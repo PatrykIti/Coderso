@@ -19,6 +19,10 @@ pagination. Split the oversized booking service by cohesive responsibility
 before altering it, preserve SPA/cache behavior, and make booking/user/session
 write races explicit rather than relying on read-then-write checks.
 
+## Sub-Tasks
+
+None; this is an executable leaf.
+
 ## Exact File Ownership
 
 **Read services:** `core/services/pages/pageReadService.ts`,
@@ -107,6 +111,12 @@ async function createBooking(command: BookingCommand, tx: Tx): Promise<Booking> 
 async function rotateSession(command: RotateSession, tx: Tx): Promise<Session> {
   // Conditional UPDATE/DELETE or row lock; never accept stale/revoked state.
 }
+
+async function updateUserRoles(command: UserRoleCommand, tx: Tx): Promise<UserRoleResult> {
+  // Lock the target user/role assignment set in stable ID order, re-check the
+  // expected state, apply set-based inserts/deletes in this transaction, and
+  // throw role_assignment_conflict when a concurrent state no longer matches.
+}
 ```
 
 Implement the same projection/keyset shape for entries, posts, users, form
@@ -114,15 +124,20 @@ submissions, media, and bookings. Keep `bookingService.ts` as a compatibility
 facade after extracting read/mutation/schedule modules; all four files must be
 under 1,000 physical lines. Route code validates and maps known domain errors;
 admin clients concatenate/invalidate pages without overwriting dirty state.
-Load the validated keyring from L01 once at server startup and inject it into
-every route/read service; route handlers must not read `process.env`.
+Every route/read factory requires an explicit `paginationCursorKeys:
+PaginationCursorKeyring` dependency. This leaf imports the type and cursor
+operations but never calls `loadPaginationCursorKeyring` and never reads
+`process.env`. TASK-551-08-L03 later owns the sole `httpServer.ts`/development
+composition call to L01's exact `loadPaginationCursorKeyring(env)` API before
+`prod.ts` starts the lifecycle and injects the resulting immutable keyring into
+all of these factories.
 
 Before adding pagination behavior, perform the named Booking, Media Library,
 and Users/Roles UI extractions above and prove their existing render/action
 contracts unchanged. Pagination state then belongs in the extracted result
 components, while cache identity and mutation state remain in their page owner.
 
-## Regression-Test Shape
+## Testing Requirements
 
 - Seed small and large fixtures with equal sort timestamps; traverse every page
   and prove exact set equality, stable order, no offset SQL, and no duplicates.
@@ -132,12 +147,23 @@ components, while cache identity and mutation state remain in their page owner.
   unknown filters, and limit 0/101 fail before DB execution.
 - Race concurrent booking creation, session rotation/revocation, and role
   updates; exactly one incompatible mutation wins and losers get stable
-  conflict responses without partial writes.
+  `booking_conflict`, session-conflict, or `role_assignment_conflict` responses
+  through centralized route mapping without partial writes.
 - UI/client tests cover first/next/reset, filter invalidation, empty/end pages,
   cache hydration, background refresh, and dirty-state protection.
 - Extraction tests pin the existing booking reservation actions, media
   grid/list selection, and member/role actions before and after pagination;
   each extracted file remains independently importable and focused.
+- With `playwright-cli -s=wf55103l02`, run at least five distinct visible-effect
+  scenarios: (1) next/previous changes the rendered page rows and disabled/ARIA
+  pagination state; (2) filter change resets to the first rendered page; (3)
+  equal-sort boundary traversal shows no duplicate or missing visible row; (4)
+  booking mutation refreshes the affected rendered page without overwriting
+  dirty UI state; and (5) Booking, Media, and Users/Roles extracted views retain
+  their visible actions and geometry in both light and dark themes. Assert DOM/
+  geometry/ARIA effects, zero console errors, and save human-review screenshots
+  below `_docs/_workflows/_smoke/task-551/03-l02/`. Smoke evidence is written by
+  the task workflow, not by the implementation leaf's source allowlist.
 
 ## Security Contract
 
@@ -160,7 +186,11 @@ components, while cache identity and mutation state remain in their page owner.
 - `set -a && source .env && set +a && bun test tests/perf/database-admin-list-budgets.test.ts`
 - `bun --cwd core lint:types`
 - `bun --cwd core lint`
+- `bun run gates:coderso`
 - `bun run gates:coderso:perf`
+- `bun run scan:security`
+- `playwright-cli -s=wf55103l02` for the five visible-effect scenarios in light
+  and dark mode, with zero console errors and the required screenshots
 
 ## Documentation Updates Required
 

@@ -19,6 +19,10 @@ budgets that all later TASK-551 leaves must meet. The large profile models
 growing lists, append-heavy logs/revisions, search candidates, and aggregate
 traffic without copying production data.
 
+## Sub-Tasks
+
+None; this is an executable leaf.
+
 ## File Ownership
 
 **Allowlist:** `scripts/task-551-database-baseline.ts`,
@@ -56,7 +60,7 @@ async function measurePoolAcquisitionWait(profile: ScaleProfile, sql: SqlClient)
 Invalid profiles/counts fail `database_baseline_invalid`; unreachable DB fails
 preflight without seeding. Measurement reports sanitized fingerprints only.
 
-## Regression-Test Shape
+## Testing Requirements
 
 - Small and large profiles seed deterministic counts with unique prefixes and
   delete only those rows.

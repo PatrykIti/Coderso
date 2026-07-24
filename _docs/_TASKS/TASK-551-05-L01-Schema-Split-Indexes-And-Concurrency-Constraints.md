@@ -20,6 +20,10 @@ cache-invalidation-outbox table, and minimum evidence-backed composite/reverse-
 FK/cutoff indexes and concurrency constraints required by later query/cache
 contracts. This is the sole TASK-551 schema and migration writer.
 
+## Sub-Tasks
+
+None; this is an executable leaf.
+
 ## Exact File Ownership
 
 **Schema:** `core/db/schema.ts`, `core/db/schema/auth.ts`,
@@ -85,6 +89,40 @@ const SEARCH_VECTOR_SQL = strictReadonly({
   assistantDocChunks: weightedLocalVector("simple", { A: ["heading"], B: ["content"] }),
 });
 
+const TRIGRAM_NORMALIZE_SQL =
+  "lower(regexp_replace(btrim(coalesce(value, '')), '[[:space:]]+', ' ', 'g'))";
+
+const TRIGRAM_CANDIDATES = strictReadonly({
+  pages: {
+    sourceSql: "coalesce(title, '') || ' ' || coalesce(slug, '')",
+    column: "search_trigram_text", index: "pages_search_trigram_idx",
+  },
+  entries: {
+    sourceSql: "coalesce(title, '') || ' ' || coalesce(data->>'title', '') || ' ' || coalesce(slug, '') || ' ' || coalesce(tags::text, '')",
+    column: "search_trigram_text", index: "content_entries_search_trigram_idx",
+  },
+  posts: {
+    sourceSql: "coalesce(title, '') || ' ' || coalesce(slug, '') || ' ' || coalesce(excerpt, '') || ' ' || coalesce(data->>'title', '')",
+    column: "search_trigram_text", index: "posts_search_trigram_idx",
+  },
+  media: {
+    sourceSql: "coalesce(title, '') || ' ' || coalesce(alt, '') || ' ' || coalesce(caption, '') || ' ' || coalesce(key, '')",
+    column: "search_trigram_text", index: "media_search_trigram_idx",
+  },
+  users: {
+    sourceSql: "coalesce(name, '')",
+    column: "search_trigram_text", index: "users_search_trigram_idx",
+  },
+});
+
+export const TRIGRAM_INDEXED_SOURCE_CONTRACT = strictReadonly({
+  pages: selectedOrNull(TRIGRAM_CANDIDATES.pages),
+  entries: selectedOrNull(TRIGRAM_CANDIDATES.entries),
+  posts: selectedOrNull(TRIGRAM_CANDIDATES.posts),
+  media: selectedOrNull(TRIGRAM_CANDIDATES.media),
+  users: selectedOrNull(TRIGRAM_CANDIDATES.users),
+});
+
 // Each owning table declares a stored generated searchVector from its matching
 // literal above and a GIN index over that column. No expression references a
 // different table. Query services consume only the exported generated columns.
@@ -115,6 +153,15 @@ function selectIndex(candidate: IndexCandidate, evidence: BaselineEvidence): Sel
 }
 ```
 
+For each selected trigram source, the migration atomically adds its stored
+generated `search_trigram_text` using `TRIGRAM_NORMALIZE_SQL` around the exact
+`sourceSql`, then adds `USING GIN (search_trigram_text gin_trgm_ops)` under the
+exact index name above. The query needle uses the byte-identical normalization
+literal. Schema definition, SQL, snapshot, catalog, query contract, and L02
+receipt must match. Email/email hash is absent from the users source. A rejected
+candidate lands neither column nor index and its exported contract member is
+`null`; no unindexed trigram fallback is permitted.
+
 At minimum add the seven exact local stored-vector GIN indexes and the outbox
 unique/event-state/cutoff indexes and checks. Also verify and, only when
 supported, add: list/keyset composites for
@@ -138,7 +185,7 @@ CONCURRENTLY` inside the transactional Drizzle migration. If measured lock time
 cannot meet the deployment budget, stop and amend the contract with a separately
 validated non-transactional operations phase before implementation.
 
-## Regression-Test Shape
+## Testing Requirements
 
 - Snapshot all pre-split public exports and table/column/index/FK/default names;
   prove split-only state is byte/DDL equivalent and imports remain stable.
@@ -148,10 +195,14 @@ validated non-transactional operations phase before implementation.
   constraint names/definitions, generated search expressions, and extensions.
 - Vector tests pin byte identity across the schema definition, generated-column
   DDL, snapshot, GIN index target, and the generated columns consumed by 04.
+- Trigram tests pin all five source concatenations, the byte-identical
+  normalization literal, `search_trigram_text` columns, exact index names,
+  `gin_trgm_ops`, selected-or-null export, and atomic column/index presence.
 - Outbox tests pin strict columns, unique event key, non-negative attempts,
   claim/processed state checks, and pending/claim/processed cutoff indexes.
 - Seed duplicate revision/overlap fixtures before constraint creation and prove
-  the migration reports/remediates deterministically without silent deletion.
+  the migration reports bounded counts and aborts deterministically without any
+  deletion or rewrite. Only the operator remediates customer rows before rerun.
 - Write benchmark covers inserts/updates at representative scale and fails above
   20% p95 regression or the L01 storage budget.
 
@@ -187,6 +238,9 @@ storage, and write-cost evidence to TASK-551-10-L02.
   1,000 lines.
 - Seven local generated-vector definitions have byte-identical schema/DDL/
   snapshot/index coverage; no definition references another table.
+- Every selected trigram candidate has byte-identical schema/DDL/snapshot/query
+  normalization and its exact GIN/`gin_trgm_ops` index; rejected candidates have
+  neither a column/index nor an enabled fallback contract.
 - The outbox table is available through `core/db/schema.ts` with 100% catalog
   parity to its strict state and index contract before TASK-551-08 starts.
 - Every new index/constraint has one inventory owner and evidence record; no

@@ -13,17 +13,22 @@
 
 ## Overview
 
-Freeze a complete machine-readable inventory of production database callers,
-their single-writer ownership, and reproducible small/large performance budgets
-before any query, schema, pool, or cache implementation begins. Evidence is
-sanitized and may not contain SQL bind values, secrets, raw PII, or customer
-payloads.
+Own a two-phase machine-readable inventory of production database callers,
+their single-writer ownership, and reproducible small/large performance budgets.
+The initial phase freezes the current exact set plus an explicit planned-delta
+manifest before implementation. The same L01 leaf is re-dispatched after
+TASK-551-09 to replace that manifest with a fresh final exact-set receipt before
+TASK-551-10-L01. Evidence is sanitized and may not contain SQL bind values,
+secrets, raw PII, or customer payloads.
 
 ## Locked Deliverables
 
 - Every direct and dynamically loaded production DB caller receives one query
   classification, cardinality/projection/order contract, owner leaf, and
   terminal disposition.
+- The initial receipt records the exact current set and every approved planned
+  caller delta by owning leaf. The final receipt permits no unresolved planned
+  delta and proves exact coverage of the post-TASK-551-09 tree.
 - Small and large fixture profiles are deterministic, uniquely scoped, and
   clean up only owned rows.
 - Query-count, rows-read/returned, p50/p95/p99, and pool-acquisition-wait
@@ -44,6 +49,9 @@ Both leaves forbid edits to production source, `core/db/migrations/**`,
 `_docs/_workflows/**`. They inventory but do not edit TASK-511 backup paths,
 TASK-517 entry/public paths, TASK-493 SEO-indexing paths, or TASK-518 migration
 artifacts.
+Later leaves consume but never edit the inventory, manifest, or receipt. Only
+TASK-551-01-L01 may refresh those artifacts when orchestration re-dispatches the
+same leaf for its final phase.
 
 ## Sub-Tasks
 
@@ -52,8 +60,14 @@ artifacts.
 
 ## Land Order
 
-L01 → L02. TASK-551-02 cannot start until both leaves pass and the ownership
-matrix has no duplicate source writers or unassigned production caller.
+Initial L01 → L02 → TASK-551-02..09 → final L01 refresh → TASK-551-10-L01.
+TASK-551-02 cannot start until the initial L01/L02 gates pass, the current caller
+set is exact, and every planned delta has one future leaf owner. TASK-551-10-L01
+cannot start until final L01 removes all planned deltas and emits a fresh exact-
+set receipt for the validated post-TASK-551-09 working tree.
+After its initial receipt, L01 and this umbrella remain `🚧 In Progress`; L02 may
+close and the receipt—not a false parent completion—unblocks TASK-551-02. Final
+L01 marks itself and this umbrella `✅ Done` only after the final receipt passes.
 The parent external dispatch gate must pass before L01 edits tooling/tests; its
 default is terminal TASK-511/TASK-493/TASK-517/TASK-518, with only the parent's
 fresh exact all-path serialized-handoff audit accepted as a substitute.
@@ -72,6 +86,8 @@ fresh exact all-path serialized-handoff audit accepted as a substitute.
 ## Testing Requirements
 
 - `bun test tests/perf/database-query-inventory.test.ts`
+- `bun scripts/task-551-query-inventory.ts --check --phase initial`
+- After TASK-551-09: `bun scripts/task-551-query-inventory.ts --check --phase final`
 - `set -a && source .env && set +a && bun test tests/perf/database-query-baseline.test.ts`
 - `bun --cwd core lint:types`
 - `bun --cwd core lint`
@@ -79,13 +95,17 @@ fresh exact all-path serialized-handoff audit accepted as a substitute.
 
 ## Documentation Updates Required
 
-No shared docs are edited here. L01/L02 produce bounded test artifacts consumed
-by TASK-551-10-L02 when it authors `_docs/DATABASE_PERFORMANCE.md` and changelog
-1263.
+No shared docs are edited here. L01/L02 produce bounded test artifacts; final
+L01 hands its exact-set receipt to TASK-551-10-L01 and the receipt summary to
+TASK-551-10-L02 for `_docs/DATABASE_PERFORMANCE.md` and changelog 1263.
 
 ## Acceptance Criteria
 
-- 100% of discovered production DB callers have exactly one owner/disposition.
+- Initial and final scans cover 100% of their discovered production DB callers;
+  the final receipt has zero unresolved planned deltas and exactly one owner/
+  disposition per caller.
+- Status transitions preserve the two-phase gate: neither L01 nor this umbrella
+  is marked done between the initial receipt and the post-09 final refresh.
 - Both scale profiles run from a clean scoped fixture namespace and publish
   reproducible budgets with variance policy and hardware/context metadata.
 - No evidence artifact contains a forbidden secret/PII field or raw bind value.

@@ -13,13 +13,17 @@ retention/lifecycle work terminal
 
 ---
 
-## Objective
+## Overview
 
 Persist Redis-mode invalidation with authoritative mutations, deliver generation
 bumps at least once with monotonic-safe token replacement, and provide optional
 namespace-scoped Pub/Sub acceleration. Event insert/claim is idempotent; the bump
 itself is intentionally not described as idempotent. No domain caller is migrated
 in this leaf.
+
+## Sub-Tasks
+
+None. This file is an executable leaf under TASK-551-08.
 
 ## Exclusive Ownership
 
@@ -51,22 +55,41 @@ contract reconciliation; do not create or patch schema here.
 Export:
 
 ```ts
+type CacheInvalidationWorkerCoherence = Readonly<{
+  state: "coherent" | "forced_bypass";
+  oldestPendingAgeMs: null | number;
+  observedAtMonotonicMs: number;
+}>;
+
 persistCacheInvalidationTx(tx, plan, backend): Promise<void>;
 applyCacheInvalidationAfterCommit(plan): Promise<"applied" | "queued" | "bypassed">;
 claimCacheInvalidations(workerId, now, limit): Promise<Claim[]>;
 completeCacheInvalidation(claim, generations): Promise<void>;
 retryCacheInvalidation(claim, stableCode, nextAttempt): Promise<void>;
+startCacheInvalidationWorker(input: {
+  onCoherenceChange: (next: CacheInvalidationWorkerCoherence) => void;
+}): Promise<void>;
 ```
+
+`CacheInvalidationWorkerCoherence` and `startCacheInvalidationWorker` are owned
+only by this leaf. L03 injects the callback and is the sole owner that combines
+this report with store health into L01's `ServerCacheHealth` transition.
 
 - Memory mode writes no outbox and bumps its store only after commit. Redis mode
   inserts the normalized plan in the same transaction; duplicate `eventKey`
   with byte-identical tags is idempotent, while different tags conflict.
+- Plan/outbox rows contain exactly the L01-bounded opaque event key and strict
+  deduplicated finite `CacheTag[]`. Record IDs, slugs, paths, request digests,
+  domain payloads and raw/digested per-record tag identities are rejected.
 - Claim batches are at most 50 using a short DB transaction and
   `FOR UPDATE SKIP LOCKED`; claim lease is 30 seconds. Redis I/O occurs after
   the claim transaction, never while holding row locks.
 - A healthy worker polls at most every 250 ms. The measured invalidation p99
-  target is at most 1 second. Oldest pending age above 5 seconds degrades health,
-  raises a bounded alert and exposes cache-bypass readiness to runtime. Processed
+  target is at most 1 second. Oldest pending age `>5_000 ms` degrades health,
+  raises a bounded alert and synchronously reports `forced_bypass` to runtime.
+  The state returns to `coherent` only after a successful Redis health probe and
+  a fresh bounded DB oldest-pending read proves age `<=5_000 ms` (or no pending
+  event); absence/error remains forced-bypass. Processed
   public values retain their policy TTL as the hard stale ceiling.
 - Retry starts at 100 ms with jitter and caps at 60 seconds. Pending events are
   never discarded because of attempt count. Processed rows retain 24 hours and
@@ -81,7 +104,8 @@ retryCacheInvalidation(claim, stableCode, nextAttempt): Promise<void>;
   incoherent/bypassed and leaves the durable event for the worker. It cannot
   claim an impossible instantaneous fence on a partitioned replica.
 - Pub/Sub channel is derived from namespace/version. A strict bounded message
-  carries event key and resulting generation digest only. Publish happens after
+  carries event key and resulting generation digest only—never tags or domain
+  identities. Publish happens after
   successful bump; subscribers may wake/recheck/measure but never mark an event
   complete or authorize cached security/private data.
 - The consistency model is bounded-eventual, not linearizable. During globally
@@ -123,14 +147,16 @@ for (const claim of await claimCacheInvalidations(workerId, now(), 50)) {
 - **Anti-abuse:** internal fixed worker and channel only; no arbitrary SQL/Redis
   input or public write.
 
-## Regression Shape and Validation
+## Testing Requirements
 
 Verify the TASK-551-05 migration/export receipt, then test commit vs rollback/
 no-op, identical/conflicting event keys, two workers with SKIP LOCKED,
 expired-claim recovery, token mismatch, Redis outage/backoff/reconnect,
 at-least-once duplicate token replacement, 250 ms polling, <=1 second p99 target,
->5 second degraded/bypass health, hard-TTL bound, bounded prune and Pub/Sub
-disconnect/malformed message. DB fixtures use unique event prefixes and delete
+exact 5,000/5,001 ms degraded/forced-bypass health, hard-TTL bound, bounded prune and Pub/Sub
+disconnect/malformed message. Assert the callback enters forced-bypass at
+`5_001 ms`, remains bypassed on DB/Redis uncertainty, and recovers only after
+both proofs; test `5_000/5_001`. DB fixtures use unique event prefixes and delete
 only owned rows; Redis cleanup uses only the test namespace.
 
 ```bash
@@ -146,6 +172,8 @@ git diff --check
 wc -l core/services/cache/cacheInvalidation{Outbox,Worker,PubSub}.ts \
   tests/integration/server/cache-invalidation-*.test.ts
 ```
+
+## Documentation Updates Required
 
 Consume TASK-551-05's migration lock/forward-recovery evidence and record worker,
 bounded-eventual/CAP, health and outbox runbook inputs for 10-L02; do not edit

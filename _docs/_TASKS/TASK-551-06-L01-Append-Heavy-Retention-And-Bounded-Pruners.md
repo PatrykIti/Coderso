@@ -20,6 +20,10 @@ webhook/session/solution-kit data. Remove inline global pruning from request hot
 paths, preserve privacy/legal windows, and make assistant execution plus
 undo-manifest persistence one transaction.
 
+## Sub-Tasks
+
+None; this is an executable leaf.
+
 ## Exact File Ownership
 
 **Production:** `core/services/maintenance/retentionPolicy.ts`,
@@ -33,6 +37,7 @@ undo-manifest persistence one transaction.
 `core/services/pages/previewTokenRetentionService.ts`,
 `core/services/assistant/actionExecutionStore.ts`,
 `core/services/assistant/assistantRetentionService.ts`,
+`core/services/analytics/trafficRepository.ts`,
 `core/services/analytics/trafficRetentionService.ts`,
 `core/services/forms/submissionRetentionService.ts`,
 `core/services/webhooks/webhookRetentionService.ts`, and
@@ -43,6 +48,7 @@ undo-manifest persistence one transaction.
 `tests/unit/access/accessLogService.test.ts`,
 `tests/unit/audit/auditService.test.ts`,
 `tests/integration/assistant/actionExecutionStore.test.ts`,
+`tests/integration/analytics/trafficRepository.test.ts`,
 `tests/integration/analytics/trafficRetention.test.ts`,
 `tests/integration/database/appendHeavyRetention.test.ts`, and
 `tests/perf/database-retention-batches.test.ts`.
@@ -51,6 +57,13 @@ No other file may be edited. In particular, L03 owns scheduler/startup;
 TASK-551-03 owns `submissionService.ts`, `webhooksService.ts`, and
 `sessionService.ts`; TASK-511 backup, TASK-517 entry/public-site, TASK-493 GSC,
 TASK-518/schema/migrations, cache, task/changelog/workflow paths are forbidden.
+This leaf is the sole TASK-551 writer of the whole `trafficRepository.ts`; it
+removes the request-time `maybePruneExpiredTraffic` import/call and moves its
+cutoff deletes into bounded `trafficRetentionService.ts` batches. It never edits
+`searchHistoryService.ts`: TASK-551-04-L01 wholly owns that file, removes its
+inline prune, and hands this leaf the `search_history` table/cutoff/newest-10/
+`created_at ASC, id ASC` contract. This leaf solely creates
+`searchHistoryRetentionService.ts`, so the two leaves share no written file.
 
 ## Complete Family Policy Matrix
 
@@ -71,7 +84,7 @@ boundary is retained), and every order finishes with immutable `id ASC`.
 | `preview_tokens`, `post_preview_tokens` | `RETENTION_PREVIEW_TOKENS_` | enabled, 1 day after expiry, `1..30` | only expired; page tokens then post tokens, `expires_at ASC, id ASC` |
 | `assistant_doc_ingest_runs` | `RETENTION_ASSISTANT_INGEST_RUNS_` | enabled, 90 days, `7..365` | preserve newest successful run/source; `created_at ASC, id ASC` |
 | `assistant_action_executions`, undo items | `RETENTION_ASSISTANT_ACTIONS_` | enabled, 180 days, `30..730` | undo children then executions; `created_at ASC, id ASC` |
-| analytics sessions/pageviews | `RETENTION_ANALYTICS_` | enabled, 365 days, `30..1095` | pageviews before sessions; `started_at/occurred_at ASC, id ASC` |
+| analytics sessions/pageviews | `RETENTION_ANALYTICS_` | enabled, 365 days, `30..1095` | pageviews by `created_at ASC, id ASC`, then sessions by `last_seen_at ASC, id ASC` |
 | form submissions/action runs | `RETENTION_FORM_SUBMISSIONS_` | **disabled**, when enabled 365 days, `1..3650` | action-run children before submissions; `created_at ASC, id ASC` |
 | webhook deliveries | `RETENTION_WEBHOOK_DELIVERIES_` | enabled, 30 days, `1..365` | terminal deliveries only; `created_at ASC, id ASC` |
 | sessions | `RETENTION_SESSIONS_` | enabled, 30 days after expiry/revocation, `1..365` | only expired/revoked; effective cutoff then `id ASC` |
@@ -107,6 +120,15 @@ async function pruneOldestBatch(policy: RetentionPolicy, tx: Tx): Promise<PruneB
   // Return counts/high-water mark only; no deleted content/PII.
 }
 
+async function pruneSearchHistoryBatch(policy: RetentionPolicy, tx: Tx): Promise<PruneBatchResult> {
+  // Consume L04-L01's table contract: age cutoff first, preserve newest 10/user,
+  // lock at most policy.batchSize oldest IDs, then delete only those IDs.
+}
+
+async function recordTrafficEvent(input: TrafficEventInput, db: Db): Promise<TrafficResult> {
+  // Persist session/pageview only. Never import or invoke retention/pruning.
+}
+
 async function saveAssistantActionExecutionResult(input: SaveInput, db: Db): Promise<void> {
   await db.transaction(async tx => {
     const execution = await insertOrLoadIdempotentExecution(input, tx);
@@ -123,7 +145,7 @@ disabled legal/business families require explicit enablement. Optimize append in
 `retention_policy_invalid`, `retention_batch_failed`, and existing assistant
 idempotency conflict codes.
 
-## Regression-Test Shape
+## Testing Requirements
 
 - Policy matrix covers defaults, min/max, unknown fields, disabled/dry-run,
   batch/max-batch bounds, and deterministic cutoff at fixed clocks.
@@ -132,7 +154,10 @@ idempotency conflict codes.
   seed uniquely prefixed old/boundary/new rows; one invocation
   deletes at most the configured batch, preserves boundary/new/unowned rows,
   orders oldest first, and repeated runs converge idempotently.
-- Instrument analytics/request ingestion and prove zero prune SQL on write.
+- Instrument analytics traffic ingestion and TASK-551-04's search-history write
+  handoff and prove zero prune SQL on either request path. Verify the traffic
+  repository contains no retention import/call and both dedicated services use
+  bounded oldest-ID deletes only.
 - Inject assistant failure between execution and undo inserts; neither persists.
   Race same/different actor-plan-hash idempotency keys and prove replay/conflict
   semantics with no orphan/partial undo rows.
@@ -156,15 +181,17 @@ idempotency conflict codes.
 
 - `bunx vitest run tests/vitest/maintenance/retentionPolicy.test.ts`
 - `set -a && source .env && set +a && bun test tests/unit/access/accessLogService.test.ts tests/unit/audit/auditService.test.ts`
-- `set -a && source .env && set +a && bun test tests/integration/assistant/actionExecutionStore.test.ts tests/integration/analytics/trafficRetention.test.ts tests/integration/database/appendHeavyRetention.test.ts tests/perf/database-retention-batches.test.ts`
+- `set -a && source .env && set +a && bun test tests/integration/assistant/actionExecutionStore.test.ts tests/integration/analytics/trafficRepository.test.ts tests/integration/analytics/trafficRetention.test.ts tests/integration/database/appendHeavyRetention.test.ts tests/perf/database-retention-batches.test.ts`
 - `bun --cwd core lint:types`
 - `bun --cwd core lint`
+- `bun run gates:coderso`
 - `bun run gates:coderso:perf`
+- `bun run scan:security`
 
 ## Documentation Updates Required
 
-No shared docs. Pass the family policy table, privacy defaults, SQL/index
-assumptions, and recovery/error behavior to TASK-551-10-L02.
+No shared docs. Pass the family policy table, request-hook removals, privacy
+defaults, SQL/index assumptions, and recovery/error behavior to TASK-551-10-L02.
 
 ## Quantified Acceptance
 

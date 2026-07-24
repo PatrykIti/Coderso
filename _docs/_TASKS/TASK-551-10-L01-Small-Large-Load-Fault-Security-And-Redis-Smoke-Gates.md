@@ -6,6 +6,7 @@
 **Category:** Performance / Reliability / Security / Runtime Smoke
 **Estimated Effort:** Large
 **Dependencies:** TASK-551-01 through TASK-551-09 landed with targeted gates;
+TASK-551-01-L01 post-09 final re-dispatch emitted a fresh exact-set receipt;
 TASK-551-11 pre-implementation audit PASS; parent external dispatch gate
 reverified for TASK-511, TASK-493, TASK-517, and TASK-518
 **Status:** ⏳ To Do
@@ -20,12 +21,18 @@ frozen small/large profiles against real PostgreSQL, exercise memory/Redis
 semantic parity and failure transitions, prove cache security boundaries, wire
 the performance/security/reliability suites into the existing Coderso release
 gate, and run at least five real flows through two separate application
-processes sharing a real Redis service.
+processes sharing a real Redis service. Re-run and consume TASK-551-03-L02's
+five Admin-list visible-effect scenarios in light and dark mode with screenshots
+and zero console errors.
 
 This leaf owns harnesses, gate registration, CI Redis provisioning, and final
 runtime evidence only. It cannot fix a production failure. Every product defect
 returns to its TASK-551-01..09 single writer, after which this leaf reruns the
 affected targeted and aggregate commands from a fresh process.
+
+## Sub-Tasks
+
+None; this is an executable aggregate-gate and smoke leaf.
 
 ## Exact Single-Writer Ownership
 
@@ -41,10 +48,17 @@ This leaf may create or edit only:
 - `.github/workflows/coderso-pr-gates.yml` (one pinned Redis service and bounded
   TASK-551 gate environment/command wiring only);
 - `_docs/_workflows/_smoke/task-551/runtime/redis-smoke-v1.json` (sanitized final
-  evidence only).
+  evidence only);
+- `_docs/_workflows/_smoke/task-551/03-l02/ui-smoke-v1.json` and these exact ten
+  screenshots: `pagination-next-previous-{light,dark}.png`,
+  `filter-reset-{light,dark}.png`, `equal-sort-boundary-{light,dark}.png`,
+  `booking-dirty-refresh-{light,dark}.png`, and
+  `extracted-views-{light,dark}.png` in that same directory.
 
-It reads, but never edits, TASK-551-01's frozen inventory/budget artifacts and
-the targeted test receipts owned by TASK-551-02..09. Before writing either
+It reads, but never edits, TASK-551-01's budget artifacts, the final query
+inventory/receipt refreshed by TASK-551-01-L01 after 09, and the targeted test
+receipts owned by TASK-551-02..09. It writes only the final UI smoke evidence,
+not any TASK-551-03-L02 product or targeted-test path. Before writing either
 shared gate file, re-read current bytes and confirm no active external task owns
 the same region. A collision blocks dispatch and returns to orchestration.
 
@@ -56,7 +70,10 @@ This leaf must not rebaseline or weaken an owner assertion.
 ## Frozen Inputs and Fixture Safety
 
 - Consume the exact versioned performance-budget and query-ownership artifacts
-  produced by TASK-551-01; do not copy their constants into this leaf.
+  produced by TASK-551-01; do not copy their constants into this leaf. The
+  inventory receipt must be `phase: "final"`, digest-current against the post-09
+  production tree, exact-set equal, and contain zero planned deltas. Initial,
+  stale, missing, or non-L01-authored receipts fail before any aggregate work.
 - The `small` and `large` profiles use TASK-551-01's exact row counts, payload
   sizes, concurrency, warm-up, sample count, percentile method, hardware/context
   metadata, and non-weakened budgets.
@@ -81,8 +98,11 @@ This leaf must not rebaseline or weaken an owner assertion.
 - Record p50/p95/p99, rows read/returned, exact query count, bytes transferred,
   pool wait/saturation, cache hit/miss/error, serialized bytes, eviction,
   coalesced loaders, and invalidation lag.
-- Assert exact zero PostgreSQL queries for a warm eligible public HTML hit and
-  prove unsafe/private/preview/nonce variants bypass cache with bounded DB work.
+- Assert exact zero PostgreSQL queries for a warm safely eligible non-gated
+  public HTML hit. Assert a mutable-visibility entry performs exactly one narrow
+  indexed visibility/version gate before cache and zero additional warm-hit
+  queries; unknown/private/password/unpublished results and a public→restricted
+  transition cannot return a primed public body.
 - Compare sanitized `EXPLAIN (ANALYZE, BUFFERS)` plan fingerprints against the
   TASK-551-01 baseline and each owning migration receipt. A different plan is
   investigated; snapshots never include bind values or raw data.
@@ -111,8 +131,8 @@ This leaf must not rebaseline or weaken an owner assertion.
   delivers the bump or the measured policy TTL expires.
 - The healthy worker poll interval is at most 250 ms and healthy committed-public
   invalidation lag must meet p99 at most 1 second. Oldest pending or locally known
-  incoherent age above 5 seconds raises an alert, degrades readiness, and causes
-  cache bypass wherever that barrier is visible until recovery.
+  incoherent age strictly above 5 seconds raises an alert, degrades readiness,
+  and forces affected-family cache bypass until recovery.
 - Every affected policy's hard TTL is measured and recorded. Public HTML is at
   most 600 seconds and no server-cache policy exceeds 3,600 seconds; the smoke
   records both observed invalidation lag and the applicable hard ceiling.
@@ -128,6 +148,10 @@ This leaf must not rebaseline or weaken an owner assertion.
 - Prove private/password/draft/preview/nonce-bearing/session/auth/RBAC and
   cross-identity Admin values never enter a shared cache or survive an identity/
   permission-epoch transition.
+- Prove decrypted or secret-bearing `SecuritySettings` never enters memory,
+  Redis, browser cache, outbox, or smoke evidence; reads remain DB-authoritative
+  while only finite generation/coherence metadata or typed redacted projections
+  may use cache infrastructure.
 - Exercise hit, miss, Redis outage, reconnect, and stale-generation paths without
   bypassing current auth, CSRF, rate-limit, nonce/HMAC, CAPTCHA, or bot policy.
 - Assert arbitrary Redis commands/keys and unknown cache/cursor fields never
@@ -141,9 +165,11 @@ real Redis namespace, but not process memory. Restart from current built/source
 bytes before the smoke; no hot-reload process qualifies. Run these exact ordered
 scenario IDs:
 
-1. `cross-process-warm-public-zero-db` — A fills one eligible published public
-   response; B serves the identical validated value with exactly zero PostgreSQL
-   queries and no process-local persistent value.
+1. `cross-process-warm-public-zero-db` — A fills one safely eligible non-gated
+   published public response; B serves the identical validated value with exactly
+   zero PostgreSQL queries and no process-local persistent value. Separately, a
+   mutable-visibility entry performs one indexed gate and zero additional warm
+   queries on B.
 2. `post-commit-generation-and-rollback` — A commits an update and B observes the
    new value after waiting for bounded outbox/generation recovery and records the
    observed lag; a rolled-back update emits no generation/outbox change and B
@@ -161,7 +187,8 @@ scenario IDs:
    change during fill rejects stale publication, and token-mismatched release
    cannot delete another holder's lease.
 5. `security-private-and-nonce-isolation` — both processes exercise public,
-   private/password, preview, and nonce-bearing server paths; restricted bodies,
+   private/password, preview, and nonce-bearing server paths, including a primed
+   public entry transitioned to restricted access; restricted bodies,
    secrets and nonce output never appear in shared keys/values or the other
    process's response. Admin browser identity/permission-epoch behavior remains
    the independently run TASK-551-09-L04 Vitest contract, not a claim made by
@@ -171,8 +198,18 @@ Every scenario uses real HTTP/runtime entry points, asserts response/DOM or
 persisted state plus exact query/cache/invalidation telemetry, and cleans only
 owned rows/keys/processes/ports in `finally`. Zero unhandled process errors are
 allowed. Because this is a non-UI infrastructure smoke, the structured
-`screenshots` array is exactly empty; any UI/editor files touched by TASK-551-09
-retain their separately required Playwright visible-effect smoke.
+`screenshots` array is exactly empty.
+
+## Required Admin List UI Smoke
+
+Restart the app and use `playwright-cli -s=wf55103l02` to run, in order,
+`pagination-next-previous`, `filter-reset`, `equal-sort-boundary`,
+`booking-dirty-refresh`, and `extracted-views`. Each scenario must assert the
+TASK-551-03-L02 visible DOM/geometry/ARIA effect in both light and dark mode,
+save the two exact screenshots declared in this leaf, and leave the console-error
+array empty. The fifth scenario covers Booking, Media, and Users/Roles extracted
+surfaces. Validate `Task551AdminListUiSmokeEvidenceV1`; missing mode, screenshot,
+visible-effect assertion, scenario, or a console error fails the aggregate gate.
 
 ## Structured Evidence
 
@@ -212,6 +249,9 @@ credential, path with user data, or raw log.
 ```ts
 async function runTask551AggregateGates(deps: GateDeps): Promise<GateEvidence> {
   const budgets = await deps.loadAndValidateFrozenTask551Budgets();
+  await deps.requireCurrentFinalQueryInventoryReceipt({
+    phase: "final", plannedDeltaCount: 0, requireCurrentProductionDigest: true,
+  });
   await deps.requirePostgresReachable();
   await deps.requireRealRedis({ minimum: "7.2.0" });
 
@@ -227,8 +267,11 @@ async function runTask551AggregateGates(deps: GateDeps): Promise<GateEvidence> {
 
   const fault = await deps.runMemoryRedisOutboxFaultMatrix();
   const security = await deps.runCacheSecurityMatrix();
+  const adminListUi = await deps.runAndValidateAdminListUiSmoke({
+    session: "wf55103l02", scenarios: 5, themes: ["light", "dark"],
+  });
   const smoke = await runTwoProcessRedisSmoke(EXACT_SCENARIO_IDS);
-  return deps.normalizeAggregateEvidence({ profiles, fault, security, smoke });
+  return deps.normalizeAggregateEvidence({ profiles, fault, security, adminListUi, smoke });
 }
 
 async function runTwoProcessRedisSmoke(ids: readonly SmokeId[]) {
@@ -243,10 +286,11 @@ async function runTwoProcessRedisSmoke(ids: readonly SmokeId[]) {
 }
 ```
 
-**Data flow:** frozen budgets/inventory → reachability/version preflight →
-owned small/large fixtures → measured Bun/DB/cache matrices → two fresh
-processes + real Redis scenarios → sanitized strict evidence → release-gate
-registration and post-audit handoff.
+**Data flow:** frozen budgets + current post-09 final inventory receipt →
+reachability/version preflight → owned small/large fixtures → measured Bun/DB/
+cache matrices → fresh Admin UI visible-effect smoke → two fresh processes +
+real Redis scenarios → sanitized strict evidence → release-gate registration
+and post-audit handoff.
 
 **Error handling:** unavailable infrastructure, required skip, budget regression,
 unexpected plan/query count, malformed evidence, process error, leaked secret,
@@ -259,6 +303,17 @@ execution, reordered/missing scenarios, unbounded cleanup, raw namespace/URL,
 non-finite metrics, unknown evidence fields, required skips, and evidence writes
 after failed cleanup. Gate-runner tests prove the new performance, security, and
 reliability commands are release-blocking.
+
+## Testing Requirements
+
+- Require TASK-551-01-L01's fresh `phase: "final"` exact-set receipt before any
+  gate and fail on an initial/stale digest or nonzero planned-delta count.
+- Run every performance, fault, security, full-suite, and two-process Redis lane
+  below with real required infrastructure and no required skip.
+- Run all five Admin-list Playwright scenarios in both themes; validate ten
+  non-empty screenshots, visible-effect assertions, and zero console errors.
+- Count every touched production/test file from the verified family baseline and
+  fail any human-authored file above 1,000 physical lines.
 
 ## Exact Validation Commands
 
@@ -273,6 +328,7 @@ bun test --timeout 120000 tests/integration/runtime/task551ServerCacheFaultMatri
 bun test --timeout 120000 tests/security/task551ServerCacheSecurityGate.test.ts
 bun test --timeout 180000 tests/integration/runtime/task551TwoProcessRedisSmoke.test.ts
 SERVER_CACHE_BACKEND=redis SERVER_CACHE_NAMESPACE=task551-test REDIS_URL="$REDIS_URL" bun scripts/task551-redis-smoke.ts
+playwright-cli -s=wf55103l02
 bun run test:vitest -- \
   tests/vitest/cache/server-cache-contracts.test.ts \
   tests/vitest/cache/server-cache-codec-keys.test.ts \

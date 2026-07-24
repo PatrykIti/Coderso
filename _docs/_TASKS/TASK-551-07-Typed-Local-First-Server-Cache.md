@@ -41,16 +41,22 @@ cache data is a measured miss/bypass, never a substitute value.
   Every policy explicitly declares `negativeTtlMs` (`null` or 5-15 seconds) and
   `stalePolicy: "forbid"`; v1 has no stale-while-revalidate. Exact limits are
   exported once by L01 and imported by every later leaf; no consumer copies
-  clamp values.
+  clamp values. Positive policy/conditional-write TTL is an integer
+  `1..3_600_000 ms`; schema version and value-byte limits use L01 constructors.
+  Invalidation plans contain exactly an opaque event key and finite tags—never
+  record IDs, slugs, paths, or digested identity tags.
 - Memory mode uses the deterministic validated namespace `local` when
   `SERVER_CACHE_NAMESPACE` is absent. Redis mode requires an explicit deployment
   namespace. `.env.example` is updated once, solely by TASK-551-10-L02, for both
   database and server-cache variables; 02/07 provide read-only config handoffs.
 - The memory LRU is O(1), bounded by entry count and exact key-plus-value bytes,
-  uses monotonic expiry, bounded lazy sweeping, shortening-only `[0.9,1.0]` TTL
+  enforces the per-entry cap against total key-plus-value bytes, uses monotonic
+  expiry, at most 64 lazy-sweep examinations per operation, shortening-only `[0.9,1.0]` TTL
   jitter and one loader per canonical request burst. Backend-independent local
   single-flight remains active during store/circuit bypass but retains promises
-  only, never values. Memory mode is explicitly not multi-replica coherent.
+  only, never values. Its key includes a process-local family coherence epoch
+  advanced at invalidation/fence transitions so post-mutation callers cannot
+  join pre-mutation work. Memory mode is explicitly not multi-replica coherent.
 - The coordinator already accepts an optional distributed-load coordinator and
   store health/circuit signals, but 08-L03 is their only Redis implementation.
   It also exposes the L01-owned bounded `writeIfGenerationsMatch` contract: the
@@ -103,7 +109,7 @@ cache data is a measured miss/bypass, never a substitute value.
 - Cache/storage/telemetry errors never change the authoritative loader result.
 - Every added production/test file remains below 1,000 physical lines.
 
-## Validation
+## Testing Requirements
 
 ```bash
 bun run test:vitest -- tests/vitest/cache/server-cache-contracts.test.ts \
@@ -116,5 +122,7 @@ bun --cwd core lint
 git diff --check
 wc -l core/services/cache/*.ts tests/vitest/cache/*.test.ts
 ```
+
+## Documentation Updates Required
 
 Documentation and changelog 1263 are handed to TASK-551-10-L02.

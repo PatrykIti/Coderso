@@ -14,11 +14,16 @@
 
 ## Overview
 
-Make page, widget-template, and detail-page revision allocation monotonic and
-race-safe using transaction-scoped parent serialization plus the TASK-551-05
-unique constraints. Bound revision reads and prune superseded history in small
-batches. Export one family-aware helper/retention contract for TASK-551-09 to
-adopt later across the whole entry/post services after TASK-517 serialization.
+Make page and widget-template service allocation monotonic and race-safe using
+transaction-scoped parent serialization plus the TASK-551-05 unique constraints.
+Bound page/widget/detail revision reads and prune superseded history in small
+batches. Export one family-aware lock/allocator/retention contract for
+TASK-551-09-L03 to adopt in the whole detail-page document writer and for later
+entry/post adoption after TASK-517 serialization.
+
+## Sub-Tasks
+
+None; this is an executable leaf.
 
 ## Exact File Ownership
 
@@ -55,19 +60,31 @@ are `RETENTION_PAGE_REVISIONS_`, `RETENTION_WIDGET_TEMPLATE_REVISIONS_`,
 `RETENTION_DETAIL_PAGE_REVISIONS_`, `RETENTION_ENTRY_REVISIONS_`, and
 `RETENTION_POST_REVISIONS_`; each exposes `ENABLED`, `MAX_AGE_DAYS`, and
 `KEEP_NEWEST_PER_PARENT`. This leaf adopts the first three. TASK-551-09 must
-adopt the final two without changing these values before overall closure.
+adopt the final two without changing these values before overall closure. Here,
+"adopts" means page/widget service allocation plus bounded retention for the
+first three tables; actual detail document allocation remains TASK-551-09-L03.
 
 ## Implementation Pseudocode
 
 ```ts
-async function allocateRevision<T>(input: RevisionInsert<T>, tx: Tx): Promise<Revision<T>> {
-  await tx.execute(sql`SELECT pg_advisory_xact_lock(${stableFamilyKey(input.family)}, ${stableParentKey(input.parentId)})`);
-  const next = await selectNextVersionForParent(input.family, input.parentId, tx);
-  try {
-    return await insertRevision({ ...input, version: next }, tx);
-  } catch (error) {
-    throw mapNamedRevisionConstraint(error, "revision_conflict");
-  }
+export type RevisionFamily =
+  | "page" | "widget_template" | "detail_page" | "entry" | "post";
+
+export async function withRevisionParentLock<T>(
+  identity: { family: RevisionFamily; parentId: string },
+  tx: Tx,
+  run: () => Promise<T>
+): Promise<T> {
+  await tx.execute(sql`SELECT pg_advisory_xact_lock(${stableFamilyKey(identity.family)}, ${stableParentKey(identity.parentId)})`);
+  return run();
+}
+
+export async function allocateRevision<T>(input: RevisionInsert<T>, tx: Tx): Promise<Revision<T>> {
+  return withRevisionParentLock(input, tx, async () => {
+    const next = await selectNextVersionForParent(input.family, input.parentId, tx);
+    try { return await insertRevision({ ...input, version: next }, tx); }
+    catch (error) { throw mapNamedRevisionConstraint(error, "revision_conflict"); }
+  });
 }
 
 async function listRevisions(parentId: string, input: RevisionListInput, db: Db): Promise<RevisionPage> {
@@ -87,14 +104,27 @@ domain conflicts. The helper's closed family identifiers already include entry
 and post so TASK-551-09 cannot invent incompatible advisory keys, conflict codes,
 cursor shapes, or retention defaults; that inclusion grants no source ownership
 to this leaf.
+`withRevisionParentLock` exists separately because TASK-551-09-L03 must serialize
+the detail autosave's latest-snapshot equality decision before allocation. In one
+transaction it locks `{ family: "detail_page", parentId }`, selects only the
+latest autosave, reuses an identical snapshot or calls `allocateRevision`, then
+deletes only that exact superseded autosave ID. Scheduled retention owns older
+history; no request-path bulk prune remains. The TASK-551-09-L03 adapter maps the
+shared `revision_conflict` to the route's existing `detail_page_conflict` code;
+this leaf and TASK-551-09-L03 do not edit `detailPageRoutes.ts`.
 
-## Regression-Test Shape
+## Testing Requirements
 
 - Contract tests pin all five family identifiers and prove entry/post resolve to
   the same allocator/policy shape without importing their services.
-- Synchronize 50 concurrent creates for page/widget/detail; committed versions are unique,
-  contiguous for successful transactions, monotonic, and correctly parent/
-  family scoped. Inject rollback/deadlock/unique-conflict paths.
+- Synchronize 50 concurrent creates through the actual page/widget services;
+  committed versions are unique, contiguous for successful transactions,
+  monotonic, and correctly parent/family scoped. Exercise the generic
+  `detail_page` lock/allocator directly without claiming document-service
+  adoption; inject rollback/deadlock/unique-conflict paths.
+- Pin the exact `withRevisionParentLock` and `allocateRevision` exports, all five
+  family literals, shared advisory-key derivation, and `revision_conflict`.
+  TASK-551-09-L03 owns the later 50-way real detail document/autosave test.
 - Revision reads select summaries only, default 50/max 100, deterministic ties,
   `<= 2` SQL statements, and never transfer full snapshots until detail lookup.
 - Retention fixtures preserve newest N, protected/published/current anchors,
@@ -126,14 +156,16 @@ to this leaf.
 ## Documentation Updates Required
 
 No shared docs. Hand locking/retry/error rules, bounded read shape, exact
-retention env/default table, and the explicit TASK-551-09 entry/post adoption
-requirement to TASK-551-10-L02.
+retention env/default table, and explicit TASK-551-09 detail/entry/post adoption
+requirements to TASK-551-10-L02.
 
 ## Quantified Acceptance
 
-- Fifty concurrent attempts in each of the three adopted families produce zero
-  duplicate versions/partial rows and a valid monotonic committed sequence;
-  entry/post identifiers remain contract-tested for TASK-551-09 adoption.
+- Fifty concurrent actual page/widget service attempts produce zero duplicate
+  versions/partial rows and a valid monotonic committed sequence. Generic
+  `detail_page`/entry/post identifiers and lock/allocation behavior remain
+  contract-tested for TASK-551-09 adoption; no claim is made that this leaf
+  changes the detail document writer.
 - Summary reads return at most 101 DB rows, at most 100 items, and at most 2 SQL
   statements; a detail fetch returns exactly one snapshot.
 - Retention never exceeds 2,000 deletes/batch, preserves 100% of protected and

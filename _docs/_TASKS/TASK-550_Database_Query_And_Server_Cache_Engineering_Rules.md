@@ -46,6 +46,9 @@ requirements.
 - Require bounded cache cardinality, request coalescing, deterministic
   namespacing, sensitive-data exclusions, cross-replica invalidation, and
   correctness when cache storage is unavailable.
+- Require public-to-restricted visibility changes to use a synchronous
+  fail-closed fence or a narrow authoritative database gate before any cached
+  public value; a zero-query target cannot weaken access control.
 - Require small- and large-dataset regression coverage, query-count/latency
   budgets, concurrency and stampede tests, and documented operational limits.
 

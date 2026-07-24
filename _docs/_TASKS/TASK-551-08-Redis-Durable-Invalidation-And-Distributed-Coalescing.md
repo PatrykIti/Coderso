@@ -22,8 +22,10 @@ wakeup/telemetry, and a bounded distributed lease coalesces cold fills.
 
 This public cache is explicitly **bounded-eventual**, not linearizable. Under a
 healthy worker the poll interval is at most 250 ms, invalidation p99 target is at
-most 1 second, and oldest-pending age above 5 seconds degrades health, alerts,
-and enables cache-bypass readiness. A globally ambiguous network partition can
+most 1 second, and oldest-pending age `>5_000 ms` degrades health, alerts,
+and transitions the local L01 `ServerCacheCoherence` state to
+`forced_bypass`; runtime then skips Redis value GET/fill until the worker proves
+recovery. A globally ambiguous network partition not locally known as degraded can
 still serve already-safe public bytes until delivery or their policy TTL, which
 is the hard stale ceiling. This is the deliberate CAP availability choice for
 public cacheable output. Admin preview/read-after-write paths bypass until their
@@ -46,6 +48,10 @@ eventual model and remains uncached or fail-closed DB-backed.
 - Redis-mode mutations persist one idempotent outbox event in the same DB
   transaction. An immediate after-commit bump reduces lag; the bounded worker
   retries. Rollback/no-op writes neither outbox nor invalidation.
+- The strict plan/outbox/PubSub payload is only opaque bounded `eventKey` plus
+  deduplicated finite `CacheTag[]` (Pub/Sub may add the resulting generation
+  digest). Record IDs, slugs, paths, domain payloads and raw/digested per-record
+  tags are forbidden.
 - Generation bumps, not deletion scans, make old values unreachable; old bytes
   expire under their original TTL. Event insertion/claim is idempotent, while
   delivery is deliberately at-least-once and token bumps are monotonic-safe, not
@@ -77,6 +83,10 @@ eventual model and remains uncached or fail-closed DB-backed.
 - TASK-511 exclusively owns backup services. L03 may touch shared server
   lifecycle only after TASK-511 is terminal and must preserve its scheduler
   behavior; it never edits `core/services/backups/**`.
+- L03 owns exact `registerComposedHttpRuntimeParticipants()`, consumes 02's
+  lifecycle/prod seam, 03's `PaginationCursorKeyring` loader, and 06's
+  `createRetentionSchedulerLifecycleParticipant(...)`; it registers existing
+  backup start/stop and moves eager router creation behind validated composition.
 - TASK-517 `publicSite.tsx` and TASK-493 SEO are forbidden throughout 08.
 - Shared docs, task board, changelog 1263 and workflows belong to 10/11.
 
@@ -93,14 +103,15 @@ eventual model and remains uncached or fail-closed DB-backed.
 - **Anti-abuse:** cache keys/commands are constructed internally; no endpoint
   accepts arbitrary Redis input.
 
-## Acceptance and Validation
+## Testing Requirements
 
 - Redis passes memory-store semantic parity plus two-client generation
   invalidation, conditional-write, outage/reconnect and malformed-value tests.
 - Outbox proves commit/rollback, idempotent identical insert/conflicting insert,
   crashed claim recovery, at-least-once duplicate token replacement,
   retry/backoff, 250 ms worker polling, p99
-  invalidation target, 5-second health/bypass threshold, bounded prune and no
+  invalidation target, exact 5,000/5,001 ms health/forced-bypass threshold,
+  zero value GET/fill while forced, bounded prune and no
   dropped pending event.
 - 1/10/50 concurrent clients demonstrate one distributed owner while load
   completes inside the waiter budget. After timeout, availability permits at
@@ -112,3 +123,8 @@ eventual model and remains uncached or fail-closed DB-backed.
 
 Targeted commands are specified per leaf. TASK-551-10 owns full load/fault
 gates, `_docs/SERVER_CACHE.md`, deployment runbook and changelog 1263.
+
+## Documentation Updates Required
+
+No shared documentation is edited here. Supply Redis operations, CAP/coherence,
+outbox, lifecycle, and validation evidence to TASK-551-10-L02.

@@ -5,7 +5,7 @@
 **Priority:** High
 **Category:** Database / Infrastructure / Observability
 **Estimated Effort:** Medium
-**Dependencies:** TASK-551-01 complete
+**Dependencies:** TASK-551-01 initial exact-set receipt and TASK-551-01-L02 complete
 **Status:** ⏳ To Do
 **Changelog:** 1263 (pinned; TASK-551-10-L02 closure only)
 
@@ -39,8 +39,14 @@ as a handoff artifact; TASK-551-10-L02 is the sole `.env.example` and prose writ
 
 L01 → L02. L02 integrates only the configuration API landed by L01.
 It exports exactly `registerRuntimeLifecycleParticipant`,
-`startRuntimeLifecycle`, and `closeRuntimeLifecycle`; later cache/retention
-workers consume those names and never install competing signal handlers.
+`startRuntimeLifecycle`, and `closeRuntimeLifecycle` from `runtimeLifecycle.ts`,
+plus `DedicatedDatabaseSession` and `withDedicatedDatabaseSession<T>(run)` from
+`client.ts`.
+Later cache/retention workers consume those names and never install competing
+signal handlers. `prod.ts` remains the sole production start/signal owner;
+TASK-551-08-L03 is the later sole `httpServer.ts`/development composition writer
+and must register cache, retention, backup, and cursor startup participants
+before `prod.ts` starts the lifecycle and accepts traffic.
 
 ## Security Contract
 
@@ -58,6 +64,7 @@ workers consume those names and never install competing signal handlers.
 - `set -a && source .env && set +a && bun test tests/perf/database-pool-telemetry.test.ts`
 - `bun --cwd core lint:types`
 - `bun --cwd core lint`
+- `bun run gates:coderso`
 - `bun run gates:coderso:perf`
 
 ## Documentation Updates Required
@@ -71,5 +78,7 @@ and performance documentation.
 - Invalid/unsafe pool and timeout configurations fail deterministically.
 - `replicas × pool + worker/migration reserve` cannot exceed the configured
   server budget; default remains safe for one small-site process.
-- Shutdown closes the client once; pool wait/saturation/latency/error metrics
-  are bounded and zero-secret.
+- Shutdown closes the client once. Explicitly opted-in query families expose
+  bounded fingerprint/duration/outcome/returned-row metrics; a separate pool
+  probe exposes bounded reservation wait/saturation. Neither claims unavailable
+  driver-wide row/wait data, and both are zero-secret.

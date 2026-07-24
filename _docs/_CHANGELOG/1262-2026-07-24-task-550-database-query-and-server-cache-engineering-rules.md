@@ -33,6 +33,9 @@ an optional Redis implementation for multi-replica deployments.
 - Requires equivalent key/TTL/invalidation semantics, request coalescing,
   deterministic namespaces, cross-replica invalidation, safe failure behavior,
   and strict secret/authorization-aware cache exclusions.
+- Makes public-to-restricted visibility transitions fail closed: they require a
+  synchronous fence or a narrow authoritative database check before serving a
+  cached public value, even when that means the path is not a zero-query hit.
 
 ### Planning and governance
 

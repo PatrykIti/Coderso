@@ -29,8 +29,11 @@ replicas. In Redis mode, Redis is the shared value backend and the application
 does not retain a persistent per-process value cache. Globally unavailable
 Redis makes every replica bypass cache and read the authoritative database;
 ambiguous or partial generation delivery may expose only still-unexpired, safe
-public old-generation bytes until durable delivery or the policy TTL. This is a
-bounded-eventual availability contract, not linearizability or stale-while-
+public old-generation bytes until durable delivery or the policy TTL. Routes
+whose visibility can mutate are never eligible on cached state alone: they run
+exactly one narrow indexed visibility/version query before any cache value read,
+then a proven-public warm hit performs zero additional PostgreSQL queries. This
+is a bounded-eventual availability contract, not linearizability or stale-while-
 revalidate, and it never applies to security/private data.
 
 This is not a promise to add every conceivable index or cache every response.
@@ -110,7 +113,7 @@ These are acceptance ranges to measure, not guaranteed marketing numbers:
 
 | Area | Current shape | Target and realistic effect |
 |---|---|---|
-| Eligible warm public render | Usually 4+ DB reads before/around HTML cache | Exactly 0 PostgreSQL queries; 70-99% fewer DB calls on cache-eligible traffic and commonly 50-95% lower application latency for true hits |
+| Eligible warm public render | Usually 4+ DB reads before/around HTML cache | Safely eligible non-gated routes execute exactly 0 PostgreSQL queries. Mutable-visibility entry routes execute exactly 1 narrow indexed visibility/version gate and 0 additional warm-hit queries; commonly 70-99% fewer DB calls and 50-95% lower application latency for true hits |
 | Growing list at 10k rows, page size 50 | O(N), sometimes wide JSONB/PII transfer and JS slicing | O(page) keyset query; commonly 100-1,000x fewer transferred rows/bytes and 5-50x lower list latency |
 | Full-text search | Expression/index drift, wildcard scans, unbounded candidates | Exact stored vector + indexed rank/order/limit; commonly 10-100x faster at scale, subject to plan evidence |
 | Multi-query aggregates/N+1 | 10-15+ sequential round trips on some endpoints | Set-based aggregates/batches; target 50-85% endpoint-latency reduction |
@@ -157,11 +160,15 @@ without amending every consumer task first:
 ```ts
 type ServerCacheBackend = "memory" | "redis";
 
+type CacheSchemaVersion = number & { readonly __cacheSchemaVersion: unique symbol };
+type PositiveCacheTtlMs = number & { readonly __positiveCacheTtlMs: unique symbol };
+type CacheValueByteLimit = number & { readonly __cacheValueByteLimit: unique symbol };
+
 type CachePolicy<T> = {
   family: CacheFamily;
-  schemaVersion: number;
-  ttlMs: number;
-  maxValueBytes: number;
+  schemaVersion: CacheSchemaVersion;
+  ttlMs: PositiveCacheTtlMs;
+  maxValueBytes: CacheValueByteLimit;
   tags: readonly CacheTag[];
   negativeTtlMs: null | NegativeCacheTtlMs;
   stalePolicy: "forbid";
@@ -171,7 +178,7 @@ type CachePolicy<T> = {
 
 interface ServerCacheStore {
   get(key: CacheKey): Promise<Uint8Array | null>;
-  set(key: CacheKey, value: Uint8Array, ttlMs: number): Promise<void>;
+  set(key: CacheKey, value: Uint8Array, ttlMs: PositiveCacheTtlMs): Promise<void>;
   delete(key: CacheKey): Promise<void>;
   readGenerations(tags: readonly CacheTag[]): Promise<CacheGenerations>;
   bumpGenerations(tags: readonly CacheTag[]): Promise<CacheGenerations>;
@@ -183,7 +190,7 @@ interface ServerCacheStore {
 type CacheConditionalWriteEntry = {
   key: CacheKey;
   encodedEnvelope: Uint8Array;
-  ttlMs: number;
+  ttlMs: PositiveCacheTtlMs;
 };
 
 type CacheConditionalWrite = {
@@ -198,6 +205,33 @@ type CacheInvalidationPlan = {
   eventKey: string;
   tags: readonly CacheTag[];
 };
+
+type ServerCacheForcedBypassReason =
+  | "redis_unavailable"
+  | "outbox_lag"
+  | "local_incoherence";
+
+type ServerCacheCoherence =
+  | Readonly<{
+      state: "coherent";
+      epoch: ProcessCacheCoherenceEpoch;
+      oldestPendingAgeMs: null | number;
+    }>
+  | Readonly<{
+      state: "forced_bypass";
+      epoch: ProcessCacheCoherenceEpoch;
+      reason: ServerCacheForcedBypassReason;
+      affectedFamilies: "all" | readonly CacheFamily[];
+      sinceMonotonicMs: number;
+      oldestPendingAgeMs: null | number;
+    }>;
+
+type ServerCacheHealth = Readonly<{
+  backend: ServerCacheBackend;
+  readiness: "ready" | "degraded";
+  coherence: ServerCacheCoherence;
+  stableCode: null | string;
+}>;
 ```
 
 `CacheFamily` is exactly `public-runtime | public-html-manifest | public-html |
@@ -210,6 +244,15 @@ never extend either union; they belong only in digested canonical key input.
 Generation values are fresh, non-reused opaque lowercase 32-hex tokens, not
 resettable counters. Missing tokens are atomically initialized before lookup,
 and every finite-tag bump replaces the tokens atomically.
+
+Policy schema versions accept only `1..2_147_483_647`; policy and conditional-
+write TTLs are positive integers `1..3_600_000 ms`; policy value limits are
+`1..16_777_216` bytes and must also fit the configured store ceiling. A domain
+configuration value of TTL `0` means disabled and must bypass before constructing
+a `CachePolicy`, reading generations, or touching either store. Positive public
+HTML TTL normalizes to `1..600_000 ms`. Unknown or malformed coherence fails to
+`forced_bypass`. Locally known outbox lag or incoherence strictly above
+`5_000 ms` forces affected-family value bypass until recovery.
 
 `ServerCache` is the cache-aside coordinator above the store. It owns canonical
 serialization, strict envelope validation, byte measurement, TTL jitter,
@@ -265,11 +308,23 @@ public HTML. Every renderer returns or registers the exact dependency tags it
 consumed. Global invalidation may initially bump a site generation; finer tags
 must remain bounded and evidence-driven.
 
-Never cache decrypted/secret settings, session/auth/RBAC decisions,
+Mutable-visibility entry routes always execute exactly one narrow indexed DB
+visibility/version gate before manifest or value lookup. An unknown,
+unpublished, private, or password-protected result fails closed into the
+TASK-517 authoritative path and cannot return a previously public cached body.
+A proven-public result contributes its visibility version to the digested key;
+its warm hit executes zero additional PostgreSQL queries. Exactly zero-query
+warm hits are reserved for safely eligible routes that do not require this gate.
+
+Never cache decrypted/secret `SecuritySettings`, session/auth/RBAC decisions,
 private/password content, drafts/previews, nonce/form-bearing HTML, unknown
 query variants, 5xx responses, or unbounded user-specific output. Negative
 not-found/redirect-miss caching is opt-in and normally 5-15 seconds. No stale-
-while-revalidate applies to security/auth decisions.
+while-revalidate applies to security/auth decisions. Decrypted security settings
+remain DB-authoritative on every read; `security-settings-generation` may carry
+only finite generation/coherence metadata, and an explicitly typed redacted
+public projection may use a separate policy. No secret-bearing settings object
+or decrypted value enters memory cache, Redis, an outbox row, or browser storage.
 
 Every mutation returns a deduplicated `CacheInvalidationPlan` covering old and
 new identities plus dependants. Memory mode executes it after commit. Redis
@@ -281,18 +336,21 @@ bypass values whose local incoherence is known. Globally unavailable Redis
 always causes DB/render bypass. During an ambiguous/partial delivery state, an
 otherwise safe public value may remain visible only while its original TTL is
 unexpired; healthy polling is at most 250 ms, invalidation lag targets p99 at
-most 1 second, and locally visible backlog/incoherence older than 5 seconds
-alerts, degrades readiness, and forces bypass. Public HTML TTL is at most 600
-seconds and no server-cache policy exceeds 3,600 seconds. Admin preview/readback
+most 1 second, and locally visible backlog/incoherence strictly above 5 seconds
+alerts, degrades readiness, and forces affected-family bypass until recovery.
+Public HTML TTL is at most 600 seconds and no server-cache policy exceeds 3,600
+seconds. Admin preview/readback
 bypasses until its event is observed; auth, security, private/password, draft,
 preview, and nonce-bearing data remains uncached or fail-closed DB-backed.
 
 Browser Admin cache remains a separate contract. It receives deployment,
-authenticated-user, and auth/permission-epoch namespacing; identity changes
-clear inaccessible values. Storage quota/private-mode, broadcast, and cache
-subscriber failures are best-effort and cannot make a successful API mutation
-look failed. Dirty editor state and background revalidation semantics remain
-unchanged.
+authenticated-user, and a monotonically increasing auth/permission epoch in its
+namespace; every login, logout, user, or permission transition advances the
+epoch before asynchronous scope work, and stale completions cannot populate the
+new epoch. Identity changes clear inaccessible values. Storage quota/private-
+mode, broadcast, and cache subscriber failures are best-effort and cannot make
+a successful API mutation look failed. Dirty editor state and background
+revalidation semantics remain unchanged.
 
 ## Security Contract
 
@@ -361,8 +419,11 @@ After the gate:
 
 ## Single-Writer Domain Ownership
 
-- TASK-551-02: `core/db/client.ts`, DB config/lifecycle, sanitized DB telemetry.
-- TASK-551-03: shared cursor/projection/batch owners and non-public-hot list/
+- TASK-551-02: `core/db/client.ts`, DB config, the runtime lifecycle registry and
+  sole production start/signal path in `prod.ts`, sanitized DB telemetry, and
+  exact `withDedicatedDatabaseSession<T>(run)` reservation API.
+- TASK-551-03: shared cursor/projection/batch owners, exact
+  `PaginationCursorKeyring` plus `loadPaginationCursorKeyring(env)`, and non-public-hot list/
   aggregate domains assigned in its leaves; it must split every oversized
   touched service first.
 - TASK-551-04: search and assistant retrieval query owners only; it consumes the
@@ -371,12 +432,18 @@ After the gate:
   migration/vector/index/constraint/outbox schema artifact plus plan evidence;
   it does not rewrite service query logic owned elsewhere.
 - TASK-551-06: access/audit/append-heavy retention, revision allocation and
-  maintenance jobs assigned in its leaves; it owns no migration and hands the
-  entry/post/detail-document adoption contract to TASK-551-09.
+  maintenance jobs assigned in its leaves, including exact
+  `createRetentionSchedulerLifecycleParticipant`; it owns no migration,
+  `dockerStart.ts`, HTTP composition, or signal handler and hands the entry/post/
+  detail-document adoption contract to TASK-551-09.
 - TASK-551-07: standalone server-cache contracts/coordinator/memory adapter only.
 - TASK-551-08: Redis adapter, outbox services/worker, generation transport and
-  distributed coalescing only; it consumes TASK-551-05's outbox schema and owns
-  no schema or migration.
+  distributed coalescing; L03 is also the sole `httpServer.ts`/`dev.ts`
+  composition writer and defines `registerComposedHttpRuntimeParticipants()`.
+  That function validates the cursor keyring and registers cache, retention, and
+  the existing backup scheduler start/stop seam before TASK-551-02's production
+  lifecycle starts and listens. L03 does not edit `backupScheduler.ts`; TASK-551-08
+  consumes TASK-551-05's outbox schema and owns no schema or migration.
 - TASK-551-09: the whole current public/entry/post/SEO/import-export/detail-page
   adoption files and tests, settings/security cache, site-shell dependencies,
   mutation invalidation, and Admin identity-cache safety; it adopts 03's query
@@ -384,12 +451,17 @@ After the gate:
 - TASK-551-10: gates, fault/load harnesses, docs and closure only; it does not
   reopen production source contracts.
 
-The per-leaf exact allowlists override this summary. Before implementation,
-TASK-551-01 freezes a machine-readable ownership matrix covering every direct
-DB caller. A discovered overlap is a task-contract defect and must be reconciled
-before dispatch, not resolved by two writers editing the same file.
+The per-leaf exact allowlists override this summary. TASK-551-01-L01 is the sole
+writer of the machine-readable ownership matrix: it freezes the initial current
+inventory before TASK-551-02 and is re-dispatched after TASK-551-09 to replace
+the receipt with a fresh exact-set `phase: "final"` inventory. Later leaves and
+TASK-551-10 consume but never edit those artifacts. A discovered overlap is a
+task-contract defect and must be reconciled before dispatch, not resolved by two
+writers editing the same file.
 
-## Sub-Tasks and Land Order
+## Sub-Tasks
+
+### Land Order
 
 TASK-551-11 is an orchestration sidecar throughout. Product work lands strictly
 in this order:
@@ -410,9 +482,16 @@ in this order:
    LRU/single-flight (2 leaves).
 8. [ ] **TASK-551-08** — optional Redis, durable generation invalidation,
    Pub/Sub acceleration, and distributed stampede control (3 leaves).
-9. [ ] **TASK-551-09** — hot-path cache adoption, zero-query warm public hits,
-   complete post-commit invalidation, and Admin/security cache hardening
+9. [ ] **TASK-551-09** — hot-path cache adoption, zero-query safely eligible
+   public hits, one-query mutable-visibility entry gates, complete post-commit
+   invalidation, and Admin/security cache hardening
    (4 leaves).
+
+   **Mandatory final inventory gate:** re-dispatch TASK-551-01-L01 from the
+   validated post-09 production tree. The same sole artifact writer refreshes
+   exact set equality and emits a `phase: "final"` receipt with zero planned
+   deltas before TASK-551-10-L01 may start.
+
 10. [ ] **TASK-551-10** — small/large load and fault matrix, documentation,
     operational runbooks, and family closure (2 leaves).
 11. [ ] **TASK-551-11** — author/audit/implementation/post-audit orchestration
@@ -439,17 +518,24 @@ in this order:
 - Public Redis consistency is explicitly bounded-eventual: global outage
   bypasses on every replica; partial/ambiguous delivery may expose only safe,
   still-unexpired public old-generation bytes until delivery or hard TTL. Poll
-  is at most 250 ms, healthy lag p99 at most 1 second, visible incoherence over
-  5 seconds degrades/alerts/bypasses, public HTML TTL is at most 600 seconds,
+  is at most 250 ms, healthy lag p99 at most 1 second, locally known incoherence
+  strictly above 5 seconds alerts, degrades readiness, and forces affected-family
+  bypass until recovery, public HTML TTL is at most 600 seconds,
   and all policy TTLs are at most 3,600 seconds. Admin preview/readback bypasses
   until observation; security/private/auth/nonce data has no stale allowance.
-- A warm eligible public HTML hit executes exactly zero PostgreSQL queries.
-  Preview, private/password, nonce-bearing and unsafe variants never enter the
-  cache. Old/new slug, update, delete, selected menu/footer, theme, settings,
-  SEO, redirects, forms and list dependencies invalidate after commit only.
-- Admin cached values cannot cross authenticated identities or permission
-  epochs; storage/cacheBus errors cannot reverse a successful authoritative
-  API result. Security settings cannot remain indefinitely stale between replicas.
+- A warm safely eligible non-gated public HTML hit executes exactly zero
+  PostgreSQL queries. A mutable-visibility entry executes exactly one narrow
+  indexed visibility/version gate before any shared value and zero additional
+  warm-hit queries; public→private/password/unpublished and unknown gate results
+  cannot return a primed public body. Preview, private/password, nonce-bearing
+  and unsafe variants never enter the cache. Old/new slug, update, delete,
+  selected menu/footer, theme, settings, SEO, redirects, forms and list
+  dependencies invalidate after commit only.
+- Admin cached values cannot cross authenticated identities or monotonically
+  increasing auth/permission epochs; storage/cacheBus errors cannot reverse a
+  successful authoritative API result. Decrypted or secret-bearing security
+  settings are never cached and every read remains DB-authoritative; only finite
+  generation/coherence metadata and explicitly redacted projections are eligible.
 - Performance gates publish reproducible p50/p95/p99, rows read/returned, query
   counts, pool wait/saturation, cache hit/miss/error, invalidation lag, bytes,
   and coalescing evidence without secrets or raw user data.
@@ -470,7 +556,13 @@ in this order:
 - Closure runs full `bun run test`, `bun run precommit:check`,
   `bun run gates:coderso`, the required strict security scan, exact performance
   and reliability suites, migration-from-clean plus migration-from-prior
-  snapshots, and at least five distinct two-process/Redis real-flow smokes.
+  snapshots, at least five distinct two-process/Redis real-flow smokes, and the
+  TASK-551-03-L02 five-scenario Admin-list Playwright smoke in both light and dark
+  modes with screenshots, visible-effect assertions, and zero console errors.
+- TASK-551-01-L01 runs in `initial` phase before 02 and is re-dispatched after 09
+  in `final` phase. TASK-551-10-L01 rejects an initial/stale receipt, any planned
+  delta, or a final source-tree digest that does not match the current production
+  query surface.
 - Redis integration uses an isolated test namespace/database and cleans only
   its own keys. If CI provisions Redis differently, the test command and
   service version become part of the checked-in release-gate contract.
@@ -480,7 +572,7 @@ in this order:
 - Add `_docs/DATABASE_PERFORMANCE.md` as the query/index/pool/retention source of
   truth and `_docs/SERVER_CACHE.md` as the local/Redis/outbox contract.
 - Update `.env.example`, `README.md`, `_docs/ARCHITECTURE.md`,
-  `_docs/ORM_SPEC.md`, `_docs/DATA_MODEL.md`, `_docs/TESTING_STRATEGY.md`,
+  `_docs/CMS_API.md`, `_docs/ORM_SPEC.md`, `_docs/DATA_MODEL.md`, `_docs/TESTING_STRATEGY.md`,
   `_docs/SECURITY_SPEC.md`, `_docs/CODERSO_RELEASE_GATES.md`, and operational
   deployment/health docs.
 - Update `_docs/ADMIN_CACHE.md` and `_docs/ADMIN_CACHE_MAP.md` for Admin
@@ -509,10 +601,21 @@ const cached = await serverCache.getOrLoad(policy, canonicalInput,
   eligibilityContext, async () => {
   return loadNarrowBoundedReadModel(db, canonicalInput);
 });
+
+const visibility = request.isMutableVisibilityRoute
+  ? await loadNarrowPublicEntryVisibilityVersion(request.identity)
+  : null;
+if (request.isMutableVisibilityRoute && !visibility?.isStrictlyPublic) {
+  return renderThroughAuthoritativeTask517Path(request, visibility);
+}
+if (configuredTtlMs === 0) return renderWithoutServerCache(request);
+return readWarmValue({ request, visibilityVersion: visibility?.version });
 ```
 
 Errors from validation/domain constraints remain machine-readable. Transaction
 failure emits no cache event. Cache failure becomes a measured miss/bypass and
 does not rewrite a committed mutation result. Regression tests exercise hit,
 miss, concurrent fill, commit, rollback, stale-generation fill, Redis failure,
-and recovery with the same externally visible domain result.
+and recovery with the same externally visible domain result. Security settings
+always use their narrow authoritative DB read; cache infrastructure may expose
+only generation/coherence metadata or an explicitly redacted projection.

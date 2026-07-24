@@ -13,11 +13,15 @@ detail-page revision handoffs terminal; parent external dispatch gate
 
 ---
 
-## Objective
+## Overview
 
 Complete dependency invalidation for selected menu/footer, active theme,
 public settings, redirects, forms, listing queries/templates and detail-page
 configuration, including nested import transactions.
+
+## Sub-Tasks
+
+None. This file is an executable leaf under TASK-551-09.
 
 ## Exclusive Ownership
 
@@ -73,7 +77,10 @@ requirements without weakening their tests.
   inputs, analytics tracking and every L01 safe snapshot field. Secret/
   integration/security settings never enter the public snapshot.
 - `setSetting`, `setSettings`, `deleteSetting` and `setSettingsTx` share one
-  pure plan builder. `setSettingsTx` returns/collects its plan and never applies
+  pure plan builder. Old/new values/identities are selector input only; its exact
+  output is `{ eventKey, tags: finite CacheTag[] }` and contains no setting key,
+  record ID, slug, path, raw/digested variable tag or domain payload.
+  `setSettingsTx` returns/collects its plan and never applies
   it before the caller's outer commit. Import wrapper and TASK-511 handoff merge
   and deduplicate plans, persist Redis outbox in the same outer transaction and
   apply once after terminal commit. Every before/consistency read and write in
@@ -81,7 +88,8 @@ requirements without weakening their tests.
   global `db`/`getSetting` fallback is permitted inside that transaction.
 - Redirect create/update/delete invalidates global redirect generation plus old
   and new normalized source-path identities through the finite
-  `site:redirects`/`site:html` generations. Positive and negative redirect
+  `site:redirects`/`site:html` generations, then discards those identities before
+  plan construction. Positive and negative redirect
   records have short bounded TTL; no per-path generation key is created.
 - Form configuration/status/schema/action changes invalidate linked rendered
   dependencies; submissions do not invalidate HTML and nonce-bearing HTML
@@ -97,10 +105,15 @@ requirements without weakening their tests.
 - Adopt TASK-551-03's handed-off bounded streaming/chunked import-export behavior
   without whole-table materialization, and TASK-551-06's handed-off shared
   concurrency-safe allocator plus bounded detail-page revision read/retention
-  behavior. Preserve TASK-511 restore atomicity and checksums.
+  behavior. Detail autosave must call
+  `withRevisionParentLock(tx, parentId, ...)` and `allocateRevision(tx, ...)`
+  inside the same supplied transaction; map
+  `revision_conflict` to the existing `detail_page_conflict` service error
+  without editing the route. Preserve TASK-511 restore atomicity and checksums.
 - Public Redis invalidation is bounded-eventual, not linearizable, with <=250 ms
-  healthy polling, <=1 second p99 target, >5-second degraded/bypass readiness and
-  policy TTL as the hard stale ceiling. Admin preview/read-after-write bypasses
+  healthy polling and <=1 second p99 target. Locally visible age `>5_000 ms`
+  forces value GET/fill bypass until proven recovery; policy TTL is the hard
+  ceiling only for ambiguity not locally known degraded. Admin preview/read-after-write bypasses
   until event observation; security/private/nonce output remains excluded.
 
 ## Implementation Pseudocode
@@ -117,7 +130,10 @@ const committed = await db.transaction(async (tx) => {
   if (plan) await persistCacheInvalidationTx(tx, plan, backend);
   return { value: change.value, plan };
 });
-if (committed.plan) await applyCacheInvalidationAfterCommit(committed.plan);
+if (committed.plan) {
+  advanceLocalCoherenceEpoch(committed.plan.tags);
+  await applyCacheInvalidationAfterCommit(committed.plan);
+}
 ```
 
 ## Security Contract
@@ -128,11 +144,13 @@ if (committed.plan) await applyCacheInvalidationAfterCommit(committed.plan);
 - **Validation:** strict existing schemas plus normalized bounded IDs/routes/
   settings keys/tags; unknown settings remain rejected.
 - **Secrets/privacy:** secret/security/provider settings, form submissions and
-  authored private bodies never enter cache/outbox/PubSub/logs.
+  authored private bodies never enter cache/outbox/PubSub/logs. Plans/outbox
+  contain only event key plus finite tags—never IDs, setting keys, slugs, paths,
+  variable/digested identity tags or domain payload.
 - **Anti-abuse:** no public write changes; form nonce/HMAC/CAPTCHA stays
   authoritative and nonce-bearing HTML stays cache-exempt.
 
-## Regression Shape and Validation
+## Testing Requirements
 
 Prime multiple pages, then mutate selected/unselected menu/footer/theme/profile;
 prove only declared dependencies/global fallback miss. Cover every public
@@ -141,7 +159,11 @@ listing query/template/detail linkage, import outer commit/rollback and Redis
 failure retry. Inject a memory bump failure and prove local family bypass. Prove
 `setSettingsTx` performs no global-client reads, and rerun handed-off bounded
 import/chunk/checksum plus detail-page revision concurrency/retention assertions.
-Run memory and two-client Redis variants with unique fixtures.
+Assert detail autosave uses one transaction/parent lock, concurrent versions are
+unique, and `revision_conflict` maps to `detail_page_conflict` without route
+changes. Strictly reject any plan/outbox extra identity field and prove the
+local coherence epoch advances before after-commit application. Run memory and
+two-client Redis variants with unique fixtures.
 
 ```bash
 set -a && source .env && set +a
@@ -170,6 +192,8 @@ wc -l core/services/{menus/menuService,pages/pageTemplateLibraryService,pages/pu
   tests/vitest/cache/site-dependency-invalidation.test.ts \
   tests/integration/runtime/site-*-invalidation.test.ts
 ```
+
+## Documentation Updates Required
 
 Split any touched production/test file that would exceed 1,000 lines by cohesive
 ownership before adding behavior. Documentation remains 10-L02 ownership.

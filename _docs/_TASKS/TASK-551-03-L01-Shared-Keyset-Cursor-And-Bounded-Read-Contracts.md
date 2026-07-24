@@ -19,6 +19,10 @@ tamper-evident keyset cursors. The contract supports ascending/descending
 tuples, nullable sort fields, stable unique tie-breakers, and limit-plus-one
 page detection without exposing raw database values as mutable API state.
 
+## Sub-Tasks
+
+None; this is an executable leaf.
+
 ## File Ownership
 
 **Allowlist:** `core/services/database/keysetCursor.ts`,
@@ -44,7 +48,7 @@ type CursorPayload = StrictReadonly<{
   id: string;
 }>;
 
-type PaginationCursorKeyring = StrictReadonly<{
+export type PaginationCursorKeyring = StrictReadonly<{
   current: { version: number; secret: Uint8Array };
   previous?: { version: number; secret: Uint8Array };
 }>;
@@ -53,7 +57,7 @@ function parsePageLimit(value: unknown, options = { default: 50, max: 100 }): Pa
   // Reject non-integer, negative, zero, overflow, and unknown option fields.
 }
 
-function loadPaginationCursorKeyring(env: NodeJS.ProcessEnv): PaginationCursorKeyring {
+export function loadPaginationCursorKeyring(env: NodeJS.ProcessEnv): PaginationCursorKeyring {
   // PAGINATION_CURSOR_SECRET is required and must encode to at least 32 bytes.
   // PAGINATION_CURSOR_KEY_VERSION defaults to 1 and is an integer in 1..2^31-1.
   // PAGINATION_CURSOR_PREVIOUS_SECRET and PAGINATION_CURSOR_PREVIOUS_KEY_VERSION
@@ -88,9 +92,14 @@ most one previous key for the 24-hour overlap; removing the previous pair
 invalidates any remaining old cursors. A process that mounts the paginated
 admin routes must load this keyring during startup and fail fast before
 accepting traffic when the current secret is absent or shorter than 32 UTF-8
-bytes. Unit tests inject an explicit keyring and never depend on developer env.
+bytes. `loadPaginationCursorKeyring(env)` is the exact production handoff API:
+TASK-551-08-L03's sole `httpServer.ts`/development composition calls it exactly
+once before `prod.ts` starts the existing lifecycle, then injects the immutable
+result into every route/read dependency factory. TASK-551-03-L02 accepts the
+typed dependency but does not read environment state or edit composition files.
+Unit tests inject an explicit keyring and never depend on developer env.
 
-## Regression-Test Shape
+## Testing Requirements
 
 - Property-style round trips cover equal timestamps, nulls, UTF-8 IDs, both
   directions, and stable canonical encoding.
@@ -101,6 +110,9 @@ bytes. Unit tests inject an explicit keyring and never depend on developer env.
   closed; current and previous keys pass only during the defined overlap.
 - Boundary tests pin defaults 50, maximum 100, and exactly `limit + 1` lookahead.
 - Import test proves both production modules are Bun/runtime/DB-client free.
+- Contract test pins the exact exported name `loadPaginationCursorKeyring` and a
+  fake TASK-551-08-L03-style composition proves one load supplies multiple route
+  dependencies while missing/weak configuration fails before lifecycle start.
 
 ## Security Contract
 
@@ -122,7 +134,8 @@ bytes. Unit tests inject an explicit keyring and never depend on developer env.
 
 ## Documentation Updates Required
 
-No shared docs. Hand the cursor format, exact environment variables, startup
+No shared docs. Hand the exact `loadPaginationCursorKeyring(env)` composition
+API, cursor format, environment variables, startup
 failure semantics, rotation procedure, limits, and error codes to
 TASK-551-10-L02 for `.env.example`, `_docs/ORM_SPEC.md`, and API documentation.
 
@@ -132,6 +145,8 @@ TASK-551-10-L02 for `.env.example`, `_docs/ORM_SPEC.md`, and API documentation.
   trip byte-deterministically.
 - Startup rejects every missing/weak/partial keyring fixture, and rotation tests
   prove one-current/one-previous verification with a fixed 24-hour expiry.
+- The handoff exposes exactly one validated-loader API and requires zero
+  environment reads from route handlers/read services.
 - Default/max limits are 50/100 and cannot be bypassed through coercion.
 - Produced predicates always include the declared unique tie-breaker and match
   the requested sort/null order in all test matrices.

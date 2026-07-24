@@ -12,11 +12,15 @@
 
 ---
 
-## Objective
+## Overview
 
 Own the Bun-free typed boundary used by all memory and Redis implementations:
 strict policies/envelopes, canonical SHA-256 keys, eligibility, invalidation
 plans and validated infrastructure configuration. Do not implement a store.
+
+## Sub-Tasks
+
+None. This file is an executable leaf under TASK-551-07.
 
 ## Exclusive Ownership
 
@@ -44,20 +48,28 @@ Preserve the parent names and export them only from
 `CacheEligibilityContext`, `CachePolicy<T>`, `CacheConditionalWrite`,
 `ServerCacheStore`, `ServerCacheHealth`, `CacheInvalidationPlan`, and an optional
 `DistributedCacheLoadCoordinator`. `decode` is the only authority for a policy's
-value. `NegativeCacheTtlMs` is an opaque normalized number whose constructor
-accepts only integer `5_000..15_000`; production callers must obtain it through
-that constructor rather than an assertion. The exact v1 policy addition is:
+value. `CacheSchemaVersion`, `PositiveCacheTtlMs`, `CacheValueByteLimit`, and
+`NegativeCacheTtlMs` are opaque normalized integers; production callers obtain
+them through constructors rather than assertions. Schema versions accept only
+`1..2_147_483_647`, positive policy/conditional-write TTL accepts only
+`1..3_600_000` ms, and value-byte limits accept only `1..16_777_216` and must
+also fit the normalized store's per-entry ceiling. `NegativeCacheTtlMs` accepts
+only integer `5_000..15_000`. The exact v1 policy addition is:
 
 ```ts
 type NegativeCacheTtlMs = number & {
   readonly __negativeCacheTtlMs: "5_000..15_000";
 };
 
+type CacheSchemaVersion = number & { readonly __cacheSchemaVersion: unique symbol };
+type PositiveCacheTtlMs = number & { readonly __positiveCacheTtlMs: unique symbol };
+type CacheValueByteLimit = number & { readonly __cacheValueByteLimit: unique symbol };
+
 type CachePolicy<T> = {
   family: CacheFamily;
-  schemaVersion: number;
-  ttlMs: number;
-  maxValueBytes: number;
+  schemaVersion: CacheSchemaVersion;
+  ttlMs: PositiveCacheTtlMs;
+  maxValueBytes: CacheValueByteLimit;
   tags: readonly CacheTag[];
   negativeTtlMs: null | NegativeCacheTtlMs;
   stalePolicy: "forbid"; // v1 never serves an expired/SWR value
@@ -76,22 +88,71 @@ families/tags fail closed. V1 deliberately maps record ids, slugs, and paths to
 these finite family/site generations; variable identity appears only inside the
 digested canonical input, preventing unbounded Redis generation metadata.
 
+L01 also solely owns the backend-neutral coherence/health shape consumed by L02,
+08-L02/L03 and 09. `ProcessCacheCoherenceEpoch` is an opaque monotonically
+increasing safe integer local to one process. The exact v1 health union is:
+
+```ts
+type ProcessCacheCoherenceEpoch = number & {
+  readonly __processCacheCoherenceEpoch: unique symbol;
+};
+
+type ServerCacheForcedBypassReason =
+  | "redis_unavailable"
+  | "outbox_lag"
+  | "local_incoherence";
+
+type ServerCacheCoherence =
+  | Readonly<{
+      state: "coherent";
+      epoch: ProcessCacheCoherenceEpoch;
+      oldestPendingAgeMs: null | number;
+    }>
+  | Readonly<{
+      state: "forced_bypass";
+      epoch: ProcessCacheCoherenceEpoch;
+      reason: ServerCacheForcedBypassReason;
+      affectedFamilies: "all" | readonly CacheFamily[];
+      sinceMonotonicMs: number;
+      oldestPendingAgeMs: null | number;
+    }>;
+
+type ServerCacheHealth = Readonly<{
+  backend: ServerCacheBackend;
+  readiness: "ready" | "degraded";
+  coherence: ServerCacheCoherence;
+  stableCode: null | string;
+}>;
+```
+
+`oldestPendingAgeMs` is a finite integer
+`0..SERVER_CACHE_LIMITS.maxHealthPendingAgeMs` capped for telemetry;
+`sinceMonotonicMs` never leaves process-local health. Unknown/malformed health
+fails to `forced_bypass`, never to coherent. Only this contract module defines
+the union; adapters/workers report inputs and L03's runtime owns transitions.
+`stableCode` is null or 1–64 ASCII `[a-z0-9_]+` bytes; affected families are
+deduplicated/sorted and non-empty unless represented by `"all"`.
+
 `CacheGenerationToken` is an opaque lowercase 32-hex-character cryptographic
 token. Reading a missing site/family generation atomically initializes and
 returns a fresh non-reusable token before any value lookup; bump replaces tokens
 instead of incrementing/resetting an integer. Tests inject a deterministic token
 source, while production uses cryptographic randomness.
 
-`ServerCacheEnvelopeV1` is recursively reject-unknown and contains only:
+`CacheGenerationDigest` is an opaque lowercase 64-hex SHA-256 digest and
+`UnixTimeMs` is an integer `0..Number.MAX_SAFE_INTEGER`. The envelope decoder is
+recursively reject-unknown, validates both branded forms, requires
+`expiresAtUnixMs > writtenAtUnixMs`, and rejects a lifetime outside
+`1..maxPolicyTtlMs`. `ServerCacheEnvelopeV1` contains only:
 
 ```ts
 type ServerCacheEnvelopeV1 = {
   schema: "coderso.server-cache-envelope@v1";
   family: CacheFamily;
-  schemaVersion: number;
-  writtenAtUnixMs: number;
-  expiresAtUnixMs: number;
-  generationDigest: string;
+  schemaVersion: CacheSchemaVersion;
+  writtenAtUnixMs: UnixTimeMs;
+  expiresAtUnixMs: UnixTimeMs;
+  generationDigest: CacheGenerationDigest;
   value: unknown;
 };
 ```
@@ -107,7 +168,16 @@ SERVER_CACHE_LIMITS = {
   maxTagBytes: 128,
   maxEventKeyBytes: 128,
   maxConditionalWrites: 2,
+  minSchemaVersion: 1,
+  maxSchemaVersion: 2_147_483_647,
+  minPolicyTtlMs: 1,
   maxPolicyTtlMs: 3_600_000,
+  minPolicyValueBytes: 1,
+  maxPolicyValueBytes: 16_777_216,
+  maxExpirySweepEntriesPerOperation: 64,
+  forcedBypassPendingAgeMs: 5_000,
+  maxHealthPendingAgeMs: 86_400_000,
+  maxHealthStableCodeBytes: 64,
   ttlJitterMinRatio: 0.90,
   ttlJitterMaxRatio: 1.00,
 };
@@ -129,7 +199,7 @@ tag set, and its expected generation snapshot. Its exact handoff is:
 type CacheConditionalWriteEntry = {
   key: CacheKey;
   encodedEnvelope: Uint8Array;
-  ttlMs: number;
+  ttlMs: PositiveCacheTtlMs;
 };
 
 type CacheConditionalWrite = {
@@ -141,12 +211,25 @@ type CacheConditionalWrite = {
 };
 
 writeIfGenerationsMatch(input: CacheConditionalWrite): Promise<boolean>;
+
+type CacheInvalidationPlan = {
+  eventKey: string;
+  tags: readonly CacheTag[];
+};
 ```
 
 It compares every current generation and writes all entries or none. Memory does
 so synchronously in-process; Redis parity is one bounded Lua script owned by
 TASK-551-08-L01. This is the only primitive TASK-551-09 may use for coupled HTML
-value/dependency-manifest publication.
+value/dependency-manifest publication. Conditional-write normalization rejects
+unknown fields, duplicate keys, TTL outside the branded positive range, an
+encoded envelope above its policy/store byte ceiling, or a total
+`UTF8(key).byteLength + encodedEnvelope.byteLength` above normalized
+`SERVER_CACHE_MAX_ENTRY_BYTES` before invoking a backend.
+`CacheInvalidationPlan` recursively rejects every other field: it never carries
+record IDs, slugs, paths, raw/digested identity tags, query input, or domain
+payload. Domain old/new identity analysis only selects and deduplicates the
+finite `CacheTag[]` before the plan crosses the cache/outbox boundary.
 
 `normalizeServerCacheConfig(env)` owns exactly:
 
@@ -173,7 +256,12 @@ handoff rather than editing that shared file.
 
 Eligibility is fail-closed. The context must explicitly prove public,
 unauthenticated, non-preview, non-private/password, non-nonce, known bounded
-query variant and successful cacheable status. Negative results are allowed
+query variant and successful cacheable status. It also carries
+`mutableVisibilityGate: "not_required" | { state: "strictly_public";
+versionToken: lowercase-64-hex }`; a mutable-visibility route is eligible only
+with the second form produced from its current mandatory DB gate. Missing,
+unknown, private/password or malformed proof is ineligible before any value
+read. Negative results are allowed
 only when `negativeTtlMs` is non-null and normalized to 5–15 seconds.
 `stalePolicy` is always `"forbid"` in v1: no policy serves expired data or uses
 stale-while-revalidate. Security/auth values are never eligible at all; the
@@ -211,7 +299,7 @@ they return a typed bypass reason and bounded redacted telemetry.
 - **Anti-abuse:** no public write; hostile canonical inputs fail before large
   allocation or hashing.
 
-## Regression Shape and Validation
+## Testing Requirements
 
 Pin canonical object-order, Unicode, numeric, schema-version, generation-order
 and key vectors;
@@ -221,7 +309,11 @@ that redacted config never exposes Redis credentials. Test the exact finite
 family/tag unions, fresh initialization of missing generation tokens, no token
 reuse, event-key and conditional-write max+1, memory namespace `local`, required
 Redis namespace, negative TTL null/4,999/5,000/15,000/15,001, and
-`writeIfGenerationsMatch` all-or-nothing behavior.
+`writeIfGenerationsMatch` all-or-nothing behavior. Pin schema version, positive
+TTL, policy-value bytes, conditional TTL, Unix time/duration and the exact 64-
+entry sweep limit at zero/one/exact maximum/maximum+1 as applicable. Include
+not-required/current-public/private/password/missing/malformed visibility-proof
+eligibility cases and exact 5,000 ms forced-bypass, health-age/stable-code bounds.
 
 ```bash
 bun run test:vitest -- tests/vitest/cache/server-cache-contracts.test.ts \
@@ -233,6 +325,8 @@ git diff --check
 wc -l core/services/cache/serverCache{Contracts,Codec,Keys,Eligibility,Config}.ts \
   tests/vitest/cache/server-cache-{contracts,codec-keys,eligibility}.test.ts
 ```
+
+## Documentation Updates Required
 
 Send exact env/envelope/key/eligibility documentation to TASK-551-10-L02; do
 not edit shared docs or changelog here.

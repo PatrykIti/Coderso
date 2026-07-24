@@ -20,6 +20,10 @@ bounded SQL query over the two local vectors landed by TASK-551-05:
 Preserve the existing explainable intent/BM25 refinement on only that bounded
 joined candidate set and preserve final answer quality and citations.
 
+## Sub-Tasks
+
+None; this is an executable leaf.
+
 ## File Ownership
 
 **Allowlist:** `core/services/assistant/assistantDocsCandidateQuery.ts`,
@@ -70,7 +74,7 @@ Both FTS predicates reference the landed local generated columns directly; doc
 title/keywords relevance enters chunk candidates through the bounded join/UNION,
 never through an impossible cross-table chunk generated column.
 
-## Regression-Test Shape
+## Testing Requirements
 
 - Golden corpus compares current expected top-K identities, order, scores within
   declared tolerance, location/how/capability modes, Polish/English tokens, and

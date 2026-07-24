@@ -13,11 +13,16 @@ handoffs terminal; parent external dispatch gate
 
 ---
 
-## Objective
+## Overview
 
 Make every current page, entry, post and SEO mutation produce a complete,
 deduplicated post-commit invalidation plan covering old/new identities and
-dependent public list/detail/HTML families.
+dependent public list/detail/HTML families. Old/new identities are inputs to a
+pure selector only; the resulting plan contains no record identity.
+
+## Sub-Tasks
+
+None. This file is an executable leaf under TASK-551-09.
 
 ## Exclusive Ownership
 
@@ -78,7 +83,9 @@ migrations/packages/shared docs/tasks.
   transaction capture narrow before/after projections, perform the mutation,
   build normalized tags and call 08-L02 `persistCacheInvalidationTx` in Redis
   mode. Return value plus plan; call `applyCacheInvalidationAfterCommit` only
-  after the outer commit.
+  after the outer commit. The exact plan is only `{ eventKey, tags }`, where
+  `tags` is a deduplicated finite `CacheTag[]`; IDs, slugs, paths, hashes and
+  domain payload never cross into plan/outbox/PubSub.
 - Failed validation, DB rollback, missing delete and semantic no-op emit no plan.
   A committed mutation returns success even if immediate cache transport fails;
   durable Redis retry remains. A memory-mode bump failure immediately fences the
@@ -89,8 +96,11 @@ migrations/packages/shared docs/tasks.
   `site:pages`/`site:shell`/`site:all` generations.
 - Entry plans map ID, content type, old/new slug/path, detail/list route,
   metadata/SEO and global/list dependencies to finite `site:entries`,
-  `site:listings`, `site:html` and fallback site generations. Preserve TASK-517
-  visibility cache exclusion.
+  `site:listings`, `site:html` and fallback site generations, then discard the
+  identity projection. Every visibility/password transition also advances the
+  authoritative `updated_at` visibility-version in the same transaction and
+  bumps `site:entries`/`site:html`. Preserve TASK-517 exclusion and L01's rule
+  that every mutable-entry request still performs its one DB gate.
 - Post plans map ID, old/new slug, status, taxonomy/feed/list/detail and SEO to
   finite `site:posts`/`site:listings`/`site:html` generations.
 - SEO mutations map target identity to finite owning content plus `site:html`
@@ -102,8 +112,9 @@ migrations/packages/shared docs/tasks.
   budget (`<=5` for SEO summaries), and TASK-551-06's concurrency-safe shared
   revision allocator plus bounded revision reads/retention in the domain modules.
 - Public Redis invalidation is bounded-eventual, not linearizable, under 08's
-  <=250 ms polling, <=1 second p99 target, >5-second degraded/bypass signal and
-  hard policy-TTL ceiling. Admin preview/read-after-write bypasses until event
+  <=250 ms polling and <=1 second p99 target. Locally visible age `>5_000 ms`
+  forces value GET/fill bypass until proven recovery; hard policy TTL applies
+  only to ambiguity not locally known degraded. Admin preview/read-after-write bypasses until event
   observation; security/private/nonce-bearing output remains excluded.
 
 ## Implementation Pseudocode
@@ -117,7 +128,10 @@ const committed = await db.transaction(async (tx) => {
   await persistCacheInvalidationTx(tx, plan, cacheBackend);
   return { value, plan };
 });
-if (committed.plan) await applyCacheInvalidationAfterCommit(committed.plan);
+if (committed.plan) {
+  advanceLocalCoherenceEpoch(committed.plan.tags);
+  await applyCacheInvalidationAfterCommit(committed.plan);
+}
 return committed.value;
 ```
 
@@ -130,11 +144,12 @@ errors are stable redacted codes and do not expose slugs/data in logs/outbox.
 - **Auth/RBAC/CSRF/rate limits:** route enforcement is unchanged; service
   refactors cannot widen access.
 - **Validation:** existing strict mutation schemas plus bounded canonical tags.
-- **Secrets/privacy:** plans/outbox contain opaque IDs or digested path tags, no
-  body, private content, SEO secret, bind value or user data.
+- **Secrets/privacy:** plans/outbox contain only opaque event key plus finite
+  tags—never IDs, slugs, paths, path digests, body, private content, SEO secret,
+  bind value or user data.
 - **Anti-abuse:** no new public write; TASK-517 gated output remains ineligible.
 
-## Regression Shape and Validation
+## Testing Requirements
 
 For each domain test create/publish/update body/update slug/delete/unpublish and
 revision restore as applicable; prime old/new detail and list caches, then prove
@@ -143,7 +158,11 @@ and SEO head dependencies. Inject rollback, no-op and Redis failure/outbox retry
 run memory and two-client Redis variants with owned DB fixtures only. Inject a
 memory bump failure and prove its local family fence bypasses old values. Re-run
 the handed-off SEO query-count and entry/post revision concurrency/bounded-read
-assertions without weakening them.
+assertions without weakening them. Prime a public entry, commit public→private
+and public→password transitions, assert `updated_at` visibility-version changes,
+and prove the next request executes exactly one gate query before any value GET
+and never returns the primed body. Assert plan/outbox strict parsing rejects IDs,
+slugs, paths, digests and extra fields.
 
 ```bash
 set -a && source .env && set +a
@@ -175,6 +194,8 @@ wc -l core/services/pages/pageService.ts \
   tests/vitest/cache/content-mutation-invalidation.test.ts \
   tests/integration/runtime/site-cache-{page-entry,post-seo}-invalidation.test.ts
 ```
+
+## Documentation Updates Required
 
 Re-run every TASK-493 current-SEO/sitemap and TASK-517 entry-visibility test named
 by the terminal handoffs. Docs and changelog remain 10-L02 ownership.

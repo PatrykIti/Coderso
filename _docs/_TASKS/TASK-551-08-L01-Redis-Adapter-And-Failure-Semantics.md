@@ -12,12 +12,16 @@
 
 ---
 
-## Objective
+## Overview
 
 Implement TASK-551-07-L01's `ServerCacheStore` over Bun's native Redis client
 with exact timeouts, atomic generation-token replacement, conditional writes,
 bounded health and DB-bypass failure semantics. Do not wire server startup,
 outbox, Pub/Sub or distributed leases.
+
+## Sub-Tasks
+
+None. This file is an executable leaf under TASK-551-08.
 
 ## Exclusive Ownership
 
@@ -49,13 +53,18 @@ package manifests/lockfile and shared docs/tasks.
   requested token. `readGenerations` returns only fully initialized snapshots.
 - Implement L01 `writeIfGenerationsMatch` as one bounded Lua script: compare all
   expected finite generation tokens and `SET ... PX` one or two encoded entries,
-  or write none. Script keys/arguments/replies obey the shared exact limits.
+  or write none. Before Lua, normalize branded positive TTL/value limits and
+  reject any `UTF8(key).byteLength + encodedEnvelope.byteLength` above the
+  configured total entry ceiling. Script keys/arguments/replies obey the shared
+  exact limits.
 - All commands use `SERVER_CACHE_COMMAND_TIMEOUT_MS`. Timeout, disconnect,
   malformed reply or uncertain write becomes a typed store failure consumed by
   TASK-551-07-L02's coordinator circuit; it never returns guessed/stale bytes.
 - The generic coordinator circuit is closed/half-open/open with one probe and
   bounded exponential cooldown. Redis health exposes only ready/degraded,
-  last stable code and timing counters—never URL, key, command payload or reply.
+  last stable code and timing counters through L01's exact `ServerCacheHealth`
+  input—never URL, key, command payload or reply. L03 alone owns coherence-state
+  transitions; malformed/unknown health can never authorize a value read.
 - Corrupt envelopes are handled by `ServerCache`; its best-effort delete failure
   is telemetry only. `close()` is idempotent and closes only this adapter's owned
   command client. TASK-551-08-L03 runtime owns worker/PubSub shutdown.
@@ -94,7 +103,7 @@ scripts/replies.
 - **Anti-abuse:** fixed command/script allowlist and deadlines prevent arbitrary
   Redis access or unbounded work.
 
-## Regression Shape and Validation
+## Testing Requirements
 
 Against isolated unique namespaces, test byte parity, TTL, delete, exact/max+1,
 two-client missing-generation initialization, fresh/non-reused token replacement,
@@ -115,6 +124,8 @@ git diff --check
 wc -l core/services/cache/redisServerCache*.ts \
   tests/integration/server/redis-server-cache-*.test.ts
 ```
+
+## Documentation Updates Required
 
 Redis is a required gate for completion; an unavailable Redis service is a
 reported blocker, not a skipped passing test. Docs are handed to 10-L02.

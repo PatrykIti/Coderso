@@ -19,6 +19,10 @@ install/retry arrays with set-based SQL, explicit projections, and bounded
 chunks. Split the oversized solution-kit installer before changing its behavior
 while preserving rollback, webhook retry, and solution-kit product contracts.
 
+## Sub-Tasks
+
+None; this is an executable leaf.
+
 ## Exact File Ownership
 
 **Production:** `core/services/analytics/analyticsService.ts`,
@@ -72,7 +76,7 @@ logic; leave `solutionKitsInstallService.ts` as an orchestration facade below
 are outside this leaf. Webhook retries and solution-kit operation application
 operate in bounded chunks without changing atomicity/idempotency.
 
-## Regression-Test Shape
+## Testing Requirements
 
 - Instrument DB executors and prove query counts are constant from 10 to 100k
   fixtures: dashboard/analytics `<= 8`, webhook retry selection `<= 3`, and

@@ -18,6 +18,10 @@ Create a Bun-free strict configuration owner for pool size, cluster connection
 budget, connect/idle/lifetime/query/lock/idle-in-transaction timeouts, and
 PgBouncer mode. It must not import `db/client` or create network connections.
 
+## Sub-Tasks
+
+None; this is an executable leaf.
+
 ## File Ownership
 
 **Allowlist:** `core/db/databaseConfig.ts` and
@@ -82,7 +86,7 @@ transaction mode maps to postgres.js `prepare: false`. Non-integers, overflow,
 negative values, unsafe timeout ordering, insufficient reserve, or zero
 operational headroom fail with machine-readable codes.
 
-## Regression-Test Shape
+## Testing Requirements
 
 - Default single replica resolves to pool 10 without exceeding a 103-connection
   server ceiling.

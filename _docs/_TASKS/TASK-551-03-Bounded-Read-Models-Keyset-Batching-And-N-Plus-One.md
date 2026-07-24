@@ -11,7 +11,7 @@
 
 ---
 
-## Objective
+## Overview
 
 Replace unbounded list reads, offset scans, repeated aggregate loops, and
 row-by-row writes with bounded read models, signed opaque keyset cursors,
@@ -19,7 +19,7 @@ set-based SQL, and chunked mutations. Preserve response authorization and cache
 contracts while separating oversized mixed-responsibility services before they
 receive new behavior.
 
-## Leaves and Strict Land Order
+## Sub-Tasks
 
 1. `TASK-551-03-L01` owns the Bun-free cursor and bounded-read contracts.
 2. `TASK-551-03-L02` consumes L01 plus the already-landed TASK-551-05 booking
@@ -68,9 +68,31 @@ editing and has sole ownership of every path in its allowlist.
 - Touched legacy modules above 1,000 physical lines are cohesively split first;
   every resulting human-authored production/test file is at most 1,000 lines.
 
-## Validation Rollup
+## Security Contract
+
+- Existing `/admin/api/*` collection routes remain internal with session auth,
+  current resource RBAC, CSRF on writes, existing admin read/write rate-limit
+  buckets, and strict reject-unknown schemas. Public booking retains its current
+  access evaluator, nonce/signature/CAPTCHA policy, and public-write bucket.
+- Authorization predicates are applied before cursor and limit processing.
+  Cursor material is scope-bound and tamper-evident but never grants access.
+- No route may read cursor secrets from `process.env`. TASK-551-03-L01 exports
+  exactly `loadPaginationCursorKeyring(env)`; TASK-551-08-L03 is the sole later
+  HTTP/development composition writer and calls it once before `prod.ts` starts
+  the lifecycle or accepts traffic, then injects the immutable keyring.
+- Errors and telemetry omit cursor payloads, SQL/binds, credentials, session
+  material, hidden columns, and PII.
+
+## Testing Requirements
 
 Each leaf runs its targeted tests plus `bun --cwd core lint:types` and
 `bun --cwd core lint`. After L03, run the exact DB integration/performance suites
-listed in the leaves and `bun run gates:coderso:perf`. Shared documentation and
-the single changelog entry remain owned by TASK-551-10-L02.
+listed in the leaves, `bun run gates:coderso`, `bun run gates:coderso:perf`, and
+the applicable security scan. L02 additionally completes its five-scenario
+visible-effect Playwright smoke in light and dark mode with zero console errors.
+
+## Documentation Updates Required
+
+No shared docs are edited here. Each leaf supplies its limits, cursor/startup,
+API, service-split, and validation handoff to TASK-551-10-L02, which owns shared
+documentation and the single changelog entry.

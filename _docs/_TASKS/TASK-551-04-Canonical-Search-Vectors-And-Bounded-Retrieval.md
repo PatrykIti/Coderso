@@ -11,7 +11,7 @@
 
 ---
 
-## Objective
+## Overview
 
 Replace expression-drifted, sequential, and unbounded search with one canonical
 stored/generated-vector contract already landed by TASK-551-05, deterministic
@@ -19,7 +19,7 @@ database rank/order/limits that consume its matching GIN/trigram indexes, and a
 bounded assistant candidate stage. Preserve search visibility, PII, and
 public-route policy without reopening schema or migration ownership.
 
-## Leaves and Strict Land Order
+## Sub-Tasks
 
 1. `TASK-551-04-L01` consumes TASK-551-05's canonical CMS generated columns and
    indexes, then owns current search services/routes and ranked query semantics.
@@ -56,9 +56,32 @@ that landed contract read-only.
 - Search results do not expose unpublished/unauthorized records, encrypted
   fields, hashes, or raw email except under the existing authorized admin rule.
 
-## Validation Rollup
+## Security Contract
+
+- `/admin/api/search` remains internal with session auth, current search RBAC,
+  the admin read rate-limit bucket, and strict reject-unknown validation. The
+  existing public search route remains read-only with its publication/
+  visibility filters and public-read limit; neither route adds a write or CSRF,
+  nonce/HMAC, or CAPTCHA requirement.
+- Query text is length-bounded and parameterized. Per-source authorization is
+  applied before candidate limits and ranking. Trigram fallback is enabled only
+  for a source whose TASK-551-05 evidence receipt proves its exact matching
+  index; there is no unindexed growing-table fallback.
+- Email remains hash-exact under existing authorized admin scope and is excluded
+  from vectors/trigram text. Logs/plans/errors omit query binds, private content,
+  emails/hashes, credentials, tokens, and customer payloads.
+
+## Testing Requirements
 
 Run both leaves' targeted Vitest, DB integration, and performance suites plus
 TASK-551-05's vector drift test read-only, then `bun run gates:coderso:perf`,
 `bun --cwd core lint:types`, and
-`bun --cwd core lint`. Shared docs and changelog 1263 remain TASK-551-10-L02.
+`bun --cwd core lint`. The search-history write-path test must prove zero inline
+retention SQL after L01; L06-L01 separately owns the new bounded retention
+service.
+
+## Documentation Updates Required
+
+No shared docs are edited here. L01/L02 hand exact vector/trigram columns,
+conditional-fallback evidence, limits, visibility, and plan results to
+TASK-551-10-L02; shared docs and changelog 1263 remain its sole ownership.

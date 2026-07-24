@@ -14,16 +14,18 @@ revision handoffs terminal; parent external dispatch gate
 
 ## Overview
 
-Adopt the local/Redis cache in the real public hot path, make an eligible warm
-HTML hit execute zero PostgreSQL queries, complete post-commit invalidation for
-all rendered dependencies, isolate Admin browser cache by identity/permissions,
-and prevent security settings from remaining indefinitely stale across
-replicas.
+Adopt the local/Redis cache in the real public hot path, make safely eligible
+non-visibility-gated warm HTML hits execute zero PostgreSQL queries, complete
+post-commit invalidation for all rendered dependencies, isolate Admin browser
+cache by identity/permissions, and keep decrypted security settings uncached and
+DB-authoritative.
 
 Public cache adoption inherits TASK-551-08's explicit bounded-eventual CAP
 contract, not linearizability: healthy worker poll <=250 ms, p99 invalidation
-target <=1 second, oldest pending >5 seconds degrades/alerts and enables bypass
-readiness, and policy TTL is the hard stale ceiling under global ambiguity.
+target <=1 second, and locally visible oldest-pending age `>5_000 ms`
+degrades/alerts and transitions runtime to forced value-cache bypass, skipping
+Redis GET/fill until proven recovery. Policy TTL is the hard stale ceiling only
+under remote ambiguity not locally known degraded.
 Admin preview/read-after-write bypasses until its event is observed. Security,
 auth, private/password and nonce-bearing data never use this eventual model.
 
@@ -31,7 +33,12 @@ auth, private/password and nonce-bearing data never use this eventual model.
 
 - `publicSite` resolves cache eligibility and canonical generations before any
   redirect/settings/theme/content DB lookup. An eligible HTML hit returns after
-  cache/middleware work with exactly zero PostgreSQL queries.
+  cache/middleware work with exactly zero PostgreSQL queries only for routes
+  whose visibility cannot mutate into private/password. Every generic
+  `content_entries` route first performs exactly one narrow indexed DB
+  visibility/version gate before any public cached value; a proven-public warm
+  hit then performs zero additional DB queries. Private/password/unknown gates
+  bypass shared values and remain fail closed.
 - The renderer records exact dependencies but maps them only to L01's finite
   site/family tags. Record ids/slugs/paths remain digested value-key input and
   never create generation keys. Uncertain linkage uses `site:all`.
@@ -42,19 +49,23 @@ auth, private/password and nonce-bearing data never use this eventual model.
   post/list/shell/site generations, persist Redis outbox within the mutation
   transaction and apply only after commit. Rollback/no-op emits nothing. A
   memory-generation failure installs a local family bypass fence immediately.
+  The plan/outbox itself contains only opaque event key plus finite tags; old/new
+  record/path identity never crosses that boundary.
 - Admin browser cache is independent from server cache and scoped by deployment,
-  authenticated identity and permission fingerprint/epoch. Security secrets
-  remain process-local only with at most a 1-second local TTL; Redis carries only
-  their generation tag and uncertainty always clears/bypasses to DB.
+  authenticated identity and permission fingerprint/auth epoch. Decrypted
+  `SecuritySettings` is never cached in-process, browser storage or Redis;
+  `getSecuritySettings` is DB-authoritative on every call. Redis may carry only
+  finite generation metadata for an explicitly typed redacted projection, and
+  v1 enables no such projection by default.
 
 ## Sub-Tasks
 
 | ID | Exclusive responsibility | Status |
 |---|---|---|
-| TASK-551-09-L01 | Public read models, dependency capture, cache-first ordering and zero-query warm hit | ⏳ To Do |
+| TASK-551-09-L01 | Public read models, dependency capture, zero-query safe routes and one-query mutable-visibility gates | ⏳ To Do |
 | TASK-551-09-L02 | Pages, entries, posts and current SEO post-commit invalidation | ⏳ To Do |
 | TASK-551-09-L03 | Menu/footer/theme/settings/redirect/form/list/detail dependencies and invalidation | ⏳ To Do |
-| TASK-551-09-L04 | Admin identity-scoped browser cache and cross-replica-safe local security-settings cache | ⏳ To Do |
+| TASK-551-09-L04 | Admin identity/epoch-scoped browser cache and uncached DB-authoritative security settings | ⏳ To Do |
 
 **Land order:** `TASK-551-09-L01 → L02 → L03 → L04`.
 
@@ -106,21 +117,35 @@ auth, private/password and nonce-bearing data never use this eventual model.
 
 ## Acceptance Criteria
 
-- Warm eligible public HTML performs exactly zero DB queries with byte-identical
-  output; cold and cache-disabled paths remain correct.
+- Warm safely eligible non-visibility-gated public HTML performs exactly zero DB
+  queries with byte-identical output. A mutable-visibility entry performs
+  exactly one narrow indexed visibility/version query and zero additional warm-
+  hit queries; private/password/unknown output never enters shared cache.
 - Update/delete/old-new slug plus page/entry/post/SEO/menu/footer/theme/settings/
   redirects/forms/list/detail dependencies select the complete finite family
   invalidation plan after commit in memory and two-client Redis modes.
 - Rollback/no-op and failed mutations do not invalidate; Redis failure after a
   durable commit does not turn API success into failure.
 - Healthy Redis invalidation meets <=250 ms polling and <=1 second p99 delivery;
-  >5-second backlog degrades/alerts and enables bypass readiness. Global
+  locally visible age `>5_000 ms` degrades/alerts and forces GET/fill bypass
+  until recovery. Global
   ambiguity may retain safe public bytes only to policy TTL and is never called
   linearizable or instant cross-replica invalidation.
 - Admin cache never hydrates across user or permission scope; storage/cacheBus
-  failure is best effort. Security cache is secret-local, generation-checked,
-  <=1-second-lived and DB-bypassed on any generation/transport uncertainty.
+  failure is best effort. Each auth epoch is a distinct namespace. Decrypted
+  security settings are never cached and every read remains DB-authoritative.
 - Every touched oversized module is split coherently below 1,000 lines before
   behavior is added.
+
+## Testing Requirements
+
+- Run every child leaf's named Vitest/Bun memory/Redis lane in land order, then
+  typecheck, lint, diff-check, and touched-file line counts.
+- Count safely eligible zero-query routes separately from mutable-visibility
+  entry routes requiring exactly one narrow gate query.
+- Redis is mandatory for distributed invalidation/lease tests; unavailable
+  infrastructure is a blocker, not a skipped passing gate.
+
+## Documentation Updates Required
 
 Full perf/fault/smoke/docs/closure and changelog 1263 remain with TASK-551-10.

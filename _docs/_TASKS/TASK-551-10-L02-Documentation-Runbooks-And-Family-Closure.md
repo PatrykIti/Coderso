@@ -27,6 +27,10 @@ that the receipts or current source cannot prove, closure stops and returns the
 issue to the exact owning leaf; L02 never changes product code or weakens copy to
 hide the gap.
 
+## Sub-Tasks
+
+None; this is the executable documentation and terminal-metadata closure leaf.
+
 ## Exact Single-Writer Ownership
 
 Final source-of-truth documentation:
@@ -37,6 +41,7 @@ Final source-of-truth documentation:
   its final bytes are re-read);
 - `README.md`;
 - `_docs/ARCHITECTURE.md`;
+- `_docs/CMS_API.md`;
 - `_docs/ORM_SPEC.md`;
 - `_docs/DATA_MODEL.md`;
 - `_docs/TESTING_STRATEGY.md`;
@@ -90,6 +95,13 @@ formatter that rewrites unrelated documentation.
   forward-fix runbooks;
 - frozen small/large fixture profiles, budget measurement method, current
   measured results, alert thresholds, and safe troubleshooting.
+- the initial and post-09 final TASK-551-01-L01 inventory phases, the final
+  exact-set receipt, and the rule that later callers never become artifact writers.
+
+`_docs/CMS_API.md` must document the shipped bounded Admin list query contracts:
+opaque cursor and limit fields, stable pagination/error semantics, narrow list
+projections, unchanged auth/RBAC/CSRF/rate-limit behavior, and the exact affected
+Admin endpoints from TASK-551-03-L02. It must not describe speculative routes.
 
 ### Server cache source of truth
 
@@ -114,11 +126,21 @@ formatter that rewrites unrelated documentation.
 - Admin post-write preview/readback cache bypass for read-after-write, while
   security/private/auth/draft/preview/nonce-bearing data remains fail-closed and
   DB-authoritative;
+- one narrow indexed visibility/version DB gate before cache for mutable-entry
+  routes, zero additional warm queries after a public result, and zero-query warm
+  behavior only for safely eligible non-gated routes;
+- TTL `0` as pre-policy/store bypass, positive TTL bounds, forced affected-family
+  bypass for locally known incoherence strictly above 5 seconds, and auth-epoch
+  namespace transitions;
+- decrypted/secret-bearing `SecuritySettings` as never cached and DB-authoritative,
+  with only finite generation/coherence metadata or typed redacted projections;
 - complete never-cache/security inventory and Admin browser-cache separation;
 - key/namespace rotation, Redis outage/reconnect, outbox backlog, corrupt value,
   stampede, deploy/rollback, incident response and exact-key cleanup runbooks;
 - measurable cache/query/invalidation metrics and the five two-process smoke
   scenarios.
+- the five TASK-551-03-L02 Admin-list visible-effect scenarios, light/dark
+  screenshots, and zero-console-error receipt alongside the infrastructure smoke.
 
 All other listed docs link to these owners and update only their relevant
 configuration, architecture, data model, security, cache-map, testing, gate, or
@@ -190,6 +212,12 @@ async function closeTask551Metadata(input: ClosureReceipts): Promise<void> {
     leafDistribution: [2, 2, 3, 2, 2, 3, 2, 3, 4, 2, 0],
   });
   requireCurrentPassingReceipts(input, graph);
+  requireCurrentFinalQueryInventoryReceipt(input.queryInventory, {
+    phase: "final", plannedDeltaCount: 0,
+  });
+  requireAdminListUiSmokeReceipt(input.adminListUiSmoke, {
+    scenarioCount: 5, themes: ["light", "dark"], consoleErrors: 0,
+  });
   requireNoUnresolvedFindings(input.finalDrift);
   requireEveryDocumentMatchesCurrentSource(input.docs);
 
@@ -222,6 +250,17 @@ leaf distribution, changelog coverage before terminal status, child-before-paren
 closure, one board row move, computed `-37/+37` statistics delta, one 1263 index
 row, next-free reservation preservation, status-only task edits, and refusal on
 stale/concurrent index bytes.
+
+## Testing Requirements
+
+- Consume the current green L01 aggregate, Redis, and Admin-list UI-smoke
+  receipts plus TASK-551-01-L01's fresh final exact-set inventory receipt.
+- Validate all links/configuration/API tables against current source and reject
+  any undocumented or speculative endpoint behavior.
+- Run the workflow graph/status/changelog checks, link checker, lint/type checks,
+  diff check, and complete touched production/test line-count gate below.
+- Do not write terminal metadata when any receipt is stale, skipped, malformed,
+  missing a screenshot/theme, or carries a console error or unresolved finding.
 
 ## Exact Validation Commands
 

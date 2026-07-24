@@ -6,7 +6,8 @@
 **Category:** Performance / Reliability / Security / Documentation / Closure
 **Estimated Effort:** Very Large
 **Dependencies:** TASK-551-01 through TASK-551-09 landed in declared order with
-their targeted gates green; TASK-551-11 authoring-audit PASS and post-audit
+their targeted gates green; TASK-551-01-L01 re-dispatched after 09 with a fresh
+exact-set `phase: "final"` receipt; TASK-551-11 authoring-audit PASS and post-audit
 handoffs; parent external dispatch gate reverified for TASK-511, TASK-493,
 TASK-517, and TASK-518
 **Status:** ⏳ To Do
@@ -20,8 +21,9 @@ Prove the complete database/query/cache program against frozen small- and
 large-data budgets, real PostgreSQL, the memory backend, and a real Redis 7.2+
 service used by two independent Coderso processes. Exercise fault, security,
 reliability, migration, invalidation, and stampede behavior; publish the
-operational documentation; then close every TASK-551 descendant in terminal
-order under changelog 1263.
+operational documentation; consume and re-prove the TASK-551-03-L02 five-scenario
+Admin-list visible-effect smoke in light and dark mode; then close every TASK-551
+descendant in terminal order under changelog 1263.
 
 This child is acceptance and closure only. It must not repair or reopen a
 production contract owned by TASK-551-01..09. A failed budget, security
@@ -32,8 +34,9 @@ gate before this child restarts the affected aggregate gate.
 ## Child Boundary
 
 - **TASK-551-10-L01** exclusively owns aggregate load/fault/security/reliability
-  harnesses, release-gate wiring, the CI Redis service contract, and final
-  runtime-smoke evidence.
+  harnesses, release-gate wiring, the CI Redis service contract, final Redis
+  runtime-smoke evidence, and the final receipt/screenshots for the TASK-551-03-L02
+  Playwright visible-effect smoke. It does not edit the 03-L02 product surfaces.
 - **TASK-551-10-L02** exclusively owns final source-of-truth docs, deployment
   runbooks, `.env.example` after TASK-511's env writer is terminal, changelog
   1263, TASK-551 status-only transitions, and the TASK-551 board/statistics
@@ -50,9 +53,12 @@ gate before this child restarts the affected aggregate gate.
 
 Immediately before L01 runs and again before L02 closes:
 
-1. Read every physical TASK-551 file, the live query-ownership inventory,
-   current HEAD, complete dirty status/diff, migration journal, and all
-   TASK-551-01..09 gate receipts.
+1. Read every physical TASK-551 file, current HEAD, complete dirty status/diff,
+   migration journal, and all TASK-551-01..09 gate receipts. Require the sole-owned
+   query inventory's current receipt to be `phase: "final"`, produced by the
+   post-09 TASK-551-01-L01 re-dispatch, exact-set equal to the current production
+   callers, digest-current, and free of planned deltas. An initial, stale, missing,
+   or later-leaf-written receipt blocks L01.
 2. Re-read TASK-511. Terminal is the default. If it remains active, require the
    same fresh exact serialized parent-gate handoff that already proved all
    schema/journal/env/publicSite/entry/SEO/import/lifecycle source and test paths
@@ -70,6 +76,10 @@ Immediately before L01 runs and again before L02 closes:
 5. Re-read TASK-518 plus `core/db/migrations/meta/_journal.json`. Prove all
    TASK-551 migration numbers were allocated from fresh state and that the
    stable-admin-role migration, if landed, has no ordering or snapshot collision.
+6. Run TASK-551-03-L02's five exact Admin-list Playwright scenarios from a fresh
+   server in task session `wf55103l02`. Require visible DOM/geometry/ARIA effects,
+   both light and dark mode, one screenshot per scenario per mode, and zero console
+   errors; then validate the strict UI-smoke receipt before aggregate acceptance.
 
 An active handoff is not a false green: it must be the parent's fresh exact
 all-path serialized handoff with one named owner, exact bytes/paths/tests,
@@ -82,19 +92,24 @@ security, persistence, migration, or test-integrity residual.
 - Both frozen fixture profiles from TASK-551-01 pass their exact non-weakened
   p50/p95/p99, rows-read/returned, query-count, pool-wait, cache-byte, hit/miss,
   coalescing, and invalidation-lag budgets.
-- Warm eligible public HTML reads execute exactly zero PostgreSQL queries;
-  cold/miss/bypass paths remain bounded and authoritative.
+- Warm safely eligible non-gated public HTML reads execute exactly zero
+  PostgreSQL queries. Mutable-visibility entry routes execute exactly one narrow
+  indexed visibility/version DB gate before any cache value and zero additional
+  warm-hit queries; unknown/private/password/unpublished gates fail closed and a
+  public→restricted transition never returns the primed public body.
 - Public Redis cache consistency is bounded-eventual, never linearizable.
   Globally unavailable Redis makes both processes bypass to PostgreSQL/render.
   Ambiguous/partial generation delivery may expose only safe public old-generation
   data until outbox delivery or measured hard TTL expiry. Worker poll is at most
   250 ms, healthy invalidation lag is p99 at most 1 second, and locally known
-  incoherence/backlog older than 5 seconds alerts, degrades readiness, and bypasses
-  cache where the barrier is visible. Public HTML TTL is at most 600 seconds and
+  incoherence/backlog strictly above 5 seconds alerts, degrades readiness, and
+  forces affected-family bypass until recovery. Public HTML TTL is at most 600 seconds and
   no server-cache policy exceeds 3,600 seconds.
 - Admin post-write preview/readback bypasses shared public cache for read-after-
   write. Private/password, auth/RBAC, security, draft/preview, and nonce-bearing
   data remain fail-closed and DB-authoritative under every outage state.
+  Decrypted/secret-bearing `SecuritySettings` is never cached; only finite
+  generation/coherence metadata and explicitly typed redacted projections qualify.
 - Memory and Redis backends pass the same envelope, TTL, expiry, oversize,
   malformed-value, generation, invalidation, and loader-result semantics.
 - Commit, rollback, no-op, old/new slug, delete, dependency fan-out, outbox
@@ -110,6 +125,9 @@ security, persistence, migration, or test-integrity residual.
   unsafe task-owned table truncation or broad Redis cleanup.
 - At least five distinct real-flow scenarios run through two independent app
   processes and one real Redis service; an in-memory mock does not qualify.
+- The five ordered TASK-551-03-L02 Admin-list scenarios run through real Admin UI
+  flows in both themes, assert visible effects, produce ten human-review
+  screenshots, and report zero console errors.
 - Full Bun, Vitest, precommit, release, strict security, task-graph, diff, and
   touched-file line-count gates pass with no required skip.
 
@@ -167,6 +185,23 @@ type Task551RedisSmokeEvidenceV1 = Readonly<{
   screenshots: readonly []; // non-UI smoke; leaf-specific UI smoke remains owned elsewhere
   failures: readonly string[];
 }>;
+
+type Task551AdminListUiSmokeEvidenceV1 = Readonly<{
+  schema: "coderso.task551.admin-list-ui-smoke@v1";
+  pass: boolean;
+  session: "wf55103l02";
+  scenarios: readonly {
+    id: "pagination-next-previous" | "filter-reset" |
+      "equal-sort-boundary" | "booking-dirty-refresh" |
+      "extracted-views";
+    pass: boolean;
+    themes: readonly ["light", "dark"];
+    visibleEffectAssertions: readonly string[];
+    screenshots: readonly [string, string];
+  }[]; // exactly the five union members above, in declaration order
+  consoleErrors: readonly [];
+  failures: readonly string[];
+}>;
 ```
 
 Raw environment values, connection strings, Redis keys, cached bodies, SQL/bind
@@ -208,7 +243,13 @@ async function closeTask551Family(): Promise<void> {
   const handoffs = await verifyCurrentCollisionOwnerHandoffs([
     "TASK-511", "TASK-517", "TASK-493", "TASK-518",
   ]);
-  const aggregate = await dispatchTask55110L01({ handoffs });
+  const finalInventory = await requireCurrentFinalQueryInventoryReceipt();
+  const adminListUiSmoke = await runAndValidateTask55103L02UiSmoke({
+    session: "wf55103l02", themes: ["light", "dark"], scenarioCount: 5,
+  });
+  const aggregate = await dispatchTask55110L01({
+    handoffs, finalInventory, adminListUiSmoke,
+  });
   requireAggregateGatePass(aggregate);
 
   const postAudit = await task551Sidecar.runFreshPostAuditLenses();
@@ -224,8 +265,9 @@ async function closeTask551Family(): Promise<void> {
 }
 ```
 
-**Data flow:** frozen budgets/inventory + landed receipts + current task/handoff
-state → aggregate Bun/DB/Redis/security/reliability/full gates → five-lens
+**Data flow:** frozen budgets + fresh post-09 exact inventory receipt + landed
+receipts + current task/handoff state + five-scenario Admin UI smoke → aggregate
+Bun/DB/Redis/security/reliability/full gates → five-lens
 post-audit → exact owner fixes and affected reruns if needed → fresh final
 drift → docs/changelog/status/board closeout.
 
@@ -243,6 +285,8 @@ clean scoped teardown, and release-gate registration.
 
 - All exact commands from TASK-551-10-L01.
 - Workflow/audit/task-graph commands from TASK-551-11.
+- Validate the exact `Task551AdminListUiSmokeEvidenceV1` receipt, ten non-empty
+  screenshot files, both themes per scenario, and an empty console-error array.
 - `git diff --check` and physical-line counts for every file added or modified
   since the verified TASK-551 family baseline.
 - No terminal metadata write until every required receipt is current and green.

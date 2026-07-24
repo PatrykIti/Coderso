@@ -21,11 +21,15 @@ time/work budgets, expose sanitized
 recovery telemetry, and report when table size/churn justifies a future
 partition migration. This leaf does not create partitions.
 
+## Sub-Tasks
+
+None; this is an executable leaf.
+
 ## Exact File Ownership
 
 **Production/tooling:** `core/services/maintenance/retentionJobService.ts`,
 `core/services/maintenance/partitionReadinessService.ts`,
-`core/server/jobs/retentionScheduler.ts`, `core/server/dockerStart.ts`, and
+`core/server/jobs/retentionScheduler.ts`, and
 `scripts/task-551-partition-readiness.ts`.
 
 **Tests:** `tests/vitest/maintenance/partitionReadinessService.test.ts`,
@@ -39,13 +43,15 @@ or supplies the only accepted fresh exact serialized handoff; its
 `core/server/jobs/backupScheduler.ts` and `core/services/backups/**` remain
 forbidden. L01/L02 services are consumers/read-only. `httpServer.ts`, DB client,
 schema/migrations, cache, TASK-493/TASK-517/TASK-518, task/changelog/workflow
-files are forbidden.
+files are forbidden. `core/server/dockerStart.ts`, `core/server/prod.ts`, and
+all HTTP/development composition files are also forbidden. TASK-551-08-L03 is
+their sole later composition writer and consumes this leaf's exported factory.
 
 ## Implementation Pseudocode
 
 ```ts
 async function runRetentionPlan(now: Date, deps: JobDeps): Promise<JobSummary> {
-  return deps.withDedicatedSession(async lockSession => {
+  return withDedicatedDatabaseSession(async lockSession => {
     const locked = await trySessionAdvisoryLock(lockSession, RETENTION_JOB_LOCK_ID);
     if (!locked) return { status: "skipped_locked", families: [] };
     try {
@@ -60,9 +66,17 @@ async function runRetentionPlan(now: Date, deps: JobDeps): Promise<JobSummary> {
   });
 }
 
-function startRetentionScheduler(deps: SchedulerDeps): StopScheduler {
+async function startRetentionScheduler(deps: SchedulerDeps): Promise<SchedulerController> {
   // Environment gated; no overlapping local ticks; unref timer; catch/redact;
-  // initial jitter, fixed bounded interval, graceful stop/test reset.
+  // initial jitter, fixed bounded interval, graceful stop-and-drain/test reset.
+}
+
+export function createRetentionSchedulerLifecycleParticipant(
+  deps: SchedulerDeps
+): RuntimeLifecycleParticipant {
+  // Return fixed { id: "retention-scheduler", phase: "worker" }.
+  // start is awaited/idempotent; close stops new ticks and awaits the in-flight
+  // run exactly once. This function registers nothing by itself.
 }
 
 async function inspectPartitionReadiness(db: Db): Promise<PartitionReadinessReport> {
@@ -71,10 +85,17 @@ async function inspectPartitionReadiness(db: Db): Promise<PartitionReadinessRepo
 }
 ```
 
-`dockerStart.ts` registers the scheduler in TASK-551-02's exact
-`registerRuntimeLifecycleParticipant` worker phase; startup is awaited after DB/cache and
-shutdown is awaited before cache/Redis/DB. Disabled/test environments do not
-schedule. Exact variables are `RETENTION_SCHEDULER_ENABLED` (default false),
+`core/db/client.ts` supplies exactly `DedicatedDatabaseSession` and
+`withDedicatedDatabaseSession<T>(run)` from TASK-551-02-L02; this leaf must not
+invent a second reserve/release helper. TASK-551-08-L03 alone calls
+`registerRuntimeLifecycleParticipant(createRetentionSchedulerLifecycleParticipant(deps))`
+from its sole HTTP/development composition, alongside the existing
+`startBackupScheduler`/`stopBackupScheduler` adapter and cursor/cache startup.
+The fixed participant ID is `retention-scheduler`, phase is `worker`, startup is
+awaited after database/cache, and close stops new ticks then drains the current
+run before cache/Redis/DB close. This leaf edits no composition or backup source,
+registers nothing by itself, and installs no signal handler. Disabled/test
+environments do not schedule. Exact variables are `RETENTION_SCHEDULER_ENABLED` (default false),
 `RETENTION_SCHEDULER_INTERVAL_MS` (86,400,000; `60,000..604,800,000`),
 `RETENTION_SCHEDULER_INITIAL_JITTER_MS` (30,000; `0..300,000` and no greater
 than interval), and `RETENTION_SCHEDULER_MAX_RUN_MS` (300,000;
@@ -96,18 +117,22 @@ separate task with online migration, dual-write/backfill validation, rollback,
 backup/restore, and retention integration; it executes zero CREATE/ATTACH/
 DETACH/DROP/TRUNCATE statements.
 
-## Regression-Test Shape
+## Testing Requirements
 
 - Fake-clock scheduler covers disabled/enabled, startup jitter, interval,
   non-overlapping local ticks, unref/stop, synchronous/async failure, and
   sanitized logs.
 - Lifecycle integration imports only `registerRuntimeLifecycleParticipant`,
-  `startRuntimeLifecycle`, and `closeRuntimeLifecycle`; it proves no second
-  signal owner and exact worker-before-cache-before-database close ordering.
+  the runtime lifecycle type/API, and this leaf's factory. It proves the factory
+  returns fixed ID/phase, registers nothing itself, has awaited/idempotent start
+  and close, drains an in-flight run, adds no signal owner, and preserves exact
+  worker-before-cache-before-database close ordering when 08-style composition
+  registers it.
 - Two independent scheduler instances against one DB tick simultaneously;
-  exactly one reserves a connection, obtains the session lock, and runs; the
-  other reports `skipped_locked`. Connection loss aborts before another batch,
-  releases the server-side lock, and the next tick succeeds.
+  both acquire and release exactly one dedicated session to attempt the lock;
+  exactly one obtains it and runs while the other reports `skipped_locked`.
+  Pool active count returns to baseline. Connection loss aborts before another
+  batch, releases the server-side lock, and the next tick succeeds.
 - Inject family failure and deadline exhaustion; committed batch semantics,
   high-water marks, remaining families, and retry are deterministic.
 - Prove each completed batch commits independently, there is no outer
@@ -128,8 +153,9 @@ DETACH/DROP/TRUNCATE statements.
 - Metrics/logs/report contain family/table identifiers, aggregate counts/sizes,
   timings, status, and redacted errors only—never row samples, PII, content,
   SQL binds, URLs, credentials, tokens, hashes, or secrets.
-- Failure cannot disable public anti-abuse, auth/session checks, backups, or
-  request handling; scheduler startup is non-fatal after configuration validates.
+- Invalid scheduler configuration fails before traffic. A later scheduled job
+  failure is contained, cannot disable public anti-abuse, auth/session checks,
+  backups, or request handling, and is retried on the next eligible tick.
 
 ## Validation Commands
 
@@ -140,16 +166,19 @@ DETACH/DROP/TRUNCATE statements.
 - `bun --cwd core lint`
 - `bun run gates:coderso`
 - `bun run gates:coderso:perf`
+- `bun run scan:security`
 
 ## Documentation Updates Required
 
-No shared docs. Give TASK-551-10-L02 the complete env/default table, scheduler
-runbook, lock/outage/retry/recovery steps, metrics, and partition decision report.
+No shared docs. Give TASK-551-10-L02 the complete env/default table, exact
+participant/dedicated-session handoff, scheduler runbook, lock/outage/retry/
+recovery steps, metrics, and partition decision report.
 
 ## Quantified Acceptance
 
 - Two replicas produce exactly one active job per tick; local overlapping ticks
-  are zero and lock release/recovery succeeds on the next eligible tick.
+  are zero, both lock attempts release their dedicated sessions, pool use returns
+  to baseline, and lock release/recovery succeeds on the next eligible tick.
 - A run deletes at most the sum of explicit family budgets, respects the maximum
   runtime within one in-flight batch, and issues no unbounded DELETE.
 - Scheduler failure leaks zero sensitive values and never prevents server start,

@@ -51,19 +51,26 @@ path. Agents never stage or commit. The repository owner owns commits.
 The workflow requires exactly 37 TASK-551 files: one parent, 11 children, and 25
 leaves distributed `2,2,3,2,2,3,2,3,4,2,0`. Missing, duplicate, extra,
 misnamed, wrong-H1, wrong-FileName, wrong-parent, noncanonical status, or
-non-1263 task metadata fails before implementation.
+non-1263 task metadata fails before implementation. Every file must contain each
+literal level-two heading exactly once: `Overview`, `Sub-Tasks`,
+`Testing Requirements`, and `Documentation Updates Required`.
 
 TASK-551-11 runs throughout, while product children execute strictly:
 
 ```text
-01 → 02 → 05 → 03 → 04 → 06 → 07 → 08 → 09 → 10-L01
+01 (including L01 initial inventory) → 02 → 05 → 03 → 04 → 06 → 07 → 08 → 09
+→ re-dispatch 01-L01 final exact-set refresh → 10-L01
 → post-audit/fixes/affected gates → fresh aggregate/full gates and Redis smoke
 → final drift → 10-L02 docs/changelog/status/board closure
 ```
 
-Within each child, leaves run numerically. The workflow loads the ownership
-matrix frozen by TASK-551-01 and rejects any overlapping writer or undeclared
-changed path. It re-reads shared bytes immediately before dispatch.
+Within each child, leaves run numerically. TASK-551-01-L01 remains the sole
+inventory-artifact writer in both dispatches; no later leaf edits its files.
+The workflow loads the initial receipt for implementation, re-dispatches L01
+after 09, then requires the replacement `phase: "final"` receipt to match the
+current production caller set with zero planned deltas before 10-L01. It rejects
+any overlapping writer or undeclared changed path and re-reads shared bytes
+immediately before dispatch.
 
 ## Authoring Drift-Audit Contract
 
@@ -75,7 +82,8 @@ Before any product implementation:
 2. Authors write only their assigned task contract. Every executable leaf must
    include exact ownership/forbidden paths, helper/function pseudocode, data flow,
    error handling, regression shape, security contract, DB/Redis fixture safety,
-   and correct commands.
+   and correct commands. Every one of the 37 files must contain the four literal
+   required level-two headings validated above.
 3. Run at least five sequential rounds. Each round dispatches one read-only
    per-file audit for every one of the 37 files plus exactly one cross-file
    reconcile audit.
@@ -91,6 +99,14 @@ The reconcile checks only cross-file contradictions: exact writer/forbidden
 paths, shared type/helper/error/schema/key/tag/env names, clamp/budget values,
 test/evidence paths, migration ownership, fixture profiles, Redis behavior,
 TASK-511/517/493/518 handoffs, land order, 37-file graph, and changelog 1263.
+It explicitly pins `withDedicatedDatabaseSession`, `PaginationCursorKeyring`,
+`loadPaginationCursorKeyring`, `createRetentionSchedulerLifecycleParticipant`,
+and `registerComposedHttpRuntimeParticipants`; 02 owns registry/prod, 03 owns
+cursor types/loading, 06 owns retention participation without `dockerStart.ts`,
+and 08-L03 alone composes cache/retention/existing-backup/cursor startup through
+`httpServer.ts`/`dev.ts` without editing `backupScheduler.ts`. It also reconciles
+TTL-0 pre-store bypass, positive TTL bounds, forced bypass above 5 seconds,
+mutable-visibility one-query gates, auth epochs, and never-cached secret settings.
 
 Any task/source/test/gate/doc contract change after the PASS invalidates that
 PASS for the changed contract and requires fresh affected-file audits plus a
@@ -113,16 +129,23 @@ fresh reconcile before dispatch.
 - Before any migration leaf, require a fresh journal read and exact migration
   writer. Before TASK-551-09 public runtime dispatch, require TASK-517's relevant
   writer terminal and read current bytes.
+- After TASK-551-09 targeted gates pass, re-dispatch TASK-551-01-L01 alone in
+  final phase. Require a current source-tree digest, exact discovered/fixture set
+  equality, zero planned deltas, and a `phase: "final"` receipt. Only then dispatch
+  TASK-551-10-L01; 10-L01 consumes and never edits the inventory artifacts.
 - At the initial and final collision gates, classify TASK-511, TASK-493,
   TASK-517, and TASK-518 as terminal verified or covered by that one exact
   serialized all-path handoff. A narrower or stale assumed state blocks.
-- TASK-551-10-L01 runs the aggregate gate only after 01..09 targeted receipts are
-  current. Required DB/Redis absence is a failure, not a skip.
+- TASK-551-10-L01 runs the aggregate gate only after 01..09 targeted receipts and
+  the final inventory receipt are current. It also consumes the five-scenario
+  TASK-551-03-L02 visible-effect UI smoke in light/dark with ten screenshots and
+  zero console errors. Required DB/Redis/UI infrastructure absence is a failure,
+  not a skip.
 
 ## Post-Audit and Final Drift
 
-After 01..09 and the initial L01 aggregate gate, dispatch exactly five fresh
-read-only post-audit lenses:
+After 01..09, the final inventory refresh, and the initial L01 aggregate/UI/Redis
+smoke gate, dispatch exactly five fresh read-only post-audit lenses:
 
 1. `scope-query-inventory` — every DB caller has one disposition/writer; bounded
    projections, pagination/search/aggregate and active handoffs are complete.
@@ -240,7 +263,10 @@ type Task551WorkflowResultV1 = Readonly<{
     changedPaths: readonly string[]; gateIds: readonly string[] }[];
   postAudit: Task551PostAuditEvidenceV1;
   finalDrift: Task551AuditResultV1;
-  runtimeEvidenceSha256: string;
+  runtimeEvidenceSha256: Readonly<{
+    redis: string;
+    adminListUi: string;
+  }>;
   errors: readonly string[];
 }>;
 ```
@@ -291,9 +317,13 @@ async function runTask551Workflow(): Promise<Task551WorkflowResultV1> {
   const finalReconcile = requireClean(await runFreshFinalReconcile(graph));
 
   const implementationReceipts = [];
-  for (const leaf of graph.productLeavesInOrder) {
+  for (const leaf of graph.productLeavesThrough09InOrder) {
     implementationReceipts.push(await dispatchLeafAndRequireTargetedGates(leaf));
   }
+  implementationReceipts.push(await dispatchLeafAndRequireTargetedGates(
+    graph.task55101L01, { phase: "final", requireCurrentExactSet: true }
+  ));
+  requireCurrentFinalInventoryReceipt(implementationReceipts.at(-1));
   const initialAggregate = await dispatchTask55110L01();
   const postAudit = await runFivePostAuditLenses(initialAggregate);
   if (!postAudit.pass) await fixExactOwnersOnceAndRerunAffectedThenAggregate(postAudit);
@@ -307,8 +337,9 @@ async function runTask551Workflow(): Promise<Task551WorkflowResultV1> {
 
 **Data flow:** HEAD/status/diff + docs/source/tests/current task state → grounded
 research/authors → five complete audit/reconcile/fix rounds → final reconcile
-→ sequential leaf implementation and targeted gates → L01 aggregate gate →
-five post-audit lenses/fixes/reruns → fresh final drift → L02 closeout.
+→ sequential implementation through 09 and targeted gates → final 01-L01
+inventory refresh → L01 aggregate plus Admin UI/Redis smoke gate → five post-
+audit lenses/fixes/reruns → fresh final drift → L02 closeout.
 
 **Error handling:** missing/malformed result, false clean, stale audit, ownership
 violation, unexpected changed path, failed/required-skipped gate, invalid
@@ -318,14 +349,28 @@ from an incomplete prior run.
 
 **Regression-test shape:** workflow tests assert exact 37-file graph and leaf
 distribution, five sequential rounds, 37/37 per-file results plus one reconcile
-per round, final reconcile, strict land order, per-leaf gate/fix cap, collision
+per round, all four required headings, final reconcile, strict land order plus
+the post-09 L01 final refresh, per-leaf gate/fix cap, collision
 owner verification, forbidden-path enforcement, five post-audit lenses, L01
-Redis evidence hash verification, L02-only metadata authority, structured schema
-rejection, and non-zero failure on every false-clean condition.
+Redis and Admin-list UI evidence hash verification, L02-only metadata authority,
+structured schema rejection, and non-zero failure on every false-clean condition.
 
 ## Sub-Tasks
 
 - None. This is the workflow/audit sidecar and intentionally has no product leaf.
+
+## Testing Requirements
+
+- Validate the exact 37-file membership, H1, `# FileName`, parent fields,
+  canonical status, changelog 1263, child/leaf distribution, and all four literal
+  required headings before accepting author output or final reconcile.
+- Require five complete 37/37 rounds plus one reconcile each, exact structured
+  result shapes, and a fresh zero-finding final reconcile.
+- Test the initial and post-09 final TASK-551-01-L01 dispatches, zero planned
+  deltas in the final receipt, strict 01→02→05→03→04→06→07→08→09→refresh→10
+  order, and failure on a missing/stale refresh.
+- Validate both Redis and Admin-list UI smoke hashes, five UI scenarios in both
+  themes, ten screenshots, and zero console errors before L02 dispatch.
 
 ## Exact Validation Commands
 

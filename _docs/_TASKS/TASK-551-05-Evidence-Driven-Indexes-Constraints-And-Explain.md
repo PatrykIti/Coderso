@@ -11,7 +11,7 @@
 
 ---
 
-## Objective
+## Overview
 
 Split the oversized schema by cohesive domain, own the realizable canonical
 search vectors, add the cache invalidation outbox schema required later by
@@ -20,7 +20,7 @@ query inventory and sanitized plans. Prove read gains, bounded write cost,
 constraint behavior, and clean/prior migration paths without rewriting service
 queries owned by other subtasks.
 
-## Leaves and Strict Land Order
+## Sub-Tasks
 
 1. `TASK-551-05-L01` is the sole TASK-551 schema/migration writer. It splits
    schema first, preserves all exports/DDL, then adds canonical local search
@@ -60,6 +60,15 @@ the seven local-table search-vector contracts, cache invalidation outbox,
 keyset-list composites, reverse-FK/cutoff indexes, revision parent/version
 uniqueness, and non-overlapping active booking windows.
 
+The five trigram candidates are pinned end-to-end: pages, content entries,
+posts, media, and users each use a stored `search_trigram_text` column plus the
+exact `*_search_trigram_idx` GIN/`gin_trgm_ops` name defined in L01. Each column
+and index lands atomically only when L01's pre-DDL frozen-plan/write evidence
+selects it. L02 independently verifies every selected member; a failure returns
+to L01 contract remediation and blocks TASK-551-04 rather than silently changing
+the set. The exported closed contract records selected versus `null` for all five
+sources; TASK-551-04 may run fallback only for a selected, L02-verified member.
+
 ## Shared Acceptance
 
 - `core/db/schema.ts` becomes a stable re-export barrel and every resulting
@@ -81,9 +90,17 @@ uniqueness, and non-overlapping active booking windows.
 - Representative write p95 regression is at most 20% and storage growth is
   reported per index; worse candidates require explicit tradeoff approval.
 
-## Validation Rollup
+## Testing Requirements
 
 Run both leaves' exact DB/migration/performance suites, a fresh `bun run
 db:generate` zero-drift check, `bun run gates:coderso:perf`, `bun --cwd core
-lint:types`, and `bun --cwd core lint`. TASK-551-10-L02 owns shared docs and
-changelog 1263.
+lint:types`, and `bun --cwd core lint`. Catalog/plan tests require byte-equivalent
+trigram normalization, exact column/index/opclass identity, and conditional-
+fallback selection-receipt coverage.
+
+## Documentation Updates Required
+
+No shared docs are edited here. Supply the schema split, migration, exact FTS/
+trigram contracts, selection receipt, constraints, plans, write/storage cost,
+and recovery handoff to TASK-551-10-L02, which owns shared docs and changelog
+1263.
