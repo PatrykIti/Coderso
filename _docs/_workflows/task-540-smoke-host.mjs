@@ -6,6 +6,15 @@ import { performance } from "node:perf_hooks";
 import { setTimeout as delay } from "node:timers/promises";
 import { pathToFileURL } from "node:url";
 
+import {
+  ALLOWED_ENV_KEYS,
+  FIXED_ENV,
+  OPTIONAL_INHERITED_ENV,
+  OPTIONAL_REPO_ENV,
+  REQUIRED_INHERITED_ENV,
+  REQUIRED_REPO_ENV,
+} from "./task-540-smoke/host/environment.mjs";
+
 const PORTS = Object.freeze([3000, 5173, 5174]);
 const READY_TIMEOUT_MS = 360_000;
 const STOP_TIMEOUT_MS = 15_000;
@@ -15,81 +24,6 @@ const CHILD_READY_MARKERS = Object.freeze({
   admin: "WF540_ADMIN_READY_V1\n",
   site: "WF540_SITE_READY_V1\n",
 });
-
-const REQUIRED_INHERITED_ENV = Object.freeze(["PATH"]);
-const OPTIONAL_INHERITED_ENV = Object.freeze([
-  "HOME",
-  "USER",
-  "LOGNAME",
-  "SHELL",
-  "TMPDIR",
-  "TMP",
-  "TEMP",
-  "LANG",
-  "LC_ALL",
-  "LC_CTYPE",
-  "TZ",
-  "TERM",
-  "COLORTERM",
-  "NO_COLOR",
-  "FORCE_COLOR",
-  "XDG_CONFIG_HOME",
-  "XDG_CACHE_HOME",
-  "XDG_DATA_HOME",
-  "DISPLAY",
-  "WAYLAND_DISPLAY",
-  "XAUTHORITY",
-  "DBUS_SESSION_BUS_ADDRESS",
-]);
-const REQUIRED_REPO_ENV = Object.freeze([
-  "DATABASE_URL",
-  "PII_HASH_KEY",
-  "PII_ENC_KEY",
-  "MEDIA_SECRET_MASTER_KEY",
-]);
-const OPTIONAL_REPO_ENV = Object.freeze([
-  "CORE_VERSION",
-  "DB_POOL_MAX",
-  "AUTH_PASSWORD_PEPPER",
-  "ANALYTICS_IP_HASH_SECRET",
-  "FORM_SUBMIT_NONCE_SECRET",
-  "FORM_SUBMIT_NONCE_TTL_MINUTES",
-  "ANALYTICS_BEACON_NONCE_SECRET",
-  "ANALYTICS_BEACON_NONCE_TTL_MINUTES",
-  "MEDIA_BASE_URL",
-  "MEDIA_ALLOWED_MIME",
-  "MEDIA_MAX_SIZE_BYTES",
-  "EMAIL_TRANSPORT",
-  "THEMES_DIR",
-  "PLUGINS_RUNTIME_DIR",
-  "PLUGINS_SAFE_MODE",
-  "PLUGIN_UPDATE_MODE",
-  "PLUGIN_ERROR_THRESHOLD",
-  "PLUGIN_TIMEOUT_MS",
-  "PLUGIN_DOWNLOAD_TIMEOUT_MS",
-  "PLUGIN_MAX_SIZE_MB",
-  "STORE_BASE_URL",
-  "STORE_PUBLIC_KEY",
-]);
-const FIXED_ENV = Object.freeze({
-  PORT: "3000",
-  PUBLIC_BASE_URL: "http://coderso-a.localhost:3000",
-  NODE_ENV: "development",
-  COOKIE_SECURE: "false",
-  VITE_DEV_SERVER_URL: "http://127.0.0.1:5173",
-  VITE_SITE_DEV_SERVER_URL: "http://127.0.0.1:5174",
-  VITE_API_ORIGIN: "http://127.0.0.1:3000",
-  VITE_ADMIN_STRICT_MODE: "false",
-  CODERSO_PUBLIC_VITE_DEV_URL: "http://coderso-a.localhost:5173",
-  CI: "true",
-});
-const ALLOWED_ENV_KEYS = Object.freeze([
-  ...REQUIRED_INHERITED_ENV,
-  ...OPTIONAL_INHERITED_ENV,
-  ...REQUIRED_REPO_ENV,
-  ...OPTIONAL_REPO_ENV,
-  ...Object.keys(FIXED_ENV),
-]);
 
 async function settleViteReadiness(server, readinessUrls, failureCode) {
   const fail = () => {
