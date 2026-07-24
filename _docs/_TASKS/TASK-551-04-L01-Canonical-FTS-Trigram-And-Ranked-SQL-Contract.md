@@ -6,7 +6,8 @@
 **Priority:** Critical
 **Category:** Database / Search / Performance
 **Estimated Effort:** Large
-**Dependencies:** TASK-551-03-L03, TASK-551-06-L03
+**Dependencies:** TASK-551-03-L03, TASK-551-06-L03, and the
+TASK-551-09-L04 INITIAL Admin-authority receipt
 **Status:** ⏳ To Do
 **Changelog:** 1263 (pinned; TASK-551-10-L02 closure only)
 
@@ -58,6 +59,13 @@ TASK-551-06-L01 removal of inline `pruneHistory` and its strict idempotent
 `recordSearch` command read-only. It does not edit that service/test; it removes
 the only legacy string-input caller from GET and invokes only the command shape
 from POST.
+`core/admin/utils/adminCacheAuthority.ts` and
+`core/admin/services/cachePolicy.ts` are read-only L04 dependencies. This leaf
+registers every `searchClient.ts` map/promise plus `useSearchResults.ts` delayed
+search/history operation with the INITIAL reset authority, captures its opaque
+installation token before async work, and verifies that token plus the current
+intent generation before installing a result. It returns an adoption receipt;
+L04 FINAL must not reopen either 04-owned file.
 
 ## Implementation Pseudocode
 
@@ -78,12 +86,24 @@ function parseSearchRequest(input: unknown): StrictSearchRequest {
 }
 
 async function searchAll(request: StrictSearchRequest, deps: SearchDeps): Promise<SearchItem[]> {
-  // Build one parameterized tsquery. Each UNION ALL arm selects an explicit
-  // projection, applies auth/publication/date filters, references only its
-  // landed search_vector column, computes ts_rank_cd, and caps candidates.
-  // Final order: rank DESC, updatedAt DESC, sourceType ASC, id DESC; LIMIT 51.
-  // A separately bounded trigram arm is eligible only below the FTS threshold
-  // and only when TRIGRAM_INDEXED_SOURCE_CONTRACT contains that source.
+  const responseCap = request.limit + 1; // 2..51 including lookahead
+  // One SQL statement builds exact-email (users only, 0..1), FTS and optional
+  // trigram CTEs for each selected source. Authorization/publication/date
+  // predicates are inside every source arm before its ORDER/LIMIT.
+  //
+  // Per source, exact-email consumes one slot when applicable; FTS consumes at
+  // most the remaining responseCap slots. Trigram is emitted only for a source
+  // selected by the L05 receipt and only when exact+FTS produced fewer than
+  // responseCap rows. It anti-joins those bounded identities and receives
+  // exactly responseCap-exactCount-ftsCount slots. Therefore all physical arms
+  // emit <= responseCap rows per source, <= 5*51=255 before global ranking.
+  //
+  // UNION ALL retains provenance. Deduplicate by (sourceType,id) with exact
+  // email before FTS before trigram; within a tier use score DESC, updatedAt
+  // DESC, sourceType ASC, id DESC. Apply the same order globally and LIMIT
+  // responseCap. FTS rank and trigram similarity are never compared across
+  // tiers. The +1 row is internal lookahead only; return the first request.limit
+  // items and add no cursor or unplanned response field.
 }
 
 // Imported read-only from L06's Bun-free searchHistoryContract.ts:
@@ -166,10 +186,28 @@ Fallback is bounded and parameterized and is enabled per source only when the
 TASK-551-05-L02 large-fixture receipt proves that exact index node, bounded rows/
 buffers, and accepted write cost. A rejected or missing candidate means FTS-only
 for that source—never an unindexed `ILIKE` scan. Exact email lookup continues via
-`emailHash`, never a searchable vector. Known errors are stable
-`search_query_invalid`, `search_cursor_invalid`, `search_unavailable`,
+`emailHash`, never a searchable vector, is available only under its existing
+authorized Admin rule, returns at most one candidate and consumes one of that
+source's 51 slots. The exact candidate accounting is closed: at most five source
+arms, each `exact + FTS + non-overlapping trigram <= limit + 1 <= 51`, hence at
+most 255 rows enter dedup/global rank and at most 51 leave it. `UNION ALL` is
+mandatory; a window/`DISTINCT ON` identity pass chooses `exact_email`, then
+`fts`, then `trigram` for the same `(sourceType,id)`. Match tier is ordered before
+score so incomparable FTS rank and trigram similarity are never mixed.
+
+The “10x” budget language means only a checked-in per-fingerprint planner
+ceiling; it is not calculated as rows read divided by the number of rows that
+survive global top-k, because a valid selected source may contribute zero final
+rows. Candidate materialization instead has the absolute 255-row ceiling above.
+Index tuples, heap tuples fetched/rechecked, buffers and normalized p95 are each
+checked against TASK-551-01's exact common/rare/unique/miss numeric receipt and
+TASK-551-05-L02's corresponding sanitized plan. No arm may claim `LIMIT 51` as
+proof that PostgreSQL read only 51 rows.
+
+Known errors are stable `search_query_invalid`, `search_unavailable`,
 `search_history_invalid`, `search_history_idempotency_required`, and
-`search_history_idempotency_conflict`; only the last maps to HTTP 409.
+`search_history_idempotency_conflict`; only the last maps to HTTP 409. There is
+no search cursor in this v1 contract and therefore no `search_cursor_invalid`.
 
 ## Testing Requirements
 
@@ -190,10 +228,25 @@ for that source—never an unindexed `ILIKE` scan. Exact email lookup continues 
 - Search tests cover accents/Unicode, punctuation, prefix/fuzzy behavior,
   ties, dates, categories, public publication filters, admin authorization, and
   deterministic result identity across repeated runs.
+- Pin request limits 1/50 and authorization/date cases leaving 1/5 eligible
+  sources: each source's exact-email +
+  FTS + non-overlapping trigram rows total at most `limit+1`, the five-source
+  pre-rank set is at most 255, and final output is at most 51. Seed one identity
+  in all eligible match arms and prove one result with precedence exact-email →
+  FTS → trigram. Fill FTS to the per-source cap and prove zero trigram rows;
+  leave N slots and prove trigram can emit at most N after anti-join. A source
+  without the exact L05 receipt emits zero trigram SQL/rows.
+- Use deliberately inverted numeric FTS/similarity scores and prove match tier,
+  then score, update time, source type and ID is the exact total order. A source
+  that loses global top-k remains valid and does not create a divide-by-zero or
+  misleading per-final-row scan assertion.
 - Large fixtures use `EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON)` with sanitized
-  binds; assert intended index nodes, bounded rows, `<= 4` statements, and no
-  growing-table sequential scan. Small fixtures may choose a seq scan by cost
-  and are judged by latency/rows rather than forced planner settings.
+  binds; assert intended index nodes, one ranked retrieval statement (`<= 4`
+  whole-endpoint statements), the absolute candidate caps, each receipt's exact
+  index/heap-row, buffer and normalized-p95 ceiling, and no forbidden growing-
+  table sequential scan. Rows read are planner evidence, not the 255 candidates
+  or 51 response rows. Small fixtures may choose a seq scan by cost and are
+  judged by their numeric receipt rather than forced planner settings.
 - Unknown fields, overlong query, invalid limit/source/date, SQL metacharacters,
   and unauthorized/private records fail safely without PII/SQL leakage.
 - Safe-method tests instrument `recordSearch` plus the DB and prove `/search`,
@@ -215,6 +268,12 @@ for that source—never an unindexed `ILIKE` scan. Exact email lookup continues 
   characters or on failed search, abort on cleanup, and successful result UI
   despite a sanitized history-write failure. Non-hook/prefetch search calls
   record nothing.
+- Delay cached search, background revalidation and history completion across an
+  L04 installation-authority transition. The completion may settle only for its
+  original caller; it cannot install, emit history for the new audience or
+  survive the registered reset. The L04 exhaustive matrix accepts the receipt
+  for exactly `searchClient.ts` and `useSearchResults.ts` and L04 FINAL edits
+  neither file.
 - Assert this leaf neither edits/imports a replacement for nor directly tests
   `searchHistoryService.ts`; TASK-551-06-L01's landed `pruneHistory` removal and
   idempotency implementation remain unchanged. Source guards require zero
@@ -237,6 +296,9 @@ for that source—never an unindexed `ILIKE` scan. Exact email lookup continues 
 - Query text is parameterized and length bounded. User email remains hash-exact
   under authorized admin scope; encrypted/plain email, hashes, tokens, private
   content, and binds never enter vectors, plan evidence, logs, or errors.
+- Admin search cache/history work is scoped by L04's opaque installation
+  authority but never uses that browser token as authentication or RBAC; server
+  session and `content:read` checks remain authoritative.
 
 ## Validation Commands
 
@@ -263,12 +325,18 @@ TASK-551-10-L02.
 - Search reads at most 51 ranked rows, executes at most 4 statements, and meets
   the parent 10-100x large-fixture improvement target or records a stricter
   evidence-backed budget without weakening correctness.
-- Large-fixture plans use the intended index and read no more than 10x the
-  returned rows per selected source after unavoidable rank filtering.
+- Exact-email + FTS + non-overlapping trigram emits at most 51 candidates per
+  selected source and 255 before global ranking. Dedup uses exact-email → FTS →
+  trigram precedence and score is compared only within a match tier. Large-
+  fixture planner reads/buffers/p95 satisfy their checked-in per-fingerprint
+  numeric receipts; no ratio uses only the rows surviving global top-k.
 - Every search GET is observably read-only. History persistence occurs only on
   the strict internal POST with CSRF/admin-write throttling and actor-scoped
   UUID idempotency; 50 exact replays add one row and mismatched reuse adds none.
 - TASK-551-04 writes zero search-history production/test files, preserves L06's
   validated `pruneHistory` removal/idempotency behavior, and leaves zero
   production callers of its transitional string-input branch.
+- Both owned Admin search modules return a complete L04 INITIAL authority/reset
+  adoption receipt; no pre-transition result/history completion installs into a
+  later audience and L04 FINAL does not reopen these files.
 - Every touched production/test file is at most 1,000 physical lines.

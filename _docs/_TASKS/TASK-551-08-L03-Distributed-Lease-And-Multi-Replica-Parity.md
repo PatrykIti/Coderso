@@ -6,7 +6,8 @@
 **Priority:** Critical
 **Category:** Cache / Redis / Concurrency / Runtime
 **Estimated Effort:** Large
-**Dependencies:** TASK-551-08-L02; TASK-551-02-L02 lifecycle registry terminal;
+**Dependencies:** INITIAL phase after TASK-551-02-L02; FINAL phase after
+TASK-551-08-L02 plus the TASK-551-03-L02 response-header consumption receipt;
 parent external dispatch gate
 **Status:** ⏳ To Do
 **Changelog:** 1263 (pinned; closure only)
@@ -20,21 +21,38 @@ Redis runtime once per process, including worker/PubSub lifecycle and graceful
 participant close behavior. The terminal TASK-551-02 `runtimeEntrypoint.ts` alone
 owns signals, listen, HTTP drain and lifecycle start/close. Prove two-client/
 multi-process semantic parity without adding an L1
-value cache in Redis mode.
+value cache in Redis mode. Before TASK-551-03-L02 lands, first add the narrow
+route-response-header transport seam needed for its private form-submission
+detail response; the later runtime composition phase reopens only this leaf's
+same HTTP owner after L02 returns its consumption receipt.
 
 ## Sub-Tasks
 
-None. This file is an executable leaf under TASK-551-08.
+None. This executable leaf has two mandatory serialized phases and remains
+`🚧 In Progress`/non-releasable between them:
+
+1. **INITIAL response-header seam:** after TASK-551-02-L02, add only the strict
+   route-local response-header API and HTTP propagation tests. Return a
+   compile-green receipt before TASK-551-03-L02 edits `formsRoutes.ts`.
+2. **FINAL cache/runtime composition:** after TASK-551-08-L02 and the 03-L02
+   consumption receipt, implement the lease, singleton cache runtime, capacity
+   catalog and composed lifecycle behavior below. Do not reopen any 03 file.
 
 ## Exclusive Ownership
 
 Sole writer of:
 
+- existing `core/server/router.ts` only for the INITIAL strict route-response-
+  header type/API;
 - new `core/services/cache/redisCacheLease.ts`;
 - new `core/services/cache/serverCacheRuntime.ts`;
+- new `core/services/cache/serverCachePolicyCapacityCatalog.ts` for the closed
+  mandatory v1 descriptors consumed at startup;
 - existing `core/server/httpServer.ts` only for the exact composed participant,
   cache runtime, retention and existing backup start/stop lifecycle wiring
-  described below;
+  described below, plus INITIAL collection/propagation of the strict route-
+  local response headers on JSON success and mapped errors;
+- new `tests/integration/server/route-response-headers.test.ts` in INITIAL;
 - new `tests/integration/server/redis-distributed-lease.test.ts`;
 - new `tests/integration/server/server-cache-runtime-lifecycle.test.ts`;
 - new `tests/integration/server/redis-multi-replica-parity.test.ts`.
@@ -42,6 +60,22 @@ Sole writer of:
 Within `httpServer.ts`, this leaf solely owns the exact
 `registerComposedHttpRuntimeParticipants()` composition seam and its idempotent
 module-evaluation call before their shared runtime entrypoint starts lifecycle.
+
+INITIAL adds `RouteContext.setResponseHeader(...)` backed by one request-local,
+write-only response-header bag. Its closed v1 contract accepts only these exact
+name/value pairs: `Cache-Control` / `private, no-store, max-age=0`, `Pragma` /
+`no-cache`, and `Expires` / `0`. Name matching is ASCII case-insensitive but is
+canonicalized to those three spellings; unknown names, alternate values,
+control/newline bytes, duplicate conflicting writes and values above 64 UTF-8
+bytes fail `route_response_header_invalid` before mutation. Handlers cannot read,
+replace or obtain the backing bag. `httpServer.ts` merges the accepted bag into
+the final JSON `Response` on normal completion and into `errorResponse(...)` on
+every caught/mapped route error, without replacing security/request-ID/CORS or
+`Content-Type` headers. The bag is created after exact route match and never
+crosses requests. TASK-551-03-L02 installs its no-store header middleware as the
+first handler of the submission-detail route, before permission, validation and
+DB handlers; therefore all success and route-mapped 4xx outcomes carry the same
+three headers. INITIAL changes no endpoint, auth behavior or cache runtime.
 
 TASK-511 remains sole owner of `core/services/backups/**` and backup scheduler
 behavior. Re-read its parent-gate terminal or exact serialized handoff
@@ -124,8 +158,10 @@ instead of creating a second owner.
   operation compares the exact random owner token and every expected finite
   generation, then writes all one or two entries or none. It returns `written`,
   `generation_changed`, `lease_lost`, or bounded redacted `unavailable`; every
-  non-`written` result returns the fresh authoritative value without fill. The
-  Before that Lua call, reuse L01's exact internal
+  uncertain dispatched Lua failure is `unavailable` with
+  `physicalOutcome:"unknown"`, because bytes may exist, and every non-`written`
+  result returns the fresh authoritative value without publication. Before that
+  Lua call, reuse L01's exact internal
   `validateRedisConditionalWriteBeforeCommand(...)`; strict envelope decode,
   matching entry/envelope `fillKind`, positive versus required non-null negative
   ceiling and TTL/lifetime/byte checks must pass for every entry. Any forged or
@@ -145,15 +181,24 @@ instead of creating a second owner.
   `CacheInvalidationRuntimeHandle` (worker plus optional Pub/Sub); it constructs
   no `MemoryServerCacheStore` or persistent value `Map`. Stores receive the
   controller and delegate exact health composition to it.
+- Before publishing the runtime or allowing HTTP listen, validate the closed
+  `SERVER_CACHE_MANDATORY_POLICY_CAPACITY_V1` catalog through L01 against
+  `store.describe()` and the normalized namespace. It contains exactly the four
+  policies adopted by 09: `public-runtime@1`/`262_144`,
+  `public-html-manifest@1`/`32_768`, `public-html@1`/`2_000_000`, and
+  `redirects@1`/`65_536` maximum encoded-envelope bytes. Exact maximum canonical
+  key overhead is additional. A missing/duplicate/mismatched/impossible descriptor
+  fails startup; TASK-551-09 policies must match rather than silently bypass.
 - Export the exact singleton surface:
 
   ```ts
   type ServerCacheRuntime = Readonly<{
-    backend: ServerCacheBackend;
+    mode: ServerCacheBackend;
     cache: ServerCache;
-    coherenceController: ServerCacheCoherenceController;
-    invalidation: CacheInvalidationRuntimeHandle;
-    loadCoordinator: DistributedCacheLoadCoordinator | null;
+    invalidation: Readonly<{
+      applyAfterCommit(plan: CacheInvalidationPlan):
+        Promise<"applied" | "queued" | "bypassed">;
+    }>;
     health: () => Promise<ServerCacheHealth>;
   }>;
 
@@ -161,15 +206,16 @@ instead of creating a second owner.
   ```
 
   After successful lifecycle start the accessor returns the same frozen object
-  on every call; it never creates or starts a runtime. Memory has null
-  `loadCoordinator`. Before start and after close it throws stable
+  on every call; it never creates or starts a runtime. Memory constructs no
+  distributed load coordinator. The store, controller, workers, Pub/Sub, lease
+  coordinator, stop/drain/close methods and clients remain private to the
+  composition root and cannot be downcast/re-exported. Before start and after close it throws stable
   `server_cache_runtime_unavailable`. Concurrent/idempotent start publishes
   exactly one instance; no caller, including TASK-551-09, may construct a second
   cache/coherence/invalidation runtime. `getServerCacheRuntime().cache` is the
   canonical consumer cache surface. Post-commit consumers call and await
-  `runtime.invalidation.applyAfterCommit(plan)` before resuming and never call
-  `coherenceController.report(...)` or a separate epoch-advance helper for that
-  plan.
+  `runtime.invalidation.applyAfterCommit(plan)` before resuming; runtime exposes
+  no controller or separate epoch-advance helper for that plan.
 - Explicit Redis config/startup failure stops boot. Post-start failure reports
   the exact `redis_store` force signal to the one controller, producing degraded
   `forced_bypass(reason="redis_unavailable", affectedFamilies="all")`, while
@@ -184,9 +230,9 @@ instead of creating a second owner.
   and ordinary fill; it uses authoritative DB/render plus the epoch-scoped
   eligibility-scope-bound fill-attempt registry; every non-published outcome still
   loads once per caller. Recovery requires both a ready Redis probe
-  and L02's fresh `outbox_worker` recovery; the controller advances the process
-  coherence epoch only inside its accepted `report(...)` transition before
-  clearing each independent fence; reads resume only when none remains.
+  and L02's fresh current-watermark `outbox_worker` recovery; this clears only
+  the global lag fence. Exact failed-post-commit fences remain until their own
+  durable processed receipts. Reads resume only when no global/event fence remains.
   Unknown/malformed state remains bypassed. This is
   bounded-eventual public caching, not linearizability;
   security/auth/private values never use it.
@@ -201,6 +247,21 @@ instead of creating a second owner.
 ## Implementation Pseudocode
 
 ```ts
+// INITIAL only: router.ts owns the closed header contract; httpServer.ts owns
+// its request-local bag and applies it to both success and caught error output.
+type RouteResponseHeaderContractV1 = Readonly<{
+  "Cache-Control": "private, no-store, max-age=0";
+  Pragma: "no-cache";
+  Expires: "0";
+}>;
+type RouteContext = Readonly<{
+  // existing fields remain unchanged
+  setResponseHeader<K extends keyof RouteResponseHeaderContractV1>(
+    name: K,
+    value: RouteResponseHeaderContractV1[K],
+  ): void;
+}>;
+
 function registerComposedHttpRuntimeParticipants(): void {
   if (composedParticipantsRegistered) return;
   composedParticipantsRegistered = true;
@@ -232,13 +293,13 @@ async function putIfGenerationsAndLeaseOwned(write) {
     write,
     config.maxEntryBytes,
   ); // validation failure has issued zero Redis commands
-  return normalizeOwnedWriteReply(await withCommandDeadline(() =>
-    evalBounded(
+  return normalizeOwnedWriteReplyOrUnknownPhysicalOutcome(
+    await withCommandDeadline(() => evalBounded(
       VERIFY_LEASE_GENERATIONS_AND_PUT_ONE_OR_TWO_LUA,
       leaseKeyAndGenerationKeys(validated),
       leaseTokenAndValidatedEntries(validated),
-    )
-  ));
+    )),
+  );
 }
 ```
 
@@ -248,6 +309,10 @@ async function putIfGenerationsAndLeaseOwned(write) {
 - **Auth/RBAC/CSRF/rate limits:** existing ordering is preserved; cache startup
   and bypass cannot skip middleware.
 - **Validation:** bounded lease/token/wait/poll/shutdown and strict runtime config.
+- **Response headers:** INITIAL exposes only the closed three-pair private/no-
+  store contract. Route code cannot inject arbitrary headers, cookies, CRLF or
+  cross-request state through this seam; caught route errors preserve the
+  already-installed safe headers without leaking error detail.
 - **Secrets/privacy:** random lease token and digested key only; Redis URL and
   values never enter logs/process messages.
 - **Anti-abuse:** no public write; lease contention cannot wait indefinitely or
@@ -265,7 +330,9 @@ process performs no generation-only or owned fill. Prove timeout/winner-crash
 fallback runs one authoritative no-fill loader per waiting caller, shares no
 caller result, and preserves token-safe expiry/reacquire. Pin atomic owned-write `written`,
 `generation_changed`, `lease_lost`, and `unavailable`; every non-`written`
-outcome must return authoritative bytes without fill, the generation-only store
+outcome must return authoritative bytes without publication, and uncertain
+dispatch must report unknown physical outcome even if a later independent strict
+GET observes valid bytes. The generation-only store
 write must remain uncalled, and post-attempt release cannot change fill authority.
 Before the owned-write Lua, pin the shared strict validator's positive/negative
 success, entry/envelope `fillKind` mismatch, unknown/malformed discriminator,
@@ -294,15 +361,34 @@ start/close/signal/drain call and delegate only to `runRuntimeEntrypoint(...)`.
 Assert no other production caller exists.
 Pin `getServerCacheRuntime()`
 before start, repeated `.cache` identity, concurrent start, after close, and prove
-TASK-551-09 consumers cannot create a second instance or access a `.serverCache`
-alias. Assert post-commit consumers await only `invalidation.applyAfterCommit(plan)`,
+TASK-551-09 consumers cannot create a second instance or access a `.serverCache`,
+store, controller, worker, Pub/Sub, lease, stop/drain/close alias. Pin frozen
+`mode/cache/invalidation.applyAfterCommit/health` as the complete public key set.
+Assert all four capacity descriptors match 09's policy tables and exact maximum
+key-plus-envelope bytes pass while max+1/impossible config fails before listen.
+Assert post-commit consumers await only `invalidation.applyAfterCommit(plan)`,
 never detach it, and cannot resume before observation/force-fence visibility;
 controller `report(...)` is the sole epoch mutator and no double/second
 `advance*Epoch` path exists.
 Assert public/auth behavior is not changed yet.
 
+INITIAL's direct HTTP integration suite registers synthetic handlers and proves
+all three exact headers survive JSON success plus mapped 400/403/404/409 errors;
+it also proves request isolation, same-value idempotence, case canonicalization,
+and rejection of unknown names, alternate/control/newline/max+1 values and
+conflicting duplicates before the response bag changes. The suite asserts the
+existing security, request-ID, CORS and content-type headers remain intact. It
+then imports the real 03-L02 route after that leaf's receipt and proves the
+submission-detail endpoint emits the exact three headers on success and every
+route-mapped 4xx while unrelated routes do not inherit them.
+
 ```bash
 set -a && source .env && set +a
+# INITIAL gate, before TASK-551-03-L02:
+bun test tests/integration/server/route-response-headers.test.ts
+bun --cwd core lint:types
+bun --cwd core lint
+# FINAL gate, after TASK-551-08-L02 and the 03-L02 receipt:
 SERVER_CACHE_BACKEND=redis SERVER_CACHE_NAMESPACE=task551-l03 \
   bun test tests/integration/server/redis-distributed-lease.test.ts \
   tests/integration/server/server-cache-runtime-lifecycle.test.ts \
@@ -311,8 +397,9 @@ bun test tests/integration/runtime/backupScheduler.test.ts
 bun --cwd core lint:types
 bun --cwd core lint
 git diff --check
-wc -l core/services/cache/{redisCacheLease,serverCacheRuntime}.ts \
-  core/server/httpServer.ts \
+wc -l core/services/cache/{redisCacheLease,serverCacheRuntime,serverCachePolicyCapacityCatalog}.ts \
+  core/server/router.ts core/server/httpServer.ts \
+  tests/integration/server/route-response-headers.test.ts \
   tests/integration/server/{redis-distributed-lease,server-cache-runtime-lifecycle,redis-multi-replica-parity}.test.ts
 ```
 

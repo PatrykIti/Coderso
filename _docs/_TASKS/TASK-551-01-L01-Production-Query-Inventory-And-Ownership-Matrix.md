@@ -59,15 +59,28 @@ tree, rejects every remaining planned delta, and requires exact discovered/
 fixture equality. Later leaves never edit these artifacts; orchestration
 re-dispatches this same leaf as their sole writer.
 
-The initial planned-delta set must include exactly
-`core/services/cache/cacheInvalidationOutbox.ts#readOldestUnprocessedAge`, owner
-`TASK-551-08-L02`, kind `point`, bound `1`, fingerprint key
-`cache_outbox_oldest_unprocessed`, predicate `processed_at IS NULL`, and order
-`created_at ASC,id ASC`. It explicitly includes claimed and backed-off rows;
-claimability/availability fields are absent from the predicate. Because the
-table is introduced later by TASK-551-05, its scale/EXPLAIN/write budget is
-owned by TASK-551-05-L01/L02 rather than the pre-schema L01-L02 baseline. Final
-inventory must discover this exact caller and remove its planned delta.
+The initial planned-delta set must contain exactly these two records:
+
+- `core/services/cache/cacheInvalidationOutbox.ts#readOldestUnprocessedAge`,
+  owner `TASK-551-08-L02`, kind `point`, bound `1`, fingerprint key
+  `cache_outbox_oldest_unprocessed`, predicate `processed_at IS NULL`, and order
+  `created_at ASC,id ASC`. It explicitly includes claimed and backed-off rows;
+  claimability/availability fields are absent from the predicate. Because the
+  table is introduced later by TASK-551-05, its scale/EXPLAIN/write budget is
+  owned by TASK-551-05-L01/L02 rather than the pre-schema L01-L02 baseline.
+- `core/services/content/publicContentVisibilityGateRead.ts#validatePublicHtmlDependencies`,
+  sole owner `TASK-551-09-L01`, kind `aggregate`, result bound `1`, input cap
+  `128` dependency tuples, canonical-input cap `16,384` bytes, root-list bound
+  `<= 100 + 1`, and fingerprint key `public_html_dependency_validation`. One
+  parameterized `VALUES`/CTE statement validates root membership plus all nested
+  page, post, and content-entry visibility projections. It selects no page/post/
+  entry bodies, document/data JSON, or password hashes. L02 supplies its initial
+  planned fixture/budget; the final refresh records the landed caller or removes
+  this planned record when TASK-551-09-L01 proves that no new caller is needed.
+
+Final inventory must discover each landed caller and remove both planned records;
+if TASK-551-09-L01 removes its planned query after final source discovery, the
+receipt records that evidence and removes only that no-longer-present delta.
 
 `tests/perf/fixtures/task551QueryInventory.ts` exports both the reviewed records
 and a `TASK551_QUERY_INVENTORY_RECEIPT` containing `phase`, sanitized source-tree
@@ -147,10 +160,13 @@ binds or environment values.
 - Add synthetic duplicate-owner, unknown-field, missing-bound, and missing-caller
   cases; each must fail deterministically.
 - Pin handoffs for TASK-511, TASK-517, TASK-493, and TASK-518.
-- Pin the outbox oldest-unprocessed planned record above. Mutating its owner,
-  bound, fingerprint, partial predicate/order, future symbol, or adding a
-  claim/availability filter fails initial inventory; leaving it planned or
-  failing to discover the exact caller fails final inventory.
+- Pin both planned records above. Mutating either owner, kind, bound, fingerprint,
+  future symbol, or query shape fails initial inventory. The dependency record
+  additionally rejects changes to tuple/root/byte caps, projection allowlist, or
+  the one-statement `VALUES`/CTE shape; fixtures prove no bodies/data/password
+  hashes are selected. Leaving a landed record planned, failing to discover its
+  exact caller, or retaining the dependency delta without TASK-551-09-L01's
+  reviewed final-removal evidence fails final inventory.
 - Assert no inventory string matches credential/URL/token/email patterns.
 - Parse the shipped root `test:bun` command and prove every current or planned
   TASK-551 Bun suite is under an executed root (`tests/unit`,

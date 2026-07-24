@@ -6,7 +6,8 @@
 **Priority:** Critical
 **Category:** Admin Cache / Security / Reliability
 **Estimated Effort:** Large
-**Dependencies:** TASK-551-09-L03
+**Dependencies:** INITIAL phase after TASK-551-07-L01; FINAL phase after
+TASK-551-09-L03 plus TASK-551-03-L02/TASK-551-04-L01 adoption receipts
 **Status:** ⏳ To Do
 **Changelog:** 1263 (pinned; closure only)
 
@@ -22,7 +23,15 @@ with no process-local, browser, or Redis value cache.
 
 ## Sub-Tasks
 
-None. This file is an executable leaf under TASK-551-09.
+None. This executable leaf has two mandatory serialized land phases and remains
+`🚧 In Progress`/non-releasable between them:
+
+1. **INITIAL seam:** add only the identity/installation-authority primitives and
+   their contract test. This compile-green receipt must land before 03-L02 and
+   04-L01 edit their exclusively owned clients.
+2. **FINAL adoption:** after those receipts and 09-L03, wire auth transitions,
+   every remaining client/cache utility, cross-tab generation, security settings
+   and route mapping. It never reopens a 03/04-owned client.
 
 ## Exclusive Ownership
 
@@ -30,13 +39,29 @@ Sole writer of:
 
 - `core/admin/services/adminAuthIdentity.ts`;
 - new `core/admin/services/adminCacheIdentity.ts`;
+- new `core/admin/utils/adminCacheAuthority.ts`;
 - `core/admin/services/authClient.ts`;
 - `core/admin/ui/contexts/AdminAuthContext.tsx`;
 - `core/admin/services/cachePolicy.ts`;
 - `core/admin/utils/storageCache.ts`;
 - `core/admin/utils/cacheBus.ts`;
 - `core/admin/utils/readThroughCache.ts`;
+- `core/admin/utils/adminPrefetch.ts`;
+- `core/admin/utils/sessionCache.ts`;
 - `core/services/settings/securitySettings.ts`;
+- `core/server/routes/settingsRoutes.ts` only for centralized
+  `security_settings_conflict` mapping;
+- FINAL-phase remaining cache-client matrix:
+  `core/admin/services/adminThemeClient.ts`, `analyticsClient.ts`,
+  `apiClient.ts`, `assistantClient.ts`, `assistantStatusClient.ts`,
+  `backupsClient.ts`, `commerceClient.ts`, `contentTypesClient.ts`,
+  `customScreenShortcutsClient.ts`, `customScreensCache.ts`,
+  `customScreensClient.ts`, `dashboardClient.ts`, `importExportClient.ts`,
+  `listingsClient.ts`, `mediaFoldersClient.ts`, `menusClient.ts`,
+  `pageTemplatesClient.ts`, `popupsClient.ts`, `redirectsClient.ts`,
+  `reviewsClient.ts`, `seoClient.ts`, `settingsCache.ts`, `settingsClient.ts`,
+  `siteSettingsClient.ts`, `solutionKitsClient.ts`, `userSettingsClient.ts`, and
+  `widgetsClient.ts` (all paths relative to `core/admin/services/`);
 - `tests/vitest/admin/storageCache.test.ts`;
 - `tests/vitest/admin/cacheBusHardening.test.ts`;
 - `tests/vitest/admin/readThroughCache.test.ts`;
@@ -48,6 +73,7 @@ Sole writer of:
   requires harness updates;
 - new `tests/vitest/admin/admin-cache-identity.test.ts`;
 - new `tests/vitest/admin/read-through-cache-generation.test.ts`;
+- new `tests/vitest/admin/admin-cache-client-authority-matrix.test.ts`;
 - existing `tests/vitest/admin/authClient.test.ts`,
   `tests/vitest/authUi/authClient.test.ts`, and
   `tests/vitest/ui/admin-auth-identity.test.tsx` for exact auth-incarnation and
@@ -55,12 +81,17 @@ Sole writer of:
 - `tests/unit/security/securitySettings.test.ts`;
 - existing `tests/integration/routes/securitySettings.test.ts` for route-level
   security-settings regression assertions;
+- existing `tests/integration/routes/settings.test.ts` for the exact centralized
+  conflict mapping assertion;
 - new `tests/integration/server/security-settings-db-authority.test.ts`.
 
 Forbidden: other Admin resource clients/UI, publicSite/site/domain invalidation,
 07/08 owners, auth/session route contracts, TASK-517/493/511, migrations/
-packages and shared docs/tasks. Existing generic cache clients consume the
-transparent scoped key/storage contract without per-client edits.
+packages and shared docs/tasks. In particular, FINAL must not edit the 03-L02
+owners `pagesClient.ts`, `detailPagesClient.ts`, `entriesClient.ts`,
+`postsClient.ts`, `adminUsersClient.ts`, `formsClient.ts`, `mediaClient.ts`, or
+`bookingClient.ts`, nor the 04-L01 owners `searchClient.ts` and
+`ui/search/useSearchResults.ts`; those leaves consume INITIAL and return receipts.
 `core/admin/utils/adminPaths.ts` is a read-only dependency: import its existing
 `resolveAdminBasePath(...)` and `DEFAULT_ADMIN_PATH` exports exactly; L04 neither
 owns nor changes that module and does not invent an `adminPaths` object API.
@@ -70,10 +101,37 @@ contract. No read-only cross-owner test exception remains.
 
 ## Admin Browser Contract
 
+- INITIAL exports only opaque `AdminCacheInstallationToken`,
+  `captureAdminCacheInstallationToken()`,
+  `isCurrentAdminCacheInstallationToken(token)`, and
+  `registerAdminModuleCacheReset(reset): unsubscribe` from
+  `adminCacheAuthority.ts`. It owns a safe-integer page-lifetime generation;
+  advancing it synchronously invokes independently isolated reset subscribers.
+  Tokens and reset callbacks contain no identity. FINAL alone wires advancement
+  to deployment/auth/cross-tab scope transitions; 03-L02 and 04-L01 import this
+  stable seam and guard every promise completion/cache install they own.
+- The single-writer matrix is exhaustive, not illustrative:
+
+  | Writer | Exact owned adoption |
+  |---|---|
+  | 03-L02 after INITIAL | pages, detail pages, entries, posts, Admin users, forms, media and booking clients; every new paginated cache/promise included |
+  | 04-L01 after INITIAL | `searchClient.ts` maps/promises and `useSearchResults.ts` delayed search/history/cache work |
+  | L04 FINAL | auth/CSRF, Admin theme, analytics, assistant status, backups, commerce, content types, shortcuts/custom screens, Dashboard, import/export, listings, media folders, menus, page templates, popups, redirects, reviews, SEO, redacted/general/site settings, solution kits, user settings, widgets, prefetch and all generic storage/read-through/cacheBus utilities listed above |
+
+  `assistantClient.ts`/`customScreensCache.ts` own event/clear-only adoption;
+  `importExportClient.ts` and `settingsCache.ts` own helper-backed values even
+  without a top-level promise. `apiClient.ts`'s CSRF value/promise and
+  `authClient.ts`'s bootstrap cache are identity-transition state and are never
+  exempt. `admin-cache-client-authority-matrix.test.ts` scans the exact source
+  manifest and fails on a newly discovered module-level cached value, promise,
+  map, read-through/storage-cache handle, or prefetch registry without exactly
+  one writer and either shared authority registration or an explicit security
+  exclusion. No implicit "generic clients are safe" claim is accepted.
 - Preserve `AdminAuthIdentitySnapshot.userId/epoch` for existing consumers and
   add a separate `AdminCacheIdentitySnapshot` with schema version `3` containing
   normalized deployment identity plus its SHA-256 digest, crypto-random auth
-  incarnation, opaque SHA-256 scope digest, auth epoch and permission fingerprint.
+  incarnation, cross-tab auth-generation nonce, opaque SHA-256 scope digest,
+  auth epoch and permission fingerprint.
   Raw deployment identity, user ID/email/roles/permissions never appear in
   storage keys.
 - `resolveAdminDeploymentIdentity()` in `adminCacheIdentity.ts` derives the sole
@@ -122,6 +180,7 @@ contract. No read-only cross-owner test exception remains.
     v: 3;
     deploymentIdentity: string;
     authIncarnation: string;
+    authGenerationNonce: string;
     authEpoch: number;
     userId: string;
     permissions: readonly string[];
@@ -131,8 +190,9 @@ contract. No read-only cross-owner test exception remains.
 
   Construct a new object in precisely that field order and serialize it as UTF-8
   JSON with standard JSON escaping. `deploymentIdentity` is the normalized,
-  bounded canonical deployment JSON above; `authIncarnation` is exact lowercase
-  32-hex; `authEpoch` is a bounded safe integer; and `userId`, permission IDs and
+  bounded canonical deployment JSON above; `authIncarnation` and
+  `authGenerationNonce` are separate exact lowercase 32-hex values; `authEpoch`
+  is a bounded safe integer; and `userId`, permission IDs and
   role IDs are non-empty NFC strings with no control characters and the exported
   byte/count caps. Permissions and `permissionSnapshot.roles[].id` are normalized,
   deduplicated and UTF-8-byte sorted into two separate arrays; role names/slugs do
@@ -152,6 +212,24 @@ contract. No read-only cross-owner test exception remains.
   incarnation for that page lifetime; because it cannot match a prior persistent
   namespace, persistent reads remain safe misses. No auth endpoint or payload
   field changes.
+- Preserve that tab-specific incarnation, but add one deployment-digest-scoped
+  cross-tab auth-generation record at
+  `coderso:admin-cache:v3:<deploymentDigest>:auth-generation`. Its strict value
+  is `{schema:"coderso.admin-auth-generation@v3",deploymentDigest,nonce}` with a
+  separate crypto-random lowercase 32-hex nonce and no identity. Create/read it
+  only through wrapped localStorage; a storage failure makes persistent scope
+  null. Before successful-login installation, logout, unauthorized bootstrap,
+  user change or permission-fingerprint transition, rotate/write this nonce
+  **before** publishing any new auth identity/scope and broadcast only its
+  deployment audience. Other tabs re-read the current storage record (they do
+  not trust or order BroadcastChannel payloads), synchronously advance installation
+  authority, clear module/storage scope, abort stale work and re-bootstrap auth.
+  A different/malformed/unknown nonce is never adopted as a cache value. Storage
+  events are the source for cross-tab ordering; BroadcastChannel is wakeup only,
+  so delayed channel messages cannot regress to an older nonce. Same-tab reload
+  retains its session incarnation only while the current shared nonce still
+  matches. Concurrent create/rotate and unavailable/throwing storage fail to
+  persistent-cache misses, not an old audience.
 - Versioned storage key is
   `coderso:admin-cache:v3:<deploymentDigest>:<scopeDigest>:e<authEpoch>:<boundedResourceKey>`.
   Envelope includes schema, identical deployment digest, scope digest,
@@ -166,7 +244,8 @@ contract. No read-only cross-owner test exception remains.
   index inside both count and serialized-byte caps; evict its oldest owned key
   before adding a new one, and never scan browser storage.
 - Login, logout, unauthorized bootstrap, user change and permission fingerprint
-  change increment epoch, abort stale work and clear in-memory values. Login,
+  change first rotate cross-tab generation, then increment epoch, advance the
+  installation generation, abort stale work and clear in-memory values. Login,
   logout, unauthorized bootstrap and user change also rotate/delete the
   incarnation as applicable, making old storage inaccessible even when the same
   user logs in again with unchanged permissions. Bounded cleanup is best effort
@@ -178,13 +257,18 @@ contract. No read-only cross-owner test exception remains.
   transport/subscriber failure is recorded best-effort and cannot make a
   successful API mutation reject. Update the old hardening test that expected
   subscriber exceptions to escape.
-- CacheBus events carry schema, deployment digest, scope digest and auth epoch;
+- CacheBus events carry schema, deployment digest, auth-generation nonce, scope
+  digest and auth epoch;
   any mismatched deployment/scope, prior epoch or unknown scope is ignored. The
   raw incarnation never enters the event; its binding is proven by scope digest.
   Dirty editor/background revalidation behavior remains unchanged.
-- `readThroughCache` captures auth epoch plus a monotonically increasing
-  generation. Invalidate/force increments generation; an older completion may
-  return to its original caller but cannot populate cache over a newer result.
+- `readThroughCache` captures auth epoch, installation token and a monotonically
+  increasing per-key generation. `set`, `invalidate`, and force-refresh each
+  advance the per-key generation before installation/removal/load; `set` installs
+  under its new generation, while force-refresh installs only if its captured
+  new generation and installation token remain current. An older completion may
+  return to its original caller but cannot populate cache over a newer set,
+  invalidation, forced refresh or auth/deployment transition.
 
 ## Uncached Secret Security-Settings Contract
 
@@ -225,6 +309,13 @@ contract. No read-only cross-owner test exception remains.
   family failure fence and new epoch are visible before the mutation caller
   resumes. No local
   decrypted value is installed after either applied or queued delivery.
+- `settingsRoutes.ts#mapSettingsRouteError` is the sole route mapper and maps
+  exactly service error `security_settings_conflict` to
+  `ApiError("security_settings_conflict", "Security settings were updated concurrently. Please retry.", 409)`.
+  The PATCH remains internal session-authenticated `settings:write`, CSRF and
+  `admin_write` rate-limited with its existing strict schema. The mapper never
+  returns driver message/details, SQLSTATE, SQL, binds, lock keys or identifiers;
+  all other unexpected errors keep the existing generic redacted 500.
 - Public projection remains redacted exactly as today. Metrics contain only
   operation/outcome codes; no keys, values, or cache-hit metric exists for
   decrypted settings.
@@ -249,10 +340,12 @@ if (!deploymentIdentity) {
   return;
 }
 const authIncarnation = loadOrCreateSessionAuthIncarnation();
-publishAuthEpochImmediately(user, authIncarnation);
+const authGenerationNonce = loadOrCreateCrossTabAuthGeneration(deploymentIdentity);
+publishAuthEpochImmediately(user, authIncarnation, authGenerationNonce);
 void deriveAdminCacheScope(
   deploymentIdentity,
   authIncarnation,
+  authGenerationNonce,
   user,
   permissions,
 ).then((scope) => {
@@ -260,13 +353,38 @@ void deriveAdminCacheScope(
 });
 
 async function onSuccessfulLogin(user) {
+  const authGenerationNonce = rotateCrossTabAuthGenerationBeforeTransition();
   const incarnation = rotateSessionAuthIncarnationBeforeScopeWork();
-  publishAuthEpochImmediately(user, incarnation);
+  advanceAdminCacheInstallationAuthority();
+  publishAuthEpochImmediately(user, incarnation, authGenerationNonce);
 }
 
 function onLogoutOrUnauthorized() {
+  rotateCrossTabAuthGenerationBeforeTransition();
   deleteSessionAuthIncarnationBeforeClearingScope();
+  advanceAdminCacheInstallationAuthority();
   publishNullScopeAndAdvanceEpoch();
+}
+
+async function forceRefresh(key, loader) {
+  const generation = advanceKeyInstallationGeneration(key);
+  const authority = captureAdminCacheInstallationToken();
+  const value = await loader();
+  if (isCurrentKeyGeneration(key, generation)
+      && isCurrentAdminCacheInstallationToken(authority)) {
+    install(key, value);
+  }
+  return value;
+}
+
+function setCached(key, value) {
+  const generation = advanceKeyInstallationGeneration(key);
+  installAtGeneration(key, generation, value);
+}
+
+function invalidateCached(key) {
+  advanceKeyInstallationGeneration(key);
+  remove(key);
 }
 
 async function getSecuritySettings() {
@@ -308,12 +426,15 @@ async function setSecuritySettings(update) {
 - **CSRF/rate limits:** existing login/logout/settings write contracts unchanged.
 - **Validation:** strict scope/envelope/event fields and bounded key index/
   storage payload; exact lowercase SHA-256 deployment/scope digests, strict
-  session-only 32-hex incarnation record, safe-integer epoch, 512-byte resource-
+  session-only 32-hex incarnation and separate deployment-scoped 32-hex auth-
+  generation record, safe-integer epoch, 512-byte resource-
   key, 512-index-entry and 65,536-byte index caps; deployment source is same-
   origin, hashed-production-entry-only and exact/max+1 UTF-8 bounded; canonical
   JSON scope preimage uses its exact field order, NFC/string/item/preimage caps,
   separately sorted/deduplicated permissions and role IDs, and rejects unknown
   data.
+- **Conflict mapping:** security-settings lock timeout/deadlock is the exact
+  redacted 409 above; settings auth/RBAC/CSRF/admin-write throttling is unchanged.
 - **Secrets/privacy:** no raw identity/permission, credentials or decrypted
   settings in localStorage, cacheBus, Redis, outbox, log or metric. The opaque
   incarnation exists only in its strict sessionStorage record or ephemeral memory
@@ -331,6 +452,15 @@ key denial, sessionStorage unavailable/corrupt/throwing get/set/remove with fres
 memory-only incarnation, localStorage quota/private storage, throwing getter/set/
 remove, BroadcastChannel/fallback/subscriber failures, deployment/incarnation/
 scope mismatch and bounded index.
+Use two independently instantiated tab/window harnesses sharing mocked
+localStorage plus BroadcastChannel/storage events. Prove each keeps its own
+session incarnation, while login/logout/unauthorized/user/permission transition
+in either tab rotates the deployment auth-generation before scope publication,
+causes the other tab to clear/abort/rebootstrap, and makes every old event,
+promise and storage envelope ineligible. Cover delayed/out-of-order Broadcast
+wakeups by authoritative storage re-read, simultaneous nonce creation/rotation,
+same-tab reload match/mismatch, malformed/max+1 records and throwing/unavailable
+storage; no old scope may hydrate.
 Pin deployment derivation for normalized origin/Admin base/module path, stripped
 query/fragment, missing selector, cross-origin/malformed/empty/oversized module,
 exact/max+1 UTF-8 bounds, hashed production separation and unhashed-development
@@ -338,7 +468,11 @@ persistent miss. Import the real `resolveAdminBasePath`/`DEFAULT_ADMIN_PATH`
 exports in the test and pin `/` fallback plus custom first-segment Admin paths;
 do not mock or duplicate another Admin-base API.
 Inject delayed prior-epoch cacheBus traffic and read-through completions and
-prove neither can populate the new epoch. For security settings, assert two
+prove neither can populate the new epoch. For each `set`, `invalidate`, and
+force-refresh, delay an older load across the operation and prove generation
+advances first, the old completion returns only to its caller, and cannot install
+over the newer value/miss/refresh. Repeat across an auth installation-token
+transition. For security settings, assert two
 successive calls perform two DB reads and return fresh committed values; inspect
 memory/Redis/outbox/PubSub boundaries for zero decrypted value bytes. Cover
 Redis disconnect and runtime `>5_000 ms` forced-bypass state without changing DB-authoritative
@@ -363,6 +497,13 @@ observation/any force fence is visible. Re-run the complete public-site
 query-budget suite after removing the settings cache: assert one authoritative
 settings read plus zero additional reads for a safe warm hit and settings plus one
 content gate plus zero additional reads for mutable detail/list.
+Pin `mapSettingsRouteError(new Error("security_settings_conflict"))` to the exact
+409 code/message above; PATCH responses/logs contain no driver text, SQLSTATE,
+SQL, binds or advisory identifiers, while unknown errors retain the generic 500.
+Run the exhaustive client-authority manifest: every 03/04 receipt and L04 matrix
+module has one writer, clears module maps/promises on transition and rejects a
+delayed pre-transition install; a synthetic uncatalogued cache/promise module
+must fail the source guard.
 
 ```bash
 set -a && source .env && set +a
@@ -374,10 +515,12 @@ bun run test:vitest -- tests/vitest/admin/storageCache.test.ts \
   tests/vitest/admin/cacheRefresh.test.ts \
   tests/vitest/admin/admin-cache-identity.test.ts \
   tests/vitest/admin/read-through-cache-generation.test.ts \
+  tests/vitest/admin/admin-cache-client-authority-matrix.test.ts \
   tests/vitest/admin/authClient.test.ts \
   tests/vitest/authUi/authClient.test.ts \
   tests/vitest/ui/admin-auth-identity.test.tsx
 SERVER_CACHE_BACKEND=memory bun test tests/unit/security/securitySettings.test.ts \
+  tests/integration/routes/settings.test.ts \
   tests/integration/routes/securitySettings.test.ts \
   tests/integration/server/security-settings-db-authority.test.ts \
   tests/integration/runtime/public-site-cache-query-budget.test.ts
@@ -389,15 +532,18 @@ bun --cwd core lint:types
 bun --cwd core lint
 git diff --check
 wc -l core/admin/services/{adminAuthIdentity,adminCacheIdentity,authClient,cachePolicy}.ts \
+  core/admin/services/{adminThemeClient,analyticsClient,apiClient,assistantClient,assistantStatusClient,backupsClient,commerceClient,contentTypesClient,customScreenShortcutsClient,customScreensCache,customScreensClient,dashboardClient,importExportClient,listingsClient,mediaFoldersClient,menusClient,pageTemplatesClient,popupsClient,redirectsClient,reviewsClient,seoClient,settingsCache,settingsClient,siteSettingsClient,solutionKitsClient,userSettingsClient,widgetsClient}.ts \
   core/admin/ui/contexts/AdminAuthContext.tsx \
-  core/admin/utils/{storageCache,cacheBus,readThroughCache}.ts \
+  core/admin/utils/{adminCacheAuthority,storageCache,sessionCache,cacheBus,readThroughCache,adminPrefetch}.ts \
+  core/server/routes/settingsRoutes.ts \
   core/services/settings/securitySettings.ts \
-  tests/vitest/admin/{storageCache,cacheBusHardening,readThroughCache,cacheBus,cacheBusCorrelation,cacheRefresh,admin-cache-identity,read-through-cache-generation}.test.ts \
+  tests/vitest/admin/{storageCache,cacheBusHardening,readThroughCache,cacheBus,cacheBusCorrelation,cacheRefresh,admin-cache-identity,read-through-cache-generation,admin-cache-client-authority-matrix}.test.ts \
   tests/vitest/admin/authClient.test.ts \
   tests/vitest/authUi/authClient.test.ts \
   tests/vitest/ui/admin-auth-identity.test.tsx \
   tests/vitest/admin/support/cacheBusTestHarness.ts \
   tests/unit/security/securitySettings.test.ts \
+  tests/integration/routes/settings.test.ts \
   tests/integration/routes/securitySettings.test.ts \
   tests/integration/server/security-settings*.test.ts
 ```

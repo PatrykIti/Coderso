@@ -665,7 +665,11 @@ type DistributedCacheOwnedWriteResult =
   | Readonly<{ kind: "written" }>
   | Readonly<{ kind: "generation_changed" }>
   | Readonly<{ kind: "lease_lost" }>
-  | Readonly<{ kind: "unavailable"; stableCode: string }>;
+  | Readonly<{
+      kind: "unavailable";
+      physicalOutcome: "unknown";
+      stableCode: string;
+    }>;
 
 type DistributedCacheLoadAcquireResult =
   | Readonly<{
@@ -702,7 +706,8 @@ renew/release returns `unknown`. The owner's
 one bounded Redis Lua operation must verify the exact random lease token and all
 expected finite generation tokens before writing the one or two validated
 entries. It returns `written`, `generation_changed`, `lease_lost`, or bounded
-redacted `unavailable`; every non-`written` result returns the authoritative
+redacted `unavailable` with physical outcome `unknown`; every non-`written`
+result returns the authoritative
 loader value without fill. A generation-only store write must never substitute
 for this ownership proof. `release()` runs after the write attempt as token-safe
 best-effort cleanup; its result cannot retroactively authorize or invalidate a

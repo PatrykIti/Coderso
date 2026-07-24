@@ -20,7 +20,8 @@ cache-first HTML path. Preserve TASK-517 gating and the one mandatory uncached
 eligible warm request executes exactly one total PostgreSQL query (security) and
 zero domain/render/cache reads. Page/home, post, and content-entry detail/list
 requests execute exactly two total queries (security plus one narrow point or
-bounded membership/version gate) and zero additional reads on a warm hit.
+bounded set-based dependency validator) and zero additional reads on a warm hit,
+including nested `contentList`, `postsFeed`, and `entryTeaser` content.
 
 ## Sub-Tasks
 
@@ -47,6 +48,7 @@ Sole writer of:
 - new `tests/integration/runtime/public-site-cache-eligibility.test.ts`.
 - new `tests/integration/runtime/public-content-visibility-cache-gate.test.ts`.
 - new `tests/integration/runtime/public-content-list-membership-cache-gate.test.ts`.
+- new `tests/integration/runtime/public-nested-content-cache-gate.test.ts`.
 - terminal TASK-517 regression suites
   `tests/vitest/content/entry-visibility-gate.test.ts`,
   `tests/vitest/content/entry-unlock-token.test.ts`,
@@ -56,13 +58,25 @@ Sole writer of:
   `tests/integration/runtime/entry-visibility-cache.test.ts`, only for preserving
   their final visibility/unlock/access/password/cache assertions during adoption.
 - existing dispatcher regressions `tests/unit/server/publicBookingApi.test.ts`,
-  `tests/unit/server/publicFormsApi.test.ts`,
   `tests/integration/routes/bookingRoutes.test.ts`,
   `tests/integration/routes/forms.test.ts`,
-  `tests/integration/server/formsWriteMounts.test.ts`,
   `tests/integration/routes/publicAnalytics.test.ts`, and
   `tests/security/analyticsBeacon.test.ts`, only for preserving the complete
   pre-cache API-surface dispatch and each handler-owned security flow.
+- delete legacy 2,038-line `tests/unit/server/publicFormsApi.test.ts` after
+  moving shared builders/mocks only to
+  `tests/unit/server/publicFormsApiTestFixtures.ts` and assertions exactly to
+  `publicFormsApi-routing-errors.test.ts`,
+  `publicFormsApi-public-access-rate.test.ts`,
+  `publicFormsApi-internal-auth.test.ts`,
+  `publicFormsApi-payload-descriptors.test.ts`, and
+  `publicFormsApi-database.test.ts` in that directory;
+- delete legacy 1,052-line
+  `tests/integration/server/formsWriteMounts.test.ts` after moving DB setup/
+  mount builders only to `formsWriteMountsTestFixtures.ts` and assertions exactly
+  to `formsWriteMounts-routing.test.ts`,
+  `formsWriteMounts-upload-errors.test.ts`, and
+  `formsWriteMounts-auth-media.test.ts` in that directory.
 
 Re-read post-TASK-493/TASK-517 bytes immediately before editing. Preserve the
 sitemap/indexing additions plus all private/password prompt/body and
@@ -70,6 +84,18 @@ authenticated-list cache exclusions and their tests.
 Forbidden: TASK-517 task/docs, domain mutation services owned by L02/L03,
 settings security/Admin files, 07/08 code, TASK-493/511, migrations/packages and
 shared docs/tasks.
+
+The split is assertion-complete and cohesive: public routing/nonmatch/error
+redaction belongs to `routing-errors`; public preparation/publication/sentinel/
+rate identity to `public-access-rate`; cookie/session/API-key/RBAC/CSRF ordering
+to `internal-auth`; multipart/body/descriptor limits to `payload-descriptors`;
+and real-DB submission/nonce/bearer/payload mapping to `database`. Mount routing
+owns root/stripped-admin executor parity, magic names, malformed targets and
+wrapper selection; upload-errors owns descriptor/media/publication/unknown-error
+parity; auth-media owns internal RBAC/audit and canonical `/media` fallback.
+Fixture modules contain no `test(...)`; every suite imports only the fixture,
+runs independently, and remains below 1,000 lines. Both legacy files must be
+absent, not retained as aggregators, at leaf completion.
 
 ## Read-Model and Render Contract
 
@@ -109,7 +135,8 @@ shared docs/tasks.
   only the unmatched surviving GET/HEAD
   path/query → perform the one authoritative security-settings DB read → request security/rate middleware →
   load the strict non-secret bootstrap snapshot → classify the dynamic route →
-  run any required point/list gate → prove eligibility → read manifest/HTML →
+  load only the strict safe metadata manifest → run its one required set-based
+  dependency validator → prove eligibility → read cached HTML →
   only on miss resolve authoritative DB models and render. The bootstrap is the
   only cached value permitted before classification/gating.
 - `loadPublicCacheRuntimeBootstrap(cache, request)` returns either a strictly
@@ -124,33 +151,39 @@ shared docs/tasks.
   manifest/HTML/content value lookup and uses authoritative routing/DB. A
   bootstrap snapshot may cause a miss or bypass but never authorizes content or
   upgrades an ambiguous path to a lower query budget.
-- Every page/home, post, and `content_entry` detail route is
-  `mutable_content_detail` and performs exactly one family-specific narrow
-  indexed gate before any manifest/HTML/content value read. The exact page
-  projection is `id,status,publishedAt,hasPublishedData,updatedAt`, where
-  `hasPublishedData` is derived in SQL and no document is selected. The exact
-  post projection is `id,status,publishedAt,updatedAt`. The exact content-entry
-  projection is `id,status,publishedAt,visibility,hasPassword,updatedAt`, where
-  `hasPassword` is derived in SQL and the password hash is never selected. A page
-  continues only for `status=published`, non-null `publishedAt`, and
-  `hasPublishedData=true`; a post only for published/non-null publishedAt; an
-  entry only for published/non-null publishedAt/public/password-free. Missing,
-  unpublished, absent-current-representation, private/password or malformed
-  rows fail closed. The lowercase SHA-256 digest of the strict discriminated
-  projection joins canonical input, so raw identity never enters a key. The warm
-  request is then exactly two total DB queries: security plus this gate.
-- A `mutable_content_list` performs exactly one bounded family-specific indexed
-  public-membership/version query from the normalized predicate and stable
-  ordering. Page rows use the page projection above, post rows the post
-  projection, and entry rows the entry projection. It returns at most validated
-  page limit plus one ordered projections and never selects a body, document,
-  password hash or unbounded relation. The lowercase SHA-256 digest of the strict
-  ordered discriminated projection joins canonical input. Unknown/malformed
-  results fail closed; unpublish, missing published representation, private/
-  password transition, removal, membership/order or version change derives a
-  different key and cannot return a primed item. A warm list is exactly two total
-  DB queries: security plus this gate, with zero additional reads. Only routes
-  proven structurally unable to contain mutable content use `safe_non_mutable`.
+- Every page/home, post, and `content_entry` detail/list route is mutable. Its
+  safe metadata manifest names the root detail or bounded list proof plus every
+  rendered nested page/post/entry discovered recursively from `contentList`,
+  `postsFeed`, `entryTeaser`, template/slot composition, or another dynamic
+  renderer. The projections are exact: page
+  `id,status,publishedAt,hasPublishedData,updatedAt`; post
+  `id,status,publishedAt,updatedAt`; entry
+  `id,status,publishedAt,visibility,hasPassword,updatedAt`. Derived booleans are
+  computed in SQL; bodies/documents/data and password hashes are never selected.
+  Public requires published/non-null `publishedAt`, plus published page data or
+  public/password-free entry as applicable.
+- After reading that metadata manifest—but before any HTML/content value GET—run
+  exactly one parameterized statement
+  `validatePublicHtmlDependencies(manifest.validation)`. Bounded `VALUES`/CTEs
+  perform all root membership and nested point checks set-wise by family and
+  return one aggregate validation row. A list CTE retains its normalized
+  predicate, stable unique order and `pageLimit + 1`; dependency point CTEs use
+  primary keys. The statement compares exact counts, identities, ordering and
+  projection digest to the manifest. Any missing/duplicate/changed/unpublished/
+  private/password/malformed dependency returns `invalid`; DB error/timeout is
+  stable internal `public_cache_dependency_validation_unavailable`. Both paths
+  use authoritative render with `no_fill` and perform zero HTML GET/fill.
+- Export exact caps: at most 128 dependency tuples, 128 UTF-8 bytes per UUID-like
+  identity, 16,384 canonical validation bytes, list limit at most 100 plus one,
+  and the existing 32,768-byte encoded manifest ceiling. Reject unknown fields,
+  family mixing, duplicate identity, over-cap nesting, and digest mismatch before
+  SQL/HTML. Sanitized EXPLAIN evidence must prove PK lookup for dependency arms
+  and the existing/planned predicate+order index for each root list at small and
+  large scale; an absent usable index blocks acceptance rather than permitting an
+  unindexed growing-table validator. A valid warm mutable route is therefore
+  exactly two total queries: security plus this one statement. Only output proven
+  structurally unable to contain mutable content uses `safe_non_mutable` and one
+  total security query.
 - Freeze every existing booking/Forms/analytics API dispatch, including GET and
   method-not-allowed cases, before any cache-specific normalization,
   bootstrap/cache read, or cache write. The minimal URL parser is dispatch-only
@@ -161,9 +194,9 @@ shared docs/tasks.
   branch.
 - Mutable publication/visibility decisions are never cached, including
   affirmative decisions. Every page/home, post, or content-entry detail/list
-  request repeats its one point or bounded membership DB gate before any
-  manifest/HTML/content value read; this is the required public→unpublished/
-  private/password fence.
+  request reads only the bounded metadata manifest, then repeats its one set-
+  based authoritative validator before any HTML/content value read; this is the
+  required root-and-nested public→unpublished/private/password fence.
 - `PublicHtmlRenderResult` gains deduplicated exact dependency tags and retains
   `html`, `cacheable`, and cache mode. Dependencies include actual page/entry/
   post, list/content type, active profile/routes, shell/menu/footer, settings,
@@ -182,9 +215,16 @@ shared docs/tasks.
   no-fill in v1.
 - Avoid a circular value-key dependency with a strict
   `PublicHtmlDependencyManifestV1`: a stable path/query/profile digest under the
-  global site generation maps to the last rendered normalized tag set. On a
-  warm read, load this bounded manifest first, read those generations, then
-  derive the HTML value key. Missing/corrupt/expired manifest is a miss. A render
+  global site generation maps to the last rendered normalized tag set plus the
+  safe validation descriptor above. It contains no body/document/data, title,
+  secret, hash, cookie, token, nonce, raw query, authorization decision, or
+  rendered fragment. On a warm mutable read, load this bounded metadata first,
+  validate every descriptor set-wise, then read generations and derive the HTML
+  key. A true store miss runs the authoritative audited manifest-primary loader
+  and may positive-fill the atomic manifest+HTML pair after the generation fence.
+  A decoded cached manifest that is corrupt/expired/over-cap/invalid is evicted
+  best-effort and renders authoritatively as `no_fill`, never permission to read
+  cached HTML. A render
   publishes the HTML value plus manifest only through the typed public wrapper's
   `ServerCache.getOrLoad(request)` calls defined by 07-L01/L02. The consumer never
   creates a conditional write or invokes `writeIfGenerationsMatch`/
@@ -294,47 +334,25 @@ async function handlePublicRequest(req) {
   if (classification.kind === "authoritative_bypass") {
     return handleThroughAuthoritativeRoutingAndDb(request, classification.reason);
   }
-  const contentGate = classification.kind === "mutable_content_detail"
-    ? await loadNarrowPublicContentPublicationVersion({
-        family: classification.contentFamily,
-        identity: classification.contentIdentity,
-      })
-    : classification.kind === "mutable_content_list"
-      ? await loadBoundedPublicContentMembershipVersions({
-          family: classification.contentFamily,
-          predicate: classification.normalizedListPredicate,
-          order: classification.stableListOrder,
-          limit: classification.pageLimitPlusOne,
-        })
-      : null;
-  if (classification.requiresContentGate && !contentGate?.isStrictlyPublishedPublic) {
-    return handleThroughAuthoritativeRoutingAndDb(request, contentGate);
-  }
   const keyInput = withPublicRouteProofs(request.keyInput, {
     routingGenerationDigest: bootstrap.routingGenerationDigest,
     classificationDigest: classification.digest,
-    contentGateDigest: contentGate?.digest,
   });
   const snapshot = bootstrap.snapshot;
   if (snapshot.publicHtmlTtlMs === 0) {
     return renderPublicRequestWithoutHtmlCache(request, snapshot);
   }
-  const eligibility = await resolvePublicCacheEligibility(
-    request,
-    snapshot,
-    classification,
-    contentGate,
+  const manifestEligibility = resolveSafeMetadataManifestEligibility(
+    request, snapshot, classification,
   );
-  if (!eligibility.cacheable) {
+  if (!manifestEligibility.cacheable) {
     return renderPublicRequestWithoutHtmlCache(request, snapshot);
   }
-  // eligibility.context is complete and normalized; the L01 policy converts all
-  // of it into the branded share-scope proof (never a bare boolean/identity).
   return publicHtmlCache(cache).getOrLoadResponse({
     keyInput,
     request,
     snapshot,
-    eligibility,
+    manifestEligibility,
     fillFenceTags: PUBLIC_HTML_FILL_FENCE_TAGS,
   });
 }
@@ -343,9 +361,9 @@ async function getOrLoadResponse(input): Promise<Response> {
   return cache.getOrLoad({
     policy: publicHtmlManifestPolicy(input.snapshot),
     input: manifestKeyInput(input),
-    context: input.eligibility.context,
+    context: input.manifestEligibility.context,
     fillFenceTags: PUBLIC_HTML_FILL_FENCE_TAGS,
-    resolveCached: (manifest) => loadHtmlFromManifest(input, manifest),
+    resolveCached: (manifest) => validateManifestThenLoadHtml(input, manifest),
     loader: async ({ companion }) => {
       const rendered = await renderAndAuditEligiblePublicRequest(input);
       const publication = classifyManifestAndHtmlPublication(rendered, input);
@@ -364,7 +382,7 @@ async function getOrLoadResponse(input): Promise<Response> {
         companion: companion({
           policy: policyForTags(publication.manifest.tags),
           input: htmlKeyInput(input, publication.manifest),
-          context: input.eligibility.context,
+          context: publication.htmlEligibility.context,
           value: publication.html,
         }),
       };
@@ -372,11 +390,24 @@ async function getOrLoadResponse(input): Promise<Response> {
   });
 }
 
-async function loadHtmlFromManifest(input, manifest): Promise<Response> {
+async function validateManifestThenLoadHtml(input, manifest): Promise<Response> {
+  const validation = manifest.validation.kind === "not_required"
+    ? { kind: "valid", digest: null }
+    : await validatePublicHtmlDependencies(manifest.validation); // one SQL statement
+  if (validation.kind !== "valid") {
+    await bestEffortEvictManifestOnly(input, manifest);
+    return renderPublicRequestAsNoFill(input, validation.stableCode);
+  }
+  const htmlEligibility = resolveValidatedHtmlEligibility(
+    input,
+    manifest,
+    validation.digest,
+  );
+  if (!htmlEligibility.cacheable) return renderPublicRequestAsNoFill(input);
   return cache.getOrLoad({
     policy: policyForTags(manifest.tags),
     input: htmlKeyInput(input, manifest),
-    context: input.eligibility.context,
+    context: htmlEligibility.context,
     fillFenceTags: PUBLIC_HTML_FILL_FENCE_TAGS,
     resolveCached: async (html) => buildHtmlResponse(html),
     loader: async ({ companion }) => {
@@ -397,7 +428,7 @@ async function loadHtmlFromManifest(input, manifest): Promise<Response> {
         companion: companion({
           policy: publicHtmlManifestPolicy(input.snapshot),
           input: manifestKeyInput(input),
-          context: input.eligibility.context,
+          context: refreshed.htmlEligibility.context,
           value: refreshed.manifest,
         }),
       };
@@ -422,6 +453,12 @@ request-scoped token or unknown dynamic dependency deterministically selects
 `cache_excluded_dependency`; a non-cacheable response/status selects
 `response_not_cacheable`. These are authoritative successful no-fill results,
 not exceptions, and neither manifest nor HTML is encoded or published.
+`validatePublicHtmlDependencies` is the only mutable warm-path domain query. It
+accepts only the decoded bounded metadata descriptor, executes one set-based
+statement, and returns a strict `valid|invalid|unavailable` union with a digest;
+it never returns content. `invalid|unavailable`, cap failure, or a manifest with
+an omitted nested dependency evicts metadata best-effort and renders
+authoritatively as `no_fill`, with zero cached HTML read/publication.
 
 Cache timeout/corruption, bootstrap generation mismatch, stale/ambiguous route
 classification or snapshot uncertainty calls the existing authoritative routing/
@@ -440,14 +477,15 @@ security-settings read or security/rate middleware.
   it and no route registration changes.
 - **Auth/RBAC:** TASK-517 visibility and authenticated-list rules are preserved;
   protected variants bypass before shared read/write. Every mutable page/home,
-  post or content-entry detail/list request executes its point or bounded
-  membership indexed DB gate before any manifest/HTML/content value. The
-  bootstrap snapshot cannot authorize data.
+  post or content-entry detail/list request decodes only safe manifest metadata,
+  then executes one bounded indexed set-based root+nested validator before any
+  HTML/content value. The bootstrap/manifest cannot authorize data.
 - **CSRF/rate limits:** CSRF unchanged; every hit first performs exactly one
   authoritative security-settings read and executes current public-read security/
   rate middleware. No rate/header policy is cached in the bootstrap.
 - **Validation:** strict bootstrap state/routing-generation/classification union,
-  discriminated page/post/content-entry gate projections, render-dependency
+  discriminated page/post/content-entry dependency projections, exact counts/
+  ordering/digest, 128-item/16,384-byte validator caps, render-dependency
   disposition, snapshot/dependency/query/path/status/TTL bounds.
 - **Secrets/privacy:** snapshot/HTML key contains no security settings, cookie,
   unlock token, nonce, raw URL/query or PII.
@@ -461,11 +499,10 @@ Instrument real DB calls from TASK-551-02 across the complete request. Prove col
 render behavior and that the second safely eligible structurally non-mutable
 request has byte parity and exactly one total PostgreSQL query: the uncached
 security-settings read, with zero domain/render/cache reads. Page/home, post and
-content-entry details execute exactly two total queries: security plus their one
-narrow point gate. Every mutable-content list executes exactly two: security plus
-one family-specific bounded membership/version query with `pageLimit + 1` as its
-maximum and stable ordering. For 1/10/50 callers, each request reads security once
-and gates once; when the cacheable positive fill is conditionally written,
+content-entry detail/list hits execute exactly two total queries: security plus
+one set-based root+nested dependency validator; lists retain `pageLimit + 1` and
+stable ordering inside that statement. For 1/10/50 callers, each request reads
+security once and validates once; when the cacheable positive fill is conditionally written,
 rendering invokes exactly one render per process and every local joiner builds its
 own response through `resolveCached` from the published primary. No shared
 `Response`/`TResult` exists. In two spawned
@@ -476,11 +513,20 @@ nor owned fill. Pin manifest-primary miss and manifest-hit/HTML-miss companion
 directions, `returnValue` non-encoding, changed-generation both-or-neither discard,
 and proof that no public facade calls a conditional-write primitive.
 
-Pin every exact page/post/content-entry projection and digest. Prime detail/list
-output, then cover page/post/entry published→draft/unpublish, page missing
+Pin every exact page/post/content-entry projection and digest. Render nested
+`contentList`, `postsFeed`, `entryTeaser`, template and slot combinations across
+all three families, assert the complete deduplicated metadata descriptor, and
+prove one validator statement for 1/128 dependencies. At 129 dependencies,
+16,385 canonical bytes, duplicate/unknown family, malformed identity/digest, DB
+timeout or missing usable plan index, assert authoritative typed `no_fill`, zero
+HTML GET/fill and redacted errors. Prime detail/list output, then cover page/post/entry published→draft/unpublish, page missing
 published data, post/entry missing publishedAt, entry private/password, list
 removal, membership change and reorder; the next request gates before HTML GET
-and never returns the primed item. Unknown/missing/malformed gates fail closed.
+and never returns the primed item. Unknown/missing/malformed validation fails closed.
+Delay generation/outbox delivery, mutate only a nested dependency from public to
+draft/private/password, and prove the next request reads safe metadata, validates,
+and never reads/returns primed HTML. Repeat root/nested removal/version change in
+memory and two-process Redis lanes.
 Assert `PublicCacheRuntimeSnapshot` and all cache bytes contain no
 `SecuritySettings`, decrypted value, rate-limit or header policy. Test `|`
 paths, query allowlist/order, TTL 0/1/30/600 where zero still permits only the
@@ -521,6 +567,10 @@ headers/body and nonce/HMAC/CAPTCHA/session/API-key/access/token/DNT/rate failur
 Specifically assert booking slots performs its one handler-owned `public_read`
 charge and can never invoke cache request normalization, bootstrap, generation,
 manifest, HTML read, render or fill spies.
+Run every named replacement alone and together; source guards prove assertion
+group ownership, fixture files contain zero tests, legacy paths are absent, the
+default Bun lane discovers every replacement, and `wc -l` is `<=1,000` for all
+fixtures/suites.
 
 ```bash
 set -a && source .env && set +a
@@ -533,6 +583,7 @@ SERVER_CACHE_BACKEND=memory bun test \
   tests/integration/runtime/public-site-cache-eligibility.test.ts \
   tests/integration/runtime/public-content-visibility-cache-gate.test.ts \
   tests/integration/runtime/public-content-list-membership-cache-gate.test.ts \
+  tests/integration/runtime/public-nested-content-cache-gate.test.ts \
   tests/integration/server/entry-access-password-hash.test.ts \
   tests/integration/runtime/entry-visibility-cache.test.ts \
   tests/integration/runtime/entry-visibility-gate.test.ts \
@@ -542,14 +593,21 @@ SERVER_CACHE_BACKEND=redis SERVER_CACHE_NAMESPACE=task551-09-l01 bun test \
   tests/integration/runtime/public-site-cache-eligibility.test.ts \
   tests/integration/runtime/public-content-visibility-cache-gate.test.ts \
   tests/integration/runtime/public-content-list-membership-cache-gate.test.ts \
+  tests/integration/runtime/public-nested-content-cache-gate.test.ts \
   tests/integration/runtime/entry-visibility-cache.test.ts \
   tests/integration/runtime/entry-visibility-gate.test.ts \
   tests/integration/runtime/entry-password-gate.test.ts
 bun test tests/unit/server/publicBookingApi.test.ts \
-  tests/unit/server/publicFormsApi.test.ts \
+  tests/unit/server/publicFormsApi-routing-errors.test.ts \
+  tests/unit/server/publicFormsApi-public-access-rate.test.ts \
+  tests/unit/server/publicFormsApi-internal-auth.test.ts \
+  tests/unit/server/publicFormsApi-payload-descriptors.test.ts \
+  tests/unit/server/publicFormsApi-database.test.ts \
   tests/integration/routes/bookingRoutes.test.ts \
   tests/integration/routes/forms.test.ts \
-  tests/integration/server/formsWriteMounts.test.ts \
+  tests/integration/server/formsWriteMounts-routing.test.ts \
+  tests/integration/server/formsWriteMounts-upload-errors.test.ts \
+  tests/integration/server/formsWriteMounts-auth-media.test.ts \
   tests/integration/routes/publicAnalytics.test.ts \
   tests/security/analyticsBeacon.test.ts
 bun --cwd core lint:types
@@ -565,6 +623,7 @@ wc -l core/server/publicSite.tsx core/server/publicSiteRenderer.tsx \
   tests/integration/runtime/public-site-cache-eligibility.test.ts \
   tests/integration/runtime/public-content-visibility-cache-gate.test.ts \
   tests/integration/runtime/public-content-list-membership-cache-gate.test.ts \
+  tests/integration/runtime/public-nested-content-cache-gate.test.ts \
   tests/vitest/content/entry-visibility-gate.test.ts \
   tests/vitest/content/entry-unlock-token.test.ts \
   tests/integration/server/entry-access-password-hash.test.ts \
@@ -572,10 +631,12 @@ wc -l core/server/publicSite.tsx core/server/publicSiteRenderer.tsx \
   tests/integration/runtime/entry-visibility-gate.test.ts \
   tests/integration/runtime/entry-password-gate.test.ts \
   tests/unit/server/publicBookingApi.test.ts \
-  tests/unit/server/publicFormsApi.test.ts \
+  tests/unit/server/publicFormsApiTestFixtures.ts \
+  tests/unit/server/publicFormsApi-*.test.ts \
   tests/integration/routes/bookingRoutes.test.ts \
   tests/integration/routes/forms.test.ts \
-  tests/integration/server/formsWriteMounts.test.ts \
+  tests/integration/server/formsWriteMountsTestFixtures.ts \
+  tests/integration/server/formsWriteMounts-*.test.ts \
   tests/integration/routes/publicAnalytics.test.ts \
   tests/security/analyticsBeacon.test.ts
 ```

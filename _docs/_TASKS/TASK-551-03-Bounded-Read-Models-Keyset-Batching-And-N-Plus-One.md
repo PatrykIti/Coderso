@@ -6,7 +6,8 @@
 **Category:** Database / Performance / Architecture
 **Estimated Effort:** Extra Large
 **Dependencies:** TASK-551-01, TASK-551-02, and TASK-551-05 complete for L01;
-TASK-551-06-L03 complete before L02
+TASK-551-06-L03 plus TASK-551-09-L04 INITIAL Admin-authority and
+TASK-551-08-L03 INITIAL route-response-header receipts complete before L02
 **Status:** ⏳ To Do
 **Changelog:** 1263 (pinned; TASK-551-10-L02 closure only)
 
@@ -29,14 +30,22 @@ receive new behavior.
    list/read paths, page/detail revision route adoption, and booking/auth
    concurrency. It owns a new bounded form read service and every booking
    resource/service/assignment/schedule/blackout/reservation list contract; it
-  also owns the fixed global summary and bounded relation-facet envelopes that
-  replace whole-array-derived admin counts without making them page-local. It
+  also owns fixed global summary and bounded relation-facet envelopes that
+  replace whole-array-derived admin counts without making them page-local.
+  Arbitrary filtered totals are explicitly not computed: envelopes return
+  `matchingTotal:null` plus `hasMore`, while every exact fixed/facet value states
+  snapshot freshness and authorized-global scope. All page/summary/facet SQL
+  runs in one read-only repeatable-read transaction and has an individual
+  checked-in budget plus sanitized plan receipt. It
   lands before aggregate changes. Existing booking tab modules consume narrow
   list items (service rows retain only derived `submissionAccess`), submission
   payload is an uncached user-triggered point detail, and media list rows expose
   a safe derived `name` without their storage key. Submission detail transport
   is explicitly `Cache-Control: private, no-store, max-age=0` plus a client
-  `cache:"no-store"` fetch. Page-author, reverse-role, post-tag, and media-tag
+  `cache:"no-store"` fetch through 08-L03 INITIAL's strict request-local header
+  transport. Its eight Admin clients consume 09-L04 INITIAL's opaque
+  installation/reset authority and return a receipt without sharing ownership.
+  Page-author, reverse-role, post-tag, and media-tag
   predicates consume the four exact evidence-owned TASK-551-05 indexes.
 3. `TASK-551-03-L03` consumes L01 and the baseline budgets for aggregate,
    webhook and solution-kit batching. `seoService.ts` and
@@ -44,8 +53,10 @@ receive new behavior.
 
 L02 and L03 may not land in parallel. Each leaf reads the current source before
 editing and has sole ownership of every path in its allowlist.
-The compile-green family order is 01 → 02 → 05 → 03-L01 → 06 → 03-L02 →
-03-L03 → 04; no TASK-551-03 route/client/UI edit may precede 06-L03.
+The compile-green family order is 01 → 02 → 05 → 03-L01 → 06 → 07-L01 →
+09-L04 INITIAL + 08-L03 INITIAL → 03-L02 → 03-L03 → 04; no TASK-551-03
+route/client/UI edit may precede all four L02 receipts. The two INITIAL phases
+remain nonterminal and their later owners must not reopen L02 clients/routes.
 TASK-551-02 has already landed the shared prod/dev lifecycle entrypoint before
 this order reaches L02, so the cursor participant is started in both runtime
 modes and L02's smoke is not deferred to TASK-551-08.
@@ -83,8 +94,11 @@ modes and L02's smoke is not deferred to TASK-551-08.
 - Keyset pages use a deterministic unique tie-breaker and return no duplicate or
   missing record across equal-sort-value page boundaries.
 - Representative large-fixture list endpoints execute at most 3 SQL statements;
-  each list uses at most one bounded page query, one fixed-row global/matching
-  summary aggregate and one bounded relation-facet batch. Existing status tabs,
+  each list uses at most one bounded page query, one fixed-row global summary
+  aggregate and one bounded relation-facet batch in one read-only repeatable-read
+  snapshot. There is no arbitrary filtered `COUNT(*)`; `matchingTotal` is null
+  and pagination uses page length plus `hasMore`. Every statement has its own
+  numeric budget/sanitized-plan receipt. Existing status tabs,
   stat cards, role/folder/tag facets, storage totals and booking summaries remain
   collection-global across page navigation and are never derived from a page or
   auto-fetched full list. Aggregate dashboards execute at most 8 statements and
@@ -92,8 +106,8 @@ modes and L02's smoke is not deferred to TASK-551-08.
 - Initial form-submission lists transfer no payload and execute no hidden detail
   query; one accessible row expansion performs one parent-scoped point query and
   keeps payload only in component memory until close/auth lifecycle. Its success
-  and error responses are private/no-store and the request uses no-store fetch
-  semantics. Media name
+  and route-mapped error responses are private/no-store through the L03-owned
+  header seam and the request uses no-store fetch semantics. Media name
   fallback and all existing booking tabs have direct compatibility tests.
 - Bulk operations use bounded chunks of at most 500 rows/parameters within the
   PostgreSQL bind limit and keep all-or-nothing semantics where promised.
@@ -123,6 +137,12 @@ modes and L02's smoke is not deferred to TASK-551-08.
   during awaited lifecycle start; routes call `require*` afterward and pass the
   value into read services. TASK-551-08-L03 preserves this participant/import
   and must neither reload the env nor create a second keyring owner.
+- TASK-551-08-L03 owns `router.ts`/`httpServer.ts` response-header transport.
+  L02 only registers its submission-detail no-store handler first and calls the
+  exact closed setter; it never edits or replaces the shared transport.
+- TASK-551-09-L04 owns Admin cache installation authority and `cachePolicy.ts`.
+  L02 imports those modules read-only and hardens exactly its eight client
+  owners; no cache hit is an authorization decision.
 - Errors and telemetry omit cursor payloads, SQL/binds, credentials, session
   material, hidden columns, and PII.
 
@@ -135,8 +155,10 @@ the applicable security scan. L01/L02 prove module registration occurs before
 the shared `runtimeEntrypoint.ts` starts the lifecycle/listens for either thin
 mode adapter, invalid keyring config rejects lifecycle start, and
 `requirePaginationCursorKeyring()` fails closed before start/after
-close. L02 additionally proves every global summary/facet remains unchanged
-across at least three pages, filters affect only `matchingTotal`, and completes
+close. L02 additionally proves every exact global summary/facet reports one
+transaction snapshot and remains unchanged across at least three pages, filters
+leave `matchingTotal:null` and change only rows/`hasMore`, every SQL fingerprint
+has its required numeric evidence, and completes
 its five-scenario visible-effect Playwright smoke in light and dark mode with
 zero console errors.
 

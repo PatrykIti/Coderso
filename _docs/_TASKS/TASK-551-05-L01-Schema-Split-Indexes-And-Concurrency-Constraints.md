@@ -55,16 +55,30 @@ is deliberately absent from the transactional Drizzle journal; it may contain
 only the closed snapshot-owned index set rendered as `CREATE [UNIQUE] INDEX
 CONCURRENTLY` plus matching guarded drop/retry operations.
 
-The task-owned runtime receipt path is exactly
-`.tmp/task551-migration-receipt.json` and is not committed. Its strict version-1
-shape records the resolved journal index/tag, transactional SQL path and SHA-256,
-snapshot path and SHA-256, online SQL path and SHA-256, manifest SHA-256, exact
-ordered member names, per-member completion/catalog digest, classification and
-budgets, and final ready/valid state. Unknown fields, ambiguous suffix matches,
-non-fresh journal state, path escape, missing file, ID mismatch, or hash drift
-fails `task551_migration_receipt_invalid` before database DDL. Re-resolving an
-identical existing receipt preserves its verified per-member completion state;
-it never resets progress, while any identity/hash change fails closed.
+The task-owned filesystem mirror is exactly
+`.tmp/task551-migration-receipt.json` and is not committed. Its strict version-2
+state is also stored in the migration-created
+`task551_migration_operations` table from `schema/operations.ts`. It records
+artifact identities/digest, preflight digest and selected classification/budgets,
+direction, admission mode, adapter executable digest, drain nonce and nonce-
+bound acknowledgements, transactional state, ordered forward/reverse group and
+member progress, catalog digests, resume authorization/completion, generation,
+and previous-state digest. Unknown fields, ambiguous suffix matches, non-fresh
+journal state, path escape, missing file, ID mismatch, generation regression, or
+hash drift fails `task551_migration_receipt_invalid` before database DDL.
+
+Before the transactional migration creates the receipt table, the crash-safe
+filesystem record is authoritative. The phase-2 transaction creates the table
+and inserts the operation row atomically with expand DDL. Thereafter the DB row
+is authoritative and every transition is a generation compare-and-swap followed
+by an atomic `0600` temp-file write, file `fsync`, rename, and directory `fsync`.
+A behind mirror is repaired from the DB after validating the digest chain; an
+ahead/conflicting mirror fails closed. Reverse execution uses the DB row until
+the transaction that drops this task-owned table; its prior durable
+`reverse_transaction_pending` filesystem state plus exact live-catalog probe
+then distinguishes not-started from committed and completes recovery. A crash at
+any persistence boundary is tested; progress is never reset or inferred from an
+unchecked file alone.
 
 No service, route, client, cache, or other test file may be edited. TASK-551-04
 search services and TASK-551-08 outbox services consume these schema exports
@@ -98,74 +112,141 @@ entry/public behavior and all task/changelog/workflow files remain forbidden.
 - No unrelated default, enum, nullability, FK action, name, or column order
   changes are allowed.
 
-## Locked Deployment Phases and Budgets
+## Locked Rollout Orchestrator, Admission, and Budgets
 
-The migration has one mandatory, non-optional deployment algorithm. An
-implementer may not choose a different lock strategy or defer an online phase:
+This migration is executed only by one resumable command:
 
-1. **Read-only classify/preflight.** Acquire the TASK-551 deployment advisory
-   lock, reject dirty migration state, and capture exact row/byte counts, free
-   disk, replication lag, and oldest transaction age. Free disk must be at
-   least `2.5 *` the combined size of every table/index touched by a rewrite or
-   index build, replication lag at most 5 seconds, and oldest transaction at
-   most 30 seconds. A table is `small` only when it is both at most 100,000 rows
-   and at most 256 MiB, and the combined touched set is at most 1 GiB; otherwise
-   the deployment is `large`. Any failed ceiling aborts before DDL.
-2. **Transactional expand/integrity.** Stop accepting mutations, drain workers,
-   then apply columns, tables, checks, the stored-generated-column backfill, and
-   `BOOKING_RESERVATION_EXCLUSION_SQL` in one transaction with
-   `lock_timeout = '2s'`. The statement/whole-phase ceilings are 30/120 seconds
-   for `small` and 300/900 seconds for `large`. A timeout, invalid preflight row,
-   or signal rolls the transaction back. The admission/drain gate remains active
-   after this transaction: no page/content/widget revision request or worker may
-   execute its existing unlocked `max(version)+1` writer until phase 3a has
-   durably admitted all three missing unique indexes.
-3. **Online index phase, with a mandatory integrity barrier.** The closed
-   manifest is ordered into two immutable receipt groups and both use the same
-   dedicated deployment advisory lock, top-level autocommit `CREATE [UNIQUE]
-   INDEX CONCURRENTLY`, 2-second lock timeout, 30-minute/member ceiling, and
-   2-hour combined ceiling:
-   - **3a — drained revision-integrity group.** While the phase-2 mutation drain
-     remains active, run exactly `bun scripts/task-551-online-indexes.ts
-     apply-resume-check --receipt .tmp/task551-migration-receipt.json --through-group
-     revision-integrity`. Its first three members, in this exact order, are
-     `page_revisions_page_version_idx`,
-     `content_revisions_entry_version_idx`, and
-     `widget_template_revisions_template_version_idx`. Validate each definition
-     plus `indisready=true` and `indisvalid=true`, then durably atomically record
-     the group barrier. Sixteen synchronized probes per affected writer run
-     throughout each build; every probe is rejected at the admission/drain gate
-     and instrumentation proves zero revision `SELECT max`/`INSERT` statements.
-     A crash, invalid member, lost lock, timeout, or missing durable group receipt
-     keeps writes drained; restart resumes at the first incomplete member and
-     never resumes the old application between these three builds.
-   - **3b — online read-performance group.** Only a valid durable 3a barrier may
-     resume the old application. Immediately after resume, race 50 synchronized
-     current `max(version)+1` attempts for each affected parent and prove the
-     now-ready database unique index admits no duplicate version. Then run
-     `apply-resume-check --receipt .tmp/task551-migration-receipt.json` to build
-     every remaining manifest member while 16 representative writers remain
-     active with zero invariant error/deadlock and at most 20% p95 write-latency
-     regression. A valid byte-identical member is skipped; owned invalid residue
-     is dropped concurrently and recreated, while a wrong valid definition or
-     foreign-owned object fails closed. Every member is receipted before advance.
-4. **Catalog/readiness gate.** Require exact schema/snapshot/manifest/live-
-   catalog parity and `pg_index.indisready = true` plus `indisvalid = true` for
-   every member. Only this receipt permits rollout of the new application.
+`bun scripts/task-551-online-indexes.ts rollout-forward --receipt .tmp/task551-migration-receipt.json --admission-mode <external|offline-single>`
 
-Pre-cutover rollback reverses the manifest in dependency-safe order with
-top-level `DROP INDEX CONCURRENTLY`, drains writes again, applies
-`BOOKING_RESERVATION_EXCLUSION_SQL.dropSql`, reverses the transactional expand
-DDL, and deliberately preserves the shared `btree_gist` extension. A failed
-rollback is resumed from its durable receipt. After the new application has
-accepted traffic the database path is forward-fix only; the old binary may not
-be redeployed against the expanded contract. Deployment fixtures exercise a
-crash after every phase/member, exact idempotent resume, forward repair, and
-reverse recovery. Revision-integrity members are built only while affected
-writes remain drained; all later read-performance members run with 16 concurrent
-writers and at most 20% p95 write-latency regression. The deployment suite
-proves there is no resume window in which an unlocked `max(version)+1` writer
-can run before all three missing unique indexes are ready and valid.
+`rollout-reverse` is the only reverse command and `status` is read-only. Generic
+`bun run db:migrate`, `drizzle-kit migrate`, startup migration, direct SQL, and
+the former split `resolve-receipt`/`apply-resume-check` sequence are not valid
+TASK-551 rollout paths. The transactional SQL begins with a guard requiring the
+same operation UUID in the session GUC `coderso.task551_operation_id` and an
+L02-owned `coderso:migration:<operationId>` `application_name`; generic migrators
+fail before DDL. The orchestrator creates one max-1 migration client with that
+name, sets the GUC, verifies TASK-551 is the only pending journal member, and
+invokes the installed `drizzle-orm/postgres-js/migrator` API over the resolved
+artifact. It never spawns a shell or delegates phase 2 to an opaque command.
+
+The command holds one dedicated TASK-551 advisory-lock session for its complete
+run and follows this exact state machine:
+
+1. **Resolve/classify/preflight.** Resolve/harden/hash the exact migration,
+   snapshot, online SQL, manifest, and current journal; reject any other pending
+   migration. Capture exact row/byte counts, free disk, replication lag, oldest
+   transaction, duplicate revisions, invalid windows, and overlapping active
+   bookings into a canonical preflight digest. Free disk is at least `2.5 *` the
+   combined touched size; lag `<=5s`; oldest transaction `<=30s`. `small` means
+   every touched table `<=100,000` rows and `<=256 MiB` and combined size
+   `<=1 GiB`; otherwise `large`. Select and persist lock/statement/phase budgets:
+   lock 2s in both classes, statement/transaction 30/120s small and 300/900s
+   large, online member 30 minutes and combined 2 hours. A resumed command must
+   reproduce the artifact and preflight identity or stop before transition.
+2. **Stop admission and drain.** `external` mode is mandatory when configured
+   replica count exceeds one or autoscaling/scale-to-zero is enabled. Resolve the
+   adapter only from `TASK551_ADMISSION_ADAPTER`: absolute regular executable,
+   owner-executable, not group/world writable, SHA-256 pinned into the receipt.
+   Runtime and worker target counts come separately from L02's strict
+   `CODERSO_RUNTIME_REPLICA_COUNT` (`1..256`) and
+   `CODERSO_WORKER_REPLICA_COUNT` (`0..256`); neither is inferred from the other.
+   Invoke Node `execFile` directly with fixed argv
+   `prepare --operation-id <uuid> --nonce <32-byte-base64url> --receipt-sha256 <hex>`;
+   never use a shell, concatenated command, or adapter-supplied argument. Timeout
+   is 120s, stdout one UTF-8 JSON object `<=16 KiB`, stderr `<=16 KiB` diagnostic
+   bytes and never receipted. The strict response is exactly
+   `{version:1,action:"prepare",operationId,nonce,receiptSha256,
+   admissionStopped:true,workersDrained:true,maintenanceStopped:true,
+   runtimeReplicas:[{id,state:"stopped",binarySha256}],
+   workerReplicas:[{id,state:"stopped",binarySha256}],completedAt}`. Objects at
+   both levels reject unknown keys; IDs satisfy L02's replica-ID grammar and are
+   unique across arrays; SHA-256 is lowercase hex; runtime/worker array lengths
+   equal their respective configured counts. Echoes match byte-for-byte and
+   `completedAt` is canonical UTC within the invocation window. There is no
+   unimplemented signature claim: executable pinning plus operation/nonce/
+   receipt binding is the exact local trust boundary. Malformed/stale output
+   fails closed.
+3. **Prove database quiescence.** Adapter acknowledgement is necessary but not
+   sufficient. On the migration session, sample `pg_stat_activity` for the same
+   database and application role, excluding its own PID, every 250ms for a
+   continuous 5s within a 120s deadline. Exact L02 names
+   `coderso:runtime:<replicaId>`, `coderso:worker:<replicaId>`, and
+   `coderso:maintenance:<replicaId>` must be absent; an unknown same-role
+   `application_name`, missing name, or a new session resets/fails the drain.
+   Before trusting this observation, open one runtime- and one worker-named probe
+   connection under the exact application DB role, require the migration session
+   to observe both distinct backend PIDs/application names, close both, and
+   require their disappearance. Failure to read `pg_stat_activity`, a differing
+   runtime role, redacted/missing identity, or failure to observe the probes is
+   `task551_migration_activity_visibility_invalid`; rollout stops. No privilege
+   or visibility limitation is treated as an empty result.
+   Persist the adapter ack, nonce, observed replica set, and quiescence window.
+4. **Transactional expand.** Persist `transaction_apply_pending`, then use the
+   dedicated migration client to apply the guarded transactional artifact with
+   selected `lock_timeout`, `statement_timeout`, and whole-phase cancellation.
+   That same transaction creates `task551_migration_operations`, inserts the
+   version-2 row, applies columns/tables/checks/generated backfill/exclusion DDL,
+   and marks `transaction_applied`. Timeout/signal rolls back. Recovery probes
+   both journal and receipt-table/catalog identity; it reruns only when nothing
+   committed and never assumes success from the filesystem mirror.
+5. **Drained revision-integrity group.** Keep admission stopped and workers
+   drained. In exact order build
+   `page_revisions_page_version_idx`,
+   `content_revisions_entry_version_idx`, and
+   `widget_template_revisions_template_version_idx` using top-level autocommit
+   `CREATE UNIQUE INDEX CONCURRENTLY`. Before/after each member CAS-persist state;
+   require byte-identical definition plus `indisready/indisvalid=true`. Sixteen
+   writer probes per family remain rejected before SQL. Valid identical members
+   skip; task-owned invalid residue drops concurrently then rebuilds; a wrong
+   valid/foreign object fails. Only the durable group barrier authorizes resume.
+6. **Drained online read-performance group.** Admission and workers remain
+   stopped; the old pre-TASK-551 binary is never resumed. Build every remaining
+   ordered member with per-member CAS receipts. Rehearsal/perf fixtures—not live
+   customer rows—run 16 controlled writers and prove zero invariant/deadlock and
+   `<=20%` p95 regression. The live rollout performs no synthetic data mutation.
+7. **Final gate and resume the compatible binary.** Verify schema/snapshot/
+   manifest/live-catalog parity and every member ready/valid, then validate the
+   supplied `TASK551_RESUME_BINARY_SHA256` and
+   `TASK551_REVISION_WRITER_COMPATIBILITY_SHA256` against the release receipt
+   proving the resumed TASK-551 binary already uses the shared race-safe revision
+   allocator and conflict mapping for page/content/widget writers. Persist
+   `resume_authorized` only after that proof. In external mode call `execFile`
+   with fixed argv
+   `resume --operation-id <uuid> --nonce <new nonce> --receipt-sha256 <hex>
+   --authorization-sha256 <final-catalog-and-binary digest>`; timeout 180s and
+   the same output limits. Its exact object is
+   `{version:1,action:"resume",operationId,nonce,receiptSha256,
+   authorizationSha256,admissionResumed:true,workersResumed:true,
+   runtimeReplicas:[{id,state:"running",binarySha256}],
+   workerReplicas:[{id,state:"running",binarySha256}],completedAt}`; counts/IDs/
+   echoes are revalidated and every binary digest equals the authorized digest.
+   Persist `resume_completed` only after this acknowledgement, then
+   `forward_ready`. In `offline-single`, persist only
+   `operator_resume_authorized`; the tool never starts a process, and the
+   operator may start exactly one compatible new binary only after successful
+   command exit. If compatibility evidence is absent, admission stays stopped.
+
+`offline-single` is allowed only when validated replica count is exactly one,
+autoscaling is false, and exact environment confirmation
+`TASK551_OFFLINE_SINGLE_ACK=all-coderso-processes-stopped` is present. It invokes
+no external adapter and is valid only as a cold upgrade: the same 5-second DB
+quiescence proof must pass before phase 2, no app/worker/maintenance session may
+appear before command completion, and the tool merely authorizes the operator's
+post-exit start. This is the exact local/small-site path, not a claim that a
+process was remotely resumed.
+
+Pre-cutover `rollout-reverse` requires a fresh drain (even if forward receipt
+says stopped), a nonce-bound reverse authorization, and proof no new binary ever
+accepted traffic. It reverses online members in recorded dependency-safe order
+with top-level `DROP INDEX CONCURRENTLY`, persists each reverse member, then sets
+`reverse_transaction_pending` and reverses the transactional artifact including
+the receipt table and exclusion `.dropSql`, deliberately preserving `btree_gist`.
+After commit it uses the filesystem pending state plus exact catalog/journal
+probe to mark `reverse_complete`. After any new binary traffic acknowledgement,
+reverse is forbidden and the path is forward-fix only. Resume/reverse tests kill
+the process after every state transition, adapter boundary, transaction commit,
+group barrier, and member in both directions; no recovery path resumes admission
+before authorization or loses ordered progress.
 
 ## Implementation Pseudocode
 
@@ -262,6 +343,19 @@ export const cacheInvalidationOutbox = pgTable("cache_invalidation_outbox", {
   lastErrorCode: text("last_error_code"),
 }, outboxIndexesAndNamedStateChecks);
 
+export const task551MigrationOperations = pgTable("task551_migration_operations", {
+  operationId: uuid("operation_id").primaryKey(),
+  taskId: text("task_id").notNull(), // CHECK task_id = 'TASK-551'
+  generation: integer("generation").notNull(), // CHECK 0..2^31-1
+  direction: text("direction").notNull(), // CHECK forward|reverse
+  state: text("state").notNull(), // CHECK exact version-2 state literals
+  receipt: jsonb("receipt").$type<Task551MigrationReceipt>().notNull(),
+  previousStateSha256: text("previous_state_sha256"),
+  stateSha256: text("state_sha256").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, task551MigrationOperationChecks);
+
 type IndexCandidate = StrictReadonly<{
   inventoryId: string;
   name: string;
@@ -275,12 +369,47 @@ function selectIndex(candidate: IndexCandidate, evidence: BaselineEvidence): Sel
 }
 
 type Task551MigrationReceipt = StrictReadonly<{
-  version: 1;
+  version: 2;
+  taskId: "TASK-551";
+  operationId: string;
+  generation: number;
+  previousStateSha256: string | null;
+  stateSha256: string;
+  direction: "forward" | "reverse";
+  state:
+    | "resolved" | "preflight_passed" | "drain_requested"
+    | "drain_confirmed" | "transaction_apply_pending"
+    | "transaction_applied" | "revision_integrity_building"
+    | "revision_integrity_ready" | "resume_authorized"
+    | "resume_completed" | "operator_resume_authorized"
+    | "read_performance_building" | "forward_ready"
+    | "reverse_drain_requested" | "reverse_drain_confirmed"
+    | "reverse_indexes_building" | "reverse_transaction_pending"
+    | "reverse_complete";
   journal: { index: number; tag: string };
-  transactionalSql: { path: string; sha256: string };
-  snapshot: { path: string; sha256: string };
-  onlineSql: { path: string; sha256: string };
-  manifestSha256: string;
+  artifacts: {
+    transactionalSql: { path: string; sha256: string };
+    snapshot: { path: string; sha256: string };
+    onlineSql: { path: string; sha256: string };
+    manifestSha256: string;
+    aggregateSha256: string;
+  };
+  preflight: { digest: string; classification: "small" | "large";
+    lockTimeoutMs: 2_000; statementTimeoutMs: 30_000 | 300_000;
+    transactionTimeoutMs: 120_000 | 900_000 };
+  admission: {
+    mode: "external" | "offline-single";
+    runtimeReplicaCount: number; workerReplicaCount: number;
+    adapterSha256: string | null;
+    drainNonce: string; prepareAckSha256: string | null;
+    quiescentFrom: string | null; quiescentUntil: string | null;
+    resumeNonce: string | null; resumeAuthorizationSha256: string | null;
+    resumeAckSha256: string | null;
+    resumeBinarySha256: string | null;
+    revisionWriterCompatibilitySha256: string | null;
+  };
+  transaction: { apply: "pending" | "applied" | "reversed";
+    catalogSha256: string | null };
   groups: readonly [
     { name: "revision-integrity"; members: readonly [
       "page_revisions_page_version_idx",
@@ -290,31 +419,33 @@ type Task551MigrationReceipt = StrictReadonly<{
     { name: "read-performance"; members: readonly string[];
       complete: boolean; completedAt: string | null },
   ];
-  members: readonly OnlineIndexMemberReceipt[];
+  forwardMembers: readonly OnlineIndexMemberReceipt[];
+  reverseMembers: readonly OnlineIndexMemberReceipt[];
   finalCatalogReady: boolean;
 }>;
 
-async function resolveTask551MigrationReceipt(
-  outputPath: ".tmp/task551-migration-receipt.json",
-  deps: ReceiptResolverDeps,
-): Promise<Task551MigrationReceipt> {
-  // Re-read the fresh journal; locate one exact TASK-551 suffix set, validate
-  // same ID and repo-contained paths, hash every artifact/manifest, then write
-  // the strict receipt atomically, preserving matching verified progress.
-  // Never accept a caller-provided number/path or reset a completed member.
-}
-
-async function applyResumeCheckOnlineIndexManifest(
+async function rolloutTask551Migration(
+  direction: "forward" | "reverse",
   receiptPath: ".tmp/task551-migration-receipt.json",
-  deps: OnlineIndexDeps,
+  deps: RolloutDeps,
 ): Promise<Task551MigrationReceipt> {
-  // Hold the deployment advisory lock on one dedicated session. Validate exact
-  // artifact hashes and snapshot/manifest identity, skip only valid
-  // byte-identical members, repair only owned invalid residue, execute one
-  // top-level CONCURRENTLY statement at a time, persist after every catalog
-  // verification. --through-group revision-integrity stops only after its three
-  // ordered unique indexes are durably ready/valid; the unqualified command
-  // requires both groups and all members ready/valid before returning.
+  const receipt = await reconcileDbAndFilesystemReceipt(receiptPath, deps);
+  await deps.advisoryLock.withDedicatedSession(async migrationSession => {
+    await verifyArtifactsAndPreflight(receipt, migrationSession);
+    await stopAdmissionAndProveQuiescence(receipt, migrationSession, deps.execFile);
+    if (direction === "forward") {
+      await applyTransactionalArtifactWithGuard(receipt, migrationSession);
+      await applyOnlineGroup(receipt, "revision-integrity", migrationSession);
+      await applyOnlineGroup(receipt, "read-performance", migrationSession);
+      await verifyAndPersistFinalCatalog(receipt, migrationSession);
+      await authorizeAndResumeCompatibleBinary(receipt, deps.execFile);
+    } else {
+      await assertPreCutoverReverseAllowed(receipt, migrationSession);
+      await reverseOnlineMembers(receipt, migrationSession);
+      await reverseTransactionalArtifactAndRecoverFilesystem(receipt, migrationSession);
+    }
+  });
+  return readStrictReceipt(receiptPath);
 }
 ```
 
@@ -338,7 +469,10 @@ The exact mandatory new btree catalog is:
 | `pages_author_list_updated_id_idx` | `pages` | `author_id ASC, updated_at DESC, id DESC` | none |
 | `content_entries_list_updated_id_idx` | `content_entries` | `updated_at DESC, id DESC` | none |
 | `content_entries_type_list_updated_id_idx` | `content_entries` | `type_id ASC, updated_at DESC, id DESC` | none |
+| `content_entries_author_list_updated_id_idx` | `content_entries` | `author_id ASC, updated_at DESC, id DESC` | none |
+| `content_entries_type_author_list_updated_id_idx` | `content_entries` | `type_id ASC, author_id ASC, updated_at DESC, id DESC` | none |
 | `posts_list_updated_id_idx` | `posts` | `updated_at DESC, id DESC` | none |
+| `posts_author_list_updated_id_idx` | `posts` | `author_id ASC, updated_at DESC, id DESC` | none |
 | `users_list_created_id_idx` | `users` | `created_at DESC, id DESC` | none |
 | `user_roles_role_user_idx` | `user_roles` | `role_id ASC, user_id ASC` | none |
 | `forms_list_updated_id_idx` | `forms` | `updated_at DESC, id DESC` | none |
@@ -376,6 +510,8 @@ The exact mandatory new btree catalog is:
 | `sessions_expired_retention_idx` | `sessions` | `expires_at ASC, id ASC` | `revoked_at IS NULL` |
 | `sessions_revoked_retention_idx` | `sessions` | `revoked_at ASC, id ASC` | `revoked_at IS NOT NULL` |
 | `analytics_sessions_retention_idx` | `analytics_sessions` | `last_seen_at ASC, id ASC` | none |
+| `webhooks_list_created_id_idx` | `webhooks` | `created_at DESC, id DESC` | none |
+| `webhook_deliveries_webhook_list_idx` | `webhook_deliveries` | `webhook_id ASC, created_at DESC, id DESC` | none |
 | `webhook_deliveries_retry_idx` | `webhook_deliveries` | `status ASC, created_at ASC, id ASC` | `status IN ('pending','failed')` |
 | `webhook_deliveries_terminal_retention_idx` | `webhook_deliveries` | `created_at ASC, id ASC` | `status IN ('success','failed')` |
 | `solution_kit_runs_retention_idx` | `solution_kit_install_runs` | `created_at ASC, id ASC` | none |
@@ -393,9 +529,10 @@ non-btree members:
 |---|---|---|---|
 | `posts_tags_gin_idx` | `posts` | `USING GIN (tags jsonb_path_ops)` | `tags @> :normalizedOneTagArray::jsonb`, where the bound JSON value is exactly one normalized tag in an array |
 | `media_tags_gin_idx` | `media` | `USING GIN (tags jsonb_path_ops)` | `tags @> :normalizedUniqueSortedTags::jsonb`, where the bound array contains all requested tags and preserves AND semantics |
+| `webhooks_events_gin_idx` | `webhooks` | `USING GIN (events jsonb_path_ops)` | `enabled = true AND events @> :normalizedOneEventArray::jsonb`, where the bound JSON value is exactly one normalized event in an array |
 
-TASK-551-03-L02 must use those exact parameterized containment shapes; neither
-owner may spell tag filtering as `jsonb_array_elements`, `?`, `?|`,
+TASK-551-03-L02 must use the tag shapes and TASK-551-03-L03 must use the webhook
+event shape exactly; neither owner may spell containment as `jsonb_array_elements`, `?`, `?|`,
 `jsonb::text`, leading-wildcard text search, or an expression that cannot use
 the declared opclass. Empty tag filters omit the predicate before SQL; request
 normalization caps/deduplicates as declared by L03.

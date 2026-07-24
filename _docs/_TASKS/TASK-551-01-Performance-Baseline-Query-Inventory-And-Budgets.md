@@ -41,11 +41,14 @@ secrets, raw PII, or customer payloads.
   role-leading user lookup, one-tag post containment, and multi-tag media AND
   containment. Their literal selectivities/bind shapes feed TASK-551-05 plans;
   later query/index leaves may not substitute a friendlier distribution.
-- Initial L01 owns the exact planned caller
-  `cacheInvalidationOutbox.ts#readOldestUnprocessedAge` (bound 1,
-  `processed_at IS NULL`, `created_at,id`, TASK-551-08-L02). Because its table is
-  created by TASK-551-05, that child's plan/write fixture owns its finite budget;
-  final L01 must discover the caller and remove the planned record.
+- Initial L01 owns exactly two planned callers: the outbox
+  `readOldestUnprocessedAge` point read (bound 1, TASK-551-08-L02) and
+  `publicContentVisibilityGateRead.ts#validatePublicHtmlDependencies` (one
+  aggregate result over at most 128 tuples/16,384 canonical bytes and a
+  `<= 100 + 1` root list, TASK-551-09-L01). The former receives its later
+  TASK-551-05 fixture; L02 baselines the latter. Final L01 must discover each
+  landed caller or record TASK-551-09-L01's reviewed removal, then remove every
+  planned record.
 - Query-count, rows-read/returned, p50/p95/p99, and pool-acquisition-wait
   budgets are checked-in finite numeric release-gate inputs before TASK-551-02.
   L02's deterministic formula is used only for the initial reviewed freeze;

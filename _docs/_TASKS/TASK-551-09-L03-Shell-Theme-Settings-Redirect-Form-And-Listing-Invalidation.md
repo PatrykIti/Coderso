@@ -69,7 +69,9 @@ Sole writer of:
 
 Forbidden: `core/services/backups/**` (TASK-511), publicSite/siteCache, page/
 entry/post/SEO, security settings/Admin, 07/08, migrations/packages and shared
-docs/tasks. Before dispatch verify TASK-511's terminal or parent-gate exact
+docs/tasks. `core/services/forms/formActionsService.ts` and its tests are also
+explicitly read-only/forbidden: action definitions/runs are post-submission Admin
+behavior, not a public rendered dependency. Before dispatch verify TASK-511's terminal or parent-gate exact
 serialized import/restore seam can
 carry its outer event key and `collectInvalidationTagsTx`, persist one plan in its
 outer transaction and call the lifecycle-owned invalidation handle's
@@ -124,9 +126,11 @@ requirements without weakening their tests.
   `site:redirects`/`site:runtime`/`site:html` generations, then discards those
   identities before plan construction. Positive and negative redirect
   records have short bounded TTL; no per-path generation key is created.
-- Form configuration/status/schema/action changes invalidate linked rendered
-  dependencies; submissions do not invalidate HTML and nonce-bearing HTML
-  remains excluded.
+- Form public configuration/status/schema/field changes owned by `formsService`
+  invalidate linked rendered dependencies. Form action-definition/action-run
+  mutations and submissions do not invalidate HTML; nonce-bearing HTML remains
+  excluded. No render audit, dependency selector, invalidation plan, outbox row,
+  or source import may treat `formActionsService`/`form_actions` as public HTML.
 - V1 never takes ownership of `commerceService`: any commerce product data/block
   is L01 `commerce_product_data` cache-excluded. Form/booking submission nonces,
   booking `slotsToken`, analytics beacon nonces, other request-scoped/one-time
@@ -255,8 +259,9 @@ if (committed.plan) {
 
 Prime multiple pages, then mutate selected/unselected menu/footer/theme/profile;
 prove only declared dependencies/global fallback miss. Cover every public
-setting above, redirect positive/negative old/new, form config vs submission,
-listing query/template/detail linkage, import outer commit/rollback and Redis
+setting above, redirect positive/negative old/new, form public config/fields vs
+action definition/run/submission, listing query/template/detail linkage, import
+outer commit/rollback and Redis
 failure retry. Inject a memory bump failure and prove local family bypass. Prove
 `setSettingsTx` performs no global-client reads, and rerun handed-off bounded
 import/chunk/checksum plus detail-page revision concurrency/retention assertions.
@@ -278,6 +283,10 @@ advances/fences coherence. Re-run L01's exact commerce/form-nonce/booking-nonce/
 analytics-nonce/request-token/unknown-dependency no-fill matrix and its tagged-
 or-gated-or-excluded invariant. Run memory and two-client Redis variants with
 unique fixtures.
+Add a source guard over production renderer/dependency/invalidation modules that
+fails on any `formActionsService`, `form_actions`, action-run cache tag or action-
+mutation invalidation reference; runtime spies prove action changes produce zero
+HTML cache/outbox activity while public form config/field changes still invalidate.
 
 ```bash
 set -a && source .env && set +a

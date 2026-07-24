@@ -43,14 +43,33 @@ TASK-518 files; task/changelog/workflow files.
 
 ```ts
 type PageLimit = Brand<number, "PageLimit">;
+type CursorField =
+  | StrictReadonly<{ name: string; type: "text"; value: string }>
+  | StrictReadonly<{ name: string; type: "uuid"; value: string }>
+  | StrictReadonly<{ name: string; type: "timestamp"; value: string }>
+  | StrictReadonly<{ name: string; type: "integer"; value: string }>
+  | StrictReadonly<{ name: string; type: "boolean"; value: boolean }>
+  | StrictReadonly<{ name: string; type: "null" }>;
 type CursorPayload = StrictReadonly<{
   formatVersion: 1;
   keyVersion: number;
   issuedAtUnixSeconds: number;
   scope: string;
   direction: "next" | "previous";
-  sort: readonly CursorScalar[];
-  id: string;
+  fields: readonly CursorField[];
+}>;
+
+type KeysetFieldSpec = StrictReadonly<{
+  name: string;
+  type: Exclude<CursorField["type"], "null">;
+  column: SqlFragment; // code-owned identifier fragment, never cursor/request text
+  order: "asc" | "desc";
+  nulls: "first" | "last";
+  nullable: boolean;
+}>;
+type KeysetSpec = StrictReadonly<{
+  scope: string;
+  fields: readonly [...KeysetFieldSpec[], KeysetFieldSpec];
 }>;
 
 export type PaginationCursorKeyring = StrictReadonly<{
@@ -70,19 +89,23 @@ export function loadPaginationCursorKeyring(env: NodeJS.ProcessEnv): PaginationC
   // Reject missing, weak, partial, duplicate-version, or malformed configuration.
 }
 
-function encodeKeysetCursor(payload: CursorPayload, keys: PaginationCursorKeyring): string {
-  // Canonical JSON + base64url + HMAC-SHA-256; never serialize credentials.
-  // Always stamp the current key version and current wall-clock issue time.
+function encodeKeysetCursor(input: CursorEncodeInput, spec: KeysetSpec,
+  keys: PaginationCursorKeyring): string {
+  // Normalize typed fields against spec, create canonical payload, then emit
+  // unpaddedBase64url(payloadJson) + "." + unpaddedBase64url(HMAC-SHA-256).
+  // MAC input is the ASCII payload token. Never serialize credentials.
 }
 
-function decodeKeysetCursor(input: string, expectedScope: string, keys: PaginationCursorKeyring): CursorPayload {
+function decodeKeysetCursor(input: string, spec: KeysetSpec,
+  keys: PaginationCursorKeyring): CursorPayload {
   // Select only the declared current/previous key version, then verify HMAC in
-  // constant time. Bound bytes, age, future skew, format, tuple, and scope.
-  // Throw cursor_invalid or cursor_scope_mismatch without echoing the input.
+  // constant time before payload interpretation. Strict-parse and normalize the
+  // exact wire schema; require field name/type/order equality with the spec.
 }
 
 function buildKeysetPredicate(spec: KeysetSpec, cursor: CursorPayload): SqlFragment {
-  // Lexicographic predicate matching ORDER BY, null ordering, and unique id.
+  // Build a lexicographic OR-of-prefixes from code-owned column fragments using
+  // the normative comparator table below. Never interpolate a payload name.
 }
 
 // core/server/paginationCursorLifecycle.ts: the only runtime adapter.
@@ -110,11 +133,74 @@ export function requirePaginationCursorKeyring(): PaginationCursorKeyring {
 }
 ```
 
+## Exact Cursor Wire and SQL Contract
+
+The cursor is exactly `<payload-base64url>.<mac-base64url>`, with no padding,
+whitespace, alternate alphabet, or third segment. The decoded canonical JSON has
+only `formatVersion,keyVersion,issuedAtUnixSeconds,scope,direction,fields` in
+that serialization order. It is at most 1,024 UTF-8 bytes; the complete encoded
+cursor is at most 2,048 ASCII bytes. `keyVersion` is an integer `1..2^31-1`,
+`issuedAtUnixSeconds` is a non-negative safe integer, scope is NFC-normalized
+UTF-8 `1..512` bytes, and there are `1..5` fields including the final tie-breaker.
+Objects reject duplicate JSON keys and unknown keys; fields reject duplicate
+names. A field name is an ASCII identifier matching
+`[a-z][a-z0-9_]{0,63}`.
+
+Scalar wire forms are exact:
+
+- `text` is NFC-normalized UTF-8 of at most 512 bytes, with no NUL/control
+  character; normalization that changes the supplied wire value is rejected;
+- `uuid` is lowercase canonical `8-4-4-4-12` hex;
+- `timestamp` is UTC millisecond ISO-8601 exactly
+  `YYYY-MM-DDTHH:mm:ss.sssZ`; invalid dates or alternate offsets/precision fail;
+- `integer` is an int64 encoded as canonical signed decimal text (`0`, or
+  optional `-` followed by a non-zero digit and digits), with no `+`, leading
+  zero, exponent, whitespace, or JSON-number precision loss;
+- `boolean` is a JSON boolean; `null` has exactly `name,type` and is legal only
+  when the matching spec is nullable. Non-null fields have exactly
+  `name,type,value`.
+
+`KeysetSpec` is a code-owned closed allowlist: every field binds a preconstructed
+SQL identifier fragment plus scalar type, order, null placement, and nullability.
+It rejects unknown spec keys, duplicate names/columns, more than five fields, or
+a final field other than exactly `{name:"id",type:"uuid",nullable:false}`. The
+payload must match spec field count, name, non-null type, and order byte-for-byte;
+the payload never chooses a SQL column, order, or null placement. Scope equality
+is constant-time over the canonical UTF-8 bytes after the MAC succeeds.
+
+For one field `c` and cursor value `v`, the strict comparison used at the first
+non-equal tuple position is frozen below. Prefix equality is always
+`c IS NOT DISTINCT FROM v`. `after` means the logical next-page relation;
+`before` means previous-page relation.
+
+| SQL order | Cursor value | `after` predicate | `before` predicate |
+|---|---|---|---|
+| `ASC NULLS LAST` | non-null | `c > v OR c IS NULL` | `c < v` |
+| `ASC NULLS LAST` | null | `FALSE` | `c IS NOT NULL` |
+| `DESC NULLS LAST` | non-null | `c < v OR c IS NULL` | `c > v` |
+| `DESC NULLS LAST` | null | `FALSE` | `c IS NOT NULL` |
+| `ASC NULLS FIRST` | null | `c IS NOT NULL` | `FALSE` |
+| `ASC NULLS FIRST` | non-null | `c > v` | `c < v OR c IS NULL` |
+| `DESC NULLS FIRST` | null | `c IS NOT NULL` | `FALSE` |
+| `DESC NULLS FIRST` | non-null | `c < v` | `c > v OR c IS NULL` |
+
+For each tuple position, the builder ORs `prefix equality AND strict comparison`;
+the final UUID `id` makes the relation unique. `direction:"next"` selects
+`after` and retains the declared `ORDER BY`. `direction:"previous"` selects
+`before`, reverses every SQL direction and null placement for the bounded
+`LIMIT + 1` fetch, and reverses fetched rows in memory before envelope encoding;
+it does not use `OFFSET`. The encoder derives fields only from the boundary row:
+last returned row for `next`, first returned row for `previous`.
+
 `toBoundedPage(rows, limit, encode)` accepts at most `limit + 1` rows and emits
 `items`, `nextCursor`, and `hasMore`. Errors are machine-readable:
-`page_limit_invalid`, `cursor_invalid`, `cursor_scope_mismatch`,
+`page_limit_invalid`, `cursor_invalid`, `cursor_schema_invalid`,
+`cursor_value_invalid`, `cursor_spec_mismatch`, `cursor_scope_mismatch`,
 `cursor_version_unsupported`, and lifecycle-only
 `pagination_cursor_keyring_unavailable`.
+Route boundaries map schema/value/spec/version/signature/age failures to the same
+generic `cursor_invalid` response and never expose the cursor, field value, MAC,
+spec, SQL fragment, or parse offset; internal exact codes remain testable.
 
 The cursor lifetime is code-owned at 24 hours with at most 60 seconds of future
 clock skew. Rotation publishes a higher current key version while retaining at
@@ -138,10 +224,16 @@ env; the runtime integration test owns scoped env setup/restore.
 
 ## Testing Requirements
 
-- Property-style round trips cover equal timestamps, nulls, UTF-8 IDs, both
-  directions, and stable canonical encoding.
-- Mutation, truncation, wrong scope/secret/version, oversized input, duplicate
-  sort fields, and unknown properties fail closed without input disclosure.
+- Property-style round trips cover every scalar wire type, equal timestamps,
+  nulls, both directions, stable canonical encoding, and 1/5-field boundaries.
+- Mutation, truncation, wrong scope/secret/version, alternate base64/JSON/date/
+  UUID/integer encodings, oversized input, duplicate JSON keys/field names,
+  unknown properties, spec-column injection attempts, and mismatched field
+  name/type/order/count fail closed without input disclosure.
+- Table-driven SQL tests execute all 16 comparator rows (four order/null modes ×
+  null/non-null × after/before), two- through five-field prefix ties, and first/
+  middle/last navigation against PostgreSQL. They prove no gaps/duplicates,
+  previous-fetch SQL reversal plus output reversal, and exact code-owned columns.
 - Missing/short current secrets, incomplete previous-key pairs, duplicate or
   non-monotonic key versions, expired cursors, and future issue times fail
   closed; current and previous keys pass only during the defined overlap.
@@ -195,5 +287,6 @@ limits, and error codes to TASK-551-10-L02 for `.env.example`,
   lifecycle, exposes one immutable required value, and requires zero environment
   reads from module registration, route handlers, or read services.
 - Default/max limits are 50/100 and cannot be bypassed through coercion.
-- Produced predicates always include the declared unique tie-breaker and match
-  the requested sort/null order in all test matrices.
+- Produced predicates always include final non-null UUID `id`, interpolate zero
+  cursor-supplied identifiers, and match the frozen comparator truth table for
+  every direction/null/order combination with no page gaps or duplicates.

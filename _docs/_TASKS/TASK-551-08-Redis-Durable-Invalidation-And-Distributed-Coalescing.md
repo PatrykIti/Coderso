@@ -53,6 +53,11 @@ eventual model and remains uncached or fail-closed DB-backed.
   that handle absorbs cache transport failures and resolves only after the local
   observation and any required affected-family force fence are visible. Rollback/
   no-op writes neither outbox nor invalidation.
+- Global Redis/outbox health fences use source-bound observation watermarks so a
+  delayed recovery cannot undo a newer force. Failed immediate delivery creates
+  a bounded exact-event fence; only conditional durable completion of that same
+  outbox row clears it. Pub/Sub and broad pending-age/health recovery clear no
+  event fence; registry overflow forces bypass until restart.
 - The strict plan/outbox payload is only opaque bounded `eventKey` plus
   deduplicated finite `CacheTag[]`. The separate strict bounded Pub/Sub payload is
   only that `eventKey` plus the resulting generation digest—never tags or domain
@@ -81,15 +86,31 @@ eventual model and remains uncached or fail-closed DB-backed.
   outcome; it never shares `TResult`, `no_fill`, token/nonce output or errors.
   Token-safe release runs afterward only as
   best-effort cleanup and cannot establish fill authority retroactively.
+  A timeout/disconnect/malformed reply after dispatch has unknown physical
+  outcome; it remains non-published even if Redis physically wrote bytes, which
+  only a later independent strict generation-bound GET may consume.
 - Redis adapters, immediate post-commit delivery, the worker and Pub/Sub report
   only L01's exact normalized coherence signals, including affected finite tags,
   reason and pending age. The single L02 coordinator-owned coherence controller
   combines those signals with backend health; no adapter or worker constructs an
   independent coherence snapshot or advances an epoch outside `report(...)`.
-  State-identical force/recover reports are no-ops, but every accepted local or
-  Pub/Sub invalidation observation conservatively advances affected epochs,
-  including at-least-once duplicates; observations never clear fences or authorize
-  stale/private values, and no event-dedup registry exists.
+  Current-watermark state-identical force/recover reports are no-ops, but every
+  accepted event-keyed local/PubSub observation advances affected epochs,
+  including at-least-once duplicates; observations never clear fences or
+  authorize stale/private values.
+- The runtime's frozen consumer surface is only read-only `mode`, `cache`,
+  awaited `invalidation.applyAfterCommit`, and `health`. Store/controller/worker/
+  PubSub/lease/lifecycle internals stay private. Before listen, its closed four-
+  policy v1 catalog must fit exact key-plus-envelope store capacity or startup
+  fails.
+- TASK-551-08-L03 has an early, header-only INITIAL phase after 02-L02. It is
+  the sole writer of `router.ts` plus the route-response portion of
+  `httpServer.ts` and installs a closed, request-local
+  `RouteContext.setResponseHeader` contract for exactly the private/no-store,
+  pragma and expires pairs. Success and caught route-error JSON responses carry
+  those headers. This seam lands before 03-L02 and changes no route or cache
+  runtime; L03 remains nonterminal until its FINAL phase after 08-L02 and the
+  03-L02 consumption receipt.
 
 ## Sub-Tasks
 
@@ -97,9 +118,13 @@ eventual model and remains uncached or fail-closed DB-backed.
 |---|---|---|
 | TASK-551-08-L01 | Native Redis store, atomic generation operations, timeouts and outage semantics | ⏳ To Do |
 | TASK-551-08-L02 | Consume the TASK-551-05-owned outbox schema, implement idempotent insert/claim plus at-least-once generation delivery, optional Pub/Sub, and its exact lifecycle handle | ⏳ To Do |
-| TASK-551-08-L03 | Distributed lease, singleton runtime composition/accessor, lifecycle and multi-replica parity | ⏳ To Do |
+| TASK-551-08-L03 | INITIAL strict route-response header seam; FINAL distributed lease, singleton runtime composition/accessor, lifecycle and multi-replica parity | ⏳ To Do |
 
-**Land order:** `TASK-551-08-L01 → TASK-551-08-L02 → TASK-551-08-L03`.
+**Phased land order:** `TASK-551-08-L03 INITIAL → TASK-551-03-L02 header
+receipt → TASK-551-08-L01 → TASK-551-08-L02 → TASK-551-08-L03 FINAL`. The
+INITIAL exception depends only on terminal TASK-551-02-L02 and the parent
+external gate; it does not construct Redis/cache runtime and cannot mark L03 or
+this parent complete.
 
 ## Collision Guards
 
@@ -128,6 +153,11 @@ eventual model and remains uncached or fail-closed DB-backed.
   `createRetentionSchedulerLifecycleParticipant(...)`, existing backup
   start/stop and the cache runtime, and never edits `prod.ts` or reloads the
   cursor keyring. L03 never calls lifecycle start/close or implements shutdown.
+- L03 also solely owns `core/server/router.ts` and its own
+  `httpServer.ts` bytes for the early response-header seam. TASK-551-03-L02
+  consumes `ctx.setResponseHeader` read-only from `formsRoutes.ts`, returns a
+  receipt, and never edits either shared transport file. L03 FINAL re-reads both
+  files and preserves that validated header behavior while adding composition.
 - TASK-517 `publicSite.tsx` and TASK-493 SEO are forbidden throughout 08.
 - Shared docs, task board, changelog 1263 and workflows belong to 10/11.
 
@@ -139,6 +169,9 @@ eventual model and remains uncached or fail-closed DB-backed.
   middleware or public-write anti-abuse.
 - **Validation:** L01 strict envelope/key limits plus bounded commands, tags,
   outbox rows, batch, lease, waits, retries and diagnostics.
+- **Response-header seam:** only the exact closed private/no-store pairs are
+  accepted; arbitrary names/values, CRLF and conflicting duplicates fail before
+  mutation, and the request-local bag is not exposed to handlers.
 - **Secrets/privacy:** `REDIS_URL` stays server ENV and is always redacted. No
   secret/private/auth/PII payload enters Redis, outbox, Pub/Sub or logs.
 - **Anti-abuse:** cache keys/commands are constructed internally; no endpoint
@@ -160,8 +193,9 @@ eventual model and remains uncached or fail-closed DB-backed.
 - Lifecycle tests prove the L02 handle stops new claims, drains within its exact
   bound, closes Pub/Sub idempotently, and reports timeout without closing DB
   early. Coherence tests prove immediate failure includes affected finite tags,
-  the awaited caller cannot resume before its force fence, no mutation detaches
-  `applyAfterCommit`, and independent Redis/outbox fences must both recover.
+  the awaited caller cannot resume before its exact event fence, no mutation
+  detaches `applyAfterCommit`, global Redis/outbox fences recover independently,
+  and no broad recovery clears an event fence.
 - 1/10/50 concurrent clients demonstrate one distributed owner while load
   completes inside the waiter budget. Coupled primary-plus-companion tests use
   two processes and prove one winning render/load publishes both or neither.
@@ -180,6 +214,9 @@ eventual model and remains uncached or fail-closed DB-backed.
   lifecycle-owned started cache; before start/after close the accessor fails with
   the exact stable unavailable code and never constructs a second instance.
 - All new/touched production and test files remain below 1,000 lines.
+- The L03 INITIAL HTTP test pins exact header propagation on success and mapped
+  route errors plus request isolation; the later 03-L02 receipt pins the real
+  submission-detail route without granting it ownership of the transport.
 
 Targeted commands are specified per leaf. TASK-551-10 owns full load/fault
 gates, `_docs/SERVER_CACHE.md`, deployment runbook and changelog 1263.

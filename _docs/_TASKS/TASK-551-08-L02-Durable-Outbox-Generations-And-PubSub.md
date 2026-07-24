@@ -98,17 +98,17 @@ injected controller, whose `report(...)` method alone performs any epoch
 mutation. The caller must `await applyAfterCommit(plan)` before returning its
 committed result; fire-and-forget dispatch is forbidden. After strict plan
 validation, the handle absorbs cache transport/timeout exceptions and resolves
-only to `applied`, `queued`, or `bypassed`. It resolves only after the local
-`invalidation_observed` report is visible and, on delivery uncertainty, after
-the affected-tag `post_commit` force fence is also visible to subsequent reads.
+only to `applied`, `queued`, or `bypassed`. It resolves only after the event-keyed
+local `invalidation_observed` report is visible and, on delivery uncertainty,
+after that exact event's `post_commit_failed` fence is visible to subsequent reads.
 A caller only awaits/calls `applyAfterCommit(plan)`; it must not call
 `report(...)` for that plan, call/export an `advance*Epoch` helper, or pre-advance
 the epoch; specifically, `advanceLocalCoherenceEpoch` is not part of this surface.
-State-identical force/recover reports are controller no-ops. Every accepted
-`invalidation_observed` report conservatively advances affected epochs, including
-at-least-once duplicate local/PubSub observations; there is no event identity or
-dedup registry, and observation never clears a fence or authorizes stale/private
-values. `stopClaiming()` is
+Current-token state-identical global reports are controller no-ops; older source
+watermarks are ignored. Every accepted `invalidation_observed` carries the strict
+event key and conservatively advances affected epochs, including at-least-once
+local/PubSub duplicates. Observation never clears a fence or authorizes stale/
+private values. `stopClaiming()` is
 synchronous/idempotent and prevents every later claim before
 returning. `drain()` waits only for already-owned claim tasks through its deadline,
 then aborts their owned Redis/DB work and returns `timed_out`; claim leases remain
@@ -133,10 +133,12 @@ store; there is no exported free-running `startCacheInvalidationWorker`.
   raises a bounded alert and synchronously reports L01 `force` from
   `outbox_worker`, reason `outbox_lag`, affected tags `"all"`, to the injected
   coherence controller.
-  The state returns to `coherent` only after a successful Redis health probe and
+  The global lag state recovers only after a successful Redis health probe and
   a fresh bounded DB oldest-pending read proves age `<=5_000 ms` (or no pending
-  event); it then reports exact `outbox_worker` recovery, which also clears
-  post-commit fences. Absence/error remains forced-bypass. Processed
+  event); both probes capture source tokens before I/O and then report exact
+  `outbox_worker` recovery. That recovery clears only the global lag fence, never
+  a post-commit event fence. Absence/error/stale completion remains forced-
+  bypass. Processed
   public values retain their policy TTL as the hard stale ceiling.
 - Retry starts at 100 ms with jitter and caps at 60 seconds. Pending events are
   never discarded because of attempt count. Processed rows retain 24 hours and
@@ -146,6 +148,13 @@ store; there is no exported free-running `startCacheInvalidationWorker`.
   after Redis token replacement but before DB completion can deliver again;
   generation replacement is at-least-once, monotonic-safe and measured, not an
   exactly-once/idempotent bump.
+- After a successful generation bump, first conditionally commit `processed_at`
+  for the same claim token, then report `durable_invalidation_processed` with
+  that exact event key/tags. Only this ordered receipt clears that event's local
+  failed-post-commit fence. If DB completion is lost/unknown, report nothing and
+  retry; a physically successful Redis bump without the durable DB receipt cannot
+  clear it. Reversed order, another event, Pub/Sub, and broad health recovery are
+  non-clearing.
 - This worker calls only the generation-bump invalidation surface. It never
   writes cache values, acquires a distributed load lease, or calls either the
   generation-only conditional value write or L03's combined lease-and-generation
@@ -157,10 +166,10 @@ store; there is no exported free-running `startCacheInvalidationWorker`.
   the caller receives a normalized outcome, not an exception or early return. It cannot
   claim an impossible instantaneous fence on a partitioned replica.
 - Before immediate delivery, `applyAfterCommit()` internally reports
-  `invalidation_observed` from `local_post_commit` with the plan's finite tags.
-  On delivery failure it internally reports the distinct effective `force` fence
-  from `post_commit`, reason `local_incoherence`, the same affected finite tags,
-  bounded pending age/time and stable code before returning `queued`/`bypassed`.
+  `invalidation_observed` from `local_post_commit` with the plan's event key and
+  finite tags. On delivery failure/unknown physical outcome it reports
+  `post_commit_failed` with that same identity/tags and a bounded stable code
+  before returning `queued`/`bypassed`.
   The controller alone applies the epoch rule above; neither the handle's caller
   nor another runtime helper advances it.
 - Pub/Sub channel is derived from namespace/version. A strict bounded message
@@ -170,8 +179,9 @@ store; there is no exported free-running `startCacheInvalidationWorker`.
   complete or authorize cached security/private data.
 - A subscriber treats the message event key only as a bounded wakeup: it performs
   a bounded point read of that outbox row, strictly normalizes its finite tags,
-  then reports L01 `invalidation_observed` from `pubsub`. Missing/malformed/read
-  failure reports no observation and never clears a fence. Pub/Sub startup,
+  then reports L01 `invalidation_observed` from `pubsub` with the event key.
+  Missing/malformed/read failure reports no observation; Pub/Sub never reports
+  durable processing and never clears a fence. Pub/Sub startup,
   unsubscribe and client close belong exclusively to the runtime handle.
 - The consistency model is bounded-eventual, not linearizable. During globally
   ambiguous/partitioned state, already-safe public bytes may remain visible until
@@ -204,6 +214,14 @@ for (const claim of await claimCacheInvalidations(workerId, now(), 50)) {
   try {
     const generations = await store.bumpGenerations(claim.tags);
     await completeCacheInvalidation(claim, generations);
+    coherenceController.report({
+      kind: "durable_invalidation_processed",
+      source: "outbox_worker",
+      eventKey: claim.eventKey,
+      affectedTags: claim.tags,
+      observedAtMonotonicMs: monotonicNow(),
+      stableCode: null,
+    });
     await bestEffortPublish(claim.eventKey, generations);
   } catch (error) {
     await retryCacheInvalidation(claim, stableCode(error), boundedBackoff(claim.attempts));
@@ -240,12 +258,15 @@ both proofs; test `5_000/5_001`. Prove immediate failure reports affected finite
 tags before the awaited caller can resume, cache transport exceptions are
 absorbed into `queued|bypassed`, and no mutation path uses `void`, a detached
 promise, or returns before `applyAfterCommit`. Prove success resolves only after
-the local observation is visible. State-identical force/recover reports do not advance, and
+the local observation is visible. Current-token state-identical force/recover
+reports do not advance, stale completion cannot recover a newer force, and
 every accepted local/PubSub `invalidation_observed` report advances affected
-epochs even on at-least-once duplicate delivery. Prove observations never clear
-fences or authorize stale/private values, overflow forces bypass, no event-dedup
-registry exists, and no `advanceLocalCoherenceEpoch`/other `advance*Epoch` export
-or call exists. Pub/Sub
+epochs even on at-least-once duplicate delivery. Prove observation/PubSub/global
+recovery/another event never clears a post-commit fence; only a conditionally
+committed processed receipt for the exact event clears it. Exercise processed-
+before-delayed-failure ordering, 4,096/4,097 registry overflow and DB-completion
+uncertainty after a physical bump. No `advanceLocalCoherenceEpoch`/other
+`advance*Epoch` export or call exists. Pub/Sub
 observation resolves tags by bounded
 event-key point read. Pin drain timeout 99/100/5,000/30,000/30,001; prove stop-before-next-
 claim, drained/timed-out results, claim recovery, concurrent/idempotent close,

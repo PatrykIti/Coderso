@@ -39,7 +39,7 @@ Seed one isolated family scenario at a time with these exact row counts:
 |---|---:|---:|---|
 | users | 100 | 10,000 | exactly one primary role per user; the deterministic additional-role subset is specified below |
 | pages | 500 | 100,000 | authors cycle through profile users |
-| content types / entries | 20 / 2,000 | 200 / 100,000 | entries distributed evenly by type |
+| content types / entries | 20 / 2,000 | 200 / 100,000 | `authorOrdinal=ordinal%userCount`; `occurrence=floor(ordinal/userCount)`; `typeOrdinal=(authorOrdinal+occurrence)%typeCount`, preserving even type totals while spreading repeat rows across types |
 | posts | 1,000 | 100,000 | authors cycle through profile users |
 | media | 2,000 | 100,000 | 20 / 1,000 folders; exactly 10% null folder |
 | form submissions | 2,000 | 100,000 | 20 / 200 forms, even distribution |
@@ -51,11 +51,16 @@ Seed one isolated family scenario at a time with these exact row counts:
 | `integration_requests` + `integrations` support | 5,000 + 10 | 100,000 + 200 | requests distributed evenly across exact support integrations; status cycle `pending,success,failed` |
 | `webhook_deliveries` + `webhooks` support | 5,000 + 20 | 100,000 + 200 | deliveries distributed evenly across support webhooks; status cycle `pending,success,failed` and attempts cycle `0,1,2,3` |
 | `sessions` | 5,000 | 100,000 | users cycle through profile users; exactly 20% revoked, 20% expired-unrevoked, and 60% active |
+| `password_resets` | 5,000 | 100,000 | users cycle through profile users; synthetic unique token hashes are never emitted |
+| `preview_tokens` / `post_preview_tokens` | 2,500 / 2,500 | 50,000 / 50,000 | page and post parents cycle independently; synthetic unique token hashes are never emitted |
+| `assistant_doc_ingest_runs` | 5,000 | 100,000 | 100 / 1,000 canonical `source_root` values; 50 / 100 runs per source |
 | `settings` | 50 | 500 | deterministic unique keys; scalar/object/array values repeat in a fixed three-row cycle |
 | `redirects` | 500 | 100,000 | unique source paths; status-code cycle `301,302,307,308`; exactly 90% enabled |
 | assistant docs / chunks | 200 / 2,000 | 10,000 / 100,000 | exactly 10 chunks per doc |
 | assistant executions / undo items | 1,000 / 3,000 | 100,000 / 300,000 | exactly 3 undo items per execution |
 | analytics sessions / pageviews | 2,000 / 10,000 | 20,000 / 100,000 | exactly 5 pageviews per session |
+| `form_action_runs` + `form_actions` support | 6,000 + 60 | 300,000 + 600 | exactly 3 runs/submission and 3 actions/form; action/run FKs cycle without orphan rows |
+| `solution_kit_install_runs` / items | 1,000 / 5,000 | 100,000 / 500,000 | 20 / 200 kit IDs; exactly 5 ordered items/run |
 | each page/content/post/widget/detail revision family | 2,000 | 100,000 | 20 / 100 versions for 100 / 1,000 parents |
 
 The row counts are insufficient without deterministic predicate selectivity, so
@@ -67,8 +72,8 @@ exact because each affected family count is divisible by 100; assignment is by
 |---|---|
 | users / roles | statuses `active=80%`, `inactive=10%`, `pending=10%`; create exactly five fixture roles; every user has exactly one primary role `ordinal % 5`, while every tenth user has one additional distinct role `(ordinal + 1) % 5`, so every user has at least one and only that subset has two total assignments |
 | pages | `published=50%`, `draft=30%`, `scheduled=10%`, `archived=10%`; published rows have non-null `published_at`, scheduled rows have non-null future `published_at`; authors cycle over every profile user, yielding exactly 5 pages/author small and 10 pages/author large |
-| entries | same status cycle as pages; visibility `public=70%`, `private=20%`, `password=10%`; password rows receive a synthetic non-reversible fixture hash and no output assertion may expose it |
-| posts | same status/publish-time cycle as pages; primary tag is exactly `task551-post-tag-${ordinal % 10}` and every row with `ordinal % 10 === 0` additionally has `task551-post-extra`, so each primary tag and the extra tag select exactly 10% |
+| entries | same status cycle as pages; visibility `public=70%`, `private=20%`, `password=10%`; password rows receive a synthetic non-reversible fixture hash and no output assertion may expose it; the relationship formula above yields exactly 20/10 entries for author 0 and exactly 1/1 for `(type 0,author 0)` |
+| posts | same status/publish-time cycle as pages; authors cycle through every profile user, yielding exactly 10/10 posts for author 0; primary tag is exactly `task551-post-tag-${ordinal % 10}` and every row with `ordinal % 10 === 0` additionally has `task551-post-extra`, so each primary tag and the extra tag select exactly 10% |
 | forms / submissions | forms `published=60%`, `draft=30%`, `archived=10%`; submission status `new=70%`, `processed=20%`, `spam=10%` |
 | media | `image=80%`, `file=20%`; exactly 10% null folder as above; MIME and created-time filters have 10 equal buckets; primary tag is `task551-media-tag-${ordinal % 10}`, while every `ordinal % 100 === 0` row also has `task551-media-pair`, making the normalized AND array `["task551-media-pair","task551-media-tag-0"]` select exactly 1% |
 | bookings | the already-pinned five statuses remain exactly 20% each; resource/service/time-window filters each select exactly 1%, 10%, and 50% through named fixture cases |
@@ -100,11 +105,55 @@ real stored text rather than mocked counts.
 Each budget record names one of the exact `point`, `filter-1pct`,
 `filter-10pct`, `filter-50pct`, `search-common`, `search-rare`, `search-miss`, or
 `search-hidden`, `equal-sort-page`, `pages-author`, `users-role-30pct`,
-`posts-tag-10pct`, or `media-tags-and-1pct` cases. `pages-author` means fixture
-author ordinal 0 and returns exactly 5/10 rows (small/large); `users-role-30pct`
-means role 1 and returns 30/3,000 users; the two tag cases use the literal binds
-above and return exactly 100/10,000 posts and 20/1,000 media rows. No seed or
-plan test may choose its own distribution, predicate, tag array, or query token.
+`entries-author`, `entries-type-author`, `posts-author`, `posts-tag-10pct`,
+`media-tags-and-1pct`, or `public-html-dependencies-128` cases. Author ordinal 0
+returns pages `5/10`, entries `20/10`, typed entries for type ordinal 0 `1/1`,
+and posts `10/10` (small/large); `users-role-30pct` means role 1 and returns
+30/3,000 users. The two tag cases use the literal binds above and return exactly
+100/10,000 posts and 20/1,000 media rows. No seed or plan test may choose its own
+distribution, predicate, tag array, or query token.
+
+`public-html-dependencies-128` is the initial TASK-551-09-L01 planned-caller
+fixture. It builds exactly 128 canonical dependency tuples (43 page, 43 post,
+42 content-entry), exactly 101 root candidates (100 eligible plus the `LIMIT + 1`
+sentinel), and a canonical JSON input of at most 16,384 bytes. One parameterized
+`VALUES`/CTE aggregate returns one row containing only membership/visibility
+booleans and counts. Its transfer fixture rejects any page/post/entry body,
+document/data JSON, or password hash. Companion cases pin 0, 1, and 128 tuples;
+129 tuples, 16,385 bytes, or 102 root candidates fail before SQL. Final inventory
+discovery either binds this budget to the landed fingerprint
+`public_html_dependency_validation` or removes both fixture and planned record
+under TASK-551-09-L01's reviewed no-caller evidence.
+
+Retention fixtures use the separate frozen clock
+`2036-01-01T00:00:00.000Z`. For each row-count family above, ordinal buckets
+`0..59`, `60..79`, and `80..99` are respectively one millisecond before its
+effective deletion cutoff, exactly at the cutoff, and one millisecond after it;
+only the first bucket is age-eligible. The previously missing families have
+these exact additional distributions and named budget cases:
+
+- `password-resets-expired`: `3,000/60,000` age-eligible rows; boundary/recent
+  rows are retained and token hashes are absent from evidence;
+- `preview-tokens-expired`: independently `1,500/30,000` page-token and
+  `1,500/30,000` post-token candidates, with page rows processed before post
+  rows and no cross-table overrun;
+- `assistant-ingest-old`: statuses cycle `success,failed,running`; the last run
+  for every source is forced to recent `success`, so `3,000/60,000` old rows are
+  candidates while exactly 100/1,000 newest-success anchors survive;
+- `form-runs-child-first`: form runs inherit their submission's age bucket,
+  producing `3,600/180,000` child and `1,200/60,000` parent candidates; the
+  family remains disabled unless explicitly enabled and deletes children first;
+- `solution-kit-child-first`: statuses cycle
+  `success,rolled_back,failed,running`; each kit's newest success and rollback
+  anchor is forced recent, leaving `600/60,000` run and `3,000/300,000` item
+  candidates; items precede runs and the family remains disabled by default.
+
+Every retention budget runs default batch `500`, max batch `2,000`, one-row-
+below/exactly-one/one-row-above-batch variants, and a ten-batch convergence case.
+It asserts candidate rows, rows read/returned, statements, transferred bytes,
+oldest-first order, child-before-parent order, boundary retention, and dry-run
+zero mutations. A fixture family or policy-matrix family missing one named budget
+fails pre-measurement validation.
 
 TASK-551-03-L02 summary/facet evidence uses the same rows and the frozen
 operation clock `2026-01-15T12:00:00.000Z`. The following additional recipes are
@@ -268,11 +317,19 @@ rows-returned, transferred-byte, and pool-wait ceilings to
   for ordinals divisible by ten. Search assertions compare each profile/family
   to the literal integer table through `expectedSearchHits`, including one-hit,
   hidden-zero, and miss-zero cases; no percentage-derived expectation is legal.
-- Pin the four index-evidence fixture cases independently: page author 0 returns
-  exactly 5/10, role 1 returns 30/3,000, the one-element post containment array
-  returns 100/10,000, and the sorted unique media AND array returns 20/1,000.
-  Mutating author cycling, role direction, tag spelling/order/deduplication, or
-  the second-tag ordinal fails fixture validation before plan capture.
+- Pin the seven index-evidence fixture cases independently: page author 0 returns
+  exactly 5/10, entry author 0 `20/10`, entry `(type 0,author 0)` `1/1`, post
+  author 0 `10/10`, role 1 `30/3,000`, the one-element post containment array
+  `100/10,000`, and the sorted unique media AND array `20/1,000`. Mutating the
+  author/type formula, author cycling, role direction, tag spelling/order/
+  deduplication, or second-tag ordinal fails fixture validation before capture.
+- Pin the five formerly missing retention-family scenarios, their literal
+  eligible/boundary/anchor counts, batch edges, child ordering, and dry-run zero-
+  mutation behavior. Mutating one timestamp/status/anchor or omitting a policy
+  family from the budget registry fails before measurement.
+- Pin `public-html-dependencies-128`, including exact tuple/table split, root and
+  canonical-byte caps, one aggregate result/statement, projection allowlist, and
+  129/16,385/102 rejection cases.
 - Run representative point/list/search/aggregate/append families; record current
   baseline separately from target budget.
 - Saturate only this harness's bounded test pool and freeze acquisition-wait

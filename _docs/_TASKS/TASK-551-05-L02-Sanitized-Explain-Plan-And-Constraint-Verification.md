@@ -109,16 +109,23 @@ planner-node differences on small data but requires expected indexes and bounded
 row ratios on large fixtures. Errors are `plan_contract_invalid`,
 `plan_regression`, and `constraint_contract_failed`.
 
-The registry has five non-optional evidence-owned statements whose SQL bytes
-must equal their production predicate/order owner: the first four are
-TASK-551-03-L02 and the outbox health statement is TASK-551-08-L02:
+The registry has eleven non-optional evidence-owned statements whose SQL bytes
+must equal their production predicate/order owner. The first seven list cases are
+TASK-551-03-L02, the three webhook cases are TASK-551-03-L03, and the outbox
+health statement is TASK-551-08-L02:
 
 | Static ID | Predicate/order | Expected large-plan index |
 |---|---|---|
 | `pages-author-keyset` | `author_id=:authorId` plus keyset; `updated_at DESC,id DESC` | `pages_author_list_updated_id_idx` |
+| `entries-author-keyset` | `author_id=:authorId` plus keyset; `updated_at DESC,id DESC` | `content_entries_author_list_updated_id_idx` |
+| `entries-type-author-keyset` | `type_id=:typeId AND author_id=:authorId` plus keyset; `updated_at DESC,id DESC` | `content_entries_type_author_list_updated_id_idx` |
+| `posts-author-keyset` | `author_id=:authorId` plus keyset; `updated_at DESC,id DESC` | `posts_author_list_updated_id_idx` |
 | `users-role-keyset` | join `user_roles` from `role_id=:roleId` to `user_id`; users keyset order | `user_roles_role_user_idx` plus `users_list_created_id_idx` |
 | `posts-tag-keyset` | `tags @> :normalizedOneTagArray::jsonb`; `updated_at DESC,id DESC` | `posts_tags_gin_idx` plus `posts_list_updated_id_idx` when bitmap/order composition is selected |
 | `media-tags-and-keyset` | `tags @> :normalizedUniqueSortedTags::jsonb`; `created_at DESC,id DESC` | `media_tags_gin_idx` plus `media_list_created_id_idx` when bitmap/order composition is selected |
+| `webhooks-created-keyset` | no filter; `created_at DESC,id DESC`; lateral latest-delivery lookup | `webhooks_list_created_id_idx` plus the delivery parent index |
+| `webhook-deliveries-parent-keyset` | `webhook_id=:webhookId`; `created_at DESC,id DESC` | `webhook_deliveries_webhook_list_idx` |
+| `webhooks-event-batch` | `enabled=true AND events @> :normalizedOneEventArray::jsonb`; `id ASC`; batch limit | `webhooks_events_gin_idx` |
 | `cache-outbox-oldest-unprocessed` | `processed_at IS NULL`; `created_at ASC,id ASC`; `LIMIT 1` | `cache_outbox_unprocessed_age_idx` |
 
 The two JSON binds remain sanitized but their fixture builders assert exact
@@ -150,20 +157,21 @@ cannot use.
 
 L02 consumes L01's immutable online-index manifest and exact
 `.tmp/task551-migration-receipt.json` read-only. It validates the strict
-version-1 receipt's resolved journal tag/index, repository-relative SQL/snapshot/
-online paths and SHA-256 values, manifest digest, ordered member receipts, and
-final state before trusting evidence. It requires one-to-one equality between
+version-2 receipt's operation/generation/digest chain, resolved journal tag/index,
+repository-relative SQL/snapshot/online artifact hashes, preflight digest,
+admission/quiescence acknowledgements, ordered forward/reverse member receipts,
+compatible-binary resume authorization, and final state before trusting evidence.
+It requires one-to-one equality between
 every new snapshot-owned index, manifest member, receipt member, and live
 definition; zero matching new index statement may remain in transactional SQL.
 Every live member must have
 `indisready = true` and `indisvalid = true`, and its receipt must record the
 locked numeric classification/budgets, completed top-level concurrent build,
-idempotent resume state, and exact two-group order. It separately requires a
-durable complete `revision-integrity` receipt before any recorded application-
-resume event; that group contains exactly page/content/widget unique indexes.
-It invokes L01's one `apply-resume-check` path,
-which applies/resumes before checking, rather than inventing a second deployment
-path; L02 does not edit L01's deployment test/tool.
+idempotent resume state, and exact two-group order. It requires an unbroken drain
+through both groups and permits a resume acknowledgement only after final catalog
+and compatible TASK-551 binary evidence. It invokes L01's one
+`rollout-forward` path on disposable fixtures rather than inventing a second
+deployment path; L02 does not edit L01's deployment test/tool.
 
 The exclusion constraint is the one explicit Drizzle snapshot limitation. L02
 imports the immutable descriptor rather than copying SQL, verifies its
@@ -177,8 +185,9 @@ emit neither a duplicate add nor the descriptor's `.dropSql`.
 ## Testing Requirements
 
 - Cover every literal L01 catalog member, including all seven generated-vector
-  GIN indexes, both tag-containment GIN indexes, every list/reverse-FK/cutoff
-  index including page-author and role-leading traversal, five revision constraints,
+  GIN indexes, all three containment GIN indexes, every list/reverse-FK/cutoff
+  index including page/entry/post-author, typed-entry-author, webhook, and
+  role-leading traversal, five revision constraints,
   booking check/exclusion, every outbox column/check/index including
   `cache_outbox_unprocessed_age_idx`, and only selected
   trigram pairs; exact registry/catalog set equality rejects missing and extra
@@ -186,14 +195,13 @@ emit neither a duplicate add nor the descriptor's `.dropSql`.
 - Verify all new snapshot indexes are exact members of the non-transactional
   manifest, absent from transactional index DDL, and ready/valid in the live
   catalog. Consume L01's crash-after-each-member, resume/rollback, threshold,
-  exact group/order/barrier receipt, drained writer-probe receipt, immediate
-  post-barrier 50-way revision-race receipt, and 16-concurrent-writer
-  read-performance receipt as mandatory evidence. No resume event may precede
-  all three unique members becoming ready/valid. Clean and immediately-
-  prior disposable databases each resolve their exact receipt, execute
-  `apply-resume-check`, then execute it again; the first invocation applies
-  before catalog checks and the second emits zero DDL while proving resume and
-  ready/valid idempotence.
+  exact group/order/barrier receipt, drain/activity-visibility receipt, rehearsal
+  50-way revision-race receipt, and 16-controlled-writer read-performance receipt
+  as mandatory evidence. No resume event may precede both groups, final catalog,
+  and compatible-binary authorization. Clean and immediately-prior disposable
+  databases execute `rollout-forward` twice; the first applies before catalog
+  checks and the second emits zero DDL/adapter action while proving final-state
+  idempotence. Crash injection covers every version-2 state/CAS/file/DB boundary.
 - For all five trigram candidates, pin the normalized column/index/opclass and
   normalization digest. Select only candidates whose large plan uses that exact
   index with bounded rows/buffers and whose write-cost gate passes; rejected
@@ -211,8 +219,11 @@ emit neither a duplicate add nor the descriptor's `.dropSql`.
 - Large plans assert index names, predicates, absence of forbidden full scans/
   external sorts, rows-read ratio, buffer budget, and p95 over repeated warm and
   cold-declared runs. Do not set `enable_seqscan = off`.
-- Execute all four exact page-author/role/post-tag/media-tags static statements
-  against both L01 fixture scales. Mutate the leading column, `jsonb_path_ops`,
+- Execute all eleven exact static statements against both L01 fixture scales.
+  Author fixtures assert page `5/10`, entry `20/10`, typed entry `1/1`, and post
+  `10/10`; their large plans use the three author composites and contain no
+  external sort. Webhook fixtures pin parent/event selectivity and one lateral
+  latest-delivery row. Mutate a leading column, `jsonb_path_ops`,
   bound array shape, `@>` operator, or stable tiebreaker and prove plan/catalog
   verification fails. Report per-index storage and write p95 delta, each at or
   below L01's 20% representative-write ceiling.
@@ -252,10 +263,9 @@ emit neither a duplicate add nor the descriptor's `.dropSql`.
 - `set -a && source .env && set +a && bun test tests/perf/database-explain-plans.test.ts`
 - `set -a && source .env && set +a && bun test tests/integration/server/task551ConcurrencyConstraints.test.ts`
 - `set -a && source .env && set +a && bun test tests/integration/server/task551OnlineIndexDeployment.test.ts`
-- `set -a && source .env && set +a && bun scripts/task-551-online-indexes.ts resolve-receipt --output .tmp/task551-migration-receipt.json`
-- `set -a && source .env && set +a && bun scripts/task-551-online-indexes.ts apply-resume-check --receipt .tmp/task551-migration-receipt.json --through-group revision-integrity`
-- `set -a && source .env && set +a && bun scripts/task-551-online-indexes.ts apply-resume-check --receipt .tmp/task551-migration-receipt.json`
-- `set -a && source .env && set +a && bun scripts/task-551-online-indexes.ts apply-resume-check --receipt .tmp/task551-migration-receipt.json` (mandatory zero-DDL resume/catalog rerun)
+- `set -a && source .env && set +a && TASK551_OFFLINE_SINGLE_ACK=all-coderso-processes-stopped bun scripts/task-551-online-indexes.ts rollout-forward --receipt .tmp/task551-migration-receipt.json --admission-mode offline-single`
+- Repeat the exact `rollout-forward` command (mandatory zero-DDL/zero-transition catalog idempotence rerun)
+- `set -a && source .env && set +a && bun scripts/task-551-online-indexes.ts status --receipt .tmp/task551-migration-receipt.json`
 - `set -a && source .env && set +a && bun scripts/task-551-explain-plans.ts --scale small --check`
 - `set -a && source .env && set +a && bun scripts/task-551-explain-plans.ts --scale large --check`
 - `bun --cwd core lint:types`
@@ -279,14 +289,15 @@ TASK-551-10-L02.
 - Transactional SQL contains zero new index creation; the same-number companion,
   snapshot, final ready/valid catalog, and resumable deployment receipt have
   exact one-to-one equality within every L01 deployment ceiling.
-- The receipt proves an unbroken mutation drain through all three new revision
-  unique builds, then zero duplicates in immediate 50-way same-parent races;
-  no crash/resume branch contains an early application-resume event.
+- The receipt proves an unbroken admission/worker drain through both online
+  groups, then a final-catalog plus compatible-binary resume authorization; no
+  crash/resume branch contains an early application-resume event.
 - Every large-fixture hot plan uses its intended index, stays within its declared
   rows/buffer/p95 budget, and has no forbidden growing-table sequential scan.
-- The page-author, reverse-role, post-tag, and media-AND-tag large cases use
-  their four exact L01 indexes and matching production predicate bytes with
-  bounded rows/buffers and measured write/storage cost.
+- Page/entry/typed-entry/post-author, reverse-role, post-tag, media-AND-tag, and
+  webhook list/event large cases use their exact L01 indexes and matching
+  production predicate bytes with bounded rows/buffers and measured write/
+  storage cost.
 - The large oldest-unprocessed outbox case uses its exact partial age index and
   observes claimed/backed-off rows; it never reports age from only claimable
   rows.

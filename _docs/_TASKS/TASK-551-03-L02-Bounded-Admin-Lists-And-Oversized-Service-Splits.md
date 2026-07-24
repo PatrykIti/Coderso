@@ -6,7 +6,9 @@
 **Priority:** Critical
 **Category:** Database / API / Admin / Performance
 **Estimated Effort:** Extra Large
-**Dependencies:** TASK-551-03-L01, TASK-551-05-L02, TASK-551-06-L03
+**Dependencies:** TASK-551-03-L01, TASK-551-05-L02, TASK-551-06-L03;
+TASK-551-09-L04 INITIAL Admin-authority receipt; TASK-551-08-L03 INITIAL
+route-response-header receipt
 **Status:** ⏳ To Do
 **Changelog:** 1263 (pinned; TASK-551-10-L02 closure only)
 
@@ -59,7 +61,6 @@ None; this is an executable leaf.
 `core/admin/services/entriesClient.ts`, `core/admin/services/postsClient.ts`,
 `core/admin/services/adminUsersClient.ts`, `core/admin/services/formsClient.ts`,
 `core/admin/services/mediaClient.ts`, `core/admin/services/bookingClient.ts`,
-`core/admin/services/cachePolicy.ts`,
 `core/admin/ui/pages/PageListPage.tsx`,
 `core/admin/ui/pages/PageRevisionDrawer.tsx`,
 `core/admin/ui/content-types/DetailTemplateEditorPage.tsx`,
@@ -81,6 +82,15 @@ None; this is an executable leaf.
 `core/admin/ui/booking/components/ResourcesTab.tsx`,
 `core/admin/ui/booking/components/ServicesTab.tsx`, and
 `core/admin/ui/booking/components/SlotPreviewTab.tsx`.
+
+`core/admin/services/cachePolicy.ts` is a read-only dependency owned solely by
+TASK-551-09-L04. This leaf may compose its existing bounded-key helper with
+client-local typed page/summary/facet discriminators, but it neither edits nor
+duplicates cache-policy TTLs. Every one of the eight owned clients registers
+all module maps/promises with L04 INITIAL's `adminCacheAuthority`, captures an
+installation token before async work, and verifies that token plus its own
+resource generation immediately before any cache install. Its reset callback
+clears every legacy and newly added page/summary/facet/detail promise or value.
 
 **Complete current list-client consumer graph, all in this leaf's allowlist:**
 `core/admin/ui/custom-screens/CustomScreenEntriesPage.tsx`,
@@ -297,7 +307,13 @@ point read with strict UUID path parameters and exact response
 and executes exactly one `LIMIT 1` query only after the user expands a row.
 Every success and mapped error response from this detail endpoint sets exactly
 `Cache-Control: private, no-store, max-age=0`, `Pragma: no-cache`, and
-`Expires: 0`. The dedicated `formsClient` point method calls `apiRequest` with
+`Expires: 0`. The route registers a no-store header handler first—before
+permission, strict path validation and detail loading—and that handler calls
+only TASK-551-08-L03 INITIAL's closed `ctx.setResponseHeader(...)` seam for the
+three exact pairs. This leaf does not edit `core/server/router.ts` or
+`core/server/httpServer.ts`; L03 owns the request-local bag and propagation on
+JSON success and caught/mapped route errors. Alternate headers/values are not a
+fallback. The dedicated `formsClient` point method calls `apiRequest` with
 `cache: "no-store"` in its `RequestInit` as well as the caller's abort signal;
 neither the generic list client nor prefetch path may call this method.
 `FormSubmissionsPage` renders an explicit accessible `View submission` button
@@ -334,14 +350,25 @@ back to the legacy full record or reconstructs all pages.
 
 ## Global Summary and Relation-Facet Contract
 
-Pagination must not turn the existing whole-authorized-collection indicators
-into page-local values. Every metric-bearing keyset response in the matrix has the exact shape
-`{items,nextCursor,hasMore,summary,facets}`. `summary.matchingTotal` applies all
-normalized row filters except `cursor,limit` and facet-navigation fields. Every
-other summary count below ignores the current `q`/status/type/author/date/folder/
-tag/access filter, exactly like the current UI derives it before local filtering,
-but always retains tenant, authorization and resolved-parent predicates. Typed
-entry and form-submission summaries remain scoped to their authorized parent.
+Pagination must not turn whole-authorized-collection indicators into page-local
+values, but bounded page work must not be mislabeled as an exact arbitrary-filter
+count. Every metric-bearing response is
+`{items,nextCursor,hasMore,summary,facets}` and every summary/facet carries an
+explicit `exactness`, `freshness`, and `scope` contract. In v1 arbitrary
+`q`/status/type/author/date/folder/tag/access combinations return
+`matchingTotal:null`, `exactness:"not_computed"`; the UI uses page length plus
+`hasMore` (for example “50 shown, more available”), never a guessed total.
+No filtered `COUNT(*)` is issued. An exact matching total may be added only for a
+separately enumerated predicate/cardinality with its own L05 rows/buffers/p95
+receipt; v1 enumerates none.
+
+The fixed collection-global fields below ignore current row filters while
+retaining tenant, authorization and resolved-parent scope. They are exact at one
+read-only repeatable-read transaction snapshot, not “constant work”: one explicit
+aggregate may read proportionally to authorized collection cardinality. This
+no-migration leaf introduces no counter table. If later scale needs maintained
+counters, schema plus every mutation must land atomically in a dedicated task.
+Typed entry/form-submission summaries remain authorized-parent-global.
 
 The fixed summary shapes are:
 
@@ -353,41 +380,55 @@ type AdminListEnvelope<Item, Summary, Facets> = Readonly<{
   summary: Summary;
   facets: Facets;
 }>;
+type SummaryContract = Readonly<{
+  matching: Readonly<{
+    exactness: "not_computed"; freshness: "request_page";
+    scope: "normalized_filter";
+  }>;
+  fixed: Readonly<{
+    exactness: "exact"; freshness: "transaction_snapshot";
+    scope: "authorized_collection_global" | "authorized_parent_global";
+    asOf: string;
+  }>;
+}>;
 type PageListSummary = Readonly<{
-  matchingTotal: number; total: number;
+  matchingTotal: null; total: number; contract: SummaryContract;
   status: { published: number; draft: number; scheduled: number; archived: number };
 }>;
 type PostListSummary = Readonly<{
-  matchingTotal: number; total: number;
+  matchingTotal: null; total: number; contract: SummaryContract;
   status: { published: number; draft: number; scheduled: number };
 }>;
 type EntryListSummary = Readonly<{
-  matchingTotal: number; total: number;
+  matchingTotal: null; total: number; contract: SummaryContract;
   status: { published: number; draft: number; scheduled: number; archived: number };
 }>;
 type FormListSummary = Readonly<{
-  matchingTotal: number; total: number; active: number; drafts: number;
+  matchingTotal: null; total: number; active: number; drafts: number;
+  contract: SummaryContract;
 }>; // active means status=published, matching the existing cards
 type FormSubmissionListSummary = Readonly<{
-  matchingTotal: number; total: number; rollingSevenDays: number; spam: number;
-  asOf: string;
+  matchingTotal: null; total: number; rollingSevenDays: number; spam: number;
+  asOf: string; contract: SummaryContract;
 }>; // the existing "This week" card is a rolling seven-day window
 type UserListSummary = Readonly<{
-  matchingTotal: number; total: number; active: number; inactive: number;
+  matchingTotal: null; total: number; active: number; inactive: number;
   pending: number; members: number; invitations: number;
   administratorCount: number; soleAdministratorId: string | null;
+  contract: SummaryContract;
 }>;
 type MediaListSummary = Readonly<{
-  matchingTotal: number; totalAssets: number; totalBytes: number;
+  matchingTotal: null; totalAssets: number; totalBytes: number;
   type: { image: number; file: number };
+  contract: SummaryContract;
 }>;
 type BookingReservationListSummary = Readonly<{
-  matchingTotal: number; total: number; today: number; upcoming: number;
-  resourceCount: number; asOf: string;
+  matchingTotal: null; total: number; today: number; upcoming: number;
+  resourceCount: number; asOf: string; contract: SummaryContract;
 }>;
-type BookingResourceListSummary = Readonly<{ matchingTotal: number; total: number }>;
-type BookingServiceListSummary = Readonly<{ matchingTotal: number; total: number }>;
-type BookingBlackoutListSummary = Readonly<{ matchingTotal: number; total: number }>;
+type BookingResourceListSummary = Readonly<{ matchingTotal: null; total: number; contract: SummaryContract }>;
+type BookingServiceListSummary = Readonly<{ matchingTotal: null; total: number; contract: SummaryContract }>;
+type BookingBlackoutListSummary = Readonly<{ matchingTotal: null; total: number; contract: SummaryContract }>;
 ```
 
 `rollingSevenDays` uses one operation clock and `created_at >= asOf - 7 days`.
@@ -404,8 +445,17 @@ Existing variable facets are global, not derived from `items`. They use one
 optional third, set-based relation query and these exact bounded pages:
 
 ```ts
+type FacetContract = Readonly<{
+  exactness: "exact";
+  freshness: "transaction_snapshot";
+  scope: "authorized_collection_global" | "authorized_parent_global";
+  asOf: string;
+}>;
 type FacetPage<T> = Readonly<{
-  items: readonly T[]; nextCursor: string | null; hasMore: boolean;
+  items: readonly T[];
+  nextCursor: string | null;
+  hasMore: boolean;
+  contract: FacetContract;
 }>; // default 50, max 100, query uses LIMIT + 1
 type AuthorFacet = Readonly<{ id: string; label: string }>;
 type ContentTypeFacet = Readonly<{
@@ -446,24 +496,36 @@ keyset-paged and searchable; no JSON aggregate or map may grow with table size.
 Forms, form submissions and booking collections use `NoListFacets`; booking
 resource/service selectors are their own bounded endpoints.
 
-For each endpoint, one SQL statement returns page rows, one statement returns a
-single fixed aggregate row using `COUNT(*) FILTER (...)`/`SUM`, and at most one
-statement returns the bounded relation-facet batch. The query-count ceiling is
-therefore 3 including role/author/content-type/folder/tag resolution; no hidden
-per-row query is allowed. TASK-551-01 inventory gives each summary/facet query a
-fingerprint and row/buffer budget. TASK-551-05-L02 captures sanitized large-plan
-evidence against L01's exact predicate/order/FK catalog; a growing-table scan or
-failed budget blocks 03-L02 and returns to the 05 contract for an evidence-backed
-index amendment rather than landing a speculative index here.
+The page, fixed summary and optional facet statements run through one explicit
+read-only `REPEATABLE READ` transaction handle so `summary.contract.fixed.asOf`
+and every `FacetContract.asOf` identify the same snapshot. One statement returns
+`limit + 1` page rows, one returns the single fixed aggregate row using
+`COUNT(*) FILTER (...)`/`SUM`, and at most one returns the bounded relation-facet
+batch. The query-count ceiling is therefore 3 including role/author/content-
+type/folder/tag resolution; no hidden per-row query or filtered-count statement
+is allowed. Every one of these production SQL fingerprints—not only the page
+query—must have a checked-in TASK-551-01 budget and a TASK-551-05-L02 sanitized
+small/large plan receipt with exact finite rows-read, rows-returned, shared-
+buffer and normalized-p95 ceilings before this leaf dispatches. The aggregate
+receipt may honestly budget a scan proportional to the 100,000-row authorized
+fixture, but it cannot use “one result row” as a bounded-work claim. Any missing
+receipt, unexpected growing-table scan, or failed numeric ceiling blocks L02 and
+returns to the evidence owner for a contract amendment; this leaf neither adds a
+speculative index nor silently removes a metric/facet.
 
-Clients cache the row page, matching summary, global summary and each facet page
-under separate canonical filter/authorization/parent identities, then compose
-the response envelope. Mutations invalidate and broadcast all four related
-families atomically. Pages/posts/entries status tabs, form/submission/user stat
+Clients cache the row page, fixed global summary and each facet page under
+separate canonical filter/authorization/parent identities, then compose the
+response envelope. `matchingTotal:null` has no cache family. Mutations invalidate
+and broadcast all three related families atomically. Pages/posts/entries status
+tabs, form/submission/user stat
 cards, member/invitation badges, role usage, media type/folder/tag counts,
 storage bytes/assets and booking cards consume only `summary`/`facets`, never
-`items.length` or a concatenated hidden page set. Media “Showing X of Y” uses
-`matchingTotal` and `totalAssets`; submission pagination uses `summary.total`.
+`items.length` as a global count or a concatenated hidden page set. Media renders
+“X shown, more available” from page length plus `hasMore` and may separately
+label `totalAssets` as the exact authorized collection total; it never presents
+that value as a filtered match count. Submission pagination follows the same
+shown/more contract and labels `summary.total` only as the exact parent-global
+total.
 
 All strict paginated query schemas accept only their matrix filters plus
 `cursor,limit` and the declared strict facet-navigation fields above; unknowns
@@ -508,27 +570,32 @@ async function listPages(
   const cursor = input.cursor
     ? decodeKeysetCursor(input.cursor, scope, paginationCursorKeys)
     : null;
-  const [rows, summary, authors] = await Promise.all([
-    deps.db.select(PAGE_LIST_COLUMNS)
-      .from(pages).where(buildPageFilters(normalizedFilters, cursor))
-      .orderBy(desc(pages.updatedAt), desc(pages.id)).limit(limit + 1),
-    selectOnePageSummaryRow({
-      authorization: authorizedPageScope(deps.actor),
-      matching: buildPageFilters(normalizedFilters, null),
-      // Returns exactly matchingTotal,total and four fixed status counts.
-    }),
-    selectBoundedPageAuthorFacets({
-      authorization: authorizedPageScope(deps.actor),
-      facet: normalizePageAuthorFacetNavigation(input),
-      limitPlusOne: resolveFacetLimit(input.facetLimit) + 1,
-    }),
-  ]); // exactly 3 statements; no row/detail relation query
-  return {
-    ...toBoundedPage(rows, limit, (payload) =>
-      encodeKeysetCursor(payload, paginationCursorKeys)),
-    summary,
-    facets: { authors: toFacetPage(authors) },
-  };
+  return deps.db.transaction(
+    { isolationLevel: "repeatable read", readOnly: true },
+    async (tx) => {
+      const asOf = deps.clock.now().toISOString();
+      const [rows, fixedSummary, authors] = await Promise.all([
+        tx.select(PAGE_LIST_COLUMNS)
+          .from(pages).where(buildPageFilters(normalizedFilters, cursor))
+          .orderBy(desc(pages.updatedAt), desc(pages.id)).limit(limit + 1),
+        selectOneFixedPageSummaryRow(tx, {
+          authorization: authorizedPageScope(deps.actor),
+          // Exactly total plus four status counts; no filter COUNT.
+        }),
+        selectBoundedPageAuthorFacets(tx, {
+          authorization: authorizedPageScope(deps.actor),
+          facet: normalizePageAuthorFacetNavigation(input),
+          limitPlusOne: resolveFacetLimit(input.facetLimit) + 1,
+        }),
+      ]); // exactly 3 tx statements; no filtered COUNT or relation N+1
+      return {
+        ...toBoundedPage(rows, limit, (payload) =>
+          encodeKeysetCursor(payload, paginationCursorKeys)),
+        summary: toPageSummary(fixedSummary, { matchingTotal: null, asOf }),
+        facets: { authors: toFacetPage(authors, { asOf }) },
+      };
+    },
+  );
 }
 
 async function createBooking(command: BookingCommand, tx: Tx): Promise<Booking> {
@@ -543,28 +610,36 @@ async function listForms(
 ): Promise<AdminListEnvelope<FormListItem, FormListSummary, NoListFacets>> {
   const filters = normalizeFormListFilters(input); // q/status/submissionAccess
   const limit = parsePageLimit(input.limit);
-  const [rows, summary] = await Promise.all([
-    deps.db.select({
-      id: forms.id,
-      name: forms.name,
-      slug: forms.slug,
-      status: forms.status,
-      description: forms.description,
-      submissionAccess: forms.submissionAccess,
-      updatedAt: forms.updatedAt,
-    })
-      .from(forms)
-      .where(buildFormListPredicate(filters, input.cursor))
-      .orderBy(desc(forms.updatedAt), desc(forms.id))
-      .limit(limit + 1),
-    selectOneFormSummaryRow({
-      scope: authorizedFormScope(deps.actor),
-      matching: buildFormListPredicate(filters, null),
-    }),
-  ]);
-  // formsService.listForms is never imported/materialized; callers never issue
-  // per-row detail reads to restore slug/description/submissionAccess.
-  return { ...toBoundedPage(rows, limit, encodeFormCursor), summary, facets: {} };
+  return deps.db.transaction(
+    { isolationLevel: "repeatable read", readOnly: true },
+    async (tx) => {
+      const [rows, fixedSummary] = await Promise.all([
+        tx.select({
+          id: forms.id,
+          name: forms.name,
+          slug: forms.slug,
+          status: forms.status,
+          description: forms.description,
+          submissionAccess: forms.submissionAccess,
+          updatedAt: forms.updatedAt,
+        })
+          .from(forms)
+          .where(buildFormListPredicate(filters, input.cursor))
+          .orderBy(desc(forms.updatedAt), desc(forms.id))
+          .limit(limit + 1),
+        selectOneFixedFormSummaryRow(tx, {
+          scope: authorizedFormScope(deps.actor),
+        }),
+      ]);
+      // formsService.listForms is never imported/materialized; callers never
+      // issue per-row detail reads to restore omitted list fields.
+      return {
+        ...toBoundedPage(rows, limit, encodeFormCursor),
+        summary: toFormSummary(fixedSummary, { matchingTotal: null }),
+        facets: {},
+      };
+    },
+  );
 }
 
 async function getFormSubmissionDetail(
@@ -580,6 +655,19 @@ async function getFormSubmissionDetail(
   if (!row[0]) throw new Error("form_submission_not_found");
   return row[0]; // exact id,formId,payload,status,createdAt; never IP/userAgent
 }
+
+const installSubmissionDetailNoStoreHeaders: RouteHandler = (ctx) => {
+  ctx.setResponseHeader("Cache-Control", "private, no-store, max-age=0");
+  ctx.setResponseHeader("Pragma", "no-cache");
+  ctx.setResponseHeader("Expires", "0");
+};
+router.get(
+  "/forms/:formId/submissions/:submissionId",
+  installSubmissionDetailNoStoreHeaders, // deliberately first
+  requirePermission("forms:read"),
+  validateSubmissionDetailPath,
+  loadSubmissionDetail,
+);
 
 function deriveMediaListName(row: Pick<MediaRow, "originalName" | "title" | "key">): string {
   return normalizeDisplayName(row.originalName)
@@ -678,11 +766,20 @@ components, while cache identity and mutation state remain in their page owner.
   or reversed role traversal fail before latency evidence is accepted.
 - For every exact summary/facet shape, seed at least 137 scoped rows so the
   result spans three default pages. First, middle, last and filtered requests
-  must return identical global counts/facets, while only `matchingTotal` changes
-  with normalized filters. Assert one fixed aggregate row, each facet page at
-  most 100 plus lookahead, total SQL `<= 3`, and zero page concatenation or
-  per-row relation lookup. Mutate each status/type/access/date/timezone/role/
-  folder/tag case and prove the matching fixed field changes by exactly one.
+  must return identical fixed global counts/facets and
+  `matchingTotal:null`; normalized filters affect rows/`hasMore` but issue no
+  filtered-count SQL. Assert the summary `fixed` and every facet report exact /
+  transaction-snapshot / authorized-global scope with the same `asOf`, one
+  fixed aggregate row, each facet page at most 100 plus lookahead, total SQL
+  `<= 3`, and zero page concatenation or per-row relation lookup. Mutate each
+  status/type/access/date/timezone/role/folder/tag case in the global scope and
+  prove the corresponding fixed field changes by exactly one.
+- The performance suite enumerates every page, fixed-summary and facet SQL
+  fingerprint. Each must resolve to a reviewed TASK-551-01 numeric budget and
+  TASK-551-05-L02 small/large sanitized-plan receipt; a missing/placeholder
+  receipt fails before execution. Assertions distinguish rows read from the one
+  aggregate row returned and apply the checked-in rows/buffers/normalized-p95
+  ceilings to each statement independently.
 - Pin page/post/entry global author facets, entry zero-count content types, user
   global role usage and sole-administrator identity, media global bytes/kinds/
   recursive-folder/tag facets, form and rolling-seven-day submission cards, and
@@ -701,9 +798,15 @@ components, while cache identity and mutation state remain in their page owner.
 - UI/client tests cover first/next/reset, filter invalidation, empty/end pages,
   cache hydration, background refresh, and dirty-state protection. With more
   than one page, changing pages must leave every global tab/card/facet/storage/
-  booking value unchanged; changing a row filter updates `matchingTotal` only.
-  Mutation tests invalidate row, matching-summary, global-summary and facet
-  cache families and reject any metric derived from `items.length`.
+  booking value unchanged; changing a row filter changes rows/`hasMore`, keeps
+  `matchingTotal:null`, and preserves fixed totals. Mutation tests invalidate
+  row-page, fixed-summary and facet cache families and reject any global metric
+  derived from `items.length`.
+- Each of the eight owned clients is present in the L04 INITIAL authority
+  manifest. Delay a request across an installation transition and prove its
+  completion may return only to the initiating caller but cannot install; the
+  registered reset clears all old/new maps and promises. L04's exhaustive FINAL
+  matrix must accept this leaf's receipt without reopening these clients.
 - The two consumer-graph suites directly import and exercise every production
   path in the complete graph above. For every changed call they prove envelope
   consumption, filter forwarding, incremental merge/reset, visible end/loading
@@ -720,7 +823,10 @@ components, while cache identity and mutation state remain in their page owner.
 - Form-submission route/client/UI tests pin the strict parent+submission point
   schema, exact five-field detail response, one indexed SQL statement, stable
   404, omission of IP/user-agent, and the exact private/no-store, pragma, and
-  expires headers on success plus 4xx. A client fetch spy asserts
+  expires headers on success plus every route-mapped 4xx through the real HTTP
+  server. They prove the L03-owned request-local transport does not leak headers
+  to an unrelated request and the detail route calls only the exact closed
+  setter pairs. A client fetch spy asserts
   `RequestInit.cache === "no-store"`; omitting it fails even when server headers
   remain correct. With at least three list pages, initial
   load/filter/page/background refresh executes zero payload reads. Clicking
@@ -744,8 +850,8 @@ components, while cache identity and mutation state remain in their page owner.
 - With `playwright-cli -s=wf55103l02`, run at least five distinct visible-effect
   scenarios: (1) next/previous changes the rendered page rows and disabled/ARIA
   pagination state while global tabs/cards/facets remain byte-identical; (2)
-  filter change resets to the first rendered page, changes the visible
-  `matchingTotal`, and preserves global totals; (3)
+  filter change resets to the first rendered page, changes the shown/more state,
+  keeps `matchingTotal` explicitly unavailable, and preserves global totals; (3)
   equal-sort boundary traversal shows no duplicate or missing visible row; (4)
   booking mutation refreshes the affected rendered page without overwriting
   dirty UI state; and (5) Booking, Media, and Users/Roles extracted views retain
@@ -765,7 +871,8 @@ components, while cache identity and mutation state remain in their page owner.
   user-triggered. It is never prefetched, persisted, broadcast, logged, or
   placed in a server/browser cache; server responses are `private, no-store`
   and the client request uses `cache:"no-store"`. Abort/close/auth transition
-  clears it.
+  clears it. The route's first handler uses only L03's closed response-header
+  setter; no arbitrary header or transport ownership moves into this leaf.
 - Authorization filters are applied inside each query before limit/cursor;
   cursors are scope-bound, signed by the L01 keyring, age-limited, and never
   grant access or expose hidden columns. Missing/weak key configuration prevents
@@ -778,10 +885,15 @@ components, while cache identity and mutation state remain in their page owner.
   `roles:read`; an unauthorized relation facet is the declared empty page.
 - Known conflicts map through centralized route error helpers; SQL/details,
   binds, cursor payloads, session material, and PII are not logged.
+- Admin client module caches are availability optimizations only. L04's opaque
+  installation token/reset seam prevents pre-transition promises from writing
+  into a later deployment/auth audience; these clients do not infer RBAC from a
+  cache hit.
 
 ## Validation Commands
 
 - `set -a && source .env && set +a && bun test tests/integration/routes/task551BoundedAdminLists.test.ts tests/integration/routes/bookingRoutes.test.ts tests/integration/routes/forms.test.ts tests/integration/server/task551AdminWriteConcurrency.test.ts`
+- `set -a && source .env && set +a && bun test tests/integration/server/route-response-headers.test.ts`
 - `set -a && source .env && set +a && bun test tests/integration/runtime/paginationCursorLifecycle.test.ts`
 - `bunx vitest run tests/vitest/admin/task551PaginatedClients.test.ts tests/vitest/admin/task551PaginatedListViews.test.tsx tests/vitest/admin/task551PaginatedConsumerGraphScreens.test.tsx tests/vitest/admin/task551PaginatedConsumerGraphEditors.test.tsx tests/vitest/admin/formsClient.test.ts tests/vitest/admin/bookingClient.test.ts tests/vitest/admin/mediaClient.test.ts tests/vitest/admin/mediaUtils.test.ts tests/vitest/admin/pagesClient.test.ts tests/vitest/admin/pagesClientPagination.test.ts tests/vitest/admin/detailPagesClient.test.ts tests/vitest/ui/booking-page-loading-pagination.test.tsx tests/vitest/ui/booking-page-mutations.test.tsx tests/vitest/ui/booking-page-calendar.test.tsx tests/vitest/ui/booking-tabs-interactions-wave.test.tsx tests/vitest/ui/booking-tabs-leaf.test.tsx tests/vitest/ui/booking-helpers.test.ts tests/vitest/ui/form-submissions-page.test.tsx tests/vitest/ui/media-library-loading-pagination.test.tsx tests/vitest/ui/media-library-selection-folders.test.tsx tests/vitest/ui/media-library-upload-edit.test.tsx tests/vitest/ui/media-picker.test.tsx tests/vitest/ui/forms-list-page-wave.test.tsx tests/vitest/ui/form-builder-page-wave.test.tsx tests/vitest/ui/forms-component-wave.test.tsx tests/vitest/ui-integration/forms-list-restyle.test.tsx tests/vitest/ui-integration/forms.test.tsx tests/vitest/ui-integration/forms-submissions-restyle.test.tsx tests/vitest/ui/page-revision-drawer.test.tsx tests/vitest/ui/page-editor-v2-loading-cache.test.tsx tests/vitest/ui/page-editor-v2-editing-dirty-state.test.tsx tests/vitest/ui/page-editor-v2-autosave-conflicts.test.tsx tests/vitest/ui/page-editor-v2-preview-device.test.tsx tests/vitest/ui/page-editor-v2-publish-revisions.test.tsx tests/vitest/ui/page-editor-v2-sections-blocks.test.tsx tests/vitest/ui/page-editor-v2-accessibility-navigation.test.tsx tests/vitest/ui/page-editor-v2-persistence-roundtrip.test.tsx tests/vitest/ui/detail-template-editor.test.tsx tests/vitest/validation/task551ListSchemas.test.ts`
 - `set -a && source .env && set +a && bun test tests/perf/database-admin-list-budgets.test.ts`
@@ -809,9 +921,12 @@ changelog 1263.
   exactly `id,name,slug,status,description,submissionAccess,updatedAt`; current
   list filters/table work without N+1 or hidden detail fallback.
 - Every representative 100k-row list request is at most 3 SQL statements and
-  meets the L01/L02 p95/row/buffer budget; response size stays within its fixture
-  budget. Fixed summaries return exactly one row, relation facets are bounded as
-  declared, and no displayed global metric changes while traversing pages.
+  every page/fixed-summary/facet statement has its own checked-in L01/L02 numeric
+  p95/row/buffer budget plus L05 sanitized-plan receipt; response size stays
+  within its fixture budget. Fixed summaries return exactly one row without
+  claiming one-row work, relation facets are bounded as declared, arbitrary
+  filters use `matchingTotal:null` plus `hasMore`, and no displayed global metric
+  changes while traversing pages.
 - All current page/post/entry status counts and author/type facets, form and
   submission cards, user/member/invitation/role/admin safeguards, media asset/
   byte/type/folder/tag totals, and booking today/upcoming/resource counts come
@@ -834,3 +949,8 @@ changelog 1263.
   expansion over a private/no-store response and no-store fetch, and are erased
   on close/auth lifecycle; media summaries always
   carry safe `name` without exposing storage keys.
+- All eight owned Admin clients consume the already-landed L04 INITIAL token/
+  reset seam and return a complete adoption receipt; delayed pre-transition
+  completions install nothing. The submission-detail route consumes the already-
+  landed L03 INITIAL header seam and emits its exact private/no-store headers on
+  success and mapped 4xx without editing shared HTTP transport.

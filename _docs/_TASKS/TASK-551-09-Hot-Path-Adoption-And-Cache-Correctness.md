@@ -49,23 +49,29 @@ auth, private/password and nonce-bearing data never use this eventual model.
   `PublicCacheRuntimeSnapshot`, `ServerCache`, Redis, a manifest, or another
   process cache. All query budgets below are **total whole-request budgets after
   middleware**: a safe warm hit is exactly one DB query; a mutable-content detail
-  or list warm hit is exactly two total DB queries (security plus its one gate),
+  or list warm hit is exactly two total DB queries (security plus one set-based
+  root-and-nested validator),
   with zero additional domain/render/cache DB reads.
 - After request middleware, `publicSite` may first load only the fixed-positive,
   strictly non-secret `PublicCacheRuntimeSnapshot` routing/bootstrap value. That
   snapshot contains or authorizes no content value. The strict classifier then
   returns `safe_non_mutable`, `mutable_content_detail`,
   `mutable_content_list`, or `authoritative_bypass`. Mutable content covers page
-  and homepage, post, and `content_entry` output. Before any manifest/HTML/content
-  value lookup, a detail classification performs exactly one narrow indexed
-  publication/visibility/version gate; a mutable-content list performs exactly
-  one bounded family-specific indexed membership/version gate for at most the
-  validated page limit plus one projections and no bodies or password hashes.
+  and homepage, post, and `content_entry` output. It may read only a bounded safe
+  metadata manifest before validation—never HTML/content. The manifest names the
+  root proof plus every page/post/entry rendered through nested content-list,
+  posts-feed, entry-teaser, template or slot composition. One bounded indexed
+  statement validates all detail dependencies set-wise and any root list's
+  ordered membership for at most page limit plus one; it selects no bodies/data/
+  documents or password hashes.
   Page projection is exactly id/status/publishedAt/derived hasPublishedData/
   updatedAt; post is id/status/publishedAt/updatedAt; content entry is id/status/
   publishedAt/visibility/derived hasPassword/updatedAt. Only the current
   published representation, and for entries public plus password-free, can
-  continue. The ordered gate digest joins canonical key input. A proven warm hit
+  continue. Exact counts/order/projection digest join canonical key input. Caps
+  are 128 dependency tuples, 16,384 canonical validation bytes and 32,768 encoded
+  manifest bytes. Invalid/over-cap/DB-error/indexless validation is authoritative
+  typed `no_fill` with zero HTML GET/fill. A proven warm hit
   then performs zero additional domain/render/cache DB queries. Unknown,
   ambiguous, unpublished, missing-data, private/password or changed membership
   bypasses value cache for authoritative routing/DB. A stale bootstrap may cause
@@ -101,6 +107,8 @@ auth, private/password and nonce-bearing data never use this eventual model.
 - The renderer records exact dependencies but maps them only to L01's finite
   site/family tags. Record ids/slugs/paths remain digested value-key input and
   never create generation keys. Uncertain linkage uses `site:all`.
+  Delayed invalidation cannot expose primed nested content: every warm mutable
+  request repeats the one authoritative validator after metadata and before HTML.
 - Preview/draft, private/password, authenticated variants, nonce/form-bearing
   HTML, unknown query variants and 5xx remain cache-exempt. Preserve every
   TASK-517 visibility/list/auth exclusion.
@@ -119,9 +127,15 @@ auth, private/password and nonce-bearing data never use this eventual model.
   the one deduplicated plan.
 - Admin browser cache is independent from server cache and scoped by deployment,
   a cryptographic per-login auth incarnation, authenticated identity, permission
-  fingerprint and auth epoch. The incarnation is stored only in sessionStorage
-  (or ephemeral memory on failure) and is bound into the opaque scope digest; the
-  deployment digest is carried by keys, envelopes and cacheBus events. Decrypted
+  fingerprint, auth epoch and a separate deployment-scoped cross-tab auth-
+  generation nonce. The incarnation is stored only in sessionStorage (or
+  ephemeral memory on failure); the generation nonce is a strict identity-free
+  localStorage record whose storage event is ordering authority and whose
+  BroadcastChannel message is wakeup only. Both are bound into the opaque scope
+  digest; the deployment digest is carried by keys, envelopes and cacheBus
+  events. Every module-level Admin cache/promise belongs to the exhaustive
+  03-L02/04-L01/L04 writer matrix, captures L04's installation token and resets
+  synchronously on audience transition. Decrypted
   `SecuritySettings` is never cached in-process, browser storage or Redis;
   `getSecuritySettings` is DB-authoritative on every call. Redis may carry only
   finite generation metadata for an explicitly typed redacted projection, and
@@ -144,9 +158,14 @@ auth, private/password and nonce-bearing data never use this eventual model.
 | TASK-551-09-L01 | Public read models, complete dependency classification, one-total-query safe warm hits and two-total-query mutable-content gates | ⏳ To Do |
 | TASK-551-09-L02 | Pages, entries, posts and current SEO post-commit invalidation | ⏳ To Do |
 | TASK-551-09-L03 | Menu/footer/theme/settings/redirect/form/list/detail dependencies, exact redirect policy and invalidation | ⏳ To Do |
-| TASK-551-09-L04 | Deployment/incarnation/identity/epoch-scoped Admin cache and uncached DB-authoritative security settings | ⏳ To Do |
+| TASK-551-09-L04 | INITIAL Admin installation/reset authority; FINAL deployment/incarnation/cross-tab-generation/identity/epoch-scoped Admin cache and uncached DB-authoritative security settings | ⏳ To Do |
 
-**Land order:** `TASK-551-09-L01 → L02 → L03 → L04`.
+**Phased land order:** after TASK-551-07-L01,
+`TASK-551-09-L04 INITIAL → TASK-551-03-L02 and TASK-551-04-L01 adoption
+receipts`; after TASK-551-08 completes, `TASK-551-09-L01 → L02 → L03 → L04
+FINAL`. L04 stays `🚧 In Progress` and the program is non-releasable between its
+phases. FINAL owns the exhaustive matrix but never reopens the ten 03/04-owned
+clients/hooks that returned receipts.
 
 ## Collision Guards and Handoffs
 
@@ -172,6 +191,11 @@ auth, private/password and nonce-bearing data never use this eventual model.
   contract amendment rather than invalidating inside a transaction.
 - No 09 leaf edits 07/08 owners, other TASK-551 domain/query owners, migration
   artifacts, package files, workflows, board/changelog or shared docs.
+- L04 INITIAL is the narrow exception to this parent's normal post-08 dispatch:
+  after 07-L01 it adds only `adminCacheAuthority.ts` plus its direct contract
+  test. TASK-551-03-L02 and 04-L01 import that stable seam read-only and remain
+  sole writers of their eight plus two Admin clients/hooks. L04 FINAL owns every
+  other current Admin module cache and verifies the combined source manifest.
 - L01 consumes the already composed lifecycle singleton only through
   `getServerCacheRuntime().cache`, handed off by 08-L03 after
   `registerComposedHttpRuntimeParticipants()` registration. No 09 leaf creates,
@@ -217,8 +241,9 @@ auth, private/password and nonce-bearing data never use this eventual model.
   uncached authoritative security-settings read, with byte-identical output and
   zero domain/render/cache reads. A page/home, post, or content-entry detail and
   a family-specific mutable-content list perform exactly two total DB queries:
-  security plus one narrow point or bounded membership/version gate for at most
-  page-limit-plus-one projections. They perform zero additional warm-hit reads;
+  security plus one set-based validator covering the root and every nested
+  manifest dependency, including bounded list membership at at most page-limit-
+  plus-one. They perform zero additional warm-hit reads;
   unpublished/missing-data/private/password/unknown or changed membership never
   returns a primed item.
 - Runtime bootstrap loading precedes dynamic route classification but cannot
@@ -246,9 +271,13 @@ auth, private/password and nonce-bearing data never use this eventual model.
   ambiguity may retain safe public bytes only to policy TTL and is never called
   linearizable or instant cross-replica invalidation.
 - Admin cache never hydrates across user or permission scope; storage/cacheBus
-  failure is best effort. Deployment digest, a crypto-random per-login
-  incarnation and each auth epoch form distinct namespaces; reload reuses only
-  the current session incarnation. Deployment identity is derived fail closed
+  failure is best effort. Deployment digest, a crypto-random tab/per-login
+  incarnation, deployment-scoped cross-tab auth-generation nonce and each auth
+  epoch form distinct namespaces; reload reuses only the current session
+  incarnation when the authoritative shared nonce still matches. Another tab's
+  login/logout/user/permission transition rotates storage first, then clears,
+  aborts and re-bootstraps every audience; delayed channel traffic cannot
+  restore an older nonce. Deployment identity is derived fail closed
   from same-origin Admin base plus the current hashed production entry-module
   path; missing/cross-origin/oversized or unhashed development entry paths never
   enable persistent scope. Decrypted security settings are never cached and every
@@ -258,7 +287,10 @@ auth, private/password and nonce-bearing data never use this eventual model.
   awaits post-commit apply; a successful memory commit writes exactly zero outbox
   rows and awaits exactly one post-commit memory-generation bump. In both modes
   the observation or affected-family failure fence/epoch is visible before the
-  caller resumes.
+  caller resumes. Every `readThroughCache` set/invalidate/force-refresh advances
+  a per-key generation before work, so an older completion can return only to
+  its original caller and never install. Lock/deadlock conflicts map only to the
+  exact redacted `security_settings_conflict` 409 contract.
 - Every touched oversized module is split coherently below 1,000 lines before
   behavior is added.
 
@@ -268,8 +300,9 @@ auth, private/password and nonce-bearing data never use this eventual model.
   typecheck, lint, diff-check, and touched-file line counts.
 - Count one-total-query safe warm routes separately from two-total-query mutable-
   content detail/list routes. In each total, exactly one query is the uncached
-  security-settings read; the latter adds exactly one point or bounded membership
-  gate and neither permits any additional domain/render/cache query.
+  security-settings read; the latter adds exactly one set-based root-plus-nested
+  projection/membership validator for the complete safe metadata manifest and
+  neither permits any additional domain/render/cache query.
 - Inject missing/corrupt/stale bootstrap routing metadata and prove classification
   takes authoritative fallback before any manifest/HTML/content value read.
 - Exercise the complete pre-cache booking/Forms/analytics surface, including
@@ -291,6 +324,13 @@ auth, private/password and nonce-bearing data never use this eventual model.
   commit = exactly one outbox row plus awaited apply; memory commit = zero outbox
   rows plus exactly one awaited generation bump. Neither caller resumes before
   its local observation or failure fence/epoch is visible.
+- Run the exhaustive Admin source manifest over all eight 03 clients, both 04
+  search owners and all 27 L04 FINAL clients plus auth/prefetch/generic cache
+  utilities. Delay every owner across an installation transition and prove no
+  stale install. With two tab harnesses, pin storage-event ordering, nonce
+  rotation-before-scope, delayed Broadcast wakeups, same-tab incarnation reuse
+  only on nonce match, and fail-closed storage errors. Race read-through load
+  against set/invalidate/force-refresh and pin generation-first behavior.
 - Redis is mandatory for distributed invalidation/lease tests; unavailable
   infrastructure is a blocker, not a skipped passing gate.
 
