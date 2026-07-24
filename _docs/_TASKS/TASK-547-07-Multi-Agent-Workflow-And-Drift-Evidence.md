@@ -129,9 +129,12 @@ or contents never join audit digests.
   private per-call temporary directory; the host rejects a redirected result,
   normalizes the direct Codex result file to mode `0600` before read and always
   removes this per-call directory. A separate private run-level directory
-  receives exclusive mode-`0600` diagnostic copies. Success removes the
-  run-level directory automatically; failure retains it only for the current
-  remediation review and the operator removes it immediately afterward.
+  receives exclusive mode-`0600` diagnostic copies. A successful finding-free
+  run removes the run-level directory automatically. A successful run that
+  encountered any structured HIGH/MEDIUM/LOW finding retains it for review
+  (including remediated earlier-round H/M and residual LOW), while failure
+  retains it for the current remediation review; the operator removes it
+  immediately after review or before the corrected fresh rerun.
   Git commands run with global/system config disabled, optional locks disabled
   and terminal prompting disabled so observation does not refresh or mutate the
   index.
