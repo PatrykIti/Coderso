@@ -182,6 +182,10 @@ import {
   createSpaceSelectionScenarioRuntime,
   isSpaceSelectionBrowserCandidate,
 } from "./task-540-smoke/browser/scenarios/space-selection.mjs";
+import {
+  createRelatedCacheScenarioRuntime,
+  isRelatedCacheBrowserCandidate,
+} from "./task-540-smoke/browser/scenarios/related-cache.mjs";
 import { buildObservationSource } from "./task-540-smoke/browser/observation-sources.mjs";
 import { buildVisibleAssertionSource } from "./task-540-smoke/browser/visible-assertion-sources.mjs";
 import { assertScreenshotScenarioOwnership } from "./task-540-smoke/browser/scenarios/ownership.mjs";
@@ -202,6 +206,15 @@ const { buildTabsKeyboardBrowserInvocation } = createTabsKeyboardScenarioRuntime
 const { buildSpaceSelectionBrowserInvocation } = createSpaceSelectionScenarioRuntime({
   buildSharedAdvancedBrowserInvocation: buildAdvancedBrowserInvocation,
   buildSharedSimpleBrowserInvocation: buildSimpleBrowserInvocation,
+});
+const {
+  buildRelatedCacheBrowserInvocation,
+  relatedCacheOperationForAction,
+  relatedCacheRouteKeyForAction,
+} = createRelatedCacheScenarioRuntime({
+  buildSharedAdvancedBrowserInvocation: buildAdvancedBrowserInvocation,
+  buildSharedSimpleBrowserInvocation: buildSimpleBrowserInvocation,
+  runCode,
 });
 const {
   buildDirtyGuardsBrowserInvocation,
@@ -3268,7 +3281,8 @@ function operationForAction(action, builderAst) {
   if (action.kind === "screen") return "screenshot";
   const dirtyGuardsOperation = dirtyGuardsOperationForAction(action);
   if (dirtyGuardsOperation !== null) return dirtyGuardsOperation;
-  if (action.id === "rc-011-visible-retry") return "real-retry";
+  const relatedCacheOperation = relatedCacheOperationForAction(action);
+  if (relatedCacheOperation !== null) return relatedCacheOperation;
   if (action.kind === "logs") return "log-read";
   if (action.kind === "captureNew") return "capture-new-block";
   if (action.kind === "blocksBefore") return "capture-block-baseline";
@@ -3279,7 +3293,7 @@ function operationForAction(action, builderAst) {
 function routeReceiptMetadata(action, executionSpec, plan, captures, runtimeConfig) {
   let routeKey = action.kind === "route" ? executionSpec.builderAst.args[0] : null;
   routeKey = dirtyGuardsRouteKeyForAction(action) ?? routeKey;
-  if (action.id === "rc-011-visible-retry") routeKey = "related-first-failure";
+  routeKey = relatedCacheRouteKeyForAction(action) ?? routeKey;
   if (routeKey === null) return deepFreezeExact({ routeKey: null, method: null, pattern: null });
   const route = expandedRoute(plan, routeKey, captures, runtimeConfig);
   return deepFreezeExact({ routeKey, method: route.method, pattern: route.pattern });
@@ -3801,39 +3815,6 @@ function buildSimpleBrowserInvocation(
           displayArgs: null,
         };
       }
-      if (action.id === "rc-011-visible-retry") {
-        const readPath =
-          "/admin/api/content/" +
-          plan.fixtureBlueprint.contentTypes.relatedFailure.slug +
-          "/entries";
-        const expectedRowId = captures.get("related-entry-failure1.id");
-        const rootSelector =
-          '[data-screen-block-id="' + plan.fixtureBlueprint.retryScreen.relatedListBlockId + '"]';
-        return {
-          args: runCode(`async (page) => {
-            const locator = page.locator(${selector});
-            await locator.waitFor({ state: "visible", timeout: 30000 });
-            if (await locator.count() !== 1) throw new Error("wf540_related_retry_target_count");
-            const pathname = (href) => { const scheme = href.indexOf("://"); const start = href.indexOf("/", scheme === -1 ? 0 : scheme + 3); return (start === -1 ? "/" : href.slice(start)).split(/[?#]/u, 1)[0]; };
-            const responsePromise = page.waitForResponse((response) => response.request().method() === "GET" && pathname(response.url()) === ${JSON.stringify(readPath)}, { timeout: 270000 });
-            await locator.click();
-            const response = await responsePromise;
-            if (!response.ok()) throw new Error("wf540_related_retry_response");
-            const root = page.locator(${JSON.stringify(rootSelector)});
-            const row = root.locator(${JSON.stringify('[data-screen-related-entry="' + expectedRowId + '"]')});
-            const deadline = Date.now() + 30000;
-            while (Date.now() < deadline) {
-              const rect = await row.count() === 1 ? await row.boundingBox() : null;
-              const retryAbsent = await page.locator(${selector}).count() === 0;
-              const alertAbsent = await page.locator('[role="alert"]').count() === 0;
-              if (rect && rect.width > 0 && rect.height > 0 && retryAbsent && alertAbsent) return true;
-              await page.waitForTimeout(25);
-            }
-            throw new Error("wf540_related_retry_settlement");
-          }`),
-          displayArgs: null,
-        };
-      }
       if (RECORDS_WORKSPACE_ACTION_IDS.includes(action.id)) {
         const recordActionsSelector = JSON.stringify(registeredSelector(plan, "recordActions"));
         const expectedRecordsUrl = JSON.stringify(expandRegisteredPath(plan, "records", captures));
@@ -4276,6 +4257,7 @@ function buildBrowserInvocation(
   const tabsContentCandidate = isTabsContentBrowserCandidate(action);
   const tabsKeyboardCandidate = isTabsKeyboardBrowserCandidate(action);
   const spaceSelectionCandidate = isSpaceSelectionBrowserCandidate(action);
+  const relatedCacheCandidate = isRelatedCacheBrowserCandidate(action);
   invariant(
     [
       buttonImageCandidate,
@@ -4283,6 +4265,7 @@ function buildBrowserInvocation(
       tabsContentCandidate,
       tabsKeyboardCandidate,
       spaceSelectionCandidate,
+      relatedCacheCandidate,
     ].filter(Boolean).length <= 1,
     action.id + " browser scenario ownership is ambiguous"
   );
@@ -4299,6 +4282,17 @@ function buildBrowserInvocation(
       })
     : tabsContentCandidate
       ? buildTabsContentBrowserInvocation({
+          action,
+          executionSpec,
+          plan,
+          captures,
+          root,
+          browserCwd,
+          refContext,
+          runtimeConfig,
+        })
+    : relatedCacheCandidate
+      ? buildRelatedCacheBrowserInvocation({
           action,
           executionSpec,
           plan,
