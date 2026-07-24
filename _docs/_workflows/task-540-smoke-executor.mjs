@@ -38,7 +38,6 @@ import {
   AUTH_SETTLEMENT_EXECUTOR_FAILURE_CLASSES,
   AUTH_SETTLEMENT_FAILURE_FRAMES,
   BUN_BRIDGE_EXECUTION_AUTHORITY,
-  CLEANUP_FAILURE_CLASSES,
   CLEANUP_FAILURE_CLASS_PRIORITY,
   COMMAND_TIMEOUT_MS,
   DATABASE_OPERATION_TIMEOUT_MS,
@@ -128,6 +127,8 @@ import {
 import { createResponseLostRegistry } from "./task-540-smoke/runtime/response-lost-registry.mjs";
 import { createResponseLostBaselines } from "./task-540-smoke/runtime/response-lost-baselines.mjs";
 import { createResponseLostDiscovery } from "./task-540-smoke/runtime/response-lost-discovery.mjs";
+import { cleanupDiagnostics } from "./task-540-smoke/cleanup/diagnostics.mjs";
+import { createConstructionAuthorityRuntime } from "./task-540-smoke/cleanup/construction-authority.mjs";
 
 const responseLostRegistry = createResponseLostRegistry({
   assertPlainJsonValue,
@@ -163,10 +164,28 @@ const {
   registry: responseLostRegistry,
 });
 
+const {
+  createPrivateCleanupFailureDiagnostic,
+  privateCleanupFailureDiagnosticNeverThrow,
+  retainPrivateCleanupAggregateDiagnosticNeverThrow,
+  retainPrivateCleanupFailureDiagnosticNeverThrow,
+  retainPrivateCleanupOutcomeDiagnosticNeverThrow,
+  selectPrivateCleanupFailureDiagnosticNeverThrow,
+} = cleanupDiagnostics;
+const {
+  PRIVATE_CONSTRUCTION_AUTHORITY,
+  PrivateConstructionCleanupAuthority,
+  createPrivateConstructionCleanupAuthority,
+  currentPrivateConstructionCleanupDiagnosticNeverThrow,
+  privateConstructionAuthorityProjection,
+} = createConstructionAuthorityRuntime({
+  cleanupConstructionStateOnce,
+  removePrivateWorkspaceLedger,
+});
+
 const PRIVATE_AUTHORITY = new WeakMap();
 const PRIVATE_CAPTURES = new WeakMap();
 const PRIVATE_CORE = new WeakMap();
-const PRIVATE_CONSTRUCTION_AUTHORITY = new WeakMap();
 const PRIVATE_WORKSPACE_LEDGER = new WeakMap();
 const PRIVATE_API_REQUEST_CONTEXT = new WeakMap();
 const PRIVATE_EPHEMERAL_API_REQUEST_CONTEXT = new WeakMap();
@@ -176,8 +195,6 @@ const PRIVATE_BUN_RESOURCE_DESCRIPTORS = new WeakMap();
 const PRIVATE_BUN_OPERATION_DESCRIPTORS = new WeakMap();
 const PRIVATE_FAILURE_ACTION_TRACKERS = new WeakMap();
 const PRIVATE_FAILURE_ACTION_DIAGNOSTIC_SINKS = new WeakMap();
-const PRIVATE_CLEANUP_FAILURE_DIAGNOSTICS = new WeakMap();
-const PRIVATE_CLEANUP_OUTCOME_DIAGNOSTICS = new WeakMap();
 const PRIVATE_AUTH_SETTLEMENT_FAILURE_CLASSES = new WeakMap();
 const PRIVATE_AUTH_SETTLEMENT_FAILURE_DETAILS = new WeakMap();
 const PRIVATE_TONE_OPEN_FAILURE_CLASSES = new WeakMap();
@@ -190,295 +207,12 @@ let PRE_AUTHORITY_FAILURE_COUNT = 0;
 
 
 
-function isPrivateCleanupFailureDiagnostic(value) {
-  try {
-    if (
-      value === null ||
-      typeof value !== "object" ||
-      Object.getPrototypeOf(value) !== Object.prototype ||
-      !Object.isFrozen(value) ||
-      !deepEqualJson(Object.keys(value).sort(), ["cleanupFailureClass", "cleanupPhase"])
-    ) {
-      return false;
-    }
-    const { cleanupFailureClass, cleanupPhase } = value;
-    if (
-      !Number.isSafeInteger(cleanupPhase) ||
-      cleanupPhase < 0 ||
-      cleanupPhase > 10 ||
-      !CLEANUP_FAILURE_CLASSES.includes(cleanupFailureClass)
-    ) {
-      return false;
-    }
-    if (cleanupPhase === 0) {
-      return ["cleanup_boundary_failed", "construction_cleanup_failed"].includes(
-        cleanupFailureClass
-      );
-    }
-    if (cleanupFailureClass === "phase_failed") return true;
-    return (
-      (cleanupPhase === 3 && PHASE_THREE_CLEANUP_FAILURE_CLASSES.includes(cleanupFailureClass)) ||
-      (cleanupPhase === 8 && PHASE_EIGHT_CLEANUP_FAILURE_CLASSES.includes(cleanupFailureClass))
-    );
-  } catch {
-    return false;
-  }
-}
-
-function createPrivateCleanupFailureDiagnostic(cleanupPhase, cleanupFailureClass) {
-  const diagnostic = deepFreezeExact({ cleanupPhase, cleanupFailureClass });
-  invariant(
-    isPrivateCleanupFailureDiagnostic(diagnostic),
-    "private cleanup failure diagnostic is invalid"
-  );
-  return diagnostic;
-}
-
-function privateCleanupFailureDiagnosticNeverThrow(cause) {
-  try {
-    const diagnostic = PRIVATE_CLEANUP_FAILURE_DIAGNOSTICS.get(cause);
-    return isPrivateCleanupFailureDiagnostic(diagnostic) ? diagnostic : null;
-  } catch {
-    return null;
-  }
-}
-
-function retainPrivateCleanupFailureDiagnosticNeverThrow(cause, cleanupPhase, cleanupFailureClass) {
-  try {
-    const failure =
-      (typeof cause === "object" && cause !== null) || typeof cause === "function"
-        ? cause
-        : new Error("TASK-540 cleanup failed");
-    const existing = privateCleanupFailureDiagnosticNeverThrow(failure);
-    if (existing === null) {
-      PRIVATE_CLEANUP_FAILURE_DIAGNOSTICS.set(
-        failure,
-        createPrivateCleanupFailureDiagnostic(cleanupPhase, cleanupFailureClass)
-      );
-    }
-    return failure;
-  } catch {
-    const failure = new Error("TASK-540 cleanup failed");
-    PRIVATE_CLEANUP_FAILURE_DIAGNOSTICS.set(
-      failure,
-      createPrivateCleanupFailureDiagnostic(0, "cleanup_boundary_failed")
-    );
-    return failure;
-  }
-}
-
-function selectPrivateCleanupFailureDiagnosticNeverThrow(failures, fallbackPhase = null) {
-  try {
-    const diagnostics = Array.isArray(failures)
-      ? failures
-          .map((failure) => privateCleanupFailureDiagnosticNeverThrow(failure))
-          .filter((diagnostic) => diagnostic !== null)
-      : [];
-    if (diagnostics.length === 0) {
-      return fallbackPhase === null
-        ? null
-        : createPrivateCleanupFailureDiagnostic(
-            fallbackPhase,
-            fallbackPhase === 0 ? "cleanup_boundary_failed" : "phase_failed"
-          );
-    }
-    diagnostics.sort((left, right) => {
-      const phaseOrder = left.cleanupPhase - right.cleanupPhase;
-      if (phaseOrder !== 0) return phaseOrder;
-      return (
-        CLEANUP_FAILURE_CLASS_PRIORITY.indexOf(left.cleanupFailureClass) -
-        CLEANUP_FAILURE_CLASS_PRIORITY.indexOf(right.cleanupFailureClass)
-      );
-    });
-    return diagnostics[0];
-  } catch {
-    return fallbackPhase === null
-      ? null
-      : createPrivateCleanupFailureDiagnostic(
-          fallbackPhase,
-          fallbackPhase === 0 ? "cleanup_boundary_failed" : "phase_failed"
-        );
-  }
-}
-
-function retainPrivateCleanupAggregateDiagnosticNeverThrow(error, failures, fallbackPhase) {
-  const diagnostic = selectPrivateCleanupFailureDiagnosticNeverThrow(failures, fallbackPhase);
-  return retainPrivateCleanupFailureDiagnosticNeverThrow(
-    error,
-    diagnostic.cleanupPhase,
-    diagnostic.cleanupFailureClass
-  );
-}
-
-function retainPrivateCleanupOutcomeDiagnosticNeverThrow(outcome, diagnostic) {
-  try {
-    if (!isPrivateCleanupFailureDiagnostic(diagnostic)) return false;
-    PRIVATE_CLEANUP_OUTCOME_DIAGNOSTICS.set(outcome, diagnostic);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-function privateCleanupOutcomeDiagnosticNeverThrow(outcome) {
-  try {
-    const diagnostic = PRIVATE_CLEANUP_OUTCOME_DIAGNOSTICS.get(outcome);
-    return isPrivateCleanupFailureDiagnostic(diagnostic) ? diagnostic : null;
-  } catch {
-    return null;
-  }
-}
-
-function retainPrivateConstructionCleanupDiagnosticNeverThrow(
-  state,
-  outcome,
-  fallbackFailureClass
-) {
-  try {
-    if (isPrivateCleanupFailureDiagnostic(state.cleanupDiagnostic)) return true;
-    const outcomeDiagnostic = privateCleanupOutcomeDiagnosticNeverThrow(outcome);
-    if (outcomeDiagnostic !== null) {
-      state.cleanupDiagnostic = outcomeDiagnostic;
-      return true;
-    }
-    if (outcome?.absenceProven !== false) return false;
-    state.cleanupDiagnostic = createPrivateCleanupFailureDiagnostic(0, fallbackFailureClass);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-function retainPrivateConstructionCleanupCauseNeverThrow(state, cause, fallbackFailureClass) {
-  try {
-    if (isPrivateCleanupFailureDiagnostic(state.cleanupDiagnostic)) return true;
-    state.cleanupDiagnostic =
-      privateCleanupFailureDiagnosticNeverThrow(cause) ??
-      createPrivateCleanupFailureDiagnostic(0, fallbackFailureClass);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-function currentPrivateConstructionCleanupDiagnosticNeverThrow(authority) {
-  try {
-    const diagnostic = PRIVATE_CONSTRUCTION_AUTHORITY.get(authority)?.cleanupDiagnostic;
-    return isPrivateCleanupFailureDiagnostic(diagnostic) ? diagnostic : null;
-  } catch {
-    return null;
-  }
-}
-
-class PrivateConstructionCleanupAuthority {
-  constructor() {
-    PRIVATE_CONSTRUCTION_AUTHORITY.set(this, {
-      workspaceLedger: null,
-      capabilityState: null,
-      capabilities: null,
-      cleanupPromise: null,
-      cleanupRequest: null,
-      cleanupCalls: 0,
-      cleanupDiagnostic: null,
-      failures: [],
-    });
-  }
-
-  registerWorkspaceLedger(ledger) {
-    const state = PRIVATE_CONSTRUCTION_AUTHORITY.get(this);
-    invariant(state.workspaceLedger === null, "private workspace authority was assigned twice");
-    state.workspaceLedger = ledger;
-  }
-
-  registerCapabilityState(capabilityState) {
-    const state = PRIVATE_CONSTRUCTION_AUTHORITY.get(this);
-    invariant(state.capabilityState === null, "capability construction state was assigned twice");
-    state.capabilityState = capabilityState;
-  }
-
-  bindCompleteCapabilities(capabilities) {
-    const state = PRIVATE_CONSTRUCTION_AUTHORITY.get(this);
-    invariant(state.capabilities === null, "complete capabilities were assigned twice");
-    invariant(
-      capabilities && typeof capabilities.cleanup === "function",
-      "complete cleanup capability is missing"
-    );
-    state.capabilities = capabilities;
-  }
-
-  cleanupWhateverWasAcquiredOnceNeverThrow(request = null) {
-    const state = PRIVATE_CONSTRUCTION_AUTHORITY.get(this);
-    state.cleanupCalls += 1;
-    if (state.cleanupPromise === null) {
-      state.cleanupRequest = request;
-      state.cleanupPromise = (async () => {
-        const fallbackFailureClass =
-          state.capabilities === null ? "construction_cleanup_failed" : "cleanup_boundary_failed";
-        try {
-          let outcome;
-          if (state.capabilities !== null) {
-            outcome = await state.capabilities.cleanup(request);
-          } else if (state.capabilityState !== null) {
-            outcome = await cleanupConstructionStateOnce(state.capabilityState, request);
-          } else if (state.workspaceLedger !== null) {
-            await removePrivateWorkspaceLedger(state.workspaceLedger);
-            outcome = deepFreezeExact({ absenceProven: true, lifecycle: null });
-          } else {
-            outcome = deepFreezeExact({ absenceProven: true, lifecycle: null });
-          }
-          retainPrivateConstructionCleanupDiagnosticNeverThrow(
-            state,
-            outcome,
-            fallbackFailureClass
-          );
-          return outcome;
-        } catch (error) {
-          state.failures.push(error);
-          retainPrivateConstructionCleanupCauseNeverThrow(state, error, fallbackFailureClass);
-          const outcome = deepFreezeExact({ absenceProven: false, lifecycle: null });
-          retainPrivateCleanupOutcomeDiagnosticNeverThrow(outcome, state.cleanupDiagnostic);
-          return outcome;
-        }
-      })();
-    }
-    return state.cleanupPromise;
-  }
-
-  retainFailureAndCleanupDiagnosticsNeverThrow(cause, diagnostics) {
-    try {
-      const state = PRIVATE_CONSTRUCTION_AUTHORITY.get(this);
-      state.failures.push(cause, diagnostics);
-    } catch {
-      // Private diagnostics never replace the fixed public failure.
-    }
-  }
-}
-
-function createPrivateConstructionCleanupAuthority() {
-  return new PrivateConstructionCleanupAuthority();
-}
-
 function retainOrDiscardPreAuthorityCauseNeverThrow() {
   try {
     PRE_AUTHORITY_FAILURE_COUNT += 1;
   } catch {
     // The null-authority path has no acquired resource and never throws.
   }
-}
-
-function privateConstructionAuthorityProjection(authority) {
-  const state = PRIVATE_CONSTRUCTION_AUTHORITY.get(authority);
-  return deepFreezeExact({
-    cleanupCalls: state.cleanupCalls,
-    cleanupStarted: state.cleanupPromise !== null,
-    cleanupMode:
-      state.cleanupRequest?.failure === true
-        ? "failure"
-        : state.cleanupRequest === null
-          ? null
-          : "success",
-    failureCount: state.failures.length,
-  });
 }
 
 function createExpectedAuthChallengeAuthority(options) {
