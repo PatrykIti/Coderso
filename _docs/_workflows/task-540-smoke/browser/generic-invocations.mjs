@@ -1,10 +1,7 @@
-import { deepFreezeExact, invariant } from "../executor/foundation.mjs";
+import { SESSION_NAME } from "../executor/config.mjs";
+import { deepFreezeExact, exactOwnKeys, invariant } from "../executor/foundation.mjs";
 import { registeredSelector, resolveExactRef } from "../executor/ref-dsl.mjs";
-import {
-  buildDataBearingRunCodeInvocation,
-  playwrightArgs,
-  runCode,
-} from "./run-code.mjs";
+import { buildDataBearingRunCodeInvocation, playwrightArgs, runCode } from "./run-code.mjs";
 import { buildSimpleBrowserInvocation as buildSimpleBrowserInvocationCore } from "./simple-invocations.mjs";
 import {
   buildBlockBaselineSource,
@@ -265,4 +262,233 @@ export function createSharedBrowserInvocationRuntime({ normalizeAuthRatePolicy }
     buildAuthRateWindowBarrierSource,
     buildAdvancedBrowserInvocation,
   });
+}
+
+export function createBrowserInvocationRouter({
+  buildAdvancedBrowserInvocation,
+  buildButtonImageBrowserInvocation,
+  buildDirtyGuardsBrowserInvocation,
+  buildRelatedCacheBrowserInvocation,
+  buildResponsiveUsersBrowserInvocation,
+  buildSimpleBrowserInvocation,
+  buildSpaceSelectionBrowserInvocation,
+  buildTabsContentBrowserInvocation,
+  buildTabsKeyboardBrowserInvocation,
+  isButtonImageBrowserCandidate,
+  isDirtyGuardsBrowserCandidate,
+  isRelatedCacheBrowserCandidate,
+  isResponsiveUsersBrowserCandidate,
+  isSpaceSelectionBrowserCandidate,
+  isTabsContentBrowserCandidate,
+  isTabsKeyboardBrowserCandidate,
+  normalizeDirtyGuardsUnitSource,
+}) {
+  invariant(
+    [
+      buildAdvancedBrowserInvocation,
+      buildButtonImageBrowserInvocation,
+      buildDirtyGuardsBrowserInvocation,
+      buildRelatedCacheBrowserInvocation,
+      buildResponsiveUsersBrowserInvocation,
+      buildSimpleBrowserInvocation,
+      buildSpaceSelectionBrowserInvocation,
+      buildTabsContentBrowserInvocation,
+      buildTabsKeyboardBrowserInvocation,
+      isButtonImageBrowserCandidate,
+      isDirtyGuardsBrowserCandidate,
+      isRelatedCacheBrowserCandidate,
+      isResponsiveUsersBrowserCandidate,
+      isSpaceSelectionBrowserCandidate,
+      isTabsContentBrowserCandidate,
+      isTabsKeyboardBrowserCandidate,
+      normalizeDirtyGuardsUnitSource,
+    ].every((dependency) => typeof dependency === "function"),
+    "browser invocation router dependencies are invalid"
+  );
+
+  function buildBrowserInvocation(
+    action,
+    executionSpec,
+    captures,
+    root,
+    browserCwd,
+    plan,
+    refContext,
+    runtimeConfig
+  ) {
+    invariant(
+      action.executable.type !== "runtime-operation",
+      action.id + " is not a browser action"
+    );
+    const buttonImageCandidate = isButtonImageBrowserCandidate(action);
+    const dirtyGuardsCandidate = isDirtyGuardsBrowserCandidate(action);
+    const tabsContentCandidate = isTabsContentBrowserCandidate(action);
+    const tabsKeyboardCandidate = isTabsKeyboardBrowserCandidate(action);
+    const spaceSelectionCandidate = isSpaceSelectionBrowserCandidate(action);
+    const relatedCacheCandidate = isRelatedCacheBrowserCandidate(action);
+    const responsiveUsersCandidate = isResponsiveUsersBrowserCandidate(action);
+    invariant(
+      [
+        buttonImageCandidate,
+        dirtyGuardsCandidate,
+        tabsContentCandidate,
+        tabsKeyboardCandidate,
+        spaceSelectionCandidate,
+        relatedCacheCandidate,
+        responsiveUsersCandidate,
+      ].filter(Boolean).length <= 1,
+      action.id + " browser scenario ownership is ambiguous"
+    );
+    let invocation = dirtyGuardsCandidate
+      ? buildDirtyGuardsBrowserInvocation({
+          action,
+          executionSpec,
+          plan,
+          captures,
+          root,
+          browserCwd,
+          refContext,
+          runtimeConfig,
+        })
+      : tabsContentCandidate
+        ? buildTabsContentBrowserInvocation({
+            action,
+            executionSpec,
+            plan,
+            captures,
+            root,
+            browserCwd,
+            refContext,
+            runtimeConfig,
+          })
+        : responsiveUsersCandidate
+          ? buildResponsiveUsersBrowserInvocation({
+              action,
+              executionSpec,
+              plan,
+              captures,
+              root,
+              browserCwd,
+              refContext,
+              runtimeConfig,
+            })
+          : relatedCacheCandidate
+            ? buildRelatedCacheBrowserInvocation({
+                action,
+                executionSpec,
+                plan,
+                captures,
+                root,
+                browserCwd,
+                refContext,
+                runtimeConfig,
+              })
+            : spaceSelectionCandidate
+              ? buildSpaceSelectionBrowserInvocation({
+                  action,
+                  executionSpec,
+                  plan,
+                  captures,
+                  root,
+                  browserCwd,
+                  refContext,
+                  runtimeConfig,
+                })
+              : tabsKeyboardCandidate
+                ? buildTabsKeyboardBrowserInvocation({
+                    action,
+                    executionSpec,
+                    plan,
+                    captures,
+                    root,
+                    browserCwd,
+                    refContext,
+                    runtimeConfig,
+                  })
+                : buttonImageCandidate
+                  ? buildButtonImageBrowserInvocation({
+                      action,
+                      executionSpec,
+                      plan,
+                      captures,
+                      root,
+                      browserCwd,
+                      refContext,
+                      runtimeConfig,
+                    })
+                  : (buildSimpleBrowserInvocation(
+                      action,
+                      executionSpec,
+                      plan,
+                      captures,
+                      root,
+                      browserCwd,
+                      refContext
+                    ) ??
+                    buildAdvancedBrowserInvocation(
+                      action,
+                      executionSpec,
+                      plan,
+                      captures,
+                      root,
+                      refContext,
+                      runtimeConfig
+                    ));
+    invariant(invocation !== null, "browser executable is not implemented: " + action.id);
+    const unitResultAlreadyNormalized = invocation.unitResultAlreadyNormalized === true;
+    invariant(
+      !Object.hasOwn(invocation, "unitResultAlreadyNormalized") ||
+        (unitResultAlreadyNormalized &&
+          action.executable.type === "browser-run-code" &&
+          action.outputSchemaId === "unit"),
+      action.id + " unit normalization marker drift"
+    );
+    if (
+      action.executable.type === "browser-run-code" &&
+      action.outputSchemaId === "unit" &&
+      !unitResultAlreadyNormalized
+    ) {
+      const sourceIndex = invocation.args.indexOf("run-code") + 1;
+      invariant(
+        sourceIndex > 0 && typeof invocation.args[sourceIndex] === "string",
+        action.id + " unit run-code source is absent"
+      );
+      const unitSource = dirtyGuardsCandidate
+        ? normalizeDirtyGuardsUnitSource(action, invocation.args[sourceIndex])
+        : `(async (page) => { await (${invocation.args[sourceIndex]})(page); return { ok: true }; })`;
+      const args = [...invocation.args];
+      args[sourceIndex] = unitSource;
+      invocation = { ...invocation, args };
+    }
+    if (unitResultAlreadyNormalized) {
+      invocation = {
+        args: invocation.args,
+        displayArgs: invocation.displayArgs,
+        ...(Object.hasOwn(invocation, "stdoutDiscarded")
+          ? { stdoutDiscarded: invocation.stdoutDiscarded }
+          : {}),
+      };
+    }
+    exactOwnKeys(
+      invocation,
+      [
+        "args",
+        "displayArgs",
+        ...(Object.hasOwn(invocation, "stdoutDiscarded") ? ["stdoutDiscarded"] : []),
+      ],
+      action.id + " invocation"
+    );
+    invariant(
+      Array.isArray(invocation.args) &&
+        invocation.args.every((value) => typeof value === "string") &&
+        ((action.kind === "cleanup-session-absence" &&
+          invocation.args[0] === "--raw" &&
+          invocation.args[1] === "list") ||
+          (invocation.args[0] === "-s=" + SESSION_NAME && invocation.args[1] === "--raw")),
+      action.id + " invocation argv drift"
+    );
+    return invocation;
+  }
+
+  return deepFreezeExact({ buildBrowserInvocation });
 }
