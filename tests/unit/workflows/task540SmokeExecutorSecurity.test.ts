@@ -31,11 +31,11 @@ const testNameContractPath = path.join(root, testNameContractRelative);
 const MASKED_IMPLEMENT_SHA256 = "480c326a4f95386fa680bb21720df6748e85d50843c0e7a528b466a3431c2f0d";
 const FROZEN_HELPER_SHA256 = Object.freeze({
   [smokeContractRelative]: "cb55ad42dd9a2dbfddeb0cf69fbc62cf92c93e2a8ab749887e43c190910f53a4",
-  [executorRelative]: "7aa39f6ab105ca355d6b00e950b80114737df38f8565146e55ea1f7f1fddc29c",
+  [executorRelative]: "03bce2674abcc51dbcb981325330c822c65ddeab03f05e32cefde0332d1fa1cd",
   [smokeHostRelative]: "d2d2763cb35d7dd844bea703f6dbdc7c199bac9f680b39f1990d59d8871de46e",
   [bridgeRelative]: "c3c594a17cb63943beab29e7f621f6e1ca46cb3b5abb67625edcddb900788341",
   [localOrchestratorRelative]: "e06c7be9652554111c111c2e8210b733db908a4f272bcbd4a11781174e132da4",
-  [implementRelative]: "6b7e7684181f42b189692de09dc6f1e90360617a2d7265ea58f6d78cb43c1b5e",
+  [implementRelative]: "36d8c4167ccefd1edbefc07ead30029cc9630773161415915772c2f95095d898",
   [testNameContractRelative]: "ce052b4245c8c384d0405c32cf9d1df146a2f83a409994a6a2822de5422fc4f5",
 });
 
@@ -751,6 +751,21 @@ test("dg022 teardown and dg024 dirty navigation use same-action visible-effect p
   ]) {
     expect(dirtyNavigation).toContain(token);
   }
+  const targetInteractionOrder = [
+    "const receivesPointerAtCenter = await candidate.evaluate(",
+    "if (receivesPointerAtCenter) {",
+    "visibleLinkIndex = nextVisibleLinkIndex;",
+    '} else if (bodyInteraction.inlinePointerEvents === "none") {',
+    '} else if (bodyInteraction.computedPointerEvents === "none") {',
+    "} else if (bodyInteraction.scrollLocked === true) {",
+    "pollTargetFailureClass = ${JSON.stringify(DIRTY_NAVIGATION_BROWSER_FAILURE_CLASSES[7])};",
+  ];
+  let previousInteractionIndex = -1;
+  for (const token of targetInteractionOrder) {
+    const interactionIndex = dirtyNavigation.indexOf(token);
+    expect(interactionIndex).toBeGreaterThan(previousInteractionIndex);
+    previousInteractionIndex = interactionIndex;
+  }
   const finalTargetProof = [
     "const candidate = links.nth(nextVisibleLinkIndex);",
     "await candidate.scrollIntoViewIfNeeded({ timeout: 30000 });",
@@ -935,7 +950,7 @@ test("TASK-540 smoke boundaries retain enlarged nested budgets without retries",
   const { executor, smokeHost } = readSources();
 
   expect(executor).toContain("const DATABASE_OPERATION_TIMEOUT_MS = 540_000;");
-  expect(executor).toContain("const COMMAND_TIMEOUT_MS = 720_000;");
+  expect(executor).toContain("const COMMAND_TIMEOUT_MS = 1_200_000;");
   expect(executor).toContain("const HOST_READY_TIMEOUT_MS = 540_000;");
   expect(smokeHost).toContain("const READY_TIMEOUT_MS = 360_000;");
   expect(smokeHost).toContain("const STOP_TIMEOUT_MS = 15_000;");

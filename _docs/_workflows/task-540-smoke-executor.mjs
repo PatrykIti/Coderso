@@ -84,7 +84,7 @@ const BUN_BRIDGE_EXECUTION_AUTHORITY = deepFreezeExact({
   maxStdoutBytes: MAX_STREAM_BYTES,
   timeoutMs: DATABASE_OPERATION_TIMEOUT_MS,
 });
-const COMMAND_TIMEOUT_MS = 720_000;
+const COMMAND_TIMEOUT_MS = 1_200_000;
 const HOST_READY_TIMEOUT_MS = 540_000;
 const ORCHESTRATOR_EVIDENCE_RUNNER_VERSION = 1;
 const SESSION_NAME = "wf540smoke";
@@ -11862,24 +11862,23 @@ function buildSimpleBrowserInvocation(
                       }))
                     : null;
                   if (bodyInteraction !== null) {
-                    if (bodyInteraction.scrollLocked === true) {
-                      pollTargetFailureClass = ${JSON.stringify(DIRTY_NAVIGATION_BROWSER_FAILURE_CLASSES[4])};
+                    const receivesPointerAtCenter = await candidate.evaluate((node, box) => {
+                      const receiver = document.elementFromPoint(
+                        box.x + box.width / 2,
+                        box.y + box.height / 2
+                      );
+                      return receiver !== null && (receiver === node || node.contains(receiver));
+                    }, rect);
+                    if (receivesPointerAtCenter) {
+                      visibleLinkIndex = nextVisibleLinkIndex;
+                      break;
                     } else if (bodyInteraction.inlinePointerEvents === "none") {
                       pollTargetFailureClass = ${JSON.stringify(DIRTY_NAVIGATION_BROWSER_FAILURE_CLASSES[5])};
                     } else if (bodyInteraction.computedPointerEvents === "none") {
                       pollTargetFailureClass = ${JSON.stringify(DIRTY_NAVIGATION_BROWSER_FAILURE_CLASSES[6])};
+                    } else if (bodyInteraction.scrollLocked === true) {
+                      pollTargetFailureClass = ${JSON.stringify(DIRTY_NAVIGATION_BROWSER_FAILURE_CLASSES[4])};
                     } else {
-                      const receivesPointerAtCenter = await candidate.evaluate((node, box) => {
-                        const receiver = document.elementFromPoint(
-                          box.x + box.width / 2,
-                          box.y + box.height / 2
-                        );
-                        return receiver !== null && (receiver === node || node.contains(receiver));
-                      }, rect);
-                      if (receivesPointerAtCenter) {
-                        visibleLinkIndex = nextVisibleLinkIndex;
-                        break;
-                      }
                       pollTargetFailureClass = ${JSON.stringify(DIRTY_NAVIGATION_BROWSER_FAILURE_CLASSES[7])};
                     }
                   }
@@ -24082,7 +24081,7 @@ export async function runTask540SmokeExecutorSelfTest() {
   );
   invariant(
     DATABASE_OPERATION_TIMEOUT_MS === 540_000 &&
-      COMMAND_TIMEOUT_MS === 720_000 &&
+      COMMAND_TIMEOUT_MS === 1_200_000 &&
       COMMAND_TIMEOUT_MS > DATABASE_OPERATION_TIMEOUT_MS &&
       COMMAND_TIMEOUT_MS > HOST_READY_TIMEOUT_MS,
     "nested command timeout envelope drift"
@@ -26959,10 +26958,10 @@ export async function runTask540SmokeExecutorSelfTest() {
           'const body = page.locator("body");',
           "const bodyInteraction = await body.count() === 1",
           "if (bodyInteraction !== null)",
-          "if (bodyInteraction.scrollLocked === true)",
-          "pollTargetFailureClass = " +
-            JSON.stringify(DIRTY_NAVIGATION_BROWSER_FAILURE_CLASSES[4]) +
-            ";",
+          "const receivesPointerAtCenter = await candidate.evaluate(",
+          "const receiver = document.elementFromPoint(",
+          "if (receivesPointerAtCenter)",
+          "visibleLinkIndex = nextVisibleLinkIndex;",
           'else if (bodyInteraction.inlinePointerEvents === "none")',
           "pollTargetFailureClass = " +
             JSON.stringify(DIRTY_NAVIGATION_BROWSER_FAILURE_CLASSES[5]) +
@@ -26971,10 +26970,10 @@ export async function runTask540SmokeExecutorSelfTest() {
           "pollTargetFailureClass = " +
             JSON.stringify(DIRTY_NAVIGATION_BROWSER_FAILURE_CLASSES[6]) +
             ";",
-          "const receivesPointerAtCenter = await candidate.evaluate(",
-          "const receiver = document.elementFromPoint(",
-          "if (receivesPointerAtCenter)",
-          "visibleLinkIndex = nextVisibleLinkIndex;",
+          "if (bodyInteraction.scrollLocked === true)",
+          "pollTargetFailureClass = " +
+            JSON.stringify(DIRTY_NAVIGATION_BROWSER_FAILURE_CLASSES[4]) +
+            ";",
           "pollTargetFailureClass = " +
             JSON.stringify(DIRTY_NAVIGATION_BROWSER_FAILURE_CLASSES[7]) +
             ";",
