@@ -49,6 +49,7 @@ type FullSitePackageV1 = {
 };
 type PackageRef = { ref: PackageResourceKind; key: string };
 type ResourceSeed<TDesired> = { key: string; desired: TDesired };
+type VerificationPlan = { scenarioIds: string[] };
 type VisualResidual = {
   id: string;
   prototypeEvidence: string;
@@ -74,21 +75,54 @@ supports it, ordered children where supported, and other domain-owned state.
 Snapshot/equality compare the canonical normalized
 `desired` value, not selected fields. Unknown seed-envelope keys are rejected.
 
-`PackageRef` is frozen exactly as `{ ref, key }`. Reference substitution is
-allowed only by this closed field-path table:
+Non-setting seed keys, package keys, `PackageRef.key` and verification scenario
+IDs use the exact canonical grammar
+`^[a-z0-9](?:[a-z0-9._-]{0,126}[a-z0-9])?$` (1..128 characters).
+Setting seed keys deliberately do **not** use that grammar: they must equal one
+of `site.name`, `site.locale`, `site.homepageId`,
+`site.navigationMenuId`, `site.footerTemplateId`, `site.contentRoutes` or
+`design.tokens`. `VerificationPlan` is strict (`scenarioIds` only), accepts at
+most 100 canonical IDs, preserves declaration order and collapses later
+duplicates by first occurrence.
 
-- entry, listing-query and detail desired payloads → content type;
-- detail desired payload → listing query;
-- Page collection/filter/form bindings → content type, listing query, listing
-  template and form respectively;
-- menu item → Page;
-- homepage, navigation-menu and footer-template settings → Page, Menu and Page
-  Template respectively;
-- content route → literal content-type slug plus Detail Page ID.
+`PackageRef` is frozen exactly as `{ ref, key }`, with no third key and the
+canonical key grammar above. Reference substitution is allowed only by L02's
+closed registry:
+
+- entry `contentTypeId`, listing-query
+  `query.sourceConfig.contentTypeId`, detail `contentTypeId`, and
+  detail `related[*].listingQueryId` when that property is present;
+- optional Page/Page Template `document.settings.collectionLink`: its
+  `contentTypeId` is a required content-type ref when the object is present,
+  while `listingQueryId`/`listingTemplateId` are nullable refs when present;
+- recursively walk Page/Page Template root and native-slot child blocks in
+  deterministic native slot order. After checking each `block.type`, inspect
+  base `props`, then `responsive.tablet.props`, then `responsive.mobile.props`:
+  `collection` permits nullable `contentTypeId/queryId/templateId`, `filters`
+  permits nullable `queryId`, and `form` permits nullable `formId`, only when
+  each property is present;
+- menu `items[*].pageId` → Page when present and non-null; menu
+  `desired.document.items` is not a native menu-item collection and is not a
+  reference path;
+- homepage, navigation-menu and footer-template setting values → Page, Menu and
+  Page Template; content-route `detailPageId` → Detail Page, with the route's
+  literal content-type slug cross-checked against a unique package content type.
 
 No other path accepts `PackageRef`. Any other object shaped like a reference,
 including raw `$ref`-like objects in arbitrary content, is rejected rather than
-recursively rewritten.
+recursively rewritten. A nullable path contributes no edge when absent or
+`null`; a non-null value must be an exact `PackageRef`. Diagnostics contain only
+sanitized bounded paths and static reason codes; raw keys, values, payloads and
+cycle members are never echoed.
+
+Each accepted ref becomes an immutable typed descriptor containing only its
+tokenized source path and target identity. `PlannedPackageResource` retains its
+descriptors in discovery order plus a deep-cloned frozen desired snapshot after
+topological sorting. L02 exports
+`resolvePlannedPackageResourceRefs(resource, resolvedIds)`: it clones desired,
+replaces only those recorded paths, verifies each source ref still matches its
+descriptor and never rescans/rebuilds the graph. The planner and pre-run
+preparer consume this same frozen plan/helper; neither owns a second ref walker.
 
 Exact package-owned resource kinds are:
 `content_type | form | page_template | listing_template | content_entry |
@@ -108,14 +142,21 @@ literally `false`; otherwise it is an implementation gap and blocks closure.
 
 - **Endpoint visibility/auth/RBAC/CSRF/rate limit:** n/a; pure contract only.
 - **Validation:** `additionalProperties:false` at every package-owned object;
-  embedded Page/Menu/Form/Content/Listing/Detail payloads delegate to their owner.
-- **Anti-abuse/complexity:** loader byte cap, root/resource count caps, bounded
-  reference edges/depth/string lengths and bounded diagnostic count. Exact
-  package limits are 8 MiB per file, 512 resources total, 256 resources in any
-  single collection, 4,096 reference edges, graph depth 64 and at most 100
-  diagnostics. Native desired payloads retain every stricter domain-owned
-  limit. Exceeding a limit returns `site_package_too_large` or
-  `site_package_too_complex`.
+  TASK-547-01 validates the package envelope/JSON and graph, not native-domain
+  write validity.
+- **Anti-abuse/complexity:** the in-memory value's `JSON.stringify` UTF-8 form
+  is capped at 8 MiB and returns `site_package_too_large`; this is distinct from
+  TASK-547-05's raw-file cap and `site_package_file_invalid`. Other exact limits
+  are 512 resources total, 256 per collection, 4,096 reference edges, graph/JSON
+  depth 64, 100 diagnostics, 100 verification scenarios, 128-character keys/
+  residual IDs, metadata lengths 200/35/2,000, residual text length 2,000 and
+  arbitrary JSON string length 100,000. Native owners retain stricter limits.
+  Count/serialized-size overflow is `site_package_too_large`; edge/depth/
+  diagnostic/scenario overflow is `site_package_too_complex`.
+  The existing exported name `PACKAGE_LIMITS.fileBytes` remains the permanent
+  8 MiB cap for the in-memory value's serialized JSON bytes. Despite its historic
+  name it is never a raw-source-file limit; TASK-547-05 owns a separate,
+  distinctly named raw-source constant.
 - **Secrets:** reject forbidden setting namespaces, provider keys, cookies,
   authorization values, raw bytes/base64 and credential-bearing URLs.
 - **CSS/HTML:** package metadata never becomes a raw CSS/HTML/JS sink.
@@ -124,18 +165,24 @@ literally `false`; otherwise it is an implementation gap and blocks closure.
 
 ```ts
 export function normalizeFullSitePackageForWrite(input: unknown): FullSitePackageV1 {
+  assertPackageByteSize(input); // serialized in-memory JSON, not source-file bytes
   const root = assertStrictPackageRoot(input);
   assertPackageComplexity(root, PACKAGE_LIMITS);
   const resources = normalizeResourceArrays(root.resources);
-  assertAllowedSettings(resources.settings);
+  assertExactAllowedSettingKeys(resources.settings);
   return canonicalizePackage({ ...root, resources });
 }
 
-export function buildReferencePlan(pkg: FullSitePackageV1): PlannedPackageResource[] {
+export function buildReferencePlan(pkg: FullSitePackageV1): readonly PlannedPackageResource[] {
   const registry = indexUniqueKindKeys(pkg.resources); // duplicate kind:key => error
-  const edges = collectRefsAtAllowedPaths(registry);
-  return stableTopologicalSort(registry, edges);
+  const { edges, descriptorsByIdentity } = collectRefsAtAllowedPaths(registry);
+  return freezePlan(stableTopologicalSort(registry, edges), descriptorsByIdentity);
 }
+
+export function resolvePlannedPackageResourceRefs(
+  resource: PlannedPackageResource,
+  resolvedIds: ReadonlyMap<PackageResourceIdentity, string>,
+): JsonObject;
 ```
 
 `normalizeFullSitePackageForWrite` owns package shape, limits, canonicalization
@@ -154,25 +201,32 @@ ref-shaped value is not a valid consumer package until `buildReferencePlan`
 accepts it. Thus bad reference paths, duplicate keys, dangling/ambiguous
 references and cycles fail before any lazy database import or access.
 
-**Data flow:** bounded parse → package-owned structural normalization → index
-stable keys → scan only allowlisted reference paths → reject
-bad-path/dangling/ambiguous/cyclic graph → stable topological sort → lazy DB
-acquisition. Native strict `desired` validation runs after reference
-substitution but before any ledger or domain write; ref-free embedded documents
-may be normalized during generation.
+**Data flow:** unknown in-memory value → serialized-size/package-owned structural
+normalization → index stable keys → discriminator-aware scan of only allowlisted
+reference paths → reject bad-path/dangling/ambiguous/cyclic graph → stable
+topological sort → consumer boundary. Post-substitution native-domain validation
+is owned and tested by TASK-547-02, not certified by this task.
 
 **Error handling:** machine-readable `site_package_invalid`,
+`site_package_too_large`, `site_package_too_complex`,
+`site_package_setting_forbidden`, `site_package_ref_duplicate`,
 `site_package_ref_missing`, `site_package_ref_ambiguous`,
-`site_package_ref_cycle`, `site_package_setting_forbidden` with safe paths only.
+`site_package_ref_cycle` and `site_package_ref_bad_path`, with only the bounded
+path/static-reason diagnostics above.
 
 **Regression-test shape:** accept canonical full graph and all ten strict
 `{key,desired}` seed kinds; reject DB IDs in package JSON, every unknown key,
 duplicate key, bad ref kind/path, dangling ref, cycle, secret-like setting, raw
-bytes, each exact over-limit boundary, more than 100 bounded diagnostics and
-invalid embedded document; prove normalize(normalize(x)) identity, complete
-desired-snapshot equality and deterministic order. A structural-schema test may
-accept a ref-shaped value solely to exercise shape/edge limits, while the full
-consumer contract must prove that the same bad path is rejected by
+bytes and each exact over-limit boundary; prove exact setting allowlist behavior
+without applying the package-key regex to setting keys, strict verification
+shape/count/ID grammar plus first-occurrence dedupe, at most 100 bounded
+diagnostics, normalize(normalize(x)) identity, complete desired-snapshot equality
+and deterministic order. Graph tests cover every discriminator/nullability row,
+reject the non-native menu `document.items` path, reject malformed ref keys
+without echoing them, pin static redacted diagnostics and prove frozen descriptor-
+only substitution with no second traversal or plan mutation. A structural-schema
+test may accept a ref-shaped value solely to exercise shape/edge limits, while
+the full consumer contract must prove that the same bad path is rejected by
 `buildReferencePlan` before lazy DB acquisition.
 
 ## Sub-Tasks
