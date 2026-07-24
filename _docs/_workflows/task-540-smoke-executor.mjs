@@ -1,5 +1,4 @@
 import { spawn } from "node:child_process";
-import { createHash } from "node:crypto";
 import { EventEmitter } from "node:events";
 import { constants as fsConstants, writeSync } from "node:fs";
 import {
@@ -22,6 +21,14 @@ import { parseEnv } from "node:util";
 import { Script } from "node:vm";
 
 import { buildTask540SmokePlan } from "./task-540-smoke-contract.mjs";
+import {
+  assertRecursivelyFrozen,
+  canonicalJson,
+  deepFreezeExact,
+  exactOwnKeys,
+  hashBytes,
+  invariant,
+} from "./task-540-smoke/executor/foundation.mjs";
 
 const INPUT_KEYS = Object.freeze(["root", "nonce", "assertSafeEvidence", "snapshotRepository"]);
 const NONCE_PATTERN = /^[a-f0-9]{12}$/;
@@ -3859,31 +3866,6 @@ const RUNTIME_KINDS = new Set([
   "isolatedApiSessionApiAs",
 ]);
 
-function invariant(condition, message) {
-  if (!condition) throw new Error("TASK-540 smoke executor: " + message);
-}
-
-function deepFreezeExact(value, seen = new WeakSet()) {
-  if ((typeof value !== "object" && typeof value !== "function") || value === null) return value;
-  if (seen.has(value)) return value;
-  seen.add(value);
-  for (const key of Reflect.ownKeys(value)) deepFreezeExact(value[key], seen);
-  return Object.freeze(value);
-}
-
-function exactOwnKeys(value, keys, label, { plain = false } = {}) {
-  invariant(
-    value && typeof value === "object" && !Array.isArray(value),
-    label + " must be an object"
-  );
-  if (plain) invariant(Object.getPrototypeOf(value) === Object.prototype, label + " must be plain");
-  const actual = Reflect.ownKeys(value);
-  invariant(
-    actual.length === keys.length && keys.every((key) => actual.includes(key)),
-    label + " has non-canonical keys"
-  );
-}
-
 function assertExecutionInput(input) {
   exactOwnKeys(input, INPUT_KEYS, "execution input", { plain: true });
   invariant(
@@ -3905,23 +3887,6 @@ function assertExecutionInput(input) {
   invariant(
     typeof input.snapshotRepository === "function",
     "snapshotRepository must be a function"
-  );
-}
-
-function hashBytes(bytes) {
-  return createHash("sha256").update(bytes).digest("hex");
-}
-
-function canonicalJson(value) {
-  if (value === null || typeof value !== "object") return JSON.stringify(value);
-  if (Array.isArray(value)) return "[" + value.map(canonicalJson).join(",") + "]";
-  return (
-    "{" +
-    Object.keys(value)
-      .sort()
-      .map((key) => JSON.stringify(key) + ":" + canonicalJson(value[key]))
-      .join(",") +
-    "}"
   );
 }
 
@@ -3968,14 +3933,6 @@ function parseBuilder(builder) {
     "builder has an empty argument"
   );
   return deepFreezeExact({ callee, args });
-}
-
-function assertRecursivelyFrozen(value, seen = new WeakSet()) {
-  if ((typeof value !== "object" && typeof value !== "function") || value === null) return;
-  if (seen.has(value)) return;
-  seen.add(value);
-  invariant(Object.isFrozen(value), "plan contains mutable state");
-  for (const key of Reflect.ownKeys(value)) assertRecursivelyFrozen(value[key], seen);
 }
 
 function createPrivateAuthSettlementFailure(failureClass, privateDetails = null) {
