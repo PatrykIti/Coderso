@@ -140,6 +140,11 @@ import {
 import { createDiagnosticSinkRuntime } from "./task-540-smoke/executor/diagnostic-sink.mjs";
 import { SingleAssignmentCaptureMap } from "./task-540-smoke/executor/captures.mjs";
 import { createAdminApiSessionRuntime } from "./task-540-smoke/runtime/admin-api-session.mjs";
+import {
+  BRIDGE_INPUT_READER,
+  BRIDGE_OUTPUT_WRITER,
+  bridgeInputSchemaGuard,
+} from "./task-540-smoke/runtime/bun-child-protocol.mjs";
 import { createBoundedStreamRuntime } from "./task-540-smoke/runtime/bounded-stream.mjs";
 import { createCommandAuthorityRuntime } from "./task-540-smoke/runtime/command-authority.mjs";
 import { createOwnedHostRuntime } from "./task-540-smoke/runtime/owned-host.mjs";
@@ -2793,53 +2798,6 @@ async function runBunBridge(state, descriptor, input, executionBoundaryObserver 
   return value;
 }
 
-const BRIDGE_INPUT_READER = String.raw`const raw = await new Response(Bun.stdin.stream()).text();
-if (!raw.endsWith("\n") || raw.slice(0, -1).includes("\n") || raw.includes("\0") || raw.includes("\r")) throw new Error("wf540_bridge_frame");
-const input = JSON.parse(raw.slice(0, -1));
-const validateJsonBounds = (root) => { const stack = [{ value:root, depth:0 }]; let nodes = 0; while (stack.length > 0) { const current = stack.pop(); nodes += 1; if (nodes > 100000 || current.depth > 64) throw new Error("wf540_input_json_bounds"); const value = current.value; if (value === null || typeof value === "string" || typeof value === "boolean") continue; if (typeof value === "number") { if (!Number.isFinite(value)) throw new Error("wf540_input_json_number"); continue; } if (!value || typeof value !== "object") throw new Error("wf540_input_json_value"); if (Array.isArray(value)) { if (value.length > 10000) throw new Error("wf540_input_json_array"); for (let index = value.length - 1; index >= 0; index -= 1) stack.push({ value:value[index], depth:current.depth + 1 }); } else { const values = Object.values(value); for (let index = values.length - 1; index >= 0; index -= 1) stack.push({ value:values[index], depth:current.depth + 1 }); } } };
-validateJsonBounds(input);
-const canonical = (value) => value === null || typeof value !== "object" ? JSON.stringify(value) : Array.isArray(value) ? "[" + value.map(canonical).join(",") + "]" : "{" + Object.keys(value).sort().map((key) => JSON.stringify(key) + ":" + canonical(value[key])).join(",") + "}";
-if (canonical(input) + "\n" !== raw) throw new Error("wf540_bridge_noncanonical");
-const inputKeys = (value, expected) => { if (!value || typeof value !== "object" || Array.isArray(value) || Object.keys(value).sort().join(",") !== [...expected].sort().join(",")) throw new Error("wf540_input_keys"); };
-const inputString = (value, maximum = 512) => { if (typeof value !== "string" || value.length === 0 || value.includes("\0") || new TextEncoder().encode(value).length > maximum) throw new Error("wf540_input_string"); return value; };
-const inputUuid = (value) => { if (typeof value !== "string" || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(value)) throw new Error("wf540_input_uuid"); return value; };
-const inputObject = (value) => { if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error("wf540_input_object"); return value; };
-const inputNullableUuid = (value) => { if (value !== null) inputUuid(value); };
-const inputStringArray = (value, maximumItems, maximumLength) => { if (!Array.isArray(value) || value.length > maximumItems) throw new Error("wf540_input_array"); value.forEach((item) => inputString(item, maximumLength)); };
-const inputTuple = (value, length) => { if (!Array.isArray(value) || value.length !== length) throw new Error("wf540_input_tuple"); value.forEach((item) => inputString(item, 1024)); return value; };
-const inputIso = (value) => value === null || (typeof value === "string" && new Date(value).toISOString() === value);
-const validateInput = (schemaId, value) => {
-  const exact = (...keys) => inputKeys(value, keys);
-  if (schemaId === "empty-input-v1") { exact(); return value; }
-  if (schemaId === "email-input-v1") { exact("email"); inputString(value.email,320); if (value.email !== value.email.toLowerCase() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.email)) throw new Error("wf540_input_email"); return value; }
-  if (schemaId === "slug-input-v1") { exact("slug"); inputString(value.slug,256); return value; }
-  if (schemaId === "user-id-input-v1" || schemaId === "media-id-input-v1") { exact(schemaId === "user-id-input-v1" ? "userId" : "mediaId"); inputUuid(value[schemaId === "user-id-input-v1" ? "userId" : "mediaId"]); return value; }
-  if (schemaId === "user-identity-input-v1") { exact("email","userId"); inputUuid(value.userId); inputString(value.email,320); if (value.email !== value.email.toLowerCase() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.email)) throw new Error("wf540_input_email"); return value; }
-  if (schemaId === "user-provision-input-v1") { exact("email","name"); inputString(value.email,320); inputString(value.name,256); if (value.email !== value.email.toLowerCase() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.email)) throw new Error("wf540_input_email"); return value; }
-  if (schemaId === "preference-write-input-v1") { exact("showFieldMetadata","userId"); inputUuid(value.userId); if (typeof value.showFieldMetadata !== "boolean") throw new Error("wf540_input_boolean"); return value; }
-  if (schemaId === "user-session-observation-input-v1") { exact("userAgent","userId"); inputUuid(value.userId); inputString(value.userAgent,512); return value; }
-  if (schemaId === "user-agents-input-v1") { exact("userAgents"); if (!Array.isArray(value.userAgents) || value.userAgents.length !== 4 || new Set(value.userAgents).size !== 4) throw new Error("wf540_input_agents"); value.userAgents.forEach((item)=>inputString(item,512)); return value; }
-  if (schemaId === "entry-discovery-input-v1") { exact("slug","typeId"); inputString(value.slug,256); inputUuid(value.typeId); return value; }
-  if (schemaId === "entry-preflight-input-v1") { exact("entrySlug","typeSlug"); inputString(value.entrySlug,256); inputString(value.typeSlug,256); return value; }
-  if (schemaId === "screen-discovery-input-v1") { exact("contentTypeId","name"); inputUuid(value.contentTypeId); inputString(value.name,256); return value; }
-  if (schemaId === "screen-preflight-input-v1") { exact("contentTypeSlug","name"); inputString(value.contentTypeSlug,256); inputString(value.name,256); return value; }
-  if (schemaId === "media-natural-input-v1") { exact("mimeType","originalName","size"); inputString(value.mimeType,128); inputString(value.originalName,512); if (!Number.isSafeInteger(value.size) || value.size <= 0 || value.size > 4194304) throw new Error("wf540_input_size"); return value; }
-  if (schemaId === "override-discovery-input-v1") { exact("blockId","entryId","propPath","screenId"); inputUuid(value.entryId); inputUuid(value.screenId); inputString(value.blockId,256); if (value.propPath !== "mediaAssetId") throw new Error("wf540_input_prop"); return value; }
-  if (schemaId === "override-preflight-input-v1") { exact("blockId","contentTypeSlug","entrySlug","propPath","screenName"); ["blockId","contentTypeSlug","entrySlug","screenName"].forEach((key)=>inputString(value[key],256)); if (value.propPath !== "mediaAssetId") throw new Error("wf540_input_prop"); return value; }
-  if (schemaId === "resource-owner-input-v2") { exact("entryIds","mediaId","override","overrideExpectedPresent"); if (!Array.isArray(value.entryIds) || value.entryIds.length !== 6 || new Set(value.entryIds).size !== 6) throw new Error("wf540_input_entries"); value.entryIds.forEach(inputUuid); inputUuid(value.mediaId); inputKeys(value.override,["blockId","entryId","propPath","screenId"]); inputUuid(value.override.entryId); inputUuid(value.override.screenId); inputString(value.override.blockId,256); if (value.override.propPath !== "mediaAssetId" || typeof value.overrideExpectedPresent !== "boolean") throw new Error("wf540_input_prop"); return value; }
-  if (schemaId === "seo-entry-targets-input-v1") { exact("targetIds"); if (!Array.isArray(value.targetIds) || value.targetIds.length !== 6 || new Set(value.targetIds).size !== 6) throw new Error("wf540_input_seo_targets"); value.targetIds.forEach(inputUuid); return value; }
-  if (schemaId === "identifier-uuid-input-v1") { exact("identifier"); inputUuid(inputTuple(value.identifier,1)[0]); return value; }
-  if (schemaId === "identifier-setting-input-v1") { exact("identifier"); const tuple=inputTuple(value.identifier,2); inputUuid(tuple[0]); if (tuple[1] !== "customScreens.entry.preferences") throw new Error("wf540_input_setting_key"); return value; }
-  if (schemaId === "identifier-override-input-v1") { exact("identifier"); const tuple=inputTuple(value.identifier,4); inputUuid(tuple[0]); inputUuid(tuple[1]); inputString(tuple[2],256); if (tuple[3] !== "mediaAssetId") throw new Error("wf540_input_prop"); return value; }
-  if (schemaId === "identifier-seo-entry-input-v1") { exact("identifier"); const tuple=inputTuple(value.identifier,3); inputUuid(tuple[0]); if (tuple[1] !== "entry") throw new Error("wf540_input_target_type"); inputUuid(tuple[2]); return value; }
-  if (schemaId === "identifier-media-input-v1") { exact("identifier"); const tuple=inputTuple(value.identifier,2); inputUuid(tuple[0]); if (!/^\d{4}\/(?:0[1-9]|1[0-2])\/[0-9a-f-]{36}\.png$/.test(tuple[1])) throw new Error("wf540_input_storage_key"); return value; }
-  if (schemaId === "screen-materialize-input-v1") { exact("bodyWithoutDefinition","contentType","definitionWithoutListView"); inputKeys(value.bodyWithoutDefinition,["contentTypeId","name","showInSidebar","sidebarLabel","status"]); inputUuid(value.bodyWithoutDefinition.contentTypeId); inputString(value.bodyWithoutDefinition.name,256); inputString(value.bodyWithoutDefinition.sidebarLabel,256); if (value.bodyWithoutDefinition.status !== "active" || typeof value.bodyWithoutDefinition.showInSidebar !== "boolean") throw new Error("wf540_input_screen_body"); inputKeys(value.contentType,["id","name","schema","slug"]); inputUuid(value.contentType.id); inputString(value.contentType.name,256); inputString(value.contentType.slug,256); inputObject(value.contentType.schema); inputKeys(value.definitionWithoutListView,["editorView","schemaVersion"]); inputObject(value.definitionWithoutListView.editorView); if (value.definitionWithoutListView.schemaVersion !== 4) throw new Error("wf540_input_screen_definition"); return value; }
-  if (schemaId === "bootstrap-restore-input-v1") { exact("baseline","newestOwnedPair","userId"); inputKeys(value.baseline,["id","lastLoginAt","updatedAt","normalizedEmailProof","emailHashProof","encryptedEmailProof","decryptEmailProof","rawUserRow","roleTuples"]); inputKeys(value.baseline.rawUserRow,["id","email","emailHash","emailEncrypted","passwordHash","name","status","createdAt","updatedAt","lastLoginAt"]); if (typeof value.baseline.id !== "string" || !/^[0-9a-f-]{36}$/.test(value.baseline.id) || value.baseline.rawUserRow.id !== value.baseline.id || value.baseline.rawUserRow.lastLoginAt !== value.baseline.lastLoginAt || value.baseline.rawUserRow.updatedAt !== value.baseline.updatedAt || !inputIso(value.baseline.lastLoginAt) || !inputIso(value.baseline.updatedAt) || !inputIso(value.baseline.rawUserRow.createdAt) || value.baseline.rawUserRow.status !== "active" || ![value.baseline.normalizedEmailProof,value.baseline.emailHashProof,value.baseline.encryptedEmailProof,value.baseline.decryptEmailProof].every((proof)=>proof === true)) throw new Error("wf540_input_bootstrap_identity"); if (!Array.isArray(value.baseline.roleTuples) || value.baseline.roleTuples.length !== 1) throw new Error("wf540_input_bootstrap_roles"); inputKeys(value.baseline.roleTuples[0],["userId","roleId","roleName","roleDescription","rolePermissions","roleCreatedAt"]); if (value.baseline.roleTuples[0].userId !== value.baseline.id || typeof value.baseline.roleTuples[0].roleId !== "string" || !/^[0-9a-f-]{36}$/.test(value.baseline.roleTuples[0].roleId) || value.baseline.roleTuples[0].roleName !== "admin" || !Array.isArray(value.baseline.roleTuples[0].rolePermissions) || canonical([...new Set(value.baseline.roleTuples[0].rolePermissions)].sort()) !== canonical(["*"]) || !inputIso(value.baseline.roleTuples[0].roleCreatedAt)) throw new Error("wf540_input_bootstrap_role"); inputKeys(value.newestOwnedPair,["lastLoginAt","updatedAt"]); if (value.userId !== value.baseline.id || !inputIso(value.newestOwnedPair.lastLoginAt) || !inputIso(value.newestOwnedPair.updatedAt)) throw new Error("wf540_input_bootstrap_pair"); return value; }
-  throw new Error("wf540_input_schema");
-};`;
-const bridgeInputSchemaGuard = (schemaId) =>
-  `validateInput(${JSON.stringify(schemaId)},input);/*wf540-bound-input*/\n`;
-const BRIDGE_OUTPUT_WRITER = String.raw`await Bun.write(Bun.stdout, canonical(output) + "\n"); process.exit(0);`;
 const USER_PROVISION_BRIDGE_SOURCE =
   BRIDGE_INPUT_READER +
   bridgeInputSchemaGuard("user-provision-input-v1") +
