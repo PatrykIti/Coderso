@@ -30,7 +30,7 @@ const localOrchestratorPath = path.join(root, localOrchestratorRelative);
 const testNameContractPath = path.join(root, testNameContractRelative);
 const MASKED_IMPLEMENT_SHA256 = "480c326a4f95386fa680bb21720df6748e85d50843c0e7a528b466a3431c2f0d";
 const FROZEN_HELPER_SHA256 = Object.freeze({
-  [smokeContractRelative]: "cb55ad42dd9a2dbfddeb0cf69fbc62cf92c93e2a8ab749887e43c190910f53a4",
+  [smokeContractRelative]: "9eb8829a00d0d5bae09fc2a427ff7a87884b5e5e5a2d0b1d18e0c26e3fe78b45",
   [executorRelative]: "03bce2674abcc51dbcb981325330c822c65ddeab03f05e32cefde0332d1fa1cd",
   [smokeHostRelative]: "d2d2763cb35d7dd844bea703f6dbdc7c199bac9f680b39f1990d59d8871de46e",
   [bridgeRelative]: "c3c594a17cb63943beab29e7f621f6e1ca46cb3b5abb67625edcddb900788341",
