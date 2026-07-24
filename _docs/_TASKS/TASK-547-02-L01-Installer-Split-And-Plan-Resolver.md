@@ -7,15 +7,7 @@
 **Estimated Effort:** Large
 **Dependencies:** TASK-547-01
 **Status:** 🚧 In Progress
-**Validation:** Corrective bounded managed-evidence/planner work and fresh
-targeted/final gates are pending.
-**V25 Post-Audit Evidence:** Parser/hostile-Proxy review passed with no findings.
-Two MEDIUM corrections remain: desired-child reads need bounded fail-closed
-resolution, and the resolver projection gate must reject every non-exact object
-member. One LOW harness-integrity correction remains: production and failure
-tests must share one injectable stage factory and prove URL/fresh-error behavior.
-All earlier behavior, query, EXPLAIN, cleanup, timeout and dependency-aware root
-typecheck requirements remain mandatory; this is not a closure claim.
+**Validation:** Corrective managed-evidence/planner work and final gates pending.
 
 ## Overview
 
@@ -24,6 +16,11 @@ current exports, then add full-site existing-resource resolution and determinist
 create/update/noop/conflict planning. This leaf also owns the complete shared
 ledger/types boundary required by both the legacy installer and full-site
 execution; it performs no native full-site resource mutation.
+
+Preserve a two-argument planner overload that builds once before dependency
+reads. Its three-argument apply overload receives the exact closed-over private
+`readonly PlannedPackageResource[]`, never rebuilds/clones/mutates it, and no
+public apply input/deps exposes it.
 
 Define and export the common ledger port contract used by both the compatibility
 installer and the full-site executor, implement its concrete DB adapter here,
@@ -217,11 +214,10 @@ exact-ID calls remain source-compatible. Its frozen tri-state meaning is:
 - explicit `null`: the caller already completed the lookup and proved there is
   no evidence; the concrete resolver must not query the ledger again.
 
-Default `planFullSiteInstall` resolves evidence exactly once for every identity
-in `buildReferencePlan(pkg)`, retains the explicit object-or-null result, and
-calls `resolveCurrentResource(kind, inspectionSeed, undefined, evidence)`. The
-concrete resolver performs zero managed-evidence queries in that explicit
-fourth-argument mode, including while resolving an entry's parent identity.
+The three-argument planner resolves evidence once per supplied identity; the
+two-argument overload first builds once. Both retain object-or-null and call
+`resolveCurrentResource(kind, inspectionSeed, undefined, evidence)`. The concrete
+resolver performs zero evidence queries in that mode, including for entry parents.
 Resolve the parent from the already-inspected dependency in canonical DAG order
 (using an inspection-only seed/context and leaving the authored package seed
 unchanged); do not turn the parent reference into another ledger read. Therefore
@@ -602,8 +598,13 @@ export async function withFullSiteInstallLocks(packageKey, execute) {
   });
 }
 
-export async function planFullSiteInstall(pkg, deps) {
-  const ordered = buildReferencePlan(pkg);
+export function planFullSiteInstall(pkg, deps): Promise<FullSiteInstallPlan>;
+export function planFullSiteInstall(pkg, referencePlan: readonly PlannedPackageResource[], deps): Promise<FullSiteInstallPlan>;
+export async function planFullSiteInstall(pkg, referencePlanOrDeps, maybeDeps) {
+  const [ordered, deps] = maybeDeps === undefined
+    ? [buildReferencePlan(pkg), referencePlanOrDeps]
+    : [referencePlanOrDeps, maybeDeps];
+  // `ordered` exists before the first deps read; the supplied array is used as-is.
   const evidenceByIdentity = new Map(await Promise.all(ordered.map(async (resource) => [
     resource.identity,
     await deps.ledger.findManagedResourceEvidence({
@@ -616,10 +617,10 @@ export async function planFullSiteInstall(pkg, deps) {
   const resolvedDependencyIds = new Map();
   for (const resource of ordered) {
     const evidence = evidenceByIdentity.get(resource.identity) ?? null;
-    const inspectionSeed = resolveInspectionIdentityRefs(
-      resource.seed,
-      resolvedDependencyIds,
-    );
+    const inspectionSeed = {
+      key: resource.key,
+      desired: resolvePlannedPackageResourceRefs(resource, resolvedDependencyIds),
+    };
     const current = await deps.resolveCurrentResource(
       resource.kind,
       inspectionSeed,
@@ -627,10 +628,11 @@ export async function planFullSiteInstall(pkg, deps) {
       evidence,
     );
     inspected.push({ resource, current, evidence });
-    resolvedDependencyIds.set(resource.identity, current?.id ?? null);
+    resolvedDependencyIds.set(resource.identity, current?.id ?? stablePlanningPlaceholder(resource));
   }
   return buildOperations(inspected, {
     normalizeDesired: deps.normalizeDesired,
+    createdResourceIdentities: new Set(inspected.filter(({ current }) => !current).map(({ resource }) => resource.identity)),
     unmanaged: "conflict",
     allowSettingTakeover: deps.allowSettingTakeover,
   });
@@ -735,15 +737,16 @@ export const buildManagedResourceEvidenceQuery = (input) => {
 };
 ```
 
-Data flow: canonical DAG -> total-order ledger evidence -> strict expected-ID or
-deterministic natural collision read -> native canonical desired projection ->
-stable create/update/noop/conflict operations with unchanged graph dependencies.
+Data flow: apply-supplied or direct-call-pre-read DAG -> total-order ledger
+evidence -> strict expected-ID/deterministic collision read -> native desired
+projection -> stable create/update/noop/conflict with unchanged dependencies.
 Errors: existing conflict/not-found/invalid codes plus exact safe
 `site_package_too_large`; zero planning writes except requested dry-run evidence.
 
-Pure regression tests in
-`tests/vitest/kits/full-site-install-planner.test.ts`: facade/type parity through
-an in-memory ledger-port fake and stable create/update/noop/conflict planning.
+L01 uses the graph-owner descriptor resolver/`normalizeDesired`; any descriptor targeting a planned create forces update even on placeholder equality; native preparation reuses the plan with actual IDs.
+
+Pure planner regressions pin two-arg pre-dependency build, three-arg frozen-array
+identity/no build, and false-noop prevention when current desired equals a create target's deterministic placeholder. L02 proves no public plan field.
 DB-backed managed-identity cases belong exclusively to L01's
 `tests/integration/kits/fullSiteManagedOwnershipDb.test.ts`: natural-key-only
 conflict, strict expected ID with no natural fallback, deterministic duplicate
@@ -879,9 +882,9 @@ composition remains usable before L02 lands.
   envelope/array/length and exact-limit matrix.
 - [ ] Add the optional managed-evidence resolver handoff; make default planning
   perform exactly one evidence read per identity, prove the direct two-argument
-  resolver makes exactly one self-lookup, and prove all planner ledger-write
-  counts remain zero while preserving strict expected-ID calls. Replace the
-  complete resolver's native bare reads with the exact evidence-backed
+  resolver makes one self-lookup and all planner writes stay zero. Pin two-arg
+  pre-read build plus three-arg frozen-plan no-rebuild. Replace native reads with
+  the exact evidence-backed
   planner-equality projections, strict whole-body source-shape gates and bounded
   child reads/independent boundary DB suite above.
 - [ ] Replace the item-driven candidate/follow-up rollback reads with the
@@ -974,8 +977,7 @@ composition remains usable before L02 lands.
   removal/buffer counters and absent leaf `Plans`, and map every malformed
   top-level/metric/node/child/`Plans` shape or derived overflow through the
   one-invocation exact-`Error` assertion above.
-- Regression gate: a dependency-bearing planner run with the concrete resolver
-  performs exactly one managed-evidence lookup per resource identity.
+- Regression gate: one evidence lookup per identity; two-arg build precedes deps, while L02 supplies one unchanged plan before lock/ledger/resolver/adapter/DB.
 - DB test-integrity gate: the URL helper returns false only for `undefined` and
   true for `""`; production and failure tests use the same injectable four-stage
   factory. Pin exact stage order, complete direct 12/13-column projections and

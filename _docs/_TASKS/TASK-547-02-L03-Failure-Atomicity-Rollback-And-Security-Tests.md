@@ -18,6 +18,10 @@ and prove recovery after real process death rather than only an injected throw.
 
 Atomicity is frozen as a compensation saga. Do not add a cross-domain
 transaction abstraction or transaction parameters to all native services.
+Pre-run `prepareFullSiteSaga` failures create no source run and never enter L03.
+L02 alone finalizes a run whose persistence-only initialization fails, because
+no native write occurred; automatic compensation starts only after the complete
+prepared item set is durable.
 
 **Exact production ownership:** only
 `core/services/kits/fullSiteInstall/rollback.ts` and

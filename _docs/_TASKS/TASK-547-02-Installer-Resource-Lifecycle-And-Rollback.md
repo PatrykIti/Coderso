@@ -26,6 +26,41 @@ IDs, multi-call aggregate writes and position-only rollback cannot prove the
 required atomicity after process death or a native reversal failure. This
 corrective contract is part of the original scope, not a smaller follow-up.
 
+## Private Reference-Plan Boundary
+
+`ApplyFullSitePackageInput` remains exactly package/actor/dry-run/takeover input;
+it has no caller-supplied `referencePlan`, graph, edge or ordered-resource field.
+`FullSiteInstallExecutorDeps` and the CLI dependency contract likewise gain no
+such field. After actor validation, the public `applyFullSitePackage` boundary
+must synchronously call `buildReferencePlan(input.package)` before it selects or
+acquires the ledger, creates a resolver, touches a DB-backed adapter, opens the
+global/package lock or performs any ledger/domain read. A graph failure therefore
+has zero lock/ledger/resolver/adapter/DB calls.
+
+The returned `readonly PlannedPackageResource[]` is private to that invocation
+and is closed over by the subsequent locked executor. L01 adds the internal
+three-argument `planFullSiteInstall(pkg, referencePlan, deps)` overload; this
+apply path consumes the exact array without rebuilding, cloning or mutating it.
+The existing direct-call `planFullSiteInstall(pkg, deps)` overload remains
+gate-compatible and builds its own graph exactly once before its first dependency
+read. Apply uses only the three-argument overload. The CLI independently builds/
+discards a plan before invoking its lazy `apply` dependency so an invalid file
+cannot import DB code; the service then builds its own private plan rather than
+trusting CLI structure.
+
+The graph owner freezes an immutable desired snapshot plus typed reference
+descriptors on every planned resource and exports the sole descriptor resolver.
+The planner uses it with placeholders; pre-run preparation receives the exact
+same `referencePlan` array and uses it with actual intended IDs. Neither phase
+rescans ref-shaped values, duplicates the Page walker or rebuilds the graph.
+
+After IDs are allocated/resolved, TASK-547-02 substitutes refs only at the
+already-validated graph paths and runs every native owner validator over the
+post-substitution desired snapshot before `createRun`, item initialization or
+any native write. This task owns the malformed Page/Menu/Form/content/listing/
+detail/setting desired regressions; TASK-547-01 deliberately does not claim
+native-domain validity.
+
 ## Frozen Ownership And Land Order
 
 Implementation lands strictly `L01 -> L02 -> L03`; each leaf reads the current
@@ -33,7 +68,9 @@ on-disk state left by its predecessor and has one writer per file.
 
 - **L01 -- shared lifecycle substrate:** shared full-site types/ledger port,
   concrete legacy persistence, legacy installer composition, deterministic
-  planner, strict current-resource resolver, two-lock coordination and versioned
+  planner whose apply overload consumes the caller-bound private reference plan
+  without rebuilding while its gate-compatible direct overload builds pre-read,
+  strict current-resource resolver, two-lock coordination and versioned
   dependency serialization in the existing `rollbackAction` JSON column. Its
   gate-safe type boundary keeps `FullSiteInstallLedgerItem` compatible for
   in-memory construction and owns `PersistedFullSiteInstallLedgerItem` for the
@@ -88,7 +125,7 @@ The concrete port's existing `withPackageLock` consumer method is retained for
 compatibility, but its DB implementation has a stronger frozen meaning: acquire
 one session advisory lock for `GLOBAL_FULL_SITE` first and then the
 package-key lock, on the same dedicated PostgreSQL connection; hold both across
-source re-read, plan, preflight, durable item initialization, native mutations,
+source re-read, plan, pre-run preparation, durable item initialization, native mutations,
 publish/settings, automatic compensation and run finalization; release in exact
 reverse order. Apply, dry-run and explicit rollback use this same order. No code
 path may acquire package then global. The global lock intentionally serializes
@@ -173,18 +210,18 @@ listing template/query and setting snapshots include their entire owner-defined
 semantic/raw state. L03 restores that exact capture through
 `restoreSnapshotAtomic({ id, expectedCurrent, target, actorId })`.
 
-L02 preparation is two-pass. Pass one allocates a server UUID for every create in
-all nine UUID-backed kinds, takes current IDs for updates/noops and uses setting
-keys, then builds the complete identity-to-ID registry. Pass two resolves every
-reference against that full registry, runs each native strict normalizer,
-captures complete before state (or proves exact create-time absence), and
-prepares exact complete staged/final targets. Create absence is durably encoded
-as `beforeSnapshot:null`; an absent setting maps that evidence to its native raw
-`{ key, present:false }` expectation.
-Only after the all-item operation/snapshot/ID matrix validates does it persist
-every exact before, staged/final after and V1 action. Every item must be durable
-before the first native write; a partial initialization failure therefore writes
-zero native resources.
+L02 preparation before `createRun` is two-pass and write-free. Pass one allocates
+a server UUID for every create in all nine UUID-backed kinds, takes current IDs
+for updates/noops and uses setting keys, then builds the complete identity-to-ID
+registry. Pass two resolves every reference against that full registry, runs each
+native strict normalizer, captures complete before state (or proves exact
+create-time absence), and prepares exact complete staged/final targets. Create
+absence is durably encoded as `beforeSnapshot:null`; an absent setting maps that
+evidence to its native raw `{ key, present:false }` expectation. Only after the
+all-item operation/snapshot/ID matrix validates may the executor create the run
+and persist every exact before, staged/final after and V1 action. Every item must
+be durable before the first native write; a partial initialization failure
+therefore writes zero native resources.
 
 `FullSiteDurableAfterSnapshotV1` keeps the exact final native snapshot at its
 top-level `id`/`desired` and an optional exact staged snapshot plus phase
@@ -404,6 +441,9 @@ export const applyFullSitePackage = async (
   overrides: FullSiteInstallExecutorDeps = {},
 ): Promise<ApplyFullSitePackageResult> => {
   assertActorUuidBeforeDb(input.actorId);
+  const referencePlan = buildReferencePlan(input.package);
+  // No ledger/default-resolver/adapter/DB acquisition or lock call precedes
+  // the private graph build. ApplyFullSitePackageInput/deps expose no plan.
   const ledger = overrides.ledger ?? defaultLegacyInstallLedger;
   const adapters = overrides.adapters ?? FULL_SITE_RESOURCE_ADAPTERS;
   const rollbackAdapters = overrides.rollbackAdapters ?? FULL_SITE_ROLLBACK_ADAPTERS;
@@ -411,24 +451,33 @@ export const applyFullSitePackage = async (
     const resolveCurrentResource =
       overrides.resolveCurrentResource ??
       createFullSiteCurrentResourceResolver(input.package.key, ledger);
-    const plan = await planFullSiteInstall(input.package, {
-      ledger,
-      resolveCurrentResource,
-      normalizeDesired: async ({ kind, key, currentId, desired }) =>
-        (await adapters[kind].validateDesired({
-          operation: "update",
-          currentId,
-          key,
-          desired,
-          actorId: input.actorId,
-        })) ?? desired,
-      allowSettingTakeover: input.allowSettingTakeover,
-    });
-    await preflightFullSitePlan({
+    const plan = await planFullSiteInstall(
+      input.package,
+      referencePlan, // exact closed-over plan; planner never rebuilds it
+      {
+        ledger,
+        resolveCurrentResource,
+        normalizeDesired: async ({ kind, key, currentId, desired }) =>
+          (await adapters[kind].validateDesired({
+            operation: "update",
+            currentId,
+            key,
+            desired,
+            actorId: input.actorId,
+          })) ?? desired,
+        allowSettingTakeover: input.allowSettingTakeover,
+      },
+    );
+    const { prepared, intendedRegistry } = await prepareFullSiteSaga({
       plan,
+      referencePlan, // exact same frozen descriptors consumed by the planner
       actorId: input.actorId,
       adapters,
-    }); // zero native writes
+      generateId: () => crypto.randomUUID(),
+    });
+    // Before createRun: allocate the complete intended-ID registry, substitute
+    // only graph-approved refs, validate every native desired snapshot and
+    // capture complete CAS expectations. This preparation performs zero writes.
     const run = await ledger.createRun({
       packageKey: input.package.key,
       actorId: input.actorId,
@@ -440,16 +489,13 @@ export const applyFullSitePackage = async (
         rollbackDependencySchemaVersion: 1,
       },
     });
-    const { prepared, intendedRegistry } = await initializeFullSiteSaga({
+    await initializeFullSiteSaga({
       ledger,
       runId: run.id,
-      plan,
-      adapters,
-      generateId: () => crypto.randomUUID(),
-    }); // two-pass: full ID registry + all exact snapshots/targets/actions durable
-    // L02 staging owns all nine DURABLE_CREATE_ID_KINDS and consumes the
-    // L01-owned buildFullSiteRollbackActionV1; no reference resolution or
-    // native write precedes the complete registry.
+      prepared,
+    }); // persist only the already-validated snapshots/targets/actions
+    // L02 staging owns all nine DURABLE_CREATE_ID_KINDS and consumes L01's
+    // buildFullSiteRollbackActionV1; it never reallocates or revalidates here.
     if (input.dryRun) {
       await ledger.finalizeRun({ runId: run.id, status: "success" });
       return {
@@ -669,12 +715,14 @@ export async function rollbackFullSiteInstall(
 }
 ```
 
-**Data flow:** valid actor -> global lock -> package lock -> source/current-state
-re-read -> deterministic plan -> complete native preflight -> run/fingerprint ->
+**Data flow:** valid actor -> private graph validation with zero dependency/DB
+access -> acquire ledger -> global lock -> package lock -> source/current-state
+re-read -> deterministic planning from that exact graph -> complete
 pass-one allocation of all nine create-ID kinds -> complete identity/ID registry
--> pass-two reference resolution, native-owner normalization and complete prior/
-staged/final snapshot preparation -> all exact snapshots, targets and dependency
-envelopes durably prepared -> one domain-local transaction per
+-> pass-two graph-approved reference resolution, native-owner validation and
+complete prior/staged/final snapshot preparation -> only then run/fingerprint
+creation -> already-validated snapshots, targets and dependency envelopes
+durably prepared -> one domain-local transaction per
 aggregate mutation with locked expected-snapshot CAS -> success snapshot ->
 publish dependencies at the end -> one
 final reversible shell/settings stage -> cache invalidation -> audit/finalization
@@ -719,7 +767,14 @@ both the source failure and every success/failed/blocked compensation outcome.
 intended managed update with matching successful ledger ID; natural-key equality
 without ledger proof conflicts as unmanaged; injected failure restores prior
 state; rollback restores previous shell/settings and only owned rows;
-invalid/dangling refs perform zero domain writes; drafts are not published early,
+invalid/dangling/bad-path refs perform zero lock, ledger, resolver, adapter and
+DB calls; the public input/deps reject a structural `referencePlan`; one private
+plan is built before dependencies and the planner consumes the same array
+identity without calling the builder again, then preparation consumes those
+same frozen descriptors without a second walker. Malformed post-substitution desired
+snapshots for every native kind fail before `createRun`, item/domain writes or
+publish, including discriminator-valid refs embedded in an otherwise invalid
+Page/Menu document. Drafts are not published early,
 menu is completely wired before publish, and shell settings are the last stage.
 Also prove exact expected-ID resolution with no natural fallback; deterministic
 natural-collision handling; atomic Form/Menu/Page/entry/detail mutations; a real

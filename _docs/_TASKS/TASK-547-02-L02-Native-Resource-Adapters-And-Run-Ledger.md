@@ -129,7 +129,7 @@ not production fallbacks invented for tests:
 ## Canonical Adapter And Form-Action Contract
 
 `adapterTypes.ts` preserves the existing backward-compatible
-`AdapterApplyInput` construction shape so current planner/preflight calls and the
+`AdapterApplyInput` construction shape so current planner/preparation calls and the
 untouched pre-L03 compensation module compile. It adds exact discriminated
 `FullSiteSagaAdapterPrepareInput` and `FullSiteSagaAdapterApplyInput` unions. A
 create has `currentId:null`, a server-owned `intendedId:string` and
@@ -146,7 +146,7 @@ property, validate null/snapshot forms and enforce the operation/ID/target
 matrix. Adapters use that assertion before entering their domain-atomic mutation
 path. Existing `applyStaged`/`applyDesired` keep accepting the base type only via
 an explicitly deprecated internal compatibility branch for the old L03 restore
-call; no L02 executor, planner or preflight path may use that branch. L03 removes
+call; no L02 executor, planner or preparation path may use that branch. L03 removes
 its call to the branch when it switches to `restoreSnapshotAtomic`; the branch is
 retained only to make the sequential L02 gate source-compatible and is not a test
 fallback. `adapterTypes.ts` also owns `FullSiteNativeSnapshot`,
@@ -553,14 +553,13 @@ caught item failure performs no item upsert: the last durable item row remains
 untouched and only the source run is finalized failed; completed items stay
 success.
 
-Preparation is deliberately two-pass:
+`prepareFullSiteSaga` receives the planner's exact private frozen `referencePlan`; it is two-pass and completes before `createRun`:
 
-1. Iterate the entire plan without native writes. Allocate and UUID-validate one
-   intended ID for every create in `DURABLE_CREATE_ID_KINDS`; take each update/
-   noop ID from `currentId`; use the canonical key for a setting. Build the full
-   `Map<FullSiteResourceIdentity,string>` before resolving any reference.
-2. For every operation, resolve all refs against that full map, run the owning
-   strict normalizer, capture the exact complete before state by ID, and call
+1. Without native writes, allocate/validate create IDs, use `currentId` for
+   update/noop and setting keys, then complete the ID map before resolving refs.
+2. Require exact identity/order/desired/dependency parity between operations and
+   planned resources. For each, use the graph owner's descriptor resolver with
+   the full ID map, strictly normalize, capture complete before state and call
    `prepareNativeTargets`. A create first proves exact-ID/key absence and records
    that absence as `beforeSnapshot:null`; for an absent setting this maps to the
    native raw state `{ key, present:false }`. An update/noop records its complete
@@ -569,18 +568,18 @@ Preparation is deliberately two-pass:
    exact capture and uses that snapshot as both `beforeSnapshot` and the complete
    top-level `id`/`desired` target inside the durable after envelope; the raw
    before/after JSON values are not equal.
-3. Build every strict durable after envelope and L01 V1 rollback action entirely
-   in memory. Validate the complete all-item set, including operation-specific
-   before/after/ID invariants, before the first ledger write.
-4. Persist every item's exact before snapshot, exact final/staged after targets
-   and exact V1 action with phase `prepared`. Only after all item upserts succeed
-   may execution invoke any native write.
+3. Build all durable after envelopes/V1 actions and validate every before/after/
+   ID invariant; any error returns before `createRun` and ledger/domain writes.
 
-Thus content type, Form, Page Template, listing template, entry, listing query,
-detail Page, Page and Menu creates all receive the exact prepared ID; no DB or
-Node UUID fallback is reachable in their installer-owned atomic create path. The
-returned ID and captured state must equal the persisted target before a later
-phase upsert.
+Only then may apply create the run. `initializeFullSiteSaga` accepts validated
+`prepared` plus `runId`/ledger, persists it and never prepares. Native writes wait.
+
+Remove generic `resolveFullSiteRefs`/`preflightFullSitePlan`; `preflight.ts`
+retains native/current-state helpers, but production never recursively rescans refs.
+
+Thus all nine UUID-backed creates receive the exact prepared ID; no DB/Node
+fallback is reachable. Returned ID/state must equal the persisted target before
+a later phase upsert.
 
 Lifecycle transitions remain recoverable at every crash point. After exact stage
 commit the same item is upserted as `staged`. Before publish it is durably armed
@@ -667,9 +666,10 @@ for (const item of input.items) {
 }
 ```
 
-The apply run options written before initialization include
-`rollbackDependencySchemaVersion:1` beside the package fingerprint, allowing L03
-to distinguish current all-items-required evidence from legacy unknown evidence.
+After preparation succeeds, apply creates the run with
+`rollbackDependencySchemaVersion:1` beside the package fingerprint, then invokes
+persistence-only initialization. L03 can distinguish current all-items-required
+evidence from legacy unknown evidence.
 
 ## Security Contract
 
@@ -684,8 +684,8 @@ transaction abstraction.
 ## Implementation Pseudocode
 
 ```ts
-export async function initializeFullSiteSaga({ runId, plan, ledger, adapters, generateId }) {
-  // Pass 1: allocate every identity before any ref is resolved.
+export async function prepareFullSiteSaga({ plan, referencePlan, adapters, generateId, actorId }) {
+  assertExactPlanAlignment(plan.operations, referencePlan);
   const intendedRegistry = new Map<FullSiteResourceIdentity, string>();
   const intents = new Map<FullSiteResourceIdentity, DurableCreateIntent>();
   for (const operation of plan.operations) {
@@ -696,20 +696,19 @@ export async function initializeFullSiteSaga({ runId, plan, ledger, adapters, ge
     intents.set(operation.identity, intent);
   }
 
-  // Pass 2: resolve/canonicalize every exact target while native writes are forbidden.
   const prepared = [];
-  for (const operation of plan.operations) {
+  for (const [index, operation] of plan.operations.entries()) {
+    const plannedResource = referencePlan[index]!;
     const intent = intents.get(operation.identity)!;
     const intendedId = intendedRegistry.get(operation.identity)!;
-    const beforeSnapshot = await captureCompleteBeforeSnapshot({ operation, intendedId, adapters });
-    // null is allowed only after exact-ID/key absence was proven for a create.
-    const resolved = resolveOperationRefs(operation.desired, intendedRegistry);
+    const resolved = resolvePlannedPackageResourceRefs(plannedResource, intendedRegistry);
     const normalized = await validateFullSiteOperation({
-      operation,
+      operation, plan,
       desired: resolved,
       actorId,
       adapter: adapters[operation.kind],
     });
+    const beforeSnapshot = await captureCompleteBeforeSnapshot({ operation, intendedId, adapters });
     const targets = operation.operation === "noop"
       ? { staged: null, complete: requireExactNoopSnapshot(operation, beforeSnapshot) }
       : await adapters[operation.kind].prepareNativeTargets(
@@ -729,10 +728,12 @@ export async function initializeFullSiteSaga({ runId, plan, ledger, adapters, ge
       targets, normalized, rollbackAction });
   }
   assertCompletePreparedSagaEvidence(prepared);
+  return { prepared, intendedRegistry };
+}
+export async function initializeFullSiteSaga({ runId, prepared, ledger }) {
   for (const item of prepared) {
     await ledger.recordItem(toPreparedLedgerItem(runId, item));
   }
-  return { prepared, intendedRegistry };
 }
 
 for (const prepared of operationsBeforeSettings) {
@@ -798,7 +799,7 @@ if (settingMutations.length > 0) {
 // Noop settings took only the zero-read ledger branch and never join the native batch.
 ```
 
-The complete target was durable from initialization; phase upserts only record
+The complete target was durable from persistence-only initialization; phase upserts only record
 transition progress and preserve the same top-level complete snapshot, optional
 staged snapshot and V1 action values.
 
@@ -861,24 +862,22 @@ The apply catch invokes this helper whenever the complete item set was durably
 initialized, even when no item has a success phase; global source-evidence
 validation for noops and fresh create/update refinement, not an in-memory
 `completed.length`, determine whether native reversal is needed.
-If initialization itself failed, it finalizes only the source run failed because
+Persistence-only initialization failure finalizes only the source run failed:
 no native write was permitted. A failure finalizing the source after successful
-native compensation leaves the rollback run failed/resumable; retry consumes its
-durable outcomes and still commits source-failed before rollback-success.
+compensation leaves rollback failed/resumable; retry consumes durable outcomes
+and still commits source-failed before rollback-success.
 
 Menu Page/item references are resolved before `validateDesired`; the complete
 resolved Menu (base row, items, document, appearance, extras and draft status) is
 passed once to `mutateMenuAggregateAtomic`. There is no executor-level Menu
 wiring write before or after that call. Publish is the only later Menu mutation.
 
-Data flow: plan -> allocate all nine UUID create IDs -> full intended-ID registry
--> ref substitution -> native canonical complete before/staged/final targets ->
-all exact targets/dependency envelopes durable -> one
-domain-local transaction with locked expected-snapshot CAS (including complete
+Data flow: plan -> pre-run nine-kind UUID allocation -> full ID registry ->
+allowlisted ref substitution -> canonical complete before/staged/final targets ->
+create run -> durable targets/dependencies -> domain-local locked CAS (including
 Menu wiring) -> exact target verification -> prepared/staged/publish-prepared/
-complete phase evidence -> publish-last -> single
-reversible shell/settings stage -> post-commit cache/audit. Known native
-errors retain codes; unexpected errors redact.
+complete evidence -> publish-last -> reversible shell/settings -> cache/audit.
+Known native errors retain codes; unexpected errors redact.
 This executor participates in L03's compensation saga and does not require a
 shared cross-domain transaction.
 
@@ -895,8 +894,12 @@ L02 and L03 tests import the shared frozen V1 status/phase export, accept every
 one of the exact six rows, and reject its remaining Cartesian product and
 staged-target violations; neither suite duplicates a local matrix. The item-fail
 catch proves no `failed` item upsert occurs and only run finalization changes.
-Form fields/actions nested;
-Page/footer/menu/query/detail refs persist as IDs; complete desired equality.
+Before `createRun`, inject every alignment/allocation/descriptor-ref/normalizer/
+capture/target failure and prove zero run/item/domain writes. Pin complete
+preparation and persistence-only exact rows. The same frozen plan/descriptors
+reach planner/preparer with no rebuild/second walker; spies prove retired generic
+preflight/resolver is unused. Nested Form and Page/footer/menu/query/detail refs
+persist as IDs.
 Every kind has an apply adapter, while only the frozen lifecycle-capable subset
 (`page`, `content_entry`, `detail_page`, `menu`) participates in publish-last.
 Page/entry/detail/menu remain draft until dependencies are wired; menu
@@ -961,7 +964,8 @@ then resume from that durable outcome without using the in-memory overlay.
   canonical Form-action Tx path and the locked settings apply/raw-restore batch
   with failure-boundary and race tests.
 - [ ] Persist two-pass durable intended UUIDs, complete target snapshots and
-  dependency envelopes before mutation and
+  dependency envelopes via pre-run preparation plus persistence-only
+  initialization before mutation and
   make recovery reject every required-kind `id:null` snapshot fail-closed;
   classify noop directly from its source operation with zero resolver/native
   read and leave outcome authority to L03's global evidence preflight.
