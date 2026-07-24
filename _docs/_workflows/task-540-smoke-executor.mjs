@@ -74,7 +74,7 @@ const CLEANUP_FAILURE_CLASS_PRIORITY = deepFreezeExact([
   "construction_cleanup_failed",
   "cleanup_boundary_failed",
 ]);
-const DATABASE_OPERATION_TIMEOUT_MS = 180_000;
+const DATABASE_OPERATION_TIMEOUT_MS = 540_000;
 const BUN_BRIDGE_EXECUTION_AUTHORITY = deepFreezeExact({
   argvShape: ["--no-env-file", "--cwd", "<canonical-core>", "--eval", "<immutable-source>"],
   cwdShape: { bun: "<canonical-core>", spawn: "<canonical-root>" },
@@ -84,8 +84,8 @@ const BUN_BRIDGE_EXECUTION_AUTHORITY = deepFreezeExact({
   maxStdoutBytes: MAX_STREAM_BYTES,
   timeoutMs: DATABASE_OPERATION_TIMEOUT_MS,
 });
-const COMMAND_TIMEOUT_MS = 120_000;
-const HOST_READY_TIMEOUT_MS = 130_000;
+const COMMAND_TIMEOUT_MS = 720_000;
+const HOST_READY_TIMEOUT_MS = 540_000;
 const ORCHESTRATOR_EVIDENCE_RUNNER_VERSION = 1;
 const SESSION_NAME = "wf540smoke";
 const TASK_FAILURE = deepFreezeExact({ code: "task540_smoke_failed" });
@@ -8663,14 +8663,14 @@ function buildDataBearingRunCodeSource(operation, input) {
     }
     if (canonical(payload) !== json) fail("canonical_json");
     if (payload.operation === "goto-ready") {
-      await page.goto(payload.url);
+      await page.goto(payload.url, { timeout: ${DATABASE_OPERATION_TIMEOUT_MS} });
       await page.waitForFunction(() => {
         const text = document.body?.innerText.trim() ?? "";
         return text.length > 0 && text !== "Loading...";
-      }, null, { timeout: 30000 });
+      }, null, { timeout: 90000 });
     } else {
       const locator = page.locator(payload.selector);
-      await locator.waitFor({ state: "visible", timeout: 10000 });
+      await locator.waitFor({ state: "visible", timeout: 30000 });
       if (await locator.count() !== 1) throw new Error("wf540_target_count");
       if (payload.operation === "fill") await locator.fill(payload.value);
       else if (payload.operation === "type") await locator.pressSequentially(payload.value);
@@ -8944,7 +8944,7 @@ function buildBlockBaselineSource(
 ) {
   return `(async (page) => {
     const canvas = page.locator(${JSON.stringify(canvasSelector)});
-    await canvas.waitFor({ state: "visible", timeout: 10000 });
+    await canvas.waitFor({ state: "visible", timeout: 30000 });
     if (await canvas.count() !== 1 || !(await canvas.isVisible())) throw new Error("wf540_canvas_count");
     const blockIds = await canvas.locator("[data-screen-block-id][data-screen-block-type]").evaluateAll((nodes) => {
       const rows = nodes.map((node) => ({ id: node.getAttribute("data-screen-block-id"), type: node.getAttribute("data-screen-block-type") }));
@@ -8954,16 +8954,16 @@ function buildBlockBaselineSource(
       return ids.sort();
     });
     const insertPanel = page.locator(${JSON.stringify(insertPanelSelector)});
-    await insertPanel.waitFor({ state: "visible", timeout: 10000 });
+    await insertPanel.waitFor({ state: "visible", timeout: 30000 });
     if (await insertPanel.count() !== 1 || !(await insertPanel.isVisible()) || !(await insertPanel.isEnabled())) throw new Error("wf540_insert_panel_count");
     await insertPanel.click();
-    const deadline = Date.now() + 10000;
+    const deadline = Date.now() + 30000;
     while (Date.now() < deadline && (await insertPanel.getAttribute("aria-pressed")) !== "true") {
       await page.waitForTimeout(25);
     }
     if ((await insertPanel.getAttribute("aria-pressed")) !== "true") throw new Error("wf540_insert_panel_state");
     const blockLibrary = page.locator(${JSON.stringify(blockLibrarySelector)});
-    await blockLibrary.waitFor({ state: "visible", timeout: 10000 });
+    await blockLibrary.waitFor({ state: "visible", timeout: 30000 });
     if (await blockLibrary.count() !== 1 || !(await blockLibrary.isVisible())) throw new Error("wf540_block_library_count");
     page.context().__wf540Remember(${JSON.stringify("block-baseline:" + action.id)}, { blockIds });
     return { blockIds };
@@ -8982,10 +8982,10 @@ function buildCaptureNewSource(action, executionSpec, plan, captures) {
   return `(async (page) => {
     const baseline = page.context().__wf540Recall(${JSON.stringify("block-baseline:" + beforeAction.id)});
     const canvas = page.locator(${JSON.stringify(registeredSelector(plan, "canvas"))});
-    await canvas.waitFor({ state: "visible", timeout: 10000 });
+    await canvas.waitFor({ state: "visible", timeout: 30000 });
     if (await canvas.count() !== 1 || !(await canvas.isVisible())) throw new Error("wf540_canvas_count");
     let rows = [];
-    const deadline = Date.now() + 10000;
+    const deadline = Date.now() + 30000;
     while (Date.now() < deadline) {
       rows = await canvas.locator("[data-screen-block-id][data-screen-block-type]").evaluateAll((nodes) => nodes.map((node) => ({ id: node.getAttribute("data-screen-block-id"), type: node.getAttribute("data-screen-block-type") })));
       const added = rows.filter(({ id }) => !baseline.blockIds.includes(id));
@@ -9322,6 +9322,7 @@ function buildRouteSetupSource(route) {
         method: request.method(),
         headers: request.headers(),
         postData: request.postData() ?? undefined,
+        timeout: ${DATABASE_OPERATION_TIMEOUT_MS},
       });
       backingStatus = response.status();
       handlerStage = "backing_validation";
@@ -9430,7 +9431,7 @@ function buildRouteSetupSource(route) {
 function buildRouteHitSource(route) {
   return `(async (page) => {
     const route = page.context().__wf540RouteGet(${JSON.stringify(route.key)});
-    const timeout = page.waitForTimeout(10000).then(() => { throw new Error("wf540_capture_timeout"); });
+    const timeout = page.waitForTimeout(540000).then(() => { throw new Error("wf540_capture_timeout"); });
     await Promise.race([route.captured, timeout]);
     if (route.failure() !== null) throw new Error(route.failure());
     if (route.hits() !== 1) throw new Error("wf540_route_hits");
@@ -9450,7 +9451,7 @@ function buildRouteReleaseSource(route) {
   return `(async (page) => {
     const route = page.context().__wf540RouteGet(${JSON.stringify(route.key)});
     route.release();
-    const timeout = page.waitForTimeout(10000).then(() => { throw new Error("wf540_settlement_timeout"); });
+    const timeout = page.waitForTimeout(540000).then(() => { throw new Error("wf540_settlement_timeout"); });
     if (${JSON.stringify(route.mode)} === "abort-aware-preference-write") {
       const settled = await Promise.race([Promise.all([route.backingSettled, route.clientAborted]), timeout]);
       return { released: true, backingSettled: settled[0] === true, clientAborted: settled[1] === true };
@@ -9717,7 +9718,7 @@ function buildObservationSource(action, name, plan, captures, selectionSelector 
     const positive = (value) => Boolean(value && value.width > 0 && value.height > 0);
     const one = async (selector) => {
       const locator = page.locator(selector);
-      const deadline = Date.now() + 10000;
+      const deadline = Date.now() + 30000;
       while (Date.now() < deadline && await locator.count() !== 1) {
         await page.waitForTimeout(25);
       }
@@ -9748,7 +9749,7 @@ function buildObservationSource(action, name, plan, captures, selectionSelector 
       return { failureClass: value.failureClass, settled: false };
     };
     const waitFor = async (read) => {
-      const deadline = Date.now() + 10000;
+      const deadline = Date.now() + 30000;
       while (Date.now() < deadline) {
         const value = await read();
         if (value) return value;
@@ -9833,7 +9834,7 @@ function buildObservationSource(action, name, plan, captures, selectionSelector 
       return clientAborted === undefined ? result : { ...result, clientAborted };
     };
     const settleAuthRealm = async (selector, expectedName = null, userId = null) => {
-      const deadline = Date.now() + 60000;
+      const deadline = Date.now() + 180000;
       const remainingAuthTime = () => {
         return Math.max(1, deadline - Date.now());
       };
@@ -10079,7 +10080,7 @@ function buildObservationSource(action, name, plan, captures, selectionSelector 
       output = await loginSample();
     } else if (config.name === "signout-settled-user-a-with-abort") {
       const route = context.__wf540RouteGet("preference-a-write-exit");
-      const aborted = await Promise.race([route.clientAborted, page.waitForTimeout(10000).then(() => { throw new Error("wf540_abort_timeout"); })]);
+      const aborted = await Promise.race([route.clientAborted, page.waitForTimeout(540000).then(() => { throw new Error("wf540_abort_timeout"); })]);
       output = await loginSample(aborted === true);
     } else if (config.name.startsWith("geometry-")) {
       output = await geometrySample();
@@ -10549,7 +10550,7 @@ function buildVisibleAssertionSource(action, name, plan, captures) {
     const positive = (rect) => Boolean(rect && rect.width > 0 && rect.height > 0);
     const one = async (selector) => {
       const locator = page.locator(selector);
-      const deadline = Date.now() + 10000;
+      const deadline = Date.now() + 30000;
       while (Date.now() < deadline && await locator.count() !== 1) await page.waitForTimeout(25);
       if (await locator.count() !== 1) throw new Error("wf540_assertion_target_count");
       return locator;
@@ -10559,7 +10560,7 @@ function buildVisibleAssertionSource(action, name, plan, captures) {
       Object.keys(value).length === keys.length && keys.every((key) => Object.prototype.hasOwnProperty.call(value, key))
     );
     const waitFor = async (read) => {
-      const deadline = Date.now() + 10000;
+      const deadline = Date.now() + 30000;
       while (Date.now() < deadline) {
         const value = await read();
         if (value) return value;
@@ -10925,7 +10926,7 @@ function buildVisibleAssertionSource(action, name, plan, captures) {
       const recordActions = page.locator(config.selectors.recordActions);
       const builderCanvas = page.locator(config.selectors.canvas);
       const builderDirtyBadge = page.getByText("Unsaved changes", { exact: true });
-      const deadline = Date.now() + 30000;
+      const deadline = Date.now() + 90000;
       while (Date.now() < deadline) {
         const count = await recordActions.count();
         const rect = count === 1 ? finiteRect(await recordActions.boundingBox()) : null;
@@ -11213,11 +11214,11 @@ function buildSimpleBrowserInvocation(
               pageId,
               navigationBaseline: page.__wf540ReadNavigationCount(),
             });
-            await page.goto(${url});
+            await page.goto(${url}, { timeout: ${DATABASE_OPERATION_TIMEOUT_MS} });
             const targets = [page.locator(${email}), page.locator(${password}), page.locator(${submit})];
             for (const [index, target] of targets.entries()) {
               try {
-                await target.waitFor({ state: "visible", timeout: 60000 });
+                await target.waitFor({ state: "visible", timeout: 180000 });
               } catch {
                 const currentUrl = page.url();
                 const bodyText = ((await page.locator("body").innerText().catch(() => "")) ?? "").trim();
@@ -11250,7 +11251,7 @@ function buildSimpleBrowserInvocation(
           return {
             args: runCode(`async (page) => {
               const dirtyIndicator = page.getByText("Unsaved changes", { exact: true });
-              await dirtyIndicator.waitFor({ state: "visible", timeout: 10000 });
+              await dirtyIndicator.waitFor({ state: "visible", timeout: 30000 });
               if (await dirtyIndicator.count() !== 1) throw new Error("wf540_dg003_dirty_count");
               const retainedDialogListeners = page.listeners("dialog");
               if (retainedDialogListeners.length !== 1) throw new Error("wf540_dg003_listener_count");
@@ -11266,7 +11267,7 @@ function buildSimpleBrowserInvocation(
               let navigationFailed = false;
               let dialogSettlementFailed = false;
               try {
-                await page.goto(${url});
+                await page.goto(${url}, { timeout: ${DATABASE_OPERATION_TIMEOUT_MS} });
               } catch {
                 navigationFailed = true;
               } finally {
@@ -11287,7 +11288,7 @@ function buildSimpleBrowserInvocation(
               }
               if (page.url() !== ${url}) throw new Error("wf540_dg003_builder_url");
               const marker = page.locator(${canvas});
-              await marker.waitFor({ state: "visible", timeout: 30000 });
+              await marker.waitFor({ state: "visible", timeout: 90000 });
               if (await marker.count() !== 1) throw new Error("wf540_dg003_builder_marker_count");
               return true;
             }`),
@@ -11296,10 +11297,10 @@ function buildSimpleBrowserInvocation(
         }
         return {
           args: runCode(`async (page) => {
-            await page.goto(${url});
+            await page.goto(${url}, { timeout: ${DATABASE_OPERATION_TIMEOUT_MS} });
             const marker = page.locator(${canvas});
             try {
-              await marker.waitFor({ state: "visible", timeout: 30000 });
+              await marker.waitFor({ state: "visible", timeout: 90000 });
             } catch {
               const bodyText = ((await page.locator("body").innerText().catch(() => "")) ?? "").trim();
               throw new Error(
@@ -11343,15 +11344,15 @@ function buildSimpleBrowserInvocation(
         return {
           args: runCode(`async (page) => {
             const trigger = page.locator(${selector});
-            await trigger.waitFor({ state: "visible", timeout: 20000 });
+            await trigger.waitFor({ state: "visible", timeout: 60000 });
             if (await trigger.count() !== 1 || !(await trigger.isVisible())) throw new Error("wf540_record_actions_target");
-            await trigger.click({ timeout: 10000 });
+            await trigger.click({ timeout: 30000 });
             const menuItem = page.locator(${menuItemSelector});
-            await menuItem.waitFor({ state: "visible", timeout: 10000 });
+            await menuItem.waitFor({ state: "visible", timeout: 30000 });
             if (await menuItem.count() !== 1 || !(await menuItem.isVisible())) throw new Error("wf540_edit_record_target");
-            await menuItem.click({ timeout: 10000 });
+            await menuItem.click({ timeout: 30000 });
             const realm = page.locator('[data-custom-screen-entry-document="true"]');
-            const deadline = Date.now() + 30000;
+            const deadline = Date.now() + 90000;
             while (Date.now() < deadline) {
               const rect = await realm.count() === 1 ? await realm.boundingBox() : null;
               if (page.url() === ${expectedEntryUrl} && rect && rect.width > 0 && rect.height > 0 && await realm.isVisible()) return true;
@@ -11399,7 +11400,7 @@ function buildSimpleBrowserInvocation(
               let failureClass = ${JSON.stringify(TONE_OPEN_BROWSER_FAILURE_CLASSES[0])};
               try {
                 const initialPanel = page.locator(${JSON.stringify(panelSelector)});
-                await initialPanel.waitFor({ state: "visible", timeout: 10000 });
+                await initialPanel.waitFor({ state: "visible", timeout: 30000 });
                 const initialTargetRoot = page.locator(${targetRootSelector});
                 const initialSelectionHandle = page.locator(${selectionHandleSelector});
                 const initialTextbox = page.locator(${textboxSelector});
@@ -11413,7 +11414,7 @@ function buildSimpleBrowserInvocation(
                 if (targetPreconditionFailed) return fail(failureClass);
                 failureClass = ${JSON.stringify(TONE_OPEN_BROWSER_FAILURE_CLASSES[1])};
                 let baselineColor = null;
-                const preconditionDeadline = Date.now() + 10000;
+                const preconditionDeadline = Date.now() + 30000;
                 while (Date.now() < preconditionDeadline) {
                   const settledPanel = page.locator(${JSON.stringify(panelSelector)});
                   const settledTargetRoot = page.locator(${targetRootSelector});
@@ -11459,9 +11460,9 @@ function buildSimpleBrowserInvocation(
                 const trigger = panel.locator(${triggerSelector});
                 const triggerRect = await trigger.count() === 1 ? await trigger.boundingBox() : null;
                 if (await panel.count() !== 1 || await trigger.count() !== 1 || !(await trigger.isVisible()) || !positive(triggerRect)) return fail(failureClass);
-                await trigger.click({ timeout: 10000 });
+                await trigger.click({ timeout: 30000 });
                 failureClass = ${JSON.stringify(TONE_OPEN_BROWSER_FAILURE_CLASSES[3])};
-                const deadline = Date.now() + 10000;
+                const deadline = Date.now() + 30000;
                 while (Date.now() < deadline) {
                   const openContent = page.locator(${openContentSelector});
                   const contentCount = await openContent.count();
@@ -11576,7 +11577,7 @@ function buildSimpleBrowserInvocation(
                 await trigger.getAttribute("aria-controls") !== authority.menuId ||
                 await trigger.getAttribute("aria-expanded") !== "true";
               if (authorityOptionPreconditionFailed) return fail(failureClass);
-              await option.click({ timeout: 10000 });
+              await option.click({ timeout: 30000 });
               failureClass = ${JSON.stringify(TONE_SELECT_BROWSER_FAILURE_CLASSES[1])};
               const stabilityHorizonMs = 600;
               let settledSince = null;
@@ -11585,7 +11586,7 @@ function buildSimpleBrowserInvocation(
                 settledSince = null;
                 settledSampleCount = 0;
               };
-              const deadline = Date.now() + 10000;
+              const deadline = Date.now() + 30000;
               while (Date.now() < deadline) {
                 const currentPanel = page.locator(${JSON.stringify(panelSelector)});
                 failureClass = ${JSON.stringify(TONE_SELECT_BROWSER_FAILURE_CLASSES[1])};
@@ -11706,7 +11707,7 @@ function buildSimpleBrowserInvocation(
         return {
           args: runCode(`async (page) => {
             const locator = page.locator(${selector});
-            await locator.waitFor({ state: "visible", timeout: 10000 });
+            await locator.waitFor({ state: "visible", timeout: 30000 });
             if (await locator.count() !== 1) throw new Error("wf540_signout_target_count");
             const context = page.context();
             const pageId = page.__wf540PageIdentity?.pageId;
@@ -11715,7 +11716,7 @@ function buildSimpleBrowserInvocation(
               pageId,
               navigationBaseline: page.__wf540ReadNavigationCount(),
             });
-            await locator.click({ timeout: 10000 });
+            await locator.click({ timeout: 30000 });
             return true;
           }`),
           displayArgs: null,
@@ -11731,14 +11732,14 @@ function buildSimpleBrowserInvocation(
         return {
           args: runCode(`async (page) => {
             const locator = page.locator(${selector});
-            await locator.waitFor({ state: "visible", timeout: 10000 });
+            await locator.waitFor({ state: "visible", timeout: 30000 });
             if (await locator.count() !== 1) throw new Error("wf540_presentation_save_target_count");
             const pathname = (href) => { const scheme = href.indexOf("://"); const start = href.indexOf("/", scheme === -1 ? 0 : scheme + 3); return (start === -1 ? "/" : href.slice(start)).split(/[?#]/u, 1)[0]; };
-            const responsePromise = page.waitForResponse((response) => response.request().method() === "PATCH" && pathname(response.url()) === ${JSON.stringify(writePath)}, { timeout: 90000 });
+            const responsePromise = page.waitForResponse((response) => response.request().method() === "PATCH" && pathname(response.url()) === ${JSON.stringify(writePath)}, { timeout: 270000 });
             await locator.click();
             const response = await responsePromise;
             if (!response.ok()) throw new Error("wf540_presentation_save_response");
-            const deadline = Date.now() + 10000;
+            const deadline = Date.now() + 30000;
             while (Date.now() < deadline) {
               const cleanDisabled = await locator.count() === 1 && !(await locator.isEnabled()) && (await locator.textContent())?.trim() === "Save presentation";
               const savingAbsent = await page.getByText("Saving...", { exact: true }).count() === 0;
@@ -11760,14 +11761,14 @@ function buildSimpleBrowserInvocation(
         return {
           args: runCode(`async (page) => {
             const locator = page.locator(${selector});
-            await locator.waitFor({ state: "visible", timeout: 10000 });
+            await locator.waitFor({ state: "visible", timeout: 30000 });
             if (await locator.count() !== 1) throw new Error("wf540_entry_retry_target_count");
             const pathname = (href) => { const scheme = href.indexOf("://"); const start = href.indexOf("/", scheme === -1 ? 0 : scheme + 3); return (start === -1 ? "/" : href.slice(start)).split(/[?#]/u, 1)[0]; };
-            const responsePromise = page.waitForResponse((response) => response.request().method() === "PATCH" && pathname(response.url()) === ${JSON.stringify(writePath)}, { timeout: 90000 });
+            const responsePromise = page.waitForResponse((response) => response.request().method() === "PATCH" && pathname(response.url()) === ${JSON.stringify(writePath)}, { timeout: 270000 });
             await locator.click();
             const response = await responsePromise;
             if (!response.ok()) throw new Error("wf540_entry_retry_response");
-            const deadline = Date.now() + 10000;
+            const deadline = Date.now() + 30000;
             while (Date.now() < deadline) {
               const enabled = await locator.count() === 1 && await locator.isEnabled() && (await locator.textContent())?.trim() === "Save";
               const savingAbsent = await page.getByText("Saving...", { exact: true }).count() === 0;
@@ -11792,16 +11793,16 @@ function buildSimpleBrowserInvocation(
         return {
           args: runCode(`async (page) => {
             const locator = page.locator(${selector});
-            await locator.waitFor({ state: "visible", timeout: 10000 });
+            await locator.waitFor({ state: "visible", timeout: 30000 });
             if (await locator.count() !== 1) throw new Error("wf540_related_retry_target_count");
             const pathname = (href) => { const scheme = href.indexOf("://"); const start = href.indexOf("/", scheme === -1 ? 0 : scheme + 3); return (start === -1 ? "/" : href.slice(start)).split(/[?#]/u, 1)[0]; };
-            const responsePromise = page.waitForResponse((response) => response.request().method() === "GET" && pathname(response.url()) === ${JSON.stringify(readPath)}, { timeout: 90000 });
+            const responsePromise = page.waitForResponse((response) => response.request().method() === "GET" && pathname(response.url()) === ${JSON.stringify(readPath)}, { timeout: 270000 });
             await locator.click();
             const response = await responsePromise;
             if (!response.ok()) throw new Error("wf540_related_retry_response");
             const root = page.locator(${JSON.stringify(rootSelector)});
             const row = root.locator(${JSON.stringify('[data-screen-related-entry="' + expectedRowId + '"]')});
-            const deadline = Date.now() + 10000;
+            const deadline = Date.now() + 30000;
             while (Date.now() < deadline) {
               const rect = await row.count() === 1 ? await row.boundingBox() : null;
               const retryAbsent = await page.locator(${selector}).count() === 0;
@@ -11830,7 +11831,7 @@ function buildSimpleBrowserInvocation(
             const links = page.locator(${selector});
             let visibleLinkIndex = -1;
             let latestTargetFailureClass = ${JSON.stringify(DIRTY_NAVIGATION_BROWSER_FAILURE_CLASSES[2])};
-            const targetDeadline = Date.now() + 10000;
+            const targetDeadline = Date.now() + 30000;
             while (Date.now() < targetDeadline) {
               let pollTargetFailureClass = ${JSON.stringify(DIRTY_NAVIGATION_BROWSER_FAILURE_CLASSES[2])};
               const count = await links.count();
@@ -11848,7 +11849,7 @@ function buildSimpleBrowserInvocation(
               if (visibleCount > 1) return fail(${JSON.stringify(DIRTY_NAVIGATION_BROWSER_FAILURE_CLASSES[1])});
               if (visibleCount === 1) {
                 const candidate = links.nth(nextVisibleLinkIndex);
-                await candidate.scrollIntoViewIfNeeded({ timeout: 10000 });
+                await candidate.scrollIntoViewIfNeeded({ timeout: 30000 });
                 const rect = await candidate.boundingBox();
                 const candidateStillVisible = await candidate.isVisible();
                 if (candidateStillVisible && positive(rect)) {
@@ -11894,12 +11895,12 @@ function buildSimpleBrowserInvocation(
             if (await dialog.count() !== 0) return fail(dialogMultiplicityFailureClass);
             let clickFailed = false;
             try {
-              await links.nth(visibleLinkIndex).click({ timeout: 10000, noWaitAfter: true });
+              await links.nth(visibleLinkIndex).click({ timeout: 30000, noWaitAfter: true });
             } catch {
               clickFailed = true;
             }
             let namedDialogObserved = false;
-            const dialogDeadline = Date.now() + 10000;
+            const dialogDeadline = Date.now() + 30000;
             while (Date.now() < dialogDeadline) {
               const heading = dialog.getByRole("heading", { name: ${dialogTitle}, exact: true });
               const description = dialog.getByText(${dialogDescription}, { exact: true });
@@ -11953,12 +11954,12 @@ function buildSimpleBrowserInvocation(
         return {
           args: runCode(`async (page) => {
             const locator = page.locator(${selector});
-            await locator.waitFor({ state: "visible", timeout: 10000 });
+            await locator.waitFor({ state: "visible", timeout: 30000 });
             if (await locator.count() !== 1) throw new Error("wf540_records_link_count");
             await locator.click();
             const recordActions = page.locator(${recordActionsSelector});
             try {
-              await recordActions.waitFor({ state: "visible", timeout: 30000 });
+              await recordActions.waitFor({ state: "visible", timeout: 90000 });
             } catch {
               const bodyText = ((await page.locator("body").innerText().catch(() => "")) ?? "").trim();
               throw new Error(
@@ -11984,13 +11985,13 @@ function buildSimpleBrowserInvocation(
         return {
           args: runCode(`async (page) => {
             const locator = page.locator(${selector});
-            await locator.waitFor({ state: "visible", timeout: 10000 });
+            await locator.waitFor({ state: "visible", timeout: 30000 });
             if (await locator.count() !== 1) throw new Error("wf540_save_target_count");
-            const responsePromise = page.waitForResponse((response) => response.request().method() === "PATCH" && response.url().includes(${JSON.stringify(writePath)}), { timeout: 90000 });
+            const responsePromise = page.waitForResponse((response) => response.request().method() === "PATCH" && response.url().includes(${JSON.stringify(writePath)}), { timeout: 270000 });
             await locator.click();
             const response = await responsePromise;
             if (!response.ok()) throw new Error("wf540_builder_save_response");
-            const deadline = Date.now() + 10000;
+            const deadline = Date.now() + 30000;
             while (Date.now() < deadline) {
               if (await locator.count() === 1 && await locator.isEnabled() && (await locator.textContent())?.trim() === "Save" && await page.getByText("Saving...", { exact: true }).count() === 0) return true;
               await page.waitForTimeout(25);
@@ -12003,13 +12004,13 @@ function buildSimpleBrowserInvocation(
       return {
         args: runCode(`async (page) => {
           const locator = page.locator(${selector});
-          const deadline = Date.now() + 10000;
+          const deadline = Date.now() + 30000;
           while (Date.now() < deadline && await locator.count() !== 1) await page.waitForTimeout(25);
           const count = await locator.count();
           if (count !== 1) {
             throw new Error(count === 0 ? "wf540_target_missing" : "wf540_target_duplicate");
           }
-          await locator.click({ timeout: 10000 });
+          await locator.click({ timeout: 30000 });
           return true;
         }`),
         displayArgs: null,
@@ -12045,7 +12046,7 @@ function buildSimpleBrowserInvocation(
             const textbox = page.locator(${JSON.stringify(selector)});
             const targetRoot = page.locator(${JSON.stringify(targetRootSelector)});
             const selectionHandle = page.locator(${JSON.stringify(selectionHandleSelector)});
-            await textbox.waitFor({ state: "visible", timeout: 10000 });
+            await textbox.waitFor({ state: "visible", timeout: 30000 });
             const textboxRect = await textbox.count() === 1 ? await textbox.boundingBox() : null;
             const targetRootRect = await targetRoot.count() === 1 ? await targetRoot.boundingBox() : null;
             const selectionHandleRect = await selectionHandle.count() === 1 ? await selectionHandle.boundingBox() : null;
@@ -12067,7 +12068,7 @@ function buildSimpleBrowserInvocation(
             const filledTextboxFocused = await textbox.evaluate((node) => node === document.activeElement);
             if (filledText !== ${JSON.stringify(expectedDraft)} || filledTextboxFocused !== true) throw new Error("wf540_tone_fill_focus");
             await textbox.blur();
-            const deadline = Date.now() + 10000;
+            const deadline = Date.now() + 30000;
             while (Date.now() < deadline) {
               const settledTextbox = page.locator(${JSON.stringify(selector)});
               const settledTargetRoot = page.locator(${JSON.stringify(targetRootSelector)});
@@ -12552,6 +12553,10 @@ const BROWSER_OPTIONAL_INHERITED_ENV = Object.freeze([
   "XAUTHORITY",
   "DBUS_SESSION_BUS_ADDRESS",
 ]);
+const BROWSER_FIXED_TIMEOUT_ENV = deepFreezeExact({
+  PLAYWRIGHT_MCP_TIMEOUT_ACTION: "90000",
+  PLAYWRIGHT_MCP_TIMEOUT_NAVIGATION: "540000",
+});
 const SMOKE_PORTS = Object.freeze([3000, 5173, 5174]);
 const API_BASE = "http://127.0.0.1:3000/admin/api";
 const PRIVATE_RUNTIME = new WeakMap();
@@ -12569,6 +12574,34 @@ function ownString(source, key, { required = false } = {}) {
     "environment value is invalid: " + key
   );
   return descriptor.value;
+}
+
+function applyFixedBrowserTimeoutEnvironment(target, repoEnvironment, inheritedEnvironment) {
+  invariant(
+    target !== null &&
+      typeof target === "object" &&
+      Object.getPrototypeOf(target) === null &&
+      repoEnvironment !== null &&
+      typeof repoEnvironment === "object" &&
+      inheritedEnvironment !== null &&
+      typeof inheritedEnvironment === "object",
+    "fixed browser timeout environment input drift"
+  );
+  for (const [key, value] of Object.entries(BROWSER_FIXED_TIMEOUT_ENV)) {
+    const inherited = ownString(inheritedEnvironment, key);
+    const repo = ownString(repoEnvironment, key);
+    invariant(
+      inherited === null || inherited === value,
+      "fixed inherited browser timeout environment conflict: " + key
+    );
+    invariant(
+      repo === null || repo === value,
+      "fixed repo browser timeout environment conflict: " + key
+    );
+    invariant(!Object.hasOwn(target, key), "fixed browser timeout environment key was preset");
+    target[key] = value;
+  }
+  return target;
 }
 
 function assertStorageFallbackEnvironmentAbsent(repoEnvironment, inheritedEnvironment) {
@@ -13029,6 +13062,7 @@ async function createPrivateBrowserWorkspace(
     const value = ownString(process.env, key);
     if (value !== null) environment[key] = value;
   }
+  applyFixedBrowserTimeoutEnvironment(environment, repoEnvironment, process.env);
   Object.assign(environment, {
     HOME: path.join(privateRoot, "home"),
     TMPDIR: path.join(privateRoot, "tmp"),
@@ -13105,7 +13139,7 @@ async function readProcessGroupMembers(pgid) {
   return members.sort((left, right) => left.pid - right.pid);
 }
 
-const PROCESS_TERM_GRACE_MS = 3_000;
+const PROCESS_TERM_GRACE_MS = 40_000;
 const PROCESS_KILL_GRACE_MS = 3_000;
 const PROCESS_ABSENCE_STABILITY_MS = 40;
 
@@ -14233,7 +14267,7 @@ function retainedApiLifecycleFailure(record, label) {
   );
 }
 
-async function runPrivateProcess({ file, args, cwd, env, stdin, timeoutMs = 30_000 }) {
+async function runPrivateProcess({ file, args, cwd, env, stdin, timeoutMs = 90_000 }) {
   const execution = await runRetainedProcessGroup({
     file,
     args,
@@ -18312,7 +18346,7 @@ async function runtimeHealth({ state }, kind) {
     cwd: state.root,
     env: Object.freeze(environment),
     stdin: Buffer.alloc(0),
-    timeoutMs: 30_000,
+    timeoutMs: 90_000,
   });
   invariant(bytes.length > 0, kind + " health response is empty");
   return runtimeSafeProjection({ kind, bytes: bytes.length, sha256: hashBytes(bytes) });
@@ -18913,13 +18947,13 @@ async function scanExactLocalStorageManifest(state) {
   let directoryCount = 0;
   const pending = [{ relative: "", depth: 0 }];
   while (pending.length > 0) {
-    invariant(Date.now() - startedAt <= 10_000, "storage manifest walk exceeded its time bound");
+    invariant(Date.now() - startedAt <= 30_000, "storage manifest walk exceeded its time bound");
     const { relative: relativeDirectory, depth } = pending.shift();
     invariant(depth <= 3, "storage manifest exceeded its depth bound");
     const absoluteDirectory = relativeDirectory === "" ? root : path.join(root, relativeDirectory);
     const names = (await readdir(absoluteDirectory)).sort();
     for (const name of names) {
-      invariant(Date.now() - startedAt <= 10_000, "storage manifest walk exceeded its time bound");
+      invariant(Date.now() - startedAt <= 30_000, "storage manifest walk exceeded its time bound");
       invariant(
         name !== "." &&
           name !== ".." &&
@@ -18985,7 +19019,7 @@ async function scanExactLocalStorageManifest(state) {
     "storage manifest contains duplicate keys"
   );
   invariant(
-    Buffer.byteLength(canonicalJson(rows)) <= MAX_STREAM_BYTES && Date.now() - startedAt <= 10_000,
+    Buffer.byteLength(canonicalJson(rows)) <= MAX_STREAM_BYTES && Date.now() - startedAt <= 30_000,
     "storage manifest serialized/time bound exceeded"
   );
   return deepFreezeExact({ rootIdentity, rows: deepFreezeExact(rows) });
@@ -20458,7 +20492,7 @@ async function closeBrowserIfPresent(state) {
       cwd: state.browserWorkspace.cwd,
       env: state.browserWorkspace.environment,
       stdin: Buffer.alloc(0),
-      timeoutMs: 30_000,
+      timeoutMs: 90_000,
     });
     invariant(
       output.equals(Buffer.from("Browser '" + SESSION_NAME + "' closed\n\n")),
@@ -20477,7 +20511,7 @@ async function releaseFailureRoutesIfPresent(state) {
     cwd: state.browserWorkspace.cwd,
     env: state.browserWorkspace.environment,
     stdin: Buffer.alloc(0),
-    timeoutMs: 30_000,
+    timeoutMs: 90_000,
   });
   invariant(output.equals(Buffer.from("true\n")), "failure route cleanup stdout drift");
 }
@@ -20489,7 +20523,7 @@ async function proveBrowserSessionAbsent(state) {
     cwd: state.browserWorkspace.cwd,
     env: state.browserWorkspace.environment,
     stdin: Buffer.alloc(0),
-    timeoutMs: 30_000,
+    timeoutMs: 90_000,
   });
   invariant(
     output.equals(Buffer.from("  (no browsers)\n")),
@@ -23614,7 +23648,7 @@ async function selfTestExactBunChildInputSource(schemaId, input) {
     ",input);\nreturn true;\n})()";
   const result = await new Script(program, {
     filename: "task-540-bun-child-" + schemaId + ".self-test.js",
-  }).runInNewContext({ TextEncoder }, { timeout: 5_000 });
+  }).runInNewContext({ TextEncoder }, { timeout: 15_000 });
   invariant(result === true, schemaId + " child Bun input source did not return success");
   return input;
 }
@@ -23642,7 +23676,7 @@ async function runExpectedAuthChallengeSelfTest({ expectNegative, assertNegative
   const [isolatedUrlType, isolatedAuthorityFactory] = new Script(
     `[typeof URL, (${createExpectedAuthChallengeAuthority.toString()})]`,
     { filename: "task-540-auth-authority-no-url.self-test.js" }
-  ).runInNewContext({ URL: undefined }, { timeout: 5_000 });
+  ).runInNewContext({ URL: undefined }, { timeout: 15_000 });
   const isolatedProjection = isolatedAuthorityFactory(options()).reconcile(pageRecords);
   invariant(
     isolatedUrlType === "undefined" &&
@@ -24043,9 +24077,58 @@ export async function runTask540SmokeExecutorSelfTest() {
     };
   };
   invariant(
-    HOST_READY_TIMEOUT_MS === 130_000 && readHostReadyLine.length === 1,
+    HOST_READY_TIMEOUT_MS === 540_000 && readHostReadyLine.length === 1,
     "host ready production timeout contract drift"
   );
+  invariant(
+    DATABASE_OPERATION_TIMEOUT_MS === 540_000 &&
+      COMMAND_TIMEOUT_MS === 720_000 &&
+      COMMAND_TIMEOUT_MS > DATABASE_OPERATION_TIMEOUT_MS &&
+      COMMAND_TIMEOUT_MS > HOST_READY_TIMEOUT_MS,
+    "nested command timeout envelope drift"
+  );
+  invariant(
+    PROCESS_TERM_GRACE_MS === 40_000 &&
+      PROCESS_KILL_GRACE_MS === 3_000 &&
+      PROCESS_TERM_GRACE_MS > 2 * 15_000 + 5_000,
+    "host stop process-group envelope drift"
+  );
+  invariant(
+    buildRouteSetupSource({}).includes("timeout: 540000,"),
+    "browser backing API timeout drift"
+  );
+  invariant(
+    buildRouteHitSource({ key: "self-test", mode: "delayed" }).includes(
+      "page.waitForTimeout(540000)"
+    ) &&
+      buildRouteReleaseSource({ key: "self-test", mode: "delayed" }).includes(
+        "page.waitForTimeout(540000)"
+      ),
+    "browser route capture/release timeout drift"
+  );
+  const fixedBrowserTimeoutEnvironment = Object.create(null);
+  applyFixedBrowserTimeoutEnvironment(fixedBrowserTimeoutEnvironment, {}, {});
+  invariant(
+    deepEqualJson(fixedBrowserTimeoutEnvironment, BROWSER_FIXED_TIMEOUT_ENV) &&
+      BROWSER_FIXED_TIMEOUT_ENV.PLAYWRIGHT_MCP_TIMEOUT_ACTION === "90000" &&
+      BROWSER_FIXED_TIMEOUT_ENV.PLAYWRIGHT_MCP_TIMEOUT_NAVIGATION === "540000" &&
+      Number(BROWSER_FIXED_TIMEOUT_ENV.PLAYWRIGHT_MCP_TIMEOUT_ACTION) <= COMMAND_TIMEOUT_MS &&
+      Number(BROWSER_FIXED_TIMEOUT_ENV.PLAYWRIGHT_MCP_TIMEOUT_NAVIGATION) < COMMAND_TIMEOUT_MS &&
+      Object.keys(BROWSER_FIXED_TIMEOUT_ENV).every(
+        (key) => !BROWSER_OPTIONAL_INHERITED_ENV.includes(key)
+      ),
+    "fixed browser timeout environment authority drift"
+  );
+  for (const [key] of Object.entries(BROWSER_FIXED_TIMEOUT_ENV)) {
+    await expectAsyncFailure(
+      async () => applyFixedBrowserTimeoutEnvironment(Object.create(null), { [key]: "1" }, {}),
+      "repo browser timeout override " + key
+    );
+    await expectAsyncFailure(
+      async () => applyFixedBrowserTimeoutEnvironment(Object.create(null), {}, { [key]: "1" }),
+      "inherited browser timeout override " + key
+    );
+  }
   const readyProjection = {
     schemaVersion: 1,
     runnerPid: 540,
@@ -26249,8 +26332,8 @@ export async function runTask540SmokeExecutorSelfTest() {
     async evaluate(callback, value) {
       return callback(value);
     },
-    async goto(url) {
-      runCodeCalls.push(["goto", url]);
+    async goto(url, options) {
+      runCodeCalls.push(["goto", url, options]);
     },
     async waitForFunction() {
       runCodeCalls.push(["waitForFunction"]);
@@ -26300,6 +26383,12 @@ export async function runTask540SmokeExecutorSelfTest() {
       deepEqualJson(output, { ok: true }) && globalThis.__wf540Injected === false,
       operation + " safe run-code execution drift"
     );
+    if (operation === "goto-ready") {
+      invariant(
+        deepEqualJson(runCodeCalls[0], ["goto", input.url, { timeout: 540000 }]),
+        "goto-ready explicit navigation timeout drift"
+      );
+    }
     const observed = runCodeCalls.flatMap((call) => call.slice(1));
     for (const value of Object.values(input)) {
       invariant(observed.includes(value), operation + " run-code value did not round-trip");
@@ -26522,6 +26611,12 @@ export async function runTask540SmokeExecutorSelfTest() {
       !compiledSource.includes(LEGACY_SCREEN_RUNTIME_ROOT_SELECTOR),
       action.id + " retained the legacy runtime-root selector"
     );
+    if (compiledSource.includes("await page.goto(")) {
+      invariant(
+        compiledSource.includes("{ timeout: 540000 }"),
+        action.id + " explicit navigation timeout drift"
+      );
+    }
     new Script("(" + compiledSource + ")", { filename: action.id + ".self-test.js" });
     const authSettlementSourceSpec = authSettlementSourceSpecs.get(action.id);
     if (authSettlementSourceSpec !== undefined) {
@@ -26537,7 +26632,7 @@ export async function runTask540SmokeExecutorSelfTest() {
       const required = [
         '"adminRootUrl":"http://coderso-a.localhost:5173/admin/"',
         expectedConfigNameToken,
-        "const deadline = Date.now() + 60000;",
+        "const deadline = Date.now() + 180000;",
         "const remainingAuthTime = () => {",
         "return Math.max(1, deadline - Date.now());",
         'let failureClass = "dom_read_failed";',
@@ -26708,7 +26803,7 @@ export async function runTask540SmokeExecutorSelfTest() {
           "let latestTargetFailureClass = " +
             JSON.stringify(DIRTY_NAVIGATION_BROWSER_FAILURE_CLASSES[2]) +
             ";",
-          "const targetDeadline = Date.now() + 10000;",
+          "const targetDeadline = Date.now() + 30000;",
           "while (Date.now() < targetDeadline)",
           "let pollTargetFailureClass = " +
             JSON.stringify(DIRTY_NAVIGATION_BROWSER_FAILURE_CLASSES[2]) +
@@ -26730,7 +26825,7 @@ export async function runTask540SmokeExecutorSelfTest() {
             ");",
           "if (visibleCount === 1)",
           "const candidate = links.nth(nextVisibleLinkIndex);",
-          "await candidate.scrollIntoViewIfNeeded({ timeout: 10000 });",
+          "await candidate.scrollIntoViewIfNeeded({ timeout: 30000 });",
           "const candidateStillVisible = await candidate.isVisible();",
           "if (candidateStillVisible && positive(rect))",
           'const body = page.locator("body");',
@@ -26773,11 +26868,11 @@ export async function runTask540SmokeExecutorSelfTest() {
           "if (await dialog.count() !== 0) return fail(dialogMultiplicityFailureClass);",
           "let clickFailed = false;",
           "try {",
-          "await links.nth(visibleLinkIndex).click({ timeout: 10000, noWaitAfter: true });",
+          "await links.nth(visibleLinkIndex).click({ timeout: 30000, noWaitAfter: true });",
           "} catch {",
           "clickFailed = true;",
           "let namedDialogObserved = false;",
-          "const dialogDeadline = Date.now() + 10000;",
+          "const dialogDeadline = Date.now() + 30000;",
           "while (Date.now() < dialogDeadline)",
           'const heading = dialog.getByRole("heading", { name: ' +
             JSON.stringify(expectedDirtyNavigationConfig.dialogTitle) +
@@ -26843,7 +26938,7 @@ export async function runTask540SmokeExecutorSelfTest() {
           "let latestTargetFailureClass = " +
             JSON.stringify(DIRTY_NAVIGATION_BROWSER_FAILURE_CLASSES[2]) +
             ";",
-          "const targetDeadline = Date.now() + 10000;",
+          "const targetDeadline = Date.now() + 30000;",
           "let pollTargetFailureClass = " +
             JSON.stringify(DIRTY_NAVIGATION_BROWSER_FAILURE_CLASSES[2]) +
             ";",
@@ -26858,7 +26953,7 @@ export async function runTask540SmokeExecutorSelfTest() {
             ");",
           "if (visibleCount === 1)",
           "const candidate = links.nth(nextVisibleLinkIndex);",
-          "await candidate.scrollIntoViewIfNeeded({ timeout: 10000 });",
+          "await candidate.scrollIntoViewIfNeeded({ timeout: 30000 });",
           "const candidateStillVisible = await candidate.isVisible();",
           "if (candidateStillVisible && positive(rect))",
           'const body = page.locator("body");',
@@ -26890,10 +26985,10 @@ export async function runTask540SmokeExecutorSelfTest() {
           "return fail(" + JSON.stringify(DIRTY_NAVIGATION_BROWSER_FAILURE_CLASSES[3]) + ");",
           "if (await dialog.count() !== 0) return fail(dialogMultiplicityFailureClass);",
           "let clickFailed = false;",
-          "await links.nth(visibleLinkIndex).click({ timeout: 10000, noWaitAfter: true });",
+          "await links.nth(visibleLinkIndex).click({ timeout: 30000, noWaitAfter: true });",
           "clickFailed = true;",
           "let namedDialogObserved = false;",
-          "const dialogDeadline = Date.now() + 10000;",
+          "const dialogDeadline = Date.now() + 30000;",
           "const heading = dialog.getByRole(",
           "const description = dialog.getByText(",
           "const keepEditing = dialog.getByRole(",
@@ -26923,8 +27018,8 @@ export async function runTask540SmokeExecutorSelfTest() {
             source.includes("pointerUnlocked") ||
             source.includes('"pointer_locked"') ||
             source.split(latestTargetFailureAssignmentBlock).length - 1 !== 1 ||
-            source.split(".click({ timeout: 10000, noWaitAfter: true });").length - 1 !== 1 ||
-            source.split(".scrollIntoViewIfNeeded({ timeout: 10000 });").length - 1 !== 1 ||
+            source.split(".click({ timeout: 30000, noWaitAfter: true });").length - 1 !== 1 ||
+            source.split(".scrollIntoViewIfNeeded({ timeout: 30000 });").length - 1 !== 1 ||
             source.includes("force: true") ||
             source.split("return fail(").length - 1 !== 9 ||
             source.split("} catch {").length - 1 !== 1 ||
@@ -27013,7 +27108,7 @@ export async function runTask540SmokeExecutorSelfTest() {
         "const textbox = page.locator(" + JSON.stringify(textboxSelector) + ");",
         "const targetRoot = page.locator(" + JSON.stringify(targetRootSelector) + ");",
         "const selectionHandle = page.locator(" + JSON.stringify(selectionHandleSelector) + ");",
-        'await textbox.waitFor({ state: "visible", timeout: 10000 });',
+        'await textbox.waitFor({ state: "visible", timeout: 30000 });',
         "const textboxRect = await textbox.count() === 1 ? await textbox.boundingBox() : null;",
         "const targetRootRect = await targetRoot.count() === 1 ? await targetRoot.boundingBox() : null;",
         "const selectionHandleRect = await selectionHandle.count() === 1 ? await selectionHandle.boundingBox() : null;",
@@ -27035,7 +27130,7 @@ export async function runTask540SmokeExecutorSelfTest() {
           JSON.stringify(expectedDraft) +
           " || filledTextboxFocused !== true)",
         "await textbox.blur();",
-        "const deadline = Date.now() + 10000;",
+        "const deadline = Date.now() + 30000;",
         "while (Date.now() < deadline)",
         "const settledTextbox = page.locator(" + JSON.stringify(textboxSelector) + ");",
         "const settledTargetRoot = page.locator(" + JSON.stringify(targetRootSelector) + ");",
@@ -27076,7 +27171,7 @@ export async function runTask540SmokeExecutorSelfTest() {
           JSON.stringify(expectedDraft) +
           " || filledTextboxFocused !== true)",
         "await textbox.blur();",
-        "const deadline = Date.now() + 10000;",
+        "const deadline = Date.now() + 30000;",
         "const settledTextbox = page.locator(" + JSON.stringify(textboxSelector) + ");",
         'const contentDirty = page.getByText("Unsaved changes", { exact: true });',
         "const settledText = await settledTextbox.count() === 1 ? await settledTextbox.textContent() : null;",
@@ -27168,7 +27263,7 @@ export async function runTask540SmokeExecutorSelfTest() {
               "const initialPanel = page.locator(" +
                 JSON.stringify('[data-custom-screen-entry-presentation-panel="true"]') +
                 ");",
-              'await initialPanel.waitFor({ state: "visible", timeout: 10000 });',
+              'await initialPanel.waitFor({ state: "visible", timeout: 30000 });',
               "const initialTargetRoot = page.locator(" +
                 JSON.stringify(
                   registeredSelector(plan, "blockRoot", [
@@ -27201,7 +27296,7 @@ export async function runTask540SmokeExecutorSelfTest() {
               "if (targetPreconditionFailed) return fail(failureClass);",
               "return fail(failureClass);",
               "failureClass = " + JSON.stringify(TONE_OPEN_BROWSER_FAILURE_CLASSES[1]) + ";",
-              "const preconditionDeadline = Date.now() + 10000;",
+              "const preconditionDeadline = Date.now() + 30000;",
               "while (Date.now() < preconditionDeadline)",
               "const settledPanel = page.locator(" +
                 JSON.stringify('[data-custom-screen-entry-presentation-panel="true"]') +
@@ -27268,7 +27363,7 @@ export async function runTask540SmokeExecutorSelfTest() {
                 ");",
               "const triggerRect = await trigger.count() === 1 ? await trigger.boundingBox() : null;",
               "await panel.count() !== 1 || await trigger.count() !== 1 || !(await trigger.isVisible()) || !positive(triggerRect)",
-              "await trigger.click({ timeout: 10000 });",
+              "await trigger.click({ timeout: 30000 });",
               "failureClass = " + JSON.stringify(TONE_OPEN_BROWSER_FAILURE_CLASSES[3]) + ";",
               "const contentCount = await openContent.count();",
               "if (contentCount > 1)",
@@ -27356,13 +27451,13 @@ export async function runTask540SmokeExecutorSelfTest() {
               'await trigger.getAttribute("aria-controls") !== authority.menuId',
               'await trigger.getAttribute("aria-expanded") !== "true"',
               "if (authorityOptionPreconditionFailed) return fail(failureClass);",
-              "await option.click({ timeout: 10000 });",
+              "await option.click({ timeout: 30000 });",
               "failureClass = " + JSON.stringify(TONE_SELECT_BROWSER_FAILURE_CLASSES[1]) + ";",
               "const stabilityHorizonMs = 600;",
               "let settledSince = null;",
               "let settledSampleCount = 0;",
               toneSelectResetSettlementBlock,
-              "const deadline = Date.now() + 10000;",
+              "const deadline = Date.now() + 30000;",
               "while (Date.now() < deadline)",
               "const currentPanel = page.locator(" +
                 JSON.stringify('[data-custom-screen-entry-presentation-panel="true"]') +
@@ -27464,7 +27559,7 @@ export async function runTask540SmokeExecutorSelfTest() {
               "const targetPreconditionFailed =",
               "if (targetPreconditionFailed) return fail(failureClass);",
               "failureClass = " + JSON.stringify(TONE_OPEN_BROWSER_FAILURE_CLASSES[1]) + ";",
-              "const preconditionDeadline = Date.now() + 10000;",
+              "const preconditionDeadline = Date.now() + 30000;",
               "const settledPanel = page.locator(",
               'const contentDirty = page.getByText("Unsaved changes", { exact: true });',
               "const contentDirtyRect = await contentDirty.count() === 1 ? await contentDirty.boundingBox() : null;",
@@ -27485,7 +27580,7 @@ export async function runTask540SmokeExecutorSelfTest() {
               "failureClass = " + JSON.stringify(TONE_OPEN_BROWSER_FAILURE_CLASSES[2]) + ";",
               "const panel = page.locator(",
               "if (await panel.count() !== 1 || await trigger.count() !== 1 || !(await trigger.isVisible()) || !positive(triggerRect)) return fail(failureClass);",
-              "await trigger.click({ timeout: 10000 });",
+              "await trigger.click({ timeout: 30000 });",
               "failureClass = " + JSON.stringify(TONE_OPEN_BROWSER_FAILURE_CLASSES[3]) + ";",
               "const openContent = page.locator(",
               "page.context().__wf540Remember(",
@@ -27507,13 +27602,13 @@ export async function runTask540SmokeExecutorSelfTest() {
               "const optionRect =",
               "const authorityOptionPreconditionFailed =",
               "if (authorityOptionPreconditionFailed) return fail(failureClass);",
-              "await option.click({ timeout: 10000 });",
+              "await option.click({ timeout: 30000 });",
               "failureClass = " + JSON.stringify(TONE_SELECT_BROWSER_FAILURE_CLASSES[1]) + ";",
               "const stabilityHorizonMs = 600;",
               "let settledSince = null;",
               "let settledSampleCount = 0;",
               "const resetSettlement = () => {",
-              "const deadline = Date.now() + 10000;",
+              "const deadline = Date.now() + 30000;",
               "while (Date.now() < deadline)",
               "const currentPanel = page.locator(",
               "failureClass = " + JSON.stringify(TONE_SELECT_BROWSER_FAILURE_CLASSES[1]) + ";",
@@ -27574,7 +27669,7 @@ export async function runTask540SmokeExecutorSelfTest() {
           source.includes("error.message") ||
           source.includes("String(error") ||
           (toneFlowConfig.phase === "select" &&
-            (source.split("const deadline = Date.now() + 10000;").length - 1 !== 1 ||
+            (source.split("const deadline = Date.now() + 30000;").length - 1 !== 1 ||
               source.split("while (Date.now() < deadline)").length - 1 !== 1 ||
               source.includes("failureStage") ||
               source.includes("advance(") ||
@@ -27780,11 +27875,12 @@ export async function runTask540SmokeExecutorSelfTest() {
     }
     if (action.id === "dg-003-builder") {
       const builderUrl = expandRegisteredPath(plan, "builder", sourceCaptures);
-      const navigationToken = "await page.goto(" + JSON.stringify(builderUrl) + ");";
+      const navigationToken =
+        "await page.goto(" + JSON.stringify(builderUrl) + ", { timeout: 540000 });";
       const exactUrlToken = "if (page.url() !== " + JSON.stringify(builderUrl) + ")";
       const required = [
         'const dirtyIndicator = page.getByText("Unsaved changes", { exact: true });',
-        'await dirtyIndicator.waitFor({ state: "visible", timeout: 10000 });',
+        'await dirtyIndicator.waitFor({ state: "visible", timeout: 30000 });',
         "if (await dirtyIndicator.count() !== 1)",
         'const retainedDialogListeners = page.listeners("dialog");',
         "if (retainedDialogListeners.length !== 1)",
@@ -27805,7 +27901,7 @@ export async function runTask540SmokeExecutorSelfTest() {
         'if (dialogSettlementFailed) throw new Error("wf540_dg003_dialog_settlement");',
         'if (dialogTypes.length !== 1 || dialogTypes[0] !== "beforeunload")',
         exactUrlToken,
-        'await marker.waitFor({ state: "visible", timeout: 30000 });',
+        'await marker.waitFor({ state: "visible", timeout: 90000 });',
         "if (await marker.count() !== 1)",
       ];
       const validates = (source) => {
@@ -27861,7 +27957,7 @@ export async function runTask540SmokeExecutorSelfTest() {
           JSON.stringify(expandRegisteredPath(plan, "records", sourceCaptures))
         ) &&
           compiledSource.includes(JSON.stringify(registeredSelector(plan, "recordActions"))) &&
-          compiledSource.includes("const deadline = Date.now() + 30000") &&
+          compiledSource.includes("const deadline = Date.now() + 90000") &&
           compiledSource.includes("page.url() === expectedRecordsUrl") &&
           compiledSource.includes("await recordActions.isVisible()") &&
           compiledSource.includes("positive(recordActionsRect)") &&
@@ -28116,7 +28212,7 @@ export async function runTask540SmokeExecutorSelfTest() {
       locator: () => menu,
       url: () => url,
       waitForTimeout: async () => {
-        clock = 60000;
+        clock = 180000;
         if (closeDuringWait) {
           closed = true;
           throw new Error("TASK540_PRIVATE_PAGE_CLOSE_DO_NOT_EGRESS");

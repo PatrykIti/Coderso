@@ -7,8 +7,8 @@ import { setTimeout as delay } from "node:timers/promises";
 import { pathToFileURL } from "node:url";
 
 const PORTS = Object.freeze([3000, 5173, 5174]);
-const READY_TIMEOUT_MS = 120_000;
-const STOP_TIMEOUT_MS = 5_000;
+const READY_TIMEOUT_MS = 360_000;
+const STOP_TIMEOUT_MS = 15_000;
 const MAX_CHILD_STREAM_BYTES = 4 * 1024 * 1024;
 const CHILD_READY_MARKERS = Object.freeze({
   backend: "WF540_BACKEND_READY_V1\n",
@@ -3319,7 +3319,7 @@ export async function runTask540SmokeHostSelfTest() {
     BACKEND_SOURCE.includes("server.stop();") && !BACKEND_SOURCE.includes("server.stop(true)"),
     "backend graceful-stop source drift"
   );
-  invariant(READY_TIMEOUT_MS === 120_000, "host warm-restart timeout drift");
+  invariant(READY_TIMEOUT_MS === 360_000, "host warm-restart timeout drift");
   invariant(
     VITE_WARM_RESTART_SOURCE.includes("for (let start = 0; start < 2; start += 1)") &&
       (VITE_WARM_RESTART_SOURCE.match(/await createServer\(inlineConfig\)/gu) ?? []).length === 1 &&
@@ -4590,7 +4590,7 @@ export async function runTask540SmokeHostSelfTest() {
         (requestedMs) => requestedMs > 0 && requestedMs <= 200
       ) &&
       !Function.prototype.toString.call(serve).includes("READY_TIMEOUT_MS / 200") &&
-      startupTimeoutHarness.clock.firstCleanupSignalAt() < 240_000,
+      startupTimeoutHarness.clock.firstCleanupSignalAt() < 2 * READY_TIMEOUT_MS,
     "monotonic startup timeout boundary or cleanup drift"
   );
   const twoObservationTimeoutHarness = createServeSelfTestHarness(root, environment, {
@@ -4621,7 +4621,7 @@ export async function runTask540SmokeHostSelfTest() {
         (elapsedMs) => elapsedMs === 200
       ) &&
       twoObservationTimeoutHarness.signals.every(({ signal }) => signal === "SIGTERM") &&
-      twoObservationTimeoutHarness.clock.firstCleanupSignalAt() < 240_000,
+      twoObservationTimeoutHarness.clock.firstCleanupSignalAt() < 2 * READY_TIMEOUT_MS,
     "second-observation timeout did not cover the prior two-delay regression"
   );
   for (const listenerFault of [

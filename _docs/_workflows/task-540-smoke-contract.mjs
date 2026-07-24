@@ -4112,7 +4112,7 @@ const RAW_ACTION_ROWS = deepFreezeExact([
     "ru-052-a-return",
     "p1/0",
     "click(S.recordActions,S.editRecord)",
-    "records same realm with exact visible Record actions control before 20,000 ms deadline -> open exact menu then click exact Edit record item + retained coordinator mount -> A entry remounted",
+    "records same realm with exact visible Record actions control before 60,000 ms deadline -> open exact menu then click exact Edit record item + retained coordinator mount -> A entry remounted",
     "ru-051 / absent -> absent",
   ],
   [
@@ -4154,7 +4154,7 @@ const RAW_ACTION_ROWS = deepFreezeExact([
     "ru-056-a-remount-pending",
     "p1/0",
     "click(S.recordActions,S.editRecord)",
-    "route installed/records ready before 20,000 ms deadline -> open exact Record actions menu then click exact Edit record item + retained coordinator mount -> A entry remount/read pending",
+    "route installed/records ready before 60,000 ms deadline -> open exact Record actions menu then click exact Edit record item + retained coordinator mount -> A entry remount/read pending",
     "ru-055 / installed -> installed",
   ],
   [

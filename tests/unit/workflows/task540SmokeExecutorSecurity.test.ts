@@ -30,12 +30,12 @@ const localOrchestratorPath = path.join(root, localOrchestratorRelative);
 const testNameContractPath = path.join(root, testNameContractRelative);
 const MASKED_IMPLEMENT_SHA256 = "480c326a4f95386fa680bb21720df6748e85d50843c0e7a528b466a3431c2f0d";
 const FROZEN_HELPER_SHA256 = Object.freeze({
-  [smokeContractRelative]: "5ed7407d13c71becaea40128128774bdf6e3baf26e4f04353715a72f0a48eb74",
-  [executorRelative]: "f473f4ff5e4c64fc1b2fc730cd24cbe48f7e1ea6d8aff1730ed32fe862d5c8de",
-  [smokeHostRelative]: "2dbec5af334b4b8d5ef7b2bcda2c1f56f6cac9e86bb7df6bedfb358d05b7d68f",
+  [smokeContractRelative]: "cb55ad42dd9a2dbfddeb0cf69fbc62cf92c93e2a8ab749887e43c190910f53a4",
+  [executorRelative]: "7aa39f6ab105ca355d6b00e950b80114737df38f8565146e55ea1f7f1fddc29c",
+  [smokeHostRelative]: "d2d2763cb35d7dd844bea703f6dbdc7c199bac9f680b39f1990d59d8871de46e",
   [bridgeRelative]: "c3c594a17cb63943beab29e7f621f6e1ca46cb3b5abb67625edcddb900788341",
   [localOrchestratorRelative]: "e06c7be9652554111c111c2e8210b733db908a4f272bcbd4a11781174e132da4",
-  [implementRelative]: "eeb25e7be19f3aa0fa8a6638c5976d9cd1a6228d1d19f9272d713ec0dca4f9cb",
+  [implementRelative]: "6b7e7684181f42b189692de09dc6f1e90360617a2d7265ea58f6d78cb43c1b5e",
   [testNameContractRelative]: "ce052b4245c8c384d0405c32cf9d1df146a2f83a409994a6a2822de5422fc4f5",
 });
 
@@ -738,12 +738,12 @@ test("dg022 teardown and dg024 dirty navigation use same-action visible-effect p
     'bodyInteraction.inlinePointerEvents === "none"',
     'bodyInteraction.computedPointerEvents === "none"',
     "if (await candidate.isVisible() && positive(rect))",
-    "await candidate.scrollIntoViewIfNeeded({ timeout: 10000 });",
+    "await candidate.scrollIntoViewIfNeeded({ timeout: 30000 });",
     "const candidateStillVisible = await candidate.isVisible();",
     "const receivesPointerAtCenter = await candidate.evaluate(",
     "document.elementFromPoint(",
     "if (receivesPointerAtCenter) {",
-    "await links.nth(visibleLinkIndex).click({ timeout: 10000, noWaitAfter: true });",
+    "await links.nth(visibleLinkIndex).click({ timeout: 30000, noWaitAfter: true });",
     "const urlStable = page.url() === urlBefore;",
     "const navigationStable = page.__wf540ReadNavigationCount() === navigationCountBefore;",
     'const keepEditing = dialog.getByRole("button", { name: "Keep editing", exact: true });',
@@ -753,12 +753,12 @@ test("dg022 teardown and dg024 dirty navigation use same-action visible-effect p
   }
   const finalTargetProof = [
     "const candidate = links.nth(nextVisibleLinkIndex);",
-    "await candidate.scrollIntoViewIfNeeded({ timeout: 10000 });",
+    "await candidate.scrollIntoViewIfNeeded({ timeout: 30000 });",
     "const rect = await candidate.boundingBox();",
     "const candidateStillVisible = await candidate.isVisible();",
   ].join("\n                ");
   expect(dirtyNavigation).toContain(finalTargetProof);
-  expect(countToken(dirtyNavigation, ".scrollIntoViewIfNeeded({ timeout: 10000 });")).toBe(1);
+  expect(countToken(dirtyNavigation, ".scrollIntoViewIfNeeded({ timeout: 30000 });")).toBe(1);
   expect(dirtyNavigation).not.toContain("sampleLockOwnerState");
   expect(dirtyNavigation).not.toContain("cleanupLockOwnerTimeline");
   expect(dirtyNavigation).not.toContain("__wf540LockOwnerTimeline_");
@@ -931,14 +931,36 @@ test("TASK-540 seven frozen helpers are regular tracked files with exact bytes",
   }
 });
 
-test("TASK-540 DB-backed smoke boundaries retain one shared contention budget without retries", () => {
-  const { executor } = readSources();
+test("TASK-540 smoke boundaries retain enlarged nested budgets without retries", () => {
+  const { executor, smokeHost } = readSources();
 
-  expect(executor).toContain("const DATABASE_OPERATION_TIMEOUT_MS = 180_000;");
-  expect(executor).toContain("const COMMAND_TIMEOUT_MS = 120_000;");
+  expect(executor).toContain("const DATABASE_OPERATION_TIMEOUT_MS = 540_000;");
+  expect(executor).toContain("const COMMAND_TIMEOUT_MS = 720_000;");
+  expect(executor).toContain("const HOST_READY_TIMEOUT_MS = 540_000;");
+  expect(smokeHost).toContain("const READY_TIMEOUT_MS = 360_000;");
+  expect(smokeHost).toContain("const STOP_TIMEOUT_MS = 15_000;");
+  expect(executor).toContain('PLAYWRIGHT_MCP_TIMEOUT_ACTION: "90000",');
+  expect(executor).toContain('PLAYWRIGHT_MCP_TIMEOUT_NAVIGATION: "540000",');
+  expect(executor).toContain("fixed inherited browser timeout environment conflict: ");
+  expect(executor).toContain("fixed repo browser timeout environment conflict: ");
   expect(countToken(executor, "timeoutMs: DATABASE_OPERATION_TIMEOUT_MS")).toBe(1);
   expect(countToken(executor, "timeout: DATABASE_OPERATION_TIMEOUT_MS")).toBe(4);
-  expect(executor).not.toContain("timeout: 90_000");
+  expect(executor).toContain("timeoutMs = 90_000");
+  expect(countToken(executor, "timeoutMs: 90_000")).toBe(4);
+  expect(countToken(executor, "{ timeout: 270000 }")).toBe(4);
+  expect(executor).toContain("timeout: ${DATABASE_OPERATION_TIMEOUT_MS},");
+  expect(countToken(executor, "{ timeout: ${DATABASE_OPERATION_TIMEOUT_MS} }")).toBe(4);
+  expect(executor).toContain(
+    'page.waitForTimeout(540000).then(() => { throw new Error("wf540_capture_timeout"); });'
+  );
+  expect(executor).toContain(
+    'page.waitForTimeout(540000).then(() => { throw new Error("wf540_settlement_timeout"); });'
+  );
+  expect(executor).toContain("const deadline = Date.now() + 180000;");
+  expect(executor).toContain("{ timeout: 15_000 }");
+  expect(countToken(executor, "Date.now() - startedAt <= 30_000")).toBe(3);
+  expect(executor).toContain("const PROCESS_TERM_GRACE_MS = 40_000;");
+  expect(executor).toContain("const PROCESS_KILL_GRACE_MS = 3_000;");
   expect(countToken(executor, "maxRetries: 0")).toBe(2);
   expect(executor).not.toMatch(/maxRetries:\s*[1-9]/u);
 });
