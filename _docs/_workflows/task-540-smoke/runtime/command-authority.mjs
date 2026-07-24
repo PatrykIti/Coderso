@@ -25,31 +25,6 @@ function shellDisplay(program, args) {
   return [program, ...args].map(quote).join(" ");
 }
 
-function createBoundedStream(maximumBytes = MAX_STREAM_BYTES) {
-  invariant(
-    Number.isSafeInteger(maximumBytes) && maximumBytes > 0,
-    "bounded stream limit is invalid"
-  );
-  const chunks = [];
-  let size = 0;
-  let exceeded = false;
-  return Object.freeze({
-    push(chunk) {
-      const bytes = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
-      const remaining = maximumBytes - size;
-      if (remaining > 0) {
-        const retained = bytes.subarray(0, remaining);
-        chunks.push(retained);
-        size += retained.length;
-      }
-      if (bytes.length > Math.max(0, remaining)) exceeded = true;
-    },
-    finish() {
-      return Object.freeze({ bytes: Buffer.concat(chunks, size), exceeded });
-    },
-  });
-}
-
 function configuredSensitiveValues(...sources) {
   const values = [];
   const append = (value) => {
@@ -580,7 +555,6 @@ export function createCommandAuthorityRuntime({
     LocalCommandAuthority,
     buildBrowserStreamIntegrity,
     configuredSensitiveValues,
-    createBoundedStream,
     rawBytesAreSensitive,
     shellDisplay,
   });
