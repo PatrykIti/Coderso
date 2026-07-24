@@ -1,9 +1,6 @@
-import { eq, and, desc } from "drizzle-orm";
-
-import { db } from "../../db/client";
-import { solutionKitInstallRuns } from "../../db/schema";
 import {
   applySolutionKitInstall,
+  defaultLegacyInstallLedger,
   getSolutionKitInstallRun,
   rollbackSolutionKitInstall,
   type ApplySolutionKitInstallInput,
@@ -12,6 +9,7 @@ import {
   type SolutionKitInstallRunRecord,
   type SolutionKitInstallSummary,
 } from "./solutionKitsInstallService";
+import type { JsonObject } from "./fullSitePackage/types";
 import { buildSolutionKitManifest, type SolutionKitManifest } from "./kitManifest";
 import { buildTemplateSeedsForKit } from "./kitTemplateSeeds";
 import { getSolutionKitFromCatalog } from "./solutionKitsCatalog";
@@ -122,8 +120,7 @@ const resolveKitDefinition = (
   kitId: string,
   kitDefinitionOverride?: SolutionKitDefinition
 ): SolutionKitDefinition => {
-  const definition =
-    kitDefinitionOverride ?? getSolutionKitFromCatalog(kitId as SolutionKitId);
+  const definition = kitDefinitionOverride ?? getSolutionKitFromCatalog(kitId as SolutionKitId);
   if (!definition) throw new Error("solution_kit_not_found");
   return definition;
 };
@@ -146,22 +143,20 @@ const persistRunMetadata = async (
   const failed = templateInstall?.summary.failed ?? 0;
   const nextStatus = failed > 0 && run.status === "success" ? "failed" : run.status;
   const nextError =
-    failed > 0 && run.status === "success"
-      ? `template_failed_operations:${failed}`
-      : run.error;
+    failed > 0 && run.status === "success" ? `template_failed_operations:${failed}` : run.error;
 
-  const [updated] = await db
-    .update(solutionKitInstallRuns)
-    .set({
-      status: nextStatus,
-      summary,
-      error: nextError,
-      options,
-      updatedAt: new Date(),
-    })
-    .where(eq(solutionKitInstallRuns.id, run.id))
-    .returning();
+  const patchRunMetadata = defaultLegacyInstallLedger.patchRunMetadata;
+  if (!patchRunMetadata) throw new Error("solution_kit_install_failed");
+  const patched = await patchRunMetadata({
+    runId: run.id,
+    status: nextStatus,
+    summary: summary as unknown as JsonObject,
+    error: nextError,
+    options: options as JsonObject,
+  });
 
+  if (!patched) return { ...run, options, summary, status: nextStatus, error: nextError };
+  const updated = await getSolutionKitInstallRun(run.id);
   if (!updated) return { ...run, options, summary, status: nextStatus, error: nextError };
 
   return {
@@ -227,7 +222,7 @@ export async function applyKitInstall(
 
 const resolveSourceRun = async (input: RollbackSolutionKitInstallInput) => {
   if (input.sourceRunId) {
-    const run = await getSolutionKitInstallRun(input.sourceRunId);
+    const run = await defaultLegacyInstallLedger.getRun(input.sourceRunId);
     if (!run) throw new Error("solution_kit_install_run_not_found");
     if (run.mode !== "apply") throw new Error("solution_kit_rollback_invalid_source");
     return run;
@@ -235,35 +230,12 @@ const resolveSourceRun = async (input: RollbackSolutionKitInstallInput) => {
 
   if (!input.kitId) throw new Error("solution_kit_rollback_source_required");
 
-  const [run] = await db
-    .select()
-    .from(solutionKitInstallRuns)
-    .where(
-      and(
-        eq(solutionKitInstallRuns.kitId, input.kitId),
-        eq(solutionKitInstallRuns.mode, "apply"),
-        eq(solutionKitInstallRuns.status, "success")
-      )
-    )
-    .orderBy(desc(solutionKitInstallRuns.createdAt))
-    .limit(1);
+  const findLatestSuccessfulApplyRun = defaultLegacyInstallLedger.findLatestSuccessfulApplyRun;
+  if (!findLatestSuccessfulApplyRun) throw new Error("solution_kit_install_failed");
+  const run = await findLatestSuccessfulApplyRun(input.kitId);
 
   if (!run) throw new Error("solution_kit_rollback_source_not_found");
-
-  return {
-    id: run.id,
-    kitId: run.kitId,
-    mode: run.mode as SolutionKitInstallRunRecord["mode"],
-    status: run.status as SolutionKitInstallRunRecord["status"],
-    actorId: run.actorId ?? null,
-    rollbackOfRunId: run.rollbackOfRunId,
-    options: asRecord(run.options),
-    summary: asRecord(run.summary) as SolutionKitInstallRunRecord["summary"],
-    error: run.error,
-    createdAt: run.createdAt,
-    updatedAt: run.updatedAt,
-    finishedAt: run.finishedAt,
-  };
+  return run;
 };
 
 export type RollbackKitInstallResult = SolutionKitInstallResult & {
@@ -275,9 +247,8 @@ export async function rollbackKitInstall(
 ): Promise<RollbackKitInstallResult> {
   const sourceRun = await resolveSourceRun(input);
 
-  const installerOptions = isRecord(sourceRun.options.kitInstaller)
-    ? sourceRun.options.kitInstaller
-    : null;
+  const sourceOptions = asRecord(sourceRun.options);
+  const installerOptions = isRecord(sourceOptions.kitInstaller) ? sourceOptions.kitInstaller : null;
   const templateRollbackPlan = toTemplateRollbackPlan(
     installerOptions ? installerOptions.templateRollbackPlan : null
   );
