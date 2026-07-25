@@ -38,29 +38,34 @@ This leaf is the sole writer for:
 - `core/admin/ui/forms/FormRuntimePreviewDialog.tsx`;
 - new `tests/vitest/forms/formSupportingText.test.ts`;
 - new `tests/vitest/ui-integration/form-supporting-text.test.tsx`;
-- new `tests/unit/forms/formSupportingTextPersistence.test.ts`.
+- new `tests/unit/forms/formSupportingTextPersistence.test.ts`;
+- new `tests/integration/routes/formSupportingTextRoutes.test.ts`.
 
 This leaf alone exports `buildFormaDomContentResources`. L01/L02 must not edit or
-duplicate the aggregate. The exact owned path count is derived by TASK-547-07
-from this list; no task or workflow may retain a hardcoded family-wide count.
+duplicate the aggregate. TASK-547-07 derives the live path count from its
+ownership map; a separately pinned expected-count value is an integrity
+assertion that its owner must update whenever the map changes, not an
+alternative source of path ownership.
 
 The generic Forms files are the smallest verified end-to-end path: settings owns
 the strict persisted key, theme resolves it without a default, the design panel
 authors and clears it, canvas/runtime preview expose authoring parity, and Form
-Embed owns public SSR placement. The two new Form Embed modules are a required
-cohesive split of the currently 1,922-line `formEmbed.tsx`: contract/schema/
-normalization move to `formEmbedContract.ts`, while field DOM allocation and
-field-control rendering move to `formEmbedFields.tsx`; `formEmbed.tsx` remains
-the stable public entry and re-exports every pre-existing public contract symbol.
-All three files must finish at or below 1,000 physical lines.
+Embed owns public SSR placement. The two new Form Embed modules preserve the
+required cohesive split of the pre-split 1,922-line `formEmbed.tsx`:
+contract/schema/normalization live in `formEmbedContract.ts`, while field DOM
+allocation and field-control rendering live in `formEmbedFields.tsx`;
+`formEmbed.tsx` remains the stable public entry and re-exports every pre-existing
+public contract symbol. All three files must finish at or below 1,000 physical
+lines.
 
 These paths remain explicitly read-only: `core/widgets/core/formRuntimeScript.ts`
-already hides the entire `data-form-embed-form-body` for the default success
-behavior, and the over-limit `tests/vitest/widgets/formEmbed.test.tsx` must not
-receive more lines. Existing `FormBuilderPage` group-replace plumbing,
-`formsClient` normalization and Form routes/services already transport the
-shared settings contract and require no production edit. Run their focused
-regression suites read-only rather than claiming or changing them.
+already implements `show-message-keep-form`, and the over-limit
+`tests/vitest/widgets/formEmbed.test.tsx` must not receive more lines. Existing
+`FormBuilderPage` group-replace plumbing and `formsClient` normalization already
+transport the shared settings contract and require no production edit. The
+focused new Bun route test may exercise route registration/schema/error mapping
+but must not edit route or service production modules. TASK-547-04, not this
+leaf, owns the Page Form block props and `pageRendererV2` mapping.
 
 This is not a new widget authoring surface: do not add a widget type, preset,
 Wizard/Visual/Advanced editor control, module-pack entry or public endpoint.
@@ -83,6 +88,7 @@ export const PROJECT_BRIEF_INITIAL_NOTE =
   "Odpisujemy zwykle w ciągu jednego dnia roboczego. Bez zobowiązań i bez sprzedażowej presji.";
 export const PROJECT_BRIEF_SUCCESS_MESSAGE =
   "Dziękujemy! Odezwiemy się z pierwszym pomysłem na Twój dom — do usłyszenia.";
+export const PROJECT_BRIEF_LOADING_LABEL = "Wysyłanie...";
 ```
 
 The ordered native fields are:
@@ -105,6 +111,16 @@ The `stage` options are exact and ordered:
 The message placeholder is exactly:
 `Napisz, jaki dom Ci się marzy, gdzie jest działka i jaki styl lubisz.`
 
+There is no blank/placeholder option in the designated reference. The rendered
+select contains exactly those four options; `Mam działkę` is its initial native
+selection. The seeded stage settings contain the exact options and no
+`placeholder` or `defaultValue` own key. A forged missing or blank submission
+still fails required-field validation. The textarea has exactly `rows="5"`.
+The loading literal above is a bounded native localization addition; it does not
+claim to be prototype copy. The reference defines no error copy. Existing safe,
+code-specific Forms runtime errors remain unchanged native security behavior,
+with no reference-parity or extra-residual claim.
+
 Required field validation and the consent field are explicit native production
 additions; they do not authorize altered labels or a claim that the static fake
 form already implemented those protections. Form `desired.description` is
@@ -115,8 +131,8 @@ owns and exports exact `PROJECT_BRIEF_INITIAL_NOTE` and persists it only as
 text block. The Form theme alone owns its present
 `label:PROJECT_BRIEF_SUBMIT_LABEL`; the TASK-547-04 contact Form block does not
 override `submitLabel`, so Form Embed inherits the exact native label. The Page
-imports only `PROJECT_BRIEF_FORM_TITLE` for its required visible block heading
-and does not import the note for rendering.
+imports `PROJECT_BRIEF_FORM_TITLE` and `PROJECT_BRIEF_LOADING_LABEL` for its
+required visible Form block props; it does not import the note for rendering.
 
 ## Native Submit Supporting-Text Contract
 
@@ -139,6 +155,12 @@ The property is strict and present-only:
   `FORM_SCHEMA_LIMITS.submitSupportingText === 2_000` characters;
 - the strict Form create/update settings schema allowlists the key, rejects
   empty/whitespace-only, oversized and unknown sibling/nested properties;
+- before this leaf implements the seed, TASK-547-02-L02 must extend
+  `assertFormNestedContract` to admit this exact key and strictly reject blank,
+  2,001-character, wrong-type and unknown submit keys, importing
+  `FORM_SCHEMA_LIMITS.submitSupportingText` from the Forms domain owner instead
+  of duplicating `2_000`; adapter preflight must reject rather than rely on
+  fail-soft normalization;
 - the defensive normalizer omits blank or oversized input without truncating it;
 - `getDefaultFormSettings()`, absent-theme normalization,
   `FORM_THEME_DEFAULTS`, `formEmbedDefaults` and legacy Form documents seed no
@@ -148,7 +170,9 @@ The property is strict and present-only:
   byte-identical to the pre-key contract and emits no supporting-text DOM node;
 - `FormDesignPanel` provides one `Textarea` under Submit with exact
   `aria-label="Submit supporting text"`,
-  `data-form-theme-control="submit.supportingText"` and `maxLength={2_000}`.
+  `data-form-theme-control="submit.supportingText"` and
+  `maxLength={FORM_SCHEMA_LIMITS.submitSupportingText}` imported from the
+  domain owner, never a duplicated `2_000` UI literal.
   Typing non-blank copy emits a complete submit-group replacement; its exact
   `aria-label="Reset submit supporting text"` reset/clear control deletes only
   `supportingText`, preserves sibling submit keys and emits an undefined group
@@ -156,26 +180,136 @@ The property is strict and present-only:
 - `FormCanvas` and `FormRuntimePreviewDialog` render the normalized resolved
   copy exactly once immediately after their submit-control row, using the
   existing helper-text visual treatment;
-- public Form Embed renders one `<p data-form-submit-supporting-text="true">`
-  immediately after the submit-control wrapper, still inside
-  `<div data-form-embed-form-body="true">`; it renders no such element when the
-  key is absent;
-- the existing success node stays outside the body and remains the sole
-  `role="alert" aria-live="polite"` success target. The existing default
-  `show-message-hide-form` branch hides the body (and therefore the supporting
-  text) before/while exposing the exact success message. Do not edit
-  `formRuntimeScript.ts` and do not add a second live region.
+- public Form Embed renders the supporting text immediately after the
+  submit-control wrapper, still inside
+  `<div data-form-embed-form-body="true">`; it renders no supporting-text node
+  when the key is absent;
+- for `show-message-keep-form` plus authored supporting text, that one paragraph
+  is the existing `data-form-embed-success="true"` target as well as
+  `data-form-submit-supporting-text="true"`. It initially contains the note;
+  the unchanged runtime writes the success message into the same node and keeps
+  the body/controls visible. It is the sole `aria-live="polite"` target and has
+  no `role="alert"` before or after mutation, so the static initial note is not
+  exposed as an alert;
+- for every non-combined case, including keep-form without authored supporting
+  text and the other success behaviors, preserve the legacy separate hidden
+  success target with `role="alert" aria-live="polite"` outside the body so
+  hide-form/reset behavior does not regress. No second success target is emitted
+  in any one form and `formRuntimeScript.ts` remains read-only.
+
+## Present-Only Form Embed Presentation Contract
+
+L03 also adds the smallest generic Form Embed presentation seam needed for the
+reference without changing the persisted Form resource:
+
+```ts
+export const FORM_EMBED_TEXTAREA_ROWS_LIMITS = {
+  min: 2,
+  max: 20,
+  legacyDefault: 4,
+} as const;
+export const FORM_EMBED_LOADING_LABEL_MAX_LENGTH = 1_000;
+export const FORM_EMBED_SUCCESS_BEHAVIORS = [
+  "show-message-hide-form",
+  "show-message-reset-form",
+  "show-message-keep-form",
+] as const;
+
+export type FormEmbedFields = {
+  showLabels?: boolean;
+  showRequiredIndicator?: boolean;
+  textareaRows?: number;
+  showSelectPrompt?: boolean;
+};
+
+export type FormEmbedSubmitBehavior = {
+  loadingLabel?: string;
+  successBehavior?: (typeof FORM_EMBED_SUCCESS_BEHAVIORS)[number];
+};
+```
+
+`textareaRows` is an integer from 2 through 20. `showSelectPrompt` is boolean.
+`loadingLabel` is a trimmed, non-empty string at most
+`FORM_EMBED_LOADING_LABEL_MAX_LENGTH === 1_000` characters; its existing schema
+and normalizer now consume that owner constant, and invalid input resolves to
+the unchanged existing pending-label fallback. Only the two new field keys
+`textareaRows` and `showSelectPrompt` are present-only:
+`formEmbedDefaults`, absent normalization and serialized legacy data do not gain
+them. At render time an absent `textareaRows` retains four rows and absent
+`showSelectPrompt` retains the legacy synthetic prompt.
+`FORM_EMBED_SUCCESS_BEHAVIORS` centralizes the existing enum without changing
+its default. These rules preserve legacy bytes and behavior.
+
+Normalization and rendering stay separate so a resolved default never becomes
+authored data:
+
+```ts
+function normalizeFormEmbedFields(value: FormEmbedFields | undefined): FormEmbedFields {
+  return {
+    showLabels: resolveExistingShowLabels(value?.showLabels),
+    showRequiredIndicator: resolveExistingRequiredIndicator(
+      value?.showRequiredIndicator
+    ),
+    ...(isTextareaRows(value?.textareaRows)
+      ? { textareaRows: value.textareaRows }
+      : {}),
+    ...(typeof value?.showSelectPrompt === "boolean"
+      ? { showSelectPrompt: value.showSelectPrompt }
+      : {}),
+  };
+}
+
+function resolveFormEmbedFieldPresentation(value?: FormEmbedFields) {
+  return {
+    textareaRows:
+      value?.textareaRows ?? FORM_EMBED_TEXTAREA_ROWS_LIMITS.legacyDefault,
+    showSelectPrompt: value?.showSelectPrompt ?? true,
+  };
+}
+```
+
+The strict schema rejects invalid authored values; the defensive normalizer
+omits invalid new field keys rather than clamping or emitting defaults. The
+renderer receives resolved presentation separately and never writes it back to
+the document.
+
+TASK-547-04-L01 exclusively authors the contact Page Form block props:
+
+```ts
+{
+  title: PROJECT_BRIEF_FORM_TITLE,
+  textareaRows: 5,
+  showSelectPrompt: false,
+  loadingLabel: PROJECT_BRIEF_LOADING_LABEL,
+  successBehavior: "show-message-keep-form",
+}
+```
+
+Its owned Page renderer mapping passes those present Page props to
+`FormEmbedData.fields` and `FormEmbedData.submitBehavior`; its Page contract
+strictly allowlists, normalizes and round-trips every consumed present-only
+prop, importing `FORM_EMBED_TEXTAREA_ROWS_LIMITS` and
+`FORM_EMBED_LOADING_LABEL_MAX_LENGTH` plus
+`FORM_EMBED_SUCCESS_BEHAVIORS` from L03's domain owner instead of duplicating
+bounds or enum values. L03 does not put any of them in `project-brief` Form
+desired data and does not edit Page paths. With `showSelectPrompt:false`, a
+configured select renders its substantive options only; the no-options disabled
+state may retain its existing neutral diagnostic.
 
 `core/widgets/core/formEmbed.tsx` remains the public import boundary for all
 existing exports: `FormEmbedVariantId`, `FormEmbedLayout`, `FormEmbedStyle`,
 `FormEmbedFields`, `FormEmbedNavigation`, `FormEmbedSubmitBehavior`,
 `ResolvedFormField`, `FormEmbedResolvedData`, `FormEmbedData`,
 `formEmbedThemeDefaultColorValues`, `isFormEmbedThemeDefaultStyleValue`,
-`resolveFormEmbedSpacing`, `formEmbedSchema`, `formEmbedDefaults`,
+`resolveFormEmbedSpacing`, `clampSavedProgressTtl`, `formEmbedSchema`,
+`formEmbedDefaults`,
 `resolveFormEmbedRuntimeErrorMessage`, `normalizeFormEmbedData`,
 `FormEmbedBlock`, `formEmbedEditorContract` and `createFormEmbedWidget`.
-Extraction may add internal exports, but no existing consumer import path,
-runtime-script contract or rendered legacy markup may change.
+It also re-exports new owners `FORM_EMBED_TEXTAREA_ROWS_LIMITS` and
+`FORM_EMBED_LOADING_LABEL_MAX_LENGTH` plus
+`FORM_EMBED_SUCCESS_BEHAVIORS`. Extraction may add internal exports, but no
+existing consumer import path, runtime-script contract or rendered legacy markup
+may change.
 
 The Form resource `name` and TASK-547-04-L01 Page Form block `props.title` both
 use `PROJECT_BRIEF_FORM_TITLE`. The title is public: the native Page renderer
@@ -199,20 +333,33 @@ The Form seed has:
 - exactly the five fields above;
 - exactly one enabled `success_message` action whose config message is the same
   exact success constant;
+- no Form-level success-behavior, loading-label, textarea-row or
+  select-prompt field; those are Page Form block presentation owned by
+  TASK-547-04-L01;
 - no form-level `enabled`, redirect, recipient, mail, webhook or secret config.
 
 ## Security Contract
 
-- No new endpoint. Submission uses the existing public Forms endpoint and
-  strict native field/action normalization. Admin Form create/update remains an
-  internal authenticated session route with existing Forms RBAC and CSRF; this
-  leaf does not alter route visibility, permissions or cache behavior.
-- Public submission is allowed only for a published Form whose normalized
-  `submissionAccess` is `public`; it does not use admin-session CSRF. Internal
-  mode retains the existing session/API-key-scope access evaluator.
-- Runtime access must require the shared signed submission nonce, charge the
-  `public_write` rate-limit bucket and enforce configured optional reCAPTCHA v3
-  using action `public_write`.
+- No new endpoint and no route production edit. Canonical
+  `POST /admin/api/forms` and `PATCH /admin/api/forms/:id` are internal
+  authenticated-admin-session writes. Both require `forms:write`, shared
+  session CSRF, the `admin_write` bucket and strict
+  `formCreateSchema`/`formUpdateSchema` reject-unknown validation. Expected
+  domain failures map through the existing centralized Form error mapper.
+- Canonical `PUT /admin/api/forms/:id/actions` is likewise internal,
+  session-authenticated, `forms:write`, CSRF-protected and charged to
+  `admin_write`; `formActionsUpdateSchema` strictly validates the sole seeded
+  `success_message` action and maps known invalid action errors to
+  `form_action_invalid`.
+- Public-site `POST /forms/:id/submissions` accepts this published public Form
+  through the evaluator's anonymous/session public principal, requires the
+  signed Form nonce, charges `public_write`, requires configured reCAPTCHA v3
+  with action `public_write` for anonymous traffic, and does not use
+  admin-session CSRF.
+- Internal `POST /admin/api/forms/:id/submissions` requires either a coherent
+  session with `forms:write` plus session CSRF, or an API key with exact scope
+  `forms.submit`; it charges `admin_write`. Anonymous public-mode access never
+  inherits this admin mount.
 - Consent is required and defaults false. Unknown form, settings, theme/submit,
   field and action properties fail closed. Supporting text is inert plain React
   text, never HTML, Markdown or script input; normal React escaping is preserved.
@@ -220,6 +367,18 @@ The Form seed has:
   explicit post-install operator configuration.
 - Tests use fake data and DB-backed closure tests delete only their own scoped
   submission.
+
+`tests/integration/routes/formSupportingTextRoutes.test.ts` is a focused Bun
+registration/boundary suite. With fake handlers it proves the exact methods and
+paths above, including the distinct public-site and internal submission mounts,
+exact permission/scope/CSRF/rate middleware, real schema identity, unknown/
+blank/over-limit supporting-text rejection, valid boundary acceptance, and
+mapped `form_invalid`/`form_not_found` responses through exported
+`mapFormError`.
+Existing `formActionsContract` and `formActionsRoutes` suites retain strict
+action-config and route-registration coverage. Existing public write security
+suites remain read-only and TASK-547-06 reruns their nonce, rate-plan,
+CSRF/API-key and captcha scenarios against the installed Form.
 
 ## Aggregate Contract
 
@@ -237,20 +396,27 @@ preserve:
 - every entry's exact `seoDescription`;
 - every entry's exact source-backed `cardHref`, including Aurora-only
   `/projekty/aurora` and five `/projekty` values;
+- exact listing semantic `description`/`href` bindings, empty item actions and
+  `{limit:24,offset:0}`;
 - neutral detail `titlePattern === "{{ title }}"`;
 - detail `seo.titlePattern` equal to
   `{{ title }} — projekt pokazowy — FormaDom Studio`;
 - detail `seo.descriptionField === "seoDescription"`;
+- every Aurora-only detail binding remains required and has no fallback, so the
+  aggregate cannot make non-Aurora detail public;
 - absence of any detail related/listing-query dependency;
 - null Form description plus the exact exported initial-note constant at the
   sole `settings.theme.submit.supportingText` placement;
 - the exact submit label and success message;
-- the exact visible Form resource title `Zacznij projekt` used by the Page block.
+- the exact visible Form resource title `Zacznij projekt` plus the exported
+  Polish loading presentation literal used by the Page block.
 
 TASK-547-04-L01 must assert that the contact Page contains no sibling block with
 `PROJECT_BRIEF_INITIAL_NOTE`; the Form binding is the only Page-owned connection
-to this note. This cross-leaf assertion does not transfer any TASK-547-04 file to
-L03.
+to this note. It also owns present Page props `textareaRows:5`,
+`showSelectPrompt:false`, the exact loading label and
+`successBehavior:"show-message-keep-form"`. This cross-leaf assertion does not
+transfer any TASK-547-04 file to L03.
 
 The aggregate adds no ID, default, copy, status or fallback and never serializes
 `undefined` through an ad hoc replacement. It may assert invariants and return
@@ -308,10 +474,27 @@ export function resolveFormTheme(theme?: FormFormTheme): ResolvedFormTheme {
   };
 }
 
-function SubmitSupportingText({ value }: { value?: string }) {
-  return value === undefined ? null : (
-    <p data-form-submit-supporting-text="true">{value}</p>
-  );
+function SubmitMessageSlot({
+  supportingText,
+  successBehavior,
+}: {
+  supportingText?: string;
+  successBehavior: FormEmbedSubmitBehavior["successBehavior"];
+}) {
+  if (supportingText && successBehavior === "show-message-keep-form") {
+    return (
+      <p
+        data-form-submit-supporting-text="true"
+        data-form-embed-success="true"
+        aria-live="polite"
+      >
+        {supportingText}
+      </p>
+    );
+  }
+  return supportingText ? (
+    <p data-form-submit-supporting-text="true">{supportingText}</p>
+  ) : null;
 }
 
 export function buildProjectBriefForm(): ResourceSeed {
@@ -335,8 +518,13 @@ export function buildProjectBriefForm(): ResourceSeed {
     actions: [enabledSuccessMessageAction(PROJECT_BRIEF_SUCCESS_MESSAGE)],
   });
   assertExactFormCopyAndSecurity(desired);
+  assertExactStageOptions(desired, {
+    options: PROJECT_BRIEF_STAGE_OPTIONS,
+    authoredPlaceholder: undefined,
+  });
   assertFormDescription(desired, null);
   assertSubmitSupportingText(desired, PROJECT_BRIEF_INITIAL_NOTE);
+  assertNoPresentationPropsInFormDesired(desired);
   return { key: PROJECT_BRIEF_FORM_KEY, desired };
 }
 
@@ -355,6 +543,8 @@ export function buildFormaDomContentResources(): FormaDomContentResources {
   };
   assertReferenceClosure(resources);
   assertProjectLinkMatrixPreserved(resources.entries);
+  assertListingBindingsAndPaginationPreserved(resources);
+  assertRequiredAuroraEligibilityPreserved(resources.detailPages[0]);
   assertDetailSeoPreserved(resources.detailPages[0]);
   assertVisibleFormTitlePreserved(resources.forms[0], PROJECT_BRIEF_FORM_TITLE);
   return resources;
@@ -364,16 +554,21 @@ export function buildFormaDomContentResources(): FormaDomContentResources {
 **Data flow:** exact Form literals → strict Form theme/settings, field and action
 normalizers → Form `{key,desired}` seed with null description and present submit
 supporting text → Form service/client persistence → shared resolver → design
-canvas/runtime preview/public Form Embed → compose current L01/L02 child arrays →
-assert closed refs/form and SEO invariants → canonical content resource slice.
+canvas/runtime preview/public Form Embed. Independently, TASK-547-04 maps the
+contact Page's present-only rows/prompt/loading/success-behavior props into
+Form Embed; those values never enter the Form seed. L03 then composes current
+L01/L02 child arrays → asserts closed refs/listing/detail eligibility/Form/SEO
+invariants → returns the canonical content resource slice.
 `PROJECT_BRIEF_INITIAL_NOTE` never flows through Form description or a Page text
 block.
 
 **Error handling:** throw stable errors for unknown form keys, reordered/missing
 field or option, drifted title/label/placeholder/note/submit/success copy,
+an invented blank select prompt, invalid rows/prompt/loading presentation,
 non-null or duplicated Form description, invalid public access/status, missing
 consent, disabled or extra action, redirect, secret-bearing config, aggregate
-ref failure or altered detail SEO. Form write validation rejects unknown,
+ref failure, weakened required detail binding or altered detail SEO. Form write
+validation and full-site preflight reject unknown,
 blank/whitespace-only and over-2,000-character supporting text. Defensive
 normalization omits invalid supporting text without truncation, interpretation
 as markup or fallback. Never repair a child slice by silently replacing its data
@@ -383,7 +578,8 @@ in the aggregate.
 
 Update `tests/vitest/kits/projekty-domow-form-and-slice.test.ts` to prove:
 
-- exact ordered names/types/labels/placeholders/options/requiredness;
+- exact ordered names/types/labels/placeholders/options/requiredness, exactly
+  four stage options, no blank/prompt option and `Mam działkę` first;
 - consent is the fifth required field and defaults false;
 - Form description normalizes to exact `null`, while the exported initial-note
   constant remains exact and occurs once at
@@ -397,11 +593,13 @@ Update `tests/vitest/kits/projekty-domow-form-and-slice.test.ts` to prove:
 - exactly one enabled normalized `success_message` action uses the same success
   constant and the seed contains no secret-like config;
 - native `status:"published"`, `submissionAccess:"public"`, no form-level
-  `enabled`, no redirect and no DB ID;
+  `enabled`, success behavior/loading/rows/prompt, redirect or DB ID;
 - unknown form/settings/field/action keys and invalid public access fail closed;
 - aggregate counts and reference closure are exact and deterministic;
 - aggregate entry `cardHref`, entry SEO and exact dynamic detail SEO are
-  unchanged, and the detail still has no related/listing-query dependency;
+  unchanged; exact listing pagination/bindings/no actions and required
+  Aurora-only detail eligibility remain unchanged; the detail still has no
+  related/listing-query dependency;
 - published detail staging yields draft without mutating desired evidence.
 
 Create `tests/vitest/forms/formSupportingText.test.ts` for the pure Form contract:
@@ -416,7 +614,13 @@ Create `tests/vitest/forms/formSupportingText.test.ts` for the pure Form contrac
   `supportingText === undefined` without an own supporting-text property;
 - prove an authored value survives normalize → resolve unchanged and the public
   exports remain importable from `core/widgets/core/formEmbed.tsx` after the
-  split.
+  split, including `clampSavedProgressTtl` and all three new owner constants;
+- compile the real Form Embed schema for `textareaRows`, `showSelectPrompt`,
+  `loadingLabel` and `successBehavior`; accept exact boundaries and enum values
+  from all three exported owner constants, reject one-under/one-over,
+  fractional/wrong-type/blank/unknown values, and prove absent new field keys
+  keep frozen legacy JSON bytes, four rows and the synthetic prompt while the
+  existing loading/success defaults remain unchanged.
 
 Create `tests/unit/forms/formSupportingTextPersistence.test.ts` in the Bun DB
 lane to satisfy the new persisted-key round-trip rule. Before its DB command,
@@ -429,6 +633,13 @@ clearing the sibling, and delete only that Form in `finally`. Never truncate or
 globally delete Forms; every case has a timeout of at least 360,000 ms and a slow
 shared Render database is not interrupted.
 
+Create `tests/integration/routes/formSupportingTextRoutes.test.ts` in the Bun
+route lane as specified by the Security Contract. It must assert exact
+registration/middleware/schema identities for Form create/update and action
+update, exercise valid 1/2,000 and invalid blank/2,001/unknown nested settings,
+and prove exported `mapFormError` mappings for known Form failures without
+touching production routes or the database.
+
 Create `tests/vitest/ui-integration/form-supporting-text.test.tsx` for all render
 surfaces, keeping it independently runnable and below 1,000 lines:
 
@@ -440,12 +651,17 @@ surfaces, keeping it independently runnable and below 1,000 lines:
   `data-form-submit-supporting-text="true"` node after the submit wrapper and
   before the closing `data-form-embed-form-body` boundary; no-theme SSR stays
   byte-identical under the existing structural baseline;
+- direct Form Embed SSR with `textareaRows:5` and
+  `showSelectPrompt:false` renders `rows="5"`, exactly four substantive options
+  in order, no blank option and no `Select an option`; the authored Polish
+  loading label reaches the exact form data attribute;
 - hostile-looking text is React-escaped and never becomes an element/script;
 - in happy-dom, execute the existing inline Form runtime against a successful
-  mocked submission using default `show-message-hide-form`; assert the body is
-  hidden (so its note is not visible), the supporting-text node is not moved or
-  duplicated, and the one existing success node becomes visible with the exact
-  message plus `role="alert"` and `aria-live="polite"`.
+  mocked submission using `show-message-keep-form`; assert all fields and submit
+  controls remain visible, the single message-slot paragraph changes from the
+  exact initial note to the exact success message, no note/success node is
+  duplicated, the initial note is not an alert, and that same sole live node
+  retains `aria-live="polite"` without gaining `role="alert"`.
 
 Run the existing `tests/vitest/forms/formActionsContract.test.ts`, Form settings/
 theme, admin Forms, Form Embed structural baseline, Form runtime-script and
@@ -458,7 +674,9 @@ scoped submission cleanup evidence remains additionally owned by TASK-547-06.
   Embed by cohesive responsibility without changing public imports or legacy
   output.
 - [ ] Correct exact Form constants, fields, settings and safe action.
-- [ ] Wire editor, canvas, runtime preview and public Form Embed placement.
+- [ ] Wire editor, canvas, runtime preview and public Form Embed placement plus
+  present-only Form Embed rows/prompt/loading contracts; hand Page prop authoring
+  and mapping to TASK-547-04-L01.
 - [ ] Preserve child slices, reference closure and dynamic SEO in the aggregate.
 - [ ] Add focused pure, UI-integration and scoped DB regression suites without
   modifying oversized legacy tests or weakening security/failure assertions.
@@ -468,10 +686,13 @@ scoped submission cleanup evidence remains additionally owned by TASK-547-06.
 - `bunx vitest run tests/vitest/kits/projekty-domow-form-and-slice.test.ts tests/vitest/forms/formSupportingText.test.ts tests/vitest/ui-integration/form-supporting-text.test.tsx tests/vitest/forms/formActionsContract.test.ts tests/vitest/forms/formSettings.test.ts tests/vitest/forms/formTheme.test.ts tests/vitest/admin/formDesignPanel.test.tsx tests/vitest/admin/formCanvas.test.tsx tests/vitest/admin/formRuntimePreviewDialog.test.tsx tests/vitest/admin/formsClient.test.ts tests/vitest/widgets/formEmbed.test.tsx tests/vitest/widgets/formRuntimeScript.test.ts`;
 - after `set -a && source /home/coder/project/Coderso/.env && set +a`, without
   inspecting, printing, copying, hashing or persisting the environment contents,
-  `bun test --timeout 360000 tests/unit/forms/formSupportingTextPersistence.test.ts`
-  plus relevant existing Bun Form runtime/service suites selected by dependency
-  shape. Every DB-backed case uses unique scoped fixtures/cleanup and a timeout
-  of at least 360 seconds;
+  `bun test --timeout 360000
+  tests/unit/forms/formSupportingTextPersistence.test.ts
+  tests/integration/routes/formSupportingTextRoutes.test.ts
+  tests/integration/routes/forms.test.ts
+  tests/integration/routes/formActionsRoutes.test.ts` plus relevant existing
+  Bun Form runtime/service suites selected by dependency shape. Every DB-backed
+  case uses unique scoped fixtures/cleanup and a timeout of at least 360 seconds;
 - `bun --cwd core lint:types`;
 - `bun --cwd core lint`;
 - `git diff --check` for owned files;
