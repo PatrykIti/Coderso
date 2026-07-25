@@ -25,6 +25,8 @@ const workflowPaths = Object.freeze({
   bootstrapBridgeSources: "_docs/_workflows/task-540-smoke/executor/bridge-sources/bootstrap.mjs",
   bootstrapRestoration:
     "_docs/_workflows/task-540-smoke/executor/self-test/bootstrap-restoration.mjs",
+  bootstrapRestorationProtocol:
+    "_docs/_workflows/task-540-smoke/executor/bootstrap-restoration-protocol.mjs",
   boundedStream: "_docs/_workflows/task-540-smoke/runtime/bounded-stream.mjs",
   browserOutputAuthority: "_docs/_workflows/task-540-smoke/executor/browser-output-authority.mjs",
   bunBridgeContracts: "_docs/_workflows/task-540-smoke/executor/self-test/bun-bridge-contracts.mjs",
@@ -110,6 +112,7 @@ const EXPECTED_EXECUTOR_MODULE_PATHS = Object.freeze([
   "_docs/_workflows/task-540-smoke/executor/action-resources.mjs",
   "_docs/_workflows/task-540-smoke/executor/auth-challenge-authority.mjs",
   "_docs/_workflows/task-540-smoke/executor/bootstrap-contracts.mjs",
+  "_docs/_workflows/task-540-smoke/executor/bootstrap-restoration-protocol.mjs",
   "_docs/_workflows/task-540-smoke/executor/bridge-descriptors.mjs",
   "_docs/_workflows/task-540-smoke/executor/bridge-input-validators.mjs",
   "_docs/_workflows/task-540-smoke/executor/bridge-output-validators/resources.mjs",
@@ -246,7 +249,7 @@ function readExecutorModuleGraph(): ReadonlyMap<string, string> {
       );
     }
   }
-  expect(EXPECTED_EXECUTOR_MODULE_PATHS).toHaveLength(134);
+  expect(EXPECTED_EXECUTOR_MODULE_PATHS).toHaveLength(135);
   expect([...sources.keys()].sort()).toEqual(EXPECTED_EXECUTOR_MODULE_PATHS);
   return sources;
 }
@@ -727,7 +730,9 @@ test("dg022 teardown and dg024 dirty navigation use same-action visible-effect p
 
 test("phase-eight bootstrap restore is one typed nullable-safe CAS", () => {
   const config = readWorkflowSource(workflowPaths.config);
-  const executor = readWorkflowSource(workflowPaths.executor);
+  const bootstrapRestorationProtocol = readWorkflowSource(
+    workflowPaths.bootstrapRestorationProtocol
+  );
   const bootstrapRestoration = readWorkflowSource(workflowPaths.bootstrapRestoration);
   const bootstrapBridgeSources = readWorkflowSource(workflowPaths.bootstrapBridgeSources);
   const resourceBridgeOutputValidators = readWorkflowSource(
@@ -809,7 +814,7 @@ test("phase-eight bootstrap restore is one typed nullable-safe CAS", () => {
   );
 
   const protocol = sourceSection(
-    executor,
+    bootstrapRestorationProtocol,
     "async function executeBootstrapRestorationProtocol",
     "async function restoreBootstrapLoginState"
   );

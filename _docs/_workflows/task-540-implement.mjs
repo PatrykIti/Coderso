@@ -1248,7 +1248,7 @@ const WORKFLOW = ROOT + "/" + WORKFLOW_REL;
 const SMOKE_CONTRACT_WORKFLOW_REL = "_docs/_workflows/task-540-smoke-contract.mjs";
 const SMOKE_EXECUTOR_WORKFLOW_REL = "_docs/_workflows/task-540-smoke-executor.mjs";
 const FROZEN_SMOKE_EXECUTOR_SHA256 =
-  "beb0285599ab3297b1990c0d3a07e898f78d2504017de3836745c49028f8d9ab";
+  "8fb2882d8d658cdbf9023d7acc89bdcdb7b1d62db1ba53fe359d9473d3ed800d";
 const SMOKE_HOST_WORKFLOW_REL = "_docs/_workflows/task-540-smoke-host.mjs";
 const CODEX_AGENT_BRIDGE_WORKFLOW_REL = "_docs/_workflows/task-540-codex-agent-bridge.mjs";
 const LOCAL_ORCHESTRATOR_WORKFLOW_REL = "_docs/_workflows/task-540-local-orchestrator.mjs";
