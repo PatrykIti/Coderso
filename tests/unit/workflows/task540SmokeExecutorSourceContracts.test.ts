@@ -5,10 +5,17 @@ import {
   ScriptKind,
   ScriptTarget,
   createSourceFile,
+  forEachChild,
+  isCallExpression,
   isExportDeclaration,
   isFunctionDeclaration,
+  isIdentifier,
   isImportDeclaration,
+  isObjectBindingPattern,
+  isReturnStatement,
   isStringLiteral,
+  isVariableStatement,
+  type Node,
 } from "typescript";
 
 const root = path.resolve(import.meta.dir, "../../..");
@@ -28,6 +35,7 @@ const workflowPaths = Object.freeze({
   executor: "_docs/_workflows/task-540-smoke-executor.mjs",
   genericInvocations: "_docs/_workflows/task-540-smoke/browser/generic-invocations.mjs",
   observationSources: "_docs/_workflows/task-540-smoke/browser/observation-sources.mjs",
+  planExecution: "_docs/_workflows/task-540-smoke/executor/plan-execution.mjs",
   processRuntime: "_docs/_workflows/task-540-smoke/runtime/process-runtime.mjs",
   relatedCache: "_docs/_workflows/task-540-smoke/browser/scenarios/related-cache.mjs",
   routeAndActionSources: "_docs/_workflows/task-540-smoke/browser/route-and-action-sources.mjs",
@@ -106,6 +114,7 @@ const EXPECTED_EXECUTOR_MODULE_PATHS = Object.freeze([
   "_docs/_workflows/task-540-smoke/executor/foundation.mjs",
   "_docs/_workflows/task-540-smoke/executor/json-schema.mjs",
   "_docs/_workflows/task-540-smoke/executor/output-parser.mjs",
+  "_docs/_workflows/task-540-smoke/executor/plan-execution.mjs",
   "_docs/_workflows/task-540-smoke/executor/private-workspace.mjs",
   "_docs/_workflows/task-540-smoke/executor/ref-dsl.mjs",
   "_docs/_workflows/task-540-smoke/executor/resource-contracts.mjs",
@@ -213,7 +222,7 @@ function readExecutorModuleGraph(): ReadonlyMap<string, string> {
       );
     }
   }
-  expect(EXPECTED_EXECUTOR_MODULE_PATHS).toHaveLength(117);
+  expect(EXPECTED_EXECUTOR_MODULE_PATHS).toHaveLength(118);
   expect([...sources.keys()].sort()).toEqual(EXPECTED_EXECUTOR_MODULE_PATHS);
   return sources;
 }
@@ -342,6 +351,159 @@ test("process runtime is the sole owner of process and host composition", () => 
   ]) {
     expect(executor).not.toContain(removedFacadeToken);
   }
+});
+
+test("plan execution has one focused owner and exact injected authority", () => {
+  const dependencyKeys = [
+    "SMOKE_PORTS",
+    "beginPrivateFailureAction",
+    "completePrivateFailureAction",
+    "retainPrivateAuthSettlementFailureClassNeverThrow",
+    "retainPrivateDirtyNavigationFailureClassNeverThrow",
+    "retainPrivateToneOpenFailureClassNeverThrow",
+    "retainPrivateToneSelectFailureClassNeverThrow",
+    "sealPrivateFailureActionTracker",
+  ];
+  const planExecution = readWorkflowSource(workflowPaths.planExecution);
+  const planExecutionPath = path.join(root, workflowPaths.planExecution);
+  const planExecutionSourceFile = createSourceFile(
+    planExecutionPath,
+    planExecution,
+    ScriptTarget.Latest,
+    true,
+    ScriptKind.JS
+  );
+  const planExecutionImports = planExecutionSourceFile.statements.filter(isImportDeclaration);
+  expect(
+    planExecutionImports.map((declaration) => declaration.getText(planExecutionSourceFile))
+  ).toEqual([
+    `import {
+  acquiredSubjects,
+  assertCanonicalFinalization as assertCanonicalFinalizationCore,
+  assertCanonicalMediaRaceProjection,
+  assertCanonicalMediaRuntimeReceipts,
+  assertCanonicalPrimaryRuntimeInventory,
+  assertCleanupReceiptBijection,
+  buildCanonicalRouteEvidence,
+  buildCanonicalScenarioEvidence,
+  validateCapabilityResult,
+} from "./canonical-evidence.mjs";`,
+    'import { SingleAssignmentCaptureMap } from "./captures.mjs";',
+    'import { TASK_FAILURE } from "./config.mjs";',
+    'import { assertRegisteredExecutable } from "./execution-contract.mjs";',
+    `import {
+  assertRecursivelyFrozen,
+  canonicalJson,
+  deepFreezeExact,
+  exactOwnKeys,
+  hashBytes,
+  invariant,
+} from "./foundation.mjs";`,
+    'import { ResourceCleanupPlanner, ResourceLedgerBuilder } from "./resource-ledger.mjs";',
+  ]);
+
+  const planExecutionDeclarations = planExecutionSourceFile.statements.filter(
+    (statement) => !isImportDeclaration(statement)
+  );
+  expect(planExecutionDeclarations).toHaveLength(1);
+  const [factoryDeclaration] = planExecutionDeclarations;
+  expect(isFunctionDeclaration(factoryDeclaration)).toBe(true);
+  if (!isFunctionDeclaration(factoryDeclaration)) {
+    throw new Error("plan execution factory declaration is absent");
+  }
+  expect(factoryDeclaration.name?.text).toBe("createPlanExecutionRuntime");
+  expect(factoryDeclaration.modifiers?.map((modifier) => modifier.getText())).toEqual(["export"]);
+  expect(factoryDeclaration.parameters).toHaveLength(1);
+  const dependencyBinding = factoryDeclaration.parameters[0].name;
+  expect(isObjectBindingPattern(dependencyBinding)).toBe(true);
+  if (!isObjectBindingPattern(dependencyBinding)) {
+    throw new Error("plan execution dependency binding is absent");
+  }
+  expect(
+    dependencyBinding.elements.map((element) => element.name.getText(planExecutionSourceFile))
+  ).toEqual(dependencyKeys);
+
+  const factoryStatements = factoryDeclaration.body?.statements ?? [];
+  expect(factoryStatements).toHaveLength(4);
+  expect(isVariableStatement(factoryStatements[0])).toBe(true);
+  expect(factoryStatements[0].getText(planExecutionSourceFile)).toBe(
+    "const PRIVATE_CORE = new WeakMap();"
+  );
+  expect(isFunctionDeclaration(factoryStatements[1])).toBe(true);
+  expect(isFunctionDeclaration(factoryStatements[2])).toBe(true);
+  expect(isReturnStatement(factoryStatements[3])).toBe(true);
+  if (
+    !isFunctionDeclaration(factoryStatements[1]) ||
+    !isFunctionDeclaration(factoryStatements[2])
+  ) {
+    throw new Error("plan execution owned functions are absent");
+  }
+  expect(factoryStatements[1].name?.text).toBe("assertCanonicalFinalization");
+  expect(factoryStatements[2].name?.text).toBe("executeSmokePlanCore");
+
+  expect(countToken(planExecution, "const PRIVATE_CORE = new WeakMap();")).toBe(1);
+  expect(countToken(planExecution, "PRIVATE_CORE.set(")).toBe(1);
+  expect(countToken(planExecution, "PRIVATE_CORE.get(")).toBe(1);
+  expect(countToken(planExecution, "function assertCanonicalFinalization(")).toBe(1);
+  expect(countToken(planExecution, "async function executeSmokePlanCore(")).toBe(1);
+  expect(planExecution).toMatch(
+    /  return Object\.freeze\(\{\n    assertCanonicalFinalization,\n    executeSmokePlanCore,\n  \}\);\n\}\n?$/u
+  );
+
+  const executor = readWorkflowSource(workflowPaths.executor);
+  const executorSourceFile = createSourceFile(
+    path.join(root, workflowPaths.executor),
+    executor,
+    ScriptTarget.Latest,
+    true,
+    ScriptKind.JS
+  );
+  const planExecutionFacadeImports = executorSourceFile.statements
+    .filter(isImportDeclaration)
+    .filter(
+      (declaration) =>
+        isStringLiteral(declaration.moduleSpecifier) &&
+        declaration.moduleSpecifier.text === "./task-540-smoke/executor/plan-execution.mjs"
+    );
+  expect(planExecutionFacadeImports).toHaveLength(1);
+  expect(planExecutionFacadeImports[0].getText(executorSourceFile)).toBe(
+    'import { createPlanExecutionRuntime } from "./task-540-smoke/executor/plan-execution.mjs";'
+  );
+  expect(executor).toContain(
+    `const { assertCanonicalFinalization, executeSmokePlanCore } = createPlanExecutionRuntime({
+  SMOKE_PORTS,
+  beginPrivateFailureAction,
+  completePrivateFailureAction,
+  retainPrivateAuthSettlementFailureClassNeverThrow,
+  retainPrivateDirtyNavigationFailureClassNeverThrow,
+  retainPrivateToneOpenFailureClassNeverThrow,
+  retainPrivateToneSelectFailureClassNeverThrow,
+  sealPrivateFailureActionTracker,
+});`
+  );
+  let planExecutionFactoryCalls = 0;
+  let planExecutionFactoryIdentifiers = 0;
+  function visitExecutorNode(node: Node): void {
+    if (isIdentifier(node) && node.text === "createPlanExecutionRuntime") {
+      planExecutionFactoryIdentifiers += 1;
+    }
+    if (
+      isCallExpression(node) &&
+      isIdentifier(node.expression) &&
+      node.expression.text === "createPlanExecutionRuntime"
+    ) {
+      planExecutionFactoryCalls += 1;
+    }
+    forEachChild(node, visitExecutorNode);
+  }
+  visitExecutorNode(executorSourceFile);
+  expect(planExecutionFactoryCalls).toBe(1);
+  expect(planExecutionFactoryIdentifiers).toBe(2);
+  expect(countToken(executor, "executeSmokePlanCore")).toBe(6);
+  expect(countToken(executor, "assertCanonicalFinalization")).toBe(2);
+  expect(executor).not.toContain("const PRIVATE_CORE = new WeakMap();");
+  expect(executor).not.toContain("function assertCanonicalFinalization(");
+  expect(executor).not.toContain("async function executeSmokePlanCore(");
 });
 
 test("Bun bridge validation primitives have one focused owner", () => {
