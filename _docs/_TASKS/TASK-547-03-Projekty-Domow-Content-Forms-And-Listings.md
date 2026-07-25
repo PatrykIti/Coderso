@@ -83,17 +83,26 @@ The portfolio facet presentation is frozen in this order:
 5. `eco` — `Energooszczędne`.
 
 The query sorts by `data.referenceOrder` ascending with a deterministic `id`
-tiebreaker. TASK-547-03-L02 owns and exports the canonical category/facet values;
-the TASK-547-04 projects Page imports them rather than repeating labels.
+tiebreaker and uses exact pagination `{limit:24,offset:0}`. L01 alone owns the
+persisted `HOUSE_PROJECT_CATEGORIES`. L02 imports that registry and owns only the
+`all` no-filter option plus ordered public labels/presentation; the TASK-547-04
+projects Page imports L02's presentation constant rather than repeating labels.
 
-Aurora detail must reproduce the source-backed hero lead, four statistics,
-assumption heading/lead and three assumption cards. Its gallery contains exactly
-three abstract cards and no invented caption or media/asset reference. The
+Aurora detail must reproduce the source-backed hero lead, prominent abstract
+hero art, four statistics, CTA, assumption heading/lead, three assumption cards
+and three abstract gallery cards in that visible order. L02 pins registered
+blocks and exact props/bindings that avoid `stats-kpi` and `gallery-mosaic`
+fallback copy. Gallery items contain no caption or media/asset reference. The
 detail document has no related-project block, related source, computed
-`relatedItems` binding or listing-query reference. Its neutral top-level document
-`titlePattern` is `{{ title }}`. Dynamic SEO alone uses
-`{{ title }} — projekt pokazowy — FormaDom Studio` plus the exact common
-`seoDescription`, producing `Dom Aurora — projekt pokazowy — FormaDom Studio`.
+`relatedItems` binding or listing-query reference. Every Aurora-only binding is
+`required:true` with no binding fallback. Because the five non-Aurora fixtures
+omit all detail data, resolving any of their direct `/projekty/:slug` requests
+fails before rendering or metadata generation and produces the existing 404
+response. Only Aurora may produce the showcase document or its showcase SEO.
+Its neutral top-level document `titlePattern` is `{{ title }}`. Dynamic SEO alone
+uses `{{ title }} — projekt pokazowy — FormaDom Studio` plus the exact common
+`seoDescription`, producing
+`Dom Aurora — projekt pokazowy — FormaDom Studio`.
 
 The public Form carries the four prototype fields plus one explicit native
 consent addition. Its public strings are exact:
@@ -113,16 +122,27 @@ consent addition. Its public strings are exact:
 - success message
   `Dziękujemy! Odezwiemy się z pierwszym pomysłem na Twój dom — do usłyszenia.`
 
+The stage control has exactly those four options and no synthetic blank or
+English prompt; its Form field has no `placeholder` or `defaultValue` own key,
+so native selection initially selects `Mam działkę`. The textarea renders with
+exactly five rows. FormaDom also authors the native Polish pending label
+`Wysyłanie...` pinned by L03. The reference defines no error copy; existing safe
+code-specific Forms runtime errors remain unchanged native security behavior and
+are not claimed as reference parity.
+
 The note is native Form data, not Page copy. TASK-547-03-L03 adds the strict,
 present-only optional contract `FormFormTheme.submit.supportingText?: string`.
 It is trimmed, must be non-empty when present, is limited to 2,000 characters,
 has no resolution or persistence default and emits no DOM/serialized bytes when
 absent. The FormaDom seed stores `PROJECT_BRIEF_INITIAL_NOTE` at that exact
-property. Form Embed renders it once, immediately after the submit controls and
-inside `data-form-embed-form-body="true"`; therefore the existing default
-`show-message-hide-form` success behavior hides both controls and supporting
-text while exposing the existing polite success live region. No new runtime
-script branch is permitted.
+property. Form Embed renders one message slot immediately after the submit
+controls. Before submission it contains the inert supporting text. FormaDom uses
+the existing `show-message-keep-form` branch; after success the same slot exposes
+the existing polite success target with the exact success message, hides the
+initial note, and leaves every form control visible. The shared paragraph has
+both data attributes and `aria-live="polite"` but no `role="alert"` before or
+after mutation. There is no duplicate note, second live region or claim that
+hiding the form matches the reference.
 
 ## Resource Contract
 
@@ -132,15 +152,23 @@ script branch is permitted.
   `published`, but TASK-547-02 creates the row as draft and publishes only in
   the publish-last stage. Every entry uses
   `{ref:"content_type",key:"house-project"}` at `contentTypeId`.
-- One lifecycle-free listing-template seed displaying only source-backed card
-  content and binding its semantic `href` field from `data.cardHref`; no visible
-  invented badge, metric or CTA copy. The explicit field binding intentionally
-  takes priority over the generic content-route fallback.
-- One published-only listing query over `house-project`, with category data and
-  deterministic reference order; its projection includes `data.cardHref`.
+- One lifecycle-free listing-template seed with the exact normalized fields
+  `title ← title`, `description ← data.cardDescription`, and
+  `href ← data.cardHref`, each with `label:null`, `fallback:null`,
+  `format:"text"` and `conditions:[]`. It has `itemActions:[]`. The href is a
+  semantic card-anchor binding, not visible CTA copy. TASK-547-04 sets the
+  projects Page Content List block to `props.showCta:false` and maps that
+  present prop to `ContentListData.fields.showCta`; TASK-547-06 proves that card
+  anchors still use the exact six-link matrix and that `Zobacz szczegóły` is
+  absent.
+- One published-only listing query over `house-project`, with exact pagination
+  `{limit:24,offset:0}`, category data and deterministic reference order; its
+  projection includes `data.cardHref`.
 - One published-target detail document bound to the content type, plus one
   enabled `/projekty/:slug` route inside the allowlisted
-  `site.contentRoutes` setting. The detail does not depend on the listing query.
+  `site.contentRoutes` setting. Required Aurora-only bindings make the document
+  fail closed for all five other direct slugs before public metadata/render.
+  The detail does not depend on the listing query.
 - One published-target `project-brief` Form with public submission access, five
   ordered fields and one mandatory enabled native `success_message` action.
   Its resource name is the visible source-derived literal `Zacznij projekt`.
@@ -153,7 +181,7 @@ script branch is permitted.
   `settings.theme.submit.supportingText:PROJECT_BRIEF_INITIAL_NOTE`. The contact
   Page contains no sibling text/note block for this copy. This native Form
   placement matches `kontakt.html:60-61`, preserves the note below the submit
-  control and prevents duplicate or success-state-orphaned copy.
+  control and replaces its visible slot on success while controls remain visible.
   E-mail/webhook/CRM configuration is outside this package.
 - Every resource seed is exactly `{key, desired}` with no database ID in JSON.
 
@@ -164,6 +192,9 @@ script branch is permitted.
   signed nonce, `public_write` rate bucket and optional reCAPTCHA v3 policy.
 - Form, action, listing, detail and route payloads reject unknown fields before
   persistence; no secret, recipient, SMTP, webhook or credential data is seeded.
+  This depends on TASK-547-02-L02 extending full-site nested preflight for both
+  `submit.supportingText` and every nested listing-template object before L03
+  implementation begins.
 - Required consent is an explicit native privacy addition to the prototype, not
   a claim that the static demo already contained it.
 - Listing/detail reads remain published-only and use allowlisted field, binding,
@@ -184,8 +215,15 @@ export function buildFormaDomContentResources(): FormaDomContentResources {
   const discovery = buildProjectDiscoveryResources();
   assertListingSource(discovery.listingQueries, "house-project");
   assertReferenceOrderSort(discovery.listingQueries);
-  assertListingHrefBinding(discovery.listingTemplates, "data.cardHref");
+  assertExactPagination(discovery.listingQueries, { limit: 24, offset: 0 });
+  assertExactListingBindings(discovery.listingTemplates, [
+    ["title", "title"],
+    ["description", "data.cardDescription"],
+    ["href", "data.cardHref"],
+  ]);
+  assertNoListingItemActionsOrCtaCopy(discovery.listingTemplates);
   assertDetailContentRef(discovery.detailPages, "house-project");
+  assertAuroraBindingsRequiredWithoutFallback(discovery.detailPages);
   assertNoRelatedListingDependency(discovery.detailPages);
   assertDynamicSeo(discovery.detailPages, {
     documentTitlePattern: "{{ title }}",
@@ -197,7 +235,17 @@ export function buildFormaDomContentResources(): FormaDomContentResources {
   assertExactReferenceFormCopy(form);
   assertVisibleFormTitle(form, "Zacznij projekt");
   assertFormDescription(form, null);
+  assertExactStageField(form, {
+    options: [
+      "Mam działkę",
+      "Szukam działki",
+      "Mam gotowy projekt do adaptacji",
+      "Chcę tylko konsultację",
+    ],
+    authoredPlaceholder: undefined,
+  });
   assertSubmitSupportingText(form, PROJECT_BRIEF_INITIAL_NOTE);
+  assertFormDoesNotPersistPagePresentation(form);
   assertPresentOnlySupportingTextContract(form);
   assertNativePublicSecurityContract(form);
 
@@ -211,32 +259,69 @@ and present-only submit supporting text → L03-owned aggregate → TASK-547-01
 graph normalization → TASK-547-02 draft-first installer and publish-last stage.
 The contact Page binds only the Form; the Form-owned note reaches editor,
 canvas, runtime preview and public Form Embed through normalized
-`settings.theme.submit.supportingText`. L03 composes existing child slices
-without rebuilding them.
+`settings.theme.submit.supportingText`, then the existing keep-form success path
+updates that visible message slot. L03 composes existing child slices without
+rebuilding them.
 
 **Error handling:** fail closed on duplicate key/slug/order, unknown category,
 unsafe or mismatched `cardHref`, non-exact `PackageRef`, missing required common
-field, partial/malformed Aurora detail data, unknown facet, unsafe route,
+field, partial/malformed Aurora detail data, unknown facet, altered exact route,
 unexpected media reference, non-null Form description, blank/oversized/unknown
 submit supporting-text input, secret-bearing form config or drift from the exact
-form strings. The generic normalizer trims valid supporting text and omits
-blank/oversized invalid values without truncation; strict write schemas reject
-them before persistence. Never silently replace source content.
+form strings. This family validates recursive plain finite JSON before
+serialization; no stringify-first coercion is allowed. The generic normalizer
+trims valid supporting text and omits blank/oversized invalid values without
+truncation; strict request/full-site preflight schemas reject them before
+persistence. Never silently replace source content.
 
 **Regression-test shape:** pin the six-row matrix, exact card-link matrix and
 frozen order; reject prior invented fields; prove schema round-trip; prove exact
 category filter order and reference-order query sort; prove the template `href`
-binding overrides the generic detail-route fallback without emitting invented
-CTA copy; resolve Aurora bindings to the exact detail copy and three gallery
-cards; prove no related block/ref; validate dynamic SEO; validate the exact
-visible Form/resource title, fields/options/placeholders/submit/success, exact
+binding shape in L02, then prove runtime precedence and the absence of
+`Zobacz szczegóły` in TASK-547-06's legal Bun/runtime lane; resolve Aurora
+bindings to exact detail copy and abstract art; prove all five non-Aurora direct
+slugs return 404 with no detail metadata/body; prove no related block/ref;
+validate dynamic SEO; validate the exact visible Form/resource title,
+four-option/no-prompt select, five-row textarea, Polish loading label,
+fields/placeholders/submit/success, exact
 exported initial-note constant, null Form description and the sole
 `settings.theme.submit.supportingText` placement; prove schema/normalizer and DB
 round-trip, editor set/reset, canvas/runtime-preview/public SSR parity, exact
-post-submit DOM order, default hide-body success state and legacy absent-key
+post-submit DOM order, keep-form in-place note replacement and legacy absent-key
 byte identity; prove the contact Page has no sibling note; prove native
 nonce/rate/captcha/consent integration, aggregate reference closure,
 determinism, SEO preservation and absence of secrets/DB/media IDs.
+
+## Cross-Owner Prerequisites and Handoffs
+
+- Before L03 implementation, TASK-547-02-L02 must add
+  `submit.supportingText` to `assertFormNestedContract` with exact 1/2,000
+  acceptance and blank, 2,001, wrong-type and unknown-key rejection, importing
+  `FORM_SCHEMA_LIMITS.submitSupportingText` from the Forms domain owner instead
+  of duplicating `2_000`. It must also strictly reject unknown own keys at every
+  nested listing-template level; the existing normalizer's key selection is not
+  strict preflight.
+- TASK-547-04 owns Page documents. Its projects Page must keep card anchors but
+  author `props.showCta:false` and map it to
+  `ContentListData.fields.showCta`; its contact Form block authors textarea rows
+  through `props.textareaRows:5`, removes the synthetic prompt through
+  `props.showSelectPrompt:false`, authors exact Polish
+  `props.loadingLabel`, authors
+  `props.successBehavior:"show-message-keep-form"`, and contains no sibling
+  initial-note block. Its Page contract must strictly allowlist, normalize and
+  round-trip every newly consumed present-only prop, and its runtime mappers pass
+  them to Content List/Form Embed. It imports L03's rows/loading-label bounds
+  and `FORM_EMBED_SUCCESS_BEHAVIORS` rather than duplicating numbers or enum
+  values. The Form resource does not persist them.
+- TASK-547-06 owns public runtime evidence: card href precedence, no visible
+  `Zobacz szczegóły`, visible lead → statistics → CTA order, Aurora-only 200
+  versus five 404s with no metadata leakage, four select options with the first
+  selected, five textarea rows, and controls remaining visible after the note
+  changes to the success message.
+- TASK-547-07 derives the live owned-path count from its ownership map and
+  updates any separately pinned expected-count integrity assertion whenever
+  this leaf's list changes. TASK-547-06 alone re-reads and synchronizes board
+  rows/statistics at closure.
 
 **Leaf land order:** `TASK-547-03-L01 → TASK-547-03-L02 → TASK-547-03-L03`.
 
