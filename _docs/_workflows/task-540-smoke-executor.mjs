@@ -198,15 +198,7 @@ import {
   bunBridgeInputSchemaId,
   validateBunBridgeInput,
 } from "./task-540-smoke/executor/bridge-input-validators.mjs";
-import {
-  PRIVATE_BUN_RESOURCE_DESCRIPTORS,
-  REQUIRED_BUN_BRIDGE_RUNTIME_OPERATION_IDS_BY_ENV_PROFILE,
-  RESPONSE_LOST_QUERY_FAMILY_BY_ACTION_ID,
-  RESPONSE_LOST_QUERY_SOURCES_BY_FAMILY,
-  bindBunBridgeOutputValidatorRegistry,
-  bunBridgeOperationDescriptor,
-  validateBunBridgeOperationDescriptor,
-} from "./task-540-smoke/executor/bridge-descriptors.mjs";
+import { createBunBridgeDescriptors } from "./task-540-smoke/executor/bridge-descriptors.mjs";
 import { createResponseLostBridgeOutputValidators } from "./task-540-smoke/executor/bridge-output-validators/response-lost.mjs";
 import { createResourceBridgeOutputValidators } from "./task-540-smoke/executor/bridge-output-validators/resources.mjs";
 import { requireBridgeUuid } from "./task-540-smoke/executor/bun-bridge-validation-primitives.mjs";
@@ -471,24 +463,6 @@ const {
 } = createProcessRuntime();
 
 const {
-  PRIVATE_BUN_EXECUTABLE_AUTHORITY,
-  assertPreparedBunBridgeFrameExact,
-  dryDispatchBunBridgeDescriptor,
-  encodeBoundedBunBridgeCanonicalFrame,
-  prepareBunBridgeDispatch,
-  resolveValidatedBunExecutable,
-  runBunBridge,
-  validateBunExecutableAuthorityObservation,
-} = createBunBridgeTransport({
-  assertNoSymlinkAncestors,
-  readStableArtifactIdentity,
-  sameArtifactIdentity,
-  validateBunBridgeInput,
-  validateBunBridgeOperationDescriptor,
-  runRetainedProcessGroup,
-});
-
-const {
   LocalCommandAuthority,
   buildBrowserStreamIntegrity,
   configuredSensitiveValues,
@@ -559,7 +533,34 @@ const {
   validateBoundedCandidatesBridgeOutput,
   validateContentRoutesBridgeProjection,
 });
-bindBunBridgeOutputValidatorRegistry({ BUN_BRIDGE_OUTPUT_VALIDATORS });
+// Descriptor construction and validation both read the output validator registry, so the
+// descriptor authority is built once the registry above exists, and the Bun bridge transport
+// that validates descriptors is constructed from it right after.
+const {
+  PRIVATE_BUN_RESOURCE_DESCRIPTORS,
+  REQUIRED_BUN_BRIDGE_RUNTIME_OPERATION_IDS_BY_ENV_PROFILE,
+  RESPONSE_LOST_QUERY_FAMILY_BY_ACTION_ID,
+  RESPONSE_LOST_QUERY_SOURCES_BY_FAMILY,
+  bunBridgeOperationDescriptor,
+  validateBunBridgeOperationDescriptor,
+} = createBunBridgeDescriptors({ BUN_BRIDGE_OUTPUT_VALIDATORS });
+const {
+  PRIVATE_BUN_EXECUTABLE_AUTHORITY,
+  assertPreparedBunBridgeFrameExact,
+  dryDispatchBunBridgeDescriptor,
+  encodeBoundedBunBridgeCanonicalFrame,
+  prepareBunBridgeDispatch,
+  resolveValidatedBunExecutable,
+  runBunBridge,
+  validateBunExecutableAuthorityObservation,
+} = createBunBridgeTransport({
+  assertNoSymlinkAncestors,
+  readStableArtifactIdentity,
+  sameArtifactIdentity,
+  validateBunBridgeInput,
+  validateBunBridgeOperationDescriptor,
+  runRetainedProcessGroup,
+});
 const {
   deleteCleanupSubject,
   hashCleanupAuthoritativeBytes,
