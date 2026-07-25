@@ -142,6 +142,17 @@ or contents never join audit digests.
   documented DB source prefix may survive redaction inside final-validation
   `argv`; no environment value can. A separate mode-`0700` private run-level
   directory receives exclusive mode-`0600` sanitized diagnostic copies. A
+  host-facing output schema uses only the Codex-supported strict subset:
+  object/array/string/integer/boolean types, required fields, closed objects,
+  items and enums. String/array bounds, patterns, uniqueness, exact lengths,
+  ISO ranges and nonnegative counters remain mandatory in the repository-owned
+  post-read validators; unsupported JSON Schema constraint keywords never
+  weaken or replace those runtime checks.
+  A nonzero child exit writes a bounded mode-`0600` diagnostic containing only
+  a sanitized label, exit/status byte counts and one fixed allowlisted failure
+  category/summary. Raw stderr, excerpts, secrets, absolute paths and user data
+  are never persisted. The host error names that safe diagnostic file and its
+  byte count, and the per-call directory is still removed in `finally`. A
   successful finding-free run removes the run-level directory automatically.
   A successful run that
   encountered any structured HIGH/MEDIUM/LOW finding retains it for review
@@ -394,8 +405,11 @@ detection. Synthetic safe-file tests use no real secret and
 prove a direct-file happy path, secret-like rejection before filesystem access,
 final/dangling/parent-directory symlink rejection and safe atomic evidence
 writes. Private-result tests reject redirects/symlinks/hard links and prove
-bounded redaction plus the single exact DB-source `argv` exception. Audit tests
-reject missing anchors, traversal, absolute/secret-like paths and oversize text.
+bounded redaction plus the single exact DB-source `argv` exception, reject
+unsupported host-schema constraint keywords before spawn, and prove a synthetic
+nonzero exit creates only a private bounded fixed-category diagnostic without
+its raw sample. Audit tests reject missing anchors, traversal,
+absolute/secret-like paths and oversize text.
 Final-manifest tests reject missing, duplicate, reordered, weakened or
 unexecuted commands and malformed timestamps/diagnostic records. Phase-scope
 tests reject mixed acceptance/closeout evidence and smoke writes through a
