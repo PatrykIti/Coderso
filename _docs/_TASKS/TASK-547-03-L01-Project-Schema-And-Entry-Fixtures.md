@@ -70,9 +70,13 @@ Only Aurora carries the optional detail fields, with these exact values:
 - `assumptionsLead`:
   `Układ rozdziela prywatną strefę sypialni od otwartego salonu, kuchni i jadalni. Główne przeszklenie kieruje uwagę na ogród.`;
 - `assumptions`, in order:
-  - `Strefa dzienna` — `Salon z wysokim sufitem, wyjście na taras, kuchnia z wyspą i ukryta spiżarnia.`;
-  - `Strefa prywatna` — `Sypialnia master z garderobą, trzy pokoje oraz kompaktowa strefa pracy.`;
-  - `Elewacja` — `Drewno, grafit, ciepłe światło i proste detale bez zbędnych ozdobników.`
+  - `{id:"living-zone",title:"Strefa dzienna",description:"Salon z wysokim sufitem, wyjście na taras, kuchnia z wyspą i ukryta spiżarnia."}`;
+  - `{id:"private-zone",title:"Strefa prywatna",description:"Sypialnia master z garderobą, trzy pokoje oraz kompaktowa strefa pracy."}`;
+  - `{id:"facade",title:"Elewacja",description:"Drewno, grafit, ciepłe światło i proste detale bez zbędnych ozdobników."}`.
+
+The three IDs are non-rendered, stable structural identifiers introduced by the
+native document model. They are not reference copy and must never become public
+labels.
 
 Linea, Nova, Mono, Vista and Calm omit all Aurora-only fields. They must not
 receive extrapolated bedrooms, bathrooms, energy standard, assumptions, style,
@@ -80,28 +84,78 @@ storeys, rooms, zones or summary copy.
 
 ## Schema Contract
 
-`HOUSE_PROJECT_SCHEMA` is strict (`additionalProperties:false`) and requires the
-source-backed common fields `cardDescription`, `cardHref`, `area`, `categories`,
-`referenceOrder` and `seoDescription`.
+`projectSchema.ts` owns and exports one exact limits object used by schema,
+fixture validation and boundary tests:
 
-- `cardDescription`: non-empty bounded string;
+```ts
+export const HOUSE_PROJECT_SCHEMA_LIMITS = {
+  key: 64,
+  slug: 64,
+  title: 160,
+  cardDescription: 240,
+  seoDescription: 320,
+  area: { min: 40, max: 500 },
+  categories: { min: 1, max: 4 },
+  referenceOrder: { min: 0, max: 5 },
+  detailEyebrow: 80,
+  detailLead: 1_000,
+  detailStats: { count: 4, id: 64, value: 32, label: 80 },
+  assumptionsEyebrow: 80,
+  assumptionsTitle: 240,
+  assumptionsLead: 1_000,
+  assumptions: { count: 3, id: 64, title: 160, description: 500 },
+} as const;
+```
+
+All numeric bounds are inclusive. Every bounded string is trimmed, non-empty
+and limited by Unicode JavaScript string length. `HOUSE_PROJECT_SCHEMA` is
+strict (`additionalProperties:false`) and requires the source-backed common
+fields `cardDescription`, `cardHref`, `area`, `categories`, `referenceOrder`
+and `seoDescription`.
+
 - `cardHref`: exact safe internal enum `/projekty/aurora` or `/projekty`;
-- `area`: finite number in the existing house-project safety range;
-- `categories`: unique bounded array of the four frozen category values;
-- `referenceOrder`: non-negative bounded integer;
-- `seoDescription`: non-empty bounded string;
-- Aurora detail strings: optional, non-empty and bounded;
-- `detailStats`: optional array of at most four strict
-  `{id,value,label}` objects;
-- `assumptions`: optional array of at most three strict
-  `{id,title,description}` objects.
+- `area`: finite number from 40 through 500;
+- `categories`: one through four unique values from L01's exact four-value
+  registry;
+- `referenceOrder`: integer from 0 through 5;
+- optional `detailStats`, when present, has exactly four strict objects;
+- optional `assumptions`, when present, has exactly three strict objects.
 
 Generator validation enforces the exact cross-field link matrix: Aurora alone
 uses `/projekty/aurora`; Linea, Nova, Mono, Vista and Calm use `/projekty`.
-It also enforces the optional Aurora detail group as complete when any member is
-present. No schema property exists for the obsolete drifted fields
+It also enforces the owner invariant: Aurora must carry the complete detail
+group with the exact four stat IDs and exact three structural assumption IDs,
+and every other fixture must omit every detail-group property. Missing-all
+Aurora detail, partial Aurora detail, a complete detail group on a different
+fixture and one misplaced detail property all fail with stable generator error
+codes. No schema property exists for the obsolete drifted fields
 `summary`, `style`, `storeys`, `rooms`, `energyClass`, singular `category`,
 `zones` or `visualLabel`.
+
+The pure fixture validator pins these machine-readable codes:
+
+- `house_project_key_duplicate`, `house_project_slug_duplicate` and
+  `house_project_reference_order_invalid`;
+- `house_project_category_invalid` and
+  `house_project_category_duplicate`;
+- `house_project_card_href_invalid` and
+  `house_project_fixture_bounds_invalid`;
+- `house_project_detail_owner_invalid` for missing-all Aurora detail or any
+  detail property on a non-Aurora fixture;
+- `house_project_detail_group_invalid` for partial detail, wrong cardinality,
+  reordered/wrong structural IDs or malformed detail values.
+
+## Strict JSON Contract
+
+`cleanJsonObject` validates recursively before cloning/serialization. The root
+and nested objects must be plain records with `Object.prototype` or a null
+prototype and enumerable string own keys only; arrays must be dense. Accepted
+leaves are `null`, strings, booleans and finite numbers. Reject `undefined`,
+functions, symbols, bigint, `NaN`, either infinity, holes/sparse arrays, cycles,
+`Date`, custom prototypes, accessors, `toJSON`, symbol keys and non-enumerable
+own keys. Every rejection, including native serialization failure, maps to
+`projekty_domow_json_object_invalid`; never drop a value or coerce it with a
+stringify-first pass.
 
 ## Security Contract
 
@@ -131,12 +185,23 @@ type ProjectFixture = {
   assumptions?: readonly ProjectAssumption[];
 };
 
+export function validateProjectFixtures(
+  fixtures: readonly ProjectFixture[]
+): void {
+  assertExactKeysSlugsAndOrders(fixtures);
+  assertEveryBound(fixtures, HOUSE_PROJECT_SCHEMA_LIMITS);
+  assertExactCardHrefMatrix(fixtures);
+  assertUniqueCategories(fixtures, HOUSE_PROJECT_CATEGORIES);
+  assertExactAuroraDetailOwner(fixtures, {
+    key: "aurora",
+    statIds: ["area", "bedrooms", "bathrooms", "energy"],
+    assumptionIds: ["living-zone", "private-zone", "facade"],
+  });
+}
+
 export function buildProjectResources() {
   assertDeepFrozen(PROJECT_FIXTURES);
-  assertExactKeysSlugsAndOrders(PROJECT_FIXTURES);
-  assertExactCardHrefMatrix(PROJECT_FIXTURES);
-  assertUniqueCategories(PROJECT_FIXTURES, HOUSE_PROJECT_CATEGORIES);
-  assertCompleteOptionalDetailGroup(PROJECT_FIXTURES);
+  validateProjectFixtures(PROJECT_FIXTURES);
 
   return {
     contentTypes: [{
@@ -156,15 +221,19 @@ export function buildProjectResources() {
 ```
 
 **Data flow:** exact literal fixtures → deep freeze → duplicate/order/category
-and detail-group guards → strict entry data projection → native content schema
-validation → `cleanJsonObject` → exact package seeds.
+and exact detail-owner guards → exact bound checks → strict entry data
+projection → native content schema validation → recursive plain-finite JSON
+validation → deterministic clone → exact package seeds. Invalid-fixture tests
+pass copied arrays to `validateProjectFixtures`; they never mutate the frozen
+canonical export or mock its module.
 
 **Error handling:** throw stable machine-readable generator errors for duplicate
 key/slug/order, non-contiguous or wrong reference order, unknown/duplicate
 category, an unsafe, remote or key-mismatched `cardHref`, missing common data,
 partial detail group, schema failure, non-exact
 content-type ref, non-published target or any DB/media/asset reference. Do not
-coerce a bad fixture into a different source fact.
+coerce a bad fixture into a different source fact. Strict JSON errors always
+surface as `projekty_domow_json_object_invalid`.
 
 ## Regression Tests
 
@@ -173,14 +242,25 @@ Update `tests/vitest/kits/projekty-domow-project-fixtures.test.ts` to prove:
 - the exact six-row matrix, order, titles, areas, categories, descriptions and
   card destinations;
 - all six exact SEO descriptions and the complete exact Aurora detail object;
-- non-Aurora fixtures omit Aurora-only data;
+- exact four stat IDs and three non-rendered structural assumption IDs;
+- Aurora must have the complete exact detail group and non-Aurora fixtures omit
+  it; copied invalid arrays cover missing-all Aurora, partial Aurora,
+  full-group-on-wrong-owner and one-field-on-wrong-owner with stable errors;
 - the schema contains only the source-backed properties and rejects every
   obsolete field named above; `cardHref` accepts only the two exact internal
   enum values;
+- every `HOUSE_PROJECT_SCHEMA_LIMITS` minimum/maximum and one-under/one-over
+  boundary, including exact cardinalities four and three;
 - category uniqueness, duplicate/order/card-link/detail-group guards and strict
   schema failure paths, including remote/unsafe and wrong-project link values;
 - one published content type and six published entries, every entry carrying
   exactly `{ref:"content_type",key:"house-project"}`;
+- direct `cleanJsonObject` success and recursive failure cases for nested
+  undefined/function/symbol/bigint, non-finite numbers, sparse arrays, cycles,
+  accessors, symbol/non-enumerable keys, `Date`, `toJSON` and custom prototypes;
+- representative valid nested content-type/entry, listing/detail, form/slice and
+  shell/Page-shaped objects retain deterministic bytes through the shared
+  helper;
 - round-trip/deterministic JSON, deep-frozen fixtures and absence of DB/media IDs.
 
 ## Sub-Tasks
@@ -193,6 +273,11 @@ Update `tests/vitest/kits/projekty-domow-project-fixtures.test.ts` to prove:
 ## Testing Requirements
 
 - `bunx vitest run tests/vitest/kits/projekty-domow-project-fixtures.test.ts`;
+- after L02 and L03 land, the aggregate gate runs
+  `tests/vitest/kits/projekty-domow-package.test.ts`,
+  `projekty-domow-discovery-resources.test.ts` and
+  `projekty-domow-form-and-slice.test.ts` as real shared-JSON consumers; after
+  TASK-547-04 lands, its shell/Page suites join the final family gate;
 - `bun --cwd core lint:types`;
 - `bun --cwd core lint`;
 - `git diff --check` for owned files;
