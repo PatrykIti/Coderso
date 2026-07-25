@@ -12,9 +12,10 @@ facts, detail composition and SEO must be corrected to the designated reference.
 
 ## Overview
 
-Own the native project listing template, published-only saved query, canonical
-category-filter vocabulary, Aurora detail document/bindings and the allowlisted
-`site.contentRoutes` setting seed. Provide only
+Own the native project listing template, published-only saved query, public
+category-filter presentation derived from L01's persisted vocabulary, Aurora
+detail document/bindings and the allowlisted `site.contentRoutes` setting seed.
+Provide only
 `buildProjectDiscoveryResources`; do not create or edit L03's
 `buildFormaDomContentResources` aggregate.
 
@@ -30,29 +31,42 @@ This leaf is the sole writer for:
 - `tests/unit/settings/contentRoutesValidation.test.ts`.
 
 The later TASK-547-06 closure leaf owns the DB/runtime detail-route integration
-suite `tests/integration/runtime/projekty-domow-detail-route.test.ts`; do not grow
-the large installed-site suite with those scenarios.
+suite `tests/integration/runtime/projekty-domow-detail-route.test.ts` and the
+runtime Content List precedence/card-render assertions; do not grow the large
+installed-site suite with those scenarios and do not move Bun-owned resolver
+behavior into this leaf's Vitest lane.
 
 ## Listing and Facet Contract
 
 Source: `_docs/projekty-domow-wow-site/projekty.html:38-73`.
 
-`projectListing.ts` owns and exports the canonical ordered public filter values:
+L01 alone owns persisted values through `HOUSE_PROJECT_CATEGORIES`. L02 imports
+that tuple and owns the ordered labels/presentation:
 
 ```ts
+const PROJECT_CATEGORY_LABELS = [
+  "Nowoczesna stodoła",
+  "Wille",
+  "Parterowe",
+  "Energooszczędne",
+] as const;
+
 export const PROJECT_CATEGORY_FILTERS = [
   { value: "all", label: "Wszystkie" },
-  { value: "barn", label: "Nowoczesna stodoła" },
-  { value: "villa", label: "Wille" },
-  { value: "single", label: "Parterowe" },
-  { value: "eco", label: "Energooszczędne" },
+  { value: HOUSE_PROJECT_CATEGORIES[0], label: PROJECT_CATEGORY_LABELS[0] },
+  { value: HOUSE_PROJECT_CATEGORIES[1], label: PROJECT_CATEGORY_LABELS[1] },
+  { value: HOUSE_PROJECT_CATEGORIES[2], label: PROJECT_CATEGORY_LABELS[2] },
+  { value: HOUSE_PROJECT_CATEGORIES[3], label: PROJECT_CATEGORY_LABELS[3] },
 ] as const;
 ```
 
 `all` means the empty/no-filter state and is never persisted in an entry's
 `categories`. The effective native category facet uses `data.categories` and
-only the remaining four options in the same order. TASK-547-04 imports this
-constant for the projects Page; it does not retype the values or labels.
+only L01's remaining four options in the same order. The exact resolved output
+is `all/barn/villa/single/eco` with the five labels above. TASK-547-04 imports
+this constant for the projects Page; it does not retype values or labels.
+`PROJECT_FACET_FIELDS` is exactly `["data.categories"] as const`; no obsolete
+style/storey/energy facet survives.
 
 The `published-projects` query contract is:
 
@@ -60,21 +74,52 @@ The `published-projects` query contract is:
   `contentTypeId:{ref:"content_type",key:"house-project"}`;
 - `includeDrafts:false` and an explicit `status == published` filter;
 - sort `[data.referenceOrder asc, id asc]`;
-- bounded pagination large enough for the six fixtures, never unbounded;
+- exact pagination `{limit:24,offset:0}`;
 - projected fields `id`, `title`, `slug`, `data.cardDescription`, `data.area`,
   `data.categories`, `data.referenceOrder`, and `data.cardHref` only.
 
-The `project-cards` listing template displays the entry title and exact
-`data.cardDescription`. It also contains the semantic field binding
-`{key:"href",source:"data.cardHref",label:null,fallback:null,format:"text"}`.
-The binding is not a visible CTA: it supplies the card anchor destination and,
-by the native resolver contract, takes priority over generic content-route
-fallback. Its exact source matrix is Aurora → `/projekty/aurora`; Linea, Nova,
-Mono, Vista and Calm → `/projekty`, matching `projekty.html:55-72`. The template
-must not display obsolete style/storey/room/energy badges, an invented visible
-CTA, a media field or an invented card fact. It has no lifecycle status field
-or item action. Neutral native empty/error/accessibility state copy is allowed,
-but it must not claim a FormaDom fact absent from the reference.
+The `project-cards` listing template has exactly this normalized field array:
+
+```ts
+[
+  {
+    key: "title",
+    source: "title",
+    label: null,
+    fallback: null,
+    format: "text",
+    conditions: [],
+  },
+  {
+    key: "description",
+    source: "data.cardDescription",
+    label: null,
+    fallback: null,
+    format: "text",
+    conditions: [],
+  },
+  {
+    key: "href",
+    source: "data.cardHref",
+    label: null,
+    fallback: null,
+    format: "text",
+    conditions: [],
+  },
+]
+```
+
+`description` is the native semantic key consumed by the card excerpt
+resolver. `href` supplies the semantic card-anchor destination and takes
+priority over generic content-route fallback. It is not a visible CTA. The
+template has `itemActions:[]` and no obsolete badge, metric, media field,
+lifecycle status or invented copy. TASK-547-04 must author the projects Page
+Content List block with `props.showCta:false` and map that present Page prop to
+`ContentListData.fields.showCta`, while retaining its normal semantic card href.
+TASK-547-04 owns that prop's strict Page allowlist/round-trip and runtime mapper.
+TASK-547-06's Bun/runtime lane proves Aurora → `/projekty/aurora`, the other
+five → `/projekty`, and no visible `Zobacz szczegóły`. L02's Vitest proves only
+the exact normalized binding shape.
 
 ## Aurora Detail Contract
 
@@ -85,25 +130,77 @@ installer. It references only
 `{ref:"content_type",key:"house-project"}`; it has no listing-query reference,
 `related` source, related-project block or computed `relatedItems` binding.
 
-Its source-backed public composition is:
+Its exact registered block order and public representation are:
 
-1. back link `← Wróć do projektów`, eyebrow bound from `detailEyebrow`, H1 bound
-   from entry `title`, lead bound from `detailLead`, and CTA
-   `Chcę podobny dom` to `/kontakt`;
-2. four statistics bound in source order from `detailStats`, including both
-   values and labels;
-3. assumption eyebrow/title/lead plus three cards bound in source order from
-   `assumptions` titles and descriptions;
-4. exactly three abstract gallery cards, matching the source's tall/default/warm
-   sequence through native layout/style vocabulary, with no caption, remote
-   image, media ID or asset ID.
+1. `project-back-link`, `rich-text-section`, `variant:"single-column"`:
+   empty `titleBlock`; `body.html` exactly
+   `<p><a href="/projekty">← Wróć do projektów</a></p>`;
+   `options:{dropcap:false,toc:false,maxWidth:"full",outputMode:"html"}`.
+2. `project-hero`, `hero`, `variant:"centered"`: placeholder sentinel `—` for
+   `badge.label`, `headline` and `body`; badge enabled/primary/above-headline;
+   no CTA and `media:{type:"none",source:"external"}`. Required bindings replace
+   the sentinels with `detailEyebrow`, entry `title` and `detailLead`.
+3. `project-hero-art`, `grid-columns`, `variant:"asymmetric"`: two empty public
+   columns `hero-art-main`/`hero-art-accent`, spans `8/4` desktop and `12/12`
+   mobile/tablet, both `minHeight:"xl"`, `surface:"on"`,
+   `padding:"none"`, `radius:"2xl"`, `overflow:"hidden"`, backgrounds
+   `var(--color-primary)` and `var(--color-secondary)`, and empty slots.
+4. `project-statistics`, `feature-grid`, `variant:"cards-4"`: empty header,
+   exact item IDs `area/bedrooms/bathrooms/energy`, each with sentinel title
+   `—`, empty description, no image/icon/CTA; required bindings replace titles
+   with each `detailStats.N.value` and descriptions with
+   `detailStats.N.label`. Style pins four columns, compact padding and no hover.
+5. `project-contact-cta`, `cta-banner`, `variant:"centered"`: empty
+   badge/title/description and `showDescription:false`; exact primary action
+   `{label:"Chcę podobny dom",href:"/kontakt",enabled:true,openInNewTab:false,
+   icon:"none"}`; secondary and tertiary actions are explicitly blank and
+   disabled so no default English action can render.
+6. `project-assumptions`, `feature-grid`, `variant:"cards-3"`: required header
+   bindings for `assumptionsEyebrow`, `assumptionsTitle`,
+   `assumptionsLead`, with raw `—` sentinels at all three header targets; exact
+   item IDs `living-zone/private-zone/facade`, raw `—` title/description
+   sentinels and required bindings from `assumptions.0..2`; no image, icon or
+   CTA; three columns, spacious padding and no hover.
+7. `project-gallery`, `grid-columns`, `variant:"asymmetric"`: empty public slots
+   for `gallery-tall/gallery-default/gallery-warm`; desktop spans `5/4/3`,
+   tablet/mobile spans `12/12/12`; minimum heights `xl/md/md`;
+   `surface:"on"`, `padding:"none"`, `radius:"2xl"`,
+   `overflow:"hidden"`; backgrounds respectively
+   `var(--color-primary)`, `var(--color-secondary)`,
+   `var(--color-accent)`.
 
-Use registered detail/Page blocks only. Native block separation of statistics
-from the hero is an allowed structural approximation; public strings and facts
-remain exact. Static block defaults for entry-bound public copy are empty so a
-missing field never leaks Aurora data into another entry. The reference defines
-only Aurora's detail page; tests must not invent detail facts for the other five
-entries.
+All seven blocks use the existing full-width detail layout. Public grid-column
+labels are editor-only and therefore not copy. `grid-columns` empty public slots
+render surfaces without placeholder text. This intentionally avoids
+`stats-kpi` and `gallery-mosaic`, whose normalizers/renderers add unwanted
+fallback text. The raw `—` sentinels are never eligible public output: every
+source-backed target is required and no binding has a `fallback` own property.
+The successful Aurora render must contain none of those sentinels or English
+widget defaults.
+
+The exact binding matrix is:
+
+- hero: `detailEyebrow → badge.label`, `title → headline`,
+  `detailLead → body`;
+- statistics index 0..3: `detailStats.N.value → items.N.title` and
+  `detailStats.N.label → items.N.description`;
+- assumption header: `assumptionsEyebrow → header.eyebrow`,
+  `assumptionsTitle → header.title`,
+  `assumptionsLead → header.description`;
+- assumptions index 0..2: `assumptions.N.title → items.N.title` and
+  `assumptions.N.description → items.N.description`.
+
+Every binding above has `required:true`; every entry-field binding has
+`transform:"text"`; none contains `fallback`. The required Aurora-only fields
+are the detail eligibility seam. A non-Aurora entry fails
+`detail_page_binding_missing_required`; the current runtime resolver returns no
+document and the public route returns 404 before generating detail metadata or
+body. The reference defines only Aurora's detail page, so no fallback detail
+facts or SEO are permitted for Linea, Nova, Mono, Vista or Calm.
+TASK-547-06's runtime suite pins `/projekty/aurora` to 200 with the exact
+showcase metadata and pins `/projekty/linea`, `/projekty/nova`,
+`/projekty/mono`, `/projekty/vista` and `/projekty/calm` to 404 with no project
+detail body, title, description or canonical metadata leakage.
 
 The document SEO is exactly:
 
@@ -147,20 +244,27 @@ The sole setting seed is exactly:
 `type` is the literal content-type slug, not a ref or database ID. Only
 `detailPageId` is a `PackageRef`; the installer resolves it to the native UUID
 before `normalizeContentRoutes` persistence. `settingsContracts.ts` remains the
-strict owner for the route object: plain-object prototype, exact string own keys
-only, unique type, normalized safe list/detail paths, terminal `:slug`/`:id`
-parameter, boolean `enabled` and optional UUID detail-page ID. It rejects custom
-prototypes, symbol/non-enumerable unknown keys, duplicate types, unsafe paths and
-invalid IDs with `settings_value_invalid`.
+strict owner for the route object: plain-object prototype, exact string own
+keys only, unique type, normalized list/detail paths, terminal `:slug`/`:id`
+parameter, boolean `enabled` and optional UUID detail-page ID. This leaf pins
+and tests only the exact generated literals `/projekty` and
+`/projekty/:slug`, their normalizer round-trip, exact keys and exact ref
+replacement. It does not change `contentRoutePaths.ts`, define a new general
+path grammar or claim rejection beyond that owner's existing documented cases.
 
 ## Security Contract
 
 No endpoint. Listing/detail reads are published-only. Query fields, filter
-operators, detail binding source paths and route patterns are closed allowlists.
+operators, detail binding source paths and the two generated route literals are
+closed allowlists.
 The card `href` binding is restricted to `data.cardHref`; L01 validates the only
 two exact safe internal values and their fixture-key mapping. Unknown facets,
 arbitrary CSS/URL/action values, non-exact refs and secret-like SEO/binding
-fields fail closed. No media, remote URL, PII or secret is seeded.
+fields fail closed. No media, remote URL, PII or secret is seeded. Before this
+leaf may install the template, TASK-547-02-L02's full-site nested preflight must
+reject unknown own keys in listing config, every field/condition/action,
+empty-state and style object; `normalizeListingTemplateConfig` silently
+selecting known keys is not sufficient strict validation.
 
 ## Implementation Pseudocode
 
@@ -180,6 +284,7 @@ export function buildProjectDiscoveryResources() {
         { field: "data.referenceOrder", dir: "asc" },
         { field: "id", dir: "asc" },
       ],
+      pagination: { limit: 24, offset: 0 },
     }),
   };
   const detail = {
@@ -193,10 +298,15 @@ export function buildProjectDiscoveryResources() {
 
   assertNoRelatedListingDependency(detail.desired);
   assertReferenceFilterOrder(PROJECT_CATEGORY_FILTERS);
-  assertListingHrefBinding(template.desired, {
-    key: "href",
-    source: "data.cardHref",
-  });
+  assertPersistedCategoriesImportedFromL01(PROJECT_CATEGORY_FILTERS);
+  assertExactListingFields(template.desired, [
+    ["title", "title"],
+    ["description", "data.cardDescription"],
+    ["href", "data.cardHref"],
+  ]);
+  assertNoItemActionsOrVisibleCta(template.desired);
+  assertAllAuroraBindingsRequiredWithoutFallback(detail.desired);
+  assertExactRegisteredDetailComposition(detail.desired);
   return {
     listingTemplates: [template],
     listingQueries: [query],
@@ -206,19 +316,23 @@ export function buildProjectDiscoveryResources() {
 }
 ```
 
-**Data flow:** L01 content ref and categories → strict listing-template/query
-normalizers → exact native detail blocks/bindings/SEO → strict content-route
-normalizer using a validation UUID → replace only the allowlisted final
-`detailPageId` with its package ref → four strict resource seeds.
+**Data flow:** L01 content ref and persisted categories → L02 public
+label/presentation mapping → strict listing-template/query preflight and
+normalizers → exact seven-block detail with required Aurora-only bindings/SEO →
+strict content-route normalizer using a validation UUID → replace only the
+allowlisted final `detailPageId` with its package ref → four strict resource
+seeds. Runtime resolves required bindings before public metadata/render.
 
 **Error handling:** throw stable generator/domain errors on unknown/reordered
 filter value, `all` persisted as a category, non-exact content/detail ref,
 unknown query field/operator, non-deterministic sort, malformed binding, missing
 or reordered `data.cardHref` projection, missing or altered semantic `href`
-binding, invented item action, Aurora source binding, any related dependency,
-wrong gallery count, unsafe route or route-normalizer failure. Do not silently
-restore the old detail composition or infer all six destinations from the detail
-route.
+binding, invented item action/CTA copy, optional/fallback Aurora binding, any
+related dependency, wrong registered block/ID/props/gallery geometry, altered
+exact route literal or route-normalizer failure. Direct non-Aurora detail
+resolution must remain a not-found outcome, never a partial document. Do not
+silently restore the old detail composition or infer all six destinations from
+the detail route.
 
 ## Regression Tests
 
@@ -226,25 +340,29 @@ Update `tests/vitest/kits/projekty-domow-discovery-resources.test.ts` to prove:
 
 - exact filter order/labels and the four persisted category values;
 - published-only query, exact projected fields including `data.cardHref`,
-  `referenceOrder`/`id` sort and content-type ref;
-- listing template title/card-description fields plus the exact semantic
-  `href ← data.cardHref` binding; no lifecycle status, item action or
+  `referenceOrder`/`id` sort, `{limit:24,offset:0}` and content-type ref;
+- listing template exact `title`/semantic `description`/semantic `href` field
+  objects including `conditions:[]`; no lifecycle status, item action or
   obsolete/invented visible fields;
-- exact resolved card-link matrix (Aurora detail; the other five listing) and
-  proof that the explicit field binding wins over generic detail-route fallback;
-- exact detail block order, exact Aurora bindings, four stats, three assumptions
-  and exactly three captionless/media-free gallery cards;
+- exact generated six-link fixture/template matrix, while runtime precedence and
+  absence of `Zobacz szczegóły` stay in TASK-547-06's Bun/runtime suite;
+- exact seven registered block IDs/types/variants/data, exact lead → art →
+  statistics → CTA → assumptions → gallery order, required/no-fallback Aurora
+  binding matrix, four stats, three assumptions and exact captionless/media-free
+  grid-column art/gallery surfaces;
 - absence of `related`, related block, computed `relatedItems` binding and any
   listing-query ref inside detail desired;
 - neutral top-level `{{ title }}` plus exact dynamic SEO pattern/description
-  resolution for `Dom Aurora`;
+  resolution for `Dom Aurora`; fixture-level binding resolution proves Aurora
+  has every required source and each other fixture is ineligible;
 - exact route seed, list/detail matching, closed ref paths, deterministic JSON
   and no validation UUID/DB/media ID in the produced package slice.
 
-Update `tests/unit/settings/contentRoutesValidation.test.ts` to retain all
-plain-object/exact-key/path/duplicate/UUID failure cases and add the exact
-`house-project` route round-trip used by the `site.contentRoutes` setting branch.
-The Bun file remains independently runnable and below 1,000 lines.
+Update `tests/unit/settings/contentRoutesValidation.test.ts` to retain its
+existing owner-defined plain-object/exact-key/path/duplicate/UUID cases and add
+the exact `/projekty` plus `/projekty/:slug` route round-trip used by this
+setting branch. Do not broaden its path grammar from this leaf. The Bun file
+remains independently runnable and below 1,000 lines.
 
 ## Sub-Tasks
 
@@ -260,8 +378,8 @@ The Bun file remains independently runnable and below 1,000 lines.
 - `bunx vitest run tests/vitest/kits/projekty-domow-discovery-resources.test.ts`;
 - `bun test tests/unit/settings/contentRoutesValidation.test.ts`;
 - targeted detail-binding/query/content-route suites selected by dependency
-  shape; DB/runtime integration stays with TASK-547-06 and uses at least a
-  360-second timeout;
+  shape; TASK-547-06 runs the Bun content-list precedence and six-slug public
+  route/metadata integration with at least a 360-second timeout;
 - `bun --cwd core lint:types`;
 - `bun --cwd core lint`;
 - `git diff --check` for owned files;
