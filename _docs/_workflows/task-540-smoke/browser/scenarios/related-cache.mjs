@@ -1,5 +1,5 @@
 import { deepFreezeExact, invariant } from "../../executor/foundation.mjs";
-import { resolveExactRef } from "../../executor/ref-dsl.mjs";
+import { registeredSelector, resolveExactRef } from "../../executor/ref-dsl.mjs";
 import { screenshotScenarioOwnershipForAction } from "./ownership.mjs";
 
 export const RELATED_CACHE_BROWSER_ACTION_IDS = deepFreezeExact([
@@ -112,6 +112,12 @@ export function createRelatedCacheScenarioRuntime({
         "/admin/api/content/" +
         plan.fixtureBlueprint.contentTypes.relatedFailure.slug +
         "/entries";
+      // The related-failure alert must be scoped: the retry Screen has no writable bindings, so
+      // `supportsDedicatedEditor` is false and the route permanently renders the unrelated
+      // "Workspace upgrade required" Alert. An unscoped [role="alert"] absence check can never
+      // reach zero on this route, and the same condition is what renders the preview surface the
+      // scenario asserts on. rc-012 owns the settled proof and scopes it the same way.
+      const alertSelector = JSON.stringify(registeredSelector(plan, "relatedAlert"));
       const expectedRowId = captures.get("related-entry-failure1.id");
       const rootSelector =
         '[data-screen-block-id="' + plan.fixtureBlueprint.retryScreen.relatedListBlockId + '"]';
@@ -131,7 +137,7 @@ export function createRelatedCacheScenarioRuntime({
             while (Date.now() < deadline) {
               const rect = await row.count() === 1 ? await row.boundingBox() : null;
               const retryAbsent = await page.locator(${selector}).count() === 0;
-              const alertAbsent = await page.locator('[role="alert"]').count() === 0;
+              const alertAbsent = await page.locator(${alertSelector}).count() === 0;
               if (rect && rect.width > 0 && rect.height > 0 && retryAbsent && alertAbsent) return true;
               await page.waitForTimeout(25);
             }
