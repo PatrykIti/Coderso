@@ -133,6 +133,7 @@ const EXPECTED_EXECUTOR_MODULE_PATHS = Object.freeze([
   "_docs/_workflows/task-540-smoke/executor/execution-contract.mjs",
   "_docs/_workflows/task-540-smoke/executor/failure-boundary.mjs",
   "_docs/_workflows/task-540-smoke/executor/fake-capabilities.mjs",
+  "_docs/_workflows/task-540-smoke/executor/finalization.mjs",
   "_docs/_workflows/task-540-smoke/executor/foundation.mjs",
   "_docs/_workflows/task-540-smoke/executor/json-schema.mjs",
   "_docs/_workflows/task-540-smoke/executor/output-parser.mjs",
@@ -249,7 +250,7 @@ function readExecutorModuleGraph(): ReadonlyMap<string, string> {
       );
     }
   }
-  expect(EXPECTED_EXECUTOR_MODULE_PATHS).toHaveLength(135);
+  expect(EXPECTED_EXECUTOR_MODULE_PATHS).toHaveLength(136);
   expect([...sources.keys()].sort()).toEqual(EXPECTED_EXECUTOR_MODULE_PATHS);
   return sources;
 }
