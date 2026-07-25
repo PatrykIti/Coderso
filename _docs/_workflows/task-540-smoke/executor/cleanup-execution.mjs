@@ -176,7 +176,6 @@ export function createCleanupExecutionStages(dependencies) {
       "bootstrapApiSession",
       "completeIntentionalPresentationOverrideAbsenceAuthority",
       "deleteCleanupSubject",
-      "executeIntentionalPresentationOverrideAlreadyAbsentCleanup",
       "hashCleanupAuthoritativeBytes",
       "proveCleanupSubjectAbsent",
       "proveCleanupSubjectPresent",
@@ -193,7 +192,6 @@ export function createCleanupExecutionStages(dependencies) {
     bootstrapApiSession,
     completeIntentionalPresentationOverrideAbsenceAuthority,
     deleteCleanupSubject,
-    executeIntentionalPresentationOverrideAlreadyAbsentCleanup,
     hashCleanupAuthoritativeBytes,
     proveCleanupSubjectAbsent,
     proveCleanupSubjectPresent,
@@ -213,7 +211,6 @@ export function createCleanupExecutionStages(dependencies) {
       "bootstrapApiSession",
       "completeIntentionalPresentationOverrideAbsenceAuthority",
       "deleteCleanupSubject",
-      "executeIntentionalPresentationOverrideAlreadyAbsentCleanup",
       "hashCleanupAuthoritativeBytes",
       "proveCleanupSubjectAbsent",
       "proveCleanupSubjectPresent",
@@ -236,6 +233,85 @@ export function createCleanupExecutionStages(dependencies) {
     );
     state.contentRoutesDeleteProofs += 1;
     return true;
+  }
+
+  async function executeIntentionalPresentationOverrideAlreadyAbsentCleanup(
+    state,
+    record,
+    operationKind,
+    proveFreshAbsence = (currentState, currentRecord) =>
+      runBoundResourceBunOperation(currentState, currentRecord, "absence")
+  ) {
+    invariant(
+      CLEANUP_OPERATION_KINDS.includes(operationKind) && typeof proveFreshAbsence === "function",
+      "intentional override cleanup operation authority drift"
+    );
+    const authority = completeIntentionalPresentationOverrideAbsenceAuthority(state, record);
+    invariant(authority !== null, "intentional override cleanup lacks complete authority");
+    const cleanupProof = state.intentionalPresentationOverrideCleanupProof;
+    exactOwnKeys(
+      cleanupProof,
+      [
+        "absenceOutputSha256",
+        "identifier",
+        "operationDescriptor",
+        "proofActionReceiptSha256",
+        "resetActionReceiptSha256",
+      ],
+      "intentional override fresh cleanup proof",
+      { plain: true }
+    );
+    invariant(
+      deepEqualJson(cleanupProof.identifier, record.identifier) &&
+        cleanupProof.operationDescriptor === "resource/current-owner-exact" &&
+        cleanupProof.proofActionReceiptSha256 === authority.proof.receiptEvidenceSha256 &&
+        cleanupProof.resetActionReceiptSha256 === authority.reset.receiptEvidenceSha256,
+      "intentional override fresh cleanup proof lineage drift"
+    );
+    const freshAbsence = await proveFreshAbsence(state, record);
+    invariant(
+      deepEqualJson(freshAbsence, { absent: true, affected: 0, present: false }),
+      "intentional override cleanup absence drift"
+    );
+    const actionAuthority =
+      operationKind === "provenance"
+        ? authority.acquisition
+        : operationKind === "delete"
+          ? authority.reset
+          : authority.proof;
+    const output = {
+      actionId: actionAuthority.actionId,
+      actionReceiptSha256: actionAuthority.receiptEvidenceSha256,
+      actionResponseSha256: actionAuthority.responseSha256,
+      alreadyDeletedByExactReset: true,
+      freshAbsence,
+      freshOwnerRefreshAbsenceSha256: cleanupProof.absenceOutputSha256,
+      proofOperationDescriptor: record.absenceOpId,
+    };
+    const observedBytesSha256 = hashBytes(
+      Buffer.from(
+        canonicalJson({
+          identifier: record.identifier,
+          operationDescriptor: record.absenceOpId,
+          result: freshAbsence,
+        }) + "\n"
+      )
+    );
+    if (operationKind === "delete") state.overridesCleared = true;
+    return cleanupRuntimeReceipt(
+      state,
+      "cleanup-" + operationKind,
+      record[
+        operationKind === "provenance"
+          ? "provenanceOpId"
+          : operationKind === "delete"
+            ? "cleanupOpId"
+            : "absenceOpId"
+      ],
+      record,
+      output,
+      observedBytesSha256
+    );
   }
 
   async function executeResourceCleanupOperation(state, record, operationKind) {
@@ -450,6 +526,7 @@ export function createCleanupExecutionStages(dependencies) {
 
   return Object.freeze({
     executeCleanupPlanStage,
+    executeIntentionalPresentationOverrideAlreadyAbsentCleanup,
     executeResourceCleanupOperation,
   });
 }

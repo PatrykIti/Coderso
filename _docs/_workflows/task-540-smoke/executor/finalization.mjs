@@ -5,9 +5,13 @@
 // seals the API context, browser session, private root, host, bootstrap, content route, settings,
 // storage and task-traffic proofs together with the screenshot set, the phase proof receipts and
 // the phase trace.
+import { removeAcquiredScreenshots } from "./browser-output-authority.mjs";
 import { MAX_STREAM_BYTES, SESSION_NAME } from "./config.mjs";
 import { deepFreezeExact, exactOwnKeys, hashBytes, invariant } from "./foundation.mjs";
-import { readOwnedRegularFileNoFollow } from "./private-workspace.mjs";
+import {
+  readOwnedRegularFileNoFollow,
+  removePrivateWorkspaceLedger,
+} from "./private-workspace.mjs";
 import { deepEqualJson } from "./resource-contracts.mjs";
 
 export function cleanupPlanView(ledger, blockedRoots = []) {
@@ -199,4 +203,96 @@ export function buildCanonicalFinalization(
     "canonical finalization terminal proof drift"
   );
   return finalization;
+}
+
+export function createConstructionStateCleanup(dependencies) {
+  // The browser teardown proofs, the API request context registries and their disposal proofs and
+  // the owned host stopper belong to authorities the facade composes, so they arrive as injected
+  // dependencies and the declaration below closes over those exact values instead of a rebindable
+  // module slot.
+  exactOwnKeys(
+    dependencies,
+    [
+      "closeBrowserIfPresent",
+      "disposeApiRequestContextAndProveAbsent",
+      "disposeOwnedApiRequestContextAndProveAbsent",
+      "privateApiContextRegistry",
+      "privateEphemeralApiContextRegistry",
+      "proveBrowserSessionAbsent",
+      "releaseFailureRoutesIfPresent",
+      "retainedApiLifecycleFailure",
+      "stopOwnedHost",
+    ],
+    "construction state cleanup dependencies",
+    { plain: true }
+  );
+  invariant(
+    Object.values(dependencies).every((dependency) => typeof dependency === "function"),
+    "construction state cleanup dependencies are not callable"
+  );
+  const {
+    closeBrowserIfPresent,
+    disposeApiRequestContextAndProveAbsent,
+    disposeOwnedApiRequestContextAndProveAbsent,
+    privateApiContextRegistry,
+    privateEphemeralApiContextRegistry,
+    proveBrowserSessionAbsent,
+    releaseFailureRoutesIfPresent,
+    retainedApiLifecycleFailure,
+    stopOwnedHost,
+  } = dependencies;
+
+  async function cleanupConstructionStateOnce(state) {
+    if (state.cleanupPromise) return state.cleanupPromise;
+    state.cleanupPromise = (async () => {
+      const failures = [];
+      const attempt = async (callback) => {
+        try {
+          await callback();
+        } catch (error) {
+          failures.push(error);
+        }
+      };
+      if (state.browserMayExist) {
+        await attempt(() => releaseFailureRoutesIfPresent(state));
+        await attempt(() => closeBrowserIfPresent(state));
+        await attempt(() => proveBrowserSessionAbsent(state));
+      }
+      const ephemeralContexts = privateEphemeralApiContextRegistry(state);
+      for (const [key, record] of [...ephemeralContexts.entries()].sort(([left], [right]) =>
+        left.localeCompare(right)
+      )) {
+        await attempt(async () => {
+          await disposeOwnedApiRequestContextAndProveAbsent(record, key);
+          const lifecycleError = retainedApiLifecycleFailure(record, key);
+          if (lifecycleError !== null) throw lifecycleError;
+        });
+        if (record.disposeProof !== null) ephemeralContexts.delete(key);
+      }
+      const privateContexts = privateApiContextRegistry(state);
+      for (const [key, record] of [...privateContexts.entries()].sort(([left], [right]) =>
+        left.localeCompare(right)
+      )) {
+        await attempt(async () => {
+          await disposeApiRequestContextAndProveAbsent(state, record.capability, key);
+          const lifecycleError = retainedApiLifecycleFailure(record, key);
+          if (lifecycleError !== null) throw lifecycleError;
+        });
+        if (record.disposeProof !== null) {
+          privateContexts.delete(key);
+          state.sessions.delete(key);
+        }
+      }
+      await attempt(() => removeAcquiredScreenshots(state));
+      await attempt(() => removePrivateWorkspaceLedger(state.browserWorkspace.ledger));
+      await attempt(() => stopOwnedHost(state));
+      state.cleanupFailures = failures.length;
+      return deepFreezeExact({ absenceProven: failures.length === 0 });
+    })();
+    return state.cleanupPromise;
+  }
+
+  return Object.freeze({
+    cleanupConstructionStateOnce,
+  });
 }

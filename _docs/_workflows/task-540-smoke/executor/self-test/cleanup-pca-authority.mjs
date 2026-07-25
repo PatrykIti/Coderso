@@ -493,7 +493,7 @@ export async function runCleanupPcaAuthoritySelfTest({
   const intentionalCleanupHashToken = "const observedBytesSha256 = hashBytes(";
   const validatesIntentionalCleanupHashSource = (source) =>
     source.includes(intentionalCleanupHashToken) &&
-    source.includes("output,\n    observedBytesSha256\n  );");
+    source.includes("output,\n      observedBytesSha256\n    );");
   invariant(
     validatesIntentionalCleanupHashSource(intentionalCleanupHashSource),
     "intentional override cleanup observed-hash source drift"
@@ -501,8 +501,8 @@ export async function runCleanupPcaAuthoritySelfTest({
   assertNegative(
     !validatesIntentionalCleanupHashSource(
       intentionalCleanupHashSource.replace(
-        "output,\n    observedBytesSha256\n  );",
-        "output,\n    null\n  );"
+        "output,\n      observedBytesSha256\n    );",
+        "output,\n      null\n    );"
       )
     ),
     "intentional override dropped observed-hash source mutant"

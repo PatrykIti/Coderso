@@ -22,6 +22,9 @@ const executorRelative = "_docs/_workflows/task-540-smoke-executor.mjs";
 const resourceSourcesRelative =
   "_docs/_workflows/task-540-smoke/executor/bun-bridge-resource-sources.mjs";
 const resourceSourcesSpecifier = "./task-540-smoke/executor/bun-bridge-resource-sources.mjs";
+const operationRegistryRelative =
+  "_docs/_workflows/task-540-smoke/executor/bridge-operation-registry.mjs";
+const operationRegistrySpecifier = "./bun-bridge-resource-sources.mjs";
 const selfTestEntryRelative = "_docs/_workflows/task-540-smoke/executor/self-test/entry.mjs";
 const cleanupOperationNames = ["provenance", "delete", "absence"] as const;
 
@@ -90,8 +93,9 @@ const exportNames = Object.freeze([
   "USER_SETTING_EXACT_BRIDGE_SOURCES",
   "assertSeoEntryDocumentExactBridgeSourcesFailClosed",
 ]);
-// The fail-closed source assertion is consumed by the self-test entry module, not the facade.
-const facadeImportNames = Object.freeze(
+// The fail-closed source assertion is consumed by the self-test entry module, not the Bun bridge
+// operation registry that owns every other resource source.
+const registryImportNames = Object.freeze(
   exportNames.filter((name) => name !== "assertSeoEntryDocumentExactBridgeSourcesFailClosed")
 );
 
@@ -164,6 +168,25 @@ test("Bun bridge resource sources have one exact module owner", () => {
     exportNames
   );
 
+  const registry = parseSource(operationRegistryRelative);
+  const registryImports = registry.statements
+    .filter(isImportDeclaration)
+    .filter(
+      (declaration) =>
+        isStringLiteral(declaration.moduleSpecifier) &&
+        declaration.moduleSpecifier.text === operationRegistrySpecifier
+    );
+  expect(registryImports).toHaveLength(1);
+  const registryImportClause = registryImports[0].importClause;
+  const registryBindings = registryImportClause?.namedBindings;
+  expect(registryBindings && isNamedImports(registryBindings)).toBe(true);
+  if (!registryBindings || !isNamedImports(registryBindings)) {
+    throw new Error("Bun bridge resource source registry binding is absent");
+  }
+  expect(registryBindings.elements.map((element) => element.name.text)).toEqual(
+    registryImportNames
+  );
+
   const executor = parseSource(executorRelative);
   const facadeImports = executor.statements
     .filter(isImportDeclaration)
@@ -172,14 +195,7 @@ test("Bun bridge resource sources have one exact module owner", () => {
         isStringLiteral(declaration.moduleSpecifier) &&
         declaration.moduleSpecifier.text === resourceSourcesSpecifier
     );
-  expect(facadeImports).toHaveLength(1);
-  const facadeImportClause = facadeImports[0].importClause;
-  const facadeBindings = facadeImportClause?.namedBindings;
-  expect(facadeBindings && isNamedImports(facadeBindings)).toBe(true);
-  if (!facadeBindings || !isNamedImports(facadeBindings)) {
-    throw new Error("Bun bridge resource source facade binding is absent");
-  }
-  expect(facadeBindings.elements.map((element) => element.name.text)).toEqual(facadeImportNames);
+  expect(facadeImports).toHaveLength(0);
   expect(readSource(selfTestEntryRelative)).toContain(
     '  assertSeoEntryDocumentExactBridgeSourcesFailClosed,\n} from "../bun-bridge-resource-sources.mjs";'
   );

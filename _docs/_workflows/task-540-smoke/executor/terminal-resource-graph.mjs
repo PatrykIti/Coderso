@@ -342,3 +342,136 @@ export function createSyntheticOwnerDependencyRefresh(dependencies) {
     refreshCurrentSyntheticOwnerDependencyEdges,
   });
 }
+
+export function createExactSeoEntryDiscovery(dependencies) {
+  // The process absence stability barrier, the bounded delay, the resource Bun descriptor
+  // promotion, the bridge UUID primitive and the Bun bridge operation runner belong to
+  // authorities the facade composes, so they arrive as injected dependencies and the declaration
+  // below closes over those exact values instead of a rebindable module slot.
+  exactOwnKeys(
+    dependencies,
+    [
+      "PROCESS_ABSENCE_STABILITY_MS",
+      "delayMilliseconds",
+      "promoteResourceBunDescriptorsAfterLedgerAppend",
+      "requireBridgeUuid",
+      "runBunBridgeOperation",
+    ],
+    "exact SEO entry discovery dependencies",
+    { plain: true }
+  );
+  invariant(
+    Number.isSafeInteger(dependencies.PROCESS_ABSENCE_STABILITY_MS) &&
+      dependencies.PROCESS_ABSENCE_STABILITY_MS > 0 &&
+      [
+        "delayMilliseconds",
+        "promoteResourceBunDescriptorsAfterLedgerAppend",
+        "requireBridgeUuid",
+        "runBunBridgeOperation",
+      ].every((key) => typeof dependencies[key] === "function"),
+    "exact SEO entry discovery dependencies are not callable"
+  );
+  const {
+    PROCESS_ABSENCE_STABILITY_MS,
+    delayMilliseconds,
+    promoteResourceBunDescriptorsAfterLedgerAppend,
+    requireBridgeUuid,
+    runBunBridgeOperation,
+  } = dependencies;
+
+  async function discoverExactSeoEntryResources(
+    state,
+    resourceLedger,
+    query = (targetIds) =>
+      runBunBridgeOperation(state, "resource/seo-entry-discovery", { targetIds }),
+    stabilityBarrier = () => delayMilliseconds(PROCESS_ABSENCE_STABILITY_MS)
+  ) {
+    invariant(
+      typeof query === "function" && typeof stabilityBarrier === "function",
+      "SEO entry discovery authority drift"
+    );
+    const targets = TASK_FIXTURE_ENTRY_SEMANTICS.map((entrySemantic) => ({
+      entrySemantic,
+      parentKey: state.resourceKeys.get(entrySemantic),
+      resourceSemantic: seoDocumentResourceSemantic(entrySemantic),
+      targetId: state.fixtureIds.get(entrySemantic),
+    }));
+    invariant(
+      targets.length === 6 &&
+        targets.every(
+          ({ parentKey, resourceSemantic, targetId }) =>
+            typeof targetId === "string" &&
+            typeof parentKey === "string" &&
+            !state.resourceKeys.has(resourceSemantic)
+        ) &&
+        new Set(targets.map(({ targetId }) => targetId)).size === 6 &&
+        new Set(targets.map(({ parentKey }) => parentKey)).size === 6,
+      "SEO entry discovery exact parent authority is absent"
+    );
+    const targetIds = deepFreezeExact(targets.map(({ targetId }) => targetId));
+    const targetById = new Map(targets.map((target) => [target.targetId, target]));
+    const validatePoll = (poll, label) => {
+      exactOwnKeys(poll, ["candidates"], label, { plain: true });
+      invariant(
+        Array.isArray(poll.candidates) && poll.candidates.length <= 6,
+        label + " cardinality drift"
+      );
+      const documentIds = new Set();
+      const candidateTargetIds = new Set();
+      let previousCorrelation = null;
+      for (const candidate of poll.candidates) {
+        exactOwnKeys(candidate, ["id", "targetId", "targetType"], label + " candidate", {
+          plain: true,
+        });
+        requireBridgeUuid(candidate.id, label + " SEO document ID");
+        requireBridgeUuid(candidate.targetId, label + " SEO target ID");
+        const correlation = candidate.targetId + "\0" + candidate.id;
+        invariant(
+          candidate.targetType === "entry" &&
+            targetById.has(candidate.targetId) &&
+            !documentIds.has(candidate.id) &&
+            !candidateTargetIds.has(candidate.targetId) &&
+            (previousCorrelation === null || previousCorrelation < correlation),
+          label + " target correlation drift"
+        );
+        documentIds.add(candidate.id);
+        candidateTargetIds.add(candidate.targetId);
+        previousCorrelation = correlation;
+      }
+      return poll;
+    };
+    const first = validatePoll(await query(targetIds), "SEO entry discovery first poll");
+    await stabilityBarrier();
+    const second = validatePoll(await query(targetIds), "SEO entry discovery second poll");
+    invariant(deepEqualJson(first, second), "SEO entry discovery did not reach a stable boundary");
+    if (second.candidates.length === 0) return deepFreezeExact([]);
+    const cores = second.candidates.map((candidate) =>
+      createResourceCore({
+        kind: "seo-document-entry",
+        identifier: [candidate.id, candidate.targetType, candidate.targetId],
+        acquisitionSourceId: "cleanup-seo-entry-discovery",
+        sourceActionOrdinal: null,
+        acquisitionChannel: "cleanup-discovery",
+      })
+    );
+    const delta = deepFreezeExact({
+      cores: deepFreezeExact(cores),
+      dependencyEdges: deepFreezeExact(
+        cores.map((core) =>
+          destructiveResourceEdge(targetById.get(core.identifier[2]).parentKey, core.resourceKey)
+        )
+      ),
+    });
+    resourceLedger.appendValidatedDelta(delta);
+    promoteResourceBunDescriptorsAfterLedgerAppend(state, delta);
+    for (const core of cores) {
+      const target = targetById.get(core.identifier[2]);
+      state.resourceKeys.set(target.resourceSemantic, core.resourceKey);
+    }
+    return deepFreezeExact(cores);
+  }
+
+  return Object.freeze({
+    discoverExactSeoEntryResources,
+  });
+}

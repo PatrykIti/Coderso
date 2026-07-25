@@ -121,6 +121,18 @@ export function createResourceBunOperationAuthority(dependencies) {
     validateBunBridgeOperationDescriptor,
   } = dependencies;
 
+  function initializeBunBridgeOperationAuthority(state) {
+    invariant(
+      !PRIVATE_BUN_RESOURCE_DESCRIPTORS.has(state) && !PRIVATE_BUN_OPERATION_DESCRIPTORS.has(state),
+      "Bun operation authority was assigned twice"
+    );
+    PRIVATE_BUN_RESOURCE_DESCRIPTORS.set(state, new Map());
+    PRIVATE_BUN_OPERATION_DESCRIPTORS.set(
+      state,
+      new Map(Object.entries(BUN_BRIDGE_OPERATION_DESCRIPTORS))
+    );
+  }
+
   function promoteResourceBunDescriptorsAfterLedgerAppend(state, delta) {
     const resourceRegistry = PRIVATE_BUN_RESOURCE_DESCRIPTORS.get(state);
     const unionRegistry = PRIVATE_BUN_OPERATION_DESCRIPTORS.get(state);
@@ -357,6 +369,7 @@ export function createResourceBunOperationAuthority(dependencies) {
   return Object.freeze({
     assertResourceBunDescriptorSetExact,
     bunBridgeDescriptorForOperation,
+    initializeBunBridgeOperationAuthority,
     promoteResourceBunDescriptorsAfterLedgerAppend,
     runBoundResourceBunOperation,
     validateStaticBunBridgeDescriptorRegistries,
