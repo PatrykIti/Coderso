@@ -105,6 +105,7 @@ const EXPECTED_EXECUTOR_MODULE_PATHS = Object.freeze([
   "_docs/_workflows/task-540-smoke/executor/action-resources.mjs",
   "_docs/_workflows/task-540-smoke/executor/auth-challenge-authority.mjs",
   "_docs/_workflows/task-540-smoke/executor/bootstrap-contracts.mjs",
+  "_docs/_workflows/task-540-smoke/executor/bridge-output-validators/response-lost.mjs",
   "_docs/_workflows/task-540-smoke/executor/bridge-sources/bootstrap.mjs",
   "_docs/_workflows/task-540-smoke/executor/bridge-sources/platform.mjs",
   "_docs/_workflows/task-540-smoke/executor/bridge-sources/response-lost.mjs",
@@ -230,7 +231,7 @@ function readExecutorModuleGraph(): ReadonlyMap<string, string> {
       );
     }
   }
-  expect(EXPECTED_EXECUTOR_MODULE_PATHS).toHaveLength(123);
+  expect(EXPECTED_EXECUTOR_MODULE_PATHS).toHaveLength(124);
   expect([...sources.keys()].sort()).toEqual(EXPECTED_EXECUTOR_MODULE_PATHS);
   return sources;
 }
@@ -570,10 +571,7 @@ test("Bun bridge validation primitives have one focused owner", () => {
   expect(primitiveFacadeImports[0].getText(executorSourceFile)).toBe(
     `import {
   validateExactBridgeKeys,
-  validateBridgeNullableUuid,
-  validateBridgeNullableString,
   validateBridgeJsonObject,
-  validateBridgeStringArray,
   requireBoundedBridgeString,
   requireBridgeUuid,
 } from "./task-540-smoke/executor/bun-bridge-validation-primitives.mjs";`
