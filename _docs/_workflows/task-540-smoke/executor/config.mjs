@@ -332,6 +332,37 @@ export const TONE_SELECT_FAILURE_FRAMES = deepFreezeExact(
     ])
   )
 );
+// Single source of truth for which `unit` browser actions compute a failure FRAME that
+// must survive transport. Every other unit action keeps the discarding wrapper, which
+// awaits the source and emits the unit contract's success literal. Declared after the
+// tone constants so every referenced registry is already initialised.
+export const UNIT_FAILURE_FRAME_CLASSES_BY_ACTION_ID = deepFreezeExact(
+  Object.fromEntries([
+    ...DIRTY_NAVIGATION_REQUEST_ACTION_IDS.map((actionId) => [
+      actionId,
+      dirtyNavigationBrowserFailureClassesForAction(actionId),
+    ]),
+    ...TONE_MENU_OPEN_ACTION_IDS.map((actionId) => [actionId, TONE_OPEN_BROWSER_FAILURE_CLASSES]),
+    ...TONE_MUTED_ACTION_IDS.map((actionId) => [actionId, TONE_SELECT_BROWSER_FAILURE_CLASSES]),
+  ])
+);
+invariant(
+  Object.keys(UNIT_FAILURE_FRAME_CLASSES_BY_ACTION_ID).length === 9 &&
+    new Set(Object.keys(UNIT_FAILURE_FRAME_CLASSES_BY_ACTION_ID)).size === 9,
+  "unit failure-frame registry drift"
+);
+export const UNIT_FAILURE_FRAME_DIRTY_NAVIGATION_RESULT_ERROR_TAG = "dirty_navigation";
+export const UNIT_FAILURE_FRAME_TONE_RESULT_ERROR_TAG = "unit_frame";
+export function unitFailureFrameClassesForAction(actionId) {
+  return Object.hasOwn(UNIT_FAILURE_FRAME_CLASSES_BY_ACTION_ID, actionId)
+    ? UNIT_FAILURE_FRAME_CLASSES_BY_ACTION_ID[actionId]
+    : null;
+}
+export function unitFailureFrameResultErrorTagForAction(actionId) {
+  return DIRTY_NAVIGATION_REQUEST_ACTION_IDS.includes(actionId)
+    ? UNIT_FAILURE_FRAME_DIRTY_NAVIGATION_RESULT_ERROR_TAG
+    : UNIT_FAILURE_FRAME_TONE_RESULT_ERROR_TAG;
+}
 export const TONE_FLOW_ACTION_CONFIG = deepFreezeExact({
   "dg-021-tone-open": {
     expectedDraftKey: "contentDraft",

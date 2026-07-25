@@ -3,7 +3,8 @@ import {
   DIRTY_NAVIGATION_BROWSER_FAILURE_CLASSES,
   DIRTY_NAVIGATION_REQUEST_ACTION_CONFIG,
   DIRTY_NAVIGATION_REQUEST_ACTION_IDS,
-  dirtyNavigationBrowserFailureClassesForAction,
+  unitFailureFrameClassesForAction,
+  unitFailureFrameResultErrorTagForAction,
 } from "../../executor/config.mjs";
 import { deepFreezeExact, invariant } from "../../executor/foundation.mjs";
 import {
@@ -90,6 +91,39 @@ function assertDirtyGuardsBrowserAction(action) {
       DIRTY_NAVIGATION_REQUEST_ACTION_IDS.includes(action.id),
     String(action?.id) + " shared dirty-navigation action is not registered"
   );
+}
+
+// The one `unit` wrapper that lets a browser-computed failure verdict survive transport.
+// `true` still becomes the unit contract's success literal; a two-key
+// { failureClass, settled: false } frame carrying a REGISTERED class is returned verbatim
+// so the executor can classify it; anything else throws, so an unexpected object can never
+// be read as success. The emitted bytes are frozen: the dirty-navigation self-test pins
+// this text, so keep the template's literal indentation exactly as written.
+export function buildFailureFramePreservingUnitSource(source, failureClasses, resultErrorTag) {
+  invariant(typeof source === "string" && source.length > 0, "unit source is absent");
+  invariant(
+    Array.isArray(failureClasses) &&
+      failureClasses.length > 0 &&
+      failureClasses.every((entry) => typeof entry === "string" && entry.length > 0),
+    "unit failure classes are invalid"
+  );
+  invariant(
+    typeof resultErrorTag === "string" && /^[a-z_]+$/u.test(resultErrorTag),
+    "unit result error tag is invalid"
+  );
+  return `(async (page) => {
+          const result = await (${source})(page);
+          if (result === true) return { ok: true };
+          const failureClasses = ${JSON.stringify(failureClasses)};
+          const keys = result !== null && typeof result === "object" && !Array.isArray(result) && Object.getPrototypeOf(result) === Object.prototype ? Object.keys(result) : [];
+          if (keys.length === 2 && keys.includes("failureClass") && keys.includes("settled") && result.settled === false && failureClasses.includes(result.failureClass)) return result;
+          throw new Error("wf540_${resultErrorTag}_result");
+        })`;
+}
+
+export function buildDiscardingUnitSource(source) {
+  invariant(typeof source === "string" && source.length > 0, "unit source is absent");
+  return `(async (page) => { await (${source})(page); return { ok: true }; })`;
 }
 
 export function createDirtyGuardsScenarioRuntime({
@@ -382,19 +416,13 @@ export function createDirtyGuardsScenarioRuntime({
   function normalizeDirtyGuardsUnitSource(action, source) {
     assertDirtyGuardsBrowserAction(action);
     invariant(typeof source === "string", action.id + " dirty-guards unit source is absent");
-    if (!DIRTY_NAVIGATION_REQUEST_ACTION_IDS.includes(action.id)) {
-      return `(async (page) => { await (${source})(page); return { ok: true }; })`;
-    }
-    return `(async (page) => {
-          const result = await (${source})(page);
-          if (result === true) return { ok: true };
-          const failureClasses = ${JSON.stringify(
-            dirtyNavigationBrowserFailureClassesForAction(action.id)
-          )};
-          const keys = result !== null && typeof result === "object" && !Array.isArray(result) && Object.getPrototypeOf(result) === Object.prototype ? Object.keys(result) : [];
-          if (keys.length === 2 && keys.includes("failureClass") && keys.includes("settled") && result.settled === false && failureClasses.includes(result.failureClass)) return result;
-          throw new Error("wf540_dirty_navigation_result");
-        })`;
+    const failureClasses = unitFailureFrameClassesForAction(action.id);
+    if (failureClasses === null) return buildDiscardingUnitSource(source);
+    return buildFailureFramePreservingUnitSource(
+      source,
+      failureClasses,
+      unitFailureFrameResultErrorTagForAction(action.id)
+    );
   }
 
   function dirtyGuardsOperationForAction(action) {

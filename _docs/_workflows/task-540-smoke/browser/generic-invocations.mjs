@@ -1,6 +1,14 @@
-import { SESSION_NAME } from "../executor/config.mjs";
+import {
+  SESSION_NAME,
+  unitFailureFrameClassesForAction,
+  unitFailureFrameResultErrorTagForAction,
+} from "../executor/config.mjs";
 import { deepFreezeExact, exactOwnKeys, invariant } from "../executor/foundation.mjs";
 import { registeredSelector, resolveExactRef } from "../executor/ref-dsl.mjs";
+import {
+  buildDiscardingUnitSource,
+  buildFailureFramePreservingUnitSource,
+} from "./scenarios/dirty-guards.mjs";
 import { buildDataBearingRunCodeInvocation, playwrightArgs, runCode } from "./run-code.mjs";
 import { buildSimpleBrowserInvocation as buildSimpleBrowserInvocationCore } from "./simple-invocations.mjs";
 import {
@@ -453,9 +461,20 @@ export function createBrowserInvocationRouter({
         sourceIndex > 0 && typeof invocation.args[sourceIndex] === "string",
         action.id + " unit run-code source is absent"
       );
+      // Which wrapper an action gets is decided by ONE registry, not by scenario. The
+      // dirty-guards branch stays so assertDirtyGuardsBrowserAction keeps auditing every
+      // dg-* / rc-037a action; it consults the same registry internally. The new branch is
+      // what reaches registered actions owned by other scenarios (rc-015 / rc-016).
+      const unitFailureClasses = unitFailureFrameClassesForAction(action.id);
       const unitSource = dirtyGuardsCandidate
         ? normalizeDirtyGuardsUnitSource(action, invocation.args[sourceIndex])
-        : `(async (page) => { await (${invocation.args[sourceIndex]})(page); return { ok: true }; })`;
+        : unitFailureClasses === null
+          ? buildDiscardingUnitSource(invocation.args[sourceIndex])
+          : buildFailureFramePreservingUnitSource(
+              invocation.args[sourceIndex],
+              unitFailureClasses,
+              unitFailureFrameResultErrorTagForAction(action.id)
+            );
       const args = [...invocation.args];
       args[sourceIndex] = unitSource;
       invocation = { ...invocation, args };

@@ -45,9 +45,58 @@ export function staticSelector(value) {
   return selectorTemplate([value]);
 }
 
+// Widget hosts whose visible label is delegated to a CHILD element, so Playwright's
+// :text-is() pseudo can never match the host itself: the text engine only accepts an
+// element whose own text match is "self", and a child element carrying the same text
+// downgrades that to "selfAndChildren". Radix/shadcn SelectItem renders its children
+// inside <SelectPrimitive.ItemText> (core/admin/components/ui/select.tsx:92-117), which
+// emits <div role="option" data-slot="select-item"><span .../><span>Label</span></div>.
+// Such hosts must therefore be addressed through :has(span:text-is("...")), never by the
+// host's own text. Only SelectItem wraps its children — Badge, DropdownMenuItem,
+// TabsTrigger and Button all pass children through unwrapped — so this is a denylist of
+// proven text-delegating hosts rather than an allowlist of safe ones. If another
+// primitive starts wrapping, add its host token here with the same evidence.
+export const TEXT_DELEGATING_HOST_TOKENS = deepFreezeExact([
+  '[role="option"]',
+  '[data-slot="select-item"]',
+]);
+
+const TEXT_ENGINE_PSEUDO = ":text-is(";
+const DELEGATED_TEXT_FORM = ':has(span:text-is("';
+
+export function assertSelectorTextEngineShape(registry) {
+  invariant(registry !== null && typeof registry === "object", "selector registry is absent");
+  for (const [name, template] of Object.entries(registry)) {
+    invariant(
+      template !== null &&
+        typeof template === "object" &&
+        template.kind === "selector-template" &&
+        Array.isArray(template.parts) &&
+        template.parts.every((part) => typeof part === "string"),
+      name + " selector template is invalid"
+    );
+    // Argument values are "css-string" leaves (block ids, labels, hrefs) and can never
+    // contain a pseudo-class or an attribute-selector token, so joining the literal parts
+    // with a neutral placeholder can neither fabricate nor hide a host/pseudo adjacency.
+    const literal = template.parts.join(" ");
+    if (!literal.includes(TEXT_ENGINE_PSEUDO)) continue;
+    for (const host of TEXT_DELEGATING_HOST_TOKENS) {
+      invariant(
+        !literal.includes(host + TEXT_ENGINE_PSEUDO),
+        name + " selector addresses a text-delegating host by its own text"
+      );
+      invariant(
+        !literal.includes(host) || literal.includes(host + DELEGATED_TEXT_FORM),
+        name + " selector must match a delegated label through :has(span:text-is(...))"
+      );
+    }
+  }
+  return registry;
+}
+
 export function createSelectorRegistry() {
   const slot = (argIndex) => ({ argIndex, encoding: "css-string" });
-  return deepFreezeExact({
+  const registry = deepFreezeExact({
     loginEmail: staticSelector('input#email[name="email"][type="email"]'),
     loginPassword: staticSelector('input#password[name="password"][type="password"]'),
     loginSubmit: staticSelector('button[type="submit"]:text-is("Sign in")'),
@@ -139,7 +188,12 @@ export function createSelectorRegistry() {
       [slot(0), slot(1)]
     ),
     toneTrigger: staticSelector('[data-presentation-control="tone"] button[role="combobox"]'),
-    muted: staticSelector('[role="option"]:text-is("Muted")'),
+    // The tone option is a Radix/shadcn SelectItem, so its "Muted" label lives in the
+    // nested <SelectPrimitive.ItemText> span and the [role="option"] host carries no
+    // direct text node. `[role="option"]:text-is("Muted")` therefore matches 0 nodes;
+    // the label has to be reached through the child span, exactly as `fieldOption`
+    // above already does for the same widget class. Do not "simplify" this back.
+    muted: staticSelector('[role="option"]:has(span:text-is("Muted"))'),
     recordsLink: selectorTemplate(
       ['a[href="/admin/advanced/custom-screens/', '/entries"]'],
       [slot(0)]
@@ -163,4 +217,5 @@ export function createSelectorRegistry() {
     secondTabTitle: staticSelector('textarea[placeholder="Enter post title..."]'),
     secondTabSave: staticSelector('button:text-is("Save draft")'),
   });
+  return assertSelectorTextEngineShape(registry);
 }

@@ -4,9 +4,42 @@ import {
   assertUniqueRegistryEntries,
   validateExecutableRegistryProjection,
 } from "../registries.mjs";
+import { assertSelectorTextEngineShape } from "../selectors.mjs";
 import { createPrivateProjectionSelfTestHarness } from "./helpers.mjs";
 
 export function runRegistriesFixturesSelfTestSuite(plan, negative) {
+  // The built plan is the authority here: these read plan.registries.selectors, not the
+  // source literal, so a regression in createSelectorRegistry cannot hide behind a stale
+  // expectation. A Radix SelectItem delegates its label to a child span, so the option
+  // host has no direct text node and cannot be addressed by its own text.
+  invariant(
+    plan.registries.selectors.muted.parts.length === 1 &&
+      plan.registries.selectors.muted.parts[0] === '[role="option"]:has(span:text-is("Muted"))' &&
+      plan.registries.selectors.muted.minArity === 0 &&
+      plan.registries.selectors.muted.maxArity === 0,
+    "muted selector literal drift"
+  );
+  const selectorShapeMutant = (parts) =>
+    assertSelectorTextEngineShape({
+      ...plan.registries.selectors,
+      muted: { kind: "selector-template", parts },
+    });
+  negative(
+    () => selectorShapeMutant(['[role="option"]:text-is("Muted")']),
+    "option host addressed by its own text"
+  );
+  negative(
+    () => selectorShapeMutant(['[data-slot="select-item"]:text-is("Muted")']),
+    "select-item host addressed by its own text"
+  );
+  negative(
+    () => selectorShapeMutant(['[role="option"] span:text-is("Muted")']),
+    "delegated label matched outside the :has(span:text-is(...)) form"
+  );
+  negative(
+    () => assertSelectorTextEngineShape({ muted: { kind: "not-a-selector" } }),
+    "selector template shape rejected"
+  );
   for (const registryName of ["runtimeOperations", "browserRunCodeSources"]) {
     const missing = {
       runtimeOperations: { ...plan.registries.runtimeOperations },

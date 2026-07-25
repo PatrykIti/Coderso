@@ -5,10 +5,26 @@ import {
   TONE_MUTED_ACTION_IDS,
   TONE_OPEN_BROWSER_FAILURE_CLASSES,
   TONE_SELECT_BROWSER_FAILURE_CLASSES,
+  unitFailureFrameResultErrorTagForAction,
 } from "../config.mjs";
 import { invariant } from "../foundation.mjs";
 import { registeredSelector } from "../ref-dsl.mjs";
 import { deepEqualJson } from "../resource-contracts.mjs";
+
+// The tone option is a Radix/shadcn SelectItem: its label is rendered inside a nested
+// <SelectPrimitive.ItemText> span, so the [role="option"] host carries no direct text node
+// and Playwright's :text-is() can never match it. The registry must reach the label through
+// the child span. Both patterns below subsume the anchored `^[role="option"]:text-is(`
+// form and also catch a scoped variant such as `<scope> [role="option"]:text-is("...")`.
+const TONE_OPTION_SELECTOR = '[role="option"]:has(span:text-is("Muted"))';
+const RADIX_OPTION_OWN_TEXT_PATTERNS = Object.freeze([
+  /\[role="option"\]:text-is\(/u,
+  /\[data-slot="select-item"\]:text-is\(/u,
+]);
+
+function addressesRadixOptionByOwnText(literal) {
+  return RADIX_OPTION_OWN_TEXT_PATTERNS.some((pattern) => pattern.test(literal));
+}
 
 export function inspectToneFlowRunCodeSource({
   actionId,
@@ -346,7 +362,24 @@ export function inspectToneFlowRunCodeSource({
             "return fail(failureClass);",
             "} catch {",
           ];
-    const required = [...commonRequired, ...phaseRequired];
+    // The compiled source is the POST-normalization source, so it must carry the
+    // frame-preserving unit wrapper: without these pins the discarding wrapper — which
+    // awaits the source and emits the unit success literal — satisfies every other token.
+    const wrapperFailureClasses =
+      toneFlowConfig.phase === "open"
+        ? TONE_OPEN_BROWSER_FAILURE_CLASSES
+        : TONE_SELECT_BROWSER_FAILURE_CLASSES;
+    const wrapperRequired = [
+      "const result = await (",
+      "if (result === true) return { ok: true };",
+      "const failureClasses = " + JSON.stringify(wrapperFailureClasses) + ";",
+      'keys.length === 2 && keys.includes("failureClass") && keys.includes("settled")',
+      "result.settled === false",
+      "failureClasses.includes(result.failureClass)",
+      "return result;",
+      'throw new Error("wf540_' + unitFailureFrameResultErrorTagForAction(actionId) + '_result");',
+    ];
+    const required = [...commonRequired, ...phaseRequired, ...wrapperRequired];
     const orderedTokens =
       toneFlowConfig.phase === "open"
         ? [
@@ -485,10 +518,12 @@ export function inspectToneFlowRunCodeSource({
             source.includes("currentTrigger") ||
             source.includes("page.keyboard") ||
             source.includes('press("Escape")') ||
+            // Each class gains exactly one occurrence from the preserving wrapper's
+            // `const failureClasses = [...]` line, on top of its in-source occurrences.
             !TONE_SELECT_BROWSER_FAILURE_CLASSES.every(
               (currentFailureClass, index) =>
                 source.split(JSON.stringify(currentFailureClass)).length - 1 ===
-                (index === 1 ? 3 : index === 2 ? 2 : 1)
+                (index === 1 ? 4 : index === 2 ? 3 : 2)
             )))
       ) {
         return false;
@@ -620,9 +655,48 @@ export function inspectToneFlowRunCodeSource({
   return null;
 }
 
+export function assertToneOptionSelectorShape({ assertNegative, plan }) {
+  // Driven off the BUILT PLAN — plan.registries.selectors, the value the tone sources
+  // actually receive — never off a source literal, so a regression cannot hide behind a
+  // stale expectation in this file.
+  invariant(
+    registeredSelector(plan, "muted") === TONE_OPTION_SELECTOR,
+    "tone option selector literal drift"
+  );
+  invariant(
+    !addressesRadixOptionByOwnText(TONE_OPTION_SELECTOR),
+    "tone option delegated selector was rejected"
+  );
+  for (const [name, template] of Object.entries(plan.registries.selectors)) {
+    invariant(
+      template !== null &&
+        typeof template === "object" &&
+        Array.isArray(template.parts) &&
+        template.parts.every((part) => typeof part === "string"),
+      name + " registered selector template is invalid"
+    );
+    invariant(
+      !addressesRadixOptionByOwnText(template.parts.join(" ")),
+      name + " addresses a Radix Select option by the host's own text"
+    );
+  }
+  for (const [label, literal] of [
+    ["pre-fix option literal", '[role="option"]:text-is("Muted")'],
+    ["select-item host literal", '[data-slot="select-item"]:text-is("Muted")'],
+    ["scoped option literal", '[data-preview-shell="roomy"] [role="option"]:text-is("Muted")'],
+  ]) {
+    assertNegative(
+      addressesRadixOptionByOwnText(literal),
+      "tone option own-text rejection: " + label
+    );
+  }
+}
+
 export function assertToneFlowRunCodeSourceOwnership({
+  assertNegative,
   observedToneMenuOpenActionIds,
   observedToneMutedActionIds,
+  plan,
 }) {
   invariant(
     deepEqualJson(observedToneMenuOpenActionIds, TONE_MENU_OPEN_ACTION_IDS),
@@ -632,4 +706,5 @@ export function assertToneFlowRunCodeSourceOwnership({
     deepEqualJson(observedToneMutedActionIds, TONE_MUTED_ACTION_IDS),
     "tone-muted specialization ownership drift"
   );
+  assertToneOptionSelectorShape({ assertNegative, plan });
 }

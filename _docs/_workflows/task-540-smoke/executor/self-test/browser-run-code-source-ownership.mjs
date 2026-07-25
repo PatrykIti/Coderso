@@ -1,8 +1,15 @@
 import { Script } from "node:vm";
 
+import {
+  UNIT_FAILURE_FRAME_CLASSES_BY_ACTION_ID,
+  unitFailureFrameClassesForAction,
+  unitFailureFrameResultErrorTagForAction,
+} from "../config.mjs";
 import { invariant } from "../foundation.mjs";
 import { expandRegisteredPath, registeredSelector } from "../ref-dsl.mjs";
+import { deepEqualJson } from "../resource-contracts.mjs";
 import { LEGACY_SCREEN_RUNTIME_ROOT_SELECTOR } from "../../browser/run-code.mjs";
+import { buildFailureFramePreservingUnitSource } from "../../browser/scenarios/dirty-guards.mjs";
 import {
   assertBrowserAuthSettlementSourceOwnership,
   inspectBrowserAuthSettlementSource,
@@ -20,6 +27,23 @@ import {
   assertToneFlowRunCodeSourceOwnership,
   inspectToneFlowRunCodeSource,
 } from "./browser-tone-flow-source.mjs";
+
+const PRESERVING_UNIT_WRAPPER_MARKER = "if (result === true) return { ok: true };";
+const UNIT_WRAPPER_PROBE_INNER_SOURCE = "__WF540_UNIT_WRAPPER_PROBE__";
+
+// Behavioural round-trip against the REAL builder output. The inner source is a trivial
+// probe: an action's own inner source drives a live page and must never be executed here.
+async function runWrappedUnitSource(failureClasses, resultErrorTag, innerLiteral) {
+  const source = buildFailureFramePreservingUnitSource(
+    "async () => (" + innerLiteral + ")",
+    failureClasses,
+    resultErrorTag
+  );
+  const wrapper = new Script("(" + source + ")", {
+    filename: "unit-frame-roundtrip.self-test.js",
+  }).runInThisContext();
+  return await wrapper(null);
+}
 
 export async function runBrowserRunCodeSourceOwnershipSelfTest({
   assertNegative,
@@ -60,6 +84,7 @@ export async function runBrowserRunCodeSourceOwnershipSelfTest({
     readDataBearingRunCodePayload,
     assertSourceMutantsRejected,
   } = browserSourceContext;
+  const observedUnitFailureFrameActionIds = [];
   for (const action of plan.actionManifest) {
     if (action.executable.type === "runtime-operation") continue;
     const executionSpec = compileActionExecutionSpec(action);
@@ -98,6 +123,60 @@ export async function runBrowserRunCodeSourceOwnershipSelfTest({
       );
     }
     new Script("(" + compiledSource + ")", { filename: action.id + ".self-test.js" });
+    if (action.outputSchemaId === "unit") {
+      const unitFailureClasses = unitFailureFrameClassesForAction(action.id);
+      if (unitFailureClasses === null) {
+        // Complement: no unregistered unit source may carry the preserving form, so the
+        // registry stays the only way an action's verdict survives transport.
+        invariant(
+          !compiledSource.includes(PRESERVING_UNIT_WRAPPER_MARKER),
+          action.id + " unregistered unit source is frame-preserving"
+        );
+      } else {
+        observedUnitFailureFrameActionIds.push(action.id);
+        const resultErrorTag = unitFailureFrameResultErrorTagForAction(action.id);
+        const [expectedWrapperHead, expectedWrapperTail] = buildFailureFramePreservingUnitSource(
+          UNIT_WRAPPER_PROBE_INNER_SOURCE,
+          unitFailureClasses,
+          resultErrorTag
+        ).split(UNIT_WRAPPER_PROBE_INNER_SOURCE);
+        invariant(
+          compiledSource.startsWith(expectedWrapperHead) &&
+            compiledSource.endsWith(expectedWrapperTail),
+          action.id + " preserving unit wrapper byte drift"
+        );
+        invariant(
+          deepEqualJson(await runWrappedUnitSource(unitFailureClasses, resultErrorTag, "true"), {
+            ok: true,
+          }),
+          action.id + " unit success frame drift"
+        );
+        for (const failureClass of unitFailureClasses) {
+          const frame = { failureClass, settled: false };
+          invariant(
+            deepEqualJson(
+              await runWrappedUnitSource(unitFailureClasses, resultErrorTag, JSON.stringify(frame)),
+              frame
+            ),
+            action.id + " " + failureClass + " frame was not preserved"
+          );
+        }
+        await expectAsyncFailure(
+          () =>
+            runWrappedUnitSource(
+              unitFailureClasses,
+              resultErrorTag,
+              JSON.stringify({ failureClass: "zz_unknown", settled: false })
+            ),
+          action.id + " unregistered failure class"
+        );
+        await expectAsyncFailure(
+          () =>
+            runWrappedUnitSource(unitFailureClasses, resultErrorTag, JSON.stringify({ ok: true })),
+          action.id + " unrecognised unit return shape"
+        );
+      }
+    }
     inspectBrowserAuthSettlementSource({
       action,
       assertNegative,
@@ -450,6 +529,14 @@ export async function runBrowserRunCodeSourceOwnershipSelfTest({
     compiledRunCodeSources += 1;
   }
   invariant(compiledRunCodeSources === 392, "generated run-code source count drift");
+  invariant(
+    observedUnitFailureFrameActionIds.length ===
+      Object.keys(UNIT_FAILURE_FRAME_CLASSES_BY_ACTION_ID).length &&
+      Object.keys(UNIT_FAILURE_FRAME_CLASSES_BY_ACTION_ID).every((actionId) =>
+        observedUnitFailureFrameActionIds.includes(actionId)
+      ),
+    "unit failure-frame action coverage drift"
+  );
   assertDirtyNavigationRunCodeSourceOwnership({
     expectedDirtyNavigationRequestActionConfig,
     observedDirtyNavigationRequestActionIds,
@@ -458,8 +545,10 @@ export async function runBrowserRunCodeSourceOwnershipSelfTest({
     observedToneContentFillActionIds,
   });
   assertToneFlowRunCodeSourceOwnership({
+    assertNegative,
     observedToneMenuOpenActionIds,
     observedToneMutedActionIds,
+    plan,
   });
   assertBrowserAuthSettlementSourceOwnership({
     authSettlementActionIds,
