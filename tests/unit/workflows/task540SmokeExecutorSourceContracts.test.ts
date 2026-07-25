@@ -165,6 +165,7 @@ const EXPECTED_EXECUTOR_MODULE_PATHS = Object.freeze([
   "_docs/_workflows/task-540-smoke/executor/self-test/cleanup-stages.mjs",
   "_docs/_workflows/task-540-smoke/executor/self-test/construction-cleanup.mjs",
   "_docs/_workflows/task-540-smoke/executor/self-test/entry-support.mjs",
+  "_docs/_workflows/task-540-smoke/executor/self-test/entry.mjs",
   "_docs/_workflows/task-540-smoke/executor/self-test/failure-action-classification.mjs",
   "_docs/_workflows/task-540-smoke/executor/self-test/failure-action-execution.mjs",
   "_docs/_workflows/task-540-smoke/executor/self-test/failure-action-sinks.mjs",
@@ -255,7 +256,7 @@ function readExecutorModuleGraph(): ReadonlyMap<string, string> {
       );
     }
   }
-  expect(EXPECTED_EXECUTOR_MODULE_PATHS).toHaveLength(140);
+  expect(EXPECTED_EXECUTOR_MODULE_PATHS).toHaveLength(141);
   expect([...sources.keys()].sort()).toEqual(EXPECTED_EXECUTOR_MODULE_PATHS);
   return sources;
 }
@@ -532,7 +533,7 @@ test("plan execution has one focused owner and exact injected authority", () => 
   visitExecutorNode(executorSourceFile);
   expect(planExecutionFactoryCalls).toBe(1);
   expect(planExecutionFactoryIdentifiers).toBe(2);
-  expect(countToken(executor, "executeSmokePlanCore")).toBe(6);
+  expect(countToken(executor, "executeSmokePlanCore")).toBe(3);
   expect(countToken(executor, "assertCanonicalFinalization")).toBe(2);
   expect(executor).not.toContain("const PRIVATE_CORE = new WeakMap();");
   expect(executor).not.toContain("function assertCanonicalFinalization(");

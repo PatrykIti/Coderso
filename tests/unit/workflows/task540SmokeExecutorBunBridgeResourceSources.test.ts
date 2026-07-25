@@ -22,6 +22,7 @@ const executorRelative = "_docs/_workflows/task-540-smoke-executor.mjs";
 const resourceSourcesRelative =
   "_docs/_workflows/task-540-smoke/executor/bun-bridge-resource-sources.mjs";
 const resourceSourcesSpecifier = "./task-540-smoke/executor/bun-bridge-resource-sources.mjs";
+const selfTestEntryRelative = "_docs/_workflows/task-540-smoke/executor/self-test/entry.mjs";
 const cleanupOperationNames = ["provenance", "delete", "absence"] as const;
 
 type CleanupOperation = (typeof cleanupOperationNames)[number];
@@ -89,6 +90,10 @@ const exportNames = Object.freeze([
   "USER_SETTING_EXACT_BRIDGE_SOURCES",
   "assertSeoEntryDocumentExactBridgeSourcesFailClosed",
 ]);
+// The fail-closed source assertion is consumed by the self-test entry module, not the facade.
+const facadeImportNames = Object.freeze(
+  exportNames.filter((name) => name !== "assertSeoEntryDocumentExactBridgeSourcesFailClosed")
+);
 
 function readSource(relativePath: string): string {
   return readFileSync(path.join(root, relativePath), "utf8");
@@ -174,7 +179,10 @@ test("Bun bridge resource sources have one exact module owner", () => {
   if (!facadeBindings || !isNamedImports(facadeBindings)) {
     throw new Error("Bun bridge resource source facade binding is absent");
   }
-  expect(facadeBindings.elements.map((element) => element.name.text)).toEqual(exportNames);
+  expect(facadeBindings.elements.map((element) => element.name.text)).toEqual(facadeImportNames);
+  expect(readSource(selfTestEntryRelative)).toContain(
+    '  assertSeoEntryDocumentExactBridgeSourcesFailClosed,\n} from "../bun-bridge-resource-sources.mjs";'
+  );
 
   const facadeDeclarationNames = executor.statements
     .map(declarationName)

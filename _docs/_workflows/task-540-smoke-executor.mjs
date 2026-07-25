@@ -9,22 +9,11 @@ import {
 
 import { assertExecutionInput } from "./task-540-smoke/executor/execution-contract.mjs";
 import { createPlanExecutionRuntime } from "./task-540-smoke/executor/plan-execution.mjs";
-import { createExecuteCleanupLifecycleCore } from "./task-540-smoke/executor/capabilities/cleanup-lifecycle.mjs";
+import { createRunTask540SmokeExecutorSelfTest } from "./task-540-smoke/executor/self-test/entry.mjs";
 import { createRealCapabilitiesFactory } from "./task-540-smoke/executor/capabilities/real-capabilities.mjs";
 
-import {
-  createFakeCapabilitiesRuntime,
-  fixtureCaptureValue,
-} from "./task-540-smoke/executor/fake-capabilities.mjs";
-import {
-  assertCleanupReceiptBijection,
-  validateCapabilityResult,
-} from "./task-540-smoke/executor/canonical-evidence.mjs";
-import {
-  BROWSER_FIXED_TIMEOUT_ENV,
-  BROWSER_OPTIONAL_INHERITED_ENV,
-  applyFixedBrowserTimeoutEnvironment,
-} from "./task-540-smoke/executor/environment.mjs";
+import { createFakeCapabilitiesRuntime } from "./task-540-smoke/executor/fake-capabilities.mjs";
+import { validateCapabilityResult } from "./task-540-smoke/executor/canonical-evidence.mjs";
 import {
   assertNoSymlinkAncestors,
   readOwnedRegularFileNoFollow,
@@ -53,41 +42,6 @@ import { cleanupDiagnostics } from "./task-540-smoke/cleanup/diagnostics.mjs";
 import { createConstructionAuthorityRuntime } from "./task-540-smoke/cleanup/construction-authority.mjs";
 import { createFinalBaselinesRuntime } from "./task-540-smoke/cleanup/final-baselines.mjs";
 import { createCleanupSubjectAuthorityRuntime } from "./task-540-smoke/cleanup/subject-authority.mjs";
-import { runApiContextSelfTest } from "./task-540-smoke/executor/self-test/api-context.mjs";
-import { runBootstrapRestorationSelfTest } from "./task-540-smoke/executor/self-test/bootstrap-restoration.mjs";
-import { runBunBridgeContractsSelfTest } from "./task-540-smoke/executor/self-test/bun-bridge-contracts.mjs";
-import { runBunResponseContractsSelfTest } from "./task-540-smoke/executor/self-test/bun-response-contracts.mjs";
-import { runExpectedAuthChallengeSelfTest } from "./task-540-smoke/executor/self-test/auth-challenge.mjs";
-import { runBrowserCaptureFrontierSelfTest } from "./task-540-smoke/executor/self-test/browser-capture-frontier.mjs";
-import { runBrowserRunCodeSourceOwnershipSelfTest } from "./task-540-smoke/executor/self-test/browser-run-code-source-ownership.mjs";
-import { runCleanupPcaAuthoritySelfTest } from "./task-540-smoke/executor/self-test/cleanup-pca-authority.mjs";
-import { runCleanupStagesSelfTest } from "./task-540-smoke/executor/self-test/cleanup-stages.mjs";
-import { runConstructionCleanupSelfTest } from "./task-540-smoke/executor/self-test/construction-cleanup.mjs";
-import { runFailureActionClassificationSelfTest } from "./task-540-smoke/executor/self-test/failure-action-classification.mjs";
-import { runFailureActionExecutionSelfTest } from "./task-540-smoke/executor/self-test/failure-action-execution.mjs";
-import { runFailureActionSinksSelfTest } from "./task-540-smoke/executor/self-test/failure-action-sinks.mjs";
-import { runFailureFramesSelfTest } from "./task-540-smoke/executor/self-test/failure-frames.mjs";
-import { runHostReadinessPolicySelfTest } from "./task-540-smoke/executor/self-test/host-readiness-policy.mjs";
-import { runMediaIsolationSelfTest } from "./task-540-smoke/executor/self-test/media-isolation.mjs";
-import { runMediaUploadSelfTest } from "./task-540-smoke/executor/self-test/media-upload.mjs";
-import { runNominalEvidenceSelfTest } from "./task-540-smoke/executor/self-test/nominal-evidence.mjs";
-import { runParserRefNativeOutputSelfTest } from "./task-540-smoke/executor/self-test/parser-ref-native-output.mjs";
-import { runResponseLostDiscoverySelfTest } from "./task-540-smoke/executor/self-test/response-lost-discovery.mjs";
-import { runSeoEntryCleanupSelfTest } from "./task-540-smoke/executor/self-test/seo-entry-cleanup.mjs";
-import { runSettlementDiagnosticCasesSelfTest } from "./task-540-smoke/executor/self-test/settlement-diagnostic-cases.mjs";
-import { runSourceOwnershipAuthRateSelfTest } from "./task-540-smoke/executor/self-test/source-ownership-auth-rate.mjs";
-import { runTerminalResourceGraphSelfTest } from "./task-540-smoke/executor/self-test/terminal-resource-graph.mjs";
-import { createSettlementDiagnosticHarness } from "./task-540-smoke/executor/self-test/settlement-diagnostic-harness.mjs";
-import {
-  expectUncountedAsyncFailure,
-  selfTestBunBridgeInputForSchema,
-  selfTestContext,
-  selfTestExactBunChildInputSource,
-  selfTestJsonTransport,
-  selfTestNativeTransport,
-  selfTestNumberSchema,
-  selfTestStringSchema,
-} from "./task-540-smoke/executor/self-test/entry-support.mjs";
 import {
   createFailureBoundaryRuntime,
   retainOrDiscardPreAuthorityCauseNeverThrow,
@@ -97,12 +51,7 @@ import { createAdminApiSessionRuntime } from "./task-540-smoke/runtime/admin-api
 import { createBootstrapLoginRuntime } from "./task-540-smoke/runtime/bootstrap-login.mjs";
 import { createBunBridgeTransport } from "./task-540-smoke/runtime/bun-bridge-transport.mjs";
 import { createCommandAuthorityRuntime } from "./task-540-smoke/runtime/command-authority.mjs";
-import {
-  TASK540_MEDIA_UPLOAD_SHA256,
-  TASK540_PNG_SIGNATURE_HEX,
-  createMediaOperationsRuntime,
-  decodeCanonicalMediaUploadFixtureExact,
-} from "./task-540-smoke/runtime/media-operations.mjs";
+import { createMediaOperationsRuntime } from "./task-540-smoke/runtime/media-operations.mjs";
 import { createMissingMediaProofRuntime } from "./task-540-smoke/runtime/missing-media-proof.mjs";
 import { createMediaStorageOwnershipRuntime } from "./task-540-smoke/runtime/media-storage-ownership.mjs";
 import { createRuntimeOperationRouter } from "./task-540-smoke/runtime/operation-router.mjs";
@@ -123,7 +72,6 @@ import {
   TASK_TRAFFIC_SNAPSHOT_BRIDGE_SOURCE,
   USER_EXACT_BRIDGE_SOURCES,
   USER_SETTING_EXACT_BRIDGE_SOURCES,
-  assertSeoEntryDocumentExactBridgeSourcesFailClosed,
 } from "./task-540-smoke/executor/bun-bridge-resource-sources.mjs";
 import {
   PREFERENCE_GET_BRIDGE_SOURCE,
@@ -134,10 +82,6 @@ import {
   USER_PROVISION_BRIDGE_SOURCE,
 } from "./task-540-smoke/executor/bridge-sources/user-preference.mjs";
 import {
-  RESPONSE_LOST_MEDIA_QUERY_BRIDGE_SOURCE,
-  RESPONSE_LOST_USER_QUERY_BRIDGE_SOURCE,
-} from "./task-540-smoke/executor/bridge-sources/response-lost.mjs";
-import {
   CONTENT_ROUTES_EXACT_BRIDGE_SOURCE,
   CURRENT_RESOURCE_OWNER_QUERY_BRIDGE_SOURCE,
   MISSING_MEDIA_DB_ABSENCE_BRIDGE_SOURCE,
@@ -146,8 +90,6 @@ import {
   SECURITY_SESSION_BRIDGE_SOURCE,
   SEO_ENTRY_DISCOVERY_BRIDGE_SOURCE,
   STORAGE_PREFLIGHT_BRIDGE_SOURCE,
-  assertCurrentResourceOwnerBridgeFailClosedSource,
-  assertSeoEntryDiscoveryBridgeFailClosedSource,
 } from "./task-540-smoke/executor/bridge-sources/platform.mjs";
 import {
   API_SESSION_OBSERVATION_BRIDGE_SOURCE,
@@ -155,10 +97,7 @@ import {
   BOOTSTRAP_CAS_RESTORE_BRIDGE_SOURCE,
   BOOTSTRAP_LOGIN_OBSERVATION_BRIDGE_SOURCE,
 } from "./task-540-smoke/executor/bridge-sources/bootstrap.mjs";
-import {
-  BUN_BRIDGE_INPUT_VALIDATORS,
-  validateBunBridgeInput,
-} from "./task-540-smoke/executor/bridge-input-validators.mjs";
+import { validateBunBridgeInput } from "./task-540-smoke/executor/bridge-input-validators.mjs";
 import { createBunBridgeDescriptors } from "./task-540-smoke/executor/bridge-descriptors.mjs";
 import {
   PRIVATE_BUN_OPERATION_DESCRIPTORS,
@@ -173,7 +112,6 @@ import {
   createPlatformRuntimeOperations,
   createScreenMaterialization,
   normalizeAuthRatePolicy,
-  readExactEntryAuthorId,
   runtimeSafeProjection,
 } from "./task-540-smoke/executor/runtime-operations/platform.mjs";
 import { createOverrideRuntimeOperations } from "./task-540-smoke/executor/runtime-operations/overrides.mjs";
@@ -183,7 +121,6 @@ import {
 import { decodeExactNativeUtf8 } from "./task-540-smoke/executor/output-parser.mjs";
 import {
   createBrowserOutputAuthority,
-  privateNativeSnapshotSizeIsValid,
   removeAcquiredScreenshots,
 } from "./task-540-smoke/executor/browser-output-authority.mjs";
 import {
@@ -194,22 +131,14 @@ import {
   authoritativeProofRuntimeReceipt,
   cleanupRuntimeReceipt,
   createCleanupExecutionStages,
-  createCleanupPhaseScheduler,
   finalRecordByKey,
-  runIndependentCleanupStepsNeverSkip,
 } from "./task-540-smoke/executor/cleanup-execution.mjs";
 import {
-  BOOTSTRAP_RESTORE_PROOF_KEYS,
-  classifyBootstrapCasBridgeFailure,
   createBootstrapRestorationProtocol,
 } from "./task-540-smoke/executor/bootstrap-restoration-protocol.mjs";
 import {
-  assertExactFinalResourceDependencyGraph,
   createSyntheticOwnerDependencyRefresh,
 } from "./task-540-smoke/executor/terminal-resource-graph.mjs";
-import {
-  cleanupPlanView,
-} from "./task-540-smoke/executor/finalization.mjs";
 import {
   createDirtyGuardsScenarioRuntime,
   isDirtyGuardsBrowserCandidate,
@@ -1465,467 +1394,109 @@ export async function executeTask540SmokePlan(input) {
   return executeTask540SmokePlanWithAuthorityFactory(input);
 }
 
-export async function runTask540SmokeExecutorSelfTest() {
-  let negativeCases = 0;
-  const expectAsyncFailure = async (callback, label) => {
-    await expectUncountedAsyncFailure(callback, label);
-    negativeCases += 1;
-  };
-  const assertNegative = (condition, label) => {
-    invariant(condition, label + " negative case did not remain observable");
-    negativeCases += 1;
-  };
-  const plan = buildTask540SmokePlan({ nonce: "0123456789ab" });
-  const { enabledAuthRatePolicy, disabledAuthRatePolicy } =
-    await runHostReadinessPolicySelfTest({
-      BROWSER_FIXED_TIMEOUT_ENV,
-      BROWSER_OPTIONAL_INHERITED_ENV,
-      PROCESS_KILL_GRACE_MS,
-      PROCESS_TERM_GRACE_MS,
-      applyFixedBrowserTimeoutEnvironment,
-      expectAsyncFailure,
-      incrementNegativeCases: () => {
-        negativeCases += 1;
-      },
-      normalizeAuthRatePolicy,
-      plan,
-      readHostReadyLine,
-      readHostReadyLineWithTimerAuthority,
-      selfTestContext,
-    });
+const { runTask540SmokeExecutorSelfTest } = createRunTask540SmokeExecutorSelfTest({
+  BUN_BRIDGE_AUXILIARY_OPERATION_DESCRIPTORS,
+  BUN_BRIDGE_OPERATION_DESCRIPTORS,
+  BUN_BRIDGE_RESPONSE_LOST_OPERATION_DESCRIPTORS,
+  BUN_BRIDGE_RUNTIME_OPERATION_DESCRIPTORS,
+  LocalCommandAuthority,
+  PRIVATE_API_REQUEST_CONTEXT,
+  PRIVATE_BOOTSTRAP_LOGIN_AUTHORITY,
+  PRIVATE_BUN_RESOURCE_DESCRIPTORS,
+  PRIVATE_CONSTRUCTION_AUTHORITY,
+  PRIVATE_FAILURE_ACTION_TRACKERS,
+  PRIVATE_RUNTIME,
+  PROCESS_KILL_GRACE_MS,
+  PROCESS_TERM_GRACE_MS,
+  PendingFailureAttemptRegistry,
+  RESOURCE_BUN_SOURCE_SPECS,
+  RESPONSE_LOST_CREATE_ACTION_IDS,
+  adminApiRequest,
+  appendRetainedGroupMembers,
+  assertCanonicalFinalization,
+  assertFinalStorageDatabaseBaseline,
+  assertPreparedBunBridgeFrameExact,
+  assertResourceBunDescriptorSetExact,
+  attemptBootstrapCasBridgeOnce,
+  beginPrivateFailureAction,
+  buildAuthRateWindowBarrierSource,
+  buildBrowserInvocation,
+  buildBrowserStreamIntegrity,
+  buildFakeCapabilities,
+  buildRuntimeOperationHandlers,
+  bunBridgeDescriptorForOperation,
+  captureAllResponseLostNaturalBaselinesBeforeFirstWrite,
+  classifyClosedBootstrapCasBridgeOutcome,
+  commitIntentionalPresentationOverrideActionAfterLedgerAppend,
+  compileActionExecutionSpec,
+  completeIntentionalPresentationOverrideAbsenceAuthority,
+  configuredSensitiveValues,
+  createBootstrapRestoreReceiptOnce,
+  createPrivateAuthSettlementFailure,
+  createPrivateBoundedFailureActionDiagnosticSink,
+  createPrivateConstructionCleanupAuthority,
+  createPrivateDirtyNavigationFailure,
+  createPrivateFailureActionTracker,
+  createPrivateSynchronousFailureActionDiagnosticSink,
+  createPrivateToneOpenFailure,
+  createPrivateToneSelectFailure,
+  currentPrivateConstructionCleanupDiagnosticNeverThrow,
+  deleteCleanupSubject,
+  discoverExactSeoEntryResources,
+  discoverOneResponseLostCreate,
+  discoverResponseLostPersistentCreatesNeverThrowPerAttempt,
+  disposeApiRequestContextAndProveAbsent,
+  disposeOwnedApiRequestContextAndProveAbsent,
+  dryDispatchBunBridgeDescriptor,
+  emitPrivateFailureActionDiagnosticNeverThrow,
+  encodeBoundedBunBridgeCanonicalFrame,
+  exactPresentationOverrideIdentifier,
+  executeBootstrapRestorationProtocol,
+  executeCleanupPlanStage,
+  executeIntentionalPresentationOverrideAlreadyAbsentCleanup,
+  executeResourceCleanupOperation,
+  executeSmokePlanCore,
+  executeTask540SmokePlanWithAuthorityFactory,
+  failureBoundary,
+  hashCleanupAuthoritativeBytes,
+  initializeBootstrapLoginAuthority,
+  initializeBunBridgeOperationAuthority,
+  normalizeBrowserCommandOutput,
+  parseMediaRaceAuthoritativeAdminEvidence,
+  prepareBunBridgeDispatch,
+  privateCleanupFailureDiagnosticNeverThrow,
+  privateConstructionAuthorityProjection,
+  promoteResourceBunDescriptorsAfterLedgerAppend,
+  proveCleanupSubjectAbsent,
+  proveCleanupSubjectPresent,
+  rawBytesAreSensitive,
+  readHostReadyLine,
+  readHostReadyLineWithTimerAuthority,
+  readPublicApiExactlyOnce,
+  registerFailureDiscoveredResourceAfterLedgerAppend,
+  responseLostCandidateFamilyForDescriptor,
+  responseLostStorageRoot,
+  restoreBootstrapLoginState,
+  retainPrivateCleanupFailureDiagnosticNeverThrow,
+  retainPrivateDirtyNavigationFailureClassNeverThrow,
+  runBunBridge,
+  runPrivateCleanupAdminApiBoundary,
+  runRetainedProcessGroup,
+  settleBootstrapLoginAttempt,
+  shellDisplay,
+  stageIntentionalPresentationOverrideActionReceipt,
+  stageIntentionalPresentationOverrideObservation,
+  validateBoundedNaturalCandidateResult,
+  validateBunBridgeOperationDescriptor,
+  validateBunBridgeOutput,
+  validateBunExecutableAuthorityObservation,
+  validateExactApiLoginResponse,
+  validateResponseLostContentSchema,
+  validateStaticBunBridgeDescriptorRegistries,
+  writePrivateFailureActionDiagnosticOnceNeverThrow,
+});
 
-  const failureActionExecutionResult = await runFailureActionExecutionSelfTest({
-    buildFakeCapabilities,
-    createPrivateAuthSettlementFailure,
-    createPrivateBoundedFailureActionDiagnosticSink,
-    createPrivateConstructionCleanupAuthority,
-    createPrivateDirtyNavigationFailure,
-    createPrivateToneOpenFailure,
-    createPrivateToneSelectFailure,
-    executeTask540SmokePlanWithAuthorityFactory,
-    plan,
-  });
-  const {
-    classifiedFailureActionId,
-    diagnosticInput,
-    diagnosticPrivateMarker,
-    dirtyNavigationFailureAction,
-    dirtyNavigationPrivateMarker,
-    expectedClassifiedLine,
-    toneOpenFailureAction,
-    toneOpenPrivateMarker,
-    toneSelectFailureAction,
-    toneSelectPrivateMarker,
-  } = failureActionExecutionResult;
-  negativeCases += failureActionExecutionResult.explicitNegativeCases;
-
-  const failureActionClassificationResult = runFailureActionClassificationSelfTest({
-    assertNegative,
-    createPrivateBoundedFailureActionDiagnosticSink,
-    emitPrivateFailureActionDiagnosticNeverThrow,
-    executionFixtures: failureActionExecutionResult,
-    failureBoundary,
-    plan,
-  });
-  const { trackerAtAction } = failureActionClassificationResult;
-  negativeCases += failureActionClassificationResult.explicitNegativeCases;
-
-  await runFailureActionSinksSelfTest({
-    PRIVATE_FAILURE_ACTION_TRACKERS,
-    assertNegative,
-    beginPrivateFailureAction,
-    createPrivateBoundedFailureActionDiagnosticSink,
-    createPrivateFailureActionTracker,
-    createPrivateSynchronousFailureActionDiagnosticSink,
-    diagnosticPrivateMarker,
-    emitPrivateFailureActionDiagnosticNeverThrow,
-    expectAsyncFailure,
-    plan,
-  });
-
-  const inheritedSecretCorpus = configuredSensitiveValues(
-    { DATABASE_URL: "postgres://wf540:p%40ssword@localhost/example" },
-    { INHERITED_SECRET: "sixteen-private", STORE_PUBLIC_KEY: "public-value" }
-  );
-  invariant(
-    inheritedSecretCorpus.includes("postgres://wf540:p%40ssword@localhost/example") &&
-      inheritedSecretCorpus.includes("p@ssword") &&
-      inheritedSecretCorpus.includes("sixteen-private") &&
-      !inheritedSecretCorpus.includes("public-value"),
-    "inherited/URL secret corpus projection drift"
-  );
-
-  await runConstructionCleanupSelfTest({
-    PRIVATE_CONSTRUCTION_AUTHORITY,
-    PRIVATE_FAILURE_ACTION_TRACKERS,
-    appendRetainedGroupMembers,
-    assertNegative,
-    buildFakeCapabilities,
-    createPrivateBoundedFailureActionDiagnosticSink,
-    createPrivateConstructionCleanupAuthority,
-    createPrivateDirtyNavigationFailure,
-    createPrivateFailureActionTracker,
-    currentPrivateConstructionCleanupDiagnosticNeverThrow,
-    diagnosticInput,
-    diagnosticPrivateMarker,
-    dirtyNavigationFailureAction,
-    dirtyNavigationPrivateMarker,
-    emitPrivateFailureActionDiagnosticNeverThrow,
-    executeSmokePlanCore,
-    executeTask540SmokePlanWithAuthorityFactory,
-    expectAsyncFailure,
-    incrementNegativeCases: (count) => {
-      negativeCases += count;
-    },
-    plan,
-    privateConstructionAuthorityProjection,
-    retainPrivateCleanupFailureDiagnosticNeverThrow,
-    retainPrivateDirtyNavigationFailureClassNeverThrow,
-    trackerAtAction,
-    validateBunExecutableAuthorityObservation,
-    writePrivateFailureActionDiagnosticOnceNeverThrow,
-  });
-
-  const sourceCaptures = await runBrowserCaptureFrontierSelfTest({
-    buildBrowserInvocation,
-    compileActionExecutionSpec,
-    expectAsyncFailure,
-    fixtureCaptureValue,
-    plan,
-  });
-
-  await runMediaUploadSelfTest({
-    TASK540_MEDIA_UPLOAD_SHA256,
-    TASK540_PNG_SIGNATURE_HEX,
-    buildRuntimeOperationHandlers,
-    decodeCanonicalMediaUploadFixtureExact,
-    expectAsyncFailure,
-    plan,
-    sourceCaptures,
-  });
-
-  runMediaIsolationSelfTest({ assertNegative, plan, sourceCaptures });
-
-  const browserSourceContext = await runBrowserRunCodeSourceOwnershipSelfTest({
-    assertNegative,
-    buildBrowserInvocation,
-    compileActionExecutionSpec,
-    expectAsyncFailure,
-    plan,
-    sourceCaptures,
-  });
-  const {
-    sourceContext,
-    authArmSourceActionIds,
-    authCloseSourceActionIds,
-    authRateBarrierSourceActionIds,
-    blockBaselineSourceActionIds,
-    mediaIsolationSourceActionIds,
-    recordEntryMenuSourceActionIds,
-    recordsWorkspaceSourceActionIds,
-    authSettlementCompiledSources,
-    previewRuntimeActionSelectors,
-    observedPreviewRuntimeActionIds,
-    assertSourceMutantsRejected,
-  } = browserSourceContext;
-  const failureFramesResult = await runFailureFramesSelfTest({
-    authSettlementCompiledSources,
-    buildFakeCapabilities,
-    createPrivateBoundedFailureActionDiagnosticSink,
-    createPrivateConstructionCleanupAuthority,
-    executeTask540SmokePlanWithAuthorityFactory,
-    executionFixtures: failureActionExecutionResult,
-    failureBoundary,
-    normalizeBrowserCommandOutput,
-    plan,
-    selfTestContext,
-  });
-  const { bootstrapSettlementAction, successfulGeneratedFrame } = failureFramesResult;
-  negativeCases += failureFramesResult.explicitNegativeCases;
-  const settlementDiagnosticHarness = createSettlementDiagnosticHarness({
-    LocalCommandAuthority,
-    bootstrapSettlementAction,
-    buildFakeCapabilities,
-    compileActionExecutionSpec,
-    createPrivateBoundedFailureActionDiagnosticSink,
-    createPrivateConstructionCleanupAuthority,
-    diagnosticInput,
-    executeTask540SmokePlanWithAuthorityFactory,
-    incrementNegativeCases: () => {
-      negativeCases += 1;
-    },
-    plan,
-  });
-  const settlementDiagnosticCasesResult = await runSettlementDiagnosticCasesSelfTest({
-    LocalCommandAuthority,
-    assertNegative,
-    buildBrowserStreamIntegrity,
-    compileActionExecutionSpec,
-    executionFixtures: failureActionExecutionResult,
-    expectAsyncFailure,
-    failureBoundary,
-    failureFrameFixtures: failureFramesResult,
-    normalizeBrowserCommandOutput,
-    plan,
-    selfTestContext,
-    settlementDiagnosticHarness,
-    shellDisplay,
-  });
-  negativeCases += settlementDiagnosticCasesResult.explicitNegativeCases;
-  await runSourceOwnershipAuthRateSelfTest({
-    authArmSourceActionIds,
-    authCloseSourceActionIds,
-    authRateBarrierSourceActionIds,
-    blockBaselineSourceActionIds,
-    buildAuthRateWindowBarrierSource,
-    buildBrowserInvocation,
-    compileActionExecutionSpec,
-    disabledAuthRatePolicy,
-    enabledAuthRatePolicy,
-    expectAsyncFailure,
-    mediaIsolationSourceActionIds,
-    observedPreviewRuntimeActionIds,
-    plan,
-    previewRuntimeActionSelectors,
-    recordEntryMenuSourceActionIds,
-    recordsWorkspaceSourceActionIds,
-    sourceCaptures,
-    sourceContext,
-  });
-  const { successCapabilities, evidence } = await runNominalEvidenceSelfTest({
-    adminApiRequest,
-    API_SESSION_OBSERVATION_BRIDGE_SOURCE,
-    assertCanonicalFinalization,
-    BOOTSTRAP_CAS_RESTORE_BRIDGE_SOURCE,
-    buildFakeCapabilities,
-    BUN_BRIDGE_RESPONSE_LOST_OPERATION_DESCRIPTORS,
-    captureAllResponseLostNaturalBaselinesBeforeFirstWrite,
-    disposeOwnedApiRequestContextAndProveAbsent,
-    executeSmokePlanCore,
-    expectAsyncFailure,
-    fixtureCaptureValue,
-    parseMediaRaceAuthoritativeAdminEvidence,
-    plan,
-    readPublicApiExactlyOnce,
-    RESPONSE_LOST_CREATE_ACTION_IDS,
-    RESPONSE_LOST_MEDIA_QUERY_BRIDGE_SOURCE,
-    RESPONSE_LOST_USER_QUERY_BRIDGE_SOURCE,
-    sourceCaptures,
-    USER_PROVISION_BRIDGE_SOURCE,
-    validateBoundedNaturalCandidateResult,
-  });
-
-  await runApiContextSelfTest({
-    PRIVATE_API_REQUEST_CONTEXT,
-    PRIVATE_BOOTSTRAP_LOGIN_AUTHORITY,
-    disposeApiRequestContextAndProveAbsent,
-    expectAsyncFailure,
-    settleBootstrapLoginAttempt,
-    validateExactApiLoginResponse,
-  });
-
-  await runBootstrapRestorationSelfTest({
-    assertNegative,
-    assertSourceMutantsRejected,
-    attemptBootstrapCasBridgeOnce,
-    BOOTSTRAP_BASELINE_READ_BRIDGE_SOURCE,
-    BOOTSTRAP_CAS_RESTORE_BRIDGE_SOURCE,
-    BOOTSTRAP_RESTORE_PROOF_KEYS,
-    classifyBootstrapCasBridgeFailure,
-    classifyClosedBootstrapCasBridgeOutcome,
-    createBootstrapRestoreReceiptOnce,
-    executeBootstrapRestorationProtocol,
-    expectAsyncFailure,
-    initializeBootstrapLoginAuthority,
-    PRIVATE_BOOTSTRAP_LOGIN_AUTHORITY,
-    privateCleanupFailureDiagnosticNeverThrow,
-    restoreBootstrapLoginState,
-    runBunBridge,
-    runRetainedProcessGroup,
-    selfTestBunBridgeInputForSchema,
-    settleBootstrapLoginAttempt,
-  });
-
-  const { apiSessionUserId } = await runBunBridgeContractsSelfTest({
-    BUN_BRIDGE_AUXILIARY_OPERATION_DESCRIPTORS,
-    BUN_BRIDGE_INPUT_VALIDATORS,
-    BUN_BRIDGE_OPERATION_DESCRIPTORS,
-    BUN_BRIDGE_RUNTIME_OPERATION_DESCRIPTORS,
-    PRIVATE_BUN_RESOURCE_DESCRIPTORS,
-    RESOURCE_BUN_SOURCE_SPECS,
-    assertFinalStorageDatabaseBaseline,
-    assertPreparedBunBridgeFrameExact,
-    assertResourceBunDescriptorSetExact,
-    dryDispatchBunBridgeDescriptor,
-    encodeBoundedBunBridgeCanonicalFrame,
-    expectAsyncFailure,
-    initializeBunBridgeOperationAuthority,
-    prepareBunBridgeDispatch,
-    promoteResourceBunDescriptorsAfterLedgerAppend,
-    responseLostStorageRoot,
-    selfTestBunBridgeInputForSchema,
-    selfTestExactBunChildInputSource,
-    validateBunBridgeInput,
-    validateBunBridgeOperationDescriptor,
-    validateBunBridgeOutput,
-    validateStaticBunBridgeDescriptorRegistries,
-  });
-  await runBunResponseContractsSelfTest({
-    BUN_BRIDGE_AUXILIARY_OPERATION_DESCRIPTORS,
-    BUN_BRIDGE_RESPONSE_LOST_OPERATION_DESCRIPTORS,
-    BUN_BRIDGE_RUNTIME_OPERATION_DESCRIPTORS,
-    MEDIA_EXACT_BRIDGE_SOURCES,
-    PRIVATE_BUN_OPERATION_DESCRIPTORS,
-    PRIVATE_BUN_RESOURCE_DESCRIPTORS,
-    STORAGE_PREFLIGHT_BRIDGE_SOURCE,
-    USER_PROVISION_BRIDGE_SOURCE,
-    apiSessionUserId,
-    assertResourceBunDescriptorSetExact,
-    bunBridgeDescriptorForOperation,
-    contentSchemaFromFields,
-    expectAsyncFailure,
-    initializeBunBridgeOperationAuthority,
-    plan,
-    promoteResourceBunDescriptorsAfterLedgerAppend,
-    responseLostCandidateFamilyForDescriptor,
-    selfTestBunBridgeInputForSchema,
-    selfTestExactBunChildInputSource,
-    validateBunBridgeInput,
-    validateBunBridgeOutput,
-    validateResponseLostContentSchema,
-  });
-
-  const responseLostDiscoveryResult = await runResponseLostDiscoverySelfTest({
-    PendingFailureAttemptRegistry,
-    RESPONSE_LOST_CREATE_ACTION_IDS,
-    contentSchemaFromFields,
-    discoverOneResponseLostCreate,
-    discoverResponseLostPersistentCreatesNeverThrowPerAttempt,
-    evidence,
-    expectAsyncFailure,
-    plan,
-    rawBytesAreSensitive,
-    registerFailureDiscoveredResourceAfterLedgerAppend,
-  });
-  negativeCases += responseLostDiscoveryResult.explicitNegativeCases;
-
-  const {
-    exactGraph,
-    exactGraphRecords,
-    graphAccessCore,
-    graphIndependentCore,
-    graphSessionCore,
-    graphUserCore,
-    terminalCapabilities,
-    terminalEvidence,
-    terminalFinalPlan,
-  } = await runTerminalResourceGraphSelfTest({
-    assertExactFinalResourceDependencyGraph,
-    buildFakeCapabilities,
-    executeSmokePlanCore,
-    expectAsyncFailure,
-    plan,
-  });
-
-  const cleanupPcaAuthorityResult = await runCleanupPcaAuthoritySelfTest({
-    CURRENT_RESOURCE_OWNER_QUERY_BRIDGE_SOURCE,
-    PRIVATE_API_REQUEST_CONTEXT,
-    PRIVATE_BOOTSTRAP_LOGIN_AUTHORITY,
-    PRIVATE_RUNTIME,
-    SEO_ENTRY_DISCOVERY_BRIDGE_SOURCE,
-    assertCleanupReceiptBijection,
-    assertCurrentResourceOwnerBridgeFailClosedSource,
-    assertNegative,
-    assertSeoEntryDiscoveryBridgeFailClosedSource,
-    cleanupRuntimeReceipt,
-    commitIntentionalPresentationOverrideActionAfterLedgerAppend,
-    completeIntentionalPresentationOverrideAbsenceAuthority,
-    deleteCleanupSubject,
-    exactPresentationOverrideIdentifier,
-    executeIntentionalPresentationOverrideAlreadyAbsentCleanup,
-    executeResourceCleanupOperation,
-    expectAsyncFailure,
-    hashCleanupAuthoritativeBytes,
-    plan,
-    proveCleanupSubjectAbsent,
-    proveCleanupSubjectPresent,
-    sourceCaptures,
-    stageIntentionalPresentationOverrideActionReceipt,
-    stageIntentionalPresentationOverrideObservation,
-    successCapabilities,
-  });
-  negativeCases += cleanupPcaAuthorityResult.explicitNegativeCases;
-
-  const seoEntryCleanupResult = await runSeoEntryCleanupSelfTest({
-    BUN_BRIDGE_OPERATION_DESCRIPTORS,
-    SEO_ENTRY_DOCUMENT_EXACT_BRIDGE_SOURCES,
-    assertSeoEntryDocumentExactBridgeSourcesFailClosed,
-    cleanupPlanView,
-    discoverExactSeoEntryResources,
-    executeCleanupPlanStage,
-    expectAsyncFailure,
-    initializeBunBridgeOperationAuthority,
-    plan,
-    validateBunBridgeInput,
-  });
-  negativeCases += seoEntryCleanupResult.explicitNegativeCases;
-
-  const cleanupStagesResult = await runCleanupStagesSelfTest({
-    assertCleanupReceiptBijection,
-    assertNegative,
-    assertSourceMutantsRejected,
-    createCleanupPhaseScheduler,
-    createExecuteCleanupLifecycleCore,
-    createPrivateBoundedFailureActionDiagnosticSink,
-    createPrivateConstructionCleanupAuthority,
-    emitPrivateFailureActionDiagnosticNeverThrow,
-    exactGraph,
-    exactGraphRecords,
-    executeCleanupPlanStage,
-    expectAsyncFailure,
-    graphAccessCore,
-    graphIndependentCore,
-    graphSessionCore,
-    graphUserCore,
-    runIndependentCleanupStepsNeverSkip,
-    runPrivateCleanupAdminApiBoundary,
-    terminalCapabilities,
-    terminalEvidence,
-    terminalFinalPlan,
-  });
-  negativeCases += cleanupStagesResult.explicitNegativeCases;
-
-  const parserRefNativeOutputResult = await runParserRefNativeOutputSelfTest({
-    assertExecutionInput,
-    assertNegative,
-    buildFakeCapabilities,
-    executeSmokePlanCore,
-    expectAsyncFailure,
-    plan,
-    privateNativeSnapshotSizeIsValid,
-    readExactEntryAuthorId,
-    selfTestContext,
-    selfTestJsonTransport,
-    selfTestNativeTransport,
-    selfTestNumberSchema,
-    selfTestStringSchema,
-  });
-  negativeCases += parserRefNativeOutputResult.explicitNegativeCases;
-  await runExpectedAuthChallengeSelfTest({
-    expectNegative: expectAsyncFailure,
-    assertNegative,
-  });
-  return deepFreezeExact({
-    pass: true,
-    actions: plan.actionManifest.length,
-    runtimeReceipts: evidence.runtimeReceipts.length,
-    cleanupActions: evidence.cleanupReceipts.length,
-    nominalPersistentCleanupActions: 72,
-    terminalMatrixCases: 1,
-    captures: evidence.captureProjection.length,
-    negativeCases,
-  });
-}
+export { runTask540SmokeExecutorSelfTest };
 
 if (
   process.argv[1]?.endsWith("/task-540-smoke-executor.mjs") &&
