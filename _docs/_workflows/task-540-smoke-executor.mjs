@@ -211,18 +211,8 @@ import {
   bunBridgeInputSchemaId,
   validateBunBridgeInput,
 } from "./task-540-smoke/executor/bridge-input-validators.mjs";
-import {
-  bindResponseLostQueryOperationBindings,
-  responseLostCandidateFamilyForDescriptor,
-  validateResponseLostContentSchema,
-} from "./task-540-smoke/executor/bridge-output-validators/response-lost.mjs";
-import {
-  BUN_BRIDGE_OUTPUT_VALIDATORS,
-  bindResourceBridgeObservationValidators,
-  validateBootstrapBaselineReadBridgeOutput,
-  validateBootstrapRestoreBridgeOutput,
-  validateBunBridgeOutput,
-} from "./task-540-smoke/executor/bridge-output-validators/resources.mjs";
+import { createResponseLostBridgeOutputValidators } from "./task-540-smoke/executor/bridge-output-validators/response-lost.mjs";
+import { createResourceBridgeOutputValidators } from "./task-540-smoke/executor/bridge-output-validators/resources.mjs";
 import { requireBridgeUuid } from "./task-540-smoke/executor/bun-bridge-validation-primitives.mjs";
 import {
   resolveFixtureValue,
@@ -361,7 +351,13 @@ const {
   responseLostStorageRoot,
   validateBoundedNaturalCandidateResult,
 } = responseLostRegistry;
-bindResponseLostQueryOperationBindings(RESPONSE_LOST_QUERY_OPERATION_BINDINGS);
+const {
+  responseLostCandidateFamilyForDescriptor,
+  validateBooleanBridgeProjection,
+  validateBoundedCandidatesBridgeOutput,
+  validateContentRoutesBridgeProjection,
+  validateResponseLostContentSchema,
+} = createResponseLostBridgeOutputValidators({ RESPONSE_LOST_QUERY_OPERATION_BINDINGS });
 const { scanExactLocalStorageManifest } = createStorageManifestRuntime({
   readStableArtifactIdentity,
   responseLostStorageRoot,
@@ -556,9 +552,17 @@ const {
   PRIVATE_RUNTIME,
   runBunBridgeOperation,
 });
-bindResourceBridgeObservationValidators({
+const {
+  BUN_BRIDGE_OUTPUT_VALIDATORS,
+  validateBootstrapBaselineReadBridgeOutput,
+  validateBootstrapRestoreBridgeOutput,
+  validateBunBridgeOutput,
+} = createResourceBridgeOutputValidators({
   validateApiSessionObservation,
+  validateBooleanBridgeProjection,
   validateBootstrapLoginObservation,
+  validateBoundedCandidatesBridgeOutput,
+  validateContentRoutesBridgeProjection,
 });
 const {
   deleteCleanupSubject,
