@@ -37,6 +37,7 @@ const workflowPaths = Object.freeze({
   buttonImage: "_docs/_workflows/task-540-smoke/browser/scenarios/button-image.mjs",
   config: "_docs/_workflows/task-540-smoke/executor/config.mjs",
   dirtyGuards: "_docs/_workflows/task-540-smoke/browser/scenarios/dirty-guards.mjs",
+  entrySupport: "_docs/_workflows/task-540-smoke/executor/self-test/entry-support.mjs",
   environment: "_docs/_workflows/task-540-smoke/executor/environment.mjs",
   executor: "_docs/_workflows/task-540-smoke-executor.mjs",
   genericInvocations: "_docs/_workflows/task-540-smoke/browser/generic-invocations.mjs",
@@ -163,6 +164,7 @@ const EXPECTED_EXECUTOR_MODULE_PATHS = Object.freeze([
   "_docs/_workflows/task-540-smoke/executor/self-test/cleanup-pca-authority.mjs",
   "_docs/_workflows/task-540-smoke/executor/self-test/cleanup-stages.mjs",
   "_docs/_workflows/task-540-smoke/executor/self-test/construction-cleanup.mjs",
+  "_docs/_workflows/task-540-smoke/executor/self-test/entry-support.mjs",
   "_docs/_workflows/task-540-smoke/executor/self-test/failure-action-classification.mjs",
   "_docs/_workflows/task-540-smoke/executor/self-test/failure-action-execution.mjs",
   "_docs/_workflows/task-540-smoke/executor/self-test/failure-action-sinks.mjs",
@@ -253,7 +255,7 @@ function readExecutorModuleGraph(): ReadonlyMap<string, string> {
       );
     }
   }
-  expect(EXPECTED_EXECUTOR_MODULE_PATHS).toHaveLength(139);
+  expect(EXPECTED_EXECUTOR_MODULE_PATHS).toHaveLength(140);
   expect([...sources.keys()].sort()).toEqual(EXPECTED_EXECUTOR_MODULE_PATHS);
   return sources;
 }
@@ -867,6 +869,7 @@ test("TASK-540 smoke boundaries retain enlarged nested budgets without retries",
   const observationSources = readWorkflowSource(workflowPaths.observationSources);
   const storageManifest = readWorkflowSource(workflowPaths.storageManifest);
   const boundedStream = readWorkflowSource(workflowPaths.boundedStream);
+  const entrySupport = readWorkflowSource(workflowPaths.entrySupport);
 
   expect(config).toContain("const DATABASE_OPERATION_TIMEOUT_MS = 540_000;");
   expect(config).toContain("const COMMAND_TIMEOUT_MS = 1_200_000;");
@@ -898,7 +901,7 @@ test("TASK-540 smoke boundaries retain enlarged nested budgets without retries",
     'page.waitForTimeout(540000).then(() => { throw new Error("wf540_settlement_timeout"); });'
   );
   expect(observationSources).toContain("const deadline = Date.now() + 180000;");
-  expect(executor).toContain("{ timeout: 15_000 }");
+  expect(entrySupport).toContain("{ timeout: 15_000 }");
   expect(countToken(storageManifest, "Date.now() - startedAt <= 30_000")).toBe(3);
   expect(processRuntime).toContain("const PROCESS_TERM_GRACE_MS = 40_000;");
   expect(boundedStream).toContain("const PROCESS_KILL_GRACE_MS = 3_000;");
