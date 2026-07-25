@@ -26,6 +26,7 @@ const workflowPaths = Object.freeze({
   bootstrapRestoration:
     "_docs/_workflows/task-540-smoke/executor/self-test/bootstrap-restoration.mjs",
   boundedStream: "_docs/_workflows/task-540-smoke/runtime/bounded-stream.mjs",
+  browserOutputAuthority: "_docs/_workflows/task-540-smoke/executor/browser-output-authority.mjs",
   bunBridgeContracts: "_docs/_workflows/task-540-smoke/executor/self-test/bun-bridge-contracts.mjs",
   bunBridgeResourceSources:
     "_docs/_workflows/task-540-smoke/executor/bun-bridge-resource-sources.mjs",
@@ -117,6 +118,7 @@ const EXPECTED_EXECUTOR_MODULE_PATHS = Object.freeze([
   "_docs/_workflows/task-540-smoke/executor/bridge-sources/platform.mjs",
   "_docs/_workflows/task-540-smoke/executor/bridge-sources/response-lost.mjs",
   "_docs/_workflows/task-540-smoke/executor/bridge-sources/user-preference.mjs",
+  "_docs/_workflows/task-540-smoke/executor/browser-output-authority.mjs",
   "_docs/_workflows/task-540-smoke/executor/bun-bridge-resource-sources.mjs",
   "_docs/_workflows/task-540-smoke/executor/bun-bridge-validation-primitives.mjs",
   "_docs/_workflows/task-540-smoke/executor/canonical-evidence.mjs",
@@ -241,7 +243,7 @@ function readExecutorModuleGraph(): ReadonlyMap<string, string> {
       );
     }
   }
-  expect(EXPECTED_EXECUTOR_MODULE_PATHS).toHaveLength(130);
+  expect(EXPECTED_EXECUTOR_MODULE_PATHS).toHaveLength(131);
   expect([...sources.keys()].sort()).toEqual(EXPECTED_EXECUTOR_MODULE_PATHS);
   return sources;
 }
@@ -842,6 +844,7 @@ test("TASK-540 smoke boundaries retain enlarged nested budgets without retries",
   const config = readWorkflowSource(workflowPaths.config);
   const environment = readWorkflowSource(workflowPaths.environment);
   const platformRuntimeOperations = readWorkflowSource(workflowPaths.platformRuntimeOperations);
+  const browserOutputAuthority = readWorkflowSource(workflowPaths.browserOutputAuthority);
   const adminApiSession = readWorkflowSource(workflowPaths.adminApiSession);
   const simpleInvocations = readWorkflowSource(workflowPaths.simpleInvocations);
   const relatedCache = readWorkflowSource(workflowPaths.relatedCache);
@@ -865,7 +868,8 @@ test("TASK-540 smoke boundaries retain enlarged nested budgets without retries",
   expect(countToken(config, "timeoutMs: DATABASE_OPERATION_TIMEOUT_MS")).toBe(1);
   expect(countToken(adminApiSession, "timeout: DATABASE_OPERATION_TIMEOUT_MS")).toBe(4);
   expect(processRuntime).toContain("timeoutMs = 90_000");
-  expect(countToken(executor, "timeoutMs: 90_000")).toBe(3);
+  expect(countToken(executor, "timeoutMs: 90_000")).toBe(0);
+  expect(countToken(browserOutputAuthority, "timeoutMs: 90_000")).toBe(3);
   expect(countToken(platformRuntimeOperations, "timeoutMs: 90_000")).toBe(1);
   expect(countToken(simpleInvocations, "{ timeout: 270000 }")).toBe(1);
   expect(countToken(relatedCache, "{ timeout: 270000 }")).toBe(1);
