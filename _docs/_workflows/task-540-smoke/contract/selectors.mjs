@@ -78,7 +78,10 @@ export function assertSelectorTextEngineShape(registry) {
     // Argument values are "css-string" leaves (block ids, labels, hrefs) and can never
     // contain a pseudo-class or an attribute-selector token, so joining the literal parts
     // with a neutral placeholder can neither fabricate nor hide a host/pseudo adjacency.
-    const literal = template.parts.join(" ");
+    // NUL is the placeholder because it is the one character a CSS selector can never
+    // carry: a space would be a legal descendant combinator and could make the joined
+    // literal read as a selector shape the template does not actually express.
+    const literal = template.parts.join("\0");
     if (!literal.includes(TEXT_ENGINE_PSEUDO)) continue;
     for (const host of TEXT_DELEGATING_HOST_TOKENS) {
       invariant(
