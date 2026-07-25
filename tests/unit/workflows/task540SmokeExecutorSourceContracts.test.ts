@@ -41,6 +41,8 @@ const workflowPaths = Object.freeze({
   planExecution: "_docs/_workflows/task-540-smoke/executor/plan-execution.mjs",
   processRuntime: "_docs/_workflows/task-540-smoke/runtime/process-runtime.mjs",
   relatedCache: "_docs/_workflows/task-540-smoke/browser/scenarios/related-cache.mjs",
+  resourceBridgeOutputValidators:
+    "_docs/_workflows/task-540-smoke/executor/bridge-output-validators/resources.mjs",
   routeAndActionSources: "_docs/_workflows/task-540-smoke/browser/route-and-action-sources.mjs",
   runCode: "_docs/_workflows/task-540-smoke/browser/run-code.mjs",
   settlementDiagnosticCases:
@@ -105,6 +107,7 @@ const EXPECTED_EXECUTOR_MODULE_PATHS = Object.freeze([
   "_docs/_workflows/task-540-smoke/executor/action-resources.mjs",
   "_docs/_workflows/task-540-smoke/executor/auth-challenge-authority.mjs",
   "_docs/_workflows/task-540-smoke/executor/bootstrap-contracts.mjs",
+  "_docs/_workflows/task-540-smoke/executor/bridge-output-validators/resources.mjs",
   "_docs/_workflows/task-540-smoke/executor/bridge-output-validators/response-lost.mjs",
   "_docs/_workflows/task-540-smoke/executor/bridge-sources/bootstrap.mjs",
   "_docs/_workflows/task-540-smoke/executor/bridge-sources/platform.mjs",
@@ -231,7 +234,7 @@ function readExecutorModuleGraph(): ReadonlyMap<string, string> {
       );
     }
   }
-  expect(EXPECTED_EXECUTOR_MODULE_PATHS).toHaveLength(124);
+  expect(EXPECTED_EXECUTOR_MODULE_PATHS).toHaveLength(125);
   expect([...sources.keys()].sort()).toEqual(EXPECTED_EXECUTOR_MODULE_PATHS);
   return sources;
 }
@@ -570,7 +573,6 @@ test("Bun bridge validation primitives have one focused owner", () => {
   expect(primitiveFacadeImports).toHaveLength(1);
   expect(primitiveFacadeImports[0].getText(executorSourceFile)).toBe(
     `import {
-  validateExactBridgeKeys,
   validateBridgeJsonObject,
   requireBoundedBridgeString,
   requireBridgeUuid,
@@ -720,6 +722,9 @@ test("phase-eight bootstrap restore is one typed nullable-safe CAS", () => {
   const executor = readWorkflowSource(workflowPaths.executor);
   const bootstrapRestoration = readWorkflowSource(workflowPaths.bootstrapRestoration);
   const bootstrapBridgeSources = readWorkflowSource(workflowPaths.bootstrapBridgeSources);
+  const resourceBridgeOutputValidators = readWorkflowSource(
+    workflowPaths.resourceBridgeOutputValidators
+  );
 
   expect(frozenStringArray(config, "PHASE_EIGHT_CLEANUP_FAILURE_CLASSES")).toEqual([
     "bootstrap_reconciliation_failed",
@@ -771,7 +776,7 @@ test("phase-eight bootstrap restore is one typed nullable-safe CAS", () => {
   expect(casSource).toContain('"committed-proof-failed"');
 
   const typedOutput = sourceSection(
-    executor,
+    resourceBridgeOutputValidators,
     "function validateBootstrapRestoreBridgeOutput",
     "function validateBootstrapBaselineReadBridgeOutput"
   );
