@@ -20,6 +20,11 @@ import {
   hashBytes,
   invariant,
 } from "./task-540-smoke/executor/foundation.mjs";
+
+import {
+  assertExecutionInput,
+  assertRegisteredExecutable,
+} from "./task-540-smoke/executor/execution-contract.mjs";
 import {
   BROWSER_FIXED_TIMEOUT_ENV,
   BROWSER_OPTIONAL_INHERITED_ENV,
@@ -45,12 +50,10 @@ import {
   ALL_SELECT_CONTENT_SELECTOR,
   BUN_BRIDGE_EXECUTION_AUTHORITY,
   DATABASE_OPERATION_TIMEOUT_MS,
-  INPUT_KEYS,
   MAX_COMPLETE_SESSION_ROWS,
   MAX_NATURAL_KEY_CANDIDATES,
   MAX_STREAM_BYTES,
   MAX_TASK_TRAFFIC_ROWS,
-  NONCE_PATTERN,
   ORCHESTRATOR_EVIDENCE_RUNNER_VERSION,
   PHASE_EIGHT_CLEANUP_FAILURE_CLASSES,
   PHASE_THREE_CLEANUP_FAILURE_CLASSES,
@@ -156,7 +159,6 @@ import { createStorageManifestRuntime } from "./task-540-smoke/runtime/storage-m
 import { createStoragePreflightRuntime } from "./task-540-smoke/runtime/storage-preflight.mjs";
 import {
   assertPlainJsonValue,
-  isSafeRepositoryRelativePath,
 } from "./task-540-smoke/executor/json-schema.mjs";
 import {
   BOOTSTRAP_RAW_USER_ROW_KEYS,
@@ -218,7 +220,6 @@ import {
   createActionExecutionCompiler,
   expandedRoute,
 } from "./task-540-smoke/browser/route-and-action-sources.mjs";
-import { assertScreenshotScenarioOwnership } from "./task-540-smoke/browser/scenarios/ownership.mjs";
 
 const {
   buildSimpleBrowserInvocation,
@@ -455,125 +456,6 @@ const {
 } = createBootstrapLoginRuntime({ delayMilliseconds, runBunBridgeOperation });
 const PRIVATE_BUN_RESOURCE_DESCRIPTORS = new WeakMap();
 const PRIVATE_BUN_OPERATION_DESCRIPTORS = new WeakMap();
-const BROWSER_KINDS = new Set([
-  "open",
-  "logger-install",
-  "goto",
-  "resize",
-  "fill",
-  "click",
-  "observe",
-  "blocksBefore",
-  "captureNew",
-  "assert",
-  "route",
-  "screen",
-  "media-count-before-release",
-  "media-count-after-release",
-  "logs",
-  "focus",
-  "press",
-  "type",
-  "dispatchAndCaptureSelectionHandle",
-  "tab-new",
-  "tab-select",
-  "tab-close",
-  "authRateWindowBarrier",
-  "cleanup-release-unroute",
-  "cleanup-route-list",
-  "cleanup-console-errors",
-  "cleanup-console-warnings",
-  "cleanup-page-errors",
-  "cleanup-close",
-  "cleanup-session-absence",
-]);
-
-const RUNTIME_KINDS = new Set([
-  "storage",
-  "host",
-  "health",
-  "apiPublicRead",
-  "settingsRead",
-  "isolatedApiSessionLogin",
-  "isolatedApiSessionCsrfCapture",
-  "fixture",
-  "fixtureRead",
-  "api",
-  "apiRead",
-  "isolatedApiSessionApiReadAs",
-  "isolatedApiSessionApiAs",
-]);
-
-function assertExecutionInput(input) {
-  exactOwnKeys(input, INPUT_KEYS, "execution input", { plain: true });
-  invariant(
-    typeof input.root === "string" &&
-      input.root.length > 1 &&
-      !input.root.includes("\0") &&
-      path.isAbsolute(input.root) &&
-      path.resolve(input.root) === input.root,
-    "root must be a canonical absolute repository path"
-  );
-  invariant(
-    typeof input.nonce === "string" && NONCE_PATTERN.test(input.nonce),
-    "nonce must be 12 lowercase hex characters"
-  );
-  invariant(
-    typeof input.assertSafeEvidence === "function",
-    "assertSafeEvidence must be a function"
-  );
-  invariant(
-    typeof input.snapshotRepository === "function",
-    "snapshotRepository must be a function"
-  );
-}
-
-function assertRegisteredExecutable(plan, action) {
-  const executable = action.executable;
-  invariant(executable && typeof executable === "object", action.id + " executable is missing");
-  if (executable.type === "runtime-operation") {
-    const descriptor = plan.registries.runtimeOperations[executable.operationId];
-    invariant(
-      descriptor?.actionId === action.id && descriptor.refCount === executable.refs.length,
-      action.id + " runtime registry mismatch"
-    );
-  } else if (executable.type === "browser-run-code") {
-    const descriptor = plan.registries.browserRunCodeSources[executable.sourceId];
-    invariant(
-      descriptor?.actionId === action.id && descriptor.refCount === executable.refs.length,
-      action.id + " run-code registry mismatch"
-    );
-  } else if (executable.type === "browser-native") {
-    const descriptor = plan.registries.browserNativeOperations[executable.operationId];
-    invariant(
-      descriptor?.operationId === executable.operationId &&
-        descriptor.actionIds.includes(action.id),
-      action.id + " native registry mismatch"
-    );
-  } else if (executable.type === "browser-screenshot") {
-    assertScreenshotScenarioOwnership(plan, action);
-    const registeredPath = plan.registries.screenshotPaths[executable.screenshotId];
-    invariant(
-      typeof registeredPath === "string" &&
-        action.repositoryMutationPolicy.mode === "allowlist" &&
-        action.repositoryMutationPolicy.paths.length === 1 &&
-        action.repositoryMutationPolicy.paths[0] === registeredPath &&
-        isSafeRepositoryRelativePath(registeredPath),
-      action.id + " screenshot registry mismatch"
-    );
-  } else {
-    invariant(
-      executable.type === "browser-global-list" && action.id === "end-007-session-absence",
-      action.id + " global-list registry mismatch"
-    );
-  }
-  invariant(
-    plan.registries.outputs[action.outputSchemaId] !== undefined,
-    action.id + " output schema is missing"
-  );
-  return executable;
-}
-
 function fixtureCaptureValue(name, plan) {
   const numeric = String(plan.requiredCaptureNames.indexOf(name) + 1).padStart(12, "0");
   if (name === "media.resolved-url")
