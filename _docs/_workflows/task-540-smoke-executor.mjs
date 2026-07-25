@@ -16,6 +16,7 @@ import {
 
 import { assertExecutionInput } from "./task-540-smoke/executor/execution-contract.mjs";
 import { createPlanExecutionRuntime } from "./task-540-smoke/executor/plan-execution.mjs";
+import { createExecuteAction } from "./task-540-smoke/executor/capabilities/execute-action.mjs";
 
 import {
   createFakeCapabilitiesRuntime,
@@ -44,7 +45,6 @@ import {
   sameArtifactIdentity,
 } from "./task-540-smoke/executor/private-workspace.mjs";
 import {
-  SESSION_NAME,
   TASK_FAILURE,
   TASK_FIXTURE_ENTRY_SEMANTICS,
   seoDocumentResourceSemantic,
@@ -62,11 +62,7 @@ import {
   createResourceCore,
   destructiveResourceEdge,
 } from "./task-540-smoke/executor/resource-ledger.mjs";
-import {
-  PROVEN_RESOURCE_ACTIONS,
-  deriveActionResourceDelta,
-  registerSuccessfulActionResourcesAfterLedgerAppend,
-} from "./task-540-smoke/executor/action-resources.mjs";
+import { registerSuccessfulActionResourcesAfterLedgerAppend } from "./task-540-smoke/executor/action-resources.mjs";
 import { createResponseLostRegistry } from "./task-540-smoke/runtime/response-lost-registry.mjs";
 import { createResponseLostBaselines } from "./task-540-smoke/runtime/response-lost-baselines.mjs";
 import { createResponseLostDiscovery } from "./task-540-smoke/runtime/response-lost-discovery.mjs";
@@ -118,10 +114,7 @@ import {
 } from "./task-540-smoke/runtime/media-operations.mjs";
 import { createMissingMediaProofRuntime } from "./task-540-smoke/runtime/missing-media-proof.mjs";
 import { createMediaStorageOwnershipRuntime } from "./task-540-smoke/runtime/media-storage-ownership.mjs";
-import {
-  canonicalManifestRuntimeOperation,
-  createRuntimeOperationRouter,
-} from "./task-540-smoke/runtime/operation-router.mjs";
+import { createRuntimeOperationRouter } from "./task-540-smoke/runtime/operation-router.mjs";
 import { createProcessRuntime } from "./task-540-smoke/runtime/process-runtime.mjs";
 import { createStorageManifestRuntime } from "./task-540-smoke/runtime/storage-manifest.mjs";
 import { createStoragePreflightRuntime } from "./task-540-smoke/runtime/storage-preflight.mjs";
@@ -196,12 +189,8 @@ import { createOverrideRuntimeOperations } from "./task-540-smoke/executor/runti
 import {
   resolveFixtureValue,
 } from "./task-540-smoke/executor/ref-dsl.mjs";
+import { decodeExactNativeUtf8 } from "./task-540-smoke/executor/output-parser.mjs";
 import {
-  decodeExactNativeUtf8,
-  parseRegisteredOutput,
-} from "./task-540-smoke/executor/output-parser.mjs";
-import {
-  acquireScreenshotIdentity,
   createBrowserOutputAuthority,
   privateNativeSnapshotSizeIsValid,
   removeAcquiredScreenshots,
@@ -1553,276 +1542,37 @@ async function createRealCapabilities(
     retainPrimaryFailureObservation(cause) {
       state.pendingFailureAttempts.retainPrimaryFailureObservation(cause);
     },
-    async executeAction({ action, executable, captures }) {
-      state.currentCaptures = captures;
-      if (executable.type === "runtime-operation") {
-        state.taskTrafficMayExist = true;
-        const handler = runtimeHandlers[executable.operationId];
-        invariant(typeof handler === "function", action.id + " runtime handler is absent");
-        let result;
-        try {
-          result = await authority.executeLocal({
-            action,
-            sequence: ++state.runtimeReceiptSequence,
-            operation: canonicalManifestRuntimeOperation(action),
-            operationDescriptor: executable.operationId,
-            subjectKind: null,
-            subjectIdentifier: null,
-            run: async () => {
-              await armResponseLostCreateBeforeWrite(state, action, captures);
-              return handler({ state, plan, action, executable, captures });
-            },
-          });
-        } catch (error) {
-          throw error;
-        }
-        const parsedOutput = parseRegisteredOutput(
-          plan.registries.outputs[action.outputSchemaId],
-          result.stdout,
-          action.id,
-          outputContext(action, captures)
-        );
-        const captureBindings =
-          action.outputSchemaId === "runtime-safe-projection" ? parsedOutput.captureBindings : {};
-        rememberFixtureBindings(captureBindings);
-        const receipt = {
-          ...result.receipt,
-          sanitizedOutput:
-            action.id === "set-017-editable-type-proof"
-              ? "[private-projection-proven]"
-              : canonicalJson(
-                  action.outputSchemaId === "runtime-safe-projection"
-                    ? {
-                        captureBindings: Object.keys(captureBindings),
-                        observationSha256: parsedOutput.observationSha256,
-                      }
-                    : { privateProjection: true }
-                ),
-        };
-        if (action.id === "set-032-storage-post-setup") {
-          invariant(
-            state.missingMediaSetupProof !== null,
-            "missing media setup receipt proof is absent"
-          );
-          Object.assign(receipt, {
-            operation: "media-race-missing-absence-setup",
-            operationDescriptor: "db+storage:missing-media-absence",
-            evidenceSha256: state.missingMediaSetupProof.evidenceSha256,
-            subjectKind: "media-race-missing-media",
-            subjectIdentifier: plan.fixtureBlueprint.media.missingBoundMediaId,
-            sanitizedOutput: canonicalJson(state.missingMediaSetupProof.projection),
-          });
-          state.missingMediaSetupReceiptSequence = receipt.sequence;
-        } else if (action.id === "set-040-override-proof") {
-          invariant(
-            state.mediaRaceProjection !== null &&
-              typeof state.mediaRaceReceiptHash === "string" &&
-              /^[a-f0-9]{64}$/u.test(state.mediaRaceReceiptHash),
-            "media-race projection receipt proof is absent"
-          );
-          Object.assign(receipt, {
-            operation: "media-race-projection-provenance",
-            operationDescriptor: "admin-api:media-race-projection",
-            evidenceSha256: state.mediaRaceReceiptHash,
-            subjectKind: "screen",
-            subjectIdentifier: state.mediaRaceProjection.screenId,
-            sanitizedOutput: canonicalJson({
-              bindingCount: 1,
-              overrideCount: 1,
-              entryValueMatches: true,
-              safeUrlMatches: true,
-            }),
-          });
-        }
-        stageIntentionalPresentationOverrideActionReceipt(state, action, receipt);
-        assertSafeEvidence(receipt, "TASK-540 parsed runtime receipt");
-        const acquisitionDelta = deriveActionResourceDelta(
-          state,
-          action,
-          { captureBindings },
-          captures
-        );
-        const provenDescriptor = PROVEN_RESOURCE_ACTIONS[action.id];
-        return deepFreezeExact({
-          receipt: deepFreezeExact(receipt),
-          captureBindings,
-          acquisitionDelta,
-          settledCreateOrigin: provenDescriptor?.origin ?? null,
-        });
-      }
-
-      let executionSpec;
-      let routeMetadata;
-      let invocation;
-      ({ executionSpec, routeMetadata, invocation } =
-        buildPrivateBrowserInvocationWithAuthSettlementBoundary(action, () => {
-          executionSpec = compileActionExecutionSpec(action);
-          routeMetadata = routeReceiptMetadata(
-            action,
-            executionSpec,
-            plan,
-            captures,
-            PRIVATE_RUNTIME.get(state)
-          );
-          invocation = buildBrowserInvocation(
-            action,
-            executionSpec,
-            captures,
-            root,
-            browserWorkspace.cwd,
-            plan,
-            outputContext(action, captures),
-            PRIVATE_RUNTIME.get(state)
-          );
-          return { executionSpec, routeMetadata, invocation };
-        }));
-      let commandResult;
-      if (executable.type === "browser-native" && executable.operationId === "open-about-blank") {
-        state.browserMayExist = true;
-        state.taskTrafficMayExist = true;
-      }
-      try {
-        const executeBrowserProgram = () =>
-          authority.executeProgram({
-            action,
-            program: "playwright-cli",
-            args: invocation.args,
-            sequence: ++state.browserReceiptSequence,
-            operation: executionSpec.operation,
-            routeKey: routeMetadata.routeKey,
-            assertionName: action.kind === "assert" ? executionSpec.builderAst.args[0] : null,
-            displayArgs:
-              executable.type === "browser-global-list"
-                ? ["--raw", "list"]
-                : [
-                    "-s=" + SESSION_NAME,
-                    "--raw",
-                    executable.type === "browser-run-code"
-                      ? executable.sourceId
-                      : executable.type === "browser-native"
-                        ? executable.operationId
-                        : executable.screenshotId,
-                  ],
-            stdoutDiscarded: invocation.stdoutDiscarded ?? false,
-            cwd: browserWorkspace.cwd,
-            env: browserWorkspace.environment,
-          });
-        commandResult =
-          action.id === "set-011-login-submit"
-            ? await runObservedBootstrapLoginAttempt(
-                state,
-                "ui",
-                plan.fixtureBlueprint.userAgents.browser,
-                executeBrowserProgram
-              )
-            : await executeBrowserProgram();
-      } catch (error) {
-        if (executable.type === "browser-screenshot") {
-          try {
-            await acquireScreenshotIdentity(state, action, plan);
-          } catch (identityError) {
-            throw new AggregateError(
-              [error, identityError],
-              "screenshot command and identity acquisition both failed"
-            );
-          }
-        }
-        throw error;
-      }
-      if (executable.type === "browser-screenshot") {
-        await acquireScreenshotIdentity(state, action, plan);
-      }
-      const normalizedBytes = await normalizePrivateBrowserOutputWithAuthSettlementBoundary(
-        action,
-        commandResult,
-        () =>
-          normalizeBrowserCommandOutput(state, action, executable, commandResult.stdout, invocation)
-      );
-      const authSettlementFailureClass = classifyPrivateAuthSettlementFailureFrame(
-        action.id,
-        normalizedBytes
-      );
-      if (authSettlementFailureClass !== null) {
-        throw createPrivateAuthSettlementFailure(authSettlementFailureClass);
-      }
-      const toneOpenFailureClass = classifyPrivateToneOpenFailureFrame(action.id, normalizedBytes);
-      if (toneOpenFailureClass !== null) {
-        throw createPrivateToneOpenFailure(toneOpenFailureClass);
-      }
-      const toneSelectFailureClass = classifyPrivateToneSelectFailureFrame(
-        action.id,
-        normalizedBytes
-      );
-      if (toneSelectFailureClass !== null) {
-        throw createPrivateToneSelectFailure(toneSelectFailureClass);
-      }
-      const dirtyNavigationFailureClass = classifyPrivateDirtyNavigationFailureFrame(
-        action.id,
-        normalizedBytes
-      );
-      if (dirtyNavigationFailureClass !== null) {
-        throw createPrivateDirtyNavigationFailure(dirtyNavigationFailureClass);
-      }
-      const parsedOutput = parsePrivateBrowserSuccessWithAuthSettlementBoundary(
-        action,
-        commandResult,
-        normalizedBytes,
-        () =>
-          parseRegisteredOutput(
-            plan.registries.outputs[action.outputSchemaId],
-            normalizedBytes,
-            action.id,
-            outputContext(action, captures)
-          )
-      );
-      return finalizePrivateBrowserResultWithAuthSettlementBoundary(
-        action,
-        executable,
-        plan,
-        commandResult,
-        () => {
-          if (
-            executable.type === "browser-native" &&
-            executable.operationId === "open-about-blank"
-          ) {
-            state.browserOpened = true;
-          }
-          if (executable.type === "browser-native" && executable.operationId === "close") {
-            state.browserClosed = true;
-          }
-          const receipt = {
-            ...commandResult.receipt,
-            method: routeMetadata.method,
-            pattern: routeMetadata.pattern,
-            sanitizedOutput: executionSpec.discardOutput
-              ? "[discarded]"
-              : canonicalJson(parsedOutput),
-          };
-          const captureBindings = {};
-          for (const name of plan.runtimeCaptureBindings[action.id] ?? []) {
-            invariant(
-              action.kind === "captureNew" && typeof parsedOutput?.id === "string",
-              action.id + " capture output drift"
-            );
-            captureBindings[name] = parsedOutput.id;
-          }
-          assertSafeEvidence(receipt, "TASK-540 parsed browser receipt");
-          const acquisitionDelta = deriveActionResourceDelta(
-            state,
-            action,
-            { captureBindings },
-            captures
-          );
-          const result = deepFreezeExact({
-            receipt: deepFreezeExact(receipt),
-            captureBindings,
-            acquisitionDelta,
-            settledCreateOrigin: null,
-          });
-          return result;
-        }
-      );
-    },
+    executeAction: createExecuteAction({
+      PRIVATE_RUNTIME,
+      armResponseLostCreateBeforeWrite,
+      assertSafeEvidence,
+      authority,
+      browserWorkspace,
+      buildBrowserInvocation,
+      buildPrivateBrowserInvocationWithAuthSettlementBoundary,
+      classifyPrivateAuthSettlementFailureFrame,
+      classifyPrivateDirtyNavigationFailureFrame,
+      classifyPrivateToneOpenFailureFrame,
+      classifyPrivateToneSelectFailureFrame,
+      compileActionExecutionSpec,
+      createPrivateAuthSettlementFailure,
+      createPrivateDirtyNavigationFailure,
+      createPrivateToneOpenFailure,
+      createPrivateToneSelectFailure,
+      finalizePrivateBrowserResultWithAuthSettlementBoundary,
+      normalizeBrowserCommandOutput,
+      normalizePrivateBrowserOutputWithAuthSettlementBoundary,
+      outputContext,
+      parsePrivateBrowserSuccessWithAuthSettlementBoundary,
+      plan,
+      rememberFixtureBindings,
+      root,
+      routeReceiptMetadata,
+      runObservedBootstrapLoginAttempt,
+      runtimeHandlers,
+      stageIntentionalPresentationOverrideActionReceipt,
+      state,
+    }),
     async executeCleanupLifecycleCore({ resourceLedger, cleanupPlanner, failure = false }) {
       invariant(
         resourceLedger instanceof ResourceLedgerBuilder &&
