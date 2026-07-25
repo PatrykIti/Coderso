@@ -90,6 +90,7 @@ const EXPECTED_EXECUTOR_MODULE_PATHS = Object.freeze([
   "_docs/_workflows/task-540-smoke/executor/action-resources.mjs",
   "_docs/_workflows/task-540-smoke/executor/auth-challenge-authority.mjs",
   "_docs/_workflows/task-540-smoke/executor/bootstrap-contracts.mjs",
+  "_docs/_workflows/task-540-smoke/executor/canonical-evidence.mjs",
   "_docs/_workflows/task-540-smoke/executor/captures.mjs",
   "_docs/_workflows/task-540-smoke/executor/config.mjs",
   "_docs/_workflows/task-540-smoke/executor/diagnostic-sink.mjs",
