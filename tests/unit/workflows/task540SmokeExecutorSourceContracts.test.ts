@@ -22,6 +22,7 @@ const root = path.resolve(import.meta.dir, "../../..");
 
 const workflowPaths = Object.freeze({
   adminApiSession: "_docs/_workflows/task-540-smoke/runtime/admin-api-session.mjs",
+  bootstrapBridgeSources: "_docs/_workflows/task-540-smoke/executor/bridge-sources/bootstrap.mjs",
   bootstrapRestoration:
     "_docs/_workflows/task-540-smoke/executor/self-test/bootstrap-restoration.mjs",
   boundedStream: "_docs/_workflows/task-540-smoke/runtime/bounded-stream.mjs",
@@ -104,6 +105,7 @@ const EXPECTED_EXECUTOR_MODULE_PATHS = Object.freeze([
   "_docs/_workflows/task-540-smoke/executor/action-resources.mjs",
   "_docs/_workflows/task-540-smoke/executor/auth-challenge-authority.mjs",
   "_docs/_workflows/task-540-smoke/executor/bootstrap-contracts.mjs",
+  "_docs/_workflows/task-540-smoke/executor/bridge-sources/bootstrap.mjs",
   "_docs/_workflows/task-540-smoke/executor/bridge-sources/platform.mjs",
   "_docs/_workflows/task-540-smoke/executor/bridge-sources/response-lost.mjs",
   "_docs/_workflows/task-540-smoke/executor/bridge-sources/user-preference.mjs",
@@ -228,7 +230,7 @@ function readExecutorModuleGraph(): ReadonlyMap<string, string> {
       );
     }
   }
-  expect(EXPECTED_EXECUTOR_MODULE_PATHS).toHaveLength(122);
+  expect(EXPECTED_EXECUTOR_MODULE_PATHS).toHaveLength(123);
   expect([...sources.keys()].sort()).toEqual(EXPECTED_EXECUTOR_MODULE_PATHS);
   return sources;
 }
@@ -719,6 +721,7 @@ test("phase-eight bootstrap restore is one typed nullable-safe CAS", () => {
   const config = readWorkflowSource(workflowPaths.config);
   const executor = readWorkflowSource(workflowPaths.executor);
   const bootstrapRestoration = readWorkflowSource(workflowPaths.bootstrapRestoration);
+  const bootstrapBridgeSources = readWorkflowSource(workflowPaths.bootstrapBridgeSources);
 
   expect(frozenStringArray(config, "PHASE_EIGHT_CLEANUP_FAILURE_CLASSES")).toEqual([
     "bootstrap_reconciliation_failed",
@@ -729,7 +732,7 @@ test("phase-eight bootstrap restore is one typed nullable-safe CAS", () => {
   ]);
 
   const baselineRead = sourceSection(
-    executor,
+    bootstrapBridgeSources,
     "const BOOTSTRAP_BASELINE_READ_BRIDGE_SOURCE =",
     "const BOOTSTRAP_CAS_RESTORE_BRIDGE_SOURCE ="
   );
@@ -741,9 +744,9 @@ test("phase-eight bootstrap restore is one typed nullable-safe CAS", () => {
   expect(baselineRead).not.toContain(".delete(");
 
   const casSource = sourceSection(
-    executor,
+    bootstrapBridgeSources,
     "const BOOTSTRAP_CAS_RESTORE_BRIDGE_SOURCE =",
-    "function validateBooleanBridgeProjection"
+    "export {"
   );
   const predicateTokens = [
     "notDistinct(users.id,input.userId)",
