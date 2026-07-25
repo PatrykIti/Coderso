@@ -412,7 +412,6 @@ const {
   retainPrivateCleanupAggregateDiagnosticNeverThrow,
   retainPrivateCleanupFailureDiagnosticNeverThrow,
   retainPrivateCleanupOutcomeDiagnosticNeverThrow,
-  selectPrivateCleanupFailureDiagnosticNeverThrow,
 } = cleanupDiagnostics;
 const {
   PRIVATE_CONSTRUCTION_AUTHORITY,
@@ -430,10 +429,7 @@ const failureBoundary = createFailureBoundaryRuntime({
   validateCapabilityResult,
 });
 const {
-  PRIVATE_DIRTY_NAVIGATION_FAILURE_DETAILS,
   PRIVATE_FAILURE_ACTION_TRACKERS,
-  PRIVATE_TONE_OPEN_FAILURE_DETAILS,
-  PRIVATE_TONE_SELECT_FAILURE_CLASSES,
   beginPrivateFailureAction,
   buildPrivateBrowserInvocationWithAuthSettlementBoundary,
   classifyPrivateAuthSettlementFailureFrame,
@@ -446,9 +442,7 @@ const {
   createPrivateFailureActionTracker,
   createPrivateToneOpenFailure,
   createPrivateToneSelectFailure,
-  failPrivateAuthSettlementStage,
   finalizePrivateBrowserResultWithAuthSettlementBoundary,
-  isExactAuthSettlementSuccessFrame,
   normalizePrivateBrowserOutputWithAuthSettlementBoundary,
   parsePrivateBrowserSuccessWithAuthSettlementBoundary,
   retainPrivateAuthSettlementFailureClassNeverThrow,
