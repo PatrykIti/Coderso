@@ -31,11 +31,11 @@ const testNameContractPath = path.join(root, testNameContractRelative);
 const MASKED_IMPLEMENT_SHA256 = "480c326a4f95386fa680bb21720df6748e85d50843c0e7a528b466a3431c2f0d";
 const FROZEN_HELPER_SHA256 = Object.freeze({
   [smokeContractRelative]: "33da5a759d69ed00d41dc364dd918660c665591db34bd411b1f174c7b9e142b2",
-  [executorRelative]: "7e6dec3246fead7178b36d2d3dde06587d8cbb7bb6cf06473a8ebc454ffad3ee",
+  [executorRelative]: "5c169e91399eace7f67bb859b0c7a7b0ce89879e27cd44e3300be01f599bcc66",
   [smokeHostRelative]: "82accfe7b9ada4ca02853c691b315fec5817a54b600912a081d5495ade6c8d61",
   [bridgeRelative]: "c3c594a17cb63943beab29e7f621f6e1ca46cb3b5abb67625edcddb900788341",
   [localOrchestratorRelative]: "e06c7be9652554111c111c2e8210b733db908a4f272bcbd4a11781174e132da4",
-  [implementRelative]: "ca33e2d594b4a8060b4344e634cecf5bdb5aaef9fe4b522c9096961265ed8c38",
+  [implementRelative]: "e0810016aae70542f5d0d5070fad7b162f33c55efacb8b7ae592be2ec3914cb1",
   [testNameContractRelative]: "ce052b4245c8c384d0405c32cf9d1df146a2f83a409994a6a2822de5422fc4f5",
 });
 
