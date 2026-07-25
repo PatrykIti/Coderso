@@ -90,10 +90,15 @@ runnable contract rather than weakening or deleting assertions.
 ## Settings Seam Contract
 
 `settingsService.ts` remains the sole owner of
-`normalizeSettingValueForWrite(key, value): string | null`. TASK-547-02-L02's
-atomic batch service imports this exact pure normalizer and owns locking/CAS and
-rollback; it must not duplicate setting validation. After those callers migrate,
-this leaf removes or privatizes the weaker installer-facing
+`normalizeSettingValueForWrite(key, value): { key: SettingKey; value:
+SettingValueMap[SettingKey] }`. The result remains object-shaped and preserves
+the complete settings value union, including strings, null, booleans, numbers,
+arrays and objects. Callers consume `.value` (and the canonical `.key` where
+needed) rather than treating the result itself as the normalized primitive.
+TASK-547-02-L02's atomic batch service imports this exact pure normalizer and
+owns locking/CAS and rollback; it must not duplicate setting validation. After
+those callers migrate, this leaf removes or privatizes the weaker
+installer-facing
 `applySettingsBatch` and `restoreSettingsBatchRaw` exports and proves no
 installer, compensation or acceptance path imports them. General settings APIs
 and non-locale values retain their existing behavior.
@@ -214,6 +219,11 @@ export const resolvePageListingRuntimeCopy = (
     : null;
 };
 
+const normalizedSetting: ReturnType<typeof normalizeSettingValueForWrite> =
+  normalizeSettingValueForWrite(input.key, input.desired.value);
+// { key: SettingKey; value: SettingValueMap[SettingKey] }
+const projectedSetting = { value: normalizedSetting.value };
+
 export function buildPublicDocumentShell(input: {
   language: unknown;
   headHtml: string;
@@ -281,8 +291,12 @@ normalizer trims, blank-omits and defensively bounds known values.
   and is intentionally not locale evidence.
 - `tests/unit/settings/settingsService.test.ts`: preserve non-blank stored locale
   compatibility, including `es-419` and `zh-Hant`; prove malformed values fall
-  back only at the HTML/runtime-copy sink; pin the exact exported setting
-  normalizer and absence of weaker installer/compensation imports.
+  back only at the HTML/runtime-copy sink; pin the exact exported
+  `{ key: SettingKey; value: SettingValueMap[SettingKey] }` setting-normalizer
+  result and the caller projection from `.value`; cover representative
+  non-string values, including the `site.contentRoutes` array and
+  `design.tokens` object required by L02, plus the absence of weaker
+  installer/compensation imports.
 
 Named suites must assert the emitted `<html lang>` string/DOM value, not merely a
 helper return. Each remains independently runnable and below 1,000 lines.
@@ -300,7 +314,9 @@ replaced by the synthetic Vitest fixture.
 - [x] Split the touched legacy public-site module into cohesive bounded modules.
 - [ ] Replace the narrowing write/read policy with the compatibility-safe public
   sink policy and complete the exact 22-key/precedence/persistence matrix.
-- [ ] Freeze the exported setting normalizer seam and remove weaker installer
+- [ ] Freeze the exported object-shaped
+  `{ key: SettingKey; value: SettingValueMap[SettingKey] }` setting normalizer
+  seam, including representative non-string values, and remove weaker installer
   batch/raw-restore imports after TASK-547-02-L02 migration.
 - [ ] Hand the installed `handlePublicRequest` and browser assertions to
   TASK-547-06; they do not block this earlier leaf's own completion gate.
