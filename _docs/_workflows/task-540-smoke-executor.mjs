@@ -11,7 +11,6 @@ import { Script } from "node:vm";
 
 import { buildTask540SmokePlan } from "./task-540-smoke-contract.mjs";
 import {
-  assertRecursivelyFrozen,
   canonicalJson,
   deepFreezeExact,
   exactOwnKeys,
@@ -53,9 +52,7 @@ import {
   sameArtifactIdentity,
 } from "./task-540-smoke/executor/private-workspace.mjs";
 import {
-  ALL_SELECT_CONTENT_SELECTOR,
   BUN_BRIDGE_EXECUTION_AUTHORITY,
-  DATABASE_OPERATION_TIMEOUT_MS,
   MAX_COMPLETE_SESSION_ROWS,
   MAX_STREAM_BYTES,
   MAX_TASK_TRAFFIC_ROWS,
@@ -71,10 +68,7 @@ import {
   CLEANUP_OPERATION_KINDS,
   INTENTIONAL_PRESENTATION_OVERRIDE_ABSENCE_ACTIONS,
   RESOURCE_BUN_BRIDGE_PARTICIPATION,
-  RESOURCE_EDGE_KEYS,
   RESOURCE_KIND_CONTRACTS,
-  RESOURCE_RECORD_INPUT_KEYS,
-  RESOURCE_RECORD_KEYS,
   RUNTIME_RECEIPT_KEYS,
   TERMINAL_RESOURCE_KINDS,
   assertResourceBunParticipationExhaustive,
@@ -231,7 +225,6 @@ import {
 } from "./task-540-smoke/executor/bridge-output-validators/resources.mjs";
 import { requireBridgeUuid } from "./task-540-smoke/executor/bun-bridge-validation-primitives.mjs";
 import {
-  changedJsonPointers,
   resolveFixtureValue,
 } from "./task-540-smoke/executor/ref-dsl.mjs";
 import {

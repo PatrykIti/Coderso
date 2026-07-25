@@ -16,7 +16,6 @@ import {
 import {
   assertDenseJsonArray,
   assertPlainJsonValue,
-  isSafeRepositoryRelativePath,
 } from "./json-schema.mjs";
 
 function assertRefPath(value, label, { nonEmpty = false } = {}) {
