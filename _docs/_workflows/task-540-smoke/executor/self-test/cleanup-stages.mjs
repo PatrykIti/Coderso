@@ -19,9 +19,9 @@ export async function runCleanupStagesSelfTest({
   assertNegative,
   assertSourceMutantsRejected,
   createCleanupPhaseScheduler,
+  createExecuteCleanupLifecycleCore,
   createPrivateBoundedFailureActionDiagnosticSink,
   createPrivateConstructionCleanupAuthority,
-  createRealCapabilities,
   emitPrivateFailureActionDiagnosticNeverThrow,
   exactGraph,
   exactGraphRecords,
@@ -570,7 +570,7 @@ export async function runCleanupStagesSelfTest({
   );
 
   const cleanupAdminBoundarySource = runPrivateCleanupAdminApiBoundary.toString();
-  const realCapabilitiesSource = createRealCapabilities.toString();
+  const cleanupLifecycleSource = createExecuteCleanupLifecycleCore.toString();
   const assertCleanupProductionSeamMutantRejected = (
     source,
     productionToken,
@@ -589,13 +589,13 @@ export async function runCleanupStagesSelfTest({
     "cleanup Admin API class"
   );
   assertCleanupProductionSeamMutantRejected(
-    realCapabilitiesSource,
+    cleanupLifecycleSource,
     'retainPrivateCleanupFailureDiagnosticNeverThrow(error, 3, "persistent_plan_failed")',
     'retainPrivateCleanupFailureDiagnosticNeverThrow(error, 3, "persistent_stage_failed")',
     "persistent plan class"
   );
   assertCleanupProductionSeamMutantRejected(
-    realCapabilitiesSource,
+    cleanupLifecycleSource,
     `retainPrivateCleanupAggregateDiagnosticNeverThrow(
             new AggregateError(phaseFailures, "phase 3 response-lost/persistent cleanup failed"),
             phaseFailures,
@@ -609,7 +609,7 @@ export async function runCleanupStagesSelfTest({
     "phase 3 cleanup aggregate input"
   );
   assertCleanupProductionSeamMutantRejected(
-    realCapabilitiesSource,
+    cleanupLifecycleSource,
     `retainPrivateCleanupAggregateDiagnosticNeverThrow(
           new AggregateError(failures, "TASK-540 deterministic cleanup failed"),
           failures,
