@@ -26,6 +26,8 @@ const workflowPaths = Object.freeze({
     "_docs/_workflows/task-540-smoke/executor/self-test/bootstrap-restoration.mjs",
   boundedStream: "_docs/_workflows/task-540-smoke/runtime/bounded-stream.mjs",
   bunBridgeContracts: "_docs/_workflows/task-540-smoke/executor/self-test/bun-bridge-contracts.mjs",
+  bunBridgeResourceSources:
+    "_docs/_workflows/task-540-smoke/executor/bun-bridge-resource-sources.mjs",
   bunBridgeValidationPrimitives:
     "_docs/_workflows/task-540-smoke/executor/bun-bridge-validation-primitives.mjs",
   buttonImage: "_docs/_workflows/task-540-smoke/browser/scenarios/button-image.mjs",
@@ -102,6 +104,7 @@ const EXPECTED_EXECUTOR_MODULE_PATHS = Object.freeze([
   "_docs/_workflows/task-540-smoke/executor/action-resources.mjs",
   "_docs/_workflows/task-540-smoke/executor/auth-challenge-authority.mjs",
   "_docs/_workflows/task-540-smoke/executor/bootstrap-contracts.mjs",
+  "_docs/_workflows/task-540-smoke/executor/bun-bridge-resource-sources.mjs",
   "_docs/_workflows/task-540-smoke/executor/bun-bridge-validation-primitives.mjs",
   "_docs/_workflows/task-540-smoke/executor/canonical-evidence.mjs",
   "_docs/_workflows/task-540-smoke/executor/captures.mjs",
@@ -222,7 +225,7 @@ function readExecutorModuleGraph(): ReadonlyMap<string, string> {
       );
     }
   }
-  expect(EXPECTED_EXECUTOR_MODULE_PATHS).toHaveLength(118);
+  expect(EXPECTED_EXECUTOR_MODULE_PATHS).toHaveLength(119);
   expect([...sources.keys()].sort()).toEqual(EXPECTED_EXECUTOR_MODULE_PATHS);
   return sources;
 }
