@@ -12,8 +12,9 @@ validation evidence are pending after drift remediation.
 
 ## Overview
 
-Own `referenceRegistry.ts`, `referenceGraph.ts` and graph tests. Freeze resource
-kinds, a discriminator-aware allowlist and stable topological ordering.
+Own `referenceRegistry.ts`, `referenceGraph.ts` and graph tests. Consume L01's
+frozen resource-kind owner; own package identity, the discriminator-aware
+allowlist and stable topological ordering.
 
 Freeze `PackageRef` exactly as `{ ref: PackageResourceKind; key: string }` with
 no extra key. `key` must match
@@ -41,7 +42,12 @@ There is no `menu.desired.document.items[*].pageId` row: menu navigation items
 are the native top-level `desired.items` aggregate, while `desired.document` is
 the separate Menu Document V2 appearance/content contract. For content routes,
 `type` stays a literal slug cross-checked against exactly one package content
-type; it is never rewritten to an ID.
+type; it is never rewritten to an ID. Process routes in array order and, within
+each route, process present `detailPageId` first and literal `type` second. A
+non-null `detailPageId` contributes one occurrence edge plus one substitution
+descriptor. A valid `type` contributes one validation-only occurrence edge to
+the matched `content_type`: it counts toward the 4,096-edge limit and becomes a
+deduplicated direct dependency, but creates no descriptor and is never rewritten.
 
 For both Page-backed source kinds, recursively visit each
 `document.sections[*].blocks[*]` and every child under only that block type's
@@ -53,6 +59,15 @@ its slot-key, block-type or device tables in the package graph.
 TASK-547-04's generator still inserts only its five declared direct-root refs;
 that narrower producer does not truncate the general package contract.
 
+The native bounds are reject boundaries, not scan cutoffs:
+`PAGE_BLOCK_MAX_TREE_DEPTH = 4` (root block is depth 1) and
+`PAGE_BLOCK_MAX_CHILDREN_PER_SLOT = 24`. For both `page` and `page_template`,
+depth 4 and 24 children are accepted and completely scanned; a depth-5 child,
+any `slots` member on a depth-4 block, a 25th child, an unknown/non-native slot
+key, or `slots` on a non-slot-capable block rejects the graph as
+`site_package_ref_bad_path`. No branch may be clipped or ignored, even when the
+invalid branch contains no reference.
+
 Absent or `null` nullable paths add no edge. Every present non-null allowed value
 must be an exact ref of the frozen target kind. A discriminator-mismatched block
 is not an allowed path, even if it uses the same property name. All other
@@ -60,17 +75,107 @@ ref-shaped objects/paths, including non-native slot keys and `$ref`, are invalid
 Enforce 4,096 edges, dependency/JSON depth 64 and at most 100 diagnostics before
 sorting.
 
-Diagnostics expose a sanitized path of at most 240 characters and a static
-reason code only. Duplicate/missing/ambiguous/cycle/bad-ref errors must not echo
-the supplied key, setting value, arbitrary document data, raw cycle identities
-or other payload text.
+Diagnostics expose a sanitized path of at most 240 characters and exactly one
+member of this closed vocabulary:
 
-Every accepted ref produces one frozen `PlannedPackageReference` with a tokenized
-`readonly (string | number)[]` source path and target identity. Each frozen
-`PlannedPackageResource.references` array preserves discovery order after the
-resource order is topologically sorted; its seed/desired is a deep-cloned frozen
-snapshot, not a caller-mutable package object. Diagnostic display paths are
-derived, sanitized text and never substitution authority.
+```ts
+export type ReferenceGraphDiagnosticReason =
+  | "duplicate_resource_identity"
+  | "expected_package_ref"
+  | "package_ref_shape_invalid"
+  | "package_ref_kind_mismatch"
+  | "package_ref_key_invalid"
+  | "package_ref_path_forbidden"
+  | "package_ref_target_missing"
+  | "content_routes_invalid"
+  | "content_route_type_invalid"
+  | "content_route_content_type_missing"
+  | "content_route_content_type_ambiguous"
+  | "page_slots_forbidden"
+  | "page_slot_key_forbidden"
+  | "page_tree_depth_exceeded"
+  | "page_slot_children_exceeded"
+  | "reference_edges_exceeded"
+  | "dependency_depth_exceeded"
+  | "diagnostic_limit_exceeded"
+  | "reference_cycle"
+  | "resolved_target_id_missing"
+  | "planned_reference_drift";
+```
+
+All validation lists below are first-match precedence, not unordered sets.
+For an exact ref validate object/presence → exact own-key shape → `ref` kind →
+canonical key → target lookup; only the first failure is reported. Freeze the
+condition mapping: duplicate kind/key → `duplicate_resource_identity`;
+non-object required/present ref → `expected_package_ref`; extra/missing ref member
+→ `package_ref_shape_invalid`; wrong `ref` discriminator →
+`package_ref_kind_mismatch`; non-canonical `key` → `package_ref_key_invalid`;
+ref-like value outside the registry → `package_ref_path_forbidden`; absent target
+→ `package_ref_target_missing`; malformed content-routes container/row →
+`content_routes_invalid`; malformed route `type` →
+`content_route_type_invalid`; zero/multiple matching slugs →
+`content_route_content_type_missing|content_route_content_type_ambiguous`.
+For every Page node with `slots`, validate in this first-match order: any `slots`
+member at depth 4 → `page_tree_depth_exceeded`; otherwise a non-slot-capable block
+→ `page_slots_forbidden`; otherwise the first unknown/non-native slot key →
+`page_slot_key_forbidden`; otherwise a 25th child in one native slot →
+`page_slot_children_exceeded`; 4,097th edge, dependency depth 65, 101st
+diagnostic and cycle → their corresponding static codes; resolver map
+miss/source mismatch →
+`resolved_target_id_missing|planned_reference_drift`. The top-level error code
+remains the matching `site_package_ref_*` or `site_package_too_complex`. On the
+101st diagnostic, discard the partial diagnostic list and throw the single
+static `diagnostic_limit_exceeded` diagnostic at `$.resources`. No supplied key,
+slug, value, payload, target identity or cycle member may appear in a reason.
+
+Freeze the complete plan shapes:
+
+```ts
+export type FrozenJsonValue =
+  | JsonPrimitive
+  | readonly FrozenJsonValue[]
+  | { readonly [key: string]: FrozenJsonValue };
+export type FrozenJsonObject = { readonly [key: string]: FrozenJsonValue };
+export type PackageResourceIdentity = `${PackageResourceKind}:${string}`;
+
+type PackageReferenceEdge = Readonly<{
+  from: PackageResourceIdentity;
+  to: PackageResourceIdentity;
+  path: readonly (string | number)[]; // relative to source seed.desired
+  purpose: "substitute" | "content_route_type";
+}>;
+
+export type PlannedPackageReference = Readonly<{
+  path: readonly (string | number)[];
+  targetIdentity: PackageResourceIdentity;
+}>;
+
+export type PlannedPackageResource = Readonly<{
+  identity: PackageResourceIdentity;
+  kind: PackageResourceKind;
+  collection: PackageResourceCollection;
+  key: string;
+  ordinal: number;
+  seed: Readonly<{ key: string; desired: FrozenJsonObject }>;
+  dependencies: readonly PackageResourceIdentity[];
+  references: readonly PlannedPackageReference[];
+}>;
+```
+
+Every accepted `PackageRef` produces one `purpose:"substitute"` occurrence edge
+and one descriptor; the content-route literal produces only the
+`purpose:"content_route_type"` edge. Count occurrences before deduplication.
+`dependencies` contains unique direct targets sorted lexicographically;
+`references` keeps occurrence discovery order. The plan is topologically sorted
+with dependencies first and stable ties by original package ordinal, then
+identity. Discovery is package collection/declaration order; registry-row order;
+array index order; and, for Page blocks, section/root-block order followed by
+depth-first pre-order. At each Page node inspect the discriminator's applicable
+properties in `contentTypeId`, `queryId`, `templateId`, `formId` order for base,
+tablet and mobile, then recurse through native slot order and child order.
+The seed, every descriptor/path/dependency array and the outer plan are
+deep-cloned and frozen. Diagnostic display paths are derived sanitized text,
+never substitution authority.
 
 This leaf also owns `resolvePlannedPackageResourceRefs(resource, resolvedIds)`.
 It deep-clones `resource.seed.desired`, visits only the recorded descriptors,
@@ -81,11 +186,24 @@ It performs no allowlist/ref-like scan, graph build or input/descriptor mutation
 L01 planning placeholders and L02 actual intended IDs use
 this one exported resolver; neither consumer duplicates the recursive walker.
 
-This leaf is the mandatory second half of complete package validation. Every
-consumer uses the existing exports in the exact order
-`normalizeFullSitePackageForWrite(rawPackage)` then `buildReferencePlan(pkg)`;
-both calls finish before the consumer acquires a lazy DB-backed dependency. Do
-not introduce a wrapper helper or alternate validation path.
+This leaf is the mandatory second half of complete package validation, with
+boundaries frozen as follows:
+
+- an `unknown`/raw entry point calls `normalizeFullSitePackageForWrite` exactly
+  once, then `buildReferencePlan` exactly once, before lazy DB acquisition;
+- `buildReferencePlan` accepts only `FullSitePackageV1` and never normalizes;
+- typed `applyFullSitePackage` accepts an already-normalized package and builds
+  its own private plan exactly once, with zero normalizer calls;
+- two-argument `planFullSiteInstall(pkg,deps)` accepts an already-normalized
+  package and builds once before dependency reads; its three-argument overload
+  consumes the exact frozen plan supplied by apply and builds zero times; and
+- `prepareFullSiteSaga` consumes that same plan and calls neither function.
+
+The CLI raw boundary and service trust boundary each validate independently, so
+an actual CLI→service apply intentionally performs one CLI graph build plus one
+private service graph build, not one shared/caller-supplied plan. Do not add a
+wrapper helper, normalize at typed internal boundaries or expose the plan through
+public input/dependencies.
 
 ## Security Contract
 
@@ -115,20 +233,33 @@ Errors distinguish duplicate/missing/ambiguous/cycle/bad-path with only the
 static redacted diagnostics above. TASK-547-02 owns post-substitution native
 `desired` validation; this leaf certifies only ref placement/resolution/order.
 
-Regression tests: every row of the closed table for both Page-backed source
-kinds; absent/null/non-null behavior at base/tablet/mobile/root/nested-slot
-surfaces; required `collectionLink.contentTypeId`; block discriminator
-cross-product and deterministic recursive slot traversal;
-explicit rejection of `menu.desired.document.items`; exact ref
-keys/target kind/no-extra-key; deterministic order, cycles,
-dangling/ambiguous refs and exact edge/depth/diagnostic limits. Reject refs at
-arbitrary Page text/data paths and pin that diagnostics are static, bounded and
-contain no hostile key/value sentinel. Pin frozen descriptor shape/order, exact
-base/responsive/nested substitution, missing-ID/source-drift rejection, input/
-plan immutability and a resolver spy proving zero second walker/build. Add a
-full-consumer regression proving a
-structurally normalized bad-path reference fails here before the lazy DB
-dependency is acquired.
+Regression tests: every closed-table row for both Page-backed kinds; absent/null/
+non-null behavior at base/tablet/mobile/root/nested-slot surfaces; required
+`collectionLink.contentTypeId`; block-discriminator cross-product; deterministic
+recursive traversal; and explicit rejection of `menu.desired.document.items`.
+For both `page` and `page_template`, pin accepted depth 4/rejected depth 5,
+accepted 24/rejected 25 children, an unknown native slot and slots on an atom;
+each rejection occurs rather than truncating a reference-bearing final branch.
+Pin exact ref keys/kind/shape; every closed reason code and condition mapping;
+the fixed diagnostic-overflow singleton; and sentinel non-disclosure for
+duplicate, missing, wrong-kind, malformed-key, forbidden-path, content-route,
+depth, edge, cycle, resolved-ID and drift failures. Cross-product precedence
+cases pin extra+wrong-kind+bad-key → shape, exact-shape wrong-kind+bad-key → kind,
+depth-4 atom with slots and depth-4 layout with an unknown slot → depth, shallower
+atom with any slots → atom, and a shallower slot-capable unknown key → slot-key.
+
+Pin occurrence-edge count versus lexicographically deduplicated direct
+dependencies; exact stable topological order; exact
+`PlannedPackageResource`/`PlannedPackageReference` keys and deep freeze; and
+content-route order where `detailPageId` has a descriptor, `type` adds a counted
+dependency edge, and `type` remains unchanged after substitution. Pin exact
+base/responsive/nested descriptor substitution, missing-ID/source-drift
+rejection, input/plan immutability and zero second walker/build. This leaf's tests
+import only TASK-547-01 package owners and use a local Bun-free harness to prove
+normalize→graph once at raw input. They do not import planner, apply, preparer or
+CLI owners: exact call-count tests are handed to 02-L01, 02-L02 and 05-L01. A
+structurally normalized bad-path ref must fail in that local harness before its
+injected lazy-dependency sentinel is acquired.
 
 ## Sub-Tasks
 

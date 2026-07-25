@@ -100,7 +100,11 @@ closed registry:
   base `props`, then `responsive.tablet.props`, then `responsive.mobile.props`:
   `collection` permits nullable `contentTypeId/queryId/templateId`, `filters`
   permits nullable `queryId`, and `form` permits nullable `formId`, only when
-  each property is present;
+  each property is present. Import native Page capability/breakpoint owners and
+  reject rather than clip depth 5, a `slots` member at depth 4, child 25,
+  unknown/non-native slots and slots on atom blocks for both source kinds.
+  For overlapping failures, first match wins in this order: max-depth `slots`,
+  non-slot-capable block, unknown slot key, then per-slot child cap;
 - menu `items[*].pageId` → Page when present and non-null; menu
   `desired.document.items` is not a native menu-item collection and is not a
   reference path;
@@ -112,13 +116,28 @@ No other path accepts `PackageRef`. Any other object shaped like a reference,
 including raw `$ref`-like objects in arbitrary content, is rejected rather than
 recursively rewritten. A nullable path contributes no edge when absent or
 `null`; a non-null value must be an exact `PackageRef`. Diagnostics contain only
-sanitized bounded paths and static reason codes; raw keys, values, payloads and
-cycle members are never echoed.
+sanitized bounded paths and L02's closed
+`ReferenceGraphDiagnosticReason` codes; raw keys, slugs, values, payloads, target
+identities and cycle members are never echoed.
 
-Each accepted ref becomes an immutable typed descriptor containing only its
-tokenized source path and target identity. `PlannedPackageResource` retains its
-descriptors in discovery order plus a deep-cloned frozen desired snapshot after
-topological sorting. L02 exports
+TASK-547-01-L02 owns this exact identity export:
+
+```ts
+export type PackageResourceIdentity = `${PackageResourceKind}:${string}`;
+```
+
+Each accepted ref becomes exactly
+`Readonly<{path:readonly (string|number)[];targetIdentity:PackageResourceIdentity}>`.
+`PlannedPackageResource` is exactly the frozen
+`{identity,kind,collection,key,ordinal,seed:{key,desired},dependencies,references}`
+record frozen by L02: `desired` is recursive readonly JSON, `dependencies` is
+unique direct target identities in lexical order, and `references` preserves
+occurrence discovery order. Every accepted ref occurrence counts as an edge;
+duplicates collapse only in `dependencies`. A content-route literal `type` adds
+a counted validation-only edge/direct dependency to its unique content type but
+no descriptor and is never rewritten. The outer plan is topologically ordered
+with dependencies first and stable ties by package ordinal then identity; every
+nested snapshot/array is deep-cloned and frozen. L02 exports
 `resolvePlannedPackageResourceRefs(resource, resolvedIds)`: it clones desired,
 replaces only those recorded paths, verifies each source ref still matches its
 descriptor and never rescans/rebuilds the graph. The planner and pre-run
@@ -185,10 +204,9 @@ export function resolvePlannedPackageResourceRefs(
 ): JsonObject;
 ```
 
-`normalizeFullSitePackageForWrite` owns package shape, limits, canonicalization
-and the setting allowlist; it does not certify reference placement or
-resolution. Every full-package consumer executes the two existing exports in
-this exact order:
+`normalizeFullSitePackageForWrite` is the sole `unknown` boundary and owns
+package shape, limits, canonicalization and the setting allowlist; it does not
+certify reference placement or resolution. A raw consumer executes:
 
 ```ts
 const pkg = normalizeFullSitePackageForWrite(rawPackage);
@@ -196,10 +214,15 @@ buildReferencePlan(pkg);
 // Only now may the consumer acquire its existing lazy DB-backed dependency.
 ```
 
-Do not add a wrapper helper or alternate validation path. A structurally accepted
-ref-shaped value is not a valid consumer package until `buildReferencePlan`
-accepts it. Thus bad reference paths, duplicate keys, dangling/ambiguous
-references and cycles fail before any lazy database import or access.
+Each call occurs exactly once. Typed service/planner boundaries accept only an
+already-normalized `FullSitePackageV1`: service apply and two-argument planning
+each build exactly one private plan with zero normalizer calls; three-argument
+planning and saga preparation consume the same supplied frozen plan with zero
+builds. The CLI and service intentionally build independently at their separate
+trust boundaries; no caller-supplied plan crosses into service input/deps. Do not
+add a wrapper helper or alternate validation path. Bad reference paths,
+duplicate keys, dangling/ambiguous references and cycles fail before the
+applicable lazy database import/access.
 
 **Data flow:** unknown in-memory value → serialized-size/package-owned structural
 normalization → index stable keys → discriminator-aware scan of only allowlisted
@@ -223,8 +246,14 @@ shape/count/ID grammar plus first-occurrence dedupe, at most 100 bounded
 diagnostics, normalize(normalize(x)) identity, complete desired-snapshot equality
 and deterministic order. Graph tests cover every discriminator/nullability row,
 reject the non-native menu `document.items` path, reject malformed ref keys
-without echoing them, pin static redacted diagnostics and prove frozen descriptor-
-only substitution with no second traversal or plan mutation. A structural-schema
+without echoing them, pin L02's exact closed reasons, plan/reference shapes,
+occurrence-edge versus direct-dependency ordering, and content-route validation-
+only edge. For both Page-backed kinds they accept depth 4/24 children and reject
+depth 5/25, non-native slots and atom slots without clipping. Prove frozen
+descriptor-only substitution with no second traversal or plan mutation. This
+task proves only its local raw normalize→graph call order; planner, typed-apply/
+preparer and CLI call counts belong to TASK-547-02-L01, 02-L02 and 05-L01. A
+structural-schema
 test may accept a ref-shaped value solely to exercise shape/edge limits, while
 the full consumer contract must prove that the same bad path is rejected by
 `buildReferencePlan` before lazy DB acquisition.

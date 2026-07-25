@@ -18,10 +18,11 @@ Do not change native Page/Menu/Form/content schemas.
 
 This leaf owns structural package normalization only. It deliberately does not
 decide whether a ref-shaped object appears at an allowed path or resolves to a
-unique resource. Every full-package consumer must immediately pass this leaf's
-normalized result to TASK-547-01-L02 `buildReferencePlan` before acquiring any
-lazy DB-backed dependency. Do not add a wrapper helper or a second validation
-path.
+unique resource. Every raw/`unknown` package boundary must immediately pass this
+leaf's normalized result to TASK-547-01-L02 `buildReferencePlan` before acquiring
+any lazy DB-backed dependency. Typed internal boundaries accept
+`FullSitePackageV1`, never normalize again and follow the downstream planner/
+apply/CLI call-count handoffs. Do not add a wrapper or second validation path.
 
 Every one of the ten resource arrays contains only a strict
 `ResourceSeed<TDesired> = { key: string; desired: TDesired }`. Package JSON
@@ -100,8 +101,8 @@ export function normalizeFullSitePackageForWrite(value: unknown) {
 Data flow: unknown input → serialized-size/shape limits → strict package-owned
 records and exact setting allowlist → canonical structural output → L02 graph
 validation. Errors use
-`site_package_invalid|site_package_too_large|site_package_too_complex` and
-bounded safe paths.
+`site_package_invalid`, `site_package_too_large`, `site_package_too_complex` and
+`site_package_setting_forbidden`, with bounded safe paths.
 
 Regression tests: valid canonical package; all ten `{key,desired}` envelopes;
 reject package DB IDs and unknown envelope keys; every exact limit edge and
@@ -109,14 +110,18 @@ one-over case, including serialized in-memory 8 MiB and 100/101 verification
 entries; package/non-setting/scenario canonical-key grammar (L02 owns ref keys); all seven and
 only seven setting keys without applying the package-key reader; strict
 verification unknown/type/ID checks and stable first-occurrence dedupe; bounded
-100-diagnostic truncation; secret namespace/raw-byte corpus; complete residual
+100-diagnostic truncation; forbidden-setting rejection with exact
+`site_package_setting_forbidden` and supplied key/value sentinels absent from the
+error/diagnostics; secret namespace/raw-byte corpus; complete residual
 object accept; bare-code/unknown-key/non-false-impact rejection; complete
 desired-snapshot equality; and idempotent normalize. A schema-only limit test may
 accept a ref-shaped object solely to count reference edges; it must state that
 this is not full-package validity and leave path/ref-key rejection to L02 and the
 consumer pre-DB regression. Native desired-document acceptance/rejection tests
-belong to TASK-547-02 after reference substitution. Pin `fileBytes` as the exact
-serialized-object boundary and prove the raw-source reader never consumes it.
+belong to TASK-547-02 after reference substitution. Pin `fileBytes` only as the
+exact serialized-object boundary. Handoff only: TASK-547-05 owns the raw reader
+and the sole proof that it never consumes `PACKAGE_LIMITS.fileBytes`; this leaf's
+suite neither imports nor source-inspects that later-owned reader.
 
 ## Sub-Tasks
 
