@@ -53,6 +53,7 @@ pinned FormaDom prototype. This leaf is the sole writer for:
 - new `tests/vitest/pages/page-switcher-aria-label-contract.test.ts`
 - new `tests/vitest/pages/page-switcher-aria-label-render.test.tsx`
 - new `tests/vitest/pages/page-switcher-aria-label-editor.test.ts`
+- new `tests/vitest/pages/page-form-success-behavior.test.tsx`
 - new `tests/vitest/pages/page-renderer-v2-module-boundaries.test.ts`
 
 L02/L03 may import `buildFormaDomPages` and shared constants read-only. This leaf
@@ -68,7 +69,7 @@ Each seed is exactly `{ key, desired }`, contains no DB ID, carries target
 
 ## Required Page-Core Split
 
-The switcher accessible-name correction must touch three legacy modules that
+The Page prop corrections must touch three legacy modules that
 currently exceed the repository's 1,000-line limit: `pageDocumentV2.ts` (4,676),
 `pageRendererV2.tsx` (4,003) and `pageEditorControlRegistry.ts` (1,813). L01 must
 split all three by responsibility before adding the field; extracting one tiny
@@ -158,6 +159,47 @@ pageBlockPropKeys.switcher = ["tabs", "activeIndex", "variant", "ariaLabel"];
 - `home.ts` authors the exact Polish value `Wybór stylu domu`. No other Page is
   forced to author it, and no multilingual routing contract is introduced.
 
+## Form Success-Behavior Bridge
+
+`show-message-keep-form` is a Form Embed behavior, not a Form resource or action
+field. L01 therefore owns one generic present-only Page Form prop and its native
+renderer bridge:
+
+```ts
+export const PAGE_FORM_SUCCESS_BEHAVIORS = [
+  "show-message-hide-form",
+  "show-message-reset-form",
+  "show-message-keep-form",
+] as const;
+
+// allowlist only; pageBlockDefaultProps.form MUST NOT seed successBehavior
+pageBlockPropKeys.form = ["formId", "title", "successBehavior"];
+```
+
+- `form.props.successBehavior` accepts only the exact enum above. Fresh unknown,
+  wrong-type and unknown-key values fail with `page_document_invalid`; malformed
+  stored values are omitted. It is base-only and rejected inside responsive
+  overrides.
+- Absence emits no normalized JSON key and preserves legacy Page JSON and SSR
+  bytes. The renderer defensively maps an authored valid value to
+  `FormEmbedData.submitBehavior.successBehavior`; absence/invalid stored input
+  omits `submitBehavior` and retains the existing native hide-form default.
+- Add one base-only select control
+  `block.form.props.successBehavior`, label `After successful submission`, path
+  `["props","successBehavior"]`, Content panel, `responsive:false`, with exact
+  option labels `Hide form`, `Reset form`, `Keep form`. Its displayed runtime
+  fallback is not written until the author changes it; reset deletes the key.
+- The FormaDom contact Page authors
+  `props.successBehavior:"show-message-keep-form"`. The referenced Form owns the
+  supporting text and installed `success_message` action; the Page owns only
+  how the existing runtime presents success.
+- `page-form-success-behavior.test.tsx` pins strict allowlist/schema/enum,
+  write/read round trip, responsive rejection, malformed stored omission,
+  absent JSON/SSR byte identity, renderer bridge/data attribute, editor
+  metadata/reset and the exact FormaDom authored value. Existing
+  `tests/vitest/widgets/formRuntimeScript.test.ts` remains read-only and proves
+  that the native keep-form branch leaves controls visible.
+
 ## Package Page Reference Contract
 
 Page package references are not native Page values until the installer resolves
@@ -199,6 +241,33 @@ equal a resource key or placeholder remain byte-for-byte unchanged. Ref-free
 Pages return the native normalized document directly; ref-bearing Page documents
 are not passed through the native Page normalizer again until TASK-547-02
 resolves these allowlisted refs to IDs.
+
+## Shared Page Palette Contract
+
+This leaf solely owns `scripts/projekty-domow/pages/shared.ts`, so it replaces
+the stale scaffold palette before any Page seed lands:
+
+```ts
+export const FORMA_DOM_PAGE_PALETTE = {
+  background: "#07111f",
+  backgroundSecondary: "#0b1628",
+  text: "#f7fbff",
+  muted: "#a8b5c7",
+  mutedQuiet: "#7e8ba0",
+  line: "rgba(255,255,255,.14)",
+  aqua: "#8ee8ff",
+  mint: "#adffd8",
+  violet: "#c7b7ff",
+  warm: "#ffd7a8",
+  danger: "#ff9fba",
+} as const;
+```
+
+Every Page builder consumes these constants rather than retyping colors. The
+pricing highlight uses the source aqua/mint treatment. Generator tests assert
+the intended values and reject stale `#13233a`, `#d8ff7a`, `#b9c9da` and every
+other legacy lime/purple scaffold value. L02 consumes this mapping read-only;
+it cannot repair palette drift in L01-owned files.
 
 ## Source And Route Matrix
 
@@ -384,10 +453,12 @@ caretakers, package comparisons or a final offer CTA absent from the source.
    The listing template's semantic `href` binding consumes TASK-547-03's
    `data.cardHref`, which wins before the generic detail-route fallback.
    TASK-547-03-L01 owns these fixture values; L01 verifies that the Page binding
-   renders them rather than duplicating static project data.
+   renders them rather than duplicating static project data. The whole rendered
+   card is the link and no visible `Zobacz szczegóły` or other CTA label is
+   emitted.
 
 Do not introduce style/storey/energy controls, catalogue-year badges, proof
-metrics or a closing CTA absent from `projekty.html`.
+metrics, per-card CTA copy or a closing CTA absent from `projekty.html`.
 
 ## Exact Process Matrix (`proces.html`)
 
@@ -457,10 +528,12 @@ Do not add biographies, named team members, company-age metrics or final CTA.
    pomyśle na dom.`; lead `Nie musisz mieć gotowego planu ani wiedzy technicznej.
    Wystarczy kilka zdań — resztę spokojnie ustalimy razem.`
 2. One real Form block binds to `{ ref:"form", key:"project-brief" }` and sets
-   `props.title:PROJECT_BRIEF_FORM_TITLE`. The Page imports that TASK-547-03-owned
-   constant (exact value `Zacznij projekt`) rather than duplicating it, so the
-   native required heading is deterministic rather than an invented or fallback
-   string. Public rendering must preserve this source field/options order:
+   `props.title:PROJECT_BRIEF_FORM_TITLE` plus
+   `props.successBehavior:"show-message-keep-form"`. The Page imports that
+   TASK-547-03-owned title constant (exact value `Zacznij projekt`) rather than
+   duplicating it, so the native required heading is deterministic rather than
+   an invented or fallback string. Public rendering must preserve this source
+   field/options order:
    - `Imię i nazwisko`, placeholder `Jan Kowalski`;
    - `E-mail`, placeholder `jan@email.pl`;
    - `Na jakim jesteś etapie?`, options `Mam działkę`, `Szukam działki`, `Mam
@@ -478,9 +551,10 @@ Do not add biographies, named team members, company-age metrics or final CTA.
    control. L01 must not add a sibling Page text block or copy the literal into
    Page data. The Form resource description stays null, so the note is neither
    duplicated nor moved above the fields. On successful native submission the
-   existing `show-message-hide-form` behavior hides the body (including the
-   supporting text) and exposes only `PROJECT_BRIEF_SUCCESS_MESSAGE`, matching
-   the source replacement state rather than leaving both messages visible.
+   `show-message-keep-form` behavior replaces the note with
+   `PROJECT_BRIEF_SUCCESS_MESSAGE` while preserving the visible controls,
+   matching the pinned handler. The initial supporting text is not shown beside
+   the success message, and the form body is never hidden.
    TASK-547-03 owns these constants/fields/actions and may append the native
    required consent/security affordance without replacing source copy. The
    native Form block's extra visible `Zacznij projekt` title is covered only by
@@ -512,6 +586,41 @@ metro, parking, district or follow-up timeline absent from the source.
   Coderso device boundaries replace only the exact 1060/700 px trigger values.
 - Every visible Page effect and layout claim must be tested through rendered
   DOM/ARIA/computed state, not only serialized property presence.
+
+## Page Editor Runtime Smoke Handoff
+
+Because this leaf adds real Page Editor controls, its gate and TASK-547-06's
+final rerun use `playwright-cli -s=wf547pageeditor` for exactly five ordered
+flows, one fresh byte-distinct PNG each and zero console/page errors:
+
+1. `page-editor-switcher-author-light` at `1440x1000`: in light mode author
+   `Wybór stylu domu`; assert `page-editor-switcher-control-value`,
+   `page-editor-switcher-base-prop`, `page-editor-switcher-canvas-aria` and
+   `page-editor-switcher-light-geometry`;
+2. `page-editor-switcher-tablet-base` at `1024x1366`: while previewing tablet,
+   change the label; assert `page-editor-tablet-control-value`,
+   `page-editor-tablet-base-prop-updated`,
+   `page-editor-tablet-responsive-override-absent` and
+   `page-editor-tablet-canvas-aria`;
+3. `page-editor-switcher-reset-dark` at `1440x1000`: in dark mode reset the
+   label; assert `page-editor-reset-key-absent`,
+   `page-editor-reset-runtime-fallback`, `page-editor-reset-canvas-aria` and
+   `page-editor-reset-dark-computed-contrast`;
+4. `page-editor-form-success-save-reload` at `1440x1000`: author `Keep form`,
+   save/navigate/reload; assert `page-editor-form-control-value`,
+   `page-editor-form-base-prop`, `page-editor-form-save-reload-roundtrip` and
+   `page-editor-form-preview-runtime-contract`;
+5. `page-editor-publish-front-parity` at `390x844`: publish, then prove on the
+   public front `page-editor-front-switcher-aria`,
+   `page-editor-front-contact-success`, `page-editor-front-controls-visible`,
+   `page-editor-front-mobile-geometry` and
+   `page-editor-front-scoped-cleanup`.
+
+Admin evidence URLs normalize the live Page ID to literal
+`http://127.0.0.1:5173/admin/pages/{pageId}`; the validator independently
+proves the live IDs resolve to the installed home/contact Pages. The final
+public flow uses `/` and `/kontakt` within one scenario. Control-presence or
+serialized-property-only evidence cannot satisfy the visible-effect assertions.
 
 ## Security Contract
 
@@ -671,6 +780,7 @@ function buildContactForm(): PageBlockV2 {
     id: "contact-form",
     formId: PAGE_BINDING_PLACEHOLDERS.projectBriefForm,
     title: PROJECT_BRIEF_FORM_TITLE,
+    successBehavior: "show-message-keep-form",
   });
 }
 
@@ -697,19 +807,21 @@ export const buildFormaDomPages = (refs: FormaDomPageRefs): ResourceSeed[] =>
   ];
 ```
 
-**Data flow:** strict present-only Page-core schema/normalizer/editor/renderer →
-frozen source constants → page-specific builders → L01-owned shared Page/SEO
-helper → exact direct-root-block package-ref insertion → closed graph validation
-→ ordered seeds consumed by L02.
+**Data flow:** strict present-only Page-core schema/normalizer/editor/renderer,
+including Page Form → Form Embed success-behavior mapping → frozen source
+constants → page-specific builders → L01-owned shared Page/SEO helper → exact
+direct-root-block package-ref insertion → closed graph validation → ordered
+seeds consumed by L02.
 Ref-free documents may normalize natively immediately; ref-bearing Page
 documents normalize natively only after installer substitution.
 
 **Error handling:** throw on unknown/invalid/overlong fresh switcher fields,
-missing/extra section, duplicate block/section ID, copy/order mismatch, unknown
-route/anchor, unsafe link, missing/duplicate/wrong-kind/wrong-path package
-binding, incorrect SEO pair or invented public claim. Never transform an
-ordinary string merely because it equals a resource key or placeholder. Stored
-malformed accessible names fail soft to omission/fallback without degrading the
+unknown/wrong-type Form success behavior, missing/extra section, duplicate
+block/section ID, copy/order mismatch, unknown route/anchor, unsafe link,
+missing/duplicate/wrong-kind/wrong-path package binding, incorrect SEO pair or
+invented public claim. Never transform an ordinary string merely because it
+equals a resource key or placeholder. Stored malformed accessible names and
+success behavior fail soft to omission/native fallback without degrading the
 Page; required FormaDom source content is never silently pruned.
 
 ## Regression Tests
@@ -719,7 +831,7 @@ Page; required FormaDom source content is never silently pruned.
 it by page family into independently runnable Vitest files and update single-
 writer/workflow ownership before appending.
 
-The four new Page-core suites are independently runnable and each remains below
+The five new Page-core suites are independently runnable and each remains below
 1,000 lines:
 
 - `page-switcher-aria-label-contract.test.ts`: strict allowlist/schema, exact
@@ -733,6 +845,10 @@ The four new Page-core suites are independently runnable and each remains below
   the frozen id/path/panel/input and no fallback/default; tablet/mobile commits
   mutate only the desktop/base value, never create overrides, and a blank commit
   deletes the key with empty-parent compaction;
+- `page-form-success-behavior.test.tsx`: strict present-only enum/allowlist,
+  round trip, responsive rejection, malformed stored omission, absent JSON/SSR
+  byte identity, renderer bridge, exact control/reset metadata and FormaDom
+  keep-form authoring;
 - `page-renderer-v2-module-boundaries.test.ts`: explicit facade surface,
   one `PageDocumentError` owner, acyclic direct internal imports, no server/DB/
   settings coupling, all renderer support modules below 1,000 lines, and the
@@ -760,10 +876,13 @@ The tests assert:
   absent from facet/query data; initial DOM pins localized heading/description,
   `Kategoria`, exact counts `2/2/2/3` and `Pokaż projekty`; selected DOM pins
   `1 aktywny filtr`, `Wyczyść wszystko` and the exact selected public label;
-  every rendered card href equals its strict `data.cardHref` source value;
+  every rendered card href equals its strict `data.cardHref` source value and
+  no visible project-card CTA copy is emitted;
 - Form block title exactly equal to imported `PROJECT_BRIEF_FORM_TITLE`, whose
   frozen value is `Zacznij projekt`, with no blank, `Zapytaj o projekt` or
-  resource-name fallback;
+  resource-name fallback; its only authored runtime success behavior is
+  `show-message-keep-form`, while an unauthored Page Form preserves native
+  hide-form JSON/SSR bytes;
 - the Form resource contributes no visible description, its owned
   `theme.submit.supportingText` equals `PROJECT_BRIEF_INITIAL_NOTE`, and the Page
   document contains no sibling copy of that note;
@@ -772,7 +891,9 @@ The tests assert:
   behavior and mobile/tablet render state through DOM/ARIA, not
   serialized-presence-only checks;
 - no deprecated widget template, raw code, remote media or invented anchors;
-- deterministic output and line-count compliance.
+- deterministic output and line-count compliance;
+- exact shared source palette use, source aqua/mint pricing highlight and
+  rejection of stale scaffold colors.
 
 ## Sub-Tasks
 
@@ -780,14 +901,16 @@ The tests assert:
   cohesive module map while preserving public imports and trusted sinks.
 - [ ] Add the strict present-only switcher accessible-name contract, editor
   control and exact Polish FormaDom value.
+- [ ] Add the strict present-only Page Form success-behavior bridge/control and
+  author keep-form only for the FormaDom contact Page.
 - [ ] Correct all seven Page v2 documents, static SEO, source copy, links,
   anchors and native interaction bindings.
-- [ ] Add the four focused Page-core suites and pass the source-fidelity,
+- [ ] Add the five focused Page-core suites and pass the source-fidelity,
   renderer/editor regression and line-count gates.
 
 ## Testing Requirements
 
-- named Page generator and four focused Page-core Vitest suites above;
+- named Page generator and five focused Page-core Vitest suites above;
 - read-only existing Page v2 schema/renderer/editor/interactivity/responsive
   suites, including TASK-534 model/render and all three oversized legacy suites;
 - TASK-547-06's owned
