@@ -6,6 +6,7 @@ import {
   ScriptTarget,
   createSourceFile,
   isExportDeclaration,
+  isFunctionDeclaration,
   isImportDeclaration,
   isStringLiteral,
 } from "typescript";
@@ -25,6 +26,7 @@ const workflowPaths = Object.freeze({
   executor: "_docs/_workflows/task-540-smoke-executor.mjs",
   genericInvocations: "_docs/_workflows/task-540-smoke/browser/generic-invocations.mjs",
   observationSources: "_docs/_workflows/task-540-smoke/browser/observation-sources.mjs",
+  processRuntime: "_docs/_workflows/task-540-smoke/runtime/process-runtime.mjs",
   relatedCache: "_docs/_workflows/task-540-smoke/browser/scenarios/related-cache.mjs",
   routeAndActionSources: "_docs/_workflows/task-540-smoke/browser/route-and-action-sources.mjs",
   runCode: "_docs/_workflows/task-540-smoke/browser/run-code.mjs",
@@ -146,6 +148,7 @@ const EXPECTED_EXECUTOR_MODULE_PATHS = Object.freeze([
   "_docs/_workflows/task-540-smoke/runtime/missing-media-proof.mjs",
   "_docs/_workflows/task-540-smoke/runtime/operation-router.mjs",
   "_docs/_workflows/task-540-smoke/runtime/owned-host.mjs",
+  "_docs/_workflows/task-540-smoke/runtime/process-runtime.mjs",
   "_docs/_workflows/task-540-smoke/runtime/response-lost-baselines.mjs",
   "_docs/_workflows/task-540-smoke/runtime/response-lost-discovery.mjs",
   "_docs/_workflows/task-540-smoke/runtime/response-lost-registry.mjs",
@@ -207,6 +210,7 @@ function readExecutorModuleGraph(): ReadonlyMap<string, string> {
       );
     }
   }
+  expect(EXPECTED_EXECUTOR_MODULE_PATHS).toHaveLength(116);
   expect([...sources.keys()].sort()).toEqual(EXPECTED_EXECUTOR_MODULE_PATHS);
   return sources;
 }
@@ -240,6 +244,102 @@ function frozenStringArray(source: string, name: string): string[] {
   expect(match).not.toBeNull();
   return [...match![1].matchAll(/"([^"]+)"/gu)].map((entry) => entry[1]);
 }
+
+test("process runtime is the sole owner of process and host composition", () => {
+  const executor = readWorkflowSource(workflowPaths.executor);
+  const processRuntime = readWorkflowSource(workflowPaths.processRuntime);
+  const processRuntimePath = path.join(root, workflowPaths.processRuntime);
+  const processRuntimeSourceFile = createSourceFile(
+    processRuntimePath,
+    processRuntime,
+    ScriptTarget.Latest,
+    true,
+    ScriptKind.JS
+  );
+  const runtimeDeclarations = processRuntimeSourceFile.statements.filter(
+    (statement) => !isImportDeclaration(statement)
+  );
+  expect(runtimeDeclarations).toHaveLength(1);
+  const [factoryDeclaration] = runtimeDeclarations;
+  expect(isFunctionDeclaration(factoryDeclaration)).toBe(true);
+  if (!isFunctionDeclaration(factoryDeclaration)) {
+    throw new Error("process runtime factory declaration is absent");
+  }
+  expect(factoryDeclaration.name?.text).toBe("createProcessRuntime");
+  expect(factoryDeclaration.parameters).toHaveLength(0);
+  expect(factoryDeclaration.modifiers?.map((modifier) => modifier.getText())).toEqual(["export"]);
+
+  const exactRuntimeKeys = [
+    "PROCESS_ABSENCE_STABILITY_MS",
+    "PROCESS_KILL_GRACE_MS",
+    "PROCESS_TERM_GRACE_MS",
+    "SMOKE_PORTS",
+    "appendRetainedGroupMembers",
+    "delayMilliseconds",
+    "portsAreAbsent",
+    "readHostReadyLine",
+    "readHostReadyLineWithTimerAuthority",
+    "readProcIdentity",
+    "resolveValidatedBundledPlaywrightRequest",
+    "runPrivateProcess",
+    "runRetainedProcessGroup",
+    "startOwnedHost",
+    "stopOwnedHost",
+  ];
+  const frozenReturn = processRuntime.match(
+    /  return Object\.freeze\(\{\n((?:    [A-Za-z][A-Za-z0-9_]*,\n)+)  \}\);\n\}\n?$/u
+  );
+  expect(frozenReturn).not.toBeNull();
+  expect(
+    frozenReturn![1]
+      .trim()
+      .split("\n")
+      .map((line) => line.trim().replace(/,$/u, ""))
+  ).toEqual(exactRuntimeKeys);
+
+  const facadeBinding = executor.match(
+    /const \{\n((?:  [A-Za-z][A-Za-z0-9_]*,\n)+)\} = createProcessRuntime\(\);/u
+  );
+  expect(facadeBinding).not.toBeNull();
+  expect(
+    facadeBinding![1]
+      .trim()
+      .split("\n")
+      .map((line) => line.trim().replace(/,$/u, ""))
+  ).toEqual(exactRuntimeKeys);
+  expect(countToken(executor, "createProcessRuntime()")).toBe(1);
+  expect(countToken(processRuntime, "createBoundedStreamRuntime({")).toBe(1);
+  expect(countToken(processRuntime, "createOwnedHostRuntime({")).toBe(1);
+
+  const movedDeclarationTokens = [
+    "function parseProcIdentity(",
+    "async function readProcIdentity(",
+    "function sameProcessIdentity(",
+    "async function readProcessGroupMembers(",
+    "const PROCESS_TERM_GRACE_MS =",
+    "const PROCESS_ABSENCE_STABILITY_MS =",
+    "function delayMilliseconds(",
+    "async function readFreshProcessIdentityWithRetry(",
+    "function appendRetainedGroupMembers(",
+    "async function waitForOwnedGroupAbsence(",
+    "async function proveOwnedGroupAbsentStable(",
+    "async function terminateRetainedProcessGroup(",
+    "async function resolveValidatedBundledPlaywrightRequest(",
+    "async function runPrivateProcess(",
+  ];
+  for (const token of movedDeclarationTokens) {
+    expect(countToken(processRuntime, token)).toBe(1);
+    expect(executor).not.toContain(token);
+  }
+  for (const removedFacadeToken of [
+    "createBoundedStreamRuntime",
+    "createOwnedHostRuntime",
+    "pathToFileURL",
+    "readdir",
+  ]) {
+    expect(executor).not.toContain(removedFacadeToken);
+  }
+});
 
 test("flagged run-code values cross the source boundary only as bounded data", () => {
   const runCode = readWorkflowSource(workflowPaths.runCode);
@@ -485,6 +585,7 @@ test("phase-eight bootstrap restore is one typed nullable-safe CAS", () => {
 
 test("TASK-540 smoke boundaries retain enlarged nested budgets without retries", () => {
   const executor = readWorkflowSource(workflowPaths.executor);
+  const processRuntime = readWorkflowSource(workflowPaths.processRuntime);
   const smokeHost = readWorkflowSource(workflowPaths.smokeHost);
   const config = readWorkflowSource(workflowPaths.config);
   const environment = readWorkflowSource(workflowPaths.environment);
@@ -510,7 +611,7 @@ test("TASK-540 smoke boundaries retain enlarged nested budgets without retries",
   expect(environment).toContain("fixed repo browser timeout environment conflict: ");
   expect(countToken(config, "timeoutMs: DATABASE_OPERATION_TIMEOUT_MS")).toBe(1);
   expect(countToken(adminApiSession, "timeout: DATABASE_OPERATION_TIMEOUT_MS")).toBe(4);
-  expect(executor).toContain("timeoutMs = 90_000");
+  expect(processRuntime).toContain("timeoutMs = 90_000");
   expect(countToken(executor, "timeoutMs: 90_000")).toBe(4);
   expect(countToken(simpleInvocations, "{ timeout: 270000 }")).toBe(1);
   expect(countToken(relatedCache, "{ timeout: 270000 }")).toBe(1);
@@ -529,7 +630,7 @@ test("TASK-540 smoke boundaries retain enlarged nested budgets without retries",
   expect(observationSources).toContain("const deadline = Date.now() + 180000;");
   expect(executor).toContain("{ timeout: 15_000 }");
   expect(countToken(storageManifest, "Date.now() - startedAt <= 30_000")).toBe(3);
-  expect(executor).toContain("const PROCESS_TERM_GRACE_MS = 40_000;");
+  expect(processRuntime).toContain("const PROCESS_TERM_GRACE_MS = 40_000;");
   expect(boundedStream).toContain("const PROCESS_KILL_GRACE_MS = 3_000;");
   expect(countToken(adminApiSession, "maxRetries: 0")).toBe(2);
   expect(adminApiSession).not.toMatch(/maxRetries:\s*[1-9]/u);
