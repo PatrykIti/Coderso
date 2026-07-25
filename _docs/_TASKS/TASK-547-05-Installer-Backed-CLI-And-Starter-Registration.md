@@ -29,10 +29,11 @@ scope because the existing closed `SolutionKitId` API does not accept this packa
 The `core/db/client.ts` ownership is limited to the narrow, awaited
 `closeDatabase()` lifecycle seam for this one-shot loader. The loader lazily
 imports the shared database client only after all applicable CLI/file/package
-validation and closes it in `finally` after apply/dry-run or rollback, on both
-success and failure, so the process does not retain the pool. This leaf must not
-change pool configuration, add signal handlers, or take ownership of the
-application's general runtime shutdown lifecycle.
+validation and closes it exactly once after apply/dry-run or rollback. Explicit
+outcome arbitration preserves the primary error if execute and close both fail,
+so the process does not retain the pool or mask a safe service code. This leaf
+must not change pool configuration, add signal handlers, or take ownership of
+the application's general runtime shutdown lifecycle.
 
 ## CLI Contract
 
@@ -80,7 +81,9 @@ Decode only after the second stat with
 decoded U+FFFD replacement character as `site_package_file_invalid`. Only a
 stable decoded file reaches `JSON.parse`: syntax failure is
 `site_package_json_invalid`, then
-`normalizeFullSitePackageForWrite` owns package/serialized-size errors unchanged.
+`normalizeFullSitePackageForWrite` preserves `site_package_invalid`,
+`site_package_too_large`, `site_package_too_complex` and
+`site_package_setting_forbidden` unchanged.
 A narrow injected handle factory used by tests must be the same factory seam as
 production, not an alternate reader.
 
@@ -97,9 +100,57 @@ production, not an alternate reader.
 - Registration remains server-chosen; do not let `/setup/starter-content/apply`
   accept a raw client package.
 
+## Loader Composition and Failure Precedence
+
+`scripts/load-projekty-domow.tsx` must be side-effect-free when imported. It
+exports a typed `FullSiteLoaderImporter` over the closed keys
+`database|apply|ledger|resolver|rollback`,
+`createFullSiteLoaderDeps(importModule, sinks)` and
+`runLoadProjektyDomowMain(argv,deps):Promise<number>`. The production importer is
+the sole dynamic-import implementation; tests inject that same importer seam to
+fail each key deterministically. Only an `if (import.meta.main)` guard invokes
+main and assigns its returned `0|1` to `process.exitCode`.
+
+The loader imports `database` first and captures `closeDatabase`; all other
+module imports occur inside the protected execute callback. Freeze the outcome
+matrix: execute success + close success returns the service result; execute
+failure + close success rethrows the original service/import error; execute
+success + close failure throws a fresh cause-free
+`site_package_cli_failed`; execute failure + close failure still rethrows the
+original primary error and never leaks the close error. Once captured, close is
+called exactly once. A database-module import failure has no closer to call and
+is safely mapped by main.
+
 ## Implementation Pseudocode
 
 ```ts
+type FullSiteLoaderModules = {
+  database: { closeDatabase(): Promise<void> };
+  apply: { applyFullSitePackage: typeof applyFullSitePackage };
+  ledger: { defaultLegacyInstallLedger: FullSiteInstallLedgerPort };
+  resolver: { createFullSiteCurrentResourceResolver: typeof createFullSiteCurrentResourceResolver };
+  rollback: { rollbackFullSiteInstall: typeof rollbackFullSiteInstall };
+};
+export type FullSiteLoaderImporter = <K extends keyof FullSiteLoaderModules>(
+  key: K,
+) => Promise<FullSiteLoaderModules[K]>;
+type FullSiteLoaderModuleFactories = {
+  [K in keyof FullSiteLoaderModules]: () => Promise<FullSiteLoaderModules[K]>;
+};
+type FullSiteLoaderSinks = Readonly<{
+  readPackage: FullSiteCliDeps["readPackage"];
+  writeOutput: FullSiteCliDeps["writeOutput"];
+  writeError(line: string): void;
+}>;
+type FullSiteLoaderDeps = FullSiteCliDeps &
+  Readonly<{ writeError(line: string): void }>;
+
+function createTypedImporter(
+  factories: FullSiteLoaderModuleFactories,
+): FullSiteLoaderImporter {
+  return <K extends keyof FullSiteLoaderModules>(key: K) => factories[key]();
+}
+
 type FullSiteCliArgs =
   | {
       mode: "dry-run" | "apply";
@@ -147,22 +198,36 @@ async function readBoundedFullSitePackage(path, fileDeps = DEFAULT_FILE_DEPS) {
   }
 }
 
-async function withLoadedDatabase<T>(execute: () => Promise<T>): Promise<T> {
-  const { closeDatabase } = await import("../core/db/client");
+async function withLoadedDatabase<T>(
+  importModule: FullSiteLoaderImporter,
+  execute: () => Promise<T>,
+): Promise<T> {
+  const { closeDatabase } = await importModule("database");
+  let outcome: { ok: true; value: T } | { ok: false; error: unknown };
   try {
-    return await execute(); // all remaining lazy imports are inside this try
-  } finally {
-    await closeDatabase();
+    outcome = { ok: true, value: await execute() };
+  } catch (error) {
+    outcome = { ok: false, error };
   }
+  try {
+    await closeDatabase();
+  } catch {
+    if (outcome.ok) throw new Error("site_package_cli_failed");
+  }
+  if (!outcome.ok) throw outcome.error;
+  return outcome.value;
 }
 
-async apply(input) {
-  return withLoadedDatabase(async () => {
+async function applyWithImports(
+  input: Parameters<FullSiteCliDeps["apply"]>[0],
+  importModule: FullSiteLoaderImporter,
+) {
+  return withLoadedDatabase(importModule, async () => {
     const [{ applyFullSitePackage }, { defaultLegacyInstallLedger }, resolver] =
       await Promise.all([
-        import("../core/services/kits/fullSiteInstall/execute"),
-        import("../core/services/kits/legacyInstallRunPersistence"),
-        import("../core/services/kits/fullSiteInstall/currentResourceResolver"),
+        importModule("apply"),
+        importModule("ledger"),
+        importModule("resolver"),
       ]);
     return applyFullSitePackage(input, {
       ledger: defaultLegacyInstallLedger,
@@ -174,12 +239,15 @@ async apply(input) {
   });
 }
 
-async rollback(input) {
-  return withLoadedDatabase(async () => {
+async function rollbackWithImports(
+  input: Parameters<FullSiteCliDeps["rollback"]>[0],
+  importModule: FullSiteLoaderImporter,
+) {
+  return withLoadedDatabase(importModule, async () => {
     const [{ rollbackFullSiteInstall }, { defaultLegacyInstallLedger }] =
       await Promise.all([
-        import("../core/services/kits/fullSiteInstall/rollback"),
-        import("../core/services/kits/legacyInstallRunPersistence"),
+        importModule("rollback"),
+        importModule("ledger"),
       ]);
     return rollbackFullSiteInstall({
       sourceRunId: input.sourceRunId,
@@ -187,6 +255,48 @@ async rollback(input) {
       ledger: defaultLegacyInstallLedger,
     });
   });
+}
+
+export function createFullSiteLoaderDeps(
+  importModule: FullSiteLoaderImporter,
+  sinks: FullSiteLoaderSinks,
+): FullSiteLoaderDeps {
+  return {
+    ...sinks,
+    apply: (input) => applyWithImports(input, importModule),
+    rollback: (input) => rollbackWithImports(input, importModule),
+  };
+}
+
+export async function runLoadProjektyDomowMain(
+  argv: readonly string[],
+  deps: FullSiteLoaderDeps,
+): Promise<number> {
+  try {
+    await runFullSiteCli(argv, deps);
+    return 0;
+  } catch (error) {
+    deps.writeError(JSON.stringify(safeCliError(error)));
+    return 1;
+  }
+}
+
+const PRODUCTION_IMPORTER = createTypedImporter({
+  database: () => import("../core/db/client"),
+  apply: () => import("../core/services/kits/fullSiteInstall/execute"),
+  ledger: () => import("../core/services/kits/legacyInstallRunPersistence"),
+  resolver: () => import("../core/services/kits/fullSiteInstall/currentResourceResolver"),
+  rollback: () => import("../core/services/kits/fullSiteInstall/rollback"),
+});
+const PRODUCTION_SINKS: FullSiteLoaderSinks = {
+  readPackage: readBoundedFullSitePackage,
+  writeOutput: (line) => console.log(line),
+  writeError: (line) => console.error(line),
+};
+
+if (import.meta.main) {
+  const deps = createFullSiteLoaderDeps(PRODUCTION_IMPORTER, PRODUCTION_SINKS);
+  process.exitCode = await runLoadProjektyDomowMain(process.argv.slice(2), deps);
 }
 ```
 
@@ -196,11 +306,10 @@ before `deps.apply` performs its existing lazy DB imports. Its result is not
 forwarded; `ApplyFullSitePackageInput` and `FullSiteCliDeps` expose no structural
 plan, and the service builds its own exact private plan. The loader-boundary
 rollback callback must invoke the canonical `rollbackFullSiteInstall({
-sourceRunId, actorId, ledger, ... })` export at the loader boundary. Existing
-`finally`-based `closeDatabase()` handling remains mandatory. After validation,
-the loader imports `db/client` first, captures `closeDatabase`, enters `try`, and
-only then imports any apply/rollback/ledger/resolver module; a later partial
-import failure still closes exactly once.
+sourceRunId, actorId, ledger, ... })` export at the loader boundary. After
+validation, the typed importer captures `closeDatabase` first; only then may its
+protected callback import apply/rollback/ledger/resolver. Every partial import
+failure follows the frozen primary/close precedence matrix above.
 TASK-547-02 alone owns post-substitution native desired validation before its
 run/item/domain writes; this CLI neither duplicates nor weakens that validation.
 
@@ -219,14 +328,20 @@ cases); exact raw 8 MiB/8 MiB+1 boundaries; one open/handle/two-fstat/one-close
 ordering; path replacement cannot redirect the opened handle; growth/shrink/
 same-size metadata drift, malformed read results, fatal UTF-8 and literal U+FFFD
 all fail with the static file code and no payload leakage; JSON syntax and
-serialized in-memory overage retain their distinct codes. Also prove dry-run
+serialized in-memory overage retain their distinct codes. A forbidden setting
+retains `site_package_setting_forbidden` through `readBoundedFullSitePackage`,
+`runFullSiteCli` and `safeCliError`, with its key/value sentinel absent. Also prove dry-run
 ledger evidence with zero domain writes, actor requirement in every mode, bad
 reference paths rejected before lazy DB acquisition with no graph added to deps,
 `allowSettingTakeover` forwarded exactly for dry-run/apply and rejected for
 rollback, apply/rollback delegation through the canonical exports, safe stdout
-and stable non-zero exits, the absence of any `PACKAGE_LIMITS.fileBytes`
-raw-reader use, and the loader's lazy-DB/`finally` close lifecycle, including
-each non-DB partial import failure after the closer is captured.
+and stable non-zero exits. The CLI suite proves one graph build after its one
+reader normalization and before `deps.apply` for dry-run/apply, zero graph builds
+for rollback, and does not assert service internals; 02-L02 owns the independent
+service build. Also prove the absence of any `PACKAGE_LIMITS.fileBytes`
+raw-reader use, side-effect-free loader import/`import.meta.main` guarding, every
+typed module-import failure, and all four execute×close outcomes with exact
+primary-error precedence and one close after capture.
 
 ## Sub-Tasks
 
@@ -234,13 +349,17 @@ each non-DB partial import failure after the closer is captured.
 
 ## Testing Requirements
 
-- targeted Bun CLI tests
-- existing Solution Kit/starter-content route and service suites
+- `bun test tests/unit/kits/fullSiteCli.test.ts`
+- `bun test tests/unit/kits/solutionKitsService.test.ts tests/integration/routes/solutionKitsRoutes.test.ts tests/integration/routes/setupStarterContent.test.ts tests/integration/routes/starterContent.test.ts`
+- `bun run lint:repo:types` (root lane owns `scripts/**/*.ts{x}` and CLI tests)
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 - touched-file line counts
 
 ## Documentation Updates Required
 
-Provide operator-guide content for
-`docs/develop/full-site-packages.md` to TASK-547-06, the sole shared-doc writer.
+Provide operator-guide content to TASK-547-06, the sole shared-doc writer:
+commands/actors plus two independent 8 MiB limits. Document raw on-disk bytes as
+`FULL_SITE_PACKAGE_RAW_SOURCE_BYTES`/`site_package_file_invalid` and serialized
+in-memory JSON as historic `PACKAGE_LIMITS.fileBytes`/`site_package_too_large`;
+equal numbers do not share a measurement, constant or error contract.
