@@ -627,26 +627,17 @@ authorizes an outcome: final L03 first parses the source noop's raw
 `planned`/`prepared` or `success`/`complete` status/phase pair, then canonical-
 deep-compares the complete `beforeSnapshot` with the envelope's top-level
 `id`/`desired` target and identical exact ID in its global zero-native preflight.
-The classifier resolves a prepared create only by
-its exact ID, but every create/update equality-projection result is likewise only
-a scheduling hint. Every non-completed create/update, including `not_applied`
-and `already_recovered`, must later pass L03's complete-snapshot parse and fresh
-exact-ID refinement. A required-kind prepared create
-with `id:null`, malformed UUID or ID/natural-identity mismatch throws
-`site_package_recovery_missing_intended_id` before adapter invocation; it never
-searches/deletes/restores by natural key. Its `item` is the L03-parsed immutable
-raw DB row; no in-memory phase/status overlay can replace source provenance.
+Prepared creates resolve only by exact ID; every create/update projection remains
+a hint, and every non-completed item reaches L03's complete-snapshot parse plus
+fresh exact-ID refinement. Null/malformed/mismatched intended IDs throw
+`site_package_recovery_missing_intended_id` before native access, never use a
+natural-key fallback, and retain the L03-parsed raw row as immutable provenance.
 
-The deprecated `recoverInterruptedSagaItems` wrapper preserves the current base
-item input and array result so untouched `rollback.ts` compiles during the L02
-gate. It delegates hint construction to `classifyInterruptedSagaItems`, whose
-noop branch performs no native-state read. The wrapper normalizes an omitted
-legacy construction-time rollback action to `null`, then
-projects the legacy array in input order: `not_applied` hints are omitted and
-`applied`, `already_recovered` and `noop` hints return their classification item.
-It never constructs or validates the dependency graph. After L03 lands, final
-rollback and compensation call only `classifyInterruptedSagaItems` after raw-field
-and graph validation; no alternate recovery alias is introduced.
+The deprecated `recoverInterruptedSagaItems` keeps the base input/array result for
+the isolated L02 gate and delegates hint construction to the classifier. It maps
+an omitted legacy action to `null`, preserves input order, omits `not_applied`,
+and returns the item for other hints without graph work. Final L03 rollback/
+compensation calls only the classifier after raw-field and graph validation.
 
 The classifier's operation split is explicit:
 
@@ -668,22 +659,41 @@ for (const item of input.items) {
 
 After preparation succeeds, apply creates the run with
 `rollbackDependencySchemaVersion:1` beside the package fingerprint, then invokes
-persistence-only initialization. L03 can distinguish current all-items-required
-evidence from legacy unknown evidence.
+persistence-only initialization. L03 distinguishes current all-items-required evidence from legacy unknown evidence.
 
 ## Security Contract
 
-Service only. Resolve typed refs immediately before each native strict normalizer.
-Settings allowlist excludes secret/auth/provider namespaces. Audit contains safe
-resource keys/IDs/operations only. Strict action/aggregate inputs reject unknown
-keys and validate fully before transactions. Intended IDs are server-generated
-UUIDs, never accepted from package JSON. No public endpoint is added. No database
-migration is added. No RBAC/CSRF/rate-limit change, media import or cross-domain
-transaction abstraction.
+Service only; resolve typed refs immediately before each native strict normalizer.
+Nested preflight is reject-unknown. Form `settings.theme.submit` allows exactly `background,textColor,radius,fullWidth,label,supportingText`, preserving the latter and rejecting extras.
+Listing-template root allows only `name,slug,description,layout,config`; config allows `fields,itemActions,emptyState,style`.
+Its field/condition/action records allow only `key,source,label,fallback,format,conditions` / `id,field,op,value` / `id,label,kind,href,opensInNewTab`.
+Its empty-state/style records allow only `title,description,ctaLabel,ctaHref` / `columns,gap,cardVariant`.
+Detail bindings preserve `required:true` plus omitted (`undefined`) fallback; never synthesize null/static Aurora copy, so missing Aurora-only data fails closed as public 404.
+Settings exclude secret/auth/provider namespaces; audit has safe keys/IDs/operations and intended IDs are server UUIDs, never package input.
+No endpoint, migration, RBAC/CSRF/rate-limit change, media import or cross-domain transaction is added.
 
 ## Implementation Pseudocode
 
 ```ts
+export async function applyFullSitePackage(input, overrides = {}) {
+  assertActorUuidBeforeDb(input.actorId);
+  const referencePlan = buildReferencePlan(input.package); // once; zero normalization
+  // No default/override dependency, lock, ledger, resolver, adapter or DB access yet.
+  const ledger = overrides.ledger ?? defaultLegacyInstallLedger;
+  const adapters = overrides.adapters ?? FULL_SITE_RESOURCE_ADAPTERS;
+  const execute = async () => {
+    const plan = await planFullSiteInstall(
+      input.package, referencePlan, createPlannerDeps(input, overrides, ledger, adapters),
+    ); // supplied-plan overload: zero builds, exact array identity
+    const saga = await prepareFullSiteSaga({ plan, referencePlan, adapters,
+      actorId: input.actorId, generateId: () => crypto.randomUUID() });
+    const run = await ledger.createRun(toRunInput(input));
+    await initializeFullSiteSaga({ runId: run.id, prepared: saga.prepared, ledger });
+    return finishPreparedApply({ input, run, saga, adapters, ledger });
+  };
+  return ledger.withPackageLock ? ledger.withPackageLock(input.package.key, execute) : execute();
+}
+
 export async function prepareFullSiteSaga({ plan, referencePlan, adapters, generateId, actorId }) {
   assertExactPlanAlignment(plan.operations, referencePlan);
   const intendedRegistry = new Map<FullSiteResourceIdentity, string>();
@@ -853,53 +863,41 @@ async function compensateFailedApply(input: CompensateFailedApplyInput) {
 }
 ```
 
-Both raw sets are reloaded only after the rollback claim and flow unchanged into
-L03's zero-native preflight. No caller reduces them to identities, trusts status
-alone, or substitutes an in-memory phase overlay; the pre-L03 compatibility
-callee may ignore these added fields until L03 lands.
-
-The apply catch invokes this helper whenever the complete item set was durably
-initialized, even when no item has a success phase; global source-evidence
-validation for noops and fresh create/update refinement, not an in-memory
-`completed.length`, determine whether native reversal is needed.
-Persistence-only initialization failure finalizes only the source run failed:
-no native write was permitted. A failure finalizing the source after successful
-compensation leaves rollback failed/resumable; retry consumes durable outcomes
-and still commits source-failed before rollback-success.
+After the claim, both raw sets flow unchanged into L03's zero-native preflight;
+no caller reduces identities, trusts status alone or installs a phase overlay.
+The apply catch invokes compensation after complete item-set initialization even
+with no success phase; durable evidence, not `completed.length`, decides reversal.
+Initialization failure marks only the source failed. A later source-finalization
+failure leaves rollback resumable; retry still orders source-failed before success.
 
 Menu Page/item references are resolved before `validateDesired`; the complete
 resolved Menu (base row, items, document, appearance, extras and draft status) is
 passed once to `mutateMenuAggregateAtomic`. There is no executor-level Menu
 wiring write before or after that call. Publish is the only later Menu mutation.
 
-Data flow: plan -> pre-run nine-kind UUID allocation -> full ID registry ->
-allowlisted ref substitution -> canonical complete before/staged/final targets ->
-create run -> durable targets/dependencies -> domain-local locked CAS (including
-Menu wiring) -> exact target verification -> prepared/staged/publish-prepared/
-complete evidence -> publish-last -> reversible shell/settings -> cache/audit.
-Known native errors retain codes; unexpected errors redact.
-This executor participates in L03's compensation saga and does not require a
-shared cross-domain transaction.
+Data flow: normalized input -> actor -> one private graph build -> dependency/lock
+acquisition -> planning -> UUID registry -> allowlisted substitution/native targets
+-> run/durable evidence -> local CAS/phases -> publish-last/reversible settings.
+Known errors retain codes; unexpected errors redact; L03 owns compensation.
 
-Regression tests: during apply, each resource create/update/noop; every noop
-requires its current ID plus complete capture, performs zero adapter/native
-writes, registers that current ID, persists a raw durable after envelope rather
-than the plain before snapshot, and remains in automatic-compensation graph
-evidence. Pin top-level `id`/`desired` canonical equality with the complete before
-snapshot and identical exact ID, `recovery.schemaVersion:1`,
-`recovery.stagedSnapshot:null`, planned phase `prepared`, success phase `complete`,
-unchanged targets/V1 action across the phase-only upsert, and zero resolver/
-adapter/native reads or writes in the noop execution branch.
+Regression tests cover every operation. A noop requires current ID/complete
+capture, registers that ID, performs zero native work and persists a durable
+envelope with equal top-level final state, V1 recovery, null staged target and
+`prepared`→`complete` phase-only change while staying in compensation evidence.
 L02 and L03 tests import the shared frozen V1 status/phase export, accept every
 one of the exact six rows, and reject its remaining Cartesian product and
 staged-target violations; neither suite duplicates a local matrix. The item-fail
 catch proves no `failed` item upsert occurs and only run finalization changes.
-Before `createRun`, inject every alignment/allocation/descriptor-ref/normalizer/
-capture/target failure and prove zero run/item/domain writes. Pin complete
-preparation and persistence-only exact rows. The same frozen plan/descriptors
-reach planner/preparer with no rebuild/second walker; spies prove retired generic
-preflight/resolver is unused. Nested Form and Page/footer/menu/query/detail refs
-persist as IDs.
+The L02-owned `tests/unit/kits/fullSiteLifecycleUpdates.test.ts` proves typed
+apply performs zero normalizations and one graph build before any default/
+override dependency, lock or DB access; graph failure makes zero planner/
+dependency/lock/DB calls, and public input/deps reject a plan field. The exact
+frozen array reaches three-argument planning/preparation with zero rebuild/clone/
+second walker; this suite does not assert CLI call counts.
+Before `createRun`, every preparation failure proves zero writes; pin complete
+prepared rows and that retired generic preflight/resolver stays unused. Nested refs
+persist as IDs. Form preflight round-trips `submit.supportingText` and rejects a sibling extra; listing tests reject an extra at every nested record above.
+Detail tests keep `required:true` plus absent fallback through normalize/target persistence and fail a missing value rather than painting Aurora defaults.
 Every kind has an apply adapter, while only the frozen lifecycle-capable subset
 (`page`, `content_entry`, `detail_page`, `menu`) participates in publish-last.
 Page/entry/detail/menu remain draft until dependencies are wired; menu

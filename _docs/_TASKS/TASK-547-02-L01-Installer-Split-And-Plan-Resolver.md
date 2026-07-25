@@ -12,28 +12,23 @@
 ## Overview
 
 Split the 2,700+ line installer into cohesive bounded modules while preserving
-current exports, then add full-site existing-resource resolution and deterministic
-create/update/noop/conflict planning. This leaf also owns the complete shared
-ledger/types boundary required by both the legacy installer and full-site
-execution; it performs no native full-site resource mutation.
+exports, then add deterministic create/update/noop/conflict planning. This leaf
+owns the shared ledger/types boundary but performs no native resource mutation.
 
-Preserve a two-argument planner overload that builds once before dependency
-reads. Its three-argument apply overload receives the exact closed-over private
-`readonly PlannedPackageResource[]`, never rebuilds/clones/mutates it, and no
-public apply input/deps exposes it.
+Both planner overloads accept normalized `FullSitePackageV1`, call no normalizer,
+and the two-argument form builds once before dependency reads. The three-argument
+form consumes the closed-over frozen plan with zero builds/clones/mutations.
 
-Define and export the common ledger port contract used by both the compatibility
-installer and the full-site executor, implement its concrete DB adapter here,
-preserve it through compatibility re-exports, and wire it into the default legacy
-installer composition. L02 consumes this port by injection and cannot edit the
-legacy composition. No second implementation or direct ledger-table write is
-allowed. Keep existing in-memory item construction gate-compatible while exposing
-a stricter persisted/listed item type for dependency consumers.
+Define the common legacy/full-site ledger port and concrete DB adapter here,
+preserve compatibility re-exports and wire default legacy composition. L02
+consumes it only by injection; no second implementation or direct table write is
+allowed. Keep in-memory construction compatible while exposing the stricter
+persisted/listed item type.
 
 **Exact production ownership:** this leaf alone owns:
 
-- `core/services/kits/fullSiteInstallTypes.ts` -- shared kind/identity, plan,
-  ledger, snapshot and dependency-envelope types plus safe error codes;
+- `core/services/kits/fullSiteInstallTypes.ts` -- package-owned kind/identity aliases,
+  plan/ledger/snapshot/dependency types and safe error codes;
 - `core/services/kits/fullSiteInstallPlanner.ts`;
 - `core/services/kits/fullSiteInstall/currentResourceResolver.ts`;
 - `core/services/kits/legacyInstallRunPersistence.ts` -- the sole concrete ledger
@@ -82,11 +77,13 @@ for distinct package keys because `site.*`/design shell settings share one store
 
 ## Versioned Rollback Dependencies
 
-Own these exact exports in `fullSiteInstallTypes.ts`:
+`fullSiteInstallTypes.ts` imports `PackageResourceKind` from package `types` and
+`PackageResourceIdentity` from `referenceRegistry`; it exports only aliases and
+has no broader legacy union or reconstructed identity schema:
 
 ```ts
-export type FullSiteResourceIdentity =
-  `${FullSiteInstallResourceKind}:${string}`;
+export type FullSiteInstallResourceKind = PackageResourceKind;
+export type FullSiteResourceIdentity = PackageResourceIdentity;
 
 export type FullSiteRollbackActionV1 = {
   schemaVersion: 1;
@@ -977,7 +974,7 @@ composition remains usable before L02 lands.
   removal/buffer counters and absent leaf `Plans`, and map every malformed
   top-level/metric/node/child/`Plans` shape or derived overflow through the
   one-invocation exact-`Error` assertion above.
-- Regression gate: one evidence lookup per identity; two-arg build precedes deps, while L02 supplies one unchanged plan before lock/ledger/resolver/adapter/DB.
+- L01 planner regression gate: one evidence lookup per identity; both overloads normalize zero times, two-arg builds once before deps, and three-arg planning consumes L02's unchanged plan with zero builds before any dependency.
 - DB test-integrity gate: the URL helper returns false only for `undefined` and
   true for `""`; production and failure tests use the same injectable four-stage
   factory. Pin exact stage order, complete direct 12/13-column projections and

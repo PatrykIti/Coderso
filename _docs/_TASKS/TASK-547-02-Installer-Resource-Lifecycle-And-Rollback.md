@@ -31,8 +31,10 @@ corrective contract is part of the original scope, not a smaller follow-up.
 `ApplyFullSitePackageInput` remains exactly package/actor/dry-run/takeover input;
 it has no caller-supplied `referencePlan`, graph, edge or ordered-resource field.
 `FullSiteInstallExecutorDeps` and the CLI dependency contract likewise gain no
-such field. After actor validation, the public `applyFullSitePackage` boundary
-must synchronously call `buildReferencePlan(input.package)` before it selects or
+such field. Its `package` is already-normalized `FullSitePackageV1`; this typed
+service boundary never calls `normalizeFullSitePackageForWrite`. After actor
+validation, public `applyFullSitePackage` must synchronously call
+`buildReferencePlan(input.package)` exactly once before it selects or
 acquires the ledger, creates a resolver, touches a DB-backed adapter, opens the
 global/package lock or performs any ledger/domain read. A graph failure therefore
 has zero lock/ledger/resolver/adapter/DB calls.
@@ -43,7 +45,8 @@ three-argument `planFullSiteInstall(pkg, referencePlan, deps)` overload; this
 apply path consumes the exact array without rebuilding, cloning or mutating it.
 The existing direct-call `planFullSiteInstall(pkg, deps)` overload remains
 gate-compatible and builds its own graph exactly once before its first dependency
-read. Apply uses only the three-argument overload. The CLI independently builds/
+read, with zero normalizer calls; the supplied-plan overload builds zero times.
+Apply uses only the three-argument overload. The CLI independently builds/
 discards a plan before invoking its lazy `apply` dependency so an invalid file
 cannot import DB code; the service then builds its own private plan rather than
 trusting CLI structure.
@@ -66,7 +69,8 @@ native-domain validity.
 Implementation lands strictly `L01 -> L02 -> L03`; each leaf reads the current
 on-disk state left by its predecessor and has one writer per file.
 
-- **L01 -- shared lifecycle substrate:** shared full-site types/ledger port,
+- **L01 -- shared lifecycle substrate:** TASK-547-01 package kind/identity aliases,
+  shared install types/ledger port,
   concrete legacy persistence, legacy installer composition, deterministic
   planner whose apply overload consumes the caller-bound private reference plan
   without rebuilding while its gate-compatible direct overload builds pre-read,
@@ -137,7 +141,7 @@ Each apply item persists a strict versioned dependency envelope in the existing
 ```ts
 type FullSiteRollbackActionV1 = {
   schemaVersion: 1;
-  dependencies: `${FullSiteInstallResourceKind}:${string}`[];
+  dependencies: FullSiteResourceIdentity[]; // alias of PackageResourceIdentity
 };
 ```
 
@@ -769,9 +773,10 @@ without ledger proof conflicts as unmanaged; injected failure restores prior
 state; rollback restores previous shell/settings and only owned rows;
 invalid/dangling/bad-path refs perform zero lock, ledger, resolver, adapter and
 DB calls; the public input/deps reject a structural `referencePlan`; one private
-plan is built before dependencies and the planner consumes the same array
-identity without calling the builder again, then preparation consumes those
-same frozen descriptors without a second walker. Malformed post-substitution desired
+plan and zero normalizations occur at typed apply before dependencies; the
+planner consumes the same array identity without calling the builder again, then
+preparation consumes those same frozen descriptors without a second walker. The
+two-argument planner separately builds once/normalizes zero times. Malformed post-substitution desired
 snapshots for every native kind fail before `createRun`, item/domain writes or
 publish, including discriminator-valid refs embedded in an otherwise invalid
 Page/Menu document. Drafts are not published early,
