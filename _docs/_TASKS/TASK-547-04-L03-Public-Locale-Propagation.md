@@ -30,7 +30,6 @@ This leaf is the sole writer for:
 
 - `core/services/settings/siteLocale.ts`
 - `core/services/settings/settingsService.ts`
-- `core/services/pages/pageRuntimeBindingContract.ts`
 - `core/services/pages/pageRuntimeDataPreparation.ts`
 - `core/site/renderPublicPage.tsx`
 - `core/site/renderPublicEntry.tsx`
@@ -51,9 +50,12 @@ This leaf is the sole writer for:
 - `tests/vitest/kits/projekty-domow-route-precedence.test.ts`
 - `tests/unit/settings/settingsService.test.ts`
 
-L02 exclusively owns the package seed/assembler assertion; L03 only consumes the
-installed setting. Do not edit Page copy, package resources or multilingual
-product contracts.
+L01 exclusively owns `pageRuntimeBindingContract.ts`, including its existing
+optional `siteLocale` input and collection/Form prop mappers; L03 consumes those
+types/mappers read-only while threading the installed setting through
+`pageRuntimeDataPreparation.ts`. L02 exclusively owns the package
+seed/assembler assertion. Do not edit Page copy, package resources or
+multilingual product contracts.
 
 `core/services/settings/settingsService.ts` is already at the 1,000-line hard
 limit on the current working tree. No new behavior may be appended to it: if a

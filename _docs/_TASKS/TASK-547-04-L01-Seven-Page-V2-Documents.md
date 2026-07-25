@@ -43,6 +43,7 @@ pinned FormaDom prototype. This leaf is the sole writer for:
 - new `core/services/pages/pageLayoutBlockRenderer.tsx`
 - new `core/services/pages/pageSectionRendererV2.tsx`
 - new `core/services/pages/pageDocumentRenderState.ts`
+- `core/services/pages/pageRuntimeBindingContract.ts`
 - `core/services/pages/pageEditorControlRegistry.ts`
 - new `core/services/pages/pageEditorControlDefinition.ts`
 - new `core/services/pages/pageEditorSectionControls.ts`
@@ -53,7 +54,7 @@ pinned FormaDom prototype. This leaf is the sole writer for:
 - new `tests/vitest/pages/page-switcher-aria-label-contract.test.ts`
 - new `tests/vitest/pages/page-switcher-aria-label-render.test.tsx`
 - new `tests/vitest/pages/page-switcher-aria-label-editor.test.ts`
-- new `tests/vitest/pages/page-form-success-behavior.test.tsx`
+- new `tests/vitest/pages/page-data-block-presentation.test.tsx`
 - new `tests/vitest/pages/page-renderer-v2-module-boundaries.test.ts`
 
 L02/L03 may import `buildFormaDomPages` and shared constants read-only. This leaf
@@ -159,44 +160,65 @@ pageBlockPropKeys.switcher = ["tabs", "activeIndex", "variant", "ariaLabel"];
 - `home.ts` authors the exact Polish value `Wybór stylu domu`. No other Page is
   forced to author it, and no multilingual routing contract is introduced.
 
-## Form Success-Behavior Bridge
+## Data-Block Presentation Bridges
 
-`show-message-keep-form` is a Form Embed behavior, not a Form resource or action
-field. L01 therefore owns one generic present-only Page Form prop and its native
-renderer bridge:
+Project-card CTA visibility and Form presentation belong to their native
+renderers, not listing-template/Form persisted data. L01 owns strict
+present-only Page props and maps them into the existing Content List/Form Embed
+contracts:
 
 ```ts
-export const PAGE_FORM_SUCCESS_BEHAVIORS = [
-  "show-message-hide-form",
-  "show-message-reset-form",
-  "show-message-keep-form",
-] as const;
+import {
+  FORM_EMBED_LOADING_LABEL_MAX_LENGTH,
+  FORM_EMBED_SUCCESS_BEHAVIORS,
+  FORM_EMBED_TEXTAREA_ROWS_LIMITS,
+} from "../../widgets/core/formEmbedContract";
 
-// allowlist only; pageBlockDefaultProps.form MUST NOT seed successBehavior
-pageBlockPropKeys.form = ["formId", "title", "successBehavior"];
+// allowlists only; pageBlockDefaultProps MUST NOT seed these present-only keys
+pageBlockPropKeys.collection = [
+  "contentTypeId", "queryId", "limit", "templateId",
+  "paginationMode", "pageSize", "showCta",
+];
+pageBlockPropKeys.form = [
+  "formId", "title", "textareaRows", "showSelectPrompt",
+  "loadingLabel", "successBehavior",
+];
 ```
 
-- `form.props.successBehavior` accepts only the exact enum above. Fresh unknown,
-  wrong-type and unknown-key values fail with `page_document_invalid`; malformed
-  stored values are omitted. It is base-only and rejected inside responsive
-  overrides.
+- `collection.props.showCta` and `form.props.showSelectPrompt` are booleans;
+  `form.props.textareaRows` is an integer bounded by the imported
+  `FORM_EMBED_TEXTAREA_ROWS_LIMITS`; `form.props.loadingLabel` is a trimmed
+  non-empty string bounded by imported
+  `FORM_EMBED_LOADING_LABEL_MAX_LENGTH`; and
+  `form.props.successBehavior` uses imported
+  `FORM_EMBED_SUCCESS_BEHAVIORS`. Fresh unknown/wrong-type/out-of-range/blank
+  values fail with `page_document_invalid`; malformed stored values are omitted.
+  These presentation props are base-only and rejected in responsive overrides.
 - Absence emits no normalized JSON key and preserves legacy Page JSON and SSR
-  bytes. The renderer defensively maps an authored valid value to
-  `FormEmbedData.submitBehavior.successBehavior`; absence/invalid stored input
-  omits `submitBehavior` and retains the existing native hide-form default.
-- Add one base-only select control
-  `block.form.props.successBehavior`, label `After successful submission`, path
-  `["props","successBehavior"]`, Content panel, `responsive:false`, with exact
-  option labels `Hide form`, `Reset form`, `Keep form`. Its displayed runtime
-  fallback is not written until the author changes it; reset deletes the key.
-- The FormaDom contact Page authors
-  `props.successBehavior:"show-message-keep-form"`. The referenced Form owns the
-  supporting text and installed `success_message` action; the Page owns only
-  how the existing runtime presents success.
-- `page-form-success-behavior.test.tsx` pins strict allowlist/schema/enum,
-  write/read round trip, responsive rejection, malformed stored omission,
-  absent JSON/SSR byte identity, renderer bridge/data attribute, editor
-  metadata/reset and the exact FormaDom authored value. Existing
+  bytes. `mapPageCollectionBlockToContentListData` maps authored `showCta` to
+  `ContentListData.fields.showCta`; semantic item href resolution remains
+  unchanged. The Form renderer groups `textareaRows`/`showSelectPrompt` into
+  `FormEmbedData.fields` and `loadingLabel`/`successBehavior` into
+  `FormEmbedData.submitBehavior`, emitting neither nested object when no member
+  is authored. Invalid stored input takes the native legacy defaults.
+- Add base-only Content-panel controls:
+  `block.collection.props.showCta` (`Show card action`, toggle);
+  `block.form.props.textareaRows` (`Textarea rows`, integer 2–20);
+  `block.form.props.showSelectPrompt` (`Show select prompt`, toggle);
+  `block.form.props.loadingLabel` (`Loading label`, text); and
+  `block.form.props.successBehavior` (`After successful submission`, select
+  options `Hide form`, `Reset form`, `Keep form`). Displayed native fallbacks
+  are not written until changed; reset deletes only the selected key.
+- The projects Page authors `props.showCta:false`. The contact Page authors
+  `textareaRows:5`, `showSelectPrompt:false`,
+  `loadingLabel:PROJECT_BRIEF_LOADING_LABEL`, and
+  `successBehavior:"show-message-keep-form"`. TASK-547-03 owns/re-exports the
+  Form Embed limits/enum and Polish constant; the referenced Form owns only its
+  fields/theme/action data and persists none of these Page props.
+- `page-data-block-presentation.test.tsx` pins strict allowlists/schema/bounds/
+  enums, write/read round trips, responsive rejection, malformed stored
+  omission, absent JSON/SSR byte identity, both renderer mappings, semantic
+  href preservation, exact editor metadata/reset and FormaDom values. Existing
   `tests/vitest/widgets/formRuntimeScript.test.ts` remains read-only and proves
   that the native keep-form branch leaves controls visible.
 
@@ -421,6 +443,9 @@ caretakers, package comparisons or a final offer CTA absent from the source.
 2. The filter controls and collection use native Page bindings to the
    TASK-547-03 content type, query and listing template refs. `projects.ts`
    imports TASK-547-03's `PROJECT_CATEGORY_FILTERS` rather than retyping it.
+   The collection authors present-only `props.showCta:false`; the shared Page
+   mapper forwards it to `ContentListData.fields.showCta`, suppressing only
+   visible CTA chrome while retaining the semantic card anchor.
    Visitor-visible controls are exactly ordered as `all` / `Wszystkie`; `barn` /
    `Nowoczesna stodoła`; `villa` / `Wille`; `single` / `Parterowe`; `eco` /
    `Energooszczędne`, but their native representation is intentionally split:
@@ -528,18 +553,19 @@ Do not add biographies, named team members, company-age metrics or final CTA.
    pomyśle na dom.`; lead `Nie musisz mieć gotowego planu ani wiedzy technicznej.
    Wystarczy kilka zdań — resztę spokojnie ustalimy razem.`
 2. One real Form block binds to `{ ref:"form", key:"project-brief" }` and sets
-   `props.title:PROJECT_BRIEF_FORM_TITLE` plus
-   `props.successBehavior:"show-message-keep-form"`. The Page imports that
-   TASK-547-03-owned title constant (exact value `Zacznij projekt`) rather than
-   duplicating it, so the native required heading is deterministic rather than
-   an invented or fallback string. Public rendering must preserve this source
-   field/options order:
+   `props.title:PROJECT_BRIEF_FORM_TITLE`, `props.textareaRows:5`,
+   `props.showSelectPrompt:false`,
+   `props.loadingLabel:PROJECT_BRIEF_LOADING_LABEL`, and
+   `props.successBehavior:"show-message-keep-form"`. The Page imports the
+   TASK-547-03-owned title/loading constants rather than duplicating them, so
+   the native required heading/pending state is deterministic. Public rendering
+   must preserve this source field/options order:
    - `Imię i nazwisko`, placeholder `Jan Kowalski`;
    - `E-mail`, placeholder `jan@email.pl`;
    - `Na jakim jesteś etapie?`, options `Mam działkę`, `Szukam działki`, `Mam
      gotowy projekt do adaptacji`, `Chcę tylko konsultację`;
    - `Krótki opis`, placeholder `Napisz, jaki dom Ci się marzy, gdzie jest
-     działka i jaki styl lubisz.`;
+     działka i jaki styl lubisz.`, exactly five visible rows;
    - submit label `Wyślij brief`;
    - success message `Dziękujemy! Odezwiemy się z pierwszym pomysłem na Twój dom
      — do usłyszenia.`
@@ -555,7 +581,10 @@ Do not add biographies, named team members, company-age metrics or final CTA.
    `PROJECT_BRIEF_SUCCESS_MESSAGE` while preserving the visible controls,
    matching the pinned handler. The initial supporting text is not shown beside
    the success message, and the form body is never hidden.
-   TASK-547-03 owns these constants/fields/actions and may append the native
+   The select has exactly those four substantive options, initially
+   `Mam działkę`, with no synthetic blank/English prompt. Pending submit shows
+   exact Polish `Wysyłanie...`; reference-defined success behavior remains as
+   below. TASK-547-03 owns these constants/fields/actions and may append the native
    required consent/security affordance without replacing source copy. The
    native Form block's extra visible `Zacznij projekt` title is covered only by
    `native-form-heading-approximated`; it cannot justify field/copy/state drift.
@@ -597,30 +626,34 @@ flows, one fresh byte-distinct PNG each and zero console/page errors:
    `Wybór stylu domu`; assert `page-editor-switcher-control-value`,
    `page-editor-switcher-base-prop`, `page-editor-switcher-canvas-aria` and
    `page-editor-switcher-light-geometry`;
-2. `page-editor-switcher-tablet-base` at `1024x1366`: while previewing tablet,
-   change the label; assert `page-editor-tablet-control-value`,
-   `page-editor-tablet-base-prop-updated`,
-   `page-editor-tablet-responsive-override-absent` and
-   `page-editor-tablet-canvas-aria`;
-3. `page-editor-switcher-reset-dark` at `1440x1000`: in dark mode reset the
-   label; assert `page-editor-reset-key-absent`,
-   `page-editor-reset-runtime-fallback`, `page-editor-reset-canvas-aria` and
-   `page-editor-reset-dark-computed-contrast`;
-4. `page-editor-form-success-save-reload` at `1440x1000`: author `Keep form`,
-   save/navigate/reload; assert `page-editor-form-control-value`,
-   `page-editor-form-base-prop`, `page-editor-form-save-reload-roundtrip` and
-   `page-editor-form-preview-runtime-contract`;
+2. `page-editor-switcher-tablet-reset` at `1024x1366`: while previewing tablet,
+   change then reset the label; assert `page-editor-tablet-base-prop-updated`,
+   `page-editor-tablet-responsive-override-absent`,
+   `page-editor-tablet-reset-key-absent` and
+   `page-editor-tablet-reset-fallback-aria`;
+3. `page-editor-collection-cta-dark` at `1440x1000`: in dark mode disable card
+   CTA; assert `page-editor-collection-control-value`,
+   `page-editor-collection-card-link-preserved`,
+   `page-editor-collection-cta-visibly-absent` and
+   `page-editor-collection-dark-computed-contrast`;
+4. `page-editor-form-presentation-save-reload` at `1440x1000`: author rows,
+   prompt, loading and keep-form values, save/navigate/reload; assert
+   `page-editor-form-controls-values`, `page-editor-form-visible-preview`,
+   `page-editor-form-save-reload-roundtrip` and
+   `page-editor-form-runtime-contract`;
 5. `page-editor-publish-front-parity` at `390x844`: publish, then prove on the
    public front `page-editor-front-switcher-aria`,
-   `page-editor-front-contact-success`, `page-editor-front-controls-visible`,
-   `page-editor-front-mobile-geometry` and
+   `page-editor-front-project-card-links-without-cta`,
+   `page-editor-front-contact-presentation-and-success`,
+   `page-editor-front-controls-visible`, `page-editor-front-mobile-geometry` and
    `page-editor-front-scoped-cleanup`.
 
 Admin evidence URLs normalize the live Page ID to literal
 `http://127.0.0.1:5173/admin/pages/{pageId}`; the validator independently
-proves the live IDs resolve to the installed home/contact Pages. The final
-public flow uses `/` and `/kontakt` within one scenario. Control-presence or
-serialized-property-only evidence cannot satisfy the visible-effect assertions.
+proves the live IDs resolve to the installed home/projects/contact Pages. The
+final public flow uses `/`, `/projekty` and `/kontakt` within one scenario.
+Control-presence or serialized-property-only evidence cannot satisfy the
+visible-effect assertions.
 
 ## Security Contract
 
@@ -753,6 +786,7 @@ function buildProjectControls(): PageBlockV2[] {
       contentTypeId: PAGE_BINDING_PLACEHOLDERS.projectContentType,
       queryId: PAGE_BINDING_PLACEHOLDERS.projectListingQuery,
       templateId: PAGE_BINDING_PLACEHOLDERS.projectListingTemplate,
+      showCta: false,
     }),
   ];
 }
@@ -780,6 +814,9 @@ function buildContactForm(): PageBlockV2 {
     id: "contact-form",
     formId: PAGE_BINDING_PLACEHOLDERS.projectBriefForm,
     title: PROJECT_BRIEF_FORM_TITLE,
+    textareaRows: 5,
+    showSelectPrompt: false,
+    loadingLabel: PROJECT_BRIEF_LOADING_LABEL,
     successBehavior: "show-message-keep-form",
   });
 }
@@ -807,22 +844,23 @@ export const buildFormaDomPages = (refs: FormaDomPageRefs): ResourceSeed[] =>
   ];
 ```
 
-**Data flow:** strict present-only Page-core schema/normalizer/editor/renderer,
-including Page Form → Form Embed success-behavior mapping → frozen source
-constants → page-specific builders → L01-owned shared Page/SEO helper → exact
-direct-root-block package-ref insertion → closed graph validation → ordered
-seeds consumed by L02.
+**Data flow:** strict present-only Page-core schema/normalizer/editor/renderer →
+Page collection/Form props mapped into Content List/Form Embed contracts →
+frozen source constants → page-specific builders → L01-owned shared Page/SEO
+helper → exact direct-root-block package-ref insertion → closed graph validation
+→ ordered seeds consumed by L02.
 Ref-free documents may normalize natively immediately; ref-bearing Page
 documents normalize natively only after installer substitution.
 
 **Error handling:** throw on unknown/invalid/overlong fresh switcher fields,
-unknown/wrong-type Form success behavior, missing/extra section, duplicate
-block/section ID, copy/order mismatch, unknown route/anchor, unsafe link,
-missing/duplicate/wrong-kind/wrong-path package binding, incorrect SEO pair or
-invented public claim. Never transform an ordinary string merely because it
-equals a resource key or placeholder. Stored malformed accessible names and
-success behavior fail soft to omission/native fallback without degrading the
-Page; required FormaDom source content is never silently pruned.
+wrong-type collection CTA visibility, invalid Form presentation value,
+missing/extra section, duplicate block/section ID, copy/order mismatch, unknown
+route/anchor, unsafe link, missing/duplicate/wrong-kind/wrong-path package
+binding, incorrect SEO pair or invented public claim. Never transform an
+ordinary string merely because it equals a resource key or placeholder. Stored
+malformed accessible names/presentation props fail soft to omission/native
+fallback without degrading the Page; required FormaDom source content is never
+silently pruned.
 
 ## Regression Tests
 
@@ -845,10 +883,10 @@ The five new Page-core suites are independently runnable and each remains below
   the frozen id/path/panel/input and no fallback/default; tablet/mobile commits
   mutate only the desktop/base value, never create overrides, and a blank commit
   deletes the key with empty-parent compaction;
-- `page-form-success-behavior.test.tsx`: strict present-only enum/allowlist,
-  round trip, responsive rejection, malformed stored omission, absent JSON/SSR
-  byte identity, renderer bridge, exact control/reset metadata and FormaDom
-  keep-form authoring;
+- `page-data-block-presentation.test.tsx`: strict present-only collection/Form
+  allowlists, owner bounds/enums, round trips, responsive rejection, malformed
+  stored omission, absent JSON/SSR byte identity, both renderer bridges,
+  semantic href preservation, exact control/reset metadata and FormaDom values;
 - `page-renderer-v2-module-boundaries.test.ts`: explicit facade surface,
   one `PageDocumentError` owner, acyclic direct internal imports, no server/DB/
   settings coupling, all renderer support modules below 1,000 lines, and the
@@ -877,12 +915,14 @@ The tests assert:
   `Kategoria`, exact counts `2/2/2/3` and `Pokaż projekty`; selected DOM pins
   `1 aktywny filtr`, `Wyczyść wszystko` and the exact selected public label;
   every rendered card href equals its strict `data.cardHref` source value and
-  no visible project-card CTA copy is emitted;
+  `props.showCta:false` maps to `fields.showCta:false`, so no visible
+  project-card CTA copy is emitted;
 - Form block title exactly equal to imported `PROJECT_BRIEF_FORM_TITLE`, whose
   frozen value is `Zacznij projekt`, with no blank, `Zapytaj o projekt` or
-  resource-name fallback; its only authored runtime success behavior is
-  `show-message-keep-form`, while an unauthored Page Form preserves native
-  hide-form JSON/SSR bytes;
+  resource-name fallback; it maps exact `textareaRows:5`,
+  `showSelectPrompt:false`, Polish loading label and
+  `show-message-keep-form`, while an unauthored Page Form preserves all native
+  default JSON/SSR bytes;
 - the Form resource contributes no visible description, its owned
   `theme.submit.supportingText` equals `PROJECT_BRIEF_INITIAL_NOTE`, and the Page
   document contains no sibling copy of that note;
@@ -901,8 +941,8 @@ The tests assert:
   cohesive module map while preserving public imports and trusted sinks.
 - [ ] Add the strict present-only switcher accessible-name contract, editor
   control and exact Polish FormaDom value.
-- [ ] Add the strict present-only Page Form success-behavior bridge/control and
-  author keep-form only for the FormaDom contact Page.
+- [ ] Add strict present-only collection/Form presentation props, renderer
+  bridges and editor controls; author only the exact FormaDom values.
 - [ ] Correct all seven Page v2 documents, static SEO, source copy, links,
   anchors and native interaction bindings.
 - [ ] Add the five focused Page-core suites and pass the source-fidelity,

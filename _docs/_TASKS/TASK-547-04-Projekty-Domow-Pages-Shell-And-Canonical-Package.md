@@ -99,11 +99,14 @@ Required cross-page behavior is:
   responsive Page composition;
 - projects Page collection/filter binding to TASK-547-03, with source-visible
   reset/category order and source card order/copy. The whole project card is the
-  semantic link; no visible per-card CTA is authored because the source has
-  none;
+  semantic link; L01's present-only `props.showCta:false` maps to native
+  `fields.showCta:false`, so no visible per-card CTA is authored because the
+  source has none;
 - contact Page bound to the real `project-brief` form, with its source initial
   supporting note replaced by the exact success state after a real submission
-  while all controls remain visible;
+  while all controls remain visible. L01 authors five textarea rows, no
+  synthetic select prompt, Polish loading copy and keep-form behavior as
+  present-only Page props; none is persisted in the Form resource;
 - exactly seven primary menu items in source order, current-route state (the
   Projects item also wins for `/projekty/aurora`), mobile disclosure, and a
   scrolled header state;
