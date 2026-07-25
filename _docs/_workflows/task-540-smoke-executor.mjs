@@ -171,6 +171,15 @@ import {
   assertPlainJsonValue,
 } from "./task-540-smoke/executor/json-schema.mjs";
 import {
+  validateExactBridgeKeys,
+  validateBridgeNullableUuid,
+  validateBridgeNullableString,
+  validateBridgeJsonObject,
+  validateBridgeStringArray,
+  requireBoundedBridgeString,
+  requireBridgeUuid,
+} from "./task-540-smoke/executor/bun-bridge-validation-primitives.mjs";
+import {
   BOOTSTRAP_RAW_USER_ROW_KEYS,
   isNullableIsoTimestamp,
   validateBootstrapPrivateBaseline,
@@ -1747,12 +1756,6 @@ if (transactionProof === null) {
 }` +
   BRIDGE_OUTPUT_WRITER;
 
-function validateExactBridgeKeys(value, keys, label) {
-  exactOwnKeys(value, keys, label, { plain: true });
-  assertPlainJsonValue(value, label);
-  return value;
-}
-
 function validateBooleanBridgeProjection(value, key, label) {
   validateExactBridgeKeys(value, [key], label);
   invariant(typeof value[key] === "boolean", label + " boolean drift");
@@ -1863,29 +1866,6 @@ const RESPONSE_LOST_CANDIDATE_KEYS_BY_FAMILY = deepFreezeExact({
   override: ["blockId", "entryId", "propPath", "screenId", "updatedBy", "value"],
   setting: ["key", "userId", "value"],
 });
-
-function validateBridgeNullableUuid(value, label) {
-  if (value !== null) requireBridgeUuid(value, label);
-}
-
-function validateBridgeNullableString(value, label, maximum = 1024) {
-  if (value !== null) requireBoundedBridgeString(value, label, maximum);
-}
-
-function validateBridgeJsonObject(value, label) {
-  exactOwnKeys(value, Object.keys(value ?? {}), label, { plain: true });
-  assertPlainJsonValue(value, label);
-  return value;
-}
-
-function validateBridgeStringArray(value, label, maximumItems = 64, maximumLength = 256) {
-  invariant(Array.isArray(value) && value.length <= maximumItems, label + " array bound drift");
-  value.forEach((item, index) =>
-    requireBoundedBridgeString(item, label + "[" + index + "]", maximumLength)
-  );
-  invariant(new Set(value).size === value.length, label + " contains duplicates");
-  return value;
-}
 
 function validateResponseLostContentSchema(schema, label) {
   exactOwnKeys(schema, ["additionalProperties", "properties", "type"], label, { plain: true });
@@ -2701,26 +2681,6 @@ function bunBridgeInputSchema(inputKeys, validator) {
     "Bun bridge input schema declaration drift"
   );
   return deepFreezeExact({ inputKeys: [...inputKeys].sort(), validator });
-}
-
-function requireBoundedBridgeString(value, label, maximum = 512) {
-  invariant(
-    typeof value === "string" &&
-      value.length > 0 &&
-      !value.includes("\0") &&
-      Buffer.byteLength(value) <= maximum,
-    label + " bounded string drift"
-  );
-  return value;
-}
-
-function requireBridgeUuid(value, label) {
-  invariant(
-    typeof value === "string" &&
-      /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/u.test(value),
-    label + " UUID drift"
-  );
-  return value;
 }
 
 function validateBridgeIdentifierTuple(input, length, label) {

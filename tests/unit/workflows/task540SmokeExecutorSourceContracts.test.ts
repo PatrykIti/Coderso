@@ -19,6 +19,8 @@ const workflowPaths = Object.freeze({
     "_docs/_workflows/task-540-smoke/executor/self-test/bootstrap-restoration.mjs",
   boundedStream: "_docs/_workflows/task-540-smoke/runtime/bounded-stream.mjs",
   bunBridgeContracts: "_docs/_workflows/task-540-smoke/executor/self-test/bun-bridge-contracts.mjs",
+  bunBridgeValidationPrimitives:
+    "_docs/_workflows/task-540-smoke/executor/bun-bridge-validation-primitives.mjs",
   buttonImage: "_docs/_workflows/task-540-smoke/browser/scenarios/button-image.mjs",
   config: "_docs/_workflows/task-540-smoke/executor/config.mjs",
   dirtyGuards: "_docs/_workflows/task-540-smoke/browser/scenarios/dirty-guards.mjs",
@@ -92,6 +94,7 @@ const EXPECTED_EXECUTOR_MODULE_PATHS = Object.freeze([
   "_docs/_workflows/task-540-smoke/executor/action-resources.mjs",
   "_docs/_workflows/task-540-smoke/executor/auth-challenge-authority.mjs",
   "_docs/_workflows/task-540-smoke/executor/bootstrap-contracts.mjs",
+  "_docs/_workflows/task-540-smoke/executor/bun-bridge-validation-primitives.mjs",
   "_docs/_workflows/task-540-smoke/executor/canonical-evidence.mjs",
   "_docs/_workflows/task-540-smoke/executor/captures.mjs",
   "_docs/_workflows/task-540-smoke/executor/config.mjs",
@@ -210,7 +213,7 @@ function readExecutorModuleGraph(): ReadonlyMap<string, string> {
       );
     }
   }
-  expect(EXPECTED_EXECUTOR_MODULE_PATHS).toHaveLength(116);
+  expect(EXPECTED_EXECUTOR_MODULE_PATHS).toHaveLength(117);
   expect([...sources.keys()].sort()).toEqual(EXPECTED_EXECUTOR_MODULE_PATHS);
   return sources;
 }
@@ -338,6 +341,78 @@ test("process runtime is the sole owner of process and host composition", () => 
     "readdir",
   ]) {
     expect(executor).not.toContain(removedFacadeToken);
+  }
+});
+
+test("Bun bridge validation primitives have one focused owner", () => {
+  const primitiveNames = [
+    "validateExactBridgeKeys",
+    "validateBridgeNullableUuid",
+    "validateBridgeNullableString",
+    "validateBridgeJsonObject",
+    "validateBridgeStringArray",
+    "requireBoundedBridgeString",
+    "requireBridgeUuid",
+  ];
+  const primitivesPath = path.join(root, workflowPaths.bunBridgeValidationPrimitives);
+  const primitives = readWorkflowSource(workflowPaths.bunBridgeValidationPrimitives);
+  const primitivesSourceFile = createSourceFile(
+    primitivesPath,
+    primitives,
+    ScriptTarget.Latest,
+    true,
+    ScriptKind.JS
+  );
+  const primitiveImports = primitivesSourceFile.statements.filter(isImportDeclaration);
+  const primitiveDeclarations = primitivesSourceFile.statements.filter(isFunctionDeclaration);
+
+  expect(primitiveImports.map((declaration) => declaration.getText(primitivesSourceFile))).toEqual([
+    'import { exactOwnKeys, invariant } from "./foundation.mjs";',
+    'import { assertPlainJsonValue } from "./json-schema.mjs";',
+  ]);
+  expect(primitiveDeclarations.map((declaration) => declaration.name?.text)).toEqual(
+    primitiveNames
+  );
+  expect(
+    primitiveDeclarations.map((declaration) =>
+      declaration.modifiers?.map((modifier) => modifier.getText(primitivesSourceFile))
+    )
+  ).toEqual(primitiveNames.map(() => ["export"]));
+  expect(primitivesSourceFile.statements).toHaveLength(9);
+
+  const executor = readWorkflowSource(workflowPaths.executor);
+  const executorSourceFile = createSourceFile(
+    path.join(root, workflowPaths.executor),
+    executor,
+    ScriptTarget.Latest,
+    true,
+    ScriptKind.JS
+  );
+  const primitiveFacadeImports = executorSourceFile.statements
+    .filter(isImportDeclaration)
+    .filter(
+      (declaration) =>
+        isStringLiteral(declaration.moduleSpecifier) &&
+        declaration.moduleSpecifier.text ===
+          "./task-540-smoke/executor/bun-bridge-validation-primitives.mjs"
+    );
+  expect(primitiveFacadeImports).toHaveLength(1);
+  expect(primitiveFacadeImports[0].getText(executorSourceFile)).toBe(
+    `import {
+  validateExactBridgeKeys,
+  validateBridgeNullableUuid,
+  validateBridgeNullableString,
+  validateBridgeJsonObject,
+  validateBridgeStringArray,
+  requireBoundedBridgeString,
+  requireBridgeUuid,
+} from "./task-540-smoke/executor/bun-bridge-validation-primitives.mjs";`
+  );
+  const facadeFunctionNames = executorSourceFile.statements
+    .filter(isFunctionDeclaration)
+    .map((declaration) => declaration.name?.text);
+  for (const primitiveName of primitiveNames) {
+    expect(facadeFunctionNames).not.toContain(primitiveName);
   }
 });
 
@@ -500,7 +575,7 @@ test("phase-eight bootstrap restore is one typed nullable-safe CAS", () => {
   const casSource = sourceSection(
     executor,
     "const BOOTSTRAP_CAS_RESTORE_BRIDGE_SOURCE =",
-    "function validateExactBridgeKeys"
+    "function validateBooleanBridgeProjection"
   );
   const predicateTokens = [
     "notDistinct(users.id,input.userId)",
