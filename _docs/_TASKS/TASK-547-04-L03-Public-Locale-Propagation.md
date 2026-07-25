@@ -7,10 +7,11 @@
 **Estimated Effort:** Large
 **Dependencies:** TASK-547-04-L02
 **Status:** 🚧 In Progress
-**Validation:** The pure locale normalizer, string-shell sink and current branch
-threading exist. Fresh gates plus a real installed-package request test and
-final smoke remain pending; existing synthetic tests are not installed-path
-evidence.
+**Validation:** The string-shell sink and current branch threading exist, but
+the compatibility-safe locale policy, exact settings seam and complete
+synthetic copy/persistence matrix remain open. Installed-package request and
+browser evidence are downstream TASK-547-06 handoffs, not completion claims for
+this leaf.
 
 ## Overview
 
@@ -64,13 +65,17 @@ runnable contract rather than weakening or deleting assertions.
 ## Locale Contract
 
 - `DEFAULT_SITE_LOCALE` remains the current safe default (`en`).
-- Accept a bounded BCP-47-like ASCII language tag owned by
-  `siteLocale.ts`; canonicalization accepts source-relevant `pl` and `pl-PL`
-  according to the frozen helper policy.
-- Direct and bulk setting writes reject malformed/non-string values with the
-  existing machine-readable settings error. Unknown fields remain rejected.
-- Legacy malformed stored values fail closed on read/list to the safe default;
-  they never reach the document sink and do not break a public request.
+- Preserve the existing `site.locale` producer/write contract: setup, assistant
+  and setting APIs may continue storing any non-blank bounded string. This leaf
+  does not narrow writes or destructively rewrite existing locales.
+- `siteLocale.ts::resolvePublicDocumentLanguage(value)` owns only the public
+  sink policy. It canonicalizes a safe bounded ASCII BCP-47-like tag with a
+  2-3-letter primary subtag and subsequent 1-8 alphanumeric subtags, including
+  `pl`, `pl-PL`, `es-419` and `zh-Hant`; malformed legacy values fall back to
+  `en` at the sink without changing the stored/read/list value.
+- `siteLocale.ts::resolvePrimarySiteLanguage(value)` uses that same
+  compatibility-safe grammar and returns the lowercase primary subtag for
+  runtime chrome selection. No second locale regex is permitted.
 - The selected public render branch reads `site.locale` once and threads that
   value through its Page, listing or detail renderer. The current runtime has no
   `buildPublicSiteRenderContext` locale owner; do not claim or call one unless a
@@ -79,6 +84,17 @@ runnable contract rather than weakening or deleting assertions.
   `document.documentElement.lang === "pl"` after the L02 package is installed.
 - Preview/cache/render branches use the same normalized value and do not fork a
   second locale policy.
+
+## Settings Seam Contract
+
+`settingsService.ts` remains the sole owner of
+`normalizeSettingValueForWrite(key, value): string | null`. TASK-547-02-L02's
+atomic batch service imports this exact pure normalizer and owns locking/CAS and
+rollback; it must not duplicate setting validation. After those callers migrate,
+this leaf removes or privatizes the weaker installer-facing
+`applySettingsBatch` and `restoreSettingsBatchRaw` exports and proves no
+installer, compensation or acceptance path imports them. General settings APIs
+and non-locale values retain their existing behavior.
 
 ## Native Listing Chrome Localization Contract
 
@@ -124,9 +140,12 @@ The present-only `ListingFiltersCopy` shape has exactly these 22 optional keys:
 | `rangeMinSliderLabel` | `Suwak minimum` |
 | `rangeMaxSliderLabel` | `Suwak maksimum` |
 
-Collection chrome is exactly `ctaLabel:"Zobacz szczegóły"`,
-`emptyTitle:"Brak wyników"` and
-`emptyDescription:"Zmień filtry lub opublikuj pasujące treści."`.
+FormaDom collection chrome intentionally emits no visible CTA label: the whole
+card remains the semantic link, matching the pinned project cards. Empty-state
+copy is exactly `emptyTitle:"Brak wyników"` and
+`emptyDescription:"Zmień filtry, aby zobaczyć inne projekty."`. The native
+empty state is an accepted source-absent adaptation and must be recorded by L02;
+it never instructs an unauthenticated visitor to publish content.
 
 `ListingFiltersCopy` is a generic strict widget contract, not a Page document
 key. Its object is optional/present-only, rejects unknown properties and
@@ -144,8 +163,8 @@ Precedence is frozen:
   wins, otherwise the locale value above is used;
 - the 22 state/accessibility labels come from the locale map as one present-only
   object; facets, aliases, resolved metrics and query state are unchanged;
-- localized collection CTA wins the native default, Page mapping and listing
-  template CTA; listing-template empty-state title/description win localized
+- FormaDom suppresses native/template CTA text while preserving the whole-card
+  link; listing-template empty-state title/description win localized
   empty-state copy when present, otherwise localized copy wins the native/Page
   fallback;
 - without Polish locale, `mapPage*` data is returned without a `copy` key and
@@ -183,13 +202,14 @@ is used by Page and entry shells so security and output bytes cannot drift.
 
 ```ts
 export const resolvePublicDocumentLanguage = (value: unknown): string =>
-  normalizeSiteLocale(value) ?? DEFAULT_SITE_LOCALE;
+  normalizePublicSiteLocale(value) ?? DEFAULT_SITE_LOCALE;
 
 export const resolvePageListingRuntimeCopy = (
   siteLocale: unknown,
 ): PageListingRuntimeCopy | null => {
-  const locale = normalizeSiteLocale(siteLocale);
-  return locale?.split("-")[0] === "pl" ? POLISH_PAGE_LISTING_RUNTIME_COPY : null;
+  return resolvePrimarySiteLanguage(siteLocale) === "pl"
+    ? POLISH_PAGE_LISTING_RUNTIME_COPY
+    : null;
 };
 
 export function buildPublicDocumentShell(input: {
@@ -230,8 +250,9 @@ render option → strict locale normalizer/default → optional present-only nat
 listing chrome plus the shared escaped string shell. Raw settings data reaches
 only normalizer-owned `unknown` inputs and never an unescaped document sink.
 
-**Error handling:** reject invalid writes; sanitize/fallback invalid legacy reads;
-never fail an otherwise renderable public page because locale is absent or bad.
+**Error handling:** preserve compatible stored writes; sanitize/fallback invalid
+legacy values only at the public sink; never fail an otherwise renderable public
+page because locale is absent or bad.
 Route precedence still selects static Pages before content-route matching and
 must not regress while the legacy `publicSite.tsx` orchestrator is split.
 Reject unknown/wrong-type/overlong external filter-copy fields; the direct
@@ -246,22 +267,25 @@ normalizer trims, blank-omits and defensively bounds known values.
 - `tests/vitest/kits/projekty-domow-listing-locale.test.tsx`: synthetic FormaDom
   Page/listing fixtures prove the pure runtime-preparation and string-render
   seams use Polish visitor copy and `lang`; pin the exact five filter headings,
-  all 22 copy keys/values, all three collection strings, `pl`/`pl-PL` primary-
-  language matching, every precedence branch, strict wrong-type/unknown/241-
+  all 22 copy keys/values, both collection empty-state strings, absence of
+  visible CTA copy, `pl`/`pl-PL` primary-language matching, every precedence
+  branch, strict wrong-type/unknown/241-
   character rejection, direct-normalizer 1/240/241 behavior, idempotent round
-  trip and absent/non-Polish/malformed legacy byte identity. This is not a DB
+  trip through the real validator/persistence boundary and
+  absent/non-Polish/malformed legacy byte identity. This is not a DB
   install/request test and must never be reported as one.
 - `tests/vitest/kits/projekty-domow-route-precedence.test.ts`: proves only static
   Page versus content-route precedence. It contains no locale input/assertion
   and is intentionally not locale evidence.
-- `tests/unit/settings/settingsService.test.ts`: accept `pl`/`pl-PL` under the
-  canonicalization policy; reject malformed direct and bulk writes; fail closed
-  for invalid stored read/list values.
+- `tests/unit/settings/settingsService.test.ts`: preserve non-blank stored locale
+  compatibility, including `es-419` and `zh-Hant`; prove malformed values fall
+  back only at the HTML/runtime-copy sink; pin the exact exported setting
+  normalizer and absence of weaker installer/compensation imports.
 
 Named suites must assert the emitted `<html lang>` string/DOM value, not merely a
 helper return. Each remains independently runnable and below 1,000 lines.
 
-TASK-547-06's scoped DB/Bun installed-site lane must call the real
+Downstream handoff: TASK-547-06's scoped DB/Bun installed-site lane must call the real
 `handlePublicRequest` after applying the package and assert `<html lang="pl">`
 for `/`, static `/projekty` and dynamic `/projekty/aurora`. It then rolls the run
 back and proves the previous locale was restored. The final browser smoke repeats
@@ -272,9 +296,12 @@ replaced by the synthetic Vitest fixture.
 
 - [x] Thread locale through the current Page and entry render branches.
 - [x] Split the touched legacy public-site module into cohesive bounded modules.
-- [x] Add the bounded locale policy and focused tests.
-- [ ] Add/pass the TASK-547-06 installed `handlePublicRequest` assertions, rerun
-  fresh locale/runtime gates and capture final smoke on the corrected package.
+- [ ] Replace the narrowing write/read policy with the compatibility-safe public
+  sink policy and complete the exact 22-key/precedence/persistence matrix.
+- [ ] Freeze the exported setting normalizer seam and remove weaker installer
+  batch/raw-restore imports after TASK-547-02-L02 migration.
+- [ ] Hand the installed `handlePublicRequest` and browser assertions to
+  TASK-547-06; they do not block this earlier leaf's own completion gate.
 
 ## Testing Requirements
 
@@ -285,7 +312,8 @@ replaced by the synthetic Vitest fixture.
 - `bun --cwd core lint`, `bun --cwd core lint:types`;
 - `wc -l` over every owned production/test file, treating >1,000 as a failed
   gate;
-- final runtime smoke with visible DOM language and rollback assertions.
+- a downstream TASK-547-06 handoff for visible DOM language and rollback smoke,
+  not a smoke requirement executed by this leaf.
 
 ## Documentation Updates Required
 
