@@ -380,16 +380,10 @@ export function createRunTask540SmokeExecutorSelfTest(dependencies) {
       plan,
     });
     const {
-      classifiedFailureActionId,
       diagnosticInput,
       diagnosticPrivateMarker,
       dirtyNavigationFailureAction,
       dirtyNavigationPrivateMarker,
-      expectedClassifiedLine,
-      toneOpenFailureAction,
-      toneOpenPrivateMarker,
-      toneSelectFailureAction,
-      toneSelectPrivateMarker,
     } = failureActionExecutionResult;
     negativeCases += failureActionExecutionResult.explicitNegativeCases;
 
@@ -514,7 +508,7 @@ export function createRunTask540SmokeExecutorSelfTest(dependencies) {
       plan,
       selfTestContext,
     });
-    const { bootstrapSettlementAction, successfulGeneratedFrame } = failureFramesResult;
+    const { bootstrapSettlementAction } = failureFramesResult;
     negativeCases += failureFramesResult.explicitNegativeCases;
     const settlementDiagnosticHarness = createSettlementDiagnosticHarness({
       LocalCommandAuthority,
