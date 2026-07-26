@@ -149,6 +149,7 @@ export function materializeEditableContentSchema(fieldBlueprints) {
 
 export function createBaseOutputSchemas(fixtureBlueprint) {
   const booleanTrue = schemaLiteral(true);
+  const booleanFalse = schemaLiteral(false);
   const jsonTrue = outputContract({
     grammar: jsonTransport(),
     schema: booleanTrue,
@@ -307,17 +308,24 @@ export function createBaseOutputSchemas(fixtureBlueprint) {
         outputEquals(["uiSettled"], true),
       ]),
     }),
+    // `clientDiscarded` replaces the former `clientAborted`, which demanded a
+    // `requestfailed`/net::ERR_ABORTED event that Chromium provably never emits for a request
+    // cancelled by document teardown. The load-bearing addition is `responseDelivered`: the
+    // guarantee this scenario exists to prove - no response for the old-client write ever reaches
+    // a realm - is now a directly falsifiable term instead of one inferred from an absent event.
     "route-abort-release": outputContract({
       grammar: jsonTransport(),
       schema: schemaObject({
         released: booleanTrue,
         backingSettled: booleanTrue,
-        clientAborted: booleanTrue,
+        clientDiscarded: booleanTrue,
+        responseDelivered: booleanFalse,
       }),
       predicate: andPredicate([
         outputEquals(["released"], true),
         outputEquals(["backingSettled"], true),
-        outputEquals(["clientAborted"], true),
+        outputEquals(["clientDiscarded"], true),
+        outputEquals(["responseDelivered"], false),
       ]),
     }),
     "route-unroute": jsonTrue,
@@ -427,7 +435,7 @@ export function createScreenBindingSchema() {
 export function createObservationFieldSchema(name, field) {
   const booleans = new Set([
     "activeUserMenuVisible",
-    "clientAborted",
+    "clientDiscarded",
     "emptyVisible",
     "errorVisible",
     "focused",
@@ -583,7 +591,7 @@ export function createObservationPredicate(name, canonicalAdminRootUrl) {
       outputEquals(["loginEmailVisible"], true),
       outputEquals(["loginPasswordVisible"], true),
       outputEquals(["loginSubmitVisible"], true),
-      outputEquals(["clientAborted"], true),
+      outputEquals(["clientDiscarded"], true),
     ]);
   }
   if (

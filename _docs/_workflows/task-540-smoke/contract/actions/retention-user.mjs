@@ -679,7 +679,7 @@ export const RETENTION_USER_ACTION_ROWS = deepFreezeExact([
     "ru-083-write-route-setup",
     "p1/0",
     "route(preference-a-write-exit,route-setup)",
-    "A false durable/entry visible -> exact bounded `requestfailed` listener installed before route, then tuple -> delayed PATCH installed",
+    "A false durable/entry visible -> exact bounded discard listeners installed before route, then tuple -> delayed PATCH installed",
     "ru-082 / absent -> installed",
   ],
   [
@@ -735,7 +735,7 @@ export const RETENTION_USER_ACTION_ROWS = deepFreezeExact([
     "ru-090a-a-exit-signout-settled",
     "p1/0",
     "observe(signout-settled-user-a-with-abort)",
-    "logout initiated -> exact same captured Request emits `net::ERR_ABORTED` + exact canonical `paths.login` URL + positive-geometry exact login form -> old-client abort and login realm settled",
+    "logout initiated -> old document torn down at exact canonical `paths.login` URL with the exact same captured Request delivering no response into any realm + positive-geometry exact login form -> old-client write discarded and login realm settled",
     "ru-090 / hit -> hit",
   ],
   [
@@ -784,7 +784,7 @@ export const RETENTION_USER_ACTION_ROWS = deepFreezeExact([
     "ru-096-write-release",
     "p1/0",
     "route(preference-a-write-exit,route-release)",
-    "A backing response settled/B active/exact captured Request abort proven -> abort-aware terminal receipt -> no response delivered into B realm",
+    "A backing response settled/B active/exact captured Request discard proven -> abort-aware terminal receipt -> no response delivered into B realm",
     "ru-085,ru-090a-a-exit-signout-settled,ru-095 / hit -> released",
   ],
   [
@@ -812,7 +812,7 @@ export const RETENTION_USER_ACTION_ROWS = deepFreezeExact([
     "ru-100-write-unroute",
     "p1/0",
     "route(preference-a-write-exit,unroute)",
-    "hit/queue/B proven -> `true` -> delayed PATCH absent and exact bounded `requestfailed` listener removed",
+    "hit/queue/B proven -> `true` -> delayed PATCH absent and exact bounded discard listeners removed",
     "ru-097,ru-098,ru-099 / released -> absent",
   ],
   [

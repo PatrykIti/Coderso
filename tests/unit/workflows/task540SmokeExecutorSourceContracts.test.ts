@@ -156,6 +156,7 @@ const EXPECTED_EXECUTOR_MODULE_PATHS = Object.freeze([
   "_docs/_workflows/task-540-smoke/executor/self-test/browser-auth-settlement-source.mjs",
   "_docs/_workflows/task-540-smoke/executor/self-test/browser-capture-frontier.mjs",
   "_docs/_workflows/task-540-smoke/executor/self-test/browser-dirty-navigation-source.mjs",
+  "_docs/_workflows/task-540-smoke/executor/self-test/browser-navigation-discard-source.mjs",
   "_docs/_workflows/task-540-smoke/executor/self-test/browser-route-duplicate-policy.mjs",
   "_docs/_workflows/task-540-smoke/executor/self-test/browser-run-code-source-ownership.mjs",
   "_docs/_workflows/task-540-smoke/executor/self-test/browser-source-context.mjs",
@@ -260,7 +261,7 @@ function readExecutorModuleGraph(): ReadonlyMap<string, string> {
       );
     }
   }
-  expect(EXPECTED_EXECUTOR_MODULE_PATHS).toHaveLength(145);
+  expect(EXPECTED_EXECUTOR_MODULE_PATHS).toHaveLength(146);
   expect([...sources.keys()].sort()).toEqual(EXPECTED_EXECUTOR_MODULE_PATHS);
   return sources;
 }
@@ -905,6 +906,21 @@ test("TASK-540 smoke boundaries retain enlarged nested budgets without retries",
   expect(routeAndActionSources).toContain(
     'page.waitForTimeout(540000).then(() => { throw new Error("wf540_settlement_timeout"); });'
   );
+  // MEASURED 2026-07-26: the sign-out navigation commit that discards the parked old-client write
+  // lands at 1043-1246 ms, so the discard postcondition is bounded at 60 000 ms (~48x headroom for
+  // the slow shared test database) instead of the former 540 000 ms. That budget could only buy
+  // dead time: it guarded a `requestfailed` / net::ERR_ABORTED event that Chromium never emits for
+  // a request cancelled by document teardown.
+  expect(config).toContain("const NAVIGATION_DISCARD_TIMEOUT_MS = 60_000;");
+  expect(
+    countToken(routeAndActionSources, "page.waitForTimeout(${NAVIGATION_DISCARD_TIMEOUT_MS})")
+  ).toBe(1);
+  expect(
+    countToken(observationSources, "page.waitForTimeout(${NAVIGATION_DISCARD_TIMEOUT_MS})")
+  ).toBe(1);
+  expect(routeAndActionSources).not.toContain("clientAborted");
+  expect(observationSources).not.toContain("clientAborted");
+  expect(observationSources).not.toContain("wf540_abort_timeout");
   expect(observationSources).toContain("const deadline = Date.now() + 180000;");
   expect(entrySupport).toContain("{ timeout: 15_000 }");
   expect(countToken(storageManifest, "Date.now() - startedAt <= 30_000")).toBe(3);

@@ -567,7 +567,7 @@ export const OBSERVATION_OUTPUT_FIELDS = deepFreezeExact({
     "loginEmailVisible",
     "loginPasswordVisible",
     "loginSubmitVisible",
-    "clientAborted",
+    "clientDiscarded",
   ],
   "post-redirect-a-fresh-read-settled": [
     "sequence",

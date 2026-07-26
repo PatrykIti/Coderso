@@ -1,4 +1,7 @@
-import { DATABASE_OPERATION_TIMEOUT_MS } from "../executor/config.mjs";
+import {
+  DATABASE_OPERATION_TIMEOUT_MS,
+  NAVIGATION_DISCARD_TIMEOUT_MS,
+} from "../executor/config.mjs";
 import { deepFreezeExact, invariant } from "../executor/foundation.mjs";
 import { expandPathTemplate, parseBuilder } from "./expression-and-capture-sources.mjs";
 
@@ -27,6 +30,14 @@ function expandedRoute(plan, key, captures, runtimeConfig) {
     pattern,
     expectedUserId: key === "preference-a-write-exit" ? captures.get("user-a.id") : null,
     csrfHeaderName: key === "preference-a-write-exit" ? runtimeConfig.csrfHeaderName : null,
+    // The canonical sign-out destination, in the same shape the signout observations compare
+    // `page.url()` against. The abort-aware route needs it because the terminal signal for the
+    // old client's discarded write is the main-frame navigation commit that destroys the old
+    // document, not a network event (see the listener block in buildRouteSetupSource).
+    loginUrl:
+      key === "preference-a-write-exit"
+        ? plan.fixtureBlueprint.origins.admin + plan.fixtureBlueprint.paths.login
+        : null,
     expectedMedia:
       key === "media-prior-resolution"
         ? {
@@ -215,15 +226,24 @@ function buildRouteSetupSource(route) {
     let fulfilledResolve;
     let uiSettledResolve;
     let backingSettledResolve;
-    let clientAbortedResolve;
+    let clientDiscardedResolve;
     let capturedRequest = null;
     let requestFailureListener = null;
+    let requestFinishedListener = null;
+    let frameNavigatedListener = null;
+    // The dangerous state this scenario exists to forbid: a response for the parked old-client
+    // write reaching a realm. It is read as a falsifiable negative rather than inferred.
+    let responseDelivered = false;
+    // Recorded, NEVER thrown. A throw inside a Playwright event callback resolves nothing and is
+    // awaited nowhere, so "the wrong event arrived" used to be indistinguishable from "no event
+    // arrived" - both surfaced only as one anonymous nine-minute timeout.
+    let listenerFailure = null;
     const captured = new Promise((resolve) => { capturedResolve = resolve; });
     const releaseGate = new Promise((resolve) => { releaseResolve = resolve; });
     const fulfilled = new Promise((resolve) => { fulfilledResolve = resolve; });
     const uiSettled = new Promise((resolve) => { uiSettledResolve = resolve; });
     const backingSettled = new Promise((resolve) => { backingSettledResolve = resolve; });
-    const clientAborted = new Promise((resolve) => { clientAbortedResolve = resolve; });
+    const clientDiscarded = new Promise((resolve) => { clientDiscardedResolve = resolve; });
     let backingStatus = null;
     let bodyAbsent = null;
     let bodyMatches = null;
@@ -239,21 +259,46 @@ function buildRouteSetupSource(route) {
     let handlerFailure = null;
     if (descriptor.mode === "abort-aware-preference-write") {
       if (typeof descriptor.expectedUserId !== "string" || !/^[0-9a-f-]{36}$/u.test(descriptor.expectedUserId) ||
-        typeof descriptor.csrfHeaderName !== "string" || !/^[a-z0-9][a-z0-9-]{0,127}$/u.test(descriptor.csrfHeaderName)) {
+        typeof descriptor.csrfHeaderName !== "string" || !/^[a-z0-9][a-z0-9-]{0,127}$/u.test(descriptor.csrfHeaderName) ||
+        typeof descriptor.loginUrl !== "string" || descriptor.loginUrl.length === 0) {
         throw new Error("wf540_preference_route_private_config");
       }
+      // MEASURED 2026-07-26 (playwright-core 1.62.0-alpha, chromium_headless_shell-1232), three
+      // arms on this exact stack with the PATCH parked exactly as the handler parks it:
+      //   AbortController.abort() + parked route -> net::ERR_ABORTED, promise resolves;
+      //   window.location.assign("/login") + parked route -> NO requestfailed, ever;
+      //   window.location.assign("/login") with no route at all -> NO requestfailed, ever.
+      // Chromium simply does not report a request cancelled by document teardown, and
+      // request.failure() stays null permanently, so the former requestfailed-only postcondition
+      // was unsatisfiable by construction on the sign-out path. The control arm proves the
+      // listener/identity/resolver below are sound, so it is kept for a genuine explicit abort;
+      // the observable terminal signal for THIS path is the main-frame navigation commit that
+      // destroys the old document, guarded by the falsifiable no-delivery negative.
+      requestFinishedListener = (request) => {
+        if (request !== capturedRequest) return;
+        responseDelivered = true;
+      };
       requestFailureListener = (request) => {
         if (request !== capturedRequest) return;
         const href = request.url();
         const scheme = href.indexOf("://");
         const start = href.indexOf("/", scheme === -1 ? 0 : scheme + 3);
         const pathname = (start === -1 ? "/" : href.slice(start)).split(/[?#]/u, 1)[0];
-        if (request.method() !== "PATCH" || pathname !== descriptor.pathname) throw new Error("wf540_abort_request_identity");
+        if (request.method() !== "PATCH" || pathname !== descriptor.pathname) { listenerFailure = "wf540_abort_request_identity"; return; }
         const failure = request.failure();
-        if (!failure || failure.errorText !== "net::ERR_ABORTED") throw new Error("wf540_abort_reason");
-        clientAbortedResolve(true);
+        if (!failure || failure.errorText !== "net::ERR_ABORTED") { listenerFailure = "wf540_abort_reason"; return; }
+        clientDiscardedResolve(true);
       };
+      frameNavigatedListener = (frame) => {
+        if (frame !== page.mainFrame() || frame.url() !== descriptor.loginUrl) return;
+        // A delivered response means the realm was NOT protected, so the postcondition must stay
+        // unresolved and fail loudly instead of being rescued by the navigation.
+        if (responseDelivered) return;
+        clientDiscardedResolve(true);
+      };
+      page.on("requestfinished", requestFinishedListener);
       page.on("requestfailed", requestFailureListener);
+      page.on("framenavigated", frameNavigatedListener);
     }
     const handler = async (route) => {
       let handlerStage = "request_identity";
@@ -397,10 +442,16 @@ function buildRouteSetupSource(route) {
       fulfilled,
       uiSettled,
       backingSettled,
-      clientAborted,
+      clientDiscarded,
+      responseDelivered: () => responseDelivered,
+      listenerFailure: () => listenerFailure,
       release: () => { if (!releaseResolve) throw new Error("wf540_route_released_twice"); const resolve = releaseResolve; releaseResolve = null; resolve(true); return true; },
       projection: () => Object.freeze({ backingStatus, bodyAbsent, bodyMatches, contentTypeJson, expectedUserIdMatches, csrfPresent, preferenceValue, rowCount, rowIdsMatch, uniqueIds, updatedA1Matches }),
-      removeFailureListener: () => { if (requestFailureListener) { page.off("requestfailed", requestFailureListener); requestFailureListener = null; } },
+      removeFailureListener: () => {
+        if (requestFinishedListener) { page.off("requestfinished", requestFinishedListener); requestFinishedListener = null; }
+        if (requestFailureListener) { page.off("requestfailed", requestFailureListener); requestFailureListener = null; }
+        if (frameNavigatedListener) { page.off("framenavigated", frameNavigatedListener); frameNavigatedListener = null; }
+      },
     });
     context.__wf540RouteSet(descriptor.key, entry);
     const mode = descriptor.mode === "malformed" ? "malformed" : descriptor.mode === "abort-aware-preference-write" ? "abort-aware" : "delayed";
@@ -431,11 +482,18 @@ function buildRouteReleaseSource(route) {
   return `(async (page) => {
     const route = page.context().__wf540RouteGet(${JSON.stringify(route.key)});
     route.release();
-    const timeout = page.waitForTimeout(540000).then(() => { throw new Error("wf540_settlement_timeout"); });
     if (${JSON.stringify(route.mode)} === "abort-aware-preference-write") {
-      const settled = await Promise.race([Promise.all([route.backingSettled, route.clientAborted]), timeout]);
-      return { released: true, backingSettled: settled[0] === true, clientAborted: settled[1] === true };
+      // MEASURED: the sign-out navigation commit that discards the old client lands at
+      // 1043-1246 ms, so this wait is bounded at ${NAVIGATION_DISCARD_TIMEOUT_MS} ms (~48x
+      // headroom for the slow shared test database) rather than the former 540000 ms. That is a
+      // REDUCTION: the old budget could only buy dead time, because no deadline can rescue an
+      // event Chromium never emits.
+      const discardTimeout = page.waitForTimeout(${NAVIGATION_DISCARD_TIMEOUT_MS}).then(() => { throw new Error(route.listenerFailure() ?? (route.responseDelivered() ? "wf540_discard_response_delivered" : "wf540_discard_timeout")); });
+      const settled = await Promise.race([Promise.all([route.backingSettled, route.clientDiscarded]), discardTimeout]);
+      if (route.listenerFailure() !== null) throw new Error(route.listenerFailure());
+      return { released: true, backingSettled: settled[0] === true, clientDiscarded: settled[1] === true, responseDelivered: route.responseDelivered() };
     }
+    const timeout = page.waitForTimeout(540000).then(() => { throw new Error("wf540_settlement_timeout"); });
     const settled = await Promise.race([Promise.all([route.fulfilled, route.uiSettled]), timeout]);
     await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
     return { released: true, fulfilled: settled[0] === true, uiSettled: settled[1] === true };

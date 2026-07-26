@@ -70,6 +70,7 @@ import { runApiContextSelfTest } from "./api-context.mjs";
 import { runExpectedAuthChallengeSelfTest } from "./auth-challenge.mjs";
 import { runBootstrapRestorationSelfTest } from "./bootstrap-restoration.mjs";
 import { runBrowserCaptureFrontierSelfTest } from "./browser-capture-frontier.mjs";
+import { runBrowserNavigationDiscardSourceSelfTest } from "./browser-navigation-discard-source.mjs";
 import { runBrowserRouteDuplicatePolicySelfTest } from "./browser-route-duplicate-policy.mjs";
 import { runBrowserRunCodeSourceOwnershipSelfTest } from "./browser-run-code-source-ownership.mjs";
 import { runBunBridgeContractsSelfTest } from "./bun-bridge-contracts.mjs";
@@ -494,6 +495,15 @@ export function createRunTask540SmokeExecutorSelfTest(dependencies) {
 
     // Counts through the shared assertNegative, so it must NOT be wrapped in `negativeCases +=`.
     await runBrowserRouteDuplicatePolicySelfTest({ assertNegative, plan, sourceCaptures });
+
+    // Counts through the shared assertNegative, so it must NOT be wrapped in `negativeCases +=`.
+    await runBrowserNavigationDiscardSourceSelfTest({
+      assertNegative,
+      buildBrowserInvocation,
+      compileActionExecutionSpec,
+      plan,
+      sourceCaptures,
+    });
 
     const browserSourceContext = await runBrowserRunCodeSourceOwnershipSelfTest({
       assertNegative,

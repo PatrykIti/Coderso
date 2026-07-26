@@ -183,6 +183,13 @@ export const CLEANUP_FAILURE_CLASS_PRIORITY = deepFreezeExact([
   "cleanup_boundary_failed",
 ]);
 export const DATABASE_OPERATION_TIMEOUT_MS = 540_000;
+// Bound for the sign-out discard postcondition of the abort-aware preference write. MEASURED
+// 2026-07-26: the main-frame navigation commit that destroys the old A document lands at
+// 1043-1246 ms, so this is ~48x headroom even on the slow shared test database. It is a
+// REDUCTION from the former 540_000 ms: that budget could only ever buy dead time, because the
+// postcondition it guarded (a `requestfailed` / net::ERR_ABORTED event for a request cancelled by
+// document teardown) is one Chromium never emits at all.
+export const NAVIGATION_DISCARD_TIMEOUT_MS = 60_000;
 export const BUN_BRIDGE_EXECUTION_AUTHORITY = deepFreezeExact({
   argvShape: ["--no-env-file", "--cwd", "<canonical-core>", "--eval", "<immutable-source>"],
   cwdShape: { bun: "<canonical-core>", spawn: "<canonical-root>" },

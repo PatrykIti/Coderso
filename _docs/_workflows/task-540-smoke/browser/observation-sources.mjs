@@ -1,6 +1,7 @@
 import {
   AUTH_SETTLEMENT_BROWSER_FAILURE_CLASSES,
   EXPECTED_AUTH_CHALLENGE_PHASES,
+  NAVIGATION_DISCARD_TIMEOUT_MS,
 } from "../executor/config.mjs";
 import { invariant } from "../executor/foundation.mjs";
 import {
@@ -333,7 +334,7 @@ function buildObservationSource(action, name, plan, captures, selectionSelector 
         ? { ...colors, toggleAriaPressed, metadataEffect: (await preferenceEffect()).metadataEffect }
         : { ...colors, toggleAriaPressed };
     };
-    const loginSample = async (clientAborted = undefined) => {
+    const loginSample = async (clientDiscarded = undefined) => {
       const result = {
         url: page.url(),
         loginEmailVisible: await visible(config.selectors.loginEmail),
@@ -341,7 +342,7 @@ function buildObservationSource(action, name, plan, captures, selectionSelector 
         loginSubmitVisible: await visible(config.selectors.loginSubmit),
       };
       if (result.url !== config.loginUrl) throw new Error("wf540_login_url");
-      return clientAborted === undefined ? result : { ...result, clientAborted };
+      return clientDiscarded === undefined ? result : { ...result, clientDiscarded };
     };
     const settleAuthRealm = async (selector, expectedName = null, userId = null) => {
       const deadline = Date.now() + 180000;
@@ -590,8 +591,11 @@ function buildObservationSource(action, name, plan, captures, selectionSelector 
       output = await loginSample();
     } else if (config.name === "signout-settled-user-a-with-abort") {
       const route = context.__wf540RouteGet("preference-a-write-exit");
-      const aborted = await Promise.race([route.clientAborted, page.waitForTimeout(540000).then(() => { throw new Error("wf540_abort_timeout"); })]);
-      output = await loginSample(aborted === true);
+      // Bounded and self-naming: the old 540000 ms wait for a never-emitted requestfailed event
+      // burnt nine minutes and then reported one anonymous token. The timeout now states which of
+      // the three distinguishable causes actually happened.
+      const discarded = await Promise.race([route.clientDiscarded, page.waitForTimeout(${NAVIGATION_DISCARD_TIMEOUT_MS}).then(() => { throw new Error(route.listenerFailure() ?? (route.responseDelivered() ? "wf540_discard_response_delivered" : "wf540_discard_timeout")); })]);
+      output = await loginSample(discarded === true);
     } else if (config.name.startsWith("geometry-")) {
       output = await geometrySample();
     } else if (config.name === "binding-after-save") {

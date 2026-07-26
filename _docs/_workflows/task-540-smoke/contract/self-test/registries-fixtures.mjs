@@ -1,5 +1,6 @@
 import { invariant } from "../core.mjs";
 import { validateFixtureBlueprint } from "../fixtures.mjs";
+import { createObservationFieldSchema } from "../output-contracts.mjs";
 import {
   assertUniqueRegistryEntries,
   validateExecutableRegistryProjection,
@@ -7,7 +8,29 @@ import {
 import { assertSelectorTextEngineShape } from "../selectors.mjs";
 import { createPrivateProjectionSelfTestHarness } from "./helpers.mjs";
 
+const DISCARD_OBSERVATION_NAME = "signout-settled-user-a-with-abort";
+
 export function runRegistriesFixturesSelfTestSuite(plan, negative) {
+  // The sign-out discard postcondition. `clientAborted` demanded a `requestfailed` /
+  // net::ERR_ABORTED event that Chromium provably never emits for a request cancelled by document
+  // teardown, so it was unsatisfiable by construction; `clientDiscarded` is settled by the
+  // observable navigation commit and guarded by a no-delivery negative. The built plan is the
+  // authority here, so a half-finished rename cannot hide behind this expectation.
+  const discardContract = plan.registries.observations[DISCARD_OBSERVATION_NAME];
+  invariant(
+    discardContract !== undefined &&
+      Object.keys(discardContract.schema.properties).join(",") ===
+        "url,loginEmailVisible,loginPasswordVisible,loginSubmitVisible,clientDiscarded" &&
+      discardContract.schema.properties.clientDiscarded.type === "boolean" &&
+      discardContract.predicate.op === "and" &&
+      discardContract.predicate.items.length === 4 &&
+      JSON.stringify(discardContract.predicate.items[3]).includes('"clientDiscarded"'),
+    "sign-out discard observation contract drift"
+  );
+  negative(
+    () => createObservationFieldSchema(DISCARD_OBSERVATION_NAME, "clientAborted"),
+    "retired clientAborted observation field"
+  );
   // The built plan is the authority here: these read plan.registries.selectors, not the
   // source literal, so a regression in createSelectorRegistry cannot hide behind a stale
   // expectation. A Radix SelectItem delegates its label to a child span, so the option
