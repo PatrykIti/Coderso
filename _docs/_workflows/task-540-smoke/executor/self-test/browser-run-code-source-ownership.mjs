@@ -34,7 +34,11 @@ import {
 
 const PRESERVING_UNIT_WRAPPER_MARKER = "if (result === true) return { ok: true };";
 const UNIT_WRAPPER_PROBE_INNER_SOURCE = "__WF540_UNIT_WRAPPER_PROBE__";
+// Two mutation carriers: rc-011 spells the alert selector as a literal, rc-012 reads it out of the
+// embedded config object, which is the idiom 108 sources use and the one the literal-only guard was
+// blind to.
 const WIDGET_ABSENCE_MUTATION_ACTION_ID = "rc-011-visible-retry";
+const WIDGET_ABSENCE_REGISTRY_ACTION_ID = "rc-012-retry-proof";
 
 // Behavioural round-trip against the REAL builder output. The inner source is a trivial
 // probe: an action's own inner source drives a live page and must never be executed here.
@@ -91,6 +95,7 @@ export async function runBrowserRunCodeSourceOwnershipSelfTest({
   } = browserSourceContext;
   const observedUnitFailureFrameActionIds = [];
   let widgetAbsenceMutationSource = null;
+  let widgetAbsenceRegistrySource = null;
   for (const action of plan.actionManifest) {
     if (action.executable.type === "runtime-operation") continue;
     const executionSpec = compileActionExecutionSpec(action);
@@ -127,6 +132,7 @@ export async function runBrowserRunCodeSourceOwnershipSelfTest({
     // unsatisfiable the moment the route mounts an unrelated instance of that class.
     assertBrowserSourceWidgetAbsenceScope(action.id, compiledSource);
     if (action.id === WIDGET_ABSENCE_MUTATION_ACTION_ID) widgetAbsenceMutationSource = compiledSource;
+    if (action.id === WIDGET_ABSENCE_REGISTRY_ACTION_ID) widgetAbsenceRegistrySource = compiledSource;
     if (compiledSource.includes("await page.goto(")) {
       invariant(
         compiledSource.includes("{ timeout: 540000 }"),
@@ -542,6 +548,7 @@ export async function runBrowserRunCodeSourceOwnershipSelfTest({
   invariant(compiledRunCodeSources === 392, "generated run-code source count drift");
   runBrowserWidgetAbsenceScopeSelfTest({
     assertNegative,
+    configuredSelectorSource: widgetAbsenceRegistrySource,
     retrySettlementSource: widgetAbsenceMutationSource,
   });
   invariant(
