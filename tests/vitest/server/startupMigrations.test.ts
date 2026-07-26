@@ -1,6 +1,7 @@
 import { resolve } from "node:path";
 import { describe, expect, test, vi } from "vitest";
 
+import { DATABASE_DIRECT_URL_ENV } from "../../../core/db/connectionTargets";
 import {
   STARTUP_MIGRATIONS_ENV,
   STARTUP_MIGRATIONS_FOLDER_ENV,
@@ -94,7 +95,7 @@ describe("runStartupMigrations", () => {
     );
   });
 
-  test("requires DATABASE_URL before running enabled migrations", async () => {
+  test("requires a database URL before running enabled migrations", async () => {
     const logger = createLogger();
     const migrate: StartupMigrationFn = vi.fn(async () => {});
 
@@ -136,28 +137,81 @@ describe("runStartupMigrations", () => {
       },
     ]);
     expect(logger.log).toHaveBeenCalledWith(
-      `[startup] Running database migrations from ${migrationsFolder}`
+      `[startup] Running database migrations from ${migrationsFolder} via ` +
+        "DATABASE_URL fallback (port 5432, not pooled)"
     );
     expect(logger.log).toHaveBeenCalledWith("[startup] Database migrations completed");
   });
 
-  test("redacts DATABASE_URL from migration failure logs", async () => {
+  test("migrates over the DIRECT url when DATABASE_URL points at the pooler", async () => {
     const logger = createLogger();
-    const databaseUrl = "postgres://coderso:secret@db/coderso";
+    const calls: StartupMigrationInput[] = [];
+    const migrate: StartupMigrationFn = async (input) => {
+      calls.push(input);
+    };
+
+    const result = await runStartupMigrations({
+      cwd: "/app/core",
+      env: {
+        DATABASE_URL: "postgres://coderso:secret@db:6432/coderso",
+        [DATABASE_DIRECT_URL_ENV]: "postgres://coderso:secret@db:5432/coderso",
+        [STARTUP_MIGRATIONS_FOLDER_ENV]: "db/migrations",
+      },
+      logger,
+      migrate,
+    });
+
+    const migrationsFolder = resolve("/app/core", "db/migrations");
+
+    expect(result).toEqual({ ran: true, migrationsFolder });
+    // The session advisory lock must span the whole migrator run, so the direct
+    // connection is the one handed to the migrator — never the pooled one.
+    expect(calls).toEqual([
+      {
+        databaseUrl: "postgres://coderso:secret@db:5432/coderso",
+        migrationsFolder,
+      },
+    ]);
+    expect(logger.log).toHaveBeenCalledWith(
+      `[startup] Running database migrations from ${migrationsFolder} via ` +
+        `${DATABASE_DIRECT_URL_ENV} (port 5432)`
+    );
+  });
+
+  test("refuses to migrate through the pooler when no direct url is configured", async () => {
+    const logger = createLogger();
+    const migrate: StartupMigrationFn = vi.fn(async () => {});
+
+    await expect(
+      runStartupMigrations({
+        env: { DATABASE_URL: "postgres://coderso:secret@db:6432/coderso" },
+        logger,
+        migrate,
+      })
+    ).rejects.toThrow(/^session_database_url_pooled: startup database migrations/);
+
+    // Fail closed: no migrator run, so no lock is taken on a pooled connection.
+    expect(migrate).not.toHaveBeenCalled();
+  });
+
+  test("redacts both connection strings from migration failure logs", async () => {
+    const logger = createLogger();
+    const pooledUrl = "postgres://coderso:pooled-secret@db:6432/coderso";
+    const directUrl = "postgres://coderso:direct-secret@db:5432/coderso";
     const migrate: StartupMigrationFn = async () => {
-      throw new Error(`cannot connect to ${databaseUrl}`);
+      throw new Error(`cannot connect to ${directUrl} (pooled: ${pooledUrl})`);
     };
 
     await expect(
       runStartupMigrations({
-        env: { DATABASE_URL: databaseUrl },
+        env: { DATABASE_URL: pooledUrl, [DATABASE_DIRECT_URL_ENV]: directUrl },
         logger,
         migrate,
       })
-    ).rejects.toThrow(`cannot connect to ${databaseUrl}`);
+    ).rejects.toThrow("cannot connect to");
 
     expect(logger.error).toHaveBeenCalledWith(
-      "[startup] Database migrations failed: cannot connect to [redacted]"
+      "[startup] Database migrations failed: cannot connect to [redacted] (pooled: [redacted])"
     );
   });
 });

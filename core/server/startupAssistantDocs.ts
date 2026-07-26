@@ -19,6 +19,17 @@ const STARTUP_ASSISTANT_DOCS_STATE_KEY = "assistant.docs.startupReindexState";
 const STARTUP_ASSISTANT_DOCS_LOCK_NAMESPACE = 20260604;
 const STARTUP_ASSISTANT_DOCS_LOCK_KEY = 403;
 
+/**
+ * Session-lock purpose id (see `core/db/connectionTargets.ts`).
+ *
+ * This lock CANNOT become `pg_advisory_xact_lock`: the guarded region reads the
+ * reindex state, walks the docs tree off disk and upserts hundreds of rows
+ * through the shared pooled client, then writes the state — many transactions,
+ * not one. Collapsing it into a single transaction would also hold a write
+ * transaction open for the entire boot.
+ */
+export const STARTUP_ASSISTANT_DOCS_SESSION_PURPOSE = "startup assistant docs reindex";
+
 type EnvMap = Record<string, string | undefined>;
 
 export type StartupAssistantDocsDecision = {
@@ -228,20 +239,26 @@ async function runDefaultAssistantDocsReindex(
   });
 }
 
+/**
+ * Hold the reindex lock on a dedicated DIRECT session for the whole action.
+ *
+ * The lock used to be taken on the shared drizzle client, which is a pool: even
+ * before the transaction pooler, lock and unlock could land on different pooled
+ * connections and leak the lock. Behind the pooler it is guaranteed to. The
+ * guarded work itself stays on the shared pooled client — only the lock needs
+ * session semantics.
+ */
 async function withDefaultStartupAssistantDocsLock<T>(action: () => Promise<T>): Promise<T> {
-  const [{ db }, drizzleOrm] = await Promise.all([import("../db/client"), import("drizzle-orm")]);
-  const { sql } = drizzleOrm;
+  const { withSessionDatabaseClient } = await import("../db/sessionClient");
 
-  await db.execute(
-    sql`select pg_advisory_lock(${STARTUP_ASSISTANT_DOCS_LOCK_NAMESPACE}, ${STARTUP_ASSISTANT_DOCS_LOCK_KEY})`
-  );
-  try {
-    return await action();
-  } finally {
-    await db.execute(
-      sql`select pg_advisory_unlock(${STARTUP_ASSISTANT_DOCS_LOCK_NAMESPACE}, ${STARTUP_ASSISTANT_DOCS_LOCK_KEY})`
-    );
-  }
+  return withSessionDatabaseClient(STARTUP_ASSISTANT_DOCS_SESSION_PURPOSE, async (client) => {
+    await client`select pg_advisory_lock(${STARTUP_ASSISTANT_DOCS_LOCK_NAMESPACE}, ${STARTUP_ASSISTANT_DOCS_LOCK_KEY})`;
+    try {
+      return await action();
+    } finally {
+      await client`select pg_advisory_unlock(${STARTUP_ASSISTANT_DOCS_LOCK_NAMESPACE}, ${STARTUP_ASSISTANT_DOCS_LOCK_KEY})`;
+    }
+  });
 }
 
 const defaultDeps: StartupAssistantDocsDeps = {

@@ -1,6 +1,11 @@
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import {
+  describeSessionDatabaseTarget,
+  resolveSessionDatabaseTarget,
+} from "../db/connectionTargets";
+
 export const STARTUP_MIGRATIONS_ENV = "CODERSO_RUN_MIGRATIONS_ON_START";
 export const STARTUP_MIGRATIONS_FOLDER_ENV = "CODERSO_MIGRATIONS_FOLDER";
 
@@ -12,6 +17,17 @@ const DEFAULT_STARTUP_MIGRATIONS_FOLDER = fileURLToPath(
 const STARTUP_MIGRATIONS_LOCK_NAMESPACE = 20260604;
 const STARTUP_MIGRATIONS_LOCK_KEY = 400;
 
+/**
+ * Session-lock purpose id, surfaced in the fail-closed error when the resolved
+ * connection would route this lock through the transaction pooler.
+ *
+ * This lock CANNOT become `pg_advisory_xact_lock`: it has to be held across the
+ * drizzle migrator's whole run, and the migrator opens a transaction per
+ * migration file. A transaction-scoped lock would be released after the first
+ * file, which defeats the point of serialising concurrent boots.
+ */
+export const STARTUP_MIGRATIONS_SESSION_PURPOSE = "startup database migrations";
+
 type EnvMap = Record<string, string | undefined>;
 
 export type StartupMigrationDecision = {
@@ -20,6 +36,12 @@ export type StartupMigrationDecision = {
 };
 
 export type StartupMigrationInput = {
+  /**
+   * DIRECT (non-pooled) connection string. The same single connection holds the
+   * session advisory lock and runs the migrator, so it must not be routed
+   * through a transaction pooler — `runStartupMigrations` resolves it via
+   * `resolveSessionDatabaseTarget`, which refuses a pooled port.
+   */
   databaseUrl: string;
   migrationsFolder: string;
 };
@@ -81,6 +103,12 @@ export function resolveStartupMigrationsFolder(
   return resolve(cwd, configuredFolder);
 }
 
+/**
+ * `max: 1` on purpose: one connection, one session, so the advisory lock taken
+ * before the migrator and released after it is guaranteed to be the same
+ * backend. `databaseUrl` must therefore be the direct target — the caller
+ * enforces that.
+ */
 export async function runDrizzleStartupMigrations({
   databaseUrl,
   migrationsFolder,
@@ -161,22 +189,31 @@ export async function runStartupMigrations(
     return { ran: false, reason: decision.reason };
   }
 
-  const databaseUrl = env.DATABASE_URL?.trim();
-
-  if (!databaseUrl) {
+  if (!env.DATABASE_URL?.trim() && !env.DATABASE_DIRECT_URL?.trim()) {
     throw new Error("startup_migrations_database_url_missing");
   }
+
+  // Direct connection: this lock is session-scoped and must survive the whole
+  // migrator run, so a transaction pooler would leak it (see connectionTargets).
+  const sessionTarget = resolveSessionDatabaseTarget(STARTUP_MIGRATIONS_SESSION_PURPOSE, env);
+  const databaseUrl = sessionTarget.url;
 
   const migrationsFolder = resolveStartupMigrationsFolder(env, options.cwd ?? process.cwd());
   const migrate = options.migrate ?? runDrizzleStartupMigrations;
 
-  logger.log(`[startup] Running database migrations from ${migrationsFolder}`);
+  logger.log(
+    `[startup] Running database migrations from ${migrationsFolder} via ` +
+      `${describeSessionDatabaseTarget(sessionTarget)}`
+  );
 
   try {
     await migrate({ databaseUrl, migrationsFolder });
   } catch (error) {
     logger.error(
-      `[startup] Database migrations failed: ${formatStartupMigrationError(error, databaseUrl)}`
+      `[startup] Database migrations failed: ${formatStartupMigrationError(error, [
+        databaseUrl,
+        env.DATABASE_URL,
+      ])}`
     );
     throw error;
   }
@@ -185,12 +222,24 @@ export async function runStartupMigrations(
   return { ran: true, migrationsFolder };
 }
 
-function formatStartupMigrationError(error: unknown, databaseUrl: string): string {
+function formatStartupMigrationError(
+  error: unknown,
+  databaseUrls: readonly (string | undefined)[]
+): string {
   const message = error instanceof Error ? error.message : String(error);
 
   if (!message) {
     return "unknown error";
   }
 
-  return message.split(databaseUrl).join("[redacted]");
+  // Redact every connection string in play: the pooled default and the direct
+  // one can differ, and either may appear verbatim in a driver error.
+  let redacted = message;
+  for (const url of databaseUrls) {
+    const trimmed = url?.trim();
+    if (trimmed) {
+      redacted = redacted.split(trimmed).join("[redacted]");
+    }
+  }
+  return redacted;
 }

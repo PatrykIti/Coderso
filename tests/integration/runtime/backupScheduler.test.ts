@@ -8,8 +8,10 @@ import postgres from "postgres";
 import {
   BACKUP_SCHEDULER_LOCK_KEY,
   BACKUP_SCHEDULER_LOCK_NAMESPACE,
+  BACKUP_SCHEDULER_SESSION_PURPOSE,
   runDueScheduledBackups,
 } from "../../../core/server/jobs/backupScheduler";
+import { resolveSessionDatabaseTarget } from "../../../core/db/connectionTargets";
 import { db } from "../../../core/db/client";
 import { auditLogs, backups, backupSchedules } from "../../../core/db/schema";
 import { deleteBackup, getBackupSchedule } from "../../../core/services/backups/backupService";
@@ -25,6 +27,12 @@ async function canConnect() {
 
 const hasDb = Boolean(process.env.DATABASE_URL) && (await canConnect());
 const testIfDb = hasDb ? test : test.skip;
+
+// The holder/probe sessions below take SESSION-level advisory locks, so they must
+// use the same DIRECT target the scheduler uses. Opening them on a pooled
+// DATABASE_URL would route lock and unlock to different backends and leak a lock
+// on the shared remote DB — the exact hazard these tests exist to police.
+const sessionLockUrl = () => resolveSessionDatabaseTarget(BACKUP_SCHEDULER_SESSION_PURPOSE).url;
 
 // --- shared-DB-safe fixtures -------------------------------------------------
 // Track ONLY ids this suite created; per-id cleanup (deleteBackup, fallback
@@ -141,7 +149,7 @@ testIfDb("single-flight (in-process): overlapping calls run at most one backup",
 
 testIfDb("advisory lock (cross-session): held elsewhere => due run is skipped", async () => {
   await forceDue();
-  const holder = postgres(process.env.DATABASE_URL!, { max: 1 }); // separate session
+  const holder = postgres(sessionLockUrl(), { max: 1 }); // separate DIRECT session
   try {
     await holder`select pg_advisory_lock(${BACKUP_SCHEDULER_LOCK_NAMESPACE}, ${BACKUP_SCHEDULER_LOCK_KEY})`;
     expect(await runDueScheduledBackups(new Date())).toBeNull(); // due, but lock contended
@@ -157,7 +165,7 @@ testIfDb(
     await forceDue();
     const id = await runDueScheduledBackups(new Date());
     if (id) createdIds.push(id);
-    const probe = postgres(process.env.DATABASE_URL!, { max: 1 }); // fresh session
+    const probe = postgres(sessionLockUrl(), { max: 1 }); // fresh DIRECT session
     try {
       const [row] = await probe<{ locked: boolean }[]>`
       select pg_try_advisory_lock(${BACKUP_SCHEDULER_LOCK_NAMESPACE}, ${BACKUP_SCHEDULER_LOCK_KEY}) as locked
