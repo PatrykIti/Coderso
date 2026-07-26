@@ -326,8 +326,8 @@ or contents never join audit digests.
 - Before dispatch the host verifies its direct single-link source, the direct
   Node runtime and the pinned `/usr/bin/claude` symlink/target identities and
   hashes. The Claude target must be the expected direct regular two-link file;
-  version `2.1.218` and SHA-256
-  `295fd30481bd03b38450fdec2a6e25bb6472c2074f04b0c4a566cd5988f230bf`,
+  version `2.1.220` and SHA-256
+  `159e4a51d796f3bf14677577100f7efb845611b1ceaf0c30cbd8d4650d942185`,
   its bytes and hash join the frozen exact-key host identity. The launcher
   plus host-source/runtime identities are rechecked immediately before and
   after each call.
