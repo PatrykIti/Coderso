@@ -357,6 +357,66 @@ export function runManifestFailClosedSelfTestSuite(plan, negative) {
     () => createRegistries(manifestWithAction(6, earlyPathAction), plan.fixtureBlueprint),
     "path capture producer after consumer"
   );
+  // The isolated durable reads are the harness's only in-code statement of the boolean the server
+  // must hold, and the runtime router derives its assertion from the same table. These cases pin
+  // the binding that was missing when ru-061a-a-durable-bypass-read asserted the negation of its
+  // own row: each one must fail with THIS invariant, not merely fail somehow, so a mutation that
+  // happens to trip an earlier check cannot masquerade as coverage.
+  const isolatedReadIndex = plan.actionManifest.findIndex(
+    ({ id }) => id === "ru-061a-a-durable-bypass-read"
+  );
+  const isolatedReadAction = plan.actionManifest[isolatedReadIndex];
+  invariant(
+    isolatedReadAction?.kind === "isolatedApiSessionApiReadAs" &&
+      isolatedReadAction.captureOutput.includes("showFieldMetadata:false"),
+    "isolated preference read fail-closed fixture drift"
+  );
+  const failsWith = (callback, fragment) => () => {
+    try {
+      callback();
+    } catch (error) {
+      if (String(error?.message ?? "").includes(fragment)) throw error;
+    }
+  };
+  negative(
+    failsWith(
+      () =>
+        validateManifest(
+          replaceManifestAction(plan.actionManifest, isolatedReadIndex, {
+            captureOutput: isolatedReadAction.captureOutput.replace(
+              "showFieldMetadata:false",
+              "showFieldMetadata:true"
+            ),
+          })
+        ),
+      "contract expectation contradicts the routed expectation"
+    ),
+    "isolated preference read expectation inversion"
+  );
+  negative(
+    failsWith(
+      () =>
+        validateManifest(
+          replaceManifestAction(plan.actionManifest, isolatedReadIndex, {
+            captureOutput: isolatedReadAction.captureOutput.replace("showFieldMetadata:false", ""),
+          })
+        ),
+      "states no showFieldMetadata literal"
+    ),
+    "isolated preference read literal absence"
+  );
+  negative(
+    failsWith(
+      () =>
+        validateManifest(
+          replaceManifestAction(plan.actionManifest, isolatedReadIndex, {
+            kind: "isolatedApiSessionApiAs",
+          })
+        ),
+      "isolated preference read expectation coverage drift"
+    ),
+    "isolated preference read expectation coverage"
+  );
   const outputMismatchIndex = plan.actionManifest.findIndex(
     ({ id }) => id === "set-017-editable-type-proof"
   );

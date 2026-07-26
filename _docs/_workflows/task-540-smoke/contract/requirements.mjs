@@ -182,6 +182,22 @@ export const REQUIRED_ISOLATED_API_ACTION_IDS = Object.freeze([
   "ru-061a-a-durable-bypass-read",
 ]);
 
+// The boolean each isolated `isolatedApiSessionApiReadAs` action asserts against the durable
+// user setting. It lives here, once, because the runtime router used to hardcode it with nothing
+// binding it back to the contract row: "ru-061a-a-durable-bypass-read" carried the exact negation
+// of its own row for four commits - the row states showFieldMetadata:false, REQUIRED_METADATA_
+// STATE_VALUES pins the actions either side to false, ru-062's predicate requires false, and the
+// router passed true. That inversion did not merely fail; it pointed the detector the wrong way,
+// because `true` could only be satisfied by an application that let a released stale read clobber
+// a newer local write - exactly the data-loss defect the action exists to catch. validateManifest
+// now binds this table to the literal stated in each row's capture-output prose, and the router
+// derives its argument from it, so contract and executable can no longer diverge.
+export const REQUIRED_ISOLATED_API_READ_EXPECTATIONS = deepFreezeExact({
+  "ru-047a-a-durable-proof": true,
+  "ru-051-a-server-false-proof": false,
+  "ru-061a-a-durable-bypass-read": false,
+});
+
 export const REQUIRED_SIGNOUT_SETTLEMENT_IDS = Object.freeze([
   "ru-040a-bootstrap-signout-settled",
   "ru-066a-a-signout-settled",

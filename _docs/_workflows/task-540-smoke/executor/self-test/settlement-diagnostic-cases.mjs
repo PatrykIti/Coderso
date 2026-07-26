@@ -209,6 +209,12 @@ export async function runSettlementDiagnosticCasesSelfTest({
       ordinaryStreamIntegrity.stderrSha256 === EMPTY_SHA256,
     "ordinary receipt evidence digest drift"
   );
+  // Two local-command-authority invariants used to reach the diagnostic as "unclassified" because
+  // no classifier pattern matched an executor invariant message. The runtime projection names them
+  // now, so each case below states the exact token it expects rather than inheriting the catch-all
+  // default — the expectation stays as strict as it was, it just says more.
+  const SENSITIVE_BYTES_REASON = "wf540_rt_local_command_emitted_sensitive_bytes";
+  const MALFORMED_PROCESS_RESULT_REASON = "wf540_rt_retained_process_result_shape_is_invalid";
   const exactLoginFrame = Buffer.from(AUTH_SETTLEMENT_FAILURE_FRAMES.login_route, "utf8");
   await runSettlementDiagnosticCase({
     label: "exact browser frame before secret scan",
@@ -391,6 +397,7 @@ export async function runSettlementDiagnosticCasesSelfTest({
     const scanProbe = createSensitiveScanProbe(collidingSecret);
     await runSettlementDiagnosticCase({
       label,
+      expectedFailureReason: SENSITIVE_BYTES_REASON,
       operation: (context) =>
         runLocalAuthority(context, {
           program: "bun",
@@ -527,6 +534,8 @@ export async function runSettlementDiagnosticCasesSelfTest({
       await runSettlementDiagnosticCase({
         label: label + (actionId === settlementTwinAction.id ? " non-auth" : " auth"),
         actionId,
+        expectedFailureReason:
+          scanProbe === null ? MALFORMED_PROCESS_RESULT_REASON : SENSITIVE_BYTES_REASON,
         operation: (context) =>
           runLocalAuthority(context, {
             execution,
@@ -610,6 +619,7 @@ export async function runSettlementDiagnosticCasesSelfTest({
       };
       await runSettlementDiagnosticCase({
         label: label + " secret " + secretChannel,
+        expectedFailureReason: SENSITIVE_BYTES_REASON,
         operation: (context) =>
           runLocalAuthority(context, {
             execution: createRetainedExecution(secretExecutionOptions),
@@ -617,6 +627,7 @@ export async function runSettlementDiagnosticCasesSelfTest({
       });
       await runSettlementDiagnosticCase({
         label: "repository plus " + label + " secret " + secretChannel,
+        expectedFailureReason: SENSITIVE_BYTES_REASON,
         operation: (context) =>
           runLocalAuthority(context, {
             execution: createRetainedExecution(secretExecutionOptions),

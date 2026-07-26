@@ -44,6 +44,7 @@ import {
   REQUIRED_FLOW_ACTION_COUNTS,
   REQUIRED_GLOBAL_LIST_ACTION_IDS,
   REQUIRED_ISOLATED_API_ACTION_IDS,
+  REQUIRED_ISOLATED_API_READ_EXPECTATIONS,
   REQUIRED_METADATA_STATE_VALUES,
   REQUIRED_NATIVE_ACTION_IDS,
   REQUIRED_RUNTIME_BLOCK_CAPTURES,
@@ -645,6 +646,33 @@ export function validateManifest(manifest) {
       action.captureOutput.includes(String(expectedValue)) ||
         action.postcondition.includes(String(expectedValue)),
       id + " does not bind its required metadata value"
+    );
+  }
+  // The isolated durable reads are the only place the harness states, in code, which boolean the
+  // server must hold. The router derives that boolean from REQUIRED_ISOLATED_API_READ_EXPECTATIONS,
+  // so the table must agree with the literal each row's capture-output prose states, and every
+  // isolated read must be covered. Without this binding the router hardcoded its own opinion and
+  // ru-061a-a-durable-bypass-read asserted the negation of its row through four commits.
+  const isolatedReadActions = manifest.filter(
+    ({ kind }) => kind === "isolatedApiSessionApiReadAs"
+  );
+  invariant(
+    sameSet(
+      isolatedReadActions.map(({ id }) => id),
+      Object.keys(REQUIRED_ISOLATED_API_READ_EXPECTATIONS)
+    ),
+    "isolated preference read expectation coverage drift"
+  );
+  for (const action of isolatedReadActions) {
+    const expectedValue = REQUIRED_ISOLATED_API_READ_EXPECTATIONS[action.id];
+    const statedValue = /showFieldMetadata:\s*(true|false)/u.exec(action.captureOutput);
+    invariant(
+      typeof expectedValue === "boolean" && statedValue !== null,
+      action.id + " states no showFieldMetadata literal"
+    );
+    invariant(
+      (statedValue[1] === "true") === expectedValue,
+      action.id + " contract expectation contradicts the routed expectation"
     );
   }
   invariant(

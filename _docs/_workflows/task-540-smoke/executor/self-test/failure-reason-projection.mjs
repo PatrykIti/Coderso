@@ -3,10 +3,13 @@ import {
   FAILURE_REASON_HARNESS_PATTERN,
   MAX_FAILURE_ACTION_DIAGNOSTIC_BYTES,
   MAX_FAILURE_REASON_MESSAGE_LENGTH,
+  MAX_RUNTIME_INVARIANT_TOKEN_SLUG_LENGTH,
   PHASE_EIGHT_CLEANUP_FAILURE_CLASSES,
+  RUNTIME_INVARIANT_PREFIX,
   TASK_FAILURE,
   classifyFailureReasonNeverThrow,
   projectBrowserErrorFrameToken,
+  projectRuntimeInvariantToken,
 } from "../config.mjs";
 import { canonicalJson, invariant } from "../foundation.mjs";
 
@@ -123,6 +126,63 @@ export function runFailureReasonProjectionSelfTest({
         );
       }),
     "browser error frame projection vocabulary closure"
+  );
+
+  // Runtime-operation failures are executor invariants, and none of them matched any classifier
+  // pattern, so all 76 runtime-kind actions reported "unclassified" — which is how ru-061a-a-
+  // durable-bypass-read failed a 28-minute run without naming its cause. The message is produced
+  // by the REAL invariant here, so the projection stays bound to the prefix `invariant` actually
+  // emits rather than to a copy of it that could drift.
+  let producedRuntimeMessage = "";
+  try {
+    invariant(false, "isolated preference read drift");
+  } catch (error) {
+    producedRuntimeMessage = error.message;
+  }
+  assertNegative(
+    producedRuntimeMessage.startsWith(RUNTIME_INVARIANT_PREFIX) &&
+      classifyFailureReasonNeverThrow(new Error(producedRuntimeMessage)) ===
+        "wf540_rt_isolated_preference_read_drift" &&
+      projectRuntimeInvariantToken("TASK-540 smoke executor: user-A API session is unavailable") ===
+        "wf540_rt_user_a_api_session_is_unavailable",
+    "runtime invariant reason projection"
+  );
+  // The projection only ever reads a fixed source-literal phrase. Every interpolated invariant —
+  // an id, a path, a count, a connection string — is refused, so naming the runtime lane cannot
+  // become a channel for data the sink is not allowed to emit.
+  assertNegative(
+    [
+      "capture owner action is missing: ru-061a-a-durable-bypass-read",
+      "postgres://wf540:p@ssword@localhost/example",
+      "expected 496 actions",
+      "",
+    ].every(
+      (phrase) => projectRuntimeInvariantToken(RUNTIME_INVARIANT_PREFIX + phrase) === null
+    ) &&
+      projectRuntimeInvariantToken("isolated preference read drift") === null &&
+      projectRuntimeInvariantToken(null) === null,
+    "runtime invariant projection abstention"
+  );
+  // Bounded output: an unbounded phrase is truncated into the same vocabulary rather than being
+  // emitted whole or dropped, and the token never carries a separator the sink forbids.
+  assertNegative(
+    [
+      "isolated preference read drift",
+      "x".repeat(MAX_FAILURE_REASON_MESSAGE_LENGTH - RUNTIME_INVARIANT_PREFIX.length - 1),
+      "user-A API session is unavailable",
+    ].every((phrase) => {
+      const token = projectRuntimeInvariantToken(RUNTIME_INVARIANT_PREFIX + phrase);
+      return (
+        typeof token === "string" &&
+        FAILURE_REASON_HARNESS_PATTERN.test(token) &&
+        token.startsWith("wf540_rt_") &&
+        token.length <= "wf540_rt_".length + MAX_RUNTIME_INVARIANT_TOKEN_SLUG_LENGTH &&
+        !token.endsWith("_") &&
+        !token.includes("\n") &&
+        !token.includes("@")
+      );
+    }),
+    "runtime invariant projection vocabulary closure"
   );
 
   // Anything else is reduced to a token. This is what keeps arbitrary message text — which may

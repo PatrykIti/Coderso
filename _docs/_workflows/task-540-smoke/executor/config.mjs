@@ -21,6 +21,20 @@ export const FAILURE_REASON_HARNESS_PATTERN = /^wf540_[a-z0-9_]{1,64}$/u;
 // Playwright's own prose ("Error: Error: wf540_...") rather than being the whole message.
 export const FAILURE_REASON_EMBEDDED_HARNESS_PATTERN = /wf540_[a-z0-9_]{1,64}/u;
 export const BROWSER_ERROR_FRAME_MARKER = "### Error\n";
+// Every runtime-operation failure is an executor invariant, and every executor invariant message
+// carries this prefix (see foundation.mjs `invariant`). None of them matched a classifier pattern,
+// so all 76 runtime-kind actions collapsed to "unclassified" - which is how ru-061a-a-durable-
+// bypass-read failed a 28-minute run without naming its cause. projectBrowserErrorFrameToken
+// cannot close this: it is gated on a local-subprocess browser error frame, and a runtime
+// operation executes in-process with no frame and no stdout/stderr buffers at all.
+export const RUNTIME_INVARIANT_PREFIX = "TASK-540 smoke executor: ";
+export const RUNTIME_INVARIANT_TOKEN_PREFIX = "wf540_rt_";
+export const MAX_RUNTIME_INVARIANT_TOKEN_SLUG_LENGTH = 55;
+// Only a fixed English phrase is projected. Any interpolated value - an id, a path, a URL, a
+// count, a connection string - carries a digit, a colon, a slash or a quote and is refused here,
+// so the projection can never derive its token from data. That keeps the sink's secret-free
+// guarantee exactly where it was: the emitted token is built from source-literal prose only.
+export const RUNTIME_INVARIANT_PHRASE_PATTERN = /^[A-Za-z][A-Za-z -]*$/u;
 export const FAILURE_REASON_CLASSES = deepFreezeExact([
   "playwright_action_timeout",
   "playwright_modal_state",
@@ -49,7 +63,31 @@ export function classifyFailureReasonNeverThrow(cause) {
     }
     if (message.includes("does not handle the modal state")) return "playwright_modal_state";
     if (message.includes("strict mode violation")) return "playwright_strict_mode";
+    const runtimeToken = projectRuntimeInvariantToken(message);
+    if (runtimeToken !== null && FAILURE_REASON_HARNESS_PATTERN.test(runtimeToken)) {
+      return runtimeToken;
+    }
     return "unclassified";
+  } catch {
+    return null;
+  }
+}
+// The runtime lane's counterpart to projectBrowserErrorFrameToken: it maps an executor invariant
+// message onto the SAME frozen `wf540_` vocabulary the classifier already accepts, so a runtime
+// action names itself instead of reporting "unclassified". It abstains on anything that is not a
+// pure source-literal phrase, so it can only ever emit prose the harness itself wrote.
+export function projectRuntimeInvariantToken(message) {
+  try {
+    if (typeof message !== "string" || !message.startsWith(RUNTIME_INVARIANT_PREFIX)) return null;
+    const phrase = message.slice(RUNTIME_INVARIANT_PREFIX.length);
+    if (!RUNTIME_INVARIANT_PHRASE_PATTERN.test(phrase)) return null;
+    const slug = phrase
+      .toLowerCase()
+      .replace(/[^a-z]+/gu, "_")
+      .replace(/^_+|_+$/gu, "")
+      .slice(0, MAX_RUNTIME_INVARIANT_TOKEN_SLUG_LENGTH)
+      .replace(/_+$/u, "");
+    return slug.length === 0 ? null : RUNTIME_INVARIANT_TOKEN_PREFIX + slug;
   } catch {
     return null;
   }

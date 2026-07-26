@@ -1,3 +1,4 @@
+import { REQUIRED_ISOLATED_API_READ_EXPECTATIONS } from "../contract/requirements.mjs";
 import { PRIMARY_RUNTIME_OPERATION_BY_ACTION_ID } from "../executor/config.mjs";
 import { invariant } from "../executor/foundation.mjs";
 import { decodeCanonicalMediaUploadFixtureExact } from "./media-operations.mjs";
@@ -81,7 +82,22 @@ function createRuntimeOperationRouter({
     const proveEntry = (context) => runtimeProveEntryBaseline(context);
     const resetOverrides = (context) => runtimeReplaceOverrides(context, true);
     const proveEmptyOverrides = (context) => runtimeProveOverrides(context, true);
+    // Every isolated durable read asserts the boolean its own frozen contract row states. The
+    // expectation is DERIVED, never restated here: the router previously hardcoded it, and
+    // ru-061a-a-durable-bypass-read carried the exact negation of its row from the smoke's first
+    // commit - the row, REQUIRED_METADATA_STATE_VALUES and ru-062's predicate all say false while
+    // the router passed true. Because the application correctly refuses to let a released stale
+    // read clobber a newer local write, that inversion could only have passed against the very
+    // data-loss defect the action exists to catch, so it did not just fail the run - it pointed
+    // the detector the wrong way. validateManifest binds this table to each row's stated literal.
+    const isolatedPreferenceReadHandlers = Object.fromEntries(
+      Object.entries(REQUIRED_ISOLATED_API_READ_EXPECTATIONS).map(([actionId, expected]) => {
+        invariant(typeof expected === "boolean", "isolated preference read expectation is invalid");
+        return ["runtime/" + actionId, (context) => runtimeUserAPreferenceRead(context, expected)];
+      })
+    );
     return Object.freeze({
+      ...isolatedPreferenceReadHandlers,
       "runtime/set-001-storage-preflight": runtimeStoragePreflight,
       "runtime/set-002-helper-launch": runtimeHostLaunch,
       "runtime/set-003-admin-health": (context) => runtimeHealth(context, "admin"),
@@ -194,12 +210,7 @@ function createRuntimeOperationRouter({
       "runtime/ru-006-overrides-proof": proveEmptyOverrides,
       "runtime/ru-043b-a-api-login": (context) => runtimeLogin(context, "user-a"),
       "runtime/ru-043c-a-api-csrf-capture": (context) => runtimeCsrf(context, "user-a"),
-      "runtime/ru-047a-a-durable-proof": (context) => runtimeUserAPreferenceRead(context, true),
       "runtime/ru-050-a-server-false": runtimeUserAPreferenceFalse,
-      "runtime/ru-051-a-server-false-proof": (context) =>
-        runtimeUserAPreferenceRead(context, false),
-      "runtime/ru-061a-a-durable-bypass-read": (context) =>
-        runtimeUserAPreferenceRead(context, true),
     });
   }
 

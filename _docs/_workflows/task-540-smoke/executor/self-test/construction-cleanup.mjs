@@ -280,15 +280,16 @@ export async function runConstructionCleanupSelfTest({
   });
   const cleanupTrackerState = PRIVATE_FAILURE_ACTION_TRACKERS.get(cleanupFailureTracker);
   // A cleanup-only failure carries no action attribution and no failure class, so the reason
-  // fallback is the only thing that names it. The retained cause is the fake lifecycle error,
-  // whose message matches no vocabulary signature — hence "unclassified", and the
-  // message-absence invariant below proves the token is not the message.
+  // fallback is the only thing that names it. The retained cause is the executor invariant the
+  // lifecycle raised, and the runtime projection now maps it onto the frozen `wf540_` vocabulary
+  // instead of collapsing it to "unclassified" — the token IS the diagnosis. The message-absence
+  // invariant below still proves the token is not the raw message.
   const cleanupOnlyDiagnosticLine =
     canonicalJson({
       code: TASK_FAILURE.code,
       cleanupPhase: 3,
       cleanupFailureClass: "persistent_plan_failed",
-      failureReason: "unclassified",
+      failureReason: "wf540_rt_cleanup_lifecycle_did_not_complete",
     }) + "\n";
   const malformedCleanupDiagnosticLine = cleanupOnlyDiagnosticLine + "{}\n";
   const overflowCleanupDiagnosticLine = "x".repeat(MAX_FAILURE_ACTION_DIAGNOSTIC_BYTES) + "\n";
