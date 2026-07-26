@@ -266,8 +266,18 @@ export function createPlanExecutionRuntime({
         retainPrivateToneSelectFailureClassNeverThrow(failureActionTracker, cause);
         retainPrivateDirtyNavigationFailureClassNeverThrow(failureActionTracker, cause);
       }
+      // The failure handler must never be able to lose the cause it is handling. Every other
+      // call in this catch is already *NeverThrow; this recorder was the one that could throw,
+      // and when it did the meta-error escaped before `cause` ever reached
+      // retainFailureAndCleanupDiagnosticsNeverThrow below — the only writer of the slot the
+      // diagnostic sink reads. A recorder failure is now structurally incapable of replacing
+      // the primary cause, whatever recorder a capability supplies.
       if (typeof capabilities.retainPrimaryFailureObservation === "function") {
-        capabilities.retainPrimaryFailureObservation(cause);
+        try {
+          capabilities.retainPrimaryFailureObservation(cause);
+        } catch {
+          // A recorder failure never replaces the primary cause it was asked to record.
+        }
       }
       state.terminalCleanupStarted = true;
       if (constructionCleanupAuthority !== null) {

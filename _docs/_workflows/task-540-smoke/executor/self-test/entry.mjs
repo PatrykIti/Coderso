@@ -445,6 +445,7 @@ export function createRunTask540SmokeExecutorSelfTest(dependencies) {
     await runConstructionCleanupSelfTest({
       PRIVATE_CONSTRUCTION_AUTHORITY,
       PRIVATE_FAILURE_ACTION_TRACKERS,
+      PendingFailureAttemptRegistry,
       appendRetainedGroupMembers,
       assertNegative,
       buildFakeCapabilities,
@@ -720,6 +721,7 @@ export function createRunTask540SmokeExecutorSelfTest(dependencies) {
       terminalFinalPlan,
     } = await runTerminalResourceGraphSelfTest({
       assertExactFinalResourceDependencyGraph,
+      assertNegative,
       buildFakeCapabilities,
       executeSmokePlanCore,
       expectAsyncFailure,

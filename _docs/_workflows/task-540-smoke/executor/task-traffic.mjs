@@ -139,26 +139,64 @@ export function createTaskTrafficAuthority(dependencies) {
         baseline.sessionIds.every((id) => completeIds.includes(id)),
         "a baseline session disappeared before task-owned cleanup"
       );
+      const bootstrapAuthority = PRIVATE_BOOTSTRAP_LOGIN_AUTHORITY.get(state);
+      const ownedSessionIds =
+        bootstrapAuthority === undefined ? new Set() : bootstrapAuthority.ownedSessionIds;
       const newCompleteSessions = snapshot.completeSession.filter(
         ({ id }) => !baseline.sessionIds.includes(id)
       );
+      // `completeSession` is the ONE unfiltered read in this snapshot — the access, audit and
+      // session queries are already restricted to the four exact task user-agents in the bridge
+      // SQL — so every session another agent creates against this SHARED test database lands
+      // here. Requiring every new row to carry a task user-agent was therefore an assertion of
+      // exclusive ownership of a shared database, which no correct application behaviour can
+      // satisfy: it is unsatisfiable in this environment in the same way a locator that can
+      // never match is. New rows are partitioned instead, and only the attributable side is
+      // asserted over and deleted. Scoping the DELTA is load-bearing, not cosmetic:
+      // terminalResourceDelta turns delta.session into `session-task` resources the terminal
+      // plan DELETES, so relaxing the assertion alone would have made this smoke destroy another
+      // agent's live sessions. It also makes the two-identical-poll stability loop below immune
+      // to foreign login churn.
+      const attributableSessions = newCompleteSessions.filter(
+        ({ id, userAgent }) => agents.includes(userAgent) || ownedSessionIds.has(id)
+      );
+      const attributableSessionIds = new Set(attributableSessions.map(({ id }) => id));
+      const foreignSessions = newCompleteSessions.filter(
+        ({ id }) => !attributableSessionIds.has(id)
+      );
+      // Every guarantee the harness can actually attribute is kept, and two are sharpened. A
+      // session for a user only this run created — ids nobody else knows — must still carry a
+      // task user-agent, and anything wearing this run's fixture prefix must still be one of the
+      // four exact agents. Both would catch a real user-agent propagation defect; neither
+      // depends on owning the database.
+      const taskOwnedUserIds = [state.ids.userA, state.ids.userB].filter(
+        (id) => typeof id === "string" && id.length > 0
+      );
       invariant(
-        newCompleteSessions.every(({ userAgent }) => agents.includes(userAgent)),
-        "a new session does not carry an exact task user-agent"
+        foreignSessions.every(({ userId }) => !taskOwnedUserIds.includes(userId)),
+        "a task-owned user session does not carry an exact task user-agent"
+      );
+      invariant(
+        newCompleteSessions.every(
+          ({ userAgent }) =>
+            typeof userAgent !== "string" ||
+            !userAgent.startsWith(state.plan.fixtureBlueprint.fixturePrefix) ||
+            agents.includes(userAgent)
+        ),
+        "a task-prefixed session does not carry an exact task user-agent"
       );
       const taskSessionDelta = snapshot.session.filter(({ id }) => !baseline.sessionIds.includes(id));
       invariant(
         deepEqualJson(
-          newCompleteSessions.map(({ id }) => id).sort(),
+          attributableSessions.map(({ id }) => id).sort(),
           taskSessionDelta.map(({ id }) => id).sort()
         ),
         "complete-session inventory does not equal the task-UA session inventory"
       );
-      const bootstrapAuthority = PRIVATE_BOOTSTRAP_LOGIN_AUTHORITY.get(state);
       invariant(
         bootstrapAuthority === undefined ||
           [...bootstrapAuthority.ownedSessionIds].every((id) => {
-            const row = newCompleteSessions.find((candidate) => candidate.id === id);
+            const row = attributableSessions.find((candidate) => candidate.id === id);
             return (
               row?.userId === state.bootstrapBaseline.id &&
               [
@@ -176,7 +214,7 @@ export function createTaskTrafficAuthority(dependencies) {
             key === "bootstrap"
               ? state.plan.fixtureBlueprint.userAgents.apiBootstrap
               : state.plan.fixtureBlueprint.userAgents.apiUserA;
-          const row = newCompleteSessions.find(({ id }) => id === tuple.id);
+          const row = attributableSessions.find(({ id }) => id === tuple.id);
           return (
             (key === "bootstrap" || key === "user-a") &&
             tuple.userId === expectedUserId &&
@@ -190,7 +228,7 @@ export function createTaskTrafficAuthority(dependencies) {
       const delta = deepFreezeExact({
         access: snapshot.access.filter(({ id }) => !baseline.accessIds.includes(id)),
         audit: snapshot.audit.filter(({ id }) => !baseline.auditIds.includes(id)),
-        session: newCompleteSessions,
+        session: attributableSessions,
       });
       if (onPoll !== null) await onPoll(attempt + 1, delta);
       state.taskTrafficPollCount = attempt + 1;

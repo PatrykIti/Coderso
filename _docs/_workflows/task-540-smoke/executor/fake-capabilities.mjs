@@ -45,6 +45,7 @@ export function createFakeCapabilitiesRuntime({
     failCleanupLifecycle = false,
     failFailureCleanup = false,
     cleanupFailureClass = "persistent_plan_failed",
+    pendingFailureAttempts = null,
   } = {}) {
     invariant(
       PHASE_THREE_CLEANUP_FAILURE_CLASSES.includes(cleanupFailureClass),
@@ -96,7 +97,16 @@ export function createFakeCapabilitiesRuntime({
           "fake response-lost settlement origin drift"
         );
       },
-      retainPrimaryFailureObservation() {},
+      // The real executor records the primary failure cause on the response-lost registry
+      // (real-capabilities.mjs), so stubbing this to a no-op hid a defect in the one path whose
+      // whole job is to preserve a diagnosis: recording could THROW and replace the cause with a
+      // meta-error. When a registry is supplied the fake delegates to it exactly as production
+      // does, which is what makes the cleanup-lifecycle expectation below load-bearing.
+      retainPrimaryFailureObservation(cause) {
+        if (pendingFailureAttempts !== null) {
+          pendingFailureAttempts.retainPrimaryFailureObservation(cause);
+        }
+      },
       async executeAction({ action, plan, captures }) {
         calls.push(action.id);
         if (action.ordinal === failOrdinal) throw new Error("private fake failure detail");
@@ -205,6 +215,10 @@ export function createFakeCapabilitiesRuntime({
       },
       async executeCleanupLifecycle({ plan, resourceLedger, cleanupPlanner }) {
         if (failCleanupLifecycle) {
+          // Mirrors real cleanup phase 3, which consumes the pending-create registry before any
+          // later phase can fail, so the recorder above meets a CONSUMED registry exactly as it
+          // does on a run that completes all 496 actions and then fails in terminal cleanup.
+          if (pendingFailureAttempts !== null) pendingFailureAttempts.takeFrozenOnce();
           throw retainPrivateCleanupFailureDiagnosticNeverThrow(
             new Error("private fake cleanup lifecycle failure"),
             3,

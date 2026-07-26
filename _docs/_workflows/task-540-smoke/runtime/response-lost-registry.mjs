@@ -126,9 +126,20 @@ export function createResponseLostRegistry({
       );
     }
 
+    // This is the RECORDER of a primary failure cause, so it must never be the thing that
+    // destroys one. It used to assert `!state.consumed`, which made the failure-recording path
+    // non-reentrant: once a success-path cleanup had consumed the batch in phase 3, a later
+    // cleanup failure raised its own invariant HERE while the real cause was being recorded,
+    // and that meta-error replaced the diagnosis and erased the failing action id.
+    // Recording after consumption is provably a no-op rather than an error: takeFrozenOnce has
+    // already returned a deep-frozen snapshot, so annotating `state.active` can no longer reach
+    // it, and on a fully-settled run `state.active` is empty and the loop below does nothing.
+    // The strictness that still means something is untouched: arm() and settle() keep asserting
+    // `!state.consumed`, and takeFrozenOnce() keeps refusing a second consumption and an attempt
+    // that lacks its real failure observation.
     retainPrimaryFailureObservation(cause) {
       const state = PRIVATE_PENDING_ATTEMPTS.get(this);
-      invariant(!state.consumed, "pending create failure observation arrived after consumption");
+      if (state.consumed) return false;
       const observation = deepFreezeExact({
         name:
           typeof cause?.name === "string" && cause.name.length > 0 && cause.name.length <= 128
@@ -144,6 +155,7 @@ export function createResponseLostRegistry({
         if (attempt.failureObservationSha256 !== null) continue;
         state.active.set(actionId, deepFreezeExact({ ...attempt, failureObservationSha256: digest }));
       }
+      return true;
     }
 
     takeFrozenOnce() {

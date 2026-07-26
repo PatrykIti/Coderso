@@ -9,7 +9,9 @@ import {
   canonicalJson,
   invariant,
 } from "./foundation.mjs";
+import { cleanupDiagnostics } from "../cleanup/diagnostics.mjs";
 
+const { privateCleanupFailureReasonNeverThrow } = cleanupDiagnostics;
 const PRIVATE_FAILURE_ACTION_DIAGNOSTIC_SINKS = new WeakMap();
 
 export function createDiagnosticSinkRuntime({
@@ -93,12 +95,31 @@ export function createDiagnosticSinkRuntime({
               currentPrivateRetainedFailureCauseNeverThrow(constructionCleanupAuthority)
             )
           : null;
-      const line = canonicalJson({
+      // {cleanupPhase, cleanupFailureClass} says WHERE cleanup died, never WHAT it hit, so a
+      // cleanup-only failure named a phase number while the phase invariant's own prose died
+      // with the process. The retained token names it, and the wrapper reason above still says
+      // which postcondition reported the failure, so the two are complementary rather than
+      // competing. Like failureReason this field is additive and droppable, and it is a
+      // projection of source-literal prose from the frozen vocabulary, never message text.
+      const cleanupFailureReason =
+        cleanupDiagnostic === null
+          ? null
+          : privateCleanupFailureReasonNeverThrow(cleanupDiagnostic);
+      const reasonedDiagnostic = {
         ...baseDiagnostic,
         ...(failureReason === null ? {} : { failureReason }),
-      });
-      if (Buffer.byteLength(line + "\n") <= MAX_FAILURE_ACTION_DIAGNOSTIC_BYTES) {
-        return writePrivateFailureActionDiagnosticOnceNeverThrow(sink, line + "\n");
+      };
+      for (const candidate of [
+        {
+          ...reasonedDiagnostic,
+          ...(cleanupFailureReason === null ? {} : { cleanupFailureReason }),
+        },
+        reasonedDiagnostic,
+      ]) {
+        const line = canonicalJson(candidate) + "\n";
+        if (Buffer.byteLength(line) <= MAX_FAILURE_ACTION_DIAGNOSTIC_BYTES) {
+          return writePrivateFailureActionDiagnosticOnceNeverThrow(sink, line);
+        }
       }
       return writePrivateFailureActionDiagnosticOnceNeverThrow(
         sink,

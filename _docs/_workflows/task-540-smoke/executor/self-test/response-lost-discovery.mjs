@@ -309,6 +309,37 @@ export async function runResponseLostDiscoverySelfTest({
     async () => pendingMatrix.takeFrozenOnce(),
     "pending attempt batch double consumption"
   );
+  // The recorder of a primary failure cause must tolerate arriving after consumption instead of
+  // raising an invariant of its own: once takeFrozenOnce has returned this deep-frozen snapshot no
+  // later annotation could reach it, so recording is a no-op, and throwing here destroyed the very
+  // diagnosis it was called to preserve. The preconditions that still mean something keep
+  // refusing, so the relaxation is confined to the one call that cannot go wrong.
+  const consumedBatchProjection = canonicalJson(pendingAttempts);
+  invariant(
+    pendingMatrix.retainPrimaryFailureObservation(
+      Object.assign(new Error("private post-consumption observation"), { code: "response_lost" })
+    ) === false &&
+      canonicalJson(pendingAttempts) === consumedBatchProjection &&
+      Object.isFrozen(pendingAttempts),
+    "consumed pending attempt batch was altered by a late primary failure observation"
+  );
+  await expectAsyncFailure(
+    async () =>
+      pendingMatrix.arm(
+        pendingActionA,
+        [],
+        deepFreezeExact({
+          naturalKey: deepFreezeExact({ key: "post-consumption" }),
+          baseline: deepFreezeExact({ candidates: deepFreezeExact([]) }),
+          authoredRequestSha256: hashBytes(Buffer.from("post-consumption-request")),
+        })
+      ),
+    "pending create arm after consumption"
+  );
+  await expectAsyncFailure(
+    async () => pendingMatrix.settle(pendingActionA.id),
+    "pending create settlement after consumption"
+  );
   invariant(
     Object.keys(RESOURCE_KIND_CONTRACTS).length === 26 &&
       Object.keys(RESOURCE_KIND_CONTRACTS).every(
@@ -403,5 +434,5 @@ export async function runResponseLostDiscoverySelfTest({
     rawBytesAreSensitive(Buffer.from("prefix-sixteen-private-suffix"), ["sixteen-private"]),
     "canonical evidence secret corpus detector drift"
   );
-  return Object.freeze({ explicitNegativeCases: 1 });
+  return Object.freeze({ explicitNegativeCases: 2 });
 }

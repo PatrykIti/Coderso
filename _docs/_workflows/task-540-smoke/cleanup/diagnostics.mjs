@@ -1,8 +1,10 @@
 import {
   CLEANUP_FAILURE_CLASSES,
   CLEANUP_FAILURE_CLASS_PRIORITY,
+  FAILURE_REASON_HARNESS_PATTERN,
   PHASE_EIGHT_CLEANUP_FAILURE_CLASSES,
   PHASE_THREE_CLEANUP_FAILURE_CLASSES,
+  classifyFailureReasonNeverThrow,
 } from "../executor/config.mjs";
 import {
   deepEqualJson,
@@ -14,6 +16,15 @@ import {
 
 const PRIVATE_CLEANUP_FAILURE_DIAGNOSTICS = new WeakMap();
 const PRIVATE_CLEANUP_OUTCOME_DIAGNOSTICS = new WeakMap();
+// {cleanupPhase, cleanupFailureClass} states WHERE cleanup died but never WHAT it hit, so a
+// cleanup-only failure could report a phase number while the phase invariant's own prose died
+// with the process — which is exactly how a phase-5 failure reached the operator as a bare
+// `cleanupPhase: 5`. The projected `wf540_` token of each retained failure is therefore kept
+// beside its diagnostic, keyed by BOTH the failure and the frozen diagnostic object the sink
+// already holds, and an aggregate inherits the token of the earliest phase it wraps. Only a
+// member of the frozen vocabulary is ever retained, never raw message text, so the sink keeps
+// its bounded-bytes and secret-free guarantees unchanged.
+const PRIVATE_CLEANUP_FAILURE_REASONS = new WeakMap();
 
 function isPrivateCleanupFailureDiagnostic(value) {
   try {
@@ -68,6 +79,37 @@ function privateCleanupFailureDiagnosticNeverThrow(cause) {
   }
 }
 
+// Abstains on anything the frozen vocabulary does not cover, "unclassified" included, so a
+// failure the projection cannot name leaves every emitted diagnostic byte-identical.
+function harnessFailureReasonNeverThrow(cause) {
+  try {
+    const reason = classifyFailureReasonNeverThrow(cause);
+    return typeof reason === "string" && FAILURE_REASON_HARNESS_PATTERN.test(reason) ? reason : null;
+  } catch {
+    return null;
+  }
+}
+
+function privateCleanupFailureReasonNeverThrow(subject) {
+  try {
+    const reason = PRIVATE_CLEANUP_FAILURE_REASONS.get(subject);
+    return typeof reason === "string" && FAILURE_REASON_HARNESS_PATTERN.test(reason) ? reason : null;
+  } catch {
+    return null;
+  }
+}
+
+function retainPrivateCleanupFailureReasonNeverThrow(subject, reason) {
+  try {
+    if (typeof reason !== "string" || !FAILURE_REASON_HARNESS_PATTERN.test(reason)) return false;
+    if (PRIVATE_CLEANUP_FAILURE_REASONS.has(subject)) return false;
+    PRIVATE_CLEANUP_FAILURE_REASONS.set(subject, reason);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 function retainPrivateCleanupFailureDiagnosticNeverThrow(cause, cleanupPhase, cleanupFailureClass) {
   try {
     const failure =
@@ -76,10 +118,12 @@ function retainPrivateCleanupFailureDiagnosticNeverThrow(cause, cleanupPhase, cl
         : new Error("TASK-540 cleanup failed");
     const existing = privateCleanupFailureDiagnosticNeverThrow(failure);
     if (existing === null) {
-      PRIVATE_CLEANUP_FAILURE_DIAGNOSTICS.set(
-        failure,
-        createPrivateCleanupFailureDiagnostic(cleanupPhase, cleanupFailureClass)
-      );
+      const diagnostic = createPrivateCleanupFailureDiagnostic(cleanupPhase, cleanupFailureClass);
+      PRIVATE_CLEANUP_FAILURE_DIAGNOSTICS.set(failure, diagnostic);
+      const reason =
+        privateCleanupFailureReasonNeverThrow(failure) ?? harnessFailureReasonNeverThrow(failure);
+      retainPrivateCleanupFailureReasonNeverThrow(failure, reason);
+      retainPrivateCleanupFailureReasonNeverThrow(diagnostic, reason);
     }
     return failure;
   } catch {
@@ -92,30 +136,44 @@ function retainPrivateCleanupFailureDiagnosticNeverThrow(cause, cleanupPhase, cl
   }
 }
 
-function selectPrivateCleanupFailureDiagnosticNeverThrow(failures, fallbackPhase = null) {
+// The earliest phase that failed is the one that describes the run, so selection keeps the
+// failure OBJECT beside the diagnostic it won with: an aggregate can then inherit that exact
+// failure's reason token instead of the wrapper's fixed prose.
+function selectPrivateCleanupFailureNeverThrow(failures) {
   try {
-    const diagnostics = Array.isArray(failures)
+    const candidates = Array.isArray(failures)
       ? failures
-          .map((failure) => privateCleanupFailureDiagnosticNeverThrow(failure))
-          .filter((diagnostic) => diagnostic !== null)
+          .map((failure) => ({
+            failure,
+            diagnostic: privateCleanupFailureDiagnosticNeverThrow(failure),
+          }))
+          .filter(({ diagnostic }) => diagnostic !== null)
       : [];
-    if (diagnostics.length === 0) {
-      return fallbackPhase === null
-        ? null
-        : createPrivateCleanupFailureDiagnostic(
-            fallbackPhase,
-            fallbackPhase === 0 ? "cleanup_boundary_failed" : "phase_failed"
-          );
-    }
-    diagnostics.sort((left, right) => {
-      const phaseOrder = left.cleanupPhase - right.cleanupPhase;
+    if (candidates.length === 0) return null;
+    candidates.sort((left, right) => {
+      const phaseOrder = left.diagnostic.cleanupPhase - right.diagnostic.cleanupPhase;
       if (phaseOrder !== 0) return phaseOrder;
       return (
-        CLEANUP_FAILURE_CLASS_PRIORITY.indexOf(left.cleanupFailureClass) -
-        CLEANUP_FAILURE_CLASS_PRIORITY.indexOf(right.cleanupFailureClass)
+        CLEANUP_FAILURE_CLASS_PRIORITY.indexOf(left.diagnostic.cleanupFailureClass) -
+        CLEANUP_FAILURE_CLASS_PRIORITY.indexOf(right.diagnostic.cleanupFailureClass)
       );
     });
-    return diagnostics[0];
+    return candidates[0];
+  } catch {
+    return null;
+  }
+}
+
+function selectPrivateCleanupFailureDiagnosticNeverThrow(failures, fallbackPhase = null) {
+  try {
+    const selected = selectPrivateCleanupFailureNeverThrow(failures);
+    if (selected !== null) return selected.diagnostic;
+    return fallbackPhase === null
+      ? null
+      : createPrivateCleanupFailureDiagnostic(
+          fallbackPhase,
+          fallbackPhase === 0 ? "cleanup_boundary_failed" : "phase_failed"
+        );
   } catch {
     return fallbackPhase === null
       ? null
@@ -127,12 +185,28 @@ function selectPrivateCleanupFailureDiagnosticNeverThrow(failures, fallbackPhase
 }
 
 function retainPrivateCleanupAggregateDiagnosticNeverThrow(error, failures, fallbackPhase) {
-  const diagnostic = selectPrivateCleanupFailureDiagnosticNeverThrow(failures, fallbackPhase);
-  return retainPrivateCleanupFailureDiagnosticNeverThrow(
+  const selected = selectPrivateCleanupFailureNeverThrow(failures);
+  const diagnostic =
+    selected === null
+      ? selectPrivateCleanupFailureDiagnosticNeverThrow(failures, fallbackPhase)
+      : selected.diagnostic;
+  const retained = retainPrivateCleanupFailureDiagnosticNeverThrow(
     error,
     diagnostic.cleanupPhase,
     diagnostic.cleanupFailureClass
   );
+  // The wrapper's own message is fixed prose ("TASK-540 deterministic cleanup failed"), so
+  // without this the emitted diagnostic would name the aggregate and lose the only statement of
+  // what the phase actually hit.
+  if (selected !== null) {
+    const reason = privateCleanupFailureReasonNeverThrow(selected.failure);
+    retainPrivateCleanupFailureReasonNeverThrow(retained, reason);
+    const retainedDiagnostic = privateCleanupFailureDiagnosticNeverThrow(retained);
+    if (retainedDiagnostic !== null) {
+      retainPrivateCleanupFailureReasonNeverThrow(retainedDiagnostic, reason);
+    }
+  }
+  return retained;
 }
 
 function retainPrivateCleanupOutcomeDiagnosticNeverThrow(outcome, diagnostic) {
@@ -158,6 +232,7 @@ export const cleanupDiagnostics = Object.freeze({
   createPrivateCleanupFailureDiagnostic,
   isPrivateCleanupFailureDiagnostic,
   privateCleanupFailureDiagnosticNeverThrow,
+  privateCleanupFailureReasonNeverThrow,
   privateCleanupOutcomeDiagnosticNeverThrow,
   retainPrivateCleanupAggregateDiagnosticNeverThrow,
   retainPrivateCleanupFailureDiagnosticNeverThrow,
