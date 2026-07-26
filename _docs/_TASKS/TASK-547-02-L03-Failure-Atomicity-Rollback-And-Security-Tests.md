@@ -26,12 +26,12 @@ prepared item set is durable.
 
 ## Count-Neutral Pre-Land Compatibility Checkpoint
 
-After corrective L01 completion and before L02, land only the initial
-`compensation.ts` plus minimal injected-fake, DB-free bridge cases in the
-already-owned `fullSiteInstallService.test.ts`. L03 stays `🚧 In Progress`; this is not another
-leaf, task, path or owner. The bridge may import only committed L01 install/
-package types and standard-library pure utilities. It must not import L02
-adapters/types/staging, settings/native services, DB or runtime modules.
+After corrective L01 completion and before L02, land only the pure
+`compensation.ts`, minimum compatibility wiring in the already-owned
+`rollback.ts`, and DB-free injected cases in the already-owned service test.
+L03 stays `🚧 In Progress`; this adds no leaf/path/owner. `compensation.ts` may
+import only committed L01 install/package types and standard-library utilities;
+it must not import L02 adapters/types/staging, settings/native/DB/runtime modules.
 
 The bridge exports `compensateItems` plus injected adapter types. Non-setting
 kinds retain per-item reversal; setting is a required all-or-none batch:
@@ -72,8 +72,8 @@ comparator. Call `reverseSettingsCompatibilityBatch` exactly once when nonempty,
 never per key; its atomic contract rejects with fake/native state byte-identical.
 Only after the whole promise resolves may the bridge write each setting success
 outcome. Propagate failure with zero setting-success outcomes. Non-setting
-reversals remain deterministic per-item calls. No native default registry,
-mutable registration, dummy/no-op fallback or L02 import is permitted.
+reversals remain deterministic per-item calls. `compensation.ts` has no native
+default registry, mutable registration, dummy/no-op fallback or L02 import.
 
 ```ts
 for (const invalid of [missingBatch, nonFunctionBatch, duplicateSetting,
@@ -90,15 +90,15 @@ expect(settingSuccessOutcomes()).toEqual([]);
 
 The minimal suite also pins a successful nonempty setting group to one batch,
 callback resolution before all setting outcomes, and zero batch calls when
-empty. The checkpoint then runs root/core type/lint gates and line counts before
-L02. Final L03 upgrades the same entry to L02's native `reverseSettingsBatch`
-once, rather than creating another bridge path or per-key setting algorithm.
+empty. `rollback.ts` alone retains the current compatibility default wiring;
+the checkpoint runs root/core gates. Final L03 replaces it with L02's native
+`reverseSettingsBatch` once, never another bridge or per-key setting path.
 
 **Exact production ownership:** only
 `core/services/kits/fullSiteInstall/rollback.ts` and
-`core/services/kits/fullSiteInstall/compensation.ts`. Preserve the canonical
-existing public entry point `rollbackFullSiteInstall(input)` and its input-object
-signature; `rollback.ts` owns both that function and the exact exported
+`core/services/kits/fullSiteInstall/compensation.ts`; both existing paths are
+writable during preland. Preserve canonical `rollbackFullSiteInstall(input)`;
+`rollback.ts` owns that function and the exact exported
 `RollbackFullSiteInstallInput` type below. Do not introduce a renamed
 replacement.
 

@@ -93,12 +93,14 @@ leaf nor a new ownership path. Each phase reads its predecessor's on-disk state.
   and exact-ID nullable capture wrappers in its adapter facade. It preserves the
   gate compatibility surfaces while adding the strict saga input and all-item
   classifier. It consumes L01 and never writes install-run tables directly.
-- **L03 -- compensation and process evidence:** after L01, pre-land only the
-  generic injected `compensateItems` bridge and its minimal existing-path test;
-  this phase imports L01 contracts, never L02/native/settings/DB code. After L02,
-  extend that same file with final rollback/compensation, dependency branches,
-  process-death/SIGKILL evidence and shared-shell concurrency. L03 consumes,
-  but cannot edit, the L02 adapter/default-registry owners.
+- **L03 -- compensation and process evidence:** after L01, pre-land the pure
+  generic injected `compensateItems` bridge, its minimal existing-path test and
+  the already-owned `rollback.ts` compatibility wiring needed to keep the root
+  checkpoint type-safe. `compensation.ts` imports L01 contracts only; the
+  orchestrator temporarily retains the current compatibility dependencies.
+  After L02, extend those same files with final rollback/compensation, dependency
+  branches, process-death/SIGKILL evidence and shared-shell concurrency. L03
+  consumes, but cannot edit, the L02 adapter/default-registry owners.
 
 Every touched human-authored production or test module must finish at most 1,000
 physical lines. In particular, L02 must split the legacy

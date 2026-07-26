@@ -135,10 +135,11 @@ or contents never join audit digests.
   `547-02-L02`; final `547-02-L03` remains immediately after `547-02-L02`.
   The preland phase is not a leaf, path owner or terminal status. Its writable
   subset is exactly
-  `core/services/kits/fullSiteInstall/compensation.ts` and
-  `tests/unit/kits/fullSiteInstallService.test.ts`, both already owned by
+  `core/services/kits/fullSiteInstall/compensation.ts`,
+  `core/services/kits/fullSiteInstall/rollback.ts` and
+  `tests/unit/kits/fullSiteInstallService.test.ts`, all already owned by
   `547-02-L03`; all other L03 paths are forbidden during preland, and final L03
-  may edit those two files again. It creates no production, test or task path,
+  may edit those three files again. It creates no production, test or task path,
   no mutable registration and no dummy/no-op bridge.
   `LEAVES` derives from the completion sequence, and the executable-leaf
   portion of `SINGLE_WRITER_PATH_MAP` contains the current source/test/closure
@@ -173,7 +174,7 @@ or contents never join audit digests.
   unlocated or ambiguous diagnostics. Only strictly future-path diagnostics and
   exact baseline-equivalent unowned diagnostics may remain. A permitted nonzero
   result reports both ignored counts and never describes the global run as
-  clean; negative self-tests cover each blocking class and both preland paths.
+  clean; negative self-tests cover each blocking class and all preland paths.
 - The preland compatibility seam and L02 settings application must reconcile
   all setting rows as one generic atomic compatibility batch. Per-setting
   fallback is forbidden because automatic compensation runs before final L03.
