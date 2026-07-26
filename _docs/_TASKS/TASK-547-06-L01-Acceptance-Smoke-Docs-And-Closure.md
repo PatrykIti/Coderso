@@ -448,8 +448,9 @@ effects with empty console/page/failure arrays.
   screenshot per identity plus the separate manifest.
 - [ ] Run exactly five Page Editor scenario identities and save one distinct
   screenshot per identity plus the separate manifest.
-- [ ] Prepare draft docs/changelog/task closeout, then complete final drift,
-  remediation, invalidated-gate reruns and fresh evidence.
+- [ ] Prepare draft docs/changelog/task closeout, then complete all five
+  independent post-audit lenses, remediation, invalidated-gate reruns and fresh
+  smoke/hash evidence before any terminal task state.
 - [ ] Confirm every TASK-547-01..05 leaf/parent is already terminal in descendant
   order; then terminalize TASK-547-07 after final drift, this L01 after its
   evidence/docs, TASK-547-06, and finally TASK-547. Update board/statistics and
@@ -478,6 +479,13 @@ command execute exactly, without printing/copying/hashing/persisting the file or
 its values:
 
 `set -a && source /home/coder/project/Coderso/.env && set +a`
+
+Each strict smoke result includes a closed-session/stopped-server cleanup
+receipt. After all three sessions the trusted root process independently
+confirms that the named Playwright sessions and server process are gone and
+ports 3000/5173/5174 are free. Only then does the root validator atomically
+write the canonical 18-entry `smoke-manifest-hashes.json` from verified PNG
+bytes; the smoke agent cannot author that aggregate.
 
 Then verify `DATABASE_URL` reachability through a bounded connection probe that
 logs only pass/fail. Every DB-targeted command has an explicit timeout of at

@@ -156,7 +156,7 @@ completed result back through bounded stdin with a strict receipt:
 
 ```ts
 type NativeAgentReceipt = Readonly<{
-  schemaVersion: 1;
+  schemaVersion: 2;
   jobId: string;
   agentTask: string;
   forkTurns: "none";
@@ -244,8 +244,9 @@ baseline-equivalent unowned diagnostics may remain.
 
 ## Post-Audits and Runtime Smoke
 
-After source, tests, docs and atomic commits are complete, dispatch fresh
-internal Codex agents for at least these independent lenses:
+After source, tests, draft docs and atomic implementation commits are complete,
+but before any terminal task status, dispatch fresh internal Codex agents for
+at least these independent lenses:
 
 - scope and task-contract fidelity;
 - model/fail-closed correctness;
@@ -255,7 +256,8 @@ internal Codex agents for at least these independent lenses:
 
 Every finding is locally verified. HIGH/MEDIUM findings are fixed and the
 affected gates plus fresh lens are rerun. LOW deferral follows only the
-TASK-9999 rules in `AGENTS.md`.
+TASK-9999 rules in `AGENTS.md`. Terminal closure follows only a clean five-lens
+pass; afterward only a final read-only graph/closeout consistency pass remains.
 
 Runtime smoke uses `playwright-cli` and only the trusted
 `coderso-dev-core-host` service helper. Restart the server before smoke and
@@ -266,8 +268,11 @@ verify admin/front health. Required sessions are:
 - `wf547pageeditor`: 5 Page Editor scenarios.
 
 All 18 scenarios assert visible effects, use fresh distinct PNGs, report zero
-console/page errors and preserve exact cleanup/rollback evidence. Public/admin
-smoke agents are internal Codex agents only.
+console/page errors and preserve exact cleanup/rollback evidence. Every result
+has a strict cleanup receipt; the root independently verifies closed sessions,
+stopped processes and free ports, then writes the aggregate 18-hash manifest
+from verified PNG bytes. Public/admin smoke agents are internal Codex agents
+only.
 
 ## Security and Operational Contract
 
