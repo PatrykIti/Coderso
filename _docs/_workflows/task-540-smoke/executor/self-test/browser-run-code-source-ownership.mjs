@@ -46,6 +46,64 @@ const UNIT_WRAPPER_PROBE_INNER_SOURCE = "__WF540_UNIT_WRAPPER_PROBE__";
 // blind to.
 const WIDGET_ABSENCE_MUTATION_ACTION_ID = "rc-011-visible-retry";
 const WIDGET_ABSENCE_REGISTRY_ACTION_ID = "rc-012-retry-proof";
+// The admin declares its themed background on `body` (core/admin/styles/globals.css), never on
+// the root element, and CSS background propagation paints the canvas from there. So
+// getComputedStyle(document.documentElement).backgroundColor is rgba(0, 0, 0, 0) in EVERY colour
+// mode: it is a constant, and a constant is not evidence. ru-073-light-dark-proof and
+// ru-082-isolation-proof each compared two such constants for inequality, which made them
+// unsatisfiable for any correct implementation and ended a run at 88% with no cause named.
+// Nothing may reintroduce the read; the root-scoped `--background` token is what actually flips.
+const THEME_INVARIANT_ROOT_BACKGROUND_READ =
+  "getComputedStyle(document.documentElement).backgroundColor";
+// Both actions above prove the colour mode changed AT THE DOCUMENT ROOT, independently of body.
+// Pinning them keeps the retarget from later being "fixed" by deleting the inequality instead.
+const ROOT_THEME_DISCRIMINATOR_FIELD = "rootColor";
+const ROOT_THEME_DISCRIMINATOR_ACTION_IDS = ["ru-073-light-dark-proof", "ru-082-isolation-proof"];
+
+export function assertThemeDiscriminatorShape(actionId, compiledSource) {
+  invariant(
+    !compiledSource.includes(THEME_INVARIANT_ROOT_BACKGROUND_READ),
+    actionId + " reads the theme-invariant root element background"
+  );
+}
+
+function terminalRefField(ref) {
+  const path = ref === null || typeof ref !== "object" ? null : ref.path;
+  return Array.isArray(path) && typeof path[path.length - 1] === "string"
+    ? path[path.length - 1]
+    : null;
+}
+
+// Collects the field names a predicate compares for INEQUALITY on both sides. Those fields carry
+// the whole discriminating power of an assertion, so they are exactly the ones that must never be
+// sourced from a value the platform guarantees to be constant.
+function collectInequalityDiscriminatorFields(predicate, fields = new Set()) {
+  if (predicate === null || typeof predicate !== "object") return fields;
+  if (predicate.op === "not" && predicate.item !== undefined && predicate.item.op === "deepEqual") {
+    const leftField = terminalRefField(predicate.item.left);
+    if (leftField !== null && leftField === terminalRefField(predicate.item.right)) {
+      fields.add(leftField);
+    }
+  }
+  for (const item of Array.isArray(predicate.items) ? predicate.items : []) {
+    collectInequalityDiscriminatorFields(item, fields);
+  }
+  if (predicate.item !== undefined) collectInequalityDiscriminatorFields(predicate.item, fields);
+  if (predicate.predicate !== undefined) {
+    collectInequalityDiscriminatorFields(predicate.predicate, fields);
+  }
+  return fields;
+}
+
+function actionsComparingFieldForInequality(plan, field) {
+  return plan.actionManifest
+    .filter(({ outputSchemaId }) => {
+      const contract = plan.registries.outputs[outputSchemaId];
+      if (contract === undefined || contract === null || contract.predicate === null) return false;
+      return collectInequalityDiscriminatorFields(contract.predicate).has(field);
+    })
+    .map(({ id }) => id);
+}
 
 // Behavioural round-trip against the REAL builder output. The inner source is a trivial
 // probe: an action's own inner source drives a live page and must never be executed here.
@@ -139,6 +197,10 @@ export async function runBrowserRunCodeSourceOwnershipSelfTest({
     // a shared widget class has to be narrowed to a container, or it silently becomes
     // unsatisfiable the moment the route mounts an unrelated instance of that class.
     assertBrowserSourceWidgetAbsenceScope(action.id, compiledSource);
+    // Same lane, same reason: an observation sourced from a platform-constant value is silently
+    // vacuous everywhere it is only required to be non-empty, and unsatisfiable the moment two
+    // samples of it are compared. Reject the read at build time rather than at action 438/496.
+    assertThemeDiscriminatorShape(action.id, compiledSource);
     if (action.id === WIDGET_ABSENCE_MUTATION_ACTION_ID) widgetAbsenceMutationSource = compiledSource;
     if (action.id === WIDGET_ABSENCE_REGISTRY_ACTION_ID) widgetAbsenceRegistrySource = compiledSource;
     if (compiledSource.includes("await page.goto(")) {
@@ -589,6 +651,36 @@ export async function runBrowserRunCodeSourceOwnershipSelfTest({
   assertNegative(
     observedGenericClickBudgets.get("rc-021-related-tab-save") === 90000,
     "rc-021 tripled click budget pin"
+  );
+  // The guard above is silent when it holds, so prove it is live: a synthetic source that
+  // reintroduces the constant read must be rejected, exactly as assertSelectorTextEngineShape
+  // is paired with a source that reintroduces its unsatisfiable selector shape.
+  let themeDiscriminatorGuardRejected = false;
+  try {
+    assertThemeDiscriminatorShape(
+      "self-test-synthetic",
+      "rootColor: " + THEME_INVARIANT_ROOT_BACKGROUND_READ + ","
+    );
+  } catch {
+    themeDiscriminatorGuardRejected = true;
+  }
+  assertNegative(
+    themeDiscriminatorGuardRejected,
+    "theme discriminator guard rejects the root element background read"
+  );
+  // Anti-softening pin. The retarget kept the ROOT-scoped half of the light/dark proof rather
+  // than deleting it, and that half is the only clause that can still catch a :root.dark token
+  // regression or a component painting body while the root tokens stay light. If a later change
+  // drops the inequality instead of keeping it satisfiable, this fails rather than passing quietly.
+  const rootThemeDiscriminatorActionIds = actionsComparingFieldForInequality(
+    plan,
+    ROOT_THEME_DISCRIMINATOR_FIELD
+  );
+  assertNegative(
+    ROOT_THEME_DISCRIMINATOR_ACTION_IDS.every((actionId) =>
+      rootThemeDiscriminatorActionIds.includes(actionId)
+    ),
+    "root theme discriminator inequality coverage"
   );
   runBrowserWidgetAbsenceScopeSelfTest({
     assertNegative,

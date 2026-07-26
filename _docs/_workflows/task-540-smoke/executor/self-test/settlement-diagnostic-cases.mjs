@@ -767,52 +767,83 @@ export async function runSettlementDiagnosticCasesSelfTest({
       });
     }
   }
+  // Each frame is paired with the token its OWN rejection must now emit. Every one of these used
+  // to report "unclassified": an output-contract invariant is labelled with the failing action
+  // id, and the runtime projection abstained on the digits in that id, so no schema or predicate
+  // rejection of any of the 496 actions could name itself. Pinning the exact token keeps that
+  // closed — a regression in the projection shows up here as "unclassified" again.
   const genericSuccessFrames = [
-    Buffer.from("{\n"),
-    Buffer.from(
-      canonicalJson({
-        url: plan.fixtureBlueprint.origins.admin + "/admin/",
-        userMenuVisible: "true",
-        userName: "Bootstrap Admin",
-      }) + "\n"
-    ),
-    Buffer.from(
-      canonicalJson({
-        rawUrl: "safe-value",
-        url: plan.fixtureBlueprint.origins.admin + "/admin/",
-        userMenuVisible: true,
-        userName: "Bootstrap Admin",
-      }) + "\n"
-    ),
-    Buffer.from(canonicalJson({ failureClass: "unknown", settled: false }) + "\n"),
-    Buffer.from(canonicalJson({ failureClass: "process_timeout", settled: false }) + "\n"),
+    [Buffer.from("{\n"), "wf540_rt_contains_malformed_json"],
+    [
+      Buffer.from(
+        canonicalJson({
+          url: plan.fixtureBlueprint.origins.admin + "/admin/",
+          userMenuVisible: "true",
+          userName: "Bootstrap Admin",
+        }) + "\n"
+      ),
+      "wf540_rt_must_be_boolean",
+    ],
+    [
+      Buffer.from(
+        canonicalJson({
+          rawUrl: "safe-value",
+          url: plan.fixtureBlueprint.origins.admin + "/admin/",
+          userMenuVisible: true,
+          userName: "Bootstrap Admin",
+        }) + "\n"
+      ),
+      "wf540_rt_value_has_non_canonical_keys",
+    ],
+    [
+      Buffer.from(canonicalJson({ failureClass: "unknown", settled: false }) + "\n"),
+      "wf540_rt_value_has_non_canonical_keys",
+    ],
+    [
+      Buffer.from(canonicalJson({ failureClass: "process_timeout", settled: false }) + "\n"),
+      "wf540_rt_value_has_non_canonical_keys",
+    ],
   ];
-  for (const [index, bytes] of genericSuccessFrames.entries()) {
+  for (const [index, [bytes, expectedFailureReason]] of genericSuccessFrames.entries()) {
     await runSettlementDiagnosticCase({
       label: "ineligible success frame " + index,
+      expectedFailureReason,
       operation: (context) => runBrowserOutputPipeline(context, bytes),
     });
   }
+  // Same pinning, one layer deeper: these frames are well formed and pass the schema, so they are
+  // rejected by the output PREDICATE — the exact failure shape that blocked ru-073-light-dark-proof
+  // at action 438/496 with no cause named. `wf540_rt_predicate_failed` reaching the diagnostic
+  // line through the real pipeline is the end-to-end witness that the gap is closed.
   const semanticSuccessFrames = [
-    {
-      url: plan.fixtureBlueprint.origins.admin + "/admin/wrong",
-      userMenuVisible: true,
-      userName: "Bootstrap Admin",
-    },
-    {
-      url: plan.fixtureBlueprint.origins.admin + "/admin/",
-      userMenuVisible: false,
-      userName: "Bootstrap Admin",
-    },
-    {
-      url: plan.fixtureBlueprint.origins.admin + "/admin/",
-      userMenuVisible: true,
-      userName: "",
-    },
+    [
+      {
+        url: plan.fixtureBlueprint.origins.admin + "/admin/wrong",
+        userMenuVisible: true,
+        userName: "Bootstrap Admin",
+      },
+      "wf540_rt_predicate_failed",
+    ],
+    [
+      {
+        url: plan.fixtureBlueprint.origins.admin + "/admin/",
+        userMenuVisible: false,
+        userName: "Bootstrap Admin",
+      },
+      "wf540_rt_predicate_failed",
+    ],
+    [
+      {
+        url: plan.fixtureBlueprint.origins.admin + "/admin/",
+        userMenuVisible: true,
+        userName: "",
+      },
+      "wf540_rt_is_too_short",
+    ],
   ];
   const authSettlementOutputContract =
     plan.registries.outputs[bootstrapSettlementAction.outputSchemaId];
-  for (const [index, value] of semanticSuccessFrames.entries()) {
+  for (const [index, [value, nonAuthFailureReason]] of semanticSuccessFrames.entries()) {
     for (const [actionId, expectedFailureClass] of [
       [bootstrapSettlementAction.id, "success_contract_failed"],
       [settlementTwinAction.id, null],
@@ -825,6 +856,7 @@ export async function runSettlementDiagnosticCasesSelfTest({
           (expectedFailureClass === null ? " non-auth" : " auth"),
         actionId,
         expectedFailureClass,
+        ...(expectedFailureClass === null ? { expectedFailureReason: nonAuthFailureReason } : {}),
         operation: (context) =>
           runBrowserOutputPipeline(context, Buffer.from(canonicalJson(value) + "\n"), {
             outputContract: authSettlementOutputContract,

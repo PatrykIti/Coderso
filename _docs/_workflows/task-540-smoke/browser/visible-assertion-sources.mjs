@@ -794,7 +794,11 @@ function buildVisibleAssertionSource(action, name, plan, captures) {
       const b = context.__wf540Recall("ru-072-b-dark-capture");
       const returned = await preferenceEffect();
       const durable = await strictPreference();
-      const computed = await page.evaluate(() => ({ theme: document.documentElement.classList.contains("dark") ? "dark" : "light", rootColor: getComputedStyle(document.documentElement).backgroundColor, bodyColor: getComputedStyle(document.body).backgroundColor }));
+      // rootColor must match themeSample's root-scoped token read, not the root element's own
+      // background: the html element carries no background here, so its computed
+      // background-color is rgba(0, 0, 0, 0) in both modes and this action's inequality
+      // against the dark capture could never hold. See browser/observation-sources.mjs.
+      const computed = await page.evaluate(() => ({ theme: document.documentElement.classList.contains("dark") ? "dark" : "light", rootColor: getComputedStyle(document.documentElement).getPropertyValue("--background").trim(), bodyColor: getComputedStyle(document.body).backgroundColor }));
       const toggleAriaPressed = await (await one(config.selectors.colorMode)).getAttribute("aria-pressed");
       if (toggleAriaPressed !== "true" && toggleAriaPressed !== "false") throw new Error("wf540_return_theme_toggle");
       output = ordinary({ userAFirst: first.value.showFieldMetadata, userB: b.metadataEffect, userAReturn: returned.visibleValue, durableA: durable.value.showFieldMetadata, metadataEffects: { userAFirst: first.switchChecked && positive(first.metadataRect), userB: b.metadataEffect, userAReturn: returned.metadataEffect }, userAReturnComputed: { ...computed, toggleAriaPressed } });

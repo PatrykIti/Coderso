@@ -315,9 +315,15 @@ function buildObservationSource(action, name, plan, captures, selectionSelector 
     };
     const themeSample = async (includeMetadata = false) => {
       const toggle = await one(config.selectors.colorMode);
+      // rootColor reads the ROOT-SCOPED theme token, not the root element's own background.
+      // globals.css declares the themed background on body only, and CSS background
+      // propagation paints the canvas from there, so the html element's computed
+      // background-color is rgba(0, 0, 0, 0) in BOTH modes and can never discriminate one.
+      // The resolved --background custom property IS root-scoped and IS flipped by
+      // :root.dark, so it proves the mode changed at the document root independently of body.
       const colors = await page.evaluate(() => ({
         theme: document.documentElement.classList.contains("dark") ? "dark" : "light",
-        rootColor: getComputedStyle(document.documentElement).backgroundColor,
+        rootColor: getComputedStyle(document.documentElement).getPropertyValue("--background").trim(),
         bodyColor: getComputedStyle(document.body).backgroundColor,
       }));
       if (!colors.rootColor || !colors.bodyColor) throw new Error("wf540_theme_color");

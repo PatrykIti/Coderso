@@ -35,6 +35,15 @@ export const MAX_RUNTIME_INVARIANT_TOKEN_SLUG_LENGTH = 55;
 // so the projection can never derive its token from data. That keeps the sink's secret-free
 // guarantee exactly where it was: the emitted token is built from source-literal prose only.
 export const RUNTIME_INVARIANT_PHRASE_PATTERN = /^[A-Za-z][A-Za-z -]*$/u;
+// Every OUTPUT-CONTRACT invariant is labelled with the failing action id, and every action id
+// carries digits, so the phrase pattern above abstained on all 496 actions: a schema or predicate
+// rejection reported "unclassified" no matter which action produced it. That is how
+// ru-073-light-dark-proof ended an 88%-complete run without naming its cause. The leading label
+// tokens are therefore DISCARDED before matching - never slugged - so the emitted token still
+// derives only from source-literal prose and the sink's secret-free guarantee is unchanged. A
+// token is stripped only when the phrase pattern ITSELF refuses it, so a word that could have
+// been prose ("user-A") is never mistaken for a label and dropped.
+export const MAX_STRIPPED_RUNTIME_INVARIANT_LABEL_TOKENS = 4;
 export const FAILURE_REASON_CLASSES = deepFreezeExact([
   "playwright_action_timeout",
   "playwright_modal_state",
@@ -79,7 +88,20 @@ export function classifyFailureReasonNeverThrow(cause) {
 export function projectRuntimeInvariantToken(message) {
   try {
     if (typeof message !== "string" || !message.startsWith(RUNTIME_INVARIANT_PREFIX)) return null;
-    const phrase = message.slice(RUNTIME_INVARIANT_PREFIX.length);
+    const words = message.slice(RUNTIME_INVARIANT_PREFIX.length).split(" ");
+    // Drop a bounded run of leading label tokens (an action id, a dotted value path) so the
+    // prose that follows can be projected. They are dropped, not encoded, so no data reaches
+    // the token; anything non-prose LATER in the message still makes the whole match abstain.
+    let strippedLabelTokens = 0;
+    while (
+      words.length > 1 &&
+      strippedLabelTokens < MAX_STRIPPED_RUNTIME_INVARIANT_LABEL_TOKENS &&
+      !RUNTIME_INVARIANT_PHRASE_PATTERN.test(words[0])
+    ) {
+      words.shift();
+      strippedLabelTokens += 1;
+    }
+    const phrase = words.join(" ");
     if (!RUNTIME_INVARIANT_PHRASE_PATTERN.test(phrase)) return null;
     const slug = phrase
       .toLowerCase()

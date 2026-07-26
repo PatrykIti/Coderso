@@ -147,6 +147,33 @@ export function runFailureReasonProjectionSelfTest({
         "wf540_rt_user_a_api_session_is_unavailable",
     "runtime invariant reason projection"
   );
+  // Every OUTPUT-CONTRACT invariant is labelled with the failing action id (output-parser.mjs
+  // takes its label from execute-action.mjs), and every action id carries digits, so the phrase
+  // pattern abstained on all 496 actions: a schema or predicate rejection could only ever report
+  // "unclassified". That is how ru-073-light-dark-proof ended an 88%-complete run without naming
+  // its cause, and neither existing projection could close it — the browser subprocess of an
+  // assertion action SUCCEEDS and the rejection happens host-side, with no frame to read.
+  assertNegative(
+    projectRuntimeInvariantToken(
+      RUNTIME_INVARIANT_PREFIX + "ru-073-light-dark-proof predicate failed"
+    ) === "wf540_rt_predicate_failed" &&
+      classifyFailureReasonNeverThrow(
+        new Error(RUNTIME_INVARIANT_PREFIX + "ru-073-light-dark-proof predicate failed")
+      ) === "wf540_rt_predicate_failed",
+    "output contract predicate reason projection"
+  );
+  // The schema half of the same lane: nested labels are built as `label + "." + key`, so the
+  // dotted value path is a second leading label token and is dropped just like the action id.
+  assertNegative(
+    projectRuntimeInvariantToken(
+      RUNTIME_INVARIANT_PREFIX +
+        "ru-073-light-dark-proof value.observations.userA.rootColor is not a bounded CSS color"
+    ) === "wf540_rt_is_not_a_bounded_css_color" &&
+      projectRuntimeInvariantToken(
+        RUNTIME_INVARIANT_PREFIX + "ru-061a-a-durable-bypass-read prior output is already bound"
+      ) === "wf540_rt_prior_output_is_already_bound",
+    "output contract schema reason projection"
+  );
   // The projection only ever reads a fixed source-literal phrase. Every interpolated invariant —
   // an id, a path, a count, a connection string — is refused, so naming the runtime lane cannot
   // become a channel for data the sink is not allowed to emit.
@@ -162,6 +189,20 @@ export function runFailureReasonProjectionSelfTest({
       projectRuntimeInvariantToken("isolated preference read drift") === null &&
       projectRuntimeInvariantToken(null) === null,
     "runtime invariant projection abstention"
+  );
+  // Dropping leading labels must not weaken a single abstention. A value interpolated AFTER the
+  // prose still refuses the whole message, stripping stops rather than consuming everything, and
+  // a hyphenated word that COULD be prose is never mistaken for a label and discarded.
+  assertNegative(
+    projectRuntimeInvariantToken(
+      RUNTIME_INVARIANT_PREFIX + "ru-073-light-dark-proof connect postgres://wf540:pw@host/db"
+    ) === null &&
+      projectRuntimeInvariantToken(RUNTIME_INVARIANT_PREFIX + "ru-073-light-dark-proof") === null &&
+      projectRuntimeInvariantToken(RUNTIME_INVARIANT_PREFIX + "a b c d e 1") === null &&
+      projectRuntimeInvariantToken(
+        RUNTIME_INVARIANT_PREFIX + "user-A API session is unavailable"
+      ) === "wf540_rt_user_a_api_session_is_unavailable",
+    "label stripping abstention preservation"
   );
   // Bounded output: an unbounded phrase is truncated into the same vocabulary rather than being
   // emitted whole or dropped, and the token never carries a separator the sink forbids.
