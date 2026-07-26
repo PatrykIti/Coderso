@@ -158,13 +158,14 @@ Testing docs:
   `session` or `API key scope` for internal mode when applicable).
 - For non-trivial implementation or task-contract work, run a read-only
   pre-implementation task audit with fresh-context internal Codex collaboration
-  agents before editing the implementation contract. Repository analysis,
-  planning, pre/post audits and drift review must use only those internal
-  agents; do not invoke Claude or another external model/CLI for these purposes.
-  Agent prompts and reports must not expose secrets, credentials, private
-  provider keys, raw sensitive logs or unredacted user data. Use read-only
-  planning by default. Do not set artificial token, time or cost budgets unless
-  the user explicitly asks for that constraint.
+  agents before editing the implementation contract. All agent-delegated
+  repository research, analysis, planning, authoring, implementation, fixing,
+  validation, smoke and pre/post-audit work must use only those internal agents;
+  do not invoke Claude or another external model/CLI for repository work. Agent
+  prompts and reports must not expose secrets, credentials, private provider
+  keys, raw sensitive logs or unredacted user data. Use read-only planning by
+  default. Do not set artificial token, time or cost budgets unless the user
+  explicitly asks for that constraint.
 - Pre-implementation audit prompts must state the repo path, current HEAD and
   dirty-worktree context, task ID(s), that no files may be edited, and that
   findings must be ordered by severity with concrete file/line references. The
