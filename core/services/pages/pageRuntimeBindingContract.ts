@@ -145,6 +145,8 @@ export type PreparePageRuntimeOptions = {
   preview: boolean;
   breakpoint: PageBreakpoint;
   contentRoutes: ContentRouteSetting[];
+  /** Optional validated site locale; absence preserves legacy listing copy. */
+  siteLocale?: string | null;
   runtimeSearchParams?: URLSearchParams;
   listingRuntimeAliasesByQueryId?: Record<string, ListingRuntimeAliasMap>;
 };
