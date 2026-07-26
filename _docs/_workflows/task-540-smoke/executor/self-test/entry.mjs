@@ -18,6 +18,7 @@ import {
   API_SESSION_OBSERVATION_BRIDGE_SOURCE,
   BOOTSTRAP_BASELINE_READ_BRIDGE_SOURCE,
   BOOTSTRAP_CAS_RESTORE_BRIDGE_SOURCE,
+  bootstrapCasPredicates,
 } from "../bridge-sources/bootstrap.mjs";
 import {
   CURRENT_RESOURCE_OWNER_QUERY_BRIDGE_SOURCE,
@@ -68,6 +69,7 @@ import {
 import { buildTask540SmokePlan } from "../../../task-540-smoke-contract.mjs";
 import { runApiContextSelfTest } from "./api-context.mjs";
 import { runExpectedAuthChallengeSelfTest } from "./auth-challenge.mjs";
+import { runBootstrapCasBindFormsSelfTest } from "./bootstrap-cas-bind-forms.mjs";
 import { runBootstrapRestorationSelfTest } from "./bootstrap-restoration.mjs";
 import { runBrowserCaptureFrontierSelfTest } from "./browser-capture-frontier.mjs";
 import { runBrowserNavigationDiscardSourceSelfTest } from "./browser-navigation-discard-source.mjs";
@@ -622,6 +624,15 @@ export function createRunTask540SmokeExecutorSelfTest(dependencies) {
       expectAsyncFailure,
       settleBootstrapLoginAttempt,
       validateExactApiLoginResponse,
+    });
+
+    // Runs before the restoration protocol self-test because it establishes the more primitive
+    // fact: the CAS statement the protocol depends on can be dispatched at all. Counts through the
+    // shared assertNegative, so it must NOT be wrapped in `negativeCases +=`.
+    runBootstrapCasBindFormsSelfTest({
+      BOOTSTRAP_CAS_RESTORE_BRIDGE_SOURCE,
+      assertNegative,
+      bootstrapCasPredicates,
     });
 
     await runBootstrapRestorationSelfTest({

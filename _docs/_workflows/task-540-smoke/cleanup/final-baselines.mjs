@@ -23,7 +23,12 @@ export function createFinalBaselinesRuntime({
         deepEqualJson(proof.contentRoutes, state.contentRoutesBaseline) &&
         deepEqualJson(proof.requiredSettings, state.requiredSettingsBaseline) &&
         deepEqualJson(proof.taskTrafficBaseline, state.taskTrafficBaseline),
-      "final storage/database baseline drift"
+      // Phrased without a slash on purpose. RUNTIME_INVARIANT_PHRASE_PATTERN accepts letters,
+      // spaces and hyphens only, so a "/" made the projection abstain and this phase - which
+      // re-asserts the same bootstrap byte identity phase 8 restores - could only ever surface as a
+      // bare cleanupPhase 9 with no stated reason. Every invariant phrase in this file is now
+      // projectable.
+      "final storage and database baseline drift"
     );
   }
 
@@ -130,7 +135,7 @@ export function createFinalBaselinesRuntime({
         settingRecords.every(({ resourceKey }) => state.cleanupAbsenceKeys.has(resourceKey)) &&
         mediaRecord !== undefined &&
         state.cleanupAbsenceKeys.has(mediaRecord.resourceKey),
-      "final setting/media absence proof drift"
+      "final setting and media absence proof drift"
     );
     invariant(
       state.contentRoutesDeleteProofs === 4,
@@ -144,7 +149,7 @@ export function createFinalBaselinesRuntime({
     };
     invariant(
       deepEqualJson(deletedCounts, state.taskTrafficDeltaCounts),
-      "task traffic deleted/delta count drift"
+      "task traffic deleted and delta count drift"
     );
     return deepFreezeExact({
       bootstrapByteIdentical: true,

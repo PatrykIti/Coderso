@@ -88,6 +88,55 @@ const roleTuples = roleRows.map((role)=>({
 })).sort((a,b)=>a.roleId.localeCompare(b.roleId));
 const output = { id:row.id,rawUserRow,roleTuples };` +
   BRIDGE_OUTPUT_WRITER;
+// A raw drizzle `sql` template value becomes an UN-ENCODED Param: the JavaScript value reaches the
+// postgres.js Bind step with no column type, so anything that is not already a driver-serialisable
+// primitive throws ERR_INVALID_ARG_TYPE inside the client and the statement never reaches Postgres.
+// Measured on the live bootstrap admin row, with children spawned exactly as this bridge spawns
+// them, the previous single untyped `notDistinct` helper failed four of its ten binds -
+// `email_encrypted` ("Received an instance of Object") and all three timestamps ("Received an
+// instance of Date") - so the CAS UPDATE died in the driver, the restore never happened, and
+// phase 8 could only report the resulting baseline drift. The asymmetry that hid this for so long:
+// the UPDATE's `.set()` clause below uses drizzle's TYPED column encoders and serialises correctly,
+// so only the raw predicates were broken. Every predicate here therefore binds a string or NULL and
+// names the target type in SQL, which changes HOW the values reach the driver and never WHAT is
+// compared.
+//
+// The three timestamps are compared at MILLISECOND granularity because milliseconds are the only
+// granularity this contract has: the baseline is captured as `row.<column>.toISOString()` above and
+// `bootstrap-restore-input-v1` rejects any timestamp that is not round-trip-exact ISO, so a
+// microsecond value can never enter this bridge. `users.created_at` is written by `defaultNow()` and
+// does carry microseconds (measured: 2026-01-27 21:27:22.169823 against a ...169Z baseline), so
+// comparing the raw column against the millisecond baseline is unsatisfiable BY CONSTRUCTION - it
+// would have rolled the CAS back on every run even once the binds were fixed. No detection power is
+// lost: `unchangedMatches` below already asserts the same eight non-login columns byte-for-byte at
+// millisecond granularity inside the transaction while the row is held under FOR UPDATE, and
+// created_at is never written after insert.
+//
+// This function is the single source of truth for the predicate list: the bridge source embeds its
+// exact text, and the executor self-test compiles this same function through drizzle's PgDialect to
+// prove every bound parameter is bind-safe. Pinning the predicates as source tokens was compatible
+// with a statement that could never run, which is why that self-test executes instead of grepping.
+// The function must stay self-contained - the child evaluates its text with no surrounding scope.
+function bootstrapCasPredicates(sql, users, input) {
+  const notDistinctText = (column, value) => sql`${column} IS NOT DISTINCT FROM ${value}::text`;
+  const notDistinctUuid = (column, value) => sql`${column} IS NOT DISTINCT FROM ${value}::uuid`;
+  const notDistinctJsonb = (column, value) =>
+    sql`${column} IS NOT DISTINCT FROM ${value === null ? null : JSON.stringify(value)}::jsonb`;
+  const notDistinctTimestampMs = (column, iso) =>
+    sql`date_trunc('milliseconds',${column}) IS NOT DISTINCT FROM ${iso}::timestamp`;
+  return [
+    notDistinctUuid(users.id, input.userId),
+    notDistinctText(users.email, input.baseline.rawUserRow.email),
+    notDistinctText(users.emailHash, input.baseline.rawUserRow.emailHash),
+    notDistinctJsonb(users.emailEncrypted, input.baseline.rawUserRow.emailEncrypted),
+    notDistinctText(users.passwordHash, input.baseline.rawUserRow.passwordHash),
+    notDistinctText(users.name, input.baseline.rawUserRow.name),
+    notDistinctText(users.status, input.baseline.rawUserRow.status),
+    notDistinctTimestampMs(users.createdAt, input.baseline.rawUserRow.createdAt),
+    notDistinctTimestampMs(users.updatedAt, input.newestOwnedPair.updatedAt),
+    notDistinctTimestampMs(users.lastLoginAt, input.newestOwnedPair.lastLoginAt),
+  ];
+}
 const BOOTSTRAP_CAS_RESTORE_BRIDGE_SOURCE =
   BRIDGE_INPUT_READER +
   bridgeInputSchemaGuard("bootstrap-restore-input-v1") +
@@ -97,7 +146,6 @@ import { db } from "./db/client.ts";
 import { roles, userRoles, users } from "./db/schema.ts";
 if (Object.keys(input).sort().join(",") !== "baseline,newestOwnedPair,userId") throw new Error("wf540_input");
 const timestamp = (value) => value === null ? null : new Date(value);
-const notDistinct = (column,value) => sql\`\${column} IS NOT DISTINCT FROM \${value}\`;
 const knownRollback = Object.freeze({ kind:"wf540_bootstrap_known_rollback" });
 const rollbackKnown = () => { throw knownRollback; };
 const serializeUser = (row) => {
@@ -132,16 +180,7 @@ try {
     const unchangedMatches = canonical({...locked,lastLoginAt:input.baseline.rawUserRow.lastLoginAt,updatedAt:input.baseline.rawUserRow.updatedAt}) === canonical(input.baseline.rawUserRow);
     const roleTuplesByteIdentical = canonical(lockedRoles) === canonical(input.baseline.roleTuples);
     if (!pairMatches || !unchangedMatches || !roleTuplesByteIdentical) rollbackKnown();
-    const predicates = [
-      notDistinct(users.id,input.userId),notDistinct(users.email,input.baseline.rawUserRow.email),
-      notDistinct(users.emailHash,input.baseline.rawUserRow.emailHash),
-      notDistinct(users.emailEncrypted,input.baseline.rawUserRow.emailEncrypted),
-      notDistinct(users.passwordHash,input.baseline.rawUserRow.passwordHash),
-      notDistinct(users.name,input.baseline.rawUserRow.name),notDistinct(users.status,input.baseline.rawUserRow.status),
-      notDistinct(users.createdAt,new Date(input.baseline.rawUserRow.createdAt)),
-      notDistinct(users.updatedAt,new Date(input.newestOwnedPair.updatedAt)),
-      notDistinct(users.lastLoginAt,timestamp(input.newestOwnedPair.lastLoginAt)),
-    ];
+    const predicates = (${bootstrapCasPredicates.toString()})(sql,users,input);
     const updated = await tx.update(users).set({
       lastLoginAt:timestamp(input.baseline.rawUserRow.lastLoginAt),
       updatedAt:new Date(input.baseline.rawUserRow.updatedAt),
@@ -191,4 +230,5 @@ export {
   BOOTSTRAP_BASELINE_READ_BRIDGE_SOURCE,
   BOOTSTRAP_CAS_RESTORE_BRIDGE_SOURCE,
   BOOTSTRAP_LOGIN_OBSERVATION_BRIDGE_SOURCE,
+  bootstrapCasPredicates,
 };

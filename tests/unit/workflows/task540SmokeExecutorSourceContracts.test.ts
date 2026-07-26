@@ -152,6 +152,7 @@ const EXPECTED_EXECUTOR_MODULE_PATHS = Object.freeze([
   "_docs/_workflows/task-540-smoke/executor/runtime-operations/platform.mjs",
   "_docs/_workflows/task-540-smoke/executor/self-test/api-context.mjs",
   "_docs/_workflows/task-540-smoke/executor/self-test/auth-challenge.mjs",
+  "_docs/_workflows/task-540-smoke/executor/self-test/bootstrap-cas-bind-forms.mjs",
   "_docs/_workflows/task-540-smoke/executor/self-test/bootstrap-restoration.mjs",
   "_docs/_workflows/task-540-smoke/executor/self-test/browser-auth-settlement-source.mjs",
   "_docs/_workflows/task-540-smoke/executor/self-test/browser-capture-frontier.mjs",
@@ -261,7 +262,7 @@ function readExecutorModuleGraph(): ReadonlyMap<string, string> {
       );
     }
   }
-  expect(EXPECTED_EXECUTOR_MODULE_PATHS).toHaveLength(146);
+  expect(EXPECTED_EXECUTOR_MODULE_PATHS).toHaveLength(147);
   expect([...sources.keys()].sort()).toEqual(EXPECTED_EXECUTOR_MODULE_PATHS);
   return sources;
 }
@@ -762,7 +763,7 @@ test("phase-eight bootstrap restore is one typed nullable-safe CAS", () => {
   const baselineRead = sourceSection(
     bootstrapBridgeSources,
     "const BOOTSTRAP_BASELINE_READ_BRIDGE_SOURCE =",
-    "const BOOTSTRAP_CAS_RESTORE_BRIDGE_SOURCE ="
+    "function bootstrapCasPredicates("
   );
   expect(baselineRead).toContain(".limit(2)");
   expect(baselineRead).toContain("rawUserRow");
@@ -773,24 +774,38 @@ test("phase-eight bootstrap restore is one typed nullable-safe CAS", () => {
 
   const casSource = sourceSection(
     bootstrapBridgeSources,
-    "const BOOTSTRAP_CAS_RESTORE_BRIDGE_SOURCE =",
+    "function bootstrapCasPredicates(",
     "export {"
   );
+  // Every predicate binds a string or NULL and states the target type in SQL. The previous forms
+  // bound a jsonb object and three Dates in untyped raw-sql parameter positions, which postgres.js
+  // cannot serialise, so the CAS statement died in the driver's Bind step and the phase-8 restore
+  // never reached Postgres. These tokens keep the predicate LIST intact; the executable authority on
+  // the bind forms is the executor self-test bootstrap-cas-bind-forms.mjs, which compiles this same
+  // function through drizzle's PgDialect and asserts every bound parameter type.
   const predicateTokens = [
-    "notDistinct(users.id,input.userId)",
-    "notDistinct(users.email,input.baseline.rawUserRow.email)",
-    "notDistinct(users.emailHash,input.baseline.rawUserRow.emailHash)",
-    "notDistinct(users.emailEncrypted,input.baseline.rawUserRow.emailEncrypted)",
-    "notDistinct(users.passwordHash,input.baseline.rawUserRow.passwordHash)",
-    "notDistinct(users.name,input.baseline.rawUserRow.name)",
-    "notDistinct(users.status,input.baseline.rawUserRow.status)",
-    "notDistinct(users.createdAt,new Date(input.baseline.rawUserRow.createdAt))",
-    "notDistinct(users.updatedAt,new Date(input.newestOwnedPair.updatedAt))",
-    "notDistinct(users.lastLoginAt,timestamp(input.newestOwnedPair.lastLoginAt))",
+    "notDistinctUuid(users.id, input.userId)",
+    "notDistinctText(users.email, input.baseline.rawUserRow.email)",
+    "notDistinctText(users.emailHash, input.baseline.rawUserRow.emailHash)",
+    "notDistinctJsonb(users.emailEncrypted, input.baseline.rawUserRow.emailEncrypted)",
+    "notDistinctText(users.passwordHash, input.baseline.rawUserRow.passwordHash)",
+    "notDistinctText(users.name, input.baseline.rawUserRow.name)",
+    "notDistinctText(users.status, input.baseline.rawUserRow.status)",
+    "notDistinctTimestampMs(users.createdAt, input.baseline.rawUserRow.createdAt)",
+    "notDistinctTimestampMs(users.updatedAt, input.newestOwnedPair.updatedAt)",
+    "notDistinctTimestampMs(users.lastLoginAt, input.newestOwnedPair.lastLoginAt)",
   ];
   for (const predicate of predicateTokens) {
     expect(countToken(casSource, predicate)).toBe(1);
   }
+  expect(countToken(casSource, "IS NOT DISTINCT FROM ${value}::text`")).toBe(1);
+  expect(countToken(casSource, "IS NOT DISTINCT FROM ${value}::uuid`")).toBe(1);
+  expect(countToken(casSource, "JSON.stringify(value)}::jsonb`")).toBe(1);
+  expect(countToken(casSource, "date_trunc('milliseconds',${column})")).toBe(1);
+  expect(countToken(casSource, "IS NOT DISTINCT FROM ${iso}::timestamp`")).toBe(1);
+  expect(casSource).not.toContain("IS NOT DISTINCT FROM ${value}`");
+  expect(countToken(casSource, "const predicates = (")).toBe(1);
+  expect(countToken(casSource, "(sql,users,input);")).toBe(1);
   expect(countToken(casSource, "await tx.update(users)")).toBe(1);
   expect(casSource).toContain('.for("update")');
   expect(casSource).toContain('.for("share")');

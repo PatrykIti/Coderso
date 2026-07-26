@@ -711,17 +711,23 @@ export async function runBootstrapRestorationSelfTest({
     !validatesRestoreBootstrapAttemptPath(duplicateAttemptPathMutant),
     "bootstrap restoration duplicate attempt helper mutant"
   );
+  // These tokens keep the predicate LIST intact - one predicate per column, none deleted,
+  // substituted or duplicated. They deliberately no longer pin the bind FORMS: pinning
+  // `notDistinct(users.emailEncrypted, ...)` as a source token is exactly how a statement that
+  // could never be dispatched coexisted with a green self-test for the whole life of this bridge.
+  // The executable authority on the bind forms is bootstrap-cas-bind-forms.mjs, which compiles
+  // these predicates through drizzle and asserts every bound parameter is a string or NULL.
   const bootstrapCasPredicateTokens = [
-    "notDistinct(users.id,input.userId)",
-    "notDistinct(users.email,input.baseline.rawUserRow.email)",
-    "notDistinct(users.emailHash,input.baseline.rawUserRow.emailHash)",
-    "notDistinct(users.emailEncrypted,input.baseline.rawUserRow.emailEncrypted)",
-    "notDistinct(users.passwordHash,input.baseline.rawUserRow.passwordHash)",
-    "notDistinct(users.name,input.baseline.rawUserRow.name)",
-    "notDistinct(users.status,input.baseline.rawUserRow.status)",
-    "notDistinct(users.createdAt,new Date(input.baseline.rawUserRow.createdAt))",
-    "notDistinct(users.updatedAt,new Date(input.newestOwnedPair.updatedAt))",
-    "notDistinct(users.lastLoginAt,timestamp(input.newestOwnedPair.lastLoginAt))",
+    "notDistinctUuid(users.id, input.userId)",
+    "notDistinctText(users.email, input.baseline.rawUserRow.email)",
+    "notDistinctText(users.emailHash, input.baseline.rawUserRow.emailHash)",
+    "notDistinctJsonb(users.emailEncrypted, input.baseline.rawUserRow.emailEncrypted)",
+    "notDistinctText(users.passwordHash, input.baseline.rawUserRow.passwordHash)",
+    "notDistinctText(users.name, input.baseline.rawUserRow.name)",
+    "notDistinctText(users.status, input.baseline.rawUserRow.status)",
+    "notDistinctTimestampMs(users.createdAt, input.baseline.rawUserRow.createdAt)",
+    "notDistinctTimestampMs(users.updatedAt, input.newestOwnedPair.updatedAt)",
+    "notDistinctTimestampMs(users.lastLoginAt, input.newestOwnedPair.lastLoginAt)",
   ];
   const bootstrapCasSourceRequired = [
     'const knownRollback = Object.freeze({ kind:"wf540_bootstrap_known_rollback" });',
@@ -731,7 +737,8 @@ export async function runBootstrapRestorationSelfTest({
     "if (lockedRows.length !== 1 || lockedRoles.length !== 1) rollbackKnown();",
     "if (locked === null) rollbackKnown();",
     "if (!pairMatches || !unchangedMatches || !roleTuplesByteIdentical) rollbackKnown();",
-    "const predicates = [",
+    "const predicates = (",
+    "(sql,users,input);",
     "const updated = await tx.update(users).set({",
     "}).where(and(...predicates)).returning();",
     "if (updated.length !== 1) rollbackKnown();",
@@ -744,7 +751,10 @@ export async function runBootstrapRestorationSelfTest({
     bootstrapCasSourceRequired.every((token) => source.includes(token)) &&
     bootstrapCasPredicateTokens.every((token) => source.split(token).length - 1 === 1) &&
     new Set(bootstrapCasPredicateTokens).size === 10 &&
-    source.split("notDistinct(users.").length - 1 === 10 &&
+    source.split("notDistinctUuid(users.").length - 1 === 1 &&
+    source.split("notDistinctText(users.").length - 1 === 5 &&
+    source.split("notDistinctJsonb(users.").length - 1 === 1 &&
+    source.split("notDistinctTimestampMs(users.").length - 1 === 3 &&
     source.split("tx.update(users)").length - 1 === 1 &&
     source.split("}).where(and(...predicates)).returning();").length - 1 === 1 &&
     source.split('output = { kind:"rolled-back",proof:null };').length - 1 === 1 &&

@@ -34,6 +34,35 @@ function requireValidatedBootstrapCasProof(value, label = "bootstrap CAS restore
   return value;
 }
 
+// The rejected CAS branch reports `casAttempt.cause` AS the failure, so a CAS bridge rejection names
+// itself. The uncertain branch threw only the follow-up baseline-read failure and dropped
+// `casAttempt.cause` on the floor, which is how a 35-minute run could report that the bootstrap row
+// still differed while never stating that its CAS child had failed to start the statement at all.
+// The cause is chained onto the thrown failure rather than wrapped around it: the emitted
+// `cleanupFailureReason` is a projection of the thrown error's own MESSAGE, so rewording it would
+// replace a named token with "unclassified". The bridge failure message is the fixed invariant string
+// "descriptor-bound Bun bridge child failed", so no child output can reach the chain.
+function chainUncertainBaselineCauseNeverThrow(baselineError, casCause) {
+  try {
+    if (
+      !(baselineError instanceof Error) ||
+      casCause === undefined ||
+      baselineError.cause !== undefined
+    ) {
+      return false;
+    }
+    Object.defineProperty(baselineError, "cause", {
+      configurable: true,
+      enumerable: false,
+      value: casCause,
+      writable: true,
+    });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 function retainPhaseEightFailure(error, failureClass) {
   invariant(
     PHASE_EIGHT_CLEANUP_FAILURE_CLASSES.includes(failureClass),
@@ -275,6 +304,7 @@ export function createBootstrapRestorationProtocol(dependencies) {
         authority.uncertainBaselineProof = deepFreezeExact(baselineRead);
         resolution = "already-restored-after-uncertain-outcome";
       } catch (error) {
+        chainUncertainBaselineCauseNeverThrow(error, casAttempt.cause);
         throw retainPhaseEightFailure(error, "bootstrap_uncertain_baseline_failed");
       }
     }
