@@ -168,6 +168,33 @@ function isolateTaskOwnedMediaList(payload, expected) {
   return Object.freeze([Object.freeze({ ...row })]);
 }
 
+// The shared delayed-route handler holds one matching request parked for the whole route
+// lifetime. For five of the six routes that lifetime contains no user interaction, so "exactly one
+// matching request, ever" is a true invariant and a second request means the cacheBus delivered a
+// mirrored event twice - the regression the fixture exists to catch.
+//
+// `related-a-refresh` is the exception, and the frozen manifest makes it one deliberately: the
+// route is installed at rc-018 and held to rc-036, and rc-025 clears one relation option while it
+// is held. The application is SPECIFIED and unit-tested (tests/vitest/ui/
+// use-screen-related-entries.test.tsx, "inherits force for same-target projection changes") to
+// answer an id-set change during a pending forced read by inheriting force, and a forced
+// listEntriesCached bypasses both the value cache and the pending-request dedupe, so a second GET
+// to the parked path is required behaviour rather than a defect. Forbidding it made the contract
+// contradict itself: rc-025 could never pass. Duplicates are therefore allowed for this key ONLY,
+// only AFTER the first request is parked (a mirrored double delivery arrives before that, while
+// the backing fetch is still outstanding, and still fails closed), and their exact count is
+// asserted at unroute - so the removed constraint is replaced by a stricter one, not by nothing.
+const POST_PARK_DUPLICATE_ROUTE_KEY = "related-a-refresh";
+const EXPECTED_POST_PARK_DUPLICATES_BY_ROUTE_KEY = deepFreezeExact({
+  [POST_PARK_DUPLICATE_ROUTE_KEY]: 1,
+});
+
+function expectedPostParkDuplicatesForRouteKey(key) {
+  return Object.hasOwn(EXPECTED_POST_PARK_DUPLICATES_BY_ROUTE_KEY, key)
+    ? EXPECTED_POST_PARK_DUPLICATES_BY_ROUTE_KEY[key]
+    : 0;
+}
+
 function buildRouteSetupSource(route) {
   const descriptor = JSON.stringify(route);
   return `(async (page) => {
@@ -178,6 +205,11 @@ function buildRouteSetupSource(route) {
     if (context.__wf540RouteHas(descriptor.key)) throw new Error("wf540_duplicate_route");
     let active = true;
     let hits = 0;
+    // Pre-park duplicates are the cacheBus double-delivery detector and still fail closed;
+    // post-park duplicates are a manifest-driven projection re-read and are counted instead.
+    let firstRequestParked = false;
+    let postCaptureHits = 0;
+    const POST_PARK_DUPLICATES_ALLOWED = descriptor.key === ${JSON.stringify(POST_PARK_DUPLICATE_ROUTE_KEY)};
     let capturedResolve;
     let releaseResolve;
     let fulfilledResolve;
@@ -235,7 +267,11 @@ function buildRouteSetupSource(route) {
         return route.continue();
       }
       hits += 1;
-      if (hits !== 1) throw new Error("wf540_unexpected_duplicate");
+      if (hits !== 1) {
+        if (!firstRequestParked || !POST_PARK_DUPLICATES_ALLOWED) throw new Error("wf540_unexpected_duplicate");
+        postCaptureHits += 1;
+        return route.continue();
+      }
       capturedRequest = request;
       bodyAbsent = request.postData() === null;
       if (descriptor.mode === "malformed") {
@@ -307,6 +343,7 @@ function buildRouteSetupSource(route) {
       backingSettledResolve(true);
       capturedResolve(true);
       handlerStage = "release_wait";
+      firstRequestParked = true;
       await releaseGate;
       if (descriptor.mode === "abort-aware-preference-write") return;
       handlerStage = "fulfill";
@@ -319,7 +356,11 @@ function buildRouteSetupSource(route) {
       uiSettledResolve(true);
       } catch (error) {
         const privateMessage = String(error?.message ?? "");
-        const failureClass = handlerStage === "backing_fetch"
+        // Our own tokens ARE the diagnosis, so they are carried through verbatim. Naming the
+        // failure from handlerStage alone reported a duplicate-request rejection as
+        // "request_identity_failed" - a stage that had provably passed - and cost two full runs.
+        const innerCause = /^wf540_[a-z0-9_]{1,64}$/u.test(privateMessage) ? privateMessage.slice("wf540_".length) : null;
+        const stageFailureClass = handlerStage === "backing_fetch"
           ? privateMessage.includes("ENOTFOUND") || privateMessage.includes("getaddrinfo")
             ? "dns"
             : privateMessage.includes("ECONNREFUSED") || privateMessage.includes("connect refused")
@@ -334,7 +375,10 @@ function buildRouteSetupSource(route) {
                       ? "fetch_error"
                       : "unknown"
           : "failed";
-        handlerFailure = "wf540_route_handler_" + handlerStage + "_" + failureClass;
+        const namedFailure = "wf540_route_handler_" + handlerStage + "_" + (innerCause ?? stageFailureClass);
+        // The emitted token has to stay inside the harness reason vocabulary, so an over-long
+        // composition falls back to the stage label rather than escaping the anchored pattern.
+        handlerFailure = /^wf540_[a-z0-9_]{1,64}$/u.test(namedFailure) ? namedFailure : "wf540_route_handler_" + handlerStage + "_" + stageFailureClass;
         capturedResolve(true);
         throw new Error(handlerFailure);
       }
@@ -347,6 +391,7 @@ function buildRouteSetupSource(route) {
       active: () => active,
       deactivate: () => { active = false; },
       hits: () => hits,
+      postCaptureHits: () => postCaptureHits,
       failure: () => handlerFailure,
       captured,
       fulfilled,
@@ -398,9 +443,16 @@ function buildRouteReleaseSource(route) {
 }
 
 function buildRouteUnrouteSource(route) {
+  const expectedPostParkDuplicates = expectedPostParkDuplicatesForRouteKey(route.key);
   return `(async (page) => {
     const context = page.context();
     const route = context.__wf540RouteGet(${JSON.stringify(route.key)});
+    // Positive invariant replacing the whole-lifetime one-hit guard: the app's specified
+    // force-inheriting re-read must happen exactly this many times while the route is held, so
+    // losing it or repeating it fails here. The observed count is IN the token, so one run names
+    // the real number instead of only reporting a mismatch.
+    const observedPostCaptureHits = route.postCaptureHits();
+    if (observedPostCaptureHits !== ${expectedPostParkDuplicates}) throw new Error("wf540_route_post_capture_duplicates_" + observedPostCaptureHits);
     await route.ownerPage.unroute(${JSON.stringify(route.pattern)}, route.handler);
     route.removeFailureListener();
     context.__wf540RouteDeactivate(${JSON.stringify(route.key)});
@@ -497,6 +549,7 @@ function createActionExecutionCompiler({
 }
 
 export {
+  POST_PARK_DUPLICATE_ROUTE_KEY,
   assertTaskOwnedMediaListTransport,
   buildCleanupRoutesSource,
   buildFailureCleanupRoutesSource,
@@ -506,5 +559,6 @@ export {
   buildRouteUnrouteSource,
   createActionExecutionCompiler,
   expandedRoute,
+  expectedPostParkDuplicatesForRouteKey,
   isolateTaskOwnedMediaList,
 };

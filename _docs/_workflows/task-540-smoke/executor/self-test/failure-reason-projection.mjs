@@ -6,6 +6,7 @@ import {
   PHASE_EIGHT_CLEANUP_FAILURE_CLASSES,
   TASK_FAILURE,
   classifyFailureReasonNeverThrow,
+  projectBrowserErrorFrameToken,
 } from "../config.mjs";
 import { canonicalJson, invariant } from "../foundation.mjs";
 
@@ -64,6 +65,64 @@ export function runFailureReasonProjectionSelfTest({
     classifyFailureReasonNeverThrow(new Error("wf540_target_missing")) === "wf540_target_missing" &&
       classifyFailureReasonNeverThrow("wf540_target_duplicate") === "wf540_target_duplicate",
     "harness vocabulary reason passthrough"
+  );
+
+  // A browser error frame is the only statement of what a browser-run-code action hit, and the
+  // failure boundary used to replace it with a fixed string for every action outside the two
+  // failure-frame registries, so the cause reached the diagnostic as "unclassified". The frame is
+  // now projected onto the same vocabulary, end to end.
+  const browserFrame = (body) => Buffer.from("### Error\n" + body, "utf8");
+  assertNegative(
+    projectBrowserErrorFrameToken(
+      browserFrame("Error: Error: wf540_route_handler_request_identity_unexpected_duplicate\n")
+    ) === "wf540_route_handler_request_identity_unexpected_duplicate" &&
+      classifyFailureReasonNeverThrow(
+        new Error(
+          projectBrowserErrorFrameToken(browserFrame("Error: Error: wf540_target_missing\n"))
+        )
+      ) === "wf540_target_missing",
+    "browser error frame harness tag projection"
+  );
+  assertNegative(
+    projectBrowserErrorFrameToken(browserFrame(PLAYWRIGHT_TIMEOUT_MESSAGE)) ===
+      "playwright_action_timeout" &&
+      projectBrowserErrorFrameToken(browserFrame(PLAYWRIGHT_MODAL_MESSAGE)) ===
+        "playwright_modal_state" &&
+      projectBrowserErrorFrameToken(browserFrame(PLAYWRIGHT_STRICT_MESSAGE)) ===
+        "playwright_strict_mode",
+    "browser error frame playwright signature projection"
+  );
+  // No frame, no marker, no recognisable cause, or a non-buffer: the projection yields nothing
+  // rather than guessing, so the boundary keeps its fixed fallback message.
+  assertNegative(
+    projectBrowserErrorFrameToken(Buffer.from('{"ok":true}\n', "utf8")) === null &&
+      projectBrowserErrorFrameToken(browserFrame("Error: unrecognised failure text\n")) === null &&
+      projectBrowserErrorFrameToken(Buffer.from("wf540_target_missing\n", "utf8")) === null &&
+      projectBrowserErrorFrameToken("### Error\nError: wf540_target_missing\n") === null &&
+      projectBrowserErrorFrameToken(null) === null,
+    "browser error frame projection abstention"
+  );
+  // Bounded scan and bounded output: a tag pushed beyond the diagnostic byte window is not read,
+  // and everything the projection does return is a member of the emitted vocabulary.
+  assertNegative(
+    projectBrowserErrorFrameToken(
+      browserFrame("Error: " + "x".repeat(MAX_FAILURE_ACTION_DIAGNOSTIC_BYTES) + " wf540_late_tag\n")
+    ) === null &&
+      [
+        "Error: Error: wf540_route_post_capture_duplicates_1\n",
+        PLAYWRIGHT_TIMEOUT_MESSAGE,
+        "Error: postgres://wf540:p@ssword@localhost/example\n",
+      ].every((body) => {
+        const token = projectBrowserErrorFrameToken(browserFrame(body));
+        return (
+          token === null ||
+          ((FAILURE_REASON_CLASSES.includes(token) ||
+            FAILURE_REASON_HARNESS_PATTERN.test(token)) &&
+            !token.includes("\n") &&
+            !token.includes("@"))
+        );
+      }),
+    "browser error frame projection vocabulary closure"
   );
 
   // Anything else is reduced to a token. This is what keeps arbitrary message text — which may

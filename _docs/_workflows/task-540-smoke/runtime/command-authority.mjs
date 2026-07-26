@@ -6,6 +6,7 @@ import {
   MAX_STREAM_BYTES,
   ORCHESTRATOR_EVIDENCE_RUNNER_VERSION,
   SESSION_NAME,
+  projectBrowserErrorFrameToken,
 } from "../executor/config.mjs";
 import {
   canonicalJson,
@@ -447,11 +448,18 @@ export function createCommandAuthorityRuntime({
       }
       const processFailureClass = classifySafeRetainedProcessOutcome(outcome);
       if (processFailureClass !== null) {
+        // For an action no failure-frame registry owns, the fallback message is the ONLY thing
+        // that survives to the diagnostic, so handing over a fixed string discarded the browser's
+        // own statement of the cause. The projected token is vocabulary-bounded, never raw output.
+        const browserErrorToken =
+          processFailureClass === "browser_error_frame"
+            ? projectBrowserErrorFrameToken(outcome.stdoutBytes)
+            : null;
         failPrivateAuthSettlementStage(
           action,
           processFailureClass,
           { execution },
-          "local command failed"
+          browserErrorToken ?? "local command failed"
         );
       }
       try {

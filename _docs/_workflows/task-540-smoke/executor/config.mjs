@@ -17,6 +17,10 @@ export const MAX_FAILURE_ACTION_DIAGNOSTIC_BYTES = 256;
 // single-line and secret-free guarantees.
 export const MAX_FAILURE_REASON_MESSAGE_LENGTH = 4096;
 export const FAILURE_REASON_HARNESS_PATTERN = /^wf540_[a-z0-9_]{1,64}$/u;
+// The same vocabulary, unanchored: inside a browser error frame the token is embedded in
+// Playwright's own prose ("Error: Error: wf540_...") rather than being the whole message.
+export const FAILURE_REASON_EMBEDDED_HARNESS_PATTERN = /wf540_[a-z0-9_]{1,64}/u;
+export const BROWSER_ERROR_FRAME_MARKER = "### Error\n";
 export const FAILURE_REASON_CLASSES = deepFreezeExact([
   "playwright_action_timeout",
   "playwright_modal_state",
@@ -46,6 +50,33 @@ export function classifyFailureReasonNeverThrow(cause) {
     if (message.includes("does not handle the modal state")) return "playwright_modal_state";
     if (message.includes("strict mode violation")) return "playwright_strict_mode";
     return "unclassified";
+  } catch {
+    return null;
+  }
+}
+// A browser error frame is the ONLY place the cause of a browser-run-code failure is stated, and
+// the failure boundary used to replace it with the fixed string "local command failed" for every
+// action outside the two failure-frame registries - 383 of the 392 browser actions - which is how a
+// route-handler rejection reached the diagnostic as failureReason "unclassified". This projects the
+// frame onto one token from the SAME frozen vocabulary the classifier already accepts: a harness
+// tag or a Playwright signature. Raw frame text is never returned, so the sink keeps its
+// bounded-bytes, single-line and secret-free guarantees.
+export function projectBrowserErrorFrameToken(stdoutBytes) {
+  try {
+    if (!Buffer.isBuffer(stdoutBytes)) return null;
+    const marker = stdoutBytes.indexOf(Buffer.from(BROWSER_ERROR_FRAME_MARKER, "utf8"));
+    if (marker === -1) return null;
+    const frame = stdoutBytes
+      .subarray(marker, marker + MAX_FAILURE_ACTION_DIAGNOSTIC_BYTES)
+      .toString("utf8");
+    const harnessTag = FAILURE_REASON_EMBEDDED_HARNESS_PATTERN.exec(frame);
+    if (harnessTag !== null) return harnessTag[0];
+    if (frame.includes("Timeout") && frame.includes("exceeded")) {
+      return "playwright_action_timeout";
+    }
+    if (frame.includes("does not handle the modal state")) return "playwright_modal_state";
+    if (frame.includes("strict mode violation")) return "playwright_strict_mode";
+    return null;
   } catch {
     return null;
   }
