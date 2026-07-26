@@ -352,6 +352,11 @@ pre-registered marker and attached ID, and has exact terminal arrays
 attached only after the outer `finally` has attempted every deletion and both
 zero-state queries have passed.
 
+`contact-nonce-contract` freezes the real public write boundary as
+`{missingStatus:400, alteredStatus:403, validStatus:200}`: a missing nonce is a
+malformed request, while a valid-format nonce with a bad HMAC signature is
+forbidden and must not be weakened to `400`.
+
 Exact title proof is required for `/` (`Nowoczesne projekty domów — FormaDom
 Studio`), `/oferta` (`Oferta — FormaDom Studio`), `/projekty` (`Projekty domów —
 FormaDom Studio`), `/proces` (`Proces projektowy — FormaDom Studio`), `/cennik`

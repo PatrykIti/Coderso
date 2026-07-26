@@ -351,6 +351,11 @@ pre-registered marker and attached ID, and has exact terminal arrays
 only after the outer `finally` attempts every deletion and both zero-state
 queries pass.
 
+`contact-nonce-contract` freezes the real public write boundary as
+`{missingStatus:400, alteredStatus:403, validStatus:200}`: a missing nonce is a
+malformed request, while a valid-format nonce with a bad HMAC signature is
+forbidden and must not be weakened to `400`.
+
 `aurora-six-slug-eligibility` keeps the exact Aurora positive object described
 above, including its material resolved canonical string. Each of
 `/projekty/linea`, `/projekty/nova`, `/projekty/mono`, `/projekty/vista` and
