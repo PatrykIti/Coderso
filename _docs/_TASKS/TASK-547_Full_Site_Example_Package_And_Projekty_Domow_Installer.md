@@ -328,6 +328,9 @@ IDs or lifecycle logic.
   forbidden
 - the aggregate proves every scenario's cleanup final-state digest equals the
   run's initial digest and the following scenario's preflight digest
+- the aggregate binds the exact tracked
+  `task547RuntimeRegistryProjection()` through canonical `registryDigest`;
+  ignored workflow code never reconstructs a second runtime descriptor list
 - baseline-to-final line counts for every touched production/test module
 
 Before every DB-backed test or dev command, execute exactly
@@ -347,7 +350,9 @@ After all 35 implementation phases and atomic commits are validated:
    terminalizing any TASK-547 status;
 2. run five fresh internal-Codex post-audit lenses, verify every finding locally,
    fix HIGH/MEDIUM findings atomically and rerun every affected gate/lens;
-3. run one fresh tracked-CLI `--all` smoke from the clean final candidate;
+3. run one root-owned composite smoke gate from the immutable final candidate:
+   preliminary `--all`, exact `--scenario 05` isolation proof, then final
+   `--all`;
 4. root-verify and atomically commit the exact 37 tracked evidence artifacts;
 5. only then terminalize task/changelog/index state and run the final fresh
    read-only graph/closeout consistency pass.

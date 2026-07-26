@@ -298,6 +298,37 @@ exports its own `arrange/act/assert`, supports direct `--self-test` and `--run`,
 imports shared harness contracts but never another scenario, and may be fixed
 and rerun without changing any peer.
 
+`registry.ts` exports the only executable runtime descriptor projection as
+`task547RuntimeRegistryProjection()`. The returned strict JSON value is exactly
+`{schemaVersion:1,scenarios:[...]}`. Every ordered scenario row is exactly
+`{number,id,session,url,viewport,assertions,modulePath,testPath,resultPath,
+screenshotPath}`. `number` is the integer `1..18`; `url` is the normalized
+string or string array above; `assertions` is the ordered non-empty array of
+exact `{id,kind,target,expected}` semantic descriptors owned by that scenario.
+All paths are literal repository-relative paths derived from the same row.
+`expected` is JSON-safe and contains the complete typed expected value, not a
+generic description or boolean proxy. The registry projection imports all
+18 landed scenario descriptors but no browser, database, settings, server or
+evidence-writing adapter.
+
+Markdown freezes each scenario's assertion IDs/order and every explicitly
+stated semantic constraint. At the registry phase, the tracked descriptor
+becomes canonical for the complete `kind`, `target` and typed `expected`
+values; its focused tests prove those values satisfy all frozen prose
+constraints. The workflow does not invent missing tuple fields: it verifies
+identity/session/URL/viewport/paths and assertion IDs/order against the task
+contract, reject-unknown-validates every complete tuple, and then compares each
+result assertion byte-semantically with that tracked registry descriptor.
+
+The root CLI and ignored workflow validator canonicalize that projection by
+recursively sorting object keys while preserving array order, then SHA-256 hash
+the UTF-8 JSON. `manifest.json` contains that digest as `registryDigest`.
+Before accepting evidence, the workflow loads the tracked export through one
+bounded argv-only Bun import, validates all 18 rows under the split authority
+above and the parent's identity/session table, and requires the same digest. No
+workflow module owns or reconstructs another runtime ID/session/URL/assertion
+list.
+
 ## Atomic Implementation Phases
 
 The implementation workflow lands these 22 phases strictly in order:
@@ -395,12 +426,110 @@ records. Cleanup includes digested submission identities, empty row/temp arrays,
 exact rollback/CAS outcome, equal final digest, closed session, stopped helper
 and free ports. Every console/page/failure array is empty.
 
+The nested lifecycle roots are reject-unknown exact schemas. A passing
+`preflight` is exactly:
+
+```ts
+{
+  lock: {
+    scope: "task-547-runtime-smoke";
+    leaseDigest: Sha256;
+    held: true;
+  };
+  attempt: {
+    number: 1;
+    retryAfterMutation: 0;
+    retryAfterBrowserDispatch: 0;
+  };
+  ports: { required: [3000, 5173, 5174]; occupied: [] };
+  session: { name: ExactScenarioSession; predecessorAbsent: true };
+  temp: { scenarioId: ExactScenarioId; remaining: [] };
+  priorStateDigest: Sha256;
+  apply: {
+    fresh: true;
+    scoped: true;
+    sourceRunDigest: Sha256;
+    installedStateDigest: Sha256;
+  };
+  server: {
+    helper: "coderso-dev-core-host";
+    fresh: true;
+    processIdentityDigest: Sha256;
+  };
+  health: {
+    admin: { url: "http://127.0.0.1:5173/"; status: 200 };
+    front: { url: "http://127.0.0.1:3000/"; status: 200 };
+  };
+}
+```
+
+A passing `cleanup` is exactly:
+
+```ts
+{
+  priorStateDigest: Sha256;
+  finalStateDigest: Sha256;
+  submissionIdentityDigests: Array<{
+    markerDigest: Sha256;
+    attachedIdDigest: Sha256 | null;
+    outcome: "deleted" | "not-created";
+  }>;
+  remainingSubmissionRows: [];
+  remainingTempArtifacts: [];
+  rollback: {
+    sourceRunDigest: Sha256;
+    officialOutcome: "restored";
+    recoveryMode: "not-needed";
+    expectedCurrentDigest: Sha256;
+    targetPriorDigest: Sha256;
+    casOutcome: "not-run";
+  };
+  settings: {
+    priorDigest: Sha256;
+    finalDigest: Sha256;
+    presenceAware: true;
+    equal: true;
+  };
+  database: {
+    priorDigest: Sha256;
+    finalDigest: Sha256;
+    equal: true;
+  };
+  session: { name: ExactScenarioSession; closed: true };
+  server: {
+    helper: "coderso-dev-core-host";
+    processIdentityDigest: Sha256;
+    stopped: true;
+  };
+  ports: {
+    required: [3000, 5173, 5174];
+    free: [3000, 5173, 5174];
+  };
+  lock: { leaseDigest: Sha256; released: true };
+}
+```
+
+The validator cross-binds the session, scenario, lock lease, helper process,
+source run, installed expected state and every prior/final digest. The settings
+and database prior/final digests must match, and the complete final state digest
+must equal the preflight and manifest initial digest. An official rollback
+failure may still run the expected-current atomic CAS to restore local state,
+but that failure stays in the unpromoted failure aggregate; fallback cleanup
+can never serialize the passing schema above.
+
+`submissionIdentityDigests` contains at most 32 unique, marker-sorted rows per
+scenario. An accepted write requires a non-null attached-ID digest and
+`outcome:"deleted"`; a rejected dispatch requires
+`attachedIdDigest:null` and `outcome:"not-created"`. Every registered marker is
+represented exactly once, so rejected public/internal attempts are zero-row
+proven without inventing a submission ID.
+
 The tracked `registry.ts` is the executable canonical matrix; ignored TASK-547-07
 workflow validators consume it and may not define a second weaker list. The
 tracked aggregate contains the exact 01..18 order, result/PNG paths and hashes,
-reference, `runInitialStateDigest`, prior/final digests, failures and pass. A
-generic string/object plus `pass:true`, missing cleanup or any timestamp/raw ID/
-secret/absolute path is invalid.
+reference, `registryDigest`, `runInitialStateDigest`, prior/final digests,
+failures and pass. A generic string/object plus `pass:true`, missing cleanup or
+any timestamp/raw ID/secret/absolute path is invalid.
 
 The parent and this leaf freeze these two ordered scenario lists identically:
 
@@ -552,12 +681,14 @@ visible effects with empty console/page/failure arrays.
 - [ ] Prepare non-terminal docs/changelog/task drafts, complete all five
   independent post-audit lenses, remediate verified findings and rerun every
   invalidated dependency-shaped gate.
-- [ ] Only after that clean pass, execute fresh root-owned `--all`, commit the 37
-  verified evidence files, and keep internal agents read-only over evidence.
+- [ ] Only after that clean pass, execute the root-owned composite
+  `--all → --scenario 05 → --all` gate, commit the 37 verified evidence files,
+  and keep internal agents read-only over evidence.
 - [ ] Confirm every TASK-547-01..05 leaf/parent is already terminal in descendant
   order; then terminalize TASK-547-07, this L01, TASK-547-06 and TASK-547.
-  Update board/statistics and changelog 1260 last, then run a read-only
-  task-graph/closeout consistency pass.
+  Keep the audited changelog 1260 file byte-identical, update only the task
+  board/statistics and changelog-index row last, then run a read-only task-graph/
+  closeout consistency pass.
 
 ## Testing Requirements
 
@@ -580,8 +711,10 @@ In particular, executing
 must not import or execute any peer scenario. Also run:
 
 - `bun scripts/task-547-runtime-smoke/cli.ts --self-test`;
-- `bun scripts/task-547-runtime-smoke/cli.ts --scenario 05` with before/after
-  hashes proving only 05's result/PNG and `manifest.json` are promotable;
+- one root-owned preliminary `--all`, followed by
+  `bun scripts/task-547-runtime-smoke/cli.ts --scenario 05` with before/after
+  hashes proving the other 17 result/PNG pairs byte-identical and only 05's
+  pair plus `manifest.json` promotable;
 - final `bun scripts/task-547-runtime-smoke/cli.ts --all`, with all 18 full
   clean-room lifecycles and aggregate digest-chain validation;
 - `git ls-files --error-unmatch` over all 18 scenario modules, 18 scenario tests
@@ -626,8 +759,10 @@ either installed-site command.
 
 Closure order is immutable: non-terminal docs/changelog/task drafts → five
 fresh independent internal-Codex post-audits → verified remediation and all
-invalidated regates → fresh root-owned `--all` → atomic tracked evidence commit
-→ terminal statuses/board/changelog → final read-only graph consistency pass.
+invalidated regates → one immutable-candidate root gate with preliminary
+`--all`, isolated `--scenario 05` and final `--all` → atomic tracked evidence
+commit → terminal statuses/board/indexes → final read-only graph consistency
+pass.
 
 ## Documentation Updates Required
 

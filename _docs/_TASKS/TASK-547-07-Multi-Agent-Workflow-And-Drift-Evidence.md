@@ -323,6 +323,16 @@ descriptors. It is the only runtime source for IDs, session mapping, execution
 order and artifact paths; workflow modules must not add a second scenario list
 or reimplement browser/install/cleanup behavior.
 
+Before the registry lands, workflow phase ownership derives only the
+`NN-<id>` module/test basenames from the parent's canonical Markdown table by a
+strict bounded parser. Missing, extra, reordered, duplicate, malformed or
+unknown-session rows fail closed. After the registry phase lands, all runtime
+validation uses the tracked `task547RuntimeRegistryProjection()` export frozen
+by TASK-547-06-L01. The workflow loads that pure JSON projection through one
+bounded argv-only Bun import and binds `manifest.json` to its canonical
+SHA-256 `registryDigest`; historical ignored smoke/admin/Page-Editor lists are
+not reachable from any active author, implement, fix or closeout entrypoint.
+
 Implementation agents run strictly one leaf/phase at a time. They read the
 current on-disk predecessor state, edit only their declared paths and return
 structured changed-path/test results. The root orchestrator verifies the diff,
@@ -371,11 +381,20 @@ mandatory closeout order is:
 2. dispatch fresh internal Codex agents for the five post-audit lenses below,
    verify every finding locally, fix HIGH/MEDIUM findings atomically and rerun
    the affected gates and fresh lenses;
-3. run a fresh trusted-root `bun scripts/task-547-runtime-smoke/cli.ts --all`
-   against the final candidate;
+3. run a fresh trusted-root preliminary `--all`, then the real isolated
+   `--scenario 05` byte-identity proof, then a final
+   `bun scripts/task-547-runtime-smoke/cli.ts --all` against the same immutable
+   candidate;
 4. root-verify and atomically commit exactly 37 tracked evidence artifacts;
 5. only then commit terminal task/changelog/index state and run one fresh
    read-only final graph/closeout consistency pass.
+
+The preliminary all-run creates the complete clean baseline needed by the
+selective proof. The root snapshots all 37 hashes, runs only scenario 05,
+requires the other 17 result/PNG pairs byte-identical and admits at most
+scenario 05's pair plus `manifest.json`, then discards that publication as
+non-final by running all 18 scenarios freshly again. No agent operates any of
+these commands or authors evidence.
 
 The five independent post-audit lenses are:
 
@@ -392,10 +411,12 @@ smoke contract or relevant draft-doc change after the clean post-audit pass
 invalidates the smoke and returns closeout to step 2.
 
 The tracked CLI owns the scenario registry and full lifecycle. This workflow
-only issues one bounded trusted-root CLI gate, validates its structured output
-and advances state; it does not duplicate the registry or lifecycle. Each of
-the 18 registry rows is a standalone tracked scenario module with a matching
-independently runnable focused test. Each row performs:
+issues one bounded trusted-root composite gate containing exactly the ordered
+preliminary `--all`, isolated `--scenario 05` and final `--all` invocations,
+validates their structured output and advances state; it does not duplicate the
+registry or lifecycle. One immutable candidate guard spans all three commands.
+Each of the 18 registry rows is a standalone tracked scenario module with a
+matching independently runnable focused test. Each row performs:
 
 1. exclusive task lock, free-port/no-live-session/no-temp preflight and a
    presence-aware prior-state digest;
@@ -451,6 +472,16 @@ repair JSON, capture or replace a PNG, choose retry behavior or certify a dirty
 cleanup. If a post-promotion audit finds real drift, the root fixes the owning
 code/contract, reruns the affected gates and all 18 fresh scenarios, and
 replaces the evidence commit before terminal closure.
+
+Draft closeout authors all product/developer prose and the complete changelog
+entry before the five post-audits. After the final smoke, terminal closure may
+touch only the 21 TASK-547 task files, `_docs/_TASKS/README.md` and
+`_docs/_CHANGELOG/README.md`; the pinned changelog file and all nine
+product/developer closure docs remain byte-identical to their audited
+post-draft state. Within task files, the terminal delta is limited to canonical
+status/completed fields, checklist markers and completion-evidence fields;
+board/changelog indexes may change only this task's row/statistics. Any broader
+delta invalidates the audit/smoke candidate and returns to draft closeout.
 
 ## Security and Operational Contract
 
@@ -549,14 +580,27 @@ for (const lens of FIVE_POST_AUDIT_LENSES) {
 
 await assertCleanFiveLensPass();
 const candidate = await captureImmutableCloseoutCandidate();
-const smoke = await trustedRootRun({
-  command: ["bun", "scripts/task-547-runtime-smoke/cli.ts", "--all"],
+const smoke = await trustedRootRunComposite({
+  commands: [
+    ["bun", "scripts/task-547-runtime-smoke/cli.ts", "--all"],
+    ["bun", "scripts/task-547-runtime-smoke/cli.ts", "--scenario", "05"],
+    ["bun", "scripts/task-547-runtime-smoke/cli.ts", "--all"],
+  ],
   sourceEnvForEachPrivilegedChild:
     "set -a && source /home/coder/project/Coderso/.env && set +a",
   databaseTimeoutMs: 360_000,
   serverHelper: "coderso-dev-core-host",
 });
 await assertUnchangedCandidate(candidate);
+await assertSelectiveScenarioDelta(smoke, {
+  selection: "05",
+  exactMutablePaths: [
+    "_docs/PLAYWRIGHT/task-547-runtime-smoke/manifest.json",
+    "_docs/PLAYWRIGHT/task-547-runtime-smoke/05-portfolio-facets/result.json",
+    "_docs/PLAYWRIGHT/task-547-runtime-smoke/05-portfolio-facets/screenshot.png",
+  ],
+  retainedPeerPairs: 17,
+});
 await validateExactTrackedSmokeEvidence(smoke, {
   scenarios: 18,
   artifacts: 37,

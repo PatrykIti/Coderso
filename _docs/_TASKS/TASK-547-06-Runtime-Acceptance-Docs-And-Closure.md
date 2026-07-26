@@ -694,11 +694,14 @@ ownership.
 - run every focused shared harness test and each of the 18 scenario test files
   independently; scenario test 05 must run without importing/executing 01..04 or
   06..18;
-- direct trusted-root CLI `bun scripts/task-547-runtime-smoke/cli.ts --all`
-  stages all 18 and promotes only after all clean lifecycle/digest-chain checks;
-- `bun scripts/task-547-runtime-smoke/cli.ts --scenario 05` runs only
+- a preliminary direct trusted-root
+  `bun scripts/task-547-runtime-smoke/cli.ts --all` stages all 18 and promotes
+  only after all clean lifecycle/digest-chain checks;
+- next, `bun scripts/task-547-runtime-smoke/cli.ts --scenario 05` runs only
   `05-portfolio-facets`, may promote only its result/PNG plus `manifest.json`,
   and proves the other 17 evidence pairs byte-identical before and after;
+- a final fresh direct trusted-root `--all` replaces the complete 37-artifact
+  set and is the only run eligible for the evidence commit;
 - every browser command uses exact argv-only `playwright-cli` operations and the
   scenario's suite session `wf547smoke`, `wf547formdesign` or
   `wf547pageeditor`; close/open is repeated per scenario;
@@ -724,11 +727,13 @@ substitute for either installed-site command.
 
 Closeout ordering is strict: prepare non-terminal docs/changelog/task drafts →
 run five fresh independent post-audit lenses → remediate verified findings and
-rerun every invalidated dependency-shaped gate → run fresh tracked `--all`
-smoke → commit the verified 37-file evidence set atomically → terminalize
-TASK-547-07, this leaf, TASK-547-06 and TASK-547 in descendant order → run the
-final read-only graph/closeout consistency pass. No terminal status or evidence
-commit may precede the clean post-audits and fresh final smoke.
+rerun every invalidated dependency-shaped gate → run one immutable-candidate
+composite gate with preliminary `--all`, isolated `--scenario 05` and final
+`--all` → commit the verified 37-file evidence set atomically → terminalize
+TASK-547-07, this leaf, TASK-547-06 and TASK-547 in descendant order while the
+audited changelog body stays byte-identical → run the final read-only
+graph/closeout consistency pass. No terminal status or evidence commit may
+precede the clean post-audits and fresh final smoke.
 
 ## Documentation Updates Required
 
