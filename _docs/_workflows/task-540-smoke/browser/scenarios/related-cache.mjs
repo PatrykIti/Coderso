@@ -112,11 +112,19 @@ export function createRelatedCacheScenarioRuntime({
         "/admin/api/content/" +
         plan.fixtureBlueprint.contentTypes.relatedFailure.slug +
         "/entries";
-      // The related-failure alert must be scoped: the retry Screen has no writable bindings, so
-      // `supportsDedicatedEditor` is false and the route permanently renders the unrelated
-      // "Workspace upgrade required" Alert. An unscoped [role="alert"] absence check can never
-      // reach zero on this route, and the same condition is what renders the preview surface the
-      // scenario asserts on. rc-012 owns the settled proof and scopes it the same way.
+      // The related-failure alert must be scoped, and the reason is narrow: this route mounts a
+      // SECOND, unrelated [role="alert"] that nothing in this scenario ever removes. The retry
+      // Screen declares no writable binding, so `supportsDedicatedEditor` is false and
+      // CustomScreenEntryEditorLayout permanently renders a "Workspace upgrade required" Alert --
+      // and the shared shadcn Alert primitive stamps role="alert" on every instance. A page-wide
+      // absence check therefore counts 2 before the click and 1 after a fully successful retry.
+      // That extra alert is the ONLY obstacle: the scenario's own subject is not implicated,
+      // because the related-list surface is rendered from the same relatedEntries in both the
+      // canvas and the preview branch and survives regardless. Measured against the frozen retry
+      // fixture with the real engine: page-wide 2 -> 1, scoped 1 -> 0. rc-012 owns the settled
+      // proof and scopes it the same way. assertBrowserSourceWidgetAbsenceScope() in
+      // executor/self-test/browser-widget-absence-scope.mjs now enforces the class over every
+      // emitted source, so reverting this line fails the executor self-test.
       const alertSelector = JSON.stringify(registeredSelector(plan, "relatedAlert"));
       const expectedRowId = captures.get("related-entry-failure1.id");
       const rootSelector =

@@ -56,6 +56,12 @@ export function staticSelector(value) {
 // TabsTrigger and Button all pass children through unwrapped — so this is a denylist of
 // proven text-delegating hosts rather than an allowlist of safe ones. If another
 // primitive starts wrapping, add its host token here with the same evidence.
+//
+// Sibling guard, different failure mode: shared widget classes such as [role="alert"] and
+// [role="option"] are also unsafe to use in a page-wide ABSENCE check, because an unrelated
+// instance the route mounts for its own reasons keeps the count above zero forever. That rule is
+// enforced over the emitted browser sources by assertBrowserSourceWidgetAbsenceScope() in
+// executor/self-test/browser-widget-absence-scope.mjs; keep the two token lists in step.
 export const TEXT_DELEGATING_HOST_TOKENS = deepFreezeExact([
   '[role="option"]',
   '[data-slot="select-item"]',

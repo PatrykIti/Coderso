@@ -27,9 +27,14 @@ import {
   assertToneFlowRunCodeSourceOwnership,
   inspectToneFlowRunCodeSource,
 } from "./browser-tone-flow-source.mjs";
+import {
+  assertBrowserSourceWidgetAbsenceScope,
+  runBrowserWidgetAbsenceScopeSelfTest,
+} from "./browser-widget-absence-scope.mjs";
 
 const PRESERVING_UNIT_WRAPPER_MARKER = "if (result === true) return { ok: true };";
 const UNIT_WRAPPER_PROBE_INNER_SOURCE = "__WF540_UNIT_WRAPPER_PROBE__";
+const WIDGET_ABSENCE_MUTATION_ACTION_ID = "rc-011-visible-retry";
 
 // Behavioural round-trip against the REAL builder output. The inner source is a trivial
 // probe: an action's own inner source drives a live page and must never be executed here.
@@ -85,6 +90,7 @@ export async function runBrowserRunCodeSourceOwnershipSelfTest({
     assertSourceMutantsRejected,
   } = browserSourceContext;
   const observedUnitFailureFrameActionIds = [];
+  let widgetAbsenceMutationSource = null;
   for (const action of plan.actionManifest) {
     if (action.executable.type === "runtime-operation") continue;
     const executionSpec = compileActionExecutionSpec(action);
@@ -116,6 +122,11 @@ export async function runBrowserRunCodeSourceOwnershipSelfTest({
       !compiledSource.includes(LEGACY_SCREEN_RUNTIME_ROOT_SELECTOR),
       action.id + " retained the legacy runtime-root selector"
     );
+    // Applied to every emitted source, not to a literal in one scenario file: an absence check on
+    // a shared widget class has to be narrowed to a container, or it silently becomes
+    // unsatisfiable the moment the route mounts an unrelated instance of that class.
+    assertBrowserSourceWidgetAbsenceScope(action.id, compiledSource);
+    if (action.id === WIDGET_ABSENCE_MUTATION_ACTION_ID) widgetAbsenceMutationSource = compiledSource;
     if (compiledSource.includes("await page.goto(")) {
       invariant(
         compiledSource.includes("{ timeout: 540000 }"),
@@ -529,6 +540,10 @@ export async function runBrowserRunCodeSourceOwnershipSelfTest({
     compiledRunCodeSources += 1;
   }
   invariant(compiledRunCodeSources === 392, "generated run-code source count drift");
+  runBrowserWidgetAbsenceScopeSelfTest({
+    assertNegative,
+    retrySettlementSource: widgetAbsenceMutationSource,
+  });
   invariant(
     observedUnitFailureFrameActionIds.length ===
       Object.keys(UNIT_FAILURE_FRAME_CLASSES_BY_ACTION_ID).length &&
