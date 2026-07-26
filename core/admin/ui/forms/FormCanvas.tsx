@@ -383,6 +383,10 @@ export function FormCanvas({
     "text-sm",
     t.typography.helperColor ? "text-[color:var(--form-helper)]" : "text-muted-foreground"
   );
+  const supportingTextClass = cn(
+    "text-xs",
+    t.typography.helperColor ? "text-[color:var(--form-helper)]" : "text-muted-foreground"
+  );
 
   // Forwarded-to-FieldPreview styling (same value for every field).
   const inputClass = cn(
@@ -538,6 +542,11 @@ export function FormCanvas({
                 </div>
               )}
             </div>
+            {t.submit.supportingText === undefined ? null : (
+              <p data-form-submit-supporting-text="true" className={supportingTextClass}>
+                {t.submit.supportingText}
+              </p>
+            )}
             <div className="flex pt-4">
               <Button type="button" disabled className={submitClass}>
                 {t.submit.label ?? "Submit"}
