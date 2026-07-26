@@ -410,8 +410,9 @@ or contents never join audit digests.
   never writes official round evidence and is not run during workflow
   remediation. Unknown, extra, combined or misspelled host-mode arguments fail
   before initialization and cannot fall through to the official audit. An
-  attestation failure resolves the initialization barrier before propagating,
-  so a concurrent shutdown cannot wait on an unreachable initialization state.
+  attestation/setup failure is retained as a barrier error, resolves the
+  initialization barrier, cleans any partial private result root, and exits
+  fail-closed, so a concurrent shutdown cannot wait on an unreachable state.
 - These guards prove repository mutations and the twelve pinned reference
   identities. They do not claim filesystem observation of TASK-540, arbitrary
   ignored paths outside the scoped TASK-547 trees or every external read;
