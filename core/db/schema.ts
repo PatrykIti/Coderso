@@ -665,6 +665,19 @@ export const accessLogs = pgTable(
     pathIdx: index("access_logs_path_idx").on(t.path),
     userIdx: index("access_logs_user_id_idx").on(t.userId),
     sessionIdx: index("access_logs_session_id_idx").on(t.sessionId),
+    // HASH, not btree, and the choice is load-bearing. `user_agent` stores the
+    // request header verbatim (httpServer.ts forwards `req.headers.get(...)` and
+    // logAccess does not truncate), so its length is client-controlled. A btree
+    // entry cannot exceed ~2704 incompressible bytes — measured as a hard INSERT
+    // rejection on PostgreSQL 18.4 — and `recordAccessLog` swallows insert
+    // failures with a console.warn, so a btree here would let any client silence
+    // its own access-log trail with a long high-entropy User-Agent. A hash index
+    // stores a 32-bit hash: no ceiling, no such failure mode (verified accepting
+    // a 32 kB User-Agent). Equality-only suffices and is planner-usable: callers
+    // filter `WHERE user_agent IN (...)`, which PostgreSQL executes as a Bitmap
+    // Index Scan over this index (one search per array element), replacing a
+    // 4,009-block Seq Scan of all 97,865 rows.
+    userAgentIdx: index("access_logs_user_agent_idx").using("hash", t.userAgent),
   })
 );
 

@@ -1,0 +1,1 @@
+CREATE INDEX "access_logs_user_agent_idx" ON "access_logs" USING hash ("user_agent");
