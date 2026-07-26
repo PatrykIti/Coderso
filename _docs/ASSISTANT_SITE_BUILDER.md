@@ -39,6 +39,13 @@ admin UI no longer exposes a parallel plan/apply/rerun/clone/rollback handoff.
 Solution Kits remains a read-only catalog surface with a CTA that opens the
 reviewed `LLM Guide` site-builder intake.
 
+The strict full-site package executor is not an additional Assistant action or
+browser authoring surface. It is a file-driven internal service/CLI seam that
+shares the Solution Kit ledger and `plan -> dry-run -> apply -> validate`
+discipline. Any future Assistant integration must compile to the same bounded
+schema, preserve explicit review, actor attribution, conflict handling, and
+auditable rollback instead of bypassing the action engine.
+
 The floating `LLM Guide` also supports reviewed resource operations for existing
 admin resources through the same action engine. Those edits/deletes must resolve
 targets from active context or server-side catalogs, preview conflicts before
