@@ -127,8 +127,10 @@ suite neither imports nor source-inspects that later-owned reader.
 
 - [x] Implement types/schema/limits/normalizer.
 - [x] Add `tests/vitest/kits/full-site-package-schema.test.ts`.
-- [ ] Correct serialized-size semantics, exact verification/setting contracts and
-  their boundary regressions, then run fresh gates.
+- [ ] Reject noncanonical package/non-setting keys without trimming; correct
+  serialized-size semantics, exact verification/setting contracts and their
+  boundary/non-disclosure regressions, remove undocumented residual/diagnostic
+  limit coupling, then run fresh gates.
 
 ## Testing Requirements
 

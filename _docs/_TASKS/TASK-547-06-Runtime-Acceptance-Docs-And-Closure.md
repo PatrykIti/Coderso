@@ -606,5 +606,5 @@ substitute for either installed-site command.
 
 Update all docs listed in the parent, add the example generation/install/rollback
 guide at `docs/develop/full-site-packages.md`, changelog
-`1260-YYYY-MM-DD-<task-547-slug>.md`/index, task
+`_docs/_CHANGELOG/1260-2026-07-23-task-547-full-site-package-formadom.md`/index, task
 statuses/board/statistics, and smoke manifest.

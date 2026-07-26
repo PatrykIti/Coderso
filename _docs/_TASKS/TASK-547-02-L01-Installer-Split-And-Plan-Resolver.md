@@ -874,8 +874,9 @@ composition remains usable before L02 lands.
 - [ ] Re-run and pin the delivered two-lock, strict V1 rollback-action,
   hostile-envelope/Proxy-array and managed-evidence query/harness work against
   the fresh corrective gate.
-- [ ] Add `RawFullSiteInstallLedgerItem` plus `listRawItems()` with the exact
-  immutable single-read boundary and regression matrix above.
+- [ ] Replace the reconstructed install identity with an exact
+  `PackageResourceIdentity` alias; add `RawFullSiteInstallLedgerItem` plus
+  `listRawItems()` with the immutable single-read boundary and regression matrix.
 - [ ] Add the three-argument frozen-plan planner overload with zero graph rebuild,
   while retaining the direct two-argument resolver's one self-lookup and zero
   planner writes.

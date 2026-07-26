@@ -266,9 +266,11 @@ injected lazy-dependency sentinel is acquired.
 - [x] Implement closed registry/ref path table and DAG planner.
 - [x] Add `tests/vitest/kits/full-site-package-references.test.ts`.
 - [ ] Remove the forbidden `menu.desired.document.items` registry row and
-  rebaseline its edge/freeze test; then correct discriminator/nullability/ref-key
-  coverage and static redacted diagnostics, implement and retain frozen
-  substitution provenance/helper, and run fresh gates.
+  rebaseline its edge/freeze test; implement recursive Page/Page Template
+  base/responsive/native-slot traversal with 4/24 reject boundaries; correct
+  discriminator/nullability/ref-key coverage and static redacted diagnostics;
+  freeze the exact occurrence-purpose/content-route plan, descriptors and
+  substitution helper; then run fresh gates.
 
 ## Testing Requirements
 

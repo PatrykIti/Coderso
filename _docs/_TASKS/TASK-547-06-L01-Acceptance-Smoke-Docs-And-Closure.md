@@ -14,7 +14,8 @@ invalidated and await fresh evidence from the final working tree.
 
 Own final acceptance-only tests, eight-flow Playwright CLI smoke, screenshots,
 scenario manifest, shared docs, changelog
-`1260-YYYY-MM-DD-<task-547-slug>.md` and task closure.
+`_docs/_CHANGELOG/1260-2026-07-23-task-547-full-site-package-formadom.md` and
+task closure.
 The single guide artifact is `docs/develop/full-site-packages.md`.
 The existing smoke manifest/screenshots are invalidated and remain untouched
 until the final fresh smoke run replaces them as one evidence set.

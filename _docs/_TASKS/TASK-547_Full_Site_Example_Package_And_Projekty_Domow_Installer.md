@@ -225,5 +225,6 @@ the main repository an implementation or audit input.
   `_docs/ARCHITECTURE.md`, and `_docs/SECURITY_SPEC.md` where contracts change
 - `docs/develop/full-site-packages.md` for generating, validating, installing and
   rolling back the example package
-- `_docs/_CHANGELOG/1260-YYYY-MM-DD-<slug>.md` and changelog index at closure
+- `_docs/_CHANGELOG/1260-2026-07-23-task-547-full-site-package-formadom.md` and
+  changelog index at closure
 - this task family and `_docs/_TASKS/README.md`

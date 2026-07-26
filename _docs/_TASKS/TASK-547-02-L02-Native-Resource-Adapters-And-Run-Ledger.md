@@ -959,20 +959,20 @@ then resume from that durable outcome without using the in-memory overlay.
 - [x] Add safe snapshots/equality/run items/cache effects.
 - [x] Add targeted adapter DB tests.
 - [ ] Split the adapter facade/tests and legacy entry service by the frozen
-  cohesive ownership map; preserve public imports and keep every touched file at
-  most 1,000 lines.
+  cohesive ownership map; preserve public imports and the 1,000-line gate.
+- [ ] Make nested full-site preflight strict for listing records and
+  `submit.supportingText`; split raw stored-locale writes/reads from canonical
+  public locale resolution, with exact boundary and compatibility tests.
+- [ ] Build the reference graph before ledger/default/lock access, then pass that
+  exact array through three-argument planning, two-pass pre-run preparation and
+  persistence-only initialization.
 - [ ] Implement all nine exact-ID native atomic APIs, atomic conditional delete,
   canonical Form-action Tx path and the locked settings apply/raw-restore batch
   with failure-boundary and race tests.
-- [ ] Persist two-pass durable intended UUIDs, complete target snapshots and
-  dependency envelopes via pre-run preparation plus persistence-only
-  initialization before mutation and
-  make recovery reject every required-kind `id:null` snapshot fail-closed;
-  classify noop directly from its source operation with zero resolver/native
-  read and leave outcome authority to L03's global evidence preflight.
-- [ ] Capture complete native-owner before snapshots independently of planner
-  equality and prove divergent current/published/revision restoration, the exact
-  revision cap/overflow behavior and locked replace/restore CAS races.
+- [ ] Persist durable intended UUIDs/dependency envelopes/complete targets;
+  classify source noops with zero resolver/native read; capture complete owner
+  before snapshots; reject required-kind `id:null`, revision overflow and CAS
+  races fail-closed while leaving outcome authority to L03's global preflight.
 
 ## Testing Requirements
 
