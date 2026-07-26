@@ -910,17 +910,20 @@ composition remains usable before L02 lands.
 - Replace both `15_000` DB-lock overrides in
   `fullSiteLegacyLedgerComposition.test.ts` and the EXPLAIN suite's `120_000`
   override with `360_000`; no L01 DB test may retain a lower hard timeout.
-- Before any TASK-547-02-L02 dispatch, the orchestrator must execute the exact
-  root-test type gate `./node_modules/.bin/tsc -p tsconfig.json --noEmit` from
-  the repository root. Capture the same command once before sequential leaf
+- Corrective L01 completion must first commit its promised
+  `RawFullSiteInstallLedgerItem` and `listRawItems()` owners. The L03 pre-land
+  bridge may then consume them but may never redeclare them. After that bridge
+  checkpoint and before TASK-547-02-L02 dispatch, the orchestrator executes the
+  exact root-test type gate `./node_modules/.bin/tsc -p tsconfig.json --noEmit`
+  from the repository root. Capture the same command once before sequential leaf
   dispatch as the baseline, parse every located TypeScript diagnostic, and
-  require zero diagnostics owned by L01 or any already-landed TASK-547 leaf.
+  require zero diagnostics owned by L01 or any already-landed TASK-547 phase.
   A non-zero root exit may preserve dependency order only when every remaining
   located diagnostic is classified either to a strictly later declared leaf or
   has the same normalized path, location, TypeScript code and headline as an
   unowned diagnostic in that pre-dispatch baseline;
   unlocated/unparsed diagnostics, new unowned diagnostics and ambiguous owners
-  block L01. The gate reports the remaining later-leaf and unchanged-baseline
+  block TASK-547-02-L02 dispatch/checkpoint progression. The gate reports the remaining later-leaf and unchanged-baseline
   counts explicitly and must not describe a non-zero global run as clean.
 - Reader/type/planner integrity gate: retain all v18 cases and prove revoked
   envelope and dependencies-array Proxies; throwing envelope `getPrototypeOf`,

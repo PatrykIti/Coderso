@@ -5,7 +5,8 @@
 **Priority:** Critical
 **Category:** Solution Kits / Native Resources
 **Estimated Effort:** Very Large
-**Dependencies:** TASK-547-02-L01
+**Dependencies:** TASK-547-02-L01 plus the TASK-547-02-L03 pre-land
+compatibility checkpoint
 **Status:** 🚧 In Progress
 **Validation:** Corrective adapter/executor work and fresh targeted/final gates
 are pending.
@@ -63,10 +64,12 @@ planner-equality `FullSiteInstallPlanItem.currentDesired` projection.
 - legacy `core/services/content/entryService.ts` plus new extracted
   `core/services/content/entryLifecycleMutationService.ts`. Preserve the public
   `entryService.ts` imports/re-exports while splitting it below 1,000 lines; and
+- `core/services/settings/settingsService.ts` owns the native setting key/value
+  contract and object-shaped write normalizer;
+- `core/services/settings/siteLocale.ts` owns the pure stored-write and public
+  sink locale policies; and
 - new `core/services/settings/fullSiteSettingsAtomicService.ts` owns exact raw
-  setting capture plus validated apply and raw-restore compare-and-swap batches.
-  It reuses `settingsService.ts`'s exported key/value normalizers and does not
-  change TASK-547-04-L03 ownership of `settingsService.ts`.
+  capture plus validated apply and trusted raw-restore CAS batches.
 
 **Exact test ownership:** existing
 `tests/unit/kits/fullSiteResourceAdapters.test.ts`,
@@ -84,53 +87,44 @@ planner-equality `FullSiteInstallPlanItem.currentDesired` projection.
 `tests/unit/content/typeService.test.ts`,
 `tests/unit/pages/pageTemplateLibraryService.test.ts`,
 `tests/unit/content/listingTemplatesService.test.ts`,
-`tests/unit/content/listingQueriesService.test.ts`; and new
+`tests/unit/content/listingQueriesService.test.ts`; existing
+`tests/unit/settings/settingsService.test.ts`; and new
 `tests/unit/settings/fullSiteSettingsAtomicService.test.ts`.
 
-Split the two near-limit adapter suites by responsibility before adding cases;
-every touched/created production and test file must close at most 1,000 physical
-lines and every extracted suite remains independently runnable. L02-owned kit
-tests may use an injected rollback adapter only to prove the executor seam; they
-must not own dependency scheduling, rollback claims or managed-identity behavior.
-Remove a duplicated cross-leaf case only after grounding equivalent coverage in
-the already-present L01/L03-owned suite; do not weaken a unique assertion.
+Split the near-limit adapter suites by responsibility before adding cases.
+`settingsService.ts` is already at the 1,000-line gate: replace/remove the weak
+batch implementation before adding behavior, never append past the limit. Every
+touched production/test file stays independently runnable and at most 1,000
+lines. L02 kit tests may inject rollback adapters only for the executor seam;
+dependency scheduling, claims and managed-identity behavior remain L03/L01.
 
 **Forbidden for L02:** L01 shared types/planner/ledger/current resolver/legacy
 composition and their tests; L03 rollback/compensation/service split/dependency/
 crash-worker tests; tasks/changelog/shared docs. No L02 file imports install-run
 tables or implements a second ledger.
 
-Keep the existing `execute.ts` import and call name `compensateItems`. L02 passes
-that compatibility entry point complete source/prior sets freshly reloaded by
-`ledger.listRawItems()`. The persisted raw source row is immutable provenance:
-an in-memory phase overlay is diagnostic-only and never becomes `items`, a
-preflight `persistedSourceItem`, or outcome operation/snapshots/action. L02 filters
-nothing and never imports L03's scheduler directly; L03 validates the raw sets,
-uses fresh exact native state for decisions, then invokes the shared scheduler.
-L02 also derives the current apply source through `ledger.getRun(run.id)` and
-passes it as `currentSource`. To keep the isolated L02 gate compatible with the
-old L03 parameter type, it first assigns the object (including `currentSource`)
-to a local variable and passes that variable; structural typing accepts it before
-L03 and the field becomes required when L03 lands.
+The L03-owned `compensation.ts` bridge is already present before this leaf.
+`execute.ts` imports its canonical `compensateItems` name and passes complete,
+unfiltered source/prior sets freshly loaded through `listRawItems()`, plus the
+locked `currentSource`. Raw DB rows remain immutable provenance; no phase overlay
+becomes an item, parsed source, snapshot, action or outcome. L02 never imports an
+L03 scheduler. The local input object may carry fields that the pre-land bridge
+does not yet require; final L03 tightens the same entry point structurally.
 
-Two source-compatible bridges are required specifically so the mandatory L02
-gate passes before L03 may edit its owned files. They are rollout compatibility,
-not production fallbacks invented for tests:
-
-- the existing base `AdapterApplyInput` construction shape remains accepted by
-  `applyStaged`/`applyDesired` through one explicitly deprecated internal branch
-  used only by the pre-L03 compensation module; the L02 executor must use the new
-  strict saga input and can never reach that branch; and
-- the existing array-returning `recoverInterruptedSagaItems` name remains a
-  compatibility wrapper for the untouched pre-L03 rollback facade. The final L03
-  implementation uses the new strict `classifyInterruptedSagaItems` API after
-  raw-field and graph validation and never uses the wrapper as dependency evidence.
+The bridge is injected and fail-closed, not a native default. L02 `adapters.ts`
+owns `FULL_SITE_ROLLBACK_ADAPTERS` and exact-ID nullable capture wrappers. For
+the bridge it supplies per-item non-setting reversal plus one required
+`reverseSettingsCompatibilityBatch({ items, actorId })` through the atomic settings
+service; final L03 replaces it once with native `reverseSettingsBatch`. No per-key setting reversal, dummy/no-op, mutable
+registration or import cycle is allowed. Missing adapters, malformed raw rows
+and native failures throw. Deprecated base `AdapterApplyInput` and array
+`recoverInterruptedSagaItems` exist only for this sequential gate; final L03
+uses atomic restore/delete and `classifyInterruptedSagaItems` after preflight.
 
 ## Canonical Adapter And Form-Action Contract
 
-`adapterTypes.ts` preserves the existing backward-compatible
-`AdapterApplyInput` construction shape so current planner/preparation calls and the
-untouched pre-L03 compensation module compile. It adds exact discriminated
+`adapterTypes.ts` preserves the backward-compatible `AdapterApplyInput` shape for
+the explicit pre-land bridge while adding exact discriminated
 `FullSiteSagaAdapterPrepareInput` and `FullSiteSagaAdapterApplyInput` unions. A
 create has `currentId:null`, a server-owned `intendedId:string` and
 `expectedSnapshot:null`; an update has `currentId:string`, `intendedId:null` and
@@ -140,24 +134,20 @@ first native write. A create never overloads `currentId`. Validation-only calls
 continue to use the base shape; every executor mutation constructs the strict
 union.
 
-The same module owns exact helpers `isFullSiteSagaAdapterApplyInput` and
-`assertFullSiteSagaAdapterApplyInput`. They require every strict key to be an own
-property, validate null/snapshot forms and enforce the operation/ID/target
-matrix. Adapters use that assertion before entering their domain-atomic mutation
-path. Existing `applyStaged`/`applyDesired` keep accepting the base type only via
-an explicitly deprecated internal compatibility branch for the old L03 restore
-call; no L02 executor, planner or preparation path may use that branch. L03 removes
-its call to the branch when it switches to `restoreSnapshotAtomic`; the branch is
-retained only to make the sequential L02 gate source-compatible and is not a test
-fallback. `adapterTypes.ts` also owns `FullSiteNativeSnapshot`,
+The exact helpers `isFullSiteSagaAdapterApplyInput` and
+`assertFullSiteSagaAdapterApplyInput` enforce own keys and the complete
+operation/ID/target matrix before mutation. Only the pre-land bridge reaches the
+deprecated base-input branch; executor/planner/preparation never do, and final
+L03 uses atomic restore/delete. `adapterTypes.ts` also owns `FullSiteNativeSnapshot`,
 `FullSitePreparedNativeTargets`, `RestoreSnapshotAtomicInput`,
 `DeleteSnapshotAtomicInput`, `PublishSnapshotAtomicInput`,
 `FullSiteNativeReversal`, `FullSiteSettingsApplyBatchInput`,
 `ReverseSettingsBatchInput`, `ResourceAdapter`,
 `LIFECYCLE_CAPABLE_PUBLISH_KINDS` and `isLifecycleCapablePublishKind`.
-`adapters.ts` only assembles and re-exports
-`FULL_SITE_RESOURCE_ADAPTERS satisfies FullSiteResourceAdapterRegistry`; it
-contains no domain implementation.
+`adapters.ts` contains no domain implementation. It assembles and re-exports
+`FULL_SITE_RESOURCE_ADAPTERS satisfies FullSiteResourceAdapterRegistry` plus
+L02-owned `FULL_SITE_ROLLBACK_ADAPTERS`, including nullable exact-ID wrappers
+that catch only each native owner's reviewed not-found code.
 
 Freeze the snapshot boundary separately from planner equality:
 
@@ -459,17 +449,30 @@ type FullSiteSettingsAtomicBatchInput = Readonly<{
 }>;
 ```
 
-Both settings mutation functions require identical unique sorted key sets. In
-one transaction they take `LOCK TABLE settings IN SHARE ROW EXCLUSIVE MODE` (an
-absent row cannot be protected by `FOR UPDATE` alone), re-read every raw key,
-compare exact presence/value with every `expectedCurrent`, and only then write
-all targets. Apply validates target values through the existing native setting
-normalizer; restore preserves trusted raw JSON. A mismatch throws
-`site_package_state_changed` with zero writes. Exactly one site-cache invalidation
-runs after commit; none runs on conflict/failure. `aggregateAdapters.ts`
-translates strict prepared apply inputs or shared `FullSiteNativeReversal[]` to
-this domain-only batch and exposes the two paths as the setting adapter's
-required `applySettingsBatchAtomic` and `reverseSettingsBatch` methods.
+`settingsService.ts` owns exact export
+`normalizeSettingValueForWrite(key, value): { key: SettingKey; value:
+SettingValueMap[SettingKey] }`; its union includes string/null/boolean/number/
+array/object values. `siteLocale.ts` owns `DEFAULT_SITE_LOCALE = "en"` and
+`MAX_SITE_LOCALE_LENGTH = 255`. `normalizeStoredSiteLocaleForWrite` rejects
+wrong-type, blank and over-bound input but returns an accepted string unchanged.
+`getSetting` and `listSettings` likewise preserve the raw stored locale.
+`normalizePublicSiteLocale` alone trims, bounds and accepts
+`^[A-Za-z]{2,3}(?:-[A-Za-z0-9]{1,8})*$`, then canonicalizes primary/script/
+region/other subtags so `pl`, `pl-PL`, `es-419` and `zh-Hant` work.
+`resolvePublicDocumentLanguage` falls back to `en`; `resolvePrimarySiteLanguage`
+uses that same parser. L04 consumes these pure exports without editing them.
+`settingsService.test.ts` pins raw/canonical examples, blank/wrong-type,
+254/255/256 bounds, full-union/cache invalidation and a `360_000` ms DB timeout.
+
+Both atomic mutations require identical sorted unique key sets. One transaction
+takes `LOCK TABLE settings IN SHARE ROW EXCLUSIVE MODE`, re-reads exact raw
+presence/value, compares `expectedCurrent`, then writes all or none. Apply uses
+the object normalizer's `.key`/`.value`; trusted restore preserves raw JSON.
+Mismatch throws `site_package_state_changed` with zero writes. Exactly one cache
+invalidation follows commit and none follows failure. Weak
+`applySettingsBatch`/`restoreSettingsBatchRaw` exports or imports are forbidden.
+The setting adapter exposes only required `applySettingsBatchAtomic` and
+`reverseSettingsBatch` paths over this service.
 
 ## Durable Create Intent
 
@@ -975,13 +978,13 @@ then resume from that durable outcome without using the in-memory overlay.
 
 - `set -a && source /home/coder/project/Coderso/.env && set +a`
 - Use that command only to load DB/settings validation variables; never inspect,
-  print, copy, hash or persist `.env` contents.
+  print/copy/hash/persist them; every DB command and test-local timeout is at least `360000`.
 - `bunx vitest run --config vitest.config.ts tests/vitest/forms/formActionsContract.test.ts`
 - `formActionsService.test.ts` uses unique per-test IDs and child-before-parent
   `finally` cleanup limited to its exact Form IDs; unqualified table deletes are
   forbidden.
 - `bun test --timeout 360000 tests/unit/forms/formActionsService.test.ts tests/unit/forms/formAggregateService.test.ts tests/unit/menus/menuAggregateAtomicity.test.ts tests/unit/pages/pageLifecycleMutation.test.ts tests/unit/content/entryLifecycleMutationService.test.ts tests/unit/content/detailPageDocumentLifecycleMutation.test.ts`
-- `bun test --timeout 360000 tests/unit/content/typeService.test.ts tests/unit/pages/pageTemplateLibraryService.test.ts tests/unit/content/listingTemplatesService.test.ts tests/unit/content/listingQueriesService.test.ts tests/unit/settings/fullSiteSettingsAtomicService.test.ts`
+- `bun test --timeout 360000 tests/unit/content/typeService.test.ts tests/unit/pages/pageTemplateLibraryService.test.ts tests/unit/content/listingTemplatesService.test.ts tests/unit/content/listingQueriesService.test.ts tests/unit/settings/settingsService.test.ts tests/unit/settings/fullSiteSettingsAtomicService.test.ts`
 - `bun test --timeout 360000 tests/unit/kits/fullSiteResourceAdapters.test.ts tests/unit/kits/fullSiteAggregateAdapters.test.ts tests/unit/kits/fullSiteLifecycleAdapters.test.ts tests/unit/kits/fullSiteAdapterAtomicity.test.ts tests/unit/kits/fullSiteLifecycleUpdates.test.ts`
 - the three native Page/entry/detail lifecycle suites above pin divergent
   current/published state, exact 100 and `limit + 1`; all nine native atomic

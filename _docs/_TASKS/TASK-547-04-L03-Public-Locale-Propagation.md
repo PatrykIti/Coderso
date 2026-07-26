@@ -28,8 +28,6 @@ copy is not an authored-content translation system.
 
 This leaf is the sole writer for:
 
-- `core/services/settings/siteLocale.ts`
-- `core/services/settings/settingsService.ts`
 - `core/services/pages/pageRuntimeDataPreparation.ts`
 - `core/site/renderPublicPage.tsx`
 - `core/site/renderPublicEntry.tsx`
@@ -48,7 +46,6 @@ This leaf is the sole writer for:
 - `tests/vitest/content/public-entry-locale.test.tsx`
 - `tests/vitest/kits/projekty-domow-listing-locale.test.tsx`
 - `tests/vitest/kits/projekty-domow-route-precedence.test.ts`
-- `tests/unit/settings/settingsService.test.ts`
 
 L01 exclusively owns `pageRuntimeBindingContract.ts`, including its existing
 optional `siteLocale` input and collection/Form prop mappers; L03 consumes those
@@ -57,27 +54,21 @@ types/mappers read-only while threading the installed setting through
 seed/assembler assertion. Do not edit Page copy, package resources or
 multilingual product contracts.
 
-`core/services/settings/settingsService.ts` is already at the 1,000-line hard
-limit on the current working tree. No new behavior may be appended to it: if a
-corrective locale change is required, first extract the cohesive locale setting
-responsibility while preserving public imports. Every production and test file
-above must finish at or below 1,000 physical lines; split tests by independently
-runnable contract rather than weakening or deleting assertions.
+TASK-547-02-L02 exclusively owns `settingsService.ts`, pure `siteLocale.ts` and
+`settingsService.test.ts`; this leaf imports their committed exports read-only.
+Every production/test file above finishes at or below 1,000 physical lines;
+split owned tests by independently runnable contract rather than weakening them.
 
 ## Locale Contract
 
-- `DEFAULT_SITE_LOCALE` remains the current safe default (`en`).
-- Preserve the existing `site.locale` producer/write contract: setup, assistant
-  and setting APIs may continue storing any non-blank bounded string. This leaf
-  does not narrow writes or destructively rewrite existing locales.
-- `siteLocale.ts::resolvePublicDocumentLanguage(value)` owns only the public
-  sink policy. It canonicalizes a safe bounded ASCII BCP-47-like tag with a
-  2-3-letter primary subtag and subsequent 1-8 alphanumeric subtags, including
-  `pl`, `pl-PL`, `es-419` and `zh-Hant`; malformed legacy values fall back to
-  `en` at the sink without changing the stored/read/list value.
-- `siteLocale.ts::resolvePrimarySiteLanguage(value)` uses that same
-  compatibility-safe grammar and returns the lowercase primary subtag for
-  runtime chrome selection. No second locale regex is permitted.
+- Consume L02's `DEFAULT_SITE_LOCALE`, `normalizePublicSiteLocale`,
+  `resolvePublicDocumentLanguage` and `resolvePrimarySiteLanguage` exactly; this
+  leaf neither validates stored writes nor defines a second locale regex.
+- L02 preserves any non-blank stored string up to its fixed 255-UTF-16-code-unit
+  bound.
+  Its public resolver alone applies the safe ASCII BCP-like grammar to `pl`,
+  `pl-PL`, `es-419` and `zh-Hant`; malformed raw values fall back to `en` only
+  at the sink. This leaf must not canonicalize or rewrite the stored/read value.
 - The selected public render branch reads `site.locale` once and threads that
   value through its Page, listing or detail renderer. The current runtime has no
   `buildPublicSiteRenderContext` locale owner; do not claim or call one unless a
@@ -89,19 +80,16 @@ runnable contract rather than weakening or deleting assertions.
 
 ## Settings Seam Contract
 
-`settingsService.ts` remains the sole owner of
+L02-owned `settingsService.ts` is the sole owner of
 `normalizeSettingValueForWrite(key, value): { key: SettingKey; value:
 SettingValueMap[SettingKey] }`. The result remains object-shaped and preserves
 the complete settings value union, including strings, null, booleans, numbers,
 arrays and objects. Callers consume `.value` (and the canonical `.key` where
 needed) rather than treating the result itself as the normalized primitive.
-TASK-547-02-L02's atomic batch service imports this exact pure normalizer and
-owns locking/CAS and rollback; it must not duplicate setting validation. After
-those callers migrate, this leaf removes or privatizes the weaker
-installer-facing
-`applySettingsBatch` and `restoreSettingsBatchRaw` exports and proves no
-installer, compensation or acceptance path imports them. General settings APIs
-and non-locale values retain their existing behavior.
+L02 already owns validation, atomic locking/CAS, raw rollback, cache invalidation
+and the absence of `applySettingsBatch`/`restoreSettingsBatchRaw`. L04 only calls
+`getSetting("site.locale")` and passes that unknown raw value to L02's safe
+resolver at the public render boundary.
 
 ## Native Listing Chrome Localization Contract
 
@@ -208,8 +196,8 @@ is used by Page and entry shells so security and output bytes cannot drift.
 ## Implementation Pseudocode
 
 ```ts
-export const resolvePublicDocumentLanguage = (value: unknown): string =>
-  normalizePublicSiteLocale(value) ?? DEFAULT_SITE_LOCALE;
+// Imported read-only from L02-owned core/services/settings/siteLocale.ts:
+// resolvePublicDocumentLanguage, resolvePrimarySiteLanguage
 
 export const resolvePageListingRuntimeCopy = (
   siteLocale: unknown,
@@ -218,11 +206,6 @@ export const resolvePageListingRuntimeCopy = (
     ? POLISH_PAGE_LISTING_RUNTIME_COPY
     : null;
 };
-
-const normalizedSetting: ReturnType<typeof normalizeSettingValueForWrite> =
-  normalizeSettingValueForWrite(input.key, input.desired.value);
-// { key: SettingKey; value: SettingValueMap[SettingKey] }
-const projectedSetting = { value: normalizedSetting.value };
 
 export function buildPublicDocumentShell(input: {
   language: unknown;
@@ -289,14 +272,10 @@ normalizer trims, blank-omits and defensively bounds known values.
 - `tests/vitest/kits/projekty-domow-route-precedence.test.ts`: proves only static
   Page versus content-route precedence. It contains no locale input/assertion
   and is intentionally not locale evidence.
-- `tests/unit/settings/settingsService.test.ts`: preserve non-blank stored locale
-  compatibility, including `es-419` and `zh-Hant`; prove malformed values fall
-  back only at the HTML/runtime-copy sink; pin the exact exported
-  `{ key: SettingKey; value: SettingValueMap[SettingKey] }` setting-normalizer
-  result and the caller projection from `.value`; cover representative
-  non-string values, including the `site.contentRoutes` array and
-  `design.tokens` object required by L02, plus the absence of weaker
-  installer/compensation imports.
+L02's independently gated `settingsService.test.ts` is prerequisite evidence for
+raw locale compatibility, the object-shaped setting normalizer, representative
+non-string values, cache invalidation and absence of weak installer imports.
+This leaf does not edit, rerun as owner, or substitute for that suite.
 
 Named suites must assert the emitted `<html lang>` string/DOM value, not merely a
 helper return. Each remains independently runnable and below 1,000 lines.
@@ -312,18 +291,15 @@ replaced by the synthetic Vitest fixture.
 
 - [x] Thread locale through the current Page and entry render branches.
 - [x] Split the touched legacy public-site module into cohesive bounded modules.
-- [ ] Replace the narrowing write/read policy with the compatibility-safe public
-  sink policy and complete the exact 22-key/precedence/persistence matrix.
-- [ ] Freeze the exported object-shaped
-  `{ key: SettingKey; value: SettingValueMap[SettingKey] }` setting normalizer
-  seam, including representative non-string values, and remove weaker installer
-  batch/raw-restore imports after TASK-547-02-L02 migration.
+- [ ] Consume L02's compatibility-safe public sink policy read-only and complete
+  the exact 22-key/precedence/persistence render matrix.
 - [ ] Hand the installed `handlePublicRequest` and browser assertions to
   TASK-547-06; they do not block this earlier leaf's own completion gate.
 
 ## Testing Requirements
 
-- the five named unit/Vitest suites above;
+- the four owned Vitest suites above, with the completed L02 settings gate as a
+  read-only prerequisite;
 - relevant Bun public Page/list/detail/preview/cache and route suites; every
   DB-targeted command/test uses at least `360000ms` timeout under the shared
   Render database policy;

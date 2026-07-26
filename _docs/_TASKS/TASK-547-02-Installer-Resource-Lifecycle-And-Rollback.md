@@ -66,8 +66,10 @@ native-domain validity.
 
 ## Frozen Ownership And Land Order
 
-Implementation lands strictly `L01 -> L02 -> L03`; each leaf reads the current
-on-disk state left by its predecessor and has one writer per file.
+Implementation lands strictly `L01 corrective completion -> L03 pre-land
+compatibility checkpoint -> L02 -> L03 final completion`. The checkpoint edits
+only L03-owned existing paths, leaves L03 `🚧 In Progress`, and is neither a new
+leaf nor a new ownership path. Each phase reads its predecessor's on-disk state.
 
 - **L01 -- shared lifecycle substrate:** TASK-547-01 package kind/identity aliases,
   shared install types/ledger port,
@@ -79,22 +81,24 @@ on-disk state left by its predecessor and has one writer per file.
   gate-safe type boundary keeps `FullSiteInstallLedgerItem` compatible for
   in-memory construction and owns `PersistedFullSiteInstallLedgerItem` for the
   compatibility `listItems()` projection plus `RawFullSiteInstallLedgerItem`
-  and authoritative `listRawItems()`. L01
-  owns planner/ledger/managed-identity tests and performs no native resource
-  mutation.
+  and authoritative `listRawItems()`. Those raw contracts must actually be
+  committed before the L03 checkpoint; the bridge may not redeclare them. L01
+  owns planner/ledger/managed-identity tests and performs no native mutation.
 - **L02 -- native mutation substrate:** staging/execute/preflight, the adapter
   facade and cohesive adapter splits, canonical Form-action normalization, and
   domain-local exact-ID create/replace/conditional-delete APIs plus complete
   native target/capture for all nine UUID-backed kinds and a new settings-domain
-  locked apply/raw-restore batch. It preserves the base adapter-input and
-  array-recovery APIs needed for its isolated gate while adding a strict saga
-  input and all-item classifier for final execution. L02 consumes the L01
-  port/types and never writes install-run tables directly.
-- **L03 -- compensation and process evidence:** rollback/compensation, including
-  the gate-safe `compensateItems` compatibility export consumed by L02, the split
-  service suite, dependency-branch tests, real process-death/SIGKILL DB tests and
-  shared-shell two-package apply/rollback concurrency tests. L03 consumes the
-  L01 dependency reader and L02 adapters; it cannot edit their owners.
+  locked apply/raw-restore batch. It owns `settingsService.ts`, `siteLocale.ts`
+  and their existing settings-service test, plus the default rollback registry
+  and exact-ID nullable capture wrappers in its adapter facade. It preserves the
+  gate compatibility surfaces while adding the strict saga input and all-item
+  classifier. It consumes L01 and never writes install-run tables directly.
+- **L03 -- compensation and process evidence:** after L01, pre-land only the
+  generic injected `compensateItems` bridge and its minimal existing-path test;
+  this phase imports L01 contracts, never L02/native/settings/DB code. After L02,
+  extend that same file with final rollback/compensation, dependency branches,
+  process-death/SIGKILL evidence and shared-shell concurrency. L03 consumes,
+  but cannot edit, the L02 adapter/default-registry owners.
 
 Every touched human-authored production or test module must finish at most 1,000
 physical lines. In particular, L02 must split the legacy
@@ -172,16 +176,16 @@ persisted items.
 
 The strict rollout preserves sequential gate safety without weakening final
 mutation authority. `AdapterApplyInput` retains its existing construction shape
-for planner/preflight and the untouched pre-L03 compensation module. L02 adds
+for planner/preflight and the pre-land L03 compatibility bridge. L02 adds
 discriminated `FullSiteSagaAdapterPrepareInput` and
 `FullSiteSagaAdapterApplyInput`, requiring the operation-correct intended ID,
 complete expected snapshot and already-durable complete target snapshot, plus
 `isFullSiteSagaAdapterApplyInput` and
 `assertFullSiteSagaAdapterApplyInput`; every new executor mutation must take that
 strict branch. The base mutation branch is explicitly deprecated and exists only
-until L03 stops the old compensation call in favor of `restoreSnapshotAtomic`.
+until final L03 replaces the bridge call with `restoreSnapshotAtomic`.
 Likewise, L02 retains array-returning `recoverInterruptedSagaItems` as a
-deprecated wrapper so the untouched rollback facade compiles at the L02 gate,
+deprecated wrapper so the pre-final rollback facade compiles at the L02 gate,
 while the exact new `classifyInterruptedSagaItems` returns one classification per
 strictly preflighted persisted source item. Final L03 scheduling uses only the
 classifier after raw-field and graph validation. These are land-order
@@ -255,12 +259,22 @@ alone is never mutation authority.
 Create reversal uses
 `deleteSnapshotAtomic({ id, expectedCurrent, actorId })`, never plain
 `deleteById`: the native owner locks/re-reads and complete-compares before delete.
-The same capture-to-write CAS applies to all nine create kinds. A new L02-owned
-`core/services/settings/fullSiteSettingsAtomicService.ts` supplies exact raw
-presence/value capture plus validated apply and raw restore. In one transaction
-it takes `LOCK TABLE settings IN SHARE ROW EXCLUSIVE MODE` (covering absent keys),
-re-reads/compares every key, then writes all or none and invalidates once after
-commit. It does not change TASK-547-04-L03 ownership of `settingsService.ts`.
+The same capture-to-write CAS applies to all nine create kinds. L02 owns
+`settingsService.ts`, the pure `siteLocale.ts`,
+`fullSiteSettingsAtomicService.ts` and both named settings tests. The settings
+service exports the object-shaped native write normalizer. Stored locale writes
+accept any non-blank string of at most `MAX_SITE_LOCALE_LENGTH = 255` UTF-16 code
+units and store the accepted string unchanged; reads/lists preserve that raw
+value. The
+separate public resolver accepts only the bounded ASCII BCP-like grammar,
+canonicalizes `pl`, `pl-PL`, `es-419` and `zh-Hant`, and falls back to `en` only
+at a public sink. L04 consumes these exports read-only.
+
+The atomic service supplies exact raw presence/value capture plus validated
+apply and trusted raw restore. In one transaction it locks the settings table
+(covering absent keys), re-reads/compares identical sorted unique key sets,
+writes all or none, and invalidates once after commit. The weak
+`applySettingsBatch` and `restoreSettingsBatchRaw` exports/imports are forbidden.
 The setting adapter is statically required to expose both
 `applySettingsBatchAtomic` and `reverseSettingsBatch`; per-key apply or reversal
 fallback is forbidden.
@@ -343,10 +357,10 @@ applied create calls locked atomic conditional delete. Settings follow equivalen
 raw presence/value refinement for non-completed create/update items before one
 locked compare-and-raw-restore batch. A preflight-authorized noop setting issues
 no native read/write and never enters the native batch payload.
-`FullSiteRollbackAdapters.captureSnapshotByIdOrNull(id)` is the L03-owned facade
-over L02's `captureSnapshotById(id)`; it converts only the native owner's exact-
-ID not-found result to `null`, propagates every other error and never performs a
-natural-key lookup.
+L02's default rollback registry owns
+`captureSnapshotByIdOrNull(id)` over `captureSnapshotById(id)`; it converts only
+the native owner's exact-ID not-found result to `null`, propagates every other
+error and never performs a natural-key lookup. L03 consumes this facade.
 
 Before any native reversal of a non-completed item whose refined state is
 `applied`, a successful source run additionally requires managed-resource
@@ -450,7 +464,8 @@ export const applyFullSitePackage = async (
   // the private graph build. ApplyFullSitePackageInput/deps expose no plan.
   const ledger = overrides.ledger ?? defaultLegacyInstallLedger;
   const adapters = overrides.adapters ?? FULL_SITE_RESOURCE_ADAPTERS;
-  const rollbackAdapters = overrides.rollbackAdapters ?? FULL_SITE_ROLLBACK_ADAPTERS;
+  const rollbackAdapters =
+    overrides.rollbackAdapters ?? FULL_SITE_ROLLBACK_ADAPTERS; // L02 facade owner
   const execute = async () => {
     const resolveCurrentResource =
       overrides.resolveCurrentResource ??
@@ -665,7 +680,8 @@ export async function rollbackFullSiteInstall(
           input.resolveCurrentResource ??
           createFullSiteCurrentResourceResolver(currentSource.packageKey, ledger),
       }); // hints only; noop skips resolver access and is not outcome authority
-      const adapters = input.adapters ?? FULL_SITE_ROLLBACK_ADAPTERS;
+      const adapters =
+        input.adapters ?? FULL_SITE_ROLLBACK_ADAPTERS; // L02 facade owner
       const refinements = await refineAllRollbackStates({
         parsed,
         classifications,
@@ -873,7 +889,7 @@ without using an in-memory overlay.
 - Use that command only to load DB/settings validation variables; never inspect,
   print, copy, hash or persist `.env` contents.
 - `bun test --timeout 360000 tests/unit/kits/installService.test.ts tests/integration/routes/solutionKitsRoutes.test.ts`
-- `bun test --timeout 360000 tests/unit/content/typeService.test.ts tests/unit/pages/pageTemplateLibraryService.test.ts tests/unit/content/listingTemplatesService.test.ts tests/unit/content/listingQueriesService.test.ts tests/unit/settings/fullSiteSettingsAtomicService.test.ts`
+- `bun test --timeout 360000 tests/unit/content/typeService.test.ts tests/unit/pages/pageTemplateLibraryService.test.ts tests/unit/content/listingTemplatesService.test.ts tests/unit/content/listingQueriesService.test.ts tests/unit/settings/settingsService.test.ts tests/unit/settings/fullSiteSettingsAtomicService.test.ts`
 - targeted Form/Menu/Page/entry/detail aggregate/lifecycle and full-site adapter
   suites from L02, including all nine exact-ID replace/delete race cases
 - `bun test --timeout 360000 tests/integration/kits/fullSiteManagedOwnershipDb.test.ts`

@@ -78,10 +78,11 @@ publishes only after their children and documents are complete.
   `_docs/_DEMO/projekty-domow.site.json` and
   `tests/vitest/kits/projekty-domow-package.test.ts`. It consumes L01 and
   TASK-547-03 exports read-only.
-- **TASK-547-04-L03** owns only the locale/runtime paths and named tests listed
-  in its leaf contract. It consumes `site.locale:"pl"` for the escaped document
-  language and the frozen present-only native listing/filter chrome; it does not
-  edit package builders, authored Page copy or entry content.
+- **TASK-547-04-L03** owns only the public-runtime paths and named render tests
+  listed in its leaf. It consumes the earlier L02-owned `settingsService.ts` and
+  pure `siteLocale.ts` exports read-only for escaped document language and the
+  present-only listing/filter chrome. It does not edit settings contracts,
+  package builders, authored Page copy or entry content.
 
 No file or symbol changes writer between leaves. All human-authored production
 and test files must remain cohesive and at most 1,000 physical lines; a file at

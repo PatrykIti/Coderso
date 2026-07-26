@@ -134,20 +134,41 @@ duplicates, missing paths or cross-leaf ownership.
   credentials, `.env` values, raw submission payload, absolute main-repository
   path or provider token in logs/screenshots/manifests.
 
+## Official Rollback And Emergency Cleanup Contract
+
+Normal cleanup calls the final
+`rollbackFullSiteInstall({ sourceRunId, actorId, ledger })` for the exact apply
+run and then proves the complete prior shell/settings raw state. Acceptance code
+must not import `applySettingsBatch`, `restoreSettingsBatchRaw`, plain
+`deleteById`, or any other weak/per-key compensation surface.
+
+Before apply, capture prior shell settings through L02's presence-aware raw
+reader. After successful apply, freeze the exact installed raw setting target
+from durable source evidence; do not recapture it at cleanup and call that a CAS
+expectation. If official rollback fails, preserve that primary error while
+independently attempting L02's
+`restoreFullSiteSettingsBatchRawAtomic({ expectedCurrent: installed, target:
+prior })`. Any emergency native resource cleanup likewise uses final atomic
+delete/restore adapters with the durable installed snapshot as
+`expectedCurrent`; a mismatch fails closed and never becomes last-writer-wins.
+Every official/emergency/verification failure remains in the cleanup aggregate.
+
 ## Implementation Pseudocode
 
 ```ts
 await verifyPinnedReferenceDigest();
 await runIsolatedAutomatedMatrixBeforeOuterInstall();
 await assertPortsFree([3000, 5173, 5174]);
-const prior = await capturePriorShellSettings();
+const prior = await captureFullSiteSettingsBatchRaw(SHELL_KEYS);
 const cleanup = createOuterCleanupRegistry();
 let sourceRun: AppliedPackageRun | null = null;
+let installedShellExpected: readonly FullSiteRawSettingState[] | null = null;
 let primaryError: unknown;
 let cleanupErrors: unknown[] = [];
 let pendingEvidence: PendingSmokeEvidence | null = null;
 try {
   sourceRun = await applyScopedPackageForBrowserSmoke();
+  installedShellExpected = await readInstalledShellTargetFromSourceEvidence(sourceRun);
   await restartServer("coderso-dev-core-host");
   await assertAdminAndFrontHealthySeparately();
   const publicEvidenceDir =
@@ -189,7 +210,9 @@ try {
       () => removeTempEvidenceDirIdempotently(directory)
     ),
     () => assertZeroRegisteredTempEvidenceDirs(cleanup.tempEvidenceDirs()),
-    () => rollbackExactSourceRun(sourceRun),
+    () => rollbackExactSourceRunOrEmergencyAtomic({
+      sourceRun, prior, installedShellExpected,
+    }),
     () => assertPriorShellSettingsEqual(prior),
     () => closeSmokeSession("wf547smoke"),
     () => closeSmokeSession("wf547formdesign"),
@@ -216,7 +239,8 @@ visible browser assertions in all three named sessions → freeze validated
 evidence bytes →
 delete every registered submission independently/idempotently and prove zero
 matching rows → remove every registered temporary directory independently/
-idempotently and prove zero directories → rollback the exact source apply run →
+idempotently and prove zero directories → officially roll back the exact source
+run, using durable-expected-current atomic emergency cleanup only on failure →
 prove exact prior shell/settings equality → close all three sessions/server
 through guaranteed `finally` cleanup → preserve the primary failure plus every
 cleanup failure → attach and validate material zero-row/zero-temp/prior-state
@@ -242,6 +266,10 @@ direct published Form status, no listing-template status, and `enabled:true`
 only on the success-message action.
 Prove static SEO from TASK-547-04-L01, dynamic detail SEO from TASK-547-03-L02
 and their exact preservation by TASK-547-04-L02 at the public runtime boundary.
+The suite statically and behaviorally proves no weak settings batch or
+`deleteById` cleanup import remains; an injected official-rollback failure makes
+the emergency settings CAS restore all keys or none, rejects intervening drift,
+and retains the official failure alongside every cleanup failure.
 
 `tests/integration/runtime/projekty-domow-detail-route.test.ts` owns the exact
 six-slug acceptance matrix: `/projekty/aurora` is 200 with exact public body,

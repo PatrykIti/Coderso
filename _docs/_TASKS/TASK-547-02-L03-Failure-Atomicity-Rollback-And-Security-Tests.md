@@ -5,7 +5,8 @@
 **Priority:** Critical
 **Category:** Reliability / Security Testing
 **Estimated Effort:** Large
-**Dependencies:** TASK-547-02-L02
+**Dependencies:** TASK-547-02-L01 for the pre-land bridge;
+TASK-547-02-L02 for final completion
 **Status:** 🚧 In Progress
 **Validation:** Corrective crash-recovery/rollback work and fresh DB/security
 evidence are pending.
@@ -22,6 +23,76 @@ Pre-run `prepareFullSiteSaga` failures create no source run and never enter L03.
 L02 alone finalizes a run whose persistence-only initialization fails, because
 no native write occurred; automatic compensation starts only after the complete
 prepared item set is durable.
+
+## Count-Neutral Pre-Land Compatibility Checkpoint
+
+After corrective L01 completion and before L02, land only the initial
+`compensation.ts` plus minimal injected-fake, DB-free bridge cases in the
+already-owned `fullSiteInstallService.test.ts`. L03 stays `🚧 In Progress`; this is not another
+leaf, task, path or owner. The bridge may import only committed L01 install/
+package types and standard-library pure utilities. It must not import L02
+adapters/types/staging, settings/native services, DB or runtime modules.
+
+The bridge exports `compensateItems` plus injected adapter types. Non-setting
+kinds retain per-item reversal; setting is a required all-or-none batch:
+
+```ts
+type CompatibilityItemRollbackAdapter = Readonly<{
+  reverseCompatibility(input: Readonly<{
+    item: RawFullSiteInstallLedgerItem;
+    actorId: string;
+  }>): Promise<void>;
+}>;
+type CompatibilitySettingsRollbackAdapter = Readonly<{
+  reverseSettingsCompatibilityBatch(input: Readonly<{
+    items: readonly RawFullSiteInstallLedgerItem[];
+    actorId: string;
+  }>): Promise<void>;
+}>;
+type CompatibilityRollbackAdapters = Readonly<Record<
+  Exclude<FullSiteInstallResourceKind, "setting">,
+  CompatibilityItemRollbackAdapter
+>> & Readonly<{ setting: CompatibilitySettingsRollbackAdapter }>;
+export async function compensateItems(input: Readonly<{
+  items: readonly RawFullSiteInstallLedgerItem[];
+  priorOutcomes: readonly RawFullSiteInstallLedgerItem[];
+  currentSource: FullSiteInstallRun;
+  actorId: string;
+  adapters: CompatibilityRollbackAdapters;
+  ledger: FullSiteInstallLedgerPort;
+  rollbackRunId: string;
+}>): Promise<void>;
+```
+
+Before any adapter/native call, validate the complete raw source/prior sets, all
+registry entries and the setting callback's function shape. Duplicate setting
+identity/key or malformed setting evidence fails in that zero-call preflight.
+Group every setting and sort it by the shared `position DESC, kind ASC, key ASC`
+comparator. Call `reverseSettingsCompatibilityBatch` exactly once when nonempty,
+never per key; its atomic contract rejects with fake/native state byte-identical.
+Only after the whole promise resolves may the bridge write each setting success
+outcome. Propagate failure with zero setting-success outcomes. Non-setting
+reversals remain deterministic per-item calls. No native default registry,
+mutable registration, dummy/no-op fallback or L02 import is permitted.
+
+```ts
+for (const invalid of [missingBatch, nonFunctionBatch, duplicateSetting,
+  malformedSetting]) {
+  await expect(compensateItems(makeInput(invalid))).rejects.toThrow();
+  expect(allAdapterAndNativeCalls()).toEqual([]);
+}
+const before = fakeSettingsBytes();
+await expect(compensateItems(makeInput(failingAtomicBatch))).rejects.toThrow();
+expect(settingBatchCalls()).toEqual([settingsInComparatorOrder]);
+expect(fakeSettingsBytes()).toBe(before);
+expect(settingSuccessOutcomes()).toEqual([]);
+```
+
+The minimal suite also pins a successful nonempty setting group to one batch,
+callback resolution before all setting outcomes, and zero batch calls when
+empty. The checkpoint then runs root/core type/lint gates and line counts before
+L02. Final L03 upgrades the same entry to L02's native `reverseSettingsBatch`
+once, rather than creating another bridge path or per-key setting algorithm.
 
 **Exact production ownership:** only
 `core/services/kits/fullSiteInstall/rollback.ts` and
@@ -49,10 +120,10 @@ cases only after confirming the L01-owned
 `fullSiteManagedOwnershipDb.test.ts` carries each equivalent assertion; retain
 all unique rollback/claim/resume/recovery behavior under L03.
 
-**Forbidden for L03:** every L01 planner/types/ledger/current-resource resolver/
-legacy composition path and test; every L02 adapter/executor/staging/domain
-service and test; task board/changelog/shared docs. Cross-leaf fixes return to
-their single writer rather than widening this leaf.
+**Forbidden for L03 edits:** every L01 planner/types/ledger/current-resource
+resolver/legacy path and test; every L02 adapter/executor/staging/domain service
+and test; task board/changelog/shared docs. Final L03 may import committed L02
+contracts/default registry read-only. Cross-leaf fixes return to their writer.
 
 ## Dependency-Aware Compensation Contract
 
@@ -66,8 +137,8 @@ their single writer rather than widening this leaf.
 `RawFullSiteInstallLedgerItem`; graph/classifier APIs receive the strict
 `PersistedFullSiteInstallLedgerItem` produced from every raw row.
 
-`compensateItems(input)` remains the import used by L02 `execute.ts`; it is not a
-second or legacy position-only algorithm. Its `items` input is the complete raw
+Final `compensateItems(input)` extends the pre-land export used by L02
+`execute.ts`; it is not a second position-only algorithm. Its `items` input is the complete raw
 source set freshly reloaded from the DB after the rollback claim. Persisted raw
 rows are immutable provenance; any in-memory phase overlay is diagnostic-only
 and never becomes an input item, preflight `persistedSourceItem`, outcome snapshots,
@@ -75,8 +146,8 @@ operation or action. This path requires V1 evidence for every current item,
 strictly validates every raw row before building the graph and calling L02's
 `classifyInterruptedSagaItems`, then delegates to
 `compensateDependencyBranches`. It must not filter noop, planned or not-applied
-items before graph validation. This lets L02 pass its gate before L03 lands while
-making automatic compensation use the same scheduler after L03 lands.
+items before graph validation. The checkpoint lets L02 pass its gate; final L03
+upgrades that same function to the shared scheduler.
 Its final `CompensateItemsInput` requires `currentSource: FullSiteInstallRun` and
 `items`/`priorOutcomes: readonly RawFullSiteInstallLedgerItem[]`;
 L02 supplies the fresh validated source through the structural local-variable
@@ -84,11 +155,11 @@ bridge plus the raw claimed-run outcomes frozen in L02, and explicit rollback
 passes its locked source re-read and raw outcomes. No caller constructs the
 completed-identity set.
 
-L02 deliberately retains two sequential-land bridges while this leaf is pending:
-base-shape `AdapterApplyInput` mutation calls used by the old compensation module,
-and the array-returning `recoverInterruptedSagaItems` wrapper used by the old
-rollback facade. This leaf removes every production call to the former by using
-`restoreSnapshotAtomic`, and final compensation/rollback imports only
+L02 deliberately retains two checkpoint surfaces: the base-shape
+`AdapterApplyInput` branch used only by `reverseCompatibility`, and the array
+`recoverInterruptedSagaItems` wrapper used by the pre-final rollback facade.
+Final L03 removes production calls to the former through
+`restoreSnapshotAtomic`; compensation/rollback imports only
 `classifyInterruptedSagaItems`. It does not use the deprecated recovery wrapper,
 does not treat its projected array as graph evidence and does not introduce a
 third recovery alias.
@@ -224,10 +295,10 @@ aggregate and compares the same `expectedCurrent` inside its transaction, so a
 capture-to-delete/restore race throws `site_package_state_changed` before any
 write. Settings use equivalent presence-aware raw before/final-after authority
 and L02's one locked compare-and-raw-restore batch.
-`FullSiteRollbackAdapters.captureSnapshotByIdOrNull(id)` is the L03-owned facade
-over L02's `captureSnapshotById(id)`; it converts only the native owner's exact-
-ID not-found result to `null`, propagates every other error and never performs a
-natural-key lookup.
+L02's `FULL_SITE_ROLLBACK_ADAPTERS` owns
+`captureSnapshotByIdOrNull(id)` over `captureSnapshotById(id)`; it converts only
+the native owner's exact-ID not-found result to `null`, propagates every other
+error and never performs a natural-key lookup. L03 consumes it read-only.
 
 Before any native reversal of a non-completed item whose refined state is
 `applied`, a successful source run additionally requires managed-resource
@@ -398,6 +469,9 @@ export type FullSiteRollbackAdapters =
       Pick<ResourceAdapter, "reverseSettingsBatch">
     >;
   };
+
+// The structural type is finalized here; the concrete
+// FULL_SITE_ROLLBACK_ADAPTERS value is owned/exported by L02 adapters.ts.
 
 type PreflightedRollbackEvidenceBase = Readonly<{
   identity: FullSiteResourceIdentity;
@@ -676,7 +750,7 @@ export async function rollbackFullSiteInstall(
       const refinements = await refineAllRollbackStates({
         parsed,
         classifications,
-        adapters: input.adapters ?? FULL_SITE_ROLLBACK_ADAPTERS,
+        adapters: input.adapters ?? FULL_SITE_ROLLBACK_ADAPTERS, // L02 owner
         currentSource,
         ledger,
         completedIdentities,
@@ -685,7 +759,7 @@ export async function rollbackFullSiteInstall(
         graph,
         refinements,
         actorId: input.actorId,
-        adapters: input.adapters ?? FULL_SITE_ROLLBACK_ADAPTERS,
+        adapters: input.adapters ?? FULL_SITE_ROLLBACK_ADAPTERS, // L02 owner
         ledger,
         rollbackRunId,
         completedIdentities,
@@ -909,6 +983,7 @@ test re-reads the pre-test raw shell rows after cleanup and fails on any mismatc
 - `set -a && source /home/coder/project/Coderso/.env && set +a`
 - Use that command only to load DB/settings validation variables; never inspect,
   print, copy, hash or persist `.env` contents.
+- pre-land checkpoint: `bun test --timeout 360000 tests/unit/kits/fullSiteInstallService.test.ts`
 - `bun test --timeout 360000 tests/unit/kits/fullSiteInstallService.test.ts tests/unit/kits/fullSiteCompensationDependencies.test.ts`
 - `bun test --timeout 360000 tests/integration/kits/fullSiteCrashRecoveryDb.test.ts`
 - targeted full-site lifecycle/adapter and all nine native atomic/settings suites

@@ -157,10 +157,13 @@ whose embedded documents delegate to their domain owners.
 5. [ ] **TASK-547-05** — installer-backed CLI (1 executable leaf).
 6. [ ] **TASK-547-06** — dependency-shaped tests, documentation, Playwright smoke,
    and closure (1 executable leaf).
-Implementation is strictly sequential: `01 → 02 → 03 → 04 → 05 → 06`. TASK-547-07
-owns the workflow script and runs throughout the family without taking source
-ownership from those children.
-The source/test ownership registry remains exactly 13 executable leaves.
+Implementation is strictly sequential: `01 → 02 → 03 → 04 → 05 → 06`. Inside
+TASK-547-02, corrective L01 completion is followed by one L03-owned pre-land
+compatibility checkpoint, then L02 completion and final L03 completion. The
+checkpoint does not terminalize L03, create a fourth TASK-547-02 leaf, or add a
+source/test path. TASK-547-07 owns the workflow script and runs throughout the
+family without taking source ownership from those children. The source/test
+ownership registry remains exactly 13 executable leaves.
 TASK-547-07's canonical ownership map is the sole source of truth for the
 current family-wide path count, and workflow checks must derive that count from
 the map instead of hardcoding a stale total. Workflow entrypoints/private
