@@ -17,7 +17,14 @@ import type { PageRuntimeDataByBlockId } from "../services/pages/pageRuntimeBind
 import { resolvePageTemplateInput } from "../services/pages/pageTemplateBoundary";
 import { DefaultRuntimePageShell, type PageTemplateProps } from "./pageRuntime";
 import { DefaultRuntimePageShellV2, type PageTemplatePropsV2 } from "./pageRuntimeV2";
-import { buildSiteShellCss, type SiteShellRenderProps } from "./siteShell";
+import {
+  buildSiteShellCss,
+  SiteFooter,
+  SiteHeaderMenuDocumentRender,
+  SiteHeaderNav,
+  type SiteShellRenderProps,
+} from "./siteShell";
+import { buildPublicDocumentShell } from "./publicDocumentShell";
 
 export type PublicPageRenderOptions = {
   title: string;
@@ -40,11 +47,16 @@ export type PublicPageRenderOptions = {
    * traffic never pollutes the analytics tables. Absent/null → no script.
    */
   analyticsScriptHtml?: string | null;
+  siteLocale?: unknown;
 };
 
 export type PublicPageRuntimeRenderOptions = PublicPageRenderOptions & {
   themeName?: string | null;
   templateKey?: unknown;
+  responsiveCss?: string | null;
+  siteShell?: SiteShellRenderProps | null;
+  siteName?: string | null;
+  activePath?: string | null;
 };
 
 export type PublicPageV2RuntimeRenderOptions = Omit<
@@ -121,7 +133,8 @@ const renderDocument = (
   isPreview?: boolean,
   renderBodyScripts?: () => ReactNode,
   responsiveCss?: string | null,
-  analyticsScriptHtml?: string | null
+  analyticsScriptHtml?: string | null,
+  siteLocale?: unknown
 ) => {
   const headTags: ReactNode[] = [
     <meta key="charset" charSet="utf-8" />,
@@ -193,7 +206,11 @@ const renderDocument = (
   const analyticsHtml =
     analyticsScriptHtml && !isPreview ? `<script>${analyticsScriptHtml}</script>` : "";
 
-  return `<!doctype html><html lang="en"><head>${head}</head><body>${bodyHtml}${bodyScriptsHtml}${analyticsHtml}</body></html>`;
+  return buildPublicDocumentShell({
+    language: siteLocale,
+    headHtml: head,
+    bodyHtml: `${bodyHtml}${bodyScriptsHtml}${analyticsHtml}`,
+  });
 };
 
 const previewBannerOffset = "2rem";
@@ -230,6 +247,64 @@ const PageRuntimeRoot = ({
     {children}
   </div>
 );
+
+const PublicSiteShellFrame = ({
+  siteShell,
+  siteName,
+  activePath,
+  previewDevice,
+  children,
+}: {
+  siteShell?: SiteShellRenderProps | null;
+  siteName?: string | null;
+  activePath?: string | null;
+  previewDevice?: PageBreakpoint;
+  children: ReactNode;
+}) => (
+  <>
+    {siteShell?.navigationDocument ? (
+      <SiteHeaderMenuDocumentRender
+        document={siteShell.navigationDocument}
+        navigation={siteShell.navigation}
+        siteName={siteName}
+        breakpoint={previewDevice ?? "desktop"}
+        activePath={activePath}
+      />
+    ) : siteShell?.navigation ? (
+      <SiteHeaderNav
+        navigation={siteShell.navigation}
+        siteName={siteName}
+        extras={siteShell.navigationExtras ?? null}
+      />
+    ) : null}
+    {children}
+    {siteShell?.footerDocument ? (
+      <SiteFooter
+        document={siteShell.footerDocument}
+        breakpoint={previewDevice ?? "desktop"}
+        peerSpotlightOn={false}
+      />
+    ) : null}
+  </>
+);
+
+const appendSiteShellCss = (
+  inlineCss: string | null | undefined,
+  siteShell: SiteShellRenderProps | null | undefined
+) => {
+  const hasSiteShell = Boolean(
+    siteShell?.navigation || siteShell?.navigationDocument || siteShell?.footerDocument
+  );
+  if (!hasSiteShell) return inlineCss;
+  return [
+    inlineCss,
+    buildSiteShellCss(
+      siteShell?.navigationDocument ? null : (siteShell?.navigationAppearance ?? null)
+    ),
+  ]
+    .filter(Boolean)
+    .join("\n");
+};
 
 export function renderPublicPageHtml(options: PublicPageRenderOptions) {
   const {
@@ -282,7 +357,8 @@ export function renderPublicPageHtml(options: PublicPageRenderOptions) {
     isPreview,
     () => runtimeScripts.renderScripts(),
     null, // responsiveCss (legacy path has none)
-    options.analyticsScriptHtml
+    options.analyticsScriptHtml,
+    options.siteLocale
   );
 }
 
@@ -301,6 +377,10 @@ export async function renderPublicPageRuntimeHtml(options: PublicPageRuntimeRend
     layoutSettings: rawLayoutSettings,
     themeName,
     templateKey,
+    responsiveCss,
+    siteShell,
+    siteName,
+    activePath,
   } = options;
 
   const normalizedTemplateKey = normalizePageTemplateKey(templateKey);
@@ -333,7 +413,18 @@ export async function renderPublicPageRuntimeHtml(options: PublicPageRuntimeRend
 
   const body = (
     <PageRuntimeRoot templateKey={templateProps.templateKey} isPreview={isPreview}>
-      {Template ? <Template {...templateProps} /> : <DefaultRuntimePageShell {...templateProps} />}
+      <PublicSiteShellFrame
+        siteShell={siteShell}
+        siteName={siteName}
+        activePath={activePath}
+        previewDevice={previewDevice}
+      >
+        {Template ? (
+          <Template {...templateProps} />
+        ) : (
+          <DefaultRuntimePageShell {...templateProps} />
+        )}
+      </PublicSiteShellFrame>
     </PageRuntimeRoot>
   );
 
@@ -341,7 +432,7 @@ export async function renderPublicPageRuntimeHtml(options: PublicPageRuntimeRend
     title,
     body,
     cssHref,
-    inlineCss,
+    appendSiteShellCss(inlineCss, siteShell),
     metaDescription,
     canonicalUrl,
     robots,
@@ -349,8 +440,9 @@ export async function renderPublicPageRuntimeHtml(options: PublicPageRuntimeRend
     devModuleScripts,
     isPreview,
     () => runtimeScripts.renderScripts(),
-    null, // responsiveCss (runtime path has none)
-    options.analyticsScriptHtml
+    responsiveCss,
+    options.analyticsScriptHtml,
+    options.siteLocale
   );
 }
 
@@ -404,19 +496,7 @@ export function renderPublicPageV2RuntimeHtml(options: PublicPageV2RuntimeRender
   // layout is emitted with a NULL appearance so residual legacy appearance props
   // (e.g. sticky on a migrated menu) never bleed under the custom menu; the
   // document's own appearance rides its scoped `menuDocumentCss` sheet instead.
-  const hasSiteShell = Boolean(
-    siteShell?.navigation || siteShell?.navigationDocument || siteShell?.footerDocument
-  );
-  const inlineCssWithShell = hasSiteShell
-    ? [
-        inlineCss,
-        buildSiteShellCss(
-          siteShell?.navigationDocument ? null : (siteShell?.navigationAppearance ?? null)
-        ),
-      ]
-        .filter(Boolean)
-        .join("\n")
-    : inlineCss;
+  const inlineCssWithShell = appendSiteShellCss(inlineCss, siteShell);
 
   const body = (
     <PageRuntimeRoot templateKey={`v2-${templateProps.templateKey}`} isPreview={isPreview}>
@@ -437,6 +517,7 @@ export function renderPublicPageV2RuntimeHtml(options: PublicPageV2RuntimeRender
     isPreview,
     renderBodyScripts ?? undefined,
     responsiveCss,
-    options.analyticsScriptHtml
+    options.analyticsScriptHtml,
+    options.siteLocale
   );
 }

@@ -14,6 +14,7 @@ import {
 } from "../services/posts/runtime/postBlockRuntimeMapper";
 import { PostBlockRuntimeRenderer } from "../services/posts/runtime/postBlockRuntimeRenderer";
 import { ContentListPager } from "../widgets/core/contentList";
+import { buildPublicDocumentShell } from "./publicDocumentShell";
 
 export type PublicEntrySummary = {
   id: string;
@@ -109,6 +110,7 @@ export type PublicEntryListOptions = {
    * skipped when `isPreview` is set. Absent/null → no script.
    */
   analyticsScriptHtml?: string | null;
+  siteLocale?: unknown;
 };
 
 export type PublicEntryDetailOptions = {
@@ -130,6 +132,7 @@ export type PublicEntryDetailOptions = {
    * set. Absent/null → no script.
    */
   analyticsScriptHtml?: string | null;
+  siteLocale?: unknown;
 };
 
 type TemplateComponent<Props> = (props: Props) => ReactNode;
@@ -185,7 +188,8 @@ const renderDocument = (
   robots?: string | null,
   devModuleScripts?: string[] | null,
   isPreview?: boolean,
-  analyticsScriptHtml?: string | null
+  analyticsScriptHtml?: string | null,
+  siteLocale?: unknown
 ) => {
   const headTags: ReactNode[] = [
     <meta key="charset" charSet="utf-8" />,
@@ -239,7 +243,11 @@ const renderDocument = (
   const analyticsHtml =
     analyticsScriptHtml && !isPreview ? `<script>${analyticsScriptHtml}</script>` : "";
 
-  return `<!doctype html><html lang="en"><head>${head}</head><body>${bodyHtml}${analyticsHtml}</body></html>`;
+  return buildPublicDocumentShell({
+    language: siteLocale,
+    headHtml: head,
+    bodyHtml: `${bodyHtml}${analyticsHtml}`,
+  });
 };
 
 const PreviewBanner = () => (
@@ -362,7 +370,8 @@ export async function renderPublicEntryListHtml(options: PublicEntryListOptions)
     robots,
     devModuleScripts,
     isPreview,
-    analyticsScriptHtml
+    analyticsScriptHtml,
+    options.siteLocale
   );
 }
 
@@ -421,6 +430,7 @@ export async function renderPublicEntryDetailHtml(options: PublicEntryDetailOpti
     robots,
     devModuleScripts,
     isPreview,
-    analyticsScriptHtml
+    analyticsScriptHtml,
+    options.siteLocale
   );
 }

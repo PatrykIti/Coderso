@@ -3,7 +3,10 @@ import {
   mapListingTemplatePresentationToContentList,
   normalizeContentListData,
 } from "../../widgets/core/contentList";
-import { normalizeListingFiltersData } from "../../widgets/core/listingFilters";
+import {
+  normalizeListingFiltersData,
+  type ListingFiltersCopy,
+} from "../../widgets/core/listingFilters";
 import { getDefaultFormSettings } from "../forms/formSettings";
 import type { FormRuntimeResolution } from "../forms/formRuntimeContract";
 import type { ContentListResolvedRuntimeData } from "./pageRuntimeBindingContract";
@@ -34,6 +37,69 @@ import {
   normalizeListingRuntimeAliases,
   type ListingRuntimeAliasMap,
 } from "../search/filterContract";
+import { normalizeSiteLocale } from "../settings/siteLocale";
+
+type PageListingRuntimeCopy = {
+  filters: {
+    title: string;
+    description: string;
+    searchLabel: string;
+    searchPlaceholder: string;
+    applyLabel: string;
+    copy: ListingFiltersCopy;
+  };
+  collection: {
+    ctaLabel: string;
+    emptyTitle: string;
+    emptyDescription: string;
+  };
+};
+
+const polishPageListingRuntimeCopy: PageListingRuntimeCopy = {
+  filters: {
+    title: "Filtruj wyniki",
+    description: "Zawęź wyniki za pomocą dostępnych filtrów.",
+    searchLabel: "Szukaj",
+    searchPlaceholder: "Szukaj w wynikach...",
+    applyLabel: "Zastosuj filtry",
+    copy: {
+      configurationAriaLabel: "Konfiguracja filtrów wyników",
+      configurationHint: "Wybierz zapisane zapytanie, aby włączyć filtry.",
+      activeFilterSingular: "aktywny filtr",
+      activeFilterPlural: "aktywne filtry",
+      activeRangeFromLabel: "Od",
+      activeRangeUpToLabel: "Do",
+      activeSearchLabel: "Szukaj",
+      clearAllLabel: "Wyczyść wszystko",
+      autoApplyLabel: "Wyniki aktualizują się automatycznie.",
+      loadingLabel: "Aktualizowanie wyników...",
+      errorLabel: "Nie udało się odświeżyć wyników. Spróbuj ponownie.",
+      rejectedLabel: "Pominięto nieprawidłowe parametry filtrów.",
+      drawerLabel: "Panel filtrów",
+      emptyOptionsLabel: "Brak dostępnych opcji.",
+      optionSearchTemplate: "Szukaj w opcjach: {facet}",
+      defaultOrderLabel: "Domyślna kolejność",
+      dateFromLabel: "Od",
+      dateToLabel: "Do",
+      rangeMinLabel: "Minimum",
+      rangeMaxLabel: "Maksimum",
+      rangeMinSliderLabel: "Suwak minimum",
+      rangeMaxSliderLabel: "Suwak maksimum",
+    },
+  },
+  collection: {
+    ctaLabel: "Zobacz szczegóły",
+    emptyTitle: "Brak wyników",
+    emptyDescription: "Zmień filtry lub opublikuj pasujące treści.",
+  },
+};
+
+export const resolvePageListingRuntimeCopy = (
+  siteLocale: string | null | undefined
+): PageListingRuntimeCopy | null => {
+  const locale = normalizeSiteLocale(siteLocale);
+  return locale?.split("-")[0] === "pl" ? polishPageListingRuntimeCopy : null;
+};
 
 const readOptionalText = (value: unknown): string | null => {
   if (typeof value !== "string") return null;
@@ -115,7 +181,18 @@ const resolveCollectionBinding = async (
   options: PreparePageRuntimeOptions,
   deps: Required<Pick<PageRuntimeDataBindingDeps, "resolveContentListRuntimeData">>
 ): Promise<PageRuntimeCollectionBinding> => {
-  const data = mapPageCollectionBlockToContentListData(block);
+  const baseData = mapPageCollectionBlockToContentListData(block);
+  const localeCopy = resolvePageListingRuntimeCopy(options.siteLocale)?.collection;
+  const data = localeCopy
+    ? normalizeContentListData({
+        ...baseData,
+        style: { ...baseData.style, ctaLabel: localeCopy.ctaLabel },
+        emptyState: {
+          title: localeCopy.emptyTitle,
+          description: localeCopy.emptyDescription,
+        },
+      })
+    : baseData;
   const listingQueryId = data.source?.listingQueryId?.trim() ?? "";
   let resolved: ContentListResolvedRuntimeData;
   try {
@@ -149,12 +226,23 @@ const resolveCollectionBinding = async (
     kind: "collection",
     data: normalizeContentListData({
       ...data,
-      ...(presentation
+      ...((presentation || localeCopy)
         ? {
-            style: { ...contentListDefaults.style, ...presentation.style },
-            ...(presentation.emptyState
-              ? { emptyState: { ...contentListDefaults.emptyState, ...presentation.emptyState } }
-              : {}),
+            style: {
+              ...contentListDefaults.style,
+              ...presentation?.style,
+              ...(localeCopy ? { ctaLabel: localeCopy.ctaLabel } : {}),
+            },
+            emptyState: {
+              ...contentListDefaults.emptyState,
+              ...(localeCopy
+                ? {
+                    title: localeCopy.emptyTitle,
+                    description: localeCopy.emptyDescription,
+                  }
+                : {}),
+              ...presentation?.emptyState,
+            },
           }
         : {}),
       resolved,
@@ -168,7 +256,20 @@ const resolveFiltersBinding = async (
   options: PreparePageRuntimeOptions,
   deps: Required<Pick<PageRuntimeDataBindingDeps, "resolveListingFiltersRuntimeData">>
 ): Promise<PageRuntimeFiltersBinding> => {
-  const data = mapPageFiltersBlockToListingFiltersData(block);
+  const baseData = mapPageFiltersBlockToListingFiltersData(block);
+  const localeCopy = resolvePageListingRuntimeCopy(options.siteLocale)?.filters;
+  const data = localeCopy
+    ? normalizeListingFiltersData({
+        ...baseData,
+        title: localeCopy.title,
+        description: localeCopy.description,
+        searchLabel: readOptionalText(block.props.searchLabel) ?? localeCopy.searchLabel,
+        searchPlaceholder:
+          readOptionalText(block.props.searchPlaceholder) ?? localeCopy.searchPlaceholder,
+        applyLabel: readOptionalText(block.props.applyLabel) ?? localeCopy.applyLabel,
+        copy: localeCopy.copy,
+      })
+    : baseData;
   let resolved: ListingFiltersRuntimeResult;
   try {
     resolved = await deps.resolveListingFiltersRuntimeData({
