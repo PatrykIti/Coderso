@@ -28,8 +28,8 @@ Active entrypoints remain:
 
 - `_docs/_workflows/task-547-author-audit.mjs` — operator-driven
   `prepare → native agent → ingest → validate` contract audit;
-- `_docs/_workflows/task-547-implement.mjs` — sequential phase manifest,
-  ownership and per-phase gate validation;
+- `_docs/_workflows/task-547-implement.mjs` — persistent JIT state machine for
+  sequential dispatch, ownership, root-only gates and phase advancement;
 - `_docs/_workflows/task-547-fix.mjs` — exact finding-to-owner scope and
   restart/refresh validation.
 
@@ -173,6 +173,15 @@ unknown field or oversized value. The receipt must repeat the exact issued
 agent task, `forkTurns`, nonce and timestamp; unrelated/reused tasks or issue
 bindings fail.
 
+All native audit, implementation and fixer state is authenticated with
+HMAC-SHA256 using the root-only `TASK547_ROOT_STATE_KEY`. The key must contain
+at least 32 random bytes encoded as hex, remains in the trusted root process
+environment and is never stored, logged or passed to an agent. State and
+descriptor directories are direct mode-`0700` directories; files are direct
+mode-`0600` regular files. Reads reject symlinks and identity changes, writes
+are atomic, and recoverable locks bind PID, process start ticks, boot ID and
+inode ownership.
+
 The pre-implementation directory contains exactly 116 files:
 
 - five rounds × 21 `round-NN-per-file-<slug>.json`;
@@ -225,7 +234,9 @@ Implementation agents run strictly one leaf/phase at a time. They read the
 current on-disk predecessor state, edit only their declared paths and return
 structured changed-path/test results. The root orchestrator verifies the diff,
 runs the required gate and creates an atomic commit before dispatching the next
-phase.
+phase. If a phase is already satisfied and produces an exact zero-path delta,
+the same full gate is mandatory and the state records `validated-existing`
+without creating an empty commit.
 
 Each implementation phase requires:
 
@@ -329,14 +340,23 @@ await validateAndPublishFinalEvidence({ expectedFiles: 116 });
 Implementation dispatch:
 
 ```ts
+await implementation.prepare();
+
 for (const phase of IMPLEMENTATION_PHASE_ORDER) {
-  const result = await orchestratorSpawnFreshCodexAgent(
-    prepareImplementationJob(phase),
-  );
-  assertExactOwnedDelta(result.changedPaths, phase.ownedPaths);
-  await runPhaseGate(phase);
-  await rootCommitAtomically(phase);
+  const issued = await implementation.pending();
+  const receipt = await orchestratorSpawnFreshCodexAgent(issued.job);
+  await implementation.ingest(receipt);
+
+  const gate = await implementation.gateRequest();
+  await implementation.gateIngest(await trustedRootRun(gate.request));
+
+  if (receipt.result.changedPaths.length > 0) {
+    await rootCommitAtomically(phase);
+  }
+  await implementation.advance();
 }
+
+await implementation.validate();
 ```
 
 ## Sub-Tasks
@@ -344,7 +364,8 @@ for (const phase of IMPLEMENTATION_PHASE_ORDER) {
 - [x] Define the 13-leaf ownership and 14-phase implementation order.
 - [x] Define 8 + 5 + 5 runtime smoke contracts.
 - [x] Replace repository-wide Claude guidance with internal Codex agents only.
-- [ ] Convert the TASK-547 audit runner and evidence schema to native receipts.
+- [x] Convert TASK-547 audit, implementation and fixer runners to authenticated
+  native receipts and JIT state machines.
 - [ ] Record five clean native-agent rounds plus final reconcile.
 - [ ] Run sequential implementation, post-audits and final smoke.
 - [ ] Preserve final screenshot hashes and close TASK-547.
