@@ -16,13 +16,17 @@ working tree.
 ## Overview
 
 Prove the complete installed package through dependency-shaped automated tests and
-real browser flows, publish documentation, then close the task family. This child
-owns acceptance/smoke tests, shared docs, task/changelog and smoke evidence only;
-TASK-547-01..05 retain exclusive ownership of their targeted tests.
+18 independently runnable real-browser scenarios, publish documentation, then
+close the task family. This child owns acceptance tests, the tracked smoke runner,
+shared docs, task/changelog and tracked smoke evidence only; TASK-547-01..05
+retain exclusive ownership of their targeted tests and production contracts.
 The exact user/developer guide path owned here is
 `docs/develop/full-site-packages.md`; do not create an alternate guide path.
-The prior string-only manifest and its screenshots are invalid evidence; only the
-final fresh `wf547smoke` run may replace them.
+All ignored `_docs/_workflows/_smoke/task-547/**` files are invalid historical
+evidence and are never force-added. Canonical executable scenarios live under
+`scripts/task-547-runtime-smoke/scenarios/`; canonical evidence lives under
+`_docs/PLAYWRIGHT/task-547-runtime-smoke/` and is tracked through a narrow
+`.gitignore` exception.
 Acceptance fails closed unless the twelve-file logical reference
 `projekty-domow-wow-site` still has aggregate ordered-manifest digest
 `d9cf34b5accf7f52b4ebc6d19516a2745936f746305b1f6a46aedbacd4745a4e`.
@@ -66,116 +70,110 @@ path or raw reference contents.
 ## Implementation Pseudocode
 
 ```ts
-async function verifyInstalledFormaDomSite(ctx: SmokeContext): Promise<SmokeResult> {
+async function runScenarioInCleanRoom(
+  ctx: RootSmokeContext,
+  scenario: RuntimeSmokeScenario,
+): Promise<TrackedScenarioResult> {
+  return ctx.withExclusiveTaskLock(async () => {
+    await ctx.assertPortsFree([3000, 5173, 5174]);
+    await ctx.closeSessionIfPresent(scenario.session);
+    await ctx.assertSessionClosed(scenario.session);
+    await ctx.assertNoScenarioTempState(scenario.id);
+    const prior = await ctx.capturePresenceAwareState();
+    const cleanup = ctx.createScenarioCleanupRegistry(scenario.id);
+    let pending: FrozenPreCleanupEvidence | null = null;
+    let sourceRun: AppliedPackageRun | null = null;
+    let installedExpected: FullSiteInstalledSnapshot | null = null;
+    let finalStateDigest: string | null = null;
+    let primaryError: unknown;
+    const cleanupErrors: unknown[] = [];
+    try {
+      sourceRun = await ctx.applyFreshScopedPackage(scenario.id);
+      installedExpected = await ctx.readInstalledSnapshotFromRun(sourceRun);
+      await ctx.startOnlyThroughHelper("coderso-dev-core-host");
+      await ctx.assertAdminAndFrontHealthy();
+      await ctx.openFreshSession(scenario.session, scenario.viewport);
+      const tracker = cleanup.submissionTracker({
+        beforeDispatch: "register-marker",
+        afterAcceptedResponse: "attach-id-before-next-assertion",
+      });
+      pending = await scenario.arrangeActAssert({
+        ctx, tracker, noRetryAfterDispatch: true,
+      });
+      await ctx.captureAndFullyDecodePng(pending);
+    } catch (error) {
+      primaryError = error;
+    } finally {
+      await ctx.attemptEveryCleanupStep(cleanupErrors, [
+        ...cleanup.submissionDeletions(),
+        () => cleanup.assertZeroSubmissionRows(),
+        () => cleanup.removeScenarioTempArtifacts(),
+        () => cleanup.assertZeroTempArtifacts(),
+        () => ctx.rollbackExactRunOrAtomicCas(sourceRun, installedExpected, prior),
+        () => ctx.assertDatabaseAndSettingsEqual(prior),
+        () => ctx.closeSessionIfPresent(scenario.session),
+        () => ctx.stopExactHelperProcess("coderso-dev-core-host"),
+        () => ctx.assertPortsFree([3000, 5173, 5174]),
+        () => ctx.assertNoScenarioTempState(scenario.id),
+        async () => {
+          finalStateDigest = await ctx.captureExactStateDigest();
+          ctx.assertStateDigestEqual(finalStateDigest, prior.digest);
+        },
+      ]);
+    }
+    ctx.throwPrimaryWithCleanupAggregate(primaryError, cleanupErrors);
+    return ctx.attachCleanupAndFreezeResult(pending, {
+      priorStateDigest: prior.digest,
+      finalStateDigest: ctx.requireCapturedDigest(finalStateDigest),
+    });
+  });
+}
+
+async function runTrackedSmoke(
+  ctx: RootSmokeContext,
+  selection: "all" | ScenarioNumber,
+): Promise<void> {
   await ctx.verifyReferenceManifest(EXPECTED_REFERENCE_DIGEST);
-  await ctx.runIsolatedAutomatedMatrix(FINAL_VALIDATION_COMMANDS);
-  await ctx.assertPortsFree([3000, 5173, 5174]);
-  const prior = await ctx.capturePriorSiteState();
-  const cleanup = ctx.createOuterCleanupRegistry();
-  let sourceRun: AppliedPackageRun | null = null;
-  let primaryError: unknown;
-  let cleanupErrors: unknown[] = [];
-  let pendingEvidence: PendingSmokeEvidence | null = null;
+  const baseline = await ctx.captureExactStateDigest();
+  const selected = ctx.registry.select(selection);
+  const staged = ctx.createBoundedInMemoryEvidenceSet();
   try {
-    sourceRun = await ctx.applyPackageForBrowserSmoke();
-    await ctx.restartServer("coderso-dev-core-host");
-    await ctx.assertAdminAndFrontHealthy();
-    const publicEvidenceDir =
-      await cleanup.createAndRegisterTempEvidenceDir("wf547smoke");
-    const formDesignEvidenceDir =
-      await cleanup.createAndRegisterTempEvidenceDir("wf547formdesign");
-    const pageEditorEvidenceDir =
-      await cleanup.createAndRegisterTempEvidenceDir("wf547pageeditor");
-    const submissionTracker = {
-      beforeSubmit(source: SmokeSet, marker: string) {
-        cleanup.registerSubmissionMarkerImmediately(source, marker);
-      },
-      onCreated(marker: string, submissionId: string) {
-        cleanup.attachSubmissionIdImmediately(marker, submissionId);
-      },
-    };
-    const scenarios = await runScenarios(FROZEN_EIGHT_REAL_FLOWS, {
-      evidenceDir: publicEvidenceDir,
-      submissionTracker,
-    });
-    const formDesign = await ctx.runFormDesignSmoke({
-      session: "wf547formdesign",
-      evidenceDir: formDesignEvidenceDir,
-      submissionTracker,
-    });
-    const pageEditor = await ctx.runPageEditorSmoke({
-      session: "wf547pageeditor",
-      evidenceDir: pageEditorEvidenceDir,
-      submissionTracker,
-    });
-    pendingEvidence = await ctx.validateAndFreezePreCleanupEvidenceBytes({
-      scenarios, formDesign, pageEditor,
-    });
-  } catch (error) {
-    primaryError = error;
+    for (const scenario of selected) {
+      staged.add(await runScenarioInCleanRoom(ctx, scenario));
+    }
+    await ctx.assertDigestChain(staged, { runInitialStateDigest: baseline });
+    await ctx.promoteEvidenceTransactionally(staged, selection);
   } finally {
-    cleanupErrors = await ctx.runSequentialIndependentIdempotentCleanup([
-      ...cleanup.submissions().map((submission) =>
-        () => ctx.deleteSubmissionByIdAndMarkerIdempotently(submission)
-      ),
-      () => ctx.assertZeroRowsForRegisteredIdsAndMarkers(cleanup.submissions()),
-      ...cleanup.tempEvidenceDirs().map((directory) =>
-        () => ctx.removeTempEvidenceDirIdempotently(directory)
-      ),
-      () => ctx.assertZeroRegisteredTempEvidenceDirs(cleanup.tempEvidenceDirs()),
-      () => ctx.rollbackExactSourceRun(sourceRun),
-      () => ctx.assertPriorSiteStateEqual(prior),
-      () => ctx.closePlaywrightSession("wf547smoke"),
-      () => ctx.closePlaywrightSession("wf547formdesign"),
-      () => ctx.closePlaywrightSession("wf547pageeditor"),
-      () => ctx.stopServer("coderso-dev-core-host"),
-    ]);
+    staged.wipe();
+    await ctx.removeAndAssertNoRunStaging();
   }
-  ctx.throwPrimaryErrorWithAllCleanupErrors(primaryError, cleanupErrors);
-  await ctx.verifyReferenceManifest(EXPECTED_REFERENCE_DIGEST);
-  const completeEvidence = ctx.attachAndValidateCleanStateReceipts(
-    pendingEvidence, cleanup.receipts()
-  );
-  return ctx.writeEvidenceFromValidatedFrozenBytesAfterCleanEquality(
-    completeEvidence
-  );
 }
 ```
 
-**Data flow:** verify pinned reference digest → run every isolated/non-mutating
-and self-cleaning automated command before the outer browser install → assert
-ports 3000/5173/5174 are free → capture exact prior shell/settings → apply one
-task-scoped package run → restart `coderso-dev-core-host` → separately verify
-admin and public-front health → create and immediately register one fresh
-task-owned temporary evidence directory for each of `wf547smoke`,
-`wf547formdesign` and `wf547pageeditor` → before every submission register its
-unique marker/source and immediately attach the returned submission ID before
-the next assertion → capture the six-slug resolver outcome before metadata and
-scan the complete closed detail-root/block, installed-title, source-corpus and
-dynamic-SEO sets for every non-Aurora 404 → validate and freeze the three
-pre-cleanup artifact/evidence sets as immutable in-memory bytes → independent
-ordered `finally` cleanup
-attempts → delete every
-registered ID/marker independently and idempotently → prove zero matching rows →
-remove every registered temporary evidence directory independently and
-idempotently → prove zero such directories → rollback only the exact outer
-source run → assert byte/value equality with every captured prior
-shell/settings value → close all named browser sessions and stop the server →
-attach the material zero-row/zero-temp/prior-state cleanup receipts and validate
-the complete evidence. Evidence is atomically written from the frozen bytes only
-after all cleanup/equality checks succeed; closeout follows final drift/
-remediation and its invalidated-gate reruns.
+**Data flow:** the trusted root CLI loads one registry entry, acquires the
+exclusive TASK-547 lock, proves free ports/no named session/no scenario temp
+state, captures a presence-aware DB/settings snapshot and digest, applies a fresh
+scenario-scoped package, starts the server only through
+`coderso-dev-core-host`, verifies admin/front health, opens the suite's exact
+session fresh, then calls that scenario file's own `arrange/act/assert`. A
+submission marker is registered before browser dispatch and an accepted ID is
+attached before the next assertion. The root freezes visible observations and a
+fully decoded PNG in staging, then `finally` deletes scoped rows, proves zero
+rows/temp state, rolls back by exact source run with expected-current atomic CAS
+fallback, proves byte/value DB/settings equality, closes the session, stops the
+exact helper process and proves ports free. Only a result containing that clean
+receipt may be promoted.
 
-**Error handling:** preserve the first test/smoke error, attempt every cleanup
-step even when an earlier cleanup fails, then surface the primary error together
-with every cleanup failure. Marker registration happens before dispatch and ID
-attachment happens immediately after creation, so a lost response or later
-assertion failure cannot orphan a row. Temporary-directory registration is part
-of the create helper and completes before it returns. A failed deletion cannot
-skip later deletions or either zero-state assertion. Any missing route, dangling
-link, invisible effect, console/page error, failed submission security check,
-dirty rollback, skipped required test, stale/corrupt screenshot, manifest drift
-or >1,000-line touched file blocks evidence and closure.
+**Error handling:** no retry is allowed after browser dispatch or any mutation.
+Preserve the first scenario failure, attempt every cleanup step independently,
+and return it with every cleanup failure. Never promote partial or pre-cleanup
+evidence. `--all` stages all 18 results and uses rollback-capable, manifest-last
+promotion so readers see either the previous valid 37-file set or the complete
+new one. `--scenario 05` may replace only scenario 05's result/PNG plus the root
+manifest and must prove the other 17 result/PNG pairs byte-identical. Missing
+routes, invisible effects, console/page errors, dirty cleanup, digest-chain
+drift, corrupt PNGs or a >1,000-line touched production/test file block evidence
+and closure.
 
 **Regression-test shape:** assert exact resource counts and identities, repeat
 apply noops, dynamic routes/data, filter result changes, form persistence and
@@ -226,7 +224,79 @@ cannot pass.
   render assertions. Every production/test module remains at most 1,000 physical
   lines and every extracted suite stays runnable in its owning lane.
 
+### Tracked Smoke Ownership And Atomic Land Order
+
+TASK-547-06-L01 is the sole tracked-smoke writer. Its implementation surface is
+`scripts/task-547-runtime-smoke/**`; its modular tests are
+`tests/unit/workflows/task547RuntimeSmoke/**`. It also owns the two package
+aliases, `tests/README.md`, and only the narrow `.gitignore` exception needed to
+track PNG evidence:
+`!/_docs/PLAYWRIGHT/task-547-runtime-smoke/*/screenshot.png`. Canonical tracked
+evidence is:
+
+- `_docs/PLAYWRIGHT/task-547-runtime-smoke/manifest.json`;
+- for every exact `NN-id` below,
+  `_docs/PLAYWRIGHT/task-547-runtime-smoke/NN-id/result.json` and
+  `_docs/PLAYWRIGHT/task-547-runtime-smoke/NN-id/screenshot.png`.
+
+That is exactly 37 tracked evidence artifacts. Final validation uses
+`git ls-files --error-unmatch` for all 18 scenario modules, all 18 matching
+scenario test files and all 37 evidence files. TASK-547-04-L01 owns only its
+production contracts and concise Page Editor handoff; TASK-547-07 owns only the
+ignored workflow bridge that invokes this tracked CLI. Internal Codex agents may
+audit root-authored results but never author or patch smoke evidence.
+
+The implementation state machine exposes 22 exact-path, separately gated atomic
+phases within this leaf:
+
+1. `547-06-L01-acceptance-tests`;
+2. `547-06-L01-smoke-framework`;
+3. `547-06-L01-smoke-01` through `547-06-L01-smoke-18`, strictly in number
+   order, each owning one scenario file plus only its matching test file;
+4. `547-06-L01-smoke-registry`;
+5. `547-06-L01-integration`.
+
+The framework phase owns shared contracts, Playwright CLI adapter, browser
+harness, scenario runner, artifacts, root-port and live-root adapter modules plus
+their focused tests. Registry owns only registry/aggregate modules and tests.
+Integration owns `cli.ts`, its test, aliases, runner docs and the narrow ignore
+exception. Every changed phase is committed atomically after its focused gate;
+a validated zero-delta phase records `validated-existing` without an empty
+commit. The 37 evidence files land later in one dedicated fresh-evidence commit.
+
 ## Required Smoke Scenarios
+
+The tracked registry is exactly:
+
+| No. | Stable ID / standalone module basename | Session | URL | Viewport |
+| --- | --- | --- | --- | --- |
+| 01 | `home-desktop-effects` | `wf547smoke` | `http://127.0.0.1:3000/` | `1440x1000` |
+| 02 | `all-routes-desktop-shell` | `wf547smoke` | `http://127.0.0.1:3000/` | `1440x1000` |
+| 03 | `tablet-responsive` | `wf547smoke` | `http://127.0.0.1:3000/` | `1024x1366` |
+| 04 | `mobile-navigation` | `wf547smoke` | `http://127.0.0.1:3000/` | `390x844` |
+| 05 | `portfolio-facets` | `wf547smoke` | `http://127.0.0.1:3000/projekty` | `1440x1000` |
+| 06 | `aurora-detail` | `wf547smoke` | `http://127.0.0.1:3000/projekty/aurora` | `1440x1000` |
+| 07 | `contact-form` | `wf547smoke` | `http://127.0.0.1:3000/kontakt` | `1440x1000` |
+| 08 | `publish-rollback` | `wf547smoke` | `http://127.0.0.1:3000/` | `1440x1000` |
+| 09 | `form-design-author-light` | `wf547formdesign` | `http://127.0.0.1:5173/admin/advanced/forms/{formId}` | `1440x1000` |
+| 10 | `form-design-author-dark` | `wf547formdesign` | `http://127.0.0.1:5173/admin/advanced/forms/{formId}` | `1440x1000` |
+| 11 | `form-design-reset-mobile` | `wf547formdesign` | `http://127.0.0.1:5173/admin/advanced/forms/{formId}` | `390x844` |
+| 12 | `form-design-save-reload` | `wf547formdesign` | `http://127.0.0.1:5173/admin/advanced/forms/{formId}` | `1440x1000` |
+| 13 | `form-design-publish-front` | `wf547formdesign` | `http://127.0.0.1:3000/kontakt` | `1440x1000` |
+| 14 | `page-editor-switcher-author-light` | `wf547pageeditor` | `http://127.0.0.1:5173/admin/pages/{pageId}` | `1440x1000` |
+| 15 | `page-editor-switcher-tablet-reset` | `wf547pageeditor` | `http://127.0.0.1:5173/admin/pages/{pageId}` | `1024x1366` |
+| 16 | `page-editor-collection-cta-dark` | `wf547pageeditor` | `http://127.0.0.1:5173/admin/pages/{pageId}` | `1440x1000` |
+| 17 | `page-editor-form-presentation-save-reload` | `wf547pageeditor` | `http://127.0.0.1:5173/admin/pages/{pageId}` | `1440x1000` |
+| 18 | `page-editor-publish-front-parity` | `wf547pageeditor` | `["http://127.0.0.1:3000/","http://127.0.0.1:3000/projekty","http://127.0.0.1:3000/kontakt"]` | `390x844` |
+
+Each module is exactly
+`scripts/task-547-runtime-smoke/scenarios/NN-id.ts`; its only scenario test is
+`tests/unit/workflows/task547RuntimeSmoke/scenarios/NN-id.test.ts`. A scenario
+owns its `arrange/act/assert`, imports shared framework modules but no other
+scenario, supports direct `--self-test` and `--run`, and is independently
+runnable by its matching test path. The three fixed session names are reused
+sequentially by suite, but the root closes any predecessor and opens the exact
+session fresh for every scenario.
 
 Exact ordered IDs:
 `home-desktop-effects`, `all-routes-desktop-shell`, `tablet-responsive`,
@@ -268,42 +338,48 @@ Exact ordered IDs:
    disappears, exact success appears and all controls remain visible. Clean
    every registered submission independently and prove zero matching rows.
 8. Draft/publish-to-front parity, native lifecycle order, source-run rollback,
-   all registered submission cleanup, all three temporary-evidence-directory
-   cleanup and exact prior shell/settings restoration.
+   all registered submission cleanup, scenario-temporary-state cleanup, exact
+   prior shell/settings restoration and aggregate digest chaining.
 
-The manifest IDs and order equal the exact list above. Its root object has
-exactly `{ reference, preflight, scenarios, consoleErrors, pageErrors,
-screenshots, failures, pass }`. `reference` is exactly
-`{ label:"projekty-domow-wow-site",
-digest:"d9cf34b5accf7f52b4ebc6d19516a2745936f746305b1f6a46aedbacd4745a4e" }`.
-`preflight` is exactly `{ portsFree, restart, adminHealth, frontHealth }`, where
-`portsFree` equals `{required:[3000,5173,5174],occupied:[]}`, `restart` equals
-`{service:"coderso-dev-core-host",session:"wf547smoke",fresh:true}`,
-`adminHealth` equals `{url:"http://127.0.0.1:5173/",status:200}` and
-`frontHealth` equals `{url:"http://127.0.0.1:3000/",status:200}`.
+Every scenario writes one strict root result after cleanup:
+`{ schemaVersion, scenario, reference, preflight, assertions, consoleErrors,
+pageErrors, screenshot, cleanup, failures, pass }`. `scenario` contains exact
+`{ number, id, session, url, viewport }`; `reference` is exactly
+`{label:"projekty-domow-wow-site",
+digest:"d9cf34b5accf7f52b4ebc6d19516a2745936f746305b1f6a46aedbacd4745a4e"}`.
+`preflight` materially records the free-port set, absent predecessor session and
+temp state, prior-state digest, fresh scoped apply, helper-only restart and both
+health responses. `cleanup` materially records hashed marker/attached-ID pairs,
+empty remaining-row/temp arrays, exact-source rollback outcome, equal prior/final
+state digests, closed exact session, stopped exact helper process and free ports.
+It is impossible to serialize a passing result before cleanup is complete.
 
-Each scenario is an object with exactly `id`, `url`, `viewport`, `pass`,
-`consoleErrors`, `pageErrors`, `screenshot` and `assertions`. Every assertion is
-`{ id, kind, target, expected, observed, pass }`; `observed` must be a material
-string, number, array or object, never a boolean proxy. Required assertion IDs
-are scenario-specific and ordered. Every scenario and the root manifest have
-empty `consoleErrors` and `pageErrors`; root `failures` is empty and `pass` is
-true. Root `screenshots` is the exact ordered array of the same eight screenshot
-records embedded in the scenarios, not independent mutable metadata.
+Every assertion remains exactly
+`{ id, kind, target, expected, observed, pass }`; `observed` is a material string,
+number, array or object, never a boolean proxy. Required assertion IDs are
+scenario-specific and ordered. Every result has empty `consoleErrors`,
+`pageErrors` and `failures`, with `pass:true`. Evidence contains no timestamps,
+raw database IDs, credentials, cookies, `.env` values, stored form payloads or
+absolute paths.
 
 Each screenshot record is exactly
-`{ scenarioId, path, sha256, width, height }`; its hash and PNG dimensions must
-match the file bytes. Save one fresh, byte-distinct PNG per scenario under
-`_docs/_workflows/_smoke/task-547/screenshots/`. Assert computed styles, geometry,
-DOM/ARIA state, content sets, persistence and visible result changes—not only
-control presence or CSS-string emission. Snapshot each fixed path's pre-run
-identity/hash, capture into a newly created empty task-owned temporary run
-directory, and only after complete validation atomically replace the fixed
-eight-PNG/manifest set. Every new identity/hash must differ from its predecessor
-and every peer; touching an old file is not fresh. Fully decode every PNG and
-require valid signature, chunk ordering, lengths/CRC, IHDR, at least one IDAT
-and IEND; 25-byte signature/IHDR pseudo-images, corrupt images and mismatched
-dimensions fail. Always remove the temporary directory in cleanup.
+`{ scenarioId, path, sha256, width, height }`; `path` is repository-relative and
+points to that scenario's tracked `screenshot.png`. Hash and dimensions must
+match fresh staged bytes. The validator fully decodes PNG signature, chunk
+ordering, lengths/CRC, IHDR, at least one IDAT and IEND; pseudo-images, corrupt
+images, duplicate peer bytes and mismatched dimensions fail. Assertions use
+computed styles, measured geometry, DOM/ARIA state, content sets, persistence
+and visible result changes—not only control presence or emitted CSS strings.
+
+The tracked aggregate `manifest.json` is root-authored from verified result/PNG
+bytes. It freezes the exact 01..18 order, relative paths/hashes, reference,
+`runInitialStateDigest`, every scenario's `priorStateDigest` and
+`finalStateDigest`, failures and pass. It rejects predecessor-state leakage
+unless for every adjacent pair:
+`scenario[N].cleanup.finalStateDigest ===
+scenario[N+1].preflight.priorStateDigest === runInitialStateDigest`.
+It also requires each scenario's prior and final digest to equal the same run
+initial digest. Agents may review this aggregate but cannot write it.
 
 Required ordered assertion IDs are frozen per scenario:
 
@@ -345,12 +421,14 @@ Required ordered assertion IDs are frozen per scenario:
   `scoped-submission-cleanup`.
 
 `scoped-submission-cleanup` is a material clean-state receipt, not a boolean. Its
-expected object names all three sources
-`["wf547smoke","wf547formdesign","wf547pageeditor"]`, records every
-pre-registered marker and attached ID, and has exact terminal arrays
-`remainingSubmissionRows:[]` and `remainingTempEvidenceDirs:[]`. The receipt is
-attached only after the outer `finally` has attempted every deletion and both
-zero-state queries have passed.
+expected object names only row 08 and session `wf547smoke`, records bounded
+digests for row 08's own pre-registered markers and attached IDs, and has exact
+terminal arrays `remainingSubmissionRows:[]` and
+`remainingTempArtifacts:[]`. Raw markers/IDs never enter tracked evidence. The
+receipt is attached only after row 08's `finally` has attempted every deletion
+and both zero-state queries have passed. Only `manifest.json` aggregates all 18
+independent cleanup receipts and proves the three session families; row 08
+cannot summarize or depend on rows 09–18.
 
 `contact-nonce-contract` freezes the real public write boundary as
 `{missingStatus:400, alteredStatus:403, validStatus:200}`: a missing nonce is a
@@ -525,8 +603,8 @@ flows, each with zero console/page errors and a fresh screenshot:
 The exact five IDs are `form-design-author-light`,
 `form-design-author-dark`, `form-design-reset-mobile`,
 `form-design-save-reload` and `form-design-publish-front`. This evidence is
-independent of, and does not change, the exact eight public `wf547smoke`
-scenario identities.
+owned by standalone modules 09..13 and is independent of the exact eight public
+modules 01..08.
 
 The first four scenarios use normalized evidence URL
 `http://127.0.0.1:5173/admin/advanced/forms/{formId}`; `{formId}` is a literal
@@ -560,17 +638,46 @@ assertion IDs are:
 
 ### Page Editor UI Runtime Acceptance
 
-TASK-547-04-L01 freezes a second, independent five-flow editor contract under
-`playwright-cli -s=wf547pageeditor`. Final acceptance reruns those exact ordered
-IDs/URLs/viewports/assertions with five fresh decoded PNGs and proves both new
-Page controls through light/dark, tablet/mobile, base-only override prevention,
-reset, save/reload and publish/front visible effects. It does not alter the
-eight public or five Form Design scenario identities.
+TASK-547-04-L01 hands off the five Page Editor product-flow IDs and viewports
+without taking smoke ownership. This child freezes their normalized URLs in the
+01..18 table and these exact ordered assertion IDs:
+
+- `page-editor-switcher-author-light`:
+  `page-editor-switcher-control-value`, `page-editor-switcher-base-prop`,
+  `page-editor-switcher-canvas-aria`,
+  `page-editor-switcher-light-geometry`;
+- `page-editor-switcher-tablet-reset`:
+  `page-editor-tablet-base-prop-updated`,
+  `page-editor-tablet-responsive-override-absent`,
+  `page-editor-tablet-reset-key-absent`,
+  `page-editor-tablet-reset-fallback-aria`;
+- `page-editor-collection-cta-dark`:
+  `page-editor-collection-control-value`,
+  `page-editor-collection-card-link-preserved`,
+  `page-editor-collection-cta-visibly-absent`,
+  `page-editor-collection-dark-computed-contrast`;
+- `page-editor-form-presentation-save-reload`:
+  `page-editor-form-controls-values`, `page-editor-form-visible-preview`,
+  `page-editor-form-save-reload-roundtrip`,
+  `page-editor-form-runtime-contract`;
+- `page-editor-publish-front-parity`:
+  `page-editor-front-switcher-aria`,
+  `page-editor-front-project-card-links-without-cta`,
+  `page-editor-front-contact-presentation-and-success`,
+  `page-editor-front-controls-visible`, `page-editor-front-mobile-geometry`,
+  `page-editor-front-scoped-cleanup`.
+
+Standalone modules 14..18 implement this list under exact session
+`wf547pageeditor`, reset it fresh per scenario and produce five decoded PNGs.
+They prove light/dark, tablet/mobile, base-only override prevention, reset,
+save/reload and publish/front visible effects without taking production
+ownership.
 
 ## Sub-Tasks
 
-- [ ] **TASK-547-06-L01** — acceptance matrix, eight-flow Playwright smoke,
-  shared docs, changelog and closure.
+- [ ] **TASK-547-06-L01** — modular acceptance matrix, tracked root CLI, exactly
+  18 standalone smoke scenario/test pairs, 37 tracked evidence artifacts, shared
+  docs, changelog and closure.
 
 ## Testing Requirements
 
@@ -584,12 +691,20 @@ eight public or five Form Design scenario identities.
 - the manifest self-test fails on a missing, duplicate, reordered, weakened or
   non-executed command and the final drift fixer reruns the complete manifest
   after any source/test/workflow/task mutation;
-- Playwright CLI smoke with exact named sessions `wf547smoke`,
-  `wf547formdesign` and `wf547pageeditor`;
-- exact session `playwright-cli -s=wf547smoke`, free-port preflight for
-  3000/5173/5174, fresh `coderso-dev-core-host` restart and admin/front health
-- exactly five parent-frozen Form Design flows under
-  `playwright-cli -s=wf547formdesign`;
+- run every focused shared harness test and each of the 18 scenario test files
+  independently; scenario test 05 must run without importing/executing 01..04 or
+  06..18;
+- direct trusted-root CLI `bun scripts/task-547-runtime-smoke/cli.ts --all`
+  stages all 18 and promotes only after all clean lifecycle/digest-chain checks;
+- `bun scripts/task-547-runtime-smoke/cli.ts --scenario 05` runs only
+  `05-portfolio-facets`, may promote only its result/PNG plus `manifest.json`,
+  and proves the other 17 evidence pairs byte-identical before and after;
+- every browser command uses exact argv-only `playwright-cli` operations and the
+  scenario's suite session `wf547smoke`, `wf547formdesign` or
+  `wf547pageeditor`; close/open is repeated per scenario;
+- every scenario independently proves ports 3000/5173/5174 free, starts only
+  `coderso-dev-core-host`, verifies admin/front health, and records exact
+  session/server/port cleanup;
 - before every DB/settings test or dev command execute exactly
   `set -a && source /home/coder/project/Coderso/.env && set +a`, without
   printing/copying/hashing/persisting the file or values, then perform a bounded
@@ -607,9 +722,18 @@ These three serial DB-backed lanes are explicit closure gates; root
 `bun run test` does not own `tests/integration/kits/` and therefore cannot
 substitute for either installed-site command.
 
+Closeout ordering is strict: prepare non-terminal docs/changelog/task drafts →
+run five fresh independent post-audit lenses → remediate verified findings and
+rerun every invalidated dependency-shaped gate → run fresh tracked `--all`
+smoke → commit the verified 37-file evidence set atomically → terminalize
+TASK-547-07, this leaf, TASK-547-06 and TASK-547 in descendant order → run the
+final read-only graph/closeout consistency pass. No terminal status or evidence
+commit may precede the clean post-audits and fresh final smoke.
+
 ## Documentation Updates Required
 
 Update all docs listed in the parent, add the example generation/install/rollback
 guide at `docs/develop/full-site-packages.md`, changelog
 `_docs/_CHANGELOG/1260-2026-07-23-task-547-full-site-package-formadom.md`/index, task
-statuses/board/statistics, and smoke manifest.
+statuses/board/statistics, package aliases/tests runner docs and tracked
+`_docs/PLAYWRIGHT/task-547-runtime-smoke/manifest.json`.

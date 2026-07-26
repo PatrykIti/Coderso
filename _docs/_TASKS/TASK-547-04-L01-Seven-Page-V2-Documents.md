@@ -618,42 +618,28 @@ metro, parking, district or follow-up timeline absent from the source.
 
 ## Page Editor Runtime Smoke Handoff
 
-Because this leaf adds real Page Editor controls, its gate and TASK-547-06's
-final rerun use `playwright-cli -s=wf547pageeditor` for exactly five ordered
-flows, one fresh byte-distinct PNG each and zero console/page errors:
+This leaf owns only the production Page/control contracts and their normal test
+lanes. TASK-547-06-L01 solely owns the tracked smoke registry, scenario files,
+standalone smoke tests and evidence. Its canonical registry must preserve these
+ordered handoff IDs:
 
-1. `page-editor-switcher-author-light` at `1440x1000`: in light mode author
-   `Wybór stylu domu`; assert `page-editor-switcher-control-value`,
-   `page-editor-switcher-base-prop`, `page-editor-switcher-canvas-aria` and
-   `page-editor-switcher-light-geometry`;
-2. `page-editor-switcher-tablet-reset` at `1024x1366`: while previewing tablet,
-   change then reset the label; assert `page-editor-tablet-base-prop-updated`,
-   `page-editor-tablet-responsive-override-absent`,
-   `page-editor-tablet-reset-key-absent` and
-   `page-editor-tablet-reset-fallback-aria`;
-3. `page-editor-collection-cta-dark` at `1440x1000`: in dark mode disable card
-   CTA; assert `page-editor-collection-control-value`,
-   `page-editor-collection-card-link-preserved`,
-   `page-editor-collection-cta-visibly-absent` and
-   `page-editor-collection-dark-computed-contrast`;
-4. `page-editor-form-presentation-save-reload` at `1440x1000`: author rows,
-   prompt, loading and keep-form values, save/navigate/reload; assert
-   `page-editor-form-controls-values`, `page-editor-form-visible-preview`,
-   `page-editor-form-save-reload-roundtrip` and
-   `page-editor-form-runtime-contract`;
-5. `page-editor-publish-front-parity` at `390x844`: publish, then prove on the
-   public front `page-editor-front-switcher-aria`,
-   `page-editor-front-project-card-links-without-cta`,
-   `page-editor-front-contact-presentation-and-success`,
-   `page-editor-front-controls-visible`, `page-editor-front-mobile-geometry` and
-   `page-editor-front-scoped-cleanup`.
+14. `page-editor-switcher-author-light` (`1440x1000`);
+15. `page-editor-switcher-tablet-reset` (`1024x1366`);
+16. `page-editor-collection-cta-dark` (`1440x1000`);
+17. `page-editor-form-presentation-save-reload` (`1440x1000`);
+18. `page-editor-publish-front-parity` (`390x844`).
 
-Admin evidence URLs normalize the live Page ID to literal
-`http://127.0.0.1:5173/admin/pages/{pageId}`; the validator independently
-proves the live IDs resolve to the installed home/projects/contact Pages. The
-final public flow uses `/`, `/projekty` and `/kontakt` within one scenario.
-Control-presence or serialized-property-only evidence cannot satisfy the
-visible-effect assertions.
+Each ID is one independently runnable tracked scenario and one independently
+runnable matching test under `scripts/task-547-runtime-smoke/` and
+`tests/unit/workflows/task547RuntimeSmoke/scenarios/`. It owns its complete
+arrange/act/assert flow, starts from the canonical installed state, uses a fresh
+close/open cycle for exact session `wf547pageeditor`, proves material
+DOM/ARIA/computed-style/geometry or save/reload/publish-front effects, records
+zero console and page errors, restores exact state, and produces only its own
+validated `result.json` plus byte-distinct viewport PNG after cleanup succeeds.
+No scenario may import or depend on predecessor state. The tracked registry and
+scenario modules, not this production leaf, own their selectors, assertion IDs,
+normalized live Page URLs and detailed smoke lifecycle.
 
 ## Security Contract
 

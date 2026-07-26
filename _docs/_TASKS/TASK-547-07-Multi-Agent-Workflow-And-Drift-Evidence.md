@@ -13,16 +13,20 @@ evidence, post-audits and final smoke hashes are pending.
 ## Overview
 
 Own the reproducible TASK-547 workflow, five-round contract audit, sequential
-implementation dispatch, final validation and runtime evidence. All delegated
-repository work uses fresh internal Codex collaboration agents. Claude,
-Anthropic, external model CLIs and model-host subprocesses are forbidden.
+35-phase implementation dispatch, final validation and the trusted-root bridge
+to tracked runtime evidence. All delegated repository work uses fresh internal
+Codex collaboration agents. Claude, Anthropic, external model CLIs and
+model-host subprocesses are forbidden.
 
 The root Codex orchestrator is the final reviewer and commit owner. Repository
 scripts never launch a model. They only freeze inputs, prepare bounded jobs,
 validate structured receipts, persist sanitized evidence and run deterministic
 local gates. The orchestrator alone calls `collaboration.spawn_agent`,
 `collaboration.wait_agent`, `collaboration.send_message` and related native
-collaboration tools.
+collaboration tools. Official browser evidence is produced only by the tracked
+root CLI `scripts/task-547-runtime-smoke/cli.ts`; internal agents may audit its
+sanitized tracked outputs but may not drive a browser, write a result, capture a
+PNG or promote evidence.
 
 Active entrypoints remain:
 
@@ -36,6 +40,8 @@ Active entrypoints remain:
 Legacy external-host helpers are not part of the active import graph and must
 not be invoked. `/tmp/task547-agent-host.mjs`, provider canaries, wrapper/model
 identity and rate-limit handling are not TASK-547 gates.
+Legacy ignored smoke files under `_docs/_workflows/_smoke/` are not official
+evidence and may neither be migrated nor force-added.
 
 ## Internal Agent Contract
 
@@ -61,7 +67,10 @@ active workflow digest fails the run.
 
 Agent reports are review evidence, not authority. The root orchestrator verifies
 every actionable finding against local files and command output before changing
-code or task state.
+code or task state. A smoke-review agent receives only the tracked result/PNG
+metadata/manifest packet after root promotion and remains read-only; its receipt
+cannot substitute for the root CLI's schema-validated lifecycle and cleanup
+records.
 
 ## Pre-Implementation Audit
 
@@ -119,7 +128,8 @@ The reconcile checks only cross-file contracts:
 - preland/final land order;
 - settings atomic-batch semantics;
 - changelog 1260 ownership;
-- 8 + 5 + 5 smoke manifests;
+- the canonical 18-row tracked smoke registry, its one-module/one-test/
+  one-result/one-PNG mapping and the 35-phase land order;
 - closure and task-board order.
 
 ## Native Receipt and Evidence Contract
@@ -203,25 +213,48 @@ zero findings, unchanged identity and aggregate digest.
 
 ## Ownership and Implementation Order
 
-The frozen leaf completion order remains:
+The task graph and audit cardinality do not change: exactly 21 TASK-547 files,
+13 executable leaves, 111 native pre-implementation jobs and 116 published
+pre-implementation artifacts. Smoke modularity expands only the sequential
+implementation state machine, from 14 to exactly **35 phases**:
 
 1. `547-01-L01`
 2. `547-01-L02`
 3. `547-02-L01`
-4. `547-02-L02`
-5. `547-02-L03`
-6. `547-03-L01`
-7. `547-03-L02`
-8. `547-03-L03`
-9. `547-04-L01`
-10. `547-04-L02`
-11. `547-04-L03`
-12. `547-05-L01`
-13. `547-06-L01`
+4. `547-02-L03-preland`
+5. `547-02-L02`
+6. `547-02-L03`
+7. `547-03-L01`
+8. `547-03-L02`
+9. `547-03-L03`
+10. `547-04-L01`
+11. `547-04-L02`
+12. `547-04-L03`
+13. `547-05-L01`
+14. `547-06-L01-acceptance-tests`
+15. `547-06-L01-smoke-framework`
+16. `547-06-L01-smoke-01`
+17. `547-06-L01-smoke-02`
+18. `547-06-L01-smoke-03`
+19. `547-06-L01-smoke-04`
+20. `547-06-L01-smoke-05`
+21. `547-06-L01-smoke-06`
+22. `547-06-L01-smoke-07`
+23. `547-06-L01-smoke-08`
+24. `547-06-L01-smoke-09`
+25. `547-06-L01-smoke-10`
+26. `547-06-L01-smoke-11`
+27. `547-06-L01-smoke-12`
+28. `547-06-L01-smoke-13`
+29. `547-06-L01-smoke-14`
+30. `547-06-L01-smoke-15`
+31. `547-06-L01-smoke-16`
+32. `547-06-L01-smoke-17`
+33. `547-06-L01-smoke-18`
+34. `547-06-L01-smoke-registry`
+35. `547-06-L01-integration`
 
-The 14-phase implementation order inserts `547-02-L03-preland` after
-`547-02-L01` and before `547-02-L02`; final `547-02-L03` follows L02. The
-preland writable subset is exactly:
+The preland writable subset remains exactly:
 
 - `core/services/kits/fullSiteInstall/compensation.ts`;
 - `core/services/kits/fullSiteInstall/rollback.ts`;
@@ -229,6 +262,66 @@ preland writable subset is exactly:
 
 All three are existing single-writer L03 paths. Preland creates no leaf, owner
 or path and does not terminalize L03.
+
+Phases 1–13 otherwise retain the literal exact path sets already frozen in
+`_docs/_workflows/lib/task-547-ownership.mjs`. The 22 TASK-547-06-L01 phase
+subsets are:
+
+- `547-06-L01-acceptance-tests`:
+  - `tests/integration/kits/projektyDomowInstalledSite.test.ts`;
+  - `tests/integration/kits/projektyDomowInstalledTestSupport.ts`;
+  - `tests/integration/kits/projektyDomowInstalledAccessibility.test.ts`;
+  - `tests/integration/runtime/projekty-domow-detail-route.test.ts`;
+  - `tests/integration/runtime/pages-runtime.test.ts`;
+  - `tests/integration/runtime/pages-runtime-blocks.test.ts`;
+  - `tests/integration/runtime/pages-runtime-listings.test.ts`;
+  - `tests/integration/runtime/pages-runtime-responsive.test.ts`;
+  - `tests/integration/runtime/pages-runtime-test-support.ts`;
+  - `tests/vitest/kits/projekty-domow-runtime-rendering.test.tsx`.
+- `547-06-L01-smoke-framework`:
+  - `scripts/task-547-runtime-smoke/contracts.ts`;
+  - `scripts/task-547-runtime-smoke/playwrightCli.ts`;
+  - `scripts/task-547-runtime-smoke/browserHarness.ts`;
+  - `scripts/task-547-runtime-smoke/runScenario.ts`;
+  - `scripts/task-547-runtime-smoke/artifacts.ts`;
+  - `scripts/task-547-runtime-smoke/rootPort.ts`;
+  - `scripts/task-547-runtime-smoke/liveRootAdapter.ts`;
+  - `tests/unit/workflows/task547RuntimeSmoke/contracts.test.ts`;
+  - `tests/unit/workflows/task547RuntimeSmoke/playwrightCli.test.ts`;
+  - `tests/unit/workflows/task547RuntimeSmoke/browserHarness.test.ts`;
+  - `tests/unit/workflows/task547RuntimeSmoke/runScenario.test.ts`;
+  - `tests/unit/workflows/task547RuntimeSmoke/artifacts.test.ts`;
+  - `tests/unit/workflows/task547RuntimeSmoke/rootPort.test.ts`;
+  - `tests/unit/workflows/task547RuntimeSmoke/liveRootAdapter.test.ts`.
+- each `547-06-L01-smoke-NN` phase, for canonical registry row `NN`, owns
+  exactly `scripts/task-547-runtime-smoke/scenarios/NN-<id>.ts` and
+  `tests/unit/workflows/task547RuntimeSmoke/scenarios/NN-<id>.test.ts`; the
+  TASK-547 parent is the canonical identity/session spine, while TASK-547-06/L01
+  own the full matching descriptors. This workflow bridge consumes those frozen
+  phase descriptors rather than restating the 18-row list.
+- `547-06-L01-smoke-registry`:
+  - `scripts/task-547-runtime-smoke/registry.ts`;
+  - `scripts/task-547-runtime-smoke/aggregate.ts`;
+  - `tests/unit/workflows/task547RuntimeSmoke/registry.test.ts`;
+  - `tests/unit/workflows/task547RuntimeSmoke/aggregate.test.ts`.
+- `547-06-L01-integration`:
+  - `scripts/task-547-runtime-smoke/cli.ts`;
+  - `tests/unit/workflows/task547RuntimeSmoke/cli.test.ts`;
+  - `.gitignore`;
+  - `package.json`;
+  - `tests/README.md`.
+
+The validator separates three pairwise-disjoint literal sets for
+TASK-547-06-L01: 69 phase-writable implementation paths above, 37 tracked
+runtime-evidence paths, and 33 closure-only documentation/task/changelog paths.
+It rejects a placeholder or broad glob as authority, proves each set has one
+writer, and proves their 139-path union equals the leaf's complete ownership.
+Evidence and closure-only paths are forbidden during all 22 implementation
+phases and are admitted only by their later dedicated closeout transitions. The
+tracked registry must be byte-for-byte compatible with the frozen phase
+descriptors. It is the only runtime source for IDs, session mapping, execution
+order and artifact paths; workflow modules must not add a second scenario list
+or reimplement browser/install/cleanup behavior.
 
 Implementation agents run strictly one leaf/phase at a time. They read the
 current on-disk predecessor state, edit only their declared paths and return
@@ -253,11 +346,38 @@ Immediately after preland, run root
 already-landed paths block; only strictly future-path or exact
 baseline-equivalent unowned diagnostics may remain.
 
+Before the 35-phase expansion is implemented, split the two boundary modules
+that have no safe growth budget:
+
+- extract runtime-smoke closeout projection/transition behavior from the current
+  1,000-line `_docs/_workflows/lib/task-547-closeout-state.mjs` into cohesive
+  `_docs/_workflows/lib/task-547-closeout-runtime-smoke.mjs`;
+- extract smoke micro-phase descriptor/request validation from the current
+  999-line `_docs/_workflows/task-547-implement.mjs` into cohesive
+  `_docs/_workflows/lib/task-547-implementation-smoke-phases.mjs`.
+
+The original modules remain explicit composition roots, and every touched
+human-authored workflow/source/test file must finish at no more than 1,000
+physical lines. Moving arbitrary ranges or duplicating the tracked registry is
+not a valid split.
+
 ## Post-Audits and Runtime Smoke
 
-After source, tests, draft docs and atomic implementation commits are complete,
-but before any terminal task status, dispatch fresh internal Codex agents for
-at least these independent lenses:
+After all 35 source/test/integration phases and atomic commits pass, the
+mandatory closeout order is:
+
+1. draft and atomically commit product/developer/task closeout docs without a
+   terminal task status;
+2. dispatch fresh internal Codex agents for the five post-audit lenses below,
+   verify every finding locally, fix HIGH/MEDIUM findings atomically and rerun
+   the affected gates and fresh lenses;
+3. run a fresh trusted-root `bun scripts/task-547-runtime-smoke/cli.ts --all`
+   against the final candidate;
+4. root-verify and atomically commit exactly 37 tracked evidence artifacts;
+5. only then commit terminal task/changelog/index state and run one fresh
+   read-only final graph/closeout consistency pass.
+
+The five independent post-audit lenses are:
 
 - scope and task-contract fidelity;
 - model/fail-closed correctness;
@@ -267,23 +387,70 @@ at least these independent lenses:
 
 Every finding is locally verified. HIGH/MEDIUM findings are fixed and the
 affected gates plus fresh lens are rerun. LOW deferral follows only the
-TASK-9999 rules in `AGENTS.md`. Terminal closure follows only a clean five-lens
-pass; afterward only a final read-only graph/closeout consistency pass remains.
+TASK-9999 rules in `AGENTS.md`. Any source, test, workflow contract, tracked
+smoke contract or relevant draft-doc change after the clean post-audit pass
+invalidates the smoke and returns closeout to step 2.
 
-Runtime smoke uses `playwright-cli` and only the trusted
-`coderso-dev-core-host` service helper. Restart the server before smoke and
-verify admin/front health. Required sessions are:
+The tracked CLI owns the scenario registry and full lifecycle. This workflow
+only issues one bounded trusted-root CLI gate, validates its structured output
+and advances state; it does not duplicate the registry or lifecycle. Each of
+the 18 registry rows is a standalone tracked scenario module with a matching
+independently runnable focused test. Each row performs:
 
-- `wf547smoke`: 8 public scenarios;
-- `wf547formdesign`: 5 Form Design scenarios;
-- `wf547pageeditor`: 5 Page Editor scenarios.
+1. exclusive task lock, free-port/no-live-session/no-temp preflight and a
+   presence-aware prior-state digest;
+2. fresh scoped package apply;
+3. fresh server start only through `coderso-dev-core-host` plus separate
+   admin/front health verification;
+4. close/open of its assigned exact session (`wf547smoke`,
+   `wf547formdesign` or `wf547pageeditor`);
+5. marker registration before any public write, immediate returned-ID attach,
+   material visible-effect assertions, separate console/page-error capture and
+   one distinct valid PNG;
+6. guaranteed sequential cleanup: scoped submission deletion/zero-row proof,
+   exact source-run rollback or durable-expected-current atomic recovery,
+   byte-exact prior settings equality, session close, exact helper-process stop,
+   free-port and no-temp proof;
+7. result/PNG promotion only after every cleanup receipt is clean.
 
-All 18 scenarios assert visible effects, use fresh distinct PNGs, report zero
-console/page errors and preserve exact cleanup/rollback evidence. Every result
-has a strict cleanup receipt; the root independently verifies closed sessions,
-stopped processes and free ports, then writes the aggregate 18-hash manifest
-from verified PNG bytes. Public/admin smoke agents are internal Codex agents
-only.
+The aggregate proves each cleanup `finalStateDigest` equals both the run's
+initial digest and the next scenario's preflight `priorStateDigest`. There is no
+retry after browser dispatch or mutation. One failed scenario leaves the tracked
+evidence tree byte-identical.
+
+`--scenario 05` is the required selective-debug proof: it may promote only row
+05's result/PNG plus `manifest.json`, must verify the other 17 evidence pairs
+byte-identical, and remains runnable without predecessor state. If any retained
+pair or its current manifest binding is missing/invalid, selective mode fails
+before mutation and requires `--all`. A correction local to scenario 05 changes
+only its scenario module/focused test and reruns only that test and smoke row. A
+shared-harness correction is explicitly cross-cutting: it reruns the shared
+framework gate and every affected scenario test and invalidates all prior
+runtime evidence.
+
+`--all` stages all 18 result/PNG pairs outside the tracked destination and
+promotes the complete set only after 18 clean independent lifecycles. Official
+evidence is exactly:
+
+- `_docs/PLAYWRIGHT/task-547-runtime-smoke/manifest.json`;
+- for each canonical row, exactly
+  `_docs/PLAYWRIGHT/task-547-runtime-smoke/NN-<id>/result.json` and
+  `_docs/PLAYWRIGHT/task-547-runtime-smoke/NN-<id>/screenshot.png`.
+
+This is 37 tracked artifacts. `.gitignore` adds only
+`!/_docs/PLAYWRIGHT/task-547-runtime-smoke/*/screenshot.png` after the global
+PNG rule; no broader binary exception is allowed and force-add is forbidden. The
+manifest binds ordered registry rows, session, result/PNG SHA-256, dimensions,
+visible-effect summary, zero console/page errors and the baseline/cleanup digest
+chain. Result files contain no `.env` value, credential, cookie, raw form
+payload, absolute main-repository path or unredacted sensitive log.
+
+Internal Codex agents may perform a fresh read-only audit of those 37 tracked
+artifacts after root promotion. They may not operate `playwright-cli`, author or
+repair JSON, capture or replace a PNG, choose retry behavior or certify a dirty
+cleanup. If a post-promotion audit finds real drift, the root fixes the owning
+code/contract, reruns the affected gates and all 18 fresh scenarios, and
+replaces the evidence commit before terminal closure.
 
 ## Security and Operational Contract
 
@@ -292,7 +459,15 @@ only.
 - Before each authorized DB/settings/server command, the trusted root-operated
   subprocess sources only `/home/coder/project/Coderso/.env` with:
   `set -a && source /home/coder/project/Coderso/.env && set +a`.
-- DB tests use at least 360,000 ms timeouts.
+- DB tests, DB-backed smoke operations and their root gate envelopes use at
+  least 360,000 ms timeouts.
+- The runtime-smoke root adapter starts/stops the server only through
+  `coderso-dev-core-host`; `bun`, npm/package aliases, direct server entrypoints
+  and an already-running process are not accepted substitutes. It records and
+  stops the exact helper-owned process and proves the ports are free.
+- `playwright-cli` receives an exact argv-only action allowlist and the three
+  frozen task sessions. The applicable session is closed and reopened for every
+  scenario, so sharing a session name never shares scenario state.
 - No prompt/result includes provider keys, DB URLs, cookies, API keys, form
   submissions, raw sensitive logs or unredacted user data.
 - Audit agents use repository-local read-only access only; no web/MCP/external
@@ -341,9 +516,11 @@ Implementation dispatch:
 
 ```ts
 await implementation.prepare();
+assertExactPhaseOrder(IMPLEMENTATION_PHASE_ORDER, { count: 35 });
 
 for (const phase of IMPLEMENTATION_PHASE_ORDER) {
   const issued = await implementation.pending();
+  assertLiteralExactWritablePaths(issued.job, phase);
   const receipt = await orchestratorSpawnFreshCodexAgent(issued.job);
   await implementation.ingest(receipt);
 
@@ -359,16 +536,66 @@ for (const phase of IMPLEMENTATION_PHASE_ORDER) {
 await implementation.validate();
 ```
 
+Closeout bridge:
+
+```ts
+await rootCommitDraftCloseoutDocsWithoutTerminalStatuses();
+
+for (const lens of FIVE_POST_AUDIT_LENSES) {
+  const result = await orchestratorSpawnFreshReadOnlyCodexAgent(lens);
+  const verified = await rootVerifyFindings(result);
+  await fixCommitRegateAndRerunLensIfNeeded(verified);
+}
+
+await assertCleanFiveLensPass();
+const candidate = await captureImmutableCloseoutCandidate();
+const smoke = await trustedRootRun({
+  command: ["bun", "scripts/task-547-runtime-smoke/cli.ts", "--all"],
+  sourceEnvForEachPrivilegedChild:
+    "set -a && source /home/coder/project/Coderso/.env && set +a",
+  databaseTimeoutMs: 360_000,
+  serverHelper: "coderso-dev-core-host",
+});
+await assertUnchangedCandidate(candidate);
+await validateExactTrackedSmokeEvidence(smoke, {
+  scenarios: 18,
+  artifacts: 37,
+  independentCleanup: true,
+});
+await rootCommitExactEvidenceSetAtomically();
+
+await orchestratorSpawnFreshReadOnlyCodexAgent(
+  buildTrackedEvidenceAuditPacket(),
+);
+await rootCommitTerminalTaskAndChangelogState();
+await runFreshFinalGraphCloseoutConsistencyPass();
+```
+
+Error handling: a malformed/missing receipt, path drift, failed gate, dirty
+cleanup, partial promotion, candidate change or evidence-audit finding stops
+advancement. Implementation fixes occur only in the owning phase/path set and
+are committed atomically. Any correction after smoke removes the candidate's
+eligibility and requires a fresh clean five-lens/regate decision plus complete
+`--all` evidence replacement; no agent-generated or hand-edited artifact may
+patch the set.
+
 ## Sub-Tasks
 
-- [x] Define the 13-leaf ownership and 14-phase implementation order.
-- [x] Define 8 + 5 + 5 runtime smoke contracts.
+- [x] Define the unchanged 13-leaf graph and expanded 35-phase atomic
+  implementation order.
+- [x] Define the 18 independent tracked runtime-smoke module/test/result/PNG
+  contracts and 37-artifact publication.
 - [x] Replace repository-wide Claude guidance with internal Codex agents only.
 - [x] Convert TASK-547 audit, implementation and fixer runners to authenticated
   native receipts and JIT state machines.
+- [ ] Split the 1,000/999-line workflow boundaries before adding the 35-phase
+  tracked-CLI bridge; prove no duplicated scenario registry/lifecycle.
 - [ ] Record five clean native-agent rounds plus final reconcile.
-- [ ] Run sequential implementation, post-audits and final smoke.
-- [ ] Preserve final screenshot hashes and close TASK-547.
+- [ ] Run 35 sequential phases with per-phase gates and atomic commits.
+- [ ] Run draft docs, five post-audits/remediation/regates, then fresh root-owned
+  18-scenario smoke.
+- [ ] Commit exactly 37 tracked evidence artifacts, close TASK-547 and preserve
+  the isolated handoff without merging to `feat/implementations`.
 
 ## Testing Requirements
 
@@ -387,7 +614,37 @@ await implementation.validate();
   - exactly 116 final artifacts;
   - schema-v1 external-host evidence rejection.
 - implementation ownership/order and root-TSC classifier self-tests.
+- implementation self-test proves exactly 35 phases, the unchanged 13-leaf
+  union, literal per-phase writable paths, one atomic commit boundary per
+  non-empty phase, scenario phases with exactly one module/test pair, and
+  rejection of an out-of-phase or broad-glob delta.
 - fixer exact-delta/restart self-tests.
+- `node --check
+  _docs/_workflows/lib/task-547-closeout-runtime-smoke.mjs`
+- `node --check
+  _docs/_workflows/lib/task-547-implementation-smoke-phases.mjs`
+- focused tracked smoke framework:
+  `bun test tests/unit/workflows/task547RuntimeSmoke/contracts.test.ts
+  tests/unit/workflows/task547RuntimeSmoke/playwrightCli.test.ts
+  tests/unit/workflows/task547RuntimeSmoke/browserHarness.test.ts
+  tests/unit/workflows/task547RuntimeSmoke/runScenario.test.ts
+  tests/unit/workflows/task547RuntimeSmoke/artifacts.test.ts
+  tests/unit/workflows/task547RuntimeSmoke/rootPort.test.ts
+  tests/unit/workflows/task547RuntimeSmoke/liveRootAdapter.test.ts`
+- registry/aggregate/integration:
+  `bun test tests/unit/workflows/task547RuntimeSmoke/registry.test.ts
+  tests/unit/workflows/task547RuntimeSmoke/aggregate.test.ts
+  tests/unit/workflows/task547RuntimeSmoke/cli.test.ts`
+- every one of the 18
+  `tests/unit/workflows/task547RuntimeSmoke/scenarios/NN-<id>.test.ts` files runs
+  independently; the full directory run also stays green
+- modularity self-tests prove no scenario imports another scenario, each row has
+  one module/test/result/PNG, each scenario owns a full outer lifecycle,
+  `--scenario 05` cannot mutate the other 17 pairs, and failed `--all` cannot
+  promote a partial evidence set
+- final evidence gate uses `git ls-files --error-unmatch` for all 18 scenario
+  modules, all 18 focused scenario tests and all 37 evidence artifacts; no
+  ignored/force-added file is accepted
 - `node _docs/_workflows/lib/task-547-final-validation-contract.mjs --line-gate-self-test`
 - `node _docs/_workflows/lib/task-547-final-validation-contract.mjs --line-gate`
 - `git diff --check`
@@ -399,8 +656,12 @@ await implementation.validate();
 At closure, TASK-547-06-L01 records:
 
 - native internal-agent audit summaries and final aggregate digest;
-- atomic implementation commits and exact validation commands;
-- three smoke sessions, 18 fresh screenshots and cleanup receipt;
+- all 35 atomic implementation phase outcomes and exact validation commands;
+- the tracked CLI/root-helper contract, three reused-but-reopened sessions, 18
+  independently runnable scenarios, 18 fresh result JSONs, 18 fresh screenshots,
+  one aggregate manifest and every clean lifecycle receipt;
+- the narrow task-scoped PNG ignore exception, tracked-path verification and
+  confirmation that no ignored legacy evidence was force-added;
 - final changelog 1260 and task-board/statistics updates;
 - confirmation that no external model/CLI and no merge to
   `feat/implementations` occurred.

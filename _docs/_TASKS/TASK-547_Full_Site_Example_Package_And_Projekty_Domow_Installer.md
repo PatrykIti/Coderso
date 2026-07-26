@@ -130,6 +130,13 @@ whose embedded documents delegate to their domain owners.
   documents, TASK-547-03-L02 owns dynamic project-detail SEO, TASK-547-04-L02
   preserves both in the assembled package, and TASK-547-06-L01 proves the public
   runtime output.
+- TASK-547-06-L01 owns one tracked, root-operated runtime-smoke CLI and its
+  canonical registry. Internal Codex agents may audit its sanitized results but
+  never drive the browser flow or author, rewrite, or promote official evidence.
+- Every runtime scenario is independently runnable and owns one scenario module,
+  one matching focused test, one result JSON, and one PNG. It starts from and
+  restores the same captured baseline through its own install/server/session/
+  browser/cleanup lifecycle; no scenario may depend on a predecessor's state.
 - The only declared fidelity residual IDs are
   `favicon-not-installed`, `theme-color-not-installed`,
   `header-brand-and-floating-frame-approximated`,
@@ -164,11 +171,99 @@ checkpoint does not terminalize L03, create a fourth TASK-547-02 leaf, or add a
 source/test path. TASK-547-07 owns the workflow script and runs throughout the
 family without taking source ownership from those children. The source/test
 ownership registry remains exactly 13 executable leaves.
+
+The executable leaf graph still contains exactly 21 TASK-547 task files. The
+pre-implementation workflow still dispatches exactly 111 native jobs and
+publishes exactly 116 audit artifacts. Those counts do not expand for smoke
+modularity. Implementation instead expands from 14 to exactly **35 sequential
+phases**, each with an exact writable-path set, a complete phase gate and one
+root-owned atomic commit when its validated delta is non-empty:
+
+1. `547-01-L01`
+2. `547-01-L02`
+3. `547-02-L01`
+4. `547-02-L03-preland`
+5. `547-02-L02`
+6. `547-02-L03`
+7. `547-03-L01`
+8. `547-03-L02`
+9. `547-03-L03`
+10. `547-04-L01`
+11. `547-04-L02`
+12. `547-04-L03`
+13. `547-05-L01`
+14. `547-06-L01-acceptance-tests`
+15. `547-06-L01-smoke-framework`
+16. `547-06-L01-smoke-01`
+17. `547-06-L01-smoke-02`
+18. `547-06-L01-smoke-03`
+19. `547-06-L01-smoke-04`
+20. `547-06-L01-smoke-05`
+21. `547-06-L01-smoke-06`
+22. `547-06-L01-smoke-07`
+23. `547-06-L01-smoke-08`
+24. `547-06-L01-smoke-09`
+25. `547-06-L01-smoke-10`
+26. `547-06-L01-smoke-11`
+27. `547-06-L01-smoke-12`
+28. `547-06-L01-smoke-13`
+29. `547-06-L01-smoke-14`
+30. `547-06-L01-smoke-15`
+31. `547-06-L01-smoke-16`
+32. `547-06-L01-smoke-17`
+33. `547-06-L01-smoke-18`
+34. `547-06-L01-smoke-registry`
+35. `547-06-L01-integration`
+
+Phases 1–13 retain their already frozen exact ownership sets. Phase 14 owns only
+the ten acceptance files frozen by TASK-547-06-L01. Phase 15 owns only the seven
+shared tracked smoke modules and seven matching focused tests. Each phase
+16–33 owns exactly one `scripts/task-547-runtime-smoke/scenarios/NN-<id>.ts`
+module and its independently runnable
+`tests/unit/workflows/task547RuntimeSmoke/scenarios/NN-<id>.test.ts`. Phase 34
+owns only `registry.ts`, `aggregate.ts` and their two focused tests. Phase 35
+owns only the tracked `cli.ts`, its focused test, `.gitignore`, `package.json`
+and `tests/README.md`. TASK-547-07 freezes the complete exact path matrix; broad
+directory globs are not writable authority.
+
 TASK-547-07's canonical ownership map is the sole source of truth for the
 current family-wide path count, and workflow checks must derive that count from
 the map instead of hardcoding a stale total. Workflow entrypoints/private
 libraries are process ownership under TASK-547-07 and do not transfer any
 source path or symbol between leaves.
+
+## Canonical Runtime Smoke Registry Contract
+
+TASK-547-06-L01's tracked registry must contain these exact ordered rows and no
+others:
+
+| NN | Scenario ID | Exact session |
+| --- | --- | --- |
+| 01 | `home-desktop-effects` | `wf547smoke` |
+| 02 | `all-routes-desktop-shell` | `wf547smoke` |
+| 03 | `tablet-responsive` | `wf547smoke` |
+| 04 | `mobile-navigation` | `wf547smoke` |
+| 05 | `portfolio-facets` | `wf547smoke` |
+| 06 | `aurora-detail` | `wf547smoke` |
+| 07 | `contact-form` | `wf547smoke` |
+| 08 | `publish-rollback` | `wf547smoke` |
+| 09 | `form-design-author-light` | `wf547formdesign` |
+| 10 | `form-design-author-dark` | `wf547formdesign` |
+| 11 | `form-design-reset-mobile` | `wf547formdesign` |
+| 12 | `form-design-save-reload` | `wf547formdesign` |
+| 13 | `form-design-publish-front` | `wf547formdesign` |
+| 14 | `page-editor-switcher-author-light` | `wf547pageeditor` |
+| 15 | `page-editor-switcher-tablet-reset` | `wf547pageeditor` |
+| 16 | `page-editor-collection-cta-dark` | `wf547pageeditor` |
+| 17 | `page-editor-form-presentation-save-reload` | `wf547pageeditor` |
+| 18 | `page-editor-publish-front-parity` | `wf547pageeditor` |
+
+This table is the canonical order/identity/session spine. TASK-547-06 and its
+L01 freeze the complete matching URL/viewport/path/assertion descriptors. A
+production leaf may repeat only its owned product-flow handoff subset
+(TASK-547-04-L01 repeats rows 14–18); TASK-547-06-L01 owns the runtime registry
+implementation, and TASK-547-07 consumes frozen descriptors without restating
+IDs or lifecycle logic.
 
 ## Acceptance Criteria
 
@@ -187,6 +282,15 @@ source path or symbol between leaves.
   data and the detail document.
 - Contact uses the real Forms nonce/rate-limit/validation/submission pipeline.
 - Desktop/tablet/mobile, reduced-motion and publish-to-front parity are proven.
+- Each of the exact 18 browser scenarios can run and fail in isolation. A
+  scenario-specific correction changes only that scenario module and focused
+  test; a shared-harness correction is an explicit cross-cutting remediation
+  that reruns the shared gate and all affected scenario tests.
+- `--scenario 05` promotes only scenario 05's result/PNG plus the aggregate
+  manifest and proves the other 17 evidence pairs byte-identical. `--all`
+  promotes no evidence unless all 18 independent cleanups restore the same
+  initial state; then it replaces the complete evidence set as one atomic
+  publication.
 - Residual visual differences are evidence-backed and do not conceal a functional,
   accessibility, data, security, or test-integrity gap.
 - Every touched human-authored production/test file is at most 1,000 physical lines.
@@ -201,21 +305,58 @@ source path or symbol between leaves.
 - `bun run precommit:check`
 - `bun run gates:coderso`
 - `bun run scan:security:strict`
-- Playwright CLI smoke comprises exact sessions `wf547smoke` (eight public
-  flows), `wf547formdesign` (five Form Design flows) and `wf547pageeditor` (five
-  Page Editor flows), owned by TASK-547-06-L01; run only after free-port checks
-  and a fresh server restart. Each of the 18 scenarios records URL, viewport,
-  zero console errors, material visible-effect assertions and one distinct PNG
-  metadata/hash record.
-- cleanup deletes only the scoped form submission, rolls back the exact source
-  run and proves exact equality with captured prior shell/settings values
+- the tracked root CLI at `scripts/task-547-runtime-smoke/cli.ts` runs the exact
+  sessions `wf547smoke` (eight public flows), `wf547formdesign` (five Form
+  Design flows) and `wf547pageeditor` (five Page Editor flows); it closes and
+  reopens the applicable exact session for every scenario rather than sharing
+  browser state
+- each scenario performs its own free-port/no-session/no-temp preflight, scoped
+  package apply, `coderso-dev-core-host` start and separate admin/front health
+  checks, browser assertions, screenshot, submission cleanup, exact-run
+  rollback, prior-state equality proof, session close, exact helper-process
+  stop, final free-port/no-temp proof and only then evidence promotion
+- every one of the 18 scenario modules and matching tests is tracked,
+  independently runnable and at most 1,000 physical lines; assertions record
+  URL, viewport, zero console/page errors, material visible effects and one
+  distinct valid PNG metadata/hash record
+- official evidence is exactly 37 tracked artifacts under
+  `_docs/PLAYWRIGHT/task-547-runtime-smoke/`: `manifest.json` plus one
+  `NN-<id>/result.json` and `NN-<id>/screenshot.png` pair per scenario; a narrow
+  root-anchored `.gitignore` exception
+  `!/_docs/PLAYWRIGHT/task-547-runtime-smoke/*/screenshot.png` admits only these
+  PNGs and `git add -f`/force-add is
+  forbidden
+- the aggregate proves every scenario's cleanup final-state digest equals the
+  run's initial digest and the following scenario's preflight digest
 - baseline-to-final line counts for every touched production/test module
 
 Before every DB-backed test or dev command, execute exactly
 `set -a && source /home/coder/project/Coderso/.env && set +a`, without printing,
 copying, hashing or persisting the file or its values, then verify
-`DATABASE_URL` is reachable. This source-only operational exception does not make
-the main repository an implementation or audit input.
+`DATABASE_URL` is reachable. DB-backed lanes and root smoke subprocesses use at
+least `360000` ms timeouts. The server is started and stopped only through
+`coderso-dev-core-host`; direct Bun/npm server starts are forbidden. This
+source-only operational exception does not make the main repository an
+implementation or audit input.
+
+## Mandatory Closeout Order
+
+After all 35 implementation phases and atomic commits are validated:
+
+1. write and atomically commit draft product/developer/task closeout docs without
+   terminalizing any TASK-547 status;
+2. run five fresh internal-Codex post-audit lenses, verify every finding locally,
+   fix HIGH/MEDIUM findings atomically and rerun every affected gate/lens;
+3. run one fresh tracked-CLI `--all` smoke from the clean final candidate;
+4. root-verify and atomically commit the exact 37 tracked evidence artifacts;
+5. only then terminalize task/changelog/index state and run the final fresh
+   read-only graph/closeout consistency pass.
+
+Any source, test, runtime-smoke contract, validation-contract or relevant draft
+documentation change after step 2 invalidates the smoke. Any failed/dirty
+cleanup or evidence mutation after step 3 invalidates the full 18-scenario set.
+Internal agents may review the final tracked outputs but cannot create or repair
+them. No TASK-547 commit is merged into `feat/implementations` by this workflow.
 
 ## Documentation Updates Required
 
