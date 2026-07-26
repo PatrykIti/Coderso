@@ -265,9 +265,10 @@ injected lazy-dependency sentinel is acquired.
 
 - [x] Implement closed registry/ref path table and DAG planner.
 - [x] Add `tests/vitest/kits/full-site-package-references.test.ts`.
-- [ ] Correct discriminator/nullability/ref-key coverage and static redacted
-  diagnostics; implement and retain frozen substitution provenance/helper and
-  run fresh gates.
+- [ ] Remove the forbidden `menu.desired.document.items` registry row and
+  rebaseline its edge/freeze test; then correct discriminator/nullability/ref-key
+  coverage and static redacted diagnostics, implement and retain frozen
+  substitution provenance/helper, and run fresh gates.
 
 ## Testing Requirements
 
