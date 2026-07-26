@@ -367,9 +367,10 @@ or contents never join audit digests.
   `subtype:"success"`, `is_error:false`, `api_error_status:null`,
   `terminal_reason:"completed"` and `num_turns:2`, with nonnegative finite
   timing/cost counters, empty `permission_denials`, schema-valid acknowledged
-  `structured_output` and exactly two `modelUsage` keys: one primary key from
-  `claude-opus-4-8` or `claude-opus-4-8[1m]`, plus the exact auxiliary key
-  `claude-haiku-4-5-20251001`; no other model identity is accepted.
+  `structured_output` and exactly one primary `modelUsage` key from
+  `claude-opus-4-8` or `claude-opus-4-8[1m]`; the exact auxiliary key
+  `claude-haiku-4-5-20251001` may additionally appear, and no other model
+  identity is accepted.
   `usage` and every reported model value are plain objects; `uuid` and
   `session_id` are strings. When present, `user_message_uuid`,
   `fast_mode_state`, `fast_mode_disabled_reason` and `origin` are strings,
