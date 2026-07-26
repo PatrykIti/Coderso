@@ -156,37 +156,36 @@ Testing docs:
   rate-limit bucket, strict reject-unknown validation, and anti-abuse controls
   (`nonce` + signature/HMAC for public write; optional reCAPTCHA policy;
   `session` or `API key scope` for internal mode when applicable).
-- If the user explicitly approves Claude/subagent consultation for non-trivial
-  implementation or task-contract work, run a read-only pre-implementation task
-  audit before editing the implementation contract. Agent consultation is
-  egress: do not send secrets, credentials, private provider keys, raw sensitive
-  logs, or unredacted user data. Use read-only planning by default; for Claude
-  CLI prefer
-  `claude -p --permission-mode plan --effort xhigh --tools Read,Grep,Bash` or
-  the highest supported effort value, and record any fallback in the
-  task/changelog closeout. Do not set artificial token, time, or cost budgets
-  unless the user explicitly asks for that constraint.
+- For non-trivial implementation or task-contract work, run a read-only
+  pre-implementation task audit with fresh-context internal Codex collaboration
+  agents before editing the implementation contract. Repository analysis,
+  planning, pre/post audits and drift review must use only those internal
+  agents; do not invoke Claude or another external model/CLI for these purposes.
+  Agent prompts and reports must not expose secrets, credentials, private
+  provider keys, raw sensitive logs or unredacted user data. Use read-only
+  planning by default. Do not set artificial token, time or cost budgets unless
+  the user explicitly asks for that constraint.
 - Pre-implementation audit prompts must state the repo path, current HEAD and
   dirty-worktree context, task ID(s), that no files may be edited, and that
   findings must be ordered by severity with concrete file/line references. The
   audit must compare task file state, parent/child state, product and
   architecture constraints, current implementation, tests, validation lanes, and
   git diff.
-- Treat Claude and subagent reports as review evidence, not authority. Verify
+- Treat internal Codex agent reports as review evidence, not authority. Verify
   every actionable finding against local files and command output before
   changing code or task state.
 - If a pre-implementation audit finds real task drift, stale assumptions,
   missing validation, or contradictions, fix the task contract first, validate
-  the correction, and rerun a fresh read-only audit before implementation when
-  the external audit is part of the task. If a workflow includes manual commits,
-  rerun on the new HEAD; otherwise rerun against the final working tree and
-  record the dirty-worktree context.
+  the correction, and rerun a fresh read-only audit with fresh-context internal
+  Codex collaboration agents before implementation. If a workflow includes
+  manual commits, rerun on the new HEAD; otherwise rerun against the final
+  working tree and record the dirty-worktree context.
 - Do not begin implementation from a stale pre-audit. If any task, changelog,
   source, test, or validation-contract file changes after the pass, that pass is
   obsolete for the changed contract.
 - After implementation, docs, validation, and commits are complete, run fresh
-  read-only drift passes on the final committed HEAD when the task uses external
-  audit and commits. If the task does not include manual commits, run the final
+  read-only drift passes with internal Codex collaboration agents on the final
+  committed HEAD when the task includes manual commits. Otherwise run the final
   pass against the validated working tree and include HEAD plus diff/status
   context in the prompt.
 - Post-implementation drift passes must check the task contract, parent/child
