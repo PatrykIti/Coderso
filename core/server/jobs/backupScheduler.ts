@@ -4,7 +4,7 @@ import {
   createBackup,
   getBackupSchedule,
   markScheduleRun,
-  sanitizeBackupError,
+  sanitizeBackupErrorForLog,
 } from "../../services/backups/backupService";
 
 const TICK_MS = Number(process.env.BACKUP_SCHEDULER_TICK_MS ?? 60_000);
@@ -109,8 +109,12 @@ export function startBackupScheduler() {
   if (timer || !schedulerEnabled()) return;
   timer = setInterval(() => {
     void runDueScheduledBackups(new Date()).catch((error) => {
-      // Sanitized only — sanitizeBackupError strips cwd/backup-dir; never log raw errors.
-      console.error("[backupScheduler] tick failed:", sanitizeBackupError(error));
+      // Sanitized only — sanitizeBackupErrorForLog strips cwd/backup-dir; never log
+      // raw errors. It uses the LOG length cap, not the `backups.error` column cap:
+      // the fail-closed session-target error is 508 characters and its last sentence
+      // is the whole remedy (set DATABASE_DIRECT_URL), which the 240-character
+      // storage cap used to cut off entirely.
+      console.error("[backupScheduler] tick failed:", sanitizeBackupErrorForLog(error));
     });
   }, TICK_MS);
   if (typeof timer.unref === "function") timer.unref(); // do not hold the process open

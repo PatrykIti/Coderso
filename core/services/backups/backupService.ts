@@ -244,14 +244,51 @@ const buildWorkerHealth = (items: BackupRecord[]): BackupWorkerHealth => {
   };
 };
 
-export const sanitizeBackupError = (error: unknown) => {
+/**
+ * Cap for a sanitized message PERSISTED on `backups.error` and rendered in the
+ * admin backups list, where a short single-line summary is what the column is
+ * for. Unchanged from the original behaviour.
+ */
+const STORED_BACKUP_ERROR_MAX_LENGTH = 240;
+
+/**
+ * Cap for a sanitized message written to a server LOG, which has no column or
+ * layout to respect.
+ *
+ * This exists because the stored cap was silently mangling the one failure that
+ * most needs to be actionable. When `DATABASE_URL` points at the transaction
+ * pooler and `DATABASE_DIRECT_URL` is unset, the backup scheduler's session-lock
+ * acquisition fails closed with a 508-character `session_database_url_pooled`
+ * message from `resolveSessionDatabaseTarget`, whose final sentence is the whole
+ * remedy: "Set DATABASE_DIRECT_URL to the direct (non-pooled) connection string
+ * for the same database ...". At 240 characters the log stopped mid-diagnosis
+ * ("... Session-level advisory locks taken ") and the remedy never reached the
+ * operator.
+ */
+const LOGGED_BACKUP_ERROR_MAX_LENGTH = 2_000;
+
+export const sanitizeBackupError = (error: unknown, options?: { maxLength?: number }): string => {
   const raw = error instanceof Error ? error.message : String(error);
   if (!raw || raw === "[object Object]") return "Backup worker failed.";
-  return raw
+  const maxLength = options?.maxLength ?? STORED_BACKUP_ERROR_MAX_LENGTH;
+  // Redaction runs BEFORE truncation, so a longer cap can never expose anything a
+  // shorter one hid — it only keeps more of the already-redacted text. The cap is
+  // a length bound, not the security control; the redaction is.
+  const redacted = raw
     .replaceAll(process.cwd(), "[cwd]")
-    .replaceAll(getBackupStorageDir(), "[backup-dir]")
-    .slice(0, 240);
+    .replaceAll(getBackupStorageDir(), "[backup-dir]");
+  // Mark truncation instead of cutting silently: an invisible cut is exactly how
+  // the missing DATABASE_DIRECT_URL remedy went unnoticed.
+  return redacted.length <= maxLength ? redacted : `${redacted.slice(0, maxLength - 1)}…`;
 };
+
+/**
+ * Sanitize for a log line rather than for storage, so a long remedy survives
+ * intact. Use this at every `console.*` call site; keep `sanitizeBackupError` for
+ * anything written to `backups.error`.
+ */
+export const sanitizeBackupErrorForLog = (error: unknown): string =>
+  sanitizeBackupError(error, { maxLength: LOGGED_BACKUP_ERROR_MAX_LENGTH });
 
 // Capture EVERY snapshot table (the 10 top-level parents + every cascade/RESTRICT
 // child transitively reachable from them). Missing a cascade child here means the
