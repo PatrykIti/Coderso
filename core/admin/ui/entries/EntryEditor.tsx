@@ -1,14 +1,10 @@
-import { RefreshCcw, SlidersHorizontal } from "lucide-react";
+import { SlidersHorizontal } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from "@/components/ui/sheet";
-import { Textarea } from "@/components/ui/textarea";
-import { cn } from "@/lib/utils";
 import { isApiClientError } from "@/services/apiClient";
 import { cacheKeys } from "@/services/cachePolicy";
 import {
@@ -19,7 +15,6 @@ import {
 import {
   deleteEntry,
   getEntryCached,
-  previewEntry,
   publishEntry,
   updateEntryMetadata,
   updateEntry,
@@ -47,12 +42,18 @@ import { RuntimePreviewDialog } from "@/ui/preview/RuntimePreviewDialog";
 
 import { EntryDeleteDialog } from "./EntryDeleteDialog";
 import { EntryEditorHeaderActions } from "./EntryEditorHeader";
+import { EntryFieldSections } from "./EntryFieldSections";
 import { EntryMetadataPanel, type EntryStatus } from "./EntryMetadataPanel";
+import { EntryTitleSlugFields } from "./EntryTitleSlugFields";
 import { getContentTypeLabels } from "./contentTypeLabels";
 import { buildEntryChecklist } from "./entryChecklist";
-import { FieldRenderer } from "./FieldRenderer";
+import { buildEntryFieldGroups } from "./entryFieldGroups";
+import { buildEntryMetadataUpdate } from "./entryMetadataUpdate";
+import { buildEntryPayloadData, buildInitialValues } from "./entryValueMapping";
+import { useEntryRelationTargets } from "./useEntryRelationTargets";
+import { useEntryRuntimePreview } from "./useEntryRuntimePreview";
 import type { ContentField } from "../content-types/SchemaBuilder";
-import { buildSchemaFromFields, fieldsFromSchema } from "../content-types/schemaMapping";
+import { fieldsFromSchema } from "../content-types/schemaMapping";
 
 const resolveEntryParams = (pathname: string): { type: string | null; id: string | null } => {
   const parts = pathname.split("/").filter(Boolean);
@@ -67,46 +68,8 @@ const resolveEntryParams = (pathname: string): { type: string | null; id: string
   return { type: null, id: null };
 };
 
-function resolveDefaultValue(field: ContentField) {
-  if (field.defaultValue === undefined || field.defaultValue === "") return null;
-  if (field.type === "number") {
-    const parsed = Number(field.defaultValue);
-    return Number.isNaN(parsed) ? null : parsed;
-  }
-  if (field.type === "boolean") {
-    return field.defaultValue === "true";
-  }
-  return field.defaultValue;
-}
-
-function buildInitialValues(fields: ContentField[], data: Record<string, unknown>) {
-  return fields.reduce<Record<string, unknown>>((acc, field) => {
-    if (data[field.name] !== undefined) {
-      acc[field.name] = data[field.name];
-      return acc;
-    }
-    const fallback = field.type === "boolean" ? false : "";
-    acc[field.name] = resolveDefaultValue(field) ?? fallback;
-    return acc;
-  }, {});
-}
-
-function slugify(value: string) {
-  return value
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/(^-|-$)+/g, "");
-}
-
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  Boolean(value) && typeof value === "object" && !Array.isArray(value);
-
 const resolveEditorErrorMessage = (error: unknown, fallback: string) =>
   isApiClientError(error) ? error.message : fallback;
-
-const mapRelationTargets = (items: ContentTypeSummary[]) =>
-  items.map((item) => ({ slug: item.slug, name: item.name }));
 
 // Local edits reach the editor through two independent channels, each with its own
 // dirty flag and Save action: CONTENT (title/slug/field values, "Save draft") and
@@ -172,10 +135,8 @@ export function EntryEditor() {
   const [title, setTitle] = useState("");
   const [slug, setSlug] = useState("");
   const [siteSettings, setSiteSettings] = useState<SiteSettingsResponse | null>(null);
-  const [previewOpen, setPreviewOpen] = useState(false);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const [previewLoading, setPreviewLoading] = useState(false);
-  const [previewError, setPreviewError] = useState<string | null>(null);
+  const { previewOpen, setPreviewOpen, previewUrl, previewLoading, previewError, openPreview } =
+    useEntryRuntimePreview(type, id);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
@@ -184,9 +145,6 @@ export function EntryEditor() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
-  const [relationTargets, setRelationTargets] = useState<Array<{ slug: string; name: string }>>(
-    () => mapRelationTargets(getCachedContentTypes() ?? [])
-  );
   const [taxonomyOverview, setTaxonomyOverview] = useState<TaxonomyOverview | null>(null);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
@@ -343,29 +301,9 @@ export function EntryEditor() {
     });
   }, [id, refreshEntry, type]);
 
-  useEffect(() => {
-    let active = true;
-    listContentTypesCached({ force: true })
-      .then((types) => {
-        if (!active) return;
-        setRelationTargets(mapRelationTargets(types));
-      })
-      .catch(() => undefined);
-    return () => {
-      active = false;
-    };
-  }, []);
-
-  useEffect(() => {
-    return subscribeCacheEvents((event) => {
-      if (event.key !== cacheKeys.contentTypesList) return;
-      listContentTypesCached({ force: true })
-        .then((types) => {
-          setRelationTargets(mapRelationTargets(types));
-        })
-        .catch(() => undefined);
-    });
-  }, []);
+  // Called here rather than beside the other useState calls so the effects it
+  // registers keep their original position in the mount effect order.
+  const relationTargets = useEntryRelationTargets();
 
   useEffect(() => {
     let active = true;
@@ -412,49 +350,6 @@ export function EntryEditor() {
     setUnsavedChanges(true);
   };
 
-  const handlePreview = async () => {
-    setPreviewOpen(true);
-    if (!type || !id) {
-      setPreviewLoading(false);
-      setPreviewError(null);
-      setPreviewUrl(null);
-      return;
-    }
-    setPreviewLoading(true);
-    setPreviewError(null);
-    try {
-      const result = await previewEntry(type, id, 30);
-      setPreviewUrl(result.previewUrl);
-    } catch (err) {
-      if (isApiClientError(err)) {
-        setPreviewError(err.message);
-      } else {
-        setPreviewError("Failed to generate preview.");
-      }
-      setPreviewUrl(null);
-    } finally {
-      setPreviewLoading(false);
-    }
-  };
-
-  const buildPayloadData = () => {
-    const schema = buildSchemaFromFields(fields);
-    const data: Record<string, unknown> = {};
-    if (isRecord(entry?.data)) {
-      hiddenSchemaFieldNames.forEach((key) => {
-        if (entry.data[key] !== undefined) {
-          data[key] = entry.data[key];
-        }
-      });
-    }
-    Object.keys(schema.properties).forEach((key) => {
-      if (values[key] !== undefined) data[key] = values[key];
-    });
-    if (schemaFieldNames.has("title")) data.title = title;
-    if (schemaFieldNames.has("slug")) data.slug = slug;
-    return data;
-  };
-
   const handleSaveDraft = async (options?: { successMessage?: string }) => {
     if (!type || !id) return;
     setIsSaving(true);
@@ -463,7 +358,15 @@ export function EntryEditor() {
       const updated = await updateEntry(type, id, {
         title,
         slug,
-        data: buildPayloadData(),
+        data: buildEntryPayloadData({
+          fields,
+          values,
+          entry,
+          title,
+          slug,
+          hiddenFieldNames: hiddenSchemaFieldNames,
+          schemaFieldNames,
+        }),
       });
       setEntry(updated);
       setStatus(updated.status);
@@ -555,10 +458,6 @@ export function EntryEditor() {
     setMetadataUnsavedChanges(true);
   };
 
-  const handleGenerateSlug = () => {
-    handleSlugChange(slugify(title));
-  };
-
   // Revisions seam (TASK-487-02-L02): opens the future revision drawer. No-op
   // for now so the PageHeader "History" action renders as a documented insertion
   // point without fetching/rendering revision data.
@@ -607,47 +506,25 @@ export function EntryEditor() {
     setIsSavingMetadata(true);
     setError(null);
 
-    let scheduledAtIso: string | null = null;
-    if (scheduledAt.trim()) {
-      const parsed = new Date(scheduledAt);
-      if (Number.isNaN(parsed.getTime())) {
-        setError("Schedule date must be a valid ISO timestamp.");
-        toast.error("Schedule date must be a valid ISO timestamp.");
-        setIsSavingMetadata(false);
-        return;
-      }
-      scheduledAtIso = parsed.toISOString();
-    }
-
-    if (status === "scheduled" && !scheduledAtIso) {
-      setError("Schedule date is required for scheduled entries.");
-      toast.error("Schedule date is required for scheduled entries.");
+    const prepared = buildEntryMetadataUpdate({
+      status,
+      visibility,
+      accessPassword,
+      scheduledAt,
+      seoDescription,
+      taxonomyOverview,
+      selectedCategoryId,
+      selectedTagIds,
+    });
+    if (!prepared.ok) {
+      setError(prepared.message);
+      toast.error(prepared.message);
       setIsSavingMetadata(false);
       return;
     }
 
     try {
-      const categoryEnabled = Boolean(taxonomyOverview?.taxonomies.category);
-      const tagEnabled = Boolean(taxonomyOverview?.taxonomies.tag);
-      const taxonomyPayload =
-        categoryEnabled || tagEnabled
-          ? {
-              categoryId: categoryEnabled ? selectedCategoryId : null,
-              tagIds: tagEnabled ? selectedTagIds : [],
-            }
-          : undefined;
-
-      const updated = await updateEntryMetadata(type, id, {
-        status,
-        visibility,
-        // undefined = omit the key = keep the existing hash; null = clear the
-        // hash (only ever sent when leaving password mode). See 514-01 §3.
-        accessPassword:
-          visibility !== "password" ? null : accessPassword === "" ? undefined : accessPassword,
-        scheduledAt: status === "scheduled" ? scheduledAtIso : null,
-        taxonomy: taxonomyPayload,
-        seo: { description: seoDescription },
-      });
+      const updated = await updateEntryMetadata(type, id, prepared.payload);
       setEntry(updated);
       setStatus(updated.status);
       setVisibility(updated.visibility);
@@ -731,123 +608,9 @@ export function EntryEditor() {
     values,
   });
   const missingRequiredNames = new Set(checklist.missingRequiredFields.map((field) => field.name));
-  const tabGroups = useMemo(() => {
-    const resolveTabLabel = (field: ContentField) => {
-      const explicitTab = field.layout?.tab?.trim();
-      if (explicitTab) return explicitTab;
-      if (field.type === "media") return "Media";
-      if (field.type === "relation") return "Relations";
-      return "Content";
-    };
-
-    const tabs = new Map<
-      string,
-      { label: string; sections: Map<string, { label: string | null; fields: ContentField[] }> }
-    >();
-    const tabOrder: string[] = [];
-
-    fields.forEach((field) => {
-      const tabLabel = resolveTabLabel(field);
-      if (!tabs.has(tabLabel)) {
-        tabs.set(tabLabel, { label: tabLabel, sections: new Map() });
-        tabOrder.push(tabLabel);
-      }
-      const sectionLabel = field.layout?.section?.trim() ?? "";
-      const tab = tabs.get(tabLabel);
-      if (!tab) return;
-      if (!tab.sections.has(sectionLabel)) {
-        tab.sections.set(sectionLabel, {
-          label: sectionLabel ? sectionLabel : null,
-          fields: [],
-        });
-      }
-      tab.sections.get(sectionLabel)?.fields.push(field);
-    });
-
-    return tabOrder.map((label, index) => {
-      const tab = tabs.get(label);
-      return {
-        id: slugify(label) || `tab-${index + 1}`,
-        label,
-        sections: tab ? Array.from(tab.sections.values()) : [],
-      };
-    });
-  }, [fields]);
-
-  // The "Content" group is re-homed into the prototype Content card (Title/Slug
-  // above its fields). Every OTHER authored group (Media, Relations, or a custom
-  // layout.tab) renders as its own stacked SectionCard — no authored grouping is
-  // ever dropped (514-03 field-grouping decision).
-  const contentGroup = tabGroups.find((group) => group.label === "Content") ?? null;
-  const otherGroups = tabGroups.filter((group) => group.label !== "Content");
-
-  const renderFieldSections = (
-    sections: Array<{ label: string | null; fields: ContentField[] }>
-  ) => (
-    <div className="flex flex-col gap-8">
-      {sections.map((section, index) => (
-        <div key={`${section.label ?? "default"}-${index}`} className="space-y-4">
-          {section.label ? (
-            <div className="flex items-center gap-3">
-              <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                {section.label}
-              </h4>
-              <div className="h-px flex-1 bg-border" />
-            </div>
-          ) : null}
-          <div className="grid gap-4 md:grid-cols-12">
-            {section.fields.map((field) => {
-              const width = field.layout?.width ?? "full";
-              const colSpan = width === "half" ? "md:col-span-6" : "md:col-span-12";
-              const isCompact = field.layout?.display === "compact";
-              const isMissing = missingRequiredNames.has(field.name);
-              return (
-                <div
-                  key={field.id}
-                  className={cn(
-                    colSpan,
-                    "flex flex-col gap-1.5 rounded-xl border p-4",
-                    isMissing ? "border-destructive/40 bg-destructive/5" : "border-border",
-                    isCompact ? "border-dashed" : null
-                  )}
-                >
-                  <div className="flex items-center justify-between gap-3">
-                    <p className="text-sm font-semibold">{field.label}</p>
-                    {field.required ? (
-                      <Badge
-                        variant="outline"
-                        className={
-                          isMissing
-                            ? "border-destructive/40 bg-destructive/10 text-destructive"
-                            : undefined
-                        }
-                      >
-                        Required
-                      </Badge>
-                    ) : null}
-                  </div>
-                  {field.help ? (
-                    <p className="text-xs text-muted-foreground">{field.help}</p>
-                  ) : null}
-                  {isMissing ? (
-                    <p className="text-xs font-semibold text-destructive">
-                      Required field missing.
-                    </p>
-                  ) : null}
-                  <FieldRenderer
-                    field={field}
-                    value={values[field.name]}
-                    onChange={(value) => handleFieldChange(field.name, value)}
-                    relationTargets={relationTargets}
-                    display={field.layout?.display}
-                  />
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      ))}
-    </div>
+  const { groups, contentGroup, otherGroups } = useMemo(
+    () => buildEntryFieldGroups(fields),
+    [fields]
   );
 
   const metadataPanelProps = {
@@ -883,35 +646,6 @@ export function EntryEditor() {
     isDeleting,
   };
 
-  const titleSlugBlock = (
-    <div className="flex flex-col gap-4">
-      <Textarea
-        ref={titleRef}
-        value={title}
-        onChange={(event) => handleTitleChange(event.target.value)}
-        rows={1}
-        className="min-h-0 h-auto resize-none overflow-hidden rounded-lg border-transparent bg-transparent px-0 py-1 font-display text-3xl font-semibold leading-tight tracking-tight focus-visible:ring-0"
-        placeholder="Enter post title..."
-      />
-      <div className="flex items-center gap-3">
-        <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-          Slug
-        </span>
-        <div className="flex flex-1 items-center gap-2 rounded-xl border border-border bg-muted/30 px-3 py-2">
-          <span className="text-xs text-muted-foreground">/</span>
-          <Input
-            value={slug}
-            onChange={(event) => handleSlugChange(event.target.value)}
-            className="h-auto border-0 bg-transparent px-0 py-0 text-sm font-mono focus-visible:ring-0"
-          />
-          <Button type="button" variant="ghost" size="icon-xs" onClick={handleGenerateSlug}>
-            <RefreshCcw className="h-3 w-3" />
-          </Button>
-        </div>
-      </div>
-    </div>
-  );
-
   return (
     <AdminShell activeHref="/admin/entries" showSearch={false}>
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-6">
@@ -927,7 +661,7 @@ export function EntryEditor() {
                 isLoading={isLoading}
                 isSaving={isSaving}
                 isPublishing={isPublishing}
-                onPreview={handlePreview}
+                onPreview={openPreview}
                 onSaveDraft={() => void handleSaveDraft()}
                 onPublish={handlePublish}
                 onHistory={handleOpenRevisions}
@@ -979,14 +713,26 @@ export function EntryEditor() {
           <div className="flex flex-col gap-6">
             <SectionCard title="Content" description="The main body of this entry.">
               <div className="flex flex-col gap-6">
-                {titleSlugBlock}
+                <EntryTitleSlugFields
+                  title={title}
+                  slug={slug}
+                  titleRef={titleRef}
+                  onTitleChange={handleTitleChange}
+                  onSlugChange={handleSlugChange}
+                />
                 {isLoading ? (
                   <div className="rounded-xl border border-dashed p-6 text-sm text-muted-foreground">
                     Loading entry fields...
                   </div>
                 ) : contentGroup ? (
-                  renderFieldSections(contentGroup.sections)
-                ) : tabGroups.length === 0 ? (
+                  <EntryFieldSections
+                    sections={contentGroup.sections}
+                    values={values}
+                    relationTargets={relationTargets}
+                    missingRequiredNames={missingRequiredNames}
+                    onFieldChange={handleFieldChange}
+                  />
+                ) : groups.length === 0 ? (
                   <div className="rounded-xl border border-dashed p-6 text-sm text-muted-foreground">
                     This content type has no fields yet.
                   </div>
@@ -996,7 +742,13 @@ export function EntryEditor() {
             {!isLoading
               ? otherGroups.map((group) => (
                   <SectionCard key={group.id} title={group.label}>
-                    {renderFieldSections(group.sections)}
+                    <EntryFieldSections
+                      sections={group.sections}
+                      values={values}
+                      relationTargets={relationTargets}
+                      missingRequiredNames={missingRequiredNames}
+                      onFieldChange={handleFieldChange}
+                    />
                   </SectionCard>
                 ))
               : null}
