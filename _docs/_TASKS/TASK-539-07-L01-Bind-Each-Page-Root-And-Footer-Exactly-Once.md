@@ -6,99 +6,174 @@
 **Priority:** High
 **Category:** Pages / Browser Runtime / Reliability
 **Estimated Effort:** Large
-**Dependencies:** TASK-539-05-L01, TASK-539-04-L01
+**Dependencies:** TASK-539-04-L01, TASK-539-05-L01
 **Status:** ⏳ To Do
 **Changelog:** 1251 (pinned; create only at TASK-539 closure)
 
 ---
 
-## Scope and ownership
+## Sole-writer scope
 
-Sole source writer: `core/services/pages/pageEffectsRuntime.ts`. This leaf also owns
-compatibility-expectation updates required before its source gate in
-`tests/vitest/pages/pageEffectsRuntime.test.ts`,
-`tests/vitest/content/task-534-interactivity-runtime.test.tsx`, and
-`tests/vitest/site/page-runtime-shell-branch.test.tsx`. Current global guard
-and scan are around `:67-95`; tilt and magnetic writers around `:191-225`.
+This leaf is the only writer of:
+
+- `core/services/pages/pageEffectsRuntime.ts`;
+- `tests/vitest/pages/pageEffectsRuntime.test.ts`;
+- `tests/vitest/content/sectionScrollEffect.test.tsx`;
+- `tests/vitest/content/cursorSpotlight.test.tsx`;
+- `tests/vitest/content/task-534-interactivity-runtime.test.tsx`.
+
+Do not edit `pageRendererV2.tsx`, renderer suites, any site-shell source,
+or `page-runtime-shell-branch.test.tsx`. TASK-539-05 owns the stale renderer
+runtime-init comment and emission. L02 alone owns the new parser-order suite.
 
 ## Implementation Pseudocode
 
-The generated static IIFE must install or reuse one versioned state, then always call
-its initializer:
+### Controller and compatibility flag
+
+Keep `PAGE_EFFECTS_RUNTIME_ID`,
+`PAGE_EFFECTS_RUNTIME_INIT_FLAG === "__codersoPageMotionEffectsInit"`,
+`PAGE_EFFECTS_REDUCED_MOTION_QUERY`, and the public static-source export stable.
+Replace the old flag guard with:
 
 ```js
 var state = window.__codersoPageEffectsV2;
-if (!state) {
-  state = window.__codersoPageEffectsV2 = {
-    reveal: new WeakSet(),
-    parallax: new WeakSet(),
-    spotlight: new WeakSet(),
-    switcher: new WeakSet(),
-    gallery: new WeakSet(),
-    tilt: new WeakSet(),
-    magnetic: new WeakSet(),
-    documentListenersBound: false,
-    init: function(root) { /* scan and bind unowned elements */ }
-  };
+if (!state || typeof state.init !== "function") {
+  state = window.__codersoPageEffectsV2 = createController();
 }
 state.init(document);
-// Preserve the exported legacy observation key/value, but never use it to skip a scan.
 window.__codersoPageMotionEffectsInit = true;
 ```
 
-This is a global reusable state plus per-element WeakSets, not a root-only/global
-boolean guard. Each emitted main/footer script rescans the current document. A set
-membership check precedes listener/observer creation; add to the set only after the
-binding is ready. Document-wide pointer/keyboard listeners, if retained, are guarded
-separately and dispatch only to current matching elements.
+The generated source may write the old flag for compatibility observation but must
+never read it or return because it is already true. Every emitted main/footer copy
+calls `init(document)`.
 
-Keep `PAGE_EFFECTS_RUNTIME_INIT_FLAG` exported with the exact existing value
-`"__codersoPageMotionEffectsInit"` for source/test compatibility. The generated static
-source may set that window property to `true` after installing/reusing state, but it must
-never read it as an early-return guard. `window.__codersoPageEffectsV2` plus the per-
-element WeakSets are the sole idempotence authority.
+`createController()` owns one `WeakSet` for each binder:
 
-Binder data flow:
+```text
+reveal, parallax, spotlight, switcher, gallery, tilt, magnetic
+```
+
+It may also own booleans/functions for document/window listeners and a reusable
+observer, but no `Element[]`, `NodeList`, `Set<Element>`, map keyed by elements, or
+other global strong element collection.
+
+Import `PAGE_MARQUEE_REPLICA_SELECTOR` and
+`PAGE_BLOCK_TRANSFORM_VARIABLES` from their pure
+`pageCompositionEffects.tsx` owner. Serialize those fixed values while constructing
+the static source so the emitted IIFE remains dependency-free; do not duplicate a
+selector or custom-property spelling in this module.
+
+### Init order and binding
 
 ```text
 init(root)
- -> query fixed selectors in root/current document
- -> for each unbound element create its exact observer/listeners
- -> record element in the corresponding WeakSet
- -> no-op only for that already-bound element, never for undiscovered footer nodes
+  -> bind switcher roots under root
+  -> bind gallery-filter roots under root
+  -> compute prefers-reduced-motion
+  -> if reduced: return from init only
+  -> bind/arm reveal roots and reveal elements
+  -> bind parallax elements and ensure global scroll/resize once
+  -> bind spotlight roots
+  -> bind tilt elements
+  -> bind magnetic elements
 ```
 
-Reveal/parallax/spotlight/tilt/magnetic motion setup is skipped or neutralized under reduced
-motion as appropriate. Switcher/gallery keyboard and ARIA state initialization must
-still run because they are accessibility behavior, not motion.
+`root` accepts the current `Document` or an element subtree. Query fixed selectors
+within that supplied root and include the root itself when it matches. A repeated scan
+skips only an element already in that binder's `WeakSet`; it never skips undiscovered
+footer nodes.
 
-Tilt pointer movement sets `--cx-tilt-x`/`--cx-tilt-y`; magnetic sets
-`--cx-magnetic-x`/`--cx-magnetic-y`. Leave/reset returns each owned variable to its
-neutral typed value. Never set/remove the whole `transform` property or another
-effect's variables.
+Before setup, every one of the seven binders rejects a candidate when the candidate
+itself matches `PAGE_MARQUEE_REPLICA_SELECTOR` or its closest ancestor matches it.
+This check happens before listener/observer/state attachment and before a WeakSet mark,
+so a recursively safe inert marquee replica can retain visual hooks without becoming
+interactive. The primary segment remains eligible. TASK-539-05 guarantees that
+`video`, `form`, `collection`, `filters`, `embed`, and nested authored-marquee
+subtrees emit no replica; do not modify the form/listing runtimes or pretend this
+seven-binder exclusion covers them.
 
-## Error and lifecycle rules
+Real renderer integration and defensive binder fixtures are distinct. A replica-safe
+marquee can contain real switcher/gallery nodes and tilt/magnetic block hosts. Reveal
+and parallax belong to section wrappers, while spotlight binds only the exact
+`[data-page-spotlight]` Page root; `[data-page-spotlight-overlay]` is merely its
+painted consumer. Those three cannot be generated inside a real marquee segment. Test their
+replica-self/ancestor rejection with minimal fixed DOM owned by the runtime suite;
+never add fake production hooks merely to manufacture one impossible renderer tree.
 
-- Missing APIs/selectors fail soft per binder without aborting later binders.
-- Repeated main/footer scripts and explicit repeated `init(document)` calls do not
-  multiply callbacks or state transitions.
-- Detached nodes remain collectible through WeakSets; do not retain element arrays in
-  the global state.
-- No MutationObserver is required: parser-order scripts invoke a fresh rescan. Do not
-  add a perpetual whole-document observer without a separate demonstrated need.
+Each binder catches failures per element and `init` catches failures per binder so one
+missing API or malformed node cannot block later binders. Add an element to its
+`WeakSet` only after its observer/listeners/state are ready. If a binder can partially
+attach before failing, remove its partial listeners before leaving it unmarked so a
+retry cannot duplicate them.
 
-## Gate test ownership and validation
+Document/window-wide scroll/resize or observer infrastructure is installed once and
+must discover current matching nodes without retaining a strong element array.
+Detached elements therefore remain collectible. No whole-document
+`MutationObserver` is added; parser-order script execution supplies the rescan.
 
-Update all three named suites' stale one-shot-flag and direct-transform expectations
-before this source gate. Include spotlight in state-shape assertions. TASK-539-07-L02
-owns additive parser-order and duplicate-callback cases afterward and must not
-re-baseline the compatibility assertions.
+### Functional versus motion behavior
+
+Switcher and gallery filtering remain functional under reduced motion, including
+click, keyboard, roving tabindex, `aria-selected`/`aria-pressed`, panel `hidden`, and
+filter-item hidden state. Their binders therefore precede the reduced-motion branch.
+
+Reveal, parallax, spotlight, tilt, and magnetic are motion and run only after the
+branch. Reduced motion never arms reveal-hidden content. Fine-pointer gating remains
+local to spotlight/tilt/magnetic, so a coarse pointer does not block unrelated
+binders.
+
+### Transform ownership
+
+Tilt writes only the imported `tiltX`/`tiltY` properties in degrees; leave resets only
+those properties to `0deg`. Magnetic writes only the imported
+`magneticX`/`magneticY` properties in pixels; leave resets only those properties to
+`0px`. Exact bytes are owned by `PAGE_BLOCK_TRANSFORM_VARIABLES`. Never set, remove,
+or clear `style.transform`, and never write another effect's variable.
+Glare retains only its own glare variables. Parallax keeps its separate
+`[data-parallax-inner]` channel and must not overwrite a block transform host.
+Spotlight preserves its existing contract: fine-pointer movement sets only
+`--spotlight-x` and `--spotlight-y` on the matched `[data-page-spotlight]` root.
+Queries and writes stay inside the supplied main/footer root, and the overlay only
+consumes the inherited values. This task adds no pointer-leave/reset behavior for
+spotlight.
+
+### Error behavior
+
+The static IIFE remains fail-soft. Do not expose caught error text or log raw DOM/data.
+No matching elements, missing APIs, main-only, and footer-only documents complete
+without an exception or console error.
+
+## Existing-test repair
+
+Before the source gate, update the four focused suites to prove:
+
+- exact controller name/shape, old-flag literal stability, and no old-flag read/early
+  return;
+- every static script calls `init(document)` and remains free of interpolation/code
+  sinks;
+- existing reveal/parallax/spotlight behavior and gates still work after resetting
+  both controller and observation flag between tests;
+- switcher/gallery continue under reduced motion;
+- tilt/magnetic use only exact custom properties and reset only owned values;
+- spotlight uses the exact root hook and `--spotlight-x`/`--spotlight-y`, with
+  main/footer root-local updates and no overlay-node binding;
+- every binder ignores replica-self and replica-descendant candidates in a safe
+  two-segment marquee while the corresponding primary candidate still binds; an
+  unsafe subtree has one segment and no replica candidate;
+- one missing API/binder failure does not abort later focused behavior.
+
+Replace stale one-shot expectations; do not weaken security, ARIA, geometry, or
+event-count assertions. L02 owns all additive main/footer parser-order combinations.
+
+## Validation
 
 ```bash
 bun --cwd core lint:types
 bun --cwd core lint
-bun run test:vitest -- tests/vitest/pages/pageEffectsRuntime.test.ts tests/vitest/content/task-534-interactivity-runtime.test.tsx tests/vitest/site/page-runtime-shell-branch.test.tsx
+bun run test:vitest -- tests/vitest/pages/pageEffectsRuntime.test.ts tests/vitest/content/sectionScrollEffect.test.tsx tests/vitest/content/cursorSpotlight.test.tsx tests/vitest/content/task-534-interactivity-runtime.test.tsx
+node _docs/_workflows/task-539-implement.mjs --check-task-family-line-limit
 git diff --check
 ```
 
-Rerun any named failing test file once in isolation before classifying the failure.
+Rerun any named failing file once in isolation before classification.

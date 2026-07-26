@@ -14,75 +14,96 @@
 
 ## Goal
 
-Keep all author-controlled Page CSS behind one positive grammar: unitless grid
-lengths are zero-only, and safe background layers are parsed into image layers plus
-an optional final color before any renderer emits them.
+Keep Page author-controlled CSS behind one positive grammar: only numeric zero may be
+unitless in grid lengths, and background input is parsed into an exact validated image
+substring plus an optional canonical final color before any consumer emits it.
 
-For every single-color layer, import TASK-541's Bun-free authoring parser and then
-apply Page's narrower seven-token allowlist. Do not add a Page-local rgb/hsl/hex
-parser or accept an arbitrary `--color-*` token merely because TASK-541 accepts it.
-Pass the original final-layer source slice directly to that parser before Page-side
-trimming, lowercasing, or classification so TASK-541 remains the sole raw-length
-and whitespace authority.
+TASK-541's Bun-free `parseCssColorValue(raw, "authoring")` remains the single semantic
+color parser. Page applies only its existing seven-token policy afterward and never
+pretrims, lowercases, regex-classifies, or recreates color syntax.
 
-The existing exported `sanitizeAuthoringCssColor` and
-`isSafeAuthoringCssColor` are part of this handoff: both delegate their original
-raw argument to the shared parser and then the same Page token filter. They do not
-retain a local grammar or pretrim. Background final-layer parsing calls that exact
-adapter/primitive, while validated image-layer bytes remain outside color
-canonicalization and preserve raw-image identity after whole-value outer trim.
-
-## Leaves
+## Leaves and land order
 
 | Leaf | Scope | Status |
 |---|---|---|
-| TASK-539-02-L01 | Sole sanitizer implementation | ⏳ To Do |
-| TASK-539-02-L02 | Grid/background security corpus | ⏳ To Do |
+| TASK-539-02-L01 | Sole sanitizer source and existing compatibility-suite writer | ⏳ To Do |
+| TASK-539-02-L02 | One new immutable security-corpus suite only | ⏳ To Do |
 
-## Ownership
+Land `TASK-539-02-L01 -> TASK-539-02-L02`.
+
+## Single-writer ownership
 
 - L01 is the sole TASK-539 writer of
-  `core/services/pages/pageAuthoringSanitizers.ts` and owns required
-  compatibility/changed-behavior updates in
-  `tests/vitest/pages/page-authoring-sanitizers.test.ts` before its source gate.
-- L02 owns only additive exhaustive/property/security cases in that suite; it reruns
-  L01 assertions read-only and cannot re-baseline them.
-- Renderer and responsive leaves import `parseAuthoringCssBackgroundPaint`; they
-  must not mirror layer splitting or tripwires.
-- TASK-541 source/tests are read-only dependencies. L01 imports their public
-  helper and reruns the canonical color suites; it never edits/rebaselines them.
+  `core/services/pages/pageAuthoringSanitizers.ts` and
+  `tests/vitest/pages/page-authoring-sanitizers.test.ts`.
+- L02 creates only
+  `tests/vitest/pages/page-authoring-sanitizers-security-corpus.test.ts`.
+  It never edits/rebaselines L01's suite.
+- TASK-541 sources and tests are read-only. Both leaves run its exact contract,
+  corpus, and consumer-parity tests.
+- Renderer/responsive leaves import `parseAuthoringCssBackgroundPaint`; they do not
+  duplicate splitting, tripwires, color filtering, or grid grammar.
+- Neither leaf edits consumers, model files, routes, DDL, dependencies,
+  parents/indexes/changelogs, or scanner configuration/suppressions.
+
+## Locked sanitizer contract
+
+- Preserve all existing sanitizer export names. `sanitizeAuthoringCssColor` and
+  `isSafeAuthoringCssColor` delegate the untouched raw argument to TASK-541, then
+  accept tokens only from
+  `primary|secondary|accent|bg|surface|text|border`.
+- `parseAuthoringCssBackgroundPaint` validates the bounded whole value once and
+  returns `{image:string|null,color:string|null}`. `image` is the exact outer-trimmed
+  source substring spanning the validated gradient layers, including original
+  spelling and separators. `color` is TASK-541 canonical output.
+- Before any trim, split, regex, or parenthesis walk, the parser rejects C0/C1
+  controls (`U+0000..U+001F`, `U+007F..U+009F`) and every Unicode whitespace code
+  point other than ASCII space (`U+0020`), including BOM (`U+FEFF`), anywhere in the
+  raw whole value.
+- The grid sanitizer applies that same raw code-point guard before `.trim()`, its
+  metacharacter check, or its top-level tokenizer. ASCII space is its only accepted
+  whitespace; TAB/newline controls, C1 controls, every Unicode/ECMAScript whitespace
+  code point, and `U+FEFF` reject even at an outer edge.
+- A color is legal only as the single final layer. Colors before/between gradients,
+  multiple colors, non-gradient image functions, unsafe protocols/functions,
+  controls/non-ASCII whitespace, empty layers, imbalance, layer overflow, and length
+  overflow reject.
+- One internal analysis owns the grammar and returns the paint plus its top-level
+  `layerCount`. The public structured parser exposes the paint. The legacy boolean
+  helper delegates to that same analysis and preserves its historical cardinality:
+  it is `true` only for a valid 2..`PAGE_BG_MAX_LAYERS` stack, and `false` for a
+  valid single color or single gradient. `sanitizeAuthoringCssBackground` delegates
+  to the same analysis and returns exact image bytes for image-only, canonical color
+  for color-only, or `${image}, ${color}` for a split result.
+- Grid lengths accept unitless `0`, `0.0`, and any all-zero decimal spelling only.
+  Every nonzero number requires `fr|px|%|rem|em`, including inside
+  `minmax`/`repeat`.
 
 ## Security Contract
 
-No route or public write is added. Existing strict Page writes remain authenticated,
-RBAC/CSRF protected, and rate-limited. This pure module is a load-bearing CSS
-validation boundary: retain length caps, balanced-parenthesis checks, top-level
-splitting, layer cap, unsafe-function/protocol tripwire, and positive per-layer
-validation. No scanner exception is allowed.
+- No route or public write is added. Existing internal Page writes keep auth, RBAC,
+  CSRF, strict Page validation, and the `admin_write` rate limit.
+- Whole-value length, balanced-parenthesis, top-level layer, layer-count, unsafe
+  function/protocol/at-rule, positive gradient, and exact color-policy guards stay in
+  the shared pure boundary.
+- Raw responsive `<style>` consumers may emit only the structured validated members.
+- No scanner exception, suppression, or allowlist change is permitted. Any strict-scan
+  nonzero result blocks this family.
+- Nonce/HMAC and captcha do not apply because no public write is added.
 
-## Acceptance and validation
+## Acceptance
 
-- `minmax(0,1fr)` remains valid; nonzero unitless bounds fail.
-- Gradient stacks and a single final safe color parse deterministically.
-- A color before/between gradients, multiple colors, URL/functions, unbalanced or
-  oversized input fail closed.
-- The parser returns the exact validated, outer-trimmed image-layer source substring,
-  preserving function spelling and internal separator whitespace. A gradient-only
-  `sanitizeAuthoringCssBackground` result is therefore trimmed-byte-identical.
-  Already-canonical single colors retain their bytes; accepted noncanonical final
-  colors are deliberately reconstructed to TASK-541 canonical bytes. Consumers
-  place the optional final color in `background-color` rather than treating it as
-  an image layer.
-- Original TASK-541 corpus inputs reach the Page adapter unchanged. Exact-cap ASCII
-  padding canonicalizes, cap + 1/control/Unicode-space inputs reject, and arbitrary
-  otherwise-valid color tokens still fail Page's seven-token policy.
-- The immutable corpus exercises both exported single-color adapters and the same
-  inputs embedded as final background layers; no path pretrims or bypasses the
-  second token filter.
-
-```bash
-bun --cwd core lint:types
-bun --cwd core lint
-bun run test:vitest -- tests/vitest/pages/page-authoring-sanitizers.test.ts
-git diff --check
-```
+- Existing export names compile and delegate to one owner.
+- Exact image bytes and canonical final-color bytes are independently pinned.
+- Legal single colors and gradients parse and sanitize successfully while the legacy
+  multi-layer predicate stays false for either one-layer form and true only at the
+  valid 2..`PAGE_BG_MAX_LAYERS` boundaries.
+- The immutable TASK-541 corpus reaches both Page color adapters and embedded-final
+  background parsing without preprocessing, including exact raw-length/control/
+  Unicode-space boundaries.
+- Zero-only unitless grid rules are covered at every nested position.
+- The final L02 gate reruns every split Page model suite read-only after the sanitizer
+  change; L02 cannot rebaseline TASK-539-01's canonical TASK-541 color fixtures.
+- Each leaf runs lint/types, exact targeted tests, the baseline-to-final TASK-539 line
+  gate, and `git diff --check`; every touched production/test file is at most 1,000
+  lines.

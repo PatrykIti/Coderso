@@ -354,6 +354,186 @@ Implementation pipeline:
 - Do not place secrets, provider keys, or privileged settings in browser cache/localStorage/debug payloads; preserve backend-only handling, encryption, and redaction rules from `_docs/SECURITY_SPEC.md`.
 - Public write endpoints must use the shared access evaluators plus nonce/captcha hardening patterns that already exist in forms/booking; do not invent weaker one-off anti-abuse flows.
 
+## Database Query, Persistence, and Server Cache Rules
+
+### Query and read-model design
+
+- PostgreSQL is the authoritative source of truth. Design every query from a
+  named caller/read model, its bounded result shape, stable ordering, expected
+  cardinality, freshness requirement, and small-site plus large-site budget;
+  never optimize from table shape alone or add an index without a matching
+  production query contract.
+- Select only the columns the caller consumes. List endpoints must not load
+  large `jsonb`, document bodies, encrypted fields, credentials, or revision
+  payloads merely to render summaries; detail payloads belong to bounded
+  point reads.
+- Every user- or data-sized list is bounded at the database boundary. Prefer
+  keyset/cursor pagination with a deterministic unique tiebreaker (normally
+  `ORDER BY <business sort>, id`) over growing `OFFSET`; validate cursor shape,
+  direction, and maximum page size. An unbounded read is allowed only for an
+  explicitly documented maintenance/export stream that processes fixed-size
+  batches and applies backpressure.
+- Avoid N+1 reads and writes. Resolve related records with joins, bounded
+  `IN`/`ANY` batches, aggregates, or explicit loaders, and enforce query-count
+  regression tests on hot paths. Bulk mutations use set-based SQL or bounded
+  batches rather than awaiting one statement per row.
+- Search SQL and its index expression must be byte-for-byte compatible at the
+  planner boundary. Own one normalized stored/generated search vector (or one
+  canonical expression) per search contract; use GIN for full-text search and
+  keep leading-wildcard `ILIKE`/trigram fallback explicitly selected, bounded,
+  and measured. Do not search wide rows through `jsonb::text` or concatenate
+  expressions that cannot use the declared index.
+- Promote frequently filtered, joined, constrained, or sorted JSON properties
+  to typed columns. Keep `jsonb` for authored documents and sparse payloads,
+  with strict schema/normalizer ownership; it is not a substitute for a
+  relational key or an excuse for full-row scans.
+- Before landing a query or index change, capture sanitized `EXPLAIN (ANALYZE,
+  BUFFERS)` evidence against representative small and large fixtures. Test the
+  result contract, stable pagination (no gaps/duplicates), query count, and the
+  relevant latency/row-scan budget. Never include secrets or raw customer data
+  in plans, fixtures, snapshots, logs, or task evidence.
+- Do not run unbounded production diagnostics that cast whole rows or every
+  column to text and regex-scan tables (for example,
+  `row_to_json(table)::text ~ pattern` across the schema). Use catalog and code
+  inventory first; when data inspection is genuinely required, scope explicit
+  columns/tables and selective predicates, use a read-only bounded session with
+  a strict statement timeout and preferably a replica, and record the operator
+  purpose. Never add a production index solely to accelerate a one-off
+  diagnostic scan that is not a recurring product query contract.
+
+### Tables, constraints, indexes, and lifecycle
+
+- Let the database enforce invariants: use primary/foreign/unique/check
+  constraints and map their named errors at the service boundary. A preflight
+  existence or uniqueness read is UX assistance, not concurrency control.
+- Design indexes from verified predicates and ordering. Put equality filters
+  before range/sort columns and finish non-unique traversal indexes with the
+  stable cursor tiebreaker; consider partial or covering indexes only with
+  measured evidence. Index hot foreign-key delete/join paths, but account for
+  write amplification and remove truly redundant indexes only after usage and
+  query-shape evidence.
+- Revision/version allocation must be concurrency-safe. Do not rely on an
+  unlocked `max(version) + 1`; use a sequence/counter, row/advisory lock, or a
+  unique constraint plus bounded retry, and test concurrent writers.
+- Append-heavy logs, audit events, analytics, revisions, jobs, and outbox rows
+  require an explicit retention/archive policy and bounded, resumable pruning.
+  Define evidence-based partition thresholds and a runbook before partitioning;
+  do not add partitions to small installations without a measured benefit.
+- Every schema change ships the SQL migration, snapshot, and journal artifacts.
+  Re-read the live migration journal immediately before allocating a number.
+  The schema representation consumed by the migration generator, SQL, snapshot,
+  and journal must land atomically under one writer; never land DDL first and
+  defer the matching Drizzle/schema export to a later task.
+  Document expected locks, table rewrites, backfill batches, rollback/forward
+  recovery, and deploy ordering. `CREATE INDEX CONCURRENTLY` must not be placed
+  inside a transactional migration; if needed, give it an explicit separately
+  validated operations phase.
+- Keep human-authored schema modules cohesive and below the repository line
+  limit. If a legacy schema/service module already exceeds 1,000 lines, split
+  it by domain ownership before extending it; generated migration metadata
+  remains exempt.
+
+### Transactions and database clients
+
+- A mutation that spans related rows is one explicit transaction. Reads and
+  writes inside it must use the provided transaction handle, not the global DB
+  client. External I/O, cache publication, webhooks, and other irreversible
+  effects happen only after commit or through a transactional outbox.
+- Concurrent updates use an explicit strategy: atomic SQL, row/advisory locks,
+  or optimistic version/`updated_at` checks with a machine-readable conflict.
+  Never silently apply last-writer-wins where it can lose authored data.
+- Return only needed `RETURNING` columns. Map expected constraint/deadlock/
+  timeout conflicts centrally; do not expose driver messages, SQL, bind values,
+  credentials, or internal identifiers to clients or logs.
+- Validate pool size and timeouts instead of blindly parsing environment
+  values. Budget total connections across replicas, workers, migrations, and
+  operational headroom; configure bounded connect/query/idle lifetimes,
+  graceful shutdown, cancellation, and PgBouncer compatibility where used.
+  An application pool maximum is a per-process value, not the cluster budget.
+- Runtime infrastructure shares one composable, awaited lifecycle contract.
+  Database, schedulers, workers, cache and transports register with that owner;
+  do not install competing signal handlers. Stop accepting work first, stop
+  schedulers/claims, drain bounded workers, close cache/transports, then close
+  the database, with idempotent start/close tests.
+- Database observability uses sanitized statement fingerprints and bounded
+  metrics for latency, rows, errors, waits, pool saturation, cache interaction,
+  and query counts. Operational use of `pg_stat_statements`, I/O timing, slow
+  plans, vacuum/analyze health, and index usage must be documented and reset or
+  compared across a known interval before conclusions are drawn.
+  Classify application, migration, maintenance/test, external-diagnostic, and
+  unknown traffic separately; cumulative or diagnostic-polluted statistics are
+  not valid evidence for application index or cache decisions. Because
+  `pg_stat_statements` does not retain `application_name`, never claim that
+  attribution without an independently verified fingerprint, role, or live
+  session correlation.
+
+### Server cache architecture and correctness
+
+- Cache is an optional optimization, never the authoritative store. Server
+  consumers use one async, typed cache contract owned by a standalone module;
+  domain code must not import `Map`, Redis, or provider clients directly. Cache
+  values use versioned strict envelopes/codecs and corrupt, unknown-version,
+  oversized, or expired data is evicted best-effort and treated as a miss.
+- The default single-replica backend is a process-local LRU bounded by both
+  entry count and serialized bytes, with per-entry/key/tag caps, monotonic TTL,
+  bounded expiry work, TTL jitter, and per-key single-flight. It must not be
+  presented as coherent for multiple replicas.
+- Redis is optional infrastructure selected through validated environment
+  configuration; TTL and domain freshness policies remain code/settings-owned.
+  Redis mode is the shared value store for multi-replica deployments and must
+  not silently fall back to a persistent per-process value cache on outage.
+  On cache timeout/unavailability, use the authoritative DB/render path with a
+  bounded circuit breaker. Missing Redis configuration for explicitly selected
+  Redis mode fails fast; readiness policy must be explicit.
+- State the distributed consistency model honestly. A design that promises
+  zero-query cache hits and successful authoritative writes during a cache
+  partition cannot also claim linearizable invalidation. For safe public data,
+  define and test the bounded-eventual invalidation-lag target, hard TTL stale
+  ceiling, degraded-readiness/bypass behavior, and read-after-write bypass.
+  Auth, RBAC, secrets, private content and security decisions must instead stay
+  fail-closed/DB-authoritative and cannot inherit that relaxed consistency.
+- Cache keys are canonical, bounded, deployment/tenant namespaced, schema-
+  versioned, family-tagged, and digest variable user input. Never embed raw
+  secrets, tokens, cookies, PII, unrestricted URLs, or delimiter-parsed values
+  in a key. Do not use Redis `KEYS` or an unbounded `SCAN` for invalidation.
+- Each cached read declares its TTL, maximum serialized size, eligibility,
+  negative-cache policy, dependency tags/generation, and stale-data policy.
+  Do not cache secrets/decrypted settings, sessions, auth/RBAC decisions,
+  private/password content, preview/draft bodies, or nonce-bearing forms. These
+  are absolute server-cache exclusions and no task contract may relax them.
+  Other explicitly non-security user-specific responses may be cached only when
+  a stricter task contract proves identity partitioning, bounded lifetime, and
+  complete invalidation. Security/auth data never uses stale-while-revalidate.
+- A transition from public access to private, password-protected, unpublished,
+  or otherwise restricted access must not depend on bounded-eventual cache
+  invalidation. Either prove a synchronous fail-closed distributed fence, or
+  perform a narrow authoritative visibility/version check before reading a
+  cached public value. A zero-query hit target never overrides this rule.
+- Every mutation declares all affected cache families and returns a deduplicated
+  invalidation plan. Execute it only after the authoritative transaction
+  commits; rollback and no-op emit nothing. Multi-replica invalidation must be
+  durable (normally a transactional outbox plus idempotent worker); Pub/Sub may
+  reduce propagation latency but is never the sole correctness mechanism.
+- A cache read/write/delete/publication failure must not turn a committed
+  authoritative mutation into an apparent API failure that clients retry.
+  Preserve the committed result, record redacted bounded telemetry, and retry
+  durable invalidation. When coherence cannot be proven, bypass cached values.
+- Distributed stampede protection uses bounded leases/waits, unique ownership
+  tokens, compare-and-delete release, generation recheck before fill, and a DB
+  fallback; it never blocks requests indefinitely. Cache only explicitly safe
+  successful results, with short bounded negative caching where declared.
+- Browser Admin caches and the server cache are separate contracts. Browser
+  values must be scoped to deployment plus authenticated user and auth/
+  permission epoch, cleared on identity transition, and keep storage/quota/
+  broadcast failures best-effort. Server invalidation does not replace Admin
+  `cacheBus` dirty-state and background-revalidation behavior.
+- Cache tests cover adapter parity, hit/miss/expiry/eviction byte bounds,
+  single-flight, malformed envelopes, mutation commit/rollback, old/new slug
+  and delete invalidation, identity isolation, multi-client/multi-replica
+  invalidation, Redis outage/reconnect, and zero-secret guarantees. Hot public
+  cache-hit tests must assert the intended database-query count, including
+  zero-query hits where the read-model contract promises them.
+
 ## Product Contract Rules
 
 - Configurable product widgets belong only to the Admin Dashboard. Dashboard

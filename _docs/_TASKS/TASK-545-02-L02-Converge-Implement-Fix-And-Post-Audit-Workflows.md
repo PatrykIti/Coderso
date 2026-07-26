@@ -176,29 +176,33 @@ export async function runCanonicalPostAudit({
 //   enters closure only; it never dispatches author/implementation/fix/post-audit/smoke
 // - after closure edits, validates the frozen snapshot's exact metadata-only delta
 
-const WORKFLOW_ENTRY = requireCanonicalRepoRelativeWorkflowEntry(import.meta.url);
+const EXECUTING_IMPORT_META_URL = import.meta.url;
 
 async function routeUiWorkflow(args) {
+  rejectCallerWorkflowEntryOverride(args);
   if (args.resumeEvidence) {
     rejectImplementationOrMutationArguments(args);
-    const resume = await openWorkflowClosureResume({
+    const resume: Task545ClosureResume = await openWorkflowClosureResume({
       repoRoot: args.repoRoot,
       expectedTask: PINNED_TASK_ID,
       checkpointPath: args.resumeEvidence,
       checkpointSha256: args.checkpointSha256,
       runId: args.runId,
-      executingWorkflowEntry: WORKFLOW_ENTRY,
-    });
-    const closureIdentity = resolvePinnedClosureIdentity({
-      checkpoint: resume.checkpoint,
-      repoRoot: args.repoRoot,
+      expectedWorkflowRole: PINNED_WORKFLOW_ROLE,
+      executingImportMetaUrl: EXECUTING_IMPORT_META_URL,
     });
     // frozen => first closure attempt; metadata_recovery => a prior closure attempt
     // crashed after writing only allowlisted metadata. Both paths have already proven
-    // tracked evidence; neither can dispatch implementation/post-audit/smoke.
-    await requireFrozenOrAllowlistedRecovery(resume, closureIdentity);
-    await runIdempotentClosureMetadataOnly(closureIdentity);
-    return validateMetadataOnlyClosureDelta(resume.checkpoint, closureIdentity);
+    // tracked evidence and an owner-resolved closure identity; neither can dispatch
+    // implementation/post-audit/smoke or independently resolve a date/path.
+    await requireFrozenOrAllowlistedRecovery(resume, resume.closureIdentity);
+    const completedClosureIdentity =
+      await runIdempotentClosureMetadataOnly(resume.closureIdentity);
+    return validateMetadataOnlyClosureDelta(
+      resume.checkpoint,
+      completedClosureIdentity,
+      args.repoRoot
+    );
   }
   const runtimeResult = await runImplementationAuditGatesAndSmoke(args);
   return createResumeCheckpoint({
@@ -206,7 +210,8 @@ async function routeUiWorkflow(args) {
     expectedTask: PINNED_TASK_ID,
     pinnedChangelogNumber: PINNED_CHANGELOG_NUMBER,
     pinnedChangelogSlug: PINNED_CHANGELOG_SLUG,
-    workflowEntry: WORKFLOW_ENTRY,
+    expectedWorkflowRole: PINNED_WORKFLOW_ROLE,
+    executingImportMetaUrl: EXECUTING_IMPORT_META_URL,
     runtimeResult,
   }); // structured owner_action_required; workflow stops here
 }
@@ -223,9 +228,12 @@ node <checkpoint.workflowEntry> --repo-root <real-root>
 The phase-1 result provides both a structured `resumeArgv` array and a display-only
 `resumeCommand` produced by the canonical shell-quoting helper; the argv array is
 authoritative. `workflowEntry` is derived from that script's `import.meta.url`, normalized
-relative to the real repository root, checked against the exact 24+44 workflow inventory,
-and integrity-bound in the checkpoint. It is never accepted from an agent result or an
-owner-supplied override. On resume, the currently executing entry must equal the checkpoint
+relative to the real repository root, and integrity-bound in the checkpoint. The exact
+24+44 built-ins remain exact. A later owner is accepted only when its canonical path matches
+its TASK ID and `author-audit|implement|fix` suffix (`TASK-9999` is the sole four-digit
+exception), is tracked, regular/non-symlink, byte-identical to `git show HEAD:<path>`, and
+passes TASK-545 static-contract/import gates. It is never accepted from an agent result or
+caller override. On resume, the currently executing entry must equal the checkpoint
 entry before tracked evidence or closure is examined. The smoke-evidence validator CLI may
 diagnose artifacts, but it is not the owner resume command and cannot close a task.
 
@@ -260,10 +268,22 @@ the owning closure branch performs only its bounded idempotent metadata writes.
 
 `runIdempotentClosureMetadataOnly` uses exact upserts/checks: it never duplicates a board or
 changelog row, never allocates a number, verifies an existing pinned changelog belongs to
-the same task, and may safely continue after a process crash. `openWorkflowClosureResume`
-returns `frozen` when no closure metadata changed, or `metadata_recovery` only when the
-current delta is already a subset of the checkpoint-frozen closure allowlist and tracked
-evidence is still byte-identical. It rejects every other delta. Replaying after complete
+the same task, and calls TASK-545's exact
+`writeOrResumeOrderedDurableChangelogFileThenIndexV1` export with literal
+`ordered-durable-changelog-file-then-index@v1` before later metadata. That protocol binds
+same-repository temp/journal state to checkpoint/run, creates
+and fsyncs the changelog no-replace first, then CAS-temp/rename/fsyncs the index; only
+`none`, `file-only`, and `both` are valid. `file-only` resumes the index idempotently;
+index-only, corrupt, or multiple state fails. `openWorkflowClosureResume`
+computes the current revision before identity selection. It returns `frozen` only for
+canonical state `none`; bound stale temp/journal-only residue is cleaned, the revision
+recomputed, and cannot set the UTC identity. Before a `metadata_recovery` delta
+is allowlisted, it returns an identity recovered from exactly one regular non-symlink
+checkpoint-number/date/slug changelog with strict body task/date/number and zero or one
+matching index row/date. File-only or both may pass; zero/multiple files, index-only, or a
+mismatched/duplicate row fails. Consumers use only
+`resume.closureIdentity`; they never resolve current time or rediscover the path. Tracked
+evidence must remain byte-identical and every other delta is rejected. Replaying after complete
 closure is a metadata no-op plus the same final delta result; replay never reruns smoke or
 product mutation.
 
@@ -285,8 +305,9 @@ product mutation.
 - Wrong task/run/path/hash, stale revision, an implementation-mode resume, non-metadata
   closure drift, or any post-validation mutation blocks closure and requires correction or
   a fresh smoke as specified by the evidence validator.
-- A wrong executing script, caller-overridden workflow path, malformed shell argument, or
-  ambiguous/multiple pinned changelog path fails before closure. An allowlisted partial
+- A wrong executing script, caller-overridden/untracked/dirty/wrong-task/symlink owner,
+  malformed shell argument, zero/multiple/non-regular changelog, strict body mismatch,
+  index-only, duplicate/mismatched row, or corrupt journal fails before allowlisting. An allowlisted partial
   closure after a crash resumes idempotently; a partial non-allowlisted write never does.
 
 ## Synthetic behavior tests owned by this leaf
@@ -298,8 +319,9 @@ flattening, wrong/duplicate/reordered lens identities, second-pass non-convergen
 fix, independent lens labels, mutation during
 either lens pass, drift between passes, fixer no-op, and validation mutation. Exact
 owner-stage/resume lifecycle, closure-only branching, idempotent replay, metadata
-allowlists and returned-argv execution belong to the later `smokeEvidence.test.ts`; do not
-create a pre-helper mock contract here.
+allowlists, extensible entry rejection, every ordered-pair child-process kill
+boundary, UTC rollover and returned argv belong to later `smokeEvidence.test.ts`;
+do not create a pre-helper mock contract here.
 
 ## Validation
 

@@ -18,6 +18,7 @@
 - new `_docs/_workflows/smoke-evidence.schema.json`
 - new `_docs/_workflows/smoke-evidence-checkpoint.schema.json`
 - new `_docs/_workflows/lib/smoke-evidence.mjs`
+- new `_docs/_workflows/lib/smoke-evidence.d.mts`
 - new `tests/unit/workflows/smokeEvidence.test.ts`
 - test fixtures under `tests/fixtures/workflows/smoke-evidence/`
 
@@ -93,12 +94,95 @@ changelog number/safe slug, the exact canonical owning workflow entry, and phase
 state/timestamp. It never contains file bodies,
 command output, environment values, or agent payloads. The checkpoint is integrity-bound
 by a SHA-256 returned separately to the owner and is never rewritten during resume.
+The owning entry is derived only from the executing module's `import.meta.url`.
+Exact built-ins remain accepted; a future entry must match the task-bound
+`task-(three digits|9999)-(author-audit|implement|fix).mjs` rule, be tracked,
+regular/no-symlink, byte-identical to `git show HEAD`, and pass TASK-545 static/
+canonical-import gates. Caller path overrides fail.
+
+The TASK-548 bootstrap exception uses the declaration-owned exact six-path
+constant and receipt below. Its normalizer recursively rejects unknowns,
+requires path-sorted constant membership, lowercase 40-hex `priorHead`/`head`
+and lowercase 64-hex file/aggregate hashes, and recomputes the aggregate over
+the checkpoint-compatible canonical JSON `{ priorHead, files }` with displayed
+key order and one final LF. The authorization gate additionally proves
+current HEAD equals `head`, is the single direct child of `priorHead`, its exact
+diff is those six regular non-symlink paths, each tracked HEAD byte hash matches,
+the worktree/index are clean for them, and the exact workflow static/import gates
+pass. The receipt carries no root, timestamp, body, command output or override.
 
 ## Implementation Pseudocode
 
-```js
+The named types and exact tuple declaration are real exports from the companion
+`_docs/_workflows/lib/smoke-evidence.d.mts` declaration contract for
+`smoke-evidence.mjs`; runtime exports the same deeply frozen tuple and the
+declaration also types every runtime export used below.
+This keeps the runtime file valid JavaScript while allowing consumers to import
+the exact owner types from `./lib/smoke-evidence.mjs` without local substitutes.
+
+```ts
+// smoke-evidence.d.mts
+declare const verifiedTask545Checkpoint: unique symbol;
+export type VerifiedTask545Checkpoint = Readonly<
+  SmokeEvidenceCheckpointV1 & { [verifiedTask545Checkpoint]: true }
+>;
+export type Task545ClosureIdentity = Readonly<{
+  taskId: TaskId; runId: string; checkpointSha256: string;
+  changelogNumber: number; changelogSlug: string;
+  closureUtcDate: CanonicalUtcDate;
+  pinnedChangelogPath: `_docs/_CHANGELOG/${string}.md`;
+  durableState: "none" | "file-only" | "both";
+}>;
+export type VerifiedTask545MetadataRecoveryDelta = Readonly<{
+  pass: true; taskId: TaskId; runId: string;
+  closureMetadataRevision: PublicWorkingTreeRevision;
+  changedPaths: readonly string[];
+}>;
+export type Task545ClosureResume =
+  | Readonly<{ state: "frozen"; checkpoint: VerifiedTask545Checkpoint;
+      closureIdentity: Task545ClosureIdentity & { durableState: "none" } }>
+  | Readonly<{ state: "metadata_recovery"; checkpoint: VerifiedTask545Checkpoint;
+      closureIdentity: Task545ClosureIdentity & { durableState: "file-only" | "both" };
+      delta: VerifiedTask545MetadataRecoveryDelta }>;
+
+export declare const TASK_548_COMMITTED_BOOTSTRAP_PATHS_V1: readonly [
+  "_docs/_workflows/lib/task-548-contract.mjs",
+  "_docs/_workflows/task-548-author-audit.mjs",
+  "_docs/_workflows/task-548-fix.mjs",
+  "_docs/_workflows/task-548-implement.mjs",
+  "tests/unit/workflows/task548AuthorAudit.test.ts",
+  "tests/unit/workflows/task548WorkflowContracts.test.ts",
+];
+export type Task548CommittedBootstrapFileV1 = Readonly<{
+  path: typeof TASK_548_COMMITTED_BOOTSTRAP_PATHS_V1[number];
+  sha256: string;
+}>;
+export type Task548CommittedBootstrapSixFilesV1 = readonly [
+  Task548CommittedBootstrapFileV1, Task548CommittedBootstrapFileV1,
+  Task548CommittedBootstrapFileV1, Task548CommittedBootstrapFileV1,
+  Task548CommittedBootstrapFileV1, Task548CommittedBootstrapFileV1
+];
+export type Task548CommittedSixPathBootstrapReceiptV1 = Readonly<{
+  schema: "coderso.task548-committed-bootstrap@v1"; taskId: "TASK-548";
+  priorHead: string; head: string;
+  workflowEntry: "_docs/_workflows/task-548-implement.mjs";
+  files: Task548CommittedBootstrapSixFilesV1; aggregateSha256: string;
+}>;
+declare const verifiedTask548Bootstrap: unique symbol;
+export type VerifiedTask548CommittedSixPathBootstrapReceiptV1 = Readonly<
+  Task548CommittedSixPathBootstrapReceiptV1 &
+  { [verifiedTask548Bootstrap]: true }
+>;
+export function normalizeTask548CommittedSixPathBootstrapReceiptV1(
+  value: unknown
+): Task548CommittedSixPathBootstrapReceiptV1;
+export function requireTask548CommittedSixPathBootstrapAuthorizationV1(
+  options: { repoRoot: string; receipt: unknown }
+): Promise<VerifiedTask548CommittedSixPathBootstrapReceiptV1>;
+
+// smoke-evidence.mjs runtime contract
 export async function resolveCanonicalEvidenceDirectory(repoRoot, expectedTask) {
-  requireExactTaskId(expectedTask); // exactly TASK-[0-9]{3}
+  requireRepoTaskId(expectedTask); // TASK-[0-9]{3}, plus sole TASK-9999 sentinel
   const realRepoRoot = await requireRealGitTopLevel(repoRoot);
   const expected = join(
     realRepoRoot,
@@ -192,17 +276,63 @@ export async function auditSmokeEvidenceDirectory(options) {
   return result;
 }
 
+async function requireTaskBoundOwningWorkflow(options) {
+  requireNoWorkflowEntryOverride(options);
+  requireCanonicalOwnerRole(options.expectedWorkflowRole);
+  const entry = deriveCanonicalRepoPathOnlyFromImportMetaUrl(
+    options.repoRoot,
+    options.executingImportMetaUrl
+  );
+  if (isExactTask545BuiltinEntry(entry)) {
+    requireExactBuiltinTaskAndRoleBinding(
+      entry, options.expectedTask, options.expectedWorkflowRole
+    );
+  } else {
+    requireCanonicalFutureTaskOwner(entry, options.expectedTask, {
+      pattern:
+        /^_docs\/_workflows\/task-(?:[0-9]{3}|9999)-(author-audit|implement|fix)\.mjs$/,
+      expectedRole: options.expectedWorkflowRole,
+      requireTaskIdAndSuffixBinding: true,
+    });
+  }
+  await requireGitTrackedRegularNoSymlink(entry);
+  await requireWorktreeBytesEqualGitShowHead(entry);
+  await requireCanonicalTask545StaticContractAndImportGates(entry);
+  return entry;
+}
+
+export async function requireTask548CommittedSixPathBootstrapAuthorizationV1(options) {
+  requireExactKeys(options, ["repoRoot", "receipt"]);
+  const receipt = normalizeTask548CommittedSixPathBootstrapReceiptV1(
+    options.receipt
+  );
+  await requireExactCommittedTask548SixPathReceipt(receipt, {
+    repoRoot: options.repoRoot,
+    expectedTask: "TASK-548",
+    expectedWorkflowEntry: "_docs/_workflows/task-548-implement.mjs",
+    expectedPaths: TASK_548_COMMITTED_BOOTSTRAP_PATHS_V1,
+    requireExactSchemaTaskPriorHeadCurrentHeadFilesAndAggregate: true,
+    requireCurrentHeadDirectParentEqualsPriorHead: true,
+    requireCurrentHeadAndExactStaticImportGates: true,
+  });
+  return brandVerifiedTask548CommittedBootstrapReceipt(receipt);
+}
+
 export async function createResumeCheckpoint(options) {
+  requireExactKeys(options, ["repoRoot", "expectedTask", "pinnedChangelogNumber",
+    "pinnedChangelogSlug", "expectedWorkflowRole", "executingImportMetaUrl",
+    "runtimeResult"]);
   requirePinnedClosureIdentity(
     options.pinnedChangelogNumber,
     options.pinnedChangelogSlug,
     options.expectedTask
   );
-  const workflowEntry = await requireOwnedWorkflowEntry(
-    options.repoRoot,
-    options.workflowEntry,
-    options.expectedTask
-  );
+  const workflowEntry = await requireTaskBoundOwningWorkflow(options);
+  await requireNoCanonicalPinnedChangelogOrIndexRow({
+    repoRoot: options.repoRoot, taskId: options.expectedTask,
+    changelogNumber: options.pinnedChangelogNumber,
+    changelogSlug: options.pinnedChangelogSlug,
+  });
   const revision = await computeWorkingTreeRevision(options.repoRoot, options.expectedTask);
   const result = await auditSmokeEvidenceDirectory({
     ...options,
@@ -237,6 +367,7 @@ export async function createResumeCheckpoint(options) {
 }
 
 export async function resumeTrackedEvidence(options) {
+  const executingWorkflowEntry = await requireTaskBoundOwningWorkflow(options);
   const canonicalPath = canonicalCheckpointPath(options.repoRoot, options.expectedTask);
   requireExactPath(options.checkpointPath, canonicalPath);
   const bytes = await readCappedFileNoSymlink(canonicalPath);
@@ -246,7 +377,7 @@ export async function resumeTrackedEvidence(options) {
   requireExecutingWorkflowEntry(
     options.repoRoot,
     checkpoint.workflowEntry,
-    options.executingWorkflowEntry
+    executingWorkflowEntry
   );
   requireRevisionEquals(
     checkpoint.frozenRuntime,
@@ -263,60 +394,150 @@ export async function resumeTrackedEvidence(options) {
   return trackedEvidencePass(checkpoint); // read-only and replay-safe
 }
 
-export async function openWorkflowClosureResume(options) {
-  const checkpoint = await readVerifyCheckpointIdentityAndWorkflow(options);
+export async function openWorkflowClosureResume(
+  options
+): Promise<Task545ClosureResume> {
+  const executingWorkflowEntry = await requireTaskBoundOwningWorkflow(options);
+  const checkpoint = await readVerifyCheckpointIdentityAndWorkflow({
+    ...options, executingWorkflowEntry,
+  });
+  let current = await computeWorkingTreeRevision(options.repoRoot, options.expectedTask);
   await requireEvidenceHashesAndTrackedParity(checkpoint, options);
-  const closureIdentity = resolvePinnedClosureIdentityFromCheckpoint(
-    checkpoint,
-    options.repoRoot,
-    nowUtc()
-  );
-  const current = await computeWorkingTreeRevision(options.repoRoot, options.expectedTask);
-  if (revisionEquals(current, checkpoint.frozenRuntime)) {
+  let pair = await inspectBoundOrderedChangelogPair(checkpoint, options, {
+    validStates: ["none", "file-only", "both"],
+    rejectIndexOnlyCorruptOrMultiple: true,
+  });
+  if (pair.state === "none" && pair.staleBoundTempOrJournalOnly) {
+    await cleanStaleBoundTransactionArtifactsAndFsyncDirectory(pair);
+    current = await computeWorkingTreeRevision(options.repoRoot, options.expectedTask);
+    pair = await inspectBoundOrderedChangelogPair(checkpoint, options, {
+      validStates: ["none"], rejectAnyCanonicalMetadata: true,
+    });
+  }
+  if (pair.state === "none" && revisionEquals(current, checkpoint.frozenRuntime)) {
+    const closureIdentity = await createFrozenClosureIdentityFromCheckpoint({
+      checkpoint,
+      checkpointSha256: options.checkpointSha256,
+      repoRoot: options.repoRoot,
+      closureUtcDate: currentCanonicalUtcDate(),
+      durableState: "none",
+    });
     return { state: "frozen", checkpoint, closureIdentity };
   }
-  // This also supports crash recovery: it accepts any subset of the exact frozen
-  // task/index/pinned-changelog allowlist, but no source/workflow/evidence/HEAD delta.
-  const delta = await validateMetadataOnlyClosureDelta(checkpoint, closureIdentity);
+  if (pair.state !== "file-only" && pair.state !== "both") {
+    fail("smoke_non_metadata_delta");
+  }
+  // Discover identity before constructing the allowlist or validating the delta.
+  const closureIdentity = await discoverMetadataRecoveryClosureIdentity({
+    checkpoint,
+    checkpointSha256: options.checkpointSha256,
+    repoRoot: options.repoRoot,
+    expectedTask: options.expectedTask,
+    closureContract: checkpoint.closureContract,
+    requireExactlyOneRegularNoSymlinkChangelog: true,
+    requireCanonicalPathFromClosureContract:
+      "_docs/_CHANGELOG/<number>-YYYY-MM-DD-<safe-slug>.md",
+    requireStrictBodyTaskDateAndNumber: true,
+    requireMatchingChangelogIndexRows: pair.state === "file-only" ? 0 : 1,
+    durableState: pair.state,
+  });
+  if (pair.boundTempOrJournalPresent) {
+    await requireBoundTransactionArtifactsMatchCheckpointRunAndIdentity({
+      pair, checkpoint, closureIdentity,
+    });
+    await cleanBoundTransactionArtifactsAndFsyncDirectory(pair);
+    current = await computeWorkingTreeRevision(options.repoRoot, options.expectedTask);
+    pair = await inspectBoundOrderedChangelogPair(checkpoint, options, {
+      validStates: [closureIdentity.durableState],
+      rejectAnyBoundTransactionArtifacts: true,
+      rejectIndexOnlyCorruptOrMultiple: true,
+    });
+  }
+  // This accepts only an exact subset of the frozen task/index/date-resolved
+  // changelog allowlist, with no source/workflow/evidence/HEAD delta.
+  const delta = await validateMetadataOnlyClosureDelta(
+    checkpoint, closureIdentity, options.repoRoot
+  );
   return { state: "metadata_recovery", checkpoint, closureIdentity, delta };
 }
 
-export async function validateMetadataOnlyClosureDelta(checkpoint, options) {
-  await requireCheckpointAndEvidenceStillExact(checkpoint, options);
-  const current = await computeWorkingTreeRevision(options.repoRoot, options.expectedTask);
+export async function writeOrResumeOrderedDurableChangelogFileThenIndexV1(options) {
+  requireExactKeys(options, ["repoRoot", "checkpoint", "runId", "closureIdentity",
+    "changelogBytes", "changelogIndexMutation", "protocol"]);
+  requireExactProtocolMarker(
+    options.protocol, "ordered-durable-changelog-file-then-index@v1"
+  );
+  requireTaskRunAndIdentityBinding(options);
+  const tx = deriveCheckpointRunBoundSameRepoTransaction(options);
+  await createOrVerifyJournalViaTempFsyncRenameAndDirectoryFsync(tx);
+  let state = await inspectBoundOrderedChangelogPair(
+    options.checkpoint, options, {
+      validStates: ["none", "file-only", "both"],
+      rejectIndexOnlyCorruptOrMultiple: true,
+    }
+  );
+  if (state.state === "none") {
+    await writeCanonicalChangelogRegularFileNoReplace(tx, options.changelogBytes);
+    await fsyncFileThenContainingDirectory(tx.changelogPath);
+    state = await requireExactPairState(tx, "file-only");
+  }
+  if (state.state === "file-only") {
+    const indexBytes = await applyExactChangelogIndexMutation(
+      tx, options.changelogIndexMutation
+    );
+    const temp = await writeSameDirectoryIndexCasTemp(tx, indexBytes);
+    await fsyncFile(temp);
+    await requireIndexBaseSha256Unchanged(tx);
+    await renameTempOverIndex(temp, tx.changelogIndex);
+    await fsyncContainingDirectory(tx.changelogIndex);
+  }
+  await requireExactPairState(tx, "both");
+  await removeBoundTempAndJournalThenFsyncDirectory(tx);
+  return advanceClosureIdentity(options.closureIdentity, "both");
+}
+
+export async function validateMetadataOnlyClosureDelta(
+  checkpoint, closureIdentity, repoRoot
+): Promise<VerifiedTask545MetadataRecoveryDelta> {
+  await requireCheckpointAndEvidenceStillExact(checkpoint, { closureIdentity, repoRoot });
+  const current = await computeWorkingTreeRevision(repoRoot, closureIdentity.taskId);
   if (current.gitHead !== checkpoint.frozenRuntime.gitHead) fail("smoke_head_changed");
+  await requireExactOrderedChangelogPrefix(checkpoint, closureIdentity, current);
   const changed = diffCanonicalRecords(checkpoint.frozenRuntime.records, current.records);
   const allowlist = buildExactClosureMetadataAllowlist({
     frozenContract: checkpoint.closureContract,
-    pinnedChangelogPath: options.pinnedChangelogPath,
-    closureUtcDate: options.closureUtcDate,
+    pinnedChangelogPath: closureIdentity.pinnedChangelogPath,
+    closureUtcDate: closureIdentity.closureUtcDate,
   });
   if (changed.some((entry) => !allowlist.has(entry.path))) {
     fail("smoke_non_metadata_delta");
   }
   return {
     pass: true,
-    taskId: options.expectedTask,
+    taskId: closureIdentity.taskId,
     runId: checkpoint.runId,
     closureMetadataRevision: publicRevision(current),
     changedPaths: uniqueSorted(changed.map((entry) => entry.path)),
   };
 }
 
-// Exact validator CLI stages; repoRoot/task are always explicit and evidence paths derived:
-// node smoke-evidence.mjs phase1 --repo-root <root> --task TASK-### --audit-directory
-//   --changelog-number <pinned-number> --changelog-slug <pinned-safe-slug>
-//   --workflow-entry <canonical-repo-relative-owning-workflow.mjs>
+// Owning workflow API only; no CLI/API workflow-entry override exists:
+// await requireTask548CommittedSixPathBootstrapAuthorizationV1({
+//   repoRoot, receipt: committedExactSixPathReceipt }) // TASK-548 only, immediately first
+// createResumeCheckpoint({ repoRoot, expectedTask, pinnedChangelogNumber,
+//   pinnedChangelogSlug, expectedWorkflowRole,
+//   executingImportMetaUrl: import.meta.url, runtimeResult })
 // -> {pass:false,code:"owner_action_required",action:"review_and_stage_evidence",
 //     taskId,evidenceDirectory,checkpointPath,checkpointSha256,runId,resumeArgv,
 //     resumeCommand,frozenRuntimeRevision}
 // Diagnostic only (never the owner closure command):
 // node smoke-evidence.mjs validate-tracked --repo-root <root> --task TASK-###
 //   --checkpoint <canonical-path> --checkpoint-sha256 <sha> --run-id <run-id>
-//   --executing-workflow-entry <checkpoint-entry> --audit-directory --require-tracked
+//   --audit-directory --require-tracked
 // node smoke-evidence.mjs closure-delta --repo-root <root> --task TASK-###
 //   --checkpoint <canonical-path> --checkpoint-sha256 <sha> --run-id <run-id>
-//   --pinned-changelog <exact-repo-relative-path> --closure-utc-date YYYY-MM-DD
+// The diagnostic recovers the identity from the checkpoint plus strict on-disk
+// changelog/index facts; callers never supply a path or date.
 // Exit 0 only for validate-tracked/closure-delta success; owner_action_required exits with the
 // documented pause code, and every failure is structured JSON without raw identities.
 ```
@@ -325,7 +546,7 @@ export async function validateMetadataOnlyClosureDelta(checkpoint, options) {
 
 ```text
 agent after smoke:
-  run the exact phase1 CLI with repo root + task; it derives the canonical directory
+  owning workflow calls phase 1 with its own import.meta.url; no path override
   require exact manifest/present-file parity, revision and hashes
   atomically create the strict resume-checkpoint.json without staging it
   return { pass:false, code:"owner_action_required", action:"review_and_stage_evidence",
@@ -347,8 +568,8 @@ resumed agent:
 
 An owner commit is not required at the checkpoint: staging makes reviewed evidence visible
 to `git ls-files`, while the final owner commit remains after closure. Checkpoint/evidence
-resume validation is read-only and idempotent; the owning closure branch may perform only
-the separately bounded metadata writes. The returned command re-enters exactly the checkpoint-owned workflow's
+parity validation is read-only and idempotent. Closure may clean only stale correctly bound
+temp/journal-only residue, then perform the separately bounded metadata writes. The returned command re-enters exactly the checkpoint-owned workflow's
 closure-only branch; the standalone validator is diagnostic only. Replaying the same
 task/run/path/hash before closure returns the same pass, and replay after an allowlisted
 partial or complete closure continues/no-ops through `metadata_recovery` without modifying
@@ -361,7 +582,24 @@ The tracked resume freezes the audited runtime snapshot. Closure may then change
 physical task-family files for that exact task, exact `_docs/_TASKS/README.md`, the exact
 pinned/date-resolved changelog file, and exact `_docs/_CHANGELOG/README.md`. Allowlist
 membership comes from the checkpoint's frozen task-file list and immutable pinned
-number/slug; the date-resolved path must match the explicit UTC closure date. Matching is
+number/slug. `openWorkflowClosureResume` computes the current revision before resolving
+an identity. Only `none`, `file-only`, and `both` are valid canonical states. Bound
+temp/journal-only residue is cleaned and directory-fsynced, the revision recomputed,
+and `frozen` is allowed only when no canonical closure metadata delta remains; residue never supplies
+date authority. A changed revision must, before allowlist/delta validation, discover
+exactly one regular non-symlink changelog whose path/body matches checkpoint task/number/
+slug and canonical date, with zero matching index rows for `file-only` or exactly one
+matching row/date for `both`. Index-only, corruption, duplicate/mismatched rows, zero/
+multiple files, non-regular files, and symlinks fail closed. The returned
+`closureIdentity` is the only date/path authority consumed by the owning workflow; callers
+never resolve it again. Verified bound temp/journal residue accompanying `file-only` or
+`both` is identity-checked, removed and directory-fsynced before the current revision and
+unchanged canonical state are recomputed; transient paths never join the allowlist. The
+first closeout transaction uses checkpoint/run-bound
+same-repository temp/journal paths, creates the changelog no-replace and fsyncs its file/
+directory, then writes/fsyncs an index CAS temp, verifies the base digest, renames and
+directory-fsyncs it. `file-only` is the exact recoverable first prefix; recovery finishes
+the index before later metadata, while `both` is revalidated. Matching is
 repository-relative, exact, normalized, and rejects traversal, prefix
 lookalikes, another task family, or another changelog. Source, tests, configuration,
 runtime/security/product docs, workflows, evidence, and HEAD remain byte-identical to the
@@ -390,8 +628,11 @@ No manifest is rewritten or hash auto-updated during validation.
 - Phase 1 never claims durability; tracked resume is the only tracked-evidence pass.
 - The agent never invokes `git add`. A missing/untracked phase-2 file returns
   `smoke_owner_stage_required` and keeps closure open.
-- A checkpoint conflict is never overwritten, and a successful resume never mutates state.
+- A checkpoint conflict is never overwritten; validation never mutates checkpoint,
+  evidence, or canonical metadata, apart from the explicit stale-transient cleanup.
 - Closure-delta success permits only bounded metadata drift; it never blesses source drift.
+- Ordered-pair recovery never accepts index-only/corrupt/multiple state or treats stale
+  temp/journal bytes as date authority.
 
 ## Regression-test shape owned by this leaf
 
@@ -411,6 +652,28 @@ revision, extra tracked file, and non-evidence staging; execution of the exact r
 repeated pre-closure resume success with no byte/status mutation; crash recovery from an
 allowlisted partial closure; completed-closure replay without duplicate metadata; and
 prevention of every implementation/fix/post-audit/smoke dispatch on resume.
+Both `frozen` and `metadata_recovery` fixtures call the exact owner export
+`writeOrResumeOrderedDurableChangelogFileThenIndexV1` with literal marker
+`ordered-durable-changelog-file-then-index@v1`; a task-local alias, skipped recovery call,
+wrong marker, or index-before-file implementation fails.
+Entry fixtures retain every exact built-in and cover all future suffixes plus TASK-9999;
+caller override, wrong task/suffix, untracked/dirty/HEAD-mismatched, symlink/non-regular,
+and static/import failures reject. TASK-548 fixtures require the TASK-545-owned current-HEAD,
+exact-six-path committed-bootstrap gate immediately before the exact-argument phase-1 call;
+missing/stale/wrong-entry receipts, reordering, an intervening action, an unknown phase-1
+option, or passing the receipt into `createResumeCheckpoint` rejects.
+TASK-548 fixtures also round-trip the exact receipt, mutate every root/nested
+key, path/order/hash/HEAD/parent/aggregate/workflow entry, and prove the branded
+receipt is returned only after live Git direct-parent/diff/tracked-byte checks.
+Child-process fixtures kill after every journal/temp
+write, file fsync, rename, and directory-fsync boundary. They prove only none/file-only/
+both recover, stale temp/journal-only cleanup restarts safely, file-only completes the
+index once, both validates, bound residue accompanying either state is cleaned only after
+identity verification, and index-only/corrupt/multiple state fails. A UTC rollover
+after the no-replace changelog write retains its date. Strict path/body/row mismatches fail
+before allowlist validation.
+Type fixtures import the three exact owner exports plus `Task545ClosureResume`,
+pin both discriminants/state-specific fields, and reject widened/local substitute shapes.
 Metadata-delta cases prove task-family/index/exact pinned-changelog edits pass while source,
 tests, config, runtime/security docs, workflow/evidence, HEAD, another task/changelog,
 new same-family task files absent from the frozen list, wrong number/slug/date, traversal,
@@ -425,5 +688,6 @@ codes.
 node --check _docs/_workflows/lib/smoke-evidence.mjs
 node _docs/_workflows/lib/smoke-evidence.mjs --help
 bun test tests/unit/workflows/smokeEvidence.test.ts
+bun run lint:repo:types
 git diff --check
 ```

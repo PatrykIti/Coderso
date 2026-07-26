@@ -100,6 +100,25 @@ test("UI closure pauses for owner evidence staging", () => {
   }
 });
 
+test("owning workflow entries are tracked, clean, and task-bound", async () => {
+  for (const owner of owningWorkflowRegistrations()) {
+    const entry = deriveOnlyFromExecutingImportMetaUrl(owner.importMetaUrl);
+    if (isExactTask545BuiltinEntry(entry)) {
+      assertExactBuiltinTaskAndRoleBinding(entry, owner.taskId);
+    } else {
+      assertCanonicalFutureEntry(entry, owner.taskId, {
+        pattern:
+          /^_docs\/_workflows\/task-(?:[0-9]{3}|9999)-(author-audit|implement|fix)\.mjs$/,
+        requireTaskIdAndSuffixBinding: true,
+      });
+    }
+    assertTrackedRegularFileNoSymlink(entry);
+    assertBytesEqualGitShowHead(entry);
+    assertCanonicalTask545StaticContractsAndImports(entry, owner.role);
+    assertNoCallerWorkflowEntryOverride(owner);
+  }
+});
+
 test("active prompts do not commit, allocate dynamically, or defer smoke", () => {
   for (const file of activeWorkflowFiles()) {
     const source = readFileSync(file, "utf8");
@@ -125,11 +144,23 @@ null/identity/fingerprint/fixer behavior belongs exclusively to the already-land
 to TASK-545-03-L01. This leaf adds only whole-inventory static enforcement and negative
 source fixtures, with no behavioral rebaseline.
 
+The existing TASK-545 24+44 built-in entry inventory remains an exact closed
+compatibility set, but it is not the universe of future owners. A non-built-in
+entry is accepted only through the canonical task-bound pattern above; three-digit
+TASK IDs and the sole `TASK-9999` sentinel follow repository naming rules. Its
+suffix must match its registered author-audit/implement/fix role and task ID.
+Resolution starts only from the currently executing module's `import.meta.url`;
+CLI/API path overrides are forbidden. Before phase 1, require `git ls-files`, a
+regular non-symlink path, byte equality with `git show HEAD:<path>`, and the same
+TASK-545 static contract/canonical-import gates used by the inventory scan.
+
 ## Error/compatibility flow
 
 - Static test output names exact file and violated invariant.
 - New workflows automatically join the scan; no manually maintained filename
   allowlist can hide them.
+- Unknown built-ins, caller overrides, wrong task/suffix, noncanonical four-digit
+  IDs, untracked/dirty files, symlinks, and static/import-gate failures reject.
 - A genuinely historical/non-executable workflow must be moved by an explicit
   future migration, not silently excluded here.
 
@@ -147,3 +178,6 @@ git diff --check
 Rerun a named failing test once. This leaf lands only after TASK-545-02-L02; do not
 weaken a pattern to baseline a residual violation. Any residual active-script failure
 returns ownership to its explicitly assigned TASK-545-02 leaf before this gate reruns.
+Fixtures cover every allowed future suffix, TASK-9999, wrong task/suffix/four-digit
+ID, caller override, untracked/dirty/HEAD-mismatched entry, regular-file failure,
+symlink, missing TASK-545 imports, and a comment-only static-contract fake.
