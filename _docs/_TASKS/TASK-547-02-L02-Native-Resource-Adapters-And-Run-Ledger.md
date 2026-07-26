@@ -460,7 +460,7 @@ wrong-type, blank and over-bound input but returns an accepted string unchanged.
 `^[A-Za-z]{2,3}(?:-[A-Za-z0-9]{1,8})*$`, then canonicalizes primary/script/
 region/other subtags so `pl`, `pl-PL`, `es-419` and `zh-Hant` work.
 `resolvePublicDocumentLanguage` falls back to `en`; `resolvePrimarySiteLanguage`
-uses that same parser. L04 consumes these pure exports without editing them.
+uses that same parser. TASK-547-04-L03 consumes these pure exports without editing them.
 `settingsService.test.ts` pins raw/canonical examples, blank/wrong-type,
 254/255/256 bounds, full-union/cache invalidation and a `360_000` ms DB timeout.
 

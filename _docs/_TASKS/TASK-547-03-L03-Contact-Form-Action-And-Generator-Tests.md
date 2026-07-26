@@ -397,7 +397,8 @@ preserve:
 - every entry's exact source-backed `cardHref`, including Aurora-only
   `/projekty/aurora` and five `/projekty` values;
 - exact listing semantic `description`/`href` bindings, empty item actions and
-  `{limit:24,offset:0}`;
+  `{limit:24,offset:0}`, plus the exact authored Polish empty state with null CTA
+  fields;
 - neutral detail `titlePattern === "{{ title }}"`;
 - detail `seo.titlePattern` equal to
   `{{ title }} — projekt pokazowy — FormaDom Studio`;
@@ -544,6 +545,7 @@ export function buildFormaDomContentResources(): FormaDomContentResources {
   assertReferenceClosure(resources);
   assertProjectLinkMatrixPreserved(resources.entries);
   assertListingBindingsAndPaginationPreserved(resources);
+  assertProjectListingEmptyStatePreserved(resources);
   assertRequiredAuroraEligibilityPreserved(resources.detailPages[0]);
   assertDetailSeoPreserved(resources.detailPages[0]);
   assertVisibleFormTitlePreserved(resources.forms[0], PROJECT_BRIEF_FORM_TITLE);
@@ -597,9 +599,9 @@ Update `tests/vitest/kits/projekty-domow-form-and-slice.test.ts` to prove:
 - unknown form/settings/field/action keys and invalid public access fail closed;
 - aggregate counts and reference closure are exact and deterministic;
 - aggregate entry `cardHref`, entry SEO and exact dynamic detail SEO are
-  unchanged; exact listing pagination/bindings/no actions and required
-  Aurora-only detail eligibility remain unchanged; the detail still has no
-  related/listing-query dependency;
+  unchanged; exact listing pagination/bindings/no actions/authored empty state
+  and required Aurora-only detail eligibility remain unchanged; the detail still
+  has no related/listing-query dependency;
 - published detail staging yields draft without mutating desired evidence.
 
 Create `tests/vitest/forms/formSupportingText.test.ts` for the pure Form contract:

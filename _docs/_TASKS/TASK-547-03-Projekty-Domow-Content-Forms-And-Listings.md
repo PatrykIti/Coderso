@@ -160,7 +160,10 @@ hiding the form matches the reference.
   projects Page Content List block to `props.showCta:false` and maps that
   present prop to `ContentListData.fields.showCta`; TASK-547-06 proves that card
   anchors still use the exact six-link matrix and that `Zobacz szczegóły` is
-  absent.
+  absent. Its package-specific `config.emptyState` is exactly
+  `{title:"Brak wyników",description:"Zmień filtry, aby zobaczyć inne projekty.",
+  ctaLabel:null,ctaHref:null}`; the generic locale runtime preserves rather than
+  authors this value.
 - One published-only listing query over `house-project`, with exact pagination
   `{limit:24,offset:0}`, category data and deterministic reference order; its
   projection includes `data.cardHref`.
@@ -222,6 +225,7 @@ export function buildFormaDomContentResources(): FormaDomContentResources {
     ["href", "data.cardHref"],
   ]);
   assertNoListingItemActionsOrCtaCopy(discovery.listingTemplates);
+  assertExactProjectListingEmptyState(discovery.listingTemplates);
   assertDetailContentRef(discovery.detailPages, "house-project");
   assertAuroraBindingsRequiredWithoutFallback(discovery.detailPages);
   assertNoRelatedListingDependency(discovery.detailPages);
@@ -277,7 +281,8 @@ persistence. Never silently replace source content.
 **Regression-test shape:** pin the six-row matrix, exact card-link matrix and
 frozen order; reject prior invented fields; prove schema round-trip; prove exact
 category filter order and reference-order query sort; prove the template `href`
-binding shape in L02, then prove runtime precedence and the absence of
+binding and exact authored Polish empty-state shape in L02, then prove runtime
+preservation, precedence and the absence of
 `Zobacz szczegóły` in TASK-547-06's legal Bun/runtime lane; resolve Aurora
 bindings to exact detail copy and abstract art; prove all five non-Aurora direct
 slugs return 404 with no detail metadata/body; prove no related block/ref;

@@ -200,10 +200,11 @@ or contents never join audit digests.
   declarations (`state:"absent"` for future files), line-numbered UTF-8 text,
   digest/byte-only binary records, path-scoped diff, 8 MiB input and 12 MiB
   rendered limits. Owner records have an exact state-dependent key set:
-  text records require positive line counts, exact ordered non-overlapping
-  ranges and a matching redaction map/total; binary records carry only their
-  bounded byte/hash contract; absent files and declared directories carry no
-  invented body. Pattern matches are typed, sorted and unique. Mutation tests
+  text records require positive physical line counts (the terminal-LF empty
+  sentinel is not a line), exact ordered non-overlapping ranges and a matching
+  redaction map/total; binary records carry only their bounded byte/hash
+  contract; absent files and declared directories carry no invented body.
+  Pattern matches are typed, sorted and unique. Mutation tests
   reject missing/extra keys, invalid counts/ranges/redactions, unsorted or
   duplicated matches and state swaps. Official preimplementation packets pin
   the route suite and `.tmp` directory above as explicit `state:"absent"`
@@ -228,6 +229,14 @@ or contents never join audit digests.
   and binary state to prove fail-closed rejection. Leaf and TASK-547-07 packets
   contain complete source/test owner bodies; very large owner handbooks use the
   same pinned required-doc ranges recorded in their coverage digest.
+  Executable-leaf preimplementation audits use those bodies to detect impossible,
+  stale, unsafe or unscheduled contracts, not to demand implementation closure:
+  a body delta or absent future owner explicitly and accurately assigned to an
+  unchecked corrective step in an In Progress task is an expected implementation
+  delta recorded only in the summary. It becomes a finding when remediation is
+  missing/misstated, ownership/symbol/test/gate/data shape is stale or conflicting,
+  the task falsely claims completion, or unsafe behavior has no planned correction.
+  TASK-547-07 itself remains auditable for current enforcement operability.
   Parent/root prompts are deliberately limited to hierarchy, decomposition,
   documentation, cross-contract state and digest review and explicitly do not
   claim aggregate owner bodies. A global 14-target body-coverage matrix proves
@@ -471,8 +480,10 @@ closeout, then restarts all five lenses from lens one. Zero LOW is required;
 TASK-9999 deferral is not used by this workflow.
 
 Every finding is bounded and sanitized before it can be forwarded to a fixer.
-It must carry one or more repository-relative `file:line` anchors and may not
-contain traversal, absolute paths, secret-like filenames, raw logs, credentials,
+Its evidence value contains only full repository-relative `file:line` or
+`file:start-end` anchors separated by exact `; ` delimiters; all explanation
+belongs in `finding`. Evidence may not contain prose/code excerpts, pseudo-anchors,
+traversal, absolute paths, secret-like filenames, raw logs, credentials,
 submission/user data or control characters. Summary/area/finding/evidence/
 recommendation byte limits are schema- and runtime-enforced. The host supplies
 each auditor with exact HEAD OID/ref plus dirty tracked/untracked/scoped-ignored

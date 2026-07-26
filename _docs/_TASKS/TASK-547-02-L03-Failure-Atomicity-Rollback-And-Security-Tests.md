@@ -415,7 +415,9 @@ Service only. A syntactically valid actor UUID is required and validated before
 DB access for apply/dry-run/rollback. Never delete reused or unmanaged rows.
 Dry-run may persist safe ledger evidence but writes zero domain resources/settings.
 All DB fixtures use unique package/resource/actor markers and delete only exact
-owned rows in dependency-safe order; never truncate shared tables. Worker argv/
+owned rows in dependency-safe order; never truncate shared tables. The suite split
+removes the inherited `site.locale` singleton mutation: L02 owns real atomic-settings
+DB restoration coverage and L03 retains an injected-adapter unit assertion only. Worker argv/
 stdout excludes DB URLs, package payloads, settings values, submissions and
 secrets. No public endpoint is added. No database migration is added. No RBAC/
 CSRF/rate-limit change, scanner suppression or cross-domain transaction
@@ -967,7 +969,7 @@ test re-reads the pre-test raw shell rows after cleanup and fails on any mismatc
 
 ## Sub-Tasks
 
-- [x] Implement reverse rollback and compensation.
+- [x] Implement the initial rollback/compensation baseline; its dependency-aware corrective replacement remains pending below.
 - [x] Add the DB lifecycle/security test matrix implementation.
 - [ ] Split the near-limit service suite and implement strict V1 dependency graph
   validation plus dependency-aware branch compensation/resume, including strict

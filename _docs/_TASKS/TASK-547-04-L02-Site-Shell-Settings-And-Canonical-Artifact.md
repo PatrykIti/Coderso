@@ -298,8 +298,9 @@ package normalizer/ref plan → deterministic Prettier serialization → atomic
 canonical-artifact write by the CLI/generator boundary.
 
 **Error handling:** throw before writing on missing/extra menu/footer element,
-copy/style/token mismatch, duplicate setting, missing static SEO, unknown or
-incomplete residual, ref-graph failure, schema failure or scenario-set drift.
+copy/style/token mismatch, duplicate setting, missing/altered static or dynamic
+detail SEO, unknown or incomplete residual, ref-graph failure, schema failure or
+scenario-set drift.
 Never leave a partial canonical file.
 
 ## Regression Tests
@@ -316,7 +317,8 @@ that boundary. It asserts:
   `customSvg`;
 - exact settings/ref values, source token mapping and no duplicate
   `site.contentRoutes`;
-- preservation of all seven L01 static SEO pairs and TASK-547-03 dynamic route;
+- preservation of all seven L01 static SEO pairs and TASK-547-03 dynamic Aurora
+  detail SEO plus its content route;
 - contact Form block title equal to imported `PROJECT_BRIEF_FORM_TITLE`
   (`Zacznij projekt`), never a retyped, invented or fallback heading; no sibling
   Page copy of `PROJECT_BRIEF_INITIAL_NOTE`; and the referenced Form owns that

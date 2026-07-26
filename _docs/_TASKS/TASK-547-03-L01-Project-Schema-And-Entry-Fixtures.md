@@ -210,11 +210,11 @@ export function buildProjectResources() {
     }],
     entries: PROJECT_FIXTURES.map((fixture) => ({
       key: fixture.key,
-      desired: normalizeProjectEntryDesired({
+      desired: cleanJsonObject(normalizeProjectEntryDesired({
         fixture,
         contentTypeId: ref("content_type", HOUSE_PROJECT_RESOURCE_KEY),
         status: "published",
-      }),
+      })),
     })),
   };
 }

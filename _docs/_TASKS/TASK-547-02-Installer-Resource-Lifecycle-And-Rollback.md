@@ -268,7 +268,7 @@ units and store the accepted string unchanged; reads/lists preserve that raw
 value. The
 separate public resolver accepts only the bounded ASCII BCP-like grammar,
 canonicalizes `pl`, `pl-PL`, `es-419` and `zh-Hant`, and falls back to `en` only
-at a public sink. L04 consumes these exports read-only.
+at a public sink. TASK-547-04-L03 consumes these exports read-only.
 
 The atomic service supplies exact raw presence/value capture plus validated
 apply and trusted raw restore. In one transaction it locks the settings table

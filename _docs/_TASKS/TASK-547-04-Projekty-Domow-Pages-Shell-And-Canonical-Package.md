@@ -30,7 +30,8 @@ entry at `/projekty/aurora`, not an eighth static Page.
 The contact Form's present-only `theme.submit.supportingText` is owned and
 normalized by TASK-547-03-L03. L01 binds that Form and must not duplicate the
 same note as a sibling Page text block. The bound Page Form block authors
-`submitBehavior.successBehavior:"show-message-keep-form"`: a successful native
+`props.successBehavior:"show-message-keep-form"`, which L01 maps to
+`FormEmbedData.submitBehavior.successBehavior`: a successful native
 submission keeps the form controls visible, hides/replaces only the supporting
 note and exposes the exact installed action message in the existing live region.
 
@@ -79,7 +80,7 @@ publishes only after their children and documents are complete.
   `tests/vitest/kits/projekty-domow-package.test.ts`. It consumes L01 and
   TASK-547-03 exports read-only.
 - **TASK-547-04-L03** owns only the public-runtime paths and named render tests
-  listed in its leaf. It consumes the earlier L02-owned `settingsService.ts` and
+  listed in its leaf. It consumes TASK-547-02-L02-owned `settingsService.ts` and
   pure `siteLocale.ts` exports read-only for escaped document language and the
   present-only listing/filter chrome. It does not edit settings contracts,
   package builders, authored Page copy or entry content.
@@ -120,9 +121,9 @@ Required cross-page behavior is:
 - `site.locale:"pl"` producing `<html lang="pl">` for Page and dynamic-entry
   document shells.
 
-The seven static SEO titles are owned by L01; L02 must preserve and assert them
-during assembly, never regenerate or overwrite them. TASK-547-03 owns dynamic
-Aurora SEO and `site.contentRoutes`.
+The seven static SEO title/description pairs are owned by L01; L02 must preserve
+and assert them during assembly, never regenerate or overwrite them. L02 must
+also preserve TASK-547-03's dynamic Aurora detail SEO and `site.contentRoutes`.
 
 ## Native Interactions Versus Verified Residuals
 
@@ -230,6 +231,7 @@ export function buildFormaDomPackage(): FullSitePackageV1 {
     verification: { scenarioIds: FORMA_DOM_SCENARIO_IDS },
   });
   assertExactStaticSeo(pkg.resources.pages);
+  assertDynamicDetailSeoPreserved(content.detailPages, pkg.resources.detailPages);
   assertSingleContentRoutesSetting(pkg);
   buildReferencePlan(pkg);
   return pkg;

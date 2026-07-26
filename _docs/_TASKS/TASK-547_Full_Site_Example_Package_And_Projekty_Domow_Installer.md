@@ -201,10 +201,12 @@ source path or symbol between leaves.
 - `bun run precommit:check`
 - `bun run gates:coderso`
 - `bun run scan:security:strict`
-- Playwright CLI smoke with exact session `wf547smoke` and exactly eight ordered
-  scenario objects; only after free-port checks and a fresh server restart. Each
-  scenario records URL, viewport, zero console errors, material visible-effect
-  assertions and one distinct PNG metadata/hash record.
+- Playwright CLI smoke comprises exact sessions `wf547smoke` (eight public
+  flows), `wf547formdesign` (five Form Design flows) and `wf547pageeditor` (five
+  Page Editor flows), owned by TASK-547-06-L01; run only after free-port checks
+  and a fresh server restart. Each of the 18 scenarios records URL, viewport,
+  zero console errors, material visible-effect assertions and one distinct PNG
+  metadata/hash record.
 - cleanup deletes only the scoped form submission, rolls back the exact source
   run and proves exact equality with captured prior shell/settings values
 - baseline-to-final line counts for every touched production/test module

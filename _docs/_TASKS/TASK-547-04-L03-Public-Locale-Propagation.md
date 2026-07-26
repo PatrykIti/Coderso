@@ -61,9 +61,10 @@ split owned tests by independently runnable contract rather than weakening them.
 
 ## Locale Contract
 
-- Consume L02's `DEFAULT_SITE_LOCALE`, `normalizePublicSiteLocale`,
-  `resolvePublicDocumentLanguage` and `resolvePrimarySiteLanguage` exactly; this
-  leaf neither validates stored writes nor defines a second locale regex.
+- Consume TASK-547-02-L02's `resolvePublicDocumentLanguage` and
+  `resolvePrimarySiteLanguage` exactly; `DEFAULT_SITE_LOCALE` and
+  `normalizePublicSiteLocale` remain owner implementation/test exports. This leaf
+  neither validates stored writes nor defines a second locale regex.
 - L02 preserves any non-blank stored string up to its fixed 255-UTF-16-code-unit
   bound.
   Its public resolver alone applies the safe ASCII BCP-like grammar to `pl`,
@@ -86,10 +87,10 @@ SettingValueMap[SettingKey] }`. The result remains object-shaped and preserves
 the complete settings value union, including strings, null, booleans, numbers,
 arrays and objects. Callers consume `.value` (and the canonical `.key` where
 needed) rather than treating the result itself as the normalized primitive.
-L02 already owns validation, atomic locking/CAS, raw rollback, cache invalidation
-and the absence of `applySettingsBatch`/`restoreSettingsBatchRaw`. L04 only calls
-`getSetting("site.locale")` and passes that unknown raw value to L02's safe
-resolver at the public render boundary.
+TASK-547-02-L02 already owns validation, atomic locking/CAS, raw rollback, cache
+invalidation and the absence of `applySettingsBatch`/`restoreSettingsBatchRaw`.
+TASK-547-04-L03 only calls `getSetting("site.locale")` and passes that unknown
+raw value to the owner resolver at the public render boundary.
 
 ## Native Listing Chrome Localization Contract
 
@@ -135,12 +136,10 @@ The present-only `ListingFiltersCopy` shape has exactly these 22 optional keys:
 | `rangeMinSliderLabel` | `Suwak minimum` |
 | `rangeMaxSliderLabel` | `Suwak maksimum` |
 
-FormaDom collection chrome intentionally emits no visible CTA label: the whole
-card remains the semantic link, matching the pinned project cards. Empty-state
-copy is exactly `emptyTitle:"Brak wyników"` and
-`emptyDescription:"Zmień filtry, aby zobaczyć inne projekty."`. The native
-empty state is an accepted source-absent adaptation and must be recorded by L02;
-it never instructs an unauthenticated visitor to publish content.
+TASK-547-03-L02 authors the package-specific Polish listing-template empty state,
+and TASK-547-04-L01 authors `props.showCta:false`. This generic locale helper
+owns neither value: it must preserve the resolved template empty state and Page
+CTA suppression byte-for-byte, never synthesize project copy or a CTA label.
 
 `ListingFiltersCopy` is a generic strict widget contract, not a Page document
 key. Its object is optional/present-only, rejects unknown properties and
@@ -158,10 +157,8 @@ Precedence is frozen:
   wins, otherwise the locale value above is used;
 - the 22 state/accessibility labels come from the locale map as one present-only
   object; facets, aliases, resolved metrics and query state are unchanged;
-- FormaDom suppresses native/template CTA text while preserving the whole-card
-  link; listing-template empty-state title/description win localized
-  empty-state copy when present, otherwise localized copy wins the native/Page
-  fallback;
+- authored listing-template empty state and Page `showCta` always retain normal
+  presentation precedence; locale copy cannot rewrite either value;
 - without Polish locale, `mapPage*` data is returned without a `copy` key and
   no locale branch may rewrite authored or template values.
 
@@ -262,9 +259,10 @@ normalizer trims, blank-omits and defensively bounds known values.
 - `tests/vitest/kits/projekty-domow-listing-locale.test.tsx`: synthetic FormaDom
   Page/listing fixtures prove the pure runtime-preparation and string-render
   seams use Polish visitor copy and `lang`; pin the exact five filter headings,
-  all 22 copy keys/values, both collection empty-state strings, absence of
-  visible CTA copy, `pl`/`pl-PL` primary-language matching, every precedence
-  branch, strict wrong-type/unknown/241-
+  all 22 copy keys/values, preservation of the TASK-547-03-L02-authored empty
+  state and TASK-547-04-L01-authored `showCta:false`, absence of visible CTA
+  copy, `pl`/`pl-PL` primary-language matching, every precedence branch, strict
+  wrong-type/unknown/241-
   character rejection, direct-normalizer 1/240/241 behavior, idempotent round
   trip through the real validator/persistence boundary and
   absent/non-Polish/malformed legacy byte identity. This is not a DB

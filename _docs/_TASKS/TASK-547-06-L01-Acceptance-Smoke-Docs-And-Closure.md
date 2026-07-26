@@ -433,7 +433,9 @@ effects with empty console/page/failure arrays.
 
 ## Sub-Tasks
 
-- [ ] Add/finalize acceptance-only tests and run combined gates/security.
+- [ ] Replace inherited weak cleanup with the exact expected-current atomic CAS
+  path, correct the frozen reference-fidelity assertions, finalize modular
+  acceptance-only tests and run combined gates/security.
 - [ ] Run exactly eight stable scenario identities and save at least one distinct
   screenshot per identity plus the manifest.
 - [ ] Run exactly five Form Design scenario identities and save one distinct

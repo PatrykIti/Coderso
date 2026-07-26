@@ -18,6 +18,8 @@ Replace the hard-coded single-page publisher with a thin CLI over the full-site
 installer. Support validation, dry-run, apply and source-run rollback with safe,
 machine-readable summaries. Catalog/onboarding registration is explicitly out of
 scope because the existing closed `SolutionKitId` API does not accept this package.
+The historical `Starter-Registration` filename slug is retained only for stable
+task numbering and links; it does not restore registration to scope.
 
 **Sole-writer ownership (exact):**
 
@@ -313,11 +315,12 @@ failure follows the frozen primary/close precedence matrix above.
 TASK-547-02 alone owns post-substitution native desired validation before its
 run/item/domain writes; this CLI neither duplicates nor weakens that validation.
 
-**Data flow:** strict args → bounded file read/JSON parse →
+**Data flow:** dry-run/apply use strict args → bounded file read/JSON parse →
 `normalizeFullSitePackageForWrite` → `buildReferencePlan` → lazy DB acquisition
-→ apply/rollback service → safe summary → stable exit code. Native `desired`
-validation remains after reference substitution and before `createRun`,
-item or domain writes.
+→ apply service → safe summary → stable exit code. Rollback uses strict args →
+lazy DB acquisition → canonical rollback service → safe summary → stable exit
+code, with zero package read or graph build. Native `desired` validation remains
+after reference substitution and before `createRun`, item or domain writes.
 
 **Error handling:** invalid args/schema/file/actor/conflict return non-zero with a
 machine-readable code. Do not partially publish a Page or bypass the run ledger.

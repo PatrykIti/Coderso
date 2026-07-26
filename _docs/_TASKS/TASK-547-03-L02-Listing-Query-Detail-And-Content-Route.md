@@ -121,6 +121,12 @@ TASK-547-06's Bun/runtime lane proves Aurora → `/projekty/aurora`, the other
 five → `/projekty`, and no visible `Zobacz szczegóły`. L02's Vitest proves only
 the exact normalized binding shape.
 
+The package-specific authored `config.emptyState` is exactly
+`{title:"Brak wyników",description:"Zmień filtry, aby zobaczyć inne projekty.",
+ctaLabel:null,ctaHref:null}`. It is a source-absent native adaptation recorded by
+TASK-547-04-L02, not generic locale copy. Public locale preparation must preserve
+this template value and must not synthesize or overwrite its CTA fields.
+
 ## Aurora Detail Contract
 
 Source: `_docs/projekty-domow-wow-site/projekt-aurora.html:4-7,38-76`.
@@ -305,6 +311,7 @@ export function buildProjectDiscoveryResources() {
     ["href", "data.cardHref"],
   ]);
   assertNoItemActionsOrVisibleCta(template.desired);
+  assertExactProjectListingEmptyState(template.desired);
   assertAllAuroraBindingsRequiredWithoutFallback(detail.desired);
   assertExactRegisteredDetailComposition(detail.desired);
   return {
@@ -327,9 +334,10 @@ seeds. Runtime resolves required bindings before public metadata/render.
 filter value, `all` persisted as a category, non-exact content/detail ref,
 unknown query field/operator, non-deterministic sort, malformed binding, missing
 or reordered `data.cardHref` projection, missing or altered semantic `href`
-binding, invented item action/CTA copy, optional/fallback Aurora binding, any
-related dependency, wrong registered block/ID/props/gallery geometry, altered
-exact route literal or route-normalizer failure. Direct non-Aurora detail
+binding, invented item action/CTA copy, optional/fallback Aurora binding, altered
+project empty-state value, related dependency, wrong registered
+block/ID/props/gallery geometry, altered exact route literal or route-normalizer
+failure. Direct non-Aurora detail
 resolution must remain a not-found outcome, never a partial document. Do not
 silently restore the old detail composition or infer all six destinations from
 the detail route.
@@ -343,7 +351,8 @@ Update `tests/vitest/kits/projekty-domow-discovery-resources.test.ts` to prove:
   `referenceOrder`/`id` sort, `{limit:24,offset:0}` and content-type ref;
 - listing template exact `title`/semantic `description`/semantic `href` field
   objects including `conditions:[]`; no lifecycle status, item action or
-  obsolete/invented visible fields;
+  obsolete/invented visible fields; exact authored Polish empty state with both
+  CTA fields null;
 - exact generated six-link fixture/template matrix, while runtime precedence and
   absence of `Zobacz szczegóły` stay in TASK-547-06's Bun/runtime suite;
 - exact seven registered block IDs/types/variants/data, exact lead → art →

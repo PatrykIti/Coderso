@@ -89,9 +89,9 @@ duplicates by first occurrence.
 canonical key grammar above. Reference substitution is allowed only by L02's
 closed registry:
 
-- entry `contentTypeId`, listing-query
-  `query.sourceConfig.contentTypeId`, detail `contentTypeId`, and
-  detail `related[*].listingQueryId` when that property is present;
+- required entry/detail `contentTypeId`;
+- listing-query `query.sourceConfig.contentTypeId` and detail
+  `related[*].listingQueryId` only when each property is present;
 - optional Page/Page Template `document.settings.collectionLink`: its
   `contentTypeId` is a required content-type ref when the object is present,
   while `listingQueryId`/`listingTemplateId` are nullable refs when present;

@@ -871,19 +871,16 @@ composition remains usable before L02 lands.
 - [x] Extract the exact bounded legacy modules, ledger port + DB implementation,
   default legacy composition and compatibility facade above.
 - [x] Add the planner and its initial pure Vitest coverage.
-- [ ] Implement and test the `GLOBAL_FULL_SITE -> PACKAGE` two-lock contract on
-  one dedicated connection without changing the port's consumer method name.
-- [ ] Add strict V1 rollback-action build/read/persistence and safe dependency
-  error codes in the shared types/ledger owner, including the single-access,
-  captured-bound Proxy-array reader regressions plus the complete v19 hostile
-  envelope/array/length and exact-limit matrix.
-- [ ] Add the optional managed-evidence resolver handoff; make default planning
-  perform exactly one evidence read per identity, prove the direct two-argument
-  resolver makes one self-lookup and all planner writes stay zero. Pin two-arg
-  pre-read build plus three-arg frozen-plan no-rebuild. Replace native reads with
-  the exact evidence-backed
-  planner-equality projections, strict whole-body source-shape gates and bounded
-  child reads/independent boundary DB suite above.
+- [ ] Re-run and pin the delivered two-lock, strict V1 rollback-action,
+  hostile-envelope/Proxy-array and managed-evidence query/harness work against
+  the fresh corrective gate.
+- [ ] Add `RawFullSiteInstallLedgerItem` plus `listRawItems()` with the exact
+  immutable single-read boundary and regression matrix above.
+- [ ] Add the three-argument frozen-plan planner overload with zero graph rebuild,
+  while retaining the direct two-argument resolver's one self-lookup and zero
+  planner writes.
+- [ ] Replace native reads with the exact evidence-backed planner-equality
+  projections, strict whole-body source-shape gates and bounded child reads.
 - [ ] Replace the item-driven candidate/follow-up rollback reads with the
   one-statement candidate-run-driven correlated-lateral query, retaining the
   combined invalidation anti-join, and land the complete managed-identity
