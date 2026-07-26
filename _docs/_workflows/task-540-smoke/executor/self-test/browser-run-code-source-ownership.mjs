@@ -1,7 +1,10 @@
 import { Script } from "node:vm";
 
 import {
+  EXTENDED_CLICK_BUDGET_BY_ACTION_ID,
+  GENERIC_CLICK_BUDGET_MS,
   UNIT_FAILURE_FRAME_CLASSES_BY_ACTION_ID,
+  clickBudgetMsForAction,
   unitFailureFrameClassesForAction,
   unitFailureFrameResultErrorTagForAction,
 } from "../config.mjs";
@@ -33,6 +36,10 @@ import {
 } from "./browser-widget-absence-scope.mjs";
 
 const PRESERVING_UNIT_WRAPPER_MARKER = "if (result === true) return { ok: true };";
+// Identifies the shared single-target click template, whose only per-action variable is the
+// wait budget. The throw pair is unique to that template.
+const GENERIC_CLICK_SOURCE_MARKER =
+  'throw new Error(count === 0 ? "wf540_target_missing" : "wf540_target_duplicate");';
 const UNIT_WRAPPER_PROBE_INNER_SOURCE = "__WF540_UNIT_WRAPPER_PROBE__";
 // Two mutation carriers: rc-011 spells the alert selector as a literal, rc-012 reads it out of the
 // embedded config object, which is the idiom 108 sources use and the one the literal-only guard was
@@ -94,6 +101,7 @@ export async function runBrowserRunCodeSourceOwnershipSelfTest({
     assertSourceMutantsRejected,
   } = browserSourceContext;
   const observedUnitFailureFrameActionIds = [];
+  const observedGenericClickBudgets = new Map();
   let widgetAbsenceMutationSource = null;
   let widgetAbsenceRegistrySource = null;
   for (const action of plan.actionManifest) {
@@ -138,6 +146,22 @@ export async function runBrowserRunCodeSourceOwnershipSelfTest({
         compiledSource.includes("{ timeout: 540000 }"),
         action.id + " explicit navigation timeout drift"
       );
+    }
+    // The generic single-target click source carries a per-action WAIT budget. Pin both
+    // occurrences to that action's registered budget and forbid any other budget appearing in
+    // the same source, so an extended budget can neither leak into a sibling click nor be
+    // silently dropped from the action it was granted to.
+    if (compiledSource.includes(GENERIC_CLICK_SOURCE_MARKER)) {
+      const expectedBudget = clickBudgetMsForAction(action.id);
+      const otherBudget =
+        expectedBudget === GENERIC_CLICK_BUDGET_MS ? 90000 : GENERIC_CLICK_BUDGET_MS;
+      invariant(
+        compiledSource.includes("const deadline = Date.now() + " + expectedBudget + ";") &&
+          compiledSource.includes("await locator.click({ timeout: " + expectedBudget + " });") &&
+          !compiledSource.includes(String(otherBudget)),
+        action.id + " generic click wait budget drift"
+      );
+      observedGenericClickBudgets.set(action.id, expectedBudget);
     }
     new Script("(" + compiledSource + ")", { filename: action.id + ".self-test.js" });
     if (action.outputSchemaId === "unit") {
@@ -546,6 +570,26 @@ export async function runBrowserRunCodeSourceOwnershipSelfTest({
     compiledRunCodeSources += 1;
   }
   invariant(compiledRunCodeSources === 392, "generated run-code source count drift");
+  // Both directions of the budget registry: every extended entry must belong to an action that
+  // really compiled the generic click source with that budget (no dead entries), and at least
+  // one sibling click must still compile the default, so the extension stays scoped.
+  assertNegative(
+    Object.entries(EXTENDED_CLICK_BUDGET_BY_ACTION_ID).every(
+      ([actionId, budget]) => observedGenericClickBudgets.get(actionId) === budget
+    ) &&
+      [...observedGenericClickBudgets.values()].filter(
+        (budget) => budget === GENERIC_CLICK_BUDGET_MS
+      ).length > 0,
+    "extended click budget registry coverage"
+  );
+  // The check above derives its expectation from the registry, so it cannot notice the registry
+  // itself losing an entry. This literal is that independent witness: rc-021-related-tab-save
+  // was tripled from 30 s to 90 s under the owner's 2026-07-26 undetermined-cause rule, and
+  // dropping the accommodation must break a pin rather than pass quietly.
+  assertNegative(
+    observedGenericClickBudgets.get("rc-021-related-tab-save") === 90000,
+    "rc-021 tripled click budget pin"
+  );
   runBrowserWidgetAbsenceScopeSelfTest({
     assertNegative,
     configuredSelectorSource: widgetAbsenceRegistrySource,

@@ -1,4 +1,7 @@
 import {
+  failureReasonMessageNeverThrow,
+} from "../executor/config.mjs";
+import {
   deepFreezeExact,
   invariant,
 } from "../executor/foundation.mjs";
@@ -60,6 +63,28 @@ export function createConstructionAuthorityRuntime({
     }
   }
 
+  // `state.failures` is shared with the cleanup boundary, which pushes its own error first
+  // whenever cleanup throws, so failures[0] can describe cleanup instead of the action that
+  // actually failed. The primary cause therefore gets a dedicated first-write-wins slot.
+  function retainPrivatePrimaryFailureCauseNeverThrow(state, cause) {
+    try {
+      if (state.primaryFailureCause !== null) return false;
+      if (failureReasonMessageNeverThrow(cause).length === 0) return false;
+      state.primaryFailureCause = cause;
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  function currentPrivateRetainedFailureCauseNeverThrow(authority) {
+    try {
+      return PRIVATE_CONSTRUCTION_AUTHORITY.get(authority)?.primaryFailureCause ?? null;
+    } catch {
+      return null;
+    }
+  }
+
   function currentPrivateConstructionCleanupDiagnosticNeverThrow(authority) {
     try {
       const diagnostic = PRIVATE_CONSTRUCTION_AUTHORITY.get(authority)?.cleanupDiagnostic;
@@ -80,6 +105,7 @@ export function createConstructionAuthorityRuntime({
         cleanupCalls: 0,
         cleanupDiagnostic: null,
         failures: [],
+        primaryFailureCause: null,
       });
     }
 
@@ -147,6 +173,7 @@ export function createConstructionAuthorityRuntime({
       try {
         const state = PRIVATE_CONSTRUCTION_AUTHORITY.get(this);
         state.failures.push(cause, diagnostics);
+        retainPrivatePrimaryFailureCauseNeverThrow(state, cause);
       } catch {
         // Private diagnostics never replace the fixed public failure.
       }
@@ -177,6 +204,7 @@ export function createConstructionAuthorityRuntime({
     PrivateConstructionCleanupAuthority,
     createPrivateConstructionCleanupAuthority,
     currentPrivateConstructionCleanupDiagnosticNeverThrow,
+    currentPrivateRetainedFailureCauseNeverThrow,
     privateConstructionAuthorityProjection,
   });
 }

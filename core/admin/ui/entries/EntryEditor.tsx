@@ -108,6 +108,8 @@ const resolveEditorErrorMessage = (error: unknown, fallback: string) =>
 const mapRelationTargets = (items: ContentTypeSummary[]) =>
   items.map((item) => ({ slug: item.slug, name: item.name }));
 
+type ApplyEntryOptions = Readonly<{ preserveLocalEdits?: boolean }>;
+
 export function EntryEditor() {
   const { navigate } = useAdminRouter();
   const [{ type, id }] = useState<{
@@ -171,21 +173,25 @@ export function EntryEditor() {
   const hiddenSchemaFieldNames = useMemo(() => new Set<string>(), []);
 
   const applyEntry = useCallback(
-    (entryResult: EntryDetail, contentType: ContentTypeSummary) => {
+    (entryResult: EntryDetail, contentType: ContentTypeSummary, options?: ApplyEntryOptions) => {
       const mappedFields = fieldsFromSchema(contentType.schema).filter(
         (field) => !hiddenSchemaFieldNames.has(field.name)
       );
+      const preserveLocalEdits = options?.preserveLocalEdits === true;
       setFields(mappedFields);
       setEntry(entryResult);
       setContentTypeId(contentType.id);
       setContentTypeName(contentType.name);
-      setTitle(entryResult.title);
-      setSlug(entryResult.slug);
-      setValues(buildInitialValues(mappedFields, entryResult.data ?? {}));
+      setTitle((current) =>
+        preserveLocalEdits && current.length > 0 ? current : entryResult.title
+      );
+      setSlug((current) => (preserveLocalEdits && current.length > 0 ? current : entryResult.slug));
+      const baseValues = buildInitialValues(mappedFields, entryResult.data ?? {});
+      setValues((current) => (preserveLocalEdits ? { ...baseValues, ...current } : baseValues));
       setStatus(entryResult.status);
       setVisibility(entryResult.visibility);
       setAccessPassword("");
-      setUnsavedChanges(false);
+      if (!preserveLocalEdits) setUnsavedChanges(false);
       setMetadataUnsavedChanges(false);
       setScheduledAt(entryResult.scheduledAt ?? "");
       setSeoDescription(entryResult.seo?.description ?? "");
@@ -271,11 +277,10 @@ export function EntryEditor() {
           return;
         }
         if (!entryResult) return;
-        if (hasUnsavedChangesRef.current || hasUnsavedMetadataChangesRef.current) {
-          setRemoteUpdatePending(true);
-          return;
-        }
-        applyEntry(entryResult, contentType);
+        // The first hydration is the baseline the local edits are based on, not a remote
+        // update: skipping it left `slug` empty and every field value unpopulated, and the
+        // next save persisted that emptiness. Apply it, keeping what the user already typed.
+        applyEntry(entryResult, contentType, { preserveLocalEdits: hasUnsavedChangesRef.current });
         await loadTaxonomy(contentType.id, entryResult);
       })
       .catch((err) => {

@@ -279,11 +279,16 @@ export async function runConstructionCleanupSelfTest({
     cleanupAttributionLines.push(line);
   });
   const cleanupTrackerState = PRIVATE_FAILURE_ACTION_TRACKERS.get(cleanupFailureTracker);
+  // A cleanup-only failure carries no action attribution and no failure class, so the reason
+  // fallback is the only thing that names it. The retained cause is the fake lifecycle error,
+  // whose message matches no vocabulary signature — hence "unclassified", and the
+  // message-absence invariant below proves the token is not the message.
   const cleanupOnlyDiagnosticLine =
     canonicalJson({
       code: TASK_FAILURE.code,
       cleanupPhase: 3,
       cleanupFailureClass: "persistent_plan_failed",
+      failureReason: "unclassified",
     }) + "\n";
   const malformedCleanupDiagnosticLine = cleanupOnlyDiagnosticLine + "{}\n";
   const overflowCleanupDiagnosticLine = "x".repeat(MAX_FAILURE_ACTION_DIAGNOSTIC_BYTES) + "\n";

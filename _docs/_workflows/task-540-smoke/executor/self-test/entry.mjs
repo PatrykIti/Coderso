@@ -90,6 +90,7 @@ import { runFailureActionClassificationSelfTest } from "./failure-action-classif
 import { runFailureActionExecutionSelfTest } from "./failure-action-execution.mjs";
 import { runFailureActionSinksSelfTest } from "./failure-action-sinks.mjs";
 import { runFailureFramesSelfTest } from "./failure-frames.mjs";
+import { runFailureReasonProjectionSelfTest } from "./failure-reason-projection.mjs";
 import { runHostReadinessPolicySelfTest } from "./host-readiness-policy.mjs";
 import { runMediaIsolationSelfTest } from "./media-isolation.mjs";
 import { runMediaUploadSelfTest } from "./media-upload.mjs";
@@ -152,6 +153,7 @@ export function createRunTask540SmokeExecutorSelfTest(dependencies) {
       "createPrivateToneOpenFailure",
       "createPrivateToneSelectFailure",
       "currentPrivateConstructionCleanupDiagnosticNeverThrow",
+      "currentPrivateRetainedFailureCauseNeverThrow",
       "deleteCleanupSubject",
       "discoverExactSeoEntryResources",
       "discoverOneResponseLostCreate",
@@ -256,6 +258,7 @@ export function createRunTask540SmokeExecutorSelfTest(dependencies) {
     createPrivateToneOpenFailure,
     createPrivateToneSelectFailure,
     currentPrivateConstructionCleanupDiagnosticNeverThrow,
+    currentPrivateRetainedFailureCauseNeverThrow,
     deleteCleanupSubject,
     discoverExactSeoEntryResources,
     discoverOneResponseLostCreate,
@@ -397,6 +400,20 @@ export function createRunTask540SmokeExecutorSelfTest(dependencies) {
     });
     const { trackerAtAction } = failureActionClassificationResult;
     negativeCases += failureActionClassificationResult.explicitNegativeCases;
+
+    // Counts through the shared assertNegative, so it must NOT be wrapped in `negativeCases +=`:
+    // a compound assignment reads the counter before evaluating the call and would discard every
+    // increment the call makes.
+    runFailureReasonProjectionSelfTest({
+      PRIVATE_CONSTRUCTION_AUTHORITY,
+      assertNegative,
+      createPrivateBoundedFailureActionDiagnosticSink,
+      createPrivateConstructionCleanupAuthority,
+      currentPrivateRetainedFailureCauseNeverThrow,
+      emitPrivateFailureActionDiagnosticNeverThrow,
+      plan,
+      trackerAtAction,
+    });
 
     await runFailureActionSinksSelfTest({
       PRIVATE_FAILURE_ACTION_TRACKERS,

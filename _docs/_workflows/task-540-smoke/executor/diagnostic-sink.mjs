@@ -3,6 +3,7 @@ import { writeSync } from "node:fs";
 import {
   MAX_FAILURE_ACTION_DIAGNOSTIC_BYTES,
   TASK_FAILURE,
+  classifyFailureReasonNeverThrow,
 } from "./config.mjs";
 import {
   canonicalJson,
@@ -13,8 +14,13 @@ const PRIVATE_FAILURE_ACTION_DIAGNOSTIC_SINKS = new WeakMap();
 
 export function createDiagnosticSinkRuntime({
   currentPrivateConstructionCleanupDiagnosticNeverThrow,
+  currentPrivateRetainedFailureCauseNeverThrow,
   failureBoundary,
 }) {
+  invariant(
+    typeof currentPrivateRetainedFailureCauseNeverThrow === "function",
+    "retained failure cause authority is absent"
+  );
   const {
     currentPrivateAuthSettlementFailureClassNeverThrow,
     currentPrivateDirtyNavigationFailureClassNeverThrow,
@@ -68,14 +74,36 @@ export function createDiagnosticSinkRuntime({
         currentPrivateToneOpenFailureClassNeverThrow(tracker) ??
         currentPrivateToneSelectFailureClassNeverThrow(tracker) ??
         currentPrivateDirtyNavigationFailureClassNeverThrow(tracker);
-      const diagnostic = {
+      const baseDiagnostic = {
         code: TASK_FAILURE.code,
         ...(failedActionId === null ? {} : { failedActionId }),
         ...(failureClass === null ? {} : { failureClass }),
         ...(cleanupDiagnostic === null ? {} : cleanupDiagnostic),
       };
-      const line = canonicalJson(diagnostic) + "\n";
-      return writePrivateFailureActionDiagnosticOnceNeverThrow(sink, line);
+      // The reason is a FALLBACK for actions no tracker classifies, which is where the
+      // diagnostic used to be empty. When a failureClass is present the cause is one of the
+      // registered private failures whose message is a fixed human string, so a reason would
+      // add nothing and would only consume the byte budget. The token comes from a frozen
+      // vocabulary, never raw message text, and it is additive: if appending it would exceed
+      // the sink's byte bound the base diagnostic is emitted alone, so naming the cause can
+      // never cost us the diagnostic itself.
+      const failureReason =
+        failureClass === null
+          ? classifyFailureReasonNeverThrow(
+              currentPrivateRetainedFailureCauseNeverThrow(constructionCleanupAuthority)
+            )
+          : null;
+      const line = canonicalJson({
+        ...baseDiagnostic,
+        ...(failureReason === null ? {} : { failureReason }),
+      });
+      if (Buffer.byteLength(line + "\n") <= MAX_FAILURE_ACTION_DIAGNOSTIC_BYTES) {
+        return writePrivateFailureActionDiagnosticOnceNeverThrow(sink, line + "\n");
+      }
+      return writePrivateFailureActionDiagnosticOnceNeverThrow(
+        sink,
+        canonicalJson(baseDiagnostic) + "\n"
+      );
     } catch {
       return false;
     }

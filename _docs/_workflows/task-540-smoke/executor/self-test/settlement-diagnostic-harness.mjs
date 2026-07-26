@@ -30,10 +30,16 @@ export function createSettlementDiagnosticHarness({
       calls: () => calls,
     });
   };
+  // An unclassified case now carries the reason fallback, which is the point of the
+  // projection: the diagnostic names its cause even when no tracker owns the action. The
+  // default is the token for a message matching no vocabulary signature; a case whose cause
+  // IS a recognised signature must state its own token, so every expectation stays exact
+  // instead of being inferred from the code under test.
   const runSettlementDiagnosticCase = async ({
     label,
     actionId = bootstrapSettlementAction.id,
     expectedFailureClass = null,
+    expectedFailureReason = expectedFailureClass === null ? "unclassified" : null,
     operationMustReject = true,
     operation,
   }) => {
@@ -76,6 +82,7 @@ export function createSettlementDiagnosticHarness({
         code: TASK_FAILURE.code,
         failedActionId: actionId,
         ...(expectedFailureClass === null ? {} : { failureClass: expectedFailureClass }),
+        ...(expectedFailureReason === null ? {} : { failureReason: expectedFailureReason }),
       }) + "\n";
     invariant(
       publicFailure === TASK_FAILURE &&

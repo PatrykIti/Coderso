@@ -54,8 +54,14 @@ export async function runFailureActionExecutionSelfTest({
   } catch (error) {
     diagnosticFailure = error;
   }
+  // An action that no tracker classifies now names its cause with a vocabulary token. The
+  // thrown message here IS the private marker, so the only honest token is "unclassified" —
+  // and the marker-absence invariant below is what proves the projection emits the token and
+  // never the message it was derived from.
   const expectedDiagnosticLine =
-    '{"code":"task540_smoke_failed","failedActionId":"' + diagnosticFailureAction.id + '"}\n';
+    '{"code":"task540_smoke_failed","failedActionId":"' +
+    diagnosticFailureAction.id +
+    '","failureReason":"unclassified"}\n';
   invariant(diagnosticFailure === TASK_FAILURE, "failure action diagnostic changed public error");
   invariant(diagnosticLines.length === 1, "failure action diagnostic write cardinality drift");
   invariant(

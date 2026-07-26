@@ -13,6 +13,7 @@ import {
   TONE_MUTED_ACTION_IDS,
   TONE_OPEN_BROWSER_FAILURE_CLASSES,
   TONE_SELECT_BROWSER_FAILURE_CLASSES,
+  clickBudgetMsForAction,
 } from "../executor/config.mjs";
 import { invariant } from "../executor/foundation.mjs";
 import {
@@ -581,16 +582,19 @@ export function buildSimpleBrowserInvocation(
           displayArgs: null,
         };
       }
+      // Only the WAIT budget is per-action; the emitted check is one shared template, so an
+      // action with the generic budget keeps byte-identical source.
+      const clickBudgetMs = clickBudgetMsForAction(action.id);
       return {
         args: runCode(`async (page) => {
           const locator = page.locator(${selector});
-          const deadline = Date.now() + 30000;
+          const deadline = Date.now() + ${clickBudgetMs};
           while (Date.now() < deadline && await locator.count() !== 1) await page.waitForTimeout(25);
           const count = await locator.count();
           if (count !== 1) {
             throw new Error(count === 0 ? "wf540_target_missing" : "wf540_target_duplicate");
           }
-          await locator.click({ timeout: 30000 });
+          await locator.click({ timeout: ${clickBudgetMs} });
           return true;
         }`),
         displayArgs: null,

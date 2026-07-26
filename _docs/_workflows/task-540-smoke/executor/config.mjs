@@ -10,6 +10,46 @@ export const MAX_NATURAL_KEY_CANDIDATES = 64;
 export const MAX_TASK_TRAFFIC_ROWS = 4096;
 export const MAX_COMPLETE_SESSION_ROWS = 4096;
 export const MAX_FAILURE_ACTION_DIAGNOSTIC_BYTES = 256;
+// A failing action that belongs to no failure-class tracker used to emit a diagnostic with
+// no cause at all, so a 30-minute run could end without naming what broke. The reason
+// projection closes that for EVERY action: it maps the retained cause onto one token from a
+// frozen vocabulary. Raw message text is never emitted, so the sink keeps its bounded-bytes,
+// single-line and secret-free guarantees.
+export const MAX_FAILURE_REASON_MESSAGE_LENGTH = 4096;
+export const FAILURE_REASON_HARNESS_PATTERN = /^wf540_[a-z0-9_]{1,64}$/u;
+export const FAILURE_REASON_CLASSES = deepFreezeExact([
+  "playwright_action_timeout",
+  "playwright_modal_state",
+  "playwright_strict_mode",
+  "unclassified",
+]);
+export function failureReasonMessageNeverThrow(cause) {
+  try {
+    if (typeof cause === "string") return cause;
+    const message = cause?.message;
+    return typeof message === "string" ? message : "";
+  } catch {
+    return "";
+  }
+}
+export function classifyFailureReasonNeverThrow(cause) {
+  try {
+    const message = failureReasonMessageNeverThrow(cause);
+    if (message.length === 0) return null;
+    // Bound the scan before inspecting content: an unbounded message is still reported, just
+    // as "unclassified", rather than being pattern-matched over arbitrary length.
+    if (message.length > MAX_FAILURE_REASON_MESSAGE_LENGTH) return "unclassified";
+    if (FAILURE_REASON_HARNESS_PATTERN.test(message)) return message;
+    if (message.includes("Timeout") && message.includes("exceeded")) {
+      return "playwright_action_timeout";
+    }
+    if (message.includes("does not handle the modal state")) return "playwright_modal_state";
+    if (message.includes("strict mode violation")) return "playwright_strict_mode";
+    return "unclassified";
+  } catch {
+    return null;
+  }
+}
 export const RUN_CODE_PAYLOAD_MAX_BYTES = 65_536;
 export const RUN_CODE_PAYLOAD_MAX_ENCODED_LENGTH = 87_384;
 export const RUN_CODE_OPERATIONS = new Set(["goto-ready", "fill", "type", "press", "focus"]);
@@ -283,6 +323,24 @@ export function resolveDirtyNavigationTargetTimeline(observations) {
     latest = observation;
   }
   return latest;
+}
+// Wait budget for the generic single-target click source. It is a WAIT budget only: the
+// check itself (exactly one target, then a real click) is identical whatever the budget is.
+export const GENERIC_CLICK_BUDGET_MS = 30_000;
+// rc-021-related-tab-save clicks "Save draft" in the second tab, whose enablement waits on the
+// entry mount reads against a remote, untuned test Postgres. Measured locally the target is
+// visible in ~0.9 s and the click lands in 1.47 s idle / 3.04 s under 32-way load, so 30 s was
+// never a latency ceiling in a quiet session - yet the action failed in-run with no identified
+// defect behind it. Tripled to 90 s under the owner's 2026-07-26 undetermined-cause rule: if
+// the operation genuinely never settles, 90 s fails exactly as 30 s did and latency is then
+// excluded as the explanation.
+export const EXTENDED_CLICK_BUDGET_BY_ACTION_ID = deepFreezeExact({
+  "rc-021-related-tab-save": 90_000,
+});
+export function clickBudgetMsForAction(actionId) {
+  return Object.hasOwn(EXTENDED_CLICK_BUDGET_BY_ACTION_ID, actionId)
+    ? EXTENDED_CLICK_BUDGET_BY_ACTION_ID[actionId]
+    : GENERIC_CLICK_BUDGET_MS;
 }
 export const OPEN_SELECT_CONTENT_SELECTOR = '[data-slot="select-content"][data-state="open"]';
 export const ALL_SELECT_CONTENT_SELECTOR = '[data-slot="select-content"]';

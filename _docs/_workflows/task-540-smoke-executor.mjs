@@ -715,6 +715,7 @@ const {
   PrivateConstructionCleanupAuthority,
   createPrivateConstructionCleanupAuthority,
   currentPrivateConstructionCleanupDiagnosticNeverThrow,
+  currentPrivateRetainedFailureCauseNeverThrow,
   privateConstructionAuthorityProjection,
 } = createConstructionAuthorityRuntime({
   cleanupConstructionStateOnce,
@@ -728,6 +729,7 @@ const {
   writePrivateFailureActionDiagnosticOnceNeverThrow,
 } = createDiagnosticSinkRuntime({
   currentPrivateConstructionCleanupDiagnosticNeverThrow,
+  currentPrivateRetainedFailureCauseNeverThrow,
   failureBoundary,
 });
 
@@ -902,6 +904,7 @@ const { runTask540SmokeExecutorSelfTest } = createRunTask540SmokeExecutorSelfTes
   createPrivateToneOpenFailure,
   createPrivateToneSelectFailure,
   currentPrivateConstructionCleanupDiagnosticNeverThrow,
+  currentPrivateRetainedFailureCauseNeverThrow,
   deleteCleanupSubject,
   discoverExactSeoEntryResources,
   discoverOneResponseLostCreate,
