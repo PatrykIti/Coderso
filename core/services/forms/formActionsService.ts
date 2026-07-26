@@ -3,7 +3,7 @@ import { and, asc, desc, eq, sql } from "drizzle-orm";
 import { db } from "../../db/client";
 import { formActionRuns, formActions } from "../../db/schema";
 import {
-  normalizeFormActionsInput,
+  normalizeFormActionsForWrite,
   normalizeFormActionCondition,
   parseFormActionConfigByType,
   type FormActionCondition,
@@ -137,16 +137,14 @@ export async function setFormActions(formId: string, input: unknown) {
   const form = await getForm(formId);
   if (!form) throw new Error("form_not_found");
 
-  const normalized = normalizeFormActionsInput(input)
-    .sort((left, right) => left.orderIndex - right.orderIndex)
-    .map((action, index) => ({ ...action, orderIndex: index }));
+  const normalized = normalizeFormActionsForWrite(input);
 
   const now = new Date();
 
   const inserted = await db.transaction(async (tx) => {
     await tx.delete(formActions).where(eq(formActions.formId, formId));
     if (normalized.length === 0) {
-      return [] as typeof formActions.$inferSelect[];
+      return [] as (typeof formActions.$inferSelect)[];
     }
 
     return tx
@@ -173,10 +171,7 @@ export async function setFormActions(formId: string, input: unknown) {
 }
 
 export async function getFormActionById(actionId: string) {
-  const [row] = await db
-    .select()
-    .from(formActions)
-    .where(eq(formActions.id, actionId));
+  const [row] = await db.select().from(formActions).where(eq(formActions.id, actionId));
 
   return row ? normalizeActionRow(row) : null;
 }
@@ -236,10 +231,7 @@ export async function listFormActionRuns(
 }
 
 export async function getFormActionRun(runId: string) {
-  const [row] = await db
-    .select()
-    .from(formActionRuns)
-    .where(eq(formActionRuns.id, runId));
+  const [row] = await db.select().from(formActionRuns).where(eq(formActionRuns.id, runId));
 
   return row ? normalizeRunRow(row) : null;
 }

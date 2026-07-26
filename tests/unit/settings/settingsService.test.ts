@@ -3,8 +3,14 @@ import { randomUUID } from "node:crypto";
 import { eq, inArray, sql } from "drizzle-orm";
 import { db } from "../../../core/db/client";
 import { settings } from "../../../core/db/schema";
-import { clearSiteCache } from "../../../core/site/cache/siteCache";
 import {
+  buildSiteCacheKey,
+  clearSiteCache,
+  getSiteCacheEntry,
+  setSiteCacheEntry,
+} from "../../../core/site/cache/siteCache";
+import {
+  applySettingsBatch,
   assertAssistantSettingsConsistency,
   deleteSetting,
   getSetting,
@@ -352,6 +358,60 @@ testIfDb(
   },
   dbTestTimeoutMs
 );
+
+testIfDb("site.locale canonicalizes valid values and rejects invalid writes", async () => {
+  await setSetting("site.locale", "pl");
+  expect(await getSetting("site.locale")).toBe("pl");
+  await setSetting("site.locale", "pl-pl");
+  expect(await getSetting("site.locale")).toBe("pl-PL");
+  await expect(setSetting("site.locale", 'pl" onload="x')).rejects.toThrow(
+    "settings_value_invalid"
+  );
+  await expect(setSettings({ "site.locale": "../pl" })).rejects.toThrow(
+    "settings_value_invalid"
+  );
+}, dbTestTimeoutMs);
+
+testIfDb("site.locale fails closed for an invalid legacy stored value", async () => {
+  await db
+    .insert(settings)
+    .values({ key: "site.locale", value: 'pl" unsafe', updatedAt: new Date() })
+    .onConflictDoUpdate({
+      target: settings.key,
+      set: { value: 'pl" unsafe', updatedAt: new Date() },
+    });
+  expect(await getSetting("site.locale")).toBe("en");
+  expect((await listSettings())["site.locale"]).toBe("en");
+}, dbTestTimeoutMs);
+
+testIfDb("site.locale writes invalidate cached public HTML", async () => {
+  const key = buildSiteCacheKey("default", "/task-547-locale");
+  setSiteCacheEntry(key, "<html lang=\"en\">", 30);
+  expect(getSiteCacheEntry(key)).not.toBeNull();
+  await setSetting("site.locale", "pl");
+  expect(getSiteCacheEntry(key)).toBeNull();
+}, dbTestTimeoutMs);
+
+testIfDb("settings saga batches validate first and commit atomically", async () => {
+  await applySettingsBatch([
+    { key: "site.name", operation: "set", value: "Before" },
+    { key: "site.locale", operation: "set", value: "en" },
+  ]);
+  await expect(
+    applySettingsBatch([
+      { key: "site.name", operation: "set", value: "After" },
+      { key: "site.locale", operation: "set", value: "../invalid" },
+    ])
+  ).rejects.toThrow("settings_value_invalid");
+  expect(await getSetting("site.name")).toBe("Before");
+  expect(await getSetting("site.locale")).toBe("en");
+  await applySettingsBatch([
+    { key: "site.name", operation: "set", value: "After" },
+    { key: "site.locale", operation: "set", value: "pl-PL" },
+  ]);
+  expect(await getSetting("site.name")).toBe("After");
+  expect(await getSetting("site.locale")).toBe("pl-PL");
+}, dbTestTimeoutMs);
 
 test("assertAssistantSettingsConsistency accepts docs-only mode without llm", () => {
   expect(() =>

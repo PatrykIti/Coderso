@@ -6,6 +6,7 @@ import { assertTokenOverrides } from "../theme/tokenValidation";
 import type { DesignTokenOverrides } from "../theme/tokenTypes";
 import { normalizeContentRoutes, type ContentRouteSetting } from "./settingsContracts";
 import { MAX_SITE_CACHE_TTL_SECONDS } from "../analytics/beaconTtl";
+import { DEFAULT_SITE_LOCALE, normalizeSiteLocale } from "./siteLocale";
 
 export type { ContentRouteSetting } from "./settingsContracts";
 
@@ -111,13 +112,20 @@ const isOptionalIdSettingKey = (key: SettingKey) =>
   key === "site.footerTemplateId";
 
 const isSiteShellSettingKey = (key: SettingKey) =>
-  key === "site.navigationMenuId" || key === "site.footerTemplateId";
+  key === "site.name" ||
+  key === "site.locale" ||
+  key === "site.homepageId" ||
+  key === "site.navigationMenuId" ||
+  key === "site.footerTemplateId" ||
+  key === "site.contentRoutes" ||
+  key === "design.tokens";
 
 /**
  * The public pages cache stores fully rendered HTML that embeds the global
- * site shell (TASK-455). Writes (or deletes) touching a shell reference key
- * must clear the whole site cache so header/footer changes propagate on the
- * next render instead of waiting out the TTL.
+ * site shell and document locale (TASK-455/TASK-547). Writes (or deletes)
+ * touching a public-render setting must clear the whole site cache so the
+ * next response cannot retain stale shell, route, design, or `<html lang>`
+ * output.
  */
 const invalidateSiteShellCachesForKeys = (keys: Iterable<SettingKey>) => {
   for (const key of keys) {
@@ -345,11 +353,17 @@ const readContentRoutesSettingValue = (value: unknown): ContentRouteSetting[] =>
 };
 
 function validateSettingValue(key: SettingKey, value: unknown): SettingValueMap[SettingKey] {
-  if (key === "site.name" || key === "site.locale") {
+  if (key === "site.name") {
     if (typeof value !== "string") {
       throw new Error("settings_value_invalid");
     }
     return value;
+  }
+
+  if (key === "site.locale") {
+    const locale = normalizeSiteLocale(value);
+    if (!locale) throw new Error("settings_value_invalid");
+    return locale;
   }
 
   if (key === "site.timezone") {
@@ -510,6 +524,14 @@ function validateSettingValue(key: SettingKey, value: unknown): SettingValueMap[
   throw new Error("settings_value_invalid");
 }
 
+export const normalizeSettingValueForWrite = (key: string, value: unknown) => {
+  const normalizedKey = resolveSettingKey(key);
+  return {
+    key: normalizedKey,
+    value: validateSettingValue(normalizedKey, value),
+  };
+};
+
 let legacyAssistantSettingsMigrationPromise: Promise<void> | null = null;
 
 async function ensureLegacyAssistantSettingsMigrated() {
@@ -619,6 +641,11 @@ export async function listSettings(): Promise<SettingValueMap> {
       continue;
     }
 
+    if (key === "site.locale") {
+      merged[key] = normalizeSiteLocale(row.value) ?? DEFAULT_SITE_LOCALE;
+      continue;
+    }
+
     if (key in merged) {
       merged[key] = row.value as string;
     }
@@ -653,6 +680,9 @@ export async function getSetting(key: string) {
   if (normalizedKey === "site.contentRoutes") {
     return readContentRoutesSettingValue(row.value);
   }
+  if (normalizedKey === "site.locale") {
+    return normalizeSiteLocale(row.value) ?? DEFAULT_SITE_LOCALE;
+  }
   if (
     normalizedKey === "auth.sessionTtlDays" ||
     normalizedKey === "auth.resetTtlMinutes" ||
@@ -674,6 +704,96 @@ export async function getSettingRecord(key: string) {
   const normalizedKey = resolveSettingKey(key);
   const [row] = await db.select().from(settings).where(eq(settings.key, normalizedKey));
   return row ?? null;
+}
+
+export type SettingsBatchChange =
+  | { key: string; operation: "set"; value: unknown }
+  | { key: string; operation: "delete" };
+
+type NormalizedSettingsBatchChange =
+  | { key: SettingKey; operation: "set"; value: unknown }
+  | { key: SettingKey; operation: "delete" };
+
+const persistSettingsBatch = async (
+  normalized: readonly NormalizedSettingsBatchChange[]
+) => {
+  const now = new Date();
+  await db.transaction(async (tx) => {
+    for (const entry of normalized) {
+      if (entry.operation === "delete") {
+        await tx.delete(settings).where(eq(settings.key, entry.key));
+      } else {
+        await tx
+          .insert(settings)
+          .values({ key: entry.key, value: entry.value, updatedAt: now })
+          .onConflictDoUpdate({
+            target: settings.key,
+            set: { value: entry.value, updatedAt: now },
+          });
+      }
+    }
+  });
+  invalidateSiteShellCachesForKeys(normalized.map((entry) => entry.key));
+  return normalized;
+};
+
+export async function applySettingsBatch(changes: readonly SettingsBatchChange[]) {
+  await ensureLegacyAssistantSettingsMigrated();
+  if (!Array.isArray(changes)) throw new Error("settings_payload_invalid");
+
+  const usedKeys = new Set<SettingKey>();
+  const normalized = changes.map((change) => {
+    if (!change || typeof change !== "object") {
+      throw new Error("settings_payload_invalid");
+    }
+    const normalizedKey = resolveSettingKey(change.key);
+    if (usedKeys.has(normalizedKey)) {
+      throw new Error("settings_payload_invalid");
+    }
+    usedKeys.add(normalizedKey);
+    if (change.operation === "delete") {
+      return { key: normalizedKey, operation: "delete" as const };
+    }
+    if (change.operation !== "set") {
+      throw new Error("settings_payload_invalid");
+    }
+    return {
+      key: normalizedKey,
+      operation: "set" as const,
+      value: validateSettingValue(normalizedKey, change.value),
+    };
+  });
+
+  if (normalized.some((entry) => isAssistantSettingKey(entry.key))) {
+    const current = await listSettings();
+    const next = { ...current } as SettingValueMap;
+    for (const entry of normalized) {
+      (next as Record<string, unknown>)[entry.key] =
+        entry.operation === "delete" ? DEFAULT_SETTINGS[entry.key] : entry.value;
+    }
+    assertAssistantSettingsConsistency(pickAssistantSettings(next));
+  }
+
+  return persistSettingsBatch(normalized);
+}
+
+/** Restores trusted ledger snapshots without canonicalizing their raw JSON. */
+export async function restoreSettingsBatchRaw(
+  changes: readonly SettingsBatchChange[]
+) {
+  await ensureLegacyAssistantSettingsMigrated();
+  if (!Array.isArray(changes)) throw new Error("settings_payload_invalid");
+  const usedKeys = new Set<SettingKey>();
+  const normalized = changes.map((change): NormalizedSettingsBatchChange => {
+    if (!change || typeof change !== "object") throw new Error("settings_payload_invalid");
+    const key = resolveSettingKey(change.key);
+    if (usedKeys.has(key)) throw new Error("settings_payload_invalid");
+    usedKeys.add(key);
+    if (change.operation === "delete") return { key, operation: "delete" };
+    if (change.operation !== "set") throw new Error("settings_payload_invalid");
+    return { key, operation: "set", value: change.value };
+  });
+  return persistSettingsBatch(normalized);
 }
 
 export async function setSetting(key: string, value: unknown) {

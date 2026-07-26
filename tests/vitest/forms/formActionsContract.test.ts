@@ -3,6 +3,7 @@ import { expect, test } from "vitest";
 import {
   matchesFormActionCondition,
   normalizeFormActionCondition,
+  normalizeFormActionsForWrite,
   normalizeFormActionsInput,
 } from "../../../core/services/forms/formActionsContract";
 
@@ -52,10 +53,7 @@ test("matchesFormActionCondition supports equals, exists and not_exists", () => 
   };
 
   expect(
-    matchesFormActionCondition(
-      { operator: "equals", field: "intent", value: "quote" },
-      payload
-    )
+    matchesFormActionCondition({ operator: "equals", field: "intent", value: "quote" }, payload)
   ).toBe(true);
 
   expect(
@@ -65,13 +63,11 @@ test("matchesFormActionCondition supports equals, exists and not_exists", () => 
     )
   ).toBe(true);
 
-  expect(matchesFormActionCondition({ operator: "exists", field: "email" }, payload)).toBe(
+  expect(matchesFormActionCondition({ operator: "exists", field: "email" }, payload)).toBe(true);
+
+  expect(matchesFormActionCondition({ operator: "not_exists", field: "missing" }, payload)).toBe(
     true
   );
-
-  expect(
-    matchesFormActionCondition({ operator: "not_exists", field: "missing" }, payload)
-  ).toBe(true);
 });
 
 test("normalizeFormActionsInput rejects invalid config", () => {
@@ -86,4 +82,35 @@ test("normalizeFormActionsInput rejects invalid config", () => {
       },
     ])
   ).toThrow("form_action_invalid_config");
+});
+
+test("normalizeFormActionsForWrite sorts, reindexes, and round-trips canonically", () => {
+  const input = [
+    {
+      id: "action-z",
+      type: "success_message" as const,
+      orderIndex: 8,
+      config: { message: "Last" },
+    },
+    {
+      id: "action-b",
+      type: "success_message" as const,
+      orderIndex: 2,
+      config: { message: "Second tie" },
+    },
+    {
+      id: "action-a",
+      type: "success_message" as const,
+      orderIndex: 2,
+      config: { message: "First tie" },
+    },
+  ];
+
+  const normalized = normalizeFormActionsForWrite(input);
+  expect(normalized.map(({ id, orderIndex }) => ({ id, orderIndex }))).toEqual([
+    { id: "action-a", orderIndex: 0 },
+    { id: "action-b", orderIndex: 1 },
+    { id: "action-z", orderIndex: 2 },
+  ]);
+  expect(normalizeFormActionsForWrite(normalized)).toEqual(normalized);
 });
