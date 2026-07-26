@@ -330,7 +330,9 @@ or contents never join audit digests.
   `159e4a51d796f3bf14677577100f7efb845611b1ceaf0c30cbd8d4650d942185`,
   its bytes and hash join the frozen exact-key host identity. The launcher
   plus host-source/runtime identities are rechecked immediately before and
-  after each call.
+  after each call. This forward repin replaces the unavailable `2.1.218`
+  launcher only after a current live no-tool canary proved the exact
+  `2.1.220` wrapper and empty tool registry.
 - Before any workflow dynamic import, the host hashes the exact 19 owned
   workflow `.mjs` sources and freezes `{fileCount,digest}` on
   `auditHostWorkflowIdentity`. It rehashes them after helper/author import and
@@ -359,15 +361,18 @@ or contents never join audit digests.
   telemetry/status keys `ttft_ms`, `ttft_stream_ms`, `time_to_request_ms`,
   `user_message_uuid`, `request_sent_wall_ms`,
   `time_to_request_from_spawn_ms`, `warm_spare_claimed`, `time_origin_ms`,
-  `fast_mode_state` and `origin` may additionally appear. Unknown keys and any
-  `deferred_tool_use` fail. Terminal success is exactly `type:"result"`,
+  `fast_mode_state`, `fast_mode_disabled_reason` and `origin` may additionally
+  appear. Unknown keys and any `deferred_tool_use` fail. Terminal success is
+  exactly `type:"result"`,
   `subtype:"success"`, `is_error:false`, `api_error_status:null`,
-  `terminal_reason:"completed"` and `num_turns:1`, with nonnegative finite
+  `terminal_reason:"completed"` and `num_turns:2`, with nonnegative finite
   timing/cost counters, empty `permission_denials`, schema-valid acknowledged
-  `structured_output` and exactly one `modelUsage` key from
-  `claude-opus-4-8` or `claude-opus-4-8[1m]`. `usage` and that model's value
-  are plain objects; `uuid` and `session_id` are strings. When present,
-  `user_message_uuid`, `fast_mode_state` and `origin` are strings,
+  `structured_output` and exactly two `modelUsage` keys: one primary key from
+  `claude-opus-4-8` or `claude-opus-4-8[1m]`, plus the exact auxiliary key
+  `claude-haiku-4-5-20251001`; no other model identity is accepted.
+  `usage` and every reported model value are plain objects; `uuid` and
+  `session_id` are strings. When present, `user_message_uuid`,
+  `fast_mode_state`, `fast_mode_disabled_reason` and `origin` are strings,
   `warm_spare_claimed` is boolean, and `request_sent_wall_ms` plus
   `time_origin_ms` are finite nonnegative numbers. The duplicate human
   `result` field is ignored after its required string shape is checked.
@@ -384,9 +389,10 @@ or contents never join audit digests.
   reject a shutdown or sibling-aborted batch; a delayed sibling cannot launch
   after another sibling fails.
 - Persistent SIGINT/SIGTERM listeners latch shutdown before further call
-  registration. The barrier first awaits an initialization promise resolved in
-  `finally`, so a signal during dynamic import/resource setup cannot race later
-  supervisor/result-root creation. It then terminates active original groups,
+  registration. The barrier first awaits an initialization promise resolved on
+  attestation failure or in the setup `finally`, so a signal during dynamic
+  import/resource setup cannot race later supervisor/result-root creation. It
+  then terminates active original groups,
   awaits every call finalizer, proves zero active calls/call roots/supervisor
   records, removes the private run root, and only then assigns natural exit
   code 130 or 143 without `process.exit()`. Repeated signals cannot bypass the
@@ -402,7 +408,10 @@ or contents never join audit digests.
   `--probe-hostile-no-tools`; it deliberately asks for Bash/Read/Web/MCP/agent/
   plugin/IDE access and passes only when the empty registry exposes none. It
   never writes official round evidence and is not run during workflow
-  remediation.
+  remediation. Unknown, extra, combined or misspelled host-mode arguments fail
+  before initialization and cannot fall through to the official audit. An
+  attestation failure resolves the initialization barrier before propagating,
+  so a concurrent shutdown cannot wait on an unreachable initialization state.
 - These guards prove repository mutations and the twelve pinned reference
   identities. They do not claim filesystem observation of TASK-540, arbitrary
   ignored paths outside the scoped TASK-547 trees or every external read;
