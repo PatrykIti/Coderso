@@ -7,15 +7,47 @@
 // field value unpopulated — and the next Save draft persisted that emptiness
 // (PATCH `{ slug: "", data: {} }`). Hydration is the baseline the local edit is
 // based on, so it must always be applied, with the typed value kept on top.
+//
+// Local edits arrive through TWO channels and hydration must respect both: the
+// content channel (title/slug/field values, "Save draft") and the metadata channel
+// (status/visibility/schedule/SEO, the metadata panel's own Save). The metadata
+// panel also renders outside the isLoading gate, so a pre-hydration metadata edit
+// is just as reachable — and preserving only the content channel silently reverted
+// it and cleared its unsaved-changes warning. Preserving the metadata channel is
+// per FIELD: an untouched control must still hydrate from the snapshot, otherwise
+// the panel's all-in-one PATCH would push its pristine mount default (draft,
+// public, no schedule, empty SEO) over the server's real state.
 
 import React from "react";
 import { createRoot } from "react-dom/client";
-import { afterEach, expect, test, vi } from "vitest";
+import { afterEach, beforeEach, expect, test, vi } from "vitest";
+
+import type { EntryVisibility } from "../../../core/admin/services/entriesClient";
+import type { EntryStatus } from "../../../core/admin/ui/entries/EntryMetadataPanel";
 
 type UpdateEntryPayload = {
   title: string;
   slug: string;
   data: Record<string, string>;
+};
+
+// Only the props the stub panel below actually exercises; the editor passes more.
+type MetadataPanelStubProps = {
+  status: EntryStatus;
+  onStatusChange: (status: EntryStatus) => void;
+  seoDescription: string;
+  onSeoDescriptionChange: (value: string) => void;
+  onSave: () => void;
+  isSaving: boolean;
+};
+
+type UpdateEntryMetadataPayload = {
+  status: EntryStatus;
+  visibility: EntryVisibility;
+  accessPassword: string | null | undefined;
+  scheduledAt: string | null;
+  taxonomy: { categoryId: string | null; tagIds: string[] } | undefined;
+  seo: { description: string };
 };
 
 const editorState = vi.hoisted(() => {
@@ -30,7 +62,8 @@ const editorState = vi.hoisted(() => {
     id: "entry-1",
     title: "Hello",
     slug: "hello",
-    status: "draft" as const,
+    status: "draft" as EntryStatus,
+    visibility: "public" as EntryVisibility,
     scheduledAt: null,
     seo: { description: "Meta" },
     taxonomy: { category: null, tags: [] as [] },
@@ -38,8 +71,10 @@ const editorState = vi.hoisted(() => {
     data: { title: "Hello", summary: "Summary" },
   };
 
-  let resolveEntry: (value: typeof entry) => void = () => undefined;
-  const entryPromise = new Promise<typeof entry>((resolve) => {
+  type EntryFixture = typeof entry;
+
+  let resolveEntry: (value: EntryFixture) => void = () => undefined;
+  let pendingEntryRead = new Promise<EntryFixture>((resolve) => {
     resolveEntry = resolve;
   });
 
@@ -50,9 +85,17 @@ const editorState = vi.hoisted(() => {
       taxonomies: { category: { id: "cat-taxonomy" }, tag: { id: "tag-taxonomy" } },
       terms: { categories: [], tags: [] },
     },
-    entryPromise,
-    resolveEntry: (value: typeof entry) => resolveEntry(value),
+    // Each test needs its own pending read, otherwise a later test inherits an
+    // already-resolved promise and can no longer type BEFORE hydration.
+    readEntry: () => pendingEntryRead,
+    resolveEntry: (value: EntryFixture) => resolveEntry(value),
+    resetEntryRead: () => {
+      pendingEntryRead = new Promise<EntryFixture>((resolve) => {
+        resolveEntry = resolve;
+      });
+    },
     updatePayloads: [] as UpdateEntryPayload[],
+    metadataPayloads: [] as UpdateEntryMetadataPayload[],
     subscribers: new Set<(event: { key: string }) => void>(),
   };
 });
@@ -163,14 +206,25 @@ vi.mock("@/services/entriesClient", () => ({
   getCachedEntryDetail: () => null,
   // The mount read stays pending until the test resolves it, so the keystroke
   // provably lands first.
-  getEntryCached: vi.fn(() => editorState.entryPromise),
+  getEntryCached: vi.fn(() => editorState.readEntry()),
   previewEntry: vi.fn(async () => ({ previewUrl: "https://preview.test/entry" })),
   publishEntry: vi.fn(async () => ({ ok: true })),
   updateEntry: vi.fn(async (_type: string, _id: string, payload: UpdateEntryPayload) => {
     editorState.updatePayloads.push(payload);
     return { ...editorState.entry, ...payload };
   }),
-  updateEntryMetadata: vi.fn(async () => editorState.entry),
+  updateEntryMetadata: vi.fn(
+    async (_type: string, _id: string, payload: UpdateEntryMetadataPayload) => {
+      editorState.metadataPayloads.push(payload);
+      return {
+        ...editorState.entry,
+        status: payload.status,
+        visibility: payload.visibility,
+        scheduledAt: payload.scheduledAt,
+        seo: payload.seo,
+      };
+    }
+  ),
 }));
 
 vi.mock("@/services/siteSettingsClient", () => ({
@@ -216,8 +270,40 @@ vi.mock("../../../core/admin/ui/entries/EntryDeleteDialog", () => ({
   EntryDeleteDialog: () => null,
 }));
 
+// The real panel renders outside the isLoading gate, so its controls are live while
+// the entry GET is in flight. The stub keeps exactly that surface: the status control
+// and the SEO textarea call the same props the real Select/Textarea call, its Save
+// button is the panel's own metadata Save, and the resolved values are mirrored as
+// text so assertions read React state instead of an uncontrolled DOM value.
 vi.mock("../../../core/admin/ui/entries/EntryMetadataPanel", () => ({
-  EntryMetadataPanel: () => <div data-metadata-panel="true" />,
+  EntryMetadataPanel: ({
+    status,
+    onStatusChange,
+    seoDescription,
+    onSeoDescriptionChange,
+    onSave,
+    isSaving,
+  }: MetadataPanelStubProps) => (
+    <div data-metadata-panel="true">
+      <span data-metadata-status-value="true">{status}</span>
+      <span data-metadata-seo-value="true">{seoDescription}</span>
+      <button
+        type="button"
+        data-metadata-publish="true"
+        onClick={() => onStatusChange("published")}
+      >
+        Set published
+      </button>
+      <textarea
+        data-metadata-seo-input="true"
+        defaultValue={seoDescription}
+        onChange={(event) => onSeoDescriptionChange(event.target.value)}
+      />
+      <button type="button" data-metadata-save="true" disabled={isSaving} onClick={onSave}>
+        Save metadata
+      </button>
+    </div>
+  ),
 }));
 
 vi.mock("../../../core/admin/ui/entries/FieldRenderer", () => ({
@@ -262,12 +348,46 @@ const flushMicrotasks = async () => {
   for (let index = 0; index < 8; index += 1) await Promise.resolve();
 };
 
+const typeIntoTextarea = (area: HTMLTextAreaElement, value: string) => {
+  const descriptor = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value");
+  descriptor?.set?.call(area, value);
+  area.dispatchEvent(new Event("input", { bubbles: true }));
+};
+
 const typeTitle = (container: HTMLElement, value: string) => {
   const titleArea = container.querySelector("textarea");
   if (!(titleArea instanceof HTMLTextAreaElement)) throw new Error("title textarea is absent");
-  const descriptor = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value");
-  descriptor?.set?.call(titleArea, value);
-  titleArea.dispatchEvent(new Event("input", { bubbles: true }));
+  typeIntoTextarea(titleArea, value);
+};
+
+const typeSeoDescription = (container: HTMLElement, value: string) => {
+  const area = container.querySelector('textarea[data-metadata-seo-input="true"]');
+  if (!(area instanceof HTMLTextAreaElement)) throw new Error("SEO description textarea is absent");
+  typeIntoTextarea(area, value);
+};
+
+// The editor renders the metadata panel twice (sidebar + details sheet); both are fed
+// from the same state, so every copy must agree and either one can be driven.
+const readMetadataState = (container: HTMLElement): { status: string; seoDescription: string } => {
+  const readValue = (panel: Element, selector: string) =>
+    panel.querySelector(selector)?.textContent ?? "";
+  const states = Array.from(container.querySelectorAll('[data-metadata-panel="true"]')).map(
+    (panel) => ({
+      status: readValue(panel, '[data-metadata-status-value="true"]'),
+      seoDescription: readValue(panel, '[data-metadata-seo-value="true"]'),
+    })
+  );
+  const first = states[0];
+  if (!first) throw new Error("metadata panel is absent");
+  states.forEach((state) => expect(state).toEqual(first));
+  return first;
+};
+
+const clickMetadataAction = (container: HTMLElement, marker: string) => {
+  const action = container.querySelector(`button[${marker}="true"]`);
+  if (!(action instanceof HTMLButtonElement)) throw new Error(`${marker} button is absent`);
+  expect(action.disabled).toBe(false);
+  action.click();
 };
 
 const findSaveDraft = (container: HTMLElement) => {
@@ -279,6 +399,12 @@ const findSaveDraft = (container: HTMLElement) => {
   if (!(save instanceof HTMLButtonElement)) throw new Error("Save draft button is absent");
   return save;
 };
+
+beforeEach(() => {
+  editorState.resetEntryRead();
+  editorState.updatePayloads.length = 0;
+  editorState.metadataPayloads.length = 0;
+});
 
 afterEach(() => {
   window.history.replaceState({}, "", "/");
@@ -326,6 +452,117 @@ test("a title typed before hydration keeps the loaded slug and field data on sav
         title: "Updated title",
         slug: "hello",
         data: { title: "Updated title", summary: "Summary" },
+      },
+    ]);
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("a metadata edit made before hydration survives it and is what the metadata save sends", async () => {
+  window.history.replaceState({}, "", "/admin/advanced/entries/articles/entry-1");
+  const { EntryEditor } = await import("../../../core/admin/ui/entries/EntryEditor");
+
+  const view = mount(<EntryEditor />);
+  try {
+    await React.act(async () => {
+      await flushMicrotasks();
+    });
+    // The mount read is still pending: the metadata panel is already writable.
+    expect(view.container.textContent).toContain("Loading entry fields");
+
+    // Metadata only — the content channel (title/slug/fields) is never touched here.
+    React.act(() => {
+      clickMetadataAction(view.container, "data-metadata-publish");
+    });
+    React.act(() => {
+      typeSeoDescription(view.container, "Edited before hydration");
+    });
+    expect(view.container.textContent).toContain("Unsaved changes");
+
+    // Hydration lands AFTER the metadata edit.
+    await React.act(async () => {
+      editorState.resolveEntry(editorState.entry);
+      await flushMicrotasks();
+    });
+
+    // The edit is still there, and it is still flagged as unsaved.
+    expect(readMetadataState(view.container)).toEqual({
+      status: "published",
+      seoDescription: "Edited before hydration",
+    });
+    expect(view.container.textContent).toContain("Unsaved changes");
+    expect(view.container.textContent).not.toContain("Updated in another tab");
+
+    // ...and the content channel still hydrated normally.
+    const slugInput = view.container.querySelector('[data-slug-input="true"]');
+    if (!(slugInput instanceof HTMLInputElement)) throw new Error("slug input is absent");
+    expect(slugInput.value).toBe("hello");
+    expect(view.container.textContent).toContain("field:summary");
+
+    await React.act(async () => {
+      clickMetadataAction(view.container, "data-metadata-save");
+      await flushMicrotasks();
+    });
+
+    expect(editorState.metadataPayloads).toEqual([
+      {
+        status: "published",
+        visibility: "public",
+        accessPassword: null,
+        scheduledAt: null,
+        taxonomy: { categoryId: null, tagIds: [] },
+        seo: { description: "Edited before hydration" },
+      },
+    ]);
+    // Saving the channel clears its warning; nothing was written through the content channel.
+    expect(view.container.textContent).not.toContain("Unsaved changes");
+    expect(editorState.updatePayloads).toEqual([]);
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("hydration still overwrites the metadata fields the user did not touch", async () => {
+  window.history.replaceState({}, "", "/admin/advanced/entries/articles/entry-1");
+  const { EntryEditor } = await import("../../../core/admin/ui/entries/EntryEditor");
+
+  const view = mount(<EntryEditor />);
+  try {
+    await React.act(async () => {
+      await flushMicrotasks();
+    });
+
+    // Only the SEO description is edited; `status` keeps its pristine mount default.
+    React.act(() => {
+      typeSeoDescription(view.container, "Edited before hydration");
+    });
+
+    await React.act(async () => {
+      editorState.resolveEntry({ ...editorState.entry, status: "published" });
+      await flushMicrotasks();
+    });
+
+    // The untouched control takes the server value — a preserved "draft" default would
+    // unpublish the entry on the panel's next all-in-one metadata PATCH.
+    expect(readMetadataState(view.container)).toEqual({
+      status: "published",
+      seoDescription: "Edited before hydration",
+    });
+
+    await React.act(async () => {
+      clickMetadataAction(view.container, "data-metadata-save");
+      await flushMicrotasks();
+    });
+
+    expect(editorState.metadataPayloads).toEqual([
+      {
+        status: "published",
+        visibility: "public",
+        accessPassword: null,
+        scheduledAt: null,
+        taxonomy: { categoryId: null, tagIds: [] },
+        seo: { description: "Edited before hydration" },
       },
     ]);
   } finally {

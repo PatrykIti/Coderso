@@ -108,7 +108,23 @@ const resolveEditorErrorMessage = (error: unknown, fallback: string) =>
 const mapRelationTargets = (items: ContentTypeSummary[]) =>
   items.map((item) => ({ slug: item.slug, name: item.name }));
 
-type ApplyEntryOptions = Readonly<{ preserveLocalEdits?: boolean }>;
+// Local edits reach the editor through two independent channels, each with its own
+// dirty flag and Save action: CONTENT (title/slug/field values, "Save draft") and
+// METADATA (status/visibility/schedule/SEO, the metadata panel). Each is preserved on
+// its own flag, so a snapshot can keep the dirty channel and still hydrate the other.
+type ApplyEntryOptions = Readonly<{
+  preserveContentEdits?: boolean;
+  preserveMetadataEdits?: boolean;
+}>;
+
+// The metadata values applyEntry hydrates, tracked one by one so that preserving
+// the channel keeps ONLY what the user actually edited. Taxonomy selections are
+// deliberately absent: loadTaxonomy owns them, and their controls render only once
+// that overview has loaded, so they cannot be edited before hydration.
+type MetadataFieldKey =
+  "status" | "visibility" | "accessPassword" | "scheduledAt" | "seoDescription";
+
+const NO_EDITED_METADATA_FIELDS: ReadonlySet<MetadataFieldKey> = new Set<MetadataFieldKey>();
 
 export function EntryEditor() {
   const { navigate } = useAdminRouter();
@@ -140,9 +156,15 @@ export function EntryEditor() {
   };
   const [hasUnsavedMetadataChanges, setHasUnsavedMetadataChanges] = useState(false);
   const hasUnsavedMetadataChangesRef = useRef(false);
+  const editedMetadataFieldsRef = useRef<Set<MetadataFieldKey>>(new Set());
   const setMetadataUnsavedChanges = (value: boolean) => {
     hasUnsavedMetadataChangesRef.current = value;
+    if (!value) editedMetadataFieldsRef.current.clear();
     setHasUnsavedMetadataChanges(value);
+  };
+  const markMetadataEdited = (field: MetadataFieldKey) => {
+    editedMetadataFieldsRef.current.add(field);
+    setMetadataUnsavedChanges(true);
   };
   const [remoteUpdatePending, setRemoteUpdatePending] = useState(false);
   const [scheduledAt, setScheduledAt] = useState("");
@@ -177,24 +199,36 @@ export function EntryEditor() {
       const mappedFields = fieldsFromSchema(contentType.schema).filter(
         (field) => !hiddenSchemaFieldNames.has(field.name)
       );
-      const preserveLocalEdits = options?.preserveLocalEdits === true;
+      const preserveContentEdits = options?.preserveContentEdits === true;
+      const preserveMetadataEdits = options?.preserveMetadataEdits === true;
       setFields(mappedFields);
       setEntry(entryResult);
       setContentTypeId(contentType.id);
       setContentTypeName(contentType.name);
       setTitle((current) =>
-        preserveLocalEdits && current.length > 0 ? current : entryResult.title
+        preserveContentEdits && current.length > 0 ? current : entryResult.title
       );
-      setSlug((current) => (preserveLocalEdits && current.length > 0 ? current : entryResult.slug));
+      setSlug((current) =>
+        preserveContentEdits && current.length > 0 ? current : entryResult.slug
+      );
       const baseValues = buildInitialValues(mappedFields, entryResult.data ?? {});
-      setValues((current) => (preserveLocalEdits ? { ...baseValues, ...current } : baseValues));
-      setStatus(entryResult.status);
-      setVisibility(entryResult.visibility);
-      setAccessPassword("");
-      if (!preserveLocalEdits) setUnsavedChanges(false);
-      setMetadataUnsavedChanges(false);
-      setScheduledAt(entryResult.scheduledAt ?? "");
-      setSeoDescription(entryResult.seo?.description ?? "");
+      setValues((current) => (preserveContentEdits ? { ...baseValues, ...current } : baseValues));
+      if (!preserveContentEdits) setUnsavedChanges(false);
+      // Every metadata value the user did NOT touch is still hydrated from the snapshot:
+      // keeping the whole channel would leave untouched controls on their pristine mount
+      // defaults ("draft", "public", no schedule, empty SEO), and the metadata panel PATCHes
+      // all of them together, so the next save would unpublish or un-restrict the entry.
+      const keptMetadataFields = preserveMetadataEdits
+        ? editedMetadataFieldsRef.current
+        : NO_EDITED_METADATA_FIELDS;
+      if (!keptMetadataFields.has("status")) setStatus(entryResult.status);
+      if (!keptMetadataFields.has("visibility")) setVisibility(entryResult.visibility);
+      if (!keptMetadataFields.has("accessPassword")) setAccessPassword("");
+      if (!keptMetadataFields.has("scheduledAt")) setScheduledAt(entryResult.scheduledAt ?? "");
+      if (!keptMetadataFields.has("seoDescription")) {
+        setSeoDescription(entryResult.seo?.description ?? "");
+      }
+      if (!preserveMetadataEdits) setMetadataUnsavedChanges(false);
       setError(null);
       setRemoteUpdatePending(false);
     },
@@ -279,8 +313,14 @@ export function EntryEditor() {
         if (!entryResult) return;
         // The first hydration is the baseline the local edits are based on, not a remote
         // update: skipping it left `slug` empty and every field value unpopulated, and the
-        // next save persisted that emptiness. Apply it, keeping what the user already typed.
-        applyEntry(entryResult, contentType, { preserveLocalEdits: hasUnsavedChangesRef.current });
+        // next save persisted that emptiness. Apply it, keeping what the user already typed
+        // in EITHER channel — the metadata panel is writable before hydration too, so
+        // preserving only the content channel silently reverted a pre-hydration status,
+        // visibility, schedule or SEO edit and cleared its unsaved-changes warning.
+        applyEntry(entryResult, contentType, {
+          preserveContentEdits: hasUnsavedChangesRef.current,
+          preserveMetadataEdits: hasUnsavedMetadataChangesRef.current,
+        });
         await loadTaxonomy(contentType.id, entryResult);
       })
       .catch((err) => {
@@ -477,7 +517,7 @@ export function EntryEditor() {
   const handleStatusChange = (nextStatus: EntryStatus) => {
     if (!type || !id) return;
     setStatus(nextStatus);
-    setMetadataUnsavedChanges(true);
+    markMetadataEdited("status");
   };
 
   const handleVisibilityChange = (nextVisibility: EntryVisibility) => {
@@ -487,22 +527,22 @@ export function EntryEditor() {
     if (nextVisibility !== "password") {
       setAccessPassword("");
     }
-    setMetadataUnsavedChanges(true);
+    markMetadataEdited("visibility");
   };
 
   const handleAccessPasswordChange = (value: string) => {
     setAccessPassword(value);
-    setMetadataUnsavedChanges(true);
+    markMetadataEdited("accessPassword");
   };
 
   const handleScheduledAtChange = (value: string) => {
     setScheduledAt(value);
-    setMetadataUnsavedChanges(true);
+    markMetadataEdited("scheduledAt");
   };
 
   const handleSeoDescriptionChange = (value: string) => {
     setSeoDescription(value);
-    setMetadataUnsavedChanges(true);
+    markMetadataEdited("seoDescription");
   };
 
   const handleCategoryChange = (categoryId: string | null) => {
