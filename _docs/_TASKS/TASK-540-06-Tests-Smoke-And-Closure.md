@@ -19,9 +19,9 @@ authority. It cannot satisfy a current-state predicate.
 of the smoke executor and scenario infrastructure is **complete** and no longer blocking;
 it took no new hardening, product change, runtime diagnosis, or smoke retry. Checkpoints
 `f22eee9f` through `8259a326` extracted the shared observation/visible-assertion sources,
-all seven scenario owners and the simple browser invocations; 88 further split commits
-ran from `8259a326` to `c89fa96c`, of which `b8170be1` moved the executor self-test body
-out of the facade entirely. Re-measured with `wc -l` at HEAD `a68a19e0` on 2026-07-27,
+all seven scenario owners and the simple browser invocations; a further 111 commits ran
+from `8259a326` to `c89fa96c` (`git rev-list --count 8259a326..c89fa96c`), of which
+`b8170be1` moved the executor self-test body out of the facade entirely. Re-measured with `wc -l` at HEAD `a68a19e0` on 2026-07-27,
 every facade and child owner is at most 1,000 physical lines: executor facade 976,
 `task-540-smoke-contract.mjs` 13, `task-540-smoke-host.mjs` 84, largest of the 162 child
 modules under `_docs/_workflows/task-540-smoke/**` 964, none above the limit. Remaining

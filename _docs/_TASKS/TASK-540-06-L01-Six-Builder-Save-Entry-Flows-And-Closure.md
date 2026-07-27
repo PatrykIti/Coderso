@@ -26,8 +26,9 @@ of the smoke executor and scenario infrastructure is **complete**, and is no lon
 blocking. It took no new hardening, product change, runtime diagnosis, or smoke retry.
 Checkpoints `f22eee9f` through `8259a326` extracted the shared observation and
 visible-assertion sources, all seven scenario owners, and the simple browser
-invocations; 88 further split commits ran from `8259a326` to `c89fa96c`, of which
-`b8170be1` moved the executor self-test body out of the facade entirely. The executor
+invocations; a further 111 commits ran from `8259a326` to `c89fa96c`
+(`git rev-list --count 8259a326..c89fa96c`), of which `b8170be1` moved the executor
+self-test body out of the facade entirely. The executor
 facade no longer contains that body: it imports `createRunTask540SmokeExecutorSelfTest`
 from `task-540-smoke/executor/self-test/entry.mjs` at `:6` and instantiates it at
 `:866`. Re-measured with `wc -l` at HEAD `a68a19e0` on 2026-07-27, the requirement that

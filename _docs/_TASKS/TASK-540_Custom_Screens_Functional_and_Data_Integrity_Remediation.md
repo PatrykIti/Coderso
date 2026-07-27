@@ -17,9 +17,9 @@ and scenario infrastructure into cohesive modules of at most 1,000 physical line
 without adding hardening, changing the frozen smoke contract, or returning to runtime
 diagnosis — is **complete**. Checkpoints `f22eee9f` through `8259a326` extracted the
 shared observation and visible-assertion sources, all seven scenario owners, and the
-simple browser invocation owner; 88 further split commits ran from `8259a326` to
-`c89fa96c`, of which `b8170be1` moved the executor self-test body out of the facade
-entirely. Re-measured with `wc -l` at HEAD `a68a19e0` on 2026-07-27: the executor facade
+simple browser invocation owner; a further 111 commits ran from `8259a326` to
+`c89fa96c` (`git rev-list --count 8259a326..c89fa96c`), of which `b8170be1` moved the
+executor self-test body out of the facade entirely. Re-measured with `wc -l` at HEAD `a68a19e0` on 2026-07-27: the executor facade
 is **976 lines**, `task-540-smoke-contract.mjs` 13, `task-540-smoke-host.mjs` 84, and
 the largest of the 162 child modules under `_docs/_workflows/task-540-smoke/**` is 964,
 with none above the limit. The remaining order is therefore targeted and full gates ->
