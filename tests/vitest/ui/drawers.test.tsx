@@ -136,7 +136,14 @@ test("EntryCreateDrawer renders title", () => {
     <EntryCreateDrawer
       open
       onOpenChange={() => undefined}
-      types={[{ id: "blog", slug: "blog", name: "Blog" }]}
+      types={[
+        {
+          id: "blog",
+          slug: "blog",
+          name: "Blog",
+          schema: { type: "object", additionalProperties: false, properties: {} },
+        },
+      ]}
     />
   );
 

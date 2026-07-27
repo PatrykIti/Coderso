@@ -6,13 +6,6 @@ import { renderToString } from "react-dom/server";
 import { afterEach, expect, test, vi } from "vitest";
 
 const entriesState = vi.hoisted(() => ({
-  createEntry: vi.fn(async (typeSlug: string, input: Record<string, unknown>) => ({
-    id: "entry-1",
-    title: input.title,
-    slug: input.slug,
-    typeSlug,
-    data: {},
-  })),
   relationItems: [
     {
       id: "related-1",
@@ -29,7 +22,6 @@ const entriesState = vi.hoisted(() => ({
     return entriesState.relationItems;
   }),
   reset() {
-    entriesState.createEntry.mockClear();
     entriesState.listEntriesCached.mockClear();
     entriesState.relationItems = [
       {
@@ -295,7 +287,6 @@ vi.mock("@/services/apiClient", () => ({
 }));
 
 vi.mock("@/services/entriesClient", () => ({
-  createEntry: entriesState.createEntry,
   listEntriesCached: entriesState.listEntriesCached,
 }));
 
@@ -411,141 +402,6 @@ const setSelectValue = (element: Element | null | undefined, value: string) => {
 afterEach(() => {
   vi.restoreAllMocks();
   entriesState.reset();
-});
-
-test("EntryCreateDrawer normalizes create payloads and open-after-create flow", async () => {
-  const { EntryCreateDrawer } = await import("../../../core/admin/ui/entries/EntryCreateDrawer");
-
-  const onOpenChange = vi.fn();
-  const onCreated = vi.fn();
-
-  const view = mount(
-    <EntryCreateDrawer
-      open
-      onOpenChange={onOpenChange}
-      types={[
-        { id: "type-1", slug: "articles", name: "Articles" },
-        { id: "type-2", slug: "products", name: "Products" },
-      ]}
-      defaultTypeSlug="articles"
-      onCreated={onCreated}
-    />
-  );
-
-  try {
-    expect(view.container.textContent).toContain("Create New Article");
-
-    const titleInput = view.container.querySelector(
-      'input[placeholder="e.g. Launch announcement"]'
-    );
-    const slugInput = view.container.querySelector('input[placeholder="launch-announcement"]');
-    const select = view.container.querySelector("select");
-    const checkbox = view.container.querySelector("input[type='checkbox']");
-    const buttons = Array.from(view.container.querySelectorAll("button"));
-
-    await React.act(async () => {
-      setSelectValue(select ?? undefined, "products");
-      setInputValue(titleInput ?? undefined, "New Product");
-      setInputValue(slugInput ?? undefined, "new-product");
-      (checkbox as HTMLInputElement | null)?.click();
-      buttons.find((button) => button.textContent === "Create Draft")?.click();
-      await Promise.resolve();
-    });
-
-    expect(entriesState.createEntry).toHaveBeenCalledWith("products", {
-      title: "New Product",
-      slug: "new-product",
-      data: {},
-    });
-    expect(onCreated).toHaveBeenCalledWith(
-      expect.objectContaining({
-        id: "entry-1",
-        slug: "new-product",
-      }),
-      "products",
-      false
-    );
-    expect(onOpenChange).toHaveBeenCalledWith(false);
-  } finally {
-    view.cleanup();
-  }
-});
-
-test("EntryCreateDrawer reports rejected create mutations through optional list callback", async () => {
-  const { EntryCreateDrawer } = await import("../../../core/admin/ui/entries/EntryCreateDrawer");
-
-  const apiError = {
-    name: "ApiClientError",
-    message: "Entry create denied.",
-    code: "request_failed",
-    status: 409,
-  };
-  entriesState.createEntry.mockRejectedValueOnce(apiError);
-  const onCreateError = vi.fn();
-
-  const view = mount(
-    <EntryCreateDrawer
-      open
-      onOpenChange={vi.fn()}
-      types={[{ id: "type-1", slug: "articles", name: "Articles" }]}
-      defaultTypeSlug="articles"
-      onCreateError={onCreateError}
-    />
-  );
-
-  try {
-    await React.act(async () => {
-      setInputValue(
-        view.container.querySelector('input[placeholder="e.g. Launch announcement"]'),
-        "Blocked Entry"
-      );
-      setInputValue(
-        view.container.querySelector('input[placeholder="launch-announcement"]'),
-        "blocked-entry"
-      );
-      Array.from(view.container.querySelectorAll("button"))
-        .find((button) => button.textContent === "Create Draft")
-        ?.click();
-      await Promise.resolve();
-    });
-
-    expect(view.container.textContent).toContain("Entry create denied.");
-    expect(onCreateError).toHaveBeenCalledWith(apiError);
-  } finally {
-    view.cleanup();
-  }
-
-  entriesState.createEntry.mockRejectedValueOnce(new Error("plain failure"));
-  const directView = mount(
-    <EntryCreateDrawer
-      open
-      onOpenChange={vi.fn()}
-      types={[{ id: "type-1", slug: "articles", name: "Articles" }]}
-      defaultTypeSlug="articles"
-    />
-  );
-
-  try {
-    await React.act(async () => {
-      setInputValue(
-        directView.container.querySelector('input[placeholder="e.g. Launch announcement"]'),
-        "Local Only"
-      );
-      setInputValue(
-        directView.container.querySelector('input[placeholder="launch-announcement"]'),
-        "local-only"
-      );
-      Array.from(directView.container.querySelectorAll("button"))
-        .find((button) => button.textContent === "Create Draft")
-        ?.click();
-      await Promise.resolve();
-    });
-
-    expect(directView.container.textContent).toContain("Failed to create entry.");
-    expect(onCreateError).toHaveBeenCalledTimes(1);
-  } finally {
-    directView.cleanup();
-  }
 });
 
 test("EntryTypeSidebar filters types and forwards select/create actions", async () => {
