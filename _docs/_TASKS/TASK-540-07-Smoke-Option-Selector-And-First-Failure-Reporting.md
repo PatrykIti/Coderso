@@ -314,10 +314,18 @@ by another TASK-540 leaf.
 
 ## Sub-Tasks
 
-| ID | Title | Status |
-|---|---|---|
-| TASK-540-07-L01 | Correct the Radix option selector and guard the text-engine shape | ⏳ To Do |
-| TASK-540-07-L02 | Preserve browser failure frames for registered unit actions | ⏳ To Do |
+Leaf status lives in exactly one table in this file — `Leaves and order` above.
+This section deliberately carries no `Status` column. The resume machinery
+resolves a leaf's row by table shape, not by heading, and
+`readCanonicalTaskStatusTableRow` requires **exactly one** matching row per id;
+a second `| ID | … | Status |` table here makes every resume mode throw
+`expected one canonical status row for TASK-540-07-L01`. This subtask was the
+only child in the family carrying two.
+
+| ID | Title |
+|---|---|
+| TASK-540-07-L01 | Correct the Radix option selector and guard the text-engine shape |
+| TASK-540-07-L02 | Preserve browser failure frames for registered unit actions |
 
 ## Security and Boundary Contract
 
