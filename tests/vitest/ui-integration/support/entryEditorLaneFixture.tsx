@@ -24,6 +24,17 @@ import {
 
 type TermFixture = { id: string; name: string; slug: string };
 
+type SchemaFieldFixture = { id: string; name: string; label: string; type: string };
+
+// The schema the content type publishes. `title` is in it because the default content-type
+// schema has a required `title` field, which is what makes the entry column and the schema
+// field two homes for one value; a lane that needs the `slug` half of that duplication swaps
+// the list with `withSchemaFields`.
+const DEFAULT_SCHEMA_FIELDS: SchemaFieldFixture[] = [
+  { id: "field-1", name: "title", label: "Title", type: "text" },
+  { id: "field-2", name: "summary", label: "Summary", type: "text" },
+];
+
 // The mocks that block: `holdNext` makes the NEXT call to one of them wait, which is how
 // a test provably lands an edit WHILE that request is in flight.
 type GateName = "updateEntry" | "updateEntryMetadata" | "taxonomyOverview";
@@ -38,6 +49,10 @@ export const editorState = (() => {
     schema: { type: "object" },
   };
 
+  // Open, like a real entry's `data`: a lane that swaps the schema fields also stores the
+  // keys that schema declares, and a shape inferred from this one fixture would refuse them.
+  const entryData: Record<string, string> = { title: "Hello", summary: "Summary" };
+
   const entry = {
     id: "entry-1",
     title: "Hello",
@@ -48,7 +63,7 @@ export const editorState = (() => {
     seo: { description: "Meta" },
     taxonomy: { category: null as TermFixture | null, tags: [] as TermFixture[] },
     author: { name: "Alex Doe", email: "alex@example.com" },
-    data: { title: "Hello", summary: "Summary" },
+    data: entryData,
   };
 
   type EntryFixture = typeof entry;
@@ -79,6 +94,8 @@ export const editorState = (() => {
   // hydrating: the entry snapshot arrives, `applyEntry` is never reached.
   let contentTypeVisible = true;
 
+  let schemaFields: SchemaFieldFixture[] = DEFAULT_SCHEMA_FIELDS;
+
   // The server the mutation mocks model: the metadata route commits what it was given
   // and BOTH routes answer with a fresh full read (`entryService.getEntry`). Modelling
   // that matters for the visibility guard — a mock that always echoed the fixture could
@@ -93,6 +110,13 @@ export const editorState = (() => {
     },
     resetContentTypeVisibility: () => {
       contentTypeVisible = true;
+    },
+    schemaFields: () => schemaFields,
+    withSchemaFields: (fields: SchemaFieldFixture[]) => {
+      schemaFields = fields;
+    },
+    resetSchemaFields: () => {
+      schemaFields = DEFAULT_SCHEMA_FIELDS;
     },
     entry,
     taxonomyOverview: {
@@ -160,6 +184,7 @@ export const resetEntryEditorLane = () => {
   editorState.resetGates();
   editorState.resetServerEntry();
   editorState.resetContentTypeVisibility();
+  editorState.resetSchemaFields();
   editorState.updatePayloads.length = 0;
   editorState.metadataPayloads.length = 0;
   editorState.publishCalls.length = 0;
@@ -276,16 +301,40 @@ export const entryDeleteDialogModule = { EntryDeleteDialog: EntryDeleteDialogStu
 // defines; this re-export only saves each lane the import.
 export const entryMetadataPanelModule = { EntryMetadataPanel: EntryMetadataPanelStub };
 
+// Writable, unlike the placeholder it replaced: a schema field named `title` or `slug` is a
+// SECOND editing surface for an entry column, so a lane has to be able to type into it. Every
+// field in this fixture is a text field, which is why the value is typed as a string. The
+// resolved value is ALSO mirrored as text, for the reason the metadata panel stub mirrors its
+// own: an assertion must read React state, not the DOM value of an uncontrolled input.
 export const fieldRendererModule = {
-  FieldRenderer: ({ field }: { field: { name: string } }) => <div>{`field:${field.name}`}</div>,
+  FieldRenderer: ({
+    field,
+    value,
+    onChange,
+  }: {
+    field: { name: string };
+    value?: string;
+    onChange: (value: string) => void;
+  }) => (
+    <div>
+      <span>{`field:${field.name}`}</span>
+      <span data-field-value={field.name}>{value ?? ""}</span>
+      <input
+        data-field-input={field.name}
+        defaultValue={value ?? ""}
+        onChange={(event) => onChange(event.target.value)}
+      />
+    </div>
+  ),
 };
 
+// Both halves are derived from the SAME field list, as the real pair is: a stub whose schema
+// properties disagreed with its field list would decide by itself which keys a payload carries.
 export const schemaMappingModule = {
-  fieldsFromSchema: () => [
-    { id: "field-1", name: "title", label: "Title", type: "text" },
-    { id: "field-2", name: "summary", label: "Summary", type: "text" },
-  ],
-  buildSchemaFromFields: () => ({ properties: { title: {}, summary: {} } }),
+  fieldsFromSchema: () => editorState.schemaFields(),
+  buildSchemaFromFields: (fields: { name: string }[]) => ({
+    properties: Object.fromEntries(fields.map((field) => [field.name, {}])),
+  }),
 };
 
 export const contentTypeLabelsModule = {

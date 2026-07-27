@@ -2,6 +2,11 @@ import type { EntryDetail } from "@/services/entriesClient";
 
 import type { ContentField } from "../content-types/SchemaBuilder";
 import { buildSchemaFromFields } from "../content-types/schemaMapping";
+import {
+  ENTRY_LINKED_FIELD_NAMES,
+  isEntryLinkedFieldName,
+  type EntryLinkedColumnValues,
+} from "./entryLinkedFields";
 
 /**
  * Translation between a content type's schema fields and an entry's `data` record.
@@ -9,7 +14,10 @@ import { buildSchemaFromFields } from "../content-types/schemaMapping";
  * on how a field default materializes: `buildInitialValues` maps a fetched snapshot
  * into editor values on hydration, `buildEntryPayloadData` maps editor values back
  * into the `updateEntry` body on save (including the hidden keys the schema no longer
- * exposes but the entry must keep).
+ * exposes but the entry must keep). They also have to agree about the LINKED names
+ * (`entryLinkedFields`), where the entry column and the schema field are two homes for
+ * one value: both resolve those from the column, so the field can never display a value
+ * the next save silently replaces.
  */
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -27,8 +35,19 @@ function resolveDefaultValue(field: ContentField) {
   return field.defaultValue;
 }
 
-export function buildInitialValues(fields: ContentField[], data: Record<string, unknown>) {
+export function buildInitialValues(
+  fields: ContentField[],
+  data: Record<string, unknown>,
+  columns: EntryLinkedColumnValues
+) {
   return fields.reduce<Record<string, unknown>>((acc, field) => {
+    // A linked name has two homes and one authority. Hydrating this copy from `data` would
+    // show whatever the last writer of THAT half left there, while `buildEntryPayloadData`
+    // below writes the column into `data` on the next save regardless.
+    if (isEntryLinkedFieldName(field.name)) {
+      acc[field.name] = columns[field.name];
+      return acc;
+    }
     if (data[field.name] !== undefined) {
       acc[field.name] = data[field.name];
       return acc;
@@ -62,8 +81,7 @@ export type EntryPayloadDataInput = Readonly<{
   fields: ContentField[];
   values: Record<string, unknown>;
   entry: EntryDetail | null;
-  title: string;
-  slug: string;
+  columns: EntryLinkedColumnValues;
   hiddenFieldNames: ReadonlySet<string>;
   schemaFieldNames: ReadonlySet<string>;
 }>;
@@ -72,8 +90,7 @@ export function buildEntryPayloadData({
   fields,
   values,
   entry,
-  title,
-  slug,
+  columns,
   hiddenFieldNames,
   schemaFieldNames,
 }: EntryPayloadDataInput): Record<string, unknown> {
@@ -89,7 +106,11 @@ export function buildEntryPayloadData({
   Object.keys(schema.properties).forEach((key) => {
     if (values[key] !== undefined) data[key] = values[key];
   });
-  if (schemaFieldNames.has("title")) data.title = title;
-  if (schemaFieldNames.has("slug")) data.slug = slug;
+  // The column is the authority for every linked name the schema exposes, exactly as it is in
+  // `buildInitialValues`. Iterated rather than written out per name so a name added to
+  // `ENTRY_LINKED_FIELD_NAMES` cannot be honoured by hydration and forgotten by the payload.
+  ENTRY_LINKED_FIELD_NAMES.forEach((name) => {
+    if (schemaFieldNames.has(name)) data[name] = columns[name];
+  });
   return data;
 }

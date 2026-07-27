@@ -51,6 +51,11 @@ import { buildEntryChecklist } from "./entryChecklist";
 import { buildEntryFieldGroups } from "./entryFieldGroups";
 import { buildEntryMetadataUpdate } from "./entryMetadataUpdate";
 import {
+  isEntryLinkedFieldName,
+  type EntryLinkedColumnValues,
+  type EntryLinkedFieldName,
+} from "./entryLinkedFields";
+import {
   buildEntryPayloadData,
   buildInitialValues,
   mergeEditedFieldValues,
@@ -223,6 +228,9 @@ function EntryEditorInstance({ type, id }: EntryEditorInstanceProps) {
 
   const schemaFieldNames = useMemo(() => new Set(fields.map((field) => field.name)), [fields]);
   const hiddenSchemaFieldNames = useMemo(() => new Set<string>(), []);
+  // The authoritative copy of every linked name (`entryLinkedFields`): what the payload writes
+  // into `data`, and what `commitLinkedValue` keeps the schema-rendered copy equal to.
+  const linkedColumnValues: EntryLinkedColumnValues = { title, slug };
 
   // A snapshot is applied to every value EXCEPT the ones the user still owns, and `kept`
   // is the only source of that fact. Nothing infers editedness from a value any more (an
@@ -234,7 +242,12 @@ function EntryEditorInstance({ type, id }: EntryEditorInstanceProps) {
       setEntry(entryResult);
       if (!kept.has("title")) setTitle(entryResult.title);
       if (!kept.has("slug")) setSlug(entryResult.slug);
-      const baseValues = buildInitialValues(mappedFields, entryResult.data ?? {});
+      // The snapshot's own columns, not the editor's current ones: a linked schema field is
+      // hydrated from the column of the entry being applied.
+      const baseValues = buildInitialValues(mappedFields, entryResult.data ?? {}, {
+        title: entryResult.title,
+        slug: entryResult.slug,
+      });
       setValues((current) =>
         mergeEditedFieldValues(baseValues, current, (name) => kept.has(entryFieldEditedKey(name)))
       );
@@ -437,30 +450,34 @@ function EntryEditorInstance({ type, id }: EntryEditorInstanceProps) {
     loadEntry({ isBaseline: true, clearLoading: true });
   };
 
-  const handleFieldChange = (name: string, value: unknown) => {
+  // The single writer for a linked name (`entryLinkedFields`). The header composer and a
+  // schema field of the same name are two surfaces onto one value, so an edit made through
+  // either has to reach both copies and mark both edited — otherwise the copy the save reads
+  // and the copy the user typed into are different values, and the save keeps the wrong one.
+  const commitLinkedValue = (name: EntryLinkedFieldName, value: string) => {
+    if (name === "title") setTitle(value);
+    else setSlug(value);
+    markEdited(name);
+    if (!schemaFieldNames.has(name)) return;
     setValues((prev) => ({ ...prev, [name]: value }));
     markEdited(entryFieldEditedKey(name));
   };
 
-  const handleTitleChange = (value: string) => {
-    setTitle(value);
-    markEdited("title");
-    // The schema can expose `title` as a field as well; both copies are the user's now,
-    // otherwise a hydration would revert the field while the header kept the typed value.
-    if (schemaFieldNames.has("title")) {
-      setValues((prev) => ({ ...prev, title: value }));
-      markEdited(entryFieldEditedKey("title"));
+  const handleFieldChange = (name: string, value: unknown) => {
+    // A schema field carrying a linked name edits the entry column, whichever surface it is
+    // rendered on. Both columns are strings, so a non-string value is out of that contract and
+    // stays an ordinary field write rather than being coerced into the column.
+    if (isEntryLinkedFieldName(name) && typeof value === "string") {
+      commitLinkedValue(name, value);
+      return;
     }
+    setValues((prev) => ({ ...prev, [name]: value }));
+    markEdited(entryFieldEditedKey(name));
   };
 
-  const handleSlugChange = (value: string) => {
-    setSlug(value);
-    markEdited("slug");
-    if (schemaFieldNames.has("slug")) {
-      setValues((prev) => ({ ...prev, slug: value }));
-      markEdited(entryFieldEditedKey("slug"));
-    }
-  };
+  const handleTitleChange = (value: string) => commitLinkedValue("title", value);
+
+  const handleSlugChange = (value: string) => commitLinkedValue("slug", value);
 
   // The editor must never submit state it never loaded. All three submits refuse here, not
   // only in the buttons that trigger them: "Save draft" would build `data: {}` from an empty
@@ -495,8 +512,7 @@ function EntryEditorInstance({ type, id }: EntryEditorInstanceProps) {
           fields,
           values,
           entry,
-          title,
-          slug,
+          columns: linkedColumnValues,
           hiddenFieldNames: hiddenSchemaFieldNames,
           schemaFieldNames,
         }),

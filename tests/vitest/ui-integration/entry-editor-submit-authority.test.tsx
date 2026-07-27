@@ -21,6 +21,8 @@ import {
   mount,
   readDeleteDialog,
   readPanelValue,
+  readSchemaFieldValue,
+  typeSchemaField,
   typeTitle,
 } from "./support/entryEditorHarness";
 import {
@@ -477,6 +479,119 @@ test("moving to another entry in place starts over instead of carrying the first
     // typed title as an edit and written it onto the row the user only navigated to.
     expect(editorState.updatePayloads).toEqual([
       { title: "Second", slug: "second", data: { title: "Second", summary: "Second summary" } },
+    ]);
+  } finally {
+    view.cleanup();
+  }
+});
+
+// R5. The lane's other half: not "may this submit fire" but "does the submit carry what the
+// user typed". `title` and `slug` are entry COLUMNS and legal schema field names at the same
+// time — the default content-type schema declares a required `title` — so the editor can hold
+// two copies of one value: the header composer's state and `values[name]`. The header wrote
+// both copies; the schema field wrote only its own, and `buildEntryPayloadData` resolves
+// `data[name]` from the column, so an edit made in the FIELD was thrown away by the very save
+// meant to persist it, silently and without touching the unsaved-changes warning. Hydration had
+// the same split: the header took the column, the field took `data`, so a snapshot whose two
+// halves differed showed the user two values for one entry and saved the one they were not
+// looking at. One value, one writer, one hydration source — the column.
+
+test("a title and slug edited through their schema fields are what the save sends", async () => {
+  window.history.replaceState({}, "", "/admin/advanced/entries/articles/entry-1");
+  // The `slug` half of the duplication needs a schema that exposes it; `title` is in the
+  // default list because the default content-type schema declares it.
+  editorState.withSchemaFields([
+    { id: "field-1", name: "title", label: "Title", type: "text" },
+    { id: "field-2", name: "slug", label: "Slug", type: "text" },
+    { id: "field-3", name: "summary", label: "Summary", type: "text" },
+  ]);
+  const { EntryEditor } = await import("../../../core/admin/ui/entries/EntryEditor");
+
+  const view = mount(<EntryEditor />);
+  try {
+    await React.act(async () => {
+      editorState.resolveEntry({
+        ...editorState.entry,
+        data: { title: "Hello", slug: "hello", summary: "Summary" },
+      });
+      await flushMicrotasks();
+    });
+
+    // Neither keystroke goes anywhere near the header composer.
+    React.act(() => {
+      typeSchemaField(view.container, "title", "Edited in the field");
+    });
+    React.act(() => {
+      typeSchemaField(view.container, "slug", "edited-in-the-field");
+    });
+
+    expect(view.container.textContent).toContain("Unsaved changes");
+
+    await React.act(async () => {
+      findSaveDraft(view.container).click();
+      await flushMicrotasks();
+    });
+
+    // Both the columns and the `data` copies carry the typed values. Before the fix every one
+    // of these five was the stored value: the edit reached the request in no form at all.
+    expect(editorState.updatePayloads).toEqual([
+      {
+        title: "Edited in the field",
+        slug: "edited-in-the-field",
+        data: {
+          title: "Edited in the field",
+          slug: "edited-in-the-field",
+          summary: "Summary",
+        },
+      },
+    ]);
+    // The header is the same value, so it moved with the field: two controls that disagree
+    // about one value are the defect, whichever of them the save happens to read.
+    expect({
+      title: readPanelValue(view.container, "data-metadata-title-value"),
+      slug: readPanelValue(view.container, "data-metadata-slug-value"),
+    }).toEqual({ title: "Edited in the field", slug: "edited-in-the-field" });
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("a snapshot whose column and data disagree shows one value, and it is the one saved", async () => {
+  window.history.replaceState({}, "", "/admin/advanced/entries/articles/entry-1");
+  const { EntryEditor } = await import("../../../core/admin/ui/entries/EntryEditor");
+
+  const view = mount(<EntryEditor />);
+  try {
+    // A stored entry whose `data.title` has drifted from its `title` column — which any save
+    // that predates this rule could produce.
+    await React.act(async () => {
+      editorState.resolveEntry({
+        ...editorState.entry,
+        title: "Column title",
+        data: { title: "Data title", summary: "Summary" },
+      });
+      await flushMicrotasks();
+    });
+
+    // The header and the schema field are one value, so they show one thing: the column, which
+    // is what the save writes into `data`. Showing "Data title" in the field made the untouched
+    // save below silently replace exactly the value on screen.
+    expect({
+      header: readPanelValue(view.container, "data-metadata-title-value"),
+      field: readSchemaFieldValue(view.container, "title"),
+    }).toEqual({ header: "Column title", field: "Column title" });
+
+    await React.act(async () => {
+      findSaveDraft(view.container).click();
+      await flushMicrotasks();
+    });
+
+    expect(editorState.updatePayloads).toEqual([
+      {
+        title: "Column title",
+        slug: "hello",
+        data: { title: "Column title", summary: "Summary" },
+      },
     ]);
   } finally {
     view.cleanup();

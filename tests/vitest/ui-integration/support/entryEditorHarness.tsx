@@ -370,6 +370,18 @@ export const typeTitle = (container: HTMLElement, value: string) =>
 export const typeSlug = (container: HTMLElement, value: string) =>
   typeIntoElement(requireInput(container, '[data-slug-input="true"]'), value);
 
+// The schema-rendered copy of a field. `title` and `slug` are legal schema field names AND
+// entry columns, so for those two this is a SECOND editing surface for one value — the one
+// the header composer also writes.
+export const typeSchemaField = (container: HTMLElement, name: string, value: string) =>
+  typeIntoElement(requireInput(container, `[data-field-input="${name}"]`), value);
+
+export const readSchemaFieldValue = (container: HTMLElement, name: string): string => {
+  const readout = container.querySelector(`[data-field-value="${name}"]`);
+  if (!readout) throw new Error(`schema field ${name} is not rendered`);
+  return readout.textContent ?? "";
+};
+
 export const typeSeoDescription = (container: HTMLElement, value: string) =>
   typeIntoElement(requireTextarea(container, 'textarea[data-metadata-seo-input="true"]'), value);
 
