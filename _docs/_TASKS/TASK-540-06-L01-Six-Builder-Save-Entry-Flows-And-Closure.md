@@ -21,17 +21,25 @@ authority. It cannot satisfy a current-state predicate.
 2026-07-15 / gate green; this predates the active 2026-07-21 repair and cannot authorize
 implementation, smoke, or closure.
 **Current Closure Repair Started:** 2026-07-23
-**Current Closure Repair State:** The owner-directed phase at HEAD `8259a326` is
-behavior-preserving modularization of the smoke executor and scenario infrastructure,
-with no new hardening, product change, runtime diagnosis, or smoke retry. Checkpoints
-`f22eee9f` through `8259a326` already extracted shared observation/visible-assertion
-sources, all seven scenario owners, and simple browser invocations. The executor facade
-remains 26,391 lines and its self-test body remains at lines 15,231-26,384, so further
-cohesive splits are blocking. Every facade and child owner must finish at no more than
-1,000 physical lines. Then run targeted/full gates, restart the helper, run exactly one
-canonical seven-flow Playwright CLI smoke with 13/13 screenshots and deterministic
-cleanup, create changelog 1252, close child-first, commit, and integrate into
-`feat/implementations`.
+**Current Closure Repair State:** The owner-directed behavior-preserving modularization
+of the smoke executor and scenario infrastructure is **complete**, and is no longer
+blocking. It took no new hardening, product change, runtime diagnosis, or smoke retry.
+Checkpoints `f22eee9f` through `8259a326` extracted the shared observation and
+visible-assertion sources, all seven scenario owners, and the simple browser
+invocations; 88 further split commits ran from `8259a326` to `c89fa96c`, of which
+`b8170be1` moved the executor self-test body out of the facade entirely. The executor
+facade no longer contains that body: it imports `createRunTask540SmokeExecutorSelfTest`
+from `task-540-smoke/executor/self-test/entry.mjs` at `:6` and instantiates it at
+`:866`. Re-measured with `wc -l` at HEAD `a68a19e0` on 2026-07-27, the requirement that
+every facade and child owner finish at no more than 1,000 physical lines is satisfied:
+`task-540-smoke-executor.mjs` is 976, `task-540-smoke-contract.mjs` is 13,
+`task-540-smoke-host.mjs` is 84, and of the 162 child modules under
+`_docs/_workflows/task-540-smoke/**` the largest is
+`executor/self-test/browser-widget-absence-scope.mjs` at 964, with zero modules above
+the limit. What remains for closure, unchanged and in order: run targeted/full gates,
+restart the helper, run exactly one canonical seven-flow Playwright CLI smoke with 13/13
+screenshots and deterministic cleanup, create changelog 1252, close child-first, commit,
+and integrate into `feat/implementations`.
 **Current Codex Collaboration Directive:** 2026-07-24 — Codex agents are the only
 reviewers/implementers used for the remaining work. The tracked Codex bridge and local
 orchestrator are landed; Claude invocation and fallback are absent from the current
@@ -58,10 +66,19 @@ read-only audit before another top-level canonical invocation.
 **Historical Executor SHA-256:** `f473f4ff5e4c64fc1b2fc730cd24cbe48f7e1ea6d8aff1730ed32fe862d5c8de`
 — checkpoint `911c29f5`; it is non-authoritative after the behavior-preserving smoke
 splits.
-**Current Executor Inventory:** At HEAD `8259a326`, the 26,391-line facade hashes to
-`bf2a3debbdb3646f302b0debd0eb480027453484a3ee46b2a187f69f2bb82799`.
-This is an inventory value, not a closure pin. Final dependent hashes and pins are
-recomputed only after every facade and child-module byte stabilizes.
+**Historical Mid-Split Executor Inventory:** At the `8259a326` checkpoint the facade was
+26,391 lines and hashed to
+`bf2a3debbdb3646f302b0debd0eb480027453484a3ee46b2a187f69f2bb82799`
+(`git show 8259a326:_docs/_workflows/task-540-smoke-executor.mjs | wc -l` and
+`| sha256sum`). That was a mid-split inventory value and is superseded; it must not be
+read as the facade's present size.
+**Current Executor Inventory:** At HEAD `a68a19e0`, re-measured 2026-07-27, the facade
+is **976 lines** and hashes to
+`2699ea77f59bf40691c8561936d1e484c32cc3639679f2f4c27c6b22f06c9442`, which is also the
+value pinned as `FROZEN_HELPER_SHA256[_docs/_workflows/task-540-smoke-executor.mjs]` in
+`tests/unit/workflows/task540SmokeExecutorSecurity.test.ts:34`. This is an inventory
+value, not a closure pin. Final dependent hashes and pins are recomputed only after
+every facade and child-module byte stabilizes.
 **Current Split Integrity Contract:** The executor self-test must prove exhaustive,
 non-overlapping action-to-scenario ownership for the current manifest, including the
 enumerated related-cache and responsive-users owners. An omitted registry member must
@@ -113,13 +130,14 @@ zero-finding strict scan; it must not restore or validate the historical pins.
 **Historical Scroll-Lock Ownership And Bootstrap-Restore Uncertainty Repair Trigger:** 2026-07-21 — the next helper-backed smoke reached the same Entry dirty-navigation boundary and emitted exact terminal `{failedActionId:"dg-024-entry-nav-cancel",failureClass:"scroll_locked",cleanupPhase:8,cleanupFailureClass:"phase_failed"}`. A post-exit read-only absence audit proved every TASK-540 nonce-shaped resource, owned file, screenshot, helper/browser/server process, and owned port absent, but phase 8 did not return accepted restoration evidence before the executor exited; the private preflight bootstrap timestamp baseline and newest smoke-owned pair are no longer available, so the final `lastLoginAt`/`updatedAt` restoration outcome is unprovable. This consumed run must not be recovered by guessed timestamps or any post-exit write and does not authorize closure. Exact source/dependency tracing proved `dg-022` handed off one final atomic unlocked sample after its full 600 ms dwell, `dg-023` performed read-only DOM/URL observations, and `dg-024` reported only its last completed target poll rather than a continuous ten-second lock; no product or Radix reopen path is evidenced before the unperformed navigation click. The bounded cross-CLI lock-owner observation and phase-8 uncertain-CAS reconciliation plus their tests/mutants are now landed in the exact pre-bridge checkpoint above, with product source unchanged. They still await the bridge-inclusive targeted gate and carry no current completion receipt.
 **Current Repair Execution Order:** The final sentence of the 2026-07-21 trigger
 evidence describes its then-planned sequence and is historical. The authoritative
-sequence is the `Current Closure Repair State` at the top of this file: finish cohesive
-smoke facade/child modularization to at most 1,000 physical lines per module -> prove
-split integrity and recompute final dependent helper/task/test pins only after all smoke
-bytes stabilize -> targeted and full gates -> helper restart -> exactly one canonical
-seven-flow Playwright CLI smoke with 13/13 screenshots and deterministic cleanup ->
-changelog/control and child-first status closure -> final closure checks, commit, and
-integration into `feat/implementations`.
+sequence is the `Current Closure Repair State` at the top of this file. Its first step,
+cohesive smoke facade/child modularization to at most 1,000 physical lines per module,
+is **done** as of 2026-07-27 and is struck from the remaining work; the surviving order
+is: prove split integrity and recompute final dependent helper/task/test pins now that
+the smoke bytes have stabilized -> targeted and full gates -> helper restart -> exactly
+one canonical seven-flow Playwright CLI smoke with 13/13 screenshots and deterministic
+cleanup -> changelog/control and child-first status closure -> final closure checks,
+commit, and integration into `feat/implementations`.
 **Historical L03 Source Repair Required:** On 2026-07-15 the live-smoke feasibility audit proved duplicate canonical/legacy cacheBus transport delivery made the exact-one `related-a-refresh` route contract impossible; the scoped repair landed and was revalidated.
 **Historical L03 Source Repair Owner:** TASK-540-04-L03 was the sole repair owner for the generic per-subscription cacheBus transport dedupe in `core/admin/utils/cacheBus.ts`, its regressions in `tests/vitest/admin/cacheBus.test.ts`, and additive direct-image route-boundary regressions in `tests/integration/routes/customScreensRoutes.test.ts`. No production route file changed.
 **Historical L03 Source Repair Gate:** TASK-540-04-L03 alone held the exact three-path repair authority, ran its required gates, and atomically replaced its matching `Repair Pending` receipt with one `Revalidation Passed` successor plus canonical `Implementation Complete`. That durable evidence remains valid but does not substitute for any later source-repair receipt or closure gate.

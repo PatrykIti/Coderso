@@ -15,16 +15,19 @@
 complete, but the later live-smoke repair superseded this as current completion
 authority. It cannot satisfy a current-state predicate.
 **Current Closure Repair Started:** 2026-07-23
-**Current Closure Repair State:** The owner-directed phase at HEAD `8259a326` is
-behavior-preserving modularization of the smoke executor and scenario infrastructure,
-with no new hardening, product change, runtime diagnosis, or smoke retry. Checkpoints
-`f22eee9f` through `8259a326` already extracted shared observation/visible-assertion
-sources, all seven scenario owners, and simple browser invocations. The executor facade
-remains 26,391 lines and its self-test body remains at lines 15,231-26,384, so further
-cohesive splits are blocking. After every facade and child owner is at most 1,000
-physical lines, the required order is targeted/full gates -> helper restart -> exactly
-one canonical seven-flow Playwright CLI smoke with 13/13 screenshots and deterministic
-cleanup -> changelog/status closure -> integration into `feat/implementations`.
+**Current Closure Repair State:** The owner-directed behavior-preserving modularization
+of the smoke executor and scenario infrastructure is **complete** and no longer blocking;
+it took no new hardening, product change, runtime diagnosis, or smoke retry. Checkpoints
+`f22eee9f` through `8259a326` extracted the shared observation/visible-assertion sources,
+all seven scenario owners and the simple browser invocations; 88 further split commits
+ran from `8259a326` to `c89fa96c`, of which `b8170be1` moved the executor self-test body
+out of the facade entirely. Re-measured with `wc -l` at HEAD `a68a19e0` on 2026-07-27,
+every facade and child owner is at most 1,000 physical lines: executor facade 976,
+`task-540-smoke-contract.mjs` 13, `task-540-smoke-host.mjs` 84, largest of the 162 child
+modules under `_docs/_workflows/task-540-smoke/**` 964, none above the limit. Remaining
+order: targeted/full gates -> helper restart -> exactly one canonical seven-flow
+Playwright CLI smoke with 13/13 screenshots and deterministic cleanup ->
+changelog/status closure -> integration into `feat/implementations`.
 **Current Codex Collaboration Directive:** 2026-07-24 — all remaining review and repair
 uses Codex collaboration agents only. The obsolete Claude host/fallback is absent; the
 tracked Codex bridge and local orchestrator are landed. No Claude invocation is part of
@@ -49,8 +52,11 @@ retains the repository-wide workflow/evidence policy.
 **Historical Executor SHA-256:** `f473f4ff5e4c64fc1b2fc730cd24cbe48f7e1ea6d8aff1730ed32fe862d5c8de`
 — hash-verified checkpoint `911c29f5`; it is non-authoritative after the subsequent
 behavior-preserving modularization commits.
-**Current Executor Inventory:** At HEAD `8259a326`, the 26,391-line facade hashes to
-`bf2a3debbdb3646f302b0debd0eb480027453484a3ee46b2a187f69f2bb82799`.
+**Historical Mid-Split Executor Inventory:** At the `8259a326` checkpoint the facade was
+26,391 lines, hashing to `bf2a3debbdb3646f302b0debd0eb480027453484a3ee46b2a187f69f2bb82799`.
+That was a mid-split value, superseded; it is not the facade's present size.
+**Current Executor Inventory:** At HEAD `a68a19e0`, re-measured 2026-07-27, the facade is
+**976 lines**, hashing to `2699ea77f59bf40691c8561936d1e484c32cc3639679f2f4c27c6b22f06c9442`.
 This is an inventory value, not a closure pin. Final dependent hashes and pins are
 recomputed only after all facade and child-module bytes stabilize.
 **Historical Source Repair Revalidated (superseded for L03):** 2026-07-16 — expanded R01 composer/stored-duplicate work and the L04 compatibility correction received their then-exact receipts alongside L03 and TASK-540-05. The later overflow repair restored L03's canonical `Implementation Complete` and exact successor gate; this historical receipt still does not authorize closure. The 2026-07-19 Entry-correction receipt is current; fresh post-audit, full validation, live smoke, changelog, and closure remain pending.

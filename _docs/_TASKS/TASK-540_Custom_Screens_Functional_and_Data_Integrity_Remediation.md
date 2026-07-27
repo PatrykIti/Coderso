@@ -12,16 +12,20 @@
 **Repair Started:** 2026-07-16
 **Current Closure Repair Started:** 2026-07-23
 **Current Closure Repair State:** All source-owner repairs remain landed. The
-owner-directed phase at HEAD `8259a326` is behavior-preserving smoke modularization
-only: split the smoke executor and scenario infrastructure into cohesive modules of at
-most 1,000 physical lines without adding hardening, changing the frozen smoke contract,
-or returning to runtime diagnosis. Checkpoints `f22eee9f` through `8259a326` extracted
-the shared observation and visible-assertion sources, all seven scenario owners, and the
-simple browser invocation owner. The executor facade remains 26,391 lines, including
-the self-test body at lines 15,231-26,384, so this phase is not complete. The required
-order is remaining modularization -> targeted and full gates -> helper restart plus one
-canonical seven-flow Playwright CLI smoke with 13/13 screenshots and deterministic
-cleanup -> changelog/status closure -> integration into `feat/implementations`.
+owner-directed behavior-preserving smoke modularization phase — split the smoke executor
+and scenario infrastructure into cohesive modules of at most 1,000 physical lines
+without adding hardening, changing the frozen smoke contract, or returning to runtime
+diagnosis — is **complete**. Checkpoints `f22eee9f` through `8259a326` extracted the
+shared observation and visible-assertion sources, all seven scenario owners, and the
+simple browser invocation owner; 88 further split commits ran from `8259a326` to
+`c89fa96c`, of which `b8170be1` moved the executor self-test body out of the facade
+entirely. Re-measured with `wc -l` at HEAD `a68a19e0` on 2026-07-27: the executor facade
+is **976 lines**, `task-540-smoke-contract.mjs` 13, `task-540-smoke-host.mjs` 84, and
+the largest of the 162 child modules under `_docs/_workflows/task-540-smoke/**` is 964,
+with none above the limit. The remaining order is therefore targeted and full gates ->
+helper restart plus one canonical seven-flow Playwright CLI smoke with 13/13 screenshots
+and deterministic cleanup -> changelog/status closure -> integration into
+`feat/implementations`.
 **Current Codex Collaboration Directive:** 2026-07-24 — Codex agents are the only
 reviewers/implementers used for remaining work. The tracked Codex bridge and local
 orchestrator are landed; Claude invocation and fallback are absent from the current
