@@ -268,9 +268,16 @@ The preland writable subset remains exactly:
 All three are existing single-writer L03 paths. Preland creates no leaf, owner
 or path and does not terminalize L03.
 
-Phases 1–13 otherwise retain the literal exact path sets already frozen in
-`_docs/_workflows/lib/task-547-ownership.mjs`. The 22 TASK-547-06-L01 phase
-subsets are:
+Phases 1–13 use the literal exact path sets frozen in
+`_docs/_workflows/lib/task-547-ownership.mjs`. TASK-547-01-L01 owns its schema,
+canonicalization and security suites plus `fullSitePackageTestSupport.ts`;
+TASK-547-01-L02 owns its core, Page, diagnostics and plan suites plus
+`fullSitePackageReferenceTestSupport.ts`. The original
+`full-site-package-references.test.ts` exists only until L02 lands, but its path
+remains permanently declared in TASK-547 ownership as a deletion tombstone and
+never becomes a validation target. The phase gate runs every split suite
+independently and then runs the owning leaf's complete combined list. The 22
+TASK-547-06-L01 phase subsets are:
 
 - `547-06-L01-acceptance-tests`:
   - `tests/integration/kits/projektyDomowInstalledSite.test.ts`;
@@ -361,20 +368,20 @@ Immediately after preland, run root
 already-landed paths block; only strictly future-path or exact
 baseline-equivalent unowned diagnostics may remain.
 
-Before the 35-phase expansion is implemented, split the two boundary modules
-that have no safe growth budget:
+Before the 35-phase expansion was implemented, the two boundary modules without
+safe growth budget were split:
 
-- extract runtime-smoke closeout projection/transition behavior from the current
-  1,000-line `_docs/_workflows/lib/task-547-closeout-state.mjs` into cohesive
+- runtime-smoke closeout projection/transition behavior was extracted from the
+  then-1,000-line `_docs/_workflows/lib/task-547-closeout-state.mjs` into cohesive
   `_docs/_workflows/lib/task-547-closeout-runtime-smoke.mjs`;
-- extract smoke micro-phase descriptor/request validation from the current
-  999-line `_docs/_workflows/task-547-implement.mjs` into cohesive
+- smoke micro-phase descriptor/request validation was extracted from the
+  then-999-line `_docs/_workflows/task-547-implement.mjs` into cohesive
   `_docs/_workflows/lib/task-547-implementation-smoke-phases.mjs`.
 
-The original modules remain explicit composition roots, and every touched
-human-authored workflow/source/test file must finish at no more than 1,000
-physical lines. Moving arbitrary ranges or duplicating the tracked registry is
-not a valid split.
+The extracted modules are now active and the original modules remain explicit
+composition roots. Every touched human-authored workflow/source/test file must
+finish at no more than 1,000 physical lines. Moving arbitrary ranges or
+duplicating the tracked registry is not a valid split.
 
 ## Post-Audits and Runtime Smoke
 
@@ -641,7 +648,7 @@ patch the set.
 - [x] Replace repository-wide Claude guidance with internal Codex agents only.
 - [x] Convert TASK-547 audit, implementation and fixer runners to authenticated
   native receipts and JIT state machines.
-- [ ] Split the 1,000/999-line workflow boundaries before adding the 35-phase
+- [x] Split the 1,000/999-line workflow boundaries before adding the 35-phase
   tracked-CLI bridge; prove no duplicated scenario registry/lifecycle.
 - [ ] Record five clean native-agent rounds plus final reconcile.
 - [ ] Run 35 sequential phases with per-phase gates and atomic commits.

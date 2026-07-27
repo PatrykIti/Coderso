@@ -38,12 +38,36 @@ every non-setting seed key and each verification scenario ID. L02 applies the
 same grammar to `PackageRef.key`. A setting seed key bypasses that regex and must equal:
 `site.name`, `site.locale`, `site.homepageId`, `site.navigationMenuId`,
 `site.footerTemplateId`, `site.contentRoutes`, `design.tokens`. No prefix,
-namespace or regex-based setting admission is allowed.
+namespace or regex-based setting admission is allowed. Package, non-setting
+resource, setting and verification-scenario identities are validated exactly as
+supplied and are never trimmed.
+
+`core/services/kits/fullSitePackage/schema.ts` owns and exports
+`compareFullSitePackageText(left, right)`, defined only as
+`left < right ? -1 : left > right ? 1 : 0` (runtime-independent UTF-16 code-unit
+order). No package or graph canonical order may use `localeCompare`, `Intl` or a
+host default locale. Apply this owner to resource seed keys, residual IDs and
+L02's lexical identity/dependency ties. The same module owns
+`compareFullSitePackageObjectKeys`: canonical ECMAScript array-index strings
+(`"0"` through `"4294967294"`, no leading zero) sort first by numeric value, then
+all other keys use `compareFullSitePackageText`. This matches deterministic
+`OrdinaryOwnPropertyKeys`/`JSON.stringify` behavior; it is not locale order.
+The fixed resource-collection tuple retains its declared order; desired arrays
+retain authored order; verification IDs retain first-occurrence order. Resource
+arrays and residuals alone sort by canonical identity.
+
+Every exported package authority consulted by validation is runtime-immutable,
+not merely TypeScript-readonly: `PACKAGE_RESOURCE_KINDS`,
+`PACKAGE_RESOURCE_COLLECTIONS`, `PACKAGE_RESOURCE_KIND_BY_COLLECTION`,
+`PACKAGE_LIMITS` and `FULL_SITE_PACKAGE_SETTING_KEYS` use `Object.freeze`.
+No mutable `Set` consulted by validation is exported; root-key and setting-key
+membership sets remain module-private behind pure checks. External code cannot
+widen, narrow or remap any package validation boundary.
 
 Freeze this exact final package limit map:
 
 ```ts
-const PACKAGE_LIMITS = {
+export const PACKAGE_LIMITS = Object.freeze({
   fileBytes: 8 * 1024 * 1024,
   resourcesTotal: 512,
   resourcesPerCollection: 256,
@@ -58,7 +82,7 @@ const PACKAGE_LIMITS = {
   residualTextLength: 2_000,
   verificationScenarios: 100,
   stringLength: 100_000,
-} as const;
+} as const);
 ```
 
 The permanent historic name `fileBytes` measures only the
@@ -77,7 +101,32 @@ this leaf does not certify native-domain write validity.
 
 Implement the parent’s exact strict `VisualResidual` shape with bounded evidence,
 constraint, approximation, difference and remediation strings plus literal-false
-functional/accessibility/data/security/test-integrity flags.
+functional/accessibility/data/security/test-integrity flags. A residual ID is
+never trimmed, uses exactly
+`^[a-z0-9](?:[a-z0-9-]{0,126}[a-z0-9])?$`, is unique inside the package and is
+sorted by `compareFullSitePackageText`; duplicates reject rather than dedupe.
+
+Metadata `name`, optional `description` and the five residual prose fields trim
+outer ECMAScript whitespace, reject an empty post-trim value and preserve every
+interior code unit. `metadata.locale` also trims outer whitespace, then validates
+exactly `^[A-Za-z]{2,8}(?:-[A-Za-z0-9]{1,8})*$` and preserves the accepted casing
+and subtags. It is package metadata, not the native `site.locale` policy.
+Strings nested inside `desired` remain byte-preserved.
+
+L01's raw structural traversal owns the same JSON-depth boundary and static
+diagnostic as L02's typed guard: every `desired` root is level 1, every property
+value/array element adds one, level 64 accepts and level 65 throws
+`site_package_too_complex` with exactly
+`{ path: "$.resources", reason: "json_depth_exceeded" }`. Because raw input must
+normalize before graph validation, this structural error precedes duplicate or
+other graph errors. L02 repeats the same guard first for already-typed callers,
+so raw and typed duplicate+depth inputs have identical precedence.
+
+Finite JSON numbers are preserved except negative zero, which canonicalizes to
+positive `0` (`Object.is(output, -0) === false`) before artifact serialization.
+Recursive object construction uses `compareFullSitePackageObjectKeys`; tests pin
+numeric index keys `"2"` before `"10"`, followed by non-index keys such as
+`"01"` in code-unit order.
 
 ## Security Contract
 
@@ -85,16 +134,128 @@ Pure Bun-free code; no endpoint. Reject unknown keys, forbidden settings/secrets
 oversized serialized values/resources/strings/diagnostics and raw bytes/base64.
 Setting keys use only the exact allowlist above, never the package-key regex.
 
+Sensitive desired-field classification is deterministic camelCase/ASCII-
+separator tokenization, never substring matching. Reject a terminal
+`authorization`, `bearer`, `cookie`, `credential|credentials`, `csrf`,
+`password`, `secret`, `session` or `token`; a terminal
+`access|api|private|provider` + `key`, `client` + `secret`, or `connection` +
+`string` pair; and a sensitive-material token followed by terminal
+`hash|header|key|value`. Thus `smtpPassword`, `accessToken`,
+`Authorization`, `X-API-Key`, `privateKey`, `secretAccessKey` and `passwordHash`
+reject, while `tokenizedCopy`, `tokenCount`, `cookieBanner`,
+`passwordPolicyLabel` and `secretDescription` remain valid descriptive keys.
+
+Value scanning first applies ECMAScript `trim()` and rejects actual
+`ArrayBuffer`, `ArrayBufferView` and `Blob` values. For a string beginning `//`,
+parse `https:${trimmed}`; for one matching the complete absolute-scheme prefix
+`^[A-Za-z][A-Za-z0-9+.-]*:`, parse the string itself. This deliberately includes
+WHATWG special-scheme forms without `//`, such as
+`http:user:pass@example.com`. Reject only when standards parsing succeeds and
+`username` or `password` is nonempty. The complete trimmed
+authorization predicate is exactly
+`/^(?:basic|bearer)[\t ]+[^\t \r\n]+$/i`; the PEM predicate is
+`/-----BEGIN (?:[A-Z0-9]+ )*PRIVATE KEY-----/`; and the carrier-independent data
+URL predicate is `/^data:[^,\r\n]*;base64,/i` (the package string cap already
+bounds the scan).
+
+Canonical standard/Base64URL scanning runs only when the field's terminal token
+is exactly `base64`, `bytes`, `binary` or `blob`. A nonempty standard candidate
+matches exactly
+`^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$`; a URL-safe
+candidate matches `^[A-Za-z0-9_-]+$` and has `length % 4 !== 1`. Strict
+decode→re-encode identity uses required `=` padding for standard Base64 and no
+padding for Base64URL. Under an explicit carrier,
+alphabet-only canonical text such as `blob:"copy"` rejects; the same text under
+a descriptive field is never treated as Base64. Unknown/prototype and secret
+key diagnostics never append a supplied object key: generic strict-shape checks
+use `<trusted-container-path>.[redacted]`. Every secret/binary value finding uses
+the complete trusted path
+`$.resources.<collection>[<index>].desired.[redacted]` plus exactly one static
+reason: `secret_key_forbidden`, `credential_url_forbidden`,
+`authorization_value_forbidden`, `private_key_forbidden`,
+`base64_value_forbidden` or `binary_value_forbidden`. No supplied key, URL,
+authorization value, PEM text or encoded bytes may enter the path, reason, error
+name or message.
+
+Tokenize a field name by first splitting acronym-to-word and lower/digit-to-
+uppercase camel boundaries, then splitting on every non-ASCII-alphanumeric code
+unit, dropping empty segments and lowercasing ASCII. The sensitive terminal set
+is exactly `authorization`, `bearer`, `cookie`, `credential`, `credentials`,
+`csrf`, `password`, `secret`, `session` and `token`. Terminal pairs are exactly
+`access|api|private|provider` + `key`, `client` + `secret`, and `connection` +
+`string`. A final `hash|header|key|value` also rejects when its preceding token
+is in that sensitive terminal set.
+
 ## Implementation Pseudocode
 
 ```ts
+export const PACKAGE_RESOURCE_KINDS = Object.freeze([
+  "content_type", "form", "page_template", "listing_template", "content_entry",
+  "listing_query", "detail_page", "page", "menu", "setting",
+] as const);
+export const PACKAGE_RESOURCE_COLLECTIONS = Object.freeze([
+  "contentTypes", "forms", "pageTemplates", "listingTemplates", "entries",
+  "listingQueries", "detailPages", "pages", "menus", "settings",
+] as const);
+export const PACKAGE_RESOURCE_KIND_BY_COLLECTION = Object.freeze({
+  contentTypes: "content_type", forms: "form", pageTemplates: "page_template",
+  listingTemplates: "listing_template", entries: "content_entry",
+  listingQueries: "listing_query", detailPages: "detail_page", pages: "page",
+  menus: "menu", settings: "setting",
+} as const);
+export const PACKAGE_LIMITS = Object.freeze({
+  fileBytes: 8 * 1024 * 1024, resourcesTotal: 512, resourcesPerCollection: 256,
+  referenceEdges: 4_096, depth: 64, diagnostics: 100, keyLength: 128,
+  metadataNameLength: 200, metadataLocaleLength: 35,
+  metadataDescriptionLength: 2_000, residualIdLength: 128,
+  residualTextLength: 2_000, verificationScenarios: 100, stringLength: 100_000,
+} as const);
+
+export const compareFullSitePackageText = (left: string, right: string) =>
+  left < right ? -1 : left > right ? 1 : 0;
+
+const toEcmaArrayIndex = (value: string): number | null => {
+  if (!/^(?:0|[1-9][0-9]{0,9})$/.test(value)) return null;
+  const index = Number(value);
+  return index <= 4_294_967_294 && String(index) === value ? index : null;
+};
+
+export const compareFullSitePackageObjectKeys = (left: string, right: string) => {
+  const leftIndex = toEcmaArrayIndex(left);
+  const rightIndex = toEcmaArrayIndex(right);
+  if (leftIndex !== null && rightIndex !== null) return leftIndex - rightIndex;
+  if (leftIndex !== null) return -1;
+  if (rightIndex !== null) return 1;
+  return compareFullSitePackageText(left, right);
+};
+
+export const FULL_SITE_PACKAGE_SETTING_KEYS = Object.freeze([
+  "site.name",
+  "site.locale",
+  "site.homepageId",
+  "site.navigationMenuId",
+  "site.footerTemplateId",
+  "site.contentRoutes",
+  "design.tokens",
+] as const);
+
+const tokenizeSensitiveFieldKey = (key: string): readonly string[] =>
+  splitAsciiCamelAcronymAndSeparators(key).map(asciiLowercase);
+
+const isSensitiveFieldKey = (key: string): boolean =>
+  matchesFrozenSensitiveTerminalRules(tokenizeSensitiveFieldKey(key));
+
 export function normalizeFullSitePackageForWrite(value: unknown) {
   assertPackageByteSize(value); // existing export; measures serialized JSON bytes
   const root = assertStrictRoot(value);
   assertPackageComplexity(root, PACKAGE_LIMITS);
-  const normalized = normalizePackageOwnedShapes(root);
-  assertExactAllowedSettingKeys(normalized.resources.settings);
-  return canonicalize(normalized);
+  const normalized = normalizePackageOwnedShapesAndScanSecrets(root);
+  assertExactAllowedSettingKeys(normalized.resources.settings); // Private membership set.
+  assertUniqueResidualIds(normalized.compatibility);
+  return canonicalize(normalized, {
+    identities: compareFullSitePackageText,
+    objectKeys: compareFullSitePackageObjectKeys,
+  });
 }
 ```
 
@@ -104,6 +265,20 @@ validation. Errors use
 `site_package_invalid`, `site_package_too_large`, `site_package_too_complex` and
 `site_package_setting_forbidden`, with bounded safe paths.
 
+Test ownership is physical and non-overlapping:
+
+- `full-site-package-schema.test.ts` owns envelopes, byte/count/depth limits and
+  verification shape;
+- `full-site-package-canonicalization.test.ts` owns identity/scalar/prose,
+  residual and exact ordering/idempotence cases;
+- `full-site-package-security.test.ts` owns immutable-authority mutation,
+  forbidden setting/secret/value and non-disclosure cases; and
+- `fullSitePackageTestSupport.ts` owns only the shared valid-package/residual
+  builders and typed error assertion used by those suites.
+
+Move existing cases/builders to that ownership; do not copy them. Each `.test.ts`
+file imports the focused support module and runs independently.
+
 Regression tests: valid canonical package; all ten `{key,desired}` envelopes;
 reject package DB IDs and unknown envelope keys; every exact limit edge and
 one-over case, including serialized in-memory 8 MiB and 100/101 verification
@@ -112,9 +287,21 @@ only seven setting keys without applying the package-key reader; strict
 verification unknown/type/ID checks and stable first-occurrence dedupe; bounded
 100-diagnostic truncation; forbidden-setting rejection with exact
 `site_package_setting_forbidden` and supplied key/value sentinels absent from the
-error/diagnostics; secret namespace/raw-byte corpus; complete residual
-object accept; bare-code/unknown-key/non-false-impact rejection; complete
-desired-snapshot equality; and idempotent normalize. A schema-only limit test may
+error/diagnostics; mutation attempts against every exported frozen authority and
+the private root/setting membership boundaries; the exact
+sensitive-key positive/near-miss matrix; credential URL, Basic/Bearer, PEM,
+typed-binary, data-Base64 and explicitly keyed standard/Base64URL cases; ordinary
+long copy acceptance and non-disclosure. Credential URL cases include canonical
+`scheme://` userinfo, protocol-relative userinfo,
+`http:user:pass@example.com` and non-credential absolute-scheme near misses
+whose parsed `username` and `password` are both empty. Pin metadata/prose trimming, locale
+grammar/case preservation, no-trim identities, residual grammar/uniqueness and
+punctuation order `a-a,a.a,a_a,aa`, integer-index order `2,10,01` and `-0` →
+`0` in exact canonical JSON. Pin the raw normalizer's exact depth 64/65 boundary
+and static redacted `json_depth_exceeded` singleton; L02 diagnostics alone owns
+raw normalize→graph and forged-typed duplicate+depth precedence. Cover complete
+residual object accept; bare-code/unknown-key/non-false-impact rejection;
+complete desired-snapshot equality; and idempotent normalize. A schema-only limit test may
 accept a ref-shaped object solely to count reference edges; it must state that
 this is not full-package validity and leave path/ref-key rejection to L02 and the
 consumer pre-DB regression. Native desired-document acceptance/rejection tests
@@ -129,13 +316,32 @@ suite neither imports nor source-inspects that later-owned reader.
 - [x] Add `tests/vitest/kits/full-site-package-schema.test.ts`.
 - [ ] Reject noncanonical package/non-setting keys without trimming; correct
   serialized-size semantics, exact verification/setting contracts and their
-  boundary/non-disclosure regressions, remove undocumented residual/diagnostic
-  limit coupling, then run fresh gates.
+  immutable boundaries; freeze scalar/canonical ordering, residual identity and
+  secret/encoded-value policies; remove undocumented residual/diagnostic limit
+  coupling; split moved cases into independently runnable
+  `full-site-package-canonicalization.test.ts` and
+  `full-site-package-security.test.ts`, backed by the focused
+  `fullSitePackageTestSupport.ts`, without copying assertions/builders; then run
+  fresh gates.
 
 ## Testing Requirements
 
-`bunx vitest run --config vitest.config.ts tests/vitest/kits/full-site-package-schema.test.ts`;
-core lint/types; touched-file line counts.
+Run independently:
+
+- `bunx vitest run --config vitest.config.ts tests/vitest/kits/full-site-package-schema.test.ts`
+- `bunx vitest run --config vitest.config.ts tests/vitest/kits/full-site-package-canonicalization.test.ts`
+- `bunx vitest run --config vitest.config.ts tests/vitest/kits/full-site-package-security.test.ts`
+
+Then run:
+
+- `bunx vitest run --config vitest.config.ts tests/vitest/kits/full-site-package-schema.test.ts tests/vitest/kits/full-site-package-canonicalization.test.ts tests/vitest/kits/full-site-package-security.test.ts`
+- `bun --cwd core lint:types`
+- `bun --cwd core lint`
+- `node _docs/_workflows/lib/task-547-final-validation-contract.mjs --line-gate`
+
+The last command is the baseline-to-final touched production/test/support
+line-count authority and must pass with every human-authored file at or below
+1,000 physical lines.
 
 ## Documentation Updates Required
 

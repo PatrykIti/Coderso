@@ -83,7 +83,32 @@ of `site.name`, `site.locale`, `site.homepageId`,
 `site.navigationMenuId`, `site.footerTemplateId`, `site.contentRoutes` or
 `design.tokens`. `VerificationPlan` is strict (`scenarioIds` only), accepts at
 most 100 canonical IDs, preserves declaration order and collapses later
-duplicates by first occurrence.
+duplicates by first occurrence. Package, non-setting resource, setting,
+verification-scenario, residual and reference identities are never trimmed.
+Validation exports no mutable authority: package kind/collection tuples, the
+collection-to-kind map, limits and the seven setting values are runtime-frozen;
+root and setting membership sets stay module-private behind pure checks.
+L02 recursively freezes its compatibility-exported fixed reference-path array,
+rows and segment arrays. At module initialization it derives a private,
+recursively frozen Page reference-authority snapshot from the native exported
+block types, breakpoints and per-type slot arrays; every graph decision uses the
+snapshot, so later mutation of an imported owner cannot change acceptance or
+ordering.
+
+L01 owns the only canonical text comparator:
+`left < right ? -1 : left > right ? 1 : 0`. It is UTF-16 code-unit order and is
+used for resource keys, residual IDs and L02 lexical identity/dependency ties;
+canonical package/graph code must not use `localeCompare`, `Intl` or a host
+locale. L01's object-key comparator follows ECMAScript own-key order: canonical
+array-index strings `0..4294967294` sort numerically first, then remaining keys
+use the text comparator. Fixed collection order, desired-array order and first-
+occurrence verification order remain authored. Resource arrays and residuals
+sort by canonical identity. Residual IDs use the exact hyphen-only
+grammar `^[a-z0-9](?:[a-z0-9-]{0,126}[a-z0-9])?$`, are unique and reject
+duplicates. Metadata/residual prose trims outer whitespace and preserves
+interior code units; locale trims outer whitespace, validates
+`^[A-Za-z]{2,8}(?:-[A-Za-z0-9]{1,8})*$` and preserves case. Desired strings are
+byte-preserved; finite `-0` canonicalizes to positive `0`.
 
 `PackageRef` is frozen exactly as `{ ref, key }`, with no third key and the
 canonical key grammar above. Reference substitution is allowed only by L02's
@@ -119,6 +144,27 @@ recursively rewritten. A nullable path contributes no edge when absent or
 sanitized bounded paths and L02's closed
 `ReferenceGraphDiagnosticReason` codes; raw keys, slugs, values, payloads, target
 identities and cycle members are never echoed.
+Registered reference paths and structurally blocked prefixes are keyed by the
+source resource ordinal plus the exact relative segment array. Authority from
+one resource therefore never suppresses generic forbidden-path scanning at the
+same relative path in another resource.
+
+Graph validation is globally phased: per-`desired` JSON-depth preflight, unique
+identities, one mixed reference/path/target discovery stream, accepted
+occurrence-edge limit, cycle detection, then dependency depth. JSON `desired`
+root is level 1; every property value/array item, including a scalar or `null`,
+adds one; 64 is accepted and 65 returns only
+`{path:"$.resources",reason:"json_depth_exceeded"}`. Raw normalization owns the
+same guard before it calls the graph, so depth wins over duplicate errors at both
+raw and typed boundaries.
+The 101st attempted diagnostic across duplicate or mixed semantic categories
+discards the partial list for one `diagnostic_limit_exceeded` singleton. For
+1..100 mixed semantic findings, return all in discovery order and choose the
+top-level code by fixed `bad_path` then `missing` then `ambiguous` priority.
+Inline ambiguity throws and per-code collectors are forbidden. Dynamic desired-
+object keys never enter diagnostic paths: registry-owned path segments may be
+shown, the first untrusted segment becomes `[redacted]`, and depth remains the
+static resource path above.
 
 TASK-547-01-L02 owns this exact identity export:
 
@@ -177,7 +223,15 @@ literally `false`; otherwise it is an implementation gap and blocks closure.
   name it is never a raw-source-file limit; TASK-547-05 owns a separate,
   distinctly named raw-source constant.
 - **Secrets:** reject forbidden setting namespaces, provider keys, cookies,
-  authorization values, raw bytes/base64 and credential-bearing URLs.
+  authorization values, raw bytes/base64 and credential-bearing URLs. Classify
+  desired keys by camelCase/separator tokens, not substrings: reject terminal
+  credential material/pairs while allowing descriptive near misses such as
+  `tokenizedCopy` and `cookieBanner`. Standards-parse every absolute-scheme
+  (`^[A-Za-z][A-Za-z0-9+.-]*:`) and protocol-relative URL candidate, rejecting
+  parsed userinfo including special-scheme forms without `//`; reject complete
+  Basic/Bearer values, private-key PEM, Base64 data URLs and
+  canonical standard/Base64URL only in explicit `base64|bytes|binary|blob`
+  fields. Secret diagnostics use a fixed redacted key path and never echo input.
 - **CSS/HTML:** package metadata never becomes a raw CSS/HTML/JS sink.
 
 ## Implementation Pseudocode
@@ -187,14 +241,21 @@ export function normalizeFullSitePackageForWrite(input: unknown): FullSitePackag
   assertPackageByteSize(input); // serialized in-memory JSON, not source-file bytes
   const root = assertStrictPackageRoot(input);
   assertPackageComplexity(root, PACKAGE_LIMITS);
-  const resources = normalizeResourceArrays(root.resources);
-  assertExactAllowedSettingKeys(resources.settings);
-  return canonicalizePackage({ ...root, resources });
+  const normalized = normalizePackageOwnedShapesAndScanSecrets(root);
+  assertExactAllowedSettingKeys(normalized.resources.settings);
+  assertUniqueResidualIds(normalized.compatibility);
+  return canonicalize(normalized, {
+    identities: compareFullSitePackageText,
+    objectKeys: compareFullSitePackageObjectKeys,
+  });
 }
 
 export function buildReferencePlan(pkg: FullSitePackageV1): readonly PlannedPackageResource[] {
+  assertReferenceGraphJsonDepth(pkg.resources); // desired=1; static level-65 error.
   const registry = indexUniqueKindKeys(pkg.resources); // duplicate kind:key => error
-  const { edges, descriptorsByIdentity } = collectRefsAtAllowedPaths(registry);
+  const { edges, descriptorsByIdentity, diagnostics } = collectRefsAtAllowedPaths(registry);
+  if (edges.length > PACKAGE_LIMITS.referenceEdges) throwReferenceEdgesSingleton();
+  diagnostics.throwIfAny();
   return freezePlan(stableTopologicalSort(registry, edges), descriptorsByIdentity);
 }
 
@@ -242,15 +303,24 @@ path/static-reason diagnostics above.
 duplicate key, bad ref kind/path, dangling ref, cycle, secret-like setting, raw
 bytes and each exact over-limit boundary; prove exact setting allowlist behavior
 without applying the package-key regex to setting keys, strict verification
-shape/count/ID grammar plus first-occurrence dedupe, at most 100 bounded
+shape/count/ID grammar plus first-occurrence dedupe, immutable root/setting
+membership, at most 100 bounded
 diagnostics, normalize(normalize(x)) identity, complete desired-snapshot equality
-and deterministic order. Graph tests cover every discriminator/nullability row,
+and deterministic code-unit/ECMAScript index order, including `-0` → `0`.
+`full-site-package-{schema,canonicalization,security}.test.ts` must each run
+independently through shared `fullSitePackageTestSupport.ts`; moved assertions or
+builders are not copied. Graph tests are likewise split into independently
+runnable `full-site-package-references-{core,page,diagnostics,plan}.test.ts`
+through focused `fullSitePackageReferenceTestSupport.ts`. They cover every
+discriminator/nullability row,
 reject the non-native menu `document.items` path, reject malformed ref keys
 without echoing them, pin L02's exact closed reasons, plan/reference shapes,
 occurrence-edge versus direct-dependency ordering, and content-route validation-
 only edge. For both Page-backed kinds they accept depth 4/24 children and reject
 depth 5/25, non-native slots and atom slots without clipping. Prove frozen
-descriptor-only substitution with no second traversal or plan mutation. This
+descriptor-only substitution with no second traversal or plan mutation. Pin exact
+JSON level 64/65, mixed bad-path/missing/ambiguity priority and complete discovery-
+order diagnostics, plus global semantic and duplicate 100/101 overflow. This
 task proves only its local raw normalize→graph call order; planner, typed-apply/
 preparer and CLI call counts belong to TASK-547-02-L01, 02-L02 and 05-L01. A
 structural-schema
@@ -268,9 +338,12 @@ the full consumer contract must prove that the same bad path is rejected by
 ## Testing Requirements
 
 - `bunx vitest run --config vitest.config.ts tests/vitest/kits/full-site-package*.test.ts`
-- `bun --cwd core lint`
 - `bun --cwd core lint:types`
-- touched-file line counts
+- `bun --cwd core lint`
+- `node _docs/_workflows/lib/task-547-final-validation-contract.mjs --line-gate`
+
+The line gate measures the verified baseline-to-final touched production/test
+scope and rejects every human-authored file above 1,000 physical lines.
 
 ## Documentation Updates Required
 
