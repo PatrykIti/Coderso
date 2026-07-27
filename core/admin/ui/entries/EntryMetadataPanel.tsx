@@ -130,6 +130,10 @@ type EntryMetadataPanelProps = {
   canSave?: boolean;
   onDelete?: () => void;
   isDeleting?: boolean;
+  // False while the host holds no loaded entry, for the same reason as `canSave` and one of
+  // its own: the confirm dialog names the entry from the host's title, which is empty until
+  // hydration, so this would ask the user to confirm destroying a row they were never shown.
+  canDelete?: boolean;
 };
 
 export function EntryMetadataPanel({
@@ -166,6 +170,7 @@ export function EntryMetadataPanel({
   canSave,
   onDelete,
   isDeleting,
+  canDelete,
 }: EntryMetadataPanelProps) {
   const [categoryInput, setCategoryInput] = useState("");
   const [tagInput, setTagInput] = useState("");
@@ -592,7 +597,7 @@ export function EntryMetadataPanel({
             variant="destructive"
             size="sm"
             className="w-full gap-2"
-            disabled={isDeleting}
+            disabled={isDeleting || canDelete === false}
             onClick={onDelete}
           >
             <Trash2 className="h-4 w-4" />

@@ -141,6 +141,11 @@ type MetadataPanelStubProps = {
   // panel PATCHes status, visibility, schedule, SEO and taxonomy TOGETHER: submitting its
   // pristine mount defaults would push them over whatever the server holds.
   canSave?: boolean;
+  onDelete: () => void;
+  isDeleting: boolean;
+  // Same gate on the real panel's Delete, for a reason of its own: the confirm dialog names
+  // the entry from the editor's title, which is empty until hydration.
+  canDelete?: boolean;
 };
 
 export const EntryMetadataPanelStub = ({
@@ -159,6 +164,9 @@ export const EntryMetadataPanelStub = ({
   onSave,
   isSaving,
   canSave,
+  onDelete,
+  isDeleting,
+  canDelete,
 }: MetadataPanelStubProps) => (
   <div data-metadata-panel="true">
     <span data-metadata-status-value="true">{status}</span>
@@ -212,8 +220,49 @@ export const EntryMetadataPanelStub = ({
     <button type="button" data-metadata-save-ungated="true" onClick={onSave}>
       Save metadata (ungated probe)
     </button>
+    <button
+      type="button"
+      data-metadata-delete="true"
+      disabled={isDeleting || canDelete === false}
+      onClick={onDelete}
+    >
+      Delete entry
+    </button>
+    {/* The delete counterpart of the save probe: it only OPENS the confirm dialog, which is
+        all the real button does, so a lane can reach the confirm the gated button refuses to
+        offer and observe what the DELETE handler itself does. */}
+    <button type="button" data-metadata-delete-ungated="true" onClick={onDelete}>
+      Delete entry (ungated probe)
+    </button>
   </div>
 );
+
+/**
+ * The confirm dialog, stubbed to the shape that matters: it renders only while the editor has
+ * it OPEN, and while open its confirm is live. That is the entire path to `handleDeleteEntry`,
+ * so a lane can only observe the delete refusal through it — and the description is asserted
+ * too, because the fallback text ("Delete this entry?") is the harm: an unhydrated editor asks
+ * the user to confirm destroying a row it cannot name.
+ */
+export const EntryDeleteDialogStub = ({
+  open,
+  description,
+  isDeleting,
+  onConfirm,
+}: {
+  open: boolean;
+  description: string;
+  isDeleting?: boolean;
+  onConfirm: () => void;
+}) =>
+  open ? (
+    <div data-delete-dialog="true">
+      <span data-delete-dialog-description="true">{description}</span>
+      <button type="button" data-delete-confirm="true" disabled={isDeleting} onClick={onConfirm}>
+        Confirm delete
+      </button>
+    </div>
+  ) : null;
 
 /**
  * The two props the header probes drive. Structural on purpose: the wrapper below takes the
@@ -375,6 +424,24 @@ export const findHeaderButton = (container: HTMLElement, label: string) => {
 };
 
 export const findSaveDraft = (container: HTMLElement) => findHeaderButton(container, "Save draft");
+
+// The confirm dialog is rendered once, outside both panel copies, and only while it is open.
+export const findDeleteConfirm = (container: HTMLElement) => {
+  const confirm = container.querySelector('button[data-delete-confirm="true"]');
+  if (!(confirm instanceof HTMLButtonElement)) throw new Error("delete confirm button is absent");
+  return confirm;
+};
+
+export const readDeleteDialog = (
+  container: HTMLElement
+): { open: boolean; description: string } => {
+  const dialog = container.querySelector('[data-delete-dialog="true"]');
+  return {
+    open: dialog !== null,
+    description:
+      dialog?.querySelector('[data-delete-dialog-description="true"]')?.textContent ?? "",
+  };
+};
 
 // The PageHeader actions cluster renders once, so a probe marker matches exactly one button.
 // The `disabled` assertion is the point of a probe: if it were gated too, a click that changed

@@ -4,6 +4,7 @@ import { vi } from "vitest";
 import type { EntryVisibility } from "../../../../core/admin/services/entriesClient";
 import type { EntryStatus } from "../../../../core/admin/ui/entries/EntryMetadataPanel";
 import {
+  EntryDeleteDialogStub,
   EntryMetadataPanelStub,
   type UpdateEntryMetadataPayload,
   type UpdateEntryPayload,
@@ -131,6 +132,7 @@ export const editorState = (() => {
     updatePayloads: [] as UpdateEntryPayload[],
     metadataPayloads: [] as UpdateEntryMetadataPayload[],
     publishCalls: [] as string[],
+    deleteCalls: [] as string[],
     subscribers: new Set<(event: { key: string }) => void>(),
   };
 })();
@@ -148,6 +150,7 @@ export const resetEntryEditorLane = () => {
   editorState.updatePayloads.length = 0;
   editorState.metadataPayloads.length = 0;
   editorState.publishCalls.length = 0;
+  editorState.deleteCalls.length = 0;
 };
 
 export const resetEntryEditorDom = () => {
@@ -172,7 +175,10 @@ export const contentTypesClientModule = {
 };
 
 export const entriesClientModule = {
-  deleteEntry: vi.fn(async () => ({ ok: true })),
+  deleteEntry: vi.fn(async (type: string, id: string) => {
+    editorState.deleteCalls.push(`${type}/${id}`);
+    return { ok: true };
+  }),
   getCachedEntryDetail: () => null,
   // The mount read stays pending until the test resolves it, so the keystroke
   // provably lands first.
@@ -248,9 +254,10 @@ export const runtimePreviewDialogModule = {
   RuntimePreviewDialog: () => <div />,
 };
 
-export const entryDeleteDialogModule = {
-  EntryDeleteDialog: () => null,
-};
+// The dialog stub lives in the harness module beside the `data-delete-*` markers it defines,
+// like the panel stub; this re-export only saves each lane the import. It renders nothing while
+// closed, which is what it did as `() => null` for every lane that never opens it.
+export const entryDeleteDialogModule = { EntryDeleteDialog: EntryDeleteDialogStub };
 
 // The panel stub lives in the harness module beside the `data-metadata-*` markers it
 // defines; this re-export only saves each lane the import.

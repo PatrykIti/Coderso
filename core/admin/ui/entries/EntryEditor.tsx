@@ -445,6 +445,10 @@ function EntryEditorInstance({ type, id }: EntryEditorInstanceProps) {
   // status/visibility/schedule/SEO/taxonomy TOGETHER and would push its pristine mount
   // defaults over the server's, and publishing would flip the stored status from an editor
   // showing none of it.
+  // `handleDeleteEntry` refuses on the same predicate. It submits no state, but it belongs to
+  // the same class: it destroys a row the editor never showed, and the confirm dialog cannot
+  // even name it — `title` is still empty, so the description falls back to "Delete this
+  // entry?".
   const refuseUnloadedSubmit = () => {
     if (hasLoadedCurrentEntry()) return false;
     // Keep whatever already explains it (a failed read, a missing content type).
@@ -648,6 +652,13 @@ function EntryEditorInstance({ type, id }: EntryEditorInstanceProps) {
 
   const handleDeleteEntry = async () => {
     if (!type || !id) return;
+    // See `refuseUnloadedSubmit`: deleting an entry the editor never loaded is the same class
+    // as submitting one. The dialog is closed on refusal, because leaving it open would cover
+    // the message that explains why nothing happened.
+    if (refuseUnloadedSubmit()) {
+      setDeleteDialogOpen(false);
+      return;
+    }
     setIsDeleting(true);
     setError(null);
     try {
@@ -746,6 +757,7 @@ function EntryEditorInstance({ type, id }: EntryEditorInstanceProps) {
     canSave: hasLoadedEntry,
     onDelete: () => setDeleteDialogOpen(true),
     isDeleting,
+    canDelete: hasLoadedEntry,
   };
 
   return (

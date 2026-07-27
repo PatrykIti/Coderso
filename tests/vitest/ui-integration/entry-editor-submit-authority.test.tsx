@@ -11,12 +11,14 @@ import React from "react";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 
 import {
+  findDeleteConfirm,
   findHeaderButton,
   findHeaderProbe,
   findMetadataButton,
   findSaveDraft,
   flushMicrotasks,
   mount,
+  readDeleteDialog,
   typeTitle,
 } from "./support/entryEditorHarness";
 import {
@@ -277,6 +279,50 @@ test("the save and publish handlers refuse an unloaded entry themselves, not onl
     // Nothing else explains the refusal in this scenario (the read has not failed and the
     // content type resolved), so the editor has to say it itself.
     expect(view.container.textContent).toContain("This entry has not finished loading yet.");
+  } finally {
+    view.cleanup();
+  }
+});
+
+// Deleting is not submitting state, but it is the same class and the worse outcome: the row is
+// gone. `handleDeleteEntry` opened with `if (!type || !id) return;` and the panel's Delete
+// carried no gate at all, so on an editor that never hydrated a user could confirm the
+// destruction of a row it never showed them — the confirm dialog falls back to "Delete this
+// entry?" precisely because there is no title to name it with.
+test("an entry that never hydrated cannot be deleted, and the dialog cannot even name it", async () => {
+  window.history.replaceState({}, "", "/admin/advanced/entries/articles/entry-1");
+  const { EntryEditor } = await import("../../../core/admin/ui/entries/EntryEditor");
+
+  const view = mount(<EntryEditor />);
+  try {
+    // The baseline read is still open: no title, no fields, no loaded entry.
+    await React.act(async () => {
+      await flushMicrotasks();
+    });
+    expect(findMetadataButton(view.container, "data-metadata-delete").disabled).toBe(true);
+    expect(readDeleteDialog(view.container).open).toBe(false);
+
+    // The ungated probe opens the dialog the gated button refuses to offer, which is the only
+    // way to reach the handler and see what IT does rather than what the button attribute says.
+    await React.act(async () => {
+      findMetadataButton(view.container, "data-metadata-delete-ungated").click();
+      await flushMicrotasks();
+    });
+    expect(readDeleteDialog(view.container)).toEqual({
+      open: true,
+      description: "Delete this entry? This cannot be undone.",
+    });
+
+    await React.act(async () => {
+      findDeleteConfirm(view.container).click();
+      await flushMicrotasks();
+    });
+
+    // No DELETE left, the editor says why, and the dialog is closed so the message is not
+    // hidden behind it.
+    expect(editorState.deleteCalls).toEqual([]);
+    expect(view.container.textContent).toContain("This entry has not finished loading yet.");
+    expect(readDeleteDialog(view.container).open).toBe(false);
   } finally {
     view.cleanup();
   }
