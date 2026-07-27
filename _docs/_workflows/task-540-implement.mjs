@@ -1487,7 +1487,7 @@ const CHANGELOG_TITLE_PREFIX = "TASK-540 Custom Screens Functional and Data-Inte
 const CHANGELOG_TYPE =
   "Custom Screens/Admin UI/API/Reliability/Accessibility/Security/Testing/Docs/Task Board";
 const CHANGELOG_TASKS_LINE =
-  "Tasks: TASK-540, TASK-540-01, TASK-540-01-L01, TASK-540-02, TASK-540-02-L01, TASK-540-03, TASK-540-03-L01, TASK-540-04, TASK-540-04-L01, TASK-540-04-L02, TASK-540-04-L03, TASK-540-04-L04, TASK-540-05, TASK-540-05-L01, TASK-540-05-L02, TASK-540-06, TASK-540-06-L01";
+  "Tasks: TASK-540, TASK-540-01, TASK-540-01-L01, TASK-540-02, TASK-540-02-L01, TASK-540-03, TASK-540-03-L01, TASK-540-04, TASK-540-04-L01, TASK-540-04-L02, TASK-540-04-L03, TASK-540-04-L04, TASK-540-05, TASK-540-05-L01, TASK-540-05-L02, TASK-540-06, TASK-540-06-L01, TASK-540-07, TASK-540-07-L01, TASK-540-07-L02";
 const TASK_FILES = Object.freeze([
   "TASK-540_Custom_Screens_Functional_and_Data_Integrity_Remediation.md",
   "TASK-540-01-Strict-Screen-Data-Urls-Tabs-And-Binding-Gc.md",
@@ -1506,6 +1506,13 @@ const TASK_FILES = Object.freeze([
   "TASK-540-05-L02-Scope-Screen-Preferences-Through-User-Settings.md",
   "TASK-540-06-Tests-Smoke-And-Closure.md",
   "TASK-540-06-L01-Six-Builder-Save-Entry-Flows-And-Closure.md",
+  // TASK-540-07 was authored after the original 17-contract pin. LEAF_STATUS_GROUPS
+  // addresses these files by positional TASK_PATHS index, so the three names are
+  // appended here and never inserted mid-array: inserting earlier would silently
+  // repoint every existing group at the wrong document while still type-checking.
+  "TASK-540-07-Smoke-Option-Selector-And-First-Failure-Reporting.md",
+  "TASK-540-07-L01-Correct-Radix-Option-Selector-And-Guard-Text-Engine-Shape.md",
+  "TASK-540-07-L02-Preserve-Browser-Failure-Frames-For-Registered-Unit-Actions.md",
 ]);
 const TASK_PATHS = Object.freeze(TASK_FILES.map((file) => "_docs/_TASKS/" + file));
 
@@ -1519,8 +1526,21 @@ const LEAF_ORDER = Object.freeze([
   "540-04-L04",
   "540-05-L01",
   "540-05-L02",
+  // TASK-540-07 lands before closure: 540-06-L01 carries the family closure and
+  // must stay the LAST element. That ordering is the only thing enforcing the
+  // "closure leaf is last" invariant -- the holdUntilClosure flag on the
+  // 540-06-L01 status group is never read -- so it is asserted below.
+  "540-07-L01",
+  "540-07-L02",
   "540-06-L01",
 ]);
+const CLOSURE_LEAF_ID = "540-06-L01";
+if (LEAF_ORDER[LEAF_ORDER.length - 1] !== CLOSURE_LEAF_ID || LEAF_ORDER.indexOf(CLOSURE_LEAF_ID) !== LEAF_ORDER.length - 1) {
+  throw new Error("TASK-540 closure leaf must be the last entry in LEAF_ORDER");
+}
+if (new Set(LEAF_ORDER).size !== LEAF_ORDER.length) {
+  throw new Error("TASK-540 LEAF_ORDER contains a duplicate leaf id");
+}
 const ROOT_TASK_PATH = TASK_PATHS[0];
 const LEAF_STATUS_GROUPS = Object.freeze({
   "540-01-L01": {
@@ -1577,6 +1597,18 @@ const LEAF_STATUS_GROUPS = Object.freeze({
     leafPath: TASK_PATHS[14],
     leafIds: ["540-05-L01", "540-05-L02"],
   },
+  "540-07-L01": {
+    childId: "540-07",
+    childPath: TASK_PATHS[17],
+    leafPath: TASK_PATHS[18],
+    leafIds: ["540-07-L01", "540-07-L02"],
+  },
+  "540-07-L02": {
+    childId: "540-07",
+    childPath: TASK_PATHS[17],
+    leafPath: TASK_PATHS[19],
+    leafIds: ["540-07-L01", "540-07-L02"],
+  },
   "540-06-L01": {
     childId: "540-06",
     childPath: TASK_PATHS[15],
@@ -1605,6 +1637,24 @@ const FAMILY_STATUS_ORDER = Object.freeze([
   ROOT_TASK_PATH,
 ]);
 const AUDIT_OWNERS = Object.freeze([...LEAF_ORDER, "orchestrator"]);
+// Two DIFFERENT cardinalities are easy to confuse and both are load-bearing:
+//   * 20 = physical task contracts (root + 7 children + 12 leaves) = TASK_PATHS
+//     = FAMILY_STATUS_ORDER = the id count on the changelog "Tasks:" line.
+//   * 21 = STATUS_TRANSACTION_PATHS, which is FAMILY_STATUS_ORDER plus the board
+//     README. Writing 20 where 21 belongs fails at the moment closure runs its
+//     status transaction, so both are pinned here instead of only at the use site.
+const TASK_540_CONTRACT_COUNT = 20;
+const TASK_540_STATUS_TRANSACTION_COUNT = TASK_540_CONTRACT_COUNT + 1;
+if (
+  LEAF_ORDER.length !== 12 ||
+  CHILD_IDS_IN_LAND_ORDER.length !== 7 ||
+  TASK_PATHS.length !== TASK_540_CONTRACT_COUNT ||
+  FAMILY_STATUS_ORDER.length !== TASK_540_CONTRACT_COUNT ||
+  new Set(TASK_PATHS).size !== TASK_540_CONTRACT_COUNT ||
+  CHANGELOG_TASKS_LINE.replace(/^Tasks: /u, "").split(", ").length !== TASK_540_CONTRACT_COUNT
+) {
+  throw new Error("TASK-540 family contract cardinality drifted");
+}
 const DEFERRED_LOW_FOLLOW_UPS = deepFreezeExact({
   "deferred-low:actor-media-uuid-domain-naming": {
     followUpTask: "TASK-9999-01-L01",
@@ -10544,6 +10594,62 @@ const LEAVES = Object.freeze(
       ]),
     },
     {
+      // TASK-540-07 repairs two test-integrity defects inside the frozen smoke
+      // bundle: an option selector that can never match, and a wrapper that
+      // discards browser failure frames. Both leaves own only files under
+      // _docs/_workflows/task-540-smoke/, so they add no production or test module
+      // to the line-limit path authority; their gates are the smoke self-tests,
+      // whose counters are the actual behavioural proof.
+      id: "540-07-L01",
+      taskFile: "TASK-540-07-L01-Correct-Radix-Option-Selector-And-Guard-Text-Engine-Shape.md",
+      allowedFiles: Object.freeze([
+        "_docs/_workflows/task-540-smoke/contract/selectors.mjs",
+        "_docs/_workflows/task-540-smoke/contract/self-test/registries-fixtures.mjs",
+      ]),
+      commands: Object.freeze([
+        command("smokeContractSyntax", "node --check _docs/_workflows/task-540-smoke-contract.mjs"),
+        command(
+          "smokeContractSelfTest",
+          "node _docs/_workflows/task-540-smoke-contract.mjs --self-test"
+        ),
+        command("smokeExecutorSyntax", "node --check _docs/_workflows/task-540-smoke-executor.mjs"),
+        command(
+          "smokeExecutorSelfTest",
+          "node _docs/_workflows/task-540-smoke-executor.mjs --self-test"
+        ),
+        command("diffCheck", "git diff --check"),
+      ]),
+    },
+    {
+      id: "540-07-L02",
+      taskFile: "TASK-540-07-L02-Preserve-Browser-Failure-Frames-For-Registered-Unit-Actions.md",
+      allowedFiles: Object.freeze([
+        "_docs/_workflows/task-540-smoke/executor/config.mjs",
+        "_docs/_workflows/task-540-smoke/browser/generic-invocations.mjs",
+        "_docs/_workflows/task-540-smoke/browser/scenarios/dirty-guards.mjs",
+        "_docs/_workflows/task-540-smoke/executor/self-test/browser-dirty-navigation-source.mjs",
+        "_docs/_workflows/task-540-smoke/executor/self-test/browser-tone-flow-source.mjs",
+        "_docs/_workflows/task-540-smoke/executor/self-test/browser-run-code-source-ownership.mjs",
+      ]),
+      commands: Object.freeze([
+        command("smokeContractSyntax", "node --check _docs/_workflows/task-540-smoke-contract.mjs"),
+        command(
+          "smokeContractSelfTest",
+          "node _docs/_workflows/task-540-smoke-contract.mjs --self-test"
+        ),
+        command("smokeExecutorSyntax", "node --check _docs/_workflows/task-540-smoke-executor.mjs"),
+        command(
+          "smokeExecutorSelfTest",
+          "node _docs/_workflows/task-540-smoke-executor.mjs --self-test"
+        ),
+        command(
+          "workflowBridgeSecurityBun",
+          "bun test tests/unit/workflows/task540SmokeExecutorSecurity.test.ts"
+        ),
+        command("diffCheck", "git diff --check"),
+      ]),
+    },
+    {
       id: "540-06-L01",
       phase: "540-06-L01 prepare",
       taskFile: "TASK-540-06-L01-Six-Builder-Save-Entry-Flows-And-Closure.md",
@@ -10722,6 +10828,15 @@ const VALIDATION_COMMAND_AUTHORITY = (() => {
 })();
 
 const LEAF_BY_ID = new Map(LEAVES.map((leaf) => [leaf.id, leaf]));
+// LEAF_ORDER drives the status/land order while LEAVES drives implementation and
+// ownership; several call sites index one by the other's position, so a leaf present
+// in only one of them would resolve to undefined at run time rather than fail here.
+if (
+  JSON.stringify(LEAVES.map(({ id }) => id)) !== JSON.stringify([...LEAF_ORDER]) ||
+  LEAF_BY_ID.size !== LEAF_ORDER.length
+) {
+  throw new Error("TASK-540 LEAVES and LEAF_ORDER disagree on leaf identity or order");
+}
 
 const MODULARITY_REPAIR_ALLOWED_FILES = deepFreezeExact({
   "540-01-L01": [
@@ -23862,7 +23977,7 @@ async function buildStatusClosureTransactionInput(owner, evidenceHash, generatio
     targets.push(Object.freeze({ path: relativePath, source: nextSource }));
   }
   if (
-    targets.length !== 18 ||
+    targets.length !== TASK_540_STATUS_TRANSACTION_COUNT ||
     JSON.stringify(targets.map(({ path }) => path)) !== JSON.stringify(STATUS_TRANSACTION_PATHS)
   ) {
     throw new Error(label + ": status transaction target order rejected");
@@ -23871,8 +23986,11 @@ async function buildStatusClosureTransactionInput(owner, evidenceHash, generatio
 }
 
 function assertTask540AtomicClosureContract() {
+  // Deliberately an INDEPENDENT restatement of CHANGELOG_TASKS_LINE, compared against
+  // it below: the point of the contract is that two separately written copies agree,
+  // so this must not be refactored into a reference to the same constant.
   const exactTasksLine =
-    "Tasks: TASK-540, TASK-540-01, TASK-540-01-L01, TASK-540-02, TASK-540-02-L01, TASK-540-03, TASK-540-03-L01, TASK-540-04, TASK-540-04-L01, TASK-540-04-L02, TASK-540-04-L03, TASK-540-04-L04, TASK-540-05, TASK-540-05-L01, TASK-540-05-L02, TASK-540-06, TASK-540-06-L01";
+    "Tasks: TASK-540, TASK-540-01, TASK-540-01-L01, TASK-540-02, TASK-540-02-L01, TASK-540-03, TASK-540-03-L01, TASK-540-04, TASK-540-04-L01, TASK-540-04-L02, TASK-540-04-L03, TASK-540-04-L04, TASK-540-05, TASK-540-05-L01, TASK-540-05-L02, TASK-540-06, TASK-540-06-L01, TASK-540-07, TASK-540-07-L01, TASK-540-07-L02";
   const expectedPendingFiles = [...CLOSURE_TASK_PATHS, "_docs/_TASKS/README.md"];
   const graph = (activeLeafIds, activeChildIds) => {
     const activePathSet = new Set([
@@ -24027,7 +24145,7 @@ function assertTask540AtomicClosureContract() {
       ),
     },
     {
-      label: "final-status rollback owns the full 17-contract snapshot and board",
+      label: "final-status rollback owns the full 20-contract snapshot and board",
       pass:
         JSON.stringify(closureStatusRollbackOwner.allowedFiles) ===
         JSON.stringify(FULL_STATUS_ROLLBACK_PATHS),
@@ -24531,7 +24649,7 @@ async function setClosurePendingState(label, generation = closureGeneration) {
         ROOT +
         ". TASK-540 closure-pending transition for " +
         label +
-        ". Read all 17 physical task files and the board fresh, but edit only " +
+        ". Read all 20 physical task files and the board fresh, but edit only " +
         JSON.stringify(closurePendingStatusOwner.allowedFiles) +
         ". In one mutation touch exactly the root, TASK-540-06 parent, and TASK-540-06-L01 leaf; " +
         "set those three statuses to 🚧 In Progress, synchronize only their root/child rows, and " +
@@ -24989,7 +25107,7 @@ async function runClosure(smoke, fullValidation, label, findings = []) {
   try {
     const closureEntry = await verifyClosureEntryGraph(label);
     const entryGraphDescription = closureEntry.graph.allActive
-      ? "All 17 physical TASK-540 contracts remain In Progress with no Completed field"
+      ? "All 20 physical TASK-540 contracts remain In Progress with no Completed field"
       : "Only the validated active frontier remains In Progress: " +
         JSON.stringify(closureEntry.graph.activePaths) +
         "; every other physical contract is covered Done with Completed under the independently validated changelog 1252 authority";
@@ -25197,7 +25315,7 @@ async function runClosure(smoke, fullValidation, label, findings = []) {
     const mechanicalGate = await runReadOnlyAgent(
       "Read-only TASK-540 post-status mechanical graph gate at " +
         ROOT +
-        ". Verify all 17 statuses/tables are Done, the evidence hash/generation exists exactly on " +
+        ". Verify all 20 statuses/tables are Done, the evidence hash/generation exists exactly on " +
         "TASK-540-06-L01, TASK-540-06, and the root with identical board-baseline/changelog-path " +
         "pins and a strict matching independent closureControl. Verify board row/statistics, " +
         "changelog 1252/index, the exact initial Git index baseline remains unchanged with no " +
@@ -25245,7 +25363,7 @@ async function runClosure(smoke, fullValidation, label, findings = []) {
 const FINAL_LENSES = Object.freeze([
   [
     "graph-board-changelog",
-    "All 17 task files terminal; exact evidence/generation/baseline/changelog-path receipts exist only on TASK-540-06-L01, TASK-540-06, and the root; board row/statistics and strict independent changelog closureControl/index exact; no other task changed.",
+    "All 20 task files terminal; exact evidence/generation/baseline/changelog-path receipts exist only on TASK-540-06-L01, TASK-540-06, and the root; board row/statistics and strict independent changelog closureControl/index exact; no other task changed.",
   ],
   [
     "evidence-security",
@@ -27393,13 +27511,13 @@ try {
   const startGate = await runReadOnlyAgent(
     "Read-only TASK-540 start gate at " +
       ROOT +
-      ". Read all 17 physical TASK-540 files, board/changelog indexes, the current implementation, " +
+      ". Read all 20 physical TASK-540 files, board/changelog indexes, the current implementation, " +
       "local-orchestrator, smoke contract/executor/host, and historical fix workflow files " +
       "fresh. The orchestrator deterministically resolved this resume state: " +
       JSON.stringify(resumeState) +
       ". The pinned changelog state is " +
       JSON.stringify(changelogResumeState) +
-      ". In terminal mode verify all 17 contracts and the board are Done, the three closure " +
+      ". In terminal mode verify all 20 contracts and the board are Done, the three closure " +
       "contracts share the exact validated evidence hash/generation and pinned board baseline/" +
       "changelog path, the closure leaf preserves one exact gate field/value, and the single " +
       "changelog block hashes to that receipt with a strict matching closureControl. Startup will " +
