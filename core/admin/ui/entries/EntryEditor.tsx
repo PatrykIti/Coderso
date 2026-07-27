@@ -172,6 +172,16 @@ function EntryEditorInstance({ type, id }: EntryEditorInstanceProps) {
   // predecessor added sequence numbers at all. `EntryEditor` keys this instance by type/id so
   // today a change remounts instead, but the predicate that decides whether a save may fire
   // has to say which entry it is talking about.
+  //
+  // The identity half of this comparison is DELIBERATELY UNPINNED (TASK-540 R4). Weakening it
+  // to a bare "hydrated once" keeps the entire entry-editor suite green, and no test can close
+  // that: the keying above means an identity change never reaches a live instance, so observing
+  // the difference needs `EntryEditorInstance` driven with changing props — which means either
+  // exporting it or dropping the key, i.e. changing the thing under test in order to test it.
+  // What IS pinned is the assumption this half free-rides on: "moving to another entry in place
+  // starts over instead of carrying the first entry's state", in
+  // tests/vitest/ui-integration/entry-editor-submit-authority.test.tsx, goes red if the key
+  // goes. If it ever does go, this is the line that still refuses the save.
   const entryIdentity = `${type ?? ""}:${id ?? ""}`;
   const hasLoadedEntry = loadedIdentity === entryIdentity;
   const hasLoadedCurrentEntry = useCallback(

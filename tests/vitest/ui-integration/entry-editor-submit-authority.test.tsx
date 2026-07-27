@@ -20,6 +20,7 @@ import {
   flushMicrotasks,
   mount,
   readDeleteDialog,
+  readPanelValue,
   typeTitle,
 } from "./support/entryEditorHarness";
 import {
@@ -417,6 +418,66 @@ test("a baseline read that resolves nothing is recoverable too, though nothing e
     });
     expect(view.container.textContent).toContain("field:summary");
     expect(findSaveDraft(view.container).disabled).toBe(false);
+  } finally {
+    view.cleanup();
+  }
+});
+
+// R4. `hasLoadedEntry` asks "did we load the entry we are ADDRESSING", not "did we load
+// something once", and that stronger half cannot be pinned directly: `EntryEditor` keys the
+// instance by `${type}:${id}`, so an identity change remounts and the weakened predicate stays
+// green. Recorded as deliberately unpinned at the predicate itself. What this case pins is the
+// assumption it free-rides on — remove the key and the editor keeps the previous entry's state
+// while addressing a new one, which is precisely the situation the strong predicate exists for.
+test("moving to another entry in place starts over instead of carrying the first entry's state", async () => {
+  window.history.replaceState({}, "", "/admin/advanced/entries/articles/entry-1");
+  const { EntryEditor } = await import("../../../core/admin/ui/entries/EntryEditor");
+
+  const view = mount(<EntryEditor />);
+  try {
+    await React.act(async () => {
+      editorState.resolveEntryRead(0, editorState.entry);
+      await flushMicrotasks();
+    });
+    React.act(() => {
+      typeTitle(view.container, "Edited first entry");
+    });
+    expect(readPanelValue(view.container, "data-metadata-title-value")).toBe("Edited first entry");
+
+    // The route changes to another entry without leaving the editor: React is handed the same
+    // element in the same root, and only the key decides whether it reuses this instance.
+    window.history.replaceState({}, "", "/admin/advanced/entries/articles/entry-2");
+    view.rerender(<EntryEditor />);
+    await React.act(async () => {
+      await flushMicrotasks();
+    });
+
+    // Nothing of entry-1 is left — not the typed title, not the loaded state — and the second
+    // entry's own baseline read has started.
+    expect(readPanelValue(view.container, "data-metadata-title-value")).toBe("");
+    expect(findSaveDraft(view.container).disabled).toBe(true);
+    expect(editorState.startedEntryReads()).toBe(2);
+
+    await React.act(async () => {
+      editorState.resolveEntryRead(1, {
+        ...editorState.entry,
+        id: "entry-2",
+        title: "Second",
+        slug: "second",
+        data: { title: "Second", summary: "Second summary" },
+      });
+      await flushMicrotasks();
+    });
+    await React.act(async () => {
+      findSaveDraft(view.container).click();
+      await flushMicrotasks();
+    });
+
+    // The save carries entry-2 and nothing of entry-1: a stale instance would have kept the
+    // typed title as an edit and written it onto the row the user only navigated to.
+    expect(editorState.updatePayloads).toEqual([
+      { title: "Second", slug: "second", data: { title: "Second", summary: "Second summary" } },
+    ]);
   } finally {
     view.cleanup();
   }

@@ -310,6 +310,13 @@ export const mount = (node: React.ReactNode) => {
   });
   return {
     container,
+    // Re-renders into the SAME root, which is the only way to ask what React does with the
+    // element it already has: a second `mount` would prove nothing about reuse.
+    rerender: (next: React.ReactNode) => {
+      React.act(() => {
+        root.render(next);
+      });
+    },
     cleanup: () => {
       React.act(() => {
         root.unmount();
