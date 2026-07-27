@@ -49,7 +49,9 @@ normalizer's cap; equal numeric values do not couple the boundaries/error codes,
 and no alias or cross-owner cleanup is introduced.
 
 Production and tests use one typed file-handle factory. The reader performs
-exactly: one read-only `open(path)`; first `handle.stat({ bigint:true })`;
+exactly: one numeric
+`open(path, constants.O_RDONLY | constants.O_NONBLOCK)`; first
+`handle.stat({ bigint:true })`;
 positional handle reads bounded by cap+1; second handle stat; fatal UTF-8 decode;
 JSON parse; package normalize; one `handle.close()` in `finally`. It performs no
 path `stat`, `readFile` or reopen. Both stats must be regular and identical in
@@ -57,7 +59,11 @@ path `stat`, `readFile` or reopen. Both stats must be regular and identical in
 observed oversize, growth/shrink/rewrite, malformed read metadata, malformed
 UTF-8, decoded U+FFFD and close failure use only the static file code; a path
 replacement cannot redirect the already-open handle. Positive short reads
-continue, zero ends the loop, and total allocation/read is at most cap+1.
+continue, zero ends the loop, and total allocation/read is at most cap+1. Capture
+the complete body outcome before close. A stat/read/integrity/decode/JSON/
+normalizer body failure remains primary if close also fails; only body success
+plus close failure throws fresh cause-free `site_package_file_invalid`. Never
+attach or expose close detail.
 
 `scripts/load-projekty-domow.tsx` is side-effect-free on import. Export a typed
 `FullSiteLoaderImporter` over the closed
@@ -66,10 +72,20 @@ continue, zero ends the loop, and total allocation/read is at most cap+1.
 `runLoadProjektyDomowMain(argv,deps):Promise<number>`. Production and tests use
 that factory; no test-only loader exists. Only `if (import.meta.main)` invokes
 main and assigns its `0|1` result to `process.exitCode`.
+After the database closer is captured, apply/rollback sibling imports use one
+typed `Promise.allSettled` helper that awaits every launched import, then throws
+the first rejection in declared key order or returns its typed tuple. Close
+therefore always follows the last sibling settlement, including delayed
+resolution/rejection after an earlier failure.
 
 ## Implementation Pseudocode
 
 ```ts
+import { constants as fsConstants } from "node:fs";
+
+export const FULL_SITE_PACKAGE_RAW_OPEN_FLAGS =
+  fsConstants.O_RDONLY | fsConstants.O_NONBLOCK;
+
 type FullSiteLoaderModules = {
   database: { closeDatabase(): Promise<void> };
   apply: { applyFullSitePackage: typeof applyFullSitePackage };
@@ -150,17 +166,36 @@ async function withLoadedDatabase<T>(
   return outcome.value;
 }
 
+type LoadedModuleTuple<K extends readonly (keyof FullSiteLoaderModules)[]> = {
+  [I in keyof K]: K[I] extends keyof FullSiteLoaderModules
+    ? FullSiteLoaderModules[K[I]]
+    : never;
+};
+async function importModulesSettled<
+  const K extends readonly (keyof FullSiteLoaderModules)[],
+>(importModule: FullSiteLoaderImporter, keys: K): Promise<LoadedModuleTuple<K>> {
+  const launched = keys.map((key) =>
+    Promise.resolve().then(() => importModule(key)),
+  ); // sync throws cannot prevent later launches
+  const settled = await Promise.allSettled(launched);
+  const firstFailure = settled.find((result) => result.status === "rejected");
+  if (firstFailure) throw firstFailure.reason; // key order; all siblings settled
+  return settled.map((result) => {
+    if (result.status === "rejected") throw result.reason;
+    return result.value;
+  }) as LoadedModuleTuple<K>; // exhaustive, no `any`
+}
+
 async function applyWithImports(
   input: Parameters<FullSiteCliDeps["apply"]>[0],
   importModule: FullSiteLoaderImporter,
 ) {
   return withLoadedDatabase(importModule, async () => {
     const [{ applyFullSitePackage }, { defaultLegacyInstallLedger }, resolver] =
-      await Promise.all([
-        importModule("apply"),
-        importModule("ledger"),
-        importModule("resolver"),
-      ]);
+      await importModulesSettled(
+        importModule,
+        ["apply", "ledger", "resolver"] as const,
+      );
     return applyFullSitePackage(input, {
       ledger: defaultLegacyInstallLedger,
       resolveCurrentResource: resolver.createFullSiteCurrentResourceResolver(
@@ -177,10 +212,10 @@ async function rollbackWithImports(
 ) {
   return withLoadedDatabase(importModule, async () => {
     const [{ rollbackFullSiteInstall }, { defaultLegacyInstallLedger }] =
-      await Promise.all([
-        importModule("rollback"),
-        importModule("ledger"),
-      ]);
+      await importModulesSettled(
+        importModule,
+        ["rollback", "ledger"] as const,
+      );
     return rollbackFullSiteInstall({
       sourceRunId: input.sourceRunId,
       actorId: input.actorId,
@@ -232,7 +267,14 @@ if (import.meta.main) {
 }
 
 async function readBoundedFullSitePackage(path, fileDeps = DEFAULT_FILE_DEPS) {
-  const handle = await openFileOrThrowSafe(fileDeps, path, "r");
+  const handle = await openFileOrThrowSafe(
+    fileDeps,
+    path,
+    FULL_SITE_PACKAGE_RAW_OPEN_FLAGS,
+  ); // one nonblocking open before handle fstat
+  let outcome:
+    | { ok: true; value: FullSitePackageV1 }
+    | { ok: false; error: unknown };
   try {
     const before = await handleStatOrThrowSafe(handle);
     assertRegularAndInitiallyBounded(before, FULL_SITE_PACKAGE_RAW_SOURCE_BYTES);
@@ -242,10 +284,22 @@ async function readBoundedFullSitePackage(path, fileDeps = DEFAULT_FILE_DEPS) {
     assertStableSameHandleFile(before, after, bytes.byteLength);
     const source = decodeFatalUtf8OrThrowFileInvalid(bytes);
     if (source.includes("\uFFFD")) throw fileInvalid();
-    return normalizeFullSitePackageForWrite(parseJsonOrThrowJsonInvalid(source));
-  } finally {
-    await closeHandleOrThrowFileInvalid(handle);
+    outcome = {
+      ok: true,
+      value: normalizeFullSitePackageForWrite(parseJsonOrThrowJsonInvalid(source)),
+    };
+  } catch (error) {
+    outcome = { ok: false, error };
   }
+  let closeFailed = false;
+  try {
+    await closeHandleOrThrowFileInvalid(handle);
+  } catch {
+    closeFailed = true;
+  }
+  if (!outcome.ok) throw outcome.error; // body primary wins
+  if (closeFailed) throw fileInvalid(); // close-only failure
+  return outcome.value;
 }
 ```
 
@@ -260,12 +314,14 @@ The one-handle `readPackage` path ends with
 `buildReferencePlan` export before `deps.apply` acquires its lazy DB modules.
 It discards the result: no `referencePlan`/graph is added to `FullSiteCliDeps`,
 its apply input or public service input. TASK-547-02 independently builds and
-closes over its private plan; post-substitution native `desired` validation is
-owned there before `createRun`, item or domain writes.
+closes over its private plan. TASK-547-04-L01 pre-normalizes placeholder-native
+Pages before attaching refs; TASK-547-02 substitutes IDs and owns the
+resolved-native Page/desired revalidation before run/item/domain writes.
 At the loader boundary rollback invokes the canonical
 `rollbackFullSiteInstall({ sourceRunId, actorId, ledger, ... })` export and
 loads `database` first. After its closer is captured, every other module import
-is inside the protected callback and close runs exactly once. Execute success/
+is inside the protected callback, every launched sibling settles, and close runs
+exactly once after the last settlement. Execute success/
 failure × close success/failure is exhaustive: close-only failure becomes fresh
 cause-free `site_package_cli_failed`; a dual failure preserves the original
 service/import error and suppresses close detail.
@@ -291,8 +347,16 @@ one graph build after one reader normalization and before `deps.apply` for each
 dry-run/apply invocation, and zero graph builds for rollback. This suite does not
 inspect service internals; 02-L02 owns its independent private build. Pin the sole
 no-`PACKAGE_LIMITS.fileBytes` raw-reader proof, side-effect-free loader
-import/guard, every typed module-key failure, and all four execute×close outcomes
-with exact primary-error precedence and one close after capture.
+import/guard, every typed module-key failure, and a fast rejection beside a
+delayed resolving/rejecting sibling; assert declared-key primary selection and
+that close occurs after all launched imports settle. Pin all four execute×close
+outcomes with exact primary-error precedence and one close after capture. Cross
+representative file/integrity, JSON and preserved normalizer body failures with
+a failing close and assert the body error wins without close detail; body success
+plus failing close alone is cause-free `site_package_file_invalid`. A real FIFO
+without a writer and injected FIFO/socket/device/directory modes reject within a
+bounded test deadline via the same numeric nonblocking open, one handle-fstat and
+one close, with no hang, reopen or path stat.
 
 ## Sub-Tasks
 
