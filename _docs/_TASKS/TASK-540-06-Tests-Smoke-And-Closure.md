@@ -151,14 +151,13 @@ under `_docs/_workflows/`, which is neither. The implementation already agrees:
 `isLineLimitedHumanAuthoredModule` (`task-540-implement.mjs`) admits only `core/`,
 `packages/`, `store/` and `tests/` paths, and its own self-test asserts that
 `_docs/_workflows/example.mjs` is out of scope. An earlier revision of this contract
-extended the limit to all seven helpers, which contradicted both AGENTS.md and the
-code, and was unsatisfiable in practice: `task-540-implement.mjs` (~28,000 lines),
-`task-540-local-orchestrator.mjs` (3,966) and `task-540-test-name-contract.mjs`
-(2,459) exceed it, so honouring it would have meant splitting ~34,500 lines of
-tooling that no gate asks about. Keeping the child modules under
-`_docs/_workflows/task-540-smoke/**` at or below 1,000 lines remains a deliberate
-family convention — it is what makes a regression localise to one named file, and it
-holds today for every child module — but it is a convention, not the AGENTS.md gate.
+extended the limit to all seven helpers, which contradicted both AGENTS.md and the code,
+and was unsatisfiable in practice: `task-540-implement.mjs`, `task-540-local-orchestrator.mjs`
+and `task-540-test-name-contract.mjs` all exceed it by a wide margin, so honouring it would
+have meant splitting the bulk of the family's tooling, which no gate asks about. Their exact lengths are deliberately not restated here: `wc -l` is the authority, and `tests/unit/workflows/task540StaleCountProse.test.ts` measures that the three exceed the limit and rejects any length restated back into the prose. Keeping the child modules under
+`_docs/_workflows/task-540-smoke/**` at or below 1,000 lines remains a deliberate family
+convention — it is what makes a regression localise to one named file, and it holds today
+for every child module — but it is a convention, not the AGENTS.md gate.
 
 TASK-540 stages only those changed top-level and child-module paths without
 changing the broad `_docs/_workflows/` ignore rule. Missing, ignored-only, partially

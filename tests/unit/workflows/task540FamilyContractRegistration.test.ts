@@ -184,8 +184,17 @@ test("every forbidden glob the family actually mutated carries a recorded except
  * The 1,000-line limit does not reach workflow tooling: AGENTS.md scopes it to "a
  * human-authored production module or test file". A doc revision claimed otherwise for all
  * seven top-level helpers, three of which exceed it, making the claim unsatisfiable without
- * splitting ~34,500 lines of tooling no gate measures. The owner's decision was to correct
- * the documents. This test keeps the reasoning from being deleted and re-litigated.
+ * splitting the bulk of the family's tooling, which no gate measures. The owner's decision
+ * was to correct the documents. This test keeps the reasoning from being deleted and
+ * re-litigated.
+ *
+ * It used to pin each helper's length as a literal -- "(3,966)" and friends. That is how a
+ * stale count survived a remediation aimed at exactly this defect: the assertion REQUIRED the
+ * wrong number to stay, so correcting the comment would have turned this test red.
+ * task-540-local-orchestrator.mjs had reached 3,988 by then. Lengths now live only in
+ * `wc -l`; what is pinned here is that the three are named in the decision and excluded by
+ * their real paths. task540StaleCountProse.test.ts measures against disk that they really do
+ * exceed the limit, and rejects any length restated back into the comment.
  */
 test("the settled helper line-limit scope decision stays recorded next to the predicate", () => {
   expect(implementSource).toContain("SETTLED SCOPE DECISION");
@@ -193,12 +202,18 @@ test("the settled helper line-limit scope decision stays recorded next to the pr
     'AGENTS.md § "File Size and Modularity" binds the 1,000-line limit to "a human-authored'
   );
   // The three helpers that exceed the limit must stay named, so the claim stays checkable.
+  // Scoped to the decision block: these basenames occur all over the module otherwise.
+  const settledScope = implementSource.slice(
+    implementSource.indexOf("// SETTLED SCOPE DECISION"),
+    implementSource.indexOf("function isLineLimitedHumanAuthoredModule")
+  );
+  expect(settledScope).toContain("AGENTS.md");
   for (const helper of [
-    "task-540-implement.mjs (~28,000 lines)",
-    "task-540-local-orchestrator.mjs (3,966)",
-    "task-540-test-name-contract.mjs (2,459)",
+    "task-540-implement.mjs",
+    "task-540-local-orchestrator.mjs",
+    "task-540-test-name-contract.mjs",
   ]) {
-    expect(implementSource).toContain(helper);
+    expect(settledScope).toContain(helper);
   }
   // And the predicate must still exclude them by their real paths, not only via a
   // placeholder example path that a targeted widening could route around.

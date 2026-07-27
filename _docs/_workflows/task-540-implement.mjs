@@ -4536,10 +4536,17 @@ async function worktreeSnapshot(
 //
 // A revision of the TASK-540-06 / TASK-540-06-L01 contracts extended the limit to all seven
 // top-level task-540-*.mjs helpers. That contradicted both AGENTS.md and this function, and
-// was unsatisfiable: three helpers exceed it -- task-540-implement.mjs (~28,000 lines),
-// task-540-local-orchestrator.mjs (3,966) and task-540-test-name-contract.mjs (2,459) --
-// so honouring it meant splitting ~34,500 lines of tooling that no gate measures. The owner's
+// was unsatisfiable: three of them sit far above it -- task-540-implement.mjs,
+// task-540-local-orchestrator.mjs and task-540-test-name-contract.mjs -- so honouring it
+// meant splitting the bulk of the family's tooling, which no gate measures. The owner's
 // decision was to correct the documents, NOT to split the helpers.
+//
+// Their lengths are deliberately NOT restated here. This comment used to carry all three
+// plus their sum, and task-540-local-orchestrator.mjs had already drifted past the figure
+// it claimed; task-540-implement.mjs cannot state its own length at all without going stale
+// the next time anyone edits this very comment. `wc -l` is the authority. The only
+// load-bearing claim is that those three exceed the limit, and
+// tests/unit/workflows/task540StaleCountProse.test.ts measures that against disk.
 //
 // The 1,000-line ceiling on the child modules under _docs/_workflows/task-540-smoke/** is a
 // separate thing: a family CONVENTION, and the property that makes a regression localise to
@@ -7088,8 +7095,8 @@ async function assertTask540TouchedModuleLineLimitContract() {
     Object.freeze({ path: "core/services/example.generated.ts", expected: false }),
     // The three real helpers that exceed 1,000 lines. Pinned by their actual paths, not a
     // placeholder, so widening the predicate to _docs/ fails here instead of silently
-    // demanding that ~34,500 lines of workflow tooling be split. See the settled scope
-    // decision above isLineLimitedHumanAuthoredModule.
+    // demanding that the bulk of the family's workflow tooling be split. Their sizes are not
+    // restated -- see the settled scope decision above isLineLimitedHumanAuthoredModule.
     Object.freeze({ path: "_docs/_workflows/task-540-implement.mjs", expected: false }),
     Object.freeze({ path: "_docs/_workflows/task-540-local-orchestrator.mjs", expected: false }),
     Object.freeze({ path: "_docs/_workflows/task-540-test-name-contract.mjs", expected: false }),
