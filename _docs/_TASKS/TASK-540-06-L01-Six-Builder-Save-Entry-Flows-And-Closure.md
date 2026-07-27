@@ -265,12 +265,14 @@ board counts are read fresh and TASK-540 applies only its own In Progress→Done
 The current repository broadly ignores `_docs/_workflows/`; TASK-545 owns the
 repository-wide workflow and durable screenshot-manifest policy. TASK-540 historically
 recovered its operational files only into the local worktree. Recovery is complete; the
-Vite/bridge/local-host/schema/recovery prerequisites are landed. The current step is
-behavior-preserving modularization of the smoke facade into cohesive tracked owners
-under `_docs/_workflows/task-540-smoke/**`; it must not replay recovery, add hardening,
-or alter product behavior. Only after every facade and child owner is at most 1,000
-physical lines and all smoke bytes stabilize may TASK-540 compute dependent hashes and
-update the implement/executor/task/test pins. Final preflight and staging cover the
+Vite/bridge/local-host/schema/recovery prerequisites are landed. Behavior-preserving
+modularization of the smoke facade into cohesive tracked owners under
+`_docs/_workflows/task-540-smoke/**` is complete; it replayed no recovery, added no
+hardening, and altered no product behavior. Every facade and child owner is at or below
+1,000 physical lines and the smoke bytes have stabilized, so the condition on computing
+dependent hashes and updating the implement/executor/task/test pins is met; that
+recomputation is part of the closure transaction, not a step ahead of it. Final
+preflight and staging cover the
 seven top-level helper/facade paths plus every changed child owner, without changing
 `.gitignore` or staging any unrelated workflow or loose screenshot.
 The sole historical recovery source is commit

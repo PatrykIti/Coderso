@@ -92,10 +92,12 @@ zero-finding strict scan; it must not restore or validate the historical pins.
 **Historical Stable Select Handoff, Latest-Target Diagnostics, And Hash-Only Cleanup Receipts Implemented And Target-Revalidated:** 2026-07-21 — the next helper-backed diagnostic smoke passed setup and the Tone visible-effect flow, then emitted exact terminal `{failedActionId:"dg-024-entry-nav-cancel",failureClass:"pointer_locked",cleanupPhase:3,cleanupFailureClass:"persistent_provenance_failed"}`. Exact nonce `wf540-fb30befde747` residue was four content types, six Entries, two Screens, one Media row, and its exact 68-byte file; a literal-ID, no-wildcard, no-user-delete, no-follow cleanup script with SHA-256 `821fe5d6ecf122edf068d8b051c3ac9c903faecc19f7d84399a244e56dbf2b1e` removed exactly that `4/6/2/1 + file` family, and two consecutive post-apply dry-runs proved `0/0/0/0 + no file` while preserving the canonical admin and proving no FK blocker. No TASK-540 screenshot, browser/server process, or owned port remained. Three independent read-only traces found no product defect: Tone selection used a mixed-time cached teardown sample, dirty-navigation retained a sticky historical blocker instead of the latest poll state, and each successful cleanup Admin GET carried a non-empty `Buffer` into recursive freeze after provenance but before DELETE; the same latent defect also affected DELETE and 404 absence receipts. The executor now requires the full Tone visible-effect and atomic Select/body teardown postcondition continuously for at least 600 ms across at least two samples plus a final atomic handoff sample, reports one of seven exact Tone-select classes, recomputes each target-acquisition poll from the latest one of five blocker classes within the closed twelve-class dirty-navigation action union, and hashes bounded non-empty authoritative response bytes before discarding the raw `Buffer`; only validated lowercase SHA-256 enters frozen cleanup receipts, while exact ID/media key/URL and fresh absence proofs remain unchanged and `deepFreezeExact` is not weakened. Hermetic real Admin P/C/A tests and mutants cover legal Screen/Entry representation drift, wrong ID/key/URL, exact attempted-request/no-DELETE/zero-receipt projection, accepted one-byte/exact-MAX boundaries, non-Buffer/empty/oversized byte rejection, unconditional latest-state assignment, full dwell reset/body/geometry predicates, relock timelines, and raw-Buffer/hash regressions. Product source remains untouched by this repair. Frozen executor SHA-256 `6accccffc88371978f2c3ad1727dbbf96aa2473802ea583d14cbc0c4ea548001` passes Prettier, syntax, diff checks, and the full self-test with 496 actions, 177 runtime receipts, 72 cleanup actions, 26 captures, and 2668 negative cases. Fresh read-only re-audits, one diagnostic helper-backed smoke, then the canonical audit/full-validation/smoke, changelog, and closure remain mandatory.
 **Historical Scroll-Lock Ownership And Bootstrap-Restore Uncertainty Repair Trigger:** 2026-07-21 — the next helper-backed smoke reached the same Entry dirty-navigation boundary and emitted exact terminal `{failedActionId:"dg-024-entry-nav-cancel",failureClass:"scroll_locked",cleanupPhase:8,cleanupFailureClass:"phase_failed"}`. A post-exit read-only absence audit proved every TASK-540 nonce-shaped resource, owned file, screenshot, helper/browser/server process, and owned port absent, but phase 8 did not return accepted restoration evidence before the executor exited; the private preflight bootstrap timestamp baseline and newest smoke-owned pair are no longer available, so the final `lastLoginAt`/`updatedAt` restoration outcome is unprovable. This consumed run must not be recovered by guessed timestamps or any post-exit write and does not authorize closure. Exact source/dependency tracing proved `dg-022` handed off one final atomic unlocked sample after its full 600 ms dwell, `dg-023` performed read-only DOM/URL observations, and `dg-024` reported only its last completed target poll rather than a continuous ten-second lock; no product or Radix reopen path is evidenced before the unperformed navigation click. The bounded cross-CLI lock-owner observation and phase-8 uncertain-CAS reconciliation plus their tests/mutants are now landed in the exact pre-bridge checkpoint above, with product source unchanged. They still await the bridge-inclusive targeted gate and carry no current completion receipt.
 **Current Repair Execution Order:** The final sentence of the 2026-07-21 trigger evidence describes its then-planned sequence and is historical. The authoritative
-sequence is the `Current Closure Repair State` and `Family modularity prerequisite` sequence in this file:
-finish cohesive smoke facade/child modularization to at most 1,000 physical lines per
-module -> recompute final dependent helper/task/test pins only after all smoke bytes
-stabilize -> targeted and full gates -> helper restart -> exactly one canonical
+sequence is the `Current Closure Repair State` and `Family modularity prerequisite` sequence in this file.
+Its first step, cohesive smoke facade/child modularization to at most 1,000 physical
+lines per module, is **done** as of 2026-07-27 and is struck from the remaining work;
+the surviving order is:
+prove split integrity and recompute final dependent helper/task/test pins now that the
+smoke bytes have stabilized -> targeted and full gates -> helper restart -> exactly one canonical
 seven-flow Playwright CLI smoke with 13/13 screenshots and deterministic cleanup ->
 changelog/control and child-first status closure -> final closure checks, commit, and
 integration into `feat/implementations`.
@@ -193,14 +195,16 @@ Before the current corrective chain, closure consumed the exact source-owner seq
 state is historical evidence, not current closure authority. The corrective source/test
 commits and exact R01 → R03 → L03 → L04 → L01 owner re-gates are complete. The
 completed current prefix is the landed no-Claude helper, host, schema, recovery, and
-smoke-contract work plus the behavior-preserving splits through HEAD `8259a326`. The
-remaining prerequisite is cohesive smoke facade/child modularization to at most 1,000
-physical lines per module. Split-integrity self-tests must prove exhaustive,
+smoke-contract work plus the behavior-preserving splits through HEAD `8259a326`. This
+prerequisite — cohesive smoke facade/child modularization to at most 1,000 physical
+lines per module — is **satisfied**; see `Current Closure Repair State` at the top of
+this file for the measurement. It is no longer part of the remaining work.
+Split-integrity self-tests must prove exhaustive,
 non-overlapping action-to-scenario ownership for the current manifest, including the
 enumerated related-cache and responsive-users owners, so no omitted registry member can
-silently fall through to a shared builder. After all smoke bytes stabilize, recompute
-final dependent pins, run targeted/full gates, restart the helper, and run exactly one
-canonical seven-flow/13-screenshot smoke before closure. The
+silently fall through to a shared builder. Now that the smoke bytes have stabilized,
+recompute final dependent pins, run targeted/full gates, restart the helper, and run
+exactly one canonical seven-flow/13-screenshot smoke before closure. The
 TASK-540 root owns the canonical 15-row pre-split evidence table. No owner, count, or
 SHA-256 may be dropped; every final production, test, and test-support record is emitted
 as `{ path, owner, lines, sha256 }` from the full baseline history plus current tracked
@@ -840,8 +844,8 @@ sole host CLI reads no `.env`/profile/package launcher and spawns backend/Admin/
 bytes already resolve Vite 8.1.5 and remain byte-identical/read-only throughout TASK-540. After checkpoint verification, TASK-540 first changes only
 `task-540-smoke-host.mjs` Vite 8.1.5 literals, default fixtures, version mutants, self-test expectations, and embedded child-source byte pin, then privately re-audits
 Vite 8.1.5 optimizer/readiness before bridge/local-host/schema/CAS/ACK/recovery/prompt/test implementation. After formatting and only once all helper bytes are final,
-only after smoke modularization is complete does it compute the final dependent helper
-hashes and perform the implement/executor/task/test repins; final preflight validates
+it computes the final dependent helper
+hashes and performs the implement/executor/task/test repins; final preflight validates
 the seven top-level entrypoints plus every tracked child owner before the complete
 targeted gate.
 Browser authority uses a task-owned `0700` temp root outside the repo for

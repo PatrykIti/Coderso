@@ -525,11 +525,13 @@ remaining TASK-540 land order was exactly:
 TASK-540-06-L01 closure
 ```
 
-The current remaining order is exactly:
+Behavior-preserving smoke executor/scenario modularization to <=1000 LOC per module was
+the first step of this order and is **done** as of 2026-07-27 (see `Current Closure
+Repair State` at the top of this file for the measurement); it is struck below. The
+current remaining order is exactly:
 
 ```text
-finish behavior-preserving smoke executor/scenario modularization to <=1000 LOC per module →
-run targeted and full gates after all smoke bytes stabilize →
+run targeted and full gates now that all smoke bytes have stabilized →
 restart the helper-backed server and run one canonical seven-flow Playwright CLI smoke →
 require 13/13 screenshots, zero console errors, and deterministic cleanup →
 create changelog 1252 and close all 20 task files child-first plus the board →
@@ -694,11 +696,12 @@ the subsequent five-lens intervention landed R01 → R03 → L03 → L04 in depe
 order, followed by the L01 compatibility test. Those 2026-07-19 R03
 selector-consumer bytes and gate are historical; R03's replacement 2026-07-20
 generation plus its separate auxiliary dead-code gate are the current authorities. The
-other matching current leaf receipts pass; the closure leaf is not regated and returns
-to the closure frontier only after the current behavior-preserving smoke modularization
-finishes with every facade/child module at most 1,000 physical lines. Final dependent
-hashes and pins are recomputed only after those bytes stabilize; targeted/full gates,
-the canonical runtime smoke, and closure then follow in the current order above.
+other matching current leaf receipts pass; the closure leaf is not regated and is back
+at the closure frontier, because the behavior-preserving smoke modularization it waited
+on finished with every facade/child module at most 1,000 physical lines. Those bytes
+have stabilized, so final dependent hashes and pins are recomputed as part of the
+closure transaction; targeted/full gates, the canonical runtime smoke, and closure then
+follow in the current order above.
 L03's earlier overflow and
 single-versus-multiple media receipts are historical. The matching
 `_docs/CMS_API.md` update is already landed and remains read-only while closure validates
