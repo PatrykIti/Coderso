@@ -92,10 +92,16 @@ These 2026-07-14 line snapshots are retained as audit provenance. They describe 
 pre-implementation source layout; current ownership and validation are anchored by the
 named symbols and regression suites in this contract rather than mutable line numbers.
 
-- Screen canvas fixed reserve: `ScreenAuthoringCanvas.tsx:491-523`.
+- Screen canvas fixed reserve: `ScreenAuthoringCanvas.tsx:491-523`; the shipped
+  responsive scroller is `ScreenAuthoringCanvas.tsx:528-536`, with the base
+  `p-6 lg:p-8` gutters at `:530` and the conditional `lg:pr-[332px]` at `:531`.
 - Responsive panel width already exists:
   `CanvasEditor.tsx:88-97` (`w-[min(280px,calc(100%-2rem))]`).
-- Label without role: `CanvasEditor.tsx:143-153`.
+- Label without role: `CanvasEditor.tsx:143-153`; the shipped named-region panel is
+  `CanvasEditor.tsx:146-152`, where `{...panelDataProps}` at `:147` precedes the
+  shell-owned `ref` at `:148`, `role="region"` at `:149`, `PANEL_POSITION_CLASS` at
+  `:150`, and `aria-label={panelAriaLabel}` at `:151`. That spread-then-semantics
+  ordering is the fail-closed guarantee, so pin it by those symbols, not by prose.
 
 ## Implementation Pseudocode
 
@@ -175,6 +181,18 @@ The `lg` breakpoint is final and the existing base padding is part of the contra
 - at 320/390/480 the scroller border-box equals its host width within 1 CSS px,
   its content box remains wider than 0 px, and the panel bounding box stays
   inside the viewport; at 1024 and 1280 the panel also stays inside the viewport.
+
+Evidence split for the two `padding-left` clauses: the browser geometry sample carries
+only `paddingRight`
+(`_docs/_workflows/task-540-smoke/contract/visible-assertion-schemas.mjs:56-66`,
+`_docs/_workflows/task-540-smoke/contract/metadata.mjs:419-427`), so
+`narrow-padding-and-positive-geometry` asserts the computed `24px` right padding and
+positive narrow content width
+(`_docs/_workflows/task-540-smoke/contract/visible-assertion-predicates.mjs:523-570`),
+`wide-padding-delta-300` asserts `32px`/`332px` plus the 300 ± 1 CSS px content-box delta
+(`:571-616`), and `panel-inside-viewport` covers all five open widths (`:617-627`). Both
+`padding-left` halves stay pinned structurally by the exact base-class assertion in
+`tests/vitest/ui/custom-screen-authoring-boundary.test.ts:483-486`.
 
 Do not replace the base `p-6 lg:p-8`, change the breakpoint after smoke, add a
 resize listener, or use effect-driven viewport state. Keep panel width/max-height

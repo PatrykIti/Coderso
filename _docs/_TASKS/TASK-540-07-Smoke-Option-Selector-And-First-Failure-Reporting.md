@@ -102,7 +102,7 @@ The attribution investigation asked whether `dg-021` genuinely succeeds. It does
 not. Its source correctly returns
 `{ failureClass: "tone_portal_settlement", settled: false }` — byte-identical in
 shape to `TONE_OPEN_FAILURE_FRAMES` in
-`_docs/_workflows/task-540-smoke/executor/config.mjs:310-316`. The frame never
+`_docs/_workflows/task-540-smoke/executor/config.mjs:466-473`. The frame never
 leaves the browser:
 
 - `_docs/_workflows/task-540-smoke/browser/generic-invocations.mjs:456-458`
@@ -123,19 +123,20 @@ leaves the browser:
 valid success frame. Downstream everything then behaves correctly and sees
 nothing: `classifyPrivateToneOpenFailureFrame`
 (`executor/failure-boundary.mjs:115-129`, called at
-`runtime/command-authority.mjs:398` and
+`runtime/command-authority.mjs:399` and
 `executor/capabilities/execute-action.mjs:316-319`) returns `null`;
 `completePrivateFailureAction` (`executor/plan-execution.mjs:104-106`) finds no
 retained failure; the `assertionDependencies` check
 (`executor/plan-execution.mjs:71-74`) passes because `dg-021` really is in
 `completed`. `dg-022` then fails instantly rather than after a poll — it starts
 with `page.context().__wf540Recall(stateKey)`
-(`browser/simple-invocations.mjs:352`), `dg-021` never reached
-`__wf540Remember` (`browser/simple-invocations.mjs:295`), so
+(`browser/simple-invocations.mjs:354`), `dg-021` never reached
+`__wf540Remember` (`browser/simple-invocations.mjs:296`), so
 `authorityOptionPreconditionFailed` short-circuits and it returns
 `fail("tone_select_authority_option_precondition")` **before** `option.click()`
 — also discarded. `dg-023`'s observation predicate
-(`contract/output-contracts.mjs:680-686`) requires only non-empty
+(`contract/output-contracts.mjs:688-694`, the `entry-drafts-url-before-cancel`
+predicate) requires only non-empty
 `contentBytes` / `presentationBytes` / `url`, so it cannot catch the missing tone
 either. `dg-024` is the first downstream action whose failure frame is on the
 preserved list, hence the first failure the harness can report.
@@ -144,7 +145,7 @@ The measured ~64-65 s open-Select window matches exactly: ~30 s (`dg-021` portal
 poll) + ~0 s (`dg-022` fail-fast) + fast observe + ~30 s (`dg-024` target
 hit-test poll).
 
-Why no self-test caught it: `executor/self-test/failure-action-execution.mjs:109-124`
+Why no self-test caught it: `executor/self-test/failure-action-execution.mjs:120-131`
 injects `createPrivateToneOpenFailure` by monkey-patching
 `capabilities.executeAction`, i.e. **below** the browser wrapper; and
 `executor/self-test/browser-tone-flow-source.mjs` validates the compiled source
@@ -187,14 +188,14 @@ Out of scope:
 |---|---|
 | Change `SelectItem` to emit a direct text node | `SelectPrimitive.ItemText` supplies the trigger's `SelectValue` text, the option's accessible name and Radix typeahead. Removing it breaks value rendering and accessibility to satisfy a CSS text selector. |
 | Patch or pin `@radix-ui/react-dismissable-layer` | There is exactly one copy (1.1.16) and it behaves correctly. The locked body is the correct consequence of a Select that was never closed. |
-| Replace `:text-is()` with `getByText(text, { exact: true })` in the tone sources | `getByText` does resolve to the innermost match and would work, but it is a different engine from the rest of the registry and would leave the defect class alive for the other 25 text-engine selectors. Fix the selector shape and guard it instead. |
+| Replace `:text-is()` with `getByText(text, { exact: true })` in the tone sources | `getByText` does resolve to the innermost match and would work, but it is a different engine from the rest of the registry and would leave the defect class alive for the other 27 text-engine selectors. Fix the selector shape and guard it instead. |
 | Weaken `dg-021`'s postcondition so it tolerates `optionCount === 0` | Relaxes a behaviour assertion. The postcondition is correct as written. |
 | Make the generic (non-registered) unit wrapper fail closed for every source | Larger blast radius: it needs a sweep of all ~390 unit run-code sources to confirm their return values first. Recorded as a non-blocking follow-up in L02, not executed here. |
 
 ## Selector sweep result (all 59 registered selectors)
 
-A full read of `createSelectorRegistry` (`contract/selectors.mjs:47-165`) splits
-the registry into 26 text-engine selectors and 33 pure attribute/structural
+A full read of `createSelectorRegistry` (`contract/selectors.mjs:106-230`) splits
+the registry into 28 text-engine selectors and 31 pure attribute/structural
 selectors. Every text-engine selector's label was traced to the component that
 renders the matched host, every shadcn primitive that could wrap children was
 read (`core/admin/components/ui/{select,tabs,dropdown-menu,badge,alert,button,card}.tsx`),
@@ -202,14 +203,15 @@ and every verdict was measured rather than reasoned. Result:
 
 - **Exactly one defect:** `muted`. It is the only registered selector that
   addresses a Radix `SelectItem` by the item host's own text.
-- `fieldOption` (`contract/selectors.mjs:68-71`) already uses
+- `fieldOption` (`contract/selectors.mjs:126-129`) already uses
   `[role="option"]:has(span:text-is("<label> (<type>)"))` — the same widget
   class, the correct shape, and the template for the fix.
 - Only `SelectItem` inserts a wrapper. `Badge`, `DropdownMenuItem`,
   `TabsTrigger` and `Button` all pass children through unwrapped.
 - Two previously-flagged selectors are settled as safe: `runtimeTab`'s host is a
   raw `<button type="button" role="tab">{tab.label}</button>` at
-  `core/admin/ui/custom-screens/ScreenRuntimeContainerBlocks.tsx:196-212` (not a
+  `core/admin/ui/custom-screens/ScreenRuntimeContainerBlocks.tsx:199-220`
+  (`role="tab"` at `:202`, `{tab.label}` at `:219`) (not a
   shadcn `TabsTrigger`; `ui/tabs.tsx` is used nowhere under
   `core/admin/ui/custom-screens`), and `mediaCard` is `MediaCard.tsx:192-195`'s
   grid `<button>` with an inner `<p>`, already using `:has()`.
@@ -219,7 +221,7 @@ and every verdict was measured rather than reasoned. Result:
 - Consumption is Playwright-only. No registered text selector reaches
   `document.querySelectorAll` — only the plain-CSS `panelSelector`,
   `triggerSelector` and `ALL_SELECT_CONTENT_SELECTOR` do, at
-  `browser/simple-invocations.mjs:331` and `:338` — so the
+  `browser/simple-invocations.mjs:322` and `:339` — so the
   `:has(span:text-is(…))` form is legal at every consumption site.
 
 Adjacent items checked and confirmed non-issues: `builderSave` and `entrySave`
@@ -255,7 +257,7 @@ corrected here and carried into the leaves:
 
 A third seed claim — that `browser-tone-flow-source.mjs` "asserts only on the raw
 pre-normalization source text" — is imprecise. It receives the **post**-wrapper
-`compiledSource` (`executor/self-test/browser-run-code-source-ownership.mjs:66-89`),
+`compiledSource` (`executor/self-test/browser-run-code-source-ownership.mjs:165-191`),
 but validates it exclusively by substring inclusion, so both wrappers satisfy it
 identically. The effect matches the seed; the mechanism does not, and L02's
 coverage is written against the real mechanism.
@@ -285,21 +287,28 @@ by another TASK-540 leaf.
   `browser-screenshot: 13`, `browser-global-list: 1`), and the executor
   self-test must still report `actions: 496`, `runtimeReceipts: 177`,
   `cleanupActions: 72`, `captures: 26`.
-- `negativeCases` may only **increase**. Baselines measured on this working tree
-  before any edit: contract self-test `109`, executor self-test `2810`.
+- `negativeCases` may only **increase**. Pre-edit historical baselines, measured
+  on this working tree before any edit: contract self-test `109`, executor
+  self-test `2810`. Post-implementation measured values at HEAD (2026-07-27):
+  contract self-test `117`, executor self-test `2985`.
 - No assertion may be relaxed. Both leaves strictly strengthen the harness: L01
   turns an unmatchable selector into a matching one and makes the bad shape a
   build-time error; L02 turns a silently-discarded verdict into either a
   classified hard failure or a thrown error.
 - Every module under `_docs/_workflows/task-540-smoke/**` must stay at or below
   1,000 physical lines (parent's `Current Smoke Module Ownership` contract).
-  Current sizes of the touched files: `contract/selectors.mjs` 166,
-  `executor/config.mjs` 370, `browser/generic-invocations.mjs` 494,
-  `browser/scenarios/dirty-guards.mjs` 414,
-  `executor/self-test/browser-dirty-navigation-source.mjs` 364,
-  `executor/self-test/browser-tone-flow-source.mjs` 635,
-  `executor/self-test/browser-run-code-source-ownership.mjs` 469,
-  `contract/self-test/registries-fixtures.mjs` 368. No split is required.
+  Sizes of the touched files, measured post-implementation at HEAD (2026-07-27):
+  `contract/selectors.mjs` 230, `executor/config.mjs` 557,
+  `browser/generic-invocations.mjs` 513,
+  `browser/scenarios/dirty-guards.mjs` 442,
+  `executor/self-test/browser-dirty-navigation-source.mjs` 364 (untouched),
+  `executor/self-test/browser-tone-flow-source.mjs` 710,
+  `executor/self-test/browser-run-code-source-ownership.mjs` 716,
+  `contract/self-test/registries-fixtures.mjs` 424. No split was required, and
+  the ≤ 1,000 gate holds tree-wide: the largest module under
+  `_docs/_workflows/task-540-smoke/**` is
+  `executor/self-test/browser-widget-absence-scope.mjs` at 964, and the smoke
+  entry point `_docs/_workflows/task-540-smoke-executor.mjs` is 976.
 - `_docs/_workflows/` is gitignored. Any commit of these implementation files
   needs `git add -f`; the task files in `_docs/_TASKS/` are tracked normally.
 
@@ -320,7 +329,7 @@ applies. The relevant boundary invariants are the harness's own:
   executor's stdout classification path. The frames are the existing frozen
   vocabulary `canonicalJson({ failureClass, settled: false }) + "\n"` over
   `TONE_OPEN_BROWSER_FAILURE_CLASSES` / `TONE_SELECT_BROWSER_FAILURE_CLASSES`
-  (`executor/config.mjs:304-334`). They are fixed literals with no interpolated
+  (`executor/config.mjs:460-490`). They are fixed literals with no interpolated
   value, so no credential, session token, entry content or fixture secret can
   enter them. `MAX_FAILURE_ACTION_DIAGNOSTIC_BYTES` bounding in
   `classifyPrivateTone*FailureFrame` stays unchanged.

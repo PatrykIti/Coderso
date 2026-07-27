@@ -188,7 +188,7 @@ anchors.
   `customScreensClient.ts:109-129,369-389`.
 - Same-context-only cache-event origin/operation delivery, canonical/legacy transport
   constants, storage emission, strict parsing, broadcast, and subscription teardown:
-  `cacheBus.ts:10-39,42-48,57-237`.
+  `cacheBus.ts:10-39,42-48,57-233`.
 - Cache-bus transport/token, twin correlation, descriptor hardening, and bounds regressions:
   `cacheBus.test.ts:184-1165`.
 - Read-only historical provenance for the registered-route direct-image override
@@ -440,7 +440,12 @@ function useScreenEntryHydration(input: {
     entryLoadGenerationRef; overrideLoadGenerationRef;
     contentDirtyRef; presentationDirtyRef;
   };
-  commit: { applyEntry; applyOverrides; reportEntry; reportOverrides };
+  commit: {
+    applyEntry; applyOverrides;
+    setEntryError; setPresentationError;
+    setRemoteEntryWarning; setRemotePresentationWarning;
+    setEntryActivity; setPresentationActivity;
+  };
 }) {
   // Capture the unchanged channel/route/visit/load/draft token before each await.
   // Commit only when mounted + route + visit + channel generation are exact.
@@ -520,8 +525,10 @@ additive boundary update/gate. That split is durable. For the landed 2026-07-19
 correction, source commit order was R01 shared selector → R03 renderer consumer → L03
 Entry consumer/accessibility/workspace helper → L04 Screen Settings accessibility. The
 current five-owner re-gates completed in order R01 → R03 → L03 → L04 → L01. The
-remaining order is clean five-lens post-audit → full validation → runtime smoke →
-closure; a passing check that still reads only the thin
+remaining order is smoke-host-only Vite 8.1.5 repin/readiness revalidation →
+bridge/helper implementation → final dependent pins → exact seven-helper tracked
+parity → combined targeted gate → clean five-lens post-audit → full validation →
+runtime smoke → closure; a passing check that still reads only the thin
 wrapper is insufficient evidence.
 
 ### Required workflow and targeted validation changes
@@ -538,7 +545,10 @@ Entry restyle/pure tests split 13+4.
 
 After reconciling every TASK-540 modularity repair from baseline `e5f15a567`, the
 authoritative family aggregate is 64 Vitest + 18 Bun = 82 target files: 81
-source-owner/read-only dependency files and 1 closure-owned aggregate file. These totals
+source-owner/read-only dependency files and 1 closure-owned aggregate file. The
+workflow's `CLOSURE_OWNER_TEST_FILES` additionally tracks a second closure-owned test
+file, `tests/unit/workflows/task540SmokeExecutorSecurity.test.ts`, which sits
+deliberately outside this 82-file matrix and is not drift. These totals
 supersede the earlier partial 51+7 calculation. TASK-540-06 and workflow assertions must
 use 64+18 consistently before closure; changelog remains 1252.
 
@@ -608,7 +618,10 @@ historical green L03 split gate replaced only `Modularity Repair Pending` with t
 matching HEAD/dirty-path-bound `Modularity Repair Revalidated` receipt while preserving
 the historical behavior receipt. The later L04 and L01 gates receive their own receipts
 and do not replace the current L03 revalidation. The mandatory TASK-540 runtime smoke
-runs only after the fresh post-audit, now that the current L03 behavior gate has landed.
+runs only after smoke-host-only Vite 8.1.5 repin/readiness revalidation, bridge/helper
+implementation, final dependent pins, exact seven-helper tracked parity, the combined
+targeted gate, the fresh post-audit, and full validation, now that the current L03
+behavior gate has landed.
 
 ## Canonical/legacy remote-event repair contract
 

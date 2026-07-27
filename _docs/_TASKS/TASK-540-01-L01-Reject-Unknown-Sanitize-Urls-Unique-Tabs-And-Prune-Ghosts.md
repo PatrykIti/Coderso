@@ -92,10 +92,12 @@
   `tests/vitest/assistant/action-plan-schema.test.ts` and
   `tests/vitest/assistant/catalogBlueprintEngine.test.ts`
 - fixture-only compatibility update in
-  `tests/unit/assistant/actionExecutorService.test.ts`, limited behaviorally to the
+  `tests/unit/assistant/actionExecutorCustomScreens.test.ts`, limited behaviorally to the
   existing `executeAssistantActionPlan patches custom screen block data` case, plus the
-  mandatory no-loss partition of its exact 73-test name multiset into the 12 named Bun
-  suites and five support modules below
+  mandatory no-loss partition of the historical
+  `tests/unit/assistant/actionExecutorService.test.ts` 73-test name multiset into the 12
+  named Bun suites and five support modules below; that partition source itself now
+  retains only positions 1-6
 
 ### Current selector-owner correction (landed before R03; revalidated)
 
@@ -180,9 +182,11 @@ its executable projection.
 The older blanket `screenDocumentOps.ts` exclusion is superseded only for the
 corrective binding-ID builder handoff described above. It does not grant R01 authority
 over insertion, movement, duplication shape, GC, or any other document operation.
-`ScreenBlockInspector.tsx` remains exclusively owned by TASK-540-02-L01: that leaf may
-import the same domain builder for its existing `createScreenFieldBinding` helper, but
-R01 must not edit the Inspector or its UI tests.
+`ScreenBlockInspector.tsx` and its extracted `screenBlockInspectorModel.ts` remain
+exclusively owned by TASK-540-02-L01: that leaf's `createScreenFieldBinding` helper now
+lives in the model module and calls the same domain builder there, with the Inspector and
+`hooks/useCustomScreenDocumentActions.ts` as its consumers. R01 must not edit the
+Inspector, its model, or its UI tests.
 
 Do not edit route registration/handlers, `ScreenBlockLibrary.tsx`, renderer/UI files,
 task indexes, or changelogs in this leaf. Update the named existing behavior tests
@@ -843,7 +847,9 @@ or persistence fallback.
 These 2026-07-13 line snapshots are retained as audit provenance. They describe the
 pre-implementation source layout; current ownership and validation are anchored by the
 named files, symbols, and regression suites in this contract rather than mutable line
-numbers.
+numbers. Every `customScreenSchemas.ts` offset below addresses the historical 3,539-line
+monolith, not the 121-line facade now at that path, so those offsets must not be resolved
+against the current file; the current owners follow this snapshot list.
 
 - Per-kind allowlist and normalizer:
   `customScreenSchemas.ts:399-415,608-669`.
@@ -856,10 +862,26 @@ numbers.
 - Shared pure URL owners:
   `pageAuthoringSanitizers.ts:238-266`.
 - Existing route-local `CustomScreenDefinitionError` and mapper:
-  `customScreenRoutes.ts:21-64`.
+  `customScreenRoutes.ts:21-64`; now the imported domain carrier at `:20`, its re-export
+  at `:22`, and `mapCustomScreenError` at `:38`.
 - Create/update warning flow:
-  `customScreenService.ts:24-57,190-204,258-313`.
+  `customScreenService.ts:24-57,190-204,258-313`; now `buildBindingWarnings` at `:47-56`,
+  the create sink at `:196`, the update read base at `:252`, and the update sink at
+  `:265`.
 - Existing Ajv error ownership: `schemaValidator.ts:15-50`.
+
+Current owners after the completed split:
+
+- Per-kind allowlist descriptor: `customScreenContracts.ts:212-232`; per-kind data
+  normalizer: `screenDocumentDataNormalizer.ts:299`; Ajv per-kind data schemas:
+  `customScreenJsonSchemas.ts:317-418`.
+- Screen URL policy: `screenDocumentDataNormalizer.ts:158-194`.
+- Read-only legacy repair: `screenDocumentReadNormalizer.ts:31-47,158-350`.
+- Binding GC: write-path sink prune and strict throw at
+  `customScreenEditorViewNormalizer.ts:92-107` and
+  `customScreenListViewNormalizer.ts:251-260`; stored-read prune with unsupported-Button
+  `href` pruning at `customScreenEditorViewNormalizer.ts:157-162` and
+  `customScreenListViewNormalizer.ts:288-295`.
 
 Re-grep these symbols before editing; line numbers may shift.
 
@@ -1032,8 +1054,8 @@ export function sanitizeScreenAuthoringUrl(
     : sanitizeAuthoringMediaUrl(trimmed);
 }
 
-// Transitional compatibility only: keep the TASK-540-01 typecheck green while the
-// Inspector lands in 02 and renderer lands in 03. Both consumers move to the wrapper.
+// Retained delegating compatibility export after the Inspector (02) and renderer (03)
+// migrated to sanitizeScreenAuthoringUrl directly; no production consumer remains.
 export const normalizeScreenImageSrc = (value: unknown): string =>
   sanitizeScreenAuthoringUrl(value, "media") ?? "";
 
@@ -1537,7 +1559,9 @@ fields, limits, enums, and URL/action policy.
   while stored-read compatibility omits those malformed legacy values. It pins the
   delegating compatibility contract
   `normalizeScreenImageSrc(value) === (sanitizeScreenAuthoringUrl(value, "media") ??
-  "")`; TASK-540-02/03 migrate the two consumers before the alias is considered unused.
+  "")`. TASK-540-02 and TASK-540-03 have migrated both consumers, so the alias has no
+  production consumer left: only the facade re-export, this delegation regression, the
+  pinned facade manifest fixture, and the Inspector suite's negative assertion name it.
 - `tests/vitest/assistant/action-plan-schema.test.ts` and
   `tests/vitest/assistant/catalogBlueprintEngine.test.ts`: direct Assistant action-plan
   and catalog-blueprint consumers of the changed exported Custom Screen write normalizer
@@ -1564,10 +1588,10 @@ fields, limits, enums, and URL/action policy.
   to prove shared route registration/error mapping and harness parity after extraction;
   its retained TASK-540-04 direct-image cases do not move into R01's new suite or widen
   R01 source authority.
-- `tests/unit/assistant/actionExecutorService.test.ts` (Bun): the existing Custom Screen
-  block-patch case uses only strict V4 fixed kinds and their owned data paths. The action
-  patches `heading.data.text`, preserves another property on the selected heading, and
-  preserves the independent `text.data.content` sibling. No expectation may normalize,
+- `tests/unit/assistant/actionExecutorCustomScreens.test.ts` (Bun): the existing Custom
+  Screen block-patch case uses only strict V4 fixed kinds and their owned data paths. The
+  action patches `heading.data.text`, preserves another property on the selected heading,
+  and preserves the independent `text.data.content` sibling. No expectation may normalize,
   accept, or silently repair `hero`, `rich-text-section`, `headline`, or another stale
   Screen authoring shape; those names may remain in unrelated Page/Widget tests whose
   contracts legitimately own them.
@@ -1685,9 +1709,12 @@ route-test, document-operations, and Assistant splits retain their separate cano
 the already-landed stored-read repair, but it did find the missing shared selector now
 owned by R01. That selector and its R03/L03 consumers are landed, and the exact owner
 re-gates completed in dependency order R01 → R03 → L03 → L04 → L01. The executable
-remaining order is clean post-audit → full gates → smoke → closure; none of those later
-results is claimed here.
+remaining order is smoke-host-only Vite 8.1.5 repin/readiness revalidation → bridge and
+remaining helpers → final pins → exact helper tracking → combined targeted gate → clean
+post-audit → full gates → smoke → closure; none of those later results is claimed here.
 TASK-540-04-L03 keeps
 one canonical `Revalidation Passed` successor and no `Repair Pending`; the closure leaf
-remains landed with its exact pre-closure evidence and must not be duplicated. Family
+TASK-540-06-L01 has no current `Implementation Complete`, `Revalidation Passed`, or
+current closure receipt. Its exact reserved pre-closure evidence is historical
+provenance only and must not be duplicated. Family
 changelog 1252, full validation, and live smoke still remain closure-owned.

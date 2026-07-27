@@ -34,7 +34,7 @@
 - `tests/vitest/admin/support/entriesClientTestHarness.ts`
 - `tests/vitest/admin/mediaClient.test.ts`
 
-No other TASK-540 leaf edits these four paths. Value priming, explicit invalidation,
+No other TASK-540 leaf edits these seven paths. Value priming, explicit invalidation,
 mutation payloads, and broadcast ordering outside the pending-read authority correction
 remain unchanged. Entry writes revoke the matching pending detail and record a typed
 reconciliation change while preserving the pending full list; media writes retain their

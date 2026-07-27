@@ -51,10 +51,10 @@ follow the registry automatically.
 
 | Anchor | Fact |
 |---|---|
-| `contract/selectors.mjs:142` | `muted: staticSelector('[role="option"]:text-is("Muted")')` — the defect |
-| `contract/selectors.mjs:68-71` | `fieldOption: selectorTemplate(['[role="option"]:has(span:text-is("', " (", ')"))'], [slot(0), slot(1)])` — the correct shape for the same widget |
-| `contract/selectors.mjs:41-45` | `staticSelector(value)` = `selectorTemplate([value])`; a static selector's literal is `parts[0]` and its arity is 0 |
-| `contract/selectors.mjs:47-165` | `createSelectorRegistry()` returns a `deepFreezeExact` object of 59 selector templates |
+| `contract/selectors.mjs:205` | `muted: staticSelector('[role="option"]:has(span:text-is("Muted"))')` — the corrected value; the defect was `staticSelector('[role="option"]:text-is("Muted")')` |
+| `contract/selectors.mjs:126-129` | `fieldOption: selectorTemplate(['[role="option"]:has(span:text-is("', " (", ')"))'], [slot(0), slot(1)])` — the correct shape for the same widget |
+| `contract/selectors.mjs:44-46` | `staticSelector(value)` = `selectorTemplate([value])`; a static selector's literal is `parts[0]` and its arity is 0 |
+| `contract/selectors.mjs:106-230` | `createSelectorRegistry()` returns a `deepFreezeExact` object of 59 selector templates, then hands it to `assertSelectorTextEngineShape` at `:229` |
 | `contract/selectors.mjs:1` | imports `{ deepFreezeExact, invariant } from "./core.mjs"` — both helpers already available |
 | `contract/registries.mjs:321` | `const selectors = createSelectorRegistry();` — the single construction site, reached on every plan build |
 | `core/admin/components/ui/select.tsx:92-117` | `SelectItem`; `data-slot="select-item"` at `:99`, indicator span at `:107`, `<SelectPrimitive.ItemText>{children}</SelectPrimitive.ItemText>` at `:114` |
@@ -62,12 +62,12 @@ follow the registry automatically.
 | `core/admin/ui/custom-screens/CustomScreenEntryPresentationPanel.tsx:181-185` | `presentationToneOptions.map(...)` → `<SelectItem value={option.value}>{option.label}</SelectItem>` |
 | `core/admin/ui/custom-screens/customScreenEntryPresentation.ts:56-59` | `presentationToneOptions` — label = value with first letter uppercased |
 | `core/services/customScreens/screenEntryPresentationOverrideContract.ts:37-49` | `screenEntryPresentationToneValues` contains `"muted"` → label `Muted` |
-| `browser/simple-invocations.mjs:178` | `const mutedSelector = JSON.stringify(registeredSelector(plan, "muted"));` |
-| `browser/simple-invocations.mjs:277` | `const option = openContent.locator(${mutedSelector});` (tone-open) |
-| `browser/simple-invocations.mjs:357` | `const option = openContent.locator(${selector});` (tone-select) |
-| `browser/simple-invocations.mjs:336` | `trigger.textContent.trim() === "Muted"` — the Select **trigger** (`SelectValue`), unaffected by this change and already correct |
+| `browser/simple-invocations.mjs:179` | `const mutedSelector = JSON.stringify(registeredSelector(plan, "muted"));` |
+| `browser/simple-invocations.mjs:278` | `const option = openContent.locator(${mutedSelector});` (tone-open) |
+| `browser/simple-invocations.mjs:358` | `const option = openContent.locator(${selector});` (tone-select) |
+| `browser/simple-invocations.mjs:337` | `trigger.textContent.trim() === "Muted"` — the Select **trigger** (`SelectValue`), unaffected by this change and already correct |
 | `contract/self-test/index.mjs:13-41` | `runTask540SmokeContractSelfTest()`; `negative(callback, label)` increments `negativeCases`; `runRegistriesFixturesSelfTestSuite(plan, negative)` at `:25` |
-| `contract/self-test/registries-fixtures.mjs:9` | `export function runRegistriesFixturesSelfTestSuite(plan, negative)` |
+| `contract/self-test/registries-fixtures.mjs:13` | `export function runRegistriesFixturesSelfTestSuite(plan, negative)` |
 
 `muted` is a `staticSelector`, so the fix is a pure string swap: no arity
 change, no template-slot change, no consumer signature change.
@@ -232,14 +232,14 @@ negative(
 ## Data flow
 
 ```
-createSelectorRegistry()            contract/selectors.mjs:47
+createSelectorRegistry()            contract/selectors.mjs:106
   └─ assertSelectorTextEngineShape  (new; throws on a delegating-host text match)
        └─ registries.selectors      contract/registries.mjs:321,339
             └─ plan.registries.selectors
                  ├─ registeredSelector(plan, "muted")   executor/ref-dsl.mjs:584
-                 │    ├─ browser/simple-invocations.mjs:178 → :277 (tone-open locator)
-                 │    ├─ browser/simple-invocations.mjs:357      (tone-select locator)
-                 │    └─ executor/self-test/browser-tone-flow-source.mjs:167,:222
+                 │    ├─ browser/simple-invocations.mjs:179 → :278 (tone-open locator)
+                 │    ├─ browser/simple-invocations.mjs:358      (tone-select locator)
+                 │    └─ executor/self-test/browser-tone-flow-source.mjs:183,:238
                  │         (expected-token strings — follow automatically)
                  └─ contract/self-test/registries-fixtures.mjs   (new cases)
 ```
@@ -278,8 +278,10 @@ selector, and must not be changed.
 | wrong delegated form | `negative(...)` | `[role="option"] span:text-is("Muted")` throws |
 | malformed entry | `negative(...)` | `{ kind: "not-a-selector" }` throws |
 
-Expected counter movement: contract self-test `negativeCases` 109 → 113. The
-executor self-test's `negativeCases` is unchanged by this leaf (2810) because it
+Expected counter movement: contract self-test `negativeCases` 109 → 113 (measured
+at HEAD 2026-07-27: 117, later family leaves having added contract negatives). The
+executor self-test's `negativeCases` is unchanged by this leaf (2810 at the time;
+measured 2985 at HEAD) because it
 adds no executor-level negative case; its `pass` must stay `true` since it
 builds the same plan.
 
@@ -307,7 +309,7 @@ executor `{"pass":true,"actions":496,"runtimeReceipts":177,"cleanupActions":72,"
 
 ## Acceptance
 
-- `contract/selectors.mjs:142` reads
+- `contract/selectors.mjs:205` reads
   `muted: staticSelector('[role="option"]:has(span:text-is("Muted"))'),`.
 - Reverting that one line makes the contract self-test throw, not pass.
 - No file outside this leaf's two owned paths is modified.

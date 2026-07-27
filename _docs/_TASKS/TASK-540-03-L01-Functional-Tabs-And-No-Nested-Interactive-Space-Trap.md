@@ -116,7 +116,7 @@ component, or introduce import-time side effects.
 | Owner | Sole responsibility | Post-format budget |
 |---|---|---:|
 | `screenRuntimeRendererModel.ts` | renderer props/context types, system-field maps, presentation/style maps, value/text/stat/time/media helpers, selection-origin predicate, tab ancestry/index helpers, and insert-target equality; pure and state-free | `<=450` |
-| `useScreenRuntimeInteractions.ts` | one renderer-root ref/`useId` namespace, local tab state, builder slot derivation, activation, root-scoped focus transfer, roving-key handling, and selection/drag callbacks | `<=350` |
+| `useScreenRuntimeInteractions.ts` | one renderer-root ref/`useId` namespace, local tab state, builder slot derivation, activation, root-scoped focus transfer, roving-key handling, and drag callbacks | `<=350` |
 | `ScreenRuntimeBlockFrame.tsx` | passive block frame, selection handle, drag handle, selection ring, metadata badges, style/class composition, and before/after drop targets | `<=350` |
 | `ScreenRuntimeLeafBlocks.tsx` | field/header/heading/text/stat/divider/image/button/related-list/unknown leaf rendering, final URL/media provenance, inline-edit sinks, and placeholders | `<=850` |
 | `ScreenRuntimeContainerBlocks.tsx` | recursive field-group/columns/Tabs children and named slots, active-panel visibility, empty Tabs status, container drop zones, and delegation to leaf/frame owners | `<=750` |
@@ -181,15 +181,18 @@ The stateless harness and retained, interactions, presentation, and layout suite
 landed in that order. Each suite passed independently at 22/22, 13/13, 24/24, and 13/13;
 the combined dependency-shaped gate passed 89/89, the 72-name and 67-declaration hashes
 matched, and all five test/support paths finished at 95/638/611/798/343 lines in that
-declared land order. The current repair supersedes only that checkpoint's R03 counts;
+declared land order; the interactions suite's `611` was since superseded to 683 by the
+2026-07-20 repair, while 95/638/798/343 remain the current counts. The current repair
+supersedes only that checkpoint's R03 counts;
 the fresh family post-audit and browser smoke remain mandatory before closure.
 
 ## Historical pre-implementation grounded anchors
 
-These 2026-07-13 line snapshots are retained as audit provenance. They describe the
-pre-implementation source layout; current ownership and validation are anchored by the
-named files, symbols, and regression suites above and below rather than mutable line
-numbers.
+These 2026-07-13 line snapshots are retained as audit provenance and resolve exactly at
+the verified family baseline `e5f15a567`, where `ScreenRuntimeRenderer.tsx` was still
+1,822 lines. They describe the pre-implementation source layout; current ownership and
+validation are anchored by the named files, symbols, and regression suites above and
+below rather than mutable line numbers.
 
 - Composite block wrapper selection: `ScreenRuntimeRenderer.tsx:594-631,670-727`.
 - Button DOM sink: `:1229-1255`.
@@ -514,13 +517,21 @@ selection handle remains the keyboard path. Drag/drop handlers stay intact.
   no UUID reaches direct `src`, and a separate media-field case proves the exact
   scalar/array UUID identity—not URL—reaches MediaPicker and preserves selected-asset
   behavior.
-- `custom-screen-record-interactions.test.tsx`: contenteditable Space is not
-  canceled; links/inputs do not select wrapper; selection handle works by keyboard.
+- `custom-screen-record-interactions.test.tsx:368`: contenteditable Space is not
+  canceled and that same contenteditable interaction does not select the block wrapper.
+  The suite's other seven tests (`:315`, `:408`, `:448`, `:503`, `:546`, `:587`, `:627`)
+  stay read-only prerequisites in this gate; the links/inputs and keyboard
+  selection-handle claims belong to the interactions suite below.
 - The interactions suite supplies both block and section selection callbacks while
   activating a nested builder input, an entry link, and a nested builder Tabs control.
   The Tabs case must prove its own visible panel change, exact slot-end `insertPoint`,
   and root-scoped focus while both ancestor callbacks remain unchanged; input and link
   cases likewise prove their own action without changing either passive selection.
+  `custom-screen-runtime-interactions.test.tsx:17` owns the claims moved off the
+  record-interactions bullet: block and section roots expose no `role`/`tabindex`, both
+  selection handles are `BUTTON` children of their own root and activate on a focused
+  `detail: 0` click, and a nested builder input toggles without calling either selection
+  callback. `:89` owns the entry-link case.
 - Three focused scenarios in the retained builder host-state declaration prove that a
   selected descendant reveals its owning non-first panel when no insert point resolves
   a slot, that an invalid direct slot also falls through to selection, and that an

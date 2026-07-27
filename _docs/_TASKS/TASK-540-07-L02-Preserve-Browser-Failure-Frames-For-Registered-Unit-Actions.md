@@ -69,29 +69,29 @@ written** and must not change — they simply never see a failure today.
 
 | Anchor | Fact |
 |---|---|
-| `browser/generic-invocations.mjs:446-461` | the wrapper branch: `const unitSource = dirtyGuardsCandidate ? normalizeDirtyGuardsUnitSource(action, invocation.args[sourceIndex]) : \`(async (page) => { await (…)(page); return { ok: true }; })\`` — the discarding literal is at `:458` |
-| `browser/generic-invocations.mjs:437-445` | the `unitResultAlreadyNormalized` escape hatch and its drift invariant; only `browser/run-code.mjs:259` sets it |
-| `browser/generic-invocations.mjs:324` | `const dirtyGuardsCandidate = isDirtyGuardsBrowserCandidate(action);` |
-| `browser/scenarios/dirty-guards.mjs:381-396` | `normalizeDirtyGuardsUnitSource`; discarding branch at `:385-386`, preserving wrapper at `:388-396` |
-| `browser/scenarios/dirty-guards.mjs:66-74` | `SHARED_DIRTY_NAVIGATION_ACTION_IDS = ["rc-037a-exit-navigation"]`; `isDirtyGuardsBrowserCandidate` also matches `action.id.startsWith("dg-")` |
-| `browser/scenarios/dirty-guards.mjs:76-92` | `assertDirtyGuardsBrowserAction` — must keep running at today's call site |
-| `executor/config.mjs:221-223` | `DIRTY_NAVIGATION_REQUEST_ACTION_IDS` = keys of `DIRTY_NAVIGATION_REQUEST_ACTION_CONFIG` (`dg-012`, `dg-015`, `dg-024`, `dg-037`, `rc-037a`) |
-| `executor/config.mjs:253-259` | `dirtyNavigationBrowserFailureClassesForAction(actionId)` |
-| `executor/config.mjs:289-290` | `TONE_MENU_OPEN_ACTION_IDS = ["dg-021-tone-open", "rc-015-tone-open"]`, `TONE_MUTED_ACTION_IDS = ["dg-022-tone-muted", "rc-016-tone-muted"]` |
-| `executor/config.mjs:304-316` | `TONE_OPEN_BROWSER_FAILURE_CLASSES` (4) and `TONE_OPEN_FAILURE_FRAMES` = `canonicalJson({ failureClass, settled: false }) + "\n"` |
-| `executor/config.mjs:318-334` | `TONE_SELECT_BROWSER_FAILURE_CLASSES` (7) and `TONE_SELECT_FAILURE_FRAMES` |
+| `browser/generic-invocations.mjs:454-481` | the unit-normalization block; the registry-driven wrapper choice is `:469-477`, `unitFailureFrameClassesForAction` is consulted at `:468`, and the discarding form is now `buildDiscardingUnitSource` (`browser/scenarios/dirty-guards.mjs:124-127`). Before this leaf the branch was: `const unitSource = dirtyGuardsCandidate ? normalizeDirtyGuardsUnitSource(action, invocation.args[sourceIndex]) : \`(async (page) => { await (…)(page); return { ok: true }; })\`` — the discarding literal is at `:458` |
+| `browser/generic-invocations.mjs:446-453` | the `unitResultAlreadyNormalized` escape hatch and its drift invariant; only `browser/run-code.mjs:259` sets it |
+| `browser/generic-invocations.mjs:332` | `const dirtyGuardsCandidate = isDirtyGuardsBrowserCandidate(action);` |
+| `browser/scenarios/dirty-guards.mjs:416-426` | `normalizeDirtyGuardsUnitSource`; the discarding branch now delegates to `buildDiscardingUnitSource` (`:124-127`) at `:420`, and the preserving wrapper was lifted to `buildFailureFramePreservingUnitSource` (`:102-122`) |
+| `browser/scenarios/dirty-guards.mjs:67-75` | `SHARED_DIRTY_NAVIGATION_ACTION_IDS = ["rc-037a-exit-navigation"]`; `isDirtyGuardsBrowserCandidate` also matches `action.id.startsWith("dg-")` |
+| `browser/scenarios/dirty-guards.mjs:77-94` | `assertDirtyGuardsBrowserAction` — must keep running at today's call site |
+| `executor/config.mjs:359-361` | `DIRTY_NAVIGATION_REQUEST_ACTION_IDS` = keys of `DIRTY_NAVIGATION_REQUEST_ACTION_CONFIG` (`dg-012`, `dg-015`, `dg-024`, `dg-037`, `rc-037a`) |
+| `executor/config.mjs:391-397` | `dirtyNavigationBrowserFailureClassesForAction(actionId)` |
+| `executor/config.mjs:445-446` | `TONE_MENU_OPEN_ACTION_IDS = ["dg-021-tone-open", "rc-015-tone-open"]`, `TONE_MUTED_ACTION_IDS = ["dg-022-tone-muted", "rc-016-tone-muted"]` |
+| `executor/config.mjs:460-473` | `TONE_OPEN_BROWSER_FAILURE_CLASSES` (4) and `TONE_OPEN_FAILURE_FRAMES` = `canonicalJson({ failureClass, settled: false }) + "\n"` |
+| `executor/config.mjs:474-490` | `TONE_SELECT_BROWSER_FAILURE_CLASSES` (7) and `TONE_SELECT_FAILURE_FRAMES` |
 | `contract/output-contracts.mjs:157-162` | `unitValue = { ok: true }`; `jsonUnit` predicate `outputEquals([], unitValue)` |
-| `browser/simple-invocations.mjs:271-301` | `dg-021`'s postcondition; `__wf540Remember` only on success at `:295`; `return fail(TONE_OPEN_BROWSER_FAILURE_CLASSES[3])` on timeout at `:301` |
-| `browser/simple-invocations.mjs:352-386` | `dg-022` recalls at `:352`, short-circuits `authorityOptionPreconditionFailed` at `:385`, `option.click()` at `:386` |
+| `browser/simple-invocations.mjs:269-304` | `dg-021`'s postcondition; `__wf540Remember` only on success at `:296`; `return fail(TONE_OPEN_BROWSER_FAILURE_CLASSES[3])` on timeout at `:302` |
+| `browser/simple-invocations.mjs:354-387` | `dg-022` recalls at `:354`, short-circuits `authorityOptionPreconditionFailed` at `:386`, `option.click()` at `:387` |
 | `executor/failure-boundary.mjs:102-129` | `createPrivateToneOpenFailure` / `classifyPrivateToneOpenFailureFrame` (byte-exact `bytes.equals(...)`, bounded by `MAX_FAILURE_ACTION_DIAGNOSTIC_BYTES`) |
 | `executor/failure-boundary.mjs:131-155` | the tone-select equivalents |
 | `runtime/command-authority.mjs:394-431` | both classifiers on the retained-process path, with the `<= 1` overlap invariant and the throw sites |
 | `executor/capabilities/execute-action.mjs:309-332` | both classifiers on the normalized-bytes path |
 | `executor/plan-execution.mjs:71-74, 104-106` | dependency bookkeeping and `completePrivateFailureAction` — correct, unchanged |
-| `contract/output-contracts.mjs:680-686` | `dg-023`'s observation predicate — cannot catch the missing tone |
-| `executor/self-test/browser-run-code-source-ownership.mjs:63-89` | the per-action loop; `compiledSource` here is the **post**-wrapper source returned by `buildBrowserInvocation` |
+| `contract/output-contracts.mjs:688-694` | `dg-023`'s observation predicate `entry-drafts-url-before-cancel` (named at `contract/actions/dirty-guard.mjs:161-166`) — cannot catch the missing tone |
+| `executor/self-test/browser-run-code-source-ownership.mjs:165-191` | the per-action loop; `compiledSource` (`:191`) is the **post**-wrapper source returned by `buildBrowserInvocation`, and the new unit-frame block is `:229-282` |
 | `executor/self-test/browser-dirty-navigation-source.mjs:173` and `:255` | the only existing pins of the preserving wrapper text (`"if (result === true) return { ok: true };"`) |
-| `executor/self-test/failure-action-execution.mjs:109-124` | tone self-test injects below the browser wrapper — why the dead path was never covered |
+| `executor/self-test/failure-action-execution.mjs:120-131` | tone self-test injects below the browser wrapper (`createPrivateToneOpenFailure` thrown at `:126`) — why the dead path was never covered |
 
 **Seed correction:** the research seed placed the wrapper pins at
 `executor/self-test/browser-source-context.mjs:178,227-228`. That is wrong.
@@ -130,19 +130,34 @@ invariant(
     new Set(Object.keys(UNIT_FAILURE_FRAME_CLASSES_BY_ACTION_ID)).size === 9,
   "unit failure-frame registry drift"
 );
+export const UNIT_FAILURE_FRAME_DIRTY_NAVIGATION_RESULT_ERROR_TAG = "dirty_navigation";
+export const UNIT_FAILURE_FRAME_TONE_RESULT_ERROR_TAG = "unit_frame";
+export function unitFailureFrameClassesForAction(actionId) {
+  return Object.hasOwn(UNIT_FAILURE_FRAME_CLASSES_BY_ACTION_ID, actionId)
+    ? UNIT_FAILURE_FRAME_CLASSES_BY_ACTION_ID[actionId]
+    : null;
+}
+export function unitFailureFrameResultErrorTagForAction(actionId) {
+  return DIRTY_NAVIGATION_REQUEST_ACTION_IDS.includes(actionId)
+    ? UNIT_FAILURE_FRAME_DIRTY_NAVIGATION_RESULT_ERROR_TAG
+    : UNIT_FAILURE_FRAME_TONE_RESULT_ERROR_TAG;
+}
 ```
 
 Nine ids: five dirty-navigation + two tone-open + two tone-muted. The cardinality
 invariant is what makes an accidental duplicate or a dropped id fail closed.
 
 Declaration order matters — place the block after
-`TONE_SELECT_FAILURE_FRAMES` (`executor/config.mjs:327-334`) so every referenced
+`TONE_SELECT_FAILURE_FRAMES` (`executor/config.mjs:483-490`) so every referenced
 constant is already initialised.
 
 ### 2. `browser/scenarios/dirty-guards.mjs` — lift the preserving wrapper
 
-Extract the existing body at `:388-396` verbatim, parameterised on the failure
-classes and on the error tag, and export it:
+Extract the existing body verbatim, parameterised on the failure classes and on
+the error tag, and export it. As landed,
+`buildFailureFramePreservingUnitSource` is at
+`browser/scenarios/dirty-guards.mjs:102-122` and the discarding form it leaves
+behind is `buildDiscardingUnitSource` at `:124-127`:
 
 ```js
 export function buildFailureFramePreservingUnitSource(source, failureClasses, resultErrorTag) {
@@ -172,16 +187,12 @@ call — that ownership check is load-bearing and must not move — and delegate
 function normalizeDirtyGuardsUnitSource(action, source) {
   assertDirtyGuardsBrowserAction(action);
   invariant(typeof source === "string", action.id + " dirty-guards unit source is absent");
-  const failureClasses = UNIT_FAILURE_FRAME_CLASSES_BY_ACTION_ID[action.id] ?? null;
-  if (failureClasses === null) {
-    return `(async (page) => { await (${source})(page); return { ok: true }; })`;
-  }
+  const failureClasses = unitFailureFrameClassesForAction(action.id);
+  if (failureClasses === null) return buildDiscardingUnitSource(source);
   return buildFailureFramePreservingUnitSource(
     source,
     failureClasses,
-    DIRTY_NAVIGATION_REQUEST_ACTION_IDS.includes(action.id)
-      ? "dirty_navigation"
-      : "tone_frame"
+    unitFailureFrameResultErrorTagForAction(action.id)
   );
 }
 ```
@@ -195,21 +206,21 @@ before and after.
 
 ### 3. `browser/generic-invocations.mjs` — one registry lookup
 
-Replace `:456-458`:
+Replace the wrapper branch (as landed, `browser/generic-invocations.mjs:468-477`):
 
 ```js
 - const unitSource = dirtyGuardsCandidate
 -   ? normalizeDirtyGuardsUnitSource(action, invocation.args[sourceIndex])
 -   : `(async (page) => { await (${invocation.args[sourceIndex]})(page); return { ok: true }; })`;
-+ const failureClasses = UNIT_FAILURE_FRAME_CLASSES_BY_ACTION_ID[action.id] ?? null;
++ const unitFailureClasses = unitFailureFrameClassesForAction(action.id);
 + const unitSource = dirtyGuardsCandidate
 +   ? normalizeDirtyGuardsUnitSource(action, invocation.args[sourceIndex])
-+   : failureClasses === null
-+     ? `(async (page) => { await (${invocation.args[sourceIndex]})(page); return { ok: true }; })`
++   : unitFailureClasses === null
++     ? buildDiscardingUnitSource(invocation.args[sourceIndex])
 +     : buildFailureFramePreservingUnitSource(
 +         invocation.args[sourceIndex],
-+         failureClasses,
-+         "tone_frame"
++         unitFailureClasses,
++         unitFailureFrameResultErrorTagForAction(action.id)
 +       );
 ```
 
@@ -248,7 +259,7 @@ const wrapperRequired = [
   "result.settled === false",
   "failureClasses.includes(result.failureClass)",
   "return result;",
-  'throw new Error("wf540_tone_frame_result");',
+  'throw new Error("wf540_' + unitFailureFrameResultErrorTagForAction(actionId) + '_result");',
 ];
 const required = [...commonRequired, ...phaseRequired, ...wrapperRequired];
 ```
@@ -371,17 +382,17 @@ particular slicing technique.
 
 ```
 plan.actionManifest row (kind: "click", outputSchemaId: "unit")
-  └─ buildBrowserInvocation                browser/generic-invocations.mjs:309
+  └─ buildBrowserInvocation                browser/generic-invocations.mjs:317
        ├─ scenario builder produces the raw source
-       └─ unit normalization                browser/generic-invocations.mjs:446-461
+       └─ unit normalization                browser/generic-invocations.mjs:454-481
             ├─ UNIT_FAILURE_FRAME_CLASSES_BY_ACTION_ID[action.id]   executor/config.mjs (new)
             ├─ registered  → buildFailureFramePreservingUnitSource  (frame survives)
             └─ unregistered→ discarding wrapper                      (unchanged)
                  ↓ playwright-cli stdout
        classifyPrivateToneOpenFailureFrame / …SelectFailureFrame
             executor/failure-boundary.mjs:115,141
-            ← runtime/command-authority.mjs:398,404
-            ← executor/capabilities/execute-action.mjs:316,322
+            ← runtime/command-authority.mjs:399,405
+            ← executor/capabilities/execute-action.mjs:316,320
                  ↓ throw createPrivateTone*Failure
        beginPrivateFailureAction / completePrivateFailureAction
             executor/plan-execution.mjs:69,104
@@ -458,11 +469,14 @@ Required output:
 
 - executor self-test: `pass: true`, `actions: 496`, `runtimeReceipts: 177`,
   `cleanupActions: 72`, `nominalPersistentCleanupActions: 72`,
-  `terminalMatrixCases: 1`, `captures: 26`, `negativeCases` > 2810.
+  `terminalMatrixCases: 1`, `captures: 26`, `negativeCases` > 2810 (the baseline
+  at the time of this leaf; measured 2985 at HEAD 2026-07-27, per commit
+  `c89fa96c`).
 - contract self-test: unchanged from the post-L01 result
   (`pass: true`, `actions: 496`, `negativeCases: 113`).
-- every touched module ≤ 1,000 physical lines (largest today is
-  `browser-tone-flow-source.mjs` at 635).
+- every touched module ≤ 1,000 physical lines (measured at HEAD 2026-07-27 the
+  largest touched module is `browser-run-code-source-ownership.mjs` at 716,
+  followed by `browser-tone-flow-source.mjs` at 710).
 
 Additional manual check before declaring done: build the invocation for
 `dg-024-entry-nav-cancel` before and after the change and diff the emitted unit
@@ -474,9 +488,15 @@ Make the generic, unregistered unit wrapper fail closed as well: assert the
 inner source returned `true` or `undefined` and throw on any plain object
 carrying a `failureClass` key. That would close the whole "source computes a
 verdict the wrapper drops" class for future sources, but it requires first
-sweeping all ~390 unit run-code sources to confirm their return values. Raise it
-as its own leaf under TASK-540-07 or, if TASK-540 has closed by then, under the
-smoke-harness owner TASK-545.
+sweeping all ~390 unit run-code sources to confirm their return values.
+
+Status as of 2026-07-27: this is a **deliberately-open, unraised** follow-up. It
+was not raised as a leaf — TASK-540 has not closed (`TASK-540` is still
+`🚧 In Progress`), no `TASK-540-07-L03` exists, and no TASK-545 leaf covers it
+(TASK-545-01..04 are the all-results guard / static workflow contract, the
+audit-workflow convergence, the durable smoke-evidence manifest and the
+task-graph/changelog repair). Owner: the TASK-540 family owner, to raise it as a
+TASK-540-07 leaf while the family is open, or to hand it to TASK-545 at closure.
 
 ## Acceptance
 

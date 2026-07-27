@@ -120,10 +120,12 @@ pre-closure boundary. The later L01/L03/L04 modularity sequence, downstream L01
 authoring-boundary handoff, and L02 test splits all passed their exact gates; all eight
 receipts and the zero-blocker line gate placed the family at the closure frontier at
 that historical checkpoint. The L03 overflow repair has since passed its fresh gate,
-   but the current corrective implementation chain R01 → R03 → L03 → L04 is now landed.
-   The exact owner re-gates completed in that order and then covered the L01 compatibility
-   boundary. A fresh clean five-lens post-audit is now the remaining prerequisite for the
-   full-validation, smoke, and closure sequence.
+but the current corrective implementation chain R01 → R03 → L03 → L04 is now landed.
+The exact owner re-gates completed in that order and then covered the L01 compatibility
+boundary. The remaining order is smoke-host-only Vite 8.1.5 repin/readiness revalidation
+→ bridge/helper implementation → final dependent pins → exact seven-helper tracked
+parity → combined targeted gate → fresh clean five-lens post-audit → full validation →
+smoke → closure.
 
 ## Shared contract
 
@@ -386,8 +388,11 @@ coverage and passed that suite read-only against the final module graph. That hi
 handoff ran in order: L03 split/target gate → L04 split/target gate → TASK-540-05-L01
 boundary update/gate → TASK-540-05-L02 split/target gate. At that checkpoint the
 modularity handoff and physical-line owner gates no longer blocked entry into closure.
-The L03 overflow repair is revalidated and no longer independently blocks closure; the
-fresh family-wide five-lens post-audit is next, while smoke, changelog, and closure remain outstanding.
+The L03 overflow repair is revalidated and no longer independently blocks closure. The
+remaining order is smoke-host-only Vite 8.1.5 repin/readiness revalidation →
+bridge/helper implementation → final dependent pins → exact seven-helper tracked
+parity → combined targeted gate → fresh family-wide five-lens post-audit → full
+validation → smoke → changelog and closure.
 
 Before closure, count complete physical lines, including blanks/comments and an
 unterminated final line, for every family-scoped human-authored production, test, and
@@ -395,7 +400,10 @@ support module derived from the verified pre-family history rather than the curr
 HEAD diff. Every file must report `<= 1000`; only AGENTS.md exemptions apply. After all
 ten protected test families are split, their exact 347-name multiset is unchanged and
 the authoritative family matrix is 64 Vitest + 18 Bun = 82 files, comprising 81
-source-owner/read-only dependency files and one closure-owned aggregate. Workflow and
+source-owner/read-only dependency files and one closure-owned aggregate. The workflow's
+`CLOSURE_OWNER_TEST_FILES` additionally tracks a second closure-owned test file,
+`tests/unit/workflows/task540SmokeExecutorSecurity.test.ts`, which sits deliberately
+outside this 82-file matrix and is not drift. Workflow and
 TASK-540-06 must pin those totals and independently runnable suite paths before the full
 gate without changing pinned changelog 1252.
 

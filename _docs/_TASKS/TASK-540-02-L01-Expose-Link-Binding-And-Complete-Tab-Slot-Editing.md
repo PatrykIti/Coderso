@@ -16,7 +16,8 @@
 **Revalidation Passed:** generation 901f3d0de7774955ba401e69e85ddd31 / token 239a28062f734c28a6927f1cc49b5bd9 / gate green
 **Repair Reason:** R01 centralized binding-ID generation in `buildScreenFieldBindingId`; this leaf consumes that domain helper from its existing Inspector binding factory and proves maximum-length tuples stay distinct and bounded. The current repair also restores invalid Tab-label drafts, preserves focus on the same commit-stable input after Enter while using `baseLabel` for stale-draft invalidation, restores the committed value when the host rejects the patch, creates collision-free default labels, clears bindings for every nested block removed with a Tab slot, invalidates stale Image URL drafts, and gives every Inspector select/number control a distinct accessible name. The unbound trigger exposes the named `Not bound` placeholder instead of falling through to an unauthored first option.
 **Modularity Repair Revalidated:** 2026-07-17 — cohesive <=1,000-line split and exact owner gate passed.
-**Current Repair State:** The historical 33/33 modularity receipt remains truthful pre-current-repair evidence. The current production graph is facade 564, model 209, controls 238, Tabs 214, and Section 80 lines; the two tests are 974 and 443, plus a cohesive 194-line shared Inspector test harness. The current repair uses a 19+18 targeted gate; the exact active metadata receipt above is the sole authority for its gate state, and no clean family post-audit, smoke, changelog, or closure is claimed.
+**Post-Audit Fix:** 2026-07-19 — commit 0f70ee82 kept the `Insert into` slot Select controlled at `ScreenBlockInspector.tsx:484` (`value={armedInsertSlotId ?? ""}`) and added the 19th owned binding-panel regression, moving that suite from 18 to 19 tests; the targeted matrix is 19+18.
+**Current Repair State:** The historical 33/33 modularity receipt remains truthful pre-current-repair evidence. The current production graph is facade 564, model 209, controls 238, Tabs 214, and Section 80 lines; the two tests are 974 and 443, plus a cohesive 194-line shared Inspector test harness. The current repair uses a 19+18 targeted gate; the exact active metadata receipt above is the sole authority for its gate state, and no clean family post-audit, smoke, changelog, or closure is claimed. All five SHA-256 pins in the workflow's `SCREEN_TAB_LABEL_DRAFT_CONTRACT` — owner `ScreenBlockInspectorTabs.tsx`, facade `ScreenBlockInspector.tsx`, both owned suites, and the shared harness — match the working tree byte-for-byte, so `--check-screen-tab-label-draft-contract` re-passes with no re-pinning.
 **Changelog:** 1252 (pinned; closure only)
 
 ---
@@ -40,7 +41,15 @@ later aggregate additions.
 `tests/vitest/customScreens/screenDocumentOps.test.ts` remain R01-owned. This leaf owns
 only the Inspector import/call sites that consume `buildScreenFieldBindingId` and
 `collectScreenBlockIds`; it must not duplicate, alter, or re-export either domain
-helper.
+helper. Both helpers now sit behind barrels: `collectScreenBlockIds` is defined at
+`core/services/customScreens/screenDocumentTree.ts:73` and re-exported by the 42-line
+`screenDocumentOps.ts` barrel (`:15`), while `buildScreenFieldBindingId` is defined at
+`core/services/customScreens/customScreenNormalizationPrimitives.ts:180` and re-exported
+by `customScreenSchemas.ts:72`. The barrel import paths this leaf already uses —
+`ScreenBlockInspectorTabs.tsx:13` for `collectScreenBlockIds` and
+`screenBlockInspectorModel.ts:2` (imported from `customScreenSchemas` at `:13`) for
+`buildScreenFieldBindingId` — are correct and must not be repointed at the definition
+modules, which sit outside this leaf's exclusive-ownership list exactly as the barrels do.
 
 ## Mandatory Inspector module split
 
@@ -271,7 +280,11 @@ and named.
   tab cannot be removed or lose its slot, and no 25th tab or orphan slot can be
   created. The same suite pins the Inspector's builder handoff: two valid maximum-
   length block/prop-path tuples produce distinct canonical IDs of at most 120
-  characters through `createScreenFieldBinding`.
+  characters through `createScreenFieldBinding`. Its 19th owned regression,
+  `Tabs keep the insert-slot Select controlled while arming a newly added tab`
+  (`tests/vitest/ui/custom-screen-binding-panel.test.tsx:611`), adds a tab, asserts the
+  `Insert into` trigger then shows the new `tab-2`, and spies that `console.warn` is never
+  called, so the `armedInsertSlotId ?? ""` controlled-Select invariant has a named owner.
 - `custom-screen-image-inspector.test.tsx`: the image control imports/uses the
   canonical Screen wrapper and rejects protocol-relative and backslash-confused UI
   input before patching the document. Its stateful regression proves a draft may survive
@@ -279,7 +292,10 @@ and named.
   unrelated committed-source changes; the suite also pins non-empty distinct combobox
   names for the image surface.
 
-`core/services/customScreens/screenDocumentOps.ts` and
+`core/services/customScreens/screenDocumentOps.ts`, the definition modules behind it
+(`screenDocumentTree.ts` for `collectScreenBlockIds` and
+`customScreenNormalizationPrimitives.ts` for the `buildScreenFieldBindingId` that
+`customScreenSchemas.ts` re-exports), and
 `tests/vitest/customScreens/screenDocumentOps.test.ts` remain read-only in this leaf.
 The Inspector is the physical UI owner; R01 alone owns the corrective document-op
 builder handoff and its regression.

@@ -175,11 +175,13 @@ closure-owner flow. This changes neither pinned changelog 1252 nor closure owner
   href and image src. Before trimming or calling a shared helper it rejects every ASCII
   control (`U+0000..U+001F` and `U+007F`) anywhere in the submitted string, plus every
   backslash. This prevents TAB/LF/CR protocol-relative confusion without modifying the
-  Page-owned helpers. During sequential rollout, the existing
-  `normalizeScreenImageSrc` export remains as a compatibility alias that delegates to
+  Page-owned helpers. The existing
+  `normalizeScreenImageSrc` export is retained as a compatibility alias that delegates to
   `sanitizeScreenAuthoringUrl(value, "media")` and returns `""` for `null`. TASK-540-02
-  migrates the Inspector and TASK-540-03 migrates the renderer; after those leaves no
-  Screen consumer imports the alias or either Page helper directly.
+  migrated the Inspector and TASK-540-03 migrated the renderer, so no Screen consumer
+  imports the alias or either Page helper directly; the alias now has zero production
+  consumers and is retained solely to keep the pinned 62-runtime facade manifest
+  byte-stable.
 - Binding pruning uses membership in the live ID set without a non-empty-set
   exception. Create and update each pass a warning sink and expose the existing
   transient warning shape in their successful response; stored read passes a discard
@@ -287,11 +289,15 @@ schema, document-operations, route, and Assistant executor splits retain their s
 canonical `Modularity Repair Revalidated` receipt. The later five-lens audit found no
 defect in the already-landed stored-read repair, but it did find the missing shared
 selector now owned by R01. The five exact owner re-gates completed in dependency order
-R01 → R03 → L03 → L04 → L01. The remaining executable order is clean post-audit → full
-gates → smoke → closure; none of those later results is claimed here.
+R01 → R03 → L03 → L04 → L01. The remaining executable order is smoke-host-only Vite
+8.1.5 repin/readiness revalidation → bridge and remaining helpers → final pins → exact
+helper tracking → combined targeted gate → clean post-audit → full gates → smoke →
+closure; none of those later results is claimed here.
 TASK-540-04-L03 retains one current `Revalidation Passed`; the closure leaf
-retains the exact deterministic `Revalidation Passed` value `pre-closure remediation /
-fix-started 2026-07-15 / gate green`. The post-audit intervention's five owner re-gates
-are complete; the fresh clean post-audit must now authorize that reserved closure state.
+TASK-540-06-L01 has no current `Implementation Complete`, `Revalidation Passed`, or
+current closure receipt. Its exact deterministic `pre-closure remediation / fix-started
+2026-07-15 / gate green` reserved pre-closure evidence is historical provenance only.
+The post-audit intervention's five owner re-gates are complete; the fresh clean
+post-audit follows the remaining implementation frontier and combined targeted gate.
 Changelog 1252, full
 validation, and live smoke remain closure-owned.
