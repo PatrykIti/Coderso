@@ -11114,12 +11114,15 @@ const TASK_540_LINE_LIMIT_ACCOUNTABLE_PATHS = Object.freeze([
   // Workflow and smoke contract tests this family authored and keeps re-pinning.
   "tests/unit/workflows/precommitFormatStagedIgnoredPaths.test.ts",
   "tests/unit/workflows/task522FindingsPrompt.test.ts",
+  "tests/unit/workflows/task540CanonicalStatusTableUniqueness.test.ts",
   "tests/unit/workflows/task540FamilyContractRegistration.test.ts",
   "tests/unit/workflows/task540ForbiddenSchemaPaths.test.ts",
   "tests/unit/workflows/task540LineLimitTripwireCoverage.test.ts",
+  "tests/unit/workflows/task540ResumeCursorSelfTestDerivation.test.ts",
   "tests/unit/workflows/task540SmokeExecutorBunBridgeResourceSources.test.ts",
   "tests/unit/workflows/task540SmokeExecutorSecurity.test.ts",
   "tests/unit/workflows/task540SmokeExecutorSourceContracts.test.ts",
+  "tests/unit/workflows/task540StaleCountProse.test.ts",
   "tests/unit/workflows/task540StatusTargetAgreement.test.ts",
   "tests/unit/workflows/task540SmokeRuntimeExpectationContracts.test.ts",
   "tests/unit/workflows/task543ImplementSecurity.test.ts",
@@ -11177,7 +11180,7 @@ const TASK_540_LINE_LIMIT_TRIPWIRE_PATHS = Object.freeze([
   "core/widgets/core/footer.tsx",
 ]);
 const TASK_540_LINE_LIMIT_ACCOUNTABLE_PATHS_SHA256 =
-  "772870486e91424412b15bb59e0e5c31bbc9373c62d66c99fd323b6cf48d5b09";
+  "c112db8cc418994aff96359da58327af6df6243e63010ab6eb0422eb14f7d495";
 const TASK_540_LINE_LIMIT_ACCOUNTABLE_OWNERS = Object.freeze(
   TASK_540_LINE_LIMIT_ACCOUNTABLE_PATHS.map((path) =>
     Object.freeze({ path, owner: TASK_540_LINE_LIMIT_ACCOUNTABLE_OWNER })
@@ -11203,7 +11206,7 @@ if (
   // Must be the leaf that lands LAST, which is the whole rationale for the choice: it is
   // the only leaf still able to split one of these before the family closes.
   TASK_540_LINE_LIMIT_ACCOUNTABLE_OWNER !== LEAF_ORDER[LEAF_ORDER.length - 1] ||
-  TASK_540_LINE_LIMIT_ACCOUNTABLE_PATHS.length !== 78 ||
+  TASK_540_LINE_LIMIT_ACCOUNTABLE_PATHS.length !== 81 ||
   new Set(TASK_540_LINE_LIMIT_ACCOUNTABLE_PATHS).size !==
     TASK_540_LINE_LIMIT_ACCOUNTABLE_PATHS.length ||
   TASK_540_LINE_LIMIT_ACCOUNTABLE_PATHS.some(
