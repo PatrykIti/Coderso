@@ -174,6 +174,37 @@ test("every forbidden glob the family actually mutated carries a recorded except
   );
 });
 
+/**
+ * The 1,000-line limit does not reach workflow tooling: AGENTS.md scopes it to "a
+ * human-authored production module or test file". A doc revision claimed otherwise for all
+ * seven top-level helpers, three of which exceed it, making the claim unsatisfiable without
+ * splitting ~34,500 lines of tooling no gate measures. The owner's decision was to correct
+ * the documents. This test keeps the reasoning from being deleted and re-litigated.
+ */
+test("the settled helper line-limit scope decision stays recorded next to the predicate", () => {
+  expect(implementSource).toContain("SETTLED SCOPE DECISION");
+  expect(implementSource).toContain(
+    'AGENTS.md § "File Size and Modularity" binds the 1,000-line limit to "a human-authored'
+  );
+  // The three helpers that exceed the limit must stay named, so the claim stays checkable.
+  for (const helper of [
+    "task-540-implement.mjs (~28,000 lines)",
+    "task-540-local-orchestrator.mjs (3,966)",
+    "task-540-test-name-contract.mjs (2,459)",
+  ]) {
+    expect(implementSource).toContain(helper);
+  }
+  // And the predicate must still exclude them by their real paths, not only via a
+  // placeholder example path that a targeted widening could route around.
+  for (const helper of [
+    "_docs/_workflows/task-540-implement.mjs",
+    "_docs/_workflows/task-540-local-orchestrator.mjs",
+    "_docs/_workflows/task-540-test-name-contract.mjs",
+  ]) {
+    expect(implementSource).toContain(`Object.freeze({ path: "${helper}", expected: false })`);
+  }
+});
+
 test("the agent prompt says the exceptions are a record, not permission", () => {
   expect(implementSource).toContain(
     "Those are a historical record, not permission: the paths above remain forbidden to you"

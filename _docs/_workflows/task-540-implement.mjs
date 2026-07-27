@@ -4475,6 +4475,23 @@ async function worktreeSnapshot(
   };
 }
 
+// SETTLED SCOPE DECISION -- do not re-open, and do not widen this predicate to _docs/.
+//
+// AGENTS.md § "File Size and Modularity" binds the 1,000-line limit to "a human-authored
+// production module or test file". The workflow helpers under _docs/_workflows/ are TOOLING:
+// neither production nor test files, and never shipped. They are therefore deliberately out
+// of scope, which is why the roots below admit only core/, packages/, store/ and tests/.
+//
+// A revision of the TASK-540-06 / TASK-540-06-L01 contracts extended the limit to all seven
+// top-level task-540-*.mjs helpers. That contradicted both AGENTS.md and this function, and
+// was unsatisfiable: three helpers exceed it -- task-540-implement.mjs (~28,000 lines),
+// task-540-local-orchestrator.mjs (3,966) and task-540-test-name-contract.mjs (2,459) --
+// so honouring it meant splitting ~34,500 lines of tooling that no gate measures. The owner's
+// decision was to correct the documents, NOT to split the helpers.
+//
+// The 1,000-line ceiling on the child modules under _docs/_workflows/task-540-smoke/** is a
+// separate thing: a family CONVENTION, and the property that makes a regression localise to
+// one named file. It holds for every child module today. It is not this gate.
 function isLineLimitedHumanAuthoredModule(relativePath) {
   if (!HUMAN_AUTHORED_MODULE_PATTERN.test(relativePath)) return false;
   const productionRoot = /^(?:core|packages|store)\//u.test(relativePath);
@@ -7017,6 +7034,17 @@ async function assertTask540TouchedModuleLineLimitContract() {
     Object.freeze({ path: "_docs/_workflows/example.mjs", expected: false }),
     Object.freeze({ path: "core/db/migrations/meta/0001_snapshot.ts", expected: false }),
     Object.freeze({ path: "core/services/example.generated.ts", expected: false }),
+    // The three real helpers that exceed 1,000 lines. Pinned by their actual paths, not a
+    // placeholder, so widening the predicate to _docs/ fails here instead of silently
+    // demanding that ~34,500 lines of workflow tooling be split. See the settled scope
+    // decision above isLineLimitedHumanAuthoredModule.
+    Object.freeze({ path: "_docs/_workflows/task-540-implement.mjs", expected: false }),
+    Object.freeze({ path: "_docs/_workflows/task-540-local-orchestrator.mjs", expected: false }),
+    Object.freeze({ path: "_docs/_workflows/task-540-test-name-contract.mjs", expected: false }),
+    Object.freeze({
+      path: "_docs/_workflows/task-540-smoke/contract/selectors.mjs",
+      expected: false,
+    }),
   ]);
   for (const testCase of pathCases) {
     if (isLineLimitedHumanAuthoredModule(testCase.path) !== testCase.expected) {
