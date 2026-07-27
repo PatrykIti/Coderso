@@ -4443,7 +4443,10 @@ function task540LineLimitOwnerIds(relativePath) {
   const readOnlyOwners = TASK_540_READ_ONLY_CONSUMER_OWNERS.filter(
     ({ path }) => path === relativePath
   ).map(({ owner }) => owner);
-  return [...writableOwners, ...readOnlyOwners];
+  const accountableOwners = TASK_540_LINE_LIMIT_ACCOUNTABLE_OWNERS.filter(
+    ({ path }) => path === relativePath
+  ).map(({ owner }) => owner);
+  return [...writableOwners, ...readOnlyOwners, ...accountableOwners];
 }
 
 async function requireTask540FamilyBaseline(label) {
@@ -4508,25 +4511,56 @@ function buildTask540TouchedModulePathAuthority(
   });
 }
 
+// The history component of the authority is meant to answer "which modules has this
+// family changed since the pre-family baseline". A plain `git log BASE..HEAD` walks ALL
+// parents, so it also reports every file touched on a side branch that was merged in --
+// even when that branch left the content byte-identical to the baseline.
+//
+// feature/tasks-fixes absorbed feat/implementations twice (merges aaf7e6db and
+// 3664d489). One of the commits that arrived that way, 23b6283f "feat: expand visual
+// authoring and harden content workflows (#21)", touches 460 files under
+// core/packages/store/tests. That inflated the authority from 244 to 504 line-limited
+// paths, and all 261 extra paths are provably NOT family work: every one of them is
+// byte-identical between the baseline and HEAD. Among them are 69 files already over
+// 1000 lines before this family began (page-editor-v2-flow.test.tsx at 6,813, PageEditor.tsx
+// at 5,204, ...), so the over-reporting also made the line limit unsatisfiable by any
+// action this family could take.
+//
+// Both sources below are therefore restricted to the branch's own first-parent line, and
+// unioned with the net baseline..HEAD content delta. The union cannot fail open: if a
+// future merge brings genuinely CHANGED content in through a second parent, the first-parent
+// walk would miss it but the net delta still reports it. Measured at the time of writing the
+// two sources are exactly set-equal (250 paths each, symmetric difference empty).
+const TASK_540_FAMILY_HISTORY_PATHSPEC = Object.freeze(["core", "packages", "store", "tests"]);
+
 async function task540TouchedModulePathAuthority(label) {
   await requireTask540FamilyBaseline(label);
-  const [committedHistory, currentTracked, untracked] = await Promise.all([
+  const [firstParentHistory, baselineDelta, currentTracked, untracked] = await Promise.all([
     git([
       "log",
       "--format=",
       "--name-only",
       "--no-renames",
+      "--first-parent",
       "-z",
       TASK_540_PRE_FAMILY_BASELINE + "..HEAD",
       "--",
-      "core",
-      "packages",
-      "store",
-      "tests",
+      ...TASK_540_FAMILY_HISTORY_PATHSPEC,
+    ]).then(splitNul),
+    git([
+      "diff",
+      "--name-only",
+      "--no-renames",
+      "-z",
+      TASK_540_PRE_FAMILY_BASELINE,
+      "HEAD",
+      "--",
+      ...TASK_540_FAMILY_HISTORY_PATHSPEC,
     ]).then(splitNul),
     git(["diff", "--name-only", "-z", "HEAD"]).then(splitNul),
     git(["ls-files", "--others", "--exclude-standard", "-z"]).then(splitNul),
   ]);
+  const committedHistory = [...new Set([...firstParentHistory, ...baselineDelta])];
   return buildTask540TouchedModulePathAuthority(committedHistory, currentTracked, untracked, label);
 }
 
@@ -7083,7 +7117,75 @@ async function assertTask540TouchedModuleLineLimitContract() {
   if (!duplicateAuthorityRejected) {
     throw new Error("TASK-540 duplicate history/untracked authority self-test failed");
   }
-  return pathCases.length + lineCases.length + readOnlyOwnerCases.length + 10;
+  // The accountability registry resolves exactly one owner per path, that owner is the
+  // closure leaf, and it grants no write access anywhere. Sampled across all five
+  // provenance groups so a whole group cannot be dropped without this failing.
+  const accountableOwnerCases = Object.freeze([
+    "core/db/schema.ts",
+    "core/db/tables/identity.ts",
+    "core/admin/ui/entries/EntryEditor.tsx",
+    "core/db/connectionTargets.ts",
+    "core/services/backups/backupService.ts",
+    "tests/unit/workflows/task540SmokeExecutorSecurity.test.ts",
+    "core/widgets/core/footer.tsx",
+  ]);
+  for (const relativePath of accountableOwnerCases) {
+    if (
+      !TASK_540_LINE_LIMIT_ACCOUNTABLE_PATHS.includes(relativePath) ||
+      !isLineLimitedHumanAuthoredModule(relativePath) ||
+      JSON.stringify(task540LineLimitOwnerIds(relativePath)) !==
+        JSON.stringify([TASK_540_LINE_LIMIT_ACCOUNTABLE_OWNER]) ||
+      LEAVES.some(({ allowedFiles }) => allowedFiles.includes(relativePath)) ||
+      task540ReadOnlyConsumerPaths.includes(relativePath)
+    ) {
+      throw new Error(
+        "TASK-540 line-limit accountability owner self-test failed: " + relativePath
+      );
+    }
+  }
+  // The two tripwire paths sit within eleven lines of the limit. Prove the gate really
+  // would reject them one line over, using hermetic bytes rather than the real files.
+  for (const tripwirePath of TASK_540_LINE_LIMIT_TRIPWIRE_PATHS) {
+    let tripwireRejected = false;
+    try {
+      await requireTask540TouchedModuleLineLimit(
+        "TASK-540 hermetic tripwire self-test",
+        [tripwirePath],
+        Object.freeze({
+          trackedPaths: Object.freeze([tripwirePath]),
+          untrackedPaths: Object.freeze([]),
+          fileBytesByPath: Object.freeze({
+            [tripwirePath]: Buffer.from("x\n".repeat(HUMAN_AUTHORED_MODULE_LINE_LIMIT + 1)),
+          }),
+        })
+      );
+    } catch (error) {
+      tripwireRejected =
+        error instanceof Error && error.message.includes(tripwirePath + "=1001");
+    }
+    if (!tripwireRejected) {
+      throw new Error("TASK-540 line-limit tripwire self-test failed: " + tripwirePath);
+    }
+  }
+  // The history component must stay scoped to the branch's own first-parent line unioned
+  // with the net baseline delta. If either source is dropped the authority silently changes
+  // shape, so both call shapes are pinned here.
+  const authoritySource = task540TouchedModulePathAuthority.toString();
+  if (
+    !authoritySource.includes('"--first-parent"') ||
+    !authoritySource.includes("TASK_540_PRE_FAMILY_BASELINE + \"..HEAD\"") ||
+    !authoritySource.includes("...new Set([...firstParentHistory, ...baselineDelta])")
+  ) {
+    throw new Error("TASK-540 touched-module history scoping self-test failed");
+  }
+  return (
+    pathCases.length +
+    lineCases.length +
+    readOnlyOwnerCases.length +
+    accountableOwnerCases.length +
+    TASK_540_LINE_LIMIT_TRIPWIRE_PATHS.length +
+    11
+  );
 }
 
 async function requireNoPendingTask540ModularityRepairs(label) {
@@ -10767,6 +10869,115 @@ const TASK_540_READ_ONLY_CONSUMER_OWNERS = Object.freeze(
     readOnlyConsumerFiles.map((path) => Object.freeze({ path, owner }))
   )
 );
+// Line-limit accountability only. These paths are inside the family's touched-module
+// authority and so must satisfy the 1000-line limit, but no leaf may WRITE them and they
+// are not dependency-shaped test consumers either, so neither allowedFiles nor
+// readOnlyConsumerFiles is the right vehicle: allowedFiles would hand an implementation
+// agent write access it must not have, and readOnlyConsumerFiles carries a prompt telling
+// the agent to run the path through its targeted commands, which is meaningless for a
+// production module.
+//
+// Owner is the closure leaf: it lands last, so it is the leaf that would have to split any
+// of these before the family can close. Provenance is recorded per group because it is the
+// only thing that tells a later reader whether a path is family work or a passenger.
+const TASK_540_LINE_LIMIT_ACCOUNTABLE_OWNER = CLOSURE_LEAF_ID;
+const TASK_540_LINE_LIMIT_ACCOUNTABLE_PATHS = Object.freeze([
+  // Schema split behind a thin facade (this family's blocker remediation, commit e6bbee69).
+  "core/db/schema.ts",
+  "core/db/tables/analytics.ts",
+  "core/db/tables/assistant.ts",
+  "core/db/tables/bookings.ts",
+  "core/db/tables/commerce.ts",
+  "core/db/tables/content.ts",
+  "core/db/tables/customScreens.ts",
+  "core/db/tables/engagement.ts",
+  "core/db/tables/forms.ts",
+  "core/db/tables/identity.ts",
+  "core/db/tables/integrations.ts",
+  "core/db/tables/media.ts",
+  "core/db/tables/navigation.ts",
+  "core/db/tables/observability.ts",
+  "core/db/tables/operations.ts",
+  "core/db/tables/pages.ts",
+  "core/db/tables/platform.ts",
+  "core/db/tables/posts.ts",
+  "core/db/tables/seo.ts",
+  "core/db/tables/theming.ts",
+  "core/db/tables/widgets.ts",
+  "tests/unit/db/schemaTableFacade.test.ts",
+  // EntryEditor split and the entry-hydration race fix (commits 48811f0a, 5908a794, ca6c3725).
+  "core/admin/ui/entries/EntryEditor.tsx",
+  "core/admin/ui/entries/EntryFieldSections.tsx",
+  "core/admin/ui/entries/EntryTitleSlugFields.tsx",
+  "core/admin/ui/entries/entryFieldGroups.ts",
+  "core/admin/ui/entries/entryMetadataUpdate.ts",
+  "core/admin/ui/entries/entrySlug.ts",
+  "core/admin/ui/entries/entryValueMapping.ts",
+  "core/admin/ui/entries/useEntryRelationTargets.ts",
+  "core/admin/ui/entries/useEntryRuntimePreview.ts",
+  "tests/vitest/ui-integration/entry-editor-hydration-race.test.tsx",
+  // Connection-target / pooler work and the backup scheduler it moved (commits e83ebc99, 369cd7ee).
+  "core/db/client.ts",
+  "core/db/connectionTargets.ts",
+  "core/db/drizzle.config.ts",
+  "core/db/sessionClient.ts",
+  "core/server/jobs/backupScheduler.ts",
+  "core/server/startupAssistantDocs.ts",
+  "core/server/startupMigrations.ts",
+  "core/services/backups/backupService.ts",
+  "tests/integration/runtime/backupScheduler.test.ts",
+  "tests/vitest/server/databaseConnectionTargets.test.ts",
+  "tests/vitest/server/startupMigrations.test.ts",
+  // Workflow and smoke contract tests this family authored and keeps re-pinning.
+  "tests/unit/workflows/task522FindingsPrompt.test.ts",
+  "tests/unit/workflows/task540FamilyContractRegistration.test.ts",
+  "tests/unit/workflows/task540SmokeExecutorBunBridgeResourceSources.test.ts",
+  "tests/unit/workflows/task540SmokeExecutorSecurity.test.ts",
+  "tests/unit/workflows/task540SmokeExecutorSourceContracts.test.ts",
+  "tests/unit/workflows/task540SmokeRuntimeExpectationContracts.test.ts",
+  "tests/unit/workflows/task543ImplementSecurity.test.ts",
+  // Carried along by the branch's own dependency bump 3d5604ec (chore: up packages) and by
+  // merge 3664d489, not by TASK-540 work. Accounted for here because the branch does ship
+  // them; every one is comfortably inside the limit.
+  "core/admin/ui/auth/SsoButtons.tsx",
+  "core/admin/ui/shared/AdminColorModeToggle.tsx",
+  "core/plugins/compat.ts",
+  "core/server/productionReactRuntime.ts",
+  "core/ui/brandIcons.tsx",
+  "core/widgets/core/footer.tsx",
+  "core/widgets/core/footerContract.ts",
+  "core/widgets/core/footerSocialIcons.tsx",
+  "tests/unit/release/releaseWorkflowConfig.test.ts",
+  "tests/unit/security/securityGateConfig.test.ts",
+  "tests/unit/toolchain/bunInstallSecurityConfig.test.ts",
+  "tests/unit/toolchain/bunProductionJsxRuntime.test.ts",
+  "tests/unit/toolchain/node26VitestConfig.test.ts",
+  "tests/unit/toolchain/vitestCoverageArgs.test.ts",
+  "tests/vitest/authUi/loginForm.test.tsx",
+  "tests/vitest/forms/formRuntimeResolver.test.ts",
+  "tests/vitest/forms/validation-field-schema.test.ts",
+  "tests/vitest/forms/validation-patterns.test.ts",
+  "tests/vitest/forms/validation-submission.test.ts",
+  "tests/vitest/forms/validation.test.ts",
+  "tests/vitest/ui/admin-color-mode-ssr.test.ts",
+  "tests/vitest/ui/permissions-matrix-page-wave.test.tsx",
+  "tests/vitest/ui/prototype-brand-icons.test.tsx",
+  "tests/vitest/widgets/footer.test.tsx",
+]);
+// Nine lines of headroom on backupService.ts and eleven on footer.tsx: whichever leaf edits
+// them next is one modest addition away from failing this gate mid-closure.
+const TASK_540_LINE_LIMIT_TRIPWIRE_PATHS = Object.freeze([
+  "core/services/backups/backupService.ts",
+  "core/widgets/core/footer.tsx",
+]);
+const TASK_540_LINE_LIMIT_ACCOUNTABLE_PATHS_SHA256 =
+  "4313e1b670c81cec91ebcc05f9ee064efebad01a1ce3c0092accd85f4dd917fa";
+const TASK_540_LINE_LIMIT_ACCOUNTABLE_OWNERS = Object.freeze(
+  TASK_540_LINE_LIMIT_ACCOUNTABLE_PATHS.map((path) =>
+    Object.freeze({ path, owner: TASK_540_LINE_LIMIT_ACCOUNTABLE_OWNER })
+  )
+);
+
 const task540ReadOnlyConsumerPaths = TASK_540_READ_ONLY_CONSUMER_OWNERS.map(({ path }) => path);
 if (
   new Set(task540ReadOnlyConsumerPaths).size !== task540ReadOnlyConsumerPaths.length ||
@@ -10775,6 +10986,40 @@ if (
   )
 ) {
   throw new Error("TASK-540 read-only consumer ownership collides with another leaf");
+}
+
+// The accountability registry grants no write access, so its only real risk is silently
+// widening into an escape hatch: a path added here stops needing a real owner. The sha256
+// pin makes any change to the set a visible, deliberate edit, and the checks below keep it
+// from overlapping the two ownership vehicles that DO grant access.
+if (
+  !LEAVES.some(({ id }) => id === TASK_540_LINE_LIMIT_ACCOUNTABLE_OWNER) ||
+  // Must be the leaf that lands LAST, which is the whole rationale for the choice: it is
+  // the only leaf still able to split one of these before the family closes.
+  TASK_540_LINE_LIMIT_ACCOUNTABLE_OWNER !== LEAF_ORDER[LEAF_ORDER.length - 1] ||
+  TASK_540_LINE_LIMIT_ACCOUNTABLE_PATHS.length !== 74 ||
+  new Set(TASK_540_LINE_LIMIT_ACCOUNTABLE_PATHS).size !==
+    TASK_540_LINE_LIMIT_ACCOUNTABLE_PATHS.length ||
+  TASK_540_LINE_LIMIT_ACCOUNTABLE_PATHS.some(
+    (path) => !isLineLimitedHumanAuthoredModule(path)
+  ) ||
+  TASK_540_LINE_LIMIT_ACCOUNTABLE_PATHS.some((path) =>
+    LEAVES.some(({ allowedFiles }) => allowedFiles.includes(path))
+  ) ||
+  TASK_540_LINE_LIMIT_ACCOUNTABLE_PATHS.some((path) =>
+    task540ReadOnlyConsumerPaths.includes(path)
+  ) ||
+  TASK_540_FROZEN_PRE_SPLIT_MODULE_PATHS.some((path) =>
+    TASK_540_LINE_LIMIT_ACCOUNTABLE_PATHS.includes(path)
+  ) ||
+  TASK_540_LINE_LIMIT_TRIPWIRE_PATHS.some(
+    (path) => !TASK_540_LINE_LIMIT_ACCOUNTABLE_PATHS.includes(path)
+  ) ||
+  createHash("sha256")
+    .update(JSON.stringify([...TASK_540_LINE_LIMIT_ACCOUNTABLE_PATHS].sort()))
+    .digest("hex") !== TASK_540_LINE_LIMIT_ACCOUNTABLE_PATHS_SHA256
+) {
+  throw new Error("TASK-540 line-limit accountability registry drifted");
 }
 
 const VALIDATION_EXECUTABLE_ALLOWLIST = Object.freeze([
