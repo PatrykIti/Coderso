@@ -78,17 +78,21 @@ The audited task set is the exact 21-file TASK-547 graph. Run five sequential
 rounds. Each round has:
 
 1. exactly 21 per-file audits, one result for every TASK-547 task file;
-2. one fresh cross-file reconcile audit after all 21 results exist;
-3. one zero-fix record only when every result is clean.
+2. exactly two path-ordered workflow-owner source-shard audits, each paired
+   with the complete signed task-contract packet;
+3. one fresh cross-file reconcile audit after all 23 source results exist;
+4. one zero-fix record only when every result is clean.
 
-With four total collaboration slots, dispatch per-file auditors in bounded
-parallel waves of at most three agents. Each per-file audit uses a unique fresh
-agent task. The reconcile uses a separate fresh agent and runs only after all
-per-file agents returned.
+With four total collaboration slots, dispatch source auditors in bounded
+parallel waves of at most three agents. Each audit uses a unique fresh agent
+task. The reconcile uses a separate fresh agent and runs only after every
+per-file and owner-shard result returned. The two balanced shards cover the
+literal workflow-owner inventory exactly once; missing, reordered, duplicated
+or cross-run shard bindings fail closed.
 
 Round `N+1` cannot begin before round `N` is complete and clean. After round 5,
-run one additional fresh reconcile. This yields 111 unique native agent tasks:
-`5 × (21 + 1) + 1`.
+run one additional fresh reconcile. This yields 121 unique native agent tasks:
+`5 × (21 + 2 + 1) + 1`.
 
 Each per-file result must use the exact schema:
 
@@ -192,18 +196,19 @@ mode-`0600` regular files. Reads reject symlinks and identity changes, writes
 are atomic, and recoverable locks bind PID, process start ticks, boot ID and
 inode ownership.
 
-The pre-implementation directory contains exactly 116 files:
+The pre-implementation directory contains exactly 126 files:
 
 - five rounds × 21 `round-NN-per-file-<slug>.json`;
+- five rounds × two `round-NN-workflow-owner-shard-0N.json`;
 - five `round-NN-reconcile.json`;
 - five `round-NN-fixes.json`;
 - one `final-reconcile.json`.
 
 Every artifact includes the native run identity digest, trusted packet/job
 binding, issue nonce/timestamp, exact unique `agentTask`, `forkTurns`, target,
-round and finding counts. Final validation compares all 111 receipts with the
+round and finding counts. Final validation compares all 121 receipts with the
 trusted state job/packet matrix; artifact-owned digests never self-authorize.
-All 116 records bind to the same immutable run input. Old external-host evidence
+All 126 records bind to the same immutable run input. Old external-host evidence
 is schema-v1 and must be rejected.
 
 An interrupted or incomplete run never passes. Official evidence is published
@@ -214,7 +219,7 @@ zero findings, unchanged identity and aggregate digest.
 ## Ownership and Implementation Order
 
 The task graph and audit cardinality do not change: exactly 21 TASK-547 files,
-13 executable leaves, 111 native pre-implementation jobs and 116 published
+13 executable leaves, 121 native pre-implementation jobs and 126 published
 pre-implementation artifacts. Smoke modularity expands only the sequential
 implementation state machine, from 14 to exactly **35 phases**:
 
@@ -518,7 +523,11 @@ const run = await prepareNativeAuditRun({
 });
 
 for (let round = 1; round <= 5; round += 1) {
-  for (const wave of chunk(run.perFileJobs(round), 3)) {
+  const sourceJobs = [
+    ...run.perFileJobs(round),
+    ...run.workflowOwnerShardJobs(round),
+  ];
+  for (const wave of chunk(sourceJobs, 3)) {
     const receipts = await orchestratorSpawnFreshCodexAgents(wave);
     for (const receipt of receipts) {
       await ingestNativeAgentReceipt(receipt);
@@ -540,7 +549,7 @@ for (let round = 1; round <= 5; round += 1) {
 await ingestNativeAgentReceipt(
   await orchestratorSpawnFreshCodexAgent(run.finalReconcileJob()),
 );
-await validateAndPublishFinalEvidence({ expectedFiles: 116 });
+await validateAndPublishFinalEvidence({ expectedFiles: 126 });
 ```
 
 Implementation dispatch:
@@ -647,15 +656,15 @@ patch the set.
 - `node --check _docs/_workflows/task-547-implement.mjs`
 - `node --check _docs/_workflows/task-547-fix.mjs`
 - native audit runner self-test:
-  - exactly 21 per-file jobs plus one reconcile per round;
+  - exactly 21 per-file jobs, two owner-shard jobs and one reconcile per round;
   - five rounds strictly sequential;
-  - 111 unique agent tasks;
+  - 121 unique agent tasks;
   - missing/duplicate/reused/wrong-round/wrong-job receipt rejection;
   - malformed schema/anchor/path/UTF-8 rejection;
   - finding in rounds 1–5 forces restart;
   - HEAD/ref/index/task/reference/workflow drift rejection;
   - interruption cannot produce complete evidence;
-  - exactly 116 final artifacts;
+  - exactly 126 final artifacts;
   - schema-v1 external-host evidence rejection.
 - implementation ownership/order and root-TSC classifier self-tests.
 - implementation self-test proves exactly 35 phases, the unchanged 13-leaf

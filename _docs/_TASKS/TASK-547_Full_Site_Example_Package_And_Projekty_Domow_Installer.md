@@ -173,9 +173,10 @@ family without taking source ownership from those children. The source/test
 ownership registry remains exactly 13 executable leaves.
 
 The executable leaf graph still contains exactly 21 TASK-547 task files. The
-pre-implementation workflow still dispatches exactly 111 native jobs and
-publishes exactly 116 audit artifacts. Those counts do not expand for smoke
-modularity. Implementation instead expands from 14 to exactly **35 sequential
+pre-implementation workflow dispatches exactly 121 native jobs and publishes
+exactly 126 audit artifacts after adding two bounded workflow-owner source
+shards per round. Those counts do not expand for smoke modularity.
+Implementation instead expands from 14 to exactly **35 sequential
 phases**, each with an exact writable-path set, a complete phase gate and one
 root-owned atomic commit when its validated delta is non-empty:
 
