@@ -11,35 +11,247 @@
 **Modularity Repair Revalidated:** 2026-07-17 — eight source-owner modularity repairs and exact gates passed.
 **Repair Started:** 2026-07-16
 **Current Closure Repair Started:** 2026-07-23
-**Current Closure Repair State:** The source-owner leaves and their latest exact owner-gate
-receipts remain valid, but TASK-540-06/L01 has no current completion or revalidation
-receipt. The active work is limited to dedicated-worktree root authority, zero-finding
-strict-scan enforcement, the bounded scroll-lock-owner timeline, phase-8 uncertain-CAS
-reconciliation, their workflow tests/mutants, the targeted gate and fresh post-audits,
-and then one canonical validation/smoke/closure sequence containing the embedded
-`dg-022` -> `dg-023` -> `dg-024` sub-proof. The 2026-07-16 closure completion receipt
-is historical and cannot satisfy any current-state predicate.
+**Current Closure Repair State:** All source-owner repairs remain landed. The
+owner-directed phase at HEAD `8259a326` is behavior-preserving smoke modularization
+only: split the smoke executor and scenario infrastructure into cohesive modules of at
+most 1,000 physical lines without adding hardening, changing the frozen smoke contract,
+or returning to runtime diagnosis. Checkpoints `f22eee9f` through `8259a326` extracted
+the shared observation and visible-assertion sources, all seven scenario owners, and the
+simple browser invocation owner. The executor facade remains 26,391 lines, including
+the self-test body at lines 15,231-26,384, so this phase is not complete. The required
+order is remaining modularization -> targeted and full gates -> helper restart plus one
+canonical seven-flow Playwright CLI smoke with 13/13 screenshots and deterministic
+cleanup -> changelog/status closure -> integration into `feat/implementations`.
+**Current Codex Collaboration Directive:** 2026-07-24 — Codex agents are the only
+reviewers/implementers used for remaining work. The tracked Codex bridge and local
+orchestrator are landed; Claude invocation and fallback are absent from the current
+workflow and closure path.
+**Current Smoke Module Ownership:** The seven top-level helper/facade paths remain the
+public workflow bundle. That seven-path contract does not forbid implementation
+modules: cohesive tracked owners under `_docs/_workflows/task-540-smoke/**` are part of
+the same TASK-540 smoke implementation, must each remain at most 1,000 physical lines,
+and join tracked-parity, diff, formatting, and line-count validation. The executor
+self-test must also prove exhaustive, non-overlapping action-to-scenario ownership for
+the current manifest, including enumerated related-cache and responsive-users owners,
+so no omitted registry member silently falls through to a shared builder.
 **Current Fresh-Target Changelog Projection Repair:** 2026-07-23 — after the committed
 TASK-548 board/changelog state was merged into the isolated TASK-540 worktree, the
 canonical Start gate stopped before agent, server, browser, fixture, or closure mutation
 because the TASK-540 index projection incorrectly included the independent 1260/1261
-reservation sentence in its mutable prose slot. TASK-540-06-L01 owns the fail-closed
-parser/test correction: mask only the unique canonical TASK-540 reservation sentence or
-consumed two-sentence pair, preserve every following reservation byte, and reject
-duplicates, malformed/interposed state, or escaped 1252/neighbor contradictions. This
-diagnostic invocation produced no smoke or closure evidence.
+reservation sentence in its mutable prose slot. The ignored implementation helper and
+tracked structural regression now contain TASK-540-06/L01's fail-closed correction at
+the exact pre-bridge checkpoint: mask only the unique canonical TASK-540 reservation
+sentence or consumed two-sentence pair, preserve every following reservation byte, and
+reject duplicates, malformed/interposed state, or escaped 1252/neighbor contradictions.
+Those bytes still await the combined targeted gate and are not a current receipt. The
+stopped invocation produced no smoke or closure evidence.
 **Current Closure Board Checkpoint:** Merge HEAD
 `aaf7e6dbd13fe51d5ab00cfc5dbcaa5e44b60d01` synchronized `feature/tasks-fixes`
 with committed `feat/implementations` and observed To Do 409 / In Progress 7 / Done 3116.
 TASK-540's isolated expected delta is 409 / 6 / 3117, but this is only a
 checkpoint: closure must read the board and changelog index fresh and derive the same
 single-family delta from whatever unrelated agents have landed.
-**Local Workflow Recovery Authority:** The ignored operational workflow set is recovered
-locally, never staged, from commit
-`3d5604ecfdeaa9c4d5ef32c1314b838a793441ad`. Its verified recovery hashes and the
-current mismatch/final repinning rules are owned in TASK-540-06/L01. TASK-545 retains
-exclusive ownership of any future tracked-workflow or durable screenshot-manifest
-policy.
+**Local Workflow Recovery Authority:** The operational workflow set was historically
+recovered locally, without staging, from commit
+`3d5604ecfdeaa9c4d5ef32c1314b838a793441ad`. Its six historical helper hashes match
+TASK-540-06/L01's pre-bridge checkpoint; recovery remains verification-only and must not
+restore, replay, or overwrite repaired bytes. The seven top-level helper/facade paths
+and every cohesive child module under `_docs/_workflows/task-540-smoke/**` must be
+tracked and clean-checkout reproducible without changing the broad
+`_docs/_workflows/` ignore rule. TASK-540-06/L01 owns the top-level set, child-module
+ownership, historical provenance, final repins, and tracked-parity rules. TASK-545
+retains ownership of repository-wide workflow policy and durable screenshot manifests.
+**Current Vite Authority:** TASK-546 owns `package.json`, `core/package.json`, and
+`bun.lock`; their landed bytes already resolve Vite `8.1.5` and remain
+byte-identical/read-only throughout TASK-540. Before any bridge or combined targeted
+gate, TASK-540-06/L01 changes only the smoke-host implementation's exact version
+literals, default fixtures, version mutants, self-test expectations, embedded
+child-source byte pins to `8.1.5`, then privately re-audits and revalidates the
+optimizer-readiness shape against that exact version. Dependent helper hashes and
+implement/executor/task/test pins remain unchanged until that revalidation, all bridge
+implementation, formatting, and every helper byte are final. No other current Vite
+authority is permitted.
+**Required Post-Repair Codex Collaboration Host Authority:** After the no-Claude
+bridge/local-host/schema/CAS-ACK/recovery/prompt/test implementation lands, receives its
+final repins, and passes the combined targeted gate, one continuous canonical
+`task-540-local-orchestrator.mjs --run` process must retain every repository snapshot,
+exact rollback, validation command, server, Playwright, fixture, evidence, and exact-one
+smoke authority. Until then, `--run` must fail closed or remain withheld before agent
+dispatch. The coordinating external root launches exactly one outer
+`node _docs/_workflows/task-540-local-orchestrator.mjs --run` child from the verified
+root with `shell:false`, `detached:false`, and private non-TTY pipe stdin/stdout. It
+never launches a request/recovery bridge child. The landed host may delegate only
+schema-bound audit/fix reasoning through the task-scoped helper
+`_docs/_workflows/task-540-codex-agent-bridge.mjs`, which remains one of the seven
+top-level tracked entrypoints. Cohesive smoke child modules are internal implementation
+owners, not additional public entrypoints. That continuous `--run` host alone owns
+every request/recovery bridge child launch.
+
+The root consumes the one private canonical-LF notification
+`{deadlineAtEpochMs,requestDir,requestId,sequence}` and sends all later control traffic
+only through that same outer host's private stream. `controlCore` is exactly
+`{command,controlId,controlOrdinal,payload,requestId,sequence}` and
+`controlReplyCore` is exactly
+`{command,controlId,controlOrdinal,requestId,result,sequence,status:"ok"}`. Exactly one
+command may be in flight. `controlOrdinal` is dense positive, `controlId` is an
+independent random 128-bit lowercase-hex value, and `command` is exactly `inspect`,
+`respond`, `status`, `wait`, `procedure`, `recover-review`, or `abort`. The first five
+commands bind non-null `requestId` and `sequence` to the notified request; `abort` and
+`recover-review` use both as null. `payload` is null exactly for `inspect`, `status`,
+and `wait`; `respond`, `procedure`, and `recover-review` carry only their exact
+leaf-defined payloads, while `abort` carries exactly `{reason,review}`, with `reason`
+from the closed `abortCore` enum and `review` the complete task-name-free
+`recoveryReviewCore`. `abort` is handled entirely by the host and never
+launches a bridge child. Reply correlation repeats the command, control ID, ordinal,
+request ID, and sequence exactly. Each complete input or reply frame, including its
+sole LF, is at most 8,454,144 bytes. Both endpoints parse and re-encode before acting,
+reject noncanonical encodings, unknown or duplicate fields, out-of-order or replayed
+commands, pipelining, and extra bytes, and never echo a raw frame or accept an argv,
+environment, file, socket, TTY, or inherited-descriptor alternate transport. An
+explicit valid framed `abort` is the sole controlled-abort path: the host freezes
+dispatch, validates the live-root review, seals and cleans the aborted generation,
+sends the correlated reply, and exits; the external root then proves the host absent.
+Unframed EOF, root loss, or control-transport loss instead freezes dispatch, terminates
+and proves absent only provable exact child state, preserves all journal/request/ledger
+evidence, and exits nonzero. A fresh external root must prove the old host absent and
+enter raw recovery; it may not retroactively abort, reconnect, resume, or adopt the
+generation, and a missing private transcript map blocks cleanup. Root alone may win
+the operator claim and mediate dispatch; the local timeout contender may instead win
+the sole pre-claim timeout claim, cancel without dispatch/procedure, and produce the
+exact nondispatch ledger state.
+
+Every bridge child launched by that continuous host is parent-armed under one dense
+launch ordinal. The fixed journal uses the leaf's exact
+`launch-<zero-padded-12-digit-launchOrdinal>.planned.json`, `.armed.json`,
+`.cleanup-started.json`, and `.cleaned.json` records and its exact
+`helper-launch-planned` -> `launchPlannedSha256`, `helper-launch-armed` ->
+`launchArmedSha256`, `helper-launch-cleanup-started` ->
+`launchCleanupStartedSha256`, and `helper-launch-cleaned` -> `launchCleanedSha256`
+domains/cores. The host writes and fsyncs the plan before spawn. Before arming, the
+child may parse only the bounded private bootstrap and MUST NOT stat, open, read, write,
+or derive `requestDir`, the fixed journal, or repository state. The host then writes
+and fsyncs the exact positive PID/start identity in the armed record before sending one
+exact `GO` frame through the private control pipe. EOF before `GO` exits silently with
+a nonzero status and no request/journal/repository access or output. Only after valid
+`GO` may the child enter its exact mode; `response.started.json` and
+`cancel.started.json` remain the only request contender-start records.
+
+A planned-without-armed launch is never request-capable and can never later gain
+request/journal/repository access because `GO` was impossible. That fact does not claim
+the PID, start identity, or physical absence of an unarmed pre-exec process. The bridge
+module's sole export is the narrow host-only in-process pre-arm primitive
+`sweepPriorBridgeLaunchesForRecovery`; it is not a CLI mode, cannot execute a
+request/recovery mode in process, and has no request/root-payload or cleanup authority.
+In a fresh recovery-only host it validates the complete prior launch-record set,
+terminates only exact still-live armed PID/start identities, and proves every prior
+armed/request-capable helper absent. It returns exactly
+`{...priorHelperSweepCore,priorHelperSweepSha256}`, where
+`priorHelperSweepCore={launches,runSha256,schemaVersion:1}` and `launches` is dense,
+prior-ordinal ordered, and contains only exact
+`{launchArmedSha256,launchOrdinal,launchPlannedSha256,state}` items. `state` is
+`armed_absent` with a non-null armed digest or `planned_unarmed` with a null armed
+digest; the sole mapping is `recovery-helper-sweep` -> `priorHelperSweepSha256`.
+`helperLaunchArmedCore` is exactly
+`{launchOrdinal,launchPlannedSha256,mode,moduleSha256,priorHelperSweepSha256,processId,processStartTime,worktreeSha256}`;
+its sweep digest is null for the five request modes and exact non-null only for
+`recover-review`. GO is exactly
+`{command:"GO",launchArmedSha256,launchOrdinal,launchPlannedSha256,priorHelperSweep}`,
+with `priorHelperSweep` null for the five request modes and the exact sweep envelope for
+`recover-review`. Only after this preflight may the host plan, arm, and GO its
+`recover-review` controller. Before recovery-payload access, that child exact-set
+verifies every prior launch ordinal, excluding only its own new ordinal. A crashed
+controller joins the next fresh host's prior-launch sweep. An exact bounded current-UID `/proc` scan keyed to canonical
+module/mode/request/launch authority is only additional absence evidence and never
+authorizes signalling an unknown or mismatched result. The handshake and recovery
+primitive add no child CLI mode: the direct bridge modes remain exactly `--self-test`,
+`--inspect`, `--respond`, `--status`, `--wait`, `--procedure`, and
+`--recover-review`.
+
+Operator/timeout election uses one hard-link no-overwrite CAS. `claimCore` is exactly
+`{claimId,claimOwner,deadlineAtEpochMs,deadlineMonotonicNs,decisionMonotonicNs,requestId,requestSha256,schemaSha256,sequence}`.
+Operator is eligible only when `decisionMonotonicNs < deadlineMonotonicNs`; timeout is
+eligible only when `decisionMonotonicNs >= deadlineMonotonicNs`, so equality is timeout.
+A contender creates its candidate at `nlink=1`, links it without overwrite to the fixed
+claim path, verifies the same inode at `nlink=2`, unlinks its candidate, and verifies the
+claim at `nlink=1`. `EEXIST` validates and joins the published winner and cleans only
+that contender's distinct losing candidate; it never overwrites or removes the winner.
+TASK-540-06-L01 owns the exact six crash rows—empty, candidate(s)-only, claim-only,
+claim plus same-inode candidate, claim plus distinct loser(s), and claim plus both—as
+well as every row and claim-boundary mutant.
+
+After an operator claim, root starts one fresh non-root collaboration agent with
+`fork_turns="none"` and relays its exact result plus root-attested,
+transcript-correlated procedural receipt through the pinned host-stream
+notify→inspect→status/wait→respond→procedure protocol. Only spawned non-root
+collaboration agents
+are forbidden from receiving the bridge path or request/claim IDs, environment or
+`.env` material, raw patch/content/log bytes, credentials/session material, or user
+data; each receives only the safe policy, prompt, and result schema. No spawned non-root
+agent may start a server, browser, or smoke.
+
+Schema identity must be registered once in-process; RESULT/AUDIT are read-only,
+registered MUTATION is the sole mutating class, and GATE, clones, unknown schemas, or
+post-registration schema-object mutation reject. The exact transcript result digest is
+bound through response, procedure, settlement, and ledger evidence. A claimed request
+whose spawn fails records exact `dispatchStatus:"spawn_failed"` in its procedure/ledger
+without invented task identity or retry; a first cancellation start strictly before the
+deadline settles with `error:"dispatch_failed"`, while equality/after or an
+already-started deadline cancellation settles with `error:"deadline_exceeded"`. Pinned
+monotonic checks at inspect, response start, and pre-CAS plus no-overwrite CAS enforce
+timeout; the root's `interrupt_agent` is procedural closure evidence, not a hermetic
+local-test claim. The independent changelog-index anchor and changelog evidence both
+retain the safe ledger prefix.
+
+Only the explicit framed `abort` command may controlled-abort a pre-terminal
+generation. It freezes dispatch, consumes the live root's final review of the available
+actual request/task/result/procedure correlations plus its reason, seals the safe
+projection under the exact abort hash in a prepared/fsynced journal, and then
+identity-cleans only the listed bridge run-ledger entries before reply and host exit.
+Raw process-crash or unframed transport-loss recovery is a separate cleanup-only path.
+Its fixed private per-worktree Git-dir run journal is prepared and fsynced before the
+first bridge-owned random `/tmp` request-directory or run-ledger artifact and durably
+plans each such identity before creation. Thus the no-undiscoverable-artifact claim is
+strictly limited to bridge-owned request/ledger artifacts; it does not claim raw-crash
+durability for smoke/browser/server/fixture artifacts, general host temporary state,
+or a reusable partial smoke.
+
+Before raw recovery may remove request bytes, the fresh external root proves the old
+host absent and the recovery-only host completes the prior-helper sweep above. Recovery
+also validates each durable response/cancel start's exact positive
+PID/start/role/module/worktree identity. It sends SIGTERM only to an exact still-live
+helper PID and waits at most five seconds, then sends SIGKILL only if that same identity
+remains and waits at most five more seconds; a recycled or mismatched process is never
+signalled. Every recorded local start identity must be proven absent. Root then supplies
+the exact task-name-free procedural review through the host-stream `recover-review`
+command for every journal-planned request; for each still-live mapped collaboration
+task, root first calls `interrupt_agent` and boundedly proves it stopped. A missing
+private transcript map, missing or mismatched review, failed termination, or missing
+absence proof retains the journal, request, and ledger evidence.
+After exactly one final agent-backed closure-drift pass returns clean, agent dispatch
+freezes permanently. The root first recomputes every actual transcript correlation;
+then the exact terminal hash binds the complete projection and pre-closure fields, and
+a prepared/fsynced five-file transaction commits the changelog-index anchor last so
+restart can roll back or forward. A final local mechanical gate and repeated root
+transcript review must both pass before local ledger cleanup, and no agent call is legal
+after the freeze. Every failure after the 21-target status commit reuses that
+same still-prepared status journal; no partial per-file status mutation or second
+status transaction is legal. Before the first old-payload restore,
+the host creates and fsyncs exact `status.rollback-prepared.json`, whose envelope uses
+domain `status-rollback-prepared`, digest field
+`statusRollbackPreparedSha256`, and core exactly
+`{manifestSha256,transactionId}`. Once present, that marker forces convergence to the
+complete old generation regardless of the current board hash. A terminal failure first
+restores the five terminal targets with the changelog index last, then every failure
+restores all 20 TASK-540 task files plus `_docs/_TASKS/README.md` from the status
+journal, with the board last as rollback commit point. Ordinary repair may start only
+after all 21 old payloads are byte/mode/hash verified. Crash mutants cover the rollback
+marker creation/fsync and every reverse payload write, file fsync, rename, and
+parent-directory fsync. TASK-540-06-L01 owns the exact frames, domain-separated hash
+cores, contender-start/settlement/acknowledgement bindings, procedure ledger, schema
+validator, recovery matrices, and mutants. “No concurrent writer” covers the local
+single-flight and other root-authorized TASK-540 writers; arbitrary same-UID drift is
+detected by snapshots. The bridge is coordination rather than malicious same-UID OS
+isolation, so existing postchecks and rollback remain final authority.
 **Historical Pre-Overflow Repair Reason:** The final sequential post-audit stopped before smoke on evidence-backed drift. R01 owned scoped malformed-binding recovery, one-pass legacy orphan filtering, collision-safe id-less legacy generation, explicit-ID-only Assistant composition, stored duplicate-ID fail-closed proof, and metadata-PATCH preservation. L03 owned single-media override eligibility across service and Entry Editor plus canonical import placement. L01 required every Canvas region name, L02 completed both sides of the authenticated A/B self-scope proof, and L04 owned the binding-flow expectation that consumes the shared binding-ID helper. Earlier R01/L02/R03 strict-ID, Tab-label, and zero-Tabs repairs remain durable; the later repair reason at that checkpoint was the L03 overflow state recorded below.
 **Historical Pre-Modularity Repair Revalidation:** 2026-07-16 — against HEAD `040604e7e3d5232a5fb2fcb6a05e149295a89a77` plus the exact dirty paths recorded by each leaf, core/root static gates passed; expanded R01 changed suites passed 81/81, six-file Vitest 176/176, route/Assistant Bun 93/93 with 576 expectations, isolated route 20/20 with 118 expectations, and document ops 11/11; L03 then retained Vitest 258/258, cacheBus 22/22, and the then-current pre-split routes 20/20 with 118; L04 passed isolated 3/3 and its ten-file matrix 98/98; TASK-540-05-L01 then retained 16/16; TASK-540-05-L02 then retained Vitest 66/66, Bun 27/27 with 165, and user-settings 10/10 with 64; DB preflight, workflow self-tests, and diff checks passed. R01/L03 route evidence is pre-modularity-split only. This historical targeted receipt was superseded by later owner receipts, themselves superseded for L03's behavior gate by the later overflow repair, and claims no closure result.
 **Historical Pre-Overflow Post-Audit Repair Revalidated:** 2026-07-17 — after the third one-shot post-audit stopped before full validation and smoke, L04 switched from synthetic source projection to genuine production-file assertions and gained an exact five-module structural verifier; L03 removed a dead fixture and tautological continuation comparisons; closure pinned the aggregate expected ID independently and narrowed the grounded-path false-positive exception without weakening non-negotiable sensitive-path rejection. Focused static/test/line/workflow gates passed, and two fresh scoped audits reported 0 HIGH/MEDIUM/LOW findings. At that checkpoint the mandatory fresh five-lens family post-audit and all later closure gates remained pending; the later L03 overflow repair superseded its behavior-gate state.
@@ -52,11 +264,19 @@ policy.
 **Historical Pre-Overflow Failure-Action Diagnostic Self-Test:** at that checkpoint the final executor self-test passed 490 actions and 196 negative cases with a caught synchronous stderr write, including `EPIPE`, `EBADF`, and partial-write containment. The later L03 overflow repair superseded the prepared closure state, not this durable diagnostic behavior.
 **Prior L03 Overflow Repair Revalidated:** 2026-07-18 — TASK-540-04-L03 restored canonical `Implementation Complete` and replaced its exact `Repair Pending` with `Revalidation Passed: generation 71b1c73b899a4ab4be94690ce387f28e / token ff99adec779348e796d56df5dbda3627 / gate green`. At that checkpoint the canonical resolver was prepared with all ten leaves landed and no remaining implementation leaf; TASK-540-06-L01 retained its exact `reserved-pre-closure-regated` receipt. Later R01 and post-audit work supersede only that prepared-resume claim, not the recorded L03 gate.
 **Historical R01 Stored-Read Repair Revalidated:** 2026-07-19 — TASK-540-01-L01 replaced `Repair Pending: generation 28bd5c90c7fd485eabc0c611d5e34752 / token 0237fd1a85b54c7e80e46c0eaac5477d` with the exact matching gate successor and restored canonical `Implementation Complete`; TASK-540-01 mirrors that completion state. The later selector-inclusive R01 receipt supersedes this as current owner-gate evidence.
-**Current Post-Audit Intervention:** 2026-07-19 — one complete five-lens round stopped before full validation and smoke. The verified correction was a four-owner dependency chain: R01 appended one Bun-free, precisely returning first-media-UUID selector to `screenMediaIdentity.ts` and extended its existing UUID test declaration; R03 consumed that selector in the runtime renderer; L03 consumed it in Entry presentation media, gave every Entry Presentation control a programmatic name, and replaced its hand-built records-workspace href with the canonical helper; L04 gave every Screen Settings control a programmatic name. The failed L03-only attempt was fully reverted and remains diagnostic evidence that a pure L03 owner must not import the R03 admin/UI model. All four implementations landed in dependency order, the L01 compatibility test followed, and all five exact owner re-gates are now green. A fresh clean family post-audit remains required before full validation.
-**Current Four-Owner Implementation Evidence:** 2026-07-19 — R01 landed as `f8e916b9255677352a2ed2fef9bd73093dec5683`, R03 as `596ede31d17c65168510baf6b478696e3d345377`, L03 as `46759bcea211c39a708ed424f749efe2343a56b3`, and L04 as `204fd1de0f129f73976f577f420acbdac5316dea`. These commit identities record source/test provenance only; they are not generation/token receipts and do not claim full validation, smoke, changelog, or closure.
+**Historical 2026-07-19 Post-Audit Intervention:** 2026-07-19 — one complete five-lens round stopped before full validation and smoke. The verified correction was a four-owner dependency chain: R01 appended one Bun-free, precisely returning first-media-UUID selector to `screenMediaIdentity.ts` and extended its existing UUID test declaration; R03 consumed that selector in the runtime renderer; L03 consumed it in Entry presentation media, gave every Entry Presentation control a programmatic name, and replaced its hand-built records-workspace href with the canonical helper; L04 gave every Screen Settings control a programmatic name. The failed L03-only attempt was fully reverted and remains diagnostic evidence that a pure L03 owner must not import the R03 admin/UI model. All four implementations landed in dependency order, the L01 compatibility test followed, and all five exact owner re-gates were green at that checkpoint. A fresh clean family post-audit remained required before full validation.
+**Historical Four-Owner Implementation Evidence:** 2026-07-19 — R01 landed as `f8e916b9255677352a2ed2fef9bd73093dec5683`, R03 as `596ede31d17c65168510baf6b478696e3d345377`, L03 as `46759bcea211c39a708ed424f749efe2343a56b3`, and L04 as `204fd1de0f129f73976f577f420acbdac5316dea`. These commit identities record source/test provenance only; they are not generation/token receipts and do not claim full validation, smoke, changelog, or closure.
 **Current L01 Compatibility Evidence:** 2026-07-19 — commit `7a393dcc7aaf454fee582ce7745073768e0e131b` reopens the one-shot Insert palette before the existing second insertion assertion, while commit `204fd1de0f129f73976f577f420acbdac5316dea` assigns that test exclusively to TASK-540-05-L01. The insertion target and ordering assertions remain unchanged; this is implementation provenance, not a current owner-gate receipt.
-**Current Focused Validation Evidence:** 2026-07-19 — all five dependency-ordered owner gates passed. R01: schema 77/77, document operations 43/43, exact Vitest 210/210, routes 21/21, Assistant 73/73, combined Bun 94/94, and DB/static/name/line/workflow checks. R03: isolated 22/13/24/13 and combined 89/89. L03: expanded 258/258, L04 read-only consumers 98/98, and routes 13/13. L04: isolated 6/13/8/9 and combined 98/98. L01: isolated 7/7 and 10/10, combined 29/29. Full-family line, prepared-resume, workflow, and diff checks passed.
-**Current Receipt Synchronization State:** R01, R03, L03, L04, and TASK-540-05-L01 each carry exactly one current `Revalidation Passed` for the five 2026-07-19 implementation/test commits above; older receipts are retained only under uniquely named historical fields. The clean five-lens post-audit and full validation remain pending.
+**Historical 2026-07-19 Focused Validation Evidence:** all five dependency-ordered owner gates passed at that checkpoint. R01: schema 77/77, document operations 43/43, exact Vitest 210/210, routes 21/21, Assistant 73/73, combined Bun 94/94, and DB/static/name/line/workflow checks. R03: isolated 22/13/24/13 and combined 89/89. L03: expanded 258/258, L04 read-only consumers 98/98, and routes 13/13. L04: isolated 6/13/8/9 and combined 98/98. L01: isolated 7/7 and 10/10, combined 29/29. Full-family line, prepared-resume, workflow, and diff checks passed.
+**Current Receipt Synchronization State:** R03's current 2026-07-20 authority is exactly
+`Revalidation Passed: generation 90d5543e1773459aaf7893aec3f24c57 / token a837a8a8a8fa442dbae7656abb3e88ac / gate green`
+for its unchanged exact 89/89 renderer contract. Its separately current auxiliary
+dead-code receipt proves the independent 6/6 gate, unchanged renderer fingerprints,
+sole-writer/153-line contract, workflow checks, and diff check. The 2026-07-19 R03
+selector-consumer commit and its selector-inclusive gate remain historical
+implementation provenance. R01, L03, L04, and TASK-540-05-L01 retain the current
+authorities recorded in their own leaves. The clean five-lens family post-audit and
+full validation remain pending.
 **Current Mechanical-Gate Correction:** the protected-name `current` mode now applies the same exact additive callback-preservation contract as `final` mode for `userSettingsRoutes`; it still preserves all names, partitions, retained statements, producer/result assertions, and support-module boundaries. This removes the deterministic current-mode false failure without weakening or re-baselining the changed body SHA.
 **Prior Repair Revalidation:** 2026-07-16 — before the composer and L04 provenance findings, HEAD `040604e7e3d5232a5fb2fcb6a05e149295a89a77` plus the then-recorded dirty paths passed core/root static gates; R01 Vitest 168/168, route/Assistant Bun 92/92 with 568 expectations, route 19/19 with 110, and ops 11/11; L03 Vitest 258/258, cacheBus 22/22, and L04 consumer matrix 98/98; L01 16/16; L02 Vitest 66/66 and Bun 27/27 with 165 expectations; user-settings 10/10 with 64; DB preflight; binding-flow 3/3; workflow self-tests; and diff checks. This evidence is historical for the expanded contract.
 **Historical L03 Repair Started:** 2026-07-15
@@ -64,7 +284,7 @@ policy.
 **Historical L04 Repair Started:** 2026-07-15
 **Historical L04 Repair Reason:** Mandatory repository-wide `bun run test` confirmed that `screen-editor-sections.test.tsx` fully mocked cacheBus without the fresh-symbol factory required by the L04-owned Screen builder Save path. TASK-540-04/L04 completed the additive mock repair and exact six-file/66-test re-gate; at that historical phase closure resumed and every source descendant was Done, before the later L03 duplicate-delivery finding paused closure again.
 **Historical Repair Started:** 2026-07-14
-**Historical Repair Reason:** Repository-wide Bun validation confirmed one stale Assistant Custom Screen block-patch fixture using unsupported strict-V4 block kinds. Only TASK-540-01/L01 was reopened for a fixture-only compatibility repair; every other source descendant remained historically Done and closure remained In Progress.
+**Historical Repair Reason:** Repository-wide Bun validation confirmed one stale Assistant Custom Screen block-patch fixture using unsupported strict-V4 block kinds. TASK-540-01/L01 alone owned that fixture-only compatibility repair while closure remained In Progress.
 **Changelog:** 1252 (pinned; create only at implementation closure)
 **Changelog File:** `_docs/_CHANGELOG/1252-2026-07-14-task-540-custom-screens-functional-and-data-integrity-remediation.md`
 
@@ -107,6 +327,8 @@ TASK-9999-01-L02 was re-triaged on 2026-07-18 and is `⏭️ Superseded` by acti
 TASK-9999-01-L01 is the only TASK-540 deferred finding. HIGH/MEDIUM findings and every LOW with
 user-visible, accessibility, data, security, privacy, auth/RBAC, API, persistence,
 migration, performance, reliability, or test-integrity impact remain blocking.
+No newly reported LOW, newly created follow-up, or alternate TASK-9999 leaf may be
+treated as non-blocking during TASK-540 closure.
 
 ## Hard invariants
 
@@ -247,6 +469,7 @@ migration, performance, reliability, or test-integrity impact remain blocking.
 | TASK-540-04 | Dirty navigation and async/cache recovery | TASK-540-04-L01..L04 | 🚧 In Progress |
 | TASK-540-05 | Responsive canvas, ARIA, and user preferences | TASK-540-05-L01, L02 | 🚧 In Progress |
 | TASK-540-06 | Tests, smoke, and closure | TASK-540-06-L01 | 🚧 In Progress |
+| TASK-540-07 | Smoke option-selector correction and first-failure reporting | TASK-540-07-L01, L02 | ⏳ To Do |
 
 ## Hard family-wide modularity gate
 
@@ -301,12 +524,12 @@ TASK-540-06-L01 closure
 The current remaining order is exactly:
 
 ```text
-contract audit → local workflow recovery → worktree-root/strict-scan repair →
-scroll-lock-owner repair → phase-8 uncertain-CAS repair → targeted revalidation →
-fresh clean five-lens pre-smoke post-audit → canonical full validation → one canonical
-runtime smoke containing the embedded dg-022 → dg-023 → dg-024 diagnostic sub-proof →
-smoke-evidence audit → changelog 1252/control preparation → complete full-validation
-rerun → child-first atomic TASK-540 closure → final closure-drift/mechanical gate
+finish behavior-preserving smoke executor/scenario modularization to <=1000 LOC per module →
+run targeted and full gates after all smoke bytes stabilize →
+restart the helper-backed server and run one canonical seven-flow Playwright CLI smoke →
+require 13/13 screenshots, zero console errors, and deterministic cleanup →
+create changelog 1252 and close all 20 task files child-first plus the board →
+run the final focused closure checks → commit → integrate into feat/implementations
 ```
 
 The ten protected pre-split test families preserve the exact sorted multiset of all
@@ -367,10 +590,13 @@ that expanded correction now has its exact current receipt. L02 then owned only 
 call-site handoff, invalid Tab-label restore, and its UI regressions; schema and document
 ops remained R01-owned.
 R03 owned only the accessible zero-item Tabs renderer branch and its renderer regression.
-R01, L02, R03, and L01 retain their exact current receipts. R03's cohesive split passed
-its exact 89/89 owner gate; L01 passed isolated 19/15/8 plus Media 23 and combined 65/65;
-both retain zero-finding owner audits. None claims a full family post-audit, full
-validation, smoke, or closure. After changelog 1252 covers their
+R01, L02, R03, and L01 retain their exact current receipts. R03's current
+2026-07-20 generation `90d5543e1773459aaf7893aec3f24c57` covers its exact 89/89
+owner gate, while its separate auxiliary receipt covers the independent dead-code 6/6
+gate; its 2026-07-19 selector-consumer commit remains historical provenance. L01 passed
+isolated 19/15/8 plus Media 23 and combined 65/65; both retain zero-finding owner audits.
+None claims a full family post-audit, full validation, smoke, or closure. After
+changelog 1252 covers their
 physical IDs, the covered post-1252 state may be `✅ Done` with `Completed`.
 Mandatory repository-wide `bun run test` on 2026-07-15 then confirmed that the legacy
 `screen-editor-sections.test.tsx` full-module cacheBus mock omitted the fresh-symbol factory
@@ -409,12 +635,15 @@ final-drift L03 repair, the workflow uses the full original L03 `allowedFiles`, 
 silently re-adding the historical route-test exception. The exact finding prompt and
 post-agent `touchedFiles` verification still constrain every mutation.
 The earlier import-only L03 attempt was reverted before the first prepared-state pass.
-Before the later overflow repair, the final sequential post-audit independently reopened L03 for the substantive
-single-versus-multiple media override contract and included canonical import placement
-inside that scoped repair. R01, L04, TASK-540-05-L01, and TASK-540-05-L02 retain
-their exact repair receipts; L03's prior and overflow generation/token receipts are now
-historical, while its 2026-07-19 Entry-correction receipt is current. The earlier R01/L02/R03 receipts remain durable
-historical prerequisites.
+Before the later overflow repair, the final sequential post-audit independently reopened
+L03 for the substantive single-versus-multiple media override contract and included
+canonical import placement inside that scoped repair. All nine landed source-owner
+leaves retain exactly one current gate receipt: `Revalidation Passed` on
+TASK-540-01-L01, TASK-540-02-L01, TASK-540-03-L01, TASK-540-04-L01,
+TASK-540-04-L03, TASK-540-04-L04, TASK-540-05-L01, and TASK-540-05-L02, plus
+`Targeted Gate Passed` on TASK-540-04-L02. R03 additionally retains its separately
+current auxiliary dead-code receipt. Every field explicitly labeled prior or historical
+remains provenance only.
 After closure, that exact-finding owner additionally receives only the TASK-540 root,
 TASK-540-04 child, and L03 leaf task contracts for evidenced prose; status transitions
 remain separate task-state mutations. TASK-540-06-L01 remains deliberately active. Its
@@ -423,10 +652,11 @@ historical `reserved-pre-closure-regated` evidence from when L03 was the sole re
 leaf; it is not a current `Revalidation Passed` field and cannot satisfy a current-state
 predicate. The prior modularity receipt remains historical split evidence,
 TASK-540-06-L01 has no current `Implementation Complete`, `Revalidation Passed`, or
-`Completed`, and the already-landed R01 → R03 → L03 → L04 → L01 chain alone retains
-current owner-gate receipts in dependency order. Closure resumes only after the complete
-current repair order above. The pre-fix repository-wide `bun run test` command still
-requires a fresh parent rerun; no full-suite or live-smoke pass is claimed here.
+`Completed`. The already-landed R01 → R03 → L03 → L04 → L01 chain records the latest
+correction sequence but is not the complete current receipt set; the exact nine-leaf set
+is pinned above. Closure resumes only after the complete current repair order above. The
+pre-fix repository-wide `bun run test` command still requires a fresh parent rerun; no
+full-suite or live-smoke pass is claimed here.
 Leaves have exclusive source ownership; any shared block data/action/DOM-id
 shape is defined by 540-01 and consumed verbatim. TASK-540-03 owns the pure renderer's
 optional UUID→URL map prop; TASK-540-04-L03 exclusively threads and populates it through
@@ -457,9 +687,14 @@ validated. Before the later overflow repair, the later L03, TASK-540-05-L01, and
 TASK-540-05-L02 repairs had matching receipts; expanded R01 and L04 retain theirs. After
 the later R01 stored-read repair gate, the resolver again reported all ten leaves landed;
 the subsequent five-lens intervention landed R01 → R03 → L03 → L04 in dependency
-order, followed by the L01 compatibility test. Their fresh owner re-gates and matching
-current receipts now pass; the closure leaf is not regated and returns to the closure
-frontier only after its current workflow repairs, targeted gate, and clean post-audit.
+order, followed by the L01 compatibility test. Those 2026-07-19 R03
+selector-consumer bytes and gate are historical; R03's replacement 2026-07-20
+generation plus its separate auxiliary dead-code gate are the current authorities. The
+other matching current leaf receipts pass; the closure leaf is not regated and returns
+to the closure frontier only after the current behavior-preserving smoke modularization
+finishes with every facade/child module at most 1,000 physical lines. Final dependent
+hashes and pins are recomputed only after those bytes stabilize; targeted/full gates,
+the canonical runtime smoke, and closure then follow in the current order above.
 L03's earlier overflow and
 single-versus-multiple media receipts are historical. The matching
 `_docs/CMS_API.md` update is already landed and remains read-only while closure validates
@@ -488,12 +723,14 @@ If shared `CanvasEditor.tsx` changed meanwhile, re-read and re-audit before land
   only its existing Custom Screen block-patch fixture/assertions may change, while the
   full file proves the fixture remains compatible with the Assistant executor contract.
 - Cache/async tests use deferred promises and explicit unmount/cancellation.
-- At least seven real flows: Button bound link with builder non-navigation and
+- Exactly seven canonical real flows: Button bound link with builder non-navigation and
   preview/entry navigation, plus direct/media-field presentation with override and
   scalar/array binding provenance/no-fallback cases;
   add/nest/save/reopen Tabs; keyboard
   Tabs; inline Space; dirty navigation cancel/discard; related-list fail/retry+
   cross-tab update; plus narrow canvas and two-user preference spot checks.
+  They inherit TASK-540-06/L01's exact-one executor-call contract: no extra diagnostic,
+  recovery, or retry smoke invocation and no partial, diagnostic, or reusable evidence.
   Assert visible/ARIA/geometry effects, light/dark, and zero console errors.
 
 ## Documentation Updates Required

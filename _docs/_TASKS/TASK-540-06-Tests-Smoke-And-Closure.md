@@ -15,27 +15,44 @@
 complete, but the later live-smoke repair superseded this as current completion
 authority. It cannot satisfy a current-state predicate.
 **Current Closure Repair Started:** 2026-07-23
-**Current Closure Repair State:** TASK-540-06/L01 has no current completion or
-revalidation receipt. Recover the ignored workflow authority; repair worktree-root and
-strict-scan authority, scroll-lock ownership, and phase-8 uncertain-CAS reconciliation;
-run the targeted gate and post-audits; then run full validation and one canonical smoke
-whose `dg-022` -> `dg-024` segment is the fail-closed real-browser diagnostic sub-proof.
-Only after the whole smoke, cleanup, and smoke-evidence audit pass may closure create
-changelog 1252 and its control evidence, rerun the complete full validation, close the
-family child-first and atomically, and run the final closure-drift/mechanical gate.
-Source-owner receipts remain valid unless fresh evidence names a source-owned defect.
+**Current Closure Repair State:** The owner-directed phase at HEAD `8259a326` is
+behavior-preserving modularization of the smoke executor and scenario infrastructure,
+with no new hardening, product change, runtime diagnosis, or smoke retry. Checkpoints
+`f22eee9f` through `8259a326` already extracted shared observation/visible-assertion
+sources, all seven scenario owners, and simple browser invocations. The executor facade
+remains 26,391 lines and its self-test body remains at lines 15,231-26,384, so further
+cohesive splits are blocking. After every facade and child owner is at most 1,000
+physical lines, the required order is targeted/full gates -> helper restart -> exactly
+one canonical seven-flow Playwright CLI smoke with 13/13 screenshots and deterministic
+cleanup -> changelog/status closure -> integration into `feat/implementations`.
+**Current Codex Collaboration Directive:** 2026-07-24 — all remaining review and repair
+uses Codex collaboration agents only. The obsolete Claude host/fallback is absent; the
+tracked Codex bridge and local orchestrator are landed. No Claude invocation is part of
+the current workflow or remaining closure path.
 **Current Fresh-Target Changelog Projection Repair:** 2026-07-23 — the first canonical
 restart after merging the committed TASK-548 board/changelog state failed closed in the
 Start gate before agent, server, browser, fixture, or closure mutation. Its TASK-540
 prose projection had treated the independent 1260/1261 reservation as part of the
-TASK-540 slot. L01 owns the exact unique-slot parser and regression fixtures that
-preserve all following reservation bytes and reject duplicate, malformed, or interposed
-TASK-540 states. The stopped invocation is diagnostic only.
-**Local Workflow Recovery Authority:** The exact ignored recovery set and its hashes are
-defined by TASK-540-06/L01. Recovering it is an execution prerequisite, not a tracked
-TASK-545 evidence-policy change; no recovered workflow or loose screenshot may be
-staged.
-**Final Executor SHA-256:** `4f21ec5d67a5ab7b810ad4fdb97dcc76ed05e69c652a43af0ab73db815396cff`
+TASK-540 slot. The exact unique-slot parser and regression fixtures are now landed at
+the verified pre-bridge checkpoint; they preserve all following reservation bytes and
+reject duplicate, malformed, or interposed TASK-540 states. They await the complete
+targeted gate. The stopped invocation remains diagnostic only.
+**Local Workflow Recovery Authority:** The exact historical local recovery set and
+hashes are defined by TASK-540-06/L01. The prerequisite is satisfied only by read-only
+inventory/provenance/current-hash verification; recovery replay, destination writes, or
+overwriting repaired bytes is forbidden. The seven top-level helper/facade paths remain
+the public bundle, while cohesive tracked owners under
+`_docs/_workflows/task-540-smoke/**` are its internal implementation modules.
+Finalization must keep both sets clean-checkout reproducible; it neither changes the
+broad ignore rule nor stages any unrelated workflow or loose screenshot. TASK-545
+retains the repository-wide workflow/evidence policy.
+**Historical Executor SHA-256:** `f473f4ff5e4c64fc1b2fc730cd24cbe48f7e1ea6d8aff1730ed32fe862d5c8de`
+— hash-verified checkpoint `911c29f5`; it is non-authoritative after the subsequent
+behavior-preserving modularization commits.
+**Current Executor Inventory:** At HEAD `8259a326`, the 26,391-line facade hashes to
+`bf2a3debbdb3646f302b0debd0eb480027453484a3ee46b2a187f69f2bb82799`.
+This is an inventory value, not a closure pin. Final dependent hashes and pins are
+recomputed only after all facade and child-module bytes stabilize.
 **Historical Source Repair Revalidated (superseded for L03):** 2026-07-16 — expanded R01 composer/stored-duplicate work and the L04 compatibility correction received their then-exact receipts alongside L03 and TASK-540-05. The later overflow repair restored L03's canonical `Implementation Complete` and exact successor gate; this historical receipt still does not authorize closure. The 2026-07-19 Entry-correction receipt is current; fresh post-audit, full validation, live smoke, changelog, and closure remain pending.
 **Historical Pre-Overflow Post-Audit Orchestrator Revalidated:** 2026-07-17 — the real-source L04 test repair, L03 hygiene fixes, independently pinned aggregate expectation, fail-closed grounded-path exception, and mechanically invoked five-module L04 verifier passed focused static/test/line/self-test gates and two scoped zero-finding audits. The later L03 overflow repair superseded that prepared closure state.
 **Historical Pre-Overflow Subsequent Post-Audit Repair Revalidated:** 2026-07-17 — the final L04 consumer gate then enumerated all 15 files and passed 98/98; R03 fixture typing and receipt order passed 89/89; L03 single-read and bounded-media repairs passed 258/258; static, name/body, line, workflow, and diff gates were green at that checkpoint. The later L03 overflow repair superseded that behavior gate.
@@ -67,14 +84,15 @@ zero-finding strict scan; it must not restore or validate the historical pins.
 **Historical Bounded Dirty-Navigation Diagnostics And Complete Cleanup Coverage Implemented And Target-Revalidated:** 2026-07-21 — a third helper-backed diagnostic smoke again reached `dg-024-entry-nav-cancel` after five screenshots, while an exact manual Playwright point probe and an immediate post-dirty race probe both proved one visible Records target, one exact named dialog with positive geometry, its exact heading/description/buttons, a stable source URL, and zero navigation. This isolated the unresolved boundary to executor diagnostics rather than product UI. An exact residue audit then corrected the prior cleanup claim: eight complete TASK-540 nonce families remained (127 exact DB rows and eight exact media files) because the terminal masked cleanup failure and SEO discovery owned only one of six fixture Entry documents. Every exact leaked row and file was removed with provenance, cardinality, bootstrap-admin, no-follow, inode, size, and SHA-256 guards; the active canonical admin remains intact. The executor emits one post-cleanup, <=256-byte allowlisted diagnostic, preserves the real phase for returned phase-6/7 failures, and discovers all six exact Entry SEO targets with stable child-before-parent cleanup. Frozen SHA-256 `4bae679c630e54533c240fae5e6d76b58254dc109242b91d1ba84b162408f1da` passed Prettier, syntax, and the executor self-test with 496 actions, 177 runtime receipts, 72 cleanup actions, and 2230 negative cases. The next live smoke exposed incomplete Select teardown and insufficient phase-3 attribution, so this receipt is historical.
 **Historical Select-Teardown, Physical Dirty-Navigation, And Phase-3 Attribution Repair Implemented And Target-Revalidated:** 2026-07-21 — the next helper-backed smoke again passed setup and the Tone visible-effect flow, then emitted exact terminal `{failedActionId:"dg-024-entry-nav-cancel",failureClass:"click_failed",cleanupPhase:3,cleanupFailureClass:"phase_failed"}`. Read-only forensics found one exact nonce family with four content types, six Entries, two Screens, one Media row and its 68-byte SHA-256-pinned file; SEO, overrides, revisions, settings, synthetic users, sessions, audit/access rows, and every other task-owned surface were absent, global settings matched baseline, and the sole active canonical admin remained intact. A literal-ID, no-wildcard, no-user-delete, no-follow cleanup removed exactly that `4/6/2/1 + file` family and a fresh dry-run proved `0/0/0/0 + no file`. Source tracing found no product navigation defect: the Tone-select latch could return before Radix released its global pointer/scroll lock, while dirty-navigation visibility/geometry did not prove event delivery and its catch conflated pre-dispatch failure with post-dispatch auto-wait. Exactly two Tone-select actions now require every Select content node absent plus body scroll/pointer unlock; exactly five dirty-navigation actions require body unlock, a center-point physical hit test, no pre-existing named dialog, `noWaitAfter`, and the full stable dialog postcondition even after click throws. Their closed browser union adds only `pointer_locked` and `target_intercepted`. Phase 3 now distinguishes stage, dependency, provenance, delete, and absence failures while preserving higher-priority plan/Admin classes. A fresh cleanup-integrity audit found that four real Admin/plan/phase/final aggregation seams were not mutation-guarded; hermetic production-path evidence and four source mutants now bind those seams through the exact bounded, private-marker-free diagnostic. Frozen SHA-256 `5b0de7a899f17148e23272a83d69a5ce148bf3477adc1aed6db3e80b65d039b4` passes Prettier, syntax, and the executor self-test with 496 actions, 177 runtime receipts, 72 cleanup actions, and 2544 negative cases. Fresh read-only re-audits, one diagnostic helper-backed smoke, then the canonical audit/full-validation/smoke, changelog, and closure remain mandatory.
 **Historical Stable Select Handoff, Latest-Target Diagnostics, And Hash-Only Cleanup Receipts Implemented And Target-Revalidated:** 2026-07-21 — the next helper-backed diagnostic smoke passed setup and the Tone visible-effect flow, then emitted exact terminal `{failedActionId:"dg-024-entry-nav-cancel",failureClass:"pointer_locked",cleanupPhase:3,cleanupFailureClass:"persistent_provenance_failed"}`. Exact nonce `wf540-fb30befde747` residue was four content types, six Entries, two Screens, one Media row, and its exact 68-byte file; a literal-ID, no-wildcard, no-user-delete, no-follow cleanup script with SHA-256 `821fe5d6ecf122edf068d8b051c3ac9c903faecc19f7d84399a244e56dbf2b1e` removed exactly that `4/6/2/1 + file` family, and two consecutive post-apply dry-runs proved `0/0/0/0 + no file` while preserving the canonical admin and proving no FK blocker. No TASK-540 screenshot, browser/server process, or owned port remained. Three independent read-only traces found no product defect: Tone selection used a mixed-time cached teardown sample, dirty-navigation retained a sticky historical blocker instead of the latest poll state, and each successful cleanup Admin GET carried a non-empty `Buffer` into recursive freeze after provenance but before DELETE; the same latent defect also affected DELETE and 404 absence receipts. The executor now requires the full Tone visible-effect and atomic Select/body teardown postcondition continuously for at least 600 ms across at least two samples plus a final atomic handoff sample, reports one of seven exact Tone-select classes, recomputes each target-acquisition poll from the latest one of five blocker classes within the closed twelve-class dirty-navigation action union, and hashes bounded non-empty authoritative response bytes before discarding the raw `Buffer`; only validated lowercase SHA-256 enters frozen cleanup receipts, while exact ID/media key/URL and fresh absence proofs remain unchanged and `deepFreezeExact` is not weakened. Hermetic real Admin P/C/A tests and mutants cover legal Screen/Entry representation drift, wrong ID/key/URL, exact attempted-request/no-DELETE/zero-receipt projection, accepted one-byte/exact-MAX boundaries, non-Buffer/empty/oversized byte rejection, unconditional latest-state assignment, full dwell reset/body/geometry predicates, relock timelines, and raw-Buffer/hash regressions. Product source remains untouched by this repair. Frozen executor SHA-256 `6accccffc88371978f2c3ad1727dbbf96aa2473802ea583d14cbc0c4ea548001` passes Prettier, syntax, diff checks, and the full self-test with 496 actions, 177 runtime receipts, 72 cleanup actions, 26 captures, and 2668 negative cases. Fresh read-only re-audits, one diagnostic helper-backed smoke, then the canonical audit/full-validation/smoke, changelog, and closure remain mandatory.
-**Current Scroll-Lock Ownership And Bootstrap-Restore Uncertainty Repair Required:** 2026-07-21 — the next helper-backed smoke reached the same Entry dirty-navigation boundary and emitted exact terminal `{failedActionId:"dg-024-entry-nav-cancel",failureClass:"scroll_locked",cleanupPhase:8,cleanupFailureClass:"phase_failed"}`. A post-exit read-only absence audit proved every TASK-540 nonce-shaped resource, owned file, screenshot, helper/browser/server process, and owned port absent, but phase 8 did not return accepted restoration evidence before the executor exited; the private preflight bootstrap timestamp baseline and newest smoke-owned pair are no longer available, so the final `lastLoginAt`/`updatedAt` restoration outcome is unprovable. This consumed run must not be recovered by guessed timestamps or any post-exit write and does not authorize closure. Exact source/dependency tracing proved `dg-022` handed off one final atomic unlocked sample after its full 600 ms dwell, `dg-023` performed read-only DOM/URL observations, and `dg-024` reported only its last completed target poll rather than a continuous ten-second lock; no product or Radix reopen path is evidenced before the unperformed navigation click. The repair contract therefore adds bounded cross-CLI lock-owner observation plus phase-8 uncertain-CAS reconciliation and their exact tests/mutants while keeping product source unchanged absent named-owner evidence. The frozen executor SHA-256 is intentionally not advanced by this contract-author turn. Fresh read-only audits, targeted revalidation, one diagnostic helper-backed smoke, then the canonical audit/full-validation/smoke, changelog, and closure remain mandatory.
-**Current Repair Execution Order:** The final sentence of the 2026-07-21 trigger
-evidence describes its then-planned sequence and is historical. The authoritative
-sequence is the `Current Closure Repair State` at the top of this file: current workflow
-repairs and targeted gate -> post-audits -> full validation -> one canonical smoke with
-the embedded diagnostic sub-proof -> smoke-evidence audit -> changelog/control
-preparation -> complete full-validation rerun -> child-first atomic closure -> final
-closure-drift/mechanical gate.
+**Historical Scroll-Lock Ownership And Bootstrap-Restore Uncertainty Repair Trigger:** 2026-07-21 — the next helper-backed smoke reached the same Entry dirty-navigation boundary and emitted exact terminal `{failedActionId:"dg-024-entry-nav-cancel",failureClass:"scroll_locked",cleanupPhase:8,cleanupFailureClass:"phase_failed"}`. A post-exit read-only absence audit proved every TASK-540 nonce-shaped resource, owned file, screenshot, helper/browser/server process, and owned port absent, but phase 8 did not return accepted restoration evidence before the executor exited; the private preflight bootstrap timestamp baseline and newest smoke-owned pair are no longer available, so the final `lastLoginAt`/`updatedAt` restoration outcome is unprovable. This consumed run must not be recovered by guessed timestamps or any post-exit write and does not authorize closure. Exact source/dependency tracing proved `dg-022` handed off one final atomic unlocked sample after its full 600 ms dwell, `dg-023` performed read-only DOM/URL observations, and `dg-024` reported only its last completed target poll rather than a continuous ten-second lock; no product or Radix reopen path is evidenced before the unperformed navigation click. The bounded cross-CLI lock-owner observation and phase-8 uncertain-CAS reconciliation plus their tests/mutants are now landed in the exact pre-bridge checkpoint above, with product source unchanged. They still await the bridge-inclusive targeted gate and carry no current completion receipt.
+**Current Repair Execution Order:** The final sentence of the 2026-07-21 trigger evidence describes its then-planned sequence and is historical. The authoritative
+sequence is the `Current Closure Repair State` and `Family modularity prerequisite` sequence in this file:
+finish cohesive smoke facade/child modularization to at most 1,000 physical lines per
+module -> recompute final dependent helper/task/test pins only after all smoke bytes
+stabilize -> targeted and full gates -> helper restart -> exactly one canonical
+seven-flow Playwright CLI smoke with 13/13 screenshots and deterministic cleanup ->
+changelog/control and child-first status closure -> final closure checks, commit, and
+integration into `feat/implementations`.
 **Changelog:** 1252 (pinned; closure only)
 **Changelog File:** `_docs/_CHANGELOG/1252-2026-07-14-task-540-custom-screens-functional-and-data-integrity-remediation.md`
 
@@ -100,9 +118,48 @@ TASK-540-06/L01 specifies; no new follow-up created during closure is non-blocki
 subtask owns no production source. Its shared-suite exceptions are the verified
 full-gate state-isolation repair in `tests/unit/settings/settingsService.test.ts` and
 `tests/unit/settings/storageSettings.test.ts`, plus the L01-delegated successor update
-to `tests/unit/workflows/task540SmokeExecutorSecurity.test.ts` for dedicated-worktree
-root and zero-finding strict-scan regressions while preserving every TASK-546 security
-assertion; no source-owner behavior assertion may be weakened or re-baselined.
+to `tests/unit/workflows/task540SmokeExecutorSecurity.test.ts`. That one successor must
+preserve every TASK-546 credential/run-code/executor-equality assertion and,
+independently of the bridge's hermetic self-test, mutation-kill the exact continuous-host
+control frames, single-flight/order/replay/EOF boundary, host-owned arm/GO launches,
+claim decision/CAS/crash table, and raw-crash-versus-controlled-abort behavior below.
+It also owns the dedicated-worktree root, zero-finding strict scan, no-Claude bridge,
+schema registration/identity/GATE/clone and closed type forms, canonical hashes,
+agent-result/transcript and CAS/ACK/procedure correlation, status/list/interrupt fields,
+late-response withdrawal ACK, exhaustive digest/recovery/status registries including
+`status.rollback-prepared.json`, independent anchor prefix, pre-artifact run journal,
+ledger-directory lifecycle, abort sealing, crash-recoverable index-last terminal
+journal, exact helper PID/start/arming and recovery, repeated-crash artifact/terminal-
+temp tables, safe-ledger cleanup/restart, honest Codex prompt, and L01's pinned mutants.
+No extracted tracked test/support file is authorized; the expanded successor itself
+must remain at most 1,000 physical lines. Clean-checkout reproducibility is mandatory.
+The seven top-level helper/facade paths remain the public bundle; cohesive tracked
+modules under `_docs/_workflows/task-540-smoke/**` are their internal implementation
+owners. Before the complete targeted gate, every top-level path and child owner must be
+a regular tracked non-symlink file with its final hash.
+
+**The 1,000-line limit does not apply to the seven top-level helpers, and this is
+settled — do not re-open it.** AGENTS.md § "File Size and Modularity" binds "a
+human-authored production module or test file"; the helpers are workflow *tooling*
+under `_docs/_workflows/`, which is neither. The implementation already agrees:
+`isLineLimitedHumanAuthoredModule` (`task-540-implement.mjs`) admits only `core/`,
+`packages/`, `store/` and `tests/` paths, and its own self-test asserts that
+`_docs/_workflows/example.mjs` is out of scope. An earlier revision of this contract
+extended the limit to all seven helpers, which contradicted both AGENTS.md and the
+code, and was unsatisfiable in practice: `task-540-implement.mjs` (~28,000 lines),
+`task-540-local-orchestrator.mjs` (3,966) and `task-540-test-name-contract.mjs`
+(2,459) exceed it, so honouring it would have meant splitting ~34,500 lines of
+tooling that no gate asks about. Keeping the child modules under
+`_docs/_workflows/task-540-smoke/**` at or below 1,000 lines remains a deliberate
+family convention — it is what makes a regression localise to one named file, and it
+holds today for every child module — but it is a convention, not the AGENTS.md gate.
+
+TASK-540 stages only those changed top-level and child-module paths without
+changing the broad `_docs/_workflows/` ignore rule. Missing, ignored-only, partially
+tracked, hash-mismatched, generated/archived, conditionally registered, or skipped
+helper coverage fails. TASK-545 retains repository-wide workflow and
+screenshot-manifest policy. No source-owner behavior assertion may be weakened or
+re-baselined.
 Flow 6 freezes the complete persisted reset draft at `rc-002`, then the complete
 post-intentional-edit current draft at `rc-017`; `rc-032` derives relation before
 values only from `rc-002`, exhaustively enumerates each current picker DOM option, and
@@ -114,8 +171,8 @@ baseline while the local presentation bytes remain preserved and dirty; no
 
 ## Leaf
 
-| ID | Title | Ownership | Status |
-|---|---|---|---|
+| ID              | Title                                      | Ownership                                                                                                                                                       | Status         |
+| --------------- | ------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------- |
 | TASK-540-06-L01 | Seven builder-save-entry flows and closure | one new aggregate test, two exact shared-settings hygiene repairs, one successor workflow-security test update, docs, smoke evidence, TASK-540 closure metadata | 🚧 In Progress |
 
 TASK-540-06-L01 deliberately retains the historical physical filename
@@ -130,13 +187,15 @@ Before the current corrective chain, closure consumed the exact source-owner seq
 540-04-L04 → 540-05-L01 boundary → 540-05-L02`. The prepared resolver's ten-landed-leaf
 state is historical evidence, not current closure authority. The corrective source/test
 commits and exact R01 → R03 → L03 → L04 → L01 owner re-gates are complete. The
-executable frontier is local workflow recovery; dedicated-worktree-root, zero-finding
-strict-scan, lock-owner, and uncertain-CAS repair; then the targeted gate, fresh clean
-post-audits, full validation, one canonical smoke with its embedded diagnostic
-sub-proof, smoke-evidence audit, changelog 1252/control preparation, the complete
-full-validation rerun, child-first atomic family closure, and final
-closure-drift/mechanical gate in that order. Only the current
-repair gate and post-audit pass permit full validation and smoke. The
+completed current prefix is the landed no-Claude helper, host, schema, recovery, and
+smoke-contract work plus the behavior-preserving splits through HEAD `8259a326`. The
+remaining prerequisite is cohesive smoke facade/child modularization to at most 1,000
+physical lines per module. Split-integrity self-tests must prove exhaustive,
+non-overlapping action-to-scenario ownership for the current manifest, including the
+enumerated related-cache and responsive-users owners, so no omitted registry member can
+silently fall through to a shared builder. After all smoke bytes stabilize, recompute
+final dependent pins, run targeted/full gates, restart the helper, and run exactly one
+canonical seven-flow/13-screenshot smoke before closure. The
 TASK-540 root owns the canonical 15-row pre-split evidence table. No owner, count, or
 SHA-256 may be dropped; every final production, test, and test-support record is emitted
 as `{ path, owner, lines, sha256 }` from the full baseline history plus current tracked
@@ -163,10 +222,14 @@ The root-local orchestrator, outside every closure-agent `allowedFiles` list, so
 the current repair bytes in `_docs/_workflows/task-540-smoke-contract.mjs`,
 `_docs/_workflows/task-540-smoke-executor.mjs`,
 `_docs/_workflows/task-540-smoke-host.mjs`,
+`_docs/_workflows/task-540-codex-agent-bridge.mjs`,
 `_docs/_workflows/task-540-local-orchestrator.mjs`,
 `_docs/_workflows/task-540-implement.mjs`, and
 `_docs/_workflows/task-540-test-name-contract.mjs`. They are task-workflow infrastructure,
-not production/source files and not closure-owned tests or docs. The contract helper
+not production/source files and not closure-owned tests or docs. Their exact final
+versions become tracked TASK-540 runtime/test inputs as the narrow reproducibility
+exception above; cohesive owned modules under `_docs/_workflows/task-540-smoke/**` may
+join the same commit, but no unrelated workflow path may. The contract helper
 exports only `buildTask540SmokePlan({nonce})` and
 `runTask540SmokeContractSelfTest()`; it is import-side-effect-free, uses no environment,
 filesystem, database, network, or `process.env`, and owns the blueprint plus the strict
@@ -180,61 +243,275 @@ after its dependencies and capture producers have completed. The executor export
 `runTask540SmokeExecutorSelfTest()`, rejects unknown input keys, accepts no raw
 environment/secrets, agent dispatcher, arbitrary shell command, or caller-supplied
 receipt/hash, and keeps its real/fake capability boundary private.
-The local-orchestrator host is the runner-compatibility boundary for Claude Code
-Workflow `2.1.210`, whose sandbox exposes no Node APIs or module loading. It accepts
-only `--self-test` or `--run`, injects only the implementation orchestrator's
-`agent`/`phase` bindings, and sends prompts over stdin.
-The host, implementation workflow, and test-name workflow independently derive their
-dedicated-worktree root from `import.meta.url`, require realpath/Git-top-level/common-dir
-agreement and exact branch `feature/tasks-fixes`, and accept no cwd/argv/env or hardcoded
-checkout-root override. All prompt and deny paths are built from that same authority; the
-complete fail-closed contract and mutants are owned by TASK-540-06/L01.
-Each agent child receives only
-the explicit non-secret OS allowlist (`HOME`, `HOSTNAME`, locale, `NO_COLOR`, `PATH`,
-`TERM`, `USER`) plus fixed `CI=true` and `GIT_OPTIONAL_LOCKS=0`; database/Postgres,
-SSH/Git-helper, cloud/profile, Kubernetes, browser/MCP, provider-key, credential,
-token, and connection-string handles are absent. Read-only agents have exactly
-`Read,Grep,Glob` in `plan` mode; mutating agents have exactly
-`Read,Grep,Glob,Edit,Write` in `acceptEdits` mode. Neither class has Bash, Workflow,
-browser, ambient MCP, slash-command, or Chrome authority. Higher-precedence Read/Edit
-deny rules cover Read/Grep/Glob and Edit/Write and block all home dotfiles (including
-CLI auth/config), every sibling project discovered at startup, root and nested
-repository `.env*`/`.git`, and system/runtime trees outside Coderso; mutation agents
-also cannot edit repository `node_modules`. `HOME` therefore authenticates the CLI
-without exposing its credential files to the agent. Each invocation instead detaches a fixed repo-owned Node launcher as
-group/session leader; it self-stops before spawning Claude, then starts Claude in the
-same group/session only after the host binds and revalidates the launcher's PID/start,
-PGID, and session identity. The launcher relays stdio, mirrors normal exits, and maps a
-signalled Claude exit deterministically to `128 + signalNumber` (`255` only for an
-unknown signal). Any post-PID authority/resume failure must complete bounded owned-group
-cleanup; a cleanup failure is aggregated with the sanitized authorization failure. The
-host bounded-polls normal/aborted completion, uses group TERM then conditional KILL
-without an unbounded close wait, and proves the complete owned group/session absent.
-When no authority identity was observable, the still-stopped launcher cannot have
-spawned Claude and is disposed only through its owned child handle with a bounded
-close. The hermetic local-host self-test executes the real Node launcher only around a
-local no-network Node probe, not `/usr/bin/claude`. It proves local Claude-argv
-construction, synthetic structured-envelope parsing, the projected child environment,
-launcher/process-ownership and cleanup invariants, and deterministic signal-code
-mapping; it makes no live Claude CLI-compatibility claim. Compatibility with the
-installed Claude CLI and its current flags, schema handling, and structured output is
-proven only when an actual `--run` invocation successfully dispatches the read-only
-Start gate. The bounded value-scanned HEAD patch is supplied
-locally for drift review together with at most 256 complete untracked projections:
-tracked text is bounded to 20 MiB, aggregate untracked UTF-8 text to 8 MiB, and each
-untracked file to 32 MiB. Text supplies path/kind/size/hash/content, binary supplies
-path/kind/size/hash, and symlinks supply only a scanned target projection. Sensitive
-paths/content, `.env*`/`.git`, unsafe/unsupported entries, bound overflow, and
-handle/path identity drift fail before dispatch; regular-file reads bind and recheck an
-opened handle so path-to-symlink swaps cannot redirect bytes. The implementation
-orchestrator independently verifies every result and repository snapshot. The adapter defines no gate, helper, DB operation,
-browser command, or smoke capability itself. Those operations remain direct children
-of the root-local implementation orchestrator and executor; no agent execution path is
-introduced.
+
+The historical pre-modularization tracked helper checkpoint was verified as:
+`task-540-codex-agent-bridge.mjs`
+`c3c594a17cb63943beab29e7f621f6e1ca46cb3b5abb67625edcddb900788341`,
+`task-540-implement.mjs`
+`eeb25e7be19f3aa0fa8a6638c5976d9cd1a6228d1d19f9272d713ec0dca4f9cb`,
+`task-540-local-orchestrator.mjs`
+`e06c7be9652554111c111c2e8210b733db908a4f272bcbd4a11781174e132da4`,
+`task-540-smoke-contract.mjs`
+`5ed7407d13c71becaea40128128774bdf6e3baf26e4f04353715a72f0a48eb74`,
+`task-540-smoke-executor.mjs`
+`f473f4ff5e4c64fc1b2fc730cd24cbe48f7e1ea6d8aff1730ed32fe862d5c8de`,
+`task-540-smoke-host.mjs`
+`2dbec5af334b4b8d5ef7b2bcda2c1f56f6cac9e86bb7df6bedfb358d05b7d68f`,
+and `task-540-test-name-contract.mjs`
+`ce052b4245c8c384d0405c32cf9d1df146a2f83a409994a6a2822de5422fc4f5`;
+the inert `task-540-fix.mjs` retains recovery hash
+`b65b1b7cce153471e71ef613bb6515846ba02515a603a899be3ffdc9388ef846`,
+and was not part of that seven-helper bundle. Those facts prove checkpoint `911c29f5`
+only. Its executor hash is non-authoritative after the smoke splits; the final helper,
+task, and test pins must be recomputed after every facade and child-module byte
+stabilizes. Repeating the recovery prerequisite is read-only verification only;
+replaying or writing a historical blob is forbidden.
+
+The required post-repair local orchestrator remains one continuous Node `--run` host; root
+launches exactly the outer `node _docs/_workflows/task-540-local-orchestrator.mjs --run`
+child from the verified root with `shell:false`, `detached:false`, and private non-TTY pipe
+stdin/stdout. Its only other direct form is `--self-test`; until the targeted gate passes,
+`--run` fails closed before dispatch. The no-Claude host alone spawns/arms every bridge
+child; root never does. The bridge permits one request and no other authorized writer.
+Snapshots detect arbitrary same-UID writers; no per-agent tool allowlist claim is made.
+
+After maintenance/self-test early exits and immediately before main execution, the
+implementer calls the non-enumerable
+`agent.registerSchemas({audit:AUDIT_SCHEMA,gate:GATE_SCHEMA,mutation:MUTATION_SCHEMA,result:RESULT_SCHEMA})`
+once. A `WeakMap` keeps original identities/hashes; RESULT/AUDIT are read-only, MUTATION
+is mutating, and GATE/clones/mutation/unknown/second registration reject. The same
+process recursively validates exact own data, dense arrays, L01's closed keywords, no
+coercion/default/removal, 8 MiB total, and 4,096-byte strings; serialized-copy
+prevalidation is not authority. Mutation remains a proposal: existing snapshots,
+allowed/touched files, task-state and secret checks, and rollback decide surviving
+bytes. Non-root agents cannot run gates, servers, Playwright, fixtures, cleanup,
+evidence sealing, or smoke; those remain root/orchestrator/executor children.
+
+The host emits private canonical-LF `{deadlineAtEpochMs,requestDir,requestId,sequence}`,
+retains the path privately, and accepts only exact
+`controlCore={command,controlId,controlOrdinal,payload,requestId,sequence}` frames on non-
+TTY stdin. `command` is exactly `inspect|respond|status|wait|procedure|recover-review|
+abort`; ordinal is dense positive with independent random 128-bit lowercase-hex ID. The
+first five bind the notified request/sequence; abort and recover-review bind both null.
+Payload is null for inspect/status/wait, the exact named bridge frame for respond/
+procedure/recover-review, and exactly `{reason,review}` for abort, with L01's closed
+reason and complete task-name-free live-root recovery review.
+Bridge-backed commands complete read→child arm/GO→execute→reply; abort completes read→
+review/reason validation→host seal/cleanup→reply with no child. The host then emits
+`controlReplyCore={command,controlId,controlOrdinal,requestId,result,sequence,status:"ok"}`,
+with closed result and repeated correlation. Whole input/reply including its sole LF is
+at most 8,454,144 bytes. Parse/re-encode/reject-unknown checks reject missing/duplicate/
+noncanonical/reordered/replayed/out-of-order identity, pipelining, binding drift, BOM/
+invalid UTF-8, partial/multiple LF, and trailing/extra bytes. Nothing is echoed; argv/
+env/file/inherited-FD/socket/TTY alternatives are banned. The bridge CLI remains exactly
+`--self-test|--inspect|--respond|--status|--wait|--procedure|--recover-review`; no
+`--abort` exists.
+
+`inspect` returns either closed pre-claim cancellation with no dispatch or the exact safe
+request/claim bundle. Root privately maps request to task and spawns one fresh
+`fork_turns="none"` agent with only policy/prompt/schema. Pre-identity spawn failure
+sends L01's exact `spawn_failed` procedure on the same stream, reuses the claim, rolls
+back/ledgers/cleans without invented correlation or retry, and settles
+`dispatch_failed` only strictly before deadline; equality/after or an earlier deadline
+start settles `deadline_exceeded` while dispatch remains `spawn_failed`.
+
+Otherwise root hashes and sends only exact
+`{agentResultSha256,claimId,requestId,result,sequence}` as `respond`; the responder
+recomputes it and cannot link when start or pre-CAS is at/after deadline. Root recomputes
+private request/task/result correlation and sends the exact `procedure`; status/wait are
+bounded observations. Polling/interrupt are procedural evidence; CAS is local
+enforcement, and tests never claim to execute collaboration tools.
+
+A responder that durably created `response.started.json` but reaches the pre-CAS
+deadline links no response candidate: it withdraws, starts/joins deadline cancellation,
+and publishes its start-bound `response.done.json` bound to that settlement. Its
+start/ACK stays beside the winning cancel start/ACK, cannot revive the result, and cannot
+be replaced by process absence.
+
+The seven commands are the whole root surface. Status is one stable read, wait is
+bounded, and recovery accepts only L01's task-name-free payload/closed ACK. Caller claim/
+cancel/replay/path cleanup and second recovery-write modes do not exist; IDs/paths stay
+private and agents receive only policy/prompt/schema. Only explicit accepted abort is
+controlled. Unframed EOF/root/transport loss freezes dispatch, terminates only provable
+children, retains all journal/request/ledger bytes, and exits raw-failed without reply,
+abort receipt, or cleanup. The host never reconnects/resumes or claims self-absence.
+A fresh root proves the old host absent and submits review only with the original root's
+private request-to-task transcript map; otherwise recovery blocks. Raw failure never
+permits retroactive abort, replay, dispatch, or generation resume.
+
+Every request uses a private `0700` `/tmp` directory and exact `0600` files with stable
+`lstat/open(O_NOFOLLOW)/fstat/recheck` identity. Every canonical digest uses only
+`bridgeDigest(kind,core) =
+sha256("coderso.task540.bridge." + kind + ".v1\0" + canonicalJson(core))`; each exact
+core excludes its own digest field. The exhaustive kind→field registry is:
+`schema→schemaSha256`, `request→requestSha256`, `claim→claimSha256`, `contender-start→startSha256`,
+`settlement→settlementSha256`, `ack→ackSha256`, `agent-result→agentResultSha256`,
+`status-observation→statusSha256`, `procedure→procedureSha256`, `transcript→transcriptCorrelationSha256`,
+`request-id→requestIdSha256`, `run-id→runIdSha256`, `recovery-task→taskCorrelationSha256`,
+`recovery-review→reviewSha256`, `recovery-helper-sweep→priorHelperSweepSha256`,
+`ledger-entry→ledgerEntrySha256`, `ledger-prefix→preClosureSha256`, `terminal-ledger→sha256`,
+`abort-ledger→sha256`, `branch-id→branchSha256`, `git-dir-id→gitDirSha256`, `root-id→rootSha256`,
+`worktree-id→worktreeSha256`, `artifact-path→pathSha256|ledgerPathSha256`, `run→runSha256`,
+`run-prepared→runPreparedSha256`, `artifact-plan→planSha256`, `artifact-created→createdSha256`,
+`artifact-cleanup-started→cleanupStartedSha256`, `artifact-cleaned→cleanedSha256`,
+`helper-launch-planned→launchPlannedSha256`, `helper-launch-armed→launchArmedSha256`,
+`helper-launch-cleanup-started→launchCleanupStartedSha256`, `helper-launch-cleaned→launchCleanedSha256`,
+`recovery-manifest→manifestSha256`, `recovery-prepared→preparedSha256`,
+`recovery-rollback-prepared→rollbackPreparedSha256`, `recovery-committed→committedSha256`,
+`recovery-ledger-cleaned→ledgerCleanedSha256`, `status-manifest→statusManifestSha256`,
+`status-prepared→statusPreparedSha256`, `status-rollback-prepared→statusRollbackPreparedSha256`,
+and `status-committed→statusCommittedSha256`. No unnamed/generic/alias hash is legal.
+Only exact byte digests `contentSha256`, `oldSha256`, `newSha256`, `oldPayloadSha256s`,
+and `newPayloadSha256s` are nondomain. L01 pins every core/envelope;
+`status-rollback-prepared` is exactly `{manifestSha256,transactionId}`. Canonical UTF-8
+JSON rejects duplicate keys, BOM, invalid/trailing bytes, and noncanonical whitespace.
+The claim digest's exact `claimCore` is
+`{claimId,claimOwner,deadlineAtEpochMs,deadlineMonotonicNs,decisionMonotonicNs,requestId,requestSha256,schemaSha256,sequence}`.
+The final operator decision sample is the last non-filesystem step before its candidate
+write/fsync/link and is legal only when `decisionMonotonicNs < deadlineMonotonicNs`;
+otherwise it joins or creates timeout. Timeout is legal only at/equality/after
+(`decisionMonotonicNs >= deadlineMonotonicNs`), so equality can never elect operator.
+Before any random `/tmp` ledger or request artifact, the bridge alone creates/fsyncs one
+fixed run-recovery journal under the verified per-worktree Git directory. It durably
+records the ledger directory's exact plan before creation, its identity after creation,
+cleanup-started before `rmdir`, and cleaned state after the parent fsync. It applies the
+same planned/created/cleanup-started/cleaned lifecycle to every exact request directory
+and ledger entry. Restart uses only those records and the closed request inventory to
+clean a crashed generation, never scans `/tmp` or adopts old work. The location is
+outside the tracked tree but inside this worktree's Git directory beneath the common Git
+directory, isolated from sibling worktrees.
+Every bridge helper launch is performed only by the continuous `--run` host through the
+leaf's parent-owned arm handshake and reject-unknown launch cores; root can cause one
+only through an accepted control command. For dense `launchOrdinal`, its files are exactly
+`launch-<zero-padded-12-digit-launchOrdinal>.planned.json`, `.armed.json`,
+`.cleanup-started.json`, and `.cleaned.json` under the four `helper-launch-*` domains
+above. The continuous host writes and fsyncs the plan before spawn. Before `GO`, the child
+may parse only its bounded private bootstrap and cannot stat, open, read, write, or
+derive the request directory, journal, or repository state; pre-`GO` EOF exits silently
+with a nonzero status and no access or output. The host writes and fsyncs the exact
+positive PID/start identity in the armed record, then sends one exact `GO` over the
+private control pipe. Only an armed child is request-capable;
+`response.started.json` and `cancel.started.json` remain the only request
+contender-start records after arming.
+
+A planned-unarmed launch is permanently request-incapable because `GO` was impossible;
+it proves no PID/start identity or physical absence. A bounded current-UID `/proc` scan
+under exact module/mode/request/launch authority is additional evidence only and never
+signals an unknown or mismatched result.
+
+The bridge module's sole export is `sweepPriorBridgeLaunchesForRecovery`, a host-only
+in-process preflight that cannot execute any request/recovery mode. Before planning
+`recover-review`, the fresh recovery-only host calls it to validate the fixed journal,
+terminate only exact live armed PID/start identities, and prove prior armed helpers
+absent. It returns exactly `{...priorHelperSweepCore,priorHelperSweepSha256}`, where
+`priorHelperSweepCore={launches,runSha256,schemaVersion:1}`; `launches` is dense,
+prior-ordinal ordered, and contains exact
+`{launchArmedSha256,launchOrdinal,launchPlannedSha256,state}` items. State is exactly
+`armed_absent` with a non-null armed digest or `planned_unarmed` with a null digest; only
+`recovery-helper-sweep` maps to `priorHelperSweepSha256`.
+`helperLaunchArmedCore` is exactly
+`{launchOrdinal,launchPlannedSha256,mode,moduleSha256,priorHelperSweepSha256,processId,processStartTime,worktreeSha256}`;
+its sweep digest is null for the five request modes and exact non-null for
+`recover-review`. GO is exactly
+`{command:"GO",launchArmedSha256,launchOrdinal,launchPlannedSha256,priorHelperSweep}`;
+that field is null for those five modes and the exact sweep envelope for recovery.
+Only after preflight may the host plan/arm/GO the controller; after GO it exact-set
+verifies every prior ordinal before root-review access or cleanup. A crashed controller
+joins the next fresh sweep.
+Root keeps the original request-to-task map outside the journal, stops every live mapped
+task, then submits the task-name-free review. Missing map/review, identity/sweep drift,
+live/recycled PID, or premature cleanup retains all evidence.
+After a fresh root proves the old host absent, raw recovery cleans journal-listed
+identities without retroactive abort/workflow evidence. Only explicit live-root `abort`
+is controlled: the host validates reason/review, prepares the abort journal, and cleans
+without a child. Self-tests/mutants cover export isolation, exact cores/order/nullability,
+prior-ordinal completeness, crashed-controller inclusion, seven modes, abort bindings,
+raw-loss retention, old-host absence, missing-map blocking, and no host self-absence claim.
+
+Operator/timeout claim candidates contain the exact claim envelope, are created
+`O_EXCL|O_NOFOLLOW` as stable current-UID regular `0600` identities at `nlink=1`, and
+hard-link without overwrite to fixed `claim.json`. A winner proves the same `(dev,ino)`
+at `nlink=2`, identity-unlinks its candidate, fsyncs the parent, and proves the claim at
+`nlink=1`; `EEXIST` stable-validates and joins the winner, then unlinks/fsyncs only the
+distinct loser candidate. Raw-crash recovery uses this exhaustive cleanup-only table:
+
+| Durable graph                                 | Exact recovery                                                                                                |
+| --------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| no claim; no candidate                        | valid never-created CAS; no election, dispatch, or resume                                                     |
+| no claim; one/both known candidates           | validate each exact owner/time envelope at distinct `nlink=1`; unlink/fsync only those candidates             |
+| claim alone                                   | stable-validate exact claim identity/envelope at `nlink=1`; retain through ordinary request cleanup           |
+| claim plus same-inode winner candidate        | validate same `(dev,ino)` graph at `nlink=2`; unlink/fsync candidate; require claim `nlink=1`                 |
+| claim plus one/both distinct loser candidates | validate claim `nlink=1` and each known loser `nlink=1`; unlink/fsync only losers                             |
+| claim plus linked winner and distinct loser   | validate winner graph at `nlink=2` and loser `nlink=1`; unlink/fsync known candidates; end at claim `nlink=1` |
+
+Any other/unknown link graph or identity/owner/mode/time/deadline drift retains all
+evidence and fails closed; recovery never creates a claim/link/decision or adopts work.
+The bridge self-test and successor security test independently mutation-kill every row,
+link-count/inode/link/unlink/EEXIST/join/crash edge, and operator/timeout equality swap.
+
+Response/cancel candidates begin at `nlink=1`, share a hard-link no-overwrite CAS, and
+the winner proves the candidate/settlement same inode at `nlink=2`, unlinks its
+candidate, then proves settlement `nlink=1`. A loser unlinks only its candidate. After
+its final CAS state, every started response or cancellation contender—winner or
+`EEXIST` loser—must publish its exact `response.done`/`cancel.done` acknowledgement.
+Only a contender that never started has no acknowledgement obligation. L01 pins each
+fixed start file's exact canonical identity/hash core, binds `startSha256` into the
+settlement and kind-matching ACK, and preserves every winner/loser start→ACK pair in the
+ledger. The bridge host's durable arm record already binds a responding or cancelling
+helper's PID/start identity before `GO`; the bridge then bounded-waits for every started
+contender's acknowledgement, the required procedure receipt, and, when an arm record
+exists, helper PID/start absence. A pre-claim
+timeout has no procedure receipt and receives an exact nondispatch ledger entry. An
+operator-claimed timeout reuses that one operator claim and must never create a second
+claim. Even after timeout/failure/cancel the bridge runs existing postchecks and
+rollback while all preimages remain retained. It then writes and revalidates one
+immutable dense safe-projection ledger entry that exposes no raw ID/prompt/result but
+records run/worktree, claim owner, settlement/start, every winner/loser start→ACK,
+dispatch/fork/conditional-interrupt transcript correlation, and final disposition.
+Only then may it unlink known identity-bound request files and remove the proven-empty
+request directory. The pre-closure ledger prefix is bound into `closureControl` and
+embedded byte-identically in both the independent changelog-index anchor and changelog
+evidence. After final closure-drift, agent dispatch freezes permanently for that
+generation. The root final reviewer first recomputes every actual
+request/task-name/result/procedure correlation before accepting the terminal receipt;
+its exact hash preimage binds the complete ordered projection and both pre-closure
+fields, and its count/hash equal the control's terminal count/hash. One
+crash-recoverable transaction under the verified worktree Git directory then journals
+and fsyncs exact old/new bytes, updates changelog plus three task receipts, and commits
+the changelog-index anchor last. Restart rolls back on the old index hash or forward on
+the new hash; every other state fails closed. A final local mechanical gate
+byte-verifies those durable bytes, and the root repeats the transcript-correlation
+review, before the `/tmp` run ledger may be cleaned.
+Digest-only recovery, a post-freeze agent call, partial terminal persistence, or cleanup
+before that gate fails closed. Recursive cleanup is forbidden.
+
+Accepted explicit `abort` uses the fixed private recovery location: freeze, validate
+live-root transcript/procedure review plus reason, seal the safe projection under exact
+`abort-ledger`, fsync its prepared journal, then identity-clean only listed entries.
+Restart may continue cleanup but cannot adopt it as workflow evidence; marker/journal
+remain until verified absence. A live root converts spawn/schema/finding/workflow stops
+to this explicit command. Unframed EOF or transport/root loss instead follows the raw-
+failed retained-evidence path. The private seven-command stream is the sole root surface;
+bridge modes/self-test are not alternate transports. This is a same-UID coordination/
+replay/partial-write boundary, not an OS boundary against a hostile same-UID process.
+
+The bridge, host, implementation workflow, and test-name workflow independently derive
+their dedicated-worktree root from `import.meta.url`, require
+realpath/Git-top-level/common-dir agreement and exact branch `feature/tasks-fixes`, and
+accept no cwd/argv/env or hardcoded checkout-root override. The complete fail-closed
+contract and mutants are owned by TASK-540-06/L01. Agent context remains the
+hash/length-only `GroundedChangeManifest` inside the existing 96 KiB context and
+128 KiB complete-prompt bounds. It names paths/kinds/byte lengths/hashes so the agent
+can inspect current worktree files locally; raw patches and file content never cross
+the bridge. The implementation orchestrator independently verifies every result and
+repository snapshot. The adapter
+defines no gate, DB operation, browser command, or smoke capability itself. Those
+operations remain direct children of the root-local implementation orchestrator and
+executor; no agent execution path is introduced.
 The host module exposes only its hermetic self-test and closed `--serve <canonical-root>`
-CLI. Its direct-entry guard is compatible with the pinned Node 22.14 runtime and
-hermetically tests absolute/relative matches plus mismatched/missing argv rejection; it
-does not rely on the later `import.meta.main` API. It never reads/sources `.env`,
+CLI. Its direct-entry guard is compatible with the repository's pinned
+`>=26.5.0 <27` Node runtime and hermetically tests absolute/relative matches plus
+mismatched/missing argv rejection. It never reads/sources `.env`,
 receives only the executor's exact null-prototype
 allowlisted host environment, directly spawns the backend/Admin/site descriptors, and
 while still alive owns only descendant cleanup: after identity revalidation it sends
@@ -319,29 +596,20 @@ cleanup-only shape when that cleanup itself fails. Raw causes/messages/codes, by
 cookies, CSRF values, command output, paths, PIDs, environment data, secrets, and
 session material remain private.
 
-For `dg-024-entry-nav-cancel`, generic `scroll_locked` becomes historical-only. Its
-closed successor classes are `scroll_locked_select_owned`,
-`scroll_locked_dialog_owned`, `scroll_locked_ownerless`,
-`scroll_locked_malformed_value`, `scroll_locked_owner_ambiguous`,
-`scroll_lock_timeline_missing`, and `scroll_lock_timeline_overflow`; the existing non-
-scroll dirty-navigation and executor-stage classes remain unchanged. `dg-022` installs
-one body-attribute `MutationObserver` atomically with its final clean teardown sample in
-an executor-private per-run page slot. Through both Playwright CLI completion gaps,
-`dg-023` validates without consuming and `dg-024` consumes then disconnects in
-`finally` a maximum-16 ordered projection containing only transition ordinal, the enum
-`absent|positive|malformed`, and bounded Select/Dialog content/overlay counts. DOM text,
-raw attribute values, HTML, nodes, timestamps, URLs, and stacks are forbidden. Final
-canonical-positive state is classified as select-owned, dialog-owned, ownerless, or
-ambiguous from those counts; malformed syntax, missing authority, and overflow retain
-their own classes. The result describes only the final completed poll, never a
-continuous ten-second lock. Exact-frame, bound/order/count/owner, final-versus-sticky,
-disconnect, malformed/ambiguous, generic-class, and raw-field mutants are mandatory.
-One real-browser regression inside the single canonical executor call must execute the
-installed Radix Select/RemoveScroll and exact product-panel `dg-022` -> read-only
-`dg-023` sequence across both CLI gaps and prove no live lock owner before `dg-024`.
-It is the embedded diagnostic sub-proof, not a second smoke invocation or partial
-evidence source. Product source stays unchanged until this bounded evidence names a
-product-owned layer.
+`dg-024-entry-nav-cancel` uses the same closed twelve-class dirty-navigation contract as
+its four siblings: `target_bound`, `target_duplicate`, `target_missing`, `source_url`,
+`scroll_locked`, `inline_pointer_locked`, `computed_pointer_locked`,
+`target_intercepted`, `click_failed`, `dialog_duplicate`, `not_suspended`, and
+`dialog_settlement`. `dg-022` independently proves the selected Muted value, dirty
+channels, visible computed-color effect, complete Select teardown, and unlocked body
+continuously for at least 600 ms plus one final atomic resample. Adjacent read-only
+`dg-023` freezes the draft/URL/navigation authority. In one same-action poll, `dg-024`
+then proves current body scroll/pointer unlock, exactly one visible positive-geometry
+Records link, scrolls it into view, reacquires its final geometry/visibility, and proves
+center-point event ownership before clicking. The exact dirty dialog, stable URL, and
+stable navigation remain mandatory even when the click call throws. This removes only
+the unreliable page-global cross-command observer; it does not add a fallback or change
+product source.
 Each invocation
 starts browser authority at most once and keeps deterministic route, browser, resource,
 access-log, process, and port cleanup plus absence proof inside the executor; a failed
@@ -351,7 +619,8 @@ mandatory in the closure gate, the complete full gate, and every final mechanica
 They are absent only from a sealed source-owner repair gate that predates the three
 modules. That is a phase/evidence rule, not a claim about any sibling's current repair
 or completion status: every pre-1252 closure/full/final gate after the modules land,
-and every post-1252 covered final gate, includes all eight commands below.
+and every post-1252 covered final gate, includes all ten helper commands plus the exact
+operational tracked-test command below.
 
 If a final-drift source repair changes the closure leaf's gate or completion metadata,
 the workflow must invalidate every pre-repair durable Pending snapshot before it tries
@@ -367,8 +636,12 @@ node --check _docs/_workflows/task-540-smoke-executor.mjs
 node _docs/_workflows/task-540-smoke-executor.mjs --self-test
 node --check _docs/_workflows/task-540-smoke-host.mjs
 node _docs/_workflows/task-540-smoke-host.mjs --self-test
+node --check _docs/_workflows/task-540-codex-agent-bridge.mjs
+node _docs/_workflows/task-540-codex-agent-bridge.mjs --self-test
 node --check _docs/_workflows/task-540-local-orchestrator.mjs
 node _docs/_workflows/task-540-local-orchestrator.mjs --self-test
+git ls-files --error-unmatch _docs/_workflows/task-540-smoke-contract.mjs _docs/_workflows/task-540-smoke-executor.mjs _docs/_workflows/task-540-smoke-host.mjs _docs/_workflows/task-540-codex-agent-bridge.mjs _docs/_workflows/task-540-local-orchestrator.mjs _docs/_workflows/task-540-implement.mjs _docs/_workflows/task-540-test-name-contract.mjs
+bun test tests/unit/workflows/task540SmokeExecutorSecurity.test.ts
 ```
 
 ## Security Contract
@@ -552,21 +825,21 @@ of terminal polling while `RunState.apiContexts` is not closed, and terminal-chi
 failure blocking the exact user. They also reject a cloned, recomputed, substituted, or
 stale final graph and any second browser receipt after successful `end-007`.
 
-The repo-owned `_docs/_workflows/task-540-smoke-host.mjs` runner executes as the
-leader of the executor-created detached process group. While the host is alive, its
-cleanup revalidates PID/PPID/PGID/start identities, sends graceful TERM and then
-conditional KILL only to surviving same-identity descendants, and proves descendant
-plus listener absence. It never signals its own negative PGID, never claims its own PID
-or PGID absent, and cannot perform the terminal group proof. The executor alone owns
-bounded whole-negative-PGID TERM/KILL and then proves the host runner, complete process
-group, every descendant, and ports 3000/5173/5174 absent. Child
-environments are built from empty maps and explicit OS/host/browser key allowlists;
-neither full `process.env` nor the parsed `.env` is forwarded. The executor invokes the
-sole repo-owned host CLI with one exact validated null-prototype host environment; the
-runner never reads/sources `.env`, a shell profile, or a package script, and directly
-spawns exactly the backend, Admin Vite, and site Vite descriptors from the leaf
-contract. The installed/global `coderso-dev-core-host` and every alternate helper are
-forbidden. Browser authority uses a task-owned `0700` temp root outside the repo for
+The repo-owned `_docs/_workflows/task-540-smoke-host.mjs` leads the executor-created
+detached group, identity-revalidates and TERM→conditionally KILLs only exact descendants,
+and proves descendant/listener absence. It never signals its own negative PGID, claims
+its PID/PGID absent, or performs the terminal group proof; the executor owns whole-group
+termination and final runner/group/descendant plus 3000/5173/5174 absence. Child
+environments use empty maps/allowlists, never full `process.env` or parsed `.env`. The
+sole host CLI reads no `.env`/profile/package launcher and spawns backend/Admin/site Vite. TASK-546 owns `package.json`, `core/package.json`, and `bun.lock`; their landed
+bytes already resolve Vite 8.1.5 and remain byte-identical/read-only throughout TASK-540. After checkpoint verification, TASK-540 first changes only
+`task-540-smoke-host.mjs` Vite 8.1.5 literals, default fixtures, version mutants, self-test expectations, and embedded child-source byte pin, then privately re-audits
+Vite 8.1.5 optimizer/readiness before bridge/local-host/schema/CAS/ACK/recovery/prompt/test implementation. After formatting and only once all helper bytes are final,
+only after smoke modularization is complete does it compute the final dependent helper
+hashes and perform the implement/executor/task/test repins; final preflight validates
+the seven top-level entrypoints plus every tracked child owner before the complete
+targeted gate.
+Browser authority uses a task-owned `0700` temp root outside the repo for
 cwd/HOME/TMP/XDG, daemon, config,
 and output; its `0600` secrets file contains exactly `ADMIN_EMAIL`/`ADMIN_PASSWORD`,
 its executor-created `cwd/.playwright` is the unique private workspace/session
@@ -651,30 +924,63 @@ gate.
 Before any closure status mutation, the evidence owner writes and byte-verifies one
 strict canonical control anchor in the existing changelog index plus changelog 1252's
 redacted smoke block. The anchor binds its evidence SHA-256, generation, board baseline,
-the fixed safe changelog path above, and the SHA-256 of the closure-leaf gate value. It
-remains independent authority if the changelog file is missing and may carry one exact
-old-gate -> Repair Pending -> successor-gate authorization during closure-leaf repair.
+the fixed safe changelog path above, the SHA-256 of the closure-leaf gate value, exact
+pre-closure collaboration-ledger count/hash, and the byte-identical ordered safe prefix.
+It remains independent regeneration authority if the changelog file is missing; a
+digest without the prefix is insufficient. It may carry one exact old-gate -> Repair
+Pending -> successor-gate authorization during closure-leaf repair.
 The three active closure contracts then persist identical
 Closure Pending, Closure Board Baseline, and Closure Changelog Path receipts. A restart
 must compare their status-owner state against that independent control rather than
 recapturing it. Sibling status authority is phase-derived, not inferred from current
-repair prose. While changelog 1252 and its exact sealed 17-ID Tasks line are absent,
-the pre-1252 authority requires all 17 physical contracts to remain In Progress; each
+repair prose. While changelog 1252 and its exact sealed 20-ID Tasks line are absent,
+the pre-1252 authority requires all 20 physical contracts to remain In Progress; each
 landed implementation leaf has its matching behavior receipt and, for each of the eight
 modularity owners, exactly one `Modularity Repair Revalidated` receipt with no remaining
 `Modularity Repair Pending`; no leaf has a `Completed` field. While any modularity
 pending field remains, closure authority cannot be created. The evidence owner must
 create and byte-verify changelog 1252
-and that exact Tasks line before one status transaction prepares ten leaves, then six
-children, then root and atomically publishes all 17 Done/Completed transitions with the
-board delta against the same evidence hash. After that atomic transition, the
-post-1252 authority is the sealed changelog/control evidence and all 17 covered
+and that exact Tasks line before one status transaction prepares twelve leaves, then seven
+children, then root. Before publishing any target, its own prepared/fsynced 21-target
+status journal binds exact old/new bytes, modes, paths, and hashes for all 20 task
+contracts plus `_docs/_TASKS/README.md`; it replaces the twelve leaves, seven children, and
+root in that order and commits the board row/statistics last as the sole status commit
+point. Restart rolls that complete 21-target set back or forward from the board hash.
+This journal is distinct from and precedes the later five-target terminal journal. It
+atomically publishes all 20 Done/Completed transitions with the board delta against the
+same evidence hash. After that atomic transition, the
+post-1252 authority is the sealed changelog/control evidence and all 20 covered
 contracts are Done/Completed. A restart first determines which of those two phases the
-sealed evidence proves and validates only that phase's graph. A later mechanical or
-final-validation failure reopens root/closure, and reopens a source-owner leaf/child
-only when a classified finding names that exact owner; unaffected post-1252 siblings
-remain Done under the same 1252 coverage, while unaffected pre-1252 siblings remain
-gated In Progress.
+sealed evidence proves and validates only that phase's graph. The status registry,
+closed inventory, validators, execution, and recovery all include exact
+`status.rollback-prepared.json`. Every failure after the 21-target board commit reuses
+the still-prepared status journal and durably fsyncs that marker before the first old-
+payload restoration. Marker presence overrides the board hash and forces convergence
+to all 20 task old bytes plus the board old bytes last. No partial per-file status
+mutation or second status transaction is permitted; ordinary owner repair may start
+only after the complete old generation's bytes, modes, and hashes are verified.
+Hermetic execution tests and exact crash mutants inject at marker
+durability and every reverse-restoration old-payload write,
+file-fsync, rename, and parent-fsync boundary; every restart must converge to that same
+board-last all-old generation.
+Final closure-drift agents append only higher dense ledger entries. After their last
+clean result, dispatch freezes permanently for the generation and the root recomputes
+every actual request/task-name/result/procedure correlation before accepting the
+terminal receipt. Before `/tmp` ledger cleanup, one separate prepared/fsynced terminal
+journal binds exact old/new bytes for exactly five targets—changelog 1252, TASK-540,
+TASK-540-06, TASK-540-06-L01, then `_docs/_CHANGELOG/README.md` last—replaces both
+durable prefixes with the complete safe projection, persists matching terminal
+count/hash and exact terminal-domain receipt, recomputes the evidence hash, and updates
+the three closure-task evidence receipts. The changelog-index anchor is its sole commit
+point. Restart uses that index's old/new hash as the rollback/roll-forward decision and
+never substitutes the earlier status journal. A caught terminal verification failure
+enters the universal post-status failure path: it first durably fsyncs
+`status.rollback-prepared.json`, restores the five terminal targets with the changelog
+index last, then reuses the still-prepared status journal to restore and verify the
+complete 20-task-plus-board old generation with the board last before cleanup. The
+final local mechanical gate verifies the durable terminal bytes, then the root repeats
+the transcript-correlation review; no agent call after freeze or cleanup before both
+passes is legal.
 
 ```text
 Tasks: TASK-540, TASK-540-01, TASK-540-01-L01, TASK-540-02, TASK-540-02-L01, TASK-540-03, TASK-540-03-L01, TASK-540-04, TASK-540-04-L01, TASK-540-04-L02, TASK-540-04-L03, TASK-540-04-L04, TASK-540-05, TASK-540-05-L01, TASK-540-05-L02, TASK-540-06, TASK-540-06-L01, TASK-540-07, TASK-540-07-L01, TASK-540-07-L02

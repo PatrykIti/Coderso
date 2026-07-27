@@ -21,26 +21,52 @@ authority. It cannot satisfy a current-state predicate.
 2026-07-15 / gate green; this predates the active 2026-07-21 repair and cannot authorize
 implementation, smoke, or closure.
 **Current Closure Repair Started:** 2026-07-23
-**Current Closure Repair State:** No current `Implementation Complete`,
-`Revalidation Passed`, closure evidence, generation, or token exists. The next legal
-sequence is contract audit -> local workflow recovery -> worktree-root/strict-scan,
-scroll-lock-owner, and phase-8 uncertain-CAS implementation -> targeted gate -> fresh
-post-audits -> canonical full validation -> one canonical seven-flow smoke whose exact
-`dg-022` -> `dg-023` -> `dg-024` segment is the diagnostic real-browser sub-proof ->
-smoke-evidence audit -> changelog 1252/control preparation -> complete full-validation
-rerun -> child-first atomic closure -> final closure-drift/mechanical gate. There is no
-separate diagnostic smoke invocation or reusable partial evidence.
+**Current Closure Repair State:** The owner-directed phase at HEAD `8259a326` is
+behavior-preserving modularization of the smoke executor and scenario infrastructure,
+with no new hardening, product change, runtime diagnosis, or smoke retry. Checkpoints
+`f22eee9f` through `8259a326` already extracted shared observation/visible-assertion
+sources, all seven scenario owners, and simple browser invocations. The executor facade
+remains 26,391 lines and its self-test body remains at lines 15,231-26,384, so further
+cohesive splits are blocking. Every facade and child owner must finish at no more than
+1,000 physical lines. Then run targeted/full gates, restart the helper, run exactly one
+canonical seven-flow Playwright CLI smoke with 13/13 screenshots and deterministic
+cleanup, create changelog 1252, close child-first, commit, and integrate into
+`feat/implementations`.
+**Current Codex Collaboration Directive:** 2026-07-24 — Codex agents are the only
+reviewers/implementers used for the remaining work. The tracked Codex bridge and local
+orchestrator are landed; Claude invocation and fallback are absent from the current
+workflow and closure path.
+**Historical Pre-Modularization Helper Checkpoint:** 2026-07-24 — commit `911c29f5`
+tracks the seven top-level
+helpers and focused regression after the 5/13 harness diagnosis. The owner requested
+minimum threefold runtime budgets for the slow shared Render database before the next
+canonical smoke; those timeout-only bytes require their own focused revalidation and
+checkpoint before runtime. This is historical provenance after the later smoke splits,
+not current closure authority. No product source change is authorized by the 5/13
+result.
 **Current Fresh-Target Changelog Projection Repair:** 2026-07-23 — after the committed
 TASK-548 board/changelog state was merged into this isolated worktree, the canonical
 Start gate stopped before agent, server, browser, fixture, or closure mutation with
 `TASK-540 changelog prose slot is not canonical`. The parser had extended TASK-540's
-mutable prose slot through the independent 1260/1261 reservation sentence. Repair the
-ignored implementation helper and its tracked structural regression so the mutable slot
-is exactly one unique canonical reserved sentence or one unique canonical consumed
-two-sentence pair; following reservations remain unrelated bytes. Reject duplicates,
-malformed/interposed pairs, and escaped 1252/1251/1254/1257 contradictions. Rerun the
-targeted gate and fresh read-only audit before another top-level canonical invocation.
-**Final Executor SHA-256:** `4f21ec5d67a5ab7b810ad4fdb97dcc76ed05e69c652a43af0ab73db815396cff`
+mutable prose slot through the independent 1260/1261 reservation sentence. The local
+implementation helper and tracked structural regression now make the mutable slot
+exactly one unique canonical reserved sentence or one unique canonical consumed
+two-sentence pair, preserve following reservations as unrelated bytes, and reject
+duplicates, malformed/interposed pairs, and escaped 1252/1251/1254/1257 contradictions.
+Those landed pre-bridge bytes still require the combined targeted gate and fresh
+read-only audit before another top-level canonical invocation.
+**Historical Executor SHA-256:** `f473f4ff5e4c64fc1b2fc730cd24cbe48f7e1ea6d8aff1730ed32fe862d5c8de`
+— checkpoint `911c29f5`; it is non-authoritative after the behavior-preserving smoke
+splits.
+**Current Executor Inventory:** At HEAD `8259a326`, the 26,391-line facade hashes to
+`bf2a3debbdb3646f302b0debd0eb480027453484a3ee46b2a187f69f2bb82799`.
+This is an inventory value, not a closure pin. Final dependent hashes and pins are
+recomputed only after every facade and child-module byte stabilizes.
+**Current Split Integrity Contract:** The executor self-test must prove exhaustive,
+non-overlapping action-to-scenario ownership for the current manifest, including the
+enumerated related-cache and responsive-users owners. An omitted registry member must
+fail instead of silently falling through to a shared builder. This is modularization
+integrity only; it adds no product behavior or smoke hardening.
 **Historical Source Repair Revalidated (superseded by the later L03 overflow revalidation):** 2026-07-16 — the final sequential post-audit stopped before smoke on R01 whole-document stored-read collapse and ambiguous legacy IDs, L03 scalar override loss for `media.multiple`, an optional Canvas region name, incomplete A/B self-scope evidence, and one stale L04 binding-ID expectation. A fresh contract audit also found the optional-ID Assistant composer, missing stored-duplicate regression, and stale L04 provenance. Those scoped repairs had matching receipts before the later overflow repair; this does not replace the next clean post-audit, full validation, final audit, or live smoke.
 **Historical Source Repair Ownership (superseded for the later L03 state):** TASK-540-01-L01 owned its schema normalizer and regressions, registered metadata-PATCH proof, `blueprintBindingComposer.ts` plus its focused suite, and read-only action-plan/catalog consumers. TASK-540-04-L03 owned Entry Editor filtering, shared override-contract eligibility, override service activity, and its domain/UI regressions. TASK-540-04-L04 exclusively owned the test-only `custom-screen-editor-binding-flow.test.tsx` shared-helper expectation and its receipt. TASK-540-05-L01 owned only the shared Canvas semantic-panel prop and named-region suite; TASK-540-05-L02 owned only the user-settings route proof. This describes the pre-overflow checkpoint; the later L03 state is recorded below.
 **Historical Source Repair Gate Contract (superseded by the later L03 overflow revalidation):** Every owner remained `🚧 In Progress`. The prior behavior owners had `Implementation Complete` and exact receipts when this gate was recorded. Its L03 258/258, L04 98/98, Bun route, static, line, name, workflow, and audit results are historical for the pre-overflow-repair bytes. TASK-540-04-L03 later restored canonical `Implementation Complete` and its exact overflow receipt with no `Repair Pending`; its 2026-07-19 Entry-correction receipt is now current. TASK-540-06-L01 remains the exact pre-closure gate owner. No clean family post-audit, full validation, live smoke, changelog 1252, or atomic Done transition is claimed.
@@ -84,14 +110,16 @@ zero-finding strict scan; it must not restore or validate the historical pins.
 **Historical Bounded Dirty-Navigation Diagnostics And Complete Cleanup Coverage Implemented And Target-Revalidated:** 2026-07-21 — a third helper-backed diagnostic smoke again reached `dg-024-entry-nav-cancel` after five screenshots, while an exact manual Playwright point probe and an immediate post-dirty race probe both proved one visible Records target, one exact named dialog with positive geometry, its exact heading/description/buttons, a stable source URL, and zero navigation. This isolated the unresolved boundary to executor diagnostics rather than product UI. An exact residue audit then corrected the prior cleanup claim: eight complete TASK-540 nonce families remained (127 exact DB rows and eight exact media files) because the terminal masked cleanup failure and SEO discovery owned only one of six fixture Entry documents. Every exact leaked row and file was removed with provenance, cardinality, bootstrap-admin, no-follow, inode, size, and SHA-256 guards; the active canonical admin remains intact. The executor emits one post-cleanup, <=256-byte allowlisted diagnostic, preserves the real phase for returned phase-6/7 failures, and discovers all six exact Entry SEO targets with stable child-before-parent cleanup. Frozen SHA-256 `4bae679c630e54533c240fae5e6d76b58254dc109242b91d1ba84b162408f1da` passed Prettier, syntax, and the executor self-test with 496 actions, 177 runtime receipts, 72 cleanup actions, and 2230 negative cases. The next live smoke exposed incomplete Select teardown and insufficient phase-3 attribution, so this receipt is historical.
 **Historical Select-Teardown, Physical Dirty-Navigation, And Phase-3 Attribution Repair Implemented And Target-Revalidated:** 2026-07-21 — the next helper-backed smoke again passed setup and the Tone visible-effect flow, then emitted exact terminal `{failedActionId:"dg-024-entry-nav-cancel",failureClass:"click_failed",cleanupPhase:3,cleanupFailureClass:"phase_failed"}`. Read-only forensics found one exact nonce family with four content types, six Entries, two Screens, one Media row and its 68-byte SHA-256-pinned file; SEO, overrides, revisions, settings, synthetic users, sessions, audit/access rows, and every other task-owned surface were absent, global settings matched baseline, and the sole active canonical admin remained intact. A literal-ID, no-wildcard, no-user-delete, no-follow cleanup removed exactly that `4/6/2/1 + file` family and a fresh dry-run proved `0/0/0/0 + no file`. Source tracing found no product navigation defect: the Tone-select latch could return before Radix released its global pointer/scroll lock, while dirty-navigation visibility/geometry did not prove event delivery and its catch conflated pre-dispatch failure with post-dispatch auto-wait. Exactly two Tone-select actions now require every Select content node absent plus body scroll/pointer unlock; exactly five dirty-navigation actions require body unlock, a center-point physical hit test, no pre-existing named dialog, `noWaitAfter`, and the full stable dialog postcondition even after click throws. Their closed browser union adds only `pointer_locked` and `target_intercepted`. Phase 3 now distinguishes stage, dependency, provenance, delete, and absence failures while preserving higher-priority plan/Admin classes. A fresh cleanup-integrity audit found that four real Admin/plan/phase/final aggregation seams were not mutation-guarded; hermetic production-path evidence and four source mutants now bind those seams through the exact bounded, private-marker-free diagnostic. Frozen SHA-256 `5b0de7a899f17148e23272a83d69a5ce148bf3477adc1aed6db3e80b65d039b4` passes Prettier, syntax, and the executor self-test with 496 actions, 177 runtime receipts, 72 cleanup actions, and 2544 negative cases. Fresh read-only re-audits, one diagnostic helper-backed smoke, then the canonical audit/full-validation/smoke, changelog, and closure remain mandatory.
 **Historical Stable Select Handoff, Latest-Target Diagnostics, And Hash-Only Cleanup Receipts Implemented And Target-Revalidated:** 2026-07-21 — the next helper-backed diagnostic smoke passed setup and the Tone visible-effect flow, then emitted exact terminal `{failedActionId:"dg-024-entry-nav-cancel",failureClass:"pointer_locked",cleanupPhase:3,cleanupFailureClass:"persistent_provenance_failed"}`. Exact nonce `wf540-fb30befde747` residue was four content types, six Entries, two Screens, one Media row, and its exact 68-byte file; a literal-ID, no-wildcard, no-user-delete, no-follow cleanup script with SHA-256 `821fe5d6ecf122edf068d8b051c3ac9c903faecc19f7d84399a244e56dbf2b1e` removed exactly that `4/6/2/1 + file` family, and two consecutive post-apply dry-runs proved `0/0/0/0 + no file` while preserving the canonical admin and proving no FK blocker. No TASK-540 screenshot, browser/server process, or owned port remained. Three independent read-only traces found no product defect: Tone selection used a mixed-time cached teardown sample, dirty-navigation retained a sticky historical blocker instead of the latest poll state, and each successful cleanup Admin GET carried a non-empty `Buffer` into recursive freeze after provenance but before DELETE; the same latent defect also affected DELETE and 404 absence receipts. The executor now requires the full Tone visible-effect and atomic Select/body teardown postcondition continuously for at least 600 ms across at least two samples plus a final atomic handoff sample, reports one of seven exact Tone-select classes, recomputes each target-acquisition poll from the latest one of five blocker classes within the closed twelve-class dirty-navigation action union, and hashes bounded non-empty authoritative response bytes before discarding the raw `Buffer`; only validated lowercase SHA-256 enters frozen cleanup receipts, while exact ID/media key/URL and fresh absence proofs remain unchanged and `deepFreezeExact` is not weakened. Hermetic real Admin P/C/A tests and mutants cover legal Screen/Entry representation drift, wrong ID/key/URL, exact attempted-request/no-DELETE/zero-receipt projection, accepted one-byte/exact-MAX boundaries, non-Buffer/empty/oversized byte rejection, unconditional latest-state assignment, full dwell reset/body/geometry predicates, relock timelines, and raw-Buffer/hash regressions. Product source remains untouched by this repair. Frozen executor SHA-256 `6accccffc88371978f2c3ad1727dbbf96aa2473802ea583d14cbc0c4ea548001` passes Prettier, syntax, diff checks, and the full self-test with 496 actions, 177 runtime receipts, 72 cleanup actions, 26 captures, and 2668 negative cases. Fresh read-only re-audits, one diagnostic helper-backed smoke, then the canonical audit/full-validation/smoke, changelog, and closure remain mandatory.
-**Current Scroll-Lock Ownership And Bootstrap-Restore Uncertainty Repair Required:** 2026-07-21 — the next helper-backed smoke reached the same Entry dirty-navigation boundary and emitted exact terminal `{failedActionId:"dg-024-entry-nav-cancel",failureClass:"scroll_locked",cleanupPhase:8,cleanupFailureClass:"phase_failed"}`. A post-exit read-only absence audit proved every TASK-540 nonce-shaped resource, owned file, screenshot, helper/browser/server process, and owned port absent, but phase 8 did not return accepted restoration evidence before the executor exited; the private preflight bootstrap timestamp baseline and newest smoke-owned pair are no longer available, so the final `lastLoginAt`/`updatedAt` restoration outcome is unprovable. This consumed run must not be recovered by guessed timestamps or any post-exit write and does not authorize closure. Exact source/dependency tracing proved `dg-022` handed off one final atomic unlocked sample after its full 600 ms dwell, `dg-023` performed read-only DOM/URL observations, and `dg-024` reported only its last completed target poll rather than a continuous ten-second lock; no product or Radix reopen path is evidenced before the unperformed navigation click. The repair contract therefore adds bounded cross-CLI lock-owner observation plus phase-8 uncertain-CAS reconciliation and their exact tests/mutants while keeping product source unchanged absent named-owner evidence. The frozen executor SHA-256 is intentionally not advanced by this contract-author turn. Fresh read-only audits, targeted revalidation, one diagnostic helper-backed smoke, then the canonical audit/full-validation/smoke, changelog, and closure remain mandatory.
+**Historical Scroll-Lock Ownership And Bootstrap-Restore Uncertainty Repair Trigger:** 2026-07-21 — the next helper-backed smoke reached the same Entry dirty-navigation boundary and emitted exact terminal `{failedActionId:"dg-024-entry-nav-cancel",failureClass:"scroll_locked",cleanupPhase:8,cleanupFailureClass:"phase_failed"}`. A post-exit read-only absence audit proved every TASK-540 nonce-shaped resource, owned file, screenshot, helper/browser/server process, and owned port absent, but phase 8 did not return accepted restoration evidence before the executor exited; the private preflight bootstrap timestamp baseline and newest smoke-owned pair are no longer available, so the final `lastLoginAt`/`updatedAt` restoration outcome is unprovable. This consumed run must not be recovered by guessed timestamps or any post-exit write and does not authorize closure. Exact source/dependency tracing proved `dg-022` handed off one final atomic unlocked sample after its full 600 ms dwell, `dg-023` performed read-only DOM/URL observations, and `dg-024` reported only its last completed target poll rather than a continuous ten-second lock; no product or Radix reopen path is evidenced before the unperformed navigation click. The bounded cross-CLI lock-owner observation and phase-8 uncertain-CAS reconciliation plus their tests/mutants are now landed in the exact pre-bridge checkpoint above, with product source unchanged. They still await the bridge-inclusive targeted gate and carry no current completion receipt.
 **Current Repair Execution Order:** The final sentence of the 2026-07-21 trigger
 evidence describes its then-planned sequence and is historical. The authoritative
-sequence is the `Current Closure Repair State` at the top of this file: current workflow
-repairs and targeted gate -> post-audits -> full validation -> one canonical smoke with
-the embedded diagnostic sub-proof -> smoke-evidence audit -> changelog/control
-preparation -> complete full-validation rerun -> child-first atomic closure -> final
-closure-drift/mechanical gate.
+sequence is the `Current Closure Repair State` at the top of this file: finish cohesive
+smoke facade/child modularization to at most 1,000 physical lines per module -> prove
+split integrity and recompute final dependent helper/task/test pins only after all smoke
+bytes stabilize -> targeted and full gates -> helper restart -> exactly one canonical
+seven-flow Playwright CLI smoke with 13/13 screenshots and deterministic cleanup ->
+changelog/control and child-first status closure -> final closure checks, commit, and
+integration into `feat/implementations`.
 **Historical L03 Source Repair Required:** On 2026-07-15 the live-smoke feasibility audit proved duplicate canonical/legacy cacheBus transport delivery made the exact-one `related-a-refresh` route contract impossible; the scoped repair landed and was revalidated.
 **Historical L03 Source Repair Owner:** TASK-540-04-L03 was the sole repair owner for the generic per-subscription cacheBus transport dedupe in `core/admin/utils/cacheBus.ts`, its regressions in `tests/vitest/admin/cacheBus.test.ts`, and additive direct-image route-boundary regressions in `tests/integration/routes/customScreensRoutes.test.ts`. No production route file changed.
 **Historical L03 Source Repair Gate:** TASK-540-04-L03 alone held the exact three-path repair authority, ran its required gates, and atomically replaced its matching `Repair Pending` receipt with one `Revalidation Passed` successor plus canonical `Implementation Complete`. That durable evidence remains valid but does not substitute for any later source-repair receipt or closure gate.
@@ -116,10 +144,56 @@ closure-drift/mechanical gate.
   shared-row snapshot/restore and cache/environment teardown boundaries
 - exact successor ownership of
   `tests/unit/workflows/task540SmokeExecutorSecurity.test.ts` for this workflow repair
-  only: preserve every TASK-546 credential/run-code/executor-equality assertion, add the
-  worktree-root and clean-strict-scan regressions, and update
+  only: preserve every TASK-546 credential/run-code/executor-equality assertion; add the
+  worktree-root and clean-strict-scan regressions; independently load the new bridge
+  source and prove no Claude runtime/fallback; the exact continuous
+  root-to-`task-540-local-orchestrator.mjs --run` private non-TTY pipe transport,
+  local notification, seven control/reply frame pairs, sequential single-flight
+  enforcement, explicit host-handled abort versus raw EOF/root-loss lifecycle, and
+  host-only inspect/status/wait/respond/procedure/recover-review CLI launch authority;
+  schema
+  registration/identity/GATE/clone rules,
+  the closed scalar type forms plus the sole exact GATE-property
+  `["string","null"]` union,
+  domain-separated canonical hash preimages, the decision-bound operator/timeout claim
+  CAS and its six-row cleanup-only crash matrix, timeout-before/after-claim transitions,
+  exact monotonic response eligibility, claimed-but-spawn-failed/deadline race table,
+  exact result/transcript digest binding, contender-start identity/hash binding, CAS
+  link-count transitions, success/EEXIST acknowledgement, procedure/transcript
+  correlation, safe ledger projection/prefix/restart, abort sealing, terminal/abort hash
+  preimages, pre-artifact run journal, crash-recoverable index-last terminal journal, and
+  exact request/ledger cleanup presence plus terminal-temp restart tables; the
+  fixed-journal launch-plan/host-arm/private-GO handshake for every bridge mode spawned
+  only by the continuous host, including the pre-GO request-inaccessibility and EOF
+  contract; exact
+  21-target status rollback-marker creation, marker-priority restart, all-old board-last
+  convergence, deterministic journal cleanup; final cleanup behavior; and pinned mutant
+  counters; and update
   `MASKED_IMPLEMENT_SHA256` exactly once after all authorized implement-workflow bytes
-  are final; weakening or removing the masked-byte equality is forbidden
+  are final. The bridge self-test cannot self-certify these properties by itself, and
+  weakening/removing the masked-byte equality is forbidden. No extracted tracked
+  test/support file is authorized for this repair; this one tracked successor must
+  remain at most 1,000 physical lines. Clean-checkout reproducibility is mandatory.
+  The seven top-level helper/facade paths remain the public workflow bundle. Cohesive
+  tracked modules under `_docs/_workflows/task-540-smoke/**` are their internal
+  implementation owners, not new public entrypoints or extracted security-test support.
+  Before the complete targeted gate, every top-level path and child owner must be a
+  regular tracked non-symlink file with its final hash. The 1,000-line limit does **not**
+  apply to the seven top-level helpers and that is settled — do not re-open it. AGENTS.md
+  binds "a human-authored production module or test file"; these are workflow tooling
+  under `_docs/_workflows/`, and `isLineLimitedHumanAuthoredModule` already admits only
+  `core/`, `packages/`, `store/` and `tests/` paths, with a self-test case asserting
+  `_docs/_workflows/example.mjs` is out of scope. Three helpers exceed the limit today
+  (`task-540-implement.mjs` ~28,000 lines, `task-540-local-orchestrator.mjs` 3,966,
+  `task-540-test-name-contract.mjs` 2,459), so the earlier wording was unsatisfiable
+  without splitting ~34,500 lines of tooling no gate measures. Child modules under
+  `_docs/_workflows/task-540-smoke/**` stay at or below 1,000 lines as a family
+  convention — the property that localises a regression to one named file — not as the
+  AGENTS.md gate. See TASK-540-06 for the full reasoning.
+  TASK-540 stages only its changed top-level and child-module paths without changing the
+  broad `_docs/_workflows/` ignore rule. Missing, ignored-only, partially tracked,
+  hash-mismatched, generated/archived, conditionally registered, or skipped coverage
+  fails. TASK-545 retains repository-wide workflow and screenshot-manifest policy.
 - every other Vitest/Bun path in the required matrix is read-only here and remains
   owned by its source leaf, including the image-inspector, Custom Screens client,
   entry-preference persistence, and navigation-guard suites
@@ -146,80 +220,147 @@ Closure may treat only this concrete, execution-ready TASK-9999 leaf as non-bloc
   `_docs/_TASKS/TASK-9999-01-L01-Decouple-Actor-And-Media-Uuid-Domain-Naming.md`.
   TASK-9999-01-L01 approved evidence: core/services/customScreens/screenMediaIdentity.ts:4; core/services/customScreens/screenEntryPresentationOverrideContract.ts:192; core/services/customScreens/screenEntryPresentationOverrideContract.ts:229; core/services/customScreens/screenEntryPresentationOverrides.ts:421.
   TASK-9999-01-L01 approved rationale: the shared UUID predicate already accepts and rejects the intended actor/media UUID grammar and preserves exact input bytes; deferral changes no UI/UX/accessibility, data, security/privacy/auth/RBAC, API, persistence/migration, performance/reliability, or test-integrity behavior.
-TASK-9999-01-L02 was re-triaged on 2026-07-18 and is `⏭️ Superseded` by active `TASK-540-02-L01`; removing `baseLabel` would regress focus-preserving stale-draft invalidation, so it is not eligible for TASK-9999 deferral.
+  TASK-9999-01-L02 was re-triaged on 2026-07-18 and is `⏭️ Superseded` by active `TASK-540-02-L01`; removing `baseLabel` would regress focus-preserving stale-draft invalidation, so it is not eligible for TASK-9999 deferral.
 
-The workflow verifies the L01 leaf contract and both source-task backlinks before excluding an exact
-matching LOW from the blocking audit set. Any mismatch, different finding, HIGH/MEDIUM,
-or LOW involving UI/UX/accessibility/data/security/privacy/auth/RBAC/API/persistence/
-migration/performance/reliability/test integrity remains blocking.
+The sole accepted normalized tuple is the canonical JSON object
+`{"area":"deferred-low:actor-media-uuid-domain-naming","evidence":["core/services/customScreens/screenMediaIdentity.ts:4","core/services/customScreens/screenEntryPresentationOverrideContract.ts:192","core/services/customScreens/screenEntryPresentationOverrideContract.ts:229","core/services/customScreens/screenEntryPresentationOverrides.ts:421"],"finding":"Actor UUID validation reuses the media-named UUID predicate without behavior change.","ownerOneOf":["540-01-L01","540-04-L03"],"recommendation":"TASK-9999-01-L01","severity":"low"}`.
+Its pinned digest is
+`sha256("coderso.task540.deferred-low-tuple.v1\0" + canonicalJson(tuple)) =
+797e76b442acd2a0e8afcde29250cd2e558e93a8bb4b489bfce1908fd06e8666`.
+An audit item normalizes only when its owner is one exact `ownerOneOf` member and all
+other scalar fields and the ordered, semicolon-parsed evidence array are byte-equal;
+the actual owner never changes the normalized tuple. The full current backlog leaf
+must independently hash to
+`0179d6fc94762dc5fa27d6749a1149031ab7912ea4757911e59238736cfc4eda`,
+have exact physical ID `TASK-9999-01-L01`, `Source Task: TASK-540`, and `Status: ⏳ To
+Do`, and both TASK-540 source backlinks must be exact. Only then may the workflow
+exclude that one tuple. A changed backlog byte, second match, different finding,
+TASK-9999-01-L02, any other TASK-9999 item, HIGH/MEDIUM, or LOW involving
+UI/UX/accessibility/data/security/privacy/auth/RBAC/API/persistence/migration/
+performance/reliability/test integrity remains blocking.
 TASK-9999 remains byte-identical as the final In Progress board row throughout closure;
 board counts are read fresh and TASK-540 applies only its own In Progress→Done delta.
 
 ### Orchestrator-only smoke module boundary
 
-The current repository intentionally ignores `_docs/_workflows/`; TASK-545 owns any
-future tracked-workflow and durable screenshot-manifest policy. TASK-540 therefore
-recovers its operational files only into the ignored local worktree and must never stage
-them with `git add -f`. The sole recovery source is commit
+The current repository broadly ignores `_docs/_workflows/`; TASK-545 owns the
+repository-wide workflow and durable screenshot-manifest policy. TASK-540 historically
+recovered its operational files only into the local worktree. Recovery is complete; the
+Vite/bridge/local-host/schema/recovery prerequisites are landed. The current step is
+behavior-preserving modularization of the smoke facade into cohesive tracked owners
+under `_docs/_workflows/task-540-smoke/**`; it must not replay recovery, add hardening,
+or alter product behavior. Only after every facade and child owner is at most 1,000
+physical lines and all smoke bytes stabilize may TASK-540 compute dependent hashes and
+update the implement/executor/task/test pins. Final preflight and staging cover the
+seven top-level helper/facade paths plus every changed child owner, without changing
+`.gitignore` or staging any unrelated workflow or loose screenshot.
+The sole historical recovery source is commit
 `3d5604ecfdeaa9c4d5ef32c1314b838a793441ad`, with these exact pre-repair SHA-256
 values:
 
-| Local workflow | Recovery SHA-256 |
-|---|---|
-| `task-540-fix.mjs` | `b65b1b7cce153471e71ef613bb6515846ba02515a603a899be3ffdc9388ef846` |
-| `task-540-implement.mjs` | `aaff4435ea87445e2183c3ba017c9c8e1de255694838be91aa1845fa1e1eb377` |
+| Local workflow                    | Recovery SHA-256                                                   |
+| --------------------------------- | ------------------------------------------------------------------ |
+| `task-540-fix.mjs`                | `b65b1b7cce153471e71ef613bb6515846ba02515a603a899be3ffdc9388ef846` |
+| `task-540-implement.mjs`          | `aaff4435ea87445e2183c3ba017c9c8e1de255694838be91aa1845fa1e1eb377` |
 | `task-540-local-orchestrator.mjs` | `f3a26517f3d2f4bfc8618c0690ae10a3b59a9281b17ead7f426fdac632411f46` |
-| `task-540-smoke-contract.mjs` | `5ed7407d13c71becaea40128128774bdf6e3baf26e4f04353715a72f0a48eb74` |
-| `task-540-smoke-executor.mjs` | `75b89a07917b4030f9876f6670c5532a9153ca0415b639b36295ba2088293aaf` |
-| `task-540-smoke-host.mjs` | `ddb9464221275c8b47fffbc7350c95f156393c8652d69920c9e4dd4f6d81fa84` |
+| `task-540-smoke-contract.mjs`     | `5ed7407d13c71becaea40128128774bdf6e3baf26e4f04353715a72f0a48eb74` |
+| `task-540-smoke-executor.mjs`     | `75b89a07917b4030f9876f6670c5532a9153ca0415b639b36295ba2088293aaf` |
+| `task-540-smoke-host.mjs`         | `ddb9464221275c8b47fffbc7350c95f156393c8652d69920c9e4dd4f6d81fa84` |
 | `task-540-test-name-contract.mjs` | `f11a7db3fbddc23274dcc76ecab7183523e5a3604e596606dcb591f93282015d` |
 
-Recovery verifies every byte before editing. The recovered implement workflow's
+`task-540-codex-agent-bridge.mjs` is the new seventh current repair helper. It is
+intentionally absent from this seven-blob historical recovery table and has no invented
+recovery hash. The inert historical `task-540-fix.mjs` remains recovery provenance and
+is not counted among the seven current repair helpers.
+
+The historical pre-modularization tracked checkpoint bundle was:
+
+| Current local helper                    | Checkpoint SHA-256                                                | Landed authority                                                                                   |
+| --------------------------------------- | ------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------- |
+| `task-540-codex-agent-bridge.mjs`       | `c3c594a17cb63943beab29e7f621f6e1ca46cb3b5abb67625edcddb900788341` | no-Claude root-mediated Codex bridge                                                               |
+| `task-540-implement.mjs`                | `eeb25e7be19f3aa0fa8a6638c5976d9cd1a6228d1d19f9272d713ec0dca4f9cb` | fresh-target parser, worktree root, strict scan and helper pins                                     |
+| `task-540-local-orchestrator.mjs`       | `e06c7be9652554111c111c2e8210b733db908a4f272bcbd4a11781174e132da4` | worktree-root host and local orchestration authority                                                |
+| `task-540-smoke-contract.mjs`           | `5ed7407d13c71becaea40128128774bdf6e3baf26e4f04353715a72f0a48eb74` | canonical seven-flow smoke contract                                                                |
+| `task-540-smoke-executor.mjs`           | `f473f4ff5e4c64fc1b2fc730cd24cbe48f7e1ea6d8aff1730ed32fe862d5c8de` | same-action scroll/pointer/geometry/hit-test dirty navigation and slow-DB cleanup authority          |
+| `task-540-smoke-host.mjs`               | `2dbec5af334b4b8d5ef7b2bcda2c1f56f6cac9e86bb7df6bedfb358d05b7d68f` | Vite 8.1.5 smoke host                                                                               |
+| `task-540-test-name-contract.mjs`       | `ce052b4245c8c384d0405c32cf9d1df146a2f83a409994a6a2822de5422fc4f5` | worktree-root/name authority                                                                        |
+
+These exact top-level bytes are tracked by checkpoint `911c29f5` and passed their
+focused non-DB validation at that checkpoint. The executor hash is non-authoritative
+after the later behavior-preserving splits, and the table does not exclude the tracked
+child owners under `_docs/_workflows/task-540-smoke/**`. Final dependent hashes and
+pins are recomputed only after every facade and child-module byte stabilizes.
+Historical checkpoint verification checked every byte without replaying recovery. The
+recovered implement workflow's
 `64daaabad53ebf3a73cc7a35fa4cb6f6b72fcf38f7e85367bf35381e492a57f4`
 executor pin is stale against the recovered executor and is not authority. Historical
 executor SHA `6accccffc88371978f2c3ad1727dbbf96aa2473802ea583d14cbc0c4ea548001`
-is provenance only. After both active repairs and formatting are final, compute the
-executor SHA once, update only the implement workflow's frozen-executor value and the
-live task pin, and require the focused TASK-546 security test to prove the equality.
+is provenance only. Those Vite/bridge/local-host prerequisites are landed. Current
+authorized writes are limited to cohesive behavior-preserving smoke splits and their
+split-integrity tests. Only after every facade and child-module byte is final may the
+workflow compute dependent helper hashes and update the
+implement/executor/live-task/focused-test pins. Require the focused TASK-546 security
+test to prove the equality.
 Tracked TASK-540 product/task/test bytes remain the current verified working-tree
 authority; old commits are recovery/provenance anchors, never a replacement source
 branch.
 
-Recovery is idempotent only before the first repair edit:
+Historical recovery was idempotent only before the first repair edit. The following
+pseudocode remains historical verification/bridge provenance, not the current execution
+order:
 
 ```text
-recoverTask540WorkflowSet(root, recoveryTable):
+verifyRecoveredTask540WorkflowSet(root, recoveryTable, currentCheckpoint):
   derive root from the executing module; accept no argv/env root override
   require git rev-parse --show-toplevel == realpath(root)
-  for each exact relative path:
-    read the source blob as <commit>:<path>; require its pinned SHA-256
-    reject a symlink, non-regular destination, partial set, or existing wrong hash
-    if the whole set is absent, restore every pinned blob into the ignored worktree
-  require all seven destination hashes and git-check-ignore authority
-  record recovery complete; never overwrite later repaired bytes
+  require the historical seven-blob provenance table still hashes at its source commit
+  require the inert fix helper retains its historical hash
+  require each six landed pre-bridge helpers as a local regular, non-symlink file
+  require their exact current hashes and the absent not-yet-created bridge
+  record verification complete without opening any destination for write
+  never restore, replay, or overwrite later repaired bytes
 
 finalizeTask540ExecutorPin():
-  finish and format every executor/implement change
+  require every facade and child owner to be cohesive and <= 1,000 physical lines
+  require exhaustive, non-overlapping current-manifest scenario ownership
+  format every authorized top-level and child-module change
+  require every smoke byte final before computing any dependent final hash or pin
   hash executor exactly once
-  update FROZEN_SMOKE_EXECUTOR_SHA256 and both live task pin fields
-  compute the final masked implement hash and update the focused test once
-  run syntax, self-tests, and the focused Bun test
+  update the final dependent helper hashes and implement/executor/task pins
+  compute the final masked implement hash and update the focused-test pin once
+  run syntax, format-check, and helper self-test preflight
+  stage the finalized seven top-level paths plus every changed tracked child owner
+  require tracked parity/hashes, then run the focused Bun test and complete targeted gate
   freeze both files; any later byte change invalidates finalization and restarts the gate
 ```
 
 The formatting-only drift in the recovered implement workflow at its
 `sensitiveAssignmentRanges` loop is not TASK-546 behavior. Restore the spaced
 `match !== null; )` form before calculating the new masked baseline, then make only the
-current contract-authorized worktree-root, strict-scan, embedded-diagnostic, and final-pin
-changes. The focused test's new masked hash freezes that complete authorized result.
+current contract-authorized changes: the fresh-target changelog-projection parser and
+its regression; worktree-root, strict-scan, embedded-diagnostic, scroll-lock-owner, and
+phase-8 uncertain-CAS repairs; the `task-540-smoke-host.mjs`-only Vite 8.1.5 version
+literals, default fixtures, version mutants, self-test expectations, and embedded
+child-source byte pins plus their private optimizer-readiness audit/revalidation;
+creation of the Codex bridge; removal of Claude from and integration into the local
+host; schema registration and recursive validation; Codex behavioral-policy prompt
+replacement; CAS/ACK/procedure-ledger cleanup enforcement; bridge gates and independent
+workflow-security test mutants; formatting; and final dependent helper hashes plus
+executor/implement/task/test repins only after every helper byte is final.
+Root `package.json`, `core/package.json`, and `bun.lock` remain byte-identical and
+read-only.
+No other recovery edit is authorized. The focused test's new masked hash freezes that
+complete authorized result.
 
 ### Dedicated-worktree root and security authority
 
 The workflow must run from the dedicated `feature/tasks-fixes` worktree requested for
-this concurrent task. `task-540-local-orchestrator.mjs`, `task-540-implement.mjs`, and
-`task-540-test-name-contract.mjs` derive `ROOT` from their own `import.meta.url` using
-`fileURLToPath`, `dirname`, `resolve`, and `realpath`; no caller, environment variable,
-current working directory, hardcoded checkout name, or sibling worktree may supply it.
+this concurrent task. `task-540-local-orchestrator.mjs`,
+`task-540-codex-agent-bridge.mjs`, `task-540-implement.mjs`, and
+`task-540-test-name-contract.mjs` each derive `ROOT` from their own `import.meta.url`
+using `fileURLToPath`, `dirname`, `resolve`, and `realpath`; no caller, environment
+variable, current working directory, hardcoded checkout name, or sibling worktree may
+supply it.
 Each requires the executing module to be a no-follow regular file under
 `ROOT/_docs/_workflows`, requires `git rev-parse --show-toplevel` and the Git common-dir
 worktree relationship to identify that same root, and requires branch
@@ -236,15 +377,16 @@ must satisfy `realpath(--show-toplevel) === ROOT`,
 `gitDir !== gitCommonDir`. Thus only a linked worktree of that same repository is
 accepted; the primary checkout and unrelated/sibling Git directories are rejected.
 
-The local orchestrator builds every prompt path, `.env*`/`.git`/`node_modules` deny rule,
-allowed repository boundary, sibling-project deny rule, and implementer URL from that
-verified root. It denies all other discovered worktrees and sibling projects. The
-implementation and test-name workflows independently derive and verify the same root;
-they do not trust a global binding from the host. Their self-tests cover the dedicated
-worktree, the legacy main checkout, cwd spoofing, argv/env override, symlinked module/root,
-wrong Git top-level/common-dir, unsafe parent/basename, prompt/deny-rule leakage, and
-cross-worktree access. A worktree-local regular `.env` and worktree-local frozen
-`node_modules` are mandatory; symlinks or reuse through another checkout fail closed.
+The local orchestrator builds every prompt path, `.env*`/`.git`/`node_modules` deny
+rule, allowed repository boundary, sibling-project deny rule, bridge URL, and
+implementer URL from that verified root. It denies all other discovered worktrees and
+sibling projects. The bridge, implementation, and test-name workflows independently
+derive and verify the same root; they do not trust a global binding from the host. Every
+one of their self-tests covers the dedicated worktree, the legacy main checkout, cwd
+spoofing, argv/env override, symlinked module/root, wrong Git top-level/common-dir,
+unsafe parent/basename, prompt/deny-rule leakage, and cross-worktree access. A
+worktree-local regular `.env` and worktree-local frozen `node_modules` are mandatory;
+symlinks or reuse through another checkout fail closed.
 
 ### Current strict-scan and embedded diagnostic authority
 
@@ -284,6 +426,8 @@ failure.
 ```text
 deriveTask540WorktreeRoot(moduleUrl, deps):
   fileURLToPath(moduleUrl); no-follow lstat the module and require one regular file
+  bind the caller to its compile-time expected filename from the closed
+    local-orchestrator/bridge/implement/test-name set; never accept it from argv/env
   require its real path under <candidate>/_docs/_workflows with no symlinked segment
   require candidate parent == /home/coder/project and basename
     /^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/
@@ -301,21 +445,231 @@ requireZeroFindingStrictScanReceipt(receipt):
   reject status 1, any finding, warning-success, allowStrictScan, a known-finding projection,
     an exception/allowlist, or missing/malformed scanner output
 
-installLockOwnerTimeline(page):
-  inside dg-022's same final atomic teardown evaluation, sample the unlocked body/owner state
-  install one body MutationObserver with the exact options below, append initial ordinal 1,
-    and bind the private per-run slot once
-  reject a pre-existing slot, invalid count/state, or a 17th distinct projection
+registerCodexSchemas(agent):
+  after every maintenance/self-test early-exit branch and immediately before main execution,
+    call the non-enumerable agent.registerSchemas exactly once with
+    {audit:AUDIT_SCHEMA,gate:GATE_SCHEMA,mutation:MUTATION_SCHEMA,result:RESULT_SCHEMA}
+  accept scalar type forms only object,array,string,boolean,integer plus only the exact
+    GATE property union ["string","null"]; reject every other type array/form and keyword
+  WeakMap each original identity/name/hash; GATE remains registered/hashed but dispatch-rejected
+  reject second registration; at dispatch recompute hash and reject mutation, clone, GATE, unknown
 
-readLockOwnerTimeline(page):
-  at dg-023, flush takeRecords(), append the current projection only if it changed,
-    validate the entire slot/ordinals/bounds, and return a frozen copy without disconnecting
+createCodexBridgeRequest(policy, safePrompt, registeredSchema, runState):
+  require the local single-flight latch and no other root-authorized TASK-540 writer for mutation
+  map registered RESULT/AUDIT -> read-only and registered MUTATION -> mutating
+  build schemaCore and exact requestCore; compute each domain-separated hash over core only
+  require the fixed run journal prepared; fsync exact request-sequence planned record first
+  create /tmp request dir 0700 and exact 0600 files with O_EXCL/O_NOFOLLOW and stable identity
+  fsync exact created record binding the request directory identity before notification
+  emit exactly canonical-LF {deadlineAtEpochMs,requestDir,requestId,sequence}
 
-consumeLockOwnerTimelineAtTargetPoll(page):
-  during each dg-024 completed target poll, in one page evaluation flush takeRecords(),
-    append/sample the current state, and return body interaction plus finalSampleOrdinal
-  classify a lock only from that same sample/ordinal; historical samples are diagnostic-only
-  in finally disconnect the observer and delete the slot on every success/failure path
+startRootMediatedCodexHost():
+  root spawns exactly
+    node _docs/_workflows/task-540-local-orchestrator.mjs --run
+    from the verified root with shell false, detached false, and private non-TTY
+    pipe stdin/stdout; no bridge CLI is ever a root child
+  retain and verify the exact host PID/start/module/cwd/argv identity
+  host stdout carries only the existing canonical request notification or one exact
+    controlReplyCore per accepted command, each as one canonical JSON line
+  forbid echo, TTY, socket, temporary control file, argv/env payload, alternate launcher,
+    reconnect, resume, or adoption
+
+executeRootControlCommand(command, requestAuthority, payload):
+  require no earlier control command in flight and allocate one fresh random 128-bit
+    lowercase-hex controlId plus the next dense positive controlOrdinal
+  build exact reject-unknown
+    controlCore={command,controlId,controlOrdinal,payload,requestId,sequence}
+  command is exactly inspect/respond/status/wait/procedure/recover-review/abort
+  first five commands bind requestId/sequence to the host's notification-backed private map;
+    recover-review and abort alone use null requestId/sequence; recover-review is legal
+    only in recovery phase and abort is legal only for the current frozen generation
+  payload is null exactly for inspect/status/wait; respond/procedure/recover-review use
+    their exact already-defined private stdin frame; abort payload is exact
+    {reason,review}, with reason from abortCore and review the complete recoveryReviewCore
+  require one canonical UTF-8 JSON serialization plus one LF, no duplicate key, BOM, CR,
+    whitespace variant, trailing/extra byte, or second/pipelined frame, with total frame
+    size <= 8,454,144 bytes and every existing nested schema/string/array/depth bound
+  host performs read -> validate -> execute -> reply completely before reading another command
+  host returns exact reject-unknown
+    controlReplyCore={command,controlId,controlOrdinal,requestId,result,sequence,status:"ok"}
+    with identical bindings and result equal to the exact validated mode output
+  apply the same canonical-LF/cardinality/8,454,144-byte/nested bounds to the reply
+  reject replay, ordinal gap, out-of-order ID/binding, duplicate reply, or pipelining
+  abort is host-handled, launches no bridge child, and is the only controlled-abort trigger:
+    freeze, validate review, seal/clean the abort journal, return exact
+    {accepted:true,runSha256,status:"aborted"}, close, and let root prove host absence
+  on plain/unframed EOF, root disappearance, broken control transport, or host crash
+    freeze dispatch, boundedly stop only exact armed children the host can still prove,
+    preserve all journal/request/ledger bytes, exit nonzero, and never write an abort receipt
+    or claim the host's own absence; never reconnect to, resume, or adopt the run
+
+launchArmedBridgeModeAsHost(mode, requestAuthority, input, priorHelperSweep):
+  allocate the next dense launch ordinal in the fixed run journal
+  write/fsync the exact
+    launch-<zero-padded-12-digit-launchOrdinal>.planned.json envelope before spawn
+  create one private child-only control pipe in addition to the mode's existing stdin contract
+  spawn the exact bridge module/mode with shell false and no ambient descriptor inheritance
+  before GO the child may only parse its bounded canonical bootstrap and wait on that pipe
+  parent identity-checks the exact child PID/start/executable/cwd/module/mode/argv
+  parent writes/fsyncs
+    launch-<zero-padded-12-digit-launchOrdinal>.armed.json with that exact identity and
+    priorHelperSweepSha256 null for every normal mode or the verified sweep digest for
+    recover-review
+  parent sends the one exact GO frame naming the armed hash and carrying
+    priorHelperSweep null for every normal mode or the exact verified sweep envelope for
+    recover-review, then closes its control endpoint
+  child revalidates the armed envelope and its own identity before any request/journal access
+  recover-review additionally validates the sweep digest and exact-set equality to every
+    launch ordinal before its own before reading the root frame or any request byte
+  pre-GO EOF exits nonzero with empty stdout/stderr and no request access or output
+  after exit prove the exact identity absent and durably publish launch cleanup markers
+  capture and validate the child's one exact canonical-LF mode output privately; only the
+    parsed exact result enters the matching controlReplyCore
+  never expose child stdout directly or accept a root-launched bridge process
+
+inspectAndMediateAsRoot(requestDir):
+  receive the host's exact request notification; send exact inspect controlCore
+  host launches/arms the inspect child; monotonic deadline wins the sole claim before
+    dispatch or operator atomically claims and returns only the exact ten-key inspect bundle
+  privately map requestId to agent task name; spawn one fresh agent with fork_turns="none"
+  on spawn failure submit exact spawn_failed procedure; invent no task/result/correlation
+  send only policy + prompt + resultSchema; do not send request/path/IDs/env/raw bytes/user data
+  hash the exact transcript result; relay result + agentResultSha256 only in the exact
+    respond controlCore payload
+  accept only {accepted,requestId,status}; poll cancellation/deadline
+  on live-agent timeout call interrupt_agent; never claim interrupt for a normal request
+  hash and self-check the private request/task-name/exact-result transcript correlation
+  relay exact root attestation plus only that digest in the procedure controlCore payload
+  require one exact spawned/fork-none or spawn_failed procedure receipt per operator
+    claim, or one nondispatch ledger entry for pre-claim timeout
+
+createOrJoinCodexClaim(owner, requestAuthority):
+  prepare and validate every claim preimage and candidate byte before the eligibility sample
+  set decisionMonotonicNs from the operator's final decision sample as the last
+    non-filesystem step before candidate write/fsync/link
+  operator is eligible only when decisionMonotonicNs < deadlineMonotonicNs; otherwise
+    create or join timeout and never write/link an operator candidate
+  timeout is eligible only when decisionMonotonicNs >= deadlineMonotonicNs; equality is timeout
+  build claimCore with decisionMonotonicNs and write the exact claim envelope to only
+    operator.claim.candidate.json or timeout.claim.candidate.json using
+    O_CREAT|O_EXCL|O_NOFOLLOW, mode 0600, stable identity, file fsync, and nlink 1
+  hard-link no-overwrite to claim.json, fsync the parent, require same dev/ino and nlink 2,
+    identity-unlink the candidate, fsync the parent, and require claim.json nlink 1
+  on EEXIST stable-read/validate the existing claim and join it; identity-unlink/fsync
+    only this contender's distinct loser candidate, never the claim or another contender
+  reject owner/basename/time/hash/request/schema/identity/link-graph drift
+
+settleAndCleanCodexRequest(kind, core):
+  on pre-claim timeout use the sole timeout claim and never dispatch
+  on post-operator-claim timeout reuse that exact claim; never create a second claim
+  at inspect, response-start, and response-CAS boundaries compare the pinned monotonic deadline
+  at/after deadline never link response; start/join deadline cancellation under the same claim
+  durably record and identity-pin exact hashed response.started/cancel.started before candidate
+  recompute agent-result digest; bind it and decisionMonotonicNs into eligible response
+  compute settlement hash from exact response-or-cancel core binding request/claim/schema/start
+  require candidate nlink 1; hard-link no-overwrite to settlement; require same inode/nlink 2
+  unlink candidate; require settlement nlink 1; loser EEXIST unlinks only its candidate
+  after CAS success or EEXIST, every started contender writes/links its exact start-bound ACK
+  wait bounded for every started acknowledgement, required procedure receipt, and responder absence
+  recursively validate response against registered original schema (8 MiB; 4096-byte strings)
+  always run existing postchecks and rollback, including timeout/failure/cancellation
+  freeze disposition; write one immutable safe dense ledger entry preserving request/run/
+    worktree/claim/settlement/procedure truth plus every sorted start/ACK pair
+  fsync ledger-sequence planned record before entry creation and created record afterward
+  re-read the entry against retained preimages; bind its pre-closure prefix into closureControl
+  fsync request cleanup-started record; unlink only identity-bound known files
+  prove empty rmdir; fsync request cleaned record
+  never recursive/glob cleanup
+
+recoverCrashedCodexGeneration(rootReview):
+  refuse normal dispatch while the fixed recovery journal exists
+  require the bridge module's sole export sweepPriorBridgeLaunchesForRecovery and call it
+    only from the verified continuous host in recovery-only phase
+  the sweep may stable-read only fixed run/launch records and /proc; it must not read
+    request bytes or root payload, nor perform artifact cleanup
+  planned-without-armed proves request incapability because GO was impossible; for every
+    armed prior helper identity-check the exact positive PID/start/module/mode/worktree,
+    TERM then KILL only that exact identity when live, and prove final identity absence
+  receive exact reject-unknown
+    {...priorHelperSweepCore,priorHelperSweepSha256}, with
+    priorHelperSweepCore={launches,runSha256,schemaVersion:1}, launches the dense
+    prior-ordinal array of exact {launchArmedSha256,launchOrdinal,
+    launchPlannedSha256,state} projections, state armed_absent|planned_unarmed, and
+    priorHelperSweepSha256 in only the recovery-helper-sweep domain
+  plan/arm recover-review only after that preflight, bind priorHelperSweepSha256 into its
+    armed core, and send the exact sweep envelope in GO
+  after GO the recover-review child recomputes the digest and requires its launches to
+    exact-set equal every launch ordinal before its own, then and only then reads
+    rootReview and planned requests
+  require one exact private root-review item for every journal-planned request sequence
+  validate each durable start plus exact PID/start/role/module/worktree process identity
+  TERM then KILL only a still-live exact bridge-mode helper PID named by a durable start
+    record, with bounded absence proofs; make no server/browser/fixture/process recovery claim
+  reject PID reuse, identity drift, an unknown process, or group/broad signalling
+  require the root to interrupt and prove stopped every still-live mapped collaboration task
+  retain request bytes until local-process absence and root procedural review both complete
+  never persist or log a collaboration task name; never claim local API verification
+  normalize claim CAS residue only from exact journal-known identities and only for cleanup:
+    no claim/no candidate; no claim plus one/both nlink-1 candidates; claim alone at
+    nlink 1; claim plus one same-inode linked candidate at nlink 2; claim plus one/both
+    distinct nlink-1 losers; or claim plus one same-inode linked candidate and one
+    distinct nlink-1 loser
+  for no-claim candidate rows identity-unlink/fsync only known candidates and never elect;
+    for a same-inode linked candidate identity-unlink/fsync it and require claim nlink 1;
+    for distinct losers identity-unlink/fsync only those losers and retain the valid claim
+  fail closed and retain evidence for every impossible inode/link graph, unknown link,
+    identity/hash/owner/basename/time condition, mode/UID/type drift, operator decision
+    at/after deadline, timeout decision before deadline, or equality assigned to operator
+  recovery never creates or links a claim, samples a decision, dispatches, resumes, or adopts
+  recover only journal-listed request and ledger artifacts through the exact presence matrix
+
+sealAbortedCodexGeneration(reason, review, ledger):
+  require invocation only by the valid host-handled abort control command; launch no
+    bridge child and freeze dispatch
+  require reason in the exact abortCore enum and review exact-set equal every planned
+    request after root interruption/final-non-live proof for every live mapped task
+  require every actual transcript/procedure correlation from the task-name-free review
+  hash exact abortCore; prepare/fsync the fixed Git-dir recovery journal and bound identities
+  identity-clean only journal-listed ledger entries; persist cleaned marker; remove journal safely
+  on restart continue cleanup only from a valid prepared journal; never adopt it as workflow evidence
+  return exact {accepted:true,runSha256,status:"aborted"}, close the host, and require the
+    root to prove the retained host PID/start identity absent
+
+persistTask540StatusTransaction(mode, exactTargets):
+  for close require exact twelve leaves + seven children + root + board in that order
+  before any target write journal/fsync every old/new payload, mode, hash, identity, and temp
+  replace/fsync task targets 0..19; rename/fsync board target 20 last as commit point
+  without status.rollback-prepared.json, restart board-old rolls all targets back and
+    board-new rolls all targets forward
+  for every post-status failure create/fsync the exact status.rollback-prepared.json first;
+    its presence overrides either board hash and forces all 21 old payloads, board last
+  verify the complete old generation and deterministically clean the status journal before
+    ordinary repair may add any pending evidence; never publish a partial per-file status
+    mutation or a second status transaction
+
+persistTerminalCodexGeneration(completeLedger, preClosure):
+  freeze dispatch; require root transcript review; build exact terminalCore/receipt
+  separately journal/fsync exact old/new bytes for changelog, three tasks, and index
+  write/fsync prepared marker; atomically replace/fsync first four targets; commit index last
+  recover by index-old rollback or index-new roll-forward; reject every other state
+  before terminal recovery writes any status-old target, create/fsync the status journal's
+    exact rollback-prepared marker and converge all 21 status targets to old, board last
+  run final local gate plus repeated root review; then clean ledger and journal idempotently
+
+settleToneAndBodyHandoff(page):
+  at dg-022 require the authored tone, dirty badges, retained selection/override marker,
+    computed color change, closed Select content, and unlocked body continuously for at
+    least 600 ms across at least two complete samples
+  take one final atomic structural/body-interaction sample immediately before returning
+
+snapshotEntryDrafts(page):
+  at dg-023 capture the content/presentation/URL/navigation snapshot exactly once
+
+settleDirtyNavigationTarget(page):
+  at dg-024 poll the current body scroll/pointer state and exactly one visible positive-
+    geometry Records link; scroll it into view, reacquire final geometry/visibility, and
+    require center-point event ownership
+  click once with noWaitAfter and require the exact named dialog plus stable URL/navigation
 
 executeCanonicalSmokeOnce(state):
   require state.executorCalls == 0 and no partial/diagnostic evidence
@@ -325,8 +679,104 @@ executeCanonicalSmokeOnce(state):
   reject replay, a second call, skipped/reordered sub-proof actions, or closure after failure
 
 currentRepairMutants():
-  exercise every root-authority spoof/symlink/common-dir/branch/path leak
+  exercise every local-orchestrator/bridge/implement/test-name root-authority
+    spoof/symlink/common-dir/branch/path leak independently
   exercise strict status/finding/exception/allowStrictScan and malformed-output cases
+  exercise Claude executable/API/fallback remnants and local-orchestrator mode drift
+  exercise registration order/cardinality, supported keywords/scalar types, the sole exact
+    GATE-property ["string","null"] union, all other type arrays/forms, identity/hash mutation,
+    clones/GATE
+  exercise the exact notification plus inspect/respond/status/wait/procedure/recover-review/
+    abort controlCore/controlReplyCore fields, enum, result, null/request bindings, random
+    128-bit control ID, dense ordinal, 8,454,144-byte accepted/rejected boundary, nested
+    schema bounds, reject-unknown, duplicate key, noncanonical JSON/LF, missing/extra/
+    trailing frame, replay/gap/reorder, pipelining/second in-flight command, echo, TTY,
+    socket, temp-file, argv/env-payload, alternate-launcher, premature/plain/unframed
+    stdin EOF, root disappearance, broken input/output control pipe, raw-byte preservation,
+    no false abort receipt/host-absence claim, explicit abort-only controlled cleanup,
+    host crash/raw recovery, and forbidden reconnect/resume/adoption; also
+    missing/ignored-only/partially tracked/hash-mismatched
+    helper inventory and conditional/skip test coverage
+  exercise agent payload leakage of path/token/env/.env/raw logs/user data, agent-result
+    digest/rewrite/transcript mismatch, and cancellation with an invented result digest
+  exercise domain/hash kind/preimage/own-hash inclusion and request/claim/settlement binding
+  exercise claim decision field omission/substitution, operator final-sample ordering,
+    operator strictly-before/equal/after and timeout before/equal/after, wrong owner/time/
+    candidate basename, timeout-before-claim with no dispatch, timeout-after-operator-claim
+    reusing that one claim, second-claim creation, and missing/extra
+    response.started/cancel.started records
+  exercise operator-claim spawn failure before task identity, false spawned/correlation/result,
+    dispatch_failed cancellation/procedure/rollback/ledger/cleanup, forbidden retry, and
+    spawn-failure before/equal/after-deadline plus pre-started cancellation race rows
+  exercise exact-before/equal/after monotonic deadline at inspect, response start, and
+    pre-CAS boundary, delayed timer, late result, clock-field replay, and ineligible response win
+  exercise start filename/payload/hash-kind, responder/canceller PID-start mismatch,
+    cross-kind/request/claim start swap, replacement before cleanup, settlement/ACK
+    missing or wrong startSha256, and loser start/ACK omission from the ledger
+  exercise directory/file mode, UID/type/link/identity swaps, O_NOFOLLOW/O_EXCL omissions,
+    invalid/noncanonical UTF-8 JSON, duplicate keys, sequence/ID/hash/PID/start/deadline replay
+  exercise nlink 1->2->1, partial response, both CAS race orders, missing winner/loser done
+    acknowledgement, process-absence-as-ack substitution, live/recycled responder,
+    overwrite/rename, recursive/glob cleanup, residue, wrong-path deletion
+  exercise claim candidate O_EXCL/O_NOFOLLOW/mode/fsync/stable-identity omission,
+    no-overwrite link and parent-fsync boundaries, same-inode/nlink checks, EEXIST
+    stable-validation, own-distinct-loser-only cleanup, and all six cleanup-only crash
+    rows: empty, candidate(s)-only, claim-only, claim+same-inode candidate,
+    claim+distinct loser(s), and claim+same-inode candidate+distinct loser; reject every
+    impossible inode/link/hash/identity/owner/time graph and every recovery
+    election/link/dispatch/resume/adoption
+  exercise response-started/pre-CAS-deadline withdrawal with no response candidate,
+    cancellation-bound response_done, both starts/ACKs in the ledger, and every illegal
+    candidate/omitted-ACK variant
+  exercise exact procedure CLI frames, status/list/interrupt race truth table,
+    missing/duplicate/replayed procedure receipts, transcript-correlation mismatch,
+    nondispatch entries, opaque/incomplete safe projections, ledger holes/reordering/rewrite,
+    postcheck-before/after-ledger crash boundaries, closure-prefix mismatch, digest-only
+    or missing independent index prefix, missing-changelog recovery without anchor bytes,
+    stale-/tmp adoption, non-prefix terminal ledger, partial/failed terminal-evidence
+    transaction and rollback, terminal/abort wrong hash domain or preimage, receipt/control
+    cross-field mismatch, missing/wrong terminal receipt, post-freeze agent dispatch,
+    abort without root review/seal or with stale/unknown ledger identity, and cleanup
+    before durable terminal or abort evidence
+  exercise process termination at every recovery-journal file/directory fsync, prepared
+    marker, target temp write/fsync/rename/parent-fsync, index-last commit, roll-forward/
+    rollback, rollback-prepared/committed marker, ledger cleanup, cleaned marker, and
+    journal removal boundary
+  exercise host-only helper launch plan write/fsync, spawn-before-bootstrap, bootstrap parse/wait,
+    armed write/fsync, GO write/partial/duplicate/EOF, post-GO identity validation, and
+    response.started/cancel.started publication boundaries for every spawned CLI mode
+  exercise the bridge module's exact-one export name, calls outside verified-host
+    recovery-only phase, direct CLI/same-process mode execution through that export,
+    forbidden request/root-payload/ledger/artifact reads or cleanup, prior sweep
+    unknown/missing/extra/reordered/hole/duplicate launch projections, wrong state/nullability,
+    wrong recovery-helper-sweep domain/digest, normal-mode non-null and recover-review
+    null/mismatched armed digest, GO null/envelope mismatch, child root/request read before
+    post-GO digest/exact-prior-set verification, and controller crash before/during/after GO
+  exercise pre-GO requestDir/journal/repo stat/open/read/write, stdout/stderr, inherited
+    control descriptor, wrong PID/start/module/mode/argv/worktree, plan/armed swap/replay,
+    planned-without-armed recovery, and armed TERM/KILL/final-absence rows
+  exercise every 21-target status manifest/prepared/payload/temp/board-last/committed
+    boundary, status rollback-marker create/fsync, all status hash cores, board
+    old/new/third-state restart with and without that marker, every reverse target temp
+    write/fsync/rename/parent-fsync, board-last old commit, deterministic rollback cleanup,
+    post-status failure rollback, terminal-failure rollback ordering, and partial
+    Done-graph retention
+  exercise restart with a live/recycled/mismatched helper PID, wrong role/module/worktree,
+    TERM-only and KILL boundary, missing process-absence proof, missing/false/incomplete
+    root recovery review, live agent without interrupt, task-name persistence/logging,
+    request cleanup before both reviews, and negative/zero/process-group signalling
+  exercise abort payload reason/review unknown/missing/extra/request-set drift, a live
+    un-interrupted mapped task, abort child launch/launch ordinal, non-abort controlled
+    cleanup, wrong aborted result, host remaining live, and raw EOF/root-loss cleanup
+  exercise every exact recovery core unknown/missing/extra/reordered field, wrong domain,
+    collection hole/duplicate/order mismatch, private path leak outside root mediation,
+    request/ledger/directory planned-created-cleanup-started-cleaned presence-table row,
+    repeated-crash row, and every terminal temp absent/required/opposite/partial/
+    wrong-identity/already-renamed row
+  do not claim local mutants executed spawn_agent/fork_turns/interrupt_agent; require per-dispatch
+    root attestation plus final transcript review and timeout-only interrupt evidence,
+    never a normal-request interrupt
+  exercise attempted agent validation/server/browser/fixture/smoke execution
   exercise observer timing/options/slot/deletion/bound/order/count/state/owner/final-sample cases
   exercise separate diagnostic call, second executor call, partial evidence, skip/replay/reorder
   exercise phase-8 known success, uncertain byte-identical reconciliation, divergent reread,
@@ -342,6 +792,8 @@ node --check _docs/_workflows/task-540-smoke-executor.mjs
 node _docs/_workflows/task-540-smoke-executor.mjs --self-test
 node --check _docs/_workflows/task-540-smoke-host.mjs
 node _docs/_workflows/task-540-smoke-host.mjs --self-test
+node --check _docs/_workflows/task-540-codex-agent-bridge.mjs
+node _docs/_workflows/task-540-codex-agent-bridge.mjs --self-test
 node --check _docs/_workflows/task-540-local-orchestrator.mjs
 node _docs/_workflows/task-540-local-orchestrator.mjs --self-test
 node --check _docs/_workflows/task-540-implement.mjs
@@ -349,18 +801,20 @@ node --check _docs/_workflows/task-540-test-name-contract.mjs
 node _docs/_workflows/task-540-test-name-contract.mjs --mode=self-test
 node _docs/_workflows/task-540-implement.mjs --self-test-repair-siblings
 node _docs/_workflows/task-540-implement.mjs --self-test-file-line-limit
-bunx --no-install prettier --check _docs/_workflows/task-540-smoke-contract.mjs _docs/_workflows/task-540-smoke-executor.mjs _docs/_workflows/task-540-smoke-host.mjs _docs/_workflows/task-540-local-orchestrator.mjs _docs/_workflows/task-540-implement.mjs _docs/_workflows/task-540-test-name-contract.mjs
+bunx --no-install prettier --check _docs/_workflows/task-540-smoke-contract.mjs _docs/_workflows/task-540-smoke-executor.mjs _docs/_workflows/task-540-smoke-host.mjs _docs/_workflows/task-540-codex-agent-bridge.mjs _docs/_workflows/task-540-local-orchestrator.mjs _docs/_workflows/task-540-implement.mjs _docs/_workflows/task-540-test-name-contract.mjs
 bun --cwd core lint:types
 bun --cwd core lint
+git ls-files --error-unmatch _docs/_workflows/task-540-smoke-contract.mjs _docs/_workflows/task-540-smoke-executor.mjs _docs/_workflows/task-540-smoke-host.mjs _docs/_workflows/task-540-codex-agent-bridge.mjs _docs/_workflows/task-540-local-orchestrator.mjs _docs/_workflows/task-540-implement.mjs _docs/_workflows/task-540-test-name-contract.mjs
 bun test tests/unit/workflows/task540SmokeExecutorSecurity.test.ts
 bun run scan:security:strict
 git diff --check
 ```
 
 Run it from the verified dedicated root only, in order, with no skipped command or
-accepted non-zero result. Its pass freezes all six repaired workflow files plus the
-focused workflow-security test. Any later byte change invalidates the receipt and
-requires the whole targeted gate again before the fresh post-audits.
+accepted non-zero result. Its pass freezes all seven top-level workflow files, every
+tracked child owner under `_docs/_workflows/task-540-smoke/**`, and the focused
+workflow-security test. Any later byte change invalidates the receipt and requires the
+whole targeted gate again before the fresh post-audits.
 
 The root-local orchestrator is the sole writer of the current repair bytes in these
 task-workflow modules:
@@ -368,6 +822,7 @@ task-workflow modules:
 - `_docs/_workflows/task-540-smoke-contract.mjs`
 - `_docs/_workflows/task-540-smoke-executor.mjs`
 - `_docs/_workflows/task-540-smoke-host.mjs`
+- `_docs/_workflows/task-540-codex-agent-bridge.mjs`
 - `_docs/_workflows/task-540-local-orchestrator.mjs`
 - `_docs/_workflows/task-540-implement.mjs`
 - `_docs/_workflows/task-540-test-name-contract.mjs`
@@ -375,94 +830,1127 @@ task-workflow modules:
 They are neither production/source files nor closure-owned tests/docs, and they must
 never appear in a closure agent's `allowedFiles`. The orchestrator lands and integrates
 them separately, then the closure agent consumes only the resulting safe projections.
+These tracked task-workflow helpers are infrastructure, not human-authored production
+or test modules, so the AGENTS production/test classification does not independently
+cover them. The current owner directive is stricter: every TASK-540 smoke facade and
+every tracked child module under `_docs/_workflows/task-540-smoke/**` must still finish
+at no more than 1,000 physical lines. The cohesive Codex bridge has the same target, and
+the independently tracked workflow-security test remains subject to the blocking
+1,000-line gate.
 The integration into `_docs/_workflows/task-540-implement.mjs` must delete the old
 agent-executed `runSmoke`/browser/cleanup/evidence path and every alternate agent
 fallback. It may retain a read-only post-execution evidence audit, but no agent may
 execute, recover, or supply observations for the smoke. The old and new execution
 models must not coexist.
 
-Claude Code Workflow `2.1.210` executes its DSL in a null-prototype VM context that
-does not expose `process`, `require`, `Buffer`, Node builtins, local modules, static
-imports, or dynamic imports. It therefore cannot be the local process authority for
-this contract. `_docs/_workflows/task-540-local-orchestrator.mjs` is the task-scoped
-Node host for `_docs/_workflows/task-540-implement.mjs`; direct execution accepts only
-these exact forms:
+`_docs/_workflows/task-540-local-orchestrator.mjs` remains the one continuous
+task-scoped Node host for `_docs/_workflows/task-540-implement.mjs`; direct execution
+keeps only these exact forms:
 
 ```bash
 node _docs/_workflows/task-540-local-orchestrator.mjs --self-test
 node _docs/_workflows/task-540-local-orchestrator.mjs --run
 ```
 
-The host injects only the `agent(prompt, options)` and `phase(title)` bindings used by
-the implementation orchestrator. Agent prompts travel over stdin rather than argv,
-and each child receives a new null-prototype environment containing only non-empty
-`HOME`, `HOSTNAME`, `LANG`, `LC_ALL`, `LC_CTYPE`, `NO_COLOR`, `PATH`, `TERM`, and
-`USER`, plus fixed `CI=true` and `GIT_OPTIONAL_LOCKS=0`. No inherited database,
-Postgres, SSH agent, Git credential-helper, cloud/profile, Kubernetes, browser, MCP,
-provider-key, password, token, or connection-string handle is forwarded. Read-only
-agents run in `plan` mode with exactly `Read,Grep,Glob`; mutation agents run in
-`acceptEdits` mode with exactly `Read,Grep,Glob,Edit,Write`. Both omit `Bash`,
-Workflow, browser tooling, ambient MCP servers, slash commands, and Chrome integration.
-CLI deny rules apply to Read/Grep/Glob and Edit/Write: they block all home dotfiles
-(including Claude auth/config), every sibling project discovered at host start,
-repository-root and nested `.env*`/`.git`, and system/runtime trees outside Coderso;
-mutation agents additionally cannot edit repository `node_modules`. The CLI's Read
-permission class covers Read/Grep/Glob and its Edit permission class covers Edit/Write,
-so the higher-precedence deny rules apply to every enabled filesystem tool. Retaining
-`HOME` for CLI authentication therefore does not make its credential files
-agent-readable.
-The implementation orchestrator supplies the value-scanned tracked HEAD patch (maximum
-20 MiB) plus complete bounded untracked projections over stdin. At most 256 untracked
-entries are accepted; each file is at most 32 MiB and aggregate UTF-8 text content is
-at most 8 MiB. Text entries expose only `{path,kind:"text",byteLength,sha256,content}`;
-binary entries expose only `{path,kind:"binary",byteLength,sha256}`; symlinks expose
-only their scanned target projection. Sensitive/token-like paths, repository
-`.env*`/`.git`, sensitive text, unsafe paths, unsupported entries, count/size overflow,
-and any identity race fail before dispatch. Regular files are opened only after
-`lstat`, identity-checked through the file handle before read, then handle/path-checked
-again after read so a symlink swap cannot redirect content. The implementation
+The following paragraphs define the required post-repair state; the recovered source is
+not evidence that this state has landed. The host and bridge must contain no Claude
+executable, process, CLI/API invocation, compatibility check, recovery branch, or
+fallback. The bridge is an import-safe CLI module whose six request/recovery modes are
+spawned only as continuous-host-owned, armed children. No same-process bridge
+invocation, optional worker, root-launched bridge child, alternate launcher, Claude
+launcher, or Claude child process is legal. The implementation
+orchestrator may retain its internal `agent(prompt, options)` call shape, but that
+binding must wait on the root-mediated Codex bridge. The same local process must remain
+alive from Start gate through every audit/fix, validation, exact-one smoke call,
+closure, final audit, and terminal rollback/cleanup.
+
+The bridge module exports exactly one narrow named function,
+`sweepPriorBridgeLaunchesForRecovery`, solely for the verified continuous host while it
+is in recovery-only phase. That export is process preflight, not direct CLI or
+same-process execution of any request/recovery mode. It may stable-read only the fixed
+run/launch records and `/proc`, terminate only exact prior armed PID/start identities,
+and prove either armed absence or planned-unarmed request incapability. It cannot read
+a request byte or root payload, execute a request mode, or perform request, ledger,
+journal, or other artifact cleanup. The module exports nothing else.
+
+The host defines a non-enumerable, non-writable `agent.registerSchemas` method. In
+`task-540-implement.mjs`, textually after every maintenance/self-test early-exit branch
+and immediately before main workflow execution, call it exactly once as
+`agent.registerSchemas({audit:AUDIT_SCHEMA,gate:GATE_SCHEMA,mutation:MUTATION_SCHEMA,result:RESULT_SCHEMA})`.
+The call accepts exactly those four own data properties and original objects. The host
+stores each object identity in a private `WeakMap` with its schema name and canonical
+hash captured at registration; second registration fails. Every dispatch recomputes the
+hash and accepts only the unchanged registered object identity: registered
+`RESULT_SCHEMA`/`AUDIT_SCHEMA` map to `read-only`, registered `MUTATION_SCHEMA` maps to
+`mutating`, and registered `GATE_SCHEMA`, clones, unknown schemas, or post-registration
+schema mutation fail before request creation. Caller options, prompt text, bridge
+files, and returned data cannot choose the class.
+
+The same continuous host's in-process schema validator validates an accepted result
+recursively against that registered original object. Schemas may use only the closed keywords
+`type`, `properties`, `required`, `additionalProperties:false`, `items`, `enum`,
+`minLength`, and `uniqueItems`. A scalar `type` is exactly one of `object`, `array`,
+`string`, `boolean`, or `integer`. The only permitted array-valued `type` is the exact
+ordered `["string","null"]` union on the already pinned GATE property; it is not legal
+on any other property or schema. Every other type token, array, ordering, duplicate,
+or form and every other keyword fails at registration. `GATE_SCHEMA` is still
+registered and hashed under this rule but remains dispatch-rejected. Values must expose
+exact own enumerable data properties with no symbol, accessor, inherited, or extra
+property; arrays must be dense, contain at most 4,096 items apiece, and satisfy
+`uniqueItems` by canonical value; recursion depth is bounded to 64. No coercion,
+default insertion, or property removal is permitted. The canonical result is at most
+8 MiB and every string at most 4,096 UTF-8 bytes. The responder prevalidates its
+serialized schema copy only to reject obvious bad input; that check is not authority.
+The continuous process repeats validation against the registered original identity and
+its unchanged registration hash, then reruns the secret scan.
+
+The bridge uses one shared domain-separated hash rule:
+`bridgeDigest(kind,core) =
+sha256("coderso.task540.bridge." + kind + ".v1\0" + canonicalJson(core))`. Every exact
+core omits its own digest field; no envelope is hashed recursively. This is the
+exhaustive canonical-digest registry—no inline prefix, unnamed domain, or generic
+envelope hash is legal:
+
+| `kind`                          | Digest field                       | Exact core                                                                                |
+| ------------------------------- | ---------------------------------- | ----------------------------------------------------------------------------------------- |
+| `schema`                        | `schemaSha256`                     | `{name,resultSchema}`                                                                     |
+| `request`                       | `requestSha256`                    | `requestCore` defined below                                                               |
+| `claim`                         | `claimSha256`                      | `claimCore` defined below                                                                 |
+| `contender-start`               | `startSha256`                      | `startCore` defined below                                                                 |
+| `settlement`                    | `settlementSha256`                 | response or cancellation `settlementCore` below                                           |
+| `ack`                           | `ackSha256`                        | `{requestId,sequence,settlementSha256,startSha256,status}`                                |
+| `agent-result`                  | `agentResultSha256`                | `{result}`                                                                                |
+| `status-observation`            | `statusSha256`                     | `{claimOwner,deadlineRelation,observedAtMonotonicNs,requestId,sequence,settlementStatus}` |
+| `procedure`                     | `procedureSha256`                  | `procedureCore` defined below                                                             |
+| `transcript`                    | `transcriptCorrelationSha256`      | `{agentResultSha256,requestId,taskName}`                                                  |
+| `request-id`                    | `requestIdSha256`                  | `{requestId}`                                                                             |
+| `run-id`                        | `runIdSha256`                      | `{runId}`                                                                                 |
+| `recovery-task`                 | `taskCorrelationSha256`            | `{requestSha256,sequence,taskName}`                                                       |
+| `recovery-review`               | `reviewSha256`                     | `{requests,runSha256,schemaVersion:1}`                                                    |
+| `recovery-helper-sweep`         | `priorHelperSweepSha256`           | `priorHelperSweepCore` defined below                                                      |
+| `ledger-entry`                  | `ledgerEntrySha256`                | the safe ledger-entry core below                                                          |
+| `ledger-prefix`                 | `preClosureSha256`                 | `{entries}`                                                                               |
+| `terminal-ledger`               | terminal receipt `sha256`          | `terminalCore` below                                                                      |
+| `abort-ledger`                  | abort receipt `sha256`             | `abortCore` below                                                                         |
+| `branch-id`                     | `branchSha256`                     | `{branch}`                                                                                |
+| `git-dir-id`                    | `gitDirSha256`                     | `{gitDir}`                                                                                |
+| `root-id`                       | `rootSha256`                       | `{root}`                                                                                  |
+| `worktree-id`                   | `worktreeSha256`                   | `{branchSha256,gitDirSha256,rootSha256}`                                                  |
+| `artifact-path`                 | `pathSha256` or `ledgerPathSha256` | `{path}`                                                                                  |
+| `run`                           | `runSha256`                        | `runCore` below                                                                           |
+| `run-prepared`                  | `runPreparedSha256`                | `{runSha256}`                                                                             |
+| `artifact-plan`                 | `planSha256`                       | `planCore` below                                                                          |
+| `artifact-created`              | `createdSha256`                    | `createdCore` below                                                                       |
+| `artifact-cleanup-started`      | `cleanupStartedSha256`             | `cleanupStartedCore` below                                                                |
+| `artifact-cleaned`              | `cleanedSha256`                    | `cleanedCore` below                                                                       |
+| `helper-launch-planned`         | `launchPlannedSha256`              | `helperLaunchPlannedCore` below                                                           |
+| `helper-launch-armed`           | `launchArmedSha256`                | `helperLaunchArmedCore` below                                                             |
+| `helper-launch-cleanup-started` | `launchCleanupStartedSha256`       | `helperLaunchCleanupStartedCore` below                                                    |
+| `helper-launch-cleaned`         | `launchCleanedSha256`              | `helperLaunchCleanedCore` below                                                           |
+| `recovery-manifest`             | `manifestSha256`                   | exact abort or terminal manifest core below                                               |
+| `recovery-prepared`             | `preparedSha256`                   | exact abort or terminal prepared core below                                               |
+| `recovery-rollback-prepared`    | `rollbackPreparedSha256`           | `rollbackPreparedCore` below                                                              |
+| `recovery-committed`            | `committedSha256`                  | `committedCore` below                                                                     |
+| `recovery-ledger-cleaned`       | `ledgerCleanedSha256`              | `ledgerCleanedCore` below                                                                 |
+| `status-manifest`               | `statusManifestSha256`             | `statusManifestCore` below                                                                |
+| `status-prepared`               | `statusPreparedSha256`             | `statusPreparedCore` below                                                                |
+| `status-rollback-prepared`      | `statusRollbackPreparedSha256`     | `statusRollbackPreparedCore` below                                                        |
+| `status-committed`              | `statusCommittedSha256`            | `statusCommittedCore` below                                                               |
+
+Every canonical envelope is exactly `{...core,<mapped-field>}`. Raw file/payload
+digests—`contentSha256`, `oldSha256`, `newSha256`, `oldPayloadSha256s`, and
+`newPayloadSha256s`—are the lowercase SHA-256 of the exact bytes and are the only
+non-domain-separated hashes. `abortReceiptSha256`, `indexNewSha256`,
+`ledgerDirectoryCreatedSha256`, `ledgerEntryCreatedSha256s`,
+`ledgerDirectoryCleanedSha256`, and `ledgerEntryCleanedSha256s` are exact references to
+already-verified registry or raw-byte fields, never newly hashed aliases.
+`schemaCore` is exactly `{name,resultSchema}`. `requestCore` is exactly
+`{accessClass,deadlineAtEpochMs,deadlineMonotonicNs,label,orchestratorPid,orchestratorStartTime,phase,policy,prompt,requestId,resultSchema,runId,schemaSha256,sequence,worktreeSha256}`.
+At request creation,
+`deadlineMonotonicNs=(process.hrtime.bigint()+timeoutMs*1_000_000n).toString()` and is
+an exact positive decimal string shared by every local bridge process; wall-clock
+`deadlineAtEpochMs` is notification/display evidence only.
+`claimCore` is exactly
+`{claimId,claimOwner,deadlineAtEpochMs,deadlineMonotonicNs,decisionMonotonicNs,requestId,requestSha256,schemaSha256,sequence}`,
+where `claimOwner` is `operator` or the local `timeout` contender and
+`decisionMonotonicNs` is its exact positive-decimal eligibility sample. An operator
+claim requires `decisionMonotonicNs < deadlineMonotonicNs`; a timeout claim requires
+`decisionMonotonicNs >= deadlineMonotonicNs`, so equality belongs only to timeout. A response
+`settlementCore` is exactly
+`{agentResultSha256,claimId,claimSha256,decisionMonotonicNs,requestId,requestSha256,responderPid,responderStartTime,result,schemaSha256,sequence,startSha256,status:"response"}`;
+a cancellation core replaces `result` and responder identity with
+`agentResultSha256:null,error,startSha256,status:"cancelled"`, where `error` is exactly
+`deadline_exceeded` or `dispatch_failed`. A response requires
+`decisionMonotonicNs < deadlineMonotonicNs`; `deadline_exceeded` requires
+`decisionMonotonicNs >= deadlineMonotonicNs`; `dispatch_failed` requires
+`decisionMonotonicNs < deadlineMonotonicNs`, the operator claim, and the exact
+failed-dispatch procedure below. For either cancellation the decision equals its bound
+cancel start's `startedAtMonotonicNs`. Thus every
+settlement binds the request, winning claim, registered schema, exact started
+contender, monotonic eligibility decision, and exact accepted result without a
+self-referential preimage. `agentResultSha256` is the `agent-result` hash of exact core
+`{result}` after
+registered-schema validation.
+
+Each fixed `response.started.json` or `cancel.started.json` file contains exactly one
+`startCore`:
+`{claimId,claimSha256,contenderId,contenderKind,processId,processRole,processStartTime,requestId,requestSha256,schemaSha256,sequence,startedAtMonotonicNs}`,
+where `contenderKind` is exactly `response` or `cancel`, `contenderId` is an independent
+random 128-bit lowercase-hex value, response process identity is the responder's
+PID/start time, and `processRole` is exactly `host`, `inspect`, `respond`, `status`,
+`wait`, or `procedure` and must match the actual authorized local bridge process
+creating the record. Its exact envelope is `{...core,startSha256}` under the
+`contender-start` hash domain. The bridge captures and retains each start file's
+`dev/ino/type/uid/mode/nlink/size/time/hash` identity through cleanup. A response start
+must match the response settlement's responder identity; a cancel start must match the
+actual bridge-process identity/role that enforced cancellation. Cross-kind,
+cross-request, cross-claim, replacement, duplicate, unauthorized process-role, or
+unbound starts reject.
+
+Acknowledgement cores bind `requestId`, `sequence`, `settlementSha256`,
+`startSha256`, and exact `status:"response_done"|"cancel_done"` under the `ack` domain.
+The status matches the bound start's contender kind, while `settlementSha256` always
+names the actual winner. A response that starts and then withdraws or loses to
+cancellation therefore writes `response_done` bound to the cancellation settlement and
+its own response start.
+
+A dispatched request's `procedureCore` is exactly
+`{agentResultSha256,agentStateAtFinalList,agentStateAtFirstList,claimSha256,dispatchStatus,forkTurns,interruptAttempted,interruptPreviousState,requestId,requestSha256,sequence,settlementSha256,spawned,statusSha256,transcriptCorrelationSha256}`.
+The bridge never claims retrospective agent liveness at the monotonic deadline. These
+fields describe only root collaboration-tool observations after the terminal local
+status frame:
+
+- spawned response: non-null transcript/settlement result digest; first-list,
+  final-list, and interrupt-previous states all `not_applicable`;
+  `interruptAttempted:false`;
+- spawned cancellation: result digest is null or the exact result already returned by
+  the transcript; `agentStateAtFirstList` is `live` or `not_live` and
+  `agentStateAtFinalList:"not_live"`. First-list `live` requires
+  `interruptAttempted:true` and `interruptPreviousState` `live` or `not_live` because
+  completion may race the call. First-list `not_live` requires
+  `interruptAttempted:false` and `interruptPreviousState:"not_applicable"`;
+- spawn failure: `spawned:false`, `dispatchStatus:"spawn_failed"`,
+  `forkTurns:"none"`, null result/correlation, all three state fields
+  `not_applicable`, and `interruptAttempted:false`; the root input carries
+  `status:null`, then procedure samples/settles locally and binds the exact internally
+  generated terminal status observation/hash into `procedureCore`;
+- every spawned row has `spawned:true`, `dispatchStatus:"spawned"`,
+  `forkTurns:"none"`, and
+  `transcriptCorrelationSha256=bridgeDigest("transcript",
+{agentResultSha256,requestId,taskName})`, computed by the root using its private actual
+  task name. Only the digest crosses the no-echo boundary.
+
+This records the real terminal status -> first `list_agents` -> optional
+`interrupt_agent` -> final `list_agents` race. A spawn-failed procedure samples the
+pinned monotonic deadline, settles or joins the one cancellation under the already won
+operator claim, and only then hashes the procedure. A cancellation start strictly
+before the deadline derives `dispatch_failed`; one at or after derives
+`deadline_exceeded`; a joiner cannot change it.
+
+Each immutable run-ledger entry is itself the safe verification projection rather than
+an opaque hash list. Its exact core is
+`{accessClass,claim,contenders,dispatch,disposition,request,settlement}`. `claim` is
+exactly `{claimOwner,claimSha256}`. `contenders` is the exact non-empty array sorted by
+`response` before `cancel`, with one exact
+`{ackSha256,contenderKind,startSha256}` item for every and only durable started
+contender. `dispatch` is exactly
+`{agentResultSha256,agentStateAtFinalList,agentStateAtFirstList,dispatchStatus,forkTurns,interruptAttempted,interruptPreviousState,procedureSha256,spawned,statusSha256,transcriptCorrelationSha256}`.
+For a pre-claim timeout it is exactly
+`{agentResultSha256:null,agentStateAtFinalList:null,agentStateAtFirstList:null,dispatchStatus:"not_started",forkTurns:null,interruptAttempted:false,interruptPreviousState:null,procedureSha256:null,spawned:false,statusSha256:null,transcriptCorrelationSha256:null}`;
+for an operator claim it copies every safe procedure truth field, uses exactly
+`dispatchStatus:"spawned"` or `"spawn_failed"`, and requires the exact procedure hash
+plus a correlation hash only for spawned.
+`disposition` is exactly `accepted` or `rejected_rolled_back` after final postchecks and
+any required rollback. `request` is exactly
+`{deadlineMonotonicNs,requestIdSha256,requestSha256,runIdSha256,sequence,worktreeSha256}`.
+`settlement` is exactly
+`{agentResultSha256,decisionMonotonicNs,error,settlementSha256,startSha256,status}`,
+where status is `response` or `cancelled`, `error` is null for response and the exact
+cancellation error otherwise, and the start hash is the winning contender.
+`requestIdSha256` and `runIdSha256` use the registry cores, so no raw bridge ID enters
+closure evidence. The ledger entry envelope is exactly
+`{...core,ledgerEntrySha256}` and uses the `ledger-entry` hash domain.
+For a complete ordered safe prefix `entries`, `preClosureSha256` is exactly
+`bridgeDigest("ledger-prefix",{entries})`; it is never a raw array or receipt hash.
+`terminalCore` is exactly
+`{entries,preClosureCount,preClosureSha256,schemaVersion:1}` and its
+`sha256` is the `terminal-ledger` domain hash. The public terminal receipt is exactly
+`{count:entries.length,preClosureCount,preClosureSha256,schemaVersion:1,sha256}`.
+`closureControl.collaborationLedger.terminalCount` must equal `receipt.count` and
+`terminalSha256` must equal `receipt.sha256`; neither may be recomputed from the receipt
+envelope itself. For an aborted generation, `abortCore` is exactly
+`{entries,reason,schemaVersion:1}`, where reason is one of
+`agent_dispatch_failed`, `agent_result_rejected`, or `workflow_failed`; its exact
+`{count:entries.length,reason,schemaVersion:1,sha256}` receipt uses the
+`abort-ledger` domain and is transient recovery evidence only.
+`recoveryReviewCore` is exactly `{requests,runSha256,schemaVersion:1}` with the
+task-name-free request rows defined in the recovery section below. Its
+`reviewSha256` uses the `recovery-review` domain. `priorHelperSweepCore` is exactly
+`{launches,runSha256,schemaVersion:1}`. `launches` is dense and ordered by every prior
+positive launch ordinal; each exact reject-unknown projection is
+`{launchArmedSha256,launchOrdinal,launchPlannedSha256,state}`, where `state` is exactly
+`armed_absent` with a non-null armed digest or `planned_unarmed` with a null armed
+digest. Its envelope is exactly
+`{...priorHelperSweepCore,priorHelperSweepSha256}`, where
+`priorHelperSweepSha256=bridgeDigest("recovery-helper-sweep",priorHelperSweepCore)`.
+`runCore` is exactly
+`{branchSha256,gitDirSha256,ledgerPath,ledgerPathSha256,rootSha256,runIdSha256,worktreeSha256}`;
+`runPreparedCore` is `{runSha256}`.
+
+The root launches exactly one continuous
+`node _docs/_workflows/task-540-local-orchestrator.mjs --run` host from the verified
+root with `shell:false`, `detached:false`, and private non-TTY pipe
+stdin/stdout. Its stdout carries only the existing canonical request notification plus
+the exact replies below. The root never launches a request/recovery bridge CLI.
+`controlCore` is exactly
+`{command,controlId,controlOrdinal,payload,requestId,sequence}`.
+`command` is exactly `inspect`, `respond`, `status`, `wait`, `procedure`,
+`recover-review`, or `abort`; `controlId` is a fresh independent random 128-bit
+lowercase-hex value; and `controlOrdinal` is a dense positive safe integer. For the
+first five commands, `requestId` and `sequence` are non-null and exactly bind the
+host's private notification-backed request map. Only `recover-review` and `abort` have
+both fields null. `recover-review` is legal only in recovery-only phase; `abort` is
+legal only for the current host's frozen generation and is the sole controlled-abort
+trigger. `payload` is null exactly for `inspect`, `status`, and `wait`; for `respond`,
+`procedure`, and `recover-review` it is the exact already-defined private stdin frame
+for that mode. The `abort` payload is exactly `{reason,review}`: `reason` is one of the
+three exact `abortCore` enum values and `review` is the complete task-name-free
+`recoveryReviewCore` for every planned request after the root has interrupted and
+proven stopped every live mapped collaboration task.
+
+`controlReplyCore` is exactly
+`{command,controlId,controlOrdinal,requestId,result,sequence,status:"ok"}`. Its command,
+ID, ordinal, request ID, and sequence exactly equal the one in-flight control command,
+including either null pair; `result` is the exact validated mode output or, for
+`abort`, exactly `{accepted:true,runSha256,status:"aborted"}`. Both cores reject
+unknown/missing/accessor/inherited fields and use
+exactly one canonical UTF-8 JSON serialization plus one LF, with no duplicate key,
+BOM, CR, insignificant whitespace, trailing byte, extra frame, or echo. Each complete
+frame including LF is at most 8,454,144 bytes and retains all existing nested
+registered-schema limits: result/schema bytes, 4,096-byte strings, 4,096-item dense
+arrays, recursion depth 64, and the stricter bounds of the named mode payload. Exactly
+one command may be in flight. The host completes `read -> validate -> execute ->
+reply` before reading the next; replayed IDs, ordinal gaps, out-of-order bindings,
+pipelining, duplicate replies, or unsolicited reply frames fail closed.
+
+For every bridge-backed command (`inspect`, `respond`, `status`, `wait`, `procedure`,
+and `recover-review`), the host alone converts an accepted command into the existing
+bridge-mode launch below, captures and exact-validates that child's
+canonical-LF stdout, and nests only its parsed exact output as `result`; child stdout
+is never directly root-visible. `abort` is the sole exception: it is handled entirely
+by the host, launches no bridge child and therefore creates no launch ordinal, validates
+the root review, seals and cleans the already durable abort journal, returns its exact
+result, and closes. The root then proves the retained host PID/start identity absent.
+No echo, TTY, socket, temporary control file, argv/environment payload, second
+launcher, or ambient descriptor is legal.
+
+Plain or unframed root-stdin EOF is not an abort command. That EOF, root
+disappearance, a broken input/output control pipe, or an unexpected host crash creates
+a raw failed generation: the host permanently freezes dispatch, boundedly terminates
+only exact armed child PID/start identities it can still prove, preserves every
+journal, request, and ledger byte, and exits nonzero. It never creates an abort receipt,
+claims successful cleanup, or claims its own absence. A fresh root must first prove
+the old host PID/start identity absent and only then start a recovery-only host. Loss
+of the original root's private request-to-task transcript mapping blocks cleanup.
+Neither path permits reconnect, resume, or adoption.
+
+Every host-spawned request/recovery bridge CLI uses one parent-owned launch
+ordinal and these exact reject-unknown cores:
+
+- `helperLaunchPlannedCore` is exactly
+  `{launchId,launchOrdinal,mode,requestDir,requestIdSha256,requestSha256,runSha256,sequence}`.
+  `launchId` is an independent random 128-bit lowercase-hex value and
+  `launchOrdinal` is a dense positive safe integer within the run. `mode` is exactly
+  `inspect`, `respond`, `status`, `wait`, `procedure`, or `recover-review`. For the first
+  five modes, `requestDir`, both request digests, and the positive request sequence
+  exactly bind the already journal-planned request. For `recover-review`, those four
+  request fields are exactly null; no other null combination is legal.
+- `helperLaunchArmedCore` is exactly
+  `{launchOrdinal,launchPlannedSha256,mode,moduleSha256,priorHelperSweepSha256,processId,processStartTime,worktreeSha256}`.
+  The host writes this record, and only the host: `processId` is the spawned positive
+  PID, `processStartTime` is its positive canonical decimal `/proc` start identity,
+  `moduleSha256` is the raw lowercase SHA-256 of the already identity-pinned bridge
+  module, and the mode/worktree/ordinal exactly repeat the plan.
+  `priorHelperSweepSha256` is exactly null for all five normal request modes and the
+  exact non-null `recovery-helper-sweep` digest only for `recover-review`.
+- `helperLaunchCleanupStartedCore` is exactly
+  `{launchArmedSha256,launchOrdinal,launchPlannedSha256}` and
+  `helperLaunchCleanedCore` is exactly
+  `{launchArmedSha256,launchCleanupStartedSha256,launchOrdinal,launchPlannedSha256}`.
+  `launchArmedSha256` is the exact armed digest or null only for a spawn failure or
+  pre-arm EOF proven never to have received GO. An armed launch can never clean through
+  the null row. A null-arm cleanup/cleaned pair attests only GO impossibility,
+  request incapability, and journal-lifecycle completion; it does not assert a
+  PID/start identity or physical absence for an unarmed pre-exec process.
+
+Their exact envelopes are respectively
+`{...helperLaunchPlannedCore,launchPlannedSha256}`,
+`{...helperLaunchArmedCore,launchArmedSha256}`,
+`{...helperLaunchCleanupStartedCore,launchCleanupStartedSha256}`, and
+`{...helperLaunchCleanedCore,launchCleanedSha256}` under only the four named launch
+domains in the registry. The fixed-journal filenames are
+`launch-<zero-padded-12-digit-launchOrdinal>.planned.json`, `.armed.json`,
+`.cleanup-started.json`, and `.cleaned.json`; no sidecar, PID file, alternate suffix,
+or reused ordinal is legal.
+
+The private control pipe carries exactly two bounded canonical-LF frames and no third
+frame. The bootstrap frame is exactly
+`{launchOrdinal,launchPlannedSha256,mode}`. The GO frame is exactly
+`{command:"GO",launchArmedSha256,launchOrdinal,launchPlannedSha256,priorHelperSweep}`.
+`priorHelperSweep` is exactly null for each normal request mode and exactly
+`{...priorHelperSweepCore,priorHelperSweepSha256}` for `recover-review`; its digest
+must equal the armed core's non-null `priorHelperSweepSha256`. Bootstrap carries
+no request path, ID, prompt, result, environment value, or task name. The parent may
+send bootstrap after spawn, but it may send GO only after the armed envelope and its
+containing fixed-journal directory are fsynced. Before validating GO, the child may
+parse only its exact argv/mode plus this bounded bootstrap and may inspect only its own
+process identity; it MUST NOT stat, open, read, write, or derive `requestDir`, the
+recovery journal, Git/repository state, or another path. EOF, malformed bootstrap, a
+second bootstrap, GO-before-arm, wrong/replayed GO, or any extra byte exits nonzero
+with empty stdout and stderr and with no request access. After GO, the child derives
+the fixed authority, stable-reads and hashes its exact plan and armed records, proves
+the armed PID/start/module/mode/worktree is itself, and only then may it access the
+request/recovery journal or publish a `response.started.json`/
+`cancel.started.json` contender record. A `recover-review` child additionally
+recomputes the sweep digest and proves that its dense projection exact-set equals every
+launch ordinal before its own. Only after that check may it read its separate root
+review frame or any planned request byte.
+
+Every artifact uses exact `planCore`
+`{artifactKind,path,pathSha256,requestIdSha256,runIdSha256,sequence}` with this closed
+matrix:
+
+| `artifactKind`      | `requestIdSha256`            | `sequence`                           | Journal basename              |
+| ------------------- | ---------------------------- | ------------------------------------ | ----------------------------- |
+| `ledger-directory`  | `null`                       | `null`                               | `ledger-directory`            |
+| `request-directory` | exact request-ID digest      | positive request sequence            | `request-<12-digit-sequence>` |
+| `ledger-entry`      | exact same request-ID digest | exact same positive request sequence | `ledger-<12-digit-sequence>`  |
+
+Every plan, including the ledger directory, has its own `artifact-plan` digest;
+`planSha256` is never aliased to `runSha256`. Raw paths may exist only in that private
+current-UID journal, the explicit root-private notification, and the host-internal
+inspect/respond/status/wait/procedure request-path argv channels defined below. They
+never enter a collaboration-agent prompt/result, general workflow
+log, safe closure projection, collaboration transcript payload, or task/changelog
+evidence; the paired hashes detect replay or substitution. `createdCore` is exactly
+`{artifactKind,contentSha256,identity,pathSha256,planSha256,sequence}`, with exact
+directory identity `{dev,ino,mode,type:"directory",uid}` or file identity
+`{ctimeNs,dev,ino,mode,mtimeNs,nlink,size,type:"file",uid}`, using canonical decimal
+strings for bigint fields. Directory `contentSha256` is null; ledger-entry content is
+the raw digest of its exact canonical envelope. A request or ledger artifact
+`cleanupStartedCore` is exactly
+`{createdSha256,pathSha256,sequence}` and its `cleanedCore` is exactly
+`{cleanupStartedSha256,createdSha256,pathSha256,sequence}`. Mode manifests and
+prepared/committed/cleaned markers use these exact reject-unknown cores:
+
+- `abortManifestCore` is exactly
+  `{abortReceipt,branchSha256,entries,generation,gitDirSha256,ledgerDirectoryCreatedSha256,ledgerEntryCreatedSha256s,mode:"abort",rootSha256,runSha256,transactionId,worktreeSha256}`;
+- `terminalManifestCore` is exactly
+  `{branchSha256,entries,generation,gitDirSha256,ledgerDirectoryCreatedSha256,ledgerEntryCreatedSha256s,mode:"terminal",preClosureCount,preClosureSha256,rootSha256,runSha256,targets,terminalReceipt,transactionId,worktreeSha256}`;
+- each ordered `targets` item is exactly
+  `{index,mode,newSha256,oldSha256,path,tempPath}`, with indices `0..4`, safe absolute
+  paths equal to the five fixed targets, and journal-derived same-parent temp paths;
+- `abortPreparedCore` is exactly
+  `{abortReceiptSha256,manifestSha256,transactionId}`;
+- `terminalPreparedCore` is exactly
+  `{manifestSha256,newPayloadSha256s,oldPayloadSha256s,transactionId}`, whose two arrays
+  are exact ordered length-five 64-lowercase-hex lists matching `targets`;
+- `rollbackPreparedCore` is exactly
+  `{manifestSha256,reason:"terminal_verification_failed",transactionId}`;
+- `committedCore` is exactly
+  `{indexNewSha256,manifestSha256,terminalSha256,transactionId}`;
+- `ledgerCleanedCore` is exactly
+  `{ledgerDirectoryCleanedSha256,ledgerEntryCleanedSha256s,manifestSha256,transactionId}`,
+  where the entry array is dense sequence order and covers every created ledger entry.
+
+`transactionId` is one independent random 128-bit lowercase-hex value. `generation` is a
+positive safe integer; entry, created-record, and cleaned-record arrays are dense,
+same-length, sequence ordered, unique, and exact-set equal. Every core rejects missing,
+extra, accessor, inherited, duplicate, sparse, reordered, or malformed data. The
+manifest/marker envelopes use only their named recovery hash domains above; hashing a
+generic JSON envelope, omitting a record/payload, or reusing a domain fails.
+At each index, the ledger plan/created record sequence equals the safe entry's request
+sequence, its `contentSha256` equals the exact canonical ledger-entry envelope bytes,
+and its entry hash recomputes from that envelope. `abortReceiptSha256` is exactly the
+abort receipt's `sha256`, not a hash of its envelope. All recovery JSON is bounded to
+32 MiB, all entry/record arrays to 4,096 items, all strings to 4,096 UTF-8 bytes except
+the five fixed target payload files, and all numeric fields to safe integers or the
+explicit decimal-string form.
+
+Each request directory is a new canonical direct child of `/tmp`, mode `0700`, owned by
+the current UID, and named with a random 128-bit lowercase-hex request ID. Run,
+request, claim, and contender IDs are independently random 128-bit values; sequence is
+dense and positive. Every enumerated file is a regular current-UID `0600` file.
+The closed request-file inventory is exactly `request.json`,
+`operator.claim.candidate.json`, `timeout.claim.candidate.json`, `claim.json`,
+`response.started.json`, `cancel.started.json`, `response.candidate.json`,
+`cancel.candidate.json`, `settlement.json`, `response.done.candidate.json`,
+`cancel.done.candidate.json`, `response.done.json`, `cancel.done.json`,
+`procedure.candidate.json`, and `procedure.json`; a file absent because its contender
+never started is not invented. `response.started.json` is the sole responder
+PID/start record. Claim, settlement, done, and procedure candidates are linked to their
+fixed destination and then unlinked; no alternate suffix, temporary filename, or
+responder sidecar is accepted. Each run-ledger entry is exactly
+`ledger-<zero-padded-12-digit-sequence>.json` inside the separately identity-bound
+run-ledger directory.
+Launch records never join the request-file inventory: they are the exact
+ordinal-qualified planned/armed/cleanup-started/cleaned files in the one fixed run
+journal, and their set is dense and exact for every host-spawned CLI helper.
+Directory/file operations follow stable
+`lstat -> open(O_NOFOLLOW) -> fstat -> bounded read/write -> fsync when written ->
+fstat/path-lstat identity recheck`; compare `dev`, `ino`, type, UID, mode, link count,
+size, and captured time metadata. Creation uses `O_CREAT|O_EXCL|O_NOFOLLOW`;
+overwrite-rename is forbidden. No unavailable `O_CLOEXEC` contract is invented.
+Every host-spawned
+inspect/respond/status/wait/procedure/recover-review CLI uses `shell:false`, the exact
+parent-owned launch protocol above, a child-only control pipe excluded from inherited
+stdin/stdout/stderr and closed across any later exec, and an explicit empty descriptor
+map except for its named pipes. `respond`, `procedure`, and spawned `recover-review`
+retain their separate no-echo stdin payload pipe; the arm/GO pipe never carries those
+payloads. The host obtains those payloads only from the validated outer controlCore and
+never forwards outer framing. No TTY, ambient descriptor inheritance, second launch
+protocol, root-launched bridge, or unarmed worker is permitted.
+
+Every envelope/result is exact canonical UTF-8 JSON from one shared serializer: plain
+data only, recursively lexicographically sorted object keys, preserved array order,
+finite JSON numbers, no accessors/custom prototypes/undefined/bigint, and no duplicate
+key, BOM, invalid UTF-8, insignificant whitespace, trailing newline, or trailing byte.
+Readers parse/re-encode and require byte equality before checking the domain-separated
+hash and stable file identity.
+
+The host-internal bridge CLI mode set is closed to exactly:
+
+```bash
+node _docs/_workflows/task-540-codex-agent-bridge.mjs --self-test
+node _docs/_workflows/task-540-codex-agent-bridge.mjs --inspect <requestDir>
+node _docs/_workflows/task-540-codex-agent-bridge.mjs --respond <requestDir>
+node _docs/_workflows/task-540-codex-agent-bridge.mjs --status <requestDir>
+node _docs/_workflows/task-540-codex-agent-bridge.mjs --wait <requestDir>
+node _docs/_workflows/task-540-codex-agent-bridge.mjs --procedure <requestDir>
+node _docs/_workflows/task-540-codex-agent-bridge.mjs --recover-review
+```
+
+These remain exactly seven bridge CLI modes. `self-test` is the sole maintenance mode
+and does not participate in launch journaling; `recover-review` is the sole
+recovery-only no-path/null-request mode. During `--run`, only the continuous
+local-orchestrator host may invoke the six request/recovery modes, always through the
+one arm/GO protocol.
+`recover-review` is the sole null-request outer command that launches a bridge child;
+`abort` is also null-request but is handled by the host and launches none. Before a
+recovery child is planned, the verified recovery-only host calls the bridge module's
+sole export `sweepPriorBridgeLaunchesForRecovery`. Only after that preflight returns
+its exact sweep core does the host plan, arm, and GO `recover-review` through the
+ordinary null-request launch row while binding the proof as specified above. The root
+never directly launches a bridge CLI, and no direct or same-process request/recovery
+mode may bypass the host parent launcher.
+
+| CLI mode                      | Exact launch role | Post-GO access                                                                                           | Possible contender start                                    |
+| ----------------------------- | ----------------- | -------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------- |
+| `inspect`                     | `inspect`         | its exact request only                                                                                   | `cancel` only when it wins/joins the monotonic timeout path |
+| `status`                      | `status`          | its exact request only                                                                                   | `cancel` only at/after deadline                             |
+| `wait`                        | `wait`            | its exact request only                                                                                   | `cancel` only at/after deadline                             |
+| `respond`                     | `respond`         | its exact request plus its separate bounded stdin result                                                 | `response`, or `cancel` on deadline                         |
+| `procedure`                   | `procedure`       | its exact request plus its separate bounded stdin procedure                                              | `cancel` only for the pinned spawn-failure/deadline rows    |
+| `recover-review` when spawned | `recover-review`  | fixed recovery journal only after GO verifies the bound prior-helper sweep and before-root-read ordering | none                                                        |
+
+The table is exhaustive for host-spawned bridge helpers. The same-process host
+timer may retain exact `processRole:"host"` when it creates a cancellation start; it is
+not a spawned CLI role and does not create a launch record. A request
+`response.started.json` or `cancel.started.json` still uses the existing exact
+`processRole` enum (`host`, `inspect`, `respond`, `status`, `wait`, or `procedure`);
+`recover-review` never creates a contender start.
+
+`self-test` accepts no stdin and creates no request/recovery artifact. Among the
+host-spawned modes, only `inspect`, `status`, and `wait` receive no payload.
+`respond`, `procedure`, and `recover-review` receive one bounded canonical JSON
+document on their child-private pipe, then EOF; that document is exactly the payload
+already validated in the outer controlCore, and stdin is never inherited or echoed.
+The recovery child must not read that pipe until its post-GO sweep-envelope verification
+has passed.
+`wait` uses a fixed 1,000 ms
+monotonic poll slice and returns early on settlement or deadline; it is not an unbounded
+wait.
+`status` samples once without sleeping. Both use exact `statusCore`
+`{claimOwner,deadlineRelation,observedAtMonotonicNs,requestId,sequence,settlementStatus}`,
+where `claimOwner` is null, `operator`, or `timeout`; `deadlineRelation` is `before` or
+`at_or_after`; and `settlementStatus` is `pending`, `response`, or `cancelled`. They
+emit exactly canonical `{...statusCore,statusSha256}` plus LF. A pending observation at
+or after the pinned monotonic deadline must first start/join cancellation and emit the
+resulting terminal cancellation; `pending` is legal only with `before`. Wall time never
+chooses a state.
+
+Every successful mode emits its one documented canonical frame plus LF and empty
+stderr. Any argv, stdin, cardinality, canonicalization, identity, schema, replay, or
+state failure exits nonzero with empty stdout and exactly
+`{"code":"task540_bridge_request_rejected"}` plus LF on stderr; an internal
+identity/journal failure instead uses exact code `task540_bridge_failed`. Neither frame
+contains a request path, prompt, result, task name, environment value, or raw input.
+Missing, combined, repeated, reordered, or additional modes/arguments fail before
+opening a request or journal. The arm boundary is the one stricter exception: any
+pre-GO EOF/bootstrap/arm/control failure exits nonzero with both stdout and stderr
+empty, because even a generic frame would falsely imply that request processing began.
+
+After durable request creation, the continuous host writes exactly one root-visible
+safe notification line and no other bridge notification:
+`{deadlineAtEpochMs,requestDir,requestId,sequence}` as canonical JSON plus one terminal
+LF on the same private stdout used for control replies. The host records the raw path
+only in its private request map; the root returns only the matching request ID and
+sequence in the next dense `inspect` controlCore. The host then launches `--inspect`
+through the exact launch-plan/arm/GO protocol; raw or root spawn is not an alternate.
+The request starts unclaimed. Inspect and the local pre-claim timeout race through one
+no-overwrite claim slot.
+
+Before either claim attempt, every non-time preimage, candidate byte, schema/hash, and
+identity expectation is complete. The operator's
+`process.hrtime.bigint()` decision sample is the last non-filesystem step before its
+candidate write, file fsync, and hard-link CAS. It may create
+`operator.claim.candidate.json` only when that exact
+`decisionMonotonicNs < deadlineMonotonicNs`; otherwise it creates or joins timeout and
+never writes or links an operator candidate. A timeout contender may create
+`timeout.claim.candidate.json` only from an exact
+`decisionMonotonicNs >= deadlineMonotonicNs`. Equality is timeout.
+
+Each candidate's bytes are exactly the claim envelope
+`{...claimCore,claimSha256}`. It is created with
+`O_CREAT|O_EXCL|O_NOFOLLOW`, mode `0600`, stable current-UID regular-file identity,
+file fsync, parent fsync, and `nlink=1`. The contender hard-links it with no overwrite
+to `claim.json`, parent-fsyncs, proves both names are the same `(dev,ino)` with
+`nlink=2`, identity-unlinks the candidate, parent-fsyncs, and proves the stable claim
+remains at `nlink=1`. On `EEXIST`, it stable-reads and fully validates the existing
+claim envelope/identity/link graph and joins that winner; it unlinks and parent-fsyncs
+only its own exact distinct loser candidate, never the claim or another contender.
+If timeout wins first,
+it creates the one claim with `claimOwner:"timeout"`, starts cancellation against that
+claim, emits only canonical `{requestId,status:"cancelled"}` plus LF instead of an
+inspect bundle, and no collaboration agent may be spawned. If the
+operator wins first, inspect creates the one claim with `claimOwner:"operator"` and
+emits exactly one canonical-LF bundle with only
+`{accessClass,claimId,deadlineAtEpochMs,label,phase,policy,prompt,requestId,resultSchema,sequence}`.
+The root privately records `requestId -> collaboration task name`, starts exactly one
+fresh `spawn_agent` with `fork_turns="none"`, and sends that agent only
+`policy + prompt + resultSchema`. The agent never receives the request path/ID,
+claim ID, process environment or `.env` material, raw patch/content, raw command or log
+bytes, credentials/session material, or user data.
+If `spawn_agent` fails before returning a task identity, the root retains no invented
+mapping/result/correlation and immediately sends the exact `procedure` controlCore
+whose payload is the `spawn_failed` frame below. The host's bridge call reuses the operator claim, settles the
+derived cancellation from the exact race table below, runs postchecks/rollback, writes
+the failed-dispatch ledger projection, cleans the request safely, and returns the
+workflow error; no retry or replacement agent is launched.
+
+After an operator claim exists, the deadline path must never create or replace a second
+claim. It reuses that exact operator `claimId`/`claimSha256` and races a cancellation
+candidate against the response candidate for the same settlement. A cancellation may
+be enforced by the authorized host timer or by an
+inspect/respond/status/wait/procedure helper that observes the monotonic boundary; each
+uses its actual process role/identity in the one `cancel.started.json`, and all other
+helpers join that contender. `dispatch_failed` is created only by the procedure mode
+after an actual failed spawn attempt and only from a cancellation start strictly before
+the deadline, while `deadline_exceeded` always records a decision at/after the deadline.
+The exact spawn-failure/deadline race table is:
+
+| First durable cancellation start                                 | Settlement error    | Decision                                                                                           | Procedure / ledger dispatch                                                  | ACK owner and cleanup                                                                                                             |
+| ---------------------------------------------------------------- | ------------------- | -------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| `spawn_failed` procedure strictly before deadline                | `dispatch_failed`   | `decisionMonotonicNs < deadlineMonotonicNs` and equals that cancel start's `startedAtMonotonicNs`  | `spawn_failed`; no task/result/correlation/interrupt                         | procedure process owns the one cancel start/ACK; timer joins; request cleanup precedes aborted-generation finalization            |
+| deadline path at or after deadline                               | `deadline_exceeded` | `decisionMonotonicNs >= deadlineMonotonicNs` and equals that cancel start's `startedAtMonotonicNs` | later procedure remains `spawn_failed`; no task/result/correlation/interrupt | winning deadline process owns the one cancel start/ACK; procedure joins; request cleanup precedes aborted-generation finalization |
+| procedure observes failure at or after deadline before any start | `deadline_exceeded` | exact procedure sample, `>= deadlineMonotonicNs`, becomes cancel start `startedAtMonotonicNs`      | `spawn_failed`; no task/result/correlation/interrupt                         | procedure owns the one cancel start/ACK; request cleanup precedes aborted-generation finalization                                 |
+
+At equality the deadline case wins. The first valid `cancel.started.json` is immutable;
+its actual process role plus `startedAtMonotonicNs` derives the sole legal reason, and a
+joiner cannot create another start/candidate/ACK or change the reason. Every row has
+`disposition:"rejected_rolled_back"`. A timer delayed behind a pre-deadline
+`dispatch_failed` start must join that state; a late procedure behind a deadline start
+must join `deadline_exceeded`.
+A cancellation
+contender is started only when its exact durable `cancel.started.json` record is created
+with `O_EXCL`; a responder is started only when its exact durable
+`response.started.json` record is created. Creation of either start record makes that
+contender's final acknowledgement mandatory even when it loses with `EEXIST`.
+
+After receiving the exact agent result, the root sends one `respond` controlCore whose
+payload is exact
+`{agentResultSha256,claimId,requestId,result,sequence}`. The host validates its
+top-level request binding, then launches `--respond <requestDir>` with `shell:false`,
+the arm/GO control pipe, and the distinct no-echo child stdin pipe. No claim/result
+enters argv, launch records, GO, or environment. The root computes `agentResultSha256` from
+the exact schema-valid collaboration result and the responder recomputes byte equality
+after GO but before any start record. Respond samples monotonic time before
+`response.started.json` and again immediately before settlement CAS. If either sample
+is at or after the deadline, it must not link a response settlement; it starts or joins
+exact `deadline_exceeded` cancellation under the existing claim. Otherwise its start
+record and response settlement bind the two monotonic samples. The launch armed record
+already binds the responder PID/start identity; after GO the responder repeats that
+identity in `response.started.json`. The inspect bundle contains no PID. Respond emits
+only canonical
+`{accepted:boolean,requestId,status}` plus LF, where the closed status is `accepted`
+when an eligible response won or `cancelled` when cancellation won. Malformed/replayed
+input exits nonzero without another structured frame.
+
+The response-started/deadline-withdrawal branch is exact: when the first sample is
+before deadline, `response.started.json` becomes durable; when the second pre-CAS
+sample is at or after deadline, the responder creates no `response.candidate.json`, no
+response settlement core, and no response link attempt. It starts or joins
+`cancel.started.json`, waits for the cancellation settlement, then writes its mandatory
+`response_done` ACK bound to that cancellation `settlementSha256` and its own response
+`startSha256`. The canceller writes `cancel_done`; the ledger contains both sorted
+contender rows and names the cancel start as settlement winner. The same
+two-start/two-ACK shape applies when an eligible response candidate loses `EEXIST` to
+concurrent cancellation. An illegal response candidate, hypothetical-response-bound
+ACK, missing ACK, or omitted contender fails closed.
+
+The root alternates bounded collaboration waits with exact `status`/`wait` control
+commands, each completed before another command. A terminal cancellation causes the
+first-list/optional-interrupt/final-list
+procedure above; local monotonic cancellation remains enforcement.
+Local self-tests and the tracked independent test cover only the filesystem/wire
+protocol. They must not claim to hermetically execute `spawn_agent`,
+`fork_turns="none"`, or `interrupt_agent`. After response settlement, or after handling
+a dispatched cancellation, the root sends one `procedure` controlCore carrying exactly
+`{agentResultSha256,agentStateAtFinalList,agentStateAtFirstList,claimId,dispatchStatus,forkTurns,interruptAttempted,interruptPreviousState,requestId,sequence,spawned,status,transcriptCorrelationSha256}`.
+The host launches `--procedure <requestDir>` through the same parent-owned arm/GO
+launcher and distinct no-echo child stdin boundary.
+`status` is the complete exact terminal `{...statusCore,statusSha256}` frame. Spawn
+failure uses the same keys with the exact spawn-failed values pinned above and
+`status:null`; procedure itself creates the cancellation and terminal status hash
+before hashing its receipt.
+The procedure command emits only canonical
+`{accepted:true,requestId,status:"recorded"}` plus LF. It cannot contain a task name,
+path, token, prompt, result, environment, log, or user data.
+
+Every operator-claimed request must have one exact procedure receipt. A spawned receipt
+attests that the root maintained its private request-to-task mapping, performed
+`spawn_agent` with `fork_turns="none"`, and relayed the exact result digest when a
+response settled. A `spawn_failed` receipt attests only the failed attempt and must not
+invent a task, result, correlation, or interrupt. A pre-claim timeout instead receives
+one exact `dispatchStatus:"not_started"` ledger entry and must not claim spawn or
+interrupt. The
+local bridge cannot hermetically prove a collaboration API call; the root final reviewer
+must recompute every `agentResultSha256` and `transcriptCorrelationSha256` from its
+private request-to-task map plus exact actual collaboration result and cross-check each
+attestation against the collaboration-tool transcript before it submits the `respond`
+or `procedure` control command, then repeat the same correlation over the retained safe ledger projection
+at the terminal gate. A cancellation settlement has no accepted result digest, although
+procedure truth may retain the digest of a transcript result that actually arrived; a
+spawn failure has neither task correlation nor result digest. Local enforcement proves
+exact cardinality, sequence, settlement binding, and that interrupt attempts occur only
+after a terminal cancellation plus an actual first-list-live observation.
+
+Response and cancellation write separate exact `0600` candidates. Immediately before
+link, the candidate has `nlink=1`. A winning hard link to the one absent
+`settlement.json` must make candidate and settlement the same `(dev,ino)` with
+`nlink=2`; the contender then unlinks its candidate and proves the settlement remains
+at `nlink=1`. On `EEXIST`, a loser unlinks only its own candidate. After its final CAS
+state, whether success or `EEXIST`, every started response or cancellation contender
+must create its exact `response.done`/`cancel.done` acknowledgement through the same
+candidate-link-unlink pattern. Process or PID/start absence is never a substitute for
+that acknowledgement.
+
+Claim-CAS crash recovery is cleanup-only and uses this exhaustive table. “Candidate”
+means only the exact identity-bound `operator.claim.candidate.json` or
+`timeout.claim.candidate.json`; all envelopes include `decisionMonotonicNs` and satisfy
+their owner/time relation.
+
+| Claim/Candidate state                                             | Exact legal cleanup-only recovery                                                                                                                                                                                    |
+| ----------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| no claim and no candidate                                         | Accept the never-started claim slot; elect nothing and continue only the aborted-generation cleanup.                                                                                                                 |
+| no claim and one or both candidates                               | Require each known candidate to be a distinct current-UID regular `0600` identity with valid envelope and `nlink=1`; identity-unlink and parent-fsync only those candidates. Never link, elect, dispatch, or resume. |
+| claim alone                                                       | Stable-validate the exact claim envelope/identity and `nlink=1`; retain it until ordinary identity-bound request cleanup.                                                                                            |
+| claim plus its same-inode linked candidate                        | Require exact equal envelope, same `dev/ino`, and `nlink=2` at both names; identity-unlink the candidate, parent-fsync, and require the claim at `nlink=1`.                                                          |
+| claim plus one or both distinct loser candidates                  | Require the stable valid claim at `nlink=1` and every exact distinct loser at `nlink=1`; identity-unlink/parent-fsync only the losers and retain the claim.                                                          |
+| claim plus one same-inode linked candidate and one distinct loser | Require the winner graph at `nlink=2` plus the distinct loser at `nlink=1`; identity-unlink/parent-fsync the two known candidate names and require the claim at `nlink=1`.                                           |
+
+Any other claim/candidate graph, external/unknown link, extra same-inode name, link
+count, inode, hash, stable identity, owner/basename, decision/deadline, UID, mode, or
+type condition is impossible and fails closed with evidence retained. In particular,
+operator at/equal/after the deadline, timeout before it, or equality assigned to
+operator is invalid. Recovery normalizes only these known identities during
+cleanup-only recovery; it never creates a claim/candidate, performs a missing link,
+resamples time, chooses a winner, dispatches, reconnects, resumes, or adopts.
+
+The continuous bridge is the sole shared cleanup owner. It bounded-waits for every
+started contender's exact acknowledgement and, when a responder record exists, for
+that responder PID/start identity to be absent. An operator-claimed request must also
+have its exact procedure receipt; a pre-claim timeout must have no procedure receipt.
+Before unlinking, it requires a one-to-one set equality between the stable
+`response.started.json`/`cancel.started.json` envelopes, their kind-matching done
+acknowledgements, and the prospective safe ledger core's sorted `contenders`; the
+winning settlement's `startSha256` must be one member of that set. No loser start/ACK
+may disappear.
+
+With every request preimage and stable identity still retained, the host stable-reads
+the settlement, runs the existing post-dispatch repository, index, environment,
+task-state, ownership, and secret checks, and completes/verifies exact rollback when
+needed—even after timeout, dispatch failure, invalid response, or cancellation. Only
+after those checks finish does it freeze `disposition`, build the complete safe
+verification projection above, and write exactly one immutable `0600` ledger-entry file
+per dense request sequence with `O_EXCL` into the canonical direct child
+`/tmp/coderso-task540-ledger-<runId>`, where `runId` is the request-core run ID and the
+directory is a private current-UID `0700` non-symlink identity. It fsyncs each entry and
+never rewrites or deletes an earlier entry before terminal verification. After re-reading
+and verifying that immutable entry against the still-present preimages, it unlinks only
+the acquired known start/acknowledgement/procedure/responder/settlement/claim/request
+files and removes the proven-empty exact request directory. It never recursively
+removes, globs, overwrites, or follows a caller-supplied cleanup path. A missing
+acknowledgement or procedure receipt, live/recycled responder identity, failed
+postcheck/rollback, ledger mismatch, residual file, or cleanup race fails closed without
+publishing a misleading ledger entry or erasing evidence.
+
+The verified worktree Git directory owns one fixed private recovery-journal path,
+`<gitDir>/coderso-task540-recovery-v1`, as a current-UID `0700` direct child. It is
+outside the tracked worktree but inside this verified per-worktree `gitDir` beneath
+`<gitCommonDir>/worktrees`; it is isolated from the common-dir root and sibling
+worktree Git directories, cannot be caller-selected, and is single-flight with the run.
+Before the first random `/tmp` artifact, the host creates and parent-fsyncs this
+directory, chooses the run ID and exact planned run-ledger path, writes/fsyncs
+`run.json`, then writes/fsyncs `run.prepared.json`. It next writes/fsyncs
+`ledger-directory.planned.json`; only then may it create the ledger directory. It
+publishes exact `ledger-directory.created.json`,
+`ledger-directory.cleanup-started.json`, and `ledger-directory.cleaned.json` using the
+artifact cores/matrix above. The plan has its own `planSha256`, while `sequence` and
+`requestIdSha256` remain null.
+Its per-sequence recovery files are exact zero-padded
+`request-<sequence>.planned.json`, `.created.json`, `.cleanup-started.json`, and
+`.cleaned.json`, plus `ledger-<sequence>.planned.json`, `.created.json`,
+`.cleanup-started.json`, and `.cleaned.json`. A planned record containing the exact
+future path/name is durable before each request directory or ledger-entry file can be
+created; the created record then binds its observed identity/hash. Normal request and
+ledger cleanup fsync cleanup-started before unlink/rmdir and cleaned afterward. Thus a
+crash between creation and identity publication still has one fixed durable path
+authority; absence after a created record is acceptable only when cleanup-started is
+valid, while planned-without-created absence means creation never became durable.
+The same journal also owns the exact dense launch record families
+`launch-<zero-padded-12-digit-launchOrdinal>.planned.json`, `.armed.json`,
+`.cleanup-started.json`, and `.cleaned.json`. A launch plan is durable before `spawn`;
+the host-written armed identity is durable before GO; cleanup-started is durable before
+launch-record cleanup; and an armed row becomes cleaned only after its exact helper
+identity is absent. A null-arm row becomes cleaned only after GO impossibility and
+request incapability are proven; it makes no claim about the physical identity or
+absence of an unarmed pre-exec process. The complete launch-mode multiset must equal the
+actual host-spawned CLI invocations.
+
+Abort mode additionally owns `abort.manifest.json`, `abort.prepared.json`, and
+`abort-receipt.json`; terminal mode owns `terminal.manifest.json`,
+`terminal.prepared.json`, `old-0.bin` through `old-4.bin`, `new-0.bin` through
+`new-4.bin`, and optional `committed.json`, `terminal.rollback-prepared.json`, and
+`ledger-cleaned.json`. Every file is
+created with
+`O_EXCL|O_NOFOLLOW`, mode `0600`, stable identity, exact canonical metadata where JSON,
+and file fsync. The journal directory and its Git-directory parent are fsynced after
+creation and after each marker. Each mode manifest binds a random transaction ID, exact
+branch/worktree/Git-directory hashes, generation, mode, complete safe projection and
+receipt hash, the current run-ledger directory identity, and the exact ordered known
+ledger-entry identities/hashes. Terminal mode additionally binds the five fixed target
+paths, their original modes and old/new byte hashes, and deterministic same-parent
+temporary basenames. A valid mode-specific prepared record hashes that complete manifest
+plus every owned payload hash; no target or ledger deletion may begin before it and the
+containing directory are durable.
+
+On startup, the host resolves only this fixed path before any new run. An active
+fixed directory without valid `run.prepared.json` is an incomplete pre-run journal:
+random artifact creation was forbidden, so restart requires every run/planned path
+absent, removes only known incomplete journal files, fsyncs the Git directory, and fails
+the old invocation. A present artifact in that state is unsafe. An active run-prepared
+journal without a durable abort/terminal prepared record is a crashed, non-resumable
+generation. A fresh root first proves the retained prior host PID/start identity absent,
+then starts one new host in recovery-only phase; it cannot reconnect to or resume the
+old control stream. That host preserves all request/ledger bytes until the prior-helper
+sweep and complete root review below pass. Only the armed recovery child may then use
+the planned paths and closed request-file inventory to identity-validate and remove
+exact known request files/directories and planned/created ledger entries; it never
+executes their payloads. It may create a missing cleanup-started marker before
+recovering a still-present created request/ledger artifact. A created artifact already
+absent without that marker is unsafe; planned-without-created absence is the only
+no-create case. An unknown path/file, identity mismatch, unplanned artifact, or missing
+original private request-to-task transcript map fails closed with all bytes retained.
+It never glob-scans `/tmp`, adopts old work, or starts a new normal run until this exact
+cleanup completes. Termination mutants cover journal directory, run record, run-prepared marker,
+every request/ledger planned record, artifact creation, created record,
+cleanup-started, request unlink/rmdir, cleaned-record publication, and every launch-plan
+write/fsync, spawn, pre-bootstrap, armed write/fsync, GO, request-start publication,
+helper-exit/absence, and launch cleanup boundary.
+
+Before crashed-generation cleanup can unlink any request byte, a fresh continuous host
+is already in recovery-only mode after the old-host absence proof. The root may send
+only one `recover-review` controlCore with null `requestId`/`sequence`; the root never
+launches `--recover-review` directly. Its payload is the exact
+`recoveryReviewCore`:
+`{requests:[{agentStateAtFinalList,agentStateAtFirstList,dispatchState,interruptAttempted,interruptPreviousState,requestSha256,sequence,taskCorrelationSha256}],runSha256,schemaVersion:1}`.
+`requests` is dense, sequence ordered, unique, and exact-set equal to every
+journal-planned request—zero items only when the journal planned zero requests and at
+most 4,096 otherwise. `dispatchState` is exactly `not_started`, `spawn_failed`, or
+`spawned`. The first two require both list states and `interruptPreviousState`
+`not_applicable`, `interruptAttempted:false`, and null correlation. `spawned` requires
+one root-computed `taskCorrelationSha256=bridgeDigest("recovery-task",
+{requestSha256,sequence,taskName})`, first-list `live` or `not_live`, final-list
+`not_live`, and the same list/interrupt race rules as a cancelled procedure. The root
+retains task names only in its private map until the fixed recovery directory is proven
+absent; no task name enters stdin, stdout, stderr, journal, ledger, prompt, task, or
+changelog.
+
+Before planning that controller, the host calls exactly
+`sweepPriorBridgeLaunchesForRecovery` from the identity-pinned bridge module. The
+function rejects every caller except the verified continuous host in recovery-only
+phase and stable-reads only `run.json`, `run.prepared.json`, the dense fixed launch
+record families, and `/proc`. It reads no request, root-review, ledger, manifest,
+prepared/receipt, status, or target artifact and performs no artifact cleanup. For
+each prior plan it proves either an exact armed PID/start identity absent—after bounded
+PID-only TERM then conditional KILL when needed—or planned-unarmed GO/request
+incapability. It returns only the exact reject-unknown
+`{...priorHelperSweepCore,priorHelperSweepSha256}` envelope defined above.
+
+After that preflight, the host allocates the next launch ordinal, plans and arms the
+`recover-review` child, binds `priorHelperSweepSha256` into its armed core, and sends
+the exact sweep envelope in GO. After GO the child recomputes the digest and requires
+the dense launch projections to exact-set equal every launch ordinal before its own.
+Only then may it read and validate the separate root-review frame, inspect request
+bytes, validate contender starts, or perform artifact cleanup.
+
+On success the bridge computes
+`reviewSha256=bridgeDigest("recovery-review",{requests,runSha256,schemaVersion:1})`,
+retains it only in process until cleanup completes, and emits exactly
+`{accepted:true,reviewSha256,runSha256,status:"recorded"}` plus LF to the host; the host
+returns that parsed object as the exact matching control reply `result`. Missing/extra/
+duplicate/reordered rows, a request-set mismatch, a false interrupt combination, or an
+unreviewed spawned task uses the closed generic failure frame and retains every request
+byte. The root derives the frame from the actual collaboration transcript; for every
+first-list-live task it calls `interrupt_agent`, records the actual previous-state race,
+and proves a final non-live list before submission. The bridge cross-checks available
+claim/procedure preimages but never persists the review, receives a task name, or claims
+local collaboration-API verification. Loss of the private root map blocks recovery.
+
+The sweep validates every launch plan before the controller can open any request
+directory. A valid planned-without-armed row is request-incapable by construction: GO
+was forbidden, the only control-pipe parent is gone, EOF forces silent nonzero child
+exit, and pre-GO code cannot touch `requestDir`, the journal, or repo state. Its
+projection is exactly `{launchArmedSha256:null,...,state:"planned_unarmed"}` and neither
+assigns a PID/start identity nor claims physical process absence. A bounded current-UID
+`/proc` observation may be keyed to exact canonical bridge module/mode/launch authority,
+but a hit without the matching durable arm is observation only and is never signalled.
+For each valid armed row the sweep combines the exact
+PID/start/mode/module/worktree with the fixed bridge authority and checks `/proc`
+without shell interpretation for that positive identity, executable, cwd, exact
+module/mode/request argv, and role. If that exact old helper remains live, it sends
+`SIGTERM` only to that positive PID, waits at most five seconds, then sends `SIGKILL`
+only if the same identity remains and waits at most five more seconds. It never signals
+zero, a negative PID, a process group, a recycled PID, or a mismatched process. Final
+absence yields exactly `state:"armed_absent"` with the non-null armed digest.
+
+Only after every armed/request-capable launch is absent does the post-GO recovery child
+validate each durable `response.started.json`/`cancel.started.json` against its matching
+armed launch (or the same-process host timer), including PID/start/role/mode. A started record without a
+valid GO-capable arm, an armed helper without the exact permitted start/absence state,
+identity drift, unknown live claimant, failed signal, or missing final absence proof
+fails closed. Request cleanup may start only after the child has verified the bound
+sweep, every prior armed helper identity is absent, and the complete root procedural
+review above has passed. A crash before, during, or after the controller launch leaves
+its plan/arm records intact; that controller is therefore one of the prior ordinals in
+the next fresh sweep, classified planned-unarmed or armed-absent under the same rules.
+The controller creates no contender, and its parent proves its absence before final
+journal cleanup.
+
+The launch-record restart table is exact:
+
+| Launch records                                                                                                       | Sweep classification and later controller action                                                                                                                                                           |
+| -------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| planned only                                                                                                         | sweep proves GO/request incapability and returns `planned_unarmed`; only the post-GO controller may later publish cleanup-started with null armed hash, then cleaned                                       |
+| planned + armed, no cleanup-started                                                                                  | sweep identity-checks, TERM then conditionally KILLs only the exact live identity, proves absence, and returns `armed_absent`; only the post-GO controller may later publish cleanup-started, then cleaned |
+| cleanup-started, no cleaned                                                                                          | sweep repeats any required exact-identity absence proof and returns the matching state; only the post-GO controller may publish cleaned                                                                    |
+| cleaned                                                                                                              | sweep requires the armed identity absent or the planned-only request-incapability proof and returns the matching state; the controller requires no request start inconsistent with the row                 |
+| armed without planned, wrong predecessor/hash/mode/ordinal, GO-capable start without armed, or any extra launch file | fail closed and retain all request/journal bytes                                                                                                                                                           |
+
+The exact restart presence matrix applies independently to the ledger directory, every
+request directory, and every ledger entry:
+
+For a regular file, `identity-equal` means every recorded identity/hash field is exact.
+For a directory being cleaned, it means exact `dev/ino/type/uid/mode` plus the same
+canonical path; `nlink/size/mtimeNs/ctimeNs` may change only as the journal-listed,
+closed-inventory children are identity-unlinked, and are recaptured after every parent
+fsync. Any unaccounted change or unknown child fails. A complete request inventory also
+revalidates its canonical envelopes and internal hard-link graph; a bounded partial
+fixed-name file may be removed only when it is current-UID regular, expected-mode, and
+has no link outside that closed request directory.
+
+| Durable recovery records    | Artifact state                                                                                                   | Legal restart action                                                                       |
+| --------------------------- | ---------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| plan only                   | absent                                                                                                           | record never-created; remove only its recovery record during final journal cleanup         |
+| plan only                   | present with exact permitted identity/type/mode and self-validating content when a file                          | publish created, then publish cleanup-started and clean                                    |
+| plan only                   | ledger file present as current-UID regular `nlink=1`, expected mode/path, and bounded partial/noncanonical bytes | identity-unlink, parent-fsync, retain the plan as never-created; never parse or publish it |
+| created, no cleanup-started | present and identity/hash-equal                                                                                  | publish cleanup-started, then clean                                                        |
+| created, no cleanup-started | absent or mismatched                                                                                             | fail closed                                                                                |
+| cleanup-started, no cleaned | present and identity/hash-equal                                                                                  | continue exact unlink/rmdir, fsync parent, then publish cleaned                            |
+| cleanup-started, no cleaned | absent                                                                                                           | treat unlink/rmdir as completed, fsync parent, then publish cleaned                        |
+| cleaned                     | absent                                                                                                           | already complete                                                                           |
+| cleaned                     | present, or any marker without every required predecessor                                                        | fail closed                                                                                |
+
+Directory cleanup additionally requires every journal-planned child to be cleaned and
+the closed inventory to contain no unknown entry before rmdir. A second or later crash
+re-enters the same row; no absence is inferred from process state alone.
+
+For a controlled workflow stop before normal terminal closure—including spawn/schema
+rejection, an audit finding, validation failure, or another sanitized workflow
+failure—the root first interrupts and proves stopped every live mapped collaboration
+task, then recomputes every actual request/task/result/procedure correlation; spawn
+failure has the exact no-task/no-result state. It sends the sole `abort` control command
+with exact payload `{reason,review}`, where `reason` is the matching `abortCore` enum
+and `review` is the exact task-name-free `recoveryReviewCore` covering every planned
+request. The host handles that command itself and launches no bridge child. It freezes
+dispatch, validates the review against its private request map and durable preimages,
+builds the exact `abort-ledger` receipt, and writes/fsyncs the abort manifest, receipt,
+and prepared marker into the already durable run recovery journal with the complete
+safe projection and known run-ledger identities. Only then may it identity-unlink
+those exact ledger files and remove the proven-empty ledger directory.
+
+Cleanup is idempotent: restart may continue only the journal-listed entries, accepting
+absence only as a previously completed step from that same prepared journal; it never
+scans or adopts them as workflow evidence. The host writes/fsyncs
+`ledger-cleaned.json`, verifies the abort receipt and absence, unlinks only the known
+journal files, removes the proven-empty recovery directory, fsyncs the Git directory,
+returns exact `{accepted:true,runSha256,status:"aborted"}` in the matching control
+reply, and closes. The root proves the retained host PID/start identity absent. A
+missing/incomplete review, live mapped task, unprepared journal, identity mismatch,
+unknown file, unsafe absence, or recovery mismatch fails closed and preserves evidence.
+Plain/unframed EOF, root disappearance, or a broken control pipe never enters this
+path, never writes an abort receipt, and preserves journal/request/ledger bytes as the
+raw failed-generation contract above requires.
+
+Immediately before closure-control creation, the host stable-reads the immutable ledger
+entries, requires exact dense sequences `1..preClosureCount`, one entry for every bridge
+request and exactly one procedure receipt whose dispatch state is `spawned` or
+`spawn_failed` for every operator claim, and hashes the canonical ordered envelope array
+as `preClosureSha256`. The strict `closureControl.collaborationLedger` object stores
+exactly that positive count and digest, while both the independent changelog-index
+anchor and changelog evidence block embed that exact ordered safe-verification
+projection prefix for restart verification. In the same process, final closure-drift
+requests append only higher dense sequences. On a fresh terminal restart, the root
+launches a new outer host/control generation; it never reconnects to, resumes, or adopts
+the prior control stream. That new host must first verify the independent control
+anchor/evidence hash and recompute every embedded
+ledger-entry hash, density, safe truth-table invariant, prefix count, and prefix digest.
+It adopts the index-embedded array only as an immutable base projection,
+prepares/fsyncs a fresh fixed run journal with its planned random run-ledger path,
+creates that ledger directory, and assigns new request sequences from
+`preClosureCount + 1`; it never scans, discovers, or adopts a stale `/tmp` request or
+ledger directory. A crash before a valid independently embedded prefix exists supplies
+no resumable closure authority and cannot be normalized into closure evidence; the
+fixed run journal may authorize cleanup only, never workflow resumption.
+
+After exactly one final agent-backed closure-drift pass returns its last clean result,
+the host permanently freezes agent dispatch,
+canonicalizes the immutable base plus current run entries, proves the pre-closure array
+is an exact prefix, revalidates every later request/dispatch safe projection plus
+correlation-digest format/cardinality, and builds one exact terminal
+`{count,preClosureCount,preClosureSha256,schemaVersion:1,sha256}` receipt. The root final
+reviewer recomputes every digest against its private actual tool transcript before
+accepting that receipt; the local gate never claims it can inspect collaboration APIs.
+No collaboration-agent call is legal after the freeze. This does not reuse or replace
+the already committed 21-target status journal. The host then prepares the separate
+five-file terminal-receipt recovery journal above for these fixed ordered targets:
+changelog 1252, root task, closure child, closure leaf, and changelog index last. It
+records/fsyncs exact old
+and new bytes, modes, hashes, deterministic same-parent temporary names, the complete
+safe projection, receipt, and current ledger identity; writes/fsyncs
+`terminal.prepared.json`; then replaces targets 0..3 one at a time through their
+journal-bound `O_EXCL` temporary file, file fsync, atomic rename, and parent-directory
+fsync. The changelog index is
+target 4 and the sole commit point: its new anchor is renamed and parent-fsynced last.
+Only after that durable commit point may `committed.json` be written/fsynced. Every
+replacement is byte/hash/mode verified and unrelated bytes remain pinned.
+
+Restart reads only the fixed identity-bound journal. Without a valid durable prepared
+marker, target writes were forbidden; it verifies the old target hashes and cleans only
+known incomplete journal files. With a valid prepared marker, no rollback-prepared
+marker, and the old index hash, it restores/verifies all five old payloads, then uses the
+terminal manifest and still-prepared 21-target status journal. Before any status target
+write it creates/fsyncs the exact `status.rollback-prepared.json`; that marker forces
+all 20 task files and the board to their old payloads with target 20 last. Only after
+full old verification and the deterministic status-journal cleanup may it
+identity-clean the failed run ledger/terminal journal, fail the old generation, and
+allow ordinary repair to add pending evidence. With the exact new index hash and no
+rollback-prepared marker, it rolls all five targets forward to their journaled new
+payloads, writes a missing committed marker, and continues terminal verification.
+A caught terminal-verification failure first writes/fsyncs the exact
+`terminal.rollback-prepared.json` envelope. Once that marker exists, either journaled
+index hash requires convergence to all five old payloads with the old index renamed and
+parent-fsynced last, followed by creation/fsync of the status rollback marker and the
+same marker-priority all-old 21-target rollback/cleanup; it never removes either
+journal while retaining an old ledger or Done graph. Any other
+index hash, missing payload, path/identity/mode/hash mismatch, unknown file, or unsafe
+temporary state fails closed with both journals and the ledger retained. Thus old index
+without rollback-prepared is the uncommitted path, new index without it rolls forward,
+and rollback-prepared makes old the sole legal destination. Termination mutants
+must cover every payload write/fsync, prepared marker/fsync, target temp
+write/fsync/rename/parent-fsync, index commit, committed marker, mechanical gate, ledger
+unlink/rmdir, and journal cleanup boundary.
+
+For each exact journal-bound target, restart first chooses the required old or new
+payload from that index decision, then applies this temp-path table before retrying the
+replacement:
+
+| Temp / target state                                                                                                                             | Legal action                                                                            |
+| ----------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| temp absent, target already required hash/mode                                                                                                  | no rewrite; parent fsync and continue                                                   |
+| temp absent, target other journaled hash/mode                                                                                                   | create temp with `O_EXCL                                                                | O_NOFOLLOW`, write full required payload, fchmod original mode, file-fsync, rename, parent-fsync |
+| temp present as current-UID regular `nlink=1`, exact mode and complete required payload                                                         | revalidate identity/hash, rename over target, parent-fsync                              |
+| temp present as the complete opposite journaled payload                                                                                         | identity-unlink temp, parent-fsync, recreate required payload through the preceding row |
+| temp present as a bounded partial payload at the exact planned path, current UID, regular, `nlink=1`, and expected creation mode                | identity-unlink temp, parent-fsync, recreate required payload                           |
+| temp symlink/directory/device, wrong UID/mode/link count, unbounded/unknown bytes, path replacement, or target outside its two journaled hashes | fail closed and retain journal/ledger                                                   |
+| temp absent because rename completed, target required hash/mode                                                                                 | treat rename as complete; never recreate                                                |
+
+Every present temp is opened no-follow and path/fd identity-rechecked before unlink or
+rename. No temp is globbed or inferred from a suffix. A crash during temp unlink,
+recreate, rename, or parent fsync re-enters exactly one row.
+
+The identity-bound current run-ledger directory remains intact until the subsequent
+final local mechanical gate verifies the durable terminal bytes and the root repeats
+its transcript review. Only then may the host idempotently identity-unlink its
+journal-listed immutable entries, remove the proven-empty directory, write/fsync
+`ledger-cleaned.json`, clean the known terminal journal, then clean the verified
+committed status journal, with a Git-dir fsync after each directory removal. A crash
+during that cleanup may continue only those exact journal-listed identity operations.
+Any ordinary repair attempted after a failed published status generation starts only
+after marker-priority all-old verification and status-journal cleanup, then creates a
+fresh control generation and repins the now-longer prefix.
+
+This is a same-UID coordination boundary against accidental collision, replay, late
+response, and partial writes, not an OS security boundary against a malicious same-UID
+process. “No concurrent writer” means the local single-flight latch plus no other
+root-authorized TASK-540 writer; arbitrary same-UID writers are outside that cooperative
+claim and are detected only by the existing snapshots/postchecks. Those postchecks,
+registered-schema validation, and rollback remain final authority; bridge settlement
+alone never authorizes mutation or closure.
+
+The agent context remains the current hash/length-only `GroundedChangeManifest`, bounded
+to 96 KiB inside the 128 KiB complete prompt. It contains named worktree paths, kinds,
+byte lengths, and SHA-256 values plus HEAD/branch/index/worktree authority, never a raw
+tracked patch or tracked/untracked file content. The collaboration agent reads the
+named current worktree files locally. Sensitive paths, unsupported entries, bound
+overflow, and stable-read identity drift fail before dispatch. The implementation
 orchestrator still verifies every read-only/mutating result against exact repository
 snapshots and ownership.
 
-Every Claude invocation uses a fixed repo-owned Node launcher detached as the leader of
-its own process group and session. The launcher self-stops before loading
-`node:child_process` or spawning Claude. Only after the host binds the launcher's PID,
-PPID, PGID, session ID, and Linux start identity from `/proc` does a just-in-time
-identity check send `SIGCONT`; the launcher then starts Claude as a descendant in the
-same group/session, relays stdio, and mirrors a normal exit byte-for-byte. A signalled
-Claude exit maps deterministically to `128 + signalNumber` (`255` only for an unknown
-signal) instead of re-signalling the launcher. Any authority or resume failure after a
-PID is observed runs bounded owned-process cleanup before the error leaves the host;
-cleanup failure is retained with the sanitized authorization failure in an
-`AggregateError`. Normal completion and every
-timeout/output-limit path bounded-poll the complete owned group/session. Failure sends
-negative-PGID TERM, then conditional KILL, uses no unbounded close wait, and returns
-only after PID/start plus PGID/session absence is proven. Each signal follows a fresh
-process-table read, rejects a recycled leader by PID/start identity, and selects only
-rows still owned by the bound process-group/session or retained exact identities. If
-authority acquisition observed the launcher, cleanup
-uses that retained identity; if no identity was observable, the still-self-stopped
-launcher cannot have started Claude and is disposed only through its owned
-`ChildProcess` handle with a bounded close. The hermetic local-host self-test executes
-the real Node launcher only around a local no-network Node probe, not
-`/usr/bin/claude`. It proves local Claude-argv construction, synthetic
-structured-envelope parsing, the projected child environment, launcher/process-
-ownership and cleanup invariants, and deterministic signal-code mapping; it makes no
-live Claude CLI-compatibility claim. Compatibility with the installed Claude CLI and
-its current flags, schema handling, and structured output is proven only when an actual
-`--run` invocation successfully dispatches the read-only Start gate. The host adapter
-itself defines no server, browser, helper, DB
-operation, validation command, or smoke capability. All validation commands and the
-single smoke execution remain direct responsibilities of the root-local implementation
-orchestrator; only `executeTask540SmokePlan` may construct the private real smoke
-capabilities. This boundary is a runner compatibility adapter, not an agent-executed or
-external smoke runner.
+The implementer must replace the recovered
+`READ_ONLY_AGENT_SHARED_CONTRACT` claim that a bounded Claude-style
+`Read/Grep/Glob` tool set exists and that shell access is unavailable. The replacement
+must state the Codex collaboration behavioral policy honestly: use only local
+read-only inspection for audit requests; do not edit, stage, commit, start a server or
+browser, run smoke/fixtures/cleanup/validation, invoke another agent, or access
+credentials, `.env`, raw logs, or user data. It must not claim a per-agent tool
+allowlist or OS sandbox. The independently tracked workflow-security test must prove
+the stale tool-language is absent and the replacement prohibitions are present.
+
+Beyond its own identity-bound request/ledger/journal cleanup, the bridge defines no
+server, browser, DB operation, validation command, repository/fixture cleanup, smoke
+evidence, or smoke capability. All validation commands and the single smoke execution
+remain direct responsibilities of the same local implementation orchestrator; only
+`executeTask540SmokePlan` constructs the private real smoke capabilities. A
+collaboration agent may audit or propose an allowed mutation only; it never executes or
+recovers any server/browser/smoke step.
 
 `_docs/_workflows/task-540-smoke-contract.mjs` has exactly these public exports:
 
 ```ts
-buildTask540SmokePlan({ nonce })
-runTask540SmokeContractSelfTest()
+buildTask540SmokePlan({ nonce });
+runTask540SmokeContractSelfTest();
 ```
 
 The module is import-side-effect-free and performs no environment, filesystem,
@@ -492,8 +1980,8 @@ the module runs nothing.
 `_docs/_workflows/task-540-smoke-executor.mjs` has exactly these public exports:
 
 ```ts
-executeTask540SmokePlan({ root, nonce, assertSafeEvidence, snapshotRepository })
-runTask540SmokeExecutorSelfTest()
+executeTask540SmokePlan({ root, nonce, assertSafeEvidence, snapshotRepository });
+runTask540SmokeExecutorSelfTest();
 ```
 
 The executor is import-side-effect-free. Its public wrapper first declares one nullable
@@ -609,13 +2097,10 @@ dirty-navigation siblings other than `dg-024-entry-nav-cancel` remain limited to
 twelve exact browser classes `target_bound`, `target_duplicate`, `target_missing`,
 `source_url`, `scroll_locked`, `inline_pointer_locked`, `computed_pointer_locked`,
 `target_intercepted`, `click_failed`, `dialog_duplicate`, `not_suspended`, and
-`dialog_settlement`. `dg-024-entry-nav-cancel` instead has the same eleven non-
-`scroll_locked` classes plus exactly `scroll_locked_select_owned`,
-`scroll_locked_dialog_owned`, `scroll_locked_ownerless`,
-`scroll_locked_malformed_value`, `scroll_locked_owner_ambiguous`,
-`scroll_lock_timeline_missing`, and `scroll_lock_timeline_overflow`; generic
-`scroll_locked` is historical-only for that action. Every browser class may be joined
-only by the executor-stage classes above. Exactly the two Tone-select
+`dialog_settlement`. `dg-024-entry-nav-cancel` uses that same twelve-class contract;
+there is no cross-action owner-timeline class or page-global diagnostic authority.
+Every browser class may be joined only by the executor-stage classes above. Exactly the
+two Tone-select
 actions settle only after every Select content node is absent, the body has no
 `data-scroll-locked` attribute, and both its inline and computed pointer-event values
 are unlocked continuously for at least 600 ms across at least two complete samples.
@@ -628,56 +2113,22 @@ then dispatches the physical click with `noWaitAfter` and evaluates the complete
 named-dialog, stable-URL, and stable-navigation postcondition even when the click call
 throws.
 
-For the exact `dg-022` -> `dg-023` -> `dg-024` sequence, `dg-022` installs one
-`MutationObserver` on `document.body` atomically inside the same final page evaluation
-that proves its clean teardown sample; installation after that sample is forbidden. The
-observer uses exactly `{attributes:true,attributeFilter:["data-scroll-locked"],
-childList:true,subtree:true}` and lives in one executor-private, per-run page slot
-through the Playwright CLI post-callback gaps. Installation immediately records the
-complete unlocked/zero-owner initial sample as ordinal 1. A callback first drains its
-records, samples current state once, and appends only a projection different from the
-last one. The slot retains at most 16 projections; an attempted 17th distinct projection
-sets one permanent `overflow:true` latch without retaining the extra projection.
-Each entry is the strict allowlisted projection
-`{ordinal,lockState,selectContentCount,dialogOverlayCount,dialogContentCount}` with
-contiguous ordinals `1..N`: `lockState` is only `absent`, `positive`, or `malformed`;
-each count is an integer in `0..8`. Observing any count above 8 immediately and
-permanently sets the same `overflow:true` latch and retains no invalid projection, so a
-later smaller sample cannot erase the overflow. Either overflow cause maps only to
-`scroll_lock_timeline_overflow` and has precedence over every owner class. It records no
-DOM text, selector result, raw
-attribute value, timestamp, node, HTML, URL, or stack. `dg-023` reads and validates the
-bounded projection after `takeRecords()` plus one current-state sample while preserving
-the observer. Every completed `dg-024` target poll atomically performs that same flush
-and sample in the page evaluation that returns body interaction state, and returns its
-`finalSampleOrdinal`; only the projection with that exact ordinal may classify that
-poll. `dg-024` disconnects/removes the private slot in `finally` on every return or
-throw. A canonical positive
-final value uses only a present attribute matching `/^[1-9][0-9]*$/` whose numeric value
-is a safe integer; all other present values are `malformed`. A positive final value
-with exactly `selectContentCount === 1` and both Dialog counts zero is select-owned;
-exactly `dialogOverlayCount === 1`, `dialogContentCount === 1`, and Select count zero is
-dialog-owned; all three counts zero is ownerless; every duplicate/mixed/inconsistent
-positive owner count is ambiguous. Malformed
-numeric syntax, mixed/inconsistent owners, missing authority, and overflow map to their
-exact classes above. This classification describes only the final completed target poll:
-neither an earlier transition nor the ten-second deadline may be claimed as continuous
-lock evidence. The exact browser failure frame remains only
-`{failureClass,settled:false}`; the timeline stays executor-private and never joins a
-public capture, receipt, diagnostic, or evidence object.
-
-The executor self-test must mutate observer installation after the atomic handoff,
-observer deletion before each consumer, the 16-entry bound, ordinal order, each count,
-each owner mapping, canonical-positive and malformed-value parsing, mixed owners,
-generic `scroll_locked` eligibility for `dg-024`, final-versus-historical selection,
-disconnect-in-`finally`, and every forbidden raw field. Exact-frame deletion,
-substitution, extra-key, extra-action, and class/order mutants must fail. The embedded
-real-browser diagnostic sub-proof in the single canonical executor call must use the
-installed Radix Select/RemoveScroll stack and the exact product panel: select Muted,
-prove the 600 ms plus final atomic handoff, execute the exact `dg-023` reads across both
-CLI completion gaps, and prove the body remains unlocked with zero live Select/Dialog
-owner before `dg-024`. Product source remains read-only
-unless this bounded evidence names a live product-owned layer.
+For the exact `dg-022` -> `dg-023` -> `dg-024` sequence, responsibility is deliberately
+split without a page-global handoff. `dg-022` owns the Radix Select transition and may
+return only after the complete authored tone/dirty/selection/computed-color proof, at
+least 600 ms of continuously closed Select content and unlocked scroll/pointer state,
+and one final atomic teardown sample. `dg-023` freezes only the dirty content,
+presentation, URL, and navigation authority. `dg-024` reads the current document state
+inside its own command: every target poll recomputes body scroll/pointer state, visible
+target cardinality, geometry, and event ownership. Before the hit-test it calls
+`scrollIntoViewIfNeeded`, then reacquires the final rectangle and visibility so stale
+pre-scroll geometry cannot pass. It dispatches one physical click with `noWaitAfter` and
+requires the exact named dialog with positive geometry, exact heading/description/
+buttons, and unchanged URL/navigation even when the click call throws. The executor
+self-test must reject removal/reordering of the current-state checks, final geometry,
+scroll settlement, center hit-test, click, and dialog/navigation postconditions. Product
+source remains read-only unless this same-action evidence names a live product-owned
+layer.
 
 The browser-frame set and executor-stage set are disjoint. Their frozen diagnostic union
 is the sole allowlist for private error branding, tracker retention, and the emitter.
@@ -806,9 +2257,7 @@ const AUTH_SETTLEMENT_DIAGNOSTIC_FAILURE_CLASSES = deepFreezeExact([
   ...AUTH_SETTLEMENT_BROWSER_FAILURE_CLASSES,
   ...AUTH_SETTLEMENT_EXECUTOR_FAILURE_CLASSES,
 ]);
-const AUTH_SETTLEMENT_FAILURE_FRAMES = buildExactFrames(
-  AUTH_SETTLEMENT_BROWSER_FAILURE_CLASSES,
-);
+const AUTH_SETTLEMENT_FAILURE_FRAMES = buildExactFrames(AUTH_SETTLEMENT_BROWSER_FAILURE_CLASSES);
 const PRIVATE_AUTH_SETTLEMENT_FAILURE_CLASSES = new WeakMap();
 const PRIVATE_AUTH_SETTLEMENT_FAILURE_DETAILS = new WeakMap();
 
@@ -834,10 +2283,7 @@ function classifySafeProcessOutcome(program, execution) {
   if (execution.stdout.exceeded || execution.stderr.exceeded) return "process_output_limit";
   if (execution.timedOut) return "process_timeout";
   if (execution.spawnError || !execution.termination.absent) return "process_runner_failed";
-  if (
-    program === "playwright-cli" &&
-    hasAllowlistedBrowserErrorMarker(execution.stdout.bytes)
-  ) {
+  if (program === "playwright-cli" && hasAllowlistedBrowserErrorMarker(execution.stdout.bytes)) {
     return "browser_error_frame";
   }
   if (execution.stderr.bytes.length !== 0) return "process_stderr_rejected";
@@ -885,7 +2331,7 @@ class LocalCommandAuthority {
         input.action,
         "repository_boundary_failed",
         { cause },
-        "snapshot failed",
+        "snapshot failed"
       );
     }
 
@@ -920,7 +2366,7 @@ class LocalCommandAuthority {
         input.action,
         "repository_boundary_failed",
         { cause: repositoryFailure, execution },
-        "repository changed",
+        "repository changed"
       );
     }
     const processFailureClass = classifySafeProcessOutcome(input.program, execution);
@@ -929,7 +2375,7 @@ class LocalCommandAuthority {
         input.action,
         processFailureClass,
         { execution },
-        "local command failed",
+        "local command failed"
       );
     }
 
@@ -940,7 +2386,7 @@ class LocalCommandAuthority {
         input.action,
         "receipt_boundary_failed",
         { cause, execution },
-        "command receipt failed",
+        "command receipt failed"
       );
     }
   }
@@ -955,7 +2401,7 @@ async function executeBrowserAction(action) {
       action,
       "invocation_boundary_failed",
       { cause },
-      "browser invocation failed",
+      "browser invocation failed"
     );
   }
   const commandResult = await authority.executeProgram(invocation);
@@ -967,7 +2413,7 @@ async function executeBrowserAction(action) {
       action,
       "output_normalization_failed",
       { cause, commandResult },
-      "output invalid",
+      "output invalid"
     );
   }
   const exactFailureClass = classifyPrivateAuthSettlementFailureFrame(action.id, normalizedBytes);
@@ -982,7 +2428,7 @@ async function executeBrowserAction(action) {
         action,
         "success_contract_failed",
         { cause, commandResult },
-        "output contract failed",
+        "output contract failed"
       );
     }
     throw cause;
@@ -991,7 +2437,7 @@ async function executeBrowserAction(action) {
     const result = buildValidateAndFreezeBrowserCapabilityResult(
       action,
       commandResult,
-      parsedOutput,
+      parsedOutput
     );
     validateCapabilityResult(result, action, executable, plan);
     return result;
@@ -1000,21 +2446,24 @@ async function executeBrowserAction(action) {
       action,
       "receipt_boundary_failed",
       { cause, commandResult },
-      "browser result failed",
+      "browser result failed"
     );
   }
 }
 ```
 
-The bridge does not add a fourth smoke module. Its action-specific registry, immutable
+The private one-shot Bun runtime bridge does not add a fourth smoke module. Its
+action-specific registry, immutable
 `--eval` source constants, schemas, and one-shot spawn primitive are non-exported
-declarations inside `task-540-smoke-executor.mjs`; there is no bridge file, package
+declarations inside `task-540-smoke-executor.mjs`; there is no separate Bun-bridge file, package
 script, installed helper, executable wrapper, daemon, persistent worker, or reusable Bun
-server. The exact three named repo-owned smoke modules remain the complete on-disk
-module set.
+server. The Codex collaboration bridge above is workflow coordination, not a smoke or
+Bun-runtime module. The exact three named repo-owned smoke modules remain the complete
+on-disk smoke-module set.
 
-Once all three smoke modules and the separate local-orchestrator host exist, the closure
-leaf gate, `FULL_GATE_COMMANDS`, and every final mechanical gate run these exact eight
+Once all three smoke modules, the Codex collaboration bridge, and the separate
+local-orchestrator host exist, the closure leaf gate, `FULL_GATE_COMMANDS`, and every
+final mechanical gate run these exact ten
 task-infrastructure commands in this order:
 
 ```bash
@@ -1024,6 +2473,8 @@ node --check _docs/_workflows/task-540-smoke-executor.mjs
 node _docs/_workflows/task-540-smoke-executor.mjs --self-test
 node --check _docs/_workflows/task-540-smoke-host.mjs
 node _docs/_workflows/task-540-smoke-host.mjs --self-test
+node --check _docs/_workflows/task-540-codex-agent-bridge.mjs
+node _docs/_workflows/task-540-codex-agent-bridge.mjs --self-test
 node --check _docs/_workflows/task-540-local-orchestrator.mjs
 node _docs/_workflows/task-540-local-orchestrator.mjs --self-test
 ```
@@ -1185,7 +2636,8 @@ their exact 77-name `18+9+10+13+11+5+11` partition and its two route suites reta
 13+8 names; the same executable name/body/partition helper protects both auxiliary
 families in R01 and final closure.
 
-The only legal modularity land order is
+The historical source-modularity land order (already completed; not the current
+bridge-frontier execution order) was
 `540-01-L01 → 540-02-L01 → 540-03-L01 → 540-04-L01 → 540-04-L03 →
 540-04-L04 → 540-05-L01 boundary → 540-05-L02 → 540-06-L01`. Closure must
 read every predecessor's post-split receipt from the current tree; a historical
@@ -1217,16 +2669,16 @@ enumeration of the complete Entry Editor and Screen Builder graphs. TASK-540-04-
 historically wrote `screenEntryPresentationOverrideContract.ts`,
 `screenEntryPresentationOverrides.ts`, `customScreensClient.ts`, `cacheBus.ts`, and
 their split admin families; its completed 2026-07-15 repair additionally owned only additive
-  direct-image route-boundary assertions in `tests/integration/routes/customScreensRoutes.test.ts`
+direct-image route-boundary assertions in `tests/integration/routes/customScreensRoutes.test.ts`
 while every production route byte remains read-only. TASK-540-04-L04 solely owns the
 stable `CustomScreenEditorPage.tsx` facade, seven focused implementation owners, the
 Page harness/four-suite 36-name family, its route helper and route/binding suites, plus
 only the additive cacheBus factory mock in
-  the recovery suite and the identical additive
-  `createCacheEventOperationToken: () => Symbol(),` property in
-  `screen-editor-sections.test.tsx`, while consuming the L03 token names and signatures
-  byte-identically. TASK-505 recovery assertions and all nine TASK-500 section-suite
-  tests and all of their assertions, imports, and other mock bytes must remain byte-identical. The workflow's leaf allowlists, targeted commands,
+the recovery suite and the identical additive
+`createCacheEventOperationToken: () => Symbol(),` property in
+`screen-editor-sections.test.tsx`, while consuming the L03 token names and signatures
+byte-identically. TASK-505 recovery assertions and all nine TASK-500 section-suite
+tests and all of their assertions, imports, and other mock bytes must remain byte-identical. The workflow's leaf allowlists, targeted commands,
 aggregate matrix, and closure hash set must name these exact paths identically.
 The earlier import-only L03 attempt was reverted before the first prepared-state pass.
 The later final sequential post-audit independently reopened L03 for the substantive
@@ -1364,7 +2816,7 @@ only that owner and restores its gated In Progress state only with a matching fr
 Revalidation receipt while every other gated In Progress leaf remains untouched; an
 anchor-backed 540-06-L01 repair additionally binds prior
 gate, Repair Pending hash, and exact successor Revalidation in the changelog-index
-repairAuthorization before task-state reopen
+repairAuthorization before task-state repair mutation
 for a verified post-audit or smoke-evidence source finding owned by already-active
 540-06-L01 only while the changelog index is still in its canonical reserved/no-anchor
 state and Closure Pending does not exist, atomically remove its old gate and write the
@@ -1381,21 +2833,24 @@ and reject any changed pending token, pre-pending Fix Started marker, or stale g
 use the program-pinned changelog path above (never a new RUN_DATE derivation), discover
 exactly zero or one changelog 1252 file, reject duplicates, and reuse that path even when
 a failed evidence dispatch temporarily removed the file; create and byte-verify changelog
-1252 plus its index row/control anchor first with the exact 17-ID Tasks line; then rerun
-the complete full validation against those bytes; only then atomically mark all ten
-leaves, all six children, and root Done in
+1252 plus its index row/control anchor first with the exact 20-ID Tasks line; then rerun
+the complete full validation against those bytes; only then atomically mark all twelve
+leaves, all seven children, and root Done in
 descendant-before-parent order while applying the one board-statistics delta; run the mechanical
-graph gate and reopen only the affected owner plus closure/root on a later failure
+graph gate; on any later failure create/fsync status.rollback-prepared.json, restore all
+21 old targets with the board last, verify/clean that journal, then let ordinary repair
+select an evidenced owner and add pending evidence
 capture one board baseline, the closure leaf's exact gate field/value, and the fixed
 changelog path from the unchanged active graph before the first status mutation; first
 bind their strict control manifest plus generation/evidence hash into the independently
 evidence-owned changelog-index anchor and hashed changelog block, then persist the identical baseline/path through pending, retry, rollback,
 status, terminal restart, and verification without recapturing them from a mutated board/task
-on terminal startup, validate that changelog 1252 and its exact 17-ID Tasks line existed
-before the atomic transition, then validate all 17 Done contracts, closure-leaf gate receipt, board row
+on terminal startup, validate that changelog 1252 and its exact 20-ID Tasks line existed
+before the atomic transition, then validate all 20 Done contracts, closure-leaf gate receipt, board row
 plus its exact persisted statistics baseline, unique changelog-index row, shared closure
-receipt, and the single changelog evidence hash before scoped-reopening closure/root and rerunning the
-post-audit, full validation, smoke, closure, final drift, and final gate sequence
+receipt, and the single changelog evidence hash; any failure first marker-rolls all 21
+status targets to old and cleans the status journal, after which ordinary repair may
+rerun the post-audit, full validation, smoke, closure, final drift, and final gate sequence
 strict-parse a persisted Closure Pending or terminal Closure Generation, seed the durable
 counter from it, and require every later closure attempt to use a greater generation
 ```
@@ -1462,9 +2917,9 @@ During an earlier source-owner `Repair Pending`, every landed sibling remains
 `🚧 In Progress`; each completed implementation sibling retains exactly one current
 gate receipt and no `Completed` field. Before the closure leaf's own gate,
 TASK-540-06-L01 remains deliberately ungated and has neither `Targeted Gate Passed` nor
-`Revalidation Passed`. After all ten leaves land, an exact reserved/no-anchor
+`Revalidation Passed`. After all twelve leaves land, an exact reserved/no-anchor
 pre-closure continuation may instead preserve TASK-540-06-L01's deterministic
-`Revalidation Passed` while a non-closure source owner is reopened. That exception
+`Revalidation Passed` while a non-closure source owner is selected for repair. That exception
 requires matching canonical child/leaf `Fix Started`, the exact
 `preClosureRegateValue`, no changelog 1252 draft, no control anchor, no closure receipt,
 one non-closure Repair Pending owner, and exactly that owner as the sole remaining leaf;
@@ -1498,7 +2953,7 @@ receives `✅ Done` or `Completed` while changelog 1252 is absent.
 The board parent remains In Progress and its statistics stay byte-identical until
 final family closure.
 
-At closure, all ten implementation leaves, all six direct children, and root remain
+At closure, all twelve implementation leaves, all seven direct children, and root remain
 In Progress; each landed leaf has its required current behavior/modularity receipts and
 no `Modularity Repair Pending` or `Completed`,
 and no unlanded descendant may be promoted from To Do. The workflow uses only the fixed `Changelog File` path above, discovers exactly
@@ -1520,21 +2975,83 @@ field/value, path, and positive generation. The evidence owner creates/updates c
     "gateReceipt": {
       "field": "Targeted Gate Passed",
       "valueSha256": "64-lowercase-hex"
+    },
+    "collaborationLedger": {
+      "preClosureCount": 1,
+      "preClosureSha256": "64-lowercase-hex",
+      "terminalCount": null,
+      "terminalSha256": null
     }
   },
+  "collaborationLedgerPrefix": [
+    {
+      "accessClass": "read-only",
+      "claim": {
+        "claimOwner": "operator",
+        "claimSha256": "64-lowercase-hex"
+      },
+      "contenders": [
+        {
+          "ackSha256": "64-lowercase-hex",
+          "contenderKind": "response",
+          "startSha256": "64-lowercase-hex"
+        }
+      ],
+      "dispatch": {
+        "agentResultSha256": "64-lowercase-hex",
+        "agentStateAtFinalList": "not_applicable",
+        "agentStateAtFirstList": "not_applicable",
+        "dispatchStatus": "spawned",
+        "forkTurns": "none",
+        "interruptAttempted": false,
+        "interruptPreviousState": "not_applicable",
+        "procedureSha256": "64-lowercase-hex",
+        "spawned": true,
+        "statusSha256": "64-lowercase-hex",
+        "transcriptCorrelationSha256": "64-lowercase-hex"
+      },
+      "disposition": "accepted",
+      "request": {
+        "deadlineMonotonicNs": "1",
+        "requestIdSha256": "64-lowercase-hex",
+        "requestSha256": "64-lowercase-hex",
+        "runIdSha256": "64-lowercase-hex",
+        "sequence": 1,
+        "worktreeSha256": "64-lowercase-hex"
+      },
+      "settlement": {
+        "agentResultSha256": "64-lowercase-hex",
+        "decisionMonotonicNs": "1",
+        "error": null,
+        "settlementSha256": "64-lowercase-hex",
+        "startSha256": "64-lowercase-hex",
+        "status": "response"
+      },
+      "ledgerEntrySha256": "64-lowercase-hex"
+    }
+  ],
+  "terminalCollaborationReceipt": null,
   "repairAuthorization": null
 }
 ```
 
-The changelog evidence block embeds the exact same `closureControl`; its whole byte hash
-must equal `evidenceSha256`. The real counters/hash replace the illustrative values. Unknown/missing keys,
-an unsafe/different path, non-positive generation, unsupported gate field, or non-64-hex
-digest fail closed. The orchestrator byte-verifies and hashes the whole block before the
-status owner writes identical `Closure Pending`, `Closure Board Baseline`, and
-`Closure Changelog Path` receipts on the three active closure contracts. Complete full
-validation then runs before final family status mutation. The evidence owner must first
+The independent changelog-index anchor and changelog evidence block both embed the exact
+same `closureControl`, exact `collaborationLedgerPrefix` array containing only the safe
+immutable ledger-entry envelopes, and exact `terminalCollaborationReceipt`. Before
+status closure, the prefix's canonical count/hash equal
+`preClosureCount`/`preClosureSha256`, both terminal fields and the terminal receipt are
+null, and the evidence block's whole byte hash equals `evidenceSha256`. The real
+counters/hash replace the illustrative values. Unknown/missing keys, an unsafe/different
+path, non-positive generation or `preClosureCount`, unsupported gate field, non-64-hex
+digest, terminal fields present early, or any anchor/evidence ledger-prefix mismatch
+fail closed. The independently embedded index prefix is the sole regeneration authority
+when changelog 1252 is missing; a digest without that byte-identical safe prefix is
+insufficient. The orchestrator byte-verifies and hashes the whole block
+before the status owner writes identical `Closure Pending`, `Closure Board Baseline`,
+and `Closure Changelog Path` receipts on the three active closure contracts. Complete
+full validation then runs before final family status mutation. The evidence owner must first
 create and byte-verify changelog 1252, its unique index row/control anchor, and the exact
-17-ID `Tasks:` line below while all 17 task files and the board remain In Progress.
+20-ID `Tasks:` line below while all 20 task files and the board remain In Progress.
 For unrelated-byte protection, the changelog-index projection owns only the unique
 canonical TASK-540 reserved sentence or, after evidence creation, the adjacent canonical
 consumed sentence plus remaining 1251/1254/1257 reservation sentence. Independent
@@ -1544,16 +3061,52 @@ independent sentence interposed inside the consumed pair, or contradictory escap
 1252/1251/1254/1257 prose fails closed. Hermetic reserved and consumed fixtures must
 prove both preservation and those rejection paths.
 Only after that durable changelog coverage exists may one status transaction prepare
-the ten leaf changes, then the six child changes, then root TASK-540, and atomically
-publish all 17 `✅ Done`/`Completed` transitions together with the single deterministic
+the twelve leaf changes, then the seven child changes, then root TASK-540, and atomically
+publish all 20 `✅ Done`/`Completed` transitions together with the single deterministic
 board row/statistics delta. There is no durable intermediate state in which a leaf or
-child is Done without changelog coverage. A final mechanical graph/evidence/diff gate
-follows. Each terminal leaf retains its own gate evidence, while the final three closure
+child is Done without changelog coverage. Exactly one final agent-backed closure-drift
+pass runs now and appends its lenses' procedure entries; any finding first
+creates/fsyncs the status rollback
+marker and restores/verifies/cleans the complete 21-target old generation, board last.
+Only then may the ordinary repair path select the evidenced owner and add pending
+evidence.
+After that pass's last clean drift result, the host permanently closes agent dispatch
+for this generation. The root first recomputes every actual transcript correlation;
+then the host canonicalizes the full embedded base plus current ledger and builds exact
+`terminalCollaborationReceipt`
+`{count,preClosureCount,preClosureSha256,schemaVersion:1,sha256}` from the exact
+`terminal-ledger` preimage pinned above. Its count/hash must equal
+`closureControl.collaborationLedger.terminalCount/terminalSha256`.
+
+Before deleting any run-ledger byte, the exact prepared, fsynced, index-anchor-last
+recovery-journal transaction above updates the changelog-index anchor, changelog
+evidence block, and the root/closure-child/closure-leaf
+`Closure Evidence SHA-256` receipts. It replaces
+`collaborationLedgerPrefix` with the complete safe projection, sets
+`closureControl.collaborationLedger.terminalCount/terminalSha256`, embeds the exact
+terminal receipt, recomputes `evidenceSha256`, and byte-verifies all five files. It must
+not change generation, pre-closure fields, gate receipt, statuses, Completed dates,
+board row/statistics, changelog Tasks line, or unrelated bytes. No agent call is legal
+after this terminal-ledger freeze. A caught failure durably selects the
+rollback-prepared path above; process-death recovery follows the index/marker truth
+table. Only after all five terminal targets and all 21 status targets verify at their
+old generation may it identity-clean the failed ledger and both journals, return to the
+ordinary repair workflow, and propagate the sanitized failure. An ambiguous/failed
+rollback retains both journals, the ledger, and every remaining target byte and fails
+closed. A committed terminal state instead retains those authorities until its
+remaining checks pass.
+
+A final local mechanical graph/evidence/diff gate then validates the persisted complete
+ledger/terminal receipt and every ordinary closure invariant. The root final reviewer
+recomputes each actual task/result correlation before accepting that gate; only then may
+the host clean the current ledger directory. Each terminal leaf retains its own gate
+evidence, while the final three closure
 contracts carry the family evidence hash/generation; a missing/open descendant or
-pre-changelog Done state fails. Any later exception atomically reopens the affected
-source owner (when applicable), its child, the closure leaf/direct child, and root before
-propagating; unrelated terminal descendants may remain Done only because the existing
-1252 line already covers them. Unstarted descendants remain To Do.
+pre-changelog Done state fails. Any later exception uses the exact terminal rollback
+plus full 21-target status rollback above before propagating; no descendant from that
+failed closure generation remains Done. The subsequent ordinary repair workflow may
+then select its verified owner chain and record fresh repair evidence; it does not
+alter the journaled all-old status generation during rollback.
 
 Changelog 1252 must contain exactly one task metadata line, byte-identical to this
 complete, unique, deterministically ordered family set:
@@ -1563,25 +3116,34 @@ Tasks: TASK-540, TASK-540-01, TASK-540-01-L01, TASK-540-02, TASK-540-02-L01, TAS
 ```
 
 A process restart from a terminal-looking graph is not accepted on status alone. It
-first requires all 17 contracts plus the board Done, identical valid evidence
+first requires all 20 contracts plus the board Done, identical valid evidence
 hash/generation/baseline/path fields on exactly the root and closure child/leaf, no closure-only
 receipt on a source descendant, exactly one byte-pinned Targeted Gate Passed or
 Revalidation Passed field/value on the closure leaf, exactly one four-cell TASK-540 row
 in the 1252 changelog index with filename-matching date/title/type, consumed reservation
 prose, and exactly one valid canonical TASK-540 control anchor. When the changelog exists,
 its canonical evidence block must hash to both the task receipt and anchor; when it is
-missing/malformed, the valid independent anchor is required before scoped reopen and
-regeneration at the same fixed path through fresh validation/smoke. The anchor's strict
+missing/malformed, the valid independent anchor can verify journal recovery but cannot
+authorize post-status task mutation or changelog regeneration. The anchor's strict
 evidence-owner `closureControl` must independently match the task generation, pinned
-baseline, pinned path, and SHA-256 of the exact closure-leaf gate value; coherent edits
-to the status-owner task files plus board therefore cannot become trusted after a process
-restart. The three closure
+baseline, pinned path, SHA-256 of the exact closure-leaf gate value, and the immutable
+pre-closure and terminal collaboration-ledger count/hash fields. Its independently
+embedded complete safe prefix must recompute both pairs and its non-null exact terminal
+receipt. A restart
+without that exact retained complete prefix/receipt cannot trust the control and fails
+closed; coherent edits to the status-owner task files plus board therefore cannot become
+trusted after a process restart. The three closure
 contracts also carry one identical `Closure Board Baseline` captured once while TASK-540
 is In Progress; terminal validation requires current statistics to equal that pinned
 baseline with In Progress -1 and Done +1. It is never recalculated from the board after
-the first closure transition. Only then does startup scoped-reopen the three closure
-contracts and rerun post-audit, full validation, live smoke, closure, final drift, and
-the final mechanical gate. A malformed/mismatched terminal graph fails closed.
+the first closure transition. A fully committed and verified terminal generation is
+accepted without status mutation. Any restart state that requires another post-audit,
+validation, smoke, or evidence write enters the universal terminal-plus-status rollback:
+create/fsync `status.rollback-prepared.json`, restore the five terminal targets with the
+changelog index last, then restore all 21 status targets from the still-prepared status
+journal with the board last. Only after complete all-old verification and journal
+cleanup may a fresh ordinary repair invocation run. A malformed/mismatched terminal
+graph fails closed.
 `Closure Pending` is strict `generation <positive-safe-integer> / <12-lower-hex-token>`;
 startup seeds the in-memory counter from that receipt or the shared terminal
 `Closure Generation`, so the next `runClosure` generation is strictly greater even
@@ -1656,12 +3218,15 @@ uses exact Repair Pending and the anchor repair-authorization chain.
 Final closure drift has at most two fresh rounds and is remedial, not throw-only.
 Its audit lenses use the same strict sequential dispatch and fail-stop/no-retry boundary
 as the pre-smoke post-audit.
-Any non-clean round reopens the closure leaf/direct child and root; it additionally
-reopens only a source leaf/direct child named by a verified source-owner finding.
-Unrelated completed descendants remain Done and unlanded descendants remain To Do.
-Source-owner findings keep that exact leaf/child In Progress, fix only its owned files,
-persist their Repair Pending generation/token, re-gate to a matching fresh Revalidation,
-and run full validation, then stop the current invocation under durable Closure Pending.
+Any non-clean round first creates/fsyncs `status.rollback-prepared.json` and restores
+the complete 21-target old generation from the still-prepared status journal, with the
+board last. Every armed/request-capable bridge helper must already be absent before
+request cleanup. Only after all old bytes/modes/hashes are verified and the status
+journal is deterministically cleaned may the ordinary repair path name the verified
+source owner, fix only its owned files, persist its pending evidence, re-gate to a
+matching fresh Revalidation, and run full validation. All 20 task contracts remain in
+their journaled old In Progress generation until a later complete status transaction;
+the current invocation stops after repair validation.
 A later fresh top-level run may execute its one smoke plus evidence audit and refresh the
 changelog evidence block before re-closing; the repairing invocation never executes a
 second smoke. Runtime/evidence-only findings are
@@ -1772,7 +3337,10 @@ const SMOKE_FIXTURE_BLUEPRINT = deepFreezeExact({
     login: "/admin/login",
     screens: "/admin/advanced/custom-screens",
     builder: { template: "/admin/advanced/custom-screens/{screen.id}", captures: ["screen.id"] },
-    records: { template: "/admin/advanced/custom-screens/{screen.id}/entries", captures: ["screen.id"] },
+    records: {
+      template: "/admin/advanced/custom-screens/{screen.id}/entries",
+      captures: ["screen.id"],
+    },
     entry: {
       template: "/admin/advanced/custom-screens/{screen.id}/entries/{entry.id}",
       captures: ["screen.id", "entry.id"],
@@ -1969,73 +3537,166 @@ const SMOKE_FIXTURE_BLUEPRINT = deepFreezeExact({
         interactionMode: "inline",
         document: {
           schemaVersion: 1,
-          sections: [{
-            id: `${PREFIX}-section-main`,
-            type: "section",
-            data: {},
-            blocks: [
-              { id: `${PREFIX}-race-image`, type: "image", data: { label: `${PREFIX} race image` } },
-              { id: `${PREFIX}-media-field`, type: "field", data: { field: "mediaAsset", label: "Media asset" } },
-              { id: `${PREFIX}-headline-field`, type: "field", data: { field: "headline", label: "Headline" } },
-              { id: `${PREFIX}-relation-a-field`, type: "field", data: { field: "relationA", label: "Related A" } },
-              { id: `${PREFIX}-relation-b-field`, type: "field", data: { field: "relationB", label: "Related B" } },
-              {
-                id: `${PREFIX}-related-list-a`,
-                type: "related-list",
-                data: {
-                  label: "Related A",
-                  target: `${PREFIX}-related-a`,
-                  displayField: "title",
-                  variant: "cards",
-                  limit: 10,
-                  field: "relationA",
+          sections: [
+            {
+              id: `${PREFIX}-section-main`,
+              type: "section",
+              data: {},
+              blocks: [
+                {
+                  id: `${PREFIX}-race-image`,
+                  type: "image",
+                  data: { label: `${PREFIX} race image` },
                 },
-              },
-              {
-                id: `${PREFIX}-related-list-b`,
-                type: "related-list",
-                data: {
-                  label: "Related B",
-                  target: `${PREFIX}-related-b`,
-                  displayField: "title",
-                  variant: "cards",
-                  limit: 10,
-                  field: "relationB",
+                {
+                  id: `${PREFIX}-media-field`,
+                  type: "field",
+                  data: { field: "mediaAsset", label: "Media asset" },
                 },
-              },
-              {
-                id: `${PREFIX}-read-only-field`,
-                type: "field",
-                data: { field: "primaryUrl", label: "Read-only URL" },
-              },
-              {
-                id: `${PREFIX}-space-group`,
-                type: "field-group",
-                data: { title: "Nested controls", description: "" },
-                slots: {
-                  content: [
-                    { id: `${PREFIX}-space-note-field`, type: "field", data: { field: "unrelatedNote", label: "Unrelated note" } },
-                    {
-                      id: `${PREFIX}-space-link`,
-                      type: "button",
-                      data: { label: "Nested destination", action: "link", href: `#${PREFIX}-nested` },
-                    },
-                  ],
+                {
+                  id: `${PREFIX}-headline-field`,
+                  type: "field",
+                  data: { field: "headline", label: "Headline" },
                 },
-              },
-            ],
-          }],
+                {
+                  id: `${PREFIX}-relation-a-field`,
+                  type: "field",
+                  data: { field: "relationA", label: "Related A" },
+                },
+                {
+                  id: `${PREFIX}-relation-b-field`,
+                  type: "field",
+                  data: { field: "relationB", label: "Related B" },
+                },
+                {
+                  id: `${PREFIX}-related-list-a`,
+                  type: "related-list",
+                  data: {
+                    label: "Related A",
+                    target: `${PREFIX}-related-a`,
+                    displayField: "title",
+                    variant: "cards",
+                    limit: 10,
+                    field: "relationA",
+                  },
+                },
+                {
+                  id: `${PREFIX}-related-list-b`,
+                  type: "related-list",
+                  data: {
+                    label: "Related B",
+                    target: `${PREFIX}-related-b`,
+                    displayField: "title",
+                    variant: "cards",
+                    limit: 10,
+                    field: "relationB",
+                  },
+                },
+                {
+                  id: `${PREFIX}-read-only-field`,
+                  type: "field",
+                  data: { field: "primaryUrl", label: "Read-only URL" },
+                },
+                {
+                  id: `${PREFIX}-space-group`,
+                  type: "field-group",
+                  data: { title: "Nested controls", description: "" },
+                  slots: {
+                    content: [
+                      {
+                        id: `${PREFIX}-space-note-field`,
+                        type: "field",
+                        data: { field: "unrelatedNote", label: "Unrelated note" },
+                      },
+                      {
+                        id: `${PREFIX}-space-link`,
+                        type: "button",
+                        data: {
+                          label: "Nested destination",
+                          action: "link",
+                          href: `#${PREFIX}-nested`,
+                        },
+                      },
+                    ],
+                  },
+                },
+              ],
+            },
+          ],
         },
         bindings: [
-          { id: `${PREFIX}-bind-race-image`, blockId: `${PREFIX}-race-image`, propPath: "src", source: "entry", field: "raceImageId", mode: "read" },
-          { id: `${PREFIX}-bind-media-field`, blockId: `${PREFIX}-media-field`, propPath: "value", source: "entry", field: "mediaAsset", mode: "readwrite" },
-          { id: `${PREFIX}-bind-headline`, blockId: `${PREFIX}-headline-field`, propPath: "value", source: "entry", field: "headline", mode: "readwrite" },
-          { id: `${PREFIX}-bind-relation-a-field`, blockId: `${PREFIX}-relation-a-field`, propPath: "value", source: "entry", field: "relationA", mode: "readwrite" },
-          { id: `${PREFIX}-bind-relation-b-field`, blockId: `${PREFIX}-relation-b-field`, propPath: "value", source: "entry", field: "relationB", mode: "readwrite" },
-          { id: `${PREFIX}-bind-related-a`, blockId: `${PREFIX}-related-list-a`, propPath: "items", source: "entry", field: "relationA", mode: "read" },
-          { id: `${PREFIX}-bind-related-b`, blockId: `${PREFIX}-related-list-b`, propPath: "items", source: "entry", field: "relationB", mode: "read" },
-          { id: `${PREFIX}-bind-read-only`, blockId: `${PREFIX}-read-only-field`, propPath: "value", source: "entry", field: "primaryUrl", mode: "read" },
-          { id: `${PREFIX}-bind-space-note`, blockId: `${PREFIX}-space-note-field`, propPath: "value", source: "entry", field: "unrelatedNote", mode: "readwrite" },
+          {
+            id: `${PREFIX}-bind-race-image`,
+            blockId: `${PREFIX}-race-image`,
+            propPath: "src",
+            source: "entry",
+            field: "raceImageId",
+            mode: "read",
+          },
+          {
+            id: `${PREFIX}-bind-media-field`,
+            blockId: `${PREFIX}-media-field`,
+            propPath: "value",
+            source: "entry",
+            field: "mediaAsset",
+            mode: "readwrite",
+          },
+          {
+            id: `${PREFIX}-bind-headline`,
+            blockId: `${PREFIX}-headline-field`,
+            propPath: "value",
+            source: "entry",
+            field: "headline",
+            mode: "readwrite",
+          },
+          {
+            id: `${PREFIX}-bind-relation-a-field`,
+            blockId: `${PREFIX}-relation-a-field`,
+            propPath: "value",
+            source: "entry",
+            field: "relationA",
+            mode: "readwrite",
+          },
+          {
+            id: `${PREFIX}-bind-relation-b-field`,
+            blockId: `${PREFIX}-relation-b-field`,
+            propPath: "value",
+            source: "entry",
+            field: "relationB",
+            mode: "readwrite",
+          },
+          {
+            id: `${PREFIX}-bind-related-a`,
+            blockId: `${PREFIX}-related-list-a`,
+            propPath: "items",
+            source: "entry",
+            field: "relationA",
+            mode: "read",
+          },
+          {
+            id: `${PREFIX}-bind-related-b`,
+            blockId: `${PREFIX}-related-list-b`,
+            propPath: "items",
+            source: "entry",
+            field: "relationB",
+            mode: "read",
+          },
+          {
+            id: `${PREFIX}-bind-read-only`,
+            blockId: `${PREFIX}-read-only-field`,
+            propPath: "value",
+            source: "entry",
+            field: "primaryUrl",
+            mode: "read",
+          },
+          {
+            id: `${PREFIX}-bind-space-note`,
+            blockId: `${PREFIX}-space-note-field`,
+            propPath: "value",
+            source: "entry",
+            field: "unrelatedNote",
+            mode: "readwrite",
+          },
         ],
       },
     },
@@ -2059,32 +3720,38 @@ const SMOKE_FIXTURE_BLUEPRINT = deepFreezeExact({
         interactionMode: "inline",
         document: {
           schemaVersion: 1,
-          sections: [{
-            id: `${PREFIX}-retry-section`,
-            type: "section",
-            data: {},
-            blocks: [{
-              id: `${PREFIX}-retry-related-list-failure`,
-              type: "related-list",
-              data: {
-                label: "Related failure retry",
-                target: `${PREFIX}-related-failure`,
-                displayField: "title",
-                variant: "cards",
-                limit: 10,
-                field: "relationFailure",
-              },
-            }],
-          }],
+          sections: [
+            {
+              id: `${PREFIX}-retry-section`,
+              type: "section",
+              data: {},
+              blocks: [
+                {
+                  id: `${PREFIX}-retry-related-list-failure`,
+                  type: "related-list",
+                  data: {
+                    label: "Related failure retry",
+                    target: `${PREFIX}-related-failure`,
+                    displayField: "title",
+                    variant: "cards",
+                    limit: 10,
+                    field: "relationFailure",
+                  },
+                },
+              ],
+            },
+          ],
         },
-        bindings: [{
-          id: `${PREFIX}-retry-bind-related-failure`,
-          blockId: `${PREFIX}-retry-related-list-failure`,
-          propPath: "items",
-          source: "entry",
-          field: "relationFailure",
-          mode: "read",
-        }],
+        bindings: [
+          {
+            id: `${PREFIX}-retry-bind-related-failure`,
+            blockId: `${PREFIX}-retry-related-list-failure`,
+            propPath: "items",
+            source: "entry",
+            field: "relationFailure",
+            mode: "read",
+          },
+        ],
       },
     },
   },
@@ -2100,7 +3767,10 @@ const SMOKE_FIXTURE_BLUEPRINT = deepFreezeExact({
     dirtyText: runtimeBlock("palette.dirty-text", "text"),
   },
   tabs: {
-    defaults: [{ id: "tab-1", label: "Tab 1" }, { id: "tab-2", label: "Tab 2" }],
+    defaults: [
+      { id: "tab-1", label: "Tab 1" },
+      { id: "tab-2", label: "Tab 2" },
+    ],
     added: { id: "tab-3", label: "Tab 3" },
     authoredLabels: { "tab-1": "Overview", "tab-2": "Details", "tab-3": "History" },
     text: {
@@ -2123,10 +3793,26 @@ const SMOKE_FIXTURE_BLUEPRINT = deepFreezeExact({
       },
       kind: "malformed",
     },
-    "related-first-failure": { method: "GET", pattern: `/admin/api/content/${PREFIX}-related-failure/entries`, kind: "malformed" },
-    "related-a-refresh": { method: "GET", pattern: `/admin/api/content/${PREFIX}-related-a/entries`, kind: "delayed" },
-    "preference-a-read-refresh": { method: "GET", pattern: "/admin/api/user-settings/customScreens.entry.preferences", kind: "delayed" },
-    "preference-a-write-exit": { method: "PATCH", pattern: "/admin/api/user-settings/customScreens.entry.preferences", kind: "delayed" },
+    "related-first-failure": {
+      method: "GET",
+      pattern: `/admin/api/content/${PREFIX}-related-failure/entries`,
+      kind: "malformed",
+    },
+    "related-a-refresh": {
+      method: "GET",
+      pattern: `/admin/api/content/${PREFIX}-related-a/entries`,
+      kind: "delayed",
+    },
+    "preference-a-read-refresh": {
+      method: "GET",
+      pattern: "/admin/api/user-settings/customScreens.entry.preferences",
+      kind: "delayed",
+    },
+    "preference-a-write-exit": {
+      method: "PATCH",
+      pattern: "/admin/api/user-settings/customScreens.entry.preferences",
+      kind: "delayed",
+    },
   },
   screenshotPaths: [
     "_docs/_workflows/_smoke/task-540-wf540smoke-button-image-light.png",
@@ -2314,24 +4000,56 @@ unrelated nodes:
 
 ```ts
 assertExactKeysRecursively(SMOKE_FIXTURE_BLUEPRINT, FIXTURE_BLUEPRINT_SCHEMA);
-assertSetEqual(Object.keys(contentTypes), [
-  "editable", "relatedA", "relatedB", "relatedFailure",
-]);
-assertSetEqual(editable.fields.map(({ name }) => name), [
-  "primaryUrl", "secondaryUrl", "headline", "raceImageId", "mediaAsset",
-  "relationA", "relationB", "relationFailure", "unrelatedNote",
-]);
-assertDeepEqual(editable.fields.map(({ id }) => id), [
-  "field-primaryUrl", "field-secondaryUrl", "field-headline", "field-raceImageId",
-  "field-mediaAsset", "field-relationA", "field-relationB",
-  "field-relationFailure", "field-unrelatedNote",
-]);
-assertDeepEqual(relatedA.fields.map(({ id }) => id), ["field-label"]);
-assertDeepEqual(relatedB.fields.map(({ id }) => id), ["field-label"]);
-assertDeepEqual(relatedFailure.fields.map(({ id }) => id), ["field-label"]);
+assertSetEqual(Object.keys(contentTypes), ["editable", "relatedA", "relatedB", "relatedFailure"]);
+assertSetEqual(
+  editable.fields.map(({ name }) => name),
+  [
+    "primaryUrl",
+    "secondaryUrl",
+    "headline",
+    "raceImageId",
+    "mediaAsset",
+    "relationA",
+    "relationB",
+    "relationFailure",
+    "unrelatedNote",
+  ]
+);
+assertDeepEqual(
+  editable.fields.map(({ id }) => id),
+  [
+    "field-primaryUrl",
+    "field-secondaryUrl",
+    "field-headline",
+    "field-raceImageId",
+    "field-mediaAsset",
+    "field-relationA",
+    "field-relationB",
+    "field-relationFailure",
+    "field-unrelatedNote",
+  ]
+);
+assertDeepEqual(
+  relatedA.fields.map(({ id }) => id),
+  ["field-label"]
+);
+assertDeepEqual(
+  relatedB.fields.map(({ id }) => id),
+  ["field-label"]
+);
+assertDeepEqual(
+  relatedFailure.fields.map(({ id }) => id),
+  ["field-label"]
+);
 assertExactKeys(entry, [
-  "id", "title", "slug", "baseline", "contentDraft", "presentationDraft",
-  "relatedUnrelatedDraft", "spacePhrase",
+  "id",
+  "title",
+  "slug",
+  "baseline",
+  "contentDraft",
+  "presentationDraft",
+  "relatedUnrelatedDraft",
+  "spacePhrase",
 ]);
 assertExactKeys(relatedEntries.a1, ["id", "title", "slug", "updatedTitle", "data"]);
 for (const relatedEntry of [
@@ -2343,8 +4061,11 @@ for (const relatedEntry of [
   assertExactKeys(relatedEntry, ["id", "title", "slug", "data"]);
 }
 assertSetEqual(allEntrySlugs(), [
-  `${PREFIX}-editable-entry`, `${PREFIX}-related-a-one`, `${PREFIX}-related-a-two`,
-  `${PREFIX}-related-b-one`, `${PREFIX}-related-b-two`,
+  `${PREFIX}-editable-entry`,
+  `${PREFIX}-related-a-one`,
+  `${PREFIX}-related-a-two`,
+  `${PREFIX}-related-b-one`,
+  `${PREFIX}-related-b-two`,
   `${PREFIX}-related-failure-one`,
 ]);
 assertEveryEntrySlugIsSafeAndTaskPrefixed();
@@ -2388,21 +4109,32 @@ assertDeepEqual(roundTrippedEntrySlugs(), {
 for (const contentType of [editable, relatedA, relatedB, relatedFailure]) {
   assertDeepEqual(
     fieldsFromSchema(capturedSchemaFor(contentType)).map(({ id, name }) => ({ id, name })),
-    contentType.fields.map(({ id, name }) => ({ id, name })),
+    contentType.fields.map(({ id, name }) => ({ id, name }))
   );
 }
 assertContentTypeCreateBodiesPersistNamesAndConfigurationButNoFieldIds();
 assertSetEqual(preseededDocumentBlockIds(), [
-  `${PREFIX}-race-image`, `${PREFIX}-media-field`, `${PREFIX}-headline-field`,
-  `${PREFIX}-relation-a-field`, `${PREFIX}-relation-b-field`,
-  `${PREFIX}-related-list-a`, `${PREFIX}-related-list-b`, `${PREFIX}-read-only-field`,
+  `${PREFIX}-race-image`,
+  `${PREFIX}-media-field`,
+  `${PREFIX}-headline-field`,
+  `${PREFIX}-relation-a-field`,
+  `${PREFIX}-relation-b-field`,
+  `${PREFIX}-related-list-a`,
+  `${PREFIX}-related-list-b`,
+  `${PREFIX}-read-only-field`,
   `${PREFIX}-space-group`,
-  `${PREFIX}-space-note-field`, `${PREFIX}-space-link`,
+  `${PREFIX}-space-note-field`,
+  `${PREFIX}-space-link`,
 ]);
 assertSetEqual(bindingIds(), [
-  `${PREFIX}-bind-race-image`, `${PREFIX}-bind-media-field`, `${PREFIX}-bind-headline`,
-  `${PREFIX}-bind-relation-a-field`, `${PREFIX}-bind-relation-b-field`,
-  `${PREFIX}-bind-related-a`, `${PREFIX}-bind-related-b`, `${PREFIX}-bind-read-only`,
+  `${PREFIX}-bind-race-image`,
+  `${PREFIX}-bind-media-field`,
+  `${PREFIX}-bind-headline`,
+  `${PREFIX}-bind-relation-a-field`,
+  `${PREFIX}-bind-relation-b-field`,
+  `${PREFIX}-bind-related-a`,
+  `${PREFIX}-bind-related-b`,
+  `${PREFIX}-bind-read-only`,
   `${PREFIX}-bind-space-note`,
 ]);
 assertSetEqual(retryScreenDocumentBlockIds(), [`${PREFIX}-retry-related-list-failure`]);
@@ -2427,12 +4159,15 @@ assertCanonicalPngFixture(media.uploadFixture, {
   sha256: "431ced6916a2a21a156e38701afe55bbd7f88969fbbfc56d7fe099d47f265460",
 });
 assertSet030UsesSoleBlueprintUploadAuthorityAndNoPathOrAlternateBytes();
-assertDeepEqual(tabs.defaults.map(({ id }) => id), ["tab-1", "tab-2"]);
+assertDeepEqual(
+  tabs.defaults.map(({ id }) => id),
+  ["tab-1", "tab-2"]
+);
 assertDeepEqual([tabs.added.id], ["tab-3"]);
 assertCardinality(SMOKE_FIXTURE_BLUEPRINT.screenshotPaths, 13);
 assertEveryCanonicalScreenshotPathMatches(
   SMOKE_FIXTURE_BLUEPRINT.screenshotPaths,
-  /^_docs\/_workflows\/_smoke\/task-540-[a-z0-9-]+\.png$/,
+  /^_docs\/_workflows\/_smoke\/task-540-[a-z0-9-]+\.png$/
 );
 assertSetEqual(Object.keys(routes), REQUIRED_ROUTE_KEYS);
 assertSetEqual(publicCaptureRefNames(), REQUIRED_CAPTURE_NAMES);
@@ -2457,8 +4192,7 @@ type EditableContentTypeDetailProjection = Readonly<{
   schema: ContentTypeSchema;
 }>;
 
-const EDITABLE_CONTENT_TYPE_DETAIL_AUTHORITY_ID =
-  "editable-content-type-detail" as const;
+const EDITABLE_CONTENT_TYPE_DETAIL_AUTHORITY_ID = "editable-content-type-detail" as const;
 const EDITABLE_CONTENT_TYPE_DETAIL_PRODUCER_ACTION_IDS = Object.freeze([
   "set-017-editable-type-proof",
 ]);
@@ -2466,29 +4200,20 @@ const EDITABLE_CONTENT_TYPE_DETAIL_CONSUMER_ACTION_IDS = Object.freeze([
   "set-035-screen-create",
   "set-037-retry-screen-create",
 ]);
-const PRIVATE_EDITABLE_CONTENT_TYPE_DETAIL =
-  new WeakMap<PrivateExecutionAuthority, EditableContentTypeDetailProjection>();
+const PRIVATE_EDITABLE_CONTENT_TYPE_DETAIL = new WeakMap<
+  PrivateExecutionAuthority,
+  EditableContentTypeDetailProjection
+>();
 
-function bindEditableContentTypeDetail(
-  executionAuthority,
-  actionId,
-  output,
-) {
+function bindEditableContentTypeDetail(executionAuthority, actionId, output) {
   assert(actionId === "set-017-editable-type-proof");
   assertExactKeys(output, ["id", "slug", "name", "schema"]);
   assertEditableContentTypeDetailProjection(output);
   assert(!PRIVATE_EDITABLE_CONTENT_TYPE_DETAIL.has(executionAuthority));
-  PRIVATE_EDITABLE_CONTENT_TYPE_DETAIL.set(
-    executionAuthority,
-    deepFreezeExact(output),
-  );
+  PRIVATE_EDITABLE_CONTENT_TYPE_DETAIL.set(executionAuthority, deepFreezeExact(output));
 }
 
-function readEditableContentTypeDetail(
-  executionAuthority,
-  actionId,
-  authorityId,
-) {
+function readEditableContentTypeDetail(executionAuthority, actionId, authorityId) {
   assert(authorityId === EDITABLE_CONTENT_TYPE_DETAIL_AUTHORITY_ID);
   assert(EDITABLE_CONTENT_TYPE_DETAIL_CONSUMER_ACTION_IDS.includes(actionId));
   const value = PRIVATE_EDITABLE_CONTENT_TYPE_DETAIL.get(executionAuthority);
@@ -2498,16 +4223,15 @@ function readEditableContentTypeDetail(
 
 assertSetEqual(
   privateProjectionProducerActionIdsActuallyRegistered(),
-  EDITABLE_CONTENT_TYPE_DETAIL_PRODUCER_ACTION_IDS,
+  EDITABLE_CONTENT_TYPE_DETAIL_PRODUCER_ACTION_IDS
 );
 assertSetEqual(
   privateProjectionConsumerActionIdsActuallyRegistered(),
-  EDITABLE_CONTENT_TYPE_DETAIL_CONSUMER_ACTION_IDS,
+  EDITABLE_CONTENT_TYPE_DETAIL_CONSUMER_ACTION_IDS
 );
-assertSetEqual(
-  listViewDescriptorPrivateProjectionAuthorityIds(),
-  [EDITABLE_CONTENT_TYPE_DETAIL_AUTHORITY_ID],
-);
+assertSetEqual(listViewDescriptorPrivateProjectionAuthorityIds(), [
+  EDITABLE_CONTENT_TYPE_DETAIL_AUTHORITY_ID,
+]);
 assertCardinality(listViewDescriptors(), 2);
 assertNoPrivateProjectionInPublicCapturesPlanEvidenceReceiptsOrErrors();
 
@@ -2515,7 +4239,7 @@ async function materializeScreenCreateBody(
   executionAuthority,
   currentActionId,
   boundBridgeDescriptor,
-  blueprint,
+  blueprint
 ) {
   assertDescriptorOwnedByCurrentRuntimeHandler(boundBridgeDescriptor);
   const { listView: descriptor, ...definitionWithoutListView } = blueprint.definitionTemplate;
@@ -2526,17 +4250,27 @@ async function materializeScreenCreateBody(
   const contentTypeDetail = readEditableContentTypeDetail(
     executionAuthority,
     currentActionId,
-    descriptor.privateProjectionAuthorityId,
+    descriptor.privateProjectionAuthorityId
   );
   const createBody = await executePrivateBunBridge(boundBridgeDescriptor, {
+    bodyWithoutDefinition: {
+      contentTypeId: contentTypeDetail.id,
+      name: blueprint.name,
+      showInSidebar: blueprint.showInSidebar,
+      sidebarLabel: blueprint.sidebarLabel,
+      status: blueprint.status,
+    },
     contentType: contentTypeDetail,
-    createFields: exactCreateFieldsForBlueprint(blueprint),
     definitionWithoutListView,
   });
   assertExactKeys(createBody, exactCustomScreenCreateBodyKeysForBlueprint(blueprint));
   const definition = deepFreezeExact(createBody.definition);
   assertExactKeys(definition.listView, [
-    "columns", "filters", "defaultSort", "bulkActions", "rowTemplate",
+    "columns",
+    "filters",
+    "defaultSort",
+    "bulkActions",
+    "rowTemplate",
   ]);
   assertDeepEqual(createBody.contentTypeId, contentTypeDetail.id);
   return deepFreezeExact(createBody);
@@ -2699,8 +4433,13 @@ keys, so a generic family cannot hide a second dispatch switch:
 type RuntimeOperationId = `runtime/${RuntimeActionId}`;
 type BrowserRunCodeSourceId = `run-code/${BrowserRunCodeActionId}`;
 const BROWSER_NATIVE_OPERATION_IDS = Object.freeze([
-  "open-about-blank", "fill-secret", "tab-new", "tab-select", "tab-close",
-  "route-list", "close",
+  "open-about-blank",
+  "fill-secret",
+  "tab-new",
+  "tab-select",
+  "tab-close",
+  "route-list",
+  "close",
 ]);
 ```
 
@@ -2723,13 +4462,14 @@ accepted from the plan, an action row, a ref, a callback, or executor input:
 type PrivateBunBridgeDescriptor = Readonly<{
   operationId: BunBridgeOperationId;
   file: "bun";
-  args: readonly [
-    "--no-env-file", "--cwd", CanonicalCoreRoot, "--eval", ImmutableSourceBytes,
-  ];
+  args: readonly ["--no-env-file", "--cwd", CanonicalCoreRoot, "--eval", ImmutableSourceBytes];
   cwd: CanonicalRoot;
   envProfileId:
-    | "schema-only" | "database" | "bootstrap-preflight"
-    | "user-identity-proof" | "user-provisioning";
+    | "schema-only"
+    | "database"
+    | "bootstrap-preflight"
+    | "user-identity-proof"
+    | "user-provisioning";
   inputSchemaId: BunBridgeInputSchemaId;
   outputSchemaId: BunBridgeOutputSchemaId;
   timeoutMs: 30_000;
@@ -2772,38 +4512,39 @@ the descriptor's frozen profile:
 ```ts
 const BUN_BRIDGE_ENV_PROFILES = deepFreezeExact({
   "schema-only": {
-    requiredInherited: ["PATH"], requiredRepo: [], optionalRepo: [], fixed: {},
+    requiredInherited: ["PATH"],
+    requiredRepo: [],
+    optionalRepo: [],
+    fixed: {},
   },
   database: {
-    requiredInherited: ["PATH"], requiredRepo: ["DATABASE_URL"], optionalRepo: [],
+    requiredInherited: ["PATH"],
+    requiredRepo: ["DATABASE_URL"],
+    optionalRepo: [],
     fixed: { DB_POOL_MAX: "1" },
   },
   "bootstrap-preflight": {
     requiredInherited: ["PATH"],
-    requiredRepo: [
-      "DATABASE_URL", "PII_HASH_KEY", "PII_ENC_KEY", "ADMIN_EMAIL",
-    ],
-    optionalRepo: [], fixed: { DB_POOL_MAX: "1" },
+    requiredRepo: ["DATABASE_URL", "PII_HASH_KEY", "PII_ENC_KEY", "ADMIN_EMAIL"],
+    optionalRepo: [],
+    fixed: { DB_POOL_MAX: "1" },
   },
   "user-identity-proof": {
     requiredInherited: ["PATH"],
     requiredRepo: ["DATABASE_URL", "PII_HASH_KEY", "PII_ENC_KEY"],
-    optionalRepo: [], fixed: { DB_POOL_MAX: "1" },
+    optionalRepo: [],
+    fixed: { DB_POOL_MAX: "1" },
   },
   "user-provisioning": {
     requiredInherited: ["PATH"],
-    requiredRepo: [
-      "DATABASE_URL", "PII_HASH_KEY", "PII_ENC_KEY", "ADMIN_PASSWORD",
-    ],
+    requiredRepo: ["DATABASE_URL", "PII_HASH_KEY", "PII_ENC_KEY", "ADMIN_PASSWORD"],
     optionalRepo: ["AUTH_PASSWORD_PEPPER"],
     fixed: { DB_POOL_MAX: "1" },
   },
 });
 
 const REQUIRED_BUN_BRIDGE_RUNTIME_OPERATION_IDS_BY_ENV_PROFILE = deepFreezeExact({
-  "bootstrap-preflight": [
-    "runtime/set-001-storage-preflight",
-  ],
+  "bootstrap-preflight": ["runtime/set-001-storage-preflight"],
   database: [
     "runtime/set-004b-session-policy-preflight",
     "runtime/set-004c-auth-rate-budget-preflight",
@@ -2813,37 +4554,28 @@ const REQUIRED_BUN_BRIDGE_RUNTIME_OPERATION_IDS_BY_ENV_PROFILE = deepFreezeExact
     "runtime/set-043-preference-b",
     "runtime/set-044-preference-b-proof",
   ],
-  "user-identity-proof": [
-    "runtime/set-013-user-a-proof",
-    "runtime/set-015-user-b-proof",
-  ],
-  "user-provisioning": [
-    "runtime/set-012-user-a-create",
-    "runtime/set-014-user-b-create",
-  ],
-  "schema-only": [
-    "runtime/set-035-screen-create",
-    "runtime/set-037-retry-screen-create",
-  ],
+  "user-identity-proof": ["runtime/set-013-user-a-proof", "runtime/set-015-user-b-proof"],
+  "user-provisioning": ["runtime/set-012-user-a-create", "runtime/set-014-user-b-create"],
+  "schema-only": ["runtime/set-035-screen-create", "runtime/set-037-retry-screen-create"],
 });
 assertCardinality(
   Object.values(REQUIRED_BUN_BRIDGE_RUNTIME_OPERATION_IDS_BY_ENV_PROFILE).flat(),
-  14,
+  14
 );
 assertUnique(Object.values(REQUIRED_BUN_BRIDGE_RUNTIME_OPERATION_IDS_BY_ENV_PROFILE).flat());
 assertSetEqual(
   Object.keys(BUN_BRIDGE_ENV_PROFILES),
-  Object.keys(REQUIRED_BUN_BRIDGE_RUNTIME_OPERATION_IDS_BY_ENV_PROFILE),
+  Object.keys(REQUIRED_BUN_BRIDGE_RUNTIME_OPERATION_IDS_BY_ENV_PROFILE)
 );
 assertSetEqual(
   Object.values(REQUIRED_BUN_BRIDGE_RUNTIME_OPERATION_IDS_BY_ENV_PROFILE).flat(),
-  runtimeHandlerIdsWithPrivateBunDescriptor(),
+  runtimeHandlerIdsWithPrivateBunDescriptor()
 );
 assertCardinality(
   runtimeExecutableActionIds().filter(
-    (id) => !runtimeHandlerIdsWithPrivateBunDescriptor().includes(`runtime/${id}`),
+    (id) => !runtimeHandlerIdsWithPrivateBunDescriptor().includes(`runtime/${id}`)
   ),
-  62,
+  62
 );
 ```
 
@@ -2958,16 +4690,22 @@ const REQUIRED_EXECUTABLE_TYPE_COUNTS = deepFreezeExact({
   "browser-global-list": 1,
 });
 const REQUIRED_NATIVE_ACTION_IDS = Object.freeze([
-  "set-005-open", "set-009-login-email", "set-010-login-password",
-  "ru-042-a-password", "ru-068-b-password", "ru-078-a2-password",
-  "ru-092-b2-password", "ru-104-a3-password",
-  "rc-019-related-tab-new", "rc-022-related-tab-origin",
-  "rc-044-close-second-tab", "rc-045-origin-proof",
-  "end-002-route-list", "end-006-close",
+  "set-005-open",
+  "set-009-login-email",
+  "set-010-login-password",
+  "ru-042-a-password",
+  "ru-068-b-password",
+  "ru-078-a2-password",
+  "ru-092-b2-password",
+  "ru-104-a3-password",
+  "rc-019-related-tab-new",
+  "rc-022-related-tab-origin",
+  "rc-044-close-second-tab",
+  "rc-045-origin-proof",
+  "end-002-route-list",
+  "end-006-close",
 ]);
-const REQUIRED_GLOBAL_LIST_ACTION_IDS = Object.freeze([
-  "end-007-session-absence",
-]);
+const REQUIRED_GLOBAL_LIST_ACTION_IDS = Object.freeze(["end-007-session-absence"]);
 ```
 
 The seven credential fills above are the only native fills. The other 16 fills, all
@@ -3099,8 +4837,7 @@ const S = deepFreezeExact({
   buttonAffordance: (id: string) =>
     `[data-screen-block-id="${id}"] [data-screen-button-affordance="true"]`,
   boundField: '[data-screen-bound-field="true"]',
-  fieldOption: (label: string, type: string) =>
-    `[role="option"]:text-is("${label} (${type})")`,
+  fieldOption: (label: string, type: string) => `[role="option"]:text-is("${label} (${type})")`,
   staticLink: 'button:text-is("Use static link")',
   staticLinkInput: 'input[placeholder="https://…"]',
   paragraph: 'textarea[placeholder="Paragraph text"]',
@@ -3144,15 +4881,12 @@ const S = deepFreezeExact({
     `[data-screen-block-id="${blockId}"] [role="textbox"][aria-label="${label}"]`,
   toneTrigger: '[data-presentation-control="tone"] button[role="combobox"]',
   muted: '[role="option"]:text-is("Muted")',
-  recordsLink: (screenId: string) =>
-    `a[href="/admin/advanced/custom-screens/${screenId}/entries"]`,
+  recordsLink: (screenId: string) => `a[href="/admin/advanced/custom-screens/${screenId}/entries"]`,
   recordActions: 'button[aria-label="Record actions"]',
   editRecord: '[role="menuitem"]:text-is("Edit record")',
-  builderLink: (screenId: string) =>
-    `a[href="/admin/advanced/custom-screens/${screenId}"]`,
+  builderLink: (screenId: string) => `a[href="/admin/advanced/custom-screens/${screenId}"]`,
   userMenu: (name: string) => `header button:has(span.block.text-sm:text-is("${name}"))`,
-  bootstrapUserMenu:
-    'header button[data-slot="dropdown-menu-trigger"]:has(span.block.text-sm)',
+  bootstrapUserMenu: 'header button[data-slot="dropdown-menu-trigger"]:has(span.block.text-sm)',
   signOut: '[role="menuitem"]:text-is("Sign out")',
   colorMode: 'button[aria-label="Toggle dark mode"]',
   panelHide: 'button[aria-label="Hide panel"][aria-pressed="true"]',
@@ -3488,392 +5222,392 @@ or rename rows.
 
 #### Setup and fixture acquisition
 
-| ID | Page | Kind / exact builder | Precondition -> captured output -> postcondition | Dependencies / route transition |
-|---|---|---|---|---|
-| `set-001-storage-preflight` | runtime | `storage(preflight-and-snapshot)` | helper stopped/no task-UA request issued -> first sub-proof requires exact persisted `setup.completed:true`, freezes the exact canonical bootstrap Admin identity/role, exact task-UA access/audit-log and complete bounded session-row baselines, plus proof-only complete `site.contentRoutes` row/absence with all task slugs absent; validates exact-one persisted `storage.driver:"local"` and private `storage.local.dir` rows equal top-level local config + `MEDIA_STORAGE`/`MEDIA_DIR` absent, then freezes the bound storage DB/root baseline; egress exact missing row/file zero only -> setup/bootstrap/routes/storage proven | `- / absent -> absent` |
-| `set-002-helper-launch` | runtime | `host(helper-launch)` | storage proven, ports absent -> owned PID/lineage -> host starting | `set-001 / absent -> absent` |
-| `set-003-admin-health` | runtime | `health(admin)` | owned host -> status -> Admin healthy | `set-002 / absent -> absent` |
-| `set-004-front-health` | runtime | `health(front)` | Admin healthy -> status -> front healthy | `set-003 / absent -> absent` |
-| `set-004a-bot-protection-preflight` | runtime | `apiPublicRead(auth-bot-protection)` | host healthy/no login attempted -> strict four-key public response/private fields -> sanitized exact `{"enabled":false}` or infrastructure fail | `set-004 / absent -> absent` |
-| `set-004b-session-policy-preflight` | runtime | `settingsRead(session-policy)` | bot protection disabled -> WeakMap-private session policy + validated exact `security.csrf.headerName` -> sanitized exact `{"singleSession":false,"effectiveMaxPerUserAtLeast2":true}` or infrastructure fail | `set-004a-bot-protection-preflight / absent -> absent` |
-| `set-004c-auth-rate-budget-preflight` | runtime | `settingsRead(auth-rate-budget)` | session policy proven -> exact active auth bucket projection + frozen identity/window budget computation -> capacity proven or infrastructure fail | `set-004b-session-policy-preflight / absent -> absent` |
-| `set-005-open` | p1/0 | `open(about:blank)` | auth/session/rate preflights proven -> page identity -> original page open | `set-004c-auth-rate-budget-preflight / absent -> absent` |
-| `set-006-logger` | p1/0 | `logger-install` | blank original -> exact unique browser User-Agent applied before network + `true` -> immutable context logger/navigation/auth-challenge tracker | `set-005 / absent -> absent` |
-| `set-007-goto-login` | p1/0 | `goto(paths.screens)` | logger installed + setup preflight proven -> URL -> login only; wizard is forbidden | `set-006 / absent -> absent` |
-| `set-008-resize` | p1/0 | `resize(1280,900)` | login visible/wizard absent -> viewport -> 1280x900 | `set-007 / absent -> absent` |
-| `set-009-login-email` | p1/0 | `fill(S.loginEmail,$ADMIN_EMAIL)` | login visible -> discarded -> email filled | `set-008 / absent -> absent` |
-| `set-010-login-password` | p1/0 | `fill(S.loginPassword,$ADMIN_PASSWORD)` | email filled -> discarded -> credentials filled | `set-009 / absent -> absent` |
-| `set-011-login-submit` | p1/0 | `click(S.loginSubmit)` | credentials filled -> navigation -> bootstrap authenticated | `set-010 / absent -> absent` |
-| `set-011a-bootstrap-auth-settled` | p1/0 | `observe(bootstrap-auth-identity-settled)` | submit navigation started -> post-login Admin URL + positive-geometry `S.bootstrapUserMenu` -> bootstrap realm settled | `set-011 / absent -> absent` |
-| `set-011b-bootstrap-api-login` | runtime | `isolatedApiSessionLogin(bootstrap)` | bootstrap UI identity settled -> one login in empty isolated jar + exact session-row inventory -> isolated bootstrap API session acquired | `set-011a-bootstrap-auth-settled / absent -> absent` |
-| `set-011c-bootstrap-csrf-capture` | runtime | `isolatedApiSessionCsrfCapture(bootstrap)` | isolated bootstrap session acquired -> one CSRF request/private rotated capability -> bootstrap unsafe API actions authorized without changing the browser jar | `set-011b-bootstrap-api-login / absent -> absent` |
-| `set-012-user-a-create` | runtime | `fixture(create-user-a)` | bootstrap API capability proven -> captured server ID -> user A acquired | `set-011c-bootstrap-csrf-capture / absent -> absent` |
-| `set-013-user-a-proof` | runtime | `fixtureRead(user-a)` | user A acquired -> exact safe projection/Admin role -> user A proven | `set-012 / absent -> absent` |
-| `set-014-user-b-create` | runtime | `fixture(create-user-b)` | user A proven -> captured server ID -> user B acquired | `set-013 / absent -> absent` |
-| `set-015-user-b-proof` | runtime | `fixtureRead(user-b)` | user B acquired -> exact safe projection/Admin role -> users proven | `set-014 / absent -> absent` |
-| `set-016-editable-type-create` | runtime | `api(create-content-type-editable)` | users proven/exact names+configuration body without field IDs -> captured ID + exact authored slug -> editable schema acquired | `set-015 / absent -> absent` |
-| `set-017-editable-type-proof` | runtime | `apiRead(content-type-editable)` | editable schema acquired -> exact nine names/configs + canonical `fieldsFromSchema()` IDs -> editable schema proven | `set-016 / absent -> absent` |
-| `set-018-related-a-type-create` | runtime | `api(create-content-type-related-a)` | editable schema proven/exact names+configuration body without field IDs -> captured ID + exact authored slug -> A schema acquired | `set-017 / absent -> absent` |
-| `set-019-related-a-type-proof` | runtime | `apiRead(content-type-related-a)` | A schema acquired -> exact field/slug + canonical `field-label` reconstruction -> A schema proven | `set-018 / absent -> absent` |
-| `set-020-related-b-type-create` | runtime | `api(create-content-type-related-b)` | A schema proven/exact names+configuration body without field IDs -> captured ID + exact authored slug -> B schema acquired | `set-019 / absent -> absent` |
-| `set-021-related-b-type-proof` | runtime | `apiRead(content-type-related-b)` | B schema acquired -> exact field/slug + canonical `field-label` reconstruction -> all schemas proven | `set-020 / absent -> absent` |
-| `set-021a-related-failure-type-create` | runtime | `api(create-content-type-related-failure)` | A/B schemas proven/exact names+configuration body without field IDs -> captured ID + exact authored slug -> failure schema acquired | `set-021 / absent -> absent` |
-| `set-021b-related-failure-type-proof` | runtime | `apiRead(content-type-related-failure)` | failure schema acquired -> exact field/slug + canonical `field-label` reconstruction -> all four schemas proven | `set-021a-related-failure-type-create / absent -> absent` |
-| `set-022-related-a1-create` | runtime | `api(create-related-entry-a1)` | A schema proven/exact title+slug+data body -> captured ID -> A1 acquired | `set-021b-related-failure-type-proof / absent -> absent` |
-| `set-023-related-a1-proof` | runtime | `apiRead(related-entry-a1)` | A1 acquired -> exact title/slug/data -> A1 proven | `set-022 / absent -> absent` |
-| `set-024-related-a2-create` | runtime | `api(create-related-entry-a2)` | A1 proven/exact title+slug+data body -> captured ID -> A2 acquired | `set-023 / absent -> absent` |
-| `set-025-related-a2-proof` | runtime | `apiRead(related-entry-a2)` | A2 acquired -> exact title/slug/data -> A2 proven | `set-024 / absent -> absent` |
-| `set-026-related-b1-create` | runtime | `api(create-related-entry-b1)` | A entries proven/exact title+slug+data body -> captured ID -> B1 acquired | `set-025 / absent -> absent` |
-| `set-027-related-b1-proof` | runtime | `apiRead(related-entry-b1)` | B1 acquired -> exact title/slug/data -> B1 proven | `set-026 / absent -> absent` |
-| `set-028-related-b2-create` | runtime | `api(create-related-entry-b2)` | B1 proven/exact title+slug+data body -> captured ID -> B2 acquired | `set-027 / absent -> absent` |
-| `set-029-related-b2-proof` | runtime | `apiRead(related-entry-b2)` | B2 acquired -> exact title/slug/data -> A/B related entries proven | `set-028 / absent -> absent` |
-| `set-029a-related-failure1-create` | runtime | `api(create-related-entry-failure1)` | failure schema proven/exact title+slug+data body -> captured ID -> failure entry acquired | `set-029 / absent -> absent` |
-| `set-029b-related-failure1-proof` | runtime | `apiRead(related-entry-failure1)` | failure entry acquired -> exact title/slug/data -> all related entries proven | `set-029a-related-failure1-create / absent -> absent` |
-| `set-030-media-upload` | runtime | `api(upload-fixture-png)` | local snapshot held + exact deep-frozen blueprint base64/68-byte/PNG-signature/SHA-256 authority -> one real multipart upload + media ID/URL/key -> media acquired | `set-029b-related-failure1-proof / absent -> absent` |
-| `set-031-media-proof` | runtime | `apiRead(media-detail)` | media acquired -> exact safe projection -> media proven | `set-030 / absent -> absent` |
-| `set-032-storage-post-setup` | runtime | `storage(post-setup-stable-observation)` | media proven -> exact zero egress + private snapshots -> owned delta frozen | `set-031 / absent -> absent` |
-| `set-033-entry-create` | runtime | `api(create-editable-entry)` | all value refs bound/exact title+slug+data body -> captured entry ID -> baseline entry acquired | `set-032 / absent -> absent` |
-| `set-034-entry-proof` | runtime | `apiRead(editable-entry)` | entry acquired -> exact title/slug/baseline data -> entry proven | `set-033 / absent -> absent` |
-| `set-035-screen-create` | runtime | `api(create-screen-definition)` | entry/schema proven -> materialized/strict-validated concrete listView + one POST/captured Screen ID -> deterministic main document acquired | `set-034 / absent -> absent` |
-| `set-036-screen-proof` | runtime | `apiRead(screen-definition)` | Screen acquired -> byte-identical concrete listView/Image/related-list data/IDs/bindings -> main Screen proven | `set-035 / absent -> absent` |
-| `set-037-retry-screen-create` | runtime | `api(create-retry-screen-definition)` | main Screen proven -> independently materialized/strict-validated concrete listView + one POST/captured retry Screen ID -> retry-only document acquired | `set-036 / absent -> absent` |
-| `set-038-retry-screen-proof` | runtime | `apiRead(retry-screen-definition)` | retry Screen acquired -> byte-identical concrete listView + exact one failure related-list/no Field blocks -> retry Screen proven | `set-037 / absent -> absent` |
-| `set-039-override-create` | runtime | `api(replace-direct-image-safe-override)` | main Screen/entry/media proven -> one write -> acquired-media override stored | `set-038 / absent -> absent` |
-| `set-040-override-proof` | runtime | `apiRead(direct-image-safe-override)` | override stored -> exact one scoped tuple -> media-race projection proven | `set-039 / absent -> absent` |
-| `set-041-preference-a` | runtime | `fixture(set-user-a-preference-false)` | user A proven/strict domain-normalized false -> one local `setUserSetting` call -> exact A composite setting stored | `set-040 / absent -> absent` |
-| `set-042-preference-a-proof` | runtime | `fixtureRead(user-a-preference)` | A composite setting stored -> one local `getUserSetting` + strict normalized literal `false` -> A baseline proven | `set-041 / absent -> absent` |
-| `set-043-preference-b` | runtime | `fixture(set-user-b-preference-false)` | user B proven/strict domain-normalized false -> one local `setUserSetting` call -> exact B composite setting stored | `set-042 / absent -> absent` |
-| `set-044-preference-b-proof` | runtime | `fixtureRead(user-b-preference)` | B composite setting stored -> one local `getUserSetting` + strict normalized literal `false` -> fixtures ready | `set-043 / absent -> absent` |
-| `set-045-builder-cold` | p1/0 | `goto(paths.builder)` | fixtures ready, no entry/media consumer visited -> URL/marker -> cold builder visible | `set-044 / absent -> absent` |
+| ID                                     | Page    | Kind / exact builder                       | Precondition -> captured output -> postcondition                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          | Dependencies / route transition                           |
+| -------------------------------------- | ------- | ------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------- |
+| `set-001-storage-preflight`            | runtime | `storage(preflight-and-snapshot)`          | helper stopped/no task-UA request issued -> first sub-proof requires exact persisted `setup.completed:true`, freezes the exact canonical bootstrap Admin identity/role, exact task-UA access/audit-log and complete bounded session-row baselines, plus proof-only complete `site.contentRoutes` row/absence with all task slugs absent; validates exact-one persisted `storage.driver:"local"` and private `storage.local.dir` rows equal top-level local config + `MEDIA_STORAGE`/`MEDIA_DIR` absent, then freezes the bound storage DB/root baseline; egress exact missing row/file zero only -> setup/bootstrap/routes/storage proven | `- / absent -> absent`                                    |
+| `set-002-helper-launch`                | runtime | `host(helper-launch)`                      | storage proven, ports absent -> owned PID/lineage -> host starting                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        | `set-001 / absent -> absent`                              |
+| `set-003-admin-health`                 | runtime | `health(admin)`                            | owned host -> status -> Admin healthy                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     | `set-002 / absent -> absent`                              |
+| `set-004-front-health`                 | runtime | `health(front)`                            | Admin healthy -> status -> front healthy                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  | `set-003 / absent -> absent`                              |
+| `set-004a-bot-protection-preflight`    | runtime | `apiPublicRead(auth-bot-protection)`       | host healthy/no login attempted -> strict four-key public response/private fields -> sanitized exact `{"enabled":false}` or infrastructure fail                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           | `set-004 / absent -> absent`                              |
+| `set-004b-session-policy-preflight`    | runtime | `settingsRead(session-policy)`             | bot protection disabled -> WeakMap-private session policy + validated exact `security.csrf.headerName` -> sanitized exact `{"singleSession":false,"effectiveMaxPerUserAtLeast2":true}` or infrastructure fail                                                                                                                                                                                                                                                                                                                                                                                                                             | `set-004a-bot-protection-preflight / absent -> absent`    |
+| `set-004c-auth-rate-budget-preflight`  | runtime | `settingsRead(auth-rate-budget)`           | session policy proven -> exact active auth bucket projection + frozen identity/window budget computation -> capacity proven or infrastructure fail                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        | `set-004b-session-policy-preflight / absent -> absent`    |
+| `set-005-open`                         | p1/0    | `open(about:blank)`                        | auth/session/rate preflights proven -> page identity -> original page open                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                | `set-004c-auth-rate-budget-preflight / absent -> absent`  |
+| `set-006-logger`                       | p1/0    | `logger-install`                           | blank original -> exact unique browser User-Agent applied before network + `true` -> immutable context logger/navigation/auth-challenge tracker                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           | `set-005 / absent -> absent`                              |
+| `set-007-goto-login`                   | p1/0    | `goto(paths.screens)`                      | logger installed + setup preflight proven -> URL -> login only; wizard is forbidden                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       | `set-006 / absent -> absent`                              |
+| `set-008-resize`                       | p1/0    | `resize(1280,900)`                         | login visible/wizard absent -> viewport -> 1280x900                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       | `set-007 / absent -> absent`                              |
+| `set-009-login-email`                  | p1/0    | `fill(S.loginEmail,$ADMIN_EMAIL)`          | login visible -> discarded -> email filled                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                | `set-008 / absent -> absent`                              |
+| `set-010-login-password`               | p1/0    | `fill(S.loginPassword,$ADMIN_PASSWORD)`    | email filled -> discarded -> credentials filled                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           | `set-009 / absent -> absent`                              |
+| `set-011-login-submit`                 | p1/0    | `click(S.loginSubmit)`                     | credentials filled -> navigation -> bootstrap authenticated                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               | `set-010 / absent -> absent`                              |
+| `set-011a-bootstrap-auth-settled`      | p1/0    | `observe(bootstrap-auth-identity-settled)` | submit navigation started -> post-login Admin URL + positive-geometry `S.bootstrapUserMenu` -> bootstrap realm settled                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    | `set-011 / absent -> absent`                              |
+| `set-011b-bootstrap-api-login`         | runtime | `isolatedApiSessionLogin(bootstrap)`       | bootstrap UI identity settled -> one login in empty isolated jar + exact session-row inventory -> isolated bootstrap API session acquired                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 | `set-011a-bootstrap-auth-settled / absent -> absent`      |
+| `set-011c-bootstrap-csrf-capture`      | runtime | `isolatedApiSessionCsrfCapture(bootstrap)` | isolated bootstrap session acquired -> one CSRF request/private rotated capability -> bootstrap unsafe API actions authorized without changing the browser jar                                                                                                                                                                                                                                                                                                                                                                                                                                                                            | `set-011b-bootstrap-api-login / absent -> absent`         |
+| `set-012-user-a-create`                | runtime | `fixture(create-user-a)`                   | bootstrap API capability proven -> captured server ID -> user A acquired                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  | `set-011c-bootstrap-csrf-capture / absent -> absent`      |
+| `set-013-user-a-proof`                 | runtime | `fixtureRead(user-a)`                      | user A acquired -> exact safe projection/Admin role -> user A proven                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      | `set-012 / absent -> absent`                              |
+| `set-014-user-b-create`                | runtime | `fixture(create-user-b)`                   | user A proven -> captured server ID -> user B acquired                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    | `set-013 / absent -> absent`                              |
+| `set-015-user-b-proof`                 | runtime | `fixtureRead(user-b)`                      | user B acquired -> exact safe projection/Admin role -> users proven                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       | `set-014 / absent -> absent`                              |
+| `set-016-editable-type-create`         | runtime | `api(create-content-type-editable)`        | users proven/exact names+configuration body without field IDs -> captured ID + exact authored slug -> editable schema acquired                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            | `set-015 / absent -> absent`                              |
+| `set-017-editable-type-proof`          | runtime | `apiRead(content-type-editable)`           | editable schema acquired -> exact nine names/configs + canonical `fieldsFromSchema()` IDs -> editable schema proven                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       | `set-016 / absent -> absent`                              |
+| `set-018-related-a-type-create`        | runtime | `api(create-content-type-related-a)`       | editable schema proven/exact names+configuration body without field IDs -> captured ID + exact authored slug -> A schema acquired                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         | `set-017 / absent -> absent`                              |
+| `set-019-related-a-type-proof`         | runtime | `apiRead(content-type-related-a)`          | A schema acquired -> exact field/slug + canonical `field-label` reconstruction -> A schema proven                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         | `set-018 / absent -> absent`                              |
+| `set-020-related-b-type-create`        | runtime | `api(create-content-type-related-b)`       | A schema proven/exact names+configuration body without field IDs -> captured ID + exact authored slug -> B schema acquired                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                | `set-019 / absent -> absent`                              |
+| `set-021-related-b-type-proof`         | runtime | `apiRead(content-type-related-b)`          | B schema acquired -> exact field/slug + canonical `field-label` reconstruction -> all schemas proven                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      | `set-020 / absent -> absent`                              |
+| `set-021a-related-failure-type-create` | runtime | `api(create-content-type-related-failure)` | A/B schemas proven/exact names+configuration body without field IDs -> captured ID + exact authored slug -> failure schema acquired                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       | `set-021 / absent -> absent`                              |
+| `set-021b-related-failure-type-proof`  | runtime | `apiRead(content-type-related-failure)`    | failure schema acquired -> exact field/slug + canonical `field-label` reconstruction -> all four schemas proven                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           | `set-021a-related-failure-type-create / absent -> absent` |
+| `set-022-related-a1-create`            | runtime | `api(create-related-entry-a1)`             | A schema proven/exact title+slug+data body -> captured ID -> A1 acquired                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  | `set-021b-related-failure-type-proof / absent -> absent`  |
+| `set-023-related-a1-proof`             | runtime | `apiRead(related-entry-a1)`                | A1 acquired -> exact title/slug/data -> A1 proven                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         | `set-022 / absent -> absent`                              |
+| `set-024-related-a2-create`            | runtime | `api(create-related-entry-a2)`             | A1 proven/exact title+slug+data body -> captured ID -> A2 acquired                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        | `set-023 / absent -> absent`                              |
+| `set-025-related-a2-proof`             | runtime | `apiRead(related-entry-a2)`                | A2 acquired -> exact title/slug/data -> A2 proven                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         | `set-024 / absent -> absent`                              |
+| `set-026-related-b1-create`            | runtime | `api(create-related-entry-b1)`             | A entries proven/exact title+slug+data body -> captured ID -> B1 acquired                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 | `set-025 / absent -> absent`                              |
+| `set-027-related-b1-proof`             | runtime | `apiRead(related-entry-b1)`                | B1 acquired -> exact title/slug/data -> B1 proven                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         | `set-026 / absent -> absent`                              |
+| `set-028-related-b2-create`            | runtime | `api(create-related-entry-b2)`             | B1 proven/exact title+slug+data body -> captured ID -> B2 acquired                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        | `set-027 / absent -> absent`                              |
+| `set-029-related-b2-proof`             | runtime | `apiRead(related-entry-b2)`                | B2 acquired -> exact title/slug/data -> A/B related entries proven                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        | `set-028 / absent -> absent`                              |
+| `set-029a-related-failure1-create`     | runtime | `api(create-related-entry-failure1)`       | failure schema proven/exact title+slug+data body -> captured ID -> failure entry acquired                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 | `set-029 / absent -> absent`                              |
+| `set-029b-related-failure1-proof`      | runtime | `apiRead(related-entry-failure1)`          | failure entry acquired -> exact title/slug/data -> all related entries proven                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             | `set-029a-related-failure1-create / absent -> absent`     |
+| `set-030-media-upload`                 | runtime | `api(upload-fixture-png)`                  | local snapshot held + exact deep-frozen blueprint base64/68-byte/PNG-signature/SHA-256 authority -> one real multipart upload + media ID/URL/key -> media acquired                                                                                                                                                                                                                                                                                                                                                                                                                                                                        | `set-029b-related-failure1-proof / absent -> absent`      |
+| `set-031-media-proof`                  | runtime | `apiRead(media-detail)`                    | media acquired -> exact safe projection -> media proven                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   | `set-030 / absent -> absent`                              |
+| `set-032-storage-post-setup`           | runtime | `storage(post-setup-stable-observation)`   | media proven -> exact zero egress + private snapshots -> owned delta frozen                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               | `set-031 / absent -> absent`                              |
+| `set-033-entry-create`                 | runtime | `api(create-editable-entry)`               | all value refs bound/exact title+slug+data body -> captured entry ID -> baseline entry acquired                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           | `set-032 / absent -> absent`                              |
+| `set-034-entry-proof`                  | runtime | `apiRead(editable-entry)`                  | entry acquired -> exact title/slug/baseline data -> entry proven                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          | `set-033 / absent -> absent`                              |
+| `set-035-screen-create`                | runtime | `api(create-screen-definition)`            | entry/schema proven -> materialized/strict-validated concrete listView + one POST/captured Screen ID -> deterministic main document acquired                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              | `set-034 / absent -> absent`                              |
+| `set-036-screen-proof`                 | runtime | `apiRead(screen-definition)`               | Screen acquired -> byte-identical concrete listView/Image/related-list data/IDs/bindings -> main Screen proven                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            | `set-035 / absent -> absent`                              |
+| `set-037-retry-screen-create`          | runtime | `api(create-retry-screen-definition)`      | main Screen proven -> independently materialized/strict-validated concrete listView + one POST/captured retry Screen ID -> retry-only document acquired                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   | `set-036 / absent -> absent`                              |
+| `set-038-retry-screen-proof`           | runtime | `apiRead(retry-screen-definition)`         | retry Screen acquired -> byte-identical concrete listView + exact one failure related-list/no Field blocks -> retry Screen proven                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         | `set-037 / absent -> absent`                              |
+| `set-039-override-create`              | runtime | `api(replace-direct-image-safe-override)`  | main Screen/entry/media proven -> one write -> acquired-media override stored                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             | `set-038 / absent -> absent`                              |
+| `set-040-override-proof`               | runtime | `apiRead(direct-image-safe-override)`      | override stored -> exact one scoped tuple -> media-race projection proven                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 | `set-039 / absent -> absent`                              |
+| `set-041-preference-a`                 | runtime | `fixture(set-user-a-preference-false)`     | user A proven/strict domain-normalized false -> one local `setUserSetting` call -> exact A composite setting stored                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       | `set-040 / absent -> absent`                              |
+| `set-042-preference-a-proof`           | runtime | `fixtureRead(user-a-preference)`           | A composite setting stored -> one local `getUserSetting` + strict normalized literal `false` -> A baseline proven                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         | `set-041 / absent -> absent`                              |
+| `set-043-preference-b`                 | runtime | `fixture(set-user-b-preference-false)`     | user B proven/strict domain-normalized false -> one local `setUserSetting` call -> exact B composite setting stored                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       | `set-042 / absent -> absent`                              |
+| `set-044-preference-b-proof`           | runtime | `fixtureRead(user-b-preference)`           | B composite setting stored -> one local `getUserSetting` + strict normalized literal `false` -> fixtures ready                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            | `set-043 / absent -> absent`                              |
+| `set-045-builder-cold`                 | p1/0    | `goto(paths.builder)`                      | fixtures ready, no entry/media consumer visited -> URL/marker -> cold builder visible                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     | `set-044 / absent -> absent`                              |
 
 #### Flow 1 — Button, Image, media race, and binding persistence
 
-| ID | Page | Kind / exact builder | Precondition -> captured output -> postcondition | Dependencies / route transition |
-|---|---|---|---|---|
-| `bi-001-light-proof` | p1/0 | `observe(theme-light)` | cold builder -> `aria-pressed=false` + computed colors -> light proven | `set-045 / absent -> absent` |
-| `bi-002-resize` | p1/0 | `resize(1280,900)` | light builder -> viewport -> 1280x900 | `bi-001 / absent -> absent` |
-| `bi-003-button-before` | p1/0 | `blocksBefore(palette.button)` | canvas visible -> exact block-ID set + Insert selected -> Button baseline captured | `bi-002 / absent -> absent` |
-| `bi-004-button-click` | p1/0 | `click(S.palette("Button"))` | Button baseline -> click receipt -> one Button inserted/selected | `bi-003 / absent -> absent` |
-| `bi-005-button-capture` | p1/0 | `captureNew(palette.button,"button",bi-003)` | insertion settled -> one new ID -> `palette.button` frozen | `bi-003,bi-004 / absent -> absent` |
-| `bi-006-bound-open-primary` | p1/0 | `click(S.boundField)` | Button selected -> menu visible -> bound-field menu open | `bi-005 / absent -> absent` |
-| `bi-007-bound-primary` | p1/0 | `click(S.fieldOption("Primary Url","text"))` | menu open -> visible Primary Url option -> semantic `primaryUrl` field bound | `bi-006 / absent -> absent` |
-| `bi-008-bound-open-secondary` | p1/0 | `click(S.boundField)` | Primary bound -> menu visible -> menu open | `bi-007 / absent -> absent` |
-| `bi-009-bound-secondary` | p1/0 | `click(S.fieldOption("Secondary Url","text"))` | menu open -> selected label -> Secondary URL bound | `bi-008 / absent -> absent` |
-| `bi-010-use-static` | p1/0 | `click(S.staticLink)` | Secondary bound -> inspector transition -> binding removed/static input visible | `bi-009 / absent -> absent` |
-| `bi-011-fill-static` | p1/0 | `fill(S.staticLinkInput,paths.nestedHash)` | static input visible -> value -> static link authored | `bi-010 / absent -> absent` |
-| `bi-012-bound-open-final` | p1/0 | `click(S.boundField)` | static link authored -> menu visible -> menu open | `bi-011 / absent -> absent` |
-| `bi-013-bound-final` | p1/0 | `click(S.fieldOption("Primary Url","text"))` | menu open -> visible Primary Url option -> exactly semantic `primaryUrl` field bound | `bi-012 / absent -> absent` |
-| `bi-014-builder-save` | p1/0 | `click(S.builderSave)` | dirty builder -> save settlement -> builder clean | `bi-013 / absent -> absent` |
-| `bi-015-persisted-binding` | p1/0 | `observe(binding-after-save)` | save settled -> strict persisted read -> post-Save binding sample frozen | `bi-014 / absent -> absent` |
-| `bi-016-list` | p1/0 | `goto(paths.screens)` | builder clean -> URL -> Screen list | `bi-015 / absent -> absent` |
-| `bi-016a-auth-rate-window-barrier` | p1/0 | `authRateWindowBarrier()` | Screen list stable/bounded rate epoch -> configured auth window naturally expires when enabled or timer is skipped when disabled + bounded realm-stability proof -> exact `{"barrierSatisfied":true}` | `bi-016 / absent -> absent` |
-| `bi-017-reopen` | p1/0 | `goto(paths.builder)` | Screen list -> URL/canvas marker -> saved builder reopened | `bi-016a-auth-rate-window-barrier / absent -> absent` |
-| `bi-018-reopen-proof` | p1/0 | `assert(persisted-no-empty-binding)` | reopened -> strict observation -> binding still exact | `bi-017 / absent -> absent` |
-| `bi-019-cache-cold` | p1/0 | `assert(media-cache-cold-before-route)` | no prior entry/media consumer -> exact aggregate count -> media GET count 0 | `bi-018 / absent -> absent` |
-| `bi-020-media-route-setup` | p1/0 | `route(media-prior-resolution,route-setup)` | cache cold -> registered task-owned media tuple -> delayed isolating route installed | `bi-019 / absent -> installed` |
-| `bi-021-records-link` | p1/0 | `click(S.recordsLink(screen.id))` | delayed route installed/builder -> URL + exact visible Record actions control -> records workspace ready | `bi-020 / installed -> installed` |
-| `bi-022-entry-link` | p1/0 | `click(S.recordActions,S.editRecord)` | records workspace ready -> open exact Record actions menu then click exact Edit record item -> entry navigation started | `bi-021 / installed -> installed` |
-| `bi-023-media-route-hit` | p1/0 | `route(media-prior-resolution,route-hit-read)` | entry mounting -> backing list validated + exact acquired fixture projected -> route hit exactly 1/pending | `bi-022 / installed -> hit` |
-| `bi-024-prior-resolution` | p1/0 | `assert(prior-media-resolution-pending)` | hit pending -> selected target + pending source -> prior protected value visible | `bi-023 / hit -> hit` |
-| `bi-025-select-race-image` | p1/0 | `click(S.selectBlock(screen.blockIds.raceImage))` | entry visible -> selection state -> race Image selected | `bi-024 / hit -> hit` |
-| `bi-026-clear-presentation` | p1/0 | `click(S.presentationClear)` | direct override selected -> dirty override -> newer local clear visible | `bi-025 / hit -> hit` |
-| `bi-027-newer-presentation` | p1/0 | `assert(newer-media-winner-selected-pending)` | clear applied/hit pending -> DOM source state -> missing-field placeholder wins | `bi-026 / hit -> hit` |
-| `bi-028-media-pending-shot` | p1/0 | `screen(media-prior-pending)` | newer state visible -> PNG -> pending-race screenshot created | `bi-027 / hit -> hit` |
-| `bi-029-media-count-before` | p1/0 | `media-count-before-release` | route pending -> exact count -> count 1 | `bi-023 / hit -> hit` |
-| `bi-030-media-release` | p1/0 | `route(media-prior-resolution,route-release)` | validated task-owned projection held -> fulfillment receipt -> isolated response released/UI settled | `bi-023,bi-029 / hit -> released` |
-| `bi-031-stale-protected` | p1/0 | `assert(stale-media-result-ignored)` | released/settled -> DOM source state -> stale result cannot overwrite clear | `bi-026,bi-030 / released -> released` |
-| `bi-032-media-count-after` | p1/0 | `media-count-after-release` | settlement complete -> exact count -> still 1 | `bi-030 / released -> released` |
-| `bi-033-media-unroute` | p1/0 | `route(media-prior-resolution,unroute)` | released and count proven -> `true` -> route absent | `bi-031,bi-032 / released -> absent` |
-| `bi-034-browse-direct` | p1/0 | `click(S.browseMedia)` | race Image selected + task-owned cache -> dialog -> Media library visible with exact fixture | `bi-033 / absent -> absent` |
-| `bi-035-select-direct-media` | p1/0 | `click(S.mediaCard(media.title))` | exact media card visible -> selected ID -> direct override uses acquired media | `bi-034 / absent -> absent` |
-| `bi-036-direct-safe` | p1/0 | `assert(direct-image-safe-url)` | media resolved -> DOM img/url -> acquired safe URL rendered | `bi-035 / absent -> absent` |
-| `bi-037-clear-direct` | p1/0 | `click(S.presentationClear)` | direct media visible -> override clear -> missing binding restored | `bi-036 / absent -> absent` |
-| `bi-038-direct-missing` | p1/0 | `assert(missing-or-unsafe-placeholder)` | clear settled -> placeholder/URL state -> no unsafe image emitted | `bi-037 / absent -> absent` |
-| `bi-039-select-media-field` | p1/0 | `click(S.selectBlock(screen.blockIds.mediaField))` | entry visible -> selected state -> preseed Media field selected | `bi-038 / absent -> absent` |
-| `bi-040-browse-field` | p1/0 | `click(S.browseMedia)` | Media field selected + task-owned cache -> dialog -> Media library visible with exact fixture | `bi-039 / absent -> absent` |
-| `bi-041-select-field-media` | p1/0 | `click(S.mediaCard(media.title))` | exact media card visible -> selected ID -> UUID draft selected | `bi-040 / absent -> absent` |
-| `bi-042-save-presentation` | p1/0 | `click(S.presentationSave)` | presentation dirty -> exact PATCH success + `Saving...` absent + clean-disabled Save presentation control -> override clean | `bi-041 / absent -> absent` |
-| `bi-043-media-uuid` | p1/0 | `assert(media-field-keeps-uuid)` | save settled -> unique visible fixture display title + canonical rendered image source mapped to the captured media fixture, plus authenticated persisted read -> captured UUID retained/no resolved URL persisted | `bi-042 / absent -> absent` |
-| `bi-044-builder-return` | p1/0 | `goto(paths.builder)` | entry clean -> URL/canvas -> builder visible | `bi-043 / absent -> absent` |
-| `bi-045-image-before` | p1/0 | `blocksBefore(palette.image)` | canvas visible -> ID set + Insert selected -> Image baseline captured | `bi-044 / absent -> absent` |
-| `bi-046-image-click` | p1/0 | `click(S.palette("Image"))` | baseline -> click -> one Image inserted | `bi-045 / absent -> absent` |
-| `bi-047-image-capture` | p1/0 | `captureNew(palette.image,"image",bi-045)` | insertion settled -> one new ID -> palette Image frozen | `bi-045,bi-046 / absent -> absent` |
-| `bi-048-image-bound-open` | p1/0 | `click(S.boundField)` | Image selected -> menu -> menu open | `bi-047 / absent -> absent` |
-| `bi-049-image-bound-media` | p1/0 | `click(S.fieldOption("Media Asset","media"))` | menu open -> exact option -> palette Image media-bound | `bi-048 / absent -> absent` |
-| `bi-050-field-before` | p1/0 | `blocksBefore(palette.mediaField)` | canvas visible -> ID set + Insert selected -> Field baseline captured | `bi-049 / absent -> absent` |
-| `bi-051-field-click` | p1/0 | `click(S.palette("Field"))` | baseline/Insert palette remains visible -> click -> one Field inserted | `bi-050 / absent -> absent` |
-| `bi-052-field-capture` | p1/0 | `captureNew(palette.mediaField,"field",bi-050)` | insertion settled -> one new ID -> palette Field frozen | `bi-050,bi-051 / absent -> absent` |
-| `bi-053-field-bound-open` | p1/0 | `click(S.boundField)` | Field selected -> menu -> menu open | `bi-052 / absent -> absent` |
-| `bi-054-field-bound-media` | p1/0 | `click(S.fieldOption("Media Asset","media"))` | menu open -> exact option -> palette Field media-bound | `bi-053 / absent -> absent` |
-| `bi-055-save-palette-media` | p1/0 | `click(S.builderSave)` | palette media blocks dirty -> save settlement -> builder clean | `bi-054 / absent -> absent` |
-| `bi-056-entry-return` | p1/0 | `goto(paths.entry)` | builder clean -> URL/document marker -> entry visible | `bi-055 / absent -> absent` |
-| `bi-056a-safe-link-observe` | p1/0 | `observe(safe-link-anchor-before-activation)` | entry visible -> tag/href/rect -> safe anchor sample frozen | `bi-056 / absent -> absent` |
-| `bi-057-safe-link-click` | p1/0 | `click(S.buttonAffordance(palette.button))` | safe anchor present -> navigation -> front hash destination reached | `bi-056a-safe-link-observe / absent -> absent` |
-| `bi-058-safe-link-proof` | p1/0 | `assert(safe-link-front-url)` | front loaded + anchor sample -> href/page URL -> exact safe front URL | `bi-056a-safe-link-observe,bi-057 / absent -> absent` |
-| `bi-059-entry-after-front` | p1/0 | `goto(paths.entry)` | front assertion complete -> URL -> entry visible | `bi-058 / absent -> absent` |
-| `bi-060-unsafe-patch` | runtime | `api(patch-screen-button-binding-secondary-url)` | entry baseline already holds unsafe Secondary URL -> one Screen PATCH -> Button rebound | `bi-059 / absent -> absent` |
-| `bi-061-unsafe-proof-read` | runtime | `apiRead(screen-button-binding-secondary-url)` | PATCH settled -> exact binding + baseline entry capture -> unsafe fixture proven | `bi-060 / absent -> absent` |
-| `bi-061a-auth-rate-window-barrier` | p1/0 | `authRateWindowBarrier()` | unsafe fixture proven/bounded rate epoch -> configured auth window naturally expires when enabled or timer is skipped when disabled + bounded realm-stability proof -> exact `{"barrierSatisfied":true}` | `bi-061 / absent -> absent` |
-| `bi-062-entry-unsafe-reload` | p1/0 | `goto(paths.entry)` | unsafe fixture proven -> URL/document -> entry rerendered | `bi-061a-auth-rate-window-barrier / absent -> absent` |
-| `bi-063-unsafe-disabled` | p1/0 | `assert(unsafe-link-disabled)` | entry rerendered -> span/ARIA/anchor count -> unsafe URL inert | `bi-062 / absent -> absent` |
-| `bi-064-baseline-restore` | runtime | `api(reset-screen-baseline)` | unsafe assertion complete -> one Screen PATCH -> baseline restored | `bi-063 / absent -> absent` |
-| `bi-065-baseline-proof` | runtime | `apiRead(screen-baseline)` | restore settled -> exact baseline document -> reset proven | `bi-064 / absent -> absent` |
-| `bi-066-final-entry` | p1/0 | `goto(paths.entry)` | reset proven -> URL/document -> final entry visible | `bi-065 / absent -> absent` |
-| `bi-067-final-shot` | p1/0 | `screen(button-image-light)` | final safe state -> PNG -> flow screenshot created | `bi-066 / absent -> absent` |
-| `bi-068-log-agg-errors` | p1/0 | `logs(aggregate,console-errors)` | flow complete -> `[]` -> aggregate errors clean | `bi-067 / absent -> absent` |
-| `bi-069-log-pages-errors` | p1/0 | `logs(per-page,console-errors)` | logger stable -> every page `[]` -> page errors clean | `bi-068 / absent -> absent` |
-| `bi-070-log-agg-warnings` | p1/0 | `logs(aggregate,console-warnings)` | flow complete -> `[]` -> aggregate warnings clean | `bi-069 / absent -> absent` |
-| `bi-071-log-pages-warnings` | p1/0 | `logs(per-page,console-warnings)` | logger stable -> every page `[]` -> page warnings clean | `bi-070 / absent -> absent` |
-| `bi-072-log-agg-page-errors` | p1/0 | `logs(aggregate,page-errors)` | flow complete -> `[]` -> aggregate page errors clean | `bi-071 / absent -> absent` |
-| `bi-073-log-pages-page-errors` | p1/0 | `logs(per-page,page-errors)` | logger stable -> every page `[]` -> flow 1 clean | `bi-072 / absent -> absent` |
+| ID                                 | Page    | Kind / exact builder                               | Precondition -> captured output -> postcondition                                                                                                                                                                   | Dependencies / route transition                       |
+| ---------------------------------- | ------- | -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------- |
+| `bi-001-light-proof`               | p1/0    | `observe(theme-light)`                             | cold builder -> `aria-pressed=false` + computed colors -> light proven                                                                                                                                             | `set-045 / absent -> absent`                          |
+| `bi-002-resize`                    | p1/0    | `resize(1280,900)`                                 | light builder -> viewport -> 1280x900                                                                                                                                                                              | `bi-001 / absent -> absent`                           |
+| `bi-003-button-before`             | p1/0    | `blocksBefore(palette.button)`                     | canvas visible -> exact block-ID set + Insert selected -> Button baseline captured                                                                                                                                 | `bi-002 / absent -> absent`                           |
+| `bi-004-button-click`              | p1/0    | `click(S.palette("Button"))`                       | Button baseline -> click receipt -> one Button inserted/selected                                                                                                                                                   | `bi-003 / absent -> absent`                           |
+| `bi-005-button-capture`            | p1/0    | `captureNew(palette.button,"button",bi-003)`       | insertion settled -> one new ID -> `palette.button` frozen                                                                                                                                                         | `bi-003,bi-004 / absent -> absent`                    |
+| `bi-006-bound-open-primary`        | p1/0    | `click(S.boundField)`                              | Button selected -> menu visible -> bound-field menu open                                                                                                                                                           | `bi-005 / absent -> absent`                           |
+| `bi-007-bound-primary`             | p1/0    | `click(S.fieldOption("Primary Url","text"))`       | menu open -> visible Primary Url option -> semantic `primaryUrl` field bound                                                                                                                                       | `bi-006 / absent -> absent`                           |
+| `bi-008-bound-open-secondary`      | p1/0    | `click(S.boundField)`                              | Primary bound -> menu visible -> menu open                                                                                                                                                                         | `bi-007 / absent -> absent`                           |
+| `bi-009-bound-secondary`           | p1/0    | `click(S.fieldOption("Secondary Url","text"))`     | menu open -> selected label -> Secondary URL bound                                                                                                                                                                 | `bi-008 / absent -> absent`                           |
+| `bi-010-use-static`                | p1/0    | `click(S.staticLink)`                              | Secondary bound -> inspector transition -> binding removed/static input visible                                                                                                                                    | `bi-009 / absent -> absent`                           |
+| `bi-011-fill-static`               | p1/0    | `fill(S.staticLinkInput,paths.nestedHash)`         | static input visible -> value -> static link authored                                                                                                                                                              | `bi-010 / absent -> absent`                           |
+| `bi-012-bound-open-final`          | p1/0    | `click(S.boundField)`                              | static link authored -> menu visible -> menu open                                                                                                                                                                  | `bi-011 / absent -> absent`                           |
+| `bi-013-bound-final`               | p1/0    | `click(S.fieldOption("Primary Url","text"))`       | menu open -> visible Primary Url option -> exactly semantic `primaryUrl` field bound                                                                                                                               | `bi-012 / absent -> absent`                           |
+| `bi-014-builder-save`              | p1/0    | `click(S.builderSave)`                             | dirty builder -> save settlement -> builder clean                                                                                                                                                                  | `bi-013 / absent -> absent`                           |
+| `bi-015-persisted-binding`         | p1/0    | `observe(binding-after-save)`                      | save settled -> strict persisted read -> post-Save binding sample frozen                                                                                                                                           | `bi-014 / absent -> absent`                           |
+| `bi-016-list`                      | p1/0    | `goto(paths.screens)`                              | builder clean -> URL -> Screen list                                                                                                                                                                                | `bi-015 / absent -> absent`                           |
+| `bi-016a-auth-rate-window-barrier` | p1/0    | `authRateWindowBarrier()`                          | Screen list stable/bounded rate epoch -> configured auth window naturally expires when enabled or timer is skipped when disabled + bounded realm-stability proof -> exact `{"barrierSatisfied":true}`              | `bi-016 / absent -> absent`                           |
+| `bi-017-reopen`                    | p1/0    | `goto(paths.builder)`                              | Screen list -> URL/canvas marker -> saved builder reopened                                                                                                                                                         | `bi-016a-auth-rate-window-barrier / absent -> absent` |
+| `bi-018-reopen-proof`              | p1/0    | `assert(persisted-no-empty-binding)`               | reopened -> strict observation -> binding still exact                                                                                                                                                              | `bi-017 / absent -> absent`                           |
+| `bi-019-cache-cold`                | p1/0    | `assert(media-cache-cold-before-route)`            | no prior entry/media consumer -> exact aggregate count -> media GET count 0                                                                                                                                        | `bi-018 / absent -> absent`                           |
+| `bi-020-media-route-setup`         | p1/0    | `route(media-prior-resolution,route-setup)`        | cache cold -> registered task-owned media tuple -> delayed isolating route installed                                                                                                                               | `bi-019 / absent -> installed`                        |
+| `bi-021-records-link`              | p1/0    | `click(S.recordsLink(screen.id))`                  | delayed route installed/builder -> URL + exact visible Record actions control -> records workspace ready                                                                                                           | `bi-020 / installed -> installed`                     |
+| `bi-022-entry-link`                | p1/0    | `click(S.recordActions,S.editRecord)`              | records workspace ready -> open exact Record actions menu then click exact Edit record item -> entry navigation started                                                                                            | `bi-021 / installed -> installed`                     |
+| `bi-023-media-route-hit`           | p1/0    | `route(media-prior-resolution,route-hit-read)`     | entry mounting -> backing list validated + exact acquired fixture projected -> route hit exactly 1/pending                                                                                                         | `bi-022 / installed -> hit`                           |
+| `bi-024-prior-resolution`          | p1/0    | `assert(prior-media-resolution-pending)`           | hit pending -> selected target + pending source -> prior protected value visible                                                                                                                                   | `bi-023 / hit -> hit`                                 |
+| `bi-025-select-race-image`         | p1/0    | `click(S.selectBlock(screen.blockIds.raceImage))`  | entry visible -> selection state -> race Image selected                                                                                                                                                            | `bi-024 / hit -> hit`                                 |
+| `bi-026-clear-presentation`        | p1/0    | `click(S.presentationClear)`                       | direct override selected -> dirty override -> newer local clear visible                                                                                                                                            | `bi-025 / hit -> hit`                                 |
+| `bi-027-newer-presentation`        | p1/0    | `assert(newer-media-winner-selected-pending)`      | clear applied/hit pending -> DOM source state -> missing-field placeholder wins                                                                                                                                    | `bi-026 / hit -> hit`                                 |
+| `bi-028-media-pending-shot`        | p1/0    | `screen(media-prior-pending)`                      | newer state visible -> PNG -> pending-race screenshot created                                                                                                                                                      | `bi-027 / hit -> hit`                                 |
+| `bi-029-media-count-before`        | p1/0    | `media-count-before-release`                       | route pending -> exact count -> count 1                                                                                                                                                                            | `bi-023 / hit -> hit`                                 |
+| `bi-030-media-release`             | p1/0    | `route(media-prior-resolution,route-release)`      | validated task-owned projection held -> fulfillment receipt -> isolated response released/UI settled                                                                                                               | `bi-023,bi-029 / hit -> released`                     |
+| `bi-031-stale-protected`           | p1/0    | `assert(stale-media-result-ignored)`               | released/settled -> DOM source state -> stale result cannot overwrite clear                                                                                                                                        | `bi-026,bi-030 / released -> released`                |
+| `bi-032-media-count-after`         | p1/0    | `media-count-after-release`                        | settlement complete -> exact count -> still 1                                                                                                                                                                      | `bi-030 / released -> released`                       |
+| `bi-033-media-unroute`             | p1/0    | `route(media-prior-resolution,unroute)`            | released and count proven -> `true` -> route absent                                                                                                                                                                | `bi-031,bi-032 / released -> absent`                  |
+| `bi-034-browse-direct`             | p1/0    | `click(S.browseMedia)`                             | race Image selected + task-owned cache -> dialog -> Media library visible with exact fixture                                                                                                                       | `bi-033 / absent -> absent`                           |
+| `bi-035-select-direct-media`       | p1/0    | `click(S.mediaCard(media.title))`                  | exact media card visible -> selected ID -> direct override uses acquired media                                                                                                                                     | `bi-034 / absent -> absent`                           |
+| `bi-036-direct-safe`               | p1/0    | `assert(direct-image-safe-url)`                    | media resolved -> DOM img/url -> acquired safe URL rendered                                                                                                                                                        | `bi-035 / absent -> absent`                           |
+| `bi-037-clear-direct`              | p1/0    | `click(S.presentationClear)`                       | direct media visible -> override clear -> missing binding restored                                                                                                                                                 | `bi-036 / absent -> absent`                           |
+| `bi-038-direct-missing`            | p1/0    | `assert(missing-or-unsafe-placeholder)`            | clear settled -> placeholder/URL state -> no unsafe image emitted                                                                                                                                                  | `bi-037 / absent -> absent`                           |
+| `bi-039-select-media-field`        | p1/0    | `click(S.selectBlock(screen.blockIds.mediaField))` | entry visible -> selected state -> preseed Media field selected                                                                                                                                                    | `bi-038 / absent -> absent`                           |
+| `bi-040-browse-field`              | p1/0    | `click(S.browseMedia)`                             | Media field selected + task-owned cache -> dialog -> Media library visible with exact fixture                                                                                                                      | `bi-039 / absent -> absent`                           |
+| `bi-041-select-field-media`        | p1/0    | `click(S.mediaCard(media.title))`                  | exact media card visible -> selected ID -> UUID draft selected                                                                                                                                                     | `bi-040 / absent -> absent`                           |
+| `bi-042-save-presentation`         | p1/0    | `click(S.presentationSave)`                        | presentation dirty -> exact PATCH success + `Saving...` absent + clean-disabled Save presentation control -> override clean                                                                                        | `bi-041 / absent -> absent`                           |
+| `bi-043-media-uuid`                | p1/0    | `assert(media-field-keeps-uuid)`                   | save settled -> unique visible fixture display title + canonical rendered image source mapped to the captured media fixture, plus authenticated persisted read -> captured UUID retained/no resolved URL persisted | `bi-042 / absent -> absent`                           |
+| `bi-044-builder-return`            | p1/0    | `goto(paths.builder)`                              | entry clean -> URL/canvas -> builder visible                                                                                                                                                                       | `bi-043 / absent -> absent`                           |
+| `bi-045-image-before`              | p1/0    | `blocksBefore(palette.image)`                      | canvas visible -> ID set + Insert selected -> Image baseline captured                                                                                                                                              | `bi-044 / absent -> absent`                           |
+| `bi-046-image-click`               | p1/0    | `click(S.palette("Image"))`                        | baseline -> click -> one Image inserted                                                                                                                                                                            | `bi-045 / absent -> absent`                           |
+| `bi-047-image-capture`             | p1/0    | `captureNew(palette.image,"image",bi-045)`         | insertion settled -> one new ID -> palette Image frozen                                                                                                                                                            | `bi-045,bi-046 / absent -> absent`                    |
+| `bi-048-image-bound-open`          | p1/0    | `click(S.boundField)`                              | Image selected -> menu -> menu open                                                                                                                                                                                | `bi-047 / absent -> absent`                           |
+| `bi-049-image-bound-media`         | p1/0    | `click(S.fieldOption("Media Asset","media"))`      | menu open -> exact option -> palette Image media-bound                                                                                                                                                             | `bi-048 / absent -> absent`                           |
+| `bi-050-field-before`              | p1/0    | `blocksBefore(palette.mediaField)`                 | canvas visible -> ID set + Insert selected -> Field baseline captured                                                                                                                                              | `bi-049 / absent -> absent`                           |
+| `bi-051-field-click`               | p1/0    | `click(S.palette("Field"))`                        | baseline/Insert palette remains visible -> click -> one Field inserted                                                                                                                                             | `bi-050 / absent -> absent`                           |
+| `bi-052-field-capture`             | p1/0    | `captureNew(palette.mediaField,"field",bi-050)`    | insertion settled -> one new ID -> palette Field frozen                                                                                                                                                            | `bi-050,bi-051 / absent -> absent`                    |
+| `bi-053-field-bound-open`          | p1/0    | `click(S.boundField)`                              | Field selected -> menu -> menu open                                                                                                                                                                                | `bi-052 / absent -> absent`                           |
+| `bi-054-field-bound-media`         | p1/0    | `click(S.fieldOption("Media Asset","media"))`      | menu open -> exact option -> palette Field media-bound                                                                                                                                                             | `bi-053 / absent -> absent`                           |
+| `bi-055-save-palette-media`        | p1/0    | `click(S.builderSave)`                             | palette media blocks dirty -> save settlement -> builder clean                                                                                                                                                     | `bi-054 / absent -> absent`                           |
+| `bi-056-entry-return`              | p1/0    | `goto(paths.entry)`                                | builder clean -> URL/document marker -> entry visible                                                                                                                                                              | `bi-055 / absent -> absent`                           |
+| `bi-056a-safe-link-observe`        | p1/0    | `observe(safe-link-anchor-before-activation)`      | entry visible -> tag/href/rect -> safe anchor sample frozen                                                                                                                                                        | `bi-056 / absent -> absent`                           |
+| `bi-057-safe-link-click`           | p1/0    | `click(S.buttonAffordance(palette.button))`        | safe anchor present -> navigation -> front hash destination reached                                                                                                                                                | `bi-056a-safe-link-observe / absent -> absent`        |
+| `bi-058-safe-link-proof`           | p1/0    | `assert(safe-link-front-url)`                      | front loaded + anchor sample -> href/page URL -> exact safe front URL                                                                                                                                              | `bi-056a-safe-link-observe,bi-057 / absent -> absent` |
+| `bi-059-entry-after-front`         | p1/0    | `goto(paths.entry)`                                | front assertion complete -> URL -> entry visible                                                                                                                                                                   | `bi-058 / absent -> absent`                           |
+| `bi-060-unsafe-patch`              | runtime | `api(patch-screen-button-binding-secondary-url)`   | entry baseline already holds unsafe Secondary URL -> one Screen PATCH -> Button rebound                                                                                                                            | `bi-059 / absent -> absent`                           |
+| `bi-061-unsafe-proof-read`         | runtime | `apiRead(screen-button-binding-secondary-url)`     | PATCH settled -> exact binding + baseline entry capture -> unsafe fixture proven                                                                                                                                   | `bi-060 / absent -> absent`                           |
+| `bi-061a-auth-rate-window-barrier` | p1/0    | `authRateWindowBarrier()`                          | unsafe fixture proven/bounded rate epoch -> configured auth window naturally expires when enabled or timer is skipped when disabled + bounded realm-stability proof -> exact `{"barrierSatisfied":true}`           | `bi-061 / absent -> absent`                           |
+| `bi-062-entry-unsafe-reload`       | p1/0    | `goto(paths.entry)`                                | unsafe fixture proven -> URL/document -> entry rerendered                                                                                                                                                          | `bi-061a-auth-rate-window-barrier / absent -> absent` |
+| `bi-063-unsafe-disabled`           | p1/0    | `assert(unsafe-link-disabled)`                     | entry rerendered -> span/ARIA/anchor count -> unsafe URL inert                                                                                                                                                     | `bi-062 / absent -> absent`                           |
+| `bi-064-baseline-restore`          | runtime | `api(reset-screen-baseline)`                       | unsafe assertion complete -> one Screen PATCH -> baseline restored                                                                                                                                                 | `bi-063 / absent -> absent`                           |
+| `bi-065-baseline-proof`            | runtime | `apiRead(screen-baseline)`                         | restore settled -> exact baseline document -> reset proven                                                                                                                                                         | `bi-064 / absent -> absent`                           |
+| `bi-066-final-entry`               | p1/0    | `goto(paths.entry)`                                | reset proven -> URL/document -> final entry visible                                                                                                                                                                | `bi-065 / absent -> absent`                           |
+| `bi-067-final-shot`                | p1/0    | `screen(button-image-light)`                       | final safe state -> PNG -> flow screenshot created                                                                                                                                                                 | `bi-066 / absent -> absent`                           |
+| `bi-068-log-agg-errors`            | p1/0    | `logs(aggregate,console-errors)`                   | flow complete -> `[]` -> aggregate errors clean                                                                                                                                                                    | `bi-067 / absent -> absent`                           |
+| `bi-069-log-pages-errors`          | p1/0    | `logs(per-page,console-errors)`                    | logger stable -> every page `[]` -> page errors clean                                                                                                                                                              | `bi-068 / absent -> absent`                           |
+| `bi-070-log-agg-warnings`          | p1/0    | `logs(aggregate,console-warnings)`                 | flow complete -> `[]` -> aggregate warnings clean                                                                                                                                                                  | `bi-069 / absent -> absent`                           |
+| `bi-071-log-pages-warnings`        | p1/0    | `logs(per-page,console-warnings)`                  | logger stable -> every page `[]` -> page warnings clean                                                                                                                                                            | `bi-070 / absent -> absent`                           |
+| `bi-072-log-agg-page-errors`       | p1/0    | `logs(aggregate,page-errors)`                      | flow complete -> `[]` -> aggregate page errors clean                                                                                                                                                               | `bi-071 / absent -> absent`                           |
+| `bi-073-log-pages-page-errors`     | p1/0    | `logs(per-page,page-errors)`                       | logger stable -> every page `[]` -> flow 1 clean                                                                                                                                                                   | `bi-072 / absent -> absent`                           |
 
 #### Flow 2 — Tabs content, add-tab identity, save, and reopen
 
-| ID | Page | Kind / exact builder | Precondition -> captured output -> postcondition | Dependencies / route transition |
-|---|---|---|---|---|
-| `tc-001-reset` | runtime | `api(reset-entry-overrides-empty)` | flow 1 clean/Screen and entry already baseline -> one scoped call -> overrides empty | `bi-073 / absent -> absent` |
-| `tc-002-reset-proof` | runtime | `apiRead(entry-overrides-empty)` | reset settled -> exact `[]` -> reset proven | `tc-001 / absent -> absent` |
-| `tc-003-builder` | p1/0 | `goto(paths.builder)` | reset proven -> URL/canvas -> builder visible | `tc-002 / absent -> absent` |
-| `tc-004-dark-toggle` | p1/0 | `click(S.colorMode)` | light proven -> aria state -> dark selected | `bi-001,tc-003 / absent -> absent` |
-| `tc-005-dark-proof` | p1/0 | `observe(theme-dark)` | toggle settled -> computed colors/aria -> dark proven | `tc-004 / absent -> absent` |
-| `tc-006-resize` | p1/0 | `resize(1280,900)` | dark builder -> viewport -> 1280x900 | `tc-005 / absent -> absent` |
-| `tc-007-tabs-before` | p1/0 | `blocksBefore(palette.outerTabs)` | canvas visible -> ID set + Insert selected -> Tabs baseline captured | `tc-006 / absent -> absent` |
-| `tc-008-tabs-click` | p1/0 | `click(S.palette("Tabs"))` | baseline -> click -> one Tabs inserted | `tc-007 / absent -> absent` |
-| `tc-009-tabs-capture` | p1/0 | `captureNew(palette.outerTabs,"tabs",tc-007)` | insertion settled -> one new ID + defaults -> outer Tabs frozen | `tc-007,tc-008 / absent -> absent` |
-| `tc-010-label-one` | p1/0 | `fill(S.tabLabel("tab-1"),"Overview")` | defaults exact -> value -> tab-1 renamed | `tc-009 / absent -> absent` |
-| `tc-011-label-two` | p1/0 | `fill(S.tabLabel("tab-2"),"Details")` | tab-1 renamed -> value -> tab-2 renamed | `tc-010 / absent -> absent` |
-| `tc-012-add-tab` | p1/0 | `click(S.addTab)` | only tab-1/tab-2 -> UI mutation -> exact tab-3 added | `tc-011 / absent -> absent` |
-| `tc-013-label-three` | p1/0 | `fill(S.tabLabel("tab-3"),"History")` | tab-3 exact -> value -> tab-3 renamed | `tc-012 / absent -> absent` |
-| `tc-014-edit-overview` | p1/0 | `click(S.editTab("Overview"))` | outer selected -> active slot -> tab-1 insertion armed | `tc-013 / absent -> absent` |
-| `tc-015-text-one-before` | p1/0 | `blocksBefore(palette.tabOneText)` | tab-1 armed -> ID set + Insert selected -> Text baseline captured | `tc-014 / absent -> absent` |
-| `tc-016-text-one-click` | p1/0 | `click(S.palette("Text"))` | baseline -> click -> Text inserted in tab-1 | `tc-015 / absent -> absent` |
-| `tc-017-text-one-capture` | p1/0 | `captureNew(palette.tabOneText,"text",tc-015)` | insertion settled -> one ID -> tab-1 Text frozen | `tc-015,tc-016 / absent -> absent` |
-| `tc-018-text-one-fill` | p1/0 | `fill(S.paragraph,tabs.text.tab-1)` | Text selected -> value -> Overview text authored | `tc-017 / absent -> absent` |
-| `tc-019-reselect-outer-one` | p1/0 | `click(S.selectBlock(palette.outerTabs))` | child authored -> selected state -> outer Tabs selected | `tc-018 / absent -> absent` |
-| `tc-020-edit-details` | p1/0 | `click(S.editTab("Details"))` | outer selected -> active slot -> tab-2 armed | `tc-019 / absent -> absent` |
-| `tc-021-text-two-before` | p1/0 | `blocksBefore(palette.tabTwoText)` | tab-2 armed -> ID set + Insert selected -> Text baseline captured | `tc-020 / absent -> absent` |
-| `tc-022-text-two-click` | p1/0 | `click(S.palette("Text"))` | baseline -> click -> Text inserted in tab-2 | `tc-021 / absent -> absent` |
-| `tc-023-text-two-capture` | p1/0 | `captureNew(palette.tabTwoText,"text",tc-021)` | insertion settled -> one ID -> tab-2 Text frozen | `tc-021,tc-022 / absent -> absent` |
-| `tc-024-text-two-fill` | p1/0 | `fill(S.paragraph,tabs.text.tab-2)` | Text selected -> value -> Details text authored | `tc-023 / absent -> absent` |
-| `tc-025-reselect-outer-two` | p1/0 | `click(S.selectBlock(palette.outerTabs))` | child authored -> selected state -> outer selected | `tc-024 / absent -> absent` |
-| `tc-026-edit-history` | p1/0 | `click(S.editTab("History"))` | outer selected -> active slot -> tab-3 armed | `tc-025 / absent -> absent` |
-| `tc-027-text-three-before` | p1/0 | `blocksBefore(palette.tabThreeText)` | tab-3 armed -> ID set + Insert selected -> Text baseline captured | `tc-026 / absent -> absent` |
-| `tc-028-text-three-click` | p1/0 | `click(S.palette("Text"))` | baseline -> click -> Text inserted in tab-3 | `tc-027 / absent -> absent` |
-| `tc-029-text-three-capture` | p1/0 | `captureNew(palette.tabThreeText,"text",tc-027)` | insertion settled -> one ID -> tab-3 Text frozen | `tc-027,tc-028 / absent -> absent` |
-| `tc-030-text-three-fill` | p1/0 | `fill(S.paragraph,tabs.text.tab-3)` | Text selected -> value -> History text authored | `tc-029 / absent -> absent` |
-| `tc-031-save` | p1/0 | `click(S.builderSave)` | three tabs/text dirty -> save settlement -> builder clean | `tc-030 / absent -> absent` |
-| `tc-032-list` | p1/0 | `goto(paths.screens)` | builder clean -> URL -> Screen list | `tc-031 / absent -> absent` |
-| `tc-032a-auth-rate-window-barrier` | p1/0 | `authRateWindowBarrier()` | Screen list stable/bounded rate epoch -> configured auth window naturally expires when enabled or timer is skipped when disabled + bounded realm-stability proof -> exact `{"barrierSatisfied":true}` | `tc-032 / absent -> absent` |
-| `tc-033-reopen` | p1/0 | `goto(paths.builder)` | list -> URL/canvas -> builder reopened | `tc-032a-auth-rate-window-barrier / absent -> absent` |
-| `tc-034-three-tabs` | p1/0 | `assert(three-tabs-persisted)` | reopened -> tab/slot/nested DOM + read -> exact persisted structure | `tc-033 / absent -> absent` |
-| `tc-035-click-details` | p1/0 | `click(S.scopedRuntimeTab(palette.outerTabs,"Details"))` | Overview active -> selected state -> Details active | `tc-034 / absent -> absent` |
-| `tc-036-details-state` | p1/0 | `observe(outer-tabs-details-state)` | Details active -> geometry/hidden/armed -> Details sample frozen | `tc-035 / absent -> absent` |
-| `tc-037-click-history` | p1/0 | `click(S.scopedRuntimeTab(palette.outerTabs,"History"))` | Details active -> selected state -> History active | `tc-036 / absent -> absent` |
-| `tc-038-history-state` | p1/0 | `observe(outer-tabs-history-state)` | History active -> geometry/hidden/armed -> History sample frozen | `tc-037 / absent -> absent` |
-| `tc-039-one-panel` | p1/0 | `assert(one-panel-visible)` | two samples/current DOM -> strict geometry -> exactly one visible | `tc-036,tc-038 / absent -> absent` |
-| `tc-040-hidden-panels` | p1/0 | `assert(other-panels-zero-geometry)` | current History -> hidden/rects -> other panels zero | `tc-038 / absent -> absent` |
-| `tc-041-armed-slot` | p1/0 | `assert(armed-slot-equals-active-tab)` | Details+History samples -> IDs -> armed equals active both directions | `tc-036,tc-038 / absent -> absent` |
-| `tc-042-shot` | p1/0 | `screen(tabs-content-dark)` | assertions pass -> PNG -> tabs-content screenshot created | `tc-039,tc-040,tc-041 / absent -> absent` |
-| `tc-043-log-agg-errors` | p1/0 | `logs(aggregate,console-errors)` | flow complete -> `[]` -> aggregate clean | `tc-042 / absent -> absent` |
-| `tc-044-log-pages-errors` | p1/0 | `logs(per-page,console-errors)` | logger stable -> every page `[]` -> pages clean | `tc-043 / absent -> absent` |
-| `tc-045-log-agg-warnings` | p1/0 | `logs(aggregate,console-warnings)` | flow complete -> `[]` -> aggregate clean | `tc-044 / absent -> absent` |
-| `tc-046-log-pages-warnings` | p1/0 | `logs(per-page,console-warnings)` | logger stable -> every page `[]` -> pages clean | `tc-045 / absent -> absent` |
-| `tc-047-log-agg-page-errors` | p1/0 | `logs(aggregate,page-errors)` | flow complete -> `[]` -> aggregate clean | `tc-046 / absent -> absent` |
-| `tc-048-log-pages-page-errors` | p1/0 | `logs(per-page,page-errors)` | logger stable -> every page `[]` -> flow 2 clean | `tc-047 / absent -> absent` |
+| ID                                 | Page    | Kind / exact builder                                     | Precondition -> captured output -> postcondition                                                                                                                                                      | Dependencies / route transition                       |
+| ---------------------------------- | ------- | -------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------- |
+| `tc-001-reset`                     | runtime | `api(reset-entry-overrides-empty)`                       | flow 1 clean/Screen and entry already baseline -> one scoped call -> overrides empty                                                                                                                  | `bi-073 / absent -> absent`                           |
+| `tc-002-reset-proof`               | runtime | `apiRead(entry-overrides-empty)`                         | reset settled -> exact `[]` -> reset proven                                                                                                                                                           | `tc-001 / absent -> absent`                           |
+| `tc-003-builder`                   | p1/0    | `goto(paths.builder)`                                    | reset proven -> URL/canvas -> builder visible                                                                                                                                                         | `tc-002 / absent -> absent`                           |
+| `tc-004-dark-toggle`               | p1/0    | `click(S.colorMode)`                                     | light proven -> aria state -> dark selected                                                                                                                                                           | `bi-001,tc-003 / absent -> absent`                    |
+| `tc-005-dark-proof`                | p1/0    | `observe(theme-dark)`                                    | toggle settled -> computed colors/aria -> dark proven                                                                                                                                                 | `tc-004 / absent -> absent`                           |
+| `tc-006-resize`                    | p1/0    | `resize(1280,900)`                                       | dark builder -> viewport -> 1280x900                                                                                                                                                                  | `tc-005 / absent -> absent`                           |
+| `tc-007-tabs-before`               | p1/0    | `blocksBefore(palette.outerTabs)`                        | canvas visible -> ID set + Insert selected -> Tabs baseline captured                                                                                                                                  | `tc-006 / absent -> absent`                           |
+| `tc-008-tabs-click`                | p1/0    | `click(S.palette("Tabs"))`                               | baseline -> click -> one Tabs inserted                                                                                                                                                                | `tc-007 / absent -> absent`                           |
+| `tc-009-tabs-capture`              | p1/0    | `captureNew(palette.outerTabs,"tabs",tc-007)`            | insertion settled -> one new ID + defaults -> outer Tabs frozen                                                                                                                                       | `tc-007,tc-008 / absent -> absent`                    |
+| `tc-010-label-one`                 | p1/0    | `fill(S.tabLabel("tab-1"),"Overview")`                   | defaults exact -> value -> tab-1 renamed                                                                                                                                                              | `tc-009 / absent -> absent`                           |
+| `tc-011-label-two`                 | p1/0    | `fill(S.tabLabel("tab-2"),"Details")`                    | tab-1 renamed -> value -> tab-2 renamed                                                                                                                                                               | `tc-010 / absent -> absent`                           |
+| `tc-012-add-tab`                   | p1/0    | `click(S.addTab)`                                        | only tab-1/tab-2 -> UI mutation -> exact tab-3 added                                                                                                                                                  | `tc-011 / absent -> absent`                           |
+| `tc-013-label-three`               | p1/0    | `fill(S.tabLabel("tab-3"),"History")`                    | tab-3 exact -> value -> tab-3 renamed                                                                                                                                                                 | `tc-012 / absent -> absent`                           |
+| `tc-014-edit-overview`             | p1/0    | `click(S.editTab("Overview"))`                           | outer selected -> active slot -> tab-1 insertion armed                                                                                                                                                | `tc-013 / absent -> absent`                           |
+| `tc-015-text-one-before`           | p1/0    | `blocksBefore(palette.tabOneText)`                       | tab-1 armed -> ID set + Insert selected -> Text baseline captured                                                                                                                                     | `tc-014 / absent -> absent`                           |
+| `tc-016-text-one-click`            | p1/0    | `click(S.palette("Text"))`                               | baseline -> click -> Text inserted in tab-1                                                                                                                                                           | `tc-015 / absent -> absent`                           |
+| `tc-017-text-one-capture`          | p1/0    | `captureNew(palette.tabOneText,"text",tc-015)`           | insertion settled -> one ID -> tab-1 Text frozen                                                                                                                                                      | `tc-015,tc-016 / absent -> absent`                    |
+| `tc-018-text-one-fill`             | p1/0    | `fill(S.paragraph,tabs.text.tab-1)`                      | Text selected -> value -> Overview text authored                                                                                                                                                      | `tc-017 / absent -> absent`                           |
+| `tc-019-reselect-outer-one`        | p1/0    | `click(S.selectBlock(palette.outerTabs))`                | child authored -> selected state -> outer Tabs selected                                                                                                                                               | `tc-018 / absent -> absent`                           |
+| `tc-020-edit-details`              | p1/0    | `click(S.editTab("Details"))`                            | outer selected -> active slot -> tab-2 armed                                                                                                                                                          | `tc-019 / absent -> absent`                           |
+| `tc-021-text-two-before`           | p1/0    | `blocksBefore(palette.tabTwoText)`                       | tab-2 armed -> ID set + Insert selected -> Text baseline captured                                                                                                                                     | `tc-020 / absent -> absent`                           |
+| `tc-022-text-two-click`            | p1/0    | `click(S.palette("Text"))`                               | baseline -> click -> Text inserted in tab-2                                                                                                                                                           | `tc-021 / absent -> absent`                           |
+| `tc-023-text-two-capture`          | p1/0    | `captureNew(palette.tabTwoText,"text",tc-021)`           | insertion settled -> one ID -> tab-2 Text frozen                                                                                                                                                      | `tc-021,tc-022 / absent -> absent`                    |
+| `tc-024-text-two-fill`             | p1/0    | `fill(S.paragraph,tabs.text.tab-2)`                      | Text selected -> value -> Details text authored                                                                                                                                                       | `tc-023 / absent -> absent`                           |
+| `tc-025-reselect-outer-two`        | p1/0    | `click(S.selectBlock(palette.outerTabs))`                | child authored -> selected state -> outer selected                                                                                                                                                    | `tc-024 / absent -> absent`                           |
+| `tc-026-edit-history`              | p1/0    | `click(S.editTab("History"))`                            | outer selected -> active slot -> tab-3 armed                                                                                                                                                          | `tc-025 / absent -> absent`                           |
+| `tc-027-text-three-before`         | p1/0    | `blocksBefore(palette.tabThreeText)`                     | tab-3 armed -> ID set + Insert selected -> Text baseline captured                                                                                                                                     | `tc-026 / absent -> absent`                           |
+| `tc-028-text-three-click`          | p1/0    | `click(S.palette("Text"))`                               | baseline -> click -> Text inserted in tab-3                                                                                                                                                           | `tc-027 / absent -> absent`                           |
+| `tc-029-text-three-capture`        | p1/0    | `captureNew(palette.tabThreeText,"text",tc-027)`         | insertion settled -> one ID -> tab-3 Text frozen                                                                                                                                                      | `tc-027,tc-028 / absent -> absent`                    |
+| `tc-030-text-three-fill`           | p1/0    | `fill(S.paragraph,tabs.text.tab-3)`                      | Text selected -> value -> History text authored                                                                                                                                                       | `tc-029 / absent -> absent`                           |
+| `tc-031-save`                      | p1/0    | `click(S.builderSave)`                                   | three tabs/text dirty -> save settlement -> builder clean                                                                                                                                             | `tc-030 / absent -> absent`                           |
+| `tc-032-list`                      | p1/0    | `goto(paths.screens)`                                    | builder clean -> URL -> Screen list                                                                                                                                                                   | `tc-031 / absent -> absent`                           |
+| `tc-032a-auth-rate-window-barrier` | p1/0    | `authRateWindowBarrier()`                                | Screen list stable/bounded rate epoch -> configured auth window naturally expires when enabled or timer is skipped when disabled + bounded realm-stability proof -> exact `{"barrierSatisfied":true}` | `tc-032 / absent -> absent`                           |
+| `tc-033-reopen`                    | p1/0    | `goto(paths.builder)`                                    | list -> URL/canvas -> builder reopened                                                                                                                                                                | `tc-032a-auth-rate-window-barrier / absent -> absent` |
+| `tc-034-three-tabs`                | p1/0    | `assert(three-tabs-persisted)`                           | reopened -> tab/slot/nested DOM + read -> exact persisted structure                                                                                                                                   | `tc-033 / absent -> absent`                           |
+| `tc-035-click-details`             | p1/0    | `click(S.scopedRuntimeTab(palette.outerTabs,"Details"))` | Overview active -> selected state -> Details active                                                                                                                                                   | `tc-034 / absent -> absent`                           |
+| `tc-036-details-state`             | p1/0    | `observe(outer-tabs-details-state)`                      | Details active -> geometry/hidden/armed -> Details sample frozen                                                                                                                                      | `tc-035 / absent -> absent`                           |
+| `tc-037-click-history`             | p1/0    | `click(S.scopedRuntimeTab(palette.outerTabs,"History"))` | Details active -> selected state -> History active                                                                                                                                                    | `tc-036 / absent -> absent`                           |
+| `tc-038-history-state`             | p1/0    | `observe(outer-tabs-history-state)`                      | History active -> geometry/hidden/armed -> History sample frozen                                                                                                                                      | `tc-037 / absent -> absent`                           |
+| `tc-039-one-panel`                 | p1/0    | `assert(one-panel-visible)`                              | two samples/current DOM -> strict geometry -> exactly one visible                                                                                                                                     | `tc-036,tc-038 / absent -> absent`                    |
+| `tc-040-hidden-panels`             | p1/0    | `assert(other-panels-zero-geometry)`                     | current History -> hidden/rects -> other panels zero                                                                                                                                                  | `tc-038 / absent -> absent`                           |
+| `tc-041-armed-slot`                | p1/0    | `assert(armed-slot-equals-active-tab)`                   | Details+History samples -> IDs -> armed equals active both directions                                                                                                                                 | `tc-036,tc-038 / absent -> absent`                    |
+| `tc-042-shot`                      | p1/0    | `screen(tabs-content-dark)`                              | assertions pass -> PNG -> tabs-content screenshot created                                                                                                                                             | `tc-039,tc-040,tc-041 / absent -> absent`             |
+| `tc-043-log-agg-errors`            | p1/0    | `logs(aggregate,console-errors)`                         | flow complete -> `[]` -> aggregate clean                                                                                                                                                              | `tc-042 / absent -> absent`                           |
+| `tc-044-log-pages-errors`          | p1/0    | `logs(per-page,console-errors)`                          | logger stable -> every page `[]` -> pages clean                                                                                                                                                       | `tc-043 / absent -> absent`                           |
+| `tc-045-log-agg-warnings`          | p1/0    | `logs(aggregate,console-warnings)`                       | flow complete -> `[]` -> aggregate clean                                                                                                                                                              | `tc-044 / absent -> absent`                           |
+| `tc-046-log-pages-warnings`        | p1/0    | `logs(per-page,console-warnings)`                        | logger stable -> every page `[]` -> pages clean                                                                                                                                                       | `tc-045 / absent -> absent`                           |
+| `tc-047-log-agg-page-errors`       | p1/0    | `logs(aggregate,page-errors)`                            | flow complete -> `[]` -> aggregate clean                                                                                                                                                              | `tc-046 / absent -> absent`                           |
+| `tc-048-log-pages-page-errors`     | p1/0    | `logs(per-page,page-errors)`                             | logger stable -> every page `[]` -> flow 2 clean                                                                                                                                                      | `tc-047 / absent -> absent`                           |
 
 #### Flow 3 — Keyboard/ARIA Tabs and nested renderer identity
 
-| ID | Page | Kind / exact builder | Precondition -> captured output -> postcondition | Dependencies / route transition |
-|---|---|---|---|---|
-| `tk-001-light-toggle` | p1/0 | `click(S.colorMode)` | flow 2 dark -> aria state -> light selected | `tc-048 / absent -> absent` |
-| `tk-002-light-proof` | p1/0 | `observe(theme-light)` | toggle settled -> computed colors/aria -> light proven | `tk-001 / absent -> absent` |
-| `tk-003-resize` | p1/0 | `resize(1024,900)` | light builder -> viewport -> 1024x900 | `tk-002 / absent -> absent` |
-| `tk-004-select-outer` | p1/0 | `click(S.selectBlock(palette.outerTabs))` | saved outer exists -> selected state -> outer selected | `tk-003 / absent -> absent` |
-| `tk-005-edit-overview` | p1/0 | `click(S.editTab("Overview"))` | outer selected -> insertion state -> tab-1 armed | `tk-004 / absent -> absent` |
-| `tk-006-inner-before` | p1/0 | `blocksBefore(palette.innerTabs)` | tab-1 armed -> ID set + Insert selected -> nested Tabs baseline | `tk-005 / absent -> absent` |
-| `tk-007-inner-click` | p1/0 | `click(S.palette("Tabs"))` | baseline -> click -> nested Tabs inserted | `tk-006 / absent -> absent` |
-| `tk-008-inner-capture` | p1/0 | `captureNew(palette.innerTabs,"tabs",tk-006)` | insertion settled -> one ID/default tabs -> inner Tabs frozen | `tk-006,tk-007 / absent -> absent` |
-| `tk-009-save` | p1/0 | `click(S.builderSave)` | nested Tabs dirty -> save settlement -> builder clean | `tk-008 / absent -> absent` |
-| `tk-010-preview` | p1/0 | `click(S.preview)` | builder clean -> dialog -> Editor View Preview open | `tk-009 / absent -> absent` |
-| `tk-011-preview-proof` | p1/0 | `observe(preview-shell-desktop)` | dialog open -> exact desktop shell + unique visible outer/nested Tabs roots -> second renderer visibly proven | `tk-010 / absent -> absent` |
-| `tk-012-focus-overview` | p1/0 | `focus(S.previewRuntimeTab(palette.outerTabs,"Overview"))` | preview visible -> focus state -> outer Overview focused | `tk-011 / absent -> absent` |
-| `tk-013-arrow-left` | p1/0 | `press(S.previewRuntimeTab(palette.outerTabs,"Overview"),"ArrowLeft")` | Overview focused -> key -> History focused/selected | `tk-012 / absent -> absent` |
-| `tk-014-observe-left` | p1/0 | `observe(key-step-arrow-left)` | key settled -> text/IDs/tabIndex -> Left step frozen | `tk-013 / absent -> absent` |
-| `tk-015-arrow-right` | p1/0 | `press(S.previewRuntimeTab(palette.outerTabs,"History"),"ArrowRight")` | History focused -> key -> Overview focused/selected | `tk-014 / absent -> absent` |
-| `tk-016-observe-right` | p1/0 | `observe(key-step-arrow-right)` | key settled -> text/IDs/tabIndex -> Right step frozen | `tk-015 / absent -> absent` |
-| `tk-017-home` | p1/0 | `press(S.previewRuntimeTab(palette.outerTabs,"Overview"),"Home")` | Overview focused -> key -> Overview remains focused/selected | `tk-016 / absent -> absent` |
-| `tk-018-observe-home` | p1/0 | `observe(key-step-home)` | key settled -> text/IDs/tabIndex -> Home step frozen | `tk-017 / absent -> absent` |
-| `tk-019-end` | p1/0 | `press(S.previewRuntimeTab(palette.outerTabs,"Overview"),"End")` | Overview focused -> key -> History focused/selected | `tk-018 / absent -> absent` |
-| `tk-020-observe-end` | p1/0 | `observe(key-step-end)` | key settled -> text/IDs/tabIndex -> End step frozen | `tk-019 / absent -> absent` |
-| `tk-021-keyboard-proof` | p1/0 | `assert(arrow-home-end-focus)` | four key samples/current DOM -> Left/Right/Home/End steps -> roving focus exact | `tk-014,tk-016,tk-018,tk-020 / absent -> absent` |
-| `tk-022-aria-proof` | p1/0 | `assert(aria-reciprocal)` | preview DOM -> exact tab/panel IDs -> reciprocal ARIA/visibility | `tk-020 / absent -> absent` |
-| `tk-022a-restore-overview` | p1/0 | `click(S.previewRuntimeTab(palette.outerTabs,"Overview"))` | ARIA proof settled with History active -> click -> outer Overview restored and inner controls visible | `tk-022 / absent -> absent` |
-| `tk-023-inner-second` | p1/0 | `click(S.previewRuntimeTab(palette.innerTabs,"Tab 2"))` | outer Overview active -> click -> inner Tab 2 selected only | `tk-022a / absent -> absent` |
-| `tk-024-outer-details` | p1/0 | `click(S.previewRuntimeTab(palette.outerTabs,"Details"))` | inner Tab 2 selected -> click -> outer Details selected | `tk-023 / absent -> absent` |
-| `tk-025-outer-overview` | p1/0 | `click(S.previewRuntimeTab(palette.outerTabs,"Overview"))` | outer Details selected -> click -> outer Overview restored | `tk-024 / absent -> absent` |
-| `tk-026-nested-proof` | p1/0 | `assert(nested-tabs-isolated)` | both roots visible -> scoped IDs/selections -> independent state | `tk-023,tk-025 / absent -> absent` |
-| `tk-027-ids-proof` | p1/0 | `assert(renderer-ids-unique)` | builder + dialog outer/nested roots -> exact 10 tab/panel IDs per realm -> 20 globally unique | `tk-011 / absent -> absent` |
-| `tk-028-shot` | p1/0 | `screen(tabs-keyboard-light)` | assertions pass -> PNG -> keyboard screenshot created | `tk-021,tk-022,tk-026,tk-027 / absent -> absent` |
-| `tk-029-preview-close` | p1/0 | `click(S.previewClose)` | screenshot captured -> dialog state -> preview closed | `tk-028 / absent -> absent` |
-| `tk-030-log-agg-errors` | p1/0 | `logs(aggregate,console-errors)` | flow complete -> `[]` -> aggregate clean | `tk-029 / absent -> absent` |
-| `tk-031-log-pages-errors` | p1/0 | `logs(per-page,console-errors)` | logger stable -> every page `[]` -> pages clean | `tk-030 / absent -> absent` |
-| `tk-032-log-agg-warnings` | p1/0 | `logs(aggregate,console-warnings)` | flow complete -> `[]` -> aggregate clean | `tk-031 / absent -> absent` |
-| `tk-033-log-pages-warnings` | p1/0 | `logs(per-page,console-warnings)` | logger stable -> every page `[]` -> pages clean | `tk-032 / absent -> absent` |
-| `tk-034-log-agg-page-errors` | p1/0 | `logs(aggregate,page-errors)` | flow complete -> `[]` -> aggregate clean | `tk-033 / absent -> absent` |
-| `tk-035-log-pages-page-errors` | p1/0 | `logs(per-page,page-errors)` | logger stable -> every page `[]` -> flow 3 clean | `tk-034 / absent -> absent` |
+| ID                             | Page | Kind / exact builder                                                   | Precondition -> captured output -> postcondition                                                              | Dependencies / route transition                  |
+| ------------------------------ | ---- | ---------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- | ------------------------------------------------ |
+| `tk-001-light-toggle`          | p1/0 | `click(S.colorMode)`                                                   | flow 2 dark -> aria state -> light selected                                                                   | `tc-048 / absent -> absent`                      |
+| `tk-002-light-proof`           | p1/0 | `observe(theme-light)`                                                 | toggle settled -> computed colors/aria -> light proven                                                        | `tk-001 / absent -> absent`                      |
+| `tk-003-resize`                | p1/0 | `resize(1024,900)`                                                     | light builder -> viewport -> 1024x900                                                                         | `tk-002 / absent -> absent`                      |
+| `tk-004-select-outer`          | p1/0 | `click(S.selectBlock(palette.outerTabs))`                              | saved outer exists -> selected state -> outer selected                                                        | `tk-003 / absent -> absent`                      |
+| `tk-005-edit-overview`         | p1/0 | `click(S.editTab("Overview"))`                                         | outer selected -> insertion state -> tab-1 armed                                                              | `tk-004 / absent -> absent`                      |
+| `tk-006-inner-before`          | p1/0 | `blocksBefore(palette.innerTabs)`                                      | tab-1 armed -> ID set + Insert selected -> nested Tabs baseline                                               | `tk-005 / absent -> absent`                      |
+| `tk-007-inner-click`           | p1/0 | `click(S.palette("Tabs"))`                                             | baseline -> click -> nested Tabs inserted                                                                     | `tk-006 / absent -> absent`                      |
+| `tk-008-inner-capture`         | p1/0 | `captureNew(palette.innerTabs,"tabs",tk-006)`                          | insertion settled -> one ID/default tabs -> inner Tabs frozen                                                 | `tk-006,tk-007 / absent -> absent`               |
+| `tk-009-save`                  | p1/0 | `click(S.builderSave)`                                                 | nested Tabs dirty -> save settlement -> builder clean                                                         | `tk-008 / absent -> absent`                      |
+| `tk-010-preview`               | p1/0 | `click(S.preview)`                                                     | builder clean -> dialog -> Editor View Preview open                                                           | `tk-009 / absent -> absent`                      |
+| `tk-011-preview-proof`         | p1/0 | `observe(preview-shell-desktop)`                                       | dialog open -> exact desktop shell + unique visible outer/nested Tabs roots -> second renderer visibly proven | `tk-010 / absent -> absent`                      |
+| `tk-012-focus-overview`        | p1/0 | `focus(S.previewRuntimeTab(palette.outerTabs,"Overview"))`             | preview visible -> focus state -> outer Overview focused                                                      | `tk-011 / absent -> absent`                      |
+| `tk-013-arrow-left`            | p1/0 | `press(S.previewRuntimeTab(palette.outerTabs,"Overview"),"ArrowLeft")` | Overview focused -> key -> History focused/selected                                                           | `tk-012 / absent -> absent`                      |
+| `tk-014-observe-left`          | p1/0 | `observe(key-step-arrow-left)`                                         | key settled -> text/IDs/tabIndex -> Left step frozen                                                          | `tk-013 / absent -> absent`                      |
+| `tk-015-arrow-right`           | p1/0 | `press(S.previewRuntimeTab(palette.outerTabs,"History"),"ArrowRight")` | History focused -> key -> Overview focused/selected                                                           | `tk-014 / absent -> absent`                      |
+| `tk-016-observe-right`         | p1/0 | `observe(key-step-arrow-right)`                                        | key settled -> text/IDs/tabIndex -> Right step frozen                                                         | `tk-015 / absent -> absent`                      |
+| `tk-017-home`                  | p1/0 | `press(S.previewRuntimeTab(palette.outerTabs,"Overview"),"Home")`      | Overview focused -> key -> Overview remains focused/selected                                                  | `tk-016 / absent -> absent`                      |
+| `tk-018-observe-home`          | p1/0 | `observe(key-step-home)`                                               | key settled -> text/IDs/tabIndex -> Home step frozen                                                          | `tk-017 / absent -> absent`                      |
+| `tk-019-end`                   | p1/0 | `press(S.previewRuntimeTab(palette.outerTabs,"Overview"),"End")`       | Overview focused -> key -> History focused/selected                                                           | `tk-018 / absent -> absent`                      |
+| `tk-020-observe-end`           | p1/0 | `observe(key-step-end)`                                                | key settled -> text/IDs/tabIndex -> End step frozen                                                           | `tk-019 / absent -> absent`                      |
+| `tk-021-keyboard-proof`        | p1/0 | `assert(arrow-home-end-focus)`                                         | four key samples/current DOM -> Left/Right/Home/End steps -> roving focus exact                               | `tk-014,tk-016,tk-018,tk-020 / absent -> absent` |
+| `tk-022-aria-proof`            | p1/0 | `assert(aria-reciprocal)`                                              | preview DOM -> exact tab/panel IDs -> reciprocal ARIA/visibility                                              | `tk-020 / absent -> absent`                      |
+| `tk-022a-restore-overview`     | p1/0 | `click(S.previewRuntimeTab(palette.outerTabs,"Overview"))`             | ARIA proof settled with History active -> click -> outer Overview restored and inner controls visible         | `tk-022 / absent -> absent`                      |
+| `tk-023-inner-second`          | p1/0 | `click(S.previewRuntimeTab(palette.innerTabs,"Tab 2"))`                | outer Overview active -> click -> inner Tab 2 selected only                                                   | `tk-022a / absent -> absent`                     |
+| `tk-024-outer-details`         | p1/0 | `click(S.previewRuntimeTab(palette.outerTabs,"Details"))`              | inner Tab 2 selected -> click -> outer Details selected                                                       | `tk-023 / absent -> absent`                      |
+| `tk-025-outer-overview`        | p1/0 | `click(S.previewRuntimeTab(palette.outerTabs,"Overview"))`             | outer Details selected -> click -> outer Overview restored                                                    | `tk-024 / absent -> absent`                      |
+| `tk-026-nested-proof`          | p1/0 | `assert(nested-tabs-isolated)`                                         | both roots visible -> scoped IDs/selections -> independent state                                              | `tk-023,tk-025 / absent -> absent`               |
+| `tk-027-ids-proof`             | p1/0 | `assert(renderer-ids-unique)`                                          | builder + dialog outer/nested roots -> exact 10 tab/panel IDs per realm -> 20 globally unique                 | `tk-011 / absent -> absent`                      |
+| `tk-028-shot`                  | p1/0 | `screen(tabs-keyboard-light)`                                          | assertions pass -> PNG -> keyboard screenshot created                                                         | `tk-021,tk-022,tk-026,tk-027 / absent -> absent` |
+| `tk-029-preview-close`         | p1/0 | `click(S.previewClose)`                                                | screenshot captured -> dialog state -> preview closed                                                         | `tk-028 / absent -> absent`                      |
+| `tk-030-log-agg-errors`        | p1/0 | `logs(aggregate,console-errors)`                                       | flow complete -> `[]` -> aggregate clean                                                                      | `tk-029 / absent -> absent`                      |
+| `tk-031-log-pages-errors`      | p1/0 | `logs(per-page,console-errors)`                                        | logger stable -> every page `[]` -> pages clean                                                               | `tk-030 / absent -> absent`                      |
+| `tk-032-log-agg-warnings`      | p1/0 | `logs(aggregate,console-warnings)`                                     | flow complete -> `[]` -> aggregate clean                                                                      | `tk-031 / absent -> absent`                      |
+| `tk-033-log-pages-warnings`    | p1/0 | `logs(per-page,console-warnings)`                                      | logger stable -> every page `[]` -> pages clean                                                               | `tk-032 / absent -> absent`                      |
+| `tk-034-log-agg-page-errors`   | p1/0 | `logs(aggregate,page-errors)`                                          | flow complete -> `[]` -> aggregate clean                                                                      | `tk-033 / absent -> absent`                      |
+| `tk-035-log-pages-page-errors` | p1/0 | `logs(per-page,page-errors)`                                           | logger stable -> every page `[]` -> flow 3 clean                                                              | `tk-034 / absent -> absent`                      |
 
 #### Flow 4 — Real Space input and independent nested selection
 
-| ID | Page | Kind / exact builder | Precondition -> captured output -> postcondition | Dependencies / route transition |
-|---|---|---|---|---|
-| `ss-001-screen-reset` | runtime | `api(reset-screen-baseline)` | flow 3 clean -> one PATCH -> preseed document restored | `tk-035 / absent -> absent` |
-| `ss-002-screen-proof` | runtime | `apiRead(screen-baseline)` | PATCH settled -> exact document -> Screen reset proven | `ss-001 / absent -> absent` |
-| `ss-003-entry-reset` | runtime | `api(reset-entry-baseline)` | Screen proven -> one PATCH -> content baseline restored | `ss-002 / absent -> absent` |
-| `ss-004-entry-proof` | runtime | `apiRead(entry-baseline)` | PATCH settled -> exact values -> entry reset proven | `ss-003 / absent -> absent` |
-| `ss-005-overrides-reset` | runtime | `api(reset-entry-overrides-empty)` | entry proven -> one DELETE/PATCH contract call -> overrides empty | `ss-004 / absent -> absent` |
-| `ss-006-overrides-proof` | runtime | `apiRead(entry-overrides-empty)` | reset settled -> `[]` -> reset complete | `ss-005 / absent -> absent` |
-| `ss-007-entry` | p1/0 | `goto(paths.entry)` | reset complete -> URL/document -> entry visible | `ss-006 / absent -> absent` |
-| `ss-008-dark-toggle` | p1/0 | `click(S.colorMode)` | flow 3 light -> aria state -> dark selected | `ss-007 / absent -> absent` |
-| `ss-009-dark-proof` | p1/0 | `observe(theme-dark)` | toggle settled -> colors/aria -> dark proven | `ss-008 / absent -> absent` |
-| `ss-010-resize` | p1/0 | `resize(1024,900)` | dark entry -> viewport -> 1024x900 | `ss-009 / absent -> absent` |
-| `ss-011-selection-before` | p1/0 | `observe(selected-block-before-nested-controls,S.selectBlock(screen.blockIds.spaceGroup))` | entry stable -> exact Space-group selection handle clicked and settled -> selected block/URL baseline frozen | `ss-010 / absent -> absent` |
-| `ss-012-editor-click` | p1/0 | `click(S.contentEditable(screen.blockIds.spaceNoteField,"Unrelated note"))` | nested editor visible -> focus -> editor focused/wrapper unchanged | `ss-011 / absent -> absent` |
-| `ss-013-select-all` | p1/0 | `press(S.contentEditable(screen.blockIds.spaceNoteField,"Unrelated note"),"Control+A")` | editor focused -> selection -> existing text selected | `ss-012 / absent -> absent` |
-| `ss-014-type-alpha` | p1/0 | `type(S.contentEditable(screen.blockIds.spaceNoteField,"Unrelated note"),"Alpha")` | text selected -> input -> `Alpha` | `ss-013 / absent -> absent` |
-| `ss-015-space-one` | p1/0 | `press(S.contentEditable(screen.blockIds.spaceNoteField,"Unrelated note"),"Space")` | caret after Alpha -> key input -> one literal U+0020 appended | `ss-014 / absent -> absent` |
-| `ss-016-type-beta` | p1/0 | `type(S.contentEditable(screen.blockIds.spaceNoteField,"Unrelated note"),"beta")` | first Space present -> input -> `Alpha beta` | `ss-015 / absent -> absent` |
-| `ss-017-space-two` | p1/0 | `press(S.contentEditable(screen.blockIds.spaceNoteField,"Unrelated note"),"Space")` | caret after beta -> key input -> second U+0020 appended | `ss-016 / absent -> absent` |
-| `ss-018-type-gamma` | p1/0 | `type(S.contentEditable(screen.blockIds.spaceNoteField,"Unrelated note"),"gamma")` | second Space present -> input -> `Alpha beta gamma` | `ss-017 / absent -> absent` |
-| `ss-019-space-three` | p1/0 | `press(S.contentEditable(screen.blockIds.spaceNoteField,"Unrelated note"),"Space")` | caret after gamma -> key input -> third U+0020 appended | `ss-018 / absent -> absent` |
-| `ss-020-type-delta` | p1/0 | `type(S.contentEditable(screen.blockIds.spaceNoteField,"Unrelated note"),"delta")` | third Space present -> input -> exact phrase | `ss-019 / absent -> absent` |
-| `ss-021-space-proof` | p1/0 | `assert(space-text-preserved)` | phrase authored -> textContent/value -> exact `Alpha beta gamma delta` | `ss-020 / absent -> absent` |
-| `ss-022-selection-after-input` | p1/0 | `observe(selected-block-after-nested-input)` | editor still focused -> selected block/focus -> wrapper identity unchanged | `ss-011,ss-020 / absent -> absent` |
-| `ss-023-nested-link` | p1/0 | `click(S.buttonAffordance(screen.blockIds.spaceLink))` | nested safe link visible -> hash navigation -> nested destination activated | `ss-022 / absent -> absent` |
-| `ss-024-selection-after-link` | p1/0 | `observe(selected-block-after-nested-link)` | hash active -> selection/URL/focus -> wrapper identity unchanged | `ss-011,ss-023 / absent -> absent` |
-| `ss-025-refocus-input` | p1/0 | `focus(S.contentEditable(screen.blockIds.spaceNoteField,"Unrelated note"))` | link activation proven -> focus -> nested editor focused | `ss-024 / absent -> absent` |
-| `ss-026-nested-proof` | p1/0 | `assert(nested-controls-do-not-select)` | before/input/link samples -> activation/focus/selection -> nested controls independent | `ss-011,ss-022,ss-024,ss-025 / absent -> absent` |
-| `ss-027-selection-handle` | p1/0 | `dispatchAndCaptureSelectionHandle(S.selectBlock(screen.blockIds.spaceGroup))` | nested controls proven -> one cancelable click dispatched and captured after handler -> group selected, exact `defaultPrevented:false`, handle focused | `ss-026 / absent -> absent` |
-| `ss-028-handle-proof` | p1/0 | `assert(selection-handle-independent)` | handle clicked -> focus/ARIA/event/selection -> exact independent selection | `ss-027 / absent -> absent` |
-| `ss-029-shot` | p1/0 | `screen(space-selection-dark)` | assertions pass -> PNG -> space screenshot created | `ss-021,ss-026,ss-028 / absent -> absent` |
-| `ss-030-log-agg-errors` | p1/0 | `logs(aggregate,console-errors)` | flow complete -> `[]` -> aggregate clean | `ss-029 / absent -> absent` |
-| `ss-031-log-pages-errors` | p1/0 | `logs(per-page,console-errors)` | logger stable -> every page `[]` -> pages clean | `ss-030 / absent -> absent` |
-| `ss-032-log-agg-warnings` | p1/0 | `logs(aggregate,console-warnings)` | flow complete -> `[]` -> aggregate clean | `ss-031 / absent -> absent` |
-| `ss-033-log-pages-warnings` | p1/0 | `logs(per-page,console-warnings)` | logger stable -> every page `[]` -> pages clean | `ss-032 / absent -> absent` |
-| `ss-034-log-agg-page-errors` | p1/0 | `logs(aggregate,page-errors)` | flow complete -> `[]` -> aggregate clean | `ss-033 / absent -> absent` |
-| `ss-035-log-pages-page-errors` | p1/0 | `logs(per-page,page-errors)` | logger stable -> every page `[]` -> flow 4 clean | `ss-034 / absent -> absent` |
+| ID                             | Page    | Kind / exact builder                                                                       | Precondition -> captured output -> postcondition                                                                                                       | Dependencies / route transition                  |
+| ------------------------------ | ------- | ------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------ |
+| `ss-001-screen-reset`          | runtime | `api(reset-screen-baseline)`                                                               | flow 3 clean -> one PATCH -> preseed document restored                                                                                                 | `tk-035 / absent -> absent`                      |
+| `ss-002-screen-proof`          | runtime | `apiRead(screen-baseline)`                                                                 | PATCH settled -> exact document -> Screen reset proven                                                                                                 | `ss-001 / absent -> absent`                      |
+| `ss-003-entry-reset`           | runtime | `api(reset-entry-baseline)`                                                                | Screen proven -> one PATCH -> content baseline restored                                                                                                | `ss-002 / absent -> absent`                      |
+| `ss-004-entry-proof`           | runtime | `apiRead(entry-baseline)`                                                                  | PATCH settled -> exact values -> entry reset proven                                                                                                    | `ss-003 / absent -> absent`                      |
+| `ss-005-overrides-reset`       | runtime | `api(reset-entry-overrides-empty)`                                                         | entry proven -> one DELETE/PATCH contract call -> overrides empty                                                                                      | `ss-004 / absent -> absent`                      |
+| `ss-006-overrides-proof`       | runtime | `apiRead(entry-overrides-empty)`                                                           | reset settled -> `[]` -> reset complete                                                                                                                | `ss-005 / absent -> absent`                      |
+| `ss-007-entry`                 | p1/0    | `goto(paths.entry)`                                                                        | reset complete -> URL/document -> entry visible                                                                                                        | `ss-006 / absent -> absent`                      |
+| `ss-008-dark-toggle`           | p1/0    | `click(S.colorMode)`                                                                       | flow 3 light -> aria state -> dark selected                                                                                                            | `ss-007 / absent -> absent`                      |
+| `ss-009-dark-proof`            | p1/0    | `observe(theme-dark)`                                                                      | toggle settled -> colors/aria -> dark proven                                                                                                           | `ss-008 / absent -> absent`                      |
+| `ss-010-resize`                | p1/0    | `resize(1024,900)`                                                                         | dark entry -> viewport -> 1024x900                                                                                                                     | `ss-009 / absent -> absent`                      |
+| `ss-011-selection-before`      | p1/0    | `observe(selected-block-before-nested-controls,S.selectBlock(screen.blockIds.spaceGroup))` | entry stable -> exact Space-group selection handle clicked and settled -> selected block/URL baseline frozen                                           | `ss-010 / absent -> absent`                      |
+| `ss-012-editor-click`          | p1/0    | `click(S.contentEditable(screen.blockIds.spaceNoteField,"Unrelated note"))`                | nested editor visible -> focus -> editor focused/wrapper unchanged                                                                                     | `ss-011 / absent -> absent`                      |
+| `ss-013-select-all`            | p1/0    | `press(S.contentEditable(screen.blockIds.spaceNoteField,"Unrelated note"),"Control+A")`    | editor focused -> selection -> existing text selected                                                                                                  | `ss-012 / absent -> absent`                      |
+| `ss-014-type-alpha`            | p1/0    | `type(S.contentEditable(screen.blockIds.spaceNoteField,"Unrelated note"),"Alpha")`         | text selected -> input -> `Alpha`                                                                                                                      | `ss-013 / absent -> absent`                      |
+| `ss-015-space-one`             | p1/0    | `press(S.contentEditable(screen.blockIds.spaceNoteField,"Unrelated note"),"Space")`        | caret after Alpha -> key input -> one literal U+0020 appended                                                                                          | `ss-014 / absent -> absent`                      |
+| `ss-016-type-beta`             | p1/0    | `type(S.contentEditable(screen.blockIds.spaceNoteField,"Unrelated note"),"beta")`          | first Space present -> input -> `Alpha beta`                                                                                                           | `ss-015 / absent -> absent`                      |
+| `ss-017-space-two`             | p1/0    | `press(S.contentEditable(screen.blockIds.spaceNoteField,"Unrelated note"),"Space")`        | caret after beta -> key input -> second U+0020 appended                                                                                                | `ss-016 / absent -> absent`                      |
+| `ss-018-type-gamma`            | p1/0    | `type(S.contentEditable(screen.blockIds.spaceNoteField,"Unrelated note"),"gamma")`         | second Space present -> input -> `Alpha beta gamma`                                                                                                    | `ss-017 / absent -> absent`                      |
+| `ss-019-space-three`           | p1/0    | `press(S.contentEditable(screen.blockIds.spaceNoteField,"Unrelated note"),"Space")`        | caret after gamma -> key input -> third U+0020 appended                                                                                                | `ss-018 / absent -> absent`                      |
+| `ss-020-type-delta`            | p1/0    | `type(S.contentEditable(screen.blockIds.spaceNoteField,"Unrelated note"),"delta")`         | third Space present -> input -> exact phrase                                                                                                           | `ss-019 / absent -> absent`                      |
+| `ss-021-space-proof`           | p1/0    | `assert(space-text-preserved)`                                                             | phrase authored -> textContent/value -> exact `Alpha beta gamma delta`                                                                                 | `ss-020 / absent -> absent`                      |
+| `ss-022-selection-after-input` | p1/0    | `observe(selected-block-after-nested-input)`                                               | editor still focused -> selected block/focus -> wrapper identity unchanged                                                                             | `ss-011,ss-020 / absent -> absent`               |
+| `ss-023-nested-link`           | p1/0    | `click(S.buttonAffordance(screen.blockIds.spaceLink))`                                     | nested safe link visible -> hash navigation -> nested destination activated                                                                            | `ss-022 / absent -> absent`                      |
+| `ss-024-selection-after-link`  | p1/0    | `observe(selected-block-after-nested-link)`                                                | hash active -> selection/URL/focus -> wrapper identity unchanged                                                                                       | `ss-011,ss-023 / absent -> absent`               |
+| `ss-025-refocus-input`         | p1/0    | `focus(S.contentEditable(screen.blockIds.spaceNoteField,"Unrelated note"))`                | link activation proven -> focus -> nested editor focused                                                                                               | `ss-024 / absent -> absent`                      |
+| `ss-026-nested-proof`          | p1/0    | `assert(nested-controls-do-not-select)`                                                    | before/input/link samples -> activation/focus/selection -> nested controls independent                                                                 | `ss-011,ss-022,ss-024,ss-025 / absent -> absent` |
+| `ss-027-selection-handle`      | p1/0    | `dispatchAndCaptureSelectionHandle(S.selectBlock(screen.blockIds.spaceGroup))`             | nested controls proven -> one cancelable click dispatched and captured after handler -> group selected, exact `defaultPrevented:false`, handle focused | `ss-026 / absent -> absent`                      |
+| `ss-028-handle-proof`          | p1/0    | `assert(selection-handle-independent)`                                                     | handle clicked -> focus/ARIA/event/selection -> exact independent selection                                                                            | `ss-027 / absent -> absent`                      |
+| `ss-029-shot`                  | p1/0    | `screen(space-selection-dark)`                                                             | assertions pass -> PNG -> space screenshot created                                                                                                     | `ss-021,ss-026,ss-028 / absent -> absent`        |
+| `ss-030-log-agg-errors`        | p1/0    | `logs(aggregate,console-errors)`                                                           | flow complete -> `[]` -> aggregate clean                                                                                                               | `ss-029 / absent -> absent`                      |
+| `ss-031-log-pages-errors`      | p1/0    | `logs(per-page,console-errors)`                                                            | logger stable -> every page `[]` -> pages clean                                                                                                        | `ss-030 / absent -> absent`                      |
+| `ss-032-log-agg-warnings`      | p1/0    | `logs(aggregate,console-warnings)`                                                         | flow complete -> `[]` -> aggregate clean                                                                                                               | `ss-031 / absent -> absent`                      |
+| `ss-033-log-pages-warnings`    | p1/0    | `logs(per-page,console-warnings)`                                                          | logger stable -> every page `[]` -> pages clean                                                                                                        | `ss-032 / absent -> absent`                      |
+| `ss-034-log-agg-page-errors`   | p1/0    | `logs(aggregate,page-errors)`                                                              | flow complete -> `[]` -> aggregate clean                                                                                                               | `ss-033 / absent -> absent`                      |
+| `ss-035-log-pages-page-errors` | p1/0    | `logs(per-page,page-errors)`                                                               | logger stable -> every page `[]` -> flow 4 clean                                                                                                       | `ss-034 / absent -> absent`                      |
 
 #### Flow 5 — Builder and entry dirty guards with a real failed Save/retry
 
-| ID | Page | Kind / exact builder | Precondition -> captured output -> postcondition | Dependencies / route transition |
-|---|---|---|---|---|
-| `dg-001-entry-reset` | runtime | `api(reset-entry-baseline)` | flow 4 clean -> one PATCH -> entry baseline restored | `ss-035 / absent -> absent` |
-| `dg-002-entry-proof` | runtime | `apiRead(entry-baseline)` | PATCH settled -> exact values -> entry reset proven | `dg-001 / absent -> absent` |
-| `dg-003-builder` | p1/0 | `goto(paths.builder)` | reset proven -> URL/canvas -> builder visible | `dg-002 / absent -> absent` |
-| `dg-004-light-toggle` | p1/0 | `click(S.colorMode)` | flow 4 dark -> aria state -> light selected | `dg-003 / absent -> absent` |
-| `dg-005-light-proof` | p1/0 | `observe(theme-light)` | toggle settled -> colors/aria -> light proven | `dg-004 / absent -> absent` |
-| `dg-006-resize` | p1/0 | `resize(1280,900)` | light builder -> viewport -> 1280x900 | `dg-005 / absent -> absent` |
-| `dg-007-dirty-before` | p1/0 | `blocksBefore(palette.dirtyText)` | canvas visible -> ID set + Insert selected -> dirty Text baseline | `dg-006 / absent -> absent` |
-| `dg-008-dirty-click` | p1/0 | `click(S.palette("Text"))` | baseline -> click -> Text inserted | `dg-007 / absent -> absent` |
-| `dg-009-dirty-capture` | p1/0 | `captureNew(palette.dirtyText,"text",dg-007)` | insertion settled -> one ID -> dirty Text frozen | `dg-007,dg-008 / absent -> absent` |
-| `dg-010-dirty-fill` | p1/0 | `fill(S.paragraph,entry.contentDraft)` | Text selected -> value -> builder dirty draft authored | `dg-009 / absent -> absent` |
-| `dg-011-builder-before-cancel` | p1/0 | `observe(builder-draft-url-before-cancel)` | builder dirty -> document bytes/URL -> before sample frozen | `dg-010 / absent -> absent` |
-| `dg-012-builder-nav-cancel` | p1/0 | `click(S.recordsLink(screen.id))` | dirty builder -> dialog -> navigation suspended | `dg-011 / absent -> absent` |
-| `dg-013-builder-keep` | p1/0 | `click(S.keepEditing)` | dialog visible -> close -> builder retained | `dg-012 / absent -> absent` |
-| `dg-014-builder-cancel-proof` | p1/0 | `assert(builder-cancel-byte-identical)` | dialog canceled -> draft/URL read -> byte-identical | `dg-011,dg-013 / absent -> absent` |
-| `dg-015-builder-nav-confirm` | p1/0 | `click(S.recordsLink(screen.id))` | builder still dirty -> dialog -> navigation suspended again | `dg-014 / absent -> absent` |
-| `dg-016-builder-discard` | p1/0 | `click(S.discard)` | dialog visible -> navigation -> records workspace | `dg-015 / absent -> absent` |
-| `dg-017-builder-confirm-proof` | p1/0 | `assert(builder-confirm-navigates-once)` | records loaded -> URL/count/draft + exact visible Record actions control -> one navigation/discard and records workspace ready | `dg-011,dg-016 / absent -> absent` |
-| `dg-018-entry-link` | p1/0 | `click(S.recordActions,S.editRecord)` | records workspace with exact visible Record actions control -> open exact menu then click exact Edit record item -> entry visible | `dg-017 / absent -> absent` |
-| `dg-019-select-headline` | p1/0 | `click(S.selectBlock(screen.blockIds.headlineField))` | entry visible -> selection -> Headline selected | `dg-018 / absent -> absent` |
-| `dg-020-headline-fill` | p1/0 | `fill(S.contentEditable(screen.blockIds.headlineField,"Headline"),entry.contentDraft)` | headline selected -> value -> content dirty | `dg-019 / absent -> absent` |
-| `dg-021-tone-open` | p1/0 | `click(S.toneTrigger)` | selected target supports tone -> menu -> tone menu open | `dg-020 / absent -> absent` |
-| `dg-022-tone-muted` | p1/0 | `click(S.muted)` | menu open -> selected value + all Select content absent + body pointer/scroll unlocked continuously for >=600 ms across >=2 complete samples + final atomic teardown sample and bounded lock observer installed atomically -> presentation dirty muted | `dg-021 / absent -> absent` |
-| `dg-023-entry-before-cancel` | p1/0 | `observe(entry-drafts-url-before-cancel)` | both channels dirty -> content/presentation/URL plus validated private bounded lock-owner timeline -> before sample frozen while observer remains active | `dg-022 / absent -> absent` |
-| `dg-024-entry-nav-cancel` | p1/0 | `click(S.recordsLink(screen.id))` | entry dirty + final private lock-owner classification -> unlocked physical target -> dialog -> navigation suspended; observer disconnected in finally | `dg-023 / absent -> absent` |
-| `dg-025-entry-keep` | p1/0 | `click(S.keepEditing)` | dialog visible -> close -> entry retained | `dg-024 / absent -> absent` |
-| `dg-026-entry-cancel-bytes` | p1/0 | `assert(entry-cancel-byte-identical)` | canceled -> both drafts -> byte-identical | `dg-023,dg-025 / absent -> absent` |
-| `dg-027-entry-cancel-url` | p1/0 | `assert(entry-cancel-url-stable)` | canceled -> before/after URL -> byte-identical | `dg-023,dg-025 / absent -> absent` |
-| `dg-028-save-route-setup` | p1/0 | `route(entry-save-failure,route-setup)` | both drafts retained -> tuple -> malformed PATCH route installed | `dg-026,dg-027 / absent -> installed` |
-| `dg-029-save-click` | p1/0 | `click(S.entrySave)` | route installed/dirty -> Save -> request intercepted | `dg-028 / installed -> installed` |
-| `dg-030-save-route-hit` | p1/0 | `route(entry-save-failure,route-hit-read)` | Save pending -> captured request -> hit exactly 1 | `dg-029 / installed -> hit` |
-| `dg-030a-save-ui-settled` | p1/0 | `observe(entry-save-failure-ui-settled)` | hit read -> error visible and exact Save control re-enabled -> failure settlement latch frozen | `dg-030 / hit -> hit` |
-| `dg-031-error-drafts` | p1/0 | `assert(entry-error-retains-both-drafts)` | failure UI settled -> UI/drafts/dirty flags -> content and presentation retained | `dg-030a-save-ui-settled / hit -> hit` |
-| `dg-032-beforeunload` | p1/0 | `assert(beforeunload-active)` | both channels dirty -> cancelable event -> prevented/return value set | `dg-031 / hit -> hit` |
-| `dg-033-failure-shot` | p1/0 | `screen(dirty-save-failure)` | visible error/drafts -> PNG -> failure screenshot created | `dg-031,dg-032 / hit -> hit` |
-| `dg-034-save-unroute` | p1/0 | `route(entry-save-failure,unroute)` | hit read and shot complete -> `true` -> route absent | `dg-030,dg-033 / hit -> absent` |
-| `dg-035-real-retry` | p1/0 | `click(S.entrySave)` | route absent/error visible -> real Save -> content request succeeds | `dg-034 / absent -> absent` |
-| `dg-036-retry-proof` | p1/0 | `assert(successful-retry-clears-persisted-channel)` | content Save settled -> persisted content plus the ss-006 proven empty server-presentation baseline, dg-023 local presentation bytes, and current dirty states captured -> content matches and is clean while the server presentation remains unchanged and the local presentation remains byte-identical and dirty | `ss-006,dg-023,dg-035 / absent -> absent` |
-| `dg-037-entry-nav-confirm` | p1/0 | `click(S.recordsLink(screen.id))` | presentation still dirty -> dialog -> navigation suspended | `dg-036 / absent -> absent` |
-| `dg-038-entry-discard` | p1/0 | `click(S.discard)` | dialog visible -> navigation -> records workspace | `dg-037 / absent -> absent` |
-| `dg-039-entry-confirm-proof` | p1/0 | `assert(entry-confirm-navigates-once)` | records loaded -> URL/count -> one navigation | `dg-038 / absent -> absent` |
-| `dg-040-dark-toggle` | p1/0 | `click(S.colorMode)` | final records light -> aria state -> dark selected | `dg-039 / absent -> absent` |
-| `dg-041-dark-proof` | p1/0 | `observe(theme-dark)` | toggle settled -> colors/aria -> dark proven | `dg-040 / absent -> absent` |
-| `dg-042-final-shot` | p1/0 | `screen(dirty-guards-final)` | final state -> PNG -> dirty-guards screenshot created | `dg-039,dg-041 / absent -> absent` |
-| `dg-043-log-agg-errors` | p1/0 | `logs(aggregate,console-errors)` | expected handled error excluded from console -> `[]` -> aggregate clean | `dg-042 / absent -> absent` |
-| `dg-044-log-pages-errors` | p1/0 | `logs(per-page,console-errors)` | logger stable -> every page `[]` -> pages clean | `dg-043 / absent -> absent` |
-| `dg-045-log-agg-warnings` | p1/0 | `logs(aggregate,console-warnings)` | flow complete -> `[]` -> aggregate clean | `dg-044 / absent -> absent` |
-| `dg-046-log-pages-warnings` | p1/0 | `logs(per-page,console-warnings)` | logger stable -> every page `[]` -> pages clean | `dg-045 / absent -> absent` |
-| `dg-047-log-agg-page-errors` | p1/0 | `logs(aggregate,page-errors)` | flow complete -> `[]` -> aggregate clean | `dg-046 / absent -> absent` |
-| `dg-048-log-pages-page-errors` | p1/0 | `logs(per-page,page-errors)` | logger stable -> every page `[]` -> flow 5 clean | `dg-047 / absent -> absent` |
+| ID                             | Page    | Kind / exact builder                                                                   | Precondition -> captured output -> postcondition                                                                                                                                                                                                                                                                    | Dependencies / route transition           |
+| ------------------------------ | ------- | -------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------- |
+| `dg-001-entry-reset`           | runtime | `api(reset-entry-baseline)`                                                            | flow 4 clean -> one PATCH -> entry baseline restored                                                                                                                                                                                                                                                                | `ss-035 / absent -> absent`               |
+| `dg-002-entry-proof`           | runtime | `apiRead(entry-baseline)`                                                              | PATCH settled -> exact values -> entry reset proven                                                                                                                                                                                                                                                                 | `dg-001 / absent -> absent`               |
+| `dg-003-builder`               | p1/0    | `goto(paths.builder)`                                                                  | reset proven -> URL/canvas -> builder visible                                                                                                                                                                                                                                                                       | `dg-002 / absent -> absent`               |
+| `dg-004-light-toggle`          | p1/0    | `click(S.colorMode)`                                                                   | flow 4 dark -> aria state -> light selected                                                                                                                                                                                                                                                                         | `dg-003 / absent -> absent`               |
+| `dg-005-light-proof`           | p1/0    | `observe(theme-light)`                                                                 | toggle settled -> colors/aria -> light proven                                                                                                                                                                                                                                                                       | `dg-004 / absent -> absent`               |
+| `dg-006-resize`                | p1/0    | `resize(1280,900)`                                                                     | light builder -> viewport -> 1280x900                                                                                                                                                                                                                                                                               | `dg-005 / absent -> absent`               |
+| `dg-007-dirty-before`          | p1/0    | `blocksBefore(palette.dirtyText)`                                                      | canvas visible -> ID set + Insert selected -> dirty Text baseline                                                                                                                                                                                                                                                   | `dg-006 / absent -> absent`               |
+| `dg-008-dirty-click`           | p1/0    | `click(S.palette("Text"))`                                                             | baseline -> click -> Text inserted                                                                                                                                                                                                                                                                                  | `dg-007 / absent -> absent`               |
+| `dg-009-dirty-capture`         | p1/0    | `captureNew(palette.dirtyText,"text",dg-007)`                                          | insertion settled -> one ID -> dirty Text frozen                                                                                                                                                                                                                                                                    | `dg-007,dg-008 / absent -> absent`        |
+| `dg-010-dirty-fill`            | p1/0    | `fill(S.paragraph,entry.contentDraft)`                                                 | Text selected -> value -> builder dirty draft authored                                                                                                                                                                                                                                                              | `dg-009 / absent -> absent`               |
+| `dg-011-builder-before-cancel` | p1/0    | `observe(builder-draft-url-before-cancel)`                                             | builder dirty -> document bytes/URL -> before sample frozen                                                                                                                                                                                                                                                         | `dg-010 / absent -> absent`               |
+| `dg-012-builder-nav-cancel`    | p1/0    | `click(S.recordsLink(screen.id))`                                                      | dirty builder -> dialog -> navigation suspended                                                                                                                                                                                                                                                                     | `dg-011 / absent -> absent`               |
+| `dg-013-builder-keep`          | p1/0    | `click(S.keepEditing)`                                                                 | dialog visible -> close -> builder retained                                                                                                                                                                                                                                                                         | `dg-012 / absent -> absent`               |
+| `dg-014-builder-cancel-proof`  | p1/0    | `assert(builder-cancel-byte-identical)`                                                | dialog canceled -> draft/URL read -> byte-identical                                                                                                                                                                                                                                                                 | `dg-011,dg-013 / absent -> absent`        |
+| `dg-015-builder-nav-confirm`   | p1/0    | `click(S.recordsLink(screen.id))`                                                      | builder still dirty -> dialog -> navigation suspended again                                                                                                                                                                                                                                                         | `dg-014 / absent -> absent`               |
+| `dg-016-builder-discard`       | p1/0    | `click(S.discard)`                                                                     | dialog visible -> navigation -> records workspace                                                                                                                                                                                                                                                                   | `dg-015 / absent -> absent`               |
+| `dg-017-builder-confirm-proof` | p1/0    | `assert(builder-confirm-navigates-once)`                                               | records loaded -> URL/count/draft + exact visible Record actions control -> one navigation/discard and records workspace ready                                                                                                                                                                                      | `dg-011,dg-016 / absent -> absent`        |
+| `dg-018-entry-link`            | p1/0    | `click(S.recordActions,S.editRecord)`                                                  | records workspace with exact visible Record actions control -> open exact menu then click exact Edit record item -> entry visible                                                                                                                                                                                   | `dg-017 / absent -> absent`               |
+| `dg-019-select-headline`       | p1/0    | `click(S.selectBlock(screen.blockIds.headlineField))`                                  | entry visible -> selection -> Headline selected                                                                                                                                                                                                                                                                     | `dg-018 / absent -> absent`               |
+| `dg-020-headline-fill`         | p1/0    | `fill(S.contentEditable(screen.blockIds.headlineField,"Headline"),entry.contentDraft)` | headline selected -> value -> content dirty                                                                                                                                                                                                                                                                         | `dg-019 / absent -> absent`               |
+| `dg-021-tone-open`             | p1/0    | `click(S.toneTrigger)`                                                                 | selected target supports tone -> menu -> tone menu open                                                                                                                                                                                                                                                             | `dg-020 / absent -> absent`               |
+| `dg-022-tone-muted`            | p1/0    | `click(S.muted)`                                                                       | menu open -> selected value + all Select content absent + body pointer/scroll unlocked continuously for >=600 ms across >=2 complete samples + final atomic teardown sample -> presentation dirty muted                                                                                                                | `dg-021 / absent -> absent`               |
+| `dg-023-entry-before-cancel`   | p1/0    | `observe(entry-drafts-url-before-cancel)`                                              | both channels dirty -> content/presentation/URL/navigation snapshot -> before sample frozen                                                                                                                                                                                                                          | `dg-022 / absent -> absent`               |
+| `dg-024-entry-nav-cancel`      | p1/0    | `click(S.recordsLink(screen.id))`                                                      | entry dirty -> current body scroll/pointer unlock + exact visible geometry + scroll settlement + final geometry/visibility + center hit-test -> exact dialog -> navigation suspended                                                                                                                                 | `dg-023 / absent -> absent`               |
+| `dg-025-entry-keep`            | p1/0    | `click(S.keepEditing)`                                                                 | dialog visible -> close -> entry retained                                                                                                                                                                                                                                                                           | `dg-024 / absent -> absent`               |
+| `dg-026-entry-cancel-bytes`    | p1/0    | `assert(entry-cancel-byte-identical)`                                                  | canceled -> both drafts -> byte-identical                                                                                                                                                                                                                                                                           | `dg-023,dg-025 / absent -> absent`        |
+| `dg-027-entry-cancel-url`      | p1/0    | `assert(entry-cancel-url-stable)`                                                      | canceled -> before/after URL -> byte-identical                                                                                                                                                                                                                                                                      | `dg-023,dg-025 / absent -> absent`        |
+| `dg-028-save-route-setup`      | p1/0    | `route(entry-save-failure,route-setup)`                                                | both drafts retained -> tuple -> malformed PATCH route installed                                                                                                                                                                                                                                                    | `dg-026,dg-027 / absent -> installed`     |
+| `dg-029-save-click`            | p1/0    | `click(S.entrySave)`                                                                   | route installed/dirty -> Save -> request intercepted                                                                                                                                                                                                                                                                | `dg-028 / installed -> installed`         |
+| `dg-030-save-route-hit`        | p1/0    | `route(entry-save-failure,route-hit-read)`                                             | Save pending -> captured request -> hit exactly 1                                                                                                                                                                                                                                                                   | `dg-029 / installed -> hit`               |
+| `dg-030a-save-ui-settled`      | p1/0    | `observe(entry-save-failure-ui-settled)`                                               | hit read -> error visible and exact Save control re-enabled -> failure settlement latch frozen                                                                                                                                                                                                                      | `dg-030 / hit -> hit`                     |
+| `dg-031-error-drafts`          | p1/0    | `assert(entry-error-retains-both-drafts)`                                              | failure UI settled -> UI/drafts/dirty flags -> content and presentation retained                                                                                                                                                                                                                                    | `dg-030a-save-ui-settled / hit -> hit`    |
+| `dg-032-beforeunload`          | p1/0    | `assert(beforeunload-active)`                                                          | both channels dirty -> cancelable event -> prevented/return value set                                                                                                                                                                                                                                               | `dg-031 / hit -> hit`                     |
+| `dg-033-failure-shot`          | p1/0    | `screen(dirty-save-failure)`                                                           | visible error/drafts -> PNG -> failure screenshot created                                                                                                                                                                                                                                                           | `dg-031,dg-032 / hit -> hit`              |
+| `dg-034-save-unroute`          | p1/0    | `route(entry-save-failure,unroute)`                                                    | hit read and shot complete -> `true` -> route absent                                                                                                                                                                                                                                                                | `dg-030,dg-033 / hit -> absent`           |
+| `dg-035-real-retry`            | p1/0    | `click(S.entrySave)`                                                                   | route absent/error visible -> real Save -> content request succeeds                                                                                                                                                                                                                                                 | `dg-034 / absent -> absent`               |
+| `dg-036-retry-proof`           | p1/0    | `assert(successful-retry-clears-persisted-channel)`                                    | content Save settled -> persisted content plus the ss-006 proven empty server-presentation baseline, dg-023 local presentation bytes, and current dirty states captured -> content matches and is clean while the server presentation remains unchanged and the local presentation remains byte-identical and dirty | `ss-006,dg-023,dg-035 / absent -> absent` |
+| `dg-037-entry-nav-confirm`     | p1/0    | `click(S.recordsLink(screen.id))`                                                      | presentation still dirty -> dialog -> navigation suspended                                                                                                                                                                                                                                                          | `dg-036 / absent -> absent`               |
+| `dg-038-entry-discard`         | p1/0    | `click(S.discard)`                                                                     | dialog visible -> navigation -> records workspace                                                                                                                                                                                                                                                                   | `dg-037 / absent -> absent`               |
+| `dg-039-entry-confirm-proof`   | p1/0    | `assert(entry-confirm-navigates-once)`                                                 | records loaded -> URL/count -> one navigation                                                                                                                                                                                                                                                                       | `dg-038 / absent -> absent`               |
+| `dg-040-dark-toggle`           | p1/0    | `click(S.colorMode)`                                                                   | final records light -> aria state -> dark selected                                                                                                                                                                                                                                                                  | `dg-039 / absent -> absent`               |
+| `dg-041-dark-proof`            | p1/0    | `observe(theme-dark)`                                                                  | toggle settled -> colors/aria -> dark proven                                                                                                                                                                                                                                                                        | `dg-040 / absent -> absent`               |
+| `dg-042-final-shot`            | p1/0    | `screen(dirty-guards-final)`                                                           | final state -> PNG -> dirty-guards screenshot created                                                                                                                                                                                                                                                               | `dg-039,dg-041 / absent -> absent`        |
+| `dg-043-log-agg-errors`        | p1/0    | `logs(aggregate,console-errors)`                                                       | expected handled error excluded from console -> `[]` -> aggregate clean                                                                                                                                                                                                                                             | `dg-042 / absent -> absent`               |
+| `dg-044-log-pages-errors`      | p1/0    | `logs(per-page,console-errors)`                                                        | logger stable -> every page `[]` -> pages clean                                                                                                                                                                                                                                                                     | `dg-043 / absent -> absent`               |
+| `dg-045-log-agg-warnings`      | p1/0    | `logs(aggregate,console-warnings)`                                                     | flow complete -> `[]` -> aggregate clean                                                                                                                                                                                                                                                                            | `dg-044 / absent -> absent`               |
+| `dg-046-log-pages-warnings`    | p1/0    | `logs(per-page,console-warnings)`                                                      | logger stable -> every page `[]` -> pages clean                                                                                                                                                                                                                                                                     | `dg-045 / absent -> absent`               |
+| `dg-047-log-agg-page-errors`   | p1/0    | `logs(aggregate,page-errors)`                                                          | flow complete -> `[]` -> aggregate clean                                                                                                                                                                                                                                                                            | `dg-046 / absent -> absent`               |
+| `dg-048-log-pages-page-errors` | p1/0    | `logs(per-page,page-errors)`                                                           | logger stable -> every page `[]` -> flow 5 clean                                                                                                                                                                                                                                                                    | `dg-047 / absent -> absent`               |
 
 #### Flow 6 — Related retry, cache identity, A -> B switch, and stale protection
 
-| ID | Page | Kind / exact builder | Precondition -> captured output -> postcondition | Dependencies / route transition |
-|---|---|---|---|---|
-| `rc-001-entry-reset` | runtime | `api(reset-entry-baseline)` | flow 5 clean -> one PATCH -> relation/content baseline restored | `dg-048 / absent -> absent` |
-| `rc-002-entry-proof` | runtime | `apiRead(entry-baseline)` | PATCH settled -> exact A IDs/B empty/other values -> entry reset proven | `rc-001 / absent -> absent` |
-| `rc-003-overrides-reset` | runtime | `api(reset-entry-overrides-empty)` | entry proven -> one contract call -> presentation overrides empty | `rc-002 / absent -> absent` |
-| `rc-004-overrides-proof` | runtime | `apiRead(entry-overrides-empty)` | reset settled -> `[]` -> reset proven | `rc-003 / absent -> absent` |
-| `rc-005-failure-route-setup` | p1/0 | `route(related-first-failure,route-setup)` | records workspace, entry unmounted -> tuple -> malformed GET route installed | `rc-004 / absent -> installed` |
-| `rc-006-entry-link` | p1/0 | `goto(paths.retryEntry)` | route installed/records visible -> retry Screen URL/document -> retry-only entry mounting with no relation FieldRenderer | `rc-005 / installed -> installed` |
-| `rc-007-failure-route-hit` | p1/0 | `route(related-first-failure,route-hit-read)` | entry mounting -> captured request -> hit exactly 1 | `rc-006 / installed -> hit` |
-| `rc-008-failure-visible` | p1/0 | `assert(related-error-visible-before-retry)` | malformed response handled -> exact related Alert/Retry plus retry-list-root scoped rows/skeleton/empty geometry -> failure visible with zero rows, exact three visible skeleton chips, no empty fallback | `rc-007 / hit -> hit` |
-| `rc-009-failure-shot` | p1/0 | `screen(related-first-failure)` | failure visible -> PNG -> first-failure screenshot created | `rc-008 / hit -> hit` |
-| `rc-010-failure-unroute` | p1/0 | `route(related-first-failure,unroute)` | hit/shot complete -> `true` -> malformed route absent | `rc-007,rc-009 / hit -> absent` |
-| `rc-011-visible-retry` | p1/0 | `click(S.relatedRetry)` | route absent/scoped related Retry visible -> real Retry -> dedicated related-failure request succeeds | `rc-010 / absent -> absent` |
-| `rc-012-retry-proof` | p1/0 | `assert(visible-retry-succeeds)` | Retry settled -> related Alert absent plus retry-list-root scoped row/skeleton/empty geometry -> exact dedicated failure-fixture row alone and visibly rendered | `rc-011 / absent -> absent` |
-| `rc-012a-records-remount` | p1/0 | `click(S.recordsLink(screen.id))` | related-list Retry succeeded/entry clean -> internal navigation + exact visible Record actions control -> records workspace ready | `rc-012 / absent -> absent` |
-| `rc-012b-entry-remount` | p1/0 | `click(S.recordActions,S.editRecord)` | records workspace ready -> open exact Record actions menu then click exact Edit record item -> fresh entry realm mounted | `rc-012a-records-remount / absent -> absent` |
-| `rc-012c-picker-warm-proof` | p1/0 | `observe(relation-pickers-a-b-warm)` | remount requests settled -> exact A1/A2/B1/B2 title buttons enabled + A related rows visible + exact positive B-list GET count frozen -> both pickers and related hook healthy/B cache warm baseline captured | `rc-012b-entry-remount / absent -> absent` |
-| `rc-013-select-note` | p1/0 | `click(S.selectBlock(screen.blockIds.spaceNoteField))` | picker warm proof complete -> selection -> unrelated text Field selected | `rc-012c-picker-warm-proof / absent -> absent` |
-| `rc-014-unrelated-fill` | p1/0 | `fill(S.contentEditable(screen.blockIds.spaceNoteField,"Unrelated note"),entry.relatedUnrelatedDraft)` | field selected -> value -> unrelated content dirty | `rc-013 / absent -> absent` |
-| `rc-015-tone-open` | p1/0 | `click(S.toneTrigger)` | selected field supports tone -> menu -> tone menu open | `rc-014 / absent -> absent` |
-| `rc-016-tone-muted` | p1/0 | `click(S.muted)` | menu open -> selected value + all Select content absent + body pointer/scroll unlocked continuously for >=600 ms across >=2 complete samples + final atomic teardown sample -> unrelated presentation dirty | `rc-015 / absent -> absent` |
-| `rc-017-unrelated-before` | p1/0 | `observe(related-unrelated-drafts-before)` | both unrelated channels dirty -> bytes -> before sample frozen | `rc-016 / absent -> absent` |
-| `rc-017a-pre-route-a-baseline` | p1/0 | `observe(related-a-visible-baseline)` | main entry/pickers settled -> exact main-A-list-root row IDs/text/positive rects and zero skeleton/empty geometry + current p1 `navigationCount` -> pre-route visible/navigation baseline frozen | `rc-017 / absent -> absent` |
-| `rc-017b-auth-rate-window-barrier` | p1/0 | `authRateWindowBarrier()` | entry baseline stable/bounded rate epoch -> configured auth window naturally expires when enabled or timer is skipped when disabled + bounded realm-stability proof -> exact `{"barrierSatisfied":true}` | `rc-017a-pre-route-a-baseline / absent -> absent` |
-| `rc-018-refresh-route-setup` | p1/0 | `route(related-a-refresh,route-setup)` | first failure recovered/drafts and A baseline held -> tuple -> delayed A route installed | `rc-017b-auth-rate-window-barrier / absent -> installed` |
-| `rc-019-related-tab-new` | p2/1 | `tab-new(paths.relatedEntryA1Editor)` | route installed/context logger active -> identity/URL -> p2 related-A editor | `rc-018 / installed -> installed` |
-| `rc-020-related-tab-edit` | p2/1 | `fill(S.secondTabTitle,relatedEntries.a1.updatedTitle)` | p2 editor visible -> value -> harmless A1 draft | `rc-019 / installed -> installed` |
-| `rc-021-related-tab-save` | p2/1 | `click(S.secondTabSave)` | p2 dirty -> real Save draft click/request begins -> A mutation in flight | `rc-020 / installed -> installed` |
-| `rc-021a-related-tab-save-settled` | p2/1 | `observe(related-tab-save-settled)` | mutation in flight -> exact PATCH method/path/success + strict returned A1 ID/updated title + Save draft re-enabled/`Saving...` absent -> A1 persisted and cache broadcast completed | `rc-021 / installed -> installed` |
-| `rc-022-related-tab-origin` | p1/0 | `tab-select(0)` | p2 save settlement proven -> selected tab -> p1 restored | `rc-021a-related-tab-save-settled / installed -> installed` |
-| `rc-023-refresh-route-hit` | p1/0 | `route(related-a-refresh,route-hit-read)` | broadcast refresh started after p2 Save -> strict parsed authoritative updated-A response with exact A IDs/no duplicate or unknown row keys/A1 updated title -> `{"hits":1,"captured":true,"rowCount":2,"rowIdsMatch":true,"uniqueIds":true,"updatedA1Matches":true}`/pending | `rc-022 / installed -> hit` |
-| `rc-024-same-target` | p1/0 | `assert(same-target-visible-rows-retained)` | updated-A response pending -> main-A-list-root scoped row IDs/text/rects/skeleton/empty plus related Alert -> pre-route A baseline retained | `rc-017a-pre-route-a-baseline,rc-023 / hit -> hit` |
-| `rc-025-clear-a1` | p1/0 | `click(S.relationEntry(screen.blockIds.relationAField,relatedEntries.a1.title))` | relation A has A1/A2 -> toggle -> A1 cleared, A2 remains | `rc-024 / hit -> hit` |
-| `rc-026-clear-a2` | p1/0 | `click(S.relationEntry(screen.blockIds.relationAField,relatedEntries.a2.title))` | relation A has A2 -> toggle -> relation A empty | `rc-025 / hit -> hit` |
-| `rc-027-target-empty` | p1/0 | `assert(target-switch-immediate-empty)` | A empty/B untouched -> main A/B list-root scoped rows/skeleton/empty geometry -> zero rows/no empty nodes/exact three visible skeleton chips in each root | `rc-026 / hit -> hit` |
-| `rc-028-select-b1` | p1/0 | `click(S.relationEntry(screen.blockIds.relationBField,relatedEntries.b1.title))` | B picker warm/empty -> toggle -> B1 selected | `rc-027 / hit -> hit` |
-| `rc-029-select-b2` | p1/0 | `click(S.relationEntry(screen.blockIds.relationBField,relatedEntries.b2.title))` | B1 selected -> toggle -> exact B1/B2 selected | `rc-028 / hit -> hit` |
-| `rc-030-only-b` | p1/0 | `assert(only-b-rows-visible)` | B selection settled -> main-B-list-root scoped IDs/rects plus zero skeleton/empty geometry and B-list GET count unchanged from rc-012c -> exact B rows visible from warmed cache with zero network delta | `rc-012c-picker-warm-proof,rc-029 / hit -> hit` |
-| `rc-031-draft-proof` | p1/0 | `assert(unrelated-draft-byte-identical)` | B visible/A pending -> before/after bytes -> unrelated channels unchanged | `rc-017,rc-030 / hit -> hit` |
-| `rc-032-diff-proof` | p1/0 | `assert(relation-diff-exact)` | current root-scoped A/B picker pressed states + relation paths from frozen exact-reset `rc-002` baseline + exhaustive non-relation current-draft diff against frozen post-unrelated-edits `rc-017` sample -> A/B/other paths -> only A cleared+B selected and no post-`rc-017` non-relation path changed | `rc-002,rc-017,rc-030,rc-031 / hit -> hit` |
-| `rc-033-stale-shot` | p1/0 | `screen(related-a-stale)` | B visible/A pending -> PNG -> stale-A screenshot created | `rc-030,rc-031,rc-032 / hit -> hit` |
-| `rc-034-refresh-release` | p1/0 | `route(related-a-refresh,route-release)` | captured A response held -> fulfillment receipt -> response released/UI settled | `rc-023,rc-033 / hit -> released` |
-| `rc-035-stale-proof` | p1/0 | `assert(stale-a-cannot-commit)` | updated-A settled after target B -> exact main-A title and main-B row state captured -> updated A1 title absent only inside the main-A list root while B-root rows remain retained | `rc-034 / released -> released` |
-| `rc-036-refresh-unroute` | p1/0 | `route(related-a-refresh,unroute)` | stale protection proven -> `true` -> delayed route absent | `rc-035 / released -> absent` |
-| `rc-037-final-shot` | p1/0 | `screen(related-b-dark)` | B retained/dark -> PNG -> final related screenshot created | `rc-035,rc-036 / absent -> absent` |
-| `rc-037a-exit-navigation` | p1/0 | `click(S.recordsLink(screen.id))` | content/presentation/relation drafts still dirty -> real internal navigation -> discard dialog visible/navigation suspended | `rc-037 / absent -> absent` |
-| `rc-037b-exit-discard` | p1/0 | `click(S.discard)` | discard dialog visible -> real discard action -> records workspace loaded | `rc-037a-exit-navigation / absent -> absent` |
-| `rc-037c-exit-proof` | p1/0 | `assert(flow6-exit-discarded-once)` | records workspace settled -> URL/current p1 navigation count minus frozen `rc-017a` count/entry dirty badges -> exact delta one and both dirty channels unmounted | `rc-017a-pre-route-a-baseline,rc-037b-exit-discard / absent -> absent` |
-| `rc-038-log-agg-errors` | p1/0 | `logs(aggregate,console-errors)` | flow complete -> both pages aggregate `[]` -> clean | `rc-037c-exit-proof / absent -> absent` |
-| `rc-039-log-pages-errors` | p1/0 | `logs(per-page,console-errors)` | p1+p2 registered -> both `[]` -> page errors clean | `rc-038 / absent -> absent` |
-| `rc-040-log-agg-warnings` | p1/0 | `logs(aggregate,console-warnings)` | flow complete -> both pages aggregate `[]` -> clean | `rc-039 / absent -> absent` |
-| `rc-041-log-pages-warnings` | p1/0 | `logs(per-page,console-warnings)` | p1+p2 registered -> both `[]` -> page warnings clean | `rc-040 / absent -> absent` |
-| `rc-042-log-agg-page-errors` | p1/0 | `logs(aggregate,page-errors)` | flow complete -> both pages aggregate `[]` -> clean | `rc-041 / absent -> absent` |
-| `rc-043-log-pages-page-errors` | p1/0 | `logs(per-page,page-errors)` | p1+p2 registered -> both `[]` -> flow 6 clean | `rc-042 / absent -> absent` |
-| `rc-044-close-second-tab` | p2/1 | `tab-close(1)` | both-page logs captured -> close receipt -> p2 closed, identity retained in logger evidence | `rc-043 / absent -> absent` |
-| `rc-045-origin-proof` | p1/0 | `tab-select(0)` | p2 closed -> selected tab -> p1 active | `rc-044 / absent -> absent` |
+| ID                                 | Page    | Kind / exact builder                                                                                   | Precondition -> captured output -> postcondition                                                                                                                                                                                                                                                         | Dependencies / route transition                                        |
+| ---------------------------------- | ------- | ------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
+| `rc-001-entry-reset`               | runtime | `api(reset-entry-baseline)`                                                                            | flow 5 clean -> one PATCH -> relation/content baseline restored                                                                                                                                                                                                                                          | `dg-048 / absent -> absent`                                            |
+| `rc-002-entry-proof`               | runtime | `apiRead(entry-baseline)`                                                                              | PATCH settled -> exact A IDs/B empty/other values -> entry reset proven                                                                                                                                                                                                                                  | `rc-001 / absent -> absent`                                            |
+| `rc-003-overrides-reset`           | runtime | `api(reset-entry-overrides-empty)`                                                                     | entry proven -> one contract call -> presentation overrides empty                                                                                                                                                                                                                                        | `rc-002 / absent -> absent`                                            |
+| `rc-004-overrides-proof`           | runtime | `apiRead(entry-overrides-empty)`                                                                       | reset settled -> `[]` -> reset proven                                                                                                                                                                                                                                                                    | `rc-003 / absent -> absent`                                            |
+| `rc-005-failure-route-setup`       | p1/0    | `route(related-first-failure,route-setup)`                                                             | records workspace, entry unmounted -> tuple -> malformed GET route installed                                                                                                                                                                                                                             | `rc-004 / absent -> installed`                                         |
+| `rc-006-entry-link`                | p1/0    | `goto(paths.retryEntry)`                                                                               | route installed/records visible -> retry Screen URL/document -> retry-only entry mounting with no relation FieldRenderer                                                                                                                                                                                 | `rc-005 / installed -> installed`                                      |
+| `rc-007-failure-route-hit`         | p1/0    | `route(related-first-failure,route-hit-read)`                                                          | entry mounting -> captured request -> hit exactly 1                                                                                                                                                                                                                                                      | `rc-006 / installed -> hit`                                            |
+| `rc-008-failure-visible`           | p1/0    | `assert(related-error-visible-before-retry)`                                                           | malformed response handled -> exact related Alert/Retry plus retry-list-root scoped rows/skeleton/empty geometry -> failure visible with zero rows, exact three visible skeleton chips, no empty fallback                                                                                                | `rc-007 / hit -> hit`                                                  |
+| `rc-009-failure-shot`              | p1/0    | `screen(related-first-failure)`                                                                        | failure visible -> PNG -> first-failure screenshot created                                                                                                                                                                                                                                               | `rc-008 / hit -> hit`                                                  |
+| `rc-010-failure-unroute`           | p1/0    | `route(related-first-failure,unroute)`                                                                 | hit/shot complete -> `true` -> malformed route absent                                                                                                                                                                                                                                                    | `rc-007,rc-009 / hit -> absent`                                        |
+| `rc-011-visible-retry`             | p1/0    | `click(S.relatedRetry)`                                                                                | route absent/scoped related Retry visible -> real Retry -> dedicated related-failure request succeeds                                                                                                                                                                                                    | `rc-010 / absent -> absent`                                            |
+| `rc-012-retry-proof`               | p1/0    | `assert(visible-retry-succeeds)`                                                                       | Retry settled -> related Alert absent plus retry-list-root scoped row/skeleton/empty geometry -> exact dedicated failure-fixture row alone and visibly rendered                                                                                                                                          | `rc-011 / absent -> absent`                                            |
+| `rc-012a-records-remount`          | p1/0    | `click(S.recordsLink(screen.id))`                                                                      | related-list Retry succeeded/entry clean -> internal navigation + exact visible Record actions control -> records workspace ready                                                                                                                                                                        | `rc-012 / absent -> absent`                                            |
+| `rc-012b-entry-remount`            | p1/0    | `click(S.recordActions,S.editRecord)`                                                                  | records workspace ready -> open exact Record actions menu then click exact Edit record item -> fresh entry realm mounted                                                                                                                                                                                 | `rc-012a-records-remount / absent -> absent`                           |
+| `rc-012c-picker-warm-proof`        | p1/0    | `observe(relation-pickers-a-b-warm)`                                                                   | remount requests settled -> exact A1/A2/B1/B2 title buttons enabled + A related rows visible + exact positive B-list GET count frozen -> both pickers and related hook healthy/B cache warm baseline captured                                                                                            | `rc-012b-entry-remount / absent -> absent`                             |
+| `rc-013-select-note`               | p1/0    | `click(S.selectBlock(screen.blockIds.spaceNoteField))`                                                 | picker warm proof complete -> selection -> unrelated text Field selected                                                                                                                                                                                                                                 | `rc-012c-picker-warm-proof / absent -> absent`                         |
+| `rc-014-unrelated-fill`            | p1/0    | `fill(S.contentEditable(screen.blockIds.spaceNoteField,"Unrelated note"),entry.relatedUnrelatedDraft)` | field selected -> value -> unrelated content dirty                                                                                                                                                                                                                                                       | `rc-013 / absent -> absent`                                            |
+| `rc-015-tone-open`                 | p1/0    | `click(S.toneTrigger)`                                                                                 | selected field supports tone -> menu -> tone menu open                                                                                                                                                                                                                                                   | `rc-014 / absent -> absent`                                            |
+| `rc-016-tone-muted`                | p1/0    | `click(S.muted)`                                                                                       | menu open -> selected value + all Select content absent + body pointer/scroll unlocked continuously for >=600 ms across >=2 complete samples + final atomic teardown sample -> unrelated presentation dirty                                                                                              | `rc-015 / absent -> absent`                                            |
+| `rc-017-unrelated-before`          | p1/0    | `observe(related-unrelated-drafts-before)`                                                             | both unrelated channels dirty -> bytes -> before sample frozen                                                                                                                                                                                                                                           | `rc-016 / absent -> absent`                                            |
+| `rc-017a-pre-route-a-baseline`     | p1/0    | `observe(related-a-visible-baseline)`                                                                  | main entry/pickers settled -> exact main-A-list-root row IDs/text/positive rects and zero skeleton/empty geometry + current p1 `navigationCount` -> pre-route visible/navigation baseline frozen                                                                                                         | `rc-017 / absent -> absent`                                            |
+| `rc-017b-auth-rate-window-barrier` | p1/0    | `authRateWindowBarrier()`                                                                              | entry baseline stable/bounded rate epoch -> configured auth window naturally expires when enabled or timer is skipped when disabled + bounded realm-stability proof -> exact `{"barrierSatisfied":true}`                                                                                                 | `rc-017a-pre-route-a-baseline / absent -> absent`                      |
+| `rc-018-refresh-route-setup`       | p1/0    | `route(related-a-refresh,route-setup)`                                                                 | first failure recovered/drafts and A baseline held -> tuple -> delayed A route installed                                                                                                                                                                                                                 | `rc-017b-auth-rate-window-barrier / absent -> installed`               |
+| `rc-019-related-tab-new`           | p2/1    | `tab-new(paths.relatedEntryA1Editor)`                                                                  | route installed/context logger active -> identity/URL -> p2 related-A editor                                                                                                                                                                                                                             | `rc-018 / installed -> installed`                                      |
+| `rc-020-related-tab-edit`          | p2/1    | `fill(S.secondTabTitle,relatedEntries.a1.updatedTitle)`                                                | p2 editor visible -> value -> harmless A1 draft                                                                                                                                                                                                                                                          | `rc-019 / installed -> installed`                                      |
+| `rc-021-related-tab-save`          | p2/1    | `click(S.secondTabSave)`                                                                               | p2 dirty -> real Save draft click/request begins -> A mutation in flight                                                                                                                                                                                                                                 | `rc-020 / installed -> installed`                                      |
+| `rc-021a-related-tab-save-settled` | p2/1    | `observe(related-tab-save-settled)`                                                                    | mutation in flight -> exact PATCH method/path/success + strict returned A1 ID/updated title + Save draft re-enabled/`Saving...` absent -> A1 persisted and cache broadcast completed                                                                                                                     | `rc-021 / installed -> installed`                                      |
+| `rc-022-related-tab-origin`        | p1/0    | `tab-select(0)`                                                                                        | p2 save settlement proven -> selected tab -> p1 restored                                                                                                                                                                                                                                                 | `rc-021a-related-tab-save-settled / installed -> installed`            |
+| `rc-023-refresh-route-hit`         | p1/0    | `route(related-a-refresh,route-hit-read)`                                                              | broadcast refresh started after p2 Save -> strict parsed authoritative updated-A response with exact A IDs/no duplicate or unknown row keys/A1 updated title -> `{"hits":1,"captured":true,"rowCount":2,"rowIdsMatch":true,"uniqueIds":true,"updatedA1Matches":true}`/pending                            | `rc-022 / installed -> hit`                                            |
+| `rc-024-same-target`               | p1/0    | `assert(same-target-visible-rows-retained)`                                                            | updated-A response pending -> main-A-list-root scoped row IDs/text/rects/skeleton/empty plus related Alert -> pre-route A baseline retained                                                                                                                                                              | `rc-017a-pre-route-a-baseline,rc-023 / hit -> hit`                     |
+| `rc-025-clear-a1`                  | p1/0    | `click(S.relationEntry(screen.blockIds.relationAField,relatedEntries.a1.title))`                       | relation A has A1/A2 -> toggle -> A1 cleared, A2 remains                                                                                                                                                                                                                                                 | `rc-024 / hit -> hit`                                                  |
+| `rc-026-clear-a2`                  | p1/0    | `click(S.relationEntry(screen.blockIds.relationAField,relatedEntries.a2.title))`                       | relation A has A2 -> toggle -> relation A empty                                                                                                                                                                                                                                                          | `rc-025 / hit -> hit`                                                  |
+| `rc-027-target-empty`              | p1/0    | `assert(target-switch-immediate-empty)`                                                                | A empty/B untouched -> main A/B list-root scoped rows/skeleton/empty geometry -> zero rows/no empty nodes/exact three visible skeleton chips in each root                                                                                                                                                | `rc-026 / hit -> hit`                                                  |
+| `rc-028-select-b1`                 | p1/0    | `click(S.relationEntry(screen.blockIds.relationBField,relatedEntries.b1.title))`                       | B picker warm/empty -> toggle -> B1 selected                                                                                                                                                                                                                                                             | `rc-027 / hit -> hit`                                                  |
+| `rc-029-select-b2`                 | p1/0    | `click(S.relationEntry(screen.blockIds.relationBField,relatedEntries.b2.title))`                       | B1 selected -> toggle -> exact B1/B2 selected                                                                                                                                                                                                                                                            | `rc-028 / hit -> hit`                                                  |
+| `rc-030-only-b`                    | p1/0    | `assert(only-b-rows-visible)`                                                                          | B selection settled -> main-B-list-root scoped IDs/rects plus zero skeleton/empty geometry and B-list GET count unchanged from rc-012c -> exact B rows visible from warmed cache with zero network delta                                                                                                 | `rc-012c-picker-warm-proof,rc-029 / hit -> hit`                        |
+| `rc-031-draft-proof`               | p1/0    | `assert(unrelated-draft-byte-identical)`                                                               | B visible/A pending -> before/after bytes -> unrelated channels unchanged                                                                                                                                                                                                                                | `rc-017,rc-030 / hit -> hit`                                           |
+| `rc-032-diff-proof`                | p1/0    | `assert(relation-diff-exact)`                                                                          | current root-scoped A/B picker pressed states + relation paths from frozen exact-reset `rc-002` baseline + exhaustive non-relation current-draft diff against frozen post-unrelated-edits `rc-017` sample -> A/B/other paths -> only A cleared+B selected and no post-`rc-017` non-relation path changed | `rc-002,rc-017,rc-030,rc-031 / hit -> hit`                             |
+| `rc-033-stale-shot`                | p1/0    | `screen(related-a-stale)`                                                                              | B visible/A pending -> PNG -> stale-A screenshot created                                                                                                                                                                                                                                                 | `rc-030,rc-031,rc-032 / hit -> hit`                                    |
+| `rc-034-refresh-release`           | p1/0    | `route(related-a-refresh,route-release)`                                                               | captured A response held -> fulfillment receipt -> response released/UI settled                                                                                                                                                                                                                          | `rc-023,rc-033 / hit -> released`                                      |
+| `rc-035-stale-proof`               | p1/0    | `assert(stale-a-cannot-commit)`                                                                        | updated-A settled after target B -> exact main-A title and main-B row state captured -> updated A1 title absent only inside the main-A list root while B-root rows remain retained                                                                                                                       | `rc-034 / released -> released`                                        |
+| `rc-036-refresh-unroute`           | p1/0    | `route(related-a-refresh,unroute)`                                                                     | stale protection proven -> `true` -> delayed route absent                                                                                                                                                                                                                                                | `rc-035 / released -> absent`                                          |
+| `rc-037-final-shot`                | p1/0    | `screen(related-b-dark)`                                                                               | B retained/dark -> PNG -> final related screenshot created                                                                                                                                                                                                                                               | `rc-035,rc-036 / absent -> absent`                                     |
+| `rc-037a-exit-navigation`          | p1/0    | `click(S.recordsLink(screen.id))`                                                                      | content/presentation/relation drafts still dirty -> real internal navigation -> discard dialog visible/navigation suspended                                                                                                                                                                              | `rc-037 / absent -> absent`                                            |
+| `rc-037b-exit-discard`             | p1/0    | `click(S.discard)`                                                                                     | discard dialog visible -> real discard action -> records workspace loaded                                                                                                                                                                                                                                | `rc-037a-exit-navigation / absent -> absent`                           |
+| `rc-037c-exit-proof`               | p1/0    | `assert(flow6-exit-discarded-once)`                                                                    | records workspace settled -> URL/current p1 navigation count minus frozen `rc-017a` count/entry dirty badges -> exact delta one and both dirty channels unmounted                                                                                                                                        | `rc-017a-pre-route-a-baseline,rc-037b-exit-discard / absent -> absent` |
+| `rc-038-log-agg-errors`            | p1/0    | `logs(aggregate,console-errors)`                                                                       | flow complete -> both pages aggregate `[]` -> clean                                                                                                                                                                                                                                                      | `rc-037c-exit-proof / absent -> absent`                                |
+| `rc-039-log-pages-errors`          | p1/0    | `logs(per-page,console-errors)`                                                                        | p1+p2 registered -> both `[]` -> page errors clean                                                                                                                                                                                                                                                       | `rc-038 / absent -> absent`                                            |
+| `rc-040-log-agg-warnings`          | p1/0    | `logs(aggregate,console-warnings)`                                                                     | flow complete -> both pages aggregate `[]` -> clean                                                                                                                                                                                                                                                      | `rc-039 / absent -> absent`                                            |
+| `rc-041-log-pages-warnings`        | p1/0    | `logs(per-page,console-warnings)`                                                                      | p1+p2 registered -> both `[]` -> page warnings clean                                                                                                                                                                                                                                                     | `rc-040 / absent -> absent`                                            |
+| `rc-042-log-agg-page-errors`       | p1/0    | `logs(aggregate,page-errors)`                                                                          | flow complete -> both pages aggregate `[]` -> clean                                                                                                                                                                                                                                                      | `rc-041 / absent -> absent`                                            |
+| `rc-043-log-pages-page-errors`     | p1/0    | `logs(per-page,page-errors)`                                                                           | p1+p2 registered -> both `[]` -> flow 6 clean                                                                                                                                                                                                                                                            | `rc-042 / absent -> absent`                                            |
+| `rc-044-close-second-tab`          | p2/1    | `tab-close(1)`                                                                                         | both-page logs captured -> close receipt -> p2 closed, identity retained in logger evidence                                                                                                                                                                                                              | `rc-043 / absent -> absent`                                            |
+| `rc-045-origin-proof`              | p1/0    | `tab-select(0)`                                                                                        | p2 closed -> selected tab -> p1 active                                                                                                                                                                                                                                                                   | `rc-044 / absent -> absent`                                            |
 
 ##### Flow 6 fixture rationale and historical cacheBus prerequisite
 
@@ -3912,143 +5646,143 @@ closed geometry, show the panel, capture open geometry. `geometry(width,state)` 
 the scroller border/content boxes, computed right padding, and panel rect; it performs
 no click and stores the sample executor-locally for the three final geometry assertions.
 
-| ID | Page | Kind / exact builder | Precondition -> captured output -> postcondition | Dependencies / route transition |
-|---|---|---|---|---|
-| `ru-001-screen-reset` | runtime | `api(reset-screen-baseline)` | flow 6 clean -> one PATCH -> preseed Screen restored | `rc-045 / absent -> absent` |
-| `ru-002-screen-proof` | runtime | `apiRead(screen-baseline)` | PATCH settled -> exact document -> Screen reset proven | `ru-001 / absent -> absent` |
-| `ru-003-entry-reset` | runtime | `api(reset-entry-baseline)` | Screen proven -> one PATCH -> entry baseline restored | `ru-002 / absent -> absent` |
-| `ru-004-entry-proof` | runtime | `apiRead(entry-baseline)` | PATCH settled -> exact values -> entry reset proven | `ru-003 / absent -> absent` |
-| `ru-005-overrides-reset` | runtime | `api(reset-entry-overrides-empty)` | entry proven -> one contract call -> overrides empty | `ru-004 / absent -> absent` |
-| `ru-006-overrides-proof` | runtime | `apiRead(entry-overrides-empty)` | reset settled -> `[]` -> reset complete | `ru-005 / absent -> absent` |
-| `ru-007-builder` | p1/0 | `goto(paths.builder)` | reset complete -> URL/canvas -> builder, panel open | `ru-006 / absent -> absent` |
-| `ru-008-resize-320` | p1/0 | `resize(320,844)` | panel open -> viewport -> 320x844 | `ru-007 / absent -> absent` |
-| `ru-009-hide-320` | p1/0 | `click(S.panelHide)` | panel open -> toggle -> panel closed | `ru-008 / absent -> absent` |
-| `ru-010-closed-320` | p1/0 | `observe(geometry-320-closed)` | panel closed -> geometry sample -> closed 320 frozen | `ru-009 / absent -> absent` |
-| `ru-011-show-320` | p1/0 | `click(S.panelShow)` | panel closed -> toggle -> panel open | `ru-010 / absent -> absent` |
-| `ru-012-open-320` | p1/0 | `observe(geometry-320-open)` | panel open -> geometry/panel sample -> open 320 frozen | `ru-011 / absent -> absent` |
-| `ru-013-resize-390` | p1/0 | `resize(390,844)` | panel open -> viewport -> 390x844 | `ru-012 / absent -> absent` |
-| `ru-014-hide-390` | p1/0 | `click(S.panelHide)` | panel open -> toggle -> panel closed | `ru-013 / absent -> absent` |
-| `ru-015-closed-390` | p1/0 | `observe(geometry-390-closed)` | panel closed -> geometry sample -> closed 390 frozen | `ru-014 / absent -> absent` |
-| `ru-016-show-390` | p1/0 | `click(S.panelShow)` | panel closed -> toggle -> panel open | `ru-015 / absent -> absent` |
-| `ru-017-open-390` | p1/0 | `observe(geometry-390-open)` | panel open -> geometry/panel sample -> open 390 frozen | `ru-016 / absent -> absent` |
-| `ru-018-resize-480` | p1/0 | `resize(480,844)` | panel open -> viewport -> 480x844 | `ru-017 / absent -> absent` |
-| `ru-019-hide-480` | p1/0 | `click(S.panelHide)` | panel open -> toggle -> panel closed | `ru-018 / absent -> absent` |
-| `ru-020-closed-480` | p1/0 | `observe(geometry-480-closed)` | panel closed -> geometry sample -> closed 480 frozen | `ru-019 / absent -> absent` |
-| `ru-021-show-480` | p1/0 | `click(S.panelShow)` | panel closed -> toggle -> panel open | `ru-020 / absent -> absent` |
-| `ru-022-open-480` | p1/0 | `observe(geometry-480-open)` | panel open -> geometry/panel sample -> open 480 frozen | `ru-021 / absent -> absent` |
-| `ru-023-resize-1024` | p1/0 | `resize(1024,900)` | panel open -> viewport -> 1024x900 | `ru-022 / absent -> absent` |
-| `ru-024-hide-1024` | p1/0 | `click(S.panelHide)` | panel open -> toggle -> panel closed | `ru-023 / absent -> absent` |
-| `ru-025-closed-1024` | p1/0 | `observe(geometry-1024-closed)` | panel closed -> geometry sample -> closed 1024 frozen | `ru-024 / absent -> absent` |
-| `ru-026-show-1024` | p1/0 | `click(S.panelShow)` | panel closed -> toggle -> panel open | `ru-025 / absent -> absent` |
-| `ru-027-open-1024` | p1/0 | `observe(geometry-1024-open)` | panel open -> geometry/panel sample -> open 1024 frozen | `ru-026 / absent -> absent` |
-| `ru-028-resize-1280` | p1/0 | `resize(1280,900)` | panel open -> viewport -> 1280x900 | `ru-027 / absent -> absent` |
-| `ru-029-hide-1280` | p1/0 | `click(S.panelHide)` | panel open -> toggle -> panel closed | `ru-028 / absent -> absent` |
-| `ru-030-closed-1280` | p1/0 | `observe(geometry-1280-closed)` | panel closed -> geometry sample -> closed 1280 frozen | `ru-029 / absent -> absent` |
-| `ru-031-show-1280` | p1/0 | `click(S.panelShow)` | panel closed -> toggle -> panel open | `ru-030 / absent -> absent` |
-| `ru-032-open-1280` | p1/0 | `observe(geometry-1280-open)` | panel open -> geometry/panel sample -> open 1280 frozen | `ru-031 / absent -> absent` |
-| `ru-033-narrow-proof` | p1/0 | `assert(narrow-padding-and-positive-geometry)` | six narrow samples -> strict samples -> 24px/positive/equal boxes | `ru-010,ru-012,ru-015,ru-017,ru-020,ru-022 / absent -> absent` |
-| `ru-034-wide-proof` | p1/0 | `assert(wide-padding-delta-300)` | four wide samples -> strict samples -> 32/332px and 300px delta | `ru-025,ru-027,ru-030,ru-032 / absent -> absent` |
-| `ru-035-panel-proof` | p1/0 | `assert(panel-inside-viewport)` | five open samples -> rects -> panel inside every viewport | `ru-012,ru-017,ru-022,ru-027,ru-032 / absent -> absent` |
-| `ru-036-light-toggle` | p1/0 | `click(S.colorMode)` | flow 6 dark -> aria state -> light selected | `ru-035 / absent -> absent` |
-| `ru-037-light-proof` | p1/0 | `observe(theme-light-user-a-candidate)` | toggle settled -> colors/aria -> light captured | `ru-036 / absent -> absent` |
-| `ru-038-entry` | p1/0 | `goto(paths.entry)` | geometry complete -> URL/document -> bootstrap entry visible | `ru-037 / absent -> absent` |
-| `ru-039-bootstrap-menu` | p1/0 | `click(S.bootstrapUserMenu)` | bootstrap entry -> menu -> menu open | `ru-038 / absent -> absent` |
-| `ru-040-bootstrap-signout` | p1/0 | `click(S.signOut)` | menu open -> real logout click/navigation initiated -> bootstrap realm leaving | `ru-039 / absent -> absent` |
-| `ru-040a-bootstrap-signout-settled` | p1/0 | `observe(signout-settled-bootstrap)` | logout initiated -> exact canonical `paths.login` URL + positive-geometry exact email/password/submit selectors -> login realm settled | `ru-040 / absent -> absent` |
-| `ru-041-a-email` | p1/0 | `fill(S.loginEmail,$WF540_USER_A_EMAIL)` | settled login form -> discarded -> A email filled | `ru-040a-bootstrap-signout-settled / absent -> absent` |
-| `ru-042-a-password` | p1/0 | `fill(S.loginPassword,$ADMIN_PASSWORD)` | A email filled -> discarded -> password filled | `ru-041 / absent -> absent` |
-| `ru-043-a-submit` | p1/0 | `click(S.loginSubmit)` | credentials filled -> auth navigation -> A authenticated | `ru-042 / absent -> absent` |
-| `ru-043a-a-identity-settled` | p1/0 | `observe(auth-identity-settled-users-a)` | submit navigation started -> post-login Admin URL + positive-geometry `S.userMenu(users.a.displayName)` -> A realm settled | `ru-043 / absent -> absent` |
-| `ru-043b-a-api-login` | runtime | `isolatedApiSessionLogin(user-a)` | A browser identity proven -> one login in empty unique-UA isolated jar + exact session-row inventory -> isolated A API session acquired | `ru-043a-a-identity-settled / absent -> absent` |
-| `ru-043c-a-api-csrf-capture` | runtime | `isolatedApiSessionCsrfCapture(user-a)` | isolated A session acquired -> one CSRF request/private rotated capability -> isolated A writes authorized without changing browser jar | `ru-043b-a-api-login / absent -> absent` |
-| `ru-044-a-entry` | p1/0 | `goto(paths.entry)` | A browser/API identities settled -> URL/document -> A entry visible | `ru-043c-a-api-csrf-capture / absent -> absent` |
-| `ru-045-a-light-capture` | p1/0 | `observe(user-a-light-computed)` | A entry/light storage -> computed colors -> A light sample frozen | `ru-037,ru-044 / absent -> absent` |
-| `ru-046-a-metadata-enable` | p1/0 | `click(S.metadata)` | A preference false -> UI + real PATCH -> visible true/write pending | `ru-045 / absent -> absent` |
-| `ru-047-a-write-settle` | p1/0 | `observe(preference-a-write-settled)` | PATCH started -> exact browser PATCH sequence 1/success/strict `{version:1,showFieldMetadata:true}`/user-A match + checked positive-geometry Switch + true metadata badge geometry -> A browser write settled | `ru-046 / absent -> absent` |
-| `ru-047a-a-durable-proof` | runtime | `isolatedApiSessionApiReadAs(user-a,preference-initial-true)` | browser write settled -> strict exact `{key:"customScreens.entry.preferences",value:{version:1,showFieldMetadata:true}}` -> A true durable independently proven | `ru-047 / absent -> absent` |
-| `ru-048-a-first-shot` | p1/0 | `screen(responsive-user-a-light)` | A true durable/light/badges visible -> PNG -> A screenshot created | `ru-047a-a-durable-proof / absent -> absent` |
-| `ru-049-a-away` | p1/0 | `click(S.recordsLink(screen.id))` | entry clean -> internal navigation/monotonic unmount-window start + exact visible Record actions control -> records workspace ready in same realm | `ru-047a-a-durable-proof / absent -> absent` |
-| `ru-050-a-server-false` | runtime | `isolatedApiSessionApiAs(user-a,set-preference-false)` | isolated A capability -> one strict PATCH through isolated APIRequestContext -> server false | `ru-049 / absent -> absent` |
-| `ru-051-a-server-false-proof` | runtime | `isolatedApiSessionApiReadAs(user-a,preference)` | PATCH settled -> strict exact `{key:"customScreens.entry.preferences",value:{version:1,showFieldMetadata:false}}` -> server change proven | `ru-050 / absent -> absent` |
-| `ru-052-a-return` | p1/0 | `click(S.recordActions,S.editRecord)` | records same realm with exact visible Record actions control before 20,000 ms deadline -> open exact menu then click exact Edit record item + retained coordinator mount -> A entry remounted | `ru-051 / absent -> absent` |
-| `ru-053-a-authoritative` | p1/0 | `assert(same-user-authoritative-refresh)` | remount read settled -> before/server/after plus false badge geometry -> false replaces proven durable true | `ru-047a-a-durable-proof,ru-051,ru-052 / absent -> absent` |
-| `ru-053a-a-nondefault-toggle` | p1/0 | `click(S.metadata)` | authoritative false visible -> real UI PATCH/optimistic state -> non-default true intent | `ru-053 / absent -> absent` |
-| `ru-053b-a-nondefault-write-settled` | p1/0 | `observe(nondefault-browser-patch-settled)` | true intent started -> context logger exact current-A PATCH sequence 2/success/strict true response -> non-default true persisted | `ru-053a-a-nondefault-toggle / absent -> absent` |
-| `ru-054-a-away-again` | p1/0 | `click(S.recordsLink(screen.id))` | A non-default true persisted/entry clean -> internal navigation/second monotonic unmount-window start + exact visible Record actions control -> records workspace ready | `ru-053b-a-nondefault-write-settled / absent -> absent` |
-| `ru-055-read-route-setup` | p1/0 | `route(preference-a-read-refresh,route-setup)` | A away/latest non-default true settled -> tuple -> delayed GET installed | `ru-054 / absent -> installed` |
-| `ru-056-a-remount-pending` | p1/0 | `click(S.recordActions,S.editRecord)` | route installed/records ready before 20,000 ms deadline -> open exact Record actions menu then click exact Edit record item + retained coordinator mount -> A entry remount/read pending | `ru-055 / installed -> installed` |
-| `ru-057-read-route-hit` | p1/0 | `route(preference-a-read-refresh,route-hit-read)` | remount -> exact GET/no-body validated and stale non-default true response captured -> `{"hits":1,"captured":true,"method":"GET","bodyAbsent":true}`/pending | `ru-056 / installed -> hit` |
-| `ru-058-retained-pending` | p1/0 | `assert(same-user-retained-view-pending)` | GET pending -> DOM/shared value -> settled non-default true retained, distinguishable from cold default false | `ru-057 / hit -> hit` |
-| `ru-059-new-local-toggle` | p1/0 | `click(S.metadata)` | retained true/read pending -> UI/write -> newer local false | `ru-058 / hit -> hit` |
-| `ru-059a-new-local-browser-write-settled` | p1/0 | `observe(new-local-browser-patch-settled)` | UI false/write started -> context logger exact current-A PATCH sequence 3/success/strict false response -> browser write succeeded and durable false before stale-read release | `ru-059 / hit -> hit` |
-| `ru-060-new-local-pending` | p1/0 | `assert(newer-local-write-pending)` | browser PATCH settled/read held -> visible/generation -> false wins pending | `ru-059a-new-local-browser-write-settled / hit -> hit` |
-| `ru-061-read-release` | p1/0 | `route(preference-a-read-refresh,route-release)` | captured stale true held/newer browser PATCH proven durable false -> fulfillment -> response released/UI settled | `ru-057,ru-059a-new-local-browser-write-settled,ru-060 / hit -> released` |
-| `ru-061a-a-durable-bypass-read` | runtime | `isolatedApiSessionApiReadAs(user-a,preference-outside-page-routing)` | stale page response released -> isolated A API strict exact `{key:"customScreens.entry.preferences",value:{version:1,showFieldMetadata:false}}` -> persisted false frozen without touching page route or browser cookies | `ru-061 / released -> released` |
-| `ru-062-new-local-wins` | p1/0 | `assert(newer-local-write-wins-refresh)` | stale true read settled + independent durable capture -> current DOM/generation -> newer false retained/persisted | `ru-061,ru-061a-a-durable-bypass-read / released -> released` |
-| `ru-063-read-unroute` | p1/0 | `route(preference-a-read-refresh,unroute)` | winner proven -> `true` -> delayed GET absent | `ru-062 / released -> absent` |
-| `ru-064-legacy-storage` | p1/0 | `assert(legacy-local-storage-absent)` | A state settled -> key/read/write instrumentation -> absent/no writes | `ru-063 / absent -> absent` |
-| `ru-065-a-menu` | p1/0 | `click(S.userMenu(users.a.displayName))` | A entry -> menu -> menu open | `ru-064 / absent -> absent` |
-| `ru-066-a-signout` | p1/0 | `click(S.signOut)` | menu open -> real logout click/navigation initiated -> A realm leaving | `ru-065 / absent -> absent` |
-| `ru-066a-a-signout-settled` | p1/0 | `observe(signout-settled-user-a)` | logout initiated -> exact canonical `paths.login` URL + positive-geometry exact login form -> login realm settled | `ru-066 / absent -> absent` |
-| `ru-067-b-email` | p1/0 | `fill(S.loginEmail,$WF540_USER_B_EMAIL)` | settled login form -> discarded -> B email filled | `ru-066a-a-signout-settled / absent -> absent` |
-| `ru-068-b-password` | p1/0 | `fill(S.loginPassword,$ADMIN_PASSWORD)` | B email filled -> discarded -> password filled | `ru-067 / absent -> absent` |
-| `ru-069-b-submit` | p1/0 | `click(S.loginSubmit)` | credentials filled -> auth navigation -> B authenticated | `ru-068 / absent -> absent` |
-| `ru-069a-b-identity-settled` | p1/0 | `observe(auth-identity-settled-users-b)` | submit navigation started -> post-login Admin URL + positive-geometry `S.userMenu(users.b.displayName)` -> B realm settled | `ru-069 / absent -> absent` |
-| `ru-070-b-entry` | p1/0 | `goto(paths.entry)` | B identity settled -> URL/document -> B entry mounting | `ru-069a-b-identity-settled / absent -> absent` |
-| `ru-071-b-dark-toggle` | p1/0 | `click(S.colorMode)` | shared theme currently light -> aria state -> dark selected | `ru-070 / absent -> absent` |
-| `ru-072-b-dark-capture` | p1/0 | `observe(user-b-dark-computed)` | toggle settled/B entry settled -> exact root/body colors + aria + root-scoped metadata effect `false` -> B dark/default-false sample frozen | `ru-071 / absent -> absent` |
-| `ru-073-light-dark-proof` | p1/0 | `assert(light-and-dark-computed)` | A/B samples -> computed colors/themes + frozen B root-scoped metadata effect -> A light/B dark/default false | `ru-045,ru-072 / absent -> absent` |
-| `ru-074-b-shot` | p1/0 | `screen(responsive-user-b-dark)` | B false/dark -> PNG -> B screenshot created | `ru-073 / absent -> absent` |
-| `ru-075-b-menu` | p1/0 | `click(S.userMenu(users.b.displayName))` | B entry -> menu -> menu open | `ru-074 / absent -> absent` |
-| `ru-076-b-signout` | p1/0 | `click(S.signOut)` | menu open -> real logout click/navigation initiated -> B realm leaving | `ru-075 / absent -> absent` |
-| `ru-076a-b-signout-settled` | p1/0 | `observe(signout-settled-user-b)` | logout initiated -> exact canonical `paths.login` URL + positive-geometry exact login form -> login realm settled | `ru-076 / absent -> absent` |
-| `ru-076b-auth-rate-window-barrier` | p1/0 | `authRateWindowBarrier()` | login realm stable/bounded rate epoch -> configured auth window naturally expires when enabled or timer is skipped when disabled + bounded realm-stability proof -> exact `{"barrierSatisfied":true}` | `ru-076a-b-signout-settled / absent -> absent` |
-| `ru-077-a2-email` | p1/0 | `fill(S.loginEmail,$WF540_USER_A_EMAIL)` | settled login form -> discarded -> A email filled | `ru-076b-auth-rate-window-barrier / absent -> absent` |
-| `ru-078-a2-password` | p1/0 | `fill(S.loginPassword,$ADMIN_PASSWORD)` | A email filled -> discarded -> password filled | `ru-077 / absent -> absent` |
-| `ru-079-a2-submit` | p1/0 | `click(S.loginSubmit)` | credentials filled -> auth navigation -> A authenticated | `ru-078 / absent -> absent` |
-| `ru-079a-a2-identity-settled` | p1/0 | `observe(auth-identity-settled-users-a)` | submit navigation started -> post-login Admin URL + exact A trigger -> A realm settled | `ru-079 / absent -> absent` |
-| `ru-080-a2-entry` | p1/0 | `goto(paths.entry)` | A identity settled -> URL/document -> returned A entry mounting | `ru-079a-a2-identity-settled / absent -> absent` |
-| `ru-081-a2-light-toggle` | p1/0 | `click(S.colorMode)` | shared theme dark -> aria state -> light selected | `ru-080 / absent -> absent` |
-| `ru-082-isolation-proof` | p1/0 | `assert(user-a-b-a-isolated)` | first A durable proof + frozen B sample from `ru-072` + current returned-A strict read/root-scoped metadata effect + `ru-081` light toggle -> exact per-user values and reject-unknown current `userAReturnComputed` theme/aria/root/body-color sample -> per-user values isolated and returned A visibly false/light | `ru-047a-a-durable-proof,ru-072,ru-080,ru-081 / absent -> absent` |
-| `ru-083-write-route-setup` | p1/0 | `route(preference-a-write-exit,route-setup)` | A false durable/entry visible -> exact bounded `requestfailed` listener installed before route, then tuple -> delayed PATCH installed | `ru-082 / absent -> installed` |
-| `ru-084-first-a-toggle` | p1/0 | `click(S.metadata)` | A visible false -> UI/write -> true PATCH captured | `ru-083 / installed -> installed` |
-| `ru-085-write-route-hit` | p1/0 | `route(preference-a-write-exit,route-hit-read)` | first write -> exact PATCH/body/content-type/user-header/CSRF-presence validated and captured -> `{"hits":1,"captured":true,"backingSettled":true,"method":"PATCH","bodyMatches":true,"contentTypeJson":true,"expectedUserIdMatches":true,"csrfPresent":true}`/pending | `ru-084 / installed -> hit` |
-| `ru-086-second-a-toggle` | p1/0 | `click(S.metadata)` | first true write pending -> UI/generation -> second false intent queued | `ru-085 / hit -> hit` |
-| `ru-087-second-intent` | p1/0 | `assert(second-a-intent-visible-before-exit)` | second toggle settled -> visible/queue/pending -> false intent visible | `ru-086 / hit -> hit` |
-| `ru-088-hit-before-release` | p1/0 | `assert(preference-a-write-hit-before-release)` | first pending/second queued -> route counter -> exact 1 | `ru-085,ru-087 / hit -> hit` |
-| `ru-089-a-exit-menu` | p1/0 | `click(S.userMenu(users.a.displayName))` | A dirty preference realm -> menu -> menu open | `ru-088 / hit -> hit` |
-| `ru-090-a-exit-signout` | p1/0 | `click(S.signOut)` | menu open/first Request object captured -> real logout click/navigation initiated -> old A realm leaving | `ru-089 / hit -> hit` |
-| `ru-090a-a-exit-signout-settled` | p1/0 | `observe(signout-settled-user-a-with-abort)` | logout initiated -> exact same captured Request emits `net::ERR_ABORTED` + exact canonical `paths.login` URL + positive-geometry exact login form -> old-client abort and login realm settled | `ru-090 / hit -> hit` |
-| `ru-091-b2-email` | p1/0 | `fill(S.loginEmail,$WF540_USER_B_EMAIL)` | settled login form -> discarded -> B email filled | `ru-090a-a-exit-signout-settled / hit -> hit` |
-| `ru-092-b2-password` | p1/0 | `fill(S.loginPassword,$ADMIN_PASSWORD)` | B email filled -> discarded -> password filled | `ru-091 / hit -> hit` |
-| `ru-093-b2-submit` | p1/0 | `click(S.loginSubmit)` | credentials filled -> auth navigation -> B authenticated | `ru-092 / hit -> hit` |
-| `ru-093a-b2-identity-settled` | p1/0 | `observe(auth-identity-settled-users-b)` | submit navigation started -> post-login Admin URL + exact B trigger -> B realm settled | `ru-093 / hit -> hit` |
-| `ru-094-b2-entry` | p1/0 | `goto(paths.entry)` | B identity settled -> URL/document -> B entry visible | `ru-093a-b2-identity-settled / hit -> hit` |
-| `ru-095-b-before-release` | p1/0 | `assert(user-b-default-before-release)` | B entry/read settled -> strict authenticated `{key,value:false}` + false badge geometry -> exact B default false | `ru-094 / hit -> hit` |
-| `ru-096-write-release` | p1/0 | `route(preference-a-write-exit,route-release)` | A backing response settled/B active/exact captured Request abort proven -> abort-aware terminal receipt -> no response delivered into B realm | `ru-085,ru-090a-a-exit-signout-settled,ru-095 / hit -> released` |
-| `ru-097-hit-after-release` | p1/0 | `assert(preference-a-write-hit-after-release)` | release settled -> route counter -> exact 1 | `ru-096 / released -> released` |
-| `ru-098-queued-zero` | p1/0 | `assert(queued-a-write-zero-dispatch)` | old realm destroyed -> derived dispatch count -> exact 0 | `ru-097 / released -> released` |
-| `ru-099-b-unchanged` | p1/0 | `assert(user-b-default-unchanged)` | strict B `{key,value}` reads before/after release + false badge geometry -> exact false/false -> B unchanged | `ru-095,ru-096 / released -> released` |
-| `ru-100-write-unroute` | p1/0 | `route(preference-a-write-exit,unroute)` | hit/queue/B proven -> `true` -> delayed PATCH absent and exact bounded `requestfailed` listener removed | `ru-097,ru-098,ru-099 / released -> absent` |
-| `ru-100a-auth-rate-window-barrier` | p1/0 | `authRateWindowBarrier()` | routes absent/B active/bounded rate epoch -> configured auth window naturally expires when enabled or timer is skipped when disabled + bounded realm-stability proof -> exact `{"barrierSatisfied":true}`; `ru-099`/`ru-101` compose the exact B proof | `ru-100 / absent -> absent` |
-| `ru-101-b2-menu` | p1/0 | `click(S.userMenu(users.b.displayName))` | auth budget barrier/B entry -> menu -> menu open | `ru-100a-auth-rate-window-barrier / absent -> absent` |
-| `ru-102-b2-signout` | p1/0 | `click(S.signOut)` | menu open -> real logout click/navigation initiated -> B realm leaving | `ru-101 / absent -> absent` |
-| `ru-102a-b2-signout-settled` | p1/0 | `observe(signout-settled-user-b)` | logout initiated -> exact canonical `paths.login` URL + positive-geometry exact login form -> login realm settled | `ru-102 / absent -> absent` |
-| `ru-103-a3-email` | p1/0 | `fill(S.loginEmail,$WF540_USER_A_EMAIL)` | settled login form -> discarded -> A email filled | `ru-102a-b2-signout-settled / absent -> absent` |
-| `ru-104-a3-password` | p1/0 | `fill(S.loginPassword,$ADMIN_PASSWORD)` | A email filled -> discarded -> password filled | `ru-103 / absent -> absent` |
-| `ru-105-a3-submit` | p1/0 | `click(S.loginSubmit)` | credentials filled -> auth navigation -> A authenticated | `ru-104 / absent -> absent` |
-| `ru-105a-a3-identity-settled` | p1/0 | `observe(auth-identity-settled-users-a)` | submit navigation started -> post-login Admin URL + exact A trigger + preference-GET counter baseline -> brand-new A realm settled | `ru-105 / absent -> absent` |
-| `ru-106-a3-entry` | p1/0 | `goto(paths.entry)` | brand-new A realm -> URL/document + fresh preference GET starts -> A entry mounting | `ru-105a-a3-identity-settled / absent -> absent` |
-| `ru-106a-a3-fresh-read-settled` | p1/0 | `observe(post-redirect-a-fresh-read-settled)` | entry mounting -> exact one new GET method/path/success + strict `{key:"customScreens.entry.preferences",value:{version:1,showFieldMetadata:true}}` + `activeUserMenuVisible:true` from positive-geometry exact A menu + checked Switch/true badge geometry -> fresh durable true rendered in new A realm | `ru-105a-a3-identity-settled,ru-106 / absent -> absent` |
-| `ru-107-fresh-a-toggle` | p1/0 | `click(S.metadata)` | fresh A true durable/route absent -> UI + real PATCH -> fresh false write | `ru-106a-a3-fresh-read-settled / absent -> absent` |
-| `ru-108-convergence` | p1/0 | `assert(final-a-retry-converges)` | fresh PATCH settled -> UI + authenticated durable read -> exact false convergence | `ru-107 / absent -> absent` |
-| `ru-109-converged-shot` | p1/0 | `screen(responsive-user-a-converged)` | convergence proven -> PNG -> final A screenshot created | `ru-108 / absent -> absent` |
-| `ru-110-log-agg-errors` | p1/0 | `logs(aggregate,console-errors)` | flow complete -> all registered pages aggregate `[]` -> clean | `ru-109 / absent -> absent` |
-| `ru-111-log-pages-errors` | p1/0 | `logs(per-page,console-errors)` | logger stable -> p1/p2 arrays `[]` -> clean | `ru-110 / absent -> absent` |
-| `ru-112-log-agg-warnings` | p1/0 | `logs(aggregate,console-warnings)` | flow complete -> all pages aggregate `[]` -> clean | `ru-111 / absent -> absent` |
-| `ru-113-log-pages-warnings` | p1/0 | `logs(per-page,console-warnings)` | logger stable -> p1/p2 arrays `[]` -> clean | `ru-112 / absent -> absent` |
-| `ru-114-log-agg-page-errors` | p1/0 | `logs(aggregate,page-errors)` | flow complete -> all pages aggregate `[]` -> clean | `ru-113 / absent -> absent` |
-| `ru-115-log-pages-page-errors` | p1/0 | `logs(per-page,page-errors)` | logger stable -> p1/p2 arrays `[]` -> flow 7 clean | `ru-114 / absent -> absent` |
+| ID                                        | Page    | Kind / exact builder                                                  | Precondition -> captured output -> postcondition                                                                                                                                                                                                                                                                      | Dependencies / route transition                                           |
+| ----------------------------------------- | ------- | --------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
+| `ru-001-screen-reset`                     | runtime | `api(reset-screen-baseline)`                                          | flow 6 clean -> one PATCH -> preseed Screen restored                                                                                                                                                                                                                                                                  | `rc-045 / absent -> absent`                                               |
+| `ru-002-screen-proof`                     | runtime | `apiRead(screen-baseline)`                                            | PATCH settled -> exact document -> Screen reset proven                                                                                                                                                                                                                                                                | `ru-001 / absent -> absent`                                               |
+| `ru-003-entry-reset`                      | runtime | `api(reset-entry-baseline)`                                           | Screen proven -> one PATCH -> entry baseline restored                                                                                                                                                                                                                                                                 | `ru-002 / absent -> absent`                                               |
+| `ru-004-entry-proof`                      | runtime | `apiRead(entry-baseline)`                                             | PATCH settled -> exact values -> entry reset proven                                                                                                                                                                                                                                                                   | `ru-003 / absent -> absent`                                               |
+| `ru-005-overrides-reset`                  | runtime | `api(reset-entry-overrides-empty)`                                    | entry proven -> one contract call -> overrides empty                                                                                                                                                                                                                                                                  | `ru-004 / absent -> absent`                                               |
+| `ru-006-overrides-proof`                  | runtime | `apiRead(entry-overrides-empty)`                                      | reset settled -> `[]` -> reset complete                                                                                                                                                                                                                                                                               | `ru-005 / absent -> absent`                                               |
+| `ru-007-builder`                          | p1/0    | `goto(paths.builder)`                                                 | reset complete -> URL/canvas -> builder, panel open                                                                                                                                                                                                                                                                   | `ru-006 / absent -> absent`                                               |
+| `ru-008-resize-320`                       | p1/0    | `resize(320,844)`                                                     | panel open -> viewport -> 320x844                                                                                                                                                                                                                                                                                     | `ru-007 / absent -> absent`                                               |
+| `ru-009-hide-320`                         | p1/0    | `click(S.panelHide)`                                                  | panel open -> toggle -> panel closed                                                                                                                                                                                                                                                                                  | `ru-008 / absent -> absent`                                               |
+| `ru-010-closed-320`                       | p1/0    | `observe(geometry-320-closed)`                                        | panel closed -> geometry sample -> closed 320 frozen                                                                                                                                                                                                                                                                  | `ru-009 / absent -> absent`                                               |
+| `ru-011-show-320`                         | p1/0    | `click(S.panelShow)`                                                  | panel closed -> toggle -> panel open                                                                                                                                                                                                                                                                                  | `ru-010 / absent -> absent`                                               |
+| `ru-012-open-320`                         | p1/0    | `observe(geometry-320-open)`                                          | panel open -> geometry/panel sample -> open 320 frozen                                                                                                                                                                                                                                                                | `ru-011 / absent -> absent`                                               |
+| `ru-013-resize-390`                       | p1/0    | `resize(390,844)`                                                     | panel open -> viewport -> 390x844                                                                                                                                                                                                                                                                                     | `ru-012 / absent -> absent`                                               |
+| `ru-014-hide-390`                         | p1/0    | `click(S.panelHide)`                                                  | panel open -> toggle -> panel closed                                                                                                                                                                                                                                                                                  | `ru-013 / absent -> absent`                                               |
+| `ru-015-closed-390`                       | p1/0    | `observe(geometry-390-closed)`                                        | panel closed -> geometry sample -> closed 390 frozen                                                                                                                                                                                                                                                                  | `ru-014 / absent -> absent`                                               |
+| `ru-016-show-390`                         | p1/0    | `click(S.panelShow)`                                                  | panel closed -> toggle -> panel open                                                                                                                                                                                                                                                                                  | `ru-015 / absent -> absent`                                               |
+| `ru-017-open-390`                         | p1/0    | `observe(geometry-390-open)`                                          | panel open -> geometry/panel sample -> open 390 frozen                                                                                                                                                                                                                                                                | `ru-016 / absent -> absent`                                               |
+| `ru-018-resize-480`                       | p1/0    | `resize(480,844)`                                                     | panel open -> viewport -> 480x844                                                                                                                                                                                                                                                                                     | `ru-017 / absent -> absent`                                               |
+| `ru-019-hide-480`                         | p1/0    | `click(S.panelHide)`                                                  | panel open -> toggle -> panel closed                                                                                                                                                                                                                                                                                  | `ru-018 / absent -> absent`                                               |
+| `ru-020-closed-480`                       | p1/0    | `observe(geometry-480-closed)`                                        | panel closed -> geometry sample -> closed 480 frozen                                                                                                                                                                                                                                                                  | `ru-019 / absent -> absent`                                               |
+| `ru-021-show-480`                         | p1/0    | `click(S.panelShow)`                                                  | panel closed -> toggle -> panel open                                                                                                                                                                                                                                                                                  | `ru-020 / absent -> absent`                                               |
+| `ru-022-open-480`                         | p1/0    | `observe(geometry-480-open)`                                          | panel open -> geometry/panel sample -> open 480 frozen                                                                                                                                                                                                                                                                | `ru-021 / absent -> absent`                                               |
+| `ru-023-resize-1024`                      | p1/0    | `resize(1024,900)`                                                    | panel open -> viewport -> 1024x900                                                                                                                                                                                                                                                                                    | `ru-022 / absent -> absent`                                               |
+| `ru-024-hide-1024`                        | p1/0    | `click(S.panelHide)`                                                  | panel open -> toggle -> panel closed                                                                                                                                                                                                                                                                                  | `ru-023 / absent -> absent`                                               |
+| `ru-025-closed-1024`                      | p1/0    | `observe(geometry-1024-closed)`                                       | panel closed -> geometry sample -> closed 1024 frozen                                                                                                                                                                                                                                                                 | `ru-024 / absent -> absent`                                               |
+| `ru-026-show-1024`                        | p1/0    | `click(S.panelShow)`                                                  | panel closed -> toggle -> panel open                                                                                                                                                                                                                                                                                  | `ru-025 / absent -> absent`                                               |
+| `ru-027-open-1024`                        | p1/0    | `observe(geometry-1024-open)`                                         | panel open -> geometry/panel sample -> open 1024 frozen                                                                                                                                                                                                                                                               | `ru-026 / absent -> absent`                                               |
+| `ru-028-resize-1280`                      | p1/0    | `resize(1280,900)`                                                    | panel open -> viewport -> 1280x900                                                                                                                                                                                                                                                                                    | `ru-027 / absent -> absent`                                               |
+| `ru-029-hide-1280`                        | p1/0    | `click(S.panelHide)`                                                  | panel open -> toggle -> panel closed                                                                                                                                                                                                                                                                                  | `ru-028 / absent -> absent`                                               |
+| `ru-030-closed-1280`                      | p1/0    | `observe(geometry-1280-closed)`                                       | panel closed -> geometry sample -> closed 1280 frozen                                                                                                                                                                                                                                                                 | `ru-029 / absent -> absent`                                               |
+| `ru-031-show-1280`                        | p1/0    | `click(S.panelShow)`                                                  | panel closed -> toggle -> panel open                                                                                                                                                                                                                                                                                  | `ru-030 / absent -> absent`                                               |
+| `ru-032-open-1280`                        | p1/0    | `observe(geometry-1280-open)`                                         | panel open -> geometry/panel sample -> open 1280 frozen                                                                                                                                                                                                                                                               | `ru-031 / absent -> absent`                                               |
+| `ru-033-narrow-proof`                     | p1/0    | `assert(narrow-padding-and-positive-geometry)`                        | six narrow samples -> strict samples -> 24px/positive/equal boxes                                                                                                                                                                                                                                                     | `ru-010,ru-012,ru-015,ru-017,ru-020,ru-022 / absent -> absent`            |
+| `ru-034-wide-proof`                       | p1/0    | `assert(wide-padding-delta-300)`                                      | four wide samples -> strict samples -> 32/332px and 300px delta                                                                                                                                                                                                                                                       | `ru-025,ru-027,ru-030,ru-032 / absent -> absent`                          |
+| `ru-035-panel-proof`                      | p1/0    | `assert(panel-inside-viewport)`                                       | five open samples -> rects -> panel inside every viewport                                                                                                                                                                                                                                                             | `ru-012,ru-017,ru-022,ru-027,ru-032 / absent -> absent`                   |
+| `ru-036-light-toggle`                     | p1/0    | `click(S.colorMode)`                                                  | flow 6 dark -> aria state -> light selected                                                                                                                                                                                                                                                                           | `ru-035 / absent -> absent`                                               |
+| `ru-037-light-proof`                      | p1/0    | `observe(theme-light-user-a-candidate)`                               | toggle settled -> colors/aria -> light captured                                                                                                                                                                                                                                                                       | `ru-036 / absent -> absent`                                               |
+| `ru-038-entry`                            | p1/0    | `goto(paths.entry)`                                                   | geometry complete -> URL/document -> bootstrap entry visible                                                                                                                                                                                                                                                          | `ru-037 / absent -> absent`                                               |
+| `ru-039-bootstrap-menu`                   | p1/0    | `click(S.bootstrapUserMenu)`                                          | bootstrap entry -> menu -> menu open                                                                                                                                                                                                                                                                                  | `ru-038 / absent -> absent`                                               |
+| `ru-040-bootstrap-signout`                | p1/0    | `click(S.signOut)`                                                    | menu open -> real logout click/navigation initiated -> bootstrap realm leaving                                                                                                                                                                                                                                        | `ru-039 / absent -> absent`                                               |
+| `ru-040a-bootstrap-signout-settled`       | p1/0    | `observe(signout-settled-bootstrap)`                                  | logout initiated -> exact canonical `paths.login` URL + positive-geometry exact email/password/submit selectors -> login realm settled                                                                                                                                                                                | `ru-040 / absent -> absent`                                               |
+| `ru-041-a-email`                          | p1/0    | `fill(S.loginEmail,$WF540_USER_A_EMAIL)`                              | settled login form -> discarded -> A email filled                                                                                                                                                                                                                                                                     | `ru-040a-bootstrap-signout-settled / absent -> absent`                    |
+| `ru-042-a-password`                       | p1/0    | `fill(S.loginPassword,$ADMIN_PASSWORD)`                               | A email filled -> discarded -> password filled                                                                                                                                                                                                                                                                        | `ru-041 / absent -> absent`                                               |
+| `ru-043-a-submit`                         | p1/0    | `click(S.loginSubmit)`                                                | credentials filled -> auth navigation -> A authenticated                                                                                                                                                                                                                                                              | `ru-042 / absent -> absent`                                               |
+| `ru-043a-a-identity-settled`              | p1/0    | `observe(auth-identity-settled-users-a)`                              | submit navigation started -> post-login Admin URL + positive-geometry `S.userMenu(users.a.displayName)` -> A realm settled                                                                                                                                                                                            | `ru-043 / absent -> absent`                                               |
+| `ru-043b-a-api-login`                     | runtime | `isolatedApiSessionLogin(user-a)`                                     | A browser identity proven -> one login in empty unique-UA isolated jar + exact session-row inventory -> isolated A API session acquired                                                                                                                                                                               | `ru-043a-a-identity-settled / absent -> absent`                           |
+| `ru-043c-a-api-csrf-capture`              | runtime | `isolatedApiSessionCsrfCapture(user-a)`                               | isolated A session acquired -> one CSRF request/private rotated capability -> isolated A writes authorized without changing browser jar                                                                                                                                                                               | `ru-043b-a-api-login / absent -> absent`                                  |
+| `ru-044-a-entry`                          | p1/0    | `goto(paths.entry)`                                                   | A browser/API identities settled -> URL/document -> A entry visible                                                                                                                                                                                                                                                   | `ru-043c-a-api-csrf-capture / absent -> absent`                           |
+| `ru-045-a-light-capture`                  | p1/0    | `observe(user-a-light-computed)`                                      | A entry/light storage -> computed colors -> A light sample frozen                                                                                                                                                                                                                                                     | `ru-037,ru-044 / absent -> absent`                                        |
+| `ru-046-a-metadata-enable`                | p1/0    | `click(S.metadata)`                                                   | A preference false -> UI + real PATCH -> visible true/write pending                                                                                                                                                                                                                                                   | `ru-045 / absent -> absent`                                               |
+| `ru-047-a-write-settle`                   | p1/0    | `observe(preference-a-write-settled)`                                 | PATCH started -> exact browser PATCH sequence 1/success/strict `{version:1,showFieldMetadata:true}`/user-A match + checked positive-geometry Switch + true metadata badge geometry -> A browser write settled                                                                                                         | `ru-046 / absent -> absent`                                               |
+| `ru-047a-a-durable-proof`                 | runtime | `isolatedApiSessionApiReadAs(user-a,preference-initial-true)`         | browser write settled -> strict exact `{key:"customScreens.entry.preferences",value:{version:1,showFieldMetadata:true}}` -> A true durable independently proven                                                                                                                                                       | `ru-047 / absent -> absent`                                               |
+| `ru-048-a-first-shot`                     | p1/0    | `screen(responsive-user-a-light)`                                     | A true durable/light/badges visible -> PNG -> A screenshot created                                                                                                                                                                                                                                                    | `ru-047a-a-durable-proof / absent -> absent`                              |
+| `ru-049-a-away`                           | p1/0    | `click(S.recordsLink(screen.id))`                                     | entry clean -> internal navigation/monotonic unmount-window start + exact visible Record actions control -> records workspace ready in same realm                                                                                                                                                                     | `ru-047a-a-durable-proof / absent -> absent`                              |
+| `ru-050-a-server-false`                   | runtime | `isolatedApiSessionApiAs(user-a,set-preference-false)`                | isolated A capability -> one strict PATCH through isolated APIRequestContext -> server false                                                                                                                                                                                                                          | `ru-049 / absent -> absent`                                               |
+| `ru-051-a-server-false-proof`             | runtime | `isolatedApiSessionApiReadAs(user-a,preference)`                      | PATCH settled -> strict exact `{key:"customScreens.entry.preferences",value:{version:1,showFieldMetadata:false}}` -> server change proven                                                                                                                                                                             | `ru-050 / absent -> absent`                                               |
+| `ru-052-a-return`                         | p1/0    | `click(S.recordActions,S.editRecord)`                                 | records same realm with exact visible Record actions control before 20,000 ms deadline -> open exact menu then click exact Edit record item + retained coordinator mount -> A entry remounted                                                                                                                         | `ru-051 / absent -> absent`                                               |
+| `ru-053-a-authoritative`                  | p1/0    | `assert(same-user-authoritative-refresh)`                             | remount read settled -> before/server/after plus false badge geometry -> false replaces proven durable true                                                                                                                                                                                                           | `ru-047a-a-durable-proof,ru-051,ru-052 / absent -> absent`                |
+| `ru-053a-a-nondefault-toggle`             | p1/0    | `click(S.metadata)`                                                   | authoritative false visible -> real UI PATCH/optimistic state -> non-default true intent                                                                                                                                                                                                                              | `ru-053 / absent -> absent`                                               |
+| `ru-053b-a-nondefault-write-settled`      | p1/0    | `observe(nondefault-browser-patch-settled)`                           | true intent started -> context logger exact current-A PATCH sequence 2/success/strict true response -> non-default true persisted                                                                                                                                                                                     | `ru-053a-a-nondefault-toggle / absent -> absent`                          |
+| `ru-054-a-away-again`                     | p1/0    | `click(S.recordsLink(screen.id))`                                     | A non-default true persisted/entry clean -> internal navigation/second monotonic unmount-window start + exact visible Record actions control -> records workspace ready                                                                                                                                               | `ru-053b-a-nondefault-write-settled / absent -> absent`                   |
+| `ru-055-read-route-setup`                 | p1/0    | `route(preference-a-read-refresh,route-setup)`                        | A away/latest non-default true settled -> tuple -> delayed GET installed                                                                                                                                                                                                                                              | `ru-054 / absent -> installed`                                            |
+| `ru-056-a-remount-pending`                | p1/0    | `click(S.recordActions,S.editRecord)`                                 | route installed/records ready before 20,000 ms deadline -> open exact Record actions menu then click exact Edit record item + retained coordinator mount -> A entry remount/read pending                                                                                                                              | `ru-055 / installed -> installed`                                         |
+| `ru-057-read-route-hit`                   | p1/0    | `route(preference-a-read-refresh,route-hit-read)`                     | remount -> exact GET/no-body validated and stale non-default true response captured -> `{"hits":1,"captured":true,"method":"GET","bodyAbsent":true}`/pending                                                                                                                                                          | `ru-056 / installed -> hit`                                               |
+| `ru-058-retained-pending`                 | p1/0    | `assert(same-user-retained-view-pending)`                             | GET pending -> DOM/shared value -> settled non-default true retained, distinguishable from cold default false                                                                                                                                                                                                         | `ru-057 / hit -> hit`                                                     |
+| `ru-059-new-local-toggle`                 | p1/0    | `click(S.metadata)`                                                   | retained true/read pending -> UI/write -> newer local false                                                                                                                                                                                                                                                           | `ru-058 / hit -> hit`                                                     |
+| `ru-059a-new-local-browser-write-settled` | p1/0    | `observe(new-local-browser-patch-settled)`                            | UI false/write started -> context logger exact current-A PATCH sequence 3/success/strict false response -> browser write succeeded and durable false before stale-read release                                                                                                                                        | `ru-059 / hit -> hit`                                                     |
+| `ru-060-new-local-pending`                | p1/0    | `assert(newer-local-write-pending)`                                   | browser PATCH settled/read held -> visible/generation -> false wins pending                                                                                                                                                                                                                                           | `ru-059a-new-local-browser-write-settled / hit -> hit`                    |
+| `ru-061-read-release`                     | p1/0    | `route(preference-a-read-refresh,route-release)`                      | captured stale true held/newer browser PATCH proven durable false -> fulfillment -> response released/UI settled                                                                                                                                                                                                      | `ru-057,ru-059a-new-local-browser-write-settled,ru-060 / hit -> released` |
+| `ru-061a-a-durable-bypass-read`           | runtime | `isolatedApiSessionApiReadAs(user-a,preference-outside-page-routing)` | stale page response released -> isolated A API strict exact `{key:"customScreens.entry.preferences",value:{version:1,showFieldMetadata:false}}` -> persisted false frozen without touching page route or browser cookies                                                                                              | `ru-061 / released -> released`                                           |
+| `ru-062-new-local-wins`                   | p1/0    | `assert(newer-local-write-wins-refresh)`                              | stale true read settled + independent durable capture -> current DOM/generation -> newer false retained/persisted                                                                                                                                                                                                     | `ru-061,ru-061a-a-durable-bypass-read / released -> released`             |
+| `ru-063-read-unroute`                     | p1/0    | `route(preference-a-read-refresh,unroute)`                            | winner proven -> `true` -> delayed GET absent                                                                                                                                                                                                                                                                         | `ru-062 / released -> absent`                                             |
+| `ru-064-legacy-storage`                   | p1/0    | `assert(legacy-local-storage-absent)`                                 | A state settled -> key/read/write instrumentation -> absent/no writes                                                                                                                                                                                                                                                 | `ru-063 / absent -> absent`                                               |
+| `ru-065-a-menu`                           | p1/0    | `click(S.userMenu(users.a.displayName))`                              | A entry -> menu -> menu open                                                                                                                                                                                                                                                                                          | `ru-064 / absent -> absent`                                               |
+| `ru-066-a-signout`                        | p1/0    | `click(S.signOut)`                                                    | menu open -> real logout click/navigation initiated -> A realm leaving                                                                                                                                                                                                                                                | `ru-065 / absent -> absent`                                               |
+| `ru-066a-a-signout-settled`               | p1/0    | `observe(signout-settled-user-a)`                                     | logout initiated -> exact canonical `paths.login` URL + positive-geometry exact login form -> login realm settled                                                                                                                                                                                                     | `ru-066 / absent -> absent`                                               |
+| `ru-067-b-email`                          | p1/0    | `fill(S.loginEmail,$WF540_USER_B_EMAIL)`                              | settled login form -> discarded -> B email filled                                                                                                                                                                                                                                                                     | `ru-066a-a-signout-settled / absent -> absent`                            |
+| `ru-068-b-password`                       | p1/0    | `fill(S.loginPassword,$ADMIN_PASSWORD)`                               | B email filled -> discarded -> password filled                                                                                                                                                                                                                                                                        | `ru-067 / absent -> absent`                                               |
+| `ru-069-b-submit`                         | p1/0    | `click(S.loginSubmit)`                                                | credentials filled -> auth navigation -> B authenticated                                                                                                                                                                                                                                                              | `ru-068 / absent -> absent`                                               |
+| `ru-069a-b-identity-settled`              | p1/0    | `observe(auth-identity-settled-users-b)`                              | submit navigation started -> post-login Admin URL + positive-geometry `S.userMenu(users.b.displayName)` -> B realm settled                                                                                                                                                                                            | `ru-069 / absent -> absent`                                               |
+| `ru-070-b-entry`                          | p1/0    | `goto(paths.entry)`                                                   | B identity settled -> URL/document -> B entry mounting                                                                                                                                                                                                                                                                | `ru-069a-b-identity-settled / absent -> absent`                           |
+| `ru-071-b-dark-toggle`                    | p1/0    | `click(S.colorMode)`                                                  | shared theme currently light -> aria state -> dark selected                                                                                                                                                                                                                                                           | `ru-070 / absent -> absent`                                               |
+| `ru-072-b-dark-capture`                   | p1/0    | `observe(user-b-dark-computed)`                                       | toggle settled/B entry settled -> exact root/body colors + aria + root-scoped metadata effect `false` -> B dark/default-false sample frozen                                                                                                                                                                           | `ru-071 / absent -> absent`                                               |
+| `ru-073-light-dark-proof`                 | p1/0    | `assert(light-and-dark-computed)`                                     | A/B samples -> computed colors/themes + frozen B root-scoped metadata effect -> A light/B dark/default false                                                                                                                                                                                                          | `ru-045,ru-072 / absent -> absent`                                        |
+| `ru-074-b-shot`                           | p1/0    | `screen(responsive-user-b-dark)`                                      | B false/dark -> PNG -> B screenshot created                                                                                                                                                                                                                                                                           | `ru-073 / absent -> absent`                                               |
+| `ru-075-b-menu`                           | p1/0    | `click(S.userMenu(users.b.displayName))`                              | B entry -> menu -> menu open                                                                                                                                                                                                                                                                                          | `ru-074 / absent -> absent`                                               |
+| `ru-076-b-signout`                        | p1/0    | `click(S.signOut)`                                                    | menu open -> real logout click/navigation initiated -> B realm leaving                                                                                                                                                                                                                                                | `ru-075 / absent -> absent`                                               |
+| `ru-076a-b-signout-settled`               | p1/0    | `observe(signout-settled-user-b)`                                     | logout initiated -> exact canonical `paths.login` URL + positive-geometry exact login form -> login realm settled                                                                                                                                                                                                     | `ru-076 / absent -> absent`                                               |
+| `ru-076b-auth-rate-window-barrier`        | p1/0    | `authRateWindowBarrier()`                                             | login realm stable/bounded rate epoch -> configured auth window naturally expires when enabled or timer is skipped when disabled + bounded realm-stability proof -> exact `{"barrierSatisfied":true}`                                                                                                                 | `ru-076a-b-signout-settled / absent -> absent`                            |
+| `ru-077-a2-email`                         | p1/0    | `fill(S.loginEmail,$WF540_USER_A_EMAIL)`                              | settled login form -> discarded -> A email filled                                                                                                                                                                                                                                                                     | `ru-076b-auth-rate-window-barrier / absent -> absent`                     |
+| `ru-078-a2-password`                      | p1/0    | `fill(S.loginPassword,$ADMIN_PASSWORD)`                               | A email filled -> discarded -> password filled                                                                                                                                                                                                                                                                        | `ru-077 / absent -> absent`                                               |
+| `ru-079-a2-submit`                        | p1/0    | `click(S.loginSubmit)`                                                | credentials filled -> auth navigation -> A authenticated                                                                                                                                                                                                                                                              | `ru-078 / absent -> absent`                                               |
+| `ru-079a-a2-identity-settled`             | p1/0    | `observe(auth-identity-settled-users-a)`                              | submit navigation started -> post-login Admin URL + exact A trigger -> A realm settled                                                                                                                                                                                                                                | `ru-079 / absent -> absent`                                               |
+| `ru-080-a2-entry`                         | p1/0    | `goto(paths.entry)`                                                   | A identity settled -> URL/document -> returned A entry mounting                                                                                                                                                                                                                                                       | `ru-079a-a2-identity-settled / absent -> absent`                          |
+| `ru-081-a2-light-toggle`                  | p1/0    | `click(S.colorMode)`                                                  | shared theme dark -> aria state -> light selected                                                                                                                                                                                                                                                                     | `ru-080 / absent -> absent`                                               |
+| `ru-082-isolation-proof`                  | p1/0    | `assert(user-a-b-a-isolated)`                                         | first A durable proof + frozen B sample from `ru-072` + current returned-A strict read/root-scoped metadata effect + `ru-081` light toggle -> exact per-user values and reject-unknown current `userAReturnComputed` theme/aria/root/body-color sample -> per-user values isolated and returned A visibly false/light | `ru-047a-a-durable-proof,ru-072,ru-080,ru-081 / absent -> absent`         |
+| `ru-083-write-route-setup`                | p1/0    | `route(preference-a-write-exit,route-setup)`                          | A false durable/entry visible -> exact bounded `requestfailed` listener installed before route, then tuple -> delayed PATCH installed                                                                                                                                                                                 | `ru-082 / absent -> installed`                                            |
+| `ru-084-first-a-toggle`                   | p1/0    | `click(S.metadata)`                                                   | A visible false -> UI/write -> true PATCH captured                                                                                                                                                                                                                                                                    | `ru-083 / installed -> installed`                                         |
+| `ru-085-write-route-hit`                  | p1/0    | `route(preference-a-write-exit,route-hit-read)`                       | first write -> exact PATCH/body/content-type/user-header/CSRF-presence validated and captured -> `{"hits":1,"captured":true,"backingSettled":true,"method":"PATCH","bodyMatches":true,"contentTypeJson":true,"expectedUserIdMatches":true,"csrfPresent":true}`/pending                                                | `ru-084 / installed -> hit`                                               |
+| `ru-086-second-a-toggle`                  | p1/0    | `click(S.metadata)`                                                   | first true write pending -> UI/generation -> second false intent queued                                                                                                                                                                                                                                               | `ru-085 / hit -> hit`                                                     |
+| `ru-087-second-intent`                    | p1/0    | `assert(second-a-intent-visible-before-exit)`                         | second toggle settled -> visible/queue/pending -> false intent visible                                                                                                                                                                                                                                                | `ru-086 / hit -> hit`                                                     |
+| `ru-088-hit-before-release`               | p1/0    | `assert(preference-a-write-hit-before-release)`                       | first pending/second queued -> route counter -> exact 1                                                                                                                                                                                                                                                               | `ru-085,ru-087 / hit -> hit`                                              |
+| `ru-089-a-exit-menu`                      | p1/0    | `click(S.userMenu(users.a.displayName))`                              | A dirty preference realm -> menu -> menu open                                                                                                                                                                                                                                                                         | `ru-088 / hit -> hit`                                                     |
+| `ru-090-a-exit-signout`                   | p1/0    | `click(S.signOut)`                                                    | menu open/first Request object captured -> real logout click/navigation initiated -> old A realm leaving                                                                                                                                                                                                              | `ru-089 / hit -> hit`                                                     |
+| `ru-090a-a-exit-signout-settled`          | p1/0    | `observe(signout-settled-user-a-with-abort)`                          | logout initiated -> exact same captured Request emits `net::ERR_ABORTED` + exact canonical `paths.login` URL + positive-geometry exact login form -> old-client abort and login realm settled                                                                                                                         | `ru-090 / hit -> hit`                                                     |
+| `ru-091-b2-email`                         | p1/0    | `fill(S.loginEmail,$WF540_USER_B_EMAIL)`                              | settled login form -> discarded -> B email filled                                                                                                                                                                                                                                                                     | `ru-090a-a-exit-signout-settled / hit -> hit`                             |
+| `ru-092-b2-password`                      | p1/0    | `fill(S.loginPassword,$ADMIN_PASSWORD)`                               | B email filled -> discarded -> password filled                                                                                                                                                                                                                                                                        | `ru-091 / hit -> hit`                                                     |
+| `ru-093-b2-submit`                        | p1/0    | `click(S.loginSubmit)`                                                | credentials filled -> auth navigation -> B authenticated                                                                                                                                                                                                                                                              | `ru-092 / hit -> hit`                                                     |
+| `ru-093a-b2-identity-settled`             | p1/0    | `observe(auth-identity-settled-users-b)`                              | submit navigation started -> post-login Admin URL + exact B trigger -> B realm settled                                                                                                                                                                                                                                | `ru-093 / hit -> hit`                                                     |
+| `ru-094-b2-entry`                         | p1/0    | `goto(paths.entry)`                                                   | B identity settled -> URL/document -> B entry visible                                                                                                                                                                                                                                                                 | `ru-093a-b2-identity-settled / hit -> hit`                                |
+| `ru-095-b-before-release`                 | p1/0    | `assert(user-b-default-before-release)`                               | B entry/read settled -> strict authenticated `{key,value:false}` + false badge geometry -> exact B default false                                                                                                                                                                                                      | `ru-094 / hit -> hit`                                                     |
+| `ru-096-write-release`                    | p1/0    | `route(preference-a-write-exit,route-release)`                        | A backing response settled/B active/exact captured Request abort proven -> abort-aware terminal receipt -> no response delivered into B realm                                                                                                                                                                         | `ru-085,ru-090a-a-exit-signout-settled,ru-095 / hit -> released`          |
+| `ru-097-hit-after-release`                | p1/0    | `assert(preference-a-write-hit-after-release)`                        | release settled -> route counter -> exact 1                                                                                                                                                                                                                                                                           | `ru-096 / released -> released`                                           |
+| `ru-098-queued-zero`                      | p1/0    | `assert(queued-a-write-zero-dispatch)`                                | old realm destroyed -> derived dispatch count -> exact 0                                                                                                                                                                                                                                                              | `ru-097 / released -> released`                                           |
+| `ru-099-b-unchanged`                      | p1/0    | `assert(user-b-default-unchanged)`                                    | strict B `{key,value}` reads before/after release + false badge geometry -> exact false/false -> B unchanged                                                                                                                                                                                                          | `ru-095,ru-096 / released -> released`                                    |
+| `ru-100-write-unroute`                    | p1/0    | `route(preference-a-write-exit,unroute)`                              | hit/queue/B proven -> `true` -> delayed PATCH absent and exact bounded `requestfailed` listener removed                                                                                                                                                                                                               | `ru-097,ru-098,ru-099 / released -> absent`                               |
+| `ru-100a-auth-rate-window-barrier`        | p1/0    | `authRateWindowBarrier()`                                             | routes absent/B active/bounded rate epoch -> configured auth window naturally expires when enabled or timer is skipped when disabled + bounded realm-stability proof -> exact `{"barrierSatisfied":true}`; `ru-099`/`ru-101` compose the exact B proof                                                                | `ru-100 / absent -> absent`                                               |
+| `ru-101-b2-menu`                          | p1/0    | `click(S.userMenu(users.b.displayName))`                              | auth budget barrier/B entry -> menu -> menu open                                                                                                                                                                                                                                                                      | `ru-100a-auth-rate-window-barrier / absent -> absent`                     |
+| `ru-102-b2-signout`                       | p1/0    | `click(S.signOut)`                                                    | menu open -> real logout click/navigation initiated -> B realm leaving                                                                                                                                                                                                                                                | `ru-101 / absent -> absent`                                               |
+| `ru-102a-b2-signout-settled`              | p1/0    | `observe(signout-settled-user-b)`                                     | logout initiated -> exact canonical `paths.login` URL + positive-geometry exact login form -> login realm settled                                                                                                                                                                                                     | `ru-102 / absent -> absent`                                               |
+| `ru-103-a3-email`                         | p1/0    | `fill(S.loginEmail,$WF540_USER_A_EMAIL)`                              | settled login form -> discarded -> A email filled                                                                                                                                                                                                                                                                     | `ru-102a-b2-signout-settled / absent -> absent`                           |
+| `ru-104-a3-password`                      | p1/0    | `fill(S.loginPassword,$ADMIN_PASSWORD)`                               | A email filled -> discarded -> password filled                                                                                                                                                                                                                                                                        | `ru-103 / absent -> absent`                                               |
+| `ru-105-a3-submit`                        | p1/0    | `click(S.loginSubmit)`                                                | credentials filled -> auth navigation -> A authenticated                                                                                                                                                                                                                                                              | `ru-104 / absent -> absent`                                               |
+| `ru-105a-a3-identity-settled`             | p1/0    | `observe(auth-identity-settled-users-a)`                              | submit navigation started -> post-login Admin URL + exact A trigger + preference-GET counter baseline -> brand-new A realm settled                                                                                                                                                                                    | `ru-105 / absent -> absent`                                               |
+| `ru-106-a3-entry`                         | p1/0    | `goto(paths.entry)`                                                   | brand-new A realm -> URL/document + fresh preference GET starts -> A entry mounting                                                                                                                                                                                                                                   | `ru-105a-a3-identity-settled / absent -> absent`                          |
+| `ru-106a-a3-fresh-read-settled`           | p1/0    | `observe(post-redirect-a-fresh-read-settled)`                         | entry mounting -> exact one new GET method/path/success + strict `{key:"customScreens.entry.preferences",value:{version:1,showFieldMetadata:true}}` + `activeUserMenuVisible:true` from positive-geometry exact A menu + checked Switch/true badge geometry -> fresh durable true rendered in new A realm             | `ru-105a-a3-identity-settled,ru-106 / absent -> absent`                   |
+| `ru-107-fresh-a-toggle`                   | p1/0    | `click(S.metadata)`                                                   | fresh A true durable/route absent -> UI + real PATCH -> fresh false write                                                                                                                                                                                                                                             | `ru-106a-a3-fresh-read-settled / absent -> absent`                        |
+| `ru-108-convergence`                      | p1/0    | `assert(final-a-retry-converges)`                                     | fresh PATCH settled -> UI + authenticated durable read -> exact false convergence                                                                                                                                                                                                                                     | `ru-107 / absent -> absent`                                               |
+| `ru-109-converged-shot`                   | p1/0    | `screen(responsive-user-a-converged)`                                 | convergence proven -> PNG -> final A screenshot created                                                                                                                                                                                                                                                               | `ru-108 / absent -> absent`                                               |
+| `ru-110-log-agg-errors`                   | p1/0    | `logs(aggregate,console-errors)`                                      | flow complete -> all registered pages aggregate `[]` -> clean                                                                                                                                                                                                                                                         | `ru-109 / absent -> absent`                                               |
+| `ru-111-log-pages-errors`                 | p1/0    | `logs(per-page,console-errors)`                                       | logger stable -> p1/p2 arrays `[]` -> clean                                                                                                                                                                                                                                                                           | `ru-110 / absent -> absent`                                               |
+| `ru-112-log-agg-warnings`                 | p1/0    | `logs(aggregate,console-warnings)`                                    | flow complete -> all pages aggregate `[]` -> clean                                                                                                                                                                                                                                                                    | `ru-111 / absent -> absent`                                               |
+| `ru-113-log-pages-warnings`               | p1/0    | `logs(per-page,console-warnings)`                                     | logger stable -> p1/p2 arrays `[]` -> clean                                                                                                                                                                                                                                                                           | `ru-112 / absent -> absent`                                               |
+| `ru-114-log-agg-page-errors`              | p1/0    | `logs(aggregate,page-errors)`                                         | flow complete -> all pages aggregate `[]` -> clean                                                                                                                                                                                                                                                                    | `ru-113 / absent -> absent`                                               |
+| `ru-115-log-pages-page-errors`            | p1/0    | `logs(per-page,page-errors)`                                          | logger stable -> p1/p2 arrays `[]` -> flow 7 clean                                                                                                                                                                                                                                                                    | `ru-114 / absent -> absent`                                               |
 
 #### Terminal browser and runtime cleanup expansion
 
@@ -4056,15 +5790,15 @@ The manifest ends with the exact seven browser cleanup operations already define
 this leaf; these are seven distinct CLI invocations and no browser invocation follows
 `cleanup-session-absence`:
 
-| ID | Page | Kind / exact builder | Precondition -> captured output -> postcondition | Dependencies / route transition |
-|---|---|---|---|---|
-| `end-001-release-unroute` | p1/0 | `cleanup-release-unroute` | all flow routes terminal -> `true` only after every latch is released, `await page.unrouteAll({behavior:"wait"})` settles, and the authoritative context active-route registry is exact `[]` -> raw `page.route()` registry empty | `ru-115 / all terminal -> absent` |
-| `end-002-route-list` | p1/0 | `cleanup-route-list` | authoritative context registry empty -> `[]` -> CLI-wrapper route registry independently empty | `end-001 / absent -> absent` |
-| `end-003-console-errors` | p1/0 | `cleanup-console-errors` | route list empty -> exact aggregate/pages -> all error arrays empty | `end-002 / absent -> absent` |
-| `end-004-console-warnings` | p1/0 | `cleanup-console-warnings` | errors clean -> exact aggregate/pages -> all warning arrays empty | `end-003 / absent -> absent` |
-| `end-005-page-errors` | p1/0 | `cleanup-page-errors` | warnings clean -> exact aggregate/pages -> all page-error arrays empty | `end-004 / absent -> absent` |
-| `end-006-close` | p1/0 | `cleanup-close` | logs clean -> `closed` -> named session closed | `end-005 / absent -> absent` |
-| `end-007-session-absence` | global | `cleanup-session-absence` | close receipt -> global list bytes -> `wf540smoke` absent/terminal | `end-006 / absent -> absent` |
+| ID                         | Page   | Kind / exact builder       | Precondition -> captured output -> postcondition                                                                                                                                                                                  | Dependencies / route transition   |
+| -------------------------- | ------ | -------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------- |
+| `end-001-release-unroute`  | p1/0   | `cleanup-release-unroute`  | all flow routes terminal -> `true` only after every latch is released, `await page.unrouteAll({behavior:"wait"})` settles, and the authoritative context active-route registry is exact `[]` -> raw `page.route()` registry empty | `ru-115 / all terminal -> absent` |
+| `end-002-route-list`       | p1/0   | `cleanup-route-list`       | authoritative context registry empty -> `[]` -> CLI-wrapper route registry independently empty                                                                                                                                    | `end-001 / absent -> absent`      |
+| `end-003-console-errors`   | p1/0   | `cleanup-console-errors`   | route list empty -> exact aggregate/pages -> all error arrays empty                                                                                                                                                               | `end-002 / absent -> absent`      |
+| `end-004-console-warnings` | p1/0   | `cleanup-console-warnings` | errors clean -> exact aggregate/pages -> all warning arrays empty                                                                                                                                                                 | `end-003 / absent -> absent`      |
+| `end-005-page-errors`      | p1/0   | `cleanup-page-errors`      | warnings clean -> exact aggregate/pages -> all page-error arrays empty                                                                                                                                                            | `end-004 / absent -> absent`      |
+| `end-006-close`            | p1/0   | `cleanup-close`            | logs clean -> `closed` -> named session closed                                                                                                                                                                                    | `end-005 / absent -> absent`      |
+| `end-007-session-absence`  | global | `cleanup-session-absence`  | close receipt -> global list bytes -> `wf540smoke` absent/terminal                                                                                                                                                                | `end-006 / absent -> absent`      |
 
 Native CLI `route-list` does not enumerate handlers installed through raw
 `page.route()`. Therefore `end-001` is the sole authoritative absence proof for those
@@ -4119,52 +5853,106 @@ type AcquiredResourceRecord = Readonly<{
   resourceKey: string;
   class: "delete" | "restore" | "runtime" | "retained";
   kind:
-    | "presentation-override" | "seo-document-entry"
-    | "setting-user-a" | "setting-user-b"
-    | "screen-main" | "screen-retry" | "entry-editable" | "entry-related"
-    | "media-row-key" | "content-type" | "audit-log-task-ua"
-    | "access-log-task-ua" | "session-task" | "user-a" | "user-b"
-    | "bootstrap-user-login-state" | "site-content-routes-baseline"
-    | "storage-baseline" | "missing-media-baseline" | "screenshot"
-    | "browser-session" | "route-registry" | "api-context-bootstrap"
-    | "api-context-user-a" | "browser-private-root" | "host-process-group";
+    | "presentation-override"
+    | "seo-document-entry"
+    | "setting-user-a"
+    | "setting-user-b"
+    | "screen-main"
+    | "screen-retry"
+    | "entry-editable"
+    | "entry-related"
+    | "media-row-key"
+    | "content-type"
+    | "audit-log-task-ua"
+    | "access-log-task-ua"
+    | "session-task"
+    | "user-a"
+    | "user-b"
+    | "bootstrap-user-login-state"
+    | "site-content-routes-baseline"
+    | "storage-baseline"
+    | "missing-media-baseline"
+    | "screenshot"
+    | "browser-session"
+    | "route-registry"
+    | "api-context-bootstrap"
+    | "api-context-user-a"
+    | "browser-private-root"
+    | "host-process-group";
   identifierType:
-    | "db-id" | "db-composite" | "seo-document-target"
+    | "db-id"
+    | "db-composite"
+    | "seo-document-target"
     | "media-id-and-storage-key"
-    | "setting-row" | "filesystem-path" | "browser-session-name"
-    | "api-context-name" | "process-group-id" | "proof-key";
+    | "setting-row"
+    | "filesystem-path"
+    | "browser-session-name"
+    | "api-context-name"
+    | "process-group-id"
+    | "proof-key";
   identifier: readonly string[];
   ownerSubjectIdentifier: string | null;
   acquisitionSourceId: string;
   acquisitionOrdinal: number;
   sourceActionOrdinal: number | null;
   acquisitionChannel:
-    | "admin-api" | "service" | "terminal-db-delta" | "filesystem"
-    | "browser" | "process" | "preflight" | "failure-discovery"
+    | "admin-api"
+    | "service"
+    | "terminal-db-delta"
+    | "filesystem"
+    | "browser"
+    | "process"
+    | "preflight"
+    | "failure-discovery"
     | "cleanup-discovery";
   dependsOn: readonly string[];
   provenanceAdapterId:
-    | "admin-api-exact" | "db-exact" | "db-terminal-delta"
-    | "user-setting-service" | "user-provisioning-service" | "media-api-composite"
-    | "postgres-bootstrap-cas" | "filesystem-identity"
-    | "playwright-session" | "playwright-route-registry"
-    | "api-request-context" | "owned-process-group" | "proof-only";
+    | "admin-api-exact"
+    | "db-exact"
+    | "db-terminal-delta"
+    | "user-setting-service"
+    | "user-provisioning-service"
+    | "media-api-composite"
+    | "postgres-bootstrap-cas"
+    | "filesystem-identity"
+    | "playwright-session"
+    | "playwright-route-registry"
+    | "api-request-context"
+    | "owned-process-group"
+    | "proof-only";
   cleanupAdapterId:
-    | "admin-api-exact" | "db-exact" | "media-api-composite"
-    | "postgres-bootstrap-cas" | "filesystem-identity"
-    | "playwright-session" | "playwright-route-registry"
-    | "api-request-context" | "owned-process-group" | null;
+    | "admin-api-exact"
+    | "db-exact"
+    | "media-api-composite"
+    | "postgres-bootstrap-cas"
+    | "filesystem-identity"
+    | "playwright-session"
+    | "playwright-route-registry"
+    | "api-request-context"
+    | "owned-process-group"
+    | null;
   absenceAdapterId:
-    | "admin-api-exact" | "db-exact" | "media-api-composite"
-    | "filesystem-identity" | "playwright-session"
-    | "playwright-route-registry" | "api-request-context"
-    | "owned-process-group" | "proof-only" | null;
-  cleanupPhase: Readonly<{ success: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10;
-                           failure: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 }>;
+    | "admin-api-exact"
+    | "db-exact"
+    | "media-api-composite"
+    | "filesystem-identity"
+    | "playwright-session"
+    | "playwright-route-registry"
+    | "api-request-context"
+    | "owned-process-group"
+    | "proof-only"
+    | null;
+  cleanupPhase: Readonly<{
+    success: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10;
+    failure: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10;
+  }>;
   cleanupPolicy:
-    | "delete-and-prove-absent" | "restore-and-prove-byte-identical"
-    | "dispose-and-prove-closed" | "release-and-prove-empty"
-    | "retain-and-validate" | "retain-on-success-remove-on-failure"
+    | "delete-and-prove-absent"
+    | "restore-and-prove-byte-identical"
+    | "dispose-and-prove-closed"
+    | "release-and-prove-empty"
+    | "retain-and-validate"
+    | "retain-on-success-remove-on-failure"
     | "observe-only";
   deleteAuthority: boolean;
   restoreAuthority: boolean;
@@ -4200,34 +5988,34 @@ asserts exact key equality between this table and the `kind` union and rejects e
 unlisted class, identifier arity, channel/adapter pair, cleanup/absence adapter,
 phase, policy, authority, or ID/schema-nullability combination:
 
-| Kind | Class; identifier type/arity | Allowed acquisition -> P adapter | C adapter / A adapter | S/F | Policy | delete/restore | P/C/A |
-|---|---|---|---|---:|---|---|---|
-| `presentation-override` | delete; `db-composite`/4 | admin-api -> admin-api-exact; failure-discovery -> db-exact | db-exact / db-exact | 3/3 | delete-and-prove-absent | true/false | R/R/R |
-| `seo-document-entry` | delete; `seo-document-target`/3 | cleanup-discovery -> db-exact | db-exact / db-exact | 3/3 | delete-and-prove-absent | true/false | R/R/R |
-| `setting-user-a` | delete; `setting-row`/2 | service -> user-setting-service; failure-discovery -> db-exact | db-exact / db-exact | 3/3 | delete-and-prove-absent | true/false | R/R/R |
-| `setting-user-b` | delete; `setting-row`/2 | service -> user-setting-service; failure-discovery -> db-exact | db-exact / db-exact | 3/3 | delete-and-prove-absent | true/false | R/R/R |
-| `screen-main` | delete; `db-id`/1 | admin-api -> admin-api-exact; failure-discovery -> db-exact | admin-api-exact / admin-api-exact | 3/3 | delete-and-prove-absent | true/false | R/R/R |
-| `screen-retry` | delete; `db-id`/1 | admin-api -> admin-api-exact; failure-discovery -> db-exact | admin-api-exact / admin-api-exact | 3/3 | delete-and-prove-absent | true/false | R/R/R |
-| `entry-editable` | delete; `db-id`/1 | admin-api -> admin-api-exact; failure-discovery -> db-exact | admin-api-exact / admin-api-exact | 3/3 | delete-and-prove-absent | true/false | R/R/R |
-| `entry-related` | delete; `db-id`/1 | admin-api -> admin-api-exact; failure-discovery -> db-exact | admin-api-exact / admin-api-exact | 3/3 | delete-and-prove-absent | true/false | R/R/R |
-| `media-row-key` | delete; `media-id-and-storage-key`/2 | admin-api -> media-api-composite; failure-discovery -> media-api-composite | media-api-composite / media-api-composite | 3/3 | delete-and-prove-absent | true/false | R/R/R |
-| `content-type` | delete; `db-id`/1 | admin-api -> admin-api-exact; failure-discovery -> db-exact | admin-api-exact / admin-api-exact | 3/3 | delete-and-prove-absent | true/false | R/R/R |
-| `audit-log-task-ua` | delete; `db-id`/1 | terminal-db-delta -> db-terminal-delta | db-exact / db-exact | 6/6 | delete-and-prove-absent | true/false | R/R/R |
-| `access-log-task-ua` | delete; `db-id`/1 | terminal-db-delta -> db-terminal-delta | db-exact / db-exact | 6/6 | delete-and-prove-absent | true/false | R/R/R |
-| `session-task` | delete; `db-id`/1 | terminal-db-delta -> db-terminal-delta | db-exact / db-exact | 6/6 | delete-and-prove-absent | true/false | R/R/R |
-| `user-a` | delete; `db-id`/1 | service -> user-provisioning-service; failure-discovery -> db-exact | db-exact / db-exact | 7/7 | delete-and-prove-absent | true/false | R/R/R |
-| `user-b` | delete; `db-id`/1 | service -> user-provisioning-service; failure-discovery -> db-exact | db-exact / db-exact | 7/7 | delete-and-prove-absent | true/false | R/R/R |
-| `bootstrap-user-login-state` | restore; `db-id`/1 | preflight -> db-exact | postgres-bootstrap-cas / db-exact | 8/8 | restore-and-prove-byte-identical | false/true | R/R/R |
-| `site-content-routes-baseline` | retained; `proof-key`/1 | preflight -> db-exact | null / db-exact | 9/9 | observe-only | false/false | R/-/R |
-| `storage-baseline` | retained; `proof-key`/1 | preflight -> filesystem-identity | null / filesystem-identity | 9/9 | observe-only | false/false | R/-/R |
-| `missing-media-baseline` | retained; `proof-key`/1 | preflight -> filesystem-identity | null / filesystem-identity | 9/9 | observe-only | false/false | R/-/R |
-| `screenshot` | retained; `filesystem-path`/1 | filesystem -> filesystem-identity; failure-discovery -> filesystem-identity | filesystem-identity / filesystem-identity | 9/2 | retain-on-success-remove-on-failure | true/false | R/R/R |
-| `browser-session` | runtime; `browser-session-name`/1 | browser -> playwright-session | playwright-session / playwright-session | 1/1 | dispose-and-prove-closed | false/false | R/R/R |
-| `route-registry` | runtime; `proof-key`/1 | browser -> playwright-route-registry | playwright-route-registry / playwright-route-registry | 1/1 | release-and-prove-empty | false/false | R/R/R |
-| `api-context-bootstrap` | runtime; `api-context-name`/1 | service -> api-request-context | api-request-context / api-request-context | 4/4 | dispose-and-prove-closed | false/false | R/R/R |
-| `api-context-user-a` | runtime; `api-context-name`/1 | service -> api-request-context | api-request-context / api-request-context | 4/4 | dispose-and-prove-closed | false/false | R/R/R |
-| `browser-private-root` | runtime; `filesystem-path`/1 | filesystem -> filesystem-identity | filesystem-identity / filesystem-identity | 1/1 | dispose-and-prove-closed | false/false | R/R/R |
-| `host-process-group` | runtime; `process-group-id`/1 | process -> owned-process-group | owned-process-group / owned-process-group | 10/10 | dispose-and-prove-closed | false/false | R/R/R |
+| Kind                           | Class; identifier type/arity         | Allowed acquisition -> P adapter                                            | C adapter / A adapter                                 |   S/F | Policy                              | delete/restore | P/C/A |
+| ------------------------------ | ------------------------------------ | --------------------------------------------------------------------------- | ----------------------------------------------------- | ----: | ----------------------------------- | -------------- | ----- |
+| `presentation-override`        | delete; `db-composite`/4             | admin-api -> admin-api-exact; failure-discovery -> db-exact                 | db-exact / db-exact                                   |   3/3 | delete-and-prove-absent             | true/false     | R/R/R |
+| `seo-document-entry`           | delete; `seo-document-target`/3      | cleanup-discovery -> db-exact                                               | db-exact / db-exact                                   |   3/3 | delete-and-prove-absent             | true/false     | R/R/R |
+| `setting-user-a`               | delete; `setting-row`/2              | service -> user-setting-service; failure-discovery -> db-exact              | db-exact / db-exact                                   |   3/3 | delete-and-prove-absent             | true/false     | R/R/R |
+| `setting-user-b`               | delete; `setting-row`/2              | service -> user-setting-service; failure-discovery -> db-exact              | db-exact / db-exact                                   |   3/3 | delete-and-prove-absent             | true/false     | R/R/R |
+| `screen-main`                  | delete; `db-id`/1                    | admin-api -> admin-api-exact; failure-discovery -> db-exact                 | admin-api-exact / admin-api-exact                     |   3/3 | delete-and-prove-absent             | true/false     | R/R/R |
+| `screen-retry`                 | delete; `db-id`/1                    | admin-api -> admin-api-exact; failure-discovery -> db-exact                 | admin-api-exact / admin-api-exact                     |   3/3 | delete-and-prove-absent             | true/false     | R/R/R |
+| `entry-editable`               | delete; `db-id`/1                    | admin-api -> admin-api-exact; failure-discovery -> db-exact                 | admin-api-exact / admin-api-exact                     |   3/3 | delete-and-prove-absent             | true/false     | R/R/R |
+| `entry-related`                | delete; `db-id`/1                    | admin-api -> admin-api-exact; failure-discovery -> db-exact                 | admin-api-exact / admin-api-exact                     |   3/3 | delete-and-prove-absent             | true/false     | R/R/R |
+| `media-row-key`                | delete; `media-id-and-storage-key`/2 | admin-api -> media-api-composite; failure-discovery -> media-api-composite  | media-api-composite / media-api-composite             |   3/3 | delete-and-prove-absent             | true/false     | R/R/R |
+| `content-type`                 | delete; `db-id`/1                    | admin-api -> admin-api-exact; failure-discovery -> db-exact                 | admin-api-exact / admin-api-exact                     |   3/3 | delete-and-prove-absent             | true/false     | R/R/R |
+| `audit-log-task-ua`            | delete; `db-id`/1                    | terminal-db-delta -> db-terminal-delta                                      | db-exact / db-exact                                   |   6/6 | delete-and-prove-absent             | true/false     | R/R/R |
+| `access-log-task-ua`           | delete; `db-id`/1                    | terminal-db-delta -> db-terminal-delta                                      | db-exact / db-exact                                   |   6/6 | delete-and-prove-absent             | true/false     | R/R/R |
+| `session-task`                 | delete; `db-id`/1                    | terminal-db-delta -> db-terminal-delta                                      | db-exact / db-exact                                   |   6/6 | delete-and-prove-absent             | true/false     | R/R/R |
+| `user-a`                       | delete; `db-id`/1                    | service -> user-provisioning-service; failure-discovery -> db-exact         | db-exact / db-exact                                   |   7/7 | delete-and-prove-absent             | true/false     | R/R/R |
+| `user-b`                       | delete; `db-id`/1                    | service -> user-provisioning-service; failure-discovery -> db-exact         | db-exact / db-exact                                   |   7/7 | delete-and-prove-absent             | true/false     | R/R/R |
+| `bootstrap-user-login-state`   | restore; `db-id`/1                   | preflight -> db-exact                                                       | postgres-bootstrap-cas / db-exact                     |   8/8 | restore-and-prove-byte-identical    | false/true     | R/R/R |
+| `site-content-routes-baseline` | retained; `proof-key`/1              | preflight -> db-exact                                                       | null / db-exact                                       |   9/9 | observe-only                        | false/false    | R/-/R |
+| `storage-baseline`             | retained; `proof-key`/1              | preflight -> filesystem-identity                                            | null / filesystem-identity                            |   9/9 | observe-only                        | false/false    | R/-/R |
+| `missing-media-baseline`       | retained; `proof-key`/1              | preflight -> filesystem-identity                                            | null / filesystem-identity                            |   9/9 | observe-only                        | false/false    | R/-/R |
+| `screenshot`                   | retained; `filesystem-path`/1        | filesystem -> filesystem-identity; failure-discovery -> filesystem-identity | filesystem-identity / filesystem-identity             |   9/2 | retain-on-success-remove-on-failure | true/false     | R/R/R |
+| `browser-session`              | runtime; `browser-session-name`/1    | browser -> playwright-session                                               | playwright-session / playwright-session               |   1/1 | dispose-and-prove-closed            | false/false    | R/R/R |
+| `route-registry`               | runtime; `proof-key`/1               | browser -> playwright-route-registry                                        | playwright-route-registry / playwright-route-registry |   1/1 | release-and-prove-empty             | false/false    | R/R/R |
+| `api-context-bootstrap`        | runtime; `api-context-name`/1        | service -> api-request-context                                              | api-request-context / api-request-context             |   4/4 | dispose-and-prove-closed            | false/false    | R/R/R |
+| `api-context-user-a`           | runtime; `api-context-name`/1        | service -> api-request-context                                              | api-request-context / api-request-context             |   4/4 | dispose-and-prove-closed            | false/false    | R/R/R |
+| `browser-private-root`         | runtime; `filesystem-path`/1         | filesystem -> filesystem-identity                                           | filesystem-identity / filesystem-identity             |   1/1 | dispose-and-prove-closed            | false/false    | R/R/R |
+| `host-process-group`           | runtime; `process-group-id`/1        | process -> owned-process-group                                              | owned-process-group / owned-process-group             | 10/10 | dispose-and-prove-closed            | false/false    | R/R/R |
 
 Every non-null operation ID and schema ID is derived deterministically from
 `resourceKey`, validated as a bounded safe identifier, paired (`op === null` iff
@@ -4271,7 +6059,8 @@ const RESOURCE_BUN_BRIDGE_PARTICIPATION = deepFreezeExact({
   "setting-user-a": {
     provenance: {
       service: {
-        mode: "bound-runtime-bridge", operationId: "runtime/set-041-preference-a",
+        mode: "bound-runtime-bridge",
+        operationId: "runtime/set-041-preference-a",
       },
       "failure-discovery": { mode: "bun-one-shot", envProfileId: "database" },
     },
@@ -4281,7 +6070,8 @@ const RESOURCE_BUN_BRIDGE_PARTICIPATION = deepFreezeExact({
   "setting-user-b": {
     provenance: {
       service: {
-        mode: "bound-runtime-bridge", operationId: "runtime/set-043-preference-b",
+        mode: "bound-runtime-bridge",
+        operationId: "runtime/set-043-preference-b",
       },
       "failure-discovery": { mode: "bun-one-shot", envProfileId: "database" },
     },
@@ -4293,28 +6083,32 @@ const RESOURCE_BUN_BRIDGE_PARTICIPATION = deepFreezeExact({
       "admin-api": { mode: "node-local" },
       "failure-discovery": { mode: "bun-one-shot", envProfileId: "database" },
     },
-    cleanup: { mode: "node-local" }, absence: { mode: "node-local" },
+    cleanup: { mode: "node-local" },
+    absence: { mode: "node-local" },
   },
   "screen-retry": {
     provenance: {
       "admin-api": { mode: "node-local" },
       "failure-discovery": { mode: "bun-one-shot", envProfileId: "database" },
     },
-    cleanup: { mode: "node-local" }, absence: { mode: "node-local" },
+    cleanup: { mode: "node-local" },
+    absence: { mode: "node-local" },
   },
   "entry-editable": {
     provenance: {
       "admin-api": { mode: "node-local" },
       "failure-discovery": { mode: "bun-one-shot", envProfileId: "database" },
     },
-    cleanup: { mode: "node-local" }, absence: { mode: "node-local" },
+    cleanup: { mode: "node-local" },
+    absence: { mode: "node-local" },
   },
   "entry-related": {
     provenance: {
       "admin-api": { mode: "node-local" },
       "failure-discovery": { mode: "bun-one-shot", envProfileId: "database" },
     },
-    cleanup: { mode: "node-local" }, absence: { mode: "node-local" },
+    cleanup: { mode: "node-local" },
+    absence: { mode: "node-local" },
   },
   "media-row-key": {
     provenance: {
@@ -4329,7 +6123,8 @@ const RESOURCE_BUN_BRIDGE_PARTICIPATION = deepFreezeExact({
       "admin-api": { mode: "node-local" },
       "failure-discovery": { mode: "bun-one-shot", envProfileId: "database" },
     },
-    cleanup: { mode: "node-local" }, absence: { mode: "node-local" },
+    cleanup: { mode: "node-local" },
+    absence: { mode: "node-local" },
   },
   "audit-log-task-ua": {
     provenance: {
@@ -4355,10 +6150,12 @@ const RESOURCE_BUN_BRIDGE_PARTICIPATION = deepFreezeExact({
   "user-a": {
     provenance: {
       service: {
-        mode: "bound-runtime-bridge", operationId: "runtime/set-012-user-a-create",
+        mode: "bound-runtime-bridge",
+        operationId: "runtime/set-012-user-a-create",
       },
       "failure-discovery": {
-        mode: "bun-one-shot", envProfileId: "user-identity-proof",
+        mode: "bun-one-shot",
+        envProfileId: "user-identity-proof",
       },
     },
     cleanup: { mode: "bun-one-shot", envProfileId: "database" },
@@ -4367,10 +6164,12 @@ const RESOURCE_BUN_BRIDGE_PARTICIPATION = deepFreezeExact({
   "user-b": {
     provenance: {
       service: {
-        mode: "bound-runtime-bridge", operationId: "runtime/set-014-user-b-create",
+        mode: "bound-runtime-bridge",
+        operationId: "runtime/set-014-user-b-create",
       },
       "failure-discovery": {
-        mode: "bun-one-shot", envProfileId: "user-identity-proof",
+        mode: "bun-one-shot",
+        envProfileId: "user-identity-proof",
       },
     },
     cleanup: { mode: "bun-one-shot", envProfileId: "database" },
@@ -4379,7 +6178,8 @@ const RESOURCE_BUN_BRIDGE_PARTICIPATION = deepFreezeExact({
   "bootstrap-user-login-state": {
     provenance: {
       preflight: {
-        mode: "bound-runtime-bridge", operationId: "runtime/set-001-storage-preflight",
+        mode: "bound-runtime-bridge",
+        operationId: "runtime/set-001-storage-preflight",
       },
     },
     cleanup: { mode: "bun-one-shot", envProfileId: "database" },
@@ -4388,7 +6188,8 @@ const RESOURCE_BUN_BRIDGE_PARTICIPATION = deepFreezeExact({
   "site-content-routes-baseline": {
     provenance: {
       preflight: {
-        mode: "bound-runtime-bridge", operationId: "runtime/set-001-storage-preflight",
+        mode: "bound-runtime-bridge",
+        operationId: "runtime/set-001-storage-preflight",
       },
     },
     cleanup: null,
@@ -4419,47 +6220,52 @@ const RESOURCE_BUN_BRIDGE_PARTICIPATION = deepFreezeExact({
       filesystem: { mode: "node-local" },
       "failure-discovery": { mode: "node-local" },
     },
-    cleanup: { mode: "node-local" }, absence: { mode: "node-local" },
+    cleanup: { mode: "node-local" },
+    absence: { mode: "node-local" },
   },
   "browser-session": {
     provenance: { browser: { mode: "node-local" } },
-    cleanup: { mode: "node-local" }, absence: { mode: "node-local" },
+    cleanup: { mode: "node-local" },
+    absence: { mode: "node-local" },
   },
   "route-registry": {
     provenance: { browser: { mode: "node-local" } },
-    cleanup: { mode: "node-local" }, absence: { mode: "node-local" },
+    cleanup: { mode: "node-local" },
+    absence: { mode: "node-local" },
   },
   "api-context-bootstrap": {
     provenance: { service: { mode: "node-local" } },
-    cleanup: { mode: "node-local" }, absence: { mode: "node-local" },
+    cleanup: { mode: "node-local" },
+    absence: { mode: "node-local" },
   },
   "api-context-user-a": {
     provenance: { service: { mode: "node-local" } },
-    cleanup: { mode: "node-local" }, absence: { mode: "node-local" },
+    cleanup: { mode: "node-local" },
+    absence: { mode: "node-local" },
   },
   "browser-private-root": {
     provenance: { filesystem: { mode: "node-local" } },
-    cleanup: { mode: "node-local" }, absence: { mode: "node-local" },
+    cleanup: { mode: "node-local" },
+    absence: { mode: "node-local" },
   },
   "host-process-group": {
     provenance: { process: { mode: "node-local" } },
-    cleanup: { mode: "node-local" }, absence: { mode: "node-local" },
+    cleanup: { mode: "node-local" },
+    absence: { mode: "node-local" },
   },
 });
 
 assertSetEqual(
   Object.keys(RESOURCE_BUN_BRIDGE_PARTICIPATION),
-  Object.keys(RESOURCE_KIND_CONTRACTS),
+  Object.keys(RESOURCE_KIND_CONTRACTS)
 );
 assertEveryResourceProvenanceChannelSetEqual();
 assertEveryBoundRuntimeBridgeIdIn(
-  Object.values(REQUIRED_BUN_BRIDGE_RUNTIME_OPERATION_IDS_BY_ENV_PROFILE).flat(),
+  Object.values(REQUIRED_BUN_BRIDGE_RUNTIME_OPERATION_IDS_BY_ENV_PROFILE).flat()
 );
 assertSetEqual(
   Object.keys(BUN_BRIDGE_RESOURCE_OPERATION_DESCRIPTORS),
-  deriveIndependentResourceBunOperationIdsFromFrozenLedger(
-    RESOURCE_BUN_BRIDGE_PARTICIPATION,
-  ),
+  deriveIndependentResourceBunOperationIdsFromFrozenLedger(RESOURCE_BUN_BRIDGE_PARTICIPATION)
 );
 ```
 
@@ -4614,26 +6420,18 @@ provenance/delete/absence manifest object per exact key—not a loop hidden insi
 command—and must pass both:
 
 ```ts
-const CLEANUP_OPERATION_KINDS = deepFreezeExact([
-  "provenance", "delete", "absence",
-]);
+const CLEANUP_OPERATION_KINDS = deepFreezeExact(["provenance", "delete", "absence"]);
 const persistentCleanupTuples = deepFreezeExact(
   expandedPersistentRuntimeCleanupActions.map(({ resourceKey, operationKind }) =>
-    deepFreezeExact([resourceKey, operationKind]),
-  ),
+    deepFreezeExact([resourceKey, operationKind])
+  )
 );
 const expectedPersistentCleanupTuples = deepFreezeExact(
-  cartesianCleanupTuples(persistentCleanupSubjectKeys, CLEANUP_OPERATION_KINDS),
+  cartesianCleanupTuples(persistentCleanupSubjectKeys, CLEANUP_OPERATION_KINDS)
 );
 assertNoDuplicateCleanupTuples(persistentCleanupTuples);
-assertExactCleanupTupleSetEqual(
-  persistentCleanupTuples,
-  expectedPersistentCleanupTuples,
-);
-assertCardinality(
-  expandedPersistentRuntimeCleanupActions,
-  persistentCleanupSubjectCount * 3,
-);
+assertExactCleanupTupleSetEqual(persistentCleanupTuples, expectedPersistentCleanupTuples);
+assertCardinality(expandedPersistentRuntimeCleanupActions, persistentCleanupSubjectCount * 3);
 ```
 
 That persistent expansion and its phase-local graph are immutable after the gate. The
@@ -4656,21 +6454,15 @@ before the first phase-6 delete:
 ```ts
 const terminalCleanupTuples = deepFreezeExact(
   expandedTerminalRuntimeCleanupActions.map(({ resourceKey, operationKind }) =>
-    deepFreezeExact([resourceKey, operationKind]),
-  ),
+    deepFreezeExact([resourceKey, operationKind])
+  )
 );
 const expectedTerminalCleanupTuples = deepFreezeExact(
-  cartesianCleanupTuples(terminalCleanupSubjectKeys, CLEANUP_OPERATION_KINDS),
+  cartesianCleanupTuples(terminalCleanupSubjectKeys, CLEANUP_OPERATION_KINDS)
 );
 assertNoDuplicateCleanupTuples(terminalCleanupTuples);
-assertExactCleanupTupleSetEqual(
-  terminalCleanupTuples,
-  expectedTerminalCleanupTuples,
-);
-assertCardinality(
-  expandedTerminalRuntimeCleanupActions,
-  terminalCleanupSubjectCount * 3,
-);
+assertExactCleanupTupleSetEqual(terminalCleanupTuples, expectedTerminalCleanupTuples);
+assertCardinality(expandedTerminalRuntimeCleanupActions, terminalCleanupSubjectCount * 3);
 assertDisjoint(persistentCleanupSubjectKeys, terminalCleanupSubjectKeys);
 ```
 
@@ -4682,40 +6474,30 @@ persistent, terminal, and cross-stage edges plus the propagated failure-discover
 blockers:
 
 ```ts
-const acquiredCleanupSubjectKeys = deepFreezeExact(sortedUnion(
-  persistentCleanupSubjectKeys,
-  terminalCleanupSubjectKeys,
-));
+const acquiredCleanupSubjectKeys = deepFreezeExact(
+  sortedUnion(persistentCleanupSubjectKeys, terminalCleanupSubjectKeys)
+);
 const expandedRuntimeCleanupActions = deepFreezeExact([
   ...expandedPersistentRuntimeCleanupActions,
   ...expandedTerminalRuntimeCleanupActions,
 ]);
 const acquiredCleanupTuples = deepFreezeExact(
   expandedRuntimeCleanupActions.map(({ resourceKey, operationKind }) =>
-    deepFreezeExact([resourceKey, operationKind]),
-  ),
+    deepFreezeExact([resourceKey, operationKind])
+  )
 );
 const expectedAcquiredCleanupTuples = deepFreezeExact(
-  cartesianCleanupTuples(acquiredCleanupSubjectKeys, CLEANUP_OPERATION_KINDS),
+  cartesianCleanupTuples(acquiredCleanupSubjectKeys, CLEANUP_OPERATION_KINDS)
 );
 assertNoDuplicateCleanupTuples(acquiredCleanupTuples);
-assertExactCleanupTupleSetEqual(
-  acquiredCleanupTuples,
-  expectedAcquiredCleanupTuples,
-);
-assertCardinality(
-  expandedRuntimeCleanupActions,
-  acquiredCleanupSubjectKeys.length * 3,
-);
+assertExactCleanupTupleSetEqual(acquiredCleanupTuples, expectedAcquiredCleanupTuples);
+assertCardinality(expandedRuntimeCleanupActions, acquiredCleanupSubjectKeys.length * 3);
 const finalCompiledLedger = deepFreezeFinalCompiledLedger();
 const finalDependencyGraph = deepFreezeExact(
-  compileFinalCrossStageDependencyGraph(finalCompiledLedger),
+  compileFinalCrossStageDependencyGraph(finalCompiledLedger)
 );
 const finalFailureDiscoveryBlockedParentKeys = deepFreezeExact(
-  compileBlockedParentClosure(
-    finalDependencyGraph,
-    failureDiscoveryBlockerRoots,
-  ),
+  compileBlockedParentClosure(finalDependencyGraph, failureDiscoveryBlockerRoots)
 );
 assert(finalCleanupPlan === null);
 finalCleanupPlan = createDeepFrozenFinalCleanupPlan({
@@ -4863,45 +6645,72 @@ const REQUIRED_SCENARIOS = Object.freeze([
 ]);
 const REQUIRED_SMOKE_ASSERTIONS = deepFreezeExact({
   "button-image": [
-    "persisted-no-empty-binding", "media-cache-cold-before-route",
-    "prior-media-resolution-pending", "newer-media-winner-selected-pending",
-    "stale-media-result-ignored", "direct-image-safe-url",
-    "missing-or-unsafe-placeholder", "media-field-keeps-uuid", "safe-link-front-url",
+    "persisted-no-empty-binding",
+    "media-cache-cold-before-route",
+    "prior-media-resolution-pending",
+    "newer-media-winner-selected-pending",
+    "stale-media-result-ignored",
+    "direct-image-safe-url",
+    "missing-or-unsafe-placeholder",
+    "media-field-keeps-uuid",
+    "safe-link-front-url",
     "unsafe-link-disabled",
   ],
   "tabs-content": [
-    "three-tabs-persisted", "one-panel-visible", "other-panels-zero-geometry",
+    "three-tabs-persisted",
+    "one-panel-visible",
+    "other-panels-zero-geometry",
     "armed-slot-equals-active-tab",
   ],
   "tabs-keyboard-aria": [
-    "arrow-home-end-focus", "aria-reciprocal", "nested-tabs-isolated",
+    "arrow-home-end-focus",
+    "aria-reciprocal",
+    "nested-tabs-isolated",
     "renderer-ids-unique",
   ],
   "space-selection": [
-    "space-text-preserved", "nested-controls-do-not-select",
+    "space-text-preserved",
+    "nested-controls-do-not-select",
     "selection-handle-independent",
   ],
   "dirty-guards": [
-    "builder-cancel-byte-identical", "builder-confirm-navigates-once",
-    "entry-cancel-byte-identical", "entry-cancel-url-stable",
-    "entry-error-retains-both-drafts", "beforeunload-active",
-    "successful-retry-clears-persisted-channel", "entry-confirm-navigates-once",
+    "builder-cancel-byte-identical",
+    "builder-confirm-navigates-once",
+    "entry-cancel-byte-identical",
+    "entry-cancel-url-stable",
+    "entry-error-retains-both-drafts",
+    "beforeunload-active",
+    "successful-retry-clears-persisted-channel",
+    "entry-confirm-navigates-once",
   ],
   "related-retry-cache": [
-    "related-error-visible-before-retry", "visible-retry-succeeds",
-    "same-target-visible-rows-retained", "target-switch-immediate-empty",
-    "only-b-rows-visible", "unrelated-draft-byte-identical", "relation-diff-exact",
-    "stale-a-cannot-commit", "flow6-exit-discarded-once",
+    "related-error-visible-before-retry",
+    "visible-retry-succeeds",
+    "same-target-visible-rows-retained",
+    "target-switch-immediate-empty",
+    "only-b-rows-visible",
+    "unrelated-draft-byte-identical",
+    "relation-diff-exact",
+    "stale-a-cannot-commit",
+    "flow6-exit-discarded-once",
   ],
   "responsive-users": [
-    "narrow-padding-and-positive-geometry", "wide-padding-delta-300",
-    "panel-inside-viewport", "same-user-authoritative-refresh",
-    "same-user-retained-view-pending", "newer-local-write-pending",
-    "newer-local-write-wins-refresh", "legacy-local-storage-absent",
-    "light-and-dark-computed", "user-a-b-a-isolated",
-    "second-a-intent-visible-before-exit", "preference-a-write-hit-before-release",
-    "user-b-default-before-release", "preference-a-write-hit-after-release",
-    "queued-a-write-zero-dispatch", "user-b-default-unchanged",
+    "narrow-padding-and-positive-geometry",
+    "wide-padding-delta-300",
+    "panel-inside-viewport",
+    "same-user-authoritative-refresh",
+    "same-user-retained-view-pending",
+    "newer-local-write-pending",
+    "newer-local-write-wins-refresh",
+    "legacy-local-storage-absent",
+    "light-and-dark-computed",
+    "user-a-b-a-isolated",
+    "second-a-intent-visible-before-exit",
+    "preference-a-write-hit-before-release",
+    "user-b-default-before-release",
+    "preference-a-write-hit-after-release",
+    "queued-a-write-zero-dispatch",
+    "user-b-default-unchanged",
     "final-a-retry-converges",
   ],
 });
@@ -4917,30 +6726,56 @@ const REQUIRED_FLOW_ACTION_COUNTS = Object.freeze({
 const REQUIRED_SETUP_ACTION_COUNT = 55;
 const REQUIRED_TERMINAL_BROWSER_ACTION_COUNT = 7;
 const REQUIRED_FIXTURE_SUBJECT_KEYS = Object.freeze([
-  "user-a", "user-b",
-  "content-type-editable", "content-type-related-a", "content-type-related-b",
+  "user-a",
+  "user-b",
+  "content-type-editable",
+  "content-type-related-a",
+  "content-type-related-b",
   "content-type-related-failure",
-  "related-entry-a1", "related-entry-a2", "related-entry-b1", "related-entry-b2",
-  "related-entry-failure1", "media", "editable-entry", "screen", "retry-screen",
+  "related-entry-a1",
+  "related-entry-a2",
+  "related-entry-b1",
+  "related-entry-b2",
+  "related-entry-failure1",
+  "media",
+  "editable-entry",
+  "screen",
+  "retry-screen",
 ]);
 const REQUIRED_CAPTURE_NAMES = Object.freeze([
-  "user-a.id", "user-b.id",
-  "content-type-editable.id", "content-type-related-a.id", "content-type-related-b.id",
+  "user-a.id",
+  "user-b.id",
+  "content-type-editable.id",
+  "content-type-related-a.id",
+  "content-type-related-b.id",
   "content-type-related-failure.id",
-  "related-entry-a1.id", "related-entry-a2.id", "related-entry-b1.id",
-  "related-entry-b2.id", "related-entry-failure1.id",
-  "media.id", "media.resolved-url", "media.storage-key", "entry.id", "screen.id",
+  "related-entry-a1.id",
+  "related-entry-a2.id",
+  "related-entry-b1.id",
+  "related-entry-b2.id",
+  "related-entry-failure1.id",
+  "media.id",
+  "media.resolved-url",
+  "media.storage-key",
+  "entry.id",
+  "screen.id",
   "retry-screen.id",
 ]);
 const REQUIRED_ISOLATED_API_ACTION_IDS = Object.freeze([
-  "set-011b-bootstrap-api-login", "set-011c-bootstrap-csrf-capture",
-  "ru-043b-a-api-login", "ru-043c-a-api-csrf-capture",
-  "ru-047a-a-durable-proof", "ru-050-a-server-false",
-  "ru-051-a-server-false-proof", "ru-061a-a-durable-bypass-read",
+  "set-011b-bootstrap-api-login",
+  "set-011c-bootstrap-csrf-capture",
+  "ru-043b-a-api-login",
+  "ru-043c-a-api-csrf-capture",
+  "ru-047a-a-durable-proof",
+  "ru-050-a-server-false",
+  "ru-051-a-server-false-proof",
+  "ru-061a-a-durable-bypass-read",
 ]);
 const REQUIRED_SIGNOUT_SETTLEMENT_IDS = Object.freeze([
-  "ru-040a-bootstrap-signout-settled", "ru-066a-a-signout-settled",
-  "ru-076a-b-signout-settled", "ru-090a-a-exit-signout-settled",
+  "ru-040a-bootstrap-signout-settled",
+  "ru-066a-a-signout-settled",
+  "ru-076a-b-signout-settled",
+  "ru-090a-a-exit-signout-settled",
   "ru-102a-b2-signout-settled",
 ]);
 const REQUIRED_METADATA_STATE_VALUES = deepFreezeExact({
@@ -5002,22 +6837,26 @@ for (const scenario of REQUIRED_SCENARIOS) {
 }
 assertCardinality(flowActions(), 434);
 assertCardinality(terminalBrowserActions(), REQUIRED_TERMINAL_BROWSER_ACTION_COUNT);
-assertDeepEqual(setupActions().map(({ ordinal }) => ordinal), integerRange(1, 55));
-assertDeepEqual(flowActions().map(({ ordinal }) => ordinal), integerRange(56, 489));
+assertDeepEqual(
+  setupActions().map(({ ordinal }) => ordinal),
+  integerRange(1, 55)
+);
+assertDeepEqual(
+  flowActions().map(({ ordinal }) => ordinal),
+  integerRange(56, 489)
+);
 assertDeepEqual(
   terminalBrowserActions().map(({ ordinal }) => ordinal),
-  integerRange(490, 496),
+  integerRange(490, 496)
 );
-assertPairwiseDisjointActionIdSets([
-  setupActions(), flowActions(), terminalBrowserActions(),
-]);
+assertPairwiseDisjointActionIdSets([setupActions(), flowActions(), terminalBrowserActions()]);
 assertSetEqual(
   [...setupActions(), ...flowActions(), ...terminalBrowserActions()].map(({ id }) => id),
-  SMOKE_ACTION_MANIFEST.map(({ id }) => id),
+  SMOKE_ACTION_MANIFEST.map(({ id }) => id)
 );
 assertDeepEqual(
   SMOKE_ACTION_MANIFEST.map(({ ordinal }) => ordinal),
-  integerRange(1, 496),
+  integerRange(1, 496)
 );
 assertUnique(SMOKE_ACTION_MANIFEST.map(({ id }) => id));
 assertEveryRowHasExactKeys(ACTION_MANIFEST_SCHEMA);
@@ -5046,7 +6885,11 @@ assertDeepEqual(metadataStateValuesActuallyAsserted(), REQUIRED_METADATA_STATE_V
 assert(MAX_PREFERENCE_UNMOUNT_WINDOW_MS < SCREEN_PREFERENCE_SETTLED_RETENTION_MS);
 assert(SCREEN_PREFERENCE_SETTLED_RETENTION_MS === 30_000);
 assertMonotonicWindow("ru-049-a-away", "ru-052-a-return", MAX_PREFERENCE_UNMOUNT_WINDOW_MS);
-assertMonotonicWindow("ru-054-a-away-again", "ru-056-a-remount-pending", MAX_PREFERENCE_UNMOUNT_WINDOW_MS);
+assertMonotonicWindow(
+  "ru-054-a-away-again",
+  "ru-056-a-remount-pending",
+  MAX_PREFERENCE_UNMOUNT_WINDOW_MS
+);
 assertSetEqual(runtimeBlockCaptureNames(), REQUIRED_RUNTIME_BLOCK_CAPTURES);
 assertSetEqual(paletteLabelsActuallyClicked(), ["Button", "Tabs", "Text", "Field", "Image"]);
 assertSetEqual(routeKeysActuallyUsed(), Object.keys(SMOKE_FIXTURE_BLUEPRINT.routes));
@@ -5058,8 +6901,12 @@ assertCardinality(scenarioLogReadActions(), 7 * 3 * 2);
 assertSetEqual(screenshotPathsActuallyWritten(), SMOKE_FIXTURE_BLUEPRINT.screenshotPaths);
 assertCardinality(screenshotPathsActuallyWritten(), 13);
 assertDeepEqual(browserCleanupActionIds(), [
-  "end-001-release-unroute", "end-002-route-list", "end-003-console-errors",
-  "end-004-console-warnings", "end-005-page-errors", "end-006-close",
+  "end-001-release-unroute",
+  "end-002-route-list",
+  "end-003-console-errors",
+  "end-004-console-warnings",
+  "end-005-page-errors",
+  "end-006-close",
   "end-007-session-absence",
 ]);
 
@@ -5068,15 +6915,15 @@ assertCardinality(oneLoopSelfTestTrace.actionDispatches, 496);
 assertCardinality(oneLoopSelfTestTrace.actionReceipts, 496);
 assertDeepEqual(
   oneLoopSelfTestTrace.actionDispatches.map(({ ordinal }) => ordinal),
-  integerRange(1, 496),
+  integerRange(1, 496)
 );
 assertDeepEqual(
   oneLoopSelfTestTrace.actionReceipts.map(({ ordinal }) => ordinal),
-  integerRange(1, 496),
+  integerRange(1, 496)
 );
 assertSetEqual(
   oneLoopSelfTestTrace.actionReceipts.map(({ actionId }) => actionId),
-  SMOKE_ACTION_MANIFEST.map(({ id }) => id),
+  SMOKE_ACTION_MANIFEST.map(({ id }) => id)
 );
 assertEveryActionIdHasExactlyOneDispatchAndOneReceipt(oneLoopSelfTestTrace);
 assertReceiptPartitionExact(oneLoopSelfTestTrace, {
@@ -5096,76 +6943,113 @@ beside each family is therefore derived, not advisory; these family names are no
 
 ```ts
 const REQUIRED_RUNTIME_ACTIONS_BY_OPERATION = deepFreezeExact({
-  storage: [
-    "set-001-storage-preflight", "set-032-storage-post-setup",
-  ],
+  storage: ["set-001-storage-preflight", "set-032-storage-post-setup"],
   host: ["set-002-helper-launch"],
   health: ["set-003-admin-health", "set-004-front-health"],
   apiPublicRead: ["set-004a-bot-protection-preflight"],
-  settingsRead: [
-    "set-004b-session-policy-preflight", "set-004c-auth-rate-budget-preflight",
-  ],
-  isolatedApiSessionLogin: [
-    "set-011b-bootstrap-api-login", "ru-043b-a-api-login",
-  ],
-  isolatedApiSessionCsrfCapture: [
-    "set-011c-bootstrap-csrf-capture", "ru-043c-a-api-csrf-capture",
-  ],
+  settingsRead: ["set-004b-session-policy-preflight", "set-004c-auth-rate-budget-preflight"],
+  isolatedApiSessionLogin: ["set-011b-bootstrap-api-login", "ru-043b-a-api-login"],
+  isolatedApiSessionCsrfCapture: ["set-011c-bootstrap-csrf-capture", "ru-043c-a-api-csrf-capture"],
   fixture: [
-    "set-012-user-a-create", "set-014-user-b-create",
-    "set-041-preference-a", "set-043-preference-b",
+    "set-012-user-a-create",
+    "set-014-user-b-create",
+    "set-041-preference-a",
+    "set-043-preference-b",
   ],
   fixtureRead: [
-    "set-013-user-a-proof", "set-015-user-b-proof",
-    "set-042-preference-a-proof", "set-044-preference-b-proof",
+    "set-013-user-a-proof",
+    "set-015-user-b-proof",
+    "set-042-preference-a-proof",
+    "set-044-preference-b-proof",
   ],
   api: [
-    "set-016-editable-type-create", "set-018-related-a-type-create",
-    "set-020-related-b-type-create", "set-021a-related-failure-type-create",
-    "set-022-related-a1-create", "set-024-related-a2-create",
-    "set-026-related-b1-create", "set-028-related-b2-create",
-    "set-029a-related-failure1-create", "set-030-media-upload",
-    "set-033-entry-create", "set-035-screen-create",
-    "set-037-retry-screen-create", "set-039-override-create",
-    "bi-060-unsafe-patch", "bi-064-baseline-restore", "tc-001-reset",
-    "ss-001-screen-reset", "ss-003-entry-reset", "ss-005-overrides-reset",
-    "dg-001-entry-reset", "rc-001-entry-reset", "rc-003-overrides-reset",
-    "ru-001-screen-reset", "ru-003-entry-reset", "ru-005-overrides-reset",
+    "set-016-editable-type-create",
+    "set-018-related-a-type-create",
+    "set-020-related-b-type-create",
+    "set-021a-related-failure-type-create",
+    "set-022-related-a1-create",
+    "set-024-related-a2-create",
+    "set-026-related-b1-create",
+    "set-028-related-b2-create",
+    "set-029a-related-failure1-create",
+    "set-030-media-upload",
+    "set-033-entry-create",
+    "set-035-screen-create",
+    "set-037-retry-screen-create",
+    "set-039-override-create",
+    "bi-060-unsafe-patch",
+    "bi-064-baseline-restore",
+    "tc-001-reset",
+    "ss-001-screen-reset",
+    "ss-003-entry-reset",
+    "ss-005-overrides-reset",
+    "dg-001-entry-reset",
+    "rc-001-entry-reset",
+    "rc-003-overrides-reset",
+    "ru-001-screen-reset",
+    "ru-003-entry-reset",
+    "ru-005-overrides-reset",
   ],
   apiRead: [
-    "set-017-editable-type-proof", "set-019-related-a-type-proof",
-    "set-021-related-b-type-proof", "set-021b-related-failure-type-proof",
-    "set-023-related-a1-proof", "set-025-related-a2-proof",
-    "set-027-related-b1-proof", "set-029-related-b2-proof",
-    "set-029b-related-failure1-proof", "set-031-media-proof",
-    "set-034-entry-proof", "set-036-screen-proof",
-    "set-038-retry-screen-proof", "set-040-override-proof",
-    "bi-061-unsafe-proof-read", "bi-065-baseline-proof", "tc-002-reset-proof",
-    "ss-002-screen-proof", "ss-004-entry-proof", "ss-006-overrides-proof",
-    "dg-002-entry-proof", "rc-002-entry-proof", "rc-004-overrides-proof",
-    "ru-002-screen-proof", "ru-004-entry-proof", "ru-006-overrides-proof",
+    "set-017-editable-type-proof",
+    "set-019-related-a-type-proof",
+    "set-021-related-b-type-proof",
+    "set-021b-related-failure-type-proof",
+    "set-023-related-a1-proof",
+    "set-025-related-a2-proof",
+    "set-027-related-b1-proof",
+    "set-029-related-b2-proof",
+    "set-029b-related-failure1-proof",
+    "set-031-media-proof",
+    "set-034-entry-proof",
+    "set-036-screen-proof",
+    "set-038-retry-screen-proof",
+    "set-040-override-proof",
+    "bi-061-unsafe-proof-read",
+    "bi-065-baseline-proof",
+    "tc-002-reset-proof",
+    "ss-002-screen-proof",
+    "ss-004-entry-proof",
+    "ss-006-overrides-proof",
+    "dg-002-entry-proof",
+    "rc-002-entry-proof",
+    "rc-004-overrides-proof",
+    "ru-002-screen-proof",
+    "ru-004-entry-proof",
+    "ru-006-overrides-proof",
   ],
   isolatedApiSessionApiAs: ["ru-050-a-server-false"],
   isolatedApiSessionApiReadAs: [
-    "ru-047a-a-durable-proof", "ru-051-a-server-false-proof",
+    "ru-047a-a-durable-proof",
+    "ru-051-a-server-false-proof",
     "ru-061a-a-durable-bypass-read",
   ],
 });
 assertDeepEqual(
-  Object.fromEntries(Object.entries(REQUIRED_RUNTIME_ACTIONS_BY_OPERATION)
-    .map(([id, ids]) => [id, ids.length])),
+  Object.fromEntries(
+    Object.entries(REQUIRED_RUNTIME_ACTIONS_BY_OPERATION).map(([id, ids]) => [id, ids.length])
+  ),
   {
-    storage: 2, host: 1, health: 2, apiPublicRead: 1, settingsRead: 2,
-    isolatedApiSessionLogin: 2, isolatedApiSessionCsrfCapture: 2,
-    fixture: 4, fixtureRead: 4, api: 26, apiRead: 26,
-    isolatedApiSessionApiAs: 1, isolatedApiSessionApiReadAs: 3,
-  },
+    storage: 2,
+    host: 1,
+    health: 2,
+    apiPublicRead: 1,
+    settingsRead: 2,
+    isolatedApiSessionLogin: 2,
+    isolatedApiSessionCsrfCapture: 2,
+    fixture: 4,
+    fixtureRead: 4,
+    api: 26,
+    apiRead: 26,
+    isolatedApiSessionApiAs: 1,
+    isolatedApiSessionApiReadAs: 3,
+  }
 );
 assertCardinality(Object.values(REQUIRED_RUNTIME_ACTIONS_BY_OPERATION).flat(), 76);
 assertUnique(Object.values(REQUIRED_RUNTIME_ACTIONS_BY_OPERATION).flat());
 assertSetEqual(
   Object.values(REQUIRED_RUNTIME_ACTIONS_BY_OPERATION).flat(),
-  runtimeExecutableActionIds(),
+  runtimeExecutableActionIds()
 );
 ```
 
@@ -5296,7 +7180,10 @@ export async function executeTask540SmokePlan(input): Promise<CanonicalSmokeEvid
     // sanitizing try and still runs before any property/prototype read from input.
     constructionCleanupAuthority = createPrivateConstructionCleanupAuthority();
     assertExactPlainObjectKeys(input, [
-      "root", "nonce", "assertSafeEvidence", "snapshotRepository",
+      "root",
+      "nonce",
+      "assertSafeEvidence",
+      "snapshotRepository",
     ]);
     assertExecutorInputTypes(input);
     const plan = buildTask540SmokePlan({ nonce: input.nonce });
@@ -5309,11 +7196,7 @@ export async function executeTask540SmokePlan(input): Promise<CanonicalSmokeEvid
       constructionCleanupAuthority,
     });
     constructionCleanupAuthority.bindCompleteCapabilities(capabilities);
-    return await executeSmokePlanCore(
-      plan,
-      capabilities,
-      constructionCleanupAuthority,
-    );
+    return await executeSmokePlanCore(plan, capabilities, constructionCleanupAuthority);
   } catch (cause) {
     if (constructionCleanupAuthority === null) {
       // Constructor failure acquired nothing. The pre-existing non-acquiring module sink
@@ -5327,7 +7210,7 @@ export async function executeTask540SmokePlan(input): Promise<CanonicalSmokeEvid
         await constructionCleanupAuthority.cleanupWhateverWasAcquiredOnceNeverThrow();
       constructionCleanupAuthority.retainFailureAndCleanupDiagnosticsNeverThrow(
         cause,
-        cleanupDiagnostics,
+        cleanupDiagnostics
       );
       // Real execution only: after cleanup, write at most one canonical bounded line
       // containing exactly the fixed code and the still-active ID validated against
@@ -5342,7 +7225,7 @@ export async function executeTask540SmokePlan(input): Promise<CanonicalSmokeEvid
 async function executeSmokePlanCore(
   plan,
   capabilities,
-  constructionCleanupAuthority,
+  constructionCleanupAuthority
 ): Promise<CanonicalSmokeEvidence> {
   assertTask540SmokePlanDeepFrozen(plan);
   const authority = privateCommandAuthority(capabilities);
@@ -5371,7 +7254,7 @@ async function executeSmokePlanCore(
       resources,
       completedActionIds,
       actionReceipts,
-      runState,
+      runState
     );
   });
 
@@ -5396,13 +7279,13 @@ async function executeSmokePlanCore(
       action,
       exactInvocation,
       parsed,
-      receipt,
+      receipt
     );
     const acquisitionDelta = takeExactActionBoundAcquisitionDelta(
       executionAuthority,
       action,
       parsed,
-      provenance,
+      provenance
     );
     assertExactActionBoundAcquisitionDelta(action, acquisitionDelta); // empty is valid
     resources.appendValidatedActionDelta(action, acquisitionDelta);
@@ -5412,13 +7295,9 @@ async function executeSmokePlanCore(
       parsed,
       provenance,
       acquisitionDelta,
-      resources.actionProjection(action.id),
+      resources.actionProjection(action.id)
     );
-    bindRegisteredPrivateProjectionOutput(
-      executionAuthority,
-      action.id,
-      parsed,
-    );
+    bindRegisteredPrivateProjectionOutput(executionAuthority, action.id, parsed);
     bindSingleAssignmentCaptures(action, parsed, captures);
     const nextRunState = transition(runState, action, parsed);
     assertPostcondition(action, parsed, nextRunState, captures);
@@ -5430,12 +7309,11 @@ async function executeSmokePlanCore(
     failureActionTracker.complete(action.id);
   }
   assert(failureActionTracker.activeId() === null);
-  assertExactOneLoopManifestExecution(
-    plan.actionManifest,
-    completedActionIds,
-    actionReceipts,
-    { setup: 55, flow: 434, terminal: 7 },
-  );
+  assertExactOneLoopManifestExecution(plan.actionManifest, completedActionIds, actionReceipts, {
+    setup: 55,
+    flow: 434,
+    terminal: 7,
+  });
   const cleanupResult =
     await constructionCleanupAuthority.cleanupWhateverWasAcquiredOnceNeverThrow();
   assertPrivateCleanupSucceeded(cleanupResult);
@@ -5452,7 +7330,7 @@ async function executeDeterministicCleanup(
   resources,
   completedActionIds,
   actionReceipts,
-  initialRunState,
+  initialRunState
 ): Promise<RunState> {
   let runState = assertValidatedDeepFrozenRunState(initialRunState);
   const errors = new PrivateAggregateCleanupError();
@@ -5474,33 +7352,29 @@ async function executeDeterministicCleanup(
         runState,
         completedActionIds,
         actionReceipts,
-        allowedOperations: [
-          "release-unroute", "route-list", "close", "global-list-absence",
-        ],
+        allowedOperations: ["release-unroute", "route-list", "close", "global-list-absence"],
       });
-      const failureCleanup = await authority.executeMissingBrowserCleanupOnceAsPrivateDiagnostics(
-        missing,
-      );
+      const failureCleanup =
+        await authority.executeMissingBrowserCleanupOnceAsPrivateDiagnostics(missing);
       assertExactMissingBrowserCleanupTrace(missing, failureCleanup);
       assertNoCanonicalActionReceiptAdded(actionReceipts, failureCleanup);
       runState = assertValidatedDeepFrozenRunState(
-        transitionEarlyFailureToBrowserSessionAbsent(runState, failureCleanup),
+        transitionEarlyFailureToBrowserSessionAbsent(runState, failureCleanup)
       );
       await identityRemoveAlreadyAbsentBrowserPrivateRootOnce(capabilities, runState);
     }
   });
   await continuePhase(errors, 2, cleanupFailureScreenshotsIfApplicable);
   await continuePhase(errors, 3, async () => {
-    const pendingAttempts =
-      authority.takeFrozenPendingFailureAttemptsForCleanupOnce();
+    const pendingAttempts = authority.takeFrozenPendingFailureAttemptsForCleanupOnce();
     const discoveryBatch: ResponseLostDiscoveryBatch =
       await discoverResponseLostPersistentCreatesNeverThrowPerAttempt(
         capabilities,
-        pendingAttempts,
+        pendingAttempts
       );
     assertOneImmutableDiscoveryResultPerPendingAttempt(
       pendingAttempts,
-      discoveryBatch.attemptResults,
+      discoveryBatch.attemptResults
     );
     const blockerRoots = new FailureDiscoveryBlockerRootBuilder();
     for (const result of discoveryBatch.attemptResults) {
@@ -5511,7 +7385,7 @@ async function executeDeterministicCleanup(
         blockerRoots.appendValidatedExistingParentKeys(
           result.pendingAttemptKey,
           result.intendedParentBlockerKeys,
-          resources,
+          resources
         );
       } else {
         assertDeepEqual(result.intendedParentBlockerKeys, []);
@@ -5523,11 +7397,10 @@ async function executeDeterministicCleanup(
     const persistent = resources.compileAndFreezePersistentProjection();
     const actions = expandPersistentRuntimeCleanup(persistent);
     assertPersistentSetAndCardinality(persistent, actions);
-    const persistentBlockedParentKeys =
-      compileBlockedParentClosure(
-        persistent.dependencyGraph,
-        failureDiscoveryBlockerRoots,
-      );
+    const persistentBlockedParentKeys = compileBlockedParentClosure(
+      persistent.dependencyGraph,
+      failureDiscoveryBlockerRoots
+    );
     assert(persistentCleanupPlan === null);
     persistentCleanupPlan = createDeepFrozenPersistentCleanupPlan({
       projection: persistent,
@@ -5535,27 +7408,25 @@ async function executeDeterministicCleanup(
       dependencyGraph: persistent.dependencyGraph,
       failureDiscoveryBlockedParentKeys: persistentBlockedParentKeys,
     });
-    const exactPersistentPlan = assertFrozenPersistentCleanupPlanPresent(
-      persistentCleanupPlan,
-    );
+    const exactPersistentPlan = assertFrozenPersistentCleanupPlanPresent(persistentCleanupPlan);
     await runEligiblePhase3Actions(
       exactPersistentPlan,
       exactPersistentPlan.dependencyGraph,
       exactPersistentPlan.failureDiscoveryBlockedParentKeys,
-      errors,
+      errors
     );
   });
   await continuePhase(errors, 4, async () => {
     const sameInputRunState = runState;
     const proof = await disposeAndIndependentlyProveBothApiContextsClosed(
       capabilities,
-      sameInputRunState,
+      sameInputRunState
     );
     assert(proof.inputRunState === sameInputRunState);
     assert(apiContextsClosedProof === null);
     apiContextsClosedProof = assertDeepFrozenApiContextsClosedProof(proof);
     runState = assertValidatedDeepFrozenRunState(
-      transitionOnlyApiContextsToClosed(sameInputRunState, apiContextsClosedProof),
+      transitionOnlyApiContextsToClosed(sameInputRunState, apiContextsClosedProof)
     );
     assertRunStateFieldsExceptApiContextsPreservedByIdentity(sameInputRunState, runState);
     assert(runState.apiContexts === "closed");
@@ -5564,10 +7435,7 @@ async function executeDeterministicCleanup(
     assert(runState.apiContexts === "closed");
     const exactApiContextsClosedProof =
       assertFrozenApiContextsClosedProofPresent(apiContextsClosedProof);
-    assertIndependentApiContextAbsenceProofMatchesRunState(
-      exactApiContextsClosedProof,
-      runState,
-    );
+    assertIndependentApiContextAbsenceProofMatchesRunState(exactApiContextsClosedProof, runState);
     assertNoFurtherHttpAllowed();
     const terminalDelta = await stablePollExactTaskUaDelta();
     resources.appendTerminalCoresAndExactEdges(terminalDelta);
@@ -5580,25 +7448,20 @@ async function executeDeterministicCleanup(
       actions: terminalActions,
       dependencyGraph: terminal.dependencyGraph,
     });
-    const exactPersistentPlan = assertFrozenPersistentCleanupPlanPresent(
-      persistentCleanupPlan,
-    );
+    const exactPersistentPlan = assertFrozenPersistentCleanupPlanPresent(persistentCleanupPlan);
     const exactTerminalPlan = assertFrozenTerminalCleanupPlanPresent(terminalCleanupPlan);
-    const exactFailureDiscoveryBlockerRoots =
-      assertFrozenFailureDiscoveryBlockerRootsPresent(failureDiscoveryBlockerRoots);
-    const finalCompiledLedger =
-      resources.compileAndDeepFreezeFinalLedgerAndDisjointUnion(
-        exactPersistentPlan,
-        exactTerminalPlan,
-      );
+    const exactFailureDiscoveryBlockerRoots = assertFrozenFailureDiscoveryBlockerRootsPresent(
+      failureDiscoveryBlockerRoots
+    );
+    const finalCompiledLedger = resources.compileAndDeepFreezeFinalLedgerAndDisjointUnion(
+      exactPersistentPlan,
+      exactTerminalPlan
+    );
     const finalDependencyGraph = deepFreezeExact(
-      compileFinalCrossStageDependencyGraph(finalCompiledLedger),
+      compileFinalCrossStageDependencyGraph(finalCompiledLedger)
     );
     const finalFailureDiscoveryBlockedParentKeys = deepFreezeExact(
-      compileBlockedParentClosure(
-        finalDependencyGraph,
-        exactFailureDiscoveryBlockerRoots,
-      ),
+      compileBlockedParentClosure(finalDependencyGraph, exactFailureDiscoveryBlockerRoots)
     );
     assert(finalCleanupPlan === null);
     finalCleanupPlan = createDeepFrozenFinalCleanupPlan({
@@ -5620,20 +7483,18 @@ async function executeDeterministicCleanup(
       exactTerminalPlan,
       exactFinalPlan.dependencyGraph,
       exactFinalPlan.failureDiscoveryBlockedParentKeys,
-      errors,
+      errors
     );
   });
   await continuePhase(errors, 7, async () => {
-    const exactPersistentPlan = assertFrozenPersistentCleanupPlanPresent(
-      persistentCleanupPlan,
-    );
+    const exactPersistentPlan = assertFrozenPersistentCleanupPlanPresent(persistentCleanupPlan);
     const exactFinalPlan = assertFrozenFinalCleanupPlanPresent(finalCleanupPlan);
     assert(exactFinalPlan.persistentActionPlan === exactPersistentPlan);
     await runGuardedSyntheticUserActionsFromPersistentPlan(
       exactPersistentPlan,
       exactFinalPlan.dependencyGraph,
       exactFinalPlan.failureDiscoveryBlockedParentKeys,
-      errors,
+      errors
     );
   });
   await continuePhase(errors, 8, restoreBootstrapWithSingleCasAndUncertainOutcomeProof);
@@ -5696,7 +7557,6 @@ earliest cleanup phase and fixed same-phase class precedence, and prove a privat
 from the retained cause never appears.
 The real sink is bounded and wrapped so an output failure cannot replace the primary
 fixed failure.
-
 
 ## Real browser smoke
 
@@ -5807,9 +7667,22 @@ all filesystem/control values are then set to the exact workflow-owned literals 
 
 ```ts
 const BROWSER_INHERITED_ENV = [
-  "PATH", "USER", "LOGNAME", "SHELL", "LANG", "LC_ALL", "LC_CTYPE", "TZ",
-  "TERM", "COLORTERM", "NO_COLOR", "FORCE_COLOR", "DISPLAY",
-  "WAYLAND_DISPLAY", "XAUTHORITY", "DBUS_SESSION_BUS_ADDRESS",
+  "PATH",
+  "USER",
+  "LOGNAME",
+  "SHELL",
+  "LANG",
+  "LC_ALL",
+  "LC_CTYPE",
+  "TZ",
+  "TERM",
+  "COLORTERM",
+  "NO_COLOR",
+  "FORCE_COLOR",
+  "DISPLAY",
+  "WAYLAND_DISPLAY",
+  "XAUTHORITY",
+  "DBUS_SESSION_BUS_ADDRESS",
 ] as const;
 const BROWSER_FIXED_ENV = deepFreezeExact({
   HOME: privateHomeDir,
@@ -5947,24 +7820,18 @@ path are forbidden. Thus private Playwright output/temp cannot mutate the repo a
 secret/config/snapshot artifact survives success or failure.
 
 No child receives `process.env`, `{...process.env}`, or the complete parsed `.env`.
-The host module uses exactly these imports. Because the repository runtime includes
-Node 22.14, it does not depend on the later `import.meta.main` API: a pure guard compares
-`import.meta.url` with `pathToFileURL(path.resolve(cwd, process.argv[1]))`. Its hermetic
-self-test pins absolute and relative direct-entry matches plus mismatched and missing
-argv rejection. Every runtime capability remains unused on the `--self-test` branch:
+The host module uses exactly these imports. Under the repository's pinned
+`>=26.5.0 <27` Node runtime, direct-entry detection intentionally remains a pure guard
+that compares `import.meta.url` with
+`pathToFileURL(path.resolve(cwd, process.argv[1]))` rather than depending on
+`import.meta.main`. Its hermetic self-test pins absolute and relative direct-entry
+matches plus mismatched and missing argv rejection. Every runtime capability remains
+unused on the `--self-test` branch:
 
 ```ts
 import { spawn } from "node:child_process";
 import { constants as fsConstants } from "node:fs";
-import {
-  access,
-  lstat,
-  readFile,
-  readdir,
-  readlink,
-  realpath,
-  stat,
-} from "node:fs/promises";
+import { access, lstat, readFile, readdir, readlink, realpath, stat } from "node:fs/promises";
 import path from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 import { pathToFileURL } from "node:url";
@@ -5976,26 +7843,59 @@ The executor constructs the host environment from these disjoint frozen contract
 const HOST_REQUIRED_INHERITED_ENV = ["PATH"] as const;
 
 const HOST_OPTIONAL_INHERITED_ENV = [
-  "HOME", "USER", "LOGNAME", "SHELL", "TMPDIR", "TMP", "TEMP",
-  "LANG", "LC_ALL", "LC_CTYPE", "TZ", "TERM", "COLORTERM",
-  "NO_COLOR", "FORCE_COLOR", "XDG_CONFIG_HOME", "XDG_CACHE_HOME",
-  "XDG_DATA_HOME", "DISPLAY", "WAYLAND_DISPLAY", "XAUTHORITY",
+  "HOME",
+  "USER",
+  "LOGNAME",
+  "SHELL",
+  "TMPDIR",
+  "TMP",
+  "TEMP",
+  "LANG",
+  "LC_ALL",
+  "LC_CTYPE",
+  "TZ",
+  "TERM",
+  "COLORTERM",
+  "NO_COLOR",
+  "FORCE_COLOR",
+  "XDG_CONFIG_HOME",
+  "XDG_CACHE_HOME",
+  "XDG_DATA_HOME",
+  "DISPLAY",
+  "WAYLAND_DISPLAY",
+  "XAUTHORITY",
   "DBUS_SESSION_BUS_ADDRESS",
 ] as const;
 
 const HOST_REQUIRED_REPO_ENV = [
-  "DATABASE_URL", "PII_HASH_KEY", "PII_ENC_KEY", "MEDIA_SECRET_MASTER_KEY",
+  "DATABASE_URL",
+  "PII_HASH_KEY",
+  "PII_ENC_KEY",
+  "MEDIA_SECRET_MASTER_KEY",
 ] as const;
 
 const HOST_OPTIONAL_REPO_ENV = [
-  "CORE_VERSION", "DB_POOL_MAX", "AUTH_PASSWORD_PEPPER",
-  "ANALYTICS_IP_HASH_SECRET", "FORM_SUBMIT_NONCE_SECRET",
-  "FORM_SUBMIT_NONCE_TTL_MINUTES", "ANALYTICS_BEACON_NONCE_SECRET",
-  "ANALYTICS_BEACON_NONCE_TTL_MINUTES", "MEDIA_BASE_URL",
-  "MEDIA_ALLOWED_MIME", "MEDIA_MAX_SIZE_BYTES", "EMAIL_TRANSPORT",
-  "THEMES_DIR", "PLUGINS_RUNTIME_DIR", "PLUGINS_SAFE_MODE",
-  "PLUGIN_UPDATE_MODE", "PLUGIN_ERROR_THRESHOLD", "PLUGIN_TIMEOUT_MS",
-  "PLUGIN_DOWNLOAD_TIMEOUT_MS", "PLUGIN_MAX_SIZE_MB", "STORE_BASE_URL",
+  "CORE_VERSION",
+  "DB_POOL_MAX",
+  "AUTH_PASSWORD_PEPPER",
+  "ANALYTICS_IP_HASH_SECRET",
+  "FORM_SUBMIT_NONCE_SECRET",
+  "FORM_SUBMIT_NONCE_TTL_MINUTES",
+  "ANALYTICS_BEACON_NONCE_SECRET",
+  "ANALYTICS_BEACON_NONCE_TTL_MINUTES",
+  "MEDIA_BASE_URL",
+  "MEDIA_ALLOWED_MIME",
+  "MEDIA_MAX_SIZE_BYTES",
+  "EMAIL_TRANSPORT",
+  "THEMES_DIR",
+  "PLUGINS_RUNTIME_DIR",
+  "PLUGINS_SAFE_MODE",
+  "PLUGIN_UPDATE_MODE",
+  "PLUGIN_ERROR_THRESHOLD",
+  "PLUGIN_TIMEOUT_MS",
+  "PLUGIN_DOWNLOAD_TIMEOUT_MS",
+  "PLUGIN_MAX_SIZE_MB",
+  "STORE_BASE_URL",
   "STORE_PUBLIC_KEY",
 ] as const;
 
@@ -6085,11 +7985,22 @@ The two exact relative cache paths resolve from the configured `core/admin` and
 `core/node_modules/.vite/wf540-admin` and
 `core/node_modules/.vite/wf540-site`. Admin and Site must never share or alias an
 optimizer `deps` directory.
-The runner validates that the local Vite package and checked-in lock both resolve to
-exactly Vite `8.1.3` before spawn and never permits `bunx`, package installation,
-network resolution, a CLI Vite wrapper, or an installed helper. The exact pin is part of
+TASK-546 owns `package.json`, `core/package.json`, and `bun.lock`; their landed bytes
+already resolve Vite `8.1.5` and remain byte-identical/read-only throughout TASK-540.
+TASK-540 changes only `task-540-smoke-host.mjs` version literals, default fixtures,
+version mutants, self-test expectations, and embedded child-source byte pins in this
+step. The runner validates that authority before spawn and never permits
+`bunx`, package installation, network resolution, a CLI Vite wrapper, or an installed
+helper. The exact pin is part of
 the readiness contract because the publication barrier below consumes the typed Vite
-`depsOptimizer` shape and must be re-audited before a Vite upgrade.
+`server.environments.client.depsOptimizer` shape. Immediately after checkpoint
+verification and before bridge/local-host/schema/CAS/ACK/recovery/prompt/test
+implementation, the smoke-host owner must update only those exact TASK-540-owned
+literals, fixtures, mutants, expectations, and embedded pins to 8.1.5, then privately
+re-audit and revalidate optimizer readiness; mixed-version authority is a hard failure.
+Dependent helper hashes and implement/executor/task/test pins are updated only after
+that revalidation, all bridge-frontier implementation, formatting, and every helper byte
+are final.
 
 Before either Vite child emits its ready marker, it must pass the fail-closed
 `settleViteReadiness(server, readinessUrls, failureCode)` barrier below. For Admin the
@@ -6102,7 +8013,8 @@ have published the browser hash and optimized files.
 
 ```ts
 async function settleViteReadiness(server, readinessUrls, failureCode) {
-  const optimizer = requireExactVite813ClientOptimizer(server, failureCode);
+  const optimizer = server.environments?.client?.depsOptimizer;
+  if (!optimizer || typeof optimizer !== "object") throw new Error(failureCode);
   let previousStableMetadata = null;
 
   for (let round = 0; round < 8; round += 1) {
@@ -6112,16 +8024,13 @@ async function settleViteReadiness(server, readinessUrls, failureCode) {
 
     const processing = uniquePresentProcessingPromises(
       requireExactMetadata(optimizer.metadata, failureCode).depInfoList,
-      failureCode,
+      failureCode
     );
     await Promise.all(processing);
     await new Promise((resolve) => setImmediate(resolve));
 
     const metadata = requireExactMetadata(optimizer.metadata, failureCode);
-    const remaining = uniquePresentProcessingPromises(
-      metadata.depInfoList,
-      failureCode,
-    );
+    const remaining = uniquePresentProcessingPromises(metadata.depInfoList, failureCode);
     if (optimizer.scanProcessing !== undefined || remaining.length !== 0) continue;
 
     const stableMetadata = {
@@ -6162,7 +8071,7 @@ helper. The Admin caller passes exactly
 `--cwd <canonical-core>` descriptor make those independent expected authorities exact;
 the helper never derives expected authority from received Vite state. The options
 argument is the recursively frozen exact owner shown above; it is never passed directly
-to Vite because Vite 8.1.3 mutates its inline config during resolution. Before each
+to Vite because Vite 8.1.5 mutates its inline config during resolution. Before each
 create, the helper validates that owner and constructs a fresh mutable plain-data clone,
 including a fresh nested `server` object. The two dispatched clones must be deep/byte
 equal to the frozen owner at their call boundary while both root and nested identities
@@ -6658,7 +8567,9 @@ fixture ID, a hidden/data-attribute ID, or any fixture-value fallback.
 Every Flow 6 related-list builder first resolves exactly one root through
 `S.relatedListRoot()` for the declared retry, main-A, or main-B block ID, then queries
 `[data-screen-related-entry]` only inside that root (the renderer-owned row anchor at
-`ScreenRuntimeRenderer.tsx:1592-1600`). It records positive/zero bounding-box geometry
+`ScreenRuntimeLeafBlocks.tsx:545` for the `cards` variant,
+`ScreenRuntimeLeafBlocks.tsx:580` for the `activity` variant, and
+`ScreenRuntimeLeafBlocks.tsx:604` for the default `list` variant). It records positive/zero bounding-box geometry
 for the root-scoped row nodes, the root-scoped three `Chip` skeleton markers, and the
 root-scoped exact `No related <target>.` empty node; the error path separately queries
 only `S.relatedAlert` and its scoped Retry. Missing/duplicate roots or any page-wide
@@ -6710,56 +8621,56 @@ This helper is mandatory for state receipts `ru-047`, `ru-053`, `ru-053b`, `ru-0
 `true,false,true,true,false,false,false,false,false,false,false,true,false`; screenshot
 preconditions reuse the immediately preceding state sample.
 
-| Scenario / assertion | Exact `observations` fields and locally checked predicate |
-|---|---|
-| `button-image` / `persisted-no-empty-binding` | `screenId`, `hrefBindingCount`, `hrefBindingField`, `emptyFieldCount`; exact main fixture Screen, one expected href binding/field, zero empty-field sentinels. |
-| `button-image` / `safe-link-front-url` | `tagName`, `href`, `pageUrl`; exact selected Button is `A`, href is the fixture-safe front URL, real activation reaches that URL. |
-| `button-image` / `unsafe-link-disabled` | `tagName`, `ariaDisabled`, `href`, `anchorCount`; `SPAN`, `"true"`, `null`, `0`. |
-| `button-image` / `direct-image-safe-url` | `imageCount`, `src`, `placeholderVisible`; one `img`, exact resolved acquired-media URL, `false`. |
-| `button-image` / `missing-or-unsafe-placeholder` | `imageCount`, `placeholderVisible`, `unsafeUrlPresent`; `0`, `true`, `false`. |
-| `button-image` / `media-field-keeps-uuid` | `selectedMediaTitle`, `selectedImageSrc`, `persistedMediaId`, `persistedResolvedUrlPresent`; the first two are the unique visible fixture display title and canonical rendered `img.src` mapped through the frozen fixture inventory, the persisted value is exact captured media UUID, and persisted resolved-URL presence is `false`. |
-| `tabs-content` / `three-tabs-persisted` | `tabIds`, `labels`, `slotIds`, `nestedText`; exact three unique fixture arrays and text after save/reopen. |
-| `tabs-content` / `one-panel-visible` | `activeTabId`, `visiblePanelIds`, `visibleRects`; one expected ID and one positive-width/height rect. |
-| `tabs-content` / `other-panels-zero-geometry` | `hiddenPanelIds`, `hiddenValues`, `rects`; the other two exact IDs, all hidden, every width/height `0`. |
-| `tabs-content` / `armed-slot-equals-active-tab` | `activeTabId`, `armedSlotId`, `selectedTabId`; all three byte-identical in both activation directions. |
-| `tabs-keyboard-aria` / `arrow-home-end-focus` | `steps`; exact ordered ArrowLeft/ArrowRight/Home/End objects with `key`, `focusedTabText`, `focusedTabId`, `selectedTabId`, and `tabIndex`, each matching the expected roving result. |
-| `tabs-keyboard-aria` / `aria-reciprocal` | `pairs`, `visiblePanelId`, `hiddenPanelIds`; every exact tab/panel pair has reciprocal IDs, one visible expected panel, all others hidden. |
-| `tabs-keyboard-aria` / `nested-tabs-isolated` | `outerRootId`, `innerRootId`, `outerSelectedId`, `innerSelectedId`; roots are distinct, outer is exact Overview/default[0], and inner is exact Tab 2/default[1] after the away/back isolation cycle. |
-| `tabs-keyboard-aria` / `renderer-ids-unique` | `ids`, `uniqueCount`; exact 20-item unique ID array (`3 + 3` outer and `2 + 2` inner per realm) and `uniqueCount === ids.length` across builder and preview. |
-| `space-selection` / `space-text-preserved` | `text`, `expectedText`; exact multi-word text including real Spaces is byte-identical. |
-| `space-selection` / `nested-controls-do-not-select` | `linkActivated`, `inputFocused`, `selectedBefore`, `selectedAfter`; real nested controls work and selection identity is unchanged. |
-| `space-selection` / `selection-handle-independent` | `handleFocused`, `ariaPressed`, `selectedBlockId`, `defaultPrevented`; exact handle independently focuses/selects the fixture block and `defaultPrevented` is exact `false` because the source handler stops propagation but does not prevent default. |
-| `dirty-guards` / `builder-cancel-byte-identical` | `draftBefore`, `draftAfter`, `urlBefore`, `urlAfter`; both byte pairs are identical. |
-| `dirty-guards` / `builder-confirm-navigates-once` | `urlBefore`, `urlAfter`, `navigationCount`, `draftDiscarded`; URL changes to the registered destination exactly once and discard is `true`. |
-| `dirty-guards` / `entry-cancel-byte-identical` | `contentBefore`, `contentAfter`, `presentationBefore`, `presentationAfter`; both draft channels remain byte-identical. |
-| `dirty-guards` / `entry-cancel-url-stable` | `urlBefore`, `urlAfter`; byte-identical. |
-| `dirty-guards` / `entry-confirm-navigates-once` | `urlBefore`, `urlAfter`, `navigationCount`; exact registered destination and count `1`. |
-| `dirty-guards` / `entry-error-retains-both-drafts` | `errorVisible`, `contentValue`, `presentationValue`, `contentDirty`, `presentationDirty`; visible error, exact fixture draft values, both dirty flags `true`. |
-| `dirty-guards` / `beforeunload-active` | `defaultPrevented`, `returnValueSet`; both `true` from a real cancelable `beforeunload`. |
-| `dirty-guards` / `successful-retry-clears-persisted-channel` | Exact fields `persistedContentMatches`, `persistedPresentationUnchanged`, `localPresentationPreserved`, `contentDirty`, `presentationDirty`; content alone equals the successful Save response/server read and `persistedContentMatches === true`; server presentation remains byte-identical to its pre-draft baseline and differs from the intentional local draft, so `persistedPresentationUnchanged === true`; the local presentation draft remains byte-identical to its pre-retry dirty bytes, so `localPresentationPreserved === true`; `contentDirty === false` and `presentationDirty === true`. A `persistedPresentationMatches` field or claim that the presentation draft was persisted is forbidden. |
-| `related-retry-cache` / `related-error-visible-before-retry` | `rootId`, `errorVisible`, `retryVisible`, `rowCount`, `skeletonChipCount`, `skeletonRects`, `emptyVisible`; exact retry root, `true`, `true`, `0`, `3`, every skeleton-chip rect positive, `false`. |
-| `related-retry-cache` / `visible-retry-succeeds` | `rootId`, `errorVisible`, `retryVisible`, `failureRowIds`, `failureRowRects`, `skeletonVisible`, `emptyVisible`; exact retry root, both flags false, IDs equal the sole dedicated failure fixture, every row rect positive, both fallbacks false. |
-| `related-retry-cache` / `same-target-visible-rows-retained` | `rootId`, `rowIdsBefore`, `rowIdsPending`, `rowTextBefore`, `rowTextPending`, `rectsBefore`, `rectsPending`, `errorVisible`, `skeletonVisible`, `emptyVisible`; exact main-A root, IDs/text/rects byte-identical to the frozen pre-route baseline, rects positive, all three flags false. |
-| `related-retry-cache` / `target-switch-immediate-empty` | `aRootId`, `bRootId`, `aRowCount`, `bRowCount`, `aEmptyVisible`, `bEmptyVisible`, `aSkeletonChipCount`, `bSkeletonChipCount`, `skeletonRects`; exact main roots, `0`, `0`, both empty nodes absent, exact `3`/`3` root-scoped chips with positive rects immediately after clearing A and before selecting warm B. |
-| `related-retry-cache` / `stale-a-cannot-commit` | `aRootId`, `bRootId`, `aRowCount`, `bRowIds`, `staleATextPresent`; exact main roots, `0`, exact B IDs, and `false` only under the main-A related-list root for `relatedEntries.a1.updatedTitle` after the updated-A response settles. |
-| `related-retry-cache` / `only-b-rows-visible` | `rootId`, `visibleRowIds`, `visibleRects`, `skeletonVisible`, `emptyVisible`, `bListGetCountBaseline`, `bListGetCount`, `bListGetDelta`; exact main-B root, exact B IDs, all rects positive, both fallbacks false, positive frozen baseline equals current count, delta `0`. |
-| `related-retry-cache` / `unrelated-draft-byte-identical` | `contentBefore`, `contentAfter`, `presentationBefore`, `presentationAfter`; both unrelated draft channels byte-identical. |
-| `related-retry-cache` / `relation-diff-exact` | `relationABefore`, `relationAAfter`, `relationBBefore`, `relationBAfter`, `otherDiffPaths`; before arrays come only from the frozen exact-reset `rc-002` relation paths, after arrays come from the two current root-scoped checked-option sets, A goes exact IDs→empty, and B empty→exact selected IDs. `rc-017` first proves its complete post-unrelated-edit draft differs from `rc-002` at only the exact intended note-content and field-tone paths with no relation drift; the exhaustive union-of-paths non-relation diff of current draft against that frozen `rc-017` draft then leaves `otherDiffPaths` exact `[]`. |
-| `related-retry-cache` / `flow6-exit-discarded-once` | `url`, `navigationCountBaseline`, `navigationCountCurrent`, `navigationCountDelta`, `entryDirtyBadgeCount`, `presentationDirtyBadgeCount`; exact main records URL, baseline from `rc-017a`, current locally read after discard, `navigationCountCurrent - navigationCountBaseline === 1`, and both badge counts `0`; no absolute navigation-count constant may substitute. |
-| `responsive-users` / `narrow-padding-and-positive-geometry` | `samples`; exact 320/390/480 objects with open/closed padding `24px`, equal border boxes, positive content width. |
-| `responsive-users` / `wide-padding-delta-300` | `samples`; exact 1024/1280 objects with `32px`/`332px`, equal left/width border box, content delta within 1 px of 300. |
-| `responsive-users` / `panel-inside-viewport` | `samples`; every declared viewport has `left >= 0`, `right <= viewportWidth`, positive width/height. |
-| `responsive-users` / `user-a-b-a-isolated` | `userAFirst`, `userB`, `userAReturn`, `durableA`, `metadataEffects`, `userAReturnComputed`; exact `true`, `false`, `false`, `false`, plus matching true/false/false scoped effects. The B value/effect is read from the frozen `ru-072` sample; the returned-A value/effect is read directly in the current realm by `ru-082`, never reused from `ru-080` navigation or an earlier sample. `userAReturnComputed` is reject-unknown with exact keys `{theme,rootColor,bodyColor,toggleAriaPressed}`: theme is `"light"`, both computed colors are non-empty and match the established light sample rather than B's dark sample, and toggle aria-pressed is `"false"`. This proves B never inherited A's first value, A follows only its own later write, and the real `ru-081` toggle has a computed visible light effect. |
-| `responsive-users` / `same-user-retained-view-pending` | `visibleValue`, `durableA`, `readPending`, `metadataEffect`; exact non-default `true`, `true`, `true`, true scoped effect, distinguishable from cold default `false`. |
-| `responsive-users` / `same-user-authoritative-refresh` | `before`, `server`, `after`, `metadataEffect`; exact `true`, `false`, `false`, false scoped effect. |
-| `responsive-users` / `newer-local-write-pending` | `visibleValue`, `newLocalValue`, `readPending`, `metadataEffect`; exact `false`, `false`, `true`, false scoped effect. |
-| `responsive-users` / `newer-local-write-wins-refresh` | `visibleValue`, `persistedValue`, `staleReadValue`, `metadataEffect`; exact `false`, `false`, `true`, false scoped effect. |
-| `responsive-users` / `legacy-local-storage-absent` | `key`, `value`, `writeCount`; exact legacy key, `null`, `0`. |
-| `responsive-users` / `light-and-dark-computed` | `userA`, `userB`; exact theme labels plus computed non-empty root/body colors, A light and B dark; the frozen `ru-072` B sample additionally has exact root-scoped `metadataEffect:false`. |
-| `responsive-users` / `second-a-intent-visible-before-exit` | `visibleValue`, `queuedIntent`, `firstWritePending`, `metadataEffect`; exact `false`, `false`, `true`, false scoped effect. |
-| `responsive-users` / `user-b-default-before-release` | `response`, `metadataEffect`; response exact `{key:"customScreens.entry.preferences",value:{version:1,showFieldMetadata:false}}`, false scoped effect. |
-| `responsive-users` / `user-b-default-unchanged` | `before`, `after`, `metadataEffect`; both responses use the exact schema/value false and the scoped effect remains false. |
-| `responsive-users` / `final-a-retry-converges` | `visibleValue`, `persistedValue`, `writePending`, `unhandledRejectionCount`, `metadataEffect`; both values exact `false`, pending false, rejection count `0`, false scoped effect. |
+| Scenario / assertion                                         | Exact `observations` fields and locally checked predicate                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| ------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `button-image` / `persisted-no-empty-binding`                | `screenId`, `hrefBindingCount`, `hrefBindingField`, `emptyFieldCount`; exact main fixture Screen, one expected href binding/field, zero empty-field sentinels.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| `button-image` / `safe-link-front-url`                       | `tagName`, `href`, `pageUrl`; exact selected Button is `A`, href is the fixture-safe front URL, real activation reaches that URL.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| `button-image` / `unsafe-link-disabled`                      | `tagName`, `ariaDisabled`, `href`, `anchorCount`; `SPAN`, `"true"`, `null`, `0`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| `button-image` / `direct-image-safe-url`                     | `imageCount`, `src`, `placeholderVisible`; one `img`, exact resolved acquired-media URL, `false`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| `button-image` / `missing-or-unsafe-placeholder`             | `imageCount`, `placeholderVisible`, `unsafeUrlPresent`; `0`, `true`, `false`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| `button-image` / `media-field-keeps-uuid`                    | `selectedMediaTitle`, `selectedImageSrc`, `persistedMediaId`, `persistedResolvedUrlPresent`; the first two are the unique visible fixture display title and canonical rendered `img.src` mapped through the frozen fixture inventory, the persisted value is exact captured media UUID, and persisted resolved-URL presence is `false`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| `tabs-content` / `three-tabs-persisted`                      | `tabIds`, `labels`, `slotIds`, `nestedText`; exact three unique fixture arrays and text after save/reopen.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| `tabs-content` / `one-panel-visible`                         | `activeTabId`, `visiblePanelIds`, `visibleRects`; one expected ID and one positive-width/height rect.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| `tabs-content` / `other-panels-zero-geometry`                | `hiddenPanelIds`, `hiddenValues`, `rects`; the other two exact IDs, all hidden, every width/height `0`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| `tabs-content` / `armed-slot-equals-active-tab`              | `activeTabId`, `armedSlotId`, `selectedTabId`; all three byte-identical in both activation directions.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| `tabs-keyboard-aria` / `arrow-home-end-focus`                | `steps`; exact ordered ArrowLeft/ArrowRight/Home/End objects with `key`, `focusedTabText`, `focusedTabId`, `selectedTabId`, and `tabIndex`, each matching the expected roving result.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| `tabs-keyboard-aria` / `aria-reciprocal`                     | `pairs`, `visiblePanelId`, `hiddenPanelIds`; every exact tab/panel pair has reciprocal IDs, one visible expected panel, all others hidden.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| `tabs-keyboard-aria` / `nested-tabs-isolated`                | `outerRootId`, `innerRootId`, `outerSelectedId`, `innerSelectedId`; roots are distinct, outer is exact Overview/default[0], and inner is exact Tab 2/default[1] after the away/back isolation cycle.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| `tabs-keyboard-aria` / `renderer-ids-unique`                 | `ids`, `uniqueCount`; exact 20-item unique ID array (`3 + 3` outer and `2 + 2` inner per realm) and `uniqueCount === ids.length` across builder and preview.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| `space-selection` / `space-text-preserved`                   | `text`, `expectedText`; exact multi-word text including real Spaces is byte-identical.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| `space-selection` / `nested-controls-do-not-select`          | `linkActivated`, `inputFocused`, `selectedBefore`, `selectedAfter`; real nested controls work and selection identity is unchanged.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| `space-selection` / `selection-handle-independent`           | `handleFocused`, `ariaPressed`, `selectedBlockId`, `defaultPrevented`; exact handle independently focuses/selects the fixture block and `defaultPrevented` is exact `false` because the source handler stops propagation but does not prevent default.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| `dirty-guards` / `builder-cancel-byte-identical`             | `draftBefore`, `draftAfter`, `urlBefore`, `urlAfter`; both byte pairs are identical.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| `dirty-guards` / `builder-confirm-navigates-once`            | `urlBefore`, `urlAfter`, `navigationCount`, `draftDiscarded`; URL changes to the registered destination exactly once and discard is `true`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| `dirty-guards` / `entry-cancel-byte-identical`               | `contentBefore`, `contentAfter`, `presentationBefore`, `presentationAfter`; both draft channels remain byte-identical.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| `dirty-guards` / `entry-cancel-url-stable`                   | `urlBefore`, `urlAfter`; byte-identical.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| `dirty-guards` / `entry-confirm-navigates-once`              | `urlBefore`, `urlAfter`, `navigationCount`; exact registered destination and count `1`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| `dirty-guards` / `entry-error-retains-both-drafts`           | `errorVisible`, `contentValue`, `presentationValue`, `contentDirty`, `presentationDirty`; visible error, exact fixture draft values, both dirty flags `true`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| `dirty-guards` / `beforeunload-active`                       | `defaultPrevented`, `returnValueSet`; both `true` from a real cancelable `beforeunload`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| `dirty-guards` / `successful-retry-clears-persisted-channel` | Exact fields `persistedContentMatches`, `persistedPresentationUnchanged`, `localPresentationPreserved`, `contentDirty`, `presentationDirty`; content alone equals the successful Save response/server read and `persistedContentMatches === true`; server presentation remains byte-identical to its pre-draft baseline and differs from the intentional local draft, so `persistedPresentationUnchanged === true`; the local presentation draft remains byte-identical to its pre-retry dirty bytes, so `localPresentationPreserved === true`; `contentDirty === false` and `presentationDirty === true`. A `persistedPresentationMatches` field or claim that the presentation draft was persisted is forbidden.                                                                                                        |
+| `related-retry-cache` / `related-error-visible-before-retry` | `rootId`, `errorVisible`, `retryVisible`, `rowCount`, `skeletonChipCount`, `skeletonRects`, `emptyVisible`; exact retry root, `true`, `true`, `0`, `3`, every skeleton-chip rect positive, `false`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| `related-retry-cache` / `visible-retry-succeeds`             | `rootId`, `errorVisible`, `retryVisible`, `failureRowIds`, `failureRowRects`, `skeletonVisible`, `emptyVisible`; exact retry root, both flags false, IDs equal the sole dedicated failure fixture, every row rect positive, both fallbacks false.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| `related-retry-cache` / `same-target-visible-rows-retained`  | `rootId`, `rowIdsBefore`, `rowIdsPending`, `rowTextBefore`, `rowTextPending`, `rectsBefore`, `rectsPending`, `errorVisible`, `skeletonVisible`, `emptyVisible`; exact main-A root, IDs/text/rects byte-identical to the frozen pre-route baseline, rects positive, all three flags false.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| `related-retry-cache` / `target-switch-immediate-empty`      | `aRootId`, `bRootId`, `aRowCount`, `bRowCount`, `aEmptyVisible`, `bEmptyVisible`, `aSkeletonChipCount`, `bSkeletonChipCount`, `skeletonRects`; exact main roots, `0`, `0`, both empty nodes absent, exact `3`/`3` root-scoped chips with positive rects immediately after clearing A and before selecting warm B.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| `related-retry-cache` / `stale-a-cannot-commit`              | `aRootId`, `bRootId`, `aRowCount`, `bRowIds`, `staleATextPresent`; exact main roots, `0`, exact B IDs, and `false` only under the main-A related-list root for `relatedEntries.a1.updatedTitle` after the updated-A response settles.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| `related-retry-cache` / `only-b-rows-visible`                | `rootId`, `visibleRowIds`, `visibleRects`, `skeletonVisible`, `emptyVisible`, `bListGetCountBaseline`, `bListGetCount`, `bListGetDelta`; exact main-B root, exact B IDs, all rects positive, both fallbacks false, positive frozen baseline equals current count, delta `0`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| `related-retry-cache` / `unrelated-draft-byte-identical`     | `contentBefore`, `contentAfter`, `presentationBefore`, `presentationAfter`; both unrelated draft channels byte-identical.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| `related-retry-cache` / `relation-diff-exact`                | `relationABefore`, `relationAAfter`, `relationBBefore`, `relationBAfter`, `otherDiffPaths`; before arrays come only from the frozen exact-reset `rc-002` relation paths, after arrays come from the two current root-scoped checked-option sets, A goes exact IDs→empty, and B empty→exact selected IDs. `rc-017` first proves its complete post-unrelated-edit draft differs from `rc-002` at only the exact intended note-content and field-tone paths with no relation drift; the exhaustive union-of-paths non-relation diff of current draft against that frozen `rc-017` draft then leaves `otherDiffPaths` exact `[]`.                                                                                                                                                                                             |
+| `related-retry-cache` / `flow6-exit-discarded-once`          | `url`, `navigationCountBaseline`, `navigationCountCurrent`, `navigationCountDelta`, `entryDirtyBadgeCount`, `presentationDirtyBadgeCount`; exact main records URL, baseline from `rc-017a`, current locally read after discard, `navigationCountCurrent - navigationCountBaseline === 1`, and both badge counts `0`; no absolute navigation-count constant may substitute.                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| `responsive-users` / `narrow-padding-and-positive-geometry`  | `samples`; exact 320/390/480 objects with open/closed padding `24px`, equal border boxes, positive content width.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| `responsive-users` / `wide-padding-delta-300`                | `samples`; exact 1024/1280 objects with `32px`/`332px`, equal left/width border box, content delta within 1 px of 300.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| `responsive-users` / `panel-inside-viewport`                 | `samples`; every declared viewport has `left >= 0`, `right <= viewportWidth`, positive width/height.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| `responsive-users` / `user-a-b-a-isolated`                   | `userAFirst`, `userB`, `userAReturn`, `durableA`, `metadataEffects`, `userAReturnComputed`; exact `true`, `false`, `false`, `false`, plus matching true/false/false scoped effects. The B value/effect is read from the frozen `ru-072` sample; the returned-A value/effect is read directly in the current realm by `ru-082`, never reused from `ru-080` navigation or an earlier sample. `userAReturnComputed` is reject-unknown with exact keys `{theme,rootColor,bodyColor,toggleAriaPressed}`: theme is `"light"`, both computed colors are non-empty and match the established light sample rather than B's dark sample, and toggle aria-pressed is `"false"`. This proves B never inherited A's first value, A follows only its own later write, and the real `ru-081` toggle has a computed visible light effect. |
+| `responsive-users` / `same-user-retained-view-pending`       | `visibleValue`, `durableA`, `readPending`, `metadataEffect`; exact non-default `true`, `true`, `true`, true scoped effect, distinguishable from cold default `false`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| `responsive-users` / `same-user-authoritative-refresh`       | `before`, `server`, `after`, `metadataEffect`; exact `true`, `false`, `false`, false scoped effect.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| `responsive-users` / `newer-local-write-pending`             | `visibleValue`, `newLocalValue`, `readPending`, `metadataEffect`; exact `false`, `false`, `true`, false scoped effect.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| `responsive-users` / `newer-local-write-wins-refresh`        | `visibleValue`, `persistedValue`, `staleReadValue`, `metadataEffect`; exact `false`, `false`, `true`, false scoped effect.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| `responsive-users` / `legacy-local-storage-absent`           | `key`, `value`, `writeCount`; exact legacy key, `null`, `0`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| `responsive-users` / `light-and-dark-computed`               | `userA`, `userB`; exact theme labels plus computed non-empty root/body colors, A light and B dark; the frozen `ru-072` B sample additionally has exact root-scoped `metadataEffect:false`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| `responsive-users` / `second-a-intent-visible-before-exit`   | `visibleValue`, `queuedIntent`, `firstWritePending`, `metadataEffect`; exact `false`, `false`, `true`, false scoped effect.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| `responsive-users` / `user-b-default-before-release`         | `response`, `metadataEffect`; response exact `{key:"customScreens.entry.preferences",value:{version:1,showFieldMetadata:false}}`, false scoped effect.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| `responsive-users` / `user-b-default-unchanged`              | `before`, `after`, `metadataEffect`; both responses use the exact schema/value false and the scoped effect remains false.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| `responsive-users` / `final-a-retry-converges`               | `visibleValue`, `persistedValue`, `writePending`, `unhandledRejectionCount`, `metadataEffect`; both values exact `false`, pending false, rejection count `0`, false scoped effect.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
 
 The specialized exact outputs remain binding: the cold/cache, three critical-media,
 and two media-count outputs declared below; `preference-a-write-hit-before-release =>
@@ -7183,14 +9094,14 @@ for the real visible button click.
 
 The required intercepted attempts are:
 
-| Key | Method and expanded path | Mode / visible boundary |
-|---|---|---|
-| `media-prior-resolution` | exact pathname `GET /admin/api/media`, routed by `**/admin/api/media`; backing fetch `http://127.0.0.1:5173/admin/api/media` | after natural cold proof, validate the bounded backing list and exact acquired media row, project only that task-owned row into the UI cache, then delay the response from exactly one non-forced first entry mount; clearing the override exposes the distinct missing bound UUID, and that newer winner must survive release |
-| `entry-save-failure` | `PATCH **/admin/api/content/<TYPE_SLUG>/entries/<ENTRY_ID>` | one malformed-JSON failure; dirty guard remains until real retry |
-| `related-first-failure` | `GET **/admin/api/content/<RELATED_FAILURE_SLUG>/entries` | one malformed-JSON failure on the cold retry-only Screen; visible scoped related Retry |
-| `related-a-refresh` | same exact A path | delayed captured success; the already rendered A rows and their geometry remain visible while the route is pending |
-| `preference-a-read-refresh` | `GET **/admin/api/user-settings/customScreens.entry.preferences` | hold one same-user SPA remount read after the latest A value is shared-settled; that exact value may remain visible, then a newer local generation must win after release |
-| `preference-a-write-exit` | `PATCH **/admin/api/user-settings/customScreens.entry.preferences` | hold the first A write, queue a second A toggle, leave the old realm through real sign-out, authenticate B, then release; the queued A write must never dispatch and hit count stays `1` |
+| Key                         | Method and expanded path                                                                                                     | Mode / visible boundary                                                                                                                                                                                                                                                                                                        |
+| --------------------------- | ---------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `media-prior-resolution`    | exact pathname `GET /admin/api/media`, routed by `**/admin/api/media`; backing fetch `http://127.0.0.1:5173/admin/api/media` | after natural cold proof, validate the bounded backing list and exact acquired media row, project only that task-owned row into the UI cache, then delay the response from exactly one non-forced first entry mount; clearing the override exposes the distinct missing bound UUID, and that newer winner must survive release |
+| `entry-save-failure`        | `PATCH **/admin/api/content/<TYPE_SLUG>/entries/<ENTRY_ID>`                                                                  | one malformed-JSON failure; dirty guard remains until real retry                                                                                                                                                                                                                                                               |
+| `related-first-failure`     | `GET **/admin/api/content/<RELATED_FAILURE_SLUG>/entries`                                                                    | one malformed-JSON failure on the cold retry-only Screen; visible scoped related Retry                                                                                                                                                                                                                                         |
+| `related-a-refresh`         | same exact A path                                                                                                            | delayed captured success; the already rendered A rows and their geometry remain visible while the route is pending                                                                                                                                                                                                             |
+| `preference-a-read-refresh` | `GET **/admin/api/user-settings/customScreens.entry.preferences`                                                             | hold one same-user SPA remount read after the latest A value is shared-settled; that exact value may remain visible, then a newer local generation must win after release                                                                                                                                                      |
+| `preference-a-write-exit`   | `PATCH **/admin/api/user-settings/customScreens.entry.preferences`                                                           | hold the first A write, queue a second A toggle, leave the old realm through real sign-out, authenticate B, then release; the queued A write must never dispatch and hit count stays `1`                                                                                                                                       |
 
 The media route has a stricter binding sequence. While still on the Screen builder,
 the `assert-media-cache-cold` receipt uses assertion name
@@ -7379,13 +9290,13 @@ helper notation only: plan construction resolves every cell to its exact
 `run-code/<action-id>` registry entry and proves bidirectional equality; no such
 function/name/key switch exists in executor dispatch. The exact source/output table is:
 
-| Route mode | Setup | Hit read / exact output | Release / exact output | Unroute | Real retry |
-|---|---|---|---|---|---|
-| malformed JSON | `expectedRouteSetupCommand(smoke, key)` | `expectedRouteHitReadCommand(key)` / `1` | none | `expectedRouteUnrouteCommand(expectedRoutePattern(smoke, key))` / `true` | `expectedRouteRetryCommand(key)` / `true` |
-| delayed visible success (media) | `expectedRouteSetupCommand(smoke, key)` | `expectedRouteHitReadCommand(key)` / `{"hits":1,"captured":true}` | `expectedRouteReleaseCommand(key)` / `{"released":true,"fulfilled":true,"uiSettled":true}` | `expectedRouteUnrouteCommand(expectedRoutePattern(smoke, key))` / `true` | none |
-| delayed related-A refresh | exact related-A setup | strict related-A response hit builder / `{"hits":1,"captured":true,"rowCount":2,"rowIdsMatch":true,"uniqueIds":true,"updatedA1Matches":true}` | exact related-A release / `{"released":true,"fulfilled":true,"uiSettled":true}` | exact related-A unroute / `true` | none |
-| delayed preference GET | `expectedRouteSetupCommand(smoke, "preference-a-read-refresh")` | exact preference-read hit builder / `{"hits":1,"captured":true,"method":"GET","bodyAbsent":true}` | exact preference-read release / `{"released":true,"fulfilled":true,"uiSettled":true}` | exact preference-read unroute / `true` | none |
-| delayed preference PATCH + realm exit | exact setup that installs the bounded `requestfailed` listener before the route | exact preference-write hit builder / `{"hits":1,"captured":true,"backingSettled":true,"method":"PATCH","bodyMatches":true,"contentTypeJson":true,"expectedUserIdMatches":true,"csrfPresent":true}` | `expectedRouteReleaseCommand(smoke, "preference-a-write-exit")` / `{"released":true,"backingSettled":true,"clientAborted":true}` | exact preference-write unroute plus listener removal / `true` | none |
+| Route mode                            | Setup                                                                           | Hit read / exact output                                                                                                                                                                            | Release / exact output                                                                                                           | Unroute                                                                  | Real retry                                |
+| ------------------------------------- | ------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------ | ----------------------------------------- |
+| malformed JSON                        | `expectedRouteSetupCommand(smoke, key)`                                         | `expectedRouteHitReadCommand(key)` / `1`                                                                                                                                                           | none                                                                                                                             | `expectedRouteUnrouteCommand(expectedRoutePattern(smoke, key))` / `true` | `expectedRouteRetryCommand(key)` / `true` |
+| delayed visible success (media)       | `expectedRouteSetupCommand(smoke, key)`                                         | `expectedRouteHitReadCommand(key)` / `{"hits":1,"captured":true}`                                                                                                                                  | `expectedRouteReleaseCommand(key)` / `{"released":true,"fulfilled":true,"uiSettled":true}`                                       | `expectedRouteUnrouteCommand(expectedRoutePattern(smoke, key))` / `true` | none                                      |
+| delayed related-A refresh             | exact related-A setup                                                           | strict related-A response hit builder / `{"hits":1,"captured":true,"rowCount":2,"rowIdsMatch":true,"uniqueIds":true,"updatedA1Matches":true}`                                                      | exact related-A release / `{"released":true,"fulfilled":true,"uiSettled":true}`                                                  | exact related-A unroute / `true`                                         | none                                      |
+| delayed preference GET                | `expectedRouteSetupCommand(smoke, "preference-a-read-refresh")`                 | exact preference-read hit builder / `{"hits":1,"captured":true,"method":"GET","bodyAbsent":true}`                                                                                                  | exact preference-read release / `{"released":true,"fulfilled":true,"uiSettled":true}`                                            | exact preference-read unroute / `true`                                   | none                                      |
+| delayed preference PATCH + realm exit | exact setup that installs the bounded `requestfailed` listener before the route | exact preference-write hit builder / `{"hits":1,"captured":true,"backingSettled":true,"method":"PATCH","bodyMatches":true,"contentTypeJson":true,"expectedUserIdMatches":true,"csrfPresent":true}` | `expectedRouteReleaseCommand(smoke, "preference-a-write-exit")` / `{"released":true,"backingSettled":true,"clientAborted":true}` | exact preference-write unroute plus listener removal / `true`            | none                                      |
 
 The generic visible-success hit shape applies only to `media-prior-resolution`; related
 A and the preference GET use their stricter hit projections. All three own
@@ -7509,6 +9420,7 @@ empty array from only the active/original page is never sufficient.
    aggregate/per-page log commands, after release/unroute and both screenshots, must
    show empty error/warning/page-error arrays for both stable page identities; no
    contradictory mid-sequence log-read requirement is inserted after tab return.
+
 7. **Responsive geometry and two users, light/dark.** Execute every resize below
    in order. At 320/390/480, open and closed computed right padding is `24px`, the
    scroller border box is unchanged, content width is positive, and the panel rect
@@ -7591,7 +9503,7 @@ containing browser receipts, runtime receipts, routes, fixtures/cleanup resource
 helper/PID lineage, screenshots, and scenario assertions. The workflow scans the
 complete created changelog for the private value corpus, then requires the block to be
 byte-identical to its in-memory validated evidence before the single status transaction
-makes all ten leaves, all six children, and TASK-540 `✅ Done`. Until that transaction,
+makes all twelve leaves, all seven children, and TASK-540 `✅ Done`. Until that transaction,
 landed source leaves remain `🚧 In Progress` with `Implementation Complete` awaiting
 family changelog 1252:
 
@@ -7609,20 +9521,103 @@ These markers are TASK-540-specific closeout metadata, not the future generic
 TASK-545 manifest contract. After any source repair or smoke rerun, closure replaces
 this block with the newest validated canonical evidence before re-closing statuses.
 
+Status closure is its own crash-atomic 21-target transaction and is not the later
+five-file collaboration-terminal transaction. Before the first status or `Completed`
+write, the fixed per-worktree Git-dir journal
+`<gitDir>/coderso-task540-status-closure-v1` must durably record old/new bytes, modes,
+hashes, fixed same-parent temp paths, and identities for these exact ordered targets:
+
+1. the twelve leaves in land order `TASK-540-01-L01`, `TASK-540-02-L01`,
+   `TASK-540-03-L01`, `TASK-540-04-L01`, `TASK-540-04-L02`, `TASK-540-04-L03`,
+   `TASK-540-04-L04`, `TASK-540-05-L01`, `TASK-540-05-L02`, `TASK-540-07-L01`,
+   `TASK-540-07-L02`, then closure leaf `TASK-540-06-L01` last;
+2. the seven direct children in that same land order `TASK-540-01`,
+   `TASK-540-02`, `TASK-540-03`, `TASK-540-04`, `TASK-540-05`, `TASK-540-07`,
+   then closure child `TASK-540-06` last;
+3. board parent `TASK-540`;
+4. `_docs/_TASKS/README.md` last.
+
+The journal inventory is exactly `status.manifest.json`, `status.prepared.json`,
+`old-0.bin` through `old-20.bin`, `new-0.bin` through `new-20.bin`, optional
+`status.committed.json`, and optional `status.rollback-prepared.json`.
+`statusManifestCore` is exactly
+`{branchSha256,generation,gitDirSha256,mode:"status-close",rootSha256,targets,transactionId,worktreeSha256}`.
+Each ordered target is exactly
+`{index,mode,newSha256,oldSha256,path,tempPath}` with indices `0..20`, one of the fixed
+paths above, its original mode, raw old/new byte digests, and a deterministic
+journal-derived same-parent temp path. `statusPreparedCore` is exactly
+`{manifestSha256,newPayloadSha256s,oldPayloadSha256s,transactionId}`, where
+`manifestSha256` equals the exact `statusManifestSha256` and both payload arrays are
+exact ordered length-21 raw digests matching the targets.
+`statusRollbackPreparedCore` is EXACTLY
+`{manifestSha256,transactionId}`.
+`statusCommittedCore` is exactly
+`{boardNewSha256,manifestSha256,transactionId}`, with the same exact manifest hash. The
+four exact envelopes are
+`{...statusManifestCore,statusManifestSha256}`,
+`{...statusPreparedCore,statusPreparedSha256}`,
+`{...statusRollbackPreparedCore,statusRollbackPreparedSha256}`, and
+`{...statusCommittedCore,statusCommittedSha256}`. They use only the
+`status-manifest`, `status-prepared`, `status-rollback-prepared`, and
+`status-committed` registry domains above and reject every missing, extra, reordered,
+sparse, duplicate, or malformed field. All payload and marker files use the same
+no-follow identity, `O_EXCL`, file-fsync, containing-directory-fsync, and bounded-byte
+rules as the five-file terminal transaction.
+
+Targets `0..19` are replaced/fsynced in order; the board target at index 20 is the sole
+commit point and is renamed and parent-fsynced last. Before a valid prepared marker no
+target write is legal. Restart applies the exact terminal-temp restart table to every
+status temp. Exact old board hash rolls every target back to its journaled old bytes;
+exact new board hash rolls every target forward to new bytes and writes a missing
+committed marker only while `status.rollback-prepared.json` is absent. Presence of that
+valid rollback marker overrides both normal decisions: either journaled board hash
+forces convergence to all 21 old payloads, targets `0..19` first and target 20 renamed
+and parent-fsynced last. Any third state, missing payload, unknown temp, mode/path/hash
+drift, invalid marker, or partial identity fails closed with the journal retained. The
+status journal and both payload generations remain intact through final closure-drift
+and the later five-file terminal transaction.
+
+Any audit, mechanical, gate, terminal-receipt, or other failure after status publication
+must reuse that still-prepared 21-target journal. Before the first old-payload target
+write, it creates `status.rollback-prepared.json` with
+`O_EXCL|O_NOFOLLOW`, file-fsyncs it, and fsyncs the journal directory. It then restores
+all 20 TASK-540 task files and `_docs/_TASKS/README.md` to the exact journaled old
+generation, with target 20 (the board) last as the rollback commit point. A process
+death re-enters marker-priority all-old convergence, never the normal board-new
+roll-forward decision.
+
+After every old target and mode/hash is stable-read and verified and every exact status
+temp is absent, rollback cleanup is deterministic: identity-unlink
+`status.committed.json` when present and parent-fsync; unlink
+`status.rollback-prepared.json` and parent-fsync; unlink `new-20.bin` through
+`new-0.bin` in descending order with a parent fsync after each; unlink `old-20.bin`
+through `old-0.bin` likewise; unlink `status.prepared.json`, then
+`status.manifest.json`, fsyncing after each; remove the proven-empty status-journal
+directory; and fsync `gitDir`. Only after that full old-generation verification and
+journal cleanup may the ordinary repair workflow add fresh pending evidence. No handler
+may direct-write an individual status target, create a second status transaction,
+retain a partial post-commit generation, or describe rollback as best-effort.
+Termination mutants
+cover rollback-marker creation/fsync, every reverse temp create/write/file-fsync/
+rename/parent-fsync boundary for targets `0..20`, the board-last old commit, every
+verification, every ordered cleanup unlink/fsync, journal rmdir, and Git-dir fsync.
+On terminal success, the final mechanical gate verifies the committed new status
+generation before both journals are identity-cleaned in their declared order.
+
 The final cleanup plan contains exactly seven separate local-runner commands whose
 operation starts with `cleanup-`, in the order below—no duplicate or extra
 `cleanup-*` operations. Earlier preparatory theme/bootstrap/fixture steps use distinct
 non-`cleanup-*` operation labels:
 
-| # | Operation | Exact command shape | Sanitized output |
-|---:|---|---|---|
-| 1 | `cleanup-release-unroute` | release every named latch, `await page.unrouteAll({behavior:"wait"})`, then require the authoritative context active-route registry exact `[]` | `true` |
-| 2 | `cleanup-route-list` | session `route-list` (CLI-wrapper registry only) | `[]` |
-| 3 | `cleanup-console-errors` | `expectedAggregateLogReadCommand("console-errors")` | exact `{aggregate,pages}`; errors empty on aggregate and every page |
-| 4 | `cleanup-console-warnings` | `expectedAggregateLogReadCommand("console-warnings")` | exact `{aggregate,pages}`; warnings empty on aggregate and every page |
-| 5 | `cleanup-page-errors` | `expectedAggregateLogReadCommand("page-errors")` | exact `{aggregate,pages}`; page errors empty on aggregate and every page |
-| 6 | `cleanup-close` | session `close` | `closed` |
-| 7 | `cleanup-session-absence` | global `playwright-cli --raw list` | `true` after proving `wf540smoke` absent |
+|   # | Operation                  | Exact command shape                                                                                                                            | Sanitized output                                                         |
+| --: | -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
+|   1 | `cleanup-release-unroute`  | release every named latch, `await page.unrouteAll({behavior:"wait"})`, then require the authoritative context active-route registry exact `[]` | `true`                                                                   |
+|   2 | `cleanup-route-list`       | session `route-list` (CLI-wrapper registry only)                                                                                               | `[]`                                                                     |
+|   3 | `cleanup-console-errors`   | `expectedAggregateLogReadCommand("console-errors")`                                                                                            | exact `{aggregate,pages}`; errors empty on aggregate and every page      |
+|   4 | `cleanup-console-warnings` | `expectedAggregateLogReadCommand("console-warnings")`                                                                                          | exact `{aggregate,pages}`; warnings empty on aggregate and every page    |
+|   5 | `cleanup-page-errors`      | `expectedAggregateLogReadCommand("page-errors")`                                                                                               | exact `{aggregate,pages}`; page errors empty on aggregate and every page |
+|   6 | `cleanup-close`            | session `close`                                                                                                                                | `closed`                                                                 |
+|   7 | `cleanup-session-absence`  | global `playwright-cli --raw list`                                                                                                             | `true` after proving `wf540smoke` absent                                 |
 
 The close and final global list are distinct invocations. Receipt 7 is executed by the
 executor-owned local command authority, never supplied by an agent; it may normalize
@@ -7724,8 +9719,10 @@ map byte-for-byte:
 ```ts
 const REQUIRED_TEST_ENV_SOURCE_SCRIPTS = deepFreezeExact({
   test: "set -a && { [ ! -f .env ] || . ./.env; } && set +a && bun run test:bun && bun run test:vitest",
-  "test:bun": "set -a && { [ ! -f .env ] || . ./.env; } && set +a && bun test --parallel=1 --timeout=15000 tests/unit tests/integration/routes tests/integration/runtime tests/integration/server tests/integration/store tests/integration/plugins tests/integration/analytics tests/perf tests/security",
-  "test:vitest": "set -a && { [ ! -f .env ] || . ./.env; } && set +a && NODE_ENV=test vitest run --config vitest.config.ts",
+  "test:bun":
+    "set -a && { [ ! -f .env ] || . ./.env; } && set +a && bun test --parallel=1 --timeout=15000 tests/unit tests/integration/routes tests/integration/runtime tests/integration/server tests/integration/store tests/integration/plugins tests/integration/analytics tests/perf tests/security",
+  "test:vitest":
+    "set -a && { [ ! -f .env ] || . ./.env; } && set +a && NODE_ENV=test vitest run --config vitest.config.ts",
 });
 ```
 
@@ -7887,6 +9884,8 @@ node --check _docs/_workflows/task-540-smoke-executor.mjs
 node _docs/_workflows/task-540-smoke-executor.mjs --self-test
 node --check _docs/_workflows/task-540-smoke-host.mjs
 node _docs/_workflows/task-540-smoke-host.mjs --self-test
+node --check _docs/_workflows/task-540-codex-agent-bridge.mjs
+node _docs/_workflows/task-540-codex-agent-bridge.mjs --self-test
 node --check _docs/_workflows/task-540-local-orchestrator.mjs
 node _docs/_workflows/task-540-local-orchestrator.mjs --self-test
 node --check _docs/_workflows/task-540-implement.mjs
@@ -7932,20 +9931,41 @@ persists identical Closure Pending, Closure Board Baseline, and Closure Changelo
 receipts on the root/closure parent/leaf. A validated restart requires all three to match
 the independently owned control even if the changelog file must be restored at the same
 pinned path. Run the complete full validation now, before final family closure. Only
-after it passes, all ten leaves have current exact gate receipts, all 17 contracts are
-still In Progress, and changelog 1252 already byte-covers the exact 17-ID Tasks line may
+after it passes, all twelve leaves have current exact gate receipts, all 20 contracts are
+still In Progress, and changelog 1252 already byte-covers the exact 20-ID Tasks line may
 the status-stage transaction record the exact evidence SHA-256/generation while
 preserving the identical Closure Board Baseline and Closure Changelog Path; prepare
-ten leaves, then six children, then TASK-540, and atomically publish all Done/Completed
-fields plus the board-statistics delta. A read-only mechanical graph gate verifies all statuses/tables, evidence,
-the deterministic board-statistics delta, unique 1252 index row, and reruns the exact
-eight task-infrastructure `node --check`/`--self-test` commands displayed above plus the
+twelve leaves, then seven children, then TASK-540, and atomically publish all Done/Completed
+fields plus the board-statistics delta. Run exactly one final agent-backed
+closure-drift pass now; a
+finding first triggers the universal marker-priority all-old status rollback, then may
+enter the pinned ordinary repair path only after complete verification and cleanup.
+After that pass's last clean result,
+permanently freeze collaboration dispatch for the generation, root-review every actual
+result/task correlation, build the exact complete safe projection and terminal receipt,
+and atomically persist/byte-verify them in both durable closure authorities plus the
+three matching task evidence receipts before any run-ledger cleanup. No agent call is
+legal after that freeze. A read-only local mechanical graph gate then verifies all
+statuses/tables, evidence, the deterministic board-statistics delta, unique 1252 index
+row, the exact persisted complete collaboration-ledger projection and both
+pre-closure/terminal count-hash pairs, every later dense request/procedure entry, the
+root-reviewed spawn/fork/timeout-only-interrupt attestations, and the non-null terminal
+receipt. The root then repeats that transcript-correlation review; only both passes
+permit identity-bound local ledger cleanup. It then reruns the
+exact task-infrastructure
+`node --check`/`--self-test` commands displayed above plus the
 implementation-orchestrator checks and `git diff --check`. Any status-stage,
 mechanical-gate, final-audit,
-or final-gate failure reopens the closure leaf/direct child and root, plus only an
-exact source owner implicated by verified drift; unrelated completed descendants stay
-Done and unlanded descendants stay To Do. Interruption that kills the workflow process
-is the only unavoidable best-effort boundary. Do not close with a failed/skipped DB preflight,
+or final-gate failure creates/fsyncs `status.rollback-prepared.json`, restores any
+terminal transaction with the changelog index last, and then restores the complete
+20-task-plus-board old status generation from the still-prepared journal with the board
+last. Ordinary repair starts only after all 21 old bytes/modes/hashes and journal
+cleanup verify. Process death is recoverable only for the
+bridge-owned request/ledger/fixed-journal artifacts and the two journaled closure
+transactions described here. Restart makes no claim to recover collaboration APIs,
+arbitrary repository mutation, DB/application fixtures, browser/server state, or OS
+state outside those identity-bound artifacts; it fails closed until root procedural
+review and the existing independent cleanup proofs complete. Do not close with a failed/skipped DB preflight,
 functional gate, runtime flow, fixture cleanup, or open child. The strict scan must
 run without suppression and exit zero with zero accepted findings. TASK-546 removed the
 historical TASK-522 Semgrep finding; any finding, scanner/tool failure, exception,
