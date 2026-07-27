@@ -187,6 +187,25 @@ TASK-540-06-L01 deliberately retains the historical physical filename
 six-flow contract. The row uses the current seven-flow title, and no rename is part of
 TASK-540.
 
+## Smoke evidence receipts in the tree
+
+The programme's runtime smoke evidence is written down in
+`_docs/_workflows/_smoke/`. It is tracked, but until now no task file pointed at it, so
+a closure operator walking the family had no path to it. Read the receipt itself before
+citing it — each states its own scope, and one of them is explicitly labelled as
+routinely misquoted.
+
+| Receipt | What it records | What it does **not** record |
+|---|---|---|
+| `_docs/_workflows/_smoke/task-540-smoke-green-full-strength.md` | the two fully green runs, both at commit `c89fa96c`: `pass: true`, all 496 actions, 13/13 screenshots, full terminal cleanup. Run 1 is at the shipped 60 s auth window, run 2 at a shortened 5 s window. Transcribed from the two annotated git tags. | a receipt for the current bytes. Both runs describe `c89fa96c`, not HEAD, and neither discharges the canonical smoke this file owns. |
+| `_docs/_workflows/_smoke/task-540-milestone-13-of-13.md` | the plan reaching 13 of 13 checkpoints at commit `92cc3bd5`, and the blocker inventory plus reproduction caveats, which still apply. | a passing run. Terminal cleanup still failed at that commit; it was repaired afterwards in `939328ef` and `c89fa96c`. Its "What is NOT yet true" section is history. |
+| `_docs/_workflows/_smoke/task-540-milestone-11-of-13.md` | an earlier bisect anchor: 11 of 13 checkpoints, action 424 of 496, at commit `6df739cc`. | current state. Superseded for progress purposes by the 13-of-13 file. |
+
+The smoke harness has not moved since those runs:
+`git diff --name-only c89fa96c..HEAD -- '_docs/_workflows/task-540-smoke*'` is empty at
+HEAD `6bf2ed98`. That is a fact about the diff and nothing more — `core/**` did change
+over the same range, and the canonical seven-flow run remains required for closure.
+
 ## Family modularity prerequisite
 
 Before the current corrective chain, closure consumed the exact source-owner sequence

@@ -40,7 +40,10 @@ every facade and child owner finish at no more than 1,000 physical lines is sati
 the limit. What remains for closure, unchanged and in order: run targeted/full gates,
 restart the helper, run exactly one canonical seven-flow Playwright CLI smoke with 13/13
 screenshots and deterministic cleanup, create changelog 1252, close child-first, commit,
-and integrate into `feat/implementations`.
+and integrate into `feat/implementations`. Prior runtime smoke evidence is tracked in
+`_docs/_workflows/_smoke/` and indexed, with each receipt's exact scope and limits,
+under `Smoke evidence receipts in the tree` in TASK-540-06; none of it discharges the
+canonical run above.
 **Current Codex Collaboration Directive:** 2026-07-24 — Codex agents are the only
 reviewers/implementers used for the remaining work. The tracked Codex bridge and local
 orchestrator are landed; Claude invocation and fallback are absent from the current

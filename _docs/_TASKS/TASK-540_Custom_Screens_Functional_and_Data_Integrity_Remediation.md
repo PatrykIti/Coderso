@@ -538,6 +538,10 @@ create changelog 1252 and close all 20 task files child-first plus the board →
 run the final focused closure checks → commit → integrate into feat/implementations
 ```
 
+Prior runtime smoke evidence is tracked in `_docs/_workflows/_smoke/` and indexed, with
+each receipt's exact scope and limits, under `Smoke evidence receipts in the tree` in
+TASK-540-06. None of it discharges the canonical run above.
+
 The ten protected pre-split test families preserve the exact sorted multiset of all
 347 fully expanded test names across their final 36 suite files, with each suite
 independently runnable. The closure target is exactly 64 Vitest + 18 Bun = 82 files:
