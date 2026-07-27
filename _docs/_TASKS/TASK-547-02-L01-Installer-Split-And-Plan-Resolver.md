@@ -31,11 +31,11 @@ persisted/listed item type.
   plan/ledger/snapshot/dependency types and safe error codes;
 - `core/services/kits/fullSiteInstallPlanner.ts`;
 - `core/services/kits/fullSiteInstall/currentResourceResolver.ts`;
-- `core/services/kits/legacyInstallRunPersistence.ts` -- the sole concrete ledger
-  implementation and lock owner;
+- `core/services/kits/legacyInstallRunPersistence.ts` -- stable public facade, concrete-ledger composition, lock owner and compatibility re-exports;
+- `core/services/kits/legacyInstallRunPersistence/readPersistence.ts` -- bounded raw/compatibility reads and managed-evidence query implementation;
+- `core/services/kits/legacyInstallRunPersistence/dryRunTerminalization.ts` -- strict input/result validation and atomic dry-run terminal arbitration;
 - `core/services/kits/solutionKitsInstallService.ts`, `kitInstaller.ts`,
-  `legacyInstallPlanning.ts`, `legacyInstallResourceHandlers.ts` and
-  `legacyInstallRollback.ts` -- bounded compatibility/default composition seams.
+  `legacyInstallPlanning.ts`, `legacyInstallResourceHandlers.ts` and `legacyInstallRollback.ts` -- bounded compatibility/default composition seams.
 
 `solutionKitsInstallService.ts` remains a compatibility facade below 1,000 lines.
 No other leaf redeclares or implements the port, imports install-run tables, or
@@ -45,6 +45,8 @@ edits these paths.
 
 - `tests/vitest/kits/full-site-install-planner.test.ts`;
 - `tests/unit/kits/fullSiteLegacyLedgerComposition.test.ts`;
+- `tests/unit/kits/fullSiteLegacyLedgerReadPersistence.test.ts`;
+- `tests/unit/kits/fullSiteLegacyLedgerDryRunTerminalization.test.ts`;
 - `tests/integration/kits/fullSiteManagedOwnershipDb.test.ts` (new, uniquely
   scoped and independently runnable DB ownership/resolver/history matrix; it
   contains no EXPLAIN profiles, helpers or budget test);
@@ -77,7 +79,8 @@ for distinct package keys because `site.*`/design shell settings share one store
 
 ## Atomic Dry-Run Terminalization
 
-L01 alone adds `terminalizeDryRun()` to the shared port and concrete DB adapter.
+L01 alone adds `terminalizeDryRun()` to the shared port and delegates its
+concrete DB behavior to `legacyInstallRunPersistence/dryRunTerminalization.ts`.
 Its runtime boundary accepts only a direct plain object with exact keys
 `runId,status,error`: UUID run ID; `success` with `error:null`; or `failed` with
 one safe error code. The returned direct plain object has exactly
@@ -366,7 +369,7 @@ keep strict expected-ID/null plus deterministic natural-lookup DB regressions.
 
 ## Bounded Managed-Evidence Query
 
-`legacyInstallRunPersistence.ts` owns one testable query-builder seam:
+`legacyInstallRunPersistence/readPersistence.ts` owns one testable query-builder seam,
 
 ```ts
 export const buildManagedResourceEvidenceQuery = (input: {
@@ -651,142 +654,140 @@ export async function planFullSiteInstall(pkg, referencePlanOrDeps, maybeDeps) {
 }
 ```
 
-`resolveManagedIdentity` returns managed only when a successful,
-non-rolled-back run snapshot records the same native ID as the current row.
-Matching a natural key or full desired payload without this proof is
-`site_package_conflict`, not reuse/noop.
+`resolveManagedIdentity` returns managed only when a successful, non-rolled-back run snapshot records the same native ID as the current row.
+Matching a natural key or full desired payload without this proof is `site_package_conflict`, not reuse/noop.
 
 ```ts
-export const buildManagedResourceEvidenceQuery = (input) => {
-  const candidateItemId = sql<string>`${candidateItem.id}`.as(
-    "candidate_item_id",
-  );
-  const candidateItemCreatedAt = sql<Date>`${candidateItem.createdAt}`.as(
-    "candidate_item_created_at",
-  );
-  const candidateItemForRun = db
-    .select({
-      candidateItemId,
-      candidateItemCreatedAt,
-    })
-    .from(candidateItem)
-    .where(
-      and(
-        eq(candidateItem.runId, candidateRun.id),
-        eq(candidateItem.resourceType, input.kind),
-        eq(candidateItem.resourceKey, input.key),
-        eq(candidateItem.status, "success"),
-        inArray(candidateItem.operation, ["create", "update"]),
-      ),
-    )
-    .orderBy(desc(candidateItemCreatedAt), desc(candidateItemId))
-    .limit(1)
-    .as("managed_candidate_item_for_run");
-
-  const matchingSuccessfulRollbackItem = db
-    .select({ one: sql<number>`1` })
-    .from(rollbackItem)
-    .where(
-      and(
-        eq(rollbackItem.runId, rollbackRun.id),
-        eq(rollbackItem.resourceType, input.kind),
-        eq(rollbackItem.resourceKey, input.key),
-        eq(rollbackItem.status, "success"),
-      ),
-    );
-  const invalidatingRollbackRun = db
-    .select({ one: sql<number>`1` })
-    .from(rollbackRun)
-    .where(
-      and(
-        eq(rollbackRun.rollbackOfRunId, candidateRun.id),
-        eq(rollbackRun.mode, "rollback"),
-        or(
-          eq(rollbackRun.status, "success"),
-          exists(matchingSuccessfulRollbackItem),
-        ),
-      ),
-    );
-
-  const candidateRunId = sql<string>`${candidateRun.id}`.as(
-    "candidate_run_id",
-  );
-  const winner = db
-    .select({
-      candidateRunId,
-      candidateItemId: candidateItemForRun.candidateItemId,
-      candidateItemCreatedAt: candidateItemForRun.candidateItemCreatedAt,
-    })
-    .from(candidateRun)
-    .innerJoinLateral(candidateItemForRun, sql`true`)
-    .where(
-      and(
-        eq(candidateRun.kitId, input.packageKey),
-        eq(candidateRun.mode, "apply"),
-        eq(candidateRun.status, "success"),
-        notExists(invalidatingRollbackRun),
-      ),
-    )
-    .orderBy(
-      desc(candidateRun.createdAt),
-      desc(candidateRun.updatedAt),
-      desc(candidateRunId),
-      desc(candidateItemForRun.candidateItemCreatedAt),
-      desc(candidateItemForRun.candidateItemId),
-    )
-    .limit(1)
-    .as("managed_resource_winner");
-  return db
-    .select({
-      runId: winner.candidateRunId,
-      afterSnapshot: solutionKitInstallItems.afterSnapshot,
-    })
-    .from(winner)
-    .innerJoin(
-      solutionKitInstallItems,
-      eq(solutionKitInstallItems.id, winner.candidateItemId),
-    ); // outer-only wide fetch; still one SQL statement
+// legacyInstallRunPersistence/readPersistence.ts
+import { aliasedTable, and, asc, desc, eq, exists, inArray, notExists, or, sql } from "drizzle-orm";
+import { db } from "../../../db/client"; import { solutionKitInstallItems, solutionKitInstallRuns } from "../../../db/schema";
+import { isRecord } from "../legacyInstallPlanning"; import type { JsonRecord, SolutionKitInstallItemRecord, SolutionKitInstallItemRow, SolutionKitInstallSummary } from "../legacyInstallPlanning";
+import type { FullSiteInstallLedgerPort, FullSiteInstallResourceKind, ManagedResourceEvidence, PersistedFullSiteInstallLedgerItem, RawFullSiteInstallLedgerItem } from "../fullSiteInstallTypes";
+import { PACKAGE_LIMITS, type JsonObject } from "../fullSitePackage/types";
+type ReadPersistence = Pick<FullSiteInstallLedgerPort, "listItems" | "listRawItems" | "findManagedResourceEvidence">;
+type ManagedEvidenceInput = Parameters<FullSiteInstallLedgerPort["findManagedResourceEvidence"]>[0];
+type PersistedResourceType = typeof solutionKitInstallItems.$inferSelect.resourceType;
+export const normalizeItemRow = (row: SolutionKitInstallItemRow): SolutionKitInstallItemRecord => ({ id: row.id, runId: row.runId, position: row.position,
+  resourceType: row.resourceType as SolutionKitInstallItemRecord["resourceType"], resourceKey: row.resourceKey, operation: row.operation as SolutionKitInstallItemRecord["operation"],
+  status: row.status as SolutionKitInstallItemRecord["status"], beforeSnapshot: isRecord(row.beforeSnapshot) ? row.beforeSnapshot as JsonRecord : null, afterSnapshot: isRecord(row.afterSnapshot) ? row.afterSnapshot as JsonRecord : null, rollbackAction: (row.rollbackAction ?? null) as JsonRecord | null, error: row.error, createdAt: row.createdAt, updatedAt: row.updatedAt });
+export const buildSummary = (items: Pick<SolutionKitInstallItemRecord, "operation" | "status">[]): SolutionKitInstallSummary => {
+  const summary: SolutionKitInstallSummary = { total: 0, success: 0, failed: 0, planned: 0, skipped: 0, operations: { create: 0, update: 0, noop: 0, delete: 0, restore: 0 } };
+  for (const item of items) { summary.total += 1; summary.operations[item.operation] += 1; if (item.status === "success") summary.success += 1; if (item.status === "failed") summary.failed += 1; if (item.status === "planned") summary.planned += 1; if (item.status === "skipped") summary.skipped += 1; } return summary;
 };
+export async function listSolutionKitInstallItems(runId: string): Promise<SolutionKitInstallItemRecord[]> {
+  const rows = await db.select().from(solutionKitInstallItems).where(eq(solutionKitInstallItems.runId, runId)).orderBy(asc(solutionKitInstallItems.position), asc(solutionKitInstallItems.createdAt)); return rows.map(normalizeItemRow); }
+const readSnapshotId = (value: unknown): string | null => isRecord(value) && typeof value.id === "string" ? value.id : null;
+const readDesiredSnapshot = (value: unknown): JsonObject => isRecord(value) && isRecord(value.desired) ? value.desired as JsonObject : isRecord(value) ? value as JsonObject : {};
+export const buildManagedResourceEvidenceQuery = (input: ManagedEvidenceInput) => {
+  const candidateItem = aliasedTable(solutionKitInstallItems, "managed_candidate_item"); const candidateRun = aliasedTable(solutionKitInstallRuns, "managed_candidate_run");
+  const rollbackRun = aliasedTable(solutionKitInstallRuns, "managed_rollback_run"); const rollbackItem = aliasedTable(solutionKitInstallItems, "managed_rollback_item");
+  const candidateItemId = sql<string>`${candidateItem.id}`.as("candidate_item_id"); const candidateItemCreatedAt = sql<Date>`${candidateItem.createdAt}`.as("candidate_item_created_at");
+  const candidateItemForRun = db.select({ candidateItemId, candidateItemCreatedAt }).from(candidateItem)
+    .where(and(eq(candidateItem.runId, candidateRun.id), eq(candidateItem.resourceType, input.kind as PersistedResourceType),
+      eq(candidateItem.resourceKey, input.key), eq(candidateItem.status, "success"), inArray(candidateItem.operation, ["create", "update"])))
+    .orderBy(desc(candidateItemCreatedAt), desc(candidateItemId)).limit(1).as("managed_candidate_item_for_run");
+  const matchingSuccessfulRollbackItem = db.select({ one: sql<number>`1` }).from(rollbackItem).where(and(eq(rollbackItem.runId, rollbackRun.id),
+    eq(rollbackItem.resourceType, input.kind as PersistedResourceType), eq(rollbackItem.resourceKey, input.key), eq(rollbackItem.status, "success")));
+  const invalidatingRollbackRun = db.select({ one: sql<number>`1` }).from(rollbackRun).where(and(eq(rollbackRun.rollbackOfRunId, candidateRun.id),
+    eq(rollbackRun.mode, "rollback"), or(eq(rollbackRun.status, "success"), exists(matchingSuccessfulRollbackItem))));
+  const candidateRunId = sql<string>`${candidateRun.id}`.as("candidate_run_id");
+  const winner = db.select({ candidateRunId, candidateItemId: candidateItemForRun.candidateItemId, candidateItemCreatedAt: candidateItemForRun.candidateItemCreatedAt })
+    .from(candidateRun).innerJoinLateral(candidateItemForRun, sql`true`).where(and(eq(candidateRun.kitId, input.packageKey), eq(candidateRun.mode, "apply"), eq(candidateRun.status, "success"), notExists(invalidatingRollbackRun)))
+    .orderBy(desc(candidateRun.createdAt), desc(candidateRun.updatedAt), desc(candidateRunId), desc(candidateItemForRun.candidateItemCreatedAt), desc(candidateItemForRun.candidateItemId)).limit(1).as("managed_resource_winner");
+  return db.select({ runId: winner.candidateRunId, afterSnapshot: solutionKitInstallItems.afterSnapshot }).from(winner).innerJoin(solutionKitInstallItems, eq(solutionKitInstallItems.id, winner.candidateItemId));
+};
+export const findManagedResourceEvidence = async (input: ManagedEvidenceInput): Promise<ManagedResourceEvidence | null> => {
+  const [row] = await buildManagedResourceEvidenceQuery(input); if (!row) return null; const resourceId = readSnapshotId(row.afterSnapshot); if (!resourceId) return null;
+  return { runId: row.runId, resourceId, desired: readDesiredSnapshot(row.afterSnapshot), successful: true, rolledBack: false };
+};
+const projectCompatibilityItems = (items: SolutionKitInstallItemRecord[]): PersistedFullSiteInstallLedgerItem[] => items
+  .filter((item) => item.operation === "create" || item.operation === "update" || item.operation === "noop").map((item) => ({ position: item.position,
+    kind: item.resourceType as FullSiteInstallResourceKind, key: item.resourceKey, operation: item.operation as "create" | "update" | "noop", status: item.status,
+    beforeSnapshot: item.beforeSnapshot as JsonObject | null, afterSnapshot: item.afterSnapshot as JsonObject | null, rollbackAction: item.rollbackAction as JsonObject | null, error: item.error }));
+export const createLegacyInstallReadPersistence = (): ReadPersistence => ({
+  async listItems(runId) { return projectCompatibilityItems(await listSolutionKitInstallItems(runId)); },
+  async listRawItems(runId): Promise<readonly RawFullSiteInstallLedgerItem[]> {
+    const rows = await db.select({ position: solutionKitInstallItems.position, kind: solutionKitInstallItems.resourceType, key: solutionKitInstallItems.resourceKey,
+      operation: solutionKitInstallItems.operation, status: solutionKitInstallItems.status, beforeSnapshot: solutionKitInstallItems.beforeSnapshot,
+      afterSnapshot: solutionKitInstallItems.afterSnapshot, rollbackAction: solutionKitInstallItems.rollbackAction, error: solutionKitInstallItems.error })
+      .from(solutionKitInstallItems).where(eq(solutionKitInstallItems.runId, runId)).orderBy(asc(solutionKitInstallItems.position), asc(solutionKitInstallItems.id)).limit(PACKAGE_LIMITS.resourcesTotal + 1);
+    if (rows.length > PACKAGE_LIMITS.resourcesTotal) throw new Error("site_package_rollback_invalid_source"); return rows;
+  }, findManagedResourceEvidence,
+});
+// legacyInstallRunPersistence/dryRunTerminalization.ts; this is the only extracted child that imports readPersistence.ts.
+import { and, asc, eq } from "drizzle-orm"; import { db } from "../../../db/client";
+import { solutionKitInstallItems, solutionKitInstallRuns } from "../../../db/schema"; import { PACKAGE_LIMITS } from "../fullSitePackage/types";
+import type { SolutionKitInstallItemRecord, SolutionKitInstallSummary } from "../legacyInstallPlanning";
+import type { FullSiteDryRunTerminalizationInput, FullSiteDryRunTerminalizationResult, FullSiteInstallLedgerPort } from "../fullSiteInstallTypes";
+import { buildSummary } from "./readPersistence";
+type SummaryRow = Pick<SolutionKitInstallItemRecord, "operation" | "status">;
+type DryRunDependencies = Readonly<{ readSummaryRows(runId: string, limit: number): Promise<readonly SummaryRow[]>; updateRunningDryRun(input: FullSiteDryRunTerminalizationInput, summary: SolutionKitInstallSummary): Promise<unknown>; readRunById(runId: string): Promise<unknown>; }>;
+declare const readExactDryRunTerminalizationInput: (value: unknown) => FullSiteDryRunTerminalizationInput; declare const readExactUpdateResult: (value: unknown, input: FullSiteDryRunTerminalizationInput) => boolean;
+declare const recoverExactTerminal: (value: unknown, input: FullSiteDryRunTerminalizationInput) => FullSiteDryRunTerminalizationResult; declare const freshFinalizeError: () => Error; declare const sanitizeDryRunTerminalizationError: (error: unknown) => Error;
+const defaultDryRunDependencies = {
+  readSummaryRows: async (runId: string, limit: number) => db.select({ operation: solutionKitInstallItems.operation, status: solutionKitInstallItems.status }).from(solutionKitInstallItems).where(eq(solutionKitInstallItems.runId, runId)).orderBy(asc(solutionKitInstallItems.position), asc(solutionKitInstallItems.id)).limit(limit),
+  updateRunningDryRun: async (input: FullSiteDryRunTerminalizationInput, summary: SolutionKitInstallSummary) => db.update(solutionKitInstallRuns).set({ status: input.status, error: input.error, summary, finishedAt: new Date() })
+    .where(and(eq(solutionKitInstallRuns.id, input.runId), eq(solutionKitInstallRuns.mode, "dry_run"), eq(solutionKitInstallRuns.status, "running"))).returning({ status: solutionKitInstallRuns.status, error: solutionKitInstallRuns.error }),
+  readRunById: async (runId: string) => (await db.select({ mode: solutionKitInstallRuns.mode, status: solutionKitInstallRuns.status,
+    error: solutionKitInstallRuns.error }).from(solutionKitInstallRuns).where(eq(solutionKitInstallRuns.id, runId)).limit(1))[0] ?? null,
+} satisfies DryRunDependencies;
+export const createDryRunTerminalization = (overrides: Partial<DryRunDependencies> = {}): Pick<FullSiteInstallLedgerPort, "terminalizeDryRun"> => {
+  const deps: DryRunDependencies = { readSummaryRows: overrides.readSummaryRows ?? defaultDryRunDependencies.readSummaryRows, updateRunningDryRun: overrides.updateRunningDryRun ?? defaultDryRunDependencies.updateRunningDryRun, readRunById: overrides.readRunById ?? defaultDryRunDependencies.readRunById };
+  return { async terminalizeDryRun(value: unknown) { try { const input = readExactDryRunTerminalizationInput(value); const rows = await deps.readSummaryRows(input.runId, PACKAGE_LIMITS.resourcesTotal + 1);
+    if (rows.length > PACKAGE_LIMITS.resourcesTotal) throw freshFinalizeError();
+    try { if (readExactUpdateResult(await deps.updateRunningDryRun(input, buildSummary([...rows])), input)) return { outcome: "desired_terminal" }; }
+    catch { return recoverExactTerminal(await deps.readRunById(input.runId), input); }
+    return recoverExactTerminal(await deps.readRunById(input.runId), input); } catch (error) { throw sanitizeDryRunTerminalizationError(error); } } };
+};
+// legacyInstallRunPersistence.ts: facade owns only the complementary Pick and imports both children; neither child imports it.
+import type { FullSiteInstallLedgerPort } from "./fullSiteInstallTypes";
+import { buildSummary, createLegacyInstallReadPersistence, listSolutionKitInstallItems, normalizeItemRow } from "./legacyInstallRunPersistence/readPersistence";
+import { createDryRunTerminalization } from "./legacyInstallRunPersistence/dryRunTerminalization";
+export { buildManagedResourceEvidenceQuery, buildSummary, findManagedResourceEvidence, listSolutionKitInstallItems, normalizeItemRow } from "./legacyInstallRunPersistence/readPersistence";
+type FacadePersistence = Pick<FullSiteInstallLedgerPort, "withPackageLock" | "createRun" | "recordItem" | "finalizeRun" | "getRun" | "patchRunMetadata" | "findLatestSuccessfulApplyRun" | "createRollbackRun" | "claimRollbackRun" | "findAutomaticCompensationRun" | "hasSuccessfulRollback">;
+type FacadeHandler<K extends keyof FacadePersistence> = NonNullable<FacadePersistence[K]>;
+declare const createFullSiteRun: FacadeHandler<"createRun">; declare const recordFullSiteItem: FacadeHandler<"recordItem">; declare const finalizeFullSiteRun: FacadeHandler<"finalizeRun">; declare const getFullSiteRun: FacadeHandler<"getRun">;
+declare const patchFullSiteRunMetadata: FacadeHandler<"patchRunMetadata">; declare const findLatestSuccessfulFullSiteApplyRun: FacadeHandler<"findLatestSuccessfulApplyRun">; declare const createFullSiteRollbackRun: FacadeHandler<"createRollbackRun">; declare const claimFullSiteRollbackRun: FacadeHandler<"claimRollbackRun">;
+declare const findAutomaticFullSiteCompensationRun: FacadeHandler<"findAutomaticCompensationRun">; declare const hasSuccessfulFullSiteRollback: FacadeHandler<"hasSuccessfulRollback">;
+const createLegacyWriteAndLockPersistence = (): FacadePersistence => ({ withPackageLock: withFullSiteInstallLocks,
+  createRun: createFullSiteRun, recordItem: recordFullSiteItem, finalizeRun: finalizeFullSiteRun, getRun: getFullSiteRun, patchRunMetadata: patchFullSiteRunMetadata,
+  findLatestSuccessfulApplyRun: findLatestSuccessfulFullSiteApplyRun, createRollbackRun: createFullSiteRollbackRun, claimRollbackRun: claimFullSiteRollbackRun,
+  findAutomaticCompensationRun: findAutomaticFullSiteCompensationRun, hasSuccessfulRollback: hasSuccessfulFullSiteRollback });
+type LegacyInstallLedgerOverrides = Readonly<{ dryRunTerminalization?: Parameters<typeof createDryRunTerminalization>[0] }>;
+export const createLegacyInstallLedger = (overrides: LegacyInstallLedgerOverrides = {}): FullSiteInstallLedgerPort => ({ ...createLegacyWriteAndLockPersistence(),
+  ...createLegacyInstallReadPersistence(), ...createDryRunTerminalization(overrides.dryRunTerminalization) });
+export const defaultLegacyInstallLedger = createLegacyInstallLedger();
+// fullSiteLegacyLedgerReadPersistence.test.ts moves (never copies) both named composition cases.
+import { expect, test } from "bun:test"; import { randomUUID } from "node:crypto"; import { fileURLToPath } from "node:url";
+const readSource = (path: string): Promise<string> => Bun.file(fileURLToPath(new URL(path, import.meta.url))).text();
+type ReadPersistenceModule = typeof import("../../../core/services/kits/legacyInstallRunPersistence/readPersistence");
+test("managed evidence uses one bounded executable SELECT", async () => {
+  const readModule: ReadPersistenceModule = await import("../../../core/services/kits/legacyInstallRunPersistence/readPersistence");
+  const sourcePath = "../../../core/services/kits/legacyInstallRunPersistence/readPersistence.ts"; const source = await readSource(sourcePath);
+  const start = source.indexOf("export const findManagedResourceEvidence"); const end = source.indexOf("\nexport const createLegacyInstallReadPersistence", start); const implementation = source.slice(start, end);
+  expect(start).toBeGreaterThanOrEqual(0); expect(end).toBeGreaterThan(start); expect(implementation.match(/buildManagedResourceEvidenceQuery/g)).toHaveLength(1); expect(implementation).toMatch(/const \[row\] = await buildManagedResourceEvidenceQuery\(input\)/);
+  const query = readModule.buildManagedResourceEvidenceQuery({ packageKey: `query-shape-${randomUUID()}`, kind: "form", key: "bounded-evidence" }); // retain current lines 445-508 compiled assertions exactly
+});
+test("shared ledger preserves omitted V1 evidence and honors an explicit null clear", async () => { /* move current lines 734-772 exactly */ });
+test("old construction literals and required rollbackAction remain compatible", async () => { /* exact matrix above */ }); test("listRawItems preserves hostile raw values/order and rejects row 513", async () => { /* exact matrix above */ });
+// fullSiteLegacyLedgerDryRunTerminalization.test.ts owns hostile/state/race/ambiguousCommitMatrix with local clients/harness only.
 ```
+Every declared `FacadeHandler` takes the matching current `createLegacyInstallLedger` method body from lines 709-939; only extraction and names change, and no child duplicates those bodies.
+Allowed dependency edges are facade -> both modules and dry terminalization -> read persistence (`buildSummary`) only; reverse edges, sibling-test imports and duplicate helper/case bodies are forbidden.
+The composition suite deletes rather than copies the named moved cases, retains facade/catalog, lock, resolver projection, metadata and DB-harness ownership, updates its exact L01-owned-file inventory with both child modules and focused suites, and neither focused suite imports the other or `fullSiteLegacyLedgerComposition.test.ts`. Both `full-site-install-planner.test.ts` construction literals add the new raw-read and dry-run methods with typed zero-write fakes; later-leaf fake ledgers remain untouched until their owning phase.
 
-Data flow: apply-supplied or direct-call-pre-read DAG -> total-order ledger
-evidence -> strict expected-ID/deterministic collision read -> native desired
-projection -> stable create/update/noop/conflict with unchanged dependencies.
-Errors: existing conflict/not-found/invalid codes plus exact safe
-`site_package_too_large`; zero planning writes except requested dry-run evidence.
+Data flow: apply-supplied or direct-call-pre-read DAG -> total-order ledger evidence -> strict expected-ID/deterministic collision read -> native desired projection -> stable create/update/noop/conflict with unchanged dependencies.
+Errors: existing conflict/not-found/invalid codes plus exact safe `site_package_too_large`; zero planning writes except requested dry-run evidence.
 
 L01 uses the graph-owner descriptor resolver/`normalizeDesired`; any descriptor targeting a planned create forces update even on placeholder equality; native preparation reuses the plan with actual IDs.
 
-Pure planner regressions pin two-arg pre-dependency build, three-arg frozen-array
-identity/no build, and false-noop prevention when current desired equals a create target's deterministic placeholder. L02 proves no public plan field.
-DB-backed managed-identity cases belong exclusively to L01's
-`tests/integration/kits/fullSiteManagedOwnershipDb.test.ts`: natural-key-only
-conflict, strict expected ID with no natural fallback, deterministic duplicate
-natural-key tie-break, mismatched snapshot ID, noop/failed/rolled-back runs,
-timestamp-tied evidence, matching successful ID plus normalized full-desired
-noop, intended managed update, and setting-takeover isolation. Add a bounded
-historical matrix with many successful apply candidates and mixed rollback runs:
-the newest invalid candidates are excluded by the two branches of the same
-combined predicate -- a successful rollback run without an item, or a matching
-successful item in a failed/running rollback run -- while a failed/running
-rollback without a successful matching item remains eligible, and the exact
-ordered winner is returned. Assert the compiled single-statement seam described
-above rather than claiming opaque driver instrumentation. The separately owned
-`tests/integration/kits/fullSiteManagedEvidenceExplainDb.test.ts` contains all
-and only the extracted EXPLAIN profiles, metrics/parsers, fixture helper, named
-budget test and sanitized summary specified above. Preserve the exact measured
-profiles, budgets, production query compilation and parameter binding during the
-extraction; do not re-baseline or simplify them.
-The independent `fullSiteResolverBoundsDb.test.ts` invokes the concrete resolver
-through strict exact parent IDs and owns six boundary cases: form fields,
-form actions and menu items at their exact 100/256 cap succeed with the complete
-canonical desired child set, while each corresponding cap+1 fixture rejects only
-with exact `Error("site_package_too_large")`, never a truncated/noop result. It
-imports no sibling test or sibling fixture. Each case enters `try/finally` before
-its first write, preallocates and records exact table-specific parent/child IDs
-before bulk inserts, and cleans only those child IDs then parent IDs; partial seed
-failure is safe and no broad predicate/global-empty assumption is allowed. The
-file and its direct Bun command use a hard timeout of `360_000`/`360000` ms.
+Pure planner regressions pin two-arg pre-dependency build, three-arg frozen-array identity/no build, and false-noop prevention when current desired equals a create target's deterministic placeholder; L02 proves no public plan field.
+DB-backed managed-identity cases belong exclusively to L01's `tests/integration/kits/fullSiteManagedOwnershipDb.test.ts`: natural-key-only conflict, strict expected ID with no natural fallback, deterministic duplicate natural-key tie-break, mismatched snapshot ID, noop/failed/rolled-back runs, timestamp-tied evidence, matching successful ID plus normalized full-desired noop, intended managed update, and setting-takeover isolation.
+Add a bounded historical matrix with many successful apply candidates and mixed rollback runs: exclude newest invalid candidates through either branch of the same combined predicate -- a successful rollback run without an item, or a matching successful item in a failed/running rollback run -- while a failed/running rollback without a successful matching item remains eligible and the exact ordered winner is returned.
+Assert the compiled single-statement seam above rather than opaque driver instrumentation. Separately owned `tests/integration/kits/fullSiteManagedEvidenceExplainDb.test.ts` contains only the extracted EXPLAIN profiles, metrics/parsers, fixture helper, named budget test and sanitized summary.
+Preserve the exact measured profiles, budgets, production query compilation and parameter binding during extraction; do not re-baseline or simplify them.
+The independent `fullSiteResolverBoundsDb.test.ts` invokes the concrete resolver through strict exact parent IDs and owns six boundary cases: form fields, form actions and menu items at exact 100/256 cap succeed with the complete canonical desired child set, while each cap+1 fixture rejects only with exact `Error("site_package_too_large")`, never a truncated/noop result.
+It imports no sibling test/fixture; each case enters `try/finally` before its first write, preallocates and records exact table-specific parent/child IDs before bulk inserts, and cleans only those child IDs then parent IDs. Partial seed failure is safe, no broad predicate/global-empty assumption is allowed, and the file/direct Bun command uses `360_000`/`360000` ms.
 The planner/concrete-resolver integration counts
 `findManagedResourceEvidence` calls for a dependency-bearing package and proves
 the count equals the number of planned resource identities, with both explicit
@@ -803,7 +804,8 @@ proof. The counted valid envelope still proves one dependency-property read.
 The three resolver projection source-shape assertions belong in the Bun-owned
 `fullSiteLegacyLedgerComposition.test.ts`; do not import the DB-coupled resolver
 into the pure Vitest planner lane merely to inspect its source.
-The L01 type/ledger gate compiles old construction literals, proves `listItems()`
+The independently runnable `fullSiteLegacyLedgerReadPersistence.test.ts` gate
+compiles old construction literals, proves `listItems()`
 still returns required `rollbackAction`, and proves an omitted phase field cannot
 clear V1. It also assigns every raw field directly to `unknown`, then seeds
 unknown/delete/restore operations plus scalar, array and null snapshot/action
@@ -813,7 +815,8 @@ values and proves `listRawItems()` returns every row unchanged in
 `const requiredAction: JsonObject | null = listed.rollbackAction` (without
 optional chaining, fallback or cast) pins the compatibility projection; L03 tests
 alone pin raw-to-persisted validation and matching legacy-null action semantics.
-The same suite calls `terminalizeDryRun` through hostile unknown inputs/results,
+The independently runnable `fullSiteLegacyLedgerDryRunTerminalization.test.ts`
+calls `terminalizeDryRun` through hostile unknown inputs/results,
 pins exact-key/pair/result rejection and cause-free codes, and uses two independent
 DB clients to race `success/null` against `failed/<safe-code>`. Exactly one
 conditional update wins; its caller observes `desired_terminal`, the loser
@@ -826,9 +829,9 @@ recovery observes `desired_terminal` rather than overwriting or duplicating work
 The planner's pure no-write test gives every planner-visible ledger mutation
 method installed on the fake a counting implementation that increments and
 throws if called, rather than a silent no-op. Pin `withPackageLock`, `createRun`,
-`recordItem`, `finalizeRun`, `patchRunMetadata`, `createRollbackRun` and
-`claimRollbackRun`; after planning, assert every individual mutation count and
-their sum are exactly zero. Evidence reads remain separately counted.
+`recordItem`, `finalizeRun`, `terminalizeDryRun`, `patchRunMetadata`,
+`createRollbackRun` and `claimRollbackRun`; after planning, assert every
+individual mutation count and their sum are exactly zero. Evidence reads remain separately counted.
 
 The DB harness in `fullSiteLegacyLedgerComposition.test.ts` owns a testable
 `isDatabaseUrlConfigured(value)` helper: only `undefined` returns false, while
@@ -892,7 +895,7 @@ composition remains usable before L02 lands.
 
 ## Sub-Tasks
 
-- [x] Extract the exact bounded legacy modules, ledger port + DB implementation,
+- [x] Extract the initial bounded legacy modules, ledger port + DB implementation,
   default legacy composition and compatibility facade above.
 - [x] Add the planner and its initial pure Vitest coverage.
 - [ ] Re-run and pin the delivered two-lock, strict V1 rollback-action,
@@ -915,25 +918,29 @@ composition remains usable before L02 lands.
   code across the exact four-stage initializer, and rebuild every managed-ownership
   fixture around preallocated exact-ID ownership with `try/finally` active before
   its first mutation.
-- [ ] Add the exact atomic dry-run terminalization port/DB method, concurrent
-  first-winner and ambiguous-commit/idempotency matrix without adding a path.
+- [ ] Before adding raw reads or dry-run arbitration, split the 945-line facade
+  into the two cohesive modules above, preserve public facade imports/exports, move
+  (not duplicate) each focused matrix out of the 1,000-line composition test, then add exact terminalization concurrency/ambiguous-commit coverage.
 
 ## Testing Requirements
 
 - `bunx vitest run --config vitest.config.ts tests/vitest/kits/full-site-install-planner.test.ts`
-- `set -a && source /home/coder/project/Coderso/.env && set +a`
-- Use that command only to load DB/settings validation variables; never inspect,
-  print, copy, hash or persist `.env` contents.
-- `bun test --timeout 360000 tests/unit/kits/installService.test.ts tests/unit/kits/fullSiteLegacyLedgerComposition.test.ts`
-- `bun test --timeout 360000 tests/integration/kits/fullSiteManagedOwnershipDb.test.ts`
-- `bun test --timeout 360000 tests/integration/kits/fullSiteManagedEvidenceExplainDb.test.ts`
-- `bun test --timeout 360000 tests/integration/kits/fullSiteResolverBoundsDb.test.ts`
+- Freshly prefix every Bun DB command below in its own shell with `set -a && source /home/coder/project/Coderso/.env && set +a`; never inspect, print, copy, hash or persist its contents.
+- `set -a && source /home/coder/project/Coderso/.env && set +a && bun test --parallel=1 --timeout=360000 tests/unit/kits/installService.test.ts tests/unit/kits/fullSiteLegacyLedgerComposition.test.ts`
+- `set -a && source /home/coder/project/Coderso/.env && set +a && bun test --parallel=1 --timeout=360000 tests/unit/kits/fullSiteLegacyLedgerReadPersistence.test.ts`
+- `set -a && source /home/coder/project/Coderso/.env && set +a && bun test --parallel=1 --timeout=360000 tests/unit/kits/fullSiteLegacyLedgerDryRunTerminalization.test.ts`
+- `set -a && source /home/coder/project/Coderso/.env && set +a && bun test --parallel=1 --timeout=360000 tests/integration/kits/fullSiteManagedOwnershipDb.test.ts`
+- `set -a && source /home/coder/project/Coderso/.env && set +a && bun test --parallel=1 --timeout=360000 tests/integration/kits/fullSiteManagedEvidenceExplainDb.test.ts`
+- `set -a && source /home/coder/project/Coderso/.env && set +a && bun test --parallel=1 --timeout=360000 tests/integration/kits/fullSiteResolverBoundsDb.test.ts`
 - `bun --cwd core lint` and `bun --cwd core lint:types`
 - Every other TASK-547 DB-targeted command/test timeout is likewise at least
   `--timeout 360000` / `360_000` ms; do not raise unrelated non-DB timeouts.
 - Replace both `15_000` DB-lock overrides in
   `fullSiteLegacyLedgerComposition.test.ts` and the EXPLAIN suite's `120_000`
   override with `360_000`; no L01 DB test may retain a lower hard timeout.
+- After the focused-test move, replace `pollUntil`'s 100 × 20 ms limit with a
+  monotonic `DB_EVENTUALLY_DEADLINE_MS = 360_000` deadline; retain bounded
+  polling/`db_lock_state_timeout`, stay below 1,000 lines and duplicate no moved cases.
 - Corrective L01 completion must first commit its promised
   `RawFullSiteInstallLedgerItem` and `listRawItems()` owners. The L03 pre-land
   bridge may then consume them but may never redeclare them. After that bridge
@@ -948,7 +955,7 @@ composition remains usable before L02 lands.
   unowned diagnostic in that pre-dispatch baseline;
   unlocated/unparsed diagnostics, new unowned diagnostics and ambiguous owners
   block TASK-547-02-L02 dispatch/checkpoint progression. The gate reports the remaining later-leaf and unchanged-baseline
-  counts explicitly and must not describe a non-zero global run as clean.
+  counts explicitly and must not describe a non-zero global run as clean. The generic record validator admits nonzero only for exact command ID `root-typecheck`; the phase passes only after this classifier, and no other command receives that exception.
 - Reader/type/planner gate: execute the exact hostile/4,096/4,097 matrix above;
   keep the required `rollbackAction` direct assignment without `?.`, `??` or cast,
   throwing zero-call planner-write spies, and one self-evidence lookup for a
@@ -964,8 +971,7 @@ composition remains usable before L02 lands.
   extra member fail. It proves the two content-entry identity selects plus one
   desired select, rejects bare selects, retains all literal forbidden-reference
   checks, and pins child cap imports, `orderIndex,id`, cap+1 limits and pre-project
-  oversize guards. DB behavior preserves exact-ID/natural lookup and proves all
-  six exact-cap/cap+1 child boundaries without truncation.
+  oversize guards. DB behavior preserves exact-ID/natural lookup and proves all six exact-cap/cap+1 child boundaries without truncation.
 - Source/query-shape gate: one compiled builder SELECT must retain the exact
   run-driven lateral winner, filters, anti-join, aliases, ordering, limits and
   outer fetch defined above. Reject item-driven winners, duplicate/unaliased IDs,
@@ -988,6 +994,5 @@ composition remains usable before L02 lands.
 - Only after both plan profiles pass, confirm `git diff --name-only` contains no
   DB migration, snapshot or journal artifact for this correction. A budget
   failure instead blocks L01 for index-migration contract re-audit.
-- Run all three L01 DB integration files independently, then `wc -l` every
-  L01-owned changed production/test file; each must be at most 1,000 physical
-  lines.
+- Run the two new focused tests and all three L01 DB integration files independently,
+  then `wc -l` every changed L01 production/test file; each must be at most 1,000 lines.

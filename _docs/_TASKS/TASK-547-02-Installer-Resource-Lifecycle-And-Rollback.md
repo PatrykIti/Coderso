@@ -78,7 +78,8 @@ leaf nor a new ownership path. Each phase reads its predecessor's on-disk state.
 
 - **L01 -- shared lifecycle substrate:** TASK-547-01 package kind/identity aliases,
   shared install types/ledger port,
-  concrete legacy persistence, legacy installer composition, deterministic
+  stable public legacy-persistence facade over cohesive read-persistence and
+  dry-run-terminalization modules, legacy installer composition, deterministic
   planner whose apply overload consumes the caller-bound private reference plan
   without rebuilding while its gate-compatible direct overload builds pre-read,
   strict current-resource resolver, two-lock coordination, versioned dependency
@@ -109,7 +110,11 @@ leaf nor a new ownership path. Each phase reads its predecessor's on-disk state.
   consumes, but cannot edit, the L02 adapter/default-registry owners.
 
 Every touched human-authored production or test module must finish at most 1,000
-physical lines. In particular, L02 must split the legacy
+physical lines. Before L01 adds raw reads or dry-run arbitration, it must split
+the current 945-line persistence module by the two responsibilities above and
+move the corresponding cases from the exactly 1,000-line composition test into
+two independently runnable focused tests; public facade imports/exports remain
+stable and moved cases are not duplicated. In particular, L02 must split the legacy
 `core/services/content/entryService.ts`, the adapter facade and any touched
 near-limit adapter/test suite by cohesive responsibility before adding behavior.
 
@@ -966,17 +971,18 @@ resume outcomes only from immutable raw rows.
 
 ## Testing Requirements
 
-- `set -a && source /home/coder/project/Coderso/.env && set +a`
-- Use that command only to load DB/settings validation variables; never inspect,
-  print, copy, hash or persist `.env` contents.
-- `bun test --timeout 360000 tests/unit/kits/installService.test.ts tests/integration/routes/solutionKitsRoutes.test.ts`
-- `bun test --timeout 360000 tests/unit/content/typeService.test.ts tests/unit/pages/pageTemplateLibraryService.test.ts tests/unit/content/listingTemplatesService.test.ts tests/unit/content/listingQueriesService.test.ts tests/unit/settings/settingsService.test.ts tests/unit/settings/fullSiteSettingsAtomicService.test.ts`
+- Freshly prefix every Bun DB/settings command below in its own shell with `set -a && source /home/coder/project/Coderso/.env && set +a`; never inspect, print, copy, hash or persist its contents.
+- `set -a && source /home/coder/project/Coderso/.env && set +a && bun test --parallel=1 --timeout=360000 tests/unit/kits/installService.test.ts tests/integration/routes/solutionKitsRoutes.test.ts`
+- `set -a && source /home/coder/project/Coderso/.env && set +a && bun test --parallel=1 --timeout=360000 tests/unit/kits/fullSiteLegacyLedgerComposition.test.ts tests/unit/kits/fullSiteLegacyLedgerReadPersistence.test.ts tests/unit/kits/fullSiteLegacyLedgerDryRunTerminalization.test.ts`
+- `set -a && source /home/coder/project/Coderso/.env && set +a && bun test --parallel=1 --timeout=360000 tests/unit/content/typeService.test.ts tests/unit/pages/pageTemplateLibraryService.test.ts tests/unit/content/listingTemplatesService.test.ts tests/unit/content/listingQueriesService.test.ts tests/unit/settings/settingsService.test.ts tests/unit/settings/fullSiteSettingsAtomicService.test.ts`
 - targeted Form/Menu/Page/entry/detail aggregate/lifecycle and full-site adapter
   suites from L02, including all nine exact-ID replace/delete race cases
-- `bun test --timeout 360000 tests/integration/kits/fullSiteManagedOwnershipDb.test.ts`
-- `bun test --timeout 360000 tests/unit/kits/fullSiteCompensationDependencies.test.ts`
-- `bun test --timeout 360000 tests/integration/kits/fullSiteCrashRecoveryDb.test.ts` (real SIGKILL
+- `set -a && source /home/coder/project/Coderso/.env && set +a && bun test --parallel=1 --timeout=360000 tests/integration/kits/fullSiteManagedOwnershipDb.test.ts`
+- `set -a && source /home/coder/project/Coderso/.env && set +a && bun test --parallel=1 --timeout=360000 tests/unit/kits/fullSiteCompensationDependencies.test.ts`
+- `set -a && source /home/coder/project/Coderso/.env && set +a && bun test --parallel=1 --timeout=360000 tests/integration/kits/fullSiteCrashRecoveryDb.test.ts` (real SIGKILL
   matrix and two-package shared-shell concurrency)
 - `bun --cwd core lint` and `bun --cwd core lint:types`
 - `bun run scan:security:strict`
+- L01 replaces the composition test's 100 × 20 ms DB poll with a monotonic
+  `DB_EVENTUALLY_DEADLINE_MS = 360_000` bounded deadline after the test split.
 - touched-file line counts
