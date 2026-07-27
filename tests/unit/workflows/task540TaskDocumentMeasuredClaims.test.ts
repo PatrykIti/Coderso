@@ -31,8 +31,14 @@ import path from "node:path";
  *
  *   1. A size claim of the form `<path>` [is|at] <number> where <path> resolves to a
  *      real file, and the number disagrees with `wc -l` of that file.
+ *   1b. The same claim with the subject written in prose instead of backticks -- "the
+ *      executor facade is **976 lines**" -- plus the two tree-wide figures the family
+ *      states the same way ("the largest of the 162 child modules ... is 964"). See
+ *      PROSE_CLAIMS: the facade's length alone is claimed at six sites across four
+ *      documents, of which the backticked pattern above sees exactly one.
  *   2. The smoke modularization described as pending while the tree shows it finished --
- *      or described as finished while the tree shows it pending. Both directions.
+ *      or described as finished while the tree shows it pending. Both directions, and
+ *      only when the sentence carries no history marker and no completion marker.
  *   3. A `negativeCases: <n>` in the TASK-540-07 family that disagrees with what the
  *      contract/executor self-tests actually return when run.
  *
@@ -44,6 +50,11 @@ import path from "node:path";
  *     here. It is a git-range fact, and which commits count depends on a filter the prose
  *     has to name; no scanner can infer the intended one.
  *   - Claims about files that do not resolve to a path in this repo.
+ *   - A prose subject that PROSE_CLAIMS does not name. Prose has no fixed vocabulary, so
+ *     that list can only ever cover the phrasings the family actually uses; a document
+ *     that invents a new way to say "the facade" is invisible until the entry is added.
+ *     Each entry must still match somewhere, so one that falls out of use fails loudly
+ *     instead of quietly guarding nothing.
  *   - Whether a number is the RIGHT KIND of measurement. If a document says
  *     `foo.ts` 240 meaning "240 test cases", and foo.ts happens to be 240 lines, this
  *     test is satisfied and should not be.
@@ -76,6 +87,20 @@ const LINE_LIMIT = 1000;
 function physicalLines(absolutePath: string): number {
   const contents = readFileSync(absolutePath, "utf8");
   return contents.split("\n").length - (contents.endsWith("\n") ? 1 : 0);
+}
+
+/** Every module the smoke split produced, discovered from the tree rather than listed. */
+function smokeChildModules(): string[] {
+  const found: string[] = [];
+  const walk = (dir: string): void => {
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      const full = path.join(dir, entry.name);
+      if (entry.isDirectory()) walk(full);
+      else if (entry.name.endsWith(".mjs")) found.push(full);
+    }
+  };
+  walk(smokeDir);
+  return found;
 }
 
 const familyDocs = readdirSync(tasksDir)
@@ -182,10 +207,73 @@ function lineFor(unit: ScanUnit, offset: number): number {
  *   `task-540-local-orchestrator.mjs` 3,966      <- the shape that kept going stale
  *
  * The trailing guard rejects "73-test", "22/22" and "1.5" -- a number fused to a word,
- * a ratio, or a decimal is not a line count.
+ * a ratio, or a decimal is not a line count. It deliberately does NOT reject a trailing
+ * "." that ends a sentence: the earlier form excluded any following "." at all, so
+ * "the smoke entry point `task-540-smoke-executor.mjs` is 976." -- a claim that happens
+ * to close its sentence -- was silently skipped. `\.\d` keeps the decimal out.
  */
-const SIZE_CLAIM =
-  /`([\w./-]+\.(?:mjs|ts|tsx|js))`(?:\s+(?:is|at|gave|was))?\s+\*{0,2}(\d[\d,]*\d|\d)\*{0,2}(?![\d,]*[-\w%/.])/gu;
+const NOT_A_LINE_COUNT = String.raw`(?![\d,]*(?:[-\w%/]|\.\d))`;
+/** A literal backtick: `\`` is not a legal escape inside a /u pattern. */
+const TICK = "`";
+const SIZE_CLAIM = new RegExp(
+  TICK +
+    String.raw`([\w./-]+\.(?:mjs|ts|tsx|js))` +
+    TICK +
+    String.raw`(?:\s+(?:is|at|gave|was))?\s+\*{0,2}(\d[\d,]*\d|\d)\*{0,2}` +
+    NOT_A_LINE_COUNT,
+  "gu"
+);
+
+/**
+ * The same measurement with the subject named in prose, and the two tree-wide figures the
+ * family writes the same way. SIZE_CLAIM needs a backticked path, and five of the six
+ * places this family states the executor facade's length do not have one -- they say "the
+ * executor facade is **976 lines**". So the one site that did have one was the only site
+ * guarded, and correctly updating it while the other five rot passed green: exactly the
+ * sibling-copy failure this file exists to close.
+ *
+ * `measure` runs at test time against the tree. There is no expected number here, in
+ * keeping with the rule at the top of this file: a test that pins a literal becomes the
+ * reason a wrong literal survives.
+ */
+type ProseClaim = { label: string; pattern: RegExp; measure: () => number };
+
+const PROSE_CLAIMS: readonly ProseClaim[] = [
+  {
+    // "the executor facade is **976 lines**", "executor facade 976,", "the facade is 976".
+    // "every facade and child owner" cannot match: the subject must be "the"/"executor",
+    // and the numeral must follow immediately, at most through one copula.
+    label: "_docs/_workflows/task-540-smoke-executor.mjs",
+    pattern: new RegExp(
+      String.raw`(?:executor|the) facade(?:\s+(?:is|at|was|of))?\s+\*{0,2}(\d[\d,]*\d|\d)\*{0,2}` +
+        NOT_A_LINE_COUNT,
+      "giu"
+    ),
+    measure: () => physicalLines(path.join(root, "_docs/_workflows/task-540-smoke-executor.mjs")),
+  },
+  {
+    // "... child modules under `_docs/_workflows/task-540-smoke/**` is 964" and the
+    // copula-less "... `_docs/_workflows/task-540-smoke/**` 964". Where the family names
+    // the module instead ("the largest is `x.mjs` at 964"), the numeral does not follow
+    // the glob and SIZE_CLAIM has it already.
+    label: "largest module under _docs/_workflows/task-540-smoke/**",
+    pattern: new RegExp(
+      TICK +
+        String.raw`_docs/_workflows/task-540-smoke/\*\*` +
+        TICK +
+        String.raw`(?:\s+(?:the\s+)?largest)?(?:\s+(?:is|at))?\s+\*{0,2}(\d[\d,]*\d|\d)\*{0,2}` +
+        NOT_A_LINE_COUNT,
+      "gu"
+    ),
+    measure: () => Math.max(...smokeChildModules().map(physicalLines)),
+  },
+  {
+    // "the largest of the 162 child modules".
+    label: "child modules under _docs/_workflows/task-540-smoke/**",
+    pattern: /\b(\d[\d,]*\d|\d)\s+child modules\b/giu,
+    measure: () => smokeChildModules().length,
+  },
+];
 
 /** Markers that make a number a record of the past rather than a current measurement. */
 const HISTORY_MARKER =
@@ -228,6 +316,7 @@ function isMeasurementClaim(unitText: string, matchIndex: number, numeral: strin
 test("every current line-count claim in the TASK-540 documents agrees with the file", () => {
   const checked: string[] = [];
   const mismatches: string[] = [];
+  const proseSites = new Map<string, string[]>(PROSE_CLAIMS.map(({ label }) => [label, []]));
 
   for (const doc of familyDocs) {
     for (const unit of scanUnits(doc.lines)) {
@@ -249,6 +338,25 @@ test("every current line-count claim in the TASK-540 documents agrees with the f
           );
         }
       }
+
+      for (const claim of PROSE_CLAIMS) {
+        for (const match of unit.text.matchAll(claim.pattern)) {
+          const numeral = match[1];
+          const at = match.index ?? 0;
+          if (!isMeasurementClaim(unit.text, at, numeral)) continue;
+
+          const claimed = Number(numeral.replace(/,/gu, ""));
+          const actual = claim.measure();
+          const site = `${doc.name}:${lineFor(unit, at)}`;
+          proseSites.get(claim.label)?.push(site);
+          checked.push(`${site} ${claim.label}=${claimed}`);
+          if (claimed !== actual) {
+            mismatches.push(
+              `${site}: claims ${claim.label} is ${numeral}, but it measures ${actual}`
+            );
+          }
+        }
+      }
     }
   }
 
@@ -256,21 +364,34 @@ test("every current line-count claim in the TASK-540 documents agrees with the f
   // This is a floor of one, not a pinned population -- it cannot itself go stale.
   expect(checked.length).toBeGreaterThan(0);
 
+  // Same idea, per prose subject: a pattern that matches nothing guards nothing, and does
+  // it silently. Listing the empty labels rather than counting them says which one broke.
+  expect([...proseSites].filter(([, sites]) => sites.length === 0).map(([label]) => label)).toEqual(
+    []
+  );
+
   expect(mismatches).toEqual([]);
 });
 
+/**
+ * A completion marker. Together with HISTORY_MARKER this is what lets a keyword tripwire
+ * tell the three cases apart:
+ *
+ *   pending  "the remaining prerequisite is the smoke modularization"
+ *   done     "the modularization is done as of 2026-07-27"        <- DONE_MARKER
+ *   was      "Historically the remaining prerequisite was the ..."  <- HISTORY_MARKER
+ *
+ * Without them the scan is a bare search for the token `modulariz` in five phrasings, and
+ * a document that correctly records the step as finished trips it. That is the inverse
+ * failure that makes a test worse than nothing: it reds on the CORRECT edit, so the next
+ * author deletes the test instead of the drift.
+ */
+const DONE_MARKER =
+  /\b(?:is|are|was|were)\s+(?:\*\*)?(?:done|complete|completed|finished|satisfied)\b|\b(?:has|have)\s+(?:since\s+)?(?:stabilized|finished|completed)\b|\bstruck from the remaining work\b/i;
+
 test("the documents agree with the tree about whether smoke modularization is finished", () => {
   const facade = physicalLines(path.join(root, "_docs/_workflows/task-540-smoke-executor.mjs"));
-
-  const childModules: string[] = [];
-  const collect = (dir: string): void => {
-    for (const entry of readdirSync(dir, { withFileTypes: true })) {
-      const full = path.join(dir, entry.name);
-      if (entry.isDirectory()) collect(full);
-      else if (entry.name.endsWith(".mjs")) childModules.push(full);
-    }
-  };
-  collect(smokeDir);
+  const childModules = smokeChildModules();
 
   // Guard the guard: an empty tree would make "largest" meaningless.
   expect(childModules.length).toBeGreaterThan(0);
@@ -289,11 +410,25 @@ test("the documents agree with the tree about whether smoke modularization is fi
     /modulariz[a-z]*[^.]*\bis (?:the )?(?:current|remaining|next|blocking)\b/i,
   ];
 
+  /**
+   * WHAT THIS RULE CANNOT SEE, since a marker test cannot read intent:
+   *
+   *   - A sentence that says the step is done AND names it as the current blocker in the
+   *     same breath. The completion marker wins and the contradiction is invisible.
+   *   - A pending claim spread over two sentences ("The blocker remains. It is the smoke
+   *     modularization."): the phrasing and the marker never share a sentence, so the
+   *     phrasing is read bare -- which errs toward reporting, not toward silence.
+   *   - A completion marker attached to something else in the same sentence ("the audit
+   *     is complete; the remaining prerequisite is the smoke modularization") -- real
+   *     drift, waved through. Sentence scope is the whole of the resolution here.
+   */
   const pendingSites: string[] = [];
   for (const doc of familyDocs) {
     const text = doc.lines.join("\n");
     for (const pattern of PENDING_PHRASING) {
       for (const match of text.matchAll(new RegExp(pattern.source, pattern.flags + "g"))) {
+        const sentence = sentenceAround(text, match.index ?? 0);
+        if (HISTORY_MARKER.test(sentence) || DONE_MARKER.test(sentence)) continue;
         const line = text.slice(0, match.index ?? 0).split("\n").length;
         pendingSites.push(`${doc.name}:${line}: ${match[0].replace(/\s+/gu, " ").slice(0, 110)}`);
       }
