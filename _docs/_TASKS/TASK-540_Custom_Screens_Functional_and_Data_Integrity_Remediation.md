@@ -469,7 +469,7 @@ treated as non-blocking during TASK-540 closure.
 | TASK-540-04 | Dirty navigation and async/cache recovery | TASK-540-04-L01..L04 | 🚧 In Progress |
 | TASK-540-05 | Responsive canvas, ARIA, and user preferences | TASK-540-05-L01, L02 | 🚧 In Progress |
 | TASK-540-06 | Tests, smoke, and closure | TASK-540-06-L01 | 🚧 In Progress |
-| TASK-540-07 | Smoke option-selector correction and first-failure reporting | TASK-540-07-L01, L02 | ⏳ To Do |
+| TASK-540-07 | Smoke option-selector correction and first-failure reporting | TASK-540-07-L01, L02 | 🚧 In Progress |
 
 ## Hard family-wide modularity gate
 
