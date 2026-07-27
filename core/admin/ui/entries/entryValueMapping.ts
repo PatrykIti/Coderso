@@ -39,6 +39,25 @@ export function buildInitialValues(fields: ContentField[], data: Record<string, 
   }, {});
 }
 
+/**
+ * Merges a fetched snapshot's values with the ones the user still owns: `baseValues`
+ * wins everywhere except the field names `isEditedFieldName` claims. Keeping the whole
+ * current record instead (`{ ...baseValues, ...currentValues }`) let a value hydrated
+ * from an OLDER snapshot shadow a newer one, because "present in state" is not the same
+ * fact as "edited by the user".
+ */
+export function mergeEditedFieldValues(
+  baseValues: Record<string, unknown>,
+  currentValues: Record<string, unknown>,
+  isEditedFieldName: (fieldName: string) => boolean
+): Record<string, unknown> {
+  const merged: Record<string, unknown> = { ...baseValues };
+  Object.keys(currentValues).forEach((fieldName) => {
+    if (isEditedFieldName(fieldName)) merged[fieldName] = currentValues[fieldName];
+  });
+  return merged;
+}
+
 export type EntryPayloadDataInput = Readonly<{
   fields: ContentField[];
   values: Record<string, unknown>;

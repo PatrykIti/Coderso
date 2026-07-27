@@ -123,8 +123,17 @@ type EntryMetadataPanelProps = {
   scrollable?: boolean;
   onSave?: () => void;
   isSaving?: boolean;
+  // False while the host holds no loaded entry. This panel PATCHes status, visibility,
+  // schedule, SEO and taxonomy TOGETHER, so saving before the entry has hydrated would push
+  // its pristine mount defaults (draft, public, no schedule, empty SEO) over the server's
+  // state. Absent means "no such gate", which is how the post editor mounts it.
+  canSave?: boolean;
   onDelete?: () => void;
   isDeleting?: boolean;
+  // False while the host holds no loaded entry, for the same reason as `canSave` and one of
+  // its own: the confirm dialog names the entry from the host's title, which is empty until
+  // hydration, so this would ask the user to confirm destroying a row they were never shown.
+  canDelete?: boolean;
 };
 
 export function EntryMetadataPanel({
@@ -158,8 +167,10 @@ export function EntryMetadataPanel({
   scrollable = true,
   onSave,
   isSaving,
+  canSave,
   onDelete,
   isDeleting,
+  canDelete,
 }: EntryMetadataPanelProps) {
   const [categoryInput, setCategoryInput] = useState("");
   const [tagInput, setTagInput] = useState("");
@@ -565,7 +576,12 @@ export function EntryMetadataPanel({
       {revisionsSlot}
       {onSave ? (
         <div className="flex items-center justify-end">
-          <Button size="sm" className="gap-2" onClick={onSave} disabled={isSaving}>
+          <Button
+            size="sm"
+            className="gap-2"
+            onClick={onSave}
+            disabled={isSaving || canSave === false}
+          >
             <Save className="h-4 w-4" />
             {isSaving ? "Saving..." : "Save metadata"}
           </Button>
@@ -581,7 +597,7 @@ export function EntryMetadataPanel({
             variant="destructive"
             size="sm"
             className="w-full gap-2"
-            disabled={isDeleting}
+            disabled={isDeleting || canDelete === false}
             onClick={onDelete}
           >
             <Trash2 className="h-4 w-4" />
