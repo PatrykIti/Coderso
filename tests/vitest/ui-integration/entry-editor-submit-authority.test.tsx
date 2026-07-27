@@ -12,6 +12,7 @@ import { afterEach, beforeEach, expect, test, vi } from "vitest";
 
 import {
   findHeaderButton,
+  findHeaderProbe,
   findMetadataButton,
   findSaveDraft,
   flushMicrotasks,
@@ -82,6 +83,18 @@ vi.mock(
   "../../../core/admin/ui/entries/entryChecklist",
   async () => (await fixture()).entryChecklistModule
 );
+// Not a stub: the real header, wrapped, so the gated Save draft / Publish keep their real
+// labels and their real `disabled` wiring while two ungated probes call the same
+// `onSaveDraft` / `onPublish` props. See `withUngatedHeaderProbes`.
+vi.mock("../../../core/admin/ui/entries/EntryEditorHeader", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("../../../core/admin/ui/entries/EntryEditorHeader")>();
+  return {
+    EntryEditorHeaderActions: (await harness()).withUngatedHeaderProbes(
+      actual.EntryEditorHeaderActions
+    ),
+  };
+});
 
 beforeEach(resetEntryEditorLane);
 
@@ -222,6 +235,48 @@ test("an entry that never hydrated can be saved or published through no channel 
       published: editorState.publishCalls,
     }).toEqual({ updates: [], metadata: [], published: [] });
     expect([save.disabled, publish.disabled, metadataSave.disabled]).toEqual([true, true, true]);
+  } finally {
+    view.cleanup();
+  }
+});
+
+// The case above asserts the buttons AND the requests, but for the two header channels it can
+// only assert the buttons: happy-dom does not dispatch a click on a disabled element, and React
+// refuses to call `onClick` when the element's props say `disabled`, so the click never reaches
+// `handleSaveDraft` or `handlePublish` whether or not they guard themselves. Removing
+// `refuseUnloadedSubmit()` from both of them left that case green. What follows drives the same
+// two props through ungated probes, so the assertion observes the editor refusing rather than an
+// attribute — the button gate is a courtesy, the handler is the guarantee.
+test("the save and publish handlers refuse an unloaded entry themselves, not only through their buttons", async () => {
+  window.history.replaceState({}, "", "/admin/advanced/entries/articles/entry-1");
+  const { EntryEditor } = await import("../../../core/admin/ui/entries/EntryEditor");
+
+  const view = mount(<EntryEditor />);
+  try {
+    // The baseline read is still open, so nothing has hydrated and no other failure is in
+    // play: `fields` and `values` are empty and a save would PATCH `data: {}` over the
+    // stored entry.
+    await React.act(async () => {
+      await flushMicrotasks();
+    });
+    expect([
+      findSaveDraft(view.container).disabled,
+      findHeaderButton(view.container, "Publish").disabled,
+    ]).toEqual([true, true]);
+
+    await React.act(async () => {
+      findHeaderProbe(view.container, "data-header-save-draft-ungated").click();
+      findHeaderProbe(view.container, "data-header-publish-ungated").click();
+      await flushMicrotasks();
+    });
+
+    expect({
+      updates: editorState.updatePayloads,
+      published: editorState.publishCalls,
+    }).toEqual({ updates: [], published: [] });
+    // Nothing else explains the refusal in this scenario (the read has not failed and the
+    // content type resolved), so the editor has to say it itself.
+    expect(view.container.textContent).toContain("This entry has not finished loading yet.");
   } finally {
     view.cleanup();
   }

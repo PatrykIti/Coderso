@@ -215,6 +215,43 @@ export const EntryMetadataPanelStub = ({
   </div>
 );
 
+/**
+ * The two props the header probes drive. Structural on purpose: the wrapper below takes the
+ * REAL `EntryEditorHeaderActions` and only adds to it, so it must not restate the header's
+ * whole prop list.
+ */
+type HeaderActionsProbeProps = {
+  onSaveDraft: () => void;
+  onPublish: () => void;
+};
+
+/**
+ * The real header plus one ungated probe per destructive channel. The gated buttons stay
+ * REAL — same labels, same `disabled` wiring — because a lane asserts both facts and they are
+ * different facts: React's own event system refuses to call `onClick` on an element whose
+ * props say `disabled`, so clicking the real Save draft can never observe what the HANDLER
+ * does. Without a probe a lane proves only the button attribute, and the data-loss path
+ * reopens the moment a `disabled` prop is dropped for an unrelated reason. Same trade as the
+ * metadata panel stub's `data-metadata-save-ungated`: a disabled button is a UI detail, the
+ * request leaving is the harm.
+ */
+export const withUngatedHeaderProbes = <P extends HeaderActionsProbeProps>(
+  HeaderActions: React.ComponentType<P>
+) => {
+  const EntryEditorHeaderActionsWithProbes = (props: P) => (
+    <>
+      <HeaderActions {...props} />
+      <button type="button" data-header-save-draft-ungated="true" onClick={props.onSaveDraft}>
+        Save draft (ungated probe)
+      </button>
+      <button type="button" data-header-publish-ungated="true" onClick={props.onPublish}>
+        Publish (ungated probe)
+      </button>
+    </>
+  );
+  return EntryEditorHeaderActionsWithProbes;
+};
+
 export const mount = (node: React.ReactNode) => {
   const container = document.createElement("div");
   document.body.appendChild(container);
@@ -338,3 +375,13 @@ export const findHeaderButton = (container: HTMLElement, label: string) => {
 };
 
 export const findSaveDraft = (container: HTMLElement) => findHeaderButton(container, "Save draft");
+
+// The PageHeader actions cluster renders once, so a probe marker matches exactly one button.
+// The `disabled` assertion is the point of a probe: if it were gated too, a click that changed
+// nothing would prove nothing.
+export const findHeaderProbe = (container: HTMLElement, marker: string) => {
+  const probe = container.querySelector(`button[${marker}="true"]`);
+  if (!(probe instanceof HTMLButtonElement)) throw new Error(`${marker} button is absent`);
+  expect(probe.disabled).toBe(false);
+  return probe;
+};
