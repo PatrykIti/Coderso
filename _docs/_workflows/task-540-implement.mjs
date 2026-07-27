@@ -11124,6 +11124,20 @@ const TASK_540_LINE_LIMIT_ACCOUNTABLE_PATHS = Object.freeze([
   "tests/vitest/ui-integration/entry-editor-submit-authority.test.tsx",
   "tests/vitest/ui-integration/support/entryEditorHarness.tsx",
   "tests/vitest/ui-integration/support/entryEditorLaneFixture.tsx",
+  // The same entry editor again, from the pre-closure read-only audit's three HIGH findings:
+  // the linked title/slug duplication, snapshot authority for mutation responses, and the
+  // missing router blocker (commits e38f4930, f7f64676, 3339202b). Two new modules extracted
+  // out of EntryEditor.tsx, one new lane that mounts it under the real AdminRouterProvider,
+  // and the three sibling suites the guard's optional-router lookup obliged to declare it.
+  // Owner is the closure leaf for exactly the reason given above: no leaf WROTE these, and
+  // they belong to the content-type entry editor under core/admin/ui/entries/**, not to
+  // 540-04-L03's screen entry editor.
+  "core/admin/ui/entries/entryLinkedFields.ts",
+  "core/admin/ui/entries/useEntrySnapshotAuthority.ts",
+  "tests/vitest/ui-integration/entry-editor-navigation-guard.test.tsx",
+  "tests/vitest/ui-integration/entry-editor-restyle.test.tsx",
+  "tests/vitest/ui/entry-editor-shell-wave.test.tsx",
+  "tests/vitest/ui/entry-editor-visibility-groups.test.tsx",
   // Connection-target / pooler work and the backup scheduler it moved (commits e83ebc99, 369cd7ee).
   "core/db/client.ts",
   "core/db/connectionTargets.ts",
@@ -11206,7 +11220,7 @@ const TASK_540_LINE_LIMIT_TRIPWIRE_PATHS = Object.freeze([
   "core/widgets/core/footer.tsx",
 ]);
 const TASK_540_LINE_LIMIT_ACCOUNTABLE_PATHS_SHA256 =
-  "2834987ab9ea648062ede4f18fce311cf9a74e240b586ab7609f625baba7747e";
+  "ca829491198ff6f6b44bad83239a5a4132927000c795527ed8b02bf054cc50fb";
 const TASK_540_LINE_LIMIT_ACCOUNTABLE_OWNERS = Object.freeze(
   TASK_540_LINE_LIMIT_ACCOUNTABLE_PATHS.map((path) =>
     Object.freeze({ path, owner: TASK_540_LINE_LIMIT_ACCOUNTABLE_OWNER })
@@ -11232,7 +11246,7 @@ if (
   // Must be the leaf that lands LAST, which is the whole rationale for the choice: it is
   // the only leaf still able to split one of these before the family closes.
   TASK_540_LINE_LIMIT_ACCOUNTABLE_OWNER !== LEAF_ORDER[LEAF_ORDER.length - 1] ||
-  TASK_540_LINE_LIMIT_ACCOUNTABLE_PATHS.length !== 88 ||
+  TASK_540_LINE_LIMIT_ACCOUNTABLE_PATHS.length !== 94 ||
   new Set(TASK_540_LINE_LIMIT_ACCOUNTABLE_PATHS).size !==
     TASK_540_LINE_LIMIT_ACCOUNTABLE_PATHS.length ||
   TASK_540_LINE_LIMIT_ACCOUNTABLE_PATHS.some(
