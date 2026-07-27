@@ -29,6 +29,7 @@ import { SectionCard } from "@/ui/shared/SectionCard";
 import { StatusBadge } from "@/ui/shared/StatusBadge";
 
 import type { EntryChecklist } from "./entryChecklist";
+import { useEntryTaxonomyIntent } from "./useEntryTaxonomyIntent";
 
 export type EntryStatus = "draft" | "published" | "scheduled" | "archived";
 
@@ -42,6 +43,10 @@ const statusOptions: Array<{ value: EntryStatus; label: string }> = [
 ];
 
 const NO_CATEGORY_VALUE = "__none__";
+
+// One identity for "no tags", so the intent hook does not resync on every render of a panel
+// mounted without taxonomy.
+const NO_TAG_IDS: readonly string[] = [];
 
 const slugify = (value: string) =>
   value
@@ -205,13 +210,18 @@ export function EntryMetadataPanel({
     ? tagOptions.filter((term) => taxonomy.selectedTagIds.includes(term.id))
     : [];
 
+  // Term creation is asynchronous, so both add flows commit a selection at a moment when the
+  // user may already have chosen something else. See `useEntryTaxonomyIntent`.
+  const taxonomyIntent = useEntryTaxonomyIntent({
+    categoryId: taxonomy?.selectedCategoryId ?? null,
+    tagIds: taxonomy?.selectedTagIds ?? NO_TAG_IDS,
+  });
+
   const handleCategorySelect = (value: string) => {
     if (!taxonomy?.categoryEnabled) return;
-    if (value === NO_CATEGORY_VALUE) {
-      onCategoryChange?.(null);
-      return;
-    }
-    onCategoryChange?.(value);
+    const nextCategoryId = value === NO_CATEGORY_VALUE ? null : value;
+    taxonomyIntent.noteCategoryDecision(nextCategoryId);
+    onCategoryChange?.(nextCategoryId);
   };
 
   const handleAddCategory = async () => {
@@ -223,23 +233,29 @@ export function EntryMetadataPanel({
       (term) => term.name.toLowerCase() === normalized || term.slug === slugify(value)
     );
     if (existing) {
+      taxonomyIntent.noteCategoryDecision(existing.id);
       onCategoryChange?.(existing.id);
       setCategoryInput("");
       return;
     }
     if (!onCreateCategory) return;
+    const decision = taxonomyIntent.beginPendingDecision();
     setIsCreatingCategory(true);
     const created = await onCreateCategory(value);
     setIsCreatingCategory(false);
-    if (created) {
-      onCategoryChange?.(created.id);
-      setCategoryInput("");
-    }
+    if (!created) return;
+    setCategoryInput("");
+    // The category is single-valued and the user answered it while this term was being
+    // created. The term exists and is offered by the select; the choice they can see stands.
+    if (decision.isCategorySuperseded()) return;
+    taxonomyIntent.noteCategoryDecision(created.id);
+    onCategoryChange?.(created.id);
   };
 
   const handleTagRemove = (tagId: string) => {
     if (!taxonomy) return;
     const next = taxonomy.selectedTagIds.filter((id) => id !== tagId);
+    taxonomyIntent.noteTagsDecision(next);
     onTagIdsChange?.(next);
   };
 
@@ -251,6 +267,7 @@ export function EntryMetadataPanel({
     const existing = tagOptions.find(
       (term) => term.name.toLowerCase() === normalized || term.slug === slugify(value)
     );
+    const decision = taxonomyIntent.beginPendingDecision();
     let nextId = existing?.id;
     if (!nextId && onCreateTag) {
       setIsCreatingTag(true);
@@ -258,11 +275,15 @@ export function EntryMetadataPanel({
       setIsCreatingTag(false);
       nextId = created?.id;
     }
-    if (!nextId || !taxonomy) {
+    if (!nextId) {
       setTagInput("");
       return;
     }
-    const next = Array.from(new Set([...taxonomy.selectedTagIds, nextId])).slice(0, 20);
+    // Adding a tag is a delta, not a replacement, so it lands on the selection as it stands
+    // now. Replaying the array captured before the request would put back every tag removed
+    // while the term was being created.
+    const next = Array.from(new Set([...decision.currentSelection().tagIds, nextId])).slice(0, 20);
+    taxonomyIntent.noteTagsDecision(next);
     onTagIdsChange?.(next);
     setTagInput("");
   };

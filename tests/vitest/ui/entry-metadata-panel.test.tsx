@@ -5,6 +5,10 @@ import { createRoot } from "react-dom/client";
 import { expect, test, vi } from "vitest";
 
 import { EntryMetadataPanel } from "../../../core/admin/ui/entries/EntryMetadataPanel";
+import type {
+  EntryTaxonomyState,
+  TaxonomyTermOption,
+} from "../../../core/admin/ui/entries/EntryMetadataPanel";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -136,6 +140,13 @@ const mount = (node: React.ReactNode) => {
   });
   return {
     container,
+    // The panel owns no taxonomy state — the host does — so a test that wants to say "the user
+    // acted and the host applied it" has to render the answer back in, exactly like the host.
+    rerender: (next: React.ReactNode) => {
+      React.act(() => {
+        root.render(next);
+      });
+    },
     cleanup: () => {
       React.act(() => {
         root.unmount();
@@ -346,5 +357,301 @@ test("regression: checklist, SEO description, tag add, save metadata remain wire
     saveButton?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
   });
   expect(onSave).toHaveBeenCalled();
+  cleanup();
+});
+
+// ---------------------------------------------------------------------------
+// Taxonomy decisions that outlive the action that formed them.
+//
+// "Add category" and "Add tag" ask the host to create a term, wait for the server, and only
+// then commit a selection. Nothing freezes in between: the user can pick another category,
+// clear it, drop a tag, and the host can hydrate a different selection over the top. Every
+// test below is about the same question — when the request lands, whose decision applies —
+// and the answer is always the newer one.
+// ---------------------------------------------------------------------------
+
+const deferred = <T,>() => {
+  let settle: (value: T) => void = () => {};
+  const promise = new Promise<T>((resolve) => {
+    settle = resolve;
+  });
+  return { promise, resolve: (value: T) => settle(value) };
+};
+
+const categoryTaxonomy = (selectedCategoryId: string | null): EntryTaxonomyState => ({
+  categoryEnabled: true,
+  tagEnabled: false,
+  selectedCategoryId,
+  selectedTagIds: [],
+  categories: [
+    { id: "cat-guides", name: "Guides", slug: "guides" },
+    { id: "cat-news", name: "News", slug: "news" },
+  ],
+  tags: [],
+});
+
+const tagTaxonomy = (selectedTagIds: string[]): EntryTaxonomyState => ({
+  categoryEnabled: false,
+  tagEnabled: true,
+  selectedCategoryId: null,
+  selectedTagIds,
+  categories: [],
+  tags: [
+    { id: "tag-draft", name: "Draft", slug: "draft" },
+    { id: "tag-other", name: "Other", slug: "other" },
+  ],
+});
+
+const findInputByPlaceholder = (container: HTMLElement, placeholder: string) =>
+  Array.from(container.querySelectorAll("input")).find(
+    (input) => input.getAttribute("placeholder") === placeholder
+  ) ?? null;
+
+const clickButton = (container: HTMLElement, pattern: RegExp) => {
+  const button = Array.from(container.querySelectorAll("button")).find((candidate) =>
+    pattern.test(candidate.textContent?.trim() ?? "")
+  );
+  React.act(() => {
+    button?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+  });
+};
+
+const pressEnter = (element: Element | null | undefined) => {
+  React.act(() => {
+    element?.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true })
+    );
+  });
+};
+
+const typeInto = (element: Element | null | undefined, value: string) => {
+  React.act(() => {
+    setInputValue(element, value);
+  });
+};
+
+const startCategoryCreation = (container: HTMLElement, name: string) => {
+  typeInto(findInputByPlaceholder(container, "Add category..."), name);
+  clickButton(container, /^add$/i);
+};
+
+const chooseCategory = (container: HTMLElement, value: string) => {
+  React.act(() => {
+    setSelectValue(findSelectByOption(container, "__none__"), value);
+  });
+};
+
+test("a category created in the background never overwrites one picked while it was pending", async () => {
+  const onCategoryChange = vi.fn();
+  const creation = deferred<TaxonomyTermOption | null>();
+  const onCreateCategory = vi.fn(() => creation.promise);
+  const view = (selectedCategoryId: string | null) => (
+    <EntryMetadataPanel
+      {...baseProps}
+      taxonomy={categoryTaxonomy(selectedCategoryId)}
+      onCategoryChange={onCategoryChange}
+      onCreateCategory={onCreateCategory}
+    />
+  );
+  const { container, rerender, cleanup } = mount(view(null));
+
+  startCategoryCreation(container, "Releases");
+  expect(onCreateCategory).toHaveBeenCalledWith("Releases");
+
+  // The select stays live while the term is created, and the host applies the new choice.
+  chooseCategory(container, "cat-news");
+  expect(onCategoryChange).toHaveBeenLastCalledWith("cat-news");
+  rerender(view("cat-news"));
+
+  await React.act(async () => {
+    creation.resolve({ id: "cat-releases", name: "Releases", slug: "releases" });
+  });
+
+  expect(onCategoryChange).not.toHaveBeenCalledWith("cat-releases");
+  expect(onCategoryChange).toHaveBeenLastCalledWith("cat-news");
+  cleanup();
+});
+
+test("a category picked away and back while a creation is pending still wins", async () => {
+  // The user's last pick equals the value the creation started from. Nothing about the
+  // selection LOOKS changed, but the user decided after the request left, so they decided last.
+  const onCategoryChange = vi.fn();
+  const creation = deferred<TaxonomyTermOption | null>();
+  const view = (selectedCategoryId: string | null) => (
+    <EntryMetadataPanel
+      {...baseProps}
+      taxonomy={categoryTaxonomy(selectedCategoryId)}
+      onCategoryChange={onCategoryChange}
+      onCreateCategory={() => creation.promise}
+    />
+  );
+  const { container, rerender, cleanup } = mount(view("cat-guides"));
+
+  startCategoryCreation(container, "Releases");
+
+  chooseCategory(container, "cat-news");
+  rerender(view("cat-news"));
+  chooseCategory(container, "cat-guides");
+  rerender(view("cat-guides"));
+
+  await React.act(async () => {
+    creation.resolve({ id: "cat-releases", name: "Releases", slug: "releases" });
+  });
+
+  expect(onCategoryChange).not.toHaveBeenCalledWith("cat-releases");
+  expect(onCategoryChange).toHaveBeenLastCalledWith("cat-guides");
+  cleanup();
+});
+
+test("clearing the category while a creation is pending is not undone by the creation", async () => {
+  const onCategoryChange = vi.fn();
+  const creation = deferred<TaxonomyTermOption | null>();
+  const view = (selectedCategoryId: string | null) => (
+    <EntryMetadataPanel
+      {...baseProps}
+      taxonomy={categoryTaxonomy(selectedCategoryId)}
+      onCategoryChange={onCategoryChange}
+      onCreateCategory={() => creation.promise}
+    />
+  );
+  const { container, rerender, cleanup } = mount(view("cat-guides"));
+
+  startCategoryCreation(container, "Releases");
+
+  chooseCategory(container, "__none__");
+  expect(onCategoryChange).toHaveBeenLastCalledWith(null);
+  rerender(view(null));
+
+  await React.act(async () => {
+    creation.resolve({ id: "cat-releases", name: "Releases", slug: "releases" });
+  });
+
+  expect(onCategoryChange).not.toHaveBeenCalledWith("cat-releases");
+  expect(onCategoryChange).toHaveBeenLastCalledWith(null);
+  cleanup();
+});
+
+test("a tag created in the background does not put back a tag removed while it was pending", async () => {
+  const onTagIdsChange = vi.fn();
+  const creation = deferred<TaxonomyTermOption | null>();
+  const view = (selectedTagIds: string[]) => (
+    <EntryMetadataPanel
+      {...baseProps}
+      taxonomy={tagTaxonomy(selectedTagIds)}
+      onTagIdsChange={onTagIdsChange}
+      onCreateTag={() => creation.promise}
+    />
+  );
+  const { container, rerender, cleanup } = mount(view(["tag-draft"]));
+
+  const tagInput = findInputByPlaceholder(container, "Add tag...");
+  typeInto(tagInput, "Launch");
+  pressEnter(tagInput);
+
+  // The chip's remove control is not disabled by the pending creation, and the host applies it.
+  React.act(() => {
+    container
+      .querySelector('[aria-label="Remove Draft"]')
+      ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+  });
+  expect(onTagIdsChange).toHaveBeenLastCalledWith([]);
+  rerender(view([]));
+
+  await React.act(async () => {
+    creation.resolve({ id: "tag-launch", name: "Launch", slug: "launch" });
+  });
+
+  expect(onTagIdsChange).toHaveBeenLastCalledWith(["tag-launch"]);
+  cleanup();
+});
+
+test("a tag creation lands on the selection the host replaced while it was pending", async () => {
+  // Nobody touched the panel here: a hydration or a mutation body changed the selection under
+  // it. The created tag is still what the user asked for, so it is added — to the new set.
+  const onTagIdsChange = vi.fn();
+  const creation = deferred<TaxonomyTermOption | null>();
+  const view = (selectedTagIds: string[]) => (
+    <EntryMetadataPanel
+      {...baseProps}
+      taxonomy={tagTaxonomy(selectedTagIds)}
+      onTagIdsChange={onTagIdsChange}
+      onCreateTag={() => creation.promise}
+    />
+  );
+  const { container, rerender, cleanup } = mount(view(["tag-draft"]));
+
+  const tagInput = findInputByPlaceholder(container, "Add tag...");
+  typeInto(tagInput, "Launch");
+  pressEnter(tagInput);
+
+  rerender(view(["tag-other"]));
+
+  await React.act(async () => {
+    creation.resolve({ id: "tag-launch", name: "Launch", slug: "launch" });
+  });
+
+  expect(onTagIdsChange).toHaveBeenLastCalledWith(["tag-other", "tag-launch"]);
+  cleanup();
+});
+
+test("a tag change while a category creation is pending does not cancel the creation", async () => {
+  // The guard is scoped to the field it protects. Deciding about tags is not deciding about
+  // the category, so the created category is still selected.
+  const onCategoryChange = vi.fn();
+  const onTagIdsChange = vi.fn();
+  const creation = deferred<TaxonomyTermOption | null>();
+  const taxonomy = (selectedTagIds: string[]): EntryTaxonomyState => ({
+    ...categoryTaxonomy(null),
+    tagEnabled: true,
+    selectedTagIds,
+    tags: [{ id: "tag-draft", name: "Draft", slug: "draft" }],
+  });
+  const view = (selectedTagIds: string[]) => (
+    <EntryMetadataPanel
+      {...baseProps}
+      taxonomy={taxonomy(selectedTagIds)}
+      onCategoryChange={onCategoryChange}
+      onTagIdsChange={onTagIdsChange}
+      onCreateCategory={() => creation.promise}
+    />
+  );
+  const { container, rerender, cleanup } = mount(view(["tag-draft"]));
+
+  startCategoryCreation(container, "Releases");
+
+  React.act(() => {
+    container
+      .querySelector('[aria-label="Remove Draft"]')
+      ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+  });
+  rerender(view([]));
+
+  await React.act(async () => {
+    creation.resolve({ id: "cat-releases", name: "Releases", slug: "releases" });
+  });
+
+  expect(onCategoryChange).toHaveBeenLastCalledWith("cat-releases");
+  cleanup();
+});
+
+test("an uncontested category creation still selects the new category", async () => {
+  const onCategoryChange = vi.fn();
+  const creation = deferred<TaxonomyTermOption | null>();
+  const { container, cleanup } = mount(
+    <EntryMetadataPanel
+      {...baseProps}
+      taxonomy={categoryTaxonomy(null)}
+      onCategoryChange={onCategoryChange}
+      onCreateCategory={() => creation.promise}
+    />
+  );
+
+  startCategoryCreation(container, "Releases");
+  await React.act(async () => {
+    creation.resolve({ id: "cat-releases", name: "Releases", slug: "releases" });
+  });
+
+  expect(onCategoryChange).toHaveBeenLastCalledWith("cat-releases");
+  expect(findInputByPlaceholder(container, "Add category...")?.value).toBe("");
   cleanup();
 });

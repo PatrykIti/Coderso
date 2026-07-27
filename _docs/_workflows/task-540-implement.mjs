@@ -11138,6 +11138,14 @@ const TASK_540_LINE_LIMIT_ACCOUNTABLE_PATHS = Object.freeze([
   "tests/vitest/ui-integration/entry-editor-restyle.test.tsx",
   "tests/vitest/ui/entry-editor-shell-wave.test.tsx",
   "tests/vitest/ui/entry-editor-visibility-groups.test.tsx",
+  // The entry METADATA panel, from the same pre-closure audit's finding 4: term creation is
+  // asynchronous, and both add flows committed a selection formed before the request over
+  // whatever the user chose during it. One new module extracted rather than inlined, so the
+  // rule about which decision still applies is stated once and testable on its own. Owner is
+  // the closure leaf for the reason given above, and for the same reason as
+  // EntryMetadataPanel.tsx itself, which is already accountable here.
+  "core/admin/ui/entries/useEntryTaxonomyIntent.ts",
+  "tests/vitest/ui/entry-metadata-panel.test.tsx",
   // Connection-target / pooler work and the backup scheduler it moved (commits e83ebc99, 369cd7ee).
   "core/db/client.ts",
   "core/db/connectionTargets.ts",
@@ -11220,7 +11228,7 @@ const TASK_540_LINE_LIMIT_TRIPWIRE_PATHS = Object.freeze([
   "core/widgets/core/footer.tsx",
 ]);
 const TASK_540_LINE_LIMIT_ACCOUNTABLE_PATHS_SHA256 =
-  "ca829491198ff6f6b44bad83239a5a4132927000c795527ed8b02bf054cc50fb";
+  "dd1baf59f6cbfd6eb4be4cf03e2129746f71e0c3fe4b4a34b2e38eb2431af64e";
 const TASK_540_LINE_LIMIT_ACCOUNTABLE_OWNERS = Object.freeze(
   TASK_540_LINE_LIMIT_ACCOUNTABLE_PATHS.map((path) =>
     Object.freeze({ path, owner: TASK_540_LINE_LIMIT_ACCOUNTABLE_OWNER })
@@ -11246,7 +11254,7 @@ if (
   // Must be the leaf that lands LAST, which is the whole rationale for the choice: it is
   // the only leaf still able to split one of these before the family closes.
   TASK_540_LINE_LIMIT_ACCOUNTABLE_OWNER !== LEAF_ORDER[LEAF_ORDER.length - 1] ||
-  TASK_540_LINE_LIMIT_ACCOUNTABLE_PATHS.length !== 94 ||
+  TASK_540_LINE_LIMIT_ACCOUNTABLE_PATHS.length !== 96 ||
   new Set(TASK_540_LINE_LIMIT_ACCOUNTABLE_PATHS).size !==
     TASK_540_LINE_LIMIT_ACCOUNTABLE_PATHS.length ||
   TASK_540_LINE_LIMIT_ACCOUNTABLE_PATHS.some(
