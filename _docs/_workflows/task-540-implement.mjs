@@ -3336,6 +3336,106 @@ const FORBIDDEN_PATHS = Object.freeze([
   "all task/changelog files outside TASK-540, the verified TASK-9999-01/L02 supersession records, changelog 1258, and pinned changelog 1252",
 ]);
 
+// FORBIDDEN_PATHS is agent-prompt policy, not an enforced gate -- it is interpolated into
+// COMMON at exactly one site and nothing verifies it after the fact. Auditing the family's
+// real baseline..HEAD delta against it found 12 paths across 8 of these globs already
+// mutated. Leaving that undocumented would mean every mutation agent reads a prohibition
+// that the family itself has visibly broken, which teaches the agent the list is advisory.
+//
+// So the entries STAY -- the prohibition is still correct for anything not listed below --
+// and the landed exceptions are recorded here with why they were allowed to stand. This is
+// a record of what already happened, NOT a licence to edit these paths further.
+const AUTHORIZED_FORBIDDEN_PATH_EXCEPTIONS = Object.freeze([
+  Object.freeze({
+    glob: "core/db/schema.ts",
+    paths: Object.freeze(["core/db/schema.ts"]),
+    commits: Object.freeze(["37e3c66b", "e6bbee69"]),
+    reason:
+      "37e3c66b added the access_logs.user_agent hash index. The owner reviewed and decided " +
+      "it STAYS: marginal write cost, zero production risk, and it fixes a real scan. " +
+      "e6bbee69 then split the file into 20 domain table modules behind a 43-line facade " +
+      "because the index brought a 1,722-line hand-written schema inside the touched set and " +
+      "AGENTS.md binds production modules to 1,000 lines. The public import surface is " +
+      "unchanged, so no consumer moved.",
+  }),
+  Object.freeze({
+    glob: "core/db/migrations/**",
+    paths: Object.freeze([
+      "core/db/migrations/0070_orange_gunslinger.sql",
+      "core/db/migrations/meta/0070_snapshot.json",
+      "core/db/migrations/meta/_journal.json",
+    ]),
+    commits: Object.freeze(["37e3c66b"]),
+    reason:
+      "The generated migration and snapshot for that index. Inseparable from the schema " +
+      "change: reverting them alone would leave the schema and the migration history " +
+      "disagreeing, which is strictly worse than the recorded exception.",
+  }),
+  Object.freeze({
+    glob: "package.json",
+    paths: Object.freeze(["package.json"]),
+    commits: Object.freeze(["a0fe8028"]),
+    reason:
+      "Three smoke:auth-window:* scripts that move the auth-rate window into a test-DB " +
+      "setting, cutting smoke barrier cost from 366s to 36s. Additive script entries only -- " +
+      "no dependency, version, or lockfile change.",
+  }),
+  Object.freeze({
+    glob: "core/widgets/**",
+    paths: Object.freeze([
+      "core/widgets/core/footer.tsx",
+      "core/widgets/core/footerContract.ts",
+      "core/widgets/core/footerSocialIcons.tsx",
+    ]),
+    commits: Object.freeze(["3d5604ec"]),
+    reason:
+      "Swept in by the branch's own dependency bump, not by TASK-540 authoring. Recorded " +
+      "rather than reverted because the bump is what the branch ships; no leaf may edit " +
+      "these paths.",
+  }),
+  Object.freeze({
+    glob: "packages/**",
+    paths: Object.freeze(["packages/sdk/package.json"]),
+    commits: Object.freeze(["3d5604ec"]),
+    reason: "Same dependency bump. Version metadata only.",
+  }),
+  Object.freeze({
+    glob: "core/package.json",
+    paths: Object.freeze(["core/package.json"]),
+    commits: Object.freeze(["3d5604ec"]),
+    reason: "Same dependency bump. Version metadata only.",
+  }),
+  Object.freeze({
+    glob: "bun.lock",
+    paths: Object.freeze(["bun.lock"]),
+    commits: Object.freeze(["3d5604ec"]),
+    reason: "Same dependency bump. Lockfile regeneration is the point of that commit.",
+  }),
+  Object.freeze({
+    glob: "_docs/_TASKS/TASK-545*",
+    paths: Object.freeze(["_docs/_TASKS/TASK-545-02-L01-Converge-Author-And-Audit-Workflows.md"]),
+    commits: Object.freeze(["3d5604ec"]),
+    reason:
+      "Same dependency bump touched another family's task file. This one is the most " +
+      "clearly unintended of the eight and is called out so a later reader does not read it " +
+      "as TASK-540 having authority over TASK-545.",
+  }),
+]);
+if (
+  AUTHORIZED_FORBIDDEN_PATH_EXCEPTIONS.length !== 8 ||
+  AUTHORIZED_FORBIDDEN_PATH_EXCEPTIONS.some(
+    ({ glob, paths, commits, reason }) =>
+      !FORBIDDEN_PATHS.includes(glob) ||
+      paths.length === 0 ||
+      commits.length === 0 ||
+      reason.length < 40
+  ) ||
+  new Set(AUTHORIZED_FORBIDDEN_PATH_EXCEPTIONS.map(({ glob }) => glob)).size !==
+    AUTHORIZED_FORBIDDEN_PATH_EXCEPTIONS.length
+) {
+  throw new Error("TASK-540 authorized forbidden-path exception record drifted");
+}
+
 const RESULT_SCHEMA = {
   type: "object",
   additionalProperties: false,
@@ -11358,6 +11458,12 @@ const COMMON =
   "task family. Configurable widgets remain Dashboard-only. Page and widget paths are " +
   "forbidden: " +
   JSON.stringify(FORBIDDEN_PATHS) +
+  ". Eight of those globs already carry owner-recorded, already-landed exceptions: " +
+  JSON.stringify(
+    AUTHORIZED_FORBIDDEN_PATH_EXCEPTIONS.map(({ glob, commits }) => glob + "@" + commits.join("/"))
+  ) +
+  ". Those are a historical record, not permission: the paths above remain forbidden to you, " +
+  "and an existing exception never justifies a new edit to the same path" +
   ". Add changed-behavior tests with the sole source owner; never weaken assertions. " +
   "The local orchestrator, not this mutation agent, owns every shell gate and named-file " +
   "rerun immediately after the mutation returns. No shell tool is expected here; its absence " +

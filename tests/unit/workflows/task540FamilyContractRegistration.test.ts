@@ -126,3 +126,59 @@ test("no closure prompt still claims the family has 17 contracts", () => {
     expect(implementSource).not.toContain(stale);
   }
 });
+
+/**
+ * FORBIDDEN_PATHS is agent-prompt policy referenced at exactly one site, with nothing
+ * verifying it afterwards. The family mutated 12 paths across 8 of its globs, so an agent
+ * was being handed a prohibition the family had visibly broken. The prohibition stays and
+ * the landed exceptions are recorded; this test keeps both halves honest.
+ */
+test("every forbidden glob the family actually mutated carries a recorded exception", () => {
+  const expectedGlobs = [
+    "core/db/schema.ts",
+    "core/db/migrations/**",
+    "package.json",
+    "core/widgets/**",
+    "packages/**",
+    "core/package.json",
+    "bun.lock",
+    "_docs/_TASKS/TASK-545*",
+  ];
+
+  const exceptionsBlock =
+    /const AUTHORIZED_FORBIDDEN_PATH_EXCEPTIONS = Object\.freeze\(\[([\s\S]*?)\n\]\);/u.exec(
+      implementSource
+    );
+  expect(exceptionsBlock).not.toBeNull();
+  const recorded = [...(exceptionsBlock?.[1] ?? "").matchAll(/glob: "([^"]+)"/gu)].map(
+    (match) => match[1]
+  );
+
+  expect([...recorded].sort()).toEqual([...expectedGlobs].sort());
+  // The prohibition itself must not have been weakened to make the audit pass.
+  const forbiddenBlock = /const FORBIDDEN_PATHS = Object\.freeze\(\[([\s\S]*?)\n\]\);/u.exec(
+    implementSource
+  );
+  expect(forbiddenBlock).not.toBeNull();
+  const forbidden = [...(forbiddenBlock?.[1] ?? "").matchAll(/"([^"]+)"/gu)].map(
+    (match) => match[1]
+  );
+  for (const glob of expectedGlobs) {
+    expect(forbidden).toContain(glob);
+  }
+  // Every exception needs a real reason and the commit that landed it, or the record is noise.
+  expect(recorded).toHaveLength(8);
+  expect([...(exceptionsBlock?.[1] ?? "").matchAll(/reason:/gu)]).toHaveLength(8);
+  expect([...(exceptionsBlock?.[1] ?? "").matchAll(/commits: Object\.freeze\(\[/gu)]).toHaveLength(
+    8
+  );
+});
+
+test("the agent prompt says the exceptions are a record, not permission", () => {
+  expect(implementSource).toContain(
+    "Those are a historical record, not permission: the paths above remain forbidden to you"
+  );
+  expect(implementSource).toContain(
+    "an existing exception never justifies a new edit to the same path"
+  );
+});
