@@ -3462,10 +3462,15 @@ const AUTHORIZED_FORBIDDEN_PATH_EXCEPTIONS = Object.freeze([
     glob: "_docs/_TASKS/TASK-545*",
     paths: Object.freeze(["_docs/_TASKS/TASK-545-02-L01-Converge-Author-And-Audit-Workflows.md"]),
     commits: Object.freeze(["3d5604ec"]),
+    // No count is restated here on purpose. This reason used to spell out how many exceptions
+    // the list held, and it disagreed with the cardinality pin below, because the ninth glob
+    // (core/db/tables/**) was appended after the schema split without revisiting the prose.
+    // The list's own length is the only authority for its size; a spelled-out duplicate is
+    // just a second thing to forget.
     reason:
-      "Same dependency bump touched another family's task file. This one is the most " +
-      "clearly unintended of the eight and is called out so a later reader does not read it " +
-      "as TASK-540 having authority over TASK-545.",
+      "Same dependency bump touched another family's task file. This is the most clearly " +
+      "unintended exception in this list and is called out so a later reader does not read " +
+      "it as TASK-540 having authority over TASK-545.",
   }),
 ]);
 if (
@@ -7318,8 +7323,11 @@ async function assertTask540TouchedModuleLineLimitContract() {
       );
     }
   }
-  // The two tripwire paths sit within eleven lines of the limit. Prove the gate really
-  // would reject them one line over, using hermetic bytes rather than the real files.
+  // Every tripwire path sits within eleven lines of the limit. Prove the gate really would
+  // reject each one a single line over, using hermetic bytes rather than the real files. How
+  // many paths there are is deliberately not restated here: this comment used to name a count,
+  // which went stale when the list grew, and the loop below plus the returned case total
+  // already derive it from TASK_540_LINE_LIMIT_TRIPWIRE_PATHS.length.
   for (const tripwirePath of TASK_540_LINE_LIMIT_TRIPWIRE_PATHS) {
     let tripwireRejected = false;
     try {
