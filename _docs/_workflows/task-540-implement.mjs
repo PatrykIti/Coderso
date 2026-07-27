@@ -3322,6 +3322,14 @@ const FORBIDDEN_PATHS = Object.freeze([
   "_docs/_WIDGETS/**",
   "_docs/DASHBOARD_WIDGETS_SPEC.md",
   "core/db/schema.ts",
+  // The prohibition follows the schema CONTENT, not the filename. e6bbee69 split
+  // core/db/schema.ts into 20 domain table modules behind a 43-line re-export facade,
+  // which moved 1,679 of the original 1,722 hand-written schema lines to paths no entry
+  // above named. Without this glob an agent reading the policy would correctly conclude
+  // that core/db/tables/identity.ts is fair game, and the prohibition -- whose whole
+  // purpose is to stop this task family mutating the database schema as a side effect --
+  // would cover a 43-line facade instead of the schema.
+  "core/db/tables/**",
   "core/db/migrations/**",
   "packages/**",
   "store/**",
@@ -3338,7 +3346,7 @@ const FORBIDDEN_PATHS = Object.freeze([
 
 // FORBIDDEN_PATHS is agent-prompt policy, not an enforced gate -- it is interpolated into
 // COMMON at exactly one site and nothing verifies it after the fact. Auditing the family's
-// real baseline..HEAD delta against it found 12 paths across 8 of these globs already
+// real baseline..HEAD delta against it found 32 paths across 9 of these globs already
 // mutated. Leaving that undocumented would mean every mutation agent reads a prohibition
 // that the family itself has visibly broken, which teaches the agent the list is advisory.
 //
@@ -3356,7 +3364,46 @@ const AUTHORIZED_FORBIDDEN_PATH_EXCEPTIONS = Object.freeze([
       "e6bbee69 then split the file into 20 domain table modules behind a 43-line facade " +
       "because the index brought a 1,722-line hand-written schema inside the touched set and " +
       "AGENTS.md binds production modules to 1,000 lines. The public import surface is " +
-      "unchanged, so no consumer moved.",
+      "unchanged, so no consumer moved. The 20 destination modules are recorded under the " +
+      "core/db/tables/** entry below, because after the split this path is only the facade.",
+  }),
+  Object.freeze({
+    // The exception the split created. It is recorded separately from core/db/schema.ts
+    // rather than folded into it because the glob has to be listed in FORBIDDEN_PATHS in
+    // its own right: naming a directory is what keeps the prohibition pointed at the
+    // schema after the content moved out of the file the original entry named.
+    glob: "core/db/tables/**",
+    paths: Object.freeze([
+      "core/db/tables/analytics.ts",
+      "core/db/tables/assistant.ts",
+      "core/db/tables/bookings.ts",
+      "core/db/tables/commerce.ts",
+      "core/db/tables/content.ts",
+      "core/db/tables/customScreens.ts",
+      "core/db/tables/engagement.ts",
+      "core/db/tables/forms.ts",
+      "core/db/tables/identity.ts",
+      "core/db/tables/integrations.ts",
+      "core/db/tables/media.ts",
+      "core/db/tables/navigation.ts",
+      "core/db/tables/observability.ts",
+      "core/db/tables/operations.ts",
+      "core/db/tables/pages.ts",
+      "core/db/tables/platform.ts",
+      "core/db/tables/posts.ts",
+      "core/db/tables/seo.ts",
+      "core/db/tables/theming.ts",
+      "core/db/tables/widgets.ts",
+    ]),
+    commits: Object.freeze(["e6bbee69"]),
+    reason:
+      "e6bbee69 created all 20 modules by moving table declarations out of schema.ts, so " +
+      "the family did mutate these paths and the record must say so. They stand because " +
+      "the split is behavior-preserving -- declarations moved verbatim, the facade " +
+      "re-exports the identical public surface, and no migration or snapshot changed -- " +
+      "and because all 20 are in the line-limit accountability registry, so their sizes " +
+      "are gated. No leaf may edit them: a table change belongs to a schema task with its " +
+      "own migration, not to a Custom Screens remediation.",
   }),
   Object.freeze({
     glob: "core/db/migrations/**",
@@ -3422,7 +3469,7 @@ const AUTHORIZED_FORBIDDEN_PATH_EXCEPTIONS = Object.freeze([
   }),
 ]);
 if (
-  AUTHORIZED_FORBIDDEN_PATH_EXCEPTIONS.length !== 8 ||
+  AUTHORIZED_FORBIDDEN_PATH_EXCEPTIONS.length !== 9 ||
   AUTHORIZED_FORBIDDEN_PATH_EXCEPTIONS.some(
     ({ glob, paths, commits, reason }) =>
       !FORBIDDEN_PATHS.includes(glob) ||
@@ -11060,6 +11107,7 @@ const TASK_540_LINE_LIMIT_ACCOUNTABLE_PATHS = Object.freeze([
   "tests/unit/workflows/precommitFormatStagedIgnoredPaths.test.ts",
   "tests/unit/workflows/task522FindingsPrompt.test.ts",
   "tests/unit/workflows/task540FamilyContractRegistration.test.ts",
+  "tests/unit/workflows/task540ForbiddenSchemaPaths.test.ts",
   "tests/unit/workflows/task540SmokeExecutorBunBridgeResourceSources.test.ts",
   "tests/unit/workflows/task540SmokeExecutorSecurity.test.ts",
   "tests/unit/workflows/task540SmokeExecutorSourceContracts.test.ts",
@@ -11100,7 +11148,7 @@ const TASK_540_LINE_LIMIT_TRIPWIRE_PATHS = Object.freeze([
   "core/widgets/core/footer.tsx",
 ]);
 const TASK_540_LINE_LIMIT_ACCOUNTABLE_PATHS_SHA256 =
-  "0f52aac07992a1e65c3766371ca176d05112c1a8a36a92302745d4e6bfe7308a";
+  "21b49ee3653fde2edfea3cdab13f0803b5259b10834f85bb741b507fa3ef0295";
 const TASK_540_LINE_LIMIT_ACCOUNTABLE_OWNERS = Object.freeze(
   TASK_540_LINE_LIMIT_ACCOUNTABLE_PATHS.map((path) =>
     Object.freeze({ path, owner: TASK_540_LINE_LIMIT_ACCOUNTABLE_OWNER })
@@ -11126,7 +11174,7 @@ if (
   // Must be the leaf that lands LAST, which is the whole rationale for the choice: it is
   // the only leaf still able to split one of these before the family closes.
   TASK_540_LINE_LIMIT_ACCOUNTABLE_OWNER !== LEAF_ORDER[LEAF_ORDER.length - 1] ||
-  TASK_540_LINE_LIMIT_ACCOUNTABLE_PATHS.length !== 75 ||
+  TASK_540_LINE_LIMIT_ACCOUNTABLE_PATHS.length !== 76 ||
   new Set(TASK_540_LINE_LIMIT_ACCOUNTABLE_PATHS).size !==
     TASK_540_LINE_LIMIT_ACCOUNTABLE_PATHS.length ||
   TASK_540_LINE_LIMIT_ACCOUNTABLE_PATHS.some(
@@ -11487,7 +11535,12 @@ const COMMON =
   "task family. Configurable widgets remain Dashboard-only. Page and widget paths are " +
   "forbidden: " +
   JSON.stringify(FORBIDDEN_PATHS) +
-  ". Eight of those globs already carry owner-recorded, already-landed exceptions: " +
+  ". " +
+  // Derived, not spelled out: the previous hardcoded "Eight" would have started lying to
+  // every mutation agent the moment a ninth exception was recorded, which is exactly what
+  // happened to the FORBIDDEN_PATHS entry this sentence describes.
+  String(AUTHORIZED_FORBIDDEN_PATH_EXCEPTIONS.length) +
+  " of those globs already carry owner-recorded, already-landed exceptions: " +
   JSON.stringify(
     AUTHORIZED_FORBIDDEN_PATH_EXCEPTIONS.map(({ glob, commits }) => glob + "@" + commits.join("/"))
   ) +
