@@ -359,8 +359,8 @@ Bun suite covers this tree.
 
 | Lane | Command | Required result |
 |---|---|---|
-| Contract self-test | `node _docs/_workflows/task-540-smoke-contract.mjs --self-test` | `pass: true`, `actions: 496`, counts unchanged, `negativeCases` > 109 after L01 |
-| Executor self-test | `node _docs/_workflows/task-540-smoke-executor.mjs --self-test` | `pass: true`, `actions: 496`, `runtimeReceipts: 177`, `cleanupActions: 72`, `captures: 26`, `negativeCases` > 2810 after L02 |
+| Contract self-test | `node _docs/_workflows/task-540-smoke-contract.mjs --self-test` | `pass: true`, `actions: 496`, counts unchanged, `negativeCases: 117` (was `109` pre-L01) |
+| Executor self-test | `node _docs/_workflows/task-540-smoke-executor.mjs --self-test` | `pass: true`, `actions: 496`, `runtimeReceipts: 177`, `cleanupActions: 72`, `captures: 26`, `negativeCases: 2985` (was `2810` pre-L02) |
 | Line-count gate | `wc -l` over every touched module | every file ≤ 1,000 |
 
 Regression shape required of the leaves (details in each leaf):
