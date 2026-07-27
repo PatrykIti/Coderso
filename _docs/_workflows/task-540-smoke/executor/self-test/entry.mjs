@@ -105,6 +105,7 @@ import { runSeoEntryCleanupSelfTest } from "./seo-entry-cleanup.mjs";
 import { runSettlementDiagnosticCasesSelfTest } from "./settlement-diagnostic-cases.mjs";
 import { createSettlementDiagnosticHarness } from "./settlement-diagnostic-harness.mjs";
 import { runSourceOwnershipAuthRateSelfTest } from "./source-ownership-auth-rate.mjs";
+import { runStorageManifestIdentitySelfTest } from "./storage-manifest-identity.mjs";
 import { runTerminalResourceGraphSelfTest } from "./terminal-resource-graph.mjs";
 
 export function createRunTask540SmokeExecutorSelfTest(dependencies) {
@@ -495,6 +496,12 @@ export function createRunTask540SmokeExecutorSelfTest(dependencies) {
     });
 
     runMediaIsolationSelfTest({ assertNegative, plan, sourceCaptures });
+
+    // Counts through the shared assertNegative, so it must NOT be wrapped in `negativeCases +=`.
+    // Drives the REAL storage-manifest scanner over a private temporary root: the terminal cleanup
+    // phase's storage postcondition had no self-test coverage at all, which is how a physically
+    // unsatisfiable byte-identity assertion reached a 34.7-minute runtime run to be discovered.
+    await runStorageManifestIdentitySelfTest({ assertNegative });
 
     // Counts through the shared assertNegative, so it must NOT be wrapped in `negativeCases +=`.
     await runBrowserRouteDuplicatePolicySelfTest({ assertNegative, plan, sourceCaptures });

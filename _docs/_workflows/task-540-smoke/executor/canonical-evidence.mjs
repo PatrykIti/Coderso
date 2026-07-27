@@ -296,7 +296,7 @@ export function assertCanonicalFinalization(finalization, plan, smokePorts) {
     [
       "driver",
       "rootIdentityByteIdentical",
-      "baselineManifestByteIdentical",
+      "baselineManifestEntriesIdentical",
       "acquiredMediaRowAbsent",
       "acquiredStorageKeyAbsent",
       "missingMedia",
@@ -387,7 +387,7 @@ export function assertCanonicalFinalization(finalization, plan, smokePorts) {
       finalization.settings.userBAbsent === true &&
       finalization.storage.driver === "local" &&
       finalization.storage.rootIdentityByteIdentical === true &&
-      finalization.storage.baselineManifestByteIdentical === true &&
+      finalization.storage.baselineManifestEntriesIdentical === true &&
       finalization.storage.acquiredMediaRowAbsent === true &&
       finalization.storage.acquiredStorageKeyAbsent === true &&
       finalization.storage.missingMedia.id === plan.fixtureBlueprint.media.missingBoundMediaId &&

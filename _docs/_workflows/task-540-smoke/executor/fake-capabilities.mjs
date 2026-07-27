@@ -546,7 +546,7 @@ export function createFakeCapabilitiesRuntime({
             storage: deepFreezeExact({
               driver: "local",
               rootIdentityByteIdentical: true,
-              baselineManifestByteIdentical: true,
+              baselineManifestEntriesIdentical: true,
               acquiredMediaRowAbsent: true,
               acquiredStorageKeyAbsent: true,
               missingMedia: deepFreezeExact({

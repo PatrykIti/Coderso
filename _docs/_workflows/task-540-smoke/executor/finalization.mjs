@@ -205,7 +205,7 @@ export function buildCanonicalFinalization(
     storage: deepFreezeExact({
       driver: "local",
       rootIdentityByteIdentical: baselineProof.storageRootByteIdentical,
-      baselineManifestByteIdentical: baselineProof.storageManifestByteIdentical,
+      baselineManifestEntriesIdentical: baselineProof.storageManifestEntriesIdentical,
       acquiredMediaRowAbsent: baselineProof.acquiredMediaAbsent,
       acquiredStorageKeyAbsent: baselineProof.acquiredMediaAbsent,
       missingMedia: deepFreezeExact({

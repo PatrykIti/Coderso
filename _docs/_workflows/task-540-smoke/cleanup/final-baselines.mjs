@@ -9,6 +9,8 @@ import { deepEqualJson } from "../executor/resource-contracts.mjs";
 export function createFinalBaselinesRuntime({
   PROCESS_ABSENCE_STABILITY_MS,
   delayMilliseconds,
+  projectLeakSensitiveStorageManifest,
+  projectStorageManifestEntrySet,
   runBunBridgeOperation,
   scanExactLocalStorageManifest,
   taskUserAgents,
@@ -119,10 +121,36 @@ export function createFinalBaselinesRuntime({
       !canonicalJson(contentRoutesAfterCleanup).includes(state.plan.prefix),
       "final content routes contains a task slug"
     );
+    // Three named conjuncts instead of one anonymous byte-identity check. The single "final storage
+    // manifest differs from preflight" invariant covered the root identity, the entry set and every
+    // field of every row at once, so run ec39365eafa6 cost a 34.7-minute run plus a forensic
+    // session just to learn WHICH had drifted; each class now states itself in the emitted
+    // wf540_rt_ token. The compared value is the leak-sensitive projection, not the raw manifest: a
+    // directory's mtimeNs and size necessarily move when the smoke's own upload is written into a
+    // pre-existing yyyy/mm bucket and unlinked again, and nothing may restore them (writing fake
+    // timestamps back would falsify the very evidence this phase reads). See
+    // runtime/storage-manifest.mjs projectLeakSensitiveStorageManifest.
     const finalStorageManifest = await scanExactLocalStorageManifest(state);
+    const finalStorageProjection = projectLeakSensitiveStorageManifest(finalStorageManifest);
+    const baselineStorageProjection = projectLeakSensitiveStorageManifest(
+      state.storageBaselineManifest
+    );
     invariant(
-      deepEqualJson(finalStorageManifest, state.storageBaselineManifest),
-      "final storage manifest differs from preflight"
+      deepEqualJson(finalStorageProjection.rootIdentity, baselineStorageProjection.rootIdentity),
+      "final storage manifest root identity drift"
+    );
+    // A file the run leaked, or an entry it removed that it did not own, lands here.
+    invariant(
+      deepEqualJson(
+        projectStorageManifestEntrySet(finalStorageProjection),
+        projectStorageManifestEntrySet(baselineStorageProjection)
+      ),
+      "final storage manifest entry set differs from preflight"
+    );
+    // A file that was rewritten, replaced or merely touched lands here.
+    invariant(
+      deepEqualJson(finalStorageProjection, baselineStorageProjection),
+      "final storage manifest entry differs from preflight"
     );
     const persistentLedger =
       state.coreCleanupContext.resourceLedger.compileResourceRecords("persistent");
@@ -155,7 +183,7 @@ export function createFinalBaselinesRuntime({
       bootstrapByteIdentical: true,
       contentRoutesByteIdentical: true,
       storageRootByteIdentical: true,
-      storageManifestByteIdentical: true,
+      storageManifestEntriesIdentical: true,
       taskTrafficByteIdentical: true,
       settingsAbsent: true,
       acquiredMediaAbsent: true,

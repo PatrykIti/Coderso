@@ -217,7 +217,11 @@ const {
   validateContentRoutesBridgeProjection,
   validateResponseLostContentSchema,
 } = createResponseLostBridgeOutputValidators({ RESPONSE_LOST_QUERY_OPERATION_BINDINGS });
-const { scanExactLocalStorageManifest } = createStorageManifestRuntime({
+const {
+  projectLeakSensitiveStorageManifest,
+  projectStorageManifestEntrySet,
+  scanExactLocalStorageManifest,
+} = createStorageManifestRuntime({
   readStableArtifactIdentity,
   responseLostStorageRoot,
   sameArtifactIdentity,
@@ -439,6 +443,8 @@ const {
 } = createFinalBaselinesRuntime({
   PROCESS_ABSENCE_STABILITY_MS,
   delayMilliseconds,
+  projectLeakSensitiveStorageManifest,
+  projectStorageManifestEntrySet,
   runBunBridgeOperation,
   scanExactLocalStorageManifest,
   taskUserAgents,
