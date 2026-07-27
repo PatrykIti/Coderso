@@ -74,6 +74,23 @@ export const cardModule = {
   CardTitle: ({ children }: ChildrenProps) => <div>{children}</div>,
 };
 
+/**
+ * The primitive behind the dirty-navigation guard's confirm dialog. Real Radix is a large graph
+ * and the editor now reaches it from every lane, which roughly doubled their import cost — far
+ * enough that the first test of a parallel batch overran vitest's 5 s default. Only
+ * `entry-editor-navigation-guard.test.tsx` ever opens that dialog, and it leaves this
+ * unstubbed; every other lane takes the shape it depends on, which is "nothing while closed".
+ */
+export const dialogModule = {
+  Dialog: ({ open, children }: ChildrenProps & { open?: boolean }) =>
+    open ? <div>{children}</div> : null,
+  DialogContent: ({ children }: ChildrenProps) => <div>{children}</div>,
+  DialogDescription: ({ children }: ChildrenProps) => <div>{children}</div>,
+  DialogFooter: ({ children }: ChildrenProps) => <div>{children}</div>,
+  DialogHeader: ({ children }: ChildrenProps) => <div>{children}</div>,
+  DialogTitle: ({ children }: ChildrenProps) => <p>{children}</p>,
+};
+
 export const inputModule = {
   Input: ({
     value,

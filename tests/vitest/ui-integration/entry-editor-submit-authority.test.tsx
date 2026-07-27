@@ -45,6 +45,7 @@ vi.mock("@/components/ui/alert", async () => (await harness()).alertModule);
 vi.mock("@/components/ui/badge", async () => (await harness()).badgeModule);
 vi.mock("@/components/ui/button", async () => (await harness()).buttonModule);
 vi.mock("@/components/ui/card", async () => (await harness()).cardModule);
+vi.mock("@/components/ui/dialog", async () => (await harness()).dialogModule);
 vi.mock("@/components/ui/input", async () => (await harness()).inputModule);
 vi.mock("@/components/ui/scroll-area", async () => (await harness()).scrollAreaModule);
 vi.mock("@/components/ui/sheet", async () => (await harness()).sheetModule);

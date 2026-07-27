@@ -35,6 +35,7 @@ import {
 } from "@/services/taxonomyClient";
 import { useAdminRouter } from "@/ui/contexts/AdminRouterContext";
 import { AdminShell } from "@/ui/layouts/AdminShell";
+import { useAdminDirtyNavigationGuard } from "@/ui/shared/AdminDirtyNavigationGuard";
 import { PageHeader } from "@/ui/shared/PageHeader";
 import { SectionCard } from "@/ui/shared/SectionCard";
 import { subscribeCacheEvents } from "@/utils/cacheBus";
@@ -436,15 +437,20 @@ function EntryEditorInstance({ type, id }: EntryEditorInstanceProps) {
   // loaded, and never claims a content type has no fields when it never saw one.
   const isEntryPending = isLoading || !hasLoadedEntry;
 
-  useEffect(() => {
-    const handler = (event: BeforeUnloadEvent) => {
-      if (!hasAnyUnsavedChanges) return;
-      event.preventDefault();
-      event.returnValue = "";
-    };
-    window.addEventListener("beforeunload", handler);
-    return () => window.removeEventListener("beforeunload", handler);
-  }, [hasAnyUnsavedChanges]);
+  // Both ways out of an editor with unsaved work, from the guard the rest of the admin already
+  // uses. A local `beforeunload` handler covered only ONE of them: `AdminLink` preventDefaults
+  // the anchor and navigates with `history.pushState`, which fires no `beforeunload` at all, so
+  // clicking this page's own "Entries" breadcrumb unmounted the editor and took every unsaved
+  // edit with it — the case docs/guide/coderso/entry-editor-and-metadata.md says must prompt.
+  // `blocked` covers both channels, because the guide names the metadata one explicitly and it
+  // is the easier of the two to lose sight of.
+  const { dialog: dirtyNavigationDialog } = useAdminDirtyNavigationGuard({
+    blocked: hasAnyUnsavedChanges,
+    title: "Discard unsaved entry changes?",
+    description: "This entry has content or metadata changes that have not been saved.",
+    confirmLabel: "Discard and continue",
+    cancelLabel: "Keep editing",
+  });
 
   // The way back into an editor whose baseline read failed or resolved nothing: that state
   // refuses every submit (rightly) and shows no fields, and "Refresh" cannot help because it
@@ -972,6 +978,7 @@ function EntryEditorInstance({ type, id }: EntryEditorInstanceProps) {
         cannotPreviewMessage="Save this entry first to generate a runtime preview."
         iframeTitle="Entry runtime preview"
       />
+      {dirtyNavigationDialog}
     </AdminShell>
   );
 }

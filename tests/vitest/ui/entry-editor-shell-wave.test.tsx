@@ -324,12 +324,28 @@ vi.mock("@/services/taxonomyClient", () => ({
   }),
 }));
 
+// The dirty-navigation guard's confirm dialog is real Radix and is never opened here; the
+// stub keeps this suite's import cost off that graph. Opening it is owned by
+// tests/vitest/ui-integration/entry-editor-navigation-guard.test.tsx.
+vi.mock("@/components/ui/dialog", () => ({
+  Dialog: ({ open, children }: { open?: boolean; children: React.ReactNode }) =>
+    open ? <div>{children}</div> : null,
+  DialogContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  DialogDescription: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  DialogFooter: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  DialogHeader: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  DialogTitle: ({ children }: { children: React.ReactNode }) => <p>{children}</p>,
+}));
+
 vi.mock("@/ui/contexts/AdminRouterContext", () => ({
   useAdminRouter: () => ({
     navigate: (href: string) => {
       entryEditorState.navigateCalls.push(href);
     },
   }),
+  // See entry-editor-restyle.test.tsx: no router means the dirty-navigation guard registers
+  // no blocker, and the dedicated navigation-guard lane owns that behaviour.
+  useOptionalAdminRouter: () => null,
 }));
 
 vi.mock("@/ui/layouts/AdminShell", () => ({

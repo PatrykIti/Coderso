@@ -277,9 +277,14 @@ export const taxonomyClientModule = {
 };
 
 // The editor derives the entry it is editing from the router path; the window location is
-// only the fallback for a mount without a router value.
+// only the fallback for a mount without a router value. `useOptionalAdminRouter` answers
+// "there is no router here", which is what a mocked module honestly is: the dirty-navigation
+// guard then registers no blocker, and the lane that owns leaving the editor
+// (`entry-editor-navigation-guard.test.tsx`) mounts the REAL provider instead of this mock.
+// The guard's `beforeunload` half does not depend on a router, so it stays observable here.
 export const adminRouterModule = {
   useAdminRouter: () => ({ navigate: vi.fn(), path: window.location.pathname }),
+  useOptionalAdminRouter: () => null,
 };
 
 export const adminShellModule = {

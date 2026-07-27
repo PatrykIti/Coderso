@@ -187,8 +187,26 @@ vi.mock("@/services/taxonomyClient", () => ({
   createTaxonomyTerm: vi.fn(async () => ({ id: "term-new", name: "New", slug: "new" })),
 }));
 
+// The dirty-navigation guard's confirm dialog is real Radix and is never opened here; the
+// stub keeps this suite's import cost off that graph. Opening it is owned by
+// tests/vitest/ui-integration/entry-editor-navigation-guard.test.tsx.
+vi.mock("@/components/ui/dialog", () => ({
+  Dialog: ({ open, children }: { open?: boolean; children: React.ReactNode }) =>
+    open ? <div>{children}</div> : null,
+  DialogContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  DialogDescription: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  DialogFooter: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  DialogHeader: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  DialogTitle: ({ children }: { children: React.ReactNode }) => <p>{children}</p>,
+}));
+
 vi.mock("@/ui/contexts/AdminRouterContext", () => ({
   useAdminRouter: () => ({ navigate: vi.fn() }),
+  // The dirty-navigation guard asks for the router optionally; a mocked module honestly has
+  // none, so it registers no blocker here. Leaving the editor is owned by
+  // tests/vitest/ui-integration/entry-editor-navigation-guard.test.tsx, which mounts the real
+  // provider.
+  useOptionalAdminRouter: () => null,
 }));
 
 vi.mock("@/ui/layouts/AdminShell", () => ({
