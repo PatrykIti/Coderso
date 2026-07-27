@@ -81,8 +81,8 @@ is **976 lines** and hashes to
 `2699ea77f59bf40691c8561936d1e484c32cc3639679f2f4c27c6b22f06c9442`, which is also the
 value pinned as `FROZEN_HELPER_SHA256[_docs/_workflows/task-540-smoke-executor.mjs]` in
 `tests/unit/workflows/task540SmokeExecutorSecurity.test.ts:34`. This is an inventory
-value, not a closure pin. Final dependent hashes and pins are recomputed only after
-every facade and child-module byte stabilizes.
+value, not a closure pin. Every facade and child-module byte has stabilized, so the
+final dependent hashes and pins are recomputed inside the closure transaction.
 **Current Split Integrity Contract:** The executor self-test must prove exhaustive,
 non-overlapping action-to-scenario ownership for the current manifest, including the
 enumerated related-cache and responsive-users owners. An omitted registry member must
@@ -312,19 +312,21 @@ The historical pre-modularization tracked checkpoint bundle was:
 These exact top-level bytes are tracked by checkpoint `911c29f5` and passed their
 focused non-DB validation at that checkpoint. The executor hash is non-authoritative
 after the later behavior-preserving splits, and the table does not exclude the tracked
-child owners under `_docs/_workflows/task-540-smoke/**`. Final dependent hashes and
-pins are recomputed only after every facade and child-module byte stabilizes.
+child owners under `_docs/_workflows/task-540-smoke/**`. Those facade and child-module
+bytes have stabilized, so the final dependent hashes and pins are recomputed inside the
+closure transaction.
 Historical checkpoint verification checked every byte without replaying recovery. The
 recovered implement workflow's
 `64daaabad53ebf3a73cc7a35fa4cb6f6b72fcf38f7e85367bf35381e492a57f4`
 executor pin is stale against the recovered executor and is not authority. Historical
 executor SHA `6accccffc88371978f2c3ad1727dbbf96aa2473802ea583d14cbc0c4ea548001`
-is provenance only. Those Vite/bridge/local-host prerequisites are landed. Current
-authorized writes are limited to cohesive behavior-preserving smoke splits and their
-split-integrity tests. Only after every facade and child-module byte is final may the
-workflow compute dependent helper hashes and update the
-implement/executor/live-task/focused-test pins. Require the focused TASK-546 security
-test to prove the equality.
+is provenance only. Those Vite/bridge/local-host prerequisites are landed, and so are
+the cohesive behavior-preserving smoke splits and their split-integrity tests: every
+facade and child-module byte is final. Current authorized writes are therefore the
+closure transaction's own — the dependent helper hashes and the
+implement/executor/live-task/focused-test pins, computed inside that transaction — and
+then the remaining steps listed under `Current Closure Repair State` above. Require the
+focused TASK-546 security test to prove the equality.
 Tracked TASK-540 product/task/test bytes remain the current verified working-tree
 authority; old commits are recovery/provenance anchors, never a replacement source
 branch.
@@ -369,8 +371,9 @@ child-source byte pins plus their private optimizer-readiness audit/revalidation
 creation of the Codex bridge; removal of Claude from and integration into the local
 host; schema registration and recursive validation; Codex behavioral-policy prompt
 replacement; CAS/ACK/procedure-ledger cleanup enforcement; bridge gates and independent
-workflow-security test mutants; formatting; and final dependent helper hashes plus
-executor/implement/task/test repins only after every helper byte is final.
+workflow-security test mutants; formatting; and, now that every helper byte is final,
+the final dependent helper hashes plus executor/implement/task/test repins, computed
+inside the closure transaction.
 Root `package.json`, `core/package.json`, and `bun.lock` remain byte-identical and
 read-only.
 No other recovery edit is authorized. The focused test's new masked hash freezes that

@@ -57,8 +57,9 @@ behavior-preserving modularization commits.
 That was a mid-split value, superseded; it is not the facade's present size.
 **Current Executor Inventory:** At HEAD `a68a19e0`, re-measured 2026-07-27, the facade is
 **976 lines**, hashing to `2699ea77f59bf40691c8561936d1e484c32cc3639679f2f4c27c6b22f06c9442`.
-This is an inventory value, not a closure pin. Final dependent hashes and pins are
-recomputed only after all facade and child-module bytes stabilize.
+This is an inventory value, not a closure pin. All facade and child-module bytes have
+stabilized, so the final dependent hashes and pins are recomputed inside the closure
+transaction.
 **Historical Source Repair Revalidated (superseded for L03):** 2026-07-16 — expanded R01 composer/stored-duplicate work and the L04 compatibility correction received their then-exact receipts alongside L03 and TASK-540-05. The later overflow repair restored L03's canonical `Implementation Complete` and exact successor gate; this historical receipt still does not authorize closure. The 2026-07-19 Entry-correction receipt is current; fresh post-audit, full validation, live smoke, changelog, and closure remain pending.
 **Historical Pre-Overflow Post-Audit Orchestrator Revalidated:** 2026-07-17 — the real-source L04 test repair, L03 hygiene fixes, independently pinned aggregate expectation, fail-closed grounded-path exception, and mechanically invoked five-module L04 verifier passed focused static/test/line/self-test gates and two scoped zero-finding audits. The later L03 overflow repair superseded that prepared closure state.
 **Historical Pre-Overflow Subsequent Post-Audit Repair Revalidated:** 2026-07-17 — the final L04 consumer gate then enumerated all 15 files and passed 98/98; R03 fixture typing and receipt order passed 89/89; L03 single-read and bounded-media repairs passed 258/258; static, name/body, line, workflow, and diff gates were green at that checkpoint. The later L03 overflow repair superseded that behavior gate.
@@ -290,9 +291,10 @@ and `task-540-test-name-contract.mjs`
 the inert `task-540-fix.mjs` retains recovery hash
 `b65b1b7cce153471e71ef613bb6515846ba02515a603a899be3ffdc9388ef846`,
 and was not part of that seven-helper bundle. Those facts prove checkpoint `911c29f5`
-only. Its executor hash is non-authoritative after the smoke splits; the final helper,
-task, and test pins must be recomputed after every facade and child-module byte
-stabilizes. Repeating the recovery prerequisite is read-only verification only;
+only. Its executor hash is non-authoritative after the smoke splits; every facade and
+child-module byte has since stabilized, so the final helper, task, and test pins are
+recomputed inside the closure transaction. Repeating the recovery prerequisite is
+read-only verification only;
 replaying or writing a historical blob is forbidden.
 
 The required post-repair local orchestrator remains one continuous Node `--run` host; root
@@ -862,9 +864,10 @@ environments use empty maps/allowlists, never full `process.env` or parsed `.env
 sole host CLI reads no `.env`/profile/package launcher and spawns backend/Admin/site Vite. TASK-546 owns `package.json`, `core/package.json`, and `bun.lock`; their landed
 bytes already resolve Vite 8.1.5 and remain byte-identical/read-only throughout TASK-540. After checkpoint verification, TASK-540 first changes only
 `task-540-smoke-host.mjs` Vite 8.1.5 literals, default fixtures, version mutants, self-test expectations, and embedded child-source byte pin, then privately re-audits
-Vite 8.1.5 optimizer/readiness before bridge/local-host/schema/CAS/ACK/recovery/prompt/test implementation. After formatting and only once all helper bytes are final,
+Vite 8.1.5 optimizer/readiness before bridge/local-host/schema/CAS/ACK/recovery/prompt/test implementation. After formatting, and with all helper bytes now final,
 it computes the final dependent helper
-hashes and performs the implement/executor/task/test repins; final preflight validates
+hashes and performs the implement/executor/task/test repins inside the closure
+transaction; final preflight validates
 the seven top-level entrypoints plus every tracked child owner before the complete
 targeted gate.
 Browser authority uses a task-owned `0700` temp root outside the repo for
