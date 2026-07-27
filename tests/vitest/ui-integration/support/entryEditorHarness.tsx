@@ -411,9 +411,10 @@ export const findMetadataButton = (container: HTMLElement, marker: string) => {
   return first;
 };
 
-// The PageHeader actions are identified by their label, and the label is state: "Save draft"
-// reads "Saving..." while its own request is open.
-export const findHeaderButton = (container: HTMLElement, label: string) => {
+// The one button carrying this exact label, wherever it renders. Labels are state: "Save draft"
+// reads "Saving..." while its own request is open, and the field area's retry only exists while
+// the editor holds no entry.
+export const findButtonByLabel = (container: HTMLElement, label: string) => {
   const matches = Array.from(container.querySelectorAll("button")).filter(
     (button) => button.textContent === label
   );
@@ -422,6 +423,10 @@ export const findHeaderButton = (container: HTMLElement, label: string) => {
   if (!(action instanceof HTMLButtonElement)) throw new Error(`${label} button is absent`);
   return action;
 };
+
+// The PageHeader actions cluster is identified the same way; the alias says where to look.
+export const findHeaderButton = (container: HTMLElement, label: string) =>
+  findButtonByLabel(container, label);
 
 export const findSaveDraft = (container: HTMLElement) => findHeaderButton(container, "Save draft");
 

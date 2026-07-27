@@ -11,6 +11,7 @@ import React from "react";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 
 import {
+  findButtonByLabel,
   findDeleteConfirm,
   findHeaderButton,
   findHeaderProbe,
@@ -323,6 +324,99 @@ test("an entry that never hydrated cannot be deleted, and the dialog cannot even
     expect(editorState.deleteCalls).toEqual([]);
     expect(view.container.textContent).toContain("This entry has not finished loading yet.");
     expect(readDeleteDialog(view.container).open).toBe(false);
+  } finally {
+    view.cleanup();
+  }
+});
+
+// R3. The guards above are correct and they had a cost nobody paid for: a baseline read that
+// REJECTS, and one that resolves NULL, both leave every submit disabled and no fields on
+// screen, and the only re-read the editor offered lives inside the "updated in another tab"
+// alert — which needs a hydration of its own. The verified shape after a reject was
+// { save: true, publish: true, metadata: true, loadingText: true, errorText: true }: a dead
+// editor, escapable only by reloading the browser. Two cases, because the two failures leave a
+// different screen behind, and the retry has to be reachable in both.
+test("a baseline read that fails is recoverable, and the retry hydrates the editor", async () => {
+  window.history.replaceState({}, "", "/admin/advanced/entries/articles/entry-1");
+  const { EntryEditor } = await import("../../../core/admin/ui/entries/EntryEditor");
+
+  const view = mount(<EntryEditor />);
+  try {
+    await React.act(async () => {
+      editorState.rejectEntryRead(0, "Network down");
+      await flushMicrotasks();
+    });
+    // Refused everywhere, as it must be — and no longer claiming to be loading, which was the
+    // other half of the lie.
+    expect([
+      findSaveDraft(view.container).disabled,
+      findHeaderButton(view.container, "Publish").disabled,
+      findMetadataButton(view.container, "data-metadata-save").disabled,
+      findMetadataButton(view.container, "data-metadata-delete").disabled,
+    ]).toEqual([true, true, true, true]);
+    expect(view.container.textContent).toContain("Failed to load entry.");
+    expect(view.container.textContent).not.toContain("Loading entry fields");
+    // The pre-existing "Refresh" is not the way out: it is inside an alert this editor cannot
+    // reach.
+    expect(view.container.textContent).not.toContain("Refresh to load the latest version");
+
+    await React.act(async () => {
+      findButtonByLabel(view.container, "Retry loading this entry").click();
+      await flushMicrotasks();
+    });
+    // A second read, started by the click and only by the click: nothing here re-reads on its
+    // own, so a GET that keeps failing cannot loop.
+    expect(editorState.startedEntryReads()).toBe(2);
+    expect(view.container.textContent).toContain("Loading entry fields");
+
+    await React.act(async () => {
+      editorState.resolveEntryRead(1, editorState.entry);
+      await flushMicrotasks();
+    });
+    // Recovered for real: the fields are there, the failure banner is gone, and the save that
+    // was refused now carries the entry rather than emptying it.
+    expect(view.container.textContent).toContain("field:summary");
+    expect(view.container.textContent).not.toContain("Failed to load entry.");
+    await React.act(async () => {
+      findSaveDraft(view.container).click();
+      await flushMicrotasks();
+    });
+    expect(editorState.updatePayloads).toEqual([
+      { title: "Hello", slug: "hello", data: { title: "Hello", summary: "Summary" } },
+    ]);
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("a baseline read that resolves nothing is recoverable too, though nothing explains it", async () => {
+  window.history.replaceState({}, "", "/admin/advanced/entries/articles/entry-1");
+  const { EntryEditor } = await import("../../../core/admin/ui/entries/EntryEditor");
+
+  const view = mount(<EntryEditor />);
+  try {
+    await React.act(async () => {
+      editorState.resolveEntryRead(0, null);
+      await flushMicrotasks();
+    });
+    // `if (!entryResult) return;` sets no error, so there is no alert to hang a recovery button
+    // on — which is why the retry lives in the field-area placeholder, the one surface that
+    // renders in every not-loaded shape.
+    expect(view.container.textContent).not.toContain("Unable to load entry");
+    expect(findMetadataButton(view.container, "data-metadata-save").disabled).toBe(true);
+
+    await React.act(async () => {
+      findButtonByLabel(view.container, "Retry loading this entry").click();
+      await flushMicrotasks();
+    });
+    expect(editorState.startedEntryReads()).toBe(2);
+
+    await React.act(async () => {
+      editorState.resolveEntryRead(1, editorState.entry);
+      await flushMicrotasks();
+    });
+    expect(view.container.textContent).toContain("field:summary");
+    expect(findSaveDraft(view.container).disabled).toBe(false);
   } finally {
     view.cleanup();
   }

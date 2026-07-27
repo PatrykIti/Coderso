@@ -43,6 +43,7 @@ import { RuntimePreviewDialog } from "@/ui/preview/RuntimePreviewDialog";
 import { EntryDeleteDialog } from "./EntryDeleteDialog";
 import { EntryEditorHeaderActions } from "./EntryEditorHeader";
 import { EntryFieldSections } from "./EntryFieldSections";
+import { EntryFieldsPlaceholder } from "./EntryFieldsPlaceholder";
 import { EntryMetadataPanel, type EntryStatus } from "./EntryMetadataPanel";
 import { EntryTitleSlugFields } from "./EntryTitleSlugFields";
 import { getContentTypeLabels } from "./contentTypeLabels";
@@ -413,6 +414,18 @@ function EntryEditorInstance({ type, id }: EntryEditorInstanceProps) {
     window.addEventListener("beforeunload", handler);
     return () => window.removeEventListener("beforeunload", handler);
   }, [hasAnyUnsavedChanges]);
+
+  // The way back into an editor whose baseline read failed or resolved nothing: that state
+  // refuses every submit (rightly) and shows no fields, and "Refresh" cannot help because it
+  // lives inside the "updated in another tab" alert, which needs a hydration of its own. Unlike
+  // Refresh this keeps the local edits: nothing was ever loaded for them to conflict with, and
+  // hydration puts the snapshot underneath them. User-initiated on purpose — see
+  // `EntryFieldsPlaceholder`.
+  const handleRetryLoad = () => {
+    setIsLoading(true);
+    setError(null);
+    loadEntry({ isBaseline: true, clearLoading: true });
+  };
 
   const handleFieldChange = (name: string, value: unknown) => {
     setValues((prev) => ({ ...prev, [name]: value }));
@@ -841,9 +854,7 @@ function EntryEditorInstance({ type, id }: EntryEditorInstanceProps) {
                   onSlugChange={handleSlugChange}
                 />
                 {isEntryPending ? (
-                  <div className="rounded-xl border border-dashed p-6 text-sm text-muted-foreground">
-                    Loading entry fields...
-                  </div>
+                  <EntryFieldsPlaceholder isLoading={isLoading} onRetry={handleRetryLoad} />
                 ) : contentGroup ? (
                   <EntryFieldSections
                     sections={contentGroup.sections}

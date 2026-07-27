@@ -54,12 +54,22 @@ export const editorState = (() => {
   type EntryFixture = typeof entry;
 
   // One deferred per GET rather than one per test: that is what lets a test resolve a
-  // NEWER read before an older one, which is the only way to observe read authority.
-  const entryReads: Array<(value: EntryFixture) => void> = [];
-  const resolveEntryRead = (index: number, value: EntryFixture) => {
-    const resolve = entryReads[index];
-    if (!resolve) throw new Error(`entry read #${index} has not started`);
-    resolve(value);
+  // NEWER read before an older one, which is the only way to observe read authority. Both
+  // settlements are kept, because a GET that REJECTS and one that resolves NULL are the two
+  // shapes that leave the editor with no entry at all — and they leave a different screen
+  // behind (one sets an error, the other explains nothing).
+  type EntryReadDeferred = {
+    resolve: (value: EntryFixture | null) => void;
+    reject: (error: Error) => void;
+  };
+  const entryReads: EntryReadDeferred[] = [];
+  const requireEntryRead = (index: number) => {
+    const deferred = entryReads[index];
+    if (!deferred) throw new Error(`entry read #${index} has not started`);
+    return deferred;
+  };
+  const resolveEntryRead = (index: number, value: EntryFixture | null) => {
+    requireEntryRead(index).resolve(value);
   };
 
   const gateReleases = new Map<GateName, () => void>();
@@ -90,11 +100,14 @@ export const editorState = (() => {
       terms: { categories: [], tags: [] },
     },
     readEntry: () =>
-      new Promise<EntryFixture>((resolve) => {
-        entryReads.push(resolve);
+      new Promise<EntryFixture | null>((resolve, reject) => {
+        entryReads.push({ resolve, reject });
       }),
     resolveEntryRead,
-    resolveEntry: (value: EntryFixture) => resolveEntryRead(0, value),
+    rejectEntryRead: (index: number, message: string) => {
+      requireEntryRead(index).reject(new Error(message));
+    },
+    resolveEntry: (value: EntryFixture | null) => resolveEntryRead(0, value),
     startedEntryReads: () => entryReads.length,
     resetEntryRead: () => {
       entryReads.length = 0;
