@@ -11106,6 +11106,24 @@ const TASK_540_LINE_LIMIT_ACCOUNTABLE_PATHS = Object.freeze([
   "core/admin/ui/entries/useEntryRelationTargets.ts",
   "core/admin/ui/entries/useEntryRuntimePreview.ts",
   "tests/vitest/ui-integration/entry-editor-hydration-race.test.tsx",
+  // The same entry editor, continued by the read-only audit's fixes, merged as cf2c8661 from a
+  // parallel worktree (commits b150c59e, d58ea1ef, c32c5fc1, b561425d, b005d45c, 80425e7c,
+  // 3445bf9a). EntryMetadataPanel.tsx predates the family -- 0b78aad0 created it -- but the
+  // merge edited it, which is what pulled it into the touched-path authority.
+  //
+  // Owner is the closure leaf for the same reason as every path above: no leaf WROTE these,
+  // so allowedFiles would hand an implementation agent write access to files outside its
+  // scope. In particular they are NOT 540-04-L03's ("Guard Entry Drafts And Subscribe Related
+  // Caches"): that leaf's surface is the SCREEN entry editor under
+  // core/admin/ui/custom-screens/**, a different editor from the content-type entry editor
+  // under core/admin/ui/entries/**, and every existing sibling of these files is accounted
+  // for here rather than there.
+  "core/admin/ui/entries/EntryFieldsPlaceholder.tsx",
+  "core/admin/ui/entries/EntryMetadataPanel.tsx",
+  "core/admin/ui/entries/useEntryEditTracker.ts",
+  "tests/vitest/ui-integration/entry-editor-submit-authority.test.tsx",
+  "tests/vitest/ui-integration/support/entryEditorHarness.tsx",
+  "tests/vitest/ui-integration/support/entryEditorLaneFixture.tsx",
   // Connection-target / pooler work and the backup scheduler it moved (commits e83ebc99, 369cd7ee).
   "core/db/client.ts",
   "core/db/connectionTargets.ts",
@@ -11132,6 +11150,7 @@ const TASK_540_LINE_LIMIT_ACCOUNTABLE_PATHS = Object.freeze([
   "tests/unit/workflows/task540StaleCountProse.test.ts",
   "tests/unit/workflows/task540StatusTargetAgreement.test.ts",
   "tests/unit/workflows/task540SmokeRuntimeExpectationContracts.test.ts",
+  "tests/unit/workflows/task540TaskDocumentMeasuredClaims.test.ts",
   "tests/unit/workflows/task543ImplementSecurity.test.ts",
   // Carried along by the branch's own dependency bump 3d5604ec (chore: up packages) and by
   // merge 3664d489, not by TASK-540 work. Accounted for here because the branch does ship
@@ -11187,7 +11206,7 @@ const TASK_540_LINE_LIMIT_TRIPWIRE_PATHS = Object.freeze([
   "core/widgets/core/footer.tsx",
 ]);
 const TASK_540_LINE_LIMIT_ACCOUNTABLE_PATHS_SHA256 =
-  "c112db8cc418994aff96359da58327af6df6243e63010ab6eb0422eb14f7d495";
+  "2834987ab9ea648062ede4f18fce311cf9a74e240b586ab7609f625baba7747e";
 const TASK_540_LINE_LIMIT_ACCOUNTABLE_OWNERS = Object.freeze(
   TASK_540_LINE_LIMIT_ACCOUNTABLE_PATHS.map((path) =>
     Object.freeze({ path, owner: TASK_540_LINE_LIMIT_ACCOUNTABLE_OWNER })
@@ -11213,7 +11232,7 @@ if (
   // Must be the leaf that lands LAST, which is the whole rationale for the choice: it is
   // the only leaf still able to split one of these before the family closes.
   TASK_540_LINE_LIMIT_ACCOUNTABLE_OWNER !== LEAF_ORDER[LEAF_ORDER.length - 1] ||
-  TASK_540_LINE_LIMIT_ACCOUNTABLE_PATHS.length !== 81 ||
+  TASK_540_LINE_LIMIT_ACCOUNTABLE_PATHS.length !== 88 ||
   new Set(TASK_540_LINE_LIMIT_ACCOUNTABLE_PATHS).size !==
     TASK_540_LINE_LIMIT_ACCOUNTABLE_PATHS.length ||
   TASK_540_LINE_LIMIT_ACCOUNTABLE_PATHS.some(
