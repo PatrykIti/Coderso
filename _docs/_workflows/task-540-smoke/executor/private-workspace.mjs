@@ -223,7 +223,7 @@ async function writeOwnedWorkspaceFile(ledger, target, bytes) {
   });
   invariant(
     sameArtifactIdentity(descriptorIdentity, identity, { includeSize: true }),
-    "private workspace file path/descriptor identity mismatch"
+    "private workspace file path and descriptor identity mismatch"
   );
   registerWorkspaceArtifact(ledger, target, identity);
   return identity;

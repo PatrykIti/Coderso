@@ -221,7 +221,7 @@ export function createExecuteCleanupLifecycleCore(dependencies) {
             invariant(
               state.browserClosed === true &&
                 state.terminalSessionAbsenceSha256 === hashBytes(Buffer.from("  (no browsers)\n")),
-              "terminal browser/session absence proof is incomplete"
+              "terminal browser and session absence proof is incomplete"
             )
           );
         }
@@ -552,7 +552,7 @@ export function createExecuteCleanupLifecycleCore(dependencies) {
           }
           invariant(
             coupledCandidate !== null,
-            "bootstrap/terminal traffic coupled barrier did not converge"
+            "bootstrap and terminal traffic coupled barrier did not converge"
           );
           terminalRows = await readStableTaskTrafficDelta(state, async (poll, rows) => {
             appendTaskTrafficPollProofReceipts(

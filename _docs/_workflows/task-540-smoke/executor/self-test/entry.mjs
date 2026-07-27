@@ -799,6 +799,7 @@ export function createRunTask540SmokeExecutorSelfTest(dependencies) {
       graphIndependentCore,
       graphSessionCore,
       graphUserCore,
+      plan,
       runIndependentCleanupStepsNeverSkip,
       runPrivateCleanupAdminApiBoundary,
       terminalCapabilities,

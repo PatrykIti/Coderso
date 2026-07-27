@@ -449,7 +449,7 @@ export function createCleanupExecutionStages(dependencies) {
   ) {
     invariant(
       [3, 6, 7].includes(cleanupPhase) && typeof executeOperation === "function",
-      "cleanup stage phase/operation authority is absent"
+      "cleanup stage phase and operation authority is absent"
     );
     const records = finalRecordByKey(finalPlan.ledger);
     const receipts = [];
@@ -457,7 +457,7 @@ export function createCleanupExecutionStages(dependencies) {
     const retainStageFailure = (error, phaseThreeFailureClass = "persistent_stage_failed") => {
       invariant(
         PHASE_THREE_CLEANUP_FAILURE_CLASSES.includes(phaseThreeFailureClass),
-        "phase 3 cleanup failure class drift"
+        "persistent stage cleanup failure class drift"
       );
       const failure = retainPrivateCleanupFailureDiagnosticNeverThrow(
         error,

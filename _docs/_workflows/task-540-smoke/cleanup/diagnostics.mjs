@@ -79,12 +79,44 @@ function privateCleanupFailureDiagnosticNeverThrow(cause) {
   }
 }
 
-// Abstains on anything the frozen vocabulary does not cover, "unclassified" included, so a
-// failure the projection cannot name leaves every emitted diagnostic byte-identical.
-function harnessFailureReasonNeverThrow(cause) {
+// A cleanup phase that runs its steps through runIndependentCleanupStepsNeverSkip never throws its
+// own invariant: the helper deliberately runs every step and then raises ONE AggregateError whose
+// message is its fixed label ("phase 9 final baselines cleanup branches failed"), which belongs to
+// no vocabulary. The phase scheduler retains the diagnostic against THAT object, so phases 1, 9 and
+// 10 - the three that use the helper - could only ever report a phase number. Measured on run
+// 1640c86416da: the emitted line carried `cleanupPhase: 9` with no cleanupFailureReason even though
+// the failing step's own invariant phrase was projectable. The bounded walk below inherits the FIRST
+// nested failure that names itself, in step order, following `errors` (AggregateError) and `cause`
+// (the chain bootstrap restoration attaches). It runs ONLY when the cause itself names nothing, so
+// it can never displace a token the cause already carries, and it still abstains on anything the
+// frozen vocabulary does not cover - "unclassified" included - so a failure the projection cannot
+// name leaves every emitted diagnostic byte-identical.
+const MAX_NESTED_FAILURE_REASON_DEPTH = 4;
+const MAX_NESTED_FAILURE_REASON_BREADTH = 16;
+
+function nestedFailureCandidatesNeverThrow(cause) {
+  try {
+    if ((typeof cause !== "object" || cause === null) && typeof cause !== "function") return [];
+    const aggregated = Array.isArray(cause.errors)
+      ? cause.errors.slice(0, MAX_NESTED_FAILURE_REASON_BREADTH)
+      : [];
+    const chained = cause.cause === undefined || cause.cause === null ? [] : [cause.cause];
+    return [...aggregated, ...chained];
+  } catch {
+    return [];
+  }
+}
+
+function harnessFailureReasonNeverThrow(cause, depth = 0) {
   try {
     const reason = classifyFailureReasonNeverThrow(cause);
-    return typeof reason === "string" && FAILURE_REASON_HARNESS_PATTERN.test(reason) ? reason : null;
+    if (typeof reason === "string" && FAILURE_REASON_HARNESS_PATTERN.test(reason)) return reason;
+    if (depth >= MAX_NESTED_FAILURE_REASON_DEPTH) return null;
+    for (const nested of nestedFailureCandidatesNeverThrow(cause)) {
+      const nestedReason = harnessFailureReasonNeverThrow(nested, depth + 1);
+      if (nestedReason !== null) return nestedReason;
+    }
+    return null;
   } catch {
     return null;
   }

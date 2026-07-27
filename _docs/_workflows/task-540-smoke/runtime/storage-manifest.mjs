@@ -89,7 +89,7 @@ export function createStorageManifestRuntime({
           directoryCount += 1;
           invariant(
             directoryCount <= 2_000 && depth + 1 <= 3,
-            "storage manifest directory/depth bound exceeded"
+            "storage manifest directory and depth bound exceeded"
           );
           pending.push({ relative, depth: depth + 1 });
         }
@@ -103,7 +103,7 @@ export function createStorageManifestRuntime({
     invariant(
       Buffer.byteLength(canonicalJson(rows)) <= MAX_STREAM_BYTES &&
         Date.now() - startedAt <= 30_000,
-      "storage manifest serialized/time bound exceeded"
+      "storage manifest serialized size and time bound exceeded"
     );
     return deepFreezeExact({ rootIdentity, rows: deepFreezeExact(rows) });
   }

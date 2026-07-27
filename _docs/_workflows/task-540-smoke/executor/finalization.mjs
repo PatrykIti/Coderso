@@ -24,13 +24,65 @@ export function cleanupPlanView(ledger, blockedRoots = []) {
   });
 }
 
+// rc-033-stale-shot and rc-037-final-shot photograph the SAME visible state on purpose. The only
+// actions between them release the held stale related-A response (rc-034) and unroute it (rc-036),
+// and rc-035-stale-proof asserts that the released response must leave the visible state unchanged:
+// the updated A1 title must stay absent while the B rows remain retained. Flow 5 never toggles the
+// theme either - the "-dark" in the second file name is the theme flow 4 left behind, and flow 6's
+// first theme action ("flow 6 dark -> light selected") records that flow 5 ended dark - so nothing
+// between the two captures can change a pixel unless stale-response rejection BROKE. Two
+// byte-identical PNGs are therefore the pixel-level corroboration that the product did the right
+// thing, and requiring all 13 contents to differ required a repaint the product must not perform.
+// Measured on run 1640c86416da: both files are 166583 bytes with sha256
+// c2c0e994164c3ecdf0382812addbd1d29eb9cc6e099c725545338214367a74e9, on distinct inodes 7022820 and
+// 7022821, written 4.53 s apart - so the acquisition genuinely happened twice and only the CONTENT
+// coincided. The pair is declared here rather than the uniqueness check being deleted, so the claim
+// stays narrow: two shots from unrelated flows that photograph the same view - the signature of a
+// capture pointed at the wrong page - still fail, every PNG must still be its own file, and every
+// PNG must still hash to the value its acquisition recorded. Identity is PERMITTED here, not
+// required: a legitimate incidental repaint (a toast, a focus ring) must not fail a 35-minute run,
+// and the authoritative proof that the stale response was rejected is rc-035's exact DOM assertion,
+// not these bytes.
+export const EXPECTED_IDENTICAL_SCREENSHOT_PATH_GROUPS = deepFreezeExact([
+  [
+    "_docs/_workflows/_smoke/task-540-wf540smoke-related-a-stale.png",
+    "_docs/_workflows/_smoke/task-540-wf540smoke-related-b-dark.png",
+  ],
+]);
+
+// Fails closed against the frozen contract: a declared path that is not a required screenshot, a
+// group with fewer than two members, a repeated member or a path claimed by two groups all refuse,
+// so the declaration can never silently stop covering the pair it was written for.
+export function expectedIdenticalScreenshotGroupOrdinals(
+  requiredScreenshotPaths,
+  groups = EXPECTED_IDENTICAL_SCREENSHOT_PATH_GROUPS
+) {
+  const required = new Set(requiredScreenshotPaths);
+  const ordinalByPath = new Map();
+  invariant(Array.isArray(groups), "expected identical screenshot groups are absent");
+  for (const [ordinal, group] of groups.entries()) {
+    invariant(
+      Array.isArray(group) &&
+        group.length >= 2 &&
+        new Set(group).size === group.length &&
+        group.every((path) => required.has(path) && !ordinalByPath.has(path)),
+      "expected identical screenshot group drift"
+    );
+    for (const path of group) ordinalByPath.set(path, ordinal);
+  }
+  return ordinalByPath;
+}
+
 export async function validateSuccessfulScreenshotSet(state) {
   invariant(
     state.screenshots.size === state.plan.requiredScreenshotPaths.length,
     "screenshot acquisition count drift"
   );
+  const identicalGroupOrdinals = expectedIdenticalScreenshotGroupOrdinals(
+    state.plan.requiredScreenshotPaths
+  );
   const identities = new Set();
-  const hashes = new Set();
+  const hashOwners = new Map();
   const paths = [];
   const pngSignature = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
   for (const relative of state.plan.requiredScreenshotPaths) {
@@ -54,12 +106,16 @@ export async function validateSuccessfulScreenshotSet(state) {
     );
     invariant(hashBytes(bytes) === record.sha256, "screenshot content identity drift");
     const identityKey = record.dev + ":" + record.ino;
+    invariant(!identities.has(identityKey), "screenshot file identity is not unique");
+    const sameContentAs = hashOwners.get(record.sha256);
     invariant(
-      !identities.has(identityKey) && !hashes.has(record.sha256),
-      "screenshot identity/hash is not unique"
+      sameContentAs === undefined ||
+        (identicalGroupOrdinals.has(relative) &&
+          identicalGroupOrdinals.get(relative) === identicalGroupOrdinals.get(sameContentAs)),
+      "undeclared duplicate screenshot content hash"
     );
     identities.add(identityKey);
-    hashes.add(record.sha256);
+    if (sameContentAs === undefined) hashOwners.set(record.sha256, relative);
     paths.push(
       deepFreezeExact({
         path: relative,

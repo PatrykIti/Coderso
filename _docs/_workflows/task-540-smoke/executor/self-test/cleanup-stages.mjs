@@ -1,3 +1,7 @@
+import { mkdtemp, rm, stat, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import path from "node:path";
+
 import {
   CLEANUP_FAILURE_CLASS_PRIORITY,
   MAX_FAILURE_ACTION_DIAGNOSTIC_BYTES,
@@ -8,8 +12,14 @@ import {
 import {
   canonicalJson,
   deepFreezeExact,
+  hashBytes,
   invariant,
 } from "../foundation.mjs";
+import {
+  EXPECTED_IDENTICAL_SCREENSHOT_PATH_GROUPS,
+  expectedIdenticalScreenshotGroupOrdinals,
+  validateSuccessfulScreenshotSet,
+} from "../finalization.mjs";
 import { deepEqualJson } from "../resource-contracts.mjs";
 import { assertExactCleanupTupleSet } from "../resource-ledger.mjs";
 import { cleanupDiagnostics } from "../../cleanup/diagnostics.mjs";
@@ -31,6 +41,7 @@ export async function runCleanupStagesSelfTest({
   graphIndependentCore,
   graphSessionCore,
   graphUserCore,
+  plan,
   runIndependentCleanupStepsNeverSkip,
   runPrivateCleanupAdminApiBoundary,
   terminalCapabilities,
@@ -39,6 +50,7 @@ export async function runCleanupStagesSelfTest({
 }) {
   const {
     privateCleanupFailureDiagnosticNeverThrow,
+    privateCleanupFailureReasonNeverThrow,
     retainPrivateCleanupAggregateDiagnosticNeverThrow,
     retainPrivateCleanupFailureDiagnosticNeverThrow,
     selectPrivateCleanupFailureDiagnosticNeverThrow,
@@ -643,6 +655,258 @@ export async function runCleanupStagesSelfTest({
     "independent cleanup branch aggregate"
   );
   invariant(independentStepMask === 7, "independent cleanup branch was skipped");
+
+  // A phase that runs its steps through the never-skip helper throws the HELPER's AggregateError,
+  // never the step's own invariant, so the phase scheduler retains its diagnostic against an object
+  // whose message belongs to no vocabulary. Run 1640c86416da ended on exactly this shape and could
+  // report only `cleanupPhase: 9`. These cases pin the nested walk in both directions: an inner
+  // failure that names itself is inherited, an outer cause that names itself is never displaced,
+  // and anything the vocabulary cannot name still leaves the emitted line byte-identical.
+  let namedStepAggregate = null;
+  await expectAsyncFailure(
+    async () => {
+      try {
+        await runIndependentCleanupStepsNeverSkip(
+          [
+            async () => invariant(false, "undeclared duplicate screenshot content hash"),
+            async () => {},
+          ],
+          "phase 9 final baselines"
+        );
+      } catch (error) {
+        namedStepAggregate = error;
+        throw error;
+      }
+    },
+    "named phase 9 step aggregate"
+  );
+  invariant(
+    privateCleanupFailureReasonNeverThrow(
+      retainPrivateCleanupFailureDiagnosticNeverThrow(namedStepAggregate, 9, "phase_failed")
+    ) === "wf540_rt_undeclared_duplicate_screenshot_content_hash",
+    "phase step aggregate did not inherit its step token"
+  );
+  invariant(
+    privateCleanupFailureReasonNeverThrow(
+      retainPrivateCleanupFailureDiagnosticNeverThrow(
+        new Error("TASK-540 cleanup failed", {
+          cause: new Error(
+            "TASK-540 smoke executor: final storage and database baseline drift"
+          ),
+        }),
+        9,
+        "phase_failed"
+      )
+    ) === "wf540_rt_final_storage_and_database_baseline_drift",
+    "chained cleanup cause token was lost"
+  );
+  invariant(
+    privateCleanupFailureReasonNeverThrow(
+      retainPrivateCleanupFailureDiagnosticNeverThrow(
+        new AggregateError(
+          [new Error("TASK-540 smoke executor: final storage and database baseline drift")],
+          "TASK-540 smoke executor: cleanup lifecycle did not complete"
+        ),
+        9,
+        "phase_failed"
+      )
+    ) === "wf540_rt_cleanup_lifecycle_did_not_complete",
+    "nested walk displaced the cause token"
+  );
+  invariant(
+    privateCleanupFailureReasonNeverThrow(
+      retainPrivateCleanupFailureDiagnosticNeverThrow(
+        new AggregateError(
+          [new Error("third party branch failure")],
+          "phase 9 final baselines cleanup branches failed"
+        ),
+        9,
+        "phase_failed"
+      )
+    ) === null,
+    "unnameable cleanup aggregate gained a reason"
+  );
+  const cyclicCleanupFailure = new Error("cyclic cleanup failure");
+  cyclicCleanupFailure.cause = cyclicCleanupFailure;
+  invariant(
+    privateCleanupFailureReasonNeverThrow(
+      retainPrivateCleanupFailureDiagnosticNeverThrow(cyclicCleanupFailure, 9, "phase_failed")
+    ) === null,
+    "cyclic cleanup cause walk did not terminate"
+  );
+
+  // Cleanup phase 9 validates the screenshot set. Its uniqueness claim had NO coverage at all,
+  // which is how a claim the flow's own semantics forbid survived every negative case: rc-033 and
+  // rc-037 photograph the same visible state on purpose, so their PNGs are byte-identical whenever
+  // stale-response rejection works. The declared group is permitted to collide; every other
+  // duplicate, a reused file identity and an acquisition-count mismatch must still refuse.
+  const screenshotFixtureRoot = await mkdtemp(path.join(tmpdir(), "wf540-screenshot-set-"));
+  try {
+    const [declaredFirstPath, declaredSecondPath] = EXPECTED_IDENTICAL_SCREENSHOT_PATH_GROUPS[0];
+    const contractOrdinals = expectedIdenticalScreenshotGroupOrdinals(
+      plan.requiredScreenshotPaths
+    );
+    invariant(
+      contractOrdinals.size === 2 &&
+        contractOrdinals.get(declaredFirstPath) === 0 &&
+        contractOrdinals.get(declaredSecondPath) === 0,
+      "contract screenshot identical group declaration drift"
+    );
+    const undeclaredPaths = plan.requiredScreenshotPaths.filter(
+      (candidate) => !contractOrdinals.has(candidate)
+    );
+    invariant(undeclaredPaths.length >= 2, "undeclared screenshot path fixtures are absent");
+    const [firstUndeclaredPath, secondUndeclaredPath] = undeclaredPaths;
+    const acquireScreenshotFixture = async (name, payload) => {
+      const absolute = path.join(screenshotFixtureRoot, name);
+      const bytes = Buffer.concat([
+        Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+        Buffer.from(payload, "utf8"),
+      ]);
+      await writeFile(absolute, bytes, { mode: 0o600 });
+      const info = await stat(absolute);
+      return deepFreezeExact({
+        absolute,
+        dev: String(info.dev),
+        ino: String(info.ino),
+        mode: info.mode & 0o777,
+        size: info.size,
+        sha256: hashBytes(bytes),
+      });
+    };
+    const screenshotSetState = (entries) =>
+      Object.freeze({
+        plan: deepFreezeExact({ requiredScreenshotPaths: entries.map(([relative]) => relative) }),
+        screenshots: new Map(entries),
+      });
+    // Every negative case below names the invariant it must trip, so a case can never pass by
+    // failing somewhere else - and every state keeps BOTH declared paths present, because the
+    // declaration guard legitimately refuses a set that has stopped carrying the pair.
+    const expectScreenshotRefusal = async (phrase, label, callback) => {
+      let observed = null;
+      await expectAsyncFailure(async () => {
+        try {
+          await callback();
+        } catch (error) {
+          observed = error;
+          throw error;
+        }
+      }, label);
+      invariant(
+        observed instanceof Error &&
+          observed.message === "TASK-540 smoke executor: " + phrase,
+        label + " refused for the wrong reason"
+      );
+    };
+    const identicalDeclaredFirst = await acquireScreenshotFixture(
+      "declared-first-identical.png",
+      "same-visible-state"
+    );
+    const identicalDeclaredSecond = await acquireScreenshotFixture(
+      "declared-second-identical.png",
+      "same-visible-state"
+    );
+    const distinctDeclaredFirst = await acquireScreenshotFixture(
+      "declared-first-distinct.png",
+      "declared-first-view"
+    );
+    const distinctDeclaredSecond = await acquireScreenshotFixture(
+      "declared-second-distinct.png",
+      "declared-second-view"
+    );
+    const firstUndeclared = await acquireScreenshotFixture("undeclared-first.png", "other-view");
+    const secondUndeclared = await acquireScreenshotFixture("undeclared-second.png", "other-view");
+    const permitted = await validateSuccessfulScreenshotSet(
+      screenshotSetState([
+        [declaredFirstPath, identicalDeclaredFirst],
+        [declaredSecondPath, identicalDeclaredSecond],
+        [firstUndeclaredPath, firstUndeclared],
+      ])
+    );
+    invariant(
+      permitted.length === 3 &&
+        identicalDeclaredFirst.sha256 === identicalDeclaredSecond.sha256 &&
+        identicalDeclaredFirst.ino !== identicalDeclaredSecond.ino &&
+        permitted.filter(({ sha256 }) => sha256 === identicalDeclaredFirst.sha256).length === 2,
+      "declared identical screenshot pair was refused"
+    );
+    await expectScreenshotRefusal(
+      "undeclared duplicate screenshot content hash",
+      "undeclared duplicate screenshot content",
+      async () =>
+        validateSuccessfulScreenshotSet(
+          screenshotSetState([
+            [declaredFirstPath, distinctDeclaredFirst],
+            [declaredSecondPath, distinctDeclaredSecond],
+            [firstUndeclaredPath, firstUndeclared],
+            [secondUndeclaredPath, secondUndeclared],
+          ])
+        )
+    );
+    const declaredCrossGroup = await acquireScreenshotFixture(
+      "declared-cross-group.png",
+      "other-view"
+    );
+    await expectScreenshotRefusal(
+      "undeclared duplicate screenshot content hash",
+      "declared screenshot duplicating an undeclared view",
+      async () =>
+        validateSuccessfulScreenshotSet(
+          screenshotSetState([
+            [declaredFirstPath, declaredCrossGroup],
+            [declaredSecondPath, distinctDeclaredSecond],
+            [firstUndeclaredPath, firstUndeclared],
+          ])
+        )
+    );
+    await expectScreenshotRefusal(
+      "screenshot file identity is not unique",
+      "reused screenshot file identity",
+      async () =>
+        validateSuccessfulScreenshotSet(
+          screenshotSetState([
+            [declaredFirstPath, distinctDeclaredFirst],
+            [declaredSecondPath, distinctDeclaredSecond],
+            [firstUndeclaredPath, firstUndeclared],
+            [secondUndeclaredPath, firstUndeclared],
+          ])
+        )
+    );
+    await expectScreenshotRefusal(
+      "screenshot acquisition count drift",
+      "screenshot acquisition count",
+      async () =>
+        validateSuccessfulScreenshotSet(
+          Object.freeze({
+            plan: deepFreezeExact({
+              requiredScreenshotPaths: [declaredFirstPath, declaredSecondPath],
+            }),
+            screenshots: new Map([[declaredFirstPath, distinctDeclaredFirst]]),
+          })
+        )
+    );
+    for (const [label, groups] of [
+      [
+        "identical group path is not required",
+        [[declaredFirstPath, "_docs/_workflows/_smoke/task-540-wf540smoke-absent.png"]],
+      ],
+      ["identical group has one member", [[declaredFirstPath]]],
+      ["identical group repeats a member", [[declaredFirstPath, declaredFirstPath]]],
+      [
+        "two identical groups claim one path",
+        [
+          [declaredFirstPath, declaredSecondPath],
+          [declaredFirstPath, firstUndeclaredPath],
+        ],
+      ],
+    ]) {
+      await expectScreenshotRefusal("expected identical screenshot group drift", label, async () =>
+        expectedIdenticalScreenshotGroupOrdinals(plan.requiredScreenshotPaths, groups)
+      );
+    }
+  } finally {
+    await rm(screenshotFixtureRoot, { recursive: true, force: true });
+  }
 
   const reorderedCleanupReceipts = [...terminalEvidence.cleanupReceipts];
   [reorderedCleanupReceipts[0], reorderedCleanupReceipts[1]] = [
