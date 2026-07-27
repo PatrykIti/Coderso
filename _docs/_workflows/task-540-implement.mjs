@@ -11112,6 +11112,7 @@ const TASK_540_LINE_LIMIT_ACCOUNTABLE_PATHS = Object.freeze([
   "tests/unit/workflows/task540SmokeExecutorBunBridgeResourceSources.test.ts",
   "tests/unit/workflows/task540SmokeExecutorSecurity.test.ts",
   "tests/unit/workflows/task540SmokeExecutorSourceContracts.test.ts",
+  "tests/unit/workflows/task540StatusTargetAgreement.test.ts",
   "tests/unit/workflows/task540SmokeRuntimeExpectationContracts.test.ts",
   "tests/unit/workflows/task543ImplementSecurity.test.ts",
   // Carried along by the branch's own dependency bump 3d5604ec (chore: up packages) and by
@@ -11168,7 +11169,7 @@ const TASK_540_LINE_LIMIT_TRIPWIRE_PATHS = Object.freeze([
   "core/widgets/core/footer.tsx",
 ]);
 const TASK_540_LINE_LIMIT_ACCOUNTABLE_PATHS_SHA256 =
-  "f4f97715da46f829fdecead3a6f4b8ecf1b3be35950479c821ae47c5ff8d02ed";
+  "772870486e91424412b15bb59e0e5c31bbc9373c62d66c99fd323b6cf48d5b09";
 const TASK_540_LINE_LIMIT_ACCOUNTABLE_OWNERS = Object.freeze(
   TASK_540_LINE_LIMIT_ACCOUNTABLE_PATHS.map((path) =>
     Object.freeze({ path, owner: TASK_540_LINE_LIMIT_ACCOUNTABLE_OWNER })
@@ -11194,7 +11195,7 @@ if (
   // Must be the leaf that lands LAST, which is the whole rationale for the choice: it is
   // the only leaf still able to split one of these before the family closes.
   TASK_540_LINE_LIMIT_ACCOUNTABLE_OWNER !== LEAF_ORDER[LEAF_ORDER.length - 1] ||
-  TASK_540_LINE_LIMIT_ACCOUNTABLE_PATHS.length !== 77 ||
+  TASK_540_LINE_LIMIT_ACCOUNTABLE_PATHS.length !== 78 ||
   new Set(TASK_540_LINE_LIMIT_ACCOUNTABLE_PATHS).size !==
     TASK_540_LINE_LIMIT_ACCOUNTABLE_PATHS.length ||
   TASK_540_LINE_LIMIT_ACCOUNTABLE_PATHS.some(

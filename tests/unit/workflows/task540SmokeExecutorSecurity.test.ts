@@ -28,14 +28,14 @@ const bridgePath = path.join(root, bridgeRelative);
 const implementPath = path.join(root, implementRelative);
 const localOrchestratorPath = path.join(root, localOrchestratorRelative);
 const testNameContractPath = path.join(root, testNameContractRelative);
-const MASKED_IMPLEMENT_SHA256 = "da7710a8b141d4670b2e15c8458e1236b4d00d34d03aed94bac38140f4c00c33";
+const MASKED_IMPLEMENT_SHA256 = "87760059986aa199c75f32b3cb372bdc622572c750384c1b097666cab601a36e";
 const FROZEN_HELPER_SHA256 = Object.freeze({
   [smokeContractRelative]: "33da5a759d69ed00d41dc364dd918660c665591db34bd411b1f174c7b9e142b2",
   [executorRelative]: "2699ea77f59bf40691c8561936d1e484c32cc3639679f2f4c27c6b22f06c9442",
   [smokeHostRelative]: "82accfe7b9ada4ca02853c691b315fec5817a54b600912a081d5495ade6c8d61",
   [bridgeRelative]: "c3c594a17cb63943beab29e7f621f6e1ca46cb3b5abb67625edcddb900788341",
-  [localOrchestratorRelative]: "e06c7be9652554111c111c2e8210b733db908a4f272bcbd4a11781174e132da4",
-  [implementRelative]: "22e94cd99e593d791de6995e56da121424d524b97d75a2dbae89dd1cf0f54cb6",
+  [localOrchestratorRelative]: "876a1ce89ed0f40b2b7b12af117e17789bed8c3f5d5c8a6008ff273c4c458c51",
+  [implementRelative]: "59590d12ab87be44bb2dba9e1cc0936240dd6159e10f36c691761675611dca9d",
   [testNameContractRelative]: "ce052b4245c8c384d0405c32cf9d1df146a2f83a409994a6a2822de5422fc4f5",
 });
 
@@ -327,7 +327,7 @@ test("TASK-540 terminal ledger is a five-target index-last transaction", () => {
   expect(cleanup).not.toContain("commitTerminalLedger");
 });
 
-test("TASK-540 status closure is an 18-target board-last durable transaction", () => {
+test("TASK-540 status closure is a 21-target board-last durable transaction", () => {
   const { implement, localOrchestrator } = readSources();
   expect(frozenStringArray(localOrchestrator, "STATUS_TARGET_RELATIVE_PATHS")).toEqual([
     "_docs/_TASKS/TASK-540-01-L01-Reject-Unknown-Sanitize-Urls-Unique-Tabs-And-Prune-Ghosts.md",
@@ -339,12 +339,15 @@ test("TASK-540 status closure is an 18-target board-last durable transaction", (
     "_docs/_TASKS/TASK-540-04-L04-Guard-Screen-Builder-Drafts.md",
     "_docs/_TASKS/TASK-540-05-L01-Keep-Screen-Canvas-Usable-And-Aria-Valid.md",
     "_docs/_TASKS/TASK-540-05-L02-Scope-Screen-Preferences-Through-User-Settings.md",
+    "_docs/_TASKS/TASK-540-07-L01-Correct-Radix-Option-Selector-And-Guard-Text-Engine-Shape.md",
+    "_docs/_TASKS/TASK-540-07-L02-Preserve-Browser-Failure-Frames-For-Registered-Unit-Actions.md",
     "_docs/_TASKS/TASK-540-06-L01-Six-Builder-Save-Entry-Flows-And-Closure.md",
     "_docs/_TASKS/TASK-540-01-Strict-Screen-Data-Urls-Tabs-And-Binding-Gc.md",
     "_docs/_TASKS/TASK-540-02-Button-Binding-And-Tabs-Authoring.md",
     "_docs/_TASKS/TASK-540-03-Accessible-Tabs-And-Selection-Semantics.md",
     "_docs/_TASKS/TASK-540-04-Dirty-Navigation-And-Async-Cache-Recovery.md",
     "_docs/_TASKS/TASK-540-05-Responsive-Canvas-Aria-And-User-Preferences.md",
+    "_docs/_TASKS/TASK-540-07-Smoke-Option-Selector-And-First-Failure-Reporting.md",
     "_docs/_TASKS/TASK-540-06-Tests-Smoke-And-Closure.md",
     "_docs/_TASKS/TASK-540_Custom_Screens_Functional_and_Data_Integrity_Remediation.md",
     "_docs/_TASKS/README.md",
@@ -358,7 +361,9 @@ test("TASK-540 status closure is an 18-target board-last durable transaction", (
     '"status.manifest.json"',
     '"status.prepared.json"',
     '"status.committed.json"',
-    "for (let index = 0; index < 18; index += 1)",
+    // Derived from STATUS_TARGET_RELATIVE_PATHS, not a literal count: the literal 18 was
+    // exactly what left this consumer rejecting the 21 targets the producer now sends.
+    "for (let index = 0; index < STATUS_TARGET_COUNT; index += 1)",
     'await convergeStatusTransaction(transaction, "new")',
     "boardNewSha256: targets.at(-1).newSha256",
   ]) {

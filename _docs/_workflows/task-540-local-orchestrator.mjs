@@ -38,16 +38,32 @@ const STATUS_TARGET_RELATIVE_PATHS = Object.freeze([
   "_docs/_TASKS/TASK-540-04-L04-Guard-Screen-Builder-Drafts.md",
   "_docs/_TASKS/TASK-540-05-L01-Keep-Screen-Canvas-Usable-And-Aria-Valid.md",
   "_docs/_TASKS/TASK-540-05-L02-Scope-Screen-Preferences-Through-User-Settings.md",
+  // TASK-540-07's two leaves land before closure, so they precede the closure leaf, exactly
+  // as LEAF_ORDER does in task-540-implement.mjs. This array is index-addressed by the
+  // status journal, so the order is the contract -- it is not merely cosmetic.
+  "_docs/_TASKS/TASK-540-07-L01-Correct-Radix-Option-Selector-And-Guard-Text-Engine-Shape.md",
+  "_docs/_TASKS/TASK-540-07-L02-Preserve-Browser-Failure-Frames-For-Registered-Unit-Actions.md",
   "_docs/_TASKS/TASK-540-06-L01-Six-Builder-Save-Entry-Flows-And-Closure.md",
   "_docs/_TASKS/TASK-540-01-Strict-Screen-Data-Urls-Tabs-And-Binding-Gc.md",
   "_docs/_TASKS/TASK-540-02-Button-Binding-And-Tabs-Authoring.md",
   "_docs/_TASKS/TASK-540-03-Accessible-Tabs-And-Selection-Semantics.md",
   "_docs/_TASKS/TASK-540-04-Dirty-Navigation-And-Async-Cache-Recovery.md",
   "_docs/_TASKS/TASK-540-05-Responsive-Canvas-Aria-And-User-Preferences.md",
+  // Children follow the same land order, so TASK-540-07 precedes the closure child.
+  "_docs/_TASKS/TASK-540-07-Smoke-Option-Selector-And-First-Failure-Reporting.md",
   "_docs/_TASKS/TASK-540-06-Tests-Smoke-And-Closure.md",
   "_docs/_TASKS/TASK-540_Custom_Screens_Functional_and_Data_Integrity_Remediation.md",
   "_docs/_TASKS/README.md",
 ]);
+// Every count below is derived from this array. They were literal 18s and 17s, which is why
+// registering TASK-540-07 in task-540-implement.mjs left this side rejecting the 21 targets
+// the producer now sends.
+const STATUS_TARGET_COUNT = STATUS_TARGET_RELATIVE_PATHS.length;
+const STATUS_BOARD_TARGET_INDEX = STATUS_TARGET_COUNT - 1;
+const STATUS_JOURNAL_INDEX_PATTERN =
+  "(?:" +
+  Array.from({ length: STATUS_TARGET_COUNT }, (_, index) => String(index)).join("|") +
+  ")";
 const TERMINAL_TARGET_RELATIVE_PATHS = Object.freeze([
   "_docs/_CHANGELOG/1252-2026-07-14-task-540-custom-screens-functional-and-data-integrity-remediation.md",
   "_docs/_TASKS/TASK-540_Custom_Screens_Functional_and_Data_Integrity_Remediation.md",
@@ -2039,9 +2055,12 @@ async function replaceTerminalTarget(target, requiredBytes, oppositeBytes) {
 
 function statusJournalPath(name) {
   invariant(
-    /^(?:status\.(?:manifest|prepared|rollback-prepared|committed)\.json|(?:old|new)-(?:[0-9]|1[0-7])\.bin)$/u.test(
-      name
-    ),
+    new RegExp(
+      "^(?:status\\.(?:manifest|prepared|rollback-prepared|committed)\\.json|(?:old|new)-" +
+        STATUS_JOURNAL_INDEX_PATTERN +
+        "\\.bin)$",
+      "u"
+    ).test(name),
     "TASK-540 status journal name rejected"
   );
   return STATUS_JOURNAL + "/" + name;
@@ -2097,7 +2116,7 @@ function validateStatusTargetShape(target, index, label) {
   );
   const relativePath = STATUS_TARGET_RELATIVE_PATHS[index];
   const transactionId = basename(target.tempPath).match(
-    /^\.task540-status-([a-f0-9]{32})-(?:[0-9]|1[0-7])\.tmp$/u
+    new RegExp("^\\.task540-status-([a-f0-9]{32})-" + STATUS_JOURNAL_INDEX_PATTERN + "\\.tmp$", "u")
   )?.[1];
   invariant(
     target.index === index &&
@@ -2152,7 +2171,7 @@ function validateStatusManifest(manifest, prepared) {
       manifest.generation > 0 &&
       HEX_128.test(manifest.transactionId) &&
       Array.isArray(manifest.targets) &&
-      manifest.targets.length === 18,
+      manifest.targets.length === STATUS_TARGET_COUNT,
     "TASK-540 status manifest authority rejected"
   );
   manifest.targets.forEach((target, index) => {
@@ -2177,7 +2196,7 @@ function validateStatusManifest(manifest, prepared) {
 async function readStatusPayloads(manifest) {
   const oldPayloads = [];
   const newPayloads = [];
-  for (let index = 0; index < 18; index += 1) {
+  for (let index = 0; index < STATUS_TARGET_COUNT; index += 1) {
     const [oldRecord, newRecord] = await Promise.all([
       readStable(statusJournalPath("old-" + index + ".bin"), 32 * 1024 * 1024),
       readStable(statusJournalPath("new-" + index + ".bin"), 32 * 1024 * 1024),
@@ -2216,10 +2235,10 @@ async function removeStatusJournal(transaction, direction) {
   await verifyStatusTargets(transaction, direction);
   await unlinkStable(statusJournalPath("status.committed.json"));
   await unlinkStable(statusJournalPath("status.rollback-prepared.json"));
-  for (let index = 17; index >= 0; index -= 1) {
+  for (let index = STATUS_BOARD_TARGET_INDEX; index >= 0; index -= 1) {
     await unlinkStable(statusJournalPath("new-" + index + ".bin"));
   }
-  for (let index = 17; index >= 0; index -= 1) {
+  for (let index = STATUS_BOARD_TARGET_INDEX; index >= 0; index -= 1) {
     await unlinkStable(statusJournalPath("old-" + index + ".bin"));
   }
   await unlinkStable(statusJournalPath("status.prepared.json"));
@@ -2266,7 +2285,7 @@ async function writeStatusRollbackMarker(transaction) {
 async function convergeStatusTransaction(transaction, direction) {
   const required = direction === "new" ? transaction.newPayloads : transaction.oldPayloads;
   const opposite = direction === "new" ? transaction.oldPayloads : transaction.newPayloads;
-  for (let index = 0; index < 18; index += 1) {
+  for (let index = 0; index < STATUS_TARGET_COUNT; index += 1) {
     await replaceTerminalTarget(transaction.manifest.targets[index], required[index], opposite[index]);
   }
   return verifyStatusTargets(transaction, direction);
@@ -2306,7 +2325,7 @@ async function commitStatusClosure(rawInput) {
     path: target.path,
     tempPath: dirname(target.path) + "/.task540-status-" + transactionId + "-" + index + ".tmp",
   }));
-  for (let index = 0; index < 18; index += 1) {
+  for (let index = 0; index < STATUS_TARGET_COUNT; index += 1) {
     await writeExclusive(statusJournalPath("old-" + index + ".bin"), currentTargets[index].bytes);
     await writeExclusive(statusJournalPath("new-" + index + ".bin"), input.targets[index].bytes);
   }
@@ -2423,9 +2442,12 @@ async function recoverStatusJournalAtStartup() {
   invariant(
     names.length > 0 &&
       names.every((name) =>
-        /^(?:status\.(?:manifest|prepared|rollback-prepared|committed)\.json|(?:old|new)-(?:[0-9]|1[0-7])\.bin)$/u.test(
-          name
-        )
+        new RegExp(
+          "^(?:status\\.(?:manifest|prepared|rollback-prepared|committed)\\.json|(?:old|new)-" +
+            STATUS_JOURNAL_INDEX_PATTERN +
+            "\\.bin)$",
+          "u"
+        ).test(name)
       ),
     "TASK-540 recovered status journal inventory rejected"
   );
@@ -2436,8 +2458,8 @@ async function recoverStatusJournalAtStartup() {
   const requiredNames = [
     "status.manifest.json",
     "status.prepared.json",
-    ...Array.from({ length: 18 }, (_, index) => "old-" + index + ".bin"),
-    ...Array.from({ length: 18 }, (_, index) => "new-" + index + ".bin"),
+    ...Array.from({ length: STATUS_TARGET_COUNT }, (_, index) => "old-" + index + ".bin"),
+    ...Array.from({ length: STATUS_TARGET_COUNT }, (_, index) => "new-" + index + ".bin"),
   ];
   invariant(
     requiredNames.every((name) => names.includes(name)),
@@ -3803,7 +3825,7 @@ function runStatusTransactionShapeSelfTest() {
       }),
     () =>
       validateStatusManifest(
-        { ...manifest, targets: targets.map((target, index) => index === 17 ? { ...target, path: target.path + "-copy" } : target) },
+        { ...manifest, targets: targets.map((target, index) => index === STATUS_BOARD_TARGET_INDEX ? { ...target, path: target.path + "-copy" } : target) },
         prepared
       ),
   ]) {
