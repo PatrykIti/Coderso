@@ -10,35 +10,54 @@
 //
 // Local edits arrive through TWO channels and hydration must respect both: the
 // content channel (title/slug/field values, "Save draft") and the metadata channel
-// (status/visibility/schedule/SEO, the metadata panel's own Save). The metadata
+// (status/visibility/schedule/SEO/taxonomy, the metadata panel's own Save). The metadata
 // panel also renders outside the isLoading gate, so a pre-hydration metadata edit
 // is just as reachable — and preserving only the content channel silently reverted
 // it and cleared its unsaved-changes warning. Preserving the metadata channel is
 // per FIELD: an untouched control must still hydrate from the snapshot, otherwise
 // the panel's all-in-one PATCH would push its pristine mount default (draft,
 // public, no schedule, empty SEO) over the server's real state.
+//
+// rc-021 pins the four remaining ways the editor lost or misplaced an edit, all of
+// which came from the same root cause — "has the user touched this?" was inferred from
+// the VALUE in some places, tracked explicitly in others and not at all for taxonomy:
+//   (a) NOTHING is disabled while a save is in flight, so an edit made during the
+//       request was either falsely marked saved (content) or visibly reverted from the
+//       response (metadata);
+//   (b) no read carried any authority, and `getEntryCached` hands the loser of two
+//       concurrent reads back to its caller, so an older snapshot could overwrite a
+//       newer one;
+//   (c) the taxonomy overview read restored category/tags from its OWN older entry
+//       snapshot, long after the user could see and use the control;
+//   (d) a title or slug the user CLEARED read as pristine, so hydration put the stored
+//       value back — including the `slugify()` case, which returns "" for an
+//       all-non-ASCII title.
+// The last case here is a guard rather than a regression: hydrating from a mutation
+// response now covers visibility and the access password too, which no earlier case
+// exercised.
 
 import React from "react";
-import { createRoot } from "react-dom/client";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 
 import type { EntryVisibility } from "../../../core/admin/services/entriesClient";
 import type { EntryStatus } from "../../../core/admin/ui/entries/EntryMetadataPanel";
+import {
+  clickMetadataAction,
+  findSaveDraft,
+  flushMicrotasks,
+  mount,
+  readMetadataState,
+  readPanelValue,
+  typeAccessPassword,
+  typeSeoDescription,
+  typeSlug,
+  typeTitle,
+} from "./support/entryEditorHarness";
 
 type UpdateEntryPayload = {
   title: string;
   slug: string;
   data: Record<string, string>;
-};
-
-// Only the props the stub panel below actually exercises; the editor passes more.
-type MetadataPanelStubProps = {
-  status: EntryStatus;
-  onStatusChange: (status: EntryStatus) => void;
-  seoDescription: string;
-  onSeoDescriptionChange: (value: string) => void;
-  onSave: () => void;
-  isSaving: boolean;
 };
 
 type UpdateEntryMetadataPayload = {
@@ -49,6 +68,14 @@ type UpdateEntryMetadataPayload = {
   taxonomy: { categoryId: string | null; tagIds: string[] } | undefined;
   seo: { description: string };
 };
+
+type TermFixture = { id: string; name: string; slug: string };
+
+// The mocks that block: `holdNext` makes the NEXT call to one of them wait, which is how
+// a test provably lands an edit WHILE that request is in flight.
+type GateName = "updateEntry" | "updateEntryMetadata" | "taxonomyOverview";
+
+const ENTRY_DETAIL_CACHE_KEY = "entry:articles:entry-1";
 
 const editorState = vi.hoisted(() => {
   const contentType = {
@@ -64,19 +91,32 @@ const editorState = vi.hoisted(() => {
     slug: "hello",
     status: "draft" as EntryStatus,
     visibility: "public" as EntryVisibility,
-    scheduledAt: null,
+    scheduledAt: null as string | null,
     seo: { description: "Meta" },
-    taxonomy: { category: null, tags: [] as [] },
+    taxonomy: { category: null as TermFixture | null, tags: [] as TermFixture[] },
     author: { name: "Alex Doe", email: "alex@example.com" },
     data: { title: "Hello", summary: "Summary" },
   };
 
   type EntryFixture = typeof entry;
 
-  let resolveEntry: (value: EntryFixture) => void = () => undefined;
-  let pendingEntryRead = new Promise<EntryFixture>((resolve) => {
-    resolveEntry = resolve;
-  });
+  // One deferred per GET rather than one per test: that is what lets a test resolve a
+  // NEWER read before an older one, which is the only way to observe read authority.
+  const entryReads: Array<(value: EntryFixture) => void> = [];
+  const resolveEntryRead = (index: number, value: EntryFixture) => {
+    const resolve = entryReads[index];
+    if (!resolve) throw new Error(`entry read #${index} has not started`);
+    resolve(value);
+  };
+
+  const gateReleases = new Map<GateName, () => void>();
+  const gatePromises = new Map<GateName, Promise<void>>();
+
+  // The server the mutation mocks model: the metadata route commits what it was given
+  // and BOTH routes answer with a fresh full read (`entryService.getEntry`). Modelling
+  // that matters for the visibility guard — a mock that always echoed the fixture could
+  // not tell a correct hydration from a stale one.
+  let committed: Partial<EntryFixture> = {};
 
   return {
     contentType,
@@ -85,14 +125,45 @@ const editorState = vi.hoisted(() => {
       taxonomies: { category: { id: "cat-taxonomy" }, tag: { id: "tag-taxonomy" } },
       terms: { categories: [], tags: [] },
     },
-    // Each test needs its own pending read, otherwise a later test inherits an
-    // already-resolved promise and can no longer type BEFORE hydration.
-    readEntry: () => pendingEntryRead,
-    resolveEntry: (value: EntryFixture) => resolveEntry(value),
+    readEntry: () =>
+      new Promise<EntryFixture>((resolve) => {
+        entryReads.push(resolve);
+      }),
+    resolveEntryRead,
+    resolveEntry: (value: EntryFixture) => resolveEntryRead(0, value),
+    startedEntryReads: () => entryReads.length,
     resetEntryRead: () => {
-      pendingEntryRead = new Promise<EntryFixture>((resolve) => {
-        resolveEntry = resolve;
-      });
+      entryReads.length = 0;
+    },
+    holdNext: (name: GateName) => {
+      gatePromises.set(
+        name,
+        new Promise<void>((resolve) => {
+          gateReleases.set(name, () => resolve());
+        })
+      );
+    },
+    passGate: async (name: GateName) => {
+      const gate = gatePromises.get(name);
+      if (!gate) return;
+      gatePromises.delete(name);
+      await gate;
+    },
+    release: (name: GateName) => {
+      const release = gateReleases.get(name);
+      gateReleases.delete(name);
+      release?.();
+    },
+    resetGates: () => {
+      gateReleases.clear();
+      gatePromises.clear();
+    },
+    serverEntry: (): EntryFixture => ({ ...entry, ...committed }),
+    commitMetadata: (patch: Partial<EntryFixture>) => {
+      committed = { ...committed, ...patch };
+    },
+    resetServerEntry: () => {
+      committed = {};
     },
     updatePayloads: [] as UpdateEntryPayload[],
     metadataPayloads: [] as UpdateEntryMetadataPayload[],
@@ -210,19 +281,23 @@ vi.mock("@/services/entriesClient", () => ({
   previewEntry: vi.fn(async () => ({ previewUrl: "https://preview.test/entry" })),
   publishEntry: vi.fn(async () => ({ ok: true })),
   updateEntry: vi.fn(async (_type: string, _id: string, payload: UpdateEntryPayload) => {
+    // Recorded before the gate: a test asserts what the request carried while it is
+    // still open.
     editorState.updatePayloads.push(payload);
-    return { ...editorState.entry, ...payload };
+    await editorState.passGate("updateEntry");
+    return { ...editorState.serverEntry(), ...payload };
   }),
   updateEntryMetadata: vi.fn(
     async (_type: string, _id: string, payload: UpdateEntryMetadataPayload) => {
       editorState.metadataPayloads.push(payload);
-      return {
-        ...editorState.entry,
+      await editorState.passGate("updateEntryMetadata");
+      editorState.commitMetadata({
         status: payload.status,
         visibility: payload.visibility,
         scheduledAt: payload.scheduledAt,
         seo: payload.seo,
-      };
+      });
+      return editorState.serverEntry();
     }
   ),
 }));
@@ -243,12 +318,17 @@ vi.mock("@/services/siteSettingsClient", () => ({
 }));
 
 vi.mock("@/services/taxonomyClient", () => ({
-  getTaxonomyOverview: vi.fn(async () => editorState.taxonomyOverview),
+  getTaxonomyOverview: vi.fn(async () => {
+    await editorState.passGate("taxonomyOverview");
+    return editorState.taxonomyOverview;
+  }),
   createTaxonomyTerm: vi.fn(async () => ({ id: "term-new", name: "New", slug: "new" })),
 }));
 
+// The editor derives the entry it is editing from the router path; the window location is
+// only the fallback for a mount without a router value.
 vi.mock("@/ui/contexts/AdminRouterContext", () => ({
-  useAdminRouter: () => ({ navigate: vi.fn() }),
+  useAdminRouter: () => ({ navigate: vi.fn(), path: window.location.pathname }),
 }));
 
 vi.mock("@/ui/layouts/AdminShell", () => ({
@@ -270,40 +350,10 @@ vi.mock("../../../core/admin/ui/entries/EntryDeleteDialog", () => ({
   EntryDeleteDialog: () => null,
 }));
 
-// The real panel renders outside the isLoading gate, so its controls are live while
-// the entry GET is in flight. The stub keeps exactly that surface: the status control
-// and the SEO textarea call the same props the real Select/Textarea call, its Save
-// button is the panel's own metadata Save, and the resolved values are mirrored as
-// text so assertions read React state instead of an uncontrolled DOM value.
-vi.mock("../../../core/admin/ui/entries/EntryMetadataPanel", () => ({
-  EntryMetadataPanel: ({
-    status,
-    onStatusChange,
-    seoDescription,
-    onSeoDescriptionChange,
-    onSave,
-    isSaving,
-  }: MetadataPanelStubProps) => (
-    <div data-metadata-panel="true">
-      <span data-metadata-status-value="true">{status}</span>
-      <span data-metadata-seo-value="true">{seoDescription}</span>
-      <button
-        type="button"
-        data-metadata-publish="true"
-        onClick={() => onStatusChange("published")}
-      >
-        Set published
-      </button>
-      <textarea
-        data-metadata-seo-input="true"
-        defaultValue={seoDescription}
-        onChange={(event) => onSeoDescriptionChange(event.target.value)}
-      />
-      <button type="button" data-metadata-save="true" disabled={isSaving} onClick={onSave}>
-        Save metadata
-      </button>
-    </div>
-  ),
+// The stub lives in the harness module beside the `data-metadata-*` markers it defines;
+// a `vi.mock` factory is lazy, so it may import it even though the call is hoisted.
+vi.mock("../../../core/admin/ui/entries/EntryMetadataPanel", async () => ({
+  EntryMetadataPanel: (await import("./support/entryEditorHarness")).EntryMetadataPanelStub,
 }));
 
 vi.mock("../../../core/admin/ui/entries/FieldRenderer", () => ({
@@ -326,82 +376,22 @@ vi.mock("../../../core/admin/ui/entries/entryChecklist", () => ({
   buildEntryChecklist: () => ({ items: [], blockingIssues: [], missingRequiredFields: [] }),
 }));
 
-const mount = (node: React.ReactNode) => {
-  const container = document.createElement("div");
-  document.body.appendChild(container);
-  const root = createRoot(container);
-  React.act(() => {
-    root.render(node);
-  });
-  return {
-    container,
-    cleanup: () => {
-      React.act(() => {
-        root.unmount();
-      });
-      container.remove();
-    },
-  };
+const dispatchEntryCacheEvent = () => {
+  editorState.subscribers.forEach((handler) => handler({ key: ENTRY_DETAIL_CACHE_KEY }));
 };
 
-const flushMicrotasks = async () => {
-  for (let index = 0; index < 8; index += 1) await Promise.resolve();
-};
-
-const typeIntoTextarea = (area: HTMLTextAreaElement, value: string) => {
-  const descriptor = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value");
-  descriptor?.set?.call(area, value);
-  area.dispatchEvent(new Event("input", { bubbles: true }));
-};
-
-const typeTitle = (container: HTMLElement, value: string) => {
-  const titleArea = container.querySelector("textarea");
-  if (!(titleArea instanceof HTMLTextAreaElement)) throw new Error("title textarea is absent");
-  typeIntoTextarea(titleArea, value);
-};
-
-const typeSeoDescription = (container: HTMLElement, value: string) => {
-  const area = container.querySelector('textarea[data-metadata-seo-input="true"]');
-  if (!(area instanceof HTMLTextAreaElement)) throw new Error("SEO description textarea is absent");
-  typeIntoTextarea(area, value);
-};
-
-// The editor renders the metadata panel twice (sidebar + details sheet); both are fed
-// from the same state, so every copy must agree and either one can be driven.
-const readMetadataState = (container: HTMLElement): { status: string; seoDescription: string } => {
-  const readValue = (panel: Element, selector: string) =>
-    panel.querySelector(selector)?.textContent ?? "";
-  const states = Array.from(container.querySelectorAll('[data-metadata-panel="true"]')).map(
-    (panel) => ({
-      status: readValue(panel, '[data-metadata-status-value="true"]'),
-      seoDescription: readValue(panel, '[data-metadata-seo-value="true"]'),
-    })
-  );
-  const first = states[0];
-  if (!first) throw new Error("metadata panel is absent");
-  states.forEach((state) => expect(state).toEqual(first));
-  return first;
-};
-
-const clickMetadataAction = (container: HTMLElement, marker: string) => {
-  const action = container.querySelector(`button[${marker}="true"]`);
-  if (!(action instanceof HTMLButtonElement)) throw new Error(`${marker} button is absent`);
-  expect(action.disabled).toBe(false);
-  action.click();
-};
-
-const findSaveDraft = (container: HTMLElement) => {
-  const matches = Array.from(container.querySelectorAll("button")).filter(
-    (button) => button.textContent === "Save draft"
-  );
-  expect(matches).toHaveLength(1);
-  const save = matches[0];
-  if (!(save instanceof HTMLButtonElement)) throw new Error("Save draft button is absent");
-  return save;
+// The unsaved-changes banner is only a hint; the `beforeunload` handler is what actually
+// stops a typed value from being lost on navigation, so the lane asserts the guard.
+const beforeUnloadIsGuarded = () => {
+  const event = new Event("beforeunload", { cancelable: true });
+  window.dispatchEvent(event);
+  return event.defaultPrevented;
 };
 
 beforeEach(() => {
   editorState.resetEntryRead();
+  editorState.resetGates();
+  editorState.resetServerEntry();
   editorState.updatePayloads.length = 0;
   editorState.metadataPayloads.length = 0;
 });
@@ -565,6 +555,372 @@ test("hydration still overwrites the metadata fields the user did not touch", as
         seo: { description: "Edited before hydration" },
       },
     ]);
+  } finally {
+    view.cleanup();
+  }
+});
+
+// (a) content channel: only the Save buttons are disabled during a save, so the title
+// stays editable while its PATCH is in flight.
+test("a title typed while Save draft is in flight stays dirty and is what the next save sends", async () => {
+  window.history.replaceState({}, "", "/admin/advanced/entries/articles/entry-1");
+  const { EntryEditor } = await import("../../../core/admin/ui/entries/EntryEditor");
+
+  const view = mount(<EntryEditor />);
+  try {
+    await React.act(async () => {
+      editorState.resolveEntry(editorState.entry);
+      await flushMicrotasks();
+    });
+
+    React.act(() => {
+      typeTitle(view.container, "Saved title");
+    });
+
+    editorState.holdNext("updateEntry");
+    await React.act(async () => {
+      findSaveDraft(view.container).click();
+      await flushMicrotasks();
+    });
+    // The request left with the title as it was; it cannot persist what comes next.
+    expect(editorState.updatePayloads).toEqual([
+      {
+        title: "Saved title",
+        slug: "hello",
+        data: { title: "Saved title", summary: "Summary" },
+      },
+    ]);
+
+    // The user keeps typing while the PATCH is still open.
+    React.act(() => {
+      typeTitle(view.container, "Typed during save");
+    });
+
+    await React.act(async () => {
+      editorState.release("updateEntry");
+      await flushMicrotasks();
+    });
+
+    // The response is authoritative only for what it persisted: the newer title is kept
+    // and STILL dirty, so navigating away is guarded...
+    expect(readPanelValue(view.container, "data-metadata-title-value")).toBe("Typed during save");
+    expect(beforeUnloadIsGuarded()).toBe(true);
+    expect(view.container.textContent).toContain("Unsaved changes");
+
+    // ...and a background read that arrives before the next save cannot apply the server
+    // snapshot over it. A falsely "saved" title is lost in place, not only on navigation.
+    await React.act(async () => {
+      dispatchEntryCacheEvent();
+      await flushMicrotasks();
+      editorState.resolveEntryRead(1, editorState.entry);
+      await flushMicrotasks();
+    });
+    expect(readPanelValue(view.container, "data-metadata-title-value")).toBe("Typed during save");
+    expect(view.container.textContent).toContain("Updated in another tab");
+
+    await React.act(async () => {
+      findSaveDraft(view.container).click();
+      await flushMicrotasks();
+    });
+
+    expect(editorState.updatePayloads[1]).toEqual({
+      title: "Typed during save",
+      slug: "hello",
+      data: { title: "Typed during save", summary: "Summary" },
+    });
+    expect(view.container.textContent).not.toContain("Unsaved changes");
+    expect(beforeUnloadIsGuarded()).toBe(false);
+  } finally {
+    view.cleanup();
+  }
+});
+
+// (a) metadata channel: the completion used to rewrite every control from the response,
+// so an edit made during the request was visibly reverted.
+test("a metadata edit made while the metadata save is in flight is not reverted by the response", async () => {
+  window.history.replaceState({}, "", "/admin/advanced/entries/articles/entry-1");
+  const { EntryEditor } = await import("../../../core/admin/ui/entries/EntryEditor");
+
+  const view = mount(<EntryEditor />);
+  try {
+    await React.act(async () => {
+      editorState.resolveEntry(editorState.entry);
+      await flushMicrotasks();
+    });
+
+    React.act(() => {
+      clickMetadataAction(view.container, "data-metadata-publish");
+    });
+
+    editorState.holdNext("updateEntryMetadata");
+    await React.act(async () => {
+      clickMetadataAction(view.container, "data-metadata-save");
+      await flushMicrotasks();
+    });
+    expect(editorState.metadataPayloads).toEqual([
+      {
+        status: "published",
+        visibility: "public",
+        accessPassword: null,
+        scheduledAt: null,
+        taxonomy: { categoryId: null, tagIds: [] },
+        seo: { description: "Meta" },
+      },
+    ]);
+
+    // The SEO field is not disabled while the PATCH is open.
+    React.act(() => {
+      typeSeoDescription(view.container, "Typed during save");
+    });
+
+    await React.act(async () => {
+      editorState.release("updateEntryMetadata");
+      await flushMicrotasks();
+    });
+
+    // `status` was persisted, so it takes the response; the SEO edit was not, so it
+    // survives and keeps the channel dirty.
+    expect(readMetadataState(view.container)).toEqual({
+      status: "published",
+      seoDescription: "Typed during save",
+    });
+    expect(view.container.textContent).toContain("Unsaved changes");
+
+    await React.act(async () => {
+      clickMetadataAction(view.container, "data-metadata-save");
+      await flushMicrotasks();
+    });
+
+    expect(editorState.metadataPayloads[1]).toEqual({
+      status: "published",
+      visibility: "public",
+      accessPassword: null,
+      scheduledAt: null,
+      taxonomy: { categoryId: null, tagIds: [] },
+      seo: { description: "Typed during save" },
+    });
+  } finally {
+    view.cleanup();
+  }
+});
+
+// (b) read authority: `getEntryCached` hands the loser of two concurrent reads back to
+// its caller, so the editor itself has to reject it.
+test("an entry read that resolves after a newer one does not overwrite it", async () => {
+  window.history.replaceState({}, "", "/admin/advanced/entries/articles/entry-1");
+  const { EntryEditor } = await import("../../../core/admin/ui/entries/EntryEditor");
+
+  const view = mount(<EntryEditor />);
+  try {
+    await React.act(async () => {
+      await flushMicrotasks();
+    });
+    expect(editorState.startedEntryReads()).toBe(1);
+
+    // A cache event starts a second read while the first is still open.
+    await React.act(async () => {
+      dispatchEntryCacheEvent();
+      await flushMicrotasks();
+    });
+    expect(editorState.startedEntryReads()).toBe(2);
+
+    // The NEWER read resolves first and is applied.
+    await React.act(async () => {
+      editorState.resolveEntryRead(1, { ...editorState.entry, title: "Newer title" });
+      await flushMicrotasks();
+    });
+    expect(readPanelValue(view.container, "data-metadata-title-value")).toBe("Newer title");
+
+    // The older read resolves last and must be discarded, not applied.
+    await React.act(async () => {
+      editorState.resolveEntryRead(0, { ...editorState.entry, title: "Older title" });
+      await flushMicrotasks();
+    });
+    expect(readPanelValue(view.container, "data-metadata-title-value")).toBe("Newer title");
+  } finally {
+    view.cleanup();
+  }
+});
+
+// (c) taxonomy: the overview read used to restore category/tags from its own older entry
+// snapshot, so a pick made while it was in flight was silently reverted — and the save
+// then submitted the reverted value.
+test("a category picked while the taxonomy overview is in flight is not restored to the old one", async () => {
+  window.history.replaceState({}, "", "/admin/advanced/entries/articles/entry-1");
+  const { EntryEditor } = await import("../../../core/admin/ui/entries/EntryEditor");
+
+  const categorized = {
+    ...editorState.entry,
+    taxonomy: { category: { id: "cat-1", name: "First", slug: "first" }, tags: [] },
+  };
+
+  const view = mount(<EntryEditor />);
+  try {
+    // First load: the overview resolves, so the category control is live from now on.
+    await React.act(async () => {
+      editorState.resolveEntry(categorized);
+      await flushMicrotasks();
+    });
+    expect(readPanelValue(view.container, "data-metadata-category-value")).toBe("cat-1");
+
+    // A background refresh: its entry read lands, its overview read is still open.
+    editorState.holdNext("taxonomyOverview");
+    await React.act(async () => {
+      dispatchEntryCacheEvent();
+      await flushMicrotasks();
+      editorState.resolveEntryRead(1, categorized);
+      await flushMicrotasks();
+    });
+
+    // The user picks a different category while that overview read is in flight.
+    React.act(() => {
+      clickMetadataAction(view.container, "data-metadata-category");
+    });
+    expect(readPanelValue(view.container, "data-metadata-category-value")).toBe("cat-2");
+
+    await React.act(async () => {
+      editorState.release("taxonomyOverview");
+      await flushMicrotasks();
+    });
+
+    expect(readPanelValue(view.container, "data-metadata-category-value")).toBe("cat-2");
+
+    await React.act(async () => {
+      clickMetadataAction(view.container, "data-metadata-save");
+      await flushMicrotasks();
+    });
+
+    expect(editorState.metadataPayloads).toEqual([
+      {
+        status: "draft",
+        visibility: "public",
+        accessPassword: null,
+        scheduledAt: null,
+        taxonomy: { categoryId: "cat-2", tagIds: [] },
+        seo: { description: "Meta" },
+      },
+    ]);
+  } finally {
+    view.cleanup();
+  }
+});
+
+// (d) editedness is a fact about the user's action, not about the value: clearing a
+// title or a slug is an edit, and `slugify()` returns "" for an all-non-ASCII title.
+test("a title and slug cleared before hydration stay cleared and are what the save sends", async () => {
+  window.history.replaceState({}, "", "/admin/advanced/entries/articles/entry-1");
+  const { EntryEditor } = await import("../../../core/admin/ui/entries/EntryEditor");
+
+  const view = mount(<EntryEditor />);
+  try {
+    await React.act(async () => {
+      await flushMicrotasks();
+    });
+    expect(view.container.textContent).toContain("Loading entry fields");
+
+    // Typed, then cleared again — both before the entry read resolves.
+    React.act(() => {
+      typeTitle(view.container, "Draft title");
+    });
+    React.act(() => {
+      typeTitle(view.container, "");
+    });
+    React.act(() => {
+      typeSlug(view.container, "draft-slug");
+    });
+    React.act(() => {
+      typeSlug(view.container, "");
+    });
+
+    await React.act(async () => {
+      editorState.resolveEntry(editorState.entry);
+      await flushMicrotasks();
+    });
+
+    // Hydration must not read "" as "never touched" and put the stored values back.
+    expect(readPanelValue(view.container, "data-metadata-title-value")).toBe("");
+    expect(readPanelValue(view.container, "data-metadata-slug-value")).toBe("");
+    expect(view.container.textContent).toContain("Unsaved changes");
+
+    await React.act(async () => {
+      findSaveDraft(view.container).click();
+      await flushMicrotasks();
+    });
+
+    expect(editorState.updatePayloads).toEqual([
+      { title: "", slug: "", data: { title: "", summary: "Summary" } },
+    ]);
+  } finally {
+    view.cleanup();
+  }
+});
+
+// Guard, not a regression: hydrating from a mutation response now covers visibility and
+// the access password, which "Save draft" does not submit. Unsaved edits to them must
+// survive it, and once the metadata save HAS persisted them, what the content response
+// reports back is the persisted value — both routes answer with a fresh full read.
+test("a draft save keeps an unsaved visibility edit and reports the persisted one", async () => {
+  window.history.replaceState({}, "", "/admin/advanced/entries/articles/entry-1");
+  const { EntryEditor } = await import("../../../core/admin/ui/entries/EntryEditor");
+
+  const view = mount(<EntryEditor />);
+  try {
+    await React.act(async () => {
+      editorState.resolveEntry(editorState.entry);
+      await flushMicrotasks();
+    });
+
+    // Visibility and the password are edited and NOT saved; "Save draft" submits neither.
+    React.act(() => {
+      clickMetadataAction(view.container, "data-metadata-password-mode");
+    });
+    React.act(() => {
+      typeAccessPassword(view.container, "a-new-password");
+    });
+    React.act(() => {
+      typeTitle(view.container, "Draft body");
+    });
+
+    await React.act(async () => {
+      findSaveDraft(view.container).click();
+      await flushMicrotasks();
+    });
+
+    expect(readPanelValue(view.container, "data-metadata-visibility-value")).toBe("password");
+    expect(readPanelValue(view.container, "data-metadata-password-value")).toBe("a-new-password");
+    // The content channel is saved; the metadata channel is still dirty.
+    expect(view.container.textContent).toContain("Unsaved changes");
+
+    // Now the metadata save persists "private", so the value stops being the user's.
+    React.act(() => {
+      clickMetadataAction(view.container, "data-metadata-private");
+    });
+    await React.act(async () => {
+      clickMetadataAction(view.container, "data-metadata-save");
+      await flushMicrotasks();
+    });
+    expect(readPanelValue(view.container, "data-metadata-visibility-value")).toBe("private");
+
+    React.act(() => {
+      typeTitle(view.container, "Draft body, again");
+    });
+    await React.act(async () => {
+      findSaveDraft(view.container).click();
+      await flushMicrotasks();
+    });
+
+    // The content response may write visibility now, and what it writes is what the
+    // server holds — not the value the editor was loaded with.
+    expect(readPanelValue(view.container, "data-metadata-visibility-value")).toBe("private");
+    expect(readPanelValue(view.container, "data-metadata-password-value")).toBe("");
+    expect(editorState.updatePayloads).toHaveLength(2);
+
+    await React.act(async () => {
+      clickMetadataAction(view.container, "data-metadata-save");
+      await flushMicrotasks();
+    });
+
+    expect(editorState.metadataPayloads[1].visibility).toBe("private");
   } finally {
     view.cleanup();
   }
