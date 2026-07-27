@@ -230,8 +230,13 @@ export const entriesClientModule = {
     // Recorded before the gate: a test asserts what the request carried while it is
     // still open.
     editorState.updatePayloads.push(payload);
+    // The body is built when the route HANDLES the request, not when the client's promise
+    // settles: a gate models latency on the way back. Building it after the gate would let a
+    // metadata commit that happened in between leak into this older response, which is
+    // exactly the divergence a response-authority check exists to survive.
+    const body = { ...editorState.serverEntry(), ...payload };
     await editorState.passGate("updateEntry");
-    return { ...editorState.serverEntry(), ...payload };
+    return body;
   }),
   updateEntryMetadata: vi.fn(
     async (_type: string, _id: string, payload: UpdateEntryMetadataPayload) => {

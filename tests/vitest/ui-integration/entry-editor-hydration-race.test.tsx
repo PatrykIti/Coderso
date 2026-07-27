@@ -650,3 +650,136 @@ test("a draft save keeps an unsaved visibility edit and reports the persisted on
     view.cleanup();
   }
 });
+
+// (e) RESPONSE AUTHORITY. The cases above gave every READ a sequence number, because
+// `getEntryCached` hands the loser of two concurrent reads back to its caller. A mutation's
+// response body is a snapshot of the same entry and got none: every one of the three
+// hydrated unconditionally. Nothing disables another channel's Save either — each button
+// disables only itself — so two mutations are genuinely concurrent, their bodies are built
+// when the route handles each request, and they can land in either order. An older body
+// applied over a newer one is the same disease as (b) with a worse ending: it does not merely
+// show a stale value, the metadata panel PATCHes status/visibility/schedule/SEO/taxonomy
+// TOGETHER, so the next metadata save sends the reverted status back to the server.
+
+test("a delayed draft response cannot put back the status a later metadata save published", async () => {
+  window.history.replaceState({}, "", "/admin/advanced/entries/articles/entry-1");
+  const { EntryEditor } = await import("../../../core/admin/ui/entries/EntryEditor");
+
+  const view = mount(<EntryEditor />);
+  try {
+    await React.act(async () => {
+      editorState.resolveEntry(editorState.entry);
+      await flushMicrotasks();
+    });
+    expect(readMetadataState(view.container).status).toBe("draft");
+
+    // "Save draft" leaves while the entry is still a draft, and its response is held on the
+    // way back. It disables its own button and nothing else.
+    React.act(() => {
+      typeTitle(view.container, "Body edited first");
+    });
+    editorState.holdNext("updateEntry");
+    await React.act(async () => {
+      findSaveDraft(view.container).click();
+      await flushMicrotasks();
+    });
+    expect(editorState.updatePayloads).toHaveLength(1);
+
+    // The user publishes while that PATCH is still open, and the metadata response — built
+    // later, and carrying `status: published` — arrives first.
+    React.act(() => {
+      clickMetadataAction(view.container, "data-metadata-publish");
+    });
+    await React.act(async () => {
+      clickMetadataAction(view.container, "data-metadata-save");
+      await flushMicrotasks();
+    });
+    expect(readMetadataState(view.container).status).toBe("published");
+
+    // Now the older body lands. Its `status` is `draft`, and the metadata save has already
+    // cleared the flag that marked `status` as the user's, so nothing protects it.
+    await React.act(async () => {
+      editorState.release("updateEntry");
+      await flushMicrotasks();
+    });
+    expect(readMetadataState(view.container).status).toBe("published");
+
+    // Refusing the stale BODY must not refuse the request's other, unrelated fact: it did
+    // persist the title, so the content channel is clean and the typed value is still there.
+    expect(readPanelValue(view.container, "data-metadata-title-value")).toBe("Body edited first");
+    expect(view.container.textContent).not.toContain("Unsaved changes");
+
+    // The harm the hydration leads to: the panel's all-in-one PATCH would send that reverted
+    // draft back and unpublish an entry nobody asked to unpublish.
+    await React.act(async () => {
+      clickMetadataAction(view.container, "data-metadata-save");
+      await flushMicrotasks();
+    });
+    expect(editorState.metadataPayloads.map((payload) => payload.status)).toEqual([
+      "published",
+      "published",
+    ]);
+  } finally {
+    view.cleanup();
+  }
+});
+
+// The same rule, across the read/mutation boundary rather than between two mutations: a read
+// that has already hydrated is newer than a mutation body built before it, and the editor
+// only ever invalidated reads in the other direction.
+test("a delayed save response cannot revert a read that hydrated while it was open", async () => {
+  window.history.replaceState({}, "", "/admin/advanced/entries/articles/entry-1");
+  const { EntryEditor } = await import("../../../core/admin/ui/entries/EntryEditor");
+
+  const view = mount(<EntryEditor />);
+  try {
+    await React.act(async () => {
+      editorState.resolveEntry(editorState.entry);
+      await flushMicrotasks();
+    });
+
+    editorState.holdNext("updateEntry");
+    await React.act(async () => {
+      findSaveDraft(view.container).click();
+      await flushMicrotasks();
+    });
+
+    // Another tab changed the SEO description; the cache event refreshes it here. Nothing is
+    // edited locally, so the snapshot is applied rather than offered.
+    await React.act(async () => {
+      dispatchEntryCacheEvent();
+      await flushMicrotasks();
+      editorState.resolveEntryRead(1, {
+        ...editorState.entry,
+        seo: { description: "Changed in another tab" },
+      });
+      await flushMicrotasks();
+    });
+    expect(readMetadataState(view.container).seoDescription).toBe("Changed in another tab");
+
+    // The save's body predates that read and still says "Meta". Applying it reverts a value
+    // the user can see, and the metadata panel would then PATCH the revert back.
+    await React.act(async () => {
+      editorState.release("updateEntry");
+      await flushMicrotasks();
+    });
+    expect(readMetadataState(view.container).seoDescription).toBe("Changed in another tab");
+
+    await React.act(async () => {
+      clickMetadataAction(view.container, "data-metadata-save");
+      await flushMicrotasks();
+    });
+    expect(editorState.metadataPayloads).toEqual([
+      {
+        status: "draft",
+        visibility: "public",
+        accessPassword: null,
+        scheduledAt: null,
+        taxonomy: { categoryId: null, tagIds: [] },
+        seo: { description: "Changed in another tab" },
+      },
+    ]);
+  } finally {
+    view.cleanup();
+  }
+});

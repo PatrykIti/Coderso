@@ -62,6 +62,7 @@ import {
 } from "./entryValueMapping";
 import { useEntryRelationTargets } from "./useEntryRelationTargets";
 import { useEntryRuntimePreview } from "./useEntryRuntimePreview";
+import { useEntrySnapshotAuthority } from "./useEntrySnapshotAuthority";
 import {
   entryFieldEditedKey,
   useEntryEditTracker,
@@ -159,12 +160,17 @@ function EntryEditorInstance({ type, id }: EntryEditorInstanceProps) {
     settleSubmit,
     resetEdits,
   } = useEntryEditTracker();
-  // Read authority. Bumped when a newer authority appears — another read starts, a
-  // mutation settles, or the visit ends — and every continuation checks its own number
-  // before writing state. Without it a read that resolves late overwrites newer state:
-  // `getEntryCached` refuses to CACHE the loser of two concurrent reads but still
-  // RETURNS it to its caller.
-  const loadSeqRef = useRef(0);
+  // Snapshot authority, for READS AND MUTATIONS ALIKE (see `useEntrySnapshotAuthority`).
+  // `getEntryCached` refuses to CACHE the loser of two concurrent reads but still RETURNS it
+  // to its caller, and a mutation's response body is a snapshot of the same row built when its
+  // request was handled — so every one of them can arrive out of order, and every one of them
+  // has to prove it is not older than what the editor already shows before it writes.
+  const {
+    begin: beginSnapshotWrite,
+    isAuthoritative: isSnapshotAuthoritative,
+    claim: claimSnapshotWrite,
+    supersedeAll: supersedeSnapshotWrites,
+  } = useEntrySnapshotAuthority();
   // Which entry the editor holds state FOR. `applyEntry` is the only writer, because it is
   // the only path that populates `fields` and `values`: a mutation response cannot supply
   // them, the field list comes from the content type. The ref is the authority — a promise
@@ -194,18 +200,13 @@ function EntryEditorInstance({ type, id }: EntryEditorInstanceProps) {
     [entryIdentity]
   );
   // "A newer authority exists" and "there is no editor left to write to" are different facts.
-  // `loadSeqRef` carries the first, and the baseline hydration below may override it; this
-  // ref carries the second, and nothing may override it.
+  // The snapshot authority carries the first, and the baseline hydration below may override
+  // it; this ref carries the second, and nothing may override it.
   const visitEndedRef = useRef(false);
   // The read that owns the page-level indicator. Only the newest owner may switch it
   // off, so two "Refresh" clicks cannot let the older one hide a spinner the newer read
   // still needs — and a background read superseding the baseline cannot strand it on.
   const loadingOwnerRef = useRef(0);
-  const beginLoad = useCallback(() => (loadSeqRef.current += 1), []);
-  const isCurrentLoad = useCallback((seq: number) => loadSeqRef.current === seq, []);
-  const invalidateInFlightLoads = useCallback(() => {
-    loadSeqRef.current += 1;
-  }, []);
   const [remoteUpdatePending, setRemoteUpdatePending] = useState(false);
   const [scheduledAt, setScheduledAt] = useState("");
   const [seoDescription, setSeoDescription] = useState("");
@@ -315,7 +316,7 @@ function EntryEditorInstance({ type, id }: EntryEditorInstanceProps) {
   const loadEntry = useCallback(
     (options?: LoadEntryOptions) => {
       if (!type || !id) return;
-      const seq = beginLoad();
+      const seq = beginSnapshotWrite();
       if (options?.clearLoading) loadingOwnerRef.current = seq;
       void Promise.all([getEntryCached(type, id, { force: true }), resolveContentType(true)])
         .then(async ([entryResult, contentType]) => {
@@ -327,7 +328,13 @@ function EntryEditorInstance({ type, id }: EntryEditorInstanceProps) {
           // form whose "Save draft" PATCHed `data: {}` over the stored entry, so the
           // supersession hands its result over instead. From the first hydration on, the
           // newer authority wins, which is what keeps a late read from reverting a newer one.
-          if (!isCurrentLoad(seq) && hasLoadedCurrentEntry()) return;
+          if (!isSnapshotAuthoritative(seq) && hasLoadedCurrentEntry()) return;
+          // This read is now the newest description of the entry anyone holds, whatever it
+          // decides below: hydrate, merely offer, or report a missing content type. Claiming
+          // before the branch is what stops an OLDER read that resolves next from taking a
+          // branch of its own — the "offer" branch writes no snapshot, so leaving it unclaimed
+          // would let a stale one hydrate the moment the edits it protected were saved.
+          claimSnapshotWrite(seq);
           if (!contentType) {
             setError("Content type not found.");
             return;
@@ -355,11 +362,11 @@ function EntryEditorInstance({ type, id }: EntryEditorInstanceProps) {
           // has been: hydration must not wait on a second request.
           applyEntry(entryResult, contentType);
           const overview = await loadTaxonomyOverview(contentType.id);
-          if (!isCurrentLoad(seq)) return;
+          if (!isSnapshotAuthoritative(seq)) return;
           setTaxonomyOverview(overview);
         })
         .catch((err: unknown) => {
-          if (!isCurrentLoad(seq)) return;
+          if (!isSnapshotAuthoritative(seq)) return;
           setError(resolveEditorErrorMessage(err, "Failed to load entry."));
         })
         .finally(() => {
@@ -368,11 +375,12 @@ function EntryEditorInstance({ type, id }: EntryEditorInstanceProps) {
     },
     [
       applyEntry,
-      beginLoad,
+      beginSnapshotWrite,
+      claimSnapshotWrite,
       hasEdits,
       hasLoadedCurrentEntry,
       id,
-      isCurrentLoad,
+      isSnapshotAuthoritative,
       loadTaxonomyOverview,
       resetEdits,
       resolveContentType,
@@ -389,12 +397,12 @@ function EntryEditorInstance({ type, id }: EntryEditorInstanceProps) {
     // user has already edited in either channel on top.
     loadEntry({ isBaseline: true, clearLoading: true });
     return () => {
-      // Ending the visit invalidates every in-flight read, so a late snapshot cannot land
+      // Ending the visit invalidates everything in flight, so a late snapshot cannot land
       // on a torn-down editor.
       visitEndedRef.current = true;
-      invalidateInFlightLoads();
+      supersedeSnapshotWrites();
     };
-  }, [invalidateInFlightLoads, loadEntry]);
+  }, [loadEntry, supersedeSnapshotWrites]);
 
   useEffect(() => {
     if (!type || !id) return;
@@ -496,12 +504,25 @@ function EntryEditorInstance({ type, id }: EntryEditorInstanceProps) {
     return true;
   };
 
+  // Every mutation answers with a fresh full read of the entry, and all three can be in flight
+  // together: each Save disables only its own button. A body built before another mutation
+  // committed describes an OLDER entry than one already applied, so it is admitted only while
+  // its ticket still holds — and once admitted it supersedes everything else in flight,
+  // because it is then the newest description of the row anyone has.
+  const applyMutationSnapshot = (ticket: number, snapshot: EntryDetail | null) => {
+    if (!isSnapshotAuthoritative(ticket)) return;
+    supersedeSnapshotWrites();
+    if (snapshot) hydrateFromSnapshot(snapshot, fields, editedKeys());
+    setRemoteUpdatePending(false);
+  };
+
   const handleSaveDraft = async (options?: { successMessage?: string }) => {
     if (!type || !id) return;
     if (refuseUnloadedSubmit()) return;
     // Captured BEFORE the request: anything edited after this tick is not in the payload,
     // so it stays dirty and survives the response.
     const submittedTick = beginSubmit();
+    const snapshotTicket = beginSnapshotWrite();
     setIsSaving(true);
     setError(null);
     try {
@@ -517,10 +538,11 @@ function EntryEditorInstance({ type, id }: EntryEditorInstanceProps) {
           schemaFieldNames,
         }),
       });
+      // What this request PERSISTED is a fact about the server and is recorded whatever else
+      // has happened since; what its BODY says the entry looks like is only a snapshot, and a
+      // save started later can commit and answer first.
       settleSubmit("content", submittedTick);
-      invalidateInFlightLoads();
-      hydrateFromSnapshot(updated, fields, editedKeys());
-      setRemoteUpdatePending(false);
+      applyMutationSnapshot(snapshotTicket, updated);
       toast.success(options?.successMessage ?? "Draft saved.");
     } catch (err) {
       const message = resolveEditorErrorMessage(err, "Failed to save entry.");
@@ -548,12 +570,11 @@ function EntryEditorInstance({ type, id }: EntryEditorInstanceProps) {
         // only value that becomes server-owned again. Clearing the content dirty flag here
         // used to drop the unsaved warning for edits nothing had persisted.
         const submittedTick = beginSubmit();
+        const snapshotTicket = beginSnapshotWrite();
         await publishEntry(type, id);
         const updated = await getEntryCached(type, id, { force: true });
         settleSubmit(["status"], submittedTick);
-        invalidateInFlightLoads();
-        if (updated) hydrateFromSnapshot(updated, fields, editedKeys());
-        setRemoteUpdatePending(false);
+        applyMutationSnapshot(snapshotTicket, updated);
         toast.success("Entry published.");
       }
     } catch (err) {
@@ -673,12 +694,11 @@ function EntryEditorInstance({ type, id }: EntryEditorInstanceProps) {
     }
 
     const submittedTick = beginSubmit();
+    const snapshotTicket = beginSnapshotWrite();
     try {
       const updated = await updateEntryMetadata(type, id, prepared.payload);
       settleSubmit("metadata", submittedTick);
-      invalidateInFlightLoads();
-      hydrateFromSnapshot(updated, fields, editedKeys());
-      setRemoteUpdatePending(false);
+      applyMutationSnapshot(snapshotTicket, updated);
       toast.success("Metadata saved.");
     } catch (err) {
       const message = resolveEditorErrorMessage(err, "Failed to save metadata.");
