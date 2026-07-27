@@ -25,6 +25,26 @@ const POOLED_URL = "postgres://coderso:secret@db.example.com:6432/coderso";
 const PORTLESS_URL = "postgres://coderso:secret@db.example.com/coderso";
 
 /**
+ * libpq multi-host syntax. postgres.js supports it (it rewrites the URL to the
+ * first host and fails over to the rest), and `new URL` rejects the ported form
+ * while accepting the portless one — so neither "it parsed" nor "it did not
+ * parse" says anything about where the driver connects. Both name the pooler as
+ * a reachable endpoint.
+ */
+const MULTI_HOST_URL =
+  "postgres://coderso:secret@direct.example.com:5432,pooler.example.com:6432/coderso";
+const MULTI_HOST_PORTLESS_URL =
+  "postgres://coderso:secret@direct.example.com,pooler.example.com/coderso";
+
+/**
+ * libpq's own variable name, spelled out rather than imported: the contract under
+ * test belongs to the driver, not to a constant the guard could rename in step
+ * with the test. The literal also keeps these cases asserting behaviour, so they
+ * go red against any guard that ignores `PGPORT` rather than failing to link.
+ */
+const PGPORT_ENV = "PGPORT";
+
+/**
  * Minimal stand-in for a driver client. `withResolvedSessionClient` is generic
  * over `ClosableDatabaseClient` — the only capability it uses itself — so this
  * needs no cast and the lifecycle can be asserted exactly.
@@ -69,18 +89,76 @@ describe("resolvePooledDatabasePort", () => {
 
 describe("inspectDatabaseUrl", () => {
   test("reads the explicit port", () => {
-    expect(inspectDatabaseUrl(POOLED_URL, 6432)).toEqual({ port: 6432, pooled: true });
-    expect(inspectDatabaseUrl(DIRECT_URL, 6432)).toEqual({ port: 5432, pooled: false });
+    expect(inspectDatabaseUrl(POOLED_URL, 6432, {})).toEqual({
+      verified: true,
+      port: 6432,
+      pooled: true,
+    });
+    expect(inspectDatabaseUrl(DIRECT_URL, 6432, {})).toEqual({
+      verified: true,
+      port: 5432,
+      pooled: false,
+    });
   });
 
   test("falls back to 5432 when the url omits the port", () => {
-    expect(inspectDatabaseUrl(PORTLESS_URL, 6432)).toEqual({ port: 5432, pooled: false });
+    expect(inspectDatabaseUrl(PORTLESS_URL, 6432, {})).toEqual({
+      verified: true,
+      port: 5432,
+      pooled: false,
+    });
   });
 
-  test("reports an unparsable connection string as an unknown port", () => {
-    expect(inspectDatabaseUrl("host=db port=6432 dbname=coderso", 6432)).toEqual({
+  test("reports an unparsable connection string as unverifiable", () => {
+    expect(inspectDatabaseUrl("host=db port=6432 dbname=coderso", 6432, {})).toEqual({
+      verified: false,
       port: null,
       pooled: false,
+      reason: "unparsable_url",
+    });
+  });
+
+  test("refuses to name a port for a comma-separated host list", () => {
+    // `new URL` rejects this one, so the old shape reported it as port null.
+    expect(inspectDatabaseUrl(MULTI_HOST_URL, 6432, {})).toEqual({
+      verified: false,
+      port: null,
+      pooled: false,
+      reason: "multiple_hosts",
+    });
+
+    // ...and ACCEPTS this one, hostname "direct.example.com,pooler.example.com",
+    // which the old shape reported as a verified port 5432. Both are host lists
+    // the driver fails over between, so neither has a single port.
+    expect(inspectDatabaseUrl(MULTI_HOST_PORTLESS_URL, 6432, {})).toEqual({
+      verified: false,
+      port: null,
+      pooled: false,
+      reason: "multiple_hosts",
+    });
+
+    // Percent-encoded comma: the driver decodes the authority before splitting.
+    expect(
+      inspectDatabaseUrl("postgres://coderso:secret@direct%2Cpooler/coderso", 6432, {}).verified
+    ).toBe(false);
+  });
+
+  test("checks a portless url against the port PGPORT would give the driver", () => {
+    expect(inspectDatabaseUrl(PORTLESS_URL, 6432, { [PGPORT_ENV]: "6432" })).toEqual({
+      verified: true,
+      port: 6432,
+      pooled: true,
+    });
+    expect(inspectDatabaseUrl(PORTLESS_URL, 6432, { [PGPORT_ENV]: "5432" })).toEqual({
+      verified: true,
+      port: 5432,
+      pooled: false,
+    });
+    expect(inspectDatabaseUrl(PORTLESS_URL, 6432, { [PGPORT_ENV]: "not-a-port" })).toEqual({
+      verified: false,
+      port: null,
+      pooled: false,
+      reason: "env_port_invalid",
     });
   });
 });
@@ -147,6 +225,64 @@ describe("resolveSessionDatabaseTarget", () => {
         [DATABASE_DIRECT_URL_ENV]: POOLED_URL,
       })
     ).toThrow(/^session_database_direct_url_pooled:/);
+  });
+
+  test("refuses a DATABASE_DIRECT_URL that names several hosts", () => {
+    let thrown: unknown;
+    try {
+      resolveSessionDatabaseTarget("startup database migrations", {
+        [DATABASE_URL_ENV]: POOLED_URL,
+        [DATABASE_DIRECT_URL_ENV]: MULTI_HOST_URL,
+      });
+    } catch (error) {
+      thrown = error;
+    }
+
+    // Being set explicitly is not evidence of being direct: the driver accepts
+    // this list and can land on pooler.example.com:6432.
+    expect(thrown).toBeInstanceOf(Error);
+    const message = thrown instanceof Error ? thrown.message : "";
+    expect(message).toMatch(
+      /^session_database_direct_url_unverifiable: startup database migrations/
+    );
+    expect(message).toContain("comma-separated hosts");
+    expect(message).toContain(DATABASE_DIRECT_URL_ENV);
+    expect(message).not.toContain("secret");
+  });
+
+  test("refuses a DATABASE_URL fallback that names several hosts", () => {
+    // The portless list parses as a URL, so the port-null check alone never saw it.
+    expect(() =>
+      resolveSessionDatabaseTarget("scheduled backup single-flight lock", {
+        [DATABASE_URL_ENV]: MULTI_HOST_PORTLESS_URL,
+      })
+    ).toThrow(/^session_database_url_unverifiable: scheduled backup single-flight lock/);
+  });
+
+  test("refuses a DATABASE_DIRECT_URL it cannot parse at all", () => {
+    expect(() =>
+      resolveSessionDatabaseTarget("startup assistant docs reindex", {
+        [DATABASE_DIRECT_URL_ENV]: "host=db port=5432 dbname=coderso",
+      })
+    ).toThrow(/^session_database_direct_url_unverifiable:/);
+  });
+
+  test("resolves a portless DATABASE_DIRECT_URL against PGPORT, not against 5432", () => {
+    // postgres.js uses PGPORT when the url omits a port, so PGPORT=6432 makes
+    // this direct-looking url the pooler.
+    expect(() =>
+      resolveSessionDatabaseTarget("startup database migrations", {
+        [DATABASE_DIRECT_URL_ENV]: PORTLESS_URL,
+        [PGPORT_ENV]: "6432",
+      })
+    ).toThrow(/^session_database_direct_url_pooled:/);
+
+    expect(
+      resolveSessionDatabaseTarget("startup database migrations", {
+        [DATABASE_DIRECT_URL_ENV]: PORTLESS_URL,
+        [PGPORT_ENV]: "5432",
+      })
+    ).toEqual({ url: PORTLESS_URL, port: 5432, source: "direct_url_env" });
   });
 
   test("honours a custom pooler port on both sides of the guard", () => {
