@@ -449,10 +449,23 @@ at ~30 s.
 | coverage | `browser-run-code-source-ownership.mjs` | observed registered ids === all 9 registry keys |
 | dirty-navigation byte identity | `browser-dirty-navigation-source.mjs` | existing pins at `:173`/`:255` still pass unmodified |
 
-Expected counter movement: executor self-test `negativeCases` increases from
-2810 by the number of `expectAsyncFailure` / `assertSourceMutantsRejected` cases
-added (≥ 18: two per registered id plus the tone mutants). The contract
-self-test's `negativeCases` is unaffected by this leaf.
+Expected counter movement, in two eras that must not be run together.
+
+**Historical post-L02 receipt** — what this leaf's own edit produced on the day it
+landed: executor self-test `negativeCases` rose from 2810 by the number of
+`expectAsyncFailure` / `assertSourceMutantsRejected` cases added (≥ 18: two per
+registered id plus the tone mutants). The contract self-test's `negativeCases` was
+unaffected by this leaf, sitting at the post-L01 value of 113.
+
+**Current required output** — re-measured at HEAD on 2026-07-27: executor
+`negativeCases: 2985`, contract `negativeCases: 117`. Both lanes grew past the
+figures above because later family leaves added further negatives.
+
+The parent's invariant is that `negativeCases` may only **increase** and no
+assertion may be relaxed, so a run reporting the historical 2810 or 113 today has
+lost negatives and is a regression. The current values are therefore pinned
+exactly below rather than as a floor: `>= 2810` or `>= 113` would let a regression
+all the way back to those numbers pass.
 
 ## Validation commands
 
@@ -467,18 +480,26 @@ wc -l _docs/_workflows/task-540-smoke/executor/config.mjs \
       _docs/_workflows/task-540-smoke/executor/self-test/browser-run-code-source-ownership.mjs
 ```
 
-Required output:
+Required output at the current bytes, re-measured 2026-07-27 at HEAD `8eaadfbd`.
+These are exact pins, not floors:
 
 - executor self-test: `pass: true`, `actions: 496`, `runtimeReceipts: 177`,
   `cleanupActions: 72`, `nominalPersistentCleanupActions: 72`,
-  `terminalMatrixCases: 1`, `captures: 26`, `negativeCases` > 2810 (the baseline
-  at the time of this leaf; measured 2985 at HEAD 2026-07-27, per commit
-  `c89fa96c`).
-- contract self-test: unchanged from the post-L01 result
-  (`pass: true`, `actions: 496`, `negativeCases: 113`).
-- every touched module ≤ 1,000 physical lines (measured at HEAD 2026-07-27 the
-  largest touched module is `browser-run-code-source-ownership.mjs` at 716,
-  followed by `browser-tone-flow-source.mjs` at 710).
+  `terminalMatrixCases: 1`, `captures: 26`, `negativeCases: 2985`.
+- contract self-test: `pass: true`, `actions: 496`, `negativeCases: 117`.
+- every touched module ≤ 1,000 physical lines (`wc -l` at the same HEAD:
+  `executor/config.mjs` 557, `browser/generic-invocations.mjs` 513,
+  `browser/scenarios/dirty-guards.mjs` 442,
+  `browser-dirty-navigation-source.mjs` 364, `browser-tone-flow-source.mjs` 710,
+  `browser-run-code-source-ownership.mjs` 716).
+
+Superseded figures, recorded so a reader can tell the eras apart. Neither is an
+acceptable result today; seeing one means negatives were lost.
+
+| era | executor `negativeCases` | contract `negativeCases` |
+|---|---|---|
+| pre-edit baseline, before this leaf | 2810 | 113 |
+| current required output, HEAD 2026-07-27 | **2985** | **117** |
 
 Additional manual check before declaring done: build the invocation for
 `dg-024-entry-nav-cancel` before and after the change and diff the emitted unit

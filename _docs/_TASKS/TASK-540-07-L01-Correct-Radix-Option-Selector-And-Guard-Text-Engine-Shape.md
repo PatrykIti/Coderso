@@ -280,12 +280,26 @@ selector, and must not be changed.
 | wrong delegated form | `negative(...)` | `[role="option"] span:text-is("Muted")` throws |
 | malformed entry | `negative(...)` | `{ kind: "not-a-selector" }` throws |
 
-Expected counter movement: contract self-test `negativeCases` 109 → 113 (measured
-at HEAD 2026-07-27: 117, later family leaves having added contract negatives). The
-executor self-test's `negativeCases` is unchanged by this leaf (2810 at the time;
-measured 2985 at HEAD) because it
-adds no executor-level negative case; its `pass` must stay `true` since it
-builds the same plan.
+Expected counter movement, in two eras that must not be run together.
+
+**Historical post-L01 receipts** — what this leaf's own edit produced on the day
+it landed: contract self-test `negativeCases` 109 → 113; executor self-test
+`negativeCases` unchanged at 2810, this leaf adding no executor-level negative
+case. Those figures are receipts of a past run, not a target.
+
+**Current required output** — re-measured at HEAD on 2026-07-27 with
+`node _docs/_workflows/task-540-smoke-contract.mjs --self-test` and
+`node _docs/_workflows/task-540-smoke-executor.mjs --self-test`: contract
+`negativeCases: 117`, executor `negativeCases: 2985`. Later family leaves added
+further negatives on both lanes, which is why the current figures exceed the
+post-L01 receipts.
+
+The parent's invariant is that `negativeCases` may only **increase** and no
+assertion may be relaxed. A run that reports the historical 113 or 2810 today has
+therefore lost negatives and is a regression. That is why the current values are
+pinned exactly below rather than as a floor: a floor of `>= 113` would let a
+regression all the way back to 113 pass. This leaf's `pass` must stay `true`
+either way, since it builds the same plan.
 
 ## Validation commands
 
@@ -296,17 +310,27 @@ wc -l _docs/_workflows/task-540-smoke/contract/selectors.mjs \
       _docs/_workflows/task-540-smoke/contract/self-test/registries-fixtures.mjs
 ```
 
-Required output:
+Required output at the current bytes, re-measured 2026-07-27. These are exact
+pins, not floors:
 
 - contract self-test: `pass: true`, `actions: 496`, `setupActions: 55`,
   `flowActions: 434`, `cleanupActions: 7`, `executableTypeCounts` unchanged,
-  `negativeCases: 113`.
+  `negativeCases: 117`.
 - executor self-test: `pass: true`, `actions: 496`, `runtimeReceipts: 177`,
-  `cleanupActions: 72`, `captures: 26`, `negativeCases: 2810`.
+  `cleanupActions: 72`, `captures: 26`, `negativeCases: 2985`.
 - both files ≤ 1,000 physical lines.
 
-Pre-edit baselines measured on this working tree, for comparison:
-contract `{"pass":true,"actions":496,...,"negativeCases":109}`,
+Superseded figures, recorded so a reader can tell the eras apart. None of them is
+an acceptable result today; seeing one means negatives were lost.
+
+| era | contract `negativeCases` | executor `negativeCases` |
+|---|---|---|
+| pre-edit baseline, before this leaf | 109 | 2810 |
+| post-L01 receipt, the day this leaf landed | 113 | 2810 |
+| current required output, HEAD 2026-07-27 | **117** | **2985** |
+
+The full pre-edit baselines measured on this working tree were
+contract `{"pass":true,"actions":496,...,"negativeCases":109}` and
 executor `{"pass":true,"actions":496,"runtimeReceipts":177,"cleanupActions":72,"nominalPersistentCleanupActions":72,"terminalMatrixCases":1,"captures":26,"negativeCases":2810}`.
 
 ## Acceptance
