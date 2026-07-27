@@ -37,12 +37,21 @@ const MULTI_HOST_PORTLESS_URL =
   "postgres://coderso:secret@direct.example.com,pooler.example.com/coderso";
 
 /**
- * libpq's own variable name, spelled out rather than imported: the contract under
- * test belongs to the driver, not to a constant the guard could rename in step
- * with the test. The literal also keeps these cases asserting behaviour, so they
- * go red against any guard that ignores `PGPORT` rather than failing to link.
+ * A url with no authority. postgres.js then resolves the host from `PGHOST`, and
+ * reads that host's own `:port` suffix in preference to `PGPORT` and to 5432 —
+ * which is how a connection string that names no port at all reaches the pooler.
+ */
+const AUTHORITYLESS_URL = "postgres:///coderso";
+
+/**
+ * libpq's own variable names, spelled out rather than imported: the contract
+ * under test belongs to the driver, not to a constant the guard could rename in
+ * step with the test. The literals also keep these cases asserting behaviour, so
+ * they go red against any guard that ignores `PGPORT` or `PGHOST` rather than
+ * failing to link.
  */
 const PGPORT_ENV = "PGPORT";
+const PGHOST_ENV = "PGHOST";
 
 /**
  * Minimal stand-in for a driver client. `withResolvedSessionClient` is generic
@@ -158,8 +167,33 @@ describe("inspectDatabaseUrl", () => {
       verified: false,
       port: null,
       pooled: false,
-      reason: "env_port_invalid",
+      reason: "invalid_port",
     });
+  });
+
+  test("checks a url with no authority against the host-specific port in PGHOST", () => {
+    // postgres.js resolves the host as `url.hostname || PGHOST || 'localhost'`
+    // and then reads each host's own `:port` suffix, so an authority-less url
+    // plus `PGHOST=host:6432` lands on the pooler even though nothing in the
+    // connection string says 6432. Reading the string alone cleared this as
+    // "port 5432, direct" — the exact fail-open the guard exists to prevent.
+    expect(
+      inspectDatabaseUrl(AUTHORITYLESS_URL, 6432, { [PGHOST_ENV]: "pooler.example.com:6432" })
+    ).toEqual({ verified: true, port: 6432, pooled: true });
+
+    expect(
+      inspectDatabaseUrl(AUTHORITYLESS_URL, 6432, { [PGHOST_ENV]: "direct.example.com:5432" })
+    ).toEqual({ verified: true, port: 5432, pooled: false });
+  });
+
+  test("refuses to name a port for a comma-separated PGHOST", () => {
+    // Same failover semantics as a host list in the url, and the same hazard:
+    // the second entry is the pooler.
+    expect(
+      inspectDatabaseUrl(AUTHORITYLESS_URL, 6432, {
+        [PGHOST_ENV]: "direct.example.com:5432,pooler.example.com:6432",
+      })
+    ).toEqual({ verified: false, port: null, pooled: false, reason: "multiple_hosts" });
   });
 });
 
@@ -283,6 +317,34 @@ describe("resolveSessionDatabaseTarget", () => {
         [PGPORT_ENV]: "5432",
       })
     ).toEqual({ url: PORTLESS_URL, port: 5432, source: "direct_url_env" });
+  });
+
+  test("refuses a DATABASE_DIRECT_URL that PGHOST points at the pooler", () => {
+    // The url names no port and no host at all: everything the driver will dial
+    // comes from PGHOST, including the pooler port.
+    expect(() =>
+      resolveSessionDatabaseTarget("startup database migrations", {
+        [DATABASE_DIRECT_URL_ENV]: AUTHORITYLESS_URL,
+        [PGHOST_ENV]: "pooler.example.com:6432",
+      })
+    ).toThrow(/^session_database_direct_url_pooled:/);
+
+    // ...and the fallback path refuses on the same rule.
+    expect(() =>
+      resolveSessionDatabaseTarget("scheduled backup single-flight lock", {
+        [DATABASE_URL_ENV]: AUTHORITYLESS_URL,
+        [PGHOST_ENV]: "pooler.example.com:6432",
+      })
+    ).toThrow(/^session_database_url_pooled:/);
+
+    // A PGHOST that names the direct port is still accepted, so the guard is
+    // refusing the pooler rather than refusing PGHOST.
+    expect(
+      resolveSessionDatabaseTarget("startup database migrations", {
+        [DATABASE_DIRECT_URL_ENV]: AUTHORITYLESS_URL,
+        [PGHOST_ENV]: "direct.example.com:5432",
+      })
+    ).toEqual({ url: AUTHORITYLESS_URL, port: 5432, source: "direct_url_env" });
   });
 
   test("honours a custom pooler port on both sides of the guard", () => {

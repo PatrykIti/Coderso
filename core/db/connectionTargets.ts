@@ -32,68 +32,63 @@
  * instead of silently leaking their lock.
  *
  * BOTH paths are fail-closed, and on the same rule: a session target is only
- * accepted when the port the driver will connect on can be read AND is not the
- * pooler port. "Could not read it" is never treated as "not the pooler". Two
- * connection-string shapes make that distinction load-bearing:
+ * accepted when the endpoint the driver will connect to can be read AND is not
+ * the pooler. "Could not read it" is never treated as "not the pooler".
  *
- *   - a comma-separated host list (`host-a:5432,host-b:6432`) — libpq syntax
- *     that postgres.js supports by rewriting the URL to the first host and
- *     failing over between the rest, so `new URL` rejecting the string says
- *     nothing about whether the driver will connect, and one port says nothing
- *     about which host it lands on. Such a list can name the direct port and the
- *     pooler port at the same time;
- *   - a URL with no port, when `PGPORT` is set — the driver prefers `PGPORT`
- *     over 5432, so the port to check is `PGPORT`, not the default.
+ * WHERE the driver will connect is not inferred here. This module asks
+ * postgres.js: `./driverEndpoints.ts` builds a throwaway client — which parses
+ * the options and opens nothing — and reads the resolved `options.host` /
+ * `options.port` back off it. Re-deriving that from the connection string is
+ * what produced two successive fail-OPEN holes in this guard: a portless URL was
+ * cleared as "port 5432, direct" while first `PGPORT`, and later a host-specific
+ * `PGHOST=pooler:6432`, sent the driver to the pooler instead. Every such shape
+ * is a consequence of the driver's own resolution, so it is enumerated once,
+ * against the installed driver source, in that module.
  *
- * This module is intentionally free of driver imports so it can be unit-tested
- * and imported without opening a connection. It does encode two facts about the
- * driver's connection-string handling (the two shapes above); they are asserted
- * in `tests/vitest/server/databaseConnectionTargets.test.ts` and the failure
- * direction is safe — a driver that stopped supporting multi-host strings would
- * make this module refuse a string that no longer connects anyway.
+ * The policy this module adds on top of the driver's answer is deliberately
+ * narrow:
+ *   - there must be exactly ONE endpoint. A comma-separated host list — in the
+ *     URL or in `PGHOST` — is libpq failover syntax that postgres.js rotates
+ *     through, and it can name the direct port and the pooler port at the same
+ *     time, so no single port describes where a session lands;
+ *   - that endpoint's port must be dialable (the driver yields `NaN` for a
+ *     non-numeric `PGPORT`, and a URL may name port 0);
+ *   - that port must not be the pooler's.
+ *
+ * Importing this module still opens no connection, so it stays safe at module
+ * load — `core/db/drizzle.config.ts` resolves its target there.
  */
 
-export type DatabaseEnvMap = Record<string, string | undefined>;
+import {
+  MAX_TCP_PORT,
+  MIN_TCP_PORT,
+  resolveDriverEndpoints,
+  type DatabaseEnvMap,
+} from "./driverEndpoints";
+
+export type { DatabaseEnvMap };
 
 export const DATABASE_URL_ENV = "DATABASE_URL";
 export const DATABASE_DIRECT_URL_ENV = "DATABASE_DIRECT_URL";
 export const DATABASE_POOLED_PORT_ENV = "DATABASE_POOLED_PORT";
 
-/**
- * libpq's port variable. postgres.js resolves a connection's port as
- * `options.port || url.port || PGPORT || 5432`, so a connection string with no
- * port is checked against `PGPORT` when one is set — otherwise the guard would
- * clear a URL as "port 5432, not pooled" while the driver dialled the pooler.
- *
- * Read from the env map the caller passed, never from ambient state behind the
- * caller's back. Callers that pass `process.env` — `core/db/drizzle.config.ts`
- * does, at module load — are therefore checked against the operator's real
- * `PGPORT`, which is the point: a developer with a local Postgres on a
- * non-default port has an environment where the port matters.
- *
- * Deliberately not exported: nothing outside this module needs the name, and the
- * test names the variable literally so it exercises libpq's contract rather than
- * a re-export of this constant.
- */
-const PGPORT_ENV = "PGPORT";
-
 /** PgBouncer's port on Render. Overridable via `DATABASE_POOLED_PORT`. */
 export const DEFAULT_POOLED_DATABASE_PORT = 6432;
 
-/** postgres.js connects on 5432 when the connection string omits the port. */
+/** postgres.js connects on 5432 when neither the string nor `PGPORT` names a port. */
 export const DEFAULT_POSTGRES_PORT = 5432;
 
 /** Why a connection string could not be resolved to one known port. */
 export type DatabaseUrlUnverifiableReason =
-  /** Not a URL we can read an authority and a port out of. */
+  /** The driver refuses the string outright, so it resolves to no endpoint at all. */
   | "unparsable_url"
   /**
-   * The authority is a comma-separated host list. The driver accepts these and
-   * fails over between the entries, so no single port describes the connection.
+   * The driver resolves several endpoints and fails over between them, so no
+   * single port describes where the connection lands.
    */
   | "multiple_hosts"
-  /** The URL omits a port and `PGPORT`, which the driver uses next, is unusable. */
-  | "env_port_invalid";
+  /** The driver resolves one endpoint whose port is not a dialable TCP port. */
+  | "invalid_port";
 
 /**
  * Result of inspecting a connection string without connecting.
@@ -149,10 +144,10 @@ export function resolvePooledDatabasePort(env: DatabaseEnvMap = process.env): nu
   if (!configured) return DEFAULT_POOLED_DATABASE_PORT;
 
   const parsed = Number(configured);
-  if (!Number.isInteger(parsed) || parsed < 1 || parsed > 65535) {
+  if (!Number.isInteger(parsed) || parsed < MIN_TCP_PORT || parsed > MAX_TCP_PORT) {
     throw new Error(
       `database_pooled_port_invalid: ${DATABASE_POOLED_PORT_ENV} must be an integer port ` +
-        `between 1 and 65535 (got ${JSON.stringify(configured)}).`
+        `between ${MIN_TCP_PORT} and ${MAX_TCP_PORT} (got ${JSON.stringify(configured)}).`
     );
   }
   return parsed;
@@ -166,79 +161,32 @@ const unverifiable = (reason: DatabaseUrlUnverifiableReason): DatabaseUrlInspect
 });
 
 /**
- * Extract the host authority the way the driver does before handing the string
- * to `new URL`: everything after `://`, cut at the first `/` or `?`, then
- * everything after the first `@`, percent-decoded.
- *
- * This is what makes a multi-host string visible. The driver reads the authority
- * from the raw string and rewrites the URL to the FIRST host before parsing it,
- * so a comma-separated list that `new URL` rejects outright still connects, and
- * a list that `new URL` happens to accept lands in `URL.hostname` as one blob.
- * Neither route lets `URL.port` describe where the connection goes.
- *
- * Returns null when there is no `://` or the authority is not decodable — both
- * mean "cannot be inspected".
- */
-const extractDriverAuthority = (url: string): string | null => {
-  const schemeSeparator = url.indexOf("://");
-  if (schemeSeparator < 0) return null;
-
-  const afterScheme = url.slice(schemeSeparator + 3).split(/[?/]/)[0] ?? "";
-  const authority = afterScheme.slice(afterScheme.indexOf("@") + 1);
-  try {
-    return decodeURIComponent(authority);
-  } catch {
-    return null;
-  }
-};
-
-/**
- * Port the driver uses when the connection string omits one: `PGPORT` if it is
- * set and usable, otherwise 5432. Null means `PGPORT` is set to something that
- * is not a port, so the effective port is unknowable from configuration alone.
- */
-const resolveImplicitPort = (env: DatabaseEnvMap): number | null => {
-  const configured = normalizeOptionalString(env[PGPORT_ENV]);
-  if (!configured) return DEFAULT_POSTGRES_PORT;
-
-  const parsed = Number(configured);
-  return Number.isInteger(parsed) && parsed >= 1 && parsed <= 65535 ? parsed : null;
-};
-
-/**
  * Inspect a connection string without connecting. Never returns or logs the
  * credentials it was given.
  *
- * Fails closed: anything that does not resolve to the one port the driver will
- * connect on comes back `verified: false`, which callers must treat as "might be
- * the pooler".
+ * Fails closed: anything the DRIVER does not resolve to a single dialable port
+ * comes back `verified: false`, which callers must treat as "might be the
+ * pooler". The three unverifiable reasons are the three ways the driver's own
+ * answer fails to name one endpoint, not three parsing rules of our own.
  */
 export function inspectDatabaseUrl(
   url: string,
   pooledPort: number,
   env: DatabaseEnvMap = process.env
 ): DatabaseUrlInspection {
-  const authority = extractDriverAuthority(url);
-  if (authority === null) return unverifiable("unparsable_url");
-  if (authority.includes(",")) return unverifiable("multiple_hosts");
+  const resolution = resolveDriverEndpoints(url, env);
+  if (!resolution.resolved) return unverifiable("unparsable_url");
 
-  let parsed: URL;
-  try {
-    parsed = new URL(url);
-  } catch {
-    return unverifiable("unparsable_url");
-  }
+  const { endpoints } = resolution;
+  if (endpoints.length > 1) return unverifiable("multiple_hosts");
 
-  if (parsed.port === "") {
-    const implicitPort = resolveImplicitPort(env);
-    if (implicitPort === null) return unverifiable("env_port_invalid");
-    return { verified: true, port: implicitPort, pooled: implicitPort === pooledPort };
-  }
+  // The driver always yields at least one endpoint for a string it accepted
+  // (`host.split(',')` cannot be empty); an empty list would mean the driver
+  // changed shape under us, which is exactly when to refuse rather than guess.
+  const endpoint = endpoints[0];
+  if (!endpoint || endpoint.port === null) return unverifiable("invalid_port");
 
-  const port = Number(parsed.port);
-  if (!Number.isInteger(port)) return unverifiable("unparsable_url");
-
-  return { verified: true, port, pooled: port === pooledPort };
+  return { verified: true, port: endpoint.port, pooled: endpoint.port === pooledPort };
 }
 
 /**
@@ -272,18 +220,18 @@ const pooledPortHint = (pooledPort: number) =>
 const unverifiableReasonHint = (reason: DatabaseUrlUnverifiableReason): string => {
   if (reason === "multiple_hosts") {
     return (
-      "it names several comma-separated hosts, which the driver fails over between, so no " +
-      "single port describes where the connection lands (such a list can name the direct port " +
-      "and the pooler port at once)"
+      "the driver resolves it to several comma-separated hosts, which it fails over between, " +
+      "so no single port describes where the connection lands (such a list — in the URL or in " +
+      "PGHOST — can name the direct port and the pooler port at once)"
     );
   }
-  if (reason === "env_port_invalid") {
+  if (reason === "invalid_port") {
     return (
-      `it omits a port and ${PGPORT_ENV} — which the driver would use instead of ` +
-      `${DEFAULT_POSTGRES_PORT} — is not a port number between 1 and 65535`
+      "the port the driver resolves for it — from the connection string, from a host-specific " +
+      `suffix in PGHOST, or from PGPORT — is not a port number between 1 and ${MAX_TCP_PORT}`
     );
   }
-  return "it is not a parsable connection URL, so its port cannot be read";
+  return "the driver refuses to parse it as a connection string, so its port cannot be read";
 };
 
 /**

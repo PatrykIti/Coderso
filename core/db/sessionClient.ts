@@ -43,11 +43,23 @@ export type SessionDatabaseOptions = {
 };
 
 export type WithSessionDatabaseClientOptions = SessionDatabaseOptions & {
-  /** Injectable for tests; defaults to a `max: 1` postgres.js client. */
+  /** Injectable for tests; defaults to `createSessionDatabaseClient`. */
   connect?: SessionDatabaseConnect;
 };
 
-const defaultConnect: SessionDatabaseConnect = (target) => postgres(target.url, { max: 1 });
+/**
+ * The connect every production session-lock path uses.
+ *
+ * Exported so a test can hold the seam that matters against the driver: the port
+ * `resolveSessionDatabaseTarget` verified as direct must be the port THIS call
+ * makes postgres.js resolve. `connectionTargets` answers that question by asking
+ * postgres.js the same thing (see `./driverEndpoints.ts`), and its answer is only
+ * the driver's if the real call passes no `host`, `port` or `path` option — which
+ * would take precedence over the connection string and the environment. `max` is
+ * the only option here, and it does not enter host/port resolution.
+ */
+export const createSessionDatabaseClient: SessionDatabaseConnect = (target) =>
+  postgres(target.url, { max: 1 });
 
 const warnedPurposes = new Set<string>();
 
@@ -106,5 +118,10 @@ export function withSessionDatabaseClient<T>(
   action: (client: SessionDatabaseClient) => Promise<T>,
   options: WithSessionDatabaseClientOptions = {}
 ): Promise<T> {
-  return withResolvedSessionClient(purpose, options.connect ?? defaultConnect, action, options);
+  return withResolvedSessionClient(
+    purpose,
+    options.connect ?? createSessionDatabaseClient,
+    action,
+    options
+  );
 }
