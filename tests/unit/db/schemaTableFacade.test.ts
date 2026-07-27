@@ -46,6 +46,13 @@ import * as schema from "../../../core/db/schema";
  * was deliberately NOT done — it would trade this loud, obvious failure for a red
  * lane on every legitimate upgrade without telling you what changed.
  *
+ * One thing this comparison structurally cannot see, stated so nobody mistakes a
+ * green run here for a guarded schema: `.$type<...>()`. It is erased before either
+ * snapshot exists, so `jsonb("context").$type<X>()` and `jsonb("context")`
+ * serialise identically and a column's TypeScript contract can be changed -- or
+ * deleted -- without moving one leaf. Those contracts are pinned by
+ * `schemaColumnTypeContracts.test.ts` instead, at the type level, where they live.
+ *
  * Deliberately DB-free: `core/db/schema.ts` imports no client and
  * `generateDrizzleJson` connects to nothing, so unlike the sibling per-area
  * `schema.test.ts` files under `tests/unit` this needs no `DATABASE_URL` and
