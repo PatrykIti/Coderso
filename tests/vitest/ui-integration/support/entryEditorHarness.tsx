@@ -6,17 +6,120 @@ import type { EntryVisibility } from "../../../../core/admin/services/entriesCli
 import type { EntryStatus } from "../../../../core/admin/ui/entries/EntryMetadataPanel";
 
 /**
- * The stubbed metadata panel and the DOM plumbing for the entry-editor integration lanes.
- * They live outside the lane file because that file's value is its service mocks and its
- * scenarios, and all of it together does not fit under the 1000-line limit.
+ * The component stubs, request-payload shapes and DOM plumbing for the entry-editor
+ * integration lanes. They live outside the lane file because that file's value is its
+ * service mocks and its scenarios, and all of it together does not fit under the 1000-line
+ * limit.
  *
- * The real panel renders outside the editor's isLoading gate and disables only its own
- * Save button, so every control below is live while a read OR a save is in flight. The
+ * The real metadata panel renders outside the editor's isLoading gate and disables only its
+ * own Save button, so every control below is live while a read OR a save is in flight. The
  * stub keeps exactly that surface: each control calls the same prop the real Select /
- * Input / Textarea calls, and every resolved value is ALSO mirrored as text, so an
- * assertion reads React state rather than the uncontrolled DOM value of an input the
- * editor never rewrites.
+ * Input / Textarea calls, its Save carries the same `canSave` gate, and every resolved value
+ * is ALSO mirrored as text, so an assertion reads React state rather than the uncontrolled
+ * DOM value of an input the editor never rewrites.
  */
+
+/** What the lanes' `updateEntry` / `updateEntryMetadata` mocks record and assert against. */
+export type UpdateEntryPayload = {
+  title: string;
+  slug: string;
+  data: Record<string, string>;
+};
+
+export type UpdateEntryMetadataPayload = {
+  status: EntryStatus;
+  visibility: EntryVisibility;
+  accessPassword: string | null | undefined;
+  scheduledAt: string | null;
+  taxonomy: { categoryId: string | null; tagIds: string[] } | undefined;
+  seo: { description: string };
+};
+
+type ChildrenProps = { children: React.ReactNode };
+
+/**
+ * The shadcn primitives the editor renders, stubbed and exported as ready-made module
+ * objects so a lane registers each one in a single `vi.mock` line. They carry no lane
+ * fixture: `Button` keeps `disabled` because a disabled Save is the point of several
+ * assertions, `Input`/`Textarea` stay uncontrolled because the editor rewrites their value
+ * through React state and a test must read the state, not the DOM.
+ */
+export const alertModule = {
+  Alert: ({ children }: ChildrenProps) => <div>{children}</div>,
+  AlertDescription: ({ children }: ChildrenProps) => <div>{children}</div>,
+  AlertTitle: ({ children }: ChildrenProps) => <p>{children}</p>,
+};
+
+export const badgeModule = {
+  Badge: ({ children }: ChildrenProps) => <span>{children}</span>,
+};
+
+export const buttonModule = {
+  Button: ({
+    children,
+    onClick,
+    disabled,
+  }: ChildrenProps & { onClick?: () => void; disabled?: boolean }) => (
+    <button type="button" onClick={onClick} disabled={disabled}>
+      {children}
+    </button>
+  ),
+};
+
+export const cardModule = {
+  Card: ({ children }: ChildrenProps) => <div>{children}</div>,
+  CardContent: ({ children }: ChildrenProps) => <div>{children}</div>,
+  CardDescription: ({ children }: ChildrenProps) => <div>{children}</div>,
+  CardHeader: ({ children }: ChildrenProps) => <div>{children}</div>,
+  CardTitle: ({ children }: ChildrenProps) => <div>{children}</div>,
+};
+
+export const inputModule = {
+  Input: ({
+    value,
+    onChange,
+  }: {
+    value?: string;
+    onChange?: (event: React.ChangeEvent<HTMLInputElement>) => void;
+  }) => <input data-slug-input="true" defaultValue={value} onChange={onChange} />,
+};
+
+export const scrollAreaModule = {
+  ScrollArea: ({ children }: ChildrenProps) => <div>{children}</div>,
+};
+
+export const sheetModule = {
+  Sheet: ({ children }: ChildrenProps) => <div>{children}</div>,
+  SheetContent: ({ children }: ChildrenProps) => <div>{children}</div>,
+  SheetDescription: ({ children }: ChildrenProps) => <div>{children}</div>,
+  SheetTitle: ({ children }: ChildrenProps) => <div>{children}</div>,
+};
+
+export const tabsModule = {
+  Tabs: ({ children }: ChildrenProps) => <div>{children}</div>,
+  TabsContent: ({ children }: ChildrenProps) => <div>{children}</div>,
+  TabsList: ({ children }: ChildrenProps) => <div>{children}</div>,
+  TabsTrigger: ({ children }: ChildrenProps) => <button type="button">{children}</button>,
+};
+
+export const textareaModule = {
+  Textarea: React.forwardRef(function MockTextarea(
+    {
+      value,
+      onChange,
+      placeholder,
+    }: {
+      value?: string;
+      onChange?: (event: React.ChangeEvent<HTMLTextAreaElement>) => void;
+      placeholder?: string;
+    },
+    ref: React.Ref<HTMLTextAreaElement>
+  ) {
+    return (
+      <textarea ref={ref} defaultValue={value} onChange={onChange} placeholder={placeholder} />
+    );
+  }),
+};
 
 // Only the props the stub exercises; the editor passes more.
 type MetadataPanelStubProps = {
@@ -34,6 +137,10 @@ type MetadataPanelStubProps = {
   onCategoryChange: (categoryId: string | null) => void;
   onSave: () => void;
   isSaving: boolean;
+  // The real panel disables its Save while the editor holds no loaded entry, because the
+  // panel PATCHes status, visibility, schedule, SEO and taxonomy TOGETHER: submitting its
+  // pristine mount defaults would push them over whatever the server holds.
+  canSave?: boolean;
 };
 
 export const EntryMetadataPanelStub = ({
@@ -51,6 +158,7 @@ export const EntryMetadataPanelStub = ({
   onCategoryChange,
   onSave,
   isSaving,
+  canSave,
 }: MetadataPanelStubProps) => (
   <div data-metadata-panel="true">
     <span data-metadata-status-value="true">{status}</span>
@@ -90,8 +198,19 @@ export const EntryMetadataPanelStub = ({
       defaultValue={seoDescription}
       onChange={(event) => onSeoDescriptionChange(event.target.value)}
     />
-    <button type="button" data-metadata-save="true" disabled={isSaving} onClick={onSave}>
+    <button
+      type="button"
+      data-metadata-save="true"
+      disabled={isSaving || canSave === false}
+      onClick={onSave}
+    >
       Save metadata
+    </button>
+    {/* No counterpart in the real panel: it calls the SAME `onSave` prop with no gate of its
+        own, so an assertion can tell "the button was disabled" from "the editor refused the
+        call". A disabled button is a UI detail; the request leaving is the harm. */}
+    <button type="button" data-metadata-save-ungated="true" onClick={onSave}>
+      Save metadata (ungated probe)
     </button>
   </div>
 );
@@ -116,6 +235,14 @@ export const mount = (node: React.ReactNode) => {
 
 export const flushMicrotasks = async () => {
   for (let index = 0; index < 8; index += 1) await Promise.resolve();
+};
+
+// The unsaved-changes banner is only a hint; the `beforeunload` handler is what actually
+// stops a typed value from being lost on navigation, so the lanes assert the guard.
+export const beforeUnloadIsGuarded = () => {
+  const event = new Event("beforeunload", { cancelable: true });
+  window.dispatchEvent(event);
+  return event.defaultPrevented;
 };
 
 // React's input-value tracker suppresses a change event when the assigned value equals
@@ -185,12 +312,29 @@ export const clickMetadataAction = (container: HTMLElement, marker: string) => {
   action.click();
 };
 
-export const findSaveDraft = (container: HTMLElement) => {
+// The editor renders the panel twice, so a marker query returns one button per copy; both
+// are fed the same props, and driving either drives the same handler.
+export const findMetadataButton = (container: HTMLElement, marker: string) => {
+  const buttons = Array.from(container.querySelectorAll(`button[${marker}="true"]`));
+  const first = buttons[0];
+  if (!(first instanceof HTMLButtonElement)) throw new Error(`${marker} button is absent`);
+  buttons.forEach((button) => {
+    if (!(button instanceof HTMLButtonElement)) throw new Error(`${marker} is not a button`);
+    expect(button.disabled).toBe(first.disabled);
+  });
+  return first;
+};
+
+// The PageHeader actions are identified by their label, and the label is state: "Save draft"
+// reads "Saving..." while its own request is open.
+export const findHeaderButton = (container: HTMLElement, label: string) => {
   const matches = Array.from(container.querySelectorAll("button")).filter(
-    (button) => button.textContent === "Save draft"
+    (button) => button.textContent === label
   );
   expect(matches).toHaveLength(1);
-  const save = matches[0];
-  if (!(save instanceof HTMLButtonElement)) throw new Error("Save draft button is absent");
-  return save;
+  const action = matches[0];
+  if (!(action instanceof HTMLButtonElement)) throw new Error(`${label} button is absent`);
+  return action;
 };
+
+export const findSaveDraft = (container: HTMLElement) => findHeaderButton(container, "Save draft");

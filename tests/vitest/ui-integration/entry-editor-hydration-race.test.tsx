@@ -42,7 +42,10 @@ import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import type { EntryVisibility } from "../../../core/admin/services/entriesClient";
 import type { EntryStatus } from "../../../core/admin/ui/entries/EntryMetadataPanel";
 import {
+  beforeUnloadIsGuarded,
   clickMetadataAction,
+  findHeaderButton,
+  findMetadataButton,
   findSaveDraft,
   flushMicrotasks,
   mount,
@@ -52,22 +55,9 @@ import {
   typeSeoDescription,
   typeSlug,
   typeTitle,
+  type UpdateEntryMetadataPayload,
+  type UpdateEntryPayload,
 } from "./support/entryEditorHarness";
-
-type UpdateEntryPayload = {
-  title: string;
-  slug: string;
-  data: Record<string, string>;
-};
-
-type UpdateEntryMetadataPayload = {
-  status: EntryStatus;
-  visibility: EntryVisibility;
-  accessPassword: string | null | undefined;
-  scheduledAt: string | null;
-  taxonomy: { categoryId: string | null; tagIds: string[] } | undefined;
-  seo: { description: string };
-};
 
 type TermFixture = { id: string; name: string; slug: string };
 
@@ -112,6 +102,10 @@ const editorState = vi.hoisted(() => {
   const gateReleases = new Map<GateName, () => void>();
   const gatePromises = new Map<GateName, Promise<void>>();
 
+  // A content type the editor cannot resolve is the other way a read finishes without
+  // hydrating: the entry snapshot arrives, `applyEntry` is never reached.
+  let contentTypeVisible = true;
+
   // The server the mutation mocks model: the metadata route commits what it was given
   // and BOTH routes answer with a fresh full read (`entryService.getEntry`). Modelling
   // that matters for the visibility guard — a mock that always echoed the fixture could
@@ -120,6 +114,13 @@ const editorState = vi.hoisted(() => {
 
   return {
     contentType,
+    contentTypes: () => (contentTypeVisible ? [contentType] : []),
+    hideContentType: () => {
+      contentTypeVisible = false;
+    },
+    resetContentTypeVisibility: () => {
+      contentTypeVisible = true;
+    },
     entry,
     taxonomyOverview: {
       taxonomies: { category: { id: "cat-taxonomy" }, tag: { id: "tag-taxonomy" } },
@@ -167,94 +168,27 @@ const editorState = vi.hoisted(() => {
     },
     updatePayloads: [] as UpdateEntryPayload[],
     metadataPayloads: [] as UpdateEntryMetadataPayload[],
+    publishCalls: [] as string[],
     subscribers: new Set<(event: { key: string }) => void>(),
   };
 });
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
-vi.mock("@/components/ui/alert", () => ({
-  Alert: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-  AlertDescription: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-  AlertTitle: ({ children }: { children: React.ReactNode }) => <p>{children}</p>,
-}));
+// The shadcn primitives are stubbed in the harness module beside the DOM plumbing that
+// reads them; a `vi.mock` factory is lazy, so it may import it even though the call is
+// hoisted.
+const harness = () => import("./support/entryEditorHarness");
 
-vi.mock("@/components/ui/badge", () => ({
-  Badge: ({ children }: { children: React.ReactNode }) => <span>{children}</span>,
-}));
-
-vi.mock("@/components/ui/button", () => ({
-  Button: ({
-    children,
-    onClick,
-    disabled,
-  }: {
-    children: React.ReactNode;
-    onClick?: () => void;
-    disabled?: boolean;
-  }) => (
-    <button type="button" onClick={onClick} disabled={disabled}>
-      {children}
-    </button>
-  ),
-}));
-
-vi.mock("@/components/ui/card", () => ({
-  Card: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-  CardContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-  CardDescription: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-  CardHeader: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-  CardTitle: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-}));
-
-vi.mock("@/components/ui/input", () => ({
-  Input: ({
-    value,
-    onChange,
-  }: {
-    value?: string;
-    onChange?: (event: React.ChangeEvent<HTMLInputElement>) => void;
-  }) => <input data-slug-input="true" defaultValue={value} onChange={onChange} />,
-}));
-
-vi.mock("@/components/ui/scroll-area", () => ({
-  ScrollArea: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-}));
-
-vi.mock("@/components/ui/sheet", () => ({
-  Sheet: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-  SheetContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-  SheetDescription: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-  SheetTitle: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-}));
-
-vi.mock("@/components/ui/tabs", () => ({
-  Tabs: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-  TabsContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-  TabsList: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-  TabsTrigger: ({ children }: { children: React.ReactNode }) => (
-    <button type="button">{children}</button>
-  ),
-}));
-
-vi.mock("@/components/ui/textarea", () => ({
-  Textarea: React.forwardRef(function MockTextarea(
-    {
-      value,
-      onChange,
-      placeholder,
-    }: {
-      value?: string;
-      onChange?: (event: React.ChangeEvent<HTMLTextAreaElement>) => void;
-      placeholder?: string;
-    },
-    ref: React.Ref<HTMLTextAreaElement>
-  ) {
-    return (
-      <textarea ref={ref} defaultValue={value} onChange={onChange} placeholder={placeholder} />
-    );
-  }),
-}));
+vi.mock("@/components/ui/alert", async () => (await harness()).alertModule);
+vi.mock("@/components/ui/badge", async () => (await harness()).badgeModule);
+vi.mock("@/components/ui/button", async () => (await harness()).buttonModule);
+vi.mock("@/components/ui/card", async () => (await harness()).cardModule);
+vi.mock("@/components/ui/input", async () => (await harness()).inputModule);
+vi.mock("@/components/ui/scroll-area", async () => (await harness()).scrollAreaModule);
+vi.mock("@/components/ui/sheet", async () => (await harness()).sheetModule);
+vi.mock("@/components/ui/tabs", async () => (await harness()).tabsModule);
+vi.mock("@/components/ui/textarea", async () => (await harness()).textareaModule);
 
 vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 
@@ -268,8 +202,8 @@ vi.mock("@/services/cachePolicy", () => ({
 }));
 
 vi.mock("@/services/contentTypesClient", () => ({
-  getCachedContentTypes: () => [editorState.contentType],
-  listContentTypesCached: vi.fn(async () => [editorState.contentType]),
+  getCachedContentTypes: () => editorState.contentTypes(),
+  listContentTypesCached: vi.fn(async () => editorState.contentTypes()),
 }));
 
 vi.mock("@/services/entriesClient", () => ({
@@ -279,7 +213,10 @@ vi.mock("@/services/entriesClient", () => ({
   // provably lands first.
   getEntryCached: vi.fn(() => editorState.readEntry()),
   previewEntry: vi.fn(async () => ({ previewUrl: "https://preview.test/entry" })),
-  publishEntry: vi.fn(async () => ({ ok: true })),
+  publishEntry: vi.fn(async (type: string, id: string) => {
+    editorState.publishCalls.push(`${type}/${id}`);
+    return { ok: true };
+  }),
   updateEntry: vi.fn(async (_type: string, _id: string, payload: UpdateEntryPayload) => {
     // Recorded before the gate: a test asserts what the request carried while it is
     // still open.
@@ -380,20 +317,14 @@ const dispatchEntryCacheEvent = () => {
   editorState.subscribers.forEach((handler) => handler({ key: ENTRY_DETAIL_CACHE_KEY }));
 };
 
-// The unsaved-changes banner is only a hint; the `beforeunload` handler is what actually
-// stops a typed value from being lost on navigation, so the lane asserts the guard.
-const beforeUnloadIsGuarded = () => {
-  const event = new Event("beforeunload", { cancelable: true });
-  window.dispatchEvent(event);
-  return event.defaultPrevented;
-};
-
 beforeEach(() => {
   editorState.resetEntryRead();
   editorState.resetGates();
   editorState.resetServerEntry();
+  editorState.resetContentTypeVisibility();
   editorState.updatePayloads.length = 0;
   editorState.metadataPayloads.length = 0;
+  editorState.publishCalls.length = 0;
 });
 
 afterEach(() => {
@@ -921,6 +852,146 @@ test("a draft save keeps an unsaved visibility edit and reports the persisted on
     });
 
     expect(editorState.metadataPayloads[1].visibility).toBe("private");
+  } finally {
+    view.cleanup();
+  }
+});
+
+// (e) rc-022: the register commit closed (a)-(d) and opened a fifth instance of the same
+// class, a worse one — it can empty an entry instead of losing one field. `applyEntry` is
+// the ONLY path that populates `fields` and `values`, and only the read that survives
+// `isCurrentLoad` reaches it, while the baseline read's own `finally` switches the page
+// spinner off whether or not it hydrated. A read superseded before hydration therefore left
+// a fieldless form with a live "Save draft", and that PATCH carries `data: {}` — which
+// REPLACES the entry's stored data. The invariant the three cases below pin: until the
+// editor has hydrated for the entry it addresses, every snapshot that arrives is its
+// baseline (applied whatever superseded it, with the user's registered edits kept on top),
+// and no save may fire at all.
+
+test("a baseline read superseded before it hydrates is still applied, so the save carries the entry", async () => {
+  window.history.replaceState({}, "", "/admin/advanced/entries/articles/entry-1");
+  const { EntryEditor } = await import("../../../core/admin/ui/entries/EntryEditor");
+
+  const view = mount(<EntryEditor />);
+  try {
+    await React.act(async () => {
+      await flushMicrotasks();
+    });
+    // A cache event supersedes the baseline read before it resolves...
+    await React.act(async () => {
+      dispatchEntryCacheEvent();
+      await flushMicrotasks();
+    });
+    expect(editorState.startedEntryReads()).toBe(2);
+
+    // ...and that superseded read is the only snapshot that ever arrives. Nothing else can
+    // populate the fields: a mutation response carries no content type.
+    await React.act(async () => {
+      editorState.resolveEntryRead(0, editorState.entry);
+      await flushMicrotasks();
+    });
+    await React.act(async () => {
+      findSaveDraft(view.container).click();
+      await flushMicrotasks();
+    });
+
+    // The PATCH replaces `data` wholesale, so what the client was called with is the harm:
+    // discarding this snapshot sent `{ title: "", slug: "", data: {} }`.
+    expect(editorState.updatePayloads).toEqual([
+      { title: "Hello", slug: "hello", data: { title: "Hello", summary: "Summary" } },
+    ]);
+    expect(view.container.textContent).toContain("field:summary");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("a cache-bus read arriving before any hydration is applied, not merely offered", async () => {
+  window.history.replaceState({}, "", "/admin/advanced/entries/articles/entry-1");
+  const { EntryEditor } = await import("../../../core/admin/ui/entries/EntryEditor");
+
+  const view = mount(<EntryEditor />);
+  try {
+    await React.act(async () => {
+      await flushMicrotasks();
+    });
+    // The user types while the baseline read is still open, so the editor has edits.
+    React.act(() => {
+      typeTitle(view.container, "Typed before hydration");
+    });
+
+    // A cache event starts a second read, and that one resolves first.
+    await React.act(async () => {
+      dispatchEntryCacheEvent();
+      await flushMicrotasks();
+      editorState.resolveEntryRead(1, { ...editorState.entry, slug: "newer-slug" });
+      await flushMicrotasks();
+    });
+
+    // The baseline read lands last. It is superseded AND there is a baseline now, so it is
+    // discarded rather than applied — (b) stays closed, its older slug never appears.
+    await React.act(async () => {
+      editorState.resolveEntryRead(0, { ...editorState.entry, slug: "older-slug" });
+      await flushMicrotasks();
+    });
+    await React.act(async () => {
+      findSaveDraft(view.container).click();
+      await flushMicrotasks();
+    });
+
+    // With no baseline yet there was no local state for "someone else's change" to conflict
+    // with: that snapshot IS the baseline, and the typed title stays on top of it. Offering it
+    // instead left the editor fieldless and sent `data: {}` with an empty slug.
+    expect(editorState.updatePayloads).toEqual([
+      {
+        title: "Typed before hydration",
+        slug: "newer-slug",
+        data: { title: "Typed before hydration", summary: "Summary" },
+      },
+    ]);
+    expect(view.container.textContent).not.toContain("Updated in another tab");
+    expect(view.container.textContent).toContain("field:summary");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("an entry that never hydrated can be saved or published through no channel at all", async () => {
+  window.history.replaceState({}, "", "/admin/advanced/entries/articles/entry-1");
+  editorState.hideContentType();
+  const { EntryEditor } = await import("../../../core/admin/ui/entries/EntryEditor");
+
+  const view = mount(<EntryEditor />);
+  try {
+    // The entry read succeeds and the spinner goes off, but nothing hydrated: the schema
+    // never arrived, so `fields` and `values` are still empty.
+    await React.act(async () => {
+      editorState.resolveEntry(editorState.entry);
+      await flushMicrotasks();
+    });
+    expect(view.container.textContent).toContain("Content type not found.");
+
+    const save = findSaveDraft(view.container);
+    const publish = findHeaderButton(view.container, "Publish");
+    const metadataSave = findMetadataButton(view.container, "data-metadata-save");
+    await React.act(async () => {
+      save.click();
+      publish.click();
+      metadataSave.click();
+      // The probe calls the panel's own `onSave` with no gate: what refuses it is the editor.
+      findMetadataButton(view.container, "data-metadata-save-ungated").click();
+      await flushMicrotasks();
+    });
+
+    // `data: {}` would replace the entry's content, the metadata PATCH would push the panel's
+    // mount defaults (draft, public, no schedule, empty SEO) over the server's, and publish
+    // would flip the stored status. Asserted together, so a failure names every leak.
+    expect({
+      updates: editorState.updatePayloads,
+      metadata: editorState.metadataPayloads,
+      published: editorState.publishCalls,
+    }).toEqual({ updates: [], metadata: [], published: [] });
+    expect([save.disabled, publish.disabled, metadataSave.disabled]).toEqual([true, true, true]);
   } finally {
     view.cleanup();
   }

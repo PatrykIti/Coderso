@@ -123,6 +123,11 @@ type EntryMetadataPanelProps = {
   scrollable?: boolean;
   onSave?: () => void;
   isSaving?: boolean;
+  // False while the host holds no loaded entry. This panel PATCHes status, visibility,
+  // schedule, SEO and taxonomy TOGETHER, so saving before the entry has hydrated would push
+  // its pristine mount defaults (draft, public, no schedule, empty SEO) over the server's
+  // state. Absent means "no such gate", which is how the post editor mounts it.
+  canSave?: boolean;
   onDelete?: () => void;
   isDeleting?: boolean;
 };
@@ -158,6 +163,7 @@ export function EntryMetadataPanel({
   scrollable = true,
   onSave,
   isSaving,
+  canSave,
   onDelete,
   isDeleting,
 }: EntryMetadataPanelProps) {
@@ -565,7 +571,12 @@ export function EntryMetadataPanel({
       {revisionsSlot}
       {onSave ? (
         <div className="flex items-center justify-end">
-          <Button size="sm" className="gap-2" onClick={onSave} disabled={isSaving}>
+          <Button
+            size="sm"
+            className="gap-2"
+            onClick={onSave}
+            disabled={isSaving || canSave === false}
+          >
             <Save className="h-4 w-4" />
             {isSaving ? "Saving..." : "Save metadata"}
           </Button>

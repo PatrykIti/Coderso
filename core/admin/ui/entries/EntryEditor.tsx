@@ -88,6 +88,11 @@ const resolveEditorPathname = (routerPath?: string) =>
 const resolveEditorErrorMessage = (error: unknown, fallback: string) =>
   isApiClientError(error) ? error.message : fallback;
 
+// Shown when a submit is refused because the editor holds no loaded entry. Only used when
+// nothing else already explains it: a failed read or a missing content type is the better
+// message.
+const ENTRY_NOT_LOADED_MESSAGE = "This entry has not finished loading yet.";
+
 type LoadEntryOptions = Readonly<{
   // This read owns the page-level loading indicator and switches it off when it
   // finishes. A read never switches it ON: the baseline read starts with `isLoading`
@@ -154,6 +159,28 @@ function EntryEditorInstance({ type, id }: EntryEditorInstanceProps) {
   // `getEntryCached` refuses to CACHE the loser of two concurrent reads but still
   // RETURNS it to its caller.
   const loadSeqRef = useRef(0);
+  // Which entry the editor holds state FOR. `applyEntry` is the only writer, because it is
+  // the only path that populates `fields` and `values`: a mutation response cannot supply
+  // them, the field list comes from the content type. The ref is the authority — a promise
+  // continuation or a click handler must not decide this from a render-old value — and it is
+  // deliberately not part of `loadEntry`'s dependencies, which keeps that reader stable and
+  // the mount effect firing exactly once. The state below is its render mirror.
+  const loadedIdentityRef = useRef<string | null>(null);
+  const [loadedIdentity, setLoadedIdentity] = useState<string | null>(null);
+  // Not "has hydrated once": identity can change under a component, which is why this commit's
+  // predecessor added sequence numbers at all. `EntryEditor` keys this instance by type/id so
+  // today a change remounts instead, but the predicate that decides whether a save may fire
+  // has to say which entry it is talking about.
+  const entryIdentity = `${type ?? ""}:${id ?? ""}`;
+  const hasLoadedEntry = loadedIdentity === entryIdentity;
+  const hasLoadedCurrentEntry = useCallback(
+    () => loadedIdentityRef.current === entryIdentity,
+    [entryIdentity]
+  );
+  // "A newer authority exists" and "there is no editor left to write to" are different facts.
+  // `loadSeqRef` carries the first, and the baseline hydration below may override it; this
+  // ref carries the second, and nothing may override it.
+  const visitEndedRef = useRef(false);
   // The read that owns the page-level indicator. Only the newest owner may switch it
   // off, so two "Refresh" clicks cannot let the older one hide a spinner the newer read
   // still needs — and a background read superseding the baseline cannot strand it on.
@@ -225,10 +252,14 @@ function EntryEditorInstance({ type, id }: EntryEditorInstanceProps) {
       setContentTypeId(contentType.id);
       setContentTypeName(contentType.name);
       hydrateFromSnapshot(entryResult, mappedFields, editedKeys());
+      // The editor now holds this entry's schema and values, which is what every submit and
+      // the field area are gated on.
+      loadedIdentityRef.current = entryIdentity;
+      setLoadedIdentity(entryIdentity);
       setError(null);
       setRemoteUpdatePending(false);
     },
-    [editedKeys, hiddenSchemaFieldNames, hydrateFromSnapshot]
+    [editedKeys, entryIdentity, hiddenSchemaFieldNames, hydrateFromSnapshot]
   );
 
   // Only the option lists: the selections are hydrated by `hydrateFromSnapshot`, which
@@ -264,7 +295,15 @@ function EntryEditorInstance({ type, id }: EntryEditorInstanceProps) {
       if (options?.clearLoading) loadingOwnerRef.current = seq;
       void Promise.all([getEntryCached(type, id, { force: true }), resolveContentType(true)])
         .then(async ([entryResult, contentType]) => {
-          if (!isCurrentLoad(seq)) return;
+          if (visitEndedRef.current) return;
+          // A superseded read may not overwrite newer state — unless there is no newer state
+          // to overwrite. Until `applyEntry` has run for this entry there are no fields and
+          // no values, and nothing that superseded this read can supply them: a mutation
+          // response carries no content type. Dropping the snapshot here left a fieldless
+          // form whose "Save draft" PATCHed `data: {}` over the stored entry, so the
+          // supersession hands its result over instead. From the first hydration on, the
+          // newer authority wins, which is what keeps a late read from reverting a newer one.
+          if (!isCurrentLoad(seq) && hasLoadedCurrentEntry()) return;
           if (!contentType) {
             setError("Content type not found.");
             return;
@@ -273,8 +312,16 @@ function EntryEditorInstance({ type, id }: EntryEditorInstanceProps) {
           // Someone else's change while the user has unsaved edits is offered, not
           // applied; the "Refresh" action re-enters here with `discardLocalEdits`. The
           // read itself succeeded, so any earlier failure banner is stale even though
-          // this snapshot is only offered.
-          if (!options?.isBaseline && !options?.discardLocalEdits && hasEdits()) {
+          // this snapshot is only offered. Offering presupposes a baseline of our own to
+          // protect: the FIRST snapshot is that baseline however it arrives, and
+          // `hydrateFromSnapshot` keeps every registered edit on top of it, so applying it
+          // costs the user nothing and is what makes the editor savable at all.
+          if (
+            hasLoadedCurrentEntry() &&
+            !options?.isBaseline &&
+            !options?.discardLocalEdits &&
+            hasEdits()
+          ) {
             setError(null);
             setRemoteUpdatePending(true);
             return;
@@ -299,6 +346,7 @@ function EntryEditorInstance({ type, id }: EntryEditorInstanceProps) {
       applyEntry,
       beginLoad,
       hasEdits,
+      hasLoadedCurrentEntry,
       id,
       isCurrentLoad,
       loadTaxonomyOverview,
@@ -309,14 +357,19 @@ function EntryEditorInstance({ type, id }: EntryEditorInstanceProps) {
   );
 
   useEffect(() => {
+    // Re-entering the same instance (a StrictMode double-invoke) re-opens the visit.
+    visitEndedRef.current = false;
     // The first hydration is the baseline the local edits are based on, not a remote
     // update: skipping it left `slug` empty and every field value unpopulated, and the
     // next save persisted that emptiness. It is always applied, keeping exactly what the
     // user has already edited in either channel on top.
     loadEntry({ isBaseline: true, clearLoading: true });
-    // Ending the visit invalidates every in-flight read, so a late snapshot cannot land
-    // on a torn-down editor.
-    return invalidateInFlightLoads;
+    return () => {
+      // Ending the visit invalidates every in-flight read, so a late snapshot cannot land
+      // on a torn-down editor.
+      visitEndedRef.current = true;
+      invalidateInFlightLoads();
+    };
   }, [invalidateInFlightLoads, loadEntry]);
 
   useEffect(() => {
@@ -344,6 +397,12 @@ function EntryEditorInstance({ type, id }: EntryEditorInstanceProps) {
   }, []);
 
   const hasAnyUnsavedChanges = hasContentEdits || hasMetadataEdits;
+  // "No request is in flight" is not "the entry is loaded": a read superseded before it
+  // hydrated, or one that failed, leaves no fields and no values at all, and the baseline
+  // read's own `finally` switches the indicator off either way. The Save/Publish actions and
+  // the field area key off this instead, so the editor never OFFERS to submit what it never
+  // loaded, and never claims a content type has no fields when it never saw one.
+  const isEntryPending = isLoading || !hasLoadedEntry;
 
   useEffect(() => {
     const handler = (event: BeforeUnloadEvent) => {
@@ -380,8 +439,22 @@ function EntryEditorInstance({ type, id }: EntryEditorInstanceProps) {
     }
   };
 
+  // The editor must never submit state it never loaded. All three submits refuse here, not
+  // only in the buttons that trigger them: "Save draft" would build `data: {}` from an empty
+  // `values` and the PATCH REPLACES the stored data with it, the metadata panel PATCHes
+  // status/visibility/schedule/SEO/taxonomy TOGETHER and would push its pristine mount
+  // defaults over the server's, and publishing would flip the stored status from an editor
+  // showing none of it.
+  const refuseUnloadedSubmit = () => {
+    if (hasLoadedCurrentEntry()) return false;
+    // Keep whatever already explains it (a failed read, a missing content type).
+    setError((current) => current ?? ENTRY_NOT_LOADED_MESSAGE);
+    return true;
+  };
+
   const handleSaveDraft = async (options?: { successMessage?: string }) => {
     if (!type || !id) return;
+    if (refuseUnloadedSubmit()) return;
     // Captured BEFORE the request: anything edited after this tick is not in the payload,
     // so it stays dirty and survives the response.
     const submittedTick = beginSubmit();
@@ -417,6 +490,7 @@ function EntryEditorInstance({ type, id }: EntryEditorInstanceProps) {
 
   const handlePublish = async () => {
     if (!type || !id) return;
+    if (refuseUnloadedSubmit()) return;
     if (checklist.blockingIssues.length > 0) {
       setError(checklist.blockingIssues.join(" "));
       return;
@@ -534,6 +608,7 @@ function EntryEditorInstance({ type, id }: EntryEditorInstanceProps) {
 
   const handleSaveMetadata = async () => {
     if (!type || !id) return;
+    if (refuseUnloadedSubmit()) return;
     setIsSavingMetadata(true);
     setError(null);
 
@@ -668,6 +743,7 @@ function EntryEditorInstance({ type, id }: EntryEditorInstanceProps) {
     entryId: entry?.id,
     onSave: handleSaveMetadata,
     isSaving: isSavingMetadata,
+    canSave: hasLoadedEntry,
     onDelete: () => setDeleteDialogOpen(true),
     isDeleting,
   };
@@ -684,7 +760,7 @@ function EntryEditorInstance({ type, id }: EntryEditorInstanceProps) {
               <EntryEditorHeaderActions
                 status={status}
                 hasUnsavedChanges={hasAnyUnsavedChanges}
-                isLoading={isLoading}
+                isLoading={isEntryPending}
                 isSaving={isSaving}
                 isPublishing={isPublishing}
                 onPreview={openPreview}
@@ -752,7 +828,7 @@ function EntryEditorInstance({ type, id }: EntryEditorInstanceProps) {
                   onTitleChange={handleTitleChange}
                   onSlugChange={handleSlugChange}
                 />
-                {isLoading ? (
+                {isEntryPending ? (
                   <div className="rounded-xl border border-dashed p-6 text-sm text-muted-foreground">
                     Loading entry fields...
                   </div>
@@ -771,7 +847,7 @@ function EntryEditorInstance({ type, id }: EntryEditorInstanceProps) {
                 ) : null}
               </div>
             </SectionCard>
-            {!isLoading
+            {!isEntryPending
               ? otherGroups.map((group) => (
                   <SectionCard key={group.id} title={group.label}>
                     <EntryFieldSections
