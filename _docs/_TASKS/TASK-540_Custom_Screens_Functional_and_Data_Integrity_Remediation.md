@@ -71,10 +71,10 @@ byte-identical/read-only throughout TASK-540. Before any bridge or combined targ
 gate, TASK-540-06/L01 changes only the smoke-host implementation's exact version
 literals, default fixtures, version mutants, self-test expectations, embedded
 child-source byte pins to `8.1.5`, then privately re-audits and revalidates the
-optimizer-readiness shape against that exact version. Dependent helper hashes and
-implement/executor/task/test pins remain unchanged until that revalidation, all bridge
-implementation, formatting, and every helper byte are final. No other current Vite
-authority is permitted.
+optimizer-readiness shape against that exact version. That revalidation, the bridge
+implementation, the formatting and every helper byte are final, so the dependent helper
+hashes and implement/executor/task/test pins are recomputed inside the closure
+transaction. No other current Vite authority is permitted.
 **Required Post-Repair Codex Collaboration Host Authority:** After the no-Claude
 bridge/local-host/schema/CAS-ACK/recovery/prompt/test implementation lands, receives its
 final repins, and passes the combined targeted gate, one continuous canonical

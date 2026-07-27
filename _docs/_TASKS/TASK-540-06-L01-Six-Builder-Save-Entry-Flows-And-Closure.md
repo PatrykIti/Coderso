@@ -8025,9 +8025,9 @@ verification and before bridge/local-host/schema/CAS/ACK/recovery/prompt/test
 implementation, the smoke-host owner must update only those exact TASK-540-owned
 literals, fixtures, mutants, expectations, and embedded pins to 8.1.5, then privately
 re-audit and revalidate optimizer readiness; mixed-version authority is a hard failure.
-Dependent helper hashes and implement/executor/task/test pins are updated only after
-that revalidation, all bridge-frontier implementation, formatting, and every helper byte
-are final.
+That revalidation, the bridge-frontier implementation, the formatting and every helper
+byte are final, so the dependent helper hashes and implement/executor/task/test pins are
+recomputed inside the closure transaction.
 
 Before either Vite child emits its ready marker, it must pass the fail-closed
 `settleViteReadiness(server, readinessUrls, failureCode)` barrier below. For Admin the

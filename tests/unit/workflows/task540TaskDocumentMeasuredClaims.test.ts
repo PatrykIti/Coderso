@@ -416,8 +416,10 @@ test("the documents agree with the tree about whether smoke modularization is fi
    *   - A sentence that says the step is done AND names it as the current blocker in the
    *     same breath. The completion marker wins and the contradiction is invisible.
    *   - A pending claim spread over two sentences ("The blocker remains. It is the smoke
-   *     modularization."): the phrasing and the marker never share a sentence, so the
-   *     phrasing is read bare -- which errs toward reporting, not toward silence.
+   *     modularization."): the patterns match a phrase, not the bare token, so neither
+   *     half matches on its own and the claim goes unreported. This errs toward SILENCE,
+   *     which is the direction that costs us -- a guard that overstates its reach is how
+   *     the next drift gets waved through.
    *   - A completion marker attached to something else in the same sentence ("the audit
    *     is complete; the remaining prerequisite is the smoke modularization") -- real
    *     drift, waved through. Sentence scope is the whole of the resolution here.
