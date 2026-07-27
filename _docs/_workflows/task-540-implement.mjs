@@ -7305,8 +7305,9 @@ async function assertTask540TouchedModuleLineLimitContract() {
     throw new Error("TASK-540 duplicate history/untracked authority self-test failed");
   }
   // The accountability registry resolves exactly one owner per path, that owner is the
-  // closure leaf, and it grants no write access anywhere. Sampled across all five
-  // provenance groups so a whole group cannot be dropped without this failing.
+  // closure leaf, and it grants no write access anywhere. Sampled once per provenance group
+  // in the registry -- how many groups there are is deliberately not restated here -- so a
+  // whole group cannot be dropped without this failing.
   const accountableOwnerCases = Object.freeze([
     "core/db/schema.ts",
     "core/db/tables/identity.ts",
@@ -7315,6 +7316,7 @@ async function assertTask540TouchedModuleLineLimitContract() {
     "core/services/backups/backupService.ts",
     "tests/unit/workflows/task540SmokeExecutorSecurity.test.ts",
     "core/widgets/core/footer.tsx",
+    "tests/unit/toolchain/trackedSourcesAreText.test.ts",
   ]);
   for (const relativePath of accountableOwnerCases) {
     if (
@@ -11201,6 +11203,15 @@ const TASK_540_LINE_LIMIT_ACCOUNTABLE_PATHS = Object.freeze([
   "tests/vitest/ui/permissions-matrix-page-wave.test.tsx",
   "tests/vitest/ui/prototype-brand-icons.test.tsx",
   "tests/vitest/widgets/footer.test.tsx",
+  // The two standing guards the pre-closure audit's findings 7 and 8 asked for
+  // (commits 9186442c, 9d5900b4): a repository-wide NUL-byte scan, after a literal NUL
+  // byte landed for the SECOND time in this family -- first in a task document, then in
+  // the very test that guards which repository paths a mutation agent may touch -- and a
+  // compile-time pin for the jsonb $type<> column contracts the facade snapshot
+  // structurally cannot see. Neither is leaf work: both are family-authored guards over
+  // the family's own machinery, which is what this registry is for.
+  "tests/unit/db/schemaColumnTypeContracts.test.ts",
+  "tests/unit/toolchain/trackedSourcesAreText.test.ts",
 ]);
 // The tripwire proves, hermetically, that the gate really rejects the specific accountable
 // paths closest to the limit -- so it has to name the ones actually closest. Measured
@@ -11228,7 +11239,7 @@ const TASK_540_LINE_LIMIT_TRIPWIRE_PATHS = Object.freeze([
   "core/widgets/core/footer.tsx",
 ]);
 const TASK_540_LINE_LIMIT_ACCOUNTABLE_PATHS_SHA256 =
-  "dd1baf59f6cbfd6eb4be4cf03e2129746f71e0c3fe4b4a34b2e38eb2431af64e";
+  "d53f4ee864432cc95f071d80852bd6ca67f183a64e355efc93f65e2d00213d6f";
 const TASK_540_LINE_LIMIT_ACCOUNTABLE_OWNERS = Object.freeze(
   TASK_540_LINE_LIMIT_ACCOUNTABLE_PATHS.map((path) =>
     Object.freeze({ path, owner: TASK_540_LINE_LIMIT_ACCOUNTABLE_OWNER })
@@ -11254,7 +11265,7 @@ if (
   // Must be the leaf that lands LAST, which is the whole rationale for the choice: it is
   // the only leaf still able to split one of these before the family closes.
   TASK_540_LINE_LIMIT_ACCOUNTABLE_OWNER !== LEAF_ORDER[LEAF_ORDER.length - 1] ||
-  TASK_540_LINE_LIMIT_ACCOUNTABLE_PATHS.length !== 96 ||
+  TASK_540_LINE_LIMIT_ACCOUNTABLE_PATHS.length !== 98 ||
   new Set(TASK_540_LINE_LIMIT_ACCOUNTABLE_PATHS).size !==
     TASK_540_LINE_LIMIT_ACCOUNTABLE_PATHS.length ||
   TASK_540_LINE_LIMIT_ACCOUNTABLE_PATHS.some(
