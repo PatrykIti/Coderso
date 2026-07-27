@@ -11108,6 +11108,7 @@ const TASK_540_LINE_LIMIT_ACCOUNTABLE_PATHS = Object.freeze([
   "tests/unit/workflows/task522FindingsPrompt.test.ts",
   "tests/unit/workflows/task540FamilyContractRegistration.test.ts",
   "tests/unit/workflows/task540ForbiddenSchemaPaths.test.ts",
+  "tests/unit/workflows/task540LineLimitTripwireCoverage.test.ts",
   "tests/unit/workflows/task540SmokeExecutorBunBridgeResourceSources.test.ts",
   "tests/unit/workflows/task540SmokeExecutorSecurity.test.ts",
   "tests/unit/workflows/task540SmokeExecutorSourceContracts.test.ts",
@@ -11141,14 +11142,33 @@ const TASK_540_LINE_LIMIT_ACCOUNTABLE_PATHS = Object.freeze([
   "tests/vitest/ui/prototype-brand-icons.test.tsx",
   "tests/vitest/widgets/footer.test.tsx",
 ]);
-// Nine lines of headroom on backupService.ts and eleven on footer.tsx: whichever leaf edits
-// them next is one modest addition away from failing this gate mid-closure.
+// The tripwire proves, hermetically, that the gate really rejects the specific accountable
+// paths closest to the limit -- so it has to name the ones actually closest. Measured
+// against the registry: the restyle suite is at EXACTLY 1,000 and the related-entries suite
+// at 999, i.e. zero and one line of headroom, while backupService.ts (990) and footer.tsx
+// (989) have ten and eleven. The first two were missing and the comment here mis-stated
+// backupService.ts's headroom as nine.
+//
+// Ordered most-urgent first. All four stay: 1,000 is an inclusive pass, so none of them is
+// in violation and none is split here. Splitting the two zero-headroom suites would be a
+// change to frozen closure machinery for files that already pass -- the restyle suite is a
+// pinned two-file family in task-540-test-name-contract.mjs (tests 17, fileTests [13, 4],
+// per-file name hashes, declaration hash), carries 10 pinned references in this workflow
+// and 17 in the family task documents, and both suites are counted in the pinned
+// "exactly 82 files: 64 Vitest + 18 Bun" closure matrix. Buying one line of headroom is not
+// worth re-pinning all of that mid-closure. What was actually missing was proof that the
+// gate bites on them, which is what this list provides.
+//
+// task540LineLimitTripwireCoverage.test.ts derives the at-risk set from real line counts on
+// disk, so this list cannot silently stop naming the closest files again.
 const TASK_540_LINE_LIMIT_TRIPWIRE_PATHS = Object.freeze([
+  "tests/vitest/ui-integration/custom-screen-entry-editor-restyle.test.tsx",
+  "tests/vitest/ui/use-screen-related-entries.test.tsx",
   "core/services/backups/backupService.ts",
   "core/widgets/core/footer.tsx",
 ]);
 const TASK_540_LINE_LIMIT_ACCOUNTABLE_PATHS_SHA256 =
-  "21b49ee3653fde2edfea3cdab13f0803b5259b10834f85bb741b507fa3ef0295";
+  "f4f97715da46f829fdecead3a6f4b8ecf1b3be35950479c821ae47c5ff8d02ed";
 const TASK_540_LINE_LIMIT_ACCOUNTABLE_OWNERS = Object.freeze(
   TASK_540_LINE_LIMIT_ACCOUNTABLE_PATHS.map((path) =>
     Object.freeze({ path, owner: TASK_540_LINE_LIMIT_ACCOUNTABLE_OWNER })
@@ -11174,7 +11194,7 @@ if (
   // Must be the leaf that lands LAST, which is the whole rationale for the choice: it is
   // the only leaf still able to split one of these before the family closes.
   TASK_540_LINE_LIMIT_ACCOUNTABLE_OWNER !== LEAF_ORDER[LEAF_ORDER.length - 1] ||
-  TASK_540_LINE_LIMIT_ACCOUNTABLE_PATHS.length !== 76 ||
+  TASK_540_LINE_LIMIT_ACCOUNTABLE_PATHS.length !== 77 ||
   new Set(TASK_540_LINE_LIMIT_ACCOUNTABLE_PATHS).size !==
     TASK_540_LINE_LIMIT_ACCOUNTABLE_PATHS.length ||
   TASK_540_LINE_LIMIT_ACCOUNTABLE_PATHS.some(
@@ -11189,9 +11209,17 @@ if (
   TASK_540_FROZEN_PRE_SPLIT_MODULE_PATHS.some((path) =>
     TASK_540_LINE_LIMIT_ACCOUNTABLE_PATHS.includes(path)
   ) ||
+  // A tripwire path must be one the gate actually governs, with exactly one resolvable
+  // owner. It used to have to come from the accountability registry specifically, which is
+  // why the tripwire could not name the two paths closest to the limit: both are owned by a
+  // leaf (540-04-L03, 540-04-L02) rather than accountable-only, and accountable paths are
+  // required NOT to be leaf-owned two checks above. Owner resolution is the real
+  // requirement, so it is what is asserted -- writable, read-only-consumer and accountable
+  // ownership all qualify.
   TASK_540_LINE_LIMIT_TRIPWIRE_PATHS.some(
-    (path) => !TASK_540_LINE_LIMIT_ACCOUNTABLE_PATHS.includes(path)
+    (path) => task540LineLimitOwnerIds(path).length !== 1
   ) ||
+  new Set(TASK_540_LINE_LIMIT_TRIPWIRE_PATHS).size !== TASK_540_LINE_LIMIT_TRIPWIRE_PATHS.length ||
   createHash("sha256")
     .update(JSON.stringify([...TASK_540_LINE_LIMIT_ACCOUNTABLE_PATHS].sort()))
     .digest("hex") !== TASK_540_LINE_LIMIT_ACCOUNTABLE_PATHS_SHA256
