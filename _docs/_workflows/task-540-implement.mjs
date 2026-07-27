@@ -27896,24 +27896,21 @@ if (currentResumeSelfTest) {
   ) {
     throw new Error("TASK-540 current-resume repair cursor is not exact");
   }
+  // The landed set is DERIVED, not spelled out. A hand-written nine-id list here went
+  // stale the moment TASK-540-07's two leaves joined LEAF_ORDER, so the self-test rejected
+  // the very graph it is meant to certify -- the same stale-duplicate class as the count
+  // comments this file has already had to repair twice. The three lines above pin the cursor
+  // at the closure leaf; given that, "landed" is exactly the other leaves in land order, so
+  // deriving it cannot disagree with LEAF_ORDER again. The repair branch above already uses
+  // this idiom (LEAF_ORDER.filter(leafId => leafId !== repairId)).
   if (
     expectedMode === "initial" &&
     (currentResume.startIndex !== LEAVES.length - 1 ||
-      currentResume.startLeafId !== "540-06-L01" ||
+      currentResume.startLeafId !== CLOSURE_LEAF_ID ||
       currentResume.repair !== null ||
       JSON.stringify(currentResume.landedLeafIds) !==
-        JSON.stringify([
-          "540-01-L01",
-          "540-02-L01",
-          "540-03-L01",
-          "540-04-L01",
-          "540-04-L02",
-          "540-04-L03",
-          "540-04-L04",
-          "540-05-L01",
-          "540-05-L02",
-        ]) ||
-      JSON.stringify(currentResume.remainingLeafIds) !== JSON.stringify(["540-06-L01"]))
+        JSON.stringify(LEAF_ORDER.filter((leafId) => leafId !== CLOSURE_LEAF_ID)) ||
+      JSON.stringify(currentResume.remainingLeafIds) !== JSON.stringify([CLOSURE_LEAF_ID]))
   ) {
     throw new Error("TASK-540 current-resume initial cursor is not exact");
   }
