@@ -202,9 +202,9 @@ commit, and integration into `feat/implementations`.
   under `_docs/_workflows/`, and `isLineLimitedHumanAuthoredModule` already admits only
   `core/`, `packages/`, `store/` and `tests/` paths, with a self-test case asserting
   `_docs/_workflows/example.mjs` is out of scope. Three helpers exceed the limit today
-  (`task-540-implement.mjs` ~28,000 lines, `task-540-local-orchestrator.mjs` 3,966,
-  `task-540-test-name-contract.mjs` 2,459), so the earlier wording was unsatisfiable
-  without splitting ~34,500 lines of tooling no gate measures. Child modules under
+  (`task-540-implement.mjs`, `task-540-local-orchestrator.mjs`,
+  `task-540-test-name-contract.mjs`), so the earlier wording was unsatisfiable without
+  splitting a volume of tooling no gate measures. Child modules under
   `_docs/_workflows/task-540-smoke/**` stay at or below 1,000 lines as a family
   convention — the property that localises a regression to one named file — not as the
   AGENTS.md gate. See TASK-540-06 for the full reasoning.
