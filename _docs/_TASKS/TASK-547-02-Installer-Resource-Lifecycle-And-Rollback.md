@@ -53,14 +53,19 @@ trusting CLI structure.
 
 The graph owner freezes an immutable desired snapshot plus typed reference
 descriptors on every planned resource and exports the sole descriptor resolver.
-The planner uses it with placeholders; pre-run preparation receives the exact
-same `referencePlan` array and uses it with actual intended IDs. Neither phase
-rescans ref-shaped values, duplicates the Page walker or rebuilds the graph.
+TASK-547-04-L01 first native-normalizes ref-bearing Pages with syntactically valid
+placeholder IDs and only then attaches `PackageRef` values. The planner consumes
+that package-aware shape; pre-run preparation receives the exact same
+`referencePlan` array and uses it with actual intended IDs. Neither phase rescans
+ref-shaped values, duplicates the Page walker or rebuilds the graph.
 
 After IDs are allocated/resolved, TASK-547-02 substitutes refs only at the
 already-validated graph paths and runs every native owner validator over the
 post-substitution desired snapshot before `createRun`, item initialization or
-any native write. This task owns the malformed Page/Menu/Form/content/listing/
+any native write. Thus Page has one placeholder-native pre-normalization before
+ref attachment and one resolved-native revalidation after substitution; no
+native Page normalizer receives a `PackageRef`. This task owns the malformed
+Page/Menu/Form/content/listing/
 detail/setting desired regressions; TASK-547-01 deliberately does not claim
 native-domain validity.
 
@@ -76,8 +81,9 @@ leaf nor a new ownership path. Each phase reads its predecessor's on-disk state.
   concrete legacy persistence, legacy installer composition, deterministic
   planner whose apply overload consumes the caller-bound private reference plan
   without rebuilding while its gate-compatible direct overload builds pre-read,
-  strict current-resource resolver, two-lock coordination and versioned
-  dependency serialization in the existing `rollbackAction` JSON column. Its
+  strict current-resource resolver, two-lock coordination, versioned dependency
+  serialization and the sole atomic conditional dry-run terminalization port/DB
+  method. Its
   gate-safe type boundary keeps `FullSiteInstallLedgerItem` compatible for
   in-memory construction and owns `PersistedFullSiteInstallLedgerItem` for the
   compatibility `listItems()` projection plus `RawFullSiteInstallLedgerItem`
@@ -229,9 +235,22 @@ create-time absence), and prepares exact complete staged/final targets. Create
 absence is durably encoded as `beforeSnapshot:null`; an absent setting maps that
 evidence to its native raw `{ key, present:false }` expectation. Only after the
 all-item operation/snapshot/ID matrix validates may the executor create the run
-and persist every exact before, staged/final after and V1 action. Every item must
-be durable before the first native write; a partial initialization failure
-therefore writes zero native resources.
+and persist every exact before, staged/final after and V1 action in topological
+plan order. Every item must be durable before the first native write. `createRun.options.initializationPlanV1` first stores the bounded reject-unknown ordered `{ position, kind, key, operation }` manifest for all prepared rows, so even an empty persisted prefix has an exact expected sequence and cardinality.
+
+An apply-mode initialization failure can therefore leave only the empty, first, middle or complete contiguous `planned/prepared` prefix and writes zero native resources. Its catch attempts exactly one source `failed` finalization with the safe original code/fallback, preserves the initialization error if finalization also fails, and never compensates. Apply is never resumed. The sole recovery is explicit rollback: under both locks it accepts only that unique contiguous topological prefix, re-proves every persisted create is absent and every update/noop still equals its captured before state, then records one successful, source-faithful rollback outcome per persisted row and zero for the missing tail, with swapped exact snapshots and unchanged V1 action. It performs zero native writes. A previously finalized source keeps its exact `failed` code; a still `running` source is finalized `failed/site_package_apply_interrupted`; rollback `success` is the final fallible commit. Tests cover empty/first/middle/last prefixes after both successful and failed source finalization.
+A complete aligned set with changed native state and no prior rollback outcome
+falls through to ordinary crash recovery; partial/prior-outcome drift conflicts.
+
+Dry-run initialization and completion instead use L01's exact-key
+`terminalizeDryRun` CAS plus L02's bounded orchestrator below. Its SQL predicate
+accepts only `id + mode=dry_run + status=running`; the same exact status/error is
+idempotent and another terminal pair wins without overwrite. Each requested
+transition gets two attempts; exhausted success gets two failed-terminalization
+attempts. Body/initialization error remains primary, service body never reruns,
+and unexpected terminalization detail is suppressed. Dry-runs are never resumed,
+compensated or accepted by rollback; fresh apply ownership ignores all
+non-success `dry_run` rows.
 
 `FullSiteDurableAfterSnapshotV1` keeps the exact final native snapshot at its
 top-level `id`/`desired` and an optional exact staged snapshot plus phase
@@ -288,8 +307,10 @@ resolution and persists the raw `afterSnapshot` as the
 canonical-deep-equal to the complete `beforeSnapshot`, while
 `recovery.schemaVersion` is `1`, `recovery.phase` is `prepared` and
 `recovery.stagedSnapshot` is `null`. The raw before/after JSON values are therefore
-not equal. Noop execution performs zero resolver/adapter/native reads or writes
-and records success by changing only `recovery.phase` to `complete`; it never
+not equal. After mandatory planning, reference resolution, native validation,
+complete snapshot capture and durable initialization, the noop execution branch
+itself performs zero resolver/adapter/native reads or writes and records success
+only through the ledger phase change from `prepared` to `complete`; it never
 regenerates or replaces either snapshot target or the unchanged V1 rollback
 action. The noop item remains in the raw graph so transitive dependency validation
 is complete.
@@ -508,17 +529,23 @@ export const applyFullSitePackage = async (
         packageFingerprint: fullSitePackageFingerprint(input.package),
         allowSettingTakeover: input.allowSettingTakeover === true,
         rollbackDependencySchemaVersion: 1,
+        initializationPlanV1: toStrictInitializationPlanV1(prepared),
       },
     });
-    await initializeFullSiteSaga({
+    await initializeFullSiteSagaOrFinalizeFailed({
       ledger,
       runId: run.id,
       prepared,
-    }); // persist only the already-validated snapshots/targets/actions
+      mode: input.dryRun ? "dry_run" : "apply",
+    }); // apply prefixes use explicit rollback; dry runs use bounded terminalization
     // L02 staging owns all nine DURABLE_CREATE_ID_KINDS and consumes L01's
     // buildFullSiteRollbackActionV1; it never reallocates or revalidates here.
     if (input.dryRun) {
-      await ledger.finalizeRun({ runId: run.id, status: "success" });
+      await finalizeDryRunBounded({
+        ledger,
+        runId: run.id,
+        desired: { status: "success" },
+      });
       return {
         runId: run.id,
         resources: prepared.map(({ operation, intendedId }) => ({
@@ -536,12 +563,50 @@ export const applyFullSitePackage = async (
       rollbackAdapters,
       publishLast: LIFECYCLE_CAPABLE_PUBLISH_KINDS,
       settingsLast: true,
-    }); // zero-read/write noop skip + strict FullSiteSagaAdapterApplyInput for mutations
+    }); // post-preparation noop skips resolver/adapter/native I/O
   };
   return ledger.withPackageLock
     ? ledger.withPackageLock(input.package.key, execute)
     : execute(); // pure injected fakes only; concrete DB paths always lock
 };
+
+async function initializeFullSiteSagaOrFinalizeFailed(input) {
+  try {
+    await initializeFullSiteSaga(input);
+  } catch (initializationError) {
+    if (input.mode === "dry_run") {
+      await finalizeDryRunBounded({
+        ledger: input.ledger, runId: input.runId, primaryError: initializationError,
+        desired: { status: "failed", error: safeApplyFailure(initializationError) },
+      });
+      throw initializationError;
+    }
+    try {
+      await input.ledger.finalizeRun({
+        runId: input.runId, status: "failed", error: safeApplyFailure(initializationError),
+      });
+    } catch { /* Initialization remains primary; never compensate. */ }
+    throw initializationError;
+  }
+}
+
+async function finalizeDryRunBounded(input) {
+  const result = await attemptDryRunTerminalTwice(
+    input.ledger, input.runId, input.desired,
+  ); // desired_terminal | different_terminal | exhausted; first terminal wins
+  if (input.primaryError) throw input.primaryError;
+  if (result === "desired_terminal") return;
+  if (input.desired.status === "success" && result === "exhausted") {
+    await attemptDryRunTerminalTwice(input.ledger, input.runId, {
+      status: "failed", error: "site_package_dry_run_finalize_failed",
+    }); // suppress the result; never retry the body
+  }
+  throw new Error("site_package_dry_run_finalize_failed");
+}
+
+async function attemptDryRunTerminalTwice(
+  ledger, runId, desired,
+): Promise<"desired_terminal" | "different_terminal" | "exhausted">; // L02 owner
 
 const compareRollbackReadyNodes = (
   left: RefinedRollbackItem,
@@ -661,6 +726,18 @@ export async function rollbackFullSiteInstall(
       } // owned/resumed post-claim validation belongs to the failed-finalization catch
       const rawSourceItems = await ledger.listRawItems(currentSource.id);
       const rawPriorOutcomes = await ledger.listRawItems(rollbackRunId);
+      const initializationPrefix =
+        await preflightUnappliedInitializationPrefix({
+          currentSource, sourceItems: rawSourceItems, priorOutcomes: rawPriorOutcomes,
+          adapters: input.adapters ?? FULL_SITE_ROLLBACK_ADAPTERS,
+        }); // unique empty/full or contiguous topological prefix; zero native writes
+      if (initializationPrefix) {
+        await terminalizeInitializationPrefixRollback({
+          ledger, rollbackRunId, currentSource, initializationPrefix,
+        }); // resume exact prior rows; source failure then rollback success last
+        successCommitted = true;
+        return { runId: rollbackRunId };
+      }
       const parsed = preflightRollbackEvidence({
         items: rawSourceItems,
       }); // validates every unknown raw field; no row may disappear
@@ -721,13 +798,9 @@ export async function rollbackFullSiteInstall(
       successCommitted = true; // no fallible work follows this assignment
       return { runId: rollbackRunId };
     } catch (error) {
-      if (!successCommitted) {
-        await ledger.finalizeRun({
-          runId: rollbackRunId,
-          status: "failed",
-          error: toSafeFullSiteErrorCode(error, "site_package_rollback_failed"),
-        });
-      }
+      if (!successCommitted) await finalizeOwnedRollbackFailedBestEffort(
+        ledger, rollbackRunId, error,
+      ); // secondary finalization failure never replaces the primary safe error
       throw error;
     }
   };
@@ -813,9 +886,10 @@ and restore detects a race after recovery/current-state capture with zero partia
 writes.
 Pin that every executor mutation supplies `FullSiteSagaAdapterApplyInput`, the
 deprecated base-input mutation branch is reachable only by the pre-L03
-compatibility call, an apply-time noop performs zero resolver/adapter/native reads
-or writes while retaining its graph node and phase-updating the same durable after
-envelope from `prepared` to `complete`, and final L03 scheduling calls
+compatibility call, and—only after mandatory preparation/capture plus complete
+durable initialization—the apply-time noop execution performs zero resolver/
+adapter/native reads or writes while retaining its graph node and phase-updating
+the same durable after envelope from `prepared` to `complete`. Final L03 scheduling calls
 `classifyInterruptedSagaItems` only
 after raw-field and graph validation. Claim/resume/busy/complete and every post-claim error
 must preserve durable outcomes, safe finalization and the actual returned rollback
@@ -871,16 +945,21 @@ after outer capture to prove the owner re-read rejects drift with zero partial
 writes. Raw-reader tests prove unknown/delete/restore operations and scalar/
 array/null fields reach L03 rather than disappearing. Catch tests prove an item
 failure leaves the last durable row untouched and only the source run becomes
-failed. Stage-commit and publish-commit/phase-upsert failures prove an outcome is
-derived from the immutable raw row, then a later resume consumes that outcome
-without using an in-memory overlay.
+failed. Initialization tests fail before zero and after first/middle/last item
+writes, then explicitly roll back each exact prefix under running/failed sources.
+They pin zero native/compensation writes, exact resumed prefix outcomes, no
+missing-tail rows, source terminalization before rollback success and primary
+error order at every ledger commit. Dry-run tests exhaust both two-attempt stages,
+pin first-terminal arbitration/body-error precedence, and prove no body retry,
+rollback, resume or native write. Stage/publish phase-upsert failures derive and
+resume outcomes only from immutable raw rows.
 
 ## Sub-Tasks
 
 - [ ] **TASK-547-02-L01** — installer split and deterministic plan resolver.
 - [ ] **TASK-547-02-L02** — native resource adapters, ref resolution, complete
-  snapshot capture, no-read noop classification and saga execution; consumes the
-  L01 ledger.
+  snapshot capture, post-capture zero-native noop execution and saga execution;
+  consumes the L01 ledger.
 - [ ] **TASK-547-02-L03** — failure atomicity, reverse rollback and DB/security
   tests, including strict noop source-evidence preflight and source-faithful
   zero-read/write noop outcomes.
@@ -898,11 +977,6 @@ without using an in-memory overlay.
 - `bun test --timeout 360000 tests/unit/kits/fullSiteCompensationDependencies.test.ts`
 - `bun test --timeout 360000 tests/integration/kits/fullSiteCrashRecoveryDb.test.ts` (real SIGKILL
   matrix and two-package shared-shell concurrency)
-- `bun --cwd core lint`
-- `bun --cwd core lint:types`
+- `bun --cwd core lint` and `bun --cwd core lint:types`
 - `bun run scan:security:strict`
 - touched-file line counts
-
-## Documentation Updates Required
-
-Provide verified contract deltas to TASK-547-06, the sole shared-doc writer.

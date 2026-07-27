@@ -20,9 +20,9 @@ and prove recovery after real process death rather than only an injected throw.
 Atomicity is frozen as a compensation saga. Do not add a cross-domain
 transaction abstraction or transaction parameters to all native services.
 Pre-run `prepareFullSiteSaga` failures create no source run and never enter L03.
-L02 alone finalizes a run whose persistence-only initialization fails, because
-no native write occurred; automatic compensation starts only after the complete
-prepared item set is durable.
+L02 alone catches persistence-only initialization failure, attempts one source
+`failed` finalization, preserves the initialization error if finalization also
+fails, and never compensates until the complete prepared item set is durable.
 
 ## Count-Neutral Pre-Land Compatibility Checkpoint
 
@@ -74,19 +74,6 @@ Only after the whole promise resolves may the bridge write each setting success
 outcome. Propagate failure with zero setting-success outcomes. Non-setting
 reversals remain deterministic per-item calls. `compensation.ts` has no native
 default registry, mutable registration, dummy/no-op fallback or L02 import.
-
-```ts
-for (const invalid of [missingBatch, nonFunctionBatch, duplicateSetting,
-  malformedSetting]) {
-  await expect(compensateItems(makeInput(invalid))).rejects.toThrow();
-  expect(allAdapterAndNativeCalls()).toEqual([]);
-}
-const before = fakeSettingsBytes();
-await expect(compensateItems(makeInput(failingAtomicBatch))).rejects.toThrow();
-expect(settingBatchCalls()).toEqual([settingsInComparatorOrder]);
-expect(fakeSettingsBytes()).toBe(before);
-expect(settingSuccessOutcomes()).toEqual([]);
-```
 
 The minimal suite also pins a successful nonempty setting group to one batch,
 callback resolution before all setting outcomes, and zero batch calls when
@@ -318,43 +305,17 @@ Freeze the settings scheduler seam and sequence:
 
 ```ts
 export type ReverseSettingsBatchSchedulerInput = Readonly<{
-  // Non-empty ready setting group, already sorted by the frozen comparator and
-  // operation-correct: noops are preflight-authorized; create/updates are refined.
   items: readonly RefinedRollbackItem[];
   actorId: string;
   adapter: FullSiteRollbackAdapters["setting"];
 }>;
-
 export type RollbackNativeResult = Readonly<{
   refined: Exclude<RefinedRollbackItem, { state: "conflict" }>;
   outcome: "reversed" | "already_recovered" | "noop";
 }>;
-
 export async function reverseSettingsBatch(
   input: ReverseSettingsBatchSchedulerInput,
-): Promise<readonly RollbackNativeResult[]> {
-  assertOneComparatorSortedSettingGroup(input.items);
-  if (input.items.some((item) => item.state === "conflict")) {
-    throw new Error("site_package_rollback_conflict"); // zero native writes
-  }
-  const ready = input.items as readonly Exclude<
-    RefinedRollbackItem,
-    { state: "conflict" }
-  >[];
-  const appliedReversals = ready.flatMap((item) =>
-    item.state === "applied" ? [item.reversal] : [],
-  ); // fully construct the whole batch before native access
-  if (appliedReversals.length > 0) {
-    await input.adapter.reverseSettingsBatch({
-      items: appliedReversals,
-      actorId: input.actorId,
-    }); // exactly one native batch call; no per-key fallback
-  }
-  return ready.map((refined) => ({
-    refined,
-    outcome: refined.state === "applied" ? "reversed" : refined.state,
-  })); // the dependency scheduler, not this helper, persists outcomes
-}
+): Promise<readonly RollbackNativeResult[]>;
 ```
 
 At the settings frontier, `compensateDependencyBranches` sorts every ready
@@ -408,6 +369,38 @@ ordered revision rows; restore never truncates them. The native owner locks and
 re-reads its complete state, canonical-compares it to `expectedCurrent`, and
 throws `site_package_state_changed` before writes if state raced between fresh
 capture and restore.
+
+## Unapplied Initialization-Prefix Rollback
+
+L03 alone owns this branch in `rollback.ts`. Immediately after a rollback claim
+and raw source/outcome reads, before generic preflight, it imports L02's strict
+`readStrictInitializationPlanV1`. No manifest selects the legacy/general path.
+A manifest requires an apply-mode source; dry-run always fails
+`site_package_rollback_invalid_source`.
+
+The branch accepts only the empty, first, middle or full contiguous prefix of the
+manifest in exact position/order/identity/operation. Every persisted source row
+must be strict `planned/prepared` durable evidence with its intended ID, snapshots
+and V1 action; duplicates, gaps, extras, reorder or a partial advanced row fail
+before native access. A complete aligned set containing any later valid phase is
+not an initialization prefix and continues to generic preflight. Prior outcomes
+must be the exact source-faithful successful contiguous prefix of persisted rows:
+same position/kind/key/operation/action, swapped decoded snapshots, and no failed,
+planned, duplicate, missing-middle or extra row.
+
+Before ledger writes, L02 adapter reads re-prove every create absent and every
+update/noop canonically equal to its captured complete before snapshot. Drift in
+a partial/prior-outcome prefix is `site_package_rollback_conflict`; a complete
+aligned set with zero prior outcomes and any changed state continues to generic
+crash recovery. This branch makes zero native mutations or scheduler calls.
+Resume writes one exact
+success outcome for each remaining persisted source row and no row or native
+write for the manifest tail. The source must then be terminal: preserve an
+already-failed source and its exact error, or finalize running as
+`failed/site_package_apply_interrupted`; reject other states. Rollback success is
+last. Outcome-ledger, source-finalization and final rollback errors remain primary
+in that order, fail the owned rollback safely before success, and resume from
+durable outcomes; `successCommitted` forbids a catch rewrite.
 
 ## Security Contract
 
@@ -478,29 +471,18 @@ export type FullSiteRollbackAdapters =
 type PreflightedRollbackEvidenceBase = Readonly<{
   identity: FullSiteResourceIdentity;
   persistedSourceItem: PersistedFullSiteInstallLedgerItem;
-  durableAfter: FullSiteDurableAfterSnapshotV1; // parsed raw afterSnapshot
+  durableAfter: FullSiteDurableAfterSnapshotV1;
   finalTarget: FullSiteNativeSnapshot;
   phase: "prepared" | "staged" | "publish_prepared" | "complete";
 }>;
-
-export type PreflightedRollbackEvidence =
-  | (PreflightedRollbackEvidenceBase & Readonly<{
-      operation: "create";
-      before: null; // proven create-time absence
-      stagedTarget: FullSiteNativeSnapshot | null;
-    }>)
-  | (PreflightedRollbackEvidenceBase & Readonly<{
-      operation: "update";
-      before: FullSiteNativeSnapshot;
-      stagedTarget: FullSiteNativeSnapshot | null;
-    }>)
-  | (PreflightedRollbackEvidenceBase & Readonly<{
-      operation: "noop";
-      before: FullSiteNativeSnapshot;
-      // Preflight compares before with durableAfter's top-level id/desired,
-      // requires identical ID, recovery.stagedSnapshot:null and the status phase.
-      stagedTarget: null;
-    }>);
+export type PreflightedRollbackEvidence = PreflightedRollbackEvidenceBase & (
+  | Readonly<{ operation: "create"; before: null;
+      stagedTarget: FullSiteNativeSnapshot | null }>
+  | Readonly<{ operation: "update"; before: FullSiteNativeSnapshot;
+      stagedTarget: FullSiteNativeSnapshot | null }>
+  | Readonly<{ operation: "noop"; before: FullSiteNativeSnapshot;
+      stagedTarget: null }>
+);
 
 export function preflightRollbackEvidence(input: Readonly<{
   items: readonly RawFullSiteInstallLedgerItem[];
@@ -511,51 +493,27 @@ export function preflightPriorRollbackSuccessOutcomes(input: Readonly<{
   priorOutcomes: readonly RawFullSiteInstallLedgerItem[];
 }>): ReadonlySet<FullSiteResourceIdentity>;
 
-// In the implementation's noop branch, before any resolver/adapter/native access:
-const durableAfter = readFullSiteDurableAfterSnapshotV1(item.afterSnapshot);
-const requiredNoopPhase = item.status === "planned"
-  ? "prepared"
-  : item.status === "success"
-    ? "complete"
-    : failRollbackEvidence(); // failed/skipped noop source rows are invalid
-assert(durableAfter.recovery.schemaVersion === 1);
-assert(durableAfter.recovery.phase === requiredNoopPhase);
-assert(durableAfter.recovery.stagedSnapshot === null);
-const finalTarget = { id: durableAfter.id, desired: durableAfter.desired };
-assert(finalTarget.id === before.id);
-assertCanonicalDeepEqual(finalTarget, before);
-// Never compare raw item.afterSnapshot directly with item.beforeSnapshot.
-
-type PreflightedNoopRollbackEvidence = Extract<
-  PreflightedRollbackEvidence,
-  { operation: "noop" }
->;
-type PreflightedMutableRollbackEvidence = Exclude<
-  PreflightedRollbackEvidence,
-  { operation: "noop" }
->;
-
 export type RefinedRollbackItem =
   | Readonly<{
-      state: "noop"; // parsed source authority; no resolver/adapter/native read
+      state: "noop";
       classification: FullSiteSagaRecoveryClassification;
-      evidence: PreflightedNoopRollbackEvidence;
+      evidence: Extract<PreflightedRollbackEvidence, { operation: "noop" }>;
     }>
   | Readonly<{
-      state: "already_recovered"; // fresh exact-ID create/update authority
+      state: "already_recovered";
       classification: FullSiteSagaRecoveryClassification;
-      evidence: PreflightedMutableRollbackEvidence;
+      evidence: Exclude<PreflightedRollbackEvidence, { operation: "noop" }>;
     }>
   | Readonly<{
       state: "applied";
       classification: FullSiteSagaRecoveryClassification;
-      evidence: PreflightedMutableRollbackEvidence;
+      evidence: Exclude<PreflightedRollbackEvidence, { operation: "noop" }>;
       reversal: FullSiteNativeReversal;
     }>
   | Readonly<{
       state: "conflict";
       classification: FullSiteSagaRecoveryClassification;
-      evidence: PreflightedMutableRollbackEvidence;
+      evidence: Exclude<PreflightedRollbackEvidence, { operation: "noop" }>;
       error: "site_package_rollback_conflict";
     }>;
 
@@ -566,30 +524,7 @@ export async function refineAllRollbackStates(input: Readonly<{
   currentSource: FullSiteInstallRun;
   ledger: FullSiteInstallLedgerPort;
   completedIdentities: ReadonlySet<FullSiteResourceIdentity>;
-}>): Promise<readonly RefinedRollbackItem[]> {
-  const refinements: RefinedRollbackItem[] = [];
-  for (const evidence of input.parsed) {
-    if (input.completedIdentities.has(evidence.identity)) continue;
-    const classification = requireMatchingClassification(
-      evidence,
-      input.classifications,
-    );
-    if (evidence.operation === "noop") {
-      refinements.push({ state: "noop", classification, evidence });
-      continue; // parsed source authority; no resolver/adapter/native read
-    }
-    const fresh = await input.adapters[evidence.persistedSourceItem.kind]
-      .captureSnapshotByIdOrNull(evidence.finalTarget.id);
-    refinements.push(await refineCreateOrUpdateFromCompleteState({
-      evidence,
-      classification, // diagnostic only, including not_applied/already_recovered
-      fresh,
-      currentSource: input.currentSource,
-      ledger: input.ledger,
-    }));
-  }
-  return refinements;
-}
+}>): Promise<readonly RefinedRollbackItem[]>;
 
 export async function compensateItems(input: CompensateItemsInput) {
   const parsed = preflightRollbackEvidence({
@@ -660,6 +595,49 @@ async function reverseRefinedNativeSnapshot(input: ReverseOneInput) {
   return "reversed";
 }
 
+type InitializationPrefixRollback = Readonly<{
+  sourceItems: readonly PersistedFullSiteInstallLedgerItem[];
+  completedOutcomeCount: number;
+  manifestLength: number;
+}>;
+async function preflightUnappliedInitializationPrefix(
+  input: Readonly<{
+    currentSource: FullSiteInstallRun;
+    sourceItems: readonly RawFullSiteInstallLedgerItem[];
+    priorOutcomes: readonly RawFullSiteInstallLedgerItem[];
+    adapters: FullSiteRollbackAdapters;
+  }>,
+): Promise<InitializationPrefixRollback | null> {
+  const rawPlan = input.currentSource.options?.initializationPlanV1;
+  if (rawPlan === undefined) return null;
+  if (input.currentSource.mode !== "apply") failRollbackSource();
+  if (input.currentSource.status !== "running" && input.currentSource.status !== "failed") failRollbackSource();
+  const plan = readStrictInitializationPlanV1(rawPlan); // L02 owner
+  assertExactManifestPrefix(plan, input.sourceItems); // no gaps/extras/reorder
+  if (input.sourceItems.length === plan.length &&
+      input.sourceItems.some((row) => !isStrictPlannedPrepared(row))) return null;
+  const sourceItems = readStrictPreparedPrefix(input.sourceItems, plan);
+  const completedOutcomeCount = preflightExactPriorPrefix(
+    sourceItems, input.priorOutcomes,
+  ); // successful, source-faithful, contiguous; zero native access
+  const unapplied = await Promise.all(sourceItems.map((item) =>
+    isInitializationItemStillUnapplied(item, input.adapters[item.kind])));
+  if (unapplied.some((value) => !value)) {
+    if (sourceItems.length === plan.length && completedOutcomeCount === 0) return null;
+    failRollbackConflict();
+  }
+  return { sourceItems, completedOutcomeCount, manifestLength: plan.length };
+}
+async function terminalizeInitializationPrefixRollback(input) {
+  for (const item of input.prefix.sourceItems.slice(
+    input.prefix.completedOutcomeCount,
+  )) {
+    await recordRollbackOutcome(toSourceFaithfulSuccess(item, input));
+  } // never iterate or persist the missing manifest tail
+  await requireFailedOrTerminalizeInterruptedSource(input);
+  await input.ledger.finalizeRun({ runId: input.rollbackRunId, status: "success" });
+}
+
 export type RollbackFullSiteInstallInput = {
   sourceRunId: string;
   actorId: string;
@@ -728,6 +706,17 @@ export async function rollbackFullSiteInstall(
       } // owned/resumed post-claim validation belongs to the failed-finalization catch
       const rawSourceItems = await ledger.listRawItems(currentSource.id);
       const rawPriorOutcomes = await ledger.listRawItems(rollbackRunId);
+      const initializationPrefix = await preflightUnappliedInitializationPrefix({
+        currentSource, sourceItems: rawSourceItems, priorOutcomes: rawPriorOutcomes,
+        adapters: input.adapters ?? FULL_SITE_ROLLBACK_ADAPTERS,
+      });
+      if (initializationPrefix) {
+        await terminalizeInitializationPrefixRollback({
+          ledger, rollbackRunId, currentSource, prefix: initializationPrefix,
+        });
+        successCommitted = true;
+        return { runId: rollbackRunId };
+      }
       const parsed = preflightRollbackEvidence({
         items: rawSourceItems,
       }); // every raw field validates before any row can be used or dropped
@@ -786,13 +775,9 @@ export async function rollbackFullSiteInstall(
       successCommitted = true; // no fallible work follows this assignment
       return { runId: rollbackRunId };
     } catch (error) {
-      if (!successCommitted) {
-        await ledger.finalizeRun({
-          runId: rollbackRunId,
-          status: "failed",
-          error: toSafeFullSiteErrorCode(error, "site_package_rollback_failed"),
-        });
-      }
+      if (!successCommitted) await finalizeOwnedRollbackFailedBestEffort(
+        ledger, rollbackRunId, error,
+      ); // suppress secondary finalization failure; primary safe error wins
       throw error;
     }
   };
@@ -844,6 +829,15 @@ durable success rows into the completed set, preserves the narrow-fake
 error failed with a safe code, marks an interrupted running source
 `site_package_apply_interrupted`, and returns the actual rollback run ID. It also
 proves final L03 restore never invokes the deprecated base-input adapter branch.
+The L03 service/dependency suites add initialization-prefix cases for empty,
+first, middle and full prepared prefixes under running/already-failed sources.
+They reject dry-run, hostile/missing/extra/reordered/gapped/duplicate plan/row
+evidence and non-prefix outcomes before mutation. Partial/prior-outcome
+present-create or update/noop before-state drift rejects; complete changed state without outcomes reaches generic recovery. Exact prior-success prefixes resume;
+missing manifest-tail rows produce no outcome, resolver or write. Inject failure
+at the next outcome, source terminalization and rollback-success commits to pin
+primary safe-error order, rollback-failed-before-success behavior, resume and zero
+native/compensation writes.
 Grounded rollback cases must additionally prove: planner-projection equality
 cannot authorize update restore or create deletion; exact complete
 before/after/other-state comparisons produce recovered/restore/conflict with no
@@ -929,6 +923,13 @@ marker deadline, terminates and cleans up the worker on timeout, and, after obse
 the marker, sends real `SIGKILL`; it does not replace process death with an exception.
 A fresh worker/process then rolls back
 the source run using only DB evidence.
+Closed initialization modes also stop after `createRun` before row zero and after
+first/middle/last prepared-row persistence, emit only
+`{phase:"initialization_prefix",runId,persistedCount,manifestCount}`, then await
+release or real `SIGKILL`. A fresh process performs explicit rollback. The DB
+suite asserts exact manifest/source prefixes and source-faithful outcome counts,
+no missing-tail row, unchanged domain/settings digests, zero native reversal and
+source terminalization before rollback success in every mode.
 The DB suite round-trips source/outcome JSONB with reordered object keys, nested
 arrays and null, proving canonical value equality after real driver decoding
 while an array-order change fails.
@@ -994,7 +995,3 @@ test re-reads the pre-test raw shell rows after cleanup and fails on any mismatc
 - `bun --cwd core lint`, `bun --cwd core lint:types`, relevant reliability/
   security gates, strict scan, and fresh `wc -l` over every L03-owned changed
   production/test file (all at most 1,000 lines).
-
-## Documentation Updates Required
-
-Send rollback/dry-run evidence semantics to TASK-547-06.

@@ -238,11 +238,12 @@ export function buildFormaDomPackage(): FullSitePackageV1 {
 }
 ```
 
-**Data flow:** source-backed Page builders → package-aware validation of
-ref-bearing documents → shell/menu/footer/settings builders → package normalizer
-and closed reference graph → deterministic pretty JSON. Native strict
-normalization runs after installer ref substitution where a document contains a
-`PackageRef`.
+**Data flow:** source-backed Page builders → placeholder-native normalization
+followed by package-aware allowlisted `PackageRef` attachment →
+shell/menu/footer/settings builders → package normalizer and closed reference
+graph → deterministic pretty JSON → installer ref-to-ID substitution → native
+strict Page revalidation before persistence. A native normalizer sees the
+placeholder-native or resolved-native shape, never a `PackageRef`.
 
 **Error handling:** fail before writing the canonical artifact on missing or
 extra route/section/menu item/footer element, copy mismatch, unsafe href, absent

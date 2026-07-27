@@ -261,8 +261,10 @@ generation. The helper never recursively searches or substitutes by string
 value. In particular, ordinary copy, IDs, links and metadata that happen to
 equal a resource key or placeholder remain byte-for-byte unchanged. Ref-free
 Pages return the native normalized document directly; ref-bearing Page documents
-are not passed through the native Page normalizer again until TASK-547-02
-resolves these allowlisted refs to IDs.
+have exactly two native validation points: this builder's placeholder-native
+pre-normalization before `PackageRef` attachment, then TASK-547-02's native
+revalidation after allowlisted substitution resolves every ref to an actual ID.
+No native normalizer receives a `PackageRef`.
 
 ## Shared Page Palette Contract
 
@@ -645,8 +647,9 @@ normalized live Page URLs and detailed smoke lifecycle.
 
 No endpoint. Only strict Page v2 primitives and sanitizer-owned inline SVG are
 allowed; no raw HTML, JavaScript, CSS or remote-fetch URL. Ref-bearing projects
-and contact documents pass package-aware validation before ref substitution and
-native strict normalization. Links use sanitized canonical paths/schemes.
+and contact documents pass placeholder-native Page normalization before
+package-aware ref attachment, then allowlisted ref-to-ID substitution and native
+strict revalidation. Links use sanitized canonical paths/schemes.
 
 ## Implementation Pseudocode
 
@@ -817,7 +820,8 @@ const contactBindings = (form: PackageRef): readonly FormaDomPageBinding[] => [{
 
 // buildProjectsPage/buildContactPage create native sections with the placeholder
 // controls above, then pass projectBindings(refs)/contactBindings(form) to
-// buildPageSeed({ ..., bindings }); PackageRef never enters native normalization.
+// buildPageSeed({ ..., bindings }). TASK-547-02 substitutes actual IDs and then
+// reruns native Page validation; PackageRef never enters native normalization.
 export const buildFormaDomPages = (refs: FormaDomPageRefs): ResourceSeed[] =>
   [
     buildHomePage(),
@@ -834,9 +838,10 @@ export const buildFormaDomPages = (refs: FormaDomPageRefs): ResourceSeed[] =>
 Page collection/Form props mapped into Content List/Form Embed contracts →
 frozen source constants → page-specific builders → L01-owned shared Page/SEO
 helper → exact direct-root-block package-ref insertion → closed graph validation
-→ ordered seeds consumed by L02.
-Ref-free documents may normalize natively immediately; ref-bearing Page
-documents normalize natively only after installer substitution.
+→ ordered seeds consumed by L02 → allowlisted ref-to-ID substitution → native
+Page revalidation before any run/item/native write. Ref-free documents normalize
+once. Ref-bearing documents first pre-normalize their placeholder-native shape,
+then revalidate the resolved native document after installer substitution.
 
 **Error handling:** throw on unknown/invalid/overlong fresh switcher fields,
 wrong-type collection CTA visibility, invalid Form presentation value,
@@ -890,7 +895,10 @@ The tests assert:
   prices/contact/team and absence of known fabricated strings;
 - home switcher stores exact `ariaLabel:"Wybór stylu domu"` while every
   unauthored switcher omits the key;
-- projects/form refs at only allowlisted paths and no embedded DB IDs;
+- projects/form refs at only allowlisted paths and no embedded DB IDs; builder
+  tests prove placeholder-native normalization precedes exact ref attachment and
+  no native Page-normalizer input contains a `PackageRef`, while TASK-547-02
+  tests the resolved-native revalidation;
 - exactly the five package Page bindings listed above, with rejection of
   missing/duplicate/nested/wrong-block/wrong-property/wrong-kind bindings; an
   ordinary string equal to every resource key and placeholder is never

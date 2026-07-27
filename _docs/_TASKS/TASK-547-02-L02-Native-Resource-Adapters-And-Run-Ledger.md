@@ -22,7 +22,8 @@ multi-call repair with native domain-local atomic APIs.
 
 The historical physical filename retains `Run-Ledger`, but this leaf is only a
 ledger consumer. L01 exclusively owns the port, concrete persistence, locking and
-listed-row types; L02 owns complete native snapshot capture and saga execution.
+listed-row types; L02 owns initialization-plan validation, bounded dry-run
+terminalization orchestration, complete native snapshot capture and saga execution.
 
 Consume L01's exported ledger port and concrete DB implementation by injection.
 Do not create or edit a `ledger.ts`, redeclare the interface, add another
@@ -510,6 +511,21 @@ export type FullSiteDurableAfterSnapshotV1 = FullSiteNativeSnapshot & Readonly<{
   }>;
 }>;
 
+export type FullSiteInitializationPlanItemV1 = Readonly<{
+  position: number;
+  kind: FullSiteInstallResourceKind;
+  key: string;
+  operation: "create" | "update" | "noop";
+}>;
+export type FullSiteInitializationPlanV1 =
+  readonly FullSiteInitializationPlanItemV1[];
+export function toStrictInitializationPlanV1(
+  prepared: readonly PreparedFullSiteSagaItem[],
+): FullSiteInitializationPlanV1;
+export function readStrictInitializationPlanV1(
+  value: unknown,
+): FullSiteInitializationPlanV1;
+
 export function canonicalizeFullSiteJsonValue(value: JsonValue): string;
 export function fullSiteJsonValuesEqual(
   left: JsonValue,
@@ -535,6 +551,15 @@ JSONB values as `JsonValue` before calling them. Canonicalization preserves arra
 order, sorts object keys lexicographically at every depth, and JSON-encodes
 primitives (including `null`); equality compares those canonical strings. L03
 uses decoded-JSONB value equality, never driver text or storage bytes.
+
+That module alone also owns both initialization-plan helpers. The strict plan is a
+frozen array of at most 512 direct plain, exact-four-key items. Positions are
+contiguous zero-based integers and array order is position order; kind/key/
+operation must exactly equal the prepared topological sequence, with no duplicate
+identity, gaps, extras or reorder. The writer never accepts caller JSON. The
+reader rejects proxies, inherited/missing/unknown keys and every invalid scalar,
+kind, operation, position or cardinality with
+`site_package_rollback_invalid_source`; L03 imports this owner read-only.
 
 `staging.ts` owns the exact frozen export
 `FULL_SITE_DURABLE_SOURCE_STATUS_PHASES_V1` and
@@ -603,20 +628,10 @@ nodes:
 export type FullSiteSagaRecoveryClassification = {
   identity: FullSiteResourceIdentity;
   item: PersistedFullSiteInstallLedgerItem;
-  // Diagnostic only. `noop` is source-operation-derived without resolver access.
   hint: "not_applied" | "applied" | "already_recovered" | "noop";
 };
-
-export async function classifyInterruptedSagaItems(input: {
-  items: readonly PersistedFullSiteInstallLedgerItem[];
-  resolveCurrentResource: FullSiteCurrentResourceResolver;
-}): Promise<readonly FullSiteSagaRecoveryClassification[]>;
-
-/** @deprecated Sequential-land compatibility for the pre-L03 rollback facade. */
-export async function recoverInterruptedSagaItems(input: {
-  items: readonly FullSiteInstallLedgerItem[];
-  resolveCurrentResource: FullSiteCurrentResourceResolver;
-}): Promise<FullSiteInstallLedgerItem[]>;
+export async function classifyInterruptedSagaItems(input: { items: readonly PersistedFullSiteInstallLedgerItem[]; resolveCurrentResource: FullSiteCurrentResourceResolver }): Promise<readonly FullSiteSagaRecoveryClassification[]>;
+export async function recoverInterruptedSagaItems(input: { items: readonly FullSiteInstallLedgerItem[]; resolveCurrentResource: FullSiteCurrentResourceResolver }): Promise<FullSiteInstallLedgerItem[]>; // deprecated pre-L03 gate only
 ```
 
 `classifyInterruptedSagaItems` returns one ordered classification for every
@@ -642,31 +657,32 @@ an omitted legacy action to `null`, preserves input order, omits `not_applied`,
 and returns the item for other hints without graph work. Final L03 rollback/
 compensation calls only the classifier after raw-field and graph validation.
 
-The classifier's operation split is explicit:
-
-```ts
-for (const item of input.items) {
-  if (item.operation === "noop") {
-    classifications.push({
-      identity: toFullSiteResourceIdentity(item),
-      item,
-      hint: "noop",
-    });
-    continue; // no resolver/adapter/native read; source evidence is not validated here
-  }
-  classifications.push(
-    await classifyCreateOrUpdateHintByExactId(item, input.resolveCurrentResource),
-  ); // still only a hint; L03 performs complete-state refinement
-}
-```
+The classifier branches on source operation: noop emits its ordered identity/item
+with diagnostic `hint:"noop"` and no resolver/native access; create/update call
+`classifyCreateOrUpdateHintByExactId`. L03 still performs all authoritative
+evidence parsing and complete-state refinement.
 
 After preparation succeeds, apply creates the run with
-`rollbackDependencySchemaVersion:1` beside the package fingerprint, then invokes
-persistence-only initialization. L03 distinguishes current all-items-required evidence from legacy unknown evidence.
+`rollbackDependencySchemaVersion:1` and the strict `initializationPlanV1` beside
+the package fingerprint, then persists rows in that exact order. L03 uses the
+manifest to distinguish an exact empty/first/middle/full prepared prefix from
+malformed or legacy evidence.
+
+L02 alone owns `assertExactDryRunTerminalizationResult`,
+`attemptDryRunTerminalTwice` and `finalizeDryRunBounded`; they consume L01's
+atomic port and never implement SQL. The result validator accepts only a direct
+plain exact-one-key object whose outcome is `desired_terminal` or
+`different_terminal`. Each requested transition stops on either valid outcome
+and retries only a thrown safe failure, at most twice. An initialization/body
+error is always rethrown unchanged after failed-terminalization attempts. Without
+a primary error, only `desired_terminal` succeeds; an exhausted success request
+gets two attempts to record `failed/site_package_dry_run_finalize_failed`, then
+every non-success path throws that fixed cause-free code. A different terminal
+winner is immutable. No path reruns the body, compensates or resumes a dry-run.
 
 ## Security Contract
 
-Service only; resolve typed refs immediately before each native strict normalizer.
+Service only. TASK-547-04-L01 native-normalizes Page placeholders before it attaches refs; this service resolves those typed refs at graph-approved paths and immediately reruns the native Page strict normalizer on actual IDs.
 Nested preflight is reject-unknown. Form `settings.theme.submit` allows exactly `background,textColor,radius,fullWidth,label,supportingText`, preserving the latter and rejecting extras.
 Listing-template root allows only `name,slug,description,layout,config`; config allows `fields,itemActions,emptyState,style`.
 Its field/condition/action records allow only `key,source,label,fallback,format,conditions` / `id,field,op,value` / `id,label,kind,href,opensInNewTab`.
@@ -690,8 +706,21 @@ export async function applyFullSitePackage(input, overrides = {}) {
     ); // supplied-plan overload: zero builds, exact array identity
     const saga = await prepareFullSiteSaga({ plan, referencePlan, adapters,
       actorId: input.actorId, generateId: () => crypto.randomUUID() });
-    const run = await ledger.createRun(toRunInput(input));
-    await initializeFullSiteSaga({ runId: run.id, prepared: saga.prepared, ledger });
+    const run = await ledger.createRun(toRunInput(input, {
+      initializationPlanV1: toStrictInitializationPlanV1(saga.prepared),
+    }));
+    await initializeFullSiteSagaOrFinalizeFailed({
+      runId: run.id, prepared: saga.prepared, ledger,
+      mode: input.dryRun ? "dry_run" : "apply",
+    }); // apply prefixes never resume; dry runs use bounded atomic terminalization
+    if (input.dryRun) {
+      await finalizeDryRunBounded({
+        ledger,
+        runId: run.id,
+        desired: { status: "success" },
+      });
+      return toDryRunResult(run, saga);
+    }
     return finishPreparedApply({ input, run, saga, adapters, ledger });
   };
   return ledger.withPackageLock ? ledger.withPackageLock(input.package.key, execute) : execute();
@@ -748,11 +777,47 @@ export async function initializeFullSiteSaga({ runId, prepared, ledger }) {
     await ledger.recordItem(toPreparedLedgerItem(runId, item));
   }
 }
+async function initializeFullSiteSagaOrFinalizeFailed(input) {
+  try {
+    await initializeFullSiteSaga(input);
+  } catch (error) {
+    if (input.mode === "dry_run") return finalizeDryRunBounded({
+      ledger: input.ledger, runId: input.runId, primaryError: error,
+      desired: { status: "failed", error: safeApplyFailure(error) },
+    });
+    try { await input.ledger.finalizeRun({ runId: input.runId, status: "failed", error: safeApplyFailure(error) }); } catch { /* Initialization error remains primary; never compensate. */ }
+    throw error;
+  }
+}
+function assertExactDryRunTerminalizationResult(value: unknown): FullSiteDryRunTerminalizationResult;
+async function attemptDryRunTerminalTwice(ledger, runId, desired) {
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    try {
+      return assertExactDryRunTerminalizationResult(
+        await ledger.terminalizeDryRun(
+          { runId, status: desired.status, error: desired.error ?? null },
+        ),
+      ).outcome;
+    } catch { /* Retry only terminalization/result validation; never the body. */ }
+  }
+  return "exhausted";
+}
+async function finalizeDryRunBounded(input) {
+  const outcome = await attemptDryRunTerminalTwice(input.ledger, input.runId, input.desired);
+  if (input.primaryError) throw input.primaryError;
+  if (outcome === "desired_terminal") return;
+  if (input.desired.status === "success" && outcome === "exhausted") {
+    await attemptDryRunTerminalTwice(input.ledger, input.runId, {
+      status: "failed", error: "site_package_dry_run_finalize_failed",
+    });
+  }
+  throw new Error("site_package_dry_run_finalize_failed");
+}
 
 for (const prepared of operationsBeforeSettings) {
   if (prepared.operation.operation === "noop") {
     await ledger.recordItem(toPhaseLedgerItem(prepared, "complete"));
-    continue; // zero resolver/adapter/native reads or writes; same envelope targets/action
+    continue; // execution-only zero native reads/writes after prepare/capture
   }
   const adapter = adapters[prepared.operation.kind];
   const applyInput: FullSiteSagaAdapterApplyInput = {
@@ -820,136 +885,75 @@ L02 also freezes automatic apply-failure finalization:
 
 ```ts
 async function compensateFailedApply(input: CompensateFailedApplyInput) {
-  const currentSource = await requireCurrentApplySource(input.run.id, input.ledger);
-  const claim = await claimAutomaticRollback(currentSource, input);
+  const source = await requireCurrentApplySource(input.run.id, input.ledger);
+  const claim = await claimAutomaticRollback(source, input);
   if (claim.state === "busy") throw new Error("site_package_rollback_in_progress");
   if (claim.state === "complete") {
-    if (currentSource.status !== "failed") {
-      throw new Error("site_package_rollback_conflict");
-    }
+    if (source.status !== "failed") throw new Error("site_package_rollback_conflict");
     return;
   }
-
   let successCommitted = false;
   try {
-    const sourceItems = await input.ledger.listRawItems(currentSource.id);
-    const priorOutcomes = await input.ledger.listRawItems(claim.id);
-    const compensationInput = { // local variable keeps the pre-L03 gate compatible
-      items: sourceItems,
-      actorId: input.actorId,
-      adapters: input.rollbackAdapters,
-      ledger: input.ledger,
-      rollbackRunId: claim.id,
-      packageKey: currentSource.packageKey,
-      resolveCurrentResource: input.resolveCurrentResource,
-      priorOutcomes,
-      currentSource,
-    };
-    await compensateItems(compensationInput);
+    await compensateItems({
+      ...toCompensationDeps(input, source, claim.id),
+      items: await input.ledger.listRawItems(source.id),
+      priorOutcomes: await input.ledger.listRawItems(claim.id),
+      currentSource: source,
+    }); // unchanged raw sets; final L03 owns zero-native preflight
     await input.ledger.finalizeRun({
-      runId: currentSource.id,
-      status: "failed",
-      error: input.safeApplyError,
+      runId: source.id, status: "failed", error: input.safeApplyError,
     }); // source failure is durable before rollback success
     await input.ledger.finalizeRun({ runId: claim.id, status: "success" });
-    successCommitted = true; // immediately after commit; no fallible work follows
+    successCommitted = true;
   } catch (error) {
     if (!successCommitted) {
-      await input.ledger.finalizeRun({
-        runId: claim.id,
-        status: "failed",
-        error: toSafeFullSiteErrorCode(error, "site_package_compensation_failed"),
-      });
+      await finalizeOwnedRollbackFailed(input.ledger, claim.id, error);
     }
-    throw error; // never rewrite a committed rollback success
+    throw error;
   }
 }
 ```
 
-After the claim, both raw sets flow unchanged into L03's zero-native preflight;
-no caller reduces identities, trusts status alone or installs a phase overlay.
-The apply catch invokes compensation after complete item-set initialization even
-with no success phase; durable evidence, not `completed.length`, decides reversal.
-Initialization failure marks only the source failed. A later source-finalization
-failure leaves rollback resumable; retry still orders source-failed before success.
+After the claim, both raw sets flow unchanged into L03's zero-native preflight; no caller reduces identities, trusts status alone or installs a phase overlay.
+The general apply catch invokes compensation only after complete item-set initialization, even with no success phase; durable evidence, not `completed.length`, decides reversal.
+Persistence-only apply initialization has a separate catch: it attempts exactly one safe source `failed` finalization, never claims/creates compensation, preserves the initialization error if finalization fails and never resumes apply. Explicit rollback alone accepts a unique manifest-aligned empty/first/middle/full `planned/prepared` prefix, re-proves create absence and update/noop exact-before state, performs zero native writes, resumes exact prior rollback outcomes, writes one swapped source-faithful success outcome per persisted source row and none for the missing tail, preserves an already-failed source or terminalizes a running source as `site_package_apply_interrupted`, then commits rollback success last.
+Dry-run initialization/completion instead gets two internal atomic terminalization attempts; exhausted success gets two failed-terminalization attempts. First terminal state wins, body work is never retried, primary body error wins, rollback/resume reject dry-run, and fresh apply ownership ignores inert non-success dry-run rows. A later post-compensation source-finalization failure still leaves the rollback run resumable from exact outcomes.
 
-Menu Page/item references are resolved before `validateDesired`; the complete
-resolved Menu (base row, items, document, appearance, extras and draft status) is
-passed once to `mutateMenuAggregateAtomic`. There is no executor-level Menu
-wiring write before or after that call. Publish is the only later Menu mutation.
+Menu Page/item references are resolved before `validateDesired`; the complete resolved Menu (base row, items, document, appearance, extras and draft status) is passed once to `mutateMenuAggregateAtomic`.
+There is no executor-level Menu wiring write before or after that call. Publish is the only later Menu mutation.
 
-Data flow: normalized input -> actor -> one private graph build -> dependency/lock
-acquisition -> planning -> UUID registry -> allowlisted substitution/native targets
--> run/durable evidence -> local CAS/phases -> publish-last/reversible settings.
-Known errors retain codes; unexpected errors redact; L03 owns compensation.
+Data flow: normalized input -> actor -> one private graph build -> dependency/lock acquisition -> planning -> UUID registry -> allowlisted substitution/native targets -> run/durable evidence -> local CAS/phases -> publish-last/reversible settings. Known errors retain codes; unexpected errors redact; L03 owns compensation.
 
-Regression tests cover every operation. A noop requires current ID/complete
-capture, registers that ID, performs zero native work and persists a durable
-envelope with equal top-level final state, V1 recovery, null staged target and
-`prepared`→`complete` phase-only change while staying in compensation evidence.
-L02 and L03 tests import the shared frozen V1 status/phase export, accept every
-one of the exact six rows, and reject its remaining Cartesian product and
-staged-target violations; neither suite duplicates a local matrix. The item-fail
-catch proves no `failed` item upsert occurs and only run finalization changes.
-The L02-owned `tests/unit/kits/fullSiteLifecycleUpdates.test.ts` proves typed
-apply performs zero normalizations and one graph build before any default/
-override dependency, lock or DB access; graph failure makes zero planner/
-dependency/lock/DB calls, and public input/deps reject a plan field. The exact
-frozen array reaches three-argument planning/preparation with zero rebuild/clone/
-second walker; this suite does not assert CLI call counts.
-Before `createRun`, every preparation failure proves zero writes; pin complete
-prepared rows and that retired generic preflight/resolver stays unused. Nested refs
-persist as IDs. Form preflight round-trips `submit.supportingText` and rejects a sibling extra; listing tests reject an extra at every nested record above.
-Detail tests keep `required:true` plus absent fallback through normalize/target persistence and fail a missing value rather than painting Aurora defaults.
-Every kind has an apply adapter, while only the frozen lifecycle-capable subset
-(`page`, `content_entry`, `detail_page`, `menu`) participates in publish-last.
-Page/entry/detail/menu remain draft until dependencies are wired; menu
-items/document/appearance precede publish; settings land in one last reversible
-stage through one required `applySettingsBatchAtomic` call with no per-key
-fallback; legacy and full-site runs use the same ledger port.
-Inject failure at each Form/Menu/Page/entry/detail internal mutation boundary and
-prove zero partial rows/revisions/cache effects. Prove exact intended IDs survive
-kill-window recovery for all nine UUID-backed kinds; a returned-ID mismatch and
-every legacy `id:null` prepared snapshot fail closed with zero natural-key
-recovery. Assert the full intended-ID registry resolves forward and backward
-package refs before canonical target preparation, and every item's exact before,
-staged/final after and V1 action is durable before the first adapter write. Pin
-both JSON helper exports with reordered object keys, ordered-array mismatch,
-primitives/null and nested values, including a real JSONB round trip. Pin
-canonical Form action
-ID/order/round-trip behavior and facade/split export parity. Start Page and detail
-Page update/rollback cases with different current and published documents plus
-non-empty revision histories; after injected failure and explicit rollback,
-assert exact current/published/publication/revision restoration. Pin that
-`classifyInterruptedSagaItems` returns a hint for every preflighted item,
-including noop and not-applied nodes, derives noop only from the source operation
-without calling the resolver or an adapter/native read, and never exposes any
-hint as mutation or outcome authority. Final L03 tests pin that every non-
-completed create/update hint still reaches fresh exact-ID refinement, while noop
-authority remains the global preflight's strict envelope, status/phase/null-staged
-matrix and canonical equality between the complete before snapshot and top-level
-final `id`/`desired` target with identical ID. Compatibility tests pin the legacy
-array projection from `recoverInterruptedSagaItems`, while final L03 tests prove
-that neither rollback nor `compensateItems` uses it for graph scheduling. Adapter
-tests prove every executor mutation supplies a strict saga input and that only
-the explicitly deprecated pre-L03 compensation shape reaches the base-input
-compatibility branch.
-For Page, entry and detail Page, pin the exact 100-revision acceptance boundary,
-`limit + 1` rejection with the three safe overflow codes and no truncation, and
-exact ordered revision restoration. For all nine atomic owners, mutate native
-state after initial capture but before replace and prove locked CAS returns
-`site_package_state_changed` with zero writes. Also mutate after rollback's fresh
-expected-current capture but before `restoreSnapshotAtomic` and before
-`deleteSnapshotAtomic`; prove the same fail-closed result with no partial restore/
-delete, cache invalidation or audit effect. Race a direct settings writer after
-capture but before both the apply batch and the raw restore batch; the table
-lock/re-read must either serialize it or reject the batch before all writes, with
-exactly one post-commit cache invalidation only on success. Crash-point tests pin
-`prepared`, `staged`,
-`publish_prepared` and `complete`: fresh state can equal only the durable before,
-exact staged target or exact final target. Stage-commit and publish-commit cases
-fail the next phase upsert, derive outcomes only from the unchanged raw DB row,
-then resume from that durable outcome without using the in-memory overlay.
+Regression tests cover every operation. A noop first performs mandatory resolution/native validation/complete capture and durable initialization; only its execution branch performs zero resolver/adapter/native reads or writes.
+It registers the current ID and persists equal top-level final state, V1 recovery, null staged target and the `prepared`→`complete` phase-only change.
+L02 and L03 import the shared frozen V1 status/phase export, accept exactly its six rows and reject the remaining Cartesian product/staged-target violations; neither duplicates a local matrix.
+The item-fail catch proves no `failed` item upsert occurs and only run finalization changes. Initialization tests fail before the first and after first/middle/last item writes, prove zero native/compensation calls plus one source-failed attempt, and inject successful/failed source finalization before explicit rollback. They assert strict prefix/cardinality rejection, exact source-faithful prefix outcomes with no missing-tail rows, source terminal result, rollback-success-last and zero native writes. Dry-run tests exhaust both two-attempt terminalization stages, prove first-terminal arbitration, primary-error precedence, no rollback/resume/body retry/native write and fresh-apply exclusion.
+The L02-owned `tests/unit/kits/fullSiteLifecycleUpdates.test.ts` proves typed apply performs zero normalizations and one graph build before any default/override dependency, lock or DB access; graph failure makes zero planner/dependency/lock/DB calls, and public input/deps reject a plan field.
+The exact frozen array reaches three-argument planning/preparation with zero rebuild/clone/second walker; this suite does not assert CLI call counts.
+Before `createRun`, every preparation failure proves zero writes; pin complete prepared rows and that retired generic preflight/resolver stays unused. Nested refs persist as IDs.
+Form preflight round-trips `submit.supportingText` and rejects a sibling extra; listing tests reject an extra at every nested record above. Detail tests keep `required:true` plus absent fallback through normalize/target persistence and fail a missing value rather than painting Aurora defaults.
+Every kind has an apply adapter, while only `page`, `content_entry`, `detail_page` and `menu` participate in publish-last. They remain draft until dependencies are wired; menu items/document/appearance precede publish.
+Settings land in one last reversible stage through one required `applySettingsBatchAtomic` call with no per-key fallback; legacy and full-site runs use the same ledger port.
+Additional focused regressions pin:
+
+- every Form/Menu/Page/entry/detail internal failure to zero partial rows,
+  revisions and cache effects;
+- all nine exact intended IDs through kill recovery, rejecting returned-ID drift
+  and legacy `id:null` without natural-key fallback;
+- bidirectional ref resolution and complete before/staged/final/action durability
+  before the first adapter write;
+- canonical JSON/JSONB equality, ordered-array drift, Form-action round trips and
+  facade/split export parity;
+- divergent Page/detail current, published, publication and ordered revisions,
+  including exact 100 acceptance and `limit + 1` safe rejection;
+- classifier hints for every item, noop's zero-read diagnostic and L03-only
+  complete-state/outcome authority for create/update/noop;
+- the legacy recovery projection and base-input bridge compile, while final L03
+  production never calls either;
+- replace/restore/delete/settings capture races fail closed with zero partial
+  effect and only successful settings commit invalidates once; and
+- all four durable phases plus failed stage/publish upserts resume solely from
+  immutable raw rows and durable outcomes.
 
 ## Sub-Tasks
 
@@ -994,7 +998,3 @@ then resume from that durable outcome without using the in-memory overlay.
   their files are not L02-owned
 - `bun --cwd core lint`, `bun --cwd core lint:types`, targeted strict security
   scan, and fresh `wc -l` over every L02-owned changed production/test file.
-
-## Documentation Updates Required
-
-Send resource lifecycle/snapshot notes to TASK-547-06.

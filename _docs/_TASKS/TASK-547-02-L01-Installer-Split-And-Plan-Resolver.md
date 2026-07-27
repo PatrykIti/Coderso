@@ -75,6 +75,29 @@ The existing source-run claim transaction lock is acquired only after those two
 session locks. No reverse ordering is allowed. The global lock is mandatory even
 for distinct package keys because `site.*`/design shell settings share one store.
 
+## Atomic Dry-Run Terminalization
+
+L01 alone adds `terminalizeDryRun()` to the shared port and concrete DB adapter.
+Its runtime boundary accepts only a direct plain object with exact keys
+`runId,status,error`: UUID run ID; `success` with `error:null`; or `failed` with
+one safe error code. The returned direct plain object has exactly
+`{outcome:"desired_terminal"}` or `{outcome:"different_terminal"}`; L02 validates
+that exact result from injected fakes before using it. Unknown/missing keys,
+invalid pairs and non-plain/proxy-trapping values fail cause-free as
+`site_package_dry_run_finalize_failed`; a missing ID alone fails as
+`site_package_run_not_found`.
+
+The concrete method builds the bounded item summary, then executes one
+`UPDATE solution_kit_install_runs ... WHERE id = <runId> AND mode = 'dry_run'
+AND status = 'running' RETURNING status,error`. PostgreSQL row locking and
+predicate recheck choose one winner. A returned row is
+`desired_terminal`; otherwise a bounded same-ID re-read returns
+`desired_terminal` only when both persisted status and safe error equal the
+request, `different_terminal` for another `success|failed` pair, not-found for
+absence, and the fixed finalize error for a non-dry-run or still-running row.
+No terminal row is overwritten. Driver/shape failures expose only the fixed
+finalize code, and no migration is permitted.
+
 ## Versioned Rollback Dependencies
 
 `fullSiteInstallTypes.ts` imports `PackageResourceKind` from package `types` and
@@ -125,44 +148,35 @@ export function readFullSiteRollbackActionV1(
   value: unknown,
 ): FullSiteRollbackActionV1 | null;
 
+export type FullSiteDryRunTerminalizationInput = Readonly<{
+  runId: string;
+  status: "success" | "failed";
+  error: string | null;
+}>;
+export type FullSiteDryRunTerminalizationResult = Readonly<{
+  outcome: "desired_terminal" | "different_terminal";
+}>;
+
 export type FullSiteInstallLedgerPort = {
-  // existing methods remain unchanged
+  terminalizeDryRun(
+    input: FullSiteDryRunTerminalizationInput,
+  ): Promise<FullSiteDryRunTerminalizationResult>;
   listItems(runId: string): Promise<PersistedFullSiteInstallLedgerItem[]>;
   listRawItems(runId: string): Promise<readonly RawFullSiteInstallLedgerItem[]>;
 };
 ```
 
-The builder rejects self/invalid identities and emits unique lexicographically
-sorted dependencies. The reader is strict (`schemaVersion`, `dependencies` only),
-bounded by the package edge limit, rejects duplicates, unknown kinds and invalid
-key syntax, and returns `null` for missing, malformed or unknown-version legacy
-data. L03 validates that referenced identities exist in the source graph. The
-reader never coerces missing evidence to `[]`. The private `isPlainJsonObject`
-guard and `readFullSiteRollbackActionV1` are total for hostile objects: every
-prototype, own-key, property and array-element access that can invoke a Proxy
-trap is fail-closed. A revoked envelope Proxy and a separately revoked
-dependencies-array Proxy both return `null`, never throw. Envelope Proxies whose
-`getPrototypeOf`, `ownKeys` or `dependencies` `get` trap throws do the same;
-cover those exact public-reader paths without exporting the private guard. Inside
-one guarded `try`, the reader accesses the envelope's `dependencies` property
-exactly once and captures it locally, calls
-`Array.isArray(capturedDependencies)` inside that same guard, captures its
-`length`, and accepts the length only when it is a safe integer in the inclusive
-range `0..PACKAGE_LIMITS.referenceEdges` (`0..4096`). It iterates only
-`0..<capturedLength`, with every existence and element read guarded, and after
-iteration requires one final length read to equal `capturedLength`. It must not
-loop against a dynamically reread length or use an iterator that can silently
-change the bound. In addition to the existing changing, non-numeric and throwing
-length/index/existence/own-descriptor cases, Proxy-backed arrays reporting a
-negative, fractional, `NaN` or greater-than-`Number.MAX_SAFE_INTEGER` length must
-return `null`. A dedicated length Proxy returns a valid captured length on its
-first read and throws a hostile sentinel from its second/final read; one captured
-public-reader invocation proves both `not.toThrow()` and `null`. Every hostile
-case uses that same one-invocation pattern. A valid dense array of exactly 4,096
-unique canonical identities succeeds, while the exact 4,097 over-limit case is
-also captured once and explicitly proves `not.toThrow()` plus `null`; a counted
-envelope getter still proves the single `dependencies` access. These cases are
-additive and may not remove or weaken any v18 reader regression.
+The builder rejects self/invalid identities and emits unique sorted dependencies.
+The strict reader allows only `schemaVersion`/`dependencies`, returns `null` for
+missing/malformed/unknown V1, never coerces absence to `[]`, and leaves graph
+closure to L03. It is total over revoked/hostile envelope or array Proxies,
+including throwing prototype/keys/property/length/existence/descriptor/index
+traps. In one guarded try it reads `dependencies` once, captures array and length,
+requires a safe `0..4096`, reads exactly those guarded indices, then requires one
+final equal length; no iterator or dynamic bound. Changing/string/throwing/
+negative/fractional/`NaN`/unsafe lengths return `null`. Each hostile and exact
+4,097 case is one captured `not.toThrow()` invocation returning `null`; a dense
+4,096 succeeds and a counted getter proves one property read. All v18 cases stay.
 
 Add optional `rollbackAction?: JsonObject | null` to the compatible construction
 shape and the exact required persisted and raw exports above; no leaf may redefine
@@ -182,6 +196,7 @@ L01 also adds the safe codes `site_package_recovery_missing_intended_id`,
 `site_package_rollback_dependency_invalid`,
 `site_package_rollback_dependency_blocked` and
 `site_package_rollback_ledger_failed`, plus
+`site_package_dry_run_finalize_failed`,
 `page_revision_snapshot_too_large`, `entry_revision_snapshot_too_large` and
 `detail_page_revision_snapshot_too_large`, before L02/L03 consume them.
 
@@ -798,6 +813,15 @@ values and proves `listRawItems()` returns every row unchanged in
 `const requiredAction: JsonObject | null = listed.rollbackAction` (without
 optional chaining, fallback or cast) pins the compatibility projection; L03 tests
 alone pin raw-to-persisted validation and matching legacy-null action semantics.
+The same suite calls `terminalizeDryRun` through hostile unknown inputs/results,
+pins exact-key/pair/result rejection and cause-free codes, and uses two independent
+DB clients to race `success/null` against `failed/<safe-code>`. Exactly one
+conditional update wins; its caller observes `desired_terminal`, the loser
+observes `different_terminal`, an identical repeat is idempotent, and the stored
+summary/status/error never changes afterward. Missing ID, apply-mode ID and a
+still-running fault seam produce only their specified errors. An injected
+post-commit transport throw followed by a second call proves ambiguous commit
+recovery observes `desired_terminal` rather than overwriting or duplicating work.
 
 The planner's pure no-write test gives every planner-visible ledger mutation
 method installed on the fake a counting implementation that increments and
@@ -891,6 +915,8 @@ composition remains usable before L02 lands.
   code across the exact four-stage initializer, and rebuild every managed-ownership
   fixture around preallocated exact-ID ownership with `try/finally` active before
   its first mutation.
+- [ ] Add the exact atomic dry-run terminalization port/DB method, concurrent
+  first-winner and ambiguous-commit/idempotency matrix without adding a path.
 
 ## Testing Requirements
 
@@ -923,18 +949,14 @@ composition remains usable before L02 lands.
   unlocated/unparsed diagnostics, new unowned diagnostics and ambiguous owners
   block TASK-547-02-L02 dispatch/checkpoint progression. The gate reports the remaining later-leaf and unchanged-baseline
   counts explicitly and must not describe a non-zero global run as clean.
-- Reader/type/planner integrity gate: retain all v18 cases and prove revoked
-  envelope and dependencies-array Proxies; throwing envelope `getPrototypeOf`,
-  `ownKeys` and `dependencies` traps; changing/string/throwing/negative/
-  fractional/`NaN`/unsafe-integer lengths; a length Proxy whose first read is
-  valid and second/final read throws; throwing existence/descriptor/index traps;
-  exact 4,096 success; and 4,097 rejection. Every hostile case and the exact
-  4,097 case is one captured invocation asserted `not.toThrow` plus `null`, after
-  one guarded envelope `dependencies` access. The persisted `rollbackAction`
-  required-property assertion remains a direct typed assignment without `?.`,
-  `??` or a cast; every installed planner ledger-write spy throws if invoked and
-  finishes with exactly zero calls; a direct concrete two-argument resolver call
-  performs exactly one self-evidence lookup.
+- Reader/type/planner gate: execute the exact hostile/4,096/4,097 matrix above;
+  keep the required `rollbackAction` direct assignment without `?.`, `??` or cast,
+  throwing zero-call planner-write spies, and one self-evidence lookup for a
+  direct concrete two-argument resolver call.
+- Dry-run terminalization gate: exact hostile input/result rejection, SQL
+  `id + mode=dry_run + status=running` predicate, two-client opposite-terminal
+  race, identical retry, missing/wrong-mode/still-running errors, one immutable
+  winner and post-commit-throw recovery; no terminal overwrite or driver detail.
 - Resolver projection gate: the Bun source-shape test pins the exact content
   type, form/field/action, template/query, content-entry, detail, Page and
   menu/item selection constants by comparing each complete body to only ordered
@@ -944,37 +966,14 @@ composition remains usable before L02 lands.
   checks, and pins child cap imports, `orderIndex,id`, cap+1 limits and pre-project
   oversize guards. DB behavior preserves exact-ID/natural lookup and proves all
   six exact-cap/cap+1 child boundaries without truncation.
-- Source/query-shape gate: prove through the testable builder/execution seam that
-  `findManagedResourceEvidence(input)` executes exactly one compiled builder
-  SELECT, then assert its `.toSQL()` has one statement whose winner is driven by
-  package/apply/success `candidateRun`, has one correlated `INNER JOIN LATERAL`
-  with `candidateItem.runId = candidateRun.id`, the requested item
-  kind/key/success/`create|update` filters, item `createdAt DESC`, ID DESC and
-  per-run `LIMIT 1`, exactly one rollback-run-correlated `NOT EXISTS` containing
-  the rollback-status-success `OR` nested matching-item `EXISTS`, the exact
-  five-field winner order and winner `LIMIT 1`, and an outer-only winning
-  `afterSnapshot` fetch. Assert the compiled derived projections use exactly
-  `candidate_item_id`, `candidate_item_created_at` and `candidate_run_id`, that
-  the winner carries the two candidate-item aliases distinctly, and that the
-  outer fetch selects `candidate_run_id` and joins through `candidate_item_id`.
-  Fail the gate if derived-table construction/compilation reports duplicate
-  `id` columns or if compiled derived projections contain duplicate/unaliased
-  `id` columns. Prove the lateral `candidate_item_created_at DESC` position is
-  strictly before `candidate_item_id DESC` and both precede that subquery's
-  `LIMIT 1`. Assert that candidate items do not drive the winner; do not count
-  separate rollback anti-joins or use opaque driver counters.
-- Conditional no-migration plan gate: the named DB integration test runs the
-  exact parameterized production run-driven correlated-lateral SELECT under
-  `EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON)` for both frozen fixture profiles and
-  enforces every execution/emission/scan/buffer budget above while emitting only
-  the sanitized summary; expected-winner mismatch emits only
-  `managed_evidence_explain_winner_mismatch`, never an assertion diff. Pure
-  parser tests accept both forms of the exact nested positive oracle above and
-  deep-equal its four frozen outputs, require finite non-negative
-  execution/row/loop metrics on every node, allow only absent optional
-  removal/buffer counters and absent leaf `Plans`, and map every malformed
-  top-level/metric/node/child/`Plans` shape or derived overflow through the
-  one-invocation exact-`Error` assertion above.
+- Source/query-shape gate: one compiled builder SELECT must retain the exact
+  run-driven lateral winner, filters, anti-join, aliases, ordering, limits and
+  outer fetch defined above. Reject item-driven winners, duplicate/unaliased IDs,
+  split anti-joins and opaque counters.
+- Conditional no-migration plan gate: run both frozen production-query EXPLAIN
+  profiles and budgets above with sanitized winner mismatch. Pure parsing retains
+  both positive forms/four outputs, finite metrics, only specified optional
+  absences, and fixed one-invocation errors for every malformed/overflow shape.
 - L01 planner regression gate: one evidence lookup per identity; both overloads normalize zero times, two-arg builds once before deps, and three-arg planning consumes L02's unchanged plan with zero builds before any dependency.
 - DB test-integrity gate: the URL helper returns false only for `undefined` and
   true for `""`; production and failure tests use the same injectable four-stage
@@ -992,7 +991,3 @@ composition remains usable before L02 lands.
 - Run all three L01 DB integration files independently, then `wc -l` every
   L01-owned changed production/test file; each must be at most 1,000 physical
   lines.
-
-## Documentation Updates Required
-
-Send installer module/order notes to TASK-547-06.
