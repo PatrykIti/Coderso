@@ -177,7 +177,7 @@ The desired-value walker carries `explicitBinaryCarrier` recursively. For an
 object property it passes `inheritedCarrier || isExplicitBinaryCarrier(key)` to
 that complete property value; arrays pass the inherited flag to every item and
 objects pass it to every descendant. Every descendant string is therefore
-canonical-encoded-scanned, while `null`, booleans and finite numbers remain
+Base64-family-inspected, while `null`, booleans and finite numbers remain
 ordinary JSON. Actual binary rejects at any depth. This closes direct, array and
 nested-object carrier shapes without declaring a composite value invalid merely
 because it is composite.
@@ -200,17 +200,32 @@ Also inspect `URL.searchParams` and a fragment parsed once with
 double-decode. A decoded parameter name is marked when the sensitive-field
 classifier above matches, its terminal token is exactly `sig` or `signature`,
 or its complete token sequence is exactly `aws/access/key/id`,
-`google/access/id`, or `key/pair/id`. Iterate duplicates. Reject the URL if any
-marked decoded value has `length > 0` without trimming; empty marked occurrences
-alone are accepted. Return one URL finding regardless of marker count/surface.
-Safe non-markers include `token_type`, `signatureVersion`, `signedHeaders`,
-`expires`, `policy`, `algorithm`, `se`, `sp`, `sv`, `state`, `scope`, `client_id`
-and `code`.
+`google/access/id`, or `key/pair/id`. In this URL-only marker predicate, also
+mark only a decoded parameter name whose exact full string ASCII-case-folds to
+`code`. Do not add `code` to the global sensitive-key tokens and do not apply
+substring, camel, or separator-token matching to this special case. Iterate
+duplicates. Reject the URL if any marked decoded value has `length > 0` without
+trimming; empty marked occurrences alone are accepted, while an empty occurrence
+followed by a nonempty duplicate rejects. Return one URL finding regardless of
+marker count/surface. Safe non-markers include `token_type`,
+`signatureVersion`, `signedHeaders`, `expires`, `policy`, `algorithm`, `se`,
+`sp`, `sv`, `state`, `scope`, `client_id`, `coupon_code`, `promoCode`,
+`code_type`, `code_challenge`, `code_challenge_method`, `postal_code`,
+`source_code` and `status_code`; `response_type=code` is also safe because only
+the decoded parameter name is classified.
 
 Carrier-independent authorization scanning is high-confidence rather than a
 two-word substring rule. Basic first matches
-`/^basic[\t ]+([A-Za-z0-9+/]+={0,2})$/i`, then requires strict canonical standard
-Base64 decode→re-encode identity and a decoded `:` byte. Bearer first matches
+`/^basic[\t ]+([A-Za-z0-9+/]+)(=*)$/i`. Split the captured standard-alphabet
+body from its terminal padding, ignore the supplied padding for decoding, and
+pass the nonempty body to a private bounded pure-TypeScript standard Base64 body
+decoder. The decoder rejects body remainder one, synthesizes the zero, one or
+two terminal `=` required by the body length, decodes sextets without
+`Buffer`, Bun APIs, `atob` or imports, and does not require zero pad bits. Basic
+rejects whenever those decoded bytes contain `0x3a` (`:`), regardless of
+canonical, missing, wrong or excess supplied terminal padding and regardless of
+nonzero pad-bit aliases. A matched but structurally undecodable body is not a
+Basic finding. Bearer first matches
 `/^bearer[\t ]+([A-Za-z0-9\-._~+/]+={0,})$/i`, then requires a captured token of
 at least 16 code units containing at least one digit or `-._~+/=`. Thus real
 Basic credentials and JWT/API-style Bearer material reject, while ordinary copy
@@ -219,18 +234,34 @@ such as `Basic analytics`, `Basic Plan`, `Bearer token` and
 distinguished from an opaque alphabetic token and is intentionally not guessed.
 The PEM predicate is `/-----BEGIN (?:[A-Z0-9]+ )*PRIVATE KEY-----/`; the
 carrier-independent data URL predicate is `/^data:[^,\r\n]*;base64,/i`.
-Canonical standard/Base64URL scanning runs only for an explicit carrier. A nonempty standard candidate
-matches exactly
-`^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$`; a URL-safe
-candidate matches `^[A-Za-z0-9_-]+$` with `length % 4 !== 1`. Strict
-decode→re-encode identity uses required `=` padding for standard Base64 and no
-padding for Base64URL. Canonical `blob:"copy"` rejects, but bare Base64-looking
-descriptive prose stays valid.
+Base64-family inspection runs only for an explicit carrier. It receives the
+detection-only ECMAScript-trimmed string, then strips exactly U+0009 through
+U+000D and U+0020 (TAB, LF, VT, FF, CR and SPACE) in one bounded pass; it never
+changes the stored string. Empty or ASCII-whitespace-only input is
+`not_encoded`. If any remaining code unit is outside
+`[A-Za-z0-9+/_=-]`, the result is also `not_encoded`. Otherwise split the body
+from the terminal `=` run. Internal padding, an empty/padding-only body, mixed
+standard (`+` or `/`) and URL (`-` or `_`) alphabets, a body remainder of one,
+or wrong/excess terminal padding is `encoded_like_invalid`. The sole explicit
+impossible-length near miss is a one-symbol unpadded body, which is
+`not_encoded`; any padding on that body is `encoded_like_invalid`. For body
+remainders zero, two and three, required padding is respectively zero, two and
+one: no padding or exactly that required count is valid, except remainder zero
+allows only zero. Every other padding count is wrong or excess. A valid
+standard, URL-safe or alphabet-neutral lexeme is `encoded` whether padded or
+unpadded and regardless of canonical pad bits. Both `encoded` and
+`encoded_like_invalid` map to `base64_value_forbidden`; only `not_encoded` is
+accepted. This detector needs no decoder, entropy heuristic, `Buffer`, Bun API,
+`atob` or import. A future decoder must enforce this strict grammar and must
+never permissively consume a string that this contract accepted as
+`not_encoded`. Thus encoded `blob:"copy"` rejects, while punctuation-bearing
+near misses and bare Base64-looking descriptive prose outside an explicit
+carrier stay valid.
 
 For a desired property, a sensitive key emits one `secret_key_forbidden` and
 skips value classification for that property after the separate depth preflight.
 Otherwise value-reason precedence is binary → authorization → private-key PEM →
-credential URL → Base64 data URL → explicit-carrier canonical Base64, with at
+credential URL → Base64 data URL → explicit-carrier Base64 family, with at
 most one finding per value. Desired findings always use
 `$.resources.<collection>[<index>].desired.[redacted]`. Package prose findings
 use only `$.metadata.name`, `$.metadata.description`, or
@@ -333,13 +364,105 @@ const isExplicitBinaryCarrier = (key: string): boolean =>
     BINARY_CARRIER_ROLES,
   );
 
+const asciiCaseFold = (value: string): string =>
+  value.replace(/[A-Z]/g, (character) =>
+    String.fromCharCode(character.charCodeAt(0) + 0x20),
+  );
+
+const isUrlCredentialParameterName = (decodedName: string): boolean =>
+  isCredentialUrlMarker(decodedName) || asciiCaseFold(decodedName) === "code";
+
 const isCredentialBearingUrl = (trimmed: string): boolean => {
   const parsed = parseTask547UrlCandidate(trimmed, "https://task547.invalid/");
   if (!parsed) return false;
   if (parsed.username.length > 0 || parsed.password.length > 0) return true;
   return [...parsed.searchParams, ...fragmentParamsOnce(parsed.hash)].some(
-    ([name, value]) => value.length > 0 && isCredentialUrlMarker(name),
+    ([name, value]) => value.length > 0 && isUrlCredentialParameterName(name),
   );
+};
+
+type Base64FamilyInspection =
+  | "not_encoded"
+  | "encoded"
+  | "encoded_like_invalid";
+
+const isBase64MimeWhitespace = (character: string): boolean => {
+  const codeUnit = character.charCodeAt(0);
+  return (codeUnit >= 0x09 && codeUnit <= 0x0d) || codeUnit === 0x20;
+};
+
+const inspectBase64FamilyLexeme = (
+  detectionTrimmed: string,
+): Base64FamilyInspection => {
+  let compact = "";
+  for (const character of detectionTrimmed) {
+    if (isBase64MimeWhitespace(character)) continue;
+    if (!/[A-Za-z0-9+/_=-]/.test(character)) return "not_encoded";
+    compact += character;
+  }
+  if (compact.length === 0) return "not_encoded";
+
+  const firstPadding = compact.indexOf("=");
+  const body = firstPadding < 0 ? compact : compact.slice(0, firstPadding);
+  const padding = firstPadding < 0 ? "" : compact.slice(firstPadding);
+  if (padding.length > 0 && !/^=+$/.test(padding)) {
+    return "encoded_like_invalid";
+  }
+  if (body.length === 0) return "encoded_like_invalid";
+  const usesStandardAlphabet = body.includes("+") || body.includes("/");
+  const usesUrlAlphabet = body.includes("-") || body.includes("_");
+  if (usesStandardAlphabet && usesUrlAlphabet) {
+    return "encoded_like_invalid";
+  }
+
+  const remainder = body.length % 4;
+  if (remainder === 1) {
+    return body.length === 1 && padding.length === 0
+      ? "not_encoded"
+      : "encoded_like_invalid";
+  }
+  const requiredPadding = remainder === 0 ? 0 : 4 - remainder;
+  if (padding.length !== 0 && padding.length !== requiredPadding) {
+    return "encoded_like_invalid";
+  }
+  return "encoded";
+};
+
+const decodeStandardBase64Sextet = (character: string): number | null => {
+  // Pure ASCII char-code mapping for A-Z, a-z, 0-9, + and /.
+  return mapStandardBase64AsciiToSextet(character);
+};
+
+const decodeBasicStandardBase64Body = (
+  body: string,
+): Uint8Array | null => {
+  if (body.length === 0 || body.length % 4 === 1) return null;
+  const synthesized = `${body}${"=".repeat((4 - (body.length % 4)) % 4)}`;
+  const output = new Uint8Array(Math.floor((body.length * 6) / 8));
+  let outputIndex = 0;
+  for (let index = 0; index < synthesized.length; index += 4) {
+    const a = decodeStandardBase64Sextet(synthesized[index]);
+    const b = decodeStandardBase64Sextet(synthesized[index + 1]);
+    const c = synthesized[index + 2] === "="
+      ? 0
+      : decodeStandardBase64Sextet(synthesized[index + 2]);
+    const d = synthesized[index + 3] === "="
+      ? 0
+      : decodeStandardBase64Sextet(synthesized[index + 3]);
+    if (a === null || b === null || c === null || d === null) return null;
+    const word = (a << 18) | (b << 12) | (c << 6) | d;
+    if (outputIndex < output.length) output[outputIndex++] = word >>> 16;
+    if (outputIndex < output.length) output[outputIndex++] = word >>> 8;
+    if (outputIndex < output.length) output[outputIndex++] = word;
+  }
+  return output;
+};
+
+const isForbiddenBasicAuthorization = (trimmed: string): boolean => {
+  const match = /^basic[\t ]+([A-Za-z0-9+/]+)(=*)$/i.exec(trimmed);
+  if (!match) return false;
+  const decoded = decodeBasicStandardBase64Body(match[1]);
+  return decoded?.includes(0x3a) ?? false;
 };
 
 type PackageValueSecretReason =
@@ -487,15 +610,27 @@ carrier role; pin longest-first `sessiontoken`/`secretaccesskey`, repeated suffi
 `XAPIKey`, `X-API-Key` plus URL-parameter equivalents.
 
 Carrier tests cover every base alone, every role, compact/multi-role forms,
-direct strings, inherited arrays and nested objects. Reject canonical encoded
-descendants under `base64Data`, `base64data`, `imageBase64Data`,
-`binaryPayload`, `bytesValue`, `blobContent`; accept the five carrier near misses
-above and ordinary nonencoded direct/descendant copy under a carrier. Pin a
-canonical decoded-colon Basic credential and a credential-shaped Bearer token,
-while accepting `Basic analytics`, `Basic Plan`, `Bearer token` and
-`Bearer architecture` in desired and package prose. Also pin PEM, typed-binary,
-Base64 data URL and explicit-carrier standard/Base64URL with complete
-non-disclosure.
+direct strings, inherited arrays and nested objects. Under `base64Data`,
+`base64data`, `imageBase64Data`, `binaryPayload`, `bytesValue` and `blobContent`,
+reject both `encoded` and `encoded_like_invalid` descendants for unpadded
+standard, padded URL-safe and alphabet-neutral forms. Pin MIME whitespace
+U+0009 TAB, U+000A LF, U+000B VT, U+000C FF, U+000D CR and U+0020 SPACE,
+including CRLF; mixed alphabets; internal, wrong and excess padding; body
+remainders one beyond the single-symbol exception; and nonzero pad-bit aliases.
+Accept empty/ASCII-whitespace-only values, punctuation-bearing near misses and
+the one-symbol unpadded impossible-length near miss, but reject that one symbol
+with any padding. Accept the five carrier-key near misses above and ordinary
+`not_encoded` direct/array/nested descendant copy. Pin all three inspection
+results, the last-place Base64 reason precedence, trusted redacted paths and
+complete non-disclosure.
+
+Pin canonical decoded-colon Basic `YTo=`, nonzero-pad-bit alias `YTq=`, missing
+padding `YTo`, wrong padding `YTo==` and excess padding `YTo===` in desired and
+package prose; every variant must reject without disclosing its token. Keep
+`Basic analytics`, `Basic Plan`, structurally undecodable colon-free Basic copy,
+`Bearer token` and `Bearer architecture` valid, and reject a
+credential-shaped Bearer token. Also pin PEM, typed-binary and Base64 data URL
+with complete non-disclosure.
 
 Credential URL cases include canonical `scheme://` userinfo, protocol-relative
 userinfo, `http:user:pass@example.com`, AWS/GCS/CloudFront/Azure signature and
@@ -504,12 +639,16 @@ mixed-case/separator variants and duplicate marked entries where an earlier
 empty value cannot hide a later nonempty one. Accept all-empty marked entries,
 the safe URL markers listed above, `access%255Ftoken` to pin exactly-once
 decoding, absolute-scheme near misses with empty parsed userinfo, and ordinary
-URLs. Explicitly cover `/download?token=secret`, `./`/`../` relative forms,
-`?api_key=secret`, `#access_token=secret`,
+URLs. In both query and fragment, reject nonempty exact-name `code`, `CODE` and
+`%63ode`, but accept `%2563ode`, every listed longer code-shaped name and
+`response_type=code`. Pin exact-name duplicates as all-empty accepted and
+empty-then-nonempty rejected. Explicitly cover `/download?token=secret`,
+`./`/`../` relative forms, `?api_key=secret`, `#access_token=secret`,
 `#?access%5Ftoken=secret`, `#access%255Ftoken=public`, fragment empty-then-
 nonempty/all-empty duplicates, and the exact `AWSAccessKeyId`, `GoogleAccessId`
 and `Key-Pair-Id` sequences. Put unique sentinels in userinfo, decoded marker
-names and values and prove none occur in error name/message/code/diagnostics.
+names and values—including the exact-name `code` cases—and prove none occur in
+error name/message/code/diagnostics.
 
 Exercise one credential-shaped Bearer sentinel across all seven exact
 package-prose surfaces,
@@ -520,7 +659,10 @@ URL, an incomplete Bearer phrase and bare Base64-looking descriptive text.
 Pin overlapping precedence too: a PEM-bearing marked URL chooses
 `private_key_forbidden`; a credential-marked Base64 data URL chooses
 `credential_url_forbidden`; and a sensitive key holding another forbidden value
-emits only `secret_key_forbidden`.
+emits only `secret_key_forbidden`. An actual typed-binary value under an explicit
+carrier chooses `binary_value_forbidden`, and authorization, PEM, credential URL
+and Base64 data URL findings continue to precede the explicit-carrier Base64
+lexeme result.
 Use an unsorted multi-residual fixture whose canonical identity order differs
 from its input order; trigger a finding in the later input element and prove its
 path retains that original pre-sort input index, never its sorted position or
@@ -549,7 +691,9 @@ suite neither imports nor source-inspects that later-owned reader.
   serialized-size semantics, exact verification/setting contracts and their
   immutable boundaries; freeze scalar/canonical ordering, residual identity and
   secret/encoded-value policies, including all seven package-prose surfaces,
-  compact credential aliases, compound carriers and signed query/fragment URLs;
+  compact credential aliases, colon-decoded noncanonical Basic variants,
+  compound-carrier Base64-family grammar and exact-name `code` query/fragment
+  URLs;
   remove undocumented residual/diagnostic limit coupling; split moved cases into independently runnable
   `full-site-package-canonicalization.test.ts` and
   `full-site-package-security.test.ts`, backed by the focused

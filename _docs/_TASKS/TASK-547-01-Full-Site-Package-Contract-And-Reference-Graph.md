@@ -246,21 +246,35 @@ literally `false`; otherwise it is an implementation gap and blocks closure.
   name it is never a raw-source-file limit; TASK-547-05 owns a separate,
   distinctly named raw-source constant.
 - **Secrets:** reject forbidden setting namespaces, provider keys, cookies,
-  authorization values, raw bytes/base64 and credential-bearing URLs. Classify
-  desired keys by camelCase/separator tokens and exact whole-token compact
-  aliases, never substring matching. Reject terminal credential material/pairs
-  and their exact material suffixes while allowing descriptive near misses such
-  as `tokenizedCopy`, `cookieBanner` and `apiKeyDescription`. Recognize explicit
-  `base64|bytes|binary|blob` carriers plus exact `content|data|payload|value`
-  compound roles. Standards-parse every absolute-scheme
+  authorization values, raw bytes, encoded values in explicit binary carriers
+  and credential-bearing URLs. Classify desired keys by camelCase/separator
+  tokens and exact whole-token compact aliases, never substring matching. Reject
+  terminal credential material/pairs and their exact material suffixes while
+  allowing descriptive near misses such as `tokenizedCopy`, `cookieBanner` and
+  `apiKeyDescription`. Recognize explicit `base64|bytes|binary|blob` carriers
+  plus exact `content|data|payload|value` compound roles. Only values under those
+  explicit carriers receive bounded
+  Base64-family scanning: strip exactly U+0009 through U+000D and U+0020 (HT,
+  LF, VT, FF, CR and SPACE) for detection and reject canonical or noncanonical
+  variants, including missing or correct padding, mixed standard/URL alphabets,
+  internal padding, wrong or excess terminal padding and nonzero-pad-bit aliases.
+  Bare desired fields, package prose and carrier-key near misses remain outside
+  that scan. Standards-parse every absolute-scheme
   (`^[A-Za-z][A-Za-z0-9+.-]*:`), protocol-relative and exact `/`, `./`, `../`,
   `?`, `#` relative URL candidate (the relative forms use one fixed inert base),
   rejecting parsed userinfo including special-scheme forms without `//` and any
   nonempty, exactly-once-decoded credential/signature query or fragment
-  parameter. Reject credential-shaped Basic/Bearer values, private-key PEM and
-  Base64 data URLs while ordinary Basic/Bearer copy stays valid. Secret
-  diagnostics use a fixed redacted desired-key path or one of seven exact
-  package-prose paths and never echo input.
+  parameter. A decoded parameter name whose full untrimmed string
+  ASCII-case-folds exactly to `code` also rejects when its decoded value has
+  nonzero length without trimming; this is URL-only and does not add `code` to
+  the global desired-key grammar, so descriptive multi-token names such as
+  `status_code`, `promoCode` and `code_type` remain valid. Basic authorization
+  uses a bounded pure decoder and decoded-colon detection rather than canonical
+  decode/re-encode identity, so padding and nonzero-pad-bit variants reject while
+  `Basic Plan` and `Basic analytics` remain valid. Credential-shaped Bearer
+  values, private-key PEM and Base64 data URLs reject; ordinary Bearer copy
+  remains valid. Secret diagnostics use a fixed redacted desired-key path or one
+  of seven exact package-prose paths and never echo input.
 - **CSS/HTML:** package metadata never becomes a raw CSS/HTML/JS sink.
 
 ## Implementation Pseudocode
@@ -342,10 +356,21 @@ and deterministic code-unit/ECMAScript index order, including `-0` → `0`.
 independently through shared `fullSitePackageTestSupport.ts`; moved assertions or
 builders are not copied. The security suite pins all seven package-prose
 surfaces, compact/suffixed credential aliases, compound binary carriers,
-userinfo and signed query/fragment URL markers, safe descriptive near misses,
-exactly-once decoding, duplicate empty/nonempty marker behavior and complete
-non-disclosure. An unsorted multi-residual fixture proves diagnostic paths keep
-their original input indexes after canonical residual sorting. Graph tests are
+userinfo and signed query/fragment URL markers, plus exact ASCII-case-insensitive
+`code` in both query and fragment with exactly-once decoding and empty/nonempty
+duplicate behavior. It accepts descriptive multi-token code names and other safe
+near misses. Explicit-carrier cases cover direct, inherited-array and nested-
+object values; all six stripped ASCII whitespace characters; canonical,
+missing/correct padding; mixed standard/URL alphabets; internal, wrong and excess
+padding; nonzero pad bits; and bare-field/carrier-key near misses. Basic cases
+pin canonical and padding/pad-bit alias credentials plus safe `Basic Plan`/`Basic
+analytics`. Overlaps assert the single-finding precedence sensitive key → binary
+→ authorization → private-key PEM → credential URL → Base64 data URL → explicit-
+carrier Base64 family, with complete non-disclosure of keys, URLs/decoded
+parameters, authorization, encoded/decoded bytes, residual IDs and values. An
+unsorted multi-residual fixture proves
+diagnostic paths keep their original input indexes after canonical residual
+sorting. Graph tests are
 likewise split into independently
 runnable `full-site-package-references-{core,page,diagnostics,plan}.test.ts`
 through focused `fullSitePackageReferenceTestSupport.ts`. They cover every
