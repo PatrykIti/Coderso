@@ -327,9 +327,9 @@ export type PlannedPackageResource = Readonly<{
 }>;
 ```
 
-Every accepted `PackageRef` produces one `purpose:"substitute"` occurrence edge
-and one descriptor; the content-route literal produces only the
-`purpose:"content_route_type"` edge. Count occurrences before deduplication.
+Every accepted `PackageRef` goes through per-build `recordPackageRefOccurrence`,
+which owns one `purpose:"substitute"` edge plus one descriptor; the route literal
+adds only its counted `purpose:"content_route_type"` edge. Deduplicate dependencies later.
 `dependencies` contains unique direct targets sorted lexicographically;
 `references` keeps occurrence discovery order. The plan is topologically sorted
 with dependencies first and stable ties by original package ordinal, then
@@ -474,7 +474,7 @@ const collectContentRouteOccurrences = (source, context) => {
   }
 };
 const collectPackageOccurrences = (context) => {
-  const state = createOccurrenceState(context);
+  const state: ReferenceOccurrenceState = createOccurrenceState(context);
   for (const source of context.registry.resources) {
     const sourceContext = { ...context, ...state, source };
     if (isContentRoutesSetting(source)) {
@@ -527,13 +527,13 @@ const selectPageReferenceRoot = (
   const value = source.seed.desired[rootKey];
   return isJsonObject(value) ? { rootKey, value } : null;
 };
-type PageReferenceVisitContext = Readonly<{
-  source: RegisteredPackageResource;
-  root: PageReferenceRoot;
-  collector: GraphDiagnostics;
-  registeredReferencePaths: Set<string>;
-  blockedReferencePrefixes: ReferenceAuthorityPath[];
-}>;
+type RecordPackageRefOccurrence = (source: RegisteredPackageResource, relativePath: readonly (string | number)[],
+  targetKind: PackageResourceKind, presence: FixedReferenceRule["presence"], value: JsonValue | undefined) => RegisteredPackageResource | null;
+type ReferenceOccurrenceState = Readonly<{ edges: PackageReferenceEdge[];
+  descriptorsByIdentity: Map<PackageResourceIdentity, PlannedPackageReference[]>; recordPackageRefOccurrence: RecordPackageRefOccurrence }>;
+type PageReferenceVisitContext = Readonly<{ source: RegisteredPackageResource; root: PageReferenceRoot;
+  collector: GraphDiagnostics; registeredReferencePaths: Set<string>;
+  blockedReferencePrefixes: ReferenceAuthorityPath[]; recordPackageRefOccurrence: RecordPackageRefOccurrence }>;
 type ReferenceAuthorityPath = Readonly<{ sourceOrdinal: number; path: readonly PathSegment[] }>;
 const serializeAuthorityPath = (
   sourceOrdinal: number,
@@ -685,7 +685,7 @@ const collectPageBlockReferences = (
     path,
     type,
     PAGE_REFERENCE_AUTHORITY.breakpoints,
-    context,
+    context, // Uses context.recordPackageRefOccurrence; never module state.
   );
   const slots = validateSlotsFirstMatch(
     preflight,
@@ -711,7 +711,7 @@ const collectPageSourceReferences = (
   const root = selectPageReferenceRoot(context.source);
   if (!root) return; // TASK-547-02 owns malformed native root/container shape.
   const pageContext = { ...context, root };
-  collectPageCollectionLinkReferences(root.value, [root.rootKey], pageContext);
+  collectPageCollectionLinkReferences(root.value, [root.rootKey], pageContext); // Same writer.
   forEachNativeRootBlock(root.value, [root.rootKey], (block, path) =>
     collectPageBlockReferences(block, path, 1, pageContext),
   );
@@ -726,7 +726,7 @@ const collectRefsAtAllowedPaths = (registry: PackageResourceRegistry) => {
   >();
   const { edges, descriptorsByIdentity } = collectPackageOccurrences({
     registry,
-    diagnostics,
+    collector: diagnostics,
     registeredReferencePaths,
     blockedReferencePrefixes,
     resolvedDetailPageContentTypes,
@@ -800,9 +800,9 @@ diagnostics. TASK-547-02 owns post-substitution native `desired` validation.
 Core tests pin non-Page `REFERENCE_PATHS` without `presence`; table-drive both required rows,
 the listing `when_present` row and every nullable row through absent/null/scalar/valid boundaries with exact code/reason/source path and occurrence counts. The focused
 Page suite independently proves Page `data` and Page Template `document` accept/
-substitute root plus recursive refs with exact root-first descriptor arrays;
-opposite roots are forbidden, every ref yields one occurrence/descriptor, and
-only recorded leaves change before TASK-547-02 validation. It owns all Page table
+substitute root plus recursive refs with exact root-first edge/descriptor arrays;
+every ref yields one occurrence/descriptor and distinct `A→B→A` builds prove writer
+isolation; opposite roots are forbidden and only recorded leaves change. It owns all Page table
 rows, device/nesting states, collection type, discriminator cross-product,
 deterministic recursion and forbidden `menu.desired.document.items`. For each
 Page kind pin depth 4/5, child 24/25, unknown slots and slots on an atom without
