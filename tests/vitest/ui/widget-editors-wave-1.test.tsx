@@ -354,7 +354,7 @@ test("TemplateSection editors cover setup, visual summaries, and advanced diagno
   } finally {
     view.cleanup();
   }
-}, 10000);
+});
 
 test("AppointmentForm editors update flow, copy, visibility, and advanced runtime fields", async () => {
   const {

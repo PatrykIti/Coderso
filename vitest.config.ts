@@ -13,6 +13,15 @@ export default defineConfig({
     execArgv: ["--no-experimental-webstorage"],
     include: ["tests/vitest/**/*.{test,spec}.{ts,tsx}"],
     setupFiles: ["tests/setup/vitest.ts"],
+    // Lane-wide per-test budget. The lane transforms and imports its module graph
+    // per worker, so a test's wall clock is dominated by contention rather than by
+    // the work it asserts: the slowest boundary test costs 4.4s alone and over 15s
+    // inside the full parallel run. Vitest's 5000ms library default is below that
+    // floor, which failed tests that pass in isolation. `test:bun` and the coverage
+    // lane already declare their own full-suite budgets for the same reason; this
+    // gives the plain Vitest lane the one it never had. Assertions are unchanged --
+    // a hung test still fails, it just is not raced by a neighbouring worker.
+    testTimeout: 30_000,
     coverage: {
       provider: "v8",
       reportsDirectory: "coverage/vitest",

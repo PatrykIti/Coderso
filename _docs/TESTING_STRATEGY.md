@@ -103,6 +103,18 @@ then that test should move to Vitest.
 - Assistant operation policy coverage and route matrix validation, because it is
   pure metadata over admin navigation/configuration and must not import runtime
   services.
+- `vitest.config.ts` declares a lane-wide `testTimeout` of `30000ms` because the
+  lane transforms and imports its module graph per worker, so under full-suite
+  parallelism a test's wall clock is dominated by contention rather than by the
+  work it asserts. Vitest's `5000ms` library default sits below that floor and
+  fails tests that pass in isolation. This matches the budgets `test:bun` and the
+  Vitest coverage lane already declare for the same reason.
+- Do not add a per-test timeout argument to work around full-suite contention.
+  Per-test caps do not converge: they are applied only to whichever test happened
+  to fail in one run, they leave neighbouring tests doing the same work at the
+  default, and a cap below the lane budget silently makes its test the first to
+  fail. Raise the lane budget, or make the test cheaper. A per-test timeout is
+  only for a test that owns a genuinely different time budget.
 - TASK-188 policy cutover suites under `tests/vitest/assistant/*` own the pure
   policy/schema/resolver/mapper/follow-up/coverage contracts; opt-in Bun live
   suites remain the guard for real OpenAI/OpenRouter behavior.
