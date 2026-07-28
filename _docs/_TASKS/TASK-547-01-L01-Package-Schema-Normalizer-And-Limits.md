@@ -247,6 +247,61 @@ Basic credentials and JWT/API-style Bearer material reject, while ordinary copy
 such as `Basic analytics`, `Basic Plan`, `Bearer token` and
 `Bearer architecture` remains valid. Arbitrary alphabetic prose cannot be
 distinguished from an opaque alphabetic token and is intentionally not guessed.
+
+Whole-value anchoring is not the string boundary. Before choosing a reason,
+compute one detection-only `value.trim()` view so leading/trailing ECMAScript
+whitespace, including NBSP, cannot hide a whole candidate; never write that view
+back. Run a fixed carrier-independent pipeline over the same view: one monotonic
+authorization pass, one private-key PEM search and one monotonic URL/data-URL
+discovery/inspection pass. Authorization and PEM never share the URL cursor,
+while URL/data discovery itself visits every code unit without jumping over a
+prior span, so a safe URL cannot mask a later Basic, Bearer, PEM or data URL.
+Their fixed count plus the URL parse budget below makes total work O(n) within
+`PACKAGE_LIMITS.stringLength`; no candidate or surrounding text is retained.
+
+A candidate begins only at start of the trimmed view or after ASCII
+whitespace/control, an opening quote/bracket, `<`, `,`, `;` or `=`. An exact
+ASCII-case-insensitive `Authorization` wrapper is also a start: accept its
+unquoted form or a matching single-/double-quoted field name, OWS (`TAB`/SPACE),
+`:`, OWS and an optional opening quote before the scheme. This wrapper rule does
+not admit arbitrary header names. The authorization pass extracts a maximal
+Basic/Bearer token, requires end-of-view or an ASCII whitespace/control,
+quote/bracket, `<`, `>`, comma or semicolon boundary, applies the existing
+anchored predicate and advances its own cursor to that token's end. A scheme
+inside a larger word is not a candidate. Thus explicit authorization-header
+credentials and high-confidence bare credentials reject, while `notBearer`,
+`Basic Plan`, `Basic analytics`, `Bearer token`, `Bearer architecture` and
+ordinary other-header prose remain valid. The PEM pass searches the complete
+view independently, so no URL span can hide its fixed marker.
+
+URL discovery visits every code unit once and stores only numeric start offsets
+for the existing absolute-scheme, protocol-relative and exact `/`, `./`, `../`,
+`?`, `#` relative prefixes; `data:` offsets are also marked for the independent
+data-URL result. Arbitrary schemes are recognized by a forward state machine,
+not a remainder regex or repeated lookahead. Inspection derives a candidate's
+maximal end at the first ASCII whitespace/control, quote or angle bracket and
+removes a terminal `)`, `]` or `}` only when unmatched inside that candidate.
+Nested starts remain visible because discovery never jumps over a prior span.
+The private parse budget is exactly four times the trimmed view length, charged
+once per code unit examined while deriving and parsing URL spans. Each candidate
+is parsed at most once; exceeding the budget fails closed as
+`credential_url_forbidden` without another parse. Consequently ordinary
+disjoint URLs consume at most n budget, while adversarial overlapping/nested
+candidates remain bounded rather than quadratic.
+
+Pass each ephemeral URL slice directly to the existing standards parser.
+Query/fragment names and values are decoded exactly once only through
+`URLSearchParams`; there is no alternate parse, suffix retry,
+`decodeURIComponent` or recursive decode. Embedded relative words without an
+allowed prefix, adjacency inside a larger token, ordinary public URLs and
+data-URL-like prose that does not satisfy the closed predicate remain valid.
+The pipeline records only fixed booleans and never returns the first textual
+match, so reason selection is candidate-order-independent and remains binary →
+authorization → private-key PEM → credential URL → Base64 data URL → explicit-
+carrier Base64 family. Only the final static reason and trusted path reach
+diagnostics; candidate offsets/text, wrapper, URL, parameter, decoded material,
+prefix, suffix and surrounding prose never do.
+
 The PEM predicate is `/-----BEGIN (?:[A-Z0-9]+ )*PRIVATE KEY-----/`; the
 carrier-independent data URL predicate is `/^data:[^,\r\n]*;base64,/i`.
 Base64-family inspection runs only for an explicit carrier. It receives the
@@ -491,6 +546,106 @@ const isForbiddenBasicAuthorization = (trimmed: string): boolean => {
   return decoded?.includes(0x3a) ?? false;
 };
 
+type EmbeddedPackageValueFindings = Readonly<{
+  authorization: boolean;
+  privateKeyPem: boolean;
+  credentialUrl: boolean;
+  base64DataUrl: boolean;
+}>;
+
+const URL_SPAN_BUDGET_FACTOR = 4;
+
+type UrlCandidateStart = Readonly<{
+  index: number;
+  dataUrlPrefix: boolean;
+}>;
+
+const scanAuthorizationCandidates = (detection: string): boolean => {
+  let cursor = 0;
+  while (cursor < detection.length) {
+    if (!isCandidateBoundary(detection, cursor)) {
+      cursor += 1;
+      continue;
+    }
+    // Implements the exact bare/wrapped grammar above. A successful read owns
+    // only its maximal scheme/token span and always returns end > cursor.
+    const candidate = readBasicOrBearerCandidate(detection, cursor);
+    if (!candidate) {
+      cursor += 1;
+      continue;
+    }
+    if (candidate.forbidden) return true;
+    cursor = candidate.end;
+  }
+  return false;
+};
+
+const collectUrlCandidateStarts = (
+  detection: string,
+): readonly UrlCandidateStart[] => {
+  const starts: UrlCandidateStart[] = [];
+  let cursor = 0;
+  while (cursor < detection.length) {
+    if (!isCandidateBoundary(detection, cursor)) {
+      cursor += 1;
+      continue;
+    }
+    // The reader handles fixed relative/protocol prefixes directly and an
+    // arbitrary absolute scheme with one forward ASCII-scheme DFA. It returns
+    // the first unconsumed index on both match and mismatch, never a substring.
+    const prefix = readUrlPrefixForward(detection, cursor);
+    if (prefix.matched) {
+      starts.push({
+        index: cursor,
+        dataUrlPrefix: prefix.dataUrlPrefix,
+      });
+    }
+    cursor = Math.max(cursor + 1, prefix.resumeAt);
+  }
+  return Object.freeze(starts);
+};
+
+const scanEmbeddedPackageValueCandidates = (
+  value: string,
+): EmbeddedPackageValueFindings => {
+  const detection = value.trim(); // Detection only; never persisted.
+  const authorization = scanAuthorizationCandidates(detection);
+  const privateKeyPem = PRIVATE_KEY_PEM_PATTERN.test(detection);
+  const starts = collectUrlCandidateStarts(detection);
+  let remainingSpanCodeUnits = detection.length * URL_SPAN_BUDGET_FACTOR;
+  let credentialUrl = false;
+  let base64DataUrl = false;
+
+  for (const start of starts) {
+    // This forward reader applies the exact terminator/unmatched-bracket rule.
+    // It consumes at most the supplied budget and returns only offsets/status.
+    const span = findUrlCandidateEndForward(
+      detection,
+      start.index,
+      remainingSpanCodeUnits,
+    );
+    if (span.budgetExceeded) {
+      credentialUrl = true; // Fail closed with the existing static reason.
+      break;
+    }
+    const spanCodeUnits = span.end - start.index;
+    remainingSpanCodeUnits -= spanCodeUnits;
+    const result = inspectUrlCandidateOnce(
+      detection.slice(start.index, span.end),
+      start.dataUrlPrefix,
+    );
+    credentialUrl ||= result.credentialUrl;
+    base64DataUrl ||= result.base64DataUrl;
+  }
+
+  return Object.freeze({
+    authorization,
+    privateKeyPem,
+    credentialUrl,
+    base64DataUrl,
+  });
+};
+
 type PackageValueSecretReason =
   | "credential_url_forbidden"
   | "authorization_value_forbidden"
@@ -501,8 +656,23 @@ type PackageValueSecretReason =
 const classifyForbiddenValue = (
   value: unknown,
   options: Readonly<{ explicitBinaryCarrier: boolean }>,
-): PackageValueSecretReason | null =>
-  classifyInFrozenPrecedence(value, options);
+): PackageValueSecretReason | null => {
+  if (isActualBinaryValue(value)) return "binary_value_forbidden";
+  if (typeof value !== "string") return null;
+
+  const embedded = scanEmbeddedPackageValueCandidates(value);
+  if (embedded.authorization) return "authorization_value_forbidden";
+  if (embedded.privateKeyPem) return "private_key_forbidden";
+  if (embedded.credentialUrl) return "credential_url_forbidden";
+  if (embedded.base64DataUrl) return "base64_value_forbidden";
+  if (
+    options.explicitBinaryCarrier &&
+    inspectBase64FamilyLexeme(value.trim()) !== "not_encoded"
+  ) {
+    return "base64_value_forbidden";
+  }
+  return null;
+};
 
 const scanDesiredValue = (
   value: unknown,
@@ -599,6 +769,35 @@ export function normalizeFullSitePackageForWrite(value: unknown) {
 }
 ```
 
+`isCandidateBoundary(input, index)` is true only for index zero or when
+the preceding code unit is U+0000–U+0020, U+007F, `'`, `"`, `(`, `[`, `{`, `<`,
+`,`, `;` or `=`. `readBasicOrBearerCandidate` first attempts the exact quoted/
+unquoted `Authorization` wrapper, then the bare ASCII-case-folded scheme; it
+walks the frozen token alphabet once, checks the closed end boundary, applies
+the existing Basic decoder or Bearer predicate and returns only
+`{ end, forbidden }`. A malformed wrapper/candidate returns `null`; it never
+skips input or emits text.
+
+`readUrlPrefixForward` returns
+`{ matched, dataUrlPrefix, resumeAt }`. An absolute scheme consumes the maximal
+`[A-Za-z][A-Za-z0-9+.-]*` sequence once and matches only when the next code unit
+is `:`. On mismatch `resumeAt` is the first unconsumed code unit, so the caller
+never repeats that scheme scan. `findUrlCandidateEndForward` receives the
+remaining numeric span budget, walks toward the frozen terminators while
+tracking only three bracket balances, and returns either
+`{ end, budgetExceeded:false }` or `{ end:start, budgetExceeded:true }` before
+reading beyond the budget. It applies the unmatched-terminal rule exactly once.
+
+`inspectUrlCandidateOnce` first evaluates the anchored data-URL predicate, then
+constructs exactly one `URL` using the already frozen absolute/protocol/
+relative rules. A parse exception returns only the data-URL flag. A successful
+parse checks userinfo, iterates `url.searchParams`, constructs exactly one
+`URLSearchParams` for the fragment body and applies the closed marked-name
+predicate to every duplicate. It returns only
+`{ credentialUrl, base64DataUrl }`; neither it nor any caller catches or formats
+candidate-derived detail. Span-budget exhaustion and forbidden flags flow only
+to the existing static reason/path mapping shown above.
+
 Both prose readers are module-private. The normalizer calls
 `readSafeResidualProse` only from the source residual array's `map` callback,
 before canonical sorting, so `inputIndex` is the callback's nonnegative integer
@@ -670,6 +869,25 @@ package prose; every variant must reject without disclosing its token. Keep
 `Bearer token` and `Bearer architecture` valid, and reject a
 credential-shaped Bearer token. Also pin PEM, typed-binary and Base64 data URL
 with complete non-disclosure.
+
+In the independently runnable security suite, table-drive embedded Basic,
+Bearer, credential-URL and Base64-data-URL sentinels through a bare desired
+string, a nested desired string and each of the seven exact package-prose
+surfaces. Cover prefix/suffix prose, explicit unquoted and matching-quoted
+`Authorization:` wrappers, case folding, maximal-token boundaries, terminal
+punctuation and URL userinfo/query/fragment forms. Reverse authorization/PEM/
+credential-URL/data-URL candidate order in paired strings and assert the same
+single precedence reason. Add explicit safe-URL-then-comma/semicolon/equals
+Basic, Bearer, PEM, credential-URL and data-URL swallowing regressions, nested
+URL starts, and a deterministic four-times-span-budget fail-closed case. Pin
+leading/trailing NBSP and another ECMAScript-trim whitespace around each
+candidate family without mutating desired bytes or adding a second prose
+normalization. Pin `%255F`
+exactly-once decoding and safe boundary near misses: schemes inside larger
+words, incomplete wrappers, arbitrary other header-like prose, ordinary public
+URLs, and data-URL-like copy. Put unique sentinels in both surrounding context
+and every candidate component and prove the complete serialized error contains
+none of them.
 
 Use carrier-independent, table-driven actual-binary cases for `ArrayBuffer`,
 representative `ArrayBufferView` instances `Uint8Array` and `DataView`, and
@@ -750,8 +968,8 @@ suite neither imports nor source-inspects that later-owned reader.
   immutable boundaries; freeze scalar/canonical ordering, residual identity and
   secret/encoded-value policies, including all seven package-prose surfaces,
   compact credential aliases, colon-decoded noncanonical Basic variants,
-  compound-carrier Base64-family grammar and exact-name `code` query/fragment
-  URLs;
+  bounded embedded authorization/credential-URL scanning, compound-carrier
+  Base64-family grammar and exact-name `code` query/fragment URLs;
   remove undocumented residual/diagnostic limit coupling; split moved cases into independently runnable
   `full-site-package-canonicalization.test.ts` and
   `full-site-package-security.test.ts`, backed by the focused

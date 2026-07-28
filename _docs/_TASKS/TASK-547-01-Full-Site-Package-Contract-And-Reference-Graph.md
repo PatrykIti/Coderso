@@ -293,7 +293,22 @@ literally `false`; otherwise it is an implementation gap and blocks closure.
   variants, including missing or correct padding, mixed standard/URL alphabets,
   internal padding, wrong or excess terminal padding and nonzero-pad-bit aliases.
   Bare desired fields, package prose and carrier-key near misses remain outside
-  that scan. Standards-parse every absolute-scheme
+  that scan. Every bounded free-form package string—each `desired` string and
+  all seven package-prose surfaces—also receives a fixed bounded classifier
+  pipeline over one detection-only ECMAScript-trimmed view. Independent
+  monotonic authorization and PEM passes plus a URL/data-URL discovery pass that
+  never jumps a prior span prevent any safe span from masking another candidate
+  and together remain O(n). URL discovery keeps only numeric offsets, visits
+  every code unit, parses each candidate at most once and fails closed with the
+  static credential-URL reason if cumulative overlapping URL span input exceeds
+  four times the trimmed string length; query/fragment decoding remains exactly
+  once. The pipeline preserves reason
+  precedence, emits at most one finding per string, and never retains or emits
+  candidate text. Safe prose near misses and arbitrary other header-like copy
+  remain valid. A finding uses only the surface's existing static redacted path
+  and reason and discloses no header, URL, decoded parameter, credential or
+  surrounding prose.
+  Standards-parse every absolute-scheme
   (`^[A-Za-z][A-Za-z0-9+.-]*:`), protocol-relative and exact `/`, `./`, `../`,
   `?`, `#` relative URL candidate (the relative forms use one fixed inert base),
   rejecting parsed userinfo including special-scheme forms without `//` and any
@@ -417,10 +432,17 @@ object values; all six stripped ASCII whitespace characters; canonical,
 missing/correct padding; mixed standard/URL alphabets; internal, wrong and excess
 padding; nonzero pad bits; and bare-field/carrier-key near misses. Basic cases
 pin canonical and padding/pad-bit alias credentials plus safe `Basic Plan`/`Basic
-analytics`. Overlaps assert the single-finding precedence sensitive key → binary
-→ authorization → private-key PEM → credential URL → Base64 data URL → explicit-
-carrier Base64 family, with complete non-disclosure of keys, URLs/decoded
-parameters, authorization, encoded/decoded bytes, residual IDs and values. An
+analytics`. Modular bare/nested desired-string and all-seven-prose cases
+independently pin embedded authorization-header, credential-bearing URL and
+Base64 data-URL candidates, candidate-order-independent precedence, bounded-
+linear extraction, URL-span swallowing in both candidate orders,
+leading/trailing ECMAScript whitespace, the fixed overlapping-span budget, safe
+prose near misses, static redacted diagnostics and complete candidate/context
+non-disclosure. Overlaps assert the single-finding precedence sensitive key →
+binary → authorization → private-key PEM → credential URL → Base64 data URL →
+explicit-carrier Base64 family, with complete non-disclosure of keys,
+URLs/decoded parameters, authorization, encoded/decoded bytes, residual IDs and
+values. An
 unsorted multi-residual fixture proves
 diagnostic paths keep their original input indexes after canonical residual
 sorting. Graph tests are
