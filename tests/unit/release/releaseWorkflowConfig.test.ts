@@ -80,7 +80,12 @@ test("Docker builder and runner use the same non-root Bun runtime", () => {
   const bunfigCopyIndex = dockerfile.indexOf("COPY package.json bun.lock bunfig.toml ./");
   const frozenInstallIndex = dockerfile.indexOf("RUN bun install --frozen-lockfile");
 
-  expect(bunImages).toEqual([BUN_VERSION, BUN_VERSION]);
+  // Three stages since the runner stopped inheriting the builder's node_modules:
+  // prod-deps installs the production-only tree, builder keeps the full one for
+  // the vite builds, runner takes only what it needs from each. All three must
+  // stay on the pinned Bun version -- a drift between them would mean the image
+  // runs a different Bun than the one the dependencies were installed with.
+  expect(bunImages).toEqual([BUN_VERSION, BUN_VERSION, BUN_VERSION]);
   expect(bunfigCopyIndex).toBeGreaterThanOrEqual(0);
   expect(frozenInstallIndex).toBeGreaterThan(bunfigCopyIndex);
   expect(dockerfile).toContain("USER bun");

@@ -120,7 +120,8 @@ COPY --from=builder --chown=bun:bun /app/store /app/store
 # dependency, and lets that package's own loader answer. On the current tree
 # that is 65 third-party packages in the graph, exactly 1 of them native
 # (@node-rs/argon2, 14 declared platform packages, 2 installed for linux/arm64).
-# The script lists what it probed on every run.
+# The script lists what it probed on every run that gets past the bundle step --
+# a bundler-resolution failure aborts before either rule reports its inventory.
 #
 # The reach of that second rule is exactly "packages in the graph declaring
 # optionalDependencies", and no wider. Covering every third-party try/catch
@@ -201,15 +202,19 @@ USER bun
 # ESTABLISHED. The production dependency tree resolves (142 packages against
 # the same lockfile, versus 747 with devDependencies -- both re-measured on
 # linux/arm64, bun 1.3.14, bun.lock byte-identical after each). Every module the
-# runtime import graph reaches -- 3129 modules, 595 of them first-party -- loads
-# against that pruned tree. The process starts.
+# runtime import graph reaches -- 3129 modules, 595 of them first-party --
+# RESOLVES against that pruned tree. It resolves them; it executes exactly one of
+# them (the native-binding probe below), so "loads" would claim more than the
+# check can show.
 #
 # Those graph figures are stated at NODE_ENV=production, the value ENV sets
 # above, and they are only true there; see the pinned-configuration note by the
-# check. An earlier revision reported 3131/595 and a module count of 3148 ->
-# 3111, all measured with NODE_ENV inherited and unset, so all describing a
-# React-development graph this image does not build. Superseded rather than
-# quietly overwritten.
+# check. An earlier revision reported 3131/595 with NODE_ENV inherited and unset,
+# which is a React-development graph this image does not build. That revision also
+# reported a module count of 3148 -> 3111, and those two numbers DO NOT REPRODUCE
+# in any configuration measured since -- NODE_ENV moves the count by 2, not by 17,
+# so the cause is unknown and they are withdrawn rather than explained. Superseded
+# openly rather than quietly overwritten.
 #
 # NOT ESTABLISHED: that the application SERVES. Every HTTP request in that
 # evidence died in the same place, before routing. httpServer.ts's `fetch()`

@@ -54,9 +54,11 @@
  * --------------------
  * 1. Dynamic imports with a computed specifier -- `import(someVariable)` -- are
  *    not statically discoverable and do not appear in the metafile at all. This
- *    script finds them by source scan and prints them on every run, so the
- *    boundary is visible to whoever reads the build log rather than buried in a
- *    report. See the "cannot be verified" section of the output.
+ *    script finds them by source scan and prints them on every run that reaches
+ *    the reporting stage, so the boundary is visible to whoever reads the build
+ *    log rather than buried in a report. A bundler-resolution failure aborts
+ *    before this point, so on that path the list is not printed at all. See the
+ *    "cannot be verified" section of the output.
  * 2. Guarded third-party requires of ordinary (non-platform) packages -- an
  *    optional peer backend a dependency probes for with try/catch. Those are not
  *    enumerable from metadata and are NOT covered by either rule here.
@@ -409,7 +411,9 @@ for (const { name, optional } of nativeCandidates) {
     ],
     { cwd: root, encoding: "utf8", env: childEnv }
   );
-  const detail = `${probe.stdout ?? ""}${probe.stderr ?? ""}`.replace(/^PROBE-(OK|ERR) ?/, "").trim();
+  const detail = `${probe.stdout ?? ""}${probe.stderr ?? ""}`
+    .replace(/^PROBE-(OK|ERR) ?/, "")
+    .trim();
   if (probe.status === 0) bindingOk.push({ name, present, optional });
   else bindingFailures.push({ name, present, optional, detail });
 }
@@ -468,7 +472,9 @@ if (nativeCandidates.length === 0) {
 }
 
 /*
- * Printed on every run, pass or fail: this is the honest edge of the check.
+ * Printed on every run that reaches this point, pass or fail: this is the honest
+ * edge of the check. A bundler-resolution failure exits earlier and never gets
+ * here, which is why the claim is scoped rather than absolute.
  */
 process.stdout.write(`\n${NAME}: NOT verifiable at build time -- computed specifiers:\n`);
 if (computedSites.length === 0) {
