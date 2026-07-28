@@ -75,15 +75,44 @@ jobs:
             echo "git_tag=" >> "$GITHUB_OUTPUT"
           fi
 
+  # Verified here as well as in the PR gates, and not by duplication: this job
+  # builds the RELEASE TAG, and semantic-release commits a regenerated bun.lock
+  # plus four package.json files onto it (see release.config.cjs). The tree this
+  # image is built from is therefore a tree no pull request ever built, and a
+  # regenerated lockfile is exactly what changes which modules land in the
+  # runner stage. Nothing else stands between that tree and GHCR.
   docker-image:
     name: Build Docker image
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
     needs: semantic-release
     if: needs.semantic-release.outputs.released == 'true'
     permissions:
       contents: read
       packages: write
+    env:
+      # Points at the service container below, published on the runner.
+      DATABASE_URL: postgres://coderso:postgres@127.0.0.1:5432/coderso_image_gate
+      APP_PORT: "3210"
+      BOOT_TIMEOUT_SECONDS: "240"
+      BOOT_LOG_FILE: .tmp/image-boot-gate.log
+    services:
+      # Throwaway, empty, and on the direct port 5432 — the session-lock guard
+      # in core/db/connectionTargets.ts refuses a pooled port (6432).
+      # Keep the major version aligned with the deployment target.
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: coderso
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: coderso_image_gate
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready --username coderso --dbname coderso_image_gate"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 24
     steps:
       - name: Create semantic-release GitHub App token
         id: semantic-release-app-token
@@ -117,6 +146,48 @@ jobs:
       - name: Setup Docker Buildx
         uses: docker/setup-buildx-action@bb05f3f5519dd87d3ba754cc423b652a5edd6d2c # v4.2.0
 
+      # BUILD 1 OF 2 — verification only; this export never leaves the runner.
+      #
+      # The boot gate has to RUN the image, so this build goes through `load`
+      # into the local daemon, and the docker exporter behind `load` cannot
+      # write a provenance attestation — hence `provenance: false` HERE, and
+      # only here. The published artifact is built by the second build below,
+      # with its attestation intact, and the step after it proves the two are
+      # the same image instead of assuming they are.
+      - name: Build coderso-core image for boot verification
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
+        with:
+          context: .
+          file: Dockerfile
+          push: false
+          load: true
+          provenance: false
+          tags: ${{ steps.image.outputs.version_tag }}
+          build-args: |
+            APP_VERSION=${{ needs.semantic-release.outputs.version }}
+          labels: |
+            org.opencontainers.image.title=coderso-core
+            org.opencontainers.image.version=${{ needs.semantic-release.outputs.version }}
+            org.opencontainers.image.revision=${{ steps.revision.outputs.sha }}
+
+      # A failure here leaves the release tagged with no image published, which
+      # is strictly better than the previous behaviour: a crash-looping image
+      # under :latest that nothing had ever started. Re-running this job alone
+      # republishes once the cause is fixed.
+      - name: Verify the release image boots and serves
+        shell: bash
+        env:
+          IMAGE_REF: ${{ steps.image.outputs.version_tag }}
+        run: .github/scripts/verify-image-boot.sh
+
+      - name: Upload release image boot log
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: release-image-boot-gate-log
+          path: .tmp/image-boot-gate.log
+          if-no-files-found: ignore
+
       - name: Login to GHCR
         uses: docker/login-action@af1e73f918a031802d376d3c8bbc3fe56130a9b0 # v4.4.0
         with:
@@ -126,12 +197,28 @@ jobs:
           # handled by the GitHub App token used for release git/API work.
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build and push coderso-core image
+      # BUILD 2 OF 2 — the published artifact.
+      #
+      # Same context, same Dockerfile, same build args and labels, same builder,
+      # in the same job: every layer comes back out of build 1's cache, so this
+      # is a re-export rather than a second compile. It differs from build 1 in
+      # exactly one respect — it goes through the image exporter to the
+      # registry, which CAN carry the SLSA provenance attestation that `load`
+      # cannot. Publishing without that attestation strips supply-chain
+      # metadata off the artifact users pull, so it is set explicitly here and
+      # asserted on the registry by the step below.
+      - name: Publish coderso-core image with provenance
         uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
         with:
           context: .
           file: Dockerfile
           push: true
+          # The exact default docker/build-push-action applies when provenance
+          # is left unset, written out rather than relied on: min-mode SLSA
+          # provenance whose builder id is the run that produced the image.
+          # `provenance: true` would attest without naming the run, which is
+          # most of what the attestation is for.
+          provenance: mode=min,inline-only=true,builder-id=${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           tags: |
             ${{ steps.image.outputs.version_tag }}
             ${{ steps.image.outputs.latest_tag }}
@@ -141,3 +228,19 @@ jobs:
             org.opencontainers.image.title=coderso-core
             org.opencontainers.image.version=${{ needs.semantic-release.outputs.version }}
             org.opencontainers.image.revision=${{ steps.revision.outputs.sha }}
+
+      # Two exports mean two artifacts, and "same builder, warm cache" is an
+      # argument rather than a check. This compares the layer diff IDs and the
+      # startup configuration of what is now in GHCR against the image the boot
+      # gate started, and refuses a publication that carries no provenance
+      # attestation. It reads the registry, so it necessarily runs after the
+      # push: a mismatch is a red release holding a published tag, not a push
+      # that was prevented.
+      - name: Verify the published image is the image that booted
+        shell: bash
+        env:
+          LOCAL_IMAGE_REF: ${{ steps.image.outputs.version_tag }}
+          PUBLISHED_REFS: |
+            ${{ steps.image.outputs.version_tag }}
+            ${{ steps.image.outputs.latest_tag }}
+        run: .github/scripts/verify-published-image.sh
