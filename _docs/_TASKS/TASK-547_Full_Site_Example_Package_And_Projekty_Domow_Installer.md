@@ -114,6 +114,61 @@ whose embedded documents delegate to their domain owners.
 - References use a closed typed shape, never arbitrary string substitution.
 - Validate the complete graph before the first domain write.
 - Install in dependency order and rollback in exact reverse order.
+- PostgreSQL advisory pair `(548, 0)` is the native-CMS writer fence. One
+  PgBouncer-safe `postgres.js` `begin()` (`prepare:false`) holds its exclusive
+  transaction lock and then package `(547, hash)` transaction lock for the whole
+  lifecycle; session advisory locks and manual unlock SQL are forbidden.
+- Only after both exclusive locks are held, a private holder capability may open
+  the short reservation transaction. Its statement one is the ordered
+  `created_at ASC, id ASC LIMIT 2 FOR UPDATE` marker-key census/row lock; it never
+  calls `acquireNativeCmsWriterFence`, tries shared, or exposes a public bypass.
+- Before DB planning, apply/dry-run reservation creates or claims the actual
+  source owner with a private server generation marker. In the same transaction,
+  takeover derives `resumePhase`: absent strict `initializationPlanV1` plus zero
+  items is `reserved`; an exact plan plus its complete matching bounded item set
+  is `initialized`; partial, malformed or impossible evidence fails closed.
+  The safe callback receives only `ownerRunId` and `resumePhase`; generation and
+  reservation authority stay private. `initialized` skips planner, preparation,
+  reinsertion and native reapply and enters durable recovery/automatic
+  compensation. Explicit rollback keeps its separate strict source plus
+  incremental-outcome resume path. Its owner is marked; an automatic-compensation
+  child is not, because the apply source remains owner.
+- Every post-reservation callback branch uses one failure-phase policy. A
+  deterministic validation/planning/preparation failure, or initialization
+  proven rolled back with zero native effects, atomically fails the owner and
+  removes its marker. Exact committed initialization enters recovery. Partial,
+  ambiguous or potentially native-effecting work leaves the owner running and
+  marked; repeated deterministic errors therefore never globally brick writers.
+- Every ordinary writer of a managed root, child, revision or allowlisted
+  setting first attempts the shared transaction fence. Contention returns
+  `native_cms_writer_fence_busy` without waiting; an acquired shared fence must
+  pass the bounded durable-marker census before protected work. A marker left by
+  holder loss blocks writes as `native_cms_writer_recovery_required` until an
+  exclusive takeover drains the owner row and rotates its generation.
+- postgres.js `onclose` closes over the exact private mutable lease and captured
+  callback promise rather than consulting `AsyncLocalStorage`. Unexpected close
+  marks that lease lost and signals unwind; the outer owner awaits callback
+  settlement before client end. Normal revoke/end cannot relabel a lease lost,
+  and callback/acquisition/holder-loss primary errors outrank cleanup failures.
+- A rollback retry treats durable success outcomes as provisional until one
+  exact read-only preflight, while that exclusive fence is held, proves every
+  reversed create is still absent, every reversed update/noop still equals its
+  exact target, and every setting still
+  equals its restored raw presence/value. The preflight detects pre-existing
+  drift; the owner-row/fence protocol prevents post-preflight ordinary-writer
+  drift until finalization. Finalization synchronously closes the inherited
+  context, drains owner-row readers with `FOR UPDATE`, atomically terminalizes
+  the owner and removes its marker, then lets the holder transaction commit.
+  Every success requires `finalizeOwnedRun` to return exactly
+  `desired_terminal`; `different_terminal` throws the fixed safe recovery
+  conflict. Explicit rollback passes its validated interrupted apply-source
+  transition to that same finalizer, so source failure, rollback-owner success
+  and marker removal commit atomically; full-site flows never use legacy
+  `finalizeRun`.
+- Foreign-key safety is explicit: `deleteUser`'s indirect `SET NULL` mutation is
+  fenced; Page/Entry/Form/ContentType conditional deletes lock and reject live
+  reverse references; listing-query JSON references take ContentType `KEY SHARE`;
+  and intended cascades are exhaustively classified.
 - Apply uses a compensation saga, not a new cross-domain transaction abstraction.
 - Both legacy and full-site execution use one exported ledger port.
 - A resource is managed only when an earlier successful, non-rolled-back run has
@@ -275,6 +330,35 @@ IDs or lifecycle logic.
 - First apply creates/wires the complete site; second apply creates zero duplicates.
 - Rollback restores prior shell/settings and restores/deletes only resources
   evidenced by the source run.
+- Retrying a partial rollback revalidates every durable successful reversal;
+  pre-existing drift in a completed dependent blocks prerequisite reversal.
+- Deterministic independent-client barriers prove transaction locks in both
+  directions from `pg_locks`, not elapsed time: a full-site holder makes an
+  ordinary domain/import/backup writer return busy before protected work, while
+  a held shared transaction makes full-site wait without exhausting the pool.
+  The holder PID stays stable; no session lock/unlock SQL occurs.
+- Real holder death releases transaction locks but leaves the durable marker, so
+  ordinary writers return recovery-required with zero protected work. Exclusive
+  takeover drains `FOR UPDATE`, rotates the generation, and makes old-generation
+  or closing descendants fail with zero I/O. Duplicate/malformed markers fail
+  closed; every post-reservation installer transaction proves the exact owner generation.
+- Reservation tests pin its private holder authorization, statement-one ordered
+  locking census and zero shared-fence call. Takeover tests cover both exact
+  `reserved`/`initialized` derivations, reject every partial/impossible matrix,
+  and prove initialized apply performs no planner/reinsert/reapply call.
+- Callback-phase tests cover deterministic failures before and during confirmed-
+  rolled-back initialization, exact committed recovery, ambiguous/native-effect
+  marker retention, and repeated deterministic errors followed by an ordinary
+  writer. Initialization preserves exact fence-lost/fence-failed codes and
+  recovers only an exact ambiguous commit.
+- Holder tests fire `onclose` outside owner ALS, with detached work and after
+  normal revoke/end, proving exact-lease loss, callback settlement before
+  `client.end` and primary-error precedence. Finalization races prove no success
+  on `different_terminal` and atomic interrupted-source failure plus rollback
+  success/marker removal.
+- DB races prove `deleteUser` `SET NULL`, reverse-reference guarded Page/Entry/
+  Form/ContentType deletes, ContentType/listing-query JSON references and every
+  intended cascade cannot violate the captured rollback graph.
 - Every prototype route responds and navigation/footer links are valid.
 - Public copy, facts, prices, contact data, project taxonomy/order, form strings,
   SEO titles/descriptions and design settings match the pinned reference unless
@@ -302,6 +386,10 @@ IDs or lifecycle logic.
 - `bun --cwd core lint:types`
 - targeted Vitest suites for pure package/schema/reference/generator logic
 - targeted Bun DB/runtime suites for installer/apply/rollback/routes/forms/content
+- after loading the required environment, run the fence/process DB suite three times serially with
+  `for attempt in 1 2 3; do bun test --parallel=1 --timeout 360000 tests/integration/kits/fullSiteCrashRecoveryDb.test.ts || exit 1; done`
+- run `tests/integration/kits/fullSiteNativeForeignKeyRacesDb.test.ts` serially
+  with the same `360000` ms timeout plus the static writer/FK inventory lane
 - `bun run test`
 - `bun run precommit:check`
 - `bun run gates:coderso`

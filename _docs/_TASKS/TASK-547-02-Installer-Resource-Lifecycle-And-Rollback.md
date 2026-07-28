@@ -63,7 +63,7 @@ ref-shaped values, duplicates the Page walker or rebuilds the graph.
 
 After IDs are allocated/resolved, TASK-547-02 substitutes refs only at the
 already-validated graph paths and runs every native owner validator over the
-post-substitution desired snapshot before `createInitializedRun` or
+post-substitution desired snapshot before `initializeReservedRun` or
 any native write. Thus Page has one placeholder-native pre-normalization before
 ref attachment and one resolved-native revalidation after substitution; no
 native Page normalizer receives a `PackageRef`. This task owns the malformed
@@ -78,37 +78,32 @@ compatibility checkpoint -> L02 -> L03 final completion`. The checkpoint edits
 only L03-owned existing paths, leaves L03 `🚧 In Progress`, and is neither a new
 leaf nor a new ownership path. Each phase reads its predecessor's on-disk state.
 
-- **L01 -- shared lifecycle substrate:** TASK-547-01 package kind/identity aliases,
-  shared install types/ledger port,
-  stable public legacy-persistence facade over cohesive read-persistence and
-  dry-run-terminalization modules, legacy installer composition, deterministic
-  planner whose apply overload consumes the caller-bound private reference plan
-  without rebuilding while its gate-compatible direct overload builds pre-read,
-  strict current-resource resolver, two-lock coordination, versioned dependency
-  serialization and the sole atomic conditional dry-run terminalization port/DB
-  method. Its
-  gate-safe type boundary keeps `FullSiteInstallLedgerItem` compatible for
-  in-memory construction and owns `PersistedFullSiteInstallLedgerItem` for the
-  bounded compatibility `listItems()` projection plus `RawFullSiteInstallLedgerItem`
-  and authoritative `listRawItems()`. Those raw contracts must actually be
-  committed before the L03 checkpoint; the bridge may not redeclare them. L01
-  owns planner/ledger/managed-identity tests and performs no native mutation.
+- **L01 -- shared lifecycle substrate:** package kind/identity aliases, shared
+  install types/ledger port, split legacy persistence, deterministic planner,
+  strict current-resource resolver, dependency serialization, dry-run CAS, and
+  the sole pooler-safe native-writer fence/owner-marker implementation. Its rich
+  package lock reserves the real owner run; its gate-safe construction type and
+  bounded persisted/raw reads must land before the L03 checkpoint. L01 owns its
+  planner/ledger/managed-identity/fence tests and legacy Tx executors.
 - **L02 -- native mutation substrate:** staging/execute/preflight, the adapter
   facade and cohesive adapter splits, canonical Form-action normalization, and
   domain-local exact-ID create/replace/conditional-delete APIs plus complete
   native target/capture for all nine UUID-backed kinds and a new settings-domain
-  locked apply/raw-restore batch. It owns `settingsService.ts`, `siteLocale.ts`
+  locked apply/raw-restore batch. Every ordinary managed writer participates in
+  L01's try-shared/marker-census transaction fence, including User/Form/Page/
+  detail revision writers and the outer import/backup transactions. It owns `settingsService.ts`, `siteLocale.ts`
   and their existing settings-service test, plus the default rollback registry
   and exact-ID nullable capture wrappers in its adapter facade. It preserves the
   gate compatibility surfaces while adding the strict saga input and all-item
   classifier. It consumes L01 and never writes install-run tables directly.
-- **L03 -- compensation and process evidence:** after L01, pre-land the pure
-  generic injected `compensateItems` bridge, its minimal existing-path test and
+- **L03 -- compensation and process evidence:** after L01, pre-land the pure generic injected
+  `compensateItems` bridge, its minimal existing-path test and
   the already-owned `rollback.ts` compatibility wiring needed to keep the root
   checkpoint type-safe. `compensation.ts` imports L01 contracts only; the
   orchestrator temporarily retains the current compatibility dependencies.
   After L02, extend those same files with final rollback/compensation, dependency
-  branches, process-death/SIGKILL evidence and shared-shell concurrency. L03
+  branches, process-death/SIGKILL evidence, exact completed-success preflight
+  under stable owner generation, and native-writer/FK concurrency. L03
   consumes, but cannot edit, the L02 adapter/default-registry owners.
 
 Every touched human-authored production or test module must finish at most 1,000
@@ -144,15 +139,121 @@ and default legacy-installer composition. L02 consumes the injected port and
 cannot edit legacy composition. No other module implements the port or
 side-writes ledger tables.
 
-The concrete port's existing `withPackageLock` consumer method is retained for
-compatibility, but its DB implementation has a stronger frozen meaning: acquire
-one session advisory lock for `GLOBAL_FULL_SITE` first and then the
-package-key lock, on the same dedicated PostgreSQL connection; hold both across
-source re-read, plan, pre-run preparation, durable item initialization, native mutations,
-publish/settings, automatic compensation and run finalization; release in exact
-reverse order. Apply, dry-run and explicit rollback use this same order. No code
-path may acquire package then global. The global lock intentionally serializes
-different packages because their shell settings are shared mutable state.
+The concrete rich `withPackageLock(reservation, execute)` is one pooler-safe
+protocol. Its strict reservation is `{intent:"apply",packageKey,actorId,dryRun,
+options}` or `{intent:"explicit_rollback",packageKey,actorId,sourceRunId,
+options}`; the latter package key is only a routing hint and is revalidated.
+Pure normalization/reference-graph work may precede it; no DB planning may. A
+dedicated `postgres.js` client configured `prepare:false` opens
+one long `begin()`, takes `pg_advisory_xact_lock(548,0)` then the namespace-547
+package transaction lock, and uses no session advisory or manual unlock SQL.
+This two-connection shape requires holder/domain pool headroom of at least two.
+
+After both locks succeed, the holder mints one unexported, unforgeable
+reservation authority bound to that holder invocation. Only the private
+`reserveOrTakeOverActualOwner` path accepts it. Its separate short domain
+transaction deliberately does **not** call `acquireNativeCmsWriterFence` or try a
+shared advisory lock, which would conflict with its own holder connection.
+Instead, transaction statement one is the narrow active-marker-key projection
+ordered `created_at ASC, id ASC LIMIT 2 FOR UPDATE`; it is both census and owner-
+row lock. The authority cannot be supplied through the ledger port, options,
+callback or any public helper, so this is not a general fence bypass.
+
+That transaction creates or claims the **actual** owner and writes a fresh
+private strict `options.nativeCmsWriterFenceV1={schemaVersion:1,generation:
+<UUID>}` before callback/planner DB access. For apply/dry-run only, it also reads
+at most 513 owner items and atomically derives callback `resumePhase`: no own
+`initializationPlanV1` and zero items is `reserved`; a strict plan plus a complete
+one-to-one bounded item set with identical position/kind/key/operation is
+`initialized` (including an authored empty plan); any plan/item prefix, cap+1,
+mismatch, malformed or impossible state fails closed without rotating ownership.
+The apply callback receives only `{intent:"apply",ownerRunId,resumePhase}`; the
+generation/authority remain private. An initialized apply/dry-run skips planner,
+preparation, `initializeReservedRun` and native reapply and enters durable
+recovery (automatic compensation for apply). Explicit rollback instead receives
+`{intent:"explicit_rollback",ownerRunId}` and retains its separate strict source
+plus incremental-outcome resume path. Its claimed rollback run is marked;
+automatic compensation creates an unmarked child and keeps its apply source as
+owner.
+
+L01 alone owns `acquireNativeCmsWriterFence`,
+`assertNativeCmsWriterOwnerContextAbsent`, `runWithNativeCmsWriterOwnerContext`,
+`beginNativeCmsWriterOwnerClosing` and `markNativeCmsWriterOwnerLost`. Every
+post-reservation installer native or ledger transaction uses SQL statement one to select
+the exact owner row `FOR SHARE` and verify its running status plus exact strict
+generation. There is no zero-SQL exclusive bypass. An inherited context already
+marked closing/revoked/lost fails `native_cms_writer_fence_lost` before executor/I/O;
+missing/mismatched ownership fails the same cause-free code, never falls back to
+ordinary mode. Nested rich entry fails cause-free `site_package_lock_reentrant`.
+
+Every ordinary writer of the nine roots, owned children/lifecycle/revisions and
+allowlisted settings uses `READ COMMITTED`; SQL statement one is
+`pg_try_advisory_xact_lock_shared(548,0)`. False returns cause-free
+`native_cms_writer_fence_busy` immediately. True must pass L01's bounded strict
+marker census before any protected read/lock/DML; one stale owner or duplicate/
+malformed marker returns `native_cms_writer_recovery_required`. Driver/executor
+failure maps only to `native_cms_writer_fence_failed`.
+
+The whole post-reservation callback is covered by one phase policy. Deterministic
+validation/planning/preparation failure, or initialization failure whose exact
+reread proves the transaction absent/rolled back, has zero native effects and
+must `finalizeOwnedRun(...failed...)` to remove the marker. Exact committed
+initialization enters durable recovery. A partial/malformed/ambiguous state or
+any path that may have native effects leaves the owner `running` and marked for
+takeover. The same deterministic failure can therefore recur without globally
+bricking ordinary writers.
+
+postgres.js `onclose` closes over the exact private mutable lease and the one
+captured callback promise; it never depends on ALS being present in `onclose`.
+Unexpected close mutates that lease to `lost` and signals the holder race, but
+does not cancel JS callback work. The outer lifecycle awaits the captured
+callback's settlement before `client.end()`. Normal completion revokes first, so
+normal transaction/client close cannot turn `revoked` into `lost`; `lost` is
+monotonic. Callback/acquisition/holder-loss primary errors outrank transaction/
+client cleanup errors, and detached descendants fail the revoked/lost zero-I/O
+gate.
+
+The caller's `finalizeOwnedRun` invocation is the final callback DB invocation.
+It synchronously marks the lease closing, then its primary transaction statement
+one locks the owner `FOR UPDATE` to drain prior `FOR SHARE` work. Only DB work
+internal to that same invocation may continue: its private ambiguous-commit
+reread takes the captured private lease, locks the exact owner `FOR UPDATE` as
+its own statement one, never calls `acquireNativeCmsWriterFence` or the ordinary
+path, and performs no native or ledger mutation. Caller code performs no
+recovery, ledger or native I/O after closing. Successful callers only map the
+returned outcome without DB I/O: exact `desired_terminal` permits return and
+`different_terminal` throws fresh cause-free `site_package_recovery_conflict`.
+Deterministic failure cleanup may catch only that finalizer's result/error to
+preserve the preexisting primary and performs zero I/O afterward. The primary
+transaction atomically terminalizes/removes the marker and, when supplied,
+either closes an unmarked automatic-compensation child with its source or
+applies the validated explicit-rollback interrupted-source transition.
+Explicit rollback therefore changes a still-running apply source to
+`failed/site_package_apply_interrupted`, terminalizes its rollback owner success
+and removes that owner's marker in one commit. Full-site apply/dry-run/rollback
+never call legacy `finalizeRun`; that method remains legacy-only. Partial native
+compensation/rollback or ambiguous finalization leaves the owner running/marked.
+Holder loss releases xact locks but leaves the marker; exact takeover drains and
+rotates its generation. Success returns only after desired finalization and the
+holder transaction commit.
+
+L02 wires the ordinary fence into every atomic adapter/settings writer, User
+deletion, Form/Page/detail revisions, import and backup outer transactions. Its
+static inventory classifies every protected DML/Tx-helper, indirect User
+`SET NULL`, intended cascade and reverse reference. Page/Entry/Form/ContentType
+conditional deletes lock-check reverse references; listing-query JSON reference
+creation takes ContentType `KEY SHARE`. `importConfig`/`restoreBackup` use one
+outer fenced transaction; backup reuses the import Tx helper without nesting.
+Delete order is fence/owner statement one -> root `FOR UPDATE` -> stable owned
+children/revisions -> snapshot CAS -> reverse-reference guards -> DML. Guards
+cover Page menu items/theme routes; Entry presentation overrides/term assignments;
+Form submissions/action runs and in-place action diffs; and ContentType listing-
+query JSON plus the locked `site.contentRoutes` setting. Intended FK cascades are
+allowlisted explicitly, never hidden by the inventory.
+
+No migration is added: the marker is private, strictly read, stripped from all
+public/run/debug projections and never accepted from callers. Deployment requires
+draining old workers first; mixed fence-aware/unaware replicas are unsupported.
 
 Each apply item persists a strict versioned dependency envelope in the existing
 `solution_kit_install_items.rollback_action` JSON column (no migration):
@@ -241,35 +342,40 @@ result is validated before operation construction; per-resource DB fallbacks are
 forbidden. Existing single-resource resolvers remain only for direct/exact-ID
 rollback and recovery callers.
 
-L02 preparation before atomic run initialization is two-pass and write-free. Pass one allocates
+After a `reserved` apply callback, L02 preparation is two-pass and native-write-free. Pass one allocates
 a server UUID for every create in all nine UUID-backed kinds, takes current IDs
 for updates/noops and uses setting keys, then builds the complete identity-to-ID
 registry. Pass two resolves every reference against that full registry, runs each
 native strict normalizer, captures complete before state (or proves exact
 create-time absence), and prepares exact complete staged/final targets. Create
-absence is durably encoded as `beforeSnapshot:null`; an absent setting maps that
-evidence to its native raw `{ key, present:false }` expectation. Only after the
-all-item matrix validates may `createInitializedRun` write the run and complete
-ordered item set through one transaction and one set-based item insert. The port
+absence is encoded as `beforeSnapshot:null`; an absent setting maps that evidence
+to its native raw `{ key, present:false }` expectation. Only after the all-item
+matrix validates may `initializeReservedRun` update the exact already-reserved
+owner and insert its complete ordered item set through one transaction/one set-
+based insert. Its SQL statement one verifies the owner row/generation `FOR SHARE`; it
+cannot create/substitute another run or accept the private marker. The port
 derives `initializationPlanV1` from those same rows; callers cannot supply it.
 The method is required, bounded to 512, has no `createRun`/`recordItem` fallback,
-and maps any failed transaction cause-free to
-`site_package_ledger_initialization_failed`. Before commit neither row family is
-visible; after commit both are complete and every item is durable before native
-I/O. A manifest/row mismatch is corrupt source evidence and fails before native
-access. A crash after commit but before native mutation follows ordinary
-complete-set recovery, with zero native reversal and one source-faithful outcome
-per item. Legacy partial prefixes are rejected, never treated as recoverable.
+and maps a failed transaction cause-free to
+`site_package_ledger_initialization_failed` only after an exact owner reread
+proves absent `initializationPlanV1` plus zero rows, hence rollback/absence. Exact
+`native_cms_writer_fence_lost` and `native_cms_writer_fence_failed` retain their
+codes rather than being blanket-rewritten. If the transaction/commit result is
+ambiguous, an exact reread of the strict manifest plus complete matching bounded
+rows returns committed success; partial/impossible evidence throws
+`native_cms_writer_recovery_required`, and an unresolved reread throws
+`native_cms_writer_fence_failed`. Both retain the running marker. Before commit
+the marked reservation has no item prefix; after commit its exact manifest/set is
+durable before native I/O. A crash then resumes through the callback's
+`initialized` branch, never planning, reinserting or reapplying.
 
-Dry-run initialization and completion instead use L01's exact-key
-`terminalizeDryRun` CAS plus L02's bounded orchestrator below. Its SQL predicate
-accepts only `id + mode=dry_run + status=running`; the same exact status/error is
-idempotent and another terminal pair wins without overwrite. Each requested
-transition gets two attempts; exhausted success gets two failed-terminalization
-attempts. Body/initialization error remains primary, service body never reruns,
-and unexpected terminalization detail is suppressed. Dry-runs are never resumed,
-compensated or accepted by rollback; fresh apply ownership ignores all
-non-success `dry_run` rows.
+Dry-run uses the same reserved owner and `initializeReservedRun`, then
+`finalizeOwnedRun`; its owner-row predicate accepts only the exact running marker/
+generation, first terminal state wins, and terminalization removes the marker.
+Its exact initialized resume is a durable no-native recovery, never a body retry.
+Every success requires `desired_terminal`; `different_terminal` raises
+`site_package_recovery_conflict`. Dry-runs are never compensated or accepted by
+rollback; apply ownership ignores non-success `dry_run` rows.
 
 `FullSiteDurableAfterSnapshotV1` keeps the exact final native snapshot at its
 top-level `id`/`desired` and an optional exact staged snapshot plus phase
@@ -397,7 +503,7 @@ successful source allows only final after; running/failed sources may also allow
 the already-durable staged target. Applied update calls locked atomic restore;
 applied create calls locked atomic conditional delete. Settings follow equivalent
 raw presence/value refinement for non-completed create/update items before one
-locked compare-and-raw-restore batch. A preflight-authorized noop setting issues
+locked compare-and-raw-restore batch. A non-completed preflight-authorized noop setting issues
 no native read/write and never enters the native batch payload.
 L02's default rollback registry owns
 `captureSnapshotByIdOrNull(id)` over `captureSnapshotById(id)`; it converts only
@@ -410,11 +516,10 @@ evidence with `successful === true`, `rolledBack === false`,
 `runId === currentSource.id` and
 `resourceId === durableAfterSnapshot.id`. This ownership guard is not required
 when create/update fresh refinement returns `already_recovered`, regardless of
-the earlier hint. A preflight-authorized noop also requires no ownership guard
+the earlier hint. A non-completed preflight-authorized noop also requires no ownership guard
 and no native read. The guard is not required when the current source is
 `running` or `failed`; exact durable complete-snapshot equality remains mandatory
-for every create/update decision. A successful prior rollback outcome removes
-the identity before this check only after L03's zero-native
+for every create/update decision. L03's zero-native
 `preflightPriorRollbackSuccessOutcomes` proves an exact one-to-one match against
 the raw source item: unique/non-extraneous identity, identical position and
 original operation, swapped snapshots and `rollbackAction` canonical-deep-equal
@@ -422,9 +527,16 @@ as strictly validated decoded JSONB. Lexicographically reordered object keys are
 equal, array order remains significant, and matching legacy-unknown
 `rollbackAction:null` is legal. Duplicate, extra, malformed or unequal success
 rows fail with `site_package_rollback_invalid_source` before classification,
-adapter access or native reads. Valid failed/skipped prior outcomes remain
-retryable and never enter the completed set. Every applied setting passes this
-guard before the single batch write begins.
+adapter access or native reads.
+
+Its returned success identities are provisional. Under the exclusive transaction fence and stable owner generation,
+after provenance/graph validation but before suppression/mutation, L03's read-only
+`preflightPriorRollbackSuccessNativeState` revalidates each exact ID/key: reversed create absent,
+update/noop equal to source `beforeSnapshot`, and setting equal to restored raw presence/value. Capture
+failure/mismatch throws cause-free `site_package_rollback_conflict`, leaks no identity/key/value/native
+message and leaves prerequisites unchanged. This detects pre-existing drift; the exclusive/shared
+protocol—not preflight alone—prevents post-preflight ordinary mutation. Failed/skipped outcomes remain
+retryable; only passing successes are suppressed, and every applied setting passes ownership.
 
 At the setting frontier, L03's dependency scheduler forms one group from every
 ready non-completed setting in `position DESC, kind ASC, key ASC` order and
@@ -455,25 +567,28 @@ Any outcome-ledger write failure becomes
 immediately and fails the rollback run; retry uses exact complete-state capture
 to recognize a native reversal that committed before its outcome write.
 
-After compensation succeeds, an interrupted `running` source is finalized
-`failed` with `site_package_apply_interrupted` first. Rollback `success`
-finalization is the final fallible operation, after which `successCommitted` is
-set and no catch path may rewrite that successful rollback. Every post-claim
-failure before that commit, including interrupted-source finalization failure,
-finalizes the owned/resumed rollback run `failed` with a safe code and remains
-resumable from its durable successful outcomes.
+After explicit rollback succeeds, the caller's `finalizeOwnedRun` invocation is
+the final callback DB invocation. When the exact freshly validated source is still
+`running`, the input includes its closed-shape interrupted apply-source transition
+(`runId`, `status:"failed"`, `error:"site_package_apply_interrupted"`). The
+finalizer validates the rollback-owner/source relation and atomically updates the
+source, commits rollback-owner success and removes its marker; no legacy
+`finalizeRun` call or intermediate source-terminal commit is legal. The caller
+returns success only for `desired_terminal`; `different_terminal` is
+`site_package_recovery_conflict`. Any partial reversal/outcome/finalization
+failure leaves the rollback owner `running` and marked for takeover, and durable
+successes remain provisional until revalidation.
 
-The automatic apply-failure path obeys the same ordering. After claiming the
-rollback, L02 freshly re-reads and passes `currentSource`, raw source items and
-raw claimed-run `priorOutcomes` through `listRawItems()` to L03's
-compatibility-named `compensateItems`; L03 derives completion only through the
-same zero-native one-to-one preflight,
-finalizes the source apply run `failed` with the safe apply code after native
-compensation, then commits rollback success and immediately sets
-`successCommitted`. It runs whenever the complete item set was durably
-initialized, even if no in-memory success list is populated. A catch before that
-commit may fail the owned rollback run; no catch may rewrite a committed
-successful rollback.
+Automatic compensation creates/resumes an unmarked child while the source apply
+remains the sole marked owner. It freshly loads source/outcomes and uses the same
+scheduler. On complete compensation, one `finalizeOwnedRun` transaction drains
+the source and atomically commits child `success`, source `failed` with the safe
+apply code, and marker removal; its caller likewise accepts only
+`desired_terminal`. Its compensation-failure record precedes finalization;
+afterward only DB-free outcome mapping occurs. Partial compensation leaves the
+source running/marked and child resumable for exclusive takeover. It runs whenever the complete item set
+was initialized, including an `initialized` takeover with no in-memory success
+list.
 
 ## Security Contract
 
@@ -496,110 +611,97 @@ successful rollback.
 ## Implementation Pseudocode
 
 ```ts
+import { compareFullSitePackageText } from "../fullSitePackage/schema";
+import { requireDesiredOwnedRunFinalization } from "./execute";
+
+async function executeOwnedApplyCallback(input: OwnedApplyCallbackInput) {
+  if (input.context.resumePhase === "initialized") {
+    return recoverInitializedOwnerFromDurableLedger(input);
+    // Fresh strict manifest/items only; apply compensates, dry-run terminalizes.
+    // Its `finalizeOwnedRun` call is the final callback DB invocation;
+    // only DB-free desired/different mapping follows.
+  }
+  let prepared: PreparedFullSiteSaga;
+  let run: Readonly<{ id: string }>;
+  try {
+    const plan = await planFullSiteInstall(
+      input.package, input.referencePlan, input.planningDeps,
+    );
+    prepared = await prepareFullSiteSaga({
+      plan, referencePlan: input.referencePlan, actorId: input.actorId,
+      adapters: input.adapters, generateId: crypto.randomUUID,
+    });
+    run = await input.ledger.initializeReservedRun({
+      ownerRunId: input.context.ownerRunId,
+      packageKey: input.package.key,
+      actorId: input.actorId,
+      dryRun: input.dryRun,
+      options: input.options,
+      items: prepared.items.map(toInitializedLedgerItem),
+    }); // exact ambiguous commit returns success; confirmed rollback throws generic
+  } catch (primary) {
+    const safe = toSafeFullSiteErrorCode(primary);
+    const mayClose =
+      (isDeterministicPreNativeFailure(safe) ||
+        safe === "site_package_ledger_initialization_failed");
+    if (mayClose) {
+      await finalizeFailedOwnerPreservingPrimary(input.ledger, {
+        ownerRunId: input.context.ownerRunId, status: "failed", error: safe,
+      }, primary); // catches only finalizer result/error; zero I/O before primary rethrow
+    }
+    throw primary; // ambiguous/partial/fence/native-effect paths retain marker
+  }
+  if (input.dryRun) {
+    await requireDesiredOwnedRunFinalization(input.ledger, {
+      ownerRunId: run.id, status: "success", error: null,
+    }); // `finalizeOwnedRun` is the final callback DB invocation; mapping is DB-free
+    return toApplyResult(run.id, prepared.items, prepared.intendedRegistry);
+  }
+  let result: ApplyFullSitePackageResult;
+  try {
+    result = await executePreparedPlanWithDomainAtomicAdapters({
+      run, prepared: prepared.items, actorId: input.actorId,
+      adapters: input.adapters, settingsLast: true,
+    });
+  } catch (primary) {
+    return recoverInitializedOwnerFromDurableLedger({ ...input, primary });
+  }
+  await requireDesiredOwnedRunFinalization(input.ledger, {
+    ownerRunId: run.id, status: "success", error: null,
+  }); // final callback DB invocation; only DB-free outcome mapping follows
+  return result;
+}
+
 export const applyFullSitePackage = async (
   input: ApplyFullSitePackageInput,
   overrides: FullSiteInstallExecutorDeps = {},
 ): Promise<ApplyFullSitePackageResult> => {
   assertActorUuidBeforeDb(input.actorId);
   const referencePlan = buildReferencePlan(input.package);
-  // No ledger/default-resolver/adapter/DB acquisition or lock call precedes
-  // the private graph build. ApplyFullSitePackageInput/deps expose no plan.
   const ledger = overrides.ledger ?? defaultLegacyInstallLedger;
   const adapters = overrides.adapters ?? FULL_SITE_RESOURCE_ADAPTERS;
-  const rollbackAdapters =
-    overrides.rollbackAdapters ?? FULL_SITE_ROLLBACK_ADAPTERS; // L02 facade owner
-  const execute = async () => {
+  const dryRun = input.dryRun === true;
+  const options = toSafeReservationOptions(input);
+  return ledger.withPackageLock({
+    intent: "apply",
+    packageKey: input.package.key,
+    actorId: input.actorId,
+    dryRun,
+    options, // never accepts nativeCmsWriterFenceV1
+  }, async (context) => {
+    if (context.intent !== "apply") throw new Error("site_package_invalid");
     const loadPlanningSnapshot =
       overrides.loadPlanningSnapshot ??
       createDefaultFullSitePlanningSnapshotLoader(input.package.key);
-    const plan = await planFullSiteInstall(
-      input.package,
-      referencePlan, // exact closed-over plan; planner never rebuilds it
-      {
-        loadPlanningSnapshot,
-        normalizeDesired: async ({ kind, key, currentId, desired }) =>
-          (await adapters[kind].validateDesired({
-            operation: "update",
-            currentId,
-            key,
-            desired,
-            actorId: input.actorId,
-          })) ?? desired,
-        allowSettingTakeover: input.allowSettingTakeover,
-      },
-    );
-    const { prepared, intendedRegistry } = await prepareFullSiteSaga({
-      plan,
-      referencePlan, // exact same frozen descriptors consumed by the planner
-      actorId: input.actorId,
-      adapters,
-      generateId: () => crypto.randomUUID(),
+    return executeOwnedApplyCallback({
+      context, package: input.package, referencePlan, ledger, adapters,
+      actorId: input.actorId, dryRun, options,
+      planningDeps: ownedPlanningDeps(
+        context.ownerRunId, loadPlanningSnapshot, adapters,
+      ),
     });
-    // Before persistence: allocate the complete intended-ID registry, substitute
-    // only graph-approved refs, validate every native desired snapshot and
-    // capture complete CAS expectations. This preparation performs zero writes.
-    const run = await ledger.createInitializedRun({
-      packageKey: input.package.key,
-      actorId: input.actorId,
-      dryRun: input.dryRun === true,
-      options: {
-        fullSitePackage: true,
-        packageFingerprint: fullSitePackageFingerprint(input.package),
-        allowSettingTakeover: input.allowSettingTakeover === true,
-        rollbackDependencySchemaVersion: 1,
-      },
-      items: prepared.map(toInitializedLedgerItem),
-    });
-    // One transaction writes the run plus all planned/prepared rows; no fallback.
-    // L02 staging owns all nine DURABLE_CREATE_ID_KINDS and consumes L01's
-    // buildFullSiteRollbackActionV1; it never reallocates or revalidates here.
-    if (input.dryRun) {
-      await finalizeDryRunBounded({
-        ledger,
-        runId: run.id,
-        desired: { status: "success" },
-      });
-      return {
-        runId: run.id,
-        resources: prepared.map(({ operation, intendedId }) => ({
-          identity: operation.identity,
-          id: intendedRegistry.get(operation.identity) ?? intendedId,
-          operation: operation.operation,
-        })),
-      };
-    }
-    return executePreparedPlanWithDomainAtomicAdapters({
-      run,
-      prepared,
-      actorId: input.actorId,
-      adapters,
-      rollbackAdapters,
-      publishLast: LIFECYCLE_CAPABLE_PUBLISH_KINDS,
-      settingsLast: true,
-    }); // post-preparation noop skips resolver/adapter/native I/O
-  };
-  return ledger.withPackageLock
-    ? ledger.withPackageLock(input.package.key, execute)
-    : execute(); // pure injected fakes only; concrete DB paths always lock
+  }); // resolves only after the holder begin() commits
 };
-
-async function finalizeDryRunBounded(input) {
-  const result = await attemptDryRunTerminalTwice(
-    input.ledger, input.runId, input.desired,
-  ); // desired_terminal | different_terminal | exhausted; first terminal wins
-  if (input.primaryError) throw input.primaryError;
-  if (result === "desired_terminal") return;
-  if (input.desired.status === "success" && result === "exhausted") {
-    await attemptDryRunTerminalTwice(input.ledger, input.runId, {
-      status: "failed", error: "site_package_dry_run_finalize_failed",
-    }); // suppress the result; never retry the body
-  }
-  throw new Error("site_package_dry_run_finalize_failed");
-}
-
-async function attemptDryRunTerminalTwice(
-  ledger, runId, desired,
-): Promise<"desired_terminal" | "different_terminal" | "exhausted">; // L02 owner
 
 const compareRollbackReadyNodes = (
   left: RefinedRollbackItem,
@@ -608,8 +710,12 @@ const compareRollbackReadyNodes = (
   // position DESC, kind ASC, key ASC
   return (
     right.classification.item.position - left.classification.item.position ||
-    left.classification.item.kind.localeCompare(right.classification.item.kind) ||
-    left.classification.item.key.localeCompare(right.classification.item.key)
+    compareFullSitePackageText(
+      left.classification.item.kind, right.classification.item.kind,
+    ) ||
+    compareFullSitePackageText(
+      left.classification.item.key, right.classification.item.key,
+    )
   );
 };
 
@@ -664,71 +770,24 @@ export async function rollbackFullSiteInstall(
 ): Promise<{ runId: string }> {
   assertActorUuidBeforeDb(input.actorId);
   const ledger = input.ledger ?? defaultLegacyInstallLedger;
-  const source = await requireApplySource(input.sourceRunId, ledger);
-  const execute = async () => {
-    const preClaimSource = await requireApplySource(input.sourceRunId, ledger);
-    if (preClaimSource.packageKey !== source.packageKey) {
+  const route = await readRollbackRoutingHint(input.sourceRunId, ledger);
+  return ledger.withPackageLock({
+    intent: "explicit_rollback",
+    packageKey: route.packageKey, // hint; reservation re-reads/locks source
+    sourceRunId: input.sourceRunId,
+    actorId: input.actorId,
+    options: { fullSitePackage: true },
+  }, async (context) => {
+    if (context.intent !== "explicit_rollback") {
+      throw new Error("site_package_invalid");
+    }
+    const rollbackRunId = context.ownerRunId;
+    // The actual rollback run is claimed/marked before this callback.
+    const postClaimSource = await requireApplySource(input.sourceRunId, ledger);
+    if (postClaimSource.packageKey !== route.packageKey) {
       throw new Error("site_package_rollback_invalid_source");
     }
-    const automaticCompensation =
-      await validateAutomaticCompensationSource(preClaimSource, ledger);
-
-    let rollbackRunId: string;
-    let completedClaim = false;
-    if (ledger.claimRollbackRun) {
-      const claim = await ledger.claimRollbackRun({
-        sourceRunId: preClaimSource.id,
-        packageKey: preClaimSource.packageKey,
-        actorId: input.actorId,
-        ...(automaticCompensation
-          ? {
-              options: { automaticCompensation: true, fullSitePackage: true },
-              resumeOnly: true,
-            }
-          : {}),
-        resumeRunning: true,
-      });
-      if (claim.state === "busy") {
-        throw new Error("site_package_rollback_in_progress");
-      }
-      rollbackRunId = claim.id;
-      completedClaim = claim.state === "complete";
-    } else {
-      // Narrow injected fakes may omit the claim API. Concrete DB composition may not.
-      if (automaticCompensation) {
-        throw new Error("site_package_compensation_not_recoverable");
-      }
-      if (await ledger.hasSuccessfulRollback(preClaimSource.id)) {
-        throw new Error("site_package_already_rolled_back");
-      }
-      rollbackRunId = (
-        await ledger.createRollbackRun({
-          sourceRunId: preClaimSource.id,
-          packageKey: preClaimSource.packageKey,
-          actorId: input.actorId,
-          options: { fullSitePackage: true },
-        })
-      ).id;
-    }
-
-    if (completedClaim) {
-      const completedSource = await requireApplySource(input.sourceRunId, ledger);
-      if (completedSource.packageKey !== source.packageKey) {
-        throw new Error("site_package_rollback_invalid_source");
-      }
-      throw new Error("site_package_already_rolled_back");
-    }
-    let successCommitted = false;
-    try {
-      const postClaimSource = await requireApplySource(input.sourceRunId, ledger);
-      if (postClaimSource.packageKey !== source.packageKey) {
-        throw new Error("site_package_rollback_invalid_source");
-      }
-      const postClaimCompensation =
-        await validateAutomaticCompensationSource(postClaimSource, ledger);
-      if (postClaimCompensation && rollbackRunId !== postClaimCompensation.id) {
-        throw new Error("site_package_rollback_conflict");
-      } // owned/resumed post-claim validation belongs to the failed-finalization catch
+    await requireOwnedExplicitRollback(rollbackRunId, postClaimSource.id, ledger);
       const rawSourceItems = await ledger.listRawItems(postClaimSource.id);
       const rawPriorOutcomes = await ledger.listRawItems(rollbackRunId);
       const parsed = preflightRollbackEvidence({
@@ -738,7 +797,7 @@ export async function rollbackFullSiteInstall(
       const completedIdentities = preflightPriorRollbackSuccessOutcomes({
         sourceItems: rawSourceItems,
         priorOutcomes: rawPriorOutcomes,
-      }); // exact zero-native one-to-one source/outcome proof
+      }); // exact zero-native provenance proof; identities remain provisional
       const persistedSourceItems = parsed.map(
         (evidence) => evidence.persistedSourceItem,
       );
@@ -747,14 +806,19 @@ export async function rollbackFullSiteInstall(
         declaredVersion: postClaimSource.options?.rollbackDependencySchemaVersion,
         readAction: readFullSiteRollbackActionV1,
       });
+      const adapters =
+        input.adapters ?? FULL_SITE_ROLLBACK_ADAPTERS; // L02 facade owner
+      await preflightPriorRollbackSuccessNativeState({
+        parsed,
+        completedIdentities,
+        adapters,
+      }); // all exact reversed targets pass before any identity is suppressed
       const classifications = await classifyInterruptedSagaItems({
         items: persistedSourceItems,
         resolveCurrentResource:
           input.resolveCurrentResource ??
           createFullSiteCurrentResourceResolver(postClaimSource.packageKey, ledger),
       }); // hints only; noop skips resolver access and is not outcome authority
-      const adapters =
-        input.adapters ?? FULL_SITE_ROLLBACK_ADAPTERS; // L02 facade owner
       const refinements = await refineAllRollbackStates({
         parsed,
         classifications,
@@ -781,47 +845,36 @@ export async function rollbackFullSiteInstall(
         onOutcomeFailure: "stop-all",
         onUnknownDependencies: "stop-conservatively",
       });
-      if (postClaimSource.status === "running") {
-        await ledger.finalizeRun({
-          runId: postClaimSource.id,
-          status: "failed",
-          error: "site_package_apply_interrupted",
-        });
-      }
-      await ledger.finalizeRun({ runId: rollbackRunId, status: "success" });
-      successCommitted = true; // no fallible work follows this assignment
+      await requireDesiredOwnedRunFinalization(ledger, {
+        ownerRunId: rollbackRunId, status: "success", error: null,
+        interruptedApplySource: postClaimSource.status === "running"
+          ? {
+              runId: postClaimSource.id,
+              status: "failed",
+              error: "site_package_apply_interrupted",
+            }
+          : null,
+      }); // final callback DB invocation; then DB-free outcome mapping and return
       return { runId: rollbackRunId };
-    } catch (error) {
-      if (!successCommitted) await finalizeOwnedRollbackFailedBestEffort(
-        ledger, rollbackRunId, error,
-      ); // secondary finalization failure never replaces the primary safe error
-      throw error;
-    }
-  };
-  return ledger.withPackageLock
-    ? ledger.withPackageLock(source.packageKey, execute)
-    : execute(); // pure injected fakes only; concrete DB paths always lock
+  }); // any partial failure leaves this owner running/marked for takeover
 }
 ```
 
-**Data flow:** valid actor -> private graph validation with zero dependency/DB
-access -> acquire ledger -> global lock -> package lock -> source/current-state
-re-read -> deterministic planning from that exact graph -> complete
-pass-one allocation of all nine create-ID kinds -> complete identity/ID registry
--> pass-two graph-approved reference resolution, native-owner validation and
-complete prior/staged/final snapshot preparation -> only then run/fingerprint
-creation -> already-validated snapshots, targets and dependency envelopes
-durably prepared -> one domain-local transaction per
-aggregate mutation with locked expected-snapshot CAS -> success snapshot ->
-publish dependencies at the end -> one
-final reversible shell/settings stage -> cache invalidation -> audit/finalization
--> reverse lock release.
+**Data flow:** valid actor -> pure private graph -> exclusive global/package xact
+locks -> private statement-one reservation census -> marked owner plus resume
+phase -> reserved-only DB plan/IDs/validation/initialization under owner `FOR
+SHARE` (or initialized durable recovery) -> guarded CAS/publish/settings ->
+closing -> owner `FOR UPDATE` drain -> desired terminal/marker removal -> holder commit.
+There is no session lock, manual unlock or public/general zero-SQL owner bypass;
+the private reservation exception still performs its locking census as statement one.
 
 Explicit rollback keeps the same locks while it revalidates the source and any
 automatic-compensation run, durably claims/creates or resumes the rollback run,
 loads raw prior outcomes, validates them one-to-one against the raw source set
-before deriving the completed-success set, validates the raw source graph, and
-parses every raw item's complete evidence in one zero-native preflight. It
+before deriving the provisional completed-success set, validates the raw source
+graph, parses every raw item's complete evidence in one zero-native preflight,
+then read-only revalidates every completed identity's exact reversed native
+target before suppression or any scheduler write. It
 rejects any noop whose
 strict durable after envelope, status/phase pair or null staged target is invalid,
 or whose complete before snapshot and top-level final `id`/`desired` target differ,
@@ -831,14 +884,11 @@ non-completed create/update by exact durable ID,
 checks successful-source ownership only for authoritative applied reversals, and
 schedules remaining branches with `position DESC, kind ASC, key ASC` as the exact
 ready-node tie-break. Each outcome preserves the source operation, swaps the raw
-snapshot columns and preserves the exact rollback action. Only narrow injected fakes may use
-`hasSuccessfulRollback` plus `createRollbackRun` when `claimRollbackRun` is
-absent. Any error after an owned or resumed claim and before committed success
-finalizes that rollback run failed with a safe code; a contender does not
-finalize `busy` or already-complete claims. After successful compensation, a
-running interrupted source is finalized failed with
-`site_package_apply_interrupted` before rollback success is committed as the
-final fallible operation.
+snapshot columns and preserves the exact rollback action. Rich reservation owns
+claim/create/busy/complete arbitration before the callback; injected fakes match
+that boundary. Any partial callback failure leaves the owner running/marked.
+After reversal, `finalizeOwnedRun` atomically fails any validated interrupted
+source while it commits rollback success as the final callback DB invocation.
 
 **Error handling:** conflict before mutation; known domain errors retain
 machine-readable codes; unexpected errors are redacted. Failure must not leave a
@@ -848,107 +898,76 @@ both the source failure and every success/failed/blocked compensation outcome.
 `site_package_recovery_missing_intended_id`,
 `site_package_rollback_dependency_invalid` and
 `site_package_rollback_dependency_blocked`,
-`site_package_rollback_ledger_failed`, plus
+`site_package_rollback_ledger_failed`, `site_package_recovery_conflict` and
+`site_package_ledger_initialization_failed`, plus
 `page_revision_snapshot_too_large`, `entry_revision_snapshot_too_large` and
-`detail_page_revision_snapshot_too_large`, are safe machine codes owned by L01.
+`detail_page_revision_snapshot_too_large`, plus
+`native_cms_writer_fence_busy`, `native_cms_writer_recovery_required`,
+`native_cms_writer_fence_lost`, `native_cms_writer_fence_failed` and
+`site_package_lock_reentrant`, are safe machine codes owned by L01.
 
-**Regression-test shape:** first apply complete; second apply no duplicates;
-intended managed update with matching successful ledger ID; natural-key equality
-without ledger proof conflicts as unmanaged; injected failure restores prior
-state; rollback restores previous shell/settings and only owned rows;
-invalid/dangling/bad-path refs perform zero lock, ledger, resolver, adapter and
-DB calls; the public input/deps reject a structural `referencePlan`; one private
-plan and zero `normalizeFullSitePackageForWrite` calls occur at typed apply
-before dependencies; the
-planner consumes the same array identity without calling the builder again, then
-preparation consumes those same frozen descriptors without a second walker. The
-two-argument planner separately builds once and calls
-`normalizeFullSitePackageForWrite` zero times; both overloads retain native
-`normalizeDesired` for existing-resource comparisons. Malformed post-substitution desired
-snapshots for every native kind fail before `createInitializedRun`, domain writes or
-publish, including discriminator-valid refs embedded in an otherwise invalid
-Page/Menu document. Drafts are not published early,
-menu is completely wired before publish, and shell settings are the last stage.
-Also prove exact expected-ID resolution with no natural fallback; deterministic
-natural-collision handling; atomic Form/Menu/Page/entry/detail mutations; a real
-SIGKILL after each of the nine exact-ID native commits and before ledger success;
-dependency failure blocks only its transitive prerequisites; legacy missing
-dependency evidence stops after failure; and two different packages cannot
-interleave shared-shell apply/rollback or lose exact prior values. Page and detail
-Page tests must begin with divergent current versus published documents and
-non-empty revision histories, then prove byte/value-identical restoration.
-For Page, entry and detail Page, also prove exactly 100 revisions capture/restore,
-101 fails before mutation without truncation, replace detects drift after capture,
-and restore detects a race after recovery/current-state capture with zero partial
-writes.
-Pin that every executor mutation supplies `FullSiteSagaAdapterApplyInput`, the
-deprecated base-input mutation branch is reachable only by the pre-L03
-compatibility call, and—only after mandatory preparation/capture plus complete
-durable initialization—the apply-time noop execution performs zero resolver/
-adapter/native reads or writes while retaining its graph node and phase-updating
-the same durable after envelope from `prepared` to `complete`. Final L03 scheduling calls
-`classifyInterruptedSagaItems` only
-after raw-field and graph validation. Claim/resume/busy/complete and every post-claim error
-must preserve durable outcomes, safe finalization and the actual returned rollback
-run ID. Grounded rollback cases must additionally prove: planner-projection
-equality cannot authorize update restore or create deletion; exact complete
-before/after/other-state comparisons produce recovered/restore/conflict with no
-partial write; missing/malformed complete snapshots and snapshot-ID mismatch fail
-before native access; a non-completed noop requires a strict
-`FullSiteDurableAfterSnapshotV1` raw `afterSnapshot` whose top-level `id`/`desired`
-canonical-deep-equals the complete before snapshot with the identical exact ID,
-whose `recovery.stagedSnapshot` is `null`, and whose status/phase is
-`planned`/`prepared`; a successful noop instead requires `success`/`complete`, and
-`failed`/`skipped` noops fail the same global boundary. A valid non-completed noop
-bypasses the resolver and all adapter/native reads and records the source-faithful
-noop outcome without a native write; a present create is deleted only after its
-exact-ID fresh
-snapshot equals durable after, while absence is recovered; successful-source
-applied reversals require all four managed-evidence predicates, but running/
-failed sources do not. An already-recovered create/update needs no guard after
-fresh refinement. A preflight-authorized noop needs neither guard nor native
-read. No classifier hint, including `not_applied` or
-`already_recovered`, may bypass create/update refinement or applied ownership.
-Pin ready-node ordering as
-`position DESC, kind ASC, key ASC`; outcome rows retain original
-`create | update | noop`, swapped snapshot values and the immutable raw source
-`rollbackAction`, without `delete | restore`; an outcome-ledger failure reports
-`site_package_rollback_ledger_failed` and prevents every later native call.
-Prior-success resume tests reject duplicate/extraneous identities, position or
-operation drift, unswapped/unequal decoded JSONB, and unequal action as
-`site_package_rollback_invalid_source` before native access; reordered object
-keys and matching legacy-null action pass, but reordered arrays do not. L02/L03
-status/phase tests import the shared frozen V1 matrix, accept exactly its six
-rows, and reject every `failed`/`skipped` source row plus the Cartesian
-complement.
-Inject interrupted-source finalization failure after compensation, assert the
-rollback run is failed rather than first committed success, then resume from
-durable outcomes and prove source-failed precedes the single final rollback-
-success commit without a catch rewrite.
-Pin that malformed complete evidence in any raw source item, including a noop
-with a raw/plain final snapshot instead of the strict durable envelope, an invalid
-status/phase pair or a non-null `recovery.stagedSnapshot`, fails before the
-classifier, resolver or adapter is touched; every non-completed create/update
-classifier hint, including `not_applied` and `already_recovered`, is
-fresh-refined before any outcome.
-Valid noops use only the global source-evidence preflight, compare the complete
-before snapshot with the envelope's top-level `id`/`desired` rather than comparing
-the raw before/after JSON, and issue zero resolver/adapter/native reads or writes.
-Settings tests group the ready frontier exactly once, preflight all keys
-before one locked batch call, persist outcomes only after native success and
-block the union dependency closure on a batch conflict/failure. Race every
-native conditional delete plus both shared settings apply/raw-restore batches
-after outer capture to prove the owner re-read rejects drift with zero partial
-writes. Raw-reader tests prove unknown/delete/restore operations and scalar/
-array/null fields reach L03 rather than disappearing. Catch tests prove an item
-failure leaves the last durable row untouched and only the source run becomes
-failed. Initialization tests pin 0/1/512 rows, reject 513 and invalid order before
-DB access, roll back run plus items on a transaction failure, and prove one run
-insert plus at most one bulk item insert. A real crash after the atomic commit
-exposes the complete manifest/set only; partial rows fail closed. Dry-run tests exhaust both two-attempt stages,
-pin first-terminal arbitration/body-error precedence, and prove no body retry,
-rollback, resume or native write. Stage/publish phase-upsert failures derive and
-resume outcomes only from immutable raw rows.
+**Regression-test shape:**
+
+- First apply completes, second creates no duplicates, ledger-backed managed
+  update/noop works, natural-key equality without proof conflicts, injected
+  failure compensates, and rollback restores only owned rows plus exact prior
+  shell/settings. Draft/publish order and settings-last remain pinned.
+- Bad refs perform zero dependency/I/O calls. Public inputs reject a structural
+  plan; typed apply builds one private plan, both planner overloads call package
+  normalization zero times, and supplied-plan identity reaches preparation.
+  Every post-substitution native validator fails before initialization/write.
+- The private reservation transaction proves statement-one ordered `LIMIT 2 FOR
+  UPDATE`, no `acquireNativeCmsWriterFence`/try-shared call, and no forgeable
+  public authority. Apply takeover returns exact `reserved` or `initialized` for
+  the two legal plan/item shapes and rejects cap+1, prefix, mismatch, malformed
+  and impossible states before generation rotation. Explicit rollback retains
+  its independent incremental-outcome resume matrix.
+- Initialized apply/dry-run invokes no planner, preparation, initialization or
+  native apply. Whole-callback tests cover deterministic plan/preparation errors,
+  confirmed initialization rollback, exact committed ambiguity and partial/
+  unresolved/native-effect failure. Only the first two close failed/remove the
+  marker; repeated deterministic failures do not block a later ordinary writer.
+- Initialization pins 0/1/512 and empty-plan identity, rejects 513/order/hostile
+  input pre-DB, uses exact owner update plus at most one bulk insert, preserves
+  fence-lost/fence-failed, recovers exact committed ambiguity, emits generic
+  initialization failure only for proven absence, and retains the marker for
+  partial/unresolved evidence. A real crash exposes reserved-empty or the exact
+  complete manifest/set, never a recoverable prefix.
+- `onclose` outside ALS mutates the captured lease, signals unwind without
+  cancelling callback work, and the outer path awaits captured callback
+  settlement before end. Pin detached descendants, normal revoke/end, monotonic
+  lost state and callback/acquisition/loss-over-cleanup primary precedence.
+- Every apply/dry-run/compensation/rollback success accepts only
+  `desired_terminal`; `different_terminal` is exact cause-free
+  `site_package_recovery_conflict`. Explicit rollback proves one transaction
+  validates and fails an interrupted running source, commits owner success and
+  removes its marker; no full-site `finalizeRun` call remains. Pin the caller's
+  `finalizeOwnedRun` invocation as its final callback DB invocation, DB-free
+  result mapping, and primary-preserving cleanup with zero I/O afterward.
+- Exact intended-ID/no-natural-fallback, deterministic collision handling and all
+  nine domain-atomic create/replace/delete races remain. Page/entry/detail retain
+  exact 100/101 revision gates and divergent current/published restoration.
+  SIGKILL after each native commit proves durable recovery.
+- Static/runtime fence coverage includes User `SET NULL`, reverse-reference
+  Page/Entry/Form/ContentType deletes, listing-query `KEY SHARE`, classified
+  cascades, import/backup and different-package shell serialization.
+- Every executor write takes strict saga input. Noop execution occurs only after
+  complete initialization and performs zero resolver/adapter/native calls while
+  preserving its graph/evidence. Classifier use follows global raw/graph checks;
+  every create/update hint receives exact-ID refinement and required ownership.
+- Rollback accepts only the six shared source status/phase rows and strict durable
+  envelopes. Prior successes require exact one-to-one decoded provenance and a
+  fenced native-state recheck; object-key reorder and matching null action pass,
+  array reorder/duplicates/extras/drift fail before mutation. A dependent-first
+  retry with recreated/changed native state leaves its prerequisite unchanged.
+- Scheduler tests pin `position DESC, kind ASC, key ASC`, source-faithful swapped
+  outcomes, fatal ledger-write stop, transitive blocking and conservative unknown
+  dependencies. Settings use one ordered preflighted batch; every conditional
+  delete/restore and settings CAS race produces zero partial writes.
+- Raw readers preserve hostile unknown/delete/restore/scalar/array/null values.
+  Partial native/ledger/compensation work leaves the owner running/marked and the
+  last durable row intact; dry-run recovery never reruns its body or writes native
+  state. Stage/publish recovery derives only from immutable raw rows.
 
 ## Sub-Tasks
 
@@ -969,9 +988,10 @@ resume outcomes only from immutable raw rows.
 - targeted Form/Menu/Page/entry/detail aggregate/lifecycle and full-site adapter
   suites from L02, including all nine exact-ID replace/delete race cases
 - `set -a && source /home/coder/project/Coderso/.env && set +a && bun test --parallel=1 --timeout=360000 tests/integration/kits/fullSiteManagedOwnershipDb.test.ts`
+- `set -a && source /home/coder/project/Coderso/.env && set +a && bun test --parallel=1 --timeout 360000 tests/integration/kits/fullSiteNativeForeignKeyRacesDb.test.ts`
 - `set -a && source /home/coder/project/Coderso/.env && set +a && bun test --parallel=1 --timeout=360000 tests/unit/kits/fullSiteCompensationDependencies.test.ts`
-- `set -a && source /home/coder/project/Coderso/.env && set +a && bun test --parallel=1 --timeout=360000 tests/integration/kits/fullSiteCrashRecoveryDb.test.ts` (real SIGKILL
-  matrix and two-package shared-shell concurrency)
+- `set -a && source /home/coder/project/Coderso/.env && set +a && for attempt in 1 2 3; do bun test --parallel=1 --timeout 360000 tests/integration/kits/fullSiteCrashRecoveryDb.test.ts || exit 1; done` (writer-fence matrix, three serial passes)
+- `set -a && source /home/coder/project/Coderso/.env && set +a && bun test --parallel=1 --timeout 360000 tests/unit/kits/nativeCmsWriterFenceInventory.test.ts tests/unit/admin/usersService.test.ts tests/unit/tools/importExport.test.ts tests/unit/backups/backupService.test.ts`
 - `bun --cwd core lint` and `bun --cwd core lint:types`
 - `bun run scan:security:strict`
 - L01 replaces the composition test's 100 × 20 ms DB poll with a monotonic

@@ -11,106 +11,125 @@
 
 ## Overview
 
-Split the 2,700+ line installer into cohesive bounded modules while preserving
-exports, then add deterministic create/update/noop/conflict planning. This leaf
-owns the shared ledger/types boundary but performs no native resource mutation.
+Split the 2,700+ line installer into cohesive bounded modules while preserving exports, then add deterministic create/update/noop/conflict planning. This leaf owns the shared ledger/types boundary but performs no native resource mutation.
 
 Both planner overloads accept normalized `FullSitePackageV1` and never call `normalizeFullSitePackageForWrite`.
 The two-argument form builds once before dependency reads; the three-argument form consumes the closed-over frozen plan with zero builds/clones/mutations.
 Native `normalizeDesired` remains required for each existing-resource equality decision inside `buildOperations`.
 
-Define the common legacy/full-site ledger port and concrete DB adapter here,
-preserve compatibility re-exports and wire default legacy composition. L02
-consumes it only by injection; no second implementation or direct table write is
-allowed. Keep in-memory construction compatible while exposing the stricter
-persisted/listed item type.
+Define the common legacy/full-site ledger port and concrete DB adapter here, preserve compatibility re-exports and wire default legacy composition. L02 consumes it only by injection; no second implementation or direct table write is allowed. Keep in-memory construction compatible while exposing the stricter persisted/listed item type.
 
-**Exact production ownership:** this leaf alone owns:
+**Exact production ownership:** this leaf alone owns
+`core/db/nativeCmsWriterFence.ts`; `core/services/kits/fullSiteInstallTypes.ts`;
+`fullSiteInstallPlanner.ts`; `fullSiteInstall/currentResourceResolver.ts`,
+`plannerEqualitySelections.ts`, `planningSnapshot.ts` and
+`planningResourceBatchReader.ts`; `legacyInstallRunPersistence.ts` plus
+`legacyInstallRunPersistence/{runInitialization,readPersistence,
+dryRunTerminalization}.ts`; and the bounded compatibility seams
+`solutionKitsInstallService.ts`, `kitInstaller.ts`, `legacyInstallPlanning.ts`,
+`legacyInstallResourceHandlers.ts`, `legacyInstallRollback.ts`. These respectively
+own the fence/private context, shared types, deterministic planning/equality/batch
+reads, holder/reservation/finalization ledger, and default legacy composition.
 
-- `core/services/kits/fullSiteInstallTypes.ts` -- package-owned kind/identity aliases,
-  plan/ledger/snapshot/dependency types and safe error codes;
-- `core/services/kits/fullSiteInstallPlanner.ts`;
-- `core/services/kits/fullSiteInstall/currentResourceResolver.ts`;
-- `core/services/kits/fullSiteInstall/planningSnapshot.ts` -- Bun-free ordered
-  snapshot coordinator and strict injected batch boundary;
-- `core/services/kits/fullSiteInstall/planningResourceBatchReader.ts` -- bounded
-  DB read model for current native resources;
-- `core/services/kits/legacyInstallRunPersistence.ts` -- stable public facade, concrete-ledger composition, lock owner and compatibility re-exports;
-- `core/services/kits/legacyInstallRunPersistence/runInitialization.ts` -- one
-  transaction plus one set-based prepared-item insert;
-- `core/services/kits/legacyInstallRunPersistence/readPersistence.ts` -- bounded raw/compatibility reads and managed-evidence query implementation;
-- `core/services/kits/legacyInstallRunPersistence/dryRunTerminalization.ts` -- strict input/result validation and atomic dry-run terminal arbitration;
-- `core/services/kits/solutionKitsInstallService.ts`, `kitInstaller.ts`,
-  `legacyInstallPlanning.ts`, `legacyInstallResourceHandlers.ts` and `legacyInstallRollback.ts` -- bounded compatibility/default composition seams.
+`solutionKitsInstallService.ts` remains a compatibility facade below 1,000 lines. No other leaf redeclares or implements the port, imports install-run tables, or edits these paths.
 
-`solutionKitsInstallService.ts` remains a compatibility facade below 1,000 lines.
-No other leaf redeclares or implements the port, imports install-run tables, or
-edits these paths.
+**Exact test/support ownership:** the three
+`tests/vitest/kits/full-site-{install-planner,planning-snapshot,explain-metrics}.test.ts`
+files; `tests/utils/fullSiteExplainMetrics.ts`; unit files
+`fullSiteLegacyLedger{Composition,ReadPersistence,DryRunTerminalization,
+RunInitialization}.test.ts` plus `nativeCmsWriterFence.test.ts`; and integration
+files `fullSiteManagedOwnershipDb.test.ts`,
+`fullSiteManagedEvidenceExplainDb.test.ts`, `fullSiteResolverBoundsDb.test.ts`,
+`fullSitePlanning{BaseBatch,AggregateBatch,NativeExplain}Db.test.ts` under
+`tests/integration/kits/`. Each remains independently runnable; the descriptions
+and split responsibilities below are binding.
 
-**Exact test ownership:**
+**Forbidden for L01:** every L02 adapter/executor/staging/domain-atomic path and test; L03 rollback/compensation/process worker/dependency/crash test paths; task board/changelog/shared docs. Land this leaf and its gates before L02 starts.
 
-- `tests/vitest/kits/full-site-install-planner.test.ts`;
-- `tests/vitest/kits/full-site-planning-snapshot.test.ts`;
-- `tests/unit/kits/fullSiteLegacyLedgerComposition.test.ts`;
-- `tests/unit/kits/fullSiteLegacyLedgerReadPersistence.test.ts`;
-- `tests/unit/kits/fullSiteLegacyLedgerDryRunTerminalization.test.ts`;
-- `tests/unit/kits/fullSiteLegacyLedgerRunInitialization.test.ts`;
-- `tests/integration/kits/fullSiteManagedOwnershipDb.test.ts` (new, uniquely
-  scoped and independently runnable DB ownership/resolver/history matrix; it
-  contains no EXPLAIN profiles, helpers or budget test);
-- `tests/integration/kits/fullSiteManagedEvidenceExplainDb.test.ts` (new,
-  cohesive and independently runnable DB EXPLAIN profile/helper/budget suite);
-- `tests/integration/kits/fullSiteResolverBoundsDb.test.ts` (new, independently
-  runnable exact-ID child-boundary suite with only scoped fixtures/cleanup).
-- `tests/integration/kits/fullSitePlanningBaseBatchDb.test.ts`;
-- `tests/integration/kits/fullSitePlanningAggregateBatchDb.test.ts`;
-- `tests/integration/kits/fullSitePlanningNativeExplainDb.test.ts`.
+## Pooler-Safe Writer Fence and Reserved Owner Ledger
 
-**Forbidden for L01:** every L02 adapter/executor/staging/domain-atomic path and
-test; L03 rollback/compensation/process worker/dependency/crash test paths; task
-board/changelog/shared docs. Land this leaf and its gates before L02 starts.
+`core/db/nativeCmsWriterFence.ts` alone owns namespace/key `548/0` and reserved
+option key `nativeCmsWriterFenceV1`; consumers never redeclare them. The marker is
+exactly `{schemaVersion:1,generation:<fresh UUID>}`. Private WeakMap state behind
+an unforgeable opaque lease holds state, owner ID and generation. ALS carries that
+exact lease for descendants, but no callback/export reveals those values or lets a
+caller construct reservation authority. Keep helper names
+`assertNativeCmsWriterOwnerContextAbsent`, `runWithNativeCmsWriterOwnerContext`,
+`beginNativeCmsWriterOwnerClosing`, `markNativeCmsWriterOwnerLost` and
+`acquireNativeCmsWriterFence`.
 
-## Two-Lock Ledger Contract
+An absent context means an ordinary native-CMS writer. It must open an explicit `READ COMMITTED` transaction and call `acquireNativeCmsWriterFence` as callback statement one. Statement one is exactly `select pg_try_advisory_xact_lock_shared(548, 0)`. `false` throws fresh cause-free `native_cms_writer_fence_busy` with zero later DB/effects; it never waits or performs a census. `true` is followed by one deterministic, narrow active-marker projection ordered by `created_at ASC, id ASC LIMIT 2`. Zero markers permits domain work; one valid, malformed/impossible or multiple markers throw `native_cms_writer_recovery_required`; census executor/driver/result-shape failure throws `native_cms_writer_fence_failed`. The shared transaction lock remains through commit/rollback, closing the census-to-write race.
 
-Keep `FullSiteInstallLedgerPort.withPackageLock` as the consumer-facing method so
-existing fakes and imports stay compatible. The concrete implementation delegates
-to the L01-owned `withFullSiteInstallLocks(packageKey, execute)` and guarantees:
+An `active` context makes statement one select the exact owner run `FOR SHARE`
+and validate running status plus byte-identical UUID generation before every
+post-reservation installer native **or ledger** read/write. Missing/mismatch
+mutates that lease to `lost` and throws fresh cause-free
+`native_cms_writer_fence_lost`; inherited closing/revoked/lost throws it with zero
+DB and never falls back to ordinary mode. Detached descendants cannot escape.
 
-1. require callers to validate actor before invocation and validate the bounded
-   normalized package key before opening its lock connection;
-2. acquire session advisory `GLOBAL_FULL_SITE` first;
-3. acquire the package-key advisory lock second on that same connection;
-4. hold both through the complete apply/dry-run/rollback or automatic-compensation
-   lifecycle, including final ledger status;
-5. release package then global in `finally`, including partial-acquisition errors.
+`withPackageLock` accepts strict `FullSiteInstallLockReservation`. It asserts
+absent context at absolute entry before validation/environment/client/DB; nesting
+throws fresh cause-free `site_package_lock_reentrant` with zero I/O. It validates
+canonical package/actor/source identity, rejects the reserved key recursively and
+proves holder/domain connection headroom of at least two before callback.
 
-The existing source-run claim transaction lock is acquired only after those two
-session locks. No reverse ordering is allowed. The global lock is mandatory even
-for distinct package keys because `site.*`/design shell settings share one store.
+The concrete path creates one postgres.js client `{max:1,prepare:false}` and one
+`begin()` holder transaction. It takes blocking transaction-exclusive global
+`pg_advisory_xact_lock(548,0)` then package
+`pg_advisory_xact_lock(547,hashtext(packageKey))`; no `reserve()`, session lock or
+manual unlock exists. Global -> package is the sole order and locks auto-release
+with the holder transaction, preserving PgBouncer transaction-pool compatibility.
 
-## Atomic Dry-Run Terminalization
+Only after both locks succeed does the holder mint one unexported, unforgeable
+authority bound to this invocation. The private `reserveOrTakeOverActualOwner`
+uses it in a separate short domain transaction whose statement one is the narrow
+marker-key projection ordered `created_at ASC,id ASC LIMIT 2 FOR UPDATE`. This is
+the reservation census/row lock. It must never call
+`acquireNativeCmsWriterFence` or try shared against its own holder connection;
+the authority is accepted by no public port/helper/options/callback and is not a
+general bypass. The transaction commits the actual owner plus fresh marker before
+callback/planner DB access.
 
-L01 alone adds `terminalizeDryRun()` to the shared port and delegates its
-concrete DB behavior to `legacyInstallRunPersistence/dryRunTerminalization.ts`.
-Its runtime boundary accepts only a direct plain object with exact keys
-`runId,status,error`: UUID run ID; `success` with `error:null`; or `failed` with
-one safe error code. The returned direct plain object has exactly
-`{outcome:"desired_terminal"}` or `{outcome:"different_terminal"}`; L02 validates
-that exact result from injected fakes before using it. Unknown/missing keys,
-invalid pairs and non-plain/proxy-trapping values fail cause-free as
-`site_package_dry_run_finalize_failed`; a missing ID alone fails as
-`site_package_run_not_found`.
+For apply/dry-run, that same transaction reads at most 513 owner items and derives
+`resumePhase` atomically. Absent strict `initializationPlanV1` plus zero items is
+`reserved`; a strict plan plus its complete one-to-one bounded item set with
+identical position/kind/key/operation is `initialized`, including strict empty
+plan plus zero rows. Prefix, cap+1, mismatch, malformed or impossible state fails
+closed before generation rotation. New/claimed apply callback context is only
+`{intent:"apply",ownerRunId,resumePhase}`. An initialized callback must enter
+durable recovery (automatic compensation for apply) with zero planner,
+preparation, initialization or native-reapply calls. Explicit rollback instead
+uses `{intent:"explicit_rollback",ownerRunId}` and its separately frozen source +
+incremental-outcome resume path. Its owner is marked; automatic compensation has
+an unmarked child and keeps the apply source as owner.
 
-The concrete method builds the bounded item summary, then executes one
-`UPDATE solution_kit_install_runs ... WHERE id = <runId> AND mode = 'dry_run'
-AND status = 'running' RETURNING status,error`. PostgreSQL row locking and
-predicate recheck choose one winner. A returned row is
-`desired_terminal`; otherwise a bounded same-ID re-read returns
-`desired_terminal` only when both persisted status and safe error equal the
-request, `different_terminal` for another `success|failed` pair, not-found for
-absence, and the fixed finalize error for a non-dry-run or still-running row.
-No terminal row is overwritten. Driver/shape failures expose only the fixed
-finalize code, and no migration is permitted.
+postgres.js `onclose` closes over the exact private mutable lease and the captured
+callback promise; it does not consult ALS or cancel JS work. Unexpected close
+calls `markNativeCmsWriterOwnerLost(lease)`, signals the holder race, then the
+outer path awaits callback settlement before `client.end()`. Normal completion
+revokes before commit/end; `revoked` is never relabelled lost and `lost` remains
+monotonic. Callback/acquisition/holder-loss primary errors outrank cleanup.
+Abnormal work leaves the marker durable. Deployment drains old writers because
+mixed fence-aware/unaware versions are unsafe.
+
+DB-free fence tests pin constants, exact ordinary/owner SQL, `READ COMMITTED`,
+state transitions and zero-I/O inherited rejection. Composition tests pin holder
+configuration/order; private statement-one locking census with zero shared-fence
+call; exact resume derivation/rejection; marker-before-planner; takeover rotation;
+absent-ALS `onclose`; detached drain; normal end; callback settlement before end;
+and primary-error precedence. L03 owns real-DB crash/two-client barriers.
+
+## Reserved Initialization and Atomic Owner Finalization
+
+`initializeReservedRun` replaces insert-new `createInitializedRun`. Its strict input is the exact reserved apply/dry-run owner plus 0..512 prepared items. Transaction statement one is the active owner `FOR SHARE` gate; it updates that row without replacing/removing its marker and set-based inserts all items atomically. Returned ID equals `ownerRunId`; there is no insert-new/sequential fallback.
+
+Initialization error mapping never blankets the owner gate: exact `native_cms_writer_fence_lost` and `native_cms_writer_fence_failed` remain exact fresh cause-free errors. After other transaction/commit failure, one bounded exact reread returns committed success only for the strict derived plan plus complete matching item set; absent plan plus zero rows proves rollback and yields `site_package_ledger_initialization_failed`; partial/impossible evidence yields `native_cms_writer_recovery_required`; unresolved reread yields `native_cms_writer_fence_failed`. The latter two retain the running marker.
+
+`finalizeOwnedRun` replaces dry-run-only terminalization for apply, dry-run and rollback. `beginNativeCmsWriterOwnerClosing` changes the exact lease to closing synchronously before its first await. The caller's invocation is its final callback DB invocation; caller code performs no recovery, ledger or native I/O after closing. The finalizer's primary transaction statement one locks that owner `FOR UPDATE`, drains prior `FOR SHARE`, validates generation, computes bounded summaries and removes the marker with its terminal update. Optional automatic compensation atomically closes its unmarked child/source. Optional `interruptedApplySource` is accepted only for an explicit rollback owner and exact related running apply source, with fixed transition `failed/site_package_apply_interrupted`; source failure, rollback-owner terminalization and marker removal are one transaction. Full-site code never calls legacy `finalizeRun`.
+
+Ambiguous-commit recovery is private work inside that same finalizer operation. Its bounded exact owner/optional-related reread takes the captured private lease, locks the exact owner `FOR UPDATE` as its own transaction statement one, never calls `acquireNativeCmsWriterFence` or the ordinary path, and performs no native or ledger mutation. Identical desired terminals with marker absent return `desired_terminal`; an immutable different terminal returns `different_terminal`; no overwrite occurs. An otherwise-successful caller maps that result after the call with zero DB I/O: desired permits return and different throws fresh cause-free `site_package_recovery_conflict`. Deterministic failure cleanup may catch only the finalizer result/error to preserve its preexisting primary, then performs zero I/O. Missing/running/malformed/unresolved state remains marked and exposes only the fixed finalization/fence code. Success also requires the holder transaction to end cleanly.
+
+The L02 whole-callback policy uses these primitives: deterministic validation/planning/preparation or initialization proven rolled back with zero native effects finalizes owner failed/removes marker; exact committed initialization enters recovery; partial/ambiguous/potentially native-effecting work remains running/marked. Repeated deterministic errors therefore cannot brick ordinary writers. The private marker is rejected from caller input, preserved by every options patch, stripped recursively from public/API/audit/log reads, and never copied to an automatic-compensation child. No migration is permitted.
 
 ## Versioned Rollback Dependencies
 
@@ -155,24 +174,46 @@ export function buildFullSiteRollbackActionV1(
 export function readFullSiteRollbackActionV1(
   value: unknown,
 ): FullSiteRollbackActionV1 | null;
-export type FullSiteDryRunTerminalizationInput = Readonly<{
-  runId: string;
-  status: "success" | "failed";
-  error: string | null;
-}>;
-export type FullSiteDryRunTerminalizationResult = Readonly<{
-  outcome: "desired_terminal" | "different_terminal";
-}>;
+export type FullSiteInstallLockReservation =
+  | Readonly<{
+      intent: "apply"; packageKey: string; actorId: string;
+      dryRun: boolean; options: JsonObject;
+    }>
+  | Readonly<{
+      intent: "explicit_rollback"; packageKey: string; actorId: string;
+      sourceRunId: string; options: JsonObject;
+    }>;
+export type FullSiteInstallLockContext =
+  | Readonly<{
+      intent: "apply";
+      ownerRunId: string;
+      resumePhase: "reserved" | "initialized";
+    }>
+  | Readonly<{ intent: "explicit_rollback"; ownerRunId: string }>;
 export type FullSiteInitializedLedgerItemInput = Readonly<{
   position: number; kind: FullSiteInstallResourceKind; key: string;
   operation: "create" | "update" | "noop";
   beforeSnapshot: JsonObject | null; afterSnapshot: JsonObject;
   rollbackAction: JsonObject;
 }>;
-export type FullSiteInitializedRunInput = Readonly<{
-  packageKey: string; actorId: string; dryRun: boolean;
+export type FullSiteReservedRunInitializationInput = Readonly<{
+  ownerRunId: string; packageKey: string; actorId: string; dryRun: boolean;
   options: JsonObject;
   items: readonly FullSiteInitializedLedgerItemInput[];
+}>;
+export type FullSiteOwnedRunFinalizationInput = Readonly<{
+  ownerRunId: string; status: "success" | "failed"; error: string | null;
+  automaticCompensation?: Readonly<{
+    runId: string; status: "success"; error: null;
+  }> | null;
+  interruptedApplySource?: Readonly<{
+    runId: string;
+    status: "failed";
+    error: "site_package_apply_interrupted";
+  }> | null;
+}>;
+export type FullSiteOwnedRunFinalizationResult = Readonly<{
+  outcome: "desired_terminal" | "different_terminal";
 }>;
 export type FullSiteInitializationPlanV1 = readonly Readonly<{
   position: number; kind: FullSiteInstallResourceKind; key: string;
@@ -182,31 +223,21 @@ export function readStrictInitializationPlanV1(
   value: unknown,
 ): FullSiteInitializationPlanV1;
 export type FullSiteInstallLedgerPortAdditions = {
-  createInitializedRun(
-    input: FullSiteInitializedRunInput,
+  initializeReservedRun(
+    input: FullSiteReservedRunInitializationInput,
   ): Promise<Readonly<{ id: string }>>;
-  terminalizeDryRun(
-    input: FullSiteDryRunTerminalizationInput,
-  ): Promise<FullSiteDryRunTerminalizationResult>;
+  finalizeOwnedRun(
+    input: FullSiteOwnedRunFinalizationInput,
+  ): Promise<FullSiteOwnedRunFinalizationResult>;
   listRawItems(runId: string): Promise<readonly RawFullSiteInstallLedgerItem[]>;
 };
 ```
 
 `FullSiteInstallLedgerPortAdditions` is only the changed-member fragment, never a replacement port.
-The final exported `FullSiteInstallLedgerPort` retains the exact existing signatures for `withPackageLock`, `createRun`, `recordItem`, `finalizeRun`, `getRun`, `patchRunMetadata`, `findLatestSuccessfulApplyRun`, `listItems`, `createRollbackRun`, `claimRollbackRun`, `findAutomaticCompensationRun`, `hasSuccessfulRollback` and `findManagedResourceEvidence`, then adds all three members above.
+The final `FullSiteInstallLedgerPort` uses the exact descriptor/discriminated context above and adds all three members. Apply callbacks get `resumePhase`; explicit rollback callbacks do not pretend that incremental outcomes are initialization items. Full-site apply/rollback use reserved initialization/owned finalization only; legacy callers alone retain `createRun`/`finalizeRun`.
 Type gates compile every read/facade `Pick` and the default full composition.
 
-`createInitializedRun(value: unknown)` is required without a sequential fallback.
-Before DB it safely rejects Proxy/accessor/cyclic input and requires direct plain
-exact-key run/items: actor UUID, canonical package key, boolean `dryRun`, plain
-JSON options/snapshots/actions, 0..512 contiguous valid items and unique
-`kind:key`; caller `options.initializationPlanV1` is forbidden. Invalid input is
-cause-free `site_package_invalid`; item 513 is cause-free
-`site_package_too_large`, both before a transaction. The port clones items,
-derives the manifest, then writes the run plus one set-based insert on one
-transaction handle. DB/commit failure rolls back both row families and throws
-cause-free `site_package_ledger_initialization_failed`. Existing `createRun`/
-`recordItem` remain for legacy/rollback and later phase upserts.
+`initializeReservedRun(value: unknown)` has no insert-new/sequential fallback. Pre-DB validation safely rejects Proxy/accessor/cyclic or non-exact input; requires owner/actor UUIDs, canonical package key, boolean dry-run, plain JSON, 0..512 contiguous unique `kind:key` items; and forbids caller marker/plan ownership. Invalid/513 are exact cause-free `site_package_invalid`/`site_package_too_large`. It clones, derives the plan, owner-gates, updates the reservation and bulk-inserts on one handle. Its catch applies the exact reread/error matrix above rather than blanket rewriting owner-gate errors. Legacy `createRun`/`recordItem` remain compatibility-only.
 
 The builder rejects self/invalid identities and emits unique sorted dependencies.
 The strict reader allows only `schemaVersion`/`dependencies`, returns `null` for
@@ -238,8 +269,10 @@ L01 also adds the safe codes `site_package_recovery_missing_intended_id`,
 `site_package_rollback_dependency_invalid`,
 `site_package_rollback_dependency_blocked` and
 `site_package_rollback_ledger_failed`, plus
-`site_package_ledger_initialization_failed`,
-`site_package_dry_run_finalize_failed`,
+`site_package_ledger_initialization_failed`, `site_package_recovery_conflict`,
+`native_cms_writer_fence_busy`, `native_cms_writer_recovery_required`,
+`native_cms_writer_fence_lost`, `native_cms_writer_fence_failed`,
+`site_package_lock_reentrant`,
 `page_revision_snapshot_too_large`, `entry_revision_snapshot_too_large` and
 `detail_page_revision_snapshot_too_large`, before L02/L03 consume them.
 
@@ -309,15 +342,17 @@ and per-parent cap+1 rejection before projection.
   `ResourceAdapter.captureSnapshotById(id)` is the sole complete native snapshot
   path.
 
-The content-entry branch must replace its bare desired-row `select()` with these
-exact source projections (equivalent `satisfies` typing is allowed, but the
-selected columns are not negotiable):
+`plannerEqualitySelections.ts` is the only owner of every `*_PLANNER_EQUALITY_SELECTION` below. It exports direct `as const` Drizzle maps and imports no DB client/runtime module. `currentResourceResolver.ts` and `planningResourceBatchReader.ts` import the same applicable objects; neither may redeclare, clone, spread or reconstruct one. Resolver equality reads pass the object directly to `select`; batch reads nest it as `desired` beside only fixed ordinal/resolved-ID/parent transport fields, never a whole row.
+
+The resolver keeps its local content-entry identity selection, while both
+consumers use the shared equality selection (equivalent `satisfies` typing is
+allowed, but selected columns are not negotiable):
 
 ```ts
 const CONTENT_ENTRY_ID_SELECTION = {
   id: contentEntries.id,
 } as const;
-const CONTENT_ENTRY_PLANNER_EQUALITY_SELECTION = {
+export const CONTENT_ENTRY_PLANNER_EQUALITY_SELECTION = {
   contentTypeId: contentEntries.typeId,
   title: contentEntries.title,
   slug: contentEntries.slug,
@@ -326,15 +361,13 @@ const CONTENT_ENTRY_PLANNER_EQUALITY_SELECTION = {
 } as const;
 ```
 
-Both strict-ID and natural-key content-entry identity queries select only
+Both strict-ID and natural-key resolver identity queries select only
 `CONTENT_ENTRY_ID_SELECTION`; the exact-ID/type/slug and natural type/slug
 predicates, `id ASC` order and `LIMIT 1` remain unchanged. The native desired
-query selects `CONTENT_ENTRY_PLANNER_EQUALITY_SELECTION` and passes that result
-directly to `projectDesired`, without a whole-row spread or post-read `typeId`
-rename. This preserves all five and only five allowed content-entry equality
-fields (`contentTypeId`, `title`, `slug`, `status`, `data`). Across identity and
-desired reads, the safe column union is exactly `id`, `typeId`, `slug`, `title`,
-`status` and `data`. It never selects or materializes
+queries in both consumers use `CONTENT_ENTRY_PLANNER_EQUALITY_SELECTION`; the resolver passes that result directly to `projectDesired` and the batch reader preserves it as `current.desired`, without a whole-row spread or post-read `typeId` rename. This preserves all five and only five equality fields
+(`contentTypeId`, `title`, `slug`, `status`, `data`). Across resolver identity
+and desired reads, the safe column union is exactly `id`, `typeId`, `slug`,
+`title`, `status` and `data`. Neither consumer selects or materializes
 `contentEntries.accessPassword` (a hashed credential), nor `authorId`,
 `visibility`, `tags`, publish/schedule fields or timestamps.
 
@@ -342,13 +375,13 @@ The same evidence audit proves two other bare desired reads load unrelated wide
 columns, so narrow them in this correction without changing desired semantics:
 
 ```ts
-const PAGE_PLANNER_EQUALITY_SELECTION = {
+export const PAGE_PLANNER_EQUALITY_SELECTION = {
   slug: pages.slug,
   title: pages.title,
   status: pages.status,
   currentData: pages.currentData,
 } as const;
-const DETAIL_PAGE_PLANNER_EQUALITY_SELECTION = {
+export const DETAIL_PAGE_PLANNER_EQUALITY_SELECTION = {
   name: detailPageDocuments.name,
   contentTypeId: detailPageDocuments.contentTypeId,
   currentDocument: detailPageDocuments.currentDocument,
@@ -370,6 +403,7 @@ row shape:
 
 | Selection | Exact selected fields |
 | --- | --- |
+| `SETTING_PLANNER_EQUALITY_SELECTION` | `value` |
 | `CONTENT_TYPE_PLANNER_EQUALITY_SELECTION` | `name`, `slug`, `schema`, `status`, `config` |
 | `FORM_PLANNER_EQUALITY_SELECTION` | `name`, `slug`, `status`, `description`, `successMessage`, `successRedirectUrl`, `submissionAccess`, `settings` |
 | `FORM_FIELD_PLANNER_EQUALITY_SELECTION` | `id`, `type`, `label`, `name`, `required`, `settings`, `orderIndex` |
@@ -379,6 +413,8 @@ row shape:
 | `LISTING_QUERY_PLANNER_EQUALITY_SELECTION` | `name`, `description`, `query` |
 | `MENU_PLANNER_EQUALITY_SELECTION` | `name`, `location`, `status`, `settings` |
 | `MENU_ITEM_PLANNER_EQUALITY_SELECTION` | `id`, `label`, `href`, `pageId`, `parentId`, `orderIndex`, `settings` |
+
+For each equality map, every owning-table column absent from its exact row is a forbidden equality output; tests derive that complete set from the schema column inventory so a later column addition fails closed. It includes setting `key/updatedAt`; every base/child `id`, parent FK and timestamp not listed above; Page `authorId/publishedData/publishedAt`; detail Page `status/publishedDocument/publishedAt`; Menu `publishedAt`; and content entry `authorId/visibility/accessPassword/tags/publishedAt/scheduledAt`. A documented batch transport key may appear only outside `desired`; it never expands that allowlist.
 
 Import `formFields`, `formActions` and `FORM_FIELD_SCHEMA_LIMITS`; reuse that
 owner's exact `fields = 100` cap. Reuse
@@ -404,16 +440,9 @@ snapshot/write boundary: it intentionally remains on `normalizeFormActionsInput`
 L02 must not edit this L01-owned resolver or make it import the later
 `normalizeFormActionsForWrite` helper.
 
-An L01-owned source/query-shape regression isolates every native desired branch.
-It proves exactly three `.from(contentEntries)` calls, two content-entry ID
-selections and one equality selection. A reusable assertion extracts each whole
-selection object body and compares all of it, in order, with the exact direct
-`key: table.column` assignments above. It must fail before comparison on spread,
-computed, shorthand, method, accessor, SQL/expression or any extra member; do not
-filter regex matches and ignore unmatched text. Prove the helper rejects both a
-synthetic malicious spread and a synthetic computed member. Retain the literal
-forbidden-reference checks, reject every bare `.select()` in the resolver, and
-keep strict expected-ID/null plus deterministic natural-lookup DB regressions.
+The source/query-shape regression in `tests/unit/kits/fullSiteLegacyLedgerComposition.test.ts` reads the shared owner and both consumers. It proves exactly three resolver `.from(contentEntries)` calls, two ID selections and one equality selection, and proves every applicable resolver/batch `select` references the shared constant instead of a local map. Its reusable assertion compares each complete shared body, in order, to the exact direct `key: table.column` assignments and fails before comparison on spread, computed, shorthand, method, accessor, SQL/expression, unmatched text or extras; synthetic spread and computed fixtures fail. Retain resolver bare-select and literal-forbidden checks.
+
+`tests/integration/kits/fullSitePlanningBaseBatchDb.test.ts` and `fullSitePlanningAggregateBatchDb.test.ts` compile every exported production batch query and compare its complete SELECT output with the fixed transport envelope plus the applicable shared map. For every projection they reject every inventory field above from `desired`, explicitly including `access_password`; an extra output fails even if later code drops it.
 
 ## Bounded Managed-Evidence Query
 
@@ -482,18 +511,24 @@ decision remains conditional and may be retained only after all frozen profiles
 below execute the exact production run-driven lateral query and pass every frozen
 budget; a passing standalone diagnostic is insufficient.
 
-Before retaining that conditional no-migration decision, extract every EXPLAIN
-profile, type, parser, fixture helper and the named test from the 995-line
-ownership matrix into the cohesive L01-owned
-`tests/integration/kits/fullSiteManagedEvidenceExplainDb.test.ts`. That file owns
-the test `managed evidence SELECT satisfies no-migration EXPLAIN budgets`, backed
-by `assertManagedResourceEvidenceExplainBudgets`; the original
-`fullSiteManagedOwnershipDb.test.ts` remains the ownership/resolver/history
-suite and contains no EXPLAIN-only code. Neither test imports the other or
-depends on another test module's initialization, and each must run independently
-and remain at most 1,000 physical lines.
+Before retaining that decision, move all evidence DB profiles, fixture helpers
+and the named budget test from the 995-line ownership matrix into
+`tests/integration/kits/fullSiteManagedEvidenceExplainDb.test.ts`. It owns
+`managed evidence SELECT satisfies no-migration EXPLAIN budgets` and
+`assertManagedResourceEvidenceExplainBudgets`; `fullSiteManagedOwnershipDb.test.ts`
+keeps only ownership/resolver/history behavior. Both run independently and stay
+at most 1,000 lines.
 
-That helper compiles the exact production
+`tests/utils/fullSiteExplainMetrics.ts` is the one independently importable
+parser owner. It has no Bun, DB, fixture or test-runner import and exports only
+`FullSiteExplainMetrics = Readonly<{ executionMs: number; emittedRows: number; scannedRows: number; sharedBuffers: number }>` plus `parseManagedEvidenceExplainMetrics(input: unknown): FullSiteExplainMetrics`. Both DB EXPLAIN suites import that helper
+directly; neither defines a parser/metrics validator, duplicates its constants,
+imports a sibling test, or relies on test registration/module state. All pure
+positive/hostile parser regressions below live only in
+`tests/vitest/kits/full-site-explain-metrics.test.ts`, which imports the helper
+directly and performs no DB/environment setup.
+
+The evidence budget helper compiles the exact production
 `buildManagedResourceEvidenceBatchQuery(input).toSQL()` SQL and parameters and runs
 that same run-driven correlated-lateral bounded SELECT as
 `EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON) <compiled SQL>`. Parameters remain bound
@@ -523,8 +558,8 @@ is a conservative one-identity history stress fixture; the width profile separat
 pins the package's
 512-resource planning ceiling; it is an evidence bound, not a retention limit.
 
-Parse the JSON plan through one pure `parseManagedEvidenceExplainMetrics`
-boundary without asserting a planner node name. Its guarded implementation maps
+The shared helper parses JSON through `parseManagedEvidenceExplainMetrics`
+without asserting a planner node name. Its guarded implementation maps
 every malformed document, record/property access, number, node or `Plans`
 structure to a new error whose sole message is
 `managed_evidence_explain_invalid` and whose `cause` is absent. It must not leak
@@ -599,10 +634,10 @@ predicate and never depend on global table emptiness.
 
 `fullSitePlanningNativeExplainDb.test.ts` independently compiles every production
 base/child batch shape, including the detail JSON-name predicate, and measures
-representative one-request plus 512-request fixtures. Each statement must stay
+representative one-request plus 512-request fixtures. Each statement stays
 within 1,000 ms server execution, its documented request/child cap, 100,000
-scanned-row work and 100,000 root shared buffers. It reuses the pure parser but
-imports no sibling test; summaries remain sanitized.
+scanned-row work and 100,000 root shared buffers. It imports the same parser from
+`tests/utils/fullSiteExplainMetrics.ts`; summaries remain sanitized.
 
 This measured gate is additive: compiled batch-shape assertions, exactly one
 planner snapshot-loader call and the `<= 14` query-count regression remain
@@ -614,32 +649,79 @@ formula, reverting to the item-driven shape or pinning a planner node name.
 
 ## Security Contract
 
-Service only; no route. Planner consumes only normalized packages, reports safe
-IDs/keys, rejects unmanaged collisions before writes and never logs payload data.
-Actor validation precedes lock/ledger DB access. Dependency readers reject
-unknown fields and unbounded arrays. The content-entry equality query never
-selects or materializes the hashed `accessPassword`; a later projection/drop is
-not sufficient. Page/detail equality reads omit unused published document bodies.
-No public endpoint is added. This contract retains no database migration only
-after the managed/native EXPLAIN gates above prove the current indexes stay
-within every frozen budget; failure requires contract re-audit before
-implementation continues. No RBAC/CSRF/rate-limit change, secret snapshot or
-cross-domain transaction is introduced.
+Service only; no route or RBAC/CSRF/rate-limit change. Actor validation precedes
+DB; normalized inputs, bounded reject-unknown readers and safe IDs/codes only.
+Never log payloads or select `accessPassword`/unused published bodies. No secret
+snapshot or cross-domain transaction is introduced. No migration remains valid
+only while every frozen EXPLAIN budget passes; failure requires contract re-audit.
 
 ## Implementation Pseudocode
 
 ```ts
-export async function withFullSiteInstallLocks(packageKey, execute) {
-  return withDedicatedLockConnection(async (client) => {
-    await acquireGlobalFullSiteLock(client);
-    try {
-      await acquirePackageLock(client, packageKey);
-      try { return await execute(); }
-      finally { await releasePackageLock(client, packageKey); }
-    } finally {
-      await releaseGlobalFullSiteLock(client);
-    }
+// core/db/nativeCmsWriterFence.ts
+import { AsyncLocalStorage } from "node:async_hooks";
+export const NATIVE_CMS_WRITER_FENCE_NAMESPACE = 548 as const;
+export const NATIVE_CMS_WRITER_FENCE_KEY = 0 as const;
+export const NATIVE_CMS_WRITER_FENCE_OPTION_KEY = "nativeCmsWriterFenceV1" as const;
+declare const ownerLeaseBrand: unique symbol;
+export type NativeCmsWriterOwnerLease = Readonly<{ [ownerLeaseBrand]: true }>;
+type PrivateOwnerState = {
+  state: "active" | "closing" | "revoked" | "lost";
+  ownerRunId: string;
+  generation: string;
+};
+const leaseStates = new WeakMap<NativeCmsWriterOwnerLease, PrivateOwnerState>();
+const ownerContext = new AsyncLocalStorage<NativeCmsWriterOwnerLease>();
+export function assertNativeCmsWriterOwnerContextAbsent(): void;
+export function runWithNativeCmsWriterOwnerContext<T>(lease, execute: (value: FullSiteInstallLockContext) => Promise<T>): Promise<T>;
+export function beginNativeCmsWriterOwnerClosing(): NativeCmsWriterOwnerLease;
+export function markNativeCmsWriterOwnerLost(lease: NativeCmsWriterOwnerLease): void {
+  const owner = requirePrivateLeaseState(lease); // generation never leaves WeakMap
+  if (owner.state === "active" || owner.state === "closing") owner.state = "lost";
+  // revoked stays revoked; lost stays lost
+}
+export async function acquireNativeCmsWriterFence(tx): Promise<void> {
+  const lease = ownerContext.getStore();
+  if (!lease) return acquireOrdinaryTrySharedThenCensus(tx); // statement 1
+  const owner = requirePrivateLeaseState(lease);
+  if (owner.state !== "active") throw new Error("native_cms_writer_fence_lost"); // zero I/O
+  return lockAndValidateOwnerForShare(tx, owner); // statement 1; marks lost on mismatch
+}
+
+// legacyInstallRunPersistence.ts
+export async function withFullSiteInstallLocks(reservation, execute) {
+  assertNativeCmsWriterOwnerContextAbsent();
+  const input = readExactLockReservationAndHeadroom(reservation);
+  let lease: NativeCmsWriterOwnerLease | null = null;
+  let callbackPromise: Promise<unknown> | null = null;
+  const holderClosed = createLossSignal();
+  const holder = postgres(readDatabaseUrl(), {
+    max: 1,
+    prepare: false,
+    onclose: () => {
+      if (lease) markNativeCmsWriterOwnerLost(lease); // works outside ALS
+      holderClosed.signal();
+    },
   });
+  let primary: unknown;
+  try {
+    const beginPromise = holder.begin(async (sql) => {
+      await sql`select pg_advisory_xact_lock(548, 0)`;
+      await sql`select pg_advisory_xact_lock(547, hashtext(${input.packageKey}))`;
+      const authority = mintPrivateHolderReservationAuthority(sql, input);
+      lease = await reserveOrTakeOverActualOwner(input, authority);
+      // Its short tx statement 1 is ordered LIMIT 2 FOR UPDATE; never shared-fences.
+      callbackPromise = runWithNativeCmsWriterOwnerContext(lease, execute);
+      return callbackPromise;
+    });
+    return await raceBeginAgainstUnexpectedClose(beginPromise, holderClosed);
+  } catch (error) {
+    primary = error;
+    throw sanitizePrimaryHolderError(error);
+  } finally {
+    await settleCapturedCallbackWithoutMasking(callbackPromise, primary);
+    await endHolderWithoutMasking(holder, primary);
+  }
 }
 export function planFullSiteInstall(pkg, deps): Promise<FullSiteInstallPlan>;
 export function planFullSiteInstall(pkg, referencePlan: readonly PlannedPackageResource[], deps): Promise<FullSiteInstallPlan>;
@@ -694,108 +776,99 @@ Matching a natural key or full desired payload without this proof is `site_packa
 
 ```ts
 // legacyInstallRunPersistence/readPersistence.ts
-import { aliasedTable, and, asc, desc, eq, exists, inArray, notExists, or, sql } from "drizzle-orm";
-import { db } from "../../../db/client"; import { solutionKitInstallItems, solutionKitInstallRuns } from "../../../db/schema";
-import { isRecord } from "../legacyInstallPlanning"; import type { JsonRecord, SolutionKitInstallItemRecord, SolutionKitInstallItemRow, SolutionKitInstallSummary } from "../legacyInstallPlanning";
-import type { FullSiteInstallLedgerPort, FullSiteInstallResourceKind, ManagedResourceEvidence, PersistedFullSiteInstallLedgerItem, RawFullSiteInstallLedgerItem } from "../fullSiteInstallTypes";
-import { PACKAGE_LIMITS, type JsonObject } from "../fullSitePackage/types";
-type ReadPersistence = Pick<FullSiteInstallLedgerPort, "listItems" | "listRawItems" | "findManagedResourceEvidence">;
-type ManagedEvidenceInput = Parameters<FullSiteInstallLedgerPort["findManagedResourceEvidence"]>[0];
-type PersistedResourceType = typeof solutionKitInstallItems.$inferSelect.resourceType;
-export const normalizeItemRow = (row: SolutionKitInstallItemRow): SolutionKitInstallItemRecord => ({ id: row.id, runId: row.runId, position: row.position,
-  resourceType: row.resourceType as SolutionKitInstallItemRecord["resourceType"], resourceKey: row.resourceKey, operation: row.operation as SolutionKitInstallItemRecord["operation"],
-  status: row.status as SolutionKitInstallItemRecord["status"], beforeSnapshot: isRecord(row.beforeSnapshot) ? row.beforeSnapshot as JsonRecord : null, afterSnapshot: isRecord(row.afterSnapshot) ? row.afterSnapshot as JsonRecord : null, rollbackAction: (row.rollbackAction ?? null) as JsonRecord | null, error: row.error, createdAt: row.createdAt, updatedAt: row.updatedAt });
-export const buildSummary = (items: Pick<SolutionKitInstallItemRecord, "operation" | "status">[]): SolutionKitInstallSummary => {
-  const summary: SolutionKitInstallSummary = { total: 0, success: 0, failed: 0, planned: 0, skipped: 0, operations: { create: 0, update: 0, noop: 0, delete: 0, restore: 0 } };
-  for (const item of items) { summary.total += 1; summary.operations[item.operation] += 1; if (item.status === "success") summary.success += 1; if (item.status === "failed") summary.failed += 1; if (item.status === "planned") summary.planned += 1; if (item.status === "skipped") summary.skipped += 1; } return summary;
-};
 export async function listSolutionKitInstallItems(runId: string): Promise<SolutionKitInstallItemRecord[]> {
-  const rows = await db.select().from(solutionKitInstallItems).where(eq(solutionKitInstallItems.runId, runId))
-    .orderBy(asc(solutionKitInstallItems.position), asc(solutionKitInstallItems.id)).limit(PACKAGE_LIMITS.resourcesTotal + 1);
-  if (rows.length > PACKAGE_LIMITS.resourcesTotal) throw new Error("site_package_too_large"); return rows.map(normalizeItemRow); }
+  const rows = await readOrderedItemRows(runId, PACKAGE_LIMITS.resourcesTotal + 1);
+  if (rows.length > PACKAGE_LIMITS.resourcesTotal) throw freshError("site_package_too_large");
+  return rows.map(normalizeItemRow);
+}
 export const buildManagedResourceEvidenceBatchQuery = (input: ManagedEvidenceBatchInput) =>
   buildRequestOrdinalCte(input.resources)
     .leftJoinLateral(buildRunDrivenWinnerForRequest(input.packageKey))
-    .select({ ordinal: request.ordinal, runId: winner.runId,
-      resourceId: sql`${winner.afterSnapshot}->>'id'` })
-    .orderBy(asc(request.ordinal)); // one bounded statement; no wide JSON result
+    .select(narrowOrdinalRunAndSnapshotId)
+    .orderBy(asc(request.ordinal));
 export const findManagedResourceEvidenceBatch = async (value: unknown) => {
   const input = readExactManagedEvidenceBatchInput(value, PACKAGE_LIMITS.resourcesTotal);
-  const rows = await buildManagedResourceEvidenceBatchQuery(input);
-  return readExactOrderedManagedEvidenceBatch(rows, input.resources);
+  return readExactOrderedManagedEvidenceBatch(
+    await buildManagedResourceEvidenceBatchQuery(input), input.resources,
+  );
 };
-// Direct/recovery compatibility retains its existing one-identity query/result.
-export const findManagedResourceEvidence = async (
-  input: ManagedEvidenceInput,
-): Promise<ManagedResourceEvidence | null> => readSingleManagedEvidence(
-  await buildManagedResourceEvidenceQuery(input),
-);
-const projectCompatibilityItems = (items: SolutionKitInstallItemRecord[]): PersistedFullSiteInstallLedgerItem[] => items
-  .filter((item) => item.operation === "create" || item.operation === "update" || item.operation === "noop").map((item) => ({ position: item.position,
-    kind: item.resourceType as FullSiteInstallResourceKind, key: item.resourceKey, operation: item.operation as "create" | "update" | "noop", status: item.status,
-    beforeSnapshot: item.beforeSnapshot as JsonObject | null, afterSnapshot: item.afterSnapshot as JsonObject | null, rollbackAction: item.rollbackAction as JsonObject | null, error: item.error }));
 export const createLegacyInstallReadPersistence = (): ReadPersistence => ({
-  async listItems(runId) { return projectCompatibilityItems(await listSolutionKitInstallItems(runId)); },
+  async listItems(runId) {
+    return projectCompatibilityItems(await listSolutionKitInstallItems(runId));
+  },
   async listRawItems(runId): Promise<readonly RawFullSiteInstallLedgerItem[]> {
-    const rows = await db.select({ position: solutionKitInstallItems.position, kind: solutionKitInstallItems.resourceType, key: solutionKitInstallItems.resourceKey,
-      operation: solutionKitInstallItems.operation, status: solutionKitInstallItems.status, beforeSnapshot: solutionKitInstallItems.beforeSnapshot,
-      afterSnapshot: solutionKitInstallItems.afterSnapshot, rollbackAction: solutionKitInstallItems.rollbackAction, error: solutionKitInstallItems.error })
-      .from(solutionKitInstallItems).where(eq(solutionKitInstallItems.runId, runId)).orderBy(asc(solutionKitInstallItems.position), asc(solutionKitInstallItems.id)).limit(PACKAGE_LIMITS.resourcesTotal + 1);
-    if (rows.length > PACKAGE_LIMITS.resourcesTotal) throw new Error("site_package_rollback_invalid_source"); return rows;
-  }, findManagedResourceEvidence,
+    const rows = await readRawOrderedItemRows(runId, PACKAGE_LIMITS.resourcesTotal + 1);
+    if (rows.length > PACKAGE_LIMITS.resourcesTotal) {
+      throw freshError("site_package_rollback_invalid_source");
+    }
+    return rows; // no operation/status/value coercion
+  },
+  findManagedResourceEvidence, // unchanged direct/recovery compatibility query
 });
 // legacyInstallRunPersistence/runInitialization.ts
 export const createRunInitialization = (
   database: Pick<typeof db, "transaction"> = db,
-): Pick<FullSiteInstallLedgerPort, "createInitializedRun"> => ({
-  async createInitializedRun(value: unknown) {
-    const input = cloneAndValidateInitializedRunInput(value); // 0..512, exact order
+): Pick<FullSiteInstallLedgerPort, "initializeReservedRun"> => ({
+  async initializeReservedRun(value: unknown) {
+    const input = cloneAndValidateReservedRunInput(value); // 0..512, exact order
     const options = withDerivedInitializationPlan(input.options, input.items);
     try {
       return await database.transaction(async (tx) => {
+        await acquireNativeCmsWriterFence(tx); // statement 1: owner FOR SHARE
+        const run = await validateAndUpdateReservedOwner(tx, input, options);
         const now = new Date();
-        const [run] = await tx.insert(solutionKitInstallRuns).values(
-          toInitializedRunRow(input, options, now),
-        ).returning({ id: solutionKitInstallRuns.id });
-        if (!run) throw new Error("site_package_ledger_initialization_failed");
         if (input.items.length > 0) await tx.insert(solutionKitInstallItems)
-          .values(input.items.map((item) => toInitializedItemRow(run.id, item, now)));
-        return Object.freeze({ id: run.id });
+          .values(input.items.map((item) => toInitializedItemRow(input.ownerRunId, item, now)));
+        if (run.id !== input.ownerRunId) throw new Error("site_package_ledger_initialization_failed");
+        return Object.freeze({ id: input.ownerRunId });
       });
-    } catch {
-      throw new Error("site_package_ledger_initialization_failed"); // no cause
+    } catch (error) {
+      if (hasExactFenceCode(error, "native_cms_writer_fence_lost")) {
+        throw freshError("native_cms_writer_fence_lost");
+      }
+      if (hasExactFenceCode(error, "native_cms_writer_fence_failed")) {
+        throw freshError("native_cms_writer_fence_failed");
+      }
+      const state = await rereadExactReservedInitialization(input.ownerRunId);
+      if (state === "initialized") return Object.freeze({ id: input.ownerRunId });
+      if (state === "reserved") {
+        throw freshError("site_package_ledger_initialization_failed");
+      }
+      if (state === "partial_or_impossible") {
+        throw freshError("native_cms_writer_recovery_required");
+      }
+      throw freshError("native_cms_writer_fence_failed"); // unresolved; marker stays
     }
   },
 });
-// legacyInstallRunPersistence/dryRunTerminalization.ts; this is the only extracted child that imports readPersistence.ts.
-import { and, asc, eq } from "drizzle-orm"; import { db } from "../../../db/client";
-import { solutionKitInstallItems, solutionKitInstallRuns } from "../../../db/schema"; import { PACKAGE_LIMITS } from "../fullSitePackage/types";
-import type { SolutionKitInstallItemRecord, SolutionKitInstallSummary } from "../legacyInstallPlanning";
-import type { FullSiteDryRunTerminalizationInput, FullSiteDryRunTerminalizationResult, FullSiteInstallLedgerPort } from "../fullSiteInstallTypes";
-import { buildSummary } from "./readPersistence";
-type SummaryRow = Pick<SolutionKitInstallItemRecord, "operation" | "status">;
-type DryRunDependencies = Readonly<{ readSummaryRows(runId: string, limit: number): Promise<readonly SummaryRow[]>; updateRunningDryRun(input: FullSiteDryRunTerminalizationInput, summary: SolutionKitInstallSummary): Promise<unknown>; readRunById(runId: string): Promise<unknown>; }>;
-declare const readExactDryRunTerminalizationInput: (value: unknown) => FullSiteDryRunTerminalizationInput; declare const readExactUpdateResult: (value: unknown, input: FullSiteDryRunTerminalizationInput) => boolean;
-declare const recoverExactTerminal: (value: unknown, input: FullSiteDryRunTerminalizationInput) => FullSiteDryRunTerminalizationResult; declare const freshFinalizeError: () => Error; declare const sanitizeDryRunTerminalizationError: (error: unknown) => Error;
-const defaultDryRunDependencies = {
-  readSummaryRows: async (runId: string, limit: number) => db.select({ operation: solutionKitInstallItems.operation, status: solutionKitInstallItems.status }).from(solutionKitInstallItems).where(eq(solutionKitInstallItems.runId, runId)).orderBy(asc(solutionKitInstallItems.position), asc(solutionKitInstallItems.id)).limit(limit),
-  updateRunningDryRun: async (input: FullSiteDryRunTerminalizationInput, summary: SolutionKitInstallSummary) => db.update(solutionKitInstallRuns).set({ status: input.status, error: input.error, summary, finishedAt: new Date() })
-    .where(and(eq(solutionKitInstallRuns.id, input.runId), eq(solutionKitInstallRuns.mode, "dry_run"), eq(solutionKitInstallRuns.status, "running"))).returning({ status: solutionKitInstallRuns.status, error: solutionKitInstallRuns.error }),
-  readRunById: async (runId: string) => (await db.select({ mode: solutionKitInstallRuns.mode, status: solutionKitInstallRuns.status,
-    error: solutionKitInstallRuns.error }).from(solutionKitInstallRuns).where(eq(solutionKitInstallRuns.id, runId)).limit(1))[0] ?? null,
-} satisfies DryRunDependencies;
-export const createDryRunTerminalization = (overrides: Partial<DryRunDependencies> = {}): Pick<FullSiteInstallLedgerPort, "terminalizeDryRun"> => {
-  const deps: DryRunDependencies = { readSummaryRows: overrides.readSummaryRows ?? defaultDryRunDependencies.readSummaryRows, updateRunningDryRun: overrides.updateRunningDryRun ?? defaultDryRunDependencies.updateRunningDryRun, readRunById: overrides.readRunById ?? defaultDryRunDependencies.readRunById };
-  return { async terminalizeDryRun(value: unknown) { try { const input = readExactDryRunTerminalizationInput(value); const rows = await deps.readSummaryRows(input.runId, PACKAGE_LIMITS.resourcesTotal + 1);
-    if (rows.length > PACKAGE_LIMITS.resourcesTotal) throw freshFinalizeError();
-    try { if (readExactUpdateResult(await deps.updateRunningDryRun(input, buildSummary([...rows])), input)) return { outcome: "desired_terminal" }; }
-    catch { return recoverExactTerminal(await deps.readRunById(input.runId), input); }
-    return recoverExactTerminal(await deps.readRunById(input.runId), input); } catch (error) { throw sanitizeDryRunTerminalizationError(error); } } };
-};
+// legacyInstallRunPersistence/dryRunTerminalization.ts (historical path)
+export const createOwnedRunFinalization = (
+  database: Pick<typeof db, "transaction"> = db,
+): Pick<FullSiteInstallLedgerPort, "finalizeOwnedRun"> => ({
+  async finalizeOwnedRun(value: unknown) {
+    const input = readExactOwnedRunFinalization(value);
+    const lease = beginNativeCmsWriterOwnerClosing(); // synchronous before await
+    try {
+      return await database.transaction(async (tx) => {
+        const owner = await lockExactOwnerForUpdate(tx, lease); // statement 1, drains FOR SHARE
+        const related = await readAndValidateBoundedRelatedTransitions(
+          tx,
+          owner,
+          input, // optional compensation child OR interrupted apply source
+        );
+        return atomicallyTerminalizeAndRemoveMarker(tx, owner, input, related);
+      });
+    } catch (error) {
+      // Same finalizer operation: private tx statement 1 locks exact owner FOR UPDATE;
+      // read-only classification, never acquireNativeCmsWriterFence/ordinary path.
+      return recoverExactTerminalOwnerAndChild(error, input, lease);
+    }
+  },
+});
 // legacyInstallRunPersistence.ts: facade owns only the complementary Pick and imports both children; neither child imports it.
 import type { FullSiteInstallLedgerPort } from "./fullSiteInstallTypes";
 import { buildSummary, createLegacyInstallReadPersistence, listSolutionKitInstallItems, normalizeItemRow } from "./legacyInstallRunPersistence/readPersistence";
-import { createDryRunTerminalization } from "./legacyInstallRunPersistence/dryRunTerminalization";
+import { createOwnedRunFinalization } from "./legacyInstallRunPersistence/dryRunTerminalization";
 import { createRunInitialization } from "./legacyInstallRunPersistence/runInitialization";
 export { buildManagedResourceEvidenceBatchQuery, buildManagedResourceEvidenceQuery, buildSummary, findManagedResourceEvidence, findManagedResourceEvidenceBatch, listSolutionKitInstallItems, normalizeItemRow } from "./legacyInstallRunPersistence/readPersistence";
 type FacadePersistence = Pick<FullSiteInstallLedgerPort, "withPackageLock" | "createRun" | "recordItem" | "finalizeRun" | "getRun" | "patchRunMetadata" | "findLatestSuccessfulApplyRun" | "createRollbackRun" | "claimRollbackRun" | "findAutomaticCompensationRun" | "hasSuccessfulRollback">;
@@ -807,10 +880,9 @@ const createLegacyWriteAndLockPersistence = (): FacadePersistence => ({ withPack
   createRun: createFullSiteRun, recordItem: recordFullSiteItem, finalizeRun: finalizeFullSiteRun, getRun: getFullSiteRun, patchRunMetadata: patchFullSiteRunMetadata,
   findLatestSuccessfulApplyRun: findLatestSuccessfulFullSiteApplyRun, createRollbackRun: createFullSiteRollbackRun, claimRollbackRun: claimFullSiteRollbackRun,
   findAutomaticCompensationRun: findAutomaticFullSiteCompensationRun, hasSuccessfulRollback: hasSuccessfulFullSiteRollback });
-type LegacyInstallLedgerOverrides = Readonly<{ dryRunTerminalization?: Parameters<typeof createDryRunTerminalization>[0] }>;
-export const createLegacyInstallLedger = (overrides: LegacyInstallLedgerOverrides = {}): FullSiteInstallLedgerPort => ({ ...createLegacyWriteAndLockPersistence(),
+export const createLegacyInstallLedger = (): FullSiteInstallLedgerPort => ({ ...createLegacyWriteAndLockPersistence(),
   ...createLegacyInstallReadPersistence(), ...createRunInitialization(),
-  ...createDryRunTerminalization(overrides.dryRunTerminalization) });
+  ...createOwnedRunFinalization() });
 export const defaultLegacyInstallLedger = createLegacyInstallLedger();
 // fullSiteLegacyLedgerReadPersistence.test.ts moves (never copies) both named composition cases.
 import { expect, test } from "bun:test"; import { randomUUID } from "node:crypto"; import { fileURLToPath } from "node:url";
@@ -827,12 +899,12 @@ test("managed evidence batch uses one bounded ordered SELECT", async () => {
 });
 test("shared ledger preserves omitted V1 evidence and honors an explicit null clear", async () => { /* move current lines 734-772 exactly */ });
 test("old construction literals and required rollbackAction remain compatible", async () => { /* exact matrix above */ }); test("listRawItems preserves hostile raw values/order and rejects row 513", async () => { /* exact matrix above */ });
-// fullSiteLegacyLedgerDryRunTerminalization.test.ts owns hostile/state/race/ambiguousCommitMatrix with local clients/harness only.
+// fullSiteLegacyLedgerDryRunTerminalization.test.ts owns all-mode owner finalization/race/ambiguous-commit matrices.
 // fullSiteLegacyLedgerRunInitialization.test.ts owns 0/1/512, exact-key/scalar/
 // Proxy/accessor/cycle/513, two-DML rollback and exact cause-free errors.
 ```
 Every declared `FacadeHandler` takes the matching current `createLegacyInstallLedger` method body from lines 709-939; only extraction and names change, and no child duplicates those bodies.
-Allowed dependency edges are facade -> three persistence children and dry terminalization -> read persistence (`buildSummary`) only; reverse edges, sibling-test imports and duplicate bodies are forbidden.
+Allowed dependency edges are facade -> three persistence children and owner finalization -> read persistence (`buildSummary`) only; reverse edges, sibling-test imports and duplicate bodies are forbidden.
 The composition suite moves rather than copies focused cases, retains facade/catalog, lock, resolver projection, metadata and DB-harness ownership, and updates its exact inventory. Planner fake ledgers add raw-read, dry-run and required atomic-initialization methods; later-leaf fakes update in their owning phases.
 
 Data flow: DAG -> one ordered batch snapshot -> strict managed/natural current state -> stable create/update/noop/conflict; direct exact-ID resolution stays separate.
@@ -840,88 +912,51 @@ Errors: existing conflict/not-found/invalid codes plus exact safe `site_package_
 
 L01 uses the graph-owner descriptor resolver/`normalizeDesired`; any descriptor targeting a planned create forces update even on placeholder equality; native preparation reuses the plan with actual IDs.
 
-Pure planner tests pin both overloads, frozen plan identity, placeholder false-noop
-prevention, one snapshot-loader call and zero planning writes. Managed-ownership
-DB tests retain natural-key conflict, strict expected ID, deterministic ties,
-mismatched/noop/failed/rolled-back evidence, timestamp ties, managed noop/update
-and setting-takeover isolation. The historical matrix pins both rollback
-invalidation branches and the exact ordered winner; EXPLAIN tests compile the
-production query with bound parameters and never use opaque driver counters.
-`fullSiteResolverBoundsDb.test.ts` retains exact-ID Form field/action and Menu
-item 100/256 cap/cap+1 cases with scoped cleanup and 360-second timeout.
-`fullSitePlanningBaseBatchDb.test.ts` covers all ten kind base shapes, evidence-ID
-preference, deterministic natural collisions, the content-entry second wave and
-exact ordered 0/1/512 output. `fullSitePlanningAggregateBatchDb.test.ts` owns
-Form field/action and Menu item multi-parent ordering plus exact cap/cap+1 with
-zero partial projection. `fullSitePlanningNativeExplainDb.test.ts` owns only the
-sanitized native plan/budget fixtures described above. All are independently
-runnable, scope IDs before first mutation and clean only owned rows.
-The planner integration proves exactly one ordered snapshot-loader call and zero
-single evidence/resolver calls for 1 and 512 resources. The focused snapshot suite
-rejects hostile cardinality/identity/order results and pins the 14-statement cap.
-A direct-resolver regression still invokes exactly `(kind, seed)` and proves one
-self-evidence lookup; it is compatibility coverage, not a planning fallback.
-The pure V1 reader retains all hostile/4,096/4,097 cases and one-call totality.
-Resolver source-shape assertions stay in the Bun composition lane. The focused
-read-persistence suite pins required V1 projection, omitted-field preservation,
-raw unknown/delete/restore and scalar/array/null passthrough, stable 512/513
-ordering, batch evidence shape/winner/order and zero partial projection. The
-dry-run suite retains strict hostile input/result, two-client terminal races,
-idempotence and ambiguous-commit recovery.
-
-The planner no-write fake counts and throws on every ledger mutation, including
-`createInitializedRun`; every individual count and their sum remain zero.
-
-The composition DB harness still treats only `undefined` as unconfigured and
-runs exactly load, `SELECT 1`, 12-column run `LIMIT 0`, then 13-column item
-`LIMIT 0` stages from one typed factory. Direct projections forbid spreads/
-computed/extras and never materialize snapshots. Every injected stage failure is
-called twice, stops at that stage and returns a fresh cause-free
-`full_site_legacy_ledger_db_harness_failed` without sentinel/driver/schema text.
-
-Every mutating test that remains in
-`tests/integration/kits/fullSiteManagedOwnershipDb.test.ts` enters its
-`try/finally` before the first insert, update, upsert, ledger mutation or other
-write. It preallocates every owned UUID and records it in a table-specific owned
-ID set before the corresponding insert; the evidence fixture likewise accepts
-or creates preallocated run/item IDs, records them before writing, and returns
-no untracked generated row. Each `finally` is partial-setup-safe and deletes only
-recorded child IDs and then recorded parent IDs in dependency order (install
-items before install runs, domain children before their parents). Empty owned
-sets are skipped explicitly. Remove package-key/resource-key cleanup helpers and
-all other broad predicates. The global setting case records/restores the exact
-prior row or deletes only its one test-owned key when no prior row existed.
-Cleanup never assumes a globally empty table.
-
-Both managed-evidence integration files are independently runnable and at most
-1,000 physical lines. They may share production imports, but neither may import
-the sibling test file or depend on its test registration, fixtures or module
-state.
-The L01-owned `tests/unit/kits/fullSiteLegacyLedgerComposition.test.ts` safe-code
-regression list must include `site_package_rollback_ledger_failed` and assert
-that `toSafeFullSiteErrorCode(code) === code`.
-The existing named Bun legacy-parity gate proves the concrete DB/default
-composition remains usable before L02 lands.
+- Planner tests pin both overloads, frozen supplied-plan identity, placeholder
+  false-noop prevention, one snapshot load, zero per-item fallback and zero
+  writes; mutation spies include `initializeReservedRun`/`finalizeOwnedRun`.
+- Managed-ownership tests retain natural/expected-ID semantics, deterministic
+  ties, invalidating histories, managed noop/update and setting isolation. The
+  direct two-argument resolver still performs its one compatibility evidence read.
+- Base/aggregate batch suites cover all ten kinds, entry second wave, exact
+  0/1/512 order, Form/Menu child caps and zero partial projection. Resolver bounds
+  retain exact-ID 100/256 cap+1 cases. Native/evidence EXPLAIN suites compile
+  production bound queries and emit only sanitized metrics.
+- Snapshot/V1/read suites reject hostile cardinality/order and 4,097 entries,
+  accept exact 4,096 once, pin the 14-query cap, preserve raw unknown/delete/
+  restore/scalar/array/null fields and enforce stable 512/513 boundaries.
+- The historical dry-run-named suite owns all-mode desired/different finalization,
+  paired compensation, interrupted-source atomic transition, races/idempotence and
+  private ambiguous recovery with captured lease, statement-one exact owner `FOR
+  UPDATE`, zero ordinary/shared-fence path and zero mutation. It also pins DB-free
+  caller mapping and primary-preserving cleanup with zero I/O after closing.
+  Fence/composition suites own the reservation, resume and `onclose` matrices above.
+- The DB harness keeps exact load -> `SELECT 1` -> 12-column run `LIMIT 0` ->
+  13-column item `LIMIT 0`, direct projections, and twice-invoked fresh sanitized
+  stage failures. Every mutating fixture enters `try/finally` before its first
+  write, pre-registers exact table IDs, deletes children before parents, uses no
+  broad predicate and exactly restores/deletes its setting.
+- DB files are independently runnable, never import sibling tests and stay at
+  most 1,000 lines. Safe-code tests round-trip ledger initialization/recovery
+  conflict, rollback-ledger, all four fence codes and reentrant lock while
+  sanitizing unknown sentinels. The named legacy-parity gate remains green.
 
 ## Sub-Tasks
 
-- [x] Extract the initial bounded legacy modules, ledger port + DB implementation,
-  default legacy composition and compatibility facade above.
+- [x] Extract the bounded legacy modules, ledger DB implementation, default composition and facade.
 - [x] Add the planner and its initial pure Vitest coverage.
-- [ ] Land aliases, bounded raw reads, strict V1/manifest readers and two-lock/
-  dry-run behavior while preserving facade compatibility.
-- [ ] Replace planner N+1 reads with the one-call snapshot loader, batch evidence
-  and <=14-query native reader; retain direct/exact-ID resolver compatibility.
-- [ ] Land atomic `createInitializedRun` and its one-transaction/set-based tests;
-  preserve `createRun`/`recordItem` for their existing callers.
-- [ ] Split the near-limit facade/tests into the declared cohesive children,
-  then land scoped managed/native behavior and EXPLAIN suites.
+- [ ] Land aliases, bounded raw reads, strict V1/manifest readers and pooler-safe xact/owner fence without facade drift.
+- [ ] Replace planner N+1 reads with one snapshot loader, batch evidence and <=14-query native reader; retain direct/exact-ID compatibility.
+- [ ] Land atomic `initializeReservedRun`/`finalizeOwnedRun`; retain legacy-only `createRun`/`recordItem`/`finalizeRun`.
+- [ ] Split near-limit facade/tests into declared cohesive children, then land managed/native and EXPLAIN suites.
 - [ ] Pass pure, DB, type/lint, query-budget and touched-file line gates.
 
 ## Testing Requirements
 
 - `bunx vitest run --config vitest.config.ts tests/vitest/kits/full-site-install-planner.test.ts`
 - `bunx vitest run --config vitest.config.ts tests/vitest/kits/full-site-planning-snapshot.test.ts`
+- `bunx vitest run --config vitest.config.ts tests/vitest/kits/full-site-explain-metrics.test.ts`
+- `bun test --parallel=1 tests/unit/kits/nativeCmsWriterFence.test.ts`
 - Freshly prefix every Bun DB command below in its own shell with `set -a && source /home/coder/project/Coderso/.env && set +a`; never inspect, print, copy, hash or persist its contents.
 - `set -a && source /home/coder/project/Coderso/.env && set +a && bun test --parallel=1 --timeout=360000 tests/unit/kits/installService.test.ts tests/unit/kits/fullSiteLegacyLedgerComposition.test.ts`
 - `set -a && source /home/coder/project/Coderso/.env && set +a && bun test --parallel=1 --timeout=360000 tests/unit/kits/fullSiteLegacyLedgerReadPersistence.test.ts`
@@ -934,65 +969,24 @@ composition remains usable before L02 lands.
 - `set -a && source /home/coder/project/Coderso/.env && set +a && bun test --parallel=1 --timeout=360000 tests/integration/kits/fullSitePlanningAggregateBatchDb.test.ts`
 - `set -a && source /home/coder/project/Coderso/.env && set +a && bun test --parallel=1 --timeout=360000 tests/integration/kits/fullSitePlanningNativeExplainDb.test.ts`
 - `bun --cwd core lint` and `bun --cwd core lint:types`
-- Every other TASK-547 DB-targeted command/test timeout is likewise at least
-  `--timeout 360000` / `360_000` ms; do not raise unrelated non-DB timeouts.
-- Replace both `15_000` DB-lock overrides in
-  `fullSiteLegacyLedgerComposition.test.ts` and the EXPLAIN suite's `120_000`
-  override with `360_000`; no L01 DB test may retain a lower hard timeout.
-- After the focused-test move, replace `pollUntil`'s 100 × 20 ms limit with a
-  monotonic `DB_EVENTUALLY_DEADLINE_MS = 360_000` deadline; retain bounded
-  polling/`db_lock_state_timeout`, stay below 1,000 lines and duplicate no moved cases.
-- Corrective L01 completion must first commit its promised
-  `RawFullSiteInstallLedgerItem` and `listRawItems()` owners. The L03 pre-land
-  bridge may then consume them but may never redeclare them. After that bridge
-  checkpoint and before TASK-547-02-L02 dispatch, the orchestrator executes the
-  exact root-test type gate `./node_modules/.bin/tsc -p tsconfig.json --noEmit`
-  from the repository root. Capture the same command once before sequential leaf
-  dispatch as the baseline, parse every located TypeScript diagnostic, and
-  require zero diagnostics owned by L01 or any already-landed TASK-547 phase.
-  A non-zero root exit may preserve dependency order only when every remaining
-  located diagnostic is classified either to a strictly later declared leaf or
-  has the same normalized path, location, TypeScript code and headline as an
-  unowned diagnostic in that pre-dispatch baseline;
-  unlocated/unparsed diagnostics, new unowned diagnostics and ambiguous owners
-  block TASK-547-02-L02 dispatch/checkpoint progression. The gate reports the remaining later-leaf and unchanged-baseline
-  counts explicitly and must not describe a non-zero global run as clean. The generic record validator admits nonzero only for exact command ID `root-typecheck`; the phase passes only after this classifier, and no other command receives that exception.
+- Every TASK-547 DB test uses at least `360000`/`360_000` ms; replace the two `15_000` lock overrides, EXPLAIN `120_000`, and 100 × 20 ms poll with monotonic `DB_EVENTUALLY_DEADLINE_MS = 360_000` while retaining bounded `db_lock_state_timeout`. Do not raise unrelated timeouts or duplicate moved cases.
+- L01 first lands `RawFullSiteInstallLedgerItem`/`listRawItems`; L03 pre-land consumes but never redeclares them. Baseline and post-bridge root run `./node_modules/.bin/tsc -p tsconfig.json --noEmit`; zero located diagnostics may belong to L01/already-landed phases.
+- A nonzero root typecheck may proceed only when every parsed diagnostic belongs to a later leaf or exactly matches baseline path/location/code/headline. Unlocated/unparsed/new-unowned/ambiguous diagnostics block; report later-leaf and unchanged-baseline counts and never call nonzero clean. Only command ID `root-typecheck` may use this classifier.
 - Reader/type/planner gate: execute the exact hostile/4,096/4,097 matrix above;
   keep the required `rollbackAction` direct assignment without `?.`, `??` or cast,
   throwing zero-call planner-write spies, and one self-evidence lookup for a
   direct concrete two-argument resolver call.
-- Dry-run terminalization gate: exact hostile input/result rejection, SQL
-  `id + mode=dry_run + status=running` predicate, two-client opposite-terminal
-  race, identical retry, missing/wrong-mode/still-running errors, one immutable
-  winner and post-commit-throw recovery; no terminal overwrite or driver detail.
-- Resolver projection gate: the Bun source-shape test pins the exact content
-  type, form/field/action, template/query, content-entry, detail, Page and
-  menu/item selection constants by comparing each complete body to only ordered
-  direct assignments; malicious spread/computed fixtures and every unmatched or
-  extra member fail. It proves the two content-entry identity selects plus one
-  desired select, rejects bare selects, retains all literal forbidden-reference
-  checks, and pins child cap imports, `orderIndex,id`, cap+1 limits and pre-project
-  oversize guards. DB behavior preserves exact-ID/natural lookup and proves all six exact-cap/cap+1 child boundaries without truncation.
-- Source/query-shape gate: the one compiled batch SELECT retains request ordinal,
+- Initialization/finalization gate: exact 0/1/512 plan/items, owner-gate code preservation, confirmed-rollback generic failure, exact ambiguous-commit success and unresolved marker retention; synchronous closing, primary and private-reread statement-one owner `FOR UPDATE`, captured lease, zero ordinary fence/mutation, bounded all-mode summaries, automatic child and interrupted-source atomic transitions, desired/different outcomes, marker removal and immutable winner. Every success requires desired; caller mapping is DB-free, deterministic cleanup catches only finalizer result/error with zero later I/O, and partial failure preserves owner.
+- Writer-fence gate: exact 548/0 ordinary `READ COMMITTED` try-shared/census and installer owner `FOR SHARE`; private holder-authorized statement-one ordered `LIMIT 2 FOR UPDATE` reservation census with zero shared-fence call/public bypass; rich resume derivation/rejection and marker-before-planner. Pin global -> package xact SQL, `{max:1,prepare:false}` `begin`, rotation, inherited/detached zero-I/O, absent-ALS `onclose`, normal revoke/end, callback settlement before end, primary precedence and no reserve/session/manual-unlock SQL.
+- Planner-projection gate: the Bun source test pins the shared exact constants and both consumers' imports/uses; malicious spread/computed/unmatched/extra members, local copies and bare selects fail. The base/aggregate DB suites compile every batch projection, compare its full transport-plus-`desired` SELECT shape and reject every non-allowlisted output for that projection, explicitly `access_password`. Retain two content-entry ID selects/one resolver desired select, literal forbidden checks, child cap imports/order/limits/pre-project guards, exact-ID/natural behavior and all six cap/cap+1 boundaries without truncation.
+- Evidence query-shape gate: the one compiled batch SELECT retains request ordinal,
   run-driven lateral winner, combined anti-join, stable aliases/order/limits and
   narrow resource ID result; native base/child batches retain exact caps.
-- Conditional no-migration plan gate: run every evidence/native EXPLAIN
-  profile and budget above with sanitized winner mismatch. Pure parsing retains
-  both positive forms/four outputs, finite metrics, only specified optional
-  absences, and fixed one-invocation errors for every malformed/overflow shape.
+- Conditional no-migration plan gate: both DB suites import the one pure helper and run every evidence/native profile and budget with sanitized winner mismatch; the focused Vitest file owns both positive forms/four outputs, finite metrics, specified optional absences and fixed one-invocation errors for every malformed/overflow shape. Sibling-test imports and duplicate parser/type/validator bodies fail.
 - L01 planner regression gate: exactly one snapshot-loader call and zero per-item
   DB fallbacks; both overloads call `normalizeFullSitePackageForWrite` zero times while `normalizeDesired` remains required for existing-resource comparisons;
   two-arg builds once before deps, and three-arg planning consumes L02's unchanged plan with zero builds before any dependency.
-- DB test-integrity gate: the URL helper returns false only for `undefined` and
-  true for `""`; production and failure tests use the same injectable four-stage
-  factory. Pin exact stage order, complete direct 12/13-column projections and
-  `LIMIT 0`. Invoke each injected stage failure twice: exact traces stop at that
-  stage and yield two distinct fresh exact sanitized `Error` objects with no
-  cause/extra property/secret. No fake production DB cast/`any`; the bounded
-  production query stays separate. Every managed-ownership and resolver-bound
-  fixture activates `try/finally` before its first mutation, records preallocated
-  table-specific IDs before inserts and cleans exact children before parents with
-  no broad predicate.
+- DB test-integrity gate: URL helper false only for `undefined` and true for `""`; one injected factory pins load/`SELECT 1`/direct 12- and 13-column `LIMIT 0` stages. Each stage fails twice with distinct fresh cause-free sanitized errors and exact stop traces. No fake production DB cast/`any`; fixtures start `try/finally` before writes, pre-register exact IDs, clean children first and use no broad predicate.
 - Only after both plan profiles pass, confirm `git diff --name-only` contains no
   DB migration, snapshot or journal artifact for this correction. A budget
   failure instead blocks L01 for index-migration contract re-audit.

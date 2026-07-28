@@ -8,8 +8,8 @@
 **Dependencies:** TASK-547-02-L01 plus the TASK-547-02-L03 pre-land
 compatibility checkpoint
 **Status:** 🚧 In Progress
-**Validation:** Corrective adapter/executor work and fresh targeted/final gates
-are pending.
+**Validation:** Corrective adapter/executor work and fresh L02-owned targeted
+gates are pending.
 
 ## Overview
 
@@ -34,63 +34,35 @@ planner-equality `FullSiteInstallPlanItem.currentDesired` projection.
 
 **Exact full-site production ownership:**
 
-- `core/services/kits/fullSiteInstall/adapters.ts` becomes a bounded registry/
-  compatibility facade;
-- new `core/services/kits/fullSiteInstall/adapterTypes.ts` owns only adapter
-  types, `FullSiteNativeSnapshot`, lifecycle-kind guards and Bun-free shared
-  helpers;
-- new `core/services/kits/fullSiteInstall/aggregateAdapters.ts` owns content
-  type, Form, Page Template, listing template/query and settings adapters;
-- new `core/services/kits/fullSiteInstall/lifecycleAdapters.ts` owns entry,
-  detail Page, Page and Menu adapters;
-- `core/services/kits/fullSiteInstall/execute.ts`, `staging.ts`, `preflight.ts`
-  and `nestedValidation.ts`.
+- `core/services/kits/fullSiteInstall/adapters.ts` becomes a bounded registry/compatibility facade;
+- new `core/services/kits/fullSiteInstall/adapterTypes.ts` owns only adapter types, `FullSiteNativeSnapshot`, lifecycle-kind guards and Bun-free shared helpers;
+- new `core/services/kits/fullSiteInstall/aggregateAdapters.ts` owns content type, Form, Page Template, listing template/query and settings adapters;
+- new `core/services/kits/fullSiteInstall/lifecycleAdapters.ts` owns entry, detail Page, Page and Menu adapters; and
+- `core/services/kits/fullSiteInstall/execute.ts`, `staging.ts`, `preflight.ts` and `nestedValidation.ts`.
 
 **Exact native-domain production ownership:**
 
-- `core/services/forms/formActionsContract.ts`,
-  `core/services/forms/formActionsService.ts`, and new
-  `core/services/forms/formAggregateService.ts`;
+- `core/services/forms/formActionsContract.ts`, `core/services/forms/formActionsService.ts`, `core/services/forms/formsService.ts`, and new `core/services/forms/formAggregateService.ts`;
 - `core/services/menus/menuService.ts`;
-- `core/services/pages/pageService.ts`;
-- `core/services/content/detailPageDocumentService.ts`;
-- `core/services/content/typeService.ts`,
-  `core/services/pages/pageTemplateLibraryService.ts`,
-  `core/services/content/listingTemplatesService.ts`, and
-  `core/services/content/listingQueriesService.ts` own exact-ID atomic create,
-  replace and conditional-delete paths for their native rows;
-- `core/services/content/listingTemplateConfig.ts` owns the Bun-free strict
-  `normalizeListingTemplateWriteInput` listing-template write normalizer used by
-  `aggregateAdapters.ts`/`adapters.ts`;
-- legacy `core/services/content/entryService.ts` plus new extracted
-  `core/services/content/entryLifecycleMutationService.ts`. Preserve the public
-  `entryService.ts` imports/re-exports while splitting it below 1,000 lines; and
-- `core/services/settings/settingsService.ts` owns the native setting key/value
-  contract and object-shaped write normalizer;
-- `core/services/settings/siteLocale.ts` owns the pure stored-write and public
-  sink locale policies; and
-- new `core/services/settings/fullSiteSettingsAtomicService.ts` owns exact raw
-  capture plus validated apply and trusted raw-restore CAS batches.
+- `core/services/pages/pageService.ts` and `core/services/pages/revisionService.ts`;
+- `core/services/content/detailPageDocumentService.ts` and `core/services/content/detailPageRevisionService.ts`;
+- `core/services/content/typeService.ts`, `core/services/pages/pageTemplateLibraryService.ts`, `core/services/content/listingTemplatesService.ts`, and `core/services/content/listingQueriesService.ts` own exact-ID atomic create, replace and conditional-delete paths;
+- `core/services/content/listingTemplateConfig.ts` owns the Bun-free strict `normalizeListingTemplateWriteInput` used by `aggregateAdapters.ts`/`adapters.ts`;
+- legacy `core/services/content/entryService.ts` plus new extracted `core/services/content/entryLifecycleMutationService.ts`; preserve public imports/re-exports while splitting below 1,000 lines;
+- `core/services/settings/settingsService.ts`, pure locale owner `core/services/settings/siteLocale.ts`, and new exact raw batch/CAS owner `core/services/settings/fullSiteSettingsAtomicService.ts`;
+- live reverse-FK writer owners `core/services/themes/themeProfileService.ts`, `core/services/forms/submissionService.ts`, `core/services/customScreens/customScreenService.ts`, `core/services/customScreens/screenEntryPresentationOverrides.ts`, and `core/services/content/taxonomyService.ts`;
+- `core/services/admin/usersService.ts` for the existing user-delete boundary; and
+- `core/services/tools/importExportService.ts` and `core/services/backups/backupService.ts` for their existing whole-config transaction boundaries only.
 
-**Exact test ownership:** existing
-`tests/unit/kits/fullSiteResourceAdapters.test.ts`,
-`tests/unit/kits/fullSiteAdapterAtomicity.test.ts`,
-`tests/unit/kits/fullSiteLifecycleUpdates.test.ts`,
-`tests/vitest/forms/formActionsContract.test.ts` and
-`tests/unit/forms/formActionsService.test.ts`; plus new cohesive
-`tests/unit/kits/fullSiteAggregateAdapters.test.ts`,
-`tests/unit/kits/fullSiteLifecycleAdapters.test.ts`,
-`tests/unit/forms/formAggregateService.test.ts`,
-`tests/unit/menus/menuAggregateAtomicity.test.ts`,
-`tests/unit/pages/pageLifecycleMutation.test.ts`,
-`tests/unit/content/detailPageDocumentLifecycleMutation.test.ts` and
-`tests/unit/content/entryLifecycleMutationService.test.ts`; existing
-`tests/unit/content/typeService.test.ts`,
-`tests/unit/pages/pageTemplateLibraryService.test.ts`,
-`tests/unit/content/listingTemplatesService.test.ts`,
-`tests/unit/content/listingQueriesService.test.ts`; existing
-`tests/unit/settings/settingsService.test.ts`; and new
-`tests/unit/settings/fullSiteSettingsAtomicService.test.ts`.
+**Exact test ownership:**
+
+- kits: existing `tests/unit/kits/fullSiteResourceAdapters.test.ts`, `tests/unit/kits/fullSiteAdapterAtomicity.test.ts`, `tests/unit/kits/fullSiteLifecycleUpdates.test.ts`; new `tests/unit/kits/fullSiteAggregateAdapters.test.ts`, `tests/unit/kits/fullSiteLifecycleAdapters.test.ts`, and `tests/unit/kits/nativeCmsWriterFenceInventory.test.ts`;
+- Forms/Menu: existing `tests/vitest/forms/formActionsContract.test.ts`, `tests/unit/forms/formsService.test.ts`, `tests/unit/forms/formActionsService.test.ts`, `tests/unit/menus/menuService.test.ts`; new `tests/unit/forms/formAggregateService.test.ts` and `tests/unit/menus/menuAggregateAtomicity.test.ts`;
+- Page/content lifecycle: existing `tests/unit/pages/pageService.test.ts`, `tests/unit/pages/revisionService.test.ts`, `tests/unit/content/detailPageDocumentService.test.ts`; new `tests/unit/pages/pageLifecycleMutation.test.ts`, `tests/unit/content/detailPageRevisionService.test.ts`, `tests/unit/content/detailPageDocumentLifecycleMutation.test.ts`, and `tests/unit/content/entryLifecycleMutationService.test.ts`;
+- aggregate/settings: existing `tests/unit/content/typeService.test.ts`, `tests/unit/pages/pageTemplateLibraryService.test.ts`, `tests/unit/content/listingTemplatesService.test.ts`, `tests/unit/content/listingQueriesService.test.ts`, `tests/unit/settings/settingsService.test.ts`; new `tests/unit/settings/fullSiteSettingsAtomicService.test.ts`; and
+- live reverse-FK writers: existing `tests/unit/themes/themeProfileService.test.ts`, `tests/unit/forms/submissionService.test.ts`, `tests/vitest/customScreens/customScreenService.test.ts`, `tests/vitest/customScreens/screenEntryPresentationOverrides.test.ts`, and `tests/unit/content/taxonomyService.test.ts`;
+- foreign-key/fence races: existing `tests/unit/admin/usersService.test.ts`; new independently runnable serial `tests/integration/kits/fullSiteNativeForeignKeyRacesDb.test.ts`; and
+- whole-config transactions: existing `tests/unit/tools/importExport.test.ts` and `tests/unit/backups/backupService.test.ts`.
 
 Split the near-limit adapter suites by responsibility before adding cases.
 `settingsService.ts` is already at the 1,000-line gate: replace/remove the weak
@@ -281,13 +253,17 @@ cannot silently fall back to per-key apply or reversal.
 canonical, JSON-safe rollback state. It never uses a natural key and never returns
 the L01 planner-equality projection. For Page, entry and detail Page it includes
 current and published state, publication metadata, and the exact bounded
-rollback-relevant revision rows under the native retention policy. Form includes
-the base row, ordered fields and canonical actions; Menu includes the base row,
-ordered items, document, appearance, extras and status. Secret values,
-submissions and unrelated audit rows are excluded. `createdAt`/`updatedAt` values
-that the restore contract does not own are excluded consistently; publication
-metadata and bounded revision rows that it does restore are included and must be
-prepared exactly.
+rollback-relevant revision rows under the native retention policy. Form includes the base row, ordered fields and canonical actions only after private `aggregateAdapters.ts` guard `assertFormActionsSafeForDurableSnapshot` accepts every canonical webhook header pair; Menu includes the base row, ordered items, document, appearance, extras and status. The Form guard consumes L01's exported pure `isSensitiveFieldKey` policy (the exact terminal/pair/compact-base/material-suffix grammar) for header names and rejects every non-null result from L01's `classifyForbiddenValue(value, { explicitBinaryCarrier:false })` for header values. The returned reason is control flow only and never enters output; L02 neither copies those token tables nor uses a substring regex.
+
+A match in any before/staged/complete Form action set throws fresh cause-free
+`site_package_invalid` before constructing an item snapshot or calling
+`initializeReservedRun`, with zero domain/cache/audit writes. The already-created
+owner reservation contains only L01's private lock metadata and is finalized
+through the owner-gated failure path; it stores no Form/action value, ID, config,
+snapshot or redacted/encrypted placeholder. Errors/logs disclose none of those
+values. Allowed headers remain unchanged in canonical capture, CAS and restore.
+Submissions and unrelated audit rows are excluded. Unowned timestamps are
+excluded consistently; owned publication metadata and bounded revisions remain.
 
 Entry and detail Page owners export exact constants
 `ENTRY_FULL_SITE_REVISION_SNAPSHOT_LIMIT = 100` from
@@ -325,76 +301,64 @@ before DB mutation.
 The new Form aggregate service uses the Tx form so Form, fields and actions share
 one native-domain transaction.
 
+## Native CMS Writer Fence
+
+L01's `core/db/nativeCmsWriterFence.ts` is the sole owner of advisory pair
+`548/0`, its private owner-generation context, and exact export
+`acquireNativeCmsWriterFence(tx)`. L02 imports that helper; it never redeclares
+SQL, constants, marker codecs or context state. Closing/revoked/lost owner
+context fails cause-free as `native_cms_writer_fence_lost` before executor/DB
+I/O.
+
+Every ordinary protected mutation owns one complete `READ COMMITTED`
+domain-local transaction and invokes the L01 helper as callback statement one,
+before validation reads, row locks or DML. The helper first runs
+`pg_try_advisory_xact_lock_shared(548, 0)`: contention returns retryable
+`native_cms_writer_fence_busy` immediately with zero census/later DB. A `true`
+result keeps the shared lock and runs one bounded active-marker census: zero
+allows domain work; any valid, malformed, impossible or duplicate marker throws
+`native_cms_writer_recovery_required`; census executor/driver/result failure is
+`native_cms_writer_fence_failed`. It never waits on a session lock. An installer
+native transaction instead uses its private live
+owner context; statement one locks the exact current
+`solution_kit_install_runs` owner row `FOR SHARE`, validates its private
+generation from reserved option
+`nativeCmsWriterFenceV1:{schemaVersion:1,generation:<UUID>}` plus running/owned
+status, and holds that row lock through commit. It does not skip SQL. Any
+stale/missing/mismatched marker or fence failure is fresh, cause-free and
+produces zero later domain/cache/audit effects. That private marker is preserved
+by patches but stripped from all public reads, logs and audit.
+
+All related reads and writes use the same transaction. A public writer owns exactly one transaction and statement-one acquisition; its `*Tx` body accepts that handle and opens neither another transaction nor another fence. This applies to every native atomic path and to the live reverse-FK families: all profile/route writers in `themeProfileService.ts`; `submitForm`; Custom Screen create/update/delete; override save plus every cleanup writer; and taxonomy config/term/assignment writers. `prepareEntryTaxonomyMutation`/`applyEntryTaxonomyMutation` remain Tx helpers used by the already-fenced entry mutation. `importConfig` and `restoreBackup` acquire once in their outer transaction, then call `importConfigTx`/`restoreArtifactTx`; backup may transitively call import but never nests.
+
+After the fence and before FK DML, theme-route writers lock every referenced Page, submission writers the Form, Custom Screen and taxonomy writers the ContentType, and presentation-override/taxonomy-assignment writers the Entry `FOR KEY SHARE`; multiple roots use stable ascending ID order. The lock, validation reads and DML share the one transaction and missing/mismatched roots reject with the owner's safe domain code and zero DML/cache/audit effect. Deleting a reference row is still fenced; it does not invent an unnecessary parent lock.
+
+The exhaustive `nativeCmsWriterFenceInventory.test.ts` classifies every direct Drizzle/raw DML, public-wrapper-to-Tx delegation, production Tx-helper caller and schema-derived incoming-FK/cascade effect. Its exact inventory includes the five families above; nine managed roots; Form fields/actions; Menu children; Page/entry/detail revisions; allowlisted settings; User deletion; root deletes for Page/Entry/Form/ContentType; and intended cascades. No wildcard, directory allowance or pending classification passes. L01/L03 foreign paths are explicit by land order. The fence rollout is mixed-version incompatible: drain old writers before reservations and deploy rollback on the coordinated boundary.
+
 ## Domain-Local Atomic APIs
 
 Freeze these exact exported helpers and filenames; none accepts an installer or
 cross-domain transaction object:
 
-```ts
-// core/services/content/typeService.ts
-mutateContentTypeAtomic(input)
+- content: `typeService.ts/mutateContentTypeAtomic`,
+  `listingTemplatesService.ts/mutateListingTemplateAtomic`,
+  `listingQueriesService.ts/mutateListingQueryAtomic`,
+  `entryLifecycleMutationService.ts/mutateEntryLifecycleAtomic`, and
+  `detailPageDocumentService.ts/mutateDetailPageDocumentLifecycleAtomic`;
+- Form/Menu/Page: `formAggregateService.ts/mutateFormAggregateAtomic`,
+  `menuService.ts/mutateMenuAggregateAtomic`,
+  `pageService.ts/mutatePageLifecycleAtomic`, and
+  `pageTemplateLibraryService.ts/mutatePageTemplateAtomic`; and
+- settings: `fullSiteSettingsAtomicService.ts` exports
+  `captureFullSiteSettingsBatchRaw`, `applyFullSiteSettingsBatchAtomic`, and
+  `restoreFullSiteSettingsBatchRawAtomic`.
 
-// core/services/forms/formAggregateService.ts
-mutateFormAggregateAtomic(input)
+Each mutation input is the exact closed `create`/`replace`/`delete` union:
+create has `{id,desired,actorId}`; replace adds `expectedCurrent`; delete has
+`{id,expectedCurrent,actorId}`. The result is `{id,snapshot}`, where `snapshot`
+is null only after conditional delete.
 
-// core/services/pages/pageTemplateLibraryService.ts
-mutatePageTemplateAtomic(input)
-
-// core/services/content/listingTemplatesService.ts
-mutateListingTemplateAtomic(input)
-
-// core/services/content/listingQueriesService.ts
-mutateListingQueryAtomic(input)
-
-// core/services/menus/menuService.ts
-mutateMenuAggregateAtomic(input)
-
-// core/services/pages/pageService.ts
-mutatePageLifecycleAtomic(input)
-
-// core/services/content/entryLifecycleMutationService.ts
-mutateEntryLifecycleAtomic(input)
-
-// core/services/content/detailPageDocumentService.ts
-mutateDetailPageDocumentLifecycleAtomic(input)
-
-// core/services/settings/fullSiteSettingsAtomicService.ts
-captureFullSiteSettingsBatchRaw(keys)
-applyFullSiteSettingsBatchAtomic(input)
-restoreFullSiteSettingsBatchRawAtomic(input)
-```
-
-Each input is a closed discriminated union:
-
-```ts
-type NativeAtomicMutation<TDesired, TNativeSnapshot> =
-  | { operation: "create"; id: string; desired: TDesired; actorId: string }
-  | {
-      operation: "replace";
-      id: string;
-      expectedCurrent: TNativeSnapshot;
-      desired: TDesired;
-      actorId: string;
-    }
-  | {
-      operation: "delete";
-      id: string;
-      expectedCurrent: TNativeSnapshot;
-      actorId: string;
-    };
-
-type NativeAtomicMutationResult<TNativeSnapshot> = {
-  id: string;
-  snapshot: TNativeSnapshot | null; // null only after conditional delete
-};
-```
-
-The domain owns distinct concrete `TDesired` and `TNativeSnapshot` types; it must
-not import full-site package types or pretend install desired data is a complete
-native snapshot. Every helper fully normalizes and validates the target before
-opening `db.transaction`, uses the caller-supplied ID on create, and locks and
-re-reads the exact row plus every owned aggregate/lifecycle row on replace or
-delete.
+The domain owns distinct concrete `TDesired` and `TNativeSnapshot` types; it must not import full-site package types or pretend install desired data is a complete native snapshot. Every helper opens `db.transaction`, invokes the owner-aware fence helper first, then fully normalizes/validates the target, uses the caller-supplied ID on create, and locks/re-reads the exact row plus every owned aggregate/lifecycle row on replace or delete.
 It canonical deep-compares that complete state with the immutable
 `expectedCurrent`; any mismatch throws `site_package_state_changed` before the
 first write. Create/replace consumes the exact precomputed target, including any
@@ -405,22 +369,39 @@ Cache invalidation/audit side effects occur only after commit.
 An injected error at every internal write boundary leaves the exact pre-call
 domain snapshot. No compensating catch sequence may emulate a transaction.
 
-- Form mutation owns base Form + ordered fields + actions and stores its native
-  target status directly.
-- Menu mutation owns base row + items + document + appearance + extras + status;
-  apply staging targets draft, while rollback can replace the exact prior
-  published/draft snapshot atomically.
-- Page, entry and detail mutation own their draft/current/published/revision state;
-  apply staging targets draft, while rollback restores the exact prior lifecycle
-  snapshot atomically. `publishSnapshotAtomic` uses the same owner transaction to
-  compare the exact staged aggregate and install the already-durable published
-  target; it never regenerates revision/publication evidence after the write.
-- Content type, Page Template, listing template and listing query keep their
-  existing public CRUD wrappers, while the new trusted atomic helpers add exact
-  ID create, locked complete-state replace and locked conditional delete. The
-  content-type conditional-delete variant refuses owned dependencies and does
-  not side-write `site.contentRoutes`; settings are independently restored by the
-  one settings batch.
+Every native replace/delete takes locks in one universal order: owner-row lock
+or ordinary shared fence as SQL statement one; managed root `FOR UPDATE` (never
+`FOR NO KEY UPDATE`); owned child/revision rows in stable order; exact snapshot
+CAS; reverse-reference guards; then DML. FK inserters take `FOR KEY SHARE` on the
+referenced root before their insert, making either race ordering safe.
+
+- Page conditional delete rejects any `menu_items.page_id` or
+  `theme_routes.page_id` reference with fresh cause-free
+  `site_package_state_changed` and zero writes. Ordinary `deletePage` preserves
+  its `SET NULL` behavior but is shared-first.
+- Entry conditional delete rejects
+  `custom_screen_entry_presentation_overrides` and
+  `content_term_assignments`; ordinary delete preserves cascades but is
+  shared-first.
+- Form native delete rejects submissions/action runs. Replace diffs action IDs,
+  updates retained rows in place, and locks each removed action `FOR UPDATE`
+  before rejecting a `form_action_runs` reference. It never delete-all/reinserts;
+  intended field/action cascades occur only after all guards.
+- Content-type public and native delete move the root read and every guard into
+  one owner-aware transaction, root `FOR UPDATE` first. Guard entries, custom
+  screens, taxonomies, detail pages, listing-query JSON `contentTypeId`, and
+  `site.contentRoutes` slug after locking the exact settings row; native delete
+  never side-writes settings. Each listing-query create/update carrying
+  `contentTypeId` locks that exact content-type row `FOR KEY SHARE` in the same
+  fenced transaction and rejects missing before DML.
+- `deleteUser` becomes one shared-first transaction: user `FOR UPDATE`, then
+  role/last-admin checks and delete on the same handle. This serializes the
+  `SET NULL` effects on `pages.authorId`, `content_entries.authorId` and
+  `detail_page_revisions.createdBy`.
+- Menu/Page/entry/detail mutation keeps its complete lifecycle ownership;
+  publish compares the exact staged aggregate and consumes the durable target.
+  Page Template, listing template/query and content type retain public wrappers
+  over the same ordered native atomics. Settings restore stays one batch.
 - `entryService.ts` becomes a below-limit compatibility/read facade; lifecycle
   mutation internals move cohesively to `entryLifecycleMutationService.ts`, with
   stable re-exports for existing consumers.
@@ -465,8 +446,10 @@ uses that same parser. TASK-547-04-L03 consumes these pure exports without editi
 `settingsService.test.ts` pins raw/canonical examples, blank/wrong-type,
 254/255/256 bounds, full-union/cache invalidation and a `360_000` ms DB timeout.
 
-Both atomic mutations require identical sorted unique key sets. One transaction
-takes `LOCK TABLE settings IN SHARE ROW EXCLUSIVE MODE`, re-reads exact raw
+Every `site.contentRoutes` write uses one shared Tx helper: single `setSetting`/`deleteSetting`, batch `setSettings`, outer `setSettingsTx`, `importConfig`/`importConfigTx`, `restoreBackup`/`restoreArtifactTx`, and `applyFullSiteSettingsBatchAtomic`/`restoreFullSiteSettingsBatchRawAtomic`. For a present target, after the statement-one fence and before any settings-row lock/upsert, it extracts the unique ContentType slugs, resolves every existing row in one bounded query, rejects a missing/duplicate resolution with the safe settings/domain code and zero writes, then locks the exact rows `FOR KEY SHARE` in stable ascending ID order. The trusted raw restore inspects the exact target without canonicalizing or rewriting accepted JSON. A delete/absent target has no referenced roots but follows the same outer transaction and post-commit-only cache contract. Every wrapper and Tx caller is explicit in the static inventory; import and backup never reacquire.
+
+Both atomic mutations require identical sorted unique key sets. After the
+shared-fence helper, one transaction takes `LOCK TABLE settings IN SHARE ROW EXCLUSIVE MODE`, re-reads exact raw
 presence/value, compares `expectedCurrent`, then writes all or none. Apply uses
 the object normalizer's `.key`/`.value`; trusted restore preserves raw JSON.
 Mismatch throws `site_package_state_changed` with zero writes. Exactly one cache
@@ -558,10 +541,22 @@ instead of duplicating expected pairs:
 These six rows are exhaustive. Every source `failed`/`skipped`, planned later
 phase, or staged/publish phase without a non-null staged target is invalid. A
 caught item failure performs no item upsert: the last durable item row remains
-untouched and only the source run is finalized failed; completed items stay
+untouched. Because initialization committed, it enters durable automatic
+compensation; only complete compensation may atomically fail the source/remove
+its marker, while partial work leaves it running/marked. Completed items stay
 success.
 
-`prepareFullSiteSaga` receives the planner's exact private frozen `referencePlan`; it is two-pass and completes before `createInitializedRun`:
+Pure package normalization and one frozen `referencePlan` build may precede the
+lock because they perform no dependency/adapter/DB work. L01's richer
+`withPackageLock` descriptor creates or claims the actual owner run marker under
+its holder transaction locks before invoking the callback and before all DB
+planning. Its discriminated apply callback receives only
+`{intent:"apply",ownerRunId,resumePhase:"reserved"|"initialized"}`; generation
+stays private. Apply/dry-run own their source marker. Automatic compensation has
+no child marker and continues under that source owner's context.
+
+Only `resumePhase:"reserved"` may plan and prepare; `prepareFullSiteSaga` receives
+the planner's exact frozen `referencePlan`. Preparation is two-pass:
 
 1. Without native writes, allocate/validate create IDs, use `currentId` for
    update/noop and setting keys, then complete the ID map before resolving refs.
@@ -577,12 +572,27 @@ success.
    top-level `id`/`desired` target inside the durable after envelope; the raw
    before/after JSON values are not equal.
 3. Build all durable after envelopes/V1 actions and validate every before/after/
-   ID invariant; any error returns before atomic ledger/domain writes.
+   ID invariant.
 
-Only then may apply call required `createInitializedRun` once with the complete
-prepared item mapping. Its transaction writes run plus all rows set-based; there
-is no sequential fallback. Failure exposes no run/items and performs zero
-finalize, compensation or native calls.
+Only then may apply call required `initializeReservedRun` once with that exact
+`ownerRunId` and complete prepared mapping. L01 validates the live context
+generation, updates only the exact still-owned reservation and inserts all items
+set-based in one transaction; there is no create/sequential fallback. It preserves
+exact `native_cms_writer_fence_lost`/`native_cms_writer_fence_failed`; exact
+ambiguous committed state returns success, confirmed rollback alone returns
+`site_package_ledger_initialization_failed`, and partial/unresolved state retains
+the marker. `resumePhase:"initialized"` skips planner, preparation,
+`initializeReservedRun` and every native apply call and enters durable recovery
+(dry-run terminal recovery or apply automatic compensation) from the exact
+manifest/items.
+
+One phase policy covers the entire callback. Deterministic validation/planning/
+preparation failure, or confirmed-rolled-back initialization, has zero native
+effects and finalizes the owner failed/removes its marker. Initialized, partial,
+ambiguous or potentially native-effecting work enters/retains durable recovery
+with the owner running/marked until compensation/finalization is exact. Every
+later ledger write remains owner-gated. The caller's `finalizeOwnedRun`
+invocation is the final callback DB invocation. L01's private captured-lease ambiguous-commit reread stays inside that same invocation; no caller recovery, ledger or native I/O occurs after closing. Successful callers map the result without DB I/O: only `desired_terminal` permits return; `different_terminal` throws fresh cause-free `site_package_recovery_conflict`.
 
 Remove generic `resolveFullSiteRefs`/`preflightFullSitePlan`; `preflight.ts`
 retains native/current-state helpers, but production never recursively rescans refs.
@@ -644,21 +654,19 @@ with diagnostic `hint:"noop"` and no resolver/native access; create/update call
 `classifyCreateOrUpdateHintByExactId`. L03 still performs all authoritative
 evidence parsing and complete-state refinement.
 
-After preparation, apply passes `rollbackDependencySchemaVersion:1`, package
+At initialization, apply passes `rollbackDependencySchemaVersion:1`, package
 metadata and the complete ordered rows to L01. L01 adds the derived manifest
-atomically. L03 accepts only the exact complete set; prefixes are invalid.
+atomically to that reservation. L03 accepts only the exact set; prefixes fail.
 
-L02 alone owns `assertExactDryRunTerminalizationResult`,
-`attemptDryRunTerminalTwice` and `finalizeDryRunBounded`; they consume L01's
-atomic port and never implement SQL. The result validator accepts only a direct
-plain exact-one-key object whose outcome is `desired_terminal` or
-`different_terminal`. Each requested transition stops on either valid outcome
-and retries only a thrown safe failure, at most twice. A body
-error is always rethrown unchanged after failed-terminalization attempts. Without
-a primary error, only `desired_terminal` succeeds; an exhausted success request
-gets two attempts to record `failed/site_package_dry_run_finalize_failed`, then
-every non-success path throws that fixed cause-free code. A different terminal
-winner is immutable. No path reruns the body, compensates or resumes a dry-run.
+L02 alone owns `assertExactOwnedRunFinalizationResult` and
+`requireDesiredOwnedRunFinalization`; they consume L01's owner-gated
+`finalizeOwnedRun` and never implement SQL. The validator accepts only a direct
+plain exact-one-key `{outcome}` with the two frozen values. The second helper
+returns only for `desired_terminal`; valid `different_terminal`, malformed result
+or exhausted/ambiguous finalization never reports success, and the former maps
+exactly to `site_package_recovery_conflict`. Dry-run body work never reruns or
+writes native state; an initialized takeover uses its durable terminal-recovery
+branch. Deterministic failure cleanup catches only the finalizer result/error to preserve the preexisting primary and performs zero I/O afterward.
 
 ## Security Contract
 
@@ -672,11 +680,41 @@ Its field/condition/action records allow only `key,source,label,fallback,format,
 Its empty-state/style records allow only `title,description,ctaLabel,ctaHref` / `columns,gap,cardVariant`.
 Detail bindings preserve `required:true` plus omitted (`undefined`) fallback; never synthesize null/static Aurora copy, so missing Aurora-only data fails closed as public 404.
 Settings exclude secret/auth/provider namespaces; audit has safe keys/IDs/operations and intended IDs are server UUIDs, never package input.
+Sensitive existing Form webhook headers fail closed during item-write-free preparation;
+their plaintext never reaches run options, item snapshots/actions, errors or audit.
 No endpoint, migration, RBAC/CSRF/rate-limit change, media import or cross-domain transaction is added.
 
 ## Implementation Pseudocode
 
 ```ts
+async function ordinaryManagedWriter(input) {
+  return db.transaction(async (tx) => {
+    await acquireNativeCmsWriterFence(tx); // statement 1: try-shared or owner row
+    return validateLockAndMutateTx(tx, input);
+  });
+}
+export async function importConfig(bundle) {
+  return db.transaction(async (tx) => {
+    await acquireNativeCmsWriterFence(tx); // statement 1
+    return importConfigTx(tx, bundle);
+  });
+}
+// restoreBackup uses the same outer shape, then restoreArtifactTx(tx, artifact).
+// Every native atomic helper uses it; installer context locks its owner row FOR SHARE.
+
+async function reverseFkWriterTx(tx, referencedIds, input) {
+  const roots = await selectRootIdsForKeyShare(tx, referencedIds, {
+    orderBy: "id ASC",
+  }); // owning domain selects its Page/Form/ContentType/Entry table
+  assertExactReferencedRoots(roots, referencedIds); // safe missing code, zero DML
+  return mutateReferenceRowsTx(tx, input);
+}
+async function writeContentRoutesTx(tx, exactTarget) {
+  const slugs = readUniqueContentTypeSlugsWithoutRewriting(exactTarget);
+  await lockExactContentTypesBySlugForKeyShare(tx, slugs, { orderBy: "id ASC" });
+  return lockThenWriteSettingsRowTx(tx, "site.contentRoutes", exactTarget);
+}
+
 export async function applyFullSitePackage(input, overrides = {}) {
   assertActorUuidBeforeDb(input.actorId);
   const referencePlan = buildReferencePlan(input.package); // once; zero normalization
@@ -684,27 +722,66 @@ export async function applyFullSitePackage(input, overrides = {}) {
   const ledger = overrides.ledger ?? defaultLegacyInstallLedger;
   const adapters = overrides.adapters ?? FULL_SITE_RESOURCE_ADAPTERS;
   const rollbackAdapters = overrides.rollbackAdapters ?? FULL_SITE_ROLLBACK_ADAPTERS;
-  const execute = async () => {
-    const plan = await planFullSiteInstall(
-      input.package, referencePlan, createPlannerDeps(input, overrides, adapters),
-    ); // supplied-plan overload: zero builds, exact array identity
-    const saga = await prepareFullSiteSaga({ plan, referencePlan, adapters,
-      actorId: input.actorId, generateId: () => crypto.randomUUID() });
-    const run = await ledger.createInitializedRun({
-      ...toInitializedRunInput(input),
-      items: saga.prepared.map(toInitializedLedgerItem),
-    }); // one transaction; one run insert + at most one bulk item insert
-    if (input.dryRun) {
-      await finalizeDryRunBounded({
-        ledger,
-        runId: run.id,
-        desired: { status: "success" },
-      });
+  const reservationOptions = toSafeReservationOptions(input);
+  const dryRun = input.dryRun === true;
+  return ledger.withPackageLock({
+    intent: "apply",
+    packageKey: input.package.key,
+    actorId: input.actorId,
+    dryRun,
+    options: reservationOptions,
+  }, async (context) => {
+    if (context.intent !== "apply") throw new Error("site_package_invalid");
+    if (context.resumePhase === "initialized") {
+      return recoverInitializedOwnerFromDurableLedger({
+        input, dryRun, context, ledger, adapters: rollbackAdapters,
+      }); // its `finalizeOwnedRun` call is the final callback DB invocation
+    }
+    let saga: PreparedFullSiteSaga;
+    let run: Readonly<{ id: string }>;
+    try {
+      const plan = await planFullSiteInstall(
+        input.package, referencePlan, createPlannerDeps(input, overrides, adapters),
+      );
+      saga = await prepareFullSiteSaga({ plan, referencePlan, adapters,
+        actorId: input.actorId, generateId: () => crypto.randomUUID() });
+      run = await ledger.initializeReservedRun({
+        ownerRunId: context.ownerRunId, packageKey: input.package.key,
+        actorId: input.actorId, dryRun,
+        options: reservationOptions,
+        items: saga.prepared.map(toInitializedLedgerItem),
+      }); // exact ambiguous commit may return this same owner
+    } catch (primary) {
+      const safe = toSafeFullSiteErrorCode(primary);
+      if (isDeterministicPreNativeFailure(safe) ||
+          safe === "site_package_ledger_initialization_failed") {
+        await finalizeFailedOwnerPreservingPrimary(ledger, {
+          ownerRunId: context.ownerRunId, status: "failed", error: safe,
+        }, primary);
+      }
+      throw primary; // fence/partial/unresolved state retains running marker
+    }
+    if (dryRun) {
+      await requireDesiredOwnedRunFinalization(ledger, {
+        ownerRunId: run.id, status: "success", error: null,
+      }); // final callback DB invocation; only DB-free outcome mapping follows
       return toDryRunResult(run, saga);
     }
-    return finishPreparedApply({ input, run, saga, adapters, rollbackAdapters, ledger });
-  };
-  return ledger.withPackageLock ? ledger.withPackageLock(input.package.key, execute) : execute();
+    let result: ApplyFullSitePackageResult;
+    try {
+      result = await executePreparedPlanWithDomainAtomicAdapters({
+        input, run, saga, adapters, ledger, ownerRunId: context.ownerRunId,
+      });
+    } catch (primary) {
+      return recoverInitializedOwnerFromDurableLedger({
+        input, dryRun, context, ledger, adapters: rollbackAdapters, primary,
+      });
+    }
+    await requireDesiredOwnedRunFinalization(ledger, {
+      ownerRunId: run.id, status: "success", error: null,
+    }); // final callback DB invocation; only DB-free outcome mapping follows
+    return result;
+  });
 }
 
 function createPlannerDeps(input, overrides, adapters) {
@@ -771,95 +848,28 @@ export async function prepareFullSiteSaga({ plan, referencePlan, adapters, gener
   assertCompletePreparedSagaEvidence(prepared);
   return { prepared, intendedRegistry };
 }
-function assertExactDryRunTerminalizationResult(value: unknown): FullSiteDryRunTerminalizationResult;
-async function attemptDryRunTerminalTwice(ledger, runId, desired) {
-  for (let attempt = 0; attempt < 2; attempt += 1) {
-    try {
-      return assertExactDryRunTerminalizationResult(
-        await ledger.terminalizeDryRun(
-          { runId, status: desired.status, error: desired.error ?? null },
-        ),
-      ).outcome;
-    } catch { /* Retry only terminalization/result validation; never the body. */ }
-  }
-  return "exhausted";
-}
-async function finalizeDryRunBounded(input) {
-  const outcome = await attemptDryRunTerminalTwice(input.ledger, input.runId, input.desired);
-  if (input.primaryError) throw input.primaryError;
-  if (outcome === "desired_terminal") return;
-  if (input.desired.status === "success" && outcome === "exhausted") {
-    await attemptDryRunTerminalTwice(input.ledger, input.runId, {
-      status: "failed", error: "site_package_dry_run_finalize_failed",
-    });
-  }
-  throw new Error("site_package_dry_run_finalize_failed");
-}
-
-for (const prepared of operationsBeforeSettings) {
-  if (prepared.operation.operation === "noop") {
-    await ledger.recordItem(toPhaseLedgerItem(prepared, "complete"));
-    continue; // execution-only zero native reads/writes after prepare/capture
-  }
-  const adapter = adapters[prepared.operation.kind];
-  const applyInput: FullSiteSagaAdapterApplyInput = {
-    operation: prepared.operation.operation,
-    currentId: prepared.operation.currentId,
-    intendedId: prepared.intent.intendedId,
-    expectedSnapshot: prepared.beforeSnapshot,
-    targetSnapshot: prepared.targets.staged ?? prepared.targets.complete,
-    key: prepared.operation.key,
-    desired: prepared.normalized,
-    actorId,
-  };
-  assertFullSiteSagaAdapterApplyInput(applyInput);
-  const result = isLifecycleCapablePublishKind(prepared.operation.kind)
-    ? await adapter.applyStaged(applyInput)
-    : await adapter.applyDesired(applyInput);
-  assertExpectedCreatedId(prepared, result.id);
-  await assertExactTargetCurrent(adapter, applyInput.targetSnapshot);
-  await ledger.recordItem(toPhaseLedgerItem(
-    prepared,
-    prepared.targets.staged ? "staged" : "complete",
-  )); // targets/action remain the exact prepared values
-}
-
-for (const prepared of preparedPublishedLifecycleItems) {
-  await ledger.recordItem(toPhaseLedgerItem(prepared, "publish_prepared"));
-  await adapters[prepared.operation.kind].publishSnapshotAtomic!({
-    id: prepared.intendedId,
-    expectedCurrent: prepared.targets.staged!,
-    target: prepared.targets.complete,
-    actorId,
-  });
-  await assertExactTargetCurrent(
-    adapters[prepared.operation.kind],
-    prepared.targets.complete,
+function assertExactOwnedRunFinalizationResult(value: unknown): FullSiteOwnedRunFinalizationResult;
+export async function requireDesiredOwnedRunFinalization(ledger, input): Promise<void> {
+  const result = assertExactOwnedRunFinalizationResult(
+    await ledger.finalizeOwnedRun(input), // caller's final callback DB invocation; later mapping is DB-free
   );
-  await ledger.recordItem(toPhaseLedgerItem(prepared, "complete"));
+  if (result.outcome !== "desired_terminal") {
+    throw new Error("site_package_recovery_conflict");
+  }
 }
 
-const settingMutations = preparedSettings.filter(
-  (item) => item.operation.operation !== "noop",
-);
-for (const prepared of preparedSettings.filter(
-  (item) => item.operation.operation === "noop",
-)) {
-  await ledger.recordItem(toPhaseLedgerItem(prepared, "complete"));
-  // Preserve top-level id/desired, recovery.stagedSnapshot:null and V1 action.
-}
-if (settingMutations.length > 0) {
-  const settingResults = await adapters.setting.applySettingsBatchAtomic({
-    items: settingMutations.map(toStrictPreparedSettingApplyInput),
-    actorId,
-  }); // exactly one locked all-key apply call; no per-key fallback
-  assertExactPreparedSettingTargets(settingMutations, settingResults);
-  await recordPreparedSettingSuccesses(settingMutations);
-}
-// Noop settings took only the zero-read ledger branch and never join the native batch.
+await executePreparedNonSettings({
+  prepared, adapters, ledger, actorId, ownerRunId,
+}); // strict input, target CAS, returned-ID check, owner-gated phase upsert
+await publishPreparedLifecycleLast({
+  prepared, adapters, ledger, actorId, ownerRunId,
+}); // durable publish_prepared -> exact publish target -> complete
+await applyPreparedSettingsLast({
+  prepared, settingAdapter: adapters.setting, ledger, actorId, ownerRunId,
+}); // one atomic non-noop batch; noops are phase-only and never join it
 ```
 
-The complete target was durable from atomic ledger initialization; phase upserts only record
+The complete target was durable from reserved-run initialization; phase upserts only record
 transition progress and preserve the same top-level complete snapshot, optional
 staged snapshot and V1 action values.
 
@@ -867,65 +877,68 @@ L02 also freezes automatic apply-failure finalization:
 
 ```ts
 async function compensateFailedApply(input: CompensateFailedApplyInput) {
-  const source = await requireCurrentApplySource(input.run.id, input.ledger);
+  const source = await requireCurrentApplySource(input.ownerRunId, input.ledger);
   const claim = await claimAutomaticRollback(source, input);
   if (claim.state === "busy") throw new Error("site_package_rollback_in_progress");
+  if (claim.state === "complete") return requireFailedSource(source.id, input.ledger);
   const currentSource = await requireCurrentApplySource(source.id, input.ledger);
-  if (claim.state === "complete") {
-    if (currentSource.status !== "failed") throw new Error("site_package_rollback_conflict");
-    return;
-  }
-  let successCommitted = false;
   try {
     await compensateItems({
       ...toCompensationDeps(input, currentSource, claim.id),
       items: await input.ledger.listRawItems(currentSource.id),
       priorOutcomes: await input.ledger.listRawItems(claim.id),
       currentSource,
-    }); // unchanged raw sets; final L03 owns zero-native preflight
-    await input.ledger.finalizeRun({
-      runId: currentSource.id, status: "failed", error: input.safeApplyError,
-    }); // source failure is durable before rollback success
-    await input.ledger.finalizeRun({ runId: claim.id, status: "success" });
-    successCommitted = true;
+    });
   } catch (error) {
-    if (!successCommitted) {
-      await finalizeOwnedRollbackFailed(input.ledger, claim.id, error);
-    }
+    await recordOwnedAutomaticCompensationFailure(input.ledger, {
+      ownerRunId: currentSource.id, runId: claim.id, error,
+    });
     throw error;
   }
+  await requireDesiredOwnedRunFinalization(input.ledger, {
+    ownerRunId: currentSource.id,
+    status: "failed",
+    error: input.safeApplyError,
+    automaticCompensation: { runId: claim.id, status: "success", error: null },
+  }); // final callback DB invocation: source owner + markerless child close atomically
 }
 ```
 
-After the claim, a fresh source read under held locks drives compensation and
-source finalization. Both raw sets stay unchanged; no caller reduces identities,
-trusts status or adds an overlay. Tests reject pre-claim reuse.
+After the claim, a fresh source read under the owner context drives compensation.
+Both raw sets stay unchanged; no caller reduces identities, trusts status or
+adds an overlay. The automatic child never owns a marker. Any incomplete
+compensation or finalization failure leaves the source running owner marker
+intact and resumable; only the atomic source-failed/child-success finalization
+closes it. Tests reject pre-claim reuse.
 The general apply catch invokes compensation only after complete item-set initialization, even with no success phase; durable evidence, not `completed.length`, decides reversal.
-Atomic initialization failure leaves no run or item and makes zero finalize/
-compensation/native calls. A committed initialization always has its complete
-manifest-aligned set; any prefix is invalid. Dry-run completion gets two bounded
-terminalization attempts; first terminal state wins and body work never retries.
-A later post-compensation source-finalization failure leaves rollback resumable.
+Confirmed-rolled-back initialization leaves the empty marked reservation, zero
+native effects and the whole-callback policy closes it failed. Exact committed
+initialization has the complete manifest-aligned set and enters recovery; any
+prefix/ambiguity stays marked. Dry-run never reruns body work. A later
+post-compensation finalization failure leaves recovery resumable.
 
 Menu Page/item references are resolved before `validateDesired`; the complete resolved Menu (base row, items, document, appearance, extras and draft status) is passed once to `mutateMenuAggregateAtomic`.
 There is no executor-level Menu wiring write before or after that call. Publish is the only later Menu mutation.
 
 Existing `tests/unit/kits/fullSiteLifecycleAdapters.test.ts` pins Page `data` acceptance, a no-ref `document:{ sections:[] }` wrong-root rejection with no alias, resolved-ID validation under `data`, exact create/update `title,slug,data` payloads and status-only draft/publish-last behavior.
-Existing `tests/unit/kits/fullSiteAggregateAdapters.test.ts` pins Page Template `document` acceptance plus no-ref `data:{ sections:[] }` rejection with no opposite-root alias. No new test file or ownership is introduced.
+Existing `tests/unit/kits/fullSiteAggregateAdapters.test.ts` pins Page Template `document` acceptance plus no-ref `data:{ sections:[] }` rejection with no opposite-root alias. No additional adapter suite is introduced.
 
 Data flow: normalized input -> actor -> one private graph build -> dependency/lock acquisition -> planning -> UUID registry -> allowlisted substitution/native targets -> run/durable evidence -> local CAS/phases -> publish-last/reversible settings. Known errors retain codes; unexpected errors redact; L03 owns compensation.
 
 Regression tests cover every operation. A noop first performs mandatory resolution/native validation/complete capture and durable initialization; only its execution branch performs zero resolver/adapter/native reads or writes.
 It registers the current ID and persists equal top-level final state, V1 recovery, null staged target and the `prepared`→`complete` phase-only change.
 L02 and L03 import the shared frozen V1 status/phase export, accept exactly its six rows and reject the remaining Cartesian product/staged-target violations; neither duplicates a local matrix.
-The item-fail catch leaves the last durable item untouched and changes only run
-finalization. Initialization tests prove one required atomic call, no sequential
-fallback and zero downstream calls on failure. Dry-run tests retain bounded
-terminal arbitration and no body retry.
+The item-fail catch leaves the last durable item untouched and enters automatic
+recovery. Initialization tests prove one required atomic call, no sequential
+fallback, exact fence-code preservation and the committed/rolled-back/partial/
+unresolved reread matrix. Dry-run tests require desired terminal, no body retry, final-callback DB ordering, DB-free result mapping and zero-I/O primary preservation; L01 owns the private reread.
 The L02-owned `tests/unit/kits/fullSiteLifecycleUpdates.test.ts` proves typed apply performs zero normalizations and one graph build before any default/override dependency, lock or DB access; graph failure makes zero planner/dependency/lock/DB calls, public input/deps reject a plan field, one L01 snapshot loader replaces per-item planning reads, a post-claim source mutation is observed, and an injected rollback registry reaches compensation without default fallback.
 The exact frozen array reaches three-argument planning/preparation with zero rebuild/clone/second walker; this suite does not assert CLI call counts.
-Before `createInitializedRun`, every preparation failure proves zero writes; pin complete prepared rows and that retired generic preflight/resolver stays unused. Nested refs persist as IDs.
-Form preflight round-trips `submit.supportingText` and rejects a sibling extra; listing tests reject an extra at every nested record above. Detail tests keep `required:true` plus absent fallback through normalize/target persistence and fail a missing value rather than painting Aurora defaults.
+Before initialization, deterministic preparation failure proves zero item/native
+writes and desired failed owner closure; ambiguous dependency/fence failure keeps
+the marker. Pin complete prepared rows and that retired generic preflight/resolver
+stays unused. Nested refs persist as IDs.
+Form preflight round-trips `submit.supportingText` and rejects a sibling extra; listing tests reject an extra at every nested record above. Form tests table-pin `Authorization`, authorization/material-suffixed and `X-API-Key` header names plus Basic/Bearer/JWT, PEM, credential-URL and data-URL material under safe names: each returns only `site_package_invalid`, leaks no sentinel and reaches neither item initialization nor native write. A safe-header fixture proves capture, CAS replace and restore preserve the exact canonical action/header map. Detail tests keep `required:true` plus absent fallback through normalize/target persistence and fail a missing value rather than painting Aurora defaults.
 Every kind has an apply adapter, while only `page`, `content_entry`, `detail_page` and `menu` participate in publish-last. They remain draft until dependencies are wired; menu items/document/appearance precede publish.
 Settings land in one last reversible stage through one required `applySettingsBatchAtomic` call with no per-key fallback; legacy and full-site runs use the same ledger port.
 Additional focused regressions pin:
@@ -936,44 +949,43 @@ Additional focused regressions pin:
 - canonical decoded JSON/JSONB equality, ordered-array drift, Form-action round trips and facade/split export parity;
 - divergent Page/detail current, published, publication and ordered revisions, including exact 100 acceptance and safe `limit + 1` rejection;
 - classifier hints for every item, noop's zero-read diagnostic and L03-only complete-state/outcome authority for create/update/noop, while the legacy recovery projection/base-input bridge compile but final L03 never calls either;
-- replace/restore/delete/settings capture races fail closed with zero partial effect and only a successful settings commit invalidates once; and
+- exact inventory coverage for all protected DML and every wrapper/Tx-helper caller, including the five live reverse-FK families and import/backup same-transaction delegation;
+- every ordinary writer's first DB statement is the try-shared fence; busy,
+  recovery-required and driver failure stay distinct safe codes with zero later
+  reads/writes/effects;
+- every installer native transaction's first statement locks its exact owner row
+  `FOR SHARE`; closing/revoked/lost context fails with zero I/O, and a direct
+  call takes the ordinary try-shared path;
+- reverse-FK and `site.contentRoutes` writer/delete races fail closed with zero partial effect; only a successful settings commit invalidates once; and
 - all four durable phases plus failed stage/publish upserts resume solely from immutable raw rows and durable outcomes.
 
 ## Sub-Tasks
 
-- [x] Implement an exhaustive
-  `satisfies FullSiteResourceAdapterRegistry` map without
-  editing L01's union/types file; add compile/runtime kind-coverage tests.
+- [x] Implement exhaustive `satisfies FullSiteResourceAdapterRegistry` without editing L01 types; test every kind.
 - [x] Add safe snapshots/equality/run items/cache effects.
 - [x] Add targeted adapter DB tests.
-- [ ] Split the adapter facade/tests and legacy entry service by the frozen
-  cohesive ownership map; preserve public imports and the 1,000-line gate.
-- [ ] Make nested full-site preflight strict for listing records and
-  `submit.supportingText`; split raw stored-locale writes/reads from canonical
-  public locale resolution, with exact boundary and compatibility tests.
-- [ ] Build the reference graph before ledger/default/lock access, then pass that
-  exact array through three-argument planning, two-pass pre-run preparation and
-  one atomic run-and-item initialization.
-- [ ] Implement all nine exact-ID native atomic APIs, atomic conditional delete,
-  canonical Form-action Tx path and the locked settings apply/raw-restore batch
-  with failure-boundary and race tests.
-- [ ] Persist durable intended UUIDs/dependency envelopes/complete targets;
-  classify source noops with zero resolver/native read; capture complete owner
-  before snapshots; reject required-kind `id:null`, revision overflow and CAS
-  races fail-closed while leaving outcome authority to L03's global preflight.
+- [ ] Split facade/tests/legacy entry service by frozen ownership; preserve public imports and 1,000-line gate.
+- [ ] Enforce strict listing/`submit.supportingText` preflight and raw stored-locale versus canonical public resolution.
+- [ ] Build one pre-lock graph; reserved apply plans/prepares/initializes once, while initialized apply enters durable recovery.
+- [ ] Implement all nine exact-ID atomic APIs, conditional deletes, Form-action Tx and locked settings batches with races.
+- [ ] Fence ordinary writers shared-first and installer work owner-first; lock all live reverse-FK/content-route targets and exhaust inventory.
+- [ ] Persist intended IDs/dependencies/targets/complete captures; reject null IDs, overflow and CAS races; keep L03 outcome authority.
 
 ## Testing Requirements
 
 - `set -a && source /home/coder/project/Coderso/.env && set +a`
 - Use that command only to load DB/settings validation variables; never inspect,
   print/copy/hash/persist them; every DB command and test-local timeout is at least `360000`.
-- `bunx vitest run --config vitest.config.ts tests/vitest/forms/formActionsContract.test.ts`
+- `bunx vitest run --config vitest.config.ts --testTimeout=360000 tests/vitest/forms/formActionsContract.test.ts tests/vitest/customScreens/customScreenService.test.ts tests/vitest/customScreens/screenEntryPresentationOverrides.test.ts`
 - `formActionsService.test.ts` uses unique per-test IDs and child-before-parent
   `finally` cleanup limited to its exact Form IDs; unqualified table deletes are
   forbidden.
-- `bun test --timeout 360000 tests/unit/forms/formActionsService.test.ts tests/unit/forms/formAggregateService.test.ts tests/unit/menus/menuAggregateAtomicity.test.ts tests/unit/pages/pageLifecycleMutation.test.ts tests/unit/content/entryLifecycleMutationService.test.ts tests/unit/content/detailPageDocumentLifecycleMutation.test.ts`
-- `bun test --timeout 360000 tests/unit/content/typeService.test.ts tests/unit/pages/pageTemplateLibraryService.test.ts tests/unit/content/listingTemplatesService.test.ts tests/unit/content/listingQueriesService.test.ts tests/unit/settings/settingsService.test.ts tests/unit/settings/fullSiteSettingsAtomicService.test.ts`
-- `bun test --timeout 360000 tests/unit/kits/fullSiteResourceAdapters.test.ts tests/unit/kits/fullSiteAggregateAdapters.test.ts tests/unit/kits/fullSiteLifecycleAdapters.test.ts tests/unit/kits/fullSiteAdapterAtomicity.test.ts tests/unit/kits/fullSiteLifecycleUpdates.test.ts`
+- `bun test --parallel=1 --timeout 360000 tests/unit/forms/formsService.test.ts tests/unit/forms/formActionsService.test.ts tests/unit/forms/formAggregateService.test.ts tests/unit/menus/menuService.test.ts tests/unit/menus/menuAggregateAtomicity.test.ts tests/unit/pages/pageService.test.ts tests/unit/pages/revisionService.test.ts tests/unit/pages/pageLifecycleMutation.test.ts tests/unit/content/detailPageDocumentService.test.ts tests/unit/content/detailPageRevisionService.test.ts tests/unit/content/detailPageDocumentLifecycleMutation.test.ts tests/unit/content/entryLifecycleMutationService.test.ts`
+- `bun test --parallel=1 --timeout 360000 tests/unit/content/typeService.test.ts tests/unit/pages/pageTemplateLibraryService.test.ts tests/unit/content/listingTemplatesService.test.ts tests/unit/content/listingQueriesService.test.ts tests/unit/content/taxonomyService.test.ts tests/unit/settings/settingsService.test.ts tests/unit/settings/fullSiteSettingsAtomicService.test.ts tests/unit/themes/themeProfileService.test.ts tests/unit/forms/submissionService.test.ts tests/unit/admin/usersService.test.ts tests/unit/tools/importExport.test.ts tests/unit/backups/backupService.test.ts`
+- `bun test --parallel=1 --timeout 360000 tests/unit/kits/nativeCmsWriterFenceInventory.test.ts tests/unit/kits/fullSiteResourceAdapters.test.ts tests/unit/kits/fullSiteAggregateAdapters.test.ts tests/unit/kits/fullSiteLifecycleAdapters.test.ts tests/unit/kits/fullSiteAdapterAtomicity.test.ts tests/unit/kits/fullSiteLifecycleUpdates.test.ts`
+- `bun test --parallel=1 --timeout 360000 tests/integration/kits/fullSiteNativeForeignKeyRacesDb.test.ts`
+- the owning suites pin statement-one fence, same-transaction Tx delegation, every Page/Form/ContentType/Entry `FOR KEY SHARE` before FK DML, stable multi-root order, missing-root rejection, `site.contentRoutes` coverage across single/batch/Tx/import/backup/full-site raw restore, safe codes and zero-DML/effect failures
+- the serial FK suite table-drives writer-first and delete-first for every live edge plus listing-query/content-route pseudo-FKs. It obtains both backend PIDs, releases neither barrier until `pg_stat_activity.wait_event_type = 'Lock'`, a same-waiter ungranted `pg_locks` row, and `pg_blocking_pids(waiterPid)` containing the holder PID agree; sleeps, elapsed-time and promise-nonsettlement assertions are forbidden. Writer-first commits the reference then the guarded delete rejects; delete-first commits deletion then the blocked writer rejects missing, with exact roots/references/cache/audit state asserted.
 - the three native Page/entry/detail lifecycle suites above pin divergent
   current/published state, exact 100 and `limit + 1`; all nine native atomic
   suites pin replace/delete CAS, and the lifecycle adapter suites pin the

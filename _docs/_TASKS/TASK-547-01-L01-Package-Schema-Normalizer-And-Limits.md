@@ -446,7 +446,7 @@ const isForbiddenPrototypeKey = (key: string): boolean =>
   FORBIDDEN_PROTOTYPE_KEYS.some((candidate) => candidate === key);
 const tokenizeSensitiveFieldKey = (key: string): readonly string[] =>
   tokenizeWithExactCompactExpansion(key, credentialCompactGrammar);
-const isSensitiveFieldKey = (key: string): boolean =>
+export const isSensitiveFieldKey = (key: string): boolean =>
   matchesSensitiveBaseAfterExactCompactExpansion(
     tokenizeSensitiveFieldKey(key),
     SENSITIVE_TERMINALS,
@@ -642,7 +642,7 @@ type PackageValueSecretReason =
   | "private_key_forbidden"
   | "base64_value_forbidden"
   | "binary_value_forbidden";
-const classifyForbiddenValue = (
+export const classifyForbiddenValue = (
   value: unknown,
   options: Readonly<{ explicitBinaryCarrier: boolean }>,
 ): PackageValueSecretReason | null => {
@@ -909,8 +909,8 @@ remain nonempty and reject. Put unique sentinels in userinfo, decoded marker
 names and values—including the exact-name `code` cases—and prove none occur in
 error name/message/code/diagnostics.
 
-Exercise one credential-shaped Bearer sentinel across all seven exact
-package-prose surfaces,
+Directly pin both exported predicates; then exercise one credential-shaped Bearer
+sentinel across all seven exact package-prose surfaces,
 asserting each trusted path and absence of residual ID/value. On one
 representative prose field pin all five value reasons (authorization, private
 key, credential URL, Base64 data URL, typed binary) plus ordinary prose, a public
