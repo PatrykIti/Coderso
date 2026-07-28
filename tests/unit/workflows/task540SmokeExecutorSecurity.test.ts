@@ -34,7 +34,7 @@ const FROZEN_HELPER_SHA256 = Object.freeze({
   [executorRelative]: "2699ea77f59bf40691c8561936d1e484c32cc3639679f2f4c27c6b22f06c9442",
   [smokeHostRelative]: "82accfe7b9ada4ca02853c691b315fec5817a54b600912a081d5495ade6c8d61",
   [bridgeRelative]: "c3c594a17cb63943beab29e7f621f6e1ca46cb3b5abb67625edcddb900788341",
-  [localOrchestratorRelative]: "876a1ce89ed0f40b2b7b12af117e17789bed8c3f5d5c8a6008ff273c4c458c51",
+  [localOrchestratorRelative]: "1bb5877cbc009bb11e85c8f4f7957ddc278a0a5cb74072cad41e3709814c1b40",
   [implementRelative]: "47e77e5b07126fdb5397eea61f060f3269683cc44355cc3b9b651f7f0b3cb7b2",
   [testNameContractRelative]: "ce052b4245c8c384d0405c32cf9d1df146a2f83a409994a6a2822de5422fc4f5",
 });

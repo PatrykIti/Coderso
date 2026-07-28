@@ -345,14 +345,10 @@ function sameIdentity(left, right) {
   );
 }
 
-async function syncDirectory(path) {
-  const before = await lstat(path, { bigint: true });
-  invariant(
-    before.isDirectory() &&
-      !before.isSymbolicLink() &&
-      before.uid === BigInt(process.getuid()),
-    "TASK-540 directory identity rejected"
-  );
+// Durability half of a directory sync: open the very inode that was just inspected, fsync it,
+// and prove the path still resolves to that inode afterwards. Both entry points below share it,
+// so the two of them differ ONLY in the precondition each is entitled to assert.
+async function syncBoundDirectory(path, before) {
   const handle = await open(
     path,
     FS_CONSTANTS.O_RDONLY | FS_CONSTANTS.O_DIRECTORY | FS_CONSTANTS.O_NOFOLLOW
@@ -366,6 +362,49 @@ async function syncDirectory(path) {
   } finally {
     await handle.close();
   }
+}
+
+// For a directory this run OWNS -- the 0o700 recovery journal and the 0o700 ledger it creates
+// itself -- ownership is the right check and stays exactly this strict. Keep it that way.
+async function syncDirectory(path) {
+  const before = await lstat(path, { bigint: true });
+  invariant(
+    before.isDirectory() &&
+      !before.isSymbolicLink() &&
+      before.uid === BigInt(process.getuid()),
+    "TASK-540 directory identity rejected"
+  );
+  await syncBoundDirectory(path, before);
+}
+
+// The shared temp root is the one directory this host must trust WITHOUT owning: creating,
+// removing and fsyncing the ledger and request directories all require fsyncing their parent,
+// and that parent is /tmp -- uid 0, mode 1777, on this machine and on any standard Linux. So
+// `uid === getuid()` there can hold only for root, and this host is not run as root; asserting
+// it made the whole transaction unreachable for a normal user rather than making it safer.
+//
+// What is actually guaranteeable about a world-writable directory is asserted instead: it is a
+// real directory, it is not a symlink, its owner is either the system or us -- because the
+// sticky bit exempts the directory's own owner, so a third-party owner could still unlink our
+// entries -- and it is sticky, which is what stops every other user of a 1777 directory from
+// unlinking or renaming entries they do not own. Ownership of the entries themselves is still
+// verified where it belongs: on the private 0o700 ledger directory this run creates, and on
+// every file read or written under it.
+//
+// This takes no path on purpose. The weaker precondition is legitimate for exactly one
+// directory, so it cannot be aimed at another one, and every call site reads as what it is.
+const SHARED_TEMP_ROOT = "/tmp";
+const STICKY_BIT = 0o1000n;
+async function syncSharedTempRoot() {
+  const before = await lstat(SHARED_TEMP_ROOT, { bigint: true });
+  invariant(
+    before.isDirectory() &&
+      !before.isSymbolicLink() &&
+      (before.uid === 0n || before.uid === BigInt(process.getuid())) &&
+      (before.mode & STICKY_BIT) === STICKY_BIT,
+    "TASK-540 shared directory identity rejected"
+  );
+  await syncBoundDirectory(SHARED_TEMP_ROOT, before);
 }
 
 async function writeExclusive(path, bytes) {
@@ -1008,7 +1047,7 @@ async function prepareRun() {
     run.runIdSha256
   );
   await mkdir(ledgerPath, { mode: 0o700 });
-  await syncDirectory("/tmp");
+  await syncSharedTempRoot();
   const ledgerDirectory = await lstat(ledgerPath, { bigint: true });
   invariant(
     ledgerDirectory.isDirectory() &&
@@ -1107,7 +1146,7 @@ async function createRequest(prompt, options, schemaAuthority) {
     runAuthority.runIdSha256
   );
   await mkdir(requestDir, { mode: 0o700 });
-  await syncDirectory("/tmp");
+  await syncSharedTempRoot();
   await writeExclusive(
     requestDir + "/request.json",
     Buffer.from(canonicalJson(request, MAX_PROMPT_BYTES))
@@ -1426,7 +1465,7 @@ async function cleanupRequest(authority) {
     await unlinkStable(authority.requestDir + "/" + name);
   }
   await rmdir(authority.requestDir);
-  await syncDirectory("/tmp");
+  await syncSharedTempRoot();
   await persistArtifactCleaned(authority.plan, authority.created, cleanupStarted);
 }
 
@@ -1749,7 +1788,7 @@ async function cleanupLedgerArtifacts(manifestSha256, transactionId) {
     runAuthority.ledgerCreated
   );
   await rmdir(ledgerPath);
-  await syncDirectory("/tmp");
+  await syncSharedTempRoot();
   const directoryCleaned = await persistArtifactCleaned(
     runAuthority.ledgerPlan,
     runAuthority.ledgerCreated,
