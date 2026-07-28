@@ -11216,6 +11216,13 @@ const TASK_540_LINE_LIMIT_ACCOUNTABLE_PATHS = Object.freeze([
   "core/widgets/core/footerContract.ts",
   "core/widgets/core/footerSocialIcons.tsx",
   "tests/unit/release/releaseWorkflowConfig.test.ts",
+  // Arrived with the three parallel-worktree merges (green-gates, image-hygiene,
+  // ci-image-gate). Same accountability as their siblings: the closure leaf owns them
+  // because no leaf wrote them -- a parallel worktree did -- and the earlier-landing
+  // leaves could not split one of them before closure even if they owned it.
+  "tests/unit/release/imageBootGateConfig.test.ts",
+  "tests/vitest/ui/block-layout-shared-wave.test.tsx",
+  "tests/vitest/ui/widget-editors-wave-1.test.tsx",
   "tests/unit/security/securityGateConfig.test.ts",
   "tests/unit/toolchain/bunInstallSecurityConfig.test.ts",
   "tests/unit/toolchain/bunProductionJsxRuntime.test.ts",
@@ -11305,7 +11312,7 @@ const TASK_540_LINE_LIMIT_TRIPWIRE_PATHS = Object.freeze([
   "core/widgets/core/footer.tsx",
 ]);
 const TASK_540_LINE_LIMIT_ACCOUNTABLE_PATHS_SHA256 =
-  "f211b4835a7cc8b918ecd8ca703e00b35eda2883da5da65cb5109515dafbca5f";
+  "cc959a15446895eecf676a1379de5423da7f754022d949ba001abf8528a85252";
 const TASK_540_LINE_LIMIT_ACCOUNTABLE_OWNERS = Object.freeze(
   TASK_540_LINE_LIMIT_ACCOUNTABLE_PATHS.map((path) =>
     Object.freeze({ path, owner: TASK_540_LINE_LIMIT_ACCOUNTABLE_OWNER })
@@ -11331,7 +11338,7 @@ if (
   // Must be the leaf that lands LAST, which is the whole rationale for the choice: it is
   // the only leaf still able to split one of these before the family closes.
   TASK_540_LINE_LIMIT_ACCOUNTABLE_OWNER !== LEAF_ORDER[LEAF_ORDER.length - 1] ||
-  TASK_540_LINE_LIMIT_ACCOUNTABLE_PATHS.length !== 106 ||
+  TASK_540_LINE_LIMIT_ACCOUNTABLE_PATHS.length !== 109 ||
   new Set(TASK_540_LINE_LIMIT_ACCOUNTABLE_PATHS).size !==
     TASK_540_LINE_LIMIT_ACCOUNTABLE_PATHS.length ||
   TASK_540_LINE_LIMIT_ACCOUNTABLE_PATHS.some(
