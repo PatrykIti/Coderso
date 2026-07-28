@@ -372,7 +372,8 @@ boundaries frozen as follows:
   once, then `buildReferencePlan` exactly once, before lazy DB acquisition;
 - `buildReferencePlan` accepts only `FullSitePackageV1` and never normalizes;
 - typed `applyFullSitePackage` accepts an already-normalized package and builds
-  its own private plan exactly once, with zero normalizer calls;
+  its own private plan exactly once, with zero
+  `normalizeFullSitePackageForWrite` calls;
 - two-argument `planFullSiteInstall(pkg,deps)` accepts an already-normalized
   package and builds once before dependency reads; its three-argument overload
   consumes the exact frozen plan supplied by apply and builds zero times; and

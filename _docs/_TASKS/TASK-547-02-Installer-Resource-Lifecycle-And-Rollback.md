@@ -45,7 +45,9 @@ three-argument `planFullSiteInstall(pkg, referencePlan, deps)` overload; this
 apply path consumes the exact array without rebuilding, cloning or mutating it.
 The existing direct-call `planFullSiteInstall(pkg, deps)` overload remains
 gate-compatible and builds its own graph exactly once before its first dependency
-read, with zero normalizer calls; the supplied-plan overload builds zero times.
+read, with zero `normalizeFullSitePackageForWrite` calls; the supplied-plan
+overload builds zero times. Planner-owned native `normalizeDesired` remains
+required for existing-resource equality decisions.
 Apply uses only the three-argument overload. The CLI independently builds/
 discards a plan before invoking its lazy `apply` dependency so an invalid file
 cannot import DB code; the service then builds its own private plan rather than
@@ -869,10 +871,13 @@ without ledger proof conflicts as unmanaged; injected failure restores prior
 state; rollback restores previous shell/settings and only owned rows;
 invalid/dangling/bad-path refs perform zero lock, ledger, resolver, adapter and
 DB calls; the public input/deps reject a structural `referencePlan`; one private
-plan and zero normalizations occur at typed apply before dependencies; the
+plan and zero `normalizeFullSitePackageForWrite` calls occur at typed apply
+before dependencies; the
 planner consumes the same array identity without calling the builder again, then
 preparation consumes those same frozen descriptors without a second walker. The
-two-argument planner separately builds once/normalizes zero times. Malformed post-substitution desired
+two-argument planner separately builds once and calls
+`normalizeFullSitePackageForWrite` zero times; both overloads retain native
+`normalizeDesired` for existing-resource comparisons. Malformed post-substitution desired
 snapshots for every native kind fail before `createRun`, item/domain writes or
 publish, including discriminator-valid refs embedded in an otherwise invalid
 Page/Menu document. Drafts are not published early,

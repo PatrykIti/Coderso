@@ -15,9 +15,9 @@ Split the 2,700+ line installer into cohesive bounded modules while preserving
 exports, then add deterministic create/update/noop/conflict planning. This leaf
 owns the shared ledger/types boundary but performs no native resource mutation.
 
-Both planner overloads accept normalized `FullSitePackageV1`, call no normalizer,
-and the two-argument form builds once before dependency reads. The three-argument
-form consumes the closed-over frozen plan with zero builds/clones/mutations.
+Both planner overloads accept normalized `FullSitePackageV1` and never call `normalizeFullSitePackageForWrite`.
+The two-argument form builds once before dependency reads; the three-argument form consumes the closed-over frozen plan with zero builds/clones/mutations.
+Native `normalizeDesired` remains required for each existing-resource equality decision inside `buildOperations`.
 
 Define the common legacy/full-site ledger port and concrete DB adapter here,
 preserve compatibility re-exports and wire default legacy composition. L02
@@ -110,12 +110,10 @@ has no broader legacy union or reconstructed identity schema:
 ```ts
 export type FullSiteInstallResourceKind = PackageResourceKind;
 export type FullSiteResourceIdentity = PackageResourceIdentity;
-
 export type FullSiteRollbackActionV1 = {
   schemaVersion: 1;
   dependencies: FullSiteResourceIdentity[];
 };
-
 export type FullSiteInstallLedgerItem = {
   position: number;
   kind: FullSiteInstallResourceKind;
@@ -127,30 +125,25 @@ export type FullSiteInstallLedgerItem = {
   rollbackAction?: JsonObject | null;
   error?: string | null;
 };
-
 export type PersistedFullSiteInstallLedgerItem =
   Omit<FullSiteInstallLedgerItem, "rollbackAction"> & {
     rollbackAction: JsonObject | null;
   };
-
 export type RawFullSiteInstallLedgerItem = Readonly<{
   position: unknown; kind: unknown; key: unknown;
   operation: unknown; status: unknown;
   beforeSnapshot: unknown; afterSnapshot: unknown;
   rollbackAction: unknown; error: unknown;
 }>;
-
 export function buildFullSiteRollbackActionV1(
   input: {
     identity: FullSiteResourceIdentity;
     dependencies: readonly FullSiteResourceIdentity[];
   },
 ): JsonObject;
-
 export function readFullSiteRollbackActionV1(
   value: unknown,
 ): FullSiteRollbackActionV1 | null;
-
 export type FullSiteDryRunTerminalizationInput = Readonly<{
   runId: string;
   status: "success" | "failed";
@@ -159,7 +152,6 @@ export type FullSiteDryRunTerminalizationInput = Readonly<{
 export type FullSiteDryRunTerminalizationResult = Readonly<{
   outcome: "desired_terminal" | "different_terminal";
 }>;
-
 export type FullSiteInstallLedgerPort = {
   terminalizeDryRun(
     input: FullSiteDryRunTerminalizationInput,
@@ -267,7 +259,6 @@ selected columns are not negotiable):
 const CONTENT_ENTRY_ID_SELECTION = {
   id: contentEntries.id,
 } as const;
-
 const CONTENT_ENTRY_PLANNER_EQUALITY_SELECTION = {
   contentTypeId: contentEntries.typeId,
   title: contentEntries.title,
@@ -299,7 +290,6 @@ const PAGE_PLANNER_EQUALITY_SELECTION = {
   status: pages.status,
   currentData: pages.currentData,
 } as const;
-
 const DETAIL_PAGE_PLANNER_EQUALITY_SELECTION = {
   name: detailPageDocuments.name,
   contentTypeId: detailPageDocuments.contentTypeId,
@@ -612,7 +602,6 @@ export async function withFullSiteInstallLocks(packageKey, execute) {
     }
   });
 }
-
 export function planFullSiteInstall(pkg, deps): Promise<FullSiteInstallPlan>;
 export function planFullSiteInstall(pkg, referencePlan: readonly PlannedPackageResource[], deps): Promise<FullSiteInstallPlan>;
 export async function planFullSiteInstall(pkg, referencePlanOrDeps, maybeDeps) {
@@ -980,7 +969,8 @@ composition remains usable before L02 lands.
   profiles and budgets above with sanitized winner mismatch. Pure parsing retains
   both positive forms/four outputs, finite metrics, only specified optional
   absences, and fixed one-invocation errors for every malformed/overflow shape.
-- L01 planner regression gate: one evidence lookup per identity; both overloads normalize zero times, two-arg builds once before deps, and three-arg planning consumes L02's unchanged plan with zero builds before any dependency.
+- L01 planner regression gate: one evidence lookup per identity; both overloads call `normalizeFullSitePackageForWrite` zero times while `normalizeDesired` remains required for existing-resource comparisons;
+  two-arg builds once before deps, and three-arg planning consumes L02's unchanged plan with zero builds before any dependency.
 - DB test-integrity gate: the URL helper returns false only for `undefined` and
   true for `""`; production and failure tests use the same injectable four-stage
   factory. Pin exact stage order, complete direct 12/13-column projections and

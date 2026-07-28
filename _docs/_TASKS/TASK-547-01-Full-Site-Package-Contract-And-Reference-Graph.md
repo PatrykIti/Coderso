@@ -382,9 +382,10 @@ buildReferencePlan(pkg);
 
 Each call occurs exactly once. Typed service/planner boundaries accept only an
 already-normalized `FullSitePackageV1`: service apply and two-argument planning
-each build exactly one private plan with zero normalizer calls; three-argument
-planning and saga preparation consume the same supplied frozen plan with zero
-builds. The CLI and service intentionally build independently at their separate
+each build exactly one private plan with zero
+`normalizeFullSitePackageForWrite` calls; three-argument planning and saga
+preparation consume the same supplied frozen plan with zero builds. The CLI and
+service intentionally build independently at their separate
 trust boundaries; no caller-supplied plan crosses into service input/deps. Do not
 add a wrapper helper or alternate validation path. Bad reference paths,
 duplicate keys, dangling/ambiguous references and cycles fail before the
