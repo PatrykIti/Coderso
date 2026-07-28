@@ -94,6 +94,22 @@ diagnose() {
     echo "::error::The image does not contain the assistant docs source tree the boot path reindexes (Dockerfile 'COPY docs docs')."
     return
   fi
+  # This gate turns the reindex ON (CODERSO_ASSISTANT_DOCS_REINDEX_ON_START=1),
+  # dockerStart.ts awaits it before the server listens, and
+  # runStartupAssistantDocsReindex rethrows on any status other than "success" —
+  # so a document the ingest rejects aborts the boot as surely as a missing
+  # module, and it is not the image's fault. The log line and the
+  # assistant_startup_docs_reindex_<status> message are both written by
+  # core/server/startupAssistantDocs.ts.
+  if grep -q "\[startup\] Assistant docs reindex failed" "${BOOT_LOG_FILE}"; then
+    if grep -q "assistant_startup_docs_reindex_partial" "${BOOT_LOG_FILE}"; then
+      echo "::error::ASSISTANT DOCS INGEST REJECTED A DOCUMENT — the reindex finished 'partial', which the boot path treats as failure: at least one file in the image's docs tree failed validation (missing or invalid frontmatter, an oversized chunk, too many chunks). The image is fine; a document under docs/ is not. Matching log lines:"
+    else
+      echo "::error::ASSISTANT DOCS REINDEX FAILED AT BOOT — the container never reached the point of listening, because dockerStart.ts awaits the reindex before starting the server. Matching log lines:"
+    fi
+    grep -n "\[startup\] Assistant docs reindex failed" "${BOOT_LOG_FILE}" | head -n 5 || true
+    return
+  fi
   if grep -qi "EADDRINUSE" "${BOOT_LOG_FILE}"; then
     echo "::error::The container could not bind port ${APP_PORT}; something else on the runner already holds it."
     return

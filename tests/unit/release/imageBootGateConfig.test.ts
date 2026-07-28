@@ -10,6 +10,7 @@ const PR_GATES_WORKFLOW = ".github/workflows/coderso-pr-gates.yml";
 const RELEASE_WORKFLOW = ".github/workflows/release.yml";
 const BOOT_SCRIPT = ".github/scripts/verify-image-boot.sh";
 const PUBLISH_SCRIPT = ".github/scripts/verify-published-image.sh";
+const STARTUP_ASSISTANT_DOCS = "core/server/startupAssistantDocs.ts";
 
 /**
  * Paths that decide what lands in the runtime image: everything the Dockerfile
@@ -205,6 +206,30 @@ test("every action the image gates run stays pinned to a commit", () => {
       }).toEqual({ workflow, reference, pinned: true });
     }
   }
+});
+
+test("the boot diagnoser recognises a docs-ingest failure by the string the boot path logs", () => {
+  const script = readFile(BOOT_SCRIPT);
+  const source = readFile(STARTUP_ASSISTANT_DOCS);
+
+  // A diagnoser signature is worth exactly as much as its agreement with the
+  // code that writes the line, so both halves are asserted here and neither can
+  // be reworded on its own.
+  const failureLine = "[startup] Assistant docs reindex failed";
+  expect(source).toContain(`\`${failureLine}: \${`);
+  // The script greps for it, so its brackets are escaped; deriving the pattern
+  // from the logged line is what keeps the two ends tied together.
+  expect(script).toContain(failureLine.replace("[", "\\[").replace("]", "\\]"));
+
+  // "partial" deserves its own wording: a document under docs/ failed
+  // validation, which is not a broken image and should not be reported as one.
+  expect(source).toContain("`assistant_startup_docs_reindex_${result.status}`");
+  expect(source).toContain('status: "success" | "partial" | "failed"');
+  expect(script).toContain("assistant_startup_docs_reindex_partial");
+
+  // The signature is only reachable because both gates switch the reindex on;
+  // with it off, a docs failure could never abort a boot here.
+  expect(script).toContain('--env "CODERSO_ASSISTANT_DOCS_REINDEX_ON_START=1"');
 });
 
 test("the gate scripts the workflows invoke exist and are runnable as invoked", () => {
