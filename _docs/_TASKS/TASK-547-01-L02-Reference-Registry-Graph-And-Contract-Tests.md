@@ -112,8 +112,8 @@ valid-node first-match contract below.
 Each occurrence has one authority path. Fixed rules and the Page walker register
 `JSON.stringify([source.ordinal, exactRelativeSegmentArray])` in
 `registeredReferencePaths` before validating any present terminal;
-the resource ordinal scopes the authority to exactly one source resource, and
-string and numeric segments therefore cannot collide.
+`ordinal` is globally monotonic for authority/ties. `collectionIndex` resets in
+each normalized collection and is used only for source display paths.
 For a valid discriminator, the Page slot validator consumes that preflight and
 returns either the native-slot-ordered indexed object children or `null` after
 emitting its one first-match structural diagnostic. For a malformed
@@ -292,7 +292,7 @@ container/type/detail-content-type mismatch, Page-structure and planned-drift re
 JSON/edge/diagnostic/dependency limit reason → `site_package_too_complex`.
 
 Resource diagnostics call `encodeReferenceDiagnosticPath(source, relativePath)` to
-prepend `$.resources.<collection>[<ordinal>].desired`; trusted numeric/closed segments
+prepend `$.resources.<collection>[<collectionIndex>].desired`; trusted numeric/closed segments
 continue until terminal `[redacted]`. Descriptors stay relative; only global
 limits/cycle use `$.resources`; supplied data never enters output.
 Freeze the complete plan shapes:
@@ -319,7 +319,7 @@ export type PlannedPackageResource = Readonly<{
   kind: PackageResourceKind;
   collection: PackageResourceCollection;
   key: string;
-  ordinal: number;
+  ordinal: number; collectionIndex: number;
   seed: Readonly<{ key: string; desired: FrozenJsonObject }>;
   dependencies: readonly PackageResourceIdentity[];
   references: readonly PlannedPackageReference[];
@@ -439,8 +439,8 @@ const throwGraphDiagnostics = (batch: DiagnosticBatch<TaggedGraphDiagnostic>): v
 const indexUniqueKindKeys = (resources: FullSitePackageResources) => {
   const duplicates = createDiagnosticCollector<ReferenceGraphDiagnostic>();
   const registry = createMutableRegistry();
-  forEachPackageResource(resources, ({ collection, resource }) => {
-    if (!registerUnique(registry, collection, resource)) {
+  forEachPackageResource(resources, ({ collection, collectionIndex, resource }) => {
+    if (!registerUnique(registry, collection, collectionIndex, resource)) {
       duplicates.add({
         path: `$.resources.${collection}`, reason: "duplicate_resource_identity",
       });
@@ -759,19 +759,26 @@ export const stableTopologicalSort = (registry, edges) => {
   assertDependencyDepth(ordered);
   return ordered;
 };
+/** @internal; production-used, direct-test import only, never barrel/SDK exported. */
+export const finalizeAndSortReferenceGraph = (
+  registry: PackageResourceRegistry,
+  edges: readonly PackageReferenceEdge[],
+  batch: DiagnosticBatch<TaggedGraphDiagnostic>,
+): ReturnType<typeof stableTopologicalSort> => {
+  if (batch.overflowed) throwDiagnosticLimitSingleton();
+  if (edges.length > PACKAGE_LIMITS.referenceEdges) throwReferenceEdgesSingleton();
+  throwGraphDiagnostics(batch);
+  return stableTopologicalSort(registry, edges);
+};
 export function buildReferencePlan(pkg: FullSitePackageV1) {
   assertReferenceGraphJsonDepth(pkg.resources);
   const registry = indexUniqueKindKeys(pkg.resources); // Bounded duplicate 100/101 finalizer.
   const { edges, descriptorsByIdentity, diagnostics } = collectRefsAtAllowedPaths(registry);
-  const batch = diagnostics.read();
-  if (batch.overflowed) throwDiagnosticLimitSingleton();
-  if (edges.length > PACKAGE_LIMITS.referenceEdges) throwReferenceEdgesSingleton();
-  throwGraphDiagnostics(batch);
-  const ordered = stableTopologicalSort(registry, edges); // Cycle first, then depth.
+  const ordered = finalizeAndSortReferenceGraph(registry, edges, diagnostics.read());
   return freezePlan(ordered, descriptorsByIdentity);
 }
 export function resolvePlannedPackageResourceRefs(resource, resolvedIds) {
-  return substituteRecordedDescriptors(cloneJson(resource.seed.desired), resource.references, resolvedIds);
+  return substituteRecordedDescriptors(resource, cloneJson(resource.seed.desired), resolvedIds);
 }
 const pkg = normalizeFullSitePackageForWrite(rawPackage);
 buildReferencePlan(pkg);
@@ -866,17 +873,14 @@ must discard the partial list. Pin
 bad-path + 4,097 accepted edges → edge singleton and 101 mixed diagnostics +
 edge overflow → diagnostic singleton.
 
-Pin two Page resources with one relative path but different block discriminators:
-one allows the ref, one forbids it. In both orders assert the offending source
-prefix while accepted edge/descriptors stay relative.
-Separately pin blocked-prefix scope with two resources at the same relative Page
-block/slot prefix: one produces a structural slot failure and therefore a blocked
-prefix, while the other has a ref-like descendant that the generic scan must
-report. Run both declaration orders so the blocked and scanned resources swap
-ordinals explicitly; the second resource's forbidden finding must never be
-suppressed. Together with the single-diagnostic/no-duplicate cases above, this
-is the public behavioral proof of exact-prefix and source-ordinal isolation; do
-not expose the private prefix collector solely for tests.
+Pin cross-collection authority at local index 0 in both root orientations: Page
+authorizes `data` while Page Template forbids the same relative `data` path, then
+Page Template authorizes `document` while Page forbids its peer path. Global
+ordinals differ; diagnostics use the offending local index and descriptors stay
+relative. Repeat blocked-prefix isolation with native Page `data` blocking versus
+non-native Page Template `data`, then native Page Template `document` versus
+non-native Page `document`; each yields the structural plus peer forbidden result.
+This proves global-ordinal isolation without exposing the private collectors.
 
 Pin runtime immutability of the exported fixed registry's outer array, rows and
 segment arrays with mutation attempts. After the graph module has captured its
@@ -886,10 +890,10 @@ and reassign/remap `pageBlockCapabilities[type].slots`. Graph acceptance and
 traversal order must remain unchanged. Save every original descriptor/value and
 restore all imported owners in `finally`.
 
-Pin occurrence-edge count versus lexicographically deduplicated direct
-dependencies; exact stable topological order; exact
-`PlannedPackageResource`/`PlannedPackageReference` keys and deep freeze; and
-content-route order where `detailPageId` has a descriptor, `type` adds a counted
+Pin occurrence count, deduplicated dependencies, stable order and exact frozen
+plan keys including both indexes. First rows in two collections share
+`collectionIndex:0` but have distinct global ordinals; a second row has local 1.
+Pin content-route order where `detailPageId` has a descriptor, `type` adds a counted
 dependency edge, and `type` remains unchanged after substitution. Pin exact
 matching route/Detail Page content-type targets as accepted and mismatching
 targets as exactly one `site_package_ref_bad_path` /
@@ -904,8 +908,8 @@ and 101st-mismatch+edge-overflow cases in the diagnostics file for the frozen
 finalizer precedence. Pin exact code-unit order `a-a,a.a,a_a,aa` in dependency
 sorting and a synthetic equal-
 ordinal identity tie so a retained `localeCompare` cannot pass. Pin substitution,
-immutability/one build; missing-ID/drift encodes `(resource, descriptor.path)`
-without mutation. Except for the
+immutability/one build. On a source whose indexes differ, missing-ID/drift encodes
+`(resource,descriptor.path)` as local `[0]` without descriptor mutation. Except for the
 Page suite's explicit immutable-snapshot regression importing the native Page
 authority owners named above, this leaf's tests import only TASK-547-01 package
 owners and use a local Bun-free harness to prove normalize→graph once at raw
@@ -921,22 +925,13 @@ with a valid detail link and expect `content_route_type_invalid`. Each asserts
 that single diagnostic, no mismatch, the counterpart edge/descriptor through an
 edge-boundary fixture and no lazy acquisition.
 
-Add focused, independently runnable dependency-phase cases without local copies
-of chain or combined-graph builders. In
-`full-site-package-references-plan.test.ts`, use the shared support builder to
-assert that 65 resources joined by 64 dependency edges are accepted, use the
-dependency-free source/root as the depth-0 base case and produce the identical
-complete ordered plan on deterministic repeat runs; 66 resources joined by 65
-dependency edges must reject on every repeat with exactly the static
-`dependency_depth_exceeded` singleton. In
-`full-site-package-references-core.test.ts`, use the shared combined-graph
-builder to assert twice from fresh fixtures that a cycle plus a disjoint 65-edge
-branch returns exactly the static `reference_cycle` singleton. A separate
-semantic-plus-cycle-and-over-depth fixture must return its complete semantic
-result twice and must never surface either cycle or dependency-depth output,
-proving that semantic discovery/finalization prevents both later phases. These
-focused cases assert whole diagnostics and whole identity order, not only error
-codes.
+Focused phase tests use shared builders and directly import the production-used
+internal `finalizeAndSortReferenceGraph`; no copied finalizer or caller override.
+The plan suite accepts 64 edges and rejects acyclic 65 edges with the depth
+singleton on repeats. The core suite sends a clean cycle plus disjoint over-depth
+branch through the helper and gets the cycle singleton twice; the same graph with
+a real semantic batch returns that complete semantic result twice and reaches
+neither cycle nor depth. Assert whole diagnostics/identity order, not only codes.
 
 Test ownership is physical and non-overlapping:
 
@@ -967,11 +962,12 @@ cases/builders. Each four `.test.ts` files must run independently.
   rebaseline its edge/freeze test; implement recursive Page/Page Template
   base/responsive/native-slot traversal with 4/24 reject boundaries; correct
   discriminator/private presence/ref-key coverage, retire `isPackageRef`, and
-  source-qualify static redacted diagnostics while descriptors remain relative;
+  source-qualify diagnostics via global `ordinal` plus local `collectionIndex`
+  while descriptors remain relative;
   freeze Page owner imports, JSON-depth counting, global mixed-diagnostic
   precedence/overflow through L01's sole collector factory, the exact occurrence-purpose/content-route plan,
   descriptors and substitution helper; enforce the exact 64-edge longest-path
-  dependency boundary with semantic → cycle → depth phase precedence; split and
+  boundary and semantic → cycle → depth through the production internal helper; split and
   retire the original reference suite per the ownership above; then run fresh
   gates.
 

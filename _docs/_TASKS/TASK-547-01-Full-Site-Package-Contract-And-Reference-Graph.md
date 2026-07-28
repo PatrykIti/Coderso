@@ -186,9 +186,10 @@ sanitized bounded paths and L02's closed
 `ReferenceGraphDiagnosticReason` codes; raw keys, slugs, values, payloads, target
 identities and cycle members are never echoed.
 Registered reference paths and structurally blocked prefixes are keyed by the
-source resource ordinal plus the exact relative segment array. Authority from
-one resource therefore never suppresses generic forbidden-path scanning at the
-same relative path in another resource.
+globally monotonic source `ordinal` plus the exact relative segment array.
+Each registered source also carries `collectionIndex`, reset inside each
+normalized collection and used only in display paths. Authority from one source
+therefore never suppresses another, while diagnostics identify the real JSON row.
 Each structural rejection emits exactly one diagnostic at the block's `slots`
 path, adds one source-ordinal-scoped blocked prefix and stops only that rejected
 subtree. The generic ref-like scan skips that prefix to prevent duplicate child
@@ -236,7 +237,7 @@ export type PackageResourceIdentity = `${PackageResourceKind}:${string}`;
 Each accepted ref becomes exactly
 `Readonly<{path:readonly (string|number)[];targetIdentity:PackageResourceIdentity}>`.
 `PlannedPackageResource` is exactly the frozen
-`{identity,kind,collection,key,ordinal,seed:{key,desired},dependencies,references}`
+`{identity,kind,collection,key,ordinal,collectionIndex,seed:{key,desired},dependencies,references}`
 record frozen by L02: `desired` is recursive readonly JSON, `dependencies` is
 unique direct target identities in lexical order, and `references` preserves
 occurrence discovery order. Every accepted ref occurrence counts as an edge;
@@ -246,6 +247,8 @@ no descriptor and is never rewritten. Its detail/content-type identity check
 reuses the two resolved route targets and adds no edge or descriptor. The outer
 plan is topologically ordered with dependencies first and stable ties by package
 ordinal then identity; every nested snapshot/array is deep-cloned and frozen.
+Both indexes are repository-internal plan metadata, never package JSON, API,
+ledger or operation fields.
 L02 exports
 `resolvePlannedPackageResourceRefs(resource, resolvedIds)`: it clones desired,
 replaces only those recorded paths, verifies each source ref still matches its
@@ -363,12 +366,16 @@ export function buildReferencePlan(pkg: FullSitePackageV1): readonly PlannedPack
   assertReferenceGraphJsonDepth(pkg.resources); // desired=1; static level-65 error.
   const registry = indexUniqueKindKeys(pkg.resources); // duplicate kind:key => error
   const { edges, descriptorsByIdentity, diagnostics } = collectRefsAtAllowedPaths(registry);
-  const batch = diagnostics.read();
+  const ordered = finalizeAndSortReferenceGraph(registry, edges, diagnostics.read());
+  return freezePlan(ordered, descriptorsByIdentity);
+}
+
+/** @internal; production-used and never re-exported by a barrel/SDK. */
+export function finalizeAndSortReferenceGraph(registry, edges, batch) {
   if (batch.overflowed) throwDiagnosticLimitSingleton();
   if (edges.length > PACKAGE_LIMITS.referenceEdges) throwReferenceEdgesSingleton();
   throwGraphDiagnostics(batch);
-  const ordered = stableTopologicalSort(registry, edges); // Cycle, then longest-path edge depth.
-  return freezePlan(ordered, descriptorsByIdentity);
+  return stableTopologicalSort(registry, edges); // Cycle, then edge depth.
 }
 
 export function resolvePlannedPackageResourceRefs(
@@ -491,7 +498,8 @@ and a depth-5 child, with or without a ref-like descendant, yields one depth
 diagnostic with no duplicate forbidden diagnostic; an in-bounds ref-like
 descendant yields exactly one generic forbidden diagnostic and no authority,
 edge or descriptor. Prove prefix behavior through observable suppression and
-two-resource source-ordinal isolation without exposing the private collector.
+cross-collection sources sharing local index 0 in both root orientations; global
+ordinals isolate authority/prefixes while diagnostics retain local indexes.
 For each Page-backed kind, a reverse-authored same-resource malformed-sibling
 case combines four structurally blocked subtrees with one in-bounds ref-like
 sibling and requires four canonical-order structural diagnostics followed by
@@ -507,7 +515,9 @@ path and reject a 65-edge/66-resource path with the exact static
 `dependency_depth_exceeded` diagnostic. Separate precedence fixtures combine an
 over-depth path with a semantic finding and combine an independent over-depth
 branch with a cycle: the first reports the semantic result, while the second
-reports `site_package_ref_cycle` with `reference_cycle`. This task proves only
+reports `site_package_ref_cycle` with `reference_cycle`. Synthetic edges and real
+semantic batches use the production internal helper, never a copied finalizer or
+caller override. This task proves only
 its local raw normalize→graph call order; planner, typed-apply/preparer and CLI
 call counts belong to TASK-547-02-L01, 02-L02 and 05-L01. A structural-schema
 test may accept a ref-shaped value solely to exercise shape/edge limits, while
