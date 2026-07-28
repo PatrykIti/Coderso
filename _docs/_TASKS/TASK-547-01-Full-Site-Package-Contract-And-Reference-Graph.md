@@ -534,8 +534,11 @@ semantic batches use the production internal helper, never a copied finalizer or
 caller override. This task proves only
 its local raw normalize→graph call order; planner, typed-apply/preparer and CLI
 call counts belong to TASK-547-02-L01, 02-L02 and 05-L01. A structural-schema
-test may accept a ref-shaped value solely to exercise shape/edge limits, while
-the full consumer contract must prove that the same bad path is rejected by
+test may accept one otherwise structural ref-shaped value solely to prove that
+L01 does not count or enforce reference occurrences and to pin the frozen
+`PACKAGE_LIMITS.referenceEdges` number. L02 alone owns the exact 4096/4097
+accepted-occurrence boundary plus bad-path and precedence behavior, while the
+full consumer contract must prove that the same bad path is rejected by
 `buildReferencePlan` before lazy DB acquisition.
 
 ## Sub-Tasks
