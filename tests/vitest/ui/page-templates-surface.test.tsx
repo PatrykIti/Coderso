@@ -4,6 +4,18 @@ import { expect, test, vi } from "vitest";
 import { renderAdminUi } from "../../utils/adminRouterRender";
 import { cacheKeys } from "../../../core/admin/services/cachePolicy";
 import type { PageEditorHost } from "../../../core/admin/ui/pages/PageEditor";
+// The two page subjects are imported statically rather than with `await import(...)`
+// inside each test. A deferred import bills the whole transform and evaluation of
+// the templates module graph to whichever test touches it first, which is why
+// "PageTemplatesPage renders cached templates with list affordances" was the one
+// test here to exhaust the lane budget under full-suite contention while its four
+// neighbours, doing the same work against an already-warm registry, were far
+// cheaper. Static imports move that cost into the file's collection phase, where
+// no per-test deadline races it. Every `vi.mock` below is hoisted above these
+// imports by Vitest, and the mock factories read the mutable `cachedTemplates`
+// binding at call time, so per-test fixtures still apply.
+import { PageTemplateEditorPage } from "../../../core/admin/ui/pages/templates/PageTemplateEditorPage";
+import { PageTemplatesPage } from "../../../core/admin/ui/pages/templates/PageTemplatesPage";
 import type { PageDocumentV2 } from "../../../core/services/pages/pageDocumentV2";
 
 const templateSummary = {
@@ -67,180 +79,145 @@ vi.mock("@/components/ui/sheet", () => ({
   SheetDescription: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }));
 
-test(
-  "PageTemplatesPage renders cached templates with list affordances",
-  { timeout: 30000 },
-  async () => {
-    cachedTemplates = [templateSummary];
-    const { PageTemplatesPage } =
-      await import("../../../core/admin/ui/pages/templates/PageTemplatesPage");
+test("PageTemplatesPage renders cached templates with list affordances", async () => {
+  cachedTemplates = [templateSummary];
+  const html = renderAdminUi(<PageTemplatesPage />, {
+    path: "/admin/advanced/page-templates",
+  });
 
-    const html = renderAdminUi(<PageTemplatesPage />, {
-      path: "/admin/advanced/page-templates",
-    });
+  expect(html).toContain("Page Templates");
+  expect(html).toContain("Reusable Page v2 section stacks");
+  expect(html).toContain("New template");
+  expect(html).toContain('href="/admin/pages"');
+  expect(html).toContain('aria-current="page">Templates');
+  expect(html).toContain('data-page-template-row="tpl-1"');
+  expect(html).toContain("Landing stack");
+  expect(html).toContain("landing-stack");
+  expect(html).toContain("marketing");
+  // SSR interleaves comment markers around interpolated counts.
+  expect(html.replace(/<!-- -->/g, "")).toContain("Published (1)");
+  expect(html.replace(/<!-- -->/g, "")).toContain("Draft (0)");
+  expect(html).toContain('aria-label="Duplicate Landing stack"');
+  expect(html).toContain('aria-label="Delete Landing stack"');
+  // No legacy widget-template surface leaks into the rewritten page.
+  expect(html).not.toContain("widget-template");
+  expect(html).not.toContain("Widget Templates");
+});
 
-    expect(html).toContain("Page Templates");
-    expect(html).toContain("Reusable Page v2 section stacks");
-    expect(html).toContain("New template");
-    expect(html).toContain('href="/admin/pages"');
-    expect(html).toContain('aria-current="page">Templates');
-    expect(html).toContain('data-page-template-row="tpl-1"');
-    expect(html).toContain("Landing stack");
-    expect(html).toContain("landing-stack");
-    expect(html).toContain("marketing");
-    // SSR interleaves comment markers around interpolated counts.
-    expect(html.replace(/<!-- -->/g, "")).toContain("Published (1)");
-    expect(html.replace(/<!-- -->/g, "")).toContain("Draft (0)");
-    expect(html).toContain('aria-label="Duplicate Landing stack"');
-    expect(html).toContain('aria-label="Delete Landing stack"');
-    // No legacy widget-template surface leaks into the rewritten page.
-    expect(html).not.toContain("widget-template");
-    expect(html).not.toContain("Widget Templates");
-  }
-);
+test("PageTemplatesPage renders the empty state when no templates are cached", async () => {
+  cachedTemplates = [];
+  const html = renderAdminUi(<PageTemplatesPage />, {
+    path: "/admin/advanced/page-templates",
+  });
 
-test(
-  "PageTemplatesPage renders the empty state when no templates are cached",
-  { timeout: 30000 },
-  async () => {
-    cachedTemplates = [];
-    const { PageTemplatesPage } =
-      await import("../../../core/admin/ui/pages/templates/PageTemplatesPage");
+  // TASK-479-23-L01: the empty state is the shared EmptyState primitive
+  // (title + description), so the copy is split across nodes — assert both
+  // parts rather than the pre-restyle single contiguous sentence.
+  expect(html).toContain("No page templates yet");
+  expect(html).toContain("Create one to reuse section stacks across pages.");
+});
 
-    const html = renderAdminUi(<PageTemplatesPage />, {
-      path: "/admin/advanced/page-templates",
-    });
+test("PageTemplateEditorPage binds the Page Editor host seam to the template contract", async () => {
+  capturedHosts.length = 0;
+  const html = renderAdminUi(<PageTemplateEditorPage templateId="tpl-1" />, {
+    path: "/admin/advanced/page-templates/tpl-1",
+  });
 
-    // TASK-479-23-L01: the empty state is the shared EmptyState primitive
-    // (title + description), so the copy is split across nodes — assert both
-    // parts rather than the pre-restyle single contiguous sentence.
-    expect(html).toContain("No page templates yet");
-    expect(html).toContain("Create one to reuse section stacks across pages.");
-  }
-);
+  expect(html).toContain("data-page-editor-stub");
+  expect(html).toContain('data-page-id="tpl-1"');
+  expect(html).toContain('data-host-mode="page-template"');
 
-test(
-  "PageTemplateEditorPage binds the Page Editor host seam to the template contract",
-  { timeout: 30000 },
-  async () => {
-    capturedHosts.length = 0;
-    const { PageTemplateEditorPage } =
-      await import("../../../core/admin/ui/pages/templates/PageTemplateEditorPage");
+  const host = capturedHosts[0];
+  expect(host).toBeTruthy();
+  expect(host?.mode).toBe("page-template");
+  expect(host?.resourceLabel).toBe("Page Templates");
+  expect(host?.assistantSurface).toBe(false);
+  expect(host?.detailCacheKey("tpl-1")).toBe(cacheKeys.pageTemplateDetail("tpl-1"));
 
-    const html = renderAdminUi(<PageTemplateEditorPage templateId="tpl-1" />, {
-      path: "/admin/advanced/page-templates/tpl-1",
-    });
+  // The host adapts the cached template detail into the PageDetail shape the
+  // shared editor expects: the stored Page v2 document rides currentData.
+  const cachedDetail = host?.getCachedDetail("tpl-1");
+  expect(cachedDetail).toMatchObject({
+    id: "tpl-1",
+    title: "Landing stack",
+    slug: "landing-stack",
+    status: "published",
+    currentData: { schemaVersion: 2, sections: [] },
+  });
 
-    expect(html).toContain("data-page-editor-stub");
-    expect(html).toContain('data-page-id="tpl-1"');
-    expect(html).toContain('data-host-mode="page-template"');
+  const loaded = await host?.loadDetail("tpl-1");
+  expect(loaded?.id).toBe("tpl-1");
+  expect(loaded?.currentData).toEqual({ schemaVersion: 2, sections: [] });
 
-    const host = capturedHosts[0];
-    expect(host).toBeTruthy();
-    expect(host?.mode).toBe("page-template");
-    expect(host?.resourceLabel).toBe("Page Templates");
-    expect(host?.assistantSurface).toBe(false);
-    expect(host?.detailCacheKey("tpl-1")).toBe(cacheKeys.pageTemplateDetail("tpl-1"));
+  // `host.preview` is optional on the host seam (TASK-458-03); the
+  // template host keeps providing it.
+  expect(host?.preview).toBeTypeOf("function");
+  const preview = await host?.preview?.("tpl-1");
+  expect(preview?.previewUrl).toBe("/preview?type=page-template&token=preview-token");
+});
 
-    // The host adapts the cached template detail into the PageDetail shape the
-    // shared editor expects: the stored Page v2 document rides currentData.
-    const cachedDetail = host?.getCachedDetail("tpl-1");
-    expect(cachedDetail).toMatchObject({
-      id: "tpl-1",
-      title: "Landing stack",
-      slug: "landing-stack",
-      status: "published",
-      currentData: { schemaVersion: 2, sections: [] },
-    });
+test("Template settings dialog renders the shared segmented status control, not a native select", async () => {
+  capturedHosts.length = 0;
+  renderAdminUi(<PageTemplateEditorPage templateId="tpl-1" />, {
+    path: "/admin/advanced/page-templates/tpl-1",
+  });
+  const host = capturedHosts[0];
+  expect(host?.renderSettings).toBeTruthy();
 
-    const loaded = await host?.loadDetail("tpl-1");
-    expect(loaded?.id).toBe("tpl-1");
-    expect(loaded?.currentData).toEqual({ schemaVersion: 2, sections: [] });
+  const html = renderAdminUi(
+    <>
+      {host?.renderSettings?.({
+        open: true,
+        onOpenChange: () => undefined,
+        detail: host.getCachedDetail("tpl-1"),
+        onSaved: () => undefined,
+      })}
+    </>,
+    { path: "/admin/advanced/page-templates/tpl-1" }
+  );
 
-    // `host.preview` is optional on the host seam (TASK-458-03); the
-    // template host keeps providing it.
-    expect(host?.preview).toBeTypeOf("function");
-    const preview = await host?.preview?.("tpl-1");
-    expect(preview?.previewUrl).toBe("/preview?type=page-template&token=preview-token");
-  }
-);
+  expect(html).toContain("Template settings");
+  // Dedicated-widget contract (phase2 smoke anomaly #3): the status field is
+  // the shared SegmentedControl, never a native select.
+  expect(html).not.toContain("<select");
+  expect(html).toContain('data-page-template-status-control="true"');
+  expect(html).toContain('data-page-editor-control="segmented"');
+  expect(html).toContain('aria-label="Status"');
+  expect(html).toContain('data-page-editor-segmented-option="draft"');
+  expect(html).toContain('data-page-editor-segmented-option="published"');
+  // Stored enum tokens stay lowercase; the pills show capitalized labels.
+  expect(html).toContain(">Draft</button>");
+  expect(html).toContain(">Published</button>");
+  // The cached template is published, so the published pill is the active one.
+  expect(html).toMatch(/aria-pressed="true"[^>]*data-page-editor-segmented-option="published"/);
+  expect(html).toMatch(/aria-pressed="false"[^>]*data-page-editor-segmented-option="draft"/);
+});
 
-test(
-  "Template settings dialog renders the shared segmented status control, not a native select",
-  { timeout: 30000 },
-  async () => {
-    capturedHosts.length = 0;
-    const { PageTemplateEditorPage } =
-      await import("../../../core/admin/ui/pages/templates/PageTemplateEditorPage");
+test("Template editor surfaces an always-visible propagation note via canvasChrome", async () => {
+  capturedHosts.length = 0;
+  renderAdminUi(<PageTemplateEditorPage templateId="tpl-1" />, {
+    path: "/admin/advanced/page-templates/tpl-1",
+  });
 
-    renderAdminUi(<PageTemplateEditorPage templateId="tpl-1" />, {
-      path: "/admin/advanced/page-templates/tpl-1",
-    });
-    const host = capturedHosts[0];
-    expect(host?.renderSettings).toBeTruthy();
+  // TASK-479-23-L02: the propagation note is rendered by the host
+  // `canvasChrome` seam (above the canvas sections), NOT buried in the settings
+  // sheet. The shared PageEditor is stubbed here, so the note is verified
+  // through the seam directly (mirroring how renderSettings is exercised).
+  const host = capturedHosts.at(-1);
+  expect(host?.canvasChrome).toBeTypeOf("function");
 
-    const html = renderAdminUi(
-      <>
-        {host?.renderSettings?.({
-          open: true,
-          onOpenChange: () => undefined,
-          detail: host.getCachedDetail("tpl-1"),
-          onSaved: () => undefined,
-        })}
-      </>,
-      { path: "/admin/advanced/page-templates/tpl-1" }
-    );
+  const document = {
+    schemaVersion: 2,
+    breakpoints: [],
+    seo: {},
+    settings: {},
+    sections: [],
+  } as unknown as PageDocumentV2;
+  const html = renderAdminUi(<>{host?.canvasChrome?.({ document, device: "desktop" })}</>, {
+    path: "/admin/advanced/page-templates/tpl-1",
+  });
 
-    expect(html).toContain("Template settings");
-    // Dedicated-widget contract (phase2 smoke anomaly #3): the status field is
-    // the shared SegmentedControl, never a native select.
-    expect(html).not.toContain("<select");
-    expect(html).toContain('data-page-template-status-control="true"');
-    expect(html).toContain('data-page-editor-control="segmented"');
-    expect(html).toContain('aria-label="Status"');
-    expect(html).toContain('data-page-editor-segmented-option="draft"');
-    expect(html).toContain('data-page-editor-segmented-option="published"');
-    // Stored enum tokens stay lowercase; the pills show capitalized labels.
-    expect(html).toContain(">Draft</button>");
-    expect(html).toContain(">Published</button>");
-    // The cached template is published, so the published pill is the active one.
-    expect(html).toMatch(/aria-pressed="true"[^>]*data-page-editor-segmented-option="published"/);
-    expect(html).toMatch(/aria-pressed="false"[^>]*data-page-editor-segmented-option="draft"/);
-  }
-);
-
-test(
-  "Template editor surfaces an always-visible propagation note via canvasChrome",
-  { timeout: 30000 },
-  async () => {
-    capturedHosts.length = 0;
-    const { PageTemplateEditorPage } =
-      await import("../../../core/admin/ui/pages/templates/PageTemplateEditorPage");
-
-    renderAdminUi(<PageTemplateEditorPage templateId="tpl-1" />, {
-      path: "/admin/advanced/page-templates/tpl-1",
-    });
-
-    // TASK-479-23-L02: the propagation note is rendered by the host
-    // `canvasChrome` seam (above the canvas sections), NOT buried in the settings
-    // sheet. The shared PageEditor is stubbed here, so the note is verified
-    // through the seam directly (mirroring how renderSettings is exercised).
-    const host = capturedHosts.at(-1);
-    expect(host?.canvasChrome).toBeTypeOf("function");
-
-    const document = {
-      schemaVersion: 2,
-      breakpoints: [],
-      seo: {},
-      settings: {},
-      sections: [],
-    } as unknown as PageDocumentV2;
-    const html = renderAdminUi(<>{host?.canvasChrome?.({ document, device: "desktop" })}</>, {
-      path: "/admin/advanced/page-templates/tpl-1",
-    });
-
-    expect(html).toMatch(/every page (using|that uses) it/i);
-    // Honesty guard: generic copy, never a fabricated page count.
-    expect(html).not.toMatch(/updates \d+ pages/i);
-  }
-);
+  expect(html).toMatch(/every page (using|that uses) it/i);
+  // Honesty guard: generic copy, never a fabricated page count.
+  expect(html).not.toMatch(/updates \d+ pages/i);
+});
