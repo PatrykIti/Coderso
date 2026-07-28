@@ -167,7 +167,8 @@ COPY --from=builder --chown=bun:bun /app/store /app/store
 # This runs in the runner stage on purpose: BuildKit skips stages that nothing
 # depends on, so the same check in a trailing stage of its own would be silently
 # never executed. The script writes its bundle to a temp dir and removes it
-# itself; only the exit code is wanted.
+# itself on every exit path including the failing ones; only the exit code is
+# wanted.
 #
 # The script is bind-mounted for the duration of this RUN rather than copied in
 # and deleted afterwards, so it genuinely does not ship. The COPY form did ship

@@ -110,7 +110,31 @@ const packageOf = (inputPath) => {
   return first.startsWith("@") ? (parts[at + 2] ? `${first}/${parts[at + 2]}` : null) : first;
 };
 
+/*
+ * Temp directories this run created, so fail() can remove them.
+ *
+ * fail() ends the process with process.exit(), which does NOT run pending
+ * `finally` blocks. The bundle's temp dir was removed only in a `finally`, so
+ * every failing run -- the two fail() calls inside that try, an unresolvable
+ * import and a missing metafile -- left a full bundle behind in the build's /tmp,
+ * while the Dockerfile said the script "removes it itself". Registering the
+ * directory here makes that claim hold on the failure paths too, which are the
+ * paths that matter: a failing build is exactly when a check gets re-run.
+ */
+const tempDirs = new Set();
+const removeTempDirs = () => {
+  for (const dir of tempDirs) {
+    try {
+      fs.rmSync(dir, { recursive: true, force: true });
+    } catch {
+      // Best effort: a temp dir we cannot remove must not mask the real failure.
+    }
+  }
+  tempDirs.clear();
+};
+
 const fail = (message) => {
+  removeTempDirs();
   process.stderr.write(`${NAME}: ${message}\n`);
   process.exit(1);
 };
@@ -255,6 +279,7 @@ for (const entry of entrypoints) {
 }
 
 const outDir = fs.mkdtempSync(path.join(os.tmpdir(), "resolve-check-"));
+tempDirs.add(outDir);
 let metafile;
 try {
   process.stdout.write(
@@ -289,7 +314,8 @@ try {
   if (!fs.existsSync(metaPath)) fail("bun build produced no metafile -- cannot verify the graph");
   metafile = JSON.parse(fs.readFileSync(metaPath, "utf8"));
 } finally {
-  fs.rmSync(outDir, { recursive: true, force: true });
+  // Covers the success path and any thrown error; fail() covers its own exits.
+  removeTempDirs();
 }
 
 const inputs = Object.entries(metafile.inputs ?? {});
