@@ -121,10 +121,9 @@ near-limit adapter/test suite by cohesive responsibility before adding behavior.
 → listing query → detail page → Pages → menus → allowlisted site/design settings
 (including `site.contentRoutes`)`.
 
-Settings and shell references land last. Rollback uses exact reverse dependency
-order with the frozen deterministic tie-break, and blocks unsafe prerequisite
-branches after a reversal failure. Media is excluded unless a later task adds an
-explicit trusted source contract.
+Settings and shell references land after every non-setting target is prepared/staged but before lifecycle publication; publishing is the final operation.
+Rollback uses exact reverse dependency order with the frozen deterministic tie-break, and blocks unsafe prerequisite branches after a reversal failure.
+Media is excluded unless a later task adds an explicit trusted source contract.
 
 Failure atomicity is a compensation saga: each successful domain operation
 records enough safe prior state to compensate in reverse order. Do not introduce
@@ -318,9 +317,9 @@ The sole exception is the allowlisted site/design shell settings stage. An
 operator may explicitly opt in to a narrow reversible takeover for those keys.
 Without that opt-in, an existing setting without matching ledger proof is an
 unmanaged conflict. With it, the executor snapshots the exact native value,
-applies settings only after every other resource is staged and published, and
-restores that exact prior value during compensation or explicit rollback. The
-exception does not apply to any other resource kind and is never implicit.
+applies settings only after every other resource is prepared and staged but
+before lifecycle publication, and restores that exact prior value during
+compensation or explicit rollback. The exception does not apply to any other resource kind and is never implicit.
 
 Planner equality and rollback snapshots are separate contracts. L01's current
 resource resolver returns only the canonical equality projection used to decide
@@ -661,8 +660,8 @@ async function executeOwnedApplyCallback(input: OwnedApplyCallbackInput) {
   try {
     result = await executePreparedPlanWithDomainAtomicAdapters({
       run, prepared: prepared.items, actorId: input.actorId,
-      adapters: input.adapters, settingsLast: true,
-    });
+      adapters: input.adapters,
+    }); // fixed internally: stage non-settings -> settings -> lifecycle publication last
   } catch (primary) {
     return recoverInitializedOwnerFromDurableLedger({ ...input, primary });
   }
@@ -721,7 +720,7 @@ const compareRollbackReadyNodes = (
 
 async function recordRollbackOutcome(input: RollbackOutcomeInput): Promise<void> {
   try {
-    await input.ledger.recordItem({
+    await input.ledger.recordItem({ // L01 shared fenced writer; stale/closing lease performs zero DML
       runId: input.rollbackRunId,
       position: input.persistedSourceItem.position,
       kind: input.persistedSourceItem.kind,
@@ -860,11 +859,10 @@ export async function rollbackFullSiteInstall(
 }
 ```
 
-**Data flow:** valid actor -> pure private graph -> exclusive global/package xact
-locks -> private statement-one reservation census -> marked owner plus resume
+**Data flow:** valid actor -> pure private graph -> exclusive global/package xact locks -> private statement-one reservation census -> marked owner plus resume
 phase -> reserved-only DB plan/IDs/validation/initialization under owner `FOR
-SHARE` (or initialized durable recovery) -> guarded CAS/publish/settings ->
-closing -> owner `FOR UPDATE` drain -> desired terminal/marker removal -> holder commit.
+SHARE` (or initialized durable recovery) -> guarded CAS/settings -> lifecycle
+publish-last -> closing -> owner `FOR UPDATE` drain -> desired terminal/marker removal -> holder commit.
 There is no session lock, manual unlock or public/general zero-SQL owner bypass;
 the private reservation exception still performs its locking census as statement one.
 
@@ -911,7 +909,7 @@ both the source failure and every success/failed/blocked compensation outcome.
 - First apply completes, second creates no duplicates, ledger-backed managed
   update/noop works, natural-key equality without proof conflicts, injected
   failure compensates, and rollback restores only owned rows plus exact prior
-  shell/settings. Draft/publish order and settings-last remain pinned.
+  shell/settings. Draft/stage -> settings -> publish-last order remains pinned.
 - Bad refs perform zero dependency/I/O calls. Public inputs reject a structural
   plan; typed apply builds one private plan, both planner overloads call package
   normalization zero times, and supplied-plan identity reaches preparation.
@@ -985,15 +983,18 @@ both the source failure and every success/failed/blocked compensation outcome.
 - `set -a && source /home/coder/project/Coderso/.env && set +a && bun test --parallel=1 --timeout=360000 tests/unit/kits/installService.test.ts tests/integration/routes/solutionKitsRoutes.test.ts`
 - `set -a && source /home/coder/project/Coderso/.env && set +a && bun test --parallel=1 --timeout=360000 tests/unit/kits/fullSiteLegacyLedgerComposition.test.ts tests/unit/kits/fullSiteLegacyLedgerReadPersistence.test.ts tests/unit/kits/fullSiteLegacyLedgerDryRunTerminalization.test.ts`
 - `set -a && source /home/coder/project/Coderso/.env && set +a && bun test --parallel=1 --timeout=360000 tests/unit/content/typeService.test.ts tests/unit/pages/pageTemplateLibraryService.test.ts tests/unit/content/listingTemplatesService.test.ts tests/unit/content/listingQueriesService.test.ts tests/unit/settings/settingsService.test.ts tests/unit/settings/fullSiteSettingsAtomicService.test.ts`
-- targeted Form/Menu/Page/entry/detail aggregate/lifecycle and full-site adapter
-  suites from L02, including all nine exact-ID replace/delete race cases
+- targeted Form/Menu/Page/entry/detail aggregate/lifecycle and full-site adapter suites from L02, including all nine exact-ID replace/delete race cases
 - `set -a && source /home/coder/project/Coderso/.env && set +a && bun test --parallel=1 --timeout=360000 tests/integration/kits/fullSiteManagedOwnershipDb.test.ts`
 - `set -a && source /home/coder/project/Coderso/.env && set +a && bun test --parallel=1 --timeout 360000 tests/integration/kits/fullSiteNativeForeignKeyRacesDb.test.ts`
 - `set -a && source /home/coder/project/Coderso/.env && set +a && bun test --parallel=1 --timeout=360000 tests/unit/kits/fullSiteCompensationDependencies.test.ts`
 - `set -a && source /home/coder/project/Coderso/.env && set +a && for attempt in 1 2 3; do bun test --parallel=1 --timeout 360000 tests/integration/kits/fullSiteCrashRecoveryDb.test.ts || exit 1; done` (writer-fence matrix, three serial passes)
 - `set -a && source /home/coder/project/Coderso/.env && set +a && bun test --parallel=1 --timeout 360000 tests/unit/kits/nativeCmsWriterFenceInventory.test.ts tests/unit/admin/usersService.test.ts tests/unit/tools/importExport.test.ts tests/unit/backups/backupService.test.ts`
-- `bun --cwd core lint` and `bun --cwd core lint:types`
-- `bun run scan:security:strict`
-- L01 replaces the composition test's 100 × 20 ms DB poll with a monotonic
-  `DB_EVENTUALLY_DEADLINE_MS = 360_000` bounded deadline after the test split.
+- `bun --cwd core lint`, `bun --cwd core lint:types`, and `bun run scan:security:strict`
+- L01 replaces the composition test's 100 × 20 ms DB poll with a monotonic `DB_EVENTUALLY_DEADLINE_MS = 360_000` bounded deadline after the test split.
 - touched-file line counts
+
+## Documentation Updates Required
+
+TASK-547-06 owns final `_docs/ARCHITECTURE.md`, `_docs/DATA_MODEL.md`,
+`_docs/CMS_API.md`, `_docs/SECURITY_SPEC.md`, and operator-guide updates for
+the installer, writer fence, recovery, and rollback contracts defined here.

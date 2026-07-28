@@ -473,7 +473,7 @@ const compareRollbackReadyNodes = (
 
 async function recordRollbackOutcome(input: RollbackOutcomeInput): Promise<void> {
   try {
-    await input.ledger.recordItem({
+    await input.ledger.recordItem({ // L01 shared fenced writer; stale/closing lease performs zero DML
       runId: input.rollbackRunId,
       position: input.persistedSourceItem.position,
       kind: input.persistedSourceItem.kind,

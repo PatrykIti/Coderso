@@ -861,12 +861,12 @@ export async function requireDesiredOwnedRunFinalization(ledger, input): Promise
 await executePreparedNonSettings({
   prepared, adapters, ledger, actorId, ownerRunId,
 }); // strict input, target CAS, returned-ID check, owner-gated phase upsert
+await applyPreparedSettingsBeforePublish({
+  prepared, settingAdapter: adapters.setting, ledger, actorId, ownerRunId,
+}); // final reversible non-noop batch; noops are phase-only and never join it
 await publishPreparedLifecycleLast({
   prepared, adapters, ledger, actorId, ownerRunId,
-}); // durable publish_prepared -> exact publish target -> complete
-await applyPreparedSettingsLast({
-  prepared, settingAdapter: adapters.setting, ledger, actorId, ownerRunId,
-}); // one atomic non-noop batch; noops are phase-only and never join it
+}); // final operation: durable publish_prepared -> exact publish target -> complete
 ```
 
 The complete target was durable from reserved-run initialization; phase upserts only record
@@ -923,7 +923,7 @@ There is no executor-level Menu wiring write before or after that call. Publish 
 Existing `tests/unit/kits/fullSiteLifecycleAdapters.test.ts` pins Page `data` acceptance, a no-ref `document:{ sections:[] }` wrong-root rejection with no alias, resolved-ID validation under `data`, exact create/update `title,slug,data` payloads and status-only draft/publish-last behavior.
 Existing `tests/unit/kits/fullSiteAggregateAdapters.test.ts` pins Page Template `document` acceptance plus no-ref `data:{ sections:[] }` rejection with no opposite-root alias. No additional adapter suite is introduced.
 
-Data flow: normalized input -> actor -> one private graph build -> dependency/lock acquisition -> planning -> UUID registry -> allowlisted substitution/native targets -> run/durable evidence -> local CAS/phases -> publish-last/reversible settings. Known errors retain codes; unexpected errors redact; L03 owns compensation.
+Data flow: normalized input -> actor -> one private graph build -> dependency/lock acquisition -> planning -> UUID registry -> allowlisted substitution/native targets -> run/durable evidence -> local CAS/phases -> reversible settings -> publication last. Known errors retain codes; unexpected errors redact; L03 owns compensation.
 
 Regression tests cover every operation. A noop first performs mandatory resolution/native validation/complete capture and durable initialization; only its execution branch performs zero resolver/adapter/native reads or writes.
 It registers the current ID and persists equal top-level final state, V1 recovery, null staged target and the `prepared`→`complete` phase-only change.
@@ -940,7 +940,7 @@ the marker. Pin complete prepared rows and that retired generic preflight/resolv
 stays unused. Nested refs persist as IDs.
 Form preflight round-trips `submit.supportingText` and rejects a sibling extra; listing tests reject an extra at every nested record above. Form tests table-pin `Authorization`, authorization/material-suffixed and `X-API-Key` header names plus Basic/Bearer/JWT, PEM, credential-URL and data-URL material under safe names: each returns only `site_package_invalid`, leaks no sentinel and reaches neither item initialization nor native write. A safe-header fixture proves capture, CAS replace and restore preserve the exact canonical action/header map. Detail tests keep `required:true` plus absent fallback through normalize/target persistence and fail a missing value rather than painting Aurora defaults.
 Every kind has an apply adapter, while only `page`, `content_entry`, `detail_page` and `menu` participate in publish-last. They remain draft until dependencies are wired; menu items/document/appearance precede publish.
-Settings land in one last reversible stage through one required `applySettingsBatchAtomic` call with no per-key fallback; legacy and full-site runs use the same ledger port.
+Settings land in the final reversible stage before publication through one required `applySettingsBatchAtomic` call with no per-key fallback; lifecycle publication is the final operation, and legacy/full-site runs use the same ledger port.
 Additional focused regressions pin:
 
 - every Form/Menu/Page/entry/detail internal failure leaves zero partial rows, revisions or cache effects;

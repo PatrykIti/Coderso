@@ -235,9 +235,10 @@ export type FullSiteInstallLedgerPortAdditions = {
 
 `FullSiteInstallLedgerPortAdditions` is only the changed-member fragment, never a replacement port.
 The final `FullSiteInstallLedgerPort` uses the exact descriptor/discriminated context above and adds all three members. Apply callbacks get `resumePhase`; explicit rollback callbacks do not pretend that incremental outcomes are initialization items. Full-site apply/rollback use reserved initialization/owned finalization only; legacy callers alone retain `createRun`/`finalizeRun`.
+`recordItem` remains the shared legacy/full-site phase and outcome writer: it validates before I/O, opens one `READ COMMITTED` transaction, calls `acquireNativeCmsWriterFence(tx)` as statement one and performs its upsert only through that handle. Active ownership validates the exact generation; ordinary legacy calls use the shared fence/census; closing, revoked or lost contexts perform zero DML.
 Type gates compile every read/facade `Pick` and the default full composition.
 
-`initializeReservedRun(value: unknown)` has no insert-new/sequential fallback. Pre-DB validation safely rejects Proxy/accessor/cyclic or non-exact input; requires owner/actor UUIDs, canonical package key, boolean dry-run, plain JSON, 0..512 contiguous unique `kind:key` items; and forbids caller marker/plan ownership. Invalid/513 are exact cause-free `site_package_invalid`/`site_package_too_large`. It clones, derives the plan, owner-gates, updates the reservation and bulk-inserts on one handle. Its catch applies the exact reread/error matrix above rather than blanket rewriting owner-gate errors. Legacy `createRun`/`recordItem` remain compatibility-only.
+`initializeReservedRun(value: unknown)` has no insert-new/sequential fallback. Pre-DB validation safely rejects Proxy/accessor/cyclic or non-exact input; requires owner/actor UUIDs, canonical package key, boolean dry-run, plain JSON, 0..512 contiguous unique `kind:key` items; and forbids caller marker/plan ownership. Invalid/513 are exact cause-free `site_package_invalid`/`site_package_too_large`. It clones, derives the plan, owner-gates, updates the reservation and bulk-inserts on one handle. Its catch applies the exact reread/error matrix above rather than blanket rewriting owner-gate errors. Initialization never falls back to legacy `createRun` or incremental `recordItem`.
 
 The builder rejects self/invalid identities and emits unique sorted dependencies.
 The strict reader allows only `schemaVersion`/`dependencies`, returns `null` for
@@ -903,7 +904,11 @@ test("old construction literals and required rollbackAction remain compatible", 
 // fullSiteLegacyLedgerRunInitialization.test.ts owns 0/1/512, exact-key/scalar/
 // Proxy/accessor/cycle/513, two-DML rollback and exact cause-free errors.
 ```
-Every declared `FacadeHandler` takes the matching current `createLegacyInstallLedger` method body from lines 709-939; only extraction and names change, and no child duplicates those bodies.
+Every declared `FacadeHandler` except `recordFullSiteItem` takes the matching
+current `createLegacyInstallLedger` method body from lines 709-939 with only
+extraction/name changes. `recordFullSiteItem` additionally receives the required
+statement-one fence transaction and uses that handle for its sole upsert; no
+child duplicates a handler body.
 Allowed dependency edges are facade -> three persistence children and owner finalization -> read persistence (`buildSummary`) only; reverse edges, sibling-test imports and duplicate bodies are forbidden.
 The composition suite moves rather than copies focused cases, retains facade/catalog, lock, resolver projection, metadata and DB-harness ownership, and updates its exact inventory. Planner fake ledgers add raw-read, dry-run and required atomic-initialization methods; later-leaf fakes update in their owning phases.
 
@@ -930,7 +935,8 @@ L01 uses the graph-owner descriptor resolver/`normalizeDesired`; any descriptor 
   private ambiguous recovery with captured lease, statement-one exact owner `FOR
   UPDATE`, zero ordinary/shared-fence path and zero mutation. It also pins DB-free
   caller mapping and primary-preserving cleanup with zero I/O after closing.
-  Fence/composition suites own the reservation, resume and `onclose` matrices above.
+  Fence/composition suites own reservation, resume, `onclose`, and `recordItem`
+  active/ordinary/stale/closing/revoked zero-DML matrices.
 - The DB harness keeps exact load -> `SELECT 1` -> 12-column run `LIMIT 0` ->
   13-column item `LIMIT 0`, direct projections, and twice-invoked fresh sanitized
   stage failures. Every mutating fixture enters `try/finally` before its first
@@ -947,7 +953,7 @@ L01 uses the graph-owner descriptor resolver/`normalizeDesired`; any descriptor 
 - [x] Add the planner and its initial pure Vitest coverage.
 - [ ] Land aliases, bounded raw reads, strict V1/manifest readers and pooler-safe xact/owner fence without facade drift.
 - [ ] Replace planner N+1 reads with one snapshot loader, batch evidence and <=14-query native reader; retain direct/exact-ID compatibility.
-- [ ] Land atomic `initializeReservedRun`/`finalizeOwnedRun`; retain legacy-only `createRun`/`recordItem`/`finalizeRun`.
+- [ ] Land atomic `initializeReservedRun`/`finalizeOwnedRun`; retain legacy-only `createRun`/`finalizeRun` and shared fenced `recordItem`.
 - [ ] Split near-limit facade/tests into declared cohesive children, then land managed/native and EXPLAIN suites.
 - [ ] Pass pure, DB, type/lint, query-budget and touched-file line gates.
 
