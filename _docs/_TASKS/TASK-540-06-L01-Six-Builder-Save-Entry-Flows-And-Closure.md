@@ -12,7 +12,9 @@
 **Dependencies:** TASK-540-01-L01, TASK-540-02-L01, TASK-540-03-L01, TASK-540-04-L01..L04, TASK-540-05-L01..L02
 **Status:** 🚧 In Progress
 **Started:** 2026-07-14
-**Fix Started:** 2026-07-15
+**Fix Started:** 2026-07-23
+**Implementation Complete:** 2026-07-28 — assigned work was completed; canonical `✅ Done` transition awaits family changelog 1252.
+**Revalidation Passed:** pre-closure remediation / fix-started 2026-07-23 / gate green
 **Modularity Repair Revalidated:** 2026-07-19 — eight source-owner modularity repairs and exact gates passed.
 **Historical Implementation Complete:** 2026-07-16 — the then-assigned work was
 complete, but the later live-smoke repair superseded this as current completion
