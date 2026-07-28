@@ -243,7 +243,7 @@ test("shared block layout keeps inherited values through first explicit override
       margin: { top: "inherit", bottom: "inherit" },
     }),
   });
-}, 10000);
+});
 
 test("advanced layout summary distinguishes inherited effective values from saved overrides", async () => {
   const { AdvancedPanel } = await import("../../../core/admin/ui/pages/builder/AdvancedPanel");
@@ -262,7 +262,7 @@ test("advanced layout summary distinguishes inherited effective values from save
   expect(view.container.textContent).toContain("Inherit page default (full)");
   expect(view.container.textContent).toContain("Hidden on all devices");
   expect(view.container.textContent).not.toContain("Top MD");
-}, 10000);
+});
 
 test("block settings confirms repeatable slot removal before patching", async () => {
   const { BlockSettings } = await import("../../../core/admin/ui/pages/builder/BlockSettings");
