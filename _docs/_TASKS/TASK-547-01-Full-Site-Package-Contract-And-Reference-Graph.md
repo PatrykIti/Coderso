@@ -322,10 +322,14 @@ literally `false`; otherwise it is an implementation gap and blocks closure.
   surrounding prose.
   Standards-parse every absolute-scheme
   (`^[A-Za-z][A-Za-z0-9+.-]*:`), protocol-relative and exact `/`, `./`, `../`,
-  `?`, `#` relative URL candidate (the relative forms use one fixed inert base),
-  rejecting parsed userinfo including special-scheme forms without `//` and any
-  nonempty, exactly-once-decoded credential/signature query or fragment
-  parameter. A decoded parameter name whose full untrimmed string
+  `?`, `#` relative URL candidate (the relative forms use one fixed inert base).
+  Also parse one whole-value unprefixed `path-noscheme` candidate only when it
+  has a nonempty path, no colon in its first segment, no URL-delimiting code
+  unit, a query or fragment, and a raw assignment after that delimiter. This
+  catches values such as `contact?token=...` without interpreting ordinary
+  embedded prose as a relative URL. Reject parsed userinfo including
+  special-scheme forms without `//` and any nonempty, exactly-once-decoded
+  credential/signature query or fragment parameter. A decoded parameter name whose full untrimmed string
   ASCII-case-folds exactly to `code` also rejects when its decoded value has
   nonzero length without trimming; this is URL-only and does not add `code` to
   the global desired-key grammar, so descriptive multi-token names such as
@@ -456,8 +460,9 @@ padding; nonzero pad bits; and bare-field/carrier-key near misses. Basic cases
 pin canonical and padding/pad-bit alias credentials plus safe bare `Basic Plan`/
 `Basic analytics`. Modular bare/nested desired-string and all-seven-prose cases
 independently pin embedded authorization-header, credential-bearing URL and
-Base64 data-URL candidates, candidate-order-independent precedence, bounded-
-linear extraction, URL-span swallowing in both candidate orders,
+Base64 data-URL candidates plus whole-value unprefixed relative query/fragment
+assignments, candidate-order-independent precedence, bounded-linear extraction,
+URL-span swallowing in both candidate orders,
 leading/trailing ECMAScript whitespace, the fixed overlapping-span budget, safe
 prose near misses, static redacted diagnostics and complete candidate/context
 non-disclosure. Overlaps assert the single-finding precedence sensitive key →

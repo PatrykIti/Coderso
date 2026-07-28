@@ -203,17 +203,17 @@ into a dynamic error field (the fixed reason literal is not key echo), and its
 value never enters any error surface. Similar or inherited keys do not match
 this exact own-key rule.
 
-The carrier-independent value classifier is shared by every `desired` string,
-metadata `name`/optional `description`, and the five VisualResidual prose fields.
-It applies ECMAScript `trim()` for detection only and rejects actual
-`ArrayBuffer`, `ArrayBufferView` and `Blob` values before ordinary string
-validation. For a string beginning `//`, parse `https:${trimmed}`; for one
-matching `^[A-Za-z][A-Za-z0-9+.-]*:`, parse the string itself. Also parse an
-exact whole-string relative candidate beginning `/`, `./`, `../`, `?` or `#`
-against the fixed inert base `https://task547.invalid/`; handle `//` first so it
-retains network-URL semantics. An unprefixed relative word/path is not a URL
-candidate. Parse failure is not a URL finding. A parsed URL rejects for nonempty
-`username` or `password`.
+The carrier-independent value classifier is shared by every `desired` string, metadata `name`/
+optional `description`, and the five VisualResidual prose fields. ECMAScript `trim()` is
+detection-only; reject actual `ArrayBuffer`, `ArrayBufferView` and `Blob` before validation. Parse `//` as
+`https:${trimmed}`, an absolute-scheme string as itself, and exact whole-string `/`, `./`, `../`, `?` or `#` relative candidates against `https://task547.invalid/`. Before
+embedded discovery, parse at most one additional whole-string `path-noscheme` candidate
+against that base: it needs a nonempty path, no `:` in its first segment, no ASCII
+whitespace/control, DEL, quote or angle bracket, a `?` or `#`, and a raw `=` after that
+delimiter, and it cannot begin with an already handled prefix. Charge its span once to
+the shared parse budget and retain only booleans. Unassigned unprefixed paths and all
+embedded unprefixed relative tokens remain outside discovery. Parse failure is not a
+finding; a parsed URL rejects for nonempty `username` or `password`.
 
 Also inspect `URL.searchParams` and a fragment parsed once with
 `new URLSearchParams(fragmentBody)`, after removing `#` and at most one leading
@@ -276,29 +276,24 @@ minimum-length or digit/punctuation heuristics. All wrapper examples above rejec
 bare near misses, `notBearer` and other-header prose remain valid. The PEM pass searches
 the complete view independently, so no URL span can hide its fixed marker.
 
-URL discovery visits every code unit once and stores only numeric start offsets
-for the existing absolute-scheme, protocol-relative and exact `/`, `./`, `../`,
-`?`, `#` relative prefixes; `data:` offsets are also marked for the independent
-data-URL result. Arbitrary schemes are recognized by a forward state machine,
-not a remainder regex or repeated lookahead. Inspection derives a candidate's
-maximal end at the first ASCII whitespace/control, quote or angle bracket and
-removes a terminal `)`, `]` or `}` only when unmatched inside that candidate.
-The same bounded scan must not remove a closer when it is the sole raw value
-after the final `=` in the active query/fragment parameter; `?code=)` therefore
-parses once with `)` as its nonempty marked value, never as an empty value.
-Nested starts remain visible because discovery never jumps over a prior span.
-The private parse budget is exactly four times the trimmed view length, charged
-once per code unit examined while deriving and parsing URL spans. Each candidate
-is parsed at most once; exceeding the budget fails closed as
-`credential_url_forbidden` without another parse. Consequently ordinary
-disjoint URLs consume at most n budget, while adversarial overlapping/nested
-candidates remain bounded rather than quadratic.
+URL discovery visits every code unit once and stores only numeric start offsets for the
+existing absolute-scheme, protocol-relative and exact `/`, `./`, `../`, `?`, `#`
+relative prefixes; `data:` offsets also feed the independent data-URL result. The one
+whole-value `path-noscheme` check adds no internal offsets or suffix retry. Recognize
+arbitrary schemes by a forward state machine. End candidates at ASCII whitespace/control,
+quote or angle bracket, removing a terminal `)`, `]` or `}` only when unmatched. Do not
+remove a closer that is the sole raw value after the final active query/fragment `=`;
+`?code=)` therefore parses once with a nonempty marked value. Discovery never jumps a
+prior span, so nested starts remain visible. Charge every examined URL-span code unit to
+the private budget of exactly four times the trimmed length and parse each candidate once.
+Budget overflow fails closed as `credential_url_forbidden`; ordinary disjoint URLs cost at
+most n, while adversarial overlaps stay bounded rather than quadratic.
 
 Pass each ephemeral URL slice directly to the existing standards parser.
 Query/fragment names and values are decoded exactly once only through
 `URLSearchParams`; there is no alternate parse, suffix retry,
-`decodeURIComponent` or recursive decode. Embedded relative words without an
-allowed prefix, adjacency inside a larger token, ordinary public URLs and
+`decodeURIComponent` or recursive decode. Embedded unprefixed relative words,
+adjacency inside a larger token, ordinary public URLs and
 data-URL-like prose that does not satisfy the closed predicate remain valid.
 The pipeline records only fixed booleans and never returns the first textual
 match, so reason selection is candidate-order-independent and remains binary →
@@ -563,6 +558,8 @@ type EmbeddedPackageValueFindings = Readonly<{
 }>;
 const URL_SPAN_BUDGET_FACTOR = 4;
 type UrlCandidateStart = Readonly<{ index: number; dataUrlPrefix: boolean }>;
+type UrlParseMode = "frozen-prefix" | "inert-relative";
+declare const isWholeValuePathNoSchemeCandidate: (detection: string) => boolean;
 const scanAuthorizationCandidates = (detection: string): boolean => {
   let cursor = 0;
   while (cursor < detection.length) {
@@ -607,10 +604,14 @@ const scanEmbeddedPackageValueCandidates = (
   const detection = value.trim(); // Detection only; never persisted.
   const authorization = scanAuthorizationCandidates(detection);
   const privateKeyPem = PRIVATE_KEY_PEM_PATTERN.test(detection);
-  const starts = collectUrlCandidateStarts(detection);
   let remainingSpanCodeUnits = detection.length * URL_SPAN_BUDGET_FACTOR;
   let credentialUrl = false;
   let base64DataUrl = false;
+  if (isWholeValuePathNoSchemeCandidate(detection)) {
+    remainingSpanCodeUnits -= detection.length; // Exactly one whole-span charge.
+    credentialUrl = inspectUrlCandidateOnce(detection, false, "inert-relative").credentialUrl;
+  }
+  const starts = collectUrlCandidateStarts(detection);
   for (const start of starts) {
     const span = findUrlCandidateEndForward(
       detection,
@@ -626,6 +627,7 @@ const scanEmbeddedPackageValueCandidates = (
     const result = inspectUrlCandidateOnce(
       detection.slice(start.index, span.end),
       start.dataUrlPrefix,
+      "frozen-prefix",
     );
     credentialUrl ||= result.credentialUrl;
     base64DataUrl ||= result.base64DataUrl;
@@ -753,35 +755,30 @@ export function normalizeFullSitePackageForWrite(value: unknown) {
 }
 ```
 
-`isCandidateBoundary(input, index)` is true only for index zero or when
-the preceding code unit is U+0000–U+0020, U+007F, `'`, `"`, `(`, `[`, `{`, `<`,
-`,`, `;` or `=`. `readAuthorizationCandidate` first attempts the exact quoted/
-unquoted `Authorization` wrapper, then the bare ASCII-case-folded scheme. The
-wrapper branch rejects every nonempty bounded field value without parsing or
-retaining it; the bare branch alone walks the Basic/Bearer token alphabet and
-applies the decoder or heuristic. It returns only `{ end, forbidden }`; an
-incomplete wrapper or malformed bare candidate returns `null` and never skips
-input or emits text.
+`isCandidateBoundary(input, index)` is true only at zero or after U+0000–U+0020,
+U+007F, `'`, `"`, `(`, `[`, `{`, `<`, `,`, `;` or `=`. `readAuthorizationCandidate`
+tries the exact quoted/unquoted wrapper before the bare scheme. The wrapper rejects every
+nonempty bounded value without parsing it; only the bare branch walks the Basic/Bearer
+alphabet and heuristic. It returns `{ end, forbidden }`; malformed input returns `null`
+without skipping input or emitting text.
 
-`readUrlPrefixForward` returns
-`{ matched, dataUrlPrefix, resumeAt }`. An absolute scheme consumes the maximal
-`[A-Za-z][A-Za-z0-9+.-]*` sequence once and matches only when the next code unit
-is `:`. On mismatch `resumeAt` is the first unconsumed code unit, so the caller
-never repeats that scheme scan. `findUrlCandidateEndForward` receives the
-remaining numeric span budget, walks toward the frozen terminators while
-tracking only three bracket balances, and returns either
-`{ end, budgetExceeded:false }` or `{ end:start, budgetExceeded:true }` before
-reading beyond the budget. It applies the unmatched-terminal rule exactly once.
+`isWholeValuePathNoSchemeCandidate` is one forward state-machine pass. It rejects an
+existing frozen prefix, any URL terminator and `:` in the first path segment; it requires
+a nonempty path, then `?` or `#`, then a raw `=`. It stores booleans only. The caller
+initializes the shared 4× budget first, charges the entire span once, parses once in
+`inert-relative` mode and processes embedded offsets with the remaining budget.
+`readUrlPrefixForward` returns `{ matched, dataUrlPrefix, resumeAt }`, consumes a maximal
+scheme alphabet once and matches it only before `:`. On mismatch the caller resumes at the
+first unconsumed code unit. `findUrlCandidateEndForward` walks frozen terminators within the
+remaining budget and tracks three bracket balances. It returns an end or budget overflow
+before over-reading and applies the unmatched-terminal rule once.
 
-`inspectUrlCandidateOnce` first evaluates the anchored data-URL predicate, then
-constructs exactly one `URL` using the already frozen absolute/protocol/
-relative rules. A parse exception returns only the data-URL flag. A successful
-parse checks userinfo, iterates `url.searchParams`, constructs exactly one
-`URLSearchParams` for the fragment body and applies the closed marked-name
-predicate to every duplicate. It returns only
-`{ credentialUrl, base64DataUrl }`; neither it nor any caller catches or formats
-candidate-derived detail. Span-budget exhaustion and forbidden flags flow only
-to the existing static reason/path mapping shown above.
+`inspectUrlCandidateOnce(candidate, dataUrlPrefix, mode: UrlParseMode)` evaluates the
+anchored data-URL predicate, then constructs exactly one `URL`: `inert-relative` uses the
+fixed base and `frozen-prefix` uses the existing absolute/protocol/relative rules. A parse
+exception returns only the data-URL flag. Success checks userinfo, `url.searchParams`, one
+fragment `URLSearchParams` and every duplicate closed marker. It returns only fixed
+booleans; budget overflow and forbidden flags reach only the static reason/path mapping.
 
 Both prose readers are module-private. The normalizer calls
 `readSafeResidualProse` only from the source residual array's `map` callback,
@@ -926,7 +923,11 @@ Pin overlapping precedence too: a PEM-bearing marked URL chooses
 emits only `secret_key_forbidden`. An actual typed-binary value under an explicit
 carrier chooses `binary_value_forbidden`, and authorization, PEM, credential URL
 and Base64 data URL findings continue to precede the explicit-carrier Base64
-lexeme result.
+lexeme result. In the security suite, reject whole-value unprefixed query/fragment assignments
+such as `contact?token=<value>` and `flow#access_token=<value>` in bare/nested desired
+strings and every prose surface, with duplicates, fixed redacted paths and complete
+non-disclosure. Accept byte-identical unassigned paths, safe non-markers, whitespace-bearing prose and
+deterministic repeats; pin one parse, shared span-budget charging and fail-closed exhaustion.
 Use an unsorted multi-residual fixture whose canonical identity order differs
 from its input order; trigger a finding in the later input element and prove its
 path retains that original pre-sort input index, never its sorted position or
