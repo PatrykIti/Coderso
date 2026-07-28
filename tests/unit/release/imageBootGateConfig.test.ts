@@ -32,7 +32,13 @@ const IMAGE_SHAPING_PATHS = [
   "packages/sdk/src/index.ts",
   "themes/default/theme.json",
   PR_GATES_WORKFLOW,
+  // The release job runs the same boot script against the same image on main,
+  // once the version is already tagged. If a pull request does not build for a
+  // change to it, nothing does until it is too late to un-tag.
+  RELEASE_WORKFLOW,
   BOOT_SCRIPT,
+  PUBLISH_SCRIPT,
+  ".github/scripts/a-gate-script-added-later.sh",
 ];
 
 /**

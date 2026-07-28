@@ -255,11 +255,18 @@ jobs:
           printf '%s\n' "${changed}" | sed 's/^/  changed: /'
           # Exactly what the Dockerfile copies into the build context — core,
           # docs, packages, themes, the four package.json files it installs
-          # from, the lockfile and bunfig.toml — plus the files that define this
-          # gate. store/ is excluded beyond its package.json because the image
-          # never receives it, and _docs/, tests/ and scripts/ cannot reach the
-          # image at all.
-          if printf '%s\n' "${changed}" | grep -qE '^(Dockerfile$|\.dockerignore$|bun\.lock$|bunfig\.toml$|package\.json$|store/package\.json$|core/|docs/|packages/|themes/|\.github/workflows/coderso-pr-gates\.yml$|\.github/scripts/verify-image-boot\.sh$)'; then
+          # from, the lockfile and bunfig.toml — plus everything that defines an
+          # image gate. store/ is excluded beyond its package.json because the
+          # image never receives it, and _docs/, tests/ and scripts/ cannot
+          # reach the image at all.
+          #
+          # release.yml is here because it runs the SAME boot script against the
+          # SAME image, and it runs on main, after the version is tagged, where
+          # there is no pull request left to catch anything. .github/scripts/ is
+          # matched as a directory rather than file by file: a gate script that
+          # nothing builds for is exactly the hole listing them individually
+          # leaves open the next time one is added.
+          if printf '%s\n' "${changed}" | grep -qE '^(Dockerfile$|\.dockerignore$|bun\.lock$|bunfig\.toml$|package\.json$|store/package\.json$|core/|docs/|packages/|themes/|\.github/workflows/coderso-pr-gates\.yml$|\.github/workflows/release\.yml$|\.github/scripts/)'; then
             echo "build=true" >> "$GITHUB_OUTPUT"
             echo "Image-shaping paths changed: building and booting the image."
           else
