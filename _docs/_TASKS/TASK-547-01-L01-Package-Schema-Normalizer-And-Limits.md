@@ -31,7 +31,8 @@ contains no database IDs in package-owned seed envelopes. Lifecycle state only
 where the native owner supports it, ordered children where supported, and all
 other intended domain state are explicit inside
 `desired`; canonical snapshot/equality is over the complete normalized
-`desired`, never a partial projection.
+`desired`, never a partial projection. All package and recursive `desired` arrays
+must own every index in `0..length - 1`; a hole is non-JSON and rejects, never `null`.
 
 Freeze the package-owned canonical key grammar to
 `^[a-z0-9](?:[a-z0-9._-]{0,126}[a-z0-9])?$`. It applies to the package key,
@@ -126,7 +127,9 @@ value/array element adds one, level 64 accepts and level 65 throws
 `{ path: "$.resources", reason: "json_depth_exceeded" }`. Because raw input must
 normalize before graph validation, this structural error precedes duplicate or
 other graph errors. L02 repeats the same guard first for already-typed callers,
-so raw and typed duplicate+depth inputs have identical precedence.
+so raw and typed duplicate+depth inputs have identical precedence. Traverse by
+numeric index and check depth before presence: holes through level 64 add
+`non_json_value`; level 65 still returns the depth singleton.
 
 Finite JSON numbers are preserved except negative zero, which canonicalizes to
 positive `0` (`Object.is(output, -0) === false`) before artifact serialization.
@@ -266,17 +269,11 @@ A candidate begins only at start of the trimmed view or after ASCII
 whitespace/control, an opening quote/bracket, `<`, `,`, `;` or `=`. An exact
 ASCII-case-insensitive `Authorization` wrapper is also a start: accept its
 unquoted form or a matching single-/double-quoted field name, OWS (`TAB`/SPACE),
-`:`, OWS and an optional opening quote before the scheme. This wrapper rule does
-not admit arbitrary header names. The authorization pass extracts a maximal
-Basic/Bearer token, requires end-of-view or an ASCII whitespace/control,
-quote/bracket, `<`, `>`, comma or semicolon boundary and advances its own cursor
-to that token's end. Inside the exact wrapper, every nonempty syntactically
-valid Basic standard-alphabet token or Bearer token rejects; do not apply the
-decoded-colon, minimum-length or digit/punctuation heuristics there. Bare
-candidates alone use those conservative predicates. A scheme inside a larger
-word is not a candidate. Thus wrapped `Basic Plan`, wrapped `Bearer token` and
-wrapped alphabetic-only material reject, while those bare near misses,
-`notBearer` and ordinary other-header prose remain valid. The PEM pass searches
+`:`, OWS and an optional opening quote; arbitrary header names do not match. Every
+nonempty bounded wrapper value rejects regardless of scheme or grammar; empty is
+valid. Bare Basic/Bearer alone uses closed-token boundaries plus decoded-colon,
+minimum-length or digit/punctuation heuristics. All wrapper examples above reject;
+bare near misses, `notBearer` and other-header prose remain valid. The PEM pass searches
 the complete view independently, so no URL span can hide its fixed marker.
 
 URL discovery visits every code unit once and stores only numeric start offsets
@@ -573,7 +570,7 @@ const scanAuthorizationCandidates = (detection: string): boolean => {
       cursor += 1;
       continue;
     }
-    const candidate = readBasicOrBearerCandidate(detection, cursor);
+    const candidate = readAuthorizationCandidate(detection, cursor);
     if (!candidate) {
       cursor += 1;
       continue;
@@ -758,12 +755,12 @@ export function normalizeFullSitePackageForWrite(value: unknown) {
 
 `isCandidateBoundary(input, index)` is true only for index zero or when
 the preceding code unit is U+0000–U+0020, U+007F, `'`, `"`, `(`, `[`, `{`, `<`,
-`,`, `;` or `=`. `readBasicOrBearerCandidate` first attempts the exact quoted/
-unquoted `Authorization` wrapper, then the bare ASCII-case-folded scheme; it
-walks the frozen token alphabet once and checks the closed end boundary. The
-wrapper branch sets `forbidden` for every nonempty syntactically valid token;
-the bare branch alone applies the Basic decoder or Bearer heuristic. It returns
-only `{ end, forbidden }`; a malformed candidate returns `null` and never skips
+`,`, `;` or `=`. `readAuthorizationCandidate` first attempts the exact quoted/
+unquoted `Authorization` wrapper, then the bare ASCII-case-folded scheme. The
+wrapper branch rejects every nonempty bounded field value without parsing or
+retaining it; the bare branch alone walks the Basic/Bearer token alphabet and
+applies the decoder or heuristic. It returns only `{ end, forbidden }`; an
+incomplete wrapper or malformed bare candidate returns `null` and never skips
 input or emits text.
 
 `readUrlPrefixForward` returns
@@ -804,10 +801,11 @@ parent-required codes with bounded diagnostics.
 
 Test ownership is physical and non-overlapping:
 
-- `full-site-package-schema.test.ts` owns envelopes, byte/count/depth limits and
-  verification shape;
+- `full-site-package-schema.test.ts` owns envelopes, byte/count/depth limits,
+  verification shape, sparse resource/desired/residual/scenario rejection and
+  sparse level-64 invalid/level-65 depth precedence;
 - `full-site-package-canonicalization.test.ts` owns identity/scalar/prose,
-  residual and exact ordering/idempotence cases;
+  residual, dense `[null]` bytes and exact ordering/idempotence cases;
 - `full-site-package-security.test.ts` owns immutable-authority mutation,
   forbidden setting/secret/value and non-disclosure cases; and
 - `fullSitePackageTestSupport.ts` owns only the shared valid-package/residual
@@ -868,9 +866,10 @@ Bearer, credential-URL and Base64-data-URL sentinels through a bare desired
 string, a nested desired string and each of the seven exact package-prose
 surfaces. Cover prefix/suffix prose, explicit unquoted and matching-quoted
 `Authorization:` wrappers whose short or alphabetic-only Basic/Bearer tokens
-reject while the identical bare near misses accept; also cover case folding,
-maximal-token boundaries, terminal punctuation and URL userinfo/query/fragment
-forms. Reverse authorization/PEM/
+reject while the identical bare near misses accept. Add quoted/unquoted,
+case-folded `Digest`, `Token`, `AWS4-HMAC`, unknown-scheme and opaque wrapper
+values; keep empty/incomplete wrappers and other header names valid. Also cover
+maximal-token boundaries, terminal punctuation and URL forms. Reverse authorization/PEM/
 credential-URL/data-URL candidate order in paired strings and assert the same
 single precedence reason. Add explicit safe-URL-then-comma/semicolon/equals
 Basic, Bearer, PEM, credential-URL and data-URL swallowing regressions, nested
@@ -965,7 +964,8 @@ suite neither imports nor source-inspects that later-owned reader.
   serialized-size semantics, exact verification/setting contracts and their
   immutable boundaries; freeze scalar/canonical ordering, residual identity and
   secret/encoded-value policies, including all seven package-prose surfaces,
-  compact credential aliases, colon-decoded noncanonical Basic variants,
+  dense-array enforcement, compact credential aliases, scheme-agnostic exact
+  Authorization wrappers, colon-decoded noncanonical Basic variants,
   bounded embedded authorization/credential-URL scanning, compound-carrier
   Base64-family grammar and exact-name `code` query/fragment URLs;
   remove undocumented residual/diagnostic limit coupling and replace inherited

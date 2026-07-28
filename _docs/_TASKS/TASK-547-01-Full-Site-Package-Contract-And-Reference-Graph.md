@@ -79,6 +79,9 @@ Page Template, it owns `document` and never aliases it to `data`. The graph
 registry preserves those native roots rather than translating between them.
 Snapshot/equality compare the canonical normalized
 `desired` value, not selected fields. Unknown seed-envelope keys are rejected.
+Every package-owned array and every recursive `desired` array must be dense: an
+absent own numeric index is non-JSON and rejects rather than materializing as
+`null`, even though `JSON.stringify` would serialize both shapes identically.
 
 Non-setting seed keys, package keys, `PackageRef.key` and verification scenario
 IDs use the exact canonical grammar
@@ -327,10 +330,10 @@ literally `false`; otherwise it is an implementation gap and blocks closure.
   uses a bounded pure decoder and decoded-colon detection rather than canonical
   decode/re-encode identity, so padding and nonzero-pad-bit variants reject while
   bare `Basic Plan` and `Basic analytics` remain valid. Inside the exact
-  `Authorization:` wrapper, every nonempty syntactically valid Basic/Bearer token
-  rejects; minimum-length, decoded-colon and digit/punctuation heuristics apply
-  only to bare prose. Credential-shaped bare Bearer values, private-key PEM and
-  Base64 data URLs reject; ordinary bare Bearer copy remains valid. The complete
+  `Authorization:` wrapper, every nonempty bounded field value rejects regardless
+  of authorization scheme or token grammar; Basic decoding and Bearer heuristics
+  apply only to bare prose. Credential-shaped bare Bearer values, private-key PEM
+  and Base64 data URLs reject; ordinary bare Bearer copy remains valid. The complete
   carrier-independent binary-class table is
   `ArrayBuffer`, `Uint8Array` (representative `ArrayBufferView`), `DataView`
   (representative `ArrayBufferView`) and `Blob`. Every row rejects at bare
