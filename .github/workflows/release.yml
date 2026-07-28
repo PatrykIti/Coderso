@@ -146,23 +146,23 @@ jobs:
       - name: Setup Docker Buildx
         uses: docker/setup-buildx-action@bb05f3f5519dd87d3ba754cc423b652a5edd6d2c # v4.2.0
 
-      - name: Build coderso-core image
+      # BUILD 1 OF 2 — verification only; this export never leaves the runner.
+      #
+      # The boot gate has to RUN the image, so this build goes through `load`
+      # into the local daemon, and the docker exporter behind `load` cannot
+      # write a provenance attestation — hence `provenance: false` HERE, and
+      # only here. The published artifact is built by the second build below,
+      # with its attestation intact, and the step after it proves the two are
+      # the same image instead of assuming they are.
+      - name: Build coderso-core image for boot verification
         uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
         with:
           context: .
           file: Dockerfile
-          # Built into the local daemon, NOT pushed: the boot gate below runs
-          # this exact image, and the push step afterwards ships those same
-          # bytes. Nothing reaches GHCR that has not been started and seen to
-          # serve.
           push: false
           load: true
-          # A provenance attestation turns the result into a manifest list,
-          # which the docker exporter behind `load` cannot write.
           provenance: false
-          tags: |
-            ${{ steps.image.outputs.version_tag }}
-            ${{ steps.image.outputs.latest_tag }}
+          tags: ${{ steps.image.outputs.version_tag }}
           build-args: |
             APP_VERSION=${{ needs.semantic-release.outputs.version }}
           labels: |
@@ -197,12 +197,50 @@ jobs:
           # handled by the GitHub App token used for release git/API work.
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Push verified coderso-core image
+      # BUILD 2 OF 2 — the published artifact.
+      #
+      # Same context, same Dockerfile, same build args and labels, same builder,
+      # in the same job: every layer comes back out of build 1's cache, so this
+      # is a re-export rather than a second compile. It differs from build 1 in
+      # exactly one respect — it goes through the image exporter to the
+      # registry, which CAN carry the SLSA provenance attestation that `load`
+      # cannot. Publishing without that attestation strips supply-chain
+      # metadata off the artifact users pull, so it is set explicitly here and
+      # asserted on the registry by the step below.
+      - name: Publish coderso-core image with provenance
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
+        with:
+          context: .
+          file: Dockerfile
+          push: true
+          # The exact default docker/build-push-action applies when provenance
+          # is left unset, written out rather than relied on: min-mode SLSA
+          # provenance whose builder id is the run that produced the image.
+          # `provenance: true` would attest without naming the run, which is
+          # most of what the attestation is for.
+          provenance: mode=min,inline-only=true,builder-id=${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          tags: |
+            ${{ steps.image.outputs.version_tag }}
+            ${{ steps.image.outputs.latest_tag }}
+          build-args: |
+            APP_VERSION=${{ needs.semantic-release.outputs.version }}
+          labels: |
+            org.opencontainers.image.title=coderso-core
+            org.opencontainers.image.version=${{ needs.semantic-release.outputs.version }}
+            org.opencontainers.image.revision=${{ steps.revision.outputs.sha }}
+
+      # Two exports mean two artifacts, and "same builder, warm cache" is an
+      # argument rather than a check. This compares the layer diff IDs and the
+      # startup configuration of what is now in GHCR against the image the boot
+      # gate started, and refuses a publication that carries no provenance
+      # attestation. It reads the registry, so it necessarily runs after the
+      # push: a mismatch is a red release holding a published tag, not a push
+      # that was prevented.
+      - name: Verify the published image is the image that booted
         shell: bash
         env:
-          VERSION_TAG: ${{ steps.image.outputs.version_tag }}
-          LATEST_TAG: ${{ steps.image.outputs.latest_tag }}
-        run: |
-          set -euo pipefail
-          docker push "${VERSION_TAG}"
-          docker push "${LATEST_TAG}"
+          LOCAL_IMAGE_REF: ${{ steps.image.outputs.version_tag }}
+          PUBLISHED_REFS: |
+            ${{ steps.image.outputs.version_tag }}
+            ${{ steps.image.outputs.latest_tag }}
+        run: .github/scripts/verify-published-image.sh
