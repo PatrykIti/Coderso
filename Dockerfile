@@ -93,28 +93,42 @@ COPY --from=builder --chown=bun:bun /app/store /app/store
 
 # Build-time proof that the pruned tree is complete.
 #
-# `bun build` resolves the entire import graph from the real entrypoints and
-# exits non-zero on the first specifier it cannot find. A package the runtime
-# needs but which sits in devDependencies therefore fails `docker build` here,
-# loudly, instead of failing the container at boot -- or worse, on the first
-# request that reaches a lazily-imported module.
+# The check bundles the whole import graph from the real entrypoints -- the CMD
+# entry, the --preload, and the templates -- and fails the build if anything the
+# graph reaches is missing from the tree above. A package the runtime needs but
+# which sits in devDependencies therefore fails `docker build` here, loudly,
+# instead of failing the container at boot, or worse on the first request that
+# reaches a lazily-imported module.
 #
-# The template globs matter: core/themes/resolver.ts loads templates by
-# filesystem path at request time (`await import(pathToFileURL(...))`), an edge
-# no static graph can see, so they are named as entrypoints here to bring their
-# imports under the same check. The glob rather than a fixed list so a newly
-# added template is covered automatically.
+# This is NOT a bare `bun build`, and the reason is the whole point of the
+# script. `bun build` reports an unresolvable import as an error -- unless the
+# import sits inside a try/catch, in which case it downgrades it to an external
+# and exits 0 with no diagnostic. core/services/email/emailProvider.ts is
+# exactly that shape (`try { await import("nodemailer") } catch`), so deleting
+# nodemailer from a pruned tree left the old bare-`bun build` check passing: it
+# was blind to the single import it was added to protect. The script reads the
+# bundler's --metafile instead of trusting its exit code, and fails on any
+# first-party edge marked external that is not a Node/Bun builtin.
+#
+# What it cannot cover, and says so on every run: dynamic imports with a
+# computed specifier. core/site/renderPublicPage.tsx and renderPublicEntry.tsx
+# do `await import(pathToFileURL(templatePath).href)` to load a template per
+# request. No static tool can confirm that path. Naming core/templates/*.tsx as
+# entrypoints brings everything those templates IMPORT under the check, but the
+# path resolution itself is only proven by serving a page -- which is the CI
+# image-boot gate's job (build image, run it against a throwaway Postgres, poll
+# /admin/ until it answers), not this check's. The glob rather than a fixed list
+# so a newly added template is covered automatically; the script fails if the
+# glob comes back empty rather than quietly checking less.
 #
 # This runs in the runner stage on purpose: BuildKit skips stages that nothing
 # depends on, so the same check in a trailing stage of its own would be silently
-# never executed. Output goes to /tmp and is deleted in the same layer; only the
-# exit code is wanted.
-RUN cd /app \
- && bun build --target=bun --outdir=/tmp/resolve-check \
-      core/server/dockerStart.ts \
-      core/server/productionReactRuntime.ts \
-      core/templates/*.tsx \
- && rm -rf /tmp/resolve-check
+# never executed. The script writes its bundle to a temp dir and removes it
+# itself; only the exit code is wanted. The script is deleted in the same layer
+# so it does not ship.
+COPY .github/scripts/docker-resolve-check.mjs /tmp/docker-resolve-check.mjs
+RUN bun /tmp/docker-resolve-check.mjs /app \
+ && rm -f /tmp/docker-resolve-check.mjs
 
 WORKDIR /app/core
 EXPOSE 3000
