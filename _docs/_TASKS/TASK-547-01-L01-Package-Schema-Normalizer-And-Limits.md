@@ -14,7 +14,8 @@ validation evidence are pending after drift remediation.
 
 Create bounded `FullSitePackageV1` types, strict schema and canonical package-aware
 normalizer. Own new `core/services/kits/fullSitePackage/{types,schema,normalize}.ts`.
-Do not change native Page/Menu/Form/content schemas.
+`schema.ts` also owns the sole exported generic bounded diagnostic-collector
+factory consumed by L02. Do not change native Page/Menu/Form/content schemas.
 
 This leaf owns structural package normalization only. It deliberately does not
 decide whether a ref-shaped object appears at an allowed path or resolves to a
@@ -242,11 +243,11 @@ canonical, missing, wrong or excess supplied terminal padding and regardless of
 nonzero pad-bit aliases. A matched but structurally undecodable body is not a
 Basic finding. Bearer first matches
 `/^bearer[\t ]+([A-Za-z0-9\-._~+/]+={0,})$/i`, then requires a captured token of
-at least 16 code units containing at least one digit or `-._~+/=`. Thus real
-Basic credentials and JWT/API-style Bearer material reject, while ordinary copy
-such as `Basic analytics`, `Basic Plan`, `Bearer token` and
-`Bearer architecture` remains valid. Arbitrary alphabetic prose cannot be
-distinguished from an opaque alphabetic token and is intentionally not guessed.
+at least 16 code units containing at least one digit or `-._~+/=`. For bare
+candidates, real Basic credentials and JWT/API-style Bearer material reject,
+while `Basic analytics`, `Basic Plan`, `Bearer token` and `Bearer architecture`
+remain valid. Arbitrary alphabetic prose cannot be distinguished from an opaque
+alphabetic token and is intentionally not guessed without an explicit wrapper.
 
 Whole-value anchoring is not the string boundary. Before choosing a reason,
 compute one detection-only `value.trim()` view so leading/trailing ECMAScript
@@ -266,13 +267,15 @@ unquoted form or a matching single-/double-quoted field name, OWS (`TAB`/SPACE),
 `:`, OWS and an optional opening quote before the scheme. This wrapper rule does
 not admit arbitrary header names. The authorization pass extracts a maximal
 Basic/Bearer token, requires end-of-view or an ASCII whitespace/control,
-quote/bracket, `<`, `>`, comma or semicolon boundary, applies the existing
-anchored predicate and advances its own cursor to that token's end. A scheme
-inside a larger word is not a candidate. Thus explicit authorization-header
-credentials and high-confidence bare credentials reject, while `notBearer`,
-`Basic Plan`, `Basic analytics`, `Bearer token`, `Bearer architecture` and
-ordinary other-header prose remain valid. The PEM pass searches the complete
-view independently, so no URL span can hide its fixed marker.
+quote/bracket, `<`, `>`, comma or semicolon boundary and advances its own cursor
+to that token's end. Inside the exact wrapper, every nonempty syntactically
+valid Basic standard-alphabet token or Bearer token rejects; do not apply the
+decoded-colon, minimum-length or digit/punctuation heuristics there. Bare
+candidates alone use those conservative predicates. A scheme inside a larger
+word is not a candidate. Thus wrapped `Basic Plan`, wrapped `Bearer token` and
+wrapped alphabetic-only material reject, while those bare near misses,
+`notBearer` and ordinary other-header prose remain valid. The PEM pass searches
+the complete view independently, so no URL span can hide its fixed marker.
 
 URL discovery visits every code unit once and stores only numeric start offsets
 for the existing absolute-scheme, protocol-relative and exact `/`, `./`, `../`,
@@ -350,6 +353,7 @@ templates are the only allowed textual overlap.
 ## Implementation Pseudocode
 
 ```ts
+import type { FullSitePackageDiagnostic } from "./types";
 export const PACKAGE_RESOURCE_KINDS = Object.freeze([
   "content_type", "form", "page_template", "listing_template", "content_entry",
   "listing_query", "detail_page", "page", "menu", "setting",
@@ -371,16 +375,42 @@ export const PACKAGE_LIMITS = Object.freeze({
   metadataDescriptionLength: 2_000, residualIdLength: 128,
   residualTextLength: 2_000, verificationScenarios: 100, stringLength: 100_000,
 } as const);
-
+export type DiagnosticLimitSingleton = Readonly<{ path: "$.resources"; reason: "diagnostic_limit_exceeded" }>;
+export type DiagnosticBatch<T> =
+  | Readonly<{ overflowed: false; diagnostics: readonly T[] }>
+  | Readonly<{ overflowed: true; diagnostics: readonly [DiagnosticLimitSingleton] }>;
+export type DiagnosticCollector<T = FullSitePackageDiagnostic> = Readonly<{
+  add(diagnostic: T): void;
+  read(): DiagnosticBatch<T>;
+}>;
+const DIAGNOSTIC_LIMIT_SINGLETON = Object.freeze({
+  path: "$.resources", reason: "diagnostic_limit_exceeded",
+} as const);
+export const createDiagnosticCollector = <T = FullSitePackageDiagnostic>(): DiagnosticCollector<T> => {
+  let diagnostics: T[] = [];
+  let overflowed = false;
+  return {
+    add(diagnostic) {
+      if (overflowed) return;
+      if (diagnostics.length === PACKAGE_LIMITS.diagnostics) {
+        diagnostics = [];
+        overflowed = true;
+        return;
+      }
+      diagnostics.push(diagnostic);
+    },
+    read: () => overflowed
+      ? Object.freeze({ overflowed: true, diagnostics: Object.freeze([DIAGNOSTIC_LIMIT_SINGLETON]) })
+      : Object.freeze({ overflowed: false, diagnostics: Object.freeze([...diagnostics]) }),
+  };
+};
 export const compareFullSitePackageText = (left: string, right: string) =>
   left < right ? -1 : left > right ? 1 : 0;
-
 const toEcmaArrayIndex = (value: string): number | null => {
   if (!/^(?:0|[1-9][0-9]{0,9})$/.test(value)) return null;
   const index = Number(value);
   return index <= 4_294_967_294 && String(index) === value ? index : null;
 };
-
 export const compareFullSitePackageObjectKeys = (left: string, right: string) => {
   const leftIndex = toEcmaArrayIndex(left);
   const rightIndex = toEcmaArrayIndex(right);
@@ -389,7 +419,6 @@ export const compareFullSitePackageObjectKeys = (left: string, right: string) =>
   if (rightIndex !== null) return 1;
   return compareFullSitePackageText(left, right);
 };
-
 export const FULL_SITE_PACKAGE_SETTING_KEYS = Object.freeze([
   "site.name",
   "site.locale",
@@ -399,7 +428,6 @@ export const FULL_SITE_PACKAGE_SETTING_KEYS = Object.freeze([
   "site.contentRoutes",
   "design.tokens",
 ] as const);
-
 const SENSITIVE_TERMINALS = Object.freeze([
   "authorization", "bearer", "cookie", "credential", "credentials", "csrf",
   "password", "secret", "session", "token",
@@ -420,15 +448,11 @@ const BINARY_CARRIER_ROLES = Object.freeze(["content", "data", "payload", "value
 const FORBIDDEN_PROTOTYPE_KEYS = Object.freeze([
   "__proto__", "prototype", "constructor",
 ] as const);
-
 type PackageStructuralJsonSafetyReason = "prototype_key_forbidden";
-
 const isForbiddenPrototypeKey = (key: string): boolean =>
   FORBIDDEN_PROTOTYPE_KEYS.some((candidate) => candidate === key);
-
 const tokenizeSensitiveFieldKey = (key: string): readonly string[] =>
   tokenizeWithExactCompactExpansion(key, credentialCompactGrammar);
-
 const isSensitiveFieldKey = (key: string): boolean =>
   matchesSensitiveBaseAfterExactCompactExpansion(
     tokenizeSensitiveFieldKey(key),
@@ -437,22 +461,18 @@ const isSensitiveFieldKey = (key: string): boolean =>
     COMPACT_EXTRA_BASES,
     MATERIAL_SUFFIXES,
   );
-
 const isExplicitBinaryCarrier = (key: string): boolean =>
   matchesCarrierAfterExactCompactExpansion(
     tokenizeWithExactCompactExpansion(key, binaryCarrierCompactGrammar),
     BINARY_CARRIER_BASES,
     BINARY_CARRIER_ROLES,
   );
-
 const asciiCaseFold = (value: string): string =>
   value.replace(/[A-Z]/g, (character) =>
     String.fromCharCode(character.charCodeAt(0) + 0x20),
   );
-
 const isUrlCredentialParameterName = (decodedName: string): boolean =>
   isCredentialUrlMarker(decodedName) || asciiCaseFold(decodedName) === "code";
-
 const isCredentialBearingUrl = (trimmed: string): boolean => {
   const parsed = parseTask547UrlCandidate(trimmed, "https://task547.invalid/");
   if (!parsed) return false;
@@ -461,17 +481,11 @@ const isCredentialBearingUrl = (trimmed: string): boolean => {
     ([name, value]) => value.length > 0 && isUrlCredentialParameterName(name),
   );
 };
-
-type Base64FamilyInspection =
-  | "not_encoded"
-  | "encoded"
-  | "encoded_like_invalid";
-
+type Base64FamilyInspection = "not_encoded" | "encoded" | "encoded_like_invalid";
 const isBase64MimeWhitespace = (character: string): boolean => {
   const codeUnit = character.charCodeAt(0);
   return (codeUnit >= 0x09 && codeUnit <= 0x0d) || codeUnit === 0x20;
 };
-
 const inspectBase64FamilyLexeme = (
   detectionTrimmed: string,
 ): Base64FamilyInspection => {
@@ -482,7 +496,6 @@ const inspectBase64FamilyLexeme = (
     compact += character;
   }
   if (compact.length === 0) return "not_encoded";
-
   const firstPadding = compact.indexOf("=");
   const body = firstPadding < 0 ? compact : compact.slice(0, firstPadding);
   const padding = firstPadding < 0 ? "" : compact.slice(firstPadding);
@@ -495,7 +508,6 @@ const inspectBase64FamilyLexeme = (
   if (usesStandardAlphabet && usesUrlAlphabet) {
     return "encoded_like_invalid";
   }
-
   const remainder = body.length % 4;
   if (remainder === 1) {
     return body.length === 1 && padding.length === 0
@@ -508,12 +520,9 @@ const inspectBase64FamilyLexeme = (
   }
   return "encoded";
 };
-
 const decodeStandardBase64Sextet = (character: string): number | null => {
-  // Pure ASCII char-code mapping for A-Z, a-z, 0-9, + and /.
   return mapStandardBase64AsciiToSextet(character);
 };
-
 const decodeBasicStandardBase64Body = (
   body: string,
 ): Uint8Array | null => {
@@ -538,28 +547,20 @@ const decodeBasicStandardBase64Body = (
   }
   return output;
 };
-
 const isForbiddenBasicAuthorization = (trimmed: string): boolean => {
   const match = /^basic[\t ]+([A-Za-z0-9+/]+)(=*)$/i.exec(trimmed);
   if (!match) return false;
   const decoded = decodeBasicStandardBase64Body(match[1]);
   return decoded?.includes(0x3a) ?? false;
 };
-
 type EmbeddedPackageValueFindings = Readonly<{
   authorization: boolean;
   privateKeyPem: boolean;
   credentialUrl: boolean;
   base64DataUrl: boolean;
 }>;
-
 const URL_SPAN_BUDGET_FACTOR = 4;
-
-type UrlCandidateStart = Readonly<{
-  index: number;
-  dataUrlPrefix: boolean;
-}>;
-
+type UrlCandidateStart = Readonly<{ index: number; dataUrlPrefix: boolean }>;
 const scanAuthorizationCandidates = (detection: string): boolean => {
   let cursor = 0;
   while (cursor < detection.length) {
@@ -567,8 +568,6 @@ const scanAuthorizationCandidates = (detection: string): boolean => {
       cursor += 1;
       continue;
     }
-    // Implements the exact bare/wrapped grammar above. A successful read owns
-    // only its maximal scheme/token span and always returns end > cursor.
     const candidate = readBasicOrBearerCandidate(detection, cursor);
     if (!candidate) {
       cursor += 1;
@@ -579,7 +578,6 @@ const scanAuthorizationCandidates = (detection: string): boolean => {
   }
   return false;
 };
-
 const collectUrlCandidateStarts = (
   detection: string,
 ): readonly UrlCandidateStart[] => {
@@ -590,9 +588,6 @@ const collectUrlCandidateStarts = (
       cursor += 1;
       continue;
     }
-    // The reader handles fixed relative/protocol prefixes directly and an
-    // arbitrary absolute scheme with one forward ASCII-scheme DFA. It returns
-    // the first unconsumed index on both match and mismatch, never a substring.
     const prefix = readUrlPrefixForward(detection, cursor);
     if (prefix.matched) {
       starts.push({
@@ -604,7 +599,6 @@ const collectUrlCandidateStarts = (
   }
   return Object.freeze(starts);
 };
-
 const scanEmbeddedPackageValueCandidates = (
   value: string,
 ): EmbeddedPackageValueFindings => {
@@ -615,10 +609,7 @@ const scanEmbeddedPackageValueCandidates = (
   let remainingSpanCodeUnits = detection.length * URL_SPAN_BUDGET_FACTOR;
   let credentialUrl = false;
   let base64DataUrl = false;
-
   for (const start of starts) {
-    // This forward reader applies the exact terminator/unmatched-bracket rule.
-    // It consumes at most the supplied budget and returns only offsets/status.
     const span = findUrlCandidateEndForward(
       detection,
       start.index,
@@ -637,7 +628,6 @@ const scanEmbeddedPackageValueCandidates = (
     credentialUrl ||= result.credentialUrl;
     base64DataUrl ||= result.base64DataUrl;
   }
-
   return Object.freeze({
     authorization,
     privateKeyPem,
@@ -645,21 +635,18 @@ const scanEmbeddedPackageValueCandidates = (
     base64DataUrl,
   });
 };
-
 type PackageValueSecretReason =
   | "credential_url_forbidden"
   | "authorization_value_forbidden"
   | "private_key_forbidden"
   | "base64_value_forbidden"
   | "binary_value_forbidden";
-
 const classifyForbiddenValue = (
   value: unknown,
   options: Readonly<{ explicitBinaryCarrier: boolean }>,
 ): PackageValueSecretReason | null => {
   if (isActualBinaryValue(value)) return "binary_value_forbidden";
   if (typeof value !== "string") return null;
-
   const embedded = scanEmbeddedPackageValueCandidates(value);
   if (embedded.authorization) return "authorization_value_forbidden";
   if (embedded.privateKeyPem) return "private_key_forbidden";
@@ -673,7 +660,6 @@ const classifyForbiddenValue = (
   }
   return null;
 };
-
 const scanDesiredValue = (
   value: unknown,
   context: Readonly<{
@@ -713,7 +699,6 @@ const scanDesiredValue = (
     return;
   }
 };
-
 type PackageProseField =
   | "prototypeEvidence"
   | "cmsConstraint"
@@ -725,7 +710,6 @@ const PACKAGE_METADATA_PROSE_PATHS = Object.freeze({
   name: "$.metadata.name",
   description: "$.metadata.description",
 } as const satisfies Record<PackageMetadataProseField, string>);
-
 const readSafeMetadataProse = (
   value: unknown,
   field: PackageMetadataProseField,
@@ -738,7 +722,6 @@ const readSafeMetadataProse = (
     maxLength,
     diagnostics,
   );
-
 const readSafeResidualProse = (
   value: unknown,
   inputIndex: number,
@@ -754,7 +737,6 @@ const readSafeResidualProse = (
     diagnostics,
   );
 };
-
 export function normalizeFullSitePackageForWrite(value: unknown) {
   assertPackageByteSize(value); // existing export; measures serialized JSON bytes
   const root = assertStrictRoot(value);
@@ -773,10 +755,11 @@ export function normalizeFullSitePackageForWrite(value: unknown) {
 the preceding code unit is U+0000–U+0020, U+007F, `'`, `"`, `(`, `[`, `{`, `<`,
 `,`, `;` or `=`. `readBasicOrBearerCandidate` first attempts the exact quoted/
 unquoted `Authorization` wrapper, then the bare ASCII-case-folded scheme; it
-walks the frozen token alphabet once, checks the closed end boundary, applies
-the existing Basic decoder or Bearer predicate and returns only
-`{ end, forbidden }`. A malformed wrapper/candidate returns `null`; it never
-skips input or emits text.
+walks the frozen token alphabet once and checks the closed end boundary. The
+wrapper branch sets `forbidden` for every nonempty syntactically valid token;
+the bare branch alone applies the Basic decoder or Bearer heuristic. It returns
+only `{ end, forbidden }`; a malformed candidate returns `null` and never skips
+input or emits text.
 
 `readUrlPrefixForward` returns
 `{ matched, dataUrlPrefix, resumeAt }`. An absolute scheme consumes the maximal
@@ -830,8 +813,10 @@ reject package DB IDs and unknown envelope keys; every exact limit edge and
 one-over case, including serialized in-memory 8 MiB and 100/101 verification
 entries; package/non-setting/scenario canonical-key grammar (L02 owns ref keys); all seven and
 only seven setting keys without applying the package-key reader; strict
-verification unknown/type/ID checks and stable first-occurrence dedupe; bounded
-100-diagnostic truncation; forbidden-setting rejection with exact
+verification unknown/type/ID checks and stable first-occurrence dedupe; factory-
+level 1..100 diagnostics in discovery order, then an exact static
+`diagnostic_limit_exceeded` singleton that discards the partial list on the
+101st attempted finding and remains the sole result afterward; forbidden-setting rejection with exact
 `site_package_setting_forbidden` and supplied key/value sentinels absent from the
 error/diagnostics; mutation attempts against every exported frozen authority and
 the private root/setting membership boundaries. Move/rebaseline the existing
@@ -874,8 +859,10 @@ In the independently runnable security suite, table-drive embedded Basic,
 Bearer, credential-URL and Base64-data-URL sentinels through a bare desired
 string, a nested desired string and each of the seven exact package-prose
 surfaces. Cover prefix/suffix prose, explicit unquoted and matching-quoted
-`Authorization:` wrappers, case folding, maximal-token boundaries, terminal
-punctuation and URL userinfo/query/fragment forms. Reverse authorization/PEM/
+`Authorization:` wrappers whose short or alphabetic-only Basic/Bearer tokens
+reject while the identical bare near misses accept; also cover case folding,
+maximal-token boundaries, terminal punctuation and URL userinfo/query/fragment
+forms. Reverse authorization/PEM/
 credential-URL/data-URL candidate order in paired strings and assert the same
 single precedence reason. Add explicit safe-URL-then-comma/semicolon/equals
 Basic, Bearer, PEM, credential-URL and data-URL swallowing regressions, nested
@@ -970,7 +957,8 @@ suite neither imports nor source-inspects that later-owned reader.
   compact credential aliases, colon-decoded noncanonical Basic variants,
   bounded embedded authorization/credential-URL scanning, compound-carrier
   Base64-family grammar and exact-name `code` query/fragment URLs;
-  remove undocumented residual/diagnostic limit coupling; split moved cases into independently runnable
+  remove undocumented residual/diagnostic limit coupling and replace inherited
+  diagnostic truncation with the 101st-attempt singleton; split moved cases into independently runnable
   `full-site-package-canonicalization.test.ts` and
   `full-site-package-security.test.ts`, backed by the focused
   `fullSitePackageTestSupport.ts`, without copying assertions/builders; then run

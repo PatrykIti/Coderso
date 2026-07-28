@@ -213,6 +213,10 @@ The 101st attempted diagnostic across duplicate or mixed semantic categories
 discards the partial list for one `diagnostic_limit_exceeded` singleton. For
 1..100 mixed semantic findings, return all in discovery order and choose the
 top-level code by fixed `bad_path` then `missing` then `ambiguous` priority.
+L01 `schema.ts` owns and exports the sole generic bounded collector factory;
+L02's terminating duplicate phase and semantic phase each instantiate it and
+may add only graph-specific tagging/finalization, never another array, counter
+or overflow rule.
 Inline ambiguity throws and per-code collectors are forbidden. Dynamic desired-
 object keys never enter diagnostic paths: registry-owned path segments may be
 shown, the first untrusted segment becomes `[redacted]`, and depth remains the
@@ -320,9 +324,12 @@ literally `false`; otherwise it is an implementation gap and blocks closure.
   `status_code`, `promoCode` and `code_type` remain valid. Basic authorization
   uses a bounded pure decoder and decoded-colon detection rather than canonical
   decode/re-encode identity, so padding and nonzero-pad-bit variants reject while
-  `Basic Plan` and `Basic analytics` remain valid. Credential-shaped Bearer
-  values, private-key PEM and Base64 data URLs reject; ordinary Bearer copy
-  remains valid. The complete carrier-independent binary-class table is
+  bare `Basic Plan` and `Basic analytics` remain valid. Inside the exact
+  `Authorization:` wrapper, every nonempty syntactically valid Basic/Bearer token
+  rejects; minimum-length, decoded-colon and digit/punctuation heuristics apply
+  only to bare prose. Credential-shaped bare Bearer values, private-key PEM and
+  Base64 data URLs reject; ordinary bare Bearer copy remains valid. The complete
+  carrier-independent binary-class table is
   `ArrayBuffer`, `Uint8Array` (representative `ArrayBufferView`), `DataView`
   (representative `ArrayBufferView`) and `Blob`. Every row rejects at bare
   desired placement, with representative nested-array, nested-object and
@@ -431,8 +438,8 @@ near misses. Explicit-carrier cases cover direct, inherited-array and nested-
 object values; all six stripped ASCII whitespace characters; canonical,
 missing/correct padding; mixed standard/URL alphabets; internal, wrong and excess
 padding; nonzero pad bits; and bare-field/carrier-key near misses. Basic cases
-pin canonical and padding/pad-bit alias credentials plus safe `Basic Plan`/`Basic
-analytics`. Modular bare/nested desired-string and all-seven-prose cases
+pin canonical and padding/pad-bit alias credentials plus safe bare `Basic Plan`/
+`Basic analytics`. Modular bare/nested desired-string and all-seven-prose cases
 independently pin embedded authorization-header, credential-bearing URL and
 Base64 data-URL candidates, candidate-order-independent precedence, bounded-
 linear extraction, URL-span swallowing in both candidate orders,

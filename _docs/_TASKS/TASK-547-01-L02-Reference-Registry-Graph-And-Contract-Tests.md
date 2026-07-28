@@ -267,6 +267,10 @@ diagnostics + edge overflow returns diagnostic overflow. Cycle and dependency-
 depth checks run only after this finalizer returns with no diagnostic.
 `ReferenceGraphError` receives only an already-bounded list and never slices or
 repairs it; overflow behavior belongs exclusively to the collectors.
+L01 `schema.ts` exports the sole generic collector factory. Duplicate indexing
+and semantic discovery each instantiate it for their terminating phase; L02 may
+wrap tagging/top-level-code selection but owns no array, counter or overflow
+implementation.
 
 The route/detail mismatch is one ordinary bad-path semantic diagnostic in this
 same stream. A resolved mismatching route still contributes its accepted
@@ -388,6 +392,9 @@ or strings. Bound edges/depth/diagnostics before sorting.
 ## Implementation Pseudocode
 
 ```ts
+import {
+  createDiagnosticCollector, type DiagnosticBatch,
+} from "./schema";
 export type AllowedReferencePath = Readonly<{
   sourceKind: PackageResourceKind;
   segments: readonly PathSegment[];
@@ -403,42 +410,47 @@ type TaggedGraphDiagnostic = Readonly<{
   code: "site_package_ref_bad_path" | "site_package_ref_missing" | "site_package_ref_ambiguous";
   diagnostic: ReferenceGraphDiagnostic;
 }>;
-class GraphDiagnostics {
-  private readonly values: TaggedGraphDiagnostic[] = [];
+type GraphDiagnostics = Readonly<{
   add(
     code: TaggedGraphDiagnostic["code"],
     path: readonly (string | number)[],
     reason: ReferenceGraphDiagnosticReason,
-  ): void {
-    if (this.values.length === PACKAGE_LIMITS.diagnostics) throwDiagnosticLimitSingleton();
-    this.values.push({ code, diagnostic: { path: encodeReferenceDiagnosticPath(path), reason } });
-  }
-  throwIfAny(): void {
-    const code = GRAPH_ERROR_PRIORITY.find((candidate) =>
-      this.values.some((value) => value.code === candidate)
-    );
-    if (code) throw new ReferenceGraphError(code, this.values.map(({ diagnostic }) => diagnostic));
-  }
-}
-class DuplicateIdentityDiagnostics {
-  private readonly values: ReferenceGraphDiagnostic[] = [];
-  add(collectionPath: string): void {
-    if (this.values.length === PACKAGE_LIMITS.diagnostics) throwDiagnosticLimitSingleton();
-    this.values.push({ path: collectionPath, reason: "duplicate_resource_identity" });
-  }
-  throwIfAny(): void {
-    if (this.values.length) throw new ReferenceGraphError("site_package_ref_duplicate", this.values);
-  }
-}
+  ): void;
+  read(): DiagnosticBatch<TaggedGraphDiagnostic>;
+}>;
+const createGraphDiagnostics = (): GraphDiagnostics => {
+  const shared = createDiagnosticCollector<TaggedGraphDiagnostic>();
+  return Object.freeze({
+    add: (code, path, reason) => shared.add({
+      code, diagnostic: { path: encodeReferenceDiagnosticPath(path), reason },
+    }),
+    read: shared.read,
+  });
+};
+const throwGraphDiagnostics = (batch: DiagnosticBatch<TaggedGraphDiagnostic>): void => {
+  if (batch.overflowed) throwDiagnosticLimitSingleton();
+  const code = GRAPH_ERROR_PRIORITY.find((candidate) =>
+    batch.diagnostics.some((value) => value.code === candidate)
+  );
+  if (code) throw new ReferenceGraphError(
+    code, batch.diagnostics.map(({ diagnostic }) => diagnostic),
+  );
+};
 const indexUniqueKindKeys = (resources: FullSitePackageResources) => {
-  const duplicates = new DuplicateIdentityDiagnostics();
+  const duplicates = createDiagnosticCollector<ReferenceGraphDiagnostic>();
   const registry = createMutableRegistry();
   forEachPackageResource(resources, ({ collection, resource }) => {
     if (!registerUnique(registry, collection, resource)) {
-      duplicates.add(`$.resources.${collection}`);
+      duplicates.add({
+        path: `$.resources.${collection}`, reason: "duplicate_resource_identity",
+      });
     }
   });
-  duplicates.throwIfAny();
+  const batch = duplicates.read();
+  if (batch.overflowed) throwDiagnosticLimitSingleton();
+  if (batch.diagnostics.length) {
+    throw new ReferenceGraphError("site_package_ref_duplicate", batch.diagnostics);
+  }
   return freezeRegistry(registry);
 };
 const collectContentRouteOccurrences = (source, context) => {
@@ -473,7 +485,6 @@ const collectPackageOccurrences = (context) => {
     }
     collectFixedSourceOccurrences(
       sourceContext,
-      // Invoked only after exact ref validation and successful target lookup.
       (row, target) => {
         if (
           source.kind === "detail_page" &&
@@ -500,10 +511,7 @@ const PAGE_REFERENCE_AUTHORITY = Object.freeze({
     ) as Readonly<Record<PageBlockType, readonly PageBlockSlotKey[]>>,
   ),
 });
-type PageReferenceRoot = Readonly<{
-  rootKey: "data" | "document";
-  value: JsonObject;
-}>;
+type PageReferenceRoot = Readonly<{ rootKey: "data" | "document"; value: JsonObject }>;
 const selectPageReferenceRoot = (
   source: RegisteredPackageResource,
 ): PageReferenceRoot | null => {
@@ -524,18 +532,12 @@ type PageReferenceVisitContext = Readonly<{
   registeredReferencePaths: Set<string>;
   blockedReferencePrefixes: ReferenceAuthorityPath[];
 }>;
-type ReferenceAuthorityPath = Readonly<{
-  sourceOrdinal: number;
-  path: readonly (string | number)[];
-}>;
+type ReferenceAuthorityPath = Readonly<{ sourceOrdinal: number; path: readonly PathSegment[] }>;
 const serializeAuthorityPath = (
   sourceOrdinal: number,
   path: readonly (string | number)[],
 ) => JSON.stringify([sourceOrdinal, path]);
-type IndexedPageBlockChild = Readonly<{
-  child: JsonObject;
-  childIndex: number;
-}>;
+type IndexedPageBlockChild = Readonly<{ child: JsonObject; childIndex: number }>;
 type PreflightPageSlot = Readonly<{
   slotKey: string;
   arrayLength: number | null;
@@ -544,7 +546,6 @@ type PreflightPageSlot = Readonly<{
 type PageBlockBoundsPreflight = Readonly<{
   hasSlots: boolean;
   depthExceeded: boolean;
-  // null means the present slots value is not an object; native validation owns its shape.
   structuralSlots: readonly PreflightPageSlot[] | null;
 }>;
 const preflightPageBlockBounds = (
@@ -590,8 +591,7 @@ const rejectPageSlots = (
   });
 };
 type ValidatedPageSlot = Readonly<{
-  slotKey: PageBlockSlotKey;
-  children: readonly IndexedPageBlockChild[];
+  slotKey: PageBlockSlotKey; children: readonly IndexedPageBlockChild[]
 }>;
 const validateSlotsFirstMatch = (
   preflight: PageBlockBoundsPreflight,
@@ -675,7 +675,6 @@ const collectPageBlockReferences = (
   const preflight = preflightPageBlockBounds(block, depth);
   const type = readKnownPageBlockType(block.type, PAGE_REFERENCE_AUTHORITY.blockTypes);
   if (!type) {
-    // Enforce bounds through this branch, but grant no ref authority below it.
     collectMalformedPageBranchBounds(block, path, depth, context, preflight);
     return;
   }
@@ -716,7 +715,7 @@ const collectPageSourceReferences = (
   );
 };
 const collectRefsAtAllowedPaths = (registry: PackageResourceRegistry) => {
-  const diagnostics = new GraphDiagnostics();
+  const diagnostics = createGraphDiagnostics();
   const registeredReferencePaths = new Set<string>();
   const blockedReferencePrefixes: ReferenceAuthorityPath[] = [];
   const resolvedDetailPageContentTypes = new Map<
@@ -756,7 +755,6 @@ const assertDependencyDepth = (
 export const stableTopologicalSort = (registry, edges) => {
   const ordered = collectStableKahnOrder(registry, edges);
   if (ordered.length !== registry.resources.length) throwReferenceCycleSingleton();
-  // The complete acyclic order is the sole input to longest-path validation.
   assertDependencyDepth(ordered);
   return ordered;
 };
@@ -764,10 +762,10 @@ export function buildReferencePlan(pkg: FullSitePackageV1) {
   assertReferenceGraphJsonDepth(pkg.resources);
   const registry = indexUniqueKindKeys(pkg.resources); // Bounded duplicate 100/101 finalizer.
   const { edges, descriptorsByIdentity, diagnostics } = collectRefsAtAllowedPaths(registry);
-  // collectRefsAtAllowedPaths already ran the generic scan; its 101st add throws first.
-  // Finish all semantic failures before topology, cycle and dependency-depth work.
+  const batch = diagnostics.read();
+  if (batch.overflowed) throwDiagnosticLimitSingleton();
   if (edges.length > PACKAGE_LIMITS.referenceEdges) throwReferenceEdgesSingleton();
-  diagnostics.throwIfAny();
+  throwGraphDiagnostics(batch);
   const ordered = stableTopologicalSort(registry, edges); // Cycle first, then depth.
   return freezePlan(ordered, descriptorsByIdentity);
 }
@@ -776,7 +774,6 @@ export function resolvePlannedPackageResourceRefs(resource, resolvedIds) {
 }
 const pkg = normalizeFullSitePackageForWrite(rawPackage);
 buildReferencePlan(pkg);
-// Only after both calls succeed may the existing lazy DB loader/import run.
 ```
 
 Data flow: normalized package → JSON-depth guard → unique registry → package-
@@ -860,7 +857,8 @@ Mix bad-path, missing-target and ambiguity occurrences in both declaration
 orders: the fixed top-level priority must not change, while the complete list
 retains each order's frozen discovery order. Pin missing+ambiguity without a bad
 path, ambiguity alone, exactly 100 mixed diagnostics, a 101st mixed diagnostic
-and duplicate-identity 100/101; both 101 cases must discard the partial list. Pin
+and duplicate-identity 100/101 through L01's imported factory; both 101 cases
+must discard the partial list. Pin
 bad-path + 4,097 accepted edges → edge singleton and 101 mixed diagnostics +
 edge overflow → diagnostic singleton.
 
@@ -968,7 +966,7 @@ cases/builders. Each four `.test.ts` files must run independently.
   base/responsive/native-slot traversal with 4/24 reject boundaries; correct
   discriminator/nullability/ref-key coverage and static redacted diagnostics;
   freeze Page owner imports, JSON-depth counting, global mixed-diagnostic
-  precedence/overflow, the exact occurrence-purpose/content-route plan,
+  precedence/overflow through L01's sole collector factory, the exact occurrence-purpose/content-route plan,
   descriptors and substitution helper; enforce the exact 64-edge longest-path
   dependency boundary with semantic → cycle → depth phase precedence; split and
   retire the original reference suite per the ownership above; then run fresh
