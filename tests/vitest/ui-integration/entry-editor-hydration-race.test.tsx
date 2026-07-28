@@ -784,3 +784,71 @@ test("a delayed save response cannot revert a read that hydrated while it was op
     view.cleanup();
   }
 });
+
+// The direction the ticket comparison ALONE cannot decide, and the reason an admitted mutation
+// body supersedes everything in flight rather than only what was issued before it.
+//
+// A ticket records when a request LEFT, not when the server handled it. The read below leaves
+// after the PATCH, so its ticket is newer, and its snapshot is older: the GET was handled
+// before the PATCH committed. Nothing in the browser can tell those two apart, so the editor
+// refuses every writer that was in flight when a body landed — see `useEntrySnapshotAuthority`
+// for what that costs. Narrowing it to "supersede only tickets issued earlier" admits this
+// read, and the ending is the same as the two cases above: `status` reverts into a UI where
+// the metadata save has already stopped marking it as the user's, and the panel's all-in-one
+// PATCH persists the revert.
+test("a read issued while a metadata save is open cannot revert the body that save answered with", async () => {
+  window.history.replaceState({}, "", "/admin/advanced/entries/articles/entry-1");
+  const { EntryEditor } = await import("../../../core/admin/ui/entries/EntryEditor");
+
+  const view = mount(<EntryEditor />);
+  try {
+    await React.act(async () => {
+      editorState.resolveEntry(editorState.entry);
+      await flushMicrotasks();
+    });
+    expect(readMetadataState(view.container).status).toBe("draft");
+
+    // Publish through the metadata panel, and hold the response on the way back.
+    editorState.holdNext("updateEntryMetadata");
+    React.act(() => {
+      clickMetadataAction(view.container, "data-metadata-publish");
+    });
+    await React.act(async () => {
+      clickMetadataAction(view.container, "data-metadata-save");
+      await flushMicrotasks();
+    });
+
+    // A cache-bus refresh starts WHILE that PATCH is open, so it takes a newer ticket.
+    await React.act(async () => {
+      dispatchEntryCacheEvent();
+      await flushMicrotasks();
+    });
+    expect(editorState.startedEntryReads()).toBe(2);
+
+    // The PATCH answers first, with the published row.
+    await React.act(async () => {
+      editorState.release("updateEntryMetadata");
+      await flushMicrotasks();
+    });
+    expect(readMetadataState(view.container).status).toBe("published");
+
+    // Now the read lands, carrying the row as it stood BEFORE the PATCH committed.
+    await React.act(async () => {
+      editorState.resolveEntryRead(1, editorState.entry);
+      await flushMicrotasks();
+    });
+    expect(readMetadataState(view.container).status).toBe("published");
+    expect(view.container.textContent).not.toContain("Unsaved changes");
+
+    await React.act(async () => {
+      clickMetadataAction(view.container, "data-metadata-save");
+      await flushMicrotasks();
+    });
+    expect(editorState.metadataPayloads.map((payload) => payload.status)).toEqual([
+      "published",
+      "published",
+    ]);
+  } finally {
+    view.cleanup();
+  }
+});

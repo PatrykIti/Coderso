@@ -514,7 +514,8 @@ function EntryEditorInstance({ type, id }: EntryEditorInstanceProps) {
   // together: each Save disables only its own button. A body built before another mutation
   // committed describes an OLDER entry than one already applied, so it is admitted only while
   // its ticket still holds — and once admitted it supersedes everything else in flight,
-  // because it is then the newest description of the row anyone has.
+  // INCLUDING requests issued later. That last part is deliberate and it has a price; both are
+  // stated in `useEntrySnapshotAuthority`.
   const applyMutationSnapshot = (ticket: number, snapshot: EntryDetail | null) => {
     if (!isSnapshotAuthoritative(ticket)) return;
     supersedeSnapshotWrites();
