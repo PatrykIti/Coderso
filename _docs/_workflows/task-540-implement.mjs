@@ -11289,6 +11289,28 @@ const TASK_540_LINE_LIMIT_ACCOUNTABLE_PATHS = Object.freeze([
   "tests/vitest/ui/page-templates-list.test.tsx",
   "tests/vitest/ui/page-templates-surface.test.tsx",
   "tests/vitest/ui/posts-editor-chrome-wave.test.tsx",
+  // The one suite that repair could not reach. section-editor-wave.test.tsx held the lane's
+  // last timeout -- "Section builder-owned Region controls expose stable control paths"
+  // spends 7.3s of an idle-box run inside a deferred `await import(...)`, and crossed the
+  // 30s budget under full-suite contention -- but at 1,941 lines it could not be edited at
+  // all without violating this very gate. So it is split first, along the seam its own
+  // tests already followed: the section's STRUCTURE (regions, variants, presets, width and
+  // grid flow, link semantics, sparse-contract fallbacks) stays in the original file, and
+  // the SURFACE it is painted with (colour inventory, swatches, gradients, borders,
+  // overlays, shadow, decorative image/video layers, numeric clamping) moves to the new
+  // surface suite. All 18 tests move verbatim, 9 and 9.
+  //
+  // The shared preamble -- stubbed admin primitives, DOM query helpers, both mount
+  // harnesses -- lives in the support module rather than being duplicated into both suites,
+  // which is what would have put each of them back over the limit. That module takes its
+  // components as ARGUMENTS and imports no application module at runtime, so importing it
+  // never pins a graph the sparse-contract tests need `vi.resetModules()` to clear.
+  //
+  // Same rationale as the four paths above: lane machinery the family's own `bun run test`
+  // gate runs on, written by no leaf. 755, 808 and 572 lines.
+  "tests/vitest/ui/section-editor-surface-wave.test.tsx",
+  "tests/vitest/ui/section-editor-wave.test.tsx",
+  "tests/vitest/ui/support/sectionEditorHarness.tsx",
 ]);
 // The tripwire proves, hermetically, that the gate really rejects the specific accountable
 // paths closest to the limit -- so it has to name the ones actually closest. Measured
@@ -11323,7 +11345,7 @@ const TASK_540_LINE_LIMIT_TRIPWIRE_PATHS = Object.freeze([
   "core/widgets/core/footer.tsx",
 ]);
 const TASK_540_LINE_LIMIT_ACCOUNTABLE_PATHS_SHA256 =
-  "59749d431e798852957a263e58a378d65a6489b0a3b7ded7953022bcbcc7344a";
+  "2cc51dfb502d1dd20bdb5ad0dcbec39616d4d975690833a35345cad6cd0b13ef";
 const TASK_540_LINE_LIMIT_ACCOUNTABLE_OWNERS = Object.freeze(
   TASK_540_LINE_LIMIT_ACCOUNTABLE_PATHS.map((path) =>
     Object.freeze({ path, owner: TASK_540_LINE_LIMIT_ACCOUNTABLE_OWNER })
@@ -11349,7 +11371,7 @@ if (
   // Must be the leaf that lands LAST, which is the whole rationale for the choice: it is
   // the only leaf still able to split one of these before the family closes.
   TASK_540_LINE_LIMIT_ACCOUNTABLE_OWNER !== LEAF_ORDER[LEAF_ORDER.length - 1] ||
-  TASK_540_LINE_LIMIT_ACCOUNTABLE_PATHS.length !== 113 ||
+  TASK_540_LINE_LIMIT_ACCOUNTABLE_PATHS.length !== 116 ||
   new Set(TASK_540_LINE_LIMIT_ACCOUNTABLE_PATHS).size !==
     TASK_540_LINE_LIMIT_ACCOUNTABLE_PATHS.length ||
   TASK_540_LINE_LIMIT_ACCOUNTABLE_PATHS.some(
