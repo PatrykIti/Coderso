@@ -149,11 +149,14 @@ The pure fixture validator pins these machine-readable codes:
 
 `cleanJsonObject` validates recursively before cloning/serialization. The root
 and nested objects must be plain records with `Object.prototype` or a null
-prototype and enumerable string own keys only; arrays must be dense. Accepted
-leaves are `null`, strings, booleans and finite numbers. Reject `undefined`,
-functions, symbols, bigint, `NaN`, either infinity, holes/sparse arrays, cycles,
-`Date`, custom prototypes, accessors, `toJSON`, symbol keys and non-enumerable
-own keys. Every rejection, including native serialization failure, maps to
+prototype and enumerable string own keys only. An array may own only its
+intrinsic non-enumerable data `length` plus dense enumerable canonical indices
+`0..length-1`; frozen descriptor flags are accepted, but holes, accessors,
+symbols, noncanonical/extra string keys and any other non-enumerable key reject.
+Accepted leaves are `null`, strings, booleans and finite numbers. Reject
+`undefined`, functions, symbols, bigint, `NaN`, either infinity, cycles, `Date`,
+custom prototypes, accessors, `toJSON`, symbol keys and non-enumerable object
+keys. Every rejection, including native serialization failure, maps to
 `projekty_domow_json_object_invalid`; never drop a value or coerce it with a
 stringify-first pass.
 
@@ -255,9 +258,11 @@ Update `tests/vitest/kits/projekty-domow-project-fixtures.test.ts` to prove:
   schema failure paths, including remote/unsafe and wrong-project link values;
 - one published content type and six published entries, every entry carrying
   exactly `{ref:"content_type",key:"house-project"}`;
-- direct `cleanJsonObject` success and recursive failure cases for nested
-  undefined/function/symbol/bigint, non-finite numbers, sparse arrays, cycles,
-  accessors, symbol/non-enumerable keys, `Date`, `toJSON` and custom prototypes;
+- direct `cleanJsonObject` success for dense/frozen arrays and recursive failure
+  cases for nested undefined/function/symbol/bigint, non-finite numbers, sparse
+  arrays, cycles, array extra enumerable/non-enumerable/noncanonical/symbol/
+  accessor keys, object accessors/symbol/non-enumerable keys, `Date`, `toJSON`
+  and custom prototypes;
 - representative valid nested content-type/entry, listing/detail, form/slice and
   shell/Page-shaped objects retain deterministic bytes through the shared
   helper;
