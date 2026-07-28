@@ -295,7 +295,8 @@ literally `false`; otherwise it is an implementation gap and blocks closure.
   authorization values, raw bytes, encoded values in explicit binary carriers
   and credential-bearing URLs. Classify desired keys by camelCase/separator
   tokens and exact whole-token compact aliases, never substring matching. Reject
-  terminal credential material/pairs and their exact material suffixes while
+  terminal credential material/pairs and only the exact material suffixes
+  `hash|header|id|key|value|data|payload` while
   allowing descriptive near misses such as `tokenizedCopy`, `cookieBanner` and
   `apiKeyDescription`. Recognize explicit `base64|bytes|binary|blob` carriers
   plus exact `content|data|payload|value` compound roles. Only values under those
@@ -309,8 +310,11 @@ literally `false`; otherwise it is an implementation gap and blocks closure.
   all seven package-prose surfaces—also receives a fixed bounded classifier
   pipeline over one detection-only ECMAScript-trimmed view. Independent
   monotonic authorization and PEM passes plus a URL/data-URL discovery pass that
-  never jumps a prior span prevent any safe span from masking another candidate
-  and together remain O(n). URL discovery keeps only numeric offsets, visits
+  never jumps a prior span prevent any safe span from masking another candidate.
+  A colon is a contextual boundary: authorization may inspect its closed forms,
+  while URL/data discovery admits only a nested absolute-scheme prefix and never
+  re-enqueues the `//` belonging to an already recorded outer scheme. All passes
+  together remain O(n). URL discovery keeps only numeric offsets, visits
   every code unit, parses each candidate at most once and fails closed with the
   static credential-URL reason if cumulative overlapping URL span input exceeds
   four times the trimmed string length; query/fragment decoding remains exactly
@@ -390,7 +394,10 @@ export function resolvePlannedPackageResourceRefs(
 
 `normalizeFullSitePackageForWrite` is the sole `unknown` boundary and owns
 package shape, limits, canonicalization and the setting allowlist; it does not
-certify reference placement or resolution. A raw consumer executes:
+certify reference placement or resolution, count ref-shaped objects or enforce
+the edge cap. L01 exports the frozen number; only L02 counts accepted occurrence
+edges and enforces it in the finalizer after diagnostic-overflow selection. A
+raw consumer executes:
 
 ```ts
 const pkg = normalizeFullSitePackageForWrite(rawPackage);
@@ -449,7 +456,8 @@ also table-tests `ArrayBuffer`, `Uint8Array`, `DataView` and `Blob` at bare
 desired placement, plus representative nested-array, nested-object and explicit-
 carrier placements at arbitrary supported depth, with binary as the first value
 reason and no type/byte/value disclosure. The suite pins all seven package-prose
-surfaces, compact/suffixed credential aliases, compound binary carriers,
+surfaces, compact/suffixed credential aliases including exact `data|payload`
+material suffixes, compound binary carriers,
 userinfo and signed query/fragment URL markers, plus exact ASCII-case-insensitive
 `code` in both query and fragment with exactly-once decoding and empty/nonempty
 duplicate behavior. It accepts descriptive multi-token code names and other safe
@@ -462,7 +470,8 @@ pin canonical and padding/pad-bit alias credentials plus safe bare `Basic Plan`/
 independently pin embedded authorization-header, credential-bearing URL and
 Base64 data-URL candidates plus whole-value unprefixed relative query/fragment
 assignments, candidate-order-independent precedence, bounded-linear extraction,
-URL-span swallowing in both candidate orders,
+URL-span swallowing in both candidate orders, post-colon nested authorization/
+absolute-URL/data-URL starts without outer-scheme `//` duplication,
 leading/trailing ECMAScript whitespace, the fixed overlapping-span budget, safe
 prose near misses, static redacted diagnostics and complete candidate/context
 non-disclosure. Overlaps assert the single-finding precedence sensitive key →

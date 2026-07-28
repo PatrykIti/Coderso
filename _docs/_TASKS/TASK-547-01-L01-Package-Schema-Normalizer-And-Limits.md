@@ -153,12 +153,10 @@ before acronym-to-word splitting; when it does not consume the entire chunk,
 split the acronym boundary and lowercase its pieces. Apply the compact parser
 again only to each complete resulting piece, never to a substring. Thus
 `APIKey`, `APIkey`, `apiKEY`, `XAPIKey` and `X-API-Key` all normalize to the
-intended authority tokens. The frozen sensitive terminals are exactly
-`authorization`, `bearer`, `cookie`, `credential`, `credentials`, `csrf`,
-`password`, `secret`, `session`, `token`; pairs are exactly
-`access|api|private|provider` + `key`, `client` + `secret`, and `connection` +
-`string`; material
-suffixes are exactly `hash`, `header`, `id`, `key`, `value`.
+intended authority tokens. Frozen terminals are exactly `authorization`, `bearer`,
+`cookie`, `credential`, `credentials`, `csrf`, `password`, `secret`, `session`, `token`;
+pairs are `access|api|private|provider` + `key`, `client` + `secret`, and `connection` +
+`string`; material suffixes are `hash`, `header`, `id`, `key`, `value`, `data`, `payload`.
 
 Whole lowercase compact chunks use one closed grammar, parsed longest-base-first
 from their first through last character. Compact bases are the terminals, the
@@ -265,29 +263,25 @@ prior span, so a safe URL cannot mask a later Basic, Bearer, PEM or data URL.
 Their fixed count plus the URL parse budget below makes total work O(n) within
 `PACKAGE_LIMITS.stringLength`; no candidate or surrounding text is retained.
 
-A candidate begins only at start of the trimmed view or after ASCII
-whitespace/control, an opening quote/bracket, `<`, `,`, `;` or `=`. An exact
-ASCII-case-insensitive `Authorization` wrapper is also a start: accept its
-unquoted form or a matching single-/double-quoted field name, OWS (`TAB`/SPACE),
-`:`, OWS and an optional opening quote; arbitrary header names do not match. Every
-nonempty bounded wrapper value rejects regardless of scheme or grammar; empty is
-valid. Bare Basic/Bearer alone uses closed-token boundaries plus decoded-colon,
-minimum-length or digit/punctuation heuristics. All wrapper examples above reject;
-bare near misses, `notBearer` and other-header prose remain valid. The PEM pass searches
-the complete view independently, so no URL span can hide its fixed marker.
+A candidate begins only at the trimmed start or after ASCII whitespace/control, an
+opening quote/bracket, `<`, `,`, `;`, `=` or `:`. After `:`, authorization inspects only
+its closed forms; URL/data discovery admits only a nested absolute scheme, never the
+recorded outer scheme's `//`. An ASCII-case-insensitive `Authorization` wrapper accepts
+an unquoted or matching single-/double-quoted field name, OWS, `:`, OWS and an optional
+opening quote; arbitrary names do not match. Every nonempty bounded wrapper value rejects;
+empty is valid. Bare Basic/Bearer alone uses closed boundaries plus decoded-colon,
+minimum-length or digit/punctuation heuristics. Wrapper examples reject; bare near misses,
+`notBearer` and other-header prose remain valid. PEM independently scans the whole view.
 
-URL discovery visits every code unit once and stores only numeric start offsets for the
-existing absolute-scheme, protocol-relative and exact `/`, `./`, `../`, `?`, `#`
-relative prefixes; `data:` offsets also feed the independent data-URL result. The one
-whole-value `path-noscheme` check adds no internal offsets or suffix retry. Recognize
-arbitrary schemes by a forward state machine. End candidates at ASCII whitespace/control,
-quote or angle bracket, removing a terminal `)`, `]` or `}` only when unmatched. Do not
-remove a closer that is the sole raw value after the final active query/fragment `=`;
-`?code=)` therefore parses once with a nonempty marked value. Discovery never jumps a
-prior span, so nested starts remain visible. Charge every examined URL-span code unit to
-the private budget of exactly four times the trimmed length and parse each candidate once.
-Budget overflow fails closed as `credential_url_forbidden`; ordinary disjoint URLs cost at
-most n, while adversarial overlaps stay bounded rather than quadratic.
+URL discovery visits each code unit once and stores numeric offsets for absolute-scheme,
+protocol-relative and exact `/`, `./`, `../`, `?`, `#` prefixes; `data:` also feeds its
+independent result. After `:`, store only an absolute scheme, never an outer URL's own `//`.
+The one whole-value `path-noscheme` check adds no internal offset or suffix retry. A forward
+state machine recognizes schemes; candidate end is ASCII whitespace/control, quote or angle
+bracket, with one unmatched-terminal `)`, `]`, `}` rule that preserves the sole raw value
+after the final active `=`. Discovery never jumps a prior span. Charge every examined span
+code unit to exactly 4× trimmed length and parse each candidate once. Overflow fails closed
+as `credential_url_forbidden`; disjoint URLs cost at most n and overlaps stay bounded.
 
 Pass each ephemeral URL slice directly to the existing standards parser.
 Query/fragment names and values are decoded exactly once only through
@@ -433,7 +427,9 @@ const SENSITIVE_PAIRS = freezeTuples([
   ["access", "key"], ["api", "key"], ["private", "key"],
   ["provider", "key"], ["client", "secret"], ["connection", "string"],
 ] as const);
-const MATERIAL_SUFFIXES = Object.freeze(["hash", "header", "id", "key", "value"] as const);
+const MATERIAL_SUFFIXES = Object.freeze([
+  "hash", "header", "id", "key", "value", "data", "payload",
+] as const);
 const COMPACT_EXTRA_BASES = freezeTuples([
   ["access", "token"], ["bearer", "token"], ["csrf", "token"],
   ["provider", "secret"], ["refresh", "token"], ["reset", "token"],
@@ -587,8 +583,9 @@ const collectUrlCandidateStarts = (
       cursor += 1;
       continue;
     }
+    const postColon = cursor > 0 && detection[cursor - 1] === ":";
     const prefix = readUrlPrefixForward(detection, cursor);
-    if (prefix.matched) {
+    if (prefix.matched && (!postColon || prefix.absoluteScheme)) {
       starts.push({
         index: cursor,
         dataUrlPrefix: prefix.dataUrlPrefix,
@@ -755,23 +752,21 @@ export function normalizeFullSitePackageForWrite(value: unknown) {
 }
 ```
 
-`isCandidateBoundary(input, index)` is true only at zero or after U+0000–U+0020,
-U+007F, `'`, `"`, `(`, `[`, `{`, `<`, `,`, `;` or `=`. `readAuthorizationCandidate`
-tries the exact quoted/unquoted wrapper before the bare scheme. The wrapper rejects every
-nonempty bounded value without parsing it; only the bare branch walks the Basic/Bearer
-alphabet and heuristic. It returns `{ end, forbidden }`; malformed input returns `null`
-without skipping input or emitting text.
+`isCandidateBoundary` accepts zero or a predecessor in U+0000–U+0020, U+007F, `'`, `"`,
+`(`, `[`, `{`, `<`, `,`, `;`, `=`, `:`. Authorization keeps its closed grammar after colon.
+`readAuthorizationCandidate` tries the wrapper before the bare scheme; the wrapper rejects
+each nonempty bounded value without parsing it, while only the bare branch walks Basic/Bearer.
+It returns `{ end, forbidden }`; malformed input returns `null` without skipping or text.
 
-`isWholeValuePathNoSchemeCandidate` is one forward state-machine pass. It rejects an
-existing frozen prefix, any URL terminator and `:` in the first path segment; it requires
-a nonempty path, then `?` or `#`, then a raw `=`. It stores booleans only. The caller
-initializes the shared 4× budget first, charges the entire span once, parses once in
-`inert-relative` mode and processes embedded offsets with the remaining budget.
-`readUrlPrefixForward` returns `{ matched, dataUrlPrefix, resumeAt }`, consumes a maximal
-scheme alphabet once and matches it only before `:`. On mismatch the caller resumes at the
-first unconsumed code unit. `findUrlCandidateEndForward` walks frozen terminators within the
-remaining budget and tracks three bracket balances. It returns an end or budget overflow
-before over-reading and applies the unmatched-terminal rule once.
+`isWholeValuePathNoSchemeCandidate` makes one forward pass, rejects a frozen prefix, URL
+terminator or first-segment `:`, and requires nonempty path → `?`/`#` → raw `=`. The caller
+starts the 4× budget, charges that span once, parses once as `inert-relative`, then processes
+embedded offsets. `readUrlPrefixForward` returns
+`{ matched, absoluteScheme, dataUrlPrefix, resumeAt }`, consuming a maximal scheme once and
+resuming a match at its first post-colon code unit.
+After colon the collector accepts only `absoluteScheme`, never the outer scheme's `//`.
+`findUrlCandidateEndForward` walks frozen terminators within remaining budget, tracks three
+bracket balances and returns an end or overflow before over-reading; apply the closer rule once.
 
 `inspectUrlCandidateOnce(candidate, dataUrlPrefix, mode: UrlParseMode)` evaluates the
 anchored data-URL predicate, then constructs exactly one `URL`: `inert-relative` uses the
@@ -829,11 +824,11 @@ its assertion. Construct all three exact own-key cases (`__proto__`, `prototype`
 `prototype_key_forbidden` reason, static redacted desired path, skipped value
 branch and complete serialized-error equality to a fixed expected shape with no
 dynamic supplied-key/value field, plus absence of unique value sentinels. Use
-table-driven cases for every sensitive terminal, pair, material
-suffix, compact extra base, carrier base and carrier role; pin longest-first
-`sessiontoken`/`secretaccesskey`, repeated suffix `apikeyheadervalue`,
-partial-parse near misses, and `APIKey`, `APIkey`, `apiKEY`, `XAPIKey`,
-`X-API-Key` plus URL-parameter equivalents.
+table-driven cases for each sensitive terminal/pair/material suffix, compact extra base,
+carrier base/role, longest-first `sessiontoken|secretaccesskey`, repeated suffix
+`apikeyheadervalue`, partial near misses, and `APIKey|APIkey|apiKEY|XAPIKey|X-API-Key`
+plus URL-parameter equivalents. Exact `data|payload` suffixes reject terminal/pair camel,
+separator, acronym, repeated and compact forms; standalone/generic/descriptive tails pass.
 
 Carrier tests cover every base alone, every role, compact/multi-role forms,
 direct strings, inherited arrays and nested objects. Under `base64Data`,
@@ -870,7 +865,10 @@ maximal-token boundaries, terminal punctuation and URL forms. Reverse authorizat
 credential-URL/data-URL candidate order in paired strings and assert the same
 single precedence reason. Add explicit safe-URL-then-comma/semicolon/equals
 Basic, Bearer, PEM, credential-URL and data-URL swallowing regressions, nested
-URL starts, and a deterministic four-times-span-budget fail-closed case. Pin
+URL starts, and post-colon closed wrappers/absolute URL/data URL after an opaque
+outer scheme in both orders. Standard public URLs must not re-enqueue their own
+`//`; accept ordinary colon prose and pin deterministic four-times-span-budget
+fail-closed behavior. Pin
 leading/trailing NBSP and another ECMAScript-trim whitespace around each
 candidate family without mutating desired bytes or adding a second prose
 normalization. Pin `%255F`
@@ -948,10 +946,10 @@ residual object accept; bare-code/unknown-key/non-false-impact rejection;
 complete desired-snapshot equality; and idempotent normalize. The independently
 runnable canonicalization suite proves 101 valid unique residuals within the byte
 cap normalize, sort and remain idempotent without `site_package_too_complex`; the
-100 limit governs attempted diagnostics only. A schema-only limit test may
-accept a ref-shaped object solely to count reference edges; it must state that
-this is not full-package validity and leave path/ref-key rejection to L02 and the
-consumer pre-DB regression. Native desired-document acceptance/rejection tests
+100 limit governs attempted diagnostics only. Pin `referenceEdges` only as the
+frozen numeric authority: remove L01's path-blind metric, over-limit throw and
+behavioral ref-shaped-object case. L02 alone tests accepted occurrence edges and
+failure precedence. Native desired-document acceptance/rejection tests
 belong to TASK-547-02 after reference substitution. Pin `fileBytes` only as the
 exact serialized-object boundary. Handoff only: TASK-547-05 owns the raw reader
 and the sole proof that it never consumes `PACKAGE_LIMITS.fileBytes`; this leaf's
@@ -965,11 +963,13 @@ suite neither imports nor source-inspects that later-owned reader.
   serialized-size semantics, exact verification/setting contracts and their
   immutable boundaries; freeze scalar/canonical ordering, residual identity and
   secret/encoded-value policies, including all seven package-prose surfaces,
-  dense-array enforcement, compact credential aliases, scheme-agnostic exact
-  Authorization wrappers, colon-decoded noncanonical Basic variants,
-  bounded embedded authorization/credential-URL scanning, compound-carrier
+  dense-array enforcement, compact credential aliases with exact `data|payload`
+  suffixes, scheme-agnostic exact Authorization wrappers, colon-decoded
+  noncanonical Basic variants, bounded context-aware post-colon embedded
+  authorization/credential-URL scanning, compound-carrier
   Base64-family grammar and exact-name `code` query/fragment URLs;
-  remove undocumented residual/diagnostic limit coupling and replace inherited
+  remove path-blind reference-edge metrics/enforcement, undocumented residual/
+  diagnostic limit coupling and replace inherited
   diagnostic truncation with the 101st-attempt singleton; split moved cases into independently runnable
   `full-site-package-canonicalization.test.ts` and
   `full-site-package-security.test.ts`, backed by the focused

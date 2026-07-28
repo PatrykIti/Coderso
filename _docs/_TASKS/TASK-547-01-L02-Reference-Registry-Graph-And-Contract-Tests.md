@@ -152,8 +152,9 @@ final own terminal, registers present authority before validation and never drop
 a missing required terminal; malformed intermediates remain TASK-547-02 work.
 Other values must be exact refs; mismatched blocks and all other ref-shaped paths,
 including non-native slots and `$ref`, are invalid.
-Enforce 4,096 occurrence edges, JSON level 64 and at most 100 diagnostics before
-sorting; after cycle detection, enforce dependency-path depth 64.
+L01 exports frozen `referenceEdges=4_096` but carries no ref-shaped metric/throw. L02
+alone counts accepted occurrences and enforces 4,096 after diagnostic overflow; check JSON
+level 64 and 100 diagnostics before sorting, then dependency depth 64 after cycles.
 Diagnostics expose a sanitized path of at most 240 characters and exactly one
 member of this closed vocabulary:
 
@@ -871,7 +872,9 @@ path, ambiguity alone, exactly 100 mixed diagnostics, a 101st mixed diagnostic
 and duplicate-identity 100/101 through L01's imported factory; both 101 cases
 must discard the partial list. Pin
 bad-path + 4,097 accepted edges → edge singleton and 101 mixed diagnostics +
-edge overflow → diagnostic singleton.
+edge overflow → diagnostic singleton. Accept 4,096 allowed-path occurrences and reject
+4,097; separate 4,097 forbidden/malformed/missing ref-like occurrences with zero accepted edges
+choose diagnostic overflow, never edge overflow. These cases replace L01's path-blind test.
 
 Pin cross-collection authority at local index 0 in both root orientations: Page
 authorizes `data` while Page Template forbids the same relative `data` path, then
@@ -965,7 +968,8 @@ cases/builders. Each four `.test.ts` files must run independently.
   source-qualify diagnostics via global `ordinal` plus local `collectionIndex`
   while descriptors remain relative;
   freeze Page owner imports, JSON-depth counting, global mixed-diagnostic
-  precedence/overflow through L01's sole collector factory, the exact occurrence-purpose/content-route plan,
+  precedence/overflow through L01's sole collector factory, sole accepted-edge enforcement
+  after removing L01's metric, the exact occurrence-purpose/content-route plan,
   descriptors and substitution helper; enforce the exact 64-edge longest-path
   boundary and semantic → cycle → depth through the production internal helper; split and
   retire the original reference suite per the ownership above; then run fresh
