@@ -841,9 +841,9 @@ remainders one beyond the single-symbol exception; and nonzero pad-bit aliases.
 Accept empty/ASCII-whitespace-only values, punctuation-bearing near misses and
 the one-symbol unpadded impossible-length near miss, but reject that one symbol
 with any padding. Accept the five carrier-key near misses above and ordinary
-`not_encoded` direct/array/nested descendant copy. Pin all three inspection
-results, the last-place Base64 reason precedence, trusted redacted paths and
-complete non-disclosure.
+`not_encoded` direct/array/nested descendant copy. Pin the exported classifier:
+representative `encoded` and `encoded_like_invalid` values both return
+`base64_value_forbidden` under an explicit carrier, while `not_encoded` returns null; the inspection helper stays private. Pin last-place Base64 reason precedence, trusted redacted paths and complete non-disclosure.
 
 Pin canonical decoded-colon Basic `YTo=`, nonzero-pad-bit alias `YTq=`, missing
 padding `YTo`, wrong padding `YTo==` and excess padding `YTo===` in desired and
