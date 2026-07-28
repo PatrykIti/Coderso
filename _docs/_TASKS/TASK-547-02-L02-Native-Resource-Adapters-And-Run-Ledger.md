@@ -797,15 +797,15 @@ function createPlannerDeps(input, overrides, adapters) {
     allowSettingTakeover: input.allowSettingTakeover,
   }; // one required batch boundary; no per-resource production fallback
 }
-
 function createDefaultFullSitePlanningSnapshotLoader(packageKey) {
   return createFullSitePlanningSnapshotLoader({
-    packageKey,
-    findManagedResourceEvidenceBatch,
-    readFullSitePlanningResourcesBatch,
-  }); // L01 pure coordinator plus its two production batch read ports
+    packageKey, withReadTransaction: (read) => db.transaction(async (tx) => {
+      await acquireNativeCmsWriterFence(tx); // statement one
+      return read({ findEvidence: (input) => findManagedResourceEvidenceBatch(tx, input),
+        readNative: (input) => readFullSitePlanningResourcesBatch(tx, input) });
+    }, { isolationLevel: "read committed" }),
+  }); // one bound handle; no global reader fallback
 }
-
 export async function prepareFullSiteSaga({ plan, referencePlan, adapters, generateId, actorId }) {
   assertExactPlanAlignment(plan.operations, referencePlan);
   const intendedRegistry = new Map<FullSiteResourceIdentity, string>();
@@ -936,7 +936,7 @@ The item-fail catch leaves the last durable item untouched and enters automatic
 recovery. Initialization tests prove one required atomic call, no sequential
 fallback, exact fence-code preservation and the committed/rolled-back/partial/
 unresolved reread matrix. Dry-run tests require desired terminal, no body retry, final-callback DB ordering, DB-free result mapping and zero-I/O primary preservation; L01 owns the private reread.
-The L02-owned `tests/unit/kits/fullSiteLifecycleUpdates.test.ts` proves typed apply performs zero normalizations and one graph build before any default/override dependency, lock or DB access; graph failure makes zero planner/dependency/lock/DB calls, public input/deps reject a plan field, one L01 snapshot loader replaces per-item planning reads, a post-claim source mutation is observed, and an injected rollback registry reaches compensation without default fallback.
+The L02-owned `tests/unit/kits/fullSiteLifecycleUpdates.test.ts` proves typed apply performs zero normalizations and one graph build before any default/override dependency, lock or DB access; graph failure makes zero planner/dependency/lock/DB calls, public input/deps reject a plan field, one L01 snapshot loader replaces per-item planning reads through one explicit READ COMMITTED transaction with statement-one fence, one bound handle and the 14-domain/15-total budget, a post-claim source mutation is observed, and an injected rollback registry reaches compensation without default fallback.
 The exact frozen array reaches three-argument planning/preparation with zero rebuild/clone/second walker; this suite does not assert CLI call counts.
 Before initialization, deterministic preparation failure proves zero item/native
 writes and desired failed owner closure; ambiguous dependency/fence failure keeps
