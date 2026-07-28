@@ -167,11 +167,20 @@ COPY --from=builder --chown=bun:bun /app/store /app/store
 # This runs in the runner stage on purpose: BuildKit skips stages that nothing
 # depends on, so the same check in a trailing stage of its own would be silently
 # never executed. The script writes its bundle to a temp dir and removes it
-# itself; only the exit code is wanted. The script is deleted in the same layer
-# so it does not ship.
-COPY .github/scripts/docker-resolve-check.mjs /tmp/docker-resolve-check.mjs
-RUN bun /tmp/docker-resolve-check.mjs /app \
- && rm -f /tmp/docker-resolve-check.mjs
+# itself; only the exit code is wanted.
+#
+# The script is bind-mounted for the duration of this RUN rather than copied in
+# and deleted afterwards, so it genuinely does not ship. The COPY form did ship
+# it, and the comment here used to claim otherwise: a COPY is its own layer, and
+# a later `rm` in the next RUN only whites the path out in that later layer --
+# the file stays in the image's layer set and comes back out of any `docker save`
+# or layer walk. A mount leaves nothing to delete, and no `rm` whose absence
+# could be misread as a leak. It does mean this Dockerfile now requires
+# BuildKit; that is already how it is built (see .github/workflows/release.yml:
+# docker/setup-buildx-action then docker/build-push-action), and the repo
+# documents no other build path.
+RUN --mount=type=bind,source=.github/scripts/docker-resolve-check.mjs,target=/tmp/docker-resolve-check.mjs \
+    bun /tmp/docker-resolve-check.mjs /app
 
 WORKDIR /app/core
 EXPOSE 3000
