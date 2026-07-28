@@ -13,6 +13,14 @@
 
 import { afterEach, expect, test, vi } from "vitest";
 
+// `vi.mock` is hoisted above every import, so the three module-scope imports below still see
+// the stubbed admin primitives declared further down. They exist to keep the BlockSettings
+// module graph OFF the first test's `testTimeout`: loading it cost 7.3s of an 7.4s test on an
+// idle box, and crossed the 30s lane budget under full-suite contention. Imported here, that
+// transform lands in the file's collection phase, which no per-test deadline governs.
+import { BlockSettings } from "../../../core/admin/ui/pages/builder/BlockSettings";
+import * as sectionEditorsModule from "../../../core/admin/ui/widgets/editors/SectionEditors";
+import * as sectionContractModule from "../../../core/widgets/core/section";
 import type { SectionData } from "../../../core/widgets/core/section";
 import {
   clickByText,
@@ -72,18 +80,25 @@ vi.mock("@/ui/media/MediaPicker", async () =>
 
 afterEach(resetSectionEditorEnvironment);
 
+// This one stays dynamic ON PURPOSE, unlike the imports above and unlike its twin in
+// section-editor-surface-wave.test.tsx. `mockSectionContract` below calls `vi.resetModules()`
+// + `vi.doMock(".../core/widgets/core/section")`, and re-importing here is how the two
+// sparse-contract tests observe that mock; bind it at module scope and they silently read the
+// REAL contract instead, which was verified by trying it. The cost this would have saved is
+// already paid by the module-scope import above -- these tests resolve SectionEditors from a
+// warm registry -- so the deadline is not what is being traded away.
 const renderEditors = async (options: SectionEditorsRenderOptions) =>
   renderSectionEditors({
     ...options,
     editors: await import("../../../core/admin/ui/widgets/editors/SectionEditors"),
   });
 
-const renderSectionBlockSettings = async () => {
-  const { BlockSettings } = await import("../../../core/admin/ui/pages/builder/BlockSettings");
-  const editors = await import("../../../core/admin/ui/widgets/editors/SectionEditors");
-  const contract = await import("../../../core/widgets/core/section");
-  return renderSectionBlockSettingsHost({ BlockSettings, editors, contract });
-};
+const renderSectionBlockSettings = () =>
+  renderSectionBlockSettingsHost({
+    BlockSettings,
+    editors: sectionEditorsModule,
+    contract: sectionContractModule,
+  });
 
 test("Section builder-owned Region controls expose stable control paths", async () => {
   const view = await renderSectionBlockSettings();
@@ -132,7 +147,7 @@ test("Section builder-owned Region controls expose stable control paths", async 
   } finally {
     view.cleanup();
   }
-}, 30000); // Full-suite transform/import contention can exceed 10s; assertions stay unchanged.
+});
 
 test("Section variant cards use atomic block patches when available", async () => {
   const view = await renderEditors({

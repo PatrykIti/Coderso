@@ -13,6 +13,13 @@
 
 import { afterEach, expect, test, vi } from "vitest";
 
+// Module scope, not a deferred import inside the first test: this suite mounts the same
+// SectionEditors graph as its sibling, and deferring it made whichever test ran first absorb
+// the whole transform inside its own `testTimeout` (4.0s of a 4.1s test on an idle box).
+// Nothing here calls `vi.resetModules()` or `vi.doMock`, so unlike the sibling's
+// `renderEditors` there is no mock the re-import is needed to observe.
+import * as sectionEditorsModule from "../../../core/admin/ui/widgets/editors/SectionEditors";
+
 import { RETAINED_COLOR_FIELDS } from "../widgets/retainedColorConsumerTable";
 import {
   clickButton,
@@ -77,11 +84,8 @@ vi.mock("@/ui/media/MediaPicker", async () =>
 
 afterEach(resetSectionEditorEnvironment);
 
-const renderEditors = async (options: SectionEditorsRenderOptions) =>
-  renderSectionEditors({
-    ...options,
-    editors: await import("../../../core/admin/ui/widgets/editors/SectionEditors"),
-  });
+const renderEditors = (options: SectionEditorsRenderOptions) =>
+  renderSectionEditors({ ...options, editors: sectionEditorsModule });
 
 test("Section mounted color inventory preserves direct inheritance and nested-stop policy", async () => {
   const view = await renderEditors({

@@ -11307,7 +11307,7 @@ const TASK_540_LINE_LIMIT_ACCOUNTABLE_PATHS = Object.freeze([
   // never pins a graph the sparse-contract tests need `vi.resetModules()` to clear.
   //
   // Same rationale as the four paths above: lane machinery the family's own `bun run test`
-  // gate runs on, written by no leaf. 755, 808 and 572 lines.
+  // gate runs on, written by no leaf. 770, 812 and 572 lines.
   "tests/vitest/ui/section-editor-surface-wave.test.tsx",
   "tests/vitest/ui/section-editor-wave.test.tsx",
   "tests/vitest/ui/support/sectionEditorHarness.tsx",
