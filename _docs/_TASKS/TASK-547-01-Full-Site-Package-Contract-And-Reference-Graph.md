@@ -129,16 +129,23 @@ closed registry:
 - optional Page/Page Template `document.settings.collectionLink`: its
   `contentTypeId` is a required content-type ref when the object is present,
   while `listingQueryId`/`listingTemplateId` are nullable refs when present;
-- recursively walk Page/Page Template root and native-slot child blocks in
-  deterministic native slot order. After checking each `block.type`, inspect
-  base `props`, then `responsive.tablet.props`, then `responsive.mobile.props`:
-  `collection` permits nullable `contentTypeId/queryId/templateId`, `filters`
-  permits nullable `queryId`, and `form` permits nullable `formId`, only when
-  each property is present. Import native Page capability/breakpoint owners and
-  reject rather than clip depth 5, a `slots` member at depth 4, child 25,
-  unknown/non-native slots and slots on atom blocks for both source kinds.
-  For overlapping failures, first match wins in this order: max-depth `slots`,
-  non-slot-capable block, unknown slot key, then per-slot child cap;
+- recursively walk Page/Page Template root and child blocks. Before `block.type`
+  can grant authority or stop traversal, derive a facts-only bounds preflight
+  from the block's own `slots`, current depth, array child counts and indexed
+  object children; it emits no diagnostic and registers no reference. Reject
+  rather than clip depth 5, a `slots` member at depth 4 and child 25 for both
+  source kinds regardless of the discriminator. A valid discriminator inspects
+  base `props`, then `responsive.tablet.props`, then
+  `responsive.mobile.props`: `collection` permits nullable
+  `contentTypeId/queryId/templateId`, `filters` permits nullable `queryId`, and
+  `form` permits nullable `formId`, only when each property is present. It then
+  traverses native slots in native order, with structural first match
+  max-depth `slots` → non-slot-capable block → unknown slot key →
+  per-slot child cap. A malformed discriminator remains native-validation-owned
+  and grants no reference authority anywhere below it; its bounds-only walker
+  instead enforces depth then child count and visits every array-valued own slot
+  in L01 canonical object-key order, preserving each object child's original
+  array index. General malformed slot/value/child shapes remain native-owned;
 - menu `items[*].pageId` → Page when present and non-null; menu
   `desired.document.items` is not a native menu-item collection and is not a
   reference path;
@@ -157,6 +164,13 @@ Registered reference paths and structurally blocked prefixes are keyed by the
 source resource ordinal plus the exact relative segment array. Authority from
 one resource therefore never suppresses generic forbidden-path scanning at the
 same relative path in another resource.
+Each structural rejection emits exactly one diagnostic at the block's `slots`
+path, adds one source-ordinal-scoped blocked prefix and stops only that rejected
+subtree. The generic ref-like scan skips that prefix to prevent duplicate child
+diagnostics, but still catches every ref-like descendant elsewhere in a
+malformed branch and continues through siblings, so no branch is clipped into
+acceptance. Sanitization never discloses the malformed discriminator, untrusted
+slot key, ref value or descendant payload.
 
 Graph validation is globally phased: per-`desired` JSON-depth preflight, unique
 identities, one mixed reference/path/target discovery stream, accepted
@@ -301,10 +315,12 @@ duplicate keys, dangling/ambiguous references and cycles fail before the
 applicable lazy database import/access.
 
 **Data flow:** unknown in-memory value → serialized-size/package-owned structural
-normalization → index stable keys → discriminator-aware scan of only allowlisted
-reference paths → reject bad-path/dangling/ambiguous/cyclic graph → stable
-topological sort → consumer boundary. Post-substitution native-domain validation
-is owned and tested by TASK-547-02, not certified by this task.
+normalization → index stable keys → discriminator-independent Page bounds
+preflight → valid-type allowlisted discovery plus malformed-branch bounds-only
+walking → generic ref-like scan → reject bad-path/dangling/ambiguous/cyclic
+graph → stable topological sort → consumer boundary. Post-substitution
+native-domain validation is owned and tested by TASK-547-02, not certified by
+this task.
 
 **Error handling:** machine-readable `site_package_invalid`,
 `site_package_too_large`, `site_package_too_complex`,
@@ -338,10 +354,24 @@ reject the non-native menu `document.items` path, reject malformed ref keys
 without echoing them, pin L02's exact closed reasons, plan/reference shapes,
 occurrence-edge versus direct-dependency ordering, and content-route validation-
 only edge. For both Page-backed kinds they accept depth 4/24 children and reject
-depth 5/25, non-native slots and atom slots without clipping. Prove frozen
-descriptor-only substitution with no second traversal or plan mutation. Pin exact
-JSON level 64/65, mixed bad-path/missing/ambiguity priority and complete discovery-
-order diagnostics, plus global semantic and duplicate 100/101 overflow. This
+depth 5/25, non-native slots and atom slots without clipping; valid-type overlap
+cases pin depth → atom → unknown slot → child-count precedence. Independently
+for `page` and `page_template`, a malformed discriminator with depth-4 `slots`
+and a depth-5 child, with or without a ref-like descendant, yields one depth
+diagnostic with no duplicate forbidden diagnostic; an in-bounds ref-like
+descendant yields exactly one generic forbidden diagnostic and no authority,
+edge or descriptor. Prove prefix behavior through observable suppression and
+two-resource source-ordinal isolation without exposing the private collector.
+For each Page-backed kind, a reverse-authored same-resource malformed-sibling
+case combines four structurally blocked subtrees with one in-bounds ref-like
+sibling and requires four canonical-order structural diagnostics followed by
+exactly one generic forbidden diagnostic; this rejects ancestor-wide or other
+overbroad prefixes. Malformed branches also pin 25 children → child-count, depth
+plus 25 → depth, canonical own-slot order, original child indexes and complete
+non-disclosure. Prove frozen
+descriptor-only substitution with no second traversal or plan mutation. Pin
+exact JSON level 64/65, mixed bad-path/missing/ambiguity priority and complete
+discovery-order diagnostics, plus global semantic and duplicate 100/101 overflow. This
 task proves only its local raw normalize→graph call order; planner, typed-apply/
 preparer and CLI call counts belong to TASK-547-02-L01, 02-L02 and 05-L01. A
 structural-schema

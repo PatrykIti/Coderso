@@ -82,10 +82,16 @@ The native bounds are reject boundaries, not scan cutoffs:
 `PAGE_BLOCK_MAX_TREE_DEPTH = 4` (root block is depth 1) and
 `PAGE_BLOCK_MAX_CHILDREN_PER_SLOT = 24`. For both `page` and `page_template`,
 depth 4 and 24 children are accepted and completely scanned; a depth-5 child,
-any `slots` member on a depth-4 block, a 25th child, an unknown/non-native slot
-key, or `slots` on a non-slot-capable block rejects the graph as
-`site_package_ref_bad_path`. No branch may be clipped or ignored, even when the
-invalid branch contains no reference.
+any `slots` member on a depth-4 block or a 25th child rejects regardless of the
+block discriminator; with a valid discriminator, an unknown/non-native slot key
+or `slots` on a non-slot-capable block also rejects the graph as
+`site_package_ref_bad_path`. No structural branch may be clipped or ignored,
+even when the invalid branch contains no reference. Bounds enforcement is
+independent of a valid `block.type`: before discriminator authority is used,
+derive a read-only preflight of the block's own `slots` member, current depth,
+array child counts and indexed object children. The preflight records facts only;
+it emits no diagnostic and registers no reference, so it cannot reorder the
+valid-node first-match contract below.
 
 Reference discovery has one authority path per occurrence. Fixed registry rows
 and the Page walker register
@@ -93,14 +99,22 @@ and the Page walker register
 `registeredReferencePaths` before validating a present required/nullable value;
 the resource ordinal scopes the authority to exactly one source resource, and
 string and numeric segments therefore cannot collide.
-The Page slot validator returns either the ordered
-`readonly { slotKey: PageBlockSlotKey; children: readonly JsonObject[] }[]` for a
-valid node or `null` after emitting its one first-match structural diagnostic.
-On `null`, add `{ sourceOrdinal: source.ordinal, path: [...path, "slots"] }` to
-`blockedReferencePrefixes` and stop only that structural branch; its
-already-emitted rejection prevents clipping from becoming acceptance. On
-success, recurse explicitly with
-`[...path, "slots", slotKey, childIndex]`.
+For a valid discriminator, the Page slot validator consumes that preflight and
+returns either the native-slot-ordered indexed object children or `null` after
+emitting its one first-match structural diagnostic. For a malformed
+discriminator, a bounds-only walker consumes the same preflight, checks depth
+then child count and recursively visits every array-valued own slot in canonical
+object-key order without ever granting reference authority to that node or its
+descendants. General malformed slot-container/value/child shapes remain owned
+by later native validation; the bounds-only walker follows only object children
+at their original array indexes.
+
+Every structural rejection uses one helper that emits exactly one diagnostic at
+`[...path, "slots"]`, adds exactly
+`{ sourceOrdinal: source.ordinal, path: [...path, "slots"] }` to
+`blockedReferencePrefixes`, and stops only that rejected `slots` subtree. Sibling
+branches continue discovery. On valid success, recurse explicitly with
+`[...path, "slots", slotKey, childIndex]`, retaining the original child index.
 
 After registered discovery, one generic ref-like scan walks the complete desired
 value of each source resource. It skips an exact `registeredReferencePaths`
@@ -110,9 +124,12 @@ never inherit the skip. Every other ref-like object gets exactly one
 `package_ref_path_forbidden`. This prevents a valid nested ref from being
 double-classified and prevents a structurally rejected Page branch from
 producing duplicate child findings. An unknown/malformed block discriminator
-registers no reference path and no blocked prefix: native validation owns the
-discriminator, while any ref-like descendant remains forbidden through the
-generic scan.
+itself emits no graph diagnostic and registers no reference path anywhere in its
+branch: native validation owns that discriminator. Its bounds-only traversal
+adds a blocked prefix only where depth or child count actually rejects; the
+generic scan therefore forbids every ref-like descendant outside such a prefix,
+while a ref-like value inside the rejected `slots` subtree cannot create a
+duplicate generic finding.
 
 Absent or `null` nullable paths add no edge. Every present non-null allowed value
 must be an exact ref of the frozen target kind. A discriminator-mismatched block
@@ -162,11 +179,18 @@ ref-like value outside the registry → `package_ref_path_forbidden`; absent tar
 `content_routes_invalid`; malformed route `type` →
 `content_route_type_invalid`; zero/multiple matching slugs →
 `content_route_content_type_missing|content_route_content_type_ambiguous`.
-For every Page node with `slots`, validate in this first-match order: any `slots`
-member at depth 4 → `page_tree_depth_exceeded`; otherwise a non-slot-capable block
-→ `page_slots_forbidden`; otherwise the first unknown/non-native slot key →
-`page_slot_key_forbidden`; otherwise a 25th child in one native slot →
-`page_slot_children_exceeded`; 4,097th edge, dependency depth 65, 101st
+For every valid-discriminator Page node with `slots`, validate in this first-match
+order: any `slots` member at depth 4 → `page_tree_depth_exceeded`; otherwise a
+non-slot-capable block → `page_slots_forbidden`; otherwise the first
+unknown/non-native slot key → `page_slot_key_forbidden`; otherwise a 25th child
+in one native slot → `page_slot_children_exceeded`. The facts-only preflight
+must not let child-count failure leapfrog the atom or unknown-key checks. For a
+malformed-discriminator branch, bounds-only first match is a `slots` member at
+depth 4 → `page_tree_depth_exceeded`, then the first 25-child array-valued own
+slot → `page_slot_children_exceeded`, then recursive child traversal; do not
+emit `page_slots_forbidden` or `page_slot_key_forbidden` without a valid type.
+Each of these failures uses the single diagnostic/blocked-prefix helper above.
+The 4,097th edge, dependency depth 65, 101st
 diagnostic and cycle → their corresponding static codes; resolver map
 miss/source mismatch →
 `resolved_target_id_missing|planned_reference_drift`. The top-level error code
@@ -266,7 +290,7 @@ and one descriptor; the content-route literal produces only the
 `dependencies` contains unique direct targets sorted lexicographically;
 `references` keeps occurrence discovery order. The plan is topologically sorted
 with dependencies first and stable ties by original package ordinal, then
-identity. Every lexical sort/tie uses L01's
+identity. Every identity/dependency lexical sort/tie uses L01's
 `compareFullSitePackageText`, imported from
 `core/services/kits/fullSitePackage/schema.ts`; `localeCompare`, `Intl` and host-
 locale ordering are forbidden. Discovery is package collection/declaration order; registry-row order;
@@ -274,6 +298,10 @@ array index order; and, for Page blocks, section/root-block order followed by
 depth-first pre-order. At each Page node inspect the discriminator's applicable
 properties in `contentTypeId`, `queryId`, `templateId`, `formId` order for base,
 tablet and mobile, then recurse through native slot order and child order.
+The malformed-discriminator bounds-only traversal instead orders own slot keys
+with L01's `compareFullSitePackageObjectKeys`, then original child index; this
+order is used only to select/traverse structural facts, never to authorize a
+path or expose an untrusted slot key in a diagnostic.
 The seed, every descriptor/path/dependency array and the outer plan are
 deep-cloned and frozen. Diagnostic display paths are derived sanitized text,
 never substitution authority.
@@ -408,18 +436,148 @@ const serializeAuthorityPath = (
   path: readonly (string | number)[],
 ) => JSON.stringify([sourceOrdinal, path]);
 
+type IndexedPageBlockChild = Readonly<{
+  child: JsonObject;
+  childIndex: number;
+}>;
+
+type PreflightPageSlot = Readonly<{
+  slotKey: string;
+  arrayLength: number | null;
+  children: readonly IndexedPageBlockChild[];
+}>;
+
+type PageBlockBoundsPreflight = Readonly<{
+  hasSlots: boolean;
+  depthExceeded: boolean;
+  // null means the present slots value is not an object; native validation owns its shape.
+  structuralSlots: readonly PreflightPageSlot[] | null;
+}>;
+
+const preflightPageBlockBounds = (
+  block: JsonObject,
+  depth: number,
+): PageBlockBoundsPreflight => {
+  if (!hasOwn(block, "slots")) {
+    return { hasSlots: false, depthExceeded: false, structuralSlots: null };
+  }
+  const depthExceeded = depth >= PAGE_BLOCK_MAX_TREE_DEPTH;
+  const slotsValue = block.slots;
+  if (!isJsonObject(slotsValue)) {
+    return { hasSlots: true, depthExceeded, structuralSlots: null };
+  }
+  const structuralSlots = Object.keys(slotsValue)
+    .sort(compareFullSitePackageObjectKeys)
+    .map((slotKey): PreflightPageSlot => {
+      const value = slotsValue[slotKey];
+      if (!Array.isArray(value)) {
+        return { slotKey, arrayLength: null, children: [] };
+      }
+      const children = value.flatMap((child, childIndex) =>
+        isJsonObject(child) ? [{ child, childIndex }] : [],
+      );
+      return { slotKey, arrayLength: value.length, children };
+    });
+  return { hasSlots: true, depthExceeded, structuralSlots };
+};
+
+const rejectPageSlots = (
+  path: readonly (string | number)[],
+  reason:
+    | "page_slots_forbidden"
+    | "page_slot_key_forbidden"
+    | "page_tree_depth_exceeded"
+    | "page_slot_children_exceeded",
+  context: PageReferenceVisitContext,
+): void => {
+  const slotsPath = [...path, "slots"];
+  context.collector.add("site_package_ref_bad_path", slotsPath, reason);
+  context.blockedReferencePrefixes.push({
+    sourceOrdinal: context.source.ordinal,
+    path: slotsPath,
+  });
+};
+
 type ValidatedPageSlot = Readonly<{
   slotKey: PageBlockSlotKey;
-  children: readonly JsonObject[];
+  children: readonly IndexedPageBlockChild[];
 }>;
 
 const validateSlotsFirstMatch = (
+  preflight: PageBlockBoundsPreflight,
+  path: readonly (string | number)[],
+  allowedSlots: readonly PageBlockSlotKey[],
+  context: PageReferenceVisitContext,
+): readonly ValidatedPageSlot[] | null => {
+  if (!preflight.hasSlots) return [];
+  if (preflight.depthExceeded) {
+    rejectPageSlots(path, "page_tree_depth_exceeded", context);
+    return null;
+  }
+  if (allowedSlots.length === 0) {
+    rejectPageSlots(path, "page_slots_forbidden", context);
+    return null;
+  }
+  if (preflight.structuralSlots === null) return []; // TASK-547-02 later owns native shape.
+
+  const firstUnknown = preflight.structuralSlots.find(
+    ({ slotKey }) => !allowedSlots.includes(slotKey as PageBlockSlotKey),
+  );
+  if (firstUnknown) {
+    rejectPageSlots(path, "page_slot_key_forbidden", context);
+    return null;
+  }
+  for (const slotKey of allowedSlots) {
+    const slot = preflight.structuralSlots.find((candidate) => candidate.slotKey === slotKey);
+    if (
+      slot &&
+      slot.arrayLength !== null &&
+      slot.arrayLength > PAGE_BLOCK_MAX_CHILDREN_PER_SLOT
+    ) {
+      rejectPageSlots(path, "page_slot_children_exceeded", context);
+      return null;
+    }
+  }
+  return allowedSlots.flatMap((slotKey) => {
+    const slot = preflight.structuralSlots?.find((candidate) => candidate.slotKey === slotKey);
+    return slot?.arrayLength === null || slot === undefined
+      ? []
+      : [{ slotKey, children: slot.children }];
+  });
+};
+
+const collectMalformedPageBranchBounds = (
   block: JsonObject,
   path: readonly (string | number)[],
   depth: number,
-  allowedSlots: readonly PageBlockSlotKey[],
-  collector: GraphDiagnostics,
-): readonly ValidatedPageSlot[] | null;
+  context: PageReferenceVisitContext,
+  preflight = preflightPageBlockBounds(block, depth),
+): void => {
+  if (!preflight.hasSlots) return;
+  if (preflight.depthExceeded) {
+    rejectPageSlots(path, "page_tree_depth_exceeded", context);
+    return;
+  }
+  if (preflight.structuralSlots === null) return;
+  const firstOversized = preflight.structuralSlots.find(
+    ({ arrayLength }) =>
+      arrayLength !== null && arrayLength > PAGE_BLOCK_MAX_CHILDREN_PER_SLOT,
+  );
+  if (firstOversized) {
+    rejectPageSlots(path, "page_slot_children_exceeded", context);
+    return;
+  }
+  for (const { slotKey, children } of preflight.structuralSlots) {
+    for (const { child, childIndex } of children) {
+      collectMalformedPageBranchBounds(
+        child,
+        [...path, "slots", slotKey, childIndex],
+        depth + 1,
+        context,
+      );
+    }
+  }
+};
 
 const collectPageBlockReferences = (
   block: JsonObject, // PackageRefs exist before native ID substitution.
@@ -427,12 +585,13 @@ const collectPageBlockReferences = (
   depth: number, // Root block = 1.
   context: PageReferenceVisitContext,
 ): void => {
-  const type = readDiscriminator(
-    block.type,
-    PAGE_REFERENCE_AUTHORITY.blockTypes,
-    context.collector,
-  );
-  if (!type) return; // The later generic scan forbids any descendant ref-like value.
+  const preflight = preflightPageBlockBounds(block, depth);
+  const type = readKnownPageBlockType(block.type, PAGE_REFERENCE_AUTHORITY.blockTypes);
+  if (!type) {
+    // Enforce bounds through this branch, but grant no ref authority below it.
+    collectMalformedPageBranchBounds(block, path, depth, context, preflight);
+    return;
+  }
   inspectAndRegisterReferenceProps(
     block,
     path,
@@ -441,21 +600,14 @@ const collectPageBlockReferences = (
     context,
   );
   const slots = validateSlotsFirstMatch(
-    block,
+    preflight,
     path,
-    depth,
     PAGE_REFERENCE_AUTHORITY.slotsByType[type],
-    context.collector,
+    context,
   );
-  if (slots === null) {
-    context.blockedReferencePrefixes.push({
-      sourceOrdinal: context.source.ordinal,
-      path: [...path, "slots"],
-    });
-    return;
-  }
+  if (slots === null) return;
   for (const { slotKey, children } of slots) {
-    children.forEach((child, childIndex) =>
+    children.forEach(({ child, childIndex }) =>
       collectPageBlockReferences(
         child,
         [...path, "slots", slotKey, childIndex],
@@ -505,7 +657,9 @@ buildReferencePlan(pkg);
 ```
 
 Data flow: normalized package → typed depth guard → unique registry →
-allowlisted refs → deterministic finalizer → DAG → plan.
+discriminator-independent Page bounds preflight → valid-type allowlisted refs plus
+malformed-branch bounds-only traversal → generic ref-like scan → deterministic
+finalizer → DAG → plan.
 Errors distinguish duplicate/missing/ambiguous/cycle/bad-path with only the
 static redacted diagnostics above. TASK-547-02 owns post-substitution native
 `desired` validation; this leaf certifies only ref placement/resolution/order.
@@ -520,6 +674,49 @@ each rejection occurs rather than truncating a reference-bearing final branch.
 Pin that a valid nested registered ref yields one edge/descriptor and zero
 forbidden diagnostics, while a structurally blocked slot subtree yields exactly
 its first-match Page diagnostic and no duplicate descendant ref diagnostic.
+Use four independent (non-loop-collapsed) malformed-discriminator regressions:
+
+| Source kind | Depth-4 malformed block's own `slots` | Expected graph result |
+| --- | --- | --- |
+| `page` | depth-5 child, no ref-like descendant | exactly one `page_tree_depth_exceeded` and no other diagnostic |
+| `page` | depth-5 child containing a ref-like value | the same single structural diagnostic; no `package_ref_path_forbidden` duplicate |
+| `page_template` | depth-5 child, no ref-like descendant | exactly one `page_tree_depth_exceeded` and no other diagnostic |
+| `page_template` | depth-5 child containing a ref-like value | the same single structural diagnostic; no `package_ref_path_forbidden` duplicate |
+
+For each source kind, separately pin an in-bounds malformed-discriminator branch
+whose descendant is ref-like: it has no registered edge/descriptor or structural
+diagnostic and receives exactly one generic `package_ref_path_forbidden`. These
+fixtures prove behaviorally that only an actual bounds rejection suppresses its
+descendant generic finding; `blockedReferencePrefixes` remains private and tests
+must not require an exported production inspection seam or assert its internal
+array cardinality directly.
+
+Run one independently named reverse-authored multi-sibling malformed case for
+`page` and one for `page_template`; shared support may build the shape, but the
+two test cases assert their complete results separately. Each malformed root
+block authors own slot keys in the reverse order `zeta-private`,
+`safe-private`, `alpha-private`, `"10"`, `"2"`; every root slot array stays
+within 24 children and places its object child after scalar/`null` sentinels at a
+distinct original index. All descendant block discriminators remain malformed.
+In canonical `compareFullSitePackageObjectKeys` traversal order `"2"`, `"10"`,
+`alpha-private`, `safe-private`, `zeta-private`, make the first, second, third and
+fifth branches end respectively in depth, child-count, depth and child-count
+rejection, with a distinct ref-like sentinel strictly inside each rejected
+nested `slots` subtree. Keep the `safe-private` sibling fully in bounds and put
+one unique ref-like sentinel on that malformed sibling outside every rejected
+nested `slots` prefix. Assert the exact complete reason order
+`page_tree_depth_exceeded, page_slot_children_exceeded, page_tree_depth_exceeded,
+page_slot_children_exceeded, package_ref_path_forbidden`: four ordered structural
+diagnostics followed by exactly one generic diagnostic from `safe-private`. This
+proves comparator order and continued sibling discovery after the first
+rejection. Because every retained object child began at a nonzero, distinct
+array index, filtered/reindexed traversal would create a blocked-path mismatch
+and add forbidden duplicates from the four rejected branches; an ancestor-wide
+or other overbroad same-resource blocked prefix would instead suppress the one
+required `safe-private` generic finding. Pin all five display paths to the exact
+trusted prefix ending in `[redacted]`, the exact static reasons above and the
+static error message; none of the five supplied slot keys or any ref sentinel may
+occur anywhere in the complete paths/reasons/message.
 Pin exact ref keys/kind/shape; every closed reason code and condition mapping;
 the fixed diagnostic-overflow singleton; and sentinel non-disclosure for
 duplicate, missing, wrong-kind, malformed-key, forbidden-path, content-route,
@@ -527,6 +724,14 @@ depth, edge, cycle, resolved-ID and drift failures. Cross-product precedence
 cases pin extra+wrong-kind+bad-key → shape, exact-shape wrong-kind+bad-key → kind,
 depth-4 atom with slots and depth-4 layout with an unknown slot → depth, shallower
 atom with any slots → atom, and a shallower slot-capable unknown key → slot-key.
+Also pin that shallower valid atom+25 children → atom and valid unknown-slot+25
+children → slot-key (the preflight cannot leapfrog valid-type authority), while
+shallower malformed-discriminator+25 children → child-count and depth-4
+malformed-discriminator+25 children → depth. Every malformed structural case
+must expose one diagnostic at the block's `slots` path and no duplicate generic
+descendant finding, never a discriminator/atom/slot-key diagnostic. The helper's
+same-path prefix remains a private implementation invariant proven through this
+observable result and the source-ordinal scope cases below.
 Pin object-only, object/array, scalar and `null` terminals at exact JSON level 64
 and reject the same shapes at 65 with the exact static `json_depth_exceeded`
 singleton. Raw normalize→graph and forged-typed duplicate+depth inputs both pin
@@ -549,7 +754,9 @@ block/slot prefix: one produces a structural slot failure and therefore a blocke
 prefix, while the other has a ref-like descendant that the generic scan must
 report. Run both declaration orders so the blocked and scanned resources swap
 ordinals explicitly; the second resource's forbidden finding must never be
-suppressed.
+suppressed. Together with the single-diagnostic/no-duplicate cases above, this
+is the public behavioral proof of exact-prefix and source-ordinal isolation; do
+not expose the private prefix collector solely for tests.
 
 Pin runtime immutability of the exported fixed registry's outer array, rows and
 segment arrays with mutation attempts. After the graph module has captured its
