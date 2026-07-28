@@ -11230,7 +11230,13 @@ const TASK_540_LINE_LIMIT_ACCOUNTABLE_PATHS = Object.freeze([
 // (989) have ten and eleven. The first two were missing and the comment here mis-stated
 // backupService.ts's headroom as nine.
 //
-// Ordered most-urgent first. All four stay: 1,000 is an inclusive pass, so none of them is
+// EntryEditor.tsx joins them at 992, eight lines of headroom, having crossed the coverage
+// threshold under this session's entry-editor fixes (5bea73af, 865e5f37): it stood at 984 --
+// one line outside the derived at-risk set -- and the two comments those commits added to it
+// took it inside. Naming it here is the response the coverage test asks for; trimming those
+// comments back under the threshold instead would only restore the same one-line margin.
+//
+// Ordered most-urgent first, and every entry stays: 1,000 is an inclusive pass, so none is
 // in violation and none is split here. Splitting the two zero-headroom suites would be a
 // change to frozen closure machinery for files that already pass -- the restyle suite is a
 // pinned two-file family in task-540-test-name-contract.mjs (tests 17, fileTests [13, 4],
@@ -11245,6 +11251,7 @@ const TASK_540_LINE_LIMIT_ACCOUNTABLE_PATHS = Object.freeze([
 const TASK_540_LINE_LIMIT_TRIPWIRE_PATHS = Object.freeze([
   "tests/vitest/ui-integration/custom-screen-entry-editor-restyle.test.tsx",
   "tests/vitest/ui/use-screen-related-entries.test.tsx",
+  "core/admin/ui/entries/EntryEditor.tsx",
   "core/services/backups/backupService.ts",
   "core/widgets/core/footer.tsx",
 ]);
