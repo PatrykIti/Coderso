@@ -375,7 +375,7 @@ validation before run/item/domain writes. This CLI duplicates neither stage.
 lazy DB acquisition → canonical rollback service → safe summary → stable exit
 code, with zero package read or graph build. Ref-bearing Page validation remains
 placeholder-native before attachment and resolved-native after substitution,
-before `createRun`, item or domain writes.
+before atomic run-and-item initialization or domain writes.
 
 **Error handling:** invalid args/schema/file/actor/conflict return non-zero with a
 machine-readable code. Do not partially publish a Page or bypass the run ledger.

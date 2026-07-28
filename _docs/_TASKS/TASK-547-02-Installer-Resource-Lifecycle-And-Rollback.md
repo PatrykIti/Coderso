@@ -63,7 +63,7 @@ ref-shaped values, duplicates the Page walker or rebuilds the graph.
 
 After IDs are allocated/resolved, TASK-547-02 substitutes refs only at the
 already-validated graph paths and runs every native owner validator over the
-post-substitution desired snapshot before `createRun`, item initialization or
+post-substitution desired snapshot before `createInitializedRun` or
 any native write. Thus Page has one placeholder-native pre-normalization before
 ref attachment and one resolved-native revalidation after substitution; no
 native Page normalizer receives a `PackageRef`. This task owns the malformed
@@ -234,7 +234,14 @@ listing template/query and setting snapshots include their entire owner-defined
 semantic/raw state. L03 restores that exact capture through
 `restoreSnapshotAtomic({ id, expectedCurrent, target, actorId })`.
 
-L02 preparation before `createRun` is two-pass and write-free. Pass one allocates
+Planning performs one bounded snapshot-loader call: one managed-evidence query,
+one base query per nonempty resource kind and at most three aggregate-child
+queries, never more than 14 statements for 0..512 resources. The exact ordered
+result is validated before operation construction; per-resource DB fallbacks are
+forbidden. Existing single-resource resolvers remain only for direct/exact-ID
+rollback and recovery callers.
+
+L02 preparation before atomic run initialization is two-pass and write-free. Pass one allocates
 a server UUID for every create in all nine UUID-backed kinds, takes current IDs
 for updates/noops and uses setting keys, then builds the complete identity-to-ID
 registry. Pass two resolves every reference against that full registry, runs each
@@ -242,13 +249,17 @@ native strict normalizer, captures complete before state (or proves exact
 create-time absence), and prepares exact complete staged/final targets. Create
 absence is durably encoded as `beforeSnapshot:null`; an absent setting maps that
 evidence to its native raw `{ key, present:false }` expectation. Only after the
-all-item operation/snapshot/ID matrix validates may the executor create the run
-and persist every exact before, staged/final after and V1 action in topological
-plan order. Every item must be durable before the first native write. `createRun.options.initializationPlanV1` first stores the bounded reject-unknown ordered `{ position, kind, key, operation }` manifest for all prepared rows, so even an empty persisted prefix has an exact expected sequence and cardinality.
-
-An apply-mode initialization failure can therefore leave only the empty, first, middle or complete contiguous `planned/prepared` prefix and writes zero native resources. Its catch attempts exactly one source `failed` finalization with the safe original code/fallback, preserves the initialization error if finalization also fails, and never compensates. Apply is never resumed. The sole recovery is explicit rollback: under both locks it accepts only that unique contiguous topological prefix, re-proves every persisted create is absent and every update/noop still equals its captured before state, then records one successful, source-faithful rollback outcome per persisted row and zero for the missing tail, with swapped exact snapshots and unchanged V1 action. It performs zero native writes. A previously finalized source keeps its exact `failed` code; a still `running` source is finalized `failed/site_package_apply_interrupted`; rollback `success` is the final fallible commit. Tests cover empty/first/middle/last prefixes after both successful and failed source finalization.
-A complete aligned set with changed native state and no prior rollback outcome
-falls through to ordinary crash recovery; partial/prior-outcome drift conflicts.
+all-item matrix validates may `createInitializedRun` write the run and complete
+ordered item set through one transaction and one set-based item insert. The port
+derives `initializationPlanV1` from those same rows; callers cannot supply it.
+The method is required, bounded to 512, has no `createRun`/`recordItem` fallback,
+and maps any failed transaction cause-free to
+`site_package_ledger_initialization_failed`. Before commit neither row family is
+visible; after commit both are complete and every item is durable before native
+I/O. A manifest/row mismatch is corrupt source evidence and fails before native
+access. A crash after commit but before native mutation follows ordinary
+complete-set recovery, with zero native reversal and one source-faithful outcome
+per item. Legacy partial prefixes are rejected, never treated as recoverable.
 
 Dry-run initialization and completion instead use L01's exact-key
 `terminalizeDryRun` CAS plus L02's bounded orchestrator below. Its SQL predicate
@@ -498,15 +509,14 @@ export const applyFullSitePackage = async (
   const rollbackAdapters =
     overrides.rollbackAdapters ?? FULL_SITE_ROLLBACK_ADAPTERS; // L02 facade owner
   const execute = async () => {
-    const resolveCurrentResource =
-      overrides.resolveCurrentResource ??
-      createFullSiteCurrentResourceResolver(input.package.key, ledger);
+    const loadPlanningSnapshot =
+      overrides.loadPlanningSnapshot ??
+      createDefaultFullSitePlanningSnapshotLoader(input.package.key);
     const plan = await planFullSiteInstall(
       input.package,
       referencePlan, // exact closed-over plan; planner never rebuilds it
       {
-        ledger,
-        resolveCurrentResource,
+        loadPlanningSnapshot,
         normalizeDesired: async ({ kind, key, currentId, desired }) =>
           (await adapters[kind].validateDesired({
             operation: "update",
@@ -525,10 +535,10 @@ export const applyFullSitePackage = async (
       adapters,
       generateId: () => crypto.randomUUID(),
     });
-    // Before createRun: allocate the complete intended-ID registry, substitute
+    // Before persistence: allocate the complete intended-ID registry, substitute
     // only graph-approved refs, validate every native desired snapshot and
     // capture complete CAS expectations. This preparation performs zero writes.
-    const run = await ledger.createRun({
+    const run = await ledger.createInitializedRun({
       packageKey: input.package.key,
       actorId: input.actorId,
       dryRun: input.dryRun === true,
@@ -537,15 +547,10 @@ export const applyFullSitePackage = async (
         packageFingerprint: fullSitePackageFingerprint(input.package),
         allowSettingTakeover: input.allowSettingTakeover === true,
         rollbackDependencySchemaVersion: 1,
-        initializationPlanV1: toStrictInitializationPlanV1(prepared),
       },
+      items: prepared.map(toInitializedLedgerItem),
     });
-    await initializeFullSiteSagaOrFinalizeFailed({
-      ledger,
-      runId: run.id,
-      prepared,
-      mode: input.dryRun ? "dry_run" : "apply",
-    }); // apply prefixes use explicit rollback; dry runs use bounded terminalization
+    // One transaction writes the run plus all planned/prepared rows; no fallback.
     // L02 staging owns all nine DURABLE_CREATE_ID_KINDS and consumes L01's
     // buildFullSiteRollbackActionV1; it never reallocates or revalidates here.
     if (input.dryRun) {
@@ -577,26 +582,6 @@ export const applyFullSitePackage = async (
     ? ledger.withPackageLock(input.package.key, execute)
     : execute(); // pure injected fakes only; concrete DB paths always lock
 };
-
-async function initializeFullSiteSagaOrFinalizeFailed(input) {
-  try {
-    await initializeFullSiteSaga(input);
-  } catch (initializationError) {
-    if (input.mode === "dry_run") {
-      await finalizeDryRunBounded({
-        ledger: input.ledger, runId: input.runId, primaryError: initializationError,
-        desired: { status: "failed", error: safeApplyFailure(initializationError) },
-      });
-      throw initializationError;
-    }
-    try {
-      await input.ledger.finalizeRun({
-        runId: input.runId, status: "failed", error: safeApplyFailure(initializationError),
-      });
-    } catch { /* Initialization remains primary; never compensate. */ }
-    throw initializationError;
-  }
-}
 
 async function finalizeDryRunBounded(input) {
   const result = await attemptDryRunTerminalTwice(
@@ -681,18 +666,19 @@ export async function rollbackFullSiteInstall(
   const ledger = input.ledger ?? defaultLegacyInstallLedger;
   const source = await requireApplySource(input.sourceRunId, ledger);
   const execute = async () => {
-    const currentSource = await requireApplySource(input.sourceRunId, ledger);
-    if (currentSource.packageKey !== source.packageKey) {
+    const preClaimSource = await requireApplySource(input.sourceRunId, ledger);
+    if (preClaimSource.packageKey !== source.packageKey) {
       throw new Error("site_package_rollback_invalid_source");
     }
     const automaticCompensation =
-      await validateAutomaticCompensationSource(currentSource, ledger);
+      await validateAutomaticCompensationSource(preClaimSource, ledger);
 
     let rollbackRunId: string;
+    let completedClaim = false;
     if (ledger.claimRollbackRun) {
       const claim = await ledger.claimRollbackRun({
-        sourceRunId: currentSource.id,
-        packageKey: currentSource.packageKey,
+        sourceRunId: preClaimSource.id,
+        packageKey: preClaimSource.packageKey,
         actorId: input.actorId,
         ...(automaticCompensation
           ? {
@@ -705,50 +691,50 @@ export async function rollbackFullSiteInstall(
       if (claim.state === "busy") {
         throw new Error("site_package_rollback_in_progress");
       }
-      if (claim.state === "complete") {
-        throw new Error("site_package_already_rolled_back");
-      }
       rollbackRunId = claim.id;
+      completedClaim = claim.state === "complete";
     } else {
       // Narrow injected fakes may omit the claim API. Concrete DB composition may not.
       if (automaticCompensation) {
         throw new Error("site_package_compensation_not_recoverable");
       }
-      if (await ledger.hasSuccessfulRollback(currentSource.id)) {
+      if (await ledger.hasSuccessfulRollback(preClaimSource.id)) {
         throw new Error("site_package_already_rolled_back");
       }
       rollbackRunId = (
         await ledger.createRollbackRun({
-          sourceRunId: currentSource.id,
-          packageKey: currentSource.packageKey,
+          sourceRunId: preClaimSource.id,
+          packageKey: preClaimSource.packageKey,
           actorId: input.actorId,
           options: { fullSitePackage: true },
         })
       ).id;
     }
 
+    if (completedClaim) {
+      const completedSource = await requireApplySource(input.sourceRunId, ledger);
+      if (completedSource.packageKey !== source.packageKey) {
+        throw new Error("site_package_rollback_invalid_source");
+      }
+      throw new Error("site_package_already_rolled_back");
+    }
     let successCommitted = false;
     try {
-      if (automaticCompensation && rollbackRunId !== automaticCompensation.id) {
+      const postClaimSource = await requireApplySource(input.sourceRunId, ledger);
+      if (postClaimSource.packageKey !== source.packageKey) {
+        throw new Error("site_package_rollback_invalid_source");
+      }
+      const postClaimCompensation =
+        await validateAutomaticCompensationSource(postClaimSource, ledger);
+      if (postClaimCompensation && rollbackRunId !== postClaimCompensation.id) {
         throw new Error("site_package_rollback_conflict");
       } // owned/resumed post-claim validation belongs to the failed-finalization catch
-      const rawSourceItems = await ledger.listRawItems(currentSource.id);
+      const rawSourceItems = await ledger.listRawItems(postClaimSource.id);
       const rawPriorOutcomes = await ledger.listRawItems(rollbackRunId);
-      const initializationPrefix =
-        await preflightUnappliedInitializationPrefix({
-          currentSource, sourceItems: rawSourceItems, priorOutcomes: rawPriorOutcomes,
-          adapters: input.adapters ?? FULL_SITE_ROLLBACK_ADAPTERS,
-        }); // unique empty/full or contiguous topological prefix; zero native writes
-      if (initializationPrefix) {
-        await terminalizeInitializationPrefixRollback({
-          ledger, rollbackRunId, currentSource, initializationPrefix,
-        }); // resume exact prior rows; source failure then rollback success last
-        successCommitted = true;
-        return { runId: rollbackRunId };
-      }
       const parsed = preflightRollbackEvidence({
         items: rawSourceItems,
-      }); // validates every unknown raw field; no row may disappear
+        initializationPlanV1: postClaimSource.options?.initializationPlanV1,
+      }); // a present manifest must match the complete row set; no prefix is legal
       const completedIdentities = preflightPriorRollbackSuccessOutcomes({
         sourceItems: rawSourceItems,
         priorOutcomes: rawPriorOutcomes,
@@ -758,14 +744,14 @@ export async function rollbackFullSiteInstall(
       );
       const graph = buildRollbackDependencyGraph({
         items: persistedSourceItems,
-        declaredVersion: currentSource.options?.rollbackDependencySchemaVersion,
+        declaredVersion: postClaimSource.options?.rollbackDependencySchemaVersion,
         readAction: readFullSiteRollbackActionV1,
       });
       const classifications = await classifyInterruptedSagaItems({
         items: persistedSourceItems,
         resolveCurrentResource:
           input.resolveCurrentResource ??
-          createFullSiteCurrentResourceResolver(currentSource.packageKey, ledger),
+          createFullSiteCurrentResourceResolver(postClaimSource.packageKey, ledger),
       }); // hints only; noop skips resolver access and is not outcome authority
       const adapters =
         input.adapters ?? FULL_SITE_ROLLBACK_ADAPTERS; // L02 facade owner
@@ -773,7 +759,7 @@ export async function rollbackFullSiteInstall(
         parsed,
         classifications,
         adapters,
-        currentSource,
+        currentSource: postClaimSource,
         ledger,
         completedIdentities,
       }); // noop from parsed source evidence; fresh exact-ID authority for create/update
@@ -789,15 +775,15 @@ export async function rollbackFullSiteInstall(
         reverseSettingsBatch,
         readyComparator: compareRollbackReadyNodes,
         recordOutcome: recordRollbackOutcome,
-        currentSource,
+        currentSource: postClaimSource,
         onNativeFailure: "block-transitive-dependencies",
         onSettingsFailure: "block-union-transitive-dependencies",
         onOutcomeFailure: "stop-all",
         onUnknownDependencies: "stop-conservatively",
       });
-      if (currentSource.status === "running") {
+      if (postClaimSource.status === "running") {
         await ledger.finalizeRun({
-          runId: currentSource.id,
+          runId: postClaimSource.id,
           status: "failed",
           error: "site_package_apply_interrupted",
         });
@@ -879,7 +865,7 @@ preparation consumes those same frozen descriptors without a second walker. The
 two-argument planner separately builds once and calls
 `normalizeFullSitePackageForWrite` zero times; both overloads retain native
 `normalizeDesired` for existing-resource comparisons. Malformed post-substitution desired
-snapshots for every native kind fail before `createRun`, item/domain writes or
+snapshots for every native kind fail before `createInitializedRun`, domain writes or
 publish, including discriminator-valid refs embedded in an otherwise invalid
 Page/Menu document. Drafts are not published early,
 menu is completely wired before publish, and shell settings are the last stage.
@@ -956,11 +942,10 @@ after outer capture to prove the owner re-read rejects drift with zero partial
 writes. Raw-reader tests prove unknown/delete/restore operations and scalar/
 array/null fields reach L03 rather than disappearing. Catch tests prove an item
 failure leaves the last durable row untouched and only the source run becomes
-failed. Initialization tests fail before zero and after first/middle/last item
-writes, then explicitly roll back each exact prefix under running/failed sources.
-They pin zero native/compensation writes, exact resumed prefix outcomes, no
-missing-tail rows, source terminalization before rollback success and primary
-error order at every ledger commit. Dry-run tests exhaust both two-attempt stages,
+failed. Initialization tests pin 0/1/512 rows, reject 513 and invalid order before
+DB access, roll back run plus items on a transaction failure, and prove one run
+insert plus at most one bulk item insert. A real crash after the atomic commit
+exposes the complete manifest/set only; partial rows fail closed. Dry-run tests exhaust both two-attempt stages,
 pin first-terminal arbitration/body-error precedence, and prove no body retry,
 rollback, resume or native write. Stage/publish phase-upsert failures derive and
 resume outcomes only from immutable raw rows.

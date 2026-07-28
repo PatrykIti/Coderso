@@ -22,8 +22,8 @@ multi-call repair with native domain-local atomic APIs.
 
 The historical physical filename retains `Run-Ledger`, but this leaf is only a
 ledger consumer. L01 exclusively owns the port, concrete persistence, locking and
-listed-row types; L02 owns initialization-plan validation, bounded dry-run
-terminalization orchestration, complete native snapshot capture and saga execution.
+listed-row/initialization-plan types; L02 owns bounded dry-run orchestration,
+complete native snapshot capture, prepared-row mapping and saga execution.
 
 Consume L01's exported ledger port and concrete DB implementation by injection.
 Do not create or edit a `ledger.ts`, redeclare the interface, add another
@@ -511,21 +511,6 @@ export type FullSiteDurableAfterSnapshotV1 = FullSiteNativeSnapshot & Readonly<{
   }>;
 }>;
 
-export type FullSiteInitializationPlanItemV1 = Readonly<{
-  position: number;
-  kind: FullSiteInstallResourceKind;
-  key: string;
-  operation: "create" | "update" | "noop";
-}>;
-export type FullSiteInitializationPlanV1 =
-  readonly FullSiteInitializationPlanItemV1[];
-export function toStrictInitializationPlanV1(
-  prepared: readonly PreparedFullSiteSagaItem[],
-): FullSiteInitializationPlanV1;
-export function readStrictInitializationPlanV1(
-  value: unknown,
-): FullSiteInitializationPlanV1;
-
 export function canonicalizeFullSiteJsonValue(value: JsonValue): string;
 export function fullSiteJsonValuesEqual(
   left: JsonValue,
@@ -552,14 +537,9 @@ order, sorts object keys lexicographically at every depth, and JSON-encodes
 primitives (including `null`); equality compares those canonical strings. L03
 uses decoded-JSONB value equality, never driver text or storage bytes.
 
-That module alone also owns both initialization-plan helpers. The strict plan is a
-frozen array of at most 512 direct plain, exact-four-key items. Positions are
-contiguous zero-based integers and array order is position order; kind/key/
-operation must exactly equal the prepared topological sequence, with no duplicate
-identity, gaps, extras or reorder. The writer never accepts caller JSON. The
-reader rejects proxies, inherited/missing/unknown keys and every invalid scalar,
-kind, operation, position or cardinality with
-`site_package_rollback_invalid_source`; L03 imports this owner read-only.
+L01's port derives and owns the strict initialization manifest from the same
+cloned prepared rows it inserts. L02 supplies no manifest JSON and L03 imports
+L01's strict reader. Any manifest/complete-row mismatch fails closed.
 
 `staging.ts` owns the exact frozen export
 `FULL_SITE_DURABLE_SOURCE_STATUS_PHASES_V1` and
@@ -581,7 +561,7 @@ caught item failure performs no item upsert: the last durable item row remains
 untouched and only the source run is finalized failed; completed items stay
 success.
 
-`prepareFullSiteSaga` receives the planner's exact private frozen `referencePlan`; it is two-pass and completes before `createRun`:
+`prepareFullSiteSaga` receives the planner's exact private frozen `referencePlan`; it is two-pass and completes before `createInitializedRun`:
 
 1. Without native writes, allocate/validate create IDs, use `currentId` for
    update/noop and setting keys, then complete the ID map before resolving refs.
@@ -597,10 +577,12 @@ success.
    top-level `id`/`desired` target inside the durable after envelope; the raw
    before/after JSON values are not equal.
 3. Build all durable after envelopes/V1 actions and validate every before/after/
-   ID invariant; any error returns before `createRun` and ledger/domain writes.
+   ID invariant; any error returns before atomic ledger/domain writes.
 
-Only then may apply create the run. `initializeFullSiteSaga` accepts validated
-`prepared` plus `runId`/ledger, persists it and never prepares. Native writes wait.
+Only then may apply call required `createInitializedRun` once with the complete
+prepared item mapping. Its transaction writes run plus all rows set-based; there
+is no sequential fallback. Failure exposes no run/items and performs zero
+finalize, compensation or native calls.
 
 Remove generic `resolveFullSiteRefs`/`preflightFullSitePlan`; `preflight.ts`
 retains native/current-state helpers, but production never recursively rescans refs.
@@ -662,18 +644,16 @@ with diagnostic `hint:"noop"` and no resolver/native access; create/update call
 `classifyCreateOrUpdateHintByExactId`. L03 still performs all authoritative
 evidence parsing and complete-state refinement.
 
-After preparation succeeds, apply creates the run with
-`rollbackDependencySchemaVersion:1` and the strict `initializationPlanV1` beside
-the package fingerprint, then persists rows in that exact order. L03 uses the
-manifest to distinguish an exact empty/first/middle/full prepared prefix from
-malformed or legacy evidence.
+After preparation, apply passes `rollbackDependencySchemaVersion:1`, package
+metadata and the complete ordered rows to L01. L01 adds the derived manifest
+atomically. L03 accepts only the exact complete set; prefixes are invalid.
 
 L02 alone owns `assertExactDryRunTerminalizationResult`,
 `attemptDryRunTerminalTwice` and `finalizeDryRunBounded`; they consume L01's
 atomic port and never implement SQL. The result validator accepts only a direct
 plain exact-one-key object whose outcome is `desired_terminal` or
 `different_terminal`. Each requested transition stops on either valid outcome
-and retries only a thrown safe failure, at most twice. An initialization/body
+and retries only a thrown safe failure, at most twice. A body
 error is always rethrown unchanged after failed-terminalization attempts. Without
 a primary error, only `desired_terminal` succeeds; an exhausted success request
 gets two attempts to record `failed/site_package_dry_run_finalize_failed`, then
@@ -703,19 +683,17 @@ export async function applyFullSitePackage(input, overrides = {}) {
   // No default/override dependency, lock, ledger, resolver, adapter or DB access yet.
   const ledger = overrides.ledger ?? defaultLegacyInstallLedger;
   const adapters = overrides.adapters ?? FULL_SITE_RESOURCE_ADAPTERS;
+  const rollbackAdapters = overrides.rollbackAdapters ?? FULL_SITE_ROLLBACK_ADAPTERS;
   const execute = async () => {
     const plan = await planFullSiteInstall(
-      input.package, referencePlan, createPlannerDeps(input, overrides, ledger, adapters),
+      input.package, referencePlan, createPlannerDeps(input, overrides, adapters),
     ); // supplied-plan overload: zero builds, exact array identity
     const saga = await prepareFullSiteSaga({ plan, referencePlan, adapters,
       actorId: input.actorId, generateId: () => crypto.randomUUID() });
-    const run = await ledger.createRun(toRunInput(input, {
-      initializationPlanV1: toStrictInitializationPlanV1(saga.prepared),
-    }));
-    await initializeFullSiteSagaOrFinalizeFailed({
-      runId: run.id, prepared: saga.prepared, ledger,
-      mode: input.dryRun ? "dry_run" : "apply",
-    }); // apply prefixes never resume; dry runs use bounded atomic terminalization
+    const run = await ledger.createInitializedRun({
+      ...toInitializedRunInput(input),
+      items: saga.prepared.map(toInitializedLedgerItem),
+    }); // one transaction; one run insert + at most one bulk item insert
     if (input.dryRun) {
       await finalizeDryRunBounded({
         ledger,
@@ -724,9 +702,27 @@ export async function applyFullSitePackage(input, overrides = {}) {
       });
       return toDryRunResult(run, saga);
     }
-    return finishPreparedApply({ input, run, saga, adapters, ledger });
+    return finishPreparedApply({ input, run, saga, adapters, rollbackAdapters, ledger });
   };
   return ledger.withPackageLock ? ledger.withPackageLock(input.package.key, execute) : execute();
+}
+
+function createPlannerDeps(input, overrides, adapters) {
+  return {
+    loadPlanningSnapshot:
+      overrides.loadPlanningSnapshot ??
+      createDefaultFullSitePlanningSnapshotLoader(input.package.key),
+    normalizeDesired: createAdapterPlanningNormalizer(input.actorId, adapters),
+    allowSettingTakeover: input.allowSettingTakeover,
+  }; // one required batch boundary; no per-resource production fallback
+}
+
+function createDefaultFullSitePlanningSnapshotLoader(packageKey) {
+  return createFullSitePlanningSnapshotLoader({
+    packageKey,
+    findManagedResourceEvidenceBatch,
+    readFullSitePlanningResourcesBatch,
+  }); // L01 pure coordinator plus its two production batch read ports
 }
 
 export async function prepareFullSiteSaga({ plan, referencePlan, adapters, generateId, actorId }) {
@@ -774,23 +770,6 @@ export async function prepareFullSiteSaga({ plan, referencePlan, adapters, gener
   }
   assertCompletePreparedSagaEvidence(prepared);
   return { prepared, intendedRegistry };
-}
-export async function initializeFullSiteSaga({ runId, prepared, ledger }) {
-  for (const item of prepared) {
-    await ledger.recordItem(toPreparedLedgerItem(runId, item));
-  }
-}
-async function initializeFullSiteSagaOrFinalizeFailed(input) {
-  try {
-    await initializeFullSiteSaga(input);
-  } catch (error) {
-    if (input.mode === "dry_run") return finalizeDryRunBounded({
-      ledger: input.ledger, runId: input.runId, primaryError: error,
-      desired: { status: "failed", error: safeApplyFailure(error) },
-    });
-    try { await input.ledger.finalizeRun({ runId: input.runId, status: "failed", error: safeApplyFailure(error) }); } catch { /* Initialization error remains primary; never compensate. */ }
-    throw error;
-  }
 }
 function assertExactDryRunTerminalizationResult(value: unknown): FullSiteDryRunTerminalizationResult;
 async function attemptDryRunTerminalTwice(ledger, runId, desired) {
@@ -880,7 +859,7 @@ if (settingMutations.length > 0) {
 // Noop settings took only the zero-read ledger branch and never join the native batch.
 ```
 
-The complete target was durable from persistence-only initialization; phase upserts only record
+The complete target was durable from atomic ledger initialization; phase upserts only record
 transition progress and preserve the same top-level complete snapshot, optional
 staged snapshot and V1 action values.
 
@@ -891,20 +870,21 @@ async function compensateFailedApply(input: CompensateFailedApplyInput) {
   const source = await requireCurrentApplySource(input.run.id, input.ledger);
   const claim = await claimAutomaticRollback(source, input);
   if (claim.state === "busy") throw new Error("site_package_rollback_in_progress");
+  const currentSource = await requireCurrentApplySource(source.id, input.ledger);
   if (claim.state === "complete") {
-    if (source.status !== "failed") throw new Error("site_package_rollback_conflict");
+    if (currentSource.status !== "failed") throw new Error("site_package_rollback_conflict");
     return;
   }
   let successCommitted = false;
   try {
     await compensateItems({
-      ...toCompensationDeps(input, source, claim.id),
-      items: await input.ledger.listRawItems(source.id),
+      ...toCompensationDeps(input, currentSource, claim.id),
+      items: await input.ledger.listRawItems(currentSource.id),
       priorOutcomes: await input.ledger.listRawItems(claim.id),
-      currentSource: source,
+      currentSource,
     }); // unchanged raw sets; final L03 owns zero-native preflight
     await input.ledger.finalizeRun({
-      runId: source.id, status: "failed", error: input.safeApplyError,
+      runId: currentSource.id, status: "failed", error: input.safeApplyError,
     }); // source failure is durable before rollback success
     await input.ledger.finalizeRun({ runId: claim.id, status: "success" });
     successCommitted = true;
@@ -917,10 +897,15 @@ async function compensateFailedApply(input: CompensateFailedApplyInput) {
 }
 ```
 
-After the claim, both raw sets flow unchanged into L03's zero-native preflight; no caller reduces identities, trusts status alone or installs a phase overlay.
+After the claim, a fresh source read under held locks drives compensation and
+source finalization. Both raw sets stay unchanged; no caller reduces identities,
+trusts status or adds an overlay. Tests reject pre-claim reuse.
 The general apply catch invokes compensation only after complete item-set initialization, even with no success phase; durable evidence, not `completed.length`, decides reversal.
-Persistence-only apply initialization has a separate catch: it attempts exactly one safe source `failed` finalization, never claims/creates compensation, preserves the initialization error if finalization fails and never resumes apply. Explicit rollback alone accepts a unique manifest-aligned empty/first/middle/full `planned/prepared` prefix, re-proves create absence and update/noop exact-before state, performs zero native writes, resumes exact prior rollback outcomes, writes one swapped source-faithful success outcome per persisted source row and none for the missing tail, preserves an already-failed source or terminalizes a running source as `site_package_apply_interrupted`, then commits rollback success last.
-Dry-run initialization/completion instead gets two internal atomic terminalization attempts; exhausted success gets two failed-terminalization attempts. First terminal state wins, body work is never retried, primary body error wins, rollback/resume reject dry-run, and fresh apply ownership ignores inert non-success dry-run rows. A later post-compensation source-finalization failure still leaves the rollback run resumable from exact outcomes.
+Atomic initialization failure leaves no run or item and makes zero finalize/
+compensation/native calls. A committed initialization always has its complete
+manifest-aligned set; any prefix is invalid. Dry-run completion gets two bounded
+terminalization attempts; first terminal state wins and body work never retries.
+A later post-compensation source-finalization failure leaves rollback resumable.
 
 Menu Page/item references are resolved before `validateDesired`; the complete resolved Menu (base row, items, document, appearance, extras and draft status) is passed once to `mutateMenuAggregateAtomic`.
 There is no executor-level Menu wiring write before or after that call. Publish is the only later Menu mutation.
@@ -933,10 +918,13 @@ Data flow: normalized input -> actor -> one private graph build -> dependency/lo
 Regression tests cover every operation. A noop first performs mandatory resolution/native validation/complete capture and durable initialization; only its execution branch performs zero resolver/adapter/native reads or writes.
 It registers the current ID and persists equal top-level final state, V1 recovery, null staged target and the `prepared`→`complete` phase-only change.
 L02 and L03 import the shared frozen V1 status/phase export, accept exactly its six rows and reject the remaining Cartesian product/staged-target violations; neither duplicates a local matrix.
-The item-fail catch proves no `failed` item upsert occurs and only run finalization changes. Initialization tests fail before the first and after first/middle/last item writes, prove zero native/compensation calls plus one source-failed attempt, and inject successful/failed source finalization before explicit rollback. They assert strict prefix/cardinality rejection, exact source-faithful prefix outcomes with no missing-tail rows, source terminal result, rollback-success-last and zero native writes. Dry-run tests exhaust both two-attempt terminalization stages, prove first-terminal arbitration, primary-error precedence, no rollback/resume/body retry/native write and fresh-apply exclusion.
-The L02-owned `tests/unit/kits/fullSiteLifecycleUpdates.test.ts` proves typed apply performs zero normalizations and one graph build before any default/override dependency, lock or DB access; graph failure makes zero planner/dependency/lock/DB calls, and public input/deps reject a plan field.
+The item-fail catch leaves the last durable item untouched and changes only run
+finalization. Initialization tests prove one required atomic call, no sequential
+fallback and zero downstream calls on failure. Dry-run tests retain bounded
+terminal arbitration and no body retry.
+The L02-owned `tests/unit/kits/fullSiteLifecycleUpdates.test.ts` proves typed apply performs zero normalizations and one graph build before any default/override dependency, lock or DB access; graph failure makes zero planner/dependency/lock/DB calls, public input/deps reject a plan field, one L01 snapshot loader replaces per-item planning reads, a post-claim source mutation is observed, and an injected rollback registry reaches compensation without default fallback.
 The exact frozen array reaches three-argument planning/preparation with zero rebuild/clone/second walker; this suite does not assert CLI call counts.
-Before `createRun`, every preparation failure proves zero writes; pin complete prepared rows and that retired generic preflight/resolver stays unused. Nested refs persist as IDs.
+Before `createInitializedRun`, every preparation failure proves zero writes; pin complete prepared rows and that retired generic preflight/resolver stays unused. Nested refs persist as IDs.
 Form preflight round-trips `submit.supportingText` and rejects a sibling extra; listing tests reject an extra at every nested record above. Detail tests keep `required:true` plus absent fallback through normalize/target persistence and fail a missing value rather than painting Aurora defaults.
 Every kind has an apply adapter, while only `page`, `content_entry`, `detail_page` and `menu` participate in publish-last. They remain draft until dependencies are wired; menu items/document/appearance precede publish.
 Settings land in one last reversible stage through one required `applySettingsBatchAtomic` call with no per-key fallback; legacy and full-site runs use the same ledger port.
@@ -965,7 +953,7 @@ Additional focused regressions pin:
   public locale resolution, with exact boundary and compatibility tests.
 - [ ] Build the reference graph before ledger/default/lock access, then pass that
   exact array through three-argument planning, two-pass pre-run preparation and
-  persistence-only initialization.
+  one atomic run-and-item initialization.
 - [ ] Implement all nine exact-ID native atomic APIs, atomic conditional delete,
   canonical Form-action Tx path and the locked settings apply/raw-restore batch
   with failure-boundary and race tests.

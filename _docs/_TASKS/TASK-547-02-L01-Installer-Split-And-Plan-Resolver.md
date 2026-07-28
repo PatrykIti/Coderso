@@ -31,7 +31,13 @@ persisted/listed item type.
   plan/ledger/snapshot/dependency types and safe error codes;
 - `core/services/kits/fullSiteInstallPlanner.ts`;
 - `core/services/kits/fullSiteInstall/currentResourceResolver.ts`;
+- `core/services/kits/fullSiteInstall/planningSnapshot.ts` -- Bun-free ordered
+  snapshot coordinator and strict injected batch boundary;
+- `core/services/kits/fullSiteInstall/planningResourceBatchReader.ts` -- bounded
+  DB read model for current native resources;
 - `core/services/kits/legacyInstallRunPersistence.ts` -- stable public facade, concrete-ledger composition, lock owner and compatibility re-exports;
+- `core/services/kits/legacyInstallRunPersistence/runInitialization.ts` -- one
+  transaction plus one set-based prepared-item insert;
 - `core/services/kits/legacyInstallRunPersistence/readPersistence.ts` -- bounded raw/compatibility reads and managed-evidence query implementation;
 - `core/services/kits/legacyInstallRunPersistence/dryRunTerminalization.ts` -- strict input/result validation and atomic dry-run terminal arbitration;
 - `core/services/kits/solutionKitsInstallService.ts`, `kitInstaller.ts`,
@@ -44,9 +50,11 @@ edits these paths.
 **Exact test ownership:**
 
 - `tests/vitest/kits/full-site-install-planner.test.ts`;
+- `tests/vitest/kits/full-site-planning-snapshot.test.ts`;
 - `tests/unit/kits/fullSiteLegacyLedgerComposition.test.ts`;
 - `tests/unit/kits/fullSiteLegacyLedgerReadPersistence.test.ts`;
 - `tests/unit/kits/fullSiteLegacyLedgerDryRunTerminalization.test.ts`;
+- `tests/unit/kits/fullSiteLegacyLedgerRunInitialization.test.ts`;
 - `tests/integration/kits/fullSiteManagedOwnershipDb.test.ts` (new, uniquely
   scoped and independently runnable DB ownership/resolver/history matrix; it
   contains no EXPLAIN profiles, helpers or budget test);
@@ -54,6 +62,9 @@ edits these paths.
   cohesive and independently runnable DB EXPLAIN profile/helper/budget suite);
 - `tests/integration/kits/fullSiteResolverBoundsDb.test.ts` (new, independently
   runnable exact-ID child-boundary suite with only scoped fixtures/cleanup).
+- `tests/integration/kits/fullSitePlanningBaseBatchDb.test.ts`;
+- `tests/integration/kits/fullSitePlanningAggregateBatchDb.test.ts`;
+- `tests/integration/kits/fullSitePlanningNativeExplainDb.test.ts`.
 
 **Forbidden for L01:** every L02 adapter/executor/staging/domain-atomic path and
 test; L03 rollback/compensation/process worker/dependency/crash test paths; task
@@ -152,7 +163,28 @@ export type FullSiteDryRunTerminalizationInput = Readonly<{
 export type FullSiteDryRunTerminalizationResult = Readonly<{
   outcome: "desired_terminal" | "different_terminal";
 }>;
+export type FullSiteInitializedLedgerItemInput = Readonly<{
+  position: number; kind: FullSiteInstallResourceKind; key: string;
+  operation: "create" | "update" | "noop";
+  beforeSnapshot: JsonObject | null; afterSnapshot: JsonObject;
+  rollbackAction: JsonObject;
+}>;
+export type FullSiteInitializedRunInput = Readonly<{
+  packageKey: string; actorId: string; dryRun: boolean;
+  options: JsonObject;
+  items: readonly FullSiteInitializedLedgerItemInput[];
+}>;
+export type FullSiteInitializationPlanV1 = readonly Readonly<{
+  position: number; kind: FullSiteInstallResourceKind; key: string;
+  operation: "create" | "update" | "noop";
+}>[];
+export function readStrictInitializationPlanV1(
+  value: unknown,
+): FullSiteInitializationPlanV1;
 export type FullSiteInstallLedgerPortAdditions = {
+  createInitializedRun(
+    input: FullSiteInitializedRunInput,
+  ): Promise<Readonly<{ id: string }>>;
   terminalizeDryRun(
     input: FullSiteDryRunTerminalizationInput,
   ): Promise<FullSiteDryRunTerminalizationResult>;
@@ -161,8 +193,20 @@ export type FullSiteInstallLedgerPortAdditions = {
 ```
 
 `FullSiteInstallLedgerPortAdditions` is only the changed-member fragment, never a replacement port.
-The final exported `FullSiteInstallLedgerPort` retains the exact existing signatures for `withPackageLock`, `createRun`, `recordItem`, `finalizeRun`, `getRun`, `patchRunMetadata`, `findLatestSuccessfulApplyRun`, `listItems`, `createRollbackRun`, `claimRollbackRun`, `findAutomaticCompensationRun`, `hasSuccessfulRollback` and `findManagedResourceEvidence`, then adds both members above.
+The final exported `FullSiteInstallLedgerPort` retains the exact existing signatures for `withPackageLock`, `createRun`, `recordItem`, `finalizeRun`, `getRun`, `patchRunMetadata`, `findLatestSuccessfulApplyRun`, `listItems`, `createRollbackRun`, `claimRollbackRun`, `findAutomaticCompensationRun`, `hasSuccessfulRollback` and `findManagedResourceEvidence`, then adds all three members above.
 Type gates compile every read/facade `Pick` and the default full composition.
+
+`createInitializedRun(value: unknown)` is required without a sequential fallback.
+Before DB it safely rejects Proxy/accessor/cyclic input and requires direct plain
+exact-key run/items: actor UUID, canonical package key, boolean `dryRun`, plain
+JSON options/snapshots/actions, 0..512 contiguous valid items and unique
+`kind:key`; caller `options.initializationPlanV1` is forbidden. Invalid input is
+cause-free `site_package_invalid`; item 513 is cause-free
+`site_package_too_large`, both before a transaction. The port clones items,
+derives the manifest, then writes the run plus one set-based insert on one
+transaction handle. DB/commit failure rolls back both row families and throws
+cause-free `site_package_ledger_initialization_failed`. Existing `createRun`/
+`recordItem` remain for legacy/rollback and later phase upserts.
 
 The builder rejects self/invalid identities and emits unique sorted dependencies.
 The strict reader allows only `schemaVersion`/`dependencies`, returns `null` for
@@ -194,6 +238,7 @@ L01 also adds the safe codes `site_package_recovery_missing_intended_id`,
 `site_package_rollback_dependency_invalid`,
 `site_package_rollback_dependency_blocked` and
 `site_package_rollback_ledger_failed`, plus
+`site_package_ledger_initialization_failed`,
 `site_package_dry_run_finalize_failed`,
 `page_revision_snapshot_too_large`, `entry_revision_snapshot_too_large` and
 `detail_page_revision_snapshot_too_large`, before L02/L03 consume them.
@@ -213,35 +258,45 @@ export type FullSiteCurrentResourceResolver = (
 ) => Promise<CurrentResourceState | null>;
 ```
 
-The optional fourth argument is a gate-compatible evidence handoff, not a new
-authority source. Existing two-argument direct calls and three-argument
-exact-ID calls remain source-compatible. Its frozen tri-state meaning is:
+The optional fourth argument remains a direct/recovery compatibility handoff,
+not a planning API. Existing two-argument direct calls and three-argument exact-
+ID calls stay source-compatible. Omitted means the resolver may perform its
+legacy single evidence lookup; object/null means the caller supplied the exact
+result and no second lookup is allowed. The production planner never calls this
+single-resource resolver and has no per-item fallback.
 
-- omitted/`undefined`: legacy or direct resolver mode; the concrete resolver may
-  perform its existing ledger lookup;
-- a `ManagedResourceEvidence` object: the caller already completed the lookup
-  and the concrete resolver must use exactly that result;
-- explicit `null`: the caller already completed the lookup and proved there is
-  no evidence; the concrete resolver must not query the ledger again.
+Planning instead owns this Bun-free injected boundary:
 
-The three-argument planner resolves evidence once per supplied identity; the
-two-argument overload first builds once. Both retain object-or-null and call
-`resolveCurrentResource(kind, inspectionSeed, undefined, evidence)`. The concrete
-resolver performs zero evidence queries in that mode, including for entry parents.
-Resolve the parent from the already-inspected dependency in canonical DAG order
-(using an inspection-only seed/context and leaving the authored package seed
-unchanged); do not turn the parent reference into another ledger read. Therefore
-the planner plus the concrete resolver performs exactly `ordered.length`
-`findManagedResourceEvidence` calls, not twice that count or one extra call per
-entry dependency.
+```ts
+export type FullSitePlanningSnapshotRow = Readonly<{
+  identity: FullSiteResourceIdentity;
+  evidence: Readonly<{ runId: string; resourceId: string }> | null;
+  current: CurrentResourceState | null;
+}>;
+export type FullSitePlanningSnapshotLoader = (
+  resources: readonly PlannedPackageResource[],
+) => Promise<readonly FullSitePlanningSnapshotRow[]>;
+```
+
+Both planner overloads call the loader exactly once after graph construction.
+It accepts at most 512 unique ordered identities and returns the same cardinality,
+identity and order; duplicates, omissions, extras or reorder fail closed before
+operation construction. Bun-free `planningSnapshot.ts` receives both production
+readers by injection and imports no DB/runtime module; L02 `execute.ts` owns the
+default composition. Native reads use at most one
+base statement per nonempty kind plus three aggregate-child statements, so the
+complete plan costs at most 14 SQL statements independent of resource count.
+Content entries form a bounded second wave after content-type IDs resolve; no
+dependency causes a ledger lookup. Child rows use stable parent/order/id ordering
+and per-parent cap+1 rejection before projection.
 
 - when `expectedId` is supplied, query only that ID constrained by the seed's
   natural identity (and parent content-type identity for entries); return `null`
   on any mismatch and never fall back to evidence or a natural-key row. The
   fourth argument cannot authorize a fallback. L02/L03 keep their existing
   three-argument exact-ID calls and recovery semantics unchanged;
-- without `expectedId`, check current ledger evidence by exact ID first, then use
-  the natural-key query solely to expose unmanaged collisions during planning;
+- without `expectedId`, direct compatibility mode checks evidence by exact ID,
+  then a natural-key row; planning natural collisions belong only to the batch reader;
 - every natural-key query has `ORDER BY id ASC LIMIT 1`, including JSON-name
   detail lookup, so duplicate-capable domains have a stable tie-break;
 - managed-evidence selection remains total-order deterministic:
@@ -362,67 +417,39 @@ keep strict expected-ID/null plus deterministic natural-lookup DB regressions.
 
 ## Bounded Managed-Evidence Query
 
-`legacyInstallRunPersistence/readPersistence.ts` owns one testable query-builder seam,
+`legacyInstallRunPersistence/readPersistence.ts` owns one batch read-port seam:
 
 ```ts
-export const buildManagedResourceEvidenceQuery = (input: {
+export const findManagedResourceEvidenceBatch = async (input: Readonly<{
   packageKey: string;
-  kind: FullSiteInstallResourceKind;
-  key: string;
-}) => /* one executable Drizzle SELECT, bounded to zero or one row */;
+  resources: readonly Readonly<{
+    identity: FullSiteResourceIdentity;
+    kind: FullSiteInstallResourceKind;
+    key: string;
+  }>[];
+}>): Promise<readonly Readonly<{
+  identity: FullSiteResourceIdentity;
+  evidence: Readonly<{ runId: string; resourceId: string }> | null;
+}>[]>;
 ```
 
-`findManagedResourceEvidence(input)` awaits that builder exactly once. The
-default query is one SQL statement per identity, not a candidate read followed
-by rollback reads. Its frozen access path is run-driven: `candidateRun`, filtered
-to the requested package plus `mode = apply` and `status = success`, is the
-driving relation. For each such run, `innerJoinLateral` (or an exact Drizzle
-equivalent that compiles to the same correlated `INNER JOIN LATERAL`) performs a
-narrow `candidateItem` lookup correlated by
-`candidateItem.runId = candidateRun.id`. That lookup filters the requested
-resource kind/key, item `status = success` and operation `create|update`, orders
-by item `createdAt DESC`, item ID DESC, and has `LIMIT 1`. It projects only the
-item ID and the item ordering field required by the enclosing winner query,
-explicitly SQL-aliased as `candidate_item_id` and
-`candidate_item_created_at`; it must not materialize `afterSnapshot`.
+Input validation accepts 0..512 unique canonical identities and preserves request
+ordinal. One bound SQL statement materializes that request relation and performs
+the existing run-driven correlated-lateral winner lookup per request. It keeps
+the exact successful apply/item filters, five-field total order and combined
+rollback invalidation rule: a successful rollback invalidates the source run;
+a successful matching outcome invalidates that identity in a running/failed run.
+Only the winning item's JSON `id` scalar is projected as `resourceId`; wide
+`afterSnapshot`/desired JSON never leaves SQL. A left lateral join emits exactly
+one ordered result per request, using explicit nulls for no evidence. Unknown,
+duplicate, missing, extra or reordered results fail before planning.
 
-The run-driven winner query contains exactly one combined correlated invalidation
-anti-join: `NOT EXISTS` a rollback run correlated by
-`rollbackOfRunId = candidateRun.id` with mode `rollback` where rollback status is
-`success OR EXISTS` a rollback item belonging to that rollback run with the same
-requested resource kind/key and status `success`. From the run plus its one
-lateral item, the winner explicitly SQL-aliases its run ID as
-`candidate_run_id`, carries the lateral `candidate_item_id` and
-`candidate_item_created_at` fields as distinct derived columns, applies the
-exact total order -- run `createdAt DESC`, run `updatedAt DESC`, run ID DESC,
-item `createdAt DESC`, item ID DESC -- through qualified source fields or those
-exact aliases, and has its own `LIMIT 1`. Only the outer fetch may select
-`candidate_run_id`, join the winning item table row through
-`candidate_item_id`, and project that one row's wide `afterSnapshot`.
-
-The successful-run branch invalidates the whole source run even without an
-outcome item. The nested matching-item branch invalidates that identity regardless
-of whether its parent rollback run is `success`, `failed` or `running`. A
-failed/running rollback without a successful matching item remains eligible. Do
-not drive the winner from candidate items, build source-run ID arrays, use an
-unbounded candidate result, load every `afterSnapshot`, or issue follow-up
-rollback queries. The compiled
-`buildManagedResourceEvidenceQuery(input).toSQL()` statement is the structural
-regression seam for the candidate-run driving relation and filters, the
-run-correlated `INNER JOIN LATERAL`, its item correlation/filters/two-field order
-and per-run `LIMIT 1`, the one rollback-run-correlated `NOT EXISTS`, its
-status-success `OR` nested matching-item `EXISTS`, the exact five-field winner
-order and winner `LIMIT 1`, and the outer-only winning `afterSnapshot`
-projection. The compiled-shape gate must assert the exact derived SQL aliases
-`candidate_item_id`, `candidate_item_created_at` and `candidate_run_id`, and
-must fail if derived-table construction/compilation reports duplicate `id`
-columns or if the compiled lateral/winner projections expose duplicate or
-unaliased generic `id` columns instead. The structural assertion locates the
-two lateral item-order terms and proves `candidate_item_created_at DESC`
-occurs before `candidate_item_id DESC`, before that lateral subquery's
-`LIMIT 1`; merely proving that both strings occur is insufficient. Do not
-depend on unavailable driver-level query counters. Runtime DB fixtures
-separately prove selection semantics.
+Compatibility `findManagedResourceEvidence(input)` retains its separate bounded
+single-identity read model and full legacy `desired` result for direct/recovery
+callers; the planner never invokes it. Structural tests compile the production batch
+statement and pin the bounded request CTE/ordinal, run-driven lateral limits,
+combined invalidation anti-join, stable aliases/order and absence of follow-up
+queries. Runtime fixtures prove winner semantics for 1 and 512 identities.
 
 ### Conditional No-Migration EXPLAIN Gate
 
@@ -451,7 +478,7 @@ winner at ordinal 192 and measured 2.367 ms execution time, 1 root emitted row,
 large-profile budgets. These sanitized diagnostics freeze the lateral access
 path but do not complete the gate. They indicate that no new index is needed, so
 no SQL migration, snapshot or journal artifact is added now. The no-migration
-decision remains conditional and may be retained only after BOTH frozen profiles
+decision remains conditional and may be retained only after all frozen profiles
 below execute the exact production run-driven lateral query and pass every frozen
 budget; a passing standalone diagnostic is insufficient.
 
@@ -467,7 +494,7 @@ depends on another test module's initialization, and each must run independently
 and remain at most 1,000 physical lines.
 
 That helper compiles the exact production
-`buildManagedResourceEvidenceQuery(input).toSQL()` SQL and parameters and runs
+`buildManagedResourceEvidenceBatchQuery(input).toSQL()` SQL and parameters and runs
 that same run-driven correlated-lateral bounded SELECT as
 `EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON) <compiled SQL>`. Parameters remain bound
 through the database driver; never interpolate fixture values into SQL. Run the
@@ -478,6 +505,7 @@ scope for each package/resource identity:
 | --- | --- | ---: | ---: | ---: | ---: |
 | Small | 16 successful apply run/item candidates + 8 rollback runs / 6 rollback items | <= 100 ms | <= 1 | <= 2,000 | <= 2,048 |
 | Bounded large | 512 successful apply run/item candidates + 256 rollback runs / 192 rollback items | <= 250 ms | <= 1 | <= 20,000 | <= 20,480 |
+| Batch width | 512 identities with one eligible candidate each | <= 1,000 ms | <= 512 | <= 100,000 | <= 100,000 |
 
 Split each rollback set evenly across: a successful rollback with no required
 outcome item, a failed rollback with a matching successful item, a running
@@ -491,7 +519,8 @@ to the preallocated expected run/resource IDs without an assertion-library
 object diff; any mismatch throws only the fixed sanitized
 `managed_evidence_explain_winner_mismatch` code and must not expose UUIDs,
 package/resource keys, snapshots or query data. The 512-candidate profile
-is a conservative one-identity history stress fixture aligned with the package's
+is a conservative one-identity history stress fixture; the width profile separately
+pins the package's
 512-resource planning ceiling; it is an evidence bound, not a retention limit.
 
 Parse the JSON plan through one pure `parseManagedEvidenceExplainMetrics`
@@ -568,9 +597,16 @@ cleanup that deletes only those item IDs and then those run IDs, including a
 partial-seed/assertion failure. Never clean up by a broad package/resource
 predicate and never depend on global table emptiness.
 
-This measured gate is additive: the source-level single-builder-execution guard,
-compiled query-shape assertions and planner/concrete-resolver exact call-count
-test remain mandatory. If either profile exceeds any budget or exposes an
+`fullSitePlanningNativeExplainDb.test.ts` independently compiles every production
+base/child batch shape, including the detail JSON-name predicate, and measures
+representative one-request plus 512-request fixtures. Each statement must stay
+within 1,000 ms server execution, its documented request/child cap, 100,000
+scanned-row work and 100,000 root shared buffers. It reuses the pure parser but
+imports no sibling test; summaries remain sanitized.
+
+This measured gate is additive: compiled batch-shape assertions, exactly one
+planner snapshot-loader call and the `<= 14` query-count regression remain
+mandatory. If any profile exceeds a budget or exposes an
 unbounded plan, the no-migration claim fails: stop L01 and re-audit this contract
 for the required index plus complete SQL/snapshot/journal artifacts. Do not make
 the test pass by reducing fixtures, raising ceilings, weakening the scanned-row
@@ -585,7 +621,7 @@ unknown fields and unbounded arrays. The content-entry equality query never
 selects or materializes the hashed `accessPassword`; a later projection/drop is
 not sufficient. Page/detail equality reads omit unused published document bodies.
 No public endpoint is added. This contract retains no database migration only
-after the managed-evidence EXPLAIN gate above proves the current indexes stay
+after the managed/native EXPLAIN gates above prove the current indexes stay
 within every frozen budget; failure requires contract re-audit before
 implementation continues. No RBAC/CSRF/rate-limit change, secret snapshot or
 cross-domain transaction is introduced.
@@ -612,37 +648,44 @@ export async function planFullSiteInstall(pkg, referencePlanOrDeps, maybeDeps) {
     ? [buildReferencePlan(pkg), referencePlanOrDeps]
     : [referencePlanOrDeps, maybeDeps];
   // `ordered` exists before the first deps read; the supplied array is used as-is.
-  const evidenceByIdentity = new Map(await Promise.all(ordered.map(async (resource) => [
-    resource.identity,
-    await deps.ledger.findManagedResourceEvidence({
-      packageKey: pkg.key,
-      kind: resource.kind,
-      key: resource.key,
-    }),
-  ])));
-  const inspected = [];
-  const resolvedDependencyIds = new Map();
-  for (const resource of ordered) {
-    const evidence = evidenceByIdentity.get(resource.identity) ?? null;
-    const inspectionSeed = {
-      key: resource.key,
-      desired: resolvePlannedPackageResourceRefs(resource, resolvedDependencyIds),
-    };
-    const current = await deps.resolveCurrentResource(
-      resource.kind,
-      inspectionSeed,
-      undefined,
-      evidence,
-    );
-    inspected.push({ resource, current, evidence });
-    resolvedDependencyIds.set(resource.identity, current?.id ?? stablePlanningPlaceholder(resource));
-  }
+  const snapshot = assertExactPlanningSnapshot(
+    ordered,
+    await deps.loadPlanningSnapshot(ordered), // exactly one call; no fallback
+  );
+  const inspected = snapshot.map((row, index) => ({
+    resource: ordered[index], current: row.current, evidence: row.evidence,
+  }));
   return buildOperations(inspected, {
     normalizeDesired: deps.normalizeDesired,
     createdResourceIdentities: new Set(inspected.filter(({ current }) => !current).map(({ resource }) => resource.identity)),
     unmanaged: "conflict",
     allowSettingTakeover: deps.allowSettingTakeover,
   });
+}
+
+export const createFullSitePlanningSnapshotLoader = (deps: Readonly<{
+  packageKey: string;
+  findManagedResourceEvidenceBatch: ManagedResourceEvidenceBatchReader;
+  readFullSitePlanningResourcesBatch: FullSitePlanningResourceBatchReader;
+}>) => async (resources) => {
+  const requests = readExactPlanningRequests(resources); // max 512, unique/order
+  const evidence = await deps.findManagedResourceEvidenceBatch({
+    packageKey: deps.packageKey,
+    resources: requests.map(toEvidenceRequest),
+  }); // exactly one SQL statement
+  const current = await deps.readFullSitePlanningResourcesBatch({
+    resources: requests,
+    evidence,
+  }); // <= one base query/kind + three child queries
+  return freezeAndValidatePlanningSnapshot(requests, evidence, current);
+};
+
+export async function readFullSitePlanningResourcesBatch(input) {
+  const grouped = groupBoundedRequestsByKind(input); // authored array stays unchanged
+  const baseRows = await readNonEmptyKindGroups(grouped); // fixed query shapes
+  const entryRows = await readEntriesAfterContentTypeIds(grouped, baseRows);
+  const children = await readAggregateChildrenCapPlusOne(baseRows);
+  return projectExactOrderedCurrentStates(input.resources, baseRows, entryRows, children);
 }
 ```
 
@@ -670,30 +713,23 @@ export async function listSolutionKitInstallItems(runId: string): Promise<Soluti
   const rows = await db.select().from(solutionKitInstallItems).where(eq(solutionKitInstallItems.runId, runId))
     .orderBy(asc(solutionKitInstallItems.position), asc(solutionKitInstallItems.id)).limit(PACKAGE_LIMITS.resourcesTotal + 1);
   if (rows.length > PACKAGE_LIMITS.resourcesTotal) throw new Error("site_package_too_large"); return rows.map(normalizeItemRow); }
-const readSnapshotId = (value: unknown): string | null => isRecord(value) && typeof value.id === "string" ? value.id : null;
-const readDesiredSnapshot = (value: unknown): JsonObject => isRecord(value) && isRecord(value.desired) ? value.desired as JsonObject : isRecord(value) ? value as JsonObject : {};
-export const buildManagedResourceEvidenceQuery = (input: ManagedEvidenceInput) => {
-  const candidateItem = aliasedTable(solutionKitInstallItems, "managed_candidate_item"); const candidateRun = aliasedTable(solutionKitInstallRuns, "managed_candidate_run");
-  const rollbackRun = aliasedTable(solutionKitInstallRuns, "managed_rollback_run"); const rollbackItem = aliasedTable(solutionKitInstallItems, "managed_rollback_item");
-  const candidateItemId = sql<string>`${candidateItem.id}`.as("candidate_item_id"); const candidateItemCreatedAt = sql<Date>`${candidateItem.createdAt}`.as("candidate_item_created_at");
-  const candidateItemForRun = db.select({ candidateItemId, candidateItemCreatedAt }).from(candidateItem)
-    .where(and(eq(candidateItem.runId, candidateRun.id), eq(candidateItem.resourceType, input.kind as PersistedResourceType),
-      eq(candidateItem.resourceKey, input.key), eq(candidateItem.status, "success"), inArray(candidateItem.operation, ["create", "update"])))
-    .orderBy(desc(candidateItemCreatedAt), desc(candidateItemId)).limit(1).as("managed_candidate_item_for_run");
-  const matchingSuccessfulRollbackItem = db.select({ one: sql<number>`1` }).from(rollbackItem).where(and(eq(rollbackItem.runId, rollbackRun.id),
-    eq(rollbackItem.resourceType, input.kind as PersistedResourceType), eq(rollbackItem.resourceKey, input.key), eq(rollbackItem.status, "success")));
-  const invalidatingRollbackRun = db.select({ one: sql<number>`1` }).from(rollbackRun).where(and(eq(rollbackRun.rollbackOfRunId, candidateRun.id),
-    eq(rollbackRun.mode, "rollback"), or(eq(rollbackRun.status, "success"), exists(matchingSuccessfulRollbackItem))));
-  const candidateRunId = sql<string>`${candidateRun.id}`.as("candidate_run_id");
-  const winner = db.select({ candidateRunId, candidateItemId: candidateItemForRun.candidateItemId, candidateItemCreatedAt: candidateItemForRun.candidateItemCreatedAt })
-    .from(candidateRun).innerJoinLateral(candidateItemForRun, sql`true`).where(and(eq(candidateRun.kitId, input.packageKey), eq(candidateRun.mode, "apply"), eq(candidateRun.status, "success"), notExists(invalidatingRollbackRun)))
-    .orderBy(desc(candidateRun.createdAt), desc(candidateRun.updatedAt), desc(candidateRunId), desc(candidateItemForRun.candidateItemCreatedAt), desc(candidateItemForRun.candidateItemId)).limit(1).as("managed_resource_winner");
-  return db.select({ runId: winner.candidateRunId, afterSnapshot: solutionKitInstallItems.afterSnapshot }).from(winner).innerJoin(solutionKitInstallItems, eq(solutionKitInstallItems.id, winner.candidateItemId));
+export const buildManagedResourceEvidenceBatchQuery = (input: ManagedEvidenceBatchInput) =>
+  buildRequestOrdinalCte(input.resources)
+    .leftJoinLateral(buildRunDrivenWinnerForRequest(input.packageKey))
+    .select({ ordinal: request.ordinal, runId: winner.runId,
+      resourceId: sql`${winner.afterSnapshot}->>'id'` })
+    .orderBy(asc(request.ordinal)); // one bounded statement; no wide JSON result
+export const findManagedResourceEvidenceBatch = async (value: unknown) => {
+  const input = readExactManagedEvidenceBatchInput(value, PACKAGE_LIMITS.resourcesTotal);
+  const rows = await buildManagedResourceEvidenceBatchQuery(input);
+  return readExactOrderedManagedEvidenceBatch(rows, input.resources);
 };
-export const findManagedResourceEvidence = async (input: ManagedEvidenceInput): Promise<ManagedResourceEvidence | null> => {
-  const [row] = await buildManagedResourceEvidenceQuery(input); if (!row) return null; const resourceId = readSnapshotId(row.afterSnapshot); if (!resourceId) return null;
-  return { runId: row.runId, resourceId, desired: readDesiredSnapshot(row.afterSnapshot), successful: true, rolledBack: false };
-};
+// Direct/recovery compatibility retains its existing one-identity query/result.
+export const findManagedResourceEvidence = async (
+  input: ManagedEvidenceInput,
+): Promise<ManagedResourceEvidence | null> => readSingleManagedEvidence(
+  await buildManagedResourceEvidenceQuery(input),
+);
 const projectCompatibilityItems = (items: SolutionKitInstallItemRecord[]): PersistedFullSiteInstallLedgerItem[] => items
   .filter((item) => item.operation === "create" || item.operation === "update" || item.operation === "noop").map((item) => ({ position: item.position,
     kind: item.resourceType as FullSiteInstallResourceKind, key: item.resourceKey, operation: item.operation as "create" | "update" | "noop", status: item.status,
@@ -707,6 +743,29 @@ export const createLegacyInstallReadPersistence = (): ReadPersistence => ({
       .from(solutionKitInstallItems).where(eq(solutionKitInstallItems.runId, runId)).orderBy(asc(solutionKitInstallItems.position), asc(solutionKitInstallItems.id)).limit(PACKAGE_LIMITS.resourcesTotal + 1);
     if (rows.length > PACKAGE_LIMITS.resourcesTotal) throw new Error("site_package_rollback_invalid_source"); return rows;
   }, findManagedResourceEvidence,
+});
+// legacyInstallRunPersistence/runInitialization.ts
+export const createRunInitialization = (
+  database: Pick<typeof db, "transaction"> = db,
+): Pick<FullSiteInstallLedgerPort, "createInitializedRun"> => ({
+  async createInitializedRun(value: unknown) {
+    const input = cloneAndValidateInitializedRunInput(value); // 0..512, exact order
+    const options = withDerivedInitializationPlan(input.options, input.items);
+    try {
+      return await database.transaction(async (tx) => {
+        const now = new Date();
+        const [run] = await tx.insert(solutionKitInstallRuns).values(
+          toInitializedRunRow(input, options, now),
+        ).returning({ id: solutionKitInstallRuns.id });
+        if (!run) throw new Error("site_package_ledger_initialization_failed");
+        if (input.items.length > 0) await tx.insert(solutionKitInstallItems)
+          .values(input.items.map((item) => toInitializedItemRow(run.id, item, now)));
+        return Object.freeze({ id: run.id });
+      });
+    } catch {
+      throw new Error("site_package_ledger_initialization_failed"); // no cause
+    }
+  },
 });
 // legacyInstallRunPersistence/dryRunTerminalization.ts; this is the only extracted child that imports readPersistence.ts.
 import { and, asc, eq } from "drizzle-orm"; import { db } from "../../../db/client";
@@ -737,7 +796,8 @@ export const createDryRunTerminalization = (overrides: Partial<DryRunDependencie
 import type { FullSiteInstallLedgerPort } from "./fullSiteInstallTypes";
 import { buildSummary, createLegacyInstallReadPersistence, listSolutionKitInstallItems, normalizeItemRow } from "./legacyInstallRunPersistence/readPersistence";
 import { createDryRunTerminalization } from "./legacyInstallRunPersistence/dryRunTerminalization";
-export { buildManagedResourceEvidenceQuery, buildSummary, findManagedResourceEvidence, listSolutionKitInstallItems, normalizeItemRow } from "./legacyInstallRunPersistence/readPersistence";
+import { createRunInitialization } from "./legacyInstallRunPersistence/runInitialization";
+export { buildManagedResourceEvidenceBatchQuery, buildManagedResourceEvidenceQuery, buildSummary, findManagedResourceEvidence, findManagedResourceEvidenceBatch, listSolutionKitInstallItems, normalizeItemRow } from "./legacyInstallRunPersistence/readPersistence";
 type FacadePersistence = Pick<FullSiteInstallLedgerPort, "withPackageLock" | "createRun" | "recordItem" | "finalizeRun" | "getRun" | "patchRunMetadata" | "findLatestSuccessfulApplyRun" | "createRollbackRun" | "claimRollbackRun" | "findAutomaticCompensationRun" | "hasSuccessfulRollback">;
 type FacadeHandler<K extends keyof FacadePersistence> = NonNullable<FacadePersistence[K]>;
 declare const createFullSiteRun: FacadeHandler<"createRun">; declare const recordFullSiteItem: FacadeHandler<"recordItem">; declare const finalizeFullSiteRun: FacadeHandler<"finalizeRun">; declare const getFullSiteRun: FacadeHandler<"getRun">;
@@ -749,112 +809,75 @@ const createLegacyWriteAndLockPersistence = (): FacadePersistence => ({ withPack
   findAutomaticCompensationRun: findAutomaticFullSiteCompensationRun, hasSuccessfulRollback: hasSuccessfulFullSiteRollback });
 type LegacyInstallLedgerOverrides = Readonly<{ dryRunTerminalization?: Parameters<typeof createDryRunTerminalization>[0] }>;
 export const createLegacyInstallLedger = (overrides: LegacyInstallLedgerOverrides = {}): FullSiteInstallLedgerPort => ({ ...createLegacyWriteAndLockPersistence(),
-  ...createLegacyInstallReadPersistence(), ...createDryRunTerminalization(overrides.dryRunTerminalization) });
+  ...createLegacyInstallReadPersistence(), ...createRunInitialization(),
+  ...createDryRunTerminalization(overrides.dryRunTerminalization) });
 export const defaultLegacyInstallLedger = createLegacyInstallLedger();
 // fullSiteLegacyLedgerReadPersistence.test.ts moves (never copies) both named composition cases.
 import { expect, test } from "bun:test"; import { randomUUID } from "node:crypto"; import { fileURLToPath } from "node:url";
 const readSource = (path: string): Promise<string> => Bun.file(fileURLToPath(new URL(path, import.meta.url))).text();
 type ReadPersistenceModule = typeof import("../../../core/services/kits/legacyInstallRunPersistence/readPersistence");
-test("managed evidence uses one bounded executable SELECT", async () => {
+test("managed evidence batch uses one bounded ordered SELECT", async () => {
   const readModule: ReadPersistenceModule = await import("../../../core/services/kits/legacyInstallRunPersistence/readPersistence");
   const sourcePath = "../../../core/services/kits/legacyInstallRunPersistence/readPersistence.ts"; const source = await readSource(sourcePath);
-  const start = source.indexOf("export const findManagedResourceEvidence"); const end = source.indexOf("\nexport const createLegacyInstallReadPersistence", start); const implementation = source.slice(start, end);
-  expect(start).toBeGreaterThanOrEqual(0); expect(end).toBeGreaterThan(start); expect(implementation.match(/buildManagedResourceEvidenceQuery/g)).toHaveLength(1); expect(implementation).toMatch(/const \[row\] = await buildManagedResourceEvidenceQuery\(input\)/);
-  const query = readModule.buildManagedResourceEvidenceQuery({ packageKey: `query-shape-${randomUUID()}`, kind: "form", key: "bounded-evidence" }); // retain current lines 445-508 compiled assertions exactly
+  const query = readModule.buildManagedResourceEvidenceBatchQuery({
+    packageKey: `query-shape-${randomUUID()}`,
+    resources: makeCanonicalRequests(512),
+  });
+  assertCompiledBatchShape(query.toSQL());
 });
 test("shared ledger preserves omitted V1 evidence and honors an explicit null clear", async () => { /* move current lines 734-772 exactly */ });
 test("old construction literals and required rollbackAction remain compatible", async () => { /* exact matrix above */ }); test("listRawItems preserves hostile raw values/order and rejects row 513", async () => { /* exact matrix above */ });
 // fullSiteLegacyLedgerDryRunTerminalization.test.ts owns hostile/state/race/ambiguousCommitMatrix with local clients/harness only.
+// fullSiteLegacyLedgerRunInitialization.test.ts owns 0/1/512, exact-key/scalar/
+// Proxy/accessor/cycle/513, two-DML rollback and exact cause-free errors.
 ```
 Every declared `FacadeHandler` takes the matching current `createLegacyInstallLedger` method body from lines 709-939; only extraction and names change, and no child duplicates those bodies.
-Allowed dependency edges are facade -> both modules and dry terminalization -> read persistence (`buildSummary`) only; reverse edges, sibling-test imports and duplicate helper/case bodies are forbidden.
-The composition suite deletes rather than copies the named moved cases, retains facade/catalog, lock, resolver projection, metadata and DB-harness ownership, updates its exact L01-owned-file inventory with both child modules and focused suites, and neither focused suite imports the other or `fullSiteLegacyLedgerComposition.test.ts`. Both `full-site-install-planner.test.ts` construction literals add the new raw-read and dry-run methods with typed zero-write fakes; later-leaf fake ledgers remain untouched until their owning phase.
+Allowed dependency edges are facade -> three persistence children and dry terminalization -> read persistence (`buildSummary`) only; reverse edges, sibling-test imports and duplicate bodies are forbidden.
+The composition suite moves rather than copies focused cases, retains facade/catalog, lock, resolver projection, metadata and DB-harness ownership, and updates its exact inventory. Planner fake ledgers add raw-read, dry-run and required atomic-initialization methods; later-leaf fakes update in their owning phases.
 
-Data flow: apply-supplied or direct-call-pre-read DAG -> total-order ledger evidence -> strict expected-ID/deterministic collision read -> native desired projection -> stable create/update/noop/conflict with unchanged dependencies.
+Data flow: DAG -> one ordered batch snapshot -> strict managed/natural current state -> stable create/update/noop/conflict; direct exact-ID resolution stays separate.
 Errors: existing conflict/not-found/invalid codes plus exact safe `site_package_too_large`; zero planning writes except requested dry-run evidence.
 
 L01 uses the graph-owner descriptor resolver/`normalizeDesired`; any descriptor targeting a planned create forces update even on placeholder equality; native preparation reuses the plan with actual IDs.
 
-Pure planner regressions pin two-arg pre-dependency build, three-arg frozen-array identity/no build, and false-noop prevention when current desired equals a create target's deterministic placeholder; L02 proves no public plan field.
-DB-backed managed-identity cases belong exclusively to L01's `tests/integration/kits/fullSiteManagedOwnershipDb.test.ts`: natural-key-only conflict, strict expected ID with no natural fallback, deterministic duplicate natural-key tie-break, mismatched snapshot ID, noop/failed/rolled-back runs, timestamp-tied evidence, matching successful ID plus normalized full-desired noop, intended managed update, and setting-takeover isolation.
-Add a bounded historical matrix with many successful apply candidates and mixed rollback runs: exclude newest invalid candidates through either branch of the same combined predicate -- a successful rollback run without an item, or a matching successful item in a failed/running rollback run -- while a failed/running rollback without a successful matching item remains eligible and the exact ordered winner is returned.
-Assert the compiled single-statement seam above rather than opaque driver instrumentation. Separately owned `tests/integration/kits/fullSiteManagedEvidenceExplainDb.test.ts` contains only the extracted EXPLAIN profiles, metrics/parsers, fixture helper, named budget test and sanitized summary.
-Preserve the exact measured profiles, budgets, production query compilation and parameter binding during extraction; do not re-baseline or simplify them.
-The independent `fullSiteResolverBoundsDb.test.ts` invokes the concrete resolver through strict exact parent IDs and owns six boundary cases: form fields, form actions and menu items at exact 100/256 cap succeed with the complete canonical desired child set, while each cap+1 fixture rejects only with exact `Error("site_package_too_large")`, never a truncated/noop result.
-It imports no sibling test/fixture; each case enters `try/finally` before its first write, preallocates and records exact table-specific parent/child IDs before bulk inserts, and cleans only those child IDs then parent IDs. Partial seed failure is safe, no broad predicate/global-empty assumption is allowed, and the file/direct Bun command uses `360_000`/`360000` ms.
-The planner/concrete-resolver integration counts `findManagedResourceEvidence`
-calls for a dependency-bearing package and proves the count equals planned identities, with explicit object and null handoffs.
-A separate concrete-resolver regression wraps that reader, invokes the concrete resolver with exactly `(kind, seed)`, and proves one self-evidence lookup; planner wrappers and three/four-argument calls do not satisfy this gate.
-The pure reader suite retains every v18 case and adds the revoked array, three throwing envelope traps, four invalid numeric lengths and exact-4,096 success.
-Each hostile input captures one call under `not.toThrow`, asserts `null`, and never calls twice; the valid envelope proves one dependency-property read.
-The three resolver projection source-shape assertions belong in the Bun-owned
-`fullSiteLegacyLedgerComposition.test.ts`; do not import the DB-coupled resolver
-into the pure Vitest planner lane merely to inspect its source.
-The independently runnable `fullSiteLegacyLedgerReadPersistence.test.ts` gate
-compiles old construction literals, proves `listItems()`
-still returns required `rollbackAction`, and proves an omitted phase field cannot
-clear V1. It also assigns every raw field directly to `unknown`, then seeds
-unknown/delete/restore operations plus scalar, array and null snapshot/action
-values and proves `listRawItems()` returns every row unchanged in
-`position ASC, id ASC` order. The query is one bounded 513-row read, rejects the
-513th row, and never calls a normalizer/filter. A direct assignment
-`const requiredAction: JsonObject | null = listed.rollbackAction` (without
-optional chaining, fallback or cast) pins the compatibility projection; L03 tests
-alone pin raw-to-persisted validation and matching legacy-null action semantics.
-The same suite pins `listItems()` at 512/513, tied-position `id ASC`, exact `site_package_too_large`, and zero partial projection.
-The independently runnable `fullSiteLegacyLedgerDryRunTerminalization.test.ts`
-calls `terminalizeDryRun` through hostile unknown inputs/results,
-pins exact-key/pair/result rejection and cause-free codes, and uses two independent
-DB clients to race `success/null` against `failed/<safe-code>`. Exactly one
-conditional update wins; its caller observes `desired_terminal`, the loser
-observes `different_terminal`, an identical repeat is idempotent, and the stored
-summary/status/error never changes afterward. Missing ID, apply-mode ID and a
-still-running fault seam produce only their specified errors. An injected
-post-commit transport throw followed by a second call proves ambiguous commit
-recovery observes `desired_terminal` rather than overwriting or duplicating work.
+Pure planner tests pin both overloads, frozen plan identity, placeholder false-noop
+prevention, one snapshot-loader call and zero planning writes. Managed-ownership
+DB tests retain natural-key conflict, strict expected ID, deterministic ties,
+mismatched/noop/failed/rolled-back evidence, timestamp ties, managed noop/update
+and setting-takeover isolation. The historical matrix pins both rollback
+invalidation branches and the exact ordered winner; EXPLAIN tests compile the
+production query with bound parameters and never use opaque driver counters.
+`fullSiteResolverBoundsDb.test.ts` retains exact-ID Form field/action and Menu
+item 100/256 cap/cap+1 cases with scoped cleanup and 360-second timeout.
+`fullSitePlanningBaseBatchDb.test.ts` covers all ten kind base shapes, evidence-ID
+preference, deterministic natural collisions, the content-entry second wave and
+exact ordered 0/1/512 output. `fullSitePlanningAggregateBatchDb.test.ts` owns
+Form field/action and Menu item multi-parent ordering plus exact cap/cap+1 with
+zero partial projection. `fullSitePlanningNativeExplainDb.test.ts` owns only the
+sanitized native plan/budget fixtures described above. All are independently
+runnable, scope IDs before first mutation and clean only owned rows.
+The planner integration proves exactly one ordered snapshot-loader call and zero
+single evidence/resolver calls for 1 and 512 resources. The focused snapshot suite
+rejects hostile cardinality/identity/order results and pins the 14-statement cap.
+A direct-resolver regression still invokes exactly `(kind, seed)` and proves one
+self-evidence lookup; it is compatibility coverage, not a planning fallback.
+The pure V1 reader retains all hostile/4,096/4,097 cases and one-call totality.
+Resolver source-shape assertions stay in the Bun composition lane. The focused
+read-persistence suite pins required V1 projection, omitted-field preservation,
+raw unknown/delete/restore and scalar/array/null passthrough, stable 512/513
+ordering, batch evidence shape/winner/order and zero partial projection. The
+dry-run suite retains strict hostile input/result, two-client terminal races,
+idempotence and ambiguous-commit recovery.
 
-The planner's pure no-write test gives every planner-visible ledger mutation
-method installed on the fake a counting implementation that increments and
-throws if called, rather than a silent no-op. Pin `withPackageLock`, `createRun`,
-`recordItem`, `finalizeRun`, `terminalizeDryRun`, `patchRunMetadata`,
-`createRollbackRun` and `claimRollbackRun`; after planning, assert every
-individual mutation count and their sum are exactly zero. Evidence reads remain separately counted.
+The planner no-write fake counts and throws on every ledger mutation, including
+`createInitializedRun`; every individual count and their sum remain zero.
 
-The DB harness in `fullSiteLegacyLedgerComposition.test.ts` owns a testable
-`isDatabaseUrlConfigured(value)` helper: only `undefined` returns false, while
-the empty string returns true and therefore fails initialization rather than
-skipping. `initializeDbHarness` owns one outer `try/catch` and runs exactly four
-sequential stages before returning the harness:
-
-1. dynamic import/load of DB, persistence, schema and both install tables;
-2. connection probe `SELECT 1`;
-3. a zero-row (`LIMIT 0`) explicit run-schema projection of all 12 required
-   columns: `id`, `kitId`, `mode`, `status`, `actorId`, `rollbackOfRunId`,
-   `options`, `summary`, `error`, `createdAt`, `updatedAt`, `finishedAt`;
-4. a zero-row (`LIMIT 0`) explicit install-item projection of all 13 required
-   columns: `id`, `runId`, `position`, `resourceType`, `resourceKey`, `operation`,
-   `status`, `beforeSnapshot`, `afterSnapshot`, `rollbackAction`, `error`,
-   `createdAt`, `updatedAt`.
-
-One typed `createDbHarnessStages` factory accepts the narrow injected
-load/connection/run/item functions and returns them in that exact order;
-production `DB_HARNESS_STAGES` and every pure failure case must call that same
-factory, never hand-build unrelated tuples. Pin production construction plus the
-complete ordered run/item selection bodies as direct `key: table.column`
-assignments, their matching `.from(...)`, and `LIMIT 0`; the run keys/columns are
-exactly the 12 above and item keys/columns exactly the 13 above, with no
-spread/computed/extra field. Do not fake a production Drizzle DB through `any`,
-a cast or an asserted production type.
-
-The zero-row probes resolve every named column without materializing snapshots.
-Keep the bounded managed-evidence SELECT separate; do not add a fifth stage.
-For each failure position, invoke `initializeDbHarness(createDbHarnessStages(...))`
-twice and pin both exact sequential call traces through only the failed stage.
-Capture two distinct fresh values whose prototype is exactly `Error.prototype`,
-message is only `full_site_legacy_ledger_db_harness_failed`, and own properties
-are only ordinary `Error` message/stack (no `cause` or extra property); neither
-error nor its safe observable fields may contain the sentinel, URL, secret,
-driver or schema text. A configured failure never becomes `null` or a skip.
+The composition DB harness still treats only `undefined` as unconfigured and
+runs exactly load, `SELECT 1`, 12-column run `LIMIT 0`, then 13-column item
+`LIMIT 0` stages from one typed factory. Direct projections forbid spreads/
+computed/extras and never materialize snapshots. Every injected stage failure is
+called twice, stops at that stage and returns a fresh cause-free
+`full_site_legacy_ledger_db_harness_failed` without sentinel/driver/schema text.
 
 Every mutating test that remains in
 `tests/integration/kits/fullSiteManagedOwnershipDb.test.ts` enters its
@@ -885,40 +908,31 @@ composition remains usable before L02 lands.
 - [x] Extract the initial bounded legacy modules, ledger port + DB implementation,
   default legacy composition and compatibility facade above.
 - [x] Add the planner and its initial pure Vitest coverage.
-- [ ] Re-run and pin the delivered two-lock, strict V1 rollback-action,
-  hostile-envelope/Proxy-array and managed-evidence query/harness work against
-  the fresh corrective gate.
-- [ ] Replace the reconstructed install identity with an exact
-  `PackageResourceIdentity` alias; add `RawFullSiteInstallLedgerItem` plus
-  `listRawItems()` with the immutable single-read boundary and regression matrix.
-- [ ] Add the three-argument frozen-plan planner overload with zero graph rebuild,
-  while retaining the direct two-argument resolver's one self-lookup and zero
-  planner writes.
-- [ ] Replace native reads with the exact evidence-backed planner-equality
-  projections, strict whole-body source-shape gates and bounded child reads.
-- [ ] Replace the item-driven candidate/follow-up rollback reads with the
-  one-statement candidate-run-driven correlated-lateral query, retaining the
-  combined invalidation anti-join, and land the complete managed-identity
-  DB/query-shape matrix plus the independently runnable extracted EXPLAIN suite
-  with both frozen production-query profiles and the strict pure plan parser.
-- [ ] Make configured ledger DB-harness failures fail with the fixed sanitized
-  code across the exact four-stage initializer, and rebuild every managed-ownership
-  fixture around preallocated exact-ID ownership with `try/finally` active before
-  its first mutation.
-- [ ] Before adding raw reads or dry-run arbitration, split the 945-line facade
-  into the two cohesive modules above, preserve public facade imports/exports, move
-  (not duplicate) each focused matrix out of the 1,000-line composition test, then add exact terminalization concurrency/ambiguous-commit coverage.
+- [ ] Land aliases, bounded raw reads, strict V1/manifest readers and two-lock/
+  dry-run behavior while preserving facade compatibility.
+- [ ] Replace planner N+1 reads with the one-call snapshot loader, batch evidence
+  and <=14-query native reader; retain direct/exact-ID resolver compatibility.
+- [ ] Land atomic `createInitializedRun` and its one-transaction/set-based tests;
+  preserve `createRun`/`recordItem` for their existing callers.
+- [ ] Split the near-limit facade/tests into the declared cohesive children,
+  then land scoped managed/native behavior and EXPLAIN suites.
+- [ ] Pass pure, DB, type/lint, query-budget and touched-file line gates.
 
 ## Testing Requirements
 
 - `bunx vitest run --config vitest.config.ts tests/vitest/kits/full-site-install-planner.test.ts`
+- `bunx vitest run --config vitest.config.ts tests/vitest/kits/full-site-planning-snapshot.test.ts`
 - Freshly prefix every Bun DB command below in its own shell with `set -a && source /home/coder/project/Coderso/.env && set +a`; never inspect, print, copy, hash or persist its contents.
 - `set -a && source /home/coder/project/Coderso/.env && set +a && bun test --parallel=1 --timeout=360000 tests/unit/kits/installService.test.ts tests/unit/kits/fullSiteLegacyLedgerComposition.test.ts`
 - `set -a && source /home/coder/project/Coderso/.env && set +a && bun test --parallel=1 --timeout=360000 tests/unit/kits/fullSiteLegacyLedgerReadPersistence.test.ts`
 - `set -a && source /home/coder/project/Coderso/.env && set +a && bun test --parallel=1 --timeout=360000 tests/unit/kits/fullSiteLegacyLedgerDryRunTerminalization.test.ts`
+- `set -a && source /home/coder/project/Coderso/.env && set +a && bun test --parallel=1 --timeout=360000 tests/unit/kits/fullSiteLegacyLedgerRunInitialization.test.ts`
 - `set -a && source /home/coder/project/Coderso/.env && set +a && bun test --parallel=1 --timeout=360000 tests/integration/kits/fullSiteManagedOwnershipDb.test.ts`
 - `set -a && source /home/coder/project/Coderso/.env && set +a && bun test --parallel=1 --timeout=360000 tests/integration/kits/fullSiteManagedEvidenceExplainDb.test.ts`
 - `set -a && source /home/coder/project/Coderso/.env && set +a && bun test --parallel=1 --timeout=360000 tests/integration/kits/fullSiteResolverBoundsDb.test.ts`
+- `set -a && source /home/coder/project/Coderso/.env && set +a && bun test --parallel=1 --timeout=360000 tests/integration/kits/fullSitePlanningBaseBatchDb.test.ts`
+- `set -a && source /home/coder/project/Coderso/.env && set +a && bun test --parallel=1 --timeout=360000 tests/integration/kits/fullSitePlanningAggregateBatchDb.test.ts`
+- `set -a && source /home/coder/project/Coderso/.env && set +a && bun test --parallel=1 --timeout=360000 tests/integration/kits/fullSitePlanningNativeExplainDb.test.ts`
 - `bun --cwd core lint` and `bun --cwd core lint:types`
 - Every other TASK-547 DB-targeted command/test timeout is likewise at least
   `--timeout 360000` / `360_000` ms; do not raise unrelated non-DB timeouts.
@@ -959,15 +973,15 @@ composition remains usable before L02 lands.
   desired select, rejects bare selects, retains all literal forbidden-reference
   checks, and pins child cap imports, `orderIndex,id`, cap+1 limits and pre-project
   oversize guards. DB behavior preserves exact-ID/natural lookup and proves all six exact-cap/cap+1 child boundaries without truncation.
-- Source/query-shape gate: one compiled builder SELECT must retain the exact
-  run-driven lateral winner, filters, anti-join, aliases, ordering, limits and
-  outer fetch defined above. Reject item-driven winners, duplicate/unaliased IDs,
-  split anti-joins and opaque counters.
-- Conditional no-migration plan gate: run both frozen production-query EXPLAIN
-  profiles and budgets above with sanitized winner mismatch. Pure parsing retains
+- Source/query-shape gate: the one compiled batch SELECT retains request ordinal,
+  run-driven lateral winner, combined anti-join, stable aliases/order/limits and
+  narrow resource ID result; native base/child batches retain exact caps.
+- Conditional no-migration plan gate: run every evidence/native EXPLAIN
+  profile and budget above with sanitized winner mismatch. Pure parsing retains
   both positive forms/four outputs, finite metrics, only specified optional
   absences, and fixed one-invocation errors for every malformed/overflow shape.
-- L01 planner regression gate: one evidence lookup per identity; both overloads call `normalizeFullSitePackageForWrite` zero times while `normalizeDesired` remains required for existing-resource comparisons;
+- L01 planner regression gate: exactly one snapshot-loader call and zero per-item
+  DB fallbacks; both overloads call `normalizeFullSitePackageForWrite` zero times while `normalizeDesired` remains required for existing-resource comparisons;
   two-arg builds once before deps, and three-arg planning consumes L02's unchanged plan with zero builds before any dependency.
 - DB test-integrity gate: the URL helper returns false only for `undefined` and
   true for `""`; production and failure tests use the same injectable four-stage
@@ -982,5 +996,5 @@ composition remains usable before L02 lands.
 - Only after both plan profiles pass, confirm `git diff --name-only` contains no
   DB migration, snapshot or journal artifact for this correction. A budget
   failure instead blocks L01 for index-migration contract re-audit.
-- Run the two new focused tests and all three L01 DB integration files independently,
+- Run every listed focused test and DB file independently,
   then `wc -l` every changed L01 production/test file; each must be at most 1,000 lines.
