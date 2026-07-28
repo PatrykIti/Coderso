@@ -109,6 +109,15 @@ duplicates. Metadata/residual prose trims outer whitespace and preserves
 interior code units; locale trims outer whitespace, validates
 `^[A-Za-z]{2,8}(?:-[A-Za-z0-9]{1,8})*$` and preserves case. Desired strings are
 byte-preserved; finite `-0` canonicalizes to positive `0`.
+After trimming, scan metadata `name`/optional `description` and all five residual
+prose fields through L01's carrier-independent value policy. Their diagnostics
+use only their exact schema-owned paths, including the original input residual
+array index before canonical sorting; residual IDs and supplied values never
+enter diagnostics. Locale and identity fields retain their stricter grammars.
+Bare canonical Base64 text stays valid in prose because those fixed descriptive
+fields are not binary carriers, while binary values, credential-shaped
+Basic/Bearer authorization, private-key PEM, Base64 data URLs and
+credential-bearing URLs reject.
 
 `PackageRef` is frozen exactly as `{ ref, key }`, with no third key and the
 canonical key grammar above. Reference substitution is allowed only by L02's
@@ -224,14 +233,20 @@ literally `false`; otherwise it is an implementation gap and blocks closure.
   distinctly named raw-source constant.
 - **Secrets:** reject forbidden setting namespaces, provider keys, cookies,
   authorization values, raw bytes/base64 and credential-bearing URLs. Classify
-  desired keys by camelCase/separator tokens, not substrings: reject terminal
-  credential material/pairs while allowing descriptive near misses such as
-  `tokenizedCopy` and `cookieBanner`. Standards-parse every absolute-scheme
-  (`^[A-Za-z][A-Za-z0-9+.-]*:`) and protocol-relative URL candidate, rejecting
-  parsed userinfo including special-scheme forms without `//`; reject complete
-  Basic/Bearer values, private-key PEM, Base64 data URLs and
-  canonical standard/Base64URL only in explicit `base64|bytes|binary|blob`
-  fields. Secret diagnostics use a fixed redacted key path and never echo input.
+  desired keys by camelCase/separator tokens and exact whole-token compact
+  aliases, never substring matching. Reject terminal credential material/pairs
+  and their exact material suffixes while allowing descriptive near misses such
+  as `tokenizedCopy`, `cookieBanner` and `apiKeyDescription`. Recognize explicit
+  `base64|bytes|binary|blob` carriers plus exact `content|data|payload|value`
+  compound roles. Standards-parse every absolute-scheme
+  (`^[A-Za-z][A-Za-z0-9+.-]*:`), protocol-relative and exact `/`, `./`, `../`,
+  `?`, `#` relative URL candidate (the relative forms use one fixed inert base),
+  rejecting parsed userinfo including special-scheme forms without `//` and any
+  nonempty, exactly-once-decoded credential/signature query or fragment
+  parameter. Reject credential-shaped Basic/Bearer values, private-key PEM and
+  Base64 data URLs while ordinary Basic/Bearer copy stays valid. Secret
+  diagnostics use a fixed redacted desired-key path or one of seven exact
+  package-prose paths and never echo input.
 - **CSS/HTML:** package metadata never becomes a raw CSS/HTML/JS sink.
 
 ## Implementation Pseudocode
@@ -309,7 +324,13 @@ diagnostics, normalize(normalize(x)) identity, complete desired-snapshot equalit
 and deterministic code-unit/ECMAScript index order, including `-0` → `0`.
 `full-site-package-{schema,canonicalization,security}.test.ts` must each run
 independently through shared `fullSitePackageTestSupport.ts`; moved assertions or
-builders are not copied. Graph tests are likewise split into independently
+builders are not copied. The security suite pins all seven package-prose
+surfaces, compact/suffixed credential aliases, compound binary carriers,
+userinfo and signed query/fragment URL markers, safe descriptive near misses,
+exactly-once decoding, duplicate empty/nonempty marker behavior and complete
+non-disclosure. An unsorted multi-residual fixture proves diagnostic paths keep
+their original input indexes after canonical residual sorting. Graph tests are
+likewise split into independently
 runnable `full-site-package-references-{core,page,diagnostics,plan}.test.ts`
 through focused `fullSitePackageReferenceTestSupport.ts`. They cover every
 discriminator/nullability row,
