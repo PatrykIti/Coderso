@@ -151,6 +151,19 @@ COPY --from=builder --chown=bun:bun /app/store /app/store
 # so a newly added template is covered automatically; the script fails if the
 # glob comes back empty rather than quietly checking less.
 #
+# The check measures in one pinned configuration and refuses every other one.
+# NODE_ENV selects conditional exports, so it decides the module graph. On the
+# pruned tree, one bun, NODE_ENV the only variable: unset, the graph resolves
+# React's DEVELOPMENT builds (3131 modules, including react/jsx-dev-runtime.js
+# and react-dom/cjs/react-dom-server.bun.development.js); at NODE_ENV=production
+# it resolves the production builds (3129 modules, and
+# react-dom/cjs/react-dom-server.bun.production.js is what renders a page). So a
+# check that merely inherited NODE_ENV could verify seven files this image never
+# opens while not verifying the five it does. The script now requires
+# NODE_ENV=production -- the value ENV sets above -- and passes it explicitly to
+# every subprocess it starts. Change that ENV and this check fails until it is
+# changed too; that coupling is deliberate.
+#
 # This runs in the runner stage on purpose: BuildKit skips stages that nothing
 # depends on, so the same check in a trailing stage of its own would be silently
 # never executed. The script writes its bundle to a temp dir and removes it
@@ -176,9 +189,17 @@ USER bun
 # exist:
 #
 # ESTABLISHED. The production dependency tree resolves (142 packages against
-# the same lockfile, versus 747 with devDependencies). Every module the runtime
-# import graph reaches -- 595 first-party, ~3100 total -- loads against that
-# pruned tree. The process starts.
+# the same lockfile, versus 747 with devDependencies -- both re-measured on
+# linux/arm64, bun 1.3.14, bun.lock byte-identical after each). Every module the
+# runtime import graph reaches -- 3129 modules, 595 of them first-party -- loads
+# against that pruned tree. The process starts.
+#
+# Those graph figures are stated at NODE_ENV=production, the value ENV sets
+# above, and they are only true there; see the pinned-configuration note by the
+# check. An earlier revision reported 3131/595 and a module count of 3148 ->
+# 3111, all measured with NODE_ENV inherited and unset, so all describing a
+# React-development graph this image does not build. Superseded rather than
+# quietly overwritten.
 #
 # NOT ESTABLISHED: that the application SERVES. Every HTTP request in that
 # evidence died in the same place, before routing. httpServer.ts's `fetch()`

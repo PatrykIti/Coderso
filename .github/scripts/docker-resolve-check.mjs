@@ -203,6 +203,37 @@ if (!fs.existsSync(path.join(root, "package.json"))) {
   fail(`no package.json under ${root} -- pass the application root as argv[1]`);
 }
 
+/*
+ * The configuration this check measures in is pinned, because it was not, and
+ * every number the check reported described a module graph the container never
+ * loads. NODE_ENV drives conditional exports: React resolves its development
+ * builds when NODE_ENV is unset and its production builds when it is
+ * "production". Measured on the pruned tree, same tree, same bun:
+ *
+ *   NODE_ENV unset       3131 modules  react/jsx-dev-runtime.js,
+ *                                      react-dom/cjs/react-dom-server.bun.development.js, ...
+ *   NODE_ENV=production  3129 modules  react-dom/cjs/react-dom-server.bun.production.js, ...
+ *
+ * Seven dev-only modules in one, five production modules in the other. So an
+ * unpinned run verifies files the image will never open and does NOT verify the
+ * ones it will. The runner stage sets ENV NODE_ENV=production before this runs;
+ * requiring that exact value here means the two cannot drift apart silently --
+ * change the Dockerfile's ENV and this check fails until it is changed too.
+ */
+const REQUIRED_NODE_ENV = "production";
+if (process.env.NODE_ENV !== REQUIRED_NODE_ENV) {
+  fail(
+    `NODE_ENV is ${process.env.NODE_ENV === undefined ? "unset" : `"${process.env.NODE_ENV}"`}, ` +
+      `this check only measures NODE_ENV="${REQUIRED_NODE_ENV}".\n` +
+      `  NODE_ENV selects conditional exports, so it changes the module graph: unset, the\n` +
+      `  graph pulls React's development builds, which the runner stage never loads. The\n` +
+      `  runner sets ENV NODE_ENV=${REQUIRED_NODE_ENV}; if that changed, change this too.`
+  );
+}
+
+/** Passed explicitly to every subprocess so the pinned value cannot be lost. */
+const childEnv = { ...process.env, NODE_ENV: REQUIRED_NODE_ENV };
+
 const templateDir = path.join(root, TEMPLATE_DIR);
 const templates = fs.existsSync(templateDir)
   ? fs
@@ -227,7 +258,8 @@ const outDir = fs.mkdtempSync(path.join(os.tmpdir(), "resolve-check-"));
 let metafile;
 try {
   process.stdout.write(
-    `${NAME}: bundling the runtime graph from ${entrypoints.length} entrypoints\n`
+    `${NAME}: bundling the runtime graph from ${entrypoints.length} entrypoints ` +
+      `(NODE_ENV=${REQUIRED_NODE_ENV})\n`
   );
   for (const entry of entrypoints) process.stdout.write(`  ${entry}\n`);
 
@@ -240,7 +272,7 @@ try {
       `--metafile=${path.join(outDir, "meta.json")}`,
       ...entrypoints,
     ],
-    { cwd: root, encoding: "utf8" }
+    { cwd: root, encoding: "utf8", env: childEnv }
   );
 
   if (build.status !== 0) {
@@ -349,7 +381,7 @@ for (const { name, optional } of nativeCandidates) {
         `  process.exit(3);\n` +
         `}\n`,
     ],
-    { cwd: root, encoding: "utf8" }
+    { cwd: root, encoding: "utf8", env: childEnv }
   );
   const detail = `${probe.stdout ?? ""}${probe.stderr ?? ""}`.replace(/^PROBE-(OK|ERR) ?/, "").trim();
   if (probe.status === 0) bindingOk.push({ name, present, optional });
@@ -372,7 +404,8 @@ for (const [file] of firstParty) {
 }
 
 process.stdout.write(
-  `\n${NAME}: graph = ${inputs.length} modules, ${firstParty.length} of them first-party\n`
+  `\n${NAME}: graph = ${inputs.length} modules, ${firstParty.length} of them first-party ` +
+    `(NODE_ENV=${REQUIRED_NODE_ENV})\n`
 );
 
 process.stdout.write(
