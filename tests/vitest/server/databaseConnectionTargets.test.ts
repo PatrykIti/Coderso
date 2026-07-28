@@ -1,3 +1,4 @@
+import type { Sql } from "postgres";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import {
@@ -19,6 +20,50 @@ import {
   type ClosableDatabaseClient,
   type SessionDatabaseConnect,
 } from "../../../core/db/sessionClient";
+
+/**
+ * The perturbation to apply to the driver's parsed options, armed for one call.
+ *
+ * `inspectDatabaseUrl` builds its own client deep inside `resolveDriverDial`, so
+ * the module boundary is the only place a driver whose option surface is not the
+ * audited one can be simulated. WHAT gets perturbed is what
+ * `tests/vitest/server/databaseDriverEndpoints.test.ts` perturbs when it holds
+ * `classifyDriverDial` to the audit: `Object.assign` onto the REAL driver's real
+ * parsed options. So both files simulate a drifted driver the same way, and this
+ * one runs it through the production path the guard's callers use.
+ */
+const armedDriverPerturbation = vi.hoisted(() => ({
+  apply: null as ((options: Sql["options"]) => void) | null,
+}));
+
+/** The one call `core/db` makes into the driver, and all this mock has to keep. */
+type PostgresModule = { default: (url: string, options: { max: number }) => Sql };
+
+vi.mock("postgres", async (importOriginal) => {
+  const actual = await importOriginal<PostgresModule>();
+  return {
+    ...actual,
+    default: (url: string, options: { max: number }): Sql => {
+      const client = actual.default(url, options);
+      armedDriverPerturbation.apply?.(client.options);
+      return client;
+    },
+  };
+});
+
+/**
+ * Run `read` against a driver whose parsed options `perturb` has changed, and
+ * disarm afterwards — every other case in this file still resolves against the
+ * real postgres.js.
+ */
+const withPerturbedDriver = <T>(perturb: (options: Sql["options"]) => void, read: () => T): T => {
+  armedDriverPerturbation.apply = perturb;
+  try {
+    return read();
+  } finally {
+    armedDriverPerturbation.apply = null;
+  }
+};
 
 const DIRECT_URL = "postgres://coderso:secret@db.example.com:5432/coderso";
 const POOLED_URL = "postgres://coderso:secret@db.example.com:6432/coderso";
@@ -194,6 +239,74 @@ describe("inspectDatabaseUrl", () => {
         [PGHOST_ENV]: "direct.example.com:5432,pooler.example.com:6432",
       })
     ).toEqual({ verified: false, port: null, pooled: false, reason: "multiple_hosts" });
+  });
+});
+
+/**
+ * The two dials that carry no endpoint this guard may read, driven end to end
+ * rather than at `classifyDriverDial`. `driverEndpoints.ts` reports them, but it
+ * is `inspectDatabaseUrl` that has to turn each one into its own refusal: a
+ * reason it drops on the floor is a target it would go on to clear as direct.
+ */
+describe("inspectDatabaseUrl against a driver whose option surface drifted", () => {
+  /** The fourth-field case: a driver version that decides the endpoint somewhere new. */
+  const growAField = (options: Sql["options"]): void => {
+    Object.assign(options, { endpoint: "pgbouncer.internal:6432" });
+  };
+
+  test("refuses to read an endpoint off an option surface it has not audited", () => {
+    const inspection = withPerturbedDriver(growAField, () =>
+      inspectDatabaseUrl(DIRECT_URL, 6432, {})
+    );
+
+    // NOT `{ verified: true, port: 5432 }` off the fields it still recognises —
+    // that is precisely the fail-open the audit exists to turn into a refusal.
+    expect(inspection).toEqual({
+      verified: false,
+      port: null,
+      pooled: false,
+      reason: "unrecognized_driver_dial",
+    });
+  });
+
+  test("sends the session resolver's caller to the driver surface to re-read", () => {
+    const resolveAgainstDriftedDriver = () =>
+      withPerturbedDriver(growAField, () =>
+        resolveSessionDatabaseTarget("startup database migrations", {
+          [DATABASE_DIRECT_URL_ENV]: DIRECT_URL,
+        })
+      );
+
+    expect(resolveAgainstDriftedDriver).toThrow(
+      /^session_database_direct_url_unverifiable: startup database migrations/
+    );
+    // The remedy an operator who hits this needs: the driver moved, so the audited
+    // dial surface has to be re-read before anything may be read off it again.
+    expect(resolveAgainstDriftedDriver).toThrow("core/db/driverEndpoints.ts");
+    // Never echo credentials back into logs.
+    expect(resolveAgainstDriftedDriver).not.toThrow(/secret/);
+  });
+
+  test("refuses a caller-supplied transport, which dials no endpoint of its own", () => {
+    const neverCalledTransport = (): never => {
+      throw new Error("the guard must not invoke the transport factory");
+    };
+
+    const inspection = withPerturbedDriver(
+      (options) => {
+        Object.assign(options, { socket: neverCalledTransport });
+      },
+      () => inspectDatabaseUrl(DIRECT_URL, 6432, {})
+    );
+
+    // `socket` is in the audited key set, so the surface is still recognised —
+    // there is simply no endpoint of the driver's own to compare with the pooler's.
+    expect(inspection).toEqual({
+      verified: false,
+      port: null,
+      pooled: false,
+      reason: "custom_transport_dial",
+    });
   });
 });
 

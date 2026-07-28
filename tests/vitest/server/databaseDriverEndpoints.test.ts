@@ -279,6 +279,16 @@ const ENDPOINT_CASES: EndpointCase[] = [
     inspection: { verified: false, port: null, pooled: false, reason: "invalid_port" },
   },
   {
+    // `parseInt` yields a perfectly good NUMBER here, one past the top of the TCP
+    // range, so nothing but the upper bound stops it being compared with the
+    // pooler's port as though the driver could dial it.
+    name: "a PGPORT one past the top of the TCP range",
+    url: PORTLESS_URL,
+    env: { PGPORT: "65536" },
+    driver: { dial: "tcp", hosts: ["db.example.com"], ports: [65536] },
+    inspection: { verified: false, port: null, pooled: false, reason: "invalid_port" },
+  },
+  {
     name: "a url naming port 0, which cannot be dialled",
     url: "postgres://coderso:secret@db.example.com:0/coderso",
     env: {},
