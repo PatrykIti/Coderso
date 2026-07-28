@@ -7342,6 +7342,8 @@ async function assertTask540TouchedModuleLineLimitContract() {
     "core/widgets/core/footer.tsx",
     "tests/unit/toolchain/trackedSourcesAreText.test.ts",
     "core/db/driverEndpoints.ts",
+    "core/admin/ui/entries/EntryCreateDrawer.tsx",
+    "tests/unit/workflows/task540LineLimitOffenderReport.test.ts",
   ]);
   for (const relativePath of accountableOwnerCases) {
     if (
@@ -11246,6 +11248,22 @@ const TASK_540_LINE_LIMIT_ACCOUNTABLE_PATHS = Object.freeze([
   // 600 lines).
   "core/db/driverEndpoints.ts",
   "tests/vitest/server/databaseDriverEndpoints.test.ts",
+  // The quick-create repair (commit 57b2a603) and every surface it touched: the drawer that
+  // now renders the required fields the schema it creates against declares, the drawer lane
+  // it updated, the lane it added for that behaviour, and the wave suite it took the
+  // superseded assertions out of. None of them is leaf work. The nearest leaf, 540-04-L03,
+  // writes core/admin/ui/custom-screens/** -- the SCREEN entry editor, a different component
+  // from the content-type entry editor under core/admin/ui/entries/** -- so these are
+  // accountable to the closure leaf exactly like EntryEditor.tsx a few groups above.
+  "core/admin/ui/entries/EntryCreateDrawer.tsx",
+  "tests/vitest/ui/drawers.test.tsx",
+  "tests/vitest/ui/entry-create-drawer-required-fields.test.tsx",
+  "tests/vitest/ui/entry-page-support-wave.test.tsx",
+  // The gate's own multi-offender guard (commit 4607727f): the lane that plants ownerless
+  // untracked probes and holds --check-task-family-line-limit to naming all of them, and
+  // their lengths, in one run. Family-authored machinery over the family's own gate, which
+  // no leaf writes.
+  "tests/unit/workflows/task540LineLimitOffenderReport.test.ts",
 ]);
 // The tripwire proves, hermetically, that the gate really rejects the specific accountable
 // paths closest to the limit -- so it has to name the ones actually closest. Measured
@@ -11280,7 +11298,7 @@ const TASK_540_LINE_LIMIT_TRIPWIRE_PATHS = Object.freeze([
   "core/widgets/core/footer.tsx",
 ]);
 const TASK_540_LINE_LIMIT_ACCOUNTABLE_PATHS_SHA256 =
-  "1b351aa5aaa9d42d82c4b519d3992d825165829f93e847eb846386d047b43572";
+  "2049bc7ce30372589db136017fe112e5e263d2e72d9d60e994b09c7f692bb694";
 const TASK_540_LINE_LIMIT_ACCOUNTABLE_OWNERS = Object.freeze(
   TASK_540_LINE_LIMIT_ACCOUNTABLE_PATHS.map((path) =>
     Object.freeze({ path, owner: TASK_540_LINE_LIMIT_ACCOUNTABLE_OWNER })
@@ -11306,7 +11324,7 @@ if (
   // Must be the leaf that lands LAST, which is the whole rationale for the choice: it is
   // the only leaf still able to split one of these before the family closes.
   TASK_540_LINE_LIMIT_ACCOUNTABLE_OWNER !== LEAF_ORDER[LEAF_ORDER.length - 1] ||
-  TASK_540_LINE_LIMIT_ACCOUNTABLE_PATHS.length !== 100 ||
+  TASK_540_LINE_LIMIT_ACCOUNTABLE_PATHS.length !== 105 ||
   new Set(TASK_540_LINE_LIMIT_ACCOUNTABLE_PATHS).size !==
     TASK_540_LINE_LIMIT_ACCOUNTABLE_PATHS.length ||
   TASK_540_LINE_LIMIT_ACCOUNTABLE_PATHS.some(
