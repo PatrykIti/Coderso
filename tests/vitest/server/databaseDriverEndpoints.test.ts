@@ -100,7 +100,7 @@ type DriverAnswer =
  * one lazy `Connection` and dials nothing, so nothing here needs closing.
  *
  * The reduction below is `connect()`'s precedence and nothing else: `options.socket`
- * makes it return at l. 344 before any dial, a truthy `options.path` is dialled at
+ * makes it return at l. 345 before any dial, a truthy `options.path` is dialled at
  * l. 350 instead of host/port, and only then does l. 354 use `port[i]`/`host[i]`.
  */
 const askDriver = (url: string, env: DatabaseEnvMap): DriverAnswer =>

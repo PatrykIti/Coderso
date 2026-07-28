@@ -28,9 +28,9 @@
  * THE DIAL SURFACE: every field postgres.js 3.4.9 consults to choose an
  * endpoint, in the driver's own precedence order (`src/connection.js`)
  * ---------------------------------------------------------------------------
- *   1. `options.socket` — `createSocket()` (l. 131) builds the transport with
- *      `await options.socket(options)` instead of `new net.Socket()`, and
- *      `connect()` (l. 344) then RETURNS before any `socket.connect(...)` call:
+ *   1. `options.socket` — `createSocket()` (l. 129) builds the transport with
+ *      `await options.socket(options)` (l. 133) instead of `new net.Socket()`, and
+ *      `connect()` then RETURNS (l. 345) before any `socket.connect(...)` call:
  *      host, port and path are all unused, and where the connection lands is the
  *      factory's business, not something this module can read. Settable only
  *      through the options object (`o.socket`, `src/index.js` l. 495) — never
@@ -51,9 +51,9 @@
  * goes.
  *
  * ---------------------------------------------------------------------------
- * How `parseOptions` (`src/index.js` l. 428) fills those fields
+ * How `parseOptions` (`src/index.js` l. 430) fills those fields
  * ---------------------------------------------------------------------------
- * `env` is bound to `process.env` directly (l. 434), and `parseUrl` (l. 536)
+ * `env` is bound to `process.env` directly (l. 434), and `parseUrl` (l. 537)
  * reads the RAW string rather than a `URL`: the authority with credentials
  * stripped and percent-decoded, plus `multihost`, which is that authority when it
  * contains a comma. The `URL` object is built from the string REWRITTEN to the
@@ -212,7 +212,7 @@ export const AUDITED_DRIVER_OPTION_KEYS: readonly string[] = Object.freeze([
  * Deciding which of the driver's inputs matter is the judgement that made this
  * guard fail open three times, and the hand-picked list (`PGHOST`, `PGPORT`) was
  * already incomplete: `PGTARGETSESSIONATTRS` does not move the endpoint, but an
- * unsupported value makes `tsa()` (`src/index.js` l. 504) THROW, so a caller whose
+ * unsupported value makes `tsa()` THROW (`src/index.js` l. 508), so a caller whose
  * map set it was handed a verified target by a driver that refuses to build a
  * client for that environment at all.
  *
@@ -221,7 +221,7 @@ export const AUDITED_DRIVER_OPTION_KEYS: readonly string[] = Object.freeze([
  * is `PG`-prefixed: `PGHOST`, `PGPORT` (l. 438/439), `PGUSERNAME`, `PGUSER`
  * (l. 440), `PGDATABASE` (l. 469), `PGPASSWORD` (l. 471), `PGAPPNAME` (l. 485),
  * `PGTARGETSESSIONATTRS` (l. 504) and `env['PG' + option.toUpperCase()]` for every
- * defaulted option (l. 477). The only reads that are not `PG*` are in
+ * defaulted option (l. 476). The only reads that are not `PG*` are in
  * `osUsername()` (l. 561) — `process.env.LOGNAME`, `USER`, `USERNAME` — which feed
  * the default user and through it the default database name, never the endpoint,
  * and which cannot throw. They stay ambient deliberately: projecting them would let
