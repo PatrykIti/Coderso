@@ -233,6 +233,21 @@ export function EntryMetadataPanel({
       (term) => term.name.toLowerCase() === normalized || term.slug === slugify(value)
     );
     if (existing) {
+      // DELIBERATELY UNPINNED (TASK-540 R5). Deleting this line keeps the panel's whole suite
+      // green, and no test can close that. A category decision is only ever READ by
+      // `isCategorySuperseded()` below, inside the one window where a category decision can be
+      // pending — the `await onCreateCategory` — and throughout that window the input and the
+      // Add button that reach this branch are `disabled={isCreatingCategory}`, so React never
+      // calls this handler there. The other half of the record, `currentSelection().categoryId`,
+      // has no reader at all: the one caller reads `.tagIds`. Observing it would take either of
+      // those two facts changing — the Add controls staying live during a creation, which is
+      // what the Select does and what makes the identical record in `handleCategorySelect`
+      // observable, or a reader for the selected category.
+      //
+      // It stays because the rule is stated once for the field, not once per control: every
+      // commit of a single-valued field is a decision about that field. What makes this line
+      // unreachable is a `disabled` attribute — a UI detail, and the only thing standing
+      // between this branch and the defect the hook exists to prevent.
       taxonomyIntent.noteCategoryDecision(existing.id);
       onCategoryChange?.(existing.id);
       setCategoryInput("");
@@ -248,6 +263,11 @@ export function EntryMetadataPanel({
     // The category is single-valued and the user answered it while this term was being
     // created. The term exists and is offered by the select; the choice they can see stands.
     if (decision.isCategorySuperseded()) return;
+    // DELIBERATELY UNPINNED (TASK-540 R5) for the reason recorded on the existing-term branch
+    // above, plus one of its own: this is the LAST statement of the only flow that opens a
+    // category decision, so the counter it bumps is compared against a baseline no pending
+    // decision has taken yet. Superseding is counted relatively, so bumping it here can never
+    // change an answer — until a second concurrent category decision becomes possible.
     taxonomyIntent.noteCategoryDecision(created.id);
     onCategoryChange?.(created.id);
   };

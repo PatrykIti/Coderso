@@ -634,6 +634,91 @@ test("a tag change while a category creation is pending does not cancel the crea
   cleanup();
 });
 
+// ---------------------------------------------------------------------------
+// The panel's OWN record of what it decided, versus the selection its props carry.
+//
+// Every case above renders the host's answer back in before the pending request resolves, so
+// the two agree and either could be read. They cannot always agree: a React commit and the
+// passive effect that copies props into the panel's record are two separate steps, and a
+// promise continuation runs between them — and a host is free to apply a taxonomy change
+// later still (`onTagIdsChange` is optional, and applying it inside a transition is not a
+// synchronous flush). The two cases below hold the panel to its own record by never rendering
+// the host's answer in at all, which is that window at its widest, and are the only cases
+// here that can tell the record from the props.
+// ---------------------------------------------------------------------------
+
+test("a tag creation lands on a removal the host has not applied yet", async () => {
+  const onTagIdsChange = vi.fn();
+  const creation = deferred<TaxonomyTermOption | null>();
+  const { container, cleanup } = mount(
+    <EntryMetadataPanel
+      {...baseProps}
+      taxonomy={tagTaxonomy(["tag-draft"])}
+      onTagIdsChange={onTagIdsChange}
+      onCreateTag={() => creation.promise}
+    />
+  );
+
+  const tagInput = findInputByPlaceholder(container, "Add tag...");
+  typeInto(tagInput, "Launch");
+  pressEnter(tagInput);
+
+  React.act(() => {
+    container
+      .querySelector('[aria-label="Remove Draft"]')
+      ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+  });
+  expect(onTagIdsChange).toHaveBeenLastCalledWith([]);
+
+  await React.act(async () => {
+    creation.resolve({ id: "tag-launch", name: "Launch", slug: "launch" });
+  });
+
+  // Reading the props instead would read the selection they still carry — ["tag-draft"] — and
+  // put back the tag the user removed.
+  expect(onTagIdsChange).toHaveBeenLastCalledWith(["tag-launch"]);
+  cleanup();
+});
+
+test("a second tag creation adds to the first one the host has not applied yet", async () => {
+  const onTagIdsChange = vi.fn();
+  const creations = [deferred<TaxonomyTermOption | null>(), deferred<TaxonomyTermOption | null>()];
+  let started = 0;
+  const onCreateTag = () => {
+    const creation = creations[started];
+    started += 1;
+    if (!creation) throw new Error("a third tag creation was started");
+    return creation.promise;
+  };
+  const { container, cleanup } = mount(
+    <EntryMetadataPanel
+      {...baseProps}
+      taxonomy={tagTaxonomy(["tag-draft"])}
+      onTagIdsChange={onTagIdsChange}
+      onCreateTag={onCreateTag}
+    />
+  );
+
+  const tagInput = findInputByPlaceholder(container, "Add tag...");
+  typeInto(tagInput, "Launch");
+  pressEnter(tagInput);
+  await React.act(async () => {
+    creations[0]?.resolve({ id: "tag-launch", name: "Launch", slug: "launch" });
+  });
+  expect(onTagIdsChange).toHaveBeenLastCalledWith(["tag-draft", "tag-launch"]);
+
+  // The input is live again and the host still has not applied the first tag.
+  typeInto(tagInput, "Ship");
+  pressEnter(tagInput);
+  await React.act(async () => {
+    creations[1]?.resolve({ id: "tag-ship", name: "Ship", slug: "ship" });
+  });
+
+  // Both additions are deltas on the same selection, so the second cannot drop the first.
+  expect(onTagIdsChange).toHaveBeenLastCalledWith(["tag-draft", "tag-launch", "tag-ship"]);
+  cleanup();
+});
+
 test("an uncontested category creation still selects the new category", async () => {
   const onCategoryChange = vi.fn();
   const creation = deferred<TaxonomyTermOption | null>();
