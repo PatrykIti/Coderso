@@ -31,13 +31,35 @@
  * whose importer is first-party code and whose specifier is not a Node/Bun
  * builtin -- which catches the guarded case regardless of try/catch.
  *
+ * THE SECOND CHECK: NATIVE BINDINGS
+ * ---------------------------------
+ * The metafile rule above is scoped to FIRST-PARTY importers, and that scope has
+ * a hole with teeth. A package can fail to resolve its own platform binary
+ * through a try/catch `require` inside its own code, which is a third-party edge
+ * and therefore ignored by design. @node-rs/argon2 is exactly that: deleting
+ * @node-rs/argon2-linux-arm64-gnu and -musl left the metafile check exiting 0 in
+ * every configuration, while `hashPassword` died with
+ * `Error: Failed to load native binding` -- so nobody could log in.
+ *
+ * Covering every third-party try/catch require is not attempted; that surface is
+ * large and mostly not ours. What IS enumerable, and what actually breaks, is the
+ * narrow class this one belongs to: packages IN the runtime graph that ship their
+ * binary as a platform-specific optional dependency. Those are found by reading
+ * each graph package's own `optionalDependencies`, and each one is then LOADED in
+ * a subprocess, which lets the package's own loader answer instead of guessing at
+ * its resolution order. Measured on the current tree that is exactly one package.
+ * The check prints the list it probed on every run, so its reach is visible.
+ *
  * WHAT IT CANNOT COVER
  * --------------------
- * Dynamic imports with a computed specifier -- `import(someVariable)` -- are
- * not statically discoverable and do not appear in the metafile at all. This
- * script finds them by source scan and prints them on every run, so the
- * boundary is visible to whoever reads the build log rather than buried in a
- * report. See the "cannot be verified" section of the output.
+ * 1. Dynamic imports with a computed specifier -- `import(someVariable)` -- are
+ *    not statically discoverable and do not appear in the metafile at all. This
+ *    script finds them by source scan and prints them on every run, so the
+ *    boundary is visible to whoever reads the build log rather than buried in a
+ *    report. See the "cannot be verified" section of the output.
+ * 2. Guarded third-party requires of ordinary (non-platform) packages -- an
+ *    optional peer backend a dependency probes for with try/catch. Those are not
+ *    enumerable from metadata and are NOT covered by either rule here.
  */
 
 /* global process */
@@ -74,6 +96,19 @@ const isBuiltin = (specifier) => {
 };
 
 const isFirstParty = (inputPath) => !inputPath.split(path.sep).includes("node_modules");
+
+/**
+ * The package name owning a node_modules path, scope included.
+ * `node_modules/@node-rs/argon2/index.js` -> `@node-rs/argon2`.
+ */
+const packageOf = (inputPath) => {
+  const parts = inputPath.split(path.sep);
+  const at = parts.lastIndexOf("node_modules");
+  if (at < 0) return null;
+  const first = parts[at + 1];
+  if (!first) return null;
+  return first.startsWith("@") ? (parts[at + 2] ? `${first}/${parts[at + 2]}` : null) : first;
+};
 
 const fail = (message) => {
   process.stderr.write(`${NAME}: ${message}\n`);
@@ -254,6 +289,73 @@ for (const [file, input] of firstParty) {
   }
 }
 
+/*
+ * Native bindings: the class the rule above ignores by design, and the one that
+ * took down password hashing.
+ *
+ * Every third-party package the graph actually reaches is inspected for
+ * `optionalDependencies`. That is the napi-rs/prebuild convention for shipping a
+ * platform binary as a separate package, and it is the only part of this failure
+ * mode that is enumerable from metadata -- the require that consumes it lives in
+ * third-party code inside a try/catch, so no static rule here can see it.
+ *
+ * Each candidate is then LOADED in a subprocess with this process's environment,
+ * so the package's own loader decides, and its error chain (which names the exact
+ * .node file and package it looked for) is what gets reported. A subprocess so a
+ * hard native crash fails the check instead of killing it, and so any import side
+ * effects stay out of this process.
+ */
+const graphPackages = new Set();
+for (const [file] of inputs) {
+  if (isFirstParty(file)) continue;
+  const name = packageOf(file);
+  if (name) graphPackages.add(name);
+}
+
+const nativeCandidates = [];
+for (const name of [...graphPackages].sort()) {
+  const manifestPath = path.join(root, "node_modules", name, "package.json");
+  let manifest;
+  try {
+    manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
+  } catch {
+    continue;
+  }
+  const optional = Object.keys(manifest.optionalDependencies ?? {});
+  if (optional.length === 0) continue;
+  nativeCandidates.push({ name, optional });
+}
+
+const bindingFailures = [];
+const bindingOk = [];
+for (const { name, optional } of nativeCandidates) {
+  const present = optional.filter((dep) => fs.existsSync(path.join(root, "node_modules", dep)));
+  const probe = spawnSync(
+    "bun",
+    [
+      "-e",
+      `const spec = ${JSON.stringify(name)};\n` +
+        `try { await import(spec); process.stdout.write("PROBE-OK"); }\n` +
+        `catch (err) {\n` +
+        `  const parts = [];\n` +
+        `  const walk = (e, d) => {\n` +
+        `    if (!e || d > 4) return;\n` +
+        `    parts.push(String(e?.message ?? e));\n` +
+        `    if (Array.isArray(e?.cause)) e.cause.forEach((c) => walk(c, d + 1));\n` +
+        `    else if (e?.cause) walk(e.cause, d + 1);\n` +
+        `  };\n` +
+        `  walk(err, 0);\n` +
+        `  process.stdout.write("PROBE-ERR " + parts.join("\\n      "));\n` +
+        `  process.exit(3);\n` +
+        `}\n`,
+    ],
+    { cwd: root, encoding: "utf8" }
+  );
+  const detail = `${probe.stdout ?? ""}${probe.stderr ?? ""}`.replace(/^PROBE-(OK|ERR) ?/, "").trim();
+  if (probe.status === 0) bindingOk.push({ name, present, optional });
+  else bindingFailures.push({ name, present, optional, detail });
+}
+
 const computedSites = [];
 let literalCount = 0;
 for (const [file] of firstParty) {
@@ -288,6 +390,21 @@ if (verifiedLazyPackages.length > 0) {
     if (seen.has(key)) continue;
     seen.add(key);
     process.stdout.write(`  ${specifier.padEnd(34)} <- ${file}\n`);
+  }
+}
+
+process.stdout.write(
+  `\n${NAME}: native bindings -- ${graphPackages.size} third-party package(s) in the graph, ` +
+    `${nativeCandidates.length} ship a platform binary as an optional dependency:\n`
+);
+if (nativeCandidates.length === 0) {
+  process.stdout.write("  (none)\n");
+} else {
+  for (const { name, present, optional } of [...bindingOk, ...bindingFailures]) {
+    const verdict = bindingFailures.some((f) => f.name === name) ? "FAILED TO LOAD" : "loads";
+    process.stdout.write(
+      `  ${name.padEnd(34)} ${verdict}  (${present.length}/${optional.length} platform package(s) present)\n`
+    );
   }
 }
 
@@ -330,6 +447,35 @@ if (unresolved.length > 0) {
   process.exit(1);
 }
 
+if (bindingFailures.length > 0) {
+  process.stderr.write(
+    `\n${NAME}: FAIL -- ${bindingFailures.length} package(s) in the runtime graph cannot load ` +
+      `their native binding in this tree:\n\n`
+  );
+  for (const { name, present, optional, detail } of bindingFailures) {
+    process.stderr.write(`  ${name}\n`);
+    process.stderr.write(
+      `      platform packages  ${present.length} of ${optional.length} declared are present\n`
+    );
+    process.stderr.write(`      loader said        ${detail || "(no output)"}\n`);
+    const missing = optional.filter((dep) => !present.includes(dep));
+    if (missing.length > 0) {
+      process.stderr.write(`      absent             ${missing.length}: ${missing.join(", ")}\n`);
+    }
+  }
+  process.stderr.write(
+    `\n  The bundler cannot see this: the binary is loaded by a try/catch \`require\` inside\n` +
+      `  the package's own code, so it is a third-party edge and the metafile rule above\n` +
+      `  ignores it by design. It fails at runtime the first time the feature is used --\n` +
+      `  for @node-rs/argon2 that is any password hash or verify, so nobody can log in.\n\n` +
+      `  Restore the platform package for this image's os/cpu. Note that\n` +
+      `  \`bun install --production\` KEEPS optionalDependencies, so a tree that reaches\n` +
+      `  this message has had them removed by something other than the prune.\n`
+  );
+  process.exit(1);
+}
+
 process.stdout.write(
-  `\n${NAME}: OK -- every statically discoverable import resolves in this tree.\n`
+  `\n${NAME}: OK -- every statically discoverable import resolves in this tree, and ` +
+    `${bindingOk.length} native binding(s) load.\n`
 );

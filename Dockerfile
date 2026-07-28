@@ -110,8 +110,38 @@ COPY --from=builder --chown=bun:bun /app/store /app/store
 # bundler's --metafile instead of trusting its exit code, and fails on any
 # first-party edge marked external that is not a Node/Bun builtin.
 #
-# What it cannot cover, and says so on every run: dynamic imports with a
-# computed specifier. core/site/renderPublicPage.tsx and renderPublicEntry.tsx
+# That metafile rule is scoped to FIRST-PARTY importers, so it does not see a
+# package failing to load its OWN platform binary -- a try/catch `require` in
+# third-party code. @node-rs/argon2 is that case, and it is not cosmetic:
+# without @node-rs/argon2-linux-arm64-gnu / -musl the metafile check still exits
+# 0 while core/services/auth/password.ts throws `Failed to load native binding`,
+# which means no login. So the script ALSO loads, in a subprocess, every package
+# in the runtime graph that ships its binary as a platform-specific optional
+# dependency, and lets that package's own loader answer. On the current tree
+# that is 65 third-party packages in the graph, exactly 1 of them native
+# (@node-rs/argon2, 14 declared platform packages, 2 installed for linux/arm64).
+# The script lists what it probed on every run.
+#
+# The reach of that second rule is exactly "packages in the graph declaring
+# optionalDependencies", and no wider. Covering every third-party try/catch
+# require is NOT attempted: guarded requires of ordinary packages -- an optional
+# peer backend a dependency probes for -- are not enumerable from metadata and
+# are NOT covered here.
+#
+# Worth stating plainly: with this Dockerfile as written the native-binding
+# failure is LATENT, not live. `bun install --production --frozen-lockfile`
+# resolves 142 packages on linux/arm64 and both @node-rs/argon2 platform
+# packages are among them, .node files included -- --production keeps
+# optionalDependencies, so the prune above cannot drop them. The probe exists so
+# that stays true. Things that would drop them, and now fail the build instead of
+# shipping an image nobody can log into: adding --omit=optional to the install; a
+# targeted rm to shrink the image; or building for a TARGETPLATFORM the lockfile
+# has no binary for -- @node-rs/argon2 declares 14, covering linux gnu+musl on
+# x64/arm64, armv7 gnueabihf, darwin, win32, freebsd, android and wasm, but not
+# for instance linux/s390x or linux/ppc64le.
+#
+# What neither rule can cover, and the script says so on every run: dynamic
+# imports with a computed specifier. core/site/renderPublicPage.tsx and renderPublicEntry.tsx
 # do `await import(pathToFileURL(templatePath).href)` to load a template per
 # request. No static tool can confirm that path. Naming core/templates/*.tsx as
 # entrypoints brings everything those templates IMPORT under the check, but the
