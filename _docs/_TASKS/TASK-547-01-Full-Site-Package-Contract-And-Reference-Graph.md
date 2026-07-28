@@ -99,9 +99,11 @@ L01 owns the only canonical text comparator:
 `left < right ? -1 : left > right ? 1 : 0`. It is UTF-16 code-unit order and is
 used for resource keys, residual IDs and L02 lexical identity/dependency ties;
 canonical package/graph code must not use `localeCompare`, `Intl` or a host
-locale. L01's object-key comparator follows ECMAScript own-key order: canonical
-array-index strings `0..4294967294` sort numerically first, then remaining keys
-use the text comparator. Fixed collection order, desired-array order and first-
+locale. L01's object-key comparator reuses only ECMAScript array-index
+classification and ordering: canonical array-index strings `0..4294967294` sort
+numerically first. Every non-index key is deliberately sorted by the custom
+UTF-16 text comparator; the canonicalizer reconstructs objects in that order
+before `JSON.stringify`. Fixed collection order, desired-array order and first-
 occurrence verification order remain authored. Resource arrays and residuals
 sort by canonical identity. Residual IDs use the exact hyphen-only
 grammar `^[a-z0-9](?:[a-z0-9-]{0,126}[a-z0-9])?$`, are unique and reject
@@ -173,13 +175,22 @@ acceptance. Sanitization never discloses the malformed discriminator, untrusted
 slot key, ref value or descendant payload.
 
 Graph validation is globally phased: per-`desired` JSON-depth preflight, unique
-identities, one mixed reference/path/target discovery stream, accepted
-occurrence-edge limit, cycle detection, then dependency depth. JSON `desired`
+identities, one mixed reference/path/target discovery stream and its finalizer
+(diagnostic overflow, accepted occurrence-edge overflow, then semantic
+findings), cycle detection, then dependency-depth validation. JSON `desired`
 root is level 1; every property value/array item, including a scalar or `null`,
 adds one; 64 is accepted and 65 returns only
 `{path:"$.resources",reason:"json_depth_exceeded"}`. Raw normalization owns the
 same guard before it calls the graph, so depth wins over duplicate errors at both
 raw and typed boundaries.
+Semantic discovery/finalization must succeed before either graph-shape check. In
+the finalized acyclic direct-dependency graph, a root/resource with no dependency
+has dependency depth 0 and every directed dependency edge adds one. The limit
+therefore accepts a longest path of exactly 64 edges (65 resources) and rejects
+65 edges (66 resources) with exactly
+`{path:"$.resources",reason:"dependency_depth_exceeded"}`. Cycle detection runs
+first, so a cyclic graph that also contains an independent over-depth path
+reports `reference_cycle`, never dependency depth.
 The 101st attempted diagnostic across duplicate or mixed semantic categories
 discards the partial list for one `diagnostic_limit_exceeded` singleton. For
 1..100 mixed semantic findings, return all in discovery order and choose the
@@ -231,7 +242,10 @@ literally `false`; otherwise it is an implementation gap and blocks closure.
 - **Endpoint visibility/auth/RBAC/CSRF/rate limit:** n/a; pure contract only.
 - **Validation:** `additionalProperties:false` at every package-owned object;
   TASK-547-01 validates the package envelope/JSON and graph, not native-domain
-  write validity.
+  write validity. After the depth preflight, exact own desired-object keys
+  `__proto__`, `prototype` and `constructor` emit only
+  `prototype_key_forbidden` at the static redacted desired path, skip that key's
+  value branch and never expose its supplied key or value.
 - **Anti-abuse/complexity:** the in-memory value's `JSON.stringify` UTF-8 form
   is capped at 8 MiB and returns `site_package_too_large`; this is distinct from
   TASK-547-05's raw-file cap and `site_package_file_invalid`. Other exact limits
@@ -273,8 +287,13 @@ literally `false`; otherwise it is an implementation gap and blocks closure.
   decode/re-encode identity, so padding and nonzero-pad-bit variants reject while
   `Basic Plan` and `Basic analytics` remain valid. Credential-shaped Bearer
   values, private-key PEM and Base64 data URLs reject; ordinary Bearer copy
-  remains valid. Secret diagnostics use a fixed redacted desired-key path or one
-  of seven exact package-prose paths and never echo input.
+  remains valid. The complete carrier-independent binary-class table is
+  `ArrayBuffer`, `Uint8Array` (representative `ArrayBufferView`), `DataView`
+  (representative `ArrayBufferView`) and `Blob`. Every row rejects at bare
+  desired placement, with representative nested-array, nested-object and
+  explicit-carrier coverage; binary receives first value-reason precedence as
+  `binary_value_forbidden` at the fixed redacted desired path. Secret diagnostics
+  use that path or one of seven exact package-prose paths and never echo input.
 - **CSS/HTML:** package metadata never becomes a raw CSS/HTML/JS sink.
 
 ## Implementation Pseudocode
@@ -299,7 +318,8 @@ export function buildReferencePlan(pkg: FullSitePackageV1): readonly PlannedPack
   const { edges, descriptorsByIdentity, diagnostics } = collectRefsAtAllowedPaths(registry);
   if (edges.length > PACKAGE_LIMITS.referenceEdges) throwReferenceEdgesSingleton();
   diagnostics.throwIfAny();
-  return freezePlan(stableTopologicalSort(registry, edges), descriptorsByIdentity);
+  const ordered = stableTopologicalSort(registry, edges); // Cycle, then longest-path edge depth.
+  return freezePlan(ordered, descriptorsByIdentity);
 }
 
 export function resolvePlannedPackageResourceRefs(
@@ -351,10 +371,19 @@ without applying the package-key regex to setting keys, strict verification
 shape/count/ID grammar plus first-occurrence dedupe, immutable root/setting
 membership, at most 100 bounded
 diagnostics, normalize(normalize(x)) identity, complete desired-snapshot equality
-and deterministic code-unit/ECMAScript index order, including `-0` → `0`.
+and deterministic custom object-key order. The boundary regression must prove
+that `"4294967294"` is the last array-index key while `"4294967295"`, `"01"`
+and `"text"` are non-index keys, producing the exact combined order
+`4294967294,01,4294967295,text`; also pin `-0` → `0`.
 `full-site-package-{schema,canonicalization,security}.test.ts` must each run
 independently through shared `fullSitePackageTestSupport.ts`; moved assertions or
-builders are not copied. The security suite pins all seven package-prose
+builders are not copied. The security suite constructs each exact prototype-
+sensitive own key through `JSON.parse` and pins its structural reason, fixed
+redacted path, skipped value branch and complete key/value non-disclosure. It
+also table-tests `ArrayBuffer`, `Uint8Array`, `DataView` and `Blob` at bare
+desired placement, plus representative nested-array, nested-object and explicit-
+carrier placements at arbitrary supported depth, with binary as the first value
+reason and no type/byte/value disclosure. The suite pins all seven package-prose
 surfaces, compact/suffixed credential aliases, compound binary carriers,
 userinfo and signed query/fragment URL markers, plus exact ASCII-case-insensitive
 `code` in both query and fragment with exactly-once decoding and empty/nonempty
@@ -396,10 +425,15 @@ plus 25 → depth, canonical own-slot order, original child indexes and complete
 non-disclosure. Prove frozen
 descriptor-only substitution with no second traversal or plan mutation. Pin
 exact JSON level 64/65, mixed bad-path/missing/ambiguity priority and complete
-discovery-order diagnostics, plus global semantic and duplicate 100/101 overflow. This
-task proves only its local raw normalize→graph call order; planner, typed-apply/
-preparer and CLI call counts belong to TASK-547-02-L01, 02-L02 and 05-L01. A
-structural-schema
+discovery-order diagnostics, plus global semantic and duplicate 100/101
+overflow. Focused dependency-depth tests accept a 64-edge/65-resource longest
+path and reject a 65-edge/66-resource path with the exact static
+`dependency_depth_exceeded` diagnostic. Separate precedence fixtures combine an
+over-depth path with a semantic finding and combine an independent over-depth
+branch with a cycle: the first reports the semantic result, while the second
+reports `site_package_ref_cycle` with `reference_cycle`. This task proves only
+its local raw normalize→graph call order; planner, typed-apply/preparer and CLI
+call counts belong to TASK-547-02-L01, 02-L02 and 05-L01. A structural-schema
 test may accept a ref-shaped value solely to exercise shape/edge limits, while
 the full consumer contract must prove that the same bad path is rejected by
 `buildReferencePlan` before lazy DB acquisition.

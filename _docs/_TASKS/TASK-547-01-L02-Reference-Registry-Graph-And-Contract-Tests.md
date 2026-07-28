@@ -14,7 +14,8 @@ validation evidence are pending after drift remediation.
 
 Own `referenceRegistry.ts`, `referenceGraph.ts` and graph tests. Consume L01's
 frozen resource-kind owner; own package identity, the discriminator-aware
-allowlist and stable topological ordering.
+allowlist, stable topological ordering and longest-path dependency-depth
+enforcement.
 
 Freeze `PackageRef` exactly as `{ ref: PackageResourceKind; key: string }` with
 no extra key. `key` must match
@@ -135,8 +136,8 @@ Absent or `null` nullable paths add no edge. Every present non-null allowed valu
 must be an exact ref of the frozen target kind. A discriminator-mismatched block
 is not an allowed path, even if it uses the same property name. All other
 ref-shaped objects/paths, including non-native slot keys and `$ref`, are invalid.
-Enforce 4,096 edges, dependency/JSON depth 64 and at most 100 diagnostics before
-sorting.
+Enforce 4,096 occurrence edges, JSON level 64 and at most 100 diagnostics before
+sorting; after cycle detection, enforce dependency-path depth 64.
 
 Diagnostics expose a sanitized path of at most 240 characters and exactly one
 member of this closed vocabulary:
@@ -190,7 +191,7 @@ depth 4 → `page_tree_depth_exceeded`, then the first 25-child array-valued own
 slot → `page_slot_children_exceeded`, then recursive child traversal; do not
 emit `page_slots_forbidden` or `page_slot_key_forbidden` without a valid type.
 Each of these failures uses the single diagnostic/blocked-prefix helper above.
-The 4,097th edge, dependency depth 65, 101st
+The 4,097th edge, a longest dependency path of 65 edges/66 resources, 101st
 diagnostic and cycle → their corresponding static codes; resolver map
 miss/source mismatch →
 `resolved_target_id_missing|planned_reference_drift`. The top-level error code
@@ -208,9 +209,20 @@ desired key is rendered. L01's raw traversal emits this same code/diagnostic
 before calling the graph, while L02 repeats it as the first guard for already-
 typed callers. Thus depth wins over duplicate identity at both boundaries.
 
+Dependency depth is a separate longest-path edge count over the deduplicated
+direct-dependency DAG. A source/root resource with no dependencies has depth 0;
+every dependency edge increments the candidate path depth by exactly one, and a
+resource's depth is the maximum of those candidates across all its direct
+dependencies. The limit 64 therefore accepts a chain of exactly 64 edges/65
+resources and rejects a chain of 65 edges/66 resources with exactly
+`{ path: "$.resources", reason: "dependency_depth_exceeded" }`. Resource count,
+occurrence-edge count and a one-based node count must not be substituted for
+this metric.
+
 Freeze the global graph-validation phases as JSON-depth preflight → unique
 identity indexing → reference/path/target discovery → discovery finalization
-→ cycle detection → dependency-depth validation. Duplicate identities
+→ stable topological traversal/cycle detection → dependency-depth
+calculation. Duplicate identities
 terminate after indexing and use the same 100/101 overflow rule below. Semantic
 discovery uses one global tagged diagnostic stream, never per-error-code
 collectors, and content-route ambiguity is accumulated rather than thrown inline.
@@ -233,6 +245,14 @@ diagnostics + edge overflow returns diagnostic overflow. Cycle and dependency-
 depth checks run only after this finalizer returns with no diagnostic.
 `ReferenceGraphError` receives only an already-bounded list and never slices or
 repairs it; overflow behavior belongs exclusively to the collectors.
+
+Topological traversal must first determine whether the complete graph is
+acyclic. Only a complete acyclic order reaches the longest-path dependency-depth
+calculation. Consequently, a cyclic graph that also contains an independent
+65-edge/66-resource over-depth branch returns exactly
+`{ path: "$.resources", reason: "reference_cycle" }`, never
+`dependency_depth_exceeded`; any semantic discovery or finalization failure
+prevents both cycle detection and dependency-depth calculation.
 
 Reason-to-code ownership is closed: duplicate identity →
 `site_package_ref_duplicate`; expected/shape/kind/key/path, content-route
@@ -637,14 +657,40 @@ const collectRefsAtAllowedPaths = (registry: PackageResourceRegistry) => {
   return { edges, descriptorsByIdentity, diagnostics };
 };
 
+const assertDependencyDepth = (
+  ordered: readonly PlannedPackageResource[],
+): void => {
+  const depthByIdentity = new Map<PackageResourceIdentity, number>();
+  for (const resource of ordered) {
+    let depth = 0;
+    for (const dependency of resource.dependencies) {
+      const dependencyDepth = depthByIdentity.get(dependency);
+      if (dependencyDepth === undefined) throw new Error("dependency order invariant");
+      depth = Math.max(depth, dependencyDepth + 1);
+    }
+    if (depth > PACKAGE_LIMITS.depth) throwDependencyDepthSingleton();
+    depthByIdentity.set(resource.identity, depth);
+  }
+};
+
+export const stableTopologicalSort = (registry, edges) => {
+  const ordered = collectStableKahnOrder(registry, edges);
+  if (ordered.length !== registry.resources.length) throwReferenceCycleSingleton();
+  // The complete acyclic order is the sole input to longest-path validation.
+  assertDependencyDepth(ordered);
+  return ordered;
+};
+
 export function buildReferencePlan(pkg: FullSitePackageV1) {
   assertReferenceGraphJsonDepth(pkg.resources);
   const registry = indexUniqueKindKeys(pkg.resources); // Bounded duplicate 100/101 finalizer.
   const { edges, descriptorsByIdentity, diagnostics } = collectRefsAtAllowedPaths(registry);
   // collectRefsAtAllowedPaths already ran the generic scan; its 101st add throws first.
+  // Finish all semantic failures before topology, cycle and dependency-depth work.
   if (edges.length > PACKAGE_LIMITS.referenceEdges) throwReferenceEdgesSingleton();
   diagnostics.throwIfAny();
-  return freezePlan(stableTopologicalSort(registry, edges), descriptorsByIdentity);
+  const ordered = stableTopologicalSort(registry, edges); // Cycle first, then depth.
+  return freezePlan(ordered, descriptorsByIdentity);
 }
 
 export function resolvePlannedPackageResourceRefs(resource, resolvedIds) {
@@ -656,10 +702,11 @@ buildReferencePlan(pkg);
 // Only after both calls succeed may the existing lazy DB loader/import run.
 ```
 
-Data flow: normalized package → typed depth guard → unique registry →
-discriminator-independent Page bounds preflight → valid-type allowlisted refs plus
-malformed-branch bounds-only traversal → generic ref-like scan → deterministic
-finalizer → DAG → plan.
+Data flow: normalized package → typed JSON-depth guard → unique registry →
+discriminator-independent Page bounds preflight → valid-type allowlisted refs
+plus malformed-branch bounds-only traversal → generic ref-like scan →
+deterministic semantic finalizer → stable topological traversal and cycle
+detection → longest-path dependency-depth calculation → frozen plan.
 Errors distinguish duplicate/missing/ambiguous/cycle/bad-path with only the
 static redacted diagnostics above. TASK-547-02 owns post-substitution native
 `desired` validation; this leaf certifies only ref placement/resolution/order.
@@ -783,18 +830,38 @@ tests are handed to 02-L01, 02-L02 and 05-L01. A
 structurally normalized bad-path ref must fail in that local harness before its
 injected lazy-dependency sentinel is acquired.
 
+Add focused, independently runnable dependency-phase cases without local copies
+of chain or combined-graph builders. In
+`full-site-package-references-plan.test.ts`, use the shared support builder to
+assert that 65 resources joined by 64 dependency edges are accepted, use the
+dependency-free source/root as the depth-0 base case and produce the identical
+complete ordered plan on deterministic repeat runs; 66 resources joined by 65
+dependency edges must reject on every repeat with exactly the static
+`dependency_depth_exceeded` singleton. In
+`full-site-package-references-core.test.ts`, use the shared combined-graph
+builder to assert twice from fresh fixtures that a cycle plus a disjoint 65-edge
+branch returns exactly the static `reference_cycle` singleton. A separate
+semantic-plus-cycle-and-over-depth fixture must return its complete semantic
+result twice and must never surface either cycle or dependency-depth output,
+proving that semantic discovery/finalization prevents both later phases. These
+focused cases assert whole diagnostics and whole identity order, not only error
+codes.
+
 Test ownership is physical and non-overlapping:
 
 - `full-site-package-references-core.test.ts` owns the fixed registry, identity,
-  content-route and topological core cases;
+  content-route, topological cycle and semantic-before-cycle phase cases;
 - `full-site-package-references-page.test.ts` owns both Page-backed recursive
   traversal/discriminator/slot/boundary cases;
 - `full-site-package-references-diagnostics.test.ts` owns reason/code mapping,
-  precedence, depth/edge/diagnostic limits and non-disclosure;
+  reference first-match/mixed-category precedence, JSON-depth/edge/diagnostic
+  limits and non-disclosure;
 - `full-site-package-references-plan.test.ts` owns occurrence/dependency order,
-  freeze, descriptor resolution and drift cases; and
-- `fullSitePackageReferenceTestSupport.ts` owns only graph/Page/depth builders,
-  while shared package/error fixtures stay in L01's
+  exact dependency-depth boundaries and repeats, freeze, descriptor resolution
+  and drift cases; and
+- `fullSitePackageReferenceTestSupport.ts` owns the single reusable
+  linear/combined graph builders plus Page/depth builders, while shared
+  package/error fixtures stay in L01's
   `fullSitePackageTestSupport.ts`.
 
 Retire `full-site-package-references.test.ts` after moving every case; do not copy
@@ -810,8 +877,10 @@ cases/builders. Each four `.test.ts` files must run independently.
   discriminator/nullability/ref-key coverage and static redacted diagnostics;
   freeze Page owner imports, JSON-depth counting, global mixed-diagnostic
   precedence/overflow, the exact occurrence-purpose/content-route plan,
-  descriptors and substitution helper; split and retire the original reference
-  suite per the ownership above; then run fresh gates.
+  descriptors and substitution helper; enforce the exact 64-edge longest-path
+  dependency boundary with semantic → cycle → depth phase precedence; split and
+  retire the original reference suite per the ownership above; then run fresh
+  gates.
 
 ## Testing Requirements
 

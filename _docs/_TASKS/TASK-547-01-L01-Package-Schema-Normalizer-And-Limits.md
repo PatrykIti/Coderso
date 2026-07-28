@@ -50,11 +50,16 @@ host default locale. Apply this owner to resource seed keys, residual IDs and
 L02's lexical identity/dependency ties. The same module owns
 `compareFullSitePackageObjectKeys`: canonical ECMAScript array-index strings
 (`"0"` through `"4294967294"`, no leading zero) sort first by numeric value, then
-all other keys use `compareFullSitePackageText`. This matches deterministic
-`OrdinaryOwnPropertyKeys`/`JSON.stringify` behavior; it is not locale order.
-The fixed resource-collection tuple retains its declared order; desired arrays
-retain authored order; verification IDs retain first-occurrence order. Resource
-arrays and residuals alone sort by canonical identity.
+all other keys use `compareFullSitePackageText`. It reuses ECMAScript's
+array-index classification but deliberately code-unit-sorts non-index keys;
+`OrdinaryOwnPropertyKeys` itself preserves insertion order for those keys and is
+not their ordering authority here. Canonicalization recursively reconstructs
+each object in comparator order before `JSON.stringify`, whose numeric-index
+behavior then agrees with the comparator while the reconstructed insertion order
+pins non-index keys. The fixed resource-collection tuple retains its declared
+order; desired arrays retain authored order; verification IDs retain
+first-occurrence order. Resource arrays and residuals alone sort by canonical
+identity.
 
 Every exported package authority consulted by validation is runtime-immutable,
 not merely TypeScript-readonly: `PACKAGE_RESOURCE_KINDS`,
@@ -182,6 +187,16 @@ ordinary JSON. Actual binary rejects at any depth. This closes direct, array and
 nested-object carrier shapes without declaring a composite value invalid merely
 because it is composite.
 
+After the separate depth preflight, every own desired-object key exactly equal
+to `__proto__`, `prototype` or `constructor` emits
+`prototype_key_forbidden` and its value branch is skipped. This is a structural
+JSON-safety reason outside `PackageValueSecretReason` and its closed value-reason
+precedence. The finding uses only
+`$.resources.<collection>[<index>].desired.[redacted]`; the key is never copied
+into a dynamic error field (the fixed reason literal is not key echo), and its
+value never enters any error surface. Similar or inherited keys do not match
+this exact own-key rule.
+
 The carrier-independent value classifier is shared by every `desired` string,
 metadata `name`/optional `description`, and the five VisualResidual prose fields.
 It applies ECMAScript `trim()` for detection only and rejects actual
@@ -258,8 +273,8 @@ never permissively consume a string that this contract accepted as
 near misses and bare Base64-looking descriptive prose outside an explicit
 carrier stay valid.
 
-For a desired property, a sensitive key emits one `secret_key_forbidden` and
-skips value classification for that property after the separate depth preflight.
+For any remaining desired property, a sensitive key emits one
+`secret_key_forbidden` and skips value classification for that property.
 Otherwise value-reason precedence is binary → authorization → private-key PEM →
 credential URL → Base64 data URL → explicit-carrier Base64 family, with at
 most one finding per value. Desired findings always use
@@ -268,11 +283,14 @@ use only `$.metadata.name`, `$.metadata.description`, or
 `$.compatibility.unresolvedVisuals[<input-index>].<trusted-prose-field>` where
 the field is one of `prototypeEvidence`, `cmsConstraint`,
 `installedApproximation`, `userVisibleDifference`, `postInstallRemediation`.
-Reasons are exactly `secret_key_forbidden`, `credential_url_forbidden`,
-`authorization_value_forbidden`, `private_key_forbidden`,
-`base64_value_forbidden`, `binary_value_forbidden`. No supplied key, residual ID,
-URL/parameter name/value, authorization, PEM text or encoded bytes may enter the
-path, reason, error name or message.
+Reasons are exactly the structural `prototype_key_forbidden`, key reason
+`secret_key_forbidden`, and the closed value reasons
+`credential_url_forbidden`, `authorization_value_forbidden`,
+`private_key_forbidden`, `base64_value_forbidden`,
+`binary_value_forbidden`. No supplied key, residual ID, URL/parameter name/value,
+authorization, PEM text, encoded bytes or binary metadata may enter the path,
+details, error name or message; the fixed reason literals and trusted path
+templates are the only allowed textual overlap.
 
 ## Implementation Pseudocode
 
@@ -344,6 +362,14 @@ const COMPACT_EXTRA_BASES = freezeTuples([
 ] as const);
 const BINARY_CARRIER_BASES = Object.freeze(["base64", "bytes", "binary", "blob"] as const);
 const BINARY_CARRIER_ROLES = Object.freeze(["content", "data", "payload", "value"] as const);
+const FORBIDDEN_PROTOTYPE_KEYS = Object.freeze([
+  "__proto__", "prototype", "constructor",
+] as const);
+
+type PackageStructuralJsonSafetyReason = "prototype_key_forbidden";
+
+const isForbiddenPrototypeKey = (key: string): boolean =>
+  FORBIDDEN_PROTOTYPE_KEYS.some((candidate) => candidate === key);
 
 const tokenizeSensitiveFieldKey = (key: string): readonly string[] =>
   tokenizeWithExactCompactExpansion(key, credentialCompactGrammar);
@@ -498,6 +524,12 @@ const scanDesiredValue = (
   }
   if (isRecord(value)) {
     for (const key of Object.keys(value)) {
+      if (isForbiddenPrototypeKey(key)) {
+        const reason: PackageStructuralJsonSafetyReason =
+          "prototype_key_forbidden";
+        addRedactedDesiredFinding(context, reason);
+        continue; // Depth was preflighted; never inspect this key's value branch.
+      }
       if (isSensitiveFieldKey(key)) {
         addRedactedDesiredFinding(context, "secret_key_forbidden");
         continue; // Depth was already preflighted; do not classify this branch's value.
@@ -603,11 +635,18 @@ verification unknown/type/ID checks and stable first-occurrence dedupe; bounded
 100-diagnostic truncation; forbidden-setting rejection with exact
 `site_package_setting_forbidden` and supplied key/value sentinels absent from the
 error/diagnostics; mutation attempts against every exported frozen authority and
-the private root/setting membership boundaries. Use table-driven cases for every
-sensitive terminal, pair, material suffix, compact extra base, carrier base and
-carrier role; pin longest-first `sessiontoken`/`secretaccesskey`, repeated suffix
-`apikeyheadervalue`, partial-parse near misses, and `APIKey`, `APIkey`, `apiKEY`,
-`XAPIKey`, `X-API-Key` plus URL-parameter equivalents.
+the private root/setting membership boundaries. Move/rebaseline the existing
+prototype-key regression into the focused security suite rather than copying
+its assertion. Construct all three exact own-key cases (`__proto__`, `prototype`,
+`constructor`) with `JSON.parse`, including nested desired objects; pin the exact
+`prototype_key_forbidden` reason, static redacted desired path, skipped value
+branch and complete serialized-error equality to a fixed expected shape with no
+dynamic supplied-key/value field, plus absence of unique value sentinels. Use
+table-driven cases for every sensitive terminal, pair, material
+suffix, compact extra base, carrier base and carrier role; pin longest-first
+`sessiontoken`/`secretaccesskey`, repeated suffix `apikeyheadervalue`,
+partial-parse near misses, and `APIKey`, `APIkey`, `apiKEY`, `XAPIKey`,
+`X-API-Key` plus URL-parameter equivalents.
 
 Carrier tests cover every base alone, every role, compact/multi-role forms,
 direct strings, inherited arrays and nested objects. Under `base64Data`,
@@ -631,6 +670,17 @@ package prose; every variant must reject without disclosing its token. Keep
 `Bearer token` and `Bearer architecture` valid, and reject a
 credential-shaped Bearer token. Also pin PEM, typed-binary and Base64 data URL
 with complete non-disclosure.
+
+Use carrier-independent, table-driven actual-binary cases for `ArrayBuffer`,
+representative `ArrayBufferView` instances `Uint8Array` and `DataView`, and
+`Blob`. Exercise every row as the bare `desired` value, plus representative rows
+inside a nested array, a nested object and an explicit-carrier property, at
+arbitrary supported depths. Every location must take binary-first precedence,
+emit exactly `binary_value_forbidden` at the static redacted desired path and
+stop before traversal or carrier scanning. Encode unique byte sentinels and a
+unique `Blob.type` sentinel in the fixtures and prove the complete serialized
+error discloses neither those bytes/type markers nor any value-derived detail.
+Keep these cases in the independently runnable focused security suite.
 
 Credential URL cases include canonical `scheme://` userinfo, protocol-relative
 userinfo, `http:user:pass@example.com`, AWS/GCS/CloudFront/Azure signature and
@@ -670,8 +720,16 @@ residual ID/value.
 Pin metadata/prose trimming, locale
 grammar/case preservation, no-trim identities, residual grammar/uniqueness and
 punctuation order `a-a,a.a,a_a,aa`, integer-index order `2,10,01` and `-0` →
-`0` in exact canonical JSON. Pin the raw normalizer's exact depth 64/65 boundary
-and static redacted `json_depth_exceeded` singleton; L02 diagnostics alone owns
+`0` in exact canonical JSON. Add a direct comparator assertion that sorting
+`["a", "4294967295", "01", "4294967294"]` yields
+`["4294967294", "01", "4294967295", "a"]`, plus exact canonical desired-object
+JSON from that adversarial input insertion order:
+`{"4294967294":"max-index","01":"leading-zero","4294967295":"not-index","a":"text"}`.
+Only `4294967294` is numeric-priority; the other three are non-index keys in
+UTF-16 code-unit order. This must prove reconstruction precedes
+`JSON.stringify`, not attribute non-index sorting to `OrdinaryOwnPropertyKeys`.
+Pin the raw normalizer's exact depth 64/65 boundary and static redacted
+`json_depth_exceeded` singleton; L02 diagnostics alone owns
 raw normalize→graph and forged-typed duplicate+depth precedence. Cover complete
 residual object accept; bare-code/unknown-key/non-false-impact rejection;
 complete desired-snapshot equality; and idempotent normalize. A schema-only limit test may
