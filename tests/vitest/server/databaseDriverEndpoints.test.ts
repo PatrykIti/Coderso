@@ -38,7 +38,7 @@ import { createSessionDatabaseClient } from "../../../core/db/sessionClient";
  * contract under test belongs to libpq and postgres.js, not to a constant the
  * guard could rename in step with its test.
  */
-const DRIVER_ENDPOINT_ENV_VARS = ["PGHOST", "PGPORT"] as const;
+const ENV_VARS_THIS_FILE_WRITES = ["PGHOST", "PGPORT", "PGTARGETSESSIONATTRS"] as const;
 
 const POOLED_PORT = 6432;
 
@@ -55,15 +55,23 @@ const setEnvVar = (name: string, value: string | undefined): void => {
 };
 
 /**
- * Run `read` with the driver's host/port variables taken from `env`.
+ * Run `read` with the driver's whole `PG*` namespace taken from `env`: the names
+ * the map supplies are set, and the ambient names it does not supply are unset, so
+ * the driver sees the caller's environment and not a mixture.
  *
  * Deliberately a second, independent copy of what `driverEndpoints.ts` does: a
  * test that reused the module's own projection could not catch that projection
- * being wrong.
+ * being wrong — and it was wrong, projecting only `PGHOST` and `PGPORT` while the
+ * driver also refuses an environment outright over `PGTARGETSESSIONATTRS`.
  */
 const withStubbedDriverEnv = <T>(env: DatabaseEnvMap, read: () => T): T => {
-  const previous = DRIVER_ENDPOINT_ENV_VARS.map((name) => [name, process.env[name]] as const);
-  for (const name of DRIVER_ENDPOINT_ENV_VARS) {
+  const names = [
+    ...new Set(
+      [...Object.keys(process.env), ...Object.keys(env)].filter((name) => name.startsWith("PG"))
+    ),
+  ];
+  const previous = names.map((name) => [name, process.env[name]] as const);
+  for (const name of names) {
     setEnvVar(name, env[name]);
   }
   try {
@@ -328,13 +336,32 @@ const ENDPOINT_CASES: EndpointCase[] = [
     driver: { dial: "refused" },
     inspection: { verified: false, port: null, pooled: false, reason: "unparsable_url" },
   },
+  {
+    // A PG variable that does not move the endpoint at all, yet decides whether the
+    // driver will build a client for this environment: `tsa()` throws on it. A
+    // projection narrower than the driver's own namespace missed it.
+    name: "a PGTARGETSESSIONATTRS the driver refuses the whole environment over",
+    url: "postgres://coderso:secret@db.example.com:5432/coderso",
+    env: { PGTARGETSESSIONATTRS: "bogus" },
+    driver: { dial: "refused" },
+    inspection: { verified: false, port: null, pooled: false, reason: "unparsable_url" },
+  },
+  {
+    name: "a PGTARGETSESSIONATTRS the driver accepts",
+    url: "postgres://coderso:secret@db.example.com:5432/coderso",
+    env: { PGTARGETSESSIONATTRS: "read-write" },
+    driver: { dial: "tcp", hosts: ["db.example.com"], ports: [5432] },
+    inspection: { verified: true, port: 5432, pooled: false },
+  },
 ];
 
 describe("postgres.js endpoint resolution", () => {
+  // Only the names this file assigns to `process.env` itself; a value handed to the
+  // guard through an env map is restored by the projection under test.
   const ambient = new Map<string, string | undefined>();
 
   beforeEach(() => {
-    for (const name of DRIVER_ENDPOINT_ENV_VARS) {
+    for (const name of ENV_VARS_THIS_FILE_WRITES) {
       ambient.set(name, process.env[name]);
     }
   });
@@ -416,6 +443,34 @@ describe("postgres.js endpoint resolution", () => {
     expect(
       inspectDatabaseUrl(AUTHORITYLESS_URL, POOLED_PORT, { PGHOST: "pgbouncer.internal:6432" })
     ).toEqual({ verified: true, port: 6432, pooled: true });
+  });
+
+  test("projects the driver's whole PG namespace, not just the endpoint variables", () => {
+    // The variable below is not part of any endpoint: it decides whether the driver
+    // will build a client for this environment AT ALL. So the guard's answer has to
+    // follow the caller's map in both directions, or a caller gets a verified target
+    // from a driver that would refuse the very same environment.
+    const url = "postgres://coderso:secret@db.example.com:5432/coderso";
+
+    process.env.PGTARGETSESSIONATTRS = "bogus";
+    // Ambient, and the caller's map does not set it: the driver must not see it.
+    expect(inspectDatabaseUrl(url, POOLED_PORT, {})).toEqual({
+      verified: true,
+      port: 5432,
+      pooled: false,
+    });
+    expect(process.env.PGTARGETSESSIONATTRS).toBe("bogus");
+
+    delete process.env.PGTARGETSESSIONATTRS;
+    // Not ambient, and the caller's map sets it: the driver must see it, and it
+    // refuses to build a client, so nothing about the endpoint can be read.
+    expect(inspectDatabaseUrl(url, POOLED_PORT, { PGTARGETSESSIONATTRS: "bogus" })).toEqual({
+      verified: false,
+      port: null,
+      pooled: false,
+      reason: "unparsable_url",
+    });
+    expect("PGTARGETSESSIONATTRS" in process.env).toBe(false);
   });
 
   test("puts the ambient environment back exactly as it found it", () => {

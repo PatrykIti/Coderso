@@ -90,7 +90,10 @@ export const DEFAULT_POSTGRES_PORT = 5432;
  * list of parsing rules of our own.
  */
 export type DatabaseUrlUnverifiableReason =
-  /** The driver refuses the string outright, so it resolves to no endpoint at all. */
+  /**
+   * The driver refuses to build a client for it at all — for the string itself, or
+   * for the `PG*` environment it would resolve it with — so there is no endpoint.
+   */
   | "unparsable_url"
   /**
    * The driver resolves several endpoints and fails over between them, so no
@@ -272,7 +275,11 @@ const unverifiableReasonHint = (reason: DatabaseUrlUnverifiableReason): string =
       "before any endpoint may be read out of it again"
     );
   }
-  return "the driver refuses to parse it as a connection string, so its port cannot be read";
+  return (
+    "the driver refuses to build a client for it — either it does not parse as a connection " +
+    "string, or the PG* environment it would be resolved with is one the driver rejects — so " +
+    "its port cannot be read"
+  );
 };
 
 /**

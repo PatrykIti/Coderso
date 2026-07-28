@@ -147,7 +147,10 @@ export type DriverDial =
   | { kind: "unix_socket"; path: string }
   /** `options.socket` supplies the transport; the driver dials nothing itself. */
   | { kind: "custom_transport" }
-  /** The driver refused the connection string, so it resolves no endpoint. */
+  /**
+   * The driver refused to build a client at all — for the connection string, or
+   * for the environment it would resolve it with — so there is no endpoint.
+   */
   | { kind: "refused_url" }
   /** The driver's option surface is not the audited one; nothing may be read off it. */
   | { kind: "unrecognized"; detail: string };
@@ -202,17 +205,32 @@ export const AUDITED_DRIVER_OPTION_KEYS: readonly string[] = Object.freeze([
 ]);
 
 /**
- * The variables postgres.js consults while resolving a host and a port (lines 438
- * and 439 above). They are the only ones this module has to project from a
- * caller-supplied env map onto `process.env`.
+ * The prefix that defines which environment variables belong to the driver.
  *
- * That projection matters ONLY for callers that pass a map which is not
- * `process.env` — tests, essentially. Production callers pass `process.env`
- * itself, so the driver reads exactly the environment it will read again when it
- * connects, and a future driver version that consults some further variable is
- * honoured automatically rather than silently missed.
+ * The projection below hands the driver the caller's variables under this prefix —
+ * ALL of them, not a hand-picked list of the ones that decide an endpoint.
+ * Deciding which of the driver's inputs matter is the judgement that made this
+ * guard fail open three times, and the hand-picked list (`PGHOST`, `PGPORT`) was
+ * already incomplete: `PGTARGETSESSIONATTRS` does not move the endpoint, but an
+ * unsupported value makes `tsa()` (`src/index.js` l. 504) THROW, so a caller whose
+ * map set it was handed a verified target by a driver that refuses to build a
+ * client for that environment at all.
+ *
+ * `PG` is the driver's own boundary rather than ours. Every environment read in
+ * postgres.js 3.4.9 goes through the `env` bound at l. 434, and every one of them
+ * is `PG`-prefixed: `PGHOST`, `PGPORT` (l. 438/439), `PGUSERNAME`, `PGUSER`
+ * (l. 440), `PGDATABASE` (l. 469), `PGPASSWORD` (l. 471), `PGAPPNAME` (l. 485),
+ * `PGTARGETSESSIONATTRS` (l. 504) and `env['PG' + option.toUpperCase()]` for every
+ * defaulted option (l. 477). The only reads that are not `PG*` are in
+ * `osUsername()` (l. 561) — `process.env.LOGNAME`, `USER`, `USERNAME` — which feed
+ * the default user and through it the default database name, never the endpoint,
+ * and which cannot throw. They stay ambient deliberately: projecting them would let
+ * a caller-supplied map change which OS user a real connection authenticates as.
  */
-const DRIVER_ENDPOINT_ENV_VARS = ["PGHOST", "PGPORT"] as const;
+const DRIVER_ENV_PREFIX = "PG";
+
+const driverEnvNames = (env: DatabaseEnvMap): string[] =>
+  Object.keys(env).filter((name) => name.startsWith(DRIVER_ENV_PREFIX));
 
 const setProcessEnv = (name: string, value: string | undefined): void => {
   // Assigning `undefined` to `process.env` stores the STRING "undefined", which
@@ -225,16 +243,21 @@ const setProcessEnv = (name: string, value: string | undefined): void => {
 };
 
 /**
- * Run `read` with `DRIVER_ENDPOINT_ENV_VARS` taken from `env`, then put
- * `process.env` back exactly as it was.
+ * Run `read` with the driver's whole environment namespace taken from `env`, then
+ * put `process.env` back exactly as it was.
  *
  * Safe because `read` is synchronous: nothing else can run — let alone connect —
  * while the environment is swapped, and the restore is in a `finally`. When
- * `env` IS `process.env` every write stores the value that was already there.
+ * `env` IS `process.env` every write stores the value that was already there,
+ * which is every production caller.
  */
 const withDriverEnv = <T>(env: DatabaseEnvMap, read: () => T): T => {
-  const previous = DRIVER_ENDPOINT_ENV_VARS.map((name) => [name, process.env[name]] as const);
-  for (const name of DRIVER_ENDPOINT_ENV_VARS) {
+  // The union of both sides: names the caller supplies have to be set, and names
+  // only the ambient environment has must be UNSET, or the driver would resolve
+  // against a mixture of the two.
+  const names = [...new Set([...driverEnvNames(process.env), ...driverEnvNames(env)])];
+  const previous = names.map((name) => [name, process.env[name]] as const);
+  for (const name of names) {
     setProcessEnv(name, env[name]);
   }
 
