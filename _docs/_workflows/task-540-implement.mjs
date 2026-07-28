@@ -4740,6 +4740,23 @@ async function task540TouchedModulePathAuthority(label) {
   return buildTask540TouchedModulePathAuthority(committedHistory, currentTracked, untracked, label);
 }
 
+function task540LineLimitFailureSection(heading, entries) {
+  if (entries.length === 0) return [];
+  return [heading + " (" + entries.length + "):", ...entries.map((entry) => "  " + entry)];
+}
+
+// The gate used to throw on the FIRST path that failed ownership resolution, so a run that
+// had six offenders named one and hid five. Two rounds of this session were lost to exactly
+// that: a fix landed for the single named path, the gate was re-run, and it named the next
+// one. Ownership and over-length verdicts are therefore both accumulated across every
+// governed path and reported together, so one run is one complete worklist. A path that is
+// unowned AND over the limit appears in both sections, which is the point -- registering an
+// owner for it would only convert one red into the other.
+//
+// Structural failures below (unsafe path, missing file, non-regular file) still throw where
+// they are found: they say the path authority itself is broken, not that the family is over
+// budget, and continuing past one would report line counts derived from an authority that is
+// already known to be wrong.
 async function requireTask540TouchedModuleLineLimit(
   label,
   ownedPaths = null,
@@ -4792,6 +4809,7 @@ async function requireTask540TouchedModuleLineLimit(
     .filter((relativePath) => ownedPathSet === null || ownedPathSet.has(relativePath))
     .sort();
   const violations = [];
+  const ownershipViolations = [];
   const evidence = [];
   for (const relativePath of paths) {
     if (
@@ -4805,15 +4823,10 @@ async function requireTask540TouchedModuleLineLimit(
     if (selfTestAuthority === null) {
       const owners = task540LineLimitOwnerIds(relativePath);
       if (owners.length !== 1) {
-        throw new Error(
-          label +
-            ": task-family line-limit path must have exactly one leaf owner: " +
-            relativePath +
-            "=" +
-            JSON.stringify(owners)
-        );
+        ownershipViolations.push(relativePath + "=" + JSON.stringify(owners));
+      } else {
+        [owner] = owners;
       }
-      [owner] = owners;
     }
     let bytes;
     if (selfTestAuthority !== null) {
@@ -4850,11 +4863,22 @@ async function requireTask540TouchedModuleLineLimit(
       violations.push(relativePath + "=" + lines);
     }
   }
-  if (violations.length > 0) {
+  if (ownershipViolations.length > 0 || violations.length > 0) {
+    const offendingPaths = new Set(
+      [...ownershipViolations, ...violations].map((entry) => entry.slice(0, entry.lastIndexOf("=")))
+    );
     throw new Error(
-      label +
-        ": touched human-authored production/test module exceeds 1000 physical lines: " +
-        violations.join(", ")
+      [
+        label + ": " + offendingPaths.size + " offending path(s)",
+        ...task540LineLimitFailureSection(
+          "task-family line-limit path must have exactly one leaf owner",
+          ownershipViolations
+        ),
+        ...task540LineLimitFailureSection(
+          "touched human-authored production/test module exceeds 1000 physical lines",
+          violations
+        ),
+      ].join("\n")
     );
   }
   return Object.freeze(evidence);
