@@ -1,25 +1,38 @@
 import postgres from "postgres";
+import type { Sql } from "postgres";
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
 
 import {
   DATABASE_DIRECT_URL_ENV,
+  DATABASE_URL_ENV,
   inspectDatabaseUrl,
   resolveSessionDatabaseTarget,
   type DatabaseEnvMap,
   type DatabaseUrlInspection,
+  type DatabaseUrlUnverifiableReason,
 } from "../../../core/db/connectionTargets";
-import { resolveDriverEndpoints } from "../../../core/db/driverEndpoints";
+import {
+  AUDITED_DRIVER_OPTION_KEYS,
+  classifyDriverDial,
+  resolveDriverDial,
+  type DriverDial,
+} from "../../../core/db/driverEndpoints";
 import { createSessionDatabaseClient } from "../../../core/db/sessionClient";
 
 /**
  * The pooler-port guard is only worth anything if its model of "where will the
- * driver connect?" is the DRIVER's answer. Twice now it was not: it ignored
- * `PGPORT`, then it ignored `PGHOST`, and both times it reported a VERIFIED
- * direct target while postgres.js dialled the pooler.
+ * driver connect?" is the DRIVER's answer. Three times it was not: it ignored
+ * `PGPORT`, then it ignored a host-specific port in `PGHOST`, and then it read
+ * `options.host` / `options.port` while the driver dialled the unix socket named
+ * by `options.path`. Every time it reported a VERIFIED direct target while
+ * postgres.js dialled the pooler.
  *
- * So this file never asserts the guard against a hand-written parse. Every case
- * asks the installed postgres.js what it resolves — by building a client, which
- * parses options and opens no socket — and holds the guard to that answer.
+ * So this file never asserts the guard against a hand-written parse, and it never
+ * asks the driver about one field. For every shape it builds its own client — which
+ * parses options and opens no socket — reduces the resolved options to the dial
+ * `connect()` would make, in `connect()`'s own precedence, and holds the guard to
+ * that. A driver upgrade that moves the resolution therefore turns this lane red
+ * instead of silently reopening the hole.
  *
  * The driver's variables are spelled out as literals rather than imported: the
  * contract under test belongs to libpq and postgres.js, not to a constant the
@@ -62,179 +75,257 @@ const withStubbedDriverEnv = <T>(env: DatabaseEnvMap, read: () => T): T => {
   }
 };
 
-/** What postgres.js resolved, or null when it refused the connection string. */
-type DriverAnswer = { hosts: string[]; ports: number[] } | null;
+/**
+ * The dial postgres.js would make, as this test reads it off the driver.
+ *
+ * One case per branch of `src/connection.js`'s `connect()`, which is the only
+ * place an endpoint is chosen.
+ */
+type DriverAnswer =
+  | { dial: "refused" }
+  | { dial: "custom" }
+  | { dial: "unix"; path: string }
+  | { dial: "tcp"; hosts: string[]; ports: number[] };
 
 /**
  * Ask the installed driver where it would connect. Building a client allocates
  * one lazy `Connection` and dials nothing, so nothing here needs closing.
+ *
+ * The reduction below is `connect()`'s precedence and nothing else: `options.socket`
+ * makes it return at l. 344 before any dial, a truthy `options.path` is dialled at
+ * l. 350 instead of host/port, and only then does l. 354 use `port[i]`/`host[i]`.
  */
 const askDriver = (url: string, env: DatabaseEnvMap): DriverAnswer =>
   withStubbedDriverEnv(env, () => {
+    let options: Sql["options"];
     try {
-      const client = postgres(url, { max: 1 });
-      return { hosts: [...client.options.host], ports: [...client.options.port] };
+      options = postgres(url, { max: 1 }).options;
     } catch {
-      return null;
+      return { dial: "refused" };
     }
+    if ("socket" in options && options.socket !== undefined) return { dial: "custom" };
+    if (options.path) return { dial: "unix", path: String(options.path) };
+    return { dial: "tcp", hosts: [...options.host], ports: [...options.port] };
   });
 
+const unverifiable = (reason: DatabaseUrlUnverifiableReason): DatabaseUrlInspection => ({
+  verified: false,
+  port: null,
+  pooled: false,
+  reason,
+});
+
+const dialable = (port: number | undefined): port is number =>
+  port !== undefined && Number.isInteger(port) && port >= 1 && port <= 65535;
+
 /**
- * The verdict the guard MUST reach for a given driver answer, expressed once:
- * one endpoint, a dialable port, and the pooler comparison on that port. Feeding
- * it the driver's own numbers is what makes the agreement test non-circular —
- * the ports come from postgres.js, only the policy comes from here.
+ * The verdict the guard MUST reach for a given driver answer, expressed once: a
+ * TCP dial to exactly one endpoint whose port is dialable, and the pooler
+ * comparison on that port. Everything else is unverifiable, including a dial the
+ * driver makes perfectly well but that carries no TCP port to compare.
+ *
+ * Feeding it the driver's own answer is what makes the agreement test
+ * non-circular — the dial comes from postgres.js, only the policy comes from here.
  */
 const expectedInspection = (answer: DriverAnswer, pooledPort: number): DatabaseUrlInspection => {
-  if (!answer) return { verified: false, port: null, pooled: false, reason: "unparsable_url" };
-  if (answer.hosts.length !== 1) {
-    return { verified: false, port: null, pooled: false, reason: "multiple_hosts" };
-  }
+  if (answer.dial === "refused") return unverifiable("unparsable_url");
+  if (answer.dial === "custom") return unverifiable("custom_transport_dial");
+  if (answer.dial === "unix") return unverifiable("unix_socket_dial");
+  if (answer.hosts.length !== 1) return unverifiable("multiple_hosts");
 
   const port = answer.ports[0];
-  if (port === undefined || !Number.isInteger(port) || port < 1 || port > 65535) {
-    return { verified: false, port: null, pooled: false, reason: "invalid_port" };
-  }
+  if (!dialable(port)) return unverifiable("invalid_port");
   return { verified: true, port, pooled: port === pooledPort };
+};
+
+/** The same answer as `driverEndpoints.ts` is required to report it. */
+const expectedDial = (answer: DriverAnswer): DriverDial => {
+  if (answer.dial === "refused") return { kind: "refused_url" };
+  if (answer.dial === "custom") return { kind: "custom_transport" };
+  if (answer.dial === "unix") return { kind: "unix_socket", path: answer.path };
+  return {
+    kind: "tcp",
+    endpoints: answer.hosts.map((host, index) => {
+      const port = answer.ports[index];
+      return { host, port: dialable(port) ? port : null };
+    }),
+  };
 };
 
 type EndpointCase = {
   name: string;
   url: string;
   env: DatabaseEnvMap;
-  /** What postgres.js 3.4.9 resolves, observed against the installed driver. */
-  driverHosts: string[];
-  driverPorts: number[];
+  /** What postgres.js 3.4.9 dials, observed against the installed driver. */
+  driver: DriverAnswer;
   /** What the guard must therefore report. */
   inspection: DatabaseUrlInspection;
 };
 
 /**
- * Each row is a shape of postgres.js's resolution, not a shape of a URL. The
- * ones that matter come from one driver rule: the port array is built from the
- * HOST string (`host.split(',').map(x => parseInt(x.split(':')[1] || port))`),
- * so a `:port` suffix carried by a host beats the scalar port, and the number of
- * endpoints follows the host list.
+ * Each row is a shape of postgres.js's resolution, not a shape of a URL. The ones
+ * that matter come from two driver rules:
+ *   - the port array is built from the HOST string
+ *     (`host.split(',').map(x => parseInt(x.split(':')[1] || port))`), so a
+ *     `:port` suffix carried by a host beats the scalar port and the number of
+ *     endpoints follows the host list;
+ *   - `path` is set to `host + '/.s.PGSQL.' + port` whenever the host string
+ *     contains a slash, from that SCALAR port, and a truthy `path` is the dial —
+ *     host and port are then never read at all.
  */
 const ENDPOINT_CASES: EndpointCase[] = [
   {
     name: "an explicit direct port",
     url: "postgres://coderso:secret@db.example.com:5432/coderso",
     env: {},
-    driverHosts: ["db.example.com"],
-    driverPorts: [5432],
+    driver: { dial: "tcp", hosts: ["db.example.com"], ports: [5432] },
     inspection: { verified: true, port: 5432, pooled: false },
   },
   {
     name: "PGHOST carrying the pooler port, for a url with no authority",
     url: AUTHORITYLESS_URL,
     env: { PGHOST: "pgbouncer.internal:6432" },
-    driverHosts: ["pgbouncer.internal"],
-    driverPorts: [6432],
+    driver: { dial: "tcp", hosts: ["pgbouncer.internal"], ports: [6432] },
     inspection: { verified: true, port: 6432, pooled: true },
   },
   {
     name: "a host-specific PGHOST port beating PGPORT",
     url: AUTHORITYLESS_URL,
     env: { PGHOST: "pgbouncer.internal:6432", PGPORT: "5432" },
-    driverHosts: ["pgbouncer.internal"],
-    driverPorts: [6432],
+    driver: { dial: "tcp", hosts: ["pgbouncer.internal"], ports: [6432] },
     inspection: { verified: true, port: 6432, pooled: true },
   },
   {
     name: "PGHOST without a port suffix",
     url: AUTHORITYLESS_URL,
     env: { PGHOST: "pgbouncer.internal" },
-    driverHosts: ["pgbouncer.internal"],
-    driverPorts: [5432],
+    driver: { dial: "tcp", hosts: ["pgbouncer.internal"], ports: [5432] },
     inspection: { verified: true, port: 5432, pooled: false },
   },
   {
     name: "a url authority beating PGHOST entirely",
     url: "postgres://coderso:secret@direct.example.com:5432/coderso",
     env: { PGHOST: "pgbouncer.internal:6432" },
-    driverHosts: ["direct.example.com"],
-    driverPorts: [5432],
+    driver: { dial: "tcp", hosts: ["direct.example.com"], ports: [5432] },
     inspection: { verified: true, port: 5432, pooled: false },
   },
   {
     name: "no host anywhere",
     url: AUTHORITYLESS_URL,
     env: {},
-    driverHosts: ["localhost"],
-    driverPorts: [5432],
+    driver: { dial: "tcp", hosts: ["localhost"], ports: [5432] },
     inspection: { verified: true, port: 5432, pooled: false },
   },
   {
     name: "a comma-separated PGHOST that reaches the pooler on failover",
     url: AUTHORITYLESS_URL,
     env: { PGHOST: "direct.example.com:5432,pgbouncer.internal:6432" },
-    driverHosts: ["direct.example.com", "pgbouncer.internal"],
-    driverPorts: [5432, 6432],
+    driver: {
+      dial: "tcp",
+      hosts: ["direct.example.com", "pgbouncer.internal"],
+      ports: [5432, 6432],
+    },
     inspection: { verified: false, port: null, pooled: false, reason: "multiple_hosts" },
   },
   {
     name: "a comma-separated PGHOST with no port suffixes",
     url: AUTHORITYLESS_URL,
     env: { PGHOST: "direct.example.com,standby.example.com" },
-    driverHosts: ["direct.example.com", "standby.example.com"],
-    driverPorts: [5432, 5432],
+    driver: {
+      dial: "tcp",
+      hosts: ["direct.example.com", "standby.example.com"],
+      ports: [5432, 5432],
+    },
     inspection: { verified: false, port: null, pooled: false, reason: "multiple_hosts" },
   },
   {
     name: "a comma-separated host list in the url",
     url: "postgres://coderso:secret@direct.example.com:5432,pgbouncer.internal:6432/coderso",
     env: {},
-    driverHosts: ["direct.example.com", "pgbouncer.internal"],
-    driverPorts: [5432, 6432],
+    driver: {
+      dial: "tcp",
+      hosts: ["direct.example.com", "pgbouncer.internal"],
+      ports: [5432, 6432],
+    },
     inspection: { verified: false, port: null, pooled: false, reason: "multiple_hosts" },
   },
   {
     name: "PGPORT for a url that omits the port",
     url: PORTLESS_URL,
     env: { PGPORT: "6432" },
-    driverHosts: ["db.example.com"],
-    driverPorts: [6432],
+    driver: { dial: "tcp", hosts: ["db.example.com"], ports: [6432] },
     inspection: { verified: true, port: 6432, pooled: true },
   },
   {
     name: "a PGPORT the driver parseInt()s down to the pooler port",
     url: PORTLESS_URL,
     env: { PGPORT: "6432abc" },
-    driverHosts: ["db.example.com"],
-    driverPorts: [6432],
+    driver: { dial: "tcp", hosts: ["db.example.com"], ports: [6432] },
     inspection: { verified: true, port: 6432, pooled: true },
   },
   {
     name: "a PGPORT that is not a number at all",
     url: PORTLESS_URL,
     env: { PGPORT: "not-a-port" },
-    driverHosts: ["db.example.com"],
-    driverPorts: [Number.NaN],
+    driver: { dial: "tcp", hosts: ["db.example.com"], ports: [Number.NaN] },
     inspection: { verified: false, port: null, pooled: false, reason: "invalid_port" },
   },
   {
     name: "a url naming port 0, which cannot be dialled",
     url: "postgres://coderso:secret@db.example.com:0/coderso",
     env: {},
-    driverHosts: ["db.example.com"],
-    driverPorts: [0],
+    driver: { dial: "tcp", hosts: ["db.example.com"], ports: [0] },
     inspection: { verified: false, port: null, pooled: false, reason: "invalid_port" },
+  },
+  {
+    // The reported fail-open: the port ARRAY says 5432 and the socket the driver
+    // actually opens says 6432, because `path` is built from PGPORT.
+    name: "a PGHOST socket directory whose port suffix disagrees with PGPORT",
+    url: AUTHORITYLESS_URL,
+    env: { PGHOST: "/var/run/pgbouncer:5432", PGPORT: "6432" },
+    driver: { dial: "unix", path: "/var/run/pgbouncer:5432/.s.PGSQL.6432" },
+    inspection: { verified: false, port: null, pooled: false, reason: "unix_socket_dial" },
+  },
+  {
+    // Same class, with a host that is not even an absolute path: the driver's test
+    // for "is this a socket" is a slash anywhere in the host string.
+    name: "a relative PGHOST containing a slash",
+    url: AUTHORITYLESS_URL,
+    env: { PGHOST: "a/b:5432", PGPORT: "6432" },
+    driver: { dial: "unix", path: "a/b:5432/.s.PGSQL.6432" },
+    inspection: { verified: false, port: null, pooled: false, reason: "unix_socket_dial" },
   },
   {
     name: "a PGHOST unix socket directory taking the pooler's socket",
     url: AUTHORITYLESS_URL,
     env: { PGHOST: "/var/run/postgresql", PGPORT: "6432" },
-    driverHosts: ["/var/run/postgresql"],
-    driverPorts: [6432],
-    inspection: { verified: true, port: 6432, pooled: true },
+    driver: { dial: "unix", path: "/var/run/postgresql/.s.PGSQL.6432" },
+    inspection: { verified: false, port: null, pooled: false, reason: "unix_socket_dial" },
+  },
+  {
+    // The over-refusing converse, deliberately: this socket IS the direct one, and
+    // the guard still refuses it, because a socket path carries no TCP port that
+    // can be compared with the pooler's. The remedy is a TCP DATABASE_DIRECT_URL.
+    name: "a PGHOST unix socket directory taking the direct socket",
+    url: AUTHORITYLESS_URL,
+    env: { PGHOST: "/var/run/postgresql" },
+    driver: { dial: "unix", path: "/var/run/postgresql/.s.PGSQL.5432" },
+    inspection: { verified: false, port: null, pooled: false, reason: "unix_socket_dial" },
+  },
+  {
+    // `path` is built from the WHOLE host string, comma list and all, so it beats
+    // the failover list rather than being one of its entries.
+    name: "a comma-separated PGHOST of socket directories",
+    url: AUTHORITYLESS_URL,
+    env: { PGHOST: "/var/run/a,/var/run/b" },
+    driver: { dial: "unix", path: "/var/run/a,/var/run/b/.s.PGSQL.5432" },
+    inspection: { verified: false, port: null, pooled: false, reason: "unix_socket_dial" },
   },
   {
     name: "a string the driver refuses outright",
     url: "host=db port=6432 dbname=coderso",
     env: {},
-    driverHosts: [],
-    driverPorts: [],
+    driver: { dial: "refused" },
     inspection: { verified: false, port: null, pooled: false, reason: "unparsable_url" },
   },
 ];
@@ -254,36 +345,17 @@ describe("postgres.js endpoint resolution", () => {
     }
   });
 
-  test.each(ENDPOINT_CASES)("the driver resolves $name", (endpointCase) => {
-    const answer = askDriver(endpointCase.url, endpointCase.env);
-
-    if (endpointCase.driverHosts.length === 0) {
-      expect(answer).toBeNull();
-      return;
-    }
-
-    expect(answer).toEqual({
-      hosts: endpointCase.driverHosts,
-      ports: endpointCase.driverPorts,
-    });
+  test.each(ENDPOINT_CASES)("the driver dials $name", (endpointCase) => {
+    expect(askDriver(endpointCase.url, endpointCase.env)).toEqual(endpointCase.driver);
   });
 
-  test.each(ENDPOINT_CASES)("resolveDriverEndpoints reports $name", (endpointCase) => {
-    const resolution = resolveDriverEndpoints(endpointCase.url, endpointCase.env);
+  test.each(ENDPOINT_CASES)("resolveDriverDial reports $name", (endpointCase) => {
+    const dial = resolveDriverDial(endpointCase.url, endpointCase.env);
 
-    if (endpointCase.driverHosts.length === 0) {
-      expect(resolution).toEqual({ resolved: false, endpoints: null });
-      return;
-    }
-
-    expect(resolution).toEqual({
-      resolved: true,
-      endpoints: endpointCase.driverHosts.map((host, index) => {
-        const port = endpointCase.driverPorts[index];
-        const dialable = port !== undefined && Number.isInteger(port) && port >= 1 && port <= 65535;
-        return { host, port: dialable ? port : null };
-      }),
-    });
+    // The literal expectation, and the same one derived from what the driver
+    // answers right now, so a driver upgrade moves both together.
+    expect(dial).toEqual(expectedDial(endpointCase.driver));
+    expect(dial).toEqual(expectedDial(askDriver(endpointCase.url, endpointCase.env)));
   });
 
   test.each(ENDPOINT_CASES)("the guard's verdict for $name is the driver's", (endpointCase) => {
@@ -293,10 +365,39 @@ describe("postgres.js endpoint resolution", () => {
       endpointCase.inspection
     );
 
-    // ...and the same verdict derived from what the driver answers right now, so
+    // ...and the same verdict derived from the dial the driver makes right now, so
     // a driver upgrade that moves an endpoint moves this expectation with it.
     expect(inspectDatabaseUrl(endpointCase.url, POOLED_PORT, endpointCase.env)).toEqual(
       expectedInspection(askDriver(endpointCase.url, endpointCase.env), POOLED_PORT)
+    );
+  });
+
+  test("refuses a session target whose socket the driver takes from PGPORT", () => {
+    // End to end through the production resolver, which is where the fail-open was
+    // reported: PGHOST names a socket directory with a `:5432` suffix, the port
+    // array says 5432, and the socket the driver opens is the pooler's.
+    const env: DatabaseEnvMap = {
+      [DATABASE_DIRECT_URL_ENV]: AUTHORITYLESS_URL,
+      PGHOST: "/var/run/pgbouncer:5432",
+      PGPORT: "6432",
+    };
+
+    expect(askDriver(AUTHORITYLESS_URL, env)).toEqual({
+      dial: "unix",
+      path: "/var/run/pgbouncer:5432/.s.PGSQL.6432",
+    });
+    expect(() => resolveSessionDatabaseTarget("startup database migrations", env)).toThrow(
+      /session_database_direct_url_unverifiable/
+    );
+
+    // And through the DATABASE_URL fallback, on the same rule.
+    const fallbackEnv: DatabaseEnvMap = {
+      [DATABASE_URL_ENV]: AUTHORITYLESS_URL,
+      PGHOST: "/var/run/pgbouncer:5432",
+      PGPORT: "6432",
+    };
+    expect(() => resolveSessionDatabaseTarget("startup database migrations", fallbackEnv)).toThrow(
+      /session_database_url_unverifiable/
     );
   });
 
@@ -364,8 +465,81 @@ describe("postgres.js endpoint resolution", () => {
     try {
       expect(client.options.host).toEqual(["direct.internal"]);
       expect(client.options.port).toEqual([target.port]);
+      // The dial is the TCP one, so those two fields really are the endpoint.
+      expect(client.options.path).toBeFalsy();
     } finally {
       await client.end();
     }
+  });
+});
+
+/**
+ * The audit that makes an unrecognised driver over-refuse instead of failing open
+ * a fourth time. `classifyDriverDial` reads endpoints out of nothing but the
+ * option surface pinned here, so these are the cases where it must refuse to read
+ * at all.
+ */
+describe("postgres.js option-surface audit", () => {
+  const buildOptions = (): Sql["options"] =>
+    postgres("postgres://coderso:secret@db.example.com:5432/coderso", { max: 1 }).options;
+
+  /** The drift the classification refused on, or why it did not refuse. */
+  const detailOf = (dial: DriverDial): string =>
+    dial.kind === "unrecognized" ? dial.detail : `dial was not refused: ${dial.kind}`;
+
+  test("the audited key set is the installed driver's key set", () => {
+    // The upgrade tripwire: a postgres.js version that adds, removes or renames
+    // ANY option fails here, and until someone re-reads connect() and updates the
+    // dial surface, every classification below it answers `unrecognized`.
+    expect(Object.keys(buildOptions()).sort()).toEqual([...AUDITED_DRIVER_OPTION_KEYS]);
+  });
+
+  test("reads the endpoint when the surface is the audited one", () => {
+    expect(classifyDriverDial(buildOptions())).toEqual({
+      kind: "tcp",
+      endpoints: [{ host: "db.example.com", port: 5432 }],
+    });
+  });
+
+  test("refuses an option surface that grew a field", () => {
+    // The fourth-field case: a driver version that decided the endpoint somewhere
+    // new must over-refuse here, not read the old fields and clear the target.
+    const options = buildOptions();
+    Object.assign(options, { endpoint: "pgbouncer.internal:6432" });
+
+    expect(detailOf(classifyDriverDial(options))).toContain("unexpected: endpoint");
+  });
+
+  test("refuses an option surface that lost a field", () => {
+    const options = buildOptions();
+    expect(Reflect.deleteProperty(options, "path")).toBe(true);
+
+    expect(detailOf(classifyDriverDial(options))).toContain("missing: path");
+  });
+
+  test("refuses an option surface whose host and port stopped being paired arrays", () => {
+    const reshaped = buildOptions();
+    Object.assign(reshaped, { port: 5432 });
+    expect(classifyDriverDial(reshaped).kind).toBe("unrecognized");
+
+    const unpaired = buildOptions();
+    Object.assign(unpaired, { port: [5432, 6432] });
+    expect(classifyDriverDial(unpaired).kind).toBe("unrecognized");
+
+    const hostless = buildOptions();
+    Object.assign(hostless, { host: [], port: [] });
+    expect(classifyDriverDial(hostless).kind).toBe("unrecognized");
+  });
+
+  test("refuses a caller-supplied transport, which dials no endpoint of its own", () => {
+    const neverCalledTransport = (): never => {
+      throw new Error("the audit must not invoke the transport factory");
+    };
+    const options = buildOptions();
+    Object.assign(options, { socket: neverCalledTransport });
+
+    // `socket` is in the audited key set, so this is a recognised dial — just not
+    // one with an endpoint to read.
+    expect(classifyDriverDial(options)).toEqual({ kind: "custom_transport" });
   });
 });

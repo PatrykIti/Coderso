@@ -35,18 +35,24 @@
  * accepted when the endpoint the driver will connect to can be read AND is not
  * the pooler. "Could not read it" is never treated as "not the pooler".
  *
- * WHERE the driver will connect is not inferred here. This module asks
- * postgres.js: `./driverEndpoints.ts` builds a throwaway client — which parses
- * the options and opens nothing — and reads the resolved `options.host` /
- * `options.port` back off it. Re-deriving that from the connection string is
- * what produced two successive fail-OPEN holes in this guard: a portless URL was
- * cleared as "port 5432, direct" while first `PGPORT`, and later a host-specific
- * `PGHOST=pooler:6432`, sent the driver to the pooler instead. Every such shape
- * is a consequence of the driver's own resolution, so it is enumerated once,
- * against the installed driver source, in that module.
+ * WHERE the driver will connect is not inferred here, and it is not read out of
+ * one chosen field of the driver's answer either. `./driverEndpoints.ts`
+ * enumerates every field postgres.js consults to pick an endpoint, classifies
+ * which of those dials the driver would make, and refuses by default. Both
+ * shortcuts have already failed OPEN in this guard: re-deriving the port from the
+ * connection string cleared a portless URL as "port 5432, direct" while first
+ * `PGPORT` and later a host-specific `PGHOST=pooler:6432` sent the driver to the
+ * pooler, and reading only the driver's `options.host` / `options.port` cleared a
+ * `PGHOST` containing a slash as direct while the driver dialled the pooler's
+ * unix socket named by `options.path`.
  *
  * The policy this module adds on top of the driver's answer is deliberately
  * narrow:
+ *   - the dial must be a TCP dial. A unix-domain socket has no TCP port to
+ *     compare with the pooler's, and a caller-supplied transport has no endpoint
+ *     to read at all, so neither can be certified — including when it happens to
+ *     be direct. That over-refusal is the safe direction and it always has a
+ *     remedy: name the direct TCP port in `DATABASE_DIRECT_URL`;
  *   - there must be exactly ONE endpoint. A comma-separated host list — in the
  *     URL or in `PGHOST` — is libpq failover syntax that postgres.js rotates
  *     through, and it can name the direct port and the pooler port at the same
@@ -62,7 +68,7 @@
 import {
   MAX_TCP_PORT,
   MIN_TCP_PORT,
-  resolveDriverEndpoints,
+  resolveDriverDial,
   type DatabaseEnvMap,
 } from "./driverEndpoints";
 
@@ -78,7 +84,11 @@ export const DEFAULT_POOLED_DATABASE_PORT = 6432;
 /** postgres.js connects on 5432 when neither the string nor `PGPORT` names a port. */
 export const DEFAULT_POSTGRES_PORT = 5432;
 
-/** Why a connection string could not be resolved to one known port. */
+/**
+ * Why a connection string could not be resolved to one known port. One per way
+ * the driver's own answer fails to name a single dialable TCP endpoint — not a
+ * list of parsing rules of our own.
+ */
 export type DatabaseUrlUnverifiableReason =
   /** The driver refuses the string outright, so it resolves to no endpoint at all. */
   | "unparsable_url"
@@ -88,7 +98,13 @@ export type DatabaseUrlUnverifiableReason =
    */
   | "multiple_hosts"
   /** The driver resolves one endpoint whose port is not a dialable TCP port. */
-  | "invalid_port";
+  | "invalid_port"
+  /** The driver dials a unix-domain socket, which carries no TCP port to compare. */
+  | "unix_socket_dial"
+  /** The connection is made by a caller-supplied transport, so it has no endpoint. */
+  | "custom_transport_dial"
+  /** The driver's option surface is not the one this repository audited. */
+  | "unrecognized_driver_dial";
 
 /**
  * Result of inspecting a connection string without connecting.
@@ -164,20 +180,23 @@ const unverifiable = (reason: DatabaseUrlUnverifiableReason): DatabaseUrlInspect
  * Inspect a connection string without connecting. Never returns or logs the
  * credentials it was given.
  *
- * Fails closed: anything the DRIVER does not resolve to a single dialable port
- * comes back `verified: false`, which callers must treat as "might be the
- * pooler". The three unverifiable reasons are the three ways the driver's own
- * answer fails to name one endpoint, not three parsing rules of our own.
+ * Fails closed: anything the DRIVER does not resolve to a single dialable TCP
+ * port comes back `verified: false`, which callers must treat as "might be the
+ * pooler". Every dial the driver can make that is not one TCP endpoint has its
+ * own reason, so no unread dial can pass as a read one.
  */
 export function inspectDatabaseUrl(
   url: string,
   pooledPort: number,
   env: DatabaseEnvMap = process.env
 ): DatabaseUrlInspection {
-  const resolution = resolveDriverEndpoints(url, env);
-  if (!resolution.resolved) return unverifiable("unparsable_url");
+  const dial = resolveDriverDial(url, env);
+  if (dial.kind === "refused_url") return unverifiable("unparsable_url");
+  if (dial.kind === "unrecognized") return unverifiable("unrecognized_driver_dial");
+  if (dial.kind === "custom_transport") return unverifiable("custom_transport_dial");
+  if (dial.kind === "unix_socket") return unverifiable("unix_socket_dial");
 
-  const { endpoints } = resolution;
+  const { endpoints } = dial;
   if (endpoints.length > 1) return unverifiable("multiple_hosts");
 
   // The driver always yields at least one endpoint for a string it accepted
@@ -229,6 +248,28 @@ const unverifiableReasonHint = (reason: DatabaseUrlUnverifiableReason): string =
     return (
       "the port the driver resolves for it — from the connection string, from a host-specific " +
       `suffix in PGHOST, or from PGPORT — is not a port number between 1 and ${MAX_TCP_PORT}`
+    );
+  }
+  if (reason === "unix_socket_dial") {
+    return (
+      "the driver dials a unix-domain socket for it rather than a TCP port, because the host " +
+      "it resolves — from the connection string or from PGHOST — contains a slash; the socket " +
+      "it names carries the port from PGPORT, which need not be the port the same host " +
+      "resolves to, so nothing here can be compared with the pooler's port"
+    );
+  }
+  if (reason === "custom_transport_dial") {
+    return (
+      "the connection is made by a caller-supplied socket factory, so the driver dials no " +
+      "endpoint of its own and there is no port to compare with the pooler's"
+    );
+  }
+  if (reason === "unrecognized_driver_dial") {
+    return (
+      "the installed postgres.js returns parsed options that are not the surface this " +
+      "repository audited — most likely the driver was upgraded, in which case its connect() " +
+      "must be re-read and the dial surface documented in core/db/driverEndpoints.ts updated " +
+      "before any endpoint may be read out of it again"
     );
   }
   return "the driver refuses to parse it as a connection string, so its port cannot be read";
