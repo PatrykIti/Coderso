@@ -31,6 +31,7 @@ import {
 import {
   beforeUnloadIsGuarded,
   clickMetadataAction,
+  findDeleteConfirm,
   flushMicrotasks,
   mount,
   readPanelValue,
@@ -241,6 +242,44 @@ test("a metadata-only edit blocks the same navigation, and still guards a browse
     // The `beforeunload` half has to survive the move to the shared guard: closing the tab is
     // still the other way out of an editor with unsaved work.
     expect(beforeUnloadIsGuarded()).toBe(true);
+  } finally {
+    view.cleanup();
+  }
+});
+
+// The guard is about the ways the USER leaves an entry that still exists. The editor's own
+// post-delete navigation is not one of them, and blocking it is strictly worse than not
+// guarding at all: the DELETE has already succeeded, so "Keep editing" leaves the user editing
+// a row that no longer exists, and the dialog asks them to decide the fate of edits that have
+// nowhere left to be saved.
+test("deleting an entry with unsaved edits leaves the editor instead of asking to discard them", async () => {
+  const view = await mountEditor();
+  try {
+    React.act(() => {
+      typeTitle(view.container, "Edited, then deleted");
+    });
+    expect(readPanelValue(view.container, "data-metadata-title-value")).toBe(
+      "Edited, then deleted"
+    );
+
+    await React.act(async () => {
+      clickButton(view.container, 'button[data-metadata-delete="true"]');
+      await flushMicrotasks();
+    });
+    await React.act(async () => {
+      findDeleteConfirm(view.container).click();
+      await flushMicrotasks();
+    });
+
+    // The server accepted the delete: this is a fact about the row, not a proposal, which is
+    // what makes staying on this editor the wrong answer rather than a cautious one.
+    expect(editorState.deleteCalls).toEqual(["articles/entry-1"]);
+    expect(document.body.textContent).not.toContain("Discard unsaved entry changes?");
+    expect(findGuardButton("Keep editing")).toBeNull();
+    expect(readWhereWeAre(view.container)).toEqual({
+      routerPath: ENTRIES_PATH,
+      addressBar: ENTRIES_PATH,
+    });
   } finally {
     view.cleanup();
   }

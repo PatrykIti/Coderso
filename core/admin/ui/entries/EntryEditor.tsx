@@ -729,7 +729,14 @@ function EntryEditorInstance({ type, id }: EntryEditorInstanceProps) {
     try {
       await deleteEntry(type, id);
       toast.success("Entry deleted.");
-      navigate("/entries");
+      // The editor's own navigation, and the only one it initiates: `navigate` is called
+      // exactly once in this component, here. It is authoritative, so it skips the dirty
+      // guard. The guard is for the ways the USER leaves an entry that still exists; the row
+      // is gone, the unsaved edits have nowhere left to be saved, and asking anyway stranded
+      // the user on the deleted entry's editor behind "Discard unsaved entry changes?" —
+      // where "Keep editing" left them editing a row that no longer exists. Every OTHER way
+      // out of here is a link the user clicked, and none of them is weakened by this.
+      navigate("/entries", { skipBlockers: true });
     } catch (err) {
       const message = resolveEditorErrorMessage(err, "Failed to delete entry.");
       setError(message);
