@@ -358,8 +358,10 @@ export function buildReferencePlan(pkg: FullSitePackageV1): readonly PlannedPack
   assertReferenceGraphJsonDepth(pkg.resources); // desired=1; static level-65 error.
   const registry = indexUniqueKindKeys(pkg.resources); // duplicate kind:key => error
   const { edges, descriptorsByIdentity, diagnostics } = collectRefsAtAllowedPaths(registry);
+  const batch = diagnostics.read();
+  if (batch.overflowed) throwDiagnosticLimitSingleton();
   if (edges.length > PACKAGE_LIMITS.referenceEdges) throwReferenceEdgesSingleton();
-  diagnostics.throwIfAny();
+  throwGraphDiagnostics(batch);
   const ordered = stableTopologicalSort(registry, edges); // Cycle, then longest-path edge depth.
   return freezePlan(ordered, descriptorsByIdentity);
 }
