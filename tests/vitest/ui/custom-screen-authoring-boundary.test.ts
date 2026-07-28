@@ -738,7 +738,7 @@ describe("custom screen authoring boundaries", () => {
     for (const name of mediaValues) {
       expect(facadeValues[name], name).toBe(mediaOwnerValues[name]);
     }
-  }, 15_000);
+  });
 
   test("screen builder split pins its five live helpers and coordinator boundaries", async () => {
     const builderPaths = Object.values(builderAuthoringModules);
