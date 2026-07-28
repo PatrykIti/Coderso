@@ -7344,6 +7344,7 @@ async function assertTask540TouchedModuleLineLimitContract() {
     "core/db/driverEndpoints.ts",
     "core/admin/ui/entries/EntryCreateDrawer.tsx",
     "tests/unit/workflows/task540LineLimitOffenderReport.test.ts",
+    "tests/vitest/ui/entry-field-renderer-wave.test.tsx",
   ]);
   for (const relativePath of accountableOwnerCases) {
     if (
@@ -11264,6 +11265,12 @@ const TASK_540_LINE_LIMIT_ACCOUNTABLE_PATHS = Object.freeze([
   // their lengths, in one run. Family-authored machinery over the family's own gate, which
   // no leaf writes.
   "tests/unit/workflows/task540LineLimitOffenderReport.test.ts",
+  // FieldRenderer's own coverage, moved out of entry-page-support-wave.test.tsx once the
+  // registration above turned that suite's 1,029 lines into the family's one remaining
+  // line-limit violation. A pure move of two tests along the subject seam -- the field
+  // control itself, rather than the entry and page support surfaces around it -- so it is
+  // accountable to the same owner as the suite it came from.
+  "tests/vitest/ui/entry-field-renderer-wave.test.tsx",
 ]);
 // The tripwire proves, hermetically, that the gate really rejects the specific accountable
 // paths closest to the limit -- so it has to name the ones actually closest. Measured
@@ -11298,7 +11305,7 @@ const TASK_540_LINE_LIMIT_TRIPWIRE_PATHS = Object.freeze([
   "core/widgets/core/footer.tsx",
 ]);
 const TASK_540_LINE_LIMIT_ACCOUNTABLE_PATHS_SHA256 =
-  "2049bc7ce30372589db136017fe112e5e263d2e72d9d60e994b09c7f692bb694";
+  "f211b4835a7cc8b918ecd8ca703e00b35eda2883da5da65cb5109515dafbca5f";
 const TASK_540_LINE_LIMIT_ACCOUNTABLE_OWNERS = Object.freeze(
   TASK_540_LINE_LIMIT_ACCOUNTABLE_PATHS.map((path) =>
     Object.freeze({ path, owner: TASK_540_LINE_LIMIT_ACCOUNTABLE_OWNER })
@@ -11324,7 +11331,7 @@ if (
   // Must be the leaf that lands LAST, which is the whole rationale for the choice: it is
   // the only leaf still able to split one of these before the family closes.
   TASK_540_LINE_LIMIT_ACCOUNTABLE_OWNER !== LEAF_ORDER[LEAF_ORDER.length - 1] ||
-  TASK_540_LINE_LIMIT_ACCOUNTABLE_PATHS.length !== 105 ||
+  TASK_540_LINE_LIMIT_ACCOUNTABLE_PATHS.length !== 106 ||
   new Set(TASK_540_LINE_LIMIT_ACCOUNTABLE_PATHS).size !==
     TASK_540_LINE_LIMIT_ACCOUNTABLE_PATHS.length ||
   TASK_540_LINE_LIMIT_ACCOUNTABLE_PATHS.some(
