@@ -351,15 +351,14 @@ The Form seed has:
   `admin_write`; `formActionsUpdateSchema` strictly validates the sole seeded
   `success_message` action and maps known invalid action errors to
   `form_action_invalid`.
-- Public-site `POST /forms/:id/submissions` accepts this published public Form
-  through the evaluator's anonymous/session public principal, requires the
-  signed Form nonce, charges `public_write`, requires configured reCAPTCHA v3
-  with action `public_write` for anonymous traffic, and does not use
-  admin-session CSRF.
-- Internal `POST /admin/api/forms/:id/submissions` requires either a coherent
-  session with `forms:write` plus session CSRF, or an API key with exact scope
-  `forms.submit`; it charges `admin_write`. Anonymous public-mode access never
-  inherits this admin mount.
+- Both `POST /forms/:id/submissions` and its stripped-admin alias
+  `POST /admin/api/forms/:id/submissions` traverse the same mode-based executor.
+  This published `submissionAccess:"public"` Form therefore requires the signed
+  nonce, `public_write` and configured reCAPTCHA v3 `public_write` policy on both
+  mounts; an admin cookie or URL prefix never upgrades or bypasses public mode.
+- A form configured `submissionAccess:"internal"` requires on either mount a
+  coherent session with `forms:write` plus session CSRF, or an API key with exact
+  scope `forms.submit`; it charges `admin_write` and rejects anonymous access.
 - Consent is required and defaults false. Unknown form, settings, theme/submit,
   field and action properties fail closed. Supporting text is inert plain React
   text, never HTML, Markdown or script input; normal React escaping is preserved.
@@ -369,12 +368,12 @@ The Form seed has:
   submission.
 
 `tests/integration/routes/formSupportingTextRoutes.test.ts` is a focused Bun
-registration/boundary suite. With fake handlers it proves the exact methods and
-paths above, including the distinct public-site and internal submission mounts,
-exact permission/scope/CSRF/rate middleware, real schema identity, unknown/
-blank/over-limit supporting-text rejection, valid boundary acceptance, and
-mapped `form_invalid`/`form_not_found` responses through exported
-`mapFormError`.
+registration/boundary suite. With fake handlers it proves the exact Form
+create/update/action methods, real schema identity, unknown/blank/over-limit
+supporting-text rejection, valid boundary acceptance, and mapped
+`form_invalid`/`form_not_found` responses through exported `mapFormError`. It
+must not restate mount-derived submission access; the existing read-only
+`formsWriteMounts.test.ts` owns shared-executor public/internal mode parity.
 Existing `formActionsContract` and `formActionsRoutes` suites retain strict
 action-config and route-registration coverage. Existing public write security
 suites remain read-only and TASK-547-06 reruns their nonce, rate-plan,
@@ -691,6 +690,7 @@ scoped submission cleanup evidence remains additionally owned by TASK-547-06.
   `bun test --timeout 360000
   tests/unit/forms/formSupportingTextPersistence.test.ts
   tests/integration/routes/formSupportingTextRoutes.test.ts
+  tests/integration/server/formsWriteMounts.test.ts
   tests/integration/routes/forms.test.ts
   tests/integration/routes/formActionsRoutes.test.ts` plus relevant existing
   Bun Form runtime/service suites selected by dependency shape. Every DB-backed

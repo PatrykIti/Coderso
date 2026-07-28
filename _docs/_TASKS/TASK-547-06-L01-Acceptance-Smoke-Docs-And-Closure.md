@@ -121,10 +121,10 @@ duplicates, missing paths or cross-leaf ownership.
 - **Auth/RBAC:** internal reads/plan require authenticated
   `solution-kits:read`; apply/rollback require authenticated
   `solution-kits:write`. Public contact submission is unauthenticated only for a
-  currently published, `submissionAccess:"public"` form. Internal
-  `POST /admin/api/forms/:id/submissions` accepts only a coherent session with
-  `forms:write` or an API key with exact scope `forms.submit`; anonymous access
-  is rejected.
+  currently published, `submissionAccess:"public"` form on either shared-
+  executor mount. A `submissionAccess:"internal"` Form on either mount accepts
+  only a coherent session with `forms:write` or an API key with exact scope
+  `forms.submit`; anonymous access is rejected. The URL prefix never selects mode.
 - **CSRF/rate limits:** every session-authenticated Solution Kit `POST`
   (plan/apply/rollback) requires CSRF and uses `admin_write`; API keys retain
   their existing non-cookie policy. Public submit is charged exactly once to
@@ -360,9 +360,9 @@ Regression/smoke in
 `tests/integration/kits/projektyDomowInstalledSite.test.ts`: all eight routes,
 distinct desktop/tablet/mobile shell and geometry, portfolio visible filter change,
 Aurora bindings/registered-widget hero-art and gallery geometry, exact installed
-`success_message` action plus real public and internal form validation/security/
-submission, reduced motion, `lang="pl"` on Page/detail and publish/front parity.
-The Form matrix proves coherent session + `forms:write` + valid CSRF +
+`success_message` action plus real installed-public and scoped-internal Form validation/security/submission,
+reduced motion, `lang="pl"` on Page/detail and publish/front parity. Both aliases
+retain mode-based authorization. The scoped internal Form matrix proves coherent session + `forms:write` + valid CSRF +
 `admin_write`, API key + `forms.submit` + no cookie-CSRF + `admin_write`, and
 anonymous rejection without a row. Every accepted public/internal submission
 created by the public, Form Design or Page Editor set is registered by unique
@@ -605,24 +605,28 @@ theme values at desktop/tablet/mobile viewports. `aurora-contact-cta` observes
 exactly `{label:"Chcę podobny dom",href:"/kontakt",
 previousBlock:"project-statistics",nextBlock:"project-assumptions"}`.
 
-The three internal-contact observations are exactly:
+The three scoped-internal-Form observations are exactly:
 
 - `contact-internal-session-contract`:
   `{mount:"/admin/api/forms/:id/submissions",principal:"coherent-session",
+  formSource:"scoped-internal-fixture",submissionAccess:"internal",
   permission:"forms:write",csrf:"valid",rateLimit:"admin_write",
   outcome:"accepted"}`;
 - `contact-internal-api-key-contract`:
   `{mount:"/admin/api/forms/:id/submissions",principal:"api-key",
+  formSource:"scoped-internal-fixture",submissionAccess:"internal",
   scope:"forms.submit",cookieCsrf:"not-applicable",rateLimit:"admin_write",
   outcome:"accepted"}`;
 - `contact-internal-anonymous-rejected`:
   `{mount:"/admin/api/forms/:id/submissions",principal:"anonymous",status:401,
+  formSource:"scoped-internal-fixture",submissionAccess:"internal",
   createdSubmissionIds:[]}`.
 
 Their markers are registered before dispatch, accepted response IDs are
 attached immediately, and final evidence includes zero rows for every registered
-ID/marker. Material expected/observed objects, not boolean proxies, satisfy these
-assertions.
+ID/marker. Cleanup deletes the scoped internal Form after its submissions and
+proves both absent. Material expected/observed objects, not boolean proxies,
+satisfy these assertions.
 
 The `home-desktop-effects` scenario includes ordered assertion
 `home-switcher-accessible-name` with kind `aria`; its target is the rendered

@@ -325,9 +325,9 @@ TASK-547-06-L01 phase subsets are:
 
 The validator separates three pairwise-disjoint literal sets for
 TASK-547-06-L01: 69 phase-writable implementation paths above, 37 tracked
-runtime-evidence paths, and 33 closure-only documentation/task/changelog paths.
+runtime-evidence paths, and 34 closure-only documentation/task/changelog paths.
 It rejects a placeholder or broad glob as authority, proves each set has one
-writer, and proves their 139-path union equals the leaf's complete ownership.
+writer, and proves their 140-path union equals the leaf's complete ownership.
 Evidence and closure-only paths are forbidden during all 22 implementation
 phases and are admitted only by their later dedicated closeout transitions. The
 tracked registry must be byte-for-byte compatible with the frozen phase

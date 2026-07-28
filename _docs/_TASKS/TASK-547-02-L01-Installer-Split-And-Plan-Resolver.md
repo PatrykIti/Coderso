@@ -152,14 +152,17 @@ export type FullSiteDryRunTerminalizationInput = Readonly<{
 export type FullSiteDryRunTerminalizationResult = Readonly<{
   outcome: "desired_terminal" | "different_terminal";
 }>;
-export type FullSiteInstallLedgerPort = {
+export type FullSiteInstallLedgerPortAdditions = {
   terminalizeDryRun(
     input: FullSiteDryRunTerminalizationInput,
   ): Promise<FullSiteDryRunTerminalizationResult>;
-  listItems(runId: string): Promise<PersistedFullSiteInstallLedgerItem[]>;
   listRawItems(runId: string): Promise<readonly RawFullSiteInstallLedgerItem[]>;
 };
 ```
+
+`FullSiteInstallLedgerPortAdditions` is only the changed-member fragment, never a replacement port.
+The final exported `FullSiteInstallLedgerPort` retains the exact existing signatures for `withPackageLock`, `createRun`, `recordItem`, `finalizeRun`, `getRun`, `patchRunMetadata`, `findLatestSuccessfulApplyRun`, `listItems`, `createRollbackRun`, `claimRollbackRun`, `findAutomaticCompensationRun`, `hasSuccessfulRollback` and `findManagedResourceEvidence`, then adds both members above.
+Type gates compile every read/facade `Pick` and the default full composition.
 
 The builder rejects self/invalid identities and emits unique sorted dependencies.
 The strict reader allows only `schemaVersion`/`dependencies`, returns `null` for
@@ -176,10 +179,10 @@ negative/fractional/`NaN`/unsafe lengths return `null`. Each hostile and exact
 Add optional `rollbackAction?: JsonObject | null` to the compatible construction
 shape and the exact required persisted and raw exports above; no leaf may redefine
 them. `recordItem()` writes V1 and preserves it when a later upsert omits the field.
-`listItems()` remains a compatibility projection and is never authoritative for
-rollback/compensation. Their sole source/prior boundary is `listRawItems()`: one
-bounded query selects every row without operation/status filtering or value
-coercion, ordered by `position ASC, id ASC`, with
+`listItems()` remains a non-authoritative compatibility projection. Its caller-specific query selects at most 513 full rows in `position ASC, id ASC` order;
+a 513th row fails cause-free as `site_package_too_large` before projection. The sole rollback source/prior boundary is `listRawItems()`: one bounded query
+selects every row without operation/status filtering or value coercion, ordered
+by `position ASC, id ASC`, with
 `LIMIT PACKAGE_LIMITS.resourcesTotal + 1` (513). A 513th row fails closed as
 `site_package_rollback_invalid_source`; unknown/delete/restore operations and
 scalar/array/null snapshot/action values must reach L03 unchanged. Only L03 may
@@ -664,7 +667,9 @@ export const buildSummary = (items: Pick<SolutionKitInstallItemRecord, "operatio
   for (const item of items) { summary.total += 1; summary.operations[item.operation] += 1; if (item.status === "success") summary.success += 1; if (item.status === "failed") summary.failed += 1; if (item.status === "planned") summary.planned += 1; if (item.status === "skipped") summary.skipped += 1; } return summary;
 };
 export async function listSolutionKitInstallItems(runId: string): Promise<SolutionKitInstallItemRecord[]> {
-  const rows = await db.select().from(solutionKitInstallItems).where(eq(solutionKitInstallItems.runId, runId)).orderBy(asc(solutionKitInstallItems.position), asc(solutionKitInstallItems.createdAt)); return rows.map(normalizeItemRow); }
+  const rows = await db.select().from(solutionKitInstallItems).where(eq(solutionKitInstallItems.runId, runId))
+    .orderBy(asc(solutionKitInstallItems.position), asc(solutionKitInstallItems.id)).limit(PACKAGE_LIMITS.resourcesTotal + 1);
+  if (rows.length > PACKAGE_LIMITS.resourcesTotal) throw new Error("site_package_too_large"); return rows.map(normalizeItemRow); }
 const readSnapshotId = (value: unknown): string | null => isRecord(value) && typeof value.id === "string" ? value.id : null;
 const readDesiredSnapshot = (value: unknown): JsonObject => isRecord(value) && isRecord(value.desired) ? value.desired as JsonObject : isRecord(value) ? value as JsonObject : {};
 export const buildManagedResourceEvidenceQuery = (input: ManagedEvidenceInput) => {
@@ -777,19 +782,11 @@ Assert the compiled single-statement seam above rather than opaque driver instru
 Preserve the exact measured profiles, budgets, production query compilation and parameter binding during extraction; do not re-baseline or simplify them.
 The independent `fullSiteResolverBoundsDb.test.ts` invokes the concrete resolver through strict exact parent IDs and owns six boundary cases: form fields, form actions and menu items at exact 100/256 cap succeed with the complete canonical desired child set, while each cap+1 fixture rejects only with exact `Error("site_package_too_large")`, never a truncated/noop result.
 It imports no sibling test/fixture; each case enters `try/finally` before its first write, preallocates and records exact table-specific parent/child IDs before bulk inserts, and cleans only those child IDs then parent IDs. Partial seed failure is safe, no broad predicate/global-empty assumption is allowed, and the file/direct Bun command uses `360_000`/`360000` ms.
-The planner/concrete-resolver integration counts
-`findManagedResourceEvidence` calls for a dependency-bearing package and proves
-the count equals the number of planned resource identities, with both explicit
-object and explicit-null handoffs represented. A separate concrete-resolver
-regression wraps `findManagedResourceEvidence`, invokes the concrete resolver
-directly with exactly two arguments `(kind, seed)`, and proves exactly one
-self-evidence lookup; a planner wrapper or a three/four-argument call does not
-satisfy this compatibility gate. The pure reader suite retains every v18 case
-and adds the revoked dependencies array, three throwing envelope traps, four
-invalid numeric length classes and exact-4,096 success described above. Each
-hostile input captures one call under `not.toThrow` and then asserts the captured
-result is `null`; calling the reader a second time is not an equivalent totality
-proof. The counted valid envelope still proves one dependency-property read.
+The planner/concrete-resolver integration counts `findManagedResourceEvidence`
+calls for a dependency-bearing package and proves the count equals planned identities, with explicit object and null handoffs.
+A separate concrete-resolver regression wraps that reader, invokes the concrete resolver with exactly `(kind, seed)`, and proves one self-evidence lookup; planner wrappers and three/four-argument calls do not satisfy this gate.
+The pure reader suite retains every v18 case and adds the revoked array, three throwing envelope traps, four invalid numeric lengths and exact-4,096 success.
+Each hostile input captures one call under `not.toThrow`, asserts `null`, and never calls twice; the valid envelope proves one dependency-property read.
 The three resolver projection source-shape assertions belong in the Bun-owned
 `fullSiteLegacyLedgerComposition.test.ts`; do not import the DB-coupled resolver
 into the pure Vitest planner lane merely to inspect its source.
@@ -804,6 +801,7 @@ values and proves `listRawItems()` returns every row unchanged in
 `const requiredAction: JsonObject | null = listed.rollbackAction` (without
 optional chaining, fallback or cast) pins the compatibility projection; L03 tests
 alone pin raw-to-persisted validation and matching legacy-null action semantics.
+The same suite pins `listItems()` at 512/513, tied-position `id ASC`, exact `site_package_too_large`, and zero partial projection.
 The independently runnable `fullSiteLegacyLedgerDryRunTerminalization.test.ts`
 calls `terminalizeDryRun` through hostile unknown inputs/results,
 pins exact-key/pair/result rejection and cause-free codes, and uses two independent

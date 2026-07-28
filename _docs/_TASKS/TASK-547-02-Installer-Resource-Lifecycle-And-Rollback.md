@@ -89,7 +89,7 @@ leaf nor a new ownership path. Each phase reads its predecessor's on-disk state.
   method. Its
   gate-safe type boundary keeps `FullSiteInstallLedgerItem` compatible for
   in-memory construction and owns `PersistedFullSiteInstallLedgerItem` for the
-  compatibility `listItems()` projection plus `RawFullSiteInstallLedgerItem`
+  bounded compatibility `listItems()` projection plus `RawFullSiteInstallLedgerItem`
   and authoritative `listRawItems()`. Those raw contracts must actually be
   committed before the L03 checkpoint; the bridge may not redeclare them. L01
   owns planner/ledger/managed-identity tests and performs no native mutation.
@@ -182,7 +182,8 @@ snapshots/action/error fields are all `unknown`. `listRawItems()` is the only
 rollback/compensation source/prior read: it returns every row without filtering
 or coercion, ordered `position ASC, id ASC` with
 `LIMIT PACKAGE_LIMITS.resourcesTotal + 1`; cap+1 fails closed;
-`listItems()` is non-authoritative. L02
+`listItems()` is non-authoritative but independently uses the same 513-row cap
+and stable order, with cap+1 failing as `site_package_too_large`. L02
 staging consumes the L01-owned `buildFullSiteRollbackActionV1` and always
 supplies V1 for current apply items; the concrete upsert preserves it when later
 writes omit the optional construction field. Only L03 raw preflights consume

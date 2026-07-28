@@ -39,16 +39,17 @@ path or raw reference contents.
   routes remain `/admin/api/solution-kits`, `/admin/api/solution-kits/:id`,
   `/admin/api/solution-kits/plan`, `/admin/api/solution-kits/:id/apply`,
   `/admin/api/solution-kits/:id/rollback`, `/admin/api/solution-kits/runs` and
-  `/admin/api/solution-kits/runs/:runId`. Form writes exercised are public-site
-  `POST /forms/:id/submissions` and internal
-  `POST /admin/api/forms/:id/submissions` through the existing dual mount.
+  `/admin/api/solution-kits/runs/:runId`. Form writes use the existing shared
+  executor at `POST /forms/:id/submissions` and its stripped-admin
+  `/admin/api/forms/:id/submissions` alias; the Form's mode, not the mount,
+  selects public versus internal authorization.
 - **Authentication/RBAC:** every Solution Kit route requires an authenticated
   admin/API-key principal. List/detail/plan/run reads require
   `solution-kits:read`; apply/rollback require `solution-kits:write`. Public
   contact submission is unauthenticated only for the server-observed
-  `status:"published"` plus `submissionAccess:"public"` form; internal mode
-  instead requires a coherent admin session with `forms:write` or API-key scope
-  `forms.submit`; anonymous access to the internal mount is rejected.
+  `status:"published"` plus `submissionAccess:"public"` form on either alias;
+  internal mode on either alias requires a coherent admin session with
+  `forms:write` or API-key scope `forms.submit`, and rejects anonymous access.
 - **CSRF/rate limit:** every session-authenticated Solution Kit `POST`,
   including plan, apply and rollback, retains CSRF enforcement and the shared
   `admin_write` bucket; API-key auth follows its existing non-cookie policy.
@@ -331,10 +332,11 @@ Exact ordered IDs:
    rejects invalid data, missing/altered nonce and configured CAPTCHA failures,
    Public-site, Form Design and Page Editor flows register every unique
    submission marker before dispatch and every returned ID immediately. The
-   installed Form also proves the internal mount's exact matrix: coherent
-   session plus `forms:write`, valid CSRF and `admin_write`; API key plus
-   `forms.submit`, no cookie-CSRF and `admin_write`; anonymous rejection with
-   no row. It executes `show-message-keep-form` visibly: the supporting note
+   installed public Form proves both mount aliases retain public nonce/CAPTCHA/
+   `public_write` behavior. A separate scoped `submissionAccess:"internal"`
+   Form proves coherent session plus `forms:write`, valid CSRF and `admin_write`;
+   API key plus `forms.submit`, no cookie-CSRF and `admin_write`; anonymous
+   rejection with no row. It executes `show-message-keep-form` visibly: the supporting note
    disappears, exact success appears and all controls remain visible. Clean
    every registered submission independently and prove zero matching rows.
 8. Draft/publish-to-front parity, native lifecycle order, source-run rollback,
@@ -482,19 +484,24 @@ least these material public structures:
   initial note is `Odpisujemy zwykle w ciągu jednego dnia roboczego. Bez
   zobowiązań i bez sprzedażowej presji.`, and success is `Dziękujemy! Odezwiemy
   się z pierwszym pomysłem na Twój dom — do usłyszenia.`;
-- the installed Form's internal submission evidence is exactly
+- a separately created scoped `submissionAccess:"internal"` Form supplies
+  internal submission evidence exactly as
   `contact-internal-session-contract → {mount:"/admin/api/forms/:id/submissions",
-  principal:"coherent-session",permission:"forms:write",csrf:"valid",
+  principal:"coherent-session",formSource:"scoped-internal-fixture",
+  submissionAccess:"internal",permission:"forms:write",csrf:"valid",
   rateLimit:"admin_write",outcome:"accepted"}`,
   `contact-internal-api-key-contract →
   {mount:"/admin/api/forms/:id/submissions",principal:"api-key",
+  formSource:"scoped-internal-fixture",submissionAccess:"internal",
   scope:"forms.submit",cookieCsrf:"not-applicable",rateLimit:"admin_write",
   outcome:"accepted"}`, and `contact-internal-anonymous-rejected →
   {mount:"/admin/api/forms/:id/submissions",principal:"anonymous",status:401,
+  formSource:"scoped-internal-fixture",submissionAccess:"internal",
   createdSubmissionIds:[]}`. The session and API-key submissions use distinct
   pre-registered markers; their returned IDs are attached immediately and both
   rows are deleted independently. The anonymous marker is also registered
-  before dispatch and the zero-row assertion proves rejection created nothing;
+  before dispatch and the zero-row assertion proves rejection created nothing.
+  Cleanup deletes the scoped internal Form after its submissions and proves both gone;
 - `aurora-six-slug-eligibility` observes one exact keyed object. Aurora has
   `status:200`, exact title
   `Dom Aurora — projekt pokazowy — FormaDom Studio`, exact description
