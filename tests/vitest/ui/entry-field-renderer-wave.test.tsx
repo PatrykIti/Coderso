@@ -18,6 +18,13 @@ import { afterEach, expect, test, vi } from "vitest";
  * sheets, tables, cards and the like are not reachable from here and are not copied.
  */
 
+/**
+ * The only value this file makes `listEntriesCached` reject with, and the only
+ * thing the mocked `isApiClientError` below is ever handed. Structurally a subset
+ * of `Error`, so a real rejection reaching the same guard is assignable to it too.
+ */
+type RejectedRelationLoad = { name: string; message: string };
+
 const entriesState = vi.hoisted(() => ({
   relationItems: [
     {
@@ -29,7 +36,7 @@ const entriesState = vi.hoisted(() => ({
       author: null,
     },
   ],
-  relationError: null as unknown,
+  relationError: null as RejectedRelationLoad | null,
   listEntriesCached: vi.fn(async () => {
     if (entriesState.relationError) throw entriesState.relationError;
     return entriesState.relationItems;
@@ -59,13 +66,7 @@ vi.mock("@/components/ui/button", () => ({
     disabled,
     asChild,
     ...props
-  }: {
-    children: React.ReactNode;
-    onClick?: () => void;
-    disabled?: boolean;
-    asChild?: boolean;
-    [key: string]: unknown;
-  }) =>
+  }: React.ComponentPropsWithoutRef<"button"> & { asChild?: boolean }) =>
     asChild ? (
       <span>{children}</span>
     ) : (
@@ -80,10 +81,9 @@ vi.mock("@/components/ui/checkbox", () => ({
     checked,
     onCheckedChange,
     ...props
-  }: {
+  }: Omit<React.ComponentPropsWithoutRef<"input">, "checked" | "onChange"> & {
     checked?: boolean | "indeterminate";
     onCheckedChange?: (checked: boolean) => void;
-    [key: string]: unknown;
   }) => (
     <input
       type="checkbox"
@@ -101,13 +101,7 @@ vi.mock("@/components/ui/input", () => ({
     onKeyDown,
     onBlur,
     ...props
-  }: {
-    value?: string;
-    onChange?: (event: React.ChangeEvent<HTMLInputElement>) => void;
-    onKeyDown?: (event: React.KeyboardEvent<HTMLInputElement>) => void;
-    onBlur?: (event: React.FocusEvent<HTMLInputElement>) => void;
-    [key: string]: unknown;
-  }) => (
+  }: React.ComponentPropsWithoutRef<"input">) => (
     <input
       defaultValue={value}
       onChange={onChange}
@@ -180,23 +174,13 @@ vi.mock("@/components/ui/switch", () => ({
 }));
 
 vi.mock("@/components/ui/textarea", () => ({
-  Textarea: ({
-    value,
-    onChange,
-    ...props
-  }: {
-    value?: string;
-    onChange?: (event: React.ChangeEvent<HTMLTextAreaElement>) => void;
-    [key: string]: unknown;
-  }) => <textarea defaultValue={value} onChange={onChange} {...props} />,
+  Textarea: ({ value, onChange, ...props }: React.ComponentPropsWithoutRef<"textarea">) => (
+    <textarea defaultValue={value} onChange={onChange} {...props} />
+  ),
 }));
 
 vi.mock("@/services/apiClient", () => ({
-  isApiClientError: (error: unknown) =>
-    typeof error === "object" &&
-    error !== null &&
-    "name" in error &&
-    (error as { name?: string }).name === "ApiClientError",
+  isApiClientError: (error: RejectedRelationLoad | null) => error?.name === "ApiClientError",
 }));
 
 vi.mock("@/services/entriesClient", () => ({
@@ -224,7 +208,8 @@ vi.mock("@/ui/media/MediaPicker", () => ({
     maxItems,
     accept,
   }: {
-    onChange: (value: unknown) => void;
+    // The three shapes the real picker emits: an id, an id list, and a clear.
+    onChange: (value: string | string[] | null) => void;
     multiple?: boolean;
     maxItems?: number;
     accept?: string[];
