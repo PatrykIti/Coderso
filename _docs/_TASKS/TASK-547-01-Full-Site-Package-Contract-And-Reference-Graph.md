@@ -107,9 +107,11 @@ canonical package/graph code must not use `localeCompare`, `Intl` or a host
 locale. L01's object-key comparator reuses only ECMAScript array-index
 classification and ordering: canonical array-index strings `0..4294967294` sort
 numerically first. Every non-index key is deliberately sorted by the custom
-UTF-16 text comparator; the canonicalizer reconstructs objects in that order
-before `JSON.stringify`. Fixed collection order, desired-array order and first-
-occurrence verification order remain authored. Resource arrays and residuals
+UTF-16 text comparator. Free-form JSON objects reconstruct in that order before
+`JSON.stringify`; schema-owned root/envelope objects are named exceptions in
+their declared order, including root `schemaVersion,key,metadata,resources`, then
+present optionals, and the fixed resource-collection tuple. Desired arrays and
+first-occurrence verification order remain authored. Resource arrays/residuals
 sort by canonical identity. Residual IDs use the exact hyphen-only
 grammar `^[a-z0-9](?:[a-z0-9-]{0,126}[a-z0-9])?$`, are unique and reject
 duplicates. Metadata/residual prose trims outer whitespace and preserves

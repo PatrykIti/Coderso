@@ -54,13 +54,13 @@ L02's lexical identity/dependency ties. The same module owns
 all other keys use `compareFullSitePackageText`. It reuses ECMAScript's
 array-index classification but deliberately code-unit-sorts non-index keys;
 `OrdinaryOwnPropertyKeys` itself preserves insertion order for those keys and is
-not their ordering authority here. Canonicalization recursively reconstructs
-each object in comparator order before `JSON.stringify`, whose numeric-index
-behavior then agrees with the comparator while the reconstructed insertion order
-pins non-index keys. The fixed resource-collection tuple retains its declared
-order; desired arrays retain authored order; verification IDs retain
-first-occurrence order. Resource arrays and residuals alone sort by canonical
-identity.
+not their ordering authority. Free-form JSON objects recursively reconstruct in
+comparator order before `JSON.stringify`. Schema-owned envelopes are named
+exceptions rebuilt in contract order: root keys are `schemaVersion`, `key`,
+`metadata`, `resources`, then present `compatibility`/`verification`; `resources`
+uses the fixed collection tuple. Desired arrays retain authored order and
+verification IDs retain first occurrence; resource arrays and residuals alone
+sort by canonical identity.
 
 Every exported package authority consulted by validation is runtime-immutable,
 not merely TypeScript-readonly: `PACKAGE_RESOURCE_KINDS`,
@@ -795,9 +795,12 @@ public/internal caller accepts an arbitrary diagnostic path.
 
 Data flow: unknown input → serialized-size/shape limits → strict package-owned
 records and exact setting allowlist → canonical structural output → L02 graph
-validation. Errors use
-`site_package_invalid`, `site_package_too_large`, `site_package_too_complex` and
-`site_package_setting_forbidden`, with bounded safe paths.
+validation. This leaf's `FullSitePackageError` owns the four structural codes
+above. TASK-547-01-L02 separately owns immutable `ReferenceGraphErrorCode`/
+`ReferenceGraphError` in `referenceRegistry.ts`: the five `site_package_ref_*`
+codes plus shared `site_package_too_complex`; it never edits `types.ts`. Service/
+CLI mapping preserves either safe `.code`. Type/runtime tests exhaust all nine
+parent-required codes with bounded diagnostics.
 
 Test ownership is physical and non-overlapping:
 
@@ -929,17 +932,15 @@ Use an unsorted multi-residual fixture whose canonical identity order differs
 from its input order; trigger a finding in the later input element and prove its
 path retains that original pre-sort input index, never its sorted position or
 residual ID/value.
-Pin metadata/prose trimming, locale
-grammar/case preservation, no-trim identities, residual grammar/uniqueness and
-punctuation order `a-a,a.a,a_a,aa`, integer-index order `2,10,01` and `-0` →
-`0` in exact canonical JSON. Add a direct comparator assertion that sorting
+Pin metadata/prose trimming, locale grammar/case preservation, no-trim identities,
+residual grammar/uniqueness, punctuation order `a-a,a.a,a_a,aa`, integer-index
+order `2,10,01` and `-0` → `0`. Directly assert sorting
 `["a", "4294967295", "01", "4294967294"]` yields
-`["4294967294", "01", "4294967295", "a"]`, plus exact canonical desired-object
-JSON from that adversarial input insertion order:
+`["4294967294", "01", "4294967295", "a"]` and the nested desired JSON is
 `{"4294967294":"max-index","01":"leading-zero","4294967295":"not-index","a":"text"}`.
-Only `4294967294` is numeric-priority; the other three are non-index keys in
-UTF-16 code-unit order. This must prove reconstruction precedes
-`JSON.stringify`, not attribute non-index sorting to `OrdinaryOwnPropertyKeys`.
+One exact full-package JSON pins root schema order, the resource tuple and this
+nested comparator order, proving named exceptions plus free-form reconstruction
+before `JSON.stringify` without crediting `OrdinaryOwnPropertyKeys`.
 Pin the raw normalizer's exact depth 64/65 boundary and static redacted
 `json_depth_exceeded` singleton; L02 diagnostics alone owns
 raw normalize→graph and forged-typed duplicate+depth precedence. Cover complete

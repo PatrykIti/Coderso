@@ -356,14 +356,14 @@ The seed, every descriptor/path/dependency array and the outer plan are
 deep-cloned and frozen. Diagnostic display paths are derived sanitized text,
 never substitution authority.
 
-This leaf also owns `resolvePlannedPackageResourceRefs(resource, resolvedIds)`.
-It deep-clones `resource.seed.desired`, visits only the recorded descriptors,
-requires the value at each path to remain the exact ref/target captured by the
-plan, substitutes the mapped ID and rejects missing IDs or any source drift with
-a static `site_package_ref_missing` or `site_package_ref_bad_path` respectively.
-It performs no allowlist/ref-like scan, graph build or input/descriptor mutation.
-L01 planning placeholders and L02 actual intended IDs use
-this one exported resolver; neither consumer duplicates the recursive walker.
+This leaf alone owns `resolvePlannedPackageResourceRefs` in `referenceGraph.ts`.
+It clones desired, visits only frozen descriptors, requires each captured ref/
+target, substitutes the mapped ID and rejects missing IDs/source drift as static
+`site_package_ref_missing`/`site_package_ref_bad_path`, without another scan,
+graph build or mutation. TASK-547-02-L01 `planFullSiteInstall` in
+`fullSiteInstallPlanner.ts` uses it for planning placeholders; TASK-547-02-L02
+`prepareFullSiteSaga` in `fullSiteInstall/staging.ts` uses actual intended IDs.
+TASK-547-01-L01 remains schema/collector owner; neither consumer copies the walker.
 
 This leaf is the mandatory second half of complete package validation, with
 boundaries frozen as follows:
@@ -782,26 +782,26 @@ ordered fixed discovery plus kind-selected Page `data`/Page Template `document`
 discovery (record successful Detail Page content-type targets) and route-ordered
 detail/type/agreement discovery → generic ref-like scan → semantic finalizer →
 stable cycle-first topology → dependency depth → frozen plan.
-Errors distinguish duplicate/missing/ambiguous/cycle/bad-path with only the
-static redacted diagnostics above. TASK-547-02 owns post-substitution native
-`desired` validation; this leaf certifies only ref placement/resolution/order.
+This leaf's immutable `ReferenceGraphErrorCode`/`ReferenceGraphError` in
+`referenceRegistry.ts` owns exactly duplicate/missing/ambiguous/cycle/bad-path
+plus shared `site_package_too_complex`; it never widens L01 `types.ts`.
+Service/CLI mapping preserves those safe codes alongside `FullSitePackageError`.
+Type/runtime tests exhaust every parent-required code with only static bounded
+diagnostics. TASK-547-02 owns post-substitution native `desired` validation.
 
-Core tests pin the exact frozen `REFERENCE_PATHS` rows and absence of both Page
-kinds. In `full-site-package-references-page.test.ts`, four named regressions pin:
-Page `data` and Page Template `document` accept/substitute root plus recursive
-refs, asserting every complete descriptor array exactly with `data`/`document`
-first; opposite-root ref-likes are forbidden. Every accepted ref yields one occurrence and
-descriptor, never a fixed-walker duplicate. Substitution changes only recorded
-leaves and hands the otherwise unchanged selected root to TASK-547-02 validation.
-That suite also owns every Page table row; absent/null/non-null device/nesting
-behavior, required collection content type, discriminator cross-product,
-deterministic recursion and rejection of `menu.desired.document.items`.
-For both `page` and `page_template`, pin accepted depth 4/rejected depth 5,
-accepted 24/rejected 25 children, an unknown native slot and slots on an atom;
-each rejection occurs rather than truncating a reference-bearing final branch.
-Pin that a valid nested registered ref yields one edge/descriptor and zero
-forbidden diagnostics, while a structurally blocked slot subtree yields exactly
-its first-match Page diagnostic and no duplicate descendant ref diagnostic.
+Core tests pin frozen `REFERENCE_PATHS` and exclude both Page kinds. The focused
+Page suite independently proves Page `data` and Page Template `document` accept/
+substitute root plus recursive refs with exact root-first descriptor arrays;
+opposite roots are forbidden, every ref yields one occurrence/descriptor, and
+only recorded leaves change before TASK-547-02 validation. It owns all Page table
+rows, device/nesting states, collection type, discriminator cross-product,
+deterministic recursion and forbidden `menu.desired.document.items`. For each
+Page kind pin depth 4/5, child 24/25, unknown slots and slots on an atom without
+truncating a reference-bearing branch. Separate named Page and Page Template cases set a
+columns block's `props.count` below its populated native slot count, place a valid
+ref in a preserved higher slot, and assert exact edge/descriptor order, successful
+substitution and zero forbidden diagnostics; using `getPageBlockActiveSlotKeys`
+must fail them. A blocked subtree yields one Page diagnostic and no descendant one.
 Use four independent (non-loop-collapsed) malformed-discriminator regressions:
 
 | Source kind | Depth-4 malformed block's own `slots` | Expected graph result |
