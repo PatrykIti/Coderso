@@ -334,12 +334,12 @@ listing template/query and setting snapshots include their entire owner-defined
 semantic/raw state. L03 restores that exact capture through
 `restoreSnapshotAtomic({ id, expectedCurrent, target, actorId })`.
 
-Planning performs one bounded snapshot-loader call: one managed-evidence query,
-one base query per nonempty resource kind and at most three aggregate-child
-queries, never more than 14 statements for 0..512 resources. The exact ordered
-result is validated before operation construction; per-resource DB fallbacks are
-forbidden. Existing single-resource resolvers remain only for direct/exact-ID
-rollback and recovery callers.
+Planning wraps its bounded snapshot load in one explicit `READ COMMITTED`
+transaction whose statement one is `acquireNativeCmsWriterFence(tx)`. Every
+reader uses that handle; at most 14 domain statements and 15 total including the
+fence cover 0..512 resources. Exact ordered results validate before
+operation construction; no per-resource fallback exists. Single-resource
+resolvers remain only for direct/exact-ID rollback/recovery callers.
 
 After a `reserved` apply callback, L02 preparation is two-pass and native-write-free. Pass one allocates
 a server UUID for every create in all nine UUID-backed kinds, takes current IDs

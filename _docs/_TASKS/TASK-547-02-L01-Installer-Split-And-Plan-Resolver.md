@@ -310,19 +310,21 @@ export type FullSitePlanningSnapshotRow = Readonly<{
 export type FullSitePlanningSnapshotLoader = (
   resources: readonly PlannedPackageResource[],
 ) => Promise<readonly FullSitePlanningSnapshotRow[]>;
+export type FullSitePlanningReadTransaction = <T>(
+  read: (scope: Readonly<{ findEvidence: ManagedResourceEvidenceBatchReader;
+    readNative: FullSitePlanningResourceBatchReader }>) => Promise<T>,
+) => Promise<T>;
 ```
 
-Both planner overloads call the loader exactly once after graph construction.
-It accepts at most 512 unique ordered identities and returns the same cardinality,
+Both planner overloads call the loader once after graph construction. It accepts at most 512 unique ordered identities and returns the same cardinality,
 identity and order; duplicates, omissions, extras or reorder fail closed before
-operation construction. Bun-free `planningSnapshot.ts` receives both production
-readers by injection and imports no DB/runtime module; L02 `execute.ts` owns the
-default composition. Native reads use at most one
-base statement per nonempty kind plus three aggregate-child statements, so the
-complete plan costs at most 14 SQL statements independent of resource count.
-Content entries form a bounded second wave after content-type IDs resolve; no
-dependency causes a ledger lookup. Child rows use stable parent/order/id ordering
-and per-parent cap+1 rejection before projection.
+operation construction. Bun-free `planningSnapshot.ts` receives the transaction
+runner and imports no DB/runtime module. L02 `execute.ts` owns default composition:
+it opens `READ COMMITTED`, calls `acquireNativeCmsWriterFence(tx)` as statement
+one, then supplies evidence/native closures bound only to that handle. They use
+one evidence query, at most one base query per nonempty kind and three child
+queries: at most 14 domain statements and 15 total. Entries form a bounded second
+wave; no dependency causes a ledger lookup. Child order is parent/order/id with cap+1 rejection.
 
 - when `expectedId` is supplied, query only that ID constrained by the seed's
   natural identity (and parent content-type identity for entries); return `null`
@@ -450,7 +452,7 @@ The source/query-shape regression in `tests/unit/kits/fullSiteLegacyLedgerCompos
 `legacyInstallRunPersistence/readPersistence.ts` owns one batch read-port seam:
 
 ```ts
-export const findManagedResourceEvidenceBatch = async (input: Readonly<{
+export const findManagedResourceEvidenceBatch = async (tx, input: Readonly<{
   packageKey: string;
   resources: readonly Readonly<{
     identity: FullSiteResourceIdentity;
@@ -463,7 +465,7 @@ export const findManagedResourceEvidenceBatch = async (input: Readonly<{
 }>[]>;
 ```
 
-Input validation accepts 0..512 unique canonical identities and preserves request
+The required first argument is the enclosing planning transaction handle; no global-DB fallback exists. Input accepts 0..512 unique canonical identities and preserves request
 ordinal. One bound SQL statement materializes that request relation and performs
 the existing run-driven correlated-lateral winner lookup per request. It keeps
 the exact successful apply/item filters, five-field total order and combined
@@ -641,8 +643,8 @@ scanned-row work and 100,000 root shared buffers. It imports the same parser fro
 `tests/utils/fullSiteExplainMetrics.ts`; summaries remain sanitized.
 
 This measured gate is additive: compiled batch-shape assertions, exactly one
-planner snapshot-loader call and the `<= 14` query-count regression remain
-mandatory. If any profile exceeds a budget or exposes an
+planner snapshot-loader call and the `<= 14` domain/`<= 15` total statement
+regression remain mandatory. If any profile exceeds a budget or exposes an
 unbounded plan, the no-migration claim fails: stop L01 and re-audit this contract
 for the required index plus complete SQL/snapshot/journal artifacts. Do not make
 the test pass by reducing fixtures, raising ceilings, weakening the scanned-row
@@ -748,26 +750,23 @@ export async function planFullSiteInstall(pkg, referencePlanOrDeps, maybeDeps) {
 
 export const createFullSitePlanningSnapshotLoader = (deps: Readonly<{
   packageKey: string;
-  findManagedResourceEvidenceBatch: ManagedResourceEvidenceBatchReader;
-  readFullSitePlanningResourcesBatch: FullSitePlanningResourceBatchReader;
+  withReadTransaction: FullSitePlanningReadTransaction;
 }>) => async (resources) => {
   const requests = readExactPlanningRequests(resources); // max 512, unique/order
-  const evidence = await deps.findManagedResourceEvidenceBatch({
-    packageKey: deps.packageKey,
-    resources: requests.map(toEvidenceRequest),
-  }); // exactly one SQL statement
-  const current = await deps.readFullSitePlanningResourcesBatch({
-    resources: requests,
-    evidence,
-  }); // <= one base query/kind + three child queries
-  return freezeAndValidatePlanningSnapshot(requests, evidence, current);
+  return deps.withReadTransaction(async ({ findEvidence, readNative }) => {
+    const evidence = await findEvidence({
+      packageKey: deps.packageKey, resources: requests.map(toEvidenceRequest),
+    }); // one domain statement
+    const current = await readNative({ resources: requests, evidence });
+    return freezeAndValidatePlanningSnapshot(requests, evidence, current);
+  }); // <= 14 domain statements; <= 15 including the owner fence
 };
 
-export async function readFullSitePlanningResourcesBatch(input) {
+export async function readFullSitePlanningResourcesBatch(tx, input) {
   const grouped = groupBoundedRequestsByKind(input); // authored array stays unchanged
-  const baseRows = await readNonEmptyKindGroups(grouped); // fixed query shapes
-  const entryRows = await readEntriesAfterContentTypeIds(grouped, baseRows);
-  const children = await readAggregateChildrenCapPlusOne(baseRows);
+  const baseRows = await readNonEmptyKindGroups(tx, grouped); // fixed query shapes
+  const entryRows = await readEntriesAfterContentTypeIds(tx, grouped, baseRows);
+  const children = await readAggregateChildrenCapPlusOne(tx, baseRows);
   return projectExactOrderedCurrentStates(input.resources, baseRows, entryRows, children);
 }
 ```
@@ -787,10 +786,10 @@ export const buildManagedResourceEvidenceBatchQuery = (input: ManagedEvidenceBat
     .leftJoinLateral(buildRunDrivenWinnerForRequest(input.packageKey))
     .select(narrowOrdinalRunAndSnapshotId)
     .orderBy(asc(request.ordinal));
-export const findManagedResourceEvidenceBatch = async (value: unknown) => {
+export const findManagedResourceEvidenceBatch = async (tx, value: unknown) => {
   const input = readExactManagedEvidenceBatchInput(value, PACKAGE_LIMITS.resourcesTotal);
   return readExactOrderedManagedEvidenceBatch(
-    await buildManagedResourceEvidenceBatchQuery(input), input.resources,
+    await executeManagedResourceEvidenceBatchQuery(tx, input), input.resources,
   );
 };
 export const createLegacyInstallReadPersistence = (): ReadPersistence => ({
@@ -927,8 +926,9 @@ L01 uses the graph-owner descriptor resolver/`normalizeDesired`; any descriptor 
   0/1/512 order, Form/Menu child caps and zero partial projection. Resolver bounds
   retain exact-ID 100/256 cap+1 cases. Native/evidence EXPLAIN suites compile
   production bound queries and emit only sanitized metrics.
-- Snapshot/V1/read suites reject hostile cardinality/order and 4,097 entries,
-  accept exact 4,096 once, pin the 14-query cap, preserve raw unknown/delete/
+- Snapshot/V1/read suites reject hostile cardinality/order and 4,097 entries, accept
+  exact 4,096 once, pin 14 domain/15 total statements, statement-one fence
+  and one transaction-bound handle, preserve raw unknown/delete/
   restore/scalar/array/null fields and enforce stable 512/513 boundaries.
 - The historical dry-run-named suite owns all-mode desired/different finalization,
   paired compensation, interrupted-source atomic transition, races/idempotence and
@@ -952,7 +952,7 @@ L01 uses the graph-owner descriptor resolver/`normalizeDesired`; any descriptor 
 - [x] Extract the bounded legacy modules, ledger DB implementation, default composition and facade.
 - [x] Add the planner and its initial pure Vitest coverage.
 - [ ] Land aliases, bounded raw reads, strict V1/manifest readers and pooler-safe xact/owner fence without facade drift.
-- [ ] Replace planner N+1 reads with one snapshot loader, batch evidence and <=14-query native reader; retain direct/exact-ID compatibility.
+- [ ] Replace planner N+1 reads with one fenced snapshot transaction, batch evidence and <=14 domain/<=15 total statements; retain direct/exact-ID compatibility.
 - [ ] Land atomic `initializeReservedRun`/`finalizeOwnedRun`; retain legacy-only `createRun`/`finalizeRun` and shared fenced `recordItem`.
 - [ ] Split near-limit facade/tests into declared cohesive children, then land managed/native and EXPLAIN suites.
 - [ ] Pass pure, DB, type/lint, query-budget and touched-file line gates.
