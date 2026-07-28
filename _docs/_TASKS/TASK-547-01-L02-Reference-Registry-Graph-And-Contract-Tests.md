@@ -90,14 +90,10 @@ rest to `responsive.<breakpoint>.props`.
 TASK-547-04's generator still inserts only its five declared direct-root refs;
 that narrower producer does not truncate the general package contract.
 
-At initialization freeze imported Page block types, breakpoints and every slot
-array into one private `PAGE_REFERENCE_AUTHORITY`, without copied literals; all
-Page decisions use it, so later owner mutation cannot alter paths or order. The
-compatibility `REFERENCE_PATHS` export is exactly the recursively frozen fixed
-non-Page rows; `page`/`page_template` are absent. `collectFixedSourceOccurrences`
-is never invoked for either kind: only the kind-selected walker grants their
-authority. Neither registry exposes a mutable validation boundary.
-
+At initialization freeze imported Page block types, breakpoints and slot arrays
+into one private `PAGE_REFERENCE_AUTHORITY`; later mutation cannot alter decisions.
+`REFERENCE_PATHS` is the frozen non-Page projection without private `presence`.
+The table initializes frozen private rules; neither collector exposes authority.
 The native bounds are reject boundaries, not scan cutoffs:
 `PAGE_BLOCK_MAX_TREE_DEPTH = 4` (root block is depth 1) and
 `PAGE_BLOCK_MAX_CHILDREN_PER_SLOT = 24`. For both `page` and `page_template`,
@@ -113,10 +109,9 @@ array child counts and indexed object children. The preflight records facts only
 it emits no diagnostic and registers no reference, so it cannot reorder the
 valid-node first-match contract below.
 
-Reference discovery has one authority path per occurrence. Fixed registry rows
-and the Page walker register
+Each occurrence has one authority path. Fixed rules and the Page walker register
 `JSON.stringify([source.ordinal, exactRelativeSegmentArray])` in
-`registeredReferencePaths` before validating a present required/nullable value;
+`registeredReferencePaths` before validating any present terminal;
 the resource ordinal scopes the authority to exactly one source resource, and
 string and numeric segments therefore cannot collide.
 For a valid discriminator, the Page slot validator consumes that preflight and
@@ -151,13 +146,14 @@ generic scan therefore forbids every ref-like descendant outside such a prefix,
 while a ref-like value inside the rejected `slots` subtree cannot create a
 duplicate generic finding.
 
-Absent or `null` nullable paths add no edge. Every present non-null allowed value
-must be an exact ref of the frozen target kind. A discriminator-mismatched block
-is not an allowed path, even if it uses the same property name. All other
-ref-shaped objects/paths, including non-native slot keys and `$ref`, are invalid.
+Private presence is closed: `required` rejects absent/`null`; `when_present` skips
+absent but rejects `null`; `nullable` skips either. Fixed collection resolves the
+final own terminal, registers present authority before validation and never drops
+a missing required terminal; malformed intermediates remain TASK-547-02 work.
+Other values must be exact refs; mismatched blocks and all other ref-shaped paths,
+including non-native slots and `$ref`, are invalid.
 Enforce 4,096 occurrence edges, JSON level 64 and at most 100 diagnostics before
 sorting; after cycle detection, enforce dependency-path depth 64.
-
 Diagnostics expose a sanitized path of at most 240 characters and exactly one
 member of this closed vocabulary:
 
@@ -295,14 +291,10 @@ container/type/detail-content-type mismatch, Page-structure and planned-drift re
 `site_package_ref_ambiguous`; cycle → `site_package_ref_cycle`; and every
 JSON/edge/diagnostic/dependency limit reason → `site_package_too_complex`.
 
-Diagnostic paths are display-only and use `encodeReferenceDiagnosticPath`.
-Collection names, resource ordinals, numeric array indexes and literal segments
-from the closed registry/Page capability owners are trusted; at the first other
-object-key segment the encoder appends `[redacted]` and stops. JSON depth, edge,
-diagnostic, dependency and cycle diagnostics use static `$.resources`. A supplied
-key, slug, target identity, unknown slot name or arbitrary desired key can never
-enter the path, reason or error message.
-
+Resource diagnostics call `encodeReferenceDiagnosticPath(source, relativePath)` to
+prepend `$.resources.<collection>[<ordinal>].desired`; trusted numeric/closed segments
+continue until terminal `[redacted]`. Descriptors stay relative; only global
+limits/cycle use `$.resources`; supplied data never enters output.
 Freeze the complete plan shapes:
 
 ```ts
@@ -402,10 +394,14 @@ export type AllowedReferencePath = Readonly<{
   targetKind: PackageResourceKind;
   settingKey?: string;
 }>;
+type FixedReferenceRule = Readonly<{
+  path: AllowedReferencePath;
+  presence: "required" | "when_present" | "nullable";
+}>;
 const freezeReferencePath = (row: AllowedReferencePath): AllowedReferencePath =>
   Object.freeze({ ...row, segments: Object.freeze([...row.segments]) });
 export const REFERENCE_PATHS: readonly AllowedReferencePath[] = Object.freeze(
-  FIXED_NON_PAGE_REFERENCE_PATH_ROWS.map(freezeReferencePath),
+  FIXED_NON_PAGE_REFERENCE_RULES.map(({ path }) => freezeReferencePath(path)),
 );
 type TaggedGraphDiagnostic = Readonly<{
   code: "site_package_ref_bad_path" | "site_package_ref_missing" | "site_package_ref_ambiguous";
@@ -414,7 +410,8 @@ type TaggedGraphDiagnostic = Readonly<{
 type GraphDiagnostics = Readonly<{
   add(
     code: TaggedGraphDiagnostic["code"],
-    path: readonly (string | number)[],
+    source: RegisteredPackageResource,
+    relativePath: readonly (string | number)[],
     reason: ReferenceGraphDiagnosticReason,
   ): void;
   read(): DiagnosticBatch<TaggedGraphDiagnostic>;
@@ -422,8 +419,10 @@ type GraphDiagnostics = Readonly<{
 const createGraphDiagnostics = (): GraphDiagnostics => {
   const shared = createDiagnosticCollector<TaggedGraphDiagnostic>();
   return Object.freeze({
-    add: (code, path, reason) => shared.add({
-      code, diagnostic: { path: encodeReferenceDiagnosticPath(path), reason },
+    add: (code, source, relativePath, reason) => shared.add({
+      code, diagnostic: {
+        path: encodeReferenceDiagnosticPath(source, relativePath), reason,
+      },
     }),
     read: shared.read,
   });
@@ -466,6 +465,7 @@ const collectContentRouteOccurrences = (source, context) => {
     if (detailContentType !== contentType.identity) {
       context.collector.add(
         "site_package_ref_bad_path",
+        source,
         [...path, "detailPageId"],
         "content_route_detail_content_type_mismatch",
       );
@@ -585,7 +585,7 @@ const rejectPageSlots = (
   context: PageReferenceVisitContext,
 ): void => {
   const slotsPath = [...path, "slots"];
-  context.collector.add("site_package_ref_bad_path", slotsPath, reason);
+  context.collector.add("site_package_ref_bad_path", context.source, slotsPath, reason);
   context.blockedReferencePrefixes.push({
     sourceOrdinal: context.source.ordinal,
     path: slotsPath,
@@ -789,7 +789,8 @@ Service/CLI mapping preserves those safe codes alongside `FullSitePackageError`.
 Type/runtime tests exhaust every parent-required code with only static bounded
 diagnostics. TASK-547-02 owns post-substitution native `desired` validation.
 
-Core tests pin frozen `REFERENCE_PATHS` and exclude both Page kinds. The focused
+Core tests pin non-Page `REFERENCE_PATHS` without `presence`; table-drive both required rows,
+the listing `when_present` row and every nullable row through absent/null/scalar/valid boundaries with exact code/reason/source path and occurrence counts. The focused
 Page suite independently proves Page `data` and Page Template `document` accept/
 substitute root plus recursive refs with exact root-first descriptor arrays;
 opposite roots are forbidden, every ref yields one occurrence/descriptor, and
@@ -834,7 +835,9 @@ sibling discovery, preserved child indexes, and neither narrow nor ancestor-wide
 blocked prefixes. Pin all display paths to the trusted prefix plus `[redacted]`,
 the static reasons/message, and absence of supplied slot keys/ref sentinels from
 every path, reason and message.
-Pin exact ref keys/kind/shape; every closed reason code and condition mapping;
+Retire unused `isPackageRef`/kind import. Pin valid 1/128 and invalid uppercase/
+punctuation/129 keys; invalids yield `package_ref_key_invalid` before lookup.
+Pin shape/kind and every closed mapping;
 the fixed diagnostic-overflow singleton; and sentinel non-disclosure for
 duplicate, missing, wrong-kind, malformed-key, forbidden-path, content-route,
 depth, edge, cycle, resolved-ID and drift failures. Cross-product precedence
@@ -863,10 +866,9 @@ must discard the partial list. Pin
 bad-path + 4,097 accepted edges → edge singleton and 101 mixed diagnostics +
 edge overflow → diagnostic singleton.
 
-Pin registered-path authority scope with two Page resources that use the same
-relative segment path but different block discriminators: one discriminator
-allows the registered reference and the other forbids it. Run both resource
-declaration orders and assert that the forbidden occurrence is reported in both.
+Pin two Page resources with one relative path but different block discriminators:
+one allows the ref, one forbids it. In both orders assert the offending source
+prefix while accepted edge/descriptors stay relative.
 Separately pin blocked-prefix scope with two resources at the same relative Page
 block/slot prefix: one produces a structural slot failure and therefore a blocked
 prefix, while the other has a ref-like descendant that the generic scan must
@@ -901,9 +903,9 @@ edges plus the Detail Page's independent content-type edge; add mismatch+4,097
 and 101st-mismatch+edge-overflow cases in the diagnostics file for the frozen
 finalizer precedence. Pin exact code-unit order `a-a,a.a,a_a,aa` in dependency
 sorting and a synthetic equal-
-ordinal identity tie so a retained `localeCompare` cannot pass. Pin exact
-base/responsive/nested descriptor substitution, missing-ID/source-drift
-rejection, input/plan immutability and zero second walker/build. Except for the
+ordinal identity tie so a retained `localeCompare` cannot pass. Pin substitution,
+immutability/one build; missing-ID/drift encodes `(resource, descriptor.path)`
+without mutation. Except for the
 Page suite's explicit immutable-snapshot regression importing the native Page
 authority owners named above, this leaf's tests import only TASK-547-01 package
 owners and use a local Bun-free harness to prove normalize→graph once at raw
@@ -938,15 +940,14 @@ codes.
 
 Test ownership is physical and non-overlapping:
 
-- `full-site-package-references-core.test.ts` owns the fixed registry, identity,
-  content-route agreement, topological cycle and semantic-before-cycle phase
-  cases;
+- `full-site-package-references-core.test.ts` owns fixed registry/identity/presence,
+  content-route agreement, topology and semantic-before-cycle cases;
 - `full-site-package-references-page.test.ts` owns the four root-authority/
   substitution/handoff cases and both Page-backed recursive discriminator/slot/
   boundary cases;
 - `full-site-package-references-diagnostics.test.ts` owns reason/code mapping,
-  reference first-match/mixed-category precedence, mismatch/edge-overflow
-  precedence, JSON-depth/edge/diagnostic limits and non-disclosure;
+  ref-key/first-match/mixed precedence, source-qualified display paths,
+  mismatch/edge precedence, JSON/edge/diagnostic limits and non-disclosure;
 - `full-site-package-references-plan.test.ts` owns non-Page occurrence/dependency
   order, exact dependency-depth boundaries/repeats, freeze, generic descriptor
   resolution and drift cases; and
@@ -965,7 +966,8 @@ cases/builders. Each four `.test.ts` files must run independently.
 - [ ] Remove the forbidden `menu.desired.document.items` registry row and
   rebaseline its edge/freeze test; implement recursive Page/Page Template
   base/responsive/native-slot traversal with 4/24 reject boundaries; correct
-  discriminator/nullability/ref-key coverage and static redacted diagnostics;
+  discriminator/private presence/ref-key coverage, retire `isPackageRef`, and
+  source-qualify static redacted diagnostics while descriptors remain relative;
   freeze Page owner imports, JSON-depth counting, global mixed-diagnostic
   precedence/overflow through L01's sole collector factory, the exact occurrence-purpose/content-route plan,
   descriptors and substitution helper; enforce the exact 64-edge longest-path
