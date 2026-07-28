@@ -682,7 +682,10 @@ winner is immutable. No path reruns the body, compensates or resumes a dry-run.
 
 ## Security Contract
 
-Service only. TASK-547-04-L01 native-normalizes Page placeholders before it attaches refs; this service resolves those typed refs at graph-approved paths and immediately reruns the native Page strict normalizer on actual IDs.
+Service only. Resource-root ownership is strict and non-interchangeable. A package `page` desired value is a direct plain object with exactly `title,slug,status,data`; it rejects `document` even when that wrong-root value contains no refs.
+A `page_template` keeps its own strict desired envelope, accepts `document` and rejects `data`. Neither adapter aliases, translates or falls back to the opposite root.
+TASK-547-04-L01 native-normalizes Page placeholders before attaching refs. This service resolves graph-approved refs in `desired.data` first, then the PageDocumentV2 owner strictly validates that resolved `desired.data` before target preparation.
+Native Page create/update receives exactly `title,slug,data`; package `status` is excluded from that payload and exclusively selects draft staging plus publish-last.
 Nested preflight is reject-unknown. Form `settings.theme.submit` allows exactly `background,textColor,radius,fullWidth,label,supportingText`, preserving the latter and rejecting extras.
 Listing-template root allows only `name,slug,description,layout,config`; config allows `fields,itemActions,emptyState,style`.
 Its field/condition/action records allow only `key,source,label,fallback,format,conditions` / `id,field,op,value` / `id,label,kind,href,opensInNewTab`.
@@ -922,6 +925,9 @@ Dry-run initialization/completion instead gets two internal atomic terminalizati
 Menu Page/item references are resolved before `validateDesired`; the complete resolved Menu (base row, items, document, appearance, extras and draft status) is passed once to `mutateMenuAggregateAtomic`.
 There is no executor-level Menu wiring write before or after that call. Publish is the only later Menu mutation.
 
+Existing `tests/unit/kits/fullSiteLifecycleAdapters.test.ts` pins Page `data` acceptance, a no-ref `document:{ sections:[] }` wrong-root rejection with no alias, resolved-ID validation under `data`, exact create/update `title,slug,data` payloads and status-only draft/publish-last behavior.
+Existing `tests/unit/kits/fullSiteAggregateAdapters.test.ts` pins Page Template `document` acceptance plus no-ref `data:{ sections:[] }` rejection with no opposite-root alias. No new test file or ownership is introduced.
+
 Data flow: normalized input -> actor -> one private graph build -> dependency/lock acquisition -> planning -> UUID registry -> allowlisted substitution/native targets -> run/durable evidence -> local CAS/phases -> publish-last/reversible settings. Known errors retain codes; unexpected errors redact; L03 owns compensation.
 
 Regression tests cover every operation. A noop first performs mandatory resolution/native validation/complete capture and durable initialization; only its execution branch performs zero resolver/adapter/native reads or writes.
@@ -936,24 +942,14 @@ Every kind has an apply adapter, while only `page`, `content_entry`, `detail_pag
 Settings land in one last reversible stage through one required `applySettingsBatchAtomic` call with no per-key fallback; legacy and full-site runs use the same ledger port.
 Additional focused regressions pin:
 
-- every Form/Menu/Page/entry/detail internal failure to zero partial rows,
-  revisions and cache effects;
-- all nine exact intended IDs through kill recovery, rejecting returned-ID drift
-  and legacy `id:null` without natural-key fallback;
-- bidirectional ref resolution and complete before/staged/final/action durability
-  before the first adapter write;
-- canonical JSON/JSONB equality, ordered-array drift, Form-action round trips and
-  facade/split export parity;
-- divergent Page/detail current, published, publication and ordered revisions,
-  including exact 100 acceptance and `limit + 1` safe rejection;
-- classifier hints for every item, noop's zero-read diagnostic and L03-only
-  complete-state/outcome authority for create/update/noop;
-- the legacy recovery projection and base-input bridge compile, while final L03
-  production never calls either;
-- replace/restore/delete/settings capture races fail closed with zero partial
-  effect and only successful settings commit invalidates once; and
-- all four durable phases plus failed stage/publish upserts resume solely from
-  immutable raw rows and durable outcomes.
+- every Form/Menu/Page/entry/detail internal failure leaves zero partial rows, revisions or cache effects;
+- all nine exact intended IDs survive kill recovery; returned-ID drift and legacy `id:null` fail without natural-key fallback;
+- bidirectional ref resolution and complete before/staged/final/action evidence are durable before the first adapter write;
+- canonical decoded JSON/JSONB equality, ordered-array drift, Form-action round trips and facade/split export parity;
+- divergent Page/detail current, published, publication and ordered revisions, including exact 100 acceptance and safe `limit + 1` rejection;
+- classifier hints for every item, noop's zero-read diagnostic and L03-only complete-state/outcome authority for create/update/noop, while the legacy recovery projection/base-input bridge compile but final L03 never calls either;
+- replace/restore/delete/settings capture races fail closed with zero partial effect and only a successful settings commit invalidates once; and
+- all four durable phases plus failed stage/publish upserts resume solely from immutable raw rows and durable outcomes.
 
 ## Sub-Tasks
 

@@ -64,9 +64,11 @@ modules or the canonical JSON. TASK-547-06 retains sole ownership of
 accessibility/runtime test; L01 sends it the exact switcher assertion instead of
 editing that file.
 
-Each seed is exactly `{ key, desired }`, contains no DB ID, carries target
-`status:"published"`, and includes the complete normalized Page document in
-`desired`. Installer draft staging/publish-last remains TASK-547-02 behavior.
+Each Page seed is exactly `{ key, desired: { title, slug, status, data } }`,
+contains no DB ID, carries target `status:"published"`, and includes the
+complete normalized `PageDocumentV2` in `desired.data`. `desired.document` is a
+forbidden Page root; Page Template is a separate document-owned resource outside
+this leaf. Installer draft staging/publish-last remains TASK-547-02 behavior.
 
 ## Required Page-Core Split
 
@@ -225,7 +227,7 @@ pageBlockPropKeys.form = [
 ## Package Page Reference Contract
 
 Page package references are not native Page values until the installer resolves
-them. L01 therefore owns one package-only document boundary:
+them. L01 therefore owns one package-only `desired.data` boundary:
 
 ```ts
 type FormaDomPageBinding =
@@ -237,8 +239,8 @@ type FormaDomPageBinding =
       prop: "formId"; value: PackageRef };
 ```
 
-The builder first creates and strictly normalizes a native Page document with
-syntactically valid placeholder IDs. It then clones that normalized document and
+The builder first creates and strictly normalizes native Page `data` with
+syntactically valid placeholder IDs. It then clones that normalized data and
 inserts `PackageRef` objects only at the five direct root-block bindings used by
 this package:
 
@@ -260,10 +262,17 @@ extra bindings, or any declared placeholder left unresolved, fail package
 generation. The helper never recursively searches or substitutes by string
 value. In particular, ordinary copy, IDs, links and metadata that happen to
 equal a resource key or placeholder remain byte-for-byte unchanged. Ref-free
-Pages return the native normalized document directly; ref-bearing Page documents
-have exactly two native validation points: this builder's placeholder-native
+Pages put the native normalized data directly in `desired.data`; ref-bearing Page
+data has exactly two native validation points: this builder's placeholder-native
 pre-normalization before `PackageRef` attachment, then TASK-547-02's native
 revalidation after allowlisted substitution resolves every ref to an actual ID.
+The resolved package `desired` reaches TASK-547-02 unchanged. Strict package-
+envelope validation there sends only `desired.data` through PageDocumentV2
+normalization, then passes only `title`, `slug` and normalized `data` to native
+Page create/update; `status` solely drives draft staging and publish-last.
+TASK-547-01-L02 owns ref-like wrong-root graph rejection, while TASK-547-02-L02
+owns non-ref wrong-root rejection and proves the adapter has no
+`data`/`document` alias. Page Template's native `document` remains unaffected.
 No native normalizer receives a `PackageRef`.
 
 ## Shared Page Palette Contract
@@ -309,12 +318,12 @@ punctuation, capitalization, spaces in prices and item order are contract data.
 | 6 | `o-nas` | `/o-nas` | `o-nas.html` | `O nas — FormaDom Studio` |
 | 7 | `kontakt` | `/kontakt` | `kontakt.html` | `Kontakt — FormaDom Studio` |
 
-Every Page `document.seo.description` is exactly:
+Every Page `data.seo.description` is exactly:
 
 `Nowoczesne projekty domów, architektura indywidualna, wizualizacje i kompleksowy proces projektowy.`
 
 `scripts/projekty-domow/pages/shared.ts::buildPageSeed` owns the separate
-`seoTitle` and `seoDescription` inputs and writes them into the Page document.
+`seoTitle` and `seoDescription` inputs and writes them into the Page data.
 L02 only asserts they survived assembly. Dynamic Aurora SEO is TASK-547-03-L02.
 
 Public anchor translation is closed: `#intro`, `#indywidualne`, `#adaptacje`
@@ -721,23 +730,23 @@ export function buildPageSeed(input: {
   bindings?: readonly FormaDomPageBinding[];
 }): ResourceSeed {
   assertExactSectionMatrix(input.key, input.sections);
-  const nativeDocument = normalizePageDocumentV2ForWrite({
+  const nativePageData = normalizePageDocumentV2ForWrite({
     schemaVersion: 2,
     breakpoints: ["desktop", "tablet", "mobile"],
     seo: input.seo,
     settings: buildFormaDomPageSettings(),
     sections: input.sections,
   });
-  const document = input.bindings?.length
-    ? attachPackageRefsAtAllowedPageBlockPaths(nativeDocument, input.bindings)
-    : nativeDocument;
+  const desiredData = input.bindings?.length
+    ? attachPackageRefsAtAllowedPageBlockPaths(nativePageData, input.bindings)
+    : nativePageData;
   return {
     key: input.key,
     desired: {
       title: input.seo.title,
       slug: input.route,
       status: "published",
-      document,
+      data: desiredData,
     },
   };
 }
@@ -837,11 +846,14 @@ export const buildFormaDomPages = (refs: FormaDomPageRefs): ResourceSeed[] =>
 **Data flow:** strict present-only Page-core schema/normalizer/editor/renderer →
 Page collection/Form props mapped into Content List/Form Embed contracts →
 frozen source constants → page-specific builders → L01-owned shared Page/SEO
-helper → exact direct-root-block package-ref insertion → closed graph validation
-→ ordered seeds consumed by L02 → allowlisted ref-to-ID substitution → native
-Page revalidation before any run/item/native write. Ref-free documents normalize
-once. Ref-bearing documents first pre-normalize their placeholder-native shape,
-then revalidate the resolved native document after installer substitution.
+helper → exact direct-root-block package-ref insertion inside `desired.data` →
+closed graph validation → ordered seeds consumed by L02 → allowlisted ref-to-ID
+substitution → unchanged resolved package `desired` reaches TASK-547-02 → strict
+envelope validation normalizes only `data` → native Page create/update receives
+only `title`/`slug`/normalized `data`; `status` drives staging/publish-last.
+Ref-free data normalizes once. Ref-bearing data first pre-normalizes its
+placeholder-native shape, then revalidates the resolved native data after
+installer substitution.
 
 **Error handling:** throw on unknown/invalid/overlong fresh switcher fields,
 wrong-type collection CTA visibility, invalid Form presentation value,
@@ -890,15 +902,21 @@ gates; weakening/source-rebaselining their security assertions is forbidden.
 
 The tests assert:
 
-- exact seven-seed order, route/status/envelope shape and static SEO pairs;
+- exact seven-seed order, route/status/envelope shape and static SEO pairs,
+  including `desired.data` present and `desired.document` absent on every Page;
 - full per-page section/copy/list/link/anchor order above, including source
   prices/contact/team and absence of known fabricated strings;
 - home switcher stores exact `ariaLabel:"Wybór stylu domu"` while every
   unauthored switcher omits the key;
 - projects/form refs at only allowlisted paths and no embedded DB IDs; builder
-  tests prove placeholder-native normalization precedes exact ref attachment and
-  no native Page-normalizer input contains a `PackageRef`, while TASK-547-02
-  tests the resolved-native revalidation;
+  tests prove placeholder-native normalization precedes exact ref attachment,
+  emit `desired.data` with `desired.document` absent, and prove no native
+  Page-normalizer input contains a `PackageRef`;
+- TASK-547-01-L02 graph regressions reject ref-like values under the forbidden
+  Page `desired.document`; TASK-547-02-L02 adapter regressions reject the same
+  wrong root without refs, prove there is no `data`/`document` alias, and prove
+  the unchanged package `desired` is validated before only
+  `title`/`slug`/normalized `data` reaches native Page create/update;
 - exactly the five package Page bindings listed above, with rejection of
   missing/duplicate/nested/wrong-block/wrong-property/wrong-kind bindings; an
   ordinary string equal to every resource key and placeholder is never

@@ -28,11 +28,12 @@ The closed registry is:
 | `listing_query` | `query.sourceConfig.contentTypeId` | `content_type` | ref when present; native source discriminator is checked by TASK-547-02 |
 | `detail_page` | `contentTypeId` | `content_type` | required ref |
 | `detail_page` | `related[*].listingQueryId` | `listing_query` | nullable ref if present; native `kind` rules belong to TASK-547-02 |
-| `page`, `page_template` | `document.settings.collectionLink.contentTypeId` when `collectionLink` exists | `content_type` | required ref |
-| `page`, `page_template` | the same object's `listingQueryId` / `listingTemplateId` | `listing_query` / `listing_template` | nullable ref if the property is present |
-| `page`, `page_template` | every recursive block's base/tablet/mobile props `contentTypeId/queryId/templateId`, only for `block.type:"collection"` | content type / listing query / listing template | each nullable ref if present |
-| `page`, `page_template` | the same props surfaces' `queryId`, only for `block.type:"filters"` | `listing_query` | nullable ref if present |
-| `page`, `page_template` | the same props surfaces' `formId`, only for `block.type:"form"` | `form` | nullable ref if present |
+| `page` | `data.settings.collectionLink.contentTypeId` when `collectionLink` exists | `content_type` | required ref |
+| `page` | same object's `listingQueryId` / `listingTemplateId` | `listing_query` / `listing_template` | nullable ref if present |
+| `page_template` | `document.settings.collectionLink.contentTypeId` when `collectionLink` exists | `content_type` | required ref |
+| `page_template` | same object's `listingQueryId` / `listingTemplateId` | `listing_query` / `listing_template` | nullable ref if present |
+| `page` | every recursive block below `data.sections[*].blocks[*]`: collection `contentTypeId/queryId/templateId`, filters `queryId`, form `formId`, at base/tablet/mobile props | matching declared kind | nullable ref if present |
+| `page_template` | the same guarded recursive surfaces below `document.sections[*].blocks[*]` | matching declared kind | nullable ref if present |
 | `menu` | `items[*].pageId` | `page` | nullable ref if present |
 | shell setting | `desired.value` for `site.homepageId` | `page` | nullable ref |
 | shell setting | `desired.value` for `site.navigationMenuId` | `menu` | nullable ref |
@@ -65,9 +66,15 @@ trusted route `detailPageId` path with static reason
 `content_route_detail_content_type_mismatch`. Trusted setting/route indexes may
 appear, but no identity, ref key or route slug enters path/reason/static message.
 
-For both Page-backed source kinds, recursively visit each
-`document.sections[*].blocks[*]` and every child under only that block type's
-native allowed `slots.<slotKey>[*]`, bounded by the native tree-depth/child caps.
+Select exactly one Page-document root by source kind: `page` uses
+`seed.desired.data`, while `page_template` uses `seed.desired.document`. Visit
+that root's `settings.collectionLink`, `sections[*].blocks[*]` and every child
+under only the block type's native allowed `slots.<slotKey>[*]`, bounded by the
+native tree-depth/child caps. The opposite root never grants reference authority:
+a ref-like object under Page `document` or Page Template `data` is rejected by
+the generic scan. A missing/non-object selected root or malformed native
+settings/sections/container remains TASK-547-02 native-validation work; graph
+discovery neither repairs it nor invents a second native-shape diagnostic.
 Traversal is root source order, native capability-registry slot order and child
 array order; inspect base props, tablet props, then mobile props at every node.
 Import exactly `pageBlockTypes`, `pageBlockCapabilities`, `pageBreakpoints`,
@@ -76,23 +83,20 @@ Page types from `core/services/pages/pageDocumentV2.ts`; do not duplicate its
 slot-key, block-type, device or limit tables in the package graph. Treat
 `pageBlockCapabilities[type].slots` as the persistence slot allowlist and native
 slot order. Do not use `getPageBlockActiveSlotKeys`: that editor helper hides
-non-destructively preserved `columns` slots above the current `props.count`. Do
-not use an authored `document.breakpoints` array as ordering authority; traverse
-the exported `pageBreakpoints` order, mapping `desktop` to base `props` and the
-remaining entries to `responsive.<breakpoint>.props`.
+non-destructively preserved `columns` slots above the current `props.count`.
+Authored `data.breakpoints`/`document.breakpoints` are not ordering authority;
+traverse exported `pageBreakpoints`, mapping `desktop` to base `props` and the
+rest to `responsive.<breakpoint>.props`.
 TASK-547-04's generator still inserts only its five declared direct-root refs;
 that narrower producer does not truncate the general package contract.
 
-At module initialization derive one private `PAGE_REFERENCE_AUTHORITY` snapshot
-from those imported owners: clone and freeze the block-type tuple, breakpoint
-tuple, the outer slots-by-type record and every per-type slot array. Do not copy
-literal values into a second table. Every Page discriminator, breakpoint and
-slot decision in this module reads only that snapshot, so later mutation of an
-imported mutable owner cannot widen, narrow or reorder accepted reference paths.
-The fixed `REFERENCE_PATHS` registry remains exported for compatibility but is
-recursively runtime-frozen: freeze the outer array, every row and every
-`segments` array. Its row type is `Readonly`; neither registry authority exposes
-a mutable validation boundary.
+At initialization freeze imported Page block types, breakpoints and every slot
+array into one private `PAGE_REFERENCE_AUTHORITY`, without copied literals; all
+Page decisions use it, so later owner mutation cannot alter paths or order. The
+compatibility `REFERENCE_PATHS` export is exactly the recursively frozen fixed
+non-Page rows; `page`/`page_template` are absent. `collectFixedSourceOccurrences`
+is never invoked for either kind: only the kind-selected walker grants their
+authority. Neither registry exposes a mutable validation boundary.
 
 The native bounds are reject boundaries, not scan cutoffs:
 `PAGE_BLOCK_MAX_TREE_DEPTH = 4` (root block is depth 1) and
@@ -304,19 +308,16 @@ export type FrozenJsonValue =
   | { readonly [key: string]: FrozenJsonValue };
 export type FrozenJsonObject = { readonly [key: string]: FrozenJsonValue };
 export type PackageResourceIdentity = `${PackageResourceKind}:${string}`;
-
 type PackageReferenceEdge = Readonly<{
   from: PackageResourceIdentity;
   to: PackageResourceIdentity;
   path: readonly (string | number)[]; // relative to source seed.desired
   purpose: "substitute" | "content_route_type";
 }>;
-
 export type PlannedPackageReference = Readonly<{
   path: readonly (string | number)[];
   targetIdentity: PackageResourceIdentity;
 }>;
-
 export type PlannedPackageResource = Readonly<{
   identity: PackageResourceIdentity;
   kind: PackageResourceKind;
@@ -393,22 +394,17 @@ export type AllowedReferencePath = Readonly<{
   targetKind: PackageResourceKind;
   settingKey?: string;
 }>;
-
 const freezeReferencePath = (row: AllowedReferencePath): AllowedReferencePath =>
   Object.freeze({ ...row, segments: Object.freeze([...row.segments]) });
-
 export const REFERENCE_PATHS: readonly AllowedReferencePath[] = Object.freeze(
-  FIXED_REFERENCE_PATH_ROWS.map(freezeReferencePath),
+  FIXED_NON_PAGE_REFERENCE_PATH_ROWS.map(freezeReferencePath),
 );
-
 type TaggedGraphDiagnostic = Readonly<{
   code: "site_package_ref_bad_path" | "site_package_ref_missing" | "site_package_ref_ambiguous";
   diagnostic: ReferenceGraphDiagnostic;
 }>;
-
 class GraphDiagnostics {
   private readonly values: TaggedGraphDiagnostic[] = [];
-
   add(
     code: TaggedGraphDiagnostic["code"],
     path: readonly (string | number)[],
@@ -417,7 +413,6 @@ class GraphDiagnostics {
     if (this.values.length === PACKAGE_LIMITS.diagnostics) throwDiagnosticLimitSingleton();
     this.values.push({ code, diagnostic: { path: encodeReferenceDiagnosticPath(path), reason } });
   }
-
   throwIfAny(): void {
     const code = GRAPH_ERROR_PRIORITY.find((candidate) =>
       this.values.some((value) => value.code === candidate)
@@ -425,20 +420,16 @@ class GraphDiagnostics {
     if (code) throw new ReferenceGraphError(code, this.values.map(({ diagnostic }) => diagnostic));
   }
 }
-
 class DuplicateIdentityDiagnostics {
   private readonly values: ReferenceGraphDiagnostic[] = [];
-
   add(collectionPath: string): void {
     if (this.values.length === PACKAGE_LIMITS.diagnostics) throwDiagnosticLimitSingleton();
     this.values.push({ path: collectionPath, reason: "duplicate_resource_identity" });
   }
-
   throwIfAny(): void {
     if (this.values.length) throw new ReferenceGraphError("site_package_ref_duplicate", this.values);
   }
 }
-
 const indexUniqueKindKeys = (resources: FullSitePackageResources) => {
   const duplicates = new DuplicateIdentityDiagnostics();
   const registry = createMutableRegistry();
@@ -450,13 +441,11 @@ const indexUniqueKindKeys = (resources: FullSitePackageResources) => {
   duplicates.throwIfAny();
   return freezeRegistry(registry);
 };
-
 const collectContentRouteOccurrences = (source, context) => {
   for (const { route, path } of readStructuralContentRoutes(source, context)) {
     const detailPage = collectNullableDetailPageOccurrence(route, path, context);
     const contentType = collectUniqueRouteTypeOccurrence(route, path, context);
     if (!detailPage || !contentType) continue;
-
     const detailContentType = context.resolvedDetailPageContentTypes.get(
       detailPage.identity,
     );
@@ -478,7 +467,11 @@ const collectPackageOccurrences = (context) => {
       collectContentRouteOccurrences(source, sourceContext); // Sole route collector.
       continue;
     }
-    collectFixedAndPageSourceOccurrences(
+    if (source.kind === "page" || source.kind === "page_template") {
+      collectPageSourceReferences(sourceContext); // Sole Page-backed authority.
+      continue;
+    }
+    collectFixedSourceOccurrences(
       sourceContext,
       // Invoked only after exact ref validation and successful target lookup.
       (row, target) => {
@@ -507,42 +500,53 @@ const PAGE_REFERENCE_AUTHORITY = Object.freeze({
     ) as Readonly<Record<PageBlockType, readonly PageBlockSlotKey[]>>,
   ),
 });
-
+type PageReferenceRoot = Readonly<{
+  rootKey: "data" | "document";
+  value: JsonObject;
+}>;
+const selectPageReferenceRoot = (
+  source: RegisteredPackageResource,
+): PageReferenceRoot | null => {
+  const rootKey =
+    source.kind === "page"
+      ? "data"
+      : source.kind === "page_template"
+        ? "document"
+        : null;
+  if (rootKey === null) return null;
+  const value = source.seed.desired[rootKey];
+  return isJsonObject(value) ? { rootKey, value } : null;
+};
 type PageReferenceVisitContext = Readonly<{
   source: RegisteredPackageResource;
+  root: PageReferenceRoot;
   collector: GraphDiagnostics;
   registeredReferencePaths: Set<string>;
   blockedReferencePrefixes: ReferenceAuthorityPath[];
 }>;
-
 type ReferenceAuthorityPath = Readonly<{
   sourceOrdinal: number;
   path: readonly (string | number)[];
 }>;
-
 const serializeAuthorityPath = (
   sourceOrdinal: number,
   path: readonly (string | number)[],
 ) => JSON.stringify([sourceOrdinal, path]);
-
 type IndexedPageBlockChild = Readonly<{
   child: JsonObject;
   childIndex: number;
 }>;
-
 type PreflightPageSlot = Readonly<{
   slotKey: string;
   arrayLength: number | null;
   children: readonly IndexedPageBlockChild[];
 }>;
-
 type PageBlockBoundsPreflight = Readonly<{
   hasSlots: boolean;
   depthExceeded: boolean;
   // null means the present slots value is not an object; native validation owns its shape.
   structuralSlots: readonly PreflightPageSlot[] | null;
 }>;
-
 const preflightPageBlockBounds = (
   block: JsonObject,
   depth: number,
@@ -569,7 +573,6 @@ const preflightPageBlockBounds = (
     });
   return { hasSlots: true, depthExceeded, structuralSlots };
 };
-
 const rejectPageSlots = (
   path: readonly (string | number)[],
   reason:
@@ -586,12 +589,10 @@ const rejectPageSlots = (
     path: slotsPath,
   });
 };
-
 type ValidatedPageSlot = Readonly<{
   slotKey: PageBlockSlotKey;
   children: readonly IndexedPageBlockChild[];
 }>;
-
 const validateSlotsFirstMatch = (
   preflight: PageBlockBoundsPreflight,
   path: readonly (string | number)[],
@@ -608,7 +609,6 @@ const validateSlotsFirstMatch = (
     return null;
   }
   if (preflight.structuralSlots === null) return []; // TASK-547-02 later owns native shape.
-
   const firstUnknown = preflight.structuralSlots.find(
     ({ slotKey }) => !allowedSlots.includes(slotKey as PageBlockSlotKey),
   );
@@ -634,7 +634,6 @@ const validateSlotsFirstMatch = (
       : [{ slotKey, children: slot.children }];
   });
 };
-
 const collectMalformedPageBranchBounds = (
   block: JsonObject,
   path: readonly (string | number)[],
@@ -667,7 +666,6 @@ const collectMalformedPageBranchBounds = (
     }
   }
 };
-
 const collectPageBlockReferences = (
   block: JsonObject, // PackageRefs exist before native ID substitution.
   path: readonly (string | number)[],
@@ -706,7 +704,17 @@ const collectPageBlockReferences = (
     );
   }
 };
-
+const collectPageSourceReferences = (
+  context: Omit<PageReferenceVisitContext, "root">,
+): void => {
+  const root = selectPageReferenceRoot(context.source);
+  if (!root) return; // TASK-547-02 owns malformed native root/container shape.
+  const pageContext = { ...context, root };
+  collectPageCollectionLinkReferences(root.value, [root.rootKey], pageContext);
+  forEachNativeRootBlock(root.value, [root.rootKey], (block, path) =>
+    collectPageBlockReferences(block, path, 1, pageContext),
+  );
+};
 const collectRefsAtAllowedPaths = (registry: PackageResourceRegistry) => {
   const diagnostics = new GraphDiagnostics();
   const registeredReferencePaths = new Set<string>();
@@ -730,7 +738,6 @@ const collectRefsAtAllowedPaths = (registry: PackageResourceRegistry) => {
   });
   return { edges, descriptorsByIdentity, diagnostics };
 };
-
 const assertDependencyDepth = (
   ordered: readonly PlannedPackageResource[],
 ): void => {
@@ -746,7 +753,6 @@ const assertDependencyDepth = (
     depthByIdentity.set(resource.identity, depth);
   }
 };
-
 export const stableTopologicalSort = (registry, edges) => {
   const ordered = collectStableKahnOrder(registry, edges);
   if (ordered.length !== registry.resources.length) throwReferenceCycleSingleton();
@@ -754,7 +760,6 @@ export const stableTopologicalSort = (registry, edges) => {
   assertDependencyDepth(ordered);
   return ordered;
 };
-
 export function buildReferencePlan(pkg: FullSitePackageV1) {
   assertReferenceGraphJsonDepth(pkg.resources);
   const registry = indexUniqueKindKeys(pkg.resources); // Bounded duplicate 100/101 finalizer.
@@ -766,28 +771,33 @@ export function buildReferencePlan(pkg: FullSitePackageV1) {
   const ordered = stableTopologicalSort(registry, edges); // Cycle first, then depth.
   return freezePlan(ordered, descriptorsByIdentity);
 }
-
 export function resolvePlannedPackageResourceRefs(resource, resolvedIds) {
   return substituteRecordedDescriptors(cloneJson(resource.seed.desired), resource.references, resolvedIds);
 }
-
 const pkg = normalizeFullSitePackageForWrite(rawPackage);
 buildReferencePlan(pkg);
 // Only after both calls succeed may the existing lazy DB loader/import run.
 ```
 
 Data flow: normalized package → JSON-depth guard → unique registry → package-
-ordered fixed/Page discovery (record successful Detail Page content-type targets)
-and route-ordered detail/type/agreement discovery → generic ref-like scan →
-semantic finalizer → stable cycle-first topology → dependency depth → frozen plan.
+ordered fixed discovery plus kind-selected Page `data`/Page Template `document`
+discovery (record successful Detail Page content-type targets) and route-ordered
+detail/type/agreement discovery → generic ref-like scan → semantic finalizer →
+stable cycle-first topology → dependency depth → frozen plan.
 Errors distinguish duplicate/missing/ambiguous/cycle/bad-path with only the
 static redacted diagnostics above. TASK-547-02 owns post-substitution native
 `desired` validation; this leaf certifies only ref placement/resolution/order.
 
-Regression tests: every closed-table row for both Page-backed kinds; absent/null/
-non-null behavior at base/tablet/mobile/root/nested-slot surfaces; required
-`collectionLink.contentTypeId`; block-discriminator cross-product; deterministic
-recursive traversal; and explicit rejection of `menu.desired.document.items`.
+Core tests pin the exact frozen `REFERENCE_PATHS` rows and absence of both Page
+kinds. In `full-site-package-references-page.test.ts`, four named regressions pin:
+Page `data` and Page Template `document` accept/substitute root plus recursive
+refs, asserting every complete descriptor array exactly with `data`/`document`
+first; opposite-root ref-likes are forbidden. Every accepted ref yields one occurrence and
+descriptor, never a fixed-walker duplicate. Substitution changes only recorded
+leaves and hands the otherwise unchanged selected root to TASK-547-02 validation.
+That suite also owns every Page table row; absent/null/non-null device/nesting
+behavior, required collection content type, discriminator cross-product,
+deterministic recursion and rejection of `menu.desired.document.items`.
 For both `page` and `page_template`, pin accepted depth 4/rejected depth 5,
 accepted 24/rejected 25 children, an unknown native slot and slots on an atom;
 each rejection occurs rather than truncating a reference-bearing final branch.
@@ -811,32 +821,21 @@ descendant generic finding; `blockedReferencePrefixes` remains private and tests
 must not require an exported production inspection seam or assert its internal
 array cardinality directly.
 
-Run one independently named reverse-authored multi-sibling malformed case for
-`page` and one for `page_template`; shared support may build the shape, but the
-two test cases assert their complete results separately. Each malformed root
-block authors own slot keys in the reverse order `zeta-private`,
-`safe-private`, `alpha-private`, `"10"`, `"2"`; every root slot array stays
-within 24 children and places its object child after scalar/`null` sentinels at a
-distinct original index. All descendant block discriminators remain malformed.
-In canonical `compareFullSitePackageObjectKeys` traversal order `"2"`, `"10"`,
-`alpha-private`, `safe-private`, `zeta-private`, make the first, second, third and
-fifth branches end respectively in depth, child-count, depth and child-count
-rejection, with a distinct ref-like sentinel strictly inside each rejected
-nested `slots` subtree. Keep the `safe-private` sibling fully in bounds and put
-one unique ref-like sentinel on that malformed sibling outside every rejected
-nested `slots` prefix. Assert the exact complete reason order
+Run separately named `page` and `page_template` reverse-authored malformed
+multi-sibling cases (shared shape support is allowed). Author root keys in order
+`zeta-private`, `safe-private`, `alpha-private`, `"10"`, `"2"`; keep arrays ≤24,
+put object children after scalar/`null` sentinels at distinct nonzero indexes and
+keep every descendant discriminator malformed. Canonical key order `"2"`, `"10"`,
+`alpha-private`, `safe-private`, `zeta-private` must yield exact reason order
 `page_tree_depth_exceeded, page_slot_children_exceeded, page_tree_depth_exceeded,
-page_slot_children_exceeded, package_ref_path_forbidden`: four ordered structural
-diagnostics followed by exactly one generic diagnostic from `safe-private`. This
-proves comparator order and continued sibling discovery after the first
-rejection. Because every retained object child began at a nonzero, distinct
-array index, filtered/reindexed traversal would create a blocked-path mismatch
-and add forbidden duplicates from the four rejected branches; an ancestor-wide
-or other overbroad same-resource blocked prefix would instead suppress the one
-required `safe-private` generic finding. Pin all five display paths to the exact
-trusted prefix ending in `[redacted]`, the exact static reasons above and the
-static error message; none of the five supplied slot keys or any ref sentinel may
-occur anywhere in the complete paths/reasons/message.
+page_slot_children_exceeded, package_ref_path_forbidden`: branches 1/3 end in
+depth rejection, 2/5 in child-count rejection, each with a ref-like sentinel
+inside rejected nested `slots`; the in-bounds `safe-private` sibling has its one
+sentinel outside every rejected prefix. Exact complete results prove continued
+sibling discovery, preserved child indexes, and neither narrow nor ancestor-wide
+blocked prefixes. Pin all display paths to the trusted prefix plus `[redacted]`,
+the static reasons/message, and absence of supplied slot keys/ref sentinels from
+every path, reason and message.
 Pin exact ref keys/kind/shape; every closed reason code and condition mapping;
 the fixed diagnostic-overflow singleton; and sentinel non-disclosure for
 duplicate, missing, wrong-kind, malformed-key, forbidden-path, content-route,
@@ -943,14 +942,15 @@ Test ownership is physical and non-overlapping:
 - `full-site-package-references-core.test.ts` owns the fixed registry, identity,
   content-route agreement, topological cycle and semantic-before-cycle phase
   cases;
-- `full-site-package-references-page.test.ts` owns both Page-backed recursive
-  traversal/discriminator/slot/boundary cases;
+- `full-site-package-references-page.test.ts` owns the four root-authority/
+  substitution/handoff cases and both Page-backed recursive discriminator/slot/
+  boundary cases;
 - `full-site-package-references-diagnostics.test.ts` owns reason/code mapping,
   reference first-match/mixed-category precedence, mismatch/edge-overflow
   precedence, JSON-depth/edge/diagnostic limits and non-disclosure;
-- `full-site-package-references-plan.test.ts` owns occurrence/dependency order,
-  exact dependency-depth boundaries and repeats, freeze, descriptor resolution
-  and drift cases; and
+- `full-site-package-references-plan.test.ts` owns non-Page occurrence/dependency
+  order, exact dependency-depth boundaries/repeats, freeze, generic descriptor
+  resolution and drift cases; and
 - `fullSitePackageReferenceTestSupport.ts` owns the single reusable
   linear/combined graph builders plus Page/depth builders, while shared
   package/error fixtures stay in L01's

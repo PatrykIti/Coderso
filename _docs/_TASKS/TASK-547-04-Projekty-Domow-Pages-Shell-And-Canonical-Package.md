@@ -61,9 +61,12 @@ source evidence.
 ## Resource And Ownership Contract
 
 Every resource is a strict `{ key, desired }` seed with no database ID. Target
-publication state and complete ordered children/document/appearance snapshots
-live in `desired`; TASK-547-02 stages lifecycle-capable resources as drafts and
-publishes only after their children and documents are complete.
+publication state and complete native resource snapshots live in `desired`;
+TASK-547-02 stages lifecycle-capable resources as drafts and publishes only
+after their children and documents are complete. A Page package seed uses
+exactly `{ title, slug, status, data: PageDocumentV2 }` in `desired`;
+`desired.document` is forbidden for Pages. Page Template remains a separate
+document-owned native resource and is not renamed by this correction.
 
 - **TASK-547-04-L01** is the sole writer for
   `scripts/projekty-domow/pages/{home,offer,projects,process,pricing,about,contact,index,shared}.ts`
@@ -239,11 +242,14 @@ export function buildFormaDomPackage(): FullSitePackageV1 {
 ```
 
 **Data flow:** source-backed Page builders → placeholder-native normalization
-followed by package-aware allowlisted `PackageRef` attachment →
-shell/menu/footer/settings builders → package normalizer and closed reference
-graph → deterministic pretty JSON → installer ref-to-ID substitution → native
-strict Page revalidation before persistence. A native normalizer sees the
-placeholder-native or resolved-native shape, never a `PackageRef`.
+followed by package-aware allowlisted `PackageRef` attachment inside
+`desired.data` → shell/menu/footer/settings builders → package normalizer and
+closed reference graph → deterministic pretty JSON → installer ref-to-ID
+substitution inside `data` → the unchanged resolved Page `desired` reaches
+TASK-547-02 strict package-envelope validation → only `desired.data` passes
+PageDocumentV2 normalization → native Page create/update receives only
+`title`/`slug`/normalized `data`. `status` solely drives draft staging and
+publish-last. A native normalizer never sees a `PackageRef`.
 
 **Error handling:** fail before writing the canonical artifact on missing or
 extra route/section/menu item/footer element, copy mismatch, unsafe href, absent
@@ -251,9 +257,12 @@ SEO pair, unclosed ref, duplicate setting, unknown residual ID, or missing smoke
 scenario. Never write a partial artifact.
 
 **Regression shape:** exact source-copy and order tables, native interactivity,
-seven static routes plus Aurora, menu/footer/settings shape, exact SEO, exact
-residual ID set, package schema/ref closure, byte-stable generation and zero
-artifact diff.
+seven static routes plus Aurora, Page `data` present/`document` absent,
+unchanged package-desired handoff and projected native payload; TASK-547-01-L02
+owns ref-like wrong-root graph rejection, while TASK-547-02-L02 owns non-ref
+wrong-root rejection and no-alias adapter regressions. Menu/footer/settings
+shape, exact SEO, exact residual ID set, package schema/ref closure, byte-stable
+generation and zero artifact diff remain required.
 
 ## Leaf Land Order
 

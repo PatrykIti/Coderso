@@ -69,9 +69,14 @@ type VisualResidual = {
 
 All ten resource collections use the same strict seed envelope
 `{ key, desired }`; the JSON package never carries a database ID beside `key` or
-inside package-owned seed metadata. `desired` is the complete native-domain
-write snapshot, including lifecycle state only where the owning native schema
-supports it, ordered children where supported, and other domain-owned state.
+inside package-owned seed metadata. `desired` is the complete adapter-domain
+target: native create/update fields plus package lifecycle state where the
+adapter owns draft staging or publish-last, ordered children where supported,
+and other domain-owned state. Lifecycle-only fields never enter a strict native
+create/update payload.
+For Page v2, that snapshot owns `data` and never aliases it to `document`; for
+Page Template, it owns `document` and never aliases it to `data`. The graph
+registry preserves those native roots rather than translating between them.
 Snapshot/equality compare the canonical normalized
 `desired` value, not selected fields. Unknown seed-envelope keys are rejected.
 
@@ -128,16 +133,19 @@ closed registry:
 - required entry/detail `contentTypeId`;
 - listing-query `query.sourceConfig.contentTypeId` and detail
   `related[*].listingQueryId` only when each property is present;
-- optional Page/Page Template `document.settings.collectionLink`: its
-  `contentTypeId` is a required content-type ref when the object is present,
-  while `listingQueryId`/`listingTemplateId` are nullable refs when present;
-- recursively walk Page/Page Template root and child blocks. Before `block.type`
-  can grant authority or stop traversal, derive a facts-only bounds preflight
-  from the block's own `slots`, current depth, array child counts and indexed
-  object children; it emits no diagnostic and registers no reference. Reject
-  rather than clip depth 5, a `slots` member at depth 4 and child 25 for both
-  source kinds regardless of the discriminator. A valid discriminator inspects
-  base `props`, then `responsive.tablet.props`, then
+- inside `desired`, optional Page v2 `data.settings.collectionLink` and Page
+  Template `document.settings.collectionLink`: `contentTypeId` is a required
+  content-type ref when the object is present, while
+  `listingQueryId`/`listingTemplateId` are nullable refs when present;
+- recursively walk Page v2 root blocks at `data.sections[*].blocks[*]` and Page
+  Template root blocks at `document.sections[*].blocks[*]`, then each block's
+  native `slots.<slot-key>[*]` children. Before `block.type` can grant authority
+  or stop traversal, derive a facts-only bounds preflight from the block's own
+  `slots`, current depth, array child counts and indexed object children; it
+  emits no diagnostic and registers no reference. Reject rather than clip depth
+  5, a `slots` member at depth 4 and child 25 for both source kinds regardless of
+  the discriminator. A valid discriminator inspects base `props`, then
+  `responsive.tablet.props`, then
   `responsive.mobile.props`: `collection` permits nullable
   `contentTypeId/queryId/templateId`, `filters` permits nullable `queryId`, and
   `form` permits nullable `formId`, only when each property is present. It then
@@ -366,7 +374,11 @@ preflight → valid-type allowlisted discovery plus malformed-branch bounds-only
 walking → generic ref-like scan → reject bad-path/dangling/ambiguous/cyclic
 graph → stable topological sort → consumer boundary. Post-substitution
 native-domain validation is owned and tested by TASK-547-02, not certified by
-this task.
+this task. Its strict adapter envelope receives the complete target after only
+descriptor-recorded ID substitution; the Page document owner validates `data`,
+native Page create/update receives only `title`/`slug`/`data`, and `status`
+drives lifecycle operations. No adapter translates Page `data` to `document` or
+Page Template `document` to `data`.
 
 **Error handling:** machine-readable `site_package_invalid`,
 `site_package_too_large`, `site_package_too_complex`,
@@ -429,6 +441,14 @@ key/slug/identity non-disclosure. For both Page-backed kinds they accept depth
 4/24 children and reject depth 5/25, non-native slots and atom slots without
 clipping; valid-type overlap cases pin depth → atom → unknown slot →
 child-count precedence. Independently
+pin native-root ownership: accept and substitute Page v2 references at
+`data.settings.collectionLink` and recursively below
+`data.sections[*].blocks[*]`, reject the equivalent Page `document` paths,
+accept and substitute Page Template references at the corresponding `document`
+paths, and reject Page Template `data` paths. TASK-547-02's post-substitution
+native-validation regressions additionally reject a Page `document` root and a
+Page Template `data` root even when neither carries a ref-like value.
+Independently
 for `page` and `page_template`, a malformed discriminator with depth-4 `slots`
 and a depth-5 child, with or without a ref-like descendant, yields one depth
 diagnostic with no duplicate forbidden diagnostic; an in-bounds ref-like
