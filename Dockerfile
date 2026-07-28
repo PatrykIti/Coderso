@@ -135,4 +135,45 @@ EXPOSE 3000
 
 USER bun
 
+# ---------------------------------------------------------------------------
+# What has been proven about this image, and where the proof stops.
+#
+# The prune above and the resolve-check were developed and verified WITHOUT
+# Docker -- it is absent from the environment this work was done in, so no
+# image here has ever been built or started. Two claims in the commit that
+# introduced the prune (08387ef7) were wider than their evidence. Corrected,
+# because a reader meeting them would otherwise assume coverage that does not
+# exist:
+#
+# ESTABLISHED. The production dependency tree resolves (142 packages against
+# the same lockfile, versus 747 with devDependencies). Every module the runtime
+# import graph reaches -- 595 first-party, ~3100 total -- loads against that
+# pruned tree. The process starts.
+#
+# NOT ESTABLISHED: that the application SERVES. Every HTTP request in that
+# evidence died in the same place, before routing. httpServer.ts's `fetch()`
+# awaits resolveAdminPath() as its very first statement, which reads the
+# `site.adminPath` setting from the database, and then enforceHostPolicy(),
+# which reads four more. Both run before the handler is picked. With no
+# database reachable, no route handler module was ever executed over HTTP. So
+# the evidence shows the module graph loads and the server accepts a
+# connection; it does not show a request being answered.
+#
+# NOT ESTABLISHED: that the CMD below is what was exercised. The program that
+# served those requests was the HTTP server underneath it -- prod.ts ->
+# httpServer.ts. dockerStart.ts runs runStartupMigrations() and
+# runStartupAssistantDocsReindex(), both of which need a database, before it
+# ever reaches `await import("./prod")`. Those two startup steps are unproven.
+#
+# The evidence is kept because it is real and useful: it is what makes the
+# prune safe to ship. It is simply narrower than it was described as.
+#
+# What closes the gap is the CI image-boot gate added on
+# feature/task-540-ci-image-gate -- .github/scripts/verify-image-boot.sh, run
+# from the "Verify the image boots and serves" step of
+# .github/workflows/coderso-pr-gates.yml. It builds this image, starts it
+# against a throwaway Postgres service container, and polls /admin/ until it
+# answers 200. That gate, and nothing above it, is what proves this image
+# serves.
+# ---------------------------------------------------------------------------
 CMD ["bun", "--config=/app/bunfig.toml", "--preload=/app/core/server/productionReactRuntime.ts", "run", "server/dockerStart.ts"]
