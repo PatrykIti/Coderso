@@ -1,0 +1,18 @@
+diff --git a/minimatch.js b/minimatch.js
+index 2e4a058a130dceebf83a7bd435f5d22b765ac836..0f42afc35532dc4436484718c8a91d8656e174e5 100644
+--- a/minimatch.js
++++ b/minimatch.js
+@@ -7,7 +7,12 @@ var path = (function () { try { return require('path') } catch (e) {}}()) || {
+ minimatch.sep = path.sep
+ 
+ var GLOBSTAR = minimatch.GLOBSTAR = Minimatch.GLOBSTAR = {}
+-var expand = require('brace-expansion')
++// CVE-2026-14257: brace-expansion 5.0.8 is the only release outside the
++// advisory range, and the 5.x line exports `expand` as a named export
++// instead of `module.exports = expand`. Accept both shapes so this patch
++// stays correct whichever major the root override resolves.
++var braceExpansion = require('brace-expansion')
++var expand = typeof braceExpansion === 'function' ? braceExpansion : braceExpansion.expand
+ 
+ var plTypes = {
+   '!': { open: '(?:(?!(?:', close: '))[^/]*?)'},
