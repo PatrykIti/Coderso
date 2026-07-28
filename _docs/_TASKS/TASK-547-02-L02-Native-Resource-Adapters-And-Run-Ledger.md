@@ -253,7 +253,11 @@ cannot silently fall back to per-key apply or reversal.
 canonical, JSON-safe rollback state. It never uses a natural key and never returns
 the L01 planner-equality projection. For Page, entry and detail Page it includes
 current and published state, publication metadata, and the exact bounded
-rollback-relevant revision rows under the native retention policy. Form includes the base row, ordered fields and canonical actions only after private `aggregateAdapters.ts` guard `assertFormActionsSafeForDurableSnapshot` accepts every canonical webhook header pair; Menu includes the base row, ordered items, document, appearance, extras and status. The Form guard consumes L01's exported pure `isSensitiveFieldKey` policy (the exact terminal/pair/compact-base/material-suffix grammar) for header names and rejects every non-null result from L01's `classifyForbiddenValue(value, { explicitBinaryCarrier:false })` for header values. The returned reason is control flow only and never enters output; L02 neither copies those token tables nor uses a substring regex.
+rollback-relevant revision rows under the native retention policy. Form includes base,
+fields and canonical actions only after `assertFormActionsSafeForDurableSnapshot`
+recursively checks every action string with L01's pure forbidden-value classifier,
+including condition, email, webhook URL/header/body, template/mapping, redirect and
+message strings. Only webhook header names use `isSensitiveFieldKey`; any match rejects.
 
 A match in any before/staged/complete Form action set throws fresh cause-free
 `site_package_invalid` before constructing an item snapshot or calling
@@ -680,8 +684,8 @@ Its field/condition/action records allow only `key,source,label,fallback,format,
 Its empty-state/style records allow only `title,description,ctaLabel,ctaHref` / `columns,gap,cardVariant`.
 Detail bindings preserve `required:true` plus omitted (`undefined`) fallback; never synthesize null/static Aurora copy, so missing Aurora-only data fails closed as public 404.
 Settings exclude secret/auth/provider namespaces; audit has safe keys/IDs/operations and intended IDs are server UUIDs, never package input.
-Sensitive existing Form webhook headers fail closed during item-write-free preparation;
-their plaintext never reaches run options, item snapshots/actions, errors or audit.
+Sensitive existing/planned Form strings or header names fail before item writes;
+plaintext never reaches run options, snapshots, actions, errors or audit.
 No endpoint, migration, RBAC/CSRF/rate-limit change, media import or cross-domain transaction is added.
 
 ## Implementation Pseudocode
@@ -938,7 +942,7 @@ Before initialization, deterministic preparation failure proves zero item/native
 writes and desired failed owner closure; ambiguous dependency/fence failure keeps
 the marker. Pin complete prepared rows and that retired generic preflight/resolver
 stays unused. Nested refs persist as IDs.
-Form preflight round-trips `submit.supportingText` and rejects a sibling extra; listing tests reject an extra at every nested record above. Form tests table-pin `Authorization`, authorization/material-suffixed and `X-API-Key` header names plus Basic/Bearer/JWT, PEM, credential-URL and data-URL material under safe names: each returns only `site_package_invalid`, leaks no sentinel and reaches neither item initialization nor native write. A safe-header fixture proves capture, CAS replace and restore preserve the exact canonical action/header map. Detail tests keep `required:true` plus absent fallback through normalize/target persistence and fail a missing value rather than painting Aurora defaults.
+Form preflight round-trips `submit.supportingText` and rejects a sibling extra; listing tests reject an extra at every nested record above. Form tests table-pin `Authorization`, authorization/material-suffixed and `X-API-Key` header names plus Basic/Bearer/JWT, PEM, credential-URL and data-URL material under safe names. Separate before/staged/complete fixtures put a sentinel in `webhook.config.url` and representative non-header action strings; each returns only `site_package_invalid`, leaks no sentinel and reaches neither initialization, native nor audit write. A safe-header fixture proves capture, CAS replace and restore preserve the exact canonical action/header map. Detail tests keep `required:true` plus absent fallback through normalize/target persistence and fail a missing value rather than painting Aurora defaults.
 Every kind has an apply adapter, while only `page`, `content_entry`, `detail_page` and `menu` participate in publish-last. They remain draft until dependencies are wired; menu items/document/appearance precede publish.
 Settings land in the final reversible stage before publication through one required `applySettingsBatchAtomic` call with no per-key fallback; lifecycle publication is the final operation, and legacy/full-site runs use the same ledger port.
 Additional focused regressions pin:
