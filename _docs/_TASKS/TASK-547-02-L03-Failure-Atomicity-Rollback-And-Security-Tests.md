@@ -176,7 +176,9 @@ missing target identities, self edges, duplicates, cycles, unknown kinds or
 malformed evidence cause `site_package_rollback_dependency_invalid` before the
 first native reversal. A legacy run without that option is marked
 `dependencyKnowledge:"legacy-unknown"`; missing evidence is never treated as an
-empty dependency list.
+empty dependency list. Automatic compensation and explicit rollback both pass
+the exact source option; regressions cover declared V1 and absent legacy-unknown
+modes in both paths.
 
 The boundary always begins with the complete raw result of
 `ledger.listRawItems(sourceRunId)`. While native access is forbidden,
@@ -587,7 +589,7 @@ export async function compensateItems(input: CompensateItemsInput) {
   );
   const graph = buildRollbackDependencyGraph({
     items: persistedSourceItems,
-    declaredVersion: 1,
+    declaredVersion: input.currentSource.options?.rollbackDependencySchemaVersion,
     readAction: readFullSiteRollbackActionV1,
   });
   await preflightPriorRollbackSuccessNativeState({
@@ -986,5 +988,11 @@ For every live edge, L02's serial `fullSiteNativeForeignKeyRacesDb.test.ts` prov
 - `bun test --parallel=1 --timeout 360000 tests/unit/backups/backupService.test.ts`
 - targeted full-site lifecycle/adapter/all-nine-native/settings suites from L02 plus legacy gates from L01
 - rerun any named failing file once in isolation before classifying a failure
+- final post-bridge root gate: `./node_modules/.bin/tsc -p tsconfig.json --noEmit`
 - `bun --cwd core lint`, `bun --cwd core lint:types`, relevant reliability/security gates, strict scan,
   and fresh `wc -l` over every L03-owned changed production/test file (all at most 1,000 lines).
+
+## Documentation Updates Required
+
+L03 edits no shared docs, changelog, or task board; TASK-547-06 solely owns the
+family closeout documentation for rollback, recovery, security, and validation.
