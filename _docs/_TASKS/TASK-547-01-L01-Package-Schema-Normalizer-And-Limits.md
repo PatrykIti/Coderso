@@ -959,22 +959,17 @@ suite neither imports nor source-inspects that later-owned reader.
 
 - [x] Implement types/schema/limits/normalizer.
 - [x] Add `tests/vitest/kits/full-site-package-schema.test.ts`.
-- [ ] Reject noncanonical package/non-setting keys without trimming; correct
-  serialized-size semantics, exact verification/setting contracts and their
-  immutable boundaries; freeze scalar/canonical ordering, residual identity and
-  secret/encoded-value policies, including all seven package-prose surfaces,
-  dense-array enforcement, compact credential aliases with exact `data|payload`
-  suffixes, scheme-agnostic exact Authorization wrappers, colon-decoded
-  noncanonical Basic variants, bounded context-aware post-colon embedded
-  authorization/credential-URL scanning, compound-carrier
-  Base64-family grammar and exact-name `code` query/fragment URLs;
-  remove path-blind reference-edge metrics/enforcement, undocumented residual/
-  diagnostic limit coupling and replace inherited
-  diagnostic truncation with the 101st-attempt singleton; split moved cases into independently runnable
-  `full-site-package-canonicalization.test.ts` and
-  `full-site-package-security.test.ts`, backed by the focused
-  `fullSitePackageTestSupport.ts`, without copying assertions/builders; then run
-  fresh gates.
+- [ ] Reject noncanonical package/non-setting keys without trimming; correct serialized-size semantics and exact verification/setting boundaries; freeze
+  scalar/canonical ordering, residual identity and secret/encoded-value policies,
+  including all seven package-prose surfaces, dense arrays, compact credential
+  aliases with exact `data|payload` suffixes, exact Authorization wrappers,
+  colon-decoded noncanonical Basic variants, bounded post-colon embedded
+  authorization/credential-URL scanning, compound-carrier Base64-family grammar
+  and exact-name `code` query/fragment URLs; remove path-blind edge metrics and
+  undocumented residual/diagnostic coupling; replace truncation with the
+  101st-attempt singleton; split cases into independently runnable canonicalization
+  and security suites backed by `fullSitePackageTestSupport.ts`, without copied
+  assertions/builders; then run fresh gates.
 
 ## Testing Requirements
 
@@ -997,4 +992,8 @@ line-count authority and must pass with every human-authored file at or below
 
 ## Documentation Updates Required
 
-Send verified schema/limit notes to TASK-547-06.
+TASK-547-06 is the sole shared-doc writer. Update `_docs/SOLUTION_KITS.md` and
+`docs/develop/full-site-packages.md` with the exact normalized schema, canonical
+ordering, dense-array/limit/101st-diagnostic rules, and the in-memory UTF-8 byte
+cap versus TASK-547-05's raw-source cap. Update `_docs/SECURITY_SPEC.md` with
+strict setting/verification allowlists and redacted secret/binary rejection.
