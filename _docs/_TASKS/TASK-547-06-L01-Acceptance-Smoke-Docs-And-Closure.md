@@ -69,9 +69,11 @@ During its acceptance/closure phase this leaf is the sole writer for exactly:
 - product/developer docs `_docs/SOLUTION_KITS.md`,
   `_docs/ASSISTANT_SITE_BUILDER.md`, `_docs/PAGE_MODEL.md`,
   `_docs/CONTENT_TYPES_SPEC.md`, `_docs/CMS_API.md`,
-  `_docs/ARCHITECTURE.md`, `_docs/SECURITY_SPEC.md`,
+  `_docs/ARCHITECTURE.md`, `_docs/DATA_MODEL.md`, `_docs/SECURITY_SPEC.md`,
   `docs/develop/README.md`, and
-  `docs/develop/full-site-packages.md`;
+  `docs/develop/full-site-packages.md`; `_docs/DATA_MODEL.md` must retain the
+  four legacy install-ledger values while documenting all ten full-site
+  resource kinds, with no DDL migration for the text-backed expansion;
 - closure indexes/artifacts `_docs/_TASKS/README.md`,
   `_docs/_CHANGELOG/README.md`, and
   `_docs/_CHANGELOG/1260-2026-07-23-task-547-full-site-package-formadom.md`;

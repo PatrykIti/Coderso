@@ -741,4 +741,7 @@ Update all docs listed in the parent, add the example generation/install/rollbac
 guide at `docs/develop/full-site-packages.md`, changelog
 `_docs/_CHANGELOG/1260-2026-07-23-task-547-full-site-package-formadom.md`/index, task
 statuses/board/statistics, package aliases/tests runner docs and tracked
-`_docs/PLAYWRIGHT/task-547-runtime-smoke/manifest.json`.
+`_docs/PLAYWRIGHT/task-547-runtime-smoke/manifest.json`. Update
+`_docs/DATA_MODEL.md` so the text-backed install-ledger `resource_type` domain
+retains the four legacy values and documents all ten full-site resource kinds;
+no DDL migration is required.

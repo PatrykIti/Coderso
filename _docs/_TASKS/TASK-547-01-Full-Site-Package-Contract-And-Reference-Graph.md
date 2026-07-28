@@ -154,6 +154,16 @@ closed registry:
 - homepage, navigation-menu and footer-template setting values → Page, Menu and
   Page Template; content-route `detailPageId` → Detail Page, with the route's
   literal content-type slug cross-checked against a unique package content type.
+  TASK-547-01-L02 then requires every present non-null route detail target's own
+  resolved `contentTypeId` target to equal that route-selected content-type
+  identity before lazy DB acquisition or the first write. The comparison runs
+  only after the route row, detail ref, unique literal-type selection and detail
+  page's required content-type ref all validate. A mismatch returns exactly one
+  `content_route_detail_content_type_mismatch` at the trusted route
+  `detailPageId` path, mapped to top-level `site_package_ref_bad_path`, without
+  exposing either identity, key or slug. Invalid/null/missing/ambiguous
+  prerequisites retain their existing outcome and never gain a mismatch; the
+  mismatch joins the fixed global bad-path → missing → ambiguous priority.
 
 No other path accepts `PackageRef`. Any other object shaped like a reference,
 including raw `$ref`-like objects in arbitrary content, is rejected rather than
@@ -215,9 +225,11 @@ unique direct target identities in lexical order, and `references` preserves
 occurrence discovery order. Every accepted ref occurrence counts as an edge;
 duplicates collapse only in `dependencies`. A content-route literal `type` adds
 a counted validation-only edge/direct dependency to its unique content type but
-no descriptor and is never rewritten. The outer plan is topologically ordered
-with dependencies first and stable ties by package ordinal then identity; every
-nested snapshot/array is deep-cloned and frozen. L02 exports
+no descriptor and is never rewritten. Its detail/content-type identity check
+reuses the two resolved route targets and adds no edge or descriptor. The outer
+plan is topologically ordered with dependencies first and stable ties by package
+ordinal then identity; every nested snapshot/array is deep-cloned and frozen.
+L02 exports
 `resolvePlannedPackageResourceRefs(resource, resolvedIds)`: it clones desired,
 replaces only those recorded paths, verifies each source ref still matches its
 descriptor and never rescans/rebuilds the graph. The planner and pre-run
@@ -407,9 +419,16 @@ discriminator/nullability row,
 reject the non-native menu `document.items` path, reject malformed ref keys
 without echoing them, pin L02's exact closed reasons, plan/reference shapes,
 occurrence-edge versus direct-dependency ordering, and content-route validation-
-only edge. For both Page-backed kinds they accept depth 4/24 children and reject
-depth 5/25, non-native slots and atom slots without clipping; valid-type overlap
-cases pin depth → atom → unknown slot → child-count precedence. Independently
+only edge. Focused L02 content-route cases independently pin a matching non-null
+detail target with exactly its substitution and literal-type route edges, a
+null detail target with only the literal-type edge, and a mismatched target with
+the exact static bad-path outcome before lazy dependency acquisition or any
+write. Missing/invalid/ambiguous prerequisites must retain their own outcome and
+add no mismatch; mixed fixtures pin the global priority and complete
+key/slug/identity non-disclosure. For both Page-backed kinds they accept depth
+4/24 children and reject depth 5/25, non-native slots and atom slots without
+clipping; valid-type overlap cases pin depth → atom → unknown slot →
+child-count precedence. Independently
 for `page` and `page_template`, a malformed discriminator with depth-4 `slots`
 and a depth-5 child, with or without a ref-like descendant, yields one depth
 diagnostic with no duplicate forbidden diagnostic; an in-bounds ref-like
@@ -458,4 +477,9 @@ scope and rejects every human-authored file above 1,000 physical lines.
 ## Documentation Updates Required
 
 Provide exact documentation deltas to TASK-547-06. TASK-547-06 is the sole writer
-of shared source-of-truth and example docs.
+of shared source-of-truth and example docs. Its `_docs/DATA_MODEL.md` handoff
+must document the text-backed install-ledger `resource_type` domain as all ten
+exact full-site kinds (`content_type`, `form`, `page_template`,
+`listing_template`, `content_entry`, `listing_query`, `detail_page`, `page`,
+`menu`, `setting`), retain every existing legacy value and state explicitly that
+this documentation/domain expansion requires no DDL migration.

@@ -50,6 +50,21 @@ descriptor. A valid `type` contributes one validation-only occurrence edge to
 the matched `content_type`: it counts toward the 4,096-edge limit and becomes a
 deduplicated direct dependency, but creates no descriptor and is never rewritten.
 
+Before the first write, compare the frozen `PackageResourceIdentity` selected by
+a resolved route `type` with the referenced Detail Page's own successfully
+resolved required `contentTypeId` target; they must match. A malformed container
+or non-object row stops that row. Otherwise order present non-null
+`detailPageId` resolution → unique `type` selection → agreement before the next
+route. Missing/null/invalid/missing-target detail links, invalid/missing/
+ambiguous types and invalid/missing Detail Page `contentTypeId` targets skip only
+agreement and retain their existing diagnostic. Each independent success keeps
+its original edge (and detail descriptor); agreement adds neither.
+
+A mismatch adds exactly one `site_package_ref_bad_path` diagnostic at the
+trusted route `detailPageId` path with static reason
+`content_route_detail_content_type_mismatch`. Trusted setting/route indexes may
+appear, but no identity, ref key or route slug enters path/reason/static message.
+
 For both Page-backed source kinds, recursively visit each
 `document.sections[*].blocks[*]` and every child under only that block type's
 native allowed `slots.<slotKey>[*]`, bounded by the native tree-depth/child caps.
@@ -155,6 +170,7 @@ export type ReferenceGraphDiagnosticReason =
   | "content_route_type_invalid"
   | "content_route_content_type_missing"
   | "content_route_content_type_ambiguous"
+  | "content_route_detail_content_type_mismatch"
   | "page_slots_forbidden"
   | "page_slot_key_forbidden"
   | "page_tree_depth_exceeded"
@@ -179,7 +195,9 @@ ref-like value outside the registry → `package_ref_path_forbidden`; absent tar
 → `package_ref_target_missing`; malformed content-routes container/row →
 `content_routes_invalid`; malformed route `type` →
 `content_route_type_invalid`; zero/multiple matching slugs →
-`content_route_content_type_missing|content_route_content_type_ambiguous`.
+`content_route_content_type_missing|content_route_content_type_ambiguous`; a
+fully resolved route/Detail Page content-type identity inequality →
+`content_route_detail_content_type_mismatch`.
 For every valid-discriminator Page node with `slots`, validate in this first-match
 order: any `slots` member at depth 4 → `page_tree_depth_exceeded`; otherwise a
 non-slot-capable block → `page_slots_forbidden`; otherwise the first
@@ -246,6 +264,13 @@ depth checks run only after this finalizer returns with no diagnostic.
 `ReferenceGraphError` receives only an already-bounded list and never slices or
 repairs it; overflow behavior belongs exclusively to the collectors.
 
+The route/detail mismatch is one ordinary bad-path semantic diagnostic in this
+same stream. A resolved mismatching route still contributes its accepted
+`detailPageId` and `type` occurrence edges before comparison, and the Detail
+Page's own valid `contentTypeId` remains its independent occurrence edge. Thus
+1..100 mismatches do not suppress edge overflow, while a 101st mismatch still
+selects diagnostic overflow by the finalizer above.
+
 Topological traversal must first determine whether the complete graph is
 acyclic. Only a complete acyclic order reaches the longest-path dependency-depth
 calculation. Consequently, a cyclic graph that also contains an independent
@@ -256,7 +281,7 @@ prevents both cycle detection and dependency-depth calculation.
 
 Reason-to-code ownership is closed: duplicate identity →
 `site_package_ref_duplicate`; expected/shape/kind/key/path, content-route
-container/type, Page-structure and planned-drift reasons →
+container/type/detail-content-type mismatch, Page-structure and planned-drift reasons →
 `site_package_ref_bad_path`; missing target/content type/resolved ID →
 `site_package_ref_missing`; ambiguous content type →
 `site_package_ref_ambiguous`; cycle → `site_package_ref_cycle`; and every
@@ -426,6 +451,50 @@ const indexUniqueKindKeys = (resources: FullSitePackageResources) => {
   return freezeRegistry(registry);
 };
 
+const collectContentRouteOccurrences = (source, context) => {
+  for (const { route, path } of readStructuralContentRoutes(source, context)) {
+    const detailPage = collectNullableDetailPageOccurrence(route, path, context);
+    const contentType = collectUniqueRouteTypeOccurrence(route, path, context);
+    if (!detailPage || !contentType) continue;
+
+    const detailContentType = context.resolvedDetailPageContentTypes.get(
+      detailPage.identity,
+    );
+    if (!detailContentType) continue; // The detail page's own ref diagnostic owns this case.
+    if (detailContentType !== contentType.identity) {
+      context.collector.add(
+        "site_package_ref_bad_path",
+        [...path, "detailPageId"],
+        "content_route_detail_content_type_mismatch",
+      );
+    }
+  }
+};
+const collectPackageOccurrences = (context) => {
+  const state = createOccurrenceState(context);
+  for (const source of context.registry.resources) {
+    const sourceContext = { ...context, ...state, source };
+    if (isContentRoutesSetting(source)) {
+      collectContentRouteOccurrences(source, sourceContext); // Sole route collector.
+      continue;
+    }
+    collectFixedAndPageSourceOccurrences(
+      sourceContext,
+      // Invoked only after exact ref validation and successful target lookup.
+      (row, target) => {
+        if (
+          source.kind === "detail_page" &&
+          row.segments.length === 1 &&
+          row.segments[0] === "contentTypeId" &&
+          target.kind === "content_type"
+        ) {
+          context.resolvedDetailPageContentTypes.set(source.identity, target.identity);
+        }
+      },
+    );
+  }
+  return state;
+};
 const PAGE_REFERENCE_AUTHORITY = Object.freeze({
   blockTypes: Object.freeze([...pageBlockTypes]),
   breakpoints: Object.freeze([...pageBreakpoints]),
@@ -642,11 +711,16 @@ const collectRefsAtAllowedPaths = (registry: PackageResourceRegistry) => {
   const diagnostics = new GraphDiagnostics();
   const registeredReferencePaths = new Set<string>();
   const blockedReferencePrefixes: ReferenceAuthorityPath[] = [];
-  const { edges, descriptorsByIdentity } = collectFixedAndPageOccurrences({
+  const resolvedDetailPageContentTypes = new Map<
+    PackageResourceIdentity,
+    PackageResourceIdentity
+  >();
+  const { edges, descriptorsByIdentity } = collectPackageOccurrences({
     registry,
     diagnostics,
     registeredReferencePaths,
     blockedReferencePrefixes,
+    resolvedDetailPageContentTypes,
   });
   scanRefLikeObjectsOnce({
     registry,
@@ -702,11 +776,10 @@ buildReferencePlan(pkg);
 // Only after both calls succeed may the existing lazy DB loader/import run.
 ```
 
-Data flow: normalized package → typed JSON-depth guard → unique registry →
-discriminator-independent Page bounds preflight → valid-type allowlisted refs
-plus malformed-branch bounds-only traversal → generic ref-like scan →
-deterministic semantic finalizer → stable topological traversal and cycle
-detection → longest-path dependency-depth calculation → frozen plan.
+Data flow: normalized package → JSON-depth guard → unique registry → package-
+ordered fixed/Page discovery (record successful Detail Page content-type targets)
+and route-ordered detail/type/agreement discovery → generic ref-like scan →
+semantic finalizer → stable cycle-first topology → dependency depth → frozen plan.
 Errors distinguish duplicate/missing/ambiguous/cycle/bad-path with only the
 static redacted diagnostics above. TASK-547-02 owns post-substitution native
 `desired` validation; this leaf certifies only ref placement/resolution/order.
@@ -818,7 +891,18 @@ dependencies; exact stable topological order; exact
 `PlannedPackageResource`/`PlannedPackageReference` keys and deep freeze; and
 content-route order where `detailPageId` has a descriptor, `type` adds a counted
 dependency edge, and `type` remains unchanged after substitution. Pin exact
-code-unit order `a-a,a.a,a_a,aa` in dependency sorting and a synthetic equal-
+matching route/Detail Page content-type targets as accepted and mismatching
+targets as exactly one `site_package_ref_bad_path` /
+`content_route_detail_content_type_mismatch` at the route `detailPageId` path,
+with no supplied slug/key/identity in path, reason or message. Independently pin
+absent and null `detailPageId`; missing Detail Page target; invalid/missing
+Detail Page `contentTypeId` target; and missing/ambiguous route type. Each keeps
+only its existing first-match result and never gains the mismatch. Pin that both
+matching and mismatching fully resolved rows count the same two route occurrence
+edges plus the Detail Page's independent content-type edge; add mismatch+4,097
+and 101st-mismatch+edge-overflow cases in the diagnostics file for the frozen
+finalizer precedence. Pin exact code-unit order `a-a,a.a,a_a,aa` in dependency
+sorting and a synthetic equal-
 ordinal identity tie so a retained `localeCompare` cannot pass. Pin exact
 base/responsive/nested descriptor substitution, missing-ID/source-drift
 rejection, input/plan immutability and zero second walker/build. Except for the
@@ -829,6 +913,13 @@ input. They do not import planner, apply, preparer or CLI owners: exact call-cou
 tests are handed to 02-L01, 02-L02 and 05-L01. A
 structurally normalized bad-path ref must fail in that local harness before its
 injected lazy-dependency sentinel is acquired.
+
+Core cases pair non-object, wrong-kind and bad-key `detailPageId` values with a
+valid unique `type` and expect respectively `expected_package_ref`,
+`package_ref_kind_mismatch` and `package_ref_key_invalid`; pair an invalid type
+with a valid detail link and expect `content_route_type_invalid`. Each asserts
+that single diagnostic, no mismatch, the counterpart edge/descriptor through an
+edge-boundary fixture and no lazy acquisition.
 
 Add focused, independently runnable dependency-phase cases without local copies
 of chain or combined-graph builders. In
@@ -850,12 +941,13 @@ codes.
 Test ownership is physical and non-overlapping:
 
 - `full-site-package-references-core.test.ts` owns the fixed registry, identity,
-  content-route, topological cycle and semantic-before-cycle phase cases;
+  content-route agreement, topological cycle and semantic-before-cycle phase
+  cases;
 - `full-site-package-references-page.test.ts` owns both Page-backed recursive
   traversal/discriminator/slot/boundary cases;
 - `full-site-package-references-diagnostics.test.ts` owns reason/code mapping,
-  reference first-match/mixed-category precedence, JSON-depth/edge/diagnostic
-  limits and non-disclosure;
+  reference first-match/mixed-category precedence, mismatch/edge-overflow
+  precedence, JSON-depth/edge/diagnostic limits and non-disclosure;
 - `full-site-package-references-plan.test.ts` owns occurrence/dependency order,
   exact dependency-depth boundaries and repeats, freeze, descriptor resolution
   and drift cases; and

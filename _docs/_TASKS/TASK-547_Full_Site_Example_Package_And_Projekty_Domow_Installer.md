@@ -369,7 +369,10 @@ them. No TASK-547 commit is merged into `feat/implementations` by this workflow.
 - `_docs/SOLUTION_KITS.md`
 - `_docs/ASSISTANT_SITE_BUILDER.md`
 - `_docs/PAGE_MODEL.md`, `_docs/CONTENT_TYPES_SPEC.md`, `_docs/CMS_API.md`,
-  `_docs/ARCHITECTURE.md`, and `_docs/SECURITY_SPEC.md` where contracts change
+  `_docs/ARCHITECTURE.md`, `_docs/DATA_MODEL.md`, and `_docs/SECURITY_SPEC.md`
+  where contracts change. The ledger documentation must retain the four legacy
+  values while covering all ten full-site resource kinds; the text-backed
+  expansion requires no DDL migration.
 - `docs/develop/full-site-packages.md` for generating, validating, installing and
   rolling back the example package
 - `_docs/_CHANGELOG/1260-2026-07-23-task-547-full-site-package-formadom.md` and
