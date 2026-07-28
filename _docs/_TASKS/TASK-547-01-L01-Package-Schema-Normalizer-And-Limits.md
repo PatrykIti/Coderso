@@ -933,9 +933,9 @@ residual ID/value.
 Pin metadata/prose trimming, locale grammar/case preservation, no-trim identities,
 residual grammar/uniqueness, punctuation order `a-a,a.a,a_a,aa`, integer-index
 order `2,10,01` and `-0` → `0`. Directly assert sorting
-`["a", "4294967295", "01", "4294967294"]` yields
-`["4294967294", "01", "4294967295", "a"]` and the nested desired JSON is
-`{"4294967294":"max-index","01":"leading-zero","4294967295":"not-index","a":"text"}`.
+`["text", "4294967295", "01", "4294967294"]` yields
+`["4294967294", "01", "4294967295", "text"]` and the nested desired JSON is
+`{"4294967294":"max-index","01":"leading-zero","4294967295":"not-index","text":"text"}`.
 One exact full-package JSON pins root schema order, the resource tuple and this
 nested comparator order, proving named exceptions plus free-form reconstruction
 before `JSON.stringify` without crediting `OrdinaryOwnPropertyKeys`.
