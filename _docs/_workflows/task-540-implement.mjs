@@ -7317,6 +7317,7 @@ async function assertTask540TouchedModuleLineLimitContract() {
     "tests/unit/workflows/task540SmokeExecutorSecurity.test.ts",
     "core/widgets/core/footer.tsx",
     "tests/unit/toolchain/trackedSourcesAreText.test.ts",
+    "core/db/driverEndpoints.ts",
   ]);
   for (const relativePath of accountableOwnerCases) {
     if (
@@ -11212,6 +11213,15 @@ const TASK_540_LINE_LIMIT_ACCOUNTABLE_PATHS = Object.freeze([
   // the family's own machinery, which is what this registry is for.
   "tests/unit/db/schemaColumnTypeContracts.test.ts",
   "tests/unit/toolchain/trackedSourcesAreText.test.ts",
+  // The pooler guard's third fail-open and its fix (commits 7c9397df, d9240c9d, 7164e441):
+  // the module that asks postgres.js which endpoint it will dial, and the lane that holds
+  // it to the installed driver's own answer for a matrix of environment shapes. Extracted
+  // out of connectionTargets.ts, which is already accountable a few groups above, so this
+  // is the same work under a new path -- family-authored guard machinery that no leaf
+  // writes, which is what this registry is for. Both are well inside the limit (379 and
+  // 600 lines).
+  "core/db/driverEndpoints.ts",
+  "tests/vitest/server/databaseDriverEndpoints.test.ts",
 ]);
 // The tripwire proves, hermetically, that the gate really rejects the specific accountable
 // paths closest to the limit -- so it has to name the ones actually closest. Measured
@@ -11239,7 +11249,7 @@ const TASK_540_LINE_LIMIT_TRIPWIRE_PATHS = Object.freeze([
   "core/widgets/core/footer.tsx",
 ]);
 const TASK_540_LINE_LIMIT_ACCOUNTABLE_PATHS_SHA256 =
-  "d53f4ee864432cc95f071d80852bd6ca67f183a64e355efc93f65e2d00213d6f";
+  "1b351aa5aaa9d42d82c4b519d3992d825165829f93e847eb846386d047b43572";
 const TASK_540_LINE_LIMIT_ACCOUNTABLE_OWNERS = Object.freeze(
   TASK_540_LINE_LIMIT_ACCOUNTABLE_PATHS.map((path) =>
     Object.freeze({ path, owner: TASK_540_LINE_LIMIT_ACCOUNTABLE_OWNER })
@@ -11265,7 +11275,7 @@ if (
   // Must be the leaf that lands LAST, which is the whole rationale for the choice: it is
   // the only leaf still able to split one of these before the family closes.
   TASK_540_LINE_LIMIT_ACCOUNTABLE_OWNER !== LEAF_ORDER[LEAF_ORDER.length - 1] ||
-  TASK_540_LINE_LIMIT_ACCOUNTABLE_PATHS.length !== 98 ||
+  TASK_540_LINE_LIMIT_ACCOUNTABLE_PATHS.length !== 100 ||
   new Set(TASK_540_LINE_LIMIT_ACCOUNTABLE_PATHS).size !==
     TASK_540_LINE_LIMIT_ACCOUNTABLE_PATHS.length ||
   TASK_540_LINE_LIMIT_ACCOUNTABLE_PATHS.some(
