@@ -137,8 +137,10 @@ numeric index keys `"2"` before `"10"`, followed by non-index keys such as
 ## Security Contract
 
 Pure Bun-free code; no endpoint. Reject unknown keys, forbidden settings/secrets,
-oversized serialized values/resources/strings/diagnostics and raw bytes/base64.
-Setting keys use only the exact allowlist above, never the package-key regex.
+oversized values/resources/strings/diagnostics, actual binary values, Base64 data
+URLs and Base64-family strings only under explicit binary carriers. Accept safe
+bare Base64-looking desired strings/package prose. Setting keys use only the
+exact allowlist above, never the package-key regex.
 
 Sensitive desired-field classification is deterministic and never uses
 substring matching. First split every non-ASCII-alphanumeric separator and drop
@@ -284,6 +286,9 @@ data-URL result. Arbitrary schemes are recognized by a forward state machine,
 not a remainder regex or repeated lookahead. Inspection derives a candidate's
 maximal end at the first ASCII whitespace/control, quote or angle bracket and
 removes a terminal `)`, `]` or `}` only when unmatched inside that candidate.
+The same bounded scan must not remove a closer when it is the sole raw value
+after the final `=` in the active query/fragment parameter; `?code=)` therefore
+parses once with `)` as its nonempty marked value, never as an empty value.
 Nested starts remain visible because discovery never jumps over a prior span.
 The private parse budget is exactly four times the trimmed view length, charged
 once per code unit examined while deriving and parsing URL spans. Each candidate
@@ -901,7 +906,9 @@ empty-then-nonempty rejected. Explicitly cover `/download?token=secret`,
 `./`/`../` relative forms, `?api_key=secret`, `#access_token=secret`,
 `#?access%5Ftoken=secret`, `#access%255Ftoken=public`, fragment empty-then-
 nonempty/all-empty duplicates, and the exact `AWSAccessKeyId`, `GoogleAccessId`
-and `Key-Pair-Id` sequences. Put unique sentinels in userinfo, decoded marker
+and `Key-Pair-Id` sequences. For query and fragment, raw terminal `)`, `]` and
+`}` values under exact `code`, a credential marker and a signature marker all
+remain nonempty and reject. Put unique sentinels in userinfo, decoded marker
 names and values—including the exact-name `code` cases—and prove none occur in
 error name/message/code/diagnostics.
 
@@ -937,7 +944,10 @@ Pin the raw normalizer's exact depth 64/65 boundary and static redacted
 `json_depth_exceeded` singleton; L02 diagnostics alone owns
 raw normalize→graph and forged-typed duplicate+depth precedence. Cover complete
 residual object accept; bare-code/unknown-key/non-false-impact rejection;
-complete desired-snapshot equality; and idempotent normalize. A schema-only limit test may
+complete desired-snapshot equality; and idempotent normalize. The independently
+runnable canonicalization suite proves 101 valid unique residuals within the byte
+cap normalize, sort and remain idempotent without `site_package_too_complex`; the
+100 limit governs attempted diagnostics only. A schema-only limit test may
 accept a ref-shaped object solely to count reference edges; it must state that
 this is not full-package validity and leave path/ref-key rejection to L02 and the
 consumer pre-DB regression. Native desired-document acceptance/rejection tests
