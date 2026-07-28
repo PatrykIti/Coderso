@@ -11278,6 +11278,17 @@ const TASK_540_LINE_LIMIT_ACCOUNTABLE_PATHS = Object.freeze([
   // control itself, rather than the entry and page support surfaces around it -- so it is
   // accountable to the same owner as the suite it came from.
   "tests/vitest/ui/entry-field-renderer-wave.test.tsx",
+  // The vitest lane's per-test deadline repair: four suites that deferred an application
+  // module graph into a test body with `await import(...)`, so the first test to touch the
+  // graph absorbed its whole transform inside its own `testTimeout` and blew the lane budget
+  // under full-suite contention. The fix hoists those imports to module scope, where the
+  // cost lands in the file's collection phase. No leaf writes these -- they are the lane
+  // machinery the family's own `bun run test` gate runs on, which is what this registry is
+  // for. All four are well inside the limit (106, 223, 385 and 466 lines).
+  "tests/vitest/pages/task-534-interactivity-model.test.ts",
+  "tests/vitest/ui/page-templates-list.test.tsx",
+  "tests/vitest/ui/page-templates-surface.test.tsx",
+  "tests/vitest/ui/posts-editor-chrome-wave.test.tsx",
 ]);
 // The tripwire proves, hermetically, that the gate really rejects the specific accountable
 // paths closest to the limit -- so it has to name the ones actually closest. Measured
@@ -11312,7 +11323,7 @@ const TASK_540_LINE_LIMIT_TRIPWIRE_PATHS = Object.freeze([
   "core/widgets/core/footer.tsx",
 ]);
 const TASK_540_LINE_LIMIT_ACCOUNTABLE_PATHS_SHA256 =
-  "cc959a15446895eecf676a1379de5423da7f754022d949ba001abf8528a85252";
+  "59749d431e798852957a263e58a378d65a6489b0a3b7ded7953022bcbcc7344a";
 const TASK_540_LINE_LIMIT_ACCOUNTABLE_OWNERS = Object.freeze(
   TASK_540_LINE_LIMIT_ACCOUNTABLE_PATHS.map((path) =>
     Object.freeze({ path, owner: TASK_540_LINE_LIMIT_ACCOUNTABLE_OWNER })
@@ -11338,7 +11349,7 @@ if (
   // Must be the leaf that lands LAST, which is the whole rationale for the choice: it is
   // the only leaf still able to split one of these before the family closes.
   TASK_540_LINE_LIMIT_ACCOUNTABLE_OWNER !== LEAF_ORDER[LEAF_ORDER.length - 1] ||
-  TASK_540_LINE_LIMIT_ACCOUNTABLE_PATHS.length !== 109 ||
+  TASK_540_LINE_LIMIT_ACCOUNTABLE_PATHS.length !== 113 ||
   new Set(TASK_540_LINE_LIMIT_ACCOUNTABLE_PATHS).size !==
     TASK_540_LINE_LIMIT_ACCOUNTABLE_PATHS.length ||
   TASK_540_LINE_LIMIT_ACCOUNTABLE_PATHS.some(
