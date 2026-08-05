@@ -1,4 +1,4 @@
-import type { EntryDataValue } from "@/services/entriesClient";
+import type { EntryDataValue } from "@/services/entryData";
 
 import type {
   ScreenDocumentV1,

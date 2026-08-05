@@ -5,7 +5,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
-import type { EntryDataValue } from "@/services/entriesClient";
+import type { EntryDataValue } from "@/services/entryData";
 import { EditorShell } from "@/ui/layouts/EditorShell";
 import { CanvasEditor } from "@/ui/shared/CanvasEditor";
 import { PageHeader } from "@/ui/shared/PageHeader";
