@@ -3346,7 +3346,7 @@ const FORBIDDEN_PATHS = Object.freeze([
 
 // FORBIDDEN_PATHS is agent-prompt policy, not an enforced gate -- it is interpolated into
 // COMMON at exactly one site and nothing verifies it after the fact. Auditing the family's
-// real baseline..HEAD delta against it found 32 paths across 9 of these globs already
+// real baseline..HEAD delta against it found 33 paths across 10 of these globs already
 // mutated. Leaving that undocumented would mean every mutation agent reads a prohibition
 // that the family itself has visibly broken, which teaches the agent the list is advisory.
 //
@@ -3359,13 +3359,13 @@ const AUTHORIZED_FORBIDDEN_PATH_EXCEPTIONS = Object.freeze([
     paths: Object.freeze(["core/db/schema.ts"]),
     commits: Object.freeze(["37e3c66b", "e6bbee69"]),
     reason:
-      "37e3c66b added the access_logs.user_agent hash index. The owner reviewed and decided " +
-      "it STAYS: marginal write cost, zero production risk, and it fixes a real scan. " +
-      "e6bbee69 then split the file into 20 domain table modules behind a 43-line facade " +
-      "because the index brought a 1,722-line hand-written schema inside the touched set and " +
-      "AGENTS.md binds production modules to 1,000 lines. The public import surface is " +
-      "unchanged, so no consumer moved. The 20 destination modules are recorded under the " +
-      "core/db/tables/** entry below, because after the split this path is only the facade.",
+      "37e3c66b added the owner-approved access_logs.user_agent hash index for recurring " +
+      "canonical smoke traffic-ledger lookups. Its measured Bitmap Index Scan avoids the " +
+      "repeated 4,009-block access-log scans that accumulate across workflow reruns; this " +
+      "intent is pinned beside the declaration and in migration 0070. e6bbee69's independent " +
+      "split of the 1,722-line hand-written schema into 20 domain modules remains: the public " +
+      "import surface is unchanged, and this path is now only the thin facade. The destination " +
+      "modules are recorded under the core/db/tables/** entry below.",
   }),
   Object.freeze({
     // The exception the split created. It is recorded separately from core/db/schema.ts
@@ -3395,15 +3395,16 @@ const AUTHORIZED_FORBIDDEN_PATH_EXCEPTIONS = Object.freeze([
       "core/db/tables/theming.ts",
       "core/db/tables/widgets.ts",
     ]),
-    commits: Object.freeze(["e6bbee69"]),
+    commits: Object.freeze(["e6bbee69", "42d57115"]),
     reason:
       "e6bbee69 created all 20 modules by moving table declarations out of schema.ts, so " +
       "the family did mutate these paths and the record must say so. They stand because " +
-      "the split is behavior-preserving -- declarations moved verbatim, the facade " +
-      "re-exports the identical public surface, and no migration or snapshot changed -- " +
-      "and because all 20 are in the line-limit accountability registry, so their sizes " +
-      "are gated. No leaf may edit them: a table change belongs to a schema task with its " +
-      "own migration, not to a Custom Screens remediation.",
+      "the split is behavior-preserving -- declarations moved verbatim and the facade " +
+      "re-exports the identical public surface. The owner-approved recurring-smoke hash " +
+      "index remains intentionally in observability.ts with its measured rationale and " +
+      "migration 0070; 42d57115 makes that owner intent explicit beside the declaration. " +
+      "All 20 modules are in the line-limit accountability registry, so their sizes are " +
+      "gated; no other schema mutation is authorized by this exception.",
   }),
   Object.freeze({
     glob: "core/db/migrations/**",
@@ -3412,20 +3413,33 @@ const AUTHORIZED_FORBIDDEN_PATH_EXCEPTIONS = Object.freeze([
       "core/db/migrations/meta/0070_snapshot.json",
       "core/db/migrations/meta/_journal.json",
     ]),
-    commits: Object.freeze(["37e3c66b"]),
+    commits: Object.freeze(["37e3c66b", "42d57115"]),
     reason:
-      "The generated migration and snapshot for that index. Inseparable from the schema " +
-      "change: reverting them alone would leave the schema and the migration history " +
-      "disagreeing, which is strictly worse than the recorded exception.",
+      "37e3c66b generated and applied these artifacts for the explicitly owner-approved " +
+      "recurring canonical-smoke access-log lookup optimization. Migration 0070, its exact " +
+      "snapshot, and journal entry intentionally ship together with the matching hash-index " +
+      "declaration; 42d57115 records in the migration SQL that it must not be removed as " +
+      "diagnostic-only without a measured replacement. No other migration change is authorized here.",
+  }),
+  Object.freeze({
+    glob: "core/admin/ui/pages/**",
+    paths: Object.freeze(["core/admin/ui/pages/editorControls/MediaPickerControl.tsx"]),
+    commits: Object.freeze(["42d57115"]),
+    reason:
+      "The final entry-value boundary repair routes the existing page-editor media control " +
+      "through the shared exact media-picker value contract. This single adapter change is " +
+      "required to keep page, entry, and custom-screen media values consistent; it does not " +
+      "authorize any other page-builder edit.",
   }),
   Object.freeze({
     glob: "package.json",
     paths: Object.freeze(["package.json"]),
-    commits: Object.freeze(["a0fe8028"]),
+    commits: Object.freeze(["a0fe8028", "42d57115"]),
     reason:
-      "Three smoke:auth-window:* scripts that move the auth-rate window into a test-DB " +
-      "setting, cutting smoke barrier cost from 366s to 36s. Additive script entries only -- " +
-      "no dependency, version, or lockfile change.",
+      "a0fe8028 added three smoke:auth-window:* scripts that move the auth-rate window into " +
+      "a test-DB setting. 42d57115 adds the audited dependency resolutions and patched npm " +
+      "bundle needed to clear the final high-severity supply-chain gate; package and lock " +
+      "changes land together with byte-pinned regression tests.",
   }),
   Object.freeze({
     glob: "core/widgets/**",
@@ -3455,8 +3469,11 @@ const AUTHORIZED_FORBIDDEN_PATH_EXCEPTIONS = Object.freeze([
   Object.freeze({
     glob: "bun.lock",
     paths: Object.freeze(["bun.lock"]),
-    commits: Object.freeze(["3d5604ec"]),
-    reason: "Same dependency bump. Lockfile regeneration is the point of that commit.",
+    commits: Object.freeze(["3d5604ec", "42d57115"]),
+    reason:
+      "3d5604ec regenerated the lockfile for the branch dependency bump. 42d57115 records " +
+      "the final audited security resolutions and patched npm bundle; frozen-install and " +
+      "resolved-byte tests pin the resulting graph.",
   }),
   Object.freeze({
     glob: "_docs/_TASKS/TASK-545*",
@@ -3474,7 +3491,7 @@ const AUTHORIZED_FORBIDDEN_PATH_EXCEPTIONS = Object.freeze([
   }),
 ]);
 if (
-  AUTHORIZED_FORBIDDEN_PATH_EXCEPTIONS.length !== 9 ||
+  AUTHORIZED_FORBIDDEN_PATH_EXCEPTIONS.length !== 10 ||
   AUTHORIZED_FORBIDDEN_PATH_EXCEPTIONS.some(
     ({ glob, paths, commits, reason }) =>
       !FORBIDDEN_PATHS.includes(glob) ||
@@ -7345,6 +7362,9 @@ async function assertTask540TouchedModuleLineLimitContract() {
     "core/admin/ui/entries/EntryCreateDrawer.tsx",
     "tests/unit/workflows/task540LineLimitOffenderReport.test.ts",
     "tests/vitest/ui/entry-field-renderer-wave.test.tsx",
+    "core/admin/services/entryData.ts",
+    "tests/unit/release/imagePromotionGate.test.ts",
+    "tests/vitest/ui/formsPagesWaveFixtures.tsx",
   ]);
   for (const relativePath of accountableOwnerCases) {
     if (
@@ -11311,6 +11331,35 @@ const TASK_540_LINE_LIMIT_ACCOUNTABLE_PATHS = Object.freeze([
   "tests/vitest/ui/section-editor-surface-wave.test.tsx",
   "tests/vitest/ui/section-editor-wave.test.tsx",
   "tests/vitest/ui/support/sectionEditorHarness.tsx",
+  // The final entry-value boundary repair: JSON-safe entry payloads and exact media-picker
+  // values now have standalone contract owners, while the screen draft and editor adapter
+  // consume those contracts without coercing malformed values. The focused media-picker
+  // lane pins the fail-closed behaviour. These are pre-closure audit repairs, not writable
+  // leaf surfaces, so the closure leaf remains their line-limit owner.
+  "core/admin/services/entryData.ts",
+  "core/admin/ui/custom-screens/customScreenEntryDraft.ts",
+  "core/admin/ui/media/mediaPickerValue.ts",
+  "core/admin/ui/pages/editorControls/MediaPickerControl.tsx",
+  "tests/vitest/ui/media-picker.test.tsx",
+  // Release and supply-chain regressions added while clearing the final security audit.
+  // They exercise repository-wide release machinery and patched transitive tooling rather
+  // than any implementation leaf, so they share the closure leaf's accountability.
+  "tests/unit/release/imagePromotionGate.test.ts",
+  "tests/unit/toolchain/npmBundledDependencySecurityPatch.test.ts",
+  "tests/unit/toolchain/npmBundledIpAddressPatch.test.ts",
+  // Final gate-repair modularity and collection-timing changes. The CSS inventory helpers
+  // keep the original discovered suite authoritative, the Forms fixtures split a legacy
+  // over-limit suite along its product seam, and the footer/widget import hoists keep graph
+  // collection outside per-test deadlines. No implementation leaf writes these test-lane
+  // mechanics; all remain independently runnable and under the repository line limit.
+  "tests/vitest/services/css-color-consumer-parity.test.ts",
+  "tests/vitest/services/cssColorAstInventorySupport.ts",
+  "tests/vitest/services/cssColorClearableInventoryAssertions.ts",
+  "tests/vitest/services/cssColorRegexInventoryAssertions.ts",
+  "tests/vitest/ui/footer-editor-wave.test.tsx",
+  "tests/vitest/ui/form-builder-page-wave.test.tsx",
+  "tests/vitest/ui/forms-pages-wave.test.tsx",
+  "tests/vitest/ui/formsPagesWaveFixtures.tsx",
 ]);
 // The tripwire proves, hermetically, that the gate really rejects the specific accountable
 // paths closest to the limit -- so it has to name the ones actually closest. Measured
@@ -11319,7 +11368,7 @@ const TASK_540_LINE_LIMIT_ACCOUNTABLE_PATHS = Object.freeze([
 // (989) have ten and eleven. The first two were missing and the comment here mis-stated
 // backupService.ts's headroom as nine.
 //
-// EntryEditor.tsx joins them at 992, eight lines of headroom, having crossed the coverage
+// EntryEditor.tsx joins them at 994, six lines of headroom, having crossed the coverage
 // threshold under this session's entry-editor fixes (5bea73af, 865e5f37): it stood at 984 --
 // one line outside the derived at-risk set -- and the two comments those commits added to it
 // took it inside. Naming it here is the response the coverage test asks for; trimming those
@@ -11345,7 +11394,7 @@ const TASK_540_LINE_LIMIT_TRIPWIRE_PATHS = Object.freeze([
   "core/widgets/core/footer.tsx",
 ]);
 const TASK_540_LINE_LIMIT_ACCOUNTABLE_PATHS_SHA256 =
-  "2cc51dfb502d1dd20bdb5ad0dcbec39616d4d975690833a35345cad6cd0b13ef";
+  "6340c626f401154236c46cc9f5b8be9fb07156fc34a003f9da2f3a3c4c937f39";
 const TASK_540_LINE_LIMIT_ACCOUNTABLE_OWNERS = Object.freeze(
   TASK_540_LINE_LIMIT_ACCOUNTABLE_PATHS.map((path) =>
     Object.freeze({ path, owner: TASK_540_LINE_LIMIT_ACCOUNTABLE_OWNER })
@@ -11371,7 +11420,7 @@ if (
   // Must be the leaf that lands LAST, which is the whole rationale for the choice: it is
   // the only leaf still able to split one of these before the family closes.
   TASK_540_LINE_LIMIT_ACCOUNTABLE_OWNER !== LEAF_ORDER[LEAF_ORDER.length - 1] ||
-  TASK_540_LINE_LIMIT_ACCOUNTABLE_PATHS.length !== 116 ||
+  TASK_540_LINE_LIMIT_ACCOUNTABLE_PATHS.length !== 132 ||
   new Set(TASK_540_LINE_LIMIT_ACCOUNTABLE_PATHS).size !==
     TASK_540_LINE_LIMIT_ACCOUNTABLE_PATHS.length ||
   TASK_540_LINE_LIMIT_ACCOUNTABLE_PATHS.some(
