@@ -77,16 +77,120 @@ Tags use the plain SemVer value, for example `1.1.0`.
 
 ## Docker Image Stage
 
+The whole release workflow uses the constant `coderso-release` concurrency
+group with `cancel-in-progress: false`. This serializes semantic-release and
+Docker promotion, so a slow older run cannot overlap a newer run and race it for
+`:latest`. GitHub keeps at most one pending run in a concurrency group and may
+replace that pending run with a newer queued run; this is deliberately not
+described as a durable FIFO release queue. Serialization is only the TOCTOU
+guard between release workflows; it does not establish which queued or rerun
+job owns the newest release. The promotion script determines that independently
+from fresh remote Git tags immediately before every GHCR write.
+
 Stage 2 runs only when semantic-release publishes a new version. It checks out
 the generated release tag with the same GitHub App auth pattern and builds the
-runtime image from `Dockerfile`.
+runtime image from `Dockerfile` twice through one warm Buildx builder. The first
+export stays in the runner's Docker daemon and must boot and serve successfully
+before the workflow logs in to GHCR. The second export publishes only the
+run-scoped `candidate-<run-id>-<attempt>` tag with BuildKit SLSA provenance. It
+uses one explicit registry output with OCI media types and `oci-artifact=true`;
+the workflow does not depend on the exporter's legacy attestation defaults or
+add a second output through the `push` shorthand.
 
-The image is pushed to GHCR as:
+The candidate is inspected by the immutable digest returned by
+`docker/build-push-action`; the mutable candidate tag is never used as the
+verification or promotion source. Before stable tags move, the gate requires:
+
+- the candidate's uncompressed layer digests and startup configuration to match
+  the image that passed the boot gate;
+- an exact single-platform index containing one `linux/amd64` runnable manifest
+  and one `unknown/unknown` OCI attestation manifest;
+- the attestation manifest's raw digest and byte size to match its index
+  descriptor;
+- the index reference annotation and the attestation `subject` digest, media
+  type, and byte size to bind that attestation exactly to the runnable manifest
+  descriptor;
+- the OCI artifact config to be the canonical empty JSON descriptor (`{}`:
+  SHA-256 `44136f…`, size `2`, with optional inline data exactly `e30=`);
+- exactly one in-toto layer whose descriptor is SLSA provenance v0.2;
+- the exact layer bytes fetched from GHCR to match the descriptor's byte size
+  and SHA-256 digest, and to decode as `https://in-toto.io/Statement/v1` with a
+  `https://slsa.dev/provenance/v0.2` predicate and the runnable manifest as its
+  sole subject;
+- that predicate to name the current GitHub Actions run as its builder and to
+  be canonically identical to the predicate Buildx exposes. An SBOM-only,
+  annotation-only, malformed, missing, duplicated, or mismatched attestation
+  fails closed.
+
+The identity step receives the workflow token only as `GHCR_TOKEN`. It uses
+Basic authentication to request a repository-scoped GHCR pull bearer, feeds
+both credentials to curl through stdin configuration rather than command-line
+arguments, and stores the fetched envelope in mode-`0600` temporary files that
+are removed on exit. No additional action or registry client is introduced.
+
+Only after those checks pass may the promotion script write a stable registry
+tag. Before any write it requires `git ls-remote --tags --refs origin` to
+succeed, parses only exact stable `MAJOR.MINOR.PATCH` tags without leading
+zeroes, requires the candidate version tag to exist, and compares arbitrarily
+long numeric segments by length and bytewise lexical order rather than bounded
+machine integers. A candidate newer than the highest remote stable tag, a
+missing candidate tag, malformed enumeration, or remote failure aborts closed.
+
+The script obtains a repository-scoped GHCR pull bearer and uses authenticated
+Distribution API `HEAD` requests with OCI and Docker media types to resolve the
+exact version tag. Credentials travel to curl through stdin configuration and
+all response/header state is private and removed on exit. Token and manifest
+requests have bounded connection and overall timeouts. Only an exact `404` means
+absent; an exact `200` must carry one valid `Docker-Content-Digest`. Any other
+status, network/authentication failure, timeout, or malformed response aborts.
+
+The version tag is immutable: when absent it is created from the verified
+candidate digest and then resolved again; when already equal it is a no-op; and
+when it resolves to any other digest promotion stops without a write. If the
+candidate is the highest stable remote version, a separate command then updates
+`:latest` from the same immutable candidate digest and verifies it with a fresh
+authenticated `HEAD`. If a newer stable Git tag exists, the historical version
+may still fill its own absent tag, but it explicitly leaves `:latest` untouched:
 
 ```text
 ghcr.io/<owner>/coderso-core:<version>
 ghcr.io/<owner>/coderso-core:latest
 ```
+
+An identity or provenance failure therefore leaves both existing stable tags
+untouched. A failure after the version write but before the latest write needs
+special handling: rerunning the Docker job re-exports time-bearing provenance,
+so its new candidate index may have a different digest even when the runnable
+filesystem is unchanged. Normal promotion rejects that rebuilt candidate
+against the immutable version tag and does not write `:latest`; it never assumes
+that a rerun reproduced the original artifact.
+
+Recovery is an explicit operator action through this workflow's
+`workflow_dispatch` inputs. The operator must take the exact version and
+immutable candidate/index digest from the original run whose identity gate
+passed and whose version-tag write succeeded, then provide both
+`recovery_image_version` and `recovery_image_digest`. The dedicated
+`recover-docker-image` job performs no build and publishes no new candidate. It
+validates both inputs before writing workflow outputs: the version must be exact
+stable SemVer and the digest must be lowercase `sha256:<64 hex>`, so whitespace,
+newlines, prerelease/build syntax, leading zeroes, and shell/output metacharacters
+fail before any derived ref exists. The job then requires the version to remain
+the highest stable tag on `origin`, resolves the
+existing version tag through an authenticated GHCR `HEAD`, requires byte-exact
+digest equality with the supplied original digest, then copies only
+`<version>@<digest>` to `:latest` and verifies the result. A missing input,
+different pre-write registry digest, stale version, tag-enumeration failure, or
+pre-write registry error aborts without a write. After Docker returns from the
+`:latest` write, a fresh authenticated `HEAD` verifies the result. A timeout,
+network error, or digest mismatch at that post-write check fails the job with
+the tag state explicitly unconfirmed; it cannot truthfully promise that no
+write occurred. The operator may safely rerun the same recovery inputs: the
+source remains the same pinned version digest and all pre-write guards execute
+again. This makes partial-promotion recovery executable without trusting the
+newly attested candidate from a rerun.
+
+The promotion step never rebuilds the image or re-resolves a mutable candidate
+or version tag as its source.
 
 The workflow lowercases the GHCR owner and image name before calling
 `docker/build-push-action`, because Docker image repository names must be

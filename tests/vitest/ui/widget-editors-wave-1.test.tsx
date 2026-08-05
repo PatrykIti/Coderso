@@ -4,6 +4,29 @@ import React from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, expect, test, vi } from "vitest";
 
+// Vitest hoists the mocks below, so these collection-time imports still bind to the stubs.
+// Loading the editor graphs here keeps transform cost outside each test's timeout budget.
+import {
+  AppointmentFormAdvancedEditor,
+  AppointmentFormVisualEditor,
+  AppointmentFormWizardEditor,
+} from "../../../core/admin/ui/widgets/editors/AppointmentFormEditors";
+import {
+  ContentListAdvancedEditor,
+  ContentListVisualEditor,
+  ContentListWizardEditor,
+} from "../../../core/admin/ui/widgets/editors/ContentListEditors";
+import {
+  PostsFeedAdvancedEditor,
+  PostsFeedVisualEditor,
+  PostsFeedWizardEditor,
+} from "../../../core/admin/ui/widgets/editors/PostsFeedEditors";
+import {
+  TemplateSectionAdvancedEditor,
+  TemplateSectionVisualEditor,
+  TemplateSectionWizardEditor,
+} from "../../../core/admin/ui/widgets/editors/TemplateSectionEditors";
+
 const widgetEditorState = vi.hoisted(() => ({
   templateId: "11111111-1111-4111-8111-111111111111",
   posts: [
@@ -291,12 +314,6 @@ afterEach(() => {
 });
 
 test("TemplateSection editors cover setup, visual summaries, and advanced diagnostics", async () => {
-  const {
-    TemplateSectionAdvancedEditor,
-    TemplateSectionVisualEditor,
-    TemplateSectionWizardEditor,
-  } = await import("../../../core/admin/ui/widgets/editors/TemplateSectionEditors");
-
   const onChange = vi.fn();
 
   const emptyView = mount(
@@ -357,12 +374,6 @@ test("TemplateSection editors cover setup, visual summaries, and advanced diagno
 });
 
 test("AppointmentForm editors update flow, copy, visibility, and advanced runtime fields", async () => {
-  const {
-    AppointmentFormAdvancedEditor,
-    AppointmentFormVisualEditor,
-    AppointmentFormWizardEditor,
-  } = await import("../../../core/admin/ui/widgets/editors/AppointmentFormEditors");
-
   const onChange = vi.fn();
   const view = mount(
     <>
@@ -410,9 +421,6 @@ test("AppointmentForm editors update flow, copy, visibility, and advanced runtim
 });
 
 test("PostsFeed editors cover source modes, manual posts, display toggles, and layout options", async () => {
-  const { PostsFeedAdvancedEditor, PostsFeedVisualEditor, PostsFeedWizardEditor } =
-    await import("../../../core/admin/ui/widgets/editors/PostsFeedEditors");
-
   const onChange = vi.fn();
 
   const view = mount(
@@ -454,9 +462,6 @@ test("PostsFeed editors cover source modes, manual posts, display toggles, and l
 });
 
 test("ContentList editors cover legacy/listing source modes and visual options", async () => {
-  const { ContentListAdvancedEditor, ContentListVisualEditor, ContentListWizardEditor } =
-    await import("../../../core/admin/ui/widgets/editors/ContentListEditors");
-
   const onChange = vi.fn();
   const view = mount(
     <>

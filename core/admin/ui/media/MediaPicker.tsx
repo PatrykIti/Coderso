@@ -17,10 +17,15 @@ import { getCachedMedia, listMediaCached } from "@/services/mediaClient";
 import { MediaGrid } from "@/ui/media/MediaGrid";
 import type { MediaItem } from "@/ui/media/types";
 import { formatBytes, resolveMediaDisplayName, toMediaItem } from "@/ui/media/utils";
+import {
+  normalizeMediaPickerValue,
+  type MediaPickerSelectionValue,
+  type MediaPickerValue,
+} from "./mediaPickerValue";
 
 type MediaPickerProps = {
-  value: unknown;
-  onChange: (value: unknown) => void;
+  value: MediaPickerValue;
+  onChange: (value: MediaPickerSelectionValue) => void;
   multiple?: boolean;
   accept?: string[];
   maxItems?: number;
@@ -78,10 +83,9 @@ export function MediaPicker({
   const [hasLoaded, setHasLoaded] = useState(false);
 
   const selectedIds = useMemo(() => {
-    if (multiple) {
-      return Array.isArray(value) ? value.map(String) : [];
-    }
-    return value ? [String(value)] : [];
+    const normalized = normalizeMediaPickerValue(value, multiple);
+    if (Array.isArray(normalized)) return normalized;
+    return typeof normalized === "string" ? [normalized] : [];
   }, [multiple, value]);
 
   const selectedItems = useMemo(

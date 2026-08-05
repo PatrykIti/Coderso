@@ -77,6 +77,12 @@ export type { DatabaseEnvMap };
 export const DATABASE_URL_ENV = "DATABASE_URL";
 export const DATABASE_DIRECT_URL_ENV = "DATABASE_DIRECT_URL";
 export const DATABASE_POOLED_PORT_ENV = "DATABASE_POOLED_PORT";
+export const DATABASE_POOL_MAX_ENV = "DB_POOL_MAX";
+
+/** The bounded per-process pool contract shared with the database client. */
+export const DEFAULT_DATABASE_POOL_MAX = 10;
+export const MIN_DATABASE_POOL_MAX = 1;
+export const MAX_DATABASE_POOL_MAX = 50;
 
 /** PgBouncer's port on Render. Overridable via `DATABASE_POOLED_PORT`. */
 export const DEFAULT_POOLED_DATABASE_PORT = 6432;
@@ -153,6 +159,37 @@ const normalizeOptionalString = (value: string | undefined): string | null => {
   const normalized = value?.trim();
   return normalized && normalized.length > 0 ? normalized : null;
 };
+
+const invalidDatabasePoolMax = (): Error =>
+  new Error(
+    `database_pool_max_invalid: ${DATABASE_POOL_MAX_ENV} must be a decimal integer between ` +
+      `${MIN_DATABASE_POOL_MAX} and ${MAX_DATABASE_POOL_MAX}.`
+  );
+
+/**
+ * Resolve the per-process pool limit without importing or opening the database
+ * client. An explicitly configured value is strict: postgres.js must never see
+ * a partial `parseInt` result, an unsafe integer, or an unbounded socket count.
+ */
+export function resolveDatabasePoolMax(env: DatabaseEnvMap = process.env): number {
+  const configured = env[DATABASE_POOL_MAX_ENV];
+  if (configured === undefined) return DEFAULT_DATABASE_POOL_MAX;
+
+  if (!/^[0-9]+$/u.test(configured)) {
+    throw invalidDatabasePoolMax();
+  }
+
+  const parsed = Number(configured);
+  if (
+    !Number.isSafeInteger(parsed) ||
+    parsed < MIN_DATABASE_POOL_MAX ||
+    parsed > MAX_DATABASE_POOL_MAX
+  ) {
+    throw invalidDatabasePoolMax();
+  }
+
+  return parsed;
+}
 
 /**
  * Resolve the port PgBouncer is expected on. Misconfiguring this would silently

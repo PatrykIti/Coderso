@@ -203,11 +203,13 @@ vi.mock("@/ui/posts/editor/richtext/PostRichTextAdapter", () => ({
 
 vi.mock("@/ui/media/MediaPicker", () => ({
   MediaPicker: ({
+    value,
     onChange,
     multiple,
     maxItems,
     accept,
   }: {
+    value?: string | string[] | null;
     // The three shapes the real picker emits: an id, an id list, and a clear.
     onChange: (value: string | string[] | null) => void;
     multiple?: boolean;
@@ -221,6 +223,7 @@ vi.mock("@/ui/media/MediaPicker", () => ({
       <span>{`media-multiple:${String(Boolean(multiple))}`}</span>
       <span>{`media-max:${maxItems ?? "none"}`}</span>
       <span>{`media-accept:${(accept ?? []).join("|") || "none"}`}</span>
+      <span>{`media-value:${Array.isArray(value) ? value.join("|") : String(value)}`}</span>
     </div>
   ),
 }));
@@ -346,6 +349,10 @@ test("FieldRenderer covers primitive, media, relation fallback, and unknown fiel
       setInputValue(numberInput ?? undefined, "42");
     });
     expect(onChange).toHaveBeenLastCalledWith(42);
+    React.act(() => {
+      setInputValue(numberInput ?? undefined, "1e309");
+    });
+    expect(onChange).toHaveBeenLastCalledWith(null);
 
     textView.rerender(
       <FieldRenderer
@@ -437,6 +444,20 @@ test("FieldRenderer covers primitive, media, relation fallback, and unknown fiel
         ?.click();
     });
     expect(onChange).toHaveBeenLastCalledWith("media-1");
+
+    textView.rerender(
+      <FieldRenderer
+        field={{
+          id: "field-media-invalid",
+          name: "cover",
+          type: "media",
+          label: "Cover",
+        }}
+        value={42}
+        onChange={onChange}
+      />
+    );
+    expect(textView.container.textContent).toContain("media-value:null");
 
     textView.rerender(
       <FieldRenderer

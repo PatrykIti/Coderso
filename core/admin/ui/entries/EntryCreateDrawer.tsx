@@ -16,7 +16,12 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { isApiClientError } from "@/services/apiClient";
 import type { ContentSchema } from "@/services/contentTypesClient";
-import { createEntry, type EntryDetail } from "@/services/entriesClient";
+import {
+  createEntry,
+  type EntryData,
+  type EntryDataValue,
+  type EntryDetail,
+} from "@/services/entriesClient";
 
 import { fieldsFromSchema } from "../content-types/schemaMapping";
 import { getContentTypeLabels } from "./contentTypeLabels";
@@ -74,9 +79,7 @@ export function EntryCreateDrawer({
   const [slug, setSlug] = useState("");
   const [slugTouched, setSlugTouched] = useState(false);
   const [openAfterCreate, setOpenAfterCreate] = useState(true);
-  const [editedValuesByType, setEditedValuesByType] = useState<
-    Record<string, Record<string, unknown>>
-  >({});
+  const [editedValuesByType, setEditedValuesByType] = useState<Record<string, EntryData>>({});
   const [error, setError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -153,7 +156,7 @@ export function EntryCreateDrawer({
     () => ({ ...seededValues, ...(editedValuesByType[resolvedTypeSlug] ?? {}) }),
     [seededValues, editedValuesByType, resolvedTypeSlug]
   );
-  const setFieldValue = (fieldName: string, next: unknown) => {
+  const setFieldValue = (fieldName: string, next: EntryDataValue) => {
     setEditedValuesByType((current) => ({
       ...current,
       [resolvedTypeSlug]: { ...(current[resolvedTypeSlug] ?? {}), [fieldName]: next },

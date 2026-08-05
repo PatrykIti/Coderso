@@ -4,6 +4,14 @@ import React, { useState } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, expect, test, vi } from "vitest";
 
+// Vitest hoists the mocks below, so importing the editors during collection still binds them
+// to the stubbed admin primitives. Keeping this module graph outside individual tests prevents
+// transform time from consuming the first test's timeout under full-suite contention.
+import {
+  FooterAdvancedEditor,
+  FooterVisualEditor,
+  FooterWizardEditor,
+} from "../../../core/admin/ui/widgets/editors/FooterEditors";
 import type { FooterData } from "../../../core/widgets/core/footer";
 import type { WidgetBlock } from "../../../core/widgets/types";
 import { RETAINED_COLOR_FIELDS } from "../widgets/retainedColorConsumerTable";
@@ -332,9 +340,6 @@ afterEach(() => {
 });
 
 test("FooterWizardEditor keeps social setup bounded to visibility while preserving saved profiles", async () => {
-  const { FooterWizardEditor } =
-    await import("../../../core/admin/ui/widgets/editors/FooterEditors");
-
   let latestValue: FooterData = {
     columns: [
       {
@@ -417,9 +422,6 @@ test("FooterWizardEditor keeps social setup bounded to visibility while preservi
 });
 
 test("FooterVisualEditor fails closed for unsafe saved logo preview", async () => {
-  const { FooterVisualEditor } =
-    await import("../../../core/admin/ui/widgets/editors/FooterEditors");
-
   const view = mount(
     <FooterVisualEditor
       value={{
@@ -449,9 +451,6 @@ test("FooterVisualEditor fails closed for unsafe saved logo preview", async () =
 });
 
 test("FooterVisualEditor keeps link ordering deterministic and exposes beginner-safe visual controls", async () => {
-  const { FooterVisualEditor } =
-    await import("../../../core/admin/ui/widgets/editors/FooterEditors");
-
   let latestValue: FooterData = {
     columns: [
       {
@@ -626,9 +625,6 @@ test("FooterVisualEditor keeps link ordering deterministic and exposes beginner-
 });
 
 test("FooterVisualEditor reorders columns through live block patching and keeps slot ownership aligned", async () => {
-  const { FooterVisualEditor } =
-    await import("../../../core/admin/ui/widgets/editors/FooterEditors");
-
   type FooterEditorBlock = WidgetBlock & {
     variant: string;
     data: FooterData;
@@ -688,9 +684,6 @@ test("FooterVisualEditor reorders columns through live block patching and keeps 
 });
 
 test("FooterAdvancedEditor is read-only diagnostics while Visual owns layout tokens", async () => {
-  const { FooterAdvancedEditor, FooterVisualEditor } =
-    await import("../../../core/admin/ui/widgets/editors/FooterEditors");
-
   let latestValue: FooterData = {
     columns: [{ title: "Company", links: [] }],
     layout: {},
@@ -758,9 +751,6 @@ test("FooterAdvancedEditor is read-only diagnostics while Visual owns layout tok
 });
 
 test("FooterVisualEditor preserves inherited states for every retained color and emits picker replacement plus clear exactly", async () => {
-  const { FooterVisualEditor } =
-    await import("../../../core/admin/ui/widgets/editors/FooterEditors");
-
   const inheritedStyle = Object.fromEntries(
     RETAINED_COLOR_FIELDS.footer.map(({ path }, index) => [
       path.slice("style.".length),

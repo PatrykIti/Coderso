@@ -66,10 +66,12 @@ export const accessLogs = pgTable(
     // failures with a console.warn, so a btree here would let any client silence
     // its own access-log trail with a long high-entropy User-Agent. A hash index
     // stores a 32-bit hash: no ceiling, no such failure mode (verified accepting
-    // a 32 kB User-Agent). Equality-only suffices and is planner-usable: callers
-    // filter `WHERE user_agent IN (...)`, which PostgreSQL executes as a Bitmap
-    // Index Scan over this index (one search per array element), replacing a
-    // 4,009-block Seq Scan of all 97,865 rows.
+    // a 32 kB User-Agent). Equality-only suffices and is planner-usable: recurring
+    // canonical smoke access-log lookups filter `WHERE user_agent IN (...)`, which
+    // PostgreSQL executes as a Bitmap Index Scan over this index (one search per
+    // array element), replacing a 4,009-block Seq Scan of all 97,865 rows. This is
+    // an intentional owner-approved test-infrastructure optimization; do not remove
+    // it as diagnostic-only without an equivalently measured bounded lookup.
     userAgentIdx: index("access_logs_user_agent_idx").using("hash", t.userAgent),
   })
 );

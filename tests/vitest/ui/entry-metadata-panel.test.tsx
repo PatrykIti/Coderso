@@ -360,6 +360,53 @@ test("regression: checklist, SEO description, tag add, save metadata remain wire
   cleanup();
 });
 
+test("save and delete stay fail-closed until the host confirms a hydrated entry", () => {
+  const onSave = vi.fn();
+  const onDelete = vi.fn();
+  const panel = (canMutate: boolean) => (
+    <EntryMetadataPanel
+      {...baseProps}
+      onSave={onSave}
+      canSave={canMutate}
+      onDelete={onDelete}
+      canDelete={canMutate}
+    />
+  );
+  const { container, rerender, cleanup } = mount(panel(false));
+  const findAction = (label: RegExp) =>
+    Array.from(container.querySelectorAll("button")).find((button) =>
+      label.test(button.textContent ?? "")
+    );
+
+  const blockedSave = findAction(/save metadata/i);
+  const blockedDelete = findAction(/delete entry/i);
+  expect(blockedSave).toBeInstanceOf(HTMLButtonElement);
+  expect(blockedDelete).toBeInstanceOf(HTMLButtonElement);
+  expect(blockedSave?.disabled).toBe(true);
+  expect(blockedDelete?.disabled).toBe(true);
+
+  React.act(() => {
+    blockedSave?.click();
+    blockedDelete?.click();
+  });
+  expect(onSave).not.toHaveBeenCalled();
+  expect(onDelete).not.toHaveBeenCalled();
+
+  rerender(panel(true));
+  const readySave = findAction(/save metadata/i);
+  const readyDelete = findAction(/delete entry/i);
+  expect(readySave?.disabled).toBe(false);
+  expect(readyDelete?.disabled).toBe(false);
+
+  React.act(() => {
+    readySave?.click();
+    readyDelete?.click();
+  });
+  expect(onSave).toHaveBeenCalledTimes(1);
+  expect(onDelete).toHaveBeenCalledTimes(1);
+  cleanup();
+});
+
 // ---------------------------------------------------------------------------
 // Taxonomy decisions that outlive the action that formed them.
 //

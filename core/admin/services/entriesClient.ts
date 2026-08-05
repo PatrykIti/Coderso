@@ -1,7 +1,11 @@
-import { apiRequest } from "./apiClient";
+import { ApiClientError, apiRequest } from "./apiClient";
 import { broadcastCacheEvent } from "@/utils/cacheBus";
 import { cacheKeys, cacheTtlMs } from "@/services/cachePolicy";
 import { clearLocalCache, readLocalCache, writeLocalCache } from "@/utils/storageCache";
+import { isEntryData, type EntryData } from "./entryData";
+
+export { isEntryData, isEntryDataValue } from "./entryData";
+export type { EntryData, EntryDataValue } from "./entryData";
 
 export type EntryStatus = "draft" | "published" | "scheduled" | "archived";
 
@@ -21,7 +25,7 @@ export type EntrySummary = {
   status: EntryStatus;
   visibility: EntryVisibility;
   hasPassword: boolean;
-  data: Record<string, unknown>;
+  data: EntryData;
   tags?: string[];
   scheduledAt?: string | null;
   createdAt: string;
@@ -67,7 +71,7 @@ export type EntrySeo = {
 export type EntryPayload = {
   title: string;
   slug: string;
-  data: Record<string, unknown>;
+  data: EntryData;
 };
 
 export type EntryMetadataPayload = {
@@ -87,6 +91,19 @@ export type PreviewResponse = {
   token: string;
   previewUrl: string;
   expiresAt: string;
+};
+
+const invalidEntryDataError = () =>
+  new ApiClientError("entry_data_invalid", "Entry data is invalid.", 400, { field: "data" });
+
+const assertCreateEntryData = (payload: EntryPayload) => {
+  if (!isEntryData(payload.data)) throw invalidEntryDataError();
+};
+
+const assertUpdateEntryData = (payload: Partial<EntryPayload>) => {
+  if (Object.prototype.hasOwnProperty.call(payload, "data") && !isEntryData(payload.data)) {
+    throw invalidEntryDataError();
+  }
 };
 
 type PendingVersioned<T> = Readonly<{ promise: Promise<T>; version: number }>;
@@ -593,6 +610,7 @@ export function getEntryCached(
 }
 
 export async function createEntry(typeSlug: string, payload: EntryPayload) {
+  assertCreateEntryData(payload);
   const created = await apiRequest<EntryDetail>(
     `/content/${typeSlug}/entries`,
     {
@@ -615,6 +633,7 @@ export async function createEntry(typeSlug: string, payload: EntryPayload) {
 }
 
 export async function updateEntry(typeSlug: string, id: string, payload: Partial<EntryPayload>) {
+  assertUpdateEntryData(payload);
   const updated = await apiRequest<EntryDetail>(
     `/content/${typeSlug}/entries/${id}`,
     {

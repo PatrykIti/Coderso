@@ -449,7 +449,7 @@ if (verifiedLazyPackages.length > 0) {
   );
   const seen = new Set();
   for (const { file, specifier } of verifiedLazyPackages) {
-    const key = `${specifier} ${file}`;
+    const key = `${specifier}\u0000${file}`;
     if (seen.has(key)) continue;
     seen.add(key);
     process.stdout.write(`  ${specifier.padEnd(34)} <- ${file}\n`);

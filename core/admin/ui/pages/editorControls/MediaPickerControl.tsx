@@ -11,8 +11,8 @@ import {
 export type MediaPickerControlProps = {
   label: string;
   /** Media asset id (string) or null/undefined when nothing is selected. */
-  value: unknown;
-  onChange: (value: unknown) => void;
+  value: string | null | undefined;
+  onChange: (value: string | null) => void;
   /** Mime patterns forwarded to the shared media picker, e.g. ["image/*"]. */
   accept?: string[];
   disabled?: boolean;
@@ -45,7 +45,7 @@ export const MediaPickerControl = ({
       <div className={disabled ? "pointer-events-none opacity-50" : undefined}>
         <MediaPicker
           value={value}
-          onChange={onChange}
+          onChange={(next) => onChange(typeof next === "string" ? next : null)}
           multiple={false}
           accept={accept}
           triggerButtonClassName={editorButtonClassFor(resolvedTone)}

@@ -3,12 +3,17 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import {
   DATABASE_DIRECT_URL_ENV,
+  DATABASE_POOL_MAX_ENV,
   DATABASE_POOLED_PORT_ENV,
   DATABASE_URL_ENV,
+  DEFAULT_DATABASE_POOL_MAX,
   DEFAULT_POOLED_DATABASE_PORT,
   DEFAULT_POSTGRES_PORT,
+  MAX_DATABASE_POOL_MAX,
+  MIN_DATABASE_POOL_MAX,
   describeSessionDatabaseTarget,
   inspectDatabaseUrl,
+  resolveDatabasePoolMax,
   resolveDefaultDatabaseTarget,
   resolvePooledDatabasePort,
   resolveSessionDatabaseTarget,
@@ -120,6 +125,58 @@ function createFakeSessionClient(): FakeSessionClient {
 function createLogger() {
   return { log: vi.fn<(message: string) => void>() };
 }
+
+describe("resolveDatabasePoolMax", () => {
+  test("uses the explicit documented default only when the key is absent", () => {
+    expect(resolveDatabasePoolMax({})).toBe(DEFAULT_DATABASE_POOL_MAX);
+    expect(resolveDatabasePoolMax({ [DATABASE_POOL_MAX_ENV]: undefined })).toBe(
+      DEFAULT_DATABASE_POOL_MAX
+    );
+    expect(DEFAULT_DATABASE_POOL_MAX).toBe(10);
+  });
+
+  test("accepts the complete inclusive pool bounds", () => {
+    expect(resolveDatabasePoolMax({ [DATABASE_POOL_MAX_ENV]: "1" })).toBe(MIN_DATABASE_POOL_MAX);
+    expect(resolveDatabasePoolMax({ [DATABASE_POOL_MAX_ENV]: "10" })).toBe(10);
+    expect(resolveDatabasePoolMax({ [DATABASE_POOL_MAX_ENV]: "50" })).toBe(MAX_DATABASE_POOL_MAX);
+  });
+
+  test("rejects malformed, out-of-range, suffixed and overflowing values", () => {
+    for (const value of [
+      "",
+      " ",
+      "0",
+      "-1",
+      "51",
+      "1.5",
+      "1e1",
+      "+10",
+      "10connections",
+      "NaN",
+      "Infinity",
+      "9007199254740992",
+    ]) {
+      expect(() => resolveDatabasePoolMax({ [DATABASE_POOL_MAX_ENV]: value })).toThrow(
+        /^database_pool_max_invalid:/
+      );
+    }
+  });
+
+  test("does not echo an invalid configured value", () => {
+    const configured = "10-private-deployment-marker";
+    let thrown: unknown;
+    try {
+      resolveDatabasePoolMax({ [DATABASE_POOL_MAX_ENV]: configured });
+    } catch (error) {
+      thrown = error;
+    }
+
+    expect(thrown).toBeInstanceOf(Error);
+    const message = thrown instanceof Error ? thrown.message : "";
+    expect(message).toMatch(/^database_pool_max_invalid:/);
+    expect(message).not.toContain(configured);
+  });
+});
 
 describe("resolvePooledDatabasePort", () => {
   test("defaults to Render's PgBouncer port", () => {

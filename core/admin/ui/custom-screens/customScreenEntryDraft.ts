@@ -1,6 +1,11 @@
 import type { ApiClientError } from "@/services/apiClient";
 import type { ContentTypeSummary } from "@/services/contentTypesClient";
-import type { EntryDetail, EntryPayload } from "@/services/entriesClient";
+import type {
+  EntryData,
+  EntryDataValue,
+  EntryDetail,
+  EntryPayload,
+} from "@/services/entriesClient";
 import { fieldsFromSchema } from "@/ui/content-types/schemaMapping";
 import type { ContentField } from "@/ui/content-types/SchemaBuilder";
 import type {
@@ -12,9 +17,9 @@ import { collectWritableBindingFields } from "../../../services/customScreens/bi
 export type CustomScreenEntryDraft = {
   title: string;
   slug: string;
-  data: Record<string, unknown>;
+  data: EntryData;
   editableFields: string[];
-  originalData: Record<string, unknown>;
+  originalData: EntryData;
   fieldErrors: Record<string, string>;
 };
 
@@ -27,23 +32,33 @@ type ApiValidationDetail = {
   params?: Record<string, unknown>;
 };
 
+const readEntryDataValue = (data: EntryData, field: string): EntryDataValue | undefined =>
+  data[field];
+
+const pickPresentEntryData = (data: EntryData, fields: string[]): EntryData =>
+  fields.reduce<EntryData>((result, field) => {
+    const value = readEntryDataValue(data, field);
+    if (value !== undefined) result[field] = value;
+    return result;
+  }, {});
+
 const isEmptyValue = (value: unknown) =>
   value === undefined ||
   value === null ||
   value === "" ||
   (Array.isArray(value) && value.length === 0);
 
-function resolveDefaultValue(field: ContentField) {
+function resolveDefaultValue(field: ContentField): EntryDataValue | undefined {
   if (field.defaultValue === undefined || field.defaultValue === "") return undefined;
   if (field.type === "number") {
     const parsed = Number(field.defaultValue);
-    return Number.isNaN(parsed) ? undefined : parsed;
+    return Number.isFinite(parsed) ? parsed : undefined;
   }
   if (field.type === "boolean") return field.defaultValue === "true";
   return field.defaultValue;
 }
 
-function fallbackValueForField(field: ContentField) {
+function fallbackValueForField(field: ContentField): EntryDataValue {
   const defaultValue = resolveDefaultValue(field);
   if (defaultValue !== undefined) return defaultValue;
   if (field.type === "boolean") return false;
@@ -80,16 +95,13 @@ export function collectEditorViewWritableFields(
 export function buildSchemaDefaultData(input: {
   contentType: ContentTypeSummary;
   fields: string[];
-}) {
+}): EntryData {
   const fieldSet = new Set(input.fields);
-  return fieldsFromSchema(input.contentType.schema).reduce<Record<string, unknown>>(
-    (result, field) => {
-      if (!fieldSet.has(field.name)) return result;
-      result[field.name] = fallbackValueForField(field);
-      return result;
-    },
-    {}
-  );
+  return fieldsFromSchema(input.contentType.schema).reduce<EntryData>((result, field) => {
+    if (!fieldSet.has(field.name)) return result;
+    result[field.name] = fallbackValueForField(field);
+    return result;
+  }, {});
 }
 
 export function buildInitialEntryDraft(input: {
@@ -161,9 +173,7 @@ export function buildEditorViewCreatePayload(input: {
   contentType: ContentTypeSummary;
   draft: CustomScreenEntryDraft;
 }): EntryPayload {
-  const data = Object.fromEntries(
-    input.draft.editableFields.map((field) => [field, input.draft.data[field]])
-  );
+  const data = pickPresentEntryData(input.draft.data, input.draft.editableFields);
   return {
     title: input.draft.title.trim(),
     slug: input.draft.slug.trim(),
@@ -175,9 +185,7 @@ export function buildEditorViewUpdatePayload(input: {
   contentType: ContentTypeSummary;
   draft: CustomScreenEntryDraft;
 }): EntryPayload {
-  const editedData = Object.fromEntries(
-    input.draft.editableFields.map((field) => [field, input.draft.data[field]])
-  );
+  const editedData = pickPresentEntryData(input.draft.data, input.draft.editableFields);
   return {
     title: input.draft.title.trim(),
     slug: input.draft.slug.trim(),

@@ -4,6 +4,7 @@ import { AlertTriangle, Image as ImageIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
+import { isEntryDataValue } from "@/services/entryData";
 import { InlineEditWrapper } from "@/ui/authoring";
 import { FieldRenderer } from "@/ui/entries/FieldRenderer";
 import {
@@ -206,7 +207,7 @@ export function ScreenRuntimeLeafBlock({ block, context }: ScreenRuntimeLeafBloc
                 <div className={context.presentation.withTextClassName(block.id, "mt-3")}>
                   <FieldRenderer
                     field={field!}
-                    value={displayValue}
+                    value={isEntryDataValue(displayValue) ? displayValue : undefined}
                     onChange={(next) => context.onFieldChange?.(field!.name, next)}
                     relationTargets={context.relationTargets}
                     display="compact"

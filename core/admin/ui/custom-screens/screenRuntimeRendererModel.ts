@@ -1,6 +1,7 @@
 import type { CSSProperties, ReactNode } from "react";
 
 import { cn } from "@/lib/utils";
+import type { EntryDataValue } from "@/services/entriesClient";
 import {
   type ScreenBlockStyleV1,
   type ScreenBlockV1,
@@ -42,7 +43,7 @@ export type ScreenRuntimeRendererProps = {
   insertPoint?: ScreenInsertTarget | null;
   onSetInsertPoint?: (target: ScreenInsertTarget | null) => void;
   onDragMove?: (blockId: string, target: ScreenInsertTarget) => void;
-  onFieldChange?: (field: string, value: unknown) => void;
+  onFieldChange?: (field: string, value: EntryDataValue) => void;
   onTitleChange?: (value: string) => void;
   onSlugChange?: (value: string) => void;
   renderBuilderActions?: (block: ScreenBlockV1) => ReactNode;
@@ -228,7 +229,7 @@ export const editableTextValue = (value: unknown) => {
   return String(value);
 };
 
-export const normalizeInlineFieldValue = (value: string, field: ContentField) => {
+export const normalizeInlineFieldValue = (value: string, field: ContentField): EntryDataValue => {
   if (field.type !== "number") return value;
   if (!value.trim()) return "";
   const parsed = Number(value);

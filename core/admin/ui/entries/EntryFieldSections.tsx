@@ -1,5 +1,6 @@
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import type { EntryData, EntryDataValue } from "@/services/entriesClient";
 
 import { FieldRenderer } from "./FieldRenderer";
 import type { EntryFieldSection } from "./entryFieldGroups";
@@ -14,10 +15,10 @@ import type { EntryRelationTarget } from "./useEntryRelationTargets";
  */
 type EntryFieldSectionsProps = {
   sections: EntryFieldSection[];
-  values: Record<string, unknown>;
+  values: EntryData;
   relationTargets: EntryRelationTarget[];
   missingRequiredNames: ReadonlySet<string>;
-  onFieldChange: (name: string, value: unknown) => void;
+  onFieldChange: (name: string, value: EntryDataValue) => void;
 };
 
 export function EntryFieldSections({

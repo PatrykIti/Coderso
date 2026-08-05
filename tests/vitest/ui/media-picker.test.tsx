@@ -8,6 +8,7 @@ import { renderAdminUi } from "../../utils/adminRouterRender";
 import { cacheKeys } from "../../../core/admin/services/cachePolicy";
 import { clearMediaCache, type MediaRecord } from "../../../core/admin/services/mediaClient";
 import { MediaPicker } from "../../../core/admin/ui/media/MediaPicker";
+import { normalizeMediaPickerValue } from "../../../core/admin/ui/media/mediaPickerValue";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -109,6 +110,14 @@ test("MediaPicker renders browse button", () => {
   const html = renderAdminUi(<MediaPicker value={null} onChange={() => undefined} />);
 
   expect(html).toContain("Browse media");
+});
+
+test("normalizeMediaPickerValue preserves string ids and rejects non-string ids", () => {
+  expect(normalizeMediaPickerValue("asset-1", false)).toBe("asset-1");
+  expect(normalizeMediaPickerValue(["asset-1", "asset-2"], true)).toEqual(["asset-1", "asset-2"]);
+  expect(normalizeMediaPickerValue(42, false)).toBeNull();
+  expect(normalizeMediaPickerValue({ id: "asset-1" }, false)).toBeNull();
+  expect(normalizeMediaPickerValue(["asset-1", 42, { id: "asset-2" }], true)).toEqual(["asset-1"]);
 });
 
 test("MediaPicker shows loading state for selected media until assets are resolved", () => {

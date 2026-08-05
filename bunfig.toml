@@ -1,3 +1,6 @@
 [install]
 linker = "hoisted"
 minimumReleaseAge = 604800
+# Security-only exceptions while the fixed releases complete the seven-day quarantine:
+# remove brace-expansion after 2026-08-06T10:00:32.762Z and fast-uri after 2026-08-07T09:16:56.212Z.
+minimumReleaseAgeExcludes = ["brace-expansion", "fast-uri"]

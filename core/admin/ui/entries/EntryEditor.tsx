@@ -18,6 +18,8 @@ import {
   publishEntry,
   updateEntryMetadata,
   updateEntry,
+  type EntryData,
+  type EntryDataValue,
   type EntryDetail,
   type EntryVisibility,
 } from "@/services/entriesClient";
@@ -140,7 +142,7 @@ function EntryEditorInstance({ type, id }: EntryEditorInstanceProps) {
   const [contentTypeId, setContentTypeId] = useState<string | null>(null);
   const [contentTypeName, setContentTypeName] = useState<string | null>(null);
   const [fields, setFields] = useState<ContentField[]>([]);
-  const [values, setValues] = useState<Record<string, unknown>>({});
+  const [values, setValues] = useState<EntryData>({});
   const [status, setStatus] = useState<EntryStatus>("draft");
   // Visibility (514-03). Two password states only: "" = untouched (keep the
   // stored hash), a non-empty string = a newly typed password. Removing a
@@ -477,7 +479,7 @@ function EntryEditorInstance({ type, id }: EntryEditorInstanceProps) {
     markEdited(entryFieldEditedKey(name));
   };
 
-  const handleFieldChange = (name: string, value: unknown) => {
+  const handleFieldChange = (name: string, value: EntryDataValue) => {
     // A schema field carrying a linked name edits the entry column, whichever surface it is
     // rendered on. Both columns are strings, so a non-string value is out of that contract and
     // stays an ordinary field write rather than being coerced into the column.

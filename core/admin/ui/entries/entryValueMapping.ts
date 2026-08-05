@@ -1,4 +1,5 @@
-import type { EntryDetail } from "@/services/entriesClient";
+import type { EntryData, EntryDataValue, EntryDetail } from "@/services/entriesClient";
+import { isEntryData } from "@/services/entryData";
 
 import type { ContentField } from "../content-types/SchemaBuilder";
 import { buildSchemaFromFields } from "../content-types/schemaMapping";
@@ -20,14 +21,11 @@ import {
  * the next save silently replaces.
  */
 
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  Boolean(value) && typeof value === "object" && !Array.isArray(value);
-
-function resolveDefaultValue(field: ContentField) {
+function resolveDefaultValue(field: ContentField): EntryDataValue {
   if (field.defaultValue === undefined || field.defaultValue === "") return null;
   if (field.type === "number") {
     const parsed = Number(field.defaultValue);
-    return Number.isNaN(parsed) ? null : parsed;
+    return Number.isFinite(parsed) ? parsed : null;
   }
   if (field.type === "boolean") {
     return field.defaultValue === "true";
@@ -37,10 +35,10 @@ function resolveDefaultValue(field: ContentField) {
 
 export function buildInitialValues(
   fields: ContentField[],
-  data: Record<string, unknown>,
+  data: EntryData,
   columns: EntryLinkedColumnValues
-) {
-  return fields.reduce<Record<string, unknown>>((acc, field) => {
+): EntryData {
+  return fields.reduce<EntryData>((acc, field) => {
     // A linked name has two homes and one authority. Hydrating this copy from `data` would
     // show whatever the last writer of THAT half left there, while `buildEntryPayloadData`
     // below writes the column into `data` on the next save regardless.
@@ -66,11 +64,11 @@ export function buildInitialValues(
  * fact as "edited by the user".
  */
 export function mergeEditedFieldValues(
-  baseValues: Record<string, unknown>,
-  currentValues: Record<string, unknown>,
+  baseValues: EntryData,
+  currentValues: EntryData,
   isEditedFieldName: (fieldName: string) => boolean
-): Record<string, unknown> {
-  const merged: Record<string, unknown> = { ...baseValues };
+): EntryData {
+  const merged: EntryData = { ...baseValues };
   Object.keys(currentValues).forEach((fieldName) => {
     if (isEditedFieldName(fieldName)) merged[fieldName] = currentValues[fieldName];
   });
@@ -79,7 +77,7 @@ export function mergeEditedFieldValues(
 
 export type EntryPayloadDataInput = Readonly<{
   fields: ContentField[];
-  values: Record<string, unknown>;
+  values: EntryData;
   entry: EntryDetail | null;
   columns: EntryLinkedColumnValues;
   hiddenFieldNames: ReadonlySet<string>;
@@ -93,10 +91,10 @@ export function buildEntryPayloadData({
   columns,
   hiddenFieldNames,
   schemaFieldNames,
-}: EntryPayloadDataInput): Record<string, unknown> {
+}: EntryPayloadDataInput): EntryData {
   const schema = buildSchemaFromFields(fields);
-  const data: Record<string, unknown> = {};
-  if (isRecord(entry?.data)) {
+  const data: EntryData = {};
+  if (isEntryData(entry?.data)) {
     hiddenFieldNames.forEach((key) => {
       if (entry.data[key] !== undefined) {
         data[key] = entry.data[key];

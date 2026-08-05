@@ -11,8 +11,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { isApiClientError } from "@/services/apiClient";
-import { listEntriesCached, type EntrySummary } from "@/services/entriesClient";
+import {
+  listEntriesCached,
+  type EntryDataValue,
+  type EntrySummary,
+} from "@/services/entriesClient";
 import { MediaPicker } from "@/ui/media/MediaPicker";
+import { normalizeMediaPickerValue } from "@/ui/media/mediaPickerValue";
 import { PostRichTextAdapter } from "@/ui/posts/editor/richtext/PostRichTextAdapter";
 import { serializePostRichText } from "../../../services/posts/editor/postRichTextSerializer";
 
@@ -20,8 +25,8 @@ import { slugifyFieldName, type ContentField } from "../content-types/SchemaBuil
 
 type FieldRendererProps = {
   field: ContentField;
-  value: unknown;
-  onChange: (value: unknown) => void;
+  value: EntryDataValue | undefined;
+  onChange: (value: EntryDataValue) => void;
   relationTargets?: Array<{ slug: string; name: string }>;
   display?: "default" | "compact";
 };
@@ -54,8 +59,8 @@ const normalizeSelectOptions = (options: unknown) => {
 type RelationSelectProps = {
   targetSlug: string;
   targetName?: string;
-  value: unknown;
-  onChange: (value: unknown) => void;
+  value: EntryDataValue | undefined;
+  onChange: (value: EntryDataValue) => void;
   multiple?: boolean;
   helpText?: string;
   compact?: boolean;
@@ -267,7 +272,8 @@ export function FieldRenderer({
             value={value !== null && value !== undefined ? String(value) : ""}
             onChange={(event) => {
               const next = event.target.value;
-              onChange(next === "" ? null : Number(next));
+              const parsed = Number(next);
+              onChange(next === "" || !Number.isFinite(parsed) ? null : parsed);
             }}
             className={inputClass}
           />
@@ -359,10 +365,11 @@ export function FieldRenderer({
       );
     }
     case "media": {
+      const mediaMultiple = field.media?.multiple ?? Array.isArray(value);
       const mediaHint = (() => {
         if (customHelp) return customHelp;
-        if (field.media?.multiple) {
-          return field.media.maxItems
+        if (mediaMultiple) {
+          return field.media?.maxItems
             ? `Select up to ${field.media.maxItems} assets from the library.`
             : "Select one or more assets from the library.";
         }
@@ -372,9 +379,9 @@ export function FieldRenderer({
       return (
         <div className={spacingClass}>
           <MediaPicker
-            value={value}
+            value={normalizeMediaPickerValue(value, mediaMultiple)}
             onChange={onChange}
-            multiple={field.media?.multiple}
+            multiple={mediaMultiple}
             accept={field.media?.accept}
             maxItems={field.media?.maxItems}
           />

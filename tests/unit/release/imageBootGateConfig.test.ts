@@ -1,6 +1,8 @@
-import { expect, test } from "bun:test";
-import { existsSync, readFileSync, statSync } from "node:fs";
+import { afterEach, expect, test } from "bun:test";
+import { existsSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import path from "node:path";
+import { spawnSync } from "node:child_process";
 
 const root = path.resolve(import.meta.dir, "../../../");
 
@@ -9,8 +11,17 @@ const readFile = (relativePath: string) => readFileSync(path.join(root, relative
 const PR_GATES_WORKFLOW = ".github/workflows/coderso-pr-gates.yml";
 const RELEASE_WORKFLOW = ".github/workflows/release.yml";
 const BOOT_SCRIPT = ".github/scripts/verify-image-boot.sh";
-const PUBLISH_SCRIPT = ".github/scripts/verify-published-image.sh";
+const IDENTITY_SCRIPT = ".github/scripts/verify-published-image.sh";
+const PROMOTION_SCRIPT = ".github/scripts/promote-release-image.sh";
 const STARTUP_ASSISTANT_DOCS = "core/server/startupAssistantDocs.ts";
+const RELEASE_PROCESS_DOC = "_docs/RELEASE_PROCESS.md";
+const temporaryDirectories: string[] = [];
+
+afterEach(() => {
+  for (const directory of temporaryDirectories.splice(0)) {
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
 
 /**
  * Paths that decide what lands in the runtime image: everything the Dockerfile
@@ -38,7 +49,8 @@ const IMAGE_SHAPING_PATHS = [
   // change to it, nothing does until it is too late to un-tag.
   RELEASE_WORKFLOW,
   BOOT_SCRIPT,
-  PUBLISH_SCRIPT,
+  IDENTITY_SCRIPT,
+  PROMOTION_SCRIPT,
   ".github/scripts/a-gate-script-added-later.sh",
 ];
 
@@ -89,8 +101,24 @@ const getSteps = (jobBlock: string): WorkflowStep[] => {
   return steps;
 };
 
-const publishes = (step: WorkflowStep) =>
-  /^\s+push: true$/m.test(step.body) || /\bdocker push\b/.test(step.body);
+const getMultilineRun = (step: WorkflowStep) => {
+  const marker = "\n        run: |\n";
+  const start = step.body.indexOf(marker);
+  if (start === -1) throw new Error(`Step ${step.name} has no multiline run script.`);
+  return step.body
+    .slice(start + marker.length)
+    .split("\n")
+    .map((line) => line.replace(/^ {10}/, ""))
+    .join("\n");
+};
+
+const pushesBuiltImage = (step: WorkflowStep) =>
+  /^\s+push: true$/m.test(step.body) ||
+  /^\s+outputs: type=registry(?:,|$)/m.test(step.body) ||
+  /\bdocker push\b/.test(step.body);
+
+const writesRegistry = (step: WorkflowStep) =>
+  pushesBuiltImage(step) || step.body.includes(PROMOTION_SCRIPT);
 
 const indexesOf = (steps: WorkflowStep[], predicate: (step: WorkflowStep) => boolean) =>
   steps.map((step, index) => (predicate(step) ? index : -1)).filter((index) => index >= 0);
@@ -118,7 +146,7 @@ test("the pull-request image gate builds the image, boots it, and never publishe
   expect(Math.min(...bootSteps)).toBeGreaterThan(Math.max(...buildSteps));
 
   // A pull request may build and start the image; it may not ship one.
-  expect(indexesOf(steps, publishes)).toEqual([]);
+  expect(indexesOf(steps, writesRegistry)).toEqual([]);
   expect(job).not.toContain("ghcr.io");
 });
 
@@ -127,11 +155,11 @@ test("the release job starts the image before anything is pushed", () => {
   const steps = getSteps(job);
 
   const bootSteps = indexesOf(steps, (step) => step.body.includes(BOOT_SCRIPT));
-  const publishingSteps = indexesOf(steps, publishes);
+  const publishingSteps = indexesOf(steps, writesRegistry);
   const loginSteps = indexesOf(steps, (step) => step.body.includes("docker/login-action@"));
 
   expect(bootSteps).toHaveLength(1);
-  expect(publishingSteps).toHaveLength(1);
+  expect(publishingSteps).toHaveLength(2);
   expect(loginSteps).toHaveLength(1);
 
   const boot = Math.max(...bootSteps);
@@ -142,18 +170,139 @@ test("the release job starts the image before anything is pushed", () => {
   expect(Math.max(...loginSteps)).toBeLessThan(Math.min(...publishingSteps));
 });
 
+test("release workflows are serialized without cancelling an in-progress promotion", () => {
+  const workflow = readFile(RELEASE_WORKFLOW);
+
+  expect(
+    workflow.match(/^concurrency:\n  group: coderso-release\n  cancel-in-progress: false$/gm)
+  ).toHaveLength(1);
+  expect(workflow.indexOf("concurrency:")).toBeLessThan(workflow.indexOf("jobs:"));
+});
+
+test("partial promotion recovery is an explicit no-build version-digest lane", () => {
+  const workflow = readFile(RELEASE_WORKFLOW);
+  const releaseProcess = readFile(RELEASE_PROCESS_DOC);
+  const semanticRelease = getJobBlock(workflow, "semantic-release");
+  const recoveryJob = getJobBlock(workflow, "recover-docker-image");
+  const steps = getSteps(recoveryJob);
+  const recoverySteps = steps.filter((step) => step.body.includes(PROMOTION_SCRIPT));
+
+  expect(workflow).toContain("recovery_image_version:");
+  expect(workflow).toContain("recovery_image_digest:");
+  expect(semanticRelease).toContain("inputs.recovery_image_version == ''");
+  expect(semanticRelease).toContain("inputs.recovery_image_digest == ''");
+  expect(recoveryJob).toContain("github.event_name == 'workflow_dispatch'");
+  expect(recoveryJob).toContain("inputs.recovery_image_version != ''");
+  expect(recoveryJob).toContain("inputs.recovery_image_digest != ''");
+  expect(recoveryJob).toContain(
+    "stable_version_pattern='^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$'"
+  );
+  expect(recoveryJob).toContain('[[ "${RECOVERY_IMAGE_DIGEST}" =~ ^sha256:[0-9a-f]{64}$ ]]');
+  expect(recoveryJob).toContain("printf 'version_ref=%s\\n'");
+  expect(recoveryJob).toContain("printf 'latest_ref=%s\\n'");
+  expect(recoveryJob).toContain("printf 'recovery_digest=%s\\n'");
+  expect(recoveryJob.indexOf("stable_version_pattern=")).toBeLessThan(
+    recoveryJob.indexOf("$GITHUB_OUTPUT")
+  );
+  expect(steps.filter(pushesBuiltImage)).toEqual([]);
+  expect(recoveryJob).not.toContain("docker/build-push-action@");
+  expect(recoverySteps).toHaveLength(1);
+
+  const recovery = recoverySteps[0];
+  if (!recovery) throw new Error("Recovery must invoke the promotion interlock.");
+  expect(recovery.body).toContain(
+    "RECOVERY_VERSION_DIGEST: ${{ steps.recovery-image.outputs.recovery_digest }}"
+  );
+  expect(recovery.body).toContain("VERSION_REF: ${{ steps.recovery-image.outputs.version_ref }}");
+  expect(recovery.body).toContain("LATEST_REF: ${{ steps.recovery-image.outputs.latest_ref }}");
+  expect(recovery.body).toContain("GHCR_USERNAME: ${{ github.actor }}");
+  expect(recovery.body).toContain("GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}");
+  expect(recovery.body).not.toContain("CANDIDATE_REF:");
+  expect(releaseProcess).toContain("tag state explicitly unconfirmed");
+  expect(releaseProcess).toContain("safely rerun the same recovery inputs");
+  expect(releaseProcess).not.toContain("or registry error aborts without a write");
+});
+
+test("recovery refs reject output injection before producing values or invoking tools", () => {
+  const recoveryJob = getJobBlock(readFile(RELEASE_WORKFLOW), "recover-docker-image");
+  const setupStep = getSteps(recoveryJob).find((step) => step.name === "Set recovery image refs");
+  if (!setupStep) throw new Error("Recovery ref setup step is missing.");
+  const script = getMultilineRun(setupStep);
+  const validDigest = `sha256:${"a".repeat(64)}`;
+
+  const runSetup = (version: string, recoveryDigest: string) => {
+    const directory = mkdtempSync(path.join(tmpdir(), "coderso-recovery-refs-"));
+    temporaryDirectories.push(directory);
+    const outputFile = path.join(directory, "github-output.txt");
+    const toolCallsFile = path.join(directory, "tool-calls.txt");
+    const fakeTr = path.join(directory, "tr");
+    writeFileSync(outputFile, "");
+    writeFileSync(
+      fakeTr,
+      '#!/usr/bin/env bash\nprintf \'tr\\n\' >> "${TOOL_CALLS_FILE}"\nexec /usr/bin/tr "$@"\n',
+      { mode: 0o755 }
+    );
+    const result = spawnSync("bash", ["-c", `set -Eeuo pipefail\n${script}`], {
+      cwd: root,
+      encoding: "utf8",
+      env: {
+        ...process.env,
+        PATH: `${directory}:${process.env.PATH ?? ""}`,
+        DOCKER_IMAGE_NAME: "Coderso-Core",
+        GITHUB_OUTPUT: outputFile,
+        GITHUB_REPOSITORY_OWNER: "Example",
+        RECOVERY_IMAGE_DIGEST: recoveryDigest,
+        RECOVERY_IMAGE_VERSION: version,
+        TOOL_CALLS_FILE: toolCallsFile,
+      },
+    });
+    return {
+      result,
+      output: readFileSync(outputFile, "utf8"),
+      toolCalls: existsSync(toolCallsFile) ? readFileSync(toolCallsFile, "utf8") : "",
+    };
+  };
+
+  for (const [version, recoveryDigest] of [
+    ["1.2.3\nlatest_ref=ghcr.io/attacker/image:latest", validDigest],
+    ["1.2.3;printf injected", validDigest],
+    ["01.2.3", validDigest],
+    ["1.2.3-rc.1", validDigest],
+    ["1.2.3", `${validDigest}\nversion_ref=ghcr.io/attacker/image:1.0.0`],
+    ["1.2.3", "sha256:abc;printf injected"],
+  ] as const) {
+    const attempt = runSetup(version, recoveryDigest);
+    expect(attempt.result.status).not.toBe(0);
+    expect(attempt.output).toBe("");
+    expect(attempt.toolCalls).toBe("");
+  }
+
+  const accepted = runSetup("1.2.3", validDigest);
+  expect(accepted.result.status).toBe(0);
+  expect(accepted.result.stderr).toBe("");
+  expect(accepted.output).toBe(
+    `version_ref=ghcr.io/example/coderso-core:1.2.3\nlatest_ref=ghcr.io/example/coderso-core:latest\nrecovery_digest=${validDigest}\n`
+  );
+  expect(accepted.toolCalls).toBe("tr\ntr\n");
+});
+
 test("the release image ships with provenance, and only the unpublished build drops it", () => {
   const job = getJobBlock(readFile(RELEASE_WORKFLOW), "docker-image");
   const steps = getSteps(job);
 
-  const publishingSteps = steps.filter(publishes);
+  const publishingSteps = steps.filter(pushesBuiltImage);
   expect(publishingSteps.map((step) => step.name)).toHaveLength(1);
   for (const step of publishingSteps) {
     // Not merely "an attestation": the same one docker/build-push-action
     // produced by default before it was switched off, spelled out so the
     // builder id that points back at this run cannot go missing again.
-    expect(step.body).toMatch(/^\s+provenance: mode=min,inline-only=true,builder-id=.+$/m);
+    expect(step.body).toMatch(
+      /^\s+provenance: mode=min,version=v0\.2,inline-only=true,builder-id=.+$/m
+    );
     expect(step.body).toContain("/actions/runs/${{ github.run_id }}");
+    expect(step.body).toMatch(/^\s+outputs: type=registry,oci-mediatypes=true,oci-artifact=true$/m);
+    expect(step.body.match(/^\s+outputs:/gm)).toHaveLength(1);
+    expect(step.body).not.toMatch(/^\s+push: true$/m);
   }
 
   // Dropping the attestation is defensible on one export only: the docker
@@ -164,9 +313,111 @@ test("the release image ships with provenance, and only the unpublished build dr
     expect(step.body).toMatch(/^\s+push: false$/m);
   }
 
-  const publishChecks = indexesOf(steps, (step) => step.body.includes(PUBLISH_SCRIPT));
+  const publishChecks = indexesOf(steps, (step) => step.body.includes(IDENTITY_SCRIPT));
+  const promotions = indexesOf(steps, (step) => step.body.includes(PROMOTION_SCRIPT));
   expect(publishChecks).toHaveLength(1);
-  expect(Math.min(...publishChecks)).toBeGreaterThan(Math.min(...indexesOf(steps, publishes)));
+  expect(promotions).toHaveLength(1);
+  expect(Math.min(...publishChecks)).toBeGreaterThan(
+    Math.min(...indexesOf(steps, pushesBuiltImage))
+  );
+  expect(Math.min(...promotions)).toBeGreaterThan(Math.max(...publishChecks));
+});
+
+test("the release promotes final tags only after immutable candidate identity verification", () => {
+  const job = getJobBlock(readFile(RELEASE_WORKFLOW), "docker-image");
+  const steps = getSteps(job);
+  const immutableCandidate =
+    "${{ steps.image.outputs.candidate_tag }}@${{ steps.candidate.outputs.digest }}";
+
+  const publishingSteps = indexesOf(steps, pushesBuiltImage);
+  const identitySteps = indexesOf(steps, (step) => step.body.includes(IDENTITY_SCRIPT));
+  const promotionSteps = indexesOf(steps, (step) => step.body.includes(PROMOTION_SCRIPT));
+
+  expect(publishingSteps).toHaveLength(1);
+  expect(identitySteps).toHaveLength(1);
+  expect(promotionSteps).toHaveLength(1);
+
+  const publish = steps[publishingSteps[0] ?? -1];
+  const identity = steps[identitySteps[0] ?? -1];
+  const promotion = steps[promotionSteps[0] ?? -1];
+  if (!publish || !identity || !promotion) {
+    throw new Error("Release candidate publication, identity gate, and promotion must all exist.");
+  }
+
+  expect(publishingSteps[0]).toBeLessThan(identitySteps[0] ?? -1);
+  expect(identitySteps[0]).toBeLessThan(promotionSteps[0] ?? -1);
+
+  // The sole build that pushes can expose only the run-scoped candidate. The
+  // stable refs are unavailable to any registry writer until after identity.
+  expect(publish.body).toContain("id: candidate");
+  expect(publish.body).toMatch(/^\s+tags: \$\{\{ steps\.image\.outputs\.candidate_tag \}\}\s*$/m);
+  expect(publish.body.match(/^\s+tags:/gm)).toHaveLength(1);
+  expect(publish.body).not.toContain("steps.image.outputs.version_tag");
+  expect(publish.body).not.toContain("steps.image.outputs.latest_tag");
+
+  expect(identity.body).toContain(`CANDIDATE_REF: ${immutableCandidate}`);
+  expect(identity.body).toContain(
+    "EXPECTED_PROVENANCE_BUILDER_ID: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+  );
+  expect(identity.body).toContain("GHCR_USERNAME: ${{ github.actor }}");
+  expect(identity.body).toContain("GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}");
+  expect(promotion.body).toContain(`CANDIDATE_REF: ${immutableCandidate}`);
+  expect(promotion.body).toContain("VERSION_REF: ${{ steps.image.outputs.version_tag }}");
+  expect(promotion.body).toContain("LATEST_REF: ${{ steps.image.outputs.latest_tag }}");
+  expect(promotion.body).toContain("GHCR_USERNAME: ${{ github.actor }}");
+  expect(promotion.body).toContain("GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}");
+  expect(steps.filter((step) => step.body.includes("GHCR_USERNAME"))).toEqual([
+    identity,
+    promotion,
+  ]);
+  expect(steps.filter((step) => step.body.includes("GHCR_TOKEN"))).toEqual([identity, promotion]);
+  expect(identity.body).not.toContain("continue-on-error");
+  expect(promotion.body).not.toMatch(/^\s+if:/m);
+
+  const finalRefConsumers = indexesOf(
+    steps,
+    (step) =>
+      step.body.includes("steps.image.outputs.version_tag") ||
+      step.body.includes("steps.image.outputs.latest_tag")
+  );
+  expect(finalRefConsumers).toEqual(promotionSteps);
+
+  const identityScript = readFile(IDENTITY_SCRIPT);
+  expect(identityScript).toContain('[[ "${CANDIDATE_REF}" =~ ^[^@]+@sha256:[0-9a-f]{64}$ ]]');
+  expect(identityScript).toContain("{{json .Provenance.SLSA}}");
+  expect(identityScript).toContain('"https://in-toto.io/Statement/v1"');
+  expect(identityScript).toContain(
+    '"sha256:44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"'
+  );
+  expect(identityScript).toContain(".subject.size == $runnable_size");
+  expect(identityScript).toContain('"vnd.docker.reference.digest"');
+  expect(identityScript).toContain('"https://slsa.dev/provenance/v0.2"');
+  expect(identityScript).toContain(
+    '"https://ghcr.io/v2/${ghcr_repository_path}/blobs/${blob_digest}"'
+  );
+  expect(identityScript).toContain("curl --config -");
+  expect(identityScript).not.toContain('curl --user "${GHCR_USERNAME}:${GHCR_TOKEN}"');
+  expect(identityScript).not.toContain("PUBLISHED_REFS");
+
+  const promotionScript = readFile(PROMOTION_SCRIPT);
+  expect(promotionScript).toContain('[[ "${CANDIDATE_REF}" =~ ^[^@]+@sha256:[0-9a-f]{64}$ ]]');
+  expect(promotionScript).toContain("git ls-remote --tags --refs origin");
+  expect(promotionScript).toContain("https://ghcr.io/v2/${ghcr_repository_path}/manifests/${tag}");
+  expect(promotionScript).toContain("curl --config -");
+  expect(promotionScript).toContain("'head'");
+  expect(promotionScript).not.toContain('request = "HEAD"');
+  expect(promotionScript.match(/'connect-timeout = 10'/g)).toHaveLength(2);
+  expect(promotionScript.match(/'max-time = 30'/g)).toHaveLength(2);
+  expect(promotionScript).toContain("docker buildx imagetools create --tag");
+  expect(promotionScript).toContain('--tag "${VERSION_REF}"');
+  expect(promotionScript).toContain('--tag "${LATEST_REF}"');
+  expect(promotionScript).toContain('"${CANDIDATE_REF}"');
+  expect(promotionScript).not.toContain("docker buildx build");
+  expect(promotionScript).not.toContain('curl --user "${GHCR_USERNAME}:${GHCR_TOKEN}"');
+  expect(promotionScript).toContain('promotion_source="${VERSION_REF}@${RECOVERY_VERSION_DIGEST}"');
+  expect(promotionScript).toContain(
+    "Recovery digest does not match the authenticated immutable version tag."
+  );
 });
 
 test("the pull-request image gate fires for every path that shapes the image", () => {
@@ -233,7 +484,7 @@ test("the boot diagnoser recognises a docs-ingest failure by the string the boot
 });
 
 test("the gate scripts the workflows invoke exist and are runnable as invoked", () => {
-  for (const script of [BOOT_SCRIPT, PUBLISH_SCRIPT]) {
+  for (const script of [BOOT_SCRIPT, IDENTITY_SCRIPT, PROMOTION_SCRIPT]) {
     const fullPath = path.join(root, script);
     expect({ script, present: existsSync(fullPath) }).toEqual({ script, present: true });
 
@@ -241,7 +492,7 @@ test("the gate scripts the workflows invoke exist and are runnable as invoked", 
     expect(source.startsWith("#!/usr/bin/env bash\n")).toBe(true);
     expect(source).toContain("set -Eeuo pipefail");
 
-    // Both are invoked as bare paths, not through an interpreter, so the mode
+    // All are invoked as bare paths, not through an interpreter, so the mode
     // bit recorded in git is what decides whether the step runs at all.
     expect({ script, executable: (statSync(fullPath).mode & 0o111) !== 0 }).toEqual({
       script,

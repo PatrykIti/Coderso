@@ -1,7 +1,11 @@
 import postgres from "postgres";
 import { drizzle } from "drizzle-orm/postgres-js";
 import * as schema from "./schema";
-import { resolveDefaultDatabaseTarget, type DefaultDatabaseTarget } from "./connectionTargets";
+import {
+  resolveDatabasePoolMax,
+  resolveDefaultDatabaseTarget,
+  type DefaultDatabaseTarget,
+} from "./connectionTargets";
 
 /**
  * The DEFAULT database client. Points at whatever `DATABASE_URL` names, which in
@@ -18,6 +22,7 @@ import { resolveDefaultDatabaseTarget, type DefaultDatabaseTarget } from "./conn
  * `pg_advisory_lock`, `LISTEN`/`NOTIFY`, temporary tables and session `SET`.
  * Those callers must use `withSessionDatabaseClient` from `./sessionClient`.
  */
+const poolMax = resolveDatabasePoolMax();
 const defaultTarget: DefaultDatabaseTarget = resolveDefaultDatabaseTarget();
 
 /**
@@ -26,7 +31,7 @@ const defaultTarget: DefaultDatabaseTarget = resolveDefaultDatabaseTarget();
  * concurrency knob for this process rather than a database-capacity limit.
  */
 const client = postgres(defaultTarget.url, {
-  max: parseInt(process.env.DB_POOL_MAX || "10", 10),
+  max: poolMax,
 });
 
 export const db = drizzle(client, { schema });
