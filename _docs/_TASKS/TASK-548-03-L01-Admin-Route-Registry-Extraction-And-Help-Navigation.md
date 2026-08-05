@@ -34,15 +34,28 @@ This leaf is the only writer for:
 - new Bun-free
   `core/admin/app/routes/core.admin-route-descriptor.ts`;
 - new `core/admin/app/routes/core.admin-route.tsx`;
+- `core/admin/services/authClient.ts`;
 - `core/admin/utils/adminPaths.ts`;
 - new `tests/vitest/admin/admin-route-registry.test.tsx`;
+- new exact
+  `tests/vitest/admin/fixtures/core-admin-route-descriptors-v1.golden.json`;
 - the route-extraction assertions in `tests/vitest/admin/adminApp.test.tsx`;
+- strict raw permission-state assertions in
+  `tests/vitest/admin/authClient.test.ts`;
 - Help path-helper assertions in `tests/vitest/admin/adminPaths.test.ts`.
 
 It must not edit `core/admin/ui/navigation/sidebarConfig.ts`, add a Help route
 module, build Help UI, or touch TASK-547 files. L02 may add the paired
 `core/admin/app/routes/help.admin-route-descriptor.ts` and
 `core/admin/app/routes/help.admin-route.tsx` without editing L01-owned files.
+
+### Read-only dependencies
+
+`core/admin/services/authClient.ts` imports the existing exact
+`listPermissionIds` export from the Bun-free
+`core/services/admin/permissionsCatalog.ts`. That catalog and its tests are
+read-only dependencies, not writer ownership for this leaf. No browser-local
+permission list or duplicate catalog may be introduced.
 
 ## Canonical Route Descriptor Contract
 
@@ -76,10 +89,120 @@ leaf invents no aggregate coverage helper or parallel list.
 
 Current `permission` becomes one-entry `allOf`; `anyPermissions` becomes
 `anyOf`; neither becomes null. Null means no extra catalog permission, while
-`visibility` separately distinguishes login/reset public routes from
-authenticated routes such as `/preview`. Non-null permissions are non-empty,
-unique, sorted and catalog-validated. `capabilityIds` uses the exact bounded,
-sorted, catalog-backed field from TASK-548-01.
+`visibility` separately preserves public login/reset and public token-gated
+`/preview` versus authenticated routes. `/preview` remains
+`visibility: "public"` with `permissionRequirement: null`; its existing preview
+token validation is unchanged and remains the authorization boundary. Non-null
+permissions are non-empty, unique, sorted and catalog-validated.
+`capabilityIds` uses the exact bounded, sorted, catalog-backed field from
+TASK-548-01.
+
+### Frozen 69-route core snapshot
+
+The implementation must not choose new route metadata while extracting it.
+`core.admin-route-descriptor.ts` owns one frozen
+`CORE_ADMIN_ROUTE_SEEDS_V1` tuple whose 69 patterns are the current
+`AdminApp.tsx:613-931` route definitions in their current array order. Expand
+the patterns in the table below from top to bottom and, inside a cell, from
+left to right. The table is exhaustive: every pattern occurs exactly once.
+
+All new fields are derived without judgment:
+
+- `moduleId` is exact `"core"` and `moduleOrder` is exact `0` for every row;
+- `routeOrder` is the zero-based tuple index, therefore the current range is
+  exactly `0..68`;
+- `routeId` is `core.root` for `/`. Otherwise validate every literal segment as
+  lowercase kebab, map it unchanged, validate each parameter as ASCII
+  lower-camel, map `:name` to `by-<name converted camel-to-kebab>`, join mapped
+  segments with `.`, and prepend `core.`. Thus `/store/plugins/:id` becomes
+  `core.store.plugins.by-id` and
+  `/advanced/engine/:id/collection/detail-template/:detailPageId` becomes
+  `core.advanced.engine.by-id.collection.detail-template.by-detail-page-id`.
+  Reject an invalid segment, non-canonical pattern, duplicate output or final
+  ID outside
+  `^[a-z][a-z0-9-]*(?:\.[a-z0-9][a-z0-9-]*)+$`; never place raw `/`, `:` or an
+  unnormalized parameter in an ID;
+- `visibility` and the normalized requirement are the exact table values.
+  `one(p)` means `{ mode: "allOf", permissions: [p] }`; `any(a,b)` means
+  `{ mode: "anyOf", permissions: [a,b] }` in the displayed, already canonical
+  order. The seed may carry the legacy `permission`/`anyPermissions` names only
+  long enough to prove extraction parity, then the pure descriptor owns the
+  normalized shape;
+- `cap(...)` means the exact displayed, UTF-8-byte-order-sorted array. Every ID
+  must exist in the exact 33-member `DOCS_CAPABILITY_CATALOG_V1`; no slug,
+  pathname or component-name heuristic may manufacture another ID.
+
+| Current patterns in exact order | Visibility | Requirement | Exact `capabilityIds` |
+| --- | --- | --- | --- |
+| `/` | authenticated | `one(content:read)` | `cap(docs.area.dashboard)` |
+| `/login`, `/2fa`, `/reset`, `/reset/confirm` | public | `null` | `cap(docs.area.auth)` |
+| `/analytics` | authenticated | `one(content:read)` | `cap(docs.area.analytics)` |
+| `/audit` | authenticated | `one(audit:read)` | `cap(docs.area.audit)` |
+| `/access-logs` | authenticated | `one(audit:read)` | `cap(docs.area.security)` |
+| `/backups` | authenticated | `one(backups:read)` | `cap(docs.area.backups)` |
+| `/search` | authenticated | `one(content:read)` | `cap(docs.area.search)` |
+| `/seo` | authenticated | `one(content:read)` | `cap(docs.area.seo)` |
+| `/redirects` | authenticated | `one(settings:read)` | `cap(docs.area.redirects)` |
+| `/tools/import-export` | authenticated | `one(settings:read)` | `cap(docs.area.operations)` |
+| `/advanced/forms`, `/advanced/forms/:id/action-runs`, `/advanced/forms/:id/submissions`, `/advanced/forms/:id` | authenticated | `one(forms:read)` | `cap(docs.area.coderso-forms, docs.area.playbooks)` |
+| `/advanced/engine`, `/advanced/engine/:id`, `/advanced/engine/:id/collection`, `/advanced/engine/:id/collection/detail-template/:detailPageId`, `/advanced/engine/:id/schema` | authenticated | `one(content:read)` | `cap(docs.area.coderso-engine, docs.area.playbooks)` |
+| `/advanced/entries`, `/advanced/entries/:type/:id` | authenticated | `one(content:read)` | `cap(docs.area.coderso-entries)` |
+| `/advanced/custom-screens`, `/advanced/custom-screens/:id/entries/:entryId`, `/advanced/custom-screens/:id/entries`, `/advanced/custom-screens/:id` | authenticated | `one(content:read)` | `cap(docs.area.coderso-custom-screens)` |
+| `/posts`, `/posts/:id` | authenticated | `one(content:read)` | `cap(docs.area.coderso-posts, docs.area.playbooks)` |
+| `/advanced/listings`, `/advanced/listings/:id` | authenticated | `one(content:read)` | `cap(docs.area.coderso-listings)` |
+| `/advanced/filters` | authenticated | `one(content:read)` | `cap(docs.area.coderso-listings)` |
+| `/advanced/search` | authenticated | `one(content:read)` | `cap(docs.area.coderso-listings)` |
+| `/advanced/booking` | authenticated | `one(booking:read)` | `cap(docs.area.coderso-booking, docs.area.playbooks)` |
+| `/advanced/reviews` | authenticated | `one(reviews:read)` | `cap(docs.area.coderso-engagement)` |
+| `/advanced/commerce`, `/advanced/commerce/:id` | authenticated | `one(commerce:read)` | `cap(docs.area.coderso-commerce, docs.area.playbooks)` |
+| `/advanced/popups`, `/advanced/popups/:id` | authenticated | `one(popups:read)` | `cap(docs.area.coderso-engagement)` |
+| `/advanced/solution-kits` | authenticated | `one(solution-kits:read)` | `cap(docs.area.playbooks, docs.area.solution-kits)` |
+| `/pages`, `/pages/:id` | authenticated | `one(content:read)` | `cap(docs.area.pages)` |
+| `/preview` | public | `null` | `cap(docs.area.pages)` |
+| `/media` | authenticated | `one(media:read)` | `cap(docs.area.media)` |
+| `/menus`, `/menus/:id`, `/menus/:id/design` | authenticated | `one(menus:read)` | `cap(docs.area.menus)` |
+| `/users` | authenticated | `any(roles:read,users:read)` | `cap(docs.area.access-control)` |
+| `/roles` | authenticated | `one(roles:read)` | `cap(docs.area.access-control)` |
+| `/themes` | authenticated | `one(themes:read)` | `cap(docs.area.themes)` |
+| `/advanced/widgets` | authenticated | `one(widgets:read)` | `cap(docs.area.coderso-authoring)` |
+| `/advanced/page-templates`, `/advanced/page-templates/:id` | authenticated | `one(content:read)` | `cap(docs.area.coderso-pages)` |
+| `/settings`, `/settings/general` | authenticated | `one(settings:read)` | `cap(docs.area.settings)` |
+| `/settings/site` | authenticated | `one(settings:read)` | `cap(docs.area.getting-started, docs.area.settings)` |
+| `/settings/assistant` | authenticated | `one(settings:read)` | `cap(docs.area.assistant)` |
+| `/settings/security`, `/settings/security/ip-allowlist`, `/settings/security/sessions`, `/settings/security/login-alerts` | authenticated | `one(settings:read)` | `cap(docs.area.security)` |
+| `/settings/api-keys`, `/settings/webhooks`, `/settings/email`, `/settings/storage`, `/settings/integrations` | authenticated | `one(settings:read)` | `cap(docs.area.integrations)` |
+| `/store`, `/store/plugins/:id` | authenticated | `one(store:browse)` | `cap(docs.area.store)` |
+
+The pure tuple produces `CORE_ADMIN_ROUTE_DESCRIPTORS_V1`; the React pair binds
+that exact descriptor array and exports the resulting
+`CORE_ROUTE_DEFINITIONS`. `AdminApp` consumes that named bound output and no
+longer owns an inline route list. There is no second route-order, permission or
+capability map.
+
+Freeze the complete normalized output, not only a hash, in
+`tests/vitest/admin/fixtures/core-admin-route-descriptors-v1.golden.json`. Its
+strict root is
+`{ schema: "coderso.core-admin-route-descriptors-golden@v1", routeCount: 69,
+docsCapabilityCount: 33, legacyContextSourceCount: 68, routes: [...] }`.
+`routes` contains all descriptor fields in normalized order and canonical JSON
+bytes. A byte change requires an explicit table/fixture review and re-freeze.
+Unknown/new patterns, count drift, duplicate patterns/IDs/orders, both
+`permission` and `anyPermissions`, empty/duplicate/unknown permissions, or a
+missing/unknown/multiply-assigned capability row fail before binding. Unknown
+requirement modes, mixed `allOf`/`anyOf` shapes, authored wildcard and
+wildcard-plus-catalog permission arrays also fail; none can trigger an implicit
+golden refresh.
+
+The golden test also loads the exact
+`LEGACY_DOCS_V1_CONTEXT_BY_SOURCE_PATH` 68-source map and its projected
+product-area capability. After stripping the canonical default `/admin` base,
+every non-null context path must resolve exactly one frozen route, its document
+requirement must not understate that route, and its non-empty projected
+capability array must be contained in the route's array. The one orientation
+empty-capability row is checked explicitly. The two null widget rows and null
+authentication/recovery row remain intentional non-route contexts. This
+cross-check is read-only; the route registry never imports the temporary legacy
+adapter at runtime.
 
 Each `*.admin-route.tsx` imports its paired exact named pure descriptor constant
 and exposes that same array reference only through the identity alias
@@ -99,6 +222,13 @@ and pair it with the pure descriptor before use:
   `AdminRouteRenderModuleV1` shape: `{ descriptors: readonly
   AdminRouteDescriptorV1[]; bindings: Readonly<Record<string,
   AdminRouteRender>> }`;
+- every `AdminRouteRender` context preserves the existing normalized
+  `authPermissions` array and additionally carries the fail-closed raw state as
+  `authPermissionSnapshot: { state: "ready"; permissions: readonly string[] } |
+  { state: "missing" | "malformed" }`; L02 passes that exact structural value to
+  its Bun-free action resolver. A live full-access role preserves the canonical
+  ready sentinel `permissions: ["*"]`; `*` may not be combined with another
+  permission, duplicated or used in an authored route requirement;
 - each module exports exactly one non-empty `descriptors` array imported from
   its pure pair plus one exact `bindings` record; these are the only module
   exports, with no default or extra namespace key;
@@ -117,6 +247,52 @@ and pair it with the pure descriptor before use:
 The core module contains the current route list in its current precedence. The
 registry is repository-owned build input, not a plugin/runtime extension
 surface.
+
+## Pre-Loss Permission State Contract
+
+`core/admin/services/authClient.ts` owns this exact scalar, `AuthUser` field and
+normalization helper:
+
+```ts
+export type AdminPermissionSnapshotStateV1 =
+  | "ready"
+  | "missing"
+  | "malformed";
+
+export type AuthUser = {
+  id: string;
+  email: string;
+  name?: string | null;
+  permissionSnapshot: AdminPermissionSnapshot | null;
+  permissionSnapshotState: AdminPermissionSnapshotStateV1;
+};
+
+export function normalizeAdminPermissionSnapshotWithStateV1(
+  value: unknown
+): Pick<AuthUser, "permissionSnapshot" | "permissionSnapshotState">;
+```
+
+The helper classifies the untouched raw `permissionSnapshot` before any
+filtering, sorting or deduplication. Absent/null is `missing`. A non-object,
+missing/non-array `permissions`, any non-string/unknown permission, duplicate,
+or wildcard mixed with another value is `malformed`, returns
+`permissionSnapshot: null`, and therefore stays fail-closed for `canAdmin`.
+Only an exact sole-member `["*"]` is the live full-access sentinel. Otherwise
+every permission must occur in a `ReadonlySet` built from the exact
+`listPermissionIds()` result and be unique. A `ready` result may sort that
+validated array deterministically only after classification, but never filters
+or deduplicates it, and retains the existing normalized roles contract.
+
+`normalizeAuthUser` copies both returned fields. `AdminApp` derives its action
+context structurally: a ready user supplies
+`{ state: "ready", permissions: user.permissionSnapshot.permissions }`; a
+missing/malformed state supplies the same state without permissions, and an
+impossible ready/null pairing degrades to `{ state: "malformed" }`. This leaf
+does not declare or import a duplicate `DocsAdminPermissionSnapshotV1`;
+TASK-548-03-L02 remains the sole named renderer-type/evaluator owner and proves
+the structural handoff. This browser normalization seam changes no server
+authentication or endpoint: existing Admin/Assistant APIs remain authenticated
+by the Admin session cookie and protected by server RBAC.
 
 ## Security Contract
 
@@ -172,11 +348,25 @@ export function resolveAdminRoute(
 }
 
 // adminPaths.ts
-export const adminHelpPath = (input?: {
-  docId?: string;
-  sectionId?: string;
-  query?: string;
-}) => appendBoundedHelpQuery("/help", input);
+export type AdminHelpPathInput =
+  | {
+      query?: string;
+      docId?: never;
+      locale?: never;
+      sectionId?: never;
+    }
+  | {
+      docId: string;
+      locale: string;
+      sectionId?: string;
+      query?: string;
+    };
+
+export function adminHelpPath(input?: AdminHelpPathInput): string;
+export function adminHelpPath(input: unknown = {}): string {
+  const normalized = normalizeAdminHelpPathInputV1(input);
+  return appendBoundedHelpQuery("/help", normalized);
+}
 ```
 
 **Data flow:** eager build-owned route modules → strict normalization and stable
@@ -185,17 +375,35 @@ sort → one registry → canonical path match → existing RBAC guard → lazy 
 **Error handling:** invalid URI components return no match rather than throwing
 the Admin shell; duplicate/malformed definitions fail deterministically during
 module normalization; unknown paths render the existing 404. Help query values
-are bounded and `URLSearchParams`-encoded.
+are bounded and `URLSearchParams`-encoded. The Help-input normalizer is
+reject-unknown: empty/root and query-only input produce `/help` or
+`/help?q=...`; a document input requires non-empty bounded `docId` and canonical
+BCP-47 `locale` together; `sectionId` is allowed only with that full tuple.
+Every unknown or partial identity combination throws
+`admin_help_path_input_invalid`. The result remains route-relative and is
+resolved by existing `resolveAdminHref`/`AdminLink`, so custom Admin base paths
+retain their current semantics without a hard-coded `/admin`.
 
 **Regression-test shape:**
 
 - pin the complete pre-extraction path/permission/order inventory;
+- compare all 69 normalized descriptors byte-for-byte with the strict golden;
+  pin exact `moduleId: "core"`, `moduleOrder: 0`, route orders `0..68`, safe
+  derived route IDs, table patterns/visibility/requirements/capabilities and
+  reject every route-ID derivation collision;
+- cross-check `CORE_ROUTE_DEFINITIONS` and `AdminApp` binding parity, the live
+  permission catalog, all 33 exact documentation capabilities, and every row of
+  the 68-source legacy context map plus the complete route-coverage snapshot;
+  fail on an unknown/new route, missing or multiply-assigned capability row,
+  unknown/duplicate/mixed permission, unknown capability, or context drift
+  until an explicit table and golden re-freeze;
 - prove the Bun-free descriptor imports without React/Vite/runtime effects and
   has the exact same IDs, patterns, order, visibility and normalized
   null/allOf/anyOf requirement plus `capabilityIds` as every React binding;
-- prove authenticated `/preview` normalizes to null and remains accessible to
-  an authenticated empty-permission snapshot, while public login/reset
-  visibility remains independently classified;
+- prove public `/preview` normalizes to null, remains public, and preserves
+  exact valid-token success plus missing/invalid/expired-token denial parity
+  before and after extraction; public login/reset and authenticated routes
+  remain independently classified;
 - inventory every discovered `*.admin-route.tsx` module and prove its same-stem
   pure `*.admin-route-descriptor.ts` pair exists, its exported `descriptors`
   alias has reference identity with the imported named pure constant, its module
@@ -205,8 +413,22 @@ are bounded and `URLSearchParams`-encoded.
 - prove duplicate ids/orders/patterns and empty `anyPermissions` reject;
 - prove an invalid encoded path does not crash;
 - render existing guarded/settings routes through `AdminApp`;
-- prove Help helper output respects custom Admin base paths and encodes
-  `docId`, `sectionId`, and query values;
+- prove empty and query-only Help input yields `/help` and encoded
+  `/help?q=...`; prove document links encode required `docId` plus canonical
+  BCP-47 `locale`, optional `sectionId`, and query; use the same
+  `docId`/`sectionId` in two locales and prove distinct hrefs;
+- reject unknown keys and every partial localized identity, including lone
+  `docId`, locale or `sectionId`, `docId + sectionId`, and
+  `locale + sectionId`; pass valid route-relative output through
+  `resolveAdminHref` for default and custom Admin bases;
+- classify raw permissions before normalization; prove non-string, an unknown
+  catalog ID such as `unknown:permission`, duplicate and mixed-wildcard arrays
+  are `malformed` and fail `canAdmin`; prove catalog membership comes from the
+  exact `listPermissionIds` import rather than a browser-local list;
+  absent/null is `missing`, canonical unique arrays are `ready`, and exact
+  `["*"]` remains unchanged;
+- preserve live `permissions: ["*"]` as the sole full-access sentinel while
+  rejecting duplicate or mixed wildcard snapshots before route rendering;
 - prove the footer still points to the existing external Docs URL in this leaf;
 - line-count `AdminApp.tsx`, registry/core route modules, and touched tests.
 
@@ -216,7 +438,10 @@ are bounded and `URLSearchParams`-encoded.
 - [ ] Add the exact Bun-free descriptor contract/core snapshot and bind React
   rendering by stable route ID.
 - [ ] Add deterministic module/duplicate/precedence validation.
-- [ ] Add bounded canonical Help path helpers without activating Help.
+- [ ] Add strict discriminated, runtime-validated canonical Help path helpers
+  without activating Help.
+- [ ] Preserve raw permission validity through the exact `authClient.ts` state
+  seam before building the structural route action snapshot.
 - [ ] Preserve AdminApp SSR, lazy route, RBAC, settings, and 404 parity.
 
 ## Testing Requirements
@@ -225,6 +450,7 @@ are bounded and `URLSearchParams`-encoded.
 bunx vitest run --config vitest.config.ts \
   tests/vitest/admin/admin-route-registry.test.tsx \
   tests/vitest/admin/adminApp.test.tsx \
+  tests/vitest/admin/authClient.test.ts \
   tests/vitest/admin/adminPaths.test.ts \
   tests/vitest/ui/admin-shell-nav.test.tsx
 bun --cwd core lint:types
@@ -235,8 +461,10 @@ wc -l core/admin/app/AdminApp.tsx \
   core/admin/app/adminRouteRegistry.tsx \
   core/admin/app/routes/core.admin-route-descriptor.ts \
   core/admin/app/routes/core.admin-route.tsx \
+  core/admin/services/authClient.ts \
   tests/vitest/admin/admin-route-registry.test.tsx \
   tests/vitest/admin/adminApp.test.tsx \
+  tests/vitest/admin/authClient.test.ts \
   tests/vitest/admin/adminPaths.test.ts
 git diff --check
 ```
@@ -255,7 +483,10 @@ classifying it.
   without TSX/Vite, and has exact React binding parity.
 - Every existing route, parameter, permission, render context, lazy component,
   settings guard, alias, SSR outcome, and 404 remains equivalent.
-- Canonical Help href helpers exist and are bounded/base-path safe.
+- Canonical Help href helpers are reject-unknown, enforce the full localized
+  identity tuple, preserve query-only root Help and are bounded/base-path safe.
+- The raw permission state reaches AdminApp before lossy normalization;
+  malformed snapshots fail closed and sole `["*"]` remains full access.
 - No `/admin/help` route or local Help link is visible until L02 lands.
 
 ## Documentation Updates Required

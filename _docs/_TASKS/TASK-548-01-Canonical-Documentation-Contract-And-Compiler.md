@@ -7,6 +7,7 @@
 **Estimated Effort:** Very Large
 **Dependencies:** TASK-109, TASK-403
 **Status:** ⏳ To Do
+**Changelog:** 1261 (pinned; closure only)
 
 ---
 
@@ -27,13 +28,58 @@ on an AI provider.
 
 **Single-writer ownership:** this child owns the shared documentation types,
 schemas, normalizers, compiler, generated distribution bundle, assistant-ingest
-v2 migration and their focused tests. TASK-548-02 owns capture scenarios,
-screenshots and visual receipts; downstream Help/portal children only consume
-the bundle. TASK-548-01-L02 is the exclusive whole-family writer of
+v2 migration, pure DB retrieval/permission filtering and their focused tests.
+L01 owns its exact declared Bun/DB/React/Core-free source allowlist under
+`packages/docs-contracts/src/` for contracts, Markdown parsing, targets and
+browser-safe DTOs; it excludes L02's private `docsMigrationReport.ts`, server-
+only `nodeArtifactGuard.ts`/`nodeFixedWorkspace.ts`, and L03's `nodeLoader.ts`.
+L01 also owns its contract Core shims and a generated
+IDs-only Admin-permission catalog snapshot with a mandatory live-catalog parity
+gate. TASK-548-02-L03 later creates the workspace manifest, exports the two
+Node-only subpaths and reconciles lock/Docker dependencies.
+To keep L01/L02 gates executable before that activation, L01's stable Core
+named re-export shims permanently use the confined exact
+`../../../packages/docs-contracts/src/index.ts`/owner-module edge; no later
+writer rewrites them. All direct consumers after activation use the package.
+TASK-548-01-L03 owns no Assistant route/service orchestration file: after this
+child lands, TASK-548-03-L03 is the sole TASK-548 writer of
+`core/server/routes/assistantRoutes.ts`,
+`core/services/assistant/assistantService.ts`, their centralized mapper/wiring,
+and route/service tests. TASK-548-02 owns capture scenarios, screenshots and
+visual receipts; downstream Help/portal children only consume the bundle.
+TASK-548-01-L02 is the exclusive whole-family writer of
 `core/generated/docs/coderso-docs-v2.json`, including the orchestrated
 post-pilot refresh after TASK-548-02-L02 and final regeneration handback after
 TASK-548-06-L01 changes native sources and visuals. No other child redefines the
 shared shapes or writes that generated final.
+
+The generated bundle is a durable tracked runtime artifact. The ignored
+`.tmp/docs-corpus/migration-report-v1.json` is workspace-only and joins the
+bundle in one durable pair only during explicit TASK-548-01-L02
+authoring/migration `--write` runs and named handbacks. The exact stable
+prestates are `bootstrap-none`, clean-checkout `packaged-bundle-only`, and
+`linked-pair`; report-only and transaction debris fail closed. Clean
+clone/tag/runtime, portal, Docker, release, `docs:check`, and coverage-check
+consumers validate the packaged bundle without requiring or recreating the
+ignored report.
+Runtime reads only through L02's zero-argument Core named shim or L03's public
+`@coderso/docs-contracts/node-loader` alias. L02's package-private
+`nodeFixedWorkspace.ts` derives the repository/Core/bundle/report/journal URLs
+solely from its own `import.meta.url`; it accepts no capability/path/env/cwd.
+Both entrypoints are the exact
+`guardAndLoadFixedDocsWorkspaceBundleV2(): Promise<DocsDistributionBundleV2>`
+function reference. That zero-input transaction
+transaction: it opens and holds the exact bundle handle across full hazard
+inventory, strict optional-report/sourceHash/artifact linkage, same-handle
+bounded read and bundle normalization, rechecks identities/inventory, then
+closes handles in reverse. Persistence/publication projections independently
+normalize the returned object. Public `./node-artifact-guard` exposes only the
+zero-input read-only authoring/check inspector; byte consumers call only the
+atomic loader, never guard then load. Node sources use exact `node:fs` and
+`node:fs/promises` plus pure contracts, with no `Bun.*`, DB, settings, server,
+Core or runtime-adapter edge. Core uses permanent repo-relative preactivation
+wrappers; after activation, portal imports only the public zero-input loader.
+Static guards keep both Node subpaths out of every browser entry.
 
 ## Locked Contract
 
@@ -45,6 +91,28 @@ exactly:
 ```ts
 schema: "coderso.docs-corpus@v2";
 ```
+
+`@coderso/docs-contracts` is the sole package owner of these
+compiled schemas/types/normalizers, safe Markdown parser output and publication
+target selector. Its top-level `.` export stays dependency-neutral and browser
+safe; the separately exported build/server-only
+`./node-artifact-guard` and `./node-loader` subpaths never enter that barrel.
+The package also owns the exact publication DTO schema/projector that
+omits `DocsDocumentV2.sourcePath` and `DocsVisualV1.assetPath`, replaces the
+latter with a deterministic opaque output key, and rejects those source fields
+at every serialization boundary. The stable graph is `docs-contracts -> []`,
+`docs-renderer -> docs-contracts`, `core -> docs-contracts + docs-renderer` and
+`docs-portal -> docs-contracts + docs-renderer`; package-edge tests reject every
+reverse import. Core Admin routing, canonical path resolution and RBAC remain
+Core-owned and are supplied later to the shared renderer only as explicit safe
+host-adapter results. Within renderer integration only that Core adapter may
+import `adminPaths`, the live permission catalog or authenticated RBAC state.
+Package-edge tests allow the one named-re-export-only Core shim family above,
+plus L02's report/zero-input loader named-only Core shims, resolve them inside the
+contracts root and require delegated reference identity; every other deep Core
+or reverse edge fails. Public Node entries may import only the package-private
+fixed-workspace owner, which itself imports exact platform builtins and pure
+contracts; any client/Vite import is a hard failure.
 
 `publicationTargets` is a non-empty, duplicate-free array whose values are
 exactly `assistant | embedded-help | public-docs` and whose canonical output
@@ -59,6 +127,15 @@ catalog. `capabilityIds` is unique, canonically sorted and validated against the
 code-owned documentation capability catalog. Consumer URLs are derived from
 those fields; authors never enter embedded-help or public-site links.
 
+`docId` is the stable translation-family ID and may be reused by different
+locales. Document identity and uniqueness are exactly `(docId, locale)`;
+duplicate pairs fail closed, while the same `docId` in two supported locales is
+valid. `sectionId` is unique within one localized document. `visualId` and
+`exampleId` remain bundle-global, but every source sidecar and visual
+image/receipt pair explicitly binds its owning canonical locale and section.
+No source, Help or Guide join may collapse a localized owner to bare `docId`.
+Canonical document order is locale then `docId`.
+
 Targets are enforced by each consumer, not treated as descriptive metadata.
 Assistant persistence/retrieval includes only documents containing `assistant`;
 embedded Help search/render includes only documents containing `embedded-help`;
@@ -72,10 +149,10 @@ The authored layout is:
 docs/guide/
   corpus.manifest.json
   **/*.md
-  examples/<docId>/<exampleId>.json
-  assets/scenarios/<docId>/<visualId>.json
-  assets/images/<docId>/<visualId>.png
-  assets/receipts/<docId>/<visualId>.json
+  examples/<docId>/<locale>/<exampleId>.json
+  assets/scenarios/<docId>/<locale>/<visualId>.json
+  assets/images/<docId>/<locale>/<visualId>.png
+  assets/receipts/<docId>/<locale>/<visualId>.json
 core/generated/docs/coderso-docs-v2.json
 ```
 
@@ -84,6 +161,11 @@ reviewed through a regenerate-and-diff gate. It is not a second authored source.
 The compiler fingerprints the root manifest, every included Markdown document,
 example, scenario, promoted PNG and receipt. It rejects missing/orphan assets
 instead of silently omitting them.
+Every example sidecar uses the exact strict `DocsExampleSidecarV1` envelope and
+its normalized `docId`, canonical BCP-47 `locale`, `sectionId` and
+bundle-global `exampleId` must agree with both its path and exactly one
+localized document section. Visual scenarios, promoted images and receipts use
+the same locale-bearing owner identity.
 
 Markdown uses a closed safe subset: headings, paragraphs, emphasis, ordered and
 unordered lists, safe links, inline code, fenced code blocks, bounded
@@ -93,6 +175,17 @@ HTML, Markdown images, dangerous URL schemes, traversal, remote image URLs,
 duplicate IDs and unknown fields fail closed. Product screenshots are
 referenced through strict visual records, never arbitrary Markdown URLs.
 
+The compatibility boundary is exactly the current 68 ingestible legacy Guide
+files and the frozen legacy key allowlist
+`{ title, audience, productArea, language, keywords }`.
+TASK-548-01-L02 owns a complete source-path context catalog and corpus-wide
+golden projection for every required `DocsDocumentV2` field; no route,
+permission, capability, target, version, summary, identity or section rule is
+left to implementer judgment. Unknown/new legacy sources fail closed. After
+TASK-547 becomes terminal, inventory, source hashes and context are re-frozen
+against its exact terminal HEAD and this contract receives a fresh audit; a
+count or context change requires an explicit task amendment.
+
 ## Security Contract
 
 - **Endpoint visibility:** no new endpoint. The compiler is local/build-time.
@@ -100,8 +193,12 @@ referenced through strict visual records, never arbitrary Markdown URLs.
 - **Auth/RBAC:** reindex remains authenticated session +
   `settings:write`; compiled files do not weaken document-level
   `permissionRequirement`. `allOf` requires every listed permission; `anyOf`
-  requires at least one. Null means no document-level restriction beyond the
-  owning route.
+  requires at least one. Null means no extra catalog permission; route
+  visibility/authentication is independently owned by the route registry,
+  including public token-gated `/preview` and authenticated `/help`. Authored
+  requirements reject `*`; permission consumers accept only the exact live
+  ready snapshot `["*"]` as full access and reject duplicate/mixed wildcard
+  snapshots.
 - **CSRF/rate limit:** reindex remains CSRF-protected and in the `assistant`
   bucket. Compiler commands have no HTTP boundary.
 - **Validation:** reject unknown fields recursively; validate BCP-47, SemVer,
@@ -117,38 +214,83 @@ referenced through strict visual records, never arbitrary Markdown URLs.
 ## Implementation Shape
 
 ```ts
-const result = await compileDocsCorpusV2({ root: "docs/guide" });
-await assertDeterministicBundleBytes(result.bundleBytes);
-await promoteDocsArtifactPair(result);
-await assertGeneratedBundleBytesEqual(result.bundleBytes);
-await ingestDocsDistributionBundleV2(result.bundleBytes, {
-  actorId,
-  expectedSourceHash: result.bundle.sourceHash,
+const prePilotVisuals = { state: "pre-pilot-empty" } as const;
+const initialWrite = await compileDocsCorpusV2({
+  root: "docs/guide",
+  mode: "write",
+  visuals: prePilotVisuals,
 });
+await assertDeterministicBundleBytes(initialWrite.bundleBytes);
+await promoteDocsArtifactPair(initialWrite);
+const initialCheck = await compileDocsCorpusV2({
+  root: "docs/guide",
+  mode: "check",
+  visuals: prePilotVisuals,
+});
+await assertGeneratedBundleBytesEqual(initialCheck.bundleBytes);
+
+const activeVisuals = {
+  state: "active",
+  validateStablePairForVisual: createDocsVisualStablePairValidatorV1,
+} as const;
+const activeWrite = await compileDocsCorpusV2({
+  root: "docs/guide",
+  mode: "write",
+  visuals: activeVisuals,
+});
+await promoteDocsArtifactPair(activeWrite);
+const activeCheck = await compileDocsCorpusV2({
+  root: "docs/guide",
+  mode: "check",
+  visuals: activeVisuals,
+});
+await assertGeneratedBundleBytesEqual(activeCheck.bundleBytes);
+await ingestDocsDistributionBundleV2(activeWrite.bundle, {
+  actorId,
+  force: true,
+});
+
+// Packaged runtime/startup is a separate fixed-path read-only boundary.
+const packaged = await loadPackagedDocsDistributionBundleV2();
+assertEqual(packaged.sourceHash, activeWrite.bundle.sourceHash);
 ```
 
 Data flows from strict local sources through normalization, referential and
 security validation, canonical sort and SHA-256 hashing into one compile result.
-The exact same `result.bundleBytes` drive determinism comparison, pair promotion,
-post-write byte verification and the v2 ingest API; no consumer reserializes the
-normalized object. Local Help and public builds consume that byte contract.
-Runtime assistant retrieval consumes only the atomically persisted DB snapshot;
-it does not read Markdown or call an external documentation service per
-question.
+Every compiler call supplies exact `root`, `mode` and `visuals`; there is no
+one-argument form or implicit visual default. The initial write/check alone use
+`pre-pilot-empty`. Every call after the first visual lands uses `active` plus
+TASK-548-02-L02's exact validator factory. The exact compile `bundleBytes`
+drive determinism comparison, pair promotion and post-write byte verification.
+The persistence boundary receives the same normalized bundle object and
+independently revalidates it; runtime reindex instead calls the one fixed
+packaged loader exactly once. That loader remains distinct from compiler/
+workspace recovery. Ingest persists the bounded localized visual, example,
+source, link-input and provenance records required for Guide answers under the
+same active `snapshotId` and `sourceHash`. Activation and its durable
+invalidation event commit atomically, so a query observes either the complete
+previous snapshot or the complete next snapshot. Local Help and public builds
+consume the packaged byte contract through their independently normalizing
+publication projections. Runtime Guide retrieval consumes only the active DB
+snapshot; it never reads the bundle, Markdown, or an external documentation
+service per question.
 
 Machine-readable failures use the bounded `docs_corpus_*`/`docs_compile_*`
-families plus exactly `assistant_docs_bundle_invalid`,
-`assistant_docs_ingest_failed`, `assistant_docs_reindex_conflict`, and
-`assistant_docs_db_unavailable`; diagnostics contain no source body, credential
-or fixture-value echo.
+families plus exactly these five Assistant-docs domain errors:
+`assistant_docs_bundle_invalid`, `assistant_docs_ingest_failed`,
+`assistant_docs_reindex_conflict`, `assistant_docs_db_unavailable`, and
+`assistant_docs_permission_snapshot_invalid`. TASK-548-01-L03 owns their pure
+error definitions/normalizers only; TASK-548-03-L03 later maps all five once at
+the centralized route boundary. Diagnostics contain no source body, credential,
+permission inventory or fixture-value echo.
 
 ## Sub-Tasks
 
 | Task | Scope | Single writer | Depends on |
 | --- | --- | --- | --- |
-| TASK-548-01-L01 | Strict shared schemas, stable identity and safe Markdown policy | `core/services/documentation/docsCorpus*`, root manifest/template and focused contract tests | None |
-| TASK-548-01-L02 | Deterministic compiler, legacy compatibility adapter, canonical migration report and generated bundle; no authored corpus edits | compiler modules, `scripts/docs/compile-corpus.ts`, generated bundle/report and compiler tests | TASK-548-01-L01 |
-| TASK-548-01-L03 | Assistant DB schema/migration, atomic bundle ingest, v1 compatibility and centralized reindex error mapping | assistant schema/ingest/startup modules, the existing assistant route error mapper, migration artifacts and focused DB/runtime tests | TASK-548-01-L02 |
+| TASK-548-01-L01 | Strict shared schemas, stable identity, browser-safe publication DTOs and safe Markdown policy | dependency-neutral contracts source/tsconfig except four exact L02/L03 files; stable contract Core re-export shims, permission snapshot/artifact and focused tests | None |
+| TASK-548-01-L02 | Deterministic compiler, compatibility adapter, canonical report/bundle and complete artifact inspection | compiler, private `docsMigrationReport.ts`/`nodeFixedWorkspace.ts`, public guard, report/loader Core shims, generated pair/tests | TASK-548-01-L01 |
+| TASK-548-01-L03 | Packaged loader alias, Assistant DB migration/ingest/atomic activation, compatibility, permission retrieval and typed errors; no route/service orchestration | public `packages/docs-contracts/src/nodeLoader.ts` alias plus assistant DB/runtime modules/migrations/tests; excludes Core shims and later TASK-548-03-L03 route/service/mapper files/tests | TASK-548-01-L02 |
 
 Land strictly in table order. TASK-548-02 starts only after TASK-548-01 is
 green, then adds canonical visuals without changing these shared shapes. After
@@ -159,12 +301,19 @@ exactly one final same-owner TASK-548-01-L02 regeneration/gate of
 `core/generated/docs/coderso-docs-v2.json` plus the canonical migration report.
 TASK-548-06 resumes `docs:check` and coverage only after that handback passes;
 TASK-548-06 never writes the generated final.
+After TASK-548-01-L03 is green, TASK-548-03-L03 consumes its pure exports and is
+the only TASK-548 leaf allowed to edit Assistant route/service orchestration,
+the centralized error mapper, or their focused route/service tests.
 
 ## Acceptance Criteria
 
-- Every ingestible English file currently under `docs/guide/` compiles through
+- All 68 ingestible English files currently under `docs/guide/` compile through
   v2 with a stable identity; locale support is ready for Polish without claiming
   the Admin UI or corpus is fully localized.
+- The same translation-family `docId` compiles in multiple supported locales;
+  an exact duplicate `(docId, locale)` is rejected. Visual and example IDs stay
+  unique across the complete bundle, while their source paths/envelopes still
+  round-trip the exact localized owner.
 - Identical source bytes produce byte-identical bundle bytes and SHA-256 on
   repeated builds, independent of filesystem order, absolute path or wall clock.
 - TASK-548-06's native-v2 rewrite must preserve normalized semantic records and
@@ -174,7 +323,11 @@ TASK-548-06 never writes the generated final.
 - `assistant`, `embedded-help` and `public-docs` consume the same normalized
   records; `docs/develop` never enters assistant retrieval.
 - A failed compile or DB reindex leaves the previous complete assistant corpus
-  available; no mixed v1/v2 partial snapshot is observable.
+  available; no mixed v1/v2, generation or `sourceHash` snapshot is observable.
+- Guide retrieval returns complete authorized localized visual/example/source/
+  link/provenance records from the active DB identity only. Per-question code
+  never loads the packaged bundle; Help/portal projections still independently
+  normalize their build-time packaged input.
 - There is no runtime filesystem fallback, per-question remote fetch, new docs
   API or DB storage of screenshots.
 - All touched human-authored production/test files are at most 1,000 physical
@@ -182,16 +335,28 @@ TASK-548-06 never writes the generated final.
 
 ## Testing Requirements
 
-- `bunx vitest run --config vitest.config.ts tests/vitest/documentation tests/vitest/assistant/docsIngestService.test.ts tests/vitest/assistant/docsDbRetriever.test.ts`
-- `set -a && source .env && set +a && bun test tests/integration/server/assistantDocsIngestV2.test.ts tests/integration/routes/assistant-reindex-v2.test.ts` when `DATABASE_URL` is reachable
+- `bunx vitest run --config vitest.config.ts tests/vitest/documentation tests/vitest/assistant/docsIngestService.test.ts tests/vitest/assistant/docsDbRetriever.test.ts tests/vitest/assistant/docsPermissionSnapshot.test.ts`
+- `set -a && source .env && set +a && bun test tests/integration/server/assistantDocsIngestV2.test.ts` when `DATABASE_URL` is reachable
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 - deterministic two-build byte/hash comparison and touched-file line counts
+- exact 68-source legacy inventory/golden projection plus route, permission,
+  capability, target, collision and exhaustive legacy→native semantic parity
+  validation after the mandatory post-TASK-547 re-freeze
+- explicit duplicate-`(docId, locale)` rejection and same-`docId`,
+  different-locale acceptance coverage, including same-section-ID example and
+  visual fixtures that prove locale-bearing paths/envelopes never cross-join
+- fixed-loader parity from repository root, `core/`,
+  `packages/docs-portal/`, Node/Vite-config context, and an unrelated Docker
+  cwd; zero-input package/Core parity, bundle/directory replacement between
+  every atomic held-handle loader phase, export/client-graph checks, atomic activation plus
+  mixed-sourceHash and zero-per-query-filesystem coverage
 
 ## Documentation Updates Required
 
 Provide verified contract and migration deltas to TASK-548-07-L01, the sole
 closeout-documentation writer, for
 `_docs/ARCHITECTURE.md`, `_docs/CMS_API.md`, `_docs/DATA_MODEL.md`,
-`_docs/SECURITY_SPEC.md`, `docs/develop/assistant.md` and
+`_docs/SECURITY_SPEC.md`, `_docs/ADMIN_CACHE.md`,
+`_docs/ADMIN_CACHE_MAP.md`, `docs/develop/assistant.md` and
 `docs/guide/README.md`. This child does not edit those shared closeout files.

@@ -81,9 +81,9 @@ Task board for project work. Keep task files and this board in sync.
   Do not move a leaf task to `Done` until either its standalone changelog
   exists or the family changelog records that leaf.
 
-- **To Do:** 409 tasks
+- **To Do:** 447 tasks
 - **In Progress:** 7 tasks
-- **Done:** 3116 tasks
+- **Done:** 3117 tasks
 
 > TASK-479 (25 subtasks 05–29 + 92 leaves) and TASK-480 (umbrella + 6 subtasks +
 > 18 leaves) were broken down 2026-06-27. The table below lists the
@@ -109,7 +109,13 @@ Task board for project work. Keep task files and this board in sync.
 > TASK-539 → TASK-542 → TASK-545. TASK-536 and TASK-538 completed on
 > 2026-07-11; TASK-541, TASK-537, and TASK-544 completed on 2026-07-12; TASK-543
 > completed on 2026-07-13. TASK-539 and
-> TASK-542 must remain sequential because both own `siteShell` seams.
+> TASK-542 must remain sequential because both validate site-shell/runtime
+> integration; after this repaired contract only TASK-542 owns `siteShell` source.
+> Shared documentation order is also strict:
+> TASK-539-08-L01 documentation → TASK-548-06-L01 Guide migration and
+> TASK-548-07-L01 security closeout. Those two TASK-548 writer leaves must still be
+> `⏳ To Do` when TASK-539 writes the shared Page guide/security files; afterward
+> TASK-548 consumes the landed bytes and owns its own final corpus/coverage sequence.
 
 ---
 
@@ -117,9 +123,10 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-548 | Hybrid Visual Documentation Platform | High | Very Large | One strict `coderso.docs-corpus@v2` source compiles into locally packaged Help, DB-backed Guide grounding, and a versioned public portal; includes reviewed Playwright visual authoring, independent Guide/optional Agent tabs, immutable release artifacts, generated coverage, and seven-plus real-flow acceptance smoke scenarios. Changelog 1261 pinned. 8 children + 17 executable leaves. |
+| TASK-551 | Scalable Database, Query, and Cache Optimization | High | Very Large | Priority implementation program from the measured PostgreSQL/code-query audit: bounded projections/keyset/batching, query/index alignment, search vectors, retention, pool guardrails, local-first server caching for single replicas, optional Redis for multi-replica scale, deterministic post-commit invalidation, and small/large performance gates. Dispatch after currently active collision owners are terminal or prove disjoint file ownership. Changelog 1263 pinned. 11 children + 25 executable leaves. |
+| TASK-548 | Hybrid Visual Documentation Platform | High | Very Large | One strict `coderso.docs-corpus@v2` source compiles into locally packaged Help, DB-backed Guide grounding, and a versioned public portal; includes reviewed Playwright visual authoring, independent Guide/optional Agent tabs, immutable release artifacts, generated coverage, and exactly eight ordered real-flow acceptance smoke scenarios. Changelog 1261 pinned. 8 children + 17 executable leaves. |
 | TASK-547 | Full-Site Example Package and Projekty Domów Installer | High | Very Large | Versioned strict full-site package graph, native resource refs, idempotent dry-run/apply/rollback lifecycle, seven Pages + dynamic project detail, complete FormaDom generator, installer-backed CLI, eight-flow Playwright smoke. Changelog 1260 pinned. 7 children + 13 executable leaves. |
-| TASK-539 | Page V2 Post-Audit Remediation II | High | Very Large | Residual Page v2 model, sanitizer, authoring, transform, renderer, responsive CSS, runtime-init, and narrow-canvas corrections after TASK-535. Changelog 1251 pinned. 8 children + 17 leaves. |
+| TASK-539 | Page V2 Post-Audit Remediation II | High | Very Large | Residual Page v2 model, sanitizer, authoring, transform, renderer, responsive CSS, runtime-init, and narrow-canvas corrections after TASK-535. Changelog 1251 pinned. 8 children + 18 leaves. |
 | TASK-542 | Menu Determinism, Responsive Cascade, and Runtime Parity | High | Large | Strict deterministic MenuDocumentV2, complete responsive neutralizers, shared public projection/active identity, and dirty-safe revalidation. Changelog 1254 pinned. 4 children + 6 leaves. |
 | TASK-545 | Workflow, Smoke Evidence, and Task-Graph Integrity | High | Large | All-results guard, five-round workflow enforcement, durable hashed smoke manifests, and bounded historical graph/index repair. Changelog 1257 pinned. 4 children + 10 leaves. |
 | TASK-478 | Page Editor Inline Link And Toolbar Placement UX | Medium | Medium | Inline links are invisible/uneditable/unremovable and hijack selection (navigate on click); plus a request to dock the mark toolbar to the block side so the picker doesn't cover the text. Live-verified 2026-06-27. |
@@ -174,6 +181,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-550 | Database Query and Server Cache Engineering Rules | High | Small | ✅ Done (2026-07-24): codified the owner-requested PostgreSQL and repository query audit as mandatory bounded-query, schema/index, transaction, retention, pool, performance-evidence, local-first cache, optional Redis, invalidation, and cache-security rules in root `AGENTS.md`. Docs/process only; no runtime, route, schema, migration, or dependency change. Changelog 1262. |
 | TASK-546 | Node 26 and Full Dependency Upgrade | High | Large | ✅ Done (2026-07-22): Node 26.5.0 and Bun 1.3.14 now own the runtime/toolchain contract; the root workspace and standalone prototype use the latest mutually compatible stable dependency graph admitted by the seven-day supply-chain quarantine, and `fast-uri` resolves only to fixed 3.1.4. Node/React/Vite compatibility, TASK-522 strict-Semgrep, TASK-540/TASK-543 local CodeQL regressions, and Forms scanner/modularity findings were repaired without UI/UX changes or dependency downgrades. Full Bun passed 1,733 with 1 optional live-provider skip and 0 failures; full Vitest passed 7,194/7,194; fresh coverage completed; precommit, all builds, Admin boundary/bundle budgets, release gates 5/5, and strict security scanning passed. The production server smoke returned healthy root/Admin/assets and the expected controlled exact `/peri` 404. Five post-audit lenses were clean. Docker image build/scan was not run because Docker CLI is unavailable; remote PR CodeQL alert closure was not claimed because `gh` is unauthenticated and no commit/push was authorized. Changelog 1259. All 4 children + 6 leaves terminal. |
 | TASK-543 | Posts Exit Safety and List Accessibility | High | Small | ✅ Done (2026-07-13): Close now awaits the newest exact durable draft across route epochs, propagates save failure, preserves exact metadata restoration, and coalesces repeated navigation. Posts rows are passive; title/checkbox/actions retain native keyboard behavior and contextual names; one status/author/date copy remains visible at 390/768/900/1024 px. Final matrix 159/159; full Bun 1,687 pass / 1 intentional opt-in skip / 0 fail; full Vitest 836 files / 6,880 tests; precommit/Admin build-boundary-bundle and release gates 5/5 passed. Seven real light/dark CLI flows produced 11 distinct PNGs with zero console/page errors and complete cleanup. Strict scan's sole residual is exact, unchanged, and TASK-545-owned. No endpoint, migration, RBAC, security-contract, or widget expansion. Changelog 1255. All 3 children + 3 leaves terminal. |
 | TASK-544 | Media Folder Reliability and Error Recovery | Medium | Medium | ✅ Done (2026-07-12): exact owned PostgreSQL slug races map to the existing bounded 409; folder-list promise/cache generations are retryable and canonical; load/create/rename/reorder/delete retain visible state and immutable Retry behavior. Full Bun 1,687 pass / 1 optional live skip / 0 fail, Vitest 6,794/6,794, precommit/Admin build-boundary-bundle, and release gates 5/5 passed; final audits reported 0 H/M/L. Live smoke passed 5/5 canonical list/create/rename/reorder/delete flows in light/dark and wide/narrow with five distinct valid PNGs, zero canonical console/page errors, and complete fixture/session/process/port cleanup. Strict scan's sole residual is exact, unchanged, and TASK-545-owned. No endpoint, migration, RBAC, security-contract, or Dashboard/widget expansion. Changelog 1256. All 4 children + 4 leaves terminal. |

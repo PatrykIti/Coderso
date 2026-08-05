@@ -6,7 +6,7 @@
 **Priority:** High
 **Category:** Accessibility / Security / Runtime QA
 **Estimated Effort:** Large
-**Dependencies:** TASK-548-04-L02, TASK-545
+**Dependencies:** TASK-548-04-L02; TASK-545 must be `✅ Done` and TASK-547 must be fully terminal before dispatch
 **Status:** ⏳ To Do
 **Changelog:** 1261 (pinned; closure only)
 
@@ -55,15 +55,32 @@ validated output root (default only when exactly
   second exclusion, untracked file or orphan record fails;
 - every canonical/alias/search/asset/sitemap/robots/header/redirect reference
   resolves inside the artifact or to the one configured HTTPS origin;
-- `deployment/site-index.json` and every prebuilt source candidate mapped by
+- every manifest `visualAssets[]` record has a bundle-global unique `visualId`,
+  exact `(docId, locale, sectionId)` ownership, and a byte/hash-identical
+  `files[]` record; localized pages may reference only their own records;
+- `deployment/site-index.json` is the exact recursively reject-unknown
+  single-release candidate, not a cumulative history, and every prebuilt source
+  candidate mapped by
   TASK-548-05 into capsule `latest/**`, `routing/{redirects,headers}.json` and
   `global/{sitemap.xml,robots.txt,site-index.json}` agree byte-for-byte with the
   portal manifest records;
+- root `404.html` is one typed, base-safe, `noindex,follow` page with exact
+  route-graph alternatives, no reflected request path, four valid islands and
+  the same L02-owned client tags as canonical/latest pages; local preview maps
+  an unmatched base-path request to these exact bytes with HTTP 404;
+- `deployment/client-assets.json` passes the exact L02 owner normalizer and
+  canonical-byte check; entry/styles/files close the complete Vite graph and
+  every path/href/byte/hash joins the detached manifest and HTML tags;
 - canonical routes, locale/version selectors, TOC/section anchors, related
   links, latest redirects, sitemap, robots, hreflang, OG, and JSON-LD agree;
 - `deployment/headers.json` yields CSP without `unsafe-inline`/`unsafe-eval`,
   frame denial, nosniff, strict referrer/permissions policies, and immutable
   hashed-asset caching;
+- root `_headers` is canonical LF output, joins its manifest file record,
+  stays within Cloudflare Pages limits and is semantically identical to
+  `deployment/headers.json` for exact/latest/404/client-asset paths; each
+  canonical route alone gets its exact JSON-LD hashes after detaching inherited
+  CSP, while alias/404 contain no JSON-LD and inherit `script-src 'self'`;
 - no source map, absolute filesystem path, `_docs`, task/changelog/audit/smoke
   text, localhost, private IP, credential-bearing URL, secret-like key/value,
   PII fixture, raw source Markdown, or unapproved external origin;
@@ -76,39 +93,82 @@ validated output root (default only when exactly
 The validator streams/bounds input sizes, rejects symlinks/path escapes, and
 does not execute HTML/JSON/script content.
 
-On success it returns this exact recursively reject-unknown receipt:
+L03 owns validation and receipt production, but not a second DTO. Its validator
+imports the exact pure server/build contract:
 
 ```ts
-type DocsPortalValidationReceiptV1 = {
-  schema: "coderso.docs-portal-validation@v1";
-  status: "pass";
-  productVersion: string;
-  corpusVersion: string;
-  sourceHash: string;
-  publicOrigin: string;
-  publicBasePath: string;
-  manifestPath: "docs-portal-manifest.json";
-  manifestSha256: string;
-  soleExcludedPath: "docs-portal-manifest.json";
-  routeCount: number;
-  fileCount: number;
-  totalBytes: number;
-  filesRootSha256: string;
-  artifactRootSha256: string;
-  allManifestFilesVerified: true;
-  untrackedFileCount: 0;
-  orphanRecordCount: 0;
-};
+import { normalizeDocsPortalClientAssetsManifestV1,
+  normalizeDocsPortalManifestV1,
+  normalizeDocsPortalSiteIndexCandidateV1,
+  normalizeDocsPortalValidationReceiptV1,
+  serializeDocsPortalClientAssetsManifestV1,
+  serializeDocsPortalManifestV1,
+  serializeDocsPortalSiteIndexCandidateV1,
+  serializeDocsPortalValidationReceiptV1,
+  type DocsPortalManifestV1,
+  type DocsPortalValidationReceiptV1,
+} from "@coderso/docs-portal/publication-contracts";
 ```
 
-`manifestSha256` is computed over the exact detached manifest bytes and is
-never written into `DocsPortalManifestV1`. `filesRootSha256` is a
-domain-separated hash over the canonical sorted `path`, `bytes`, and `sha256`
-records. `artifactRootSha256` binds that files root to `manifestSha256`.
-Counts and bytes are bounded non-negative safe integers. The receipt is returned
-to TASK-548-05-L01 or written outside `dist`; it can never become an untracked
-portal output or a second manifest exclusion. A failure returns a typed error
-and never emits a receipt with `status: "pass"`.
+No validator/client deep import or duplicate shape is valid. The owner
+normalizer rejects unknown keys recursively and the CLI emits only paired
+serializer bytes after proving serialize→parse→normalize byte identity.
+
+`manifestSha256` is lowercase hex SHA-256 of the exact raw detached-manifest
+bytes, without a domain prefix, and is never written into
+`DocsPortalManifestV1`. L03 solely owns:
+
+```ts
+export const DOCS_PORTAL_FILES_ROOT_DOMAIN_V1 =
+  "coderso.docs-portal.files-root.v1" as const;
+export const DOCS_PORTAL_ARTIFACT_ROOT_DOMAIN_V1 =
+  "coderso.docs-portal.artifact-root.v1" as const;
+
+export function hashDocsPortalFilesRootV1(
+  records: readonly { path: string; bytes: number; sha256: string }[]
+): string;
+
+export function hashDocsPortalArtifactRootV1(input: {
+  manifestSha256: string;
+  filesRootSha256: string;
+}): string;
+```
+
+`filesRootSha256` is lowercase hex SHA-256 over exactly
+`UTF8(DOCS_PORTAL_FILES_ROOT_DOMAIN_V1) || 0x00 || u64be(recordCount)`,
+followed for each record by
+`u32be(pathUtf8.length) || pathUtf8 || u64be(bytes) ||
+raw32(hexDecode(sha256))`. Paths are non-empty NFC, confined, base-relative
+POSIX paths, unique and sorted by unsigned raw UTF-8 byte order before hashing.
+Counts and lengths use the fixed-width unsigned big-endian widths shown;
+`bytes` is a bounded non-negative safe integer. Input digests are exact
+lowercase 64-hex decoded to 32 raw bytes, never their 64 ASCII characters.
+There are no implicit separators, JSON encoding, platform path rules, or final
+newline. The empty record set is defined by the domain, NUL, and zero `u64be`
+count.
+
+`artifactRootSha256` is lowercase hex SHA-256 over exactly
+`UTF8(DOCS_PORTAL_ARTIFACT_ROOT_DOMAIN_V1) || 0x00 ||
+raw32(hexDecode(manifestSha256)) || raw32(hexDecode(filesRootSha256))`, with no
+lengths, separators, or final newline. The independent producer and reopened
+artifact verifier implement these byte streams separately and must match these
+golden vectors:
+
+- empty files root:
+  `22e2b152769ac29645b74b2a38ac06d01abcd83f379caf11daea08a21be884d6`;
+- one file `a.txt`, `bytes = 3`, and SHA-256 of raw `abc`
+  (`ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad`):
+  `493343b5ef343313ec1d14f3a09475c7d34f8f51a44cb80f16cdc07a26efb547`;
+- exact manifest bytes `{}\n`:
+  `ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356`;
+- that manifest with the empty and one-file roots respectively:
+  `dce715eba7ab2a2cf04ca51a1da949f9652eee47cd7959dd7369220feeeef547`
+  and
+  `648fe5d4f45f7e4bd3f9729fccf0da00c55ff11bd7abce3774fecf89a621076d`.
+
+The receipt is returned to TASK-548-05-L01 or written outside `dist`; it can
+never become an untracked portal output or a second manifest exclusion. A
+failure returns a typed error and never emits a receipt with `status: "pass"`.
 
 ## Browser Gate Scenarios
 
@@ -117,7 +177,11 @@ and use named session `wf548portal`. Run at least these distinct real flows:
 
 1. **Wide light search/read:** search a known screen, open a result, assert URL,
    H1, highlighted result text, TOC target geometry, screenshot/alt/caption, and
-   no horizontal overflow.
+   no horizontal overflow. Before navigation install console/page-error
+   collectors, then require exactly the four declared sibling hydration roots,
+   functional interaction in each root, zero DOM replacement of the static
+   article/navigation/TOC, and zero
+   `docs_portal_hydration_recoverable_error` diagnostics.
 2. **Keyboard-only navigation:** skip to content, operate search/results/TOC/
    version controls, open/close mobile or desktop navigation as applicable,
    assert focus order/restore and visible focus ring.
@@ -127,15 +191,23 @@ and use named session `wf548portal`. Run at least these distinct real flows:
 4. **Dark + reduced motion:** emulate dark and reduced motion; assert computed
    foreground/background/token changes, animation duration/behavior, visual
    readability, and screenshot.
-5. **Version/latest/deep link:** open a versioned section deep link and matching
-   latest alias; assert canonical/noindex metadata, version selector, anchor
-   offset, and alias mapping.
+5. **Version/latest/deep link:** serve a strict cumulative same-origin
+   `/site-index.json` with two retained versions, open a versioned section deep
+   link and matching latest alias, and assert canonical/noindex metadata,
+   same-`(docId, locale)` version selection, anchor offset, and alias mapping.
 6. **Locale truth:** verify English complete route and one available alternate
-   fixture; verify missing Polish translation is not advertised and fallback is
-   explicit.
+   fixture; verify missing Polish translation is not advertised, fallback is
+   explicit, and a visual resolves only through its localized
+   `(docId, locale, sectionId)` owner despite a bundle-global `visualId`.
 7. **Static/offline/no-runtime dependency:** after initial local artifact load,
-   block all non-preview origins, repeat article/search navigation, and assert
-   zero provider/CMS/analytics/external image calls.
+   make the cumulative site index unavailable, block all non-preview origins,
+   repeat article/search navigation, assert the selector remains current-only,
+   and assert zero provider/CMS/analytics/external image calls.
+
+The route flows also request one deterministic missing path under the configured
+base and require status 404, body hash equal to root `404.html`, visible real
+alternatives, noindex, functioning four-island UI, base-safe client requests,
+and no redirect or SPA-200 fallback.
 
 All scenarios require zero console/page errors and zero unexpected network
 requests. The targeted L03 run captures one screenshot for every scenario into
@@ -143,46 +215,28 @@ its exact task-owned `.tmp` run directory for immediate human review.
 
 ## Canonical TASK-545 Evidence Handoff
 
-Final evidence uses only the completed TASK-545 root:
+This leaf's seven scenario screenshots and structured results remain
+exclusively below
+`.tmp/docs-portal-smoke/task-548-04/<run-id>/`; they are targeted-gate inputs,
+not members of the final TASK-545 evidence directory.
 
-```text
-_docs/_workflows/_smoke/evidence/task-548/
-```
+TASK-548-07-L01 is the sole writer of
+`_docs/_workflows/_smoke/evidence/task-548/manifest.json` and its exact eight
+acceptance PNGs. It consumes this leaf's prior portal evidence read-only. If the
+final tree requires recapture, L01 requests one same-owner operational L03
+handback; L03 returns bounded results/screenshot bytes without status transfer,
+and L01 alone writes `06-portal-local-exact-latest-rollback.png` as the portal
+member of its exact canonical inventory. No `portal/*.png` subtree or other
+extra canonical member is valid.
 
-TASK-548-07 is the sole final evidence and manifest writer. It reruns the exact
-L03 scenario driver against the final working tree and writes these disjoint
-manifest-relative screenshots:
-
-| Scenario ID | Final screenshot path |
-| --- | --- |
-| `portal-wide-light-search-read` | `portal/01-wide-light-search-read.png` |
-| `portal-keyboard-navigation` | `portal/02-keyboard-navigation.png` |
-| `portal-narrow-responsive` | `portal/03-narrow-responsive.png` |
-| `portal-dark-reduced-motion` | `portal/04-dark-reduced-motion.png` |
-| `portal-version-latest-deep-link` | `portal/05-version-latest-deep-link.png` |
-| `portal-locale-truth` | `portal/06-locale-truth.png` |
-| `portal-static-offline` | `portal/07-static-offline.png` |
-
-The final `manifest.json` references every exact file above and records the
-TASK-545 strict task/revision/generatedAt/server/scenario/surface/theme/
-viewport/assertion/console/screenshot shapes. Assertions use only
-`computed-style`, `geometry`, `dom-state`, or `aria`; every scenario has at
-least one passing visible assertion, one screenshot with lowercase SHA-256,
-and zero console errors. The portal set uses `surface: "public"` and explicit
-light/dark themes.
-
-After all final portal-affecting fixes, TASK-548-07 reruns and reconciles all
-seven IDs before TASK-545 phase 1. It then audits exact manifest/file/hash/
-revision parity, atomically creates the non-overwritable
-`resume-checkpoint.json`, and returns structured
-`{ pass: false, code: "owner_action_required",
-action: "review_and_stage_evidence", ... }`. The agent pauses without staging or
-closing metadata. Only the owner reviews and stages the exact
-`evidence/task-548/` directory, then invokes the checkpoint-owned resume with
-the unchanged task/run/checkpoint hash. Resume requires exact workflow identity,
-tracked file parity and hashes; wrong/stale/tampered identity or any later
-non-evidence source drift invalidates the result and requires a fresh final
-rerun. No legacy `_smoke/task-548-04-*` path is valid.
+After L01 has written and validated only that manifest/eight-PNG inventory, it
+calls the imported TASK-545 phase-1 `createResumeCheckpoint` helper. That helper
+is the sole writer of
+`_docs/_workflows/_smoke/evidence/task-548/resume-checkpoint.json`.
+TASK-548-07-L01 owns the surrounding `owner_action_required` pause, owner staging
+review, resume identity/parity checks and fresh rerun after source drift, but it
+does not write checkpoint bytes itself. This leaf writes neither canonical
+evidence nor checkpoint and never closes metadata.
 
 ## Security Contract
 
@@ -207,15 +261,18 @@ export async function validateBuiltPortal(
 ): Promise<{
   manifest: DocsPortalManifestV1;
   receipt: DocsPortalValidationReceiptV1;
+  receiptBytes: Uint8Array;
 }> {
   const exactRoot = await assertAllowedPortalRoot(root);
-  const manifest = assertPortalManifest(
-    await readBoundedJson(exactRoot, "docs-portal-manifest.json")
-  );
+  const manifestBytes = await readBoundedBytes(exactRoot, "docs-portal-manifest.json");
+  const manifest = normalizeDocsPortalManifestV1(parseJson(manifestBytes));
+  assertBytesEqual(manifestBytes, serializeDocsPortalManifestV1(manifest));
   const files = await walkFilesWithoutSymlinks(exactRoot, options.maxFiles);
 
   assertDetachedManifestIsSoleExcludedControlFile(manifest, files);
   await verifyEveryOtherFileHash(exactRoot, manifest.files);
+  assertLocalizedVisualAssetOwnership(manifest.visualAssets, manifest.files);
+  assertCurrentReleaseSiteIndexCandidate(exactRoot, manifest);
   validateRouteSeoLinkAndDeploymentGraph(exactRoot, manifest);
   scanPublicBytesForForbiddenMaterial(exactRoot, manifest);
   const receipt = normalizeDocsPortalValidationReceiptV1({
@@ -223,22 +280,24 @@ export async function validateBuiltPortal(
     status: "pass",
     ...portalIdentityFromManifest(manifest),
     manifestPath: "docs-portal-manifest.json",
-    manifestSha256: await sha256File(exactRoot, "docs-portal-manifest.json"),
+    manifestSha256: sha256(manifestBytes),
     soleExcludedPath: "docs-portal-manifest.json",
     ...computePortalRootClosureFacts(manifest, files),
     allManifestFilesVerified: true,
     untrackedFileCount: 0,
     orphanRecordCount: 0,
   });
-  return { manifest, receipt };
+  const receiptBytes = serializeDocsPortalValidationReceiptV1(receipt);
+  assertCanonicalReceiptRoundTripV1(receiptBytes, receipt);
+  return { manifest, receipt, receiptBytes };
 }
 ```
 
 **Data flow:** immutable L02 dist → bounded path-safe file walk → schema/hash/
 reference/content/a11y checks → mandatory local preview and temporary targeted
-Playwright evidence → TASK-548-07 final-tree rerun → canonical TASK-545
-manifest/screenshots/checkpoint → owner review/stage → tracked resume evidence
-for TASK-548-05/closure.
+Playwright evidence → TASK-548-07 final-tree rerun → L01-owned canonical
+manifest/eight PNGs → TASK-545 `createResumeCheckpoint` phase-1 checkpoint →
+owner review/stage → tracked resume evidence for TASK-548-05/closure.
 
 **Error handling:** first integrity/path/schema failure returns a machine-readable
 error plus safe relative evidence and nonzero exit; never repairs or deletes
@@ -249,22 +308,40 @@ unexpected request, absent screenshot, or skipped scenario is a failed gate.
 
 - valid fixture passes with exact file/route counts and exactly one detached
   control-file exclusion, exact external `manifestSha256`, and reproducible
-  files/artifact root hashes;
+  files/artifact root hashes; independent producer and reopened-verifier tests
+  pin the literal domains, empty/one-file/manifest/artifact golden vectors,
+  NFC and raw-UTF-8 ordering, big-endian widths, raw digest bytes, and absence
+  of implicit separators or final newlines;
+- exact package-subpath imports compile; receipt fixtures pin discriminator/key
+  order/final LF, reject nested unknowns, and round-trip through the sole
+  normalizer/serializer to byte-identical CLI output consumed by 05-L01;
 - file mutation, orphan, hash mismatch, symlink/traversal, duplicate route,
   broken anchor/link/hreflang/redirect, bad CSP, unsafe HTML/URL, secret/internal
   marker, source map, remote media, missing alt, and a11y landmark/heading
   defects, manifest self-record and second exclusion each fail with a stable code;
+- 404 reflected-path/fake-alternative/canonical/status/body/tag/payload drift,
+  client-assets entry/style/file/href/closure drift, and `_headers` syntax/base/
+  limit/JSON-parity/effective-policy drift each fail with a stable code;
+- site-index unknown keys/order/version/route drift and localized visual
+  owner/locale/section/global-id/file-hash drift each fail with a stable code;
 - validator never executes hostile fixture content;
 - receipt unknown fields, wrong discriminator/identity/count/root hash,
   self-hash field attempts, and a pass receipt after any failed check reject;
 - every Playwright scenario reports computed/geometry/DOM visible effects and
-  evidence path, not just selector presence.
+  evidence path, not just selector presence;
+- built-page hydration installs collectors before navigation, exercises all
+  four roots, and fails on any default-observer
+  `docs_portal_hydration_recoverable_error`, React mismatch/recovery console
+  output, page error, root-count drift, or static article/navigation/TOC DOM
+  replacement;
 - targeted output is confined to `.tmp`; static ownership tests reject writes
   to canonical evidence, manifest/checkpoint, or the legacy smoke prefix;
-- final handoff fixtures pin all seven IDs/paths, exact TASK-545 manifest fields,
-  `owner_action_required` pause, unchanged checkpoint hash/run/workflow identity,
-  owner-only staging, tracked resume, stale/tampered failure, and full rerun
-  after any non-evidence final-tree drift.
+- final handoff fixtures pin all seven targeted IDs and `.tmp` paths, then prove
+  07-L01 writes only `06-portal-local-exact-latest-rollback.png` for the portal
+  inside its exact eight-image canonical inventory plus `manifest.json`;
+  TASK-545 `createResumeCheckpoint` alone writes the checkpoint, while
+  `owner_action_required`, checkpoint hash/run/workflow validation, owner-only
+  staging, tracked resume, and stale/tampered rerun remain 07-owned orchestration.
 
 ## Sub-Tasks
 
@@ -277,7 +354,11 @@ unexpected request, absent screenshot, or skipped scenario is a failed gate.
 ## Testing Requirements
 
 ```bash
-SOURCE_DATE_EPOCH=1784764800 bun --cwd packages/docs-portal build
+DOCS_PRODUCT_VERSION=0.0.0-test \
+DOCS_PUBLIC_ORIGIN=https://docs.example.invalid \
+DOCS_PUBLIC_BASE_PATH=/docs \
+SOURCE_DATE_EPOCH=0 \
+  bun --cwd packages/docs-portal build
 bun packages/docs-portal/scripts/validate-built-portal.ts \
   packages/docs-portal/dist
 bunx vitest run --config vitest.config.ts \
@@ -298,6 +379,8 @@ bun run precommit:check
 wc -l packages/docs-portal/scripts/validate-built-portal.ts \
   tests/vitest/docs-portal/portal-security.test.ts \
   tests/vitest/docs-portal/portal-accessibility.test.tsx
+find packages/docs-portal/scripts/browser-gate \
+  -type f -exec wc -l {} +
 git diff --check
 ```
 
@@ -309,9 +392,11 @@ fail-closed exit code.
 Then restart the preview server and run `playwright-cli -s=wf548portal` for all
 seven scenarios. Store all seven targeted screenshots only below the bounded
 `.tmp/docs-portal-smoke/task-548-04/<run-id>/` candidate directory. The final
-TASK-548-07 gate reruns the same driver and writes the seven exact canonical
-paths before TASK-545 phase 1. Every count must be at most 1,000; every
-scenario/result and the final tracked-resume handoff are mandatory.
+TASK-548-07 gate consumes or requests a same-owner recapture of the portal flow
+and alone writes only `06-portal-local-exact-latest-rollback.png` for the portal
+inside its exact eight-image inventory before TASK-545 phase 1. Count every
+human-authored browser-gate driver; every count must be at most 1,000, and every
+targeted scenario/result remains mandatory.
 
 ## Acceptance Criteria
 
@@ -323,11 +408,17 @@ scenario/result and the final tracked-resume handoff are mandatory.
 - At least seven distinct browser flows pass with visible-effect assertions,
   zero console errors, zero unexpected requests, and human-reviewable
   screenshots.
-- TASK-548-07 alone writes the canonical final screenshots/manifest/checkpoint
-  flow; TASK-548-04-L03 keeps mandatory targeted evidence temporary and cannot
-  collide with final acceptance filenames.
+- The built page mounts exactly four sibling islands from identical server/
+  client component-model-prefix inputs and produces zero recoverable hydration
+  diagnostics, mismatch recovery, or static article/navigation/TOC replacement.
+- TASK-548-07-L01 writes only the canonical final eight screenshots and
+  `manifest.json`; TASK-545 `createResumeCheckpoint` alone writes the phase-1
+  checkpoint. TASK-548-04-L03 keeps mandatory targeted evidence temporary and
+  cannot collide with final acceptance filenames.
 - Wide/narrow, light/dark, keyboard/focus, reduced-motion, deep-link/latest,
-  locale truth, and offline/static behavior are all demonstrated.
+  typed 404, locale truth, and offline/static behavior are all demonstrated.
+- Cumulative online version navigation and current-only offline fallback are
+  visibly proven without cross-document substitution.
 - No validation failure is suppressed, auto-baselined, or repaired in output;
   source fixes land through the exclusive L01/L02 owner and gates rerun.
 - TASK-548-05 receives a clean immutable artifact plus validator/browser

@@ -38,8 +38,26 @@ branch verifies the unchanged checkpoint, exact executing workflow, and tracked 
 never replays implementation. The standalone evidence validator is diagnostic, not the
 owner's closure entrypoint.
 
+The executing owner is derived only from its `import.meta.url`; callers cannot supply a
+workflow path. Existing 24+44 built-ins stay exact. A future owner must be canonical
+`_docs/_workflows/task-<matching-id>-(author-audit|implement|fix).mjs` (`TASK-9999` is the
+only four-digit exception), tracked, regular/no-symlink, byte-identical to `git show HEAD`,
+task/suffix-bound, and green in TASK-545 static-contract/import gates.
+
 That tracked pass freezes the audited runtime snapshot. Subsequent closure may change only
 the exact task family, task index, date-resolved pinned changelog file, and changelog index.
+A resume computes the current revision first. With no canonical closure delta or pinned
+changelog/index state, stale checkpoint/run-bound same-repository temp/journal alone is cleaned and the
+`frozen` branch returns current-canonical-UTC `closureIdentity`. Changelog closure calls exact
+owner export `writeOrResumeOrderedDurableChangelogFileThenIndexV1` with marker
+`ordered-durable-changelog-file-then-index@v1`: no-replace changelog file +
+file/directory fsync, then index CAS via a
+same-directory temp/rename + file/directory fsync. Valid states are only `none`, `file-only`,
+and `both`; index-only, corruption, and multiple candidates fail. Recovery derives identity
+from exactly one strict regular non-symlink file and zero or one matching index row before
+allowlisting, accepts file-only as the exact first prefix, completes the index idempotently,
+then later metadata, and validates both. Its returned identity is the sole downstream
+authority, so a crash across UTC midnight keeps the changelog date.
 A final metadata-delta validation returns the new revision and sorted allowed paths; any
 source/test/config/runtime-doc/workflow/evidence/HEAD or other-task delta requires a fresh
 smoke. Resume recovers only allowlisted partial closure metadata after a crash and is
@@ -57,7 +75,7 @@ but the durability defect remains.
 
 | ID | Title | Exclusive ownership | Status |
 |---|---|---|---|
-| TASK-545-03-L01 | Define and validate smoke evidence manifests | manifest/checkpoint schemas, canonical-root validator/resume/delta CLI, focused tests | ⏳ To Do |
+| TASK-545-03-L01 | Define and validate smoke evidence manifests | manifest/checkpoint schemas, exact type declarations, canonical-root validator/resume/delta CLI, focused tests | ⏳ To Do |
 | TASK-545-03-L02 | Track evidence screenshots | narrow `.gitignore` plus evidence docs only | ⏳ To Do |
 
 ## Security Contract

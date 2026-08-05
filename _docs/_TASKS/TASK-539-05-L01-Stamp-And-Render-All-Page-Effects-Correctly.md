@@ -6,120 +6,500 @@
 **Priority:** High
 **Category:** Pages / Public Renderer / Geometry
 **Estimated Effort:** Very Large
-**Dependencies:** TASK-539-04-L01; TASK-539-01-L01; TASK-539-02-L01
+**Dependencies:** TASK-539-04-L02, TASK-539-03-L05, TASK-539-02-L01, TASK-539-01-L01
 **Status:** ⏳ To Do
 **Changelog:** 1251 (pinned; create only at TASK-539 closure)
 
 ---
 
-## Ownership
+## Sole ownership and mandatory split
 
-Sole source writer: `core/services/pages/pageRendererV2.tsx`. This leaf also owns
-compatibility-expectation updates required before its source gate in
-`tests/vitest/pages/page-renderer-v2.test.tsx` and
-`tests/vitest/pages/task-534-interactivity-render.test.tsx`. Read the post-TASK-478
-file fresh. Current anchors include block render props `:1125-1193`, gallery
-`:1585-1805`, marquee `:2354-2394`, divider `:2545-2580`, tilt/layer wrapper
-`:2872-2901`, timeline `:3012-3088`, reveal CSS `:795-842`, and document runtime
-emission `:3866-3877`.
+Own the stable `core/services/pages/pageRendererV2.tsx` facade plus cohesive sibling
+modules:
+
+- `pageRendererTypes.ts`
+- `pageRendererSectionStyles.ts`
+- `pageRendererBlockStyles.ts`
+- `pageRendererReplicaIdentity.ts`
+- `pageRendererTextBlocks.tsx`
+- `pageRendererMediaBlocks.tsx`
+- `pageRendererDataBlocks.tsx`
+- `pageRendererSvgBlock.tsx`
+- `pageRendererLayoutBlocks.tsx`
+- `pageRendererTimelineGeometry.ts`
+- `pageRendererBlockFrame.tsx`
+- `pageRendererSections.tsx`
+- `pageRendererDocument.tsx`
+
+The facade explicitly re-exports every pre-task public symbol used by site shell,
+runtime, admin canvas, menus, and tests; `export *` is forbidden. Avoid circular
+facades: internal modules import their direct owner. Split by responsibility and
+extract further cohesive modules if any receipt exceeds 1,000.
+
+`pageRendererReplicaIdentity.ts` is the direct owner of the task-added pure replica
+identity types and helpers. It explicitly exports them for focused direct-owner
+tests, while internal renderer modules import that direct owner. Do not widen the
+stable `pageRendererV2.tsx` facade with these implementation-only symbols.
+It has no runtime import edge to the responsive-CSS facade: canonical frame and
+tilt/layer attribute constants may be referenced through type-only imports in the
+finite attribute-name union, while renderer call sites pass their runtime attribute
+names. This keeps TASK-539-06's declarations-to-replica-identity import acyclic.
+`pageRendererTimelineGeometry.ts` follows the same direct-owner policy for
+`PageTimelineItemGeometry` and `resolvePageTimelineItemGeometry`; renderer modules
+and its focused test import that file directly, and the stable facade does not
+re-export either task-added symbol.
+
+Also own the cohesive split/updates of:
+
+- `tests/vitest/pages/page-renderer-v2-facade.test.tsx`
+- `tests/vitest/pages/page-renderer-v2.test.tsx`
+- `page-renderer-v2-section-layout.test.tsx`
+- `page-renderer-v2-blocks.test.tsx`
+- `page-renderer-v2-data-binding.test.tsx`
+- `page-renderer-v2-effects.test.tsx`
+- `page-renderer-v2-svg.test.tsx`
+- `page-renderer-v2-composition.test.tsx`
+- `page-renderer-timeline-geometry.test.ts`
+- `tests/vitest/pages/task-534-interactivity-render.test.tsx`
+
+Each suite must be independently runnable; shared fixtures may live in a focused
+`pageRendererV2TestFixtures.tsx` kept `<=1000`. Read the post-TASK-478 renderer fresh.
+
+The stable facade surface is frozen from the verified pre-task source at exactly 41
+names: these 12 type exports
+
+```ts
+PageRenderMode
+PageSectionLayoutMode
+PageSectionStyleProperties
+PageBlockStyleProperties
+PageSectionDataAttributes
+PageBlockDataAttributes
+PageSectionRenderProps
+PageBlockRenderProps
+PageBlockFrameRenderer
+PageInlineTextRenderer
+PageColumnsSlotTrailingRenderer
+PageSectionColumnTrailingRenderer
+```
+
+and these 29 runtime-value exports
+
+```ts
+joinPageRenderClasses
+toPageSectionStyle
+toPageSectionBleedStyle
+pageSectionGridClass
+pageSectionCanvasGridClass
+pageSectionAlignmentClass
+pageSectionJustifyClass
+pageTextAlignClass
+pageBlockWidthClass
+isPageBlockSelfAligned
+pageBlockEffectiveWidthClass
+pageBlockAlignmentClass
+toPageSectionRenderProps
+PAGE_REVEAL_MOTION_CSS
+toPageBlockTypographyStyle
+pageBlockTextDataAttributes
+toPageBlockElementStyle
+pageBlockElementDataAttributes
+toPageBlockStyle
+toPageBlockRenderProps
+renderPageBlockContent
+PageBlockContent
+PageBlockFrame
+PageSectionContent
+PageSectionRender
+resolvePageRenderTree
+PAGE_SPOTLIGHT_CSS
+documentUsesSpotlight
+PageDocumentRender
+```
+
+The L01-owned `page-renderer-v2-facade.test.tsx` uses the TypeScript compiler API to
+parse `pageRendererV2.tsx` as TSX. The facade is declaration-only: every top-level
+statement must be an `ExportDeclaration` with a string-literal direct-owner module
+specifier and an explicit `NamedExports` clause. Reject imports, locally exported
+functions/classes/variables/types/interfaces, export assignments/default exports,
+namespace exports, export-star declarations, missing module specifiers, mixed
+type/value clauses, aliases that change a public name, and a duplicate public name
+before converting either manifest to a set.
+
+All 12 type names above must occur exactly once in `export type { ... } from
+"./pageRendererTypes"` declarations. Compare the sorted
+`type:<public-name>@<module-specifier>` signatures to that exact 12-entry owner map;
+type-only imports in the test then prove every facade type is usable. No extra type is
+allowed, including `PageReplicaIdentitySets`, `PageReplicaIdentityContext`,
+`PageReplicaIdentityAttributeName`, or `PageTimelineItemGeometry`.
+
+For values, statically collect the same explicit declarations, assert the exact
+29-name manifest above with no duplicate, assert `Object.keys(facade).sort()` equals
+that sorted manifest, and import every value from the module named by its parsed
+direct-owner clause to prove strict reference identity with the facade export. The
+task-added replica namespace/identity helpers, the two replica style-scope constants,
+and `resolvePageTimelineItemGeometry` remain direct-owner-only and must be absent.
+Mutation fixtures for the AST classifier prove each forbidden declaration form and
+each task-added/extra/duplicate type fails instead of merely checking the current
+happy-path source.
 
 ## Implementation Pseudocode
 
-### Data Flow
+1. **Composition predicate and hosts.** Consume
+   `PAGE_BLOCK_TRANSFORM_HOST_ATTRIBUTE`, selector/variables, and resolver from
+   TASK-539-04. Reveal CSS writes only reveal opacity/variable. A block under a
+   revealing section receives the same host attribute; ambient-orb spans receive it
+   too, so their decoration variables use the identical formula. Magnetic alone and
+   any section `scrollEffect` independently cause
+   `PAGE_COMPOSITION_EFFECTS_CSS` emission. Recurse through slots and use the same
+   predicate for main/footer document inputs. Float/drift/pulse/orbit remain on the
+   TASK-539-04 decoration channel; do not recreate a drift-only transform vocabulary.
 
-1. **Composition and magnetic.** Continue to obtain attributes/variables from
-   `resolveBlockCompositionAttrs`; spread its magnetic and transform-host hooks on
-   the real frame. Update reveal CSS so hidden/revealed states set only
-   `--cx-reveal-y` and opacity; never emit `transform:none`. Import the shared
-   `PAGE_BLOCK_TRANSFORM_HOST_SELECTOR` so a reveal-only section's descendant block
-   consumes the same fixed transform chain without needing a block-style attribute.
-   Update the exact recursive composition-emission predicate
-   `blockUsesCompositionEffect` (and any document/section wrapper that delegates to it)
-   so `style.magnetic === true` is independently sufficient to emit
-   `PAGE_COMPOSITION_EFFECTS_CSS`. Also update `docUsesCompositionEffects` so any
-   section with `style.scrollEffect` is independently sufficient to emit that same
-   stylesheet: a reveal-only section needs the shared transform chain even when none of
-   its blocks owns a composition effect. A magnetic-only document must receive both the
-   present-only host hook and the fixed transform-chain stylesheet; do not rely on
-   reveal/decoration/hover/tilt/layer being co-authored. The same predicate is used for
-   every document rendered through this module, including the footer document supplied
-   by `siteShell`; do not create a main-only duplicate gate.
+2. **Layer width.** Stamp owner `PAGE_LAYER_WIDTH_ATTRIBUTE="full|auto"` only on an
+   existing tilt/layer wrapper; preserve tilt-parent/layer variables and bounded width.
 
-2. **Tilt/layer width.** Import `PAGE_LAYER_WIDTH_ATTRIBUTE`, derive the existing
-   effective block width on the hoisted tilt/layer wrapper, and stamp
-   `full|auto` only when that wrapper
-   exists. Full follows the same width semantics as the frame; auto stays
-   max-content/bounded. Preserve `data-tilt-parent-for` and layer variables.
+3. **Actual grid-item span.** Extend the internal `PageBlockRenderContext` with its
+   owning `section` and the real `includeHiddenBlocks:boolean` chosen by the render
+   boundary. The public renderer boundary first normalizes its optional input exactly
+   once:
 
-3. **Actual grid-item span.** Import `PAGE_BLOCK_GRID_ITEM_ATTRIBUTE` from its exact
-   owner, TASK-539-04-L01, and add that stable, present-only hook for blocks
-   with base or responsive spans. In default auto-flow, the block frame is the target.
-   For existing gallery/FAQ/testimonial/timeline template wrappers, move base span
-   styling and the hook to that wrapper and suppress the inner frame span. For
-   per-column composition and non-grid media-split zones, omit the hook/span. Do not
-   add a wrapper to legacy default markup merely to host a span. Its value is the
-   normalized block id; do not spell the attribute literal locally.
-
-4. **Background split.** Call `parseAuthoringCssBackgroundPaint` after the existing
-   model sanitizer. Emit `paint.image` only as `backgroundImage` and `paint.color`
-   only as `backgroundColor`; when one component is absent, apply the same explicit
-   clear/reset semantics as the current background-type branch. Full-bleed section
-   paint remains on the outer section; capped content remains unpainted.
-
-5. **Canonical gallery.** Import `PageGalleryItemV2` and remove the renderer-local
-   alias-reading shape/regex mirror. Consume canonical fields, while re-sanitizing
-   nonempty `src` and category tokens before attributes. Caption-only placeholders
-   remain supported. Filters remain toolbar/pressed controls.
-
-6. **Marquee.** Render exactly:
-
-   ```tsx
-   <div className="cx-marquee-viewport">
-     <div className="cx-marquee-rail">
-       <div className="cx-marquee-segment">...</div>
-       <div className="cx-marquee-segment" aria-hidden="true">...</div>
-     </div>
-   </div>
+   ```ts
+   const includeHiddenBlocks = options.includeHiddenBlocks === true;
+   const context: PageBlockRenderContext = {
+     // existing fields
+     includeHiddenBlocks,
+   };
    ```
 
-   Duplicate content is inert/hidden from accessibility. Stable keys do not duplicate
-   IDs.
+   Every descendant and placement call receives that boolean; no nested consumer may
+   reread/coerce the optional raw option. For each root block, compute exactly once:
 
-7. **Divider.** Gradient width/alignment apply only under `gradient===true`; legacy
-   `<hr>` carries no dead width/alignment. TASK-539-01 removes stale stored props and
-   TASK-539-03 gates controls.
+   ```ts
+   const placement = resolvePageBlockGridPlacement(section, blockPath, {
+     includeHiddenBlocks: context.includeHiddenBlocks,
+   });
+   const hasAnySpan = [block.style, block.responsive?.tablet?.style,
+     block.responsive?.mobile?.style]
+     .some((style) => style?.colSpan !== undefined || style?.rowSpan !== undefined);
+   const spanTarget = hasAnySpan ? placement : "none";
+   ```
 
-8. **Timeline.** Introduce one pure geometry helper returning item padding class,
-   marker-center offset (22px default, 18px compact), and row gap. Per-item axis top is
-   marker center for the first item and zero otherwise; bottom is marker center for the
-   last item and gap bleed otherwise. A single item begins/ends at the same center.
-   Horizontal timeline remains unchanged.
+   Use normalized model data only. For `"block-frame"`, put base span style on the
+   frame when a base span exists and put
+   `[PAGE_BLOCK_GRID_ITEM_ATTRIBUTE]=block.id` on it whenever `hasAnySpan`, including
+   responsive-only spans. For `"section-template-wrapper"`, put the same base
+   style/hook policy on the existing timeline/gallery/FAQ/testimonial wrapper and
+   suppress both on the inner frame. For `"none"` or no span in any of
+   base/tablet/mobile, emit neither. Thread the computed target through existing
+   wrapper/frame calls; do not recompute against a different block list, add a
+   wrapper, or duplicate the classifier/attribute literal. Nested blocks remain
+   `"none"`. Tests pin omitted/`false` as the same visible-root policy and `true` as
+   the all-root policy.
 
-## Error and identity rules
+4. **Background paint.** After model sanitization, call
+   `parseAuthoringCssBackgroundPaint`; emit only `paint.image` to
+   `backgroundImage` and only `paint.color` to `backgroundColor`, preserving the
+   existing explicit clear/reset semantics and full-bleed paint target.
 
-- A failed paint/media/category recheck omits only the unsafe declaration/item and
-  never emits raw input.
-- Do not catch and render unsafe raw values as a fallback.
-- All new hooks/styles are present only when their feature is authored. Pin the
-  no-effect/no-span/no-background render output byte-for-byte.
-- `magnetic:true` alone emits the composition stylesheet; false/unset alone emits no
-  new bytes. Main and footer rendering share this exact predicate.
-- A reveal-only section independently emits the composition stylesheet; its otherwise
-  effect-free descendant consumes the shared chain, while a section with no effect
-  remains byte-identical.
-- Do not move runtime initialization to `siteShell`; TASK-539-07 owns rescanning.
+5. **Canonical gallery.** Import `PageGalleryItemV2`; remove local alias adapters and
+   regex mirrors. Read only `src/alt/caption/category`, then defense-recheck nonempty
+   URLs and category tokens with owner sanitizers/constants. Invalid material omits
+   only that unsafe output; caption-only placeholders remain.
 
-## Gate test ownership and validation
+6. **Marquee safety, identity, and accessibility.** Import
+   `PAGE_MARQUEE_REPLICA_ATTRIBUTE` from the pure TASK-539-04 owner; do not spell the
+   marker locally. Its sibling `PAGE_MARQUEE_REPLICA_SELECTOR` remains the exact
+   TASK-539-07 runtime import, so the renderer must not add a second selector.
 
-Update the two named renderer suites' stale DOM/transform expectations and add the
-reveal-only emission assertion before this source gate. TASK-539-05-L02 owns additive
-geometry combinations afterward and must not re-baseline these landed expectations.
+   First own one exhaustive, recursive, Bun-free safety decision. The map uses
+   `satisfies Record<PageBlockType, boolean>` so a future block type cannot silently
+   become cloneable. Exactly these five types are unsafe:
+   `video`, `form`, `collection`, `filters`, and `embed`. The explicitly safe
+   current types are `heading`, `text`, `badge`, `button`, `image`, `gallery`,
+   `list`, `card`, `divider`, `spacer`, `statistic`, `icon`, `quote`, `container`,
+   `columns`, `group`, `customSvg`, `switcher`, and `scrollHint`.
+
+   ```ts
+   function isPageMarqueeReplicaSafeSubtree(
+     blocks: readonly PageBlockV2[],
+     options: { includeHiddenBlocks: boolean }
+   ): boolean {
+     const renderedBlocks = options.includeHiddenBlocks
+       ? blocks
+       : blocks.filter((candidate) => candidate.visibility.visible);
+     return renderedBlocks.every((candidate) => {
+       if (!PAGE_MARQUEE_REPLICA_SAFE_BY_BLOCK_TYPE[candidate.type]) return false;
+       // The outer owner is not passed here. Any descendant-authored marquee would
+       // otherwise be cloned recursively and is therefore unsafe for this owner.
+       if (candidate.style?.marquee !== undefined) return false;
+       return getPageBlockActiveSlotKeys(candidate).every((slotKey) =>
+         isPageMarqueeReplicaSafeSubtree(candidate.slots?.[slotKey] ?? [], options)
+       );
+     });
+   }
+   ```
+
+   The authored marquee owner is the `group` renderer branch. Do not pass that owner
+   group into the predicate: its own `style.marquee` is expected and is not a reason
+   to reject cloning. Invoke the predicate only on that outer group's normalized
+   active-slot children using the already-normalized render-context boolean. In this
+   contract, a “direct unsafe” block means an immediate active-slot child of the
+   owner group; “deep unsafe” means a descendant beneath an otherwise safe child.
+   `seamless:true` plus a safe child subtree renders one `.cx-marquee-rail` with two
+   equal adjacent
+   `.cx-marquee-segment` nodes. Any unsafe direct/deep descendant or nested authored
+   marquee renders the same one-rail/one-canonical-segment fallback as
+   `seamless:false`: no replica marker, namespace, clone render, or secondary
+   script/nonce/global-runtime/network-bearing surface. The canonical nested marquee
+   still evaluates its own children and may create its own safe replica. This is a
+   fail-closed visual degradation, not an error or document rewrite.
+
+   Primary content stays canonical and byte-identical. An approved replica segment
+   carries only `[PAGE_MARQUEE_REPLICA_ATTRIBUTE]=""`, `aria-hidden="true"`, and
+   the native `inert` property/attribute. Do not blanket-rewrite descendant
+   `tabIndex`, do not add `disabled`, and do not mutate visual/form state; `inert`
+   owns focus and activation suppression. TASK-539-07 additionally imports the one
+   fixed selector and rejects marker-self/ancestors before each of its seven binders.
+   Vitest asserts the emitted marker/`aria-hidden`/native `inert` attribute/property
+   and the absence of blanket descendant mutations; it does not claim real browser
+   focus or activation suppression. TASK-539-08 Playwright owns that interaction
+   proof.
+
+   Define one deterministic direct-owner helper/context shape for the allowed safe
+   inline subtree. Keep actual DOM/SVG IDs separate from identifier values emitted
+   only in renderer data hooks:
+
+   ```ts
+   export type PageReplicaIdentitySets = {
+     domIds: ReadonlySet<string>;
+     hookIdentifiers: ReadonlySet<string>;
+   };
+
+   export type PageReplicaIdentityContext = {
+     namespace: string;
+     domIds: ReadonlySet<string>;
+     hookIdentifiers: ReadonlySet<string>;
+     inert: true;
+   };
+
+   export type PageReplicaIdentityAttributeName =
+     | "id"
+     | "htmlFor"
+     | "aria-labelledby"
+     | "aria-describedby"
+     | "aria-controls"
+     | "href"
+     | "xlinkHref"
+     | "fill"
+     | "stroke"
+     | "clipPath"
+     | "mask"
+     | "filter"
+     | "data-page-block-slot-owner"
+     | typeof PAGE_BLOCK_ID_ATTRIBUTE
+     | typeof PAGE_TILT_PARENT_LAYER_ATTRIBUTE;
+
+   export function encodePageReplicaNamespacePart(value: string): string;
+
+   export function createPageMarqueeReplicaNamespace(
+     normalizedOwnerBlockId: string,
+     serializedBlockPath: string
+   ): string;
+
+   export function collectPageReplicaIdentitySets(
+     blocks: readonly PageBlockV2[],
+     options: { includeHiddenBlocks: boolean }
+   ): PageReplicaIdentitySets;
+
+   export function namespacePageReplicaDomId(
+     context: PageReplicaIdentityContext,
+     value: string
+   ): string;
+
+   export function namespacePageReplicaHookIdentifier(
+     context: PageReplicaIdentityContext,
+     value: string
+   ): string;
+
+   export function namespacePageReplicaIdRef(
+     context: PageReplicaIdentityContext,
+     value: string
+   ): string;
+
+   export function transformPageReplicaIdentityAttribute(
+     context: PageReplicaIdentityContext,
+     attribute: PageReplicaIdentityAttributeName,
+     value: string
+   ): string;
+   ```
+
+   `encodePageReplicaNamespacePart` maps each Unicode code point, in order, to its
+   fixed-width four-character lowercase base-36 value
+   (`codePointAt(0).toString(36).padStart(4, "0")`) and concatenates the results.
+   Return
+   `cx-mrq-${encodePageReplicaNamespacePart(normalizedOwnerBlockId)}-${encodePageReplicaNamespacePart(serializedBlockPath)}`.
+   This reversible delimiter-safe mapping stays inside `[a-z0-9-]`; it uses neither a
+   lossy slug nor a truncated hash. The normalized model guarantees block-ID
+   uniqueness and the serialized path distinguishes nested occurrences.
+
+   Before rendering the replica, inspect the exact normalized safe/rendered subtree
+   after the real hidden-block filter. Put in `domIds` only values that the subtree
+   will actually emit as an HTML/SVG `id` definition (currently switcher tab/panel
+   IDs and sanitized Safe SVG IDs). Put separately in `hookIdentifiers` normalized
+   block/slot identifiers that can be emitted only as identifier-bearing data-hook
+   values. A hook identifier does not become a DOM ID merely because its bytes
+   match one; membership in one set never implies membership in the other.
+
+   Carry one replica context through every nested active-slot renderer. Namespace
+   every emitted `id` definition through `domIds` and each identifier-bearing data
+   hook through `hookIdentifiers`. The styling-only replica frame still omits Admin
+   selection chrome; namespace only hook attributes actually emitted below it.
+   Marquee replicas contain only the authored outer group's slot descendants. Their
+   preserved paths are nested, so TASK-539-03-L05 always classifies them as
+   `"none"`: no duplicated node emits `PAGE_BLOCK_GRID_ITEM_ATTRIBUTE`, a grid
+   identity hook, or span style. The outer authored group may be a legal root grid
+   item, but its one canonical frame remains outside both marquee segments.
+   Boolean/enumerated hooks such as gallery layout/pressed state remain byte-for-byte.
+
+   `transformPageReplicaIdentityAttribute` is the one pure routing function for all
+   identity-bearing renderer/Safe-SVG attributes. For whitespace-separated
+   `aria-labelledby`/`aria-describedby`, `aria-controls`, JSX `htmlFor` (rendered
+   `for`), local `href`/`xlinkHref` hashes, and every accepted Safe SVG
+   `url(#...)` in fill/stroke/clip-path/mask/filter, it rewrites a target only when
+   that exact target is in `domIds`. Data-hook attributes use only
+   `hookIdentifiers`. Therefore a fragment whose target equals only a block/slot
+   hook identifier remains byte-identical. Preserve unresolved references,
+   external/non-hash URLs, and values outside the attribute's owning set
+   byte-for-byte.
+
+   No current safe real Page renderer branch emits a `<label>`/`htmlFor` pair.
+   Prove `htmlFor` routing against the exported pure transformer in the direct-owner
+   suite; do not invent production label markup for test convenience. End-to-end
+   replica proof must use real switcher HTML IDs/ARIA references, Safe SVG
+   IDs/ARIA/hash/`url(#...)` references, and real identifier-bearing data hooks.
+   Every rewritten DOM reference resolves within the replica, no reference crosses
+   to the primary, and hook-only fragment candidates remain unchanged.
+
+   The direct identity owner additionally defines exactly these two
+   styling-only replica scope hooks:
+
+   ```ts
+   export const PAGE_MARQUEE_REPLICA_BLOCK_STYLE_SCOPE_ATTRIBUTE =
+     "data-page-marquee-replica-block-style-scope" as const;
+   export const PAGE_MARQUEE_REPLICA_TILT_LAYER_STYLE_SCOPE_ATTRIBUTE =
+     "data-page-marquee-replica-tilt-layer-style-scope" as const;
+   ```
+
+   Each hook's value is the canonical normalized original block ID, not the
+   replica-namespaced hook identifier. They are CSS scope aliases only: they are
+   neither DOM IDs/IDREF targets nor Admin selection, renderer runtime, or effects
+   runtime hooks; they are not members of `domIds`, `hookIdentifiers`, or
+   `PageReplicaIdentityAttributeName`, and the identity transformer never rewrites
+   them.
+
+   Stamp `PAGE_MARQUEE_REPLICA_BLOCK_STYLE_SCOPE_ATTRIBUTE` on each approved
+   replica block frame corresponding to the primary frame's
+   `PAGE_BLOCK_ID_ATTRIBUTE`. Stamp
+   `PAGE_MARQUEE_REPLICA_TILT_LAYER_STYLE_SCOPE_ATTRIBUTE` only on the existing
+   replica tilt/layer wrapper whose primary counterpart carries
+   `PAGE_TILT_PARENT_LAYER_ATTRIBUTE`. Do not add a wrapper. There is deliberately no
+   replica grid-item alias: every duplicated descendant is nested and therefore
+   placement `"none"`, while the outer authored group's legal root grid target is
+   one canonical node outside both segments and retains only
+   `PAGE_BLOCK_GRID_ITEM_ATTRIBUTE`. Primary output, `seamless:false`, and every
+   unsafe one-segment fallback emit neither replica alias. The identity direct-owner
+   and renderer suites pin the two exact literals, canonical values, precise targets,
+   separate-set non-membership, zero alias leakage to canonical/fallback/unsafe
+   output, and zero grid hook/span on every replica descendant.
+
+7. **Divider.** Do not change divider production behavior: its gradient-only
+   width/alignment branch is already correct. Preserve it and add regression coverage
+   only.
+
+8. **Timeline geometry.** Make
+   `pageRendererTimelineGeometry.ts` the direct owner of this exact public-to-that-
+   module contract:
+
+   ```ts
+   export type PageTimelineItemGeometry = {
+     paddingClassName: "py-2" | "py-3";
+     markerCenterPx: 18 | 22;
+     rowGapPx: number;
+     axis: {
+       top: string;
+       bottom: string;
+     } | null;
+   };
+
+   export function resolvePageTimelineItemGeometry(
+     section: PageSectionV2,
+     template: ResolvedPageSectionTemplate,
+     index: number,
+     total: number
+   ): PageTimelineItemGeometry;
+   ```
+
+   It imports the existing normalized `toPageSectionVariantSpacing` from its direct
+   split owner instead of duplicating gap normalization/scaling. Return
+   `paddingClassName:"py-2"` and `markerCenterPx:18` only for compact; otherwise
+   `"py-3"` and `22`. `rowGapPx` is exactly the normalized helper's gap (`0..120`,
+   including the existing compact scaling/minimum behavior). Set `axis:null` for
+   horizontal or `total <= 1`. Otherwise return these exact strings:
+
+   ```ts
+   const top = index === 0 ? `${markerCenterPx}px` : "0";
+   const bottom =
+     index === total - 1
+       ? `calc(100% - ${markerCenterPx}px)`
+       : `calc(-1 * ${rowGapPx}px)`;
+   ```
+
+   Thus the first segment begins at the first marker center, interior/last segments
+   begin at row top, non-final segments bleed only the negative row gap, and the
+   final segment ends at the final marker center. The renderer uses the returned
+   padding/axis without recomputing geometry. Horizontal markup stays byte-identical.
+   The focused `page-renderer-timeline-geometry.test.ts` imports the type/function
+   directly, pins default/compact and `0..120`/compact-scaled gaps, every
+   first/interior/final/singleton/horizontal result, and proves the stable facade has
+   not widened.
+
+9. **Renderer runtime commentary.** Correct only the stale
+   `pageRendererV2.tsx` documentation that says the second emitted effects-runtime
+   copy is a “total no-op.” Describe the final TASK-539 contract accurately: each
+   emitted copy invokes the reusable per-root controller, which discovers later
+   main/footer nodes while binder-specific idempotence prevents duplicate work.
+   TASK-539-07 owns the runtime implementation. Do not edit `siteShell.tsx`; its
+   existing emission/ownership comment is already accurate.
+
+## Error, identity, and handoff rules
+
+No unsafe content clone. The one-canonical-segment safety fallback is deterministic
+and non-mutating. Hooks/styles are present-only. Pin no-effect/no-span/no-background
+bytes, magnetic false/unset, reveal absent, non-seamless markup, and unsafe-seamless
+fallback markup. In particular, an ordinary block with no base/tablet/mobile span
+must not gain the grid-item hook, while a responsive-only span must gain it on the
+one legal target. Do not edit runtime clone filtering/magnetic writes here
+(TASK-539-07) or responsive span CSS (TASK-539-06).
+
+## Validation and line receipt
 
 ```bash
 bun --cwd core lint:types
 bun --cwd core lint
-bun run test:vitest -- tests/vitest/pages/page-renderer-v2.test.tsx tests/vitest/pages/task-534-interactivity-render.test.tsx
+bun run test:vitest -- \
+  tests/vitest/pages/page-renderer-v2-facade.test.tsx \
+  tests/vitest/pages/page-renderer-v2.test.tsx \
+  tests/vitest/pages/page-renderer-v2-section-layout.test.tsx \
+  tests/vitest/pages/page-renderer-v2-blocks.test.tsx \
+  tests/vitest/pages/page-renderer-v2-data-binding.test.tsx \
+  tests/vitest/pages/page-renderer-v2-effects.test.tsx \
+  tests/vitest/pages/page-renderer-v2-svg.test.tsx \
+  tests/vitest/pages/page-renderer-v2-composition.test.tsx \
+  tests/vitest/pages/page-renderer-timeline-geometry.test.ts \
+  tests/vitest/pages/task-534-interactivity-render.test.tsx
+node _docs/_workflows/task-539-implement.mjs --check-task-family-line-limit
 git diff --check
 ```
 
-Rerun any named failing test file once in isolation before classifying the failure.
+The workflow receipt must enumerate every touched/split source/test at `<=1000`.
+Rerun a named failure alone.

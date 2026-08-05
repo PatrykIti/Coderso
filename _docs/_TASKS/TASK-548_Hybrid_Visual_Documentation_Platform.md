@@ -4,9 +4,11 @@
 **Priority:** High
 **Category:** Documentation / Assistant / Admin UI / Release
 **Estimated Effort:** Very Large
-**Dependencies:** TASK-109, TASK-182, TASK-403; completed TASK-545 plus a fresh
-canonical pre-implementation audit PASS, and the TASK-547 exact-path declaration,
-before implementation dispatch
+**Dependencies:** TASK-109, TASK-182, TASK-403; TASK-545 must be `✅ Done` and
+TASK-547 must be terminal, then this parent amended from TASK-547's final
+literal paths, the bounded TASK-548-08 bootstrap committed, and a fresh canonical
+pre-implementation authoring audit PASS before any TASK-548-01..07 product
+dispatch
 **Related Tasks:** TASK-240, TASK-414, TASK-547
 **Status:** ⏳ To Do
 **Changelog:** 1261 pinned
@@ -97,8 +99,9 @@ Playwright scenarios ── reviewed canonical screenshots
   `permissionRequirement: DocsPermissionRequirementV1 | null`, where the
   requirement is `{ mode: "allOf" | "anyOf"; permissions: string[] }`.
   Permission arrays are non-empty, unique, canonically sorted and catalog
-  validated. Null means authenticated Admin access with no extra catalog
-  permission and remains valid for non-null routes such as `/preview`.
+  validated. Null means no extra catalog permission. Route visibility and
+  authentication remain separate registry concerns: it is valid for the public
+  token-gated `/preview` descriptor and the authenticated `/help` descriptor.
 - `capabilityIds` is the single bounded, canonical, catalog-validated
   capability field used by compiler, ingest, search and coverage.
 - The schema discriminator is `coderso.docs-corpus@v2`.
@@ -110,15 +113,22 @@ Playwright scenarios ── reviewed canonical screenshots
   portal accepts only documents containing `public-docs`. A document may target
   more than one surface, but absence of a target always excludes it from that
   surface.
-- Stable `docId`, `sectionId`, `visualId`, and `exampleId` values own links and
-  joins. Internal Help and public portal URLs are derived, never copied into
-  prose by hand.
+- Stable `docId` is translation-family identity and is intentionally reused
+  across locales; document uniqueness is the exact `(docId, locale)` pair.
+  `sectionId` is unique within that localized document, while `visualId` and
+  `exampleId` are bundle-global. Every authored sidecar, visual promotion
+  identity, receipt, Guide evidence record and Help deep link still carries the
+  owning canonical `locale`; no consumer joins a localized document by bare
+  `docId` or by `docId + sectionId`. Internal Help and public portal URLs are
+  derived, never copied into prose by hand.
 
 ### Local-first distribution
 
 - Embedded Help consumes the locally packaged distribution bundle.
-- Assistant retrieval remains DB-backed. Reindex compiles and persists the same
-  normalized contract; there is no runtime filesystem retrieval fallback.
+- Assistant retrieval remains DB-backed. Reindex loads the fixed packaged
+  bundle exactly once and persists its independently revalidated contract; it
+  cannot invoke the compiler, Markdown/source-root resolver, workspace
+  recovery, migration report, provider or network fallback.
 - The public portal consumes the same bundle and assets.
 - The CMS does not fetch the public portal or a remote documentation API while
   answering a question.
@@ -167,7 +177,7 @@ Playwright scenarios ── reviewed canonical screenshots
 - Migration of the complete active English Guide corpus and coverage of active
   Admin screens/capabilities. Locale identity is ready for Polish content, but
   this task must not claim that the Admin UI itself is fully localized.
-- Dependency-shaped automated tests, at least seven real browser flows,
+- Dependency-shaped automated tests, exactly eight ordered real browser flows,
   security scans, documentation, changelog, and task closure.
 
 ## Out of Scope
@@ -270,17 +280,28 @@ Executable implementation order is exactly:
 → 06-L01 → one final same-owner 01-L02 handback/gate → 06-L02 → 07`.
 
 TASK-548-01-L02 is the exclusive writer of
-`core/generated/docs/coderso-docs-v2.json` for the whole family. TASK-548-06-L01
-may edit native Guide sources and production visual triples but may not write
-that generated final. After those edits, orchestration pauses TASK-548-06 and
-re-dispatches the same TASK-548-01-L02 owner to regenerate and verify the bundle
-plus `.tmp/docs-corpus/migration-report-v1.json` from the final native source
-set. This handback occurs exactly once after all TASK-548-06-L01 source/visual
-edits, never per wave or per promotion. Only after it passes may TASK-548-06
-resume `docs:check` and TASK-548-06-L02 coverage reconciliation. It is a
+the durable tracked `core/generated/docs/coderso-docs-v2.json` for the whole
+family. TASK-548-06-L01 may edit native Guide sources and production visual
+triples but may not write that generated final. After those edits, orchestration
+pauses TASK-548-06 and re-dispatches the same TASK-548-01-L02 owner to regenerate
+and verify the bundle plus the workspace-only ignored
+`.tmp/docs-corpus/migration-report-v1.json` from the final native source set.
+This handback occurs exactly once after all TASK-548-06-L01 source/visual edits,
+never per wave or per promotion. Only after it passes may TASK-548-06 resume
+read-only `docs:check` and TASK-548-06-L02 coverage reconciliation. It is a
 same-owner operational checkpoint, not a second writer. TASK-548-07 remains the
 only status writer, so the handback neither reopens a terminal 01-L02 leaf nor
 changes parent/child status during implementation.
+
+The linked bundle/report transaction exists only for explicit TASK-548-01-L02
+authoring/migration `--write` runs and the two named handbacks. Its stable
+prestates are exactly `bootstrap-none`, clean-checkout
+`packaged-bundle-only`, and `linked-pair`; report-only and recovery hazards fail
+closed. A clean clone/tag, production runtime, portal, Docker image, release,
+`docs:check`, and coverage check require only the tracked bundle. Consumers call
+exactly one zero-input atomic `loadPackagedDocsDistributionBundleV2()`, which
+internally inspects workspace hazards and validates packaged bytes/`sourceHash`;
+no separate guard call, recovery, write, or ignored report is allowed.
 
 The same status rule applies to the post-pilot checkpoint: after
 TASK-548-02-L02 writes exactly five pilot scenario/image/receipt triples,
@@ -288,23 +309,96 @@ TASK-548-01-L02 regenerates the exclusive bundle/report from those bytes and
 passes its targeted gate before TASK-548-02-L03 or TASK-548-03 may start. This
 is one owner refresh, not another writer or a status transition.
 
-TASK-545 completion is also a hard dispatch blocker, not an advisory dependency.
-After TASK-545 is `✅ Done`, rerun the canonical read-only pre-implementation
-audit against the then-current HEAD plus dirty-worktree context and require a
-PASS with zero unresolved HIGH/MEDIUM findings. A stale pre-TASK-545 audit does
-not qualify.
+TASK-545 and TASK-547 are separate hard dispatch blockers, not advisory
+dependencies. TASK-545 must be exactly `✅ Done`, because TASK-548 imports its
+tracked shared workflow drivers; `⏭️ Superseded` or `❌ Cancelled` cannot
+authorize a substitute. TASK-547 must reach a terminal status. TASK-548 must
+not edit either family to manufacture those states.
 
-TASK-547 is a separate hard dispatch blocker, not an advisory related task. Before any
-TASK-548 implementation starts, its owner must name every exact user/developer
-guide path it will edit at closure. This parent must then record those literal
-paths, the serialized land order, and each TASK-548 leaf's matching
-forbidden-path guard. Until that amendment exists, no implementation leaf may
-start. TASK-548 must not edit TASK-547 to manufacture the declaration. No
-TASK-548 implementation leaf may dispatch until both the TASK-545 audit gate and
-TASK-547 literal-path gate pass.
+The pre-authoring authorization order is exactly:
+
+1. TASK-545 reaches exactly `✅ Done`.
+2. TASK-547 reaches a terminal status.
+3. Read TASK-547's final bytes and land an amendment to this parent containing
+   every literal user/developer guide path it owns, the serialized cross-family
+   land order, and each TASK-548 leaf's matching forbidden-path guard.
+4. Select only `task548-bootstrap-build`. This bounded TASK-548-08 bootstrap is
+   the sole pre-authoring-audit exception and may rebuild, validate,
+   and hand the owner for tracking/commit only these exact six paths:
+   `_docs/_workflows/lib/task-548-contract.mjs`,
+   `_docs/_workflows/task-548-author-audit.mjs`,
+   `_docs/_workflows/task-548-fix.mjs`,
+   `_docs/_workflows/task-548-implement.mjs`,
+   `tests/unit/workflows/task548AuthorAudit.test.ts`, and
+   `tests/unit/workflows/task548WorkflowContracts.test.ts`. They import the
+   tracked TASK-545 drivers. Before any owner checkpoint/commit, require only
+   the exact six-file write set and forbidden-path gate, Node syntax checks,
+   targeted workflow tests, line counts, and `git diff --check`.
+5. Hand the exact reviewed-byte checkpoint to the owner. Its bounded strict
+   owner action identifies TASK-548/schema/mode/prior 40-hex HEAD, the exact six
+   sorted `{ path, sha256 }` records, their canonical aggregate SHA-256, and
+   canonical unpadded base64url checkpoint plus SHA-256 in exact `resumeArgv`.
+   Only the owner stages and commits exactly those six paths. The bootstrap cannot edit
+   product/source, task, documentation, changelog, status, or evidence bytes;
+   TASK-548-08 remains `⏳ To Do`. Return immediately; do not validate the
+   commit, audit or implement in this process.
+6. In a fresh, mutually exclusive `task548-bootstrap-committed-resume`, strictly
+   decode and timing-safe verify that current-process checkpoint, reject unknown/
+   missing/duplicate/stale fields, then require the new HEAD to be one exact
+   single-parent owner commit over the recorded prior HEAD with the exact six-path diff,
+   `git ls-files --error-unmatch` for all six paths, clean status and unstaged/
+   staged diffs, `git show HEAD:<path>` byte parity for every path, and the
+   clean-checkout/worktree tests. None of these post-commit gates may be required
+   of the uncommitted rebuild. This mode cannot rebuild or rerun pre-commit gates.
+   Later TASK-545 first validates the committed exact-six-path receipt, then its
+   exact phase-1 call pins 1261/`task-548-hybrid-visual-documentation` and derives
+   `_docs/_workflows/task-548-implement.mjs` only from the executing `import.meta.url`;
+   caller overrides, untracked/dirty/
+   wrong-task/symlink entries or failed TASK-545 static/import gates reject.
+7. Only after that complete post-commit gate passes, run five mandatory fresh
+   sequential authoring rounds plus the fresh per-round reconcile and require a
+   final PASS with zero unresolved HIGH/MEDIUM findings.
+8. Only that PASS authorizes the unchanged executable product order
+   `01 → 02 → 03 → 04 → 05 → 06 → 07`; the TASK-548-08 wrappers orchestrate
+   throughout without becoming a product-source writer.
+
+The current ignored/provisional TASK-548 helper and every result it produced are
+non-authorizing. It cannot be promoted merely by tracking its current bytes:
+all six exact bootstrap files must be rebuilt against the final tracked TASK-545
+owners and pass the pre-commit gate before the owner commit, then the separate
+committed-resume gate from the resulting clean HEAD, with no rebuild loop. Any later change to a bootstrap
+artifact, any TASK-548 task contract, or an imported TASK-545 driver invalidates
+the authoring authorization and requires all five fresh rounds plus reconcile
+again from the new HEAD. An audit run before either dependency gate, before the
+literal-path amendment, or before the committed clean-checkout bootstrap is
+stale and does not qualify. No TASK-548-01..07 product implementation leaf may
+dispatch until this exact sequence passes; the bounded TASK-548-08 bootstrap
+grants no product/source or status-write authority.
 
 Only TASK-548-07 may edit TASK-548 statuses, the board, changelog 1261, or the
 changelog index during implementation.
+
+Closure orchestration keeps commit SHA, computed `HEAD^{tree}` Git OID, clean
+index/worktree parity, and canonical `runtimeTreeSha256` distinct; clean parity
+gates consumption and the runtime digest binds immutable receipts. The computed
+tree values are not extra release-resume inputs.
+After checkpoint retirement, 08 must run a fresh current-tree read-only drift
+and derive scoped owners only from those verified findings before fixes/gates/
+prerelease audit, then end at the owner release pause; old findings and retired
+evidence are non-authorizing. Only a separate fresh replacement release-resume
+may perform preparation/smoke. TASK-545 returns the sole closure identity.
+`frozen` permits only canonical state `none`; bound stale temp/journal is cleaned
+without date authority. Closure durably writes/fsyncs the no-replace changelog,
+then CAS-temp/renames/fsyncs the index. Both frozen and recovery call TASK-545's
+exact `writeOrResumeOrderedDurableChangelogFileThenIndexV1` owner export with
+`ordered-durable-changelog-file-then-index@v1`; no TASK-548 alias is permitted.
+Recovery accepts one strict regular
+non-symlink TASK-548 1261 file with slug
+`task-548-hybrid-visual-documentation` and zero (`file-only`) or one (`both`)
+matching index row before allowlisting. Index-only/corrupt/multiple fails; UTC
+rollover preserves the file's date.
+07 consumes it without re-resolution and returns the final mechanical delta;
+08 emits it exactly once, and neither persists the handoff.
 
 ## Acceptance Criteria
 
@@ -334,10 +428,21 @@ changelog index during implementation.
 - Capture fails on console/page errors, invisible effects, stale source hashes,
   unsafe fixtures, missing cleanup, changed images without review, or receipt
   mismatch.
+- The six-file TASK-548-08 bootstrap passes only pre-commit write-set,
+  forbidden-path, syntax, targeted-test, line-count, and diff-check gates before
+  the owner commit; tracked membership, clean status/diffs, `git show` byte
+  parity, exact commit scope, and clean-checkout/worktree tests pass afterward
+  from a fresh committed-resume before any authoring audit; build mode has
+  already terminated and committed-resume never rebuilds. Its strict bounded
+  checkpoint validates canonical transport/hash, exact sorted records, one
+  direct-parent owner commit and its exact six-path diff; malformed, duplicate,
+  unknown, stale or integrity-mismatched input fails closed.
+- Child-process crash tests kill every changelog journal/temp, fsync, rename and
+  directory-fsync boundary; only none/file-only/both recover idempotently.
 - No public API, runtime remote docs dependency, secret/PII leak, raw HTML sink,
   or second documentation source is introduced.
-- All targeted and full gates pass, including strict security scanning and at
-  least seven distinct real-flow Playwright CLI scenarios.
+- All targeted and full gates pass, including strict security scanning and
+  exactly eight ordered real-flow Playwright CLI scenarios.
 
 ## Testing Requirements
 
@@ -356,7 +461,7 @@ changelog index during implementation.
 - `bun run gates:coderso`
 - `bun run scan:security:strict`
 - task graph/H1/FileName/parent/status and touched-file line-count audits
-- task-scoped `playwright-cli -s=wf548smoke` smoke with at least seven distinct
+- task-scoped `playwright-cli -s=wf548smoke` smoke with exactly eight ordered
   real flows, visible-effect assertions, zero console/page errors, unique
   screenshots, SHA-256 evidence, and complete cleanup
 

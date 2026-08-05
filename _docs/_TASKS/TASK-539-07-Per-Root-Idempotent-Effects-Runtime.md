@@ -6,7 +6,7 @@
 **Priority:** High
 **Category:** Pages / Browser Runtime / Reliability
 **Estimated Effort:** Large
-**Dependencies:** TASK-539-04, TASK-539-05, TASK-539-06
+**Dependencies:** TASK-539-04 through TASK-539-06
 **Status:** ⏳ To Do
 **Changelog:** 1251 (pinned; create only at TASK-539 closure)
 
@@ -14,45 +14,75 @@
 
 ## Goal
 
-Replace the global one-shot initializer with a reusable global runtime state whose
-initializer rescans the supplied document/root and binds each discovered element once.
-This lets a later-parsed footer initialize after main without duplicating document
-listeners or element handlers.
+Replace the all-or-nothing flag guard with one reusable
+`window.__codersoPageEffectsV2` controller. Every emitted script calls
+`init(root)`, later main/footer markup is discovered, global listeners are installed
+once, and each element is bound once through binder-specific `WeakSet` ownership.
+
+TASK-539 may start only after TASK-540 is terminal and a fresh read-only audit passes
+against the post-TASK-540 HEAD and complete dirty state.
 
 ## Leaves
 
 | Leaf | Scope | Status |
 |---|---|---|
-| TASK-539-07-L01 | Sole runtime-source implementation | ⏳ To Do |
-| TASK-539-07-L02 | Main/footer parser-order and idempotence proof | ⏳ To Do |
+| TASK-539-07-L01 | Sole runtime source and focused compatibility tests | ⏳ To Do |
+| TASK-539-07-L02 | New focused rescan/parser-order suite only | ⏳ To Do |
 
 ## Ownership
 
-L01 solely owns `core/services/pages/pageEffectsRuntime.ts` and compatibility/
-changed-behavior updates in all three named runtime/shell suites before its source gate.
-L02 owns only additive parser-order/idempotence cases, reruns L01 assertions read-only,
-and cannot re-baseline them. No renderer/site-shell source is changed.
+L01 solely owns `core/services/pages/pageEffectsRuntime.ts`, the four existing focused
+runtime suites named in its leaf. It may not change site-shell source or renderer
+source/comments. Renderer commentary and emit predicates belong to TASK-539-05.
+
+L02 creates only
+`tests/vitest/pages/task-539-page-effects-runtime-rescan.test.tsx`. It treats L01
+source/tests and every renderer/site-shell file as read-only.
 
 ## Security Contract
 
-The emitted runtime remains a static literal. It uses no eval, Function, dynamic code,
-author-data HTML, network request, or storage. Selectors are fixed literals. Motion
-still obeys reduced-motion and pointer capability, while accessibility interactions
-remain available without motion.
+The emitted runtime remains one static dependency-free literal. It uses fixed
+selectors and validated DOM data/custom properties only: no interpolation of stored
+data, `eval`, `Function`, `innerHTML`, network, or storage. There is no route, auth,
+RBAC, CSRF, rate-limit, nonce, captcha, or public-write change. Functional
+switcher/gallery behavior remains available under reduced motion; motion behavior
+remains reduced-motion and pointer-capability gated.
 
 ## Acceptance
 
-- Main then footer both bind in parser order.
-- Repeated initialization never duplicates listeners/actions.
-- Tilt and magnetic write only their transform custom properties.
-- No global all-or-nothing early return remains.
-- Footer-only/main-only and no-effect pages retain behavior.
+- Every script reuses or installs `window.__codersoPageEffectsV2` and invokes
+  `init(document)`; the old exported flag is observation-only and is never read to
+  skip work.
+- Every binder owns a `WeakSet`, marks only after successful binding, and isolates
+  per-binder/per-element failures.
+- Document/window globals bind once; the controller retains no strong element arrays.
+- Main then footer and footer then main both bind; repeated scripts and explicit init
+  calls do not duplicate actions.
+- Switcher/gallery bind before the reduced-motion branch; all motion binders run only
+  after it.
+- Spotlight queries the exact `[data-page-spotlight]` Page-root hook inside the
+  supplied scan root and writes only `--spotlight-x`/`--spotlight-y` on that matched
+  root. `[data-page-spotlight-overlay]` is a painted consumer, never a binder
+  candidate. Main and footer owners remain root-local and coexist without cross-write.
+- All seven binders import and honor the shared marquee-replica selector, excluding
+  replica-self and replica descendants before setup while preserving primary
+  behavior. The renderer emits that replica only for the recursively safe subtree
+  defined by TASK-539-05; form/listing/embed/video or nested-marquee subtrees take
+  the one-segment path, so this runtime does not widen into their global binders.
+- Tilt and magnetic write/reset only their fixed transform custom properties, never
+  the whole `transform`.
+- Existing no-effect, main-only, and footer-only behavior fails soft with zero console
+  errors.
 
 ## Validation
+
+Run both leaves' exact Vitest inventories, then:
 
 ```bash
 bun --cwd core lint:types
 bun --cwd core lint
-bun run test:vitest -- tests/vitest/pages/pageEffectsRuntime.test.ts tests/vitest/content/task-534-interactivity-runtime.test.tsx tests/vitest/site/page-runtime-shell-branch.test.tsx
+node _docs/_workflows/task-539-implement.mjs --check-task-family-line-limit
 git diff --check
 ```
+
+Rerun a named failing file once in isolation before classifying it.
