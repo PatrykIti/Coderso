@@ -2624,7 +2624,7 @@ const TEST_SPLIT_FAMILY_COUNTS = deepFreezeExact({
   actionExecutor: { files: ACTION_EXECUTOR_BUN_FILES, tests: 73 },
   screenRuntime: { files: SCREEN_RUNTIME_VITEST_FILES, tests: 72 },
   screenEditorPage: { files: SCREEN_EDITOR_PAGE_VITEST_FILES, tests: 36 },
-  entriesClient: { files: ENTRIES_CLIENT_VITEST_FILES, tests: 42 },
+  entriesClient: { files: ENTRIES_CLIENT_VITEST_FILES, tests: 44 },
   assistantPanel: { files: ASSISTANT_PANEL_VITEST_FILES, tests: 13 },
   customScreensClient: { files: CUSTOM_SCREENS_CLIENT_VITEST_FILES, tests: 40 },
   cacheBus: { files: CACHE_BUS_VITEST_FILES, tests: 22 },
@@ -2744,7 +2744,7 @@ const TEST_SPLIT_FAMILY_FILES = Object.freeze(
   Object.values(TEST_SPLIT_FAMILY_COUNTS).flatMap(({ files }) => files)
 );
 if (
-  Object.values(TEST_SPLIT_FAMILY_COUNTS).reduce((total, { tests }) => total + tests, 0) !== 347 ||
+  Object.values(TEST_SPLIT_FAMILY_COUNTS).reduce((total, { tests }) => total + tests, 0) !== 349 ||
   TEST_SPLIT_FAMILY_FILES.length !== 36 ||
   new Set(TEST_SPLIT_FAMILY_FILES).size !== TEST_SPLIT_FAMILY_FILES.length ||
   TEST_SPLIT_FAMILY_FILES.some(
@@ -13110,7 +13110,7 @@ function assertTask540ModularityRepairContract() {
         TASK_540_PRE_FAMILY_BASELINE === "e5f15a5675b58df85e573f760df4429af735400f" &&
         TASK_540_FIRST_FAMILY_COMMIT === "cf6a40334d76b98a9bef45e0a816429f836b142f" &&
         Object.values(TEST_SPLIT_FAMILY_COUNTS).reduce((total, { tests }) => total + tests, 0) ===
-          347,
+          349,
     },
   ];
   let mismatchRejected = false;

@@ -819,16 +819,16 @@ const families = Object.freeze({
   }),
   entriesClient: Object.freeze({
     lane: "vitest",
-    tests: 42,
-    sha256: "4ac0a985562db074992ca7af1ec9e3b7030eb5de9ae4e5ec1de94cf263249ae8",
-    fileTests: Object.freeze([19, 15, 8]),
+    tests: 44,
+    sha256: "b3723d9b8d970ee024778b0c8f557302c4e7b774f00f79defa2b1d4ca4028efc",
+    fileTests: Object.freeze([21, 15, 8]),
     fileNameSha256: Object.freeze([
-      "c59939e166edd4bb4f5aec4f8d95174384b44857a6da144f2ffe4075f7152a2a",
+      "8b2ed108c4d59e11e40afb45e739988c07231caf723c7016660c2e6763216b09",
       "47cedf78c23e17feab06f85f09a45ddfb0d4c2eaa5766e43b733382b3e8b57a9",
       "f69cbd52b677ff1363eeb40988261615d153c06e1dbf2c8b91c9ffe372e4ff31",
     ]),
-    declarations: 38,
-    declarationSha256: "5612f5cf3293e2a06db1d0a3c519d627930b799206b53698a530cc074c2c1bab",
+    declarations: 40,
+    declarationSha256: "b8672d9bb192c861085d56e1615ab5331c3cf41f1f3f99da120e61e64eb51647",
     files: Object.freeze([
       "tests/vitest/admin/entriesClient.test.ts",
       "tests/vitest/admin/entriesClientReadAuthority.test.ts",
@@ -991,7 +991,7 @@ const familyFiles = familyEntries.flatMap(([, family]) => family.files);
 const SHA256_PATTERN = /^[a-f0-9]{64}$/u;
 if (
   protectedFamilyEntries.length !== 10 ||
-  protectedFamilyEntries.reduce((total, [, family]) => total + family.tests, 0) !== 347 ||
+  protectedFamilyEntries.reduce((total, [, family]) => total + family.tests, 0) !== 349 ||
   protectedFamilyEntries.flatMap(([, family]) => family.files).length !== 36 ||
   auxiliaryFamilyEntries.length !== 2 ||
   auxiliaryFamilyEntries.reduce((total, [, family]) => total + family.tests, 0) !== 98 ||
