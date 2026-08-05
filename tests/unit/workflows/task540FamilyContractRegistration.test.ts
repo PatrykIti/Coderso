@@ -129,20 +129,22 @@ test("no closure prompt still claims the family has 17 contracts", () => {
 
 /**
  * FORBIDDEN_PATHS is agent-prompt policy referenced at exactly one site, with nothing
- * verifying it afterwards. The family mutated 32 paths across 9 of its globs, so an agent
+ * verifying it afterwards. The family mutated 33 paths across 10 of its globs, so an agent
  * was being handed a prohibition the family had visibly broken. The prohibition stays and
  * the landed exceptions are recorded; this test keeps both halves honest.
  *
  * The ninth glob, core/db/tables/**, was added after the schema split moved 1,679 of
  * schema.ts's 1,722 lines to paths no entry named; task540ForbiddenSchemaPaths.test.ts
  * derives that coverage from core/db/ on disk, while the pinned list here proves the
- * whole record stayed complete rather than only the schema half.
+ * whole record stayed complete rather than only the schema half. The tenth glob records
+ * the final shared page-editor media adapter required by the exact picker value contract.
  */
 test("every forbidden glob the family actually mutated carries a recorded exception", () => {
   const expectedGlobs = [
     "core/db/schema.ts",
     "core/db/tables/**",
     "core/db/migrations/**",
+    "core/admin/ui/pages/**",
     "package.json",
     "core/widgets/**",
     "packages/**",
@@ -173,10 +175,10 @@ test("every forbidden glob the family actually mutated carries a recorded except
     expect(forbidden).toContain(glob);
   }
   // Every exception needs a real reason and the commit that landed it, or the record is noise.
-  expect(recorded).toHaveLength(9);
-  expect([...(exceptionsBlock?.[1] ?? "").matchAll(/reason:/gu)]).toHaveLength(9);
+  expect(recorded).toHaveLength(10);
+  expect([...(exceptionsBlock?.[1] ?? "").matchAll(/reason:/gu)]).toHaveLength(10);
   expect([...(exceptionsBlock?.[1] ?? "").matchAll(/commits: Object\.freeze\(\[/gu)]).toHaveLength(
-    9
+    10
   );
 });
 
