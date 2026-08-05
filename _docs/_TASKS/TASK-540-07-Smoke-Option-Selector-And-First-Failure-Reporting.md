@@ -291,7 +291,7 @@ by another TASK-540 leaf.
 - `negativeCases` may only **increase**. Pre-edit historical baselines, measured
   on this working tree before any edit: contract self-test `109`, executor
   self-test `2810`. Post-implementation measured values at HEAD (2026-07-27):
-  contract self-test `117`, executor self-test `2985`.
+  contract self-test `117`, executor self-test `2986`.
 - No assertion may be relaxed. Both leaves strictly strengthen the harness: L01
   turns an unmatchable selector into a matching one and makes the bad shape a
   build-time error; L02 turns a silently-discarded verdict into either a
@@ -360,7 +360,7 @@ Bun suite covers this tree.
 | Lane | Command | Required result |
 |---|---|---|
 | Contract self-test | `node _docs/_workflows/task-540-smoke-contract.mjs --self-test` | `pass: true`, `actions: 496`, counts unchanged, `negativeCases: 117` (was `109` pre-L01) |
-| Executor self-test | `node _docs/_workflows/task-540-smoke-executor.mjs --self-test` | `pass: true`, `actions: 496`, `runtimeReceipts: 177`, `cleanupActions: 72`, `captures: 26`, `negativeCases: 2985` (was `2810` pre-L02) |
+| Executor self-test | `node _docs/_workflows/task-540-smoke-executor.mjs --self-test` | `pass: true`, `actions: 496`, `runtimeReceipts: 177`, `cleanupActions: 72`, `captures: 26`, `negativeCases: 2986` (was `2810` pre-L02) |
 | Line-count gate | `wc -l` over every touched module | every file ≤ 1,000 |
 
 Regression shape required of the leaves (details in each leaf):

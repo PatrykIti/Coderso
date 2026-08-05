@@ -70,18 +70,11 @@ export function createDiagnosticSinkRuntime({
       const cleanupDiagnostic = currentPrivateConstructionCleanupDiagnosticNeverThrow(
         constructionCleanupAuthority
       );
-      if (failedActionId === null && cleanupDiagnostic === null) return false;
       const failureClass =
         currentPrivateAuthSettlementFailureClassNeverThrow(tracker) ??
         currentPrivateToneOpenFailureClassNeverThrow(tracker) ??
         currentPrivateToneSelectFailureClassNeverThrow(tracker) ??
         currentPrivateDirtyNavigationFailureClassNeverThrow(tracker);
-      const baseDiagnostic = {
-        code: TASK_FAILURE.code,
-        ...(failedActionId === null ? {} : { failedActionId }),
-        ...(failureClass === null ? {} : { failureClass }),
-        ...(cleanupDiagnostic === null ? {} : cleanupDiagnostic),
-      };
       // The reason is a FALLBACK for actions no tracker classifies, which is where the
       // diagnostic used to be empty. When a failureClass is present the cause is one of the
       // registered private failures whose message is a fixed human string, so a reason would
@@ -95,6 +88,19 @@ export function createDiagnosticSinkRuntime({
               currentPrivateRetainedFailureCauseNeverThrow(constructionCleanupAuthority)
             )
           : null;
+      if (
+        failedActionId === null &&
+        cleanupDiagnostic === null &&
+        failureReason === null
+      ) {
+        return false;
+      }
+      const baseDiagnostic = {
+        code: TASK_FAILURE.code,
+        ...(failedActionId === null ? {} : { failedActionId }),
+        ...(failureClass === null ? {} : { failureClass }),
+        ...(cleanupDiagnostic === null ? {} : cleanupDiagnostic),
+      };
       // {cleanupPhase, cleanupFailureClass} says WHERE cleanup died, never WHAT it hit, so a
       // cleanup-only failure named a phase number while the phase invariant's own prose died
       // with the process. The retained token names it, and the wrapper reason above still says

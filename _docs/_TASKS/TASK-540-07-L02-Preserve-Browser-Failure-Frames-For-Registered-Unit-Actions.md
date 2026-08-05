@@ -10,7 +10,7 @@
 **Dependencies:** TASK-540-07-L01 (land order only; file ownership is disjoint)
 **Status:** 🚧 In Progress
 **Implementation Complete:** 2026-07-27 — assigned work was completed; canonical `✅ Done` transition awaits family changelog 1252.
-**Targeted Gate Passed:** 2026-07-27 — this leaf's authoritative lane re-measured on the current bytes, not copied from the seed: `node _docs/_workflows/task-540-smoke-executor.mjs --self-test` returned `pass: true, actions: 496, runtimeReceipts: 177, cleanupActions: 72, nominalPersistentCleanupActions: 72, terminalMatrixCases: 1, captures: 26, negativeCases: 2985`, so every frozen executor count holds and `negativeCases` is above the 2810 pre-edit baseline; `node _docs/_workflows/task-540-smoke-contract.mjs --self-test` returned `pass: true, actions: 496, setupActions: 55, flowActions: 434, cleanupActions: 7, negativeCases: 117`, so this leaf relaxed nothing in the contract lane; `wc -l` over all six owned modules gave `executor/config.mjs` 557, `browser/generic-invocations.mjs` 513, `browser/scenarios/dirty-guards.mjs` 442, `executor/self-test/browser-dirty-navigation-source.mjs` 364, `executor/self-test/browser-tone-flow-source.mjs` 710 and `executor/self-test/browser-run-code-source-ownership.mjs` 716, each ≤ 1,000. Structural acceptance was read at the anchors: `UNIT_FAILURE_FRAME_CLASSES_BY_ACTION_ID` is declared once at `executor/config.mjs:495` under the `=== 9` cardinality invariant at `:505-509`, the preserving wrapper body exists once at `browser/scenarios/dirty-guards.mjs:102` and is reached from the single normalization site at `browser/generic-invocations.mjs:473`, and the ownership self-test derives its coverage from the registry's own keys at `executor/self-test/browser-run-code-source-ownership.mjs:692-693`. This is an evidence-backed re-measurement of already-landed code, not a transition-generated generation/token or hash receipt. The canonical seven-flow Playwright smoke run is owned by TASK-540-06 and was NOT run here; no family post-audit, full validation, changelog, or closure result is claimed.
+**Targeted Gate Passed:** 2026-07-27 — this leaf's authoritative lane re-measured on the current bytes, not copied from the seed: `node _docs/_workflows/task-540-smoke-executor.mjs --self-test` returned `pass: true, actions: 496, runtimeReceipts: 177, cleanupActions: 72, nominalPersistentCleanupActions: 72, terminalMatrixCases: 1, captures: 26, negativeCases: 2986`, so every frozen executor count holds and `negativeCases` is above the 2810 pre-edit baseline; `node _docs/_workflows/task-540-smoke-contract.mjs --self-test` returned `pass: true, actions: 496, setupActions: 55, flowActions: 434, cleanupActions: 7, negativeCases: 117`, so this leaf relaxed nothing in the contract lane; `wc -l` over all six owned modules gave `executor/config.mjs` 557, `browser/generic-invocations.mjs` 513, `browser/scenarios/dirty-guards.mjs` 442, `executor/self-test/browser-dirty-navigation-source.mjs` 364, `executor/self-test/browser-tone-flow-source.mjs` 710 and `executor/self-test/browser-run-code-source-ownership.mjs` 716, each ≤ 1,000. Structural acceptance was read at the anchors: `UNIT_FAILURE_FRAME_CLASSES_BY_ACTION_ID` is declared once at `executor/config.mjs:495` under the `=== 9` cardinality invariant at `:505-509`, the preserving wrapper body exists once at `browser/scenarios/dirty-guards.mjs:102` and is reached from the single normalization site at `browser/generic-invocations.mjs:473`, and the ownership self-test derives its coverage from the registry's own keys at `executor/self-test/browser-run-code-source-ownership.mjs:692-693`. This is an evidence-backed re-measurement of already-landed code, not a transition-generated generation/token or hash receipt. The canonical seven-flow Playwright smoke run is owned by TASK-540-06 and was NOT run here; no family post-audit, full validation, changelog, or closure result is claimed.
 **Changelog:** 1252 (family-pinned; closure only, owned by TASK-540-06)
 
 ---
@@ -458,7 +458,7 @@ registered id plus the tone mutants). The contract self-test's `negativeCases` w
 unaffected by this leaf, sitting at the post-L01 value of 113.
 
 **Current required output** — re-measured at HEAD on 2026-07-27: executor
-`negativeCases: 2985`, contract `negativeCases: 117`. Both lanes grew past the
+`negativeCases: 2986`, contract `negativeCases: 117`. Both lanes grew past the
 figures above because later family leaves added further negatives.
 
 The parent's invariant is that `negativeCases` may only **increase** and no
@@ -485,7 +485,7 @@ These are exact pins, not floors:
 
 - executor self-test: `pass: true`, `actions: 496`, `runtimeReceipts: 177`,
   `cleanupActions: 72`, `nominalPersistentCleanupActions: 72`,
-  `terminalMatrixCases: 1`, `captures: 26`, `negativeCases: 2985`.
+  `terminalMatrixCases: 1`, `captures: 26`, `negativeCases: 2986`.
 - contract self-test: `pass: true`, `actions: 496`, `negativeCases: 117`.
 - every touched module ≤ 1,000 physical lines (`wc -l` at the same HEAD:
   `executor/config.mjs` 557, `browser/generic-invocations.mjs` 513,
@@ -499,7 +499,7 @@ acceptable result today; seeing one means negatives were lost.
 | era | executor `negativeCases` | contract `negativeCases` |
 |---|---|---|
 | pre-edit baseline, before this leaf | 2810 | 113 |
-| current required output, HEAD 2026-07-27 | **2985** | **117** |
+| current required output, HEAD 2026-07-27 | **2986** | **117** |
 
 Additional manual check before declaring done: build the invocation for
 `dg-024-entry-nav-cancel` before and after the change and diff the emitted unit

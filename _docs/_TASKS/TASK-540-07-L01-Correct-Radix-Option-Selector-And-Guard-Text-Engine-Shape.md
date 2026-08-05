@@ -10,7 +10,7 @@
 **Dependencies:** none (lands first in TASK-540-07)
 **Status:** 🚧 In Progress
 **Implementation Complete:** 2026-07-27 — assigned work was completed; canonical `✅ Done` transition awaits family changelog 1252.
-**Targeted Gate Passed:** 2026-07-27 — this leaf's two authoritative lanes re-measured on the current bytes, not copied from the seed: `node _docs/_workflows/task-540-smoke-contract.mjs --self-test` returned `pass: true, actions: 496, setupActions: 55, flowActions: 434, cleanupActions: 7, fixtures: 15, captures: 17, screenshots: 13, assertions: 55, expandedCleanupActions: 45, executableTypeCounts {runtime-operation: 76, browser-run-code: 392, browser-native: 14, browser-screenshot: 13, browser-global-list: 1}, oneLoopReceipts: 496, negativeCases: 117`, so the frozen contract counts are unchanged and `negativeCases` is above the 109 pre-edit baseline; `node _docs/_workflows/task-540-smoke-executor.mjs --self-test` returned `pass: true, actions: 496, runtimeReceipts: 177, cleanupActions: 72, captures: 26, negativeCases: 2985`, proving the same plan still builds; `wc -l` over both owned modules gave `contract/selectors.mjs` 230 and `contract/self-test/registries-fixtures.mjs` 424, each ≤ 1,000. The guard was exercised directly against the live registry: `createSelectorRegistry().muted` is `[role="option"]:has(span:text-is("Muted"))`, and `assertSelectorTextEngineShape` rejected the pre-fix `[role="option"]:text-is("Muted")`, the `[data-slot="select-item"]:text-is("Muted")` sibling token, and the non-delegated `[role="option"] span:text-is("Muted")` form. This is an evidence-backed re-measurement of already-landed code, not a transition-generated generation/token or hash receipt; it claims no family post-audit, full validation, canonical smoke run, changelog, or closure result.
+**Targeted Gate Passed:** 2026-07-27 — this leaf's two authoritative lanes re-measured on the current bytes, not copied from the seed: `node _docs/_workflows/task-540-smoke-contract.mjs --self-test` returned `pass: true, actions: 496, setupActions: 55, flowActions: 434, cleanupActions: 7, fixtures: 15, captures: 17, screenshots: 13, assertions: 55, expandedCleanupActions: 45, executableTypeCounts {runtime-operation: 76, browser-run-code: 392, browser-native: 14, browser-screenshot: 13, browser-global-list: 1}, oneLoopReceipts: 496, negativeCases: 117`, so the frozen contract counts are unchanged and `negativeCases` is above the 109 pre-edit baseline; `node _docs/_workflows/task-540-smoke-executor.mjs --self-test` returned `pass: true, actions: 496, runtimeReceipts: 177, cleanupActions: 72, captures: 26, negativeCases: 2986`, proving the same plan still builds; `wc -l` over both owned modules gave `contract/selectors.mjs` 230 and `contract/self-test/registries-fixtures.mjs` 424, each ≤ 1,000. The guard was exercised directly against the live registry: `createSelectorRegistry().muted` is `[role="option"]:has(span:text-is("Muted"))`, and `assertSelectorTextEngineShape` rejected the pre-fix `[role="option"]:text-is("Muted")`, the `[data-slot="select-item"]:text-is("Muted")` sibling token, and the non-delegated `[role="option"] span:text-is("Muted")` form. This is an evidence-backed re-measurement of already-landed code, not a transition-generated generation/token or hash receipt; it claims no family post-audit, full validation, canonical smoke run, changelog, or closure result.
 **Changelog:** 1252 (family-pinned; closure only, owned by TASK-540-06)
 
 ---
@@ -290,7 +290,7 @@ case. Those figures are receipts of a past run, not a target.
 **Current required output** — re-measured at HEAD on 2026-07-27 with
 `node _docs/_workflows/task-540-smoke-contract.mjs --self-test` and
 `node _docs/_workflows/task-540-smoke-executor.mjs --self-test`: contract
-`negativeCases: 117`, executor `negativeCases: 2985`. Later family leaves added
+`negativeCases: 117`, executor `negativeCases: 2986`. Later family leaves added
 further negatives on both lanes, which is why the current figures exceed the
 post-L01 receipts.
 
@@ -317,7 +317,7 @@ pins, not floors:
   `flowActions: 434`, `cleanupActions: 7`, `executableTypeCounts` unchanged,
   `negativeCases: 117`.
 - executor self-test: `pass: true`, `actions: 496`, `runtimeReceipts: 177`,
-  `cleanupActions: 72`, `captures: 26`, `negativeCases: 2985`.
+  `cleanupActions: 72`, `captures: 26`, `negativeCases: 2986`.
 - both files ≤ 1,000 physical lines.
 
 Superseded figures, recorded so a reader can tell the eras apart. None of them is
@@ -327,7 +327,7 @@ an acceptable result today; seeing one means negatives were lost.
 |---|---|---|
 | pre-edit baseline, before this leaf | 109 | 2810 |
 | post-L01 receipt, the day this leaf landed | 113 | 2810 |
-| current required output, HEAD 2026-07-27 | **117** | **2985** |
+| current required output, HEAD 2026-07-27 | **117** | **2986** |
 
 The full pre-edit baselines measured on this working tree were
 contract `{"pass":true,"actions":496,...,"negativeCases":109}` and

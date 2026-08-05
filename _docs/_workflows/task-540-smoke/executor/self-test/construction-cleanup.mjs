@@ -681,6 +681,53 @@ export async function runConstructionCleanupSelfTest({
   );
   incrementNegativeCases(3);
 
+  let preflightConstructionAuthority = null;
+  const preflightConstructionDiagnosticLines = [];
+  const preflightConstructionDiagnosticSink =
+    createPrivateBoundedFailureActionDiagnosticSink((line) => {
+      preflightConstructionDiagnosticLines.push(line);
+    });
+  let preflightConstructionFailure = null;
+  try {
+    await executeTask540SmokePlanWithAuthorityFactory(
+      diagnosticInput,
+      () => {
+        preflightConstructionAuthority = createPrivateConstructionCleanupAuthority();
+        return preflightConstructionAuthority;
+      },
+      async () => {
+        throw new Error("wf540_capability_construction_preflight", {
+          cause: new Error(diagnosticPrivateMarker),
+        });
+      },
+      preflightConstructionDiagnosticSink
+    );
+  } catch (error) {
+    preflightConstructionFailure = error;
+  }
+  const preflightConstructionProjection = privateConstructionAuthorityProjection(
+    preflightConstructionAuthority
+  );
+  const preflightConstructionDiagnosticLine =
+    canonicalJson({
+      code: TASK_FAILURE.code,
+      failureReason: "wf540_capability_construction_preflight",
+    }) + "\n";
+  invariant(
+    preflightConstructionFailure === TASK_FAILURE &&
+      preflightConstructionProjection.cleanupCalls === 1 &&
+      preflightConstructionProjection.cleanupStarted === true &&
+      preflightConstructionProjection.cleanupMode === null &&
+      preflightConstructionProjection.failureCount === 2 &&
+      preflightConstructionDiagnosticLines.length === 1 &&
+      preflightConstructionDiagnosticLines[0] === preflightConstructionDiagnosticLine &&
+      Buffer.byteLength(preflightConstructionDiagnosticLines[0]) <=
+        MAX_FAILURE_ACTION_DIAGNOSTIC_BYTES &&
+      !preflightConstructionDiagnosticLines[0].includes(diagnosticPrivateMarker),
+    "capability construction preflight diagnostic drift"
+  );
+  incrementNegativeCases(1);
+
   let inputTrapCalls = 0;
   const trappedInput = new Proxy(
     {},
