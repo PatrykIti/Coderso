@@ -353,9 +353,14 @@ The Form seed has:
   `form_action_invalid`.
 - Both `POST /forms/:id/submissions` and its stripped-admin alias
   `POST /admin/api/forms/:id/submissions` traverse the same mode-based executor.
-  This published `submissionAccess:"public"` Form therefore requires the signed
-  nonce, `public_write` and configured reCAPTCHA v3 `public_write` policy on both
-  mounts; an admin cookie or URL prefix never upgrades or bypasses public mode.
+  They preserve the shared `evaluateSubmissionAccess` decision on both mounts;
+  an admin URL prefix never bypasses or reimplements it. For this published
+  `submissionAccess:"public"` Form, an anonymous principal requires the signed
+  nonce, `public_write`, no session CSRF and configured reCAPTCHA v3
+  `public_write` policy. A coherent authenticated public session remains public:
+  it still requires the nonce and `public_write`, requires no session CSRF, and
+  has `requireCaptcha:false`. Its cookie changes only the evaluator's principal
+  and CAPTCHA decision; it does not upgrade the request to internal/admin mode.
 - A form configured `submissionAccess:"internal"` requires on either mount a
   coherent session with `forms:write` plus session CSRF, or an API key with exact
   scope `forms.submit`; it charges `admin_write` and rejects anonymous access.
@@ -376,8 +381,11 @@ must not restate mount-derived submission access; the existing read-only
 `formsWriteMounts.test.ts` owns shared-executor public/internal mode parity.
 Existing `formActionsContract` and `formActionsRoutes` suites retain strict
 action-config and route-registration coverage. Existing public write security
-suites remain read-only and TASK-547-06 reruns their nonce, rate-plan,
-CSRF/API-key and captcha scenarios against the installed Form.
+suites remain read-only: `formsWriteMounts.test.ts` pins anonymous and coherent-
+session public decisions on both aliases (same nonce/`public_write`/no-CSRF,
+CAPTCHA true versus false) through the unmodified evaluator. TASK-547-06 reruns
+their nonce, rate-plan, CSRF/API-key and CAPTCHA scenarios against the installed
+Form.
 
 ## Aggregate Contract
 
@@ -704,5 +712,5 @@ scoped submission cleanup evidence remains additionally owned by TASK-547-06.
 ## Documentation Updates Required
 
 Send exact field/action setup, null-description/native-submit-note placement,
-nonce/rate/captcha/consent and optional post-install integration guidance to
+nonce/rate/principal-aware CAPTCHA/consent and optional post-install integration guidance to
 TASK-547-06; do not edit shared docs here.

@@ -230,7 +230,7 @@ The verification plan retains exactly these final scenario IDs:
 
 `home-desktop-effects`, `all-routes-desktop-shell`, `tablet-responsive`,
 `mobile-navigation`, `portfolio-facets`, `aurora-detail`, `contact-form`,
-`publish-rollback`.
+`publish-lifecycle-parity`.
 
 ## Security Contract
 

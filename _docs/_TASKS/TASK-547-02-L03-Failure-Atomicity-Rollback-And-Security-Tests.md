@@ -274,8 +274,7 @@ Every post-reservation compensation/rollback ledger or native transaction calls
 `native_cms_writer_fence_busy` on contention. Active owner work instead locks the
 exact running `nativeCmsWriterFenceV1` generation row `FOR SHARE`. Inherited
 closing/revoked/lost state fails as `native_cms_writer_fence_lost` with zero I/O;
-reservation takeover locks the candidate owner `FOR UPDATE` and rotates its
-generation; finalization transitions to closing and locks it `FOR UPDATE` again.
+reservation takeover locks the candidate owner `FOR UPDATE` and rotates its generation only after its locked package key, exact apply/dry-run mode, non-null actor and request-options projection match the incoming reservation. Package, mode, deleted/different-actor or option mismatch fails cause-free as `site_package_recovery_conflict` with generation/items unchanged and zero callback/initialization/native activity. Finalization transitions to closing and locks it `FOR UPDATE` again.
 
 Before constructing that set, zero-native
 `preflightPriorRollbackSuccessOutcomes({ sourceItems, priorOutcomes })` validates every raw prior row
@@ -447,7 +446,7 @@ owned rows in dependency-safe order; never truncate shared tables. The suite spl
 removes the inherited `site.locale` singleton mutation: L02 owns real atomic-settings
 DB restoration coverage and L03 retains an injected-adapter unit assertion only. Worker argv/
 stdout excludes DB URLs, package payloads, settings values, submissions and
-secrets. No public endpoint is added. No database migration is added. No RBAC/
+secrets. No public endpoint is added. No database migration is added unless L02's bounded JSON pseudo-FK EXPLAIN gate fails and a separate complete migration contract is approved with SQL/snapshot/journal artifacts. No RBAC/
 CSRF/rate-limit change, scanner suppression or cross-domain transaction
 abstraction.
 
@@ -792,7 +791,7 @@ prove the same race is rejected inside `deleteSnapshotAtomic`, and settings prov
 all keys are re-read under the one native batch lock before any raw write.
 The service suite pins the rich reservation boundary: new and exact takeover
 owners reach the callback with their actual ID, while contention, incompatible
-marker state and an already-complete rollback stop before it. It runs the
+marker state and an already-complete rollback stop before it. Locked takeover fixtures pin package A→B, apply↔dry-run, deleted/null actor, different actor and request-options mismatch as the exact safe conflict before generation rotation; the candidate row, marker generation and item set remain unchanged. It runs the
 one-to-one prior-outcome preflight, keeps successes provisional, and read-only
 checks every reversed native target before suppression. Test fakes expose the
 same descriptor/callback shape; there is no legacy lock or run-creation fallback.
@@ -894,9 +893,7 @@ marker `{phase:"native_committed",runId,kind,intendedId}` and waits for an expli
 stdin release or process termination. The parent test enforces the shared bounded
 DB-worker deadline, terminates and cleans up the worker on timeout, and, after
 observing the marker, sends real `SIGKILL`; it does not replace process death
-with an exception. A fresh matching apply takeover rotates the source-owner
-generation and runs automatic compensation with one unmarked child using only DB
-evidence.
+with an exception. A fresh matching apply takeover rotates the source-owner generation and runs automatic compensation with one unmarked child using only DB evidence. Separate killed-owner fixtures retry as package A→B, apply↔dry-run, deleted/null actor, different actor and changed request options; each returns only `site_package_recovery_conflict` before rotation/initialization/native work and proves the durable owner generation, options and items are byte-identical.
 
 Initialization has exactly two crash modes. The transaction-open mode injects a
 test-owned DB wrapper around L01's real `initializeReservedRun`; after the exact
@@ -958,9 +955,9 @@ frozen order. All nine UUID adapters and settings use
 work. `importConfig`/`restoreBackup` prove outer-transaction participation; backup
 reuses import's Tx helper without nested acquisition.
 
-Retain different-package apply/apply, apply/rollback and rollback/rollback: B restores A before A restores exact original raw settings, without lost update, dangling ID, extra owner or partial cache effect. L02's static inventory rejects unclassified DML, wrappers, Tx-helper callers and incoming-FK/cascade effects, including theme-route→Page, submission→Form, Custom Screen/taxonomy→ContentType, and presentation-override/taxonomy-assignment→Entry writers plus every `site.contentRoutes` single/batch/Tx/import/backup/full-site raw-restore path.
+Retain different-package apply/apply, apply/rollback and rollback/rollback: B restores A before A restores exact original raw settings, without lost update, dangling ID, extra owner or partial cache effect. L02's static inventory rejects unclassified DML, wrappers, Tx-helper callers and incoming-FK/cascade effects, including theme-route→Page, submission→Form, Custom Screen/taxonomy→ContentType, presentation-override/taxonomy-assignment→Entry, ContentType slug rename, and every `site.contentRoutes` single/batch/Tx/import/backup/full-site raw-restore path.
 
-For every live edge, L02's serial `fullSiteNativeForeignKeyRacesDb.test.ts` proves both writer-first and delete-first with independent clients and explicit barriers. It captures holder/waiter backend PIDs and advances only after `pg_stat_activity.wait_event_type='Lock'`, a matching waiter `pg_locks.granted=false` row and `pg_blocking_pids(waiterPid)` containing the holder PID agree. Writer-first commits the reference before the guarded delete rejects; delete-first commits deletion before the writer rejects missing. Timing, sleep, `Promise.race` and non-settlement are not evidence. Each case asserts exact roots/references/effects, terminates both actors, performs owned-only `finally` cleanup and restores original shell rows.
+For every live edge, L02's serial `fullSiteNativeForeignKeyRacesDb.test.ts` proves both writer-first and delete-first with independent clients and explicit barriers; for ContentType slug rename it proves route-writer-first and rename-first under the same fence/root/settings-row lock order. It captures holder/waiter backend PIDs and advances only after `pg_stat_activity.wait_event_type='Lock'`, a matching waiter `pg_locks.granted=false` row and `pg_blocking_pids(waiterPid)` containing the holder PID agree. Writer-first commits the reference before guarded delete/rename rejects; delete/rename-first commits before the old-reference writer rejects missing. Timing, sleep, `Promise.race` and non-settlement are not evidence. Each case asserts exact roots/references/effects, no route side-write, owned-only cleanup and restored shell rows. L02's focused pseudo-FK EXPLAIN suite must pass its exact sanitized 64/10,000-row latency/emitted/scanned/buffer budgets before no-migration is accepted; failure blocks L02 for a separate full migration contract.
 
 ## Sub-Tasks
 

@@ -5,7 +5,7 @@
 **Priority:** High
 **Category:** Testing / Runtime Smoke / Documentation
 **Estimated Effort:** Large
-**Dependencies:** TASK-547-05
+**Dependencies:** TASK-547-05, TASK-552-04 shared dispatcher/server extraction
 **Status:** 🚧 In Progress
 **Validation:** The previous final-gate, post-audit and smoke evidence is
 invalidated; the complete acceptance/cleanup cycle must be rerun on the final
@@ -70,12 +70,17 @@ path or raw reference contents.
 ## Implementation Pseudocode
 
 ```ts
-export const task547Adapter: RuntimeSmokeAdapter = {
+import type { SmokeAdapter } from "./types";
+
+export const task547Adapter: SmokeAdapter = {
   suiteId: "task-547",
   supportedProfiles: ["fast", "certification"],
   async run(context) {
+    assertExactTask547Invocation(context.input); // suite + supported profile, before side effects
     const timingPolicy = task547TimingPolicy(context.input.profile); // timeouts only
     await verifyTask547ReferenceManifest(context.root, EXPECTED_REFERENCE_DIGEST);
+    const outputs = buildExactTask547OutputManifest(context.input); // 18 PNGs + JSON/Markdown reports
+    const repositoryBefore = await context.repository.snapshot(outputs.paths);
     const bun = await resolveExecutableOnPath("bun");
     const workers = await WorkerPool.create({
       root: context.root,
@@ -85,61 +90,110 @@ export const task547Adapter: RuntimeSmokeAdapter = {
       profiles: createTask547WorkerProfiles(),
       lifecycle: context.lifecycle,
     });
-    const fixture = await installTask547Fixture(workers);
-    context.lifecycle.register(createTask547RollbackResource({ workers, fixture }));
+    const resources = createTask547ResourceSlots();
+    let accepted: Task547AcceptedObservations | null = null;
+    let primary: unknown = null;
+    let cleanupProof: Task547CleanupProof | null = null;
+    try {
+      const fixture = await installTask547Fixture(workers); // one fixture for rows 01..18
+      resources.rollback = createTask547RollbackResource({ workers, fixture });
+      resources.reset = createTask547ScenarioResetResource({ workers, fixture });
+      resources.submissions = createTask547SubmissionCleanupResource({ workers, fixture });
+      registerTask547Resources(context.lifecycle, resources);
 
-    const server = await startTask547Server({
-      root: context.root,
-      supervisor: context.processes,
-      command: "coderso-dev-core-host",
-    });
-    context.lifecycle.register(server);
-    await pollUntil({ timeoutMs: timingPolicy.healthTimeoutMs, check: server.health });
+      resources.server = await startSupervisedServer({
+        context,
+        executableName: "coderso-dev-core-host",
+        args: [context.root],
+        environment: projectTask547ServerEnvironment(process.env),
+        ports: [3000, 5173, 5174],
+        readiness: task547Readiness(timingPolicy.healthTimeoutMs),
+      });
 
-    const browser = new BrowserTransport(
-      context.input.session,
-      await createTask547PlaywrightDispatcher(context),
-    );
-    context.lifecycle.register(browser);
-    const plan = compileBrowserDispatchPlan(buildTask547BrowserActions());
-    const observed = await runTask547BrowserPlan({
-      browser,
-      plan,
-      workers,
-      authTimeoutMs: timingPolicy.authTimeoutMs,
-    });
-    const accepted = validateAll18Task547Scenarios(observed);
-
+      const dispatcher = new PlaywrightCliDispatcher({
+        context,
+        session: context.input.session,
+        workspace: outputs.workspace,
+      });
+      resources.browser = new BrowserTransport(context.input.session, dispatcher);
+      context.lifecycle.register(resources.browser);
+      const plan = compileBrowserDispatchPlan(buildTask547BrowserActions());
+      const observed = await runTask547BrowserPlan({
+        browser: resources.browser,
+        plan,
+        workers,
+        authTimeoutMs: timingPolicy.authTimeoutMs,
+      });
+      accepted = validateAll18Task547Scenarios(observed);
+    } catch (error) {
+      primary = error;
+    } finally {
+      const finalization = await finalizeTask547ResourcesNeverThrow({
+        resources: [
+          resources.browser,
+          resources.server,
+          resources.submissions,
+          resources.reset,
+          resources.rollback,
+        ], // idempotent; shared lifecycle closes them safely again
+        workers,
+      });
+      cleanupProof = finalization.proof;
+      const repository = await compareTask547RepositoryNeverThrow({
+        guard: context.repository,
+        before: repositoryBefore,
+        allowedPaths: outputs.paths,
+      }); // takes the final snapshot
+      primary = preservePrimaryWithCleanup(
+        primary,
+        finalization.failures,
+        repository.failure,
+      );
+    }
+    if (primary !== null) throw primary;
+    if (accepted === null || cleanupProof === null) {
+      throw new SmokeError("smoke_output_invalid", "TASK-547 result is incomplete");
+    }
     return projectTask547SmokeAdapterResult({
       accepted,
-      screenshots: observed.screenshots,
+      cleanupProof,
       workerCounters: workers.counters(),
     }); // exact SmokeAdapterResult shape
   },
 };
 
-// Add `task-547` to SUITE_IDS, ADAPTER_PATHS and the static descriptor map.
+// Add `task-547` to contracts.ts SUITE_IDS, cli.ts SUPPORTED_PROFILES,
+// registry.ts ADAPTER_PATHS/descriptor map, and cli-registry.test.ts positives/negatives.
 // Both profiles run the same plan; only bounded polling/auth windows differ.
 ```
 
 **Data flow:** the shared CLI selects the statically registered `task-547`
 adapter. Suite-local factories construct real shared primitives from
-`RuntimeSmokeContext`: a lifecycle-registered `WorkerPool`, a supervised server
-resource, `pollUntil`, and a lifecycle-registered `BrowserTransport` executing a
-`compileBrowserDispatchPlan()` result. Persistent bounded workers and set-based
-DB operations replace one-process-per-query work. The adapter validates all 18
-scenario assertions internally, then returns only the bounded
+`RuntimeSmokeContext`: a lifecycle-registered `WorkerPool`,
+`SupervisedServerResource`/`startSupervisedServer(...)` from
+`scripts/runtime-smoke/server/supervised-server.ts`, `pollUntil`, and a
+lifecycle-registered `BrowserTransport` backed by `PlaywrightCliDispatcher` from
+`scripts/runtime-smoke/browser/playwright-cli-dispatcher.ts`. These shared
+exports land in TASK-552-04 and are imported rather than copied. One install
+supplies every Form/Page identity used by ordered rows 01..18. Persistent bounded
+workers and set-based DB operations replace one-process-per-query work. The
+adapter validates all 18 scenario assertions internally, completes and proves
+final cleanup, verifies repository snapshots, then returns only the bounded
 `SmokeAdapterResult`; the shared entry point owns timing, process counters,
 redaction and final `RuntimeSmokeReport`.
 
-**Error handling:** preserve the primary failure and run every registered
-cleanup. Delete task-scoped submissions in batches, roll back the exact source
-run with expected-current CAS fallback, prove prior DB/settings equality, close
-browser state and stop the supervised server. Missing routes, invisible effects,
-console/page errors, dirty cleanup, corrupt PNGs or a >1,000-line touched
-production/test file block closure. Do not add fixed sleeps, a duplicate
-lifecycle, generated-ledger authority or an unimplemented end-to-end resume
-claim.
+**Error handling:** the adapter's `finally` phase idempotently closes browser,
+server, submission-cleanup, scenario-reset and exact-run rollback resources,
+retains every close/absence receipt, proves zero scoped rows/temp state and prior
+DB/settings equality, and compares final to initial `RepositoryGuard` snapshots.
+Only the exact derived suite screenshot/report paths are allowed to change. The
+shared lifecycle safely closes those resources again and owns the worker close.
+The primary execution failure outranks cleanup failures, but every failure is
+retained and any one blocks a result. Missing routes, invisible effects,
+console/page errors, dirty cleanup, corrupt PNGs, unexpected repository mutation
+or a >1,000-line touched production/test file block closure. Do not add fixed
+sleeps, a duplicate lifecycle, generated-ledger authority or an unimplemented
+end-to-end resume claim.
 
 **Regression-test shape:** assert exact resource counts and identities, repeat
 apply noops, dynamic routes/data, filter result changes, form persistence and
@@ -192,22 +246,66 @@ cannot pass.
 
 ### Shared Runtime-Smoke Ownership And Land Order
 
-TASK-547-06-L01 is the sole TASK-547 smoke adapter writer. It adds the smallest
-cohesive suite implementation under `scripts/runtime-smoke/adapters/` (with
-suite-local modules only where the 18 scenario descriptors or browser segments
-need separation), statically registers suite `task-547`, and adds focused tests
-to the shared runtime-smoke test lane. It must follow
+TASK-547-06-L01 is the sole TASK-547 smoke adapter writer. It owns exactly
+`scripts/runtime-smoke/adapters/task-547.ts` and these suite-local modules:
+`task-547/descriptors.ts`, `task-547/environment.ts`,
+`task-547/worker-operations.ts`, `task-547/fixture.ts`,
+`task-547/cleanup.ts`, `task-547/browser-segments.ts`,
+`task-547/assertions.ts` and `task-547/output-manifest.ts`, all relative to
+`scripts/runtime-smoke/adapters/`. It owns exactly the focused tests
+`tests/unit/runtime-smoke/task547-adapter.test.ts`,
+`task547-descriptors.test.ts`, `task547-environment.test.ts`,
+`task547-worker-operations.test.ts`, `task547-cleanup-batch.test.ts`,
+`task547-browser-segments.test.ts` and `task547-output-manifest.test.ts` under
+`tests/unit/runtime-smoke/`. It statically registers suite `task-547` by editing exactly
+`scripts/runtime-smoke/contracts.ts`, `scripts/runtime-smoke/cli.ts`,
+`scripts/runtime-smoke/registry.ts` and
+`tests/unit/runtime-smoke/cli-registry.test.ts`. No other adapter or runtime-smoke
+test path is writable authority. The registration tests cover both
+accepted profiles, the exhaustive suite/profile map, the fixed adapter path and
+negative unsupported suite/profile pairs; the adapter itself rejects a
+mismatched suite or profile before any fixture/server/browser side effect. It
+must follow
 `docs/develop/runtime-smoke-cookbook.md` and reuse the platform contracts rather
 than owning another CLI, process manager, DB worker, Playwright loop, cleanup
 loop or report format.
+
+TASK-552-04 lands first and owns the extraction of
+`scripts/runtime-smoke/browser/playwright-cli-dispatcher.ts`
+(`PlaywrightCliDispatcher`) and
+`scripts/runtime-smoke/server/supervised-server.ts`
+(`SupervisedServerResource`, `startSupervisedServer(...)`). TASK-547 imports
+those exact exports; it must not copy the private loops from an existing adapter
+or introduce suite-local dispatcher/server implementations.
+
+`startSupervisedServer(...)` owns lifecycle registration and internally resolves
+the literal `coderso-dev-core-host` through inherited `PATH` to one absolute
+executable before spawning it. TASK-547 must not register the returned resource
+again. `projectTask547ServerEnvironment()` in the owned `environment.ts` passes
+only present values from this exact inherited allowlist: `PATH`, `NODE_ENV`,
+`DATABASE_URL`, `DATABASE_DIRECT_URL`, `DATABASE_POOLED_PORT`, `DB_POOL_MAX`,
+`PUBLIC_BASE_URL`, `COOKIE_SECURE`, `PII_HASH_KEY`,
+`ANALYTICS_IP_HASH_SECRET`, `PII_ENC_KEY`, `AUTH_PASSWORD_PEPPER`,
+`FORM_SUBMIT_NONCE_SECRET`, `FORM_SUBMIT_NONCE_TTL_MINUTES`,
+`ANALYTICS_BEACON_NONCE_SECRET`, `ANALYTICS_BEACON_NONCE_TTL_MINUTES`,
+`MEDIA_SECRET_MASTER_KEY`, `MEDIA_STORAGE`, `MEDIA_DIR`, `MEDIA_BASE_URL`,
+`EMAIL_TRANSPORT`, `THEMES_DIR`, `PLUGINS_RUNTIME_DIR`, `PLUGINS_SAFE_MODE` and
+`PLUGIN_UPDATE_MODE`. `PATH` and `DATABASE_URL` are required; blank required
+values and NUL in any allowlisted value fail before spawn.
+Non-allowlisted ambient keys are ignored. The projection never spreads the
+ambient environment, and tests/reports record key names and redacted presence
+only, never values.
 
 Land the remaining acceptance tests first, then the suite descriptors/adapter,
 then static registration and focused adapter/registry tests, and finally docs and
 closure. Each changed unit gets typecheck, lint, its owning tests and a line-
 count gate. A clean completed unit is not replayed after an unrelated later
 failure. Screenshots/reports are written under `_docs/_workflows/_smoke/task-547/`
-for review; generated smoke output is not a task-state ledger and is not counted
-as a fixed tracked-artifact closure gate.
+for review. A strict output-manifest builder derives the exact 18 screenshot and
+JSON/Markdown report paths for the validated profile/session; the repository
+guard allows only those exact paths, never the directory prefix. Generated smoke
+output is not a task-state ledger and is not counted as a fixed tracked-artifact
+closure gate.
 
 ## Required Smoke Scenarios
 
@@ -222,7 +320,7 @@ The suite descriptor order is exactly:
 | 05 | `portfolio-facets` | `wf547smoke` | `http://127.0.0.1:3000/projekty` | `1440x1000` |
 | 06 | `aurora-detail` | `wf547smoke` | `http://127.0.0.1:3000/projekty/aurora` | `1440x1000` |
 | 07 | `contact-form` | `wf547smoke` | `http://127.0.0.1:3000/kontakt` | `1440x1000` |
-| 08 | `publish-rollback` | `wf547smoke` | `http://127.0.0.1:3000/` | `1440x1000` |
+| 08 | `publish-lifecycle-parity` | `wf547smoke` | `http://127.0.0.1:3000/` | `1440x1000` |
 | 09 | `form-design-author-light` | `wf547formdesign` | `http://127.0.0.1:5173/admin/advanced/forms/{formId}` | `1440x1000` |
 | 10 | `form-design-author-dark` | `wf547formdesign` | `http://127.0.0.1:5173/admin/advanced/forms/{formId}` | `1440x1000` |
 | 11 | `form-design-reset-mobile` | `wf547formdesign` | `http://127.0.0.1:5173/admin/advanced/forms/{formId}` | `390x844` |
@@ -239,12 +337,14 @@ adapter. They may be split into cohesive suite-local modules, but they do not
 own another process, browser, DB, cleanup or report loop. The adapter groups
 them into the public, Form Design and Page Editor browser segments and relies on
 the shared lifecycle to isolate browser state. Both supported profiles retain
-this exact order, IDs, URLs, viewports and assertions.
+this exact order, IDs, URLs, viewports and assertions. One installed fixture is
+kept through the whole ordered plan; no segment performs a second install or
+rolls back the source run before row 18 completes.
 
 Exact ordered IDs:
 `home-desktop-effects`, `all-routes-desktop-shell`, `tablet-responsive`,
 `mobile-navigation`, `portfolio-facets`, `aurora-detail`, `contact-form`,
-`publish-rollback`.
+`publish-lifecycle-parity`.
 
 1. Home desktop: material hero geometry, header appearance, interaction effects,
    exact source hero text/facts, all three ordered style controls and their
@@ -280,11 +380,12 @@ Exact ordered IDs:
    API key plus `forms.submit`, no cookie-CSRF and `admin_write`; anonymous
    rejection with no row. It executes `show-message-keep-form` visibly: the supporting note
    disappears, exact success appears and all controls remain visible. Project
-   an exact logical receipt for every registered submission from bounded set-
-   based cleanup, then prove zero matching rows.
-8. Draft/publish-to-front parity, native lifecycle order, source-run rollback,
-   all registered submission cleanup, scenario-temporary-state cleanup, exact
-   prior shell/settings restoration and aggregate digest chaining.
+   each submission is registered for the single suite-final set-based cleanup,
+   which later projects per-item logical receipts and proves zero matching rows.
+8. Draft/publish-to-front parity and native lifecycle order while the exact
+   source run remains installed. This row proves the installed Form/Page
+   identities are still available to rows 09..18; it performs no rollback,
+   settings restoration or suite cleanup.
 
 The suite-local validator owns the bounded assertion observations needed to
 prove the ordered IDs below. Each observation has a material string, number,
@@ -297,15 +398,18 @@ shared entry point adds timings, process counters, snapshot count, lifecycle
 cleanup and failures in `RuntimeSmokeReport`, with final redaction and the 1 MiB
 bound.
 
-Screenshot paths live under `_docs/_workflows/_smoke/task-547/`. Before
-projection the suite validates fresh bytes, dimensions and complete PNG decode;
-pseudo-images, corrupt images, duplicate peer bytes or viewport mismatches fail.
-The suite also validates the fixed reference digest, helper-only server start,
-health checks, exact-source rollback and prior/final state equality before
-returning `pass:true`. Reports contain no raw database IDs, credentials, cookies,
-`.env` values, stored form payloads or absolute paths. Assertions use computed
-styles, measured geometry, DOM/ARIA state, content sets, persistence and visible
-result changes—not only control presence or emitted CSS strings.
+Screenshot paths live under `_docs/_workflows/_smoke/task-547/`. The exact output
+manifest lists each allowed screenshot/report file; a directory-prefix allowlist
+is forbidden. Before projection the suite validates fresh bytes, dimensions and
+complete PNG decode; pseudo-images, corrupt images, duplicate peer bytes or
+viewport mismatches fail. The suite also validates the fixed reference digest,
+shared supervised-server start, health checks, exact-source rollback and
+prior/final state equality before returning `pass:true`. Initial and final
+repository snapshots must differ only at the exact output-manifest paths.
+Reports contain no raw database IDs, credentials, cookies, `.env` values, stored
+form payloads or absolute paths. Assertions use computed styles, measured
+geometry, DOM/ARIA state, content sets, persistence and visible result changes—not
+only control presence or emitted CSS strings.
 
 Required ordered assertion IDs are frozen per scenario:
 
@@ -342,19 +446,18 @@ Required ordered assertion IDs are frozen per scenario:
   `contact-internal-session-contract`, `contact-internal-api-key-contract`,
   `contact-internal-anonymous-rejected`, `contact-scoped-submission`,
   `contact-success-action`, `contact-controls-remain-visible`;
-- `publish-rollback`: `publish-front-parity`, `publish-lifecycle-order`,
-  `rollback-source-run`, `prior-shell-settings-restored`,
-  `scoped-submission-cleanup`.
+- `publish-lifecycle-parity`: `publish-front-parity`,
+  `publish-lifecycle-order`, `installed-fixture-continuity`.
 
-`scoped-submission-cleanup` is a material clean-state receipt, not a boolean. Its
-expected object names only row 08 and session `wf547smoke`, records bounded
-digests for row 08's own pre-registered markers and attached IDs, and has exact
-terminal arrays `remainingSubmissionRows:[]` and
-`remainingTempArtifacts:[]`. Raw markers/IDs never enter the report. The receipt
-is attached only after row 08's cleanup has attempted every deletion and both
-zero-state queries have passed. The suite-local validator checks every cleanup
-observation before projecting aggregate safe scalars into
-`SmokeAdapterResult.cleanup`; row 08 cannot summarize or depend on rows 09–18.
+Suite-final cleanup is intentionally not a row-08 assertion. After row 18, one
+material cleanup proof records bounded digests for every pre-registered
+submission marker/attached ID from rows 01..18 and exact terminal arrays
+`remainingSubmissionRows:[]` and `remainingTempArtifacts:[]`; raw markers/IDs
+never enter the report. The adapter then resets temporary Form/Page mutations to
+the durable installed snapshot, invokes exact-source rollback once, verifies
+presence-aware prior shell/settings equality and retains every receipt. It
+projects only safe aggregate scalars into `SmokeAdapterResult.cleanup` after the
+proof passes.
 
 `contact-nonce-contract` freezes the real public write boundary as
 `{missingStatus:400, alteredStatus:403, validStatus:200}`: a missing nonce is a
@@ -426,7 +529,8 @@ least these material public structures:
   logical rows join one bounded set-based cleanup with per-ID receipts. The
   anonymous marker is also registered before dispatch and the zero-row assertion
   proves rejection created nothing.
-  Cleanup deletes the scoped internal Form after its submissions and proves both gone;
+  Suite-final cleanup deletes the scoped internal Form after its submissions and
+  proves both gone;
 - `aurora-six-slug-eligibility` observes one exact keyed object. Aurora has
   `status:200`, exact title
   `Dom Aurora — projekt pokazowy — FormaDom Studio`, exact description
@@ -565,7 +669,7 @@ assertion IDs are:
   `form-design-front-success-message`,
   `form-design-front-controls-visible`,
   `form-design-front-admin-public-parity`,
-  `form-design-front-scoped-cleanup`.
+  `form-design-front-submission-registered`.
 
 ### Page Editor UI Runtime Acceptance
 
@@ -596,7 +700,7 @@ without taking smoke ownership. This child freezes their normalized URLs in the
   `page-editor-front-project-card-links-without-cta`,
   `page-editor-front-contact-presentation-and-success`,
   `page-editor-front-controls-visible`, `page-editor-front-mobile-geometry`,
-  `page-editor-front-scoped-cleanup`.
+  `page-editor-front-submission-registered`.
 
 Descriptor rows 14..18 implement this list in the Page Editor browser segment
 and produce five decoded PNGs. They prove light/dark, tablet/mobile, base-only
@@ -618,16 +722,26 @@ without taking production ownership.
   `bun run scan:security:strict`, canonical generator zero-diff and touched-file
   line counts;
 - run the shared runtime-smoke self-tests plus focused TASK-547 adapter,
-  descriptor, cleanup-batch and browser-segment tests;
+  descriptor, cleanup-batch and browser-segment tests; include positive
+  `task-547` fast/certification registration plus wrong-suite,
+  wrong-profile and unsupported suite/profile negative tests in
+  `tests/unit/runtime-smoke/cli-registry.test.ts` and the adapter lane;
 - run
   `bun scripts/runtime-smoke.ts run --suite task-547 --profile fast --session wf547fast`
   and prove with descriptor tests that it executes the same 18 scenarios and
   assertions as certification; only bounded polling/auth windows differ;
 - run one final
   `bun scripts/runtime-smoke.ts run --suite task-547 --profile certification --session wf547certification`;
-- every browser command uses argv-only `playwright-cli` through shared browser
-  segments; the shared lifecycle starts only `coderso-dev-core-host`, polls
-  admin/front health and records session/server/port cleanup;
+- prove that each profile performs one install, executes ordered rows 01..18 on
+  that fixture, then completes one final idempotent submission/reset/rollback
+  phase, verifies every cleanup receipt and accepts only exact screenshot/report
+  repository mutations before returning its adapter result;
+- every browser command uses argv-only `playwright-cli` through the shared
+  TASK-552-04 `PlaywrightCliDispatcher`; server ownership uses the shared
+  `SupervisedServerResource`/`startSupervisedServer(...)` with only
+  `coderso-dev-core-host`, the exact bounded inherited-environment projection and
+  helper-owned lifecycle registration, polls admin/front health and records
+  session/server/port cleanup;
 - before every DB/settings test or dev command execute exactly
   `set -a && source /home/coder/project/Coderso/.env && set +a`, without
   printing/copying/hashing/persisting the file or values, then perform a bounded

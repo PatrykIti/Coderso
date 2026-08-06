@@ -186,11 +186,18 @@ whose embedded documents delegate to their domain owners.
   preserves both in the assembled package, and TASK-547-06-L01 proves the public
   runtime output.
 - TASK-547-06-L01 registers one thin `task-547` adapter in the shared
-  `scripts/runtime-smoke.ts` entry point. It composes the shared lifecycle,
-  condition polling, process supervision, profile-scoped workers, set-based DB
-  cleanup, browser segments, redaction, timing and
-  reporting described by `docs/develop/runtime-smoke-cookbook.md`; it does not
-  create a second task-local CLI or lifecycle.
+  `scripts/runtime-smoke.ts` entry point. Registration updates the exhaustive
+  suite/profile contracts in `scripts/runtime-smoke/contracts.ts`,
+  `scripts/runtime-smoke/cli.ts`, `scripts/runtime-smoke/registry.ts` and
+  `tests/unit/runtime-smoke/cli-registry.test.ts`; the adapter rejects a
+  mismatched suite or unsupported profile before any side effect. It composes
+  the shared lifecycle, condition polling, profile-scoped workers, set-based DB
+  cleanup, `PlaywrightCliDispatcher` from
+  `scripts/runtime-smoke/browser/playwright-cli-dispatcher.ts`, and
+  `startSupervisedServer(...)`/`SupervisedServerResource` from
+  `scripts/runtime-smoke/server/supervised-server.ts` as extracted by
+  TASK-552-04. It does not create a second task-local CLI, dispatcher, server
+  resource or lifecycle.
 - All 18 runtime scenarios remain independently identifiable and assert the same
   product-visible behavior in both profiles. `fast` differs only through shorter
   bounded polling/auth infrastructure windows while retaining the same set-
@@ -198,6 +205,15 @@ whose embedded documents delegate to their domain owners.
   strength waits. This task does not consume checkpoint resume; a future change
   may add it only when the adapter restores renewable state and re-proves the
   exact candidate, canonical preconditions and cleanup end to end.
+- One installed fixture and source run remain live through ordered rows 01..18.
+  Row 08 proves publish/front and native lifecycle parity without rolling back;
+  rows 09..18 reuse that fixture's Form/Page identities. The adapter performs
+  set-based submission cleanup, scenario reset and exact-source rollback once in
+  its final `finally` phase after row 18, proves prior-state equality, and only
+  then may return a passing `SmokeAdapterResult`.
+- The adapter takes initial and final `RepositoryGuard` snapshots. Its exact
+  allowlist is the derived set of this run's screenshot and report files under
+  `_docs/_workflows/_smoke/task-547/`; any other repository mutation fails.
 - The only declared fidelity residual IDs are
   `favicon-not-installed`, `theme-color-not-installed`,
   `header-brand-and-floating-frame-approximated`,
@@ -263,7 +279,7 @@ others:
 | 05 | `portfolio-facets` | `wf547smoke` |
 | 06 | `aurora-detail` | `wf547smoke` |
 | 07 | `contact-form` | `wf547smoke` |
-| 08 | `publish-rollback` | `wf547smoke` |
+| 08 | `publish-lifecycle-parity` | `wf547smoke` |
 | 09 | `form-design-author-light` | `wf547formdesign` |
 | 10 | `form-design-author-dark` | `wf547formdesign` |
 | 11 | `form-design-reset-mobile` | `wf547formdesign` |
@@ -339,6 +355,11 @@ IDs or lifecycle logic.
   with the same assertions. The shared runner records structured scenario and
   phase timings, zero console/page errors, cleanup results and screenshots under
   `_docs/_workflows/_smoke/`.
+- Rows 01..18 use one installed fixture. Row 08 does not roll it back; the suite
+  closes browser/server, submission/reset and exact-run rollback resources
+  idempotently after row 18, verifies cleanup receipts and the final repository
+  snapshot, and then returns its result. The shared lifecycle may safely close
+  those already-closed resources again.
 - Residual visual differences are evidence-backed and do not conceal a functional,
   accessibility, data, security, or test-integrity gap.
 - Every touched human-authored production/test file is at most 1,000 physical lines.
@@ -357,23 +378,30 @@ IDs or lifecycle logic.
 - `bun run precommit:check`
 - `bun run gates:coderso`
 - `bun run scan:security:strict`
-- register suite `task-547` statically in the shared runtime-smoke CLI and add a
-  thin adapter following `docs/develop/runtime-smoke-cookbook.md`
+- register suite `task-547` statically by updating the exhaustive `SUITE_IDS` in
+  `scripts/runtime-smoke/contracts.ts`, `SUPPORTED_PROFILES` in
+  `scripts/runtime-smoke/cli.ts`, `ADAPTER_PATHS` plus the descriptor map in
+  `scripts/runtime-smoke/registry.ts`, and positives/negatives in
+  `tests/unit/runtime-smoke/cli-registry.test.ts`; adapter tests reject a wrong
+  suite/profile before fixture, browser or server work
 - run both `bun scripts/runtime-smoke.ts run --suite task-547 --profile fast
   --session wf547fast` and final `bun scripts/runtime-smoke.ts run --suite
   task-547 --profile certification --session wf547certification`; both retain
   all 18 scenarios/assertions, while only their controlled polling/auth windows
   differ
-- compose shared lifecycle/process/polling/worker/DB-batch/browser/redaction/
-  timing/reporting primitives; do not copy their loops into a
-  TASK-547 executor
+- depend on TASK-552-04 and compose its shared `PlaywrightCliDispatcher` and
+  `SupervisedServerResource`/`startSupervisedServer(...)` with the shared
+  lifecycle/process/polling/worker/DB-batch/redaction/timing/reporting
+  primitives; do not copy their loops into a TASK-547 executor
 - keep the exact three logical browser segments for public, Form Design and Page
   Editor flows while letting the shared lifecycle own server start/health/stop
   through `coderso-dev-core-host`
 - every scenario records URL, viewport, zero console/page errors, material
-  visible effects, cleanup/rollback outcome and a valid screenshot under
-  `_docs/_workflows/_smoke/`
-- use set-based cleanup and exact-run rollback with prior-state equality proof;
+  visible effects and a valid screenshot under `_docs/_workflows/_smoke/`; the
+  suite result separately records the single final cleanup/rollback outcome
+- keep one fixture installed through all 18 rows, then use one final set-based
+  cleanup and exact-run rollback with prior-state equality proof; initial/final
+  repository snapshots allow only the exact derived screenshot/report paths and
   no evidence directory or generated ledger is closure authority
 - baseline-to-final line counts for every touched production/test module
 

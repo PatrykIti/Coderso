@@ -90,12 +90,10 @@ the authority is accepted by no public port/helper/options/callback and is not a
 general bypass. The transaction commits the actual owner plus fresh marker before
 callback/planner DB access.
 
-For apply/dry-run, that same transaction reads at most 513 owner items and derives
-`resumePhase` atomically. Absent strict `initializationPlanV1` plus zero items is
-`reserved`; a strict plan plus its complete one-to-one bounded item set with
-identical position/kind/key/operation is `initialized`, including strict empty
-plan plus zero rows. Prefix, cap+1, mismatch, malformed or impossible state fails
-closed before generation rotation. New/claimed apply callback context is only
+Before claiming an existing marked apply/dry-run owner, that same transaction compares the locked row's package key, exact mode derived from `dryRun`, non-null actor UUID and canonical request-options projection with the incoming reservation. The projection removes only top-level `nativeCmsWriterFenceV1` and derived `initializationPlanV1`; all other options remain identity-bearing.
+Package A→B, apply↔dry-run, deleted/null or different actor, or any option mismatch throws fresh cause-free `site_package_recovery_conflict` before generation rotation, callback or initialization and leaves the candidate unchanged.
+It then reads at most 513 owner items and derives `resumePhase` atomically. Absent strict `initializationPlanV1` plus zero items is `reserved`; a strict plan plus its complete one-to-one bounded item set with identical position/kind/key/operation is `initialized`, including strict empty plan plus zero rows. Prefix, cap+1, mismatch, malformed or impossible state fails closed before generation rotation.
+New/claimed apply callback context is only
 `{intent:"apply",ownerRunId,resumePhase}`. An initialized callback must enter
 durable recovery (automatic compensation for apply) with zero planner,
 preparation, initialization or native-reapply calls. Explicit rollback instead
@@ -112,16 +110,11 @@ monotonic. Callback/acquisition/holder-loss primary errors outrank cleanup.
 Abnormal work leaves the marker durable. Deployment drains old writers because
 mixed fence-aware/unaware versions are unsafe.
 
-DB-free fence tests pin constants, exact ordinary/owner SQL, `READ COMMITTED`,
-state transitions and zero-I/O inherited rejection. Composition tests pin holder
-configuration/order; private statement-one locking census with zero shared-fence
-call; exact resume derivation/rejection; marker-before-planner; takeover rotation;
-absent-ALS `onclose`; detached drain; normal end; callback settlement before end;
-and primary-error precedence. L03 owns real-DB crash/two-client barriers.
+DB-free fence tests pin constants, exact ordinary/owner SQL, `READ COMMITTED`, state transitions and zero-I/O inherited rejection. Composition tests pin holder configuration/order; private statement-one locking census with zero shared-fence call; exact request-identity and resume derivation/rejection; unchanged generation/row/items for package A→B, apply↔dry-run, deleted/different actor and options mismatch; marker-before-planner; exact-match takeover rotation; absent-ALS `onclose`; detached drain; normal end; callback settlement before end; and primary-error precedence. L03 owns real-DB crash/two-client barriers.
 
 ## Reserved Initialization and Atomic Owner Finalization
 
-`initializeReservedRun` replaces insert-new `createInitializedRun`. Its strict input is the exact reserved apply/dry-run owner plus 0..512 prepared items. Transaction statement one is the active owner `FOR SHARE` gate; it updates that row without replacing/removing its marker and set-based inserts all items atomically. Returned ID equals `ownerRunId`; there is no insert-new/sequential fallback.
+`initializeReservedRun` replaces insert-new `createInitializedRun`. Its strict input is the exact reserved apply/dry-run owner plus 0..512 prepared items. Transaction statement one is the active owner `FOR SHARE` gate; before writing, it rechecks the same locked package/mode/actor/request-options identity, so another request can never initialize the owner. It updates that row without replacing/removing its marker and set-based inserts all items atomically. Returned ID equals `ownerRunId`; there is no insert-new/sequential fallback.
 
 Initialization error mapping never blankets the owner gate: exact `native_cms_writer_fence_lost` and `native_cms_writer_fence_failed` remain exact fresh cause-free errors. After other transaction/commit failure, one bounded exact reread returns committed success only for the strict derived plan plus complete matching item set; absent plan plus zero rows proves rollback and yields `site_package_ledger_initialization_failed`; partial/impossible evidence yields `native_cms_writer_recovery_required`; unresolved reread yields `native_cms_writer_fence_failed`. The latter two retain the running marker.
 
@@ -713,7 +706,7 @@ export async function withFullSiteInstallLocks(reservation, execute) {
       await sql`select pg_advisory_xact_lock(547, hashtext(${input.packageKey}))`;
       const authority = mintPrivateHolderReservationAuthority(sql, input);
       lease = await reserveOrTakeOverActualOwner(input, authority);
-      // Its short tx statement 1 is ordered LIMIT 2 FOR UPDATE; never shared-fences.
+      // Match package/mode/actor/options before rotation; statement 1 is LIMIT 2 FOR UPDATE.
       callbackPromise = runWithNativeCmsWriterOwnerContext(lease, execute);
       return callbackPromise;
     });
@@ -983,7 +976,7 @@ L01 uses the graph-owner descriptor resolver/`normalizeDesired`; any descriptor 
   throwing zero-call planner-write spies, and one self-evidence lookup for a
   direct concrete two-argument resolver call.
 - Initialization/finalization gate: exact 0/1/512 plan/items, owner-gate code preservation, confirmed-rollback generic failure, exact ambiguous-commit success and unresolved marker retention; synchronous closing, primary and private-reread statement-one owner `FOR UPDATE`, captured lease, zero ordinary fence/mutation, bounded all-mode summaries, automatic child and interrupted-source atomic transitions, desired/different outcomes, marker removal and immutable winner. Every success requires desired; caller mapping is DB-free, deterministic cleanup catches only finalizer result/error with zero later I/O, and partial failure preserves owner.
-- Writer-fence gate: exact 548/0 ordinary `READ COMMITTED` try-shared/census and installer owner `FOR SHARE`; private holder-authorized statement-one ordered `LIMIT 2 FOR UPDATE` reservation census with zero shared-fence call/public bypass; rich resume derivation/rejection and marker-before-planner. Pin global -> package xact SQL, `{max:1,prepare:false}` `begin`, rotation, inherited/detached zero-I/O, absent-ALS `onclose`, normal revoke/end, callback settlement before end, primary precedence and no reserve/session/manual-unlock SQL.
+- Writer-fence gate: exact 548/0 ordinary `READ COMMITTED` try-shared/census and installer owner `FOR SHARE`; private holder-authorized statement-one ordered `LIMIT 2 FOR UPDATE` reservation census with zero shared-fence call/public bypass; exact package/mode/actor/request-options identity before rotation; rich resume derivation/rejection and marker-before-planner. Pin package A→B, apply↔dry-run, deleted/different actor and options mismatch as unchanged zero-callback failures; then global -> package xact SQL, `{max:1,prepare:false}` `begin`, exact-match rotation, inherited/detached zero-I/O, absent-ALS `onclose`, normal revoke/end, callback settlement before end, primary precedence and no reserve/session/manual-unlock SQL.
 - Planner-projection gate: the Bun source test pins the shared exact constants and both consumers' imports/uses; malicious spread/computed/unmatched/extra members, local copies and bare selects fail. The base/aggregate DB suites compile every batch projection, compare its full transport-plus-`desired` SELECT shape and reject every non-allowlisted output for that projection, explicitly `access_password`. Retain two content-entry ID selects/one resolver desired select, literal forbidden checks, child cap imports/order/limits/pre-project guards, exact-ID/natural behavior and all six cap/cap+1 boundaries without truncation.
 - Evidence query-shape gate: the one compiled batch SELECT retains request ordinal,
   run-driven lateral winner, combined anti-join, stable aliases/order/limits and

@@ -158,14 +158,9 @@ ordered `created_at ASC, id ASC LIMIT 2 FOR UPDATE`; it is both census and owner
 row lock. The authority cannot be supplied through the ledger port, options,
 callback or any public helper, so this is not a general fence bypass.
 
-That transaction creates or claims the **actual** owner and writes a fresh
-private strict `options.nativeCmsWriterFenceV1={schemaVersion:1,generation:
-<UUID>}` before callback/planner DB access. For apply/dry-run only, it also reads
-at most 513 owner items and atomically derives callback `resumePhase`: no own
-`initializationPlanV1` and zero items is `reserved`; a strict plan plus a complete
-one-to-one bounded item set with identical position/kind/key/operation is
-`initialized` (including an authored empty plan); any plan/item prefix, cap+1,
-mismatch, malformed or impossible state fails closed without rotating ownership.
+That transaction creates or claims the **actual** owner and writes a fresh private strict `options.nativeCmsWriterFenceV1={schemaVersion:1,generation:<UUID>}` before callback/planner DB access. Before claiming an existing marked apply/dry-run owner, it atomically compares the locked row's package key, exact `apply`/`dry_run` mode, non-null actor UUID and canonical request-options projection with the incoming reservation.
+That projection removes only the top-level private fence marker and derived `initializationPlanV1`; every other option remains identity-bearing. A different package, apply/dry-run flip, deleted/null or different actor, or option mismatch throws fresh cause-free `site_package_recovery_conflict` before generation rotation, callback or initialization and leaves the owner byte-identical.
+It then reads at most 513 owner items and atomically derives callback `resumePhase`: no own `initializationPlanV1` and zero items is `reserved`; a strict plan plus a complete one-to-one bounded item set with identical position/kind/key/operation is `initialized` (including an authored empty plan); any plan/item prefix, cap+1, mismatch, malformed or impossible state fails closed without rotating ownership.
 The apply callback receives only `{intent:"apply",ownerRunId,resumePhase}`; the
 generation/authority remain private. An initialized apply/dry-run skips planner,
 preparation, `initializeReservedRun` and native reapply and enters durable
@@ -236,19 +231,9 @@ Holder loss releases xact locks but leaves the marker; exact takeover drains and
 rotates its generation. Success returns only after desired finalization and the
 holder transaction commit.
 
-L02 wires the ordinary fence into every atomic adapter/settings writer, User
-deletion, Form/Page/detail revisions, import and backup outer transactions. Its
-static inventory classifies every protected DML/Tx-helper, indirect User
-`SET NULL`, intended cascade and reverse reference. Page/Entry/Form/ContentType
-conditional deletes lock-check reverse references; listing-query JSON reference
-creation takes ContentType `KEY SHARE`. `importConfig`/`restoreBackup` use one
-outer fenced transaction; backup reuses the import Tx helper without nesting.
-Delete order is fence/owner statement one -> root `FOR UPDATE` -> stable owned
-children/revisions -> snapshot CAS -> reverse-reference guards -> DML. Guards
-cover Page menu items/theme routes; Entry presentation overrides/term assignments;
-Form submissions/action runs and in-place action diffs; and ContentType listing-
-query JSON plus the locked `site.contentRoutes` setting. Intended FK cascades are
-allowlisted explicitly, never hidden by the inventory.
+L02 wires the ordinary fence into every atomic adapter/settings writer, User deletion, Form/Page/detail revisions, import and backup outer transactions. Its static inventory classifies every protected DML/Tx-helper, indirect User `SET NULL`, intended cascade and reverse reference. Page/Entry/Form/ContentType conditional deletes lock-check reverse references; listing-query JSON reference creation takes ContentType `KEY SHARE`.
+A ContentType slug rename uses that same fenced/root-locked mutation, locks `site.contentRoutes`, rejects any old-slug reference and never side-writes routes. `importConfig`/`restoreBackup` use one outer fenced transaction; backup reuses the import Tx helper without nesting. Delete/rename order is fence/owner statement one -> root `FOR UPDATE` -> stable owned children/revisions -> snapshot CAS -> reverse-reference guards -> DML.
+Guards cover Page menu items/theme routes; Entry presentation overrides/term assignments; Form submissions/action runs and in-place action diffs; and ContentType listing-query JSON plus the locked `site.contentRoutes` setting. Intended FK cascades are allowlisted explicitly, never hidden by the inventory. Retaining no migration for the JSON listing-query pseudo-FK additionally requires sanitized small and representative-large `EXPLAIN (ANALYZE, BUFFERS)` profiles to pass explicit latency, emitted/scanned-row and buffer budgets. Failure blocks this leaf and starts a separate index-migration contract with SQL, snapshot and journal artifacts; it never permits an ad hoc or partial DDL change.
 
 No migration is added: the marker is private, strictly read, stripped from all
 public/run/debug projections and never accepted from callers. Deployment requires
@@ -914,12 +899,7 @@ both the source failure and every success/failed/blocked compensation outcome.
   plan; typed apply builds one private plan, both planner overloads call package
   normalization zero times, and supplied-plan identity reaches preparation.
   Every post-substitution native validator fails before initialization/write.
-- The private reservation transaction proves statement-one ordered `LIMIT 2 FOR
-  UPDATE`, no `acquireNativeCmsWriterFence`/try-shared call, and no forgeable
-  public authority. Apply takeover returns exact `reserved` or `initialized` for
-  the two legal plan/item shapes and rejects cap+1, prefix, mismatch, malformed
-  and impossible states before generation rotation. Explicit rollback retains
-  its independent incremental-outcome resume matrix.
+- The private reservation transaction proves statement-one ordered `LIMIT 2 FOR UPDATE`, no `acquireNativeCmsWriterFence`/try-shared call, no forgeable public authority, and exact `reserved`/`initialized` takeover only for matching request identity and legal plan/items. It rejects package A→B, apply↔dry-run, deleted/different actor, request-option mismatch, cap+1, prefix, malformed and impossible states before generation rotation; explicit rollback retains its independent resume matrix.
 - Initialized apply/dry-run invokes no planner, preparation, initialization or
   native apply. Whole-callback tests cover deterministic plan/preparation errors,
   confirmed initialization rollback, exact committed ambiguity and partial/
@@ -946,9 +926,7 @@ both the source failure and every success/failed/blocked compensation outcome.
   nine domain-atomic create/replace/delete races remain. Page/entry/detail retain
   exact 100/101 revision gates and divergent current/published restoration.
   SIGKILL after each native commit proves durable recovery.
-- Static/runtime fence coverage includes User `SET NULL`, reverse-reference
-  Page/Entry/Form/ContentType deletes, listing-query `KEY SHARE`, classified
-  cascades, import/backup and different-package shell serialization.
+- Static/runtime fence coverage includes User `SET NULL`, reverse-reference Page/Entry/Form/ContentType deletes plus ContentType slug rename, listing-query `KEY SHARE`, classified cascades, import/backup and different-package shell serialization. The JSON pseudo-FK production predicate passes its sanitized bounded small/large EXPLAIN budgets before no-migration stands.
 - Every executor write takes strict saga input. Noop execution occurs only after
   complete initialization and performs zero resolver/adapter/native calls while
   preserving its graph/evidence. Classifier use follows global raw/graph checks;

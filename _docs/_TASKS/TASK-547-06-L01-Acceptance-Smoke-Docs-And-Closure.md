@@ -5,7 +5,7 @@
 **Priority:** High
 **Category:** QA / Documentation / Closure
 **Estimated Effort:** Large
-**Dependencies:** TASK-547-05
+**Dependencies:** TASK-547-05, TASK-552-04 shared dispatcher/server extraction
 **Status:** 🚧 In Progress
 **Validation:** All previous final-gate, smoke, cleanup and closure claims are
 invalidated and await fresh evidence from the final working tree.
@@ -47,10 +47,26 @@ During its acceptance/closure phase this leaf is the sole writer for exactly:
   `tests/integration/runtime/pages-runtime-responsive.test.ts`,
   `tests/integration/runtime/pages-runtime-test-support.ts` and
   `tests/vitest/kits/projekty-domow-runtime-rendering.test.tsx`;
-- the thin adapter and cohesive TASK-547 suite-local helpers under
-  `scripts/runtime-smoke/adapters/`, shared static registration in
-  `scripts/runtime-smoke/contracts.ts` and `scripts/runtime-smoke/registry.ts`,
-  plus focused tests in the existing runtime-smoke unit lane;
+- runtime-smoke production paths
+  `scripts/runtime-smoke/adapters/task-547.ts`,
+  `scripts/runtime-smoke/adapters/task-547/descriptors.ts`,
+  `scripts/runtime-smoke/adapters/task-547/environment.ts`,
+  `scripts/runtime-smoke/adapters/task-547/worker-operations.ts`,
+  `scripts/runtime-smoke/adapters/task-547/fixture.ts`,
+  `scripts/runtime-smoke/adapters/task-547/cleanup.ts`,
+  `scripts/runtime-smoke/adapters/task-547/browser-segments.ts`,
+  `scripts/runtime-smoke/adapters/task-547/assertions.ts` and
+  `scripts/runtime-smoke/adapters/task-547/output-manifest.ts`; shared static registration in
+  `scripts/runtime-smoke/contracts.ts`, `scripts/runtime-smoke/cli.ts` and
+  `scripts/runtime-smoke/registry.ts`;
+- runtime-smoke tests `tests/unit/runtime-smoke/cli-registry.test.ts`,
+  `tests/unit/runtime-smoke/task547-adapter.test.ts`,
+  `tests/unit/runtime-smoke/task547-descriptors.test.ts`,
+  `tests/unit/runtime-smoke/task547-environment.test.ts`,
+  `tests/unit/runtime-smoke/task547-worker-operations.test.ts`,
+  `tests/unit/runtime-smoke/task547-cleanup-batch.test.ts`,
+  `tests/unit/runtime-smoke/task547-browser-segments.test.ts` and
+  `tests/unit/runtime-smoke/task547-output-manifest.test.ts`;
 - root integration surfaces `package.json`, `tests/README.md` and shared smoke
   docs only where needed for the new suite commands/registration; no task-local
   CLI, lifecycle, process supervisor, DB worker, browser loop, report loop or
@@ -97,6 +113,31 @@ TASK-547-01..05 production or targeted-test path without a fresh verified defect
 assigned back to that owner. Every new/changed path must have one writer and a
 focused owning gate; broad directory globs are not writable authority.
 
+TASK-552-04 must land first. This leaf imports
+`PlaywrightCliDispatcher` from
+`scripts/runtime-smoke/browser/playwright-cli-dispatcher.ts` and
+`SupervisedServerResource`/`startSupervisedServer(...)` from
+`scripts/runtime-smoke/server/supervised-server.ts`; it must not duplicate the
+private dispatcher/server loops from any existing adapter.
+
+The shared `startSupervisedServer(...)` resolves the literal
+`coderso-dev-core-host` through inherited `PATH` to an absolute executable and
+registers its returned resource with `context.lifecycle` before readiness work;
+the adapter must not register it again. The owned
+`projectTask547ServerEnvironment()` forwards only present values from this exact
+allowlist: `PATH`, `NODE_ENV`, `DATABASE_URL`, `DATABASE_DIRECT_URL`,
+`DATABASE_POOLED_PORT`, `DB_POOL_MAX`, `PUBLIC_BASE_URL`, `COOKIE_SECURE`,
+`PII_HASH_KEY`, `ANALYTICS_IP_HASH_SECRET`, `PII_ENC_KEY`,
+`AUTH_PASSWORD_PEPPER`, `FORM_SUBMIT_NONCE_SECRET`,
+`FORM_SUBMIT_NONCE_TTL_MINUTES`, `ANALYTICS_BEACON_NONCE_SECRET`,
+`ANALYTICS_BEACON_NONCE_TTL_MINUTES`, `MEDIA_SECRET_MASTER_KEY`,
+`MEDIA_STORAGE`, `MEDIA_DIR`, `MEDIA_BASE_URL`, `EMAIL_TRANSPORT`, `THEMES_DIR`,
+`PLUGINS_RUNTIME_DIR`, `PLUGINS_SAFE_MODE` and `PLUGIN_UPDATE_MODE`. `PATH` and
+`DATABASE_URL` are mandatory; blank required values and NUL in any allowlisted
+value fail before spawn, while every non-allowlisted ambient key is ignored. No
+ambient spread is allowed, and evidence exposes only key names plus redacted
+presence, never values.
+
 ## Security Contract
 
 - **Visibility/endpoints:** add no route. Validate all existing internal admin
@@ -123,19 +164,23 @@ focused owning gate; broad directory globs are not writable authority.
   cannot select that policy.
 - **Data hygiene:** use only fake uniquely marker-bearing data. Register every
   public, Form Design and Page Editor marker before dispatch, attach every
-  returned submission ID immediately, delete each registered ID/marker
-  independently and idempotently, and prove zero scoped rows. Tracked cleanup
-  evidence retains only bounded marker/ID digests and outcomes, never raw values.
+  returned submission ID immediately, delete registered IDs/markers in one
+  bounded set-based final cleanup with per-item logical receipts, and prove zero
+  scoped rows. Tracked cleanup evidence retains only bounded marker/ID digests
+  and outcomes, never raw values.
   Expose no
   credentials, `.env` values, raw submission payload, absolute main-repository
   path or provider token in logs/screenshots/manifests.
 
 ## Official Rollback And Emergency Cleanup Contract
 
-Normal cleanup calls the final
-`rollbackFullSiteInstall({ sourceRunId, actorId, ledger })` for the exact apply
-run and then proves the complete prior shell/settings raw state. Acceptance code
-must not import `applySettingsBatch`, `restoreSettingsBatchRaw`, plain
+Install exactly one fixture and keep its source run live through ordered rows
+01..18. Row 08 proves publish/front and native lifecycle parity but must not call
+rollback; rows 09..18 reuse the installed Form/Page IDs. Only the adapter's final
+`finally` phase, after row 18, calls
+`rollbackFullSiteInstall({ sourceRunId, actorId, ledger })` once for the exact
+apply run and then proves the complete prior shell/settings raw state. Acceptance
+code must not import `applySettingsBatch`, `restoreSettingsBatchRaw`, plain
 `deleteById`, or any other weak/per-key compensation surface.
 
 Before apply, capture prior shell settings through L02's presence-aware raw
@@ -148,16 +193,26 @@ prior })`. Any emergency native resource cleanup likewise uses final atomic
 delete/restore adapters with the durable installed snapshot as
 `expectedCurrent`; a mismatch fails closed and never becomes last-writer-wins.
 Every official/emergency/verification failure remains in the cleanup aggregate.
+The final phase explicitly and idempotently closes browser, server,
+submission-cleanup, scenario-reset and rollback resources, then validates all
+cleanup/absence receipts and the final repository snapshot before returning a
+`SmokeAdapterResult`. The shared lifecycle can safely call `close()` and
+`proveAbsent()` on those already-closed resources again.
 
 ## Implementation Pseudocode
 
 ```ts
+import type { SmokeAdapter, SmokeAdapterResult } from "./types";
+
 export async function runTask547Adapter(
   context: RuntimeSmokeContext,
 ): Promise<SmokeAdapterResult> {
+  assertExactTask547Invocation(context.input); // fail closed before side effects
   const timingPolicy = task547TimingPolicy(context.input.profile);
   // timingPolicy changes only bounded polling/auth windows; scenarioPlan is identical
   const scenarioPlan = buildTask547ScenarioPlan(TASK_547_SCENARIOS);
+  const outputs = buildExactTask547OutputManifest(context.input);
+  const repositoryBefore = await context.repository.snapshot(outputs.paths);
 
   const workers = await WorkerPool.create({
     root: context.root,
@@ -167,33 +222,73 @@ export async function runTask547Adapter(
     profiles: createTask547WorkerProfiles(),
     lifecycle: context.lifecycle,
   });
-  const fixture = await installTask547FixtureInBatches(workers);
-  context.lifecycle.register(createTask547RollbackResource({ workers, fixture }));
+  const resources = createTask547ResourceSlots();
+  let accepted: Task547AcceptedObservations | null = null;
+  let cleanupProof: Task547CleanupProof | null = null;
+  let primary: unknown = null;
+  try {
+    const fixture = await installTask547FixtureInBatches(workers); // one install for 01..18
+    resources.rollback = createTask547RollbackResource({ workers, fixture });
+    resources.reset = createTask547ScenarioResetResource({ workers, fixture });
+    resources.submissions = createTask547SubmissionCleanupResource({ workers, fixture });
+    registerTask547Resources(context.lifecycle, resources);
 
-  const server = await startTask547ServerResource({
-    root: context.root,
-    supervisor: context.processes,
-    command: "coderso-dev-core-host",
-  });
-  context.lifecycle.register(server);
-  await pollUntil({ timeoutMs: timingPolicy.healthTimeoutMs, check: server.health });
+    resources.server = await startSupervisedServer({
+      context,
+      executableName: "coderso-dev-core-host",
+      args: [context.root],
+      environment: projectTask547ServerEnvironment(process.env),
+      ports: [3000, 5173, 5174],
+      readiness: task547Readiness(timingPolicy.healthTimeoutMs),
+    });
 
-  const browser = new BrowserTransport(
-    context.input.session,
-    await createTask547PlaywrightDispatcher(context),
-  );
-  context.lifecycle.register(browser);
-  const dispatchPlan = compileBrowserDispatchPlan(scenarioPlan.actions);
-  const observations = await executeTask547Segments({
-    browser,
-    dispatchPlan,
-    workers,
-    authTimeoutMs: timingPolicy.authTimeoutMs,
-  });
-  const accepted = validateExactTask547Observations(observations, scenarioPlan);
+    const dispatcher = new PlaywrightCliDispatcher({
+      context,
+      session: context.input.session,
+      workspace: outputs.workspace,
+    });
+    resources.browser = new BrowserTransport(context.input.session, dispatcher);
+    context.lifecycle.register(resources.browser);
+    const dispatchPlan = compileBrowserDispatchPlan(scenarioPlan.actions);
+    const observations = await executeTask547Segments({
+      browser: resources.browser,
+      dispatchPlan,
+      workers,
+      authTimeoutMs: timingPolicy.authTimeoutMs,
+    });
+    accepted = validateExactTask547Observations(observations, scenarioPlan);
+  } catch (error) {
+    primary = error;
+  } finally {
+    const finalization = await finalizeTask547ResourcesNeverThrow({
+      resources: [
+        resources.browser,
+        resources.server,
+        resources.submissions,
+        resources.reset,
+        resources.rollback,
+      ], // each close/proveAbsent is idempotent
+      workers,
+    });
+    cleanupProof = finalization.proof;
+    const repository = await compareTask547RepositoryNeverThrow({
+      guard: context.repository,
+      before: repositoryBefore,
+      allowedPaths: outputs.paths,
+    }); // takes the final snapshot
+    primary = preservePrimaryWithCleanup(
+      primary,
+      finalization.failures,
+      repository.failure,
+    );
+  }
+  if (primary !== null) throw primary;
+  if (accepted === null || cleanupProof === null) {
+    throw new SmokeError("smoke_output_invalid", "TASK-547 result is incomplete");
+  }
   return projectTask547SmokeAdapterResult({
     accepted,
-    screenshots: observations.screenshots,
+    cleanupProof,
     workerCounters: workers.counters(),
   });
 }
@@ -206,20 +301,27 @@ export default Object.freeze({
 ```
 
 Data flow: the shared CLI creates `RuntimeSmokeContext`; suite-local factories
-construct a lifecycle-registered persistent `WorkerPool`, supervised
-`coderso-dev-core-host` resource, `pollUntil` health check and lifecycle-
-registered `BrowserTransport`. `compileBrowserDispatchPlan()` batches compatible
+construct a lifecycle-registered persistent `WorkerPool`, TASK-552-04's shared
+`SupervisedServerResource`/`startSupervisedServer(...)`, `pollUntil` health check
+and lifecycle-registered `BrowserTransport` backed by its shared
+`PlaywrightCliDispatcher`. `compileBrowserDispatchPlan()` batches compatible
 Playwright run-code actions without crossing scenario boundaries. DB fixture,
-proof and cleanup operations use bounded worker batches. The exact same 18-row
-plan enters both profiles; only timing-policy polling/auth timeout values differ.
+proof and cleanup operations use bounded worker batches. One fixture supplies
+the Form/Page IDs for the exact same 18-row plan in both profiles; only timing-
+policy polling/auth timeout values differ.
 
-The lifecycle closes resources in reverse order and preserves cleanup failures.
-The rollback resource batch-deletes scoped submissions, performs exact-run
-rollback or expected-current atomic CAS, then proves zero scoped rows/temp state
-and prior DB/settings equality. No retry occurs after a non-idempotent browser or
-DB dispatch. The adapter validates material observations and decoded PNGs, then
-returns only bounded `SmokeAdapterResult`; shared reporting owns redaction,
-timings, process counters and global cleanup. There is no TASK-547 CLI, tracked
+The adapter's `finally` phase closes browser, server, submission, reset and
+rollback resources in dependency-safe order and preserves cleanup failures. The
+submission resource performs one bounded set-based deletion, reset restores the
+installed mutation baseline, and rollback performs exact-run rollback or
+expected-current atomic CAS once before proving zero scoped rows/temp state and
+prior DB/settings equality. It then verifies the final repository snapshot
+against the exact output-path allowlist. All resources are idempotent, so the
+shared lifecycle safely closes/proves them again before it closes workers. No
+retry occurs after a non-idempotent browser or DB dispatch. The adapter validates
+material observations and decoded PNGs, then returns only bounded
+`SmokeAdapterResult`; shared reporting owns redaction, timings, process counters
+and global cleanup. There is no TASK-547 CLI, tracked
 evidence ledger or claimed end-to-end checkpoint resume.
 
 ## Exact Shared-Adapter Scenario Descriptors
@@ -233,7 +335,7 @@ evidence ledger or claimed end-to-end checkpoint resume.
 | 05 | `portfolio-facets` | `wf547smoke` | `http://127.0.0.1:3000/projekty` | `1440x1000` |
 | 06 | `aurora-detail` | `wf547smoke` | `http://127.0.0.1:3000/projekty/aurora` | `1440x1000` |
 | 07 | `contact-form` | `wf547smoke` | `http://127.0.0.1:3000/kontakt` | `1440x1000` |
-| 08 | `publish-rollback` | `wf547smoke` | `http://127.0.0.1:3000/` | `1440x1000` |
+| 08 | `publish-lifecycle-parity` | `wf547smoke` | `http://127.0.0.1:3000/` | `1440x1000` |
 | 09 | `form-design-author-light` | `wf547formdesign` | `http://127.0.0.1:5173/admin/advanced/forms/{formId}` | `1440x1000` |
 | 10 | `form-design-author-dark` | `wf547formdesign` | `http://127.0.0.1:5173/admin/advanced/forms/{formId}` | `1440x1000` |
 | 11 | `form-design-reset-mobile` | `wf547formdesign` | `http://127.0.0.1:5173/admin/advanced/forms/{formId}` | `390x844` |
@@ -253,17 +355,21 @@ projection owns exact `{number,id,segment,url,viewport,assertions}` rows.
 Bun-free and imports no DB, server, browser or evidence adapter. Focused tests
 prove the exact 01..18 order and byte-semantic equality of the descriptor plan
 between `fast` and `certification`; only the separate profile timeout policy may
-differ.
+differ. One fixture remains installed for the full ordered plan; row 08 cannot
+rollback it before the Form Design and Page Editor segments consume its IDs.
 
 ## Dependency-Shaped Implementation Units
 
 Resume from the actual merged branch inventory and land only unfinished units:
 
 1. acceptance/support tests owned by this leaf;
-2. TASK-547 descriptor, worker-operation, cleanup-batch, server-resource and
-   browser-segment helpers plus thin adapter;
-3. shared `SUITE_IDS`/`ADAPTER_PATHS`/descriptor-map registration and focused
-   shared CLI/registry/adapter tests;
+2. TASK-547 descriptor, worker-operation, cleanup-batch, server-environment,
+   output-manifest and browser-segment helpers plus thin adapter;
+3. exhaustive `SUITE_IDS` registration in `scripts/runtime-smoke/contracts.ts`,
+   `SUPPORTED_PROFILES` in `scripts/runtime-smoke/cli.ts`, `ADAPTER_PATHS` and
+   descriptor-map registration in `scripts/runtime-smoke/registry.ts`, plus
+   focused positive/negative CLI/registry tests in
+   `tests/unit/runtime-smoke/cli-registry.test.ts` and adapter fail-closed tests;
 4. shared docs, non-terminal changelog/task drafts and closure.
 
 Each changed unit passes typecheck, lint, its focused tests and line-count gate
@@ -281,8 +387,8 @@ retain mode-based authorization. The scoped internal Form matrix proves coherent
 `admin_write`, API key + `forms.submit` + no cookie-CSRF + `admin_write`, and
 anonymous rejection without a row. Every accepted public/internal submission
 created by the public, Form Design or Page Editor set is registered by unique
-marker and returned ID, independently deleted and included in the final
-zero-scoped-row assertion.
+marker and returned ID, joined into one bounded final deletion and included in
+the final zero-scoped-row assertion.
 Pin native lifecycle evidence: staged-then-published Page/entry/detail/menu,
 direct published Form status, no listing-template status, and `enabled:true`
 only on the success-message action.
@@ -342,11 +448,20 @@ Before projecting a passing result, suite-local validators cross-bind the exact
 scenario descriptor, reference digest, installed source run and material browser
 observations. They fully decode distinct PNGs, reject raw IDs/secrets/absolute
 paths, require zero console/page errors, and prove all registered task-scoped
-submission markers are deleted in one bounded set-based cleanup. Cleanup calls
-official exact-run rollback first, may attempt expected-current atomic CAS after
-a failure, and always proves zero scoped rows/temp artifacts plus presence-aware
-prior/final DB/settings equality. An official rollback failure remains primary;
-fallback cleanup cannot turn the run into PASS.
+submission markers are deleted in one bounded set-based cleanup. Final cleanup
+closes browser/server work, deletes submissions, resets temporary Form/Page
+mutations to the durable installed snapshot, then calls official exact-run
+rollback once and may attempt expected-current atomic CAS after a failure. It
+always proves zero scoped rows/temp artifacts plus presence-aware prior/final
+DB/settings equality. An official rollback failure remains primary; fallback
+cleanup cannot turn the run into PASS.
+
+Before any fixture/server/browser side effect, the adapter takes an initial
+`RepositoryGuard` snapshot including the exact output manifest. After its final
+cleanup and before returning, it takes the final snapshot and calls
+`assertUnchanged` with only that run's exact 18 screenshot and JSON/Markdown
+report paths. A broad `_docs/_workflows/_smoke/task-547/` allowlist, an unlisted
+file or any source/doc mutation fails the smoke.
 
 The profile policy is reject-unknown and may branch only on bounded polling/auth
 windows. Descriptor IDs/order/URLs/viewports/assertions, worker operations,
@@ -370,13 +485,17 @@ The parent and this leaf freeze these two ordered scenario lists identically:
   `contact-internal-anonymous-rejected`, `contact-scoped-submission`,
   `contact-success-action`, `contact-controls-remain-visible`.
 
-`publish-rollback` retains ordered `scoped-submission-cleanup`. It is a material
-suite-local observation for row 08, records bounded digests for that row's own
-pre-registered markers/attached IDs, and has exact terminal arrays
+`publish-lifecycle-parity` owns ordered `publish-front-parity`,
+`publish-lifecycle-order` and `installed-fixture-continuity`. It proves row 08's
+material lifecycle state and that the installed fixture remains available for
+rows 09..18; it does not own cleanup or rollback.
+
+After row 18, one material suite-final cleanup proof records bounded digests for
+all pre-registered markers/attached IDs and exact terminal arrays
 `remainingSubmissionRows:[]` and `remainingTempArtifacts:[]`. It is accepted
-only after set-based deletion and both zero-state queries pass. The adapter
-validates all cleanup observations before projecting safe aggregate scalars into
-`SmokeAdapterResult.cleanup`; row 08 cannot depend on rows 09–18.
+only after set-based deletion, Form/Page mutation reset, exact-source rollback
+and every zero/prior-state query pass. The adapter validates all cleanup receipts
+before projecting safe aggregate scalars into `SmokeAdapterResult.cleanup`.
 
 `contact-nonce-contract` freezes the real public write boundary as
 `{missingStatus:400, alteredStatus:403, validStatus:200}`: a missing nonce is a
@@ -444,9 +563,9 @@ The three scoped-internal-Form observations are exactly:
 
 Their markers are registered before dispatch, accepted response IDs are
 attached immediately, and final runtime proof includes zero rows for every registered
-ID/marker. Cleanup deletes the scoped internal Form after its submissions and
-proves both absent. Material expected/observed objects, not boolean proxies,
-satisfy these assertions.
+ID/marker. Suite-final cleanup deletes the scoped internal Form after its
+submissions and proves both absent. Material expected/observed objects, not
+boolean proxies, satisfy these assertions.
 
 The `home-desktop-effects` scenario includes ordered assertion
 `home-switcher-accessible-name` with kind `aria`; its target is the rendered
@@ -487,7 +606,7 @@ this leaf owns their table URLs and exact ordered assertion IDs:
   `page-editor-front-project-card-links-without-cta`,
   `page-editor-front-contact-presentation-and-success`,
   `page-editor-front-controls-visible`, `page-editor-front-mobile-geometry`,
-  `page-editor-front-scoped-cleanup`.
+  `page-editor-front-submission-registered`.
 
 Descriptor rows 14..18 implement those assertions in the Page Editor browser
 segment. They require five distinct decoded PNGs and light/dark, cross-device,
@@ -498,8 +617,9 @@ console/page/failure arrays.
 
 - [ ] Inventory the interrupted branch, finish acceptance-only tests and retain
   exact expected-current atomic cleanup plus all 18 frozen assertion sets.
-- [ ] Add the thin `task-547` adapter, suite-local worker/cleanup/browser helpers,
-  static shared registration and focused tests; reuse shared platform loops.
+- [ ] Add only the exact owned `task-547` adapter/helper/test files above, the
+  four-file static shared registration and focused tests; reuse TASK-552-04's
+  dispatcher/server exports and all other shared platform loops.
 - [ ] Prove `fast` and `certification` have identical 01..18 descriptors,
   assertions and cleanup behavior, differing only in bounded polling/auth
   windows; run both through `scripts/runtime-smoke.ts`.
@@ -519,7 +639,11 @@ console/page/failure arrays.
 Run the shared runtime-smoke self-tests plus focused TASK-547 adapter,
 descriptor/profile, worker-operation, cleanup-batch and browser-segment tests.
 Descriptor tests must prove both profiles execute the exact same ordered 18 IDs,
-URLs, viewports and assertions. Run the dependency-shaped acceptance tests and
+URLs, viewports and assertions. CLI/registry tests must prove the exhaustive
+suite/profile map accepts `task-547` with `fast` and `certification`, resolves the
+fixed adapter, and rejects unsupported suite/profile pairs. Direct adapter tests
+must inject a mismatched suite and each unsupported profile and prove rejection
+before install, server or browser dispatch. Run the dependency-shaped acceptance tests and
 the closure gates `bun --cwd core lint:types`, `bun --cwd core lint`,
 `bun run lint:repo:types`, `bun run test`, `bun run precommit:check`,
 `bun run gates:coderso`, `bun run scan:security:strict`, canonical generator
@@ -532,9 +656,13 @@ Run both shared entry-point commands:
 - `bun scripts/runtime-smoke.ts run --suite task-547 --profile certification --session wf547certification`.
 
 Both execute all 18 scenarios. The adapter uses argv-only `playwright-cli`
-through `BrowserTransport`, starts the server only through the supervised
-`coderso-dev-core-host` resource, polls health and records cleanup through the
-shared lifecycle. No retry occurs after non-idempotent browser/DB dispatch.
+through `BrowserTransport` and TASK-552-04's `PlaywrightCliDispatcher`, starts
+the server only through its shared `startSupervisedServer(...)`/
+`SupervisedServerResource` with `coderso-dev-core-host`, the exact bounded
+environment projection and helper-owned lifecycle registration, polls health and
+records cleanup through the shared lifecycle. Each profile performs one install for all
+18 rows and one final cleanup/rollback. No retry occurs after non-idempotent
+browser/DB dispatch.
 
 Before every DB/settings test or dev command execute exactly, without
 printing/copying/hashing/persisting the file or its values:

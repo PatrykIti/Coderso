@@ -56,6 +56,11 @@ The reconcile checks:
 - promised test paths versus real runner ownership;
 - pinned changelog 1260, which remains Draft and unindexed;
 - all 18 runtime scenario IDs/order/assertions in both profiles;
+- exhaustive `task-547` registration/profile ownership across
+  `scripts/runtime-smoke/contracts.ts`, `scripts/runtime-smoke/cli.ts`,
+  `scripts/runtime-smoke/registry.ts` and
+  `tests/unit/runtime-smoke/cli-registry.test.ts`, including fail-closed
+  suite/profile negatives;
 - no duplicate task-local lifecycle, worker, DB cleanup, Playwright or report
   loop.
 
@@ -74,7 +79,8 @@ Preserve the parent land order:
 3. `TASK-547-03-L01` → L02 → L03;
 4. `TASK-547-04-L01` → L02 → L03;
 5. `TASK-547-05-L01`;
-6. `TASK-547-06-L01` acceptance, shared smoke adapter, docs and closure.
+6. TASK-552-04 shared dispatcher/server extraction, then `TASK-547-06-L01`
+   acceptance, shared smoke adapter, docs and closure.
 
 Before continuing, map each leaf to `complete`, `unfinished` or `changed by
 merge` using code, tests and receipts—not task prose alone. Implement only
@@ -104,13 +110,33 @@ windows; `certification` uses production-strength waits. Both use the same
 persistent-worker and set-based DB batching. A profile never omits a scenario,
 weakens an assertion or silently falls back to the other.
 
+One installed fixture remains live for all ordered rows 01..18. Row 08
+`publish-lifecycle-parity` proves publish/front and native lifecycle parity but
+does not roll back; rows 09..18 reuse the fixture's exact Form/Page identities.
+After row 18, the adapter's explicit `finally` phase performs one bounded
+submission cleanup, resets temporary authored mutations and rolls back the exact
+source run once with prior-state equality proof.
+
 The thin adapter composes real shared primitives: lifecycle resources,
 `WorkerPool.create`, `pollUntil`, supervised processes,
 `compileBrowserDispatchPlan`, `BrowserTransport`, repository guards, redaction,
-timing and `SmokeAdapterResult`/`RuntimeSmokeReport`. It starts/stops the server
-only through `coderso-dev-core-host`. Screenshots and reports go under
+timing and `SmokeAdapterResult`/`RuntimeSmokeReport`. It imports TASK-552-04's
+`PlaywrightCliDispatcher` from
+`scripts/runtime-smoke/browser/playwright-cli-dispatcher.ts` and
+`SupervisedServerResource`/`startSupervisedServer(...)` from
+`scripts/runtime-smoke/server/supervised-server.ts` instead of copying either
+loop. It starts/stops the server only through `coderso-dev-core-host`.
+Screenshots and reports go under
 `_docs/_workflows/_smoke/task-547/`. No task-local CLI, tracked
 `_docs/PLAYWRIGHT` evidence tree or generated ledger is closure authority.
+
+The adapter validates its exact suite and one of the two supported profiles
+before any side effect. It takes initial/final `RepositoryGuard` snapshots and
+allows changes only to the exact derived screenshot/report files for that run,
+not the containing directory. Its final phase idempotently closes browser,
+server, submission, reset and rollback resources, verifies all cleanup/absence
+receipts and the repository snapshot, then returns `SmokeAdapterResult`; the
+shared lifecycle can safely close the same resources again.
 
 Do not claim end-to-end checkpoint resume. A future adapter may skip a completed
 scenario only after it consumes a compatible shared checkpoint, rebuilds
@@ -127,8 +153,8 @@ After implementation and draft documentation:
    and targeted gates;
 3. run `fast`, then run the final 18-scenario `certification` smoke on the final
    candidate;
-4. verify zero console/page errors, all screenshots, exact-run rollback,
-   set-based cleanup and prior-state equality;
+4. verify zero console/page errors, all screenshots, the single final exact-run
+   rollback, set-based cleanup, prior-state equality and repository snapshot;
 5. terminalize descendants, parent, board and changelog index in dependency
    order, then run one final read-only graph/closeout consistency pass.
 
@@ -150,6 +176,9 @@ requires a clean smoke restart only.
 - Cleanup uses exact-run rollback and expected-current atomic recovery, attempts
   every registered lifecycle close/absence proof and preserves the primary
   failure with cleanup failures.
+- Registration and direct-adapter negatives reject a mismatched suite or profile
+  before install/server/browser work; the exhaustive CLI map allows exactly
+  `fast` and `certification` for `task-547`.
 - No workflow step changes endpoint visibility, auth, RBAC, CSRF, rate limits,
   nonce/HMAC, CAPTCHA or secret-handling contracts.
 
@@ -197,7 +226,10 @@ a generated receipt or by replaying unrelated clean work.
 - dependency-shaped typecheck, lint and targeted test gates for changed leaves;
 - shared runtime-smoke self-tests plus focused TASK-547 adapter/profile/
   descriptor/worker/cleanup/browser tests;
-- both shared CLI commands above, with identical 18-scenario coverage;
+- `tests/unit/runtime-smoke/cli-registry.test.ts` proves exact four-file
+  registration, both allowed profiles and unsupported suite/profile negatives;
+- both shared CLI commands above, with one fixture and identical 18-scenario
+  coverage followed by one final cleanup/rollback;
 - serial DB acceptance lanes owned by TASK-547-06-L01;
 - canonical package generator zero-diff;
 - `bun run precommit:check`, `bun run gates:coderso` and

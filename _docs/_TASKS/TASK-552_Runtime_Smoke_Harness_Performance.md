@@ -3,13 +3,15 @@
 
 **Priority:** High
 **Category:** Testing / Developer Experience / Performance / Reliability / Security
-**Estimated Effort:** Large
+**Estimated Effort:** Very Large
 **Dependencies:** TASK-540 and TASK-546 complete
 **Related Tasks:** TASK-543, TASK-545, TASK-548, TASK-550, TASK-551
-**Status:** ✅ Done
+**Status:** 🚧 In Progress
 **Started:** 2026-08-06
-**Completed:** 2026-08-06
-**Changelog:** 1264
+**Reopened:** 2026-08-06
+**Previous Completion:** 2026-08-06 (superseded by the corrective reopen)
+**Historical Closure:** TASK-552-03-L02 fast-only evidence is superseded and is not final evidence
+**Changelog:** 1264 (Draft; not closure evidence while reopened)
 
 ---
 
@@ -30,6 +32,20 @@ bun scripts/runtime-smoke.ts run --suite <task-540|widget-contract|production-bo
 New workflows add a thin registered suite adapter and compose the shared
 wrappers under `scripts/runtime-smoke/`; they must not copy lifecycle,
 Playwright, worker, database cleanup, timing, checkpoint, or reporting loops.
+
+## Corrective Reopen
+
+The shared CLI and generic primitives landed, but the 2026-08-06 audit proved
+that the registered TASK-540 adapter still transitively executes 148 modules
+from the old `_docs/_workflows/task-540*` runtime (approximately 58,886 lines),
+including 57 unique source-string handler bodies behind 160 accepted operation
+IDs and dynamic module compilation. The old tree contains 169 workflow modules
+in total and therefore cannot yet be removed. The widget adapter also still
+spawns a 5,530-line runner with its own Playwright/process/wait loop.
+TASK-552-04 owns the native relocation, typed worker operations, full widget
+runner split, shared Playwright/server adoption, exact legacy deletion and fresh
+fast plus certification proof. The earlier benchmark remains historical
+behavior evidence only; it does not prove a complete migration.
 
 ## Verified Baseline and Database Decision
 
@@ -58,6 +74,10 @@ Playwright, worker, database cleanup, timing, checkpoint, or reporting loops.
 - Provide reusable profile-scoped persistent Bun workers. Each worker receives
   only its declared environment; no union-secret worker, raw SQL frame,
   arbitrary module path, or dynamic source is allowed.
+- Freeze the exact TASK-540 operation authority as 160 accepted operation IDs
+  (57 canonical IDs, 26 explicit aliases, 36 response-lost aliases and 41
+  resource aliases) mapped to 57 typed handler bodies, with exact per-alias
+  input/output-schema parity.
 - Provide reusable set-based DB cleanup/proof primitives and a TASK-540
   operation pack that preserves provenance, transaction rollback, response-lost
   reconciliation, and the original ordered logical receipts.
@@ -72,12 +92,17 @@ Playwright, worker, database cleanup, timing, checkpoint, or reporting loops.
   consumes those seals end to end.
 - Add thin adapters for TASK-540, the existing widget contract (focused
   `gallery-mosaic` fast benchmark), and TASK-546's production boundary.
+- Split the oversized widget runner and its oversized unit test by cohesive
+  responsibility, preserve its direct CLI, and route every widget Playwright
+  session/process through the shared dispatcher/supervisor without fixed settle
+  sleeps or private command loops. This complete 5,530-line migration is a
+  mandatory L03 deliverable, not deferred cleanup.
 - Document the extension contract so later workflows reuse the same entry
   point, transports, workers, batching, evidence, and cleanup ownership.
-- Benchmark the owner-selected complete TASK-540 fast run. Keep TASK-540
-  certification as a release-boundary lane and validate the widget and
-  production-boundary adapters in their owning tests without claiming live
-  benchmark passes.
+- Benchmark complete TASK-540 fast and certification runs on the final native
+  tree. Validate the widget and production-boundary adapters in their owning
+  tests and run the bounded widget host/Playwright integration probe without
+  claiming an unexecuted live result.
 
 ## Out of Scope
 
@@ -85,8 +110,6 @@ Playwright, worker, database cleanup, timing, checkpoint, or reporting loops.
 - Any TASK-552 schema, migration, snapshot, journal, or index change.
 - Weakening TASK-540's seven flows, 496 action identities, visible-effect
   assertions, light/dark coverage, 13 PNGs, console checks, or cleanup.
-- Editing the oversized widget smoke source/test merely to wrap its existing
-  public behavior.
 - Retrofitting every historical task workflow; the documented shared adapter
   contract is mandatory for new work and adopted by the three initial suites.
 
@@ -101,8 +124,11 @@ Shared code owns lifecycle, local-origin validation, polling, process groups,
 bounded streams, repository mutation checks, timing/counters, worker pools,
 browser transport, checkpoints, redaction, cleanup aggregation, and reports.
 Thin adapters own selectors, fixtures, logical flows, registered worker
-operations, reset proofs, and suite-specific evidence. A legacy TASK-540 entry
-may remain only as a thin forwarder to the public CLI.
+operations, reset proofs, and suite-specific evidence. No executable TASK-540
+runtime may remain under `_docs/` after TASK-552-04 closes, and the widget suite
+may not retain a private Playwright/process/wait loop behind its adapter. Every
+initial registered suite uses the shared wrappers for each capability it needs;
+the compatibility widget CLI calls the same modular suite as its adapter.
 
 `fast` retains every product-visible scenario but uses the existing supported
 five-second auth window and restores the exact prior value in `finally`.
@@ -126,6 +152,11 @@ DB-owned cleanup is grouped into foreign-key-safe transactional waves and
 projected back to the canonical logical receipt order; Admin API cleanup stays
 API-owned where it proves product behavior.
 
+Privileged bootstrap-preflight, user-identity-proof and user-provisioning
+profiles close at their phase boundary. The used clients must prove immediate
+absence before the next phase; a later genuine dispatch restarts lazily with a
+different PID. The normal database worker stays persistent for its bounded run.
+
 Checkpoints bind suite/profile, revision and working-tree digest, harness and
 scenario digests, fixture namespace/ledger, origins, reset proof, completed
 actions, and evidence hashes. They contain no secrets or raw customer data.
@@ -134,7 +165,7 @@ cleanup, setting restoration, canonical reset, and repository guard may seal.
 
 ## Task Tree and Land Order
 
-This family contains three technical subtasks and four execution leaves (seven
+This family contains four technical subtasks and eight execution leaves (12
 physical descendants):
 
 | ID | Title | Status | Leaves |
@@ -142,6 +173,7 @@ physical descendants):
 | TASK-552-01 | Shared Runtime Smoke Entry Point and Timings | ✅ Done | TASK-552-01-L01 |
 | TASK-552-02 | Profile-Scoped Persistent Bun Bridge and Batched Cleanup | ✅ Done | TASK-552-02-L01 |
 | TASK-552-03 | Browser Scenario Batching, Checkpoints, and Benchmarks | ✅ Done | TASK-552-03-L01, TASK-552-03-L02 |
+| TASK-552-04 | Native TASK-540 Suite Migration and Legacy Cleanup | 🚧 In Progress | TASK-552-04-L01, TASK-552-04-L02, TASK-552-04-L03, TASK-552-04-L04 |
 
 Land strictly:
 
@@ -152,7 +184,18 @@ Land strictly:
 3. `TASK-552-03-L01` — reusable Playwright segment transport and checkpoints,
    then TASK-540's bounded segment/reset integration.
 4. `TASK-552-03-L02` — three thin adapters, benchmarks, documentation,
-   changelog 1264, task/board closure, and final dependency-shaped gates.
+   and the now-superseded first closure evidence.
+5. `TASK-552-04-L01` — exact 169-path classification plus only pure/stable native
+   contract/shared relocation; the registered adapter is intentionally not
+   switched yet.
+6. `TASK-552-04-L02` — every source-dependent executor/runtime/descriptor/
+   registry path, the frozen 160-ID-to-57-handler input/output mapping and all
+   160 static definitions on shared persistent, phase-scoped workers.
+7. `TASK-552-04-L03` — shared Playwright CLI dispatcher, self-registering
+   supervised server, full widget runner/test split, native TASK-540 browser/
+   host composition and the only registered adapter switch.
+8. `TASK-552-04-L04` — exact legacy deletion, coverage port, fast and
+   certification benchmarks, documentation, changelog 1264 and reclosure.
 
 Each implementation source/test file has exactly one leaf writer. If an
 implementation needs to cross an ownership boundary, correct and re-audit the
@@ -163,9 +206,9 @@ affected contracts before editing.
 - TASK-540 preserves seven flows, 496 actions, 420/76 receipt partition, 13
   valid PNGs, visible assertions, dark/light coverage, zero console/page errors,
   and complete fixture/session/process/port/settings cleanup.
-- TASK-540 fast targeted 10–15 minutes. The owner accepts the measured
-  `19:38.580` residual; closure records it explicitly and does not claim the
-  15-minute target was met.
+- TASK-540 fast retains the 10–15 minute target. The historical wrapped run was
+  `19:38.580`; reclosure records the fresh native duration truthfully and does
+  not claim the target or an improvement unless comparable evidence proves it.
 - A no-resume run uses no per-action Git snapshots and at most nine full
   repository snapshots (baseline, the seven safe scenario boundaries, and
   finalization), plus cheap known-screenshot rehashes around screenshot actions.
@@ -173,12 +216,21 @@ affected contracts before editing.
   420 per-action launches to the dependency-bounded segment plan; no fallback
   or restart is hidden.
 - The database profile is persistent with pool max one; privileged profiles
-  remain isolated and short-lived. Batched cleanup/proofs use bounded waves,
-  exact provenance, affected-row parity, and post-commit absence proof.
+  remain isolated and close with immediate absence at phase boundaries before
+  any lazy restart. Batched cleanup/proofs use bounded waves, exact provenance,
+  affected-row parity, and post-commit absence proof.
 - `widget-contract` fast exercises the existing strict focused
   `gallery-mosaic` flow; `production-boundary` proves root/Admin/install status,
   a built asset, exact `/peri` 404, root recovery, clean logs, and PID/port
   cleanup.
+- The complete widget contract keeps its backwards-compatible direct CLI, but
+  both that CLI and the registered adapter call one modular suite whose browser
+  and process work uses shared runtime-smoke capabilities only. Every extracted
+  production/test file is at most 1,000 physical lines.
+- `startSupervisedServer(...)` self-registers before spawn, resolves only the
+  literal `coderso-dev-core-host` through an explicitly bounded projected PATH
+  to an absolute executable, and projects only named required/optional/fixed
+  runtime environment keys. Evidence records key names and never values.
 - All three suites are invokable through the exact public CLI. Reports contain
   suite/profile/session, pass/server state, scenario and phase timings,
   process/snapshot counters, suite cleanup/worker/database metrics,
@@ -200,19 +252,23 @@ affected contracts before editing.
 
 ## Required Validation and Documentation
 
-Run leaf-targeted tests after each land, the TASK-540 executor self-test when its
-canonical harness changes, root TypeScript, task-graph checks,
-`git diff --check`, and touched-file line counts. Product/security gates already
-green before this harness-only family are not replayed. Runtime closure requires
-one fresh complete TASK-540 fast run and bounded post-run cleanup proof; repeat
-only an interrupted or affected boundary result.
+Run leaf-targeted tests after each land, the replacement TASK-540 native
+contract/operation/browser tests, split widget suites, root TypeScript,
+task-graph checks, `git diff --check`, and touched-file line counts.
+Product/security gates already green before this harness-only family are not
+replayed. Runtime reclosure requires fresh complete TASK-540 fast and
+certification runs with bounded post-run cleanup proof; repeat only an
+interrupted or affected runtime boundary.
 
 Document the command, profiles, suite adapter API, shared worker/operation-pack
 API, browser segmentation, checkpoint rules, evidence locations, cleanup rules,
 and troubleshooting in `tests/README.md` and `_docs/TESTING_STRATEGY.md`, and
 update `AGENTS.md` so future workflows compose this shared platform.
 
-## Completion Evidence
+## Superseded Historical Evidence
+
+The following results describe the adapter-wrapped legacy run and remain useful
+as a comparison baseline. They are not current TASK-552 closure evidence:
 
 - `bun test tests/unit/runtime-smoke`: 58 pass, 548 assertions, 0 fail.
 - Root TypeScript check passed.
@@ -227,3 +283,8 @@ update `AGENTS.md` so future workflows compose this shared platform.
   recurring access-log lookup index.
 - Durable receipt:
   `_docs/_workflows/_smoke/task-552-task-540-fast-2026-08-06.md`.
+
+Fresh reclosure evidence is owned by TASK-552-04-L04 and must prove zero
+executable legacy modules plus both fast and certification profiles on the
+same final native tree. The old fast-only TASK-552-03-L02 closure stays
+historical/superseded even after the family recloses.

@@ -61,7 +61,7 @@ planner-equality `FullSiteInstallPlanItem.currentDesired` projection.
 - Page/content lifecycle: existing `tests/unit/pages/pageService.test.ts`, `tests/unit/pages/revisionService.test.ts`, `tests/unit/content/detailPageDocumentService.test.ts`; new `tests/unit/pages/pageLifecycleMutation.test.ts`, `tests/unit/content/detailPageRevisionService.test.ts`, `tests/unit/content/detailPageDocumentLifecycleMutation.test.ts`, and `tests/unit/content/entryLifecycleMutationService.test.ts`;
 - aggregate/settings: existing `tests/unit/content/typeService.test.ts`, `tests/unit/pages/pageTemplateLibraryService.test.ts`, `tests/unit/content/listingTemplatesService.test.ts`, `tests/unit/content/listingQueriesService.test.ts`, `tests/unit/settings/settingsService.test.ts`; new `tests/unit/settings/fullSiteSettingsAtomicService.test.ts`; and
 - live reverse-FK writers: existing `tests/unit/themes/themeProfileService.test.ts`, `tests/unit/forms/submissionService.test.ts`, `tests/vitest/customScreens/customScreenService.test.ts`, `tests/vitest/customScreens/screenEntryPresentationOverrides.test.ts`, and `tests/unit/content/taxonomyService.test.ts`;
-- foreign-key/fence races: existing `tests/unit/admin/usersService.test.ts`; new independently runnable serial `tests/integration/kits/fullSiteNativeForeignKeyRacesDb.test.ts`; and
+- foreign-key/fence races: existing `tests/unit/admin/usersService.test.ts`; new independently runnable serial `tests/integration/kits/fullSiteNativeForeignKeyRacesDb.test.ts` and focused `tests/integration/kits/fullSiteContentTypePseudoFkExplainDb.test.ts`; and
 - whole-config transactions: existing `tests/unit/tools/importExport.test.ts` and `tests/unit/backups/backupService.test.ts`.
 
 Split the near-limit adapter suites by responsibility before adding cases.
@@ -391,13 +391,7 @@ referenced root before their insert, making either race ordering safe.
   updates retained rows in place, and locks each removed action `FOR UPDATE`
   before rejecting a `form_action_runs` reference. It never delete-all/reinserts;
   intended field/action cascades occur only after all guards.
-- Content-type public and native delete move the root read and every guard into
-  one owner-aware transaction, root `FOR UPDATE` first. Guard entries, custom
-  screens, taxonomies, detail pages, listing-query JSON `contentTypeId`, and
-  `site.contentRoutes` slug after locking the exact settings row; native delete
-  never side-writes settings. Each listing-query create/update carrying
-  `contentTypeId` locks that exact content-type row `FOR KEY SHARE` in the same
-  fenced transaction and rejects missing before DML.
+- Content-type public/native delete and each slug-changing public/native replace move the root read and every guard into one owner-aware transaction, root `FOR UPDATE` first. Delete guards entries, custom screens, taxonomies, detail pages and listing-query JSON `contentTypeId`; delete and rename lock the exact `site.contentRoutes` settings row `FOR UPDATE` and reject a route using the old slug with cause-free `content_type_has_content_routes`. Neither path side-writes settings; an unchanged normalized slug skips only that rename guard, never its mutation's fence/root lock. Each listing-query create/update carrying `contentTypeId` locks that exact content-type row `FOR KEY SHARE` in the same fenced transaction and rejects missing before DML.
 - `deleteUser` becomes one shared-first transaction: user `FOR UPDATE`, then
   role/last-admin checks and delete on the same handle. This serializes the
   `SET NULL` effects on `pages.authorId`, `content_entries.authorId` and
@@ -452,15 +446,17 @@ uses that same parser. TASK-547-04-L03 consumes these pure exports without editi
 
 Every `site.contentRoutes` write uses one shared Tx helper: single `setSetting`/`deleteSetting`, batch `setSettings`, outer `setSettingsTx`, `importConfig`/`importConfigTx`, `restoreBackup`/`restoreArtifactTx`, and `applyFullSiteSettingsBatchAtomic`/`restoreFullSiteSettingsBatchRawAtomic`. For a present target, after the statement-one fence and before any settings-row lock/upsert, it extracts the unique ContentType slugs, resolves every existing row in one bounded query, rejects a missing/duplicate resolution with the safe settings/domain code and zero writes, then locks the exact rows `FOR KEY SHARE` in stable ascending ID order. The trusted raw restore inspects the exact target without canonicalizing or rewriting accepted JSON. A delete/absent target has no referenced roots but follows the same outer transaction and post-commit-only cache contract. Every wrapper and Tx caller is explicit in the static inventory; import and backup never reacquire.
 
-Both atomic mutations require identical sorted unique key sets. After the
-shared-fence helper, one transaction takes `LOCK TABLE settings IN SHARE ROW EXCLUSIVE MODE`, re-reads exact raw
-presence/value, compares `expectedCurrent`, then writes all or none. Apply uses
-the object normalizer's `.key`/`.value`; trusted restore preserves raw JSON.
-Mismatch throws `site_package_state_changed` with zero writes. Exactly one cache
-invalidation follows commit and none follows failure. Weak
-`applySettingsBatch`/`restoreSettingsBatchRaw` exports or imports are forbidden.
-The setting adapter exposes only required `applySettingsBatchAtomic` and
-`reverseSettingsBatch` paths over this service.
+Both atomic mutations require identical sorted unique key sets. After the shared-fence helper, one transaction takes `LOCK TABLE settings IN SHARE ROW EXCLUSIVE MODE`, re-reads exact raw presence/value, compares `expectedCurrent`, then writes all or none. Apply uses the object normalizer's `.key`/`.value`; trusted restore preserves raw JSON.
+Mismatch throws `site_package_state_changed` with zero writes. Exactly one cache invalidation follows commit and none follows failure. Weak `applySettingsBatch`/`restoreSettingsBatchRaw` exports or imports are forbidden. The setting adapter exposes only required `applySettingsBatchAtomic` and `reverseSettingsBatch` paths over this service.
+
+**Conditional JSON pseudo-FK no-migration gate:** `typeService.ts` owns one canonical builder for the bounded `LIMIT 1` listing-query reference SELECT using the exact production predicate ``listing_queries.query->'sourceConfig'->>'contentTypeId' = $id``; delete and the focused DB test compile that owner rather than duplicating JSON SQL. The current no-migration decision is valid only if sequential sanitized `EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON)` runs against the exact bound production SELECT pass every budget:
+
+| Profile | Owned fixture / absent target | Server execution | Root rows | Scanned-row work | Root shared buffers |
+| --- | --- | ---: | ---: | ---: | ---: |
+| Small | 64 listing queries | <= 100 ms | = 0 | <= 5,000 | <= 2,048 |
+| Representative large | 10,000 listing queries | <= 250 ms | = 0 | <= 25,000 | <= 20,480 |
+
+The test imports L01's pure `parseManagedEvidenceExplainMetrics` owner, emits only profile/count/four-number summaries, preallocates and cleans exact fixture IDs, and never records plans, SQL, parameters, UUIDs or JSON. It separately pins one matching reference and one absence result. Passing both profiles retains no schema change. Any latency/row/buffer failure blocks L02; only then may a separate reviewed index migration proceed, atomically including schema export, SQL, snapshot and journal artifacts plus fresh plans. Fixtures/ceilings may not be reduced or raised to preserve a no-migration claim.
 
 ## Durable Create Intent
 
@@ -686,7 +682,7 @@ Detail bindings preserve `required:true` plus omitted (`undefined`) fallback; ne
 Settings exclude secret/auth/provider namespaces; audit has safe keys/IDs/operations and intended IDs are server UUIDs, never package input.
 Sensitive existing/planned Form strings or header names fail before item writes;
 plaintext never reaches run options, snapshots, actions, errors or audit.
-No endpoint, migration, RBAC/CSRF/rate-limit change, media import or cross-domain transaction is added.
+No endpoint, RBAC/CSRF/rate-limit change, media import or cross-domain transaction is added. No migration is retained only while the JSON pseudo-FK plan gate passes; failure requires the separate complete migration contract above.
 
 ## Implementation Pseudocode
 
@@ -717,6 +713,10 @@ async function writeContentRoutesTx(tx, exactTarget) {
   const slugs = readUniqueContentTypeSlugsWithoutRewriting(exactTarget);
   await lockExactContentTypesBySlugForKeyShare(tx, slugs, { orderBy: "id ASC" });
   return lockThenWriteSettingsRowTx(tx, "site.contentRoutes", exactTarget);
+}
+async function replaceContentTypeSlugTx(tx, id, target) {
+  const current = await lockContentTypeForUpdate(tx, id); const routes = target.slug === current.slug ? null : await lockContentRoutesSettingForUpdate(tx); // root -> setting
+  if (routes && routesReferenceSlug(routes, current.slug)) throw new Error("content_type_has_content_routes"); else return replaceContentTypeRowTx(tx, current, target); // never rewrites routes
 }
 
 export async function applyFullSitePackage(input, overrides = {}) {
@@ -960,7 +960,7 @@ Additional focused regressions pin:
 - every installer native transaction's first statement locks its exact owner row
   `FOR SHARE`; closing/revoked/lost context fails with zero I/O, and a direct
   call takes the ordinary try-shared path;
-- reverse-FK and `site.contentRoutes` writer/delete races fail closed with zero partial effect; only a successful settings commit invalidates once; and
+- reverse-FK and `site.contentRoutes` writer/delete-or-slug-rename races fail closed with zero partial effect; writer-first makes rename reject, rename-first makes the old-slug writer reject, neither side-writes routes, and only a successful settings commit invalidates once; and
 - all four durable phases plus failed stage/publish upserts resume solely from immutable raw rows and durable outcomes.
 
 ## Sub-Tasks
@@ -987,9 +987,9 @@ Additional focused regressions pin:
 - `bun test --parallel=1 --timeout 360000 tests/unit/forms/formsService.test.ts tests/unit/forms/formActionsService.test.ts tests/unit/forms/formAggregateService.test.ts tests/unit/menus/menuService.test.ts tests/unit/menus/menuAggregateAtomicity.test.ts tests/unit/pages/pageService.test.ts tests/unit/pages/revisionService.test.ts tests/unit/pages/pageLifecycleMutation.test.ts tests/unit/content/detailPageDocumentService.test.ts tests/unit/content/detailPageRevisionService.test.ts tests/unit/content/detailPageDocumentLifecycleMutation.test.ts tests/unit/content/entryLifecycleMutationService.test.ts`
 - `bun test --parallel=1 --timeout 360000 tests/unit/content/typeService.test.ts tests/unit/pages/pageTemplateLibraryService.test.ts tests/unit/content/listingTemplatesService.test.ts tests/unit/content/listingQueriesService.test.ts tests/unit/content/taxonomyService.test.ts tests/unit/settings/settingsService.test.ts tests/unit/settings/fullSiteSettingsAtomicService.test.ts tests/unit/themes/themeProfileService.test.ts tests/unit/forms/submissionService.test.ts tests/unit/admin/usersService.test.ts tests/unit/tools/importExport.test.ts tests/unit/backups/backupService.test.ts`
 - `bun test --parallel=1 --timeout 360000 tests/unit/kits/nativeCmsWriterFenceInventory.test.ts tests/unit/kits/fullSiteResourceAdapters.test.ts tests/unit/kits/fullSiteAggregateAdapters.test.ts tests/unit/kits/fullSiteLifecycleAdapters.test.ts tests/unit/kits/fullSiteAdapterAtomicity.test.ts tests/unit/kits/fullSiteLifecycleUpdates.test.ts`
-- `bun test --parallel=1 --timeout 360000 tests/integration/kits/fullSiteNativeForeignKeyRacesDb.test.ts`
+- `bun test --parallel=1 --timeout 360000 tests/integration/kits/fullSiteNativeForeignKeyRacesDb.test.ts tests/integration/kits/fullSiteContentTypePseudoFkExplainDb.test.ts`
 - the owning suites pin statement-one fence, same-transaction Tx delegation, every Page/Form/ContentType/Entry `FOR KEY SHARE` before FK DML, stable multi-root order, missing-root rejection, `site.contentRoutes` coverage across single/batch/Tx/import/backup/full-site raw restore, safe codes and zero-DML/effect failures
-- the serial FK suite table-drives writer-first and delete-first for every live edge plus listing-query/content-route pseudo-FKs. It obtains both backend PIDs, releases neither barrier until `pg_stat_activity.wait_event_type = 'Lock'`, a same-waiter ungranted `pg_locks` row, and `pg_blocking_pids(waiterPid)` containing the holder PID agree; sleeps, elapsed-time and promise-nonsettlement assertions are forbidden. Writer-first commits the reference then the guarded delete rejects; delete-first commits deletion then the blocked writer rejects missing, with exact roots/references/cache/audit state asserted.
+- the serial FK suite table-drives writer-first and delete-first for every live edge plus listing-query/content-route pseudo-FKs, and writer-first versus rename-first for `site.contentRoutes`/ContentType slug changes. It obtains both backend PIDs, releases neither barrier until `pg_stat_activity.wait_event_type = 'Lock'`, a same-waiter ungranted `pg_locks` row, and `pg_blocking_pids(waiterPid)` containing the holder PID agree; sleeps, elapsed-time and promise-nonsettlement assertions are forbidden. Writer-first commits the reference then guarded delete/rename rejects; delete/rename-first commits then the blocked old-reference writer rejects missing, with exact roots/references/cache/audit state asserted. The pseudo-FK suite compiles production SQL, passes the exact sanitized 64/10,000-row budgets and owns exact-ID cleanup; failure blocks no-migration for a separate complete migration contract.
 - the three native Page/entry/detail lifecycle suites above pin divergent
   current/published state, exact 100 and `limit + 1`; all nine native atomic
   suites pin replace/delete CAS, and the lifecycle adapter suites pin the
