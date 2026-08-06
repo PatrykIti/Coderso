@@ -160,37 +160,70 @@ const editorDefWithBindings = (bindings: unknown[], blocks: unknown[]) => ({
   },
 });
 
+const definitionWithScopedBindings = (
+  scope: "editor" | "row-template",
+  bindings: unknown[],
+  blocks: unknown[]
+) => {
+  const base = editorDefWithBindings(scope === "editor" ? bindings : [], blocks);
+  return {
+    definition: {
+      ...base.definition,
+      listView: {
+        ...base.definition.listView,
+        ...(scope === "row-template"
+          ? {
+              rowTemplate: {
+                document: {
+                  schemaVersion: 1,
+                  sections: [{ id: "row-section-1", type: "section", data: {}, blocks }],
+                },
+                bindings,
+              },
+            }
+          : {}),
+      },
+    },
+  };
+};
+
 test("TASK-505-01 field-orphan binding is pruned + recorded in the sink (write path, recoverable)", () => {
-  const sink: ScreenBindingWarningSink = { removedFieldOrphans: [], removedBlockOrphans: [] };
-  const definition = normalizeCustomScreenDefinitionForWrite(
-    editorDefWithBindings(
-      [
-        {
-          id: "binding-1",
-          blockId: "header-1",
-          propPath: "title",
-          source: "entry",
-          field: "projectStatus",
-          mode: "readwrite",
-        },
-        {
-          id: "binding-2",
-          blockId: "header-1",
-          propPath: "sub",
-          source: "entry",
-          field: "bathrooms",
-          mode: "readwrite",
-        },
-      ],
-      [{ id: "header-1", type: "record-header", data: {} }]
-    ),
-    houseProjectsContext,
-    sink
-  );
-  const bindings = definition.editorView.bindings;
-  expect(bindings.map((b) => b.field)).toEqual(["projectStatus"]); // orphan pruned, order kept
-  expect(sink.removedFieldOrphans).toEqual(["bathrooms"]);
-  expect(sink.removedBlockOrphans).toEqual([]);
+  for (const scope of ["editor", "row-template"] as const) {
+    const sink: ScreenBindingWarningSink = { removedFieldOrphans: [], removedBlockOrphans: [] };
+    const definition = normalizeCustomScreenDefinitionForWrite(
+      definitionWithScopedBindings(
+        scope,
+        [
+          {
+            id: "binding-1",
+            blockId: "header-1",
+            propPath: "title",
+            source: "entry",
+            field: "projectStatus",
+            mode: "readwrite",
+          },
+          {
+            id: "binding-2",
+            blockId: "header-1",
+            propPath: "sub",
+            source: "entry",
+            field: "bathrooms",
+            mode: "readwrite",
+          },
+        ],
+        [{ id: "header-1", type: "record-header", data: {} }]
+      ),
+      houseProjectsContext,
+      sink
+    );
+    const bindings =
+      scope === "editor"
+        ? definition.editorView.bindings
+        : (definition.listView.rowTemplate?.bindings ?? []);
+    expect(bindings.map((binding) => binding.field)).toEqual(["projectStatus"]);
+    expect(sink.removedFieldOrphans).toEqual(["bathrooms"]);
+    expect(sink.removedBlockOrphans).toEqual([]);
+  }
 });
 
 test("TASK-505-01 block-orphan binding is pruned inline (not hard-throw) when a sink is threaded", () => {
@@ -278,6 +311,53 @@ test("TASK-505-01 malformed binding (non-record / missing blockId) still throws 
       sink
     )
   ).toThrow("custom_screen_definition_invalid");
+
+  const malformedOrphans = [
+    {
+      id: "binding-orphan",
+      blockId: "header-1",
+      propPath: "title",
+      source: "external",
+      field: "bathrooms",
+      mode: "readwrite",
+    },
+    {
+      id: " Non Canonical ",
+      blockId: "header-1",
+      propPath: "title",
+      source: "entry",
+      field: "bathrooms",
+      mode: "readwrite",
+    },
+    {
+      id: "binding-orphan",
+      blockId: "header-1",
+      propPath: "title",
+      source: "entry",
+      field: "bathrooms",
+      mode: "invalid",
+    },
+  ];
+  for (const scope of ["editor", "row-template"] as const) {
+    for (const malformedOrphan of malformedOrphans) {
+      const orphanSink: ScreenBindingWarningSink = {
+        removedFieldOrphans: [],
+        removedBlockOrphans: [],
+      };
+      expect(() =>
+        normalizeCustomScreenDefinitionForWrite(
+          definitionWithScopedBindings(
+            scope,
+            [malformedOrphan],
+            [{ id: "header-1", type: "record-header", data: {} }]
+          ),
+          houseProjectsContext,
+          orphanSink
+        )
+      ).toThrow("custom_screen_definition_invalid");
+      expect(orphanSink).toEqual({ removedFieldOrphans: [], removedBlockOrphans: [] });
+    }
+  }
 });
 
 test("TASK-505-01 stored field-orphan doc READS non-fatally and RETAINS the orphan for reopen recovery", () => {

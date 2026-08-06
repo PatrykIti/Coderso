@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import { afterEach, expect, test, vi } from "vitest";
 
 import { ScreenRuntimeRenderer } from "../../../core/admin/ui/custom-screens/ScreenRuntimeRenderer";
+import { FieldRenderer } from "../../../core/admin/ui/entries/FieldRenderer";
 import type { ScreenBlockV1 } from "../../../core/services/customScreens/customScreenSchemas";
 import type { ScreenInsertTarget } from "../../../core/services/customScreens/screenDocumentOps";
 import { doc, fields, mount, render } from "./support/customScreenRuntimeRendererHarness";
@@ -13,6 +14,36 @@ import { doc, fields, mount, render } from "./support/customScreenRuntimeRendere
 afterEach(() => {
   document.body.innerHTML = "";
 });
+
+function PassiveSelectionLabelControls() {
+  const [enabled, setEnabled] = useState(false);
+  const [topics, setTopics] = useState<string[]>([]);
+  return (
+    <>
+      <input type="checkbox" aria-label="Nested builder input" />
+      <FieldRenderer
+        field={{ id: "f-enabled", name: "enabled", type: "boolean", label: "Enabled" }}
+        value={enabled}
+        onChange={(value) => setEnabled(value === true)}
+      />
+      <FieldRenderer
+        field={{
+          id: "f-topics",
+          name: "topics",
+          type: "select",
+          label: "Topics",
+          multiple: true,
+          options: [{ id: "featured", label: "Featured", value: "featured" }],
+        }}
+        value={topics}
+        onChange={(value) => setTopics(Array.isArray(value) ? value.map(String) : [])}
+      />
+      <output data-passive-selection-field-values="true">
+        {JSON.stringify({ enabled, topics })}
+      </output>
+    </>
+  );
+}
 
 test("block and section roots stay passive while sibling selection handles remain keyboard-clickable", () => {
   const onSelectBlock = vi.fn();
@@ -25,7 +56,7 @@ test("block and section roots stay passive while sibling selection handles remai
     {
       onSelectBlock,
       onSelectSection,
-      renderBuilderActions: () => <input type="checkbox" aria-label="Nested builder input" />,
+      renderBuilderActions: () => <PassiveSelectionLabelControls />,
     }
   );
   try {
@@ -71,6 +102,23 @@ test("block and section roots stay passive while sibling selection handles remai
     )!;
     React.act(() => nestedInput.click());
     expect(nestedInput.checked).toBe(true);
+    expect(onSelectBlock).not.toHaveBeenCalled();
+    expect(onSelectSection).not.toHaveBeenCalled();
+
+    const fieldValues = () =>
+      block.querySelector('[data-passive-selection-field-values="true"]')?.textContent;
+    const labels = Array.from(block.querySelectorAll("label"));
+    const enabledLabel = labels.find((label) => label.textContent?.trim() === "Enabled")!;
+    const featuredLabel = labels.find((label) => label.textContent?.trim() === "Featured")!;
+
+    expect(fieldValues()).toBe('{"enabled":false,"topics":[]}');
+    React.act(() => enabledLabel.click());
+    expect(fieldValues()).toBe('{"enabled":true,"topics":[]}');
+    expect(onSelectBlock).not.toHaveBeenCalled();
+    expect(onSelectSection).not.toHaveBeenCalled();
+
+    React.act(() => featuredLabel.click());
+    expect(fieldValues()).toBe('{"enabled":true,"topics":["featured"]}');
     expect(onSelectBlock).not.toHaveBeenCalled();
     expect(onSelectSection).not.toHaveBeenCalled();
 

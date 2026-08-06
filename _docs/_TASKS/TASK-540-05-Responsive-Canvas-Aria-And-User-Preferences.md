@@ -7,7 +7,8 @@
 **Category:** Custom Screens / Responsive UI / Accessibility / User Settings
 **Estimated Effort:** Medium
 **Dependencies:** TASK-540-04
-**Status:** 🚧 In Progress
+**Status:** ✅ Done
+**Completed:** 2026-08-06
 **Started:** 2026-07-14
 **Fix Started:** 2026-07-18
 **Implementation Complete:** 2026-07-19 — assigned work was completed; canonical `✅ Done` transition awaits family changelog 1252.
@@ -43,8 +44,8 @@ work with both default and already-persisted security settings.
 
 | ID | Title | Exclusive source ownership | Status |
 |---|---|---|---|
-| TASK-540-05-L01 | Keep Screen canvas usable and ARIA-valid | `ScreenAuthoringCanvas.tsx`, `CanvasEditor.tsx` | 🚧 In Progress |
-| TASK-540-05-L02 | Scope Screen preferences through user settings | exact Bun-free preference/auth-identity contracts + route-persistent auth provider + user-settings service/client/route + Screen hook + narrow central HTTP error mapping + cohesive Bun access-log and Assistant-panel test splits/support | 🚧 In Progress |
+| TASK-540-05-L01 | Keep Screen canvas usable and ARIA-valid | `ScreenAuthoringCanvas.tsx`, `CanvasEditor.tsx` | ✅ Done |
+| TASK-540-05-L02 | Scope Screen preferences through user settings | exact Bun-free preference/auth-identity contracts + route-persistent auth provider + user-settings service/client/route + Screen hook + narrow central HTTP error mapping + cohesive Bun access-log and Assistant-panel test splits/support | ✅ Done |
 
 ## Completed child modularity sequence
 
@@ -65,8 +66,9 @@ The current L02 receipt covers the retained and extracted test/support paths as
 `{ path, owner, lines, sha256 }`, with every human-authored file `<= 1000`; the full
 baseline history survives staging and intermediate commits. The user-settings pair
 preserves exactly 10 expanded names, while the Assistant panel pair preserves exactly
-13. Both families run each suite independently and join the protected global 347-name
-multiset. Neither a line failure nor missing/changed test proof is a LOW/TASK-9999
+13. Both families run each suite independently and join the protected global multiset:
+347 original names plus two authorized additive Entries JSON-boundary regressions, for
+349 current names. Neither a line failure nor missing/changed test proof is a LOW/TASK-9999
 candidate.
 
 ## Completed L02 modularization gate
@@ -93,8 +95,8 @@ access-log delete is allowed.
 The workflow added the new harness test to L02's exact Bun command, targeted matrix,
 source-owner hashes, named-file isolation, and 10-name before/after proof. The required
 Assistant support/conversation split similarly joined L02's Vitest command and exact
-13-name proof. Reconciled with every owner split, the final family matrix is exactly 64
-Vitest + 18 Bun = 82 target files, 81 source-owner/read-only tests and one closure-owner
+13-name proof. Reconciled with every owner split, the final family matrix is exactly 78
+Vitest + 18 Bun = 96 target files, 95 source-owner/read-only tests and one closure-owner
 test. New untracked test/support paths must be explicitly owner-allowlisted rather than
 discovered broadly.
 The final owner receipt proves every added or modified production/test file passed the

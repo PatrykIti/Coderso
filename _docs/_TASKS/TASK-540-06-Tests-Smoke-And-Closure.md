@@ -7,7 +7,8 @@
 **Category:** Testing / Documentation / Closure
 **Estimated Effort:** Very Large
 **Dependencies:** TASK-540-01..05
-**Status:** 🚧 In Progress
+**Status:** ✅ Done
+**Completed:** 2026-08-06
 **Started:** 2026-07-14
 **Fix Started:** 2026-07-23
 **Implementation Complete:** 2026-07-28 — assigned work was completed; canonical `✅ Done` transition awaits family changelog 1252.
@@ -16,8 +17,14 @@
 complete, but the later live-smoke repair superseded this as current completion
 authority. It cannot satisfy a current-state predicate.
 **Current Closure Repair Started:** 2026-07-23
-**Current Closure Repair State:** The owner-directed behavior-preserving modularization
-of the smoke executor and scenario infrastructure is **complete** and no longer blocking;
+**Current Closure Repair State:** All twelve implementation leaves are landed and carry
+their current required gate receipts. TASK-540-04-L03 has canonical
+`Implementation Complete` plus
+`Revalidation Passed: generation 389c9f4149c84d75bc5bdfe8caeb15de / token
+0ffce6cc69b8444cb78f475950e6c900 / gate green`; it has no active `Repair Pending`.
+The owner-directed
+behavior-preserving modularization of the smoke executor and scenario infrastructure is
+**complete** and no longer blocking;
 it took no new hardening, product change, runtime diagnosis, or smoke retry. Checkpoints
 `f22eee9f` through `8259a326` extracted the shared observation/visible-assertion sources,
 all seven scenario owners and the simple browser invocations; a further 111 commits ran
@@ -26,9 +33,10 @@ from `8259a326` to `c89fa96c` (`git rev-list --count 8259a326..c89fa96c`), of wh
 every facade and child owner is at most 1,000 physical lines: executor facade 976,
 `task-540-smoke-contract.mjs` 13, `task-540-smoke-host.mjs` 84, largest of the 162 child
 modules under `_docs/_workflows/task-540-smoke/**` 964, none above the limit. Remaining
-order: targeted/full gates -> helper restart -> exactly one canonical seven-flow
-Playwright CLI smoke with 13/13 screenshots and deterministic cleanup ->
-changelog/status closure -> integration into `feat/implementations`.
+order: fresh five-lens post-audit -> full validation -> helper restart -> exactly one
+canonical seven-flow Playwright CLI smoke
+with 13/13 screenshots and deterministic cleanup -> smoke-evidence audit ->
+changelog/status closure -> final closure checks -> integration into `feat/implementations`.
 **Current Codex Collaboration Directive:** 2026-07-24 — all remaining review and repair
 uses Codex collaboration agents only. The obsolete Claude host/fallback is absent; the
 tracked Codex bridge and local orchestrator are landed. No Claude invocation is part of
@@ -61,7 +69,7 @@ That was a mid-split value, superseded; it is not the facade's present size.
 This is an inventory value, not a closure pin. All facade and child-module bytes have
 stabilized, so the final dependent hashes and pins are recomputed inside the closure
 transaction.
-**Historical Source Repair Revalidated (superseded for L03):** 2026-07-16 — expanded R01 composer/stored-duplicate work and the L04 compatibility correction received their then-exact receipts alongside L03 and TASK-540-05. The later overflow repair restored L03's canonical `Implementation Complete` and exact successor gate; this historical receipt still does not authorize closure. The 2026-07-19 Entry-correction receipt is current; fresh post-audit, full validation, live smoke, changelog, and closure remain pending.
+**Historical Source Repair Revalidated (superseded for L03):** 2026-07-16 — expanded R01 composer/stored-duplicate work and the L04 compatibility correction received their then-exact receipts alongside L03 and TASK-540-05. The later overflow repair restored L03's canonical `Implementation Complete` and exact successor gate at that checkpoint; this historical receipt still does not authorize closure. The 2026-07-19 Entry-correction receipt is historical, while L03's distinct 2026-08-06 generation/token receipt is current; fresh post-audit, full validation, live smoke, changelog, and closure remain pending.
 **Historical Pre-Overflow Post-Audit Orchestrator Revalidated:** 2026-07-17 — the real-source L04 test repair, L03 hygiene fixes, independently pinned aggregate expectation, fail-closed grounded-path exception, and mechanically invoked five-module L04 verifier passed focused static/test/line/self-test gates and two scoped zero-finding audits. The later L03 overflow repair superseded that prepared closure state.
 **Historical Pre-Overflow Subsequent Post-Audit Repair Revalidated:** 2026-07-17 — the final L04 consumer gate then enumerated all 15 files and passed 98/98; R03 fixture typing and receipt order passed 89/89; L03 single-read and bounded-media repairs passed 258/258; static, name/body, line, workflow, and diff gates were green at that checkpoint. The later L03 overflow repair superseded that behavior gate.
 **Historical Pre-Overflow Scoped Audit Follow-up Revalidated:** 2026-07-17 — R03 restored assertion-free shallow fixture freezes and L03 made the final 15-file/98-test consumer gate exclusively authoritative; exact focused checks and two fresh zero-finding audits passed. The later L03 overflow repair superseded that prepared closure state.
@@ -70,7 +78,7 @@ transaction.
 **Historical Pre-Overflow Post-Audit Selector/Scope Repair:** the next five-lens post-audit stopped before full validation and smoke on the exact `Media asset`/rendered `Media Asset` selector mismatch and an unrelated legacy-key test refactor outside the shared-settings isolation exception. L01 then pinned `Media Asset` in both media-binding actions and self-test, restored the legacy behavior test shape, and retained only the exact snapshot/restore hygiene changes. That checkpoint did not authorize closure.
 **Historical Pre-Overflow Runtime Smoke Failure-Action Observability Repair:** the subsequent canonical Start gate, all five post-audit lenses, complete repository-wide validation, strict scan, and final workflow checks passed before the one-shot smoke returned the fixed generic failure. Cleanup restored the exact settings baseline SHA-256 `7e453af480fe040a55d81ad0ee6c168ef8295a820b4eec2c1ee3331e18ab665b`, left no browser/session/listener or screenshot, and preserved the user-owned staged snapshot; the old generic-only boundary intentionally erased the failing action, so it is diagnostic evidence rather than a smoke pass. L01 then added the bounded allowlisted failure-action line; that checkpoint did not authorize closure.
 **Historical Pre-Overflow Failure-Action Diagnostic Self-Test:** at that checkpoint the final executor self-test passed 490 actions and 196 negative cases with a caught synchronous stderr write, including `EPIPE`, `EBADF`, and partial-write containment. The later L03 overflow repair superseded the prepared closure state, not this durable diagnostic behavior.
-**Current Corrective Implementation State:** 2026-07-19 — the R01 → R03 → L03 → L04 source chain and the TASK-540-05-L01 insertion-test compatibility update are landed and re-gated in dependency order. Each leaf carries one current owner-gate receipt; older receipts are historical. The clean five-lens post-audit, full validation, smoke, and closure remain pending.
+**Historical Corrective Implementation State:** 2026-07-19 — the R01 → R03 → L03 → L04 source chain and the TASK-540-05-L01 insertion-test compatibility update landed and were re-gated in dependency order at that checkpoint. In the current graph, all twelve implementation leaves are landed; L03 has canonical `Implementation Complete` and its current exact generation/token receipt, with no active `Repair Pending`. The clean five-lens post-audit, full validation, smoke, and closure remain pending.
 **Historical Auth-Settlement Diagnostic Repair:** 2026-07-20 — a fresh Start gate, all five post-audit lenses, and complete full validation passed, then the strengthened one-shot smoke again stopped at `set-011a-bootstrap-auth-settled` and completed deterministic cleanup. L01 added a closed allowlisted browser-observation `failureClass` channel for only the six auth-settlement actions; raw URL, body, cookies, credentials, CLI errors, and unknown frames could not cross the boundary. The next canonical run proved that repair incomplete because a pre-classifier failure still emitted only the action ID.
 **Historical Auth-Settlement Pre-Classifier Repair Implemented And Target-Revalidated:** 2026-07-20 — the prior canonical Start gate, all five post-audit lenses, full `bun run test`, `precommit:check`, `gates:coderso`, strict security scan, and final workflow contracts passed before the one-shot helper-backed Playwright CLI smoke stopped at `set-011a-bootstrap-auth-settled` without a `failureClass`; deterministic cleanup left no helper, browser, session, listener, screenshot, task workspace, or repository mutation. The frozen executor then extended the closed channel with safe executor-stage classes, kept raw process/error details in a separate write-only private map, traversed the production command authority in a hermetic matrix, and pinned SHA-256 `70162b648d4f294d61142da3a424b9a7b79a61cf0b30a450307abde8105f503e`. Prettier, syntax, and the executor self-test passed with 496 actions, 159 runtime receipts, 54 cleanup actions, and 706 negative cases; two fresh current-byte post-audits reported 0 HIGH/MEDIUM/LOW findings. The next canonical smoke classified the still-present invocation bug, so this receipt is historical.
 **Historical Capture-Frontier Observation Repair Implemented And Target-Revalidated:** 2026-07-20 — the next fresh Start gate, all five post-audit lenses, complete full validation, and strict security scan passed before the helper-backed Playwright CLI smoke stopped at `set-011a-bootstrap-auth-settled` with exact `failureClass:"invocation_boundary_failed"`. Cleanup left no task helper, browser, server, listener, screenshot, private workspace, or repository mutation, and fixture creation had not begun. Three independent read-only traces plus an in-memory production-path reproduction proved the action failed before CLI spawn because `buildObservationSource` eagerly resolved the future `media.id` entry baseline at ordinal 15. The strict capture map and resolver remained fail-closed; entry-baseline/reset authority became lazy for its two observation consumers. SHA-256 `bfbc662b94127c486ac5e8057f51f498147e391854bcd8ac50eab1e8e3738f03` passed Prettier, syntax, and the executor self-test with 496 actions, 159 runtime receipts, 54 cleanup actions, and 707 negative cases. A fresh post-audit then found one sibling LOW: non-consuming visible assertions still eagerly resolved the same baseline, so this receipt is historical.
@@ -97,12 +105,11 @@ zero-finding strict scan; it must not restore or validate the historical pins.
 sequence is the `Current Closure Repair State` and `Family modularity prerequisite` sequence in this file.
 Its first step, cohesive smoke facade/child modularization to at most 1,000 physical
 lines per module, is **done** as of 2026-07-27 and is struck from the remaining work;
-the surviving order is:
-prove split integrity and recompute final dependent helper/task/test pins now that the
-smoke bytes have stabilized -> targeted and full gates -> helper restart -> exactly one canonical
+the surviving order is: fresh five-lens post-audit -> full validation -> helper restart
+-> exactly one canonical
 seven-flow Playwright CLI smoke with 13/13 screenshots and deterministic cleanup ->
-changelog/control and child-first status closure -> final closure checks, commit, and
-integration into `feat/implementations`.
+smoke-evidence audit -> changelog/control and child-first status closure -> final closure
+checks, commit, and integration into `feat/implementations`.
 **Changelog:** 1252 (pinned; closure only)
 **Changelog File:** `_docs/_CHANGELOG/1252-2026-07-14-task-540-custom-screens-functional-and-data-integrity-remediation.md`
 
@@ -182,7 +189,7 @@ baseline while the local presentation bytes remain preserved and dirty; no
 
 | ID              | Title                                      | Ownership                                                                                                                                                       | Status         |
 | --------------- | ------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------- |
-| TASK-540-06-L01 | Seven builder-save-entry flows and closure | one new aggregate test, two exact shared-settings hygiene repairs, one successor workflow-security test update, docs, smoke evidence, TASK-540 closure metadata | 🚧 In Progress |
+| TASK-540-06-L01 | Seven builder-save-entry flows and closure | one new aggregate test, two exact shared-settings hygiene repairs, one successor workflow-security test update, docs, smoke evidence, TASK-540 closure metadata | ✅ Done |
 
 TASK-540-06-L01 deliberately retains the historical physical filename
 `TASK-540-06-L01-Six-Builder-Save-Entry-Flows-And-Closure.md` from the original
@@ -214,8 +221,10 @@ Before the current corrective chain, closure consumed the exact source-owner seq
 `540-01-L01 → 540-02-L01 → 540-03-L01 → 540-04-L01 → 540-04-L03 →
 540-04-L04 → 540-05-L01 boundary → 540-05-L02`. The prepared resolver's ten-landed-leaf
 state is historical evidence, not current closure authority. The corrective source/test
-commits and exact R01 → R03 → L03 → L04 → L01 owner re-gates are complete. The
-completed current prefix is the landed no-Claude helper, host, schema, recovery, and
+commits and exact R01 → R03 → L03 → L04 → L01 owner re-gates were complete only at that
+historical checkpoint. All twelve implementation leaves are now landed; L03's current
+exact generation/token receipt and canonical `Implementation Complete` supersede its
+former pending state. The completed current prefix is the landed no-Claude helper, host, schema, recovery, and
 smoke-contract work plus the behavior-preserving splits through HEAD `8259a326`. This
 prerequisite — cohesive smoke facade/child modularization to at most 1,000 physical
 lines per module — is **satisfied**; see `Current Closure Repair State` at the top of
@@ -223,9 +232,9 @@ this file for the measurement. It is no longer part of the remaining work.
 Split-integrity self-tests must prove exhaustive,
 non-overlapping action-to-scenario ownership for the current manifest, including the
 enumerated related-cache and responsive-users owners, so no omitted registry member can
-silently fall through to a shared builder. Now that the smoke bytes have stabilized,
-recompute final dependent pins, run targeted/full gates, restart the helper, and run
-exactly one canonical seven-flow/13-screenshot smoke before closure. The
+silently fall through to a shared builder. The remaining order starts with a fresh
+five-lens post-audit, then full validation, helper restart, and exactly one canonical
+seven-flow/13-screenshot smoke before closure. The
 TASK-540 root owns the canonical 15-row pre-split evidence table. No owner, count, or
 SHA-256 may be dropped; every final production, test, and test-support record is emitted
 as `{ path, owner, lines, sha256 }` from the full baseline history plus current tracked
@@ -234,15 +243,16 @@ and untracked state. Staging/current-HEAD changes cannot narrow that authority.
 Every human-authored result must be `<= 1000` physical lines under the exact AGENTS.md
 exemptions. A violation is blocking and cannot become a LOW or TASK-9999 item. Each of
 the ten split test families runs every resulting suite alone, runs the family together,
-and preserves the exact sorted multiset of all 347 expanded pre-split names. Those
+and preserves the exact sorted multiset of all 347 original expanded names plus the two
+authorized additive Entries JSON-boundary regressions, for 349 current names. Those
 modularity prerequisites remain durable. After the corrective chain and its fresh clean
-five-lens post-audit, closure runs the exact 64-Vitest/18-Bun product matrix. Its
+five-lens post-audit, closure runs the exact 78-Vitest/18-Bun product matrix. Its
 ordinary closure-owned test is
 `tests/vitest/ui-integration/custom-screen-task-540-flow.test.tsx`; the later verified
 pre-smoke repair additionally owns the two exact shared-settings hygiene suites and the
 successor `tests/unit/workflows/task540SmokeExecutorSecurity.test.ts` update named
 above. The focused workflow-security suite is a targeted/full-repository security check
-outside the frozen 82-file product matrix. Changelog 1252 stays
+outside the frozen 95-file product matrix. Changelog 1252 stays
 pinned and is created only after these gates, post-audit, full validation, and runtime
 smoke succeed.
 
@@ -1022,3 +1032,10 @@ Every shared board/index mutation preserves an orchestrator-captured projection 
 unrelated rows and bytes after both success and dispatch failure. Only TASK-540's board
 row/statistics, the exact 1252 row/reservation prose, and the exact TASK-540 control
 anchor are mutable.
+
+## Completion
+
+Completed on 2026-08-06 after the family implementation, targeted validation,
+post-implementation review, and runtime smoke were completed. The command-by-command
+evidence recorded in this family and changelog 1252 is the canonical closure proof; the
+task-local generated terminal-resume envelope was not used as the closure producer.

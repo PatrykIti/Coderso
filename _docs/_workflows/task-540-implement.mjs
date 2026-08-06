@@ -1041,6 +1041,7 @@ const INHERITED_ENV_FOR_REDACTION = Object.freeze({ ...process.env });
 const HERMETIC_SELF_TEST_MODE =
   process.argv.includes("--self-test-repair-siblings") ||
   process.argv.includes("--self-test-file-line-limit") ||
+  process.argv.includes("--self-test-exact-rollback-paths") ||
   process.argv.some((value) => value.startsWith("--self-test-current-resume="));
 const HERMETIC_SELF_TEST_SENSITIVE_ENV_PROJECTION = Object.freeze(
   Object.assign(Object.create(null), {
@@ -2431,6 +2432,7 @@ const ENTRIES_CLIENT_VITEST_FILES = Object.freeze([
   "tests/vitest/admin/entriesClientReadAuthority.test.ts",
   "tests/vitest/admin/entriesClientMutationReconciliation.test.ts",
 ]);
+const CONTENT_TYPES_CLIENT_VITEST_FILE = "tests/vitest/admin/contentTypesClient.test.ts";
 const ASSISTANT_PANEL_VITEST_FILES = Object.freeze([
   "tests/vitest/ui/assistant-panel-interaction.test.tsx",
   "tests/vitest/ui/assistant-panel-conversation.test.tsx",
@@ -2466,6 +2468,50 @@ const ENTRY_NAVIGATION_VITEST_FILES = Object.freeze([
 const ENTRY_RESTYLE_VITEST_FILES = Object.freeze([
   "tests/vitest/ui-integration/custom-screen-entry-editor-restyle.test.tsx",
   "tests/vitest/ui/custom-screen-entry-presentation-media.test.ts",
+]);
+const CONTENT_ENTRY_EDITOR_PRODUCTION_FILES = Object.freeze([
+  "core/admin/ui/entries/EntryCreateDrawer.tsx",
+  "core/admin/ui/entries/EntryEditor.tsx",
+  "core/admin/ui/entries/EntryFieldSections.tsx",
+  "core/admin/ui/entries/EntryFieldsPlaceholder.tsx",
+  "core/admin/ui/entries/EntryMetadataPanel.tsx",
+  "core/admin/ui/entries/EntryTitleSlugFields.tsx",
+  "core/admin/ui/entries/FieldRenderer.tsx",
+  "core/admin/ui/entries/entryFieldGroups.ts",
+  "core/admin/ui/entries/entryEditorVisit.ts",
+  "core/admin/ui/entries/entryLinkedFields.ts",
+  "core/admin/ui/entries/entryMetadataUpdate.ts",
+  "core/admin/ui/entries/entrySlug.ts",
+  "core/admin/ui/entries/entryValueMapping.ts",
+  "core/admin/ui/entries/useEntryEditTracker.ts",
+  "core/admin/ui/entries/useEntryRelationTargets.ts",
+  "core/admin/ui/entries/useEntryRuntimePreview.ts",
+  "core/admin/ui/entries/useEntrySnapshotAuthority.ts",
+  "core/admin/ui/entries/useEntryTaxonomyIntent.ts",
+]);
+const CONTENT_ENTRY_EDITOR_VITEST_FILES = Object.freeze([
+  "tests/vitest/ui/drawers.test.tsx",
+  "tests/vitest/ui/entry-create-drawer-required-fields.test.tsx",
+  "tests/vitest/ui/entry-editor-shell-wave.test.tsx",
+  "tests/vitest/ui/entry-editor-visibility-groups.test.tsx",
+  "tests/vitest/ui/entry-field-relation-interaction.test.tsx",
+  "tests/vitest/ui/entry-field-relation-option-identity.test.tsx",
+  "tests/vitest/ui/entry-field-renderer-wave.test.tsx",
+  "tests/vitest/ui/entry-metadata-panel.test.tsx",
+  "tests/vitest/ui/entry-page-support-wave.test.tsx",
+  "tests/vitest/ui-integration/entry-editor-hydration-race.test.tsx",
+  "tests/vitest/ui-integration/entry-editor-navigation-guard.test.tsx",
+  "tests/vitest/ui-integration/entry-editor-restyle.test.tsx",
+  "tests/vitest/ui-integration/entry-editor-submit-authority.test.tsx",
+]);
+const CONTENT_ENTRY_EDITOR_SUPPORT_FILES = Object.freeze([
+  "tests/vitest/ui-integration/support/entryEditorHarness.tsx",
+  "tests/vitest/ui-integration/support/entryEditorLaneFixture.tsx",
+]);
+const CONTENT_ENTRY_EDITOR_ALLOWED_FILES = Object.freeze([
+  ...CONTENT_ENTRY_EDITOR_PRODUCTION_FILES,
+  ...CONTENT_ENTRY_EDITOR_VITEST_FILES,
+  ...CONTENT_ENTRY_EDITOR_SUPPORT_FILES,
 ]);
 const R01_SCHEMA_VITEST_FILES = Object.freeze([
   "tests/vitest/admin/custom-screen-schemas.test.ts",
@@ -2552,13 +2598,14 @@ const CORRECTIVE_TEST_PREDECESSOR_LEAVES = deepFreezeExact({
   "540-04-L03": ["540-01-L01", "540-04-L03"],
   "540-04-L04": ["540-01-L01", "540-04-L03", "540-04-L04"],
 });
+let correctiveProtectedTestBaselineSources = null;
 const CORRECTIVE_REPIN_FAMILY_AUTHORITY = deepFreezeExact({
   r01Schema: {
     files: R01_SCHEMA_VITEST_FILES,
-    tests: 77,
-    sha256: "021b5bd353cf7cf775ae7a06b1477f6b0c5e6933c64518a6aaa36bbbf3f2ebc2",
-    declarations: 77,
-    fileTests: [18, 9, 10, 13, 11, 5, 11],
+    tests: 78,
+    sha256: "069696f71e523b1cced0c58edc9cc9dd713130772e51de80021588caedf18aee",
+    declarations: 78,
+    fileTests: [18, 9, 10, 13, 11, 5, 12],
     fileNameSha256: [
       "3bc33544c8750ea721ccd30993d5000a2525e6f5096555ec786a8128c5fc9a01",
       "892e8a43828f3730c4681e56c15f561005e2554abdf16bdf8725e901c129fb8e",
@@ -2566,17 +2613,17 @@ const CORRECTIVE_REPIN_FAMILY_AUTHORITY = deepFreezeExact({
       "99fabc38404bc71bbb1687dec945d4ebc5d3b3d95843bfa70e795a79b1677073",
       "1cd5e7af104b451a364a40a3d623040e495ef609a8ea0e6720bfc677f14bc47c",
       "b46512e7ddea5aedb4eb6cac33943ea906fce30f05522f0b589174b8b5694221",
-      "2999367a7d6209104a11564b88cdcdf269040bd2c4913fb07e9baceb6cd5e0a9",
+      "37c56877ff36fe4c7c97e246525801f2d68e2b557adbdb453fd224f84457ebfa",
     ],
   },
   entryRestyle: {
     files: ENTRY_RESTYLE_VITEST_FILES,
     tests: 17,
-    sha256: "219111fd536cf6005e754820d0ad61680add470725defa358a75c021cb7065a4",
+    sha256: "c37e8a416ec083c119008be45cdf2445579038f3e60be83c580c3aff10b83c47",
     declarations: 17,
     fileTests: [13, 4],
     fileNameSha256: [
-      "ebfefcdf8167a927dcbfe5f3159a892e34124f98f27e691b6a1888138e436076",
+      "8b03a89d113fa27414acc33911136143d5be2fc815b4a6168daab4595177b8e8",
       "b932d8833667fc0e08733720fa10856c720b1c6a69524e5b728bff063ffc0948",
     ],
   },
@@ -2655,6 +2702,7 @@ const TARGET_VITEST_FILES = Object.freeze([
   "tests/vitest/admin/entriesClientReadAuthority.test.ts",
   "tests/vitest/admin/entriesClientMutationReconciliation.test.ts",
   "tests/vitest/admin/mediaClient.test.ts",
+  CONTENT_TYPES_CLIENT_VITEST_FILE,
   "tests/vitest/admin/userSettingsClient.test.ts",
   "tests/vitest/assistant/action-plan-schema.test.ts",
   "tests/vitest/assistant/blueprint-binding-composer.test.ts",
@@ -2689,6 +2737,7 @@ const TARGET_VITEST_FILES = Object.freeze([
   "tests/vitest/ui-integration/custom-screen-entry-editor-restyle.test.tsx",
   "tests/vitest/ui-integration/custom-screen-entry-preferences-persistence.test.tsx",
   "tests/vitest/ui-integration/custom-screen-preview-owner.test.tsx",
+  ...CONTENT_ENTRY_EDITOR_VITEST_FILES,
   "tests/vitest/ui/custom-screen-entry-navigation-guard.test.tsx",
   "tests/vitest/ui/custom-screen-entry-navigation-authority.test.tsx",
   "tests/vitest/ui-integration/custom-screen-runtime-renderer.test.tsx",
@@ -2732,11 +2781,11 @@ const CLOSURE_OWNER_TEST_FILES = Object.freeze([
   WORKFLOW_BRIDGE_SECURITY_TEST_FILE,
 ]);
 if (
-  TARGET_VITEST_FILES.length !== 64 ||
+  TARGET_VITEST_FILES.length !== 78 ||
   TARGET_BUN_FILES.length !== 18 ||
-  SOURCE_OWNER_TEST_FILES.length !== 81 ||
+  SOURCE_OWNER_TEST_FILES.length !== 95 ||
   CLOSURE_OWNER_TEST_FILES.length !== 2 ||
-  new Set([...TARGET_VITEST_FILES, ...TARGET_BUN_FILES]).size !== 82
+  new Set([...TARGET_VITEST_FILES, ...TARGET_BUN_FILES]).size !== 96
 ) {
   throw new Error("TASK-540 test matrix cardinality drift");
 }
@@ -3346,9 +3395,11 @@ const FORBIDDEN_PATHS = Object.freeze([
 
 // FORBIDDEN_PATHS is agent-prompt policy, not an enforced gate -- it is interpolated into
 // COMMON at exactly one site and nothing verifies it after the fact. Auditing the family's
-// real baseline..HEAD delta against it found 33 paths across 10 of these globs already
-// mutated. Leaving that undocumented would mean every mutation agent reads a prohibition
-// that the family itself has visibly broken, which teaches the agent the list is advisory.
+// current pre-family-baseline..worktree delta against it finds mutations across nine of
+// these globs. Leaving those mutations undocumented would mean every mutation agent reads
+// a prohibition that the family itself has visibly broken, which teaches the agent the list
+// is advisory. The intermediate Page-adapter mutation is excluded because the current bytes
+// are identical to the verified pre-family baseline.
 //
 // So the entries STAY -- the prohibition is still correct for anything not listed below --
 // and the landed exceptions are recorded here with why they were allowed to stand. This is
@@ -3422,16 +3473,6 @@ const AUTHORIZED_FORBIDDEN_PATH_EXCEPTIONS = Object.freeze([
       "diagnostic-only without a measured replacement. No other migration change is authorized here.",
   }),
   Object.freeze({
-    glob: "core/admin/ui/pages/**",
-    paths: Object.freeze(["core/admin/ui/pages/editorControls/MediaPickerControl.tsx"]),
-    commits: Object.freeze(["42d57115"]),
-    reason:
-      "The final entry-value boundary repair routes the existing page-editor media control " +
-      "through the shared exact media-picker value contract. This single adapter change is " +
-      "required to keep page, entry, and custom-screen media values consistent; it does not " +
-      "authorize any other page-builder edit.",
-  }),
-  Object.freeze({
     glob: "package.json",
     paths: Object.freeze(["package.json"]),
     commits: Object.freeze(["a0fe8028", "42d57115"]),
@@ -3491,7 +3532,7 @@ const AUTHORIZED_FORBIDDEN_PATH_EXCEPTIONS = Object.freeze([
   }),
 ]);
 if (
-  AUTHORIZED_FORBIDDEN_PATH_EXCEPTIONS.length !== 10 ||
+  AUTHORIZED_FORBIDDEN_PATH_EXCEPTIONS.length !== 9 ||
   AUTHORIZED_FORBIDDEN_PATH_EXCEPTIONS.some(
     ({ glob, paths, commits, reason }) =>
       !FORBIDDEN_PATHS.includes(glob) ||
@@ -5761,7 +5802,7 @@ function requireSafeRollbackPath(relativePath, label) {
     typeof relativePath !== "string" ||
     relativePath.startsWith("/") ||
     relativePath.split("/").includes("..") ||
-    !/^_docs\/(?:_TASKS|_CHANGELOG)\//.test(relativePath) ||
+    !/^_docs\/(?:_TASKS|_CHANGELOG|_workflows)\//.test(relativePath) ||
     relativePath.split("/").some((segment) => /^\.env(?:\.|$)/.test(segment))
   ) {
     throw new Error(label + ": unsafe exact-rollback path " + relativePath);
@@ -5769,7 +5810,9 @@ function requireSafeRollbackPath(relativePath, label) {
   return relativePath;
 }
 
-const EXACT_ROLLBACK_PARENT_PATHS = Object.freeze(new Set(["_docs/_TASKS", "_docs/_CHANGELOG"]));
+const EXACT_ROLLBACK_PARENT_PATHS = Object.freeze(
+  new Set(["_docs/_TASKS", "_docs/_CHANGELOG", "_docs/_workflows"])
+);
 
 async function requireCanonicalRollbackParent(relativePath, label) {
   requireSafeRollbackPath(relativePath, label);
@@ -5783,7 +5826,14 @@ async function requireCanonicalRollbackParent(relativePath, label) {
   if (!rootInfo.isDirectory() || rootInfo.isSymbolicLink() || (await realpath(ROOT)) !== ROOT) {
     throw new Error(label + ": repository root is not its exact canonical directory");
   }
-  const parentAbsolutePath = ROOT + "/" + parentRelativePath;
+  const parentAbsolutePath = resolve(ROOT, parentRelativePath);
+  const absolutePath = resolve(ROOT, relativePath);
+  if (
+    parentAbsolutePath !== ROOT + "/" + parentRelativePath ||
+    absolutePath !== parentAbsolutePath + "/" + basename
+  ) {
+    throw new Error(label + ": rollback path escaped its canonical root");
+  }
   const parentInfo = await lstat(parentAbsolutePath);
   if (
     !parentInfo.isDirectory() ||
@@ -5794,9 +5844,55 @@ async function requireCanonicalRollbackParent(relativePath, label) {
   }
   return Object.freeze({
     parentAbsolutePath,
-    absolutePath: parentAbsolutePath + "/" + basename,
+    absolutePath,
     basename,
   });
+}
+
+async function assertTask540ExactRollbackPathContract() {
+  const acceptedPaths = Object.freeze([
+    "_docs/_TASKS/README.md",
+    "_docs/_CHANGELOG/README.md",
+    TEST_NAME_CONTRACT_WORKFLOW_REL,
+    WORKFLOW_REL,
+  ]);
+  for (const relativePath of acceptedPaths) {
+    const location = await requireCanonicalRollbackParent(
+      relativePath,
+      "TASK-540 exact rollback path self-test"
+    );
+    const expectedAbsolutePath = resolve(ROOT, relativePath);
+    if (
+      location.absolutePath !== expectedAbsolutePath ||
+      location.parentAbsolutePath !== dirname(expectedAbsolutePath) ||
+      location.basename !== basename(expectedAbsolutePath) ||
+      !location.absolutePath.startsWith(ROOT + "/")
+    ) {
+      throw new Error("TASK-540 registered rollback path escaped its canonical root");
+    }
+  }
+
+  const rejectedPaths = Object.freeze([
+    "/tmp/task-540-outside.md",
+    "core/task-540-outside.ts",
+    "_docs/_workflows/../_TASKS/README.md",
+    "_docs/_workflows/nested/task-540-copy.mjs",
+  ]);
+  let rejected = 0;
+  for (const relativePath of rejectedPaths) {
+    try {
+      await requireCanonicalRollbackParent(
+        relativePath,
+        "TASK-540 exact rollback rejection self-test"
+      );
+    } catch {
+      rejected += 1;
+    }
+  }
+  if (rejected !== rejectedPaths.length) {
+    throw new Error("TASK-540 unsafe rollback path self-test failed closed");
+  }
+  return acceptedPaths.length + rejectedPaths.length;
 }
 
 function exactBytesSha256(bytes) {
@@ -6942,6 +7038,7 @@ async function restoreExactRollbackFiles(
 }
 
 async function assertTask540ExactRollbackResidualContract() {
+  const pathCases = await assertTask540ExactRollbackPathContract();
   const bytes = Buffer.from("same rollback bytes", "utf8");
   const beforeStat = Object.freeze({
     dev: 1n,
@@ -7118,7 +7215,7 @@ async function assertTask540ExactRollbackResidualContract() {
   ) {
     throw new Error("TASK-540 exact rollback execution self-test failed");
   }
-  return cases.length + 8;
+  return pathCases + cases.length + 8;
 }
 
 async function assertTask540TouchedModuleLineLimitContract() {
@@ -7178,21 +7275,14 @@ async function assertTask540TouchedModuleLineLimitContract() {
       path: "tests/vitest/ui-integration/custom-screen-widget-picker.test.tsx",
       owner: "540-05-L01",
     }),
+  ]);
+  const writableOwnerCases = Object.freeze([
     Object.freeze({
-      path: "core/admin/ui/entries/FieldRenderer.tsx",
-      owner: "540-06-L01",
-    }),
-    Object.freeze({
-      path: "core/admin/ui/media/MediaPicker.tsx",
-      owner: "540-06-L01",
-    }),
-    Object.freeze({
-      path: "tests/vitest/ui/entry-field-relation-interaction.test.tsx",
-      owner: "540-06-L01",
-    }),
-    Object.freeze({
-      path: "tests/vitest/ui/entry-field-relation-option-identity.test.tsx",
-      owner: "540-06-L01",
+      paths: Object.freeze([
+        "core/admin/ui/media/MediaPicker.tsx",
+        "tests/vitest/ui/media-picker.test.tsx",
+      ]),
+      owner: "540-04-L03",
     }),
   ]);
   if (
@@ -7204,6 +7294,20 @@ async function assertTask540TouchedModuleLineLimitContract() {
     )
   ) {
     throw new Error("TASK-540 read-only line-limit owner self-test failed");
+  }
+  if (
+    writableOwnerCases.some(({ paths, owner }) =>
+      paths.some(
+        (path) =>
+          !isLineLimitedHumanAuthoredModule(path) ||
+          JSON.stringify(task540LineLimitOwnerIds(path)) !== JSON.stringify([owner]) ||
+          !LEAF_BY_ID.get(owner)?.allowedFiles.includes(path) ||
+          task540ReadOnlyConsumerPaths.includes(path) ||
+          TASK_540_LINE_LIMIT_ACCOUNTABLE_PATHS.includes(path)
+      )
+    )
+  ) {
+    throw new Error("TASK-540 writable media line-limit owner self-test failed");
   }
   const emptyDynamicAuthority = buildTask540TouchedModulePathAuthority(
     [],
@@ -7352,16 +7456,13 @@ async function assertTask540TouchedModuleLineLimitContract() {
   const accountableOwnerCases = Object.freeze([
     "core/db/schema.ts",
     "core/db/tables/identity.ts",
-    "core/admin/ui/entries/EntryEditor.tsx",
     "core/db/connectionTargets.ts",
     "core/services/backups/backupService.ts",
     "tests/unit/workflows/task540SmokeExecutorSecurity.test.ts",
     "core/widgets/core/footer.tsx",
     "tests/unit/toolchain/trackedSourcesAreText.test.ts",
     "core/db/driverEndpoints.ts",
-    "core/admin/ui/entries/EntryCreateDrawer.tsx",
     "tests/unit/workflows/task540LineLimitOffenderReport.test.ts",
-    "tests/vitest/ui/entry-field-renderer-wave.test.tsx",
     "core/admin/services/entryData.ts",
     "tests/unit/release/imagePromotionGate.test.ts",
     "tests/vitest/ui/formsPagesWaveFixtures.tsx",
@@ -7407,6 +7508,21 @@ async function assertTask540TouchedModuleLineLimitContract() {
       throw new Error("TASK-540 line-limit tripwire self-test failed: " + tripwirePath);
     }
   }
+  const contentEntryEditorAuthority = await task540TouchedModulePathAuthority(
+    "TASK-540 content Entry Editor ownership self-test"
+  );
+  const contentEntryEditorHistoryPaths = [
+    ...contentEntryEditorAuthority.trackedPaths,
+    ...contentEntryEditorAuthority.untrackedPaths,
+  ]
+    .filter((path) => path.startsWith("core/admin/ui/entries/"))
+    .sort();
+  if (
+    JSON.stringify(contentEntryEditorHistoryPaths) !==
+    JSON.stringify([...CONTENT_ENTRY_EDITOR_PRODUCTION_FILES].sort())
+  ) {
+    throw new Error("TASK-540 content Entry Editor history ownership drifted");
+  }
   // The history component must stay scoped to the branch's own first-parent line unioned
   // with the net baseline delta. If either source is dropped the authority silently changes
   // shape, so both call shapes are pinned here.
@@ -7422,9 +7538,10 @@ async function assertTask540TouchedModuleLineLimitContract() {
     pathCases.length +
     lineCases.length +
     readOnlyOwnerCases.length +
+    writableOwnerCases.length +
     accountableOwnerCases.length +
     TASK_540_LINE_LIMIT_TRIPWIRE_PATHS.length +
-    11
+    12
   );
 }
 
@@ -10622,20 +10739,27 @@ const LEAVES = Object.freeze(
       allowedFiles: Object.freeze([
         "core/admin/services/entriesClient.ts",
         "core/admin/services/mediaClient.ts",
+        "core/admin/services/contentTypesClient.ts",
         "tests/vitest/admin/entriesClient.test.ts",
         "tests/vitest/admin/entriesClientMutationReconciliation.test.ts",
         "tests/vitest/admin/entriesClientReadAuthority.test.ts",
         "tests/vitest/admin/support/entriesClientTestHarness.ts",
         "tests/vitest/admin/mediaClient.test.ts",
+        CONTENT_TYPES_CLIENT_VITEST_FILE,
       ]),
       commands: Object.freeze([
         command("lintTypes", LINT_TYPES),
         command("lint", LINT),
         ...isolatedTestCommands("entriesClientIsolated", ENTRIES_CLIENT_VITEST_FILES, "vitest"),
         command("mediaClientIsolated", vitestCommand(["tests/vitest/admin/mediaClient.test.ts"])),
+        command("contentTypesClientIsolated", vitestCommand([CONTENT_TYPES_CLIENT_VITEST_FILE])),
         command(
           "vitest",
-          vitestCommand([...ENTRIES_CLIENT_VITEST_FILES, "tests/vitest/admin/mediaClient.test.ts"])
+          vitestCommand([
+            ...ENTRIES_CLIENT_VITEST_FILES,
+            "tests/vitest/admin/mediaClient.test.ts",
+            CONTENT_TYPES_CLIENT_VITEST_FILE,
+          ])
         ),
         command(
           "entriesClientTestNames",
@@ -10668,6 +10792,7 @@ const LEAVES = Object.freeze(
       id: "540-04-L03",
       taskFile: "TASK-540-04-L03-Guard-Entry-Drafts-And-Subscribe-Related-Caches.md",
       allowedFiles: Object.freeze([
+        ...CONTENT_ENTRY_EDITOR_ALLOWED_FILES,
         "core/admin/ui/custom-screens/CustomScreenEntryEditor.tsx",
         "core/admin/ui/custom-screens/CustomScreenEntryEditorLayout.tsx",
         "core/admin/ui/custom-screens/CustomScreenEntryPresentationPanel.tsx",
@@ -10679,6 +10804,7 @@ const LEAVES = Object.freeze(
         "core/admin/ui/custom-screens/customScreenEntryRuntime.ts",
         "core/admin/ui/custom-screens/hooks/useScreenEntryHydration.ts",
         "core/admin/ui/custom-screens/hooks/useScreenEntryPresentationMedia.ts",
+        "core/admin/ui/media/MediaPicker.tsx",
         "core/services/customScreens/screenEntryPresentationOverrides.ts",
         "core/services/customScreens/screenEntryPresentationOverrideContract.ts",
         "core/admin/services/customScreensClient.ts",
@@ -10686,6 +10812,7 @@ const LEAVES = Object.freeze(
         "tests/vitest/ui-integration/custom-screen-entry-editor-restyle.test.tsx",
         "tests/vitest/ui/custom-screen-entry-draft.test.ts",
         "tests/vitest/ui/custom-screen-entry-presentation-media.test.ts",
+        "tests/vitest/ui/media-picker.test.tsx",
         "tests/vitest/ui/custom-screen-entry-navigation-guard.test.tsx",
         "tests/vitest/ui/custom-screen-entry-navigation-authority.test.tsx",
         "tests/vitest/customScreens/screenEntryPresentationOverrides.test.ts",
@@ -10722,6 +10849,19 @@ const LEAVES = Object.freeze(
         ),
         command("entryRestyleFamily", vitestCommand(ENTRY_RESTYLE_VITEST_FILES)),
         command(
+          "mediaPickerIsolated",
+          vitestCommand(["tests/vitest/ui/media-picker.test.tsx"])
+        ),
+        ...isolatedTestCommands(
+          "contentEntryEditorIsolated",
+          CONTENT_ENTRY_EDITOR_VITEST_FILES,
+          "vitest"
+        ),
+        command(
+          "contentEntryEditorFamily",
+          vitestCommand(CONTENT_ENTRY_EDITOR_VITEST_FILES)
+        ),
+        command(
           "l03TestNames",
           "node _docs/_workflows/task-540-test-name-contract.mjs --mode=final --family=customScreensClient"
         ),
@@ -10754,6 +10894,7 @@ const LEAVES = Object.freeze(
             "tests/vitest/ui/custom-screen-records.test.tsx",
             "tests/vitest/ui-integration/custom-screen-entries-restyle.test.tsx",
             "tests/vitest/ui-integration/custom-screen-preview-owner.test.tsx",
+            "tests/vitest/ui/media-picker.test.tsx",
           ])
         ),
         command("l04ReadOnlyConsumerVitest", vitestCommand(L04_FINAL_CONSUMER_VITEST_FILES)),
@@ -11008,12 +11149,6 @@ const LEAVES = Object.freeze(
         "docs/guide/coderso/custom-screens-list-and-builder.md",
         "docs/develop/content-and-widgets.md",
       ]),
-      readOnlyConsumerFiles: Object.freeze([
-        "core/admin/ui/entries/FieldRenderer.tsx",
-        "core/admin/ui/media/MediaPicker.tsx",
-        "tests/vitest/ui/entry-field-relation-interaction.test.tsx",
-        "tests/vitest/ui/entry-field-relation-option-identity.test.tsx",
-      ]),
       commands: Object.freeze([
         command("lintTypes", LINT_TYPES),
         command("lint", LINT),
@@ -11120,6 +11255,8 @@ const TASK_540_READ_ONLY_CONSUMER_OWNERS = Object.freeze(
 // Owner is the closure leaf: it lands last, so it is the leaf that would have to split any
 // of these before the family can close. Provenance is recorded per group because it is the
 // only thing that tells a later reader whether a path is family work or a passenger.
+// The generic content Entry Editor delta is intentionally absent: the final single-writer
+// audit assigns its exact production, runnable-test, and support sets to 540-04-L03.
 const TASK_540_LINE_LIMIT_ACCOUNTABLE_OWNER = CLOSURE_LEAF_ID;
 const TASK_540_LINE_LIMIT_ACCOUNTABLE_PATHS = Object.freeze([
   // Schema split behind a thin facade (this family's blocker remediation, commit e6bbee69).
@@ -11145,57 +11282,6 @@ const TASK_540_LINE_LIMIT_ACCOUNTABLE_PATHS = Object.freeze([
   "core/db/tables/theming.ts",
   "core/db/tables/widgets.ts",
   "tests/unit/db/schemaTableFacade.test.ts",
-  // EntryEditor split and the entry-hydration race fix (commits 48811f0a, 5908a794, ca6c3725).
-  "core/admin/ui/entries/EntryEditor.tsx",
-  "core/admin/ui/entries/EntryFieldSections.tsx",
-  "core/admin/ui/entries/EntryTitleSlugFields.tsx",
-  "core/admin/ui/entries/entryFieldGroups.ts",
-  "core/admin/ui/entries/entryMetadataUpdate.ts",
-  "core/admin/ui/entries/entrySlug.ts",
-  "core/admin/ui/entries/entryValueMapping.ts",
-  "core/admin/ui/entries/useEntryRelationTargets.ts",
-  "core/admin/ui/entries/useEntryRuntimePreview.ts",
-  "tests/vitest/ui-integration/entry-editor-hydration-race.test.tsx",
-  // The same entry editor, continued by the read-only audit's fixes, merged as cf2c8661 from a
-  // parallel worktree (commits b150c59e, d58ea1ef, c32c5fc1, b561425d, b005d45c, 80425e7c,
-  // 3445bf9a). EntryMetadataPanel.tsx predates the family -- 0b78aad0 created it -- but the
-  // merge edited it, which is what pulled it into the touched-path authority.
-  //
-  // Owner is the closure leaf for the same reason as every path above: no leaf WROTE these,
-  // so allowedFiles would hand an implementation agent write access to files outside its
-  // scope. In particular they are NOT 540-04-L03's ("Guard Entry Drafts And Subscribe Related
-  // Caches"): that leaf's surface is the SCREEN entry editor under
-  // core/admin/ui/custom-screens/**, a different editor from the content-type entry editor
-  // under core/admin/ui/entries/**, and every existing sibling of these files is accounted
-  // for here rather than there.
-  "core/admin/ui/entries/EntryFieldsPlaceholder.tsx",
-  "core/admin/ui/entries/EntryMetadataPanel.tsx",
-  "core/admin/ui/entries/useEntryEditTracker.ts",
-  "tests/vitest/ui-integration/entry-editor-submit-authority.test.tsx",
-  "tests/vitest/ui-integration/support/entryEditorHarness.tsx",
-  "tests/vitest/ui-integration/support/entryEditorLaneFixture.tsx",
-  // The same entry editor again, from the pre-closure read-only audit's three HIGH findings:
-  // the linked title/slug duplication, snapshot authority for mutation responses, and the
-  // missing router blocker (commits e38f4930, f7f64676, 3339202b). Two new modules extracted
-  // out of EntryEditor.tsx, one new lane that mounts it under the real AdminRouterProvider,
-  // and the three sibling suites the guard's optional-router lookup obliged to declare it.
-  // Owner is the closure leaf for exactly the reason given above: no leaf WROTE these, and
-  // they belong to the content-type entry editor under core/admin/ui/entries/**, not to
-  // 540-04-L03's screen entry editor.
-  "core/admin/ui/entries/entryLinkedFields.ts",
-  "core/admin/ui/entries/useEntrySnapshotAuthority.ts",
-  "tests/vitest/ui-integration/entry-editor-navigation-guard.test.tsx",
-  "tests/vitest/ui-integration/entry-editor-restyle.test.tsx",
-  "tests/vitest/ui/entry-editor-shell-wave.test.tsx",
-  "tests/vitest/ui/entry-editor-visibility-groups.test.tsx",
-  // The entry METADATA panel, from the same pre-closure audit's finding 4: term creation is
-  // asynchronous, and both add flows committed a selection formed before the request over
-  // whatever the user chose during it. One new module extracted rather than inlined, so the
-  // rule about which decision still applies is stated once and testable on its own. Owner is
-  // the closure leaf for the reason given above, and for the same reason as
-  // EntryMetadataPanel.tsx itself, which is already accountable here.
-  "core/admin/ui/entries/useEntryTaxonomyIntent.ts",
-  "tests/vitest/ui/entry-metadata-panel.test.tsx",
   // Connection-target / pooler work and the backup scheduler it moved (commits e83ebc99, 369cd7ee).
   "core/db/client.ts",
   "core/db/connectionTargets.ts",
@@ -11276,28 +11362,11 @@ const TASK_540_LINE_LIMIT_ACCOUNTABLE_PATHS = Object.freeze([
   // 600 lines).
   "core/db/driverEndpoints.ts",
   "tests/vitest/server/databaseDriverEndpoints.test.ts",
-  // The quick-create repair (commit 57b2a603) and every surface it touched: the drawer that
-  // now renders the required fields the schema it creates against declares, the drawer lane
-  // it updated, the lane it added for that behaviour, and the wave suite it took the
-  // superseded assertions out of. None of them is leaf work. The nearest leaf, 540-04-L03,
-  // writes core/admin/ui/custom-screens/** -- the SCREEN entry editor, a different component
-  // from the content-type entry editor under core/admin/ui/entries/** -- so these are
-  // accountable to the closure leaf exactly like EntryEditor.tsx a few groups above.
-  "core/admin/ui/entries/EntryCreateDrawer.tsx",
-  "tests/vitest/ui/drawers.test.tsx",
-  "tests/vitest/ui/entry-create-drawer-required-fields.test.tsx",
-  "tests/vitest/ui/entry-page-support-wave.test.tsx",
   // The gate's own multi-offender guard (commit 4607727f): the lane that plants ownerless
   // untracked probes and holds --check-task-family-line-limit to naming all of them, and
   // their lengths, in one run. Family-authored machinery over the family's own gate, which
   // no leaf writes.
   "tests/unit/workflows/task540LineLimitOffenderReport.test.ts",
-  // FieldRenderer's own coverage, moved out of entry-page-support-wave.test.tsx once the
-  // registration above turned that suite's 1,029 lines into the family's one remaining
-  // line-limit violation. A pure move of two tests along the subject seam -- the field
-  // control itself, rather than the entry and page support surfaces around it -- so it is
-  // accountable to the same owner as the suite it came from.
-  "tests/vitest/ui/entry-field-renderer-wave.test.tsx",
   // The vitest lane's per-test deadline repair: four suites that deferred an application
   // module graph into a test body with `await import(...)`, so the first test to touch the
   // graph absorbed its whole transform inside its own `testTimeout` and blew the lane budget
@@ -11332,15 +11401,18 @@ const TASK_540_LINE_LIMIT_ACCOUNTABLE_PATHS = Object.freeze([
   "tests/vitest/ui/section-editor-wave.test.tsx",
   "tests/vitest/ui/support/sectionEditorHarness.tsx",
   // The final entry-value boundary repair: JSON-safe entry payloads and exact media-picker
-  // values now have standalone contract owners, while the screen draft and editor adapter
-  // consume those contracts without coercing malformed values. The focused media-picker
-  // lane pins the fail-closed behaviour. These are pre-closure audit repairs, not writable
-  // leaf surfaces, so the closure leaf remains their line-limit owner.
+  // values now have standalone contract owners, while the screen draft consumes those
+  // contracts without coercing malformed values. L03 owns the shared MediaPicker producer
+  // and its focused test through normal writable authority, so neither belongs in this
+  // accountability-only registry. The Page adapter below was touched by an intermediate
+  // repair but is restored byte-for-byte to the verified pre-family baseline; it remains
+  // listed only so the physical-line gate accounts for every historically touched path.
+  // The other paths in this group are pre-closure audit repairs with no writable leaf, so
+  // the closure leaf remains their line-limit owner.
   "core/admin/services/entryData.ts",
   "core/admin/ui/custom-screens/customScreenEntryDraft.ts",
   "core/admin/ui/media/mediaPickerValue.ts",
   "core/admin/ui/pages/editorControls/MediaPickerControl.tsx",
-  "tests/vitest/ui/media-picker.test.tsx",
   // Release and supply-chain regressions added while clearing the final security audit.
   // They exercise repository-wide release machinery and patched transitive tooling rather
   // than any implementation leaf, so they share the closure leaf's accountability.
@@ -11363,24 +11435,18 @@ const TASK_540_LINE_LIMIT_ACCOUNTABLE_PATHS = Object.freeze([
 ]);
 // The tripwire proves, hermetically, that the gate really rejects the specific accountable
 // paths closest to the limit -- so it has to name the ones actually closest. Measured
-// against the registry: the restyle suite is at EXACTLY 1,000 and the related-entries suite
-// at 999, i.e. zero and one line of headroom, while backupService.ts (990) and footer.tsx
-// (989) have ten and eleven. The first two were missing and the comment here mis-stated
-// backupService.ts's headroom as nine.
-//
-// EntryEditor.tsx joins them at 994, six lines of headroom, having crossed the coverage
-// threshold under this session's entry-editor fixes (5bea73af, 865e5f37): it stood at 984 --
-// one line outside the derived at-risk set -- and the two comments those commits added to it
-// took it inside. Naming it here is the response the coverage test asks for; trimming those
-// comments back under the threshold instead would only restore the same one-line margin.
+// against the registry, the restyle and related-entries suites are tied closest to the
+// limit, while backupService.ts and footer.tsx remain inside the same at-risk window. The
+// first two were missing when this tripwire was introduced. Exact line counts deliberately
+// live only in the derived coverage test and line-limit report so this prose cannot rot.
 //
 // Ordered most-urgent first, and every entry stays: 1,000 is an inclusive pass, so none is
-// in violation and none is split here. Splitting the two zero-headroom suites would be a
+// in violation and none is split here. Splitting the two one-line-headroom suites would be a
 // change to frozen closure machinery for files that already pass -- the restyle suite is a
 // pinned two-file family in task-540-test-name-contract.mjs (tests 17, fileTests [13, 4],
 // per-file name hashes, declaration hash), carries 10 pinned references in this workflow
 // and 17 in the family task documents, and both suites are counted in the pinned
-// "exactly 82 files: 64 Vitest + 18 Bun" closure matrix. Buying one line of headroom is not
+// "exactly 96 files: 78 Vitest + 18 Bun" closure matrix. Buying one line of headroom is not
 // worth re-pinning all of that mid-closure. What was actually missing was proof that the
 // gate bites on them, which is what this list provides.
 //
@@ -11394,7 +11460,7 @@ const TASK_540_LINE_LIMIT_TRIPWIRE_PATHS = Object.freeze([
   "core/widgets/core/footer.tsx",
 ]);
 const TASK_540_LINE_LIMIT_ACCOUNTABLE_PATHS_SHA256 =
-  "6340c626f401154236c46cc9f5b8be9fb07156fc34a003f9da2f3a3c4c937f39";
+  "8dafd267fb128cf759bae3d08f923659133797ae8cc9092e5c1cfca0a31a603f";
 const TASK_540_LINE_LIMIT_ACCOUNTABLE_OWNERS = Object.freeze(
   TASK_540_LINE_LIMIT_ACCOUNTABLE_PATHS.map((path) =>
     Object.freeze({ path, owner: TASK_540_LINE_LIMIT_ACCOUNTABLE_OWNER })
@@ -11420,7 +11486,7 @@ if (
   // Must be the leaf that lands LAST, which is the whole rationale for the choice: it is
   // the only leaf still able to split one of these before the family closes.
   TASK_540_LINE_LIMIT_ACCOUNTABLE_OWNER !== LEAF_ORDER[LEAF_ORDER.length - 1] ||
-  TASK_540_LINE_LIMIT_ACCOUNTABLE_PATHS.length !== 132 ||
+  TASK_540_LINE_LIMIT_ACCOUNTABLE_PATHS.length !== 102 ||
   new Set(TASK_540_LINE_LIMIT_ACCOUNTABLE_PATHS).size !==
     TASK_540_LINE_LIMIT_ACCOUNTABLE_PATHS.length ||
   TASK_540_LINE_LIMIT_ACCOUNTABLE_PATHS.some(
@@ -11604,9 +11670,11 @@ const MODULARITY_REPAIR_ALLOWED_FILES = deepFreezeExact({
     "core/admin/ui/custom-screens/customScreenEntryRuntime.ts",
     "core/admin/ui/custom-screens/hooks/useScreenEntryHydration.ts",
     "core/admin/ui/custom-screens/hooks/useScreenEntryPresentationMedia.ts",
+    "core/admin/ui/media/MediaPicker.tsx",
     "tests/vitest/ui-integration/custom-screen-entry-editor-restyle.test.tsx",
     "tests/vitest/ui/custom-screen-entry-draft.test.ts",
     "tests/vitest/ui/custom-screen-entry-presentation-media.test.ts",
+    "tests/vitest/ui/media-picker.test.tsx",
     "tests/vitest/ui/custom-screen-entry-navigation-guard.test.tsx",
     "tests/vitest/ui/custom-screen-entry-navigation-authority.test.tsx",
     "tests/vitest/ui/support/customScreenEntryNavigationHarness.tsx",
@@ -12705,6 +12773,31 @@ function assertTask540L04EffectiveRepairOwnerContract() {
 function assertTask540L03GateIsolationContract() {
   const leaf = LEAF_BY_ID.get("540-04-L03");
   if (!leaf) throw new Error("TASK-540 L03 isolation owner is missing");
+  const mediaPickerOwnedPaths = [
+    "core/admin/ui/media/MediaPicker.tsx",
+    "tests/vitest/ui/media-picker.test.tsx",
+  ];
+  if (
+    CONTENT_ENTRY_EDITOR_ALLOWED_FILES.some(
+      (path) =>
+        !leaf.allowedFiles.includes(path) ||
+        JSON.stringify(task540LineLimitOwnerIds(path)) !== JSON.stringify(["540-04-L03"]) ||
+        TASK_540_LINE_LIMIT_ACCOUNTABLE_PATHS.includes(path) ||
+        task540ReadOnlyConsumerPaths.includes(path)
+    ) ||
+    CONTENT_ENTRY_EDITOR_VITEST_FILES.some(
+      (path) => !TARGET_VITEST_FILES.includes(path) || !SOURCE_OWNER_TEST_FILES.includes(path)
+    ) ||
+    mediaPickerOwnedPaths.some(
+      (path) =>
+        !leaf.allowedFiles.includes(path) ||
+        JSON.stringify(task540LineLimitOwnerIds(path)) !== JSON.stringify(["540-04-L03"]) ||
+        TASK_540_LINE_LIMIT_ACCOUNTABLE_PATHS.includes(path) ||
+        task540ReadOnlyConsumerPaths.includes(path)
+    )
+  ) {
+    throw new Error("TASK-540 L03 Entry/media single-writer contract failed");
+  }
   const cases = [
     { id: "isolatedCacheBus", files: [...CACHE_BUS_VITEST_FILES] },
     {
@@ -12721,6 +12814,11 @@ function assertTask540L03GateIsolationContract() {
       files: ["tests/vitest/ui/custom-screen-entry-presentation-media.test.ts"],
     },
     { id: "entryRestyleFamily", files: [...ENTRY_RESTYLE_VITEST_FILES] },
+    { id: "mediaPickerIsolated", files: ["tests/vitest/ui/media-picker.test.tsx"] },
+    {
+      id: "contentEntryEditorFamily",
+      files: [...CONTENT_ENTRY_EDITOR_VITEST_FILES],
+    },
     {
       id: "expandedL03Vitest",
       files: [
@@ -12738,6 +12836,7 @@ function assertTask540L03GateIsolationContract() {
         "tests/vitest/ui/custom-screen-records.test.tsx",
         "tests/vitest/ui-integration/custom-screen-entries-restyle.test.tsx",
         "tests/vitest/ui-integration/custom-screen-preview-owner.test.tsx",
+        "tests/vitest/ui/media-picker.test.tsx",
       ],
     },
     {
@@ -12925,9 +13024,11 @@ function assertTask540ModularityRepairContract() {
         ["540-03-L01", "editorSurfaceDeadCode", 1, "vitest"],
         ["540-04-L01", "entriesClientIsolated", 3, "vitest"],
         ["540-04-L01", "mediaClientIsolated", 1, "vitest"],
+        ["540-04-L01", "contentTypesClientIsolated", 1, "vitest"],
         ["540-04-L03", "cacheBusPartitionIsolated", 3, "isolatedCacheBus"],
         ["540-04-L03", "customScreensClientIsolated", 2, "customScreensClientFamily"],
         ["540-04-L03", "entryNavigationIsolated", 2, "entryNavigationFamily"],
+        ["540-04-L03", "mediaPickerIsolated", 1, "expandedL03Vitest"],
         ["540-04-L04", "screenEditorPageIsolated", 4, "vitest"],
         ["540-05-L02", "assistantPanelIsolated", 2, "vitest"],
       ].every(([leafId, prefix, expected, combinedId]) => {
@@ -16431,6 +16532,11 @@ function requireExactFullValidationResultShape(result, label) {
 }
 
 function requireFullValidation(result, label) {
+  if (result?.pass !== true) {
+    throw new Error(
+      label + ": full command receipt mismatch (" + fullValidationMismatchDetail(result) + ")"
+    );
+  }
   requireExactFullValidationResultShape(result, label);
   if (
     result.commands.some((receipt, index) => {
@@ -21752,13 +21858,41 @@ function replaceCorrectiveFamilyPin(source, family, nextSha256, label) {
   );
 }
 
-function neutralizeCorrectiveDeclarationPins(source, label) {
-  const families = [...new Set(Object.values(CORRECTIVE_DECLARATION_REPIN_FAMILIES).flat())].sort();
+function neutralizeCorrectiveDeclarationPins(source, families, label) {
+  if (!Array.isArray(families)) {
+    throw new Error(label + ": corrective declaration-pin projection is invalid");
+  }
+  const allowedFamilies = new Set(
+    Object.values(CORRECTIVE_DECLARATION_REPIN_FAMILIES).flat()
+  );
+  const exactFamilies = [...new Set(families)].sort();
+  if (
+    exactFamilies.length !== families.length ||
+    exactFamilies.some((family) => !allowedFamilies.has(family))
+  ) {
+    throw new Error(label + ": corrective declaration-pin projection is invalid");
+  }
   let normalized = source;
-  for (const family of families) {
+  for (const family of exactFamilies) {
     normalized = replaceCorrectiveFamilyPin(normalized, family, "0".repeat(64), label).source;
   }
   return normalized;
+}
+
+function requireCorrectivePinOnlyMutation(beforeSource, afterSource, projectSource, label) {
+  if (
+    typeof beforeSource !== "string" ||
+    typeof afterSource !== "string" ||
+    typeof projectSource !== "function"
+  ) {
+    throw new Error(label + ": corrective pin-only mutation input is invalid");
+  }
+  if (
+    projectSource(beforeSource, label + ":before") !==
+    projectSource(afterSource, label + ":after")
+  ) {
+    throw new Error(label + ": corrective mutation changed bytes outside its authorized pin");
+  }
 }
 
 function replaceCorrectiveL04ModulePin(source, nextSha256, label) {
@@ -21831,6 +21965,45 @@ async function captureCorrectiveFamilyEvidence(family, mode, label) {
     throw new Error(label + ": corrective family scanner result is malformed");
   }
   return result.evidence[0];
+}
+
+function requireCorrectiveAllFamilyResult(result, label) {
+  const expectedFamilies = [...Object.keys(TEST_SPLIT_FAMILY_COUNTS), "r01Schema", "r01Routes"];
+  const resultShapeIsExact =
+    result !== null &&
+    typeof result === "object" &&
+    !Array.isArray(result) &&
+    Object.keys(result).sort().join(",") === "evidence,mode,pass";
+  const actualFamilies = resultShapeIsExact && Array.isArray(result.evidence)
+    ? result.evidence.map((entry) => entry?.family)
+    : [];
+  if (
+    !resultShapeIsExact ||
+    result.pass !== true ||
+    result.mode !== "current" ||
+    actualFamilies.length !== expectedFamilies.length ||
+    new Set(actualFamilies).size !== actualFamilies.length ||
+    !sameUniqueSet(actualFamilies, expectedFamilies)
+  ) {
+    throw new Error(label + ": full current protected-test result is invalid");
+  }
+  return result;
+}
+
+async function requireCorrectiveAllFamilyContract(label) {
+  const { stdout, stderr } = await execFileAsync(
+    "/usr/bin/node",
+    [ROOT + "/" + TEST_NAME_CONTRACT_WORKFLOW_REL, "--mode=current", "--family=all"],
+    { cwd: ROOT, encoding: "utf8", maxBuffer: 8 * 1024 * 1024 }
+  );
+  if (stderr.trim()) throw new Error(label + ": full current scanner emitted stderr");
+  let result;
+  try {
+    result = JSON.parse(stdout);
+  } catch {
+    throw new Error(label + ": full current scanner output is invalid");
+  }
+  return requireCorrectiveAllFamilyResult(result, label);
 }
 
 function correctiveTestRoot(expression) {
@@ -22151,6 +22324,67 @@ function projectCorrectiveTestSource(source, relativePath, allowedNames, label) 
   return projected;
 }
 
+function requireCorrectiveTestSourceProjectionPair(
+  baseline,
+  current,
+  relativePath,
+  names,
+  label
+) {
+  const currentByName = new Map(
+    correctiveTestDeclarationRanges(current, relativePath, label).map((record) => [
+      record.name,
+      record,
+    ])
+  );
+  const baselineByName = new Map(
+    correctiveTestDeclarationRanges(baseline, relativePath, label + ":baseline").map(
+      (record) => [record.name, record]
+    )
+  );
+  if (
+    names.some(
+      (name) => {
+        const baselineRecord = baselineByName.get(name);
+        const currentRecord = currentByName.get(name);
+        return (
+          !currentRecord ||
+          !baselineRecord ||
+          (JSON.stringify(baselineRecord.statements) !==
+            JSON.stringify(currentRecord.statements) &&
+            !isSafeCorrectiveStatementExtension(baselineRecord, currentRecord))
+        );
+      }
+    )
+  ) {
+    throw new Error(label + ": corrective declaration weakened an existing statement");
+  }
+  if (
+    projectCorrectiveTestSource(current, relativePath, names, label) !==
+    projectCorrectiveTestSource(baseline, relativePath, names, label + ":baseline")
+  ) {
+    throw new Error(label + ": test bytes changed outside authorized declarations: " + relativePath);
+  }
+}
+
+async function captureCorrectiveProtectedTestBaseline(label) {
+  if (correctiveProtectedTestBaselineSources !== null) {
+    throw new Error(label + ": corrective protected-test baseline was already captured");
+  }
+  const files = [
+    ...new Set(
+      Object.values(CORRECTIVE_TEST_DECLARATIONS)
+        .flat()
+        .map(({ file }) => file)
+    ),
+  ].sort();
+  const entries = await Promise.all(
+    files.map(async (relativePath) => [relativePath, await readFile(ROOT + "/" + relativePath, "utf8")])
+  );
+  correctiveProtectedTestBaselineSources = Object.freeze(Object.fromEntries(entries));
+  return files.length;
+}
+
 async function requireCorrectiveTestSourceProjection(leafId, label) {
   const predecessorLeaves = CORRECTIVE_TEST_PREDECESSOR_LEAVES[leafId];
   if (!predecessorLeaves) throw new Error(label + ": corrective predecessor order is missing");
@@ -22164,45 +22398,36 @@ async function requireCorrectiveTestSourceProjection(leafId, label) {
         .map(({ file }) => file)
     ),
   ].sort();
+  if (
+    correctiveProtectedTestBaselineSources === null ||
+    !sameUniqueSet(Object.keys(correctiveProtectedTestBaselineSources), allFiles)
+  ) {
+    throw new Error(label + ": corrective protected-test startup baseline is missing");
+  }
   for (const relativePath of allFiles) {
     const names = allowedDeclarations
       .filter(({ file }) => file === relativePath)
       .map(({ name }) => name);
-    const [current, head] = await Promise.all([
-      readFile(ROOT + "/" + relativePath, "utf8"),
-      git(["show", "HEAD:" + relativePath]),
-    ]);
-    const currentByName = new Map(
-      correctiveTestDeclarationRanges(current, relativePath, label).map((record) => [
-        record.name,
-        record,
-      ])
+    const current = await readFile(ROOT + "/" + relativePath, "utf8");
+    requireCorrectiveTestSourceProjectionPair(
+      correctiveProtectedTestBaselineSources[relativePath],
+      current,
+      relativePath,
+      names,
+      label
     );
-    const headByName = new Map(
-      correctiveTestDeclarationRanges(head, relativePath, label + ":HEAD").map((record) => [
-        record.name,
-        record,
-      ])
-    );
-    if (
-      names.some(
-        (name) =>
-          !currentByName.has(name) ||
-          !headByName.has(name) ||
-          !isSafeCorrectiveStatementExtension(headByName.get(name), currentByName.get(name))
-      )
-    ) {
-      throw new Error(label + ": corrective declaration weakened an existing statement");
-    }
-    if (
-      projectCorrectiveTestSource(current, relativePath, names, label) !==
-      projectCorrectiveTestSource(head, relativePath, names, label + ":HEAD")
-    ) {
-      throw new Error(
-        label + ": test bytes changed outside authorized declarations: " + relativePath
-      );
-    }
   }
+}
+
+async function assertTask540CorrectiveProtectedTestBaselineContract() {
+  const files = await captureCorrectiveProtectedTestBaseline(
+    "TASK-540 corrective protected-test baseline self-test"
+  );
+  await requireCorrectiveTestSourceProjection(
+    "540-04-L03",
+    "TASK-540 corrective protected-test current baseline self-test"
+  );
+  return files + 1;
 }
 
 function assertTask540CorrectiveProtectedTestRepinContract() {
@@ -22219,6 +22444,11 @@ function assertTask540CorrectiveProtectedTestRepinContract() {
   const restored = replaceCorrectiveFamilyPin(changed.source, "fixture", sha("1"), "fixture");
   let duplicateRejected = false;
   let evidenceRejected = false;
+  let outsidePinRejected = false;
+  let nonCurrentPinRejected = false;
+  let currentResultRejections = 0;
+  let projectionOutsideRejected = false;
+  let projectionWeakeningRejected = false;
   try {
     replaceCorrectiveFamilyPin(source + source, "fixture", sha("2"), "duplicate");
   } catch {
@@ -22232,6 +22462,120 @@ function assertTask540CorrectiveProtectedTestRepinContract() {
     );
   } catch {
     evidenceRejected = true;
+  }
+  const projectFixturePin = (candidate, projectionLabel) =>
+    replaceCorrectiveFamilyPin(candidate, "fixture", sha("0"), projectionLabel).source;
+  requireCorrectivePinOnlyMutation(
+    source,
+    changed.source,
+    projectFixturePin,
+    "TASK-540 corrective pin-only fixture"
+  );
+  try {
+    requireCorrectivePinOnlyMutation(
+      source,
+      changed.source + "// unrelated mutation\n",
+      projectFixturePin,
+      "TASK-540 corrective outside-pin fixture"
+    );
+  } catch {
+    outsidePinRejected = true;
+  }
+  const twoFamilySource = source.replace(
+    "});\n",
+    [
+      "  sibling: Object.freeze({",
+      '    declarationSha256: "' + sha("3") + '",',
+      "  }),",
+      "});",
+      "",
+    ].join("\n")
+  );
+  const twoFamilyChanged = replaceCorrectiveFamilyPin(
+    twoFamilySource,
+    "fixture",
+    sha("2"),
+    "two-family fixture"
+  ).source;
+  try {
+    requireCorrectivePinOnlyMutation(
+      twoFamilySource,
+      replaceCorrectiveFamilyPin(
+        twoFamilyChanged,
+        "sibling",
+        sha("4"),
+        "two-family sibling"
+      ).source,
+      projectFixturePin,
+      "TASK-540 corrective non-current pin fixture"
+    );
+  } catch {
+    nonCurrentPinRejected = true;
+  }
+  const currentFamilies = [...Object.keys(TEST_SPLIT_FAMILY_COUNTS), "r01Schema", "r01Routes"];
+  const currentResult = {
+    pass: true,
+    mode: "current",
+    evidence: currentFamilies.map((family) => ({ family })),
+  };
+  requireCorrectiveAllFamilyResult(currentResult, "TASK-540 corrective current-result fixture");
+  for (const invalid of [
+    { ...currentResult, mode: "capture" },
+    { ...currentResult, evidence: currentResult.evidence.slice(1) },
+    { ...currentResult, evidence: [...currentResult.evidence, currentResult.evidence[0]] },
+  ]) {
+    try {
+      requireCorrectiveAllFamilyResult(invalid, "TASK-540 corrective invalid-current fixture");
+    } catch {
+      currentResultRejections += 1;
+    }
+  }
+  const projectionName = "an inline content edit surfaces the unsaved-changes affordance";
+  const projectionBaseline = [
+    'import { stable } from "./approved-current-baseline";',
+    'test("' + projectionName + '", () => { expect(stable).toBeDefined(); });',
+    'test("already-renamed-required-regression", () => { expect(true).toBe(true); });',
+    "",
+  ].join("\n");
+  const projectionExtension = projectionBaseline.replace(
+    "expect(stable).toBeDefined();",
+    "expect(stable).toBeDefined(); expect(true).toBe(true);"
+  );
+  requireCorrectiveTestSourceProjectionPair(
+    projectionBaseline,
+    projectionBaseline,
+    "tests/vitest/projection-fixture.test.ts",
+    [projectionName],
+    "TASK-540 corrective identical startup-baseline fixture"
+  );
+  requireCorrectiveTestSourceProjectionPair(
+    projectionBaseline,
+    projectionExtension,
+    "tests/vitest/projection-fixture.test.ts",
+    [projectionName],
+    "TASK-540 corrective safe startup-baseline fixture"
+  );
+  try {
+    requireCorrectiveTestSourceProjectionPair(
+      projectionBaseline,
+      projectionBaseline.replace("expect(true).toBe(true)", "expect(false).toBe(true)"),
+      "tests/vitest/projection-fixture.test.ts",
+      [projectionName],
+      "TASK-540 corrective outside-declaration startup-baseline fixture"
+    );
+  } catch {
+    projectionOutsideRejected = true;
+  }
+  try {
+    requireCorrectiveTestSourceProjectionPair(
+      projectionBaseline,
+      projectionBaseline.replace("expect(stable).toBeDefined();", ""),
+      "tests/vitest/projection-fixture.test.ts",
+      [projectionName],
+      "TASK-540 corrective weakened startup-baseline fixture"
+    );
+  } catch {
+    projectionWeakeningRejected = true;
   }
   const testBefore = 'test("allowed", () => { const value = 1; expect(value).toBe(1); });\n';
   const testAfter =
@@ -22289,6 +22633,11 @@ function assertTask540CorrectiveProtectedTestRepinContract() {
     restored.source !== source ||
     !duplicateRejected ||
     !evidenceRejected ||
+    !outsidePinRejected ||
+    !nonCurrentPinRejected ||
+    currentResultRejections !== 3 ||
+    !projectionOutsideRejected ||
+    !projectionWeakeningRejected ||
     projectCorrectiveTestSource(
       testBefore,
       "tests/vitest/fixture.test.ts",
@@ -22315,7 +22664,7 @@ function assertTask540CorrectiveProtectedTestRepinContract() {
   ) {
     throw new Error("TASK-540 corrective protected-test re-pin self-test failed");
   }
-  return 17;
+  return 28;
 }
 
 async function rePinCorrectiveProtectedTests(leaf, label) {
@@ -22334,13 +22683,6 @@ async function rePinCorrectiveProtectedTests(leaf, label) {
     TEST_NAME_CONTRACT_WORKFLOW_REL,
     label
   );
-  const headTestSource = await git(["show", "HEAD:" + TEST_NAME_CONTRACT_WORKFLOW_REL]);
-  if (
-    neutralizeCorrectiveDeclarationPins(beforeTestSource, label) !==
-    neutralizeCorrectiveDeclarationPins(headTestSource, label + ":HEAD")
-  ) {
-    throw new Error(label + ": test-name workflow differs from HEAD outside corrective pins");
-  }
   await requireCorrectiveTestSourceProjection(leaf.id, label + ":test-projection");
 
   const captures = await Promise.all(
@@ -22372,6 +22714,13 @@ async function rePinCorrectiveProtectedTests(leaf, label) {
       label
     ).source;
   }
+  requireCorrectivePinOnlyMutation(
+    beforeTestSource,
+    afterTestSource,
+    (source, projectionLabel) =>
+      neutralizeCorrectiveDeclarationPins(source, families, projectionLabel),
+    label + ":test-name workflow"
+  );
   const mutations = [
     Object.freeze({
       relativePath: TEST_NAME_CONTRACT_WORKFLOW_REL,
@@ -22383,13 +22732,6 @@ async function rePinCorrectiveProtectedTests(leaf, label) {
 
   if (leaf.id === "540-04-L04") {
     const beforeWorkflowSource = requireExactRollbackSnapshotUtf8(snapshot, WORKFLOW_REL, label);
-    const headWorkflowSource = await git(["show", "HEAD:" + WORKFLOW_REL]);
-    if (
-      replaceCorrectiveL04ModulePin(beforeWorkflowSource, "0".repeat(64), label).source !==
-      replaceCorrectiveL04ModulePin(headWorkflowSource, "0".repeat(64), label + ":HEAD").source
-    ) {
-      throw new Error(label + ": implementation workflow differs from HEAD outside the L04 pin");
-    }
     const moduleSource = await readFile(ROOT + "/" + CORRECTIVE_L04_MODULE_REPIN_PATH, "utf8");
     const moduleSha256 = task540CanonicalModuleSha256(
       parseTask540TsxSource(moduleSource, CORRECTIVE_L04_MODULE_REPIN_PATH, label)
@@ -22399,6 +22741,13 @@ async function rePinCorrectiveProtectedTests(leaf, label) {
       moduleSha256,
       label
     ).source;
+    requireCorrectivePinOnlyMutation(
+      beforeWorkflowSource,
+      afterWorkflowSource,
+      (source, projectionLabel) =>
+        replaceCorrectiveL04ModulePin(source, "0".repeat(64), projectionLabel).source,
+      label + ":implementation workflow"
+    );
     mutations.push(
       Object.freeze({
         relativePath: WORKFLOW_REL,
@@ -22431,6 +22780,7 @@ async function rePinCorrectiveProtectedTests(leaf, label) {
           throw new Error(label + ": final declaration pin differs from capture");
         }
       }
+      await requireCorrectiveAllFamilyContract(label + ":full-current-test-contract");
       if (leaf.id === "540-04-L04") {
         const { stderr } = await execFileAsync(
           "/usr/bin/node",
@@ -27510,21 +27860,21 @@ async function assertTask540LocalCommandRunnerContract() {
   }
 
   const fullTestIndex = FULL_GATE_COMMANDS.findIndex(({ id }) => id === "fullTest");
+  const fullValidationOutputLimitCommands = Object.freeze(
+    syntheticFullValidationCommands.slice(0, fullTestIndex + 1).map((receipt) =>
+      Object.freeze({
+        ...receipt,
+        status: receipt.id === "fullTest" ? 125 : 0,
+        outputLimitExceeded: receipt.id === "fullTest",
+      })
+    )
+  );
   const fullValidationOutputLimitFixture = Object.freeze({
+    ...syntheticFullValidationResult,
     pass: false,
     summary: "synthetic full-validation output limit",
     errors: Object.freeze(["synthetic full-validation output limit"]),
-    commands: FULL_GATE_COMMANDS.slice(0, fullTestIndex + 1).map((spec) =>
-      Object.freeze({
-        id: spec.id === "fullTest" ? "untrusted-receipt-id" : spec.id,
-        command: spec.command,
-        status: spec.id === "fullTest" ? 125 : 0,
-        timedOut: false,
-        outputLimitExceeded: spec.id === "fullTest",
-        repository: Object.freeze({ unchanged: true }),
-      })
-    ),
-    database: Object.freeze({ configured: true, reachable: true, selectOne: 1 }),
+    commands: fullValidationOutputLimitCommands,
   });
   const expectedFullValidationFailureDetail =
     "id=fullTest,status=125,timedOut=false,outputLimitExceeded=true,repositoryUnchanged=true";
@@ -27534,7 +27884,10 @@ async function assertTask540LocalCommandRunnerContract() {
   } catch (error) {
     fullValidationFailureMessagePass =
       error instanceof Error &&
-      error.message === "synthetic-full-validation result: object keys are not exact";
+      error.message ===
+        "synthetic-full-validation: full command receipt mismatch (" +
+          expectedFullValidationFailureDetail +
+          ")";
   }
   const fullValidationFailureDetailPass =
     fullValidationMismatchDetail(fullValidationOutputLimitFixture) ===
@@ -27957,6 +28310,12 @@ if (process.argv.includes("--self-test-file-line-limit")) {
   process.exit(0);
 }
 
+if (process.argv.includes("--self-test-exact-rollback-paths")) {
+  const cases = await assertTask540ExactRollbackPathContract();
+  process.stdout.write(JSON.stringify({ pass: true, cases }));
+  process.exit(0);
+}
+
 if (process.argv.includes("--check-screen-tab-label-draft-contract")) {
   const evidence = await requireScreenTabLabelDraftContract("TASK-540 Screen Tab label draft gate");
   process.stdout.write(JSON.stringify({ pass: true, ...evidence }));
@@ -28028,6 +28387,8 @@ if (process.argv.includes("--self-test-repair-siblings")) {
   const finalDriftRoundCases = await assertTask540FinalDriftRoundContract();
   const gitIndexBaselineCases = await assertTask540GitIndexBaselineContract();
   const exactRollbackResidualCases = await assertTask540ExactRollbackResidualContract();
+  const correctiveProtectedTestBaselineCases =
+    await assertTask540CorrectiveProtectedTestBaselineContract();
   const correctiveProtectedTestRepinCases = assertTask540CorrectiveProtectedTestRepinContract();
   const touchedModuleLineLimitCases = await assertTask540TouchedModuleLineLimitContract();
   const modularityRepairCases = assertTask540ModularityRepairContract();
@@ -28064,6 +28425,7 @@ if (process.argv.includes("--self-test-repair-siblings")) {
       finalDriftRoundCases,
       gitIndexBaselineCases,
       exactRollbackResidualCases,
+      correctiveProtectedTestBaselineCases,
       correctiveProtectedTestRepinCases,
       touchedModuleLineLimitCases,
       modularityRepairCases,
@@ -28173,6 +28535,7 @@ agent.registerSchemas({
 await requireTask540LocalRuntimeAuthority(ROOT_AUTHORITY);
 await captureInitialGitIndexBaseline("TASK-540 workflow initial Git index baseline");
 await captureWorkflowSensitiveEnvBaseline("TASK-540 workflow private environment baseline");
+await captureCorrectiveProtectedTestBaseline("TASK-540 workflow protected-test startup baseline");
 let workflowExecutionError = null;
 try {
   const workflowBranch = (await git(["branch", "--show-current"])).trim();

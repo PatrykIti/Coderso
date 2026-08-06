@@ -30,6 +30,7 @@ import {
   editorState,
   resetEntryEditorDom,
   resetEntryEditorLane,
+  sonnerModule,
 } from "./support/entryEditorLaneFixture";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -201,6 +202,40 @@ test("a cache-bus read arriving before any hydration is applied, not merely offe
     ]);
     expect(view.container.textContent).not.toContain("Updated in another tab");
     expect(view.container.textContent).toContain("field:summary");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("a baseline from a discarded StrictMode visit cannot hydrate or finalize the live visit", async () => {
+  window.history.replaceState({}, "", "/admin/advanced/entries/articles/entry-1");
+  const { EntryEditor } = await import("../../../core/admin/ui/entries/EntryEditor");
+
+  const view = mount(
+    <React.StrictMode>
+      <EntryEditor />
+    </React.StrictMode>
+  );
+  try {
+    await React.act(async () => {
+      await flushMicrotasks();
+    });
+    expect(editorState.startedEntryReads()).toBe(2);
+
+    await React.act(async () => {
+      editorState.resolveEntryRead(0, { ...editorState.entry, title: "Discarded visit" });
+      await flushMicrotasks();
+    });
+    expect(findSaveDraft(view.container).disabled).toBe(true);
+    expect(view.container.textContent).toContain("Loading entry fields...");
+    expect(readPanelValue(view.container, "data-metadata-title-value")).toBe("");
+
+    await React.act(async () => {
+      editorState.resolveEntryRead(1, { ...editorState.entry, title: "Live visit" });
+      await flushMicrotasks();
+    });
+    expect(findSaveDraft(view.container).disabled).toBe(false);
+    expect(readPanelValue(view.container, "data-metadata-title-value")).toBe("Live visit");
   } finally {
     view.cleanup();
   }
@@ -483,6 +518,147 @@ test("moving to another entry in place starts over instead of carrying the first
     ]);
   } finally {
     view.cleanup();
+  }
+});
+
+test("a rejected save from entry A cannot report into entry B after navigation", async () => {
+  window.history.replaceState({}, "", "/admin/advanced/entries/articles/entry-1");
+  const { EntryEditor } = await import("../../../core/admin/ui/entries/EntryEditor");
+  const view = mount(<EntryEditor />);
+  try {
+    await React.act(async () => {
+      editorState.resolveEntryRead(0, editorState.entry);
+      await flushMicrotasks();
+    });
+    const saveGate = editorState.holdNext("updateEntry");
+    await React.act(async () => {
+      findSaveDraft(view.container).click();
+      await flushMicrotasks();
+    });
+    expect(editorState.updatePayloads).toHaveLength(1);
+
+    window.history.replaceState({}, "", "/admin/advanced/entries/articles/entry-2");
+    view.rerender(<EntryEditor />);
+    await React.act(async () => {
+      await flushMicrotasks();
+    });
+    saveGate.reject(new Error("late save failure"));
+    await React.act(async () => {
+      await flushMicrotasks();
+    });
+
+    expect(sonnerModule.toast.success).not.toHaveBeenCalled();
+    expect(sonnerModule.toast.error).not.toHaveBeenCalled();
+    expect(view.container.textContent).not.toContain("Failed to save entry.");
+    expect(editorState.navigate).not.toHaveBeenCalled();
+  } finally {
+    view.cleanup();
+  }
+});
+
+test.each(["save", "delete"] as const)(
+  "a prior %s settling during route layout cleanup has no visit authority",
+  async (operation) => {
+    const firstPath = "/admin/advanced/entries/articles/entry-1";
+    const secondPath = "/admin/advanced/entries/articles/entry-2";
+    window.history.replaceState({}, "", firstPath);
+    const { EntryEditor } = await import("../../../core/admin/ui/entries/EntryEditor");
+    const settlementRef: { current: (() => void) | null } = { current: null };
+    const SettleOnRouteCleanup = () => {
+      React.useLayoutEffect(
+        () => () => {
+          const settle = settlementRef.current;
+          settlementRef.current = null;
+          settle?.();
+        },
+        []
+      );
+      return null;
+    };
+    const RouteSettlement = ({ path }: { path: string }) => {
+      return (
+        <>
+          <EntryEditor />
+          <SettleOnRouteCleanup key={path} />
+        </>
+      );
+    };
+    const view = mount(<RouteSettlement path={firstPath} />);
+    try {
+      await React.act(async () => {
+        editorState.resolveEntryRead(0, editorState.entry);
+        await flushMicrotasks();
+      });
+      const gate = editorState.holdNext(operation === "save" ? "updateEntry" : "deleteEntry");
+      if (operation === "save") {
+        await React.act(async () => {
+          findSaveDraft(view.container).click();
+          await flushMicrotasks();
+        });
+        expect(editorState.updatePayloads).toHaveLength(1);
+      } else {
+        React.act(() => {
+          findMetadataButton(view.container, "data-metadata-delete").click();
+        });
+        await React.act(async () => {
+          findDeleteConfirm(view.container).click();
+          await flushMicrotasks();
+        });
+        expect(editorState.deleteCalls).toEqual(["articles/entry-1"]);
+      }
+
+      let baselineReadsDuringLayout = -1;
+      settlementRef.current = () => {
+        baselineReadsDuringLayout = editorState.startedEntryReads();
+        gate.resolve();
+      };
+      window.history.replaceState({}, "", secondPath);
+      view.rerender(<RouteSettlement path={secondPath} />);
+      await React.act(async () => {
+        await flushMicrotasks();
+      });
+
+      expect(baselineReadsDuringLayout).toBe(1);
+      expect(editorState.startedEntryReads()).toBe(2);
+      expect(sonnerModule.toast.success).not.toHaveBeenCalled();
+      expect(sonnerModule.toast.error).not.toHaveBeenCalled();
+      expect(editorState.navigate).not.toHaveBeenCalled();
+    } finally {
+      view.cleanup();
+    }
+  }
+);
+
+test("a delete that settles after unmount cannot toast or navigate", async () => {
+  window.history.replaceState({}, "", "/admin/advanced/entries/articles/entry-1");
+  const { EntryEditor } = await import("../../../core/admin/ui/entries/EntryEditor");
+  const view = mount(<EntryEditor />);
+  let mounted = true;
+  try {
+    await React.act(async () => {
+      editorState.resolveEntryRead(0, editorState.entry);
+      await flushMicrotasks();
+    });
+    const deleteGate = editorState.holdNext("deleteEntry");
+    React.act(() => {
+      findMetadataButton(view.container, "data-metadata-delete").click();
+    });
+    await React.act(async () => {
+      findDeleteConfirm(view.container).click();
+      await flushMicrotasks();
+    });
+    expect(editorState.deleteCalls).toEqual(["articles/entry-1"]);
+
+    view.cleanup();
+    mounted = false;
+    deleteGate.resolve();
+    await flushMicrotasks();
+
+    expect(sonnerModule.toast.success).not.toHaveBeenCalled();
+    expect(sonnerModule.toast.error).not.toHaveBeenCalled();
+    expect(editorState.navigate).not.toHaveBeenCalled();
+  } finally {
+    if (mounted) view.cleanup();
   }
 });
 

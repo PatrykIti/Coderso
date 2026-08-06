@@ -372,6 +372,12 @@ export async function runBrowserNavigationDiscardSourceSelfTest({
       ) &&
       observationSource.includes('route.responseDelivered() ? "wf540_discard_response_delivered"') &&
       observationSource.includes('"wf540_discard_timeout"') &&
+      observationSource.includes(
+        "const loginEmailVisible = await visible(config.selectors.loginEmail);"
+      ) &&
+      observationSource.includes(
+        'const observedLoginUrl = page.url();\n      if (observedLoginUrl !== config.loginUrl) throw new Error("wf540_login_url");\n      const result = {\n        url: observedLoginUrl,'
+      ) &&
       observationSource.includes("output = await loginSample(discarded === true);") &&
       !observationSource.includes("clientAborted") &&
       !observationSource.includes("wf540_abort_timeout") &&

@@ -8,12 +8,13 @@
 **Category:** Custom Screens / Responsive UI / Accessibility
 **Estimated Effort:** Small
 **Dependencies:** TASK-540-04-L04
-**Status:** 🚧 In Progress
+**Status:** ✅ Done
+**Completed:** 2026-08-06
 **Started:** 2026-07-14
 **Fix Started:** 2026-07-18
 **Implementation Complete:** 2026-07-19 — assigned work was completed; canonical `✅ Done` transition awaits family changelog 1252.
 **Historical Boundary Revalidation:** generation eeb29960e5784a47ad38fb056c30d9a8 / token cabb94f2a2894d9fa5130e6256ae6442 / gate green
-**Revalidation Passed:** 2026-07-19 — evidence-backed manual checkpoint receipt for the current L01 compatibility owner gate after L04: core lint/types and root TypeScript checks; authoring-boundary isolation 7/7; insertion-targeting isolation 10/10; exact four-file owner matrix 29/29; full-family physical-line, prepared-resume, and diff checks. This is not a transition-generated generation/token or hash receipt and claims no clean family post-audit, full validation, smoke, changelog, or closure result.
+**Revalidation Passed:** 2026-08-05 — the complete current L01 owner gate passed after `panelDataProps` semantic hardening: its `data-*`-only type and runtime filter preserve data hooks and the forwarded ref while rejecting `role`/ARIA overrides, with regression coverage for `aria-labelledby` and `aria-hidden`. Core lint/types and root TypeScript passed; authoring-boundary isolation passed 7/7, insertion-targeting isolation passed 10/10, and the exact four-file owner matrix passed 29/29. The boundary suite is 863 physical lines and `git diff --check` passed. This receipt claims no family post-audit, full validation, smoke, changelog, or closure result.
 **Current Insertion Compatibility Evidence:** 2026-07-19 — commit `7a393dcc7aaf454fee582ce7745073768e0e131b` reopens the one-shot Insert palette before the existing second insertion assertion after `ScreenAuthoringCanvas` begins inspecting a newly inserted block. The insertion target and ordering assertions remain unchanged, and commit `204fd1de0f129f73976f577f420acbdac5316dea` assigns the test exclusively to this leaf.
 **Current Insertion Receipt State:** The exact L01 compatibility owner gate passed on 2026-07-19 after L04 and commit `7a393dcc7aaf454fee582ce7745073768e0e131b`; the current `Revalidation Passed` field above is the sole active owner-gate receipt. It claims no clean family post-audit, full validation, smoke, changelog, or closure result.
 **Modularity Repair Revalidated:** 2026-07-17 — cohesive <=1,000-line split and exact owner gate passed.
@@ -80,7 +81,7 @@ or committing intermediate work cannot narrow the set. A path omitted because it
 thin, pure, a facade, or already committed is a failed boundary gate, not a LOW or
 TASK-9999 deferral. L01 may edit only its boundary test, never either source family.
 This additive update creates no test target; the reconciled family total remains exactly
-64 Vitest + 18 Bun = 82 files (81 source-owner/read-only dependency targets plus one
+78 Vitest + 18 Bun = 96 files (95 source-owner/read-only dependency targets plus one
 closure-owned aggregate target), with pinned changelog 1252 unchanged.
 
 TASK-542 separately owns Menu host clearance. Do not add Menu/Page special cases

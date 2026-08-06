@@ -37,7 +37,12 @@ const DEFAULT_SCHEMA_FIELDS: SchemaFieldFixture[] = [
 
 // The mocks that block: `holdNext` makes the NEXT call to one of them wait, which is how
 // a test provably lands an edit WHILE that request is in flight.
-type GateName = "updateEntry" | "updateEntryMetadata" | "taxonomyOverview";
+type GateName = "updateEntry" | "updateEntryMetadata" | "deleteEntry" | "taxonomyOverview";
+type GateControl = {
+  promise: Promise<void>;
+  resolve: () => void;
+  reject: (error: Error) => void;
+};
 
 const ENTRY_DETAIL_CACHE_KEY = "entry:articles:entry-1";
 
@@ -87,8 +92,8 @@ export const editorState = (() => {
     requireEntryRead(index).resolve(value);
   };
 
-  const gateReleases = new Map<GateName, () => void>();
-  const gatePromises = new Map<GateName, Promise<void>>();
+  const queuedGates = new Map<GateName, GateControl[]>();
+  const unsettledGates = new Map<GateName, GateControl[]>();
 
   // A content type the editor cannot resolve is the other way a read finishes without
   // hydrating: the entry snapshot arrives, `applyEntry` is never reached.
@@ -137,27 +142,35 @@ export const editorState = (() => {
       entryReads.length = 0;
     },
     holdNext: (name: GateName) => {
-      gatePromises.set(
-        name,
-        new Promise<void>((resolve) => {
-          gateReleases.set(name, () => resolve());
-        })
-      );
+      let resolve!: () => void;
+      let reject!: (error: Error) => void;
+      const promise = new Promise<void>((next, fail) => {
+        resolve = next;
+        reject = fail;
+      });
+      const gate = { promise, resolve, reject };
+      queuedGates.set(name, [...(queuedGates.get(name) ?? []), gate]);
+      unsettledGates.set(name, [...(unsettledGates.get(name) ?? []), gate]);
+      return gate;
     },
     passGate: async (name: GateName) => {
-      const gate = gatePromises.get(name);
+      const queue = queuedGates.get(name) ?? [];
+      const gate = queue.shift();
       if (!gate) return;
-      gatePromises.delete(name);
-      await gate;
+      if (queue.length === 0) queuedGates.delete(name);
+      else queuedGates.set(name, queue);
+      await gate.promise;
     },
     release: (name: GateName) => {
-      const release = gateReleases.get(name);
-      gateReleases.delete(name);
-      release?.();
+      const queue = unsettledGates.get(name) ?? [];
+      const gate = queue.shift();
+      if (queue.length === 0) unsettledGates.delete(name);
+      else unsettledGates.set(name, queue);
+      gate?.resolve();
     },
     resetGates: () => {
-      gateReleases.clear();
-      gatePromises.clear();
+      queuedGates.clear();
+      unsettledGates.clear();
     },
     serverEntry: (): EntryFixture => ({ ...entry, ...committed }),
     commitMetadata: (patch: Partial<EntryFixture>) => {
@@ -170,6 +183,7 @@ export const editorState = (() => {
     metadataPayloads: [] as UpdateEntryMetadataPayload[],
     publishCalls: [] as string[],
     deleteCalls: [] as string[],
+    navigate: vi.fn(),
     subscribers: new Set<(event: { key: string }) => void>(),
   };
 })();
@@ -189,6 +203,9 @@ export const resetEntryEditorLane = () => {
   editorState.metadataPayloads.length = 0;
   editorState.publishCalls.length = 0;
   editorState.deleteCalls.length = 0;
+  editorState.navigate.mockReset();
+  sonnerModule.toast.success.mockReset();
+  sonnerModule.toast.error.mockReset();
 };
 
 export const resetEntryEditorDom = () => {
@@ -215,6 +232,7 @@ export const contentTypesClientModule = {
 export const entriesClientModule = {
   deleteEntry: vi.fn(async (type: string, id: string) => {
     editorState.deleteCalls.push(`${type}/${id}`);
+    await editorState.passGate("deleteEntry");
     return { ok: true };
   }),
   getCachedEntryDetail: () => null,
@@ -283,7 +301,7 @@ export const taxonomyClientModule = {
 // (`entry-editor-navigation-guard.test.tsx`) mounts the REAL provider instead of this mock.
 // The guard's `beforeunload` half does not depend on a router, so it stays observable here.
 export const adminRouterModule = {
-  useAdminRouter: () => ({ navigate: vi.fn(), path: window.location.pathname }),
+  useAdminRouter: () => ({ navigate: editorState.navigate, path: window.location.pathname }),
   useOptionalAdminRouter: () => null,
 };
 

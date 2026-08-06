@@ -147,8 +147,16 @@ test("(c) panelPosition='bottom' yields the centered-bottom container", () => {
   expect(html).toContain("-translate-x-1/2");
 });
 
-test("(d) panelRef / region role / panelAriaLabel / panelDataProps land on the single rail div", () => {
+test("(d) panelDataProps preserves data hooks without allowing semantic overrides", () => {
   const ref = React.createRef<HTMLDivElement>();
+  const untrustedPanelDataProps = {
+    role: "dialog",
+    "aria-label": "Overridden tools",
+    "aria-labelledby": "untrusted-panel-label",
+    "aria-hidden": "true",
+    "data-page-editor-floating-toolbar": "true",
+    "data-page-editor-toolbar-collapsed": "false",
+  } as unknown as React.ComponentProps<typeof CanvasEditor>["panelDataProps"];
   const view = mount(
     <CanvasEditor
       title="Page builder"
@@ -157,12 +165,7 @@ test("(d) panelRef / region role / panelAriaLabel / panelDataProps land on the s
       panelOpen={true}
       panelRef={ref}
       panelAriaLabel="Section tools"
-      panelDataProps={{
-        role: "dialog",
-        "aria-label": "Overridden tools",
-        "data-page-editor-floating-toolbar": "true",
-        "data-page-editor-toolbar-collapsed": "false",
-      }}
+      panelDataProps={untrustedPanelDataProps}
       onPanelOpenChange={noop}
     />
   );
@@ -175,6 +178,8 @@ test("(d) panelRef / region role / panelAriaLabel / panelDataProps land on the s
     expect(rail.getAttribute("data-page-editor-toolbar-collapsed")).toBe("false");
     expect(rail.getAttribute("role")).toBe("region");
     expect(rail.getAttribute("aria-label")).toBe("Section tools");
+    expect(rail.hasAttribute("aria-labelledby")).toBe(false);
+    expect(rail.hasAttribute("aria-hidden")).toBe(false);
     expect(view.container.querySelector('[role="dialog"]')).toBeNull();
     expect(view.container.querySelector('[aria-label="Overridden tools"]')).toBeNull();
     expect(view.container.querySelector('[role="region"][aria-label="Section tools"]')).toBe(rail);

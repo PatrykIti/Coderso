@@ -28,15 +28,15 @@ const bridgePath = path.join(root, bridgeRelative);
 const implementPath = path.join(root, implementRelative);
 const localOrchestratorPath = path.join(root, localOrchestratorRelative);
 const testNameContractPath = path.join(root, testNameContractRelative);
-const MASKED_IMPLEMENT_SHA256 = "509e76efbcd3aab704907d12d7df341198e339fc3aa541395fafb11fa5645b44";
+const MASKED_IMPLEMENT_SHA256 = "2bfa5df4604433febf62c6e63e6ac20b1b641291583c3976d10999c1ddce479e";
 const FROZEN_HELPER_SHA256 = Object.freeze({
   [smokeContractRelative]: "33da5a759d69ed00d41dc364dd918660c665591db34bd411b1f174c7b9e142b2",
   [executorRelative]: "2699ea77f59bf40691c8561936d1e484c32cc3639679f2f4c27c6b22f06c9442",
   [smokeHostRelative]: "82accfe7b9ada4ca02853c691b315fec5817a54b600912a081d5495ade6c8d61",
   [bridgeRelative]: "c3c594a17cb63943beab29e7f621f6e1ca46cb3b5abb67625edcddb900788341",
   [localOrchestratorRelative]: "1bb5877cbc009bb11e85c8f4f7957ddc278a0a5cb74072cad41e3709814c1b40",
-  [implementRelative]: "b0ac96c187c720439014bced516f81d2c5cf896ba8fac3fc50216886f814f001",
-  [testNameContractRelative]: "a7e03d6d0147716ca95395839c70990592c74863de723d34e19f4c1b9f63aed3",
+  [implementRelative]: "58239b32d6c878ce74ac5137f7f41688fdb521b0df3bd21676b0439bc774358d",
+  [testNameContractRelative]: "35fe83fdd15ae1492e126704b5377554d6d550c433c931e412552cb1bbbda8c0",
 });
 
 function readSources() {

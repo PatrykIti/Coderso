@@ -11,7 +11,21 @@
 
 import React from "react";
 import { createRoot } from "react-dom/client";
-import { afterEach, expect, test, vi } from "vitest";
+import { afterEach, beforeEach, expect, test, vi } from "vitest";
+
+import {
+  listContentTypesCached,
+  type ContentTypeSummary,
+} from "../../../core/admin/services/contentTypesClient";
+import { getEntryCached, type EntryDetail } from "../../../core/admin/services/entriesClient";
+
+const deferred = <T,>() => {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((next) => {
+    resolve = next;
+  });
+  return { promise, resolve };
+};
 
 const editorState = vi.hoisted(() => {
   const contentType = {
@@ -42,9 +56,11 @@ const editorState = vi.hoisted(() => {
     contentType,
     entry,
     taxonomyOverview,
+    relationTargetSnapshots: [] as string[],
     subscribers: new Set<(event: { key: string }) => void>(),
     reset() {
       this.subscribers.clear();
+      this.relationTargetSnapshots.length = 0;
     },
   };
 });
@@ -284,14 +300,24 @@ vi.mock("../../../core/admin/ui/entries/FieldRenderer", () => ({
   FieldRenderer: ({
     field,
     onChange,
+    relationTargets = [],
   }: {
     field: { name: string };
     onChange: (value: unknown) => void;
-  }) => (
-    <button type="button" onClick={() => onChange(`${field.name}-updated`)}>
-      {`field:${field.name}`}
-    </button>
-  ),
+    relationTargets?: Array<{ slug: string; name: string }>;
+  }) => {
+    const targetSlugs = relationTargets.map((target) => target.slug).join(",");
+    editorState.relationTargetSnapshots.push(targetSlugs);
+    return (
+      <button
+        type="button"
+        data-relation-targets={targetSlugs}
+        onClick={() => onChange(`${field.name}-updated`)}
+      >
+        {`field:${field.name}`}
+      </button>
+    );
+  },
 }));
 
 vi.mock("../../../core/admin/ui/content-types/schemaMapping", () => ({
@@ -339,6 +365,15 @@ async function flushAsync() {
   });
 }
 
+beforeEach(() => {
+  vi.mocked(listContentTypesCached)
+    .mockReset()
+    .mockResolvedValue([editorState.contentType as unknown as ContentTypeSummary]);
+  vi.mocked(getEntryCached)
+    .mockReset()
+    .mockResolvedValue(editorState.entry as unknown as EntryDetail);
+});
+
 afterEach(() => {
   vi.restoreAllMocks();
   editorState.reset();
@@ -374,6 +409,8 @@ test("editor renders the in-page PageHeader + [1fr_320px] SectionCard grid", asy
     expect(buttonText).toContain("Save draft");
     expect(buttonText).toContain("Publish");
     expect(buttonText).toContain("History");
+    expect(listContentTypesCached).toHaveBeenCalledTimes(1);
+    expect(listContentTypesCached).toHaveBeenCalledWith({ force: true });
   } finally {
     view.cleanup();
   }
@@ -417,5 +454,118 @@ test("schema-driven field cards still render via FieldRenderer", async () => {
     expect(view.container.textContent).toContain("field:summary");
   } finally {
     view.cleanup();
+  }
+});
+
+test("relation targets accept only the latest forced refresh and ignore settlement after unmount", async () => {
+  const makeType = (slug: string, name: string): ContentTypeSummary => ({
+    id: `type-${slug}`,
+    slug,
+    name,
+    schema: { type: "object", additionalProperties: false, properties: {} },
+    status: "published",
+    createdAt: "2026-01-01T00:00:00.000Z",
+    updatedAt: "2026-01-01T00:00:00.000Z",
+  });
+  const { EntryEditor } = await import("../../../core/admin/ui/entries/EntryEditor");
+
+  for (const [index, settlementOrder] of ["content-types-first", "entry-detail-first"].entries()) {
+    const contentTypesRefresh = deferred<ContentTypeSummary[]>();
+    const entryContentTypes = deferred<ContentTypeSummary[]>();
+    const entryRefresh = deferred<EntryDetail>();
+    const afterUnmount = deferred<ContentTypeSummary[]>();
+    const currentType = editorState.contentType as unknown as ContentTypeSummary;
+    const freshType = makeType(`fresh-${index}`, `Fresh ${index}`);
+    const remoteEntry = {
+      ...editorState.entry,
+      title: `Remote title ${index}`,
+      slug: `remote-${index}`,
+    } as unknown as EntryDetail;
+    vi.mocked(listContentTypesCached)
+      .mockReset()
+      .mockResolvedValueOnce([currentType])
+      .mockReturnValueOnce(contentTypesRefresh.promise)
+      .mockReturnValueOnce(entryContentTypes.promise)
+      .mockReturnValueOnce(afterUnmount.promise);
+    vi.mocked(getEntryCached)
+      .mockReset()
+      .mockResolvedValueOnce(editorState.entry as unknown as EntryDetail)
+      .mockReturnValueOnce(entryRefresh.promise);
+    editorState.relationTargetSnapshots.length = 0;
+    window.history.replaceState({}, "", "/admin/entries/articles/entry-1");
+
+    const view = mount(<EntryEditor />);
+    try {
+      await flushAsync();
+      // The baseline supplies relation targets, so mounting starts one forced list read.
+      expect(listContentTypesCached).toHaveBeenCalledTimes(1);
+      React.act(() => {
+        const title = view.container.querySelector("textarea");
+        const slug = view.container.querySelector("input");
+        if (title instanceof HTMLTextAreaElement && slug instanceof HTMLInputElement) {
+          Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value")?.set?.call(
+            title,
+            `Local title ${index}`
+          );
+          title.dispatchEvent(new Event("input", { bubbles: true }));
+          Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")?.set?.call(
+            slug,
+            `local-${index}`
+          );
+          slug.dispatchEvent(new Event("input", { bubbles: true }));
+        }
+      });
+
+      React.act(() => {
+        editorState.subscribers.forEach((listener) => listener({ key: "contentTypesList" }));
+      });
+      React.act(() => {
+        editorState.subscribers.forEach((listener) => listener({ key: "entry:articles:entry-1" }));
+      });
+      expect(listContentTypesCached).toHaveBeenCalledTimes(3);
+      expect(getEntryCached).toHaveBeenCalledTimes(2);
+
+      if (settlementOrder === "content-types-first") {
+        contentTypesRefresh.resolve([currentType, makeType("intermediate", "Intermediate")]);
+        await flushAsync();
+        entryRefresh.resolve(remoteEntry);
+        entryContentTypes.resolve([currentType, freshType]);
+      } else {
+        entryRefresh.resolve(remoteEntry);
+        entryContentTypes.resolve([currentType, freshType]);
+        await flushAsync();
+        contentTypesRefresh.resolve([currentType, makeType("intermediate", "Intermediate")]);
+      }
+      await flushAsync();
+
+      const renderedTargetLists = Array.from(
+        view.container.querySelectorAll("[data-relation-targets]")
+      ).map((node) => node.getAttribute("data-relation-targets"));
+      expect(renderedTargetLists.length).toBeGreaterThan(0);
+      expect(new Set(renderedTargetLists)).toEqual(new Set([`articles,fresh-${index}`]));
+      expect(view.container.querySelector("textarea")?.getAttribute("value")).toBeNull();
+      expect((view.container.querySelector("textarea") as HTMLTextAreaElement).value).toBe(
+        `Local title ${index}`
+      );
+      expect((view.container.querySelector("input") as HTMLInputElement).value).toBe(
+        `local-${index}`
+      );
+      expect(view.container.textContent).toContain("Updated in another tab");
+      expect(view.container.textContent).toContain("Unsaved changes");
+
+      React.act(() => {
+        editorState.subscribers.forEach((listener) => listener({ key: "contentTypesList" }));
+      });
+      expect(listContentTypesCached).toHaveBeenCalledTimes(4);
+      const renderCountAtUnmount = editorState.relationTargetSnapshots.length;
+      view.cleanup();
+      afterUnmount.resolve([makeType("unmounted", "Unmounted")]);
+      await flushAsync();
+      expect(editorState.relationTargetSnapshots).toHaveLength(renderCountAtUnmount);
+      expect(editorState.relationTargetSnapshots).not.toContain("intermediate");
+      expect(editorState.relationTargetSnapshots).not.toContain("unmounted");
+    } finally {
+      view.cleanup();
+    }
   }
 });

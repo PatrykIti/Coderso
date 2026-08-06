@@ -335,13 +335,19 @@ function buildObservationSource(action, name, plan, captures, selectionSelector 
         : { ...colors, toggleAriaPressed };
     };
     const loginSample = async (clientDiscarded = undefined) => {
+      // The logout handler awaits its API request before navigating. Read the URL only after
+      // the login controls settle so this observation cannot retain the pre-logout URL.
+      const loginEmailVisible = await visible(config.selectors.loginEmail);
+      const loginPasswordVisible = await visible(config.selectors.loginPassword);
+      const loginSubmitVisible = await visible(config.selectors.loginSubmit);
+      const observedLoginUrl = page.url();
+      if (observedLoginUrl !== config.loginUrl) throw new Error("wf540_login_url");
       const result = {
-        url: page.url(),
-        loginEmailVisible: await visible(config.selectors.loginEmail),
-        loginPasswordVisible: await visible(config.selectors.loginPassword),
-        loginSubmitVisible: await visible(config.selectors.loginSubmit),
+        url: observedLoginUrl,
+        loginEmailVisible,
+        loginPasswordVisible,
+        loginSubmitVisible,
       };
-      if (result.url !== config.loginUrl) throw new Error("wf540_login_url");
       return clientDiscarded === undefined ? result : { ...result, clientDiscarded };
     };
     const settleAuthRealm = async (selector, expectedName = null, userId = null) => {

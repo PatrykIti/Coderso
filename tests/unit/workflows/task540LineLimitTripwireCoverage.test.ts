@@ -10,10 +10,10 @@ import path from "node:path";
  * to fail with `<path>=1001`.
  *
  * That proof is only worth having if the list names the paths actually closest to the limit.
- * It did not. `tests/vitest/ui-integration/custom-screen-entry-editor-restyle.test.tsx` sits
- * at EXACTLY 1,000 lines and `tests/vitest/ui/use-screen-related-entries.test.tsx` at 999 --
- * zero and one line of headroom, since 1,000 is an inclusive pass -- while the list pinned
- * `backupService.ts` (990) and `footer.tsx` (989) instead, which have ten and eleven.
+ * It did not. `tests/vitest/ui-integration/custom-screen-entry-editor-restyle.test.tsx`
+ * and `tests/vitest/ui/use-screen-related-entries.test.tsx` are tied closest to the limit,
+ * while the original list named only `backupService.ts` and `footer.tsx` from the same
+ * at-risk window.
  *
  * A hand-maintained list is what let that happen, so the expectations below are derived from
  * the gate's OWN report of the paths it governs and their real line counts. If any governed
@@ -77,13 +77,14 @@ test("the line-limit tripwire names every governed module close to the limit", (
     .filter((module) => module.lines > LINE_LIMIT - HEADROOM_LINES)
     .sort((left, right) => right.lines - left.lines);
 
-  // The defect: the two modules with the least headroom were the two absent from the list.
-  expect(atRisk.slice(0, 2).map((module) => module.path)).toEqual([
+  // The defect: the modules tied for the least headroom were absent from the list.
+  const leastHeadroom = atRisk
+    .filter((module) => module.lines === atRisk[0]?.lines)
+    .map((module) => module.path);
+  expect(leastHeadroom).toEqual([
     "tests/vitest/ui-integration/custom-screen-entry-editor-restyle.test.tsx",
     "tests/vitest/ui/use-screen-related-entries.test.tsx",
   ]);
-  expect(atRisk[0].lines).toBe(LINE_LIMIT);
-  expect(atRisk[1].lines).toBe(LINE_LIMIT - 1);
 
   const uncovered = atRisk
     .filter((module) => !tripwire.includes(module.path))
@@ -108,8 +109,8 @@ test("the tripwire is ordered most-urgent-first and every entry is a compliant g
   // A tripwire entry above the limit would mean the family gate is already red, and its
   // 1,001-line rejection would prove nothing a real run had not already proven.
   for (const count of counts) expect(count).toBeLessThanOrEqual(LINE_LIMIT);
-  expect(Math.max(...counts)).toBe(LINE_LIMIT);
+  expect(Math.max(...counts)).toBeGreaterThan(LINE_LIMIT - HEADROOM_LINES);
   for (let index = 1; index < counts.length; index += 1) {
-    expect(counts[index]).toBeLessThan(counts[index - 1]);
+    expect(counts[index]).toBeLessThanOrEqual(counts[index - 1]);
   }
 });

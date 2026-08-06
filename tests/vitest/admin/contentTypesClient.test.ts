@@ -3,6 +3,7 @@ import { afterEach, expect, test, vi } from "vitest";
 import {
   clearContentTypesCache,
   clearContentTypeCollectionWorkspaceCache,
+  type ContentTypeSummary,
   createContentType,
   deleteContentType,
   duplicateContentType,
@@ -38,6 +39,26 @@ const createLocalStorage = () => {
     },
   };
 };
+
+const createDeferred = <T>() => {
+  let resolve!: (value: T | PromiseLike<T>) => void;
+  let reject!: (reason?: unknown) => void;
+  const promise = new Promise<T>((resolvePromise, rejectPromise) => {
+    resolve = resolvePromise;
+    reject = rejectPromise;
+  });
+  return { promise, resolve, reject };
+};
+
+const contentTypeSummary = (id: string, name: string): ContentTypeSummary => ({
+  id,
+  name,
+  slug: id,
+  status: "published",
+  schema: { type: "object", additionalProperties: false, properties: {} },
+  createdAt: "2026-02-14T00:00:00.000Z",
+  updatedAt: "2026-02-14T00:00:00.000Z",
+});
 
 const workspaceSummary = {
   contentType: {
@@ -318,6 +339,201 @@ test("listContentTypesCached returns cached items without fetch", async () => {
     resetCaches();
   }
 });
+
+test.each(["A-first", "B-first"] as const)(
+  "listContentTypesCached keeps forced B authoritative when %s settles",
+  async (settlementOrder) => {
+    const originalFetch = globalThis.fetch;
+    const requestAResponse = createDeferred<Response>();
+    const requestBResponse = createDeferred<Response>();
+    let listCalls = 0;
+
+    globalThis.fetch = (input) => {
+      if (String(input) !== "/admin/api/content-types") {
+        return Promise.reject(new Error(`Unexpected request: ${String(input)}`));
+      }
+      listCalls += 1;
+      return listCalls === 1 ? requestAResponse.promise : requestBResponse.promise;
+    };
+
+    try {
+      resetCaches();
+      const itemA = contentTypeSummary("ct-a", "Request A");
+      const itemB = contentTypeSummary("ct-b", "Request B");
+      const requestA = listContentTypesCached({ force: true });
+      const requestB = listContentTypesCached({ force: true });
+      const joinedRequest = listContentTypesCached();
+
+      expect(requestA).not.toBe(requestB);
+      expect(joinedRequest).toBe(requestB);
+      expect(listCalls).toBe(2);
+
+      if (settlementOrder === "A-first") {
+        requestAResponse.resolve(jsonResponse([itemA]));
+        await expect(requestA).resolves.toEqual([itemA]);
+        expect(getCachedContentTypes()).toBeNull();
+        expect(listContentTypesCached()).toBe(requestB);
+
+        requestBResponse.resolve(jsonResponse([itemB]));
+        await expect(requestB).resolves.toEqual([itemB]);
+      } else {
+        requestBResponse.resolve(jsonResponse([itemB]));
+        await expect(requestB).resolves.toEqual([itemB]);
+        expect(getCachedContentTypes()).toEqual([itemB]);
+
+        requestAResponse.resolve(jsonResponse([itemA]));
+        await expect(requestA).resolves.toEqual([itemA]);
+      }
+
+      expect(getCachedContentTypes()).toEqual([itemB]);
+      expect(listCalls).toBe(2);
+    } finally {
+      globalThis.fetch = originalFetch;
+      resetCaches();
+    }
+  }
+);
+
+test("listContentTypesCached clears an authoritative rejection so the next read retries", async () => {
+  const originalFetch = globalThis.fetch;
+  const firstResponse = createDeferred<Response>();
+  let listCalls = 0;
+
+  globalThis.fetch = (input) => {
+    if (String(input) !== "/admin/api/content-types") {
+      return Promise.reject(new Error(`Unexpected request: ${String(input)}`));
+    }
+    listCalls += 1;
+    if (listCalls === 1) return firstResponse.promise;
+    return Promise.resolve(jsonResponse([contentTypeSummary("ct-retry", "Retry")]));
+  };
+
+  try {
+    resetCaches();
+    const firstRequest = listContentTypesCached({ force: true });
+    firstResponse.reject(new Error("list failed"));
+    await expect(firstRequest).rejects.toThrow("list failed");
+
+    const retryRequest = listContentTypesCached();
+    expect(retryRequest).not.toBe(firstRequest);
+    await expect(retryRequest).resolves.toEqual([contentTypeSummary("ct-retry", "Retry")]);
+    expect(getCachedContentTypes()?.[0]?.id).toBe("ct-retry");
+    expect(listCalls).toBe(2);
+  } finally {
+    globalThis.fetch = originalFetch;
+    resetCaches();
+  }
+});
+
+test("primeContentTypesCache revokes an older pending list publisher", async () => {
+  const originalFetch = globalThis.fetch;
+  const pendingResponse = createDeferred<Response>();
+
+  globalThis.fetch = () => pendingResponse.promise;
+
+  try {
+    resetCaches();
+    const staleItem = contentTypeSummary("ct-stale", "Stale read");
+    const primedItem = contentTypeSummary("ct-primed", "Manual prime");
+    const pendingRead = listContentTypesCached({ force: true });
+
+    primeContentTypesCache([primedItem]);
+    pendingResponse.resolve(jsonResponse([staleItem]));
+    await expect(pendingRead).resolves.toEqual([staleItem]);
+
+    expect(getCachedContentTypes()).toEqual([primedItem]);
+  } finally {
+    globalThis.fetch = originalFetch;
+    resetCaches();
+  }
+});
+
+const pendingReadMutationCases: Array<{
+  name: string;
+  path: string;
+  method: string;
+  response: unknown;
+  run: () => Promise<unknown>;
+  expectedItem: ContentTypeSummary | null;
+}> = [
+  {
+    name: "create",
+    path: "/admin/api/content-types",
+    method: "POST",
+    response: contentTypeSummary("ct-created", "Created"),
+    run: () =>
+      createContentType({
+        name: "Created",
+        slug: "ct-created",
+        schema: { type: "object", additionalProperties: false, properties: {} },
+      }),
+    expectedItem: contentTypeSummary("ct-created", "Created"),
+  },
+  {
+    name: "duplicate",
+    path: "/admin/api/content-types/ct-source/duplicate",
+    method: "POST",
+    response: contentTypeSummary("ct-duplicated", "Duplicated"),
+    run: () => duplicateContentType("ct-source", { name: "Duplicated" }),
+    expectedItem: contentTypeSummary("ct-duplicated", "Duplicated"),
+  },
+  {
+    name: "update",
+    path: "/admin/api/content-types/ct-updated",
+    method: "PATCH",
+    response: contentTypeSummary("ct-updated", "Updated"),
+    run: () => updateContentType("ct-updated", { name: "Updated" }),
+    expectedItem: contentTypeSummary("ct-updated", "Updated"),
+  },
+  {
+    name: "delete",
+    path: "/admin/api/content-types/ct-deleted",
+    method: "DELETE",
+    response: { ok: true },
+    run: () => deleteContentType("ct-deleted"),
+    expectedItem: null,
+  },
+];
+
+test.each(pendingReadMutationCases)(
+  "successful $name revokes an older pending content-type list before cache publication",
+  async ({ path, method, response, run, expectedItem }) => {
+    const originalFetch = globalThis.fetch;
+    const pendingListResponse = createDeferred<Response>();
+
+    globalThis.fetch = (input, init) => {
+      const url = String(input);
+      if (url === "/admin/api/content-types" && init?.method === "GET") {
+        return pendingListResponse.promise;
+      }
+      if (url === "/admin/api/auth/csrf") {
+        return Promise.resolve(jsonResponse({ token: "csrf-token" }));
+      }
+      if (url === path && init?.method === method) {
+        return Promise.resolve(jsonResponse(response));
+      }
+      return Promise.reject(new Error(`Unexpected request: ${method} ${url}`));
+    };
+
+    try {
+      resetCsrfToken();
+      resetCaches();
+      const staleItem = contentTypeSummary("ct-stale", "Stale read");
+      const pendingRead = listContentTypesCached({ force: true });
+
+      await run();
+      expect(getCachedContentTypes()).toEqual(expectedItem ? [expectedItem] : null);
+
+      pendingListResponse.resolve(jsonResponse([staleItem]));
+      await expect(pendingRead).resolves.toEqual([staleItem]);
+      expect(getCachedContentTypes()).toEqual(expectedItem ? [expectedItem] : null);
+    } finally {
+      globalThis.fetch = originalFetch;
+      resetCsrfToken();
+      resetCaches();
+    }
+  }
+);
 
 test("getContentTypeCached returns cached entry by id", async () => {
   const originalFetch = globalThis.fetch;

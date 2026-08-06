@@ -789,7 +789,7 @@ const families = Object.freeze({
       "95d614a88db6711cb115831b4c8425889e94ff9ccf5b20f6b6f7a368e1e127ba",
     ]),
     declarations: 67,
-    declarationSha256: "9333823591499bf77a76bc44fb8ba086f3928231881fa43225c89ba94226e172",
+    declarationSha256: "5602fe5b44d63614128b2a506b6a327f6d977b6892416d27543eed5554c81895",
     files: Object.freeze([
       "tests/vitest/ui-integration/custom-screen-runtime-renderer.test.tsx",
       "tests/vitest/ui-integration/custom-screen-runtime-interactions.test.tsx",
@@ -888,14 +888,14 @@ const families = Object.freeze({
   entryRestyle: Object.freeze({
     lane: "vitest",
     tests: 17,
-    sha256: "219111fd536cf6005e754820d0ad61680add470725defa358a75c021cb7065a4",
+    sha256: "c37e8a416ec083c119008be45cdf2445579038f3e60be83c580c3aff10b83c47",
     fileTests: Object.freeze([13, 4]),
     fileNameSha256: Object.freeze([
-      "ebfefcdf8167a927dcbfe5f3159a892e34124f98f27e691b6a1888138e436076",
+      "8b03a89d113fa27414acc33911136143d5be2fc815b4a6168daab4595177b8e8",
       "b932d8833667fc0e08733720fa10856c720b1c6a69524e5b728bff063ffc0948",
     ]),
     declarations: 17,
-    declarationSha256: "b1a78f0995fdb95fa263de4a750c36686ee8a2655bec79e57fb6764190765bf7",
+    declarationSha256: "8700baf4484315f0e54432e38fc18e07dbdd8dd5e7d06b009c1d496ee970482f",
     files: Object.freeze([
       "tests/vitest/ui-integration/custom-screen-entry-editor-restyle.test.tsx",
       "tests/vitest/ui/custom-screen-entry-presentation-media.test.ts",
@@ -942,9 +942,9 @@ const families = Object.freeze({
 const auxiliaryFamilies = Object.freeze({
   r01Schema: Object.freeze({
     lane: "vitest",
-    tests: 77,
-    sha256: "021b5bd353cf7cf775ae7a06b1477f6b0c5e6933c64518a6aaa36bbbf3f2ebc2",
-    fileTests: Object.freeze([18, 9, 10, 13, 11, 5, 11]),
+    tests: 78,
+    sha256: "069696f71e523b1cced0c58edc9cc9dd713130772e51de80021588caedf18aee",
+    fileTests: Object.freeze([18, 9, 10, 13, 11, 5, 12]),
     fileNameSha256: Object.freeze([
       "3bc33544c8750ea721ccd30993d5000a2525e6f5096555ec786a8128c5fc9a01",
       "892e8a43828f3730c4681e56c15f561005e2554abdf16bdf8725e901c129fb8e",
@@ -952,10 +952,10 @@ const auxiliaryFamilies = Object.freeze({
       "99fabc38404bc71bbb1687dec945d4ebc5d3b3d95843bfa70e795a79b1677073",
       "1cd5e7af104b451a364a40a3d623040e495ef609a8ea0e6720bfc677f14bc47c",
       "b46512e7ddea5aedb4eb6cac33943ea906fce30f05522f0b589174b8b5694221",
-      "2999367a7d6209104a11564b88cdcdf269040bd2c4913fb07e9baceb6cd5e0a9",
+      "37c56877ff36fe4c7c97e246525801f2d68e2b557adbdb453fd224f84457ebfa",
     ]),
-    declarations: 77,
-    declarationSha256: "4135e76b63ee4bf1432b46402dfe06b279d52da8aa4e74664f24d0b82f802d36",
+    declarations: 78,
+    declarationSha256: "318d89fa1a527314013312b89b4a4c67699033b5c2c717ee6f0f62dced677b39",
     files: Object.freeze([
       "tests/vitest/admin/custom-screen-schemas.test.ts",
       "tests/vitest/admin/custom-screen-document-contract.test.ts",
@@ -976,7 +976,7 @@ const auxiliaryFamilies = Object.freeze({
       "f2b1d22c0604abd4d546b2163b45a39cd812d21e1860cdfc10919102d1ec0d36",
     ]),
     declarations: 21,
-    declarationSha256: "c4662daa636508bb6b4bc6385a052e68ea4438aa030419b79c7459cbad0e0617",
+    declarationSha256: "f8947b33f463b6a0d10499bd3a87e527f7cf0fe0b13bd1849627cc5d5b520c16",
     files: Object.freeze([
       "tests/integration/routes/customScreensRoutes.test.ts",
       "tests/integration/routes/customScreensDefinitionIntegrityRoutes.test.ts",
@@ -994,7 +994,7 @@ if (
   protectedFamilyEntries.reduce((total, [, family]) => total + family.tests, 0) !== 349 ||
   protectedFamilyEntries.flatMap(([, family]) => family.files).length !== 36 ||
   auxiliaryFamilyEntries.length !== 2 ||
-  auxiliaryFamilyEntries.reduce((total, [, family]) => total + family.tests, 0) !== 98 ||
+  auxiliaryFamilyEntries.reduce((total, [, family]) => total + family.tests, 0) !== 99 ||
   auxiliaryFamilyEntries.flatMap(([, family]) => family.files).length !== 9 ||
   familyFiles.length !== 45 ||
   new Set(familyFiles).size !== familyFiles.length ||

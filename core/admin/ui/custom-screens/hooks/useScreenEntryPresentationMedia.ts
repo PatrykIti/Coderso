@@ -1,6 +1,7 @@
 import {
   useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useReducer,
   useRef,
@@ -74,6 +75,10 @@ export function useScreenEntryPresentationMedia(input: {
     [requestedIdsPlan, routeKey]
   );
   const mediaRequestKey = boundedRequestPlan.requestKey;
+  const currentMediaRequestKeyRef = useRef(mediaRequestKey);
+  useLayoutEffect(() => {
+    currentMediaRequestKeyRef.current = mediaRequestKey;
+  }, [mediaRequestKey]);
   const [mediaMachine, dispatchMediaAttempt] = useReducer(
     mediaAttemptReducer,
     { requestKey: mediaRequestKey, requestedIds: boundedRequestPlan.requestedIds },
@@ -131,12 +136,16 @@ export function useScreenEntryPresentationMedia(input: {
   useEffect(() => {
     if (!attempt || attempt.requestKey !== mediaRequestKey) return undefined;
     const frozenRouteVisit = routeVisit;
+    const frozenRequestKey = attempt.requestKey;
     const frozenRequestedIds = attempt.requestedIds;
     const frozenAttemptToken = attempt.token;
     let active = true;
     const generation = ++mediaLoadGenerationRef.current;
     const isCurrent = () =>
-      active && mountedRef.current && generation === mediaLoadGenerationRef.current;
+      active &&
+      mountedRef.current &&
+      generation === mediaLoadGenerationRef.current &&
+      currentMediaRequestKeyRef.current === frozenRequestKey;
     let pending = mediaPendingAttemptRef.current;
     if (!pending || pending.attempt !== attempt) {
       pending = { attempt, promise: listMediaCached({ force: attempt.force }) };
@@ -147,12 +156,12 @@ export function useScreenEntryPresentationMedia(input: {
         if (!isCurrent()) return;
         dispatchMediaAttempt({
           type: "settled",
-          requestKey: mediaRequestKey,
+          requestKey: frozenRequestKey,
           token: frozenAttemptToken,
         });
         setMediaCommit({
           routeVisit: frozenRouteVisit,
-          requestKey: mediaRequestKey,
+          requestKey: frozenRequestKey,
           attemptToken: frozenAttemptToken,
           urlsById: projectExactRequestedMediaUrls(records, frozenRequestedIds),
           error: null,
@@ -162,15 +171,15 @@ export function useScreenEntryPresentationMedia(input: {
         if (!isCurrent()) return;
         dispatchMediaAttempt({
           type: "settled",
-          requestKey: mediaRequestKey,
+          requestKey: frozenRequestKey,
           token: frozenAttemptToken,
         });
         setMediaCommit((previous) => ({
           routeVisit: frozenRouteVisit,
-          requestKey: mediaRequestKey,
+          requestKey: frozenRequestKey,
           attemptToken: frozenAttemptToken,
           urlsById:
-            previous.routeVisit === frozenRouteVisit && previous.requestKey === mediaRequestKey
+            previous.routeVisit === frozenRouteVisit && previous.requestKey === frozenRequestKey
               ? previous.urlsById
               : {},
           error: PRESENTATION_MEDIA_LOAD_ERROR,

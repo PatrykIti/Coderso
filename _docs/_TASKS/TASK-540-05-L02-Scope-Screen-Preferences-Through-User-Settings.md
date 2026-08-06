@@ -8,7 +8,8 @@
 **Category:** User Settings / Custom Screens / Privacy
 **Estimated Effort:** Medium
 **Dependencies:** TASK-540-05-L01
-**Status:** 🚧 In Progress
+**Status:** ✅ Done
+**Completed:** 2026-08-06
 **Started:** 2026-07-14
 **Implementation Complete:** 2026-07-17 — assigned work was completed; canonical `✅ Done` transition awaits family changelog 1252.
 **Repair Reason:** Final post-audit found the A/B self-scope route proof re-read only user B after the two sessions wrote different values. The existing real-HTTP test now re-reads A with A's authenticated identity and asserts A's exact DB row alongside B, preserving the exact access-log inventory.
@@ -365,8 +366,8 @@ testIfDb("real HTTP user-settings routes preserve self-scope, CSRF, buckets, err
 - Before the owner stages the new test, the workflow must explicitly union its exact
   path into `TRACKED_TEST_FILES`; do not broaden discovery to every unrelated untracked
   test in the shared tree. Preserve uniqueness/existence checks.
-- The reconciled TASK-540 family aggregate is exactly 64 Vitest + 18 Bun = 82 target
-  files: 81 source-owner/read-only dependency files and one closure-owned aggregate
+- The reconciled TASK-540 family aggregate is exactly 78 Vitest + 18 Bun = 96 target
+  files: 95 source-owner/read-only dependency files and one closure-owned aggregate
   file. This supersedes all earlier partial 51+7 calculations. Update exact cardinality,
   command/isolation self-tests, receipts, and the frozen workflow hash consistently.
 - Add a hard physical-line gate for every added or modified production/test file. For

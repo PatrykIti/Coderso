@@ -17,14 +17,10 @@ import { getCachedMedia, listMediaCached } from "@/services/mediaClient";
 import { MediaGrid } from "@/ui/media/MediaGrid";
 import type { MediaItem } from "@/ui/media/types";
 import { formatBytes, resolveMediaDisplayName, toMediaItem } from "@/ui/media/utils";
-import {
-  normalizeMediaPickerValue,
-  type MediaPickerSelectionValue,
-  type MediaPickerValue,
-} from "./mediaPickerValue";
+import { normalizeMediaPickerValue, type MediaPickerSelectionValue } from "./mediaPickerValue";
 
 type MediaPickerProps = {
-  value: MediaPickerValue;
+  value: unknown;
   onChange: (value: MediaPickerSelectionValue) => void;
   multiple?: boolean;
   accept?: string[];

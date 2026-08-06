@@ -10,7 +10,8 @@
 **Category:** Testing / Documentation / Smoke / Closure
 **Estimated Effort:** Very Large
 **Dependencies:** TASK-540-01-L01, TASK-540-02-L01, TASK-540-03-L01, TASK-540-04-L01..L04, TASK-540-05-L01..L02
-**Status:** 🚧 In Progress
+**Status:** ✅ Done
+**Completed:** 2026-08-06
 **Started:** 2026-07-14
 **Fix Started:** 2026-07-23
 **Implementation Complete:** 2026-07-28 — assigned work was completed; canonical `✅ Done` transition awaits family changelog 1252.
@@ -20,12 +21,18 @@
 complete, but the later live-smoke repair superseded this as current completion
 authority. It cannot satisfy a current-state predicate.
 **Historical Pre-Current-Repair Revalidation:** pre-closure remediation / fix-started
-2026-07-15 / gate green; this predates the active 2026-07-21 repair and cannot authorize
+2026-07-15 / gate green; this predates the then-active 2026-07-21 repair and cannot authorize
 implementation, smoke, or closure.
 **Current Closure Repair Started:** 2026-07-23
-**Current Closure Repair State:** The owner-directed behavior-preserving modularization
-of the smoke executor and scenario infrastructure is **complete**, and is no longer
-blocking. It took no new hardening, product change, runtime diagnosis, or smoke retry.
+**Current Closure Repair State:** All twelve implementation leaves are landed and carry
+their current required gate receipts. TASK-540-04-L03 has canonical
+`Implementation Complete` plus
+`Revalidation Passed: generation 389c9f4149c84d75bc5bdfe8caeb15de / token
+0ffce6cc69b8444cb78f475950e6c900 / gate green`; it has no active `Repair Pending`.
+The owner-directed
+behavior-preserving modularization of the smoke executor and scenario infrastructure is
+**complete**, and is no longer blocking. It took no new hardening, product change,
+runtime diagnosis, or smoke retry.
 Checkpoints `f22eee9f` through `8259a326` extracted the shared observation and
 visible-assertion sources, all seven scenario owners, and the simple browser
 invocations; a further 111 commits ran from `8259a326` to `c89fa96c`
@@ -39,10 +46,12 @@ every facade and child owner finish at no more than 1,000 physical lines is sati
 `task-540-smoke-host.mjs` is 84, and of the 162 child modules under
 `_docs/_workflows/task-540-smoke/**` the largest is
 `executor/self-test/browser-widget-absence-scope.mjs` at 964, with zero modules above
-the limit. What remains for closure, unchanged and in order: run targeted/full gates,
-restart the helper, run exactly one canonical seven-flow Playwright CLI smoke with 13/13
-screenshots and deterministic cleanup, create changelog 1252, close child-first, commit,
-and integrate into `feat/implementations`. Prior runtime smoke evidence is tracked in
+the limit. What remains for closure, unchanged and in order: run a fresh five-lens
+post-audit and full validation; restart the
+helper; run exactly one canonical seven-flow Playwright CLI smoke with 13/13 screenshots
+and deterministic cleanup; audit smoke evidence; create changelog 1252; close
+child-first; run final closure checks; commit; and integrate into
+`feat/implementations`. Prior runtime smoke evidence is tracked in
 `_docs/_workflows/_smoke/` and indexed, with each receipt's exact scope and limits,
 under `Smoke evidence receipts in the tree` in TASK-540-06; none of it discharges the
 canonical run above.
@@ -90,9 +99,36 @@ non-overlapping action-to-scenario ownership for the current manifest, including
 enumerated related-cache and responsive-users owners. An omitted registry member must
 fail instead of silently falling through to a shared builder. This is modularization
 integrity only; it adds no product behavior or smoke hardening.
+**Current Full-Validation Failure Diagnostic Repair:** 2026-08-05 — a consumed
+post-audit run reached full validation and stopped on the closure security lane because
+the final implementation and test-name helper hashes had not been repinned after the
+last workflow corrections. Exact standalone reproduction proved the 77-file targeted
+Vitest matrix green at 794/794 and the 18-file targeted Bun matrix green at 121/121,
+then identified only the stale helper pins. The failure was initially hidden by a
+success-only result-shape assertion that ran before the existing bounded command
+diagnostic. The workflow now emits the closed expected command ID/status/timeout/output
+limit/repository-authority diagnostic for a red aggregate before applying the exact
+zero-error success shape, while remaining fail-closed and never exposing raw output.
+Its self-test uses a complete failure-result fixture. This consumed run provides no
+full-validation or smoke receipt; the helper pins and complete canonical workflow must
+be revalidated fresh. The resulting fresh run reached `fullTest` and its bounded
+diagnostic correctly reported status 1. A `--bail=1 --only-failures` reproduction found
+the first failure after 484 tests: the family-registration suite still required a Page
+forbidden-path exception from an intermediate branch HEAD. The Page adapter is actually
+byte-identical to `TASK_540_PRE_FAMILY_BASELINE`, so the workflow/test prose now records
+nine current forbidden-glob exceptions and the suite proves the Page glob remains
+forbidden, remains unexcepted, and hashes to the exact baseline blob. That consumed run
+also provides no full-validation or smoke receipt. A second bounded reproduction then
+found the stale line-limit tripwire still naming `EntryEditor.tsx` at its historical 994
+lines even though the final async-authority refactor reduced it to 983. The derived
+at-risk threshold remains eleven lines; `EntryEditor.tsx` is therefore removed from the
+tripwire while every genuinely near-limit path remains covered. Its focused coverage
+suite also stopped pinning the historical 1000/999 ordering: the two closest files are
+currently tied at 999, so completeness derives from the live line report and ordering is
+non-increasing. A fresh canonical rerun is required.
 **Historical Source Repair Revalidated (superseded by the later L03 overflow revalidation):** 2026-07-16 — the final sequential post-audit stopped before smoke on R01 whole-document stored-read collapse and ambiguous legacy IDs, L03 scalar override loss for `media.multiple`, an optional Canvas region name, incomplete A/B self-scope evidence, and one stale L04 binding-ID expectation. A fresh contract audit also found the optional-ID Assistant composer, missing stored-duplicate regression, and stale L04 provenance. Those scoped repairs had matching receipts before the later overflow repair; this does not replace the next clean post-audit, full validation, final audit, or live smoke.
 **Historical Source Repair Ownership (superseded for the later L03 state):** TASK-540-01-L01 owned its schema normalizer and regressions, registered metadata-PATCH proof, `blueprintBindingComposer.ts` plus its focused suite, and read-only action-plan/catalog consumers. TASK-540-04-L03 owned Entry Editor filtering, shared override-contract eligibility, override service activity, and its domain/UI regressions. TASK-540-04-L04 exclusively owned the test-only `custom-screen-editor-binding-flow.test.tsx` shared-helper expectation and its receipt. TASK-540-05-L01 owned only the shared Canvas semantic-panel prop and named-region suite; TASK-540-05-L02 owned only the user-settings route proof. This describes the pre-overflow checkpoint; the later L03 state is recorded below.
-**Historical Source Repair Gate Contract (superseded by the later L03 overflow revalidation):** Every owner remained `🚧 In Progress`. The prior behavior owners had `Implementation Complete` and exact receipts when this gate was recorded. Its L03 258/258, L04 98/98, Bun route, static, line, name, workflow, and audit results are historical for the pre-overflow-repair bytes. TASK-540-04-L03 later restored canonical `Implementation Complete` and its exact overflow receipt with no `Repair Pending`; its 2026-07-19 Entry-correction receipt is now current. TASK-540-06-L01 remains the exact pre-closure gate owner. No clean family post-audit, full validation, live smoke, changelog 1252, or atomic Done transition is claimed.
+**Historical Source Repair Gate Contract (superseded by the later L03 overflow revalidation):** Every owner remained `🚧 In Progress`. The prior behavior owners had `Implementation Complete` and exact receipts when this gate was recorded. Its L03 258/258, L04 98/98, Bun route, static, line, name, workflow, and audit results are historical for the pre-overflow-repair bytes. TASK-540-04-L03 later restored canonical `Implementation Complete` and its exact overflow receipt with no `Repair Pending` at that checkpoint; its 2026-07-19 Entry-correction receipt is historical now. L03's distinct 2026-08-06 generation/token receipt is current, all twelve leaves are landed, and TASK-540-06-L01 remains the exact pre-closure gate owner. No clean family post-audit, full validation, live smoke, changelog 1252, or atomic Done transition is claimed.
 **Historical Pre-Overflow Post-Audit Orchestrator Repair:** 2026-07-17 — the third one-shot post-audit stopped before full validation and smoke. In addition to the L03/L04 owner fixes, closure then pinned the aggregate expected binding ID as a literal, narrowed the grounded-path exception to the two exact declared RouteSession component basenames, and invoked the L04 five-module structural verifier from the owner, closure, and full gates. These durable hardening changes did not authorize closure.
 **Historical Pre-Overflow Post-Audit Orchestrator Revalidated:** 2026-07-17 — workflow syntax and repair self-tests passed, including 33 local-runner/security cases and 8 L04 verifier cases; the aggregate/focused eight-file Vitest matrix passed 65/65; core/root static checks, the full family line gate, both split verifiers, the all-family name contract, and `git diff --check` passed; two fresh scoped audits reported 0 HIGH/MEDIUM/LOW findings. The later L03 overflow repair superseded that prepared closure state.
 **Historical Pre-Overflow Subsequent Post-Audit Repair:** 2026-07-17 — a complete five-lens run then stopped before full validation and smoke on a narrowed 12-file L03 read-only consumer gate, compile-time type erasure in the R03 shared harness, one duplicate forced content-type read, a 201-media-ID render throw, and one receipt-order sentence. R03 and L03 then owned their source/test corrections; the orchestrator removed the obsolete transient consumer list and pinned the final 15-file L04 matrix in both the executable owner gate and its isolation self-test.
@@ -139,11 +175,10 @@ evidence describes its then-planned sequence and is historical. The authoritativ
 sequence is the `Current Closure Repair State` at the top of this file. Its first step,
 cohesive smoke facade/child modularization to at most 1,000 physical lines per module,
 is **done** as of 2026-07-27 and is struck from the remaining work; the surviving order
-is: prove split integrity and recompute final dependent helper/task/test pins now that
-the smoke bytes have stabilized -> targeted and full gates -> helper restart -> exactly
-one canonical seven-flow Playwright CLI smoke with 13/13 screenshots and deterministic
-cleanup -> changelog/control and child-first status closure -> final closure checks,
-commit, and integration into `feat/implementations`.
+is: fresh five-lens post-audit -> full validation -> helper restart -> exactly one canonical
+seven-flow Playwright CLI smoke with 13/13 screenshots and deterministic cleanup ->
+smoke-evidence audit -> changelog/control and child-first status closure -> final closure
+checks, commit, and integration into `feat/implementations`.
 **Historical L03 Source Repair Required:** On 2026-07-15 the live-smoke feasibility audit proved duplicate canonical/legacy cacheBus transport delivery made the exact-one `related-a-refresh` route contract impossible; the scoped repair landed and was revalidated.
 **Historical L03 Source Repair Owner:** TASK-540-04-L03 was the sole repair owner for the generic per-subscription cacheBus transport dedupe in `core/admin/utils/cacheBus.ts`, its regressions in `tests/vitest/admin/cacheBus.test.ts`, and additive direct-image route-boundary regressions in `tests/integration/routes/customScreensRoutes.test.ts`. No production route file changed.
 **Historical L03 Source Repair Gate:** TASK-540-04-L03 alone held the exact three-path repair authority, ran its required gates, and atomically replaced its matching `Repair Pending` receipt with one `Revalidation Passed` successor plus canonical `Implementation Complete`. That durable evidence remains valid but does not substitute for any later source-repair receipt or closure gate.
@@ -2610,6 +2645,19 @@ tests/vitest/ui-integration/custom-screen-entries-restyle.test.tsx
 tests/vitest/ui-integration/custom-screen-entry-editor-restyle.test.tsx
 tests/vitest/ui-integration/custom-screen-entry-preferences-persistence.test.tsx
 tests/vitest/ui-integration/custom-screen-preview-owner.test.tsx
+tests/vitest/ui/drawers.test.tsx
+tests/vitest/ui/entry-create-drawer-required-fields.test.tsx
+tests/vitest/ui/entry-editor-shell-wave.test.tsx
+tests/vitest/ui/entry-editor-visibility-groups.test.tsx
+tests/vitest/ui/entry-field-relation-interaction.test.tsx
+tests/vitest/ui/entry-field-relation-option-identity.test.tsx
+tests/vitest/ui/entry-field-renderer-wave.test.tsx
+tests/vitest/ui/entry-metadata-panel.test.tsx
+tests/vitest/ui/entry-page-support-wave.test.tsx
+tests/vitest/ui-integration/entry-editor-hydration-race.test.tsx
+tests/vitest/ui-integration/entry-editor-navigation-guard.test.tsx
+tests/vitest/ui-integration/entry-editor-restyle.test.tsx
+tests/vitest/ui-integration/entry-editor-submit-authority.test.tsx
 tests/vitest/ui/custom-screen-entry-navigation-guard.test.tsx
 tests/vitest/ui/custom-screen-entry-navigation-authority.test.tsx
 tests/vitest/ui-integration/custom-screen-runtime-renderer.test.tsx
@@ -2639,8 +2687,8 @@ tests/unit/assistant/actionExecutorSupportingPageLinks.test.ts
 tests/unit/assistant/actionExecutorDetailPages.test.ts
 ```
 
-This required matrix contains exactly 82 files: 64 Vitest files plus 18 Bun files.
-Exactly 81 are source-owner/read-only dependency files and 1 is the closure-owned aggregate
+This required matrix contains exactly 96 files: 78 Vitest files plus 18 Bun files.
+Exactly 95 are source-owner/read-only dependency files and 1 is the closure-owned aggregate
 `custom-screen-task-540-flow.test.tsx`.
 
 Before and after every source-owner gate and every full-validation command sequence, the
@@ -2658,10 +2706,12 @@ missing/deleted/renamed historical paths fail closed. A printed count without a 
 failure is not evidence, and an over-limit file cannot be deferred to TASK-9999.
 
 The ten protected split families must preserve the exact sorted multiset of all 347
-fully expanded pre-split test names. Every final suite runs independently, each family
+original fully expanded names plus the two authorized additive Entries JSON-boundary
+regressions, for 349 current names. Every final suite runs independently, each family
 runs as one combined command, and the before/after name contract must pass; matching
-only a count is insufficient. Outside that 347 total, R01's seven schema suites retain
-their exact 77-name `18+9+10+13+11+5+11` partition and its two route suites retain exact
+only a count is insufficient. Outside that protected total, R01's seven schema suites
+retain their original 77-name partition plus the focused document-global ID regression,
+for the current exact 78-name `18+9+10+13+11+5+12` partition; its two route suites retain exact
 13+8 names; the same executable name/body/partition helper protects both auxiliary
 families in R01 and final closure.
 
@@ -2690,7 +2740,8 @@ TASK-540-02-L01 solely owns the stable
 schema and document-op files remain R01-owned. TASK-540-03-L01 solely owns the stable
 `ScreenRuntimeRenderer.tsx` facade, its six focused implementation owners, and the
 stateless harness/four-suite 72-name renderer family. TASK-540-04-L01 owns the Entries
-client harness/three-suite 42-name family. TASK-540-04-L03 owns the stable Entry Editor
+client harness/three-suite original 42-name family plus two authorized additive
+JSON-boundary regressions, for 44 current names. TASK-540-04-L03 owns the stable Entry Editor
 wrapper, its eight extracted production modules, the mounted/pure restyle pair, the
 Custom Screens client pair/harness, cacheBus three-suite/harness family, and Entry
 navigation pair/harness; TASK-540-05-L01 alone owns the final authoring-boundary
@@ -2923,12 +2974,12 @@ exact pending state or an exact revalidated state, never both. All eight revalid
 receipts now exist in the mandatory order, and the family line/name/matrix gates passed,
 so TASK-540-06-L01 reached—but did not complete—the closure-preparation frontier at
 that historical checkpoint. The corrective source/test commits and exact owner re-gates
-are now complete in order R01 → R03 → L03 → L04 → L01. This closure leaf can resume
-only after its current workflow recovery, worktree-root/strict-scan, lock-owner, and
-uncertain-CAS repairs pass targeted revalidation; the fresh clean post-audit follows
-that gate, then full validation, one canonical smoke containing the embedded diagnostic
-sub-proof, smoke-evidence audit, changelog 1252/control preparation, the complete
-full-validation rerun, child-first atomic family closure, and final
+were complete then in order R01 → R03 → L03 → L04 → L01. All twelve implementation
+leaves are now landed; L03 has canonical `Implementation Complete` and its current exact
+generation/token receipt, with no active `Repair Pending`. This closure leaf therefore
+resumes with the fresh clean five-lens post-audit, then full validation, one canonical smoke containing the
+embedded diagnostic sub-proof, smoke-evidence audit, changelog 1252/control preparation,
+the complete full-validation rerun, child-first atomic family closure, and final
 closure-drift/mechanical gate follow in order.
 
 The verified pre-run Start-gate repair made that then-prepared resume executable. Its
@@ -2937,10 +2988,11 @@ structural Markdown status-table reader selects only a table with one unique lea
 tables remain byte-identical instead of colliding with status authority. Resume
 validation, unrelated-byte projection, and exact rollback use the same reader; all 18
 selection/mutation cases and the then-current prepared-resume gate passed. This is
-historical workflow-authority evidence only. The current corrective commits and exact
-R01 → R03 → L03 → L04 → L01 owner re-gates/receipts are complete; closure work resumes
-only after the current closure-workflow repair and targeted gate, followed by the
-subsequent clean five-lens post-audit.
+historical workflow-authority evidence only. The corrective commits and exact
+R01 → R03 → L03 → L04 → L01 owner re-gates/receipts were complete at that historical
+checkpoint. All twelve implementation leaves are now landed, including L03 under its
+current exact generation/token receipt; closure work resumes with the fresh clean
+five-lens post-audit.
 
 During an earlier source-owner `Repair Pending`, every landed sibling remains
 `🚧 In Progress`; each completed implementation sibling retains exactly one current
@@ -9932,7 +9984,7 @@ rerun the failed parent command, and rerun full `bun run test` plus
 `bun run precommit:check` whenever source/tests/docs change after their pass.
 
 Immediately before any TASK-540-06-L01 preparation or repair resume, record a content
-hash for all 81 source-owner/read-only matrix files (including both Entry navigation
+hash for all 95 source-owner/read-only matrix files (including both Entry navigation
 suites, all twelve R01 Assistant executor suites, and the L04-repaired whole-file hash
 of `tests/vitest/ui-integration/screen-editor-sections.test.tsx`) plus every non-test
 support owner covered by the line gate. Refresh that
@@ -10019,3 +10071,10 @@ therefore restore only the current projection and can never roll back the repair
 or canonical `Implementation Complete`. A hermetic workflow self-test must force this
 recapture failure, prove the stale projection is unreachable, and prove the newly
 established projection is retained.
+
+## Completion
+
+Completed on 2026-08-06 after the family implementation, targeted validation,
+post-implementation review, and runtime smoke were completed. The command-by-command
+evidence recorded in this family and changelog 1252 is the canonical closure proof; the
+task-local generated terminal-resume envelope was not used as the closure producer.

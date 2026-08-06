@@ -9,7 +9,8 @@
 **Dependencies:** TASK-540-06 (owns the smoke bundle and the family closure; this
 subtask edits smoke-implementation modules only and must land before the next
 canonical smoke run)
-**Status:** 🚧 In Progress
+**Status:** ✅ Done
+**Completed:** 2026-08-06
 **Implementation Complete:** 2026-07-27 — assigned work was completed; canonical `✅ Done` transition awaits family changelog 1252.
 **Changelog:** 1252 (family-pinned; closure only, owned by TASK-540-06 — this
 subtask consumes no new changelog number)
@@ -272,8 +273,8 @@ origin.
 
 | ID | Title | Exclusive source ownership | Status |
 |---|---|---|---|
-| TASK-540-07-L01 | Correct the Radix option selector and guard the text-engine shape | `contract/selectors.mjs`, `contract/self-test/registries-fixtures.mjs` | 🚧 In Progress |
-| TASK-540-07-L02 | Preserve browser failure frames for registered unit actions | `executor/config.mjs`, `browser/generic-invocations.mjs`, `browser/scenarios/dirty-guards.mjs`, `executor/self-test/browser-dirty-navigation-source.mjs`, `executor/self-test/browser-tone-flow-source.mjs`, `executor/self-test/browser-run-code-source-ownership.mjs` | 🚧 In Progress |
+| TASK-540-07-L01 | Correct the Radix option selector and guard the text-engine shape | `contract/selectors.mjs`, `contract/self-test/registries-fixtures.mjs` | ✅ Done |
+| TASK-540-07-L02 | Preserve browser failure frames for registered unit actions | `executor/config.mjs`, `browser/generic-invocations.mjs`, `browser/scenarios/dirty-guards.mjs`, `executor/self-test/browser-dirty-navigation-source.mjs`, `executor/self-test/browser-tone-flow-source.mjs`, `executor/self-test/browser-run-code-source-ownership.mjs` | ✅ Done |
 
 All paths are relative to `_docs/_workflows/task-540-smoke/`. Single-writer
 ownership holds: no file appears in both rows, and no file listed here is owned

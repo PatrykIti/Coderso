@@ -7,6 +7,7 @@ import {
   isScreenMediaAssetUuid,
   normalizeCustomScreenDefinitionForRead,
   normalizeCustomScreenDefinitionForWrite,
+  normalizeScreenDocumentV1ForRead,
   type CustomScreenListRowTemplate,
   type ScreenBindingWarningSink,
   type ScreenFieldBinding,
@@ -236,6 +237,160 @@ test("TASK-540-01 generated stored-read Button IDs cannot retain unsupported hre
   ]);
   expect(normalizeCustomScreenDefinitionForRead({ definition: read })).toEqual(read);
   expect(normalizeCustomScreenDefinitionForWrite({ definition: read })).toEqual(read);
+});
+
+test("TASK-540-01 stored-read block IDs are document-global and explicit duplicates fail closed", () => {
+  // The allocator is shared by every recursive collection in one stored document.
+  const storedDocument = (scope: "editor" | "row") => ({
+    schemaVersion: 1 as const,
+    sections: [
+      {
+        id: `${scope}-section-a`,
+        type: "section",
+        data: {},
+        blocks: [
+          { id: "block-1", type: "field", data: { marker: `${scope}-explicit-one` } },
+          { type: "field", data: { marker: `${scope}-root-missing` } },
+          {
+            id: `${scope}-container`,
+            type: "field-group",
+            data: { marker: `${scope}-container` },
+            children: [
+              { type: "field", data: { marker: `${scope}-child-missing` } },
+              { id: null, type: "field", data: { marker: `${scope}-child-null` } },
+            ],
+            slots: {
+              main: [{ type: "field", data: { marker: `${scope}-slot-missing` } }],
+            },
+          },
+        ],
+      },
+      {
+        id: `${scope}-section-b`,
+        type: "section",
+        data: {},
+        blocks: [
+          { id: "block-3", type: "field", data: { marker: `${scope}-explicit-three` } },
+          { id: null, type: "field", data: { marker: `${scope}-second-section-null` } },
+          { id: "block-6", type: "field", data: { marker: `${scope}-explicit-six` } },
+        ],
+      },
+    ],
+  });
+  const bindingFor = (scope: "editor" | "row") => ({
+    id: `${scope}-generated-slot-binding`,
+    blockId: "block-7",
+    propPath: "value",
+    source: "entry" as const,
+    field: "title",
+    mode: "read" as const,
+  });
+  const globalBase = buildV4WithBlocks([]);
+  const globalStored = {
+    ...globalBase,
+    listView: {
+      ...globalBase.listView,
+      rowTemplate: {
+        document: storedDocument("row"),
+        bindings: [bindingFor("row")],
+      },
+    },
+    editorView: {
+      ...globalBase.editorView,
+      document: storedDocument("editor"),
+      bindings: [bindingFor("editor")],
+    },
+  };
+  const globalBefore = JSON.stringify(globalStored);
+
+  const globalRead = normalizeCustomScreenDefinitionForRead({ definition: globalStored });
+
+  expect(JSON.stringify(globalStored)).toBe(globalBefore);
+  const collectIds = (document: typeof globalRead.editorView.document) => {
+    const ids: string[] = [];
+    const visit = (blocks: (typeof document.sections)[number]["blocks"]) => {
+      for (const block of blocks) {
+        ids.push(block.id);
+        if (block.children) visit(block.children);
+        if (block.slots) Object.values(block.slots).forEach(visit);
+      }
+    };
+    document.sections.forEach((section) => visit(section.blocks));
+    return ids;
+  };
+  for (const [scope, document, bindings] of [
+    ["editor", globalRead.editorView.document, globalRead.editorView.bindings],
+    ["row", globalRead.listView.rowTemplate?.document, globalRead.listView.rowTemplate?.bindings],
+  ] as const) {
+    expect(document).toBeDefined();
+    if (!document) throw new Error(`${scope} document missing`);
+    const ids = collectIds(document);
+    expect(ids).toEqual([
+      "block-1",
+      "block-2",
+      `${scope}-container`,
+      "block-4",
+      "block-5",
+      "block-7",
+      "block-3",
+      "block-8",
+      "block-6",
+    ]);
+    expect(new Set(ids).size).toBe(ids.length);
+    expect(bindings).toEqual([expect.objectContaining({ blockId: "block-7" })]);
+  }
+  expect(() => validate(customScreenDefinitionSchema, globalRead)).not.toThrow();
+  expect(normalizeCustomScreenDefinitionForRead({ definition: globalRead })).toEqual(globalRead);
+  expect(normalizeCustomScreenDefinitionForWrite({ definition: globalRead })).toEqual(globalRead);
+
+  const duplicateDocument = {
+    schemaVersion: 1 as const,
+    sections: [
+      {
+        id: "duplicate-section-a",
+        type: "section",
+        data: {},
+        blocks: [
+          {
+            id: "duplicate-explicit",
+            type: "field-group",
+            data: {},
+            children: [{ id: "duplicate-global", type: "field", data: {} }],
+          },
+        ],
+      },
+      {
+        id: "duplicate-section-b",
+        type: "section",
+        data: {},
+        blocks: [{ id: "duplicate-global", type: "field", data: {} }],
+      },
+    ],
+  };
+  expect(() => normalizeScreenDocumentV1ForRead(duplicateDocument)).toThrow(
+    "custom_screen_definition_invalid"
+  );
+
+  const duplicateEditor = normalizeCustomScreenDefinitionForRead({
+    definition: {
+      ...globalStored,
+      editorView: { ...globalStored.editorView, document: duplicateDocument },
+    },
+  });
+  expect(duplicateEditor.editorView.document.sections).toEqual([]);
+  expect(collectIds(duplicateEditor.listView.rowTemplate!.document)).toContain("block-8");
+
+  const duplicateRow = normalizeCustomScreenDefinitionForRead({
+    definition: {
+      ...globalStored,
+      listView: {
+        ...globalStored.listView,
+        rowTemplate: { document: duplicateDocument, bindings: [] },
+      },
+    },
+  });
+  expect(duplicateRow.listView.rowTemplate).toEqual(globalBase.listView.rowTemplate);
+  expect(collectIds(duplicateRow.editorView.document)).toContain("block-8");
 });
 
 test("TASK-540-01 Object.prototype type names never become stored-read aliases", () => {

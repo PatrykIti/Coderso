@@ -1,5 +1,5 @@
 import { SlidersHorizontal } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -7,11 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from "@/components/ui/sheet";
 import { isApiClientError } from "@/services/apiClient";
 import { cacheKeys } from "@/services/cachePolicy";
-import {
-  getCachedContentTypes,
-  listContentTypesCached,
-  type ContentTypeSummary,
-} from "@/services/contentTypesClient";
+import { listContentTypesCached, type ContentTypeSummary } from "@/services/contentTypesClient";
 import {
   deleteEntry,
   getEntryCached,
@@ -51,6 +47,13 @@ import { EntryMetadataPanel, type EntryStatus } from "./EntryMetadataPanel";
 import { EntryTitleSlugFields } from "./EntryTitleSlugFields";
 import { getContentTypeLabels } from "./contentTypeLabels";
 import { buildEntryChecklist } from "./entryChecklist";
+import {
+  resolveEntryEditorPath,
+  resolveEntryEditorRoute,
+  useEntryVisitAuthority,
+  type EntryLoadOptions,
+  type EntryVisitToken,
+} from "./entryEditorVisit";
 import { buildEntryFieldGroups } from "./entryFieldGroups";
 import { buildEntryMetadataUpdate } from "./entryMetadataUpdate";
 import {
@@ -74,27 +77,6 @@ import {
 import type { ContentField } from "../content-types/SchemaBuilder";
 import { fieldsFromSchema } from "../content-types/schemaMapping";
 
-const resolveEntryParams = (path: string): { type: string | null; id: string | null } => {
-  // A router path carries the search and hash too; only the pathname segments identify
-  // the entry.
-  const pathname = path.split(/[?#]/)[0] ?? path;
-  const parts = pathname.split("/").filter(Boolean);
-  const entriesIndex = parts.findIndex((segment) => segment === "entries");
-  if (entriesIndex !== -1) {
-    return {
-      type: parts[entriesIndex + 1] ?? null,
-      id: parts[entriesIndex + 2] ?? null,
-    };
-  }
-
-  return { type: null, id: null };
-};
-
-// `AdminApp` resolves its own route the same way: the router path is authoritative,
-// `window.location` is the fallback for a mount without one.
-const resolveEditorPathname = (routerPath?: string) =>
-  routerPath ?? (typeof window === "undefined" ? "" : window.location.pathname);
-
 const resolveEditorErrorMessage = (error: unknown, fallback: string) =>
   isApiClientError(error) ? error.message : fallback;
 
@@ -102,20 +84,6 @@ const resolveEditorErrorMessage = (error: unknown, fallback: string) =>
 // nothing else already explains it: a failed read or a missing content type is the better
 // message.
 const ENTRY_NOT_LOADED_MESSAGE = "This entry has not finished loading yet.";
-
-type LoadEntryOptions = Readonly<{
-  // This read owns the page-level loading indicator and switches it off when it
-  // finishes. A read never switches it ON: the baseline read starts with `isLoading`
-  // already true, and writing state synchronously from the mount effect would only
-  // cost a cascading render (react-hooks/set-state-in-effect). Background reads from
-  // the cache bus leave the indicator alone, so a refresh never blanks the page.
-  clearLoading?: boolean;
-  // The first read of this visit: the baseline the local edits are based on, so it is
-  // applied over them instead of being offered as someone else's change.
-  isBaseline?: boolean;
-  // The user asked for the remote version ("Refresh"): local edits are dropped.
-  discardLocalEdits?: boolean;
-}>;
 
 /**
  * One entry editor visit. `type` and `id` are FIXED for this component's lifetime:
@@ -132,7 +100,7 @@ type EntryEditorInstanceProps = Readonly<{
 
 export function EntryEditor() {
   const { path } = useAdminRouter();
-  const { type, id } = resolveEntryParams(resolveEditorPathname(path));
+  const { type, id } = resolveEntryEditorRoute(resolveEntryEditorPath(path));
   return <EntryEditorInstance key={`${type ?? ""}:${id ?? ""}`} type={type} id={id} />;
 }
 
@@ -174,6 +142,8 @@ function EntryEditorInstance({ type, id }: EntryEditorInstanceProps) {
     claim: claimSnapshotWrite,
     supersedeAll: supersedeSnapshotWrites,
   } = useEntrySnapshotAuthority();
+  const { beginVisit, endVisit, currentVisit, isCurrentVisit, beginMutation, isCurrentMutation } =
+    useEntryVisitAuthority();
   // Which entry the editor holds state FOR. `applyEntry` is the only writer, because it is
   // the only path that populates `fields` and `values`: a mutation response cannot supply
   // them, the field list comes from the content type. The ref is the authority — a promise
@@ -202,10 +172,6 @@ function EntryEditorInstance({ type, id }: EntryEditorInstanceProps) {
     () => loadedIdentityRef.current === entryIdentity,
     [entryIdentity]
   );
-  // "A newer authority exists" and "there is no editor left to write to" are different facts.
-  // The snapshot authority carries the first, and the baseline hydration below may override
-  // it; this ref carries the second, and nothing may override it.
-  const visitEndedRef = useRef(false);
   // The read that owns the page-level indicator. Only the newest owner may switch it
   // off, so two "Refresh" clicks cannot let the older one hide a spinner the newer read
   // still needs — and a background read superseding the baseline cannot strand it on.
@@ -229,6 +195,11 @@ function EntryEditorInstance({ type, id }: EntryEditorInstanceProps) {
   const [taxonomyOverview, setTaxonomyOverview] = useState<TaxonomyOverview | null>(null);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
+  const {
+    relationTargets,
+    beginAuthoritativeContentTypesRequest,
+    acceptAuthoritativeContentTypes,
+  } = useEntryRelationTargets();
 
   const schemaFieldNames = useMemo(() => new Set(fields.map((field) => field.name)), [fields]);
   const hiddenSchemaFieldNames = useMemo(() => new Set<string>(), []);
@@ -301,29 +272,27 @@ function EntryEditorInstance({ type, id }: EntryEditorInstanceProps) {
     }
   }, []);
 
-  const resolveContentType = useCallback(
-    async (force?: boolean) => {
-      if (!type) return null;
-      const cached = getCachedContentTypes()?.find((item) => item.slug === type) ?? null;
-      if (cached && !force) return cached;
-      const types = await listContentTypesCached({ force: true });
-      return types.find((item) => item.slug === type) ?? null;
-    },
-    [type]
-  );
-
   // One reader for every path into the editor (baseline, cache bus, "Refresh"), written
   // as a promise chain rather than an async body so that every state write happens in a
   // callback: the mount effect below can then start a read without writing state
   // synchronously (react-hooks/set-state-in-effect).
   const loadEntry = useCallback(
-    (options?: LoadEntryOptions) => {
-      if (!type || !id) return;
+    (options?: EntryLoadOptions, exactVisit?: EntryVisitToken) => {
+      const visit = exactVisit ?? currentVisit();
+      if (!type || !id || visit === null || !isCurrentVisit(visit)) return;
       const seq = beginSnapshotWrite();
+      // Reserve relation-target authority before either request starts. A cache-bus
+      // refresh begun later must remain authoritative even if this baseline settles last.
+      const relationTargetsRequest = beginAuthoritativeContentTypesRequest();
       if (options?.clearLoading) loadingOwnerRef.current = seq;
-      void Promise.all([getEntryCached(type, id, { force: true }), resolveContentType(true)])
-        .then(async ([entryResult, contentType]) => {
-          if (visitEndedRef.current) return;
+      void Promise.all([
+        getEntryCached(type, id, { force: true }),
+        listContentTypesCached({ force: true }),
+      ])
+        .then(async ([entryResult, contentTypes]) => {
+          if (!isCurrentVisit(visit)) return;
+          // Option-list freshness is independent of whether a dirty draft accepts the snapshot.
+          acceptAuthoritativeContentTypes(relationTargetsRequest, contentTypes);
           // A superseded read may not overwrite newer state — unless there is no newer state
           // to overwrite. Until `applyEntry` has run for this entry there are no fields and
           // no values, and nothing that superseded this read can supply them: a mutation
@@ -338,6 +307,7 @@ function EntryEditorInstance({ type, id }: EntryEditorInstanceProps) {
           // branch of its own — the "offer" branch writes no snapshot, so leaving it unclaimed
           // would let a stale one hydrate the moment the edits it protected were saved.
           claimSnapshotWrite(seq);
+          const contentType = contentTypes.find((item) => item.slug === type) ?? null;
           if (!contentType) {
             setError("Content type not found.");
             return;
@@ -361,51 +331,57 @@ function EntryEditorInstance({ type, id }: EntryEditorInstanceProps) {
             return;
           }
           if (options?.discardLocalEdits) resetEdits();
-          // The snapshot is applied BEFORE the option lists are fetched, as it always
-          // has been: hydration must not wait on a second request.
           applyEntry(entryResult, contentType);
           const overview = await loadTaxonomyOverview(contentType.id);
-          if (!isSnapshotAuthoritative(seq)) return;
+          if (!isCurrentVisit(visit) || !isSnapshotAuthoritative(seq)) return;
           setTaxonomyOverview(overview);
         })
         .catch((err: unknown) => {
-          if (!isSnapshotAuthoritative(seq)) return;
+          if (!isCurrentVisit(visit) || !isSnapshotAuthoritative(seq)) return;
           setError(resolveEditorErrorMessage(err, "Failed to load entry."));
         })
         .finally(() => {
-          if (options?.clearLoading && loadingOwnerRef.current === seq) setIsLoading(false);
+          if (isCurrentVisit(visit) && options?.clearLoading && loadingOwnerRef.current === seq) {
+            setIsLoading(false);
+          }
         });
     },
     [
       applyEntry,
+      acceptAuthoritativeContentTypes,
+      beginAuthoritativeContentTypesRequest,
       beginSnapshotWrite,
       claimSnapshotWrite,
+      currentVisit,
       hasEdits,
       hasLoadedCurrentEntry,
       id,
+      isCurrentVisit,
       isSnapshotAuthoritative,
       loadTaxonomyOverview,
       resetEdits,
-      resolveContentType,
       type,
     ]
   );
 
+  useLayoutEffect(() => {
+    const visit = beginVisit();
+    return () => {
+      // Revoke mutations during the route commit, before passive cleanup can run.
+      endVisit(visit);
+      supersedeSnapshotWrites();
+    };
+  }, [beginVisit, endVisit, supersedeSnapshotWrites]);
+
   useEffect(() => {
-    // Re-entering the same instance (a StrictMode double-invoke) re-opens the visit.
-    visitEndedRef.current = false;
+    const visit = currentVisit();
+    if (visit === null) return;
     // The first hydration is the baseline the local edits are based on, not a remote
     // update: skipping it left `slug` empty and every field value unpopulated, and the
     // next save persisted that emptiness. It is always applied, keeping exactly what the
     // user has already edited in either channel on top.
-    loadEntry({ isBaseline: true, clearLoading: true });
-    return () => {
-      // Ending the visit invalidates everything in flight, so a late snapshot cannot land
-      // on a torn-down editor.
-      visitEndedRef.current = true;
-      supersedeSnapshotWrites();
-    };
-  }, [loadEntry, supersedeSnapshotWrites]);
+    loadEntry({ isBaseline: true, clearLoading: true }, visit);
+  }, [currentVisit, loadEntry]);
 
   useEffect(() => {
     if (!type || !id) return;
@@ -414,10 +390,6 @@ function EntryEditorInstance({ type, id }: EntryEditorInstanceProps) {
       loadEntry();
     });
   }, [id, loadEntry, type]);
-
-  // Called here rather than beside the other useState calls so the effects it
-  // registers keep their original position in the mount effect order.
-  const relationTargets = useEntryRelationTargets();
 
   useEffect(() => {
     let active = true;
@@ -528,6 +500,8 @@ function EntryEditorInstance({ type, id }: EntryEditorInstanceProps) {
   const handleSaveDraft = async (options?: { successMessage?: string }) => {
     if (!type || !id) return;
     if (refuseUnloadedSubmit()) return;
+    const mutation = beginMutation("save");
+    if (!mutation) return;
     // Captured BEFORE the request: anything edited after this tick is not in the payload,
     // so it stays dirty and survives the response.
     const submittedTick = beginSubmit();
@@ -547,6 +521,7 @@ function EntryEditorInstance({ type, id }: EntryEditorInstanceProps) {
           schemaFieldNames,
         }),
       });
+      if (!isCurrentMutation(mutation)) return;
       // What this request PERSISTED is a fact about the server and is recorded whatever else
       // has happened since; what its BODY says the entry looks like is only a snapshot, and a
       // save started later can commit and answer first.
@@ -554,11 +529,12 @@ function EntryEditorInstance({ type, id }: EntryEditorInstanceProps) {
       applyMutationSnapshot(snapshotTicket, updated);
       toast.success(options?.successMessage ?? "Draft saved.");
     } catch (err) {
+      if (!isCurrentMutation(mutation)) return;
       const message = resolveEditorErrorMessage(err, "Failed to save entry.");
       setError(message);
       toast.error(message);
     } finally {
-      setIsSaving(false);
+      if (isCurrentMutation(mutation)) setIsSaving(false);
     }
   };
 
@@ -569,6 +545,8 @@ function EntryEditorInstance({ type, id }: EntryEditorInstanceProps) {
       setError(checklist.blockingIssues.join(" "));
       return;
     }
+    const mutation = beginMutation("publish");
+    if (!mutation) return;
     setIsPublishing(true);
     setError(null);
     try {
@@ -581,17 +559,20 @@ function EntryEditorInstance({ type, id }: EntryEditorInstanceProps) {
         const submittedTick = beginSubmit();
         const snapshotTicket = beginSnapshotWrite();
         await publishEntry(type, id);
+        if (!isCurrentMutation(mutation)) return;
         const updated = await getEntryCached(type, id, { force: true });
+        if (!isCurrentMutation(mutation)) return;
         settleSubmit(["status"], submittedTick);
         applyMutationSnapshot(snapshotTicket, updated);
         toast.success("Entry published.");
       }
     } catch (err) {
+      if (!isCurrentMutation(mutation)) return;
       const message = resolveEditorErrorMessage(err, "Failed to publish entry.");
       setError(message);
       toast.error(message);
     } finally {
-      setIsPublishing(false);
+      if (isCurrentMutation(mutation)) setIsPublishing(false);
     }
   };
 
@@ -682,9 +663,6 @@ function EntryEditorInstance({ type, id }: EntryEditorInstanceProps) {
   const handleSaveMetadata = async () => {
     if (!type || !id) return;
     if (refuseUnloadedSubmit()) return;
-    setIsSavingMetadata(true);
-    setError(null);
-
     const prepared = buildEntryMetadataUpdate({
       status,
       visibility,
@@ -698,23 +676,28 @@ function EntryEditorInstance({ type, id }: EntryEditorInstanceProps) {
     if (!prepared.ok) {
       setError(prepared.message);
       toast.error(prepared.message);
-      setIsSavingMetadata(false);
       return;
     }
 
+    const mutation = beginMutation("metadata");
+    if (!mutation) return;
+    setIsSavingMetadata(true);
+    setError(null);
     const submittedTick = beginSubmit();
     const snapshotTicket = beginSnapshotWrite();
     try {
       const updated = await updateEntryMetadata(type, id, prepared.payload);
+      if (!isCurrentMutation(mutation)) return;
       settleSubmit("metadata", submittedTick);
       applyMutationSnapshot(snapshotTicket, updated);
       toast.success("Metadata saved.");
     } catch (err) {
+      if (!isCurrentMutation(mutation)) return;
       const message = resolveEditorErrorMessage(err, "Failed to save metadata.");
       setError(message);
       toast.error(message);
     } finally {
-      setIsSavingMetadata(false);
+      if (isCurrentMutation(mutation)) setIsSavingMetadata(false);
     }
   };
 
@@ -727,10 +710,13 @@ function EntryEditorInstance({ type, id }: EntryEditorInstanceProps) {
       setDeleteDialogOpen(false);
       return;
     }
+    const mutation = beginMutation("delete");
+    if (!mutation) return;
     setIsDeleting(true);
     setError(null);
     try {
       await deleteEntry(type, id);
+      if (!isCurrentMutation(mutation)) return;
       toast.success("Entry deleted.");
       // The editor's own navigation, and the only one it initiates: `navigate` is called
       // exactly once in this component, here. It is authoritative, so it skips the dirty
@@ -741,12 +727,15 @@ function EntryEditorInstance({ type, id }: EntryEditorInstanceProps) {
       // out of here is a link the user clicked, and none of them is weakened by this.
       navigate("/entries", { skipBlockers: true });
     } catch (err) {
+      if (!isCurrentMutation(mutation)) return;
       const message = resolveEditorErrorMessage(err, "Failed to delete entry.");
       setError(message);
       toast.error(message);
     } finally {
-      setIsDeleting(false);
-      setDeleteDialogOpen(false);
+      if (isCurrentMutation(mutation)) {
+        setIsDeleting(false);
+        setDeleteDialogOpen(false);
+      }
     }
   };
   const titleRef = useRef<HTMLTextAreaElement | null>(null);

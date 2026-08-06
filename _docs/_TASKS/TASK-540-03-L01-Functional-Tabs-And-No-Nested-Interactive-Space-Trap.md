@@ -8,7 +8,8 @@
 **Category:** Custom Screens / Runtime UI / Accessibility
 **Estimated Effort:** Medium
 **Dependencies:** TASK-540-01-L01, TASK-540-02-L01
-**Status:** 🚧 In Progress
+**Status:** ✅ Done
+**Completed:** 2026-08-06
 **Started:** 2026-07-13
 **Implementation Complete:** 2026-07-20 — assigned work was completed; canonical `✅ Done` transition awaits family changelog 1252.
 **Revalidation Passed:** generation 90d5543e1773459aaf7893aec3f24c57 / token a837a8a8a8fa442dbae7656abb3e88ac / gate green
@@ -53,7 +54,7 @@
   `tests/vitest/ui-integration/custom-screen-record-interactions.test.tsx`
 - the auxiliary repository guard
   `tests/vitest/ui/editor-surface-dead-code.test.ts`; it remains outside the frozen
-  72-name renderer inventory and the 64-Vitest/18-Bun product matrix, runs in its own
+  72-name renderer inventory and the 78-Vitest/18-Bun product matrix, runs in its own
   six-test leaf gate, and is also exercised by mandatory `bun run test`
 
 For the historical 2026-07-14 R03 correction, R03 wrote only
@@ -108,7 +109,7 @@ final working tree. Staging and intermediate commits do not reset it. Verified
 baseline→pre-split counts were Renderer 1,822→1,983, renderer suite 1,536→2,415,
 record-interactions suite 607→657, and image-source suite 119→232. All original and new
 paths remain in the byte-based final gate. The current production owners have final
-line counts 405/190/177/637/420/284/1 in declared owner order. The existing
+line counts 406/190/177/638/420/284/1 in declared owner order. The existing
 `ScreenRuntimeRenderer.tsx` import remains stable and exposes the exact same
 `ScreenRuntimeRenderer` function reference; the facade may not use `export *`, wrap the
 component, or introduce import-time side effects.
@@ -181,8 +182,9 @@ The stateless harness and retained, interactions, presentation, and layout suite
 landed in that order. Each suite passed independently at 22/22, 13/13, 24/24, and 13/13;
 the combined dependency-shaped gate passed 89/89, the 72-name and 67-declaration hashes
 matched, and all five test/support paths finished at 95/638/611/798/343 lines in that
-declared land order; the interactions suite's `611` was since superseded to 683 by the
-2026-07-20 repair, while 95/638/798/343 remain the current counts. The current repair
+declared land order; the interactions suite's `611` was superseded to 683 by the
+2026-07-20 repair and is now 731 after the semantic-label regression, while
+95/638/798/343 remain the current counts. The current repair
 supersedes only that checkpoint's R03 counts;
 the fresh family post-audit and browser smoke remain mandatory before closure.
 
@@ -527,11 +529,13 @@ selection handle remains the keyboard path. Drag/drop handlers stay intact.
   The Tabs case must prove its own visible panel change, exact slot-end `insertPoint`,
   and root-scoped focus while both ancestor callbacks remain unchanged; input and link
   cases likewise prove their own action without changing either passive selection.
-  `custom-screen-runtime-interactions.test.tsx:17` owns the claims moved off the
+  `custom-screen-runtime-interactions.test.tsx:48` owns the claims moved off the
   record-interactions bullet: block and section roots expose no `role`/`tabindex`, both
   selection handles are `BUTTON` children of their own root and activate on a focused
   `detail: 0` click, and a nested builder input toggles without calling either selection
-  callback. `:89` owns the entry-link case.
+  callback. The same declaration activates boolean and multi-select label text, proves
+  both field values change, and leaves both passive-selection callbacks unchanged.
+  `:137` owns the entry-link case.
 - Three focused scenarios in the retained builder host-state declaration prove that a
   selected descendant reveals its owning non-first panel when no insert point resolves
   a slot, that an invalid direct slot also falls through to selection, and that an

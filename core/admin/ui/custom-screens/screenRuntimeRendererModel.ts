@@ -277,7 +277,7 @@ export const relatedInitials = (title: string): string => {
 };
 
 const selectionInteractiveOriginSelector =
-  'a,button,input,select,textarea,[contenteditable="true"],[role="tab"]';
+  'a,button,input,label,select,textarea,[contenteditable="true"],[role="tab"]';
 
 export const isSelectionInteractiveOrigin = (target: EventTarget | null, boundary: HTMLElement) => {
   if (!(target instanceof Element) || target === boundary) return false;

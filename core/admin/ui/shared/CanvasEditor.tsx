@@ -28,6 +28,10 @@ import { cn } from "@/lib/utils";
  * keeping it inside the custom-screen authoring boundary for the 496-02 Screen
  * consumers as well as the Pages host here.
  */
+type CanvasEditorPanelDataProps = {
+  [key: `data-${string}`]: string | undefined;
+};
+
 type CanvasEditorProps = {
   /**
    * In-content `PageHeader` region rendered ABOVE the card (host supplies the
@@ -78,7 +82,7 @@ type CanvasEditorProps = {
   /** Required aria-label on the rail div, e.g. `${target} tools`. */
   panelAriaLabel: string;
   /** data-* hooks forwarded onto the rail div (floating-toolbar / -collapsed). */
-  panelDataProps?: Record<string, string | undefined>;
+  panelDataProps?: CanvasEditorPanelDataProps;
   /** Host-gated "Show panel" chip; the shell renders it only when `!panelOpen`. */
   reopenAffordance?: ReactNode;
 
@@ -95,6 +99,20 @@ const PANEL_POSITION_CLASS = {
   bottom:
     "absolute bottom-5 left-1/2 z-30 flex max-h-[calc(100%-2rem)] w-[min(760px,calc(100%-2rem))] -translate-x-1/2 flex-col overflow-hidden rounded-2xl border border-border bg-popover p-2 text-foreground shadow-pop",
 } as const;
+
+const filterPanelDataProps = (
+  panelDataProps: CanvasEditorPanelDataProps | undefined
+): CanvasEditorPanelDataProps | undefined => {
+  if (!panelDataProps) return undefined;
+
+  const dataProps: CanvasEditorPanelDataProps = {};
+  for (const [key, value] of Object.entries(panelDataProps)) {
+    if (key.startsWith("data-")) {
+      dataProps[key as `data-${string}`] = value;
+    }
+  }
+  return dataProps;
+};
 
 export function CanvasEditor({
   header,
@@ -116,6 +134,8 @@ export function CanvasEditor({
   reopenAffordance,
   className,
 }: CanvasEditorProps) {
+  const safePanelDataProps = filterPanelDataProps(panelDataProps);
+
   return (
     <>
       {header}
@@ -144,7 +164,7 @@ export function CanvasEditor({
           {canvas}
           {panelOpen && panel ? (
             <div
-              {...panelDataProps}
+              {...safePanelDataProps}
               ref={panelRef}
               role="region"
               className={PANEL_POSITION_CLASS[panelPosition ?? "right"]}

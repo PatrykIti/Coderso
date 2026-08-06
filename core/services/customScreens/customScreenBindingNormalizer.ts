@@ -48,15 +48,6 @@ export const normalizeScreenFieldBinding = (
   const blockId = normalizeScreenPath(value.blockId ?? value.widgetId, mode);
   const propPath = normalizeScreenPath(value.propPath, mode);
   const field = normalizeScreenPath(value.field, mode);
-  const fieldRoot = field.split(".")[0] ?? field;
-  const allowedFieldRoots = getAllowedBindingFieldRoots(context);
-  if (allowedFieldRoots && !allowedFieldRoots.has(fieldRoot)) {
-    if (sink) {
-      sink.removedFieldOrphans.push(field); // PRUNE + record (write=warn / ForRead=discarded)
-      return null;
-    }
-    throw new Error("custom_screen_definition_invalid"); // only when NO sink is threaded
-  }
   const hasSource = Object.prototype.hasOwnProperty.call(value, "source");
   if (mode === "write" && (!hasSource || value.source !== "entry")) {
     throw new Error("custom_screen_definition_invalid");
@@ -97,6 +88,15 @@ export const normalizeScreenFieldBinding = (
     bindingMode = value.mode as CustomScreenBindingMode;
   } else {
     throw new Error("custom_screen_definition_invalid");
+  }
+  const fieldRoot = field.split(".")[0] ?? field;
+  const allowedFieldRoots = getAllowedBindingFieldRoots(context);
+  if (allowedFieldRoots && !allowedFieldRoots.has(fieldRoot)) {
+    if (sink) {
+      sink.removedFieldOrphans.push(field); // PRUNE + record (write=warn / ForRead=discarded)
+      return null;
+    }
+    throw new Error("custom_screen_definition_invalid"); // only when NO sink is threaded
   }
   return {
     id,

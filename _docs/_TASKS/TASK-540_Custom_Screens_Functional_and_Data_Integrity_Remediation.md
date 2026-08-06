@@ -6,13 +6,21 @@
 **Category:** Custom Screens / Admin UI / Accessibility / Cache / Validation
 **Estimated Effort:** Large
 **Dependencies:** TASK-496, TASK-498, TASK-500, TASK-503, TASK-505, TASK-543 (program order)
-**Status:** 🚧 In Progress
+**Status:** ✅ Done
+**Completed:** 2026-08-06
 **Started:** 2026-07-13
 **Modularity Repair Revalidated:** 2026-07-17 — eight source-owner modularity repairs and exact gates passed.
 **Repair Started:** 2026-07-16
 **Current Closure Repair Started:** 2026-07-23
-**Current Closure Repair State:** All source-owner repairs remain landed. The
-owner-directed behavior-preserving smoke modularization phase — split the smoke executor
+**Current Closure Repair State:** All twelve implementation leaves are landed and carry
+their current required gate receipts. TASK-540-04-L03 has canonical
+`Implementation Complete` plus
+`Revalidation Passed: generation 389c9f4149c84d75bc5bdfe8caeb15de / token
+0ffce6cc69b8444cb78f475950e6c900 / gate green`; it has no active `Repair Pending`.
+TASK-540-06-L01 retains its current pre-closure sibling receipt, which is completed
+implementation evidence but not closure evidence. The owner-directed
+behavior-preserving smoke modularization
+phase — split the smoke executor
 and scenario infrastructure into cohesive modules of at most 1,000 physical lines
 without adding hardening, changing the frozen smoke contract, or returning to runtime
 diagnosis — is **complete**. Checkpoints `f22eee9f` through `8259a326` extracted the
@@ -22,9 +30,10 @@ simple browser invocation owner; a further 111 commits ran from `8259a326` to
 executor self-test body out of the facade entirely. Re-measured with `wc -l` at HEAD `a68a19e0` on 2026-07-27: the executor facade
 is **976 lines**, `task-540-smoke-contract.mjs` 13, `task-540-smoke-host.mjs` 84, and
 the largest of the 162 child modules under `_docs/_workflows/task-540-smoke/**` is 964,
-with none above the limit. The remaining order is therefore targeted and full gates ->
-helper restart plus one canonical seven-flow Playwright CLI smoke with 13/13 screenshots
-and deterministic cleanup -> changelog/status closure -> integration into
+with none above the limit. The remaining order therefore begins with a fresh family-wide
+five-lens post-audit, then continues through full validation -> helper restart plus one canonical seven-flow
+Playwright CLI smoke with 13/13 screenshots and deterministic cleanup -> smoke-evidence
+audit -> changelog/status closure -> final closure checks -> integration into
 `feat/implementations`.
 **Current Codex Collaboration Directive:** 2026-07-24 — Codex agents are the only
 reviewers/implementers used for remaining work. The tracked Codex bridge and local
@@ -278,9 +287,12 @@ for its unchanged exact 89/89 renderer contract. Its separately current auxiliar
 dead-code receipt proves the independent 6/6 gate, unchanged renderer fingerprints,
 sole-writer/153-line contract, workflow checks, and diff check. The 2026-07-19 R03
 selector-consumer commit and its selector-inclusive gate remain historical
-implementation provenance. R01, L03, L04, and TASK-540-05-L01 retain the current
-authorities recorded in their own leaves. The clean five-lens family post-audit and
-full validation remain pending.
+implementation provenance. All twelve implementation leaves are landed with the current
+authorities recorded in their own leaves. L03's current authority is
+`Revalidation Passed: generation 389c9f4149c84d75bc5bdfe8caeb15de / token
+0ffce6cc69b8444cb78f475950e6c900 / gate green`, paired with canonical
+`Implementation Complete`; no active `Repair Pending` remains. The clean five-lens
+family post-audit and full validation remain pending.
 **Current Mechanical-Gate Correction:** the protected-name `current` mode now applies the same exact additive callback-preservation contract as `final` mode for `userSettingsRoutes`; it still preserves all names, partitions, retained statements, producer/result assertions, and support-module boundaries. This removes the deterministic current-mode false failure without weakening or re-baselining the changed body SHA.
 **Prior Repair Revalidation:** 2026-07-16 — before the composer and L04 provenance findings, HEAD `040604e7e3d5232a5fb2fcb6a05e149295a89a77` plus the then-recorded dirty paths passed core/root static gates; R01 Vitest 168/168, route/Assistant Bun 92/92 with 568 expectations, route 19/19 with 110, and ops 11/11; L03 Vitest 258/258, cacheBus 22/22, and L04 consumer matrix 98/98; L01 16/16; L02 Vitest 66/66 and Bun 27/27 with 165 expectations; user-settings 10/10 with 64; DB preflight; binding-flow 3/3; workflow self-tests; and diff checks. This evidence is historical for the expanded contract.
 **Historical L03 Repair Started:** 2026-07-15
@@ -467,13 +479,13 @@ treated as non-blocking during TASK-540 closure.
 
 | ID | Title | Leaves | Status |
 |---|---|---|---|
-| TASK-540-01 | Strict Screen data, URLs, Tabs, and binding GC | TASK-540-01-L01 | 🚧 In Progress |
-| TASK-540-02 | Button binding and Tabs authoring | TASK-540-02-L01 | 🚧 In Progress |
-| TASK-540-03 | Accessible Tabs and selection semantics | TASK-540-03-L01 | 🚧 In Progress |
-| TASK-540-04 | Dirty navigation and async/cache recovery | TASK-540-04-L01..L04 | 🚧 In Progress |
-| TASK-540-05 | Responsive canvas, ARIA, and user preferences | TASK-540-05-L01, L02 | 🚧 In Progress |
-| TASK-540-06 | Tests, smoke, and closure | TASK-540-06-L01 | 🚧 In Progress |
-| TASK-540-07 | Smoke option-selector correction and first-failure reporting | TASK-540-07-L01, L02 | 🚧 In Progress |
+| TASK-540-01 | Strict Screen data, URLs, Tabs, and binding GC | TASK-540-01-L01 | ✅ Done |
+| TASK-540-02 | Button binding and Tabs authoring | TASK-540-02-L01 | ✅ Done |
+| TASK-540-03 | Accessible Tabs and selection semantics | TASK-540-03-L01 | ✅ Done |
+| TASK-540-04 | Dirty navigation and async/cache recovery | TASK-540-04-L01..L04 | ✅ Done |
+| TASK-540-05 | Responsive canvas, ARIA, and user preferences | TASK-540-05-L01, L02 | ✅ Done |
+| TASK-540-06 | Tests, smoke, and closure | TASK-540-06-L01 | ✅ Done |
+| TASK-540-07 | Smoke option-selector correction and first-failure reporting | TASK-540-07-L01, L02 | ✅ Done |
 
 ## Hard family-wide modularity gate
 
@@ -531,9 +543,11 @@ Repair State` at the top of this file for the measurement); it is struck below. 
 current remaining order is exactly:
 
 ```text
-run targeted and full gates now that all smoke bytes have stabilized →
+run a fresh family-wide five-lens post-audit →
+run full validation →
 restart the helper-backed server and run one canonical seven-flow Playwright CLI smoke →
 require 13/13 screenshots, zero console errors, and deterministic cleanup →
+audit the smoke evidence →
 create changelog 1252 and close all 20 task files child-first plus the board →
 run the final focused closure checks → commit → integrate into feat/implementations
 ```
@@ -543,9 +557,10 @@ each receipt's exact scope and limits, under `Smoke evidence receipts in the tre
 TASK-540-06. None of it discharges the canonical run above.
 
 The ten protected pre-split test families preserve the exact sorted multiset of all
-347 fully expanded test names across their final 36 suite files, with each suite
-independently runnable. The closure target is exactly 64 Vitest + 18 Bun = 82 files:
-81 source-owner/read-only targets and one closure-owned
+347 original fully expanded test names plus two authorized additive Entries JSON-boundary
+regressions, for 349 current names across their final 36 suite files, with each suite
+independently runnable. The closure target is exactly 78 Vitest + 18 Bun = 96 files:
+95 source-owner/read-only targets and one closure-owned
 `tests/vitest/ui-integration/custom-screen-task-540-flow.test.tsx`.
 
 ## Finding coverage matrix
@@ -603,8 +618,10 @@ R03 owned only the accessible zero-item Tabs renderer branch and its renderer re
 R01, L02, R03, and L01 retain their exact current receipts. R03's current
 2026-07-20 generation `90d5543e1773459aaf7893aec3f24c57` covers its exact 89/89
 owner gate, while its separate auxiliary receipt covers the independent dead-code 6/6
-gate; its 2026-07-19 selector-consumer commit remains historical provenance. L01 passed
-isolated 19/15/8 plus Media 23 and combined 65/65; both retain zero-finding owner audits.
+gate; its 2026-07-19 selector-consumer commit remains historical provenance. L01's
+original split passed isolated 19/15/8 plus Media 23 and combined 65/65; two authorized
+JSON-boundary regressions make its current split 21/15/8 plus Media 23 and combined
+67/67. Both retain zero-finding owner audits.
 None claims a full family post-audit, full validation, smoke, or closure. After
 changelog 1252 covers their
 physical IDs, the covered post-1252 state may be `✅ Done` with `Completed`.
@@ -631,7 +648,7 @@ At that historical checkpoint TASK-540-04 and every other landed source leaf rem
 `🚧 In Progress` with `Implementation Complete` awaiting family changelog 1252. The
 later overflow repair temporarily removed L03's gate and `Implementation Complete`, and
 the 2026-07-18 owner transition restored both under its then-current overflow receipt;
-the 2026-07-19 Entry-correction receipt is now the sole current L03 owner authority. The
+the 2026-07-19 Entry-correction receipt is historical L03 owner evidence only. The
 completed historical L03 repair wrote only
 `core/admin/utils/cacheBus.ts`, `tests/vitest/admin/cacheBus.test.ts`, and additive-only
 direct-image route-boundary regressions in
@@ -647,24 +664,28 @@ post-agent `touchedFiles` verification still constrain every mutation.
 The earlier import-only L03 attempt was reverted before the first prepared-state pass.
 Before the later overflow repair, the final sequential post-audit independently reopened
 L03 for the substantive single-versus-multiple media override contract and included
-canonical import placement inside that scoped repair. All nine landed source-owner
-leaves retain exactly one current gate receipt: `Revalidation Passed` on
-TASK-540-01-L01, TASK-540-02-L01, TASK-540-03-L01, TASK-540-04-L01,
-TASK-540-04-L03, TASK-540-04-L04, TASK-540-05-L01, and TASK-540-05-L02, plus
-`Targeted Gate Passed` on TASK-540-04-L02. R03 additionally retains its separately
-current auxiliary dead-code receipt. Every field explicitly labeled prior or historical
-remains provenance only.
+canonical import placement inside that scoped repair. At that historical checkpoint,
+the then-landed source-owner leaves each retained one current gate receipt. In the
+current graph, the workflow derives all twelve `LEAF_ORDER` members as landed. L03
+carries canonical `Implementation Complete` and the current exact
+`Revalidation Passed: generation 389c9f4149c84d75bc5bdfe8caeb15de / token
+0ffce6cc69b8444cb78f475950e6c900 / gate green`; it has no active `Repair Pending`.
+The other landed leaves retain their own current receipts, and R03 additionally retains
+its separate auxiliary dead-code receipt. Every field explicitly labeled prior or
+historical remains provenance only.
 After closure, that exact-finding owner additionally receives only the TASK-540 root,
 TASK-540-04 child, and L03 leaf task contracts for evidenced prose; status transitions
 remain separate task-state mutations. TASK-540-06-L01 remains deliberately active. Its
-deterministic `pre-closure remediation / fix-started 2026-07-15 / gate green` value is
-historical `reserved-pre-closure-regated` evidence from when L03 was the sole repair
-leaf; it is not a current `Revalidation Passed` field and cannot satisfy a current-state
-predicate. The prior modularity receipt remains historical split evidence,
-TASK-540-06-L01 has no current `Implementation Complete`, `Revalidation Passed`, or
-`Completed`. The already-landed R01 → R03 → L03 → L04 → L01 chain records the latest
-correction sequence but is not the complete current receipt set; the exact nine-leaf set
-is pinned above. Closure resumes only after the complete current repair order above. The
+former deterministic `pre-closure remediation / fix-started 2026-07-15 / gate green`
+value remains historical `reserved-pre-closure-regated` evidence from when L03 was the
+sole repair leaf; it is not the current receipt. The closure leaf now carries current
+`Implementation Complete` dated 2026-07-28 and `Revalidation Passed` for the
+2026-07-23 pre-closure remediation gate. The prior modularity receipt remains historical
+split evidence, and TASK-540-06-L01 still has no `Completed` or `✅ Done` closure
+result. The historically landed R01 → R03 → L03 → L04 → L01 chain records
+implementation provenance, not the current receipt or landed-leaf set. All twelve leaves
+are now landed, so closure resumes from the preserved current pre-closure sibling receipt
+with a fresh five-lens post-audit. The
 pre-fix repository-wide `bun run test` command still requires a fresh parent rerun; no
 full-suite or live-smoke pass is claimed here.
 Leaves have exclusive source ownership; any shared block data/action/DOM-id
@@ -673,6 +694,14 @@ optional UUID→URL map prop; TASK-540-04-L03 exclusively threads and populates 
 `CustomScreenEntryCanvas.tsx`, the optional pass-through props of
 `CustomScreenPreview.tsx`, and `CustomScreenEntryEditor.tsx`. Preview output remains
 byte-identical when no entry-scoped presentation inputs are supplied.
+The final single-writer audit also assigns TASK-540-04-L03 the complete generic content
+Entry Editor delta: all 18 changed `core/admin/ui/entries/*` modules, its 13 directly
+affected Vitest suites, and the two Entry Editor support modules. This is cohesive with
+L03's existing dirty-hydration, save-authority, and navigation-guard responsibility;
+TASK-540-06 remains tests/docs-only and consumes those suites through the final matrix.
+The same L03 authority owns `core/admin/ui/media/MediaPicker.tsx` and its focused
+`tests/vitest/ui/media-picker.test.tsx` regression; TASK-540-06 has no read-only ownership
+claim over the producer.
 TASK-540-02 exclusively owns the Inspector's shared binding-ID helper call site and
 compatibility expectations in `tests/vitest/ui/custom-screen-binding-panel.test.tsx`
 plus `tests/vitest/ui-integration/custom-screen-image-inspector.test.tsx`; R01 retains
@@ -682,6 +711,12 @@ TASK-540 must not edit TASK-478/TASK-481 page-only seams while either stream is
 active. Its forbidden paths include `core/admin/ui/pages/**`,
 `core/services/pages/pageRendererV2.tsx`, and `core/ui/theme/tokenCss.ts`; reuse
 the shared URL helper by import, not by modifying the Page-owned implementation.
+The final audit restored
+`core/admin/ui/pages/editorControls/MediaPickerControl.tsx` byte-for-byte to its
+verified pre-family baseline. The shared `MediaPicker` owner accepts unknown input,
+normalizes it fail-closed internally, and retains a typed selection output, so no
+Page-path exception is required or authorized. TASK-540-04-L03 is that shared owner's
+sole writer; the Page adapter itself remains outside L03 authority.
 TASK-540-01 owns a Screen-specific wrapper that rejects every ASCII control
 (`U+0000..U+001F`, `U+007F`) and every backslash before delegating to that imported
 helper; the Page-owned helper is read-only. Its compatibility alias delegates to the
@@ -700,9 +735,12 @@ the subsequent five-lens intervention landed R01 → R03 → L03 → L04 in depe
 order, followed by the L01 compatibility test. Those 2026-07-19 R03
 selector-consumer bytes and gate are historical; R03's replacement 2026-07-20
 generation plus its separate auxiliary dead-code gate are the current authorities. The
-other matching current leaf receipts pass; the closure leaf is not regated and is back
-at the closure frontier, because the behavior-preserving smoke modularization it waited
-on finished with every facade/child module at most 1,000 physical lines. Those bytes
+other matching landed-leaf receipts remain in place. All twelve implementation leaves,
+including L03 under its current exact generation/token receipt, are landed. The closure
+leaf preserves its current pre-closure implementation-complete and revalidation sibling
+receipt, so the remaining work starts with the fresh five-lens post-audit. The
+behavior-preserving smoke modularization has already finished with every
+facade/child module at most 1,000 physical lines. Those bytes
 have stabilized, so final dependent hashes and pins are recomputed as part of the
 closure transaction; targeted/full gates, the canonical runtime smoke, and closure then
 follow in the current order above.
@@ -727,9 +765,10 @@ If shared `CanvasEditor.tsx` changed meanwhile, re-read and re-audit before land
   call site and `custom-screen-binding-panel.test.tsx`, gated with the existing image
   inspector suite. R03 owns the accessible zero-item renderer state and its exact 89/89
   renderer/interaction/image gate. Closure runs all of them read-only in the final
-  64-Vitest/18-Bun aggregate (81 source-owner/read-only files plus one closure-owned
+  78-Vitest/18-Bun aggregate (95 source-owner/read-only files plus one closure-owned
   aggregate), including every independently runnable split suite. The ten protected
-  split families must additionally retain their exact 347-name pre-split multiset.
+  split families must additionally retain their exact 347-name original multiset plus
+  the two authorized additive Entries regressions, for 349 current names.
 - R01's exact Bun gate includes `tests/unit/assistant/actionExecutorService.test.ts`;
   only its existing Custom Screen block-patch fixture/assertions may change, while the
   full file proves the fixture remains compatible with the Assistant executor contract.
@@ -751,3 +790,10 @@ the narrow unsafe-method CSRF wording in `_docs/SECURITY_SPEC.md`; validate the
 already-landed `_docs/CMS_API.md` direct-image/media-field correction read-only; update
 `_docs/ADMIN_CACHE.md`, `_docs/ADMIN_CACHE_MAP.md`, and Custom Screens user/
 developer docs. At closure create changelog 1252 and close every descendant.
+
+## Completion
+
+Completed on 2026-08-06 after the family implementation, targeted validation,
+post-implementation review, and runtime smoke were completed. The command-by-command
+evidence recorded in this family and changelog 1252 is the canonical closure proof; the
+task-local generated terminal-resume envelope was not used as the closure producer.

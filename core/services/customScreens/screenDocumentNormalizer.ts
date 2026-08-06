@@ -34,9 +34,9 @@ import type {
 
 export const normalizeScreenBlock = (
   value: unknown,
-  index: number,
   mode: ScreenNormalizeMode,
-  blockPath: readonly ScreenFieldPathSegment[]
+  blockPath: readonly ScreenFieldPathSegment[],
+  allocateStoredReadBlockId?: () => string
 ): ScreenBlockV1 => {
   if (!isRecord(value)) throw new Error("custom_screen_definition_invalid");
   rejectUnknownKeys(value, [
@@ -53,10 +53,11 @@ export const normalizeScreenBlock = (
     "children",
     "slots",
   ]);
-  const id = normalizeScreenPath(
-    mode === "write" ? value.id : (value.id ?? `block-${index + 1}`),
-    mode
-  );
+  const rawId =
+    mode === "stored-read" && (value.id === undefined || value.id === null)
+      ? allocateStoredReadBlockId?.()
+      : value.id;
+  const id = normalizeScreenPath(rawId, mode);
   const type = normalizeText(value.type);
   if (!type) throw new Error("custom_screen_definition_invalid");
   const label = normalizeText(value.label);
@@ -69,7 +70,12 @@ export const normalizeScreenBlock = (
   const children = Array.isArray(value.children)
     ? normalizeUniqueIds(
         value.children.map((item, childIndex) =>
-          normalizeScreenBlock(item, childIndex, mode, [...blockPath, "children", childIndex])
+          normalizeScreenBlock(
+            item,
+            mode,
+            [...blockPath, "children", childIndex],
+            allocateStoredReadBlockId
+          )
         )
       )
     : undefined;
@@ -88,12 +94,12 @@ export const normalizeScreenBlock = (
                 slotId,
                 normalizeUniqueIds(
                   items.map((item, slotIndex) =>
-                    normalizeScreenBlock(item, slotIndex, mode, [
-                      ...blockPath,
-                      "slots",
-                      slotGroupIndex,
-                      slotIndex,
-                    ])
+                    normalizeScreenBlock(
+                      item,
+                      mode,
+                      [...blockPath, "slots", slotGroupIndex, slotIndex],
+                      allocateStoredReadBlockId
+                    )
                   )
                 ),
               ];
@@ -141,7 +147,8 @@ export const normalizeScreenSection = (
   value: unknown,
   index: number,
   mode: ScreenNormalizeMode,
-  sectionPath: readonly ScreenFieldPathSegment[]
+  sectionPath: readonly ScreenFieldPathSegment[],
+  allocateStoredReadBlockId?: () => string
 ): ScreenSectionV1 => {
   if (!isRecord(value)) throw new Error("custom_screen_definition_invalid");
   rejectUnknownKeys(value, [
@@ -182,7 +189,12 @@ export const normalizeScreenSection = (
     ...(style ? { style } : {}),
     blocks: normalizeUniqueIds(
       (value.blocks ?? []).map((item, blockIndex) =>
-        normalizeScreenBlock(item, blockIndex, mode, [...sectionPath, "blocks", blockIndex])
+        normalizeScreenBlock(
+          item,
+          mode,
+          [...sectionPath, "blocks", blockIndex],
+          allocateStoredReadBlockId
+        )
       )
     ),
   };

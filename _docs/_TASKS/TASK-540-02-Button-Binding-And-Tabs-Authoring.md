@@ -7,7 +7,8 @@
 **Category:** Custom Screens / Admin Authoring
 **Estimated Effort:** Small
 **Dependencies:** TASK-540-01
-**Status:** 🚧 In Progress
+**Status:** ✅ Done
+**Completed:** 2026-08-06
 **Started:** 2026-07-13
 **Repair Started:** 2026-07-16
 **Fix Started:** 2026-07-18
@@ -35,7 +36,7 @@ or runtime renderer in this subtask.
 
 | ID | Title | Exclusive source ownership | Status |
 |---|---|---|---|
-| TASK-540-02-L01 | Expose link binding and complete tab-slot editing | stable `ScreenBlockInspector.tsx` facade; `screenBlockInspectorModel.ts`; `ScreenBlockInspectorControls.tsx`; `ScreenBlockInspectorTabs.tsx`; `ScreenBlockInspectorSection.tsx`; binding-panel/image-inspector suites plus cohesive shared Inspector harness | 🚧 In Progress |
+| TASK-540-02-L01 | Expose link binding and complete tab-slot editing | stable `ScreenBlockInspector.tsx` facade; `screenBlockInspectorModel.ts`; `ScreenBlockInspectorControls.tsx`; `ScreenBlockInspectorTabs.tsx`; `ScreenBlockInspectorSection.tsx`; binding-panel/image-inspector suites plus cohesive shared Inspector harness | ✅ Done |
 
 ## Mandatory Inspector modularity gate
 
@@ -61,7 +62,7 @@ stale-draft behavior and is not eligible for deferred LOW treatment.
 This leaf lands after TASK-540-01-L01 and before TASK-540-03-L01. Its two behavior
 suites remain independently runnable and now cover 19 binding-panel plus 18
 image-inspector tests (37 total). The family
-aggregate remains exactly 64 Vitest + 18 Bun = 82 targets, with 81 source-owner/read-only
+aggregate remains exactly 78 Vitest + 18 Bun = 96 targets, with 95 source-owner/read-only
 files and one closure aggregate; pinned changelog 1252 is unchanged.
 
 ## Acceptance

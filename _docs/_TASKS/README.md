@@ -82,8 +82,8 @@ Task board for project work. Keep task files and this board in sync.
   exists or the family changelog records that leaf.
 
 - **To Do:** 447 tasks
-- **In Progress:** 7 tasks
-- **Done:** 3117 tasks
+- **In Progress:** 6 tasks
+- **Done:** 3118 tasks
 
 > TASK-479 (25 subtasks 05–29 + 92 leaves) and TASK-480 (umbrella + 6 subtasks +
 > 18 leaves) were broken down 2026-06-27. The table below lists the
@@ -101,14 +101,14 @@ Task board for project work. Keep task files and this board in sync.
 > 2026-07-09: the TASK-536–545 remediation program was authored as 10 umbrellas,
 > 43 technical children, and 74 executable leaves (127 physical tasks).
 > The table lists the umbrellas; every descendant and its status is linked from
-> the corresponding parent/child file. Changelogs 1248–1250, 1253, 1255, and 1256 are
-> consumed by TASK-536, TASK-537, TASK-538, TASK-541, TASK-543, and TASK-544; 1251–1252,
-> 1254, and 1257 remain reserved for implementation closure only. Implement by the audited
+> the corresponding parent/child file. Changelogs 1248–1250, 1252–1253, 1255, and 1256 are
+> consumed by TASK-536, TASK-537, TASK-538, TASK-540, TASK-541, TASK-543, and TASK-544;
+> 1251, 1254, and 1257 remain reserved for implementation closure only. Implement by the audited
 > dependency map, not numeric ID:
 > TASK-538 → TASK-536 → TASK-541 → TASK-537 → TASK-544 → TASK-543 → TASK-540 →
 > TASK-539 → TASK-542 → TASK-545. TASK-536 and TASK-538 completed on
 > 2026-07-11; TASK-541, TASK-537, and TASK-544 completed on 2026-07-12; TASK-543
-> completed on 2026-07-13. TASK-539 and
+> completed on 2026-07-13; TASK-540 completed on 2026-08-06. TASK-539 and
 > TASK-542 must remain sequential because both validate site-shell/runtime
 > integration; after this repaired contract only TASK-542 owns `siteShell` source.
 > Shared documentation order is also strict:
@@ -168,7 +168,6 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-540 | Custom Screens Functional and Data-Integrity Remediation | High | Large | 🚧 In progress (2026-07-13): strict Screen data/URLs/Tabs, link-only Button action, accessible runtime, dirty/cache recovery, responsive canvas, and per-user preferences. Session-only Admin contracts; no generic/widget expansion. Changelog 1252 pinned. 7 children + 12 leaves (TASK-540-07 added 2026-07-25: smoke option-selector correction + first-failure reporting). |
 | TASK-414 | Generic CMS Site Assistant Product Completion | High | Very Large | In progress: TASK-414-01 is done; remaining children track broader generic assistant product gaps such as media/theme breadth, installed-site refinement, helper mode, and capability drift automation. |
 | TASK-105 | Real Vitest 100% Coverage Program | High | Large | In progress: fresh 2026-03-15 baseline is `74.04%` lines with `61.35%` branches; `ThemeTemplateDrawer` and `UserList` are now line-closed, `UsersRolesPage` jumped into the high 80s, and the remaining backlog is increasingly broader low-line admin page/drawer tail |
 | TASK-105-04 | Themes, Booking, Listings, and Forms Wave | High | Large | In progress: booking leaf tabs, `ListingListPage`, `FormCanvas`, and `ThemeTemplateDrawer` are now line-closed; the wave tail is mostly branch-only theme/page-shell cleanup |
@@ -181,6 +180,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-540 | Custom Screens Functional and Data-Integrity Remediation | High | Large | ✅ Done (2026-08-06): strict Screen data/URL/Tab integrity, link-only Button actions, accessible runtime selection, dirty-navigation/cache recovery, responsive canvas behavior, and per-user preferences are complete. Targeted validation and final post-implementation review passed; the canonical seven-flow runtime smoke passed with 13 valid PNGs, light/dark coverage, and complete fixture/session/process/port cleanup. Changelog 1252. All 7 children and 12 leaves are terminal; the naming-only deferred LOW remains TASK-9999-01-L01. |
 | TASK-550 | Database Query and Server Cache Engineering Rules | High | Small | ✅ Done (2026-07-24): codified the owner-requested PostgreSQL and repository query audit as mandatory bounded-query, schema/index, transaction, retention, pool, performance-evidence, local-first cache, optional Redis, invalidation, and cache-security rules in root `AGENTS.md`. Docs/process only; no runtime, route, schema, migration, or dependency change. Changelog 1262. |
 | TASK-546 | Node 26 and Full Dependency Upgrade | High | Large | ✅ Done (2026-07-22): Node 26.5.0 and Bun 1.3.14 now own the runtime/toolchain contract; the root workspace and standalone prototype use the latest mutually compatible stable dependency graph admitted by the seven-day supply-chain quarantine, and `fast-uri` resolves only to fixed 3.1.4. Node/React/Vite compatibility, TASK-522 strict-Semgrep, TASK-540/TASK-543 local CodeQL regressions, and Forms scanner/modularity findings were repaired without UI/UX changes or dependency downgrades. Full Bun passed 1,733 with 1 optional live-provider skip and 0 failures; full Vitest passed 7,194/7,194; fresh coverage completed; precommit, all builds, Admin boundary/bundle budgets, release gates 5/5, and strict security scanning passed. The production server smoke returned healthy root/Admin/assets and the expected controlled exact `/peri` 404. Five post-audit lenses were clean. Docker image build/scan was not run because Docker CLI is unavailable; remote PR CodeQL alert closure was not claimed because `gh` is unauthenticated and no commit/push was authorized. Changelog 1259. All 4 children + 6 leaves terminal. |
 | TASK-543 | Posts Exit Safety and List Accessibility | High | Small | ✅ Done (2026-07-13): Close now awaits the newest exact durable draft across route epochs, propagates save failure, preserves exact metadata restoration, and coalesces repeated navigation. Posts rows are passive; title/checkbox/actions retain native keyboard behavior and contextual names; one status/author/date copy remains visible at 390/768/900/1024 px. Final matrix 159/159; full Bun 1,687 pass / 1 intentional opt-in skip / 0 fail; full Vitest 836 files / 6,880 tests; precommit/Admin build-boundary-bundle and release gates 5/5 passed. Seven real light/dark CLI flows produced 11 distinct PNGs with zero console/page errors and complete cleanup. Strict scan's sole residual is exact, unchanged, and TASK-545-owned. No endpoint, migration, RBAC, security-contract, or widget expansion. Changelog 1255. All 3 children + 3 leaves terminal. |
