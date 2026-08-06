@@ -112,10 +112,30 @@ bun run gates:coderso:security   # security only
 
 The release gate is a baseline, **not** a substitute for running the targeted `tests/perf/*`, `tests/security/*`, route, and reliability suites on the surface you actually touched. For the security side of the model — public-write nonce/captcha contracts, secret handling, RBAC, and the `scan:*` scanners — see [security.md](./security.md).
 
+## Real-host runtime smoke
+
+Use the shared runtime-smoke platform when the acceptance contract needs a real
+Coderso server and browser-visible proof. New suites extend the static registry
+with a thin adapter and reuse the common lifecycle, persistent Bun workers,
+bounded DB batches, Playwright segments, evidence, and reporting contracts.
+
+```bash
+bun scripts/runtime-smoke.ts run \
+  --suite <registered-suite> \
+  --profile <fast|certification> \
+  --session <task-scoped-name>
+```
+
+See the [Runtime Smoke Authoring Cookbook](./runtime-smoke-cookbook.md) for the
+complete registration recipe, adapter and worker skeletons, transactional
+cleanup pattern, browser segmentation rules, checkpoint limitations, tests,
+and review checklist.
+
 ## Where to go deeper
 
 - [`_docs/TESTING_STRATEGY.md`](../../_docs/TESTING_STRATEGY.md) — the authoritative lane-selection rules, coverage policy, and harness guardrails.
 - [`tests/README.md`](../../tests/README.md) — the on-disk layout of the test suites.
+- [Runtime Smoke Authoring Cookbook](./runtime-smoke-cookbook.md) — the step-by-step recipe for reusable real-host suites.
 - [security.md](./security.md) — the security model the `security` gate and `tests/security/*` enforce.
 - [runtime-model.md](./runtime-model.md) — why the Bun lane mirrors the production runtime (no restart, runtime ESM plugins).
 - [contributing.md](./contributing.md) — pre-commit hooks, CI PR gates, and the release flow tests slot into.

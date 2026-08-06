@@ -121,6 +121,11 @@ can prove independent cleanup and reset. TASK-540 currently uses its canonical
 full-run cleanup and reset inventory; do not claim automatic TASK-540 resume
 until that adapter seals and consumes those checkpoints end to end.
 
+For a copyable suite-registration sequence, adapter/worker skeletons, DB ledger
+and transactional cleanup recipe, Playwright segmentation and evidence rules,
+checkpoint limitations, targeted tests, and the closure checklist, use the
+[Runtime Smoke Authoring Cookbook](../docs/develop/runtime-smoke-cookbook.md).
+
 ## Legacy Widget Smoke
 
 The TASK-336 widget contract smoke remains a Bun-owned Playwright CLI harness
