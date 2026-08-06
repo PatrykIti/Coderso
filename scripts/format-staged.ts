@@ -83,4 +83,12 @@ if (!existsSync(prettierBin)) {
 
 process.stdout.write(`[precommit] Formatting ${formatTargets.length} staged file(s).\n`);
 await run([prettierBin, "--write", ...formatTargets], { inherit: true });
-await run(["git", "add", "--", ...formatTargets]);
+// `-f` is required, not a convenience. Some tracked directories are also listed in
+// .gitignore (`_docs/_workflows/` is, while all of its files are tracked), and plain
+// `git add -- <path>` refuses an explicitly named path under an ignored directory even
+// when the file itself is tracked -- which failed the whole hook for any commit
+// touching such a path. Forcing is safe here because every target came from
+// `git diff --cached`, so it is already staged and therefore already tracked; this
+// call only re-stages Prettier's rewrite of bytes git is already carrying and can
+// never introduce a previously untracked ignored file.
+await run(["git", "add", "-f", "--", ...formatTargets]);

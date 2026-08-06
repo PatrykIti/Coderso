@@ -1,11 +1,10 @@
-import postgres from "postgres";
-
+import { withSessionDatabaseClient } from "../../db/sessionClient";
 import { logAudit } from "../../services/audit/auditService";
 import {
   createBackup,
   getBackupSchedule,
   markScheduleRun,
-  sanitizeBackupError,
+  sanitizeBackupErrorForLog,
 } from "../../services/backups/backupService";
 
 const TICK_MS = Number(process.env.BACKUP_SCHEDULER_TICK_MS ?? 60_000);
@@ -14,6 +13,17 @@ const TICK_MS = Number(process.env.BACKUP_SCHEDULER_TICK_MS ?? 60_000);
 // but distinct values so the scheduler never contends with startup migrations.
 export const BACKUP_SCHEDULER_LOCK_NAMESPACE = 20260628;
 export const BACKUP_SCHEDULER_LOCK_KEY = 484;
+
+/**
+ * Session-lock purpose id (see `core/db/connectionTargets.ts`).
+ *
+ * This lock CANNOT become `pg_try_advisory_xact_lock`: the guarded region writes
+ * a backup artifact to storage, inserts the backup row, advances the schedule,
+ * writes an audit row and prunes — deliberately across several transactions,
+ * because `createBackup` has to commit its own failure marker. There is no
+ * single transaction to scope the lock to.
+ */
+export const BACKUP_SCHEDULER_SESSION_PURPOSE = "scheduled backup single-flight lock";
 
 let timer: ReturnType<typeof setInterval> | null = null;
 let isRunning = false;
@@ -55,13 +65,12 @@ export async function runDueScheduledBackups(now: Date): Promise<string | null> 
     if (!schedule.enabled || !schedule.nextRunAt || schedule.nextRunAt.getTime() > now.getTime()) {
       return null; // disabled or not due — cheap pre-check before locking
     }
-    // Cross-instance single-flight. Advisory locks are SESSION-scoped and the shared
-    // drizzle client (core/db/client.ts) is a postgres-js POOL (max 10): lock/unlock
-    // could hit different pooled connections and LEAK the lock on the shared remote DB.
-    // Use a dedicated single-connection client, mirroring runDrizzleStartupMigrations
-    // (core/server/startupMigrations.ts:92-111).
-    const lockClient = postgres(process.env.DATABASE_URL!, { max: 1 });
-    try {
+    // Cross-instance single-flight. Advisory locks are SESSION-scoped, and the shared
+    // drizzle client (core/db/client.ts) is a postgres-js POOL pointed at Render's
+    // TRANSACTION pooler: lock/unlock would hit different backends and LEAK the lock.
+    // withSessionDatabaseClient opens one dedicated connection to the DIRECT port and
+    // refuses outright if only a pooled URL is configured.
+    return await withSessionDatabaseClient(BACKUP_SCHEDULER_SESSION_PURPOSE, async (lockClient) => {
       const [lockRow] = await lockClient<{ locked: boolean }[]>`
         select pg_try_advisory_lock(${BACKUP_SCHEDULER_LOCK_NAMESPACE}, ${BACKUP_SCHEDULER_LOCK_KEY}) as locked
       `;
@@ -88,9 +97,9 @@ export async function runDueScheduledBackups(now: Date): Promise<string | null> 
       } finally {
         await lockClient`select pg_advisory_unlock(${BACKUP_SCHEDULER_LOCK_NAMESPACE}, ${BACKUP_SCHEDULER_LOCK_KEY})`;
       }
-    } finally {
-      await lockClient.end(); // close the dedicated session (session end also drops any held lock)
-    }
+    });
+    // withSessionDatabaseClient closes the dedicated session on the way out;
+    // ending a session also drops any advisory lock it still holds.
   } finally {
     isRunning = false;
   }
@@ -100,8 +109,12 @@ export function startBackupScheduler() {
   if (timer || !schedulerEnabled()) return;
   timer = setInterval(() => {
     void runDueScheduledBackups(new Date()).catch((error) => {
-      // Sanitized only — sanitizeBackupError strips cwd/backup-dir; never log raw errors.
-      console.error("[backupScheduler] tick failed:", sanitizeBackupError(error));
+      // Sanitized only — sanitizeBackupErrorForLog strips cwd/backup-dir; never log
+      // raw errors. It uses the LOG length cap, not the `backups.error` column cap:
+      // the fail-closed session-target error is 508 characters and its last sentence
+      // is the whole remedy (set DATABASE_DIRECT_URL), which the 240-character
+      // storage cap used to cut off entirely.
+      console.error("[backupScheduler] tick failed:", sanitizeBackupErrorForLog(error));
     });
   }, TICK_MS);
   if (typeof timer.unref === "function") timer.unref(); // do not hold the process open

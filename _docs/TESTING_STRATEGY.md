@@ -69,6 +69,62 @@ then that test should move to Vitest.
 | Admin/UI | Validate React/admin behavior with deterministic DOM tooling | Vitest | `core/admin/*`, `core/ui/*`, domain section/block editors, Admin Dashboard widget UI, retained compatibility-renderer UI tests, hooks, clients |
 | SDK / shared contracts | Validate plugin-facing contracts and manifest helpers | Vitest | `packages/sdk/src/*`, pure manifest/schema helpers |
 
+## Shared Runtime Smoke Architecture
+
+Runtime smoke is a separate, real-host lane above Bun/Vitest contract tests. Its
+canonical command is:
+
+```text
+bun scripts/runtime-smoke.ts run --suite <suite> --profile <fast|certification> --session <name>
+```
+
+The shared entry point owns lifecycle, readiness polling, process supervision,
+repository mutation guards, timing, redaction, cleanup aggregation, and bounded
+reports. A suite owns only its product flows, fixtures, assertions, registered
+worker operations, and cleanup/reset proof. New workflows extend the static
+registry with a thin adapter instead of creating another lifecycle or executor.
+The contributor-facing [Runtime Smoke Authoring Cookbook](../docs/develop/runtime-smoke-cookbook.md)
+provides the exact registration sequence and copyable adapter, worker, database,
+browser, evidence, checkpoint, and test recipes for that extension contract.
+
+Use `fast` for required pull-request/task feedback when the adapter can shorten
+only deliberate infrastructure waits and restore the exact prior state. It must
+not remove product-visible scenarios or assertions. Use `certification` once at
+the release boundary for production-strength waits or exhaustive variants. A
+harness-only repair reruns its focused unit/self-test and affected runtime lane;
+it does not invalidate unrelated product gates.
+
+Database-bearing work uses profile-scoped persistent Bun workers with a bounded
+pool (`DB_POOL_MAX=1`) and registered, strict NDJSON operations. Independent
+lookups and foreign-key-safe cleanup/proofs are sent as bounded batches and then
+projected back to stable logical receipts. API-owned cleanup stays API-owned.
+TASK-540 deliberately retains a single canonical one-shot bootstrap CAS restore
+because Node and Bun do not produce a stable cross-runtime source identity for
+that mutation; this explicit exception does not reopen generic one-shot
+execution.
+
+Browser actions compile into bounded contiguous segments around runtime,
+screenshot, native CLI, and capture-dependency barriers. The named Playwright
+session persists across those segments, while every logical action keeps its
+identity and first-failure semantics. Poll conditions instead of sleeping, and
+count physical processes/segments separately from logical receipts.
+
+The shared checkpoint package provides strict identity, sealing, compatibility,
+and atomic storage primitives. An adapter may resume only after it proves that a
+completed scenario performed its assertions, evidence, cleanup, setting
+restoration, canonical reset, and repository guard. TASK-540 currently exposes a
+seven-scenario reset inventory but does not yet consume automatic resume seals;
+its optimized adapter therefore still runs the canonical full flow.
+
+TASK-552 measured that full TASK-540 fast flow at 1,178.580 seconds (19:38.580),
+including seven scenarios, 13 PNGs, nine repository snapshots, zero console
+errors, and complete cleanup. That is 46.77% shorter than the earlier 36.9-minute
+fast run and 65.23% shorter than the historical 56.5-minute full-strength run;
+the latter comparison also includes a different authentication wait profile.
+The remaining time is product/browser work plus canonical cleanup, not evidence
+for another database index. Migration `0070` already owns the recurring
+access-log lookup, so TASK-552 adds no schema or migration.
+
 ## Runner Ownership Rules
 
 ### Bun Owns
@@ -103,6 +159,18 @@ then that test should move to Vitest.
 - Assistant operation policy coverage and route matrix validation, because it is
   pure metadata over admin navigation/configuration and must not import runtime
   services.
+- `vitest.config.ts` declares a lane-wide `testTimeout` of `30000ms` because the
+  lane transforms and imports its module graph per worker, so under full-suite
+  parallelism a test's wall clock is dominated by contention rather than by the
+  work it asserts. Vitest's `5000ms` library default sits below that floor and
+  fails tests that pass in isolation. This matches the budgets `test:bun` and the
+  Vitest coverage lane already declare for the same reason.
+- Do not add a per-test timeout argument to work around full-suite contention.
+  Per-test caps do not converge: they are applied only to whichever test happened
+  to fail in one run, they leave neighbouring tests doing the same work at the
+  default, and a cap below the lane budget silently makes its test the first to
+  fail. Raise the lane budget, or make the test cheaper. A per-test timeout is
+  only for a test that owns a genuinely different time budget.
 - TASK-188 policy cutover suites under `tests/vitest/assistant/*` own the pure
   policy/schema/resolver/mapper/follow-up/coverage contracts; opt-in Bun live
   suites remain the guard for real OpenAI/OpenRouter behavior.

@@ -82,12 +82,7 @@ export type ContentTypePayload = {
 };
 
 export type CollectionWorkspaceResourceKind =
-  | "contentRoute"
-  | "detailPage"
-  | "listPage"
-  | "listingQuery"
-  | "listingTemplate"
-  | "adminScreen";
+  "contentRoute" | "detailPage" | "listPage" | "listingQuery" | "listingTemplate" | "adminScreen";
 
 export type CollectionWorkspaceUnresolvedReason =
   | "missing_content_route"
@@ -379,8 +374,11 @@ const getCollectionWorkspaceCache = (id: string) => {
 };
 
 const primeContentTypesCacheInternal = (items: ContentTypeSummary[]) => {
-  cachedContentTypesPromise = null;
   contentTypesListCache.write(items);
+};
+
+const revokeContentTypesListRead = () => {
+  cachedContentTypesPromise = null;
 };
 
 const upsertCachedContentType = (item: ContentTypeSummary) => {
@@ -410,11 +408,12 @@ export const getCachedContentTypes = () => {
 };
 
 export const primeContentTypesCache = (items: ContentTypeSummary[]) => {
+  revokeContentTypesListRead();
   primeContentTypesCacheInternal(items);
 };
 
 export const clearContentTypesCache = () => {
-  cachedContentTypesPromise = null;
+  revokeContentTypesListRead();
   contentTypesListCache.clear();
   for (const cache of collectionWorkspaceCacheById.values()) {
     cache.clear();
@@ -427,17 +426,28 @@ export async function listContentTypes() {
   return apiRequest<ContentTypeSummary[]>("/content-types", { method: "GET" });
 }
 
-export async function listContentTypesCached(options?: { force?: boolean }) {
+export function listContentTypesCached(options?: { force?: boolean }) {
   if (!options?.force) {
     const cached = getCachedContentTypes();
-    if (cached) return cached;
+    if (cached) return Promise.resolve(cached);
     if (cachedContentTypesPromise) return cachedContentTypesPromise;
   }
-  const request = listContentTypes();
+
+  let request: Promise<ContentTypeSummary[]>;
+  request = listContentTypes()
+    .then((items) => {
+      if (cachedContentTypesPromise === request) {
+        primeContentTypesCacheInternal(items);
+      }
+      return items;
+    })
+    .finally(() => {
+      if (cachedContentTypesPromise === request) {
+        cachedContentTypesPromise = null;
+      }
+    });
   cachedContentTypesPromise = request;
-  const items = await request;
-  primeContentTypesCacheInternal(items);
-  return items;
+  return request;
 }
 
 export async function getContentType(id: string) {
@@ -516,6 +526,7 @@ export async function createContentType(payload: ContentTypePayload) {
     { withCsrf: true }
   );
   if (created) {
+    revokeContentTypesListRead();
     upsertCachedContentType(created);
     broadcastCacheEvent({ key: cacheKeys.contentTypesList, action: "update" });
     broadcastCacheEvent({ key: cacheKeys.contentTypeDetail(created.id), action: "update" });
@@ -537,6 +548,7 @@ export async function duplicateContentType(
     { withCsrf: true }
   );
   if (duplicated) {
+    revokeContentTypesListRead();
     upsertCachedContentType(duplicated);
     broadcastCacheEvent({ key: cacheKeys.contentTypesList, action: "update" });
     broadcastCacheEvent({
@@ -558,6 +570,7 @@ export async function updateContentType(id: string, payload: Partial<ContentType
     { withCsrf: true }
   );
   if (updated) {
+    revokeContentTypesListRead();
     upsertCachedContentType(updated);
     clearContentTypeCollectionWorkspaceCache(id);
     clearContentTypeCollectionWorkspaceCache(updated.id);
@@ -580,6 +593,7 @@ export async function deleteContentType(id: string) {
     { withCsrf: true }
   );
   if (result?.ok) {
+    revokeContentTypesListRead();
     removeCachedContentType(id);
     broadcastCacheEvent({ key: cacheKeys.contentTypesList, action: "invalidate" });
     broadcastCacheEvent({ key: cacheKeys.contentTypeDetail(id), action: "invalidate" });

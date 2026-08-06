@@ -1,3 +1,5 @@
+import type { EntryDataValue } from "@/services/entryData";
+
 import type {
   ScreenDocumentV1,
   ScreenFieldBinding,
@@ -19,7 +21,7 @@ type CustomScreenEntryCanvasProps = {
   // TASK-498-03: host-precomputed related entries (forward-only — the owner
   // CustomScreenEntryEditor resolves + passes this in).
   relatedEntries?: Record<string, RelatedEntrySummary[]>;
-  onFieldChange: (field: string, value: unknown) => void;
+  onFieldChange: (field: string, value: EntryDataValue) => void;
   onTitleChange: (value: string) => void;
   onSlugChange: (value: string) => void;
   selectedBlockId?: string | null;

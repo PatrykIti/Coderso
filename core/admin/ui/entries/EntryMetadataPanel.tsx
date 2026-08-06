@@ -29,6 +29,7 @@ import { SectionCard } from "@/ui/shared/SectionCard";
 import { StatusBadge } from "@/ui/shared/StatusBadge";
 
 import type { EntryChecklist } from "./entryChecklist";
+import { useEntryTaxonomyIntent } from "./useEntryTaxonomyIntent";
 
 export type EntryStatus = "draft" | "published" | "scheduled" | "archived";
 
@@ -42,6 +43,10 @@ const statusOptions: Array<{ value: EntryStatus; label: string }> = [
 ];
 
 const NO_CATEGORY_VALUE = "__none__";
+
+// One identity for "no tags", so the intent hook does not resync on every render of a panel
+// mounted without taxonomy.
+const NO_TAG_IDS: readonly string[] = [];
 
 const slugify = (value: string) =>
   value
@@ -123,8 +128,17 @@ type EntryMetadataPanelProps = {
   scrollable?: boolean;
   onSave?: () => void;
   isSaving?: boolean;
+  // False while the host holds no loaded entry. This panel PATCHes status, visibility,
+  // schedule, SEO and taxonomy TOGETHER, so saving before the entry has hydrated would push
+  // its pristine mount defaults (draft, public, no schedule, empty SEO) over the server's
+  // state. Absent means "no such gate", which is how the post editor mounts it.
+  canSave?: boolean;
   onDelete?: () => void;
   isDeleting?: boolean;
+  // False while the host holds no loaded entry, for the same reason as `canSave` and one of
+  // its own: the confirm dialog names the entry from the host's title, which is empty until
+  // hydration, so this would ask the user to confirm destroying a row they were never shown.
+  canDelete?: boolean;
 };
 
 export function EntryMetadataPanel({
@@ -158,8 +172,10 @@ export function EntryMetadataPanel({
   scrollable = true,
   onSave,
   isSaving,
+  canSave,
   onDelete,
   isDeleting,
+  canDelete,
 }: EntryMetadataPanelProps) {
   const [categoryInput, setCategoryInput] = useState("");
   const [tagInput, setTagInput] = useState("");
@@ -194,13 +210,18 @@ export function EntryMetadataPanel({
     ? tagOptions.filter((term) => taxonomy.selectedTagIds.includes(term.id))
     : [];
 
+  // Term creation is asynchronous, so both add flows commit a selection at a moment when the
+  // user may already have chosen something else. See `useEntryTaxonomyIntent`.
+  const taxonomyIntent = useEntryTaxonomyIntent({
+    categoryId: taxonomy?.selectedCategoryId ?? null,
+    tagIds: taxonomy?.selectedTagIds ?? NO_TAG_IDS,
+  });
+
   const handleCategorySelect = (value: string) => {
     if (!taxonomy?.categoryEnabled) return;
-    if (value === NO_CATEGORY_VALUE) {
-      onCategoryChange?.(null);
-      return;
-    }
-    onCategoryChange?.(value);
+    const nextCategoryId = value === NO_CATEGORY_VALUE ? null : value;
+    taxonomyIntent.noteCategoryDecision(nextCategoryId);
+    onCategoryChange?.(nextCategoryId);
   };
 
   const handleAddCategory = async () => {
@@ -212,23 +233,49 @@ export function EntryMetadataPanel({
       (term) => term.name.toLowerCase() === normalized || term.slug === slugify(value)
     );
     if (existing) {
+      // DELIBERATELY UNPINNED (TASK-540 R5). Deleting this line keeps the panel's whole suite
+      // green, and no test can close that. A category decision is only ever READ by
+      // `isCategorySuperseded()` below, inside the one window where a category decision can be
+      // pending — the `await onCreateCategory` — and throughout that window the input and the
+      // Add button that reach this branch are `disabled={isCreatingCategory}`, so React never
+      // calls this handler there. The other half of the record, `currentSelection().categoryId`,
+      // has no reader at all: the one caller reads `.tagIds`. Observing it would take either of
+      // those two facts changing — the Add controls staying live during a creation, which is
+      // what the Select does and what makes the identical record in `handleCategorySelect`
+      // observable, or a reader for the selected category.
+      //
+      // It stays because the rule is stated once for the field, not once per control: every
+      // commit of a single-valued field is a decision about that field. What makes this line
+      // unreachable is a `disabled` attribute — a UI detail, and the only thing standing
+      // between this branch and the defect the hook exists to prevent.
+      taxonomyIntent.noteCategoryDecision(existing.id);
       onCategoryChange?.(existing.id);
       setCategoryInput("");
       return;
     }
     if (!onCreateCategory) return;
+    const decision = taxonomyIntent.beginPendingDecision();
     setIsCreatingCategory(true);
     const created = await onCreateCategory(value);
     setIsCreatingCategory(false);
-    if (created) {
-      onCategoryChange?.(created.id);
-      setCategoryInput("");
-    }
+    if (!created) return;
+    setCategoryInput("");
+    // The category is single-valued and the user answered it while this term was being
+    // created. The term exists and is offered by the select; the choice they can see stands.
+    if (decision.isCategorySuperseded()) return;
+    // DELIBERATELY UNPINNED (TASK-540 R5) for the reason recorded on the existing-term branch
+    // above, plus one of its own: this is the LAST statement of the only flow that opens a
+    // category decision, so the counter it bumps is compared against a baseline no pending
+    // decision has taken yet. Superseding is counted relatively, so bumping it here can never
+    // change an answer — until a second concurrent category decision becomes possible.
+    taxonomyIntent.noteCategoryDecision(created.id);
+    onCategoryChange?.(created.id);
   };
 
   const handleTagRemove = (tagId: string) => {
     if (!taxonomy) return;
     const next = taxonomy.selectedTagIds.filter((id) => id !== tagId);
+    taxonomyIntent.noteTagsDecision(next);
     onTagIdsChange?.(next);
   };
 
@@ -240,6 +287,7 @@ export function EntryMetadataPanel({
     const existing = tagOptions.find(
       (term) => term.name.toLowerCase() === normalized || term.slug === slugify(value)
     );
+    const decision = taxonomyIntent.beginPendingDecision();
     let nextId = existing?.id;
     if (!nextId && onCreateTag) {
       setIsCreatingTag(true);
@@ -247,11 +295,15 @@ export function EntryMetadataPanel({
       setIsCreatingTag(false);
       nextId = created?.id;
     }
-    if (!nextId || !taxonomy) {
+    if (!nextId) {
       setTagInput("");
       return;
     }
-    const next = Array.from(new Set([...taxonomy.selectedTagIds, nextId])).slice(0, 20);
+    // Adding a tag is a delta, not a replacement, so it lands on the selection as it stands
+    // now. Replaying the array captured before the request would put back every tag removed
+    // while the term was being created.
+    const next = Array.from(new Set([...decision.currentSelection().tagIds, nextId])).slice(0, 20);
+    taxonomyIntent.noteTagsDecision(next);
     onTagIdsChange?.(next);
     setTagInput("");
   };
@@ -565,7 +617,12 @@ export function EntryMetadataPanel({
       {revisionsSlot}
       {onSave ? (
         <div className="flex items-center justify-end">
-          <Button size="sm" className="gap-2" onClick={onSave} disabled={isSaving}>
+          <Button
+            size="sm"
+            className="gap-2"
+            onClick={onSave}
+            disabled={isSaving || canSave === false}
+          >
             <Save className="h-4 w-4" />
             {isSaving ? "Saving..." : "Save metadata"}
           </Button>
@@ -581,7 +638,7 @@ export function EntryMetadataPanel({
             variant="destructive"
             size="sm"
             className="w-full gap-2"
-            disabled={isDeleting}
+            disabled={isDeleting || canDelete === false}
             onClick={onDelete}
           >
             <Trash2 className="h-4 w-4" />

@@ -5,6 +5,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
+import type { EntryDataValue } from "@/services/entryData";
 import { EditorShell } from "@/ui/layouts/EditorShell";
 import { CanvasEditor } from "@/ui/shared/CanvasEditor";
 import { PageHeader } from "@/ui/shared/PageHeader";
@@ -82,7 +83,7 @@ export type CustomScreenEntryEditorLayoutProps = {
   presentationOverrides: ScreenEntryPresentationOverrideDraft[];
   selectedBlockId: string | null;
   onSelectBlock: (blockId: string | null) => void;
-  onFieldChange: (name: string, value: unknown) => void;
+  onFieldChange: (name: string, value: EntryDataValue) => void;
   onTitleChange: (value: string) => void;
   onSlugChange: (value: string) => void;
   preferences: ScreenEntryPreferences;

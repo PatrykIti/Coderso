@@ -43,10 +43,12 @@ ENV in Coderso is reserved for **critical infrastructure** only — connection s
 
 | Variable | Purpose |
 | --- | --- |
-| `DATABASE_URL` | Postgres connection string. Ships as `postgres://user:password@localhost:5432/coderso`. |
+| `DATABASE_URL` | Postgres connection string for the default client. Ships as `postgres://user:password@localhost:5432/coderso`. |
 | `PII_ENC_KEY` | AES-256-GCM key for email encryption (32 bytes). |
 | `PII_HASH_KEY` | HMAC key for the email lookup hash (32+ bytes recommended). |
 | `MEDIA_SECRET_MASTER_KEY` | Master key for encrypting media provider secrets (32 bytes). |
+
+A plain local Postgres needs nothing else. If you point `DATABASE_URL` at a **connection pooler** (Render's is the same host on port `6432`), also set `DATABASE_DIRECT_URL` to the direct connection string on port `5432`: startup migrations, the assistant-docs reindex and the backup scheduler take session-level advisory locks, which a transaction pooler cannot carry, and they refuse to run through a pooled URL rather than leak a lock. See [Runtime model → Database connection targets](./runtime-model.md#database-connection-targets).
 
 Generate the secret keys with anything that produces 32 random bytes, for example:
 

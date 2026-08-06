@@ -8,14 +8,15 @@
 **Category:** Admin Client / Cache / Reliability
 **Estimated Effort:** Medium
 **Dependencies:** TASK-540-01-L01
-**Status:** 🚧 In Progress
+**Status:** ✅ Done
+**Completed:** 2026-08-06
 **Started:** 2026-07-13
 **Fix Started:** 2026-07-20
 **Implementation Complete:** 2026-07-20 — assigned work was completed; canonical `✅ Done` transition awaits family changelog 1252.
 **Revalidation Passed:** generation 0d0b4b2b3c194e1693151d2a2c847b1c / token 965989df8f714e18b6d7155cb9745e96 / gate green
-**Fix Reason:** Final post-audit found that independent list/detail authority can let an older detail shrink or stale a newer full entry list.
+**Fix Reason:** Final post-audit found that independent list/detail authority can let an older detail shrink or stale a newer full entry list. A later shared-cache audit found the same missing exact-request authority in the content-type list cache used by related-entry consumers.
 **Modularity Repair Revalidated:** 2026-07-17 — cohesive <=1,000-line split and exact owner gate passed.
-**Current Repair State:** Cache behavior and the test-only cohesive split are implemented. The harness and three Entries suites passed independently at 19/19, 15/15, and 8/8; unchanged Media passed 23/23; the combined gate passed 65/65; and exact fingerprints, static, line, isolation, and drift gates passed. Full family post-audit and runtime smoke remain later closure gates.
+**Current Repair State:** Cache behavior and the test-only cohesive split are implemented. The retained Entries suite now contains its original 19 tests plus two authorized JSON-boundary regressions, so the three Entries suites pass independently at 21/21, 15/15, and 8/8; unchanged Media passes 23/23; the Entries/Media gate is 67/67; and the added Content Types authority suite passes 23/23. Exact fingerprints, static, line, isolation, and drift gates pass. Full family post-audit and runtime smoke remain later closure gates.
 **Post-Audit:** 2026-07-14 — PASS; zero HIGH, MEDIUM, or LOW findings on the corrected working tree
 **Previous Revalidation:** 2026-07-14 — `core lint:types`, `core lint`, and the exact entries/media client Vitest matrix (57/57)
 **Previous Completion:** 2026-07-14
@@ -33,12 +34,17 @@
 - `tests/vitest/admin/entriesClientMutationReconciliation.test.ts`
 - `tests/vitest/admin/support/entriesClientTestHarness.ts`
 - `tests/vitest/admin/mediaClient.test.ts`
+- `core/admin/services/contentTypesClient.ts`
+- `tests/vitest/admin/contentTypesClient.test.ts`
 
-No other TASK-540 leaf edits these four paths. Value priming, explicit invalidation,
+No other TASK-540 leaf edits these nine paths. Value priming, explicit invalidation,
 mutation payloads, and broadcast ordering outside the pending-read authority correction
 remain unchanged. Entry writes revoke the matching pending detail and record a typed
 reconciliation change while preserving the pending full list; media writes retain their
-list-only revocation. Both apply even when the value cache is absent.
+list-only revocation. Content-type list reads use the same exact-request authority as
+media, while public manual priming and every successful content-type mutation revoke an
+older read before applying the mutation-derived list update. These write revocations
+apply even when the corresponding value cache is absent.
 
 ## Mandatory Entries test split
 
@@ -55,17 +61,19 @@ Complete test declarations moved into these exact independently runnable Vitest 
 
 | Owner | Exact expanded pre-split positions and responsibility | Count | Post-format budget |
 |---|---|---:|---:|
-| retained `entriesClient.test.ts` | current `:113-819`, positions 1-19: transport methods, CSRF/payloads/events, local cache reads, metadata/password redaction, and raw all-entry priming | 19 | `<=850` |
+| retained `entriesClient.test.ts` | original positions 1-19 plus two authorized JSON-safe EntryData boundary regressions: transport methods, CSRF/payloads/events, local cache reads, metadata/password redaction, and raw all-entry priming | 21 | `<=900` |
 | `entriesClientReadAuthority.test.ts` | current `:820-1336`, positions 20-34: two expanded detail A/B orders, detail retry/mutation authority, four expanded list/detail orders, rejected-list/scoped-clear, list promise identity, A/B replacement, and rejection retry | 15 | `<=700` |
 | `entriesClientMutationReconciliation.test.ts` | current `:1337-1893`, positions 35-42: upsert/status/delete replay, newer rejected detail, replace→status composition, rejected mutation, and per-type/all-entry A/B/C→D authority | 8 | `<=750` |
 | `support/entriesClientTestHarness.ts` | current helpers `:35-112`: JSON response, isolated localStorage install/restore, scoped cache reset, deferred promise, and typed entry/all-entry fixture builders only | 0 | `<=150` |
 
-The exact expanded Entries name multiset stays 42: lexical `test.each` declarations
+The original expanded Entries name multiset was 42: lexical `test.each` declarations
 expand to two detail-order names and four cross-channel order names. Its sorted
-JSON-serialized sorted expanded-name SHA-256 at the verified pre-split tree is
+JSON-serialized expanded-name SHA-256 at the verified pre-split tree is
 `4ac0a985562db074992ca7af1ec9e3b7030eb5de9ae4e5ec1de94cf263249ae8`.
-The media suite retains 23 unchanged tests, so this leaf's independent/combined result remains
-`19 + 15 + 8 + 23 = 65`. The harness contains no test, hooks, global fetch mutation,
+Two authorized JSON-boundary regressions make the current family 44 tests with SHA-256
+`b3723d9b8d970ee024778b0c8f557302c4e7b774f00f79defa2b1d4ca4028efc`.
+The media suite retains 23 unchanged tests, so the current independent/combined result is
+`21 + 15 + 8 + 23 = 67`. The harness contains no test, hooks, global fetch mutation,
 or singleton state. Each test owns and restores fetch/localStorage/CSRF/cache state in
 `try/finally`; no suite relies on another suite's evaluation or cleanup order.
 
@@ -83,7 +91,7 @@ isolation loss is test-integrity impact. Any such drift blocks this leaf until r
 The split landed in this exact order: `support/entriesClientTestHarness.ts`, retained
 `entriesClient.test.ts`, `entriesClientReadAuthority.test.ts`, then
 `entriesClientMutationReconciliation.test.ts`. Each suite passed immediately after its
-move, followed by the unchanged Media suite and combined 65/65 gate. Production clients remain
+move, followed by the unchanged Media suite and historical combined 65/65 gate. Production clients remain
 read-only during this test-only partition unless a fresh evidence-backed behavior drift
 is verified at their sole owner.
 
@@ -315,6 +323,48 @@ function removeCachedMedia(id) {
   revokeMediaRead();
   existingValueOnlyRemovalWhenFullListPresent(id);
 }
+
+function primeContentTypesCacheInternal(items) {
+  contentTypesListCache.write(items); // never clears cachedContentTypesPromise
+}
+
+function revokeContentTypesListRead() {
+  cachedContentTypesPromise = null;
+}
+
+export function primeContentTypesCache(items) {
+  // This public/manual prime is authoritative, unlike the value-only internal helper.
+  revokeContentTypesListRead();
+  primeContentTypesCacheInternal(items);
+}
+
+export function listContentTypesCached(options): Promise<ContentTypeSummary[]> {
+  if (!options?.force) {
+    const cached = getCachedContentTypes();
+    if (cached) return Promise.resolve(cached);
+    if (cachedContentTypesPromise) return cachedContentTypesPromise;
+  }
+
+  let request: Promise<ContentTypeSummary[]>;
+  request = listContentTypes()
+    .then((items) => {
+      if (cachedContentTypesPromise === request) primeContentTypesCacheInternal(items);
+      return items;
+    })
+    .finally(() => {
+      if (cachedContentTypesPromise === request) cachedContentTypesPromise = null;
+    });
+  cachedContentTypesPromise = request;
+  return request;
+}
+
+async function successfulContentTypeMutation() {
+  const result = await mutateContentType();
+  // create, duplicate, update, and delete all revoke before their existing cache update.
+  revokeContentTypesListRead();
+  applyExistingMutationDerivedContentTypeCacheUpdate(result);
+  return result;
+}
 ```
 
 The stored promise is the exact promise returned to every concurrent non-force caller;
@@ -354,8 +404,8 @@ keeps using its existing explicit `clearAllEntriesCache()` invalidation.
 
 ## Gate tests owned here; aggregate additions owned by TASK-540-06
 
-Both owned suites use deferred A/B requests and assert caller-visible promise identity.
-For per-type entries, all entries, and media independently, cover:
+The owned suites use deferred A/B requests and assert caller-visible promise identity.
+For per-type entries, all entries, media, and content types independently, cover:
 
 - two concurrent non-force callers are `toBe` the same pending promise and issue one
   transport read;
@@ -387,6 +437,11 @@ For per-type entries, all entries, and media independently, cover:
   to its returned target row, or retaining the deletion tombstone;
 - media upsert and removal prove the same behavior both with and without a current full
   media-list cache; and
+- content-type forced A/B reads in both settlement orders prove that only B publishes
+  or clears; authoritative rejection retries; public manual priming revokes an older
+  publisher; and successful create/duplicate/update/delete each revoke an older pending
+  list before applying their existing mutation-derived cache update, including from an
+  absent list value; and
 - authoritative success is returned from the value cache without another transport
   read.
 
@@ -401,13 +456,14 @@ bun --cwd core lint
 bunx vitest run tests/vitest/admin/entriesClient.test.ts \
   tests/vitest/admin/entriesClientReadAuthority.test.ts \
   tests/vitest/admin/entriesClientMutationReconciliation.test.ts \
-  tests/vitest/admin/mediaClient.test.ts
+  tests/vitest/admin/mediaClient.test.ts \
+  tests/vitest/admin/contentTypesClient.test.ts
 node _docs/_workflows/task-540-implement.mjs --check-task-family-line-limit
 ```
 
-Run the three Entries files independently for 19/19, 15/15, and 8/8, and Media for
-23/23, before the combined 65/65 command. Count complete physical lines for both
-clients, all four suites, and the support harness, including blanks/comments and an
+Run the three Entries files independently for 21/21, 15/15, and 8/8, and Media for
+23/23. Run Content Types independently for 23/23 before the combined 90/90 command.
+Count complete physical lines for all three clients, all five suites, and the support harness, including blanks/comments and an
 unterminated final line; reject every result above 1,000. Rerun the named failing file
 once in isolation before classifying failure. `runLeafGate` applies this byte-based
 count to the leaf's exact `allowedFiles` before and after commands; the displayed global
@@ -416,10 +472,10 @@ command runs after all modular streams are present.
 ## Completion
 
 Implemented exact pending-promise identity and request authority for per-type entry,
-entry-detail, all-entry, and media cached reads. Publication and cleanup require the
+entry-detail, all-entry, media, and content-type cached reads. Publication and cleanup require the
 registered promise identity; authoritative rejection is retryable; and every successful
-entry or media mutation revokes only the affected older read before value-cache inspection
-while preserving the existing entry/media priming differences.
+entry, media, or content-type mutation revokes the affected older read before its
+existing value-cache update while preserving the domain-specific priming differences.
 
 The pre-audit corrected a contract contradiction that would have removed the existing
 empty-cache entry-upsert behavior. The first post-audit then found incomplete A/B/C
@@ -430,9 +486,11 @@ retry, successful/rejected mutation, and scoped-identity regressions raised the 
 gate to 57/57. The fresh cross-channel audit then reproduced list/detail start-order
 loss of unrelated rows. The corrected client now uses atomic versioned list/detail
 requests and replayable typed per-item authority, including replacement-to-status
-composition. The complete cross-channel/mutation/clear matrix passed 65/65, static gates
+composition. The original complete cross-channel/mutation/clear matrix passed 65/65, static gates
 and diff check were green, and a fresh read-only post-audit reported zero findings for
 the pre-split tree. The modular split then preserved all 42 expanded names and 38
 declarations, passed isolated 19/15/8 plus Media 23 and combined 65/65, finished every
-owner below 1,000 lines, and passed fresh zero-finding code audits. Its exact modularity
+owner below 1,000 lines, and passed fresh zero-finding code audits. Two later authorized
+JSON-boundary regressions raise the retained/current family to 21 and 44, and the current
+combined Entries/Media gate to 67, without changing the original split provenance. Its exact modularity
 receipt is current; family post-audit, smoke, and closure remain pending.

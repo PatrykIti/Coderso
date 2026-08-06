@@ -114,14 +114,37 @@ bun run db:migrate    # apply pending migrations
 
 Both source `.env` and run `drizzle-kit` against `core/db/drizzle.config.ts`. A schema change is a deploy-level operation, not a live edit.
 
+### Database connection targets
+
+The same database is reached two ways, and the choice is a correctness question, not a tuning one.
+
+| | Variable | Used by | Why |
+| --- | --- | --- | --- |
+| **Default (pooled)** | `DATABASE_URL` | `core/db/client.ts` → every service, route and test/smoke subprocess | Point it at the provider's connection pooler where one exists (Render: same host, port `6432`, `pool_mode = transaction`, `max_client_conn = 30000`). The pooler answers from an already-forked backend, so a cold connect plus first query drops from roughly 750 ms to 500 ms; a warm query is unchanged. postgres.js prepared statements still work through it at one round trip, so `prepare` stays at its default `true`. |
+| **Direct (session)** | `DATABASE_DIRECT_URL` | `withSessionDatabaseClient()` in `core/db/sessionClient.ts` | Anything needing SESSION state. Render reserves 10 backend connections for direct access, which is what these callers use. |
+
+Under `pool_mode = transaction` a client holds a backend for one transaction only. A `pg_advisory_lock` taken in one transaction and unlocked in the next can land on a different backend: the unlock returns `false` and the lock leaks for the lifetime of the original backend. Three paths take session-level advisory locks and therefore run on the direct target:
+
+- `core/server/startupMigrations.ts` — the lock must span the drizzle migrator's whole run, which opens a transaction per migration file, so it cannot be transaction-scoped. The direct connection both holds the lock and runs the migrator.
+- `core/server/startupAssistantDocs.ts` — the lock spans a state read, a docs-tree walk and hundreds of upserts, then a state write.
+- `core/server/jobs/backupScheduler.ts` — the lock spans artifact creation, the backup row, the schedule advance, the audit row and the prune.
+
+`pg_advisory_xact_lock` is pooler-safe and needs no direct connection, because transaction pooling pins one backend for the whole transaction. `core/services/admin/firstRunService.ts` uses it inside a single `db.transaction(...)` and stays on the default client.
+
+Resolution lives in `core/db/connectionTargets.ts` and **fails closed**: if `DATABASE_DIRECT_URL` is unset, session-lock callers fall back to `DATABASE_URL`, but only after checking its port. If that port is the pooler's (or the connection string cannot be parsed to check), they throw with the remedy instead of taking a lock that would leak. `DATABASE_POOLED_PORT` overrides the port the guard treats as pooled (default `6432`).
+
+`LISTEN`/`NOTIFY`, temporary tables and session-level `SET` are deliberately absent from the codebase; adding any of them would need the direct target too.
+
 ### Critical infrastructure ENV
 
 `.env` is read at boot only. Changing any of these is a restart-level operation:
 
 | Variable | Purpose |
 | --- | --- |
-| `DATABASE_URL` | Postgres connection string |
-| `DB_POOL_MAX` | Connection pool size |
+| `DATABASE_URL` | Postgres connection string for the default client — the pooler where one exists (see [Database connection targets](#database-connection-targets)) |
+| `DATABASE_DIRECT_URL` | Direct (non-pooled) connection string for session-scoped callers (`pg_advisory_lock`) |
+| `DATABASE_POOLED_PORT` | Port the session-lock guard treats as the pooler (default `6432`) |
+| `DB_POOL_MAX` | Client-side connection cap for this process |
 | `PORT` | HTTP listen port (default `3000`) |
 | `MEDIA_SECRET_MASTER_KEY` | Encrypts media provider secrets |
 | `PII_ENC_KEY`, `PII_HASH_KEY` | Email encryption + lookup hash |

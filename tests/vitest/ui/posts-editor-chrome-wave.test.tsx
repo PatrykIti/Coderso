@@ -11,6 +11,18 @@ import React from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+// The shell is imported statically, not with `await import(...)` inside
+// `renderEditor`. This file renders the REAL PostBlockEditorShell, so its module
+// graph is large, and a deferred import bills that whole transform and evaluation
+// to whichever test renders first -- 17349ms for the first test in the last full
+// run, against a 30000ms lane budget, while its siblings reused a warm registry.
+// Collection is where that cost belongs; no per-test deadline races it. The
+// `vi.mock`/`vi.hoisted` calls below are hoisted above this import by Vitest, and
+// the `vi.stubGlobal("matchMedia", ...)` in `renderEditor` still lands before any
+// render: the shell only reads `matchMedia` from a `useState` initializer and a
+// `useEffect` in PostEditorLayout, never at module evaluation.
+import { PostBlockEditorShell } from "../../../core/admin/ui/posts/editor/PostBlockEditorShell";
+
 const chromeState = vi.hoisted(() => ({
   navigate: vi.fn(),
   focusCapture: vi.fn(),
@@ -284,8 +296,6 @@ const renderEditor = async () => {
       removeListener: vi.fn(),
     }))
   );
-  const { PostBlockEditorShell } =
-    await import("../../../core/admin/ui/posts/editor/PostBlockEditorShell");
   const view = mount(<PostBlockEditorShell />);
   // Flush the shell's async mount effects (site-settings / taxonomy / slug) inside act
   // so their settling setState calls do not trip the "not wrapped in act" guard.

@@ -11,6 +11,7 @@ import {
   resolveEntryFieldErrorsFromApiError,
   validateEntryDraft,
 } from "../../../core/admin/ui/custom-screens/customScreenEntryDraft";
+import { buildInitialValues } from "../../../core/admin/ui/entries/entryValueMapping";
 import {
   isDraftAuthorityClean,
   resolvePresentationDraftTransition,
@@ -137,6 +138,35 @@ test("buildInitialEntryDraft initializes defaults for writable Editor View field
   expect(draft.originalData).toEqual({});
 });
 
+test("entry draft producers fail closed for overflowing numeric defaults", () => {
+  const overflowingNumberField = {
+    id: "field-budget",
+    name: "budget",
+    type: "number" as const,
+    label: "Budget",
+    defaultValue: "1e309",
+  };
+  const overflowingContentType: ContentTypeSummary = {
+    ...contentType,
+    schema: {
+      ...contentType.schema,
+      properties: {
+        ...contentType.schema.properties,
+        budget: {
+          ...contentType.schema.properties.budget,
+          default: "1e309",
+        },
+      },
+    },
+  };
+
+  expect(buildInitialValues([overflowingNumberField], {}, { title: "", slug: "" }).budget).toBe("");
+  expect(
+    buildInitialEntryDraft({ contentType: overflowingContentType, editorView: v4EditorView }).data
+      .budget
+  ).toBeNull();
+});
+
 test("buildInitialEntryDraft does not fall back to the whole schema without writable bindings", () => {
   const draft = buildInitialEntryDraft({
     contentType,
@@ -231,6 +261,24 @@ test("Editor View payload builders keep create scoped and update non-destructive
       budget: 125000,
       internalNotes: "Keep hidden",
     },
+  });
+});
+
+test("Editor View payload builders omit editable fields missing from draft data", () => {
+  const draft = {
+    ...buildInitialEntryDraft({ contentType, editorView: v4EditorView }),
+    title: "Lake House",
+    slug: "lake-house",
+    data: { projectStatus: "active" },
+    originalData: { internalNotes: "Keep hidden" },
+  };
+
+  expect(buildEditorViewCreatePayload({ contentType, draft }).data).toEqual({
+    projectStatus: "active",
+  });
+  expect(buildEditorViewUpdatePayload({ contentType, draft }).data).toEqual({
+    projectStatus: "active",
+    internalNotes: "Keep hidden",
   });
 });
 

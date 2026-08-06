@@ -8,12 +8,13 @@
 **Category:** Custom Screens / Responsive UI / Accessibility
 **Estimated Effort:** Small
 **Dependencies:** TASK-540-04-L04
-**Status:** 🚧 In Progress
+**Status:** ✅ Done
+**Completed:** 2026-08-06
 **Started:** 2026-07-14
 **Fix Started:** 2026-07-18
 **Implementation Complete:** 2026-07-19 — assigned work was completed; canonical `✅ Done` transition awaits family changelog 1252.
 **Historical Boundary Revalidation:** generation eeb29960e5784a47ad38fb056c30d9a8 / token cabb94f2a2894d9fa5130e6256ae6442 / gate green
-**Revalidation Passed:** 2026-07-19 — evidence-backed manual checkpoint receipt for the current L01 compatibility owner gate after L04: core lint/types and root TypeScript checks; authoring-boundary isolation 7/7; insertion-targeting isolation 10/10; exact four-file owner matrix 29/29; full-family physical-line, prepared-resume, and diff checks. This is not a transition-generated generation/token or hash receipt and claims no clean family post-audit, full validation, smoke, changelog, or closure result.
+**Revalidation Passed:** 2026-08-05 — the complete current L01 owner gate passed after `panelDataProps` semantic hardening: its `data-*`-only type and runtime filter preserve data hooks and the forwarded ref while rejecting `role`/ARIA overrides, with regression coverage for `aria-labelledby` and `aria-hidden`. Core lint/types and root TypeScript passed; authoring-boundary isolation passed 7/7, insertion-targeting isolation passed 10/10, and the exact four-file owner matrix passed 29/29. The boundary suite is 863 physical lines and `git diff --check` passed. This receipt claims no family post-audit, full validation, smoke, changelog, or closure result.
 **Current Insertion Compatibility Evidence:** 2026-07-19 — commit `7a393dcc7aaf454fee582ce7745073768e0e131b` reopens the one-shot Insert palette before the existing second insertion assertion after `ScreenAuthoringCanvas` begins inspecting a newly inserted block. The insertion target and ordering assertions remain unchanged, and commit `204fd1de0f129f73976f577f420acbdac5316dea` assigns the test exclusively to this leaf.
 **Current Insertion Receipt State:** The exact L01 compatibility owner gate passed on 2026-07-19 after L04 and commit `7a393dcc7aaf454fee582ce7745073768e0e131b`; the current `Revalidation Passed` field above is the sole active owner-gate receipt. It claims no clean family post-audit, full validation, smoke, changelog, or closure result.
 **Modularity Repair Revalidated:** 2026-07-17 — cohesive <=1,000-line split and exact owner gate passed.
@@ -80,7 +81,7 @@ or committing intermediate work cannot narrow the set. A path omitted because it
 thin, pure, a facade, or already committed is a failed boundary gate, not a LOW or
 TASK-9999 deferral. L01 may edit only its boundary test, never either source family.
 This additive update creates no test target; the reconciled family total remains exactly
-64 Vitest + 18 Bun = 82 files (81 source-owner/read-only dependency targets plus one
+78 Vitest + 18 Bun = 96 files (95 source-owner/read-only dependency targets plus one
 closure-owned aggregate target), with pinned changelog 1252 unchanged.
 
 TASK-542 separately owns Menu host clearance. Do not add Menu/Page special cases
@@ -92,10 +93,16 @@ These 2026-07-14 line snapshots are retained as audit provenance. They describe 
 pre-implementation source layout; current ownership and validation are anchored by the
 named symbols and regression suites in this contract rather than mutable line numbers.
 
-- Screen canvas fixed reserve: `ScreenAuthoringCanvas.tsx:491-523`.
+- Screen canvas fixed reserve: `ScreenAuthoringCanvas.tsx:491-523`; the shipped
+  responsive scroller is `ScreenAuthoringCanvas.tsx:528-536`, with the base
+  `p-6 lg:p-8` gutters at `:530` and the conditional `lg:pr-[332px]` at `:531`.
 - Responsive panel width already exists:
   `CanvasEditor.tsx:88-97` (`w-[min(280px,calc(100%-2rem))]`).
-- Label without role: `CanvasEditor.tsx:143-153`.
+- Label without role: `CanvasEditor.tsx:143-153`; the shipped named-region panel is
+  `CanvasEditor.tsx:146-152`, where `{...panelDataProps}` at `:147` precedes the
+  shell-owned `ref` at `:148`, `role="region"` at `:149`, `PANEL_POSITION_CLASS` at
+  `:150`, and `aria-label={panelAriaLabel}` at `:151`. That spread-then-semantics
+  ordering is the fail-closed guarantee, so pin it by those symbols, not by prose.
 
 ## Implementation Pseudocode
 
@@ -175,6 +182,18 @@ The `lg` breakpoint is final and the existing base padding is part of the contra
 - at 320/390/480 the scroller border-box equals its host width within 1 CSS px,
   its content box remains wider than 0 px, and the panel bounding box stays
   inside the viewport; at 1024 and 1280 the panel also stays inside the viewport.
+
+Evidence split for the two `padding-left` clauses: the browser geometry sample carries
+only `paddingRight`
+(`_docs/_workflows/task-540-smoke/contract/visible-assertion-schemas.mjs:56-66`,
+`_docs/_workflows/task-540-smoke/contract/metadata.mjs:419-427`), so
+`narrow-padding-and-positive-geometry` asserts the computed `24px` right padding and
+positive narrow content width
+(`_docs/_workflows/task-540-smoke/contract/visible-assertion-predicates.mjs:523-570`),
+`wide-padding-delta-300` asserts `32px`/`332px` plus the 300 ± 1 CSS px content-box delta
+(`:571-616`), and `panel-inside-viewport` covers all five open widths (`:617-627`). Both
+`padding-left` halves stay pinned structurally by the exact base-class assertion in
+`tests/vitest/ui/custom-screen-authoring-boundary.test.ts:483-486`.
 
 Do not replace the base `p-6 lg:p-8`, change the breakpoint after smoke, add a
 resize listener, or use effect-driven viewport state. Keep panel width/max-height

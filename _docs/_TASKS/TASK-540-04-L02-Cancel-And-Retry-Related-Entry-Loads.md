@@ -8,7 +8,8 @@
 **Category:** Custom Screens / Async UI / Cache
 **Estimated Effort:** Medium
 **Dependencies:** TASK-540-04-L01
-**Status:** 🚧 In Progress
+**Status:** ✅ Done
+**Completed:** 2026-08-06
 **Started:** 2026-07-13
 **Implementation Complete:** 2026-07-13 — assigned work was completed; canonical `✅ Done` transition awaits family changelog 1252.
 **Targeted Gate Passed:** 2026-07-13 — `core lint:types`, `core lint`, the exact two-file Vitest matrix (44/44), full core lint/typecheck, tracked and untracked diff checks, empty staging, and Page collision guards all green

@@ -4,6 +4,11 @@ import path from "node:path";
 
 const root = path.resolve(import.meta.dir, "../../../");
 const MINIMUM_RELEASE_AGE_SECONDS = 7 * 24 * 60 * 60;
+const SECURITY_RELEASE_AGE_EXCLUDES = ["brace-expansion", "fast-uri"];
+const SECURITY_EXCEPTION_COMMENT = [
+  "# Security-only exceptions while the fixed releases complete the seven-day quarantine:",
+  "# remove brace-expansion after 2026-08-06T10:00:32.762Z and fast-uri after 2026-08-07T09:16:56.212Z.",
+].join("\n");
 
 test("Bun install configuration enforces hoisting and a seven-day release age", () => {
   const bunfig = readFileSync(path.join(root, "bunfig.toml"), "utf-8");
@@ -20,8 +25,22 @@ test("Bun install configuration enforces hoisting and a seven-day release age", 
   const installBody = bunfig.slice(sectionStart, sectionEnd);
   const linkers = [...installBody.matchAll(/^\s*linker\s*=\s*"([^"]+)"\s*(?:#.*)?$/gm)];
   const releaseAges = [...installBody.matchAll(/^\s*minimumReleaseAge\s*=\s*(\d+)\s*(?:#.*)?$/gm)];
+  const releaseAgeExcludes = [
+    ...installBody.matchAll(/^\s*minimumReleaseAgeExcludes\s*=\s*\[([^\]]*)\]\s*(?:#.*)?$/gm),
+  ];
 
   expect(linkers.map((match) => match[1])).toEqual(["hoisted"]);
   expect(releaseAges).toHaveLength(1);
   expect(Number(releaseAges[0][1])).toBe(MINIMUM_RELEASE_AGE_SECONDS);
+  expect(releaseAgeExcludes).toHaveLength(1);
+
+  const excludedPackageNames = [...(releaseAgeExcludes[0][1] ?? "").matchAll(/"([^"]+)"/g)].map(
+    (match) => match[1]
+  );
+
+  expect(excludedPackageNames).toEqual(SECURITY_RELEASE_AGE_EXCLUDES);
+  expect(excludedPackageNames.every((packageName) => !packageName.includes("*"))).toBe(true);
+  expect(installBody).toContain(
+    `${SECURITY_EXCEPTION_COMMENT}\nminimumReleaseAgeExcludes = ["brace-expansion", "fast-uri"]`
+  );
 });

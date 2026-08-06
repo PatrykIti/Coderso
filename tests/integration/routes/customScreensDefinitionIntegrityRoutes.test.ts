@@ -50,11 +50,14 @@ testIfDb(
     const screen = await seedBoundScreen();
     const base = buildDefinition();
     const overviewContent = [
-      { id: "overview-copy", type: "text", data: { content: "Keep overview" } },
+      {
+        id: "overview-group",
+        type: "field-group",
+        data: {},
+        children: [{ type: "text", data: { content: "Keep overview" } }],
+      },
     ];
-    const detailsContent = [
-      { id: "details-copy", type: "text", data: { content: "Keep details" } },
-    ];
+    const detailsContent = [{ id: null, type: "text", data: { content: "Keep details" } }];
     const longSectionId = `section-${"s".repeat(170)}`;
     const longBlockPrefix = `block-${"b".repeat(170)}`;
     const longTabsId = `${longBlockPrefix}-tabs`;
@@ -82,6 +85,12 @@ testIfDb(
                 sibling,
               ],
             },
+            {
+              id: "second-section",
+              type: "section",
+              data: {},
+              blocks: [{ type: "field", data: { label: "Second section" } }],
+            },
           ],
         },
         bindings: [
@@ -101,6 +110,14 @@ testIfDb(
             field: "name",
             mode: "read",
           },
+          {
+            id: "generated-child-binding",
+            blockId: "block-2",
+            propPath: "content",
+            source: "entry",
+            field: "name",
+            mode: "read",
+          },
         ],
       },
     } as unknown as CustomScreenDefinition;
@@ -116,7 +133,7 @@ testIfDb(
       (storedBeforePatch?.definition as CustomScreenDefinition).editorView.bindings.map(
         ({ id }) => id
       )
-    ).toEqual(["malformed-stored-binding", "sibling-binding"]);
+    ).toEqual(["malformed-stored-binding", "sibling-binding", "generated-child-binding"]);
 
     const response = (await patchScreen(screen.id, { name: "Repaired metadata name" })) as {
       name: string;
@@ -125,7 +142,7 @@ testIfDb(
     const responseSection = response.definition.editorView.document.sections[0]!;
     const responseBlocks = responseSection.blocks;
     expect(response.name).toBe("Repaired metadata name");
-    expect(response.definition.editorView.document.sections).toHaveLength(1);
+    expect(response.definition.editorView.document.sections).toHaveLength(2);
     expect(responseBlocks).toHaveLength(2);
     expect(responseSection.id.length).toBeLessThanOrEqual(160);
     expect(responseBlocks[0]?.id.length).toBeLessThanOrEqual(160);
@@ -136,13 +153,33 @@ testIfDb(
       { id: "details", label: "Tab 1" },
       { id: "overview", label: "Tab 2" },
     ]);
-    expect(responseBlocks[0]?.slots?.overview).toEqual(overviewContent);
-    expect(responseBlocks[0]?.slots?.details).toEqual(detailsContent);
+    expect(responseBlocks[0]?.slots?.details).toEqual([
+      { id: "block-1", type: "text", data: { content: "Keep details" } },
+    ]);
+    expect(responseBlocks[0]?.slots?.overview).toEqual([
+      {
+        id: "overview-group",
+        type: "field-group",
+        data: {},
+        children: [{ id: "block-2", type: "text", data: { content: "Keep overview" } }],
+      },
+    ]);
+    expect(response.definition.editorView.document.sections[1]?.blocks).toEqual([
+      { id: "block-3", type: "field", data: { label: "Second section" } },
+    ]);
     expect(response.definition.editorView.bindings).toEqual([
       {
         id: "sibling-binding",
         blockId: responseBlocks[1]?.id,
         propPath: expect.stringMatching(/^[a-zA-Z0-9_.-]{1,160}$/),
+        source: "entry",
+        field: "name",
+        mode: "read",
+      },
+      {
+        id: "generated-child-binding",
+        blockId: "block-2",
+        propPath: "content",
         source: "entry",
         field: "name",
         mode: "read",
@@ -158,6 +195,7 @@ testIfDb(
     expect(persistedDefinition).toEqual(response.definition);
     expect(persistedDefinition?.editorView.bindings.map(({ id }) => id)).toEqual([
       "sibling-binding",
+      "generated-child-binding",
     ]);
   }
 );

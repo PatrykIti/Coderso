@@ -14,6 +14,8 @@ import {
   createEntry,
   getCachedEntryDetail,
   updateEntry,
+  type EntryData,
+  type EntryDataValue,
   type EntryDetail,
 } from "@/services/entriesClient";
 import {
@@ -69,6 +71,8 @@ import { buildCustomScreenWorkspacePath } from "./routeParams";
 
 const emptyContentFields: ContentField[] = [];
 const emptyPresentationOverrides: CustomScreenEntryPresentationOverride[] = [];
+const readEntryDataValue = (data: EntryData, field: string): EntryDataValue | undefined =>
+  data[field];
 
 export type CustomScreenEntryRouteSessionProps = {
   screenId: string | null;
@@ -139,15 +143,13 @@ export function CustomScreenEntryRouteSession({
   const [contentType, setContentType] = useState<ContentTypeSummary | null>(initialContentType);
   const [entry, setEntry] = useState<EntryDetail | null>(initialEntry);
   const [fields, setFields] = useState<ContentField[]>(initialFields);
-  const [values, setValues] = useState<Record<string, unknown>>(initialDraft?.data ?? {});
+  const [values, setValues] = useState<EntryData>(initialDraft?.data ?? {});
   const [title, setTitle] = useState(initialDraft?.title ?? "");
   const [slug, setSlug] = useState(initialDraft?.slug ?? "");
   const [editableFields, setEditableFields] = useState<string[]>(
     initialDraft?.editableFields ?? []
   );
-  const [originalData, setOriginalData] = useState<Record<string, unknown>>(
-    initialDraft?.originalData ?? {}
-  );
+  const [originalData, setOriginalData] = useState<EntryData>(initialDraft?.originalData ?? {});
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [committedEntryVisit, setCommittedEntryVisit] = useState<RouteVisit | null>(
@@ -393,7 +395,7 @@ export function CustomScreenEntryRouteSession({
     setHasUnsavedChanges(true);
     return true;
   };
-  const handleFieldChange = (name: string, value: unknown) => {
+  const handleFieldChange = (name: string, value: EntryDataValue) => {
     if (!markContentMutation()) return;
     setValues((current) => ({ ...current, [name]: value }));
     setFieldErrors((current) => {
@@ -424,15 +426,16 @@ export function CustomScreenEntryRouteSession({
     if (schemaFieldNames.has("slug")) setValues((current) => ({ ...current, slug: value }));
   };
   const buildPayloadData = () => {
-    const data: Record<string, unknown> = { ...originalData };
+    const data: EntryData = { ...originalData };
     editableFields.forEach((key) => {
-      data[key] = values[key];
+      const value = readEntryDataValue(values, key);
+      if (value !== undefined) data[key] = value;
     });
     if (schemaFieldNames.has("title")) data.title = title;
     if (schemaFieldNames.has("slug")) data.slug = slug;
     return data;
   };
-  const canvasFieldValues = useMemo<Record<string, unknown>>(
+  const canvasFieldValues = useMemo<EntryData>(
     () => ({
       ...buildPayloadData(),
       title,

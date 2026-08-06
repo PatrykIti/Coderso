@@ -7,19 +7,21 @@
 **Category:** Custom Screens / Admin State / Cache / Reliability
 **Estimated Effort:** Medium
 **Dependencies:** TASK-540-01, TASK-540-03
-**Status:** 🚧 In Progress
+**Status:** ✅ Done
+**Completed:** 2026-08-06
 **Started:** 2026-07-13
-**Fix Started:** 2026-07-20
-**Implementation Complete:** 2026-07-20 — assigned work was completed; canonical `✅ Done` transition awaits family changelog 1252.
-**Current L03/L04 Implementation Evidence:** 2026-07-19 — L03 landed as `46759bcea211c39a708ed424f749efe2343a56b3` after R01/R03, and L04 landed as `204fd1de0f129f73976f577f420acbdac5316dea` after L03. The first commit centralizes Entry media identity, names the Entry Presentation controls/group, and uses the canonical records-workspace helper; the second names all five Screen Settings controls. These commit identities are implementation provenance, not generation/token receipts.
-**Current Focused Validation Evidence:** 2026-07-19 — core lint/types and root TypeScript checks passed; the expanded 22-file L03 matrix passed 258/258, the final 15-file L04 consumer matrix passed 98/98, DB-backed Custom Screens routes passed 13/13, and protected-name/module, family line, workflow, and diff checks passed. The exact L03 and L04 owner receipts now record those current bytes.
-**Current Receipt Synchronization State:** L03 and L04 each carry one current `Revalidation Passed` for their 2026-07-19 commits; their older receipts moved to dedicated historical fields. The five owner re-gates completed in dependency order R01 → R03 → L03 → L04 → L01. The clean family post-audit and full validation remain pending.
+**Fix Started:** 2026-08-06
+**Implementation Complete:** 2026-08-06 — assigned work was completed; canonical `✅ Done` transition awaits family changelog 1252.
+**Historical L03/L04 Implementation Evidence:** 2026-07-19 — L03 landed as `46759bcea211c39a708ed424f749efe2343a56b3` after R01/R03, and L04 landed as `204fd1de0f129f73976f577f420acbdac5316dea` after L03. The first commit centralizes Entry media identity, names the Entry Presentation controls/group, and uses the canonical records-workspace helper; the second names all five Screen Settings controls. These commit identities are implementation provenance, not generation/token receipts or current landed-state evidence.
+**Historical Focused Validation Evidence:** 2026-07-19 — core lint/types and root TypeScript checks passed; the expanded 22-file L03 matrix passed 258/258, the final 15-file L04 consumer matrix passed 98/98, DB-backed Custom Screens routes passed 13/13, and protected-name/module, family line, workflow, and diff checks passed. The later 2026-08-06 L03 repair superseded this as current-byte authority while retaining it as dependency evidence; the dedicated current L03 receipt is recorded below.
+**Current Receipt Synchronization State:** All twelve implementation leaves are landed. L03 carries canonical `Implementation Complete` and `Revalidation Passed: generation 389c9f4149c84d75bc5bdfe8caeb15de / token 0ffce6cc69b8444cb78f475950e6c900 / gate green`; no active `Repair Pending` remains. L04 retains its current owner receipt, and older receipts remain in dedicated historical fields. The clean family post-audit and full validation remain pending.
+**Current 2026-08-06 Post-Audit Repair:** L03 again enforces exactly one forced content-type read per initial Entry visit; that same authoritative list supplies schema hydration and relation targets after the visit/snapshot/draft barrier, while the relation-target hook refreshes only on later cache events with latest-request and unmount authority. Its focused Entry/shared-media suites passed 14/14, the generic `entry-editor-*` family passed 33/33, and the exact canonical owner revalidation is now current under the generation/token receipt above.
 **Historical Implementation Complete:** 2026-07-15 — the earlier cacheBus/mock repair phase completed before the current L03/L04 corrections.
-**Repair Reason:** A fresh post-audit reopened L03 because the bounded 201-direct-image path rendered a transient load message and dead-end `Retry` for a structural overflow that performs zero media reads. L03 now distinguishes retryable load failures from a non-retryable visible overflow; focused revalidation has passed and a fresh clean post-audit remains pending.
-**Historical Post-Audit Overflow Retry Repair:** 2026-07-17 — L03 carries an explicit media error kind through its pure plan, hook, route session, and layout, preserves transient retry, and removes the impossible retry affordance from the bounded overflow. Its exact owner gate passed and is retained under L03's dedicated historical overflow receipt; the 2026-07-19 Entry-correction receipt is current.
+**Historical Overflow Repair Reason:** A post-audit reopened L03 because the bounded 201-direct-image path rendered a transient load message and dead-end `Retry` for a structural overflow that performs zero media reads. L03 distinguished retryable load failures from a non-retryable visible overflow; that repair's focused revalidation is historical and did not satisfy the later 2026-08-06 receipt, which now has its own current authority.
+**Historical Post-Audit Overflow Retry Repair:** 2026-07-17 — L03 carries an explicit media error kind through its pure plan, hook, route session, and layout, preserves transient retry, and removes the impossible retry affordance from the bounded overflow. Its exact owner gate passed and is retained under L03's dedicated historical overflow receipt; the 2026-07-19 Entry-correction receipt is historical too.
 **Historical Compatibility Revalidation:** 2026-07-16 — before the Page/cache-bus split, L03 retained its exact five-path media override receipt and L04 passed post-change static gates, isolated binding-flow 3/3, and the then-current ten-file matrix 98/98. This receipt is superseded by the 2026-07-17 final fifteen-file/98-test owner receipt and does not govern any current or repeated validation.
 **Historical Pre-Modularity L03 Revalidation:** 2026-07-16 — against HEAD `040604e7e3d5232a5fb2fcb6a05e149295a89a77` plus L03's then-five dirty owner paths, core/root static gates passed; expanded L03 Vitest passed 258/258, isolated cacheBus 22/22, L04 read-only consumers 98/98, DB preflight was reachable, and the then-current pre-split registered Custom Screens routes passed 20/20 with 118 expectations; `git diff --check` passed. This is historical pre-modularity evidence only and did not gate the later overflow repair.
-**Modularity Repair Revalidated:** 2026-07-17 — all eight family source-owner modularity receipts existed and the family line gate reported zero blockers before the later L03 overflow repair. This remains split/line evidence only; L03 now has no `Repair Pending` and is landed, while closure returns to its pre-closure frontier after a fresh clean post-audit.
+**Modularity Repair Revalidated:** 2026-07-17 — all eight family source-owner modularity receipts existed and the family line gate reported zero blockers before the later L03 overflow repair. This remains split/line evidence only; L03 now has its current behavior receipt and canonical `Implementation Complete`, all twelve leaves are landed, and closure resumes with the fresh five-lens post-audit.
 **Historical Pre-Overflow Post-Audit Hygiene Revalidated:** 2026-07-17 — L03 removed its dead fixture and tautological settlement comparisons while preserving fail-closed request/generation authority; L04 removed synthetic source projection and added the exact five-module Page-family verifier. Focused static/test/line gates and fresh scoped audits were green at that checkpoint; the later L03 overflow repair superseded its behavior-gate state.
 **Historical Pre-Overflow Subsequent Post-Audit Repair Revalidated:** 2026-07-17 — L03 then performed one forced content-type read per initial Entry visit and degraded a 201-ID presentation-media plan to the bounded visible error without a render crash or media request. The exact twenty-two-file L03 gate passed 258/258, the final fifteen-file L04 read-only consumer gate passed 98/98, and core/root static, all-family name/body, line, workflow, and diff gates were green at that checkpoint. The later L03 overflow repair superseded that behavior gate.
 **Historical Pre-Overflow Post-Audit Final-Gate Contract Revalidated:** 2026-07-17 — L03 then marked the historical transient handoff as superseded and named the final 15-file, 98-test L04 consumer matrix as the sole repeat-validation authority; workflow checks and a fresh zero-finding audit passed. The later L03 overflow repair superseded that behavior gate and prepared closure state.
@@ -49,10 +51,10 @@ when the user edits after a background request has already started.
 
 | ID | Title | Exclusive source ownership | Status |
 |---|---|---|---|
-| TASK-540-04-L01 | Make related-entry and media promise caches retryable | `entriesClient.ts`, `mediaClient.ts`, Entries harness/three-suite split, and Media suite | 🚧 In Progress |
-| TASK-540-04-L02 | Cancel and retry related-entry loads | shared Screen hook, Preview dialog, and hook/Preview tests | 🚧 In Progress |
-| TASK-540-04-L03 | Guard entry drafts, expand direct-image presentation targets, resolve presentation media UUIDs, and correlate mutation cache events | stable Entry Editor facade/eight extracted owners, canvas/read-only Preview, `customScreensClient.ts`, cache-bus substrate, override contract/service, four split test families/support, and assigned suites | 🚧 In Progress |
-| TASK-540-04-L04 | Guard Screen builder drafts | stable Screen Builder facade/seven extracted owners, additive editor-path helper, Page harness/four-suite split, route/binding/recovery seams, and read-only cache-bus/client production seams | 🚧 In Progress |
+| TASK-540-04-L01 | Make related-entry and media promise caches retryable | `entriesClient.ts`, `mediaClient.ts`, Entries harness/three-suite split, and Media suite | ✅ Done |
+| TASK-540-04-L02 | Cancel and retry related-entry loads | shared Screen hook, Preview dialog, and hook/Preview tests | ✅ Done |
+| TASK-540-04-L03 | Guard Screen and content Entry drafts, expand direct-image presentation targets, resolve presentation media UUIDs, and correlate mutation cache events | stable Screen Entry facade/eight extracted owners, complete generic content Entry Editor delta, canvas/read-only Preview, clients/cache substrate, contracts, and assigned suites/support | ✅ Done |
+| TASK-540-04-L04 | Guard Screen builder drafts | stable Screen Builder facade/seven extracted owners, additive editor-path helper, Page harness/four-suite split, route/binding/recovery seams, and read-only cache-bus/client production seams | ✅ Done |
 
 ### Landed 2026-07-19 post-audit correction
 
@@ -61,9 +63,11 @@ media-UUID selector in favor of R01's Bun-free helper, named all Entry Presentat
 controls, and used `buildCustomScreenWorkspacePath` for the records workspace. L04 then
 landed last and named all Screen Settings controls. Each leaf extended existing test
 declarations only: Entry navigation remains exactly 9+13 and the L04 Page family remains
-exactly 6+13+8+9 = 36. Canonical workflow re-gated L03 before L04 and then L01; the
-current leaf receipts record those focused gates and claim no full validation, smoke,
-changelog, or closure.
+exactly 6+13+8+9 = 36. Canonical workflow re-gated L03 before L04 and then L01 at that
+checkpoint; those focused L03 receipts are historical. L04 and L01 retain their current
+receipts, while L03 now carries its distinct current 2026-08-06 receipt. All twelve
+implementation leaves are landed; full validation, smoke, changelog, and closure remain
+unclaimed.
 
 ## Mandatory parent modularity sequence
 
@@ -85,10 +89,12 @@ Each leaf's final receipt covers every extant history/current/untracked producti
 test, and test-support owner path as `{ path, owner, lines, sha256 }`; all must be
 `<= 1000`.
 Staging or intermediate commits cannot reset the full baseline scope. L01 preserves its
-exact 42-name Entries family, L03 preserves the exact 40-name Custom Screens client,
+original 42-name Entries family plus two authorized additive JSON-boundary regressions
+(44 current names), while L03 preserves the exact 40-name Custom Screens client,
 22-name cacheBus, 17-name Entry-restyle, and 22-name navigation families, and L04
 preserves the exact 36-name Page family. Every resulting suite remains independently
-runnable. These names join the global protected 347-name multiset; no line or
+runnable. These names form the current protected 349-name multiset (347 original plus
+the two additive Entries regressions); no line or
 test-integrity violation is eligible for TASK-9999.
 
 ## Corrective workflow
@@ -119,11 +125,13 @@ line rule was introduced, those receipts would have returned the graph to the pr
 pre-closure boundary. The later L01/L03/L04 modularity sequence, downstream L01
 authoring-boundary handoff, and L02 test splits all passed their exact gates; all eight
 receipts and the zero-blocker line gate placed the family at the closure frontier at
-that historical checkpoint. The L03 overflow repair has since passed its fresh gate,
-   but the current corrective implementation chain R01 → R03 → L03 → L04 is now landed.
-   The exact owner re-gates completed in that order and then covered the L01 compatibility
-   boundary. A fresh clean five-lens post-audit is now the remaining prerequisite for the
-   full-validation, smoke, and closure sequence.
+that historical checkpoint. The L03 overflow repair later passed its then-fresh gate,
+and the R01 → R03 → L03 → L04 implementation chain landed at that historical
+checkpoint. Those owner re-gates completed in order and then covered the L01
+compatibility boundary. In the current graph, all twelve implementation leaves are
+landed, and L03's current exact generation/token receipt replaces its former pending
+state. The remaining order begins with a fresh clean five-lens post-audit → full
+validation → canonical smoke → smoke-evidence audit → changelog and closure.
 
 ## Shared contract
 
@@ -295,6 +303,7 @@ that historical checkpoint. The L03 overflow repair has since passed its fresh g
   the existing related resolver suite is read-only for this leaf.
 - TASK-540-04-L03 exclusively owns `custom-screen-entry-editor-restyle.test.tsx`,
   `custom-screen-entry-presentation-media.test.ts`,
+  `media-picker.test.tsx`,
   `custom-screen-entry-draft.test.ts`,
   `custom-screen-entry-navigation-guard.test.tsx`,
   `custom-screen-entry-navigation-authority.test.tsx`,
@@ -310,7 +319,8 @@ that historical checkpoint. The L03 overflow repair has since passed its fresh g
   `CustomScreenEntryPresentationPanel.tsx`, `customScreenEntryRuntime.ts`,
   `customScreenEntryPresentation.ts`, `customScreenEntryPresentationMedia.ts`,
   `hooks/useScreenEntryHydration.ts`,
-  `hooks/useScreenEntryPresentationMedia.ts`, `customScreensClient.ts`, `cacheBus.ts`,
+  `hooks/useScreenEntryPresentationMedia.ts`, the shared `MediaPicker.tsx` producer,
+  `customScreensClient.ts`, `cacheBus.ts`,
   `screenEntryPresentationOverrideContract.ts`, and
   `screenEntryPresentationOverrides.ts` in addition to the entry editor/canvas.
   `CustomScreenPreview.tsx` is also owned only to add optional pass-through props; absent
@@ -327,6 +337,15 @@ that historical checkpoint. The L03 overflow repair has since passed its fresh g
   exact finding prompt plus post-agent `touchedFiles` verification. After closure it may
   add only the TASK-540 root, TASK-540-04 child, and exact L03 task contracts for
   evidenced contract findings; task-state transitions remain separate.
+  The final single-writer audit additionally assigns L03 every baseline-to-HEAD change
+  under `core/admin/ui/entries/*`, the 13 directly affected generic Entry Vitest suites,
+  and `support/entryEditorHarness.tsx` plus `support/entryEditorLaneFixture.tsx`.
+  Its dependency-shaped gate runs every one of those suites, including the hydration-race,
+  submit-authority, and real-router navigation-guard lanes. Its independent MediaPicker
+  gate pins fail-closed unknown-input normalization and typed selection output. Closure
+  has no read-only ownership claim over that producer. The Page-owned
+  `pages/editorControls/MediaPickerControl.tsx` adapter remains byte-identical to the
+  verified pre-family baseline and outside every TASK-540 Page-path exception.
 - TASK-540-04-L04 exclusively owns the stable `CustomScreenEditorPage.tsx` facade,
   `customScreenEditorModel.ts`, `hooks/useCustomScreenEditorPersistence.ts`,
   `hooks/useCustomScreenDocumentActions.ts`, `CustomScreenEditorPreviewOwner.tsx`,
@@ -386,16 +405,23 @@ coverage and passed that suite read-only against the final module graph. That hi
 handoff ran in order: L03 split/target gate → L04 split/target gate → TASK-540-05-L01
 boundary update/gate → TASK-540-05-L02 split/target gate. At that checkpoint the
 modularity handoff and physical-line owner gates no longer blocked entry into closure.
-The L03 overflow repair is revalidated and no longer independently blocks closure; the
-fresh family-wide five-lens post-audit is next, while smoke, changelog, and closure remain outstanding.
+That checkpoint statement is historical. L03 now has canonical `Implementation Complete`
+and the current generation/token receipt, no active `Repair Pending` remains, and all
+twelve implementation leaves are landed. The current remaining order is a fresh
+family-wide five-lens post-audit → full validation → helper-backed canonical smoke →
+smoke-evidence audit → changelog and closure.
 
 Before closure, count complete physical lines, including blanks/comments and an
 unterminated final line, for every family-scoped human-authored production, test, and
 support module derived from the verified pre-family history rather than the current
 HEAD diff. Every file must report `<= 1000`; only AGENTS.md exemptions apply. After all
-ten protected test families are split, their exact 347-name multiset is unchanged and
-the authoritative family matrix is 64 Vitest + 18 Bun = 82 files, comprising 81
-source-owner/read-only dependency files and one closure-owned aggregate. Workflow and
+ten protected test families are split, their exact original 347-name multiset plus two
+authorized additive Entries regressions yields the current 349-name contract, and
+the authoritative family matrix is 78 Vitest + 18 Bun = 96 files, comprising 95
+source-owner/read-only dependency files and one closure-owned aggregate. The workflow's
+`CLOSURE_OWNER_TEST_FILES` additionally tracks a second closure-owned test file,
+`tests/unit/workflows/task540SmokeExecutorSecurity.test.ts`, which sits deliberately
+outside this 95-file matrix and is not drift. Workflow and
 TASK-540-06 must pin those totals and independently runnable suite paths before the full
 gate without changing pinned changelog 1252.
 
@@ -449,8 +475,9 @@ three writable paths and full required re-gate were complete at that checkpoint.
 former `Repair Pending` receipt was then replaced by the exact successor
 `Revalidation Passed`; L03 then remained `🚧 In Progress` with `Implementation Complete`
 until the later overflow repair superseded and reopened that state, then restored it
-under its then-current successor receipt. The 2026-07-19 Entry-correction receipt is now
-the sole current L03 owner authority. L04 was
+under its then-current successor receipt. The 2026-07-19 Entry-correction receipt is
+historical only; L03's distinct 2026-08-06 generation/token receipt is the current
+owner-gate authority. L04 was
 separately revalidated for its then-current binding-ID compatibility test and provenance
 gate. L04's narrow 2026-07-15 mock repair
 and six-file/66-test gate remain historical evidence only. TASK-540-06 retains

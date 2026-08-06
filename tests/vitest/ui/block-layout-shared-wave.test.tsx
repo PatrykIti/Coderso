@@ -11,6 +11,23 @@ import type {
   WidgetLayoutDefaults,
 } from "../../../core/admin/ui/pages/builder/types";
 
+// The three panels under test and the patch helper are imported statically, not
+// with `await import(...)` inside each test. The builder module graph costs
+// seconds to transform and evaluate, and a deferred import bills all of that to
+// the importing test's `testTimeout`: measured on an idle box, the import alone
+// was 7771ms of the first test's 7827ms, and the assertions after it were 41ms.
+// That is why the first test read 4036ms in isolation while its two neighbours
+// read 21ms and 66ms, and why it was the only test here to blow the lane budget
+// under full-suite contention. A static import moves that cost into the file's
+// collection phase, where it belongs and where no per-test deadline races it. The
+// `vi.mock` calls below are hoisted above every import by Vitest, so the stubs
+// still apply. Nothing these tests assert changes; they now measure only the
+// render and the assertions.
+import { AdvancedPanel } from "../../../core/admin/ui/pages/builder/AdvancedPanel";
+import { BlockSettings } from "../../../core/admin/ui/pages/builder/BlockSettings";
+import { applyWidgetBlockPatch } from "../../../core/admin/ui/pages/builder/blockUtils";
+import { VisualPanel } from "../../../core/admin/ui/pages/builder/VisualPanel";
+
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
 vi.mock("@/components/ui/badge", () => ({
@@ -207,7 +224,6 @@ afterEach(() => {
 });
 
 test("shared block layout keeps inherited values through first explicit override", async () => {
-  const { VisualPanel } = await import("../../../core/admin/ui/pages/builder/VisualPanel");
   let lastPatch: WidgetBlockPatch | null = null;
   const view = mount(
     <VisualPanel
@@ -243,10 +259,9 @@ test("shared block layout keeps inherited values through first explicit override
       margin: { top: "inherit", bottom: "inherit" },
     }),
   });
-}, 10000);
+});
 
 test("advanced layout summary distinguishes inherited effective values from saved overrides", async () => {
-  const { AdvancedPanel } = await import("../../../core/admin/ui/pages/builder/AdvancedPanel");
   const view = mount(
     <AdvancedPanel
       widget={widget}
@@ -262,11 +277,9 @@ test("advanced layout summary distinguishes inherited effective values from save
   expect(view.container.textContent).toContain("Inherit page default (full)");
   expect(view.container.textContent).toContain("Hidden on all devices");
   expect(view.container.textContent).not.toContain("Top MD");
-}, 10000);
+});
 
 test("block settings confirms repeatable slot removal before patching", async () => {
-  const { BlockSettings } = await import("../../../core/admin/ui/pages/builder/BlockSettings");
-  const { applyWidgetBlockPatch } = await import("../../../core/admin/ui/pages/builder/blockUtils");
   const confirmSpy = vi.fn(() => false);
   Object.defineProperty(window, "confirm", {
     value: confirmSpy,

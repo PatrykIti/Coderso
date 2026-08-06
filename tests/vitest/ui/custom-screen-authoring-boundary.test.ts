@@ -35,6 +35,18 @@ import {
 } from "typescript";
 import { describe, expect, test } from "vitest";
 
+// The runtime half of the entry-editor test -- proving the facade re-exports the
+// *same* bindings its owners export -- needs these three modules evaluated. They
+// are imported statically because a deferred `await import(...)` bills their whole
+// transform and evaluation to that one test's `testTimeout`: measured on an idle
+// box the test spent 12562ms in those three imports, against 167ms reading and
+// parsing the module sources and 41ms on every AST assertion in it. That is why it
+// timed out under full-suite contention. The identity assertions are unaffected --
+// static and dynamic import of the same specifier yield the same module instance.
+import * as entryFacadeRuntime from "../../../core/admin/ui/custom-screens/CustomScreenEntryEditor";
+import * as entryMediaOwner from "../../../core/admin/ui/custom-screens/customScreenEntryPresentationMedia";
+import * as entryPresentationOwner from "../../../core/admin/ui/custom-screens/customScreenEntryPresentation";
+
 const repoRoot = process.cwd();
 
 const readSourceFiles = async (
@@ -721,14 +733,9 @@ describe("custom screen authoring boundaries", () => {
       )
     ).toEqual([]);
 
-    const [facadeRuntime, presentationOwner, mediaOwner] = await Promise.all([
-      import("../../../core/admin/ui/custom-screens/CustomScreenEntryEditor"),
-      import("../../../core/admin/ui/custom-screens/customScreenEntryPresentation"),
-      import("../../../core/admin/ui/custom-screens/customScreenEntryPresentationMedia"),
-    ]);
-    const facadeValues = facadeRuntime as Record<string, unknown>;
-    const presentationOwnerValues = presentationOwner as Record<string, unknown>;
-    const mediaOwnerValues = mediaOwner as Record<string, unknown>;
+    const facadeValues = entryFacadeRuntime as Record<string, unknown>;
+    const presentationOwnerValues = entryPresentationOwner as Record<string, unknown>;
+    const mediaOwnerValues = entryMediaOwner as Record<string, unknown>;
     expect(Object.keys(facadeValues).sort()).toEqual(
       ["CustomScreenEntryEditor", ...presentationValues, ...mediaValues].sort()
     );
@@ -738,7 +745,7 @@ describe("custom screen authoring boundaries", () => {
     for (const name of mediaValues) {
       expect(facadeValues[name], name).toBe(mediaOwnerValues[name]);
     }
-  }, 15_000);
+  });
 
   test("screen builder split pins its five live helpers and coordinator boundaries", async () => {
     const builderPaths = Object.values(builderAuthoringModules);

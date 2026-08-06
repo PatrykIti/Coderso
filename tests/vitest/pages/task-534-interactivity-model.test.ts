@@ -41,21 +41,19 @@ const firstBlock = (doc: PageDocumentV2): PageBlockV2 => {
   return block;
 };
 
-const AJV_TIMEOUT = 30_000;
-
-// Ajv compilation of the recursive page-document schema takes several seconds
-// under parallel suite load. Compile it ONCE and share the validator across the
-// two schema tests so neither pays the compile cost twice (which pushed the
-// second test past the 30s cap under load). Lazy + memoized so the compile only
-// runs when a schema test actually executes.
-let sharedSchemaValidator: ReturnType<InstanceType<typeof Ajv>["compile"]> | null = null;
-const getSchemaValidator = (): ReturnType<InstanceType<typeof Ajv>["compile"]> => {
-  if (!sharedSchemaValidator) {
-    const ajv = new Ajv({ allErrors: true, strict: false });
-    sharedSchemaValidator = ajv.compile(pageDocumentV2JsonSchema);
-  }
-  return sharedSchemaValidator;
-};
+// Ajv compilation of the recursive page-document schema takes several seconds, and
+// the two schema tests here share one validator so neither pays it twice. It is
+// compiled at module scope rather than lazily on first use: whichever test ran
+// first used to absorb the whole compile inside its own deadline, which is how
+// this file put a 12595ms test into the slowest three of the entire lane. At
+// module scope the cost falls in the file's collection phase, which no per-test
+// deadline races, and the explicit per-test timeouts that existed only to pay for
+// it are gone. The trade is that the compile now also runs when a non-schema test
+// is selected on its own; that is a few seconds in a developer's filtered run,
+// against a full-lane failure it kept causing.
+const schemaValidator = new Ajv({ allErrors: true, strict: false }).compile(
+  pageDocumentV2JsonSchema
+);
 
 describe("TASK-534 interactivity model", () => {
   test("switcher round-trips (tabs/activeIndex/variant) with panel slots", () => {
@@ -339,57 +337,49 @@ describe("TASK-534 interactivity model", () => {
     expect(pageBlockCapabilities.scrollHint.editorInsertable).toBe(true);
   });
 
-  test(
-    "switcher tabs from a {label,href} editor row normalize to {label} and PASS the strict schema",
-    { timeout: AJV_TIMEOUT },
-    () => {
-      // 534-04-L01 reuses the listItems editor for switcher tabs, which can commit
-      // {label,href} rows. The 534-01-L01 normalizer must rebuild each tab as {label}
-      // BEFORE schema validation so additionalProperties:false + required:["label"]
-      // never reject an editor row. This pins that load-bearing guarantee.
-      const written = write(
-        buildDocWithBlock({
-          id: "blk_sw_href",
-          type: "switcher",
-          props: { tabs: [{ label: "A", href: "/x" }] },
-          visibility: { visible: true },
-        })
-      );
-      expect(firstBlock(written).props.tabs).toEqual([{ label: "A" }]);
-      const validate = getSchemaValidator();
-      expect(validate(written)).toBe(true);
-    }
-  );
-
-  test(
-    "JSON schema accepts the good shapes and rejects an unknown prop",
-    { timeout: AJV_TIMEOUT },
-    () => {
-      const validate = getSchemaValidator();
-
-      const good = write(
-        buildDocWithBlock({
-          id: "blk_ok",
-          type: "switcher",
-          props: {
-            tabs: [{ label: "A" }, { label: "B" }],
-            activeIndex: 0,
-            variant: "pill",
-          },
-          visibility: { visible: true },
-          slots: { "panel:1": [createPageBlockV2("text", { id: "t", props: { text: "x" } })] },
-        })
-      );
-      expect(validate(good)).toBe(true);
-
-      // A raw doc with an unknown switcher prop must fail additionalProperties:false.
-      const bad = buildDocWithBlock({
-        id: "blk_bad",
+  test("switcher tabs from a {label,href} editor row normalize to {label} and PASS the strict schema", () => {
+    // 534-04-L01 reuses the listItems editor for switcher tabs, which can commit
+    // {label,href} rows. The 534-01-L01 normalizer must rebuild each tab as {label}
+    // BEFORE schema validation so additionalProperties:false + required:["label"]
+    // never reject an editor row. This pins that load-bearing guarantee.
+    const written = write(
+      buildDocWithBlock({
+        id: "blk_sw_href",
         type: "switcher",
-        props: { tabs: [{ label: "A" }], evil: true },
+        props: { tabs: [{ label: "A", href: "/x" }] },
         visibility: { visible: true },
-      });
-      expect(validate(bad)).toBe(false);
-    }
-  );
+      })
+    );
+    expect(firstBlock(written).props.tabs).toEqual([{ label: "A" }]);
+    const validate = schemaValidator;
+    expect(validate(written)).toBe(true);
+  });
+
+  test("JSON schema accepts the good shapes and rejects an unknown prop", () => {
+    const validate = schemaValidator;
+
+    const good = write(
+      buildDocWithBlock({
+        id: "blk_ok",
+        type: "switcher",
+        props: {
+          tabs: [{ label: "A" }, { label: "B" }],
+          activeIndex: 0,
+          variant: "pill",
+        },
+        visibility: { visible: true },
+        slots: { "panel:1": [createPageBlockV2("text", { id: "t", props: { text: "x" } })] },
+      })
+    );
+    expect(validate(good)).toBe(true);
+
+    // A raw doc with an unknown switcher prop must fail additionalProperties:false.
+    const bad = buildDocWithBlock({
+      id: "blk_bad",
+      type: "switcher",
+      props: { tabs: [{ label: "A" }], evil: true },
+      visibility: { visible: true },
+    });
+    expect(validate(bad)).toBe(false);
+  });
 });

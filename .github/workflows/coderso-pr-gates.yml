@@ -182,6 +182,136 @@ jobs:
           name: admin-bundle-report
           path: .tmp/admin-bundle-report.json
 
+  # Builds the production image from the repository Dockerfile, starts a
+  # container from it and refuses to pass until that container serves HTTP.
+  #
+  # The image runs the app from TypeScript source, so imports resolve at BOOT,
+  # not at build time: a module missing from the runner stage builds cleanly and
+  # only fails when the container starts. Nothing above this job can see that —
+  # they all run against the repository's own node_modules, never the image.
+  #
+  # No secret is used. The database is a throwaway service container, so this
+  # job runs identically on a pull request from a fork, and the boot is
+  # hermetic: no shared database, no cross-run interference.
+  image-boot-gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      IMAGE_REF: coderso-core:ci-${{ github.run_id }}
+      # Points at the service container below, published on the runner.
+      DATABASE_URL: postgres://coderso:postgres@127.0.0.1:5432/coderso_image_gate
+      APP_PORT: "3210"
+      BOOT_TIMEOUT_SECONDS: "240"
+      BOOT_LOG_FILE: .tmp/image-boot-gate.log
+    services:
+      # Empty database on the standard direct port. Port 5432 matters: the
+      # session-lock guard in core/db/connectionTargets.ts refuses a pooled port
+      # (6432), and startup migrations take a session advisory lock.
+      # Keep the major version aligned with the deployment target.
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: coderso
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: coderso_image_gate
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready --username coderso --dbname coderso_image_gate"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 24
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      # Scope, rather than a workflow-level paths filter: the job always reports
+      # a status, so it can be a required check without hanging pending on the
+      # pull requests it skips.
+      - name: Decide whether this change can reach the image
+        id: scope
+        shell: bash
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          set -euo pipefail
+          if [ "${GITHUB_EVENT_NAME}" != "pull_request" ]; then
+            echo "build=true" >> "$GITHUB_OUTPUT"
+            echo "Event ${GITHUB_EVENT_NAME}: verifying the image unconditionally."
+            exit 0
+          fi
+          if [ -z "${BASE_SHA:-}" ] || ! git cat-file -e "${BASE_SHA}^{commit}" 2>/dev/null; then
+            echo "build=true" >> "$GITHUB_OUTPUT"
+            echo "::notice::Base commit unavailable; verifying the image rather than assuming it is unaffected."
+            exit 0
+          fi
+          if ! changed="$(git diff --name-only "${BASE_SHA}" HEAD)"; then
+            echo "build=true" >> "$GITHUB_OUTPUT"
+            echo "::notice::Could not diff against the base commit; verifying the image."
+            exit 0
+          fi
+          printf '%s\n' "${changed}" | sed 's/^/  changed: /'
+          # Exactly what the Dockerfile copies into the build context — core,
+          # docs, packages, themes, the four package.json files it installs
+          # from, the lockfile and bunfig.toml — plus everything that defines an
+          # image gate. store/ is excluded beyond its package.json because the
+          # image never receives it, and _docs/, tests/ and scripts/ cannot
+          # reach the image at all.
+          #
+          # release.yml is here because it runs the SAME boot script against the
+          # SAME image, and it runs on main, after the version is tagged, where
+          # there is no pull request left to catch anything. .github/scripts/ is
+          # matched as a directory rather than file by file: a gate script that
+          # nothing builds for is exactly the hole listing them individually
+          # leaves open the next time one is added.
+          if printf '%s\n' "${changed}" | grep -qE '^(Dockerfile$|\.dockerignore$|bun\.lock$|bunfig\.toml$|package\.json$|store/package\.json$|core/|docs/|packages/|themes/|\.github/workflows/coderso-pr-gates\.yml$|\.github/workflows/release\.yml$|\.github/scripts/)'; then
+            echo "build=true" >> "$GITHUB_OUTPUT"
+            echo "Image-shaping paths changed: building and booting the image."
+          else
+            echo "build=false" >> "$GITHUB_OUTPUT"
+            echo "No image-shaping path changed: nothing in this pull request reaches the runtime image."
+          fi
+
+      - name: Setup Docker Buildx
+        if: steps.scope.outputs.build == 'true'
+        uses: docker/setup-buildx-action@bb05f3f5519dd87d3ba754cc423b652a5edd6d2c # v4.2.0
+
+      - name: Build coderso-core image
+        if: steps.scope.outputs.build == 'true'
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
+        with:
+          context: .
+          file: Dockerfile
+          # Local only: a pull request never publishes an image anywhere.
+          push: false
+          load: true
+          # A provenance attestation turns the result into a manifest list,
+          # which the docker exporter behind `load` cannot write.
+          provenance: false
+          tags: ${{ env.IMAGE_REF }}
+          build-args: |
+            APP_VERSION=0.0.0
+          cache-from: type=gha,scope=coderso-core-image
+          cache-to: type=gha,mode=max,scope=coderso-core-image,ignore-error=true
+
+      # Fails the pull request when the container does not serve. The script
+      # dumps the container's log and names the cause; a missing module gets its
+      # own annotation instead of an unexplained timeout.
+      - name: Verify the image boots and serves
+        if: steps.scope.outputs.build == 'true'
+        shell: bash
+        run: .github/scripts/verify-image-boot.sh
+
+      - name: Upload image boot log
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: image-boot-gate-log
+          path: .tmp/image-boot-gate.log
+          if-no-files-found: ignore
+
   security-gate:
     needs:
       - vitest-lane

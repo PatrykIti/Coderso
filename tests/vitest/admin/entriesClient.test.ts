@@ -10,6 +10,8 @@ import {
   getCachedEntryDetail,
   getEntry,
   getEntryCached,
+  isEntryData,
+  isEntryDataValue,
   listAllEntries,
   listAllEntriesCached,
   listEntries,
@@ -20,11 +22,34 @@ import {
   updateEntry,
   updateEntryMetadata,
 } from "../../../core/admin/services/entriesClient";
-import type { EntryMetadataPayload } from "../../../core/admin/services/entriesClient";
-import { resetCsrfToken } from "../../../core/admin/services/apiClient";
+import type { EntryData, EntryMetadataPayload } from "../../../core/admin/services/entriesClient";
+import { ApiClientError, resetCsrfToken } from "../../../core/admin/services/apiClient";
 import { cacheKeys } from "../../../core/admin/services/cachePolicy";
 import { subscribeCacheEvents, type CacheEvent } from "../../../core/admin/utils/cacheBus";
 import { createLocalStorage, jsonResponse, resetCaches } from "./support/entriesClientTestHarness";
+
+test("EntryData preserves arbitrary JSON values across a JSON round trip", () => {
+  const source: EntryData = {
+    title: "Nested entry",
+    published: true,
+    score: 4.5,
+    empty: null,
+    tags: ["one", "two"],
+    nested: { layout: { columns: 3 }, flags: [true, false] },
+  };
+  const parsed: unknown = JSON.parse(JSON.stringify(source));
+  const cyclic: Record<string, unknown> = {};
+  cyclic.self = cyclic;
+
+  expect(isEntryData(parsed)).toBe(true);
+  expect(parsed).toEqual(source);
+  expect(isEntryDataValue({ invalid: undefined })).toBe(false);
+  expect(isEntryDataValue(Number.NaN)).toBe(false);
+  expect(isEntryDataValue(Number.POSITIVE_INFINITY)).toBe(false);
+  expect(isEntryDataValue(new Array(1))).toBe(false);
+  expect(isEntryDataValue(new Date())).toBe(false);
+  expect(isEntryDataValue(cyclic)).toBe(false);
+});
 
 test("listEntries hits GET /content/:type/entries", async () => {
   const originalFetch = globalThis.fetch;
@@ -98,11 +123,112 @@ test("createEntry uses CSRF and posts payload", async () => {
     await createEntry("blog", {
       title: "Hello",
       slug: "hello",
-      data: {},
+      data: {
+        featured: true,
+        sections: [{ title: "Introduction", weight: 1.5 }],
+      },
     });
     expect(calls[0]?.input).toBe("/admin/api/auth/csrf");
     expect(calls[1]?.input).toBe("/admin/api/content/blog/entries");
+    expect(calls[1]?.init?.body).toBe(
+      JSON.stringify({
+        title: "Hello",
+        slug: "hello",
+        data: {
+          featured: true,
+          sections: [{ title: "Introduction", weight: 1.5 }],
+        },
+      })
+    );
   } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("entry mutations reject non-JSON-safe data before serialization, CSRF, fetch, or cache", async () => {
+  const originalFetch = globalThis.fetch;
+  const fetchCalls: Array<{ input: RequestInfo | URL; init?: RequestInit }> = [];
+  const cacheEvents: CacheEvent[] = [];
+  const cyclic: Record<string, unknown> = {};
+  cyclic.self = cyclic;
+  let accessorReads = 0;
+  const accessorData: Record<string, unknown> = {};
+  Object.defineProperty(accessorData, "score", {
+    enumerable: true,
+    get() {
+      accessorReads += 1;
+      throw new Error("entry data accessors must not execute");
+    },
+  });
+  const symbolData: Record<PropertyKey, unknown> = { visible: "kept" };
+  symbolData[Symbol("omitted")] = "not serialized";
+  const nonEnumerableData: Record<string, unknown> = { visible: "kept" };
+  Object.defineProperty(nonEnumerableData, "omitted", {
+    enumerable: false,
+    value: "not serialized",
+  });
+  const arrayWithExtraProperty = ["kept"] as string[] & { omitted?: string };
+  arrayWithExtraProperty.omitted = "not serialized";
+  let customArrayToJsonCalls = 0;
+  const customPrototypeArray = ["kept"];
+  Object.setPrototypeOf(customPrototypeArray, {
+    toJSON() {
+      customArrayToJsonCalls += 1;
+      return [];
+    },
+  });
+  const invalidCases: Array<{ label: string; data: unknown }> = [
+    { label: "missing data", data: undefined },
+    { label: "NaN", data: { score: Number.NaN } },
+    { label: "positive infinity", data: { score: Number.POSITIVE_INFINITY } },
+    { label: "negative infinity", data: { score: Number.NEGATIVE_INFINITY } },
+    { label: "sparse array", data: { sections: new Array(1) } },
+    { label: "cyclic data", data: cyclic },
+    { label: "non-plain data", data: { createdAt: new Date("2026-08-05T00:00:00.000Z") } },
+    { label: "accessor data", data: accessorData },
+    { label: "symbol-keyed data", data: symbolData },
+    { label: "non-enumerable data", data: nonEnumerableData },
+    { label: "array extra property", data: { sections: arrayWithExtraProperty } },
+    { label: "custom array prototype", data: { sections: customPrototypeArray } },
+  ];
+  const unsubscribe = subscribeCacheEvents((event) => cacheEvents.push(event));
+  globalThis.fetch = async (input, init) => {
+    fetchCalls.push({ input, init });
+    return jsonResponse({ id: "unexpected" });
+  };
+
+  try {
+    resetCsrfToken();
+    const expectInvalidEntryData = async (request: Promise<unknown>, label: string) => {
+      const error = await request.catch((caught: unknown) => caught);
+      expect(error, label).toBeInstanceOf(ApiClientError);
+      expect(error, label).toMatchObject({
+        name: "ApiClientError",
+        message: "Entry data is invalid.",
+        code: "entry_data_invalid",
+        status: 400,
+        details: { field: "data" },
+        sharedFailureKind: "generic_error",
+      });
+    };
+    for (const invalidCase of invalidCases) {
+      const data = invalidCase.data as EntryData;
+      await expectInvalidEntryData(
+        createEntry("blog", { title: "Invalid", slug: "invalid", data }),
+        `create: ${invalidCase.label}`
+      );
+      await expectInvalidEntryData(
+        updateEntry("blog", "entry-1", { data }),
+        `update: ${invalidCase.label}`
+      );
+    }
+
+    expect(accessorReads).toBe(0);
+    expect(customArrayToJsonCalls).toBe(0);
+    expect(fetchCalls).toEqual([]);
+    expect(cacheEvents).toEqual([]);
+  } finally {
+    unsubscribe();
     globalThis.fetch = originalFetch;
   }
 });

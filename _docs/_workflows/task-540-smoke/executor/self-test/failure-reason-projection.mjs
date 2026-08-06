@@ -1,0 +1,359 @@
+import {
+  FAILURE_REASON_CLASSES,
+  FAILURE_REASON_HARNESS_PATTERN,
+  MAX_FAILURE_ACTION_DIAGNOSTIC_BYTES,
+  MAX_FAILURE_REASON_MESSAGE_LENGTH,
+  MAX_RUNTIME_INVARIANT_TOKEN_SLUG_LENGTH,
+  PHASE_EIGHT_CLEANUP_FAILURE_CLASSES,
+  RUNTIME_INVARIANT_PREFIX,
+  TASK_FAILURE,
+  classifyFailureReasonNeverThrow,
+  projectBrowserErrorFrameToken,
+  projectRuntimeInvariantToken,
+} from "../config.mjs";
+import { canonicalJson, invariant } from "../foundation.mjs";
+
+// Real Playwright failure text, kept verbatim so the classifier is pinned against the strings
+// it will actually meet rather than against a paraphrase of them.
+const PLAYWRIGHT_TIMEOUT_MESSAGE =
+  "locator.click: Timeout 30000ms exceeded.\nCall log:\n  - waiting for locator('button')";
+const PLAYWRIGHT_MODAL_MESSAGE =
+  'locator.click: Error: page.click: "beforeunload" dialog does not handle the modal state';
+const PLAYWRIGHT_STRICT_MESSAGE =
+  'locator.click: Error: strict mode violation: locator("button") resolved to 2 elements';
+
+/**
+ * The failure-reason projection is the harness's answer to a 30-minute run that ends without
+ * naming what broke: an action no tracker classifies still reports a cause token. These cases
+ * pin the two properties that make it safe to emit — the token always comes from a frozen
+ * vocabulary, and it is additive, so it can never displace the diagnostic it annotates.
+ */
+export function runFailureReasonProjectionSelfTest({
+  PRIVATE_CONSTRUCTION_AUTHORITY,
+  assertNegative,
+  createPrivateBoundedFailureActionDiagnosticSink,
+  createPrivateConstructionCleanupAuthority,
+  currentPrivateRetainedFailureCauseNeverThrow,
+  emitPrivateFailureActionDiagnosticNeverThrow,
+  plan,
+  trackerAtAction,
+}) {
+  invariant(
+    typeof currentPrivateRetainedFailureCauseNeverThrow === "function" &&
+      typeof trackerAtAction === "function",
+    "failure reason projection dependencies are absent"
+  );
+
+  // Every Playwright signature the recovery-cache lane can produce maps to its own token, so a
+  // timeout is never confused with a duplicate-target or a blocked dialog.
+  assertNegative(
+    classifyFailureReasonNeverThrow(new Error(PLAYWRIGHT_TIMEOUT_MESSAGE)) ===
+      "playwright_action_timeout",
+    "playwright timeout reason mapping"
+  );
+  assertNegative(
+    classifyFailureReasonNeverThrow(new Error(PLAYWRIGHT_MODAL_MESSAGE)) ===
+      "playwright_modal_state",
+    "playwright modal reason mapping"
+  );
+  assertNegative(
+    classifyFailureReasonNeverThrow(new Error(PLAYWRIGHT_STRICT_MESSAGE)) ===
+      "playwright_strict_mode",
+    "playwright strict mode reason mapping"
+  );
+
+  // The harness's own vocabulary passes through verbatim: those messages ARE the diagnosis, and
+  // collapsing them to "unclassified" would throw away the discriminating evidence.
+  assertNegative(
+    classifyFailureReasonNeverThrow(new Error("wf540_target_missing")) === "wf540_target_missing" &&
+      classifyFailureReasonNeverThrow("wf540_target_duplicate") === "wf540_target_duplicate",
+    "harness vocabulary reason passthrough"
+  );
+
+  // A browser error frame is the only statement of what a browser-run-code action hit, and the
+  // failure boundary used to replace it with a fixed string for every action outside the two
+  // failure-frame registries, so the cause reached the diagnostic as "unclassified". The frame is
+  // now projected onto the same vocabulary, end to end.
+  const browserFrame = (body) => Buffer.from("### Error\n" + body, "utf8");
+  assertNegative(
+    projectBrowserErrorFrameToken(
+      browserFrame("Error: Error: wf540_route_handler_request_identity_unexpected_duplicate\n")
+    ) === "wf540_route_handler_request_identity_unexpected_duplicate" &&
+      classifyFailureReasonNeverThrow(
+        new Error(
+          projectBrowserErrorFrameToken(browserFrame("Error: Error: wf540_target_missing\n"))
+        )
+      ) === "wf540_target_missing",
+    "browser error frame harness tag projection"
+  );
+  assertNegative(
+    projectBrowserErrorFrameToken(browserFrame(PLAYWRIGHT_TIMEOUT_MESSAGE)) ===
+      "playwright_action_timeout" &&
+      projectBrowserErrorFrameToken(browserFrame(PLAYWRIGHT_MODAL_MESSAGE)) ===
+        "playwright_modal_state" &&
+      projectBrowserErrorFrameToken(browserFrame(PLAYWRIGHT_STRICT_MESSAGE)) ===
+        "playwright_strict_mode",
+    "browser error frame playwright signature projection"
+  );
+  // Batched browser frames carry the already-normalized class instead of Playwright's original
+  // prose. Keep that wire representation diagnostic-equivalent to the legacy one-action frame.
+  assertNegative(
+    projectBrowserErrorFrameToken(browserFrame("Error: playwright_action_timeout\n")) ===
+      "playwright_action_timeout" &&
+      projectBrowserErrorFrameToken(browserFrame("Error: playwright_modal_state\n")) ===
+        "playwright_modal_state" &&
+      projectBrowserErrorFrameToken(browserFrame("Error: playwright_strict_mode\n")) ===
+        "playwright_strict_mode" &&
+      classifyFailureReasonNeverThrow(new Error("playwright_action_timeout")) ===
+        "playwright_action_timeout",
+    "batched browser failure class projection"
+  );
+  // No frame, no marker, no recognisable cause, or a non-buffer: the projection yields nothing
+  // rather than guessing, so the boundary keeps its fixed fallback message.
+  assertNegative(
+    projectBrowserErrorFrameToken(Buffer.from('{"ok":true}\n', "utf8")) === null &&
+      projectBrowserErrorFrameToken(browserFrame("Error: unrecognised failure text\n")) === null &&
+      projectBrowserErrorFrameToken(Buffer.from("wf540_target_missing\n", "utf8")) === null &&
+      projectBrowserErrorFrameToken("### Error\nError: wf540_target_missing\n") === null &&
+      projectBrowserErrorFrameToken(null) === null,
+    "browser error frame projection abstention"
+  );
+  // Bounded scan and bounded output: a tag pushed beyond the diagnostic byte window is not read,
+  // and everything the projection does return is a member of the emitted vocabulary.
+  assertNegative(
+    projectBrowserErrorFrameToken(
+      browserFrame("Error: " + "x".repeat(MAX_FAILURE_ACTION_DIAGNOSTIC_BYTES) + " wf540_late_tag\n")
+    ) === null &&
+      [
+        "Error: Error: wf540_route_post_capture_duplicates_1\n",
+        PLAYWRIGHT_TIMEOUT_MESSAGE,
+        "Error: postgres://wf540:p@ssword@localhost/example\n",
+      ].every((body) => {
+        const token = projectBrowserErrorFrameToken(browserFrame(body));
+        return (
+          token === null ||
+          ((FAILURE_REASON_CLASSES.includes(token) ||
+            FAILURE_REASON_HARNESS_PATTERN.test(token)) &&
+            !token.includes("\n") &&
+            !token.includes("@"))
+        );
+      }),
+    "browser error frame projection vocabulary closure"
+  );
+
+  // Runtime-operation failures are executor invariants, and none of them matched any classifier
+  // pattern, so all 76 runtime-kind actions reported "unclassified" — which is how ru-061a-a-
+  // durable-bypass-read failed a 28-minute run without naming its cause. The message is produced
+  // by the REAL invariant here, so the projection stays bound to the prefix `invariant` actually
+  // emits rather than to a copy of it that could drift.
+  let producedRuntimeMessage = "";
+  try {
+    invariant(false, "isolated preference read drift");
+  } catch (error) {
+    producedRuntimeMessage = error.message;
+  }
+  assertNegative(
+    producedRuntimeMessage.startsWith(RUNTIME_INVARIANT_PREFIX) &&
+      classifyFailureReasonNeverThrow(new Error(producedRuntimeMessage)) ===
+        "wf540_rt_isolated_preference_read_drift" &&
+      projectRuntimeInvariantToken("TASK-540 smoke executor: user-A API session is unavailable") ===
+        "wf540_rt_user_a_api_session_is_unavailable",
+    "runtime invariant reason projection"
+  );
+  // Every OUTPUT-CONTRACT invariant is labelled with the failing action id (output-parser.mjs
+  // takes its label from execute-action.mjs), and every action id carries digits, so the phrase
+  // pattern abstained on all 496 actions: a schema or predicate rejection could only ever report
+  // "unclassified". That is how ru-073-light-dark-proof ended an 88%-complete run without naming
+  // its cause, and neither existing projection could close it — the browser subprocess of an
+  // assertion action SUCCEEDS and the rejection happens host-side, with no frame to read.
+  assertNegative(
+    projectRuntimeInvariantToken(
+      RUNTIME_INVARIANT_PREFIX + "ru-073-light-dark-proof predicate failed"
+    ) === "wf540_rt_predicate_failed" &&
+      classifyFailureReasonNeverThrow(
+        new Error(RUNTIME_INVARIANT_PREFIX + "ru-073-light-dark-proof predicate failed")
+      ) === "wf540_rt_predicate_failed",
+    "output contract predicate reason projection"
+  );
+  // The schema half of the same lane: nested labels are built as `label + "." + key`, so the
+  // dotted value path is a second leading label token and is dropped just like the action id.
+  assertNegative(
+    projectRuntimeInvariantToken(
+      RUNTIME_INVARIANT_PREFIX +
+        "ru-073-light-dark-proof value.observations.userA.rootColor is not a bounded CSS color"
+    ) === "wf540_rt_is_not_a_bounded_css_color" &&
+      projectRuntimeInvariantToken(
+        RUNTIME_INVARIANT_PREFIX + "ru-061a-a-durable-bypass-read prior output is already bound"
+      ) === "wf540_rt_prior_output_is_already_bound",
+    "output contract schema reason projection"
+  );
+  // The projection only ever reads a fixed source-literal phrase. Every interpolated invariant —
+  // an id, a path, a count, a connection string — is refused, so naming the runtime lane cannot
+  // become a channel for data the sink is not allowed to emit.
+  assertNegative(
+    [
+      "capture owner action is missing: ru-061a-a-durable-bypass-read",
+      "postgres://wf540:p@ssword@localhost/example",
+      "expected 496 actions",
+      "",
+    ].every(
+      (phrase) => projectRuntimeInvariantToken(RUNTIME_INVARIANT_PREFIX + phrase) === null
+    ) &&
+      projectRuntimeInvariantToken("isolated preference read drift") === null &&
+      projectRuntimeInvariantToken(null) === null,
+    "runtime invariant projection abstention"
+  );
+  // Dropping leading labels must not weaken a single abstention. A value interpolated AFTER the
+  // prose still refuses the whole message, stripping stops rather than consuming everything, and
+  // a hyphenated word that COULD be prose is never mistaken for a label and discarded.
+  assertNegative(
+    projectRuntimeInvariantToken(
+      RUNTIME_INVARIANT_PREFIX + "ru-073-light-dark-proof connect postgres://wf540:pw@host/db"
+    ) === null &&
+      projectRuntimeInvariantToken(RUNTIME_INVARIANT_PREFIX + "ru-073-light-dark-proof") === null &&
+      projectRuntimeInvariantToken(RUNTIME_INVARIANT_PREFIX + "a b c d e 1") === null &&
+      projectRuntimeInvariantToken(
+        RUNTIME_INVARIANT_PREFIX + "user-A API session is unavailable"
+      ) === "wf540_rt_user_a_api_session_is_unavailable",
+    "label stripping abstention preservation"
+  );
+  // Bounded output: an unbounded phrase is truncated into the same vocabulary rather than being
+  // emitted whole or dropped, and the token never carries a separator the sink forbids.
+  assertNegative(
+    [
+      "isolated preference read drift",
+      "x".repeat(MAX_FAILURE_REASON_MESSAGE_LENGTH - RUNTIME_INVARIANT_PREFIX.length - 1),
+      "user-A API session is unavailable",
+    ].every((phrase) => {
+      const token = projectRuntimeInvariantToken(RUNTIME_INVARIANT_PREFIX + phrase);
+      return (
+        typeof token === "string" &&
+        FAILURE_REASON_HARNESS_PATTERN.test(token) &&
+        token.startsWith("wf540_rt_") &&
+        token.length <= "wf540_rt_".length + MAX_RUNTIME_INVARIANT_TOKEN_SLUG_LENGTH &&
+        !token.endsWith("_") &&
+        !token.includes("\n") &&
+        !token.includes("@")
+      );
+    }),
+    "runtime invariant projection vocabulary closure"
+  );
+
+  // Anything else is reduced to a token. This is what keeps arbitrary message text — which may
+  // carry a credential or a path — out of the emitted line.
+  assertNegative(
+    classifyFailureReasonNeverThrow(new Error("postgres://wf540:p@ssword@localhost/example")) ===
+      "unclassified",
+    "arbitrary reason text reduction"
+  );
+  assertNegative(
+    classifyFailureReasonNeverThrow(new Error("WF540_TARGET_MISSING")) === "unclassified" &&
+      classifyFailureReasonNeverThrow(new Error("wf540_")) === "unclassified" &&
+      classifyFailureReasonNeverThrow(new Error(" wf540_target_missing")) === "unclassified",
+    "near-miss harness vocabulary rejection"
+  );
+  assertNegative(
+    classifyFailureReasonNeverThrow(
+      new Error("wf540_" + "x".repeat(MAX_FAILURE_REASON_MESSAGE_LENGTH))
+    ) === "unclassified",
+    "oversized reason message reduction"
+  );
+
+  // A cause carrying no usable message yields no key at all rather than a misleading token.
+  assertNegative(
+    classifyFailureReasonNeverThrow(null) === null &&
+      classifyFailureReasonNeverThrow(undefined) === null &&
+      classifyFailureReasonNeverThrow(TASK_FAILURE) === null &&
+      classifyFailureReasonNeverThrow({}) === null &&
+      classifyFailureReasonNeverThrow(new Error("")) === null &&
+      classifyFailureReasonNeverThrow({ message: 7 }) === null,
+    "absent reason message projection"
+  );
+
+  // Structural complement to the mappings above: whatever the input, the output is either a
+  // vocabulary member or a harness token. Nothing else can reach the emitted line.
+  const reasonCorpus = [
+    PLAYWRIGHT_TIMEOUT_MESSAGE,
+    PLAYWRIGHT_MODAL_MESSAGE,
+    PLAYWRIGHT_STRICT_MESSAGE,
+    "wf540_related_route_row_data",
+    "unrecognised failure text",
+    "\u0000binary\u0000",
+    "multi\nline\nmessage",
+    "x".repeat(MAX_FAILURE_REASON_MESSAGE_LENGTH + 1),
+  ];
+  assertNegative(
+    reasonCorpus.every((message) => {
+      const reason = classifyFailureReasonNeverThrow(new Error(message));
+      return (
+        typeof reason === "string" &&
+        (FAILURE_REASON_CLASSES.includes(reason) || FAILURE_REASON_HARNESS_PATTERN.test(reason)) &&
+        !reason.includes("\n") &&
+        !reason.includes("\0")
+      );
+    }),
+    "reason vocabulary closure"
+  );
+
+  // First-write-wins retention. The cleanup boundary pushes its own error into the shared
+  // failures list before the action cause is retained, so the slot the diagnostic reads from
+  // must be the one the ACTION wrote, and the fixed public sentinel must never occupy it.
+  const retentionAuthority = createPrivateConstructionCleanupAuthority();
+  const actionCause = new Error("wf540_target_missing");
+  retentionAuthority.retainFailureAndCleanupDiagnosticsNeverThrow(TASK_FAILURE, null);
+  retentionAuthority.retainFailureAndCleanupDiagnosticsNeverThrow(actionCause, null);
+  retentionAuthority.retainFailureAndCleanupDiagnosticsNeverThrow(new Error("later cleanup"), null);
+  assertNegative(
+    currentPrivateRetainedFailureCauseNeverThrow(retentionAuthority) === actionCause &&
+      currentPrivateRetainedFailureCauseNeverThrow(null) === null &&
+      currentPrivateRetainedFailureCauseNeverThrow(createPrivateConstructionCleanupAuthority()) ===
+        null,
+    "primary failure cause retention"
+  );
+
+  // A classified action keeps its exact bytes: the reason is a FALLBACK, so where a tracker
+  // already owns the failure the line must not grow a redundant key.
+  const overflowActionId = plan.actionManifest
+    .map(({ id }) => id)
+    .reduce((longest, id) => (id.length > longest.length ? id : longest), "");
+  const overflowClass = [...PHASE_EIGHT_CLEANUP_FAILURE_CLASSES].reduce(
+    (longest, value) => (value.length > longest.length ? value : longest),
+    ""
+  );
+  const overflowAuthority = createPrivateConstructionCleanupAuthority();
+  const overflowState = PRIVATE_CONSTRUCTION_AUTHORITY.get(overflowAuthority);
+  overflowState.cleanupDiagnostic = Object.freeze({
+    cleanupPhase: 8,
+    cleanupFailureClass: overflowClass,
+  });
+  overflowAuthority.retainFailureAndCleanupDiagnosticsNeverThrow(
+    new Error("wf540_" + "x".repeat(64)),
+    null
+  );
+  const overflowLines = [];
+  const overflowSink = createPrivateBoundedFailureActionDiagnosticSink((line) => {
+    overflowLines.push(line);
+  });
+  const expectedOverflowLine =
+    canonicalJson({
+      code: TASK_FAILURE.code,
+      cleanupPhase: 8,
+      cleanupFailureClass: overflowClass,
+      failedActionId: overflowActionId,
+    }) + "\n";
+  // Longest action id + longest cleanup class + a maximal harness token exceeds the sink's byte
+  // bound, which the sink answers by writing nothing at all. Naming the cause must never cost
+  // the diagnostic, so the annotated line is dropped and the base line is emitted instead.
+  assertNegative(
+    emitPrivateFailureActionDiagnosticNeverThrow(
+      trackerAtAction(overflowActionId),
+      overflowSink,
+      overflowAuthority
+    ) === true &&
+      overflowLines.length === 1 &&
+      overflowLines[0] === expectedOverflowLine &&
+      !overflowLines[0].includes("failureReason") &&
+      Buffer.byteLength(overflowLines[0]) <= MAX_FAILURE_ACTION_DIAGNOSTIC_BYTES,
+    "reason projection byte-bound fallback"
+  );
+}

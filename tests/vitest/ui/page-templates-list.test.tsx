@@ -1,6 +1,13 @@
 import { expect, test, vi } from "vitest";
 
 import { renderAdminUi } from "../../utils/adminRouterRender";
+// Imported statically, not with `await import(...)` inside `renderList`: a deferred
+// import bills the whole transform and evaluation of the templates module graph to
+// whichever test runs first, which is what put this file's siblings over the lane
+// budget under full-suite contention. Collection is the right place for that cost.
+// The `vi.mock` below is hoisted above this import by Vitest and its factory reads
+// the mutable `cachedTemplates` binding at call time, so per-test fixtures apply.
+import { PageTemplatesPage } from "../../../core/admin/ui/pages/templates/PageTemplatesPage";
 
 // TASK-479-23-L03: list-structure coverage for the restyled Page Templates
 // library. Reuses the `pageTemplatesClient` mock shape from
@@ -41,39 +48,33 @@ vi.mock("@/services/pageTemplatesClient", () => ({
 }));
 
 const renderList = async () => {
-  const { PageTemplatesPage } =
-    await import("../../../core/admin/ui/pages/templates/PageTemplatesPage");
   return renderAdminUi(<PageTemplatesPage />, { path: "/admin/advanced/page-templates" });
 };
 
-test(
-  "PageTemplatesPage renders restyled header + propagation note + entries",
-  { timeout: 30000 },
-  async () => {
-    cachedTemplates = [templateSummary];
-    const html = await renderList();
+test("PageTemplatesPage renders restyled header + propagation note + entries", async () => {
+  cachedTemplates = [templateSummary];
+  const html = await renderList();
 
-    // Header + CTA preserved.
-    expect(html).toContain("Page Templates");
-    expect(html).toContain("New template");
-    // Propagation note (ported from the prototype) — assert stable copy, not classes.
-    expect(html).toMatch(/every page (using|that uses) it/i);
-    // A seeded template renders with its real fields (name + section count).
-    expect(html).toContain("Landing stack");
-    expect(html).toContain("landing-stack");
-    expect(html).toMatch(/section/i);
-    // The badge reflects a REAL field (category), not a fabricated scope.
-    expect(html).toContain("marketing");
-    // Open/row affordance: navigation is onClick, so the route string is not
-    // emitted by SSR — assert the emitted DOM hook + action labels instead.
-    expect(html).toContain('data-page-template-row="tpl-1"');
-    expect(html).toContain('aria-label="Edit Landing stack"');
-    expect(html).toContain('aria-label="Duplicate Landing stack"');
-    expect(html).toContain('aria-label="Delete Landing stack"');
-  }
-);
+  // Header + CTA preserved.
+  expect(html).toContain("Page Templates");
+  expect(html).toContain("New template");
+  // Propagation note (ported from the prototype) — assert stable copy, not classes.
+  expect(html).toMatch(/every page (using|that uses) it/i);
+  // A seeded template renders with its real fields (name + section count).
+  expect(html).toContain("Landing stack");
+  expect(html).toContain("landing-stack");
+  expect(html).toMatch(/section/i);
+  // The badge reflects a REAL field (category), not a fabricated scope.
+  expect(html).toContain("marketing");
+  // Open/row affordance: navigation is onClick, so the route string is not
+  // emitted by SSR — assert the emitted DOM hook + action labels instead.
+  expect(html).toContain('data-page-template-row="tpl-1"');
+  expect(html).toContain('aria-label="Edit Landing stack"');
+  expect(html).toContain('aria-label="Duplicate Landing stack"');
+  expect(html).toContain('aria-label="Delete Landing stack"');
+});
 
-test("PageTemplatesPage shows NO fabricated scope/usage", { timeout: 30000 }, async () => {
+test("PageTemplatesPage shows NO fabricated scope/usage", async () => {
   cachedTemplates = [templateSummary];
   const html = await renderList();
 
@@ -83,31 +84,23 @@ test("PageTemplatesPage shows NO fabricated scope/usage", { timeout: 30000 }, as
   expect(html).not.toMatch(/Site-wide/); // unless a REAL scope field exists
 });
 
-test(
-  "PageTemplatesPage cached render does not show the loading state",
-  { timeout: 30000 },
-  async () => {
-    // cachedTemplates is seeded -> isLoading starts false; the loading affordance is
-    // absent and the seeded name renders.
-    cachedTemplates = [templateSummary];
-    const html = await renderList();
+test("PageTemplatesPage cached render does not show the loading state", async () => {
+  // cachedTemplates is seeded -> isLoading starts false; the loading affordance is
+  // absent and the seeded name renders.
+  cachedTemplates = [templateSummary];
+  const html = await renderList();
 
-    expect(html).not.toContain("Loading page templates");
-    expect(html).toContain("Landing stack");
-  }
-);
+  expect(html).not.toContain("Loading page templates");
+  expect(html).toContain("Landing stack");
+});
 
-test(
-  "PageTemplatesPage renders the redesigned empty state when no templates are cached",
-  { timeout: 30000 },
-  async () => {
-    cachedTemplates = [];
-    const html = await renderList();
+test("PageTemplatesPage renders the redesigned empty state when no templates are cached", async () => {
+  cachedTemplates = [];
+  const html = await renderList();
 
-    // Empty state is the shared EmptyState (title + description), with its New
-    // template action still available.
-    expect(html).toContain("No page templates yet");
-    expect(html).toContain("Create one to reuse section stacks across pages.");
-    expect(html).toContain("New template");
-  }
-);
+  // Empty state is the shared EmptyState (title + description), with its New
+  // template action still available.
+  expect(html).toContain("No page templates yet");
+  expect(html).toContain("Create one to reuse section stacks across pages.");
+  expect(html).toContain("New template");
+});

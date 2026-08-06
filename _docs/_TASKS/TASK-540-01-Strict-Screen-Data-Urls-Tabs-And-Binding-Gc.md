@@ -7,13 +7,14 @@
 **Category:** Custom Screens / Schema / Security / Compatibility
 **Estimated Effort:** Medium
 **Dependencies:** TASK-498, TASK-500, TASK-505
-**Status:** 🚧 In Progress
+**Status:** ✅ Done
+**Completed:** 2026-08-06
 **Started:** 2026-07-13
 **Historical Implementation Complete:** 2026-07-14 — original assigned work completed before later repair cycles.
 **Modularity Repair Revalidated:** 2026-07-17 — cohesive <=1,000-line split and exact owner gate passed.
-**Current Repair State:** The verified R01 audit set of two MEDIUM behavior defects and three test-integrity LOW gaps is implemented at the validated HEAD. The separate 2026-07-19 stored-read hardening named in `Fix Reason` and the later shared-selector follow-up in commit `f8e916b9255677352a2ed2fef9bd73093dec5683` are both covered by the leaf's current selector-inclusive `Revalidation Passed` plus this child's canonical `Implementation Complete`. Earlier generation/token and pre-split receipts remain historical evidence only. The clean family post-audit, full validation, smoke, changelog, and closure remain pending.
+**Current Repair State:** The verified R01 audit set is implemented at the validated working tree. In addition to the stored-read and shared-selector repairs, sink-backed editor and row-template field-orphan normalization now validates strict `source`, explicit ID, and `mode` fields before recoverable pruning; malformed orphans throw without mutating the sink, while structurally valid orphans still prune with warnings. The leaf's current `Revalidation Passed` plus this child's canonical `Implementation Complete` cover the current owner bytes. Earlier generation/token and pre-split receipts remain historical evidence only. The clean family post-audit, full validation, smoke, changelog, and closure remain pending.
 **Current Selector Implementation Evidence:** 2026-07-19 — `screenMediaIdentity.ts` now owns `firstScreenMediaAssetUuid`, and the existing media-identity declaration covers its scalar/array, first-valid, malformed, and exact-casing behavior without adding a test declaration. Commit `f8e916b9255677352a2ed2fef9bd73093dec5683` is implementation provenance, not a generation/token receipt.
-**Current Selector Receipt State:** The leaf's exact selector-inclusive owner gate passed on 2026-07-19 before the dependent R03/L03/L04/L01 gates. Its current `Revalidation Passed` is the sole active R01 owner-gate receipt and claims no clean family post-audit, full validation, smoke, changelog, or closure result.
+**Current R01 Receipt State:** The leaf's current 2026-08-06 owner gate passed core lint/types and lint, the exact fourteen-file Vitest matrix 211/211, DB routes 21/21 with 125 assertions, the R01 line gate, the `r01Schema` declaration contract, and diff checks. It claims no clean family post-audit, full validation, smoke, changelog, or closure result.
 **Repair Started:** 2026-07-16
 **Fix Started:** 2026-07-19
 **Fix Reason:** A stored-read post-audit reproduced that the legacy block-type alias map was read by bare indexing, so a stored `type` equal to an inherited `Object.prototype` member name resolved to a function and collapsed the entire `editorView` read into the empty fallback. TASK-540-01-L01 owns the runtime-frozen, own-property-only alias map; the pinned prototype-named-type read outcome (unrepaired legacy placeholder, byte-stable `data`, surviving bindings); and removal of the duplicated `publish`/`custom` Button rewrite from the read-repair pass. `screenDocumentDataNormalizer.ts` remains the sole owner: write rejects a present non-`link` Button action, while stored-read coerces it to `link` and drops `href`.
@@ -63,7 +64,7 @@ blocking gate and cannot be deferred to TASK-9999.
 
 | ID | Title | Exclusive source ownership | Status |
 |---|---|---|---|
-| TASK-540-01-L01 | Reject unknown, sanitize URLs, unique Tabs, and prune ghosts | strict Screen schema/service/route owner; cohesive schema facade; seven schema suites/fixture; isolated definition-integrity route suite/harness; stable document-ops facade plus five owners; explicit-ID composer; twelve-suite/73-name Assistant executor family plus five support owners; read-only Assistant plan/catalog consumers | 🚧 In Progress |
+| TASK-540-01-L01 | Reject unknown, sanitize URLs, unique Tabs, and prune ghosts | strict Screen schema/service/route owner; cohesive schema facade; seven schema suites/fixture; isolated definition-integrity route suite/harness; stable document-ops facade plus five owners; explicit-ID composer; twelve-suite/73-name Assistant executor family plus five support owners; read-only Assistant plan/catalog consumers | ✅ Done |
 
 ## Current audit and modularity closure contract
 
@@ -78,10 +79,11 @@ shape. The parameter is an untrusted-value boundary and must be narrowed immedia
 production and tests may not introduce `any`, an assertion cast, or a second selector.
 
 The existing `TASK-540-01 media identity predicate has one exact UUID contract` test in
-`custom-screen-stored-read-repair.test.ts` gains the scalar/array/first-valid/malformed
-selector assertions inside that same declaration. No new test declaration is allowed:
-the seven schema suites remain exactly
-`18+9+10+13+11+5+11 = 77`. The stable facade continues to re-export
+`custom-screen-stored-read-repair.test.ts` gained the scalar/array/first-valid/malformed
+selector assertions inside that same declaration. That selector-only checkpoint retained
+`18+9+10+13+11+5+11 = 77`; the later final document-global ID audit explicitly authorized
+one focused stored-read declaration, so the current partition is
+`18+9+10+13+11+5+12 = 78`. The stable facade continues to re-export
 `isScreenMediaAssetUuid` exactly as before; the new internal selector is imported
 directly by R03 and L03 and does not change the pinned 62-runtime/39-type facade
 manifest. The dependency order was preserved by the landed commits, and the exact
@@ -138,14 +140,15 @@ predicate-wide, table-wide, and truncating cleanup are forbidden.
 An injected-dependency regression must prove cleanup continues through every later
 independent exact resource after earlier failures and then propagates the failure.
 
-For workflow reconciliation, the seven schema suites preserve 75 existing names plus
-the facade and prototype-safe alias regressions in the exact
-`18+9+10+13+11+5+11` partition, the two route suites preserve their 13+8 partition,
+For workflow reconciliation, the seven schema suites preserve the original 77 names
+plus the focused document-global ID regression in the current
+`18+9+10+13+11+5+12` partition, the two route suites preserve their 13+8 partition,
 and the twelve Assistant executor suites preserve exactly 73 fully expanded names. The
-schema 77 and route 21 are separately count-protected by their owner gates; only the Assistant
-Executor's 73 names from this child participate in the protected ten-monolith global
-347-name multiset. After every owner split is reconciled, the family target is exactly
-64 Vitest plus 18 Bun = 82 distinct test files: 81 source-owner/read-only paths and one
+schema 78 and route 21 are separately count-protected by their owner gates; only the Assistant
+Executor's 73 names from this child participate in the protected ten-family multiset.
+That multiset was originally 347 names and is currently 349 after two authorized additive
+Entries JSON-boundary regressions. After every owner split is reconciled, the family target is exactly
+78 Vitest plus 18 Bun = 96 distinct test files: 95 source-owner/read-only paths and one
 closure-owner flow. This changes neither pinned changelog 1252 nor closure ownership.
 
 ## Contract
@@ -175,11 +178,13 @@ closure-owner flow. This changes neither pinned changelog 1252 nor closure owner
   href and image src. Before trimming or calling a shared helper it rejects every ASCII
   control (`U+0000..U+001F` and `U+007F`) anywhere in the submitted string, plus every
   backslash. This prevents TAB/LF/CR protocol-relative confusion without modifying the
-  Page-owned helpers. During sequential rollout, the existing
-  `normalizeScreenImageSrc` export remains as a compatibility alias that delegates to
+  Page-owned helpers. The existing
+  `normalizeScreenImageSrc` export is retained as a compatibility alias that delegates to
   `sanitizeScreenAuthoringUrl(value, "media")` and returns `""` for `null`. TASK-540-02
-  migrates the Inspector and TASK-540-03 migrates the renderer; after those leaves no
-  Screen consumer imports the alias or either Page helper directly.
+  migrated the Inspector and TASK-540-03 migrated the renderer, so no Screen consumer
+  imports the alias or either Page helper directly; the alias now has zero production
+  consumers and is retained solely to keep the pinned 62-runtime facade manifest
+  byte-stable.
 - Binding pruning uses membership in the live ID set without a non-empty-set
   exception. Create and update each pass a warning sink and expose the existing
   transient warning shape in their successful response; stored read passes a discard
@@ -286,12 +291,20 @@ retained under a historical field. The mandatory
 schema, document-operations, route, and Assistant executor splits retain their separate
 canonical `Modularity Repair Revalidated` receipt. The later five-lens audit found no
 defect in the already-landed stored-read repair, but it did find the missing shared
-selector now owned by R01. The five exact owner re-gates completed in dependency order
-R01 → R03 → L03 → L04 → L01. The remaining executable order is clean post-audit → full
-gates → smoke → closure; none of those later results is claimed here.
-TASK-540-04-L03 retains one current `Revalidation Passed`; the closure leaf
-retains the exact deterministic `Revalidation Passed` value `pre-closure remediation /
-fix-started 2026-07-15 / gate green`. The post-audit intervention's five owner re-gates
-are complete; the fresh clean post-audit must now authorize that reserved closure state.
+selector now owned by R01. At that historical checkpoint the five exact owner re-gates
+completed in dependency order R01 → R03 → L03 → L04 → L01. The current executable
+order begins with a fresh five-lens post-audit, then full validation → helper restart →
+canonical smoke → smoke-evidence audit → changelog/status closure → final closure checks;
+none of those later results is claimed here. All twelve implementation leaves are landed,
+and TASK-540-04-L03 has canonical `Implementation Complete` plus its current exact
+generation/token receipt with no active `Repair Pending`. The closure leaf
+TASK-540-06-L01 now carries current `Implementation Complete` dated 2026-07-28 and
+`Revalidation Passed` for the 2026-07-23 pre-closure remediation gate, while still
+having no `Completed` or `✅ Done` closure result. Its former exact deterministic
+`pre-closure remediation / fix-started 2026-07-15 / gate green` reserved pre-closure
+evidence is historical provenance only.
+The post-audit intervention's five owner re-gates were complete at that historical
+checkpoint. All twelve leaves are now landed, no active repair owner remains, and the
+fresh five-lens post-audit is the next executable family step.
 Changelog 1252, full
 validation, and live smoke remain closure-owned.

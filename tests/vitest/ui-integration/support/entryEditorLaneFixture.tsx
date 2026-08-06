@@ -1,0 +1,374 @@
+import React from "react";
+import { vi } from "vitest";
+
+import type { EntryVisibility } from "../../../../core/admin/services/entriesClient";
+import type { EntryStatus } from "../../../../core/admin/ui/entries/EntryMetadataPanel";
+import {
+  EntryDeleteDialogStub,
+  EntryMetadataPanelStub,
+  type UpdateEntryMetadataPayload,
+  type UpdateEntryPayload,
+} from "./entryEditorHarness";
+
+/**
+ * The service fixture and the ready-made mock modules for the entry-editor integration
+ * lanes. Two lanes now mount the same editor against the same fake server — the hydration
+ * races and the submit authority — so the fixture lives here and each lane registers a mock
+ * in a single `vi.mock` line, keeping every lane file's own value in its scenarios.
+ *
+ * `vi.mock` is hoisted to the top of the lane file, so the mock PATHS have to stay there:
+ * they resolve relative to the file that calls `vi.mock`. Only the module bodies move here,
+ * which is safe because a `vi.mock` factory is lazy — it may import this module even though
+ * the call around it is hoisted.
+ */
+
+type TermFixture = { id: string; name: string; slug: string };
+
+type SchemaFieldFixture = { id: string; name: string; label: string; type: string };
+
+// The schema the content type publishes. `title` is in it because the default content-type
+// schema has a required `title` field, which is what makes the entry column and the schema
+// field two homes for one value; a lane that needs the `slug` half of that duplication swaps
+// the list with `withSchemaFields`.
+const DEFAULT_SCHEMA_FIELDS: SchemaFieldFixture[] = [
+  { id: "field-1", name: "title", label: "Title", type: "text" },
+  { id: "field-2", name: "summary", label: "Summary", type: "text" },
+];
+
+// The mocks that block: `holdNext` makes the NEXT call to one of them wait, which is how
+// a test provably lands an edit WHILE that request is in flight.
+type GateName = "updateEntry" | "updateEntryMetadata" | "deleteEntry" | "taxonomyOverview";
+type GateControl = {
+  promise: Promise<void>;
+  resolve: () => void;
+  reject: (error: Error) => void;
+};
+
+const ENTRY_DETAIL_CACHE_KEY = "entry:articles:entry-1";
+
+export const editorState = (() => {
+  const contentType = {
+    id: "type-1",
+    slug: "articles",
+    name: "Articles",
+    schema: { type: "object" },
+  };
+
+  // Open, like a real entry's `data`: a lane that swaps the schema fields also stores the
+  // keys that schema declares, and a shape inferred from this one fixture would refuse them.
+  const entryData: Record<string, string> = { title: "Hello", summary: "Summary" };
+
+  const entry = {
+    id: "entry-1",
+    title: "Hello",
+    slug: "hello",
+    status: "draft" as EntryStatus,
+    visibility: "public" as EntryVisibility,
+    scheduledAt: null as string | null,
+    seo: { description: "Meta" },
+    taxonomy: { category: null as TermFixture | null, tags: [] as TermFixture[] },
+    author: { name: "Alex Doe", email: "alex@example.com" },
+    data: entryData,
+  };
+
+  type EntryFixture = typeof entry;
+
+  // One deferred per GET rather than one per test: that is what lets a test resolve a
+  // NEWER read before an older one, which is the only way to observe read authority. Both
+  // settlements are kept, because a GET that REJECTS and one that resolves NULL are the two
+  // shapes that leave the editor with no entry at all — and they leave a different screen
+  // behind (one sets an error, the other explains nothing).
+  type EntryReadDeferred = {
+    resolve: (value: EntryFixture | null) => void;
+    reject: (error: Error) => void;
+  };
+  const entryReads: EntryReadDeferred[] = [];
+  const requireEntryRead = (index: number) => {
+    const deferred = entryReads[index];
+    if (!deferred) throw new Error(`entry read #${index} has not started`);
+    return deferred;
+  };
+  const resolveEntryRead = (index: number, value: EntryFixture | null) => {
+    requireEntryRead(index).resolve(value);
+  };
+
+  const queuedGates = new Map<GateName, GateControl[]>();
+  const unsettledGates = new Map<GateName, GateControl[]>();
+
+  // A content type the editor cannot resolve is the other way a read finishes without
+  // hydrating: the entry snapshot arrives, `applyEntry` is never reached.
+  let contentTypeVisible = true;
+
+  let schemaFields: SchemaFieldFixture[] = DEFAULT_SCHEMA_FIELDS;
+
+  // The server the mutation mocks model: the metadata route commits what it was given
+  // and BOTH routes answer with a fresh full read (`entryService.getEntry`). Modelling
+  // that matters for the visibility guard — a mock that always echoed the fixture could
+  // not tell a correct hydration from a stale one.
+  let committed: Partial<EntryFixture> = {};
+
+  return {
+    contentType,
+    contentTypes: () => (contentTypeVisible ? [contentType] : []),
+    hideContentType: () => {
+      contentTypeVisible = false;
+    },
+    resetContentTypeVisibility: () => {
+      contentTypeVisible = true;
+    },
+    schemaFields: () => schemaFields,
+    withSchemaFields: (fields: SchemaFieldFixture[]) => {
+      schemaFields = fields;
+    },
+    resetSchemaFields: () => {
+      schemaFields = DEFAULT_SCHEMA_FIELDS;
+    },
+    entry,
+    taxonomyOverview: {
+      taxonomies: { category: { id: "cat-taxonomy" }, tag: { id: "tag-taxonomy" } },
+      terms: { categories: [], tags: [] },
+    },
+    readEntry: () =>
+      new Promise<EntryFixture | null>((resolve, reject) => {
+        entryReads.push({ resolve, reject });
+      }),
+    resolveEntryRead,
+    rejectEntryRead: (index: number, message: string) => {
+      requireEntryRead(index).reject(new Error(message));
+    },
+    resolveEntry: (value: EntryFixture | null) => resolveEntryRead(0, value),
+    startedEntryReads: () => entryReads.length,
+    resetEntryRead: () => {
+      entryReads.length = 0;
+    },
+    holdNext: (name: GateName) => {
+      let resolve!: () => void;
+      let reject!: (error: Error) => void;
+      const promise = new Promise<void>((next, fail) => {
+        resolve = next;
+        reject = fail;
+      });
+      const gate = { promise, resolve, reject };
+      queuedGates.set(name, [...(queuedGates.get(name) ?? []), gate]);
+      unsettledGates.set(name, [...(unsettledGates.get(name) ?? []), gate]);
+      return gate;
+    },
+    passGate: async (name: GateName) => {
+      const queue = queuedGates.get(name) ?? [];
+      const gate = queue.shift();
+      if (!gate) return;
+      if (queue.length === 0) queuedGates.delete(name);
+      else queuedGates.set(name, queue);
+      await gate.promise;
+    },
+    release: (name: GateName) => {
+      const queue = unsettledGates.get(name) ?? [];
+      const gate = queue.shift();
+      if (queue.length === 0) unsettledGates.delete(name);
+      else unsettledGates.set(name, queue);
+      gate?.resolve();
+    },
+    resetGates: () => {
+      queuedGates.clear();
+      unsettledGates.clear();
+    },
+    serverEntry: (): EntryFixture => ({ ...entry, ...committed }),
+    commitMetadata: (patch: Partial<EntryFixture>) => {
+      committed = { ...committed, ...patch };
+    },
+    resetServerEntry: () => {
+      committed = {};
+    },
+    updatePayloads: [] as UpdateEntryPayload[],
+    metadataPayloads: [] as UpdateEntryMetadataPayload[],
+    publishCalls: [] as string[],
+    deleteCalls: [] as string[],
+    navigate: vi.fn(),
+    subscribers: new Set<(event: { key: string }) => void>(),
+  };
+})();
+
+export const dispatchEntryCacheEvent = () => {
+  editorState.subscribers.forEach((handler) => handler({ key: ENTRY_DETAIL_CACHE_KEY }));
+};
+
+/** What every lane's `beforeEach` / `afterEach` does: one fake server per test, one DOM. */
+export const resetEntryEditorLane = () => {
+  editorState.resetEntryRead();
+  editorState.resetGates();
+  editorState.resetServerEntry();
+  editorState.resetContentTypeVisibility();
+  editorState.resetSchemaFields();
+  editorState.updatePayloads.length = 0;
+  editorState.metadataPayloads.length = 0;
+  editorState.publishCalls.length = 0;
+  editorState.deleteCalls.length = 0;
+  editorState.navigate.mockReset();
+  sonnerModule.toast.success.mockReset();
+  sonnerModule.toast.error.mockReset();
+};
+
+export const resetEntryEditorDom = () => {
+  window.history.replaceState({}, "", "/");
+  document.body.innerHTML = "";
+};
+
+export const sonnerModule = { toast: { success: vi.fn(), error: vi.fn() } };
+
+export const apiClientModule = { isApiClientError: () => false };
+
+export const cachePolicyModule = {
+  cacheKeys: {
+    entryDetail: (type: string, id: string) => `entry:${type}:${id}`,
+    contentTypesList: "contentTypesList",
+  },
+};
+
+export const contentTypesClientModule = {
+  getCachedContentTypes: () => editorState.contentTypes(),
+  listContentTypesCached: vi.fn(async () => editorState.contentTypes()),
+};
+
+export const entriesClientModule = {
+  deleteEntry: vi.fn(async (type: string, id: string) => {
+    editorState.deleteCalls.push(`${type}/${id}`);
+    await editorState.passGate("deleteEntry");
+    return { ok: true };
+  }),
+  getCachedEntryDetail: () => null,
+  // The mount read stays pending until the test resolves it, so the keystroke
+  // provably lands first.
+  getEntryCached: vi.fn(() => editorState.readEntry()),
+  previewEntry: vi.fn(async () => ({ previewUrl: "https://preview.test/entry" })),
+  publishEntry: vi.fn(async (type: string, id: string) => {
+    editorState.publishCalls.push(`${type}/${id}`);
+    return { ok: true };
+  }),
+  updateEntry: vi.fn(async (_type: string, _id: string, payload: UpdateEntryPayload) => {
+    // Recorded before the gate: a test asserts what the request carried while it is
+    // still open.
+    editorState.updatePayloads.push(payload);
+    // The body is built when the route HANDLES the request, not when the client's promise
+    // settles: a gate models latency on the way back. Building it after the gate would let a
+    // metadata commit that happened in between leak into this older response, which is
+    // exactly the divergence a response-authority check exists to survive.
+    const body = { ...editorState.serverEntry(), ...payload };
+    await editorState.passGate("updateEntry");
+    return body;
+  }),
+  updateEntryMetadata: vi.fn(
+    async (_type: string, _id: string, payload: UpdateEntryMetadataPayload) => {
+      editorState.metadataPayloads.push(payload);
+      await editorState.passGate("updateEntryMetadata");
+      editorState.commitMetadata({
+        status: payload.status,
+        visibility: payload.visibility,
+        scheduledAt: payload.scheduledAt,
+        seo: payload.seo,
+      });
+      return editorState.serverEntry();
+    }
+  ),
+};
+
+export const siteSettingsClientModule = {
+  getSiteSettings: vi.fn(async () => ({ publicBaseUrl: "https://site.test", contentRoutes: [] })),
+  resolveContentSlugRouteContext: () => ({
+    publicBaseUrl: "https://site.test",
+    contentTypeSlug: "articles",
+    detailPathPattern: "/articles/:slug",
+    routeEnabled: true,
+  }),
+  resolveContentSlugDisplay: () => ({
+    label: "Public URL",
+    value: "https://site.test/articles/hello",
+    concrete: true,
+  }),
+};
+
+export const taxonomyClientModule = {
+  getTaxonomyOverview: vi.fn(async () => {
+    await editorState.passGate("taxonomyOverview");
+    return editorState.taxonomyOverview;
+  }),
+  createTaxonomyTerm: vi.fn(async () => ({ id: "term-new", name: "New", slug: "new" })),
+};
+
+// The editor derives the entry it is editing from the router path; the window location is
+// only the fallback for a mount without a router value. `useOptionalAdminRouter` answers
+// "there is no router here", which is what a mocked module honestly is: the dirty-navigation
+// guard then registers no blocker, and the lane that owns leaving the editor
+// (`entry-editor-navigation-guard.test.tsx`) mounts the REAL provider instead of this mock.
+// The guard's `beforeunload` half does not depend on a router, so it stays observable here.
+export const adminRouterModule = {
+  useAdminRouter: () => ({ navigate: editorState.navigate, path: window.location.pathname }),
+  useOptionalAdminRouter: () => null,
+};
+
+export const adminShellModule = {
+  AdminShell: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+};
+
+export const cacheBusModule = {
+  subscribeCacheEvents: (handler: (event: { key: string }) => void) => {
+    editorState.subscribers.add(handler);
+    return () => editorState.subscribers.delete(handler);
+  },
+};
+
+export const runtimePreviewDialogModule = {
+  RuntimePreviewDialog: () => <div />,
+};
+
+// The dialog stub lives in the harness module beside the `data-delete-*` markers it defines,
+// like the panel stub; this re-export only saves each lane the import. It renders nothing while
+// closed, which is what it did as `() => null` for every lane that never opens it.
+export const entryDeleteDialogModule = { EntryDeleteDialog: EntryDeleteDialogStub };
+
+// The panel stub lives in the harness module beside the `data-metadata-*` markers it
+// defines; this re-export only saves each lane the import.
+export const entryMetadataPanelModule = { EntryMetadataPanel: EntryMetadataPanelStub };
+
+// Writable, unlike the placeholder it replaced: a schema field named `title` or `slug` is a
+// SECOND editing surface for an entry column, so a lane has to be able to type into it. Every
+// field in this fixture is a text field, which is why the value is typed as a string. The
+// resolved value is ALSO mirrored as text, for the reason the metadata panel stub mirrors its
+// own: an assertion must read React state, not the DOM value of an uncontrolled input.
+export const fieldRendererModule = {
+  FieldRenderer: ({
+    field,
+    value,
+    onChange,
+  }: {
+    field: { name: string };
+    value?: string;
+    onChange: (value: string) => void;
+  }) => (
+    <div>
+      <span>{`field:${field.name}`}</span>
+      <span data-field-value={field.name}>{value ?? ""}</span>
+      <input
+        data-field-input={field.name}
+        defaultValue={value ?? ""}
+        onChange={(event) => onChange(event.target.value)}
+      />
+    </div>
+  ),
+};
+
+// Both halves are derived from the SAME field list, as the real pair is: a stub whose schema
+// properties disagreed with its field list would decide by itself which keys a payload carries.
+export const schemaMappingModule = {
+  fieldsFromSchema: () => editorState.schemaFields(),
+  buildSchemaFromFields: (fields: { name: string }[]) => ({
+    properties: Object.fromEntries(fields.map((field) => [field.name, {}])),
+  }),
+};
+
+export const contentTypeLabelsModule = {
+  getContentTypeLabels: () => ({ singular: "Article", plural: "Articles" }),
+};
+
+export const entryChecklistModule = {
+  buildEntryChecklist: () => ({ items: [], blockingIssues: [], missingRequiredFields: [] }),
+};

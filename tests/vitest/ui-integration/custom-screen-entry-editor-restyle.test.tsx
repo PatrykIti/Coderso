@@ -16,6 +16,7 @@ import { cacheKeys } from "../../../core/admin/services/cachePolicy";
 import { PRESENTATION_MEDIA_OVERFLOW_ERROR } from "../../../core/admin/ui/custom-screens/customScreenEntryPresentationMedia";
 import { CustomScreenEntryEditor } from "../../../core/admin/ui/custom-screens/CustomScreenEntryEditor";
 import { AdminRouterProvider } from "../../../core/admin/ui/contexts/AdminRouterContext";
+import { useScreenEntryPresentationMedia } from "../../../core/admin/ui/custom-screens/hooks/useScreenEntryPresentationMedia";
 import { renderAdminUi } from "../../utils/adminRouterRender";
 
 const deferred = <T,>() => {
@@ -29,19 +30,12 @@ const deferred = <T,>() => {
 };
 
 /**
- * TASK-479-14-L05: presentation guard for the entry content editor restyle
- * (TASK-479-14-L04). Confirms the calm document-card framing (rounded-2xl /
- * shadow-card) and that the rendered layout is DATA-DRIVEN by the per-screen
- * definition (different screens render different bound-field layouts), while the
- * inline edit -> dirty affordance stays wired.
+ * TASK-479-14-L05 presentation guard: pins the calm document-card framing,
+ * definition-driven per-screen layouts, and the inline-edit dirty affordance.
  *
- * NOTE: the prototype's checklist/activity related-list variants and its
- * Bold/Italic/Underline mark toolbar have no backing in the real custom-screen
- * model (block types: record-header/field/field-group/columns/rich-text;
- * presentation overrides: textSize/textEmphasis/tone/mediaAssetId; inline editing
- * via contenteditable). Per the de-fabrication rule those mock-only affordances
- * are intentionally NOT asserted here; per-screen presentation is proven through
- * the real, definition-driven bound-field layout instead.
+ * NOTE: prototype-only checklist/activity variants and the mark toolbar have no
+ * backing in the real custom-screen model. Per the de-fabrication rule they are
+ * not asserted; presentation is proven through the definition-driven layout.
  */
 type EntryEditorFixture = {
   screen: CustomScreenRecord & { definition: CustomScreenDefinition };
@@ -932,56 +926,58 @@ test("presentation media failure is visible and manual/cache retries force autho
     view.cleanup();
   }
 });
-
-test("an ID-set change during a forced media attempt commits only the new request", async () => {
-  const staleForcedRead = deferred<typeof mediaRecords>();
-  current = imageFixture;
-  currentOverrides = [{ blockId: "image-1", propPath: "mediaAssetId", value: OVERRIDE_MEDIA_ID }];
+test("a new ID set keeps force when the old request settles during layout", async () => {
+  let settleStaleForcedRead: () => void = () => undefined;
+  const staleForcedRead = {
+    then(onFulfilled: (records: typeof mediaRecords) => void) {
+      settleStaleForcedRead = () => onFulfilled([mediaRecords[1]!]);
+      return { catch: () => undefined };
+    },
+  } as unknown as Promise<typeof mediaRecords>;
+  const currentRead = deferred<typeof mediaRecords>();
+  const stableRoute = { routeKey: '["s","e",false]', current: true };
+  const publishedInNewLayout: string[] = [];
+  let retry: () => void = () => undefined;
   vi.mocked(listMediaCached)
     .mockResolvedValueOnce(mediaRecords)
-    .mockReturnValueOnce(staleForcedRead.promise)
-    .mockResolvedValue(mediaRecords);
-  const view = mount("/admin/advanced/custom-screens/image-catalog/entries/1");
+    .mockReturnValueOnce(staleForcedRead)
+    .mockReturnValueOnce(currentRead.promise);
+  const root = createRoot(document.createElement("div"));
   try {
+    function Probe({ mediaId }: { mediaId: string }) {
+      const result = useScreenEntryPresentationMedia({
+        routeKey: stableRoute.routeKey,
+        routeVisit: stableRoute,
+        document: imageFixture.screen.definition.editorView.document,
+        bindings: imageFixture.screen.definition.editorView.bindings,
+        values: { cover: mediaId },
+        overrides: [],
+        mountedRef: stableRoute,
+      });
+      retry = result.retry;
+      if (mediaId === BOUND_MEDIA_ID)
+        publishedInNewLayout.push(...Object.values(result.state.urlsById));
+      React.useLayoutEffect(() => {
+        if (mediaId === BOUND_MEDIA_ID) settleStaleForcedRead();
+      }, [mediaId]);
+      return null;
+    }
+    const render = (mediaId: string) => React.act(() => root.render(<Probe mediaId={mediaId} />));
+    render(OVERRIDE_MEDIA_ID);
     await flush();
-    expect(view.container.querySelector('img[alt="Cover"]')?.getAttribute("src")).toBe(
-      "/media/override.jpg"
-    );
-
-    React.act(() => {
-      cacheListeners.forEach((listener) =>
-        listener({ key: cacheKeys.mediaList, action: "update" })
-      );
-    });
+    React.act(() => retry());
     await flush();
-    expect(vi.mocked(listMediaCached).mock.calls.at(-1)?.[0]).toEqual({ force: true });
-
-    currentOverrides = [{ blockId: "image-1", propPath: "mediaAssetId", value: BOUND_MEDIA_ID }];
-    React.act(() => {
-      cacheListeners.forEach((listener) =>
-        listener({
-          key: cacheKeys.customScreenEntryOverrides("image-catalog", "1"),
-          action: "update",
-        })
-      );
-    });
+    render(BOUND_MEDIA_ID);
     await flush();
-    expect(view.container.querySelector('img[alt="Cover"]')?.getAttribute("src")).toBe(
-      "/media/bound.jpg"
-    );
-    expect(vi.mocked(listMediaCached).mock.calls.at(-1)?.[0]).toEqual({ force: true });
-
-    staleForcedRead.resolve([{ ...mediaRecords[1]!, url: "/media/stale-override.jpg" }]);
+    expect(vi.mocked(listMediaCached).mock.calls[1]?.[0]).toEqual({ force: true });
+    expect(vi.mocked(listMediaCached).mock.calls[2]?.[0]).toEqual({ force: true });
+    currentRead.resolve([{ ...mediaRecords[0]!, url: "/media/current-bound.jpg" }]);
     await flush();
-    expect(view.container.querySelector('img[alt="Cover"]')?.getAttribute("src")).toBe(
-      "/media/bound.jpg"
-    );
-    expect(view.container.innerHTML).not.toContain("stale-override.jpg");
+    expect(publishedInNewLayout).toEqual(["/media/current-bound.jpg"]);
   } finally {
-    view.cleanup();
+    React.act(() => root.unmount());
   }
 });
-
 test("an unmounted media attempt cannot commit or report a React update error", async () => {
   const pending = deferred<typeof mediaRecords>();
   const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
@@ -989,12 +985,15 @@ test("an unmounted media attempt cannot commit or report a React update error", 
   currentOverrides = [{ blockId: "image-1", propPath: "mediaAssetId", value: OVERRIDE_MEDIA_ID }];
   vi.mocked(listMediaCached).mockReturnValue(pending.promise);
   const view = mount("/admin/advanced/custom-screens/image-catalog/entries/1");
-  await flush();
-  expect(listMediaCached).toHaveBeenCalledTimes(1);
-  view.cleanup();
-  pending.resolve(mediaRecords);
-  await Promise.resolve();
-  await Promise.resolve();
-  expect(consoleError).not.toHaveBeenCalled();
-  consoleError.mockRestore();
+  try {
+    await flush();
+    expect(listMediaCached).toHaveBeenCalledTimes(1);
+    view.cleanup();
+    pending.resolve(mediaRecords);
+    await flush();
+    expect(consoleError).not.toHaveBeenCalled();
+  } finally {
+    view.cleanup();
+    consoleError.mockRestore();
+  }
 });

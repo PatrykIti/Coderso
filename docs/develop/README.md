@@ -31,6 +31,7 @@ humans — concrete and practical. When you need the exhaustive contracts, they 
 | Page | What it covers |
 |---|---|
 | [Testing](./testing.md) | The Bun and Vitest lanes, and how to choose and run them |
+| [Runtime Smoke Authoring Cookbook](./runtime-smoke-cookbook.md) | How to register and build reusable real-host suites with shared workers, DB batches, Playwright segments, evidence, and cleanup |
 | [Security for Developers](./security.md) | Public-write hardening, secrets, RBAC/CSRF, and the scanners |
 | [Contributing Workflow](./contributing.md) | Branches, conventional commits, pre-commit, gates, and releases |
 | [Adding a Change: End to End](./adding-a-change.md) | The golden path from idea to merged PR |

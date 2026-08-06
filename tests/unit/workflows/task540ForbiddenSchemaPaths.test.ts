@@ -1,0 +1,116 @@
+import { expect, test } from "bun:test";
+import { readFileSync, readdirSync } from "node:fs";
+import path from "node:path";
+
+/**
+ * `FORBIDDEN_PATHS` in `_docs/_workflows/task-540-implement.mjs` is the prohibition every
+ * TASK-540 mutation agent reads. Its `core/db/schema.ts` entry exists to stop this task
+ * family mutating the database schema as a side effect of Custom Screens work.
+ *
+ * Commit e6bbee69 split that file into 20 domain table modules behind a 43-line re-export
+ * facade, moving 1,679 of the original 1,722 hand-written schema lines to paths the
+ * prohibition did not name. The policy still said `core/db/schema.ts` and contained zero
+ * reference to `core/db/tables/**`, so an agent reading it would correctly conclude that
+ * `core/db/tables/identity.ts` was fair game: the prohibition had silently narrowed to
+ * cover a facade instead of a schema.
+ *
+ * The expectations below are derived from `core/db/` ON DISK rather than from a
+ * hand-maintained list, so a future domain module -- or a second split -- cannot escape
+ * the prohibition without this test failing.
+ */
+
+const root = path.resolve(import.meta.dir, "../../..");
+const implementSource = readFileSync(
+  path.join(root, "_docs/_workflows/task-540-implement.mjs"),
+  "utf8"
+);
+
+function frozenStringArray(constName: string): readonly string[] {
+  const pattern = new RegExp(
+    "const " + constName + " = Object\\.freeze\\(\\[([\\s\\S]*?)\\n\\]\\);",
+    "u"
+  );
+  const block = pattern.exec(implementSource);
+  if (!block) throw new Error("could not locate " + constName);
+  return [...block[1].matchAll(/^ {2}"([^"]+)",$/gmu)].map((match) => match[1]);
+}
+
+/**
+ * Minimal `**`-and-`*` glob match, matching how the prohibition is read by a human.
+ *
+ * Translated in ONE pass, so `**` is never re-read as two `*`s and no placeholder
+ * is needed to keep them apart. The two-pass form this replaces parked `**` on a
+ * literal NUL byte, which made this `.ts` file read as binary `data` to `file(1)`,
+ * `git diff` and `git grep` -- the worst possible state for the one test that
+ * guards which repository paths a mutation agent may touch, because the tools a
+ * reviewer would use to inspect it silently skip it.
+ */
+function globMatches(glob: string, relativePath: string): boolean {
+  const source =
+    "^" +
+    glob.replace(/\*\*|\*|[.+^${}()|[\]\\]/gu, (token) => {
+      if (token === "**") return ".*";
+      if (token === "*") return "[^/]*";
+      return "\\" + token;
+    }) +
+    "$";
+  return new RegExp(source, "u").test(relativePath);
+}
+
+function schemaModulePaths(): readonly string[] {
+  const tablesDir = path.join(root, "core/db/tables");
+  return readdirSync(tablesDir)
+    .filter((name) => name.endsWith(".ts"))
+    .map((name) => "core/db/tables/" + name)
+    .sort();
+}
+
+test("every hand-written schema module is covered by a FORBIDDEN_PATHS glob", () => {
+  const forbidden = frozenStringArray("FORBIDDEN_PATHS");
+  const modules = schemaModulePaths();
+
+  // Guard the guard: if the split were ever reverted this test would pass vacuously.
+  expect(modules.length).toBeGreaterThanOrEqual(20);
+  expect(modules).toContain("core/db/tables/identity.ts");
+  expect(forbidden).toContain("core/db/schema.ts");
+
+  const uncovered = [...modules, "core/db/schema.ts"].filter(
+    (relativePath) => !forbidden.some((glob) => globMatches(glob, relativePath))
+  );
+  expect(uncovered).toEqual([]);
+});
+
+test("the schema split is recorded as an authorized forbidden-path exception", () => {
+  const block =
+    /const AUTHORIZED_FORBIDDEN_PATH_EXCEPTIONS = Object\.freeze\(\[([\s\S]*?)\n\]\);/u.exec(
+      implementSource
+    );
+  if (!block) throw new Error("could not locate AUTHORIZED_FORBIDDEN_PATH_EXCEPTIONS");
+  const record = block[1];
+  const forbidden = frozenStringArray("FORBIDDEN_PATHS");
+
+  // Every recorded exception must name a glob the prohibition actually carries, otherwise
+  // the record documents a rule that does not exist.
+  const globs = [...record.matchAll(/glob: "([^"]+)"/gu)].map((match) => match[1]);
+  expect(globs.length).toBe(new Set(globs).size);
+  for (const glob of globs) expect(forbidden).toContain(glob);
+
+  // The split created these 20 files, so the family did mutate them and the record has
+  // to say so -- otherwise the widened glob describes a prohibition the family has
+  // visibly broken without explanation, which teaches an agent the list is advisory.
+  expect(globs).toContain("core/db/tables/**");
+  const tablesEntry = /\{[^{]*?glob: "core\/db\/tables\/\*\*"[\s\S]*?\n  \}\)/u.exec(record);
+  if (!tablesEntry) throw new Error("could not locate the core/db/tables exception entry");
+  for (const modulePath of schemaModulePaths()) {
+    expect(tablesEntry[0]).toContain('"' + modulePath + '"');
+  }
+  expect(tablesEntry[0]).toContain("e6bbee69");
+
+  // The agent-facing sentence counts the exceptions. A hardcoded count is what rotted the
+  // FORBIDDEN_PATHS entry this record describes, so it must be derived from the array.
+  expect(implementSource).toContain(
+    "String(AUTHORIZED_FORBIDDEN_PATH_EXCEPTIONS.length) +\n" +
+      '  " of those globs already carry owner-recorded, already-landed exceptions: "'
+  );
+  expect(implementSource).not.toContain("Eight of those globs already carry");
+});

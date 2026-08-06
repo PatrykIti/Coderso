@@ -61,8 +61,8 @@ const createScans = (mode: ScanMode, imageRef: string | null): ScanDefinition[] 
         "semgrep",
         ...(strict ? ["--error"] : []),
         // Give heavy taint/dataflow rules enough budget to FULLY scan large files
-        // (core/db/schema.ts, core/services/assistant/actionExecutorService.ts) —
-        // the default 5s/rule timeout silently SKIPPED rules on them (coverage gap).
+        // (core/services/assistant/actionExecutorService.ts) — the default
+        // 5s/rule timeout silently SKIPPED rules on them (coverage gap).
         // --timeout-threshold 0 = never abandon a file after N timed-out rules.
         "--timeout",
         "120",

@@ -7,7 +7,8 @@
 **Category:** Custom Screens / Runtime UI / Accessibility
 **Estimated Effort:** Medium
 **Dependencies:** TASK-540-01, TASK-540-02
-**Status:** 🚧 In Progress
+**Status:** ✅ Done
+**Completed:** 2026-08-06
 **Started:** 2026-07-13
 **Implementation Complete:** 2026-07-20 — assigned work was completed; canonical `✅ Done` transition awaits family changelog 1252.
 **Historical Selector-Consumer Implementation Evidence:** 2026-07-19 — commit `596ede31d17c65168510baf6b478696e3d345377` removed the renderer-local selector, imported R01's Bun-free owner directly in the leaf renderer, and kept the predicate import on that same owner. This commit remains implementation provenance, not a generation/token receipt.
@@ -40,7 +41,7 @@ authoring controls without swallowing Space or link/input activation.
 
 | ID | Title | Exclusive source ownership | Status |
 |---|---|---|---|
-| TASK-540-03-L01 | Functional Tabs and no nested-interactive Space trap | stable renderer facade plus six focused production owners; runtime harness, four independently runnable renderer suites, and the auxiliary dead-code guard | 🚧 In Progress |
+| TASK-540-03-L01 | Functional Tabs and no nested-interactive Space trap | stable renderer facade plus six focused production owners; runtime harness, four independently runnable renderer suites, and the auxiliary dead-code guard | ✅ Done |
 
 ## Mandatory renderer modularity gate
 
@@ -56,7 +57,7 @@ The completed split owns the stable facade plus `screenRuntimeRendererModel.ts`,
 22+13+24+13 suite partition, while the separately gated
 `tests/vitest/ui/editor-surface-dead-code.test.ts` auxiliary guard is 153 lines. Their
 current physical-line counts are respectively
-1/405/190/177/637/420/284 for production and 638/683/798/343/95 for the four suites
+1/406/190/177/638/420/284 for production and 638/731/798/343/95 for the four suites
 plus harness, so every R03 owner is below its declared budget and the hard maximum.
 
 The owner gate byte-counts every original/extracted/dependency test/support path touched
@@ -69,7 +70,7 @@ partition remains 22/13/24/13, its fingerprint covers 72 names and 67 declaratio
 and the dependency-shaped matrix remains 89/89. Neither
 line drift nor test-name/assertion drift is
 TASK-9999-eligible. This leaf lands after TASK-540-02-L01 and before TASK-540-04-L01;
-the reconciled family matrix remains 64 Vitest + 18 Bun = 82 files (81 source-owner/
+the reconciled family matrix remains 78 Vitest + 18 Bun = 96 files (95 source-owner/
 read-only plus one closure aggregate) under pinned changelog 1252. The tracked
 TASK-496 dead-code guard is an auxiliary R03 leaf gate and mandatory full-suite test,
 not an added member of that frozen product matrix.
@@ -149,5 +150,5 @@ historical when the 2026-07-20 post-audit repair changed source and tests. The c
 repair passed the 72-name/67-declaration contract, exact 89/89 behavior gate, line gate,
 and focused zero-finding re-audit. The later auxiliary dead-code guard rewrite preserves
 its six assertions while replacing 107 synchronous recursive greps with one source
-index; its independent 6/6 leaf gate does not change the 64+18 closure matrix. Fresh
+index; its independent 6/6 leaf gate does not change the 78+18 closure matrix. Fresh
 family post-audit, live smoke, changelog 1252, and closure remain pending.

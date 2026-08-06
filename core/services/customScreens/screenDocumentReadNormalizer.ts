@@ -23,6 +23,7 @@ import {
 } from "./screenDocumentNormalizer";
 import {
   isRecord,
+  normalizeScreenPath,
   normalizeUniqueIds,
   rejectUnknownKeys,
 } from "./customScreenNormalizationPrimitives";
@@ -251,6 +252,25 @@ export const collectRepairedScreenBlocksInReadOrder = (
   return blocks;
 };
 
+const createStoredReadBlockIdAllocator = (repairedSections: unknown[]) => {
+  const occupiedIds = new Set<string>();
+  for (const block of collectRepairedScreenBlocksInReadOrder(repairedSections)) {
+    if (block.id === undefined || block.id === null) continue;
+    const explicitId = normalizeScreenPath(block.id, "stored-read");
+    if (occupiedIds.has(explicitId)) throw new Error("custom_screen_definition_invalid");
+    occupiedIds.add(explicitId);
+  }
+
+  let nextIndex = 1;
+  return () => {
+    while (occupiedIds.has(`block-${nextIndex}`)) nextIndex += 1;
+    const id = `block-${nextIndex}`;
+    occupiedIds.add(id);
+    nextIndex += 1;
+    return id;
+  };
+};
+
 export const collectNormalizedUnsupportedButtonIds = (
   repairedSections: unknown[],
   normalizedDocument: ScreenDocumentV1,
@@ -309,6 +329,7 @@ export const normalizeScreenDocumentV1ForReadWithRepairAtPath = (
     unsupportedButtonNodes: new WeakSet<Record<string, unknown>>(),
   };
   const repairedSections = repairLegacyScreenRecordForRead(rawSections, repairContext) as unknown[];
+  const allocateStoredReadBlockId = createStoredReadBlockIdAllocator(repairedSections);
   const document: ScreenDocumentV1 = sectionsLookLikeLegacyBlockArray(repairedSections)
     ? {
         schemaVersion: 1,
@@ -318,13 +339,12 @@ export const normalizeScreenDocumentV1ForReadWithRepairAtPath = (
                 createDefaultScreenSection(
                   normalizeUniqueIds(
                     repairedSections.map((item, index) =>
-                      normalizeScreenBlock(item, index, "stored-read", [
-                        ...documentPath,
-                        "sections",
-                        0,
-                        "blocks",
-                        index,
-                      ])
+                      normalizeScreenBlock(
+                        item,
+                        "stored-read",
+                        [...documentPath, "sections", 0, "blocks", index],
+                        allocateStoredReadBlockId
+                      )
                     )
                   )
                 ),
@@ -335,7 +355,13 @@ export const normalizeScreenDocumentV1ForReadWithRepairAtPath = (
         schemaVersion: 1,
         sections: normalizeUniqueIds(
           repairedSections.map((item, index) =>
-            normalizeScreenSection(item, index, "stored-read", [...documentPath, "sections", index])
+            normalizeScreenSection(
+              item,
+              index,
+              "stored-read",
+              [...documentPath, "sections", index],
+              allocateStoredReadBlockId
+            )
           )
         ),
       };

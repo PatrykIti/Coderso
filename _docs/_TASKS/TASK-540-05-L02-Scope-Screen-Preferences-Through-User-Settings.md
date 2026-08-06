@@ -8,9 +8,10 @@
 **Category:** User Settings / Custom Screens / Privacy
 **Estimated Effort:** Medium
 **Dependencies:** TASK-540-05-L01
-**Status:** 🚧 In Progress
+**Status:** ✅ Done
+**Completed:** 2026-08-06
 **Started:** 2026-07-14
-**Implementation Complete:** 2026-07-14 — assigned work was completed; canonical `✅ Done` transition awaits family changelog 1252.
+**Implementation Complete:** 2026-07-17 — assigned work was completed; canonical `✅ Done` transition awaits family changelog 1252.
 **Repair Reason:** Final post-audit found the A/B self-scope route proof re-read only user B after the two sessions wrote different values. The existing real-HTTP test now re-reads A with A's authenticated identity and asserts A's exact DB row alongside B, preserving the exact access-log inventory.
 **Revalidation Passed:** 2026-07-17 — current post-split owner gate: the exact seven-file Vitest matrix passed 62/62; the exact four-file Bun matrix passed 27/27 with 190 assertions; isolated User Settings route and access-log harness suites passed 2/2 and 8/8; all 39 scanner self-test cases, core/root static checks, split/name/line/workflow gates, and `git diff --check` passed. No clean family post-audit, full validation, smoke, changelog, or closure result is claimed.
 **Modularity Repair Revalidated:** 2026-07-17 — cohesive <=1,000-line split and exact owner gate passed.
@@ -365,8 +366,8 @@ testIfDb("real HTTP user-settings routes preserve self-scope, CSRF, buckets, err
 - Before the owner stages the new test, the workflow must explicitly union its exact
   path into `TRACKED_TEST_FILES`; do not broaden discovery to every unrelated untracked
   test in the shared tree. Preserve uniqueness/existence checks.
-- The reconciled TASK-540 family aggregate is exactly 64 Vitest + 18 Bun = 82 target
-  files: 81 source-owner/read-only dependency files and one closure-owned aggregate
+- The reconciled TASK-540 family aggregate is exactly 78 Vitest + 18 Bun = 96 target
+  files: 95 source-owner/read-only dependency files and one closure-owned aggregate
   file. This supersedes all earlier partial 51+7 calculations. Update exact cardinality,
   command/isolation self-tests, receipts, and the frozen workflow hash consistently.
 - Add a hard physical-line gate for every added or modified production/test file. For
@@ -519,16 +520,29 @@ numbers.
 - Route-persistent provider mount and provider source:
   `AdminApp.tsx:1212-1234`, `AdminAuthContext.tsx:1-47`.
 - Existing L03-owned transport-neutral hook call site, read-only in this leaf:
-  `CustomScreenEntryEditor.tsx:717-719`.
+  `CustomScreenEntryEditor.tsx:717-719`. After the TASK-540-04-L03 split that file is a
+  49-line facade; the shipped call site is
+  `core/admin/ui/custom-screens/CustomScreenEntryRouteSession.tsx:183`, with
+  `useScreenEntryPreferences` imported at `:65`.
 - Additional exact `UserSettings` fixture which must compile with the new required key:
   `assistant-panel-interaction.test.tsx:81-107`.
 - Existing self-scoped routes: `userSettingsRoutes.ts:33-56` and
-  strict envelope `settingsSchemas.ts:16-23`.
+  strict envelope `settingsSchemas.ts:16-23`. The shipped 59-line route module keeps both
+  GETs at `userSettingsRoutes.ts:31-44` and the expected-owner-guarded PATCH at `:46-58`
+  (`x-coderso-expected-user-id` compared at `:50-53` before `validate` at `:54` and the
+  first write at `:56`); the strict envelope anchor still lands exactly on
+  `userSettingsUpdateSchema`.
 - Request headers are lower-cased into the shared route context before auth,
   rate-limit, CSRF, and handlers run: `router.ts:1-15`,
   `httpServer.ts:348-428`.
-- Central runtime boundary and middleware order: `httpServer.ts:110-170,378-428`;
-  today both user-settings service errors miss `errorResponse` and become 500.
+- Central runtime boundary and middleware order: `httpServer.ts:110-170,378-428`; at that
+  2026-07-13 snapshot both user-settings service errors missed `errorResponse` and became
+  500. Shipped: `errorResponse` spans `httpServer.ts:110-191` and maps
+  `user_setting_identity_changed` to 409 at `:136-143` and both
+  `user_settings_key_invalid` and `user_settings_value_invalid` to 400 at `:144-156`,
+  ahead of the generic 500 fallback at `:190`; the request pipeline still runs
+  `attachUserFromSession` at `:401`, rate-limit bucket resolution at `:404-416`, and
+  `enforceCsrf` at `:417` before the route handlers at `:419-422`.
 
 ## Implementation Pseudocode
 

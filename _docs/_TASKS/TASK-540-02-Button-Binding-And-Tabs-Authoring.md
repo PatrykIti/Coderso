@@ -7,7 +7,8 @@
 **Category:** Custom Screens / Admin Authoring
 **Estimated Effort:** Small
 **Dependencies:** TASK-540-01
-**Status:** 🚧 In Progress
+**Status:** ✅ Done
+**Completed:** 2026-08-06
 **Started:** 2026-07-13
 **Repair Started:** 2026-07-16
 **Fix Started:** 2026-07-18
@@ -15,6 +16,7 @@
 **Repair Reason:** The Inspector's binding factory must consume R01's schema-domain `buildScreenFieldBindingId` and prove maximum-length tuples remain distinct and max-120 without taking ownership of schema or document operations. The current repair also restores invalid Tab-label drafts, keeps keyboard focus on the same input after an Enter commit while invalidating stale drafts through the now-read `baseLabel`, restores the committed label when a host rejects that commit, assigns collision-free default Tab labels, garbage-collects bindings owned by a removed Tab slot subtree, invalidates stale Image URL drafts across block/committed-source changes, and gives every select/number control a distinct accessible name. The unbound field trigger displays the named `Not bound` placeholder and preserves exact-binding → authored-`data.field` → empty-placeholder precedence.
 **Repair Revalidated:** 2026-07-16 — TASK-540-02-L01 passed `core lint:types`, `core lint`, its exact two-file Vitest gate 33/33 on the final shared schema state, including the domain-builder consumer and invalid blur/Enter restore regressions, and `git diff --check`; no full-suite, post-audit, smoke, changelog, or closure pass is claimed.
 **Modularity Repair Revalidated:** 2026-07-17 — cohesive <=1,000-line split and exact owner gate passed.
+**Post-Audit Fix:** 2026-07-19 — commit 0f70ee82 kept the `Insert into` slot Select controlled at `ScreenBlockInspector.tsx:484`; the owned binding-panel suite grew from 18 to its current 19 tests.
 **Changelog:** 1252 (pinned; closure only)
 
 ---
@@ -34,7 +36,7 @@ or runtime renderer in this subtask.
 
 | ID | Title | Exclusive source ownership | Status |
 |---|---|---|---|
-| TASK-540-02-L01 | Expose link binding and complete tab-slot editing | stable `ScreenBlockInspector.tsx` facade; `screenBlockInspectorModel.ts`; `ScreenBlockInspectorControls.tsx`; `ScreenBlockInspectorTabs.tsx`; `ScreenBlockInspectorSection.tsx`; binding-panel/image-inspector suites plus cohesive shared Inspector harness | 🚧 In Progress |
+| TASK-540-02-L01 | Expose link binding and complete tab-slot editing | stable `ScreenBlockInspector.tsx` facade; `screenBlockInspectorModel.ts`; `ScreenBlockInspectorControls.tsx`; `ScreenBlockInspectorTabs.tsx`; `ScreenBlockInspectorSection.tsx`; binding-panel/image-inspector suites plus cohesive shared Inspector harness | ✅ Done |
 
 ## Mandatory Inspector modularity gate
 
@@ -60,7 +62,7 @@ stale-draft behavior and is not eligible for deferred LOW treatment.
 This leaf lands after TASK-540-01-L01 and before TASK-540-03-L01. Its two behavior
 suites remain independently runnable and now cover 19 binding-panel plus 18
 image-inspector tests (37 total). The family
-aggregate remains exactly 64 Vitest + 18 Bun = 82 targets, with 81 source-owner/read-only
+aggregate remains exactly 78 Vitest + 18 Bun = 96 targets, with 95 source-owner/read-only
 files and one closure aggregate; pinned changelog 1252 is unchanged.
 
 ## Acceptance

@@ -8,7 +8,8 @@
 **Category:** Custom Screens / Builder / Data Safety
 **Estimated Effort:** Medium
 **Dependencies:** TASK-540-04-L03
-**Status:** 🚧 In Progress
+**Status:** ✅ Done
+**Completed:** 2026-08-06
 **Started:** 2026-07-14
 **Fix Started:** 2026-07-15
 **Repair Started:** 2026-07-16
@@ -135,8 +136,10 @@ Done and closure resumed. The later TASK-540-04-L03 duplicate-delivery finding p
 closure again, then its scoped repair completed and passed the required re-gate. In the
 current pre-1252 state L04 and TASK-540-04 remain `🚧 In Progress`; L04 carries one
 current `Revalidation Passed` for the Settings correction, while its earlier post-split
-evidence is historical. L03 likewise carries one current `Revalidation Passed` and no
-`Repair Pending`. The exact R01 → R03 → L03 → L04 → L01 re-gates completed in order.
+evidence is historical. L03 now carries canonical `Implementation Complete` plus its
+current exact generation/token receipt, no active `Repair Pending` remains, and all twelve
+implementation leaves are landed. The exact R01 → R03 → L03 → L04 → L01 re-gates also
+remain recorded as historical dependency evidence.
 TASK-540-06-L01 remains active; fresh post-audit, full
 validation, live smoke, family changelog 1252, and closure remain pending.
 
@@ -352,8 +355,8 @@ suite.
 Add every new production/test/harness path to L04 `allowedFiles`/`requiredFiles`, add
 the three net-new suites to `TARGET_VITEST_FILES`, source-owner hashing, commands,
 isolation metadata, and the hard line-count gate. Harnesses are required paths but not
-test targets. The reconciled TASK-540 final aggregate is exactly 64 Vitest + 18 Bun =
-82 target files (81 source-owner/read-only dependency files plus one closure-owned
+test targets. The reconciled TASK-540 final aggregate is exactly 78 Vitest + 18 Bun =
+96 target files (95 source-owner/read-only dependency files plus one closure-owned
 aggregate file); earlier partial totals are obsolete. Pinned changelog 1252 is unchanged.
 
 TASK-540-05-L01 exclusively owned and completed the additive authoring-boundary update
