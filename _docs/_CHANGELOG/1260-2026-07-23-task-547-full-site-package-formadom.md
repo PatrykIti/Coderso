@@ -43,10 +43,16 @@ TASK-547-05, TASK-547-05-L01, TASK-547-06, TASK-547-06-L01, TASK-547-07
 
 ## Validation and smoke (pending)
 
-- Fresh targeted and full validation, the five sequential audit rounds, final
-  reconcile, independent post-audit lenses, strict security scan, production
-  site build, exact eight-scenario Playwright smoke, rollback equality and scoped
-  cleanup remain pending on the corrected final working tree.
+- The interrupted branch is being re-inventoried after merging current
+  `feat/implementations`. One dependency-shaped audit/reconcile round, unfinished
+  leaf gates, affected post-audit lenses, strict security scan, production site
+  build and both shared runtime-smoke profiles remain pending.
+- `fast` and `certification` will both run the same ordered 18 product-visible
+  scenarios (eight public FormaDom, five Form Design and five Page Editor flows)
+  through `scripts/runtime-smoke.ts`; only bounded polling/auth infrastructure
+  windows differ. Exact rollback equality, set-based scoped cleanup, zero
+  console/page errors and screenshots under `_docs/_workflows/_smoke/task-547/`
+  are required.
 - All earlier final counts, pass claims, screenshot hashes and cleanup claims
   were invalidated when TASK-547 was reopened on 2026-07-23 and are intentionally
   omitted from this draft. They must be replaced only by newly observed evidence

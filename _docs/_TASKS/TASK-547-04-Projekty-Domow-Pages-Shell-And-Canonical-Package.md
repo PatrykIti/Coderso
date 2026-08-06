@@ -7,10 +7,10 @@
 **Estimated Effort:** Very Large
 **Dependencies:** TASK-547-03
 **Status:** 🚧 In Progress
-**Validation:** Round-one read-only audit findings are being corrected. This
-contract remains open until the complete family passes the fresh five-round
-drift loop, implementation gates and final runtime acceptance on one working
-tree.
+**Validation:** The interrupted branch is being re-inventoried on the merged
+working tree. This contract remains open until its unfinished implementation
+and dependency-shaped gates pass, followed by the shared TASK-547 runtime
+acceptance.
 
 ---
 

@@ -630,9 +630,9 @@ metro, parking, district or follow-up timeline absent from the source.
 ## Page Editor Runtime Smoke Handoff
 
 This leaf owns only the production Page/control contracts and their normal test
-lanes. TASK-547-06-L01 solely owns the tracked smoke registry, scenario files,
-standalone smoke tests and evidence. Its canonical registry must preserve these
-ordered handoff IDs:
+lanes. TASK-547-06-L01 owns the thin `task-547` adapter and suite descriptors
+registered through the shared `scripts/runtime-smoke.ts` entry point. Its
+canonical descriptor set must preserve these ordered handoff IDs:
 
 14. `page-editor-switcher-author-light` (`1440x1000`);
 15. `page-editor-switcher-tablet-reset` (`1024x1366`);
@@ -640,17 +640,17 @@ ordered handoff IDs:
 17. `page-editor-form-presentation-save-reload` (`1440x1000`);
 18. `page-editor-publish-front-parity` (`390x844`).
 
-Each ID is one independently runnable tracked scenario and one independently
-runnable matching test under `scripts/task-547-runtime-smoke/` and
-`tests/unit/workflows/task547RuntimeSmoke/scenarios/`. It owns its complete
-arrange/act/assert flow, starts from the canonical installed state, uses a fresh
-close/open cycle for exact session `wf547pageeditor`, proves material
-DOM/ARIA/computed-style/geometry or save/reload/publish-front effects, records
-zero console and page errors, restores exact state, and produces only its own
-validated `result.json` plus byte-distinct viewport PNG after cleanup succeeds.
-No scenario may import or depend on predecessor state. The tracked registry and
-scenario modules, not this production leaf, own their selectors, assertion IDs,
-normalized live Page URLs and detailed smoke lifecycle.
+Each ID remains a distinct real-flow scenario in both supported profiles. The
+suite adapter composes the shared lifecycle, condition polling, supervised
+`coderso-dev-core-host`, browser segments, persistent workers, set-based DB
+cleanup, redaction, timing and reporting. It starts from canonical installed
+state, proves material DOM/ARIA/computed-style/geometry or save/reload/publish-
+front effects, records zero console/page errors, restores exact state and saves
+a viewport PNG under `_docs/_workflows/_smoke/`. `fast` shortens only bounded
+polling/auth infrastructure windows; it must not omit an ID or weaken an
+assertion. The suite descriptor/adapter, not this production leaf, owns live
+selectors, normalized URLs and detailed smoke lifecycle. Do not claim replay
+resume unless a valid shared checkpoint for the same candidate is implemented.
 
 ## Security Contract
 
