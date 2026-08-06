@@ -137,6 +137,17 @@ function bootstrapCasPredicates(sql, users, input) {
     notDistinctTimestampMs(users.lastLoginAt, input.newestOwnedPair.lastLoginAt),
   ];
 }
+const BOOTSTRAP_CAS_ROLLBACK_REASONS = Object.freeze([
+  "wf540_bootstrap_cas_locked_user_cardinality",
+  "wf540_bootstrap_cas_locked_role_cardinality",
+  "wf540_bootstrap_cas_locked_user_shape",
+  "wf540_bootstrap_cas_newest_pair_mismatch",
+  "wf540_bootstrap_cas_user_baseline_mismatch",
+  "wf540_bootstrap_cas_role_baseline_mismatch",
+  "wf540_bootstrap_cas_update_cardinality",
+  "wf540_bootstrap_cas_transaction_user_mismatch",
+  "wf540_bootstrap_cas_transaction_role_mismatch",
+]);
 const BOOTSTRAP_CAS_RESTORE_BRIDGE_SOURCE =
   BRIDGE_INPUT_READER +
   bridgeInputSchemaGuard("bootstrap-restore-input-v1") +
@@ -146,8 +157,15 @@ import { db } from "./db/client.ts";
 import { roles, userRoles, users } from "./db/schema.ts";
 if (Object.keys(input).sort().join(",") !== "baseline,newestOwnedPair,userId") throw new Error("wf540_input");
 const timestamp = (value) => value === null ? null : new Date(value);
-const knownRollback = Object.freeze({ kind:"wf540_bootstrap_known_rollback" });
-const rollbackKnown = () => { throw knownRollback; };
+const rollbackReasons = Object.freeze(${JSON.stringify(BOOTSTRAP_CAS_ROLLBACK_REASONS)});
+const knownRollbacks = Object.freeze(Object.fromEntries(rollbackReasons.map((reason)=>[
+  reason,Object.freeze({ kind:"wf540_bootstrap_known_rollback",reason }),
+])));
+const rollbackKnown = (reason) => {
+  const rollback = knownRollbacks[reason];
+  if (rollback === undefined) throw new Error("wf540_bootstrap_cas_reason_drift");
+  throw rollback;
+};
 const serializeUser = (row) => {
   if (Object.keys(row).sort().join(",") !== "createdAt,email,emailEncrypted,emailHash,id,lastLoginAt,name,passwordHash,status,updatedAt") return null;
   return {
@@ -169,23 +187,27 @@ const selectRoles = async (executor,lock) => {
   })).sort((a,b)=>a.roleId.localeCompare(b.roleId));
 };
 let transactionProof = null;
+let rollbackReason = null;
 try {
   transactionProof = await db.transaction(async (tx) => {
     const lockedRows = await tx.select().from(users).where(eq(users.id,input.userId)).limit(2).for("update");
     const lockedRoles = await selectRoles(tx,true);
-    if (lockedRows.length !== 1 || lockedRoles.length !== 1) rollbackKnown();
+    if (lockedRows.length !== 1) rollbackKnown("wf540_bootstrap_cas_locked_user_cardinality");
+    if (lockedRoles.length !== 1) rollbackKnown("wf540_bootstrap_cas_locked_role_cardinality");
     const locked = serializeUser(lockedRows[0]);
-    if (locked === null) rollbackKnown();
+    if (locked === null) rollbackKnown("wf540_bootstrap_cas_locked_user_shape");
     const pairMatches = locked.lastLoginAt === input.newestOwnedPair.lastLoginAt && locked.updatedAt === input.newestOwnedPair.updatedAt;
     const unchangedMatches = canonical({...locked,lastLoginAt:input.baseline.rawUserRow.lastLoginAt,updatedAt:input.baseline.rawUserRow.updatedAt}) === canonical(input.baseline.rawUserRow);
     const roleTuplesByteIdentical = canonical(lockedRoles) === canonical(input.baseline.roleTuples);
-    if (!pairMatches || !unchangedMatches || !roleTuplesByteIdentical) rollbackKnown();
+    if (!pairMatches) rollbackKnown("wf540_bootstrap_cas_newest_pair_mismatch");
+    if (!unchangedMatches) rollbackKnown("wf540_bootstrap_cas_user_baseline_mismatch");
+    if (!roleTuplesByteIdentical) rollbackKnown("wf540_bootstrap_cas_role_baseline_mismatch");
     const predicates = (${bootstrapCasPredicates.toString()})(sql,users,input);
     const updated = await tx.update(users).set({
       lastLoginAt:timestamp(input.baseline.rawUserRow.lastLoginAt),
       updatedAt:new Date(input.baseline.rawUserRow.updatedAt),
     }).where(and(...predicates)).returning();
-    if (updated.length !== 1) rollbackKnown();
+    if (updated.length !== 1) rollbackKnown("wf540_bootstrap_cas_update_cardinality");
     const conditionalUpdateAffectedOne = true;
     const inTransactionRows = await tx.select().from(users).where(eq(users.id,input.userId)).limit(2);
     const inTransactionUser = inTransactionRows.length === 1 ? serializeUser(inTransactionRows[0]) : null;
@@ -194,19 +216,24 @@ try {
     const rolesAfter = await selectRoles(tx,false);
     const rolesInTransactionByteIdentical = rolesAfter.length === 1 &&
       canonical(rolesAfter) === canonical(input.baseline.roleTuples);
-    if (!inTransactionByteIdentical || !rolesInTransactionByteIdentical) rollbackKnown();
+    if (!inTransactionByteIdentical) rollbackKnown("wf540_bootstrap_cas_transaction_user_mismatch");
+    if (!rolesInTransactionByteIdentical) rollbackKnown("wf540_bootstrap_cas_transaction_role_mismatch");
     return {
       conditionalUpdateAffectedOne, inTransactionByteIdentical, roleTuplesByteIdentical,
       rolesInTransactionByteIdentical, rolesShareLocked:true, transactionLocked:true,
     };
   });
 } catch (error) {
-  if (error !== knownRollback) throw error;
+  const knownReason = rollbackReasons.find((reason)=>error === knownRollbacks[reason]) ?? null;
+  if (knownReason === null) throw error;
+  rollbackReason = knownReason;
 }
 let output;
 if (transactionProof === null) {
-  output = { kind:"rolled-back",proof:null };
+  if (rollbackReason === null) throw new Error("wf540_bootstrap_cas_reason_absent");
+  output = { kind:"rolled-back",proof:null,reason:rollbackReason };
 } else {
+  if (rollbackReason !== null) throw new Error("wf540_bootstrap_cas_reason_unexpected");
   const afterRows = await db.select().from(users).where(eq(users.id,input.userId)).limit(2);
   const afterRoles = await selectRoles(db,false);
   const afterUser = afterRows.length === 1 ? serializeUser(afterRows[0]) : null;
@@ -221,13 +248,14 @@ if (transactionProof === null) {
     ...transactionProof,afterCommitByteIdentical,completeRowByteIdentical,restored,
     roleTuplesByteIdentical,
   };
-  output = { kind:restored ? "committed" : "committed-proof-failed",proof };
+  output = { kind:restored ? "committed" : "committed-proof-failed",proof,reason:null };
 }` +
   BRIDGE_OUTPUT_WRITER;
 
 export {
   API_SESSION_OBSERVATION_BRIDGE_SOURCE,
   BOOTSTRAP_BASELINE_READ_BRIDGE_SOURCE,
+  BOOTSTRAP_CAS_ROLLBACK_REASONS,
   BOOTSTRAP_CAS_RESTORE_BRIDGE_SOURCE,
   BOOTSTRAP_LOGIN_OBSERVATION_BRIDGE_SOURCE,
   bootstrapCasPredicates,

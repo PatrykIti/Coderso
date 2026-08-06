@@ -26,6 +26,7 @@ import {
 } from "../bun-bridge-resource-sources.mjs";
 import {
   BOOTSTRAP_BASELINE_READ_BRIDGE_SOURCE,
+  BOOTSTRAP_CAS_ROLLBACK_REASONS,
   BOOTSTRAP_CAS_RESTORE_BRIDGE_SOURCE,
   BOOTSTRAP_LOGIN_OBSERVATION_BRIDGE_SOURCE,
 } from "../bridge-sources/bootstrap.mjs";
@@ -186,15 +187,19 @@ export function createResourceBridgeOutputValidators(dependencies) {
   }
 
   function validateBootstrapRestoreBridgeOutput(_state, descriptor, _input, value) {
-    validateExactBridgeKeys(value, ["kind", "proof"], descriptor.operationId + " output");
+    validateExactBridgeKeys(value, ["kind", "proof", "reason"], descriptor.operationId + " output");
     invariant(
       ["committed", "committed-proof-failed", "rolled-back"].includes(value.kind),
       descriptor.operationId + " closed restore outcome kind drift"
     );
     if (value.kind === "rolled-back") {
-      invariant(value.proof === null, descriptor.operationId + " rollback proof drift");
+      invariant(
+        value.proof === null && BOOTSTRAP_CAS_ROLLBACK_REASONS.includes(value.reason),
+        descriptor.operationId + " rollback reason/proof drift"
+      );
       return value;
     }
+    invariant(value.reason === null, descriptor.operationId + " committed rollback reason drift");
     const proofKeys = [
       "afterCommitByteIdentical",
       "completeRowByteIdentical",

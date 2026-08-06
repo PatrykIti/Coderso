@@ -40,6 +40,30 @@ const BUN_BRIDGE_ENV_PROFILES = deepFreezeExact({
   },
 });
 
+let persistentBunBridgeDispatcher = null;
+
+function installPersistentBunBridgeDispatcher(dispatcher) {
+  invariant(
+    typeof dispatcher === "function" && persistentBunBridgeDispatcher === null,
+    "persistent Bun bridge dispatcher binding drift"
+  );
+  persistentBunBridgeDispatcher = dispatcher;
+  let installed = true;
+  return () => {
+    if (!installed) return;
+    installed = false;
+    invariant(
+      persistentBunBridgeDispatcher === dispatcher,
+      "persistent Bun bridge dispatcher authority drift"
+    );
+    persistentBunBridgeDispatcher = null;
+  };
+}
+
+function persistentBunBridgeDispatcherIsInstalled() {
+  return persistentBunBridgeDispatcher !== null;
+}
+
 function createBunBridgeTransport({
   assertNoSymlinkAncestors,
   readStableArtifactIdentity,
@@ -346,6 +370,28 @@ function createBunBridgeTransport({
         path.isAbsolute(executable.executablePath),
       "Bun bridge canonical executable/cwd binding drift"
     );
+    // The bootstrap restore is the sole critical compensating mutation in the smoke. Keep it on a
+    // fresh one-shot Bun boundary even when the ordinary bridge is persistent: its source embeds a
+    // predicate builder whose Function#toString bytes differ between the Node orchestrator and Bun,
+    // so a cross-runtime persistent registry cannot prove the same source digest. One fresh process
+    // per run preserves the canonical legacy isolation without giving up persistent workers for the
+    // hundreds of ordinary reads and cleanup operations.
+    const requiresFreshBootstrapCas =
+      descriptor.operationId === "resource/bootstrap-cas-restore";
+    if (persistentBunBridgeDispatcher !== null && !requiresFreshBootstrapCas) {
+      const value = await persistentBunBridgeDispatcher(
+        Object.freeze({
+          descriptor,
+          environment: buildBridgeEnvironment(state, descriptor.envProfileId),
+          executablePath: executable.executablePath,
+          executionBoundaryObserver,
+          input,
+          rootPath: executable.rootPath,
+        })
+      );
+      assertPlainJsonValue(value, "persistent Bun bridge output");
+      return value;
+    }
     const args = ["--no-env-file", "--cwd", executable.corePath, "--eval", descriptor.source];
     const execution = await runRetainedProcessGroup({
       file: executable.executablePath,
@@ -358,16 +404,18 @@ function createBunBridgeTransport({
       maxStdoutBytes: descriptor.maxStdoutBytes,
       maxStderrBytes: descriptor.maxStderrBytes,
     });
-    invariant(
+    const executionClosedCleanly =
       !execution.timedOut &&
-        !execution.spawnError &&
-        execution.completion.code === 0 &&
-        !execution.stdout.exceeded &&
-        !execution.stderr.exceeded &&
-        execution.stderr.bytes.length === 0 &&
-        execution.termination.absent === true,
-      "descriptor-bound Bun bridge child failed"
-    );
+      !execution.spawnError &&
+      execution.completion.code === 0 &&
+      !execution.stdout.exceeded &&
+      !execution.stderr.exceeded &&
+      execution.stderr.bytes.length === 0 &&
+      execution.termination.absent === true;
+    if (!executionClosedCleanly && requiresFreshBootstrapCas) {
+      throw new Error("wf540_bootstrap_cas_one_shot_failed");
+    }
+    invariant(executionClosedCleanly, "descriptor-bound Bun bridge child failed");
     const text = decodeBoundedUtf8(
       execution.stdout.bytes,
       "Bun bridge output",
@@ -383,6 +431,61 @@ function createBunBridgeTransport({
     return value;
   }
 
+  async function runBunBridgeBatch(state, requests) {
+    invariant(
+      Array.isArray(requests) &&
+        requests.length === 18 &&
+        requests.every(
+          (request, index) =>
+            request !== null &&
+            typeof request === "object" &&
+            Object.keys(request).join(",") === "descriptor,input,logicalId" &&
+            request.logicalId === "baseline/item-" + String(index)
+        ),
+      "Bun bridge baseline batch request drift"
+    );
+    const prepared = requests.map(({ descriptor, input }) =>
+      prepareBunBridgeDispatch(state, descriptor, input)
+    );
+    const executable = await revalidateBunExecutableAuthority(state);
+    if (
+      persistentBunBridgeDispatcher !== null &&
+      typeof persistentBunBridgeDispatcher.dispatchBatch === "function"
+    ) {
+      const values = await persistentBunBridgeDispatcher.dispatchBatch(
+        Object.freeze({
+          kind: "baseline",
+          wave: 0,
+          items: Object.freeze(
+            prepared.map(({ descriptor }, index) =>
+              Object.freeze({
+                descriptor,
+                environment: buildBridgeEnvironment(state, descriptor.envProfileId),
+                executablePath: executable.executablePath,
+                executionBoundaryObserver: null,
+                input: requests[index].input,
+                rootPath: executable.rootPath,
+                logicalId: requests[index].logicalId,
+                cleanup: null,
+              })
+            )
+          ),
+        })
+      );
+      invariant(
+        Array.isArray(values) && values.length === requests.length,
+        "persistent Bun bridge baseline batch result drift"
+      );
+      for (const value of values) assertPlainJsonValue(value, "persistent Bun bridge batch output");
+      return deepFreezeExact(values);
+    }
+    const values = [];
+    for (const request of requests) {
+      values.push(await runBunBridge(state, request.descriptor, request.input));
+    }
+    return deepFreezeExact(values);
+  }
+
   return {
     PRIVATE_BUN_EXECUTABLE_AUTHORITY,
     assertPreparedBunBridgeFrameExact,
@@ -391,8 +494,14 @@ function createBunBridgeTransport({
     prepareBunBridgeDispatch,
     resolveValidatedBunExecutable,
     runBunBridge,
+    runBunBridgeBatch,
     validateBunExecutableAuthorityObservation,
   };
 }
 
-export { BUN_BRIDGE_ENV_PROFILES, createBunBridgeTransport };
+export {
+  BUN_BRIDGE_ENV_PROFILES,
+  createBunBridgeTransport,
+  installPersistentBunBridgeDispatcher,
+  persistentBunBridgeDispatcherIsInstalled,
+};

@@ -624,6 +624,38 @@ export async function runConstructionCleanupSelfTest({
     5,
     "phase_failed"
   );
+  // The selected phase and its reason are one attribution unit. An unclassified phase-8 failure
+  // must not acquire the projectable reason of a later phase-9 consequence merely because the
+  // aggregate's bounded nested walk can see both members.
+  const aggregateOpaquePhaseEightFailure = retainPrivateCleanupFailureDiagnosticNeverThrow(
+    new Error(phaseThreeCleanupPrivateMarker + ":phase-eight-unclassified"),
+    8,
+    "bootstrap_cas_failed"
+  );
+  const aggregateNamedPhaseNineFailure = retainPrivateCleanupFailureDiagnosticNeverThrow(
+    new Error(phaseInvariantMessage),
+    9,
+    "phase_failed"
+  );
+  const aggregateCrossPhaseFailures = [
+    aggregateOpaquePhaseEightFailure,
+    aggregateNamedPhaseNineFailure,
+  ];
+  const aggregateCrossPhaseLine = await emitCleanupOnlyDiagnostic(
+    retainPrivateCleanupAggregateDiagnosticNeverThrow(
+      new AggregateError(aggregateCrossPhaseFailures, "TASK-540 deterministic cleanup failed"),
+      aggregateCrossPhaseFailures,
+      0
+    ),
+    8,
+    "bootstrap_cas_failed"
+  );
+  const aggregateCrossPhaseExpected =
+    canonicalJson({
+      code: TASK_FAILURE.code,
+      cleanupPhase: 8,
+      cleanupFailureClass: "bootstrap_cas_failed",
+    }) + "\n";
   // A failure the frozen vocabulary cannot name abstains rather than guessing, so every diagnostic
   // that exists today keeps its exact bytes.
   const opaqueCleanupOnlyLine = await emitCleanupOnlyDiagnostic(
@@ -640,6 +672,7 @@ export async function runConstructionCleanupSelfTest({
   invariant(
     namedCleanupOnlyLine === namedCleanupOnlyExpected &&
       aggregateCleanupOnlyLine === namedCleanupOnlyExpected &&
+      aggregateCrossPhaseLine === aggregateCrossPhaseExpected &&
       opaqueCleanupOnlyLine === opaqueCleanupOnlyExpected,
     "cleanup failure reason attribution drift"
   );
@@ -679,7 +712,7 @@ export async function runConstructionCleanupSelfTest({
       !overflowCleanupLine.includes("cleanupFailureReason"),
     "cleanup reason byte-bound fallback drift"
   );
-  incrementNegativeCases(3);
+  incrementNegativeCases(4);
 
   let preflightConstructionAuthority = null;
   const preflightConstructionDiagnosticLines = [];

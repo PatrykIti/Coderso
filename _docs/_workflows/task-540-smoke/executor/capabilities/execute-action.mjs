@@ -13,6 +13,66 @@ import { acquireScreenshotIdentity } from "../browser-output-authority.mjs";
 import { parseRegisteredOutput } from "../output-parser.mjs";
 import { canonicalManifestRuntimeOperation } from "../../runtime/operation-router.mjs";
 
+export function createPrepareBrowserAction(dependencies) {
+  exactOwnKeys(
+    dependencies,
+    [
+      "PRIVATE_RUNTIME",
+      "browserWorkspace",
+      "buildBrowserInvocation",
+      "buildPrivateBrowserInvocationWithAuthSettlementBoundary",
+      "compileActionExecutionSpec",
+      "outputContext",
+      "plan",
+      "root",
+      "routeReceiptMetadata",
+      "state",
+    ],
+    "browser action preparation dependencies",
+    { plain: true }
+  );
+  const {
+    PRIVATE_RUNTIME,
+    browserWorkspace,
+    buildBrowserInvocation,
+    buildPrivateBrowserInvocationWithAuthSettlementBoundary,
+    compileActionExecutionSpec,
+    outputContext,
+    plan,
+    root,
+    routeReceiptMetadata,
+    state,
+  } = dependencies;
+  return function prepareBrowserAction(action, captures) {
+    let executionSpec;
+    let routeMetadata;
+    let invocation;
+    ({ executionSpec, routeMetadata, invocation } =
+      buildPrivateBrowserInvocationWithAuthSettlementBoundary(action, () => {
+        executionSpec = compileActionExecutionSpec(action);
+        routeMetadata = routeReceiptMetadata(
+          action,
+          executionSpec,
+          plan,
+          captures,
+          PRIVATE_RUNTIME.get(state)
+        );
+        invocation = buildBrowserInvocation(
+          action,
+          executionSpec,
+          captures,
+          root,
+          browserWorkspace.cwd,
+          plan,
+          outputContext(action, captures),
+          PRIVATE_RUNTIME.get(state)
+        );
+        return { executionSpec, routeMetadata, invocation };
+      }));
+    return { executionSpec, routeMetadata, invocation };
+  };
+}
+
 export function createExecuteAction(dependencies) {
   // The capability state, the manifest plan, the local command authority, the private browser
   // workspace, the runtime operation handler registry and every private browser failure-frame
@@ -43,6 +103,7 @@ export function createExecuteAction(dependencies) {
       "outputContext",
       "parsePrivateBrowserSuccessWithAuthSettlementBoundary",
       "plan",
+      "prepareBrowserAction",
       "rememberFixtureBindings",
       "root",
       "routeReceiptMetadata",
@@ -50,6 +111,7 @@ export function createExecuteAction(dependencies) {
       "runtimeHandlers",
       "stageIntentionalPresentationOverrideActionReceipt",
       "state",
+      "executePreparedBrowserProgram",
     ],
     "capability action execution dependencies",
     { plain: true }
@@ -77,6 +139,7 @@ export function createExecuteAction(dependencies) {
     outputContext,
     parsePrivateBrowserSuccessWithAuthSettlementBoundary,
     plan,
+    prepareBrowserAction,
     rememberFixtureBindings,
     root,
     routeReceiptMetadata,
@@ -84,6 +147,7 @@ export function createExecuteAction(dependencies) {
     runtimeHandlers,
     stageIntentionalPresentationOverrideActionReceipt,
     state,
+    executePreparedBrowserProgram,
   } = dependencies;
   invariant(
     PRIVATE_RUNTIME instanceof WeakMap &&
@@ -113,10 +177,12 @@ export function createExecuteAction(dependencies) {
       normalizePrivateBrowserOutputWithAuthSettlementBoundary,
       outputContext,
       parsePrivateBrowserSuccessWithAuthSettlementBoundary,
+      prepareBrowserAction,
       rememberFixtureBindings,
       routeReceiptMetadata,
       runObservedBootstrapLoginAttempt,
       stageIntentionalPresentationOverrideActionReceipt,
+      executePreparedBrowserProgram,
     ].every((dependency) => typeof dependency === "function"),
     "capability action execution helpers are not callable"
   );
@@ -219,39 +285,14 @@ export function createExecuteAction(dependencies) {
       });
     }
 
-    let executionSpec;
-    let routeMetadata;
-    let invocation;
-    ({ executionSpec, routeMetadata, invocation } =
-      buildPrivateBrowserInvocationWithAuthSettlementBoundary(action, () => {
-        executionSpec = compileActionExecutionSpec(action);
-        routeMetadata = routeReceiptMetadata(
-          action,
-          executionSpec,
-          plan,
-          captures,
-          PRIVATE_RUNTIME.get(state)
-        );
-        invocation = buildBrowserInvocation(
-          action,
-          executionSpec,
-          captures,
-          root,
-          browserWorkspace.cwd,
-          plan,
-          outputContext(action, captures),
-          PRIVATE_RUNTIME.get(state)
-        );
-        return { executionSpec, routeMetadata, invocation };
-      }));
+    const { executionSpec, routeMetadata, invocation } = prepareBrowserAction(action, captures);
     let commandResult;
     if (executable.type === "browser-native" && executable.operationId === "open-about-blank") {
       state.browserMayExist = true;
       state.taskTrafficMayExist = true;
     }
     try {
-      const executeBrowserProgram = () =>
-        authority.executeProgram({
+      const logicalRequest = {
           action,
           program: "playwright-cli",
           args: invocation.args,
@@ -274,6 +315,15 @@ export function createExecuteAction(dependencies) {
           stdoutDiscarded: invocation.stdoutDiscarded ?? false,
           cwd: browserWorkspace.cwd,
           env: browserWorkspace.environment,
+        };
+      const executeBrowserProgram = () =>
+        executePreparedBrowserProgram({
+          actionId: action.id,
+          executableType: executable.type,
+          action,
+          captures,
+          prepared: { executionSpec, routeMetadata, invocation },
+          logicalRequest,
         });
       commandResult =
         action.id === "set-011-login-submit"

@@ -249,6 +249,7 @@ const {
   registry: responseLostRegistry,
   resolveFixtureValue,
   runBunBridgeOperation,
+  runBunBridgeOperationBatch,
 });
 const {
   discoverOneResponseLostCreate,
@@ -395,6 +396,7 @@ const {
   prepareBunBridgeDispatch,
   resolveValidatedBunExecutable,
   runBunBridge,
+  runBunBridgeBatch,
   validateBunExecutableAuthorityObservation,
 } = createBunBridgeTransport({
   assertNoSymlinkAncestors,
@@ -516,6 +518,27 @@ async function runBunBridgeOperation(state, operationId, input, executionBoundar
   exactOwnKeys(input, descriptor.inputKeys, operationId + " Bun bridge input", { plain: true });
   const value = await runBunBridge(state, descriptor, input, executionBoundaryObserver);
   return validateBunBridgeOutput(state, descriptor, input, value);
+}
+
+async function runBunBridgeOperationBatch(state, requests) {
+  invariant(
+    Array.isArray(requests) && requests.length === 18,
+    "response-lost Bun bridge batch cardinality drift"
+  );
+  const prepared = requests.map(({ operationId, input }, index) => {
+    const descriptor = bunBridgeDescriptorForOperation(state, operationId);
+    exactOwnKeys(input, descriptor.inputKeys, operationId + " Bun bridge input", { plain: true });
+    return { descriptor, input, logicalId: "baseline/item-" + String(index) };
+  });
+  const values = await runBunBridgeBatch(state, prepared);
+  return values.map((value, index) =>
+    validateBunBridgeOutput(
+      state,
+      prepared[index].descriptor,
+      prepared[index].input,
+      value
+    )
+  );
 }
 
 const { runtimeStoragePreflight } = createStoragePreflightRuntime({

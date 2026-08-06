@@ -1,0 +1,70 @@
+import { pathToFileURL } from "node:url";
+import { resolveInsideRoot, SmokeError, type SmokeInput, type SmokeSuiteId } from "./contracts";
+import { isSmokeAdapter, type SmokeAdapter } from "./adapters/types";
+
+export interface SmokeSuiteDescriptor {
+  readonly id: SmokeSuiteId;
+  readonly adapterPath: string;
+  loadFixedAdapter(root: string): Promise<SmokeAdapter>;
+}
+
+const ADAPTER_PATHS: Readonly<Record<SmokeSuiteId, string>> = Object.freeze({
+  "task-540": "scripts/runtime-smoke/adapters/task-540.ts",
+  "widget-contract": "scripts/runtime-smoke/adapters/widget-contract.ts",
+  "production-boundary": "scripts/runtime-smoke/adapters/production-boundary.ts",
+});
+
+function adapterDefault(loaded: unknown): unknown {
+  if (loaded === null || typeof loaded !== "object") return undefined;
+  const direct = Reflect.get(loaded, "default");
+  if (isSmokeAdapter(direct)) return direct;
+  if (direct === null || typeof direct !== "object") return direct;
+  return Reflect.get(direct, "default");
+}
+
+function descriptor(id: SmokeSuiteId): SmokeSuiteDescriptor {
+  const adapterPath = ADAPTER_PATHS[id];
+  return Object.freeze({
+    id,
+    adapterPath,
+    async loadFixedAdapter(root: string): Promise<SmokeAdapter> {
+      const absolute = resolveInsideRoot(root, adapterPath, "adapter path");
+      let loaded: unknown;
+      try {
+        loaded = await import(pathToFileURL(absolute).href);
+      } catch (error) {
+        throw new SmokeError("smoke_adapter_unavailable", `${id} adapter is unavailable`, {
+          cause: error,
+        });
+      }
+      // tsx exposes one CJS-interop default wrapper when this fixed TypeScript module is loaded
+      // by the Node-owned orchestrator. Bun exposes the adapter directly. Accept exactly those
+      // two shapes and let the strict adapter contract reject everything else.
+      const candidate = adapterDefault(loaded);
+      if (!isSmokeAdapter(candidate) || candidate.suiteId !== id) {
+        throw new SmokeError("smoke_adapter_unavailable", `${id} adapter contract is invalid`);
+      }
+      return candidate;
+    },
+  });
+}
+
+const DESCRIPTORS = new Map<SmokeSuiteId, SmokeSuiteDescriptor>([
+  ["task-540", descriptor("task-540")],
+  ["widget-contract", descriptor("widget-contract")],
+  ["production-boundary", descriptor("production-boundary")],
+]);
+
+export const staticSmokeRegistry = Object.freeze({
+  ids(): readonly SmokeSuiteId[] {
+    return Object.freeze([...DESCRIPTORS.keys()]);
+  },
+  require(input: Pick<SmokeInput, "suite"> | SmokeSuiteId): SmokeSuiteDescriptor {
+    const id = typeof input === "string" ? input : input.suite;
+    const found = DESCRIPTORS.get(id);
+    if (found === undefined) {
+      throw new SmokeError("smoke_argument_invalid", "suite is not registered");
+    }
+    return found;
+  },
+});

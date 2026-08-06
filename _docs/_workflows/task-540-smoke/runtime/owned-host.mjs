@@ -1,5 +1,5 @@
 import { spawn } from "node:child_process";
-import { readFile, readdir, readlink } from "node:fs/promises";
+import { realpath, readFile, readdir, readlink, stat } from "node:fs/promises";
 import path from "node:path";
 
 import { HOST_READY_TIMEOUT_MS } from "../executor/config.mjs";
@@ -22,6 +22,38 @@ export function createOwnedHostRuntime({
   terminateRetainedProcessGroup,
 }) {
   const SMOKE_PORTS = Object.freeze([3000, 5173, 5174]);
+
+  async function resolveNodeRunner(pathValue, root) {
+    invariant(
+      typeof pathValue === "string" && pathValue.length > 0 && !pathValue.includes("\0"),
+      "Node runner PATH authority is invalid"
+    );
+    const entries = pathValue.split(path.delimiter);
+    invariant(
+      entries.length > 0 &&
+        entries.length <= 128 &&
+        entries.every((entry) => path.isAbsolute(entry) && path.resolve(entry) === entry),
+      "Node runner PATH projection drift"
+    );
+    for (const directory of entries) {
+      try {
+        const executable = await realpath(path.join(directory, "node"));
+        const identity = await stat(executable);
+        invariant(
+          path.isAbsolute(executable) &&
+            path.basename(executable) === "node" &&
+            identity.isFile() &&
+            (identity.mode & 0o111) !== 0 &&
+            !executable.startsWith(root + path.sep + "node_modules" + path.sep),
+          "Node runner identity drift"
+        );
+        return executable;
+      } catch (error) {
+        if (!error || !["ENOENT", "ENOTDIR", "EACCES"].includes(error.code)) throw error;
+      }
+    }
+    invariant(false, "Node runner is unavailable from the exact PATH");
+  }
 
   async function portsAreAbsent() {
     const expected = new Set(
@@ -184,8 +216,12 @@ export function createOwnedHostRuntime({
   async function startOwnedHost(state) {
     invariant(state.host === null, "smoke host is already owned");
     await proveSmokePortsAbsentTwice();
+    // The host runner audits the raw OS environment with Node data descriptors. The public
+    // runtime-smoke entry point is Bun, whose synthetic process.env.TZ accessor would otherwise
+    // make the unchanged Node-owned host contract fail before any child starts.
+    const nodeRunner = await resolveNodeRunner(state.hostEnvironment.PATH, state.root);
     const child = spawn(
-      process.execPath,
+      nodeRunner,
       [path.join(state.root, "_docs/_workflows/task-540-smoke-host.mjs"), "--serve", state.root],
       {
         cwd: state.root,

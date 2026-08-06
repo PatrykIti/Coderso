@@ -312,19 +312,14 @@ export function createCommandAuthorityRuntime({
         sensitiveValues,
         processRunner,
         rawByReceipt: new WeakMap(),
+        batchProofs: new WeakMap(),
       });
     }
 
-    async executeProgram({
+    async executePhysicalProgram({
       action,
       program,
       args,
-      sequence,
-      operation,
-      routeKey,
-      assertionName,
-      displayArgs = args,
-      stdoutDiscarded = false,
       cwd,
       env,
       stdinBytes = null,
@@ -334,10 +329,6 @@ export function createCommandAuthorityRuntime({
       invariant(
         Array.isArray(args) && args.every((value) => typeof value === "string"),
         "argv invalid"
-      );
-      invariant(
-        Array.isArray(displayArgs) && displayArgs.every((value) => typeof value === "string"),
-        "display argv invalid"
       );
       const state = PRIVATE_AUTHORITY.get(this);
       invariant(
@@ -350,7 +341,7 @@ export function createCommandAuthorityRuntime({
       );
       let before;
       try {
-        before = await state.snapshotRepository();
+        before = await state.snapshotRepository(action.repositoryMutationPolicy.paths);
       } catch (cause) {
         failPrivateAuthSettlementStage(
           action,
@@ -380,12 +371,38 @@ export function createCommandAuthorityRuntime({
       let after = null;
       let repositoryFailure = null;
       try {
-        after = await state.snapshotRepository();
+        after = await state.snapshotRepository(action.repositoryMutationPolicy.paths);
         assertRepositoryMutationPolicy(action, before, after);
       } catch (cause) {
         repositoryFailure = cause;
       }
       const outcome = inspectRetainedProcessOutcome(execution, program);
+      return { state, execution, outcome, before, after, repositoryFailure };
+    }
+
+    projectProgramOutcome(
+      {
+        action,
+        program,
+        args,
+        sequence,
+        operation,
+        routeKey,
+        assertionName,
+        displayArgs = args,
+        stdoutDiscarded = false,
+      },
+      { state, execution, outcome, before, after, repositoryFailure }
+    ) {
+      invariant(ALLOWED_PROGRAMS.has(program), "program is not allowlisted");
+      invariant(
+        Array.isArray(args) && args.every((value) => typeof value === "string"),
+        "argv invalid"
+      );
+      invariant(
+        Array.isArray(displayArgs) && displayArgs.every((value) => typeof value === "string"),
+        "display argv invalid"
+      );
       const exactAuthFailureClass =
         program === "playwright-cli" &&
         repositoryFailure === null &&
@@ -515,6 +532,165 @@ export function createCommandAuthorityRuntime({
       }
     }
 
+    async executeProgram({
+      action,
+      program,
+      args,
+      sequence,
+      operation,
+      routeKey,
+      assertionName,
+      displayArgs = args,
+      stdoutDiscarded = false,
+      cwd,
+      env,
+      stdinBytes = null,
+      timeoutMs = COMMAND_TIMEOUT_MS,
+    }) {
+      const physical = await this.executePhysicalProgram({
+        action,
+        program,
+        args,
+        cwd,
+        env,
+        stdinBytes,
+        timeoutMs,
+      });
+      return this.projectProgramOutcome(
+        {
+          action,
+          program,
+          args,
+          sequence,
+          operation,
+          routeKey,
+          assertionName,
+          displayArgs,
+          stdoutDiscarded,
+        },
+        physical
+      );
+    }
+
+    async executeBatchProgram({ attributionAction, actions, args, cwd, env, timeoutMs }) {
+      invariant(
+        Array.isArray(actions) &&
+          actions.length > 0 &&
+          actions.length <= 64 &&
+          actions[0] === attributionAction &&
+          actions.every(
+            (action) =>
+              action?.executable?.type === "browser-run-code" &&
+              action.repositoryMutationPolicy?.mode === "none" &&
+              action.repositoryMutationPolicy.paths.length === 0
+          ),
+        "browser batch action authority is invalid"
+      );
+      const physical = await this.executePhysicalProgram({
+        action: attributionAction,
+        program: "playwright-cli",
+        args,
+        cwd,
+        env,
+        timeoutMs,
+      });
+      const { state, execution, outcome, before, after, repositoryFailure } = physical;
+      const sensitiveOutput =
+        (outcome.stdoutBytes !== null &&
+          rawBytesAreSensitive(outcome.stdoutBytes, state.sensitiveValues)) ||
+        (outcome.stderrBytes !== null &&
+          rawBytesAreSensitive(outcome.stderrBytes, state.sensitiveValues));
+      invariant(!sensitiveOutput, "local command emitted sensitive bytes");
+      invariant(outcome.shapeIsCanonical, "retained process result shape is invalid");
+      if (repositoryFailure !== null) {
+        failPrivateAuthSettlementStage(
+          attributionAction,
+          "repository_boundary_failed",
+          { cause: repositoryFailure, execution },
+          "repository boundary failed"
+        );
+      }
+      const processFailureClass = classifySafeRetainedProcessOutcome(outcome);
+      if (processFailureClass !== null) {
+        const browserErrorToken =
+          processFailureClass === "browser_error_frame"
+            ? projectBrowserErrorFrameToken(outcome.stdoutBytes)
+            : null;
+        failPrivateAuthSettlementStage(
+          attributionAction,
+          processFailureClass,
+          { execution },
+          browserErrorToken ?? "local command failed"
+        );
+      }
+      invariant(
+        Buffer.isBuffer(outcome.stdoutBytes) && Buffer.isBuffer(outcome.stderrBytes),
+        "browser batch buffers are absent"
+      );
+      const proof = Object.freeze({});
+      state.batchProofs.set(proof, {
+        actions: Object.freeze([...actions]),
+        nextIndex: 0,
+        firstSequence: null,
+        execution,
+        before,
+        after,
+      });
+      return Object.freeze({ proof, stdout: outcome.stdoutBytes, stderr: outcome.stderrBytes });
+    }
+
+    projectBatchActionResult({
+      proof,
+      request,
+      stdout,
+      stderr = Buffer.alloc(0),
+      terminal = false,
+    }) {
+      const state = PRIVATE_AUTHORITY.get(this);
+      const batch = state.batchProofs.get(proof);
+      invariant(batch !== undefined, "browser batch proof is invalid or foreign");
+      const action = batch.actions[batch.nextIndex];
+      invariant(
+        action !== undefined &&
+          request?.action === action &&
+          request.program === "playwright-cli" &&
+          request.action.executable.type === "browser-run-code" &&
+          Buffer.isBuffer(stdout) &&
+          Buffer.isBuffer(stderr) &&
+          stdout.length <= MAX_STREAM_BYTES &&
+          stderr.length <= MAX_STREAM_BYTES &&
+          typeof terminal === "boolean",
+        "browser batch projection is invalid"
+      );
+      if (batch.firstSequence === null) batch.firstSequence = request.sequence;
+      invariant(
+        request.sequence === batch.firstSequence + batch.nextIndex,
+        "browser batch receipt sequence drifted"
+      );
+      batch.nextIndex += 1;
+      invariant(
+        terminal || batch.nextIndex < batch.actions.length,
+        "browser batch terminal frame is absent"
+      );
+      if (terminal) state.batchProofs.delete(proof);
+      const execution = Object.freeze({
+        completion: Object.freeze({ code: 0, signal: null }),
+        timedOut: false,
+        spawnError: false,
+        stdout: Object.freeze({ bytes: stdout, exceeded: false }),
+        stderr: Object.freeze({ bytes: stderr, exceeded: false }),
+        termination: Object.freeze({ absent: true }),
+      });
+      return this.projectProgramOutcome(request, {
+        state,
+        execution: batch.execution,
+        outcome: inspectRetainedProcessOutcome(execution, request.program),
+        before: batch.before,
+        after: batch.after,
+        repositoryFailure: null,
+      });
+    }
+
     async executeLocal({
       action,
       sequence,
@@ -527,7 +703,7 @@ export function createCommandAuthorityRuntime({
       invariant(typeof operation === "string" && operation.length > 0, "local operation invalid");
       invariant(typeof run === "function", "local operation callback invalid");
       const state = PRIVATE_AUTHORITY.get(this);
-      const before = await state.snapshotRepository();
+      const before = await state.snapshotRepository(action.repositoryMutationPolicy.paths);
       let rawValue;
       let cause = null;
       try {
@@ -535,7 +711,7 @@ export function createCommandAuthorityRuntime({
       } catch (error) {
         cause = error;
       }
-      const after = await state.snapshotRepository();
+      const after = await state.snapshotRepository(action.repositoryMutationPolicy.paths);
       assertRepositoryMutationPolicy(action, before, after);
       if (cause !== null) throw cause;
       const raw = Buffer.from(canonicalJson(rawValue) + "\n");
