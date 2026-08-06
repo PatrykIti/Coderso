@@ -39,7 +39,6 @@ type DbHarness = {
   buildManagedResourceEvidenceQuery: PersistenceModule["buildManagedResourceEvidenceQuery"];
   createLegacyInstallLedger: PersistenceModule["createLegacyInstallLedger"];
   getSolutionKitInstallRun: PersistenceModule["getSolutionKitInstallRun"];
-  runFullSiteInstallLockLifecycle: PersistenceModule["runFullSiteInstallLockLifecycle"];
   withFullSiteInstallLocks: PersistenceModule["withFullSiteInstallLocks"];
   solutionKitInstallItems: SchemaModule["solutionKitInstallItems"];
   solutionKitInstallRuns: SchemaModule["solutionKitInstallRuns"];
@@ -71,7 +70,6 @@ const loadDbHarness = async (): Promise<DbHarness> => {
     buildManagedResourceEvidenceQuery: persistence.buildManagedResourceEvidenceQuery,
     createLegacyInstallLedger: persistence.createLegacyInstallLedger,
     getSolutionKitInstallRun: persistence.getSolutionKitInstallRun,
-    runFullSiteInstallLockLifecycle: persistence.runFullSiteInstallLockLifecycle,
     withFullSiteInstallLocks: persistence.withFullSiteInstallLocks,
     solutionKitInstallItems: schemaModule.solutionKitInstallItems,
     solutionKitInstallRuns: schemaModule.solutionKitInstallRuns,
@@ -136,9 +134,9 @@ const DB_HARNESS_STAGES = createDbHarnessStages<DbHarness>(
 const databaseUrlConfigured = isDatabaseUrlConfigured(process.env.DATABASE_URL);
 const dbHarness = databaseUrlConfigured ? await initializeDbHarness(DB_HARNESS_STAGES) : null;
 const testIfDb = databaseUrlConfigured ? test : test.skip;
-const createDeferred = () => {
-  let resolve!: () => void;
-  const promise = new Promise<void>((next) => {
+const createDeferred = <T = void>() => {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((next) => {
     resolve = next;
   });
   return { promise, resolve };
@@ -507,196 +505,6 @@ testIfDb("managed evidence uses one bounded executable SELECT", async () => {
   }
   expect(await query).toEqual([]);
 });
-testIfDb(
-  "lock lifecycle validates both unlock acknowledgements and completes reverse cleanup",
-  async () => {
-    const harness = dbHarness;
-    if (!harness) throw new Error("db_test_unavailable");
-    for (const failedUnlock of ["package", "global"] as const) {
-      const events: string[] = [];
-      const result = harness.runFullSiteInstallLockLifecycle(
-        {
-          reserveSession: async () => {
-            events.push("reserve");
-            return {
-              acquireGlobal: async () => {
-                events.push("acquire-global");
-              },
-              acquirePackage: async () => {
-                events.push("acquire-package");
-              },
-              releasePackage: async () => {
-                events.push("release-package");
-                return failedUnlock !== "package";
-              },
-              releaseGlobal: async () => {
-                events.push("release-global");
-                return failedUnlock !== "global";
-              },
-              releaseReservation: () => {
-                events.push("release-reservation");
-              },
-            };
-          },
-          endClient: async () => {
-            events.push("end-client");
-          },
-        },
-        async () => {
-          events.push("execute");
-          return "done";
-        }
-      );
-      await expect(result).rejects.toThrow("site_package_lock_release_failed");
-      expect(events).toEqual([
-        "reserve",
-        "acquire-global",
-        "acquire-package",
-        "execute",
-        "release-package",
-        "release-global",
-        "release-reservation",
-        "end-client",
-      ]);
-    }
-  }
-);
-testIfDb("lock lifecycle cleans up every acquisition boundary", async () => {
-  const harness = dbHarness;
-  if (!harness) throw new Error("db_test_unavailable");
-  for (const failedStep of ["reserve", "global", "package", null] as const) {
-    const events: string[] = [];
-    const failure = failedStep ? new Error(`${failedStep}_failed`) : null;
-    const result = harness
-      .runFullSiteInstallLockLifecycle(
-        {
-          reserveSession: async () => {
-            events.push("reserve");
-            if (failedStep === "reserve") throw failure;
-            return {
-              acquireGlobal: async () => {
-                events.push("acquire-global");
-                if (failedStep === "global") throw failure;
-              },
-              acquirePackage: async () => {
-                events.push("acquire-package");
-                if (failedStep === "package") throw failure;
-              },
-              releasePackage: async () => {
-                events.push("release-package");
-                return true;
-              },
-              releaseGlobal: async () => {
-                events.push("release-global");
-                return true;
-              },
-              releaseReservation: () => {
-                events.push("release-reservation");
-              },
-            };
-          },
-          endClient: async () => {
-            events.push("end-client");
-          },
-        },
-        async () => {
-          events.push("execute");
-          return "done";
-        }
-      )
-      .then(
-        (value) => ({ ok: true as const, value, error: null }),
-        (error: unknown) => ({ ok: false as const, value: null, error })
-      );
-    const outcome = await result;
-    if (failure) {
-      expect(outcome.ok).toBe(false);
-      expect(outcome.error).toBe(failure);
-    } else {
-      expect(outcome).toEqual({ ok: true, value: "done", error: null });
-    }
-    expect(events).toEqual(
-      failedStep === "reserve"
-        ? ["reserve", "end-client"]
-        : failedStep === "global"
-          ? ["reserve", "acquire-global", "release-reservation", "end-client"]
-          : failedStep === "package"
-            ? [
-                "reserve",
-                "acquire-global",
-                "acquire-package",
-                "release-global",
-                "release-reservation",
-                "end-client",
-              ]
-            : [
-                "reserve",
-                "acquire-global",
-                "acquire-package",
-                "execute",
-                "release-package",
-                "release-global",
-                "release-reservation",
-                "end-client",
-              ]
-    );
-  }
-});
-testIfDb("callback errors take precedence without truncating lock cleanup", async () => {
-  const harness = dbHarness;
-  if (!harness) throw new Error("db_test_unavailable");
-  const events: string[] = [];
-  const callbackError = new Error("callback_failed");
-  const result = harness
-    .runFullSiteInstallLockLifecycle(
-      {
-        reserveSession: async () => ({
-          acquireGlobal: async () => {
-            events.push("acquire-global");
-          },
-          acquirePackage: async () => {
-            events.push("acquire-package");
-          },
-          releasePackage: async () => {
-            events.push("release-package");
-            return false;
-          },
-          releaseGlobal: async () => {
-            events.push("release-global");
-            return false;
-          },
-          releaseReservation: () => {
-            events.push("release-reservation");
-            throw new Error("reservation_release_failed");
-          },
-        }),
-        endClient: async () => {
-          events.push("end-client");
-          throw new Error("client_end_failed");
-        },
-      },
-      async () => {
-        events.push("execute");
-        throw callbackError;
-      }
-    )
-    .then(
-      () => ({ ok: true as const, error: null }),
-      (error: unknown) => ({ ok: false as const, error })
-    );
-  const outcome = await result;
-  expect(outcome.ok).toBe(false);
-  expect(outcome.error).toBe(callbackError);
-  expect(events).toEqual([
-    "acquire-global",
-    "acquire-package",
-    "execute",
-    "release-package",
-    "release-global",
-    "release-reservation",
-    "end-client",
-  ]);
-});
 testIfDb("shared ledger metadata patch persists JSON and redacts unsafe errors", async () => {
   const harness = dbHarness;
   if (!harness) throw new Error("db_test_unavailable");
@@ -846,7 +654,7 @@ testIfDb(
   360_000
 );
 testIfDb(
-  "partial package-lock acquisition failure releases the global session lock",
+  "partial package-lock acquisition failure releases the global transaction lock",
   async () => {
     const harness = dbHarness;
     const databaseUrl = process.env.DATABASE_URL;
@@ -854,13 +662,18 @@ testIfDb(
     const holder = postgres(databaseUrl, { max: 1 });
     const probe = postgres(databaseUrl, { max: 1 });
     const packageKey = `partial-lock-${randomUUID()}`;
-    let holderAcquired = false;
+    const holderReady = createDeferred<number>();
+    const releaseHolder = createDeferred();
+    const holderTransaction = holder.begin(async (transaction) => {
+      await transaction`select pg_advisory_xact_lock(547, hashtext(${packageKey}))`;
+      const [holderRow] = await transaction`select pg_backend_pid() as pid`;
+      if (typeof holderRow?.pid !== "number") throw new Error("db_holder_pid_missing");
+      holderReady.resolve(holderRow.pid);
+      await releaseHolder.promise;
+    });
     let callbackCalled = false;
     try {
-      await holder`select pg_advisory_lock(547, hashtext(${packageKey}))`;
-      holderAcquired = true;
-      const [holderRow] = await holder`select pg_backend_pid() as pid`;
-      if (typeof holderRow?.pid !== "number") throw new Error("db_holder_pid_missing");
+      const holderPid = await holderReady.promise;
       const attempt = harness
         .withFullSiteInstallLocks(packageKey, async () => {
           callbackCalled = true;
@@ -885,7 +698,7 @@ testIfDb(
           and global_lock.classid = 548
           and global_lock.objid = 0
           and global_lock.granted
-        where held.pid = ${holderRow.pid}
+        where held.pid = ${holderPid}
           and held.locktype = 'advisory'
           and held.classid = 547
           and held.granted
@@ -901,15 +714,14 @@ testIfDb(
       expect(outcome.ok).toBe(false);
       expect(outcome.error).toBeTruthy();
       expect(callbackCalled).toBe(false);
-      await holder`select pg_advisory_unlock(547, hashtext(${packageKey}))`;
-      holderAcquired = false;
+      releaseHolder.resolve();
+      await holderTransaction;
       await expect(
         harness.withFullSiteInstallLocks(`partial-followup-${randomUUID()}`, async () => "released")
       ).resolves.toBe("released");
     } finally {
-      if (holderAcquired) {
-        await holder`select pg_advisory_unlock(547, hashtext(${packageKey}))`;
-      }
+      releaseHolder.resolve();
+      await Promise.allSettled([holderTransaction]);
       await Promise.all([holder.end(), probe.end()]);
     }
   },

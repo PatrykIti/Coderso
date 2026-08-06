@@ -567,7 +567,6 @@ const toFullSiteRun = (run: SolutionKitInstallRunRecord) => ({
 const FULL_SITE_PACKAGE_LOCK_NAMESPACE = 547;
 const GLOBAL_FULL_SITE_LOCK_NAMESPACE = 548;
 const GLOBAL_FULL_SITE_LOCK_KEY = 0;
-const FULL_SITE_LOCK_RELEASE_FAILED = "site_package_lock_release_failed";
 
 const requireCanonicalPackageKey = (value: string): string => {
   const diagnostics = new DiagnosticCollector();
@@ -581,68 +580,45 @@ const requireCanonicalPackageKey = (value: string): string => {
   return packageKey;
 };
 
-export type FullSiteInstallLockSession = {
-  acquireGlobal(): Promise<void>;
-  acquirePackage(): Promise<void>;
-  releasePackage(): Promise<boolean>;
-  releaseGlobal(): Promise<boolean>;
-  releaseReservation(): void | Promise<void>;
-};
-
-export type FullSiteInstallLockRuntime = {
-  reserveSession(): Promise<FullSiteInstallLockSession>;
+export type FullSiteInstallTransactionLockRuntime = {
+  runTransaction<T>(execute: (lock: FullSiteInstallTransactionLock) => Promise<T>): Promise<T>;
   endClient(): Promise<void>;
 };
 
+export type FullSiteInstallTransactionLock = {
+  acquireGlobal(): Promise<void>;
+  acquirePackage(): Promise<void>;
+};
+
 /**
- * Runs the lock lifecycle independently from the postgres.js adapter so every
- * cleanup branch remains deterministic and directly testable. An operation or
- * acquisition failure stays authoritative over later cleanup failures.
+ * Holds transaction-scoped locks around work performed through the application's
+ * regular pool. The lock transaction owns no product writes; keeping it open is
+ * enough to pin one PgBouncer backend until the complete package lifecycle ends.
  */
-export const runFullSiteInstallLockLifecycle = async <T>(
-  runtime: FullSiteInstallLockRuntime,
+export const runFullSiteInstallTransactionLockLifecycle = async <T>(
+  runtime: FullSiteInstallTransactionLockRuntime,
   execute: () => Promise<T>
 ): Promise<T> => {
-  let session: FullSiteInstallLockSession | null = null;
-  let globalAcquired = false;
-  let packageAcquired = false;
   let outcome: { ok: true; value: T } | { ok: false; error: unknown };
-  let cleanupError: unknown;
-  const cleanUp = async (action: () => void | Promise<void>) => {
-    try {
-      await action();
-    } catch (error) {
-      cleanupError ??= error;
-    }
-  };
-
   try {
-    session = await runtime.reserveSession();
-    await session.acquireGlobal();
-    globalAcquired = true;
-    await session.acquirePackage();
-    packageAcquired = true;
-    outcome = { ok: true, value: await execute() };
+    outcome = {
+      ok: true,
+      value: await runtime.runTransaction(async (lock) => {
+        await lock.acquireGlobal();
+        await lock.acquirePackage();
+        return execute();
+      }),
+    };
   } catch (error) {
     outcome = { ok: false, error };
-  } finally {
-    const cleanupSession = session;
-    if (packageAcquired && cleanupSession) {
-      await cleanUp(async () => {
-        if (!(await cleanupSession.releasePackage()))
-          throw new Error(FULL_SITE_LOCK_RELEASE_FAILED);
-      });
-    }
-    if (globalAcquired && cleanupSession) {
-      await cleanUp(async () => {
-        if (!(await cleanupSession.releaseGlobal())) throw new Error(FULL_SITE_LOCK_RELEASE_FAILED);
-      });
-    }
-    if (cleanupSession) await cleanUp(() => cleanupSession.releaseReservation());
-    await cleanUp(() => runtime.endClient());
   }
 
-  // Preserve the callback/acquisition error even if one or more cleanup steps failed.
+  let cleanupError: unknown;
+  try {
+    await runtime.endClient();
+  } catch (error) {
+    cleanupError = error;
+  }
   if (!outcome.ok) throw outcome.error;
   if (cleanupError) throw cleanupError;
   return outcome.value;
@@ -657,47 +633,30 @@ export const withFullSiteInstallLocks = async <T>(
   if (!databaseUrl) throw new Error("DATABASE_URL is not set");
   const lockClient = postgres(databaseUrl, { max: 1, max_lifetime: null });
 
-  return runFullSiteInstallLockLifecycle(
+  return runFullSiteInstallTransactionLockLifecycle(
     {
-      reserveSession: async () => {
-        const lockSession = await lockClient.reserve();
-        return {
-          acquireGlobal: async () => {
-            await lockSession`
-              select pg_advisory_lock(
+      runTransaction: async (run) => {
+        const result = await lockClient.begin(async (lockTransaction) => ({
+          value: await run({
+            acquireGlobal: async () => {
+              await lockTransaction`
+              select pg_advisory_xact_lock(
                 ${GLOBAL_FULL_SITE_LOCK_NAMESPACE},
                 ${GLOBAL_FULL_SITE_LOCK_KEY}
               )
             `;
-          },
-          acquirePackage: async () => {
-            await lockSession`
-              select pg_advisory_lock(
+            },
+            acquirePackage: async () => {
+              await lockTransaction`
+              select pg_advisory_xact_lock(
                 ${FULL_SITE_PACKAGE_LOCK_NAMESPACE},
                 hashtext(${canonicalPackageKey})
               )
             `;
-          },
-          releasePackage: async () => {
-            const [row] = await lockSession<{ unlocked: boolean }[]>`
-              select pg_advisory_unlock(
-                ${FULL_SITE_PACKAGE_LOCK_NAMESPACE},
-                hashtext(${canonicalPackageKey})
-              ) as unlocked
-            `;
-            return row?.unlocked === true;
-          },
-          releaseGlobal: async () => {
-            const [row] = await lockSession<{ unlocked: boolean }[]>`
-              select pg_advisory_unlock(
-                ${GLOBAL_FULL_SITE_LOCK_NAMESPACE},
-                ${GLOBAL_FULL_SITE_LOCK_KEY}
-              ) as unlocked
-            `;
-            return row?.unlocked === true;
-          },
-          releaseReservation: () => lockSession.release(),
-        };
+            },
+          }),
+        }));
+        return result.value;
       },
       endClient: () => lockClient.end(),
     },

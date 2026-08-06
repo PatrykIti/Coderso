@@ -580,7 +580,8 @@ test("installs, reapplies idempotently, exposes every native resource, and rolls
     const entryIds = entryIdentities.map((identity) => getResourceId(first.resources, identity));
     const detailId = getResourceId(first.resources, detailIdentity);
     const menuId = getResourceId(first.resources, menuIdentity);
-    installedFormId = getResourceId(first.resources, formIdentity);
+    const formId = getResourceId(first.resources, formIdentity);
+    installedFormId = formId;
     const listingTemplateId = getResourceId(first.resources, listingTemplateIdentity);
 
     const installedPages = await db.select().from(pages).where(inArray(pages.id, pageIds));
@@ -650,7 +651,7 @@ test("installs, reapplies idempotently, exposes every native resource, and rolls
       },
     });
 
-    const [installedForm] = await db.select().from(forms).where(eq(forms.id, installedFormId));
+    const [installedForm] = await db.select().from(forms).where(eq(forms.id, formId));
     expect(installedForm).toMatchObject({
       status: "published",
       successMessage: PROJECT_BRIEF_SUCCESS_MESSAGE,
@@ -659,7 +660,7 @@ test("installs, reapplies idempotently, exposes every native resource, and rolls
     const installedActions = await db
       .select()
       .from(formActions)
-      .where(eq(formActions.formId, installedFormId));
+      .where(eq(formActions.formId, formId));
     expect(installedActions).toHaveLength(1);
     expect(installedActions[0]).toMatchObject({
       type: "success_message",
@@ -681,7 +682,7 @@ test("installs, reapplies idempotently, exposes every native resource, and rolls
       ["proces", "Dobra architektura potrzebuje dobrego procesu"],
       ["cennik", "Przejrzyste pakiety projektowe"],
       ["o-nas", "Projektujemy domy do prawdziwego życia"],
-      ["kontakt", "Opowiedz nam o swoim domu"],
+      ["kontakt", "Opowiedz nam o działce, marzeniu albo pomyśle na dom."],
     ] as const;
     const resolveScopedPagePath = (baseKey: (typeof pageRouteContract)[number][0]) => {
       const seed = pkg.resources.pages.find((candidate) => candidate.key === `${baseKey}-${scope}`);
@@ -817,12 +818,12 @@ test("installs, reapplies idempotently, exposes every native resource, and rolls
     const nonceTag = contactHtml.match(/<input[^>]*data-form-security-nonce="1"[^>]*>/)?.[0] ?? "";
     const renderedFormId = getHtmlAttribute(formTag, "data-form-id");
     const nonce = getHtmlAttribute(nonceTag, "value");
-    expect(renderedFormId).toBe(installedFormId);
-    expect(getHtmlAttribute(formTag, "action")).toBe(`/forms/${installedFormId}/submissions`);
+    expect(renderedFormId).toBe(formId);
+    expect(getHtmlAttribute(formTag, "action")).toBe(`/forms/${formId}/submissions`);
     expect(nonce).toMatch(/^\d+\.[a-f0-9]{64}$/);
     if (!nonce) throw new Error("site_package_acceptance_nonce_missing");
 
-    const submissionUrl = `http://task-547.invalid/forms/${installedFormId}/submissions`;
+    const submissionUrl = `http://task-547.invalid/forms/${formId}/submissions`;
     const submittedPayload = {
       name: "Test użytkownika TASK-547",
       email: `${scope}@submission.task-547.invalid`,
@@ -846,10 +847,10 @@ test("installs, reapplies idempotently, exposes every native resource, and rolls
     };
     const expectNoFormWrites = async () => {
       expect(
-        await db.select().from(formSubmissions).where(eq(formSubmissions.formId, installedFormId))
+        await db.select().from(formSubmissions).where(eq(formSubmissions.formId, formId))
       ).toHaveLength(0);
       expect(
-        await db.select().from(formActionRuns).where(eq(formActionRuns.formId, installedFormId))
+        await db.select().from(formActionRuns).where(eq(formActionRuns.formId, formId))
       ).toHaveLength(0);
     };
     const tamperedNonce = `${nonce.slice(0, -1)}${nonce.endsWith("0") ? "1" : "0"}`;
@@ -884,7 +885,7 @@ test("installs, reapplies idempotently, exposes every native resource, and rolls
       runtime: { successMessage: string | null; redirectUrl: string | null };
     };
     expect(submissionResult).toMatchObject({
-      formId: installedFormId,
+      formId,
       status: "new",
       payload: { ...submittedPayload, consent: true },
       runtime: {
@@ -897,7 +898,7 @@ test("installs, reapplies idempotently, exposes every native resource, and rolls
       .from(formSubmissions)
       .where(eq(formSubmissions.id, submissionResult.id));
     expect(storedSubmission).toMatchObject({
-      formId: installedFormId,
+      formId,
       payload: { ...submittedPayload, consent: true },
       status: "new",
       ip: "127.0.0.1",
@@ -909,7 +910,7 @@ test("installs, reapplies idempotently, exposes every native resource, and rolls
       .where(eq(formActionRuns.submissionId, submissionResult.id));
     expect(storedActionRuns).toHaveLength(1);
     expect(storedActionRuns[0]).toMatchObject({
-      formId: installedFormId,
+      formId,
       submissionId: submissionResult.id,
       actionId: installedActions[0]!.id,
       actionType: "success_message",
@@ -921,10 +922,10 @@ test("installs, reapplies idempotently, exposes every native resource, and rolls
 
     await deleteScopedFormArtifacts();
     expect(
-      await db.select().from(formActionRuns).where(eq(formActionRuns.formId, installedFormId))
+      await db.select().from(formActionRuns).where(eq(formActionRuns.formId, formId))
     ).toHaveLength(0);
     expect(
-      await db.select().from(formSubmissions).where(eq(formSubmissions.formId, installedFormId))
+      await db.select().from(formSubmissions).where(eq(formSubmissions.formId, formId))
     ).toHaveLength(0);
 
     const second = await applyFullSitePackage(

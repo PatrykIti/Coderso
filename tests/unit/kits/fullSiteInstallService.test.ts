@@ -17,10 +17,10 @@ import {
 } from "../../../core/services/kits/fullSiteInstall/compensation";
 import { rollbackFullSiteInstall } from "../../../core/services/kits/fullSiteInstall/rollback";
 import type {
-  FullSiteInstallLedgerItem,
   FullSiteInstallLedgerPort,
   FullSiteInstallResourceKind,
   FullSiteInstallRun,
+  PersistedFullSiteInstallLedgerItem,
 } from "../../../core/services/kits/fullSiteInstallTypes";
 import type { JsonObject } from "../../../core/services/kits/fullSitePackage/types";
 import { createLegacyInstallLedger } from "../../../core/services/kits/legacyInstallRunPersistence";
@@ -64,7 +64,9 @@ const adapters = (calls: string[]): FullSiteRollbackAdapters => {
   };
 };
 
-const item = (overrides: Partial<FullSiteInstallLedgerItem> = {}): FullSiteInstallLedgerItem => ({
+const item = (
+  overrides: Partial<PersistedFullSiteInstallLedgerItem> = {}
+): PersistedFullSiteInstallLedgerItem => ({
   position: 0,
   kind: "page",
   key: "home",
@@ -72,10 +74,11 @@ const item = (overrides: Partial<FullSiteInstallLedgerItem> = {}): FullSiteInsta
   status: "success",
   beforeSnapshot: null,
   afterSnapshot: { id: "page-id", desired: { marker: "after" } },
+  rollbackAction: null,
   ...overrides,
 });
 
-const ledger = (source: FullSiteInstallRun | null, items: FullSiteInstallLedgerItem[]) => {
+const ledger = (source: FullSiteInstallRun | null, items: PersistedFullSiteInstallLedgerItem[]) => {
   const events: string[] = [];
   const port: FullSiteInstallLedgerPort = {
     createRun: async () => ({ id: "unused" }),

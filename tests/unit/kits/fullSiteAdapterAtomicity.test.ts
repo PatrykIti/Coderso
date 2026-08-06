@@ -21,6 +21,7 @@ import type {
   FullSiteCurrentResourceResolver,
   FullSiteInstallLedgerItem,
   FullSiteInstallLedgerPort,
+  PersistedFullSiteInstallLedgerItem,
 } from "../../../core/services/kits/fullSiteInstallTypes";
 import type {
   FullSitePackageV1,
@@ -106,7 +107,7 @@ const menuDesired = (name: string) => ({
       label: "Home",
       href: "/",
       pageId: null,
-      parentId: null,
+      parentId: null as string | null,
       orderIndex: 0,
       settings: {},
     },
@@ -299,15 +300,31 @@ describe("full-site multi-step adapter atomicity", () => {
     const typeId = "00000000-0000-4000-8000-000000000021";
     const detailId = "00000000-0000-4000-8000-000000000022";
     const state = new Map<string, { id: string; desired: JsonObject }>();
-    const recorded = new Map<string, FullSiteInstallLedgerItem[]>();
+    const recorded = new Map<string, PersistedFullSiteInstallLedgerItem[]>();
     let runNumber = 0;
     let managed = false;
     let writes = 0;
     const ledger: FullSiteInstallLedgerPort = {
       createRun: async () => ({ id: `run-${++runNumber}` }),
       recordItem: async (item) => {
+        const operation = item.operation;
+        if (operation === "delete" || operation === "restore") {
+          throw new Error("canonical_detail_fixture_unexpected_rollback_item");
+        }
         const items = recorded.get(item.runId) ?? [];
-        items.push(structuredClone(item));
+        items.push(
+          structuredClone({
+            position: item.position,
+            kind: item.kind,
+            key: item.key,
+            operation,
+            status: item.status,
+            beforeSnapshot: item.beforeSnapshot,
+            afterSnapshot: item.afterSnapshot,
+            rollbackAction: item.rollbackAction ?? null,
+            error: item.error,
+          })
+        );
         recorded.set(item.runId, items);
       },
       finalizeRun: async () => undefined,
@@ -680,6 +697,15 @@ describe("full-site multi-step adapter atomicity", () => {
       desired: form,
       actorId: ACTOR_ID,
     };
+    const supportingTextInput = structuredClone(formInput);
+    supportingTextInput.desired.settings = {
+      theme: { submit: { label: "Send", supportingText: "We reply within one day." } },
+    };
+    expect(await createFormResourceAdapter().validateDesired(supportingTextInput)).toMatchObject({
+      settings: {
+        theme: { submit: { label: "Send", supportingText: "We reply within one day." } },
+      },
+    });
     const missingFieldId = structuredClone(formInput);
     delete (missingFieldId.desired.fields[0] as { id?: string }).id;
     expect(() => createFormResourceAdapter().validateDesired(missingFieldId)).toThrow(

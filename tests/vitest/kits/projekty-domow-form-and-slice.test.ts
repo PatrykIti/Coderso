@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { getDefaultFormSettings } from "../../../core/services/forms/formSettings";
 import { toStagedDetailDocument } from "../../../core/services/kits/fullSiteInstall/staging";
 import { buildReferencePlan } from "../../../core/services/kits/fullSitePackage/referenceGraph";
 import type { FullSitePackageV1 } from "../../../core/services/kits/fullSitePackage/types";
@@ -83,6 +84,7 @@ describe("Projekty Domów form and content slice", () => {
     expect(desired.name).toBe(PROJECT_BRIEF_FORM_TITLE);
     expect(desired.description).toBeNull();
     expect(desired.settings).toEqual({
+      ...getDefaultFormSettings(),
       theme: {
         submit: {
           label: PROJECT_BRIEF_SUBMIT_LABEL,
@@ -123,7 +125,11 @@ describe("Projekty Domów form and content slice", () => {
         description: null,
         successMessage: PROJECT_BRIEF_SUCCESS_MESSAGE,
         submissionAccess: "public",
-        settings: { theme: { submit: { label: PROJECT_BRIEF_SUBMIT_LABEL, supportingText: "Hi", extra: true } } },
+        settings: {
+          theme: {
+            submit: { label: PROJECT_BRIEF_SUBMIT_LABEL, supportingText: "Hi", extra: true },
+          },
+        },
         fields: [
           {
             type: "text",

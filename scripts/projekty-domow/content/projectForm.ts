@@ -21,18 +21,18 @@ const FIELD_IDS = [
   "00000000-0000-4000-8000-000000000555",
 ] as const;
 
-const assertKnownKeys = (
+function assertKnownKeys(
   value: unknown,
   allowed: readonly string[],
   errorCode = "project_brief_form_invalid"
-): asserts value is Record<string, unknown> => {
+): asserts value is Record<string, unknown> {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
     throw new Error(errorCode);
   }
   if (Object.keys(value).some((key) => !allowed.includes(key))) {
     throw new Error(errorCode);
   }
-};
+}
 
 const rawFields = () => [
   {

@@ -104,7 +104,7 @@ export const assertFormNestedContract = (desired: JsonObject): void => {
           "fontFamily",
         ],
         input: ["size", "radius", "borderColor", "background", "textColor"],
-        submit: ["background", "textColor", "radius", "fullWidth", "label"],
+        submit: ["background", "textColor", "radius", "fullWidth", "label", "supportingText"],
       };
       for (const [key, value] of Object.entries(theme)) {
         strictRecord(value, groups[key]!, "form_invalid");
