@@ -309,6 +309,10 @@ Implementation pipeline:
 - Use `playwright-cli` with a task-scoped named session (for example
   `-s=wf508smoke`); save screenshots to `_docs/_workflows/_smoke/` for human
   review.
+- Author new reusable suites through the shared entry point and the
+  `docs/develop/runtime-smoke-cookbook.md` registration/adapter recipes; do not
+  create another task-local lifecycle, worker, DB cleanup, Playwright, or report
+  loop.
 - Restart the dev server before the smoke (the Bun server does not hot-reload)
   and verify the admin and front respond before testing.
 - Feature flows must produce 0 console errors; verify dark mode alongside light

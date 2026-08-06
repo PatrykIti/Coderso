@@ -83,6 +83,9 @@ repository mutation guards, timing, redaction, cleanup aggregation, and bounded
 reports. A suite owns only its product flows, fixtures, assertions, registered
 worker operations, and cleanup/reset proof. New workflows extend the static
 registry with a thin adapter instead of creating another lifecycle or executor.
+The contributor-facing [Runtime Smoke Authoring Cookbook](../docs/develop/runtime-smoke-cookbook.md)
+provides the exact registration sequence and copyable adapter, worker, database,
+browser, evidence, checkpoint, and test recipes for that extension contract.
 
 Use `fast` for required pull-request/task feedback when the adapter can shorten
 only deliberate infrastructure waits and restore the exact prior state. It must
