@@ -184,6 +184,15 @@ Testing docs:
 - Do not begin implementation from a stale pre-audit. If any task, changelog,
   source, test, or validation-contract file changes after the pass, that pass is
   obsolete for the changed contract.
+- A strictly mechanical test-only repair after implementation does not stale an
+  otherwise current product or drift audit when the diff changes only a type
+  annotation, type-only import, formatting, or equivalent compile/lint metadata
+  and leaves test names, control flow, fixture and mock values, assertions,
+  snapshots, production code, task/changelog files, workflow files, and
+  validation contracts byte-identical. Verify that narrow scope from the diff,
+  rerun the failed static check plus the exact owning test, and continue from the
+  failed validation phase. Any behavioral test change or wider file change makes
+  the earlier pass obsolete under the normal rule above.
 - After implementation, docs, validation, and commits are complete, run fresh
   read-only drift passes on the final committed HEAD when the task uses external
   audit and commits. If the task does not include manual commits, run the final
@@ -248,9 +257,11 @@ Research and authoring:
 
 Drift-audit loop (contract QA before implementation):
 
-- Run at least 5 SEQUENTIAL audit rounds. Each round = parallel per-file drift
-  audits + ONE cross-subtask RECONCILE audit + fixers for the HIGH/MEDIUM
-  findings (per-file fixers plus one cross-file fixer).
+- Run one complete audit round before implementation. A round may use parallel
+  per-file audits plus one cross-subtask RECONCILE audit when multiple contracts
+  share types, selectors, ownership, or land order. Repeat only the affected
+  audit scopes after a verified HIGH/MEDIUM finding is fixed; do not run a
+  minimum number of clean rounds or replay unchanged scopes for ceremony.
 - A round is clean only when there are 0 HIGH/MEDIUM findings AND every audit
   agent returned a result — a missing audit result is a false-clean, not a
   pass.
@@ -260,10 +271,10 @@ Drift-audit loop (contract QA before implementation):
   subtask defines, per-device representation, test-file names promised vs
   delivered, land order, and the pinned changelog number.
 - Authoring loops can OSCILLATE on cross-file contradictions because each
-  per-file fixer sees only its file. If the loop hits its round cap without
-  converging, address the residual findings surgically with fresh agents, then
-  run ONE final fresh read-only reconcile. Implementation may start only from a
-  PASS (0 HIGH/MEDIUM).
+  per-file fixer sees only its file. If repeated fixes do not converge, address
+  the residual findings surgically with fresh agents, then run one fresh
+  read-only reconcile over those changed contracts. Implementation may start
+  only with no unresolved HIGH/MEDIUM finding.
 
 Implementation pipeline:
 
@@ -278,10 +289,11 @@ Implementation pipeline:
   for an intended contract change and never weaken a behavior assertion.
 - The closure subtask owns tests + docs only (changelog entry, board rows, task
   statuses) and must not re-open source contracts.
-- After closure, run a POST-AUDIT of ~5 independent lenses (scope fidelity,
+- After implementation and before closure, run one POST-AUDIT using independent lenses (scope fidelity,
   model/fail-closed correctness, byte-identity/present-only, cross-stream
-  safety, test integrity). Findings must be evidence-backed (`file:line`). Fix
-  HIGH/MEDIUM once, then re-run the targeted gate.
+  safety, test integrity) appropriate to the touched contract. Findings must be
+  evidence-backed (`file:line`). After a fix, re-run only the affected lenses
+  and targeted gates; retain clean receipts whose inputs did not change.
 
 ### Runtime smoke (mandatory for UI/editor work)
 
@@ -301,6 +313,17 @@ Implementation pipeline:
   and verify the admin and front respond before testing.
 - Feature flows must produce 0 console errors; verify dark mode alongside light
   for admin surfaces.
+- A product-code smoke failure invalidates the affected runtime scenarios, not
+  completed static gates or unrelated audits. A smoke-harness-only repair
+  invalidates the harness self-test and runtime smoke, not product validation.
+  An external interruption such as a lost host, power, or network connection
+  requires a clean smoke restart only.
+- Routine smoke tooling must avoid fixed sleeps, one-process-per-query cleanup,
+  and replaying already successful scenarios after a harness failure. Prefer
+  condition polling, persistent bounded workers, set-based cleanup, independent
+  scenario checkpoints, and phase timing. When exhaustive certification is
+  materially slower than a normal feedback cycle, keep a fast required smoke
+  lane and run the exhaustive lane once at the appropriate release boundary.
 
 ### Parallel streams and collision guards
 
@@ -604,6 +627,19 @@ Implementation pipeline:
 - For auth, public-write, secret-handling, dependency, or scanner-config changes, run the local Semgrep/Trivy/Gitleaks commands from `_docs/SECURITY_SPEC.md` when feasible or state clearly that validation remains CI-only. Any change to scanner allowlists/configs must record owner, reason, expiry, and ticket in task/changelog notes.
 - If `bun test:full` cannot complete due to DB/network issues, rerun after recovery and update the changelog with the final test status.
 - Parallel workflow streams may DEFER the full mandatory gate set to ONE combined run after all streams land: full `bun run test` (Bun + Vitest), `bun run precommit:check`, `bun run gates:coderso`, and the security scan (`bun run scan:security`, or `scan:security:strict` when the strict gate is required). Each stream must still pass its targeted per-subtask gates and its runtime smoke before closure.
+- Do not restart completed audits or restart an entire closure pipeline solely
+  because of the strictly mechanical test-only repair defined above. Re-run the
+  failed static command, the exact owning test, touched-file line counts, and
+  `git diff --check`, then resume at the failed validation phase. A workflow must
+  preserve successful receipts whose production, fixture, assertion, workflow,
+  and validation-contract inputs are unchanged instead of discarding them.
+- Broad validation failures outside the touched dependency shape must be
+  isolated before they block closure. Re-run the named failing file once. If an
+  executor suppresses the failing file and output, record that observability
+  defect and the non-zero broad-gate result; do not spend another full-suite run
+  solely to rediscover the hidden name when targeted gates for the touched
+  contract and the required runtime smoke are green. Validation executors must
+  retain or stream a secret-safe failing test identifier for the next run.
 - Before declaring a test failure real, re-run the NAMED failing file once in isolation — known under-load flakes exist (spurious Vitest timeouts; avoid contention when measuring the performance gate). Record confirmed flakes and fix the root cause instead of tolerating them (for example, a test asserting a clean global precondition must reset the state it asserts).
 - If any tests are skipped or cannot run, state it clearly in the summary.
 - Before creating a manual commit, run `bun run precommit` unless the commit is
@@ -611,6 +647,17 @@ Implementation pipeline:
 
 ## Task Closure Rules
 
+- Repository tests, source-of-truth docs, the task acceptance contract, and
+  truthful validation evidence are closure authority. Task-local workflow
+  scripts may automate that process, but must not add generated hashes,
+  collaboration ledgers, retry counts, or terminal envelopes as independent
+  product gates unless a repository-wide contract explicitly requires them.
+- If task-local closure automation fails after the required implementation,
+  targeted validation, review, and runtime smoke are complete, isolate the
+  automation defect. A manual closure is allowed when it records the evidence,
+  the automation limitation, and synchronized task/board/changelog state. Do
+  not fabricate generated receipts or replay successful product phases solely
+  to satisfy task-local orchestration metadata.
 - Update task/subtask status in `_docs/_TASKS/*`.
 - Do not leave open direct children under a closed parent. Convert remaining
   work into explicit follow-on tasks when needed.
