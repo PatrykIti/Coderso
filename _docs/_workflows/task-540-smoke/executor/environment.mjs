@@ -95,9 +95,25 @@ function ownString(source, key, { required = false } = {}) {
     invariant(!required, "required environment value is missing: " + key);
     return null;
   }
+  // Bun exposes a small set of native process.env keys (notably TZ) through accessors even
+  // when they are absent. Keep rejecting accessors on every caller-owned object, but treat the
+  // exact process.env object according to its runtime value so the Bun smoke entry point and the
+  // Node oracle preserve the same optional-environment contract.
+  if (!Object.hasOwn(descriptor, "value")) {
+    invariant(
+      source === process.env && typeof descriptor.get === "function",
+      "environment value is invalid: " + key
+    );
+    const runtimeValue = descriptor.get.call(source);
+    if (runtimeValue === undefined) {
+      invariant(!required, "required environment value is missing: " + key);
+      return null;
+    }
+    invariant(typeof runtimeValue === "string", "environment value is invalid: " + key);
+    return runtimeValue;
+  }
   invariant(
-    Object.hasOwn(descriptor, "value") &&
-      typeof descriptor.value === "string" &&
+    typeof descriptor.value === "string" &&
       (!required || descriptor.value.length > 0),
     "environment value is invalid: " + key
   );

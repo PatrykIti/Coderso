@@ -7,6 +7,7 @@ export async function runBootstrapRestorationSelfTest({
   assertSourceMutantsRejected,
   attemptBootstrapCasBridgeOnce,
   BOOTSTRAP_BASELINE_READ_BRIDGE_SOURCE,
+  BOOTSTRAP_CAS_ROLLBACK_REASONS,
   BOOTSTRAP_CAS_RESTORE_BRIDGE_SOURCE,
   BOOTSTRAP_RESTORE_PROOF_KEYS,
   classifyBootstrapCasBridgeFailure,
@@ -27,6 +28,15 @@ export async function runBootstrapRestorationSelfTest({
   const bootstrapProtocolBaseline = bootstrapProtocolFixture.baseline;
   const validBootstrapCasProof = deepFreezeExact(
     Object.fromEntries(BOOTSTRAP_RESTORE_PROOF_KEYS.map((key) => [key, true]))
+  );
+  const bootstrapRollbackReason = "wf540_bootstrap_cas_newest_pair_mismatch";
+  invariant(
+    Array.isArray(BOOTSTRAP_CAS_ROLLBACK_REASONS) &&
+      Object.isFrozen(BOOTSTRAP_CAS_ROLLBACK_REASONS) &&
+      BOOTSTRAP_CAS_ROLLBACK_REASONS.length === 9 &&
+      new Set(BOOTSTRAP_CAS_ROLLBACK_REASONS).size === 9 &&
+      BOOTSTRAP_CAS_ROLLBACK_REASONS.includes(bootstrapRollbackReason),
+    "bootstrap CAS rollback reason vocabulary drift"
   );
   const validBootstrapBaselineRead = deepFreezeExact({
     id: bootstrapProtocolBaseline.id,
@@ -67,10 +77,39 @@ export async function runBootstrapRestorationSelfTest({
   await expectAsyncFailure(
     async () =>
       classifyClosedBootstrapCasBridgeOutcome(
-        deepFreezeExact({ kind: "rolled-back", proof: validBootstrapCasProof })
+        deepFreezeExact({
+          kind: "rolled-back",
+          proof: validBootstrapCasProof,
+          reason: bootstrapRollbackReason,
+        })
       ),
     "closed bootstrap rollback carrying a proof"
   );
+  const classifiedRollback = classifyClosedBootstrapCasBridgeOutcome(
+    deepFreezeExact({ kind: "rolled-back", proof: null, reason: bootstrapRollbackReason })
+  );
+  invariant(
+    classifiedRollback.kind === "rejected" &&
+      classifiedRollback.cause instanceof Error &&
+      classifiedRollback.cause.message === bootstrapRollbackReason,
+    "closed bootstrap rollback reason classification drift"
+  );
+  for (const [label, outcome] of [
+    ["missing rollback reason", { kind: "rolled-back", proof: null }],
+    [
+      "unknown rollback reason",
+      { kind: "rolled-back", proof: null, reason: "wf540_bootstrap_cas_unknown" },
+    ],
+    [
+      "committed rollback reason",
+      { kind: "committed", proof: validBootstrapCasProof, reason: bootstrapRollbackReason },
+    ],
+  ]) {
+    await expectAsyncFailure(
+      async () => classifyClosedBootstrapCasBridgeOutcome(deepFreezeExact(outcome)),
+      label
+    );
+  }
   const bootstrapProtocolTraffic = deepFreezeExact({
     auditOne: "54000000-0000-4000-8000-000000007411",
     auditTwo: "54000000-0000-4000-8000-000000007412",
@@ -188,7 +227,7 @@ export async function runBootstrapRestorationSelfTest({
         validatedCasCalls += 1;
         validatedCasInput = input;
         return classifyClosedBootstrapCasBridgeOutcome(
-          deepFreezeExact({ kind: "committed", proof: validBootstrapCasProof })
+          deepFreezeExact({ kind: "committed", proof: validBootstrapCasProof, reason: null })
         );
       },
     }
@@ -266,7 +305,7 @@ export async function runBootstrapRestorationSelfTest({
     },
     runCasOnce = async () =>
       classifyClosedBootstrapCasBridgeOutcome(
-        deepFreezeExact({ kind: "committed", proof: validBootstrapCasProof })
+        deepFreezeExact({ kind: "committed", proof: validBootstrapCasProof, reason: null })
       ),
   }) => {
     let caught = null;
@@ -300,7 +339,7 @@ export async function runBootstrapRestorationSelfTest({
     runCasOnce: async () => {
       reconciliationFailureCasCalls += 1;
       return classifyClosedBootstrapCasBridgeOutcome(
-        deepFreezeExact({ kind: "committed", proof: validBootstrapCasProof })
+        deepFreezeExact({ kind: "committed", proof: validBootstrapCasProof, reason: null })
       );
     },
   });
@@ -331,7 +370,7 @@ export async function runBootstrapRestorationSelfTest({
       runCasOnce: async () => {
         casCalls += 1;
         return classifyClosedBootstrapCasBridgeOutcome(
-          deepFreezeExact({ kind: "committed", proof: validBootstrapCasProof })
+          deepFreezeExact({ kind: "committed", proof: validBootstrapCasProof, reason: null })
         );
       },
     });
@@ -347,7 +386,7 @@ export async function runBootstrapRestorationSelfTest({
     probe: rejectedCasProbe,
     runCasOnce: async () =>
       classifyClosedBootstrapCasBridgeOutcome(
-        deepFreezeExact({ kind: "rolled-back", proof: null })
+        deepFreezeExact({ kind: "rolled-back", proof: null, reason: bootstrapRollbackReason })
       ),
   });
   invariant(
@@ -365,7 +404,7 @@ export async function runBootstrapRestorationSelfTest({
     expectedFailureClass: "bootstrap_post_restore_proof_failed",
     runCasOnce: async () =>
       classifyClosedBootstrapCasBridgeOutcome(
-        deepFreezeExact({ kind: "committed-proof-failed", proof: invalidPostProof })
+        deepFreezeExact({ kind: "committed-proof-failed", proof: invalidPostProof, reason: null })
       ),
   });
 
@@ -647,6 +686,24 @@ export async function runBootstrapRestorationSelfTest({
     validatesBunBridgeDispatchBoundary(bunBridgeSource),
     "Bun bridge execution boundary forwarding drift"
   );
+  const validatesBootstrapCasFreshProcessRouting = (source) =>
+    source.includes(
+      'const requiresFreshBootstrapCas =\n      descriptor.operationId === "resource/bootstrap-cas-restore";'
+    ) &&
+    source.includes(
+      "persistentBunBridgeDispatcher !== null && !requiresFreshBootstrapCas"
+    ) &&
+    source.includes('throw new Error("wf540_bootstrap_cas_one_shot_failed");') &&
+    source.split('descriptor.operationId === "resource/bootstrap-cas-restore"').length - 1 === 1 &&
+    source.split("persistentBunBridgeDispatcher(").length - 1 === 1 &&
+    source.indexOf("persistentBunBridgeDispatcher !== null && !requiresFreshBootstrapCas") <
+      source.indexOf("persistentBunBridgeDispatcher(") &&
+    source.indexOf("const execution = await runRetainedProcessGroup({") <
+      source.indexOf('throw new Error("wf540_bootstrap_cas_one_shot_failed");');
+  invariant(
+    validatesBootstrapCasFreshProcessRouting(bunBridgeSource),
+    "bootstrap CAS fresh-process routing drift"
+  );
   for (const [label, mutant] of [
     [
       "boundary crossed before retained runner",
@@ -664,6 +721,25 @@ export async function runBootstrapRestorationSelfTest({
     ],
   ]) {
     assertNegative(!validatesBunBridgeDispatchBoundary(mutant), "Bun bridge " + label + " mutant");
+  }
+  for (const [label, mutant] of [
+    [
+      "persistent routing restored",
+      bunBridgeSource.replace(" && !requiresFreshBootstrapCas", ""),
+    ],
+    [
+      "isolated operation substituted",
+      bunBridgeSource.replace("resource/bootstrap-cas-restore", "resource/bootstrap-baseline-read"),
+    ],
+    [
+      "safe failure token removed",
+      bunBridgeSource.replace("wf540_bootstrap_cas_one_shot_failed", "bootstrap CAS failed"),
+    ],
+  ]) {
+    assertNegative(
+      !validatesBootstrapCasFreshProcessRouting(mutant),
+      "bootstrap CAS " + label + " mutant"
+    );
   }
   const bootstrapAttemptSource = attemptBootstrapCasBridgeOnce.toString();
   const bootstrapAttemptRequired = [
@@ -729,35 +805,48 @@ export async function runBootstrapRestorationSelfTest({
     "notDistinctTimestampMs(users.updatedAt, input.newestOwnedPair.updatedAt)",
     "notDistinctTimestampMs(users.lastLoginAt, input.newestOwnedPair.lastLoginAt)",
   ];
+  const bootstrapCasRollbackGuardTokens = BOOTSTRAP_CAS_ROLLBACK_REASONS.map(
+    (reason) => `rollbackKnown("${reason}")`
+  );
   const bootstrapCasSourceRequired = [
-    'const knownRollback = Object.freeze({ kind:"wf540_bootstrap_known_rollback" });',
-    "const rollbackKnown = () => { throw knownRollback; };",
+    `const rollbackReasons = Object.freeze(${JSON.stringify(BOOTSTRAP_CAS_ROLLBACK_REASONS)})`,
+    "const knownRollbacks = Object.freeze(Object.fromEntries(rollbackReasons.map((reason)=>[",
+    'reason,Object.freeze({ kind:"wf540_bootstrap_known_rollback",reason }),',
+    "const rollbackKnown = (reason) => {",
+    'if (rollback === undefined) throw new Error("wf540_bootstrap_cas_reason_drift");',
     "let transactionProof = null;",
+    "let rollbackReason = null;",
     "transactionProof = await db.transaction(async (tx) => {",
-    "if (lockedRows.length !== 1 || lockedRoles.length !== 1) rollbackKnown();",
-    "if (locked === null) rollbackKnown();",
-    "if (!pairMatches || !unchangedMatches || !roleTuplesByteIdentical) rollbackKnown();",
     "const predicates = (",
     "(sql,users,input);",
     "const updated = await tx.update(users).set({",
     "}).where(and(...predicates)).returning();",
-    "if (updated.length !== 1) rollbackKnown();",
-    "if (!inTransactionByteIdentical || !rolesInTransactionByteIdentical) rollbackKnown();",
-    "if (error !== knownRollback) throw error;",
-    'output = { kind:"rolled-back",proof:null };',
-    'output = { kind:restored ? "committed" : "committed-proof-failed",proof };',
+    "const knownReason = rollbackReasons.find((reason)=>error === knownRollbacks[reason]) ?? null;",
+    "if (knownReason === null) throw error;",
+    "rollbackReason = knownReason;",
+    'if (rollbackReason === null) throw new Error("wf540_bootstrap_cas_reason_absent");',
+    'output = { kind:"rolled-back",proof:null,reason:rollbackReason };',
+    'if (rollbackReason !== null) throw new Error("wf540_bootstrap_cas_reason_unexpected");',
+    'output = { kind:restored ? "committed" : "committed-proof-failed",proof,reason:null };',
   ];
   const validatesBootstrapCasSource = (source) =>
     bootstrapCasSourceRequired.every((token) => source.includes(token)) &&
     bootstrapCasPredicateTokens.every((token) => source.split(token).length - 1 === 1) &&
+    bootstrapCasRollbackGuardTokens.every((token) => source.split(token).length - 1 === 1) &&
     new Set(bootstrapCasPredicateTokens).size === 10 &&
+    bootstrapCasRollbackGuardTokens.length === 9 &&
+    new Set(bootstrapCasRollbackGuardTokens).size === 9 &&
+    BOOTSTRAP_CAS_ROLLBACK_REASONS.every(
+      (reason) => source.split(`"${reason}"`).length - 1 === 2
+    ) &&
     source.split("notDistinctUuid(users.").length - 1 === 1 &&
     source.split("notDistinctText(users.").length - 1 === 5 &&
     source.split("notDistinctJsonb(users.").length - 1 === 1 &&
     source.split("notDistinctTimestampMs(users.").length - 1 === 3 &&
     source.split("tx.update(users)").length - 1 === 1 &&
     source.split("}).where(and(...predicates)).returning();").length - 1 === 1 &&
-    source.split('output = { kind:"rolled-back",proof:null };').length - 1 === 1 &&
+    source.split('output = { kind:"rolled-back",proof:null,reason:rollbackReason };').length - 1 ===
+      1 &&
     source.split('"committed-proof-failed"').length - 1 === 1 &&
     source.includes("IS NOT DISTINCT FROM");
   invariant(
@@ -798,22 +887,29 @@ export async function runBootstrapRestorationSelfTest({
     [
       "zero-row rollback removed",
       BOOTSTRAP_CAS_RESTORE_BRIDGE_SOURCE.replace(
-        "if (updated.length !== 1) rollbackKnown();",
+        'if (updated.length !== 1) rollbackKnown("wf540_bootstrap_cas_update_cardinality");',
         "void updated.length;"
       ),
     ],
     [
       "known rollback made uncertain",
       BOOTSTRAP_CAS_RESTORE_BRIDGE_SOURCE.replace(
-        'output = { kind:"rolled-back",proof:null };',
+        'output = { kind:"rolled-back",proof:null,reason:rollbackReason };',
         'throw new Error("wf540_known_rollback_hidden");'
+      ),
+    ],
+    [
+      "rollback reason replaced with data",
+      BOOTSTRAP_CAS_RESTORE_BRIDGE_SOURCE.replace(
+        'rollbackKnown("wf540_bootstrap_cas_newest_pair_mismatch")',
+        "rollbackKnown(input.userId)"
       ),
     ],
     [
       "invalid postcommit proof marked committed",
       BOOTSTRAP_CAS_RESTORE_BRIDGE_SOURCE.replace(
-        'output = { kind:restored ? "committed" : "committed-proof-failed",proof };',
-        'output = { kind:"committed",proof };'
+        'output = { kind:restored ? "committed" : "committed-proof-failed",proof,reason:null };',
+        'output = { kind:"committed",proof,reason:null };'
       ),
     ],
   ]) {

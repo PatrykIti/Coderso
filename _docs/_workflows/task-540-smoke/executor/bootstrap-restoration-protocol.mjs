@@ -179,7 +179,7 @@ export function createBootstrapRestorationProtocol(dependencies) {
     );
     if (outcome.kind === "rolled-back") {
       return Object.freeze({
-        cause: new Error("bootstrap CAS closed with a known rollback"),
+        cause: new Error(outcome.reason),
         kind: "rejected",
       });
     }

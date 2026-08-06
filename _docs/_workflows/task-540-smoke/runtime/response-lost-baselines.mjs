@@ -12,6 +12,7 @@ export function createResponseLostBaselines({
   registry,
   resolveFixtureValue,
   runBunBridgeOperation,
+  runBunBridgeOperationBatch = null,
 }) {
   const {
     RESPONSE_LOST_CONTENT_TYPE_ACTIONS,
@@ -59,6 +60,7 @@ export function createResponseLostBaselines({
         plan.fixtureBlueprint.entry.slug,
       ],
     };
+    const requests = [];
     for (const actionId of RESPONSE_LOST_CREATE_ACTION_IDS) {
       const binding = RESPONSE_LOST_QUERY_OPERATION_BINDINGS[actionId];
       invariant(binding !== undefined, "response-lost preflight operation binding is absent");
@@ -103,7 +105,21 @@ export function createResponseLostBaselines({
       } else {
         invariant(false, "response-lost preflight action is not registered");
       }
-      const output = await bridgeQuery(binding.baselineOperationId, input);
+      requests.push(deepFreezeExact({ actionId, operationId: binding.baselineOperationId, input }));
+    }
+    const batchOutputs =
+      bridgeQuery === runBunBridgeOperation && typeof runBunBridgeOperationBatch === "function"
+        ? await runBunBridgeOperationBatch(state, requests)
+        : null;
+    invariant(
+      batchOutputs === null ||
+        (Array.isArray(batchOutputs) && batchOutputs.length === RESPONSE_LOST_CREATE_ACTION_IDS.length),
+      "response-lost preflight batch output cardinality drift"
+    );
+    for (let index = 0; index < requests.length; index += 1) {
+      const { actionId, operationId, input } = requests[index];
+      const output =
+        batchOutputs === null ? await bridgeQuery(operationId, input) : batchOutputs[index];
       const baseline = validateBoundedNaturalCandidateResult(output, "response-lost preflight query");
       if (
         actionId === "set-039-override-create" ||

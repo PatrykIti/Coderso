@@ -324,6 +324,13 @@ Implementation pipeline:
   scenario checkpoints, and phase timing. When exhaustive certification is
   materially slower than a normal feedback cycle, keep a fast required smoke
   lane and run the exhaustive lane once at the appropriate release boundary.
+- New or substantially changed reusable runtime smokes must enter through
+  `bun scripts/runtime-smoke.ts run --suite <suite> --profile <fast|certification> --session <name>`.
+  Add a thin statically registered suite adapter and compose the shared
+  lifecycle, polling, process supervision, profile-scoped workers, database
+  batches, browser segments, checkpoint primitives, redaction, timing, and
+  reporting. Do not copy those loops into another task-local executor. A legacy
+  harness may remain behind its adapter while it is incrementally migrated.
 
 ### Parallel streams and collision guards
 

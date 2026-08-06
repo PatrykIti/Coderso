@@ -25,6 +25,7 @@ const PRIVATE_CLEANUP_OUTCOME_DIAGNOSTICS = new WeakMap();
 // member of the frozen vocabulary is ever retained, never raw message text, so the sink keeps
 // its bounded-bytes and secret-free guarantees unchanged.
 const PRIVATE_CLEANUP_FAILURE_REASONS = new WeakMap();
+const INFER_PRIVATE_CLEANUP_FAILURE_REASON = Symbol("infer cleanup failure reason");
 
 function isPrivateCleanupFailureDiagnostic(value) {
   try {
@@ -142,7 +143,12 @@ function retainPrivateCleanupFailureReasonNeverThrow(subject, reason) {
   }
 }
 
-function retainPrivateCleanupFailureDiagnosticNeverThrow(cause, cleanupPhase, cleanupFailureClass) {
+function retainPrivateCleanupFailureDiagnosticNeverThrow(
+  cause,
+  cleanupPhase,
+  cleanupFailureClass,
+  cleanupFailureReason = INFER_PRIVATE_CLEANUP_FAILURE_REASON
+) {
   try {
     const failure =
       (typeof cause === "object" && cause !== null) || typeof cause === "function"
@@ -153,7 +159,10 @@ function retainPrivateCleanupFailureDiagnosticNeverThrow(cause, cleanupPhase, cl
       const diagnostic = createPrivateCleanupFailureDiagnostic(cleanupPhase, cleanupFailureClass);
       PRIVATE_CLEANUP_FAILURE_DIAGNOSTICS.set(failure, diagnostic);
       const reason =
-        privateCleanupFailureReasonNeverThrow(failure) ?? harnessFailureReasonNeverThrow(failure);
+        cleanupFailureReason === INFER_PRIVATE_CLEANUP_FAILURE_REASON
+          ? privateCleanupFailureReasonNeverThrow(failure) ??
+            harnessFailureReasonNeverThrow(failure)
+          : cleanupFailureReason;
       retainPrivateCleanupFailureReasonNeverThrow(failure, reason);
       retainPrivateCleanupFailureReasonNeverThrow(diagnostic, reason);
     }
@@ -225,7 +234,10 @@ function retainPrivateCleanupAggregateDiagnosticNeverThrow(error, failures, fall
   const retained = retainPrivateCleanupFailureDiagnosticNeverThrow(
     error,
     diagnostic.cleanupPhase,
-    diagnostic.cleanupFailureClass
+    diagnostic.cleanupFailureClass,
+    selected === null
+      ? INFER_PRIVATE_CLEANUP_FAILURE_REASON
+      : privateCleanupFailureReasonNeverThrow(selected.failure)
   );
   // The wrapper's own message is fixed prose ("TASK-540 deterministic cleanup failed"), so
   // without this the emitted diagnostic would name the aggregate and lose the only statement of

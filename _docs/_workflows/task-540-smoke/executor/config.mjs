@@ -67,6 +67,7 @@ export function classifyFailureReasonNeverThrow(cause) {
     // as "unclassified", rather than being pattern-matched over arbitrary length.
     if (message.length > MAX_FAILURE_REASON_MESSAGE_LENGTH) return "unclassified";
     if (FAILURE_REASON_HARNESS_PATTERN.test(message)) return message;
+    if (FAILURE_REASON_CLASSES.includes(message)) return message;
     if (message.includes("Timeout") && message.includes("exceeded")) {
       return "playwright_action_timeout";
     }
@@ -131,6 +132,9 @@ export function projectBrowserErrorFrameToken(stdoutBytes) {
       .toString("utf8");
     const harnessTag = FAILURE_REASON_EMBEDDED_HARNESS_PATTERN.exec(frame);
     if (harnessTag !== null) return harnessTag[0];
+    for (const failureClass of FAILURE_REASON_CLASSES.slice(0, 3)) {
+      if (frame.includes("Error: " + failureClass)) return failureClass;
+    }
     if (frame.includes("Timeout") && frame.includes("exceeded")) {
       return "playwright_action_timeout";
     }

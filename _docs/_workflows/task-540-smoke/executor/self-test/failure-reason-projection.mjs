@@ -95,6 +95,19 @@ export function runFailureReasonProjectionSelfTest({
         "playwright_strict_mode",
     "browser error frame playwright signature projection"
   );
+  // Batched browser frames carry the already-normalized class instead of Playwright's original
+  // prose. Keep that wire representation diagnostic-equivalent to the legacy one-action frame.
+  assertNegative(
+    projectBrowserErrorFrameToken(browserFrame("Error: playwright_action_timeout\n")) ===
+      "playwright_action_timeout" &&
+      projectBrowserErrorFrameToken(browserFrame("Error: playwright_modal_state\n")) ===
+        "playwright_modal_state" &&
+      projectBrowserErrorFrameToken(browserFrame("Error: playwright_strict_mode\n")) ===
+        "playwright_strict_mode" &&
+      classifyFailureReasonNeverThrow(new Error("playwright_action_timeout")) ===
+        "playwright_action_timeout",
+    "batched browser failure class projection"
+  );
   // No frame, no marker, no recognisable cause, or a non-buffer: the projection yields nothing
   // rather than guessing, so the boundary keeps its fixed fallback message.
   assertNegative(

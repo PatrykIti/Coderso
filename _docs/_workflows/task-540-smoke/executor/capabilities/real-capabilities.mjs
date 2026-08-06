@@ -25,8 +25,9 @@ import {
 } from "../private-workspace.mjs";
 import { deepEqualJson } from "../resource-contracts.mjs";
 import { ResourceCleanupPlanner, ResourceLedgerBuilder } from "../resource-ledger.mjs";
+import { persistentBunBridgeDispatcherIsInstalled } from "../../runtime/bun-bridge-transport.mjs";
 import { createExecuteCleanupLifecycleCore } from "./cleanup-lifecycle.mjs";
-import { createExecuteAction } from "./execute-action.mjs";
+import { createExecuteAction, createPrepareBrowserAction } from "./execute-action.mjs";
 
 export function createRealCapabilitiesFactory(dependencies) {
   // The private state registries, the local command authority, the Bun bridge descriptor and
@@ -277,6 +278,16 @@ export function createRealCapabilitiesFactory(dependencies) {
       browserWorkspace.environment.PATH
     );
     const bundledBun = await resolveValidatedBunExecutable(browserWorkspace.environment.PATH, root);
+    const batchingRuntime =
+      persistentBunBridgeDispatcherIsInstalled()
+        ? await Promise.all([
+            import("../../../../../scripts/runtime-smoke/adapters/task-540/browser-segments.ts"),
+            import("../../../../../scripts/runtime-smoke/adapters/task-540/browser-executor.ts"),
+            import("../../../../../scripts/runtime-smoke/browser/action-frames.ts"),
+            import("../../../../../scripts/runtime-smoke/repository-guard.ts"),
+            import("../../../../../scripts/runtime-smoke/browser/segment-compiler.ts"),
+          ])
+        : null;
     const state = {
       root,
       plan,
@@ -376,10 +387,59 @@ export function createRealCapabilitiesFactory(dependencies) {
     validateStaticBunBridgeDescriptorRegistries();
     initializeBunBridgeOperationAuthority(state);
     PRIVATE_RUNTIME.set(state, { repoEnvironment, csrfHeaderName: null, authRatePolicy: null });
+    const knownRepositoryGuard =
+      batchingRuntime === null
+        ? null
+        : new batchingRuntime[3].RepositoryGuard(root, async () => {
+            invariant(false, "known-path repository guard invoked full status authority");
+          });
+    const snapshotKnownRepository =
+      knownRepositoryGuard === null
+        ? snapshotRepository
+        : async (paths = []) =>
+            batchingRuntime[1].projectTask540KnownRepositorySnapshot(
+              await knownRepositoryGuard.snapshotKnown(paths)
+            );
+    let fullRepositorySnapshot =
+      batchingRuntime === null ? null : await snapshotRepository();
+    let fullRepositorySnapshotCount = fullRepositorySnapshot === null ? 0 : 1;
+    let finalRepositoryBoundarySealed = false;
+    const terminalScenarioByActionId = new Map();
+    for (const scenarioId of plan.requiredScenarios) {
+      const actions = plan.actionManifest.filter((action) => action.scenario === scenarioId);
+      invariant(actions.length > 0, scenarioId + " scenario action set is absent");
+      terminalScenarioByActionId.set(actions.at(-1).id, scenarioId);
+    }
+    const screenshotPathsByScenario = new Map(
+      plan.requiredScenarios.map((scenarioId) => [
+        scenarioId,
+        Object.values(plan.registries.screenshotPaths).filter((screenshotPath) =>
+          plan.actionManifest.some(
+            (action) =>
+              action.scenario === scenarioId &&
+              action.executable.type === "browser-screenshot" &&
+              plan.registries.screenshotPaths[action.executable.screenshotId] === screenshotPath
+          )
+        ),
+      ])
+    );
+    const sealFullRepositoryBoundary = async (allowedPaths) => {
+      if (batchingRuntime === null) return;
+      invariant(fullRepositorySnapshot !== null, "full repository baseline is absent");
+      const after = await snapshotRepository();
+      batchingRuntime[1].assertTask540RepositorySnapshotBoundary(
+        fullRepositorySnapshot,
+        after,
+        allowedPaths
+      );
+      fullRepositorySnapshot = after;
+      fullRepositorySnapshotCount += 1;
+      invariant(fullRepositorySnapshotCount <= 9, "full repository snapshot budget exceeded");
+    };
     const authority = new LocalCommandAuthority({
       root,
       assertSafeEvidence,
-      snapshotRepository,
+      snapshotRepository: snapshotKnownRepository,
       sensitiveValues: configuredSensitiveValues(repoEnvironment, process.env),
     });
     const runtimeHandlers = buildRuntimeOperationHandlers(plan);
@@ -410,6 +470,140 @@ export function createRealCapabilitiesFactory(dependencies) {
         if (subject) state.fixtureIds.set(subject, value);
       }
     };
+    const prepareBrowserAction = createPrepareBrowserAction({
+      PRIVATE_RUNTIME,
+      browserWorkspace,
+      buildBrowserInvocation,
+      buildPrivateBrowserInvocationWithAuthSettlementBoundary,
+      compileActionExecutionSpec,
+      outputContext,
+      plan,
+      root,
+      routeReceiptMetadata,
+      state,
+    });
+    let executePreparedBrowserProgram = ({ logicalRequest }) =>
+      authority.executeProgram(logicalRequest);
+    let browserBatchExecutor = null;
+    if (batchingRuntime !== null) {
+      const [segments, executor, frames, , segmentCompiler] = batchingRuntime;
+      const dispatchPlan = segments.compileTask540BrowserDispatchPlan(plan);
+      const materializedAuthorities = new WeakMap();
+      browserBatchExecutor = executor.createTask540BrowserExecutor({
+        dispatchPlan,
+        runId: "wf540-" + plan.nonce,
+        manifestSha256: segments.task540ManifestSha256(plan),
+        async materializeSegment(segment, current) {
+          const actions = segment.actionIds.map((actionId) => {
+            const action = plan.actionManifest.find((candidate) => candidate.id === actionId);
+            invariant(action !== undefined, actionId + " batch action is absent");
+            return action;
+          });
+          const materialized = Object.freeze({
+            segment,
+            actions: Object.freeze(
+              actions.map((action) => {
+                const prepared =
+                  action.id === current.actionId
+                    ? current.prepared
+                    : prepareBrowserAction(action, current.captures);
+                const args = prepared.invocation.args;
+                invariant(
+                  args.length === 4 &&
+                    args[0] === current.logicalRequest.args[0] &&
+                    args[1] === "--raw" &&
+                    args[2] === "run-code" &&
+                    typeof args[3] === "string" &&
+                    args[3].length > 0,
+                  action.id + " batch run-code invocation drift"
+                );
+                return Object.freeze({ actionId: action.id, source: args[3] });
+              })
+            ),
+          });
+          materializedAuthorities.set(materialized, {
+            actions,
+            sessionFlag: current.logicalRequest.args[0],
+          });
+          return materialized;
+        },
+        splitMaterializedSegment(materialized) {
+          const authority = materializedAuthorities.get(materialized);
+          invariant(authority !== undefined, "batch materialization authority is absent");
+          const splitSegments = segmentCompiler.splitMaterializedSegment(
+            materialized.segment,
+            frames.materializedSourceBytes(materialized.segment, materialized.actions)
+          );
+          let offset = 0;
+          const partitions = splitSegments.map((segment) => {
+            const actions = materialized.actions.slice(offset, offset + segment.actionIds.length);
+            const authorityActions = authority.actions.slice(
+              offset,
+              offset + segment.actionIds.length
+            );
+            offset += segment.actionIds.length;
+            invariant(
+              actions.length === segment.actionIds.length &&
+                authorityActions.length === segment.actionIds.length &&
+                actions.every(({ actionId }, index) => actionId === segment.actionIds[index]) &&
+                authorityActions.every(({ id }, index) => id === segment.actionIds[index]),
+              "browser batch partition authority drift"
+            );
+            const partition = Object.freeze({
+              segment,
+              actions: Object.freeze(actions),
+            });
+            materializedAuthorities.set(partition, {
+              actions: authorityActions,
+              sessionFlag: authority.sessionFlag,
+            });
+            return partition;
+          });
+          invariant(
+            offset === materialized.actions.length,
+            "browser batch partition cardinality drift"
+          );
+          return Object.freeze(partitions);
+        },
+        async dispatchSegment(materialized, expectation) {
+          const materializedAuthority = materializedAuthorities.get(materialized);
+          invariant(materializedAuthority !== undefined, "batch materialization authority is absent");
+          const source = frames.buildBatchRunCodeSource({
+            expectation,
+            actions: materialized.actions,
+          });
+          const physical = await authority.executeBatchProgram({
+            attributionAction: materializedAuthority.actions[0],
+            actions: materializedAuthority.actions,
+            args: [materializedAuthority.sessionFlag, "--raw", "run-code", source],
+            cwd: browserWorkspace.cwd,
+            env: browserWorkspace.environment,
+          });
+          invariant(physical.stderr.length === 0, "browser batch stderr is not empty");
+          return Object.freeze({
+            frames: frames.decodePlaywrightBatchOutput(physical.stdout, expectation),
+            proof: physical.proof,
+          });
+        },
+        async projectFrame(request, frame, proof) {
+          const stdout =
+            frame.status === "success"
+              ? frames.logicalSuccessBytes(frame)
+              : frames.logicalFailureBytes(frame);
+          return authority.projectBatchActionResult({
+            proof,
+            request: request.logicalRequest,
+            stdout,
+            terminal: frame.terminal,
+          });
+        },
+        executeStandalone(request) {
+          return authority.executeProgram(request.logicalRequest);
+        },
+      });
+      executePreparedBrowserProgram = (request) =>
+        browserBatchExecutor.executePrepared(request);
+    }
     // The ten-phase deterministic cleanup lifecycle lives in one capability module and receives
     // the capability state, the manifest plan, the private browser workspace, the bootstrap login
     // authority and every private discovery, disposal, task-traffic, restoration, baseline and
@@ -447,6 +641,39 @@ export function createRealCapabilitiesFactory(dependencies) {
       state,
       stopOwnedHost,
     });
+    const executeActionCore = createExecuteAction({
+      PRIVATE_RUNTIME,
+      armResponseLostCreateBeforeWrite,
+      assertSafeEvidence,
+      authority,
+      browserWorkspace,
+      buildBrowserInvocation,
+      buildPrivateBrowserInvocationWithAuthSettlementBoundary,
+      classifyPrivateAuthSettlementFailureFrame,
+      classifyPrivateDirtyNavigationFailureFrame,
+      classifyPrivateToneOpenFailureFrame,
+      classifyPrivateToneSelectFailureFrame,
+      compileActionExecutionSpec,
+      createPrivateAuthSettlementFailure,
+      createPrivateDirtyNavigationFailure,
+      createPrivateToneOpenFailure,
+      createPrivateToneSelectFailure,
+      executePreparedBrowserProgram,
+      finalizePrivateBrowserResultWithAuthSettlementBoundary,
+      normalizeBrowserCommandOutput,
+      normalizePrivateBrowserOutputWithAuthSettlementBoundary,
+      outputContext,
+      parsePrivateBrowserSuccessWithAuthSettlementBoundary,
+      plan,
+      prepareBrowserAction,
+      rememberFixtureBindings,
+      root,
+      routeReceiptMetadata,
+      runObservedBootstrapLoginAttempt,
+      runtimeHandlers,
+      stageIntentionalPresentationOverrideActionReceipt,
+      state,
+    });
     const capabilities = {
       bindCoreCleanupAuthority(context) {
         invariant(state.coreCleanupContext === null, "core cleanup authority was assigned twice");
@@ -479,37 +706,14 @@ export function createRealCapabilitiesFactory(dependencies) {
       retainPrimaryFailureObservation(cause) {
         state.pendingFailureAttempts.retainPrimaryFailureObservation(cause);
       },
-      executeAction: createExecuteAction({
-        PRIVATE_RUNTIME,
-        armResponseLostCreateBeforeWrite,
-        assertSafeEvidence,
-        authority,
-        browserWorkspace,
-        buildBrowserInvocation,
-        buildPrivateBrowserInvocationWithAuthSettlementBoundary,
-        classifyPrivateAuthSettlementFailureFrame,
-        classifyPrivateDirtyNavigationFailureFrame,
-        classifyPrivateToneOpenFailureFrame,
-        classifyPrivateToneSelectFailureFrame,
-        compileActionExecutionSpec,
-        createPrivateAuthSettlementFailure,
-        createPrivateDirtyNavigationFailure,
-        createPrivateToneOpenFailure,
-        createPrivateToneSelectFailure,
-        finalizePrivateBrowserResultWithAuthSettlementBoundary,
-        normalizeBrowserCommandOutput,
-        normalizePrivateBrowserOutputWithAuthSettlementBoundary,
-        outputContext,
-        parsePrivateBrowserSuccessWithAuthSettlementBoundary,
-        plan,
-        rememberFixtureBindings,
-        root,
-        routeReceiptMetadata,
-        runObservedBootstrapLoginAttempt,
-        runtimeHandlers,
-        stageIntentionalPresentationOverrideActionReceipt,
-        state,
-      }),
+      async executeAction(request) {
+        const result = await executeActionCore(request);
+        const scenarioId = terminalScenarioByActionId.get(request.action.id);
+        if (scenarioId !== undefined) {
+          await sealFullRepositoryBoundary(screenshotPathsByScenario.get(scenarioId) ?? []);
+        }
+        return result;
+      },
       executeCleanupLifecycleCore,
       cleanup(request = null) {
         if (state.cleanupPromise === null) {
@@ -538,6 +742,17 @@ export function createRealCapabilitiesFactory(dependencies) {
                 "cleanup once request identity drift"
               );
               const lifecycle = await capabilities.executeCleanupLifecycleCore(selected);
+              if (!finalRepositoryBoundarySealed) {
+                await sealFullRepositoryBoundary([]);
+                finalRepositoryBoundarySealed = true;
+              }
+              if (!selected.failure && batchingRuntime !== null) {
+                invariant(
+                  fullRepositorySnapshotCount === 9,
+                  "successful smoke full repository snapshot count drift"
+                );
+                browserBatchExecutor.assertDrained();
+              }
               return deepFreezeExact({ absenceProven: true, lifecycle });
             } catch (error) {
               state.cleanupFailures += 1;

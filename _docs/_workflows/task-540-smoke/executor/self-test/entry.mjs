@@ -17,6 +17,7 @@ import {
 import {
   API_SESSION_OBSERVATION_BRIDGE_SOURCE,
   BOOTSTRAP_BASELINE_READ_BRIDGE_SOURCE,
+  BOOTSTRAP_CAS_ROLLBACK_REASONS,
   BOOTSTRAP_CAS_RESTORE_BRIDGE_SOURCE,
   bootstrapCasPredicates,
 } from "../bridge-sources/bootstrap.mjs";
@@ -647,6 +648,7 @@ export function createRunTask540SmokeExecutorSelfTest(dependencies) {
       assertSourceMutantsRejected,
       attemptBootstrapCasBridgeOnce,
       BOOTSTRAP_BASELINE_READ_BRIDGE_SOURCE,
+      BOOTSTRAP_CAS_ROLLBACK_REASONS,
       BOOTSTRAP_CAS_RESTORE_BRIDGE_SOURCE,
       BOOTSTRAP_RESTORE_PROOF_KEYS,
       classifyBootstrapCasBridgeFailure,

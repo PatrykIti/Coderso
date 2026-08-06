@@ -81,9 +81,9 @@ Task board for project work. Keep task files and this board in sync.
   Do not move a leaf task to `Done` until either its standalone changelog
   exists or the family changelog records that leaf.
 
-- **To Do:** 447 tasks
-- **In Progress:** 6 tasks
-- **Done:** 3118 tasks
+- **To Do:** 450 tasks
+- **In Progress:** 10 tasks
+- **Done:** 3119 tasks
 
 > TASK-479 (25 subtasks 05–29 + 92 leaves) and TASK-480 (umbrella + 6 subtasks +
 > 18 leaves) were broken down 2026-06-27. The table below lists the
@@ -180,6 +180,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-552 | Runtime Smoke Harness Performance | High | Large | ✅ Done (2026-08-06): added the shared `scripts/runtime-smoke.ts` fast/certification entry point, lifecycle, polling, supervision, profile-isolated persistent Bun workers, bounded DB cleanup/proofs, dependency-bounded Playwright segments, strict checkpoint primitives, reports, and thin TASK-540/widget/production adapters. The complete TASK-540 fast smoke passed 7/7 flows with 13 PNGs, zero console errors, nine repository snapshots, and complete auth/DB/storage/process/port cleanup in `19:38.580`—46.77% shorter than the earlier 36.9m fast run and an owner-accepted residual above the aspirational 15-minute target. No product, schema, migration, or index change; migration 0070 remains intentional. Changelog 1264. All 3 children + 4 leaves terminal. |
 | TASK-540 | Custom Screens Functional and Data-Integrity Remediation | High | Large | ✅ Done (2026-08-06): strict Screen data/URL/Tab integrity, link-only Button actions, accessible runtime selection, dirty-navigation/cache recovery, responsive canvas behavior, and per-user preferences are complete. Targeted validation and final post-implementation review passed; the canonical seven-flow runtime smoke passed with 13 valid PNGs, light/dark coverage, and complete fixture/session/process/port cleanup. Changelog 1252. All 7 children and 12 leaves are terminal; the naming-only deferred LOW remains TASK-9999-01-L01. |
 | TASK-550 | Database Query and Server Cache Engineering Rules | High | Small | ✅ Done (2026-07-24): codified the owner-requested PostgreSQL and repository query audit as mandatory bounded-query, schema/index, transaction, retention, pool, performance-evidence, local-first cache, optional Redis, invalidation, and cache-security rules in root `AGENTS.md`. Docs/process only; no runtime, route, schema, migration, or dependency change. Changelog 1262. |
 | TASK-546 | Node 26 and Full Dependency Upgrade | High | Large | ✅ Done (2026-07-22): Node 26.5.0 and Bun 1.3.14 now own the runtime/toolchain contract; the root workspace and standalone prototype use the latest mutually compatible stable dependency graph admitted by the seven-day supply-chain quarantine, and `fast-uri` resolves only to fixed 3.1.4. Node/React/Vite compatibility, TASK-522 strict-Semgrep, TASK-540/TASK-543 local CodeQL regressions, and Forms scanner/modularity findings were repaired without UI/UX changes or dependency downgrades. Full Bun passed 1,733 with 1 optional live-provider skip and 0 failures; full Vitest passed 7,194/7,194; fresh coverage completed; precommit, all builds, Admin boundary/bundle budgets, release gates 5/5, and strict security scanning passed. The production server smoke returned healthy root/Admin/assets and the expected controlled exact `/peri` 404. Five post-audit lenses were clean. Docker image build/scan was not run because Docker CLI is unavailable; remote PR CodeQL alert closure was not claimed because `gh` is unauthenticated and no commit/push was authorized. Changelog 1259. All 4 children + 6 leaves terminal. |

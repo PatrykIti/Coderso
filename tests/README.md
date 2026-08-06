@@ -72,11 +72,60 @@ admin-reachable code value-imports server/runtime-only modules such as DB,
 server routes, storage adapters, provider SDKs, password hashing, secret-store,
 or runtime data resolvers.
 
-## Manual Smoke
+## Runtime Smoke Platform
 
-The TASK-336 widget contract smoke is a Bun-owned Playwright CLI harness. It is
-not part of the default automated lane because it requires local admin/frontend
-servers and admin credentials.
+Reusable local runtime smokes use one strict entry point:
+
+```bash
+bun scripts/runtime-smoke.ts run \
+  --suite <task-540|widget-contract|production-boundary> \
+  --profile <fast|certification> \
+  --session <task-scoped-name>
+```
+
+`fast` preserves its suite's product-visible scenarios while selecting
+short-feedback infrastructure settings that the adapter can safely restore.
+`certification` keeps production-strength timing and belongs at the release
+boundary when running both profiles would repeat the same product proof. A
+profile never silently falls back to the other.
+
+The entry point owns local lifecycle, condition polling, bounded process
+supervision, repository guards, redaction, timings, JSON/Markdown reporting,
+and cleanup aggregation. Suite adapters reuse profile-scoped persistent Bun
+workers (`DB_POOL_MAX=1` for database-bearing profiles), bounded transactional
+database batches, Playwright action segments, and checkpoint contracts. New
+suites add a fixed registry entry plus a thin adapter; they must not duplicate
+worker, cleanup, polling, browser, or reporting loops.
+
+The current adapters are:
+
+- `task-540`: the complete seven-scenario Custom Screens proof with 496 logical
+  action identities, 13 PNGs, light/dark coverage, console checks, and canonical
+  cleanup. Its 18 setup baselines use two profile-isolated worker frames and its
+  DB cleanup remains projected into the original ordered receipts. Bootstrap
+  CAS restoration intentionally uses one canonical one-shot Bun operation: its
+  source identity depends on runtime-specific `Function#toString`, so routing
+  that single mutation through the persistent worker would reject a valid
+  restore. All other registered operations remain persistent/batched.
+- `widget-contract`: a focused `gallery-mosaic` adapter over the retained
+  widget contract harness plus a fresh public browser error probe.
+- `production-boundary`: a certification-only production build/server probe
+  covering install status, root/Admin, one built asset, exact `/peri` 404,
+  clean logs, and PID/port release.
+
+Reports go to stdout as bounded canonical JSON and stderr as a concise Markdown
+summary; redirect them to a task-scoped file when durable evidence is required.
+Screenshots remain under `_docs/_workflows/_smoke/`. Generic checkpoint
+validation/sealing/storage primitives are available to adapters whose scenarios
+can prove independent cleanup and reset. TASK-540 currently uses its canonical
+full-run cleanup and reset inventory; do not claim automatic TASK-540 resume
+until that adapter seals and consumes those checkpoints end to end.
+
+## Legacy Widget Smoke
+
+The TASK-336 widget contract smoke remains a Bun-owned Playwright CLI harness
+behind the shared adapter. Direct invocation is useful only for targeted legacy
+debugging and still requires local admin/frontend servers and admin credentials.
 
 ```bash
 CODERSO_PLAYWRIGHT_EMAIL="<admin email>" \

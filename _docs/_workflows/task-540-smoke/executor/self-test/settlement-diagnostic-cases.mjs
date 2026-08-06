@@ -267,7 +267,7 @@ export async function runSettlementDiagnosticCasesSelfTest({
         sensitiveValues: [DIRTY_NAVIGATION_BROWSER_FAILURE_CLASSES[0]],
       }),
   });
-  const executeProgramSource = LocalCommandAuthority.prototype.executeProgram.toString();
+  const executeProgramSource = LocalCommandAuthority.prototype.projectProgramOutcome.toString();
   const dirtyClassifierStart = executeProgramSource.indexOf(
     "const exactDirtyNavigationFailureClass ="
   );

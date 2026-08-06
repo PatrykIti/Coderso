@@ -43,15 +43,18 @@ Changelogs 1260 and 1261 are reserved for the implementation closure of
 TASK-547 and TASK-548, respectively.
 Changelog 1262 is consumed by the completed TASK-550 docs/process task.
 Changelog 1263 is reserved for the implementation closure of TASK-551.
+Changelog 1264 is consumed by the completed TASK-552 runtime-smoke performance
+family.
 These remaining numbers are contract reservations only: do not add index
 rows or changelog files before the corresponding family is complete.
 If a completed family is reopened after its changelog draft was already authored, that draft
 may remain only with an explicit `Draft` status that supersedes its closure evidence; keep its
 index row absent until fresh reclosure validation succeeds.
-Use 1264 for the next unreserved changelog entry.
+Use 1265 for the next unreserved changelog entry.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 1264 | 2026-08-06 | TASK-552 Runtime Smoke Harness Performance — one shared CLI/lifecycle, profile-isolated persistent Bun workers, bounded DB and Playwright batching, strict checkpoint primitives, three thin adapters, and complete TASK-540 fast smoke reduced to 19:38.580 with 7/7 flows, 13 PNGs, zero console errors, and complete cleanup; no product or migration/index change | Testing/Developer Experience/Performance/Reliability/Security/Docs/Task Board |
 | 1262 | 2026-07-24 | TASK-550 Database Query and Server Cache Engineering Rules — mandatory bounded-query, schema/index, transaction, retention, pool, measured-performance, local-first cache, optional Redis, post-commit invalidation, and cache-security rules; TASK-551 implementation program prioritized | Docs/Process/Database/Queries/Caching/Performance/Task Board |
 | 1259 | 2026-07-22 | TASK-546 Node 26 and Full Dependency Upgrade — Node 26.5/Bun 1.3.14, latest admitted dependency graph, `fast-uri` CVE removal, Node/React/Vite compatibility, workflow/Forms scanner remediation, complete gates, and `/peri` production smoke | Toolchain/Dependencies/Supply Chain/Security/CodeQL/Runtime/UI Compatibility/Testing/QA/Docs/Task Board |
 | 1258 | 2026-07-18 | TASK-9999-01-L02 Superseded by TASK-540-02-L01 — current evidence shows `baseLabel` is read to invalidate stale Tab-label drafts while the commit-stable input preserves keyboard focus. The old value-only cleanup would regress visible UX/accessibility, so L02 left the deferred backlog as `⏭️ Superseded`; TASK-540-02-L01 remains active under its existing repair receipt. TASK-9999-01 stays To Do for L01 and the sentinel parent stays In Progress. | Custom Screens/Admin UI/Accessibility/Task Board/Docs |
