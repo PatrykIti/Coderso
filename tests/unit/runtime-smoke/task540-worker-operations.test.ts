@@ -17,8 +17,13 @@ import {
   type Task540WorkerHandlers,
 } from "../../../scripts/runtime-smoke/adapters/task-540/worker-operations";
 import { createTask540ProductionWorkerHandlers } from "../../../scripts/runtime-smoke/adapters/task-540/production-handlers";
-import { TASK540_SOURCE_CATALOG } from "../../../scripts/runtime-smoke/adapters/task-540/source-catalog";
-import type { Task540SourceExecutor } from "../../../scripts/runtime-smoke/adapters/task-540/source-executor";
+import { TASK540_OPERATION_ALIASES } from "../../../scripts/runtime-smoke/adapters/task-540/operations/aliases";
+import { createTask540TypedHandlers } from "../../../scripts/runtime-smoke/adapters/task-540/operations/handlers";
+import type {
+  Task540InputSchemaId,
+  Task540TypedHandler,
+} from "../../../scripts/runtime-smoke/adapters/task-540/operations/contracts";
+import type { PlainJsonObject } from "../../../scripts/runtime-smoke/workers/contracts";
 
 function digest(value: string): string {
   return createHash("sha256").update(value).digest("hex");
@@ -92,7 +97,8 @@ test("TASK-540 batches 32 DB operations while its outer loop preserves all 72 re
   const appendResource = (
     kind: string,
     resourceIndex: number,
-    slots: readonly ("provenance" | "delete" | "absence")[]
+    slots: readonly ("provenance" | "delete" | "absence")[],
+    identifier: readonly string[]
   ): void => {
     const resourceKey = `${kind}:${resourceIndex}`;
     for (const operation of slots) {
@@ -105,24 +111,65 @@ test("TASK-540 batches 32 DB operations while its outer loop preserves all 72 re
         profileId: "database",
         wave: 0,
         ordinal,
-        identifier: [`00000000-0000-4000-8000-${String(resourceIndex).padStart(12, "0")}`],
+        identifier,
         ownershipSha256: digest(`owner-${resourceKey}`),
       });
     }
   };
   for (let index = 0; index < 6; index += 1) {
-    appendResource("seo-document-entry", index, ["provenance", "delete", "absence"]);
+    appendResource(
+      "seo-document-entry",
+      index,
+      ["provenance", "delete", "absence"],
+      [
+        `00000000-0000-4000-8000-${String(index).padStart(12, "0")}`,
+        "entry",
+        `10000000-0000-4000-8000-${String(index).padStart(12, "0")}`,
+      ]
+    );
   }
   for (let index = 0; index < 2; index += 1) {
-    appendResource(index === 0 ? "setting-user-a" : "setting-user-b", index, ["delete", "absence"]);
-    appendResource(index === 0 ? "user-a" : "user-b", index + 2, ["delete", "absence"]);
+    const settingUserId = `20000000-0000-4000-8000-${String(index).padStart(12, "0")}`;
+    const userId = `30000000-0000-4000-8000-${String(index).padStart(12, "0")}`;
+    appendResource(
+      index === 0 ? "setting-user-a" : "setting-user-b",
+      index,
+      ["delete", "absence"],
+      [settingUserId, "customScreens.entry.preferences"]
+    );
+    appendResource(index === 0 ? "user-a" : "user-b", index + 2, ["delete", "absence"], [userId]);
   }
-  appendResource("media-row-key", 4, ["provenance", "delete", "absence"]);
-  appendResource("presentation-override", 5, ["provenance", "delete", "absence"]);
+  const mediaId = "40000000-0000-4000-8000-000000000004";
+  appendResource(
+    "media-row-key",
+    4,
+    ["provenance", "delete", "absence"],
+    [mediaId, `2026/08/${mediaId}.png`]
+  );
+  appendResource(
+    "presentation-override",
+    5,
+    ["provenance", "delete", "absence"],
+    [
+      "50000000-0000-4000-8000-000000000005",
+      "60000000-0000-4000-8000-000000000005",
+      "block-5",
+      "mediaAssetId",
+    ]
+  );
   expect(operations).toHaveLength(TASK540_CLEANUP_DB_OPERATIONS);
 
   const dispatches = buildTask540CleanupDispatches(operations, handlers.artifact);
-  expect(dispatches).toHaveLength(2);
+  expect(dispatches).toHaveLength(7);
+  expect(dispatches.map(({ family }) => family)).toEqual([
+    "media",
+    "media",
+    "media",
+    "override",
+    "seo",
+    "setting",
+    "user",
+  ]);
   const seoDispatch = dispatches.find(({ family }) => family === "seo");
   expect(seoDispatch).toBeDefined();
   assertTask540SeoBatchBudget(seoDispatch!, 3);
@@ -147,6 +194,19 @@ test("TASK-540 batches 32 DB operations while its outer loop preserves all 72 re
   expect(preserved).toHaveLength(72);
   expect(preserved.filter(({ authority }) => authority === "canonical+db")).toHaveLength(32);
   expect(preserved.filter(({ authority }) => authority === "canonical")).toHaveLength(40);
+
+  const foreignSlot = operations.map((operation, index) =>
+    index === 1 ? { ...operation, ownershipSha256: digest("foreign-owner") } : operation
+  );
+  expect(() => buildTask540CleanupDispatches(foreignSlot, handlers.artifact)).toThrow(
+    "ownership or slot authority drifted"
+  );
+  const duplicateSlot = operations.map((operation, index) =>
+    index === 2 ? { ...operation, operation: "delete" as const } : operation
+  );
+  expect(() => buildTask540CleanupDispatches(duplicateSlot, handlers.artifact)).toThrow(
+    "ownership or slot authority drifted"
+  );
 });
 
 test("TASK-540 worker seam rejects result reordering and incomplete handler registries", async () => {
@@ -184,22 +244,56 @@ test("TASK-540 worker seam rejects result reordering and incomplete handler regi
 });
 
 test("TASK-540 production baseline handler reduces 18 logical reads to two profile frames", async () => {
-  const requests: string[] = [];
-  const executor = {
-    async execute(request: { readonly operationId: string }) {
-      requests.push(request.operationId);
-      return { candidates: [] };
-    },
-  } as unknown as Task540SourceExecutor;
-  const productionHandlers = createTask540ProductionWorkerHandlers(executor);
-  const items = TASK540_SOURCE_CATALOG.operationIds()
-    .filter((operationId) => operationId.startsWith("response-lost/preflight/"))
-    .map((operationId, index) => ({
-      logicalId: `baseline/item-${index}`,
-      operationId,
-      profileId: TASK540_SOURCE_CATALOG.require(operationId).profileId,
-      input: { ordinal: index },
-    }));
+  const calls: string[] = [];
+  const typedHandlers = new Map(createTask540TypedHandlers());
+  for (const [handlerId, handler] of typedHandlers) {
+    typedHandlers.set(
+      handlerId,
+      Object.freeze({
+        ...handler,
+        async execute(): Promise<{
+          readonly candidates: readonly never[];
+          readonly overflow: false;
+        }> {
+          calls.push(handlerId);
+          return Object.freeze({ candidates: Object.freeze([]), overflow: false });
+        },
+      }) satisfies Task540TypedHandler
+    );
+  }
+  const productionHandlers = createTask540ProductionWorkerHandlers(typedHandlers);
+  const inputForSchema = (schemaId: Task540InputSchemaId, index: number): PlainJsonObject => {
+    switch (schemaId) {
+      case "email-input-v1":
+        return { email: `task-540-${index}@example.com` };
+      case "slug-input-v1":
+        return { slug: `task-540-${index}` };
+      case "entry-preflight-input-v1":
+        return { entrySlug: `entry-${index}`, typeSlug: `type-${index}` };
+      case "media-natural-input-v1":
+        return { mimeType: "image/png", originalName: `task-${index}.png`, size: 64 };
+      case "screen-preflight-input-v1":
+        return { contentTypeSlug: `type-${index}`, name: `Task ${index}` };
+      case "override-preflight-input-v1":
+        return {
+          blockId: `block-${index}`,
+          contentTypeSlug: `type-${index}`,
+          entrySlug: `entry-${index}`,
+          propPath: "mediaAssetId",
+          screenName: `Screen ${index}`,
+        };
+      default:
+        throw new Error(`unexpected baseline schema: ${schemaId}`);
+    }
+  };
+  const items = TASK540_OPERATION_ALIASES.filter(({ operationId }) =>
+    operationId.startsWith("response-lost/preflight/")
+  ).map((row, index) => ({
+    logicalId: `baseline/item-${index}`,
+    operationId: row.operationId,
+    profileId: row.profileId,
+    input: inputForSchema(row.inputSchemaId, index),
+  }));
   expect(items).toHaveLength(18);
   const dispatches = buildTask540BaselineDispatches(items, productionHandlers.artifact);
   expect(dispatches).toHaveLength(2);
@@ -207,7 +301,7 @@ test("TASK-540 production baseline handler reduces 18 logical reads to two profi
   const outputs = await Promise.all(
     dispatches.map(({ descriptor, input }) => registry.executeOneShot(descriptor, input))
   );
-  expect(requests).toHaveLength(18);
+  expect(calls).toHaveLength(18);
   expect(
     outputs.map((output) => (output as { readonly results: readonly unknown[] }).results.length)
   ).toEqual([14, 4]);

@@ -8,7 +8,8 @@
  * burst starts against a fresh fixed-window counter. The wait is DERIVED, never
  * hard-coded:
  *
- *   _docs/_workflows/task-540-smoke/browser/generic-invocations.mjs
+ *   scripts/runtime-smoke/adapters/task-540/suite/browser/materialization/
+ *     generic-invocations.mjs
  *     const waitMs = policy.enabled ? policy.windowSeconds * 1000 + 1000 : 0;
  *
  * and `policy` is read live out of the database by a bridge subprocess that
@@ -93,7 +94,7 @@ const SECURITY_SETTINGS_ROW_KEY = "security.settings";
 
 /**
  * The band the frozen smoke contract accepts, from
- * `_docs/_workflows/task-540-smoke/contract/requirements.mjs`
+ * `scripts/runtime-smoke/adapters/task-540/suite/contract/requirements.mjs`
  * (`requiredEnabledWindowSecondsMin: 1`, `requiredEnabledWindowSecondsMax: 60`,
  * `requiredEnabledMaxRequests: 10`). Enforced here so a bad value is rejected
  * before it reaches the database; the smoke's own `set-004c` capacity preflight

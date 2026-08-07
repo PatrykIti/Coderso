@@ -6,7 +6,9 @@
 **Category:** Testing Infrastructure / Browser / Process Lifecycle / Runtime
 **Estimated Effort:** Very Large
 **Dependencies:** TASK-552-04-L02 complete
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Started:** 2026-08-06
+**Completed:** 2026-08-06
 **Changelog:** 1264 (family reclosure)
 
 ---

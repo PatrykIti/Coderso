@@ -59,10 +59,10 @@ Changelog 1264 therefore remains a draft until this corrective family closes.
 
 | ID | Title | Status |
 |---|---|---|
-| TASK-552-04-L01 | Native Suite Relocation and No-Docs-Import Boundary | ⏳ To Do |
-| TASK-552-04-L02 | Typed TASK-540 Operations and Persistent Worker | ⏳ To Do |
-| TASK-552-04-L03 | Shared Playwright Dev Host and Scenario Composition | ⏳ To Do |
-| TASK-552-04-L04 | Legacy Deletion, Benchmark, Docs, and Reclosure | ⏳ To Do |
+| TASK-552-04-L01 | Native Suite Relocation and No-Docs-Import Boundary | ✅ Done |
+| TASK-552-04-L02 | Typed TASK-540 Operations and Persistent Worker | ✅ Done |
+| TASK-552-04-L03 | Shared Playwright Dev Host and Scenario Composition | ✅ Done |
+| TASK-552-04-L04 | Legacy Deletion, Benchmark, Docs, and Reclosure | 🚧 In Progress |
 
 Land strictly in this order:
 

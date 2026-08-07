@@ -78,15 +78,11 @@ type NulException = {
  * the separator (2 bytes, around lines 785 and 790). The fix is to write it as the
  * `\u0000` escape, which is the same string at runtime and leaves the source text.
  *
- * It is not applied here for two independent reasons, either of which is
- * sufficient. First, `core/admin/ui/pages/**` is in this task family's
- * FORBIDDEN_PATHS (`_docs/_workflows/task-540-implement.mjs`), so the family is not
- * permitted to edit that file at all. Second, TASK-540's own physical-line gate
- * (`node _docs/_workflows/task-540-implement.mjs --check-task-family-line-limit`)
- * rejects any TOUCHED module over 1,000 physical lines, and this file is 5,205 --
- * so even a one-character fix would turn the family gate red until the file is
- * split. Fixing it belongs to whoever owns the page editor, not to a NUL-byte
- * cleanup that would have to break two of the family's own rules to reach it.
+ * It is not applied here because the repository's physical-line gate rejects any
+ * touched human-authored module over 1,000 lines, and this legacy page editor is
+ * 5,205 lines. Even a one-character fix therefore requires a cohesive page-editor
+ * split in the same task. Fixing it belongs to the stream that owns that split,
+ * not to a NUL-byte cleanup that would leave the governed module oversized.
  *
  * The entry pins the COUNT, not the offsets: offsets move under every unrelated
  * edit to an actively-developed file, while the count only moves when someone adds
@@ -99,9 +95,8 @@ const NUL_EXCEPTIONS: readonly NulException[] = [
     path: "core/admin/ui/pages/PageEditor.tsx",
     nulBytes: 2,
     reason:
-      "form-id useMemo key separator; core/admin/ui/pages/** is in this family's " +
-      "FORBIDDEN_PATHS, and at 5,205 lines the file is also outside the 1,000-line " +
-      "physical-line gate that governs every module this family touches",
+      "form-id useMemo key separator; at 5,205 lines the file requires a cohesive " +
+      "split before any edit can satisfy the repository's 1,000-line gate",
   },
 ];
 
@@ -141,7 +136,7 @@ test("no tracked text source carries a NUL byte", () => {
   // Guard the guard: a broken enumeration or an over-eager filter would make every
   // assertion below pass over nothing at all.
   expect(scanned.length).toBeGreaterThan(5_000);
-  expect(scanned).toContain("tests/unit/workflows/task540ForbiddenSchemaPaths.test.ts");
+  expect(scanned).toContain("tests/unit/toolchain/trackedSourcesAreText.test.ts");
   expect(scanned).toContain("core/admin/ui/pages/PageEditor.tsx");
 
   const excepted = new Map(NUL_EXCEPTIONS.map((entry) => [entry.path, entry.nulBytes]));

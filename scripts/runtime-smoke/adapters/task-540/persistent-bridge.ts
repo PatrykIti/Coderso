@@ -12,12 +12,15 @@ import {
 } from "../../workers/contracts";
 import { WorkerPool, type WorkerProfileSpec } from "../../workers/pool";
 import {
-  TASK540_SOURCE_CATALOG,
-  TASK540_SOURCE_PROFILE_IDS,
-  type Task540SourceProfileId,
-  type Task540SourceRequest,
-} from "./source-catalog";
-import { createTask540SourceWorkerRegistry, task540SourceWorkerDescriptor } from "./worker-entry";
+  TASK540_OPERATION_PROFILE_IDS,
+  type Task540OperationProfileId,
+} from "./operations/contracts";
+import { task540OperationDescriptor } from "./operations/registry";
+import {
+  routeTask540Operation,
+  type Task540RoutableOperation,
+} from "./suite/runtime/operation-router";
+import { createTask540WorkerRegistry } from "./worker-entry";
 import { TASK540_AUTH_PREPARE_DESCRIPTOR, TASK540_AUTH_RESTORE_DESCRIPTOR } from "./auth-window";
 import { buildTask540BaselineDispatches } from "./cleanup-batches";
 import { TASK540_PRODUCTION_HANDLER_ARTIFACT } from "./production-handlers";
@@ -27,15 +30,8 @@ import {
   type Task540CleanupBatchOutput,
 } from "./worker-operations";
 
-interface LegacyBunBridgeDescriptor {
-  readonly envProfileId: string;
-  readonly operationId: string;
-  readonly source: string;
-  readonly sourceSha256: string;
-}
-
 export interface PersistentBunBridgeDispatch {
-  readonly descriptor: LegacyBunBridgeDescriptor;
+  readonly descriptor: Task540RoutableOperation;
   readonly environment: Readonly<Record<string, string>>;
   readonly executablePath: string;
   readonly executionBoundaryObserver: (() => void | Promise<void>) | null;
@@ -99,8 +95,8 @@ export class Task540PersistentBridge implements LifecycleResource {
   readonly #processes: ProcessSupervisor;
   readonly #entryFile: string;
   readonly #coreRoot: string;
-  readonly #environments = new Map<Task540SourceProfileId, Readonly<Record<string, string>>>();
-  readonly #environmentDigests = new Map<Task540SourceProfileId, string>();
+  readonly #environments = new Map<Task540OperationProfileId, Readonly<Record<string, string>>>();
+  readonly #environmentDigests = new Map<Task540OperationProfileId, string>();
   readonly #uninstall: () => void;
   #pool: WorkerPool | null = null;
   #executablePath: string | null = null;
@@ -110,8 +106,8 @@ export class Task540PersistentBridge implements LifecycleResource {
 
   private constructor(input: {
     readonly root: string;
-    readonly coreRoot: string;
     readonly entryFile: string;
+    readonly coreRoot: string;
     readonly processes: ProcessSupervisor;
     readonly lifecycle: RuntimeLifecycle;
     readonly install: PersistentBunBridgeInstaller;
@@ -161,38 +157,25 @@ export class Task540PersistentBridge implements LifecycleResource {
     if (this.#closed || dispatch.rootPath !== this.#root) {
       throw new SmokeError("smoke_process_failed", "TASK-540 persistent bridge is unavailable");
     }
-    const profileId = dispatch.descriptor.envProfileId as Task540SourceProfileId;
-    if (!TASK540_SOURCE_PROFILE_IDS.includes(profileId)) {
+    const profileId = dispatch.descriptor.envProfileId as Task540OperationProfileId;
+    if (!TASK540_OPERATION_PROFILE_IDS.includes(profileId)) {
       throw new SmokeError("smoke_output_invalid", "TASK-540 bridge profile is unregistered");
     }
     assertPlainJsonObject(dispatch.input, "TASK-540 persistent bridge input");
-    const entry = TASK540_SOURCE_CATALOG.require(
-      dispatch.descriptor.operationId,
-      profileId,
-      dispatch.descriptor.sourceSha256
-    );
-    if (entry.source !== dispatch.descriptor.source) {
-      throw new SmokeError("smoke_output_invalid", "TASK-540 bridge source authority drifted");
-    }
+    const alias = routeTask540Operation(dispatch.descriptor);
     this.#bindEnvironment(profileId, dispatch.environment);
     const pool = await this.#poolFor(dispatch.executablePath);
-    const request: Task540SourceRequest = Object.freeze({
-      operationId: dispatch.descriptor.operationId,
-      profileId,
-      sourceSha256: entry.sourceSha256,
-      input: dispatch.input,
-    });
     try {
       return await pool.dispatch(
-        task540SourceWorkerDescriptor(entry),
-        request as unknown as PlainJsonObject,
+        task540OperationDescriptor(alias),
+        dispatch.input,
         dispatch.executionBoundaryObserver
       );
     } catch (error) {
       // The operation ID is catalog-owned and contains no request or result data. Projecting it
       // into the legacy bounded diagnostic keeps worker failures actionable without exposing the
       // private exception, input, database row, or environment.
-      throw new SmokeError("smoke_process_failed", task540PersistentFailureToken(entry.sourceId), {
+      throw new SmokeError("smoke_process_failed", task540PersistentFailureToken(alias.handlerId), {
         cause: error,
       });
     }
@@ -215,33 +198,26 @@ export class Task540PersistentBridge implements LifecycleResource {
     if (executablePaths.size !== 1 || rootPaths.size !== 1 || !rootPaths.has(this.#root)) {
       throw new SmokeError("smoke_output_invalid", "TASK-540 persistent batch authority drifted");
     }
-    const sourceEntries = dispatch.items.map((item) => {
-      const profileId = item.descriptor.envProfileId as Task540SourceProfileId;
-      if (!TASK540_SOURCE_PROFILE_IDS.includes(profileId)) {
+    const resolvedItems = dispatch.items.map((item) => {
+      const profileId = item.descriptor.envProfileId as Task540OperationProfileId;
+      if (!TASK540_OPERATION_PROFILE_IDS.includes(profileId)) {
         throw new SmokeError("smoke_output_invalid", "TASK-540 batch profile is unregistered");
       }
       assertPlainJsonObject(item.input, "TASK-540 persistent batch input");
-      const entry = TASK540_SOURCE_CATALOG.require(
-        item.descriptor.operationId,
-        profileId,
-        item.descriptor.sourceSha256
-      );
-      if (entry.source !== item.descriptor.source) {
-        throw new SmokeError("smoke_output_invalid", "TASK-540 batch source authority drifted");
-      }
+      const alias = routeTask540Operation(item.descriptor);
       this.#bindEnvironment(profileId, item.environment);
-      return { item, entry, profileId };
+      return { item, alias, profileId };
     });
     const pool = await this.#poolFor(dispatch.items[0]!.executablePath);
     try {
       if (dispatch.kind === "baseline") {
-        if (sourceEntries.some(({ item }) => item.cleanup !== null)) {
+        if (resolvedItems.some(({ item }) => item.cleanup !== null)) {
           throw new SmokeError("smoke_output_invalid", "TASK-540 baseline batch metadata drifted");
         }
         const plans = buildTask540BaselineDispatches(
-          sourceEntries.map(({ item, profileId }) => ({
+          resolvedItems.map(({ item, alias, profileId }) => ({
             logicalId: item.logicalId,
-            operationId: item.descriptor.operationId,
+            operationId: alias.operationId,
             profileId,
             input: item.input,
           })),
@@ -278,7 +254,7 @@ export class Task540PersistentBridge implements LifecycleResource {
         );
       }
       if (
-        sourceEntries.some(
+        resolvedItems.some(
           ({ profileId, item }) => profileId !== "database" || item.cleanup === null
         )
       ) {
@@ -287,7 +263,7 @@ export class Task540PersistentBridge implements LifecycleResource {
       const descriptors = createTask540WorkerDescriptors(TASK540_PRODUCTION_HANDLER_ARTIFACT);
       const input = Object.freeze({
         wave: dispatch.wave,
-        items: Object.freeze(sourceEntries.map(({ item }) => Object.freeze({ ...item.cleanup! }))),
+        items: Object.freeze(resolvedItems.map(({ item }) => Object.freeze({ ...item.cleanup! }))),
       }) as Task540CleanupBatchInput;
       const output = (await pool.dispatch(
         descriptors.cleanupDatabase,
@@ -337,8 +313,15 @@ export class Task540PersistentBridge implements LifecycleResource {
     this.#fastAuthRestored = true;
   }
 
+  async closePrivilegedProfiles(): Promise<void> {
+    if (this.#closed) {
+      throw new SmokeError("smoke_process_failed", "TASK-540 persistent bridge is unavailable");
+    }
+    await this.#pool?.closePrivilegedProfiles();
+  }
+
   #bindEnvironment(
-    profileId: Task540SourceProfileId,
+    profileId: Task540OperationProfileId,
     environment: Readonly<Record<string, string>>
   ): void {
     const digest = canonicalEnvironment(environment);
@@ -359,15 +342,14 @@ export class Task540PersistentBridge implements LifecycleResource {
     }
     if (this.#pool !== null) return this.#pool;
     this.#executablePath = canonicalExecutable;
-    const registry = createTask540SourceWorkerRegistry(this.#coreRoot);
-    const profiles: WorkerProfileSpec[] = TASK540_SOURCE_PROFILE_IDS.map((profileId) => ({
+    const registry = createTask540WorkerRegistry("database");
+    const profiles: WorkerProfileSpec[] = TASK540_OPERATION_PROFILE_IDS.map((profileId) => ({
       profileId,
       databaseBearing: profileId !== "schema-only",
-      privileged: !new Set<Task540SourceProfileId>(["schema-only", "database"]).has(profileId),
+      privileged: !new Set<Task540OperationProfileId>(["schema-only", "database"]).has(profileId),
       entryFile: this.#entryFile,
-      // The canonical one-shot bridge executes every registered source from core. Several exact
-      // sources resolve storage and plugin paths from process.cwd(), so the persistent worker must
-      // preserve that authority rather than inheriting the repository-level smoke entry point.
+      // Static handlers resolve storage and plugin paths from core's process.cwd(), matching the
+      // runtime authority used by the product services they call.
       cwd: this.#coreRoot,
       family: `task540-worker-${profileId}`,
       // Preserve the canonical bridge's 540 s per-operation ceiling. The worker client owns the

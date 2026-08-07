@@ -17,16 +17,14 @@ import {
   type WorkerOperationDefinition,
   type WorkerOperationDescriptor,
 } from "../../workers/contracts";
+import {
+  TASK540_OPERATION_PROFILE_IDS,
+  type Task540OperationProfileId,
+} from "./operations/contracts";
 
-export const TASK540_WORKER_PROFILE_IDS = [
-  "schema-only",
-  "database",
-  "bootstrap-preflight",
-  "user-identity-proof",
-  "user-provisioning",
-] as const;
+export const TASK540_WORKER_PROFILE_IDS = TASK540_OPERATION_PROFILE_IDS;
 
-export type Task540WorkerProfileId = (typeof TASK540_WORKER_PROFILE_IDS)[number];
+export type Task540WorkerProfileId = Task540OperationProfileId;
 
 export const TASK540_BATCH_OPERATION_IDS = [
   "task-540/baseline/database",

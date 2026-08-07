@@ -1,0 +1,621 @@
+{
+  "schemaVersion": 1,
+  "legacyFileCount": 13,
+  "legacyCaseCount": 55,
+  "portedCaseCount": 15,
+  "obsoleteCaseCount": 40,
+  "entries": [
+    {
+      "legacyFile": "tests/unit/workflows/task540CanonicalStatusTableUniqueness.test.ts",
+      "legacyTest": "the workflow really demands exactly one canonical status row",
+      "disposition": "obsolete-workflow-orchestration",
+      "coverageArea": "historical-workflow-orchestration",
+      "replacementTests": [],
+      "replacementAssertions": [],
+      "rationale": "Historical TASK-540 authoring/orchestration, status-table, line-count, or prose synchronization assertion; the executable workflow it guarded is deleted and repository-wide task/line gates remain authoritative."
+    },
+    {
+      "legacyFile": "tests/unit/workflows/task540CanonicalStatusTableUniqueness.test.ts",
+      "legacyTest": "no TASK-540 document lists any family id in two canonical status tables",
+      "disposition": "obsolete-workflow-orchestration",
+      "coverageArea": "historical-workflow-orchestration",
+      "replacementTests": [],
+      "replacementAssertions": [],
+      "rationale": "Historical TASK-540 authoring/orchestration, status-table, line-count, or prose synchronization assertion; the executable workflow it guarded is deleted and repository-wide task/line gates remain authoritative."
+    },
+    {
+      "legacyFile": "tests/unit/workflows/task540CanonicalStatusTableUniqueness.test.ts",
+      "legacyTest": "every child's leaves and every root child row resolve to exactly one status row",
+      "disposition": "obsolete-workflow-orchestration",
+      "coverageArea": "historical-workflow-orchestration",
+      "replacementTests": [],
+      "replacementAssertions": [],
+      "rationale": "Historical TASK-540 authoring/orchestration, status-table, line-count, or prose synchronization assertion; the executable workflow it guarded is deleted and repository-wide task/line gates remain authoritative."
+    },
+    {
+      "legacyFile": "tests/unit/workflows/task540FamilyContractRegistration.test.ts",
+      "legacyTest": "the TASK-540 family has exactly the 20 physical contracts the closure machinery pins",
+      "disposition": "obsolete-workflow-orchestration",
+      "coverageArea": "historical-workflow-orchestration",
+      "replacementTests": [],
+      "replacementAssertions": [],
+      "rationale": "Historical TASK-540 authoring/orchestration, status-table, line-count, or prose synchronization assertion; the executable workflow it guarded is deleted and repository-wide task/line gates remain authoritative."
+    },
+    {
+      "legacyFile": "tests/unit/workflows/task540FamilyContractRegistration.test.ts",
+      "legacyTest": "both independently written Tasks: lines name every contract on disk",
+      "disposition": "obsolete-workflow-orchestration",
+      "coverageArea": "historical-workflow-orchestration",
+      "replacementTests": [],
+      "replacementAssertions": [],
+      "rationale": "Historical TASK-540 authoring/orchestration, status-table, line-count, or prose synchronization assertion; the executable workflow it guarded is deleted and repository-wide task/line gates remain authoritative."
+    },
+    {
+      "legacyFile": "tests/unit/workflows/task540FamilyContractRegistration.test.ts",
+      "legacyTest": "TASK_FILES registers every family task file, including the TASK-540-07 contracts",
+      "disposition": "obsolete-workflow-orchestration",
+      "coverageArea": "historical-workflow-orchestration",
+      "replacementTests": [],
+      "replacementAssertions": [],
+      "rationale": "Historical TASK-540 authoring/orchestration, status-table, line-count, or prose synchronization assertion; the executable workflow it guarded is deleted and repository-wide task/line gates remain authoritative."
+    },
+    {
+      "legacyFile": "tests/unit/workflows/task540FamilyContractRegistration.test.ts",
+      "legacyTest": "the closure leaf stays last in LEAF_ORDER so TASK-540-07 lands before closure",
+      "disposition": "obsolete-workflow-orchestration",
+      "coverageArea": "historical-workflow-orchestration",
+      "replacementTests": [],
+      "replacementAssertions": [],
+      "rationale": "Historical TASK-540 authoring/orchestration, status-table, line-count, or prose synchronization assertion; the executable workflow it guarded is deleted and repository-wide task/line gates remain authoritative."
+    },
+    {
+      "legacyFile": "tests/unit/workflows/task540FamilyContractRegistration.test.ts",
+      "legacyTest": "the status transaction covers every contract plus the task board README",
+      "disposition": "obsolete-workflow-orchestration",
+      "coverageArea": "historical-workflow-orchestration",
+      "replacementTests": [],
+      "replacementAssertions": [],
+      "rationale": "Historical TASK-540 authoring/orchestration, status-table, line-count, or prose synchronization assertion; the executable workflow it guarded is deleted and repository-wide task/line gates remain authoritative."
+    },
+    {
+      "legacyFile": "tests/unit/workflows/task540FamilyContractRegistration.test.ts",
+      "legacyTest": "no closure prompt still claims the family has 17 contracts",
+      "disposition": "obsolete-workflow-orchestration",
+      "coverageArea": "historical-workflow-orchestration",
+      "replacementTests": [],
+      "replacementAssertions": [],
+      "rationale": "Historical TASK-540 authoring/orchestration, status-table, line-count, or prose synchronization assertion; the executable workflow it guarded is deleted and repository-wide task/line gates remain authoritative."
+    },
+    {
+      "legacyFile": "tests/unit/workflows/task540FamilyContractRegistration.test.ts",
+      "legacyTest": "every forbidden glob the family actually mutated carries a recorded exception",
+      "disposition": "obsolete-workflow-orchestration",
+      "coverageArea": "historical-workflow-orchestration",
+      "replacementTests": [],
+      "replacementAssertions": [],
+      "rationale": "Historical TASK-540 authoring/orchestration, status-table, line-count, or prose synchronization assertion; the executable workflow it guarded is deleted and repository-wide task/line gates remain authoritative."
+    },
+    {
+      "legacyFile": "tests/unit/workflows/task540FamilyContractRegistration.test.ts",
+      "legacyTest": "the settled helper line-limit scope decision stays recorded next to the predicate",
+      "disposition": "obsolete-workflow-orchestration",
+      "coverageArea": "historical-workflow-orchestration",
+      "replacementTests": [],
+      "replacementAssertions": [],
+      "rationale": "Historical TASK-540 authoring/orchestration, status-table, line-count, or prose synchronization assertion; the executable workflow it guarded is deleted and repository-wide task/line gates remain authoritative."
+    },
+    {
+      "legacyFile": "tests/unit/workflows/task540FamilyContractRegistration.test.ts",
+      "legacyTest": "the agent prompt says the exceptions are a record, not permission",
+      "disposition": "obsolete-workflow-orchestration",
+      "coverageArea": "historical-workflow-orchestration",
+      "replacementTests": [],
+      "replacementAssertions": [],
+      "rationale": "Historical TASK-540 authoring/orchestration, status-table, line-count, or prose synchronization assertion; the executable workflow it guarded is deleted and repository-wide task/line gates remain authoritative."
+    },
+    {
+      "legacyFile": "tests/unit/workflows/task540ForbiddenSchemaPaths.test.ts",
+      "legacyTest": "every hand-written schema module is covered by a FORBIDDEN_PATHS glob",
+      "disposition": "obsolete-workflow-orchestration",
+      "coverageArea": "historical-workflow-orchestration",
+      "replacementTests": [],
+      "replacementAssertions": [],
+      "rationale": "Historical TASK-540 authoring/orchestration, status-table, line-count, or prose synchronization assertion; the executable workflow it guarded is deleted and repository-wide task/line gates remain authoritative."
+    },
+    {
+      "legacyFile": "tests/unit/workflows/task540ForbiddenSchemaPaths.test.ts",
+      "legacyTest": "the schema split is recorded as an authorized forbidden-path exception",
+      "disposition": "obsolete-workflow-orchestration",
+      "coverageArea": "historical-workflow-orchestration",
+      "replacementTests": [],
+      "replacementAssertions": [],
+      "rationale": "Historical TASK-540 authoring/orchestration, status-table, line-count, or prose synchronization assertion; the executable workflow it guarded is deleted and repository-wide task/line gates remain authoritative."
+    },
+    {
+      "legacyFile": "tests/unit/workflows/task540LineLimitOffenderReport.test.ts",
+      "legacyTest": "the family line-limit gate names every ownerless path, not just the first",
+      "disposition": "obsolete-workflow-orchestration",
+      "coverageArea": "historical-workflow-orchestration",
+      "replacementTests": [],
+      "replacementAssertions": [],
+      "rationale": "Historical TASK-540 authoring/orchestration, status-table, line-count, or prose synchronization assertion; the executable workflow it guarded is deleted and repository-wide task/line gates remain authoritative."
+    },
+    {
+      "legacyFile": "tests/unit/workflows/task540LineLimitOffenderReport.test.ts",
+      "legacyTest": "the family line-limit gate reports ownership and over-length from the same run",
+      "disposition": "obsolete-workflow-orchestration",
+      "coverageArea": "historical-workflow-orchestration",
+      "replacementTests": [],
+      "replacementAssertions": [],
+      "rationale": "Historical TASK-540 authoring/orchestration, status-table, line-count, or prose synchronization assertion; the executable workflow it guarded is deleted and repository-wide task/line gates remain authoritative."
+    },
+    {
+      "legacyFile": "tests/unit/workflows/task540LineLimitTripwireCoverage.test.ts",
+      "legacyTest": "the line-limit tripwire names every governed module close to the limit",
+      "disposition": "obsolete-workflow-orchestration",
+      "coverageArea": "historical-workflow-orchestration",
+      "replacementTests": [],
+      "replacementAssertions": [],
+      "rationale": "Historical TASK-540 authoring/orchestration, status-table, line-count, or prose synchronization assertion; the executable workflow it guarded is deleted and repository-wide task/line gates remain authoritative."
+    },
+    {
+      "legacyFile": "tests/unit/workflows/task540LineLimitTripwireCoverage.test.ts",
+      "legacyTest": "the tripwire is ordered most-urgent-first and every entry is a compliant governed module",
+      "disposition": "obsolete-workflow-orchestration",
+      "coverageArea": "historical-workflow-orchestration",
+      "replacementTests": [],
+      "replacementAssertions": [],
+      "rationale": "Historical TASK-540 authoring/orchestration, status-table, line-count, or prose synchronization assertion; the executable workflow it guarded is deleted and repository-wide task/line gates remain authoritative."
+    },
+    {
+      "legacyFile": "tests/unit/workflows/task540ResumeCursorSelfTestDerivation.test.ts",
+      "legacyTest": "the initial cursor branch derives its landed set instead of spelling leaf ids out",
+      "disposition": "obsolete-workflow-orchestration",
+      "coverageArea": "historical-workflow-orchestration",
+      "replacementTests": [],
+      "replacementAssertions": [],
+      "rationale": "Historical TASK-540 authoring/orchestration, status-table, line-count, or prose synchronization assertion; the executable workflow it guarded is deleted and repository-wide task/line gates remain authoritative."
+    },
+    {
+      "legacyFile": "tests/unit/workflows/task540ResumeCursorSelfTestDerivation.test.ts",
+      "legacyTest": "the retired literal genuinely no longer describes the family's landed set",
+      "disposition": "obsolete-workflow-orchestration",
+      "coverageArea": "historical-workflow-orchestration",
+      "replacementTests": [],
+      "replacementAssertions": [],
+      "rationale": "Historical TASK-540 authoring/orchestration, status-table, line-count, or prose synchronization assertion; the executable workflow it guarded is deleted and repository-wide task/line gates remain authoritative."
+    },
+    {
+      "legacyFile": "tests/unit/workflows/task540ResumeCursorSelfTestDerivation.test.ts",
+      "legacyTest": "the sibling cursor branches were already derived and stay that way",
+      "disposition": "obsolete-workflow-orchestration",
+      "coverageArea": "historical-workflow-orchestration",
+      "replacementTests": [],
+      "replacementAssertions": [],
+      "rationale": "Historical TASK-540 authoring/orchestration, status-table, line-count, or prose synchronization assertion; the executable workflow it guarded is deleted and repository-wide task/line gates remain authoritative."
+    },
+    {
+      "legacyFile": "tests/unit/workflows/task540SmokeExecutorBunBridgeResourceSources.test.ts",
+      "legacyTest": "Bun bridge resource sources have one exact module owner",
+      "disposition": "ported-native",
+      "coverageArea": "resource-handler-ownership",
+      "replacementTests": ["tests/unit/runtime-smoke/task540-operation-registry.test.ts"],
+      "replacementAssertions": [
+        "TASK-540 typed registry matches the immutable 57/160 parity fixture"
+      ],
+      "rationale": "The native runtime-smoke assertion is behaviorally equivalent or stronger and runs without the deleted workflow engine."
+    },
+    {
+      "legacyFile": "tests/unit/workflows/task540SmokeExecutorBunBridgeResourceSources.test.ts",
+      "legacyTest": "Bun bridge resource registries retain exact frozen order and leaf coverage",
+      "disposition": "ported-native",
+      "coverageArea": "resource-registry-order",
+      "replacementTests": ["tests/unit/runtime-smoke/task540-operation-registry.test.ts"],
+      "replacementAssertions": [
+        "TASK-540 parity rejects missing, extra, duplicate, mapping, schema, and authority mutants"
+      ],
+      "rationale": "The native runtime-smoke assertion is behaviorally equivalent or stronger and runs without the deleted workflow engine."
+    },
+    {
+      "legacyFile": "tests/unit/workflows/task540SmokeExecutorBunBridgeResourceSources.test.ts",
+      "legacyTest": "SEO entry source owner rejects exact-predicate mutants",
+      "disposition": "ported-native",
+      "coverageArea": "seo-cleanup-predicate",
+      "replacementTests": ["tests/unit/runtime-smoke/task540-native-suite-boundary.test.ts"],
+      "replacementAssertions": [
+        "TASK-540 isolated reads and SEO cleanup identity fail closed on exact mutants"
+      ],
+      "rationale": "The native runtime-smoke assertion is behaviorally equivalent or stronger and runs without the deleted workflow engine."
+    },
+    {
+      "legacyFile": "tests/unit/workflows/task540SmokeExecutorSecurity.test.ts",
+      "legacyTest": "TASK-540 executor security self-test passes",
+      "disposition": "ported-native",
+      "coverageArea": "native-suite-evidence",
+      "replacementTests": [
+        "tests/unit/runtime-smoke/task540-adapter.test.ts",
+        "tests/unit/runtime-smoke/task540-native-suite-boundary.test.ts"
+      ],
+      "replacementAssertions": [
+        "TASK-540 adapter validates exact native evidence totals",
+        "TASK-540 native runtime map and response-lost baseline batches retain exact cardinality"
+      ],
+      "rationale": "The native runtime-smoke assertion is behaviorally equivalent or stronger and runs without the deleted workflow engine."
+    },
+    {
+      "legacyFile": "tests/unit/workflows/task540SmokeExecutorSecurity.test.ts",
+      "legacyTest": "TASK-540 Codex bridge exposes only seven armed CLI modes",
+      "disposition": "obsolete-workflow-orchestration",
+      "coverageArea": "historical-workflow-orchestration",
+      "replacementTests": [],
+      "replacementAssertions": [],
+      "rationale": "Historical Codex bridge, workflow transaction, frozen-helper, audit-receipt, or changelog orchestration assertion; no runtime product contract is discarded and the obsolete orchestration is not recreated."
+    },
+    {
+      "legacyFile": "tests/unit/workflows/task540SmokeExecutorSecurity.test.ts",
+      "legacyTest": "TASK-540 continuous host is Codex-only and owns every bridge launch",
+      "disposition": "obsolete-workflow-orchestration",
+      "coverageArea": "historical-workflow-orchestration",
+      "replacementTests": [],
+      "replacementAssertions": [],
+      "rationale": "Historical Codex bridge, workflow transaction, frozen-helper, audit-receipt, or changelog orchestration assertion; no runtime product contract is discarded and the obsolete orchestration is not recreated."
+    },
+    {
+      "legacyFile": "tests/unit/workflows/task540SmokeExecutorSecurity.test.ts",
+      "legacyTest": "TASK-540 schemas, per-request finalization, and permanent freeze are host-owned",
+      "disposition": "obsolete-workflow-orchestration",
+      "coverageArea": "historical-workflow-orchestration",
+      "replacementTests": [],
+      "replacementAssertions": [],
+      "rationale": "Historical Codex bridge, workflow transaction, frozen-helper, audit-receipt, or changelog orchestration assertion; no runtime product contract is discarded and the obsolete orchestration is not recreated."
+    },
+    {
+      "legacyFile": "tests/unit/workflows/task540SmokeExecutorSecurity.test.ts",
+      "legacyTest": "TASK-540 terminal ledger is a five-target index-last transaction",
+      "disposition": "obsolete-workflow-orchestration",
+      "coverageArea": "historical-workflow-orchestration",
+      "replacementTests": [],
+      "replacementAssertions": [],
+      "rationale": "Historical Codex bridge, workflow transaction, frozen-helper, audit-receipt, or changelog orchestration assertion; no runtime product contract is discarded and the obsolete orchestration is not recreated."
+    },
+    {
+      "legacyFile": "tests/unit/workflows/task540SmokeExecutorSecurity.test.ts",
+      "legacyTest": "TASK-540 status closure is a 21-target board-last durable transaction",
+      "disposition": "obsolete-workflow-orchestration",
+      "coverageArea": "historical-workflow-orchestration",
+      "replacementTests": [],
+      "replacementAssertions": [],
+      "rationale": "Historical Codex bridge, workflow transaction, frozen-helper, audit-receipt, or changelog orchestration assertion; no runtime product contract is discarded and the obsolete orchestration is not recreated."
+    },
+    {
+      "legacyFile": "tests/unit/workflows/task540SmokeExecutorSecurity.test.ts",
+      "legacyTest": "TASK-540 smoke execution is local and agents only audit sealed evidence afterward",
+      "disposition": "obsolete-workflow-orchestration",
+      "coverageArea": "historical-workflow-orchestration",
+      "replacementTests": [],
+      "replacementAssertions": [],
+      "rationale": "Historical Codex bridge, workflow transaction, frozen-helper, audit-receipt, or changelog orchestration assertion; no runtime product contract is discarded and the obsolete orchestration is not recreated."
+    },
+    {
+      "legacyFile": "tests/unit/workflows/task540SmokeExecutorSecurity.test.ts",
+      "legacyTest": "TASK-540 closure embeds the collaboration prefix before an index-last terminal freeze",
+      "disposition": "obsolete-workflow-orchestration",
+      "coverageArea": "historical-workflow-orchestration",
+      "replacementTests": [],
+      "replacementAssertions": [],
+      "rationale": "Historical Codex bridge, workflow transaction, frozen-helper, audit-receipt, or changelog orchestration assertion; no runtime product contract is discarded and the obsolete orchestration is not recreated."
+    },
+    {
+      "legacyFile": "tests/unit/workflows/task540SmokeExecutorSecurity.test.ts",
+      "legacyTest": "TASK-540 workflow roots and runtime resources are independently fail-closed",
+      "disposition": "ported-native",
+      "coverageArea": "lifecycle-boundary",
+      "replacementTests": [
+        "tests/unit/runtime-smoke/task540-adapter.test.ts",
+        "tests/unit/runtime-smoke/playwright-cli-dispatcher.test.ts",
+        "tests/unit/runtime-smoke/supervised-server.test.ts"
+      ],
+      "replacementAssertions": [
+        "TASK-540 registered graph is native, canonical, present, and symlink-free",
+        "Playwright dispatcher closes the exact session after a partial open failure",
+        "readiness failure preserves the primary error while lifecycle exposes port cleanup failure"
+      ],
+      "rationale": "The native runtime-smoke assertion is behaviorally equivalent or stronger and runs without the deleted workflow engine."
+    },
+    {
+      "legacyFile": "tests/unit/workflows/task540SmokeExecutorSecurity.test.ts",
+      "legacyTest": "strict security and full-validation receipts have exact zero-finding schemas",
+      "disposition": "obsolete-workflow-orchestration",
+      "coverageArea": "historical-workflow-orchestration",
+      "replacementTests": [],
+      "replacementAssertions": [],
+      "rationale": "Historical Codex bridge, workflow transaction, frozen-helper, audit-receipt, or changelog orchestration assertion; no runtime product contract is discarded and the obsolete orchestration is not recreated."
+    },
+    {
+      "legacyFile": "tests/unit/workflows/task540SmokeExecutorSecurity.test.ts",
+      "legacyTest": "TASK-540 changelog projection preserves independent reservations fail-closed",
+      "disposition": "obsolete-workflow-orchestration",
+      "coverageArea": "historical-workflow-orchestration",
+      "replacementTests": [],
+      "replacementAssertions": [],
+      "rationale": "Historical Codex bridge, workflow transaction, frozen-helper, audit-receipt, or changelog orchestration assertion; no runtime product contract is discarded and the obsolete orchestration is not recreated."
+    },
+    {
+      "legacyFile": "tests/unit/workflows/task540SmokeExecutorSecurity.test.ts",
+      "legacyTest": "TASK-540 seven frozen helpers are regular tracked files with exact bytes",
+      "disposition": "obsolete-workflow-orchestration",
+      "coverageArea": "historical-workflow-orchestration",
+      "replacementTests": [],
+      "replacementAssertions": [],
+      "rationale": "Historical Codex bridge, workflow transaction, frozen-helper, audit-receipt, or changelog orchestration assertion; no runtime product contract is discarded and the obsolete orchestration is not recreated."
+    },
+    {
+      "legacyFile": "tests/unit/workflows/task540SmokeExecutorSecurity.test.ts",
+      "legacyTest": "frozen executor pin matches and is the implement workflow's only dirty byte range",
+      "disposition": "obsolete-workflow-orchestration",
+      "coverageArea": "historical-workflow-orchestration",
+      "replacementTests": [],
+      "replacementAssertions": [],
+      "rationale": "Historical Codex bridge, workflow transaction, frozen-helper, audit-receipt, or changelog orchestration assertion; no runtime product contract is discarded and the obsolete orchestration is not recreated."
+    },
+    {
+      "legacyFile": "tests/unit/workflows/task540SmokeExecutorSourceContracts.test.ts",
+      "legacyTest": "process runtime is the sole owner of process and host composition",
+      "disposition": "ported-native",
+      "coverageArea": "process-host-composition",
+      "replacementTests": [
+        "tests/unit/runtime-smoke/supervised-server.test.ts",
+        "tests/unit/runtime-smoke/playwright-cli-dispatcher.test.ts"
+      ],
+      "replacementAssertions": [
+        "supervised literal server registers before spawn and projects the exact shared dev-host environment",
+        "Playwright dispatcher opens once, dispatches bounded private files, and closes twice"
+      ],
+      "rationale": "The native runtime-smoke assertion is behaviorally equivalent or stronger and runs without the deleted workflow engine."
+    },
+    {
+      "legacyFile": "tests/unit/workflows/task540SmokeExecutorSourceContracts.test.ts",
+      "legacyTest": "plan execution has one focused owner and exact injected authority",
+      "disposition": "ported-native",
+      "coverageArea": "plan-execution",
+      "replacementTests": [
+        "tests/unit/runtime-smoke/task540-browser-plan.test.ts",
+        "tests/unit/runtime-smoke/task540-adapter.test.ts"
+      ],
+      "replacementAssertions": [
+        "TASK-540 native manifest compiles to exact 47 batches plus 28 standalone dispatches",
+        "TASK-540 adapter validates exact native evidence totals"
+      ],
+      "rationale": "The native runtime-smoke assertion is behaviorally equivalent or stronger and runs without the deleted workflow engine."
+    },
+    {
+      "legacyFile": "tests/unit/workflows/task540SmokeExecutorSourceContracts.test.ts",
+      "legacyTest": "Bun bridge validation primitives have one focused owner",
+      "disposition": "ported-native",
+      "coverageArea": "typed-operation-validation",
+      "replacementTests": [
+        "tests/unit/runtime-smoke/task540-operation-registry.test.ts",
+        "tests/unit/runtime-smoke/task540-operation-handlers.test.ts"
+      ],
+      "replacementAssertions": [
+        "TASK-540 aliases do not widen shared handler input or output authority",
+        "TASK-540 operation definitions reject unknown input fields and profile drift"
+      ],
+      "rationale": "The native runtime-smoke assertion is behaviorally equivalent or stronger and runs without the deleted workflow engine."
+    },
+    {
+      "legacyFile": "tests/unit/workflows/task540SmokeExecutorSourceContracts.test.ts",
+      "legacyTest": "flagged run-code values cross the source boundary only as bounded data",
+      "disposition": "ported-native",
+      "coverageArea": "bounded-browser-source",
+      "replacementTests": [
+        "tests/unit/runtime-smoke/task540-browser-plan.test.ts",
+        "tests/unit/runtime-smoke/playwright-cli-dispatcher.test.ts"
+      ],
+      "replacementAssertions": [
+        "TASK-540 browser executor preserves logical order and proof ownership across size splits",
+        "Playwright dispatcher rejects unsafe sessions, segments, and storage-state paths"
+      ],
+      "rationale": "The native runtime-smoke assertion is behaviorally equivalent or stronger and runs without the deleted workflow engine."
+    },
+    {
+      "legacyFile": "tests/unit/workflows/task540SmokeExecutorSourceContracts.test.ts",
+      "legacyTest": "credential evidence avoids fast digests while secret-free evidence stays bound",
+      "disposition": "ported-native",
+      "coverageArea": "secret-safe-evidence",
+      "replacementTests": [
+        "tests/unit/runtime-smoke/task540-adapter.test.ts",
+        "tests/unit/runtime-smoke/worker-profile-isolation.test.ts"
+      ],
+      "replacementAssertions": [
+        "TASK-540 safe evidence assertion fails closed on configured secrets",
+        "workers are lazy, reused by exact profile, and never receive a union of secrets"
+      ],
+      "rationale": "The native runtime-smoke assertion is behaviorally equivalent or stronger and runs without the deleted workflow engine."
+    },
+    {
+      "legacyFile": "tests/unit/workflows/task540SmokeExecutorSourceContracts.test.ts",
+      "legacyTest": "dg022 teardown and dg024 dirty navigation use same-action visible-effect proofs",
+      "disposition": "ported-native",
+      "coverageArea": "visible-effect-proof",
+      "replacementTests": ["tests/unit/runtime-smoke/task540-native-suite-boundary.test.ts"],
+      "replacementAssertions": [
+        "TASK-540 standalone and visible-effect output validation fails closed"
+      ],
+      "rationale": "The native runtime-smoke assertion is behaviorally equivalent or stronger and runs without the deleted workflow engine."
+    },
+    {
+      "legacyFile": "tests/unit/workflows/task540SmokeExecutorSourceContracts.test.ts",
+      "legacyTest": "phase-eight bootstrap restore is one typed nullable-safe CAS",
+      "disposition": "ported-native",
+      "coverageArea": "bootstrap-restoration-cas",
+      "replacementTests": [
+        "tests/unit/runtime-smoke/task540-native-suite-boundary.test.ts",
+        "tests/unit/runtime-smoke/task540-operation-handlers.test.ts"
+      ],
+      "replacementAssertions": [
+        "TASK-540 native runtime map and response-lost baseline batches retain exact cardinality",
+        "TASK-540 typed operation lane contains no executable-code transport"
+      ],
+      "rationale": "The native runtime-smoke assertion is behaviorally equivalent or stronger and runs without the deleted workflow engine."
+    },
+    {
+      "legacyFile": "tests/unit/workflows/task540SmokeExecutorSourceContracts.test.ts",
+      "legacyTest": "TASK-540 smoke boundaries retain enlarged nested budgets without retries",
+      "disposition": "ported-native",
+      "coverageArea": "browser-bounds",
+      "replacementTests": [
+        "tests/unit/runtime-smoke/task540-browser-plan.test.ts",
+        "tests/unit/runtime-smoke/playwright-cli-dispatcher.test.ts"
+      ],
+      "replacementAssertions": [
+        "TASK-540 browser executor preserves logical order and proof ownership across size splits",
+        "Playwright dispatcher opens once, dispatches bounded private files, and closes twice"
+      ],
+      "rationale": "The native runtime-smoke assertion is behaviorally equivalent or stronger and runs without the deleted workflow engine."
+    },
+    {
+      "legacyFile": "tests/unit/workflows/task540SmokeRuntimeExpectationContracts.test.ts",
+      "legacyTest": "every isolated durable read routes the boolean its frozen contract row states",
+      "disposition": "ported-native",
+      "coverageArea": "isolated-read-expectations",
+      "replacementTests": ["tests/unit/runtime-smoke/task540-native-suite-boundary.test.ts"],
+      "replacementAssertions": [
+        "TASK-540 isolated reads and SEO cleanup identity fail closed on exact mutants"
+      ],
+      "rationale": "The native runtime-smoke assertion is behaviorally equivalent or stronger and runs without the deleted workflow engine."
+    },
+    {
+      "legacyFile": "tests/unit/workflows/task540SmokeRuntimeExpectationContracts.test.ts",
+      "legacyTest": "runtime invariant messages classify to a bounded token instead of unclassified",
+      "disposition": "ported-native",
+      "coverageArea": "failure-classification",
+      "replacementTests": ["tests/unit/runtime-smoke/task540-native-suite-boundary.test.ts"],
+      "replacementAssertions": [
+        "TASK-540 runtime invariant failures retain a bounded classified smoke token"
+      ],
+      "rationale": "The native runtime-smoke assertion is behaviorally equivalent or stronger and runs without the deleted workflow engine."
+    },
+    {
+      "legacyFile": "tests/unit/workflows/task540StaleCountProse.test.ts",
+      "legacyTest": "the forbidden-path exception record states its size only through its own length",
+      "disposition": "obsolete-workflow-orchestration",
+      "coverageArea": "historical-workflow-orchestration",
+      "replacementTests": [],
+      "replacementAssertions": [],
+      "rationale": "Historical TASK-540 authoring/orchestration, status-table, line-count, or prose synchronization assertion; the executable workflow it guarded is deleted and repository-wide task/line gates remain authoritative."
+    },
+    {
+      "legacyFile": "tests/unit/workflows/task540StaleCountProse.test.ts",
+      "legacyTest": "the line-limit tripwire comment states no count and its headroom claim is true",
+      "disposition": "obsolete-workflow-orchestration",
+      "coverageArea": "historical-workflow-orchestration",
+      "replacementTests": [],
+      "replacementAssertions": [],
+      "rationale": "Historical TASK-540 authoring/orchestration, status-table, line-count, or prose synchronization assertion; the executable workflow it guarded is deleted and repository-wide task/line gates remain authoritative."
+    },
+    {
+      "legacyFile": "tests/unit/workflows/task540StaleCountProse.test.ts",
+      "legacyTest": "the settled-scope decision restates no helper length, and its real claim is measured",
+      "disposition": "obsolete-workflow-orchestration",
+      "coverageArea": "historical-workflow-orchestration",
+      "replacementTests": [],
+      "replacementAssertions": [],
+      "rationale": "Historical TASK-540 authoring/orchestration, status-table, line-count, or prose synchronization assertion; the executable workflow it guarded is deleted and repository-wide task/line gates remain authoritative."
+    },
+    {
+      "legacyFile": "tests/unit/workflows/task540StatusTargetAgreement.test.ts",
+      "legacyTest": "producer and consumer agree on the status transaction targets, index for index",
+      "disposition": "obsolete-workflow-orchestration",
+      "coverageArea": "historical-workflow-orchestration",
+      "replacementTests": [],
+      "replacementAssertions": [],
+      "rationale": "Historical TASK-540 authoring/orchestration, status-table, line-count, or prose synchronization assertion; the executable workflow it guarded is deleted and repository-wide task/line gates remain authoritative."
+    },
+    {
+      "legacyFile": "tests/unit/workflows/task540StatusTargetAgreement.test.ts",
+      "legacyTest": "the consumer derives every status count from its own target array",
+      "disposition": "obsolete-workflow-orchestration",
+      "coverageArea": "historical-workflow-orchestration",
+      "replacementTests": [],
+      "replacementAssertions": [],
+      "rationale": "Historical TASK-540 authoring/orchestration, status-table, line-count, or prose synchronization assertion; the executable workflow it guarded is deleted and repository-wide task/line gates remain authoritative."
+    },
+    {
+      "legacyFile": "tests/unit/workflows/task540TaskDocumentMeasuredClaims.test.ts",
+      "legacyTest": "every current line-count claim in the TASK-540 documents agrees with the file",
+      "disposition": "obsolete-workflow-orchestration",
+      "coverageArea": "historical-workflow-orchestration",
+      "replacementTests": [],
+      "replacementAssertions": [],
+      "rationale": "Historical TASK-540 authoring/orchestration, status-table, line-count, or prose synchronization assertion; the executable workflow it guarded is deleted and repository-wide task/line gates remain authoritative."
+    },
+    {
+      "legacyFile": "tests/unit/workflows/task540TaskDocumentMeasuredClaims.test.ts",
+      "legacyTest": "the documents agree with the tree about whether smoke modularization is finished",
+      "disposition": "obsolete-workflow-orchestration",
+      "coverageArea": "historical-workflow-orchestration",
+      "replacementTests": [],
+      "replacementAssertions": [],
+      "rationale": "Historical TASK-540 authoring/orchestration, status-table, line-count, or prose synchronization assertion; the executable workflow it guarded is deleted and repository-wide task/line gates remain authoritative."
+    },
+    {
+      "legacyFile": "tests/unit/workflows/task540TaskDocumentMeasuredClaims.test.ts",
+      "legacyTest": "the TASK-540-07 negativeCases claims equal what the self-tests return",
+      "disposition": "obsolete-workflow-orchestration",
+      "coverageArea": "historical-workflow-orchestration",
+      "replacementTests": [],
+      "replacementAssertions": [],
+      "rationale": "Historical TASK-540 authoring/orchestration, status-table, line-count, or prose synchronization assertion; the executable workflow it guarded is deleted and repository-wide task/line gates remain authoritative."
+    }
+  ],
+  "supplementalNativeCoverage": [
+    {
+      "coverageArea": "scenario-action-screenshot-cardinality",
+      "replacementTests": [
+        "tests/unit/runtime-smoke/task540-adapter.test.ts",
+        "tests/unit/runtime-smoke/task540-browser-plan.test.ts",
+        "tests/unit/runtime-smoke/task540-scenario-resets.test.ts"
+      ]
+    },
+    {
+      "coverageArea": "handler-alias-schema-parity",
+      "replacementTests": [
+        "tests/unit/runtime-smoke/task540-operation-registry.test.ts",
+        "tests/unit/runtime-smoke/task540-operation-handlers.test.ts"
+      ]
+    },
+    {
+      "coverageArea": "console-page-error-and-visible-output",
+      "replacementTests": [
+        "tests/unit/runtime-smoke/task540-native-suite-boundary.test.ts",
+        "tests/unit/runtime-smoke/task540-adapter.test.ts"
+      ]
+    },
+    {
+      "coverageArea": "environment-and-session-rejection",
+      "replacementTests": [
+        "tests/unit/runtime-smoke/playwright-cli-dispatcher.test.ts",
+        "tests/unit/runtime-smoke/supervised-server.test.ts"
+      ]
+    },
+    {
+      "coverageArea": "profile-isolation-and-single-db-connection",
+      "replacementTests": ["tests/unit/runtime-smoke/worker-profile-isolation.test.ts"]
+    },
+    {
+      "coverageArea": "response-lost-baselines",
+      "replacementTests": [
+        "tests/unit/runtime-smoke/task540-native-suite-boundary.test.ts",
+        "tests/unit/runtime-smoke/task540-operation-registry.test.ts"
+      ]
+    },
+    {
+      "coverageArea": "complete-cleanup-receipts",
+      "replacementTests": [
+        "tests/unit/runtime-smoke/task540-adapter.test.ts",
+        "tests/unit/runtime-smoke/task540-operation-registry.test.ts"
+      ]
+    }
+  ]
+}

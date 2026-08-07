@@ -13,3 +13,9 @@ db/migrations
 # hand-formatted. Prettier rewrites pipe tables and structural examples into
 # noisy diffs that are harder to review.
 *.md
+
+# TASK-552 keeps the audited stable TASK-540 relocation byte-identical to its
+# immutable source manifest. These modules are validated by a hash-based test.
+scripts/runtime-smoke/adapters/task-540/suite/contract/*.mjs
+scripts/runtime-smoke/adapters/task-540/suite/contract/**/*.mjs
+scripts/runtime-smoke/adapters/task-540/suite/shared/*.mjs

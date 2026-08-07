@@ -8,7 +8,7 @@ import {
   task540PersistentFailureToken,
   type PersistentBunBridgeDispatch,
 } from "../../../scripts/runtime-smoke/adapters/task-540/persistent-bridge";
-import { TASK540_SOURCE_CATALOG } from "../../../scripts/runtime-smoke/adapters/task-540/source-catalog";
+import { requireTask540OperationAlias } from "../../../scripts/runtime-smoke/adapters/task-540/operations/aliases";
 
 const root = path.resolve(import.meta.dir, "../../..");
 
@@ -69,12 +69,12 @@ test("TASK-540 bridge keeps one profile worker and uninstalls it through shared 
       };
     },
   });
-  const entry = TASK540_SOURCE_CATALOG.require("runtime/set-035-screen-create");
+  const entry = requireTask540OperationAlias("runtime/set-035-screen-create");
   const descriptor = {
     envProfileId: entry.profileId,
-    operationId: "runtime/set-035-screen-create",
-    source: entry.source,
-    sourceSha256: entry.sourceSha256,
+    operationId: entry.operationId,
+    inputSchemaId: entry.inputSchemaId,
+    outputSchemaId: entry.outputSchemaId,
   };
   let boundaries = 0;
   const dispatch = dispatcher as

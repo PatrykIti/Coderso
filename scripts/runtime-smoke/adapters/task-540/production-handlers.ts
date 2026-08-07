@@ -1,9 +1,15 @@
 import { createHash } from "node:crypto";
 import { and, eq, inArray, or } from "drizzle-orm";
 import { WorkerProtocolError, type PlainJsonValue } from "../../workers/contracts";
-import type { Task540SourceProfileId } from "./source-catalog";
-import { TASK540_SOURCE_CATALOG } from "./source-catalog";
-import type { Task540SourceExecutor } from "./source-executor";
+import type { WorkerOperationContext } from "../../workers/contracts";
+import { requireTask540OperationAlias } from "./operations/aliases";
+import { createTask540TypedHandlers } from "./operations/handlers";
+import { executeTask540TypedHandler, requireTask540TypedHandler } from "./operations/handlers";
+import {
+  validateTask540OperationInput,
+  validateTask540OperationOutput,
+  type Task540TypedHandler,
+} from "./operations/contracts";
 import type {
   Task540CleanupBatchInput,
   Task540CleanupBatchOutput,
@@ -25,6 +31,8 @@ export const TASK540_PRODUCTION_HANDLER_ARTIFACT = Object.freeze({
         "cleanup:seo-pca-transaction",
         "cleanup:setting-da-transaction",
         "cleanup:user-da-transaction",
+        "cleanup:media-composite-stage-proof",
+        "cleanup:override-already-reset-proof",
       ].join("\0")
     )
     .digest("hex"),
@@ -36,6 +44,7 @@ interface CleanupResource {
   readonly resourceKey: string;
   readonly kind: string;
   readonly identifier: readonly string[];
+  readonly ownershipSha256: string;
   readonly items: ReadonlyMap<CleanupOperation, Task540CleanupItem>;
 }
 
@@ -62,6 +71,7 @@ function collectResources(
     {
       kind: string;
       identifier: readonly string[];
+      ownershipSha256: string;
       items: Map<CleanupOperation, Task540CleanupItem>;
     }
   >();
@@ -75,6 +85,7 @@ function collectResources(
       mutable.set(item.resourceKey, {
         kind: item.kind,
         identifier,
+        ownershipSha256: item.ownershipSha256,
         items: new Map([[item.operation, item]]),
       });
       continue;
@@ -82,6 +93,7 @@ function collectResources(
     if (
       current.kind !== item.kind ||
       JSON.stringify(current.identifier) !== JSON.stringify(identifier) ||
+      current.ownershipSha256 !== item.ownershipSha256 ||
       current.items.has(item.operation)
     ) {
       throw new WorkerProtocolError("TASK-540 cleanup resource identity drifted");
@@ -236,8 +248,19 @@ async function cleanupSettings(
   const predicates = resources.map(({ identifier: [userId, key] }) =>
     and(eq(userSettings.userId, userId!), eq(userSettings.key, key!))
   );
+  let beforeCount = 0;
   let deletedCount = 0;
   await db.transaction(async (transaction) => {
+    const before = await transaction
+      .select({ userId: userSettings.userId, key: userSettings.key })
+      .from(userSettings)
+      .where(or(...predicates));
+    exactKeySet(
+      before.map(({ userId, key }) => [userId, key].join("\0")),
+      expected,
+      "setting provenance"
+    );
+    beforeCount = before.length;
     const deleted = await transaction
       .delete(userSettings)
       .where(or(...predicates))
@@ -268,8 +291,8 @@ async function cleanupSettings(
   }
   return Object.freeze({
     results: orderedResults(input, outputs),
-    statements: 2,
-    rows: deletedCount,
+    statements: 3,
+    rows: beforeCount + deletedCount,
   });
 }
 
@@ -286,8 +309,19 @@ async function cleanupUsers(input: Task540CleanupBatchInput): Promise<Task540Cle
     import("../../../../core/db/schema"),
   ]);
   const ids = resources.map(({ identifier }) => identifier[0]!);
+  let beforeCount = 0;
   let deletedCount = 0;
   await db.transaction(async (transaction) => {
+    const before = await transaction
+      .select({ id: users.id })
+      .from(users)
+      .where(inArray(users.id, ids));
+    exactKeySet(
+      before.map(({ id }) => id),
+      ids,
+      "user provenance"
+    );
+    beforeCount = before.length;
     const deleted = await transaction
       .delete(users)
       .where(inArray(users.id, ids))
@@ -315,8 +349,121 @@ async function cleanupUsers(input: Task540CleanupBatchInput): Promise<Task540Cle
   }
   return Object.freeze({
     results: orderedResults(input, outputs),
+    statements: 3,
+    rows: beforeCount + deletedCount,
+  });
+}
+
+async function cleanupMedia(input: Task540CleanupBatchInput): Promise<Task540CleanupBatchOutput> {
+  const operation = input.items[0]?.operation;
+  if (operation === undefined || input.items.some((item) => item.operation !== operation)) {
+    throw new WorkerProtocolError("TASK-540 media DB proof must contain one cleanup stage");
+  }
+  const resources = collectResources(input, new Set(["media-row-key"]), 2, [operation]);
+  if (resources.length !== 1) {
+    throw new WorkerProtocolError("TASK-540 media cleanup batch must own one row");
+  }
+  const [{ db }, { media }] = await Promise.all([
+    import("../../../../core/db/client"),
+    import("../../../../core/db/schema"),
+  ]);
+  const [{ resourceKey, identifier }] = resources;
+  const [mediaId, storageKey] = identifier;
+  const rows = await db
+    .select({ id: media.id, key: media.key, url: media.url })
+    .from(media)
+    .where(eq(media.id, mediaId!))
+    .limit(2);
+  if (operation === "provenance") {
+    if (
+      rows.length !== 1 ||
+      rows[0]?.id !== mediaId ||
+      rows[0]?.key !== storageKey ||
+      rows[0]?.url !== `/media/${storageKey}`
+    ) {
+      throw new WorkerProtocolError("TASK-540 media provenance identity drifted");
+    }
+  } else if (rows.length !== 0) {
+    throw new WorkerProtocolError("TASK-540 media post-API absence drifted");
+  }
+  const outputs = new Map<string, ReadonlyMap<CleanupOperation, PlainJsonValue>>([
+    [
+      resourceKey,
+      new Map([
+        [
+          operation,
+          {
+            absent: operation !== "provenance",
+            present: operation === "provenance",
+            stage: operation,
+          },
+        ],
+      ]),
+    ],
+  ]);
+  return Object.freeze({
+    results: orderedResults(input, outputs),
+    statements: 1,
+    rows: rows.length,
+  });
+}
+
+async function cleanupAlreadyResetOverride(
+  input: Task540CleanupBatchInput
+): Promise<Task540CleanupBatchOutput> {
+  const resources = collectResources(input, new Set(["presentation-override"]), 4, [
+    "provenance",
+    "delete",
+    "absence",
+  ]);
+  if (resources.length !== 1) {
+    throw new WorkerProtocolError("TASK-540 override cleanup batch must own one row");
+  }
+  const [{ db }, { customScreenEntryPresentationOverrides }] = await Promise.all([
+    import("../../../../core/db/client"),
+    import("../../../../core/db/schema"),
+  ]);
+  const [{ resourceKey, identifier }] = resources;
+  const [screenId, entryId, blockId, propPath] = identifier;
+  const predicate = and(
+    eq(customScreenEntryPresentationOverrides.screenId, screenId!),
+    eq(customScreenEntryPresentationOverrides.entryId, entryId!),
+    eq(customScreenEntryPresentationOverrides.blockId, blockId!),
+    eq(customScreenEntryPresentationOverrides.propPath, propPath!)
+  );
+  await db.transaction(async (transaction) => {
+    const present = await transaction
+      .select({ screenId: customScreenEntryPresentationOverrides.screenId })
+      .from(customScreenEntryPresentationOverrides)
+      .where(predicate)
+      .limit(2);
+    if (present.length !== 0) {
+      throw new WorkerProtocolError("TASK-540 already-reset override became present");
+    }
+  });
+  const remaining = await db
+    .select({ screenId: customScreenEntryPresentationOverrides.screenId })
+    .from(customScreenEntryPresentationOverrides)
+    .where(predicate)
+    .limit(2);
+  if (remaining.length !== 0) {
+    throw new WorkerProtocolError("TASK-540 override absence proof drifted");
+  }
+  const absentOutput = Object.freeze({ absent: true, affected: 0, present: false });
+  const outputs = new Map<string, ReadonlyMap<CleanupOperation, PlainJsonValue>>([
+    [
+      resourceKey,
+      new Map([
+        ["provenance", absentOutput],
+        ["delete", absentOutput],
+        ["absence", absentOutput],
+      ]),
+    ],
+  ]);
+  return Object.freeze({
+    results: orderedResults(input, outputs),
     statements: 2,
-    rows: deletedCount,
+    rows: 0,
   });
 }
 
@@ -334,6 +481,10 @@ async function runCleanupBatch(
   }
   if ([...kinds].every((kind) => kind === "user-a" || kind === "user-b")) {
     return cleanupUsers(input);
+  }
+  if (kinds.size === 1 && kinds.has("media-row-key")) return cleanupMedia(input);
+  if (kinds.size === 1 && kinds.has("presentation-override")) {
+    return cleanupAlreadyResetOverride(input);
   }
   throw new WorkerProtocolError("TASK-540 cleanup batch family is unsupported");
 }
@@ -353,7 +504,7 @@ function observedCandidateRows(output: PlainJsonValue): number {
 }
 
 export function createTask540ProductionWorkerHandlers(
-  executor: Task540SourceExecutor
+  typedHandlers: ReadonlyMap<string, Task540TypedHandler> = createTask540TypedHandlers()
 ): Task540WorkerHandlers {
   const handlers: Task540WorkerHandlers = {
     artifact: TASK540_PRODUCTION_HANDLER_ARTIFACT,
@@ -361,16 +512,15 @@ export function createTask540ProductionWorkerHandlers(
       const results = [];
       let rows = 0;
       for (const item of input.items) {
-        const entry = TASK540_SOURCE_CATALOG.require(
-          item.operationId,
-          profileId as Task540SourceProfileId
-        );
-        const output = await executor.execute({
-          operationId: item.operationId,
-          profileId: profileId as Task540SourceProfileId,
-          sourceSha256: entry.sourceSha256,
-          input: item.input,
-        });
+        const alias = requireTask540OperationAlias(item.operationId);
+        if (alias.profileId !== profileId) {
+          throw new WorkerProtocolError("TASK-540 baseline profile authority drifted");
+        }
+        const operationInput = validateTask540OperationInput(alias.inputSchemaId, item.input);
+        const handler = requireTask540TypedHandler(typedHandlers, alias.handlerId);
+        const context: WorkerOperationContext = Object.freeze({ profileId, requestId: 1 });
+        const rawOutput = await executeTask540TypedHandler(handler, operationInput, context);
+        const output = validateTask540OperationOutput(alias, operationInput, rawOutput);
         rows += observedCandidateRows(output);
         results.push(Object.freeze({ logicalId: item.logicalId, output }));
       }

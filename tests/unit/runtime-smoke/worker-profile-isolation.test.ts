@@ -58,7 +58,13 @@ test("workers are lazy, reused by exact profile, and never receive a union of se
   await expect(clientA.dispatch(SELF_TEST_PROFILE_DESCRIPTORS.b, {})).rejects.toThrow(
     "profile does not own"
   );
+  const startsBeforeBoundary = pool.counters().starts;
   await pool.closePrivilegedProfiles();
+  expect(await clientA.proveAbsent()).toBe(true);
+  expect(pool.counters().starts).toBe(startsBeforeBoundary);
+  await pool.closePrivilegedProfiles();
+  expect(pool.counters().starts).toBe(startsBeforeBoundary);
+  expect((await pool.forProfile("self-test-b")).pid).toBe(clientB.pid);
   const replacementA = await pool.forProfile("self-test-a");
   expect(replacementA.pid).not.toBe(clientA.pid);
   expect((await pool.forProfile("self-test-b")).pid).toBe(clientB.pid);

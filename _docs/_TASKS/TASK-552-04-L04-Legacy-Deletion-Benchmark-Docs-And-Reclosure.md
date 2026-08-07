@@ -6,7 +6,8 @@
 **Category:** Testing Infrastructure / Cleanup / Documentation / Closure
 **Estimated Effort:** Large
 **Dependencies:** TASK-552-04-L03 complete
-**Status:** ⏳ To Do
+**Status:** 🚧 In Progress
+**Started:** 2026-08-06
 **Changelog:** 1264 (family reclosure)
 
 ---
