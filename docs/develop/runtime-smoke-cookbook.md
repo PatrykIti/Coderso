@@ -64,8 +64,8 @@ shared platform owns CLI parsing, lifecycle, polling, process supervision,
 worker framing, retry boundaries, database batch validation, browser framing,
 redaction, timings, and the final report.
 
-Do not use TASK-540's legacy source/eval catalog as the template for a new
-suite. New work should register typed worker operations directly.
+TASK-540's retired source/eval catalog was deleted after native coverage parity
+was proven. New work registers typed worker operations directly.
 
 ## 3. Register the suite in all four places
 
@@ -681,20 +681,25 @@ Assert computed styles, geometry, DOM state, `aria-*`, and real front/Admin
 parity. Control presence or an emitted CSS string is not a visible-effect
 proof. Return no cookies, headers, tokens, raw DOM, raw responses, or user data.
 
-## 10. Implement one named Playwright transport
+## 10. Reuse the shared Playwright transport
 
-The dispatcher adapts the shared transport to `playwright-cli`. It should:
-
-1. Validate the exact registered session and segment.
-2. Keep one task-scoped named session.
-3. Write generated source to a private `0600` file.
-4. Call `playwright-cli --raw -s=<session> run-code --filename <file>` through
-   `context.processes` with bounded output.
-5. Validate the one expected result shape.
-6. Close the exact named session and prove that it is absent.
+Adapters must instantiate `PlaywrightCliDispatcher`; they must not implement a
+task-local `playwright-cli` wrapper. The dispatcher validates the exact session
+and segment allowlist, projects only the approved Chromium runtime paths, writes
+generated source to a private `0600` file, bounds and validates canonical output,
+and closes the named session with an absence proof.
 
 ```ts
-const dispatcher = new ExamplePlaywrightDispatcher(context, workspace);
+import { BrowserTransport } from "../browser/transport";
+import { PlaywrightCliDispatcher } from "../browser/playwright-cli-dispatcher";
+
+const segmentIds = Object.freeze(["editor-visible-proof"]);
+const dispatcher = new PlaywrightCliDispatcher({
+  context,
+  session: context.input.session,
+  workspace,
+  segments: segmentIds,
+});
 const transport = new BrowserTransport(context.input.session, dispatcher);
 context.lifecycle.register(transport);
 
@@ -712,10 +717,13 @@ if (!(await transport.proveAbsent())) {
 `BrowserTransport` preserves action identity and successful-prefix semantics,
 stops at the first failure, rejects concurrent dispatch on one transport, and
 counts physical client processes, segments, and frames separately from logical
-actions. The practical dispatcher is in
-[`widget-contract.ts`](../../scripts/runtime-smoke/adapters/widget-contract.ts);
-the generic contracts are in
-[`browser/`](../../scripts/runtime-smoke/browser/).
+actions. Shared ownership lives in
+[`playwright-cli-dispatcher.ts`](../../scripts/runtime-smoke/browser/playwright-cli-dispatcher.ts)
+and [`browser/`](../../scripts/runtime-smoke/browser/). Long-running development
+or production hosts must likewise use
+[`startSupervisedServer()`](../../scripts/runtime-smoke/server/supervised-server.ts)
+with a suite-owned exact environment policy, readiness probes, bounded logs,
+owned ports, and lifecycle cleanup; do not add a private server launcher.
 
 Install `console` and `pageerror` listeners before the first navigation. An
 empty `consoleErrors` array is valid only when the adapter actually observed

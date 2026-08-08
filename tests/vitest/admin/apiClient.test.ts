@@ -119,6 +119,52 @@ test("apiRequest refreshes csrf token and retries once for csrf_invalid", async 
   }
 });
 
+test("concurrent csrf retries share one token refresh", async () => {
+  let csrfRequests = 0;
+  let staleMutationAttempts = 0;
+  let releaseStaleAttempts: (() => void) | undefined;
+  const staleAttemptsReady = new Promise<void>((resolve) => {
+    releaseStaleAttempts = resolve;
+  });
+  const fetchMock = installFetch(async (input, init) => {
+    const url = String(input);
+    if (url.endsWith("/auth/csrf")) {
+      csrfRequests += 1;
+      return jsonResponse({ token: csrfRequests === 1 ? "stale-token" : "fresh-token" });
+    }
+
+    const token = new Headers(init?.headers).get("X-CSRF-Token");
+    if (token === "stale-token") {
+      staleMutationAttempts += 1;
+      if (staleMutationAttempts === 3) releaseStaleAttempts?.();
+      await staleAttemptsReady;
+      return csrfErrorResponse("csrf_invalid");
+    }
+    expect(token).toBe("fresh-token");
+    return jsonResponse({ ok: true });
+  });
+
+  try {
+    await expect(getCsrfToken()).resolves.toBe("stale-token");
+    await expect(
+      Promise.all(
+        ["form", "fields", "actions"].map((resource) =>
+          apiRequest<{ ok: boolean }>(
+            `/forms/form-1/${resource}`,
+            { method: "PUT", body: "{}" },
+            { withCsrf: true }
+          )
+        )
+      )
+    ).resolves.toEqual([{ ok: true }, { ok: true }, { ok: true }]);
+
+    expect(csrfRequests).toBe(2);
+    expect(staleMutationAttempts).toBe(3);
+  } finally {
+    fetchMock.restore();
+  }
+});
+
 test("apiRequest does not retry non-csrf forbidden responses", async () => {
   const fetchMock = installFetch(async (input) => {
     const url = String(input);

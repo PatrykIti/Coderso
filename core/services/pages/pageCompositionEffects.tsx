@@ -268,6 +268,7 @@ export const PAGE_INTERACTIVITY_CSS = [
   "[data-switcher] .cx-switcher-tabs{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none}",
   "[data-switcher] .cx-switcher-tabs::-webkit-scrollbar{display:none}",
   "[data-switcher] [data-switcher-tab]{cursor:pointer;white-space:nowrap;border:0;background:transparent;padding:6px 14px;color:inherit;font:inherit}",
+  "[data-switcher] [data-switcher-tab]:focus-visible{outline:2px solid var(--primary);outline-offset:2px}",
   // pill vs underline selected state (token color only).
   "[data-switcher-variant='pill'] [data-switcher-tab][aria-selected='true']{background:var(--primary);color:#fff;border-radius:999px}",
   "[data-switcher-variant='underline'] [data-switcher-tab][aria-selected='true']{border-bottom:2px solid var(--primary)}",
@@ -275,6 +276,11 @@ export const PAGE_INTERACTIVITY_CSS = [
   "[data-switcher-panel][hidden]{display:none}",
   // panel crossfade — motion-safe only; reduce users get instant show/hide.
   "@media (prefers-reduced-motion: no-preference){[data-switcher-panel]{opacity:0;transition:opacity .25s ease}[data-switcher-panel][data-active='true']{opacity:1}}",
+  // Pointer lift is a visible affordance for authored switcher controls. Keep
+  // the transform and its transition entirely motion-gated; keyboard focus is
+  // represented by the non-motion outline above.
+  "@media (prefers-reduced-motion: no-preference){[data-switcher] [data-switcher-tab]{transition:transform .15s ease}[data-switcher] [data-switcher-tab]:hover{transform:translateY(-2px)}}",
+  "@media (prefers-reduced-motion: reduce){[data-switcher] [data-switcher-tab]{transform:none}}",
   // filter chip bar.
   "[data-gallery-filter]{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}",
   "[data-gallery-filter] .cx-filter-chip{cursor:pointer;border:1px solid var(--primary);background:transparent;color:inherit;border-radius:999px;padding:4px 12px;font:inherit}",

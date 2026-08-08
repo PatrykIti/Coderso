@@ -1,4 +1,6 @@
 import { expect, test } from "bun:test";
+import { readFile } from "node:fs/promises";
+import { resolve } from "node:path";
 import adapter, {
   buildWidgetContractInventoryOverlay,
   buildWidgetPublicProbeSource,
@@ -250,4 +252,37 @@ test("widget environment is least-privilege and long probe sessions remain bound
   const bounded = resolveWidgetProbeSession(`w${"f".repeat(62)}`);
   expect(bounded.length).toBeLessThanOrEqual(64);
   expect(bounded).toMatch(/^[a-z0-9-]+$/u);
+});
+
+test("widget production graph is modular and delegates every browser child to the shared dispatcher", async () => {
+  const paths = [
+    "scripts/playwright-widget-contract-smoke.ts",
+    "scripts/runtime-smoke/adapters/widget-contract.ts",
+    "scripts/runtime-smoke/adapters/widget-contract/admin-probe.ts",
+    "scripts/runtime-smoke/adapters/widget-contract/browser-session.ts",
+    "scripts/runtime-smoke/adapters/widget-contract/cli.ts",
+    "scripts/runtime-smoke/adapters/widget-contract/environment.ts",
+    "scripts/runtime-smoke/adapters/widget-contract/fixtures.ts",
+    "scripts/runtime-smoke/adapters/widget-contract/inventory.ts",
+    "scripts/runtime-smoke/adapters/widget-contract/public-probe.ts",
+    "scripts/runtime-smoke/adapters/widget-contract/report.ts",
+    "scripts/runtime-smoke/adapters/widget-contract/suite.ts",
+  ] as const;
+  const sources = await Promise.all(
+    paths.map(async (path) => [path, await readFile(resolve(process.cwd(), path), "utf8")] as const)
+  );
+  for (const [path, source] of sources) {
+    expect(source.split("\n").length, path).toBeLessThanOrEqual(1_000);
+    expect(source, path).not.toContain("Bun.spawn");
+    expect(source, path).not.toContain("node:child_process");
+    expect(source, path).not.toMatch(/setTimeout\s*\(/u);
+  }
+  const adapterSource = sources.find(([path]) => path.endsWith("widget-contract.ts"))?.[1] ?? "";
+  const browserSource = sources.find(([path]) => path.endsWith("browser-session.ts"))?.[1] ?? "";
+  expect(adapterSource).toContain('from "./widget-contract/suite"');
+  expect(adapterSource).not.toMatch(
+    /(?:from\s+|import\s*\()\s*["'][^"']*playwright-widget-contract-smoke/u
+  );
+  expect(browserSource).toContain("new PlaywrightCliDispatcher");
+  expect(browserSource).not.toContain("processes.run");
 });

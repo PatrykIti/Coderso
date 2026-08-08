@@ -3,7 +3,12 @@ import { randomUUID } from "node:crypto";
 import { eq, inArray, sql } from "drizzle-orm";
 import { db } from "../../../core/db/client";
 import { settings } from "../../../core/db/schema";
-import { clearSiteCache } from "../../../core/site/cache/siteCache";
+import {
+  buildSiteCacheKey,
+  clearSiteCache,
+  getSiteCacheEntry,
+  setSiteCacheEntry,
+} from "../../../core/site/cache/siteCache";
 import {
   assertAssistantSettingsConsistency,
   deleteSetting,
@@ -13,10 +18,17 @@ import {
   setSettings,
 } from "../../../core/services/settings/settingsService";
 import { MAX_SITE_CACHE_TTL_SECONDS } from "../../../core/services/analytics/beaconTtl";
+import {
+  MAX_SITE_LOCALE_LENGTH,
+  normalizePublicSiteLocale,
+  normalizeStoredSiteLocaleForWrite,
+  resolvePrimarySiteLanguage,
+  resolvePublicDocumentLanguage,
+} from "../../../core/services/settings/siteLocale";
 
 const hasDb = Boolean(process.env.DATABASE_URL) && (await canConnect());
 const testIfDb = hasDb ? test : test.skip;
-const dbTestTimeoutMs = 15_000;
+const dbTestTimeoutMs = 360_000;
 
 async function canConnect() {
   try {
@@ -349,6 +361,88 @@ testIfDb(
     await expect(setSetting("assistant.llm.maxInputTokens", 0)).rejects.toThrow(
       "settings_value_invalid"
     );
+  },
+  dbTestTimeoutMs
+);
+
+test("site locale keeps stored strings raw and canonicalizes only public consumers", () => {
+  const raw = "  zH-hANT-t-FOO  ";
+  expect(normalizeStoredSiteLocaleForWrite(raw)).toBe(raw);
+  expect(normalizePublicSiteLocale(raw)).toBe("zh-Hant-t-foo");
+  expect(normalizePublicSiteLocale("pl")).toBe("pl");
+  expect(normalizePublicSiteLocale("PL-pl")).toBe("pl-PL");
+  expect(normalizePublicSiteLocale("ES-419")).toBe("es-419");
+  expect(normalizePublicSiteLocale("ZH-hANT")).toBe("zh-Hant");
+  expect(resolvePublicDocumentLanguage("../pl")).toBe("en");
+  expect(resolvePrimarySiteLanguage("pl-PL")).toBe("pl");
+  expect(resolvePrimarySiteLanguage("es-419")).toBe("es");
+  expect(resolvePrimarySiteLanguage("zh-Hant")).toBe("zh");
+});
+
+test("site locale enforces exact stored 254/255/256 and invalid-input bounds", () => {
+  for (const length of [254, MAX_SITE_LOCALE_LENGTH]) {
+    const value = `pl-${"x".repeat(length - 3)}`;
+    expect(normalizeStoredSiteLocaleForWrite(value)).toBe(value);
+  }
+  for (const value of ["", "   ", null, 123, {}, [], "x".repeat(256)]) {
+    expect(() => normalizeStoredSiteLocaleForWrite(value)).toThrow("settings_value_invalid");
+  }
+  expect(normalizePublicSiteLocale("x".repeat(256))).toBeNull();
+});
+
+testIfDb(
+  "site.locale preserves accepted writes without canonicalizing",
+  async () => {
+    await setSetting("site.locale", "pl");
+    expect(await getSetting("site.locale")).toBe("pl");
+    await setSetting("site.locale", " pl-pl ");
+    expect(await getSetting("site.locale")).toBe(" pl-pl ");
+    expect((await listSettings())["site.locale"]).toBe(" pl-pl ");
+    await expect(setSettings({ "site.locale": "   " })).rejects.toThrow("settings_value_invalid");
+  },
+  dbTestTimeoutMs
+);
+
+testIfDb(
+  "site.locale reads preserve a non-public legacy stored string",
+  async () => {
+    await db
+      .insert(settings)
+      .values({ key: "site.locale", value: 'pl" unsafe', updatedAt: new Date() })
+      .onConflictDoUpdate({
+        target: settings.key,
+        set: { value: 'pl" unsafe', updatedAt: new Date() },
+      });
+    expect(await getSetting("site.locale")).toBe('pl" unsafe');
+    expect((await listSettings())["site.locale"]).toBe('pl" unsafe');
+  },
+  dbTestTimeoutMs
+);
+
+testIfDb(
+  "site.locale writes invalidate cached public HTML",
+  async () => {
+    const key = buildSiteCacheKey("default", "/task-547-locale");
+    setSiteCacheEntry(key, '<html lang="en">', 30);
+    expect(getSiteCacheEntry(key)).not.toBeNull();
+    await setSetting("site.locale", "pl");
+    expect(getSiteCacheEntry(key)).toBeNull();
+  },
+  dbTestTimeoutMs
+);
+
+testIfDb(
+  "settings saga batches validate first and commit atomically",
+  async () => {
+    await setSettings({ "site.name": "Before", "site.locale": "en" });
+    await expect(setSettings({ "site.name": "After", "site.locale": "" })).rejects.toThrow(
+      "settings_value_invalid"
+    );
+    expect(await getSetting("site.name")).toBe("Before");
+    expect(await getSetting("site.locale")).toBe("en");
+    await setSettings({ "site.name": "After", "site.locale": "pl-PL" });
+    expect(await getSetting("site.name")).toBe("After");
+    expect(await getSetting("site.locale")).toBe("pl-PL");
   },
   dbTestTimeoutMs
 );

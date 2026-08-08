@@ -1,7 +1,8 @@
-import { eq, inArray } from "drizzle-orm";
+import { asc, eq, inArray } from "drizzle-orm";
 
 import { db } from "../../db/client";
-import { themeProfiles, themeRoutes } from "../../db/schema";
+import { acquireNativeCmsWriterFence } from "../../db/nativeCmsWriterFence";
+import { pages, themeProfiles, themeRoutes } from "../../db/schema";
 import type { DesignTokenOverrides } from "../theme/tokenTypes";
 import { assertTokenOverrides } from "../theme/tokenValidation";
 import { clearSiteCache } from "../../site/cache/siteCache";
@@ -35,6 +36,8 @@ export type ThemeProfileUpdateInput = {
   tokens?: DesignTokenOverrides;
 };
 
+type ThemeProfileTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
+
 const normalizePath = (value: string) => {
   const trimmed = value.trim();
   if (!trimmed) throw new Error("theme_route_invalid");
@@ -55,17 +58,36 @@ const normalizeRoutes = (routes: ThemeRouteInput[]) => {
   });
 };
 
+const lockReferencedPages = async (
+  tx: ThemeProfileTransaction,
+  routes: readonly Readonly<{ pageId: string | null }>[]
+): Promise<void> => {
+  const pageIds = [...new Set(routes.flatMap(({ pageId }) => (pageId ? [pageId] : [])))].sort();
+  if (pageIds.length === 0) return;
+  const rows = await tx
+    .select({ id: pages.id })
+    .from(pages)
+    .where(inArray(pages.id, pageIds))
+    .orderBy(asc(pages.id))
+    .for("key share");
+  if (rows.length !== pageIds.length || rows.some((row, index) => row.id !== pageIds[index])) {
+    throw new Error("theme_route_invalid");
+  }
+};
+
 export async function listThemeProfiles(): Promise<ThemeProfile[]> {
-  const profiles = await db
-    .select()
-    .from(themeProfiles)
-    .orderBy(themeProfiles.createdAt);
+  const profiles = await db.select().from(themeProfiles).orderBy(themeProfiles.createdAt);
   if (!profiles.length) return [];
 
   const routes = await db
     .select()
     .from(themeRoutes)
-    .where(inArray(themeRoutes.profileId, profiles.map((p) => p.id)));
+    .where(
+      inArray(
+        themeRoutes.profileId,
+        profiles.map((p) => p.id)
+      )
+    );
 
   const routesByProfile = new Map<string, ThemeRoute[]>();
   for (const route of routes) {
@@ -84,10 +106,7 @@ export async function getThemeProfile(id: string) {
   const [profile] = await db.select().from(themeProfiles).where(eq(themeProfiles.id, id));
   if (!profile) return null;
 
-  const routes = await db
-    .select()
-    .from(themeRoutes)
-    .where(eq(themeRoutes.profileId, id));
+  const routes = await db.select().from(themeRoutes).where(eq(themeRoutes.profileId, id));
 
   return {
     ...profile,
@@ -96,35 +115,17 @@ export async function getThemeProfile(id: string) {
 }
 
 export async function createThemeProfile(input: ThemeProfileCreateInput) {
-  if (!input.name.trim() || !input.themeName.trim()) {
-    throw new Error("theme_profile_invalid");
-  }
-
-  if (input.tokens) {
-    assertTokenOverrides(input.tokens);
-  }
-
-  const now = new Date();
-
-  const createProfile = async () => {
-    const [row] = await db
-      .insert(themeProfiles)
-      .values({
-        name: input.name.trim(),
-        description: input.description?.trim() || null,
-        themeName: input.themeName.trim(),
-        tokens: input.tokens ?? {},
-        isActive: input.isActive ?? false,
-        createdAt: now,
-        updatedAt: now,
-      })
-      .returning();
-    return row;
-  };
-
-  if (input.isActive) {
-    const created = await db.transaction(async (tx) => {
-      await tx.update(themeProfiles).set({ isActive: false, updatedAt: now });
+  const created = await db.transaction(
+    async (tx) => {
+      await acquireNativeCmsWriterFence(tx);
+      if (!input.name.trim() || !input.themeName.trim()) {
+        throw new Error("theme_profile_invalid");
+      }
+      if (input.tokens) assertTokenOverrides(input.tokens);
+      const now = new Date();
+      if (input.isActive) {
+        await tx.update(themeProfiles).set({ isActive: false, updatedAt: now });
+      }
       const [row] = await tx
         .insert(themeProfiles)
         .values({
@@ -132,20 +133,15 @@ export async function createThemeProfile(input: ThemeProfileCreateInput) {
           description: input.description?.trim() || null,
           themeName: input.themeName.trim(),
           tokens: input.tokens ?? {},
-          isActive: true,
+          isActive: input.isActive ?? false,
           createdAt: now,
           updatedAt: now,
         })
         .returning();
       return row;
-    });
-    if (created) {
-      clearSiteCache();
-    }
-    return created;
-  }
-
-  const created = await createProfile();
+    },
+    { isolationLevel: "read committed" }
+  );
   if (created?.isActive) {
     clearSiteCache();
   }
@@ -153,71 +149,71 @@ export async function createThemeProfile(input: ThemeProfileCreateInput) {
 }
 
 export async function updateThemeProfile(id: string, input: ThemeProfileUpdateInput) {
-  if (input.tokens) {
-    assertTokenOverrides(input.tokens);
-  }
-
-  const update: Partial<typeof themeProfiles.$inferInsert> = {
-    updatedAt: new Date(),
-  };
-  if (input.name !== undefined) {
-    update.name = input.name.trim();
-  }
-  if (input.description !== undefined) {
-    update.description = input.description?.trim() || null;
-  }
-  if (input.tokens !== undefined) {
-    update.tokens = input.tokens;
-  }
-
-  const [row] = await db
-    .update(themeProfiles)
-    .set(update)
-    .where(eq(themeProfiles.id, id))
-    .returning();
+  const row = await db.transaction(
+    async (tx) => {
+      await acquireNativeCmsWriterFence(tx);
+      if (input.tokens) assertTokenOverrides(input.tokens);
+      const update: Partial<typeof themeProfiles.$inferInsert> = { updatedAt: new Date() };
+      if (input.name !== undefined) update.name = input.name.trim();
+      if (input.description !== undefined) update.description = input.description?.trim() || null;
+      if (input.tokens !== undefined) update.tokens = input.tokens;
+      const [updated] = await tx
+        .update(themeProfiles)
+        .set(update)
+        .where(eq(themeProfiles.id, id))
+        .returning();
+      return updated ?? null;
+    },
+    { isolationLevel: "read committed" }
+  );
 
   if (row) {
     clearSiteCache();
   }
 
-  return row ?? null;
+  return row;
 }
 
 export async function activateThemeProfile(profileId: string) {
   const now = new Date();
-  const [profile] = await db
-    .select()
-    .from(themeProfiles)
-    .where(eq(themeProfiles.id, profileId));
-  if (!profile) throw new Error("theme_profile_not_found");
-
-  await db.transaction(async (tx) => {
-    await tx.update(themeProfiles).set({ isActive: false, updatedAt: now });
-    await tx
-      .update(themeProfiles)
-      .set({ isActive: true, updatedAt: now })
-      .where(eq(themeProfiles.id, profileId));
-  });
+  await db.transaction(
+    async (tx) => {
+      await acquireNativeCmsWriterFence(tx);
+      const [profile] = await tx
+        .select({ id: themeProfiles.id })
+        .from(themeProfiles)
+        .where(eq(themeProfiles.id, profileId))
+        .for("update");
+      if (!profile) throw new Error("theme_profile_not_found");
+      await tx.update(themeProfiles).set({ isActive: false, updatedAt: now });
+      await tx
+        .update(themeProfiles)
+        .set({ isActive: true, updatedAt: now })
+        .where(eq(themeProfiles.id, profileId));
+    },
+    { isolationLevel: "read committed" }
+  );
 
   clearSiteCache();
   return { ok: true };
 }
 
 export async function setThemeRoutes(profileId: string, routes: ThemeRouteInput[]) {
-  const normalized = normalizeRoutes(routes);
-  const [profile] = await db
-    .select()
-    .from(themeProfiles)
-    .where(eq(themeProfiles.id, profileId));
-  if (!profile) throw new Error("theme_profile_not_found");
-
-  const now = new Date();
-  await db.transaction(async (tx) => {
-    await tx.delete(themeRoutes).where(eq(themeRoutes.profileId, profileId));
-    if (normalized.length > 0) {
-      await tx
-        .insert(themeRoutes)
-        .values(
+  await db.transaction(
+    async (tx) => {
+      await acquireNativeCmsWriterFence(tx);
+      const normalized = normalizeRoutes(routes);
+      const [profile] = await tx
+        .select({ id: themeProfiles.id })
+        .from(themeProfiles)
+        .where(eq(themeProfiles.id, profileId))
+        .for("update");
+      if (!profile) throw new Error("theme_profile_not_found");
+      await lockReferencedPages(tx, normalized);
+      const now = new Date();
+      await tx.delete(themeRoutes).where(eq(themeRoutes.profileId, profileId));
+      if (normalized.length > 0) {
+        await tx.insert(themeRoutes).values(
           normalized.map((route) => ({
             profileId,
             path: route.path,
@@ -225,19 +221,18 @@ export async function setThemeRoutes(profileId: string, routes: ThemeRouteInput[
             createdAt: now,
           }))
         );
-    }
-    await tx.update(themeProfiles).set({ updatedAt: now }).where(eq(themeProfiles.id, profileId));
-  });
+      }
+      await tx.update(themeProfiles).set({ updatedAt: now }).where(eq(themeProfiles.id, profileId));
+    },
+    { isolationLevel: "read committed" }
+  );
 
   clearSiteCache();
   return getThemeProfile(profileId);
 }
 
 export async function getActiveThemeProfile() {
-  const [profile] = await db
-    .select()
-    .from(themeProfiles)
-    .where(eq(themeProfiles.isActive, true));
+  const [profile] = await db.select().from(themeProfiles).where(eq(themeProfiles.isActive, true));
   if (!profile) return null;
   return getThemeProfile(profile.id);
 }

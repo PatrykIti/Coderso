@@ -1,0 +1,1615 @@
+{
+  "schemaVersion": 1,
+  "legacyContractHead": "faa9b60fce294e27a6700bdf8a500c661c06419a",
+  "handlerArtifactVersion": "task-540-static-handler-v1",
+  "counts": {
+    "canonicalHandlers": 57,
+    "acceptedOperationIds": 160,
+    "canonicalIds": 57,
+    "explicitAliases": 26,
+    "responseLostAliases": 36,
+    "resourceAliases": 41
+  },
+  "rows": [
+    {
+      "operationId": "access-log-task-ua/absence",
+      "handlerId": "source/resource/access-log/absence",
+      "profileId": "database",
+      "inputSchemaId": "identifier-uuid-input-v1",
+      "outputSchemaId": "strict-resource-operation-v1",
+      "retryClass": "idempotent-read",
+      "handlerArtifactSha256": "6e1ea2162a40271f26918d97cc90bb1d690e71a0a2861e836029cccb57e0735d",
+      "category": "resource-alias"
+    },
+    {
+      "operationId": "access-log-task-ua/cleanup",
+      "handlerId": "source/resource/access-log/delete",
+      "profileId": "database",
+      "inputSchemaId": "identifier-uuid-input-v1",
+      "outputSchemaId": "strict-resource-operation-v1",
+      "retryClass": "mutation",
+      "handlerArtifactSha256": "f2ff512a1b5dbc9119c2401400fbc95bf633ffea181f9973064c0c0cdb05b0e4",
+      "category": "resource-alias"
+    },
+    {
+      "operationId": "access-log-task-ua/provenance/terminal-db-delta",
+      "handlerId": "source/resource/access-log/provenance",
+      "profileId": "database",
+      "inputSchemaId": "identifier-uuid-input-v1",
+      "outputSchemaId": "strict-resource-operation-v1",
+      "retryClass": "idempotent-read",
+      "handlerArtifactSha256": "0668024a1d0b19fc65c25de9221da5376a4b75e468baf5c04766de37deb2e325",
+      "category": "resource-alias"
+    },
+    {
+      "operationId": "audit-log-task-ua/absence",
+      "handlerId": "source/resource/audit-log/absence",
+      "profileId": "database",
+      "inputSchemaId": "identifier-uuid-input-v1",
+      "outputSchemaId": "strict-resource-operation-v1",
+      "retryClass": "idempotent-read",
+      "handlerArtifactSha256": "2be6bf9f77eb78629be323e33f4ac54632baa1da74ee5ddd754e8867648e5de9",
+      "category": "resource-alias"
+    },
+    {
+      "operationId": "audit-log-task-ua/cleanup",
+      "handlerId": "source/resource/audit-log/delete",
+      "profileId": "database",
+      "inputSchemaId": "identifier-uuid-input-v1",
+      "outputSchemaId": "strict-resource-operation-v1",
+      "retryClass": "mutation",
+      "handlerArtifactSha256": "ebb3ad0fcf0d4362cfeb04d54eca8dbbec7d7c31b712ccc56596478d6eb7bea2",
+      "category": "resource-alias"
+    },
+    {
+      "operationId": "audit-log-task-ua/provenance/terminal-db-delta",
+      "handlerId": "source/resource/audit-log/provenance",
+      "profileId": "database",
+      "inputSchemaId": "identifier-uuid-input-v1",
+      "outputSchemaId": "strict-resource-operation-v1",
+      "retryClass": "idempotent-read",
+      "handlerArtifactSha256": "fd39fad5ed235a662ef40d9813866cee6fbddeb75f642b976d109953a2cf2e96",
+      "category": "resource-alias"
+    },
+    {
+      "operationId": "bootstrap-user-login-state/absence",
+      "handlerId": "source/bootstrap/login-observation",
+      "profileId": "database",
+      "inputSchemaId": "user-session-observation-input-v1",
+      "outputSchemaId": "strict-resource-operation-v1",
+      "retryClass": "idempotent-read",
+      "handlerArtifactSha256": "98e0d97a1f2cced3d911e50b1342ee9ed7baab7b4571e6dabd17dc514fc4a2ea",
+      "category": "resource-alias"
+    },
+    {
+      "operationId": "bootstrap-user-login-state/cleanup",
+      "handlerId": "source/bootstrap/cas-restore",
+      "profileId": "database",
+      "inputSchemaId": "bootstrap-restore-input-v1",
+      "outputSchemaId": "strict-resource-operation-v1",
+      "retryClass": "mutation",
+      "handlerArtifactSha256": "b6ab51f7a813a70aac7c1c77dbbb26a22a114b814cf6d2384db7d93b4c4f8f35",
+      "category": "resource-alias"
+    },
+    {
+      "operationId": "content-type/provenance/failure-discovery",
+      "handlerId": "source/resource/content-type-provenance",
+      "profileId": "database",
+      "inputSchemaId": "identifier-uuid-input-v1",
+      "outputSchemaId": "strict-resource-operation-v1",
+      "retryClass": "idempotent-read",
+      "handlerArtifactSha256": "81c742ecc4a0afd82519809c1b3bdf2d4d9d62105c8e614f25f31fe68852fc30",
+      "category": "resource-alias"
+    },
+    {
+      "operationId": "entry-editable/provenance/failure-discovery",
+      "handlerId": "source/resource/content-entry-provenance",
+      "profileId": "database",
+      "inputSchemaId": "identifier-uuid-input-v1",
+      "outputSchemaId": "strict-resource-operation-v1",
+      "retryClass": "idempotent-read",
+      "handlerArtifactSha256": "ebcae78fb598694c2ed01d6e468bc968df748e5a38381fbbd1829d7c3ccabfdd",
+      "category": "resource-alias"
+    },
+    {
+      "operationId": "entry-related/provenance/failure-discovery",
+      "handlerId": "source/resource/content-entry-provenance",
+      "profileId": "database",
+      "inputSchemaId": "identifier-uuid-input-v1",
+      "outputSchemaId": "strict-resource-operation-v1",
+      "retryClass": "idempotent-read",
+      "handlerArtifactSha256": "ebcae78fb598694c2ed01d6e468bc968df748e5a38381fbbd1829d7c3ccabfdd",
+      "category": "resource-alias"
+    },
+    {
+      "operationId": "legacy/user-absence-exact",
+      "handlerId": "source/user/absence",
+      "profileId": "user-identity-proof",
+      "inputSchemaId": "user-id-input-v1",
+      "outputSchemaId": "legacy-user-absence-private-v1",
+      "retryClass": "idempotent-read",
+      "handlerArtifactSha256": "c03ff8341fdc0e7aa53eded8f6762bda9446b38c7f4be688bb2af4d0216ef394",
+      "category": "explicit-alias"
+    },
+    {
+      "operationId": "legacy/user-delete-exact",
+      "handlerId": "source/user/delete",
+      "profileId": "user-identity-proof",
+      "inputSchemaId": "user-id-input-v1",
+      "outputSchemaId": "legacy-user-delete-private-v1",
+      "retryClass": "mutation",
+      "handlerArtifactSha256": "da1e61c93c2f379f976ad09d763bc2f9877e976ec294ea928df024c754fab656",
+      "category": "explicit-alias"
+    },
+    {
+      "operationId": "media-row-key/absence",
+      "handlerId": "source/resource/media/absence",
+      "profileId": "database",
+      "inputSchemaId": "identifier-media-input-v1",
+      "outputSchemaId": "strict-resource-operation-v1",
+      "retryClass": "idempotent-read",
+      "handlerArtifactSha256": "c3f72ae073cbbeecafcfc4b8b9207b1b26e2f6a4c5770507bf271af6200baa42",
+      "category": "resource-alias"
+    },
+    {
+      "operationId": "media-row-key/cleanup",
+      "handlerId": "source/resource/media/delete",
+      "profileId": "database",
+      "inputSchemaId": "identifier-media-input-v1",
+      "outputSchemaId": "strict-resource-operation-v1",
+      "retryClass": "idempotent-read",
+      "handlerArtifactSha256": "7e8fcd5d8b273ee7644eb26260f5894ca51168f09fd34b3c454fa5015066956d",
+      "category": "resource-alias"
+    },
+    {
+      "operationId": "media-row-key/provenance/admin-api",
+      "handlerId": "source/resource/media/provenance",
+      "profileId": "database",
+      "inputSchemaId": "identifier-media-input-v1",
+      "outputSchemaId": "strict-resource-operation-v1",
+      "retryClass": "idempotent-read",
+      "handlerArtifactSha256": "321dafefe6762e8575bc48b2b8e1d73942a8325deeb008eaa4045fca86df15a8",
+      "category": "resource-alias"
+    },
+    {
+      "operationId": "media-row-key/provenance/failure-discovery",
+      "handlerId": "source/resource/media/provenance",
+      "profileId": "database",
+      "inputSchemaId": "identifier-media-input-v1",
+      "outputSchemaId": "strict-resource-operation-v1",
+      "retryClass": "idempotent-read",
+      "handlerArtifactSha256": "321dafefe6762e8575bc48b2b8e1d73942a8325deeb008eaa4045fca86df15a8",
+      "category": "resource-alias"
+    },
+    {
+      "operationId": "missing-media-baseline/absence",
+      "handlerId": "source/platform/missing-media-db-absence",
+      "profileId": "database",
+      "inputSchemaId": "media-id-input-v1",
+      "outputSchemaId": "strict-resource-operation-v1",
+      "retryClass": "idempotent-read",
+      "handlerArtifactSha256": "829c059447d84ee46ce9ce5b273b431fcb1ed3b5c7edd23fd207c7a7549be739",
+      "category": "resource-alias"
+    },
+    {
+      "operationId": "presentation-override/absence",
+      "handlerId": "source/resource/override/absence",
+      "profileId": "database",
+      "inputSchemaId": "identifier-override-input-v1",
+      "outputSchemaId": "strict-resource-operation-v1",
+      "retryClass": "idempotent-read",
+      "handlerArtifactSha256": "177c60ceba76a5a37fe22862055742691d253e1466c6c5b834e39ef1f182ecdc",
+      "category": "resource-alias"
+    },
+    {
+      "operationId": "presentation-override/cleanup",
+      "handlerId": "source/resource/override/delete",
+      "profileId": "database",
+      "inputSchemaId": "identifier-override-input-v1",
+      "outputSchemaId": "strict-resource-operation-v1",
+      "retryClass": "mutation",
+      "handlerArtifactSha256": "e3a147cd1498bc73ab28f6398c17b1a5f8056ad23119be1d9b4c5e6bbaac1c78",
+      "category": "resource-alias"
+    },
+    {
+      "operationId": "presentation-override/provenance/failure-discovery",
+      "handlerId": "source/resource/override/provenance",
+      "profileId": "database",
+      "inputSchemaId": "identifier-override-input-v1",
+      "outputSchemaId": "strict-resource-operation-v1",
+      "retryClass": "idempotent-read",
+      "handlerArtifactSha256": "595a487b41a8c8a09b562dfa41738277b20d5eb3d3079ef4eac4cc1574cf3aed",
+      "category": "resource-alias"
+    },
+    {
+      "operationId": "resource/api-session-observation",
+      "handlerId": "source/bootstrap/api-session-observation",
+      "profileId": "database",
+      "inputSchemaId": "user-session-observation-input-v1",
+      "outputSchemaId": "api-session-observation-private-v1",
+      "retryClass": "idempotent-read",
+      "handlerArtifactSha256": "599c7e521a203e4af720f888cef9318e7ef7e44f0556201b569598e76b149225",
+      "category": "explicit-alias"
+    },
+    {
+      "operationId": "resource/bootstrap-baseline-read",
+      "handlerId": "source/bootstrap/baseline-read",
+      "profileId": "database",
+      "inputSchemaId": "user-id-input-v1",
+      "outputSchemaId": "bootstrap-baseline-read-private-v1",
+      "retryClass": "idempotent-read",
+      "handlerArtifactSha256": "69479c14f2dcc4d55860a4d260f8effbe1ac008eac44c222bffa8a83fde3e4d9",
+      "category": "explicit-alias"
+    },
+    {
+      "operationId": "resource/bootstrap-cas-restore",
+      "handlerId": "source/bootstrap/cas-restore",
+      "profileId": "database",
+      "inputSchemaId": "bootstrap-restore-input-v1",
+      "outputSchemaId": "bootstrap-restore-private-v2",
+      "retryClass": "mutation",
+      "handlerArtifactSha256": "b6ab51f7a813a70aac7c1c77dbbb26a22a114b814cf6d2384db7d93b4c4f8f35",
+      "category": "explicit-alias"
+    },
+    {
+      "operationId": "resource/bootstrap-login-observation",
+      "handlerId": "source/bootstrap/login-observation",
+      "profileId": "database",
+      "inputSchemaId": "user-session-observation-input-v1",
+      "outputSchemaId": "bootstrap-login-observation-private-v1",
+      "retryClass": "idempotent-read",
+      "handlerArtifactSha256": "98e0d97a1f2cced3d911e50b1342ee9ed7baab7b4571e6dabd17dc514fc4a2ea",
+      "category": "explicit-alias"
+    },
+    {
+      "operationId": "resource/content-routes-exact",
+      "handlerId": "source/platform/content-routes-exact",
+      "profileId": "database",
+      "inputSchemaId": "empty-input-v1",
+      "outputSchemaId": "content-routes-private-v1",
+      "retryClass": "idempotent-read",
+      "handlerArtifactSha256": "228fa863d40fa87b6b6bfdd1f5f8e4d52f764b8c39f9924e1953e1d1bcf7ee83",
+      "category": "explicit-alias"
+    },
+    {
+      "operationId": "resource/current-owner-exact",
+      "handlerId": "source/platform/current-resource-owner",
+      "profileId": "database",
+      "inputSchemaId": "resource-owner-input-v2",
+      "outputSchemaId": "resource-owner-private-v2",
+      "retryClass": "idempotent-read",
+      "handlerArtifactSha256": "8ef0c8e9171c38b1f14f4577c08fc686a420819c7fb3c2bb0b691e439345dd32",
+      "category": "explicit-alias"
+    },
+    {
+      "operationId": "resource/missing-media-db-absence",
+      "handlerId": "source/platform/missing-media-db-absence",
+      "profileId": "database",
+      "inputSchemaId": "media-id-input-v1",
+      "outputSchemaId": "missing-media-row-count-v1",
+      "retryClass": "idempotent-read",
+      "handlerArtifactSha256": "829c059447d84ee46ce9ce5b273b431fcb1ed3b5c7edd23fd207c7a7549be739",
+      "category": "explicit-alias"
+    },
+    {
+      "operationId": "resource/seo-entry-discovery",
+      "handlerId": "source/platform/seo-entry-discovery",
+      "profileId": "database",
+      "inputSchemaId": "seo-entry-targets-input-v1",
+      "outputSchemaId": "seo-entry-discovery-private-v1",
+      "retryClass": "idempotent-read",
+      "handlerArtifactSha256": "719f84b6f47999f4aa241479b9b54b28472dd3474e61253764c665a0c8c5e38a",
+      "category": "explicit-alias"
+    },
+    {
+      "operationId": "resource/storage-final-preflight",
+      "handlerId": "source/platform/storage-preflight",
+      "profileId": "bootstrap-preflight",
+      "inputSchemaId": "user-agents-input-v1",
+      "outputSchemaId": "storage-preflight-private-v2",
+      "retryClass": "idempotent-read",
+      "handlerArtifactSha256": "d8c9395d1d2b0ed0b741086679a0e7317b71e46db3bfe54b87a668c9c4a6b5c3",
+      "category": "explicit-alias"
+    },
+    {
+      "operationId": "response-lost/discovery/content-type-editable",
+      "handlerId": "source/response-lost/content-type",
+      "profileId": "database",
+      "inputSchemaId": "slug-input-v1",
+      "outputSchemaId": "bounded-natural-candidates-v1",
+      "retryClass": "idempotent-read",
+      "handlerArtifactSha256": "d7abac95acb248785b7826ee1f9c21489968bd677222097df82e87447aaccaec",
+      "category": "response-lost-alias"
+    },
+    {
+      "operationId": "response-lost/discovery/content-type-related-a",
+      "handlerId": "source/response-lost/content-type",
+      "profileId": "database",
+      "inputSchemaId": "slug-input-v1",
+      "outputSchemaId": "bounded-natural-candidates-v1",
+      "retryClass": "idempotent-read",
+      "handlerArtifactSha256": "d7abac95acb248785b7826ee1f9c21489968bd677222097df82e87447aaccaec",
+      "category": "response-lost-alias"
+    },
+    {
+      "operationId": "response-lost/discovery/content-type-related-b",
+      "handlerId": "source/response-lost/content-type",
+      "profileId": "database",
+      "inputSchemaId": "slug-input-v1",
+      "outputSchemaId": "bounded-natural-candidates-v1",
+      "retryClass": "idempotent-read",
+      "handlerArtifactSha256": "d7abac95acb248785b7826ee1f9c21489968bd677222097df82e87447aaccaec",
+      "category": "response-lost-alias"
+    },
+    {
+      "operationId": "response-lost/discovery/content-type-related-failure",
+      "handlerId": "source/response-lost/content-type",
+      "profileId": "database",
+      "inputSchemaId": "slug-input-v1",
+      "outputSchemaId": "bounded-natural-candidates-v1",
+      "retryClass": "idempotent-read",
+      "handlerArtifactSha256": "d7abac95acb248785b7826ee1f9c21489968bd677222097df82e87447aaccaec",
+      "category": "response-lost-alias"
+    },
+    {
+      "operationId": "response-lost/discovery/entry-editable",
+      "handlerId": "source/response-lost/entry",
+      "profileId": "database",
+      "inputSchemaId": "entry-discovery-input-v1",
+      "outputSchemaId": "bounded-natural-candidates-v1",
+      "retryClass": "idempotent-read",
+      "handlerArtifactSha256": "971de369af9fb111c318375acd5ec015080c2eeae96bb3094a197afd454bcd63",
+      "category": "response-lost-alias"
+    },
+    {
+      "operationId": "response-lost/discovery/entry-related-a1",
+      "handlerId": "source/response-lost/entry",
+      "profileId": "database",
+      "inputSchemaId": "entry-discovery-input-v1",
+      "outputSchemaId": "bounded-natural-candidates-v1",
+      "retryClass": "idempotent-read",
+      "handlerArtifactSha256": "971de369af9fb111c318375acd5ec015080c2eeae96bb3094a197afd454bcd63",
+      "category": "response-lost-alias"
+    },
+    {
+      "operationId": "response-lost/discovery/entry-related-a2",
+      "handlerId": "source/response-lost/entry",
+      "profileId": "database",
+      "inputSchemaId": "entry-discovery-input-v1",
+      "outputSchemaId": "bounded-natural-candidates-v1",
+      "retryClass": "idempotent-read",
+      "handlerArtifactSha256": "971de369af9fb111c318375acd5ec015080c2eeae96bb3094a197afd454bcd63",
+      "category": "response-lost-alias"
+    },
+    {
+      "operationId": "response-lost/discovery/entry-related-b1",
+      "handlerId": "source/response-lost/entry",
+      "profileId": "database",
+      "inputSchemaId": "entry-discovery-input-v1",
+      "outputSchemaId": "bounded-natural-candidates-v1",
+      "retryClass": "idempotent-read",
+      "handlerArtifactSha256": "971de369af9fb111c318375acd5ec015080c2eeae96bb3094a197afd454bcd63",
+      "category": "response-lost-alias"
+    },
+    {
+      "operationId": "response-lost/discovery/entry-related-b2",
+      "handlerId": "source/response-lost/entry",
+      "profileId": "database",
+      "inputSchemaId": "entry-discovery-input-v1",
+      "outputSchemaId": "bounded-natural-candidates-v1",
+      "retryClass": "idempotent-read",
+      "handlerArtifactSha256": "971de369af9fb111c318375acd5ec015080c2eeae96bb3094a197afd454bcd63",
+      "category": "response-lost-alias"
+    },
+    {
+      "operationId": "response-lost/discovery/entry-related-failure1",
+      "handlerId": "source/response-lost/entry",
+      "profileId": "database",
+      "inputSchemaId": "entry-discovery-input-v1",
+      "outputSchemaId": "bounded-natural-candidates-v1",
+      "retryClass": "idempotent-read",
+      "handlerArtifactSha256": "971de369af9fb111c318375acd5ec015080c2eeae96bb3094a197afd454bcd63",
+      "category": "response-lost-alias"
+    },
+    {
+      "operationId": "response-lost/discovery/media",
+      "handlerId": "source/response-lost/media",
+      "profileId": "database",
+      "inputSchemaId": "media-natural-input-v1",
+      "outputSchemaId": "bounded-natural-candidates-v1",
+      "retryClass": "idempotent-read",
+      "handlerArtifactSha256": "a2f49ed6577d39dde7ca18d9f45c03fd73acc4d8b9721774612d6158dd357d6f",
+      "category": "response-lost-alias"
+    },
+    {
+      "operationId": "response-lost/discovery/override",
+      "handlerId": "source/response-lost/override",
+      "profileId": "database",
+      "inputSchemaId": "override-discovery-input-v1",
+      "outputSchemaId": "bounded-natural-candidates-v1",
+      "retryClass": "idempotent-read",
+      "handlerArtifactSha256": "e5c8b6beae75c704e654face2c44734e63fc648c71658c4022fe47e33abfd729",
+      "category": "response-lost-alias"
+    },
+    {
+      "operationId": "response-lost/discovery/screen-main",
+      "handlerId": "source/response-lost/screen",
+      "profileId": "database",
+      "inputSchemaId": "screen-discovery-input-v1",
+      "outputSchemaId": "bounded-natural-candidates-v1",
+      "retryClass": "idempotent-read",
+      "handlerArtifactSha256": "0ce31af6d6a924dc5be279abaab3d18e911cec93a82dd27747a9d62b96d631c7",
+      "category": "response-lost-alias"
+    },
+    {
+      "operationId": "response-lost/discovery/screen-retry",
+      "handlerId": "source/response-lost/screen",
+      "profileId": "database",
+      "inputSchemaId": "screen-discovery-input-v1",
+      "outputSchemaId": "bounded-natural-candidates-v1",
+      "retryClass": "idempotent-read",
+      "handlerArtifactSha256": "0ce31af6d6a924dc5be279abaab3d18e911cec93a82dd27747a9d62b96d631c7",
+      "category": "response-lost-alias"
+    },
+    {
+      "operationId": "response-lost/discovery/setting-user-a",
+      "handlerId": "source/response-lost/setting",
+      "profileId": "user-identity-proof",
+      "inputSchemaId": "user-id-input-v1",
+      "outputSchemaId": "bounded-natural-candidates-v1",
+      "retryClass": "idempotent-read",
+      "handlerArtifactSha256": "8a922f3a2e66af586cb7321e65ee43941ee256664a67387e35b259549e0645a3",
+      "category": "response-lost-alias"
+    },
+    {
+      "operationId": "response-lost/discovery/setting-user-b",
+      "handlerId": "source/response-lost/setting",
+      "profileId": "user-identity-proof",
+      "inputSchemaId": "user-id-input-v1",
+      "outputSchemaId": "bounded-natural-candidates-v1",
+      "retryClass": "idempotent-read",
+      "handlerArtifactSha256": "8a922f3a2e66af586cb7321e65ee43941ee256664a67387e35b259549e0645a3",
+      "category": "response-lost-alias"
+    },
+    {
+      "operationId": "response-lost/discovery/user-a",
+      "handlerId": "source/response-lost/user",
+      "profileId": "user-identity-proof",
+      "inputSchemaId": "email-input-v1",
+      "outputSchemaId": "bounded-natural-candidates-v1",
+      "retryClass": "idempotent-read",
+      "handlerArtifactSha256": "8be3aab1d223976015ef489feb21b2711931b4049e444286f958dfd26b9dc4c6",
+      "category": "response-lost-alias"
+    },
+    {
+      "operationId": "response-lost/discovery/user-b",
+      "handlerId": "source/response-lost/user",
+      "profileId": "user-identity-proof",
+      "inputSchemaId": "email-input-v1",
+      "outputSchemaId": "bounded-natural-candidates-v1",
+      "retryClass": "idempotent-read",
+      "handlerArtifactSha256": "8be3aab1d223976015ef489feb21b2711931b4049e444286f958dfd26b9dc4c6",
+      "category": "response-lost-alias"
+    },
+    {
+      "operationId": "response-lost/preflight/content-type-editable",
+      "handlerId": "source/response-lost/content-type",
+      "profileId": "database",
+      "inputSchemaId": "slug-input-v1",
+      "outputSchemaId": "bounded-natural-candidates-v1",
+      "retryClass": "idempotent-read",
+      "handlerArtifactSha256": "d7abac95acb248785b7826ee1f9c21489968bd677222097df82e87447aaccaec",
+      "category": "response-lost-alias"
+    },
+    {
+      "operationId": "response-lost/preflight/content-type-related-a",
+      "handlerId": "source/response-lost/content-type",
+      "profileId": "database",
+      "inputSchemaId": "slug-input-v1",
+      "outputSchemaId": "bounded-natural-candidates-v1",
+      "retryClass": "idempotent-read",
+      "handlerArtifactSha256": "d7abac95acb248785b7826ee1f9c21489968bd677222097df82e87447aaccaec",
+      "category": "response-lost-alias"
+    },
+    {
+      "operationId": "response-lost/preflight/content-type-related-b",
+      "handlerId": "source/response-lost/content-type",
+      "profileId": "database",
+      "inputSchemaId": "slug-input-v1",
+      "outputSchemaId": "bounded-natural-candidates-v1",
+      "retryClass": "idempotent-read",
+      "handlerArtifactSha256": "d7abac95acb248785b7826ee1f9c21489968bd677222097df82e87447aaccaec",
+      "category": "response-lost-alias"
+    },
+    {
+      "operationId": "response-lost/preflight/content-type-related-failure",
+      "handlerId": "source/response-lost/content-type",
+      "profileId": "database",
+      "inputSchemaId": "slug-input-v1",
+      "outputSchemaId": "bounded-natural-candidates-v1",
+      "retryClass": "idempotent-read",
+      "handlerArtifactSha256": "d7abac95acb248785b7826ee1f9c21489968bd677222097df82e87447aaccaec",
+      "category": "response-lost-alias"
+    },
+    {
+      "operationId": "response-lost/preflight/entry-editable",
+      "handlerId": "source/response-lost/entry-preflight",
+      "profileId": "database",
+      "inputSchemaId": "entry-preflight-input-v1",
+      "outputSchemaId": "bounded-natural-candidates-v1",
+      "retryClass": "idempotent-read",
+      "handlerArtifactSha256": "8a221750d3f5e51ce36f91a2f4a2ee4a8bb04910d36dcbc46e486a915ff739f9",
+      "category": "response-lost-alias"
+    },
+    {
+      "operationId": "response-lost/preflight/entry-related-a1",
+      "handlerId": "source/response-lost/entry-preflight",
+      "profileId": "database",
+      "inputSchemaId": "entry-preflight-input-v1",
+      "outputSchemaId": "bounded-natural-candidates-v1",
+      "retryClass": "idempotent-read",
+      "handlerArtifactSha256": "8a221750d3f5e51ce36f91a2f4a2ee4a8bb04910d36dcbc46e486a915ff739f9",
+      "category": "response-lost-alias"
+    },
+    {
+      "operationId": "response-lost/preflight/entry-related-a2",
+      "handlerId": "source/response-lost/entry-preflight",
+      "profileId": "database",
+      "inputSchemaId": "entry-preflight-input-v1",
+      "outputSchemaId": "bounded-natural-candidates-v1",
+      "retryClass": "idempotent-read",
+      "handlerArtifactSha256": "8a221750d3f5e51ce36f91a2f4a2ee4a8bb04910d36dcbc46e486a915ff739f9",
+      "category": "response-lost-alias"
+    },
+    {
+      "operationId": "response-lost/preflight/entry-related-b1",
+      "handlerId": "source/response-lost/entry-preflight",
+      "profileId": "database",
+      "inputSchemaId": "entry-preflight-input-v1",
+      "outputSchemaId": "bounded-natural-candidates-v1",
+      "retryClass": "idempotent-read",
+      "handlerArtifactSha256": "8a221750d3f5e51ce36f91a2f4a2ee4a8bb04910d36dcbc46e486a915ff739f9",
+      "category": "response-lost-alias"
+    },
+    {
+      "operationId": "response-lost/preflight/entry-related-b2",
+      "handlerId": "source/response-lost/entry-preflight",
+      "profileId": "database",
+      "inputSchemaId": "entry-preflight-input-v1",
+      "outputSchemaId": "bounded-natural-candidates-v1",
+      "retryClass": "idempotent-read",
+      "handlerArtifactSha256": "8a221750d3f5e51ce36f91a2f4a2ee4a8bb04910d36dcbc46e486a915ff739f9",
+      "category": "response-lost-alias"
+    },
+    {
+      "operationId": "response-lost/preflight/entry-related-failure1",
+      "handlerId": "source/response-lost/entry-preflight",
+      "profileId": "database",
+      "inputSchemaId": "entry-preflight-input-v1",
+      "outputSchemaId": "bounded-natural-candidates-v1",
+      "retryClass": "idempotent-read",
+      "handlerArtifactSha256": "8a221750d3f5e51ce36f91a2f4a2ee4a8bb04910d36dcbc46e486a915ff739f9",
+      "category": "response-lost-alias"
+    },
+    {
+      "operationId": "response-lost/preflight/media",
+      "handlerId": "source/response-lost/media",
+      "profileId": "database",
+      "inputSchemaId": "media-natural-input-v1",
+      "outputSchemaId": "bounded-natural-candidates-v1",
+      "retryClass": "idempotent-read",
+      "handlerArtifactSha256": "a2f49ed6577d39dde7ca18d9f45c03fd73acc4d8b9721774612d6158dd357d6f",
+      "category": "response-lost-alias"
+    },
+    {
+      "operationId": "response-lost/preflight/override",
+      "handlerId": "source/response-lost/override-preflight",
+      "profileId": "database",
+      "inputSchemaId": "override-preflight-input-v1",
+      "outputSchemaId": "bounded-natural-candidates-v1",
+      "retryClass": "idempotent-read",
+      "handlerArtifactSha256": "2e018de46067c3a7264d8b5a7aeaf8e484ff305f9f64f96d1d0b01ce4e57ca0e",
+      "category": "response-lost-alias"
+    },
+    {
+      "operationId": "response-lost/preflight/screen-main",
+      "handlerId": "source/response-lost/screen-preflight",
+      "profileId": "database",
+      "inputSchemaId": "screen-preflight-input-v1",
+      "outputSchemaId": "bounded-natural-candidates-v1",
+      "retryClass": "idempotent-read",
+      "handlerArtifactSha256": "c7fd9b79d7d1c17e6ed3eea8a858a4c769ed1afb3a5c0143442570685488a68a",
+      "category": "response-lost-alias"
+    },
+    {
+      "operationId": "response-lost/preflight/screen-retry",
+      "handlerId": "source/response-lost/screen-preflight",
+      "profileId": "database",
+      "inputSchemaId": "screen-preflight-input-v1",
+      "outputSchemaId": "bounded-natural-candidates-v1",
+      "retryClass": "idempotent-read",
+      "handlerArtifactSha256": "c7fd9b79d7d1c17e6ed3eea8a858a4c769ed1afb3a5c0143442570685488a68a",
+      "category": "response-lost-alias"
+    },
+    {
+      "operationId": "response-lost/preflight/setting-user-a",
+      "handlerId": "source/response-lost/setting-preflight",
+      "profileId": "user-identity-proof",
+      "inputSchemaId": "email-input-v1",
+      "outputSchemaId": "bounded-natural-candidates-v1",
+      "retryClass": "idempotent-read",
+      "handlerArtifactSha256": "88e2dbb6b941636e1464eed0b31389daf15193abbcaffeca93c2ba7e4eb39eb2",
+      "category": "response-lost-alias"
+    },
+    {
+      "operationId": "response-lost/preflight/setting-user-b",
+      "handlerId": "source/response-lost/setting-preflight",
+      "profileId": "user-identity-proof",
+      "inputSchemaId": "email-input-v1",
+      "outputSchemaId": "bounded-natural-candidates-v1",
+      "retryClass": "idempotent-read",
+      "handlerArtifactSha256": "88e2dbb6b941636e1464eed0b31389daf15193abbcaffeca93c2ba7e4eb39eb2",
+      "category": "response-lost-alias"
+    },
+    {
+      "operationId": "response-lost/preflight/user-a",
+      "handlerId": "source/response-lost/user",
+      "profileId": "user-identity-proof",
+      "inputSchemaId": "email-input-v1",
+      "outputSchemaId": "bounded-natural-candidates-v1",
+      "retryClass": "idempotent-read",
+      "handlerArtifactSha256": "8be3aab1d223976015ef489feb21b2711931b4049e444286f958dfd26b9dc4c6",
+      "category": "response-lost-alias"
+    },
+    {
+      "operationId": "response-lost/preflight/user-b",
+      "handlerId": "source/response-lost/user",
+      "profileId": "user-identity-proof",
+      "inputSchemaId": "email-input-v1",
+      "outputSchemaId": "bounded-natural-candidates-v1",
+      "retryClass": "idempotent-read",
+      "handlerArtifactSha256": "8be3aab1d223976015ef489feb21b2711931b4049e444286f958dfd26b9dc4c6",
+      "category": "response-lost-alias"
+    },
+    {
+      "operationId": "runtime/set-001-storage-preflight",
+      "handlerId": "source/platform/storage-preflight",
+      "profileId": "bootstrap-preflight",
+      "inputSchemaId": "user-agents-input-v1",
+      "outputSchemaId": "storage-preflight-private-v2",
+      "retryClass": "idempotent-read",
+      "handlerArtifactSha256": "d8c9395d1d2b0ed0b741086679a0e7317b71e46db3bfe54b87a668c9c4a6b5c3",
+      "category": "explicit-alias"
+    },
+    {
+      "operationId": "runtime/set-004b-session-policy-preflight",
+      "handlerId": "source/platform/security-session",
+      "profileId": "database",
+      "inputSchemaId": "empty-input-v1",
+      "outputSchemaId": "session-policy-private-v1",
+      "retryClass": "idempotent-read",
+      "handlerArtifactSha256": "bad2aefa17d972f98d1b1dc0cf0fdd2d106fb0d774d008e0605ab1e6a3be02e7",
+      "category": "explicit-alias"
+    },
+    {
+      "operationId": "runtime/set-004c-auth-rate-budget-preflight",
+      "handlerId": "source/platform/security-rate",
+      "profileId": "database",
+      "inputSchemaId": "empty-input-v1",
+      "outputSchemaId": "auth-rate-private-v1",
+      "retryClass": "idempotent-read",
+      "handlerArtifactSha256": "35cdc91d886984ecdbb4c11f11efaba8fa09219cb8fb017984c1ac45c775ca6d",
+      "category": "explicit-alias"
+    },
+    {
+      "operationId": "runtime/set-012-user-a-create",
+      "handlerId": "source/user/provision",
+      "profileId": "user-provisioning",
+      "inputSchemaId": "user-provision-input-v1",
+      "outputSchemaId": "user-provision-private-v2",
+      "retryClass": "mutation",
+      "handlerArtifactSha256": "6760d9545574bd82ec60c6c082f23a8392af76afc401f5c49058e7ea7ec1262f",
+      "category": "explicit-alias"
+    },
+    {
+      "operationId": "runtime/set-013-user-a-proof",
+      "handlerId": "source/user/proof",
+      "profileId": "user-identity-proof",
+      "inputSchemaId": "user-identity-input-v1",
+      "outputSchemaId": "user-identity-private-v2",
+      "retryClass": "idempotent-read",
+      "handlerArtifactSha256": "de7407f6b536b4676eb5eba7165d049ccd8edeb0140119235b6efe9696454638",
+      "category": "explicit-alias"
+    },
+    {
+      "operationId": "runtime/set-014-user-b-create",
+      "handlerId": "source/user/provision",
+      "profileId": "user-provisioning",
+      "inputSchemaId": "user-provision-input-v1",
+      "outputSchemaId": "user-provision-private-v2",
+      "retryClass": "mutation",
+      "handlerArtifactSha256": "6760d9545574bd82ec60c6c082f23a8392af76afc401f5c49058e7ea7ec1262f",
+      "category": "explicit-alias"
+    },
+    {
+      "operationId": "runtime/set-015-user-b-proof",
+      "handlerId": "source/user/proof",
+      "profileId": "user-identity-proof",
+      "inputSchemaId": "user-identity-input-v1",
+      "outputSchemaId": "user-identity-private-v2",
+      "retryClass": "idempotent-read",
+      "handlerArtifactSha256": "de7407f6b536b4676eb5eba7165d049ccd8edeb0140119235b6efe9696454638",
+      "category": "explicit-alias"
+    },
+    {
+      "operationId": "runtime/set-032-storage-post-setup",
+      "handlerId": "source/platform/missing-media-db-absence",
+      "profileId": "database",
+      "inputSchemaId": "media-id-input-v1",
+      "outputSchemaId": "missing-media-row-count-v1",
+      "retryClass": "idempotent-read",
+      "handlerArtifactSha256": "829c059447d84ee46ce9ce5b273b431fcb1ed3b5c7edd23fd207c7a7549be739",
+      "category": "explicit-alias"
+    },
+    {
+      "operationId": "runtime/set-035-screen-create",
+      "handlerId": "source/platform/screen-materialize",
+      "profileId": "schema-only",
+      "inputSchemaId": "screen-materialize-input-v1",
+      "outputSchemaId": "screen-materialize-private-v1",
+      "retryClass": "idempotent-read",
+      "handlerArtifactSha256": "49a0cd3e9e6d11be54a598c5236c5bca6c74d27520f63a106ae4271e72e95d94",
+      "category": "explicit-alias"
+    },
+    {
+      "operationId": "runtime/set-037-retry-screen-create",
+      "handlerId": "source/platform/screen-materialize",
+      "profileId": "schema-only",
+      "inputSchemaId": "screen-materialize-input-v1",
+      "outputSchemaId": "screen-materialize-private-v1",
+      "retryClass": "idempotent-read",
+      "handlerArtifactSha256": "49a0cd3e9e6d11be54a598c5236c5bca6c74d27520f63a106ae4271e72e95d94",
+      "category": "explicit-alias"
+    },
+    {
+      "operationId": "runtime/set-041-preference-a",
+      "handlerId": "source/user/preference-set",
+      "profileId": "database",
+      "inputSchemaId": "preference-write-input-v1",
+      "outputSchemaId": "preference-write-private-v1",
+      "retryClass": "mutation",
+      "handlerArtifactSha256": "1e9aff9c603615d4035cc6fe7a31fbca5797d14ae83626e941cd0e63cdfdeff6",
+      "category": "explicit-alias"
+    },
+    {
+      "operationId": "runtime/set-042-preference-a-proof",
+      "handlerId": "source/user/preference-get",
+      "profileId": "database",
+      "inputSchemaId": "user-id-input-v1",
+      "outputSchemaId": "preference-read-private-v1",
+      "retryClass": "idempotent-read",
+      "handlerArtifactSha256": "a89f5efbbf4ed20e9a2836c0bfe893cf62346cc1801ca82626c23ba6e9983174",
+      "category": "explicit-alias"
+    },
+    {
+      "operationId": "runtime/set-043-preference-b",
+      "handlerId": "source/user/preference-set",
+      "profileId": "database",
+      "inputSchemaId": "preference-write-input-v1",
+      "outputSchemaId": "preference-write-private-v1",
+      "retryClass": "mutation",
+      "handlerArtifactSha256": "1e9aff9c603615d4035cc6fe7a31fbca5797d14ae83626e941cd0e63cdfdeff6",
+      "category": "explicit-alias"
+    },
+    {
+      "operationId": "runtime/set-044-preference-b-proof",
+      "handlerId": "source/user/preference-get",
+      "profileId": "database",
+      "inputSchemaId": "user-id-input-v1",
+      "outputSchemaId": "preference-read-private-v1",
+      "retryClass": "idempotent-read",
+      "handlerArtifactSha256": "a89f5efbbf4ed20e9a2836c0bfe893cf62346cc1801ca82626c23ba6e9983174",
+      "category": "explicit-alias"
+    },
+    {
+      "operationId": "screen-main/provenance/failure-discovery",
+      "handlerId": "source/resource/custom-screen-provenance",
+      "profileId": "database",
+      "inputSchemaId": "identifier-uuid-input-v1",
+      "outputSchemaId": "strict-resource-operation-v1",
+      "retryClass": "idempotent-read",
+      "handlerArtifactSha256": "566f19503d3b0813e884538c3f1cd216caae28173e9b85a80bbcce152b928dab",
+      "category": "resource-alias"
+    },
+    {
+      "operationId": "screen-retry/provenance/failure-discovery",
+      "handlerId": "source/resource/custom-screen-provenance",
+      "profileId": "database",
+      "inputSchemaId": "identifier-uuid-input-v1",
+      "outputSchemaId": "strict-resource-operation-v1",
+      "retryClass": "idempotent-read",
+      "handlerArtifactSha256": "566f19503d3b0813e884538c3f1cd216caae28173e9b85a80bbcce152b928dab",
+      "category": "resource-alias"
+    },
+    {
+      "operationId": "seo-document-entry/absence",
+      "handlerId": "source/resource/seo/absence",
+      "profileId": "database",
+      "inputSchemaId": "identifier-seo-entry-input-v1",
+      "outputSchemaId": "strict-resource-operation-v1",
+      "retryClass": "idempotent-read",
+      "handlerArtifactSha256": "d167c50975e0edb8c7853939d760801c6369ffe943bd1c9442ad84e30218b085",
+      "category": "resource-alias"
+    },
+    {
+      "operationId": "seo-document-entry/cleanup",
+      "handlerId": "source/resource/seo/delete",
+      "profileId": "database",
+      "inputSchemaId": "identifier-seo-entry-input-v1",
+      "outputSchemaId": "strict-resource-operation-v1",
+      "retryClass": "mutation",
+      "handlerArtifactSha256": "83a7639fb46be70365ad8f3987038a5a9a3f8d168e5c9b1cbdcb63f377657120",
+      "category": "resource-alias"
+    },
+    {
+      "operationId": "seo-document-entry/provenance/cleanup-discovery",
+      "handlerId": "source/resource/seo/provenance",
+      "profileId": "database",
+      "inputSchemaId": "identifier-seo-entry-input-v1",
+      "outputSchemaId": "strict-resource-operation-v1",
+      "retryClass": "idempotent-read",
+      "handlerArtifactSha256": "eb60347aa77da958b1fa3bb92868e66670fbf816270b0dfc3a5bbc3171061f6c",
+      "category": "resource-alias"
+    },
+    {
+      "operationId": "session-task/absence",
+      "handlerId": "source/resource/session/absence",
+      "profileId": "database",
+      "inputSchemaId": "identifier-uuid-input-v1",
+      "outputSchemaId": "strict-resource-operation-v1",
+      "retryClass": "idempotent-read",
+      "handlerArtifactSha256": "85d30a5255334956ddd396ceabeb6f949132943583d547f652ad4106981d8285",
+      "category": "resource-alias"
+    },
+    {
+      "operationId": "session-task/cleanup",
+      "handlerId": "source/resource/session/delete",
+      "profileId": "database",
+      "inputSchemaId": "identifier-uuid-input-v1",
+      "outputSchemaId": "strict-resource-operation-v1",
+      "retryClass": "mutation",
+      "handlerArtifactSha256": "a8bae994b6d490bcd2155b6185d8d35362ac685fa6fef96b6b59f2fa6f27353d",
+      "category": "resource-alias"
+    },
+    {
+      "operationId": "session-task/provenance/terminal-db-delta",
+      "handlerId": "source/resource/session/provenance",
+      "profileId": "database",
+      "inputSchemaId": "identifier-uuid-input-v1",
+      "outputSchemaId": "strict-resource-operation-v1",
+      "retryClass": "idempotent-read",
+      "handlerArtifactSha256": "2719ddce09928fdbf0ba1d3a73a3680d5e0ea041122835a1ad3e7301c5af1a68",
+      "category": "resource-alias"
+    },
+    {
+      "operationId": "setting-user-a/absence",
+      "handlerId": "source/resource/setting/absence",
+      "profileId": "database",
+      "inputSchemaId": "identifier-setting-input-v1",
+      "outputSchemaId": "strict-resource-operation-v1",
+      "retryClass": "idempotent-read",
+      "handlerArtifactSha256": "ac3604aa71de73763025e3b00906cfe853ff73adc1e49e754c2410d38c36755b",
+      "category": "resource-alias"
+    },
+    {
+      "operationId": "setting-user-a/cleanup",
+      "handlerId": "source/resource/setting/delete",
+      "profileId": "database",
+      "inputSchemaId": "identifier-setting-input-v1",
+      "outputSchemaId": "strict-resource-operation-v1",
+      "retryClass": "mutation",
+      "handlerArtifactSha256": "1ce5db2d16564439c20bb868e075dd0309feb581fa708ddfd01265586807fe66",
+      "category": "resource-alias"
+    },
+    {
+      "operationId": "setting-user-a/provenance/failure-discovery",
+      "handlerId": "source/resource/setting/provenance",
+      "profileId": "database",
+      "inputSchemaId": "identifier-setting-input-v1",
+      "outputSchemaId": "strict-resource-operation-v1",
+      "retryClass": "idempotent-read",
+      "handlerArtifactSha256": "3dbc9c131d6846fe892e9bbb05471af0ee4c5e36015c689587d943acd8d1d672",
+      "category": "resource-alias"
+    },
+    {
+      "operationId": "setting-user-b/absence",
+      "handlerId": "source/resource/setting/absence",
+      "profileId": "database",
+      "inputSchemaId": "identifier-setting-input-v1",
+      "outputSchemaId": "strict-resource-operation-v1",
+      "retryClass": "idempotent-read",
+      "handlerArtifactSha256": "ac3604aa71de73763025e3b00906cfe853ff73adc1e49e754c2410d38c36755b",
+      "category": "resource-alias"
+    },
+    {
+      "operationId": "setting-user-b/cleanup",
+      "handlerId": "source/resource/setting/delete",
+      "profileId": "database",
+      "inputSchemaId": "identifier-setting-input-v1",
+      "outputSchemaId": "strict-resource-operation-v1",
+      "retryClass": "mutation",
+      "handlerArtifactSha256": "1ce5db2d16564439c20bb868e075dd0309feb581fa708ddfd01265586807fe66",
+      "category": "resource-alias"
+    },
+    {
+      "operationId": "setting-user-b/provenance/failure-discovery",
+      "handlerId": "source/resource/setting/provenance",
+      "profileId": "database",
+      "inputSchemaId": "identifier-setting-input-v1",
+      "outputSchemaId": "strict-resource-operation-v1",
+      "retryClass": "idempotent-read",
+      "handlerArtifactSha256": "3dbc9c131d6846fe892e9bbb05471af0ee4c5e36015c689587d943acd8d1d672",
+      "category": "resource-alias"
+    },
+    {
+      "operationId": "site-content-routes-baseline/absence",
+      "handlerId": "source/platform/content-routes-exact",
+      "profileId": "database",
+      "inputSchemaId": "empty-input-v1",
+      "outputSchemaId": "strict-resource-operation-v1",
+      "retryClass": "idempotent-read",
+      "handlerArtifactSha256": "228fa863d40fa87b6b6bfdd1f5f8e4d52f764b8c39f9924e1953e1d1bcf7ee83",
+      "category": "resource-alias"
+    },
+    {
+      "operationId": "source/bootstrap/api-session-observation",
+      "handlerId": "source/bootstrap/api-session-observation",
+      "profileId": "database",
+      "inputSchemaId": "user-session-observation-input-v1",
+      "outputSchemaId": "api-session-observation-private-v1",
+      "retryClass": "idempotent-read",
+      "handlerArtifactSha256": "599c7e521a203e4af720f888cef9318e7ef7e44f0556201b569598e76b149225",
+      "category": "canonical"
+    },
+    {
+      "operationId": "source/bootstrap/baseline-read",
+      "handlerId": "source/bootstrap/baseline-read",
+      "profileId": "database",
+      "inputSchemaId": "user-id-input-v1",
+      "outputSchemaId": "bootstrap-baseline-read-private-v1",
+      "retryClass": "idempotent-read",
+      "handlerArtifactSha256": "69479c14f2dcc4d55860a4d260f8effbe1ac008eac44c222bffa8a83fde3e4d9",
+      "category": "canonical"
+    },
+    {
+      "operationId": "source/bootstrap/cas-restore",
+      "handlerId": "source/bootstrap/cas-restore",
+      "profileId": "database",
+      "inputSchemaId": "bootstrap-restore-input-v1",
+      "outputSchemaId": "bootstrap-restore-private-v2",
+      "retryClass": "mutation",
+      "handlerArtifactSha256": "b6ab51f7a813a70aac7c1c77dbbb26a22a114b814cf6d2384db7d93b4c4f8f35",
+      "category": "canonical"
+    },
+    {
+      "operationId": "source/bootstrap/login-observation",
+      "handlerId": "source/bootstrap/login-observation",
+      "profileId": "database",
+      "inputSchemaId": "user-session-observation-input-v1",
+      "outputSchemaId": "bootstrap-login-observation-private-v1",
+      "retryClass": "idempotent-read",
+      "handlerArtifactSha256": "98e0d97a1f2cced3d911e50b1342ee9ed7baab7b4571e6dabd17dc514fc4a2ea",
+      "category": "canonical"
+    },
+    {
+      "operationId": "source/platform/content-routes-exact",
+      "handlerId": "source/platform/content-routes-exact",
+      "profileId": "database",
+      "inputSchemaId": "empty-input-v1",
+      "outputSchemaId": "content-routes-private-v1",
+      "retryClass": "idempotent-read",
+      "handlerArtifactSha256": "228fa863d40fa87b6b6bfdd1f5f8e4d52f764b8c39f9924e1953e1d1bcf7ee83",
+      "category": "canonical"
+    },
+    {
+      "operationId": "source/platform/current-resource-owner",
+      "handlerId": "source/platform/current-resource-owner",
+      "profileId": "database",
+      "inputSchemaId": "resource-owner-input-v2",
+      "outputSchemaId": "resource-owner-private-v2",
+      "retryClass": "idempotent-read",
+      "handlerArtifactSha256": "8ef0c8e9171c38b1f14f4577c08fc686a420819c7fb3c2bb0b691e439345dd32",
+      "category": "canonical"
+    },
+    {
+      "operationId": "source/platform/missing-media-db-absence",
+      "handlerId": "source/platform/missing-media-db-absence",
+      "profileId": "database",
+      "inputSchemaId": "media-id-input-v1",
+      "outputSchemaId": "missing-media-row-count-v1",
+      "retryClass": "idempotent-read",
+      "handlerArtifactSha256": "829c059447d84ee46ce9ce5b273b431fcb1ed3b5c7edd23fd207c7a7549be739",
+      "category": "canonical"
+    },
+    {
+      "operationId": "source/platform/screen-materialize",
+      "handlerId": "source/platform/screen-materialize",
+      "profileId": "schema-only",
+      "inputSchemaId": "screen-materialize-input-v1",
+      "outputSchemaId": "screen-materialize-private-v1",
+      "retryClass": "idempotent-read",
+      "handlerArtifactSha256": "49a0cd3e9e6d11be54a598c5236c5bca6c74d27520f63a106ae4271e72e95d94",
+      "category": "canonical"
+    },
+    {
+      "operationId": "source/platform/security-rate",
+      "handlerId": "source/platform/security-rate",
+      "profileId": "database",
+      "inputSchemaId": "empty-input-v1",
+      "outputSchemaId": "auth-rate-private-v1",
+      "retryClass": "idempotent-read",
+      "handlerArtifactSha256": "35cdc91d886984ecdbb4c11f11efaba8fa09219cb8fb017984c1ac45c775ca6d",
+      "category": "canonical"
+    },
+    {
+      "operationId": "source/platform/security-session",
+      "handlerId": "source/platform/security-session",
+      "profileId": "database",
+      "inputSchemaId": "empty-input-v1",
+      "outputSchemaId": "session-policy-private-v1",
+      "retryClass": "idempotent-read",
+      "handlerArtifactSha256": "bad2aefa17d972f98d1b1dc0cf0fdd2d106fb0d774d008e0605ab1e6a3be02e7",
+      "category": "canonical"
+    },
+    {
+      "operationId": "source/platform/seo-entry-discovery",
+      "handlerId": "source/platform/seo-entry-discovery",
+      "profileId": "database",
+      "inputSchemaId": "seo-entry-targets-input-v1",
+      "outputSchemaId": "seo-entry-discovery-private-v1",
+      "retryClass": "idempotent-read",
+      "handlerArtifactSha256": "719f84b6f47999f4aa241479b9b54b28472dd3474e61253764c665a0c8c5e38a",
+      "category": "canonical"
+    },
+    {
+      "operationId": "source/platform/storage-preflight",
+      "handlerId": "source/platform/storage-preflight",
+      "profileId": "bootstrap-preflight",
+      "inputSchemaId": "user-agents-input-v1",
+      "outputSchemaId": "storage-preflight-private-v2",
+      "retryClass": "idempotent-read",
+      "handlerArtifactSha256": "d8c9395d1d2b0ed0b741086679a0e7317b71e46db3bfe54b87a668c9c4a6b5c3",
+      "category": "canonical"
+    },
+    {
+      "operationId": "source/resource/access-log/absence",
+      "handlerId": "source/resource/access-log/absence",
+      "profileId": "database",
+      "inputSchemaId": "identifier-uuid-input-v1",
+      "outputSchemaId": "strict-resource-operation-v1",
+      "retryClass": "idempotent-read",
+      "handlerArtifactSha256": "6e1ea2162a40271f26918d97cc90bb1d690e71a0a2861e836029cccb57e0735d",
+      "category": "canonical"
+    },
+    {
+      "operationId": "source/resource/access-log/delete",
+      "handlerId": "source/resource/access-log/delete",
+      "profileId": "database",
+      "inputSchemaId": "identifier-uuid-input-v1",
+      "outputSchemaId": "strict-resource-operation-v1",
+      "retryClass": "mutation",
+      "handlerArtifactSha256": "f2ff512a1b5dbc9119c2401400fbc95bf633ffea181f9973064c0c0cdb05b0e4",
+      "category": "canonical"
+    },
+    {
+      "operationId": "source/resource/access-log/provenance",
+      "handlerId": "source/resource/access-log/provenance",
+      "profileId": "database",
+      "inputSchemaId": "identifier-uuid-input-v1",
+      "outputSchemaId": "strict-resource-operation-v1",
+      "retryClass": "idempotent-read",
+      "handlerArtifactSha256": "0668024a1d0b19fc65c25de9221da5376a4b75e468baf5c04766de37deb2e325",
+      "category": "canonical"
+    },
+    {
+      "operationId": "source/resource/audit-log/absence",
+      "handlerId": "source/resource/audit-log/absence",
+      "profileId": "database",
+      "inputSchemaId": "identifier-uuid-input-v1",
+      "outputSchemaId": "strict-resource-operation-v1",
+      "retryClass": "idempotent-read",
+      "handlerArtifactSha256": "2be6bf9f77eb78629be323e33f4ac54632baa1da74ee5ddd754e8867648e5de9",
+      "category": "canonical"
+    },
+    {
+      "operationId": "source/resource/audit-log/delete",
+      "handlerId": "source/resource/audit-log/delete",
+      "profileId": "database",
+      "inputSchemaId": "identifier-uuid-input-v1",
+      "outputSchemaId": "strict-resource-operation-v1",
+      "retryClass": "mutation",
+      "handlerArtifactSha256": "ebb3ad0fcf0d4362cfeb04d54eca8dbbec7d7c31b712ccc56596478d6eb7bea2",
+      "category": "canonical"
+    },
+    {
+      "operationId": "source/resource/audit-log/provenance",
+      "handlerId": "source/resource/audit-log/provenance",
+      "profileId": "database",
+      "inputSchemaId": "identifier-uuid-input-v1",
+      "outputSchemaId": "strict-resource-operation-v1",
+      "retryClass": "idempotent-read",
+      "handlerArtifactSha256": "fd39fad5ed235a662ef40d9813866cee6fbddeb75f642b976d109953a2cf2e96",
+      "category": "canonical"
+    },
+    {
+      "operationId": "source/resource/content-entry-provenance",
+      "handlerId": "source/resource/content-entry-provenance",
+      "profileId": "database",
+      "inputSchemaId": "identifier-uuid-input-v1",
+      "outputSchemaId": "strict-resource-operation-v1",
+      "retryClass": "idempotent-read",
+      "handlerArtifactSha256": "ebcae78fb598694c2ed01d6e468bc968df748e5a38381fbbd1829d7c3ccabfdd",
+      "category": "canonical"
+    },
+    {
+      "operationId": "source/resource/content-type-provenance",
+      "handlerId": "source/resource/content-type-provenance",
+      "profileId": "database",
+      "inputSchemaId": "identifier-uuid-input-v1",
+      "outputSchemaId": "strict-resource-operation-v1",
+      "retryClass": "idempotent-read",
+      "handlerArtifactSha256": "81c742ecc4a0afd82519809c1b3bdf2d4d9d62105c8e614f25f31fe68852fc30",
+      "category": "canonical"
+    },
+    {
+      "operationId": "source/resource/custom-screen-provenance",
+      "handlerId": "source/resource/custom-screen-provenance",
+      "profileId": "database",
+      "inputSchemaId": "identifier-uuid-input-v1",
+      "outputSchemaId": "strict-resource-operation-v1",
+      "retryClass": "idempotent-read",
+      "handlerArtifactSha256": "566f19503d3b0813e884538c3f1cd216caae28173e9b85a80bbcce152b928dab",
+      "category": "canonical"
+    },
+    {
+      "operationId": "source/resource/media/absence",
+      "handlerId": "source/resource/media/absence",
+      "profileId": "database",
+      "inputSchemaId": "identifier-media-input-v1",
+      "outputSchemaId": "strict-resource-operation-v1",
+      "retryClass": "idempotent-read",
+      "handlerArtifactSha256": "c3f72ae073cbbeecafcfc4b8b9207b1b26e2f6a4c5770507bf271af6200baa42",
+      "category": "canonical"
+    },
+    {
+      "operationId": "source/resource/media/delete",
+      "handlerId": "source/resource/media/delete",
+      "profileId": "database",
+      "inputSchemaId": "identifier-media-input-v1",
+      "outputSchemaId": "strict-resource-operation-v1",
+      "retryClass": "idempotent-read",
+      "handlerArtifactSha256": "7e8fcd5d8b273ee7644eb26260f5894ca51168f09fd34b3c454fa5015066956d",
+      "category": "canonical"
+    },
+    {
+      "operationId": "source/resource/media/provenance",
+      "handlerId": "source/resource/media/provenance",
+      "profileId": "database",
+      "inputSchemaId": "identifier-media-input-v1",
+      "outputSchemaId": "strict-resource-operation-v1",
+      "retryClass": "idempotent-read",
+      "handlerArtifactSha256": "321dafefe6762e8575bc48b2b8e1d73942a8325deeb008eaa4045fca86df15a8",
+      "category": "canonical"
+    },
+    {
+      "operationId": "source/resource/override/absence",
+      "handlerId": "source/resource/override/absence",
+      "profileId": "database",
+      "inputSchemaId": "identifier-override-input-v1",
+      "outputSchemaId": "strict-resource-operation-v1",
+      "retryClass": "idempotent-read",
+      "handlerArtifactSha256": "177c60ceba76a5a37fe22862055742691d253e1466c6c5b834e39ef1f182ecdc",
+      "category": "canonical"
+    },
+    {
+      "operationId": "source/resource/override/delete",
+      "handlerId": "source/resource/override/delete",
+      "profileId": "database",
+      "inputSchemaId": "identifier-override-input-v1",
+      "outputSchemaId": "strict-resource-operation-v1",
+      "retryClass": "mutation",
+      "handlerArtifactSha256": "e3a147cd1498bc73ab28f6398c17b1a5f8056ad23119be1d9b4c5e6bbaac1c78",
+      "category": "canonical"
+    },
+    {
+      "operationId": "source/resource/override/provenance",
+      "handlerId": "source/resource/override/provenance",
+      "profileId": "database",
+      "inputSchemaId": "identifier-override-input-v1",
+      "outputSchemaId": "strict-resource-operation-v1",
+      "retryClass": "idempotent-read",
+      "handlerArtifactSha256": "595a487b41a8c8a09b562dfa41738277b20d5eb3d3079ef4eac4cc1574cf3aed",
+      "category": "canonical"
+    },
+    {
+      "operationId": "source/resource/seo/absence",
+      "handlerId": "source/resource/seo/absence",
+      "profileId": "database",
+      "inputSchemaId": "identifier-seo-entry-input-v1",
+      "outputSchemaId": "strict-resource-operation-v1",
+      "retryClass": "idempotent-read",
+      "handlerArtifactSha256": "d167c50975e0edb8c7853939d760801c6369ffe943bd1c9442ad84e30218b085",
+      "category": "canonical"
+    },
+    {
+      "operationId": "source/resource/seo/delete",
+      "handlerId": "source/resource/seo/delete",
+      "profileId": "database",
+      "inputSchemaId": "identifier-seo-entry-input-v1",
+      "outputSchemaId": "strict-resource-operation-v1",
+      "retryClass": "mutation",
+      "handlerArtifactSha256": "83a7639fb46be70365ad8f3987038a5a9a3f8d168e5c9b1cbdcb63f377657120",
+      "category": "canonical"
+    },
+    {
+      "operationId": "source/resource/seo/provenance",
+      "handlerId": "source/resource/seo/provenance",
+      "profileId": "database",
+      "inputSchemaId": "identifier-seo-entry-input-v1",
+      "outputSchemaId": "strict-resource-operation-v1",
+      "retryClass": "idempotent-read",
+      "handlerArtifactSha256": "eb60347aa77da958b1fa3bb92868e66670fbf816270b0dfc3a5bbc3171061f6c",
+      "category": "canonical"
+    },
+    {
+      "operationId": "source/resource/session/absence",
+      "handlerId": "source/resource/session/absence",
+      "profileId": "database",
+      "inputSchemaId": "identifier-uuid-input-v1",
+      "outputSchemaId": "strict-resource-operation-v1",
+      "retryClass": "idempotent-read",
+      "handlerArtifactSha256": "85d30a5255334956ddd396ceabeb6f949132943583d547f652ad4106981d8285",
+      "category": "canonical"
+    },
+    {
+      "operationId": "source/resource/session/delete",
+      "handlerId": "source/resource/session/delete",
+      "profileId": "database",
+      "inputSchemaId": "identifier-uuid-input-v1",
+      "outputSchemaId": "strict-resource-operation-v1",
+      "retryClass": "mutation",
+      "handlerArtifactSha256": "a8bae994b6d490bcd2155b6185d8d35362ac685fa6fef96b6b59f2fa6f27353d",
+      "category": "canonical"
+    },
+    {
+      "operationId": "source/resource/session/provenance",
+      "handlerId": "source/resource/session/provenance",
+      "profileId": "database",
+      "inputSchemaId": "identifier-uuid-input-v1",
+      "outputSchemaId": "strict-resource-operation-v1",
+      "retryClass": "idempotent-read",
+      "handlerArtifactSha256": "2719ddce09928fdbf0ba1d3a73a3680d5e0ea041122835a1ad3e7301c5af1a68",
+      "category": "canonical"
+    },
+    {
+      "operationId": "source/resource/setting/absence",
+      "handlerId": "source/resource/setting/absence",
+      "profileId": "database",
+      "inputSchemaId": "identifier-setting-input-v1",
+      "outputSchemaId": "strict-resource-operation-v1",
+      "retryClass": "idempotent-read",
+      "handlerArtifactSha256": "ac3604aa71de73763025e3b00906cfe853ff73adc1e49e754c2410d38c36755b",
+      "category": "canonical"
+    },
+    {
+      "operationId": "source/resource/setting/delete",
+      "handlerId": "source/resource/setting/delete",
+      "profileId": "database",
+      "inputSchemaId": "identifier-setting-input-v1",
+      "outputSchemaId": "strict-resource-operation-v1",
+      "retryClass": "mutation",
+      "handlerArtifactSha256": "1ce5db2d16564439c20bb868e075dd0309feb581fa708ddfd01265586807fe66",
+      "category": "canonical"
+    },
+    {
+      "operationId": "source/resource/setting/provenance",
+      "handlerId": "source/resource/setting/provenance",
+      "profileId": "database",
+      "inputSchemaId": "identifier-setting-input-v1",
+      "outputSchemaId": "strict-resource-operation-v1",
+      "retryClass": "idempotent-read",
+      "handlerArtifactSha256": "3dbc9c131d6846fe892e9bbb05471af0ee4c5e36015c689587d943acd8d1d672",
+      "category": "canonical"
+    },
+    {
+      "operationId": "source/resource/task-traffic-snapshot",
+      "handlerId": "source/resource/task-traffic-snapshot",
+      "profileId": "database",
+      "inputSchemaId": "user-agents-input-v1",
+      "outputSchemaId": "task-traffic-complete-private-v2",
+      "retryClass": "idempotent-read",
+      "handlerArtifactSha256": "c12b60d38ac716b4f90a3fb4bcb63c54475bee39e603541b32fb3d60d5fcfed3",
+      "category": "canonical"
+    },
+    {
+      "operationId": "source/resource/user/absence",
+      "handlerId": "source/resource/user/absence",
+      "profileId": "database",
+      "inputSchemaId": "identifier-uuid-input-v1",
+      "outputSchemaId": "strict-resource-operation-v1",
+      "retryClass": "idempotent-read",
+      "handlerArtifactSha256": "b446308aab0608082d6dfd71a2646757ddb3e2f8e36617bce6eef04ef09609b8",
+      "category": "canonical"
+    },
+    {
+      "operationId": "source/resource/user/delete",
+      "handlerId": "source/resource/user/delete",
+      "profileId": "database",
+      "inputSchemaId": "identifier-uuid-input-v1",
+      "outputSchemaId": "strict-resource-operation-v1",
+      "retryClass": "mutation",
+      "handlerArtifactSha256": "162a9ce351893a4b8d9d3164ab18426b4f3d6222f6e61792d81902f90abdbed9",
+      "category": "canonical"
+    },
+    {
+      "operationId": "source/resource/user/provenance",
+      "handlerId": "source/resource/user/provenance",
+      "profileId": "user-identity-proof",
+      "inputSchemaId": "identifier-uuid-input-v1",
+      "outputSchemaId": "strict-resource-operation-v1",
+      "retryClass": "idempotent-read",
+      "handlerArtifactSha256": "1cd4302a4d55bb95bc00ff397ef8ae81f9a960c831eba92202e815ceeb8c6826",
+      "category": "canonical"
+    },
+    {
+      "operationId": "source/response-lost/content-type",
+      "handlerId": "source/response-lost/content-type",
+      "profileId": "database",
+      "inputSchemaId": "slug-input-v1",
+      "outputSchemaId": "bounded-natural-candidates-v1",
+      "retryClass": "idempotent-read",
+      "handlerArtifactSha256": "d7abac95acb248785b7826ee1f9c21489968bd677222097df82e87447aaccaec",
+      "category": "canonical"
+    },
+    {
+      "operationId": "source/response-lost/entry",
+      "handlerId": "source/response-lost/entry",
+      "profileId": "database",
+      "inputSchemaId": "entry-discovery-input-v1",
+      "outputSchemaId": "bounded-natural-candidates-v1",
+      "retryClass": "idempotent-read",
+      "handlerArtifactSha256": "971de369af9fb111c318375acd5ec015080c2eeae96bb3094a197afd454bcd63",
+      "category": "canonical"
+    },
+    {
+      "operationId": "source/response-lost/entry-preflight",
+      "handlerId": "source/response-lost/entry-preflight",
+      "profileId": "database",
+      "inputSchemaId": "entry-preflight-input-v1",
+      "outputSchemaId": "bounded-natural-candidates-v1",
+      "retryClass": "idempotent-read",
+      "handlerArtifactSha256": "8a221750d3f5e51ce36f91a2f4a2ee4a8bb04910d36dcbc46e486a915ff739f9",
+      "category": "canonical"
+    },
+    {
+      "operationId": "source/response-lost/media",
+      "handlerId": "source/response-lost/media",
+      "profileId": "database",
+      "inputSchemaId": "media-natural-input-v1",
+      "outputSchemaId": "bounded-natural-candidates-v1",
+      "retryClass": "idempotent-read",
+      "handlerArtifactSha256": "a2f49ed6577d39dde7ca18d9f45c03fd73acc4d8b9721774612d6158dd357d6f",
+      "category": "canonical"
+    },
+    {
+      "operationId": "source/response-lost/override",
+      "handlerId": "source/response-lost/override",
+      "profileId": "database",
+      "inputSchemaId": "override-discovery-input-v1",
+      "outputSchemaId": "bounded-natural-candidates-v1",
+      "retryClass": "idempotent-read",
+      "handlerArtifactSha256": "e5c8b6beae75c704e654face2c44734e63fc648c71658c4022fe47e33abfd729",
+      "category": "canonical"
+    },
+    {
+      "operationId": "source/response-lost/override-preflight",
+      "handlerId": "source/response-lost/override-preflight",
+      "profileId": "database",
+      "inputSchemaId": "override-preflight-input-v1",
+      "outputSchemaId": "bounded-natural-candidates-v1",
+      "retryClass": "idempotent-read",
+      "handlerArtifactSha256": "2e018de46067c3a7264d8b5a7aeaf8e484ff305f9f64f96d1d0b01ce4e57ca0e",
+      "category": "canonical"
+    },
+    {
+      "operationId": "source/response-lost/screen",
+      "handlerId": "source/response-lost/screen",
+      "profileId": "database",
+      "inputSchemaId": "screen-discovery-input-v1",
+      "outputSchemaId": "bounded-natural-candidates-v1",
+      "retryClass": "idempotent-read",
+      "handlerArtifactSha256": "0ce31af6d6a924dc5be279abaab3d18e911cec93a82dd27747a9d62b96d631c7",
+      "category": "canonical"
+    },
+    {
+      "operationId": "source/response-lost/screen-preflight",
+      "handlerId": "source/response-lost/screen-preflight",
+      "profileId": "database",
+      "inputSchemaId": "screen-preflight-input-v1",
+      "outputSchemaId": "bounded-natural-candidates-v1",
+      "retryClass": "idempotent-read",
+      "handlerArtifactSha256": "c7fd9b79d7d1c17e6ed3eea8a858a4c769ed1afb3a5c0143442570685488a68a",
+      "category": "canonical"
+    },
+    {
+      "operationId": "source/response-lost/setting",
+      "handlerId": "source/response-lost/setting",
+      "profileId": "user-identity-proof",
+      "inputSchemaId": "user-id-input-v1",
+      "outputSchemaId": "bounded-natural-candidates-v1",
+      "retryClass": "idempotent-read",
+      "handlerArtifactSha256": "8a922f3a2e66af586cb7321e65ee43941ee256664a67387e35b259549e0645a3",
+      "category": "canonical"
+    },
+    {
+      "operationId": "source/response-lost/setting-preflight",
+      "handlerId": "source/response-lost/setting-preflight",
+      "profileId": "user-identity-proof",
+      "inputSchemaId": "email-input-v1",
+      "outputSchemaId": "bounded-natural-candidates-v1",
+      "retryClass": "idempotent-read",
+      "handlerArtifactSha256": "88e2dbb6b941636e1464eed0b31389daf15193abbcaffeca93c2ba7e4eb39eb2",
+      "category": "canonical"
+    },
+    {
+      "operationId": "source/response-lost/user",
+      "handlerId": "source/response-lost/user",
+      "profileId": "user-identity-proof",
+      "inputSchemaId": "email-input-v1",
+      "outputSchemaId": "bounded-natural-candidates-v1",
+      "retryClass": "idempotent-read",
+      "handlerArtifactSha256": "8be3aab1d223976015ef489feb21b2711931b4049e444286f958dfd26b9dc4c6",
+      "category": "canonical"
+    },
+    {
+      "operationId": "source/user/absence",
+      "handlerId": "source/user/absence",
+      "profileId": "user-identity-proof",
+      "inputSchemaId": "user-id-input-v1",
+      "outputSchemaId": "legacy-user-absence-private-v1",
+      "retryClass": "idempotent-read",
+      "handlerArtifactSha256": "c03ff8341fdc0e7aa53eded8f6762bda9446b38c7f4be688bb2af4d0216ef394",
+      "category": "canonical"
+    },
+    {
+      "operationId": "source/user/delete",
+      "handlerId": "source/user/delete",
+      "profileId": "user-identity-proof",
+      "inputSchemaId": "user-id-input-v1",
+      "outputSchemaId": "legacy-user-delete-private-v1",
+      "retryClass": "mutation",
+      "handlerArtifactSha256": "da1e61c93c2f379f976ad09d763bc2f9877e976ec294ea928df024c754fab656",
+      "category": "canonical"
+    },
+    {
+      "operationId": "source/user/preference-get",
+      "handlerId": "source/user/preference-get",
+      "profileId": "database",
+      "inputSchemaId": "user-id-input-v1",
+      "outputSchemaId": "preference-read-private-v1",
+      "retryClass": "idempotent-read",
+      "handlerArtifactSha256": "a89f5efbbf4ed20e9a2836c0bfe893cf62346cc1801ca82626c23ba6e9983174",
+      "category": "canonical"
+    },
+    {
+      "operationId": "source/user/preference-set",
+      "handlerId": "source/user/preference-set",
+      "profileId": "database",
+      "inputSchemaId": "preference-write-input-v1",
+      "outputSchemaId": "preference-write-private-v1",
+      "retryClass": "mutation",
+      "handlerArtifactSha256": "1e9aff9c603615d4035cc6fe7a31fbca5797d14ae83626e941cd0e63cdfdeff6",
+      "category": "canonical"
+    },
+    {
+      "operationId": "source/user/proof",
+      "handlerId": "source/user/proof",
+      "profileId": "user-identity-proof",
+      "inputSchemaId": "user-identity-input-v1",
+      "outputSchemaId": "user-identity-private-v2",
+      "retryClass": "idempotent-read",
+      "handlerArtifactSha256": "de7407f6b536b4676eb5eba7165d049ccd8edeb0140119235b6efe9696454638",
+      "category": "canonical"
+    },
+    {
+      "operationId": "source/user/provision",
+      "handlerId": "source/user/provision",
+      "profileId": "user-provisioning",
+      "inputSchemaId": "user-provision-input-v1",
+      "outputSchemaId": "user-provision-private-v2",
+      "retryClass": "mutation",
+      "handlerArtifactSha256": "6760d9545574bd82ec60c6c082f23a8392af76afc401f5c49058e7ea7ec1262f",
+      "category": "canonical"
+    },
+    {
+      "operationId": "storage-baseline/absence",
+      "handlerId": "source/platform/storage-preflight",
+      "profileId": "bootstrap-preflight",
+      "inputSchemaId": "user-agents-input-v1",
+      "outputSchemaId": "strict-resource-operation-v1",
+      "retryClass": "idempotent-read",
+      "handlerArtifactSha256": "d8c9395d1d2b0ed0b741086679a0e7317b71e46db3bfe54b87a668c9c4a6b5c3",
+      "category": "resource-alias"
+    },
+    {
+      "operationId": "terminal/task-traffic-snapshot",
+      "handlerId": "source/resource/task-traffic-snapshot",
+      "profileId": "database",
+      "inputSchemaId": "user-agents-input-v1",
+      "outputSchemaId": "task-traffic-complete-private-v2",
+      "retryClass": "idempotent-read",
+      "handlerArtifactSha256": "c12b60d38ac716b4f90a3fb4bcb63c54475bee39e603541b32fb3d60d5fcfed3",
+      "category": "explicit-alias"
+    },
+    {
+      "operationId": "user-a/absence",
+      "handlerId": "source/resource/user/absence",
+      "profileId": "database",
+      "inputSchemaId": "identifier-uuid-input-v1",
+      "outputSchemaId": "strict-resource-operation-v1",
+      "retryClass": "idempotent-read",
+      "handlerArtifactSha256": "b446308aab0608082d6dfd71a2646757ddb3e2f8e36617bce6eef04ef09609b8",
+      "category": "resource-alias"
+    },
+    {
+      "operationId": "user-a/cleanup",
+      "handlerId": "source/resource/user/delete",
+      "profileId": "database",
+      "inputSchemaId": "identifier-uuid-input-v1",
+      "outputSchemaId": "strict-resource-operation-v1",
+      "retryClass": "mutation",
+      "handlerArtifactSha256": "162a9ce351893a4b8d9d3164ab18426b4f3d6222f6e61792d81902f90abdbed9",
+      "category": "resource-alias"
+    },
+    {
+      "operationId": "user-a/provenance/failure-discovery",
+      "handlerId": "source/resource/user/provenance",
+      "profileId": "user-identity-proof",
+      "inputSchemaId": "identifier-uuid-input-v1",
+      "outputSchemaId": "strict-resource-operation-v1",
+      "retryClass": "idempotent-read",
+      "handlerArtifactSha256": "1cd4302a4d55bb95bc00ff397ef8ae81f9a960c831eba92202e815ceeb8c6826",
+      "category": "resource-alias"
+    },
+    {
+      "operationId": "user-b/absence",
+      "handlerId": "source/resource/user/absence",
+      "profileId": "database",
+      "inputSchemaId": "identifier-uuid-input-v1",
+      "outputSchemaId": "strict-resource-operation-v1",
+      "retryClass": "idempotent-read",
+      "handlerArtifactSha256": "b446308aab0608082d6dfd71a2646757ddb3e2f8e36617bce6eef04ef09609b8",
+      "category": "resource-alias"
+    },
+    {
+      "operationId": "user-b/cleanup",
+      "handlerId": "source/resource/user/delete",
+      "profileId": "database",
+      "inputSchemaId": "identifier-uuid-input-v1",
+      "outputSchemaId": "strict-resource-operation-v1",
+      "retryClass": "mutation",
+      "handlerArtifactSha256": "162a9ce351893a4b8d9d3164ab18426b4f3d6222f6e61792d81902f90abdbed9",
+      "category": "resource-alias"
+    },
+    {
+      "operationId": "user-b/provenance/failure-discovery",
+      "handlerId": "source/resource/user/provenance",
+      "profileId": "user-identity-proof",
+      "inputSchemaId": "identifier-uuid-input-v1",
+      "outputSchemaId": "strict-resource-operation-v1",
+      "retryClass": "idempotent-read",
+      "handlerArtifactSha256": "1cd4302a4d55bb95bc00ff397ef8ae81f9a960c831eba92202e815ceeb8c6826",
+      "category": "resource-alias"
+    }
+  ]
+}

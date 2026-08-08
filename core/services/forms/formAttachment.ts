@@ -2,6 +2,25 @@ import { getMediaById } from "../media/mediaService";
 import { mimeMatchesAccept } from "./mimeMatchesAccept";
 import type { NormalizedFormField } from "./validation";
 
+export type FormAttachmentMediaReference = Readonly<{
+  id: string;
+  mimeType: string;
+  size: number;
+}>;
+
+export type FormAttachmentVerificationDeps = Readonly<{
+  loadMediaByIds(ids: readonly string[]): Promise<readonly FormAttachmentMediaReference[]>;
+}>;
+
+const defaultVerificationDeps: FormAttachmentVerificationDeps = {
+  loadMediaByIds: async (ids) => {
+    const rows = await Promise.all(ids.map((id) => getMediaById(id)));
+    return rows.flatMap((row) =>
+      row ? [{ id: row.id, mimeType: row.mimeType, size: row.size }] : []
+    );
+  },
+};
+
 /**
  * DB-backed security backstop (TASK-516-07). Runs AFTER the sync
  * `validateSubmissionPayload` (which only structurally normalizes the value into an
@@ -17,8 +36,21 @@ import type { NormalizedFormField } from "./validation";
  */
 export async function verifyFileReferences(
   fields: NormalizedFormField[],
-  payload: Record<string, unknown>
+  payload: Record<string, unknown>,
+  deps: FormAttachmentVerificationDeps = defaultVerificationDeps
 ): Promise<void> {
+  const referencedIds = new Set<string>();
+  for (const field of fields) {
+    if (field.type !== "file" || !Object.hasOwn(payload, field.name)) continue;
+    const value = payload[field.name];
+    if (value === undefined) continue;
+    for (const id of Array.isArray(value) ? (value as string[]) : [value as string]) {
+      referencedIds.add(id);
+    }
+  }
+  const mediaById = new Map(
+    (await deps.loadMediaByIds([...referencedIds].sort())).map((row) => [row.id, row])
+  );
   for (const field of fields) {
     if (field.type !== "file") continue;
     if (!Object.hasOwn(payload, field.name)) continue;
@@ -27,7 +59,7 @@ export async function verifyFileReferences(
 
     const ids = Array.isArray(value) ? (value as string[]) : [value as string];
     for (const id of ids) {
-      const row = await getMediaById(id);
+      const row = mediaById.get(id);
       if (!row) throw new Error("form_payload_invalid"); // unknown / cross-origin id
       if (!mimeMatchesAccept(row.mimeType, field.settings.accept)) {
         throw new Error("form_payload_invalid");

@@ -6,12 +6,378 @@
 **Category:** Solution Kits / Reference Graph
 **Estimated Effort:** Medium
 **Dependencies:** TASK-547-01-L01
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-08-08
+**Validation:** Dependency-shaped contract gates and final repository checks passed;
+the TASK-547 certification smoke completed 18/18 with cleanup on 2026-08-08.
 
 ## Overview
 
-Own `referenceRegistry.ts`, `referenceGraph.ts` and graph tests. Freeze resource
-kinds, allowlisted ref paths and stable topological ordering.
+Own `referenceRegistry.ts`, `referenceGraph.ts` and graph tests. Consume L01's
+frozen resource-kind owner; own package identity, the discriminator-aware
+allowlist, stable topological ordering and longest-path dependency-depth
+enforcement.
+
+Freeze `PackageRef` exactly as `{ ref: PackageResourceKind; key: string }` with
+no extra key. `key` must match
+`^[a-z0-9](?:[a-z0-9._-]{0,126}[a-z0-9])?$`; malformed keys fail before lookup.
+The closed registry is:
+
+| Source | Exact path/guard | Target | Presence |
+| --- | --- | --- | --- |
+| `content_entry` | `contentTypeId` | `content_type` | required ref |
+| `listing_query` | `query.sourceConfig.contentTypeId` | `content_type` | ref when present; native source discriminator is checked by TASK-547-02 |
+| `detail_page` | `contentTypeId` | `content_type` | required ref |
+| `detail_page` | `related[*].listingQueryId` | `listing_query` | nullable ref if present; native `kind` rules belong to TASK-547-02 |
+| `page` | `data.settings.collectionLink.contentTypeId` when `collectionLink` exists | `content_type` | required ref |
+| `page` | same object's `listingQueryId` / `listingTemplateId` | `listing_query` / `listing_template` | nullable ref if present |
+| `page_template` | `document.settings.collectionLink.contentTypeId` when `collectionLink` exists | `content_type` | required ref |
+| `page_template` | same object's `listingQueryId` / `listingTemplateId` | `listing_query` / `listing_template` | nullable ref if present |
+| `page` | every recursive block below `data.sections[*].blocks[*]`: collection `contentTypeId/queryId/templateId`, filters `queryId`, form `formId`, at base/tablet/mobile props | matching declared kind | nullable ref if present |
+| `page_template` | the same guarded recursive surfaces below `document.sections[*].blocks[*]` | matching declared kind | nullable ref if present |
+| `menu` | `items[*].pageId` | `page` | nullable ref if present |
+| shell setting | `desired.value` for `site.homepageId` | `page` | nullable ref |
+| shell setting | `desired.value` for `site.navigationMenuId` | `menu` | nullable ref |
+| shell setting | `desired.value` for `site.footerTemplateId` | `page_template` | nullable ref |
+| `site.contentRoutes` | `desired.value[*].detailPageId` | `detail_page` | nullable ref if present |
+
+There is no `menu.desired.document.items[*].pageId` row: menu navigation items
+are the native top-level `desired.items` aggregate, while `desired.document` is
+the separate Menu Document V2 appearance/content contract. For content routes,
+`type` stays a literal slug cross-checked against exactly one package content
+type; it is never rewritten to an ID. Process routes in array order and, within
+each route, process present `detailPageId` first and literal `type` second. A
+non-null `detailPageId` contributes one occurrence edge plus one substitution
+descriptor. A valid `type` contributes one validation-only occurrence edge to
+the matched `content_type`: it counts toward the 4,096-edge limit and becomes a
+deduplicated direct dependency, but creates no descriptor and is never rewritten.
+
+Before the first write, compare the frozen `PackageResourceIdentity` selected by
+a resolved route `type` with the referenced Detail Page's own successfully
+resolved required `contentTypeId` target; they must match. A malformed container
+or non-object row stops that row. Otherwise order present non-null
+`detailPageId` resolution → unique `type` selection → agreement before the next
+route. Missing/null/invalid/missing-target detail links, invalid/missing/
+ambiguous types and invalid/missing Detail Page `contentTypeId` targets skip only
+agreement and retain their existing diagnostic. Each independent success keeps
+its original edge (and detail descriptor); agreement adds neither.
+
+A mismatch adds exactly one `site_package_ref_bad_path` diagnostic at the
+trusted route `detailPageId` path with static reason
+`content_route_detail_content_type_mismatch`. Trusted setting/route indexes may
+appear, but no identity, ref key or route slug enters path/reason/static message.
+
+Select exactly one Page-document root by source kind: `page` uses
+`seed.desired.data`, while `page_template` uses `seed.desired.document`. Visit
+that root's `settings.collectionLink`, `sections[*].blocks[*]` and every child
+under only the block type's native allowed `slots.<slotKey>[*]`, bounded by the
+native tree-depth/child caps. The opposite root never grants reference authority:
+a ref-like object under Page `document` or Page Template `data` is rejected by
+the generic scan. A missing/non-object selected root or malformed native
+settings/sections/container remains TASK-547-02 native-validation work; graph
+discovery neither repairs it nor invents a second native-shape diagnostic.
+Traversal is root source order, native capability-registry slot order and child
+array order; inspect base props, tablet props, then mobile props at every node.
+Import exactly `pageBlockTypes`, `pageBlockCapabilities`, `pageBreakpoints`,
+`PAGE_BLOCK_MAX_TREE_DEPTH`, `PAGE_BLOCK_MAX_CHILDREN_PER_SLOT` and the needed
+Page types from `core/services/pages/pageDocumentV2.ts`; do not duplicate its
+slot-key, block-type, device or limit tables in the package graph. Treat
+`pageBlockCapabilities[type].slots` as the persistence slot allowlist and native
+slot order. Do not use `getPageBlockActiveSlotKeys`: that editor helper hides
+non-destructively preserved `columns` slots above the current `props.count`.
+Authored `data.breakpoints`/`document.breakpoints` are not ordering authority;
+traverse exported `pageBreakpoints`, mapping `desktop` to base `props` and the
+rest to `responsive.<breakpoint>.props`.
+TASK-547-04's generator still inserts only its five declared direct-root refs;
+that narrower producer does not truncate the general package contract.
+
+At initialization freeze imported Page block types, breakpoints and slot arrays
+into one private `PAGE_REFERENCE_AUTHORITY`; later mutation cannot alter decisions.
+`REFERENCE_PATHS` is the frozen non-Page projection without private `presence`.
+The table initializes frozen private rules; neither collector exposes authority.
+The native bounds are reject boundaries, not scan cutoffs:
+`PAGE_BLOCK_MAX_TREE_DEPTH = 4` (root block is depth 1) and
+`PAGE_BLOCK_MAX_CHILDREN_PER_SLOT = 24`. For both `page` and `page_template`,
+depth 4 and 24 children are accepted and completely scanned; a depth-5 child,
+any `slots` member on a depth-4 block or a 25th child rejects regardless of the
+block discriminator; with a valid discriminator, an unknown/non-native slot key
+or `slots` on a non-slot-capable block also rejects the graph as
+`site_package_ref_bad_path`. No structural branch may be clipped or ignored,
+even when the invalid branch contains no reference. Bounds enforcement is
+independent of a valid `block.type`: before discriminator authority is used,
+derive a read-only preflight of the block's own `slots` member, current depth,
+array child counts and indexed object children. The preflight records facts only;
+it emits no diagnostic and registers no reference, so it cannot reorder the
+valid-node first-match contract below.
+
+Each occurrence has one authority path. Fixed rules and the Page walker register
+`JSON.stringify([source.ordinal, exactRelativeSegmentArray])` in
+`registeredReferencePaths` before validating any present terminal;
+`ordinal` is globally monotonic for authority/ties. `collectionIndex` resets in
+each normalized collection and is used only for source display paths.
+For a valid discriminator, the Page slot validator consumes that preflight and
+returns either the native-slot-ordered indexed object children or `null` after
+emitting its one first-match structural diagnostic. For a malformed
+discriminator, a bounds-only walker consumes the same preflight, checks depth
+then child count and recursively visits every array-valued own slot in canonical
+object-key order without ever granting reference authority to that node or its
+descendants. General malformed slot-container/value/child shapes remain owned
+by later native validation; the bounds-only walker follows only object children
+at their original array indexes.
+
+Every structural rejection uses one helper that emits exactly one diagnostic at
+`[...path, "slots"]`, adds exactly
+`{ sourceOrdinal: source.ordinal, path: [...path, "slots"] }` to
+`blockedReferencePrefixes`, and stops only that rejected `slots` subtree. Sibling
+branches continue discovery. On valid success, recurse explicitly with
+`[...path, "slots", slotKey, childIndex]`, retaining the original child index.
+
+After registered discovery, one generic ref-like scan walks the complete desired
+value of each source resource. It skips an exact `registeredReferencePaths`
+member and any `blockedReferencePrefixes` subtree only when that authority has
+the same `source.ordinal`; an identical relative path in another resource can
+never inherit the skip. Every other ref-like object gets exactly one
+`package_ref_path_forbidden`. This prevents a valid nested ref from being
+double-classified and prevents a structurally rejected Page branch from
+producing duplicate child findings. An unknown/malformed block discriminator
+itself emits no graph diagnostic and registers no reference path anywhere in its
+branch: native validation owns that discriminator. Its bounds-only traversal
+adds a blocked prefix only where depth or child count actually rejects; the
+generic scan therefore forbids every ref-like descendant outside such a prefix,
+while a ref-like value inside the rejected `slots` subtree cannot create a
+duplicate generic finding.
+
+Private presence is closed: `required` rejects absent/`null`; `when_present` skips
+absent but rejects `null`; `nullable` skips either. Fixed collection resolves the
+final own terminal, registers present authority before validation and never drops
+a missing required terminal; malformed intermediates remain TASK-547-02 work.
+Other values must be exact refs; mismatched blocks and all other ref-shaped paths,
+including non-native slots and `$ref`, are invalid.
+L01 exports frozen `referenceEdges=4_096` but carries no ref-shaped metric/throw. L02
+alone counts accepted occurrences and enforces 4,096 after diagnostic overflow; check JSON
+level 64 and 100 diagnostics before sorting, then dependency depth 64 after cycles.
+Diagnostics expose a sanitized path of at most 240 characters and exactly one
+member of this closed vocabulary:
+
+```ts
+export type ReferenceGraphDiagnosticReason =
+  | "duplicate_resource_identity"
+  | "expected_package_ref"
+  | "package_ref_shape_invalid"
+  | "package_ref_kind_mismatch"
+  | "package_ref_key_invalid"
+  | "package_ref_path_forbidden"
+  | "package_ref_target_missing"
+  | "content_routes_invalid"
+  | "content_route_type_invalid"
+  | "content_route_content_type_missing"
+  | "content_route_content_type_ambiguous"
+  | "content_route_detail_content_type_mismatch"
+  | "page_slots_forbidden"
+  | "page_slot_key_forbidden"
+  | "page_tree_depth_exceeded"
+  | "page_slot_children_exceeded"
+  | "json_depth_exceeded"
+  | "reference_edges_exceeded"
+  | "dependency_depth_exceeded"
+  | "diagnostic_limit_exceeded"
+  | "reference_cycle"
+  | "resolved_target_id_missing"
+  | "planned_reference_drift";
+```
+
+All validation lists below are first-match precedence, not unordered sets.
+For an exact ref validate object/presence → exact own-key shape → `ref` kind →
+canonical key → target lookup; only the first failure is reported. Freeze the
+condition mapping: duplicate kind/key → `duplicate_resource_identity`;
+non-object required/present ref → `expected_package_ref`; extra/missing ref member
+→ `package_ref_shape_invalid`; wrong `ref` discriminator →
+`package_ref_kind_mismatch`; non-canonical `key` → `package_ref_key_invalid`;
+ref-like value outside the registry → `package_ref_path_forbidden`; absent target
+→ `package_ref_target_missing`; malformed content-routes container/row →
+`content_routes_invalid`; malformed route `type` →
+`content_route_type_invalid`; zero/multiple matching slugs →
+`content_route_content_type_missing|content_route_content_type_ambiguous`; a
+fully resolved route/Detail Page content-type identity inequality →
+`content_route_detail_content_type_mismatch`.
+For every valid-discriminator Page node with `slots`, validate in this first-match
+order: any `slots` member at depth 4 → `page_tree_depth_exceeded`; otherwise a
+non-slot-capable block → `page_slots_forbidden`; otherwise the first
+unknown/non-native slot key → `page_slot_key_forbidden`; otherwise a 25th child
+in one native slot → `page_slot_children_exceeded`. The facts-only preflight
+must not let child-count failure leapfrog the atom or unknown-key checks. For a
+malformed-discriminator branch, bounds-only first match is a `slots` member at
+depth 4 → `page_tree_depth_exceeded`, then the first 25-child array-valued own
+slot → `page_slot_children_exceeded`, then recursive child traversal; do not
+emit `page_slots_forbidden` or `page_slot_key_forbidden` without a valid type.
+Each of these failures uses the single diagnostic/blocked-prefix helper above.
+The 4,097th edge, a longest dependency path of 65 edges/66 resources, 101st
+diagnostic and cycle → their corresponding static codes; resolver map
+miss/source mismatch →
+`resolved_target_id_missing|planned_reference_drift`. The top-level error code
+remains the matching `site_package_ref_*` or `site_package_too_complex`. On the
+101st diagnostic, discard the partial diagnostic list and throw the single
+static `diagnostic_limit_exceeded` diagnostic at `$.resources`. No supplied key,
+slug, value, payload, target identity or cycle member may appear in a reason.
+
+JSON depth is measured independently for every `seed.desired`: the `desired`
+root is level 1 and every own-property value or array element, including an
+object, array, scalar or `null`, is one level deeper; property names do not add a
+level. Level 64 is accepted. Level 65 throws `site_package_too_complex` with
+exactly `{ path: "$.resources", reason: "json_depth_exceeded" }`; no dynamic
+desired key is rendered. L01's raw traversal emits this same code/diagnostic
+before calling the graph, while L02 repeats it as the first guard for already-
+typed callers. Thus depth wins over duplicate identity at both boundaries.
+
+Dependency depth is a separate longest-path edge count over the deduplicated
+direct-dependency DAG. A source/root resource with no dependencies has depth 0;
+every dependency edge increments the candidate path depth by exactly one, and a
+resource's depth is the maximum of those candidates across all its direct
+dependencies. The limit 64 therefore accepts a chain of exactly 64 edges/65
+resources and rejects a chain of 65 edges/66 resources with exactly
+`{ path: "$.resources", reason: "dependency_depth_exceeded" }`. Resource count,
+occurrence-edge count and a one-based node count must not be substituted for
+this metric.
+
+Freeze the global graph-validation phases as JSON-depth preflight → unique
+identity indexing → reference/path/target discovery → discovery finalization
+→ stable topological traversal/cycle detection → dependency-depth
+calculation. Duplicate identities
+terminate after indexing and use the same 100/101 overflow rule below. Semantic
+discovery uses one global tagged diagnostic stream, never per-error-code
+collectors, and content-route ambiguity is accumulated rather than thrown inline.
+Each offending occurrence contributes at most one diagnostic after the local
+first-match rules above. Diagnostics retain the frozen discovery order across
+categories. For 1..100 mixed semantic diagnostics, choose the top-level code by
+fixed priority `site_package_ref_bad_path` → `site_package_ref_missing` →
+`site_package_ref_ambiguous`, independent of declaration order, and expose the
+complete mixed list without category filtering. The 101st attempted diagnostic
+globally, including duplicate identities, discards every partial diagnostic and
+throws the one `diagnostic_limit_exceeded` singleton specified above.
+
+During semantic discovery, count every accepted occurrence edge but do not throw
+inline at 4,097. Finalize in the exact order diagnostic overflow → edge overflow
+→ 1..100 semantic diagnostics: a 101st diagnostic wins with its singleton; else
+4,097 accepted edges win with the one `reference_edges_exceeded` diagnostic at
+`$.resources`; otherwise throw the complete semantic list by fixed code priority.
+Therefore bad-path + 4,097 accepted edges returns edge overflow, while 101 mixed
+diagnostics + edge overflow returns diagnostic overflow. Cycle and dependency-
+depth checks run only after this finalizer returns with no diagnostic.
+`ReferenceGraphError` receives only an already-bounded list and never slices or
+repairs it; overflow behavior belongs exclusively to the collectors.
+L01 `schema.ts` exports the sole generic collector factory. Duplicate indexing
+and semantic discovery each instantiate it for their terminating phase; L02 may
+wrap tagging/top-level-code selection but owns no array, counter or overflow
+implementation.
+
+The route/detail mismatch is one ordinary bad-path semantic diagnostic in this
+same stream. A resolved mismatching route still contributes its accepted
+`detailPageId` and `type` occurrence edges before comparison, and the Detail
+Page's own valid `contentTypeId` remains its independent occurrence edge. Thus
+1..100 mismatches do not suppress edge overflow, while a 101st mismatch still
+selects diagnostic overflow by the finalizer above.
+
+Topological traversal must first determine whether the complete graph is
+acyclic. Only a complete acyclic order reaches the longest-path dependency-depth
+calculation. Consequently, a cyclic graph that also contains an independent
+65-edge/66-resource over-depth branch returns exactly
+`{ path: "$.resources", reason: "reference_cycle" }`, never
+`dependency_depth_exceeded`; any semantic discovery or finalization failure
+prevents both cycle detection and dependency-depth calculation.
+
+Reason-to-code ownership is closed: duplicate identity →
+`site_package_ref_duplicate`; expected/shape/kind/key/path, content-route
+container/type/detail-content-type mismatch, Page-structure and planned-drift reasons →
+`site_package_ref_bad_path`; missing target/content type/resolved ID →
+`site_package_ref_missing`; ambiguous content type →
+`site_package_ref_ambiguous`; cycle → `site_package_ref_cycle`; and every
+JSON/edge/diagnostic/dependency limit reason → `site_package_too_complex`.
+
+Resource diagnostics call `encodeReferenceDiagnosticPath(source, relativePath)` to
+prepend `$.resources.<collection>[<collectionIndex>].desired`; trusted numeric/closed segments
+continue until terminal `[redacted]`. Descriptors stay relative; only global
+limits/cycle use `$.resources`; supplied data never enters output.
+Freeze the complete plan shapes:
+
+```ts
+export type FrozenJsonValue =
+  | JsonPrimitive
+  | readonly FrozenJsonValue[]
+  | { readonly [key: string]: FrozenJsonValue };
+export type FrozenJsonObject = { readonly [key: string]: FrozenJsonValue };
+export type PackageResourceIdentity = `${PackageResourceKind}:${string}`;
+type PackageReferenceEdge = Readonly<{
+  from: PackageResourceIdentity;
+  to: PackageResourceIdentity;
+  path: readonly (string | number)[]; // relative to source seed.desired
+  purpose: "substitute" | "content_route_type";
+}>;
+export type PlannedPackageReference = Readonly<{
+  path: readonly (string | number)[];
+  targetIdentity: PackageResourceIdentity;
+}>;
+export type PlannedPackageResource = Readonly<{
+  identity: PackageResourceIdentity;
+  kind: PackageResourceKind;
+  collection: PackageResourceCollection;
+  key: string;
+  ordinal: number; collectionIndex: number;
+  seed: Readonly<{ key: string; desired: FrozenJsonObject }>;
+  dependencies: readonly PackageResourceIdentity[];
+  references: readonly PlannedPackageReference[];
+}>;
+```
+
+Every accepted `PackageRef` goes through per-build `recordPackageRefOccurrence`,
+which owns one `purpose:"substitute"` edge plus one descriptor; the route literal
+adds only its counted `purpose:"content_route_type"` edge. Deduplicate dependencies later.
+`dependencies` contains unique direct targets sorted lexicographically;
+`references` keeps occurrence discovery order. The plan is topologically sorted
+with dependencies first and stable ties by original package ordinal, then
+identity. Every identity/dependency lexical sort/tie uses L01's
+`compareFullSitePackageText`, imported from
+`core/services/kits/fullSitePackage/schema.ts`; `localeCompare`, `Intl` and host-
+locale ordering are forbidden. Discovery is package collection/declaration order; registry-row order;
+array index order; and, for Page blocks, section/root-block order followed by
+depth-first pre-order. At each Page node inspect the discriminator's applicable
+properties in `contentTypeId`, `queryId`, `templateId`, `formId` order for base,
+tablet and mobile, then recurse through native slot order and child order.
+The malformed-discriminator bounds-only traversal instead orders own slot keys
+with L01's `compareFullSitePackageObjectKeys`, then original child index; this
+order is used only to select/traverse structural facts, never to authorize a
+path or expose an untrusted slot key in a diagnostic.
+The seed, every descriptor/path/dependency array and the outer plan are
+deep-cloned and frozen. Diagnostic display paths are derived sanitized text,
+never substitution authority.
+
+This leaf alone owns `resolvePlannedPackageResourceRefs` in `referenceGraph.ts`.
+It clones desired, visits only frozen descriptors, requires each captured ref/
+target, substitutes the mapped ID and rejects missing IDs/source drift as static
+`site_package_ref_missing`/`site_package_ref_bad_path`, without another scan,
+graph build or mutation. TASK-547-02-L01 `planFullSiteInstall` in
+`fullSiteInstallPlanner.ts` uses it for planning placeholders; TASK-547-02-L02
+`prepareFullSiteSaga` in `fullSiteInstall/staging.ts` uses actual intended IDs.
+TASK-547-01-L01 remains schema/collector owner; neither consumer copies the walker.
+
+This leaf is the mandatory second half of complete package validation, with
+boundaries frozen as follows:
+
+- an `unknown`/raw entry point calls `normalizeFullSitePackageForWrite` exactly
+  once, then `buildReferencePlan` exactly once, before lazy DB acquisition;
+- `buildReferencePlan` accepts only `FullSitePackageV1` and never normalizes;
+- typed `applyFullSitePackage` accepts an already-normalized package and builds
+  its own private plan exactly once, with zero
+  `normalizeFullSitePackageForWrite` calls;
+- two-argument `planFullSiteInstall(pkg,deps)` accepts an already-normalized
+  package and builds once before dependency reads; its three-argument overload
+  consumes the exact frozen plan supplied by apply and builds zero times; and
+- `prepareFullSiteSaga` consumes that same plan and calls neither function.
+
+The CLI raw boundary and service trust boundary each validate independently, so
+an actual CLI→service apply intentionally performs one CLI graph build plus one
+private service graph build, not one shared/caller-supplied plan. Do not add a
+wrapper helper, normalize at typed internal boundaries or expose the plan through
+public input/dependencies.
 
 ## Security Contract
 
@@ -21,28 +387,614 @@ or strings. Bound edges/depth/diagnostics before sorting.
 ## Implementation Pseudocode
 
 ```ts
+import {
+  createDiagnosticCollector, type DiagnosticBatch,
+} from "./schema";
+export type AllowedReferencePath = Readonly<{
+  sourceKind: PackageResourceKind;
+  segments: readonly PathSegment[];
+  targetKind: PackageResourceKind;
+  settingKey?: string;
+}>;
+type FixedReferenceRule = Readonly<{
+  path: AllowedReferencePath;
+  presence: "required" | "when_present" | "nullable";
+}>;
+const freezeReferencePath = (row: AllowedReferencePath): AllowedReferencePath =>
+  Object.freeze({ ...row, segments: Object.freeze([...row.segments]) });
+export const REFERENCE_PATHS: readonly AllowedReferencePath[] = Object.freeze(
+  FIXED_NON_PAGE_REFERENCE_RULES.map(({ path }) => freezeReferencePath(path)),
+);
+type TaggedGraphDiagnostic = Readonly<{
+  code: "site_package_ref_bad_path" | "site_package_ref_missing" | "site_package_ref_ambiguous";
+  diagnostic: ReferenceGraphDiagnostic;
+}>;
+type GraphDiagnostics = Readonly<{
+  add(
+    code: TaggedGraphDiagnostic["code"],
+    source: RegisteredPackageResource,
+    relativePath: readonly (string | number)[],
+    reason: ReferenceGraphDiagnosticReason,
+  ): void;
+  read(): DiagnosticBatch<TaggedGraphDiagnostic>;
+}>;
+const createGraphDiagnostics = (): GraphDiagnostics => {
+  const shared = createDiagnosticCollector<TaggedGraphDiagnostic>();
+  return Object.freeze({
+    add: (code, source, relativePath, reason) => shared.add({
+      code, diagnostic: {
+        path: encodeReferenceDiagnosticPath(source, relativePath), reason,
+      },
+    }),
+    read: shared.read,
+  });
+};
+const throwGraphDiagnostics = (batch: DiagnosticBatch<TaggedGraphDiagnostic>): void => {
+  if (batch.overflowed) throwDiagnosticLimitSingleton();
+  const code = GRAPH_ERROR_PRIORITY.find((candidate) =>
+    batch.diagnostics.some((value) => value.code === candidate)
+  );
+  if (code) throw new ReferenceGraphError(
+    code, batch.diagnostics.map(({ diagnostic }) => diagnostic),
+  );
+};
+const indexUniqueKindKeys = (resources: FullSitePackageResources) => {
+  const duplicates = createDiagnosticCollector<ReferenceGraphDiagnostic>();
+  const registry = createMutableRegistry();
+  forEachPackageResource(resources, ({ collection, collectionIndex, resource }) => {
+    if (!registerUnique(registry, collection, collectionIndex, resource)) {
+      duplicates.add({
+        path: `$.resources.${collection}`, reason: "duplicate_resource_identity",
+      });
+    }
+  });
+  const batch = duplicates.read();
+  if (batch.overflowed) throwDiagnosticLimitSingleton();
+  if (batch.diagnostics.length) {
+    throw new ReferenceGraphError("site_package_ref_duplicate", batch.diagnostics);
+  }
+  return freezeRegistry(registry);
+};
+const collectContentRouteOccurrences = (source, context) => {
+  for (const { route, path } of readStructuralContentRoutes(source, context)) {
+    const detailPage = collectNullableDetailPageOccurrence(route, path, context);
+    const contentType = collectUniqueRouteTypeOccurrence(route, path, context);
+    if (!detailPage || !contentType) continue;
+    const detailContentType = context.resolvedDetailPageContentTypes.get(
+      detailPage.identity,
+    );
+    if (!detailContentType) continue; // The detail page's own ref diagnostic owns this case.
+    if (detailContentType !== contentType.identity) {
+      context.collector.add(
+        "site_package_ref_bad_path",
+        source,
+        [...path, "detailPageId"],
+        "content_route_detail_content_type_mismatch",
+      );
+    }
+  }
+};
+const collectPackageOccurrences = (context) => {
+  const state: ReferenceOccurrenceState = createOccurrenceState(context);
+  for (const source of context.registry.resources) {
+    const sourceContext = { ...context, ...state, source };
+    if (isContentRoutesSetting(source)) {
+      collectContentRouteOccurrences(source, sourceContext); // Sole route collector.
+      continue;
+    }
+    if (source.kind === "page" || source.kind === "page_template") {
+      collectPageSourceReferences(sourceContext); // Sole Page-backed authority.
+      continue;
+    }
+    collectFixedSourceOccurrences(
+      sourceContext,
+      (row, target) => {
+        if (
+          source.kind === "detail_page" &&
+          row.segments.length === 1 &&
+          row.segments[0] === "contentTypeId" &&
+          target.kind === "content_type"
+        ) {
+          context.resolvedDetailPageContentTypes.set(source.identity, target.identity);
+        }
+      },
+    );
+  }
+  return state;
+};
+const PAGE_REFERENCE_AUTHORITY = Object.freeze({
+  blockTypes: Object.freeze([...pageBlockTypes]),
+  breakpoints: Object.freeze([...pageBreakpoints]),
+  slotsByType: Object.freeze(
+    Object.fromEntries(
+      pageBlockTypes.map((type) => [
+        type,
+        Object.freeze([...pageBlockCapabilities[type].slots]),
+      ]),
+    ) as Readonly<Record<PageBlockType, readonly PageBlockSlotKey[]>>,
+  ),
+});
+type PageReferenceRoot = Readonly<{ rootKey: "data" | "document"; value: JsonObject }>;
+const selectPageReferenceRoot = (
+  source: RegisteredPackageResource,
+): PageReferenceRoot | null => {
+  const rootKey =
+    source.kind === "page"
+      ? "data"
+      : source.kind === "page_template"
+        ? "document"
+        : null;
+  if (rootKey === null) return null;
+  const value = source.seed.desired[rootKey];
+  return isJsonObject(value) ? { rootKey, value } : null;
+};
+type RecordPackageRefOccurrence = (source: RegisteredPackageResource, relativePath: readonly (string | number)[],
+  targetKind: PackageResourceKind, presence: FixedReferenceRule["presence"], value: JsonValue | undefined) => RegisteredPackageResource | null;
+type ReferenceOccurrenceState = Readonly<{ edges: PackageReferenceEdge[];
+  descriptorsByIdentity: Map<PackageResourceIdentity, PlannedPackageReference[]>; recordPackageRefOccurrence: RecordPackageRefOccurrence }>;
+type PageReferenceVisitContext = Readonly<{ source: RegisteredPackageResource; root: PageReferenceRoot;
+  collector: GraphDiagnostics; registeredReferencePaths: Set<string>;
+  blockedReferencePrefixes: ReferenceAuthorityPath[]; recordPackageRefOccurrence: RecordPackageRefOccurrence }>;
+type ReferenceAuthorityPath = Readonly<{ sourceOrdinal: number; path: readonly PathSegment[] }>;
+const serializeAuthorityPath = (
+  sourceOrdinal: number,
+  path: readonly (string | number)[],
+) => JSON.stringify([sourceOrdinal, path]);
+type IndexedPageBlockChild = Readonly<{ child: JsonObject; childIndex: number }>;
+type PreflightPageSlot = Readonly<{
+  slotKey: string;
+  arrayLength: number | null;
+  children: readonly IndexedPageBlockChild[];
+}>;
+type PageBlockBoundsPreflight = Readonly<{
+  hasSlots: boolean;
+  depthExceeded: boolean;
+  structuralSlots: readonly PreflightPageSlot[] | null;
+}>;
+const preflightPageBlockBounds = (
+  block: JsonObject,
+  depth: number,
+): PageBlockBoundsPreflight => {
+  if (!hasOwn(block, "slots")) {
+    return { hasSlots: false, depthExceeded: false, structuralSlots: null };
+  }
+  const depthExceeded = depth >= PAGE_BLOCK_MAX_TREE_DEPTH;
+  const slotsValue = block.slots;
+  if (!isJsonObject(slotsValue)) {
+    return { hasSlots: true, depthExceeded, structuralSlots: null };
+  }
+  const structuralSlots = Object.keys(slotsValue)
+    .sort(compareFullSitePackageObjectKeys)
+    .map((slotKey): PreflightPageSlot => {
+      const value = slotsValue[slotKey];
+      if (!Array.isArray(value)) {
+        return { slotKey, arrayLength: null, children: [] };
+      }
+      const children = value.flatMap((child, childIndex) =>
+        isJsonObject(child) ? [{ child, childIndex }] : [],
+      );
+      return { slotKey, arrayLength: value.length, children };
+    });
+  return { hasSlots: true, depthExceeded, structuralSlots };
+};
+const rejectPageSlots = (
+  path: readonly (string | number)[],
+  reason:
+    | "page_slots_forbidden"
+    | "page_slot_key_forbidden"
+    | "page_tree_depth_exceeded"
+    | "page_slot_children_exceeded",
+  context: PageReferenceVisitContext,
+): void => {
+  const slotsPath = [...path, "slots"];
+  context.collector.add("site_package_ref_bad_path", context.source, slotsPath, reason);
+  context.blockedReferencePrefixes.push({
+    sourceOrdinal: context.source.ordinal,
+    path: slotsPath,
+  });
+};
+type ValidatedPageSlot = Readonly<{
+  slotKey: PageBlockSlotKey; children: readonly IndexedPageBlockChild[]
+}>;
+const validateSlotsFirstMatch = (
+  preflight: PageBlockBoundsPreflight,
+  path: readonly (string | number)[],
+  allowedSlots: readonly PageBlockSlotKey[],
+  context: PageReferenceVisitContext,
+): readonly ValidatedPageSlot[] | null => {
+  if (!preflight.hasSlots) return [];
+  if (preflight.depthExceeded) {
+    rejectPageSlots(path, "page_tree_depth_exceeded", context);
+    return null;
+  }
+  if (allowedSlots.length === 0) {
+    rejectPageSlots(path, "page_slots_forbidden", context);
+    return null;
+  }
+  if (preflight.structuralSlots === null) return []; // TASK-547-02 later owns native shape.
+  const firstUnknown = preflight.structuralSlots.find(
+    ({ slotKey }) => !allowedSlots.includes(slotKey as PageBlockSlotKey),
+  );
+  if (firstUnknown) {
+    rejectPageSlots(path, "page_slot_key_forbidden", context);
+    return null;
+  }
+  for (const slotKey of allowedSlots) {
+    const slot = preflight.structuralSlots.find((candidate) => candidate.slotKey === slotKey);
+    if (
+      slot &&
+      slot.arrayLength !== null &&
+      slot.arrayLength > PAGE_BLOCK_MAX_CHILDREN_PER_SLOT
+    ) {
+      rejectPageSlots(path, "page_slot_children_exceeded", context);
+      return null;
+    }
+  }
+  return allowedSlots.flatMap((slotKey) => {
+    const slot = preflight.structuralSlots?.find((candidate) => candidate.slotKey === slotKey);
+    return slot?.arrayLength === null || slot === undefined
+      ? []
+      : [{ slotKey, children: slot.children }];
+  });
+};
+const collectMalformedPageBranchBounds = (
+  block: JsonObject,
+  path: readonly (string | number)[],
+  depth: number,
+  context: PageReferenceVisitContext,
+  preflight = preflightPageBlockBounds(block, depth),
+): void => {
+  if (!preflight.hasSlots) return;
+  if (preflight.depthExceeded) {
+    rejectPageSlots(path, "page_tree_depth_exceeded", context);
+    return;
+  }
+  if (preflight.structuralSlots === null) return;
+  const firstOversized = preflight.structuralSlots.find(
+    ({ arrayLength }) =>
+      arrayLength !== null && arrayLength > PAGE_BLOCK_MAX_CHILDREN_PER_SLOT,
+  );
+  if (firstOversized) {
+    rejectPageSlots(path, "page_slot_children_exceeded", context);
+    return;
+  }
+  for (const { slotKey, children } of preflight.structuralSlots) {
+    for (const { child, childIndex } of children) {
+      collectMalformedPageBranchBounds(
+        child,
+        [...path, "slots", slotKey, childIndex],
+        depth + 1,
+        context,
+      );
+    }
+  }
+};
+const collectPageBlockReferences = (
+  block: JsonObject, // PackageRefs exist before native ID substitution.
+  path: readonly (string | number)[],
+  depth: number, // Root block = 1.
+  context: PageReferenceVisitContext,
+): void => {
+  const preflight = preflightPageBlockBounds(block, depth);
+  const type = readKnownPageBlockType(block.type, PAGE_REFERENCE_AUTHORITY.blockTypes);
+  if (!type) {
+    collectMalformedPageBranchBounds(block, path, depth, context, preflight);
+    return;
+  }
+  inspectAndRegisterReferenceProps(
+    block,
+    path,
+    type,
+    PAGE_REFERENCE_AUTHORITY.breakpoints,
+    context, // Uses context.recordPackageRefOccurrence; never module state.
+  );
+  const slots = validateSlotsFirstMatch(
+    preflight,
+    path,
+    PAGE_REFERENCE_AUTHORITY.slotsByType[type],
+    context,
+  );
+  if (slots === null) return;
+  for (const { slotKey, children } of slots) {
+    children.forEach(({ child, childIndex }) =>
+      collectPageBlockReferences(
+        child,
+        [...path, "slots", slotKey, childIndex],
+        depth + 1,
+        context,
+      )
+    );
+  }
+};
+const collectPageSourceReferences = (
+  context: Omit<PageReferenceVisitContext, "root">,
+): void => {
+  const root = selectPageReferenceRoot(context.source);
+  if (!root) return; // TASK-547-02 owns malformed native root/container shape.
+  const pageContext = { ...context, root };
+  collectPageCollectionLinkReferences(root.value, [root.rootKey], pageContext); // Same writer.
+  forEachNativeRootBlock(root.value, [root.rootKey], (block, path) =>
+    collectPageBlockReferences(block, path, 1, pageContext),
+  );
+};
+const collectRefsAtAllowedPaths = (registry: PackageResourceRegistry) => {
+  const diagnostics = createGraphDiagnostics();
+  const registeredReferencePaths = new Set<string>();
+  const blockedReferencePrefixes: ReferenceAuthorityPath[] = [];
+  const resolvedDetailPageContentTypes = new Map<
+    PackageResourceIdentity,
+    PackageResourceIdentity
+  >();
+  const { edges, descriptorsByIdentity } = collectPackageOccurrences({
+    registry,
+    collector: diagnostics,
+    registeredReferencePaths,
+    blockedReferencePrefixes,
+    resolvedDetailPageContentTypes,
+  });
+  scanRefLikeObjectsOnce({
+    registry,
+    diagnostics,
+    registeredReferencePaths,
+    blockedReferencePrefixes,
+  });
+  return { edges, descriptorsByIdentity, diagnostics };
+};
+const assertDependencyDepth = (
+  ordered: readonly PlannedPackageResource[],
+): void => {
+  const depthByIdentity = new Map<PackageResourceIdentity, number>();
+  for (const resource of ordered) {
+    let depth = 0;
+    for (const dependency of resource.dependencies) {
+      const dependencyDepth = depthByIdentity.get(dependency);
+      if (dependencyDepth === undefined) throw new Error("dependency order invariant");
+      depth = Math.max(depth, dependencyDepth + 1);
+    }
+    if (depth > PACKAGE_LIMITS.depth) throwDependencyDepthSingleton();
+    depthByIdentity.set(resource.identity, depth);
+  }
+};
+export const stableTopologicalSort = (registry, edges) => {
+  const ordered = collectStableKahnOrder(registry, edges);
+  if (ordered.length !== registry.resources.length) throwReferenceCycleSingleton();
+  assertDependencyDepth(ordered);
+  return ordered;
+};
+/** @internal; production-used, direct-test import only, never barrel/SDK exported. */
+export const finalizeAndSortReferenceGraph = (
+  registry: PackageResourceRegistry,
+  edges: readonly PackageReferenceEdge[],
+  batch: DiagnosticBatch<TaggedGraphDiagnostic>,
+): ReturnType<typeof stableTopologicalSort> => {
+  if (batch.overflowed) throwDiagnosticLimitSingleton();
+  if (edges.length > PACKAGE_LIMITS.referenceEdges) throwReferenceEdgesSingleton();
+  throwGraphDiagnostics(batch);
+  return stableTopologicalSort(registry, edges);
+};
 export function buildReferencePlan(pkg: FullSitePackageV1) {
-  const registry = indexUniqueKindKeys(pkg.resources);
-  const edges = collectRefsAtAllowedPaths(pkg.resources, REFERENCE_PATHS);
-  assertResolved(edges, registry);
-  return stableTopologicalSort(assertAcyclic(edges));
+  assertReferenceGraphJsonDepth(pkg.resources);
+  const registry = indexUniqueKindKeys(pkg.resources); // Bounded duplicate 100/101 finalizer.
+  const { edges, descriptorsByIdentity, diagnostics } = collectRefsAtAllowedPaths(registry);
+  const ordered = finalizeAndSortReferenceGraph(registry, edges, diagnostics.read());
+  return freezePlan(ordered, descriptorsByIdentity);
 }
+export function resolvePlannedPackageResourceRefs(resource, resolvedIds) {
+  return substituteRecordedDescriptors(resource, cloneJson(resource.seed.desired), resolvedIds);
+}
+const pkg = normalizeFullSitePackageForWrite(rawPackage);
+buildReferencePlan(pkg);
 ```
 
-Data flow: normalized package → unique registry → allowlisted refs → DAG → plan.
-Errors distinguish duplicate/missing/ambiguous/cycle/bad-path.
+Data flow: normalized package → JSON-depth guard → unique registry → package-
+ordered fixed discovery plus kind-selected Page `data`/Page Template `document`
+discovery (record successful Detail Page content-type targets) and route-ordered
+detail/type/agreement discovery → generic ref-like scan → semantic finalizer →
+stable cycle-first topology → dependency depth → frozen plan.
+This leaf's immutable `ReferenceGraphErrorCode`/`ReferenceGraphError` in
+`referenceRegistry.ts` owns exactly duplicate/missing/ambiguous/cycle/bad-path
+plus shared `site_package_too_complex`; it never widens L01 `types.ts`.
+Service/CLI mapping preserves those safe codes alongside `FullSitePackageError`.
+Type/runtime tests exhaust every parent-required code with only static bounded
+diagnostics. TASK-547-02 owns post-substitution native `desired` validation.
 
-Regression tests: every resource-kind edge, deterministic order, cycles,
-dangling/ambiguous refs, refs rejected at arbitrary Page text/data paths.
+Core tests pin non-Page `REFERENCE_PATHS` without `presence`; table-drive both required rows,
+the listing `when_present` row and every nullable row through absent/null/scalar/valid boundaries with exact code/reason/source path and occurrence counts. The focused
+Page suite independently proves Page `data` and Page Template `document` accept/
+substitute root plus recursive refs with exact root-first edge/descriptor arrays;
+every ref yields one occurrence/descriptor and distinct `A→B→A` builds prove writer
+isolation; opposite roots are forbidden and only recorded leaves change. It owns all Page table
+rows, device/nesting states, collection type, discriminator cross-product,
+deterministic recursion and forbidden `menu.desired.document.items`. For each
+Page kind pin depth 4/5, child 24/25, unknown slots and slots on an atom without
+truncating a reference-bearing branch. Separate named Page and Page Template cases set a
+columns block's `props.count` below its populated native slot count, place a valid
+ref in a preserved higher slot, and assert exact edge/descriptor order, successful
+substitution and zero forbidden diagnostics; using `getPageBlockActiveSlotKeys`
+must fail them. A blocked subtree yields one Page diagnostic and no descendant one.
+Use four independent (non-loop-collapsed) malformed-discriminator regressions:
+
+| Source kind | Depth-4 malformed block's own `slots` | Expected graph result |
+| --- | --- | --- |
+| `page` | depth-5 child, no ref-like descendant | exactly one `page_tree_depth_exceeded` and no other diagnostic |
+| `page` | depth-5 child containing a ref-like value | the same single structural diagnostic; no `package_ref_path_forbidden` duplicate |
+| `page_template` | depth-5 child, no ref-like descendant | exactly one `page_tree_depth_exceeded` and no other diagnostic |
+| `page_template` | depth-5 child containing a ref-like value | the same single structural diagnostic; no `package_ref_path_forbidden` duplicate |
+
+For each source kind, separately pin an in-bounds malformed-discriminator branch
+whose descendant is ref-like: it has no registered edge/descriptor or structural
+diagnostic and receives exactly one generic `package_ref_path_forbidden`. These
+fixtures prove behaviorally that only an actual bounds rejection suppresses its
+descendant generic finding; `blockedReferencePrefixes` remains private and tests
+must not require an exported production inspection seam or assert its internal
+array cardinality directly.
+
+Run separately named `page` and `page_template` reverse-authored malformed
+multi-sibling cases (shared shape support is allowed). Author root keys in order
+`zeta-private`, `safe-private`, `alpha-private`, `"10"`, `"2"`; keep arrays ≤24,
+put object children after scalar/`null` sentinels at distinct nonzero indexes and
+keep every descendant discriminator malformed. Canonical key order `"2"`, `"10"`,
+`alpha-private`, `safe-private`, `zeta-private` must yield exact reason order
+`page_tree_depth_exceeded, page_slot_children_exceeded, page_tree_depth_exceeded,
+page_slot_children_exceeded, package_ref_path_forbidden`: branches 1/3 end in
+depth rejection, 2/5 in child-count rejection, each with a ref-like sentinel
+inside rejected nested `slots`; the in-bounds `safe-private` sibling has its one
+sentinel outside every rejected prefix. Exact complete results prove continued
+sibling discovery, preserved child indexes, and neither narrow nor ancestor-wide
+blocked prefixes. Pin all display paths to the trusted prefix plus `[redacted]`,
+the static reasons/message, and absence of supplied slot keys/ref sentinels from
+every path, reason and message.
+Retire unused `isPackageRef`/kind import. Pin valid 1/128 and invalid uppercase/
+punctuation/129 keys; invalids yield `package_ref_key_invalid` before lookup.
+Pin shape/kind and every closed mapping;
+the fixed diagnostic-overflow singleton; and sentinel non-disclosure for
+duplicate, missing, wrong-kind, malformed-key, forbidden-path, content-route,
+depth, edge, cycle, resolved-ID and drift failures. Cross-product precedence
+cases pin extra+wrong-kind+bad-key → shape, exact-shape wrong-kind+bad-key → kind,
+depth-4 atom with slots and depth-4 layout with an unknown slot → depth, shallower
+atom with any slots → atom, and a shallower slot-capable unknown key → slot-key.
+Also pin that shallower valid atom+25 children → atom and valid unknown-slot+25
+children → slot-key (the preflight cannot leapfrog valid-type authority), while
+shallower malformed-discriminator+25 children → child-count and depth-4
+malformed-discriminator+25 children → depth. Every malformed structural case
+must expose one diagnostic at the block's `slots` path and no duplicate generic
+descendant finding, never a discriminator/atom/slot-key diagnostic. The helper's
+same-path prefix remains a private implementation invariant proven through this
+observable result and the source-ordinal scope cases below.
+Pin object-only, object/array, scalar and `null` terminals at exact JSON level 64
+and reject the same shapes at 65 with the exact static `json_depth_exceeded`
+singleton. Raw normalize→graph and forged-typed duplicate+depth inputs both pin
+depth precedence. Forbidden-path and depth sentinels must be absent from complete
+paths/reasons/messages, not only from reasons.
+Mix bad-path, missing-target and ambiguity occurrences in both declaration
+orders: the fixed top-level priority must not change, while the complete list
+retains each order's frozen discovery order. Pin missing+ambiguity without a bad
+path, ambiguity alone, exactly 100 mixed diagnostics, a 101st mixed diagnostic
+and duplicate-identity 100/101 through L01's imported factory; both 101 cases
+must discard the partial list. Pin
+bad-path + 4,097 accepted edges → edge singleton and 101 mixed diagnostics +
+edge overflow → diagnostic singleton. Accept 4,096 allowed-path occurrences and reject
+4,097; separate 4,097 forbidden/malformed/missing ref-like occurrences with zero accepted edges
+choose diagnostic overflow, never edge overflow. These cases replace L01's path-blind test.
+
+Pin cross-collection authority at local index 0 in both root orientations: Page
+authorizes `data` while Page Template forbids the same relative `data` path, then
+Page Template authorizes `document` while Page forbids its peer path. Global
+ordinals differ; diagnostics use the offending local index and descriptors stay
+relative. Repeat blocked-prefix isolation with native Page `data` blocking versus
+non-native Page Template `data`, then native Page Template `document` versus
+non-native Page `document`; each yields the structural plus peer forbidden result.
+This proves global-ordinal isolation without exposing the private collectors.
+
+Pin runtime immutability of the exported fixed registry's outer array, rows and
+segment arrays with mutation attempts. After the graph module has captured its
+private Page snapshot, synchronously attempt to widen, narrow and reorder the
+imported `pageBlockTypes` and `pageBreakpoints` arrays; mutate slot-array contents
+and reassign/remap `pageBlockCapabilities[type].slots`. Graph acceptance and
+traversal order must remain unchanged. Save every original descriptor/value and
+restore all imported owners in `finally`.
+
+Pin occurrence count, deduplicated dependencies, stable order and exact frozen
+plan keys including both indexes. First rows in two collections share
+`collectionIndex:0` but have distinct global ordinals; a second row has local 1.
+Pin content-route order where `detailPageId` has a descriptor, `type` adds a counted
+dependency edge, and `type` remains unchanged after substitution. Pin exact
+matching route/Detail Page content-type targets as accepted and mismatching
+targets as exactly one `site_package_ref_bad_path` /
+`content_route_detail_content_type_mismatch` at the route `detailPageId` path,
+with no supplied slug/key/identity in path, reason or message. Independently pin
+absent and null `detailPageId`; missing Detail Page target; invalid/missing
+Detail Page `contentTypeId` target; and missing/ambiguous route type. Each keeps
+only its existing first-match result and never gains the mismatch. Pin that both
+matching and mismatching fully resolved rows count the same two route occurrence
+edges plus the Detail Page's independent content-type edge; add mismatch+4,097
+and 101st-mismatch+edge-overflow cases in the diagnostics file for the frozen
+finalizer precedence. Pin exact code-unit order `a-a,a.a,a_a,aa` in dependency
+sorting and a synthetic equal-
+ordinal identity tie so a retained `localeCompare` cannot pass. Pin substitution,
+immutability/one build. On a source whose indexes differ, missing-ID/drift encodes
+`(resource,descriptor.path)` as local `[0]` without descriptor mutation. Except for the
+Page suite's explicit immutable-snapshot regression importing the native Page
+authority owners named above, this leaf's tests import only TASK-547-01 package
+owners and use a local Bun-free harness to prove normalize→graph once at raw
+input. They do not import planner, apply, preparer or CLI owners: exact call-count
+tests are handed to 02-L01, 02-L02 and 05-L01. A
+structurally normalized bad-path ref must fail in that local harness before its
+injected lazy-dependency sentinel is acquired.
+
+Core cases pair non-object, wrong-kind and bad-key `detailPageId` values with a
+valid unique `type` and expect respectively `expected_package_ref`,
+`package_ref_kind_mismatch` and `package_ref_key_invalid`; pair an invalid type
+with a valid detail link and expect `content_route_type_invalid`. Each asserts
+that single diagnostic, no mismatch, the counterpart edge/descriptor through an
+edge-boundary fixture and no lazy acquisition.
+
+Focused phase tests use shared builders and directly import the production-used
+internal `finalizeAndSortReferenceGraph`; no copied finalizer or caller override.
+The plan suite accepts 64 edges and rejects acyclic 65 edges with the depth
+singleton on repeats. The core suite sends a clean cycle plus disjoint over-depth
+branch through the helper and gets the cycle singleton twice; the same graph with
+a real semantic batch returns that complete semantic result twice and reaches
+neither cycle nor depth. Assert whole diagnostics/identity order, not only codes.
+
+Test ownership is physical and non-overlapping:
+
+- `full-site-package-references-core.test.ts` owns fixed registry/identity/presence,
+  content-route agreement, topology and semantic-before-cycle cases;
+- `full-site-package-references-page.test.ts` owns the four root-authority/
+  substitution/handoff cases and both Page-backed recursive discriminator/slot/
+  boundary cases;
+- `full-site-package-references-diagnostics.test.ts` owns reason/code mapping,
+  ref-key/first-match/mixed precedence, source-qualified display paths,
+  mismatch/edge precedence, JSON/edge/diagnostic limits and non-disclosure;
+- `full-site-package-references-plan.test.ts` owns non-Page occurrence/dependency
+  order, exact dependency-depth boundaries/repeats, freeze, generic descriptor
+  resolution and drift cases; and
+- `fullSitePackageReferenceTestSupport.ts` owns the single reusable
+  linear/combined graph builders plus Page/depth builders, while shared
+  package/error fixtures stay in L01's
+  `fullSitePackageTestSupport.ts`.
+
+Retire `full-site-package-references.test.ts` after moving every case; do not copy
+cases/builders. Each four `.test.ts` files must run independently.
 
 ## Sub-Tasks
 
-- [ ] Implement closed registry/ref path table and DAG planner.
-- [ ] Add `tests/vitest/kits/full-site-package-references.test.ts`.
+- [x] Implement closed registry/ref path table and DAG planner.
+- [x] Add the original `tests/vitest/kits/full-site-package-references.test.ts`.
+- [x] Remove the forbidden `menu.desired.document.items` registry row and
+  rebaseline its edge/freeze test; implement recursive Page/Page Template
+  base/responsive/native-slot traversal with 4/24 reject boundaries; correct
+  discriminator/private presence/ref-key coverage, retire `isPackageRef`, and
+  source-qualify diagnostics via global `ordinal` plus local `collectionIndex`
+  while descriptors remain relative;
+  freeze Page owner imports, JSON-depth counting, global mixed-diagnostic
+  precedence/overflow through L01's sole collector factory, sole accepted-edge enforcement
+  after removing L01's metric, the exact occurrence-purpose/content-route plan,
+  descriptors and substitution helper; enforce the exact 64-edge longest-path
+  boundary and semantic → cycle → depth through the production internal helper; split and
+  retire the original reference suite per the ownership above; then run fresh
+  gates.
 
 ## Testing Requirements
 
-Targeted Vitest file; core lint/types; touched-file line counts.
+Run independently:
+
+- `bunx vitest run --config vitest.config.ts tests/vitest/kits/full-site-package-references-core.test.ts`
+- `bunx vitest run --config vitest.config.ts tests/vitest/kits/full-site-package-references-page.test.ts`
+- `bunx vitest run --config vitest.config.ts tests/vitest/kits/full-site-package-references-diagnostics.test.ts`
+- `bunx vitest run --config vitest.config.ts tests/vitest/kits/full-site-package-references-plan.test.ts`
+
+Then run:
+
+- `bunx vitest run --config vitest.config.ts tests/vitest/kits/full-site-package-references-core.test.ts tests/vitest/kits/full-site-package-references-page.test.ts tests/vitest/kits/full-site-package-references-diagnostics.test.ts tests/vitest/kits/full-site-package-references-plan.test.ts`
+- `bun --cwd core lint:types`
+- `bun --cwd core lint`
+- `node _docs/_workflows/lib/task-547-final-validation-contract.mjs --line-gate`
+
+The last command is the baseline-to-final touched production/test/support
+line-count authority and must pass with every human-authored file at or below
+1,000 physical lines.
 
 ## Documentation Updates Required
 

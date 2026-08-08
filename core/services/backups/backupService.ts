@@ -4,6 +4,8 @@ import { and, desc, eq, getTableColumns, inArray, lt } from "drizzle-orm";
 import type { PgTable } from "drizzle-orm/pg-core";
 
 import { db } from "../../db/client";
+import { acquireNativeCmsWriterFence } from "../../db/nativeCmsWriterFence";
+import { clearSiteCache } from "../../site/cache/siteCache";
 import {
   backups,
   backupSchedules,
@@ -751,9 +753,14 @@ export async function restoreBackup(
 
   // Single outer transaction: replace snapshot tables + settings share one `tx`,
   // so any failure rolls the whole restore back (no partial state).
-  await db.transaction(async (tx) => {
-    await restoreArtifactTx(tx, artifact);
-  });
+  await db.transaction(
+    async (tx) => {
+      await acquireNativeCmsWriterFence(tx);
+      await restoreArtifactTx(tx, artifact);
+    },
+    { isolationLevel: "read committed" }
+  );
+  if (artifact.settings) clearSiteCache();
 
   // Restore does not change the backup row's own status; return the redacted record.
   return mapBackup(row);

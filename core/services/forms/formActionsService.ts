@@ -1,9 +1,10 @@
-import { and, asc, desc, eq, sql } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, sql } from "drizzle-orm";
 
+import { acquireNativeCmsWriterFence } from "../../db/nativeCmsWriterFence";
 import { db } from "../../db/client";
-import { formActionRuns, formActions } from "../../db/schema";
+import { formActionRuns, formActions, forms } from "../../db/schema";
 import {
-  normalizeFormActionsInput,
+  normalizeFormActionsForWrite,
   normalizeFormActionCondition,
   parseFormActionConfigByType,
   type FormActionCondition,
@@ -11,7 +12,6 @@ import {
   type FormActionType,
   type NormalizedFormAction,
 } from "./formActionsContract";
-import { getForm } from "./formsService";
 
 export type FormActionRecord = {
   id: string;
@@ -133,25 +133,26 @@ export async function listFormActions(formId: string) {
   return rows.map(normalizeActionRow);
 }
 
-export async function setFormActions(formId: string, input: unknown) {
-  const form = await getForm(formId);
+type FormActionTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
+
+export async function setFormActionsTx(
+  tx: FormActionTransaction,
+  formId: string,
+  input: unknown,
+  options: Readonly<{ requireStableIds: boolean }>
+) {
+  const [form] = await tx
+    .select({ id: forms.id })
+    .from(forms)
+    .where(eq(forms.id, formId))
+    .for("key share");
   if (!form) throw new Error("form_not_found");
-
-  const normalized = normalizeFormActionsInput(input)
-    .sort((left, right) => left.orderIndex - right.orderIndex)
-    .map((action, index) => ({ ...action, orderIndex: index }));
-
+  const normalized = normalizeFormActionsForWrite(input, options);
   const now = new Date();
-
-  const inserted = await db.transaction(async (tx) => {
+  if (!options.requireStableIds) {
     await tx.delete(formActions).where(eq(formActions.formId, formId));
-    if (normalized.length === 0) {
-      return [] as typeof formActions.$inferSelect[];
-    }
-
-    return tx
-      .insert(formActions)
-      .values(
+    if (normalized.length > 0) {
+      await tx.insert(formActions).values(
         normalized.map((action) => ({
           id: action.id,
           formId,
@@ -165,18 +166,74 @@ export async function setFormActions(formId: string, input: unknown) {
           createdAt: now,
           updatedAt: now,
         }))
-      )
-      .returning();
-  });
+      );
+    }
+  } else {
+    const existing = await tx
+      .select({ id: formActions.id })
+      .from(formActions)
+      .where(eq(formActions.formId, formId))
+      .orderBy(asc(formActions.id))
+      .for("update");
+    const existingIds = new Set(existing.map((row) => row.id));
+    const targetIds = new Set(normalized.map((action) => action.id));
+    const removedIds = existing.map((row) => row.id).filter((id) => !targetIds.has(id));
+    if (removedIds.length > 0) {
+      const [referenced] = await tx
+        .select({ id: formActionRuns.id })
+        .from(formActionRuns)
+        .where(inArray(formActionRuns.actionId, removedIds))
+        .limit(1)
+        .for("update");
+      if (referenced) throw new Error("site_package_state_changed");
+      await tx.delete(formActions).where(inArray(formActions.id, removedIds));
+    }
+    for (const action of normalized) {
+      const values = {
+        type: action.type,
+        label: action.label,
+        enabled: action.enabled,
+        continueOnError: action.continueOnError,
+        condition: action.condition,
+        config: action.config,
+        orderIndex: action.orderIndex,
+        updatedAt: now,
+      };
+      if (existingIds.has(action.id)) {
+        await tx
+          .update(formActions)
+          .set(values)
+          .where(and(eq(formActions.formId, formId), eq(formActions.id, action.id)));
+      } else {
+        await tx.insert(formActions).values({
+          id: action.id,
+          formId,
+          ...values,
+          createdAt: now,
+        });
+      }
+    }
+  }
+  const rows = await tx
+    .select()
+    .from(formActions)
+    .where(eq(formActions.formId, formId))
+    .orderBy(asc(formActions.orderIndex), asc(formActions.id));
+  return rows.map(normalizeActionRow);
+}
 
-  return inserted.map(normalizeActionRow);
+export async function setFormActions(formId: string, input: unknown) {
+  return db.transaction(
+    async (tx) => {
+      await acquireNativeCmsWriterFence(tx);
+      return setFormActionsTx(tx, formId, input, { requireStableIds: false });
+    },
+    { isolationLevel: "read committed" }
+  );
 }
 
 export async function getFormActionById(actionId: string) {
-  const [row] = await db
-    .select()
-    .from(formActions)
-    .where(eq(formActions.id, actionId));
+  const [row] = await db.select().from(formActions).where(eq(formActions.id, actionId));
 
   return row ? normalizeActionRow(row) : null;
 }
@@ -185,27 +242,50 @@ export async function createFormActionRun(input: CreateFormActionRunInput) {
   const actionLabel = normalizeActionLabel(input.actionLabel);
   if (!actionLabel) throw new Error("form_action_invalid_label");
 
-  const [row] = await db
-    .insert(formActionRuns)
-    .values({
-      formId: input.formId,
-      submissionId: input.submissionId ?? null,
-      actionId: input.actionId ?? null,
-      actionType: input.actionType,
-      actionLabel,
-      status: input.status,
-      attempt: input.attempt ?? 1,
-      trigger: input.trigger ?? "submission",
-      errorCode: input.errorCode ?? null,
-      errorMessage: input.errorMessage ?? null,
-      requestPayload: input.requestPayload ?? null,
-      responsePayload: input.responsePayload ?? null,
-      actionCondition: input.actionCondition,
-      actionConfig: input.actionConfig,
-      submissionPayload: input.submissionPayload,
-      retryOfId: input.retryOfId ?? null,
-    })
-    .returning();
+  const row = await db.transaction(
+    async (tx) => {
+      await acquireNativeCmsWriterFence(tx);
+      const [form] = await tx
+        .select({ id: forms.id })
+        .from(forms)
+        .where(eq(forms.id, input.formId))
+        .for("key share");
+      if (!form) throw new Error("form_not_found");
+      if (input.actionId) {
+        const [action] = await tx
+          .select({ id: formActions.id, formId: formActions.formId })
+          .from(formActions)
+          .where(eq(formActions.id, input.actionId))
+          .for("key share");
+        if (!action || action.formId !== input.formId) {
+          throw new Error("form_action_not_found");
+        }
+      }
+      const [created] = await tx
+        .insert(formActionRuns)
+        .values({
+          formId: input.formId,
+          submissionId: input.submissionId ?? null,
+          actionId: input.actionId ?? null,
+          actionType: input.actionType,
+          actionLabel,
+          status: input.status,
+          attempt: input.attempt ?? 1,
+          trigger: input.trigger ?? "submission",
+          errorCode: input.errorCode ?? null,
+          errorMessage: input.errorMessage ?? null,
+          requestPayload: input.requestPayload ?? null,
+          responsePayload: input.responsePayload ?? null,
+          actionCondition: input.actionCondition,
+          actionConfig: input.actionConfig,
+          submissionPayload: input.submissionPayload,
+          retryOfId: input.retryOfId ?? null,
+        })
+        .returning();
+      return created;
+    },
+    { isolationLevel: "read committed" }
+  );
 
   if (!row) throw new Error("form_action_run_create_failed");
   return normalizeRunRow(row);
@@ -236,10 +316,7 @@ export async function listFormActionRuns(
 }
 
 export async function getFormActionRun(runId: string) {
-  const [row] = await db
-    .select()
-    .from(formActionRuns)
-    .where(eq(formActionRuns.id, runId));
+  const [row] = await db.select().from(formActionRuns).where(eq(formActionRuns.id, runId));
 
   return row ? normalizeRunRow(row) : null;
 }

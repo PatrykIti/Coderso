@@ -26,7 +26,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import { Textarea } from "@/components/ui/textarea";
 import { SharedColorControl } from "@/ui/widgets/editors/SharedColorControl";
+
+import { FORM_SCHEMA_LIMITS } from "../../../services/forms/formSettings";
 
 import {
   FORM_THEME_ALIGNS,
@@ -192,6 +195,7 @@ function EnumSelect({
 // -----------------------------------------------------------------------------
 export function FormDesignPanel({ theme, onThemeChange, disabled }: FormDesignPanelProps) {
   const resolved = resolveFormTheme(theme); // concrete effective tokens for hints
+  const submitSupportingText = theme?.submit?.supportingText;
 
   // set/override a single token: build the complete next group (merge over the
   // current group) and emit it as a GROUP-LEVEL REPLACE (516-03 replaces the whole
@@ -609,6 +613,39 @@ export function FormDesignPanel({ theme, onThemeChange, disabled }: FormDesignPa
                     patchGroup("submit", { label: next });
                   } else {
                     clearKey("submit", "label");
+                  }
+                }}
+              />
+            </ControlRow>
+            <ControlRow
+              label="Supporting text"
+              hint={
+                submitSupportingText === undefined ? undefined : (
+                  <button
+                    type="button"
+                    aria-label="Reset submit supporting text"
+                    className="text-[10px] font-medium text-muted-foreground transition hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
+                    disabled={disabled}
+                    onClick={() => clearKey("submit", "supportingText")}
+                  >
+                    Reset
+                  </button>
+                )
+              }
+            >
+              <Textarea
+                aria-label="Submit supporting text"
+                data-form-theme-control="submit.supportingText"
+                value={submitSupportingText ?? ""}
+                maxLength={FORM_SCHEMA_LIMITS.submitSupportingText}
+                rows={3}
+                disabled={disabled}
+                onChange={(event) => {
+                  const next = event.target.value;
+                  if (next.trim().length > 0) {
+                    patchGroup("submit", { supportingText: next });
+                  } else {
+                    clearKey("submit", "supportingText");
                   }
                 }}
               />

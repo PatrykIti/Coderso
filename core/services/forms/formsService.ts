@@ -1,6 +1,7 @@
 import { asc, desc, eq, sql } from "drizzle-orm";
 
 import { db } from "../../db/client";
+import { acquireNativeCmsWriterFence } from "../../db/nativeCmsWriterFence";
 import { formActionRuns, formFields, forms, formSubmissions } from "../../db/schema";
 import { invalidateLinkedDetailPageRouteCaches } from "../../site/cache/siteCache";
 import {
@@ -115,86 +116,77 @@ export async function countFormActionRuns(formId: string) {
 }
 
 export async function createForm(input: FormCreateInput) {
-  const name = normalizeName(input.name);
-  if (!name) throw new Error("form_name_required");
-  const slug = deriveFormSlug(name, input.slug ?? null);
-  const status = normalizeFormStatus(input.status, "draft");
-  const description = normalizeDescription(input.description);
-  const successMessage = normalizeSuccessMessage(input.successMessage);
-  const successRedirectUrl = normalizeFormSuccessRedirectUrl(input.successRedirectUrl);
-  const submissionAccess = normalizeSubmissionAccess(input.submissionAccess, "public");
-  const settings = normalizeFormSettings(input.settings);
-
-  const existing = await db.select({ id: forms.id }).from(forms).where(eq(forms.slug, slug));
-  if (existing.length > 0) throw new Error("form_slug_exists");
-
-  const now = new Date();
-  const [row] = await db
-    .insert(forms)
-    .values({
-      name,
-      slug,
-      status,
-      description,
-      successMessage,
-      successRedirectUrl,
-      submissionAccess,
-      settings,
-      createdAt: now,
-      updatedAt: now,
-    })
-    .returning();
-
-  return row ?? null;
+  return db.transaction(
+    async (tx) => {
+      await acquireNativeCmsWriterFence(tx);
+      const name = normalizeName(input.name);
+      if (!name) throw new Error("form_name_required");
+      const slug = deriveFormSlug(name, input.slug ?? null);
+      const status = normalizeFormStatus(input.status, "draft");
+      const description = normalizeDescription(input.description);
+      const successMessage = normalizeSuccessMessage(input.successMessage);
+      const successRedirectUrl = normalizeFormSuccessRedirectUrl(input.successRedirectUrl);
+      const submissionAccess = normalizeSubmissionAccess(input.submissionAccess, "public");
+      const settings = normalizeFormSettings(input.settings);
+      const existing = await tx.select({ id: forms.id }).from(forms).where(eq(forms.slug, slug));
+      if (existing.length > 0) throw new Error("form_slug_exists");
+      const now = new Date();
+      const [row] = await tx
+        .insert(forms)
+        .values({
+          name,
+          slug,
+          status,
+          description,
+          successMessage,
+          successRedirectUrl,
+          submissionAccess,
+          settings,
+          createdAt: now,
+          updatedAt: now,
+        })
+        .returning();
+      return row ?? null;
+    },
+    { isolationLevel: "read committed" }
+  );
 }
 
 export async function updateForm(id: string, input: FormUpdateInput) {
-  const update: Partial<typeof forms.$inferInsert> = {
-    updatedAt: new Date(),
-  };
-
-  if (input.name !== undefined) {
-    const name = normalizeName(input.name);
-    if (!name) throw new Error("form_name_required");
-    update.name = name;
-  }
-
-  if (input.slug !== undefined) {
-    const baseName = update.name ?? (await getForm(id))?.name;
-    if (!baseName) throw new Error("form_not_found");
-    const slug = deriveFormSlug(baseName, input.slug);
-    const existing = await db.select({ id: forms.id }).from(forms).where(eq(forms.slug, slug));
-    if (existing.length > 0 && existing[0]?.id !== id) {
-      throw new Error("form_slug_exists");
-    }
-    update.slug = slug;
-  }
-
-  if (input.status !== undefined) {
-    update.status = normalizeFormStatus(input.status, "draft");
-  }
-
-  if (input.description !== undefined) {
-    update.description = normalizeDescription(input.description);
-  }
-
-  if (input.successMessage !== undefined) {
-    update.successMessage = normalizeSuccessMessage(input.successMessage);
-  }
-
-  if (input.successRedirectUrl !== undefined) {
-    update.successRedirectUrl = normalizeFormSuccessRedirectUrl(input.successRedirectUrl);
-  }
-
-  if (input.submissionAccess !== undefined) {
-    update.submissionAccess = normalizeSubmissionAccess(input.submissionAccess, "public");
-  }
-
-  if (input.settings !== undefined) {
-    update.settings = normalizeFormSettings(input.settings);
-  }
-
-  const [row] = await db.update(forms).set(update).where(eq(forms.id, id)).returning();
+  const row = await db.transaction(
+    async (tx) => {
+      await acquireNativeCmsWriterFence(tx);
+      const [existing] = await tx.select().from(forms).where(eq(forms.id, id)).for("update");
+      if (!existing) return null;
+      const update: Partial<typeof forms.$inferInsert> = { updatedAt: new Date() };
+      if (input.name !== undefined) {
+        const name = normalizeName(input.name);
+        if (!name) throw new Error("form_name_required");
+        update.name = name;
+      }
+      if (input.slug !== undefined) {
+        const slug = deriveFormSlug(update.name ?? existing.name, input.slug);
+        const conflict = await tx.select({ id: forms.id }).from(forms).where(eq(forms.slug, slug));
+        if (conflict.some((candidate) => candidate.id !== id)) throw new Error("form_slug_exists");
+        update.slug = slug;
+      }
+      if (input.status !== undefined) update.status = normalizeFormStatus(input.status, "draft");
+      if (input.description !== undefined)
+        update.description = normalizeDescription(input.description);
+      if (input.successMessage !== undefined)
+        update.successMessage = normalizeSuccessMessage(input.successMessage);
+      if (input.successRedirectUrl !== undefined) {
+        update.successRedirectUrl = normalizeFormSuccessRedirectUrl(input.successRedirectUrl);
+      }
+      if (input.submissionAccess !== undefined) {
+        update.submissionAccess = normalizeSubmissionAccess(input.submissionAccess, "public");
+      }
+      if (input.settings !== undefined) update.settings = normalizeFormSettings(input.settings);
+      const [updated] = await tx.update(forms).set(update).where(eq(forms.id, id)).returning();
+      return updated ?? null;
+    },
+    { isolationLevel: "read committed" }
+  );
 
   if (row) {
     await invalidateLinkedDetailPageRouteCaches();
@@ -204,16 +196,31 @@ export async function updateForm(id: string, input: FormUpdateInput) {
 }
 
 export async function deleteForm(id: string) {
-  const existing = await getForm(id);
-  if (!existing) return null;
-  const [submissionCount, actionRunCount] = await Promise.all([
-    countFormSubmissions(id),
-    countFormActionRuns(id),
-  ]);
-  if (submissionCount > 0 || actionRunCount > 0) {
-    throw new Error("form_delete_restricted");
-  }
-  const [row] = await db.delete(forms).where(eq(forms.id, id)).returning();
+  const row = await db.transaction(
+    async (tx) => {
+      await acquireNativeCmsWriterFence(tx);
+      const [existing] = await tx
+        .select({ id: forms.id })
+        .from(forms)
+        .where(eq(forms.id, id))
+        .for("update");
+      if (!existing) return null;
+      const [submissionCount] = await tx
+        .select({ count: sql<number>`count(*)::int` })
+        .from(formSubmissions)
+        .where(eq(formSubmissions.formId, id));
+      const [actionRunCount] = await tx
+        .select({ count: sql<number>`count(*)::int` })
+        .from(formActionRuns)
+        .where(eq(formActionRuns.formId, id));
+      if (Number(submissionCount?.count ?? 0) > 0 || Number(actionRunCount?.count ?? 0) > 0) {
+        throw new Error("form_delete_restricted");
+      }
+      const [deleted] = await tx.delete(forms).where(eq(forms.id, id)).returning();
+      return deleted ?? null;
+    },
+    { isolationLevel: "read committed" }
+  );
   if (row) {
     await invalidateLinkedDetailPageRouteCaches();
   }
@@ -229,36 +236,44 @@ export async function listFormFields(formId: string) {
 }
 
 export async function setFormFields(formId: string, fieldsInput: FormFieldInput[]) {
-  const fieldsSnapshot = snapshotFormFieldsWriteShape(fieldsInput);
-  const form = await getForm(formId);
-  if (!form) throw new Error("form_not_found");
-
-  const normalized = normalizeFormFields(fieldsSnapshot);
-  const now = new Date();
-
-  const inserted = await db.transaction(async (tx) => {
-    await tx.delete(formFields).where(eq(formFields.formId, formId));
-    if (normalized.length === 0) return [] as (typeof formFields.$inferSelect)[];
-    return tx
-      .insert(formFields)
-      .values(
-        normalized.map((field) => ({
-          formId,
-          id: field.id,
-          type: field.type,
-          label: field.label,
-          name: field.name,
-          required: field.required,
-          settings: field.settings,
-          orderIndex: field.orderIndex,
-          createdAt: now,
-          updatedAt: now,
-        }))
-      )
-      .returning();
-  });
-
-  await db.update(forms).set({ updatedAt: now }).where(eq(forms.id, formId));
+  const inserted = await db.transaction(
+    async (tx) => {
+      await acquireNativeCmsWriterFence(tx);
+      const fieldsSnapshot = snapshotFormFieldsWriteShape(fieldsInput);
+      const [form] = await tx
+        .select({ id: forms.id })
+        .from(forms)
+        .where(eq(forms.id, formId))
+        .for("update");
+      if (!form) throw new Error("form_not_found");
+      const normalized = normalizeFormFields(fieldsSnapshot);
+      const now = new Date();
+      await tx.delete(formFields).where(eq(formFields.formId, formId));
+      const rows =
+        normalized.length === 0
+          ? []
+          : await tx
+              .insert(formFields)
+              .values(
+                normalized.map((field) => ({
+                  formId,
+                  id: field.id,
+                  type: field.type,
+                  label: field.label,
+                  name: field.name,
+                  required: field.required,
+                  settings: field.settings,
+                  orderIndex: field.orderIndex,
+                  createdAt: now,
+                  updatedAt: now,
+                }))
+              )
+              .returning();
+      await tx.update(forms).set({ updatedAt: now }).where(eq(forms.id, formId));
+      return rows;
+    },
+    { isolationLevel: "read committed" }
+  );
   await invalidateLinkedDetailPageRouteCaches();
 
   return inserted as (typeof formFields.$inferSelect)[];

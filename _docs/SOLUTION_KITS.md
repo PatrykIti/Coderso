@@ -105,6 +105,20 @@ Core rollback behavior (unchanged):
 - remove created resources for `create`,
 - includes nested content: taxonomies, form fields, page SEO, menu items.
 
+## Full-site package executor
+
+TASK-547 adds a strict file-driven executor alongside the catalog installer. It
+reuses the exported Solution Kit run ledger but does not add a catalog entry or
+admin/public endpoint. `FullSitePackageV1` supports ten native resource kinds,
+closed `{ ref, key }` references, bounded DAG validation, deterministic
+create/update/no-op/conflict planning, and saga compensation.
+
+Natural-key equality alone never proves ownership. Update and rollback require a
+successful, non-rolled-back run whose snapshot carries the same native ID.
+Pages, entries, detail pages, and menus publish only after their draft state is
+complete; shell settings apply last. Exact CLI usage and limits are documented
+in `docs/develop/full-site-packages.md`.
+
 ## QA Matrix (2026-02-20)
 
 | Suite | Command | Result |

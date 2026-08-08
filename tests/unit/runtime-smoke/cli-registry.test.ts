@@ -15,6 +15,22 @@ test("runtime smoke CLI accepts only the exact public shape", () => {
       "fast",
     ])
   ).toEqual({ command: "run", suite: "task-540", profile: "fast", session: "wf552-fast" });
+  expect(
+    parseRuntimeSmokeArgs([
+      "run",
+      "--suite",
+      "task-547",
+      "--profile",
+      "certification",
+      "--session",
+      "wf547-certification",
+    ])
+  ).toEqual({
+    command: "run",
+    suite: "task-547",
+    profile: "certification",
+    session: "wf547-certification",
+  });
 
   const invalid = [
     ["start", "--suite", "task-540", "--profile", "fast", "--session", "wf552-fast"],
@@ -31,12 +47,20 @@ test("runtime smoke CLI accepts only the exact public shape", () => {
   }
 });
 
-test("static registry reserves exactly three fixed adapters", async () => {
-  expect(staticSmokeRegistry.ids()).toEqual(["task-540", "widget-contract", "production-boundary"]);
+test("static registry reserves exactly four fixed adapters", async () => {
+  expect(staticSmokeRegistry.ids()).toEqual([
+    "task-540",
+    "task-547",
+    "widget-contract",
+    "production-boundary",
+  ]);
   expect(staticSmokeRegistry.require("task-540").adapterPath).toBe(
     "scripts/runtime-smoke/adapters/task-540.ts"
   );
   const adapter = await staticSmokeRegistry.require("task-540").loadFixedAdapter(process.cwd());
   expect(adapter.suiteId).toBe("task-540");
   expect(adapter.supportedProfiles).toEqual(["fast", "certification"]);
+  const task547 = await staticSmokeRegistry.require("task-547").loadFixedAdapter(process.cwd());
+  expect(task547.suiteId).toBe("task-547");
+  expect(task547.supportedProfiles).toEqual(["fast", "certification"]);
 });

@@ -1,57 +1,11 @@
 import { randomBytes } from "node:crypto";
-import { pathToFileURL } from "node:url";
-import { resolveInsideRoot, SmokeError } from "../contracts";
+import { SmokeError } from "../contracts";
 import type { RuntimeSmokeContext } from "../lifecycle";
-import { resolveExecutableOnPath } from "../process-supervisor";
 import type { RepositorySnapshot } from "../repository-guard";
 import type { SmokeAdapter, SmokeAdapterResult } from "./types";
-import {
-  Task540PersistentBridge,
-  type PersistentBunBridgeInstaller,
-} from "./task-540/persistent-bridge";
-
-interface Task540Plan {
-  readonly requiredScreenshotPaths: readonly string[];
-}
-
-interface Task540Evidence {
-  readonly pass: true;
-  readonly browserReceipts: readonly unknown[];
-  readonly runtimeReceipts: readonly unknown[];
-  readonly cleanupReceipts: readonly unknown[];
-  readonly scenarios: readonly { readonly id: string }[];
-  readonly finalization: {
-    readonly screenshots: readonly { readonly path: string; readonly sha256: string }[];
-  };
-}
-
-interface Task540ContractModule {
-  buildTask540SmokePlan(input: { readonly nonce: string }): Task540Plan;
-}
-
-interface Task540ExecutorModule {
-  executeTask540SmokePlan(input: {
-    readonly root: string;
-    readonly nonce: string;
-    readonly assertSafeEvidence: (value: unknown, label: string) => unknown;
-    readonly snapshotRepository: () => Promise<
-      Readonly<{
-        paths: readonly string[];
-        hashes: Readonly<Record<string, string>>;
-      }>
-    >;
-  }): Promise<unknown>;
-}
-
-interface Task540TransportModule {
-  readonly installPersistentBunBridgeDispatcher: PersistentBunBridgeInstaller;
-}
-
-async function loadRootModule<T>(root: string, relativePath: string): Promise<T> {
-  return (await import(
-    pathToFileURL(resolveInsideRoot(root, relativePath, "module path")).href
-  )) as T;
-}
+import type { Task540NativeEvidence } from "./task-540/suite/composition/contracts";
+import { runTask540NativeSuite } from "./task-540/suite/composition/suite";
+import { isTask540CleanupLogicalReceiptCount } from "./task-540/cleanup-cardinality";
 
 function sensitiveEnvironmentValues(environment: NodeJS.ProcessEnv): readonly string[] {
   const values = new Set<string>();
@@ -101,146 +55,65 @@ export function createTask540SafeEvidenceAssertion(environment: NodeJS.ProcessEn
   };
 }
 
-export function projectTask540LegacySnapshot(snapshot: RepositorySnapshot) {
+export function projectTask540RepositorySnapshot(snapshot: RepositorySnapshot) {
   return Object.freeze({
     paths: Object.freeze(snapshot.files.map(({ path }) => path)),
     hashes: Object.freeze(
-      Object.fromEntries(snapshot.files.map(({ path, sha256 }) => [path, sha256]))
+      Object.fromEntries(
+        snapshot.files.map(({ path, kind, sha256 }) => [path, `${kind}:${sha256}`])
+      )
     ),
   });
 }
 
-export function validateTask540Evidence(value: unknown): Task540Evidence {
-  // The canonical executor has already checked exact keys, all 496 receipt cardinalities,
-  // recursive freezing, scenario coverage, screenshot identities and the complete cleanup proof
-  // before it returns. This adapter owns only the small projection it consumes; duplicating the
-  // whole canonical contract here made a green 19-minute flow fail after cleanup when the two
-  // layers drifted. Accept objects from the dynamically loaded executor realm and validate only
-  // the fields read below.
-  if (
-    value === null ||
-    typeof value !== "object" ||
-    Array.isArray(value) ||
-    Reflect.get(value, "pass") !== true
-  ) {
-    throw new SmokeError("smoke_output_invalid", "TASK-540 canonical evidence is invalid");
+export function validateTask540Evidence(value: unknown): Task540NativeEvidence {
+  if (value === null || typeof value !== "object" || Array.isArray(value)) {
+    throw new SmokeError("smoke_output_invalid", "TASK-540 native evidence is invalid");
   }
-  const candidate = value as Partial<Task540Evidence>;
+  const candidate = value as Partial<Task540NativeEvidence>;
   if (
+    candidate.pass !== true ||
+    candidate.serverUp !== true ||
     !Array.isArray(candidate.browserReceipts) ||
+    candidate.browserReceipts.length !== 420 ||
     !Array.isArray(candidate.runtimeReceipts) ||
+    candidate.runtimeReceipts.length !== 76 ||
     !Array.isArray(candidate.cleanupReceipts) ||
+    !isTask540CleanupLogicalReceiptCount(candidate.cleanupReceipts.length) ||
     !Array.isArray(candidate.scenarios) ||
-    candidate.finalization === undefined ||
-    candidate.finalization === null ||
-    typeof candidate.finalization !== "object" ||
-    !Array.isArray(candidate.finalization.screenshots) ||
-    candidate.scenarios.length === 0 ||
-    candidate.finalization.screenshots.length === 0
+    candidate.scenarios.length !== 7 ||
+    !Array.isArray(candidate.screenshots) ||
+    candidate.screenshots.length !== 13 ||
+    !Array.isArray(candidate.consoleErrors) ||
+    candidate.consoleErrors.length !== 0 ||
+    !Array.isArray(candidate.pageErrors) ||
+    candidate.pageErrors.length !== 0
   ) {
-    throw new SmokeError("smoke_output_invalid", "TASK-540 evidence projection is incomplete");
+    throw new SmokeError("smoke_output_invalid", "TASK-540 native evidence projection drifted");
   }
-  for (const scenario of candidate.scenarios) {
-    if (
-      scenario === null ||
-      typeof scenario !== "object" ||
-      Array.isArray(scenario) ||
-      typeof Reflect.get(scenario, "id") !== "string"
-    ) {
-      throw new SmokeError("smoke_output_invalid", "TASK-540 scenario evidence drifted");
-    }
-  }
-  for (const screenshot of candidate.finalization.screenshots) {
-    if (
-      screenshot === null ||
-      typeof screenshot !== "object" ||
-      Array.isArray(screenshot) ||
-      typeof Reflect.get(screenshot, "path") !== "string" ||
-      typeof Reflect.get(screenshot, "sha256") !== "string" ||
-      !/^[a-f0-9]{64}$/u.test(Reflect.get(screenshot, "sha256") as string)
-    ) {
-      throw new SmokeError("smoke_output_invalid", "TASK-540 screenshot evidence drifted");
-    }
-  }
-  return candidate as Task540Evidence;
-}
-
-function requiredDatabaseEnvironment(): Readonly<Record<string, string>> {
-  const path = process.env.PATH;
-  const databaseUrl = process.env.DATABASE_URL;
-  if (!path || !databaseUrl) {
-    throw new SmokeError("smoke_argument_invalid", "TASK-540 database environment is incomplete");
-  }
-  return Object.freeze({ PATH: path, DATABASE_URL: databaseUrl, DB_POOL_MAX: "1" });
+  return candidate as Task540NativeEvidence;
 }
 
 export async function runTask540Adapter(context: RuntimeSmokeContext): Promise<SmokeAdapterResult> {
-  const transport = await loadRootModule<Task540TransportModule>(
-    context.root,
-    "_docs/_workflows/task-540-smoke/runtime/bun-bridge-transport.mjs"
+  const result = await runTask540NativeSuite(context, randomBytes(6).toString("hex"));
+  const evidence = validateTask540Evidence(
+    createTask540SafeEvidenceAssertion(process.env)(result.evidence, "TASK-540 native evidence")
   );
-  const bridge = await Task540PersistentBridge.create({
-    root: context.root,
-    processes: context.processes,
-    lifecycle: context.lifecycle,
-    install: transport.installPersistentBunBridgeDispatcher,
-  });
-  if (context.input.profile === "fast") {
-    const bun = await resolveExecutableOnPath("bun");
-    await context.timing.measure("phase", "auth-window-prepare", () =>
-      bridge.prepareFastAuthWindow({
-        environment: requiredDatabaseEnvironment(),
-        executablePath: bun,
-      })
-    );
-  }
-
-  const nonce = randomBytes(6).toString("hex");
-  const contract = await loadRootModule<Task540ContractModule>(
-    context.root,
-    "_docs/_workflows/task-540-smoke-contract.mjs"
-  );
-  const plan = contract.buildTask540SmokePlan({ nonce });
-  const snapshotRepository = async () =>
-    projectTask540LegacySnapshot(await context.repository.snapshot(plan.requiredScreenshotPaths));
-  const executor = await loadRootModule<Task540ExecutorModule>(
-    context.root,
-    "_docs/_workflows/task-540-smoke-executor.mjs"
-  );
-  const rawEvidence = await context.timing.measure("phase", "canonical-flow", () =>
-    executor.executeTask540SmokePlan({
-      root: context.root,
-      nonce,
-      assertSafeEvidence: createTask540SafeEvidenceAssertion(process.env),
-      snapshotRepository,
-    })
-  );
-  const evidence = validateTask540Evidence(rawEvidence);
-  if (context.input.profile === "fast") {
-    await context.timing.measure("phase", "auth-window-restore", () =>
-      bridge.restoreFastAuthWindow()
-    );
-  }
-  const counters = bridge.counters();
   return Object.freeze({
     pass: true,
-    serverUp: true,
-    scenarios: Object.freeze(
-      evidence.scenarios.map(({ id }) => Object.freeze({ id, pass: true, elapsedMs: 0 }))
-    ),
-    screenshots: Object.freeze(
-      evidence.finalization.screenshots.map(({ path, sha256 }) => Object.freeze({ path, sha256 }))
-    ),
-    consoleErrors: Object.freeze([]),
+    serverUp: evidence.serverUp,
+    scenarios: evidence.scenarios,
+    screenshots: evidence.screenshots,
+    consoleErrors: evidence.consoleErrors,
     cleanup: Object.freeze({
       canonicalCleanupReceipts: evidence.cleanupReceipts.length,
-      authWindowState: context.input.profile === "fast" ? "restored" : "unchanged",
-      workerStarts: counters.starts,
-      workerRequests: counters.requests,
-      workerReconnects: counters.reconnects,
-      databaseBatches: counters.databaseBatches,
-      statements: counters.statements,
-      rows: counters.rows,
+      authWindowState: result.authWindowState,
+      workerStarts: result.workerCounters.starts,
+      workerRequests: result.workerCounters.requests,
+      workerReconnects: result.workerCounters.reconnects,
+      databaseBatches: result.workerCounters.databaseBatches,
+      statements: result.workerCounters.statements,
+      rows: result.workerCounters.rows,
     }),
   });
 }

@@ -12,7 +12,7 @@ interface PlanModule {
 test("TASK-540 reset contracts cover seven scenarios and all 13 screenshots", async () => {
   const root = path.resolve(import.meta.dir, "../../..");
   const module: PlanModule = await import(
-    path.join(root, "_docs/_workflows/task-540-smoke/contract/plan.mjs")
+    path.join(root, "scripts/runtime-smoke/adapters/task-540/suite/contract/plan.mjs")
   );
   const plan = module.buildTask540SmokePlan({ nonce: "0123456789ab" });
   const contracts = buildTask540ScenarioResetContracts(plan);

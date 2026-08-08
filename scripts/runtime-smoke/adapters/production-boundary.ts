@@ -1,5 +1,4 @@
 import { readFile, realpath, stat } from "node:fs/promises";
-import { createServer, connect, type Server } from "node:net";
 import { extname, resolve } from "node:path";
 import {
   assertExactKeys,
@@ -8,13 +7,15 @@ import {
   resolveInsideRoot,
   SmokeError,
 } from "../contracts";
-import type { LifecycleResource, RuntimeSmokeContext } from "../lifecycle";
+import type { RuntimeSmokeContext } from "../lifecycle";
+import { resolveExecutableOnPath, type ProcessResult } from "../process-supervisor";
 import {
-  resolveExecutableOnPath,
-  type ManagedProcessHandle,
-  type ProcessResult,
-} from "../process-supervisor";
-import { pollUntil } from "../polling";
+  allocateLoopbackPort,
+  canConnectToLoopbackPort,
+  isLoopbackPortAvailable,
+  startSupervisedServer,
+  type SupervisedServerEnvironmentPolicy,
+} from "../server/supervised-server";
 import type { SmokeAdapter, SmokeAdapterResult, SmokeScenarioResult } from "./types";
 
 const LOOPBACK_HOST = "127.0.0.1";
@@ -24,7 +25,6 @@ const SERVER_LOG_LIMIT_BYTES = 64 * 1024;
 const BUILD_TIMEOUT_MS = 5 * 60_000;
 const READINESS_TIMEOUT_MS = 30_000;
 const PORT_RELEASE_TIMEOUT_MS = 5_000;
-const CONNECT_TIMEOUT_MS = 250;
 const ANSI_COLOR_SEQUENCE = new RegExp(`${String.fromCharCode(27)}\\[[0-9;]*m`, "gu");
 
 const OPTIONAL_PRODUCTION_ENVIRONMENT_KEYS = Object.freeze([
@@ -75,239 +75,13 @@ interface LogSnapshot {
   readonly stderr: string;
 }
 
+export const allocateProductionPort = allocateLoopbackPort;
+export const isProductionPortAvailable = isLoopbackPortAvailable;
+export const canConnectToProductionPort = canConnectToLoopbackPort;
+
 function errorCode(error: unknown): string | null {
   if (error === null || typeof error !== "object" || !("code" in error)) return null;
   return typeof error.code === "string" ? error.code : null;
-}
-
-class BoundedStreamCapture {
-  readonly #limit: number;
-  readonly #chunks: Buffer[] = [];
-  readonly #end: Promise<void>;
-  #bytes = 0;
-  #overflow = false;
-  #invalid = false;
-
-  constructor(stream: NodeJS.ReadableStream, limit: number) {
-    this.#limit = limit;
-    this.#end = new Promise<void>((resolveEnd) => {
-      let settled = false;
-      const settle = (): void => {
-        if (settled) return;
-        settled = true;
-        resolveEnd();
-      };
-      stream.on("data", (value: unknown) => this.#append(value));
-      stream.once("end", settle);
-      stream.once("close", settle);
-      stream.once("error", () => {
-        this.#invalid = true;
-        settle();
-      });
-    });
-  }
-
-  #append(value: unknown): void {
-    const chunk =
-      typeof value === "string"
-        ? Buffer.from(value)
-        : Buffer.isBuffer(value)
-          ? value
-          : value instanceof Uint8Array
-            ? Buffer.from(value)
-            : null;
-    if (chunk === null) {
-      this.#invalid = true;
-      return;
-    }
-    this.#bytes += chunk.byteLength;
-    if (this.#bytes > this.#limit) {
-      this.#overflow = true;
-      return;
-    }
-    this.#chunks.push(chunk);
-  }
-
-  async settle(): Promise<void> {
-    let timeout: ReturnType<typeof setTimeout> | undefined;
-    try {
-      await Promise.race([
-        this.#end,
-        new Promise<never>((_, reject) => {
-          timeout = setTimeout(
-            () =>
-              reject(new SmokeError("smoke_process_timeout", "server log stream did not close")),
-            2_000
-          );
-        }),
-      ]);
-    } finally {
-      if (timeout !== undefined) clearTimeout(timeout);
-    }
-  }
-
-  snapshot(): { readonly bytes: number; readonly text: string } {
-    if (this.#overflow || this.#invalid) {
-      throw new SmokeError(
-        "smoke_output_invalid",
-        "production server logs are invalid or unbounded"
-      );
-    }
-    try {
-      return Object.freeze({
-        bytes: this.#bytes,
-        text: new TextDecoder("utf-8", { fatal: true }).decode(Buffer.concat(this.#chunks)),
-      });
-    } catch (error) {
-      throw new SmokeError("smoke_output_invalid", "production server logs are not UTF-8", {
-        cause: error,
-      });
-    }
-  }
-}
-
-class ProductionLogCapture {
-  readonly #stdout: BoundedStreamCapture;
-  readonly #stderr: BoundedStreamCapture;
-
-  constructor(handle: ManagedProcessHandle) {
-    this.#stdout = new BoundedStreamCapture(handle.stdout, SERVER_LOG_LIMIT_BYTES);
-    this.#stderr = new BoundedStreamCapture(handle.stderr, SERVER_LOG_LIMIT_BYTES);
-  }
-
-  async settle(): Promise<void> {
-    await Promise.all([this.#stdout.settle(), this.#stderr.settle()]);
-  }
-
-  snapshot(): LogSnapshot {
-    const stdout = this.#stdout.snapshot();
-    const stderr = this.#stderr.snapshot();
-    return Object.freeze({
-      stdoutBytes: stdout.bytes,
-      stderrBytes: stderr.bytes,
-      stdout: stdout.text,
-      stderr: stderr.text,
-    });
-  }
-}
-
-class OwnedProductionServer implements LifecycleResource {
-  readonly name = "production-boundary-server";
-  readonly #handle: ManagedProcessHandle;
-  readonly #logs: ProductionLogCapture;
-  readonly #port: number;
-  readonly #isPortAvailable: (port: number) => Promise<boolean>;
-  readonly #releaseTimeoutMs: number;
-  #closePromise: Promise<void> | null = null;
-  #absent = false;
-
-  constructor(input: {
-    readonly handle: ManagedProcessHandle;
-    readonly logs: ProductionLogCapture;
-    readonly port: number;
-    readonly isPortAvailable: (port: number) => Promise<boolean>;
-    readonly releaseTimeoutMs: number;
-  }) {
-    this.#handle = input.handle;
-    this.#logs = input.logs;
-    this.#port = input.port;
-    this.#isPortAvailable = input.isPortAvailable;
-    this.#releaseTimeoutMs = input.releaseTimeoutMs;
-  }
-
-  close(): Promise<void> {
-    this.#closePromise ??= this.#closeOnce();
-    return this.#closePromise;
-  }
-
-  async #closeOnce(): Promise<void> {
-    await this.#handle.terminate();
-    await this.#handle.wait();
-    await this.#logs.settle();
-    await pollUntil({
-      timeoutMs: this.#releaseTimeoutMs,
-      intervalMs: 25,
-      check: async () => ((await this.#isPortAvailable(this.#port)) ? true : null),
-    });
-    this.#absent = true;
-  }
-
-  async proveAbsent(): Promise<boolean> {
-    return this.#absent && (await this.#isPortAvailable(this.#port));
-  }
-}
-
-function listen(server: Server, port: number): Promise<void> {
-  return new Promise<void>((resolveListen, rejectListen) => {
-    const onError = (error: Error): void => {
-      server.off("listening", onListening);
-      rejectListen(error);
-    };
-    const onListening = (): void => {
-      server.off("error", onError);
-      resolveListen();
-    };
-    server.once("error", onError);
-    server.once("listening", onListening);
-    server.listen({ host: LOOPBACK_HOST, port, exclusive: true });
-  });
-}
-
-function closeServer(server: Server): Promise<void> {
-  return new Promise<void>((resolveClose, rejectClose) => {
-    server.close((error) => (error ? rejectClose(error) : resolveClose()));
-  });
-}
-
-export async function allocateProductionPort(): Promise<number> {
-  const server = createServer();
-  server.unref();
-  try {
-    await listen(server, 0);
-    const address = server.address();
-    if (address === null || typeof address === "string") {
-      throw new SmokeError("smoke_process_spawn_failed", "allocated port is unavailable");
-    }
-    return assertOwnedPort(address.port);
-  } finally {
-    if (server.listening) await closeServer(server);
-  }
-}
-
-export async function isProductionPortAvailable(port: number): Promise<boolean> {
-  assertOwnedPort(port);
-  const server = createServer();
-  server.unref();
-  try {
-    await listen(server, port);
-    return true;
-  } catch (error) {
-    if (errorCode(error) === "EADDRINUSE") return false;
-    throw new SmokeError("smoke_process_failed", "production port availability probe failed", {
-      cause: error,
-    });
-  } finally {
-    if (server.listening) await closeServer(server);
-  }
-}
-
-export async function canConnectToProductionPort(port: number): Promise<boolean> {
-  assertOwnedPort(port);
-  return new Promise<boolean>((resolveConnection) => {
-    const socket = connect({ host: LOOPBACK_HOST, port });
-    socket.unref();
-    let settled = false;
-    const finish = (result: boolean): void => {
-      if (settled) return;
-      settled = true;
-      clearTimeout(timeout);
-      socket.destroy();
-      resolveConnection(result);
-    };
-    const timeout = setTimeout(() => finish(false), CONNECT_TIMEOUT_MS);
-    socket.once("connect", () => finish(true));
-    socket.once("error", () => finish(false));
-  });
 }
 
 function normalizeAssetPath(value: string): string {
@@ -407,6 +181,25 @@ export function buildProductionBoundaryEnvironment(
     BACKUP_SCHEDULER_ENABLED: "0",
     EMAIL_TRANSPORT: "mock",
     NO_COLOR: "1",
+  });
+}
+
+function productionServerEnvironmentPolicy(port: number): SupervisedServerEnvironmentPolicy {
+  return Object.freeze({
+    id: "production-boundary",
+    required: Object.freeze(["DATABASE_URL"]),
+    optional: OPTIONAL_PRODUCTION_ENVIRONMENT_KEYS,
+    inherited: Object.freeze([]),
+    fixed: Object.freeze({
+      NODE_ENV: "production",
+      PORT: String(assertOwnedPort(port)),
+      PUBLIC_BASE_URL: `http://${LOOPBACK_HOST}:${port}`,
+      DB_POOL_MAX: "1",
+      COOKIE_SECURE: "false",
+      BACKUP_SCHEDULER_ENABLED: "0",
+      EMAIL_TRANSPORT: "mock",
+      NO_COLOR: "1",
+    }),
   });
 }
 
@@ -597,31 +390,28 @@ export async function runProductionBoundaryAdapter(
   );
   await runBuild(context, executable, coreBuildEnvironment, "build:site", "production-build-site");
   const asset = await (dependencies.loadBuiltAsset ?? loadProductionBuiltAsset)(context.root);
-  const productionEnvironment = buildProductionBoundaryEnvironment(environment, port);
-  const handle = await context.processes.start({
-    executable,
-    args: ["--no-env-file", "run", "start:prod"],
-    cwd: resolveInsideRoot(context.root, "core", "Core working directory"),
-    env: productionEnvironment,
-    maxOutputBytes: SERVER_LOG_LIMIT_BYTES,
-    family: "production-server",
-  });
-  const logs = new ProductionLogCapture(handle);
-  const server = new OwnedProductionServer({
-    handle,
-    logs,
-    port,
-    isPortAvailable,
-    releaseTimeoutMs: dependencies.portReleaseTimeoutMs ?? PORT_RELEASE_TIMEOUT_MS,
-  });
-  context.lifecycle.register(server);
-
   const canConnect = dependencies.canConnect ?? canConnectToProductionPort;
-  await context.timing.measure("phase", "production-readiness", () =>
-    pollUntil({
-      timeoutMs: dependencies.readinessTimeoutMs ?? READINESS_TIMEOUT_MS,
-      intervalMs: 50,
-      check: async () => ((await canConnect(port)) ? true : null),
+  const server = await context.timing.measure("phase", "production-readiness", () =>
+    startSupervisedServer(context, {
+      executable: { kind: "absolute", path: executable },
+      args: ["--no-env-file", "run", "start:prod"],
+      cwd: resolveInsideRoot(context.root, "core", "Core working directory"),
+      environment: {
+        source: environment,
+        policy: productionServerEnvironmentPolicy(port),
+      },
+      ports: [port],
+      readiness: [
+        {
+          id: "production-http",
+          check: async () => canConnect(port),
+        },
+      ],
+      family: "production-server",
+      readinessTimeoutMs: dependencies.readinessTimeoutMs ?? READINESS_TIMEOUT_MS,
+      portReleaseTimeoutMs: dependencies.portReleaseTimeoutMs ?? PORT_RELEASE_TIMEOUT_MS,
+      maximumLogBytes: SERVER_LOG_LIMIT_BYTES,
+      isPortAvailable,
     })
   );
 
@@ -708,14 +498,14 @@ export async function runProductionBoundaryAdapter(
   scenarios.push(
     await measureScenario(context, "clean-stop", now, async () => {
       await server.close();
-      assertCleanServerLogs(logs.snapshot(), port);
+      assertCleanServerLogs(server.logs(), port);
       if (!(await server.proveAbsent())) {
         throw new SmokeError("smoke_cleanup_failed", "production server or port remains active");
       }
     })
   );
 
-  const logSnapshot = logs.snapshot();
+  const logSnapshot = server.logs();
   return Object.freeze({
     pass: true,
     serverUp: true,
@@ -728,7 +518,7 @@ export async function runProductionBoundaryAdapter(
       productionProcessStopped: true,
       productionPortReleased: true,
       productionPort: port,
-      serverPid: handle.pid,
+      serverPid: server.pid() ?? 0,
       stdoutBytes: logSnapshot.stdoutBytes,
       stderrBytes: logSnapshot.stderrBytes,
       builtAsset: asset.path,

@@ -99,7 +99,8 @@ plugin's `apiVersion`.
 - **`scripts/`** is repo automation invoked by npm scripts: `coderso-release-gates.ts`,
   `run-bun-lane.ts`, `run-security-scan.ts`, `run-vitest-coverage.ts`,
   `format-staged.ts` (the pre-commit Prettier runner), `semantic-release-pr-notes.cjs`,
-  and `playwright-widget-contract-smoke.ts`.
+  and the thin shared-runner compatibility CLI
+  `playwright-widget-contract-smoke.ts`.
 
 ## The documentation taxonomy
 

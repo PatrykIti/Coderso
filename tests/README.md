@@ -78,7 +78,7 @@ Reusable local runtime smokes use one strict entry point:
 
 ```bash
 bun scripts/runtime-smoke.ts run \
-  --suite <task-540|widget-contract|production-boundary> \
+  --suite <task-540|task-547|widget-contract|production-boundary> \
   --profile <fast|certification> \
   --session <task-scoped-name>
 ```
@@ -103,10 +103,15 @@ The current adapters are:
   action identities, 13 PNGs, light/dark coverage, console checks, and canonical
   cleanup. Its 18 setup baselines use two profile-isolated worker frames and its
   DB cleanup remains projected into the original ordered receipts. Bootstrap
-  CAS restoration intentionally uses one canonical one-shot Bun operation: its
-  source identity depends on runtime-specific `Function#toString`, so routing
-  that single mutation through the persistent worker would reject a valid
-  restore. All other registered operations remain persistent/batched.
+  restoration uses an exact typed read → compare-and-swap → read sequence on
+  the persistent worker and fails closed on ownership drift. All operations are
+  native, statically registered and persistent/batched; no workflow source-code
+  executor remains.
+- `task-547`: the complete 18-scenario Full Site package and installed
+  `projekty-domow` proof. It uses the shared supervised developer host,
+  persistent worker bridge, segmented Playwright transport, transactional
+  cleanup, exact observation manifest, and the same scenario descriptors in
+  `fast` and `certification` profiles.
 - `widget-contract`: a focused `gallery-mosaic` adapter over the retained
   widget contract harness plus a fresh public browser error probe.
 - `production-boundary`: a certification-only production build/server probe
@@ -126,11 +131,12 @@ and transactional cleanup recipe, Playwright segmentation and evidence rules,
 checkpoint limitations, targeted tests, and the closure checklist, use the
 [Runtime Smoke Authoring Cookbook](../docs/develop/runtime-smoke-cookbook.md).
 
-## Legacy Widget Smoke
+## Widget Compatibility CLI
 
-The TASK-336 widget contract smoke remains a Bun-owned Playwright CLI harness
-behind the shared adapter. Direct invocation is useful only for targeted legacy
-debugging and still requires local admin/frontend servers and admin credentials.
+The TASK-336 command remains as a thin compatibility CLI over the same modular
+suite used by the registered adapter. Its browser/session work uses the shared
+dispatcher and lifecycle. Direct invocation is useful for targeted debugging
+and still requires local admin/frontend servers and admin credentials.
 
 ```bash
 CODERSO_PLAYWRIGHT_EMAIL="<admin email>" \

@@ -1097,6 +1097,20 @@ Zakres CMS, model danych, auth i security opisane sa w:
   - `menu`: resolve `pageSlug -> pageId` and replace menu tree (`menu_items`),
   - nested data jest takze snapshotowane dla rollback (`beforeSnapshot` / `afterSnapshot`).
 
+### Full-site package execution
+
+- `core/services/kits/fullSitePackage/*` owns the strict schema, normalization,
+  limits, reference registry, and dependency graph.
+- `core/services/kits/fullSiteInstallPlanner.ts` owns deterministic planning;
+  `core/services/kits/fullSiteInstall/*` owns native adapters, saga
+  execution/compensation, and exact-run rollback.
+- The legacy and full-site executors share `FullSiteInstallLedgerPort`; native
+  ownership requires a successful, non-rolled-back run plus matching snapshot ID.
+- Publication is staged: Page/entry/detail/menu drafts first, complete menu state
+  before publish, and reversible shell settings last.
+- This is a CLI/internal service seam only. It adds no route, migration, media
+  import, catalog entry, or configurable widget surface.
+
 
 ## Media delivery access
 

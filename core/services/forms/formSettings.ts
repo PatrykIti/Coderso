@@ -20,6 +20,7 @@ export const FORM_SCHEMA_LIMITS = {
   stepTitle: 240,
   themeColor: CSS_COLOR_VALUE_MAX_LENGTH,
   submitLabel: 240,
+  submitSupportingText: 2_000,
 } as const;
 
 export type FormAutomationRetrySettings = {
@@ -126,6 +127,7 @@ export type FormFormTheme = {
     radius?: FormThemeRadius;
     fullWidth?: boolean;
     label?: string;
+    supportingText?: string;
   };
 };
 
@@ -221,6 +223,12 @@ export const formThemeSchema = {
           type: "string",
           minLength: 1,
           maxLength: FORM_SCHEMA_LIMITS.submitLabel,
+        },
+        supportingText: {
+          type: "string",
+          minLength: 1,
+          maxLength: FORM_SCHEMA_LIMITS.submitSupportingText,
+          pattern: "\\S",
         },
       },
       additionalProperties: false,
@@ -322,7 +330,12 @@ const normalizeThemeBool = (value: unknown): boolean | undefined =>
 const normalizeThemeColor = (value: unknown): string | undefined =>
   normalizeCssColorValue(value, "inherited-render");
 
-const normalizeOptionalText = (value: unknown): string | undefined => toString(value) ?? undefined;
+const normalizeOptionalText = (value: unknown, maxLength?: number): string | undefined => {
+  const normalized = toString(value) ?? undefined;
+  if (normalized === undefined) return undefined;
+  if (maxLength !== undefined && normalized.length > maxLength) return undefined;
+  return normalized;
+};
 
 const normalizeThemeGroup = <T extends Record<string, unknown>>(
   raw: unknown,
@@ -384,7 +397,9 @@ export function normalizeFormTheme(value: unknown): FormFormTheme | undefined {
     textColor: normalizeThemeColor,
     radius: (v) => normalizeThemeEnum(v, FORM_THEME_RADII),
     fullWidth: normalizeThemeBool,
-    label: normalizeOptionalText,
+    label: (v) => normalizeOptionalText(v, FORM_SCHEMA_LIMITS.submitLabel),
+    supportingText: (v) =>
+      normalizeOptionalText(v, FORM_SCHEMA_LIMITS.submitSupportingText),
   });
 
   if (layout) theme.layout = layout;

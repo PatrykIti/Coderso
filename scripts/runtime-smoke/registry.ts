@@ -10,6 +10,7 @@ export interface SmokeSuiteDescriptor {
 
 const ADAPTER_PATHS: Readonly<Record<SmokeSuiteId, string>> = Object.freeze({
   "task-540": "scripts/runtime-smoke/adapters/task-540.ts",
+  "task-547": "scripts/runtime-smoke/adapters/task-547.ts",
   "widget-contract": "scripts/runtime-smoke/adapters/widget-contract.ts",
   "production-boundary": "scripts/runtime-smoke/adapters/production-boundary.ts",
 });
@@ -51,6 +52,7 @@ function descriptor(id: SmokeSuiteId): SmokeSuiteDescriptor {
 
 const DESCRIPTORS = new Map<SmokeSuiteId, SmokeSuiteDescriptor>([
   ["task-540", descriptor("task-540")],
+  ["task-547", descriptor("task-547")],
   ["widget-contract", descriptor("widget-contract")],
   ["production-boundary", descriptor("production-boundary")],
 ]);

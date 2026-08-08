@@ -98,10 +98,9 @@ Database-bearing work uses profile-scoped persistent Bun workers with a bounded
 pool (`DB_POOL_MAX=1`) and registered, strict NDJSON operations. Independent
 lookups and foreign-key-safe cleanup/proofs are sent as bounded batches and then
 projected back to stable logical receipts. API-owned cleanup stays API-owned.
-TASK-540 deliberately retains a single canonical one-shot bootstrap CAS restore
-because Node and Bun do not produce a stable cross-runtime source identity for
-that mutation; this explicit exception does not reopen generic one-shot
-execution.
+TASK-540 performs bootstrap restoration through one exact typed
+read → compare-and-swap → read sequence on its profile-scoped persistent worker.
+Ownership drift blocks the CAS; there is no one-shot source-code fallback.
 
 Browser actions compile into bounded contiguous segments around runtime,
 screenshot, native CLI, and capture-dependency barriers. The named Playwright
@@ -116,14 +115,12 @@ restoration, canonical reset, and repository guard. TASK-540 currently exposes a
 seven-scenario reset inventory but does not yet consume automatic resume seals;
 its optimized adapter therefore still runs the canonical full flow.
 
-TASK-552 measured that full TASK-540 fast flow at 1,178.580 seconds (19:38.580),
-including seven scenarios, 13 PNGs, nine repository snapshots, zero console
-errors, and complete cleanup. That is 46.77% shorter than the earlier 36.9-minute
-fast run and 65.23% shorter than the historical 56.5-minute full-strength run;
-the latter comparison also includes a different authentication wait profile.
-The remaining time is product/browser work plus canonical cleanup, not evidence
-for another database index. Migration `0070` already owns the recurring
-access-log lookup, so TASK-552 adds no schema or migration.
+The historical adapter-wrapped TASK-540 fast baseline measured 1,178.580 seconds
+(19:38.580), including seven scenarios, 13 PNGs, nine repository snapshots,
+zero console errors, and complete cleanup. It remains comparison evidence, not
+proof of the later native migration. Migration `0070` already owns the recurring
+access-log lookup, so TASK-552 adds no schema or migration; final native profile
+timings belong to the matching closeout receipt.
 
 ## Runner Ownership Rules
 

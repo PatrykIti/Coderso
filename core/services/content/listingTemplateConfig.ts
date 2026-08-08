@@ -360,3 +360,38 @@ export function normalizeListingTemplateConfig(value: unknown): ListingTemplateC
     style: normalizeStyle(value.style),
   };
 }
+
+const listingLayouts = new Set<ListingLayout>(["grid", "list", "table", "calendar", "map"]);
+
+export type NormalizedListingTemplateWriteInput = {
+  name: string;
+  slug: string;
+  description: string | null;
+  layout: ListingLayout;
+  config: ListingTemplateConfig;
+};
+
+/**
+ * Bun-free write-contract mirror for callers that must complete native
+ * validation before opening a multi-resource mutation saga.
+ */
+export function normalizeListingTemplateWriteInput(
+  value: unknown
+): NormalizedListingTemplateWriteInput {
+  if (!isRecord(value)) throw new Error("listing_template_invalid");
+  const name = normalizeText(value.name);
+  if (!name) throw new Error("listing_template_invalid");
+  const slug = slugify(normalizeText(value.slug) ?? name);
+  if (!slug) throw new Error("listing_template_slug_required");
+  const layout = normalizeText(value.layout) ?? "grid";
+  if (!listingLayouts.has(layout as ListingLayout)) {
+    throw new Error("listing_template_layout_invalid");
+  }
+  return {
+    name,
+    slug,
+    description: normalizeNullableText(value.description),
+    layout: layout as ListingLayout,
+    config: normalizeListingTemplateConfig(value.config),
+  };
+}

@@ -627,6 +627,14 @@ export function FormRuntimePreviewDialog({
                     {isSubmitting ? "Submitting..." : submitLabel}
                   </Button>
                 </div>
+                {t.submit.supportingText === undefined ? null : (
+                  <p
+                    data-form-submit-supporting-text="true"
+                    className={cn("text-xs", helperColorClass)}
+                  >
+                    {t.submit.supportingText}
+                  </p>
+                )}
               </div>
             </div>
           </div>

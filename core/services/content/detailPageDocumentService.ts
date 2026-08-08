@@ -2,7 +2,15 @@ import { and, desc, eq, inArray, max } from "drizzle-orm";
 import { randomUUID } from "node:crypto";
 
 import { db } from "../../db/client";
-import { detailPageDocuments, detailPageRevisions } from "../../db/schema";
+import { acquireNativeCmsWriterFence } from "../../db/nativeCmsWriterFence";
+import {
+  contentEntries,
+  contentTypes,
+  detailPageDocuments,
+  detailPageRevisions,
+  previewTokens,
+  settings,
+} from "../../db/schema";
 import { invalidateContentRouteCache } from "../../site/cache/siteCache";
 import { areRevisionSnapshotsEqual } from "./revisionSnapshot";
 import { getSetting } from "../settings/settingsService";
@@ -10,8 +18,20 @@ import type { ContentRouteSetting } from "../settings/settingsContracts";
 import { getContentType, type ContentTypeRecord } from "./typeService";
 import { normalizeDetailPageDocument } from "./detailPageSchema";
 import type { DetailPageDocument, DetailPageRevisionKind } from "./detailPageTypes";
-import { getEntry } from "./entryService";
-import { createDetailPagePreviewToken } from "../pages/previewService";
+import { hashPreviewToken } from "../pages/previewService";
+
+export {
+  DETAIL_PAGE_FULL_SITE_REVISION_SNAPSHOT_LIMIT,
+  captureDetailPageDocumentLifecycleNativeSnapshot,
+  mutateDetailPageDocumentLifecycleAtomic,
+  normalizeDetailPageDocumentLifecycleNativeDesired,
+  prepareDetailPageDocumentLifecycleNativeTargets,
+  type DetailPageDocumentLifecycleAtomicMutation,
+  type DetailPageDocumentLifecycleAtomicMutationResult,
+  type DetailPageDocumentLifecycleNativeDesired,
+  type DetailPageDocumentLifecycleNativeSnapshot,
+  type DetailPageLifecycleRevisionSnapshot,
+} from "./detailPageDocumentLifecycleMutation";
 
 export type DetailPageDocumentRecord = Omit<
   typeof detailPageDocuments.$inferSelect,
@@ -81,11 +101,6 @@ const invalidateLinkedDetailPageCaches = async (detailPageId: string, contentTyp
     if ((route.detailPageId ?? null) !== detailPageId) continue;
     invalidateContentRouteCache(route);
   }
-};
-
-const findLinkedRoute = async (detailPageId: string) => {
-  const contentRoutes = ((await getSetting("site.contentRoutes")) as ContentRouteSetting[]) ?? [];
-  return contentRoutes.find((route) => (route.detailPageId ?? null) === detailPageId) ?? null;
 };
 
 const normalizeDocumentWithResolvedId = (value: unknown, resolvedId?: string) => {
@@ -275,16 +290,7 @@ export async function createDetailPageDocument(input: { document: unknown }): Pr
   contentType: ContentTypeRecord;
 }> {
   const document = normalizeDocumentWithResolvedId(input.document, randomUUID());
-  const prepared = await prepareDetailPageDocumentUpsert({
-    document,
-  });
-  if (prepared.existing) {
-    throw new Error("detail_page_conflict");
-  }
-
-  return upsertDetailPageDocument({
-    document: prepared.document,
-  });
+  return persistDetailPageDocument({ document, mode: "create", lifecycle: "full" });
 }
 
 export async function createDetailPageDraftDocument(input: { document: unknown }): Promise<{
@@ -294,16 +300,7 @@ export async function createDetailPageDraftDocument(input: { document: unknown }
   const document = ensureDraftCrudDocument(
     normalizeDocumentWithResolvedId(input.document, randomUUID())
   );
-  const prepared = await prepareDetailPageDocumentUpsert({
-    document,
-  });
-  if (prepared.existing) {
-    throw new Error("detail_page_conflict");
-  }
-
-  return upsertDetailPageDraftDocument({
-    document: prepared.document,
-  });
+  return persistDetailPageDocument({ document, mode: "create", lifecycle: "draft" });
 }
 
 export async function updateDetailPageDocument(
@@ -320,17 +317,7 @@ export async function updateDetailPageDocument(
     throw new Error("detail_page_conflict");
   }
 
-  const prepared = await prepareDetailPageDocumentUpsert({
-    document,
-  });
-  if (!prepared.existing) {
-    throw new Error("detail_page_not_found");
-  }
-
-  return upsertDetailPageDocument({
-    document: prepared.document,
-    expectedExistingId: id,
-  });
+  return persistDetailPageDocument({ document, mode: "update", lifecycle: "full" });
 }
 
 export async function updateDetailPageDraftDocument(
@@ -347,18 +334,97 @@ export async function updateDetailPageDraftDocument(
     throw new Error("detail_page_conflict");
   }
 
-  const prepared = await prepareDetailPageDocumentUpsert({
-    document,
-  });
-  if (!prepared.existing) {
-    throw new Error("detail_page_not_found");
-  }
-
-  return upsertDetailPageDraftDocument({
-    document: prepared.document,
-    expectedExistingId: id,
-  });
+  return persistDetailPageDocument({ document, mode: "update", lifecycle: "draft" });
 }
+
+type DetailPageWriteMode = "create" | "update" | "upsert";
+type DetailPageLifecycleWriteMode = "full" | "draft";
+
+const persistDetailPageDocument = async (input: {
+  document: DetailPageDocument;
+  mode: DetailPageWriteMode;
+  lifecycle: DetailPageLifecycleWriteMode;
+  expectedExistingId?: string | null;
+}): Promise<{
+  record: DetailPageDocumentRecord;
+  contentType: ContentTypeRecord;
+}> => {
+  const normalized = normalizeDetailPageDocument(input.document);
+  if (input.expectedExistingId && input.expectedExistingId !== normalized.id) {
+    throw new Error("detail_page_conflict");
+  }
+  const result = await db.transaction(
+    async (tx) => {
+      await acquireNativeCmsWriterFence(tx);
+      const [contentType] = await tx
+        .select()
+        .from(contentTypes)
+        .where(eq(contentTypes.id, normalized.contentTypeId))
+        .for("key share");
+      if (!contentType) throw new Error("detail_page_invalid");
+      const document = normalizeDetailPageDocument({
+        ...normalized,
+        contentTypeSlug: contentType.slug,
+      });
+      const [existingRow] = await tx
+        .select()
+        .from(detailPageDocuments)
+        .where(eq(detailPageDocuments.id, document.id))
+        .for("update");
+      if (existingRow && existingRow.contentTypeId !== contentType.id) {
+        throw new Error("detail_page_content_type_mismatch");
+      }
+      if (input.mode === "create" && existingRow) throw new Error("detail_page_conflict");
+      if (input.mode === "update" && !existingRow) throw new Error("detail_page_not_found");
+      if (input.expectedExistingId && !existingRow) throw new Error("detail_page_not_found");
+
+      const existing = existingRow ? mapDetailPageRow(existingRow) : null;
+      const now = new Date();
+      const keepPublished =
+        input.lifecycle === "draft" &&
+        existing?.status === "published" &&
+        existing.publishedDocument !== null;
+      const status = keepPublished ? "published" : document.status;
+      const publishedDocument = keepPublished
+        ? existing!.publishedDocument
+        : input.lifecycle === "full" && document.status === "published"
+          ? document
+          : null;
+      const publishedAt = keepPublished ? existing!.publishedAt : publishedDocument ? now : null;
+      const values = {
+        name: document.name,
+        status,
+        currentDocument: document,
+        publishedDocument,
+        publishedAt,
+        updatedAt: now,
+      };
+      const [row] = existingRow
+        ? await tx
+            .update(detailPageDocuments)
+            .set(values)
+            .where(eq(detailPageDocuments.id, document.id))
+            .returning()
+        : await tx
+            .insert(detailPageDocuments)
+            .values({
+              id: document.id,
+              contentTypeId: contentType.id,
+              ...values,
+              createdAt: now,
+            })
+            .returning();
+      if (!row) throw new Error("detail_page_invalid");
+      return {
+        record: mapDetailPageRow(row),
+        contentType: contentType as ContentTypeRecord,
+      };
+    },
+    { isolationLevel: "read committed" }
+  );
+  await invalidateLinkedDetailPageCaches(result.record.id, result.contentType.slug);
+  return result;
+};
 
 export async function upsertDetailPageDocument(input: {
   document: DetailPageDocument;
@@ -367,128 +433,49 @@ export async function upsertDetailPageDocument(input: {
   record: DetailPageDocumentRecord;
   contentType: ContentTypeRecord;
 }> {
-  const prepared = await prepareDetailPageDocumentUpsert(input);
-  const now = new Date();
-  const nextPublishedDocument = prepared.document.status === "published" ? prepared.document : null;
-  const nextPublishedAt = prepared.document.status === "published" ? now : null;
-
-  const [row] = prepared.existing
-    ? await db
-        .update(detailPageDocuments)
-        .set({
-          name: prepared.document.name,
-          status: prepared.document.status,
-          currentDocument: prepared.document,
-          publishedDocument: nextPublishedDocument,
-          publishedAt: nextPublishedAt,
-          updatedAt: now,
-        })
-        .where(eq(detailPageDocuments.id, prepared.document.id))
-        .returning()
-    : await db
-        .insert(detailPageDocuments)
-        .values({
-          id: prepared.document.id,
-          name: prepared.document.name,
-          contentTypeId: prepared.contentType.id,
-          status: prepared.document.status,
-          currentDocument: prepared.document,
-          publishedDocument: nextPublishedDocument,
-          createdAt: now,
-          updatedAt: now,
-          publishedAt: nextPublishedAt,
-        })
-        .returning();
-
-  if (!row) {
-    throw new Error("detail_page_invalid");
-  }
-
-  await invalidateLinkedDetailPageCaches(row.id, prepared.contentType.slug);
-
-  return {
-    record: mapDetailPageRow(row),
-    contentType: prepared.contentType,
-  };
-}
-
-async function upsertDetailPageDraftDocument(input: {
-  document: DetailPageDocument;
-  expectedExistingId?: string | null;
-}): Promise<{
-  record: DetailPageDocumentRecord;
-  contentType: ContentTypeRecord;
-}> {
-  const prepared = await prepareDetailPageDocumentUpsert(input);
-  const now = new Date();
-  const keepPublishedState =
-    prepared.existing?.status === "published" && prepared.existing.publishedDocument !== null;
-  const nextPublishedDocument = keepPublishedState ? prepared.existing!.publishedDocument : null;
-  const nextPublishedAt = keepPublishedState ? prepared.existing!.publishedAt : null;
-  const nextStatus = keepPublishedState ? "published" : "draft";
-
-  const [row] = prepared.existing
-    ? await db
-        .update(detailPageDocuments)
-        .set({
-          name: prepared.document.name,
-          status: nextStatus,
-          currentDocument: prepared.document,
-          publishedDocument: nextPublishedDocument,
-          publishedAt: nextPublishedAt,
-          updatedAt: now,
-        })
-        .where(eq(detailPageDocuments.id, prepared.document.id))
-        .returning()
-    : await db
-        .insert(detailPageDocuments)
-        .values({
-          id: prepared.document.id,
-          name: prepared.document.name,
-          contentTypeId: prepared.contentType.id,
-          status: "draft",
-          currentDocument: prepared.document,
-          publishedDocument: null,
-          createdAt: now,
-          updatedAt: now,
-          publishedAt: null,
-        })
-        .returning();
-
-  if (!row) {
-    throw new Error("detail_page_invalid");
-  }
-
-  await invalidateLinkedDetailPageCaches(row.id, prepared.contentType.slug);
-
-  return {
-    record: mapDetailPageRow(row),
-    contentType: prepared.contentType,
-  };
+  return persistDetailPageDocument({
+    document: input.document,
+    mode: "upsert",
+    lifecycle: "full",
+    expectedExistingId: input.expectedExistingId,
+  });
 }
 
 export async function deleteDetailPageDocument(id: string) {
-  const existing = await getDetailPageDocument(id);
-  if (!existing) {
-    throw new Error("detail_page_not_found");
-  }
-
-  const linkedRoute = await findLinkedRoute(id);
-  if (linkedRoute) {
-    throw new Error("detail_page_route_conflict");
-  }
-
-  const [row] = await db
-    .delete(detailPageDocuments)
-    .where(eq(detailPageDocuments.id, id))
-    .returning();
-
-  if (!row) {
-    throw new Error("detail_page_not_found");
-  }
-
-  await invalidateLinkedDetailPageCaches(id, existing.currentDocument.contentTypeSlug);
-  return mapDetailPageRow(row);
+  const result = await db.transaction(
+    async (tx) => {
+      await acquireNativeCmsWriterFence(tx);
+      const [existing] = await tx
+        .select()
+        .from(detailPageDocuments)
+        .where(eq(detailPageDocuments.id, id))
+        .for("update");
+      if (!existing) throw new Error("detail_page_not_found");
+      const [routeSetting] = await tx
+        .select({ value: settings.value })
+        .from(settings)
+        .where(eq(settings.key, "site.contentRoutes"))
+        .for("update");
+      if (
+        Array.isArray(routeSetting?.value) &&
+        routeSetting.value.some((route) => isRecord(route) && (route.detailPageId ?? null) === id)
+      ) {
+        throw new Error("detail_page_route_conflict");
+      }
+      const [deleted] = await tx
+        .delete(detailPageDocuments)
+        .where(eq(detailPageDocuments.id, id))
+        .returning();
+      if (!deleted) throw new Error("detail_page_not_found");
+      return {
+        row: deleted,
+        contentTypeSlug: normalizeDetailPageDocument(existing.currentDocument).contentTypeSlug,
+      };
+    },
+    { isolationLevel: "read committed" }
+  );
+  await invalidateLinkedDetailPageCaches(id, result.contentTypeSlug);
+  return mapDetailPageRow(result.row);
 }
 
 export async function issueDetailPagePreview(input: {
@@ -496,108 +483,126 @@ export async function issueDetailPagePreview(input: {
   sampleEntryId: string;
   ttlMinutes?: number;
 }): Promise<DetailPagePreviewResult> {
-  const detailPage = await getDetailPageDocument(input.detailPageId);
-  if (!detailPage) {
-    throw new Error("detail_page_not_found");
-  }
-
-  const entry = await getEntry(input.sampleEntryId);
-  if (!entry) {
-    throw new Error("detail_page_invalid");
-  }
-  if (entry.typeId !== detailPage.contentTypeId) {
-    throw new Error("detail_page_content_type_mismatch");
-  }
-  if (entry.status !== "published") {
-    throw new Error("detail_page_invalid");
-  }
-
-  return createDetailPagePreviewToken({
-    detailPageId: detailPage.id,
-    sampleEntryId: input.sampleEntryId,
-    ttlMinutes: input.ttlMinutes,
-  });
+  return db.transaction(
+    async (tx) => {
+      await acquireNativeCmsWriterFence(tx);
+      const [detailPage] = await tx
+        .select({ id: detailPageDocuments.id, contentTypeId: detailPageDocuments.contentTypeId })
+        .from(detailPageDocuments)
+        .where(eq(detailPageDocuments.id, input.detailPageId))
+        .for("key share");
+      if (!detailPage) throw new Error("detail_page_not_found");
+      const [entry] = await tx
+        .select({
+          id: contentEntries.id,
+          typeId: contentEntries.typeId,
+          status: contentEntries.status,
+        })
+        .from(contentEntries)
+        .where(eq(contentEntries.id, input.sampleEntryId))
+        .for("key share");
+      if (!entry || entry.status !== "published") throw new Error("detail_page_invalid");
+      if (entry.typeId !== detailPage.contentTypeId) {
+        throw new Error("detail_page_content_type_mismatch");
+      }
+      const token = randomUUID();
+      const expiresAt = new Date(Date.now() + (input.ttlMinutes ?? 60) * 60_000);
+      await tx.insert(previewTokens).values({
+        targetType: "detail-page",
+        targetId: detailPage.id,
+        tokenHash: hashPreviewToken(token),
+        context: { kind: "detail-page", sampleEntryId: entry.id },
+        expiresAt,
+      });
+      return { token, expiresAt };
+    },
+    { isolationLevel: "read committed" }
+  );
 }
 
 export async function publishDetailPageDocument(id: string, userId: string) {
-  const existing = await getDetailPageDocument(id);
-  if (!existing) {
-    throw new Error("detail_page_not_found");
-  }
-
-  const contentType = await getContentType(existing.contentTypeId);
-  if (!contentType) {
-    throw new Error("detail_page_invalid");
-  }
-
-  const publishedDocument = normalizeDetailPageDocument({
-    ...existing.currentDocument,
-    contentTypeSlug: contentType.slug,
-    status: "published",
-  });
-
-  const [row] = await db.transaction(async (tx) => {
-    await createDetailPageRevisionTx(tx, id, publishedDocument, userId, "publish");
-    const [updated] = await tx
-      .update(detailPageDocuments)
-      .set({
-        name: publishedDocument.name,
+  const result = await db.transaction(
+    async (tx) => {
+      await acquireNativeCmsWriterFence(tx);
+      const [existing] = await tx
+        .select()
+        .from(detailPageDocuments)
+        .where(eq(detailPageDocuments.id, id))
+        .for("update");
+      if (!existing) throw new Error("detail_page_not_found");
+      const [contentType] = await tx
+        .select({ slug: contentTypes.slug })
+        .from(contentTypes)
+        .where(eq(contentTypes.id, existing.contentTypeId))
+        .for("key share");
+      if (!contentType) throw new Error("detail_page_invalid");
+      const publishedDocument = normalizeDetailPageDocument({
+        ...normalizeDetailPageDocument(existing.currentDocument),
+        contentTypeSlug: contentType.slug,
         status: "published",
-        currentDocument: publishedDocument,
-        publishedDocument,
-        updatedAt: new Date(),
-        publishedAt: new Date(),
-      })
-      .where(eq(detailPageDocuments.id, id))
-      .returning();
-
-    return [updated];
-  });
-
-  if (!row) {
-    throw new Error("detail_page_not_found");
-  }
-
-  await invalidateLinkedDetailPageCaches(id, contentType.slug);
-  return mapDetailPageRow(row);
+      });
+      await createDetailPageRevisionTx(tx, id, publishedDocument, userId, "publish");
+      const [updated] = await tx
+        .update(detailPageDocuments)
+        .set({
+          name: publishedDocument.name,
+          status: "published",
+          currentDocument: publishedDocument,
+          publishedDocument,
+          updatedAt: new Date(),
+          publishedAt: new Date(),
+        })
+        .where(eq(detailPageDocuments.id, id))
+        .returning();
+      if (!updated) throw new Error("detail_page_not_found");
+      return { row: updated, contentTypeSlug: contentType.slug };
+    },
+    { isolationLevel: "read committed" }
+  );
+  await invalidateLinkedDetailPageCaches(id, result.contentTypeSlug);
+  return mapDetailPageRow(result.row);
 }
 
 export async function unpublishDetailPageDocument(id: string) {
-  const existing = await getDetailPageDocument(id);
-  if (!existing) {
-    throw new Error("detail_page_not_found");
-  }
-
-  const contentType = await getContentType(existing.contentTypeId);
-  if (!contentType) {
-    throw new Error("detail_page_invalid");
-  }
-
-  const draftDocument = normalizeDetailPageDocument({
-    ...existing.currentDocument,
-    contentTypeSlug: contentType.slug,
-    status: "draft",
-  });
-
-  const [row] = await db
-    .update(detailPageDocuments)
-    .set({
-      name: draftDocument.name,
-      status: "draft",
-      currentDocument: draftDocument,
-      publishedDocument: null,
-      updatedAt: new Date(),
-      publishedAt: null,
-    })
-    .where(eq(detailPageDocuments.id, id))
-    .returning();
-
-  if (!row) {
-    throw new Error("detail_page_not_found");
-  }
-
-  await invalidateLinkedDetailPageCaches(id, contentType.slug);
-  return mapDetailPageRow(row);
+  const result = await db.transaction(
+    async (tx) => {
+      await acquireNativeCmsWriterFence(tx);
+      const [existing] = await tx
+        .select()
+        .from(detailPageDocuments)
+        .where(eq(detailPageDocuments.id, id))
+        .for("update");
+      if (!existing) throw new Error("detail_page_not_found");
+      const [contentType] = await tx
+        .select({ slug: contentTypes.slug })
+        .from(contentTypes)
+        .where(eq(contentTypes.id, existing.contentTypeId))
+        .for("key share");
+      if (!contentType) throw new Error("detail_page_invalid");
+      const draftDocument = normalizeDetailPageDocument({
+        ...normalizeDetailPageDocument(existing.currentDocument),
+        contentTypeSlug: contentType.slug,
+        status: "draft",
+      });
+      const [updated] = await tx
+        .update(detailPageDocuments)
+        .set({
+          name: draftDocument.name,
+          status: "draft",
+          currentDocument: draftDocument,
+          publishedDocument: null,
+          updatedAt: new Date(),
+          publishedAt: null,
+        })
+        .where(eq(detailPageDocuments.id, id))
+        .returning();
+      if (!updated) throw new Error("detail_page_not_found");
+      return { row: updated, contentTypeSlug: contentType.slug };
+    },
+    { isolationLevel: "read committed" }
+  );
+  await invalidateLinkedDetailPageCaches(id, result.contentTypeSlug);
+  return mapDetailPageRow(result.row);
 }
 
 export async function autosaveDetailPageDocument(
@@ -612,16 +617,31 @@ export async function autosaveDetailPageDocument(
     throw new Error("detail_page_conflict");
   }
 
-  const prepared = await prepareDetailPageDocumentUpsert({
-    document,
-    expectedExistingId: id,
-  });
-  if (!prepared.existing) {
-    throw new Error("detail_page_not_found");
-  }
-
-  const result = await db.transaction(async (tx) =>
-    createOrReplaceDetailPageAutosaveRevisionTx(tx, id, prepared.document, userId)
+  const result = await db.transaction(
+    async (tx) => {
+      await acquireNativeCmsWriterFence(tx);
+      const [contentType] = await tx
+        .select({ id: contentTypes.id, slug: contentTypes.slug })
+        .from(contentTypes)
+        .where(eq(contentTypes.id, document.contentTypeId))
+        .for("key share");
+      if (!contentType) throw new Error("detail_page_invalid");
+      const [existing] = await tx
+        .select({ id: detailPageDocuments.id, contentTypeId: detailPageDocuments.contentTypeId })
+        .from(detailPageDocuments)
+        .where(eq(detailPageDocuments.id, id))
+        .for("update");
+      if (!existing) throw new Error("detail_page_not_found");
+      if (existing.contentTypeId !== contentType.id) {
+        throw new Error("detail_page_content_type_mismatch");
+      }
+      const refreshed = normalizeDetailPageDocument({
+        ...document,
+        contentTypeSlug: contentType.slug,
+      });
+      return createOrReplaceDetailPageAutosaveRevisionTx(tx, id, refreshed, userId);
+    },
+    { isolationLevel: "read committed" }
   );
 
   return {

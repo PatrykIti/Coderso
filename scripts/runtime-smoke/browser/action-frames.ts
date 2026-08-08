@@ -40,19 +40,24 @@ export function buildBatchRunCodeSource(input: {
     .map(({ actionId, source }) => `[${safeLiteral(actionId)},(${source})]`)
     .join(",");
   const source = `async (page) => {
+    const __name = (target) => target;
     const actions = [${entries}];
-    const canonicalize = (value, seen = new WeakSet()) => {
+    const canonicalize = (value, ancestors = new WeakSet()) => {
       if (value === null || typeof value === "string" || typeof value === "boolean") return value;
       if (typeof value === "number") {
         if (!Number.isFinite(value)) throw new Error("wf540_nonfinite_output");
         return value;
       }
-      if (typeof value !== "object" || seen.has(value)) throw new Error("wf540_nonjson_output");
-      seen.add(value);
-      if (Array.isArray(value)) return value.map((item) => canonicalize(item, seen));
-      const output = {};
-      for (const key of Object.keys(value).sort()) output[key] = canonicalize(value[key], seen);
-      return output;
+      if (typeof value !== "object" || ancestors.has(value)) throw new Error("wf540_nonjson_output");
+      ancestors.add(value);
+      try {
+        if (Array.isArray(value)) return value.map((item) => canonicalize(item, ancestors));
+        const output = {};
+        for (const key of Object.keys(value).sort()) output[key] = canonicalize(value[key], ancestors);
+        return output;
+      } finally {
+        ancestors.delete(value);
+      }
     };
     const canonicalJson = (value) => JSON.stringify(canonicalize(value));
     const projectFailure = (error) => {

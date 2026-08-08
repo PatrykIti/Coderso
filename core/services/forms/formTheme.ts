@@ -104,6 +104,7 @@ export type ResolvedFormTheme = {
     fullWidth: boolean;
     radius: FormThemeRadius;
     label?: string;
+    supportingText?: string;
     background?: string;
     textColor?: string;
   };
@@ -202,6 +203,9 @@ export function resolveFormTheme(theme?: FormFormTheme): ResolvedFormTheme {
       fullWidth: submit?.fullWidth ?? d.submit.fullWidth,
       radius: submit?.radius ?? d.submit.radius,
       label: submit?.label ?? d.submit.label,
+      ...(submit?.supportingText !== undefined
+        ? { supportingText: submit.supportingText }
+        : {}),
       background: resolveColor(submit?.background) ?? d.submit.background,
       textColor: resolveColor(submit?.textColor) ?? d.submit.textColor,
     },

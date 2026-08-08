@@ -44,6 +44,10 @@ credential values.
 
 ## Widget Contract Smoke
 
+The command below is a thin compatibility entry point over the registered
+modular widget suite. It reuses the shared runtime-smoke Playwright dispatcher,
+private workspace and lifecycle instead of owning another browser process loop.
+
 Run the repeatable TASK-336 widget editor/frontend smoke from the repo root:
 
 ```bash

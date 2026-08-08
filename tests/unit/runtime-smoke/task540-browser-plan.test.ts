@@ -1,11 +1,11 @@
 import { expect, test } from "bun:test";
-import path from "node:path";
 import {
   compileTask540BrowserDispatchPlan,
   TASK_540_EXPECTED_BROWSER_TOTALS,
-  type Task540SegmentPlanSource,
 } from "../../../scripts/runtime-smoke/adapters/task-540/browser-segments";
 import { createTask540BrowserExecutor } from "../../../scripts/runtime-smoke/adapters/task-540/browser-executor";
+import { buildTask540NativePlan } from "../../../scripts/runtime-smoke/adapters/task-540/suite/composition/plan.mjs";
+import type { Task540NativePlan } from "../../../scripts/runtime-smoke/adapters/task-540/suite/composition/contracts";
 import {
   buildBatchRunCodeSource,
   materializedSourceBytes,
@@ -13,18 +13,10 @@ import {
 import { MAX_BROWSER_RUN_CODE_ARG_BYTES } from "../../../scripts/runtime-smoke/browser/contracts";
 import { splitMaterializedSegment } from "../../../scripts/runtime-smoke/browser/segment-compiler";
 import { successFrame } from "../../../scripts/runtime-smoke/browser/protocol";
+import { task540BrowserSegmentIds } from "../../../scripts/runtime-smoke/adapters/task-540/suite/browser/native-browser";
 
-interface PlanModule {
-  readonly buildTask540SmokePlan: (input: { readonly nonce: string }) => Task540SegmentPlanSource;
-}
-
-const root = path.resolve(import.meta.dir, "../../..");
-
-test("TASK-540 manifest compiles to exact 47 batches plus 28 standalone dispatches", async () => {
-  const module: PlanModule = await import(
-    path.join(root, "_docs/_workflows/task-540-smoke/contract/plan.mjs")
-  );
-  const plan = module.buildTask540SmokePlan({ nonce: "0123456789ab" });
+test("TASK-540 native manifest compiles to exact 47 batches plus 28 standalone dispatches", () => {
+  const plan = buildTask540NativePlan({ nonce: "0123456789ab" }) as Task540NativePlan;
   const compiled = compileTask540BrowserDispatchPlan(plan);
   expect(compiled).toMatchObject({
     logicalBrowserActions: 420,
@@ -86,6 +78,9 @@ test("TASK-540 manifest compiles to exact 47 batches plus 28 standalone dispatch
   );
   expect(partitions.length).toBeGreaterThan(1);
   expect(partitions.flatMap(({ actionIds }) => actionIds)).toEqual(oversized.actionIds);
+  const allowedSegmentIds = new Set(task540BrowserSegmentIds(plan));
+  expect(allowedSegmentIds.size).toBe(467);
+  expect(partitions.every(({ segmentId }) => allowedSegmentIds.has(segmentId))).toBe(true);
   let offset = 0;
   for (const partition of partitions) {
     const actions = materialized.slice(offset, offset + partition.actionIds.length);
@@ -137,26 +132,28 @@ test("TASK-540 browser executor preserves logical order and proof ownership acro
       };
     },
     splitMaterializedSegment(materialized) {
-      const partitions = [
-        materialized.segment.actionIds.slice(0, 2),
-        materialized.segment.actionIds.slice(2),
-      ];
-      return partitions.map((actionIds, index) => ({
-        segment: {
-          ...materialized.segment,
-          segmentId: `${materialized.segment.segmentId}-part-0${index + 1}`,
-          actionIds,
+      return [
+        {
+          segment: {
+            ...materialized.segment,
+            segmentId: "segment-0001-part-01",
+            actionIds: ["a", "b"],
+          },
+          actions: materialized.actions.slice(0, 2),
         },
-        actions: materialized.actions.slice(index === 0 ? 0 : 2, index === 0 ? 2 : 3),
-      }));
+        {
+          segment: { ...materialized.segment, segmentId: "segment-0001-part-02", actionIds: ["c"] },
+          actions: materialized.actions.slice(2),
+        },
+      ];
     },
-    async dispatchSegment(materialized, frameExpectation) {
+    async dispatchSegment(materialized, expectation) {
       events.push(`dispatch:${materialized.segment.segmentId}`);
       const proof = {};
       proofBySegment.set(materialized.segment.segmentId, proof);
       return {
-        frames: frameExpectation.actionIds.map((_, index) =>
-          successFrame({ expectation: frameExpectation, sequence: index + 1, output: index + 1 })
+        frames: expectation.actionIds.map((_, index) =>
+          successFrame({ expectation, sequence: index + 1, output: index + 1 })
         ),
         proof,
       };
@@ -171,20 +168,11 @@ test("TASK-540 browser executor preserves logical order and proof ownership acro
       throw new Error("unexpected standalone action");
     },
   });
-  expect(
-    await executor.executePrepared({ actionId: "a", executableType: "browser-run-code" })
-  ).toBe("a");
-  expect(events).toEqual([
-    "dispatch:segment-0001-part-01",
-    "dispatch:segment-0001-part-02",
-    "project:a:segment-0001-part-01",
-  ]);
-  expect(
-    await executor.executePrepared({ actionId: "b", executableType: "browser-run-code" })
-  ).toBe("b");
-  expect(
-    await executor.executePrepared({ actionId: "c", executableType: "browser-run-code" })
-  ).toBe("c");
+  for (const actionId of ["a", "b", "c"]) {
+    expect(await executor.executePrepared({ actionId, executableType: "browser-run-code" })).toBe(
+      actionId
+    );
+  }
   expect(events).toEqual([
     "dispatch:segment-0001-part-01",
     "dispatch:segment-0001-part-02",
@@ -193,150 +181,4 @@ test("TASK-540 browser executor preserves logical order and proof ownership acro
     "project:c:segment-0001-part-02",
   ]);
   expect(() => executor.assertDrained()).not.toThrow();
-});
-
-test("TASK-540 command authority projects two logical receipts from one physical batch", async () => {
-  interface AuthorityRequest {
-    readonly action: TaskAction;
-    readonly program: "playwright-cli";
-    readonly args: readonly string[];
-    readonly sequence: number;
-    readonly operation: string;
-    readonly routeKey: null;
-    readonly assertionName: null;
-    readonly displayArgs: readonly string[];
-    readonly stdoutDiscarded: false;
-  }
-  interface TaskAction {
-    readonly id: string;
-    readonly kind: string;
-    readonly scenario: string;
-    readonly pageId: string;
-    readonly tabIndex: number;
-    readonly executable: { readonly type: "browser-run-code" };
-    readonly repositoryMutationPolicy: { readonly mode: "none"; readonly paths: readonly [] };
-  }
-  interface CommandAuthority {
-    executeBatchProgram(input: {
-      readonly attributionAction: TaskAction;
-      readonly actions: readonly TaskAction[];
-      readonly args: readonly string[];
-      readonly cwd: string;
-      readonly env: Readonly<Record<string, string>>;
-    }): Promise<{ readonly proof: object; readonly stdout: Buffer; readonly stderr: Buffer }>;
-    projectBatchActionResult(input: {
-      readonly proof: object;
-      readonly request: AuthorityRequest;
-      readonly stdout: Buffer;
-      readonly terminal?: boolean;
-    }): { readonly receipt: { readonly sequence: number; readonly stdoutSha256: string } };
-  }
-  interface AuthorityModule {
-    readonly createCommandAuthorityRuntime: (input: {
-      readonly failureBoundary: Record<string, (...args: never[]) => unknown>;
-      readonly runRetainedProcessGroup: () => Promise<object>;
-    }) => { readonly LocalCommandAuthority: new (input: object) => CommandAuthority };
-  }
-  const module: AuthorityModule = await import(
-    path.join(root, "_docs/_workflows/task-540-smoke/runtime/command-authority.mjs")
-  );
-  let physicalCalls = 0;
-  const retained = async (): Promise<object> => {
-    physicalCalls += 1;
-    return Object.freeze({
-      completion: Object.freeze({ code: 0, signal: null }),
-      timedOut: false,
-      spawnError: false,
-      stdout: Object.freeze({ bytes: Buffer.from('"batch\\n"\n'), exceeded: false }),
-      stderr: Object.freeze({ bytes: Buffer.alloc(0), exceeded: false }),
-      termination: Object.freeze({ absent: true }),
-    });
-  };
-  const noFrame = (): null => null;
-  const failureBoundary = {
-    classifyPrivateAuthSettlementFailureFrame: noFrame,
-    classifyPrivateDirtyNavigationFailureFrame: noFrame,
-    classifyPrivateToneOpenFailureFrame: noFrame,
-    classifyPrivateToneSelectFailureFrame: noFrame,
-    createPrivateAuthSettlementFailure: () => new Error("auth"),
-    createPrivateDirtyNavigationFailure: () => new Error("dirty"),
-    createPrivateToneOpenFailure: () => new Error("tone-open"),
-    createPrivateToneSelectFailure: () => new Error("tone-select"),
-    failPrivateAuthSettlementStage: (
-      _action: never,
-      _failureClass: never,
-      _details: never,
-      fallback: string
-    ): never => {
-      throw new Error(fallback);
-    },
-  };
-  const { LocalCommandAuthority } = module.createCommandAuthorityRuntime({
-    failureBoundary: failureBoundary as unknown as Record<string, (...args: never[]) => unknown>,
-    runRetainedProcessGroup: retained,
-  });
-  const clean = Object.freeze({ paths: Object.freeze([]), hashes: Object.freeze({}) });
-  const authority = new LocalCommandAuthority({
-    root,
-    assertSafeEvidence: () => undefined,
-    snapshotRepository: async () => clean,
-    sensitiveValues: [],
-  });
-  const makeAction = (id: string): TaskAction => ({
-    id,
-    kind: "click",
-    scenario: "scenario",
-    pageId: "admin",
-    tabIndex: 0,
-    executable: { type: "browser-run-code" },
-    repositoryMutationPolicy: { mode: "none", paths: [] },
-  });
-  const first = makeAction("first");
-  const second = makeAction("second");
-  const physical = await authority.executeBatchProgram({
-    attributionAction: first,
-    actions: [first, second],
-    args: ["-s=wf540smoke", "--raw", "run-code", "async () => true"],
-    cwd: root,
-    env: {},
-  });
-  const request = (action: TaskAction, sequence: number): AuthorityRequest => ({
-    action,
-    program: "playwright-cli",
-    args: ["-s=wf540smoke", "--raw", "run-code", "async () => true"],
-    sequence,
-    operation: "click",
-    routeKey: null,
-    assertionName: null,
-    displayArgs: ["-s=wf540smoke", "--raw", `run-code/${action.id}`],
-    stdoutDiscarded: false,
-  });
-  expect(() =>
-    authority.projectBatchActionResult({
-      proof: physical.proof,
-      request: request(second, 2),
-      stdout: Buffer.from('{"ok":true}\n'),
-    })
-  ).toThrow();
-  const firstResult = authority.projectBatchActionResult({
-    proof: physical.proof,
-    request: request(first, 1),
-    stdout: Buffer.from('{"ok":true}\n'),
-  });
-  const secondResult = authority.projectBatchActionResult({
-    proof: physical.proof,
-    request: request(second, 2),
-    stdout: Buffer.from('{"ok":true}\n'),
-    terminal: true,
-  });
-  expect([firstResult.receipt.sequence, secondResult.receipt.sequence]).toEqual([1, 2]);
-  expect(firstResult.receipt.stdoutSha256).toBe(secondResult.receipt.stdoutSha256);
-  expect(physicalCalls).toBe(1);
-  expect(() =>
-    authority.projectBatchActionResult({
-      proof: physical.proof,
-      request: request(second, 2),
-      stdout: Buffer.from('{"ok":true}\n'),
-    })
-  ).toThrow();
 });

@@ -3,7 +3,7 @@ import { randomUUID } from "node:crypto";
 import { eq, sql } from "drizzle-orm";
 
 import { db } from "../../../core/db/client";
-import { listingTemplates } from "../../../core/db/schema";
+import { contentTypes, listingTemplates } from "../../../core/db/schema";
 import {
   createListingTemplate,
   deleteListingTemplate,
@@ -28,6 +28,7 @@ const hasDb = Boolean(process.env.DATABASE_URL) && (await canConnect());
 const testIfDb = hasDb ? test : test.skip;
 
 const createdTemplateIds = new Set<string>();
+const routeContentTypeIds = new Set<string>();
 let originalContentRoutes: ContentRouteSetting[] | null = null;
 
 async function canConnect() {
@@ -69,12 +70,12 @@ afterAll(async () => {
     await setSetting("site.contentRoutes", originalContentRoutes);
     originalContentRoutes = null;
   }
-  if (!hasDb || createdTemplateIds.size === 0) return;
-  await db
-    .delete(listingTemplates)
-    .where(eq(listingTemplates.id, Array.from(createdTemplateIds)[0]));
-  for (const id of Array.from(createdTemplateIds).slice(1)) {
+  if (!hasDb) return;
+  for (const id of createdTemplateIds) {
     await db.delete(listingTemplates).where(eq(listingTemplates.id, id));
+  }
+  for (const id of routeContentTypeIds) {
+    await db.delete(contentTypes).where(eq(contentTypes.id, id));
   }
 });
 
@@ -84,6 +85,10 @@ afterEach(async () => {
     await setSetting("site.contentRoutes", originalContentRoutes);
     originalContentRoutes = null;
   }
+  for (const id of routeContentTypeIds) {
+    await db.delete(contentTypes).where(eq(contentTypes.id, id));
+  }
+  routeContentTypeIds.clear();
 });
 
 const enableLinkedDetailRouteCache = async () => {
@@ -91,17 +96,30 @@ const enableLinkedDetailRouteCache = async () => {
     originalContentRoutes ??
     ((await getSetting("site.contentRoutes")) as ContentRouteSetting[]) ??
     [];
+  const typeSlug = `products-${randomUUID()}`;
+  const [contentType] = await db
+    .insert(contentTypes)
+    .values({
+      name: `Products ${randomUUID()}`,
+      slug: typeSlug,
+      schema: { type: "object", additionalProperties: false, properties: {} },
+      status: "draft",
+      config: {},
+    })
+    .returning({ id: contentTypes.id });
+  if (!contentType) throw new Error("content_type_fixture_failed");
+  routeContentTypeIds.add(contentType.id);
   await setSetting("site.contentRoutes", [
     {
-      type: "products",
-      listPath: "/products",
-      detailPath: "/products/:slug",
+      type: typeSlug,
+      listPath: `/${typeSlug}`,
+      detailPath: `/${typeSlug}/:slug`,
       enabled: true,
       detailPageId: "14d7f4d4-48d8-53f7-a9e6-0d01f6b89e6c",
     } satisfies ContentRouteSetting,
   ]);
   configureSiteCache(300);
-  const key = buildSiteCacheKey("profile-1", "/products/example");
+  const key = buildSiteCacheKey("profile-1", `/${typeSlug}/example`);
   setSiteCacheEntry(key, "<html>cached</html>", 300, 0);
   expect(getSiteCacheEntry(key, 1)).toBe("<html>cached</html>");
   return key;

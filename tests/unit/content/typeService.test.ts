@@ -166,38 +166,47 @@ testIfDb("delete content type is blocked while detail page documents exist", asy
   await expect(deleteContentType(created.id)).rejects.toThrow("content_type_has_detail_pages");
 });
 
-testIfDb("delete content type removes its auto content route reference", async () => {
-  const originalContentRoutes = await getSetting("site.contentRoutes");
-  const created = await createContentType({
-    name: `Routed ${randomUUID()}`,
-    slug: `routed-${randomUUID()}`,
-    schema,
-  });
-  cleanupTypeIds.add(created.id);
+testIfDb(
+  "delete content type rejects an existing content route without side-writing settings",
+  async () => {
+    const originalContentRoutes = await getSetting("site.contentRoutes");
+    const created = await createContentType({
+      name: `Routed ${randomUUID()}`,
+      slug: `routed-${randomUUID()}`,
+      schema,
+    });
+    cleanupTypeIds.add(created.id);
 
-  try {
-    await setSetting("site.contentRoutes", [
-      ...((Array.isArray(originalContentRoutes)
-        ? originalContentRoutes
-        : []) as ContentRouteSetting[]),
-      {
-        type: created.slug,
-        listPath: `/${created.slug}`,
-        detailPath: `/${created.slug}/:slug`,
-        enabled: true,
-      },
-    ]);
+    try {
+      await setSetting("site.contentRoutes", [
+        ...((Array.isArray(originalContentRoutes)
+          ? originalContentRoutes
+          : []) as ContentRouteSetting[]),
+        {
+          type: created.slug,
+          listPath: `/${created.slug}`,
+          detailPath: `/${created.slug}/:slug`,
+          enabled: true,
+        },
+      ]);
 
-    const removed = await deleteContentType(created.id);
-    expect(removed?.id).toBe(created.id);
-    cleanupTypeIds.delete(created.id);
+      await expect(
+        updateContentType(created.id, { slug: `renamed-${randomUUID()}` })
+      ).rejects.toThrow("content_type_has_content_routes");
+      await expect(deleteContentType(created.id)).rejects.toThrow(
+        "content_type_has_content_routes"
+      );
 
-    const nextContentRoutes = (await getSetting("site.contentRoutes")) as ContentRouteSetting[];
-    expect(
-      Array.isArray(nextContentRoutes) &&
-        nextContentRoutes.some((route) => route.type === created.slug)
-    ).toBe(false);
-  } finally {
-    await setSetting("site.contentRoutes", originalContentRoutes);
+      const nextContentRoutes = (await getSetting("site.contentRoutes")) as ContentRouteSetting[];
+      expect(
+        Array.isArray(nextContentRoutes) &&
+          nextContentRoutes.some((route) => route.type === created.slug)
+      ).toBe(true);
+      expect(
+        (await db.select().from(contentTypes).where(eq(contentTypes.id, created.id)))[0]?.slug
+      ).toBe(created.slug);
+    } finally {
+      await setSetting("site.contentRoutes", originalContentRoutes);
+    }
   }
-});
+);

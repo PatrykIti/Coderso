@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { PassThrough } from "node:stream";
@@ -260,4 +260,16 @@ test("production environment is fixed, least-privilege, and rejects missing data
   expect(projected.VITE_DEV_SERVER_URL).toBeUndefined();
   expect(projected.DATABASE_URL).toBe(environment.DATABASE_URL);
   expect(() => buildProductionBoundaryEnvironment({ PATH: "/usr/bin" }, TEST_PORT)).toThrow();
+});
+
+test("production boundary delegates server ownership to the shared supervised resource", async () => {
+  const source = await readFile(
+    join(process.cwd(), "scripts/runtime-smoke/adapters/production-boundary.ts"),
+    "utf8"
+  );
+  expect(source).toContain("startSupervisedServer(context");
+  expect(source).not.toContain("class OwnedProductionServer");
+  expect(source).not.toContain("context.processes.start(");
+  expect(source).not.toContain("createServer(");
+  expect(source).not.toMatch(/setTimeout\s*\(/u);
 });

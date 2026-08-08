@@ -1,0 +1,1425 @@
+{
+  "schemaVersion": 1,
+  "sourceManifestSha256": "5e2e2e7571deeede2db1c58ab3f2e4c4a7ad36952a38f2d90b392e643584c13f",
+  "counts": {
+    "tracked": 169,
+    "reachability": { "host-subprocess": 17, "registered-static": 148, "workflow-only": 4 },
+    "importTimeSelfTests": 44,
+    "dispositions": {
+      "l01-stable-contract": 26,
+      "l02-typed-operation": 43,
+      "l03-browser-host-composition": 51,
+      "l04-delete-only": 49
+    }
+  },
+  "destinationOwnership": [
+    {
+      "disposition": "l01-stable-contract",
+      "roots": [
+        "scripts/runtime-smoke/adapters/task-540/suite/contract/",
+        "scripts/runtime-smoke/adapters/task-540/suite/shared/"
+      ],
+      "exactPaths": [
+        "scripts/runtime-smoke/adapters/task-540/suite/contract/action-rows.mjs",
+        "scripts/runtime-smoke/adapters/task-540/suite/contract/actions/button-image.mjs",
+        "scripts/runtime-smoke/adapters/task-540/suite/contract/actions/dirty-guard.mjs",
+        "scripts/runtime-smoke/adapters/task-540/suite/contract/actions/recovery-cache.mjs",
+        "scripts/runtime-smoke/adapters/task-540/suite/contract/actions/retention-user.mjs",
+        "scripts/runtime-smoke/adapters/task-540/suite/contract/actions/setup.mjs",
+        "scripts/runtime-smoke/adapters/task-540/suite/contract/actions/space-selection.mjs",
+        "scripts/runtime-smoke/adapters/task-540/suite/contract/actions/tabs-content.mjs",
+        "scripts/runtime-smoke/adapters/task-540/suite/contract/actions/tabs-keyboard.mjs",
+        "scripts/runtime-smoke/adapters/task-540/suite/contract/actions/terminal.mjs",
+        "scripts/runtime-smoke/adapters/task-540/suite/contract/assertion-registries.mjs",
+        "scripts/runtime-smoke/adapters/task-540/suite/contract/contract-dsl.mjs",
+        "scripts/runtime-smoke/adapters/task-540/suite/contract/core.mjs",
+        "scripts/runtime-smoke/adapters/task-540/suite/contract/fixtures.mjs",
+        "scripts/runtime-smoke/adapters/task-540/suite/contract/manifest.mjs",
+        "scripts/runtime-smoke/adapters/task-540/suite/contract/metadata.mjs",
+        "scripts/runtime-smoke/adapters/task-540/suite/contract/output-contracts.mjs",
+        "scripts/runtime-smoke/adapters/task-540/suite/contract/plan.mjs",
+        "scripts/runtime-smoke/adapters/task-540/suite/contract/references.mjs",
+        "scripts/runtime-smoke/adapters/task-540/suite/contract/registries.mjs",
+        "scripts/runtime-smoke/adapters/task-540/suite/contract/requirements.mjs",
+        "scripts/runtime-smoke/adapters/task-540/suite/contract/selectors.mjs",
+        "scripts/runtime-smoke/adapters/task-540/suite/contract/visible-assertion-predicates.mjs",
+        "scripts/runtime-smoke/adapters/task-540/suite/contract/visible-assertion-schemas.mjs",
+        "scripts/runtime-smoke/adapters/task-540/suite/shared/captures.mjs",
+        "scripts/runtime-smoke/adapters/task-540/suite/shared/foundation.mjs"
+      ]
+    },
+    {
+      "disposition": "l02-typed-operation",
+      "roots": [
+        "scripts/runtime-smoke/adapters/task-540/suite/executor/",
+        "scripts/runtime-smoke/adapters/task-540/suite/operations/",
+        "scripts/runtime-smoke/adapters/task-540/suite/runtime/"
+      ],
+      "exactPaths": []
+    },
+    {
+      "disposition": "l03-browser-host-composition",
+      "roots": [
+        "scripts/runtime-smoke/adapters/task-540/suite/browser/",
+        "scripts/runtime-smoke/adapters/task-540/suite/composition/",
+        "scripts/runtime-smoke/adapters/task-540/suite/host/"
+      ],
+      "exactPaths": []
+    },
+    { "disposition": "l04-delete-only", "roots": [], "exactPaths": [] }
+  ],
+  "entries": [
+    {
+      "path": "_docs/_workflows/task-540-codex-agent-bridge.mjs",
+      "sha256": "c3c594a17cb63943beab29e7f621f6e1ca46cb3b5abb67625edcddb900788341",
+      "reachability": "workflow-only",
+      "importTimeSelfTest": false,
+      "disposition": "l04-delete-only",
+      "destination": null
+    },
+    {
+      "path": "_docs/_workflows/task-540-implement.mjs",
+      "sha256": "58239b32d6c878ce74ac5137f7f41688fdb521b0df3bd21676b0439bc774358d",
+      "reachability": "workflow-only",
+      "importTimeSelfTest": false,
+      "disposition": "l04-delete-only",
+      "destination": null
+    },
+    {
+      "path": "_docs/_workflows/task-540-local-orchestrator.mjs",
+      "sha256": "1bb5877cbc009bb11e85c8f4f7957ddc278a0a5cb74072cad41e3709814c1b40",
+      "reachability": "workflow-only",
+      "importTimeSelfTest": false,
+      "disposition": "l04-delete-only",
+      "destination": null
+    },
+    {
+      "path": "_docs/_workflows/task-540-smoke-contract.mjs",
+      "sha256": "33da5a759d69ed00d41dc364dd918660c665591db34bd411b1f174c7b9e142b2",
+      "reachability": "registered-static",
+      "importTimeSelfTest": false,
+      "disposition": "l03-browser-host-composition",
+      "destination": null
+    },
+    {
+      "path": "_docs/_workflows/task-540-smoke-executor.mjs",
+      "sha256": "89de531b799d844985e51a393c6bd08d5647f964f288dcb5148c20894f1b35d9",
+      "reachability": "registered-static",
+      "importTimeSelfTest": false,
+      "disposition": "l03-browser-host-composition",
+      "destination": null
+    },
+    {
+      "path": "_docs/_workflows/task-540-smoke-host.mjs",
+      "sha256": "82accfe7b9ada4ca02853c691b315fec5817a54b600912a081d5495ade6c8d61",
+      "reachability": "host-subprocess",
+      "importTimeSelfTest": false,
+      "disposition": "l03-browser-host-composition",
+      "destination": null
+    },
+    {
+      "path": "_docs/_workflows/task-540-smoke/browser/expression-and-capture-sources.mjs",
+      "sha256": "efa1b31b96719b0635ff6dd093a778bd8a6d0966dce3435623a3a7d14432005a",
+      "reachability": "registered-static",
+      "importTimeSelfTest": false,
+      "disposition": "l03-browser-host-composition",
+      "destination": null
+    },
+    {
+      "path": "_docs/_workflows/task-540-smoke/browser/generic-invocations.mjs",
+      "sha256": "812dc8dbecf548a46822666d2339fad55d6f5bd1cf76d9797a92216115d990a2",
+      "reachability": "registered-static",
+      "importTimeSelfTest": false,
+      "disposition": "l03-browser-host-composition",
+      "destination": null
+    },
+    {
+      "path": "_docs/_workflows/task-540-smoke/browser/observation-sources.mjs",
+      "sha256": "0063615b9ca2237841e402e47bd4129110e86f609870b323261299c26030a3a8",
+      "reachability": "registered-static",
+      "importTimeSelfTest": false,
+      "disposition": "l03-browser-host-composition",
+      "destination": null
+    },
+    {
+      "path": "_docs/_workflows/task-540-smoke/browser/route-and-action-sources.mjs",
+      "sha256": "1a03a8fc3e7d5bf35e243e4f24eb99fee9246c0646b9bec6d813181636a41673",
+      "reachability": "registered-static",
+      "importTimeSelfTest": false,
+      "disposition": "l03-browser-host-composition",
+      "destination": null
+    },
+    {
+      "path": "_docs/_workflows/task-540-smoke/browser/run-code.mjs",
+      "sha256": "23d45701abd41035008ab5f722d3e92d8d2681eb5c12829d342514d696a37bb8",
+      "reachability": "registered-static",
+      "importTimeSelfTest": false,
+      "disposition": "l03-browser-host-composition",
+      "destination": null
+    },
+    {
+      "path": "_docs/_workflows/task-540-smoke/browser/scenarios/button-image.mjs",
+      "sha256": "a97a92c922d4c31e228d5eb30187eb4de4ceaa85cf5c4d117efa17cb6a92fd76",
+      "reachability": "registered-static",
+      "importTimeSelfTest": false,
+      "disposition": "l03-browser-host-composition",
+      "destination": null
+    },
+    {
+      "path": "_docs/_workflows/task-540-smoke/browser/scenarios/dirty-guards.mjs",
+      "sha256": "2542b6bc51a329de5774b976487b7e913616ddaf0f3bfb578e38a05d76ce6b8c",
+      "reachability": "registered-static",
+      "importTimeSelfTest": false,
+      "disposition": "l03-browser-host-composition",
+      "destination": null
+    },
+    {
+      "path": "_docs/_workflows/task-540-smoke/browser/scenarios/ownership.mjs",
+      "sha256": "211969730f4220f36c67fd5223bcf06320a0eab47eabbe5f23e2c1f5586f19de",
+      "reachability": "registered-static",
+      "importTimeSelfTest": false,
+      "disposition": "l03-browser-host-composition",
+      "destination": null
+    },
+    {
+      "path": "_docs/_workflows/task-540-smoke/browser/scenarios/related-cache.mjs",
+      "sha256": "a25113fc125e332a9f2c7a6db2274397c37a571f8305d7a2b4eae6baf975305e",
+      "reachability": "registered-static",
+      "importTimeSelfTest": false,
+      "disposition": "l03-browser-host-composition",
+      "destination": null
+    },
+    {
+      "path": "_docs/_workflows/task-540-smoke/browser/scenarios/responsive-users.mjs",
+      "sha256": "dd47ed18230a67683466cd4af79e5d1712db189a69075edb9195bbd60974c5d4",
+      "reachability": "registered-static",
+      "importTimeSelfTest": false,
+      "disposition": "l03-browser-host-composition",
+      "destination": null
+    },
+    {
+      "path": "_docs/_workflows/task-540-smoke/browser/scenarios/space-selection.mjs",
+      "sha256": "a076c55445439674b2e33654eba348ee2d74891e99fa9f2cf73fed37b47faa30",
+      "reachability": "registered-static",
+      "importTimeSelfTest": false,
+      "disposition": "l03-browser-host-composition",
+      "destination": null
+    },
+    {
+      "path": "_docs/_workflows/task-540-smoke/browser/scenarios/tabs-content.mjs",
+      "sha256": "ff533c3cfc3381f0e7cc7050d0e2b3de07f93cc97aba8e45507d158f6c998ed4",
+      "reachability": "registered-static",
+      "importTimeSelfTest": false,
+      "disposition": "l03-browser-host-composition",
+      "destination": null
+    },
+    {
+      "path": "_docs/_workflows/task-540-smoke/browser/scenarios/tabs-keyboard.mjs",
+      "sha256": "468abb0a544eefcaebc9f7ed914725df180b45205c08467f60108ff32dbcbe51",
+      "reachability": "registered-static",
+      "importTimeSelfTest": false,
+      "disposition": "l03-browser-host-composition",
+      "destination": null
+    },
+    {
+      "path": "_docs/_workflows/task-540-smoke/browser/simple-invocations.mjs",
+      "sha256": "d92e93d623c52426faa340ffc056a0ab0c59df2e549a6136528e169ebc0d60ce",
+      "reachability": "registered-static",
+      "importTimeSelfTest": false,
+      "disposition": "l03-browser-host-composition",
+      "destination": null
+    },
+    {
+      "path": "_docs/_workflows/task-540-smoke/browser/visible-assertion-sources.mjs",
+      "sha256": "8f3913a7c515b01936bab2e773bf55b4cc139f0e45b04008938642977b0c0225",
+      "reachability": "registered-static",
+      "importTimeSelfTest": false,
+      "disposition": "l03-browser-host-composition",
+      "destination": null
+    },
+    {
+      "path": "_docs/_workflows/task-540-smoke/cleanup/construction-authority.mjs",
+      "sha256": "871d184295183063b9f24fe73c68226d47fcbd2f4eee9f0a7828eaf57947efa7",
+      "reachability": "registered-static",
+      "importTimeSelfTest": false,
+      "disposition": "l03-browser-host-composition",
+      "destination": null
+    },
+    {
+      "path": "_docs/_workflows/task-540-smoke/cleanup/diagnostics.mjs",
+      "sha256": "c005ea30b601440310426e0d90f00ae1846696e21e7850b113b08ea9fad73c6f",
+      "reachability": "registered-static",
+      "importTimeSelfTest": false,
+      "disposition": "l02-typed-operation",
+      "destination": null
+    },
+    {
+      "path": "_docs/_workflows/task-540-smoke/cleanup/final-baselines.mjs",
+      "sha256": "e6f3238281f423eb7ea6b23d957a862e30f7109f4dbf4666bf6d699c4a612991",
+      "reachability": "registered-static",
+      "importTimeSelfTest": false,
+      "disposition": "l02-typed-operation",
+      "destination": null
+    },
+    {
+      "path": "_docs/_workflows/task-540-smoke/cleanup/subject-authority.mjs",
+      "sha256": "933c1a3ca95d15dddcbedce2249acd640ee39968cf973590677791cf9d7d851b",
+      "reachability": "registered-static",
+      "importTimeSelfTest": false,
+      "disposition": "l02-typed-operation",
+      "destination": null
+    },
+    {
+      "path": "_docs/_workflows/task-540-smoke/contract/action-rows.mjs",
+      "sha256": "2fbe4102f883ad5c7bf8c4637f91c0148f16ccff562907e9719842be61d6a304",
+      "reachability": "registered-static",
+      "importTimeSelfTest": false,
+      "disposition": "l01-stable-contract",
+      "destination": "scripts/runtime-smoke/adapters/task-540/suite/contract/action-rows.mjs"
+    },
+    {
+      "path": "_docs/_workflows/task-540-smoke/contract/actions/button-image.mjs",
+      "sha256": "fd2d6ff30dc122a6357d68b46cbcd1b9de57f16b61dcb7ed5ef4bcbdc11a6156",
+      "reachability": "registered-static",
+      "importTimeSelfTest": false,
+      "disposition": "l01-stable-contract",
+      "destination": "scripts/runtime-smoke/adapters/task-540/suite/contract/actions/button-image.mjs"
+    },
+    {
+      "path": "_docs/_workflows/task-540-smoke/contract/actions/dirty-guard.mjs",
+      "sha256": "cdd95be5bb595abd38944985149b3da439bd98e8bb87e00cc2a0cb1847126e0e",
+      "reachability": "registered-static",
+      "importTimeSelfTest": false,
+      "disposition": "l01-stable-contract",
+      "destination": "scripts/runtime-smoke/adapters/task-540/suite/contract/actions/dirty-guard.mjs"
+    },
+    {
+      "path": "_docs/_workflows/task-540-smoke/contract/actions/recovery-cache.mjs",
+      "sha256": "a7da18f7da116603c4a6ccad29234ffd7947cb49ccf1701add2e512f5db5d02f",
+      "reachability": "registered-static",
+      "importTimeSelfTest": false,
+      "disposition": "l01-stable-contract",
+      "destination": "scripts/runtime-smoke/adapters/task-540/suite/contract/actions/recovery-cache.mjs"
+    },
+    {
+      "path": "_docs/_workflows/task-540-smoke/contract/actions/retention-user.mjs",
+      "sha256": "2117ca01cd8e99338101f1cda97e69ef30846818b809d2cb31dcd891684d899e",
+      "reachability": "registered-static",
+      "importTimeSelfTest": false,
+      "disposition": "l01-stable-contract",
+      "destination": "scripts/runtime-smoke/adapters/task-540/suite/contract/actions/retention-user.mjs"
+    },
+    {
+      "path": "_docs/_workflows/task-540-smoke/contract/actions/setup.mjs",
+      "sha256": "39c3c7c553b8f75473c226bff10e028a9a2266881bc4aef6c23ed85482ac606b",
+      "reachability": "registered-static",
+      "importTimeSelfTest": false,
+      "disposition": "l01-stable-contract",
+      "destination": "scripts/runtime-smoke/adapters/task-540/suite/contract/actions/setup.mjs"
+    },
+    {
+      "path": "_docs/_workflows/task-540-smoke/contract/actions/space-selection.mjs",
+      "sha256": "f79fa2e517a4e97aac56872e0d46808939c4438c3e71bd2254031a06c0fd8ca0",
+      "reachability": "registered-static",
+      "importTimeSelfTest": false,
+      "disposition": "l01-stable-contract",
+      "destination": "scripts/runtime-smoke/adapters/task-540/suite/contract/actions/space-selection.mjs"
+    },
+    {
+      "path": "_docs/_workflows/task-540-smoke/contract/actions/tabs-content.mjs",
+      "sha256": "67985e5361d02972b4f4ede98937665f357e5b417d07451d9286dcc4996ec351",
+      "reachability": "registered-static",
+      "importTimeSelfTest": false,
+      "disposition": "l01-stable-contract",
+      "destination": "scripts/runtime-smoke/adapters/task-540/suite/contract/actions/tabs-content.mjs"
+    },
+    {
+      "path": "_docs/_workflows/task-540-smoke/contract/actions/tabs-keyboard.mjs",
+      "sha256": "0246c3aa771cc6c728a48dbf84368f29bceb95f6bcf78dd0dfb5ecdc83c13aa3",
+      "reachability": "registered-static",
+      "importTimeSelfTest": false,
+      "disposition": "l01-stable-contract",
+      "destination": "scripts/runtime-smoke/adapters/task-540/suite/contract/actions/tabs-keyboard.mjs"
+    },
+    {
+      "path": "_docs/_workflows/task-540-smoke/contract/actions/terminal.mjs",
+      "sha256": "0bed0cd497132ff471579b9e5dd9d38d9761aef3d267ae50aff3a22c86a6bf34",
+      "reachability": "registered-static",
+      "importTimeSelfTest": false,
+      "disposition": "l01-stable-contract",
+      "destination": "scripts/runtime-smoke/adapters/task-540/suite/contract/actions/terminal.mjs"
+    },
+    {
+      "path": "_docs/_workflows/task-540-smoke/contract/assertion-registries.mjs",
+      "sha256": "1476ab64de73b96538968bd3e55d7f7c507b0301d392e72bbe5999f8d0356b4d",
+      "reachability": "registered-static",
+      "importTimeSelfTest": false,
+      "disposition": "l01-stable-contract",
+      "destination": "scripts/runtime-smoke/adapters/task-540/suite/contract/assertion-registries.mjs"
+    },
+    {
+      "path": "_docs/_workflows/task-540-smoke/contract/contract-dsl.mjs",
+      "sha256": "0d2ca5708d7898947fd93cdb7e55f0e54c0281fb81f79018b6ed221143d699c6",
+      "reachability": "registered-static",
+      "importTimeSelfTest": false,
+      "disposition": "l01-stable-contract",
+      "destination": "scripts/runtime-smoke/adapters/task-540/suite/contract/contract-dsl.mjs"
+    },
+    {
+      "path": "_docs/_workflows/task-540-smoke/contract/core.mjs",
+      "sha256": "8e1656ad64a87454c4a97f5443e56a8f386be2061020fb6507458537d5756705",
+      "reachability": "registered-static",
+      "importTimeSelfTest": false,
+      "disposition": "l01-stable-contract",
+      "destination": "scripts/runtime-smoke/adapters/task-540/suite/contract/core.mjs"
+    },
+    {
+      "path": "_docs/_workflows/task-540-smoke/contract/fixtures.mjs",
+      "sha256": "84aebcb6967daa8121f04381b51f317cc9ad394a5ddafa81faa914cdd29abe44",
+      "reachability": "registered-static",
+      "importTimeSelfTest": false,
+      "disposition": "l01-stable-contract",
+      "destination": "scripts/runtime-smoke/adapters/task-540/suite/contract/fixtures.mjs"
+    },
+    {
+      "path": "_docs/_workflows/task-540-smoke/contract/manifest.mjs",
+      "sha256": "37914b9a8cf0fcfb3e756def48e1a817200b0d28adcc509d71a603eeb2f321b1",
+      "reachability": "registered-static",
+      "importTimeSelfTest": false,
+      "disposition": "l01-stable-contract",
+      "destination": "scripts/runtime-smoke/adapters/task-540/suite/contract/manifest.mjs"
+    },
+    {
+      "path": "_docs/_workflows/task-540-smoke/contract/metadata.mjs",
+      "sha256": "d75c8862df8672177a2fb83546833522772d5895881fc73fe7283249e31c7a96",
+      "reachability": "registered-static",
+      "importTimeSelfTest": false,
+      "disposition": "l01-stable-contract",
+      "destination": "scripts/runtime-smoke/adapters/task-540/suite/contract/metadata.mjs"
+    },
+    {
+      "path": "_docs/_workflows/task-540-smoke/contract/output-contracts.mjs",
+      "sha256": "b67a5661535e9b42ffee45402815eb18a406273e7584eb22a43739a912390777",
+      "reachability": "registered-static",
+      "importTimeSelfTest": false,
+      "disposition": "l01-stable-contract",
+      "destination": "scripts/runtime-smoke/adapters/task-540/suite/contract/output-contracts.mjs"
+    },
+    {
+      "path": "_docs/_workflows/task-540-smoke/contract/plan.mjs",
+      "sha256": "b077e367e8ea3357daaf73d8e3f504a7285122acdf026da81982f9ca1d60a0d3",
+      "reachability": "registered-static",
+      "importTimeSelfTest": false,
+      "disposition": "l01-stable-contract",
+      "destination": "scripts/runtime-smoke/adapters/task-540/suite/contract/plan.mjs"
+    },
+    {
+      "path": "_docs/_workflows/task-540-smoke/contract/references.mjs",
+      "sha256": "1af734ed6ca1d8d496a7b748b8fae75335fbf3985d4485b2e4d4ec72eb9adba7",
+      "reachability": "registered-static",
+      "importTimeSelfTest": false,
+      "disposition": "l01-stable-contract",
+      "destination": "scripts/runtime-smoke/adapters/task-540/suite/contract/references.mjs"
+    },
+    {
+      "path": "_docs/_workflows/task-540-smoke/contract/registries.mjs",
+      "sha256": "91c19b20d2c9b7334b262977811bd1655ef01b3bbbc6fe367f40c0bb6cc5f939",
+      "reachability": "registered-static",
+      "importTimeSelfTest": false,
+      "disposition": "l01-stable-contract",
+      "destination": "scripts/runtime-smoke/adapters/task-540/suite/contract/registries.mjs"
+    },
+    {
+      "path": "_docs/_workflows/task-540-smoke/contract/requirements.mjs",
+      "sha256": "31ddc1fbecdd2f865ae10ccf9ec30b123f9894e549e77288db7f7555e03d7061",
+      "reachability": "registered-static",
+      "importTimeSelfTest": false,
+      "disposition": "l01-stable-contract",
+      "destination": "scripts/runtime-smoke/adapters/task-540/suite/contract/requirements.mjs"
+    },
+    {
+      "path": "_docs/_workflows/task-540-smoke/contract/selectors.mjs",
+      "sha256": "dc8d4ec45090b1f6b0b9c25365aa15cad4965b6bed94490f40e616938bffc9ac",
+      "reachability": "registered-static",
+      "importTimeSelfTest": false,
+      "disposition": "l01-stable-contract",
+      "destination": "scripts/runtime-smoke/adapters/task-540/suite/contract/selectors.mjs"
+    },
+    {
+      "path": "_docs/_workflows/task-540-smoke/contract/self-test/helpers.mjs",
+      "sha256": "0bf557601a13ea94ecb9e256826092667fd21c9ab5f1a3d781486b1b5ef6fa47",
+      "reachability": "registered-static",
+      "importTimeSelfTest": true,
+      "disposition": "l04-delete-only",
+      "destination": null
+    },
+    {
+      "path": "_docs/_workflows/task-540-smoke/contract/self-test/index.mjs",
+      "sha256": "37626d86a41c56e365e606303d4eb87f2344977f4076843f5bbdb64272f009d0",
+      "reachability": "registered-static",
+      "importTimeSelfTest": true,
+      "disposition": "l04-delete-only",
+      "destination": null
+    },
+    {
+      "path": "_docs/_workflows/task-540-smoke/contract/self-test/loop-integrity.mjs",
+      "sha256": "5dca15bafcd80e6fae169086aa2cd1b80e79fc8e3b175f250679b46bf3325d44",
+      "reachability": "registered-static",
+      "importTimeSelfTest": true,
+      "disposition": "l04-delete-only",
+      "destination": null
+    },
+    {
+      "path": "_docs/_workflows/task-540-smoke/contract/self-test/manifest-fail-closed.mjs",
+      "sha256": "1fb5b3d0ac6b6cec4b0671f6e5b04d1d43d5c3fccf4820c9215888e6a1d354ec",
+      "reachability": "registered-static",
+      "importTimeSelfTest": true,
+      "disposition": "l04-delete-only",
+      "destination": null
+    },
+    {
+      "path": "_docs/_workflows/task-540-smoke/contract/self-test/plan-contract.mjs",
+      "sha256": "6f7b831785d571cb1b2c75a0c3fd393c6d21d271c390e795bd9b6e9bf72fb149",
+      "reachability": "registered-static",
+      "importTimeSelfTest": true,
+      "disposition": "l04-delete-only",
+      "destination": null
+    },
+    {
+      "path": "_docs/_workflows/task-540-smoke/contract/self-test/registries-fixtures.mjs",
+      "sha256": "ef1901368db961076f4860e174b3f4cc05e935973d29bb5fe5aa08ab512ad1de",
+      "reachability": "registered-static",
+      "importTimeSelfTest": true,
+      "disposition": "l04-delete-only",
+      "destination": null
+    },
+    {
+      "path": "_docs/_workflows/task-540-smoke/contract/visible-assertion-predicates.mjs",
+      "sha256": "d7c2a50b8520def6b6a83dca4fe915c6800cc33ec65f828e6c62bf65aeb298b6",
+      "reachability": "registered-static",
+      "importTimeSelfTest": false,
+      "disposition": "l01-stable-contract",
+      "destination": "scripts/runtime-smoke/adapters/task-540/suite/contract/visible-assertion-predicates.mjs"
+    },
+    {
+      "path": "_docs/_workflows/task-540-smoke/contract/visible-assertion-schemas.mjs",
+      "sha256": "5d3352955cf99b2c9a00d3cbfd197de58451da52f33b12eabfa8b4b34b1f9911",
+      "reachability": "registered-static",
+      "importTimeSelfTest": false,
+      "disposition": "l01-stable-contract",
+      "destination": "scripts/runtime-smoke/adapters/task-540/suite/contract/visible-assertion-schemas.mjs"
+    },
+    {
+      "path": "_docs/_workflows/task-540-smoke/executor/action-resources.mjs",
+      "sha256": "b9cd956b11dbbb2e314b83877be4f19184d3374c90d31fe7176e5224f5ef51a4",
+      "reachability": "registered-static",
+      "importTimeSelfTest": false,
+      "disposition": "l02-typed-operation",
+      "destination": null
+    },
+    {
+      "path": "_docs/_workflows/task-540-smoke/executor/auth-challenge-authority.mjs",
+      "sha256": "4632459d443d3be542a22c465f784f6b635193b088ea8d74d9a999dad11bc636",
+      "reachability": "registered-static",
+      "importTimeSelfTest": false,
+      "disposition": "l03-browser-host-composition",
+      "destination": null
+    },
+    {
+      "path": "_docs/_workflows/task-540-smoke/executor/bootstrap-contracts.mjs",
+      "sha256": "aec2c91a7ddbbb81f57141d630c0508662106f3c52b3bab52a90148e44c701c9",
+      "reachability": "registered-static",
+      "importTimeSelfTest": false,
+      "disposition": "l02-typed-operation",
+      "destination": null
+    },
+    {
+      "path": "_docs/_workflows/task-540-smoke/executor/bootstrap-restoration-protocol.mjs",
+      "sha256": "0556e8e21e17f64a4054f17c54a4a748b458c94dfe0fb3a9aebd6733858ba433",
+      "reachability": "registered-static",
+      "importTimeSelfTest": false,
+      "disposition": "l02-typed-operation",
+      "destination": null
+    },
+    {
+      "path": "_docs/_workflows/task-540-smoke/executor/bridge-descriptors.mjs",
+      "sha256": "4ceaf0b9cd6b20879db186d54dc311306bc818f1458125362d7bee787683eeef",
+      "reachability": "registered-static",
+      "importTimeSelfTest": false,
+      "disposition": "l02-typed-operation",
+      "destination": null
+    },
+    {
+      "path": "_docs/_workflows/task-540-smoke/executor/bridge-input-validators.mjs",
+      "sha256": "fedca57f3e808214fd426c7d45cb77b314faf4aa455bdaeb0e86659e9f956695",
+      "reachability": "registered-static",
+      "importTimeSelfTest": false,
+      "disposition": "l02-typed-operation",
+      "destination": null
+    },
+    {
+      "path": "_docs/_workflows/task-540-smoke/executor/bridge-operation-registry.mjs",
+      "sha256": "5c696b45229aa7f53808d3674c6c413820c9a21b8d82f84c4fae3464324e72dd",
+      "reachability": "registered-static",
+      "importTimeSelfTest": false,
+      "disposition": "l02-typed-operation",
+      "destination": null
+    },
+    {
+      "path": "_docs/_workflows/task-540-smoke/executor/bridge-output-validators/resources.mjs",
+      "sha256": "bf6f28db9b10f77050e886138f52ae81361bcc625c511984a0384bf6f4aa40d6",
+      "reachability": "registered-static",
+      "importTimeSelfTest": false,
+      "disposition": "l02-typed-operation",
+      "destination": null
+    },
+    {
+      "path": "_docs/_workflows/task-540-smoke/executor/bridge-output-validators/response-lost.mjs",
+      "sha256": "3300e1e6aee549303b08bb7bede14b5178134f47518dd094b94bac4b320cb731",
+      "reachability": "registered-static",
+      "importTimeSelfTest": false,
+      "disposition": "l02-typed-operation",
+      "destination": null
+    },
+    {
+      "path": "_docs/_workflows/task-540-smoke/executor/bridge-sources/bootstrap.mjs",
+      "sha256": "cd4ae24136616a4c546f463f11b5e639ff38b54e829496a6167207bf07514f5e",
+      "reachability": "registered-static",
+      "importTimeSelfTest": false,
+      "disposition": "l02-typed-operation",
+      "destination": null
+    },
+    {
+      "path": "_docs/_workflows/task-540-smoke/executor/bridge-sources/platform.mjs",
+      "sha256": "f86eff7a559addb296edfae9c89c01b5244c6ec6ea063f11a3a4cb3040833f0f",
+      "reachability": "registered-static",
+      "importTimeSelfTest": false,
+      "disposition": "l02-typed-operation",
+      "destination": null
+    },
+    {
+      "path": "_docs/_workflows/task-540-smoke/executor/bridge-sources/response-lost.mjs",
+      "sha256": "342e39f5725e770e23bfbc4e35433a56e684e505c66f798c713e7c0096004dee",
+      "reachability": "registered-static",
+      "importTimeSelfTest": false,
+      "disposition": "l02-typed-operation",
+      "destination": null
+    },
+    {
+      "path": "_docs/_workflows/task-540-smoke/executor/bridge-sources/user-preference.mjs",
+      "sha256": "8573ec904144c6394bf50de68adcfa1c4a6b39a5d4dda4781c62f54abf9e64e4",
+      "reachability": "registered-static",
+      "importTimeSelfTest": false,
+      "disposition": "l02-typed-operation",
+      "destination": null
+    },
+    {
+      "path": "_docs/_workflows/task-540-smoke/executor/browser-output-authority.mjs",
+      "sha256": "d8937c408fb9e9f0f79c965a091cb67075504c0f3dd8fcefebcb56170f00608d",
+      "reachability": "registered-static",
+      "importTimeSelfTest": false,
+      "disposition": "l03-browser-host-composition",
+      "destination": null
+    },
+    {
+      "path": "_docs/_workflows/task-540-smoke/executor/bun-bridge-resource-sources.mjs",
+      "sha256": "84ec6f08cc475271cf1aed8c65c983a1567b746fbb6d1a1a30fe100750e1b37c",
+      "reachability": "registered-static",
+      "importTimeSelfTest": false,
+      "disposition": "l02-typed-operation",
+      "destination": null
+    },
+    {
+      "path": "_docs/_workflows/task-540-smoke/executor/bun-bridge-validation-primitives.mjs",
+      "sha256": "731ccca4aa18c99074c0f4c447d5205a5a33fdb820406dd4589c21fd641359ac",
+      "reachability": "registered-static",
+      "importTimeSelfTest": false,
+      "disposition": "l02-typed-operation",
+      "destination": null
+    },
+    {
+      "path": "_docs/_workflows/task-540-smoke/executor/canonical-evidence.mjs",
+      "sha256": "7fbf4d1f3e69b1cfa64fba7701fcdb2eeb17232665699dba58eeaf1aaa85da1a",
+      "reachability": "registered-static",
+      "importTimeSelfTest": false,
+      "disposition": "l03-browser-host-composition",
+      "destination": null
+    },
+    {
+      "path": "_docs/_workflows/task-540-smoke/executor/capabilities/cleanup-lifecycle.mjs",
+      "sha256": "9922d9734f646944ad6f33fce98bc91635ca017ddb2960c72bf555354f27e99a",
+      "reachability": "registered-static",
+      "importTimeSelfTest": false,
+      "disposition": "l02-typed-operation",
+      "destination": null
+    },
+    {
+      "path": "_docs/_workflows/task-540-smoke/executor/capabilities/execute-action.mjs",
+      "sha256": "35a60447c9dd09d6b549e092eee9ff78e772a9ce8c021805e54c2286da111f90",
+      "reachability": "registered-static",
+      "importTimeSelfTest": false,
+      "disposition": "l03-browser-host-composition",
+      "destination": null
+    },
+    {
+      "path": "_docs/_workflows/task-540-smoke/executor/capabilities/real-capabilities.mjs",
+      "sha256": "9318aa6f619a711191ab4355b724b901d9f9b27a97b28833180ebee374452988",
+      "reachability": "registered-static",
+      "importTimeSelfTest": false,
+      "disposition": "l03-browser-host-composition",
+      "destination": null
+    },
+    {
+      "path": "_docs/_workflows/task-540-smoke/executor/captures.mjs",
+      "sha256": "9378ccbc8b15a5cd6667f0dc1d66ff1e4cefb940a912b0180a3de6bf1de534bc",
+      "reachability": "registered-static",
+      "importTimeSelfTest": false,
+      "disposition": "l01-stable-contract",
+      "destination": "scripts/runtime-smoke/adapters/task-540/suite/shared/captures.mjs"
+    },
+    {
+      "path": "_docs/_workflows/task-540-smoke/executor/cleanup-execution.mjs",
+      "sha256": "3a29ca835c8f8d35f03805e737093461d9098766f4809f26e3d7c8dc109a146f",
+      "reachability": "registered-static",
+      "importTimeSelfTest": false,
+      "disposition": "l02-typed-operation",
+      "destination": null
+    },
+    {
+      "path": "_docs/_workflows/task-540-smoke/executor/config.mjs",
+      "sha256": "48e70b8d9f4e84fd55420e67237d7d604bb4f1f6538153b4e6a3757762b58951",
+      "reachability": "registered-static",
+      "importTimeSelfTest": false,
+      "disposition": "l02-typed-operation",
+      "destination": null
+    },
+    {
+      "path": "_docs/_workflows/task-540-smoke/executor/diagnostic-sink.mjs",
+      "sha256": "5b4b38f124e3244bb8af5e39f2a574075631856f26201de00428b0f631759f59",
+      "reachability": "registered-static",
+      "importTimeSelfTest": false,
+      "disposition": "l03-browser-host-composition",
+      "destination": null
+    },
+    {
+      "path": "_docs/_workflows/task-540-smoke/executor/environment.mjs",
+      "sha256": "09418657c535c60aed8468e6edd80a9ec679b30b1b63c6949e3d7585ea72755d",
+      "reachability": "registered-static",
+      "importTimeSelfTest": false,
+      "disposition": "l03-browser-host-composition",
+      "destination": null
+    },
+    {
+      "path": "_docs/_workflows/task-540-smoke/executor/execution-contract.mjs",
+      "sha256": "6ee8278e46ce08b45c986a3f8dbed5389419712ab5978a8b6d313ac5e3fad9ee",
+      "reachability": "registered-static",
+      "importTimeSelfTest": false,
+      "disposition": "l03-browser-host-composition",
+      "destination": null
+    },
+    {
+      "path": "_docs/_workflows/task-540-smoke/executor/failure-boundary.mjs",
+      "sha256": "15ee156df8d0ce2b96223e75f3f69d9f52dca004f961bed1a6194b806f0f200e",
+      "reachability": "registered-static",
+      "importTimeSelfTest": false,
+      "disposition": "l03-browser-host-composition",
+      "destination": null
+    },
+    {
+      "path": "_docs/_workflows/task-540-smoke/executor/fake-capabilities.mjs",
+      "sha256": "ee72b51be80fb678854ff4e61654d16706f90e6f41c3c55666ea87725a7f8d0d",
+      "reachability": "registered-static",
+      "importTimeSelfTest": false,
+      "disposition": "l04-delete-only",
+      "destination": null
+    },
+    {
+      "path": "_docs/_workflows/task-540-smoke/executor/finalization.mjs",
+      "sha256": "560a2057ca2fbd161d1bd99718991753b82f2825f2bab715d4e381a22af9f5ac",
+      "reachability": "registered-static",
+      "importTimeSelfTest": false,
+      "disposition": "l03-browser-host-composition",
+      "destination": null
+    },
+    {
+      "path": "_docs/_workflows/task-540-smoke/executor/foundation.mjs",
+      "sha256": "3d195ed7bc62f67d970dd181e0afb30ec75e1637e47527ddac2ac2ad3ce416d2",
+      "reachability": "registered-static",
+      "importTimeSelfTest": false,
+      "disposition": "l01-stable-contract",
+      "destination": "scripts/runtime-smoke/adapters/task-540/suite/shared/foundation.mjs"
+    },
+    {
+      "path": "_docs/_workflows/task-540-smoke/executor/json-schema.mjs",
+      "sha256": "4b1ec36fcea7c22a04b79415edf22c2bfe88c6d4b9a1f84324d792974751e0b7",
+      "reachability": "registered-static",
+      "importTimeSelfTest": false,
+      "disposition": "l02-typed-operation",
+      "destination": null
+    },
+    {
+      "path": "_docs/_workflows/task-540-smoke/executor/output-parser.mjs",
+      "sha256": "3f3614a8aa48bf5bbe872f2cda54eca1d7b5990f9fa8a37fb1f8568d151e4fc6",
+      "reachability": "registered-static",
+      "importTimeSelfTest": false,
+      "disposition": "l02-typed-operation",
+      "destination": null
+    },
+    {
+      "path": "_docs/_workflows/task-540-smoke/executor/plan-execution.mjs",
+      "sha256": "e441e4cc2b3bc9fd046cbc36fbd7f73b4d619b3f64e3eaa20224c6a5cef97ade",
+      "reachability": "registered-static",
+      "importTimeSelfTest": false,
+      "disposition": "l03-browser-host-composition",
+      "destination": null
+    },
+    {
+      "path": "_docs/_workflows/task-540-smoke/executor/private-workspace.mjs",
+      "sha256": "675eb5319f56b75a454172056202d26eb26d5aff57f8aee9ba8e5a7e32c242ce",
+      "reachability": "registered-static",
+      "importTimeSelfTest": false,
+      "disposition": "l03-browser-host-composition",
+      "destination": null
+    },
+    {
+      "path": "_docs/_workflows/task-540-smoke/executor/ref-dsl.mjs",
+      "sha256": "b605e3f3ef31038cbbf5b21d4e7cfa731a892bab8d7ddf9796d487b5f18d1433",
+      "reachability": "registered-static",
+      "importTimeSelfTest": false,
+      "disposition": "l02-typed-operation",
+      "destination": null
+    },
+    {
+      "path": "_docs/_workflows/task-540-smoke/executor/resource-bun-authority.mjs",
+      "sha256": "fa38629519318241fc71de43364c938b50a239b0797bea4f5e6e522dffe622d7",
+      "reachability": "registered-static",
+      "importTimeSelfTest": false,
+      "disposition": "l02-typed-operation",
+      "destination": null
+    },
+    {
+      "path": "_docs/_workflows/task-540-smoke/executor/resource-contracts.mjs",
+      "sha256": "e54e348909cdaf7f0f455be191fd8d87a2ab09cc7644f5abc2e2025575dff132",
+      "reachability": "registered-static",
+      "importTimeSelfTest": false,
+      "disposition": "l02-typed-operation",
+      "destination": null
+    },
+    {
+      "path": "_docs/_workflows/task-540-smoke/executor/resource-ledger.mjs",
+      "sha256": "ac42a55b7ebfe6fbd5d55e5144a101fcd399ab38334dfd92723059132610d409",
+      "reachability": "registered-static",
+      "importTimeSelfTest": false,
+      "disposition": "l02-typed-operation",
+      "destination": null
+    },
+    {
+      "path": "_docs/_workflows/task-540-smoke/executor/runtime-operations/overrides.mjs",
+      "sha256": "c019f932e57f4fc4396abf491e8da2bcb29aea970dd01e4aa1d9fff57fb6c6b3",
+      "reachability": "registered-static",
+      "importTimeSelfTest": false,
+      "disposition": "l02-typed-operation",
+      "destination": null
+    },
+    {
+      "path": "_docs/_workflows/task-540-smoke/executor/runtime-operations/platform.mjs",
+      "sha256": "4a988d970f1ca203879ea970704b95a3bd44b8a63286d34c4cf029541151ef92",
+      "reachability": "registered-static",
+      "importTimeSelfTest": false,
+      "disposition": "l02-typed-operation",
+      "destination": null
+    },
+    {
+      "path": "_docs/_workflows/task-540-smoke/executor/self-test/api-context.mjs",
+      "sha256": "d54d40b18038220aa4d9245e7e1fd34c10da9f2e487774274bcfc1b07d004dc3",
+      "reachability": "registered-static",
+      "importTimeSelfTest": true,
+      "disposition": "l04-delete-only",
+      "destination": null
+    },
+    {
+      "path": "_docs/_workflows/task-540-smoke/executor/self-test/auth-challenge.mjs",
+      "sha256": "bb73bb70470791524b61e22c24f8ab346f2d04c3f9aa5bb132c64f6241ccb440",
+      "reachability": "registered-static",
+      "importTimeSelfTest": true,
+      "disposition": "l04-delete-only",
+      "destination": null
+    },
+    {
+      "path": "_docs/_workflows/task-540-smoke/executor/self-test/bootstrap-cas-bind-forms.mjs",
+      "sha256": "f2c50f114c1b4fa9da7e4a80707426460d9966b928874b50bbe5900a595a653c",
+      "reachability": "registered-static",
+      "importTimeSelfTest": true,
+      "disposition": "l04-delete-only",
+      "destination": null
+    },
+    {
+      "path": "_docs/_workflows/task-540-smoke/executor/self-test/bootstrap-restoration.mjs",
+      "sha256": "eff9d2ff934bfea73a23c019b34d08f2c3f37af229180a25ed755ef6ffe3610b",
+      "reachability": "registered-static",
+      "importTimeSelfTest": true,
+      "disposition": "l04-delete-only",
+      "destination": null
+    },
+    {
+      "path": "_docs/_workflows/task-540-smoke/executor/self-test/browser-auth-settlement-source.mjs",
+      "sha256": "81b521feb5cc9724b71908096b3d19f6419ac26aa3a497bd46c1737810536ca6",
+      "reachability": "registered-static",
+      "importTimeSelfTest": true,
+      "disposition": "l04-delete-only",
+      "destination": null
+    },
+    {
+      "path": "_docs/_workflows/task-540-smoke/executor/self-test/browser-capture-frontier.mjs",
+      "sha256": "8bcb0ae166b94d1ae530261e22b14b9a627d34db19036bbea04e214145f6c6b1",
+      "reachability": "registered-static",
+      "importTimeSelfTest": true,
+      "disposition": "l04-delete-only",
+      "destination": null
+    },
+    {
+      "path": "_docs/_workflows/task-540-smoke/executor/self-test/browser-dirty-navigation-source.mjs",
+      "sha256": "253028866d5aa923527e6d504931ac6b95a09aa201fc4309854490f1c852a2ca",
+      "reachability": "registered-static",
+      "importTimeSelfTest": true,
+      "disposition": "l04-delete-only",
+      "destination": null
+    },
+    {
+      "path": "_docs/_workflows/task-540-smoke/executor/self-test/browser-navigation-discard-source.mjs",
+      "sha256": "d19b0ed2d094c9b417d4186c7f42c33027c3b9790a21d6a0747885098479c7c5",
+      "reachability": "registered-static",
+      "importTimeSelfTest": true,
+      "disposition": "l04-delete-only",
+      "destination": null
+    },
+    {
+      "path": "_docs/_workflows/task-540-smoke/executor/self-test/browser-route-duplicate-policy.mjs",
+      "sha256": "ee20c0d30fc2dd0dbfe83cc1148f72089bf452b0318698b42b525c3ddc94770e",
+      "reachability": "registered-static",
+      "importTimeSelfTest": true,
+      "disposition": "l04-delete-only",
+      "destination": null
+    },
+    {
+      "path": "_docs/_workflows/task-540-smoke/executor/self-test/browser-run-code-source-ownership.mjs",
+      "sha256": "0a6c8d9df2f6e30b13d08a91057ff157f5307a6c2fcac79cedec403fb025e5b4",
+      "reachability": "registered-static",
+      "importTimeSelfTest": true,
+      "disposition": "l04-delete-only",
+      "destination": null
+    },
+    {
+      "path": "_docs/_workflows/task-540-smoke/executor/self-test/browser-source-context.mjs",
+      "sha256": "74351fa1a9b7ed950c7e47303f39891499139d143f26cb996d7084ae2b737143",
+      "reachability": "registered-static",
+      "importTimeSelfTest": true,
+      "disposition": "l04-delete-only",
+      "destination": null
+    },
+    {
+      "path": "_docs/_workflows/task-540-smoke/executor/self-test/browser-tone-content-fill-source.mjs",
+      "sha256": "3ed55d05e443d0a6868135f47fcf47151580f9f2ada96c4e72de399fa3434ad6",
+      "reachability": "registered-static",
+      "importTimeSelfTest": true,
+      "disposition": "l04-delete-only",
+      "destination": null
+    },
+    {
+      "path": "_docs/_workflows/task-540-smoke/executor/self-test/browser-tone-flow-source.mjs",
+      "sha256": "920055661364e1ef467ceed8b3b00d3ec171d2daf1943c9b8360ad5eea2f0cc9",
+      "reachability": "registered-static",
+      "importTimeSelfTest": true,
+      "disposition": "l04-delete-only",
+      "destination": null
+    },
+    {
+      "path": "_docs/_workflows/task-540-smoke/executor/self-test/browser-widget-absence-scope.mjs",
+      "sha256": "4701ff375a4835077eb6d661152cd5ec96983ab6f91ab5d565db099756901404",
+      "reachability": "registered-static",
+      "importTimeSelfTest": true,
+      "disposition": "l04-delete-only",
+      "destination": null
+    },
+    {
+      "path": "_docs/_workflows/task-540-smoke/executor/self-test/bun-bridge-contracts.mjs",
+      "sha256": "daf820fcfc161d6b5d3c14c505e4026859b6654cbb30fcdb4962b2ac7367d467",
+      "reachability": "registered-static",
+      "importTimeSelfTest": true,
+      "disposition": "l04-delete-only",
+      "destination": null
+    },
+    {
+      "path": "_docs/_workflows/task-540-smoke/executor/self-test/bun-response-contracts.mjs",
+      "sha256": "08b35b78b2345bb1d73278ecfb7bca52161433bdea43f19bea28194b79a3e980",
+      "reachability": "registered-static",
+      "importTimeSelfTest": true,
+      "disposition": "l04-delete-only",
+      "destination": null
+    },
+    {
+      "path": "_docs/_workflows/task-540-smoke/executor/self-test/cleanup-pca-authority.mjs",
+      "sha256": "11772d9494a7a82a8912a9d7d65b763a294595aa0b0fa0e6e1916c5077a260ce",
+      "reachability": "registered-static",
+      "importTimeSelfTest": true,
+      "disposition": "l04-delete-only",
+      "destination": null
+    },
+    {
+      "path": "_docs/_workflows/task-540-smoke/executor/self-test/cleanup-stages.mjs",
+      "sha256": "5ad1adf3bf77de42f2197240392cdd2c2b0494a3f3d567c97dc7db8ed6d29560",
+      "reachability": "registered-static",
+      "importTimeSelfTest": true,
+      "disposition": "l04-delete-only",
+      "destination": null
+    },
+    {
+      "path": "_docs/_workflows/task-540-smoke/executor/self-test/construction-cleanup.mjs",
+      "sha256": "da1496fca6a26b112cfe336de4b752c166da6caeb1db6da6c16d6794674d9750",
+      "reachability": "registered-static",
+      "importTimeSelfTest": true,
+      "disposition": "l04-delete-only",
+      "destination": null
+    },
+    {
+      "path": "_docs/_workflows/task-540-smoke/executor/self-test/entry-support.mjs",
+      "sha256": "934bf32bb90112c414f5202be2b0298609fe5d1a15028d28ee1e7e17edab5920",
+      "reachability": "registered-static",
+      "importTimeSelfTest": true,
+      "disposition": "l04-delete-only",
+      "destination": null
+    },
+    {
+      "path": "_docs/_workflows/task-540-smoke/executor/self-test/entry.mjs",
+      "sha256": "e8deec5eb942bcf95cc21d0ae19355d03b94b7c7f6b797cfe6a1823b508b4956",
+      "reachability": "registered-static",
+      "importTimeSelfTest": true,
+      "disposition": "l04-delete-only",
+      "destination": null
+    },
+    {
+      "path": "_docs/_workflows/task-540-smoke/executor/self-test/failure-action-classification.mjs",
+      "sha256": "867fdd9d6da0b70fbd6b8dd405804ace69353d878f8c124c341228a361d8324f",
+      "reachability": "registered-static",
+      "importTimeSelfTest": true,
+      "disposition": "l04-delete-only",
+      "destination": null
+    },
+    {
+      "path": "_docs/_workflows/task-540-smoke/executor/self-test/failure-action-execution.mjs",
+      "sha256": "1be9b85e5615e83e5b3e180c638e0e84e5a97483a4518638b2454f21215e092d",
+      "reachability": "registered-static",
+      "importTimeSelfTest": true,
+      "disposition": "l04-delete-only",
+      "destination": null
+    },
+    {
+      "path": "_docs/_workflows/task-540-smoke/executor/self-test/failure-action-sinks.mjs",
+      "sha256": "8d1367d58b8ccd3f8a7ecca30049cf4e87b1500eacf4fa1169999460b7ed9dbf",
+      "reachability": "registered-static",
+      "importTimeSelfTest": true,
+      "disposition": "l04-delete-only",
+      "destination": null
+    },
+    {
+      "path": "_docs/_workflows/task-540-smoke/executor/self-test/failure-frames.mjs",
+      "sha256": "cb1e1972a9bb9e5d98f54196493f87737ded470c8aba2f1ac685bdedbcce03a1",
+      "reachability": "registered-static",
+      "importTimeSelfTest": true,
+      "disposition": "l04-delete-only",
+      "destination": null
+    },
+    {
+      "path": "_docs/_workflows/task-540-smoke/executor/self-test/failure-reason-projection.mjs",
+      "sha256": "5e9d868ad868194cde9f961142c7a1e7e69b18ba1e74c5833aee58b69207b269",
+      "reachability": "registered-static",
+      "importTimeSelfTest": true,
+      "disposition": "l04-delete-only",
+      "destination": null
+    },
+    {
+      "path": "_docs/_workflows/task-540-smoke/executor/self-test/host-readiness-policy.mjs",
+      "sha256": "612ac7ffb1803c3664ed8557d2afe8124eecaee6d2516a37d94da4ae7a1f8271",
+      "reachability": "registered-static",
+      "importTimeSelfTest": true,
+      "disposition": "l04-delete-only",
+      "destination": null
+    },
+    {
+      "path": "_docs/_workflows/task-540-smoke/executor/self-test/media-isolation.mjs",
+      "sha256": "678fe5a0e2d81c3bbcbbc410368be36c94058749d98c9c8f9ac67b893ea3b266",
+      "reachability": "registered-static",
+      "importTimeSelfTest": true,
+      "disposition": "l04-delete-only",
+      "destination": null
+    },
+    {
+      "path": "_docs/_workflows/task-540-smoke/executor/self-test/media-upload.mjs",
+      "sha256": "94a8428d5fdcc3a7e6eb99b0bc8eb555eed51898123bdb9d17fcfa6999865f75",
+      "reachability": "registered-static",
+      "importTimeSelfTest": true,
+      "disposition": "l04-delete-only",
+      "destination": null
+    },
+    {
+      "path": "_docs/_workflows/task-540-smoke/executor/self-test/nominal-evidence.mjs",
+      "sha256": "2af0976dc1da8cd166e490f6ee77f505a7e1e8fa9e93b8aa54968d22bc03b1ec",
+      "reachability": "registered-static",
+      "importTimeSelfTest": true,
+      "disposition": "l04-delete-only",
+      "destination": null
+    },
+    {
+      "path": "_docs/_workflows/task-540-smoke/executor/self-test/parser-ref-native-output.mjs",
+      "sha256": "798292283d2c41feeb0cd1cb5eea769a8fadc4440b3eb53faef16ed6187851ea",
+      "reachability": "registered-static",
+      "importTimeSelfTest": true,
+      "disposition": "l04-delete-only",
+      "destination": null
+    },
+    {
+      "path": "_docs/_workflows/task-540-smoke/executor/self-test/response-lost-discovery.mjs",
+      "sha256": "95ceb01d7ef97586efd7cf903054f2a8133f552a45c8ccd2a173a63d8960122f",
+      "reachability": "registered-static",
+      "importTimeSelfTest": true,
+      "disposition": "l04-delete-only",
+      "destination": null
+    },
+    {
+      "path": "_docs/_workflows/task-540-smoke/executor/self-test/seo-entry-cleanup.mjs",
+      "sha256": "f6257bb6c0470dbc01c44fa19a6ccd32443be9da0e7abef9266272a658762ce9",
+      "reachability": "registered-static",
+      "importTimeSelfTest": true,
+      "disposition": "l04-delete-only",
+      "destination": null
+    },
+    {
+      "path": "_docs/_workflows/task-540-smoke/executor/self-test/settlement-diagnostic-cases.mjs",
+      "sha256": "197edf7c8060ce96a3b3ec254b17284d3eace43a1e571448d5b647702e952873",
+      "reachability": "registered-static",
+      "importTimeSelfTest": true,
+      "disposition": "l04-delete-only",
+      "destination": null
+    },
+    {
+      "path": "_docs/_workflows/task-540-smoke/executor/self-test/settlement-diagnostic-harness.mjs",
+      "sha256": "906df09b043d4f5d430c1aa6e8c87590619ac77fe6b85707d52d76a3659e3d06",
+      "reachability": "registered-static",
+      "importTimeSelfTest": true,
+      "disposition": "l04-delete-only",
+      "destination": null
+    },
+    {
+      "path": "_docs/_workflows/task-540-smoke/executor/self-test/source-ownership-auth-rate.mjs",
+      "sha256": "95633ea55e2c3af52284e8641657189d9eb3db64a4e74f8439a5f6b81e2ed422",
+      "reachability": "registered-static",
+      "importTimeSelfTest": true,
+      "disposition": "l04-delete-only",
+      "destination": null
+    },
+    {
+      "path": "_docs/_workflows/task-540-smoke/executor/self-test/storage-manifest-identity.mjs",
+      "sha256": "ace3527865835c6c0d0e395d520494dfc784dceaf21b1187414d4a03577da9bc",
+      "reachability": "registered-static",
+      "importTimeSelfTest": true,
+      "disposition": "l04-delete-only",
+      "destination": null
+    },
+    {
+      "path": "_docs/_workflows/task-540-smoke/executor/self-test/terminal-resource-graph.mjs",
+      "sha256": "cb81e32d4102838335df6a064869900aed8dc8e21f0444b67e5d24f773a71b1c",
+      "reachability": "registered-static",
+      "importTimeSelfTest": true,
+      "disposition": "l04-delete-only",
+      "destination": null
+    },
+    {
+      "path": "_docs/_workflows/task-540-smoke/executor/task-traffic.mjs",
+      "sha256": "ea9890a07afe40c35cfef986e57e6768c02805c17cb17502028929e66321d2cd",
+      "reachability": "registered-static",
+      "importTimeSelfTest": false,
+      "disposition": "l02-typed-operation",
+      "destination": null
+    },
+    {
+      "path": "_docs/_workflows/task-540-smoke/executor/terminal-resource-graph.mjs",
+      "sha256": "7521d5743273f978f8877f86da1ee20fb83d7c5306f53c1392567d3cbcf9d15f",
+      "reachability": "registered-static",
+      "importTimeSelfTest": false,
+      "disposition": "l02-typed-operation",
+      "destination": null
+    },
+    {
+      "path": "_docs/_workflows/task-540-smoke/host/child-descriptors.mjs",
+      "sha256": "4bcf150c978f36244441364a02230d29986af5f2d9fd345f60a459f97feae1cb",
+      "reachability": "host-subprocess",
+      "importTimeSelfTest": false,
+      "disposition": "l03-browser-host-composition",
+      "destination": null
+    },
+    {
+      "path": "_docs/_workflows/task-540-smoke/host/child-sources.mjs",
+      "sha256": "4dd035dd96b9ee74095324ae56c1476f06cff549adde8468cf48b808bf5fc899",
+      "reachability": "host-subprocess",
+      "importTimeSelfTest": false,
+      "disposition": "l03-browser-host-composition",
+      "destination": null
+    },
+    {
+      "path": "_docs/_workflows/task-540-smoke/host/environment-preflight.mjs",
+      "sha256": "190ccc640e870de1aaba70684749701ddb368baef8c686885509ab187fb2560e",
+      "reachability": "host-subprocess",
+      "importTimeSelfTest": false,
+      "disposition": "l03-browser-host-composition",
+      "destination": null
+    },
+    {
+      "path": "_docs/_workflows/task-540-smoke/host/environment.mjs",
+      "sha256": "b72e24a89214c6fa1fa56b11f660d122ad2d4572218119dcb28226b3466739d5",
+      "reachability": "host-subprocess",
+      "importTimeSelfTest": false,
+      "disposition": "l03-browser-host-composition",
+      "destination": null
+    },
+    {
+      "path": "_docs/_workflows/task-540-smoke/host/preflight.mjs",
+      "sha256": "00f6bb423d174689b7294400b83193a4f0856472cc2a3c12110d6812a22622a6",
+      "reachability": "host-subprocess",
+      "importTimeSelfTest": false,
+      "disposition": "l03-browser-host-composition",
+      "destination": null
+    },
+    {
+      "path": "_docs/_workflows/task-540-smoke/host/process-identity.mjs",
+      "sha256": "c37a17b0fde89855512369960c1795ff76941d811cd8df9119f2db24f1439d08",
+      "reachability": "host-subprocess",
+      "importTimeSelfTest": false,
+      "disposition": "l03-browser-host-composition",
+      "destination": null
+    },
+    {
+      "path": "_docs/_workflows/task-540-smoke/host/self-test/cli-direct-entry.mjs",
+      "sha256": "32718b905a95117e527936ce259bd7c6be898cfd675428f583bd43f73c967156",
+      "reachability": "host-subprocess",
+      "importTimeSelfTest": false,
+      "disposition": "l03-browser-host-composition",
+      "destination": null
+    },
+    {
+      "path": "_docs/_workflows/task-540-smoke/host/self-test/descriptors-vite.mjs",
+      "sha256": "3dac0fdec5121f1e4be7eab42859aa647a1eb757f7e7ac3c7cdf0460f6f49444",
+      "reachability": "host-subprocess",
+      "importTimeSelfTest": false,
+      "disposition": "l03-browser-host-composition",
+      "destination": null
+    },
+    {
+      "path": "_docs/_workflows/task-540-smoke/host/self-test/environment-preflight-startup.mjs",
+      "sha256": "f90b80d636e8ae9160e7cdaa697104aa2c7598a683a72f92c5e526687ea95754",
+      "reachability": "host-subprocess",
+      "importTimeSelfTest": false,
+      "disposition": "l03-browser-host-composition",
+      "destination": null
+    },
+    {
+      "path": "_docs/_workflows/task-540-smoke/host/self-test/index.mjs",
+      "sha256": "5bb9d8bd34342bd7588dbe51668782079d0e0be7dfcc14811ffb8203e9484f82",
+      "reachability": "host-subprocess",
+      "importTimeSelfTest": false,
+      "disposition": "l03-browser-host-composition",
+      "destination": null
+    },
+    {
+      "path": "_docs/_workflows/task-540-smoke/host/self-test/stop-serve.mjs",
+      "sha256": "7ea86b36462fabc5b10ee5cd252ecebd5b8ecb93a061d096398ad1a97b397a53",
+      "reachability": "host-subprocess",
+      "importTimeSelfTest": false,
+      "disposition": "l03-browser-host-composition",
+      "destination": null
+    },
+    {
+      "path": "_docs/_workflows/task-540-smoke/host/self-test/support.mjs",
+      "sha256": "158170de8ff1fd001c37a7c9d8d5565cfc8c3f460db00b8e3b655a9390ef4a5c",
+      "reachability": "host-subprocess",
+      "importTimeSelfTest": false,
+      "disposition": "l03-browser-host-composition",
+      "destination": null
+    },
+    {
+      "path": "_docs/_workflows/task-540-smoke/host/serve-runtime.mjs",
+      "sha256": "93a76f5b0bef73057607f2e3ad45e012162583894d3c9d435ad4c0bacd05aa32",
+      "reachability": "host-subprocess",
+      "importTimeSelfTest": false,
+      "disposition": "l03-browser-host-composition",
+      "destination": null
+    },
+    {
+      "path": "_docs/_workflows/task-540-smoke/host/stop-runtime.mjs",
+      "sha256": "eec4627fa986f3f088b943c675a9c383abe61a7725e137f090c54d7ea1899d29",
+      "reachability": "host-subprocess",
+      "importTimeSelfTest": false,
+      "disposition": "l03-browser-host-composition",
+      "destination": null
+    },
+    {
+      "path": "_docs/_workflows/task-540-smoke/host/validation.mjs",
+      "sha256": "315ae41bff1061dfb127a4b9fed9bca8bf469e94daa15808d91836a96163a09c",
+      "reachability": "host-subprocess",
+      "importTimeSelfTest": false,
+      "disposition": "l03-browser-host-composition",
+      "destination": null
+    },
+    {
+      "path": "_docs/_workflows/task-540-smoke/host/vite-source-runtime.mjs",
+      "sha256": "4075586356f2e9870ee6cfa01878bba2cb57b15dc1e9c0c70edb88edaa3da452",
+      "reachability": "host-subprocess",
+      "importTimeSelfTest": false,
+      "disposition": "l03-browser-host-composition",
+      "destination": null
+    },
+    {
+      "path": "_docs/_workflows/task-540-smoke/runtime/admin-api-session.mjs",
+      "sha256": "66b9e15cf307b3ed0cc991ae1bd3c28818d95d9805df324904839ca823ef2da8",
+      "reachability": "registered-static",
+      "importTimeSelfTest": false,
+      "disposition": "l02-typed-operation",
+      "destination": null
+    },
+    {
+      "path": "_docs/_workflows/task-540-smoke/runtime/bootstrap-login.mjs",
+      "sha256": "0c81e6e98c212731f1790850f7c8d0a633655bd11c842331033d1886ec10bc66",
+      "reachability": "registered-static",
+      "importTimeSelfTest": false,
+      "disposition": "l02-typed-operation",
+      "destination": null
+    },
+    {
+      "path": "_docs/_workflows/task-540-smoke/runtime/bounded-stream.mjs",
+      "sha256": "a786cd09004733e008d1b1d0f6653f2fd3c42963da4d53d7ed0b242389682e4f",
+      "reachability": "registered-static",
+      "importTimeSelfTest": false,
+      "disposition": "l03-browser-host-composition",
+      "destination": null
+    },
+    {
+      "path": "_docs/_workflows/task-540-smoke/runtime/bun-bridge-transport.mjs",
+      "sha256": "6409d457430551168c04deb874056bbe09d86c96d0b3774c9792208583c4b967",
+      "reachability": "registered-static",
+      "importTimeSelfTest": false,
+      "disposition": "l02-typed-operation",
+      "destination": null
+    },
+    {
+      "path": "_docs/_workflows/task-540-smoke/runtime/bun-child-protocol.mjs",
+      "sha256": "bd93bbf1524b14817580b2167456303df94cff3886d6abb89bdeb6daab3b2050",
+      "reachability": "registered-static",
+      "importTimeSelfTest": false,
+      "disposition": "l02-typed-operation",
+      "destination": null
+    },
+    {
+      "path": "_docs/_workflows/task-540-smoke/runtime/command-authority.mjs",
+      "sha256": "cc366925a18feae66053203cb8a0b79c54a5e8ac4e256dd1d09ac5dc533cb991",
+      "reachability": "registered-static",
+      "importTimeSelfTest": false,
+      "disposition": "l03-browser-host-composition",
+      "destination": null
+    },
+    {
+      "path": "_docs/_workflows/task-540-smoke/runtime/media-operations.mjs",
+      "sha256": "1d7018920d3ffa85e20f6a7a5e2349b5efa0a974223e8fcd54d14aeca32f7624",
+      "reachability": "registered-static",
+      "importTimeSelfTest": false,
+      "disposition": "l02-typed-operation",
+      "destination": null
+    },
+    {
+      "path": "_docs/_workflows/task-540-smoke/runtime/media-storage-ownership.mjs",
+      "sha256": "86ef7f63f9342d7fc639f45c5ff992c836af42257d9032dfef6e09c894168c46",
+      "reachability": "registered-static",
+      "importTimeSelfTest": false,
+      "disposition": "l02-typed-operation",
+      "destination": null
+    },
+    {
+      "path": "_docs/_workflows/task-540-smoke/runtime/missing-media-proof.mjs",
+      "sha256": "be31e36cf93b4d7e9d9fc79fe529331095196e8d356edf2445fceef24f4e0528",
+      "reachability": "registered-static",
+      "importTimeSelfTest": false,
+      "disposition": "l02-typed-operation",
+      "destination": null
+    },
+    {
+      "path": "_docs/_workflows/task-540-smoke/runtime/operation-router.mjs",
+      "sha256": "1bba0361008013e8a69d9a16c8b0ea89fbbf3a1fb3af47503449316319247671",
+      "reachability": "registered-static",
+      "importTimeSelfTest": false,
+      "disposition": "l02-typed-operation",
+      "destination": null
+    },
+    {
+      "path": "_docs/_workflows/task-540-smoke/runtime/owned-host.mjs",
+      "sha256": "43ad38451eae2e587189d3ccf12851205415c7c4818e65f7bd4f562793c8b3ef",
+      "reachability": "registered-static",
+      "importTimeSelfTest": false,
+      "disposition": "l03-browser-host-composition",
+      "destination": null
+    },
+    {
+      "path": "_docs/_workflows/task-540-smoke/runtime/process-runtime.mjs",
+      "sha256": "eacc33ddcbea45555e9cd6130aafd31d4fbae43522566f902000a9ae2a2d701d",
+      "reachability": "registered-static",
+      "importTimeSelfTest": false,
+      "disposition": "l03-browser-host-composition",
+      "destination": null
+    },
+    {
+      "path": "_docs/_workflows/task-540-smoke/runtime/response-lost-baselines.mjs",
+      "sha256": "aa2745d5c45558b43e1d10c25e95c59530e885386564ec6019dd9cec58bb7a0b",
+      "reachability": "registered-static",
+      "importTimeSelfTest": false,
+      "disposition": "l02-typed-operation",
+      "destination": null
+    },
+    {
+      "path": "_docs/_workflows/task-540-smoke/runtime/response-lost-discovery.mjs",
+      "sha256": "c3f0b1f6d8d2516010b2a599a7943104dcbcea77f9f317280b10341dcc9a9f9b",
+      "reachability": "registered-static",
+      "importTimeSelfTest": false,
+      "disposition": "l02-typed-operation",
+      "destination": null
+    },
+    {
+      "path": "_docs/_workflows/task-540-smoke/runtime/response-lost-registry.mjs",
+      "sha256": "80d790e04ffa4fd4a1b1876226d820e0cdb403ad9a928c9d37f6520d9de48082",
+      "reachability": "registered-static",
+      "importTimeSelfTest": false,
+      "disposition": "l02-typed-operation",
+      "destination": null
+    },
+    {
+      "path": "_docs/_workflows/task-540-smoke/runtime/storage-manifest.mjs",
+      "sha256": "3e4e8d2a08649686c190373801bd94a46178a9684d3081f086ff39176e6a80f7",
+      "reachability": "registered-static",
+      "importTimeSelfTest": false,
+      "disposition": "l02-typed-operation",
+      "destination": null
+    },
+    {
+      "path": "_docs/_workflows/task-540-smoke/runtime/storage-preflight.mjs",
+      "sha256": "ef191973285e6a519b9097837504c6fc67bb9815792ff2ab79f6552a7ea16b22",
+      "reachability": "registered-static",
+      "importTimeSelfTest": false,
+      "disposition": "l02-typed-operation",
+      "destination": null
+    },
+    {
+      "path": "_docs/_workflows/task-540-test-name-contract.mjs",
+      "sha256": "35fe83fdd15ae1492e126704b5377554d6d550c433c931e412552cb1bbbda8c0",
+      "reachability": "workflow-only",
+      "importTimeSelfTest": false,
+      "disposition": "l04-delete-only",
+      "destination": null
+    }
+  ]
+}

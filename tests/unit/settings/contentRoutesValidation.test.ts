@@ -19,6 +19,75 @@ test("normalizeContentRoutes normalizes paths and defaults enabled", () => {
   expect(routes[0]?.detailPageId).toBe("4dd7f4d4-48d8-53f7-a9e6-0d01f6b89e6c");
 });
 
+test("normalizeContentRoutes round-trips the Projekty Domów route exactly", () => {
+  const routes = normalizeContentRoutes([
+    {
+      type: "house-project",
+      listPath: "/projekty",
+      detailPath: "/projekty/:slug",
+      enabled: true,
+      detailPageId: "00000000-0000-4000-8000-000000000548",
+    },
+  ]);
+
+  expect(routes).toEqual([
+    {
+      type: "house-project",
+      listPath: "/projekty",
+      detailPath: "/projekty/:slug",
+      enabled: true,
+      detailPageId: "00000000-0000-4000-8000-000000000548",
+    },
+  ]);
+  expect(Object.keys(routes[0] ?? {})).toEqual([
+    "type",
+    "listPath",
+    "detailPath",
+    "enabled",
+    "detailPageId",
+  ]);
+});
+
+test.each(["unexpected", "__proto__", "prototype", "constructor"])(
+  "normalizeContentRoutes rejects exact unknown own key %s",
+  (key) => {
+    const route = JSON.parse(
+      `{"type":"blog","listPath":"/blog","detailPath":"/blog/:slug","${key}":true}`
+    );
+    expect(Object.prototype.hasOwnProperty.call(route, key)).toBe(true);
+    expect(() => normalizeContentRoutes([route])).toThrow("settings_value_invalid");
+  }
+);
+
+const validRoute = (): Record<PropertyKey, unknown> => ({
+  type: "blog",
+  listPath: "/blog",
+  detailPath: "/blog/:slug",
+});
+
+test("normalizeContentRoutes rejects a custom object prototype", () => {
+  const route = Object.assign(
+    Object.create({ inherited: true }) as Record<PropertyKey, unknown>,
+    validRoute()
+  );
+
+  expect(() => normalizeContentRoutes([route])).toThrow("settings_value_invalid");
+});
+
+test("normalizeContentRoutes rejects a non-enumerable unknown own key", () => {
+  const route = validRoute();
+  Object.defineProperty(route, "unexpected", { value: true, enumerable: false });
+
+  expect(() => normalizeContentRoutes([route])).toThrow("settings_value_invalid");
+});
+
+test("normalizeContentRoutes rejects a symbol own key", () => {
+  const route = validRoute();
+  Object.defineProperty(route, Symbol("unexpected"), { value: true, enumerable: true });
+
+  expect(() => normalizeContentRoutes([route])).toThrow("settings_value_invalid");
+});
+
 test("normalizeContentRoutes rejects duplicate types", () => {
   expect(() =>
     normalizeContentRoutes([

@@ -1,7 +1,9 @@
 import { and, desc, eq, inArray, max } from "drizzle-orm";
 
 import { db } from "../../db/client";
+import { acquireNativeCmsWriterFence } from "../../db/nativeCmsWriterFence";
 import { pageRevisions, pages, users } from "../../db/schema";
+import { clearSiteCache } from "../../site/cache/siteCache";
 import { areRevisionSnapshotsEqual } from "../content/revisionSnapshot";
 import { resolveEmailValue } from "../security/piiEmail";
 import { normalizeStoredPageDocumentV2ForRead } from "./pageDocumentV2";
@@ -45,7 +47,6 @@ export type PageAutosaveRevisionResult = {
 };
 
 type DbTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
-type DbClient = typeof db | DbTransaction;
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   Boolean(value) && typeof value === "object" && !Array.isArray(value);
@@ -131,7 +132,7 @@ const mapRevisionRow = (
   };
 };
 
-const nextRevisionVersion = async (tx: DbClient, pageId: string) => {
+const nextRevisionVersion = async (tx: DbTransaction, pageId: string) => {
   const [{ value }] = await tx
     .select({ value: max(pageRevisions.version) })
     .from(pageRevisions)
@@ -168,11 +169,23 @@ export async function createRevision(
   userId: string,
   kind: PageRevisionKind = "publish"
 ) {
-  return createRevisionTx(db, pageId, snapshot, userId, kind);
+  return db.transaction(
+    async (tx) => {
+      await acquireNativeCmsWriterFence(tx);
+      const [page] = await tx
+        .select({ id: pages.id })
+        .from(pages)
+        .where(eq(pages.id, pageId))
+        .for("key share");
+      if (!page) throw new Error("page_not_found");
+      return createRevisionTx(tx, pageId, snapshot, userId, kind);
+    },
+    { isolationLevel: "read committed" }
+  );
 }
 
 export async function createRevisionTx(
-  tx: DbClient,
+  tx: DbTransaction,
   pageId: string,
   snapshot: PageRevisionSnapshot | RevisionData,
   userId: string,
@@ -207,11 +220,23 @@ export async function createOrReplaceAutosaveRevision(
   snapshot: PageRevisionSnapshot | RevisionData,
   userId: string
 ) {
-  return createOrReplaceAutosaveRevisionTx(db, pageId, snapshot, userId);
+  return db.transaction(
+    async (tx) => {
+      await acquireNativeCmsWriterFence(tx);
+      const [page] = await tx
+        .select({ id: pages.id })
+        .from(pages)
+        .where(eq(pages.id, pageId))
+        .for("key share");
+      if (!page) throw new Error("page_not_found");
+      return createOrReplaceAutosaveRevisionTx(tx, pageId, snapshot, userId);
+    },
+    { isolationLevel: "read committed" }
+  );
 }
 
 export async function createOrReplaceAutosaveRevisionTx(
-  tx: DbClient,
+  tx: DbTransaction,
   pageId: string,
   snapshot: PageRevisionSnapshot | RevisionData,
   userId: string
@@ -277,10 +302,23 @@ export async function createOrReplaceAutosaveRevisionTx(
 }
 
 export async function pruneRevisions(pageId: string, keep: number) {
-  return pruneRevisionsTx(db, pageId, keep);
+  if (!Number.isFinite(keep) || keep < 1) return;
+  return db.transaction(
+    async (tx) => {
+      await acquireNativeCmsWriterFence(tx);
+      const [page] = await tx
+        .select({ id: pages.id })
+        .from(pages)
+        .where(eq(pages.id, pageId))
+        .for("key share");
+      if (!page) throw new Error("page_not_found");
+      return pruneRevisionsTx(tx, pageId, keep);
+    },
+    { isolationLevel: "read committed" }
+  );
 }
 
-export async function pruneRevisionsTx(tx: DbClient, pageId: string, keep: number) {
+export async function pruneRevisionsTx(tx: DbTransaction, pageId: string, keep: number) {
   if (!Number.isFinite(keep) || keep < 1) return;
 
   const excess = await tx
@@ -301,17 +339,29 @@ export async function pruneRevisionsTx(tx: DbClient, pageId: string, keep: numbe
 }
 
 export async function discardAutosaveRevision(pageId: string, revisionId: string) {
-  const [revision] = await db
-    .select()
-    .from(pageRevisions)
-    .where(and(eq(pageRevisions.pageId, pageId), eq(pageRevisions.id, revisionId)));
-
-  if (!revision) throw new Error("revision_not_found");
-  if (normalizeRevisionKind(revision.kind) !== "autosave") {
-    throw new Error("revision_delete_forbidden");
-  }
-
-  await db.delete(pageRevisions).where(eq(pageRevisions.id, revisionId));
+  const revision = await db.transaction(
+    async (tx) => {
+      await acquireNativeCmsWriterFence(tx);
+      const [page] = await tx
+        .select({ id: pages.id })
+        .from(pages)
+        .where(eq(pages.id, pageId))
+        .for("key share");
+      if (!page) throw new Error("page_not_found");
+      const [current] = await tx
+        .select()
+        .from(pageRevisions)
+        .where(and(eq(pageRevisions.pageId, pageId), eq(pageRevisions.id, revisionId)))
+        .for("update");
+      if (!current) throw new Error("revision_not_found");
+      if (normalizeRevisionKind(current.kind) !== "autosave") {
+        throw new Error("revision_delete_forbidden");
+      }
+      await tx.delete(pageRevisions).where(eq(pageRevisions.id, revisionId));
+      return current;
+    },
+    { isolationLevel: "read committed" }
+  );
   return mapRevisionRow({
     ...revision,
     authorName: null,
@@ -324,65 +374,55 @@ export async function restoreRevision(
   pageId: string,
   revisionId: string
 ): Promise<PageRevisionRestoreResult> {
-  const [page] = await db.select().from(pages).where(eq(pages.id, pageId));
-  if (!page) throw new Error("page_not_found");
-
-  const [revision] = await db
-    .select({
-      id: pageRevisions.id,
-      pageId: pageRevisions.pageId,
-      version: pageRevisions.version,
-      kind: pageRevisions.kind,
-      data: pageRevisions.data,
-      createdAt: pageRevisions.createdAt,
-      createdBy: pageRevisions.createdBy,
-      authorName: users.name,
-      authorEmail: users.email,
-      authorEmailEncrypted: users.emailEncrypted,
-    })
-    .from(pageRevisions)
-    .leftJoin(users, eq(pageRevisions.createdBy, users.id))
-    .where(and(eq(pageRevisions.pageId, pageId), eq(pageRevisions.id, revisionId)));
-
-  if (!revision) throw new Error("revision_not_found");
-
-  const normalizedRevision = mapRevisionRow(revision);
-  const currentSnapshot = normalizePageRevisionSnapshot({
-    title: page.title,
-    slug: page.slug,
-    data: page.currentData,
-  });
-  const targetSnapshot = normalizePageRevisionSnapshot({
-    title: normalizedRevision.title,
-    slug: normalizedRevision.slug,
-    data: normalizedRevision.data,
-  });
-
-  if (areRevisionSnapshotsEqual(currentSnapshot, targetSnapshot)) {
-    return {
-      restored: false,
-      revision: normalizedRevision,
-      page,
-    };
-  }
-
-  const [updated] = await db
-    .update(pages)
-    .set({
-      title: targetSnapshot.title ?? page.title,
-      slug: targetSnapshot.slug ?? page.slug,
-      currentData: targetSnapshot.data,
-      status: "draft",
-      updatedAt: new Date(),
-    })
-    .where(eq(pages.id, pageId))
-    .returning();
-
-  if (!updated) throw new Error("page_not_found");
-
-  return {
-    restored: true,
-    revision: normalizedRevision,
-    page: updated,
-  };
+  const result = await db.transaction(
+    async (tx) => {
+      await acquireNativeCmsWriterFence(tx);
+      const [page] = await tx.select().from(pages).where(eq(pages.id, pageId)).for("update");
+      if (!page) throw new Error("page_not_found");
+      const [revision] = await tx
+        .select()
+        .from(pageRevisions)
+        .where(and(eq(pageRevisions.pageId, pageId), eq(pageRevisions.id, revisionId)))
+        .for("update");
+      if (!revision) throw new Error("revision_not_found");
+      const [author] = revision.createdBy
+        ? await tx.select().from(users).where(eq(users.id, revision.createdBy))
+        : [undefined];
+      const normalizedRevision = mapRevisionRow({
+        ...revision,
+        authorName: author?.name ?? null,
+        authorEmail: author?.email ?? null,
+        authorEmailEncrypted: author?.emailEncrypted ?? null,
+      });
+      const currentSnapshot = normalizePageRevisionSnapshot({
+        title: page.title,
+        slug: page.slug,
+        data: page.currentData,
+      });
+      const targetSnapshot = normalizePageRevisionSnapshot({
+        title: normalizedRevision.title,
+        slug: normalizedRevision.slug,
+        data: normalizedRevision.data,
+      });
+      if (areRevisionSnapshotsEqual(currentSnapshot, targetSnapshot)) {
+        return { restored: false, revision: normalizedRevision, page };
+      }
+      const [updated] = await tx
+        .update(pages)
+        .set({
+          title: targetSnapshot.title ?? page.title,
+          slug: targetSnapshot.slug ?? page.slug,
+          currentData: targetSnapshot.data,
+          status: "draft",
+          updatedAt: new Date(),
+        })
+        .where(eq(pages.id, pageId))
+        .returning();
+      if (!updated) throw new Error("page_not_found");
+      return { restored: true, revision: normalizedRevision, page: updated };
+    },
+    { isolationLevel: "read committed" }
+  );
+  if (result.restored) clearSiteCache();
+  return result;
 }

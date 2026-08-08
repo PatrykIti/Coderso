@@ -67,13 +67,23 @@ test("browser transport batches action sources and preserves exact logical outpu
       },
       actions: [
         { actionId: "a", source: "async () => ({ z: 2, a: 1 })" },
-        { actionId: "b", source: "async () => true" },
-        { actionId: "c", source: "async () => ({ ok: true })" },
+        {
+          actionId: "b",
+          source: 'async () => __name(() => true, "tsx-compatible-action")()',
+        },
+        {
+          actionId: "c",
+          source:
+            "async () => { const shared = { value: 1 }; return { left: shared, right: shared } }",
+        },
       ],
     },
     expectation
   );
   expect(logicalSuccessBytes(frames[0]!).toString("utf8")).toBe('{"a":1,"z":2}\n');
+  expect(logicalSuccessBytes(frames[2]!).toString("utf8")).toBe(
+    '{"left":{"value":1},"right":{"value":1}}\n'
+  );
   expect(transport.counters()).toEqual({
     clientProcesses: 1,
     segments: 1,
@@ -83,6 +93,45 @@ test("browser transport batches action sources and preserves exact logical outpu
   });
   await transport.close();
   expect(await transport.proveAbsent()).toBe(true);
+});
+
+test("browser transport accepts shared references but still rejects a real cycle", async () => {
+  const cyclicExpectation: BrowserFrameExpectation = {
+    ...expectation,
+    actionIds: ["cycle"],
+  };
+  const dispatcher = {
+    async dispatch(request: BrowserTransportDispatch): Promise<Uint8Array> {
+      const execute = (0, eval)(`(${request.source})`) as (page: object) => Promise<string>;
+      return Buffer.from(`${JSON.stringify(await execute({}))}\n`);
+    },
+    async close(): Promise<void> {},
+    async proveAbsent(): Promise<boolean> {
+      return true;
+    },
+  };
+  const transport = new BrowserTransport("wf552-cycle", dispatcher);
+  const frames = await transport.runSegment(
+    {
+      segment: {
+        schemaVersion: 1,
+        kind: "run-code",
+        segmentId: "segment-0001",
+        scenarioId: "scenario",
+        actionIds: ["cycle"],
+        estimatedSourceBytes: 0,
+      },
+      actions: [
+        {
+          actionId: "cycle",
+          source: "async () => { const value = {}; value.self = value; return value }",
+        },
+      ],
+    },
+    cyclicExpectation
+  );
+  expect(frames).toHaveLength(1);
+  expect(frames[0]).toMatchObject({ status: "failure", failureCode: "wf540_nonjson_output" });
 });
 
 test("browser transport retains a successful prefix and one closed terminal failure", async () => {

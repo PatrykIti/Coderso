@@ -1,11 +1,13 @@
-import { eq, inArray } from "drizzle-orm";
+import { asc, eq, inArray } from "drizzle-orm";
 import { db } from "../../db/client";
-import { settings } from "../../db/schema";
+import { acquireNativeCmsWriterFence } from "../../db/nativeCmsWriterFence";
+import { contentTypes, settings } from "../../db/schema";
 import { clearSiteCache, invalidateContentRouteCacheTransition } from "../../site/cache/siteCache";
 import { assertTokenOverrides } from "../theme/tokenValidation";
 import type { DesignTokenOverrides } from "../theme/tokenTypes";
 import { normalizeContentRoutes, type ContentRouteSetting } from "./settingsContracts";
 import { MAX_SITE_CACHE_TTL_SECONDS } from "../analytics/beaconTtl";
+import { normalizeStoredSiteLocaleForWrite } from "./siteLocale";
 
 export type { ContentRouteSetting } from "./settingsContracts";
 
@@ -111,15 +113,22 @@ const isOptionalIdSettingKey = (key: SettingKey) =>
   key === "site.footerTemplateId";
 
 const isSiteShellSettingKey = (key: SettingKey) =>
-  key === "site.navigationMenuId" || key === "site.footerTemplateId";
+  key === "site.name" ||
+  key === "site.locale" ||
+  key === "site.homepageId" ||
+  key === "site.navigationMenuId" ||
+  key === "site.footerTemplateId" ||
+  key === "site.contentRoutes" ||
+  key === "design.tokens";
 
 /**
  * The public pages cache stores fully rendered HTML that embeds the global
- * site shell (TASK-455). Writes (or deletes) touching a shell reference key
- * must clear the whole site cache so header/footer changes propagate on the
- * next render instead of waiting out the TTL.
+ * site shell and document locale (TASK-455/TASK-547). Writes (or deletes)
+ * touching a public-render setting must clear the whole site cache so the
+ * next response cannot retain stale shell, route, design, or `<html lang>`
+ * output.
  */
-const invalidateSiteShellCachesForKeys = (keys: Iterable<SettingKey>) => {
+export const invalidateSiteShellCachesForKeys = (keys: Iterable<SettingKey>) => {
   for (const key of keys) {
     if (isSiteShellSettingKey(key)) {
       clearSiteCache();
@@ -134,6 +143,35 @@ export function resolveSettingKey(key: string): SettingKey {
     throw new Error("settings_key_invalid");
   }
   return normalized as SettingKey;
+}
+
+export async function lockContentRouteSettingRootsTx(
+  tx: DbTransaction,
+  value: unknown
+): Promise<void> {
+  if (value === null || value === undefined) return;
+  if (!Array.isArray(value)) throw new Error("settings_value_invalid");
+  const slugs = new Set<string>();
+  for (const route of value) {
+    if (!route || Array.isArray(route) || typeof route !== "object") {
+      throw new Error("settings_value_invalid");
+    }
+    const slug = Reflect.get(route, "type");
+    if (typeof slug !== "string" || !slug) throw new Error("settings_value_invalid");
+    slugs.add(slug);
+  }
+  const ordered = [...slugs].sort();
+  if (ordered.length === 0) return;
+  const rows = await tx
+    .select({ id: contentTypes.id, slug: contentTypes.slug })
+    .from(contentTypes)
+    .where(inArray(contentTypes.slug, ordered))
+    .orderBy(asc(contentTypes.id))
+    .for("key share");
+  const found = new Set(rows.map((row) => row.slug));
+  if (rows.length !== ordered.length || ordered.some((slug) => !found.has(slug))) {
+    throw new Error("settings_value_invalid");
+  }
 }
 
 const ASSISTANT_SETTING_KEYS = [
@@ -345,11 +383,15 @@ const readContentRoutesSettingValue = (value: unknown): ContentRouteSetting[] =>
 };
 
 function validateSettingValue(key: SettingKey, value: unknown): SettingValueMap[SettingKey] {
-  if (key === "site.name" || key === "site.locale") {
+  if (key === "site.name") {
     if (typeof value !== "string") {
       throw new Error("settings_value_invalid");
     }
     return value;
+  }
+
+  if (key === "site.locale") {
+    return normalizeStoredSiteLocaleForWrite(value);
   }
 
   if (key === "site.timezone") {
@@ -510,28 +552,44 @@ function validateSettingValue(key: SettingKey, value: unknown): SettingValueMap[
   throw new Error("settings_value_invalid");
 }
 
+export const normalizeSettingValueForWrite = (key: string, value: unknown) => {
+  const normalizedKey = resolveSettingKey(key);
+  return {
+    key: normalizedKey,
+    value: validateSettingValue(normalizedKey, value),
+  };
+};
+
 let legacyAssistantSettingsMigrationPromise: Promise<void> | null = null;
+
+const migrateLegacyAssistantSettingsTx = async (tx: DbTransaction): Promise<void> => {
+  await tx.delete(settings).where(inArray(settings.key, [...LEGACY_ASSISTANT_DOCS_SETTING_KEYS]));
+  const [defaultMode] = await tx
+    .select({ value: settings.value })
+    .from(settings)
+    .where(eq(settings.key, "assistant.defaultMode"));
+  if (defaultMode?.value === "llm-rag") {
+    await tx
+      .update(settings)
+      .set({ value: "llm-guide", updatedAt: new Date() })
+      .where(eq(settings.key, "assistant.defaultMode"));
+  }
+};
 
 async function ensureLegacyAssistantSettingsMigrated() {
   if (legacyAssistantSettingsMigrationPromise) {
     return legacyAssistantSettingsMigrationPromise;
   }
 
-  legacyAssistantSettingsMigrationPromise = (async () => {
-    await db.delete(settings).where(inArray(settings.key, [...LEGACY_ASSISTANT_DOCS_SETTING_KEYS]));
-
-    const [defaultMode] = await db
-      .select({ value: settings.value })
-      .from(settings)
-      .where(eq(settings.key, "assistant.defaultMode"));
-
-    if (defaultMode?.value === "llm-rag") {
-      await db
-        .update(settings)
-        .set({ value: "llm-guide", updatedAt: new Date() })
-        .where(eq(settings.key, "assistant.defaultMode"));
-    }
-  })().catch(() => undefined);
+  legacyAssistantSettingsMigrationPromise = db
+    .transaction(
+      async (tx) => {
+        await acquireNativeCmsWriterFence(tx);
+        await migrateLegacyAssistantSettingsTx(tx);
+      },
+      { isolationLevel: "read committed" }
+    )
+    .catch(() => undefined);
 
   return legacyAssistantSettingsMigrationPromise;
 }
@@ -619,6 +677,11 @@ export async function listSettings(): Promise<SettingValueMap> {
       continue;
     }
 
+    if (key === "site.locale") {
+      merged[key] = row.value as string;
+      continue;
+    }
+
     if (key in merged) {
       merged[key] = row.value as string;
     }
@@ -653,6 +716,9 @@ export async function getSetting(key: string) {
   if (normalizedKey === "site.contentRoutes") {
     return readContentRoutesSettingValue(row.value);
   }
+  if (normalizedKey === "site.locale") {
+    return row.value as SettingValueMap[typeof normalizedKey];
+  }
   if (
     normalizedKey === "auth.sessionTtlDays" ||
     normalizedKey === "auth.resetTtlMinutes" ||
@@ -676,155 +742,72 @@ export async function getSettingRecord(key: string) {
   return row ?? null;
 }
 
-export async function setSetting(key: string, value: unknown) {
-  await ensureLegacyAssistantSettingsMigrated();
-  const normalizedKey = resolveSettingKey(key);
-  const typedValue = validateSettingValue(normalizedKey, value);
-  const previousContentRoutes =
-    normalizedKey === "site.contentRoutes"
-      ? (((await getSetting("site.contentRoutes")) as ContentRouteSetting[]) ?? [])
-      : null;
-  if (isAssistantSettingKey(normalizedKey)) {
-    const current = await listSettings();
-    const next = {
-      ...current,
-      [normalizedKey]: typedValue,
-    } as SettingValueMap;
-    assertAssistantSettingsConsistency(pickAssistantSettings(next));
-  }
-  const now = new Date();
+type ValidatedSettingWrite = Readonly<{
+  key: SettingKey;
+  value: SettingValueMap[SettingKey];
+}>;
 
-  const [row] = await db
-    .insert(settings)
-    .values({ key: normalizedKey, value: typedValue, updatedAt: now })
-    .onConflictDoUpdate({
-      target: settings.key,
-      set: { value: typedValue, updatedAt: now },
-    })
-    .returning();
-
-  if (normalizedKey === "site.contentRoutes" && previousContentRoutes) {
-    const nextContentRoutes = typedValue as ContentRouteSetting[];
-    const touchedTypes = new Set([
-      ...previousContentRoutes.map((entry) => entry.type),
-      ...nextContentRoutes.map((entry) => entry.type),
-    ]);
-    for (const typeSlug of touchedTypes) {
-      invalidateContentRouteCacheTransition({
-        previousRoutes: previousContentRoutes,
-        nextRoutes: nextContentRoutes,
-        typeSlug,
-      });
-    }
-  }
-
-  invalidateSiteShellCachesForKeys([normalizedKey]);
-
-  return row;
-}
-
-export async function setSettings(values: Record<string, unknown>) {
-  await ensureLegacyAssistantSettingsMigrated();
+const validateSettingsObject = (values: Record<string, unknown>): ValidatedSettingWrite[] => {
   if (!values || typeof values !== "object" || Array.isArray(values)) {
     throw new Error("settings_payload_invalid");
   }
-
-  const entries = Object.entries(values);
-  const now = new Date();
   const usedKeys = new Set<SettingKey>();
-  const previousContentRoutes = entries.some(
-    ([rawKey]) => resolveSettingKey(rawKey) === "site.contentRoutes"
-  )
-    ? (((await getSetting("site.contentRoutes")) as ContentRouteSetting[]) ?? [])
-    : null;
-  const validated = entries.map(([rawKey, value]) => {
-    const normalizedKey = resolveSettingKey(rawKey);
-    if (usedKeys.has(normalizedKey)) {
-      throw new Error("settings_payload_invalid");
-    }
-    usedKeys.add(normalizedKey);
-    const typedValue = validateSettingValue(normalizedKey, value);
-    return { key: normalizedKey, value: typedValue };
+  return Object.entries(values).map(([rawKey, value]) => {
+    const normalized = normalizeSettingValueForWrite(rawKey, value);
+    if (usedKeys.has(normalized.key)) throw new Error("settings_payload_invalid");
+    usedKeys.add(normalized.key);
+    return normalized as ValidatedSettingWrite;
   });
+};
 
-  if (validated.some((entry) => isAssistantSettingKey(entry.key))) {
-    const current = await listSettings();
-    const next = { ...current } as SettingValueMap;
-    for (const entry of validated) {
-      (next as Record<string, unknown>)[entry.key] = entry.value;
-    }
-    assertAssistantSettingsConsistency(pickAssistantSettings(next));
-  }
-
-  await db.transaction(async (tx) => {
-    for (const entry of validated) {
-      await tx
-        .insert(settings)
-        .values({ key: entry.key, value: entry.value, updatedAt: now })
-        .onConflictDoUpdate({
-          target: settings.key,
-          set: { value: entry.value, updatedAt: now },
-        });
-    }
-  });
-
-  if (previousContentRoutes) {
-    const nextContentRoutes =
-      (validated.find((entry) => entry.key === "site.contentRoutes")?.value as
-        | ContentRouteSetting[]
-        | undefined) ?? previousContentRoutes;
-    const touchedTypes = new Set([
-      ...previousContentRoutes.map((entry) => entry.type),
-      ...nextContentRoutes.map((entry) => entry.type),
-    ]);
-    for (const typeSlug of touchedTypes) {
-      invalidateContentRouteCacheTransition({
-        previousRoutes: previousContentRoutes,
-        nextRoutes: nextContentRoutes,
-        typeSlug,
-      });
+const assertAssistantSettingsWriteTx = async (
+  tx: DbTransaction,
+  writes: readonly ValidatedSettingWrite[]
+): Promise<void> => {
+  if (!writes.some((entry) => isAssistantSettingKey(entry.key))) return;
+  const rows = await tx
+    .select({ key: settings.key, value: settings.value })
+    .from(settings)
+    .where(inArray(settings.key, [...ASSISTANT_SETTING_KEYS]));
+  const current = { ...DEFAULT_SETTINGS } as SettingValueMap;
+  const currentByKey = current as Record<SettingKey, SettingValueMap[SettingKey]>;
+  for (const row of rows) {
+    const key = row.key as SettingKey;
+    if (!isAssistantSettingKey(key)) continue;
+    try {
+      currentByKey[key] = validateSettingValue(key, row.value);
+    } catch {
+      currentByKey[key] = DEFAULT_SETTINGS[key];
     }
   }
+  for (const entry of writes) currentByKey[entry.key] = entry.value;
+  assertAssistantSettingsConsistency(pickAssistantSettings(current));
+};
 
-  invalidateSiteShellCachesForKeys(validated.map((entry) => entry.key));
+const readContentRoutesForUpdateTx = async (tx: DbTransaction): Promise<ContentRouteSetting[]> => {
+  const [row] = await tx
+    .select({ value: settings.value })
+    .from(settings)
+    .where(eq(settings.key, "site.contentRoutes"))
+    .for("update");
+  return row ? readContentRoutesSettingValue(row.value) : [];
+};
 
-  return listSettings();
-}
-
-export async function setSettingsTx(tx: DbTransaction, values: Record<string, unknown>) {
-  await ensureLegacyAssistantSettingsMigrated();
-  if (!values || typeof values !== "object" || Array.isArray(values)) {
-    throw new Error("settings_payload_invalid");
+const writeValidatedSettingsTx = async (
+  tx: DbTransaction,
+  writes: readonly ValidatedSettingWrite[]
+): Promise<void> => {
+  const keys = writes.map((entry) => entry.key).sort();
+  if (keys.length > 0) {
+    await tx
+      .select({ key: settings.key })
+      .from(settings)
+      .where(inArray(settings.key, keys))
+      .orderBy(asc(settings.key))
+      .for("update");
   }
-
-  const entries = Object.entries(values);
   const now = new Date();
-  const usedKeys = new Set<SettingKey>();
-  const previousContentRoutes = entries.some(
-    ([rawKey]) => resolveSettingKey(rawKey) === "site.contentRoutes"
-  )
-    ? (((await getSetting("site.contentRoutes")) as ContentRouteSetting[]) ?? [])
-    : null;
-  const validated = entries.map(([rawKey, value]) => {
-    const normalizedKey = resolveSettingKey(rawKey);
-    if (usedKeys.has(normalizedKey)) {
-      throw new Error("settings_payload_invalid");
-    }
-    usedKeys.add(normalizedKey);
-    const typedValue = validateSettingValue(normalizedKey, value);
-    return { key: normalizedKey, value: typedValue };
-  });
-
-  if (validated.some((entry) => isAssistantSettingKey(entry.key))) {
-    const current = await listSettings();
-    const next = { ...current } as SettingValueMap;
-    for (const entry of validated) {
-      (next as Record<string, unknown>)[entry.key] = entry.value;
-    }
-    assertAssistantSettingsConsistency(pickAssistantSettings(next));
-  }
-
-  for (const entry of validated) {
+  for (const entry of writes) {
     await tx
       .insert(settings)
       .values({ key: entry.key, value: entry.value, updatedAt: now })
@@ -833,48 +816,102 @@ export async function setSettingsTx(tx: DbTransaction, values: Record<string, un
         set: { value: entry.value, updatedAt: now },
       });
   }
+};
 
-  if (previousContentRoutes) {
-    const nextContentRoutes =
-      (validated.find((entry) => entry.key === "site.contentRoutes")?.value as
-        | ContentRouteSetting[]
-        | undefined) ?? previousContentRoutes;
-    const touchedTypes = new Set([
-      ...previousContentRoutes.map((entry) => entry.type),
-      ...nextContentRoutes.map((entry) => entry.type),
-    ]);
-    for (const typeSlug of touchedTypes) {
-      invalidateContentRouteCacheTransition({
-        previousRoutes: previousContentRoutes,
-        nextRoutes: nextContentRoutes,
-        typeSlug,
-      });
-    }
+const invalidateContentRouteTransition = (
+  previous: readonly ContentRouteSetting[],
+  next: readonly ContentRouteSetting[]
+): void => {
+  const touchedTypes = new Set([
+    ...previous.map((entry) => entry.type),
+    ...next.map((entry) => entry.type),
+  ]);
+  for (const typeSlug of touchedTypes) {
+    invalidateContentRouteCacheTransition({
+      previousRoutes: [...previous],
+      nextRoutes: [...next],
+      typeSlug,
+    });
   }
+};
 
-  invalidateSiteShellCachesForKeys(validated.map((entry) => entry.key));
+export async function setSetting(key: string, value: unknown) {
+  const write = validateSettingsObject({ [key]: value })[0]!;
+  const result = await db.transaction(
+    async (tx) => {
+      await acquireNativeCmsWriterFence(tx);
+      if (write.key === "site.contentRoutes") {
+        await lockContentRouteSettingRootsTx(tx, write.value);
+      }
+      await migrateLegacyAssistantSettingsTx(tx);
+      const previous =
+        write.key === "site.contentRoutes" ? await readContentRoutesForUpdateTx(tx) : null;
+      await assertAssistantSettingsWriteTx(tx, [write]);
+      await writeValidatedSettingsTx(tx, [write]);
+      const [row] = await tx.select().from(settings).where(eq(settings.key, write.key));
+      return { previous, row };
+    },
+    { isolationLevel: "read committed" }
+  );
+
+  if (result.previous) {
+    invalidateContentRouteTransition(result.previous, write.value as ContentRouteSetting[]);
+  }
+  invalidateSiteShellCachesForKeys([write.key]);
+  return result.row;
+}
+
+export async function setSettings(values: Record<string, unknown>) {
+  const writes = validateSettingsObject(values);
+  const routeWrite = writes.find((entry) => entry.key === "site.contentRoutes");
+  const previousContentRoutes = await db.transaction(
+    async (tx) => {
+      await acquireNativeCmsWriterFence(tx);
+      await lockContentRouteSettingRootsTx(tx, routeWrite?.value);
+      await migrateLegacyAssistantSettingsTx(tx);
+      const previous = routeWrite ? await readContentRoutesForUpdateTx(tx) : null;
+      await assertAssistantSettingsWriteTx(tx, writes);
+      await writeValidatedSettingsTx(tx, writes);
+      return previous;
+    },
+    { isolationLevel: "read committed" }
+  );
+
+  if (previousContentRoutes && routeWrite) {
+    invalidateContentRouteTransition(
+      previousContentRoutes,
+      routeWrite.value as ContentRouteSetting[]
+    );
+  }
+  invalidateSiteShellCachesForKeys(writes.map((entry) => entry.key));
+  return listSettings();
+}
+
+export async function setSettingsTx(tx: DbTransaction, values: Record<string, unknown>) {
+  const writes = validateSettingsObject(values);
+  const routeWrite = writes.find((entry) => entry.key === "site.contentRoutes");
+  await lockContentRouteSettingRootsTx(tx, routeWrite?.value);
+  await migrateLegacyAssistantSettingsTx(tx);
+  if (routeWrite) await readContentRoutesForUpdateTx(tx);
+  await assertAssistantSettingsWriteTx(tx, writes);
+  await writeValidatedSettingsTx(tx, writes);
 }
 
 export async function deleteSetting(key: string) {
-  await ensureLegacyAssistantSettingsMigrated();
   const normalizedKey = resolveSettingKey(key);
-  const previousContentRoutes =
-    normalizedKey === "site.contentRoutes"
-      ? (((await getSetting("site.contentRoutes")) as ContentRouteSetting[]) ?? [])
-      : null;
-  const [row] = await db.delete(settings).where(eq(settings.key, normalizedKey)).returning();
+  const result = await db.transaction(
+    async (tx) => {
+      await acquireNativeCmsWriterFence(tx);
+      await migrateLegacyAssistantSettingsTx(tx);
+      const previous =
+        normalizedKey === "site.contentRoutes" ? await readContentRoutesForUpdateTx(tx) : null;
+      const [row] = await tx.delete(settings).where(eq(settings.key, normalizedKey)).returning();
+      return { previous, row };
+    },
+    { isolationLevel: "read committed" }
+  );
 
-  if (normalizedKey === "site.contentRoutes" && previousContentRoutes) {
-    for (const typeSlug of new Set(previousContentRoutes.map((entry) => entry.type))) {
-      invalidateContentRouteCacheTransition({
-        previousRoutes: previousContentRoutes,
-        nextRoutes: [],
-        typeSlug,
-      });
-    }
-  }
-
+  if (result.previous) invalidateContentRouteTransition(result.previous, []);
   invalidateSiteShellCachesForKeys([normalizedKey]);
-
-  return row ?? null;
+  return result.row ?? null;
 }

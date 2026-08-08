@@ -38,6 +38,7 @@
 import {
   getPageBlockActiveSlotKeys,
   isPageTypographyCapableBlockType,
+  PAGE_BLOCK_SPAN_CLAMP,
   pageBlockCapabilities,
   pageTypographyFontFamilyCssValues,
   pageTypographyFontSizeCssValues,
@@ -170,6 +171,11 @@ const sectionContentSelector = (id: string) =>
 
 const blockSelector = (id: string) => `[${PAGE_BLOCK_ID_ATTRIBUTE}="${escapeCssString(id)}"]`;
 
+const blockGridItemSelector = (id: string) =>
+  `:is(${blockSelector(id)},[data-tilt-parent]:has(> ${blockSelector(id)}))`;
+const stackedSectionGridItemSelector = (id: string) =>
+  `${sectionContentSelector(id)} > :is([${PAGE_BLOCK_ID_ATTRIBUTE}],[data-tilt-parent])`;
+
 /**
  * TASK-535 — the `[data-tilt-parent]` wrapper carrying a tilt+layer block's
  * hoisted layer placement (base `--layer-*`). Per-device layer overrides target
@@ -237,6 +243,11 @@ const isSafeCssBackgroundValue = (value: string): boolean =>
 
 const isFiniteNumber = (value: unknown): value is number =>
   typeof value === "number" && Number.isFinite(value);
+
+const blockSpanValue = (value: unknown): string | null =>
+  isFiniteNumber(value)
+    ? `span ${Math.max(PAGE_BLOCK_SPAN_CLAMP.min, Math.min(PAGE_BLOCK_SPAN_CLAMP.max, Math.trunc(value)))}`
+    : null;
 
 const pxValue = (value: unknown): string | null => (isFiniteNumber(value) ? `${value}px` : null);
 
@@ -547,11 +558,13 @@ const collectBlockDeclarations = (
   context: CollectorContext
 ): {
   frame: CssDeclaration[];
+  gridItem: CssDeclaration[];
   element: CssDeclaration[];
   text: CssDeclaration[];
   wrapper: CssDeclaration[];
 } => {
   const frame: CssDeclaration[] = [];
+  const gridItem: CssDeclaration[] = [];
   // TASK-535 — declarations that must ride the `[data-tilt-parent]` WRAPPER rather
   // than the `[data-block-id]` frame (currently only the per-device layer offsets of
   // a tilt+layer block, whose base `--layer-*` were hoisted onto the wrapper).
@@ -595,6 +608,16 @@ const collectBlockDeclarations = (
 
   const styleOverride = override.style ?? {};
   const mergedStyle = { ...(block.style ?? {}), ...styleOverride };
+
+  const spanProperties = [
+    ["colSpan", "grid-column"],
+    ["rowSpan", "grid-row"],
+  ] as const;
+  for (const [key, property] of spanProperties) {
+    if (styleOverride[key] === undefined) continue;
+    const value = blockSpanValue(mergedStyle[key]);
+    if (value) gridItem.push({ property, value });
+  }
 
   // Section-column placement (owner finding #5, round 3): `style.column`
   // re-parents the block into a different column wrapper in the BASE markup,
@@ -840,7 +863,7 @@ const collectBlockDeclarations = (
     frame.push({ property: "display", value: "none" });
   }
 
-  return { frame, element: visual === frame ? [] : visual, text, wrapper };
+  return { frame, gridItem, element: visual === frame ? [] : visual, text, wrapper };
 };
 
 const hasBlockOverride = (
@@ -864,8 +887,13 @@ const walkBlock = (block: PageBlockV2, context: CollectorContext, markupAbsent: 
     } else if (!id) {
       pushDiagnostic(context, "block", id, "*", "unsafe_scope_id");
     } else {
-      const { frame, element, text, wrapper } = collectBlockDeclarations(block, override, context);
+      const { frame, gridItem, element, text, wrapper } = collectBlockDeclarations(
+        block,
+        override,
+        context
+      );
       pushRule(context, blockSelector(id), frame);
+      pushRule(context, blockGridItemSelector(id), gridItem);
       pushRule(context, blockElementSelector(id), element);
       pushRule(context, blockTextSelector(id), text);
       // TASK-535 — tilt+layer per-device layer offsets ride the hoisted wrapper.
@@ -905,6 +933,12 @@ const walkSection = (section: PageSectionV2, context: CollectorContext) => {
       const { content, root } = collectSectionDeclarations(section, override, context);
       pushRule(context, sectionRootSelector(id), root);
       pushRule(context, sectionContentSelector(id), content);
+      if (override.layout?.stackVertical === true) {
+        pushRule(context, stackedSectionGridItemSelector(id), [
+          { property: "grid-column", value: "span 1" },
+          { property: "grid-row", value: "span 1" },
+        ]);
+      }
     }
   }
 

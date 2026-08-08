@@ -12,6 +12,24 @@ export type ContentRouteSetting = {
   detailPageId?: string | null;
 };
 
+const CONTENT_ROUTE_KEYS = new Set(["type", "listPath", "detailPath", "enabled", "detailPageId"]);
+
+const assertExactContentRouteKeys = (value: object): void => {
+  let keys: readonly PropertyKey[];
+  try {
+    const prototype = Object.getPrototypeOf(value);
+    if (prototype !== Object.prototype && prototype !== null) {
+      throw new Error("settings_value_invalid");
+    }
+    keys = Reflect.ownKeys(value);
+  } catch {
+    throw new Error("settings_value_invalid");
+  }
+  if (keys.some((key) => typeof key !== "string" || !CONTENT_ROUTE_KEYS.has(key))) {
+    throw new Error("settings_value_invalid");
+  }
+};
+
 export const normalizeContentRoutes = (value: unknown): ContentRouteSetting[] => {
   if (!Array.isArray(value)) {
     throw new Error("settings_value_invalid");
@@ -21,6 +39,7 @@ export const normalizeContentRoutes = (value: unknown): ContentRouteSetting[] =>
     if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
       throw new Error("settings_value_invalid");
     }
+    assertExactContentRouteKeys(entry);
     const record = entry as {
       type?: unknown;
       listPath?: unknown;

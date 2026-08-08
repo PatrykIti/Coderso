@@ -3,7 +3,10 @@ import {
   mapListingTemplatePresentationToContentList,
   normalizeContentListData,
 } from "../../widgets/core/contentList";
-import { normalizeListingFiltersData } from "../../widgets/core/listingFilters";
+import {
+  normalizeListingFiltersData,
+  type ListingFiltersCopy,
+} from "../../widgets/core/listingFilters";
 import { getDefaultFormSettings } from "../forms/formSettings";
 import type { FormRuntimeResolution } from "../forms/formRuntimeContract";
 import type { ContentListResolvedRuntimeData } from "./pageRuntimeBindingContract";
@@ -34,6 +37,53 @@ import {
   normalizeListingRuntimeAliases,
   type ListingRuntimeAliasMap,
 } from "../search/filterContract";
+import { resolvePrimarySiteLanguage } from "../settings/siteLocale";
+
+export type PageListingRuntimeCopy = {
+  title: string;
+  description: string;
+  searchLabel: string;
+  searchPlaceholder: string;
+  applyLabel: string;
+  copy: ListingFiltersCopy;
+};
+
+const polishPageListingRuntimeCopy: PageListingRuntimeCopy = {
+  title: "Filtruj wyniki",
+  description: "Zawęź wyniki za pomocą dostępnych filtrów.",
+  searchLabel: "Szukaj",
+  searchPlaceholder: "Szukaj w wynikach...",
+  applyLabel: "Zastosuj filtry",
+  copy: {
+    configurationAriaLabel: "Konfiguracja filtrów wyników",
+    configurationHint: "Wybierz zapisane zapytanie, aby włączyć filtry.",
+    activeFilterSingular: "aktywny filtr",
+    activeFilterPlural: "aktywne filtry",
+    activeRangeFromLabel: "Od",
+    activeRangeUpToLabel: "Do",
+    activeSearchLabel: "Szukaj",
+    clearAllLabel: "Wyczyść wszystko",
+    autoApplyLabel: "Wyniki aktualizują się automatycznie.",
+    loadingLabel: "Aktualizowanie wyników...",
+    errorLabel: "Nie udało się odświeżyć wyników. Spróbuj ponownie.",
+    rejectedLabel: "Pominięto nieprawidłowe parametry filtrów.",
+    drawerLabel: "Panel filtrów",
+    emptyOptionsLabel: "Brak dostępnych opcji.",
+    optionSearchTemplate: "Szukaj w opcjach: {facet}",
+    defaultOrderLabel: "Domyślna kolejność",
+    dateFromLabel: "Od",
+    dateToLabel: "Do",
+    rangeMinLabel: "Minimum",
+    rangeMaxLabel: "Maksimum",
+    rangeMinSliderLabel: "Suwak minimum",
+    rangeMaxSliderLabel: "Suwak maksimum",
+  },
+};
+
+export const resolvePageListingRuntimeCopy = (
+  siteLocale: unknown
+): PageListingRuntimeCopy | null =>
+  resolvePrimarySiteLanguage(siteLocale) === "pl" ? polishPageListingRuntimeCopy : null;
 
 const readOptionalText = (value: unknown): string | null => {
   if (typeof value !== "string") return null;
@@ -115,11 +165,11 @@ const resolveCollectionBinding = async (
   options: PreparePageRuntimeOptions,
   deps: Required<Pick<PageRuntimeDataBindingDeps, "resolveContentListRuntimeData">>
 ): Promise<PageRuntimeCollectionBinding> => {
-  const data = mapPageCollectionBlockToContentListData(block);
-  const listingQueryId = data.source?.listingQueryId?.trim() ?? "";
+  const baseData = mapPageCollectionBlockToContentListData(block);
+  const listingQueryId = baseData.source?.listingQueryId?.trim() ?? "";
   let resolved: ContentListResolvedRuntimeData;
   try {
-    resolved = await deps.resolveContentListRuntimeData(data, {
+    resolved = await deps.resolveContentListRuntimeData(baseData, {
       preview: options.preview,
       contentRoutes: options.contentRoutes,
       runtimeSearchParams: options.runtimeSearchParams,
@@ -148,13 +198,17 @@ const resolveCollectionBinding = async (
   return {
     kind: "collection",
     data: normalizeContentListData({
-      ...data,
+      ...baseData,
       ...(presentation
         ? {
-            style: { ...contentListDefaults.style, ...presentation.style },
-            ...(presentation.emptyState
-              ? { emptyState: { ...contentListDefaults.emptyState, ...presentation.emptyState } }
-              : {}),
+            style: {
+              ...contentListDefaults.style,
+              ...presentation?.style,
+            },
+            emptyState: {
+              ...contentListDefaults.emptyState,
+              ...presentation?.emptyState,
+            },
           }
         : {}),
       resolved,
@@ -168,7 +222,20 @@ const resolveFiltersBinding = async (
   options: PreparePageRuntimeOptions,
   deps: Required<Pick<PageRuntimeDataBindingDeps, "resolveListingFiltersRuntimeData">>
 ): Promise<PageRuntimeFiltersBinding> => {
-  const data = mapPageFiltersBlockToListingFiltersData(block);
+  const baseData = mapPageFiltersBlockToListingFiltersData(block);
+  const localeCopy = resolvePageListingRuntimeCopy(options.siteLocale);
+  const data = localeCopy
+    ? normalizeListingFiltersData({
+        ...baseData,
+        title: localeCopy.title,
+        description: localeCopy.description,
+        searchLabel: readOptionalText(block.props.searchLabel) ?? localeCopy.searchLabel,
+        searchPlaceholder:
+          readOptionalText(block.props.searchPlaceholder) ?? localeCopy.searchPlaceholder,
+        applyLabel: readOptionalText(block.props.applyLabel) ?? localeCopy.applyLabel,
+        copy: localeCopy.copy,
+      })
+    : baseData;
   let resolved: ListingFiltersRuntimeResult;
   try {
     resolved = await deps.resolveListingFiltersRuntimeData({

@@ -1,10 +1,13 @@
 import { and, desc, eq, ne } from "drizzle-orm";
+import { isDeepStrictEqual } from "node:util";
 
 import { db } from "../../db/client";
+import { acquireNativeCmsWriterFence } from "../../db/nativeCmsWriterFence";
 import { listingTemplates } from "../../db/schema";
 import { invalidateLinkedDetailPageRouteCaches } from "../../site/cache/siteCache";
 import {
   normalizeListingTemplateConfig,
+  normalizeListingTemplateWriteInput,
   type ListingActionKind,
   type ListingCardVariant,
   type ListingFieldFormat,
@@ -66,6 +69,8 @@ export type ListingTemplateUpdateInput = {
   config?: unknown;
 };
 
+type ListingTemplateTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
+
 const listingLayouts = new Set<ListingLayout>(["grid", "list", "table", "calendar", "map"]);
 
 const normalizeText = (value: unknown) => {
@@ -114,8 +119,12 @@ const mapRow = (row: typeof listingTemplates.$inferSelect): ListingTemplateRecor
   updatedAt: row.updatedAt,
 });
 
-async function assertUniqueSlug(slug: string, excludeId?: string) {
-  const [existing] = await db
+async function assertUniqueSlugTx(
+  tx: ListingTemplateTransaction,
+  slug: string,
+  excludeId?: string
+) {
+  const [existing] = await tx
     .select({ id: listingTemplates.id })
     .from(listingTemplates)
     .where(
@@ -143,62 +152,74 @@ export async function getListingTemplate(id: string) {
 export async function createListingTemplate(input: ListingTemplateCreateInput) {
   const name = normalizeName(input.name);
   const slug = resolveSlug(name, input.slug);
-  await assertUniqueSlug(slug);
-
-  const [row] = await db
-    .insert(listingTemplates)
-    .values({
-      name,
-      slug,
-      description: normalizeNullableText(input.description),
-      layout: normalizeLayout(input.layout),
-      config: normalizeListingTemplateConfig(input.config),
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    })
-    .returning();
+  const desired = {
+    name,
+    slug,
+    description: normalizeNullableText(input.description),
+    layout: normalizeLayout(input.layout),
+    config: normalizeListingTemplateConfig(input.config),
+  };
+  const row = await db.transaction(
+    async (tx) => {
+      await acquireNativeCmsWriterFence(tx);
+      await assertUniqueSlugTx(tx, slug);
+      const now = new Date();
+      const [created] = await tx
+        .insert(listingTemplates)
+        .values({ ...desired, createdAt: now, updatedAt: now })
+        .returning();
+      return created;
+    },
+    { isolationLevel: "read committed" }
+  );
 
   if (!row) throw new Error("listing_template_invalid");
   return mapRow(row);
 }
 
 export async function updateListingTemplate(id: string, input: ListingTemplateUpdateInput) {
-  const [existing] = await db.select().from(listingTemplates).where(eq(listingTemplates.id, id));
-  if (!existing) return null;
-
-  const nextName = input.name !== undefined ? normalizeName(input.name) : existing.name;
-  const nextSlug =
-    input.slug !== undefined
-      ? resolveSlug(nextName, input.slug)
-      : input.name !== undefined
-        ? resolveSlug(nextName, existing.slug)
-        : existing.slug;
-
-  if (nextSlug !== existing.slug) {
-    await assertUniqueSlug(nextSlug, id);
-  }
-
-  const [row] = await db
-    .update(listingTemplates)
-    .set({
-      name: nextName,
-      slug: nextSlug,
-      description:
-        input.description !== undefined
-          ? normalizeNullableText(input.description)
-          : existing.description,
-      layout:
-        input.layout !== undefined
-          ? normalizeLayout(input.layout)
-          : normalizeLayout(existing.layout),
-      config:
-        input.config !== undefined
-          ? normalizeListingTemplateConfig(input.config)
-          : normalizeListingTemplateConfig(existing.config),
-      updatedAt: new Date(),
-    })
-    .where(eq(listingTemplates.id, id))
-    .returning();
+  const row = await db.transaction(
+    async (tx) => {
+      await acquireNativeCmsWriterFence(tx);
+      const [existing] = await tx
+        .select()
+        .from(listingTemplates)
+        .where(eq(listingTemplates.id, id))
+        .for("update");
+      if (!existing) return null;
+      const nextName = input.name !== undefined ? normalizeName(input.name) : existing.name;
+      const nextSlug =
+        input.slug !== undefined
+          ? resolveSlug(nextName, input.slug)
+          : input.name !== undefined
+            ? resolveSlug(nextName, existing.slug)
+            : existing.slug;
+      if (nextSlug !== existing.slug) await assertUniqueSlugTx(tx, nextSlug, id);
+      const [updated] = await tx
+        .update(listingTemplates)
+        .set({
+          name: nextName,
+          slug: nextSlug,
+          description:
+            input.description !== undefined
+              ? normalizeNullableText(input.description)
+              : existing.description,
+          layout:
+            input.layout !== undefined
+              ? normalizeLayout(input.layout)
+              : normalizeLayout(existing.layout),
+          config:
+            input.config !== undefined
+              ? normalizeListingTemplateConfig(input.config)
+              : normalizeListingTemplateConfig(existing.config),
+          updatedAt: new Date(),
+        })
+        .where(eq(listingTemplates.id, id))
+        .returning();
+      return updated ?? null;
+    },
+    { isolationLevel: "read committed" }
+  );
 
   if (row) {
     await invalidateLinkedDetailPageRouteCaches();
@@ -209,10 +230,158 @@ export async function updateListingTemplate(id: string, input: ListingTemplateUp
 }
 
 export async function deleteListingTemplate(id: string) {
-  const [row] = await db.delete(listingTemplates).where(eq(listingTemplates.id, id)).returning();
+  const row = await db.transaction(
+    async (tx) => {
+      await acquireNativeCmsWriterFence(tx);
+      const [current] = await tx
+        .select({ id: listingTemplates.id })
+        .from(listingTemplates)
+        .where(eq(listingTemplates.id, id))
+        .for("update");
+      if (!current) return null;
+      const [deleted] = await tx
+        .delete(listingTemplates)
+        .where(eq(listingTemplates.id, id))
+        .returning();
+      return deleted ?? null;
+    },
+    { isolationLevel: "read committed" }
+  );
   if (row) {
     await invalidateLinkedDetailPageRouteCaches();
   }
   if (!row) return null;
   return mapRow(row);
+}
+
+export type ListingTemplateNativeDesired = ReturnType<typeof normalizeListingTemplateWriteInput>;
+
+export type ListingTemplateNativeSnapshot = Readonly<{
+  id: string;
+  desired: ListingTemplateNativeDesired;
+}>;
+
+export type ListingTemplateAtomicMutation =
+  | Readonly<{
+      operation: "create";
+      id: string;
+      desired: ListingTemplateNativeDesired;
+      actorId: string;
+    }>
+  | Readonly<{
+      operation: "replace";
+      id: string;
+      desired: ListingTemplateNativeDesired;
+      expectedCurrent: ListingTemplateNativeSnapshot;
+      actorId: string;
+    }>
+  | Readonly<{
+      operation: "delete";
+      id: string;
+      expectedCurrent: ListingTemplateNativeSnapshot;
+      actorId: string;
+    }>;
+
+export type ListingTemplateAtomicMutationResult = Readonly<{
+  id: string;
+  snapshot: ListingTemplateNativeSnapshot | null;
+}>;
+
+const rowToNativeSnapshot = (
+  row: typeof listingTemplates.$inferSelect
+): ListingTemplateNativeSnapshot => ({
+  id: row.id,
+  desired: normalizeListingTemplateWriteInput({
+    name: row.name,
+    slug: row.slug,
+    description: row.description,
+    layout: row.layout,
+    config: row.config,
+  }),
+});
+
+export const captureListingTemplateNativeSnapshot = async (
+  id: string
+): Promise<ListingTemplateNativeSnapshot | null> =>
+  db.transaction(async (tx) => {
+    await acquireNativeCmsWriterFence(tx);
+    const [row] = await tx.select().from(listingTemplates).where(eq(listingTemplates.id, id));
+    return row ? rowToNativeSnapshot(row) : null;
+  });
+
+export async function mutateListingTemplateAtomic(
+  input: ListingTemplateAtomicMutation
+): Promise<ListingTemplateAtomicMutationResult> {
+  let invalidatesLinkedRoutes = false;
+  try {
+    const result = await db.transaction(async (tx) => {
+      await acquireNativeCmsWriterFence(tx);
+      const desired =
+        input.operation === "delete" ? null : normalizeListingTemplateWriteInput(input.desired);
+      if (input.operation === "create") {
+        const [conflict] = await tx
+          .select({ id: listingTemplates.id })
+          .from(listingTemplates)
+          .where(eq(listingTemplates.slug, desired!.slug))
+          .limit(1);
+        if (conflict) throw new Error("listing_template_slug_exists");
+        const now = new Date();
+        const [row] = await tx
+          .insert(listingTemplates)
+          .values({ id: input.id, ...desired!, createdAt: now, updatedAt: now })
+          .returning();
+        if (!row) throw new Error("listing_template_invalid");
+        return { id: row.id, snapshot: rowToNativeSnapshot(row) };
+      }
+
+      const [currentRow] = await tx
+        .select()
+        .from(listingTemplates)
+        .where(eq(listingTemplates.id, input.id))
+        .for("update");
+      if (!currentRow) throw new Error("site_package_state_changed");
+      const current = rowToNativeSnapshot(currentRow);
+      if (
+        input.expectedCurrent.id !== input.id ||
+        !isDeepStrictEqual(current, input.expectedCurrent)
+      ) {
+        throw new Error("site_package_state_changed");
+      }
+      invalidatesLinkedRoutes = true;
+      if (input.operation === "delete") {
+        const [deleted] = await tx
+          .delete(listingTemplates)
+          .where(eq(listingTemplates.id, input.id))
+          .returning({ id: listingTemplates.id });
+        if (!deleted) throw new Error("site_package_state_changed");
+        return { id: input.id, snapshot: null };
+      }
+      if (desired!.slug !== current.desired.slug) {
+        const [conflict] = await tx
+          .select({ id: listingTemplates.id })
+          .from(listingTemplates)
+          .where(and(eq(listingTemplates.slug, desired!.slug), ne(listingTemplates.id, input.id)))
+          .limit(1);
+        if (conflict) throw new Error("listing_template_slug_exists");
+      }
+      const [row] = await tx
+        .update(listingTemplates)
+        .set({ ...desired!, updatedAt: new Date() })
+        .where(eq(listingTemplates.id, input.id))
+        .returning();
+      if (!row) throw new Error("site_package_state_changed");
+      return { id: row.id, snapshot: rowToNativeSnapshot(row) };
+    });
+    if (invalidatesLinkedRoutes) await invalidateLinkedDetailPageRouteCaches();
+    return result;
+  } catch (error) {
+    if (
+      Boolean(error) &&
+      typeof error === "object" &&
+      (error as { code?: unknown }).code === "23505"
+    ) {
+      throw new Error("listing_template_slug_exists");
+    }
+    throw error;
+  }
 }
