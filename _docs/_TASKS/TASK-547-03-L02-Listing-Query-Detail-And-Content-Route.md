@@ -6,9 +6,10 @@
 **Category:** Content Engine / Listings / Detail
 **Estimated Effort:** Large
 **Dependencies:** TASK-547-03-L01
-**Status:** 🚧 In Progress
-**Reopened:** 2026-07-23 — the resource graph exists, but its facets, project
-facts, detail composition and SEO must be corrected to the designated reference.
+**Status:** ✅ Done
+**Completed:** 2026-08-08
+**Validation:** Corrected listing, detail, route and SEO gates passed, followed by
+the final 18/18 certification smoke.
 
 ## Overview
 
@@ -375,12 +376,12 @@ remains independently runnable and below 1,000 lines.
 
 ## Sub-Tasks
 
-- [ ] Correct canonical filters, listing card projection and deterministic query.
-- [ ] Correct Aurora detail blocks, bindings and dynamic SEO; remove related
+- [x] Correct canonical filters, listing card projection and deterministic query.
+- [x] Correct Aurora detail blocks, bindings and dynamic SEO; remove related
   listing behavior completely.
-- [ ] Preserve strict `site.contentRoutes` normalization and add the exact route
+- [x] Preserve strict `site.contentRoutes` normalization and add the exact route
   branch regression test.
-- [ ] Rebaseline the focused discovery suite without weakening failure cases.
+- [x] Rebaseline the focused discovery suite without weakening failure cases.
 
 ## Testing Requirements
 

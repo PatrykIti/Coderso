@@ -2,6 +2,7 @@ import { and, desc, eq, inArray, ne, or } from "drizzle-orm";
 import { randomBytes } from "node:crypto";
 
 import { db } from "../../db/client";
+import { acquireNativeCmsWriterFence } from "../../db/nativeCmsWriterFence";
 import { roles, userRoles, users } from "../../db/schema";
 import { hashPassword } from "../auth/password";
 import { buildEmailFields, normalizeEmail, resolveEmailValue } from "../security/piiEmail";
@@ -299,9 +300,34 @@ export async function enableUser(userId: string) {
 }
 
 export async function deleteUser(userId: string) {
-  if (await userHasAdminRole(userId)) {
-    await ensureNotLastAdmin(userId);
-  }
-  const [row] = await db.delete(users).where(eq(users.id, userId)).returning();
-  return row ?? null;
+  return db.transaction(
+    async (tx) => {
+      await acquireNativeCmsWriterFence(tx);
+      const [existing] = await tx
+        .select({ id: users.id })
+        .from(users)
+        .where(eq(users.id, userId))
+        .for("update");
+      if (!existing) return null;
+      const adminRoleIds = await getAdminRoleIds(undefined, tx);
+      if (adminRoleIds.length > 0) {
+        const assignedAdminRole = await tx
+          .select({ roleId: userRoles.roleId })
+          .from(userRoles)
+          .where(and(eq(userRoles.userId, userId), inArray(userRoles.roleId, adminRoleIds)))
+          .limit(1);
+        if (assignedAdminRole.length > 0) {
+          const otherAdmins = await tx
+            .select({ userId: userRoles.userId })
+            .from(userRoles)
+            .where(and(ne(userRoles.userId, userId), inArray(userRoles.roleId, adminRoleIds)))
+            .limit(1);
+          if (otherAdmins.length === 0) throw new Error("last_admin");
+        }
+      }
+      const [row] = await tx.delete(users).where(eq(users.id, userId)).returning();
+      return row ?? null;
+    },
+    { isolationLevel: "read committed" }
+  );
 }

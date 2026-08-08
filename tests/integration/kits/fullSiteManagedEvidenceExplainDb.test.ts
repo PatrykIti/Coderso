@@ -1,13 +1,15 @@
-import { expect, test } from "bun:test";
+import { test } from "bun:test";
 import { randomUUID } from "node:crypto";
 import { inArray } from "drizzle-orm";
 
 import { db } from "../../../core/db/client";
 import { solutionKitInstallItems, solutionKitInstallRuns } from "../../../core/db/schema";
 import {
-  buildManagedResourceEvidenceQuery,
-  createLegacyInstallLedger,
+  buildManagedResourceEvidenceBatchQuery,
+  findManagedResourceEvidenceBatch,
 } from "../../../core/services/kits/legacyInstallRunPersistence";
+import type { FullSiteResourceIdentity } from "../../../core/services/kits/fullSiteInstallTypes";
+import { parseManagedEvidenceExplainMetrics } from "../../utils/fullSiteExplainMetrics";
 
 const EXPLAIN_PROFILES = [
   {
@@ -31,127 +33,6 @@ const EXPLAIN_PROFILES = [
 ] as const;
 
 type ExplainProfile = (typeof EXPLAIN_PROFILES)[number];
-type ExplainRecord = Record<string, unknown>;
-type ExplainMetrics = {
-  executionMs: number;
-  emittedRows: number;
-  scannedRows: number;
-  sharedBuffers: number;
-};
-
-const EXPLAIN_INVALID = "managed_evidence_explain_invalid";
-const OPTIONAL_REMOVAL_METRICS = [
-  "Rows Removed by Filter",
-  "Rows Removed by Join Filter",
-  "Rows Removed by Index Recheck",
-] as const;
-const OPTIONAL_BUFFER_METRICS = [
-  "Shared Hit Blocks",
-  "Shared Read Blocks",
-  "Shared Dirtied Blocks",
-  "Shared Written Blocks",
-] as const;
-
-const invalidExplain = (): never => {
-  throw new Error(EXPLAIN_INVALID);
-};
-
-const isExplainRecord = (value: unknown): value is ExplainRecord => {
-  if (!value || typeof value !== "object" || Array.isArray(value)) {
-    return false;
-  }
-  const prototype = Object.getPrototypeOf(value);
-  return prototype === Object.prototype || prototype === null;
-};
-
-const asExplainRecord = (value: unknown): ExplainRecord => {
-  if (!isExplainRecord(value)) return invalidExplain();
-  return value;
-};
-
-const hasOwn = (record: ExplainRecord | readonly unknown[], key: PropertyKey): boolean =>
-  Object.prototype.hasOwnProperty.call(record, key);
-
-const explainNumber = (record: ExplainRecord, key: string, required: boolean): number => {
-  if (!hasOwn(record, key)) return required ? invalidExplain() : 0;
-  const value = Reflect.get(record, key);
-  if (typeof value !== "number" || !Number.isFinite(value) || value < 0) {
-    return invalidExplain();
-  }
-  return value;
-};
-
-const finiteSum = (values: readonly number[]): number => {
-  const sum = values.reduce((total, value) => total + value, 0);
-  return Number.isFinite(sum) && sum >= 0 ? sum : invalidExplain();
-};
-
-const finiteProduct = (left: number, right: number): number => {
-  const product = left * right;
-  return Number.isFinite(product) && product >= 0 ? product : invalidExplain();
-};
-
-const parsePlanNode = (
-  value: unknown,
-  visited: WeakSet<object>
-): { actualRows: number; actualLoops: number; scannedRows: number } => {
-  const node = asExplainRecord(value);
-  if (visited.has(node)) return invalidExplain();
-  visited.add(node);
-  const actualRows = explainNumber(node, "Actual Rows", true);
-  const actualLoops = explainNumber(node, "Actual Loops", true);
-  const localRows = finiteSum([
-    actualRows,
-    ...OPTIONAL_REMOVAL_METRICS.map((key) => explainNumber(node, key, false)),
-  ]);
-  let scannedRows = finiteProduct(localRows, actualLoops);
-
-  if (hasOwn(node, "Plans")) {
-    const plans = Reflect.get(node, "Plans");
-    if (!Array.isArray(plans)) return invalidExplain();
-    const length = Reflect.get(plans, "length");
-    if (typeof length !== "number" || !Number.isSafeInteger(length) || length < 0) {
-      return invalidExplain();
-    }
-    for (let index = 0; index < length; index += 1) {
-      if (!hasOwn(plans, index)) return invalidExplain();
-      const child = parsePlanNode(Reflect.get(plans, index), visited);
-      scannedRows = finiteSum([scannedRows, child.scannedRows]);
-    }
-    if (Reflect.get(plans, "length") !== length) return invalidExplain();
-  }
-
-  return { actualRows, actualLoops, scannedRows };
-};
-
-const parseManagedEvidenceExplainMetrics = (input: unknown): ExplainMetrics => {
-  try {
-    const document: unknown = typeof input === "string" ? JSON.parse(input) : input;
-    if (!Array.isArray(document)) return invalidExplain();
-    const topLevelLength = Reflect.get(document, "length");
-    if (topLevelLength !== 1 || !hasOwn(document, 0)) {
-      return invalidExplain();
-    }
-    const result = asExplainRecord(Reflect.get(document, 0));
-    if (!hasOwn(result, "Plan")) return invalidExplain();
-    const rootRecord = asExplainRecord(Reflect.get(result, "Plan"));
-    const root = parsePlanNode(rootRecord, new WeakSet<object>());
-    const emittedRows = finiteProduct(root.actualRows, root.actualLoops);
-    const sharedBuffers = finiteSum(
-      OPTIONAL_BUFFER_METRICS.map((key) => explainNumber(rootRecord, key, false))
-    );
-    const metrics = {
-      executionMs: explainNumber(result, "Execution Time", true),
-      emittedRows,
-      scannedRows: root.scannedRows,
-      sharedBuffers,
-    };
-    if (Reflect.get(document, "length") !== topLevelLength) return invalidExplain();
-    return metrics;
-  } catch {
-    throw new Error(EXPLAIN_INVALID);
-  }
-};
 
 const cleanupExplainFixture = async (
   ownedItemIds: ReadonlySet<string>,
@@ -312,23 +193,29 @@ const assertManagedResourceEvidenceExplainBudgets = async (profile: ExplainProfi
     const winnerIndex = groupSize * 3;
     const expectedRunId = candidateRunIds[winnerIndex]!;
     const expectedResourceId = resourceIds[winnerIndex]!;
-    const winner = await createLegacyInstallLedger().findManagedResourceEvidence({
+    const resources = [
+      {
+        identity: `form:${resourceKey}` as FullSiteResourceIdentity,
+        kind: "form" as const,
+        key: resourceKey,
+      },
+    ];
+    const winnerRows = await findManagedResourceEvidenceBatch(db, {
       packageKey,
-      kind: "form",
-      key: resourceKey,
+      resources,
     });
+    const winner = winnerRows[0]?.evidence;
     if (!winner || winner.runId !== expectedRunId || winner.resourceId !== expectedResourceId) {
       throw new Error("managed_evidence_explain_winner_mismatch");
     }
 
-    const compiled = buildManagedResourceEvidenceQuery({
+    const compiled = buildManagedResourceEvidenceBatchQuery({
       packageKey,
-      kind: "form",
-      key: resourceKey,
+      resources,
     }).toSQL();
     const explainParameters = compiled.params.map((value) => {
       if (typeof value !== "string" && typeof value !== "number") {
-        throw new Error(EXPLAIN_INVALID);
+        throw new Error("managed_evidence_explain_parameter_invalid");
       }
       return value;
     });
@@ -356,150 +243,100 @@ const assertManagedResourceEvidenceExplainBudgets = async (profile: ExplainProfi
   }
 };
 
-const createNestedExplainFixture = () => {
-  const child: ExplainRecord = {
-    "Actual Rows": 29,
-    "Actual Loops": 2,
-    "Rows Removed by Filter": 31,
-    "Rows Removed by Join Filter": 37,
-    "Rows Removed by Index Recheck": 41,
-  };
-  const root: ExplainRecord = {
-    "Actual Rows": 2,
-    "Actual Loops": 3,
-    "Rows Removed by Filter": 5,
-    "Rows Removed by Join Filter": 7,
-    "Rows Removed by Index Recheck": 11,
-    "Shared Hit Blocks": 13,
-    "Shared Read Blocks": 17,
-    "Shared Dirtied Blocks": 19,
-    "Shared Written Blocks": 23,
-    Plans: [child],
-  };
-  const result: ExplainRecord = { "Execution Time": 7, Plan: root };
-  return { document: [result], result, root, child };
-};
-
-const expectExplainInvalid = (value: unknown): void => {
-  let thrown: unknown;
+const assertManagedResourceEvidenceBatchWidthBudget = async () => {
+  const scope = randomUUID();
+  const packageKey = `managed-explain-width-${scope}`;
+  const runIds = Array.from({ length: 512 }, () => randomUUID());
+  const itemIds = Array.from({ length: 512 }, () => randomUUID());
+  const resourceIds = Array.from({ length: 512 }, () => randomUUID());
+  const resources = Array.from({ length: 512 }, (_, index) => ({
+    identity: `form:width-${index}` as FullSiteResourceIdentity,
+    kind: "form" as const,
+    key: `width-${index}`,
+  }));
+  const ownedRunIds = new Set(runIds);
+  const ownedItemIds = new Set(itemIds);
+  const now = new Date("2026-07-24T13:00:00.000Z");
   try {
-    parseManagedEvidenceExplainMetrics(value);
-  } catch (error) {
-    thrown = error;
+    await db.insert(solutionKitInstallRuns).values(
+      runIds.map((id) => ({
+        id,
+        kitId: packageKey,
+        mode: "apply",
+        status: "success",
+        actorId: null,
+        rollbackOfRunId: null,
+        options: { fullSitePackage: true },
+        summary: {},
+        error: null,
+        createdAt: now,
+        updatedAt: now,
+        finishedAt: now,
+      }))
+    );
+    await db.insert(solutionKitInstallItems).values(
+      itemIds.map((id, index) => ({
+        id,
+        runId: runIds[index]!,
+        position: 0,
+        resourceType: "form",
+        resourceKey: resources[index]!.key,
+        operation: "create",
+        status: "success",
+        beforeSnapshot: null,
+        afterSnapshot: { id: resourceIds[index], desired: {} },
+        rollbackAction: null,
+        error: null,
+        createdAt: now,
+        updatedAt: now,
+      }))
+    );
+
+    const winners = await findManagedResourceEvidenceBatch(db, { packageKey, resources });
+    if (winners.length !== resources.length) {
+      throw new Error("managed_evidence_explain_winner_mismatch");
+    }
+    for (let index = 0; index < winners.length; index += 1) {
+      const winner = winners[index]?.evidence;
+      if (!winner || winner.runId !== runIds[index] || winner.resourceId !== resourceIds[index]) {
+        throw new Error("managed_evidence_explain_winner_mismatch");
+      }
+    }
+
+    const compiled = buildManagedResourceEvidenceBatchQuery({ packageKey, resources }).toSQL();
+    const parameters = compiled.params.map((value) => {
+      if (typeof value !== "string" && typeof value !== "number") {
+        throw new Error("managed_evidence_explain_parameter_invalid");
+      }
+      return value;
+    });
+    const explainRows = await db.$client.unsafe(
+      `EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON) ${compiled.sql}`,
+      parameters
+    );
+    const metrics = parseManagedEvidenceExplainMetrics(explainRows[0]?.["QUERY PLAN"]);
+    console.info(
+      "managed evidence EXPLAIN profile",
+      JSON.stringify({
+        label: "batch-width",
+        candidates: 512,
+        rollbacks: 0,
+        rollbackItems: 0,
+        ...metrics,
+      })
+    );
+    assertBudget(metrics.executionMs, 1_000);
+    assertBudget(metrics.emittedRows, 512);
+    assertBudget(metrics.scannedRows, 100_000);
+    assertBudget(metrics.sharedBuffers, 100_000);
+  } finally {
+    await cleanupExplainFixture(ownedItemIds, ownedRunIds);
   }
-  if (thrown === undefined) throw new Error("managed_evidence_explain_rejection_expected");
-  expect(thrown).toBeInstanceOf(Error);
-  if (!(thrown instanceof Error)) throw new Error("managed_evidence_explain_error_expected");
-  expect(Object.getPrototypeOf(thrown)).toBe(Error.prototype);
-  expect(thrown.message).toBe(EXPLAIN_INVALID);
-  expect(thrown.message).not.toContain("hostile_explain_sentinel");
-  expect(Object.prototype.hasOwnProperty.call(thrown, "cause")).toBe(false);
 };
-
-test("EXPLAIN parser accepts the exact nested fixture in both driver representations", () => {
-  const { document } = createNestedExplainFixture();
-  const expected: ExplainMetrics = {
-    executionMs: 7,
-    emittedRows: 6,
-    scannedRows: 351,
-    sharedBuffers: 72,
-  };
-  expect(parseManagedEvidenceExplainMetrics(document)).toEqual(expected);
-  expect(parseManagedEvidenceExplainMetrics(JSON.stringify(document))).toEqual(expected);
-});
-
-test("EXPLAIN parser accepts a zero-valued leaf with absent optional metrics", () => {
-  expect(
-    parseManagedEvidenceExplainMetrics([
-      { "Execution Time": 0, Plan: { "Actual Rows": 0, "Actual Loops": 0 } },
-    ])
-  ).toEqual({ executionMs: 0, emittedRows: 0, scannedRows: 0, sharedBuffers: 0 });
-});
-
-test("EXPLAIN parser rejects malformed top-level and trapped representations", () => {
-  const twoResults = createNestedExplainFixture();
-  const sparseTop = new Array(1);
-  const hostileResult = new Proxy(createNestedExplainFixture().result, {
-    getOwnPropertyDescriptor: () => {
-      throw new Error("hostile_explain_sentinel");
-    },
-  });
-  const hostilePlan = new Proxy(createNestedExplainFixture().root, {
-    getPrototypeOf: () => {
-      throw new Error("hostile_explain_sentinel");
-    },
-  });
-  for (const value of [
-    null,
-    {},
-    [],
-    sparseTop,
-    [twoResults.result, twoResults.result],
-    [{ "Execution Time": 1 }],
-    "{hostile_explain_sentinel",
-    JSON.stringify({ Plan: {} }),
-    [hostileResult],
-    [{ "Execution Time": 1, Plan: hostilePlan }],
-  ]) {
-    expectExplainInvalid(value);
-  }
-});
-
-test("EXPLAIN parser rejects every required and optional numeric metric class", () => {
-  const required = [
-    ["Execution Time", "result"],
-    ["Actual Rows", "root"],
-    ["Actual Loops", "root"],
-  ] as const;
-  const optional = [...OPTIONAL_REMOVAL_METRICS, ...OPTIONAL_BUFFER_METRICS];
-  const missing = Symbol("missing");
-
-  for (const [key, ownerName] of required) {
-    for (const value of [missing, undefined, "1", Number.NaN, Infinity, -1]) {
-      const fixture = createNestedExplainFixture();
-      const owner = ownerName === "result" ? fixture.result : fixture.root;
-      if (value === missing) delete owner[key];
-      else owner[key] = value;
-      expectExplainInvalid(fixture.document);
-    }
-  }
-  for (const key of optional) {
-    for (const value of [undefined, "1", Number.NaN, Infinity, -1]) {
-      const fixture = createNestedExplainFixture();
-      fixture.root[key] = value;
-      expectExplainInvalid(fixture.document);
-    }
-  }
-});
-
-test("EXPLAIN parser rejects malformed root, child, and Plans shapes", () => {
-  for (const root of [null, [], "root", new Date()]) {
-    const fixture = createNestedExplainFixture();
-    fixture.result.Plan = root;
-    expectExplainInvalid(fixture.document);
-  }
-  const sparsePlans = new Array(1);
-  for (const plans of [null, {}, "plans", sparsePlans, [null], [{}]]) {
-    const fixture = createNestedExplainFixture();
-    fixture.root.Plans = plans;
-    expectExplainInvalid(fixture.document);
-  }
-});
-
-test("EXPLAIN parser rejects non-finite derived metrics", () => {
-  const rowOverflow = createNestedExplainFixture();
-  rowOverflow.root["Actual Rows"] = Number.MAX_VALUE;
-  rowOverflow.root["Actual Loops"] = 2;
-  expectExplainInvalid(rowOverflow.document);
-
-  const bufferOverflow = createNestedExplainFixture();
-  bufferOverflow.root["Shared Hit Blocks"] = Number.MAX_VALUE;
-  bufferOverflow.root["Shared Read Blocks"] = Number.MAX_VALUE;
-  expectExplainInvalid(bufferOverflow.document);
-});
 
 test("managed evidence SELECT satisfies no-migration EXPLAIN budgets", async () => {
   for (const profile of EXPLAIN_PROFILES) {
     await assertManagedResourceEvidenceExplainBudgets(profile);
   }
+  await assertManagedResourceEvidenceBatchWidthBudget();
 }, 360_000);

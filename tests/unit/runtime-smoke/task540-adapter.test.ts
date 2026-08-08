@@ -59,13 +59,13 @@ async function traceRegisteredTask540Graph(): Promise<readonly string[]> {
   return Object.freeze([...seen].map((file) => relative(root, file)).sort());
 }
 
-function canonicalEvidence(): unknown {
+function canonicalEvidence(cleanupReceipts = 72): unknown {
   return {
     pass: true,
     serverUp: true,
     browserReceipts: Array.from({ length: 420 }, () => ({})),
     runtimeReceipts: Array.from({ length: 76 }, () => ({})),
-    cleanupReceipts: Array.from({ length: 72 }, () => ({})),
+    cleanupReceipts: Array.from({ length: cleanupReceipts }, () => ({})),
     scenarios: Array.from({ length: 7 }, (_value, index) => ({ id: `scenario-${index}` })),
     screenshots: Array.from({ length: 13 }, (_value, index) => ({
       path: `_docs/_workflows/_smoke/task-540-${index}.png`,
@@ -76,10 +76,15 @@ function canonicalEvidence(): unknown {
   };
 }
 
-test("TASK-540 adapter validates exact native evidence totals", () => {
+test("TASK-540 adapter validates exact native evidence totals with bounded dynamic SEO cleanup", () => {
   expect(adapter.suiteId).toBe("task-540");
   expect(adapter.supportedProfiles).toEqual(["fast", "certification"]);
-  expect(validateTask540Evidence(canonicalEvidence())).toMatchObject({ pass: true });
+  for (const cleanupReceipts of [54, 60, 72]) {
+    expect(validateTask540Evidence(canonicalEvidence(cleanupReceipts))).toMatchObject({
+      pass: true,
+    });
+  }
+  expect(() => validateTask540Evidence(canonicalEvidence(55))).toThrow("projection drifted");
   const drifted = canonicalEvidence() as {
     screenshots: unknown[];
   };

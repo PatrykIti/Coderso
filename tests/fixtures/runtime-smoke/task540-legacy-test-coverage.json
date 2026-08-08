@@ -237,7 +237,7 @@
         "tests/unit/runtime-smoke/task540-native-suite-boundary.test.ts"
       ],
       "replacementAssertions": [
-        "TASK-540 adapter validates exact native evidence totals",
+        "TASK-540 adapter validates exact native evidence totals with bounded dynamic SEO cleanup",
         "TASK-540 native runtime map and response-lost baseline batches retain exact cardinality"
       ],
       "rationale": "The native runtime-smoke assertion is behaviorally equivalent or stronger and runs without the deleted workflow engine."
@@ -384,7 +384,7 @@
       ],
       "replacementAssertions": [
         "TASK-540 native manifest compiles to exact 47 batches plus 28 standalone dispatches",
-        "TASK-540 adapter validates exact native evidence totals"
+        "TASK-540 adapter validates exact native evidence totals with bounded dynamic SEO cleanup"
       ],
       "rationale": "The native runtime-smoke assertion is behaviorally equivalent or stronger and runs without the deleted workflow engine."
     },

@@ -399,7 +399,8 @@ surface; reusable Page authoring uses `page_templates` with Page sections/blocks
 - id (uuid, pk)
 - run_id (fk solution_kit_install_runs, cascade delete)
 - position (int)
-- resource_type (`content_type|form|page|menu`)
+- resource_type (`content_type|form|page_template|listing_template|content_entry|
+  listing_query|detail_page|page|menu|setting`)
 - resource_key (slug/location key)
 - operation (`create|update|noop|delete|restore`)
 - status (`planned|success|failed|skipped`)
@@ -413,6 +414,10 @@ surface; reusable Page authoring uses `page_templates` with Page sections/blocks
 Note:
 - Install traceability jest per-run i per-resource.
 - `before_snapshot`/`after_snapshot` wspieraja rollback best-effort oraz audyt.
+- Rozszerzony zestaw rodzajow zasobow nie wymaga migracji: `resource_type`,
+  `operation`, `status` i pozostale dyskryminatory ledgeru sa kolumnami `text`,
+  a snapshoty pozostaja `jsonb`. Walidacja zamknietej listy dziesieciu rodzajow
+  nalezy do kontraktu pakietu i serwisu, nie do enum PostgreSQL.
 
 ## Themes
 

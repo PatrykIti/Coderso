@@ -3,10 +3,7 @@ import { randomUUID } from "node:crypto";
 import { fileURLToPath } from "node:url";
 import { eq, inArray, sql } from "drizzle-orm";
 import postgres from "postgres";
-import {
-  buildFullSiteRollbackActionV1,
-  toSafeFullSiteErrorCode,
-} from "../../../core/services/kits/fullSiteInstallTypes";
+import { toSafeFullSiteErrorCode } from "../../../core/services/kits/fullSiteInstallTypes";
 const readSource = (relativePath: string) =>
   Bun.file(fileURLToPath(new URL(relativePath, import.meta.url))).text();
 const DIRECT_SELECTION_MEMBER =
@@ -36,12 +33,12 @@ type PersistenceModule = typeof import("../../../core/services/kits/legacyInstal
 type SchemaModule = typeof import("../../../core/db/schema");
 type DbHarness = {
   db: DbModule["db"];
-  buildManagedResourceEvidenceQuery: PersistenceModule["buildManagedResourceEvidenceQuery"];
   createLegacyInstallLedger: PersistenceModule["createLegacyInstallLedger"];
   getSolutionKitInstallRun: PersistenceModule["getSolutionKitInstallRun"];
   withFullSiteInstallLocks: PersistenceModule["withFullSiteInstallLocks"];
   solutionKitInstallItems: SchemaModule["solutionKitInstallItems"];
   solutionKitInstallRuns: SchemaModule["solutionKitInstallRuns"];
+  users: SchemaModule["users"];
 };
 type DbHarnessStages<T> = readonly [
   load: () => Promise<T>,
@@ -67,12 +64,12 @@ const loadDbHarness = async (): Promise<DbHarness> => {
   ]);
   return {
     db: dbModule.db,
-    buildManagedResourceEvidenceQuery: persistence.buildManagedResourceEvidenceQuery,
     createLegacyInstallLedger: persistence.createLegacyInstallLedger,
     getSolutionKitInstallRun: persistence.getSolutionKitInstallRun,
     withFullSiteInstallLocks: persistence.withFullSiteInstallLocks,
     solutionKitInstallItems: schemaModule.solutionKitInstallItems,
     solutionKitInstallRuns: schemaModule.solutionKitInstallRuns,
+    users: schemaModule.users,
   };
 };
 const initializeDbHarness = async <T>(stages: DbHarnessStages<T>): Promise<T> => {
@@ -141,13 +138,25 @@ const createDeferred = <T = void>() => {
   });
   return { promise, resolve };
 };
+const DB_EVENTUALLY_DEADLINE_MS = 360_000;
 const pollUntil = async <T>(read: () => Promise<T | null>): Promise<T> => {
-  for (let attempt = 0; attempt < 100; attempt += 1) {
+  const deadline = performance.now() + DB_EVENTUALLY_DEADLINE_MS;
+  while (performance.now() < deadline) {
     const value = await read();
     if (value !== null) return value;
     await new Promise<void>((resolve) => setTimeout(resolve, 20));
   }
   throw new Error("db_lock_state_timeout");
+};
+const createLockActor = async (harness: DbHarness): Promise<string> => {
+  const actorId = randomUUID();
+  await harness.db.insert(harness.users).values({
+    id: actorId,
+    email: `full-site-lock-${actorId}@example.test`,
+    passwordHash: "test-only-password-hash",
+    name: "Full-site lock test",
+  });
+  return actorId;
 };
 test("catalog kit installer delegates run-table work to the shared ledger port", async () => {
   const source = await readSource("../../../core/services/kits/kitInstaller.ts");
@@ -190,11 +199,14 @@ test("L01-owned files do not depend on the future form write helper", async () =
   for (const source of sources) expect(source).not.toContain(futureHelper);
 });
 test("current-resource resolver and DB harness use bounded exhaustive direct projections", async () => {
-  const [source, ledgerSource] = await Promise.all([
+  const [source, selectionSource, batchSource, ledgerSource] = await Promise.all([
     readSource("../../../core/services/kits/fullSiteInstall/currentResourceResolver.ts"),
+    readSource("../../../core/services/kits/fullSiteInstall/plannerEqualitySelections.ts"),
+    readSource("../../../core/services/kits/fullSiteInstall/planningResourceBatchReader.ts"),
     readSource("./fullSiteLegacyLedgerComposition.test.ts"),
   ]);
   const selections: Record<string, string> = {
+    SETTING_PLANNER_EQUALITY_SELECTION: "value:settings.value",
     CONTENT_TYPE_PLANNER_EQUALITY_SELECTION:
       "name:contentTypes.name slug:contentTypes.slug schema:contentTypes.schema status:contentTypes.status config:contentTypes.config",
     FORM_PLANNER_EQUALITY_SELECTION:
@@ -222,14 +234,21 @@ test("current-resource resolver and DB harness use bounded exhaustive direct pro
       "id:menuItems.id label:menuItems.label href:menuItems.href pageId:menuItems.pageId parentId:menuItems.parentId orderIndex:menuItems.orderIndex settings:menuItems.settings",
   };
   for (const [name, expectedFields] of Object.entries(selections)) {
+    const ownerSource = name === "CONTENT_ENTRY_ID_SELECTION" ? source : selectionSource;
+    const declaration = name === "CONTENT_ENTRY_ID_SELECTION" ? "const" : "export const";
     assertDirectSelectionBody(
-      extractUniqueBody(source, `const ${name} = {`, "\n} as const;"),
+      extractUniqueBody(ownerSource, `${declaration} ${name} = {`, "\n} as const;"),
       expectedFields.split(" ")
     );
     const expectedUses = name === "CONTENT_ENTRY_ID_SELECTION" ? 2 : 1;
     expect(source.match(new RegExp(`\\.select\\(${name}\\)`, "g")) ?? []).toHaveLength(
       expectedUses
     );
+    if (name !== "CONTENT_ENTRY_ID_SELECTION") {
+      expect(source).not.toContain(`const ${name} = {`);
+      expect(batchSource).not.toContain(`const ${name} = {`);
+      expect(batchSource).toContain(name);
+    }
   }
   expect(source.match(/\.from\(contentEntries\)/g) ?? []).toHaveLength(3);
   expect(source).not.toMatch(/\.select\(\s*\)/);
@@ -422,89 +441,6 @@ for (const [label, failedStage] of [
     }
   });
 }
-testIfDb("managed evidence uses one bounded executable SELECT", async () => {
-  const harness = dbHarness;
-  if (!harness) throw new Error("db_test_unavailable");
-  const source = await readSource("../../../core/services/kits/legacyInstallRunPersistence.ts");
-  const start = source.indexOf("export const findManagedResourceEvidence");
-  const end = source.indexOf("\nconst toFullSiteRun", start);
-  const implementation = source.slice(start, end);
-  expect(start).toBeGreaterThanOrEqual(0);
-  expect(end).toBeGreaterThan(start);
-  expect(implementation.match(/buildManagedResourceEvidenceQuery/g)).toHaveLength(1);
-  expect(implementation).toMatch(
-    /const \[row\] = await buildManagedResourceEvidenceQuery\(input\)/
-  );
-  const query = harness.buildManagedResourceEvidenceQuery({
-    packageKey: `query-shape-${randomUUID()}`,
-    kind: "form",
-    key: "bounded-evidence",
-  });
-  const compiled = query.toSQL();
-  const normalized = compiled.sql.toLowerCase().replace(/\s+/g, " ");
-  expect(normalized.split(";").filter(Boolean)).toHaveLength(1);
-  expect(normalized.match(/not exists/g)).toHaveLength(1);
-  expect(normalized.match(/\bexists\b/g)).toHaveLength(2);
-  expect(normalized.match(/after_snapshot/g)).toHaveLength(1);
-  expect(normalized.match(/ as "candidate_item_id"/g)).toHaveLength(1);
-  expect(normalized.match(/ as "candidate_item_created_at"/g)).toHaveLength(1);
-  expect(normalized.match(/ as "candidate_run_id"/g)).toHaveLength(1);
-  expect(normalized).not.toMatch(/select "[^"]+"\."id"(?:,| from)/);
-  expect(normalized).toContain(
-    'from "solution_kit_install_runs" "managed_candidate_run" inner join lateral'
-  );
-  expect(normalized).not.toContain(
-    'from "solution_kit_install_items" "managed_candidate_item" inner join "solution_kit_install_runs"'
-  );
-  expect(normalized).toContain('"managed_candidate_item"."run_id" = "managed_candidate_run"."id"');
-  expect(normalized).toContain('"managed_candidate_item"."resource_type" =');
-  expect(normalized).toContain('"managed_candidate_item"."resource_key" =');
-  expect(normalized).toContain('"managed_candidate_item"."status" =');
-  expect(normalized).toContain('"managed_candidate_item"."operation" in');
-  expect(normalized).toContain('"managed_rollback_run"."rollback_of_run_id" =');
-  expect(normalized).toContain('"managed_rollback_run"."mode" =');
-  expect(normalized).toContain('"managed_rollback_run"."status" =');
-  expect(normalized).toContain(" or exists (");
-  expect(normalized).toContain('"managed_rollback_item"."run_id" = "managed_rollback_run"."id"');
-  expect(normalized).toContain('"managed_rollback_item"."status" =');
-  expect(normalized).toContain(
-    'select "candidate_run_id", "solution_kit_install_items"."after_snapshot"'
-  );
-  expect(normalized).toContain('"solution_kit_install_items"."id" = "candidate_item_id"');
-  const lateralStart = normalized.indexOf(" inner join lateral ");
-  const lateralEnd = normalized.indexOf(') "managed_candidate_item_for_run" on true');
-  const itemOrderStart = normalized.indexOf(" order by ", lateralStart);
-  const itemLimitStart = normalized.indexOf(" limit ", itemOrderStart);
-  const createdAtPosition = normalized.indexOf('"candidate_item_created_at" desc', itemOrderStart);
-  const itemIdPosition = normalized.indexOf('"candidate_item_id" desc', itemOrderStart);
-  expect(itemOrderStart).toBeGreaterThan(lateralStart);
-  expect(createdAtPosition).toBeGreaterThan(itemOrderStart);
-  expect(itemIdPosition).toBeGreaterThan(createdAtPosition);
-  expect(itemLimitStart).toBeGreaterThan(itemIdPosition);
-  expect(lateralEnd).toBeGreaterThan(itemLimitStart);
-  const orderStart = normalized.indexOf(" order by ", lateralEnd);
-  const limitStart = normalized.indexOf(" limit ", orderStart);
-  const orderedTerms = [
-    'managed_candidate_run"."created_at" desc',
-    'managed_candidate_run"."updated_at" desc',
-    '"candidate_run_id" desc',
-    '"candidate_item_created_at" desc',
-    '"candidate_item_id" desc',
-  ];
-  let priorPosition = orderStart;
-  for (const term of orderedTerms) {
-    const position = normalized.indexOf(term, priorPosition + 1);
-    expect(position).toBeGreaterThan(priorPosition);
-    priorPosition = position;
-  }
-  expect(limitStart).toBeGreaterThan(priorPosition);
-  const limitPlaceholders = [...normalized.matchAll(/ limit \$(\d+)/g)];
-  expect(limitPlaceholders).toHaveLength(2);
-  for (const match of limitPlaceholders) {
-    expect(compiled.params[Number(match[1]) - 1]).toBe(1);
-  }
-  expect(await query).toEqual([]);
-});
 testIfDb("shared ledger metadata patch persists JSON and redacts unsafe errors", async () => {
   const harness = dbHarness;
   if (!harness) throw new Error("db_test_unavailable");
@@ -540,62 +476,33 @@ testIfDb("shared ledger metadata patch persists JSON and redacts unsafe errors",
   }
 });
 testIfDb(
-  "shared ledger preserves omitted V1 evidence and honors an explicit null clear",
-  async () => {
-    const harness = dbHarness;
-    if (!harness) throw new Error("db_test_unavailable");
-    const { solutionKitInstallRuns } = harness;
-    const ledger = harness.createLegacyInstallLedger();
-    const run = await ledger.createRun({
-      packageKey: `ledger-action-${randomUUID()}`,
-      actorId: null,
-      dryRun: false,
-    });
-    const rollbackAction = buildFullSiteRollbackActionV1({
-      identity: "page:home",
-      dependencies: ["form:contact"],
-    });
-    const base = {
-      runId: run.id,
-      position: 0,
-      kind: "page" as const,
-      key: "home",
-      operation: "create" as const,
-      beforeSnapshot: null,
-      afterSnapshot: { id: randomUUID() },
-      error: null,
-    };
-    try {
-      await ledger.recordItem({ ...base, status: "planned", rollbackAction });
-      await ledger.recordItem({ ...base, status: "success" });
-      const [preserved] = await ledger.listItems(run.id);
-      expect(preserved?.rollbackAction).toEqual(rollbackAction);
-      await ledger.recordItem({ ...base, status: "success", rollbackAction: null });
-      const [cleared] = await ledger.listItems(run.id);
-      expect(cleared?.rollbackAction).toBeNull();
-    } finally {
-      await harness.db.delete(solutionKitInstallRuns).where(eq(solutionKitInstallRuns.id, run.id));
-    }
-  }
-);
-testIfDb(
-  "two-lock composition serializes both same and different package keys",
+  "two-lock composition serializes exact takeover and rejects a different package",
   async () => {
     const harness = dbHarness;
     const databaseUrl = process.env.DATABASE_URL;
     if (!harness || !databaseUrl) throw new Error("db_test_unavailable");
     const probe = postgres(databaseUrl, { max: 1 });
+    const actorId = await createLockActor(harness);
+    const ownerRunIds = new Set<string>();
     try {
       for (const useDifferentPackage of [false, true]) {
         const scope = randomUUID();
         const firstKey = `lock-first-${scope}`;
         const secondKey = useDifferentPackage ? `lock-second-${scope}` : firstKey;
+        const reservation = (packageKey: string) => ({
+          intent: "apply" as const,
+          packageKey,
+          actorId,
+          dryRun: false,
+          options: { request: scope },
+        });
         const entered = createDeferred();
         const release = createDeferred();
         const events: string[] = [];
         let active = 0;
         let maxActive = 0;
-        const first = harness.withFullSiteInstallLocks(firstKey, async () => {
+        const first = harness.withFullSiteInstallLocks(reservation(firstKey), async (context) => {
+          ownerRunIds.add(context.ownerRunId);
           active += 1;
           maxActive = Math.max(maxActive, active);
           events.push("first-enter");
@@ -605,7 +512,10 @@ testIfDb(
           active -= 1;
         });
         await entered.promise;
-        const second = harness.withFullSiteInstallLocks(secondKey, async () => {
+        let secondCallbackCalled = false;
+        const second = harness.withFullSiteInstallLocks(reservation(secondKey), async (context) => {
+          ownerRunIds.add(context.ownerRunId);
+          secondCallbackCalled = true;
           active += 1;
           maxActive = Math.max(maxActive, active);
           events.push("second-enter");
@@ -643,11 +553,34 @@ testIfDb(
         } finally {
           release.resolve();
         }
-        await Promise.all([first, second]);
+        await first;
+        if (useDifferentPackage) {
+          await expect(second).rejects.toThrow("site_package_recovery_conflict");
+          expect(secondCallbackCalled).toBe(false);
+        } else {
+          await second;
+          expect(secondCallbackCalled).toBe(true);
+        }
         expect(maxActive).toBe(1);
-        expect(events).toEqual(["first-enter", "first-exit", "second-enter", "second-exit"]);
+        expect(events).toEqual(
+          useDifferentPackage
+            ? ["first-enter", "first-exit"]
+            : ["first-enter", "first-exit", "second-enter", "second-exit"]
+        );
+        for (const ownerRunId of ownerRunIds) {
+          await harness.db
+            .delete(harness.solutionKitInstallRuns)
+            .where(eq(harness.solutionKitInstallRuns.id, ownerRunId));
+        }
+        ownerRunIds.clear();
       }
     } finally {
+      for (const ownerRunId of ownerRunIds) {
+        await harness.db
+          .delete(harness.solutionKitInstallRuns)
+          .where(eq(harness.solutionKitInstallRuns.id, ownerRunId));
+      }
+      await harness.db.delete(harness.users).where(eq(harness.users.id, actorId));
       await probe.end();
     }
   },
@@ -661,9 +594,18 @@ testIfDb(
     if (!harness || !databaseUrl) throw new Error("db_test_unavailable");
     const holder = postgres(databaseUrl, { max: 1 });
     const probe = postgres(databaseUrl, { max: 1 });
+    const actorId = await createLockActor(harness);
     const packageKey = `partial-lock-${randomUUID()}`;
+    const reservation = (value: string) => ({
+      intent: "apply" as const,
+      packageKey: value,
+      actorId,
+      dryRun: false,
+      options: { request: packageKey },
+    });
     const holderReady = createDeferred<number>();
     const releaseHolder = createDeferred();
+    let followupOwnerRunId: string | null = null;
     const holderTransaction = holder.begin(async (transaction) => {
       await transaction`select pg_advisory_xact_lock(547, hashtext(${packageKey}))`;
       const [holderRow] = await transaction`select pg_backend_pid() as pid`;
@@ -675,7 +617,7 @@ testIfDb(
     try {
       const holderPid = await holderReady.promise;
       const attempt = harness
-        .withFullSiteInstallLocks(packageKey, async () => {
+        .withFullSiteInstallLocks(reservation(packageKey), async () => {
           callbackCalled = true;
         })
         .then(
@@ -717,12 +659,90 @@ testIfDb(
       releaseHolder.resolve();
       await holderTransaction;
       await expect(
-        harness.withFullSiteInstallLocks(`partial-followup-${randomUUID()}`, async () => "released")
+        harness.withFullSiteInstallLocks(
+          reservation(`partial-followup-${randomUUID()}`),
+          async (context) => {
+            followupOwnerRunId = context.ownerRunId;
+            return "released";
+          }
+        )
       ).resolves.toBe("released");
     } finally {
       releaseHolder.resolve();
       await Promise.allSettled([holderTransaction]);
+      if (followupOwnerRunId) {
+        await harness.db
+          .delete(harness.solutionKitInstallRuns)
+          .where(eq(harness.solutionKitInstallRuns.id, followupOwnerRunId));
+      }
+      await harness.db.delete(harness.users).where(eq(harness.users.id, actorId));
       await Promise.all([holder.end(), probe.end()]);
+    }
+  },
+  360_000
+);
+testIfDb(
+  "explicit rollback transfers the writer marker from an interrupted apply source",
+  async () => {
+    const harness = dbHarness;
+    if (!harness) throw new Error("db_test_unavailable");
+    const actorId = await createLockActor(harness);
+    const packageKey = `rollback-transfer-${randomUUID()}`;
+    const ownedRunIds = new Set<string>();
+    try {
+      let sourceRunId = "";
+      await harness.withFullSiteInstallLocks(
+        {
+          intent: "apply",
+          packageKey,
+          actorId,
+          dryRun: false,
+          options: { request: packageKey },
+        },
+        async (context) => {
+          if (context.intent !== "apply") throw new Error("apply_context_expected");
+          sourceRunId = context.ownerRunId;
+          ownedRunIds.add(sourceRunId);
+        }
+      );
+      let rollbackRunId = "";
+      await harness.withFullSiteInstallLocks(
+        {
+          intent: "explicit_rollback",
+          packageKey,
+          actorId,
+          sourceRunId,
+          options: { request: `rollback-${packageKey}` },
+        },
+        async (context) => {
+          if (context.intent !== "explicit_rollback") {
+            throw new Error("rollback_context_expected");
+          }
+          rollbackRunId = context.ownerRunId;
+          ownedRunIds.add(rollbackRunId);
+        }
+      );
+      const [source, rollback] = await Promise.all([
+        harness.getSolutionKitInstallRun(sourceRunId),
+        harness.getSolutionKitInstallRun(rollbackRunId),
+      ]);
+      expect(source).toMatchObject({ id: sourceRunId, mode: "apply", status: "running" });
+      expect(source?.options).toMatchObject({ request: packageKey });
+      expect(source?.options).not.toHaveProperty("nativeCmsWriterFenceV1");
+      expect(rollback).toMatchObject({
+        id: rollbackRunId,
+        mode: "rollback",
+        status: "running",
+        rollbackOfRunId: sourceRunId,
+      });
+      expect(rollback?.options).toHaveProperty("nativeCmsWriterFenceV1");
+    } finally {
+      if (ownedRunIds.size > 0) {
+        await harness.db
+          .delete(harness.solutionKitInstallRuns)
+          .where(inArray(harness.solutionKitInstallRuns.id, [...ownedRunIds]));
+      }
+      await harness.db.delete(harness.users).where(eq(harness.users.id, actorId));
     }
   },
   360_000
@@ -732,9 +752,18 @@ testIfDb("lock entry rejects a non-canonical package key before invoking work", 
   if (!harness) throw new Error("db_test_unavailable");
   let called = false;
   await expect(
-    harness.withFullSiteInstallLocks(" Not-Canonical ", async () => {
-      called = true;
-    })
+    harness.withFullSiteInstallLocks(
+      {
+        intent: "apply",
+        packageKey: " Not-Canonical ",
+        actorId: randomUUID(),
+        dryRun: false,
+        options: {},
+      },
+      async () => {
+        called = true;
+      }
+    )
   ).rejects.toThrow("site_package_invalid");
   expect(called).toBe(false);
 });

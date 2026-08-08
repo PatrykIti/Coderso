@@ -6,8 +6,10 @@
 **Category:** Solution Kits / Installer Architecture
 **Estimated Effort:** Large
 **Dependencies:** TASK-547-01
-**Status:** 🚧 In Progress
-**Validation:** Corrective managed-evidence/planner work and final gates pending.
+**Status:** ✅ Done
+**Completed:** 2026-08-08
+**Validation:** Managed-evidence, planner, query-budget and final repository gates
+passed on the completed working tree.
 
 ## Overview
 
@@ -944,11 +946,11 @@ L01 uses the graph-owner descriptor resolver/`normalizeDesired`; any descriptor 
 
 - [x] Extract the bounded legacy modules, ledger DB implementation, default composition and facade.
 - [x] Add the planner and its initial pure Vitest coverage.
-- [ ] Land aliases, bounded raw reads, strict V1/manifest readers and pooler-safe xact/owner fence without facade drift.
-- [ ] Replace planner N+1 reads with one fenced snapshot transaction, batch evidence and <=14 domain/<=15 total statements; retain direct/exact-ID compatibility.
-- [ ] Land atomic `initializeReservedRun`/`finalizeOwnedRun`; retain legacy-only `createRun`/`finalizeRun` and shared fenced `recordItem`.
-- [ ] Split near-limit facade/tests into declared cohesive children, then land managed/native and EXPLAIN suites.
-- [ ] Pass pure, DB, type/lint, query-budget and touched-file line gates.
+- [x] Land aliases, bounded raw reads, strict V1/manifest readers and pooler-safe xact/owner fence without facade drift.
+- [x] Replace planner N+1 reads with one fenced snapshot transaction, batch evidence and <=14 domain/<=15 total statements; retain direct/exact-ID compatibility.
+- [x] Land atomic `initializeReservedRun`/`finalizeOwnedRun`; retain legacy-only `createRun`/`finalizeRun` and shared fenced `recordItem`.
+- [x] Split near-limit facade/tests into declared cohesive children, then land managed/native and EXPLAIN suites.
+- [x] Pass pure, DB, type/lint, query-budget and touched-file line gates.
 
 ## Testing Requirements
 

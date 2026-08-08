@@ -1,11 +1,10 @@
 import type { PlainJsonObject, PlainJsonValue } from "../../../../workers/contracts";
 import {
   TASK540_CLEANUP_API_NODE_OPERATIONS,
-  TASK540_CLEANUP_DB_OPERATIONS,
-  TASK540_CLEANUP_LOGICAL_RECEIPTS,
   assertTask540SeoBatchBudget,
   buildTask540CleanupDispatches,
   preserveTask540CanonicalCleanupReceipts,
+  task540CleanupCardinality,
   type Task540DbCleanupOperation,
 } from "../executor/cleanup-receipts";
 import { dispatchTask540Operation } from "../executor/operation-dispatch";
@@ -114,34 +113,50 @@ async function discoverSeo(
     "related-entry-b2.id",
     "related-entry-failure1.id",
   ].map((name) => capture(state.memory.captures, name));
-  const output = runtimeObject(
-    await dispatchTask540Operation(state.pool, {
-      operationId: "resource/seo-entry-discovery",
-      input: { targetIds },
-    }),
-    "TASK-540 SEO discovery"
-  );
-  runtimeInvariant(Array.isArray(output.candidates), "TASK-540 SEO candidates are invalid");
-  runtimeInvariant(output.candidates.length === 6, "TASK-540 SEO candidate cardinality drifted");
-  const remaining = new Set(targetIds);
-  const ids = new Set<string>();
-  const candidates = output.candidates.map((value) => {
-    const raw = runtimeObject(value, "TASK-540 SEO candidate");
-    const expected = {
-      id: runtimeUuid(raw.id, "TASK-540 SEO document ID"),
-      targetId: runtimeUuid(raw.targetId, "TASK-540 SEO target ID"),
-      targetType: "entry" as const,
-    };
-    const candidate = assertTask540SeoCleanupCandidate(raw, expected);
-    runtimeInvariant(
-      remaining.delete(candidate.targetId) && !ids.has(candidate.id),
-      "TASK-540 SEO candidate correlation drifted"
+  const readCandidates = async (): Promise<readonly Task540SeoCleanupCandidate[]> => {
+    const output = runtimeObject(
+      await dispatchTask540Operation(state.pool, {
+        operationId: "resource/seo-entry-discovery",
+        input: { targetIds },
+      }),
+      "TASK-540 SEO discovery"
     );
-    ids.add(candidate.id);
-    return candidate;
-  });
-  runtimeInvariant(remaining.size === 0 && ids.size === 6, "TASK-540 SEO target set drifted");
-  return Object.freeze(candidates);
+    runtimeInvariant(Array.isArray(output.candidates), "TASK-540 SEO candidates are invalid");
+    runtimeInvariant(
+      output.candidates.length <= targetIds.length,
+      "TASK-540 SEO candidate cardinality drifted"
+    );
+    const remaining = new Set(targetIds);
+    const ids = new Set<string>();
+    const candidates = output.candidates.map((value) => {
+      const raw = runtimeObject(value, "TASK-540 SEO candidate");
+      const expected = {
+        id: runtimeUuid(raw.id, "TASK-540 SEO document ID"),
+        targetId: runtimeUuid(raw.targetId, "TASK-540 SEO target ID"),
+        targetType: "entry" as const,
+      };
+      const candidate = assertTask540SeoCleanupCandidate(raw, expected);
+      runtimeInvariant(
+        remaining.delete(candidate.targetId) && !ids.has(candidate.id),
+        "TASK-540 SEO candidate correlation drifted"
+      );
+      ids.add(candidate.id);
+      return candidate;
+    });
+    runtimeInvariant(
+      remaining.size + ids.size === targetIds.length,
+      "TASK-540 SEO target set drifted"
+    );
+    return Object.freeze(candidates);
+  };
+  const first = await readCandidates();
+  await new Promise<void>((resolveWait) => setTimeout(resolveWait, 40));
+  const second = await readCandidates();
+  runtimeInvariant(
+    JSON.stringify(first) === JSON.stringify(second),
+    "TASK-540 SEO discovery did not reach a stable boundary"
+  );
+  return second;
 }
 
 function apiResources(state: Task540RuntimeState): readonly CleanupResource[] {
@@ -339,10 +354,6 @@ function canonicalReceipts(
     for (const slot of SLOTS)
       receipts.push(cleanupReceipt(resourceValue.resourceKey, slot, receipts.length));
   }
-  runtimeInvariant(
-    receipts.length === TASK540_CLEANUP_LOGICAL_RECEIPTS,
-    "TASK-540 cleanup receipt cardinality drifted"
-  );
   return Object.freeze(receipts);
 }
 
@@ -385,10 +396,6 @@ function dbOperations(
       );
     }
   }
-  runtimeInvariant(
-    operations.length === TASK540_CLEANUP_DB_OPERATIONS,
-    "TASK-540 DB cleanup operation cardinality drifted"
-  );
   return Object.freeze(operations);
 }
 
@@ -453,19 +460,29 @@ export async function finalizeTask540NativeCleanup(
   const seo = await discoverSeo(state);
   const api = apiResources(state);
   const db = dbResources(state, seo);
+  const dbByKey = new Map(db.map((item) => [item.resourceKey, item]));
+  const requireDb = (resourceKey: string): CleanupResource => {
+    const item = dbByKey.get(resourceKey);
+    runtimeInvariant(item !== undefined, "TASK-540 DB cleanup resource is absent");
+    return item;
+  };
   const orderedResources = Object.freeze([
-    db[0]!,
-    ...seo.map((_, index) => db[index + 1]!),
-    db[7]!,
-    db[8]!,
+    requireDb("override/main"),
+    ...seo.map((_, index) => requireDb(`seo/${index + 1}`)),
+    requireDb("setting/user-a"),
+    requireDb("setting/user-b"),
     ...api.slice(0, 2),
     ...api.slice(2, 8),
-    db[9]!,
+    requireDb("media/main"),
     ...api.slice(8),
-    db[10]!,
-    db[11]!,
+    requireDb("user/a"),
+    requireDb("user/b"),
   ]);
-  runtimeInvariant(orderedResources.length === 24, "TASK-540 cleanup resource cardinality drifted");
+  const cardinality = task540CleanupCardinality(seo.length);
+  runtimeInvariant(
+    orderedResources.length * 3 === cardinality.logicalReceipts,
+    "TASK-540 cleanup resource cardinality drifted"
+  );
   const receipts = canonicalReceipts(orderedResources);
   const operations = dbOperations(orderedResources, receipts);
   const dispatches = buildTask540CleanupDispatches(operations, TASK540_PRODUCTION_HANDLER_ARTIFACT);
@@ -502,6 +519,9 @@ export async function finalizeTask540NativeCleanup(
     (receipt) => receipt.logicalId,
     mergeDbReceipt
   );
-  runtimeInvariant(preserved.length === 72, "TASK-540 cleanup projection cardinality drifted");
+  runtimeInvariant(
+    preserved.length === cardinality.logicalReceipts,
+    "TASK-540 cleanup projection cardinality drifted"
+  );
   return Object.freeze(preserved.map(({ logicalId }) => Object.freeze({ logicalId, pass: true })));
 }

@@ -8,6 +8,18 @@ import { resolveClearableCssColorValue } from "./clearableStyle";
 
 export type FormEmbedVariantId = "standard";
 
+export const FORM_EMBED_TEXTAREA_ROWS_LIMITS = {
+  min: 2,
+  max: 20,
+  legacyDefault: 4,
+} as const;
+export const FORM_EMBED_LOADING_LABEL_MAX_LENGTH = 1_000;
+export const FORM_EMBED_SUCCESS_BEHAVIORS = [
+  "show-message-hide-form",
+  "show-message-reset-form",
+  "show-message-keep-form",
+] as const;
+
 export type FormEmbedLayout = {
   alignment?: "start" | "center" | "end";
   width?: "none" | "sm" | "md" | "lg" | "xl";
@@ -38,6 +50,8 @@ export type FormEmbedStyle = {
 export type FormEmbedFields = {
   showLabels?: boolean;
   showRequiredIndicator?: boolean;
+  textareaRows?: number;
+  showSelectPrompt?: boolean;
 };
 
 export type FormEmbedNavigation = {
@@ -49,7 +63,7 @@ export type FormEmbedNavigation = {
 
 export type FormEmbedSubmitBehavior = {
   loadingLabel?: string;
-  successBehavior?: "show-message-hide-form" | "show-message-reset-form" | "show-message-keep-form";
+  successBehavior?: (typeof FORM_EMBED_SUCCESS_BEHAVIORS)[number];
 };
 
 export type ResolvedFormField = {
@@ -222,9 +236,29 @@ export const resolveStyle = (value?: FormEmbedStyle): Required<FormEmbedStyle> =
   submitTextColor: value?.submitTextColor ?? formEmbedThemeDefaultColorValues.submitTextColor,
 });
 
-export const resolveFields = (value?: FormEmbedFields): Required<FormEmbedFields> => ({
+export type NormalizedFormEmbedFields = FormEmbedFields &
+  Required<Pick<FormEmbedFields, "showLabels" | "showRequiredIndicator">>;
+
+const isTextareaRows = (value: unknown): value is number =>
+  typeof value === "number" &&
+  Number.isInteger(value) &&
+  value >= FORM_EMBED_TEXTAREA_ROWS_LIMITS.min &&
+  value <= FORM_EMBED_TEXTAREA_ROWS_LIMITS.max;
+
+export const normalizeFormEmbedFields = (value?: FormEmbedFields): NormalizedFormEmbedFields => ({
   showLabels: value?.showLabels ?? true,
   showRequiredIndicator: value?.showRequiredIndicator ?? true,
+  ...(isTextareaRows(value?.textareaRows) ? { textareaRows: value.textareaRows } : {}),
+  ...(typeof value?.showSelectPrompt === "boolean"
+    ? { showSelectPrompt: value.showSelectPrompt }
+    : {}),
+});
+
+export const resolveFields = normalizeFormEmbedFields;
+
+export const resolveFormEmbedFieldPresentation = (value?: FormEmbedFields) => ({
+  textareaRows: value?.textareaRows ?? FORM_EMBED_TEXTAREA_ROWS_LIMITS.legacyDefault,
+  showSelectPrompt: value?.showSelectPrompt ?? true,
 });
 
 export function clampSavedProgressTtl(raw: string | number | undefined): number {
@@ -233,9 +267,7 @@ export function clampSavedProgressTtl(raw: string | number | undefined): number 
   return Math.max(1, Math.min(30, parsed));
 }
 
-export const resolveNavigation = (
-  value?: FormEmbedNavigation
-): Required<FormEmbedNavigation> => ({
+export const resolveNavigation = (value?: FormEmbedNavigation): Required<FormEmbedNavigation> => ({
   backLabel: resolveNonEmptyString(value?.backLabel, "Back"),
   nextLabel: resolveNonEmptyString(value?.nextLabel, "Next"),
   showProgress: value?.showProgress ?? true,
@@ -246,12 +278,15 @@ export const resolveSubmitBehavior = (
   value?: FormEmbedSubmitBehavior
 ): Required<FormEmbedSubmitBehavior> => {
   const successBehavior = value?.successBehavior;
+  const loadingLabel = resolveNonEmptyString(value?.loadingLabel, "Sending...");
   return {
-    loadingLabel: resolveNonEmptyString(value?.loadingLabel, "Sending..."),
-    successBehavior:
-      successBehavior === "show-message-reset-form" || successBehavior === "show-message-keep-form"
-        ? successBehavior
-        : "show-message-hide-form",
+    loadingLabel:
+      loadingLabel.length <= FORM_EMBED_LOADING_LABEL_MAX_LENGTH ? loadingLabel : "Sending...",
+    successBehavior: FORM_EMBED_SUCCESS_BEHAVIORS.includes(
+      successBehavior as (typeof FORM_EMBED_SUCCESS_BEHAVIORS)[number]
+    )
+      ? (successBehavior as (typeof FORM_EMBED_SUCCESS_BEHAVIORS)[number])
+      : FORM_EMBED_SUCCESS_BEHAVIORS[0],
   };
 };
 
@@ -354,6 +389,12 @@ export const formEmbedSchema = {
       properties: {
         showLabels: { type: "boolean" },
         showRequiredIndicator: { type: "boolean" },
+        textareaRows: {
+          type: "integer",
+          minimum: FORM_EMBED_TEXTAREA_ROWS_LIMITS.min,
+          maximum: FORM_EMBED_TEXTAREA_ROWS_LIMITS.max,
+        },
+        showSelectPrompt: { type: "boolean" },
       },
     },
     navigation: {
@@ -370,9 +411,14 @@ export const formEmbedSchema = {
       type: "object",
       additionalProperties: false,
       properties: {
-        loadingLabel: { type: "string" },
+        loadingLabel: {
+          type: "string",
+          minLength: 1,
+          maxLength: FORM_EMBED_LOADING_LABEL_MAX_LENGTH,
+          pattern: "\\S",
+        },
         successBehavior: {
-          enum: ["show-message-hide-form", "show-message-reset-form", "show-message-keep-form"],
+          enum: [...FORM_EMBED_SUCCESS_BEHAVIORS],
         },
       },
     },

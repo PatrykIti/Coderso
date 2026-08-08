@@ -1,19 +1,34 @@
-import { HOUSE_PROJECT_CATEGORIES, HOUSE_PROJECT_ENERGY_CLASSES } from "./constants";
+import type { HouseProjectCategory } from "./constants";
+
+export type ProjectDetailStat = {
+  id: string;
+  value: string;
+  label: string;
+};
+
+export type ProjectAssumption = {
+  id: string;
+  title: string;
+  description: string;
+};
 
 export type ProjectFixture = {
   key: string;
   title: string;
   slug: string;
-  summary: string;
+  cardDescription: string;
+  cardHref: "/projekty/aurora" | "/projekty";
   area: number;
-  style: "minimal" | "natural" | "classic";
-  storeys: number;
-  rooms: number;
-  energyClass: (typeof HOUSE_PROJECT_ENERGY_CLASSES)[number];
-  category: (typeof HOUSE_PROJECT_CATEGORIES)[number];
-  assumptions: readonly string[];
-  zones: readonly string[];
-  visualLabel: string;
+  categories: readonly HouseProjectCategory[];
+  referenceOrder: number;
+  seoDescription: string;
+  detailEyebrow?: string;
+  detailLead?: string;
+  detailStats?: readonly ProjectDetailStat[];
+  assumptionsEyebrow?: string;
+  assumptionsTitle?: string;
+  assumptionsLead?: string;
+  assumptions?: readonly ProjectAssumption[];
 };
 
 const deepFreeze = <T>(value: T): T => {
@@ -24,95 +39,105 @@ const deepFreeze = <T>(value: T): T => {
   return value;
 };
 
+export const PROJECT_SEO_DESCRIPTION =
+  "Nowoczesne projekty domów, architektura indywidualna, wizualizacje i kompleksowy proces projektowy.";
+
 export const PROJECT_FIXTURES: readonly ProjectFixture[] = deepFreeze<ProjectFixture[]>([
   {
     key: "aurora",
-    title: "Aurora",
+    title: "Dom Aurora",
     slug: "aurora",
-    summary: "Przestronny dom dla rodziny, otwarty na ogród i naturalne światło.",
-    area: 148,
-    style: "natural",
-    storeys: 2,
-    rooms: 5,
-    energyClass: "A+",
-    category: "modern",
-    assumptions: ["duże przeszklenia", "gabinet przy wejściu", "zadaszony taras"],
-    zones: ["dzienna", "nocna", "praca"],
-    visualLabel: "Ciepły gradient o świcie",
+    cardDescription: "142 m² · stodoła · eko",
+    cardHref: "/projekty/aurora",
+    area: 142,
+    categories: ["barn", "eco"],
+    referenceOrder: 0,
+    seoDescription: PROJECT_SEO_DESCRIPTION,
+    detailEyebrow: "Projekt pokazowy",
+    detailLead:
+      "Nowoczesna stodoła z wysoką strefą dzienną, dużym przeszkleniem od ogrodu i spokojną elewacją z drewna oraz grafitowej blachy.",
+    detailStats: [
+      { id: "area", value: "142 m²", label: "powierzchnia" },
+      { id: "bedrooms", value: "4", label: "sypialnie" },
+      { id: "bathrooms", value: "2", label: "łazienki" },
+      { id: "energy", value: "A++", label: "standard energii" },
+    ],
+    assumptionsEyebrow: "Założenia",
+    assumptionsTitle: "Dom ma być efektowny, ale bardzo prosty w codziennym życiu.",
+    assumptionsLead:
+      "Układ rozdziela prywatną strefę sypialni od otwartego salonu, kuchni i jadalni. Główne przeszklenie kieruje uwagę na ogród.",
+    assumptions: [
+      {
+        id: "living-zone",
+        title: "Strefa dzienna",
+        description:
+          "Salon z wysokim sufitem, wyjście na taras, kuchnia z wyspą i ukryta spiżarnia.",
+      },
+      {
+        id: "private-zone",
+        title: "Strefa prywatna",
+        description: "Sypialnia master z garderobą, trzy pokoje oraz kompaktowa strefa pracy.",
+      },
+      {
+        id: "facade",
+        title: "Elewacja",
+        description: "Drewno, grafit, ciepłe światło i proste detale bez zbędnych ozdobników.",
+      },
+    ],
   },
   {
     key: "linea",
-    title: "Linea",
+    title: "Dom Linea",
     slug: "linea",
-    summary: "Parterowy układ z czytelną osią i spokojnym rytmem elewacji.",
-    area: 112,
-    style: "minimal",
-    storeys: 1,
-    rooms: 4,
-    energyClass: "A",
-    category: "modern",
-    assumptions: ["bez barier", "spiżarnia", "taras od południa"],
-    zones: ["dzienna", "prywatna"],
-    visualLabel: "Jasna linearna fasada",
+    cardDescription: "188 m² · miejska willa",
+    cardHref: "/projekty",
+    area: 188,
+    categories: ["villa"],
+    referenceOrder: 1,
+    seoDescription: PROJECT_SEO_DESCRIPTION,
   },
   {
     key: "nova",
-    title: "Nova",
+    title: "Dom Nova",
     slug: "nova",
-    summary: "Zwarty dom miejski z elastycznym pokojem na parterze.",
-    area: 126,
-    style: "minimal",
-    storeys: 2,
-    rooms: 5,
-    energyClass: "A+",
-    category: "modern",
-    assumptions: ["wąska działka", "pokój elastyczny", "pompa ciepła"],
-    zones: ["wejście", "dzienna", "nocna"],
-    visualLabel: "Grafitowa miejska bryła",
+    cardDescription: "121 m² · parterowy",
+    cardHref: "/projekty",
+    area: 121,
+    categories: ["single", "eco"],
+    referenceOrder: 2,
+    seoDescription: PROJECT_SEO_DESCRIPTION,
   },
   {
     key: "mono",
-    title: "Mono",
+    title: "Dom Mono",
     slug: "mono",
-    summary: "Nowoczesna stodoła z wysokim salonem i prostą konstrukcją.",
-    area: 134,
-    style: "natural",
-    storeys: 2,
-    rooms: 5,
-    energyClass: "A",
-    category: "barn",
-    assumptions: ["antresola", "prosta więźba", "widok na ogród"],
-    zones: ["wspólna", "antresola", "prywatna"],
-    visualLabel: "Ciemna stodoła w zieleni",
+    cardDescription: "156 m² · czarna elewacja",
+    cardHref: "/projekty",
+    area: 156,
+    categories: ["barn"],
+    referenceOrder: 3,
+    seoDescription: PROJECT_SEO_DESCRIPTION,
   },
   {
     key: "vista",
-    title: "Vista",
+    title: "Dom Vista",
     slug: "vista",
-    summary: "Dom na działkę widokową z tarasami i odwróconą strefą dzienną.",
-    area: 162,
-    style: "classic",
-    storeys: 2,
-    rooms: 6,
-    energyClass: "B",
-    category: "traditional",
-    assumptions: ["działka ze spadkiem", "panoramiczny salon", "dwa tarasy"],
-    zones: ["gospodarcza", "nocna", "widokowa"],
-    visualLabel: "Warstwowy dom na zboczu",
+    cardDescription: "206 m² · willa z patio",
+    cardHref: "/projekty",
+    area: 206,
+    categories: ["villa", "eco"],
+    referenceOrder: 4,
+    seoDescription: PROJECT_SEO_DESCRIPTION,
   },
   {
     key: "calm",
-    title: "Calm",
+    title: "Dom Calm",
     slug: "calm",
-    summary: "Kameralny dom parterowy skupiony wokół osłoniętego patio.",
-    area: 96,
-    style: "natural",
-    storeys: 1,
-    rooms: 4,
-    energyClass: "A+",
-    category: "barn",
-    assumptions: ["patio", "kompaktowa komunikacja", "zielony dach"],
-    zones: ["patio", "dzienna", "cisza"],
-    visualLabel: "Zielone patio i miękkie światło",
+    cardDescription: "98 m² · kompaktowy",
+    cardHref: "/projekty",
+    area: 98,
+    categories: ["single"],
+    referenceOrder: 5,
+    seoDescription: PROJECT_SEO_DESCRIPTION,
   },
 ]);

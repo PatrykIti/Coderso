@@ -7,6 +7,7 @@ import type { FullSitePackageV1 } from "../../../core/services/kits/fullSitePack
 import { buildFormaDomContentResources } from "../../../scripts/projekty-domow/content/buildFormaDomContentResources";
 import {
   buildProjectBriefForm,
+  PROJECT_BRIEF_LOADING_LABEL,
   PROJECT_BRIEF_FORM_TITLE,
   PROJECT_BRIEF_INITIAL_NOTE,
   PROJECT_BRIEF_SUBMIT_LABEL,
@@ -111,6 +112,16 @@ describe("Projekty Domów form and content slice", () => {
     expect(desired.submissionAccess).toBe("public");
     expect(desired).not.toHaveProperty("enabled");
     expect(desired).not.toHaveProperty("id");
+    expect(PROJECT_BRIEF_LOADING_LABEL).toBe("Wysyłanie...");
+    for (const presentationKey of [
+      "loadingLabel",
+      "successBehavior",
+      "textareaRows",
+      "showSelectPrompt",
+    ]) {
+      expect(desired).not.toHaveProperty(presentationKey);
+      expect(desired.settings).not.toHaveProperty(presentationKey);
+    }
   });
 
   it("rejects unknown form, settings, field, and action properties plus invalid access", () => {
@@ -187,6 +198,58 @@ describe("Projekty Domów form and content slice", () => {
       },
     };
     expect(buildReferencePlan(pkg)).toHaveLength(12);
+
+    expect(
+      slice.entries.map((entry) => ({
+        key: entry.key,
+        cardHref: (entry.desired.data as Record<string, unknown>).cardHref,
+        seoDescription: (entry.desired.data as Record<string, unknown>).seoDescription,
+      }))
+    ).toEqual([
+      expect.objectContaining({ key: "aurora", cardHref: "/projekty/aurora" }),
+      ...["linea", "nova", "mono", "vista", "calm"].map((key) =>
+        expect.objectContaining({ key, cardHref: "/projekty" })
+      ),
+    ]);
+    expect(
+      slice.entries.every(
+        (entry) =>
+          (entry.desired.data as Record<string, unknown>).seoDescription ===
+          "Nowoczesne projekty domów, architektura indywidualna, wizualizacje i kompleksowy proces projektowy."
+      )
+    ).toBe(true);
+
+    const listing = slice.listingTemplates[0]!.desired.config as Record<string, unknown>;
+    expect(listing).toMatchObject({
+      fields: [
+        expect.objectContaining({ key: "title", source: "title" }),
+        expect.objectContaining({ key: "description", source: "data.cardDescription" }),
+        expect.objectContaining({ key: "href", source: "data.cardHref" }),
+      ],
+      itemActions: [],
+      emptyState: {
+        title: "Brak wyników",
+        description: "Zmień filtry, aby zobaczyć inne projekty.",
+        ctaLabel: null,
+        ctaHref: null,
+      },
+    });
+    expect(slice.listingQueries[0]!.desired.query).toMatchObject({
+      pagination: { limit: 24, offset: 0 },
+    });
+
+    const detail = slice.detailPages[0]!.desired;
+    expect(detail.titlePattern).toBe("{{ title }}");
+    expect(detail.seo).toEqual({
+      titlePattern: "{{ title }} — projekt pokazowy — FormaDom Studio",
+      descriptionField: "seoDescription",
+    });
+    expect(detail).not.toHaveProperty("related");
+    expect(JSON.stringify(detail)).not.toContain("listing_query");
+    for (const binding of detail.bindings as Array<Record<string, unknown>>) {
+      expect(binding.required).toBe(true);
+      expect(binding).not.toHaveProperty("fallback");
+    }
   });
 
   it("is deterministic", () => {

@@ -1,4 +1,4 @@
-export const PACKAGE_RESOURCE_KINDS = [
+export const PACKAGE_RESOURCE_KINDS = Object.freeze([
   "content_type",
   "form",
   "page_template",
@@ -9,11 +9,11 @@ export const PACKAGE_RESOURCE_KINDS = [
   "page",
   "menu",
   "setting",
-] as const;
+] as const);
 
 export type PackageResourceKind = (typeof PACKAGE_RESOURCE_KINDS)[number];
 
-export const PACKAGE_RESOURCE_COLLECTIONS = [
+export const PACKAGE_RESOURCE_COLLECTIONS = Object.freeze([
   "contentTypes",
   "forms",
   "pageTemplates",
@@ -24,11 +24,11 @@ export const PACKAGE_RESOURCE_COLLECTIONS = [
   "pages",
   "menus",
   "settings",
-] as const;
+] as const);
 
 export type PackageResourceCollection = (typeof PACKAGE_RESOURCE_COLLECTIONS)[number];
 
-export const PACKAGE_RESOURCE_KIND_BY_COLLECTION = {
+export const PACKAGE_RESOURCE_KIND_BY_COLLECTION = Object.freeze({
   contentTypes: "content_type",
   forms: "form",
   pageTemplates: "page_template",
@@ -39,12 +39,41 @@ export const PACKAGE_RESOURCE_KIND_BY_COLLECTION = {
   pages: "page",
   menus: "menu",
   settings: "setting",
-} as const satisfies Record<PackageResourceCollection, PackageResourceKind>;
+} as const satisfies Record<PackageResourceCollection, PackageResourceKind>);
 
-export type PackageRef = {
+export const PACKAGE_LIMITS = Object.freeze({
+  fileBytes: 8 * 1024 * 1024,
+  resourcesTotal: 512,
+  resourcesPerCollection: 256,
+  referenceEdges: 4_096,
+  depth: 64,
+  diagnostics: 100,
+  keyLength: 128,
+  metadataNameLength: 200,
+  metadataLocaleLength: 35,
+  metadataDescriptionLength: 2_000,
+  residualIdLength: 128,
+  residualTextLength: 2_000,
+  verificationScenarios: 100,
+  stringLength: 100_000,
+} as const);
+
+export const FULL_SITE_PACKAGE_SETTING_KEYS = Object.freeze([
+  "site.name",
+  "site.locale",
+  "site.homepageId",
+  "site.navigationMenuId",
+  "site.footerTemplateId",
+  "site.contentRoutes",
+  "design.tokens",
+] as const);
+
+export type FullSitePackageSettingKey = (typeof FULL_SITE_PACKAGE_SETTING_KEYS)[number];
+
+export type PackageRef = Readonly<{
   ref: PackageResourceKind;
   key: string;
-};
+}>;
 
 export type JsonPrimitive = string | number | boolean | null;
 export type JsonValue = JsonPrimitive | JsonValue[] | { [key: string]: JsonValue };
@@ -107,42 +136,30 @@ export type FullSitePackageV1 = {
   verification?: VerificationPlan;
 };
 
-export const PACKAGE_LIMITS = {
-  fileBytes: 8 * 1024 * 1024,
-  resourcesTotal: 512,
-  resourcesPerCollection: 256,
-  referenceEdges: 4_096,
-  depth: 64,
-  diagnostics: 100,
-  keyLength: 128,
-  metadataNameLength: 200,
-  metadataLocaleLength: 35,
-  metadataDescriptionLength: 2_000,
-  residualIdLength: 128,
-  residualTextLength: 2_000,
-  verificationScenarios: 100,
-  stringLength: 100_000,
-} as const;
-
 export type FullSitePackageErrorCode =
   | "site_package_invalid"
   | "site_package_too_large"
   | "site_package_too_complex"
   | "site_package_setting_forbidden";
 
-export type FullSitePackageDiagnostic = {
+export type FullSitePackageDiagnostic = Readonly<{
   path: string;
   reason: string;
-};
+}>;
 
 export class FullSitePackageError extends Error {
   readonly code: FullSitePackageErrorCode;
-  readonly diagnostics: FullSitePackageDiagnostic[];
+  readonly diagnostics: readonly FullSitePackageDiagnostic[];
 
-  constructor(code: FullSitePackageErrorCode, diagnostics: FullSitePackageDiagnostic[] = []) {
+  constructor(
+    code: FullSitePackageErrorCode,
+    diagnostics: readonly FullSitePackageDiagnostic[] = []
+  ) {
     super(code);
     this.name = "FullSitePackageError";
     this.code = code;
-    this.diagnostics = diagnostics.slice(0, PACKAGE_LIMITS.diagnostics);
+    this.diagnostics = Object.freeze(
+      diagnostics.map((diagnostic) => Object.freeze({ ...diagnostic }))
+    );
   }
 }

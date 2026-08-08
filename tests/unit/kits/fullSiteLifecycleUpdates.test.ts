@@ -8,6 +8,7 @@ import { getEntry, updateEntry } from "../../../core/services/content/entryServi
 import {
   createContentEntryResourceAdapter,
   createPageResourceAdapter,
+  FULL_SITE_ROLLBACK_ADAPTERS,
   FULL_SITE_RESOURCE_ADAPTERS,
 } from "../../../core/services/kits/fullSiteInstall/adapters";
 import { createFullSiteCurrentResourceResolver } from "../../../core/services/kits/fullSiteInstall/currentResourceResolver";
@@ -27,7 +28,6 @@ import { deleteMenu, getMenu } from "../../../core/services/menus/menuService";
 import { deletePage, getPage, updatePage } from "../../../core/services/pages/pageService";
 import type { JsonObject } from "../../../core/services/kits/fullSitePackage/types";
 import { buildFormaDomPackage } from "../../../scripts/projekty-domow/package";
-import { FULL_SITE_ROLLBACK_ADAPTERS } from "../../../core/services/kits/fullSiteInstall/compensation";
 
 const statusOf = async (kind: "content_entry" | "page" | "menu", id: string) => {
   if (kind === "content_entry") return (await getEntry(id))?.status;
@@ -298,10 +298,6 @@ test("detail-page staging preserves live revisions but draft restore explicitly 
     desired.contentTypeId = contentType.id;
     desired.contentTypeSlug = contentTypeDesired.slug;
     desired.name = `Detail ${scope}`;
-    desired.related = (desired.related as JsonObject[]).map((source) => ({
-      ...source,
-      listingQueryId: crypto.randomUUID(),
-    }));
     const created = await FULL_SITE_RESOURCE_ADAPTERS.detail_page.applyStaged({
       operation: "create",
       currentId: null,
@@ -347,11 +343,16 @@ test("detail-page staging preserves live revisions but draft restore explicitly 
 
     const stagedDesired = { ...updatedDesired, status: "draft" } as JsonObject;
     const ledger: FullSiteInstallLedgerPort = {
+      withPackageLock: async (_reservation, execute) =>
+        execute({ intent: "apply", ownerRunId: "unused", resumePhase: "reserved" }),
       createRun: async () => ({ id: "unused" }),
       recordItem: async () => undefined,
       finalizeRun: async () => undefined,
       getRun: async () => null,
       listItems: async () => [],
+      listRawItems: async () => [],
+      initializeReservedRun: async (input) => ({ id: input.ownerRunId }),
+      finalizeOwnedRun: async () => ({ outcome: "desired_terminal" }),
       createRollbackRun: async () => ({ id: "unused" }),
       hasSuccessfulRollback: async () => false,
       findManagedResourceEvidence: async () => ({
@@ -403,7 +404,32 @@ test("detail-page staging preserves live revisions but draft restore explicitly 
       name: `Restored draft ${scope}`,
       status: "draft",
     } as JsonObject;
-    await FULL_SITE_ROLLBACK_ADAPTERS.detail_page.restoreById(created.id, restoredDraft, actor.id);
+    const expectedCurrent = await FULL_SITE_ROLLBACK_ADAPTERS.detail_page.captureSnapshotByIdOrNull(
+      created.id
+    );
+    if (!expectedCurrent) throw new Error("detail_page_not_found");
+    const target = {
+      id: created.id,
+      desired: {
+        ...expectedCurrent.desired,
+        name: restoredDraft.name,
+        status: "draft",
+        currentDocument: {
+          ...(expectedCurrent.desired.currentDocument as JsonObject),
+          ...restoredDraft,
+          id: created.id,
+          status: "draft",
+        },
+        publishedDocument: null,
+        publishedAt: null,
+      },
+    };
+    await FULL_SITE_ROLLBACK_ADAPTERS.detail_page.restoreSnapshotAtomic({
+      id: created.id,
+      expectedCurrent,
+      target,
+      actorId: actor.id,
+    });
     expect(await getDetailPageDocument(created.id)).toMatchObject({
       status: "draft",
       currentDocument: { status: "draft", name: restoredDraft.name },

@@ -29,6 +29,8 @@ import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { SharedColorControl } from "@/ui/widgets/editors/SharedColorControl";
 
+import { FORM_SCHEMA_LIMITS } from "../../../services/forms/formSettings";
+
 import {
   FORM_THEME_ALIGNS,
   FORM_THEME_BORDER_WIDTHS,
@@ -635,7 +637,7 @@ export function FormDesignPanel({ theme, onThemeChange, disabled }: FormDesignPa
                 aria-label="Submit supporting text"
                 data-form-theme-control="submit.supportingText"
                 value={submitSupportingText ?? ""}
-                maxLength={2_000}
+                maxLength={FORM_SCHEMA_LIMITS.submitSupportingText}
                 rows={3}
                 disabled={disabled}
                 onChange={(event) => {

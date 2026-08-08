@@ -2,6 +2,8 @@ import { randomUUID } from "node:crypto";
 import { eq, inArray } from "drizzle-orm";
 
 import { db } from "../../db/client";
+import { acquireNativeCmsWriterFence } from "../../db/nativeCmsWriterFence";
+import { clearSiteCache } from "../../site/cache/siteCache";
 import {
   adminThemeProfiles,
   adminThemeTemplates,
@@ -657,5 +659,13 @@ export async function importConfigTx(
 }
 
 export async function importConfig(bundle: ExportBundle): Promise<ImportResult> {
-  return db.transaction((tx) => importConfigTx(tx, bundle));
+  const result = await db.transaction(
+    async (tx) => {
+      await acquireNativeCmsWriterFence(tx);
+      return importConfigTx(tx, bundle);
+    },
+    { isolationLevel: "read committed" }
+  );
+  if (includesOption(resolveImportScope(bundle), "settings")) clearSiteCache();
+  return result;
 }

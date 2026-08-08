@@ -7,9 +7,10 @@
 **Estimated Effort:** Large
 **Dependencies:** TASK-547-02-L01 for the pre-land bridge;
 TASK-547-02-L02 for final completion
-**Status:** 🚧 In Progress
-**Validation:** Corrective crash-recovery/rollback work and fresh DB/security
-evidence are pending.
+**Status:** ✅ Done
+**Completed:** 2026-08-08
+**Validation:** Crash-recovery, rollback, DB/security and final repository gates
+passed; the final certification cleanup completed without residue.
 
 ## Overview
 
@@ -963,13 +964,13 @@ For every live edge, L02's serial `fullSiteNativeForeignKeyRacesDb.test.ts` prov
 
 - [x] Implement the initial rollback/compensation baseline; its dependency-aware corrective replacement remains pending below.
 - [x] Add the DB lifecycle/security test matrix implementation.
-- [ ] Split the near-limit service suite and implement strict V1 dependency graph
+- [x] Split the near-limit service suite and implement strict V1 dependency graph
   validation plus dependency-aware branch compensation/resume, including strict
   noop durable-envelope/final-target equality/ID/status-phase preflight and zero-
   read source-faithful noop outcomes.
-- [ ] Add the nine-kind real SIGKILL create-intent recovery matrix, including
+- [x] Add the nine-kind real SIGKILL create-intent recovery matrix, including
   fail-closed legacy `id:null` evidence and exact scoped cleanup.
-- [ ] Add two-package shared-shell apply/apply, apply/rollback and rollback/
+- [x] Add two-package shared-shell apply/apply, apply/rollback and rollback/
   rollback coordination with deterministic barriers and raw-value restoration.
 
 ## Testing Requirements

@@ -1,9 +1,23 @@
 import Ajv from "ajv";
 import { expect, test } from "vitest";
 
-import { FORM_SCHEMA_LIMITS, normalizeFormSettings } from "../../../core/services/forms/formSettings";
+import {
+  FORM_SCHEMA_LIMITS,
+  formSettingsSchema,
+  normalizeFormSettings,
+} from "../../../core/services/forms/formSettings";
 import { FORM_THEME_DEFAULTS, resolveFormTheme } from "../../../core/services/forms/formTheme";
 import { formCreateSchema, formUpdateSchema } from "../../../core/server/validation/formSchemas";
+import {
+  FORM_EMBED_LOADING_LABEL_MAX_LENGTH,
+  FORM_EMBED_SUCCESS_BEHAVIORS,
+  FORM_EMBED_TEXTAREA_ROWS_LIMITS,
+  clampSavedProgressTtl,
+  formEmbedDefaults,
+  formEmbedSchema,
+  normalizeFormEmbedData,
+  resolveFormEmbedFieldPresentation,
+} from "../../../core/widgets/core/formEmbed";
 
 const ajv = new Ajv({
   allErrors: true,
@@ -14,6 +28,8 @@ const ajv = new Ajv({
 
 const validateCreate = ajv.compile(formCreateSchema);
 const validateUpdate = ajv.compile(formUpdateSchema);
+const validateSettings = ajv.compile(formSettingsSchema);
+const validateEmbed = ajv.compile(formEmbedSchema);
 
 test("supporting text is allowlisted, trimmed, and resolved only when authored", () => {
   const settings = normalizeFormSettings({
@@ -129,4 +145,117 @@ test("supporting text rejects blank, oversized, and unknown sibling keys", () =>
       },
     })
   ).toBe(false);
+});
+
+test("supporting text accepts exact string boundaries and preserves submit siblings", () => {
+  for (const supportingText of ["ż", "ż".repeat(FORM_SCHEMA_LIMITS.submitSupportingText)]) {
+    expect(validateSettings({ theme: { submit: { supportingText } } })).toBe(true);
+  }
+  for (const supportingText of [
+    "",
+    "   ",
+    "x".repeat(FORM_SCHEMA_LIMITS.submitSupportingText + 1),
+    42,
+  ]) {
+    expect(validateSettings({ theme: { submit: { supportingText } } })).toBe(false);
+  }
+
+  const normalized = normalizeFormSettings({
+    theme: {
+      submit: {
+        label: "Wyślij brief",
+        fullWidth: false,
+        radius: "xl",
+        supportingText: "  Zażółć gęślą jaźń.  ",
+      },
+    },
+  });
+  expect(normalized.theme?.submit).toEqual({
+    label: "Wyślij brief",
+    fullWidth: false,
+    radius: "xl",
+    supportingText: "Zażółć gęślą jaźń.",
+  });
+  expect(resolveFormTheme(normalized.theme).submit.supportingText).toBe("Zażółć gęślą jaźń.");
+});
+
+test("Form Embed public boundary re-exports present-only presentation owners", () => {
+  expect(FORM_EMBED_TEXTAREA_ROWS_LIMITS).toEqual({ min: 2, max: 20, legacyDefault: 4 });
+  expect(FORM_EMBED_LOADING_LABEL_MAX_LENGTH).toBe(1_000);
+  expect(FORM_EMBED_SUCCESS_BEHAVIORS).toEqual([
+    "show-message-hide-form",
+    "show-message-reset-form",
+    "show-message-keep-form",
+  ]);
+  expect(clampSavedProgressTtl(99)).toBe(30);
+});
+
+test("Form Embed schema owns rows, prompt, bounded loading and success behavior", () => {
+  for (const textareaRows of [
+    FORM_EMBED_TEXTAREA_ROWS_LIMITS.min,
+    FORM_EMBED_TEXTAREA_ROWS_LIMITS.max,
+  ]) {
+    expect(validateEmbed({ fields: { textareaRows } })).toBe(true);
+  }
+  for (const textareaRows of [1, 21, 4.5, "5"]) {
+    expect(validateEmbed({ fields: { textareaRows } })).toBe(false);
+  }
+  expect(validateEmbed({ fields: { showSelectPrompt: false } })).toBe(true);
+  expect(validateEmbed({ fields: { showSelectPrompt: "false" } })).toBe(false);
+
+  for (const loadingLabel of ["x", "x".repeat(FORM_EMBED_LOADING_LABEL_MAX_LENGTH)]) {
+    expect(validateEmbed({ submitBehavior: { loadingLabel } })).toBe(true);
+  }
+  for (const loadingLabel of ["", "   ", "x".repeat(FORM_EMBED_LOADING_LABEL_MAX_LENGTH + 1)]) {
+    expect(validateEmbed({ submitBehavior: { loadingLabel } })).toBe(false);
+  }
+  for (const successBehavior of FORM_EMBED_SUCCESS_BEHAVIORS) {
+    expect(validateEmbed({ submitBehavior: { successBehavior } })).toBe(true);
+  }
+  expect(validateEmbed({ submitBehavior: { successBehavior: "unknown" } })).toBe(false);
+  expect(validateEmbed({ fields: { textareaRows: 5, unexpected: true } })).toBe(false);
+});
+
+test("Form Embed keeps the two new field keys present-only and resolves legacy rendering", () => {
+  expect(formEmbedDefaults.fields).toEqual({
+    showLabels: true,
+    showRequiredIndicator: true,
+  });
+  const legacy = normalizeFormEmbedData({});
+  expect(legacy.fields).toEqual({ showLabels: true, showRequiredIndicator: true });
+  expect(JSON.stringify(legacy.fields)).toBe(
+    JSON.stringify({ showLabels: true, showRequiredIndicator: true })
+  );
+  expect(resolveFormEmbedFieldPresentation(legacy.fields)).toEqual({
+    textareaRows: FORM_EMBED_TEXTAREA_ROWS_LIMITS.legacyDefault,
+    showSelectPrompt: true,
+  });
+
+  const authored = normalizeFormEmbedData({
+    fields: { textareaRows: 5, showSelectPrompt: false },
+    submitBehavior: {
+      loadingLabel: "  Wysyłanie...  ",
+      successBehavior: "show-message-keep-form",
+    },
+  });
+  expect(authored.fields).toEqual({
+    showLabels: true,
+    showRequiredIndicator: true,
+    textareaRows: 5,
+    showSelectPrompt: false,
+  });
+  expect(authored.submitBehavior).toEqual({
+    loadingLabel: "Wysyłanie...",
+    successBehavior: "show-message-keep-form",
+  });
+
+  const invalid = normalizeFormEmbedData({
+    fields: { textareaRows: 100, showSelectPrompt: "no" as never },
+    submitBehavior: { loadingLabel: "x".repeat(1_001) },
+  });
+  expect(invalid.fields).toEqual({ showLabels: true, showRequiredIndicator: true });
+  expect(invalid.submitBehavior).toEqual({
+    loadingLabel: "Sending...",
+    successBehavior: "show-message-hide-form",
+  });
 });

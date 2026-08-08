@@ -2,7 +2,6 @@ import { normalizeDetailPageDocument } from "../../../core/services/content/deta
 import { normalizeContentRoutes } from "../../../core/services/settings/settingsContracts";
 import type { JsonObject, PackageRef } from "../../../core/services/kits/fullSitePackage/types";
 import { HOUSE_PROJECT_RESOURCE_KEY } from "./constants";
-import { PROJECT_LISTING_QUERY_KEY } from "./projectListing";
 import { cleanJsonObject } from "../json";
 
 export const PROJECT_DETAIL_KEY = "project-detail";
@@ -11,7 +10,6 @@ export const PROJECT_DETAIL_PATH = "/projekty/:slug";
 
 const CONTENT_ID = "00000000-0000-4000-8000-000000000547";
 const DETAIL_ID = "00000000-0000-4000-8000-000000000548";
-const QUERY_ID = "00000000-0000-4000-8000-000000000549";
 
 const fullWidthLayout = {
   container: "full",
@@ -20,223 +18,212 @@ const fullWidthLayout = {
   background: { color: "transparent", image: null },
 } as const;
 
-const buildProjectDetailBlocks = () => [
-  {
-    id: "project-hero",
-    type: "hero",
-    variant: "centered",
-    layout: fullWidthLayout,
-    data: {
-      headline: "",
-      subhead: "Projekt domu dopasowany do codziennego rytmu",
-      body: "",
-      badge: {
-        enabled: true,
-        label: "Projekt FormaDom",
-        tone: "primary",
-        placement: "above-headline",
-      },
-      primaryCta: { label: "Porozmawiajmy o adaptacji", href: "/kontakt" },
-      media: { type: "none", source: "external" },
-      layout: {
-        align: "left",
-        maxWidth: "2xl",
-        contentWidth: "xl",
-        height: "large",
-        bleed: "full-bleed",
-      },
-      spacing: { paddingTop: "2xl", paddingBottom: "2xl" },
-      style: {
-        textColor: "#f7fbff",
-        subheadColor: "#8ee8ff",
-        bodyColor: "#d9e5f2",
-        headlineSize: "5xl",
-        bodySize: "lg",
-        borderWidth: "0",
-        borderRadius: "none",
-        primaryButtonBg: "#d8ff7a",
-        primaryButtonText: "#07111f",
-        primaryButtonBorder: "#d8ff7a",
-        primaryButtonSize: "lg",
-        cardShadow: "none",
-        buttonShadow: "soft",
-        fontFamily: "sans",
-        headlineWeight: "bold",
-        bodyWeight: "normal",
-        motion: "slide-up",
-        tilt: "none",
-      },
-      background: {
-        color: "#07111f",
-        gradient: "linear-gradient(135deg, #07111f, #163c4b)",
-      },
-      responsive: { hideMediaOnMobile: true },
-    },
-  },
-  {
-    id: "project-specifications",
-    type: "stats-kpi",
-    variant: "cards",
-    data: {
-      header: {
-        title: "Najważniejsze parametry",
-        description: "Czytelny punkt wyjścia do rozmowy o adaptacji projektu.",
-      },
-      items: [
-        { id: "area", value: "0", suffix: " m²", label: "Powierzchnia", icon: "⌂" },
-        {
-          id: "storeys",
-          value: "0",
-          suffix: "kond.",
-          label: "Kondygnacje",
-          icon: "↕",
-        },
-        { id: "rooms", value: "0", suffix: "pok.", label: "Pokoje", icon: "▦" },
-        {
-          id: "energy",
-          value: "—",
-          suffix: "standard",
-          label: "Klasa energii",
-          icon: "◌",
-        },
-      ],
-      style: {
-        alignment: "start",
-        spacing: "md",
-        valueColor: "#f7fbff",
-        labelColor: "#b9c9da",
-        descriptionColor: "#8fa5bb",
-        valueSize: "lg",
-        divider: false,
-        dividerIntensity: "soft",
-        sectionBackground: "#0b1628",
-        maxWidth: "xl",
-        padding: "lg",
-        minHeight: "compact",
-        cardBackground: "#13233a",
-        cardBorderColor: "#26384d",
-        iconSize: "md",
-        iconSurface: "#163c4b",
-        iconBorderColor: "#2c6674",
-      },
-    },
-  },
-  {
-    id: "project-gallery",
-    type: "gallery-mosaic",
-    variant: "feature-left",
-    data: {
-      header: {
-        title: "Kierunek wizualny",
-        description: "",
-      },
-      items: [
-        { id: "project-view-main", caption: "Bryła od strony ogrodu", ratio: "16:9" },
-        { id: "project-view-day", caption: "Strefa dzienna", ratio: "4:3" },
-        { id: "project-view-night", caption: "Strefa prywatna", ratio: "4:3" },
-        { id: "project-view-detail", caption: "Detal materiałowy", ratio: "4:3" },
-      ],
-      interaction: { mode: "none", zoom: "fit" },
-      style: {
-        ratio: "4:3",
-        gap: "lg",
-        radius: "xl",
-        overlay: "rgba(7, 17, 31, 0.72)",
-        captionPosition: "inside",
-        layoutDensity: "balanced",
-        motionPreset: "slide-up",
-      },
-    },
-  },
-  {
-    id: "project-assumptions",
-    type: "feature-grid",
-    variant: "cards-3",
-    data: {
-      header: {
-        eyebrow: "Założenia",
-        title: "Rozwiązania wpisane w projekt",
-        description: "Trzy decyzje, które porządkują układ i charakter domu.",
-      },
-      items: [
-        { id: "assumption-1", icon: "01", title: "", description: "Założenie projektu" },
-        { id: "assumption-2", icon: "02", title: "", description: "Założenie projektu" },
-        { id: "assumption-3", icon: "03", title: "", description: "Założenie projektu" },
-      ],
-      style: {
-        columns: "3",
-        gap: "lg",
-        surfaceColor: "#0b1628",
-        sectionBackground: "#07111f",
-        borderColor: "#26384d",
-        borderWidth: "1",
-        radius: "xl",
-        textAlign: "left",
-        cardPadding: "spacious",
-        mediaSize: "md",
-        cardLayout: "vertical",
-        maxWidth: "6xl",
-        headerSize: "lg",
-        cardTitleSize: "lg",
-        hoverEffect: "lift",
-      },
-    },
-  },
-  {
-    id: "project-related",
-    type: "content-list",
-    variant: "cards",
-    data: {
-      source: {
-        mode: "listing",
-        listingQueryId: "detail-related-projects",
-        listingTemplateId: "",
-        contentTypeId: "",
-        statusScope: "published",
-        limit: 3,
-        sort: "title-asc",
-      },
-      filters: {
-        taxonomy: "",
-        featuredOnly: false,
-        searchQuery: "",
-        authorId: "",
-      },
-      title: "Podobne projekty",
-      description: "Porównaj inne układy i wybierz kierunek najbliższy Twoim potrzebom.",
-      pagination: { mode: "none", pageSize: 3 },
-      fields: { showImage: false, showExcerpt: true, showMeta: false, showCta: true },
-      emptyState: {
-        title: "Brak podobnych projektów",
-        description: "Wkrótce pojawią się tutaj kolejne propozycje.",
-      },
-      style: {
-        columns: "3",
-        gap: "lg",
-        cardStyle: "elevated",
-        imageAspect: "wide",
-        tagMode: "hidden",
-        tagLimit: 2,
-        ctaLabel: "Zobacz projekt",
-        backgroundColor: "#07111f",
-        borderColor: "#26384d",
-        textColor: "#f7fbff",
-      },
-      resolved: {
-        items: [],
-        total: 0,
-        sourceTypeId: "",
-        sourceTypeSlug: HOUSE_PROJECT_RESOURCE_KEY,
-        listPath: PROJECT_LIST_PATH,
-        listingQueryId: "detail-related-projects",
-        listingTemplateId: "",
-        resolvedAt: "",
-      },
-    },
-  },
-];
+const emptyFeatureItem = (id: string) => ({
+  id,
+  title: "—",
+  description: "",
+});
 
-const projectDetailBindings = [
+const buildSurfaceColumn = (input: {
+  id: string;
+  desktopSpan: string;
+  tabletSpan: string;
+  mobileSpan: string;
+  minHeight: string;
+  background: string;
+}) => ({
+  id: input.id,
+  label: input.id,
+  desktopSpan: input.desktopSpan,
+  tabletSpan: input.tabletSpan,
+  mobileSpan: input.mobileSpan,
+  minHeight: input.minHeight,
+  style: {
+    surface: "on",
+    background: input.background,
+    padding: "none",
+    radius: "2xl",
+    overflow: "hidden",
+  },
+});
+
+export const buildProjectDetailBlocks = () =>
+  [
+    {
+      id: "project-back-link",
+      type: "rich-text-section",
+      variant: "single-column",
+      layout: fullWidthLayout,
+      data: {
+        titleBlock: {},
+        body: { html: '<p><a href="/projekty">← Wróć do projektów</a></p>' },
+        options: { dropcap: false, toc: false, maxWidth: "full", outputMode: "html" },
+      },
+    },
+    {
+      id: "project-hero",
+      type: "hero",
+      variant: "centered",
+      layout: fullWidthLayout,
+      data: {
+        headline: "—",
+        subhead: "",
+        body: "—",
+        badge: {
+          enabled: true,
+          label: "—",
+          tone: "primary",
+          placement: "above-headline",
+        },
+        primaryCta: { label: "", href: "" },
+        media: { type: "none", source: "external" },
+      },
+    },
+    {
+      id: "project-hero-art",
+      type: "grid-columns",
+      variant: "asymmetric",
+      layout: fullWidthLayout,
+      data: {
+        columns: [
+          buildSurfaceColumn({
+            id: "hero-art-main",
+            desktopSpan: "8",
+            tabletSpan: "12",
+            mobileSpan: "12",
+            minHeight: "xl",
+            background: "var(--color-primary)",
+          }),
+          buildSurfaceColumn({
+            id: "hero-art-accent",
+            desktopSpan: "4",
+            tabletSpan: "12",
+            mobileSpan: "12",
+            minHeight: "xl",
+            background: "var(--color-secondary)",
+          }),
+        ],
+      },
+      slots: {
+        "column:hero-art-main": [],
+        "column:hero-art-accent": [],
+      },
+    },
+    {
+      id: "project-statistics",
+      type: "feature-grid",
+      variant: "cards-4",
+      layout: fullWidthLayout,
+      data: {
+        header: { eyebrow: "", title: "", description: "" },
+        items: [
+          emptyFeatureItem("area"),
+          emptyFeatureItem("bedrooms"),
+          emptyFeatureItem("bathrooms"),
+          emptyFeatureItem("energy"),
+        ],
+        style: { columns: "4", cardPadding: "compact", hoverEffect: "none" },
+      },
+    },
+    {
+      id: "project-contact-cta",
+      type: "cta-banner",
+      variant: "centered",
+      layout: fullWidthLayout,
+      data: {
+        content: { badge: "", title: "", description: "", showDescription: false },
+        actions: {
+          primaryCta: {
+            label: "Chcę podobny dom",
+            href: "/kontakt",
+            enabled: true,
+            openInNewTab: false,
+            icon: "none",
+          },
+          secondaryCta: {
+            label: "",
+            href: "",
+            enabled: false,
+            openInNewTab: false,
+            icon: "none",
+          },
+          tertiaryCta: {
+            label: "",
+            href: "",
+            enabled: false,
+            openInNewTab: false,
+            icon: "none",
+          },
+        },
+      },
+    },
+    {
+      id: "project-assumptions",
+      type: "feature-grid",
+      variant: "cards-3",
+      layout: fullWidthLayout,
+      data: {
+        header: { eyebrow: "—", title: "—", description: "—" },
+        items: [
+          emptyFeatureItem("living-zone"),
+          emptyFeatureItem("private-zone"),
+          emptyFeatureItem("facade"),
+        ],
+        style: { columns: "3", cardPadding: "spacious", hoverEffect: "none" },
+      },
+    },
+    {
+      id: "project-gallery",
+      type: "grid-columns",
+      variant: "asymmetric",
+      layout: fullWidthLayout,
+      data: {
+        columns: [
+          buildSurfaceColumn({
+            id: "gallery-tall",
+            desktopSpan: "5",
+            tabletSpan: "12",
+            mobileSpan: "12",
+            minHeight: "xl",
+            background: "var(--color-primary)",
+          }),
+          buildSurfaceColumn({
+            id: "gallery-default",
+            desktopSpan: "4",
+            tabletSpan: "12",
+            mobileSpan: "12",
+            minHeight: "md",
+            background: "var(--color-secondary)",
+          }),
+          buildSurfaceColumn({
+            id: "gallery-warm",
+            desktopSpan: "3",
+            tabletSpan: "12",
+            mobileSpan: "12",
+            minHeight: "md",
+            background: "var(--color-accent)",
+          }),
+        ],
+      },
+      slots: {
+        "column:gallery-tall": [],
+        "column:gallery-default": [],
+        "column:gallery-warm": [],
+      },
+    },
+  ] as const;
+
+const entryFieldBinding = (id: string, blockId: string, propPath: string, field: string) => ({
+  id,
+  blockId,
+  propPath,
+  source: { kind: "entry-field", field },
+  transform: "text",
+  required: true,
+});
+
+export const PROJECT_DETAIL_BINDINGS = [
+  entryFieldBinding("project-detail-eyebrow", "project-hero", "badge.label", "detailEyebrow"),
   {
     id: "project-title",
     blockId: "project-hero",
@@ -244,37 +231,53 @@ const projectDetailBindings = [
     source: { kind: "entry-meta", field: "title" },
     required: true,
   },
-  {
-    id: "project-summary",
-    blockId: "project-hero",
-    propPath: "body",
-    source: { kind: "entry-field", field: "summary" },
-    required: true,
-  },
-  ...[
-    ["area", "project-area", "project-specifications", "items.0.value"],
-    ["storeys", "project-storeys", "project-specifications", "items.1.value"],
-    ["rooms", "project-rooms", "project-specifications", "items.2.value"],
-    ["energyClass", "project-energy", "project-specifications", "items.3.value"],
-    ["visualLabel", "project-visual-label", "project-gallery", "header.description"],
-    ["assumptions.0", "project-assumption-1", "project-assumptions", "items.0.title"],
-    ["assumptions.1", "project-assumption-2", "project-assumptions", "items.1.title"],
-    ["assumptions.2", "project-assumption-3", "project-assumptions", "items.2.title"],
-  ].map(([field, id, blockId, propPath]) => ({
-    id,
-    blockId,
-    propPath,
-    source: { kind: "entry-field", field },
-    transform: "text",
-    required: true,
-  })),
-  {
-    id: "project-related-items",
-    blockId: "project-related",
-    propPath: "resolved.items",
-    source: { kind: "computed", resolver: "relatedItems" },
-    required: true,
-  },
+  entryFieldBinding("project-detail-lead", "project-hero", "body", "detailLead"),
+  ...[0, 1, 2, 3].flatMap((index) => [
+    entryFieldBinding(
+      `project-stat-${index + 1}-value`,
+      "project-statistics",
+      `items.${index}.title`,
+      `detailStats.${index}.value`
+    ),
+    entryFieldBinding(
+      `project-stat-${index + 1}-label`,
+      "project-statistics",
+      `items.${index}.description`,
+      `detailStats.${index}.label`
+    ),
+  ]),
+  entryFieldBinding(
+    "project-assumptions-eyebrow",
+    "project-assumptions",
+    "header.eyebrow",
+    "assumptionsEyebrow"
+  ),
+  entryFieldBinding(
+    "project-assumptions-title",
+    "project-assumptions",
+    "header.title",
+    "assumptionsTitle"
+  ),
+  entryFieldBinding(
+    "project-assumptions-lead",
+    "project-assumptions",
+    "header.description",
+    "assumptionsLead"
+  ),
+  ...[0, 1, 2].flatMap((index) => [
+    entryFieldBinding(
+      `project-assumption-${index + 1}-title`,
+      "project-assumptions",
+      `items.${index}.title`,
+      `assumptions.${index}.title`
+    ),
+    entryFieldBinding(
+      `project-assumption-${index + 1}-description`,
+      "project-assumptions",
+      `items.${index}.description`,
+      `assumptions.${index}.description`
+    ),
+  ]),
 ] as const;
 
 const assertRef: (
@@ -282,30 +285,36 @@ const assertRef: (
   expected: { ref: PackageRef["ref"]; key: string },
   code: string
 ) => asserts value is PackageRef = (value, expected, code) => {
-  const record = value as Partial<PackageRef> | null;
   if (
-    !record ||
-    record.ref !== expected.ref ||
-    record.key !== expected.key ||
-    Object.keys(record).length !== 2
+    !value ||
+    typeof value !== "object" ||
+    Array.isArray(value) ||
+    Object.getPrototypeOf(value) !== Object.prototype ||
+    (value as { ref?: unknown }).ref !== expected.ref ||
+    (value as { key?: unknown }).key !== expected.key ||
+    Object.keys(value).length !== 2
   ) {
     throw new Error(code);
   }
 };
 
+const compactNormalizedBlocks = (blocks: JsonObject[]): JsonObject[] =>
+  blocks.map((block) => {
+    const compact: JsonObject = {};
+    for (const [key, value] of Object.entries(block)) {
+      if (value !== undefined) compact[key] = value;
+    }
+    return compact;
+  });
+
 export const buildProjectDetailDesired = (
   contentTypeId: unknown,
-  listingQueryId: unknown
+  _legacyListingQueryId?: unknown
 ): JsonObject => {
   assertRef(
     contentTypeId,
     { ref: "content_type", key: HOUSE_PROJECT_RESOURCE_KEY },
     "house_project_detail_content_ref_invalid"
-  );
-  assertRef(
-    listingQueryId,
-    { ref: "listing_query", key: PROJECT_LISTING_QUERY_KEY },
-    "house_project_detail_query_ref_invalid"
   );
   const normalized = normalizeDetailPageDocument({
     schemaVersion: 1,
@@ -314,30 +323,20 @@ export const buildProjectDetailDesired = (
     contentTypeId: CONTENT_ID,
     contentTypeSlug: HOUSE_PROJECT_RESOURCE_KEY,
     status: "published",
-    titlePattern: "{{ title }} — projekt domu",
-    seo: { titlePattern: "{{ title }} — FormaDom", descriptionField: "summary" },
+    titlePattern: "{{ title }}",
+    seo: {
+      titlePattern: "{{ title }} — projekt pokazowy — FormaDom Studio",
+      descriptionField: "seoDescription",
+    },
     settings: { template: "project-detail", layout: {} },
     blocks: buildProjectDetailBlocks(),
-    bindings: projectDetailBindings,
-    related: [
-      {
-        id: "related-projects",
-        kind: "listing-query",
-        label: "Podobne projekty",
-        limit: 3,
-        listingQueryId: QUERY_ID,
-        excludeCurrentEntry: true,
-      },
-    ],
+    bindings: PROJECT_DETAIL_BINDINGS,
   });
-  const { id: _nativeValidationId, ...withoutDatabaseId } = normalized;
+  const { id: _nativeValidationId, blocks, ...withoutDatabaseId } = normalized;
   return cleanJsonObject({
     ...withoutDatabaseId,
     contentTypeId,
-    related: withoutDatabaseId.related?.map((source) => ({
-      ...source,
-      listingQueryId,
-    })),
+    blocks: compactNormalizedBlocks(blocks as JsonObject[]),
   });
 };
 

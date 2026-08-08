@@ -4897,7 +4897,16 @@ Opcjonalne pola:
   `surface.padding` `sm|md|lg|xl`, `surface.shadow` `none|soft|sm|md|lg`,
   `surface.borderWidth` `none|sm|md`, `typography.titleSize` `sm|md|lg|xl`,
   `typography.titleWeight` `normal|medium|semibold|bold`, `typography.fontFamily`
-  `display|inherit|sans|serif|mono`, `input.size` `sm|md|lg`. The form theme is
+  `display|inherit|sans|serif|mono`, `input.size` `sm|md|lg`.
+  `submit.supportingText` is an optional, present-only string: strict create and
+  update payloads trim it, require 1..2000 characters, and reject blank,
+  wrong-type, oversized, or unknown sibling fields. It has no seeded default;
+  clearing it removes only that key, and an unauthored legacy form emits neither
+  a JSON property nor a public supporting-text node. Canvas, runtime preview,
+  and the public Form renderer place the normalized text once immediately after
+  the submit-control row. With `show-message-keep-form`, that same visible node
+  becomes the success message while the controls remain visible.
+  The form theme is
   the render BASE across the builder canvas, runtime preview, and existing public
   Form block/section runtime; a per-embed `FormEmbedStyle` compatibility token
   OVERRIDES the theme per explicit key (form theme = base, embed wins per-token).

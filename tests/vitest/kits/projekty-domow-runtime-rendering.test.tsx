@@ -8,7 +8,10 @@ import {
 import type { DetailPageDocument } from "../../../core/services/content/detailPageTypes";
 import type { PageBlockV2, PageDocumentV2 } from "../../../core/services/pages/pageDocumentV2";
 import { mapPageFiltersBlockToListingFiltersData } from "../../../core/services/pages/pageRuntimeBindingContract";
-import { collectPrehydratedDetailBlockIds } from "../../../core/server/publicSiteEntryRuntime";
+import {
+  collectPrehydratedDetailBlockIds,
+  resolveDetailPageRuntimeSeo,
+} from "../../../core/server/publicSiteEntryRuntime";
 import {
   renderPublicPageRuntimeHtml,
   renderPublicPageV2RuntimeHtml,
@@ -28,22 +31,27 @@ const refs = {
 };
 
 describe("Projekty Domów public runtime rendering", () => {
-  it("renders three native facet groups with canonical query controls", () => {
+  it("renders the source-ordered native category facet and reset contract", () => {
     const projects = buildFormaDomPages(refs).find((seed) => seed.key === "projekty");
-    const document = projects?.desired.document as {
+    const document = projects?.desired.data as {
       sections: Array<{ blocks: PageBlockV2[] }>;
     };
-    const source = document.sections
-      .flatMap((section) => section.blocks)
-      .find((block) => block.type === "filters");
+    const blocks = document.sections.flatMap((section) => section.blocks);
+    const source = blocks.find((block) => block.type === "filters");
     expect(source).toBeDefined();
     expect(source?.props).toMatchObject({
-      autoApply: true,
-      showSearch: true,
+      autoApply: false,
+      showSearch: false,
       showCount: false,
-      searchLabel: "Szukaj projektu",
-      searchPlaceholder: "Wpisz nazwę projektu...",
       applyLabel: "Pokaż projekty",
+    });
+    expect(blocks.find((block) => block.id === "projects-reset")?.props).toMatchObject({
+      label: "Wszystkie",
+      href: "/projekty",
+    });
+    expect(blocks.find((block) => block.id === "projects-collection")?.props).toMatchObject({
+      showCta: false,
+      paginationMode: "none",
     });
 
     const filtersBlock = structuredClone(source!);
@@ -58,14 +66,26 @@ describe("Projekty Domów public runtime rendering", () => {
       />
     );
 
-    expect(data.facets).toHaveLength(3);
-    expect(data.facets?.map((facet) => facet.id)).toEqual(["style", "storeys", "energy"]);
-    expect(html).toContain('name="lq.query-projects.data.style.in"');
-    expect(html).toContain('name="lq.query-projects.data.storeys.in"');
-    expect(html).toContain('name="lq.query-projects.data.energyClass.in"');
-    expect(html).toContain('value="minimal"');
-    expect(html).toContain('value="2"');
-    expect(html).toContain('value="A+"');
+    expect(data.facets).toEqual([
+      {
+        id: "category",
+        kind: "radio",
+        label: "Kategoria",
+        field: "data.categories",
+        op: "eq",
+        options: [
+          { value: "barn", label: "Nowoczesna stodoła" },
+          { value: "villa", label: "Wille" },
+          { value: "single", label: "Parterowe" },
+          { value: "eco", label: "Energooszczędne" },
+        ],
+      },
+    ]);
+    expect(html).toContain('name="lq.query-projects.data.categories.eq"');
+    for (const value of ["barn", "villa", "single", "eco"]) {
+      expect(html).toContain(`value="${value}"`);
+    }
+    expect(html).not.toContain('value="all"');
   });
 
   it("paints advanced Page-v2 composition styles and real section anchors", () => {
@@ -74,7 +94,7 @@ describe("Projekty Domów public runtime rendering", () => {
       const seed = built.find((entry) => entry.key === key)!;
       return renderPublicPageV2RuntimeHtml({
         title: String(seed.desired.title),
-        document: seed.desired.document as unknown as PageDocumentV2,
+        document: seed.desired.data as unknown as PageDocumentV2,
         siteLocale: "pl",
         activePath: String(seed.desired.slug),
       });
@@ -82,28 +102,34 @@ describe("Projekty Domów public runtime rendering", () => {
 
     const homeHtml = render("home");
     expect(homeHtml).toContain('<html lang="pl">');
-    expect(homeHtml).toContain('id="start"');
+    expect(homeHtml).toContain('data-section-id="home-hero"');
     expect(homeHtml).toContain("radial-gradient(circle at 82% 10%");
-    expect(homeHtml).toContain("linear-gradient(145deg,#07111f,#163c4b)");
+    expect(homeHtml).toContain("linear-gradient(145deg,#07111f,#0b1628)");
     expect(homeHtml).toContain("font-size:clamp(2.8rem,6vw,6.5rem)");
     expect(homeHtml).toContain("grid-template-columns:minmax(0,1fr) minmax(420px,.9fr)");
     expect(homeHtml).toContain("grid-template-columns:1fr 1.2fr");
-    expect(homeHtml).toContain("grid-column:span 2");
-    expect(homeHtml).toContain("grid-row:span 2");
-    expect(homeHtml).toContain("box-shadow:0px 0px 80px 8px rgba(142,232,255,0.2)");
-    expect(homeHtml).toContain("border-top-color:rgba(255,255,255,0.1)");
-    expect(homeHtml).toContain("border-right-width:2px");
+    expect(homeHtml).toContain("0px 0px 48px 2px rgba(142,232,255,.28)");
+    expect(homeHtml).toContain("border-color:rgba(255,255,255,.14)");
+    expect(homeHtml).toContain("border-width:1px");
     expect(homeHtml).toContain('data-surface="ambient-orbs"');
+    expect(homeHtml).toContain('role="tablist"');
+    expect(homeHtml).toContain('aria-label="Wybór stylu domu"');
+    expect(homeHtml).toContain("Nowoczesna stodoła");
+    expect(homeHtml).toContain("Modern Barn");
+    expect(homeHtml).toContain("Miejska willa");
+    expect(homeHtml).toContain("Urban Villa");
+    expect(homeHtml).toContain("Dom eko");
+    expect(homeHtml).toContain("Eco Soft");
 
     const pricingHtml = render("cennik");
-    expect(pricingHtml).toContain('id="pakiety"');
-    expect(pricingHtml).toContain("rgba(216,255,122,0.3)");
-    expect(pricingHtml).toContain("NAJCZĘŚCIEJ WYBIERANY");
+    expect(pricingHtml).toContain('data-section-id="pricing-packages"');
+    expect(pricingHtml).toContain("rgba(173,255,216,.28)");
+    expect(pricingHtml).toContain("Najczęściej wybierane");
 
     const contactHtml = render("kontakt");
-    expect(contactHtml).toContain('id="formularz"');
+    expect(contactHtml).toContain('data-section-id="contact-form-section"');
     expect(contactHtml).toContain('data-page-section="lead-form"');
-    expect(contactHtml).toContain("MAPA POGLĄDOWA");
+    expect(contactHtml).toContain('aria-label="Abstrakcyjna mapa lokalizacji"');
   });
 
   it("renders the bound detail composition inside the shared responsive site shell", async () => {
@@ -112,7 +138,7 @@ describe("Projekty Domów public runtime rendering", () => {
       refs.contentType,
       refs.listingQuery
     ) as unknown as DetailPageDocument;
-    expect(collectPrehydratedDetailBlockIds(detail)).toEqual(new Set(["project-related"]));
+    expect(collectPrehydratedDetailBlockIds(detail)).toEqual(new Set());
     const entry = {
       id: "aurora-entry",
       typeId: "house-project-type",
@@ -123,16 +149,19 @@ describe("Projekty Domów public runtime rendering", () => {
       hasPassword: false,
       tags: [],
       data: {
-        summary: aurora.summary,
+        cardDescription: aurora.cardDescription,
+        cardHref: aurora.cardHref,
         area: aurora.area,
-        style: aurora.style,
-        storeys: aurora.storeys,
-        rooms: aurora.rooms,
-        energyClass: aurora.energyClass,
-        category: aurora.category,
-        assumptions: [...aurora.assumptions],
-        zones: [...aurora.zones],
-        visualLabel: aurora.visualLabel,
+        categories: [...aurora.categories],
+        referenceOrder: aurora.referenceOrder,
+        seoDescription: aurora.seoDescription,
+        detailEyebrow: aurora.detailEyebrow,
+        detailLead: aurora.detailLead,
+        detailStats: aurora.detailStats?.map((stat) => ({ ...stat })),
+        assumptionsEyebrow: aurora.assumptionsEyebrow,
+        assumptionsTitle: aurora.assumptionsTitle,
+        assumptionsLead: aurora.assumptionsLead,
+        assumptions: aurora.assumptions?.map((assumption) => ({ ...assumption })),
       },
       publishedAt: new Date("2026-07-23T10:00:00.000Z"),
       scheduledAt: null,
@@ -151,86 +180,101 @@ describe("Projekty Domów public runtime rendering", () => {
         },
         preview: false,
       },
-      {
-        resolveListingContentListRuntimeData: async () => ({
-          items: ["linea", "nova", "mono"].map((slug) => ({
-            id: `${slug}-entry`,
-            title: slug[0]!.toUpperCase() + slug.slice(1),
-            slug,
-            href: `/projekty/${slug}`,
-            excerpt: `Projekt ${slug}`,
-            status: "published",
-          })),
-        }),
-      }
+      {}
     );
-    expect(blocks.find((block) => block.id === "project-specifications")).toMatchObject({
-      type: "stats-kpi",
-      variant: "cards",
+    expect(blocks.map((block) => block.id)).toEqual([
+      "project-back-link",
+      "project-hero",
+      "project-hero-art",
+      "project-statistics",
+      "project-contact-cta",
+      "project-assumptions",
+      "project-gallery",
+    ]);
+    expect(blocks.find((block) => block.id === "project-hero")).toMatchObject({
+      type: "hero",
       data: {
-        items: [
-          { id: "area", value: "148", label: "Powierzchnia" },
-          { id: "storeys", value: "2", label: "Kondygnacje" },
-          { id: "rooms", value: "5", label: "Pokoje" },
-          { id: "energy", value: "A+", label: "Klasa energii" },
-        ],
-        style: {
-          maxWidth: "xl",
-          padding: "lg",
-          minHeight: "compact",
-          cardBackground: "#13233a",
-        },
+        headline: "Dom Aurora",
+        body: aurora.detailLead,
+        badge: { enabled: true, label: "Projekt pokazowy" },
       },
     });
-    expect(blocks.find((block) => block.id === "project-gallery")).toMatchObject({
-      type: "gallery-mosaic",
-      variant: "feature-left",
+    expect(blocks.find((block) => block.id === "project-hero-art")).toMatchObject({
+      type: "grid-columns",
       data: {
-        header: { description: aurora.visualLabel },
-        items: [
-          { id: "project-view-main", ratio: "16:9" },
-          { id: "project-view-day", ratio: "4:3" },
-          { id: "project-view-night", ratio: "4:3" },
-          { id: "project-view-detail", ratio: "4:3" },
+        columns: [
+          {
+            id: "hero-art-main",
+            desktopSpan: "8",
+            tabletSpan: "12",
+            mobileSpan: "12",
+            minHeight: "xl",
+            style: { background: "var(--color-primary)" },
+          },
+          {
+            id: "hero-art-accent",
+            desktopSpan: "4",
+            tabletSpan: "12",
+            mobileSpan: "12",
+            minHeight: "xl",
+            style: { background: "var(--color-secondary)" },
+          },
         ],
-        style: {
-          ratio: "4:3",
-          gap: "lg",
-          layoutDensity: "balanced",
-          motionPreset: "slide-up",
+      },
+    });
+    expect(blocks.find((block) => block.id === "project-statistics")).toMatchObject({
+      type: "feature-grid",
+      data: {
+        items: aurora.detailStats?.map((stat) => ({
+          id: stat.id,
+          title: stat.value,
+          description: stat.label,
+        })),
+      },
+    });
+    expect(blocks.find((block) => block.id === "project-contact-cta")).toMatchObject({
+      type: "cta-banner",
+      data: {
+        actions: {
+          primaryCta: { label: "Chcę podobny dom", href: "/kontakt", enabled: true },
         },
       },
     });
     expect(blocks.find((block) => block.id === "project-assumptions")).toMatchObject({
       data: {
-        items: aurora.assumptions.map((title, index) => ({
-          id: `assumption-${index + 1}`,
-          title,
-        })),
+        header: {
+          eyebrow: aurora.assumptionsEyebrow,
+          title: aurora.assumptionsTitle,
+          description: aurora.assumptionsLead,
+        },
+        items: aurora.assumptions,
       },
     });
-    expect(blocks.find((block) => block.id === "project-related")).toMatchObject({
-      type: "content-list",
-      variant: "cards",
+    expect(blocks.find((block) => block.id === "project-gallery")).toMatchObject({
+      type: "grid-columns",
       data: {
-        source: { mode: "listing", limit: 3 },
-        fields: { showImage: false, showExcerpt: true, showMeta: false, showCta: true },
-        style: { columns: "3", gap: "lg", cardStyle: "elevated" },
-        resolved: {
-          items: [
-            { title: "Linea", href: "/projekty/linea" },
-            { title: "Nova", href: "/projekty/nova" },
-            { title: "Mono", href: "/projekty/mono" },
-          ],
-        },
+        columns: [
+          { id: "gallery-tall", desktopSpan: "5" },
+          { id: "gallery-default", desktopSpan: "4" },
+          { id: "gallery-warm", desktopSpan: "3" },
+        ],
       },
+    });
+    const detailSeo = resolveDetailPageRuntimeSeo({
+      document: detail,
+      entry,
+      contentTypeName: "Projekty domów",
+    });
+    expect(detailSeo).toMatchObject({
+      title: "Dom Aurora — projekt pokazowy — FormaDom Studio",
+      metaDescription: aurora.seoDescription,
     });
     const footerDocument = buildFooterTemplate().desired.document as unknown as NonNullable<
       Parameters<typeof renderPublicPageRuntimeHtml>[0]["siteShell"]
     >["footerDocument"];
 
     const html = await renderPublicPageRuntimeHtml({
-      title: "Aurora — FormaDom",
+      title: detailSeo.title,
       blocks,
       templateKey: "project-detail",
       inlineCss: ":root{--color-bg:#07111f;--color-text:#f7fbff}",
@@ -238,6 +282,8 @@ describe("Projekty Domów public runtime rendering", () => {
       siteLocale: "pl",
       siteName: "FormaDom Studio",
       activePath: "/projekty/aurora",
+      metaDescription: detailSeo.metaDescription,
+      canonicalUrl: "http://127.0.0.1:3000/projekty/aurora",
       siteShell: {
         navigation: {
           label: "Menu główne FormaDom",
@@ -260,29 +306,27 @@ describe("Projekty Domów public runtime rendering", () => {
     expect(html).toContain('[data-site-header="true"]{border-bottom:');
     expect(html).toContain('[data-site-footer="true"]{border-top:');
     expect(html).toContain("--detail-footer-mobile:1");
-    expect(html).toContain("linear-gradient(135deg");
-    expect(html).toContain('data-stats-kpi-count="4"');
-    expect(html).toContain('data-stats-kpi-variant="cards"');
-    expect(html).toContain('data-stats-kpi-max-width="xl"');
-    expect(html).toContain('data-stats-kpi-padding="lg"');
-    expect(html).toContain('data-stats-kpi-min-height="compact"');
-    expect(html).toContain("148");
-    expect(html).toContain("A+");
-    expect(html).toContain('data-gallery-mosaic-variant="feature-left"');
-    expect(html).toContain('data-gallery-mosaic-count="4"');
-    expect(html).toContain('data-gallery-mosaic-gap="lg"');
-    expect(html).toContain('data-gallery-mosaic-ratio="4:3"');
-    expect(html).toContain('data-gallery-mosaic-layout-density="balanced"');
-    expect(html).toContain('data-gallery-mosaic-motion="slide-up"');
-    expect(html).toContain(aurora.visualLabel);
-    for (const assumption of aurora.assumptions) {
-      expect(html).toContain(assumption);
+    expect(html).toContain("<title>Dom Aurora — projekt pokazowy — FormaDom Studio</title>");
+    expect(html).toContain(`name="description" content="${aurora.seoDescription}"`);
+    expect(html).toContain('rel="canonical" href="http://127.0.0.1:3000/projekty/aurora"');
+    expect(html).toContain('data-grid-columns-count="2"');
+    expect(html).toContain('data-grid-column="column:hero-art-main"');
+    expect(html).toContain('data-grid-column="column:hero-art-accent"');
+    expect(html).toContain("var(--color-primary)");
+    expect(html).toContain("var(--color-secondary)");
+    for (const stat of aurora.detailStats ?? []) {
+      expect(html).toContain(stat.value);
+      expect(html).toContain(stat.label);
     }
-    expect(html).toContain('data-content-list-items="3"');
-    expect(html).toContain('data-content-list-variant="cards"');
-    expect(html).toContain("grid-cols-1 md:grid-cols-2 lg:grid-cols-3");
-    expect(html).toContain('href="/projekty/linea"');
-    expect(html).toContain('href="/oferta"');
+    expect(html).toContain("Chcę podobny dom");
+    for (const assumption of aurora.assumptions ?? []) {
+      expect(html).toContain(assumption.title);
+      expect(html).toContain(assumption.description);
+    }
+    expect(html).toContain('data-grid-columns-count="3"');
+    expect(html).toContain('data-grid-column="column:gallery-tall"');
+    expect(html).toContain('data-grid-column="column:gallery-default"');
+    expect(html).toContain('data-grid-column="column:gallery-warm"');
     expect(html).toContain('href="/kontakt"');
     expect(html).not.toMatch(
       /Build your system with Coderso|Launch modern sites|Get started|Learn more|Untitled|Read more|Media [1-4]|Content list|Choose a listing query/

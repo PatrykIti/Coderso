@@ -47,6 +47,24 @@ export const setNestedPathValue = (
   };
 };
 
+export const deleteNestedPathValue = (
+  source: unknown,
+  path: readonly string[]
+): Record<string, unknown> | undefined => {
+  if (!isPlainRecord(source)) return undefined;
+  const [key, ...rest] = path;
+  if (!key) return Object.keys(source).length > 0 ? { ...source } : undefined;
+  const result = { ...source };
+  if (rest.length === 0) {
+    delete result[key];
+  } else {
+    const child = deleteNestedPathValue(result[key], rest);
+    if (child) result[key] = child;
+    else delete result[key];
+  }
+  return Object.keys(result).length > 0 ? result : undefined;
+};
+
 const filterBlockPropsPatch = (type: PageBlockV2["type"], patch: Record<string, unknown>) => {
   const allowed = pageBlockPropKeys[type];
   return Object.fromEntries(
@@ -148,35 +166,72 @@ export const patchBlockControlForDevice = (
   const [group, ...path] = control.overridePath;
   if (!isBlockControlGroup(group) || path.length === 0) return block;
   const sanitizedValue = sanitizePageEditorControlValue(control, value);
+  const deletePath =
+    control.input === "text" &&
+    control.fallback === undefined &&
+    typeof sanitizedValue === "string" &&
+    sanitizedValue.trim().length === 0;
+  const effectiveDevice: PageBreakpoint = control.responsive === false ? "desktop" : device;
   if (group === "props") {
     const [key] = path;
     if (!key) return block;
     if (block.type === "collection" && key === "contentTypeId") {
-      return patchBlockPropsForDevice(block, device, {
+      return patchBlockPropsForDevice(block, effectiveDevice, {
         contentTypeId: sanitizedValue,
         queryId: null,
       });
     }
-    return patchBlockPropsForDevice(block, device, { [key]: sanitizedValue });
+    if (!pageBlockPropKeys[block.type].includes(key)) return block;
+    if (deletePath) {
+      if (effectiveDevice === "desktop") {
+        const props = deleteNestedPathValue(block.props, path) ?? {};
+        return { ...block, props };
+      }
+      const breakpoint = block.responsive?.[effectiveDevice] ?? {};
+      const props = deleteNestedPathValue(breakpoint.props, path);
+      const nextBreakpoint = { ...breakpoint };
+      if (props) nextBreakpoint.props = props;
+      else delete nextBreakpoint.props;
+      const responsive = { ...block.responsive };
+      if (Object.keys(nextBreakpoint).length > 0) responsive[effectiveDevice] = nextBreakpoint;
+      else delete responsive[effectiveDevice];
+      return {
+        ...block,
+        ...(Object.keys(responsive).length > 0 ? { responsive } : { responsive: undefined }),
+      };
+    }
+    return patchBlockPropsForDevice(block, effectiveDevice, { [key]: sanitizedValue });
   }
 
-  if (device === "desktop") {
+  if (effectiveDevice === "desktop") {
+    const nextGroup = deletePath
+      ? deleteNestedPathValue(block[group], path)
+      : setNestedPathValue(block[group], path, sanitizedValue);
+    if (!nextGroup && group === "style") {
+      const { style: _style, ...withoutStyle } = block;
+      return withoutStyle;
+    }
     return {
       ...block,
-      [group]: setNestedPathValue(block[group], path, sanitizedValue),
+      [group]: nextGroup,
     };
   }
 
-  const breakpoint = block.responsive?.[device] ?? {};
+  const breakpoint = block.responsive?.[effectiveDevice] ?? {};
+  const nextGroup = deletePath
+    ? deleteNestedPathValue(breakpoint[group], path)
+    : setNestedPathValue(breakpoint[group], path, sanitizedValue);
+  const nextBreakpoint = { ...breakpoint };
+  if (nextGroup) nextBreakpoint[group] = nextGroup as never;
+  else delete nextBreakpoint[group];
+  const nextResponsive = { ...block.responsive };
+  if (Object.keys(nextBreakpoint).length > 0) nextResponsive[effectiveDevice] = nextBreakpoint;
+  else delete nextResponsive[effectiveDevice];
   return {
     ...block,
-    responsive: {
-      ...block.responsive,
-      [device]: {
-        ...breakpoint,
-        [group]: setNestedPathValue(breakpoint[group], path, sanitizedValue),
-      },
-    },
+    ...(Object.keys(nextResponsive).length > 0
+      ? { responsive: nextResponsive }
+      : { responsive: undefined }),
   };
 };
 

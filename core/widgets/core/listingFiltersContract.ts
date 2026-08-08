@@ -82,8 +82,8 @@ const resolveOptionalText = (value: string | undefined) => {
   return trimmed.length > 0 ? trimmed : undefined;
 };
 
-const LISTING_FILTERS_COPY_MAX_LENGTH = 240;
-const listingFiltersCopyKeys = [
+export const LISTING_FILTERS_COPY_MAX_LENGTH = 240;
+export const listingFiltersCopyKeys = [
   "configurationAriaLabel",
   "configurationHint",
   "activeFilterSingular",

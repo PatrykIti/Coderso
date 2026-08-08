@@ -1,8 +1,9 @@
-import { desc, eq } from "drizzle-orm";
+import { asc, desc, eq, inArray } from "drizzle-orm";
 
 import { db } from "../../db/client";
-import { formSubmissions } from "../../db/schema";
-import { getForm, listFormFields, toFieldRecord } from "./formsService";
+import { acquireNativeCmsWriterFence } from "../../db/nativeCmsWriterFence";
+import { formFields, forms, formSubmissions, media } from "../../db/schema";
+import { toFieldRecord } from "./formsService";
 import { validateSubmissionPayload } from "./validation";
 import { verifyFileReferences } from "./formAttachment";
 
@@ -25,28 +26,44 @@ export async function getSubmission(id: string) {
 }
 
 export async function submitForm(formId: string, payload: unknown, meta?: SubmissionMeta) {
-  const form = await getForm(formId);
-  if (!form) throw new Error("form_not_found");
-
-  const fields = await listFormFields(formId);
-  const normalizedFields = fields.map(toFieldRecord);
-  const normalizedPayload = validateSubmissionPayload(payload, normalizedFields);
-
-  // DB-backed backstop: resolve + re-check every file reference against the media table
-  // (defence-in-depth — rejects unknown/cross-origin ids and mime/size violations even
-  // if the upload path was bypassed).
-  await verifyFileReferences(normalizedFields, normalizedPayload);
-
-  const [row] = await db
-    .insert(formSubmissions)
-    .values({
-      formId,
-      payload: normalizedPayload,
-      status: "new",
-      ip: meta?.ip ?? null,
-      userAgent: meta?.userAgent ?? null,
-    })
-    .returning();
-
-  return row ?? null;
+  return db.transaction(
+    async (tx) => {
+      await acquireNativeCmsWriterFence(tx);
+      const [form] = await tx
+        .select({ id: forms.id })
+        .from(forms)
+        .where(eq(forms.id, formId))
+        .for("key share");
+      if (!form) throw new Error("form_not_found");
+      const fields = await tx
+        .select()
+        .from(formFields)
+        .where(eq(formFields.formId, formId))
+        .orderBy(asc(formFields.orderIndex));
+      const normalizedFields = fields.map(toFieldRecord);
+      const normalizedPayload = validateSubmissionPayload(payload, normalizedFields);
+      await verifyFileReferences(normalizedFields, normalizedPayload, {
+        loadMediaByIds: async (ids) =>
+          ids.length === 0
+            ? []
+            : tx
+                .select({ id: media.id, mimeType: media.mimeType, size: media.size })
+                .from(media)
+                .where(inArray(media.id, [...ids]))
+                .orderBy(asc(media.id)),
+      });
+      const [row] = await tx
+        .insert(formSubmissions)
+        .values({
+          formId,
+          payload: normalizedPayload,
+          status: "new",
+          ip: meta?.ip ?? null,
+          userAgent: meta?.userAgent ?? null,
+        })
+        .returning();
+      return row ?? null;
+    },
+    { isolationLevel: "read committed" }
+  );
 }

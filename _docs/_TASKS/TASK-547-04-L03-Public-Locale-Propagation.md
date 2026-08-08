@@ -6,12 +6,10 @@
 **Category:** Public Runtime / Accessibility / SEO
 **Estimated Effort:** Large
 **Dependencies:** TASK-547-04-L02
-**Status:** 🚧 In Progress
-**Validation:** The string-shell sink and current branch threading exist, but
-the compatibility-safe locale policy, exact settings seam and complete
-synthetic copy/persistence matrix remain open. Installed-package request and
-browser evidence are downstream TASK-547-06 handoffs, not completion claims for
-this leaf.
+**Status:** ✅ Done
+**Completed:** 2026-08-08
+**Validation:** Locale policy, settings seam, copy/persistence matrix and installed
+public-runtime evidence passed through the final TASK-547 certification smoke.
 
 ## Overview
 
@@ -289,9 +287,9 @@ replaced by the synthetic Vitest fixture.
 
 - [x] Thread locale through the current Page and entry render branches.
 - [x] Split the touched legacy public-site module into cohesive bounded modules.
-- [ ] Consume L02's compatibility-safe public sink policy read-only and complete
+- [x] Consume L02's compatibility-safe public sink policy read-only and complete
   the exact 22-key/precedence/persistence render matrix.
-- [ ] Hand the installed `handlePublicRequest` and browser assertions to
+- [x] Hand the installed `handlePublicRequest` and browser assertions to
   TASK-547-06; they do not block this earlier leaf's own completion gate.
 
 ## Testing Requirements

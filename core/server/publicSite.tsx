@@ -112,6 +112,23 @@ type PublicHtmlRenderResult = {
   cacheMode?: PageRuntimeCacheMode;
 };
 
+const resolveRequestCanonicalUrl = (input: {
+  canonicalUrl: string | null;
+  requestOrigin?: string | null;
+  requestPath?: string | null;
+}): string | null => {
+  if (input.canonicalUrl) return input.canonicalUrl;
+  if (!input.requestOrigin || !input.requestPath) return null;
+  try {
+    const origin = new URL(input.requestOrigin);
+    if (origin.protocol !== "http:" && origin.protocol !== "https:") return null;
+    const canonical = new URL(input.requestPath, origin);
+    return canonical.origin === origin.origin ? canonical.href : null;
+  } catch {
+    return null;
+  }
+};
+
 const jsonResponse = (payload: unknown, status = 200) =>
   new Response(JSON.stringify(payload), {
     status,
@@ -167,7 +184,7 @@ const renderPublicPageHtmlInternal = async (
     preview: options?.preview ?? false,
     breakpoint: (previewDevice ?? "desktop") as PageBreakpoint,
     contentRoutes,
-    siteLocale: typeof siteLocale === "string" ? siteLocale : null,
+    siteLocale,
     runtimeSearchParams: options?.runtimeSearchParams,
   });
 
@@ -339,6 +356,7 @@ const renderEntryDetailHtml = async (
     contentRoutes?: ContentRouteSetting[];
     runtimeSearchParams?: URLSearchParams;
     requestPath?: string | null;
+    requestOrigin?: string | null;
   }
 ): Promise<PublicHtmlRenderResult | string | null> => {
   const routeParam = options?.routeParam ?? "slug";
@@ -510,7 +528,11 @@ const renderEntryDetailHtml = async (
         metaDescription: detailPage.document.seo?.descriptionField
           ? detailSeo.metaDescription
           : resolvedSeo.description,
-        canonicalUrl: resolvedSeo.canonicalUrl,
+        canonicalUrl: resolveRequestCanonicalUrl({
+          canonicalUrl: resolvedSeo.canonicalUrl,
+          requestOrigin: options?.requestOrigin,
+          requestPath: options?.requestPath,
+        }),
         robots: resolvedSeo.robots,
         imageUrl: detailSeo.imageUrl,
         responsiveCss,
@@ -894,6 +916,7 @@ export async function handlePublicRequest(req: Request) {
       contentRoutes,
       runtimeSearchParams: url.searchParams,
       requestPath: slugPath,
+      requestOrigin: url.origin,
     });
     if (!detailHtml) return new Response("Not Found", { status: 404 });
     const html = typeof detailHtml === "string" ? detailHtml : detailHtml.html;

@@ -19,6 +19,35 @@ test("normalizeContentRoutes normalizes paths and defaults enabled", () => {
   expect(routes[0]?.detailPageId).toBe("4dd7f4d4-48d8-53f7-a9e6-0d01f6b89e6c");
 });
 
+test("normalizeContentRoutes round-trips the Projekty Domów route exactly", () => {
+  const routes = normalizeContentRoutes([
+    {
+      type: "house-project",
+      listPath: "/projekty",
+      detailPath: "/projekty/:slug",
+      enabled: true,
+      detailPageId: "00000000-0000-4000-8000-000000000548",
+    },
+  ]);
+
+  expect(routes).toEqual([
+    {
+      type: "house-project",
+      listPath: "/projekty",
+      detailPath: "/projekty/:slug",
+      enabled: true,
+      detailPageId: "00000000-0000-4000-8000-000000000548",
+    },
+  ]);
+  expect(Object.keys(routes[0] ?? {})).toEqual([
+    "type",
+    "listPath",
+    "detailPath",
+    "enabled",
+    "detailPageId",
+  ]);
+});
+
 test.each(["unexpected", "__proto__", "prototype", "constructor"])(
   "normalizeContentRoutes rejects exact unknown own key %s",
   (key) => {

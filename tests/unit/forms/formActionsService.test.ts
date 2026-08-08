@@ -38,64 +38,106 @@ const cleanupForm = async (formId: string) => {
   await db.delete(forms).where(eq(forms.id, formId));
 };
 
-testIfDb("setFormActions stores normalized ordered actions", async () => {
-  const form = await createForm({ name: `Automation test ${crypto.randomUUID()}` });
+testIfDb(
+  "setFormActions stores normalized ordered actions",
+  async () => {
+    const form = await createForm({ name: `Automation test ${crypto.randomUUID()}` });
 
-  try {
-    await setFormActions(form.id, [
-      {
-        type: "redirect",
-        label: "Redirect",
-        config: { url: "/thank-you" },
-        orderIndex: 2,
-      },
-      {
-        type: "success_message",
-        label: "Success message",
-        config: { message: "Thanks" },
-        orderIndex: 0,
-      },
+    try {
+      await setFormActions(form.id, [
+        {
+          type: "redirect",
+          label: "Redirect",
+          config: { url: "/thank-you" },
+          orderIndex: 2,
+        },
+        {
+          type: "success_message",
+          label: "Success message",
+          config: { message: "Thanks" },
+          orderIndex: 0,
+        },
+      ]);
+
+      const rows = await listFormActions(form.id);
+      expect(rows).toHaveLength(2);
+      expect(rows[0]?.type).toBe("success_message");
+      expect(rows[0]?.orderIndex).toBe(0);
+      expect(rows[1]?.type).toBe("redirect");
+      expect(rows[1]?.orderIndex).toBe(1);
+    } finally {
+      await cleanupForm(form.id);
+    }
+  },
+  360_000
+);
+
+testIfDb(
+  "createFormActionRun persists run and listFormActionRuns returns it",
+  async () => {
+    const form = await createForm({ name: `Action runs ${crypto.randomUUID()}` });
+
+    try {
+      const [action] = await setFormActions(form.id, [
+        {
+          type: "success_message",
+          config: { message: "Thanks" },
+        },
+      ]);
+
+      await createFormActionRun({
+        formId: form.id,
+        actionId: action?.id,
+        actionType: "success_message",
+        actionLabel: "Success message",
+        status: "success",
+        actionCondition: { operator: "always" },
+        actionConfig: { message: "Thanks" },
+        submissionPayload: { email: "lead@example.com" },
+        responsePayload: { delivered: true },
+      });
+
+      const runs = await listFormActionRuns(form.id);
+      expect(runs).toHaveLength(1);
+      expect(runs[0]?.status).toBe("success");
+      expect(runs[0]?.responsePayload).toEqual({ delivered: true });
+    } finally {
+      await cleanupForm(form.id);
+    }
+  },
+  360_000
+);
+
+testIfDb(
+  "createFormActionRun rejects a missing or cross-form action before insert",
+  async () => {
+    const form = await createForm({ name: `Action owner ${crypto.randomUUID()}` });
+    const otherForm = await createForm({ name: `Other action owner ${crypto.randomUUID()}` });
+    const [otherAction] = await setFormActions(otherForm.id, [
+      { type: "success_message", config: { message: "Thanks" } },
     ]);
-
-    const rows = await listFormActions(form.id);
-    expect(rows).toHaveLength(2);
-    expect(rows[0]?.type).toBe("success_message");
-    expect(rows[0]?.orderIndex).toBe(0);
-    expect(rows[1]?.type).toBe("redirect");
-    expect(rows[1]?.orderIndex).toBe(1);
-  } finally {
-    await cleanupForm(form.id);
-  }
-}, 360_000);
-
-testIfDb("createFormActionRun persists run and listFormActionRuns returns it", async () => {
-  const form = await createForm({ name: `Action runs ${crypto.randomUUID()}` });
-
-  try {
-    const [action] = await setFormActions(form.id, [
-      {
-        type: "success_message",
-        config: { message: "Thanks" },
-      },
-    ]);
-
-    await createFormActionRun({
+    const input = {
       formId: form.id,
-      actionId: action?.id,
-      actionType: "success_message",
+      actionType: "success_message" as const,
       actionLabel: "Success message",
-      status: "success",
-      actionCondition: { operator: "always" },
+      status: "success" as const,
+      actionCondition: { operator: "always" as const },
       actionConfig: { message: "Thanks" },
       submissionPayload: { email: "lead@example.com" },
-      responsePayload: { delivered: true },
-    });
+    };
 
-    const runs = await listFormActionRuns(form.id);
-    expect(runs).toHaveLength(1);
-    expect(runs[0]?.status).toBe("success");
-    expect(runs[0]?.responsePayload).toEqual({ delivered: true });
-  } finally {
-    await cleanupForm(form.id);
-  }
-}, 360_000);
+    try {
+      await expect(
+        createFormActionRun({ ...input, actionId: crypto.randomUUID() })
+      ).rejects.toThrow("form_action_not_found");
+      await expect(createFormActionRun({ ...input, actionId: otherAction?.id })).rejects.toThrow(
+        "form_action_not_found"
+      );
+      expect(await listFormActionRuns(form.id)).toHaveLength(0);
+    } finally {
+      await cleanupForm(form.id);
+      await cleanupForm(otherForm.id);
+    }
+  },
+  360_000
+);

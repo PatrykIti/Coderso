@@ -78,7 +78,7 @@ Reusable local runtime smokes use one strict entry point:
 
 ```bash
 bun scripts/runtime-smoke.ts run \
-  --suite <task-540|widget-contract|production-boundary> \
+  --suite <task-540|task-547|widget-contract|production-boundary> \
   --profile <fast|certification> \
   --session <task-scoped-name>
 ```
@@ -107,6 +107,11 @@ The current adapters are:
   the persistent worker and fails closed on ownership drift. All operations are
   native, statically registered and persistent/batched; no workflow source-code
   executor remains.
+- `task-547`: the complete 18-scenario Full Site package and installed
+  `projekty-domow` proof. It uses the shared supervised developer host,
+  persistent worker bridge, segmented Playwright transport, transactional
+  cleanup, exact observation manifest, and the same scenario descriptors in
+  `fast` and `certification` profiles.
 - `widget-contract`: a focused `gallery-mosaic` adapter over the retained
   widget contract harness plus a fresh public browser error probe.
 - `production-boundary`: a certification-only production build/server probe

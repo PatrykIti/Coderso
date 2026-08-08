@@ -13,6 +13,7 @@ import {
 import { MAX_BROWSER_RUN_CODE_ARG_BYTES } from "../../../scripts/runtime-smoke/browser/contracts";
 import { splitMaterializedSegment } from "../../../scripts/runtime-smoke/browser/segment-compiler";
 import { successFrame } from "../../../scripts/runtime-smoke/browser/protocol";
+import { task540BrowserSegmentIds } from "../../../scripts/runtime-smoke/adapters/task-540/suite/browser/native-browser";
 
 test("TASK-540 native manifest compiles to exact 47 batches plus 28 standalone dispatches", () => {
   const plan = buildTask540NativePlan({ nonce: "0123456789ab" }) as Task540NativePlan;
@@ -77,6 +78,9 @@ test("TASK-540 native manifest compiles to exact 47 batches plus 28 standalone d
   );
   expect(partitions.length).toBeGreaterThan(1);
   expect(partitions.flatMap(({ actionIds }) => actionIds)).toEqual(oversized.actionIds);
+  const allowedSegmentIds = new Set(task540BrowserSegmentIds(plan));
+  expect(allowedSegmentIds.size).toBe(467);
+  expect(partitions.every(({ segmentId }) => allowedSegmentIds.has(segmentId))).toBe(true);
   let offset = 0;
   for (const partition of partitions) {
     const actions = materialized.slice(offset, offset + partition.actionIds.length);

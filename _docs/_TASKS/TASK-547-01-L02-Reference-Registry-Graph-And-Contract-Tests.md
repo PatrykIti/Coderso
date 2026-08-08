@@ -6,9 +6,10 @@
 **Category:** Solution Kits / Reference Graph
 **Estimated Effort:** Medium
 **Dependencies:** TASK-547-01-L01
-**Status:** 🚧 In Progress
-**Reopened:** 2026-07-23 — implementation remains present; fresh final audit and
-validation evidence are pending after drift remediation.
+**Status:** ✅ Done
+**Completed:** 2026-08-08
+**Validation:** Dependency-shaped contract gates and final repository checks passed;
+the TASK-547 certification smoke completed 18/18 with cleanup on 2026-08-08.
 
 ## Overview
 
@@ -961,7 +962,7 @@ cases/builders. Each four `.test.ts` files must run independently.
 
 - [x] Implement closed registry/ref path table and DAG planner.
 - [x] Add the original `tests/vitest/kits/full-site-package-references.test.ts`.
-- [ ] Remove the forbidden `menu.desired.document.items` registry row and
+- [x] Remove the forbidden `menu.desired.document.items` registry row and
   rebaseline its edge/freeze test; implement recursive Page/Page Template
   base/responsive/native-slot traversal with 4/24 reject boundaries; correct
   discriminator/private presence/ref-key coverage, retire `isPackageRef`, and

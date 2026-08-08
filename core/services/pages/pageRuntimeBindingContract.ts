@@ -145,8 +145,8 @@ export type PreparePageRuntimeOptions = {
   preview: boolean;
   breakpoint: PageBreakpoint;
   contentRoutes: ContentRouteSetting[];
-  /** Optional validated site locale; absence preserves legacy listing copy. */
-  siteLocale?: string | null;
+  /** Raw optional site locale; the public-copy resolver owns sink-time validation. */
+  siteLocale?: unknown;
   runtimeSearchParams?: URLSearchParams;
   listingRuntimeAliasesByQueryId?: Record<string, ListingRuntimeAliasMap>;
 };
@@ -240,6 +240,10 @@ export const mapPageCollectionBlockToContentListData = (block: PageBlockV2): Con
       ...contentListDefaults.pagination,
       mode: paginationMode,
       pageSize,
+    },
+    fields: {
+      ...contentListDefaults.fields,
+      ...(typeof block.props.showCta === "boolean" ? { showCta: block.props.showCta } : {}),
     },
   });
 };

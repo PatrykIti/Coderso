@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { planFullSiteInstall } from "../../../core/services/kits/fullSiteInstallPlanner";
+import {
+  buildReferencePlan,
+  type PlannedPackageResource,
+} from "../../../core/services/kits/fullSitePackage/referenceGraph";
+import { planFullSiteInstall as planFullSiteInstallWithSnapshot } from "../../../core/services/kits/fullSiteInstallPlanner";
 import {
   buildFullSiteRollbackActionV1,
   readFullSiteRollbackActionV1,
@@ -9,6 +13,7 @@ import type {
   CurrentResourceState,
   FullSiteInstallLedgerItem,
   FullSiteInstallLedgerPort,
+  FullSiteCurrentResourceResolver,
   FullSitePlanningDesiredNormalizer,
   FullSiteResourceIdentity,
   ManagedResourceEvidence,
@@ -19,6 +24,7 @@ import {
   type FullSitePackageResources,
   type FullSitePackageV1,
   type JsonObject,
+  type ResourceSeed,
 } from "../../../core/services/kits/fullSitePackage/types";
 
 const resources = (): FullSitePackageResources => ({
@@ -56,15 +62,51 @@ const packageFixture = (): FullSitePackageV1 => {
 };
 
 const fakeLedger = (evidence: Map<string, ManagedResourceEvidence>): FullSiteInstallLedgerPort => ({
+  withPackageLock: async (_reservation, execute) =>
+    execute({ intent: "apply", ownerRunId: "run-id", resumePhase: "reserved" }),
   createRun: async () => ({ id: "run-id" }),
   recordItem: async () => undefined,
   finalizeRun: async () => undefined,
   getRun: async () => null,
   listItems: async () => [],
+  listRawItems: async () => [],
+  initializeReservedRun: async () => ({ id: "run-id" }),
+  finalizeOwnedRun: async () => ({ outcome: "desired_terminal" }),
   createRollbackRun: async () => ({ id: "rollback-id" }),
   hasSuccessfulRollback: async () => false,
   findManagedResourceEvidence: async ({ kind, key }) => evidence.get(`${kind}:${key}`) ?? null,
 });
+
+type LegacyPlannerTestDeps = Readonly<{
+  ledger: Pick<FullSiteInstallLedgerPort, "findManagedResourceEvidence">;
+  resolveCurrentResource: FullSiteCurrentResourceResolver;
+  normalizeDesired?: FullSitePlanningDesiredNormalizer;
+  allowSettingTakeover?: boolean;
+}>;
+
+const planFullSiteInstall = (pkg: FullSitePackageV1, deps: LegacyPlannerTestDeps) =>
+  planFullSiteInstallWithSnapshot(pkg, {
+    allowSettingTakeover: deps.allowSettingTakeover,
+    normalizeDesired: deps.normalizeDesired,
+    loadPlanningSnapshot: async (planned) =>
+      Promise.all(
+        planned.map(async (resource) => {
+          const [candidate, current] = await Promise.all([
+            deps.ledger.findManagedResourceEvidence({
+              packageKey: pkg.key,
+              kind: resource.kind,
+              key: resource.key,
+            }),
+            deps.resolveCurrentResource(resource.kind, resource.seed as unknown as ResourceSeed),
+          ]);
+          const evidence =
+            candidate?.successful === true && candidate.rolledBack === false
+              ? { runId: candidate.runId, resourceId: candidate.resourceId }
+              : null;
+          return { identity: resource.identity, evidence, current };
+        })
+      ),
+  });
 
 const identityNormalizer: FullSitePlanningDesiredNormalizer = async ({ desired }) => desired;
 
@@ -607,7 +649,8 @@ describe("full-site install planner", () => {
     await expect(
       planFullSiteInstall(packageFixture(), {
         ledger: fakeLedger(evidence),
-        normalizeDesired: async () => {
+        normalizeDesired: async ({ kind, desired }) => {
+          if (kind !== "content_entry") return desired;
           normalizationCalls += 1;
           throw new Error("native_entry_validation_should_not_run");
         },
@@ -766,20 +809,23 @@ describe("full-site install planner", () => {
       status: "published",
     });
     expect(plan.operations.map((item) => item.operation)).toEqual(["create", "update"]);
-    expect(plan.operations[1]?.desired).toBe(originalDesired);
+    expect(pkg.resources.entries[0]?.desired).toBe(originalDesired);
+    expect(plan.operations[1]?.desired).not.toBe(originalDesired);
     expect(plan.operations[1]?.desired).toEqual({
       contentTypeId: { ref: "content_type", key: "project" },
       status: "published",
     });
   });
 
-  it("keeps the planner Bun-free and performs no ledger writes", async () => {
-    let reads = 0;
+  it("loads one ordered snapshot and performs no ledger writes", async () => {
+    let snapshotLoads = 0;
     const writeCounts = {
       withPackageLock: 0,
       createRun: 0,
       recordItem: 0,
       finalizeRun: 0,
+      initializeReservedRun: 0,
+      finalizeOwnedRun: 0,
       patchRunMetadata: 0,
       createRollbackRun: 0,
       claimRollbackRun: 0,
@@ -796,26 +842,61 @@ describe("full-site install planner", () => {
       getRun: async () => null,
       patchRunMetadata: async () => rejectPlannerWrite("patchRunMetadata"),
       listItems: async () => [],
+      listRawItems: async () => [],
+      initializeReservedRun: async () => rejectPlannerWrite("initializeReservedRun"),
+      finalizeOwnedRun: async () => rejectPlannerWrite("finalizeOwnedRun"),
       createRollbackRun: async () => rejectPlannerWrite("createRollbackRun"),
       claimRollbackRun: async () => rejectPlannerWrite("claimRollbackRun"),
       hasSuccessfulRollback: async () => false,
-      findManagedResourceEvidence: async () => {
-        reads += 1;
-        return null;
+      findManagedResourceEvidence: async () => null,
+    };
+    const deps = {
+      ledger,
+      loadPlanningSnapshot: async (planned: readonly PlannedPackageResource[]) => {
+        snapshotLoads += 1;
+        return planned.map((resource) => ({
+          identity: resource.identity,
+          evidence: null,
+          current: null,
+        }));
       },
     };
-    const plan = await planFullSiteInstall(packageFixture(), {
-      ledger,
-      resolveCurrentResource: async () => null,
-    });
-    expect(reads).toBe(plan.operations.length);
+    const plan = await planFullSiteInstallWithSnapshot(packageFixture(), deps);
+    expect(snapshotLoads).toBe(1);
+    expect(plan.operations.map((item) => item.identity)).toEqual([
+      "content_type:project",
+      "content_entry:aurora",
+    ]);
     expect(writeCounts.withPackageLock).toBe(0);
     expect(writeCounts.createRun).toBe(0);
     expect(writeCounts.recordItem).toBe(0);
     expect(writeCounts.finalizeRun).toBe(0);
+    expect(writeCounts.initializeReservedRun).toBe(0);
+    expect(writeCounts.finalizeOwnedRun).toBe(0);
     expect(writeCounts.patchRunMetadata).toBe(0);
     expect(writeCounts.createRollbackRun).toBe(0);
     expect(writeCounts.claimRollbackRun).toBe(0);
     expect(Object.values(writeCounts).reduce((sum, count) => sum + count, 0)).toBe(0);
+  });
+
+  it("consumes the supplied frozen reference plan without replacing its identity", async () => {
+    const pkg = packageFixture();
+    const referencePlan = buildReferencePlan(pkg);
+    let receivedPlan: readonly unknown[] | null = null;
+
+    const plan = await planFullSiteInstallWithSnapshot(pkg, referencePlan, {
+      loadPlanningSnapshot: async (planned) => {
+        receivedPlan = planned;
+        return planned.map((resource) => ({
+          identity: resource.identity,
+          evidence: null,
+          current: null,
+        }));
+      },
+    });
+
+    expect(receivedPlan).toBe(referencePlan);
+    expect(Object.isFrozen(referencePlan)).toBe(true);
+    expect(plan.operations).toHaveLength(2);
   });
 });

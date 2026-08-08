@@ -601,14 +601,6 @@ export function FormRuntimePreviewDialog({
                   </div>
                 )}
 
-                {t.submit.supportingText === undefined ? null : (
-                  <p
-                    data-form-submit-supporting-text="true"
-                    className={cn("text-xs", helperColorClass)}
-                  >
-                    {t.submit.supportingText}
-                  </p>
-                )}
                 <div className="flex flex-wrap justify-between gap-2 border-t border-border/60 pt-4">
                   <div className="flex gap-2">
                     {settings.layoutMode === "multi_step" ? (
@@ -635,6 +627,14 @@ export function FormRuntimePreviewDialog({
                     {isSubmitting ? "Submitting..." : submitLabel}
                   </Button>
                 </div>
+                {t.submit.supportingText === undefined ? null : (
+                  <p
+                    data-form-submit-supporting-text="true"
+                    className={cn("text-xs", helperColorClass)}
+                  >
+                    {t.submit.supportingText}
+                  </p>
+                )}
               </div>
             </div>
           </div>

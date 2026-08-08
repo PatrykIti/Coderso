@@ -584,10 +584,10 @@ export async function executeTask540PlatformAction(
       return runtimeSafeProjection({ hostReady: true });
     case "set-003-admin-health":
       return runtimeSafeProjection(
-        await boundedHealth("http://coderso-a.localhost:5173/admin/advanced/custom-screens")
+        await boundedHealth("http://127.0.0.1:5173/admin/advanced/custom-screens")
       );
     case "set-004-front-health":
-      return runtimeSafeProjection(await boundedHealth("http://coderso-a.localhost:3000/"));
+      return runtimeSafeProjection(await boundedHealth("http://127.0.0.1:3000/"));
     case "set-004a-bot-protection-preflight": {
       let response: Response;
       try {

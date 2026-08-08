@@ -2,7 +2,8 @@
 
 **Date:** 2026-08-06
 **Version:** Unreleased
-**Status:** Draft — TASK-552 reopened; not closure evidence
+**Status:** Final
+**Completed:** 2026-08-08
 **Tasks:** TASK-552, TASK-552-01, TASK-552-01-L01, TASK-552-02,
 TASK-552-02-L01, TASK-552-03, TASK-552-03-L01, TASK-552-03-L02,
 TASK-552-04, TASK-552-04-L01, TASK-552-04-L02, TASK-552-04-L03,
@@ -21,9 +22,9 @@ runtime therefore remains executable and cannot be deleted. The widget adapter
 also still spawns a 5,530-line runner with private Bun/Playwright process and
 fixed-wait loops instead of reusing the shared dispatcher end to end.
 
-Changelog 1264 is reopened as a draft. Its historical `19:38.580` run remains
-valid behavior/performance evidence for the wrapped suite, but it is not native
-migration or reclosure evidence.
+Changelog 1264 was reopened as a draft. Its historical `19:38.580` run remains
+valid behavior/performance evidence for the wrapped suite, but it is not the
+native migration or final reclosure evidence recorded below.
 
 ## Landed Baseline Retained
 
@@ -38,26 +39,26 @@ migration or reclosure evidence.
 - No product endpoint, auth/RBAC/CSRF/rate behavior, product schema, migration,
   snapshot, journal or index change; migration `0070` remains intentional.
 
-## Corrective Work Required Before Reclosure
+## Corrective Work Completed
 
-- `TASK-552-04-L01` freezes all 169 legacy paths into one exclusive source
+- `TASK-552-04-L01` froze all 169 legacy paths into one exclusive source
   manifest and relocates only its stable contract/shared partition without an
   early registered-adapter switch.
-- `TASK-552-04-L02` replaces all 57 dynamic source bodies while preserving all
+- `TASK-552-04-L02` replaced all 57 dynamic source bodies while preserving all
   160 operation IDs/alias schemas through static typed definitions on shared
   profile-scoped `WorkerPool` processes with privileged phase closure.
-- `TASK-552-04-L03` exports and adopts shared `PlaywrightCliDispatcher`,
+- `TASK-552-04-L03` exported and adopted shared `PlaywrightCliDispatcher`,
   `SupervisedServerResource` and self-registering `startSupervisedServer(...)`,
   composes and switches native TASK-540, and cohesively splits/migrates the
   complete oversized widget runner/test so TASK-540, widget, production and
   future TASK-547 consume the same wrappers.
-- `TASK-552-04-L04` ports essential tests, deletes exactly 169 old TASK-540
+- `TASK-552-04-L04` ported essential tests, deleted exactly 169 old TASK-540
   workflow modules plus obsolete workflow-only tests, documents the final
   native architecture and runs fresh fast plus certification benchmarks.
 
-## Reclosure Evidence Pending
+## Final Reclosure Evidence
 
-This entry returns to final/indexed status only when the final tree proves:
+The final tree proves:
 
 - zero executable imports/requires/subprocess paths into the deleted TASK-540
   workflow runtime;
@@ -69,3 +70,14 @@ This entry returns to final/indexed status only when the final tree proves:
   zero console/page errors and complete cleanup in both profiles;
 - focused/full runtime-smoke tests, static checks, line counts, task graph and
   documentation gates green.
+
+The final native TASK-540 `fast` profile passed in `349.437s` (`5:49.437`),
+and `certification` passed in `682.228s` (`11:22.228`). Both retained all seven
+scenarios, 496 logical actions, 13 PNG paths, zero console/page errors, two
+repository snapshots, 149 Playwright run-code dispatches and complete
+60-receipt cleanup. Fast restored the temporary auth-window setting; the
+certification profile left the production setting unchanged. Against the
+comparable historical wrapped-fast `1178.580s`, the native run is `70.35%`
+shorter (`3.373x`). The 164-test runtime-smoke lane (6,760 assertions),
+repo-wide TypeScript, diff check, zero-legacy inventory and touched-file
+1,000-line gate passed. No database migration or product API change was needed.

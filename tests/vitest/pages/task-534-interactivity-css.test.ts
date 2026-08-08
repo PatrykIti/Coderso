@@ -53,6 +53,16 @@ describe("PAGE_INTERACTIVITY_CSS (TASK-534)", () => {
     expect(guarded).toContain("transition:transform");
   });
 
+  test("switcher tabs expose pointer and keyboard effects without violating reduced motion", () => {
+    expect(css).toContain(
+      "[data-switcher] [data-switcher-tab]:focus-visible{outline:2px solid var(--primary);outline-offset:2px}"
+    );
+    expect(css).toContain("[data-switcher] [data-switcher-tab]:hover{transform:translateY(-2px)}");
+    expect(css).toContain(
+      "@media (prefers-reduced-motion: reduce){[data-switcher] [data-switcher-tab]{transform:none}}"
+    );
+  });
+
   test("uses var(--primary) design token, not author input; contains no ${} interpolation or url()", () => {
     expect(css).toContain("var(--primary)");
     expect(css.includes("${")).toBe(false);

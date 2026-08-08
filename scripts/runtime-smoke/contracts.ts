@@ -1,6 +1,11 @@
 import { isAbsolute, relative, resolve } from "node:path";
 
-export const SUITE_IDS = ["task-540", "widget-contract", "production-boundary"] as const;
+export const SUITE_IDS = [
+  "task-540",
+  "task-547",
+  "widget-contract",
+  "production-boundary",
+] as const;
 export const PROFILE_IDS = ["fast", "certification"] as const;
 
 export type SmokeSuiteId = (typeof SUITE_IDS)[number];

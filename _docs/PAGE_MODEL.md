@@ -386,7 +386,13 @@ Examples:
   canonical runtime tokens, e.g. `{ "rooms": "data.rooms.in", "sort":
   "__sort", "page": "__page" }`; fresh writes reject invalid names/tokens and
   canonical `lq.*` params win over aliases when both are present.
-- `form`: `formId`, `title`
+- `form`: `formId`, `title`, plus present-only presentation props
+  `textareaRows`, `showSelectPrompt`, `loadingLabel`, `successBehavior`.
+  `textareaRows` is bounded by the shared Form Embed limits;
+  `successBehavior` accepts only `show-message-hide-form` or
+  `show-message-keep-form`. These four presentation props are base-only:
+  fresh responsive overrides reject them, absence emits no normalized key,
+  and legacy documents retain their existing render bytes/default behavior.
 - `list`: `items`, `ordered`
 - `columns`: `count`, `gap`, `distribution`
 - `group`: `direction`, `wrap`, `gap`
@@ -478,7 +484,12 @@ Runtime-renderable and insertable are related but not identical states:
   panel ships a `formId` combobox (dynamic `optionsSource: "forms"` resolved
   by the editor shell through `listFormsCached()`, with an explicit "None" row
   for the nullable schema and a dangling-value marker for deleted forms) plus
-  a `title` text control. The editor canvas renders the form block through
+  a `title` text control. Base-only presentation controls configure textarea
+  rows, whether select fields render a blank prompt, the pending/loading label,
+  and keep-form versus hide-form success behavior. The editor canvas and public
+  runtime consume the same normalized mapping; these values are not responsive
+  overrides and do not duplicate Form resource settings. The editor canvas
+  renders the form block through
   the shared renderer in `layoutMode: "canvas-device"` as an inert preview
   (disabled fieldset, pointer events off, no submission nonce) fed by
   `pageEditorFormPreview.ts` from cached admin form details; the public
@@ -1450,7 +1461,12 @@ stays green. Its N labelled panels live in SIX new `panel:1..panel:6`
 validation read `pageBlockCapabilities[type].slots`). Props: `variant`
 (`normalizeEnum` fail-closed), `activeIndex` (clamped), and up to six free-text tab
 `{label}` records (rendered as escaped React TEXT nodes — never
-`dangerouslySetInnerHTML`). The renderer emits a real `role="tablist"` with N
+`dangerouslySetInnerHTML`). Optional base-only `ariaLabel` is present-only,
+trimmed, bounded to 160 characters, rejected when blank/wrong-type/overlong on
+fresh writes, and never seeded into defaults or responsive overrides. Its editor
+control is the non-responsive `Tab list label`; the renderer uses the authored
+value as the tablist accessible name and otherwise retains the existing generic
+fallback without adding a stored key. The renderer emits a real `role="tablist"` with N
 `role="tab"` (roving `tabindex`, `aria-selected`, `aria-controls`) and N
 `role="tabpanel"` (`aria-labelledby`, resting `hidden` on inactive panels for no-JS
 progressive enhancement). The runtime clause toggles the active panel on click and

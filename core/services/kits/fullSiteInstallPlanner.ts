@@ -1,14 +1,18 @@
 import { isDeepStrictEqual } from "node:util";
 
-import { buildReferencePlan } from "./fullSitePackage/referenceGraph";
-import type { FullSitePackageV1, JsonObject, JsonValue } from "./fullSitePackage/types";
+import {
+  buildReferencePlan,
+  resolvePlannedPackageResourceRefs,
+  type PlannedPackageResource,
+} from "./fullSitePackage/referenceGraph";
+import type { FullSitePackageV1, JsonObject } from "./fullSitePackage/types";
 import type {
-  CurrentResourceState,
-  FullSiteCurrentResourceResolver,
-  FullSiteInstallLedgerPort,
   FullSiteInstallPlan,
   FullSiteInstallPlanItem,
   FullSitePlanningDesiredNormalizer,
+  FullSitePlanningSnapshotLoader,
+  FullSitePlanningSnapshotRow,
+  FullSiteResourceIdentity,
 } from "./fullSiteInstallTypes";
 
 const PLACEHOLDER_ID_PREFIX = "00000000-0000-4000-8000-";
@@ -25,64 +29,55 @@ export class FullSiteInstallPlannerError extends Error {
   }
 }
 
-export type FullSiteInstallPlannerDeps = {
-  ledger: FullSiteInstallLedgerPort;
-  resolveCurrentResource: FullSiteCurrentResourceResolver;
+export type FullSiteInstallPlannerDeps = Readonly<{
+  loadPlanningSnapshot: FullSitePlanningSnapshotLoader;
   normalizeDesired?: FullSitePlanningDesiredNormalizer;
   allowSettingTakeover?: boolean;
+}>;
+
+const assertExactPlanningSnapshot = (
+  resources: readonly PlannedPackageResource[],
+  rows: readonly FullSitePlanningSnapshotRow[]
+): readonly FullSitePlanningSnapshotRow[] => {
+  if (!Array.isArray(rows) || rows.length !== resources.length) {
+    throw new FullSiteInstallPlannerError("site_package_invalid", "planning_snapshot");
+  }
+  const identities = new Set<FullSiteResourceIdentity>();
+  for (let index = 0; index < resources.length; index += 1) {
+    const resource = resources[index];
+    const row = rows[index];
+    if (
+      !row ||
+      row.identity !== resource.identity ||
+      identities.has(row.identity) ||
+      (row.current !== null &&
+        (typeof row.current.id !== "string" ||
+          !row.current.id ||
+          !row.current.desired ||
+          Array.isArray(row.current.desired))) ||
+      (row.evidence !== null &&
+        (typeof row.evidence.runId !== "string" ||
+          !row.evidence.runId ||
+          typeof row.evidence.resourceId !== "string" ||
+          !row.evidence.resourceId))
+    ) {
+      throw new FullSiteInstallPlannerError("site_package_invalid", resource.identity);
+    }
+    identities.add(row.identity);
+  }
+  return rows;
 };
 
-type PlanningRefResolution = {
-  value: JsonValue;
-  referencesCreatedResource: boolean;
-};
-
-const resolvePlanningRefs = (
-  value: JsonValue,
-  resolvedIds: ReadonlyMap<string, string>,
-  createdResourceIdentities: ReadonlySet<string>,
-  identity: string
-): PlanningRefResolution => {
-  if (Array.isArray(value)) {
-    const resolved = value.map((item) =>
-      resolvePlanningRefs(item, resolvedIds, createdResourceIdentities, identity)
-    );
-    return {
-      value: resolved.map((item) => item.value),
-      referencesCreatedResource: resolved.some((item) => item.referencesCreatedResource),
-    };
-  }
-  if (value === null || typeof value !== "object") {
-    return { value, referencesCreatedResource: false };
-  }
-  const keys = Object.keys(value);
-  if (keys.length === 2 && typeof value.ref === "string" && typeof value.key === "string") {
-    const targetIdentity = `${value.ref}:${value.key}`;
-    const id = resolvedIds.get(targetIdentity);
-    if (!id) throw new FullSiteInstallPlannerError("site_package_invalid", identity);
-    return {
-      value: id,
-      referencesCreatedResource: createdResourceIdentities.has(targetIdentity),
-    };
-  }
-  const resolved = Object.entries(value).map(
-    ([key, child]) =>
-      [key, resolvePlanningRefs(child, resolvedIds, createdResourceIdentities, identity)] as const
-  );
-  return {
-    value: Object.fromEntries(resolved.map(([key, child]) => [key, child.value])) as JsonObject,
-    referencesCreatedResource: resolved.some(([, child]) => child.referencesCreatedResource),
-  };
-};
-
-const normalizePlanningDesired = async (input: {
-  normalizer: FullSitePlanningDesiredNormalizer | undefined;
-  kind: FullSiteInstallPlanItem["kind"];
-  key: string;
-  identity: string;
-  currentId: string;
-  desired: JsonObject;
-}): Promise<JsonObject> => {
+const normalizePlanningDesired = async (
+  input: Readonly<{
+    normalizer: FullSitePlanningDesiredNormalizer | undefined;
+    kind: FullSiteInstallPlanItem["kind"];
+    key: string;
+    identity: FullSiteResourceIdentity;
+    currentId: string;
+    desired: JsonObject;
+  }>
+): Promise<JsonObject> => {
   if (!input.normalizer) {
     throw new FullSiteInstallPlannerError("site_package_invalid", input.identity);
   }
@@ -102,77 +97,44 @@ const normalizePlanningDesired = async (input: {
   }
 };
 
-export const planFullSiteInstall = async (
+const rawDesired = (resource: PlannedPackageResource): JsonObject =>
+  resource.seed.desired as unknown as JsonObject;
+
+const buildOperations = async (
   pkg: FullSitePackageV1,
+  ordered: readonly PlannedPackageResource[],
+  rows: readonly FullSitePlanningSnapshotRow[],
   deps: FullSiteInstallPlannerDeps
 ): Promise<FullSiteInstallPlan> => {
-  const ordered = buildReferencePlan(pkg);
-  const operations: FullSiteInstallPlanItem[] = [];
-  const evidenceByIdentity = new Map(
-    await Promise.all(
-      ordered.map(
-        async (resource) =>
-          [
-            resource.identity,
-            await deps.ledger.findManagedResourceEvidence({
-              packageKey: pkg.key,
-              kind: resource.kind,
-              key: resource.key,
-            }),
-          ] as const
-      )
-    )
-  );
-  const inspected: Array<{
-    resource: (typeof ordered)[number];
-    current: CurrentResourceState | null;
-    managedRunId: string | null;
-  }> = [];
-  const resolvedIds = new Map<string, string>();
-  const createdResourceIdentities = new Set<string>();
+  const resolvedIds = new Map<FullSiteResourceIdentity, string>();
+  const createdResourceIdentities = new Set<FullSiteResourceIdentity>();
 
-  for (const [index, resource] of ordered.entries()) {
-    const evidence = evidenceByIdentity.get(resource.identity) ?? null;
-    const inspectionSeed = {
-      key: resource.seed.key,
-      desired: resolvePlanningRefs(
-        resource.seed.desired,
-        resolvedIds,
-        createdResourceIdentities,
-        resource.identity
-      ).value as JsonObject,
-    };
-    const current = await deps.resolveCurrentResource(
-      resource.kind,
-      inspectionSeed,
-      undefined,
-      evidence
-    );
-    const managedRunId =
-      current &&
-      evidence?.successful === true &&
-      evidence.rolledBack === false &&
-      evidence.resourceId === current.id
-        ? evidence.runId
-        : null;
-    inspected.push({ resource, current, managedRunId });
+  for (let index = 0; index < ordered.length; index += 1) {
+    const resource = ordered[index];
+    const current = rows[index].current;
+    if (!current) createdResourceIdentities.add(resource.identity);
     resolvedIds.set(
       resource.identity,
       current?.id ?? `${PLACEHOLDER_ID_PREFIX}${String(index + 1).padStart(12, "0")}`
     );
-    if (!current) createdResourceIdentities.add(resource.identity);
-  }
-  const unmanaged = inspected.find(
-    ({ resource, current, managedRunId }) =>
-      current !== null &&
-      managedRunId === null &&
-      (resource.kind !== "setting" || !deps.allowSettingTakeover)
-  );
-  if (unmanaged) {
-    throw new FullSiteInstallPlannerError("site_package_conflict", unmanaged.resource.identity);
   }
 
-  for (const [position, { resource, current, managedRunId }] of inspected.entries()) {
+  const operations: FullSiteInstallPlanItem[] = [];
+  for (let position = 0; position < ordered.length; position += 1) {
+    const resource = ordered[position];
+    const row = rows[position];
+    const current = row.current;
+    const managedRunId =
+      current && row.evidence?.resourceId === current.id ? row.evidence.runId : null;
+
+    if (
+      current &&
+      managedRunId === null &&
+      (resource.kind !== "setting" || deps.allowSettingTakeover !== true)
+    ) {
+      throw new FullSiteInstallPlannerError("site_package_conflict", resource.identity);
+    }
+
     if (!current) {
       operations.push({
         position,
@@ -180,7 +142,7 @@ export const planFullSiteInstall = async (
         kind: resource.kind,
         key: resource.key,
         operation: "create",
-        desired: resource.seed.desired,
+        desired: rawDesired(resource),
         currentId: null,
         currentDesired: null,
         managedRunId: null,
@@ -189,49 +151,34 @@ export const planFullSiteInstall = async (
       continue;
     }
 
-    const refResolution = resolvePlanningRefs(
-      resource.seed.desired,
-      resolvedIds,
-      createdResourceIdentities,
-      resource.identity
-    );
+    let resolvedDesired: JsonObject;
+    try {
+      resolvedDesired = resolvePlannedPackageResourceRefs(resource, resolvedIds);
+    } catch {
+      throw new FullSiteInstallPlannerError("site_package_invalid", resource.identity);
+    }
     const normalizedDesired = await normalizePlanningDesired({
       normalizer: deps.normalizeDesired,
       kind: resource.kind,
       key: resource.key,
       identity: resource.identity,
       currentId: current.id,
-      desired: refResolution.value as JsonObject,
+      desired: resolvedDesired,
     });
-    const operation =
-      refResolution.referencesCreatedResource ||
-      !isDeepStrictEqual(current.desired, normalizedDesired)
-        ? "update"
-        : "noop";
-
-    if (resource.kind === "setting") {
-      operations.push({
-        position,
-        identity: resource.identity,
-        kind: resource.kind,
-        key: resource.key,
-        operation,
-        desired: resource.seed.desired,
-        currentId: current.id,
-        currentDesired: current.desired,
-        managedRunId,
-        dependencies: resource.dependencies,
-      });
-      continue;
-    }
+    const referencesCreatedResource = resource.references.some((reference) =>
+      createdResourceIdentities.has(reference.targetIdentity)
+    );
 
     operations.push({
       position,
       identity: resource.identity,
       kind: resource.kind,
       key: resource.key,
-      operation,
-      desired: resource.seed.desired,
+      operation:
+        referencesCreatedResource || !isDeepStrictEqual(current.desired, normalizedDesired)
+          ? "update"
+          : "noop",
+      desired: rawDesired(resource),
       currentId: current.id,
       currentDesired: current.desired,
       managedRunId,
@@ -240,4 +187,27 @@ export const planFullSiteInstall = async (
   }
 
   return { packageKey: pkg.key, operations };
+};
+
+export const planFullSiteInstall: {
+  (pkg: FullSitePackageV1, deps: FullSiteInstallPlannerDeps): Promise<FullSiteInstallPlan>;
+  (
+    pkg: FullSitePackageV1,
+    referencePlan: readonly PlannedPackageResource[],
+    deps: FullSiteInstallPlannerDeps
+  ): Promise<FullSiteInstallPlan>;
+} = async (
+  pkg: FullSitePackageV1,
+  referencePlanOrDeps: readonly PlannedPackageResource[] | FullSiteInstallPlannerDeps,
+  maybeDeps?: FullSiteInstallPlannerDeps
+): Promise<FullSiteInstallPlan> => {
+  const referencePlan = maybeDeps
+    ? (referencePlanOrDeps as readonly PlannedPackageResource[])
+    : buildReferencePlan(pkg);
+  const deps = maybeDeps ?? (referencePlanOrDeps as FullSiteInstallPlannerDeps);
+  const rows = assertExactPlanningSnapshot(
+    referencePlan,
+    await deps.loadPlanningSnapshot(referencePlan)
+  );
+  return buildOperations(pkg, referencePlan, rows, deps);
 };

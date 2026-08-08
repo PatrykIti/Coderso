@@ -158,3 +158,13 @@ test("TASK-540 typed operation lane contains no executable-code transport", asyn
     await expect(access(path.join(operationRoot, "..", retired))).rejects.toThrow();
   }
 });
+
+test("TASK-540 production SEO cleanup accepts the contract's dynamic cardinality", async () => {
+  const source = await readFile(
+    path.join(root, "scripts/runtime-smoke/adapters/task-540/production-handlers.ts"),
+    "utf8"
+  );
+  expect(source).toContain("task540CleanupCardinality(resources.length)");
+  expect(source).not.toContain("resources.length !== 6");
+  expect(source).not.toContain("must own six rows");
+});

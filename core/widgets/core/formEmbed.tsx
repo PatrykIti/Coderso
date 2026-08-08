@@ -21,6 +21,7 @@ import {
   isTitleSize,
   isWidth,
   normalizeFormEmbedData,
+  resolveFormEmbedFieldPresentation,
   resolveFields,
   resolveFormEmbedRuntimeErrorMessage,
   resolveLayout,
@@ -43,12 +44,17 @@ import {
 } from "./formEmbedFields";
 
 export {
+  FORM_EMBED_LOADING_LABEL_MAX_LENGTH,
+  FORM_EMBED_SUCCESS_BEHAVIORS,
+  FORM_EMBED_TEXTAREA_ROWS_LIMITS,
   clampSavedProgressTtl,
   formEmbedDefaults,
   formEmbedSchema,
   formEmbedThemeDefaultColorValues,
   isFormEmbedThemeDefaultStyleValue,
   normalizeFormEmbedData,
+  normalizeFormEmbedFields,
+  resolveFormEmbedFieldPresentation,
   resolveFormEmbedRuntimeErrorMessage,
   resolveFormEmbedSpacing,
 } from "./formEmbedContract";
@@ -279,6 +285,7 @@ export function FormEmbedBlock({ data, variant }: { data: FormEmbedData; variant
     ...(hasInstanceStyle ? (normalizedData.style ?? {}) : {}),
   };
   const fieldsConfig = resolveFields(normalizedData.fields);
+  const fieldPresentation = resolveFormEmbedFieldPresentation(fieldsConfig);
   const navigation = resolveNavigation(normalizedData.navigation);
   const submitBehavior = resolveSubmitBehavior(normalizedData.submitBehavior);
   const fields = Array.isArray(resolved?.fields) ? resolved?.fields : [];
@@ -463,6 +470,9 @@ export function FormEmbedBlock({ data, variant }: { data: FormEmbedData; variant
 
   const showDescription = description.trim().length > 0;
   const showSuccessMessage = (normalizedData.successMessage ?? "").trim().length > 0;
+  const supportingTextIsSuccessTarget =
+    submitSupportingText !== undefined &&
+    submitBehavior.successBehavior === "show-message-keep-form";
   const formAction = buildFormAction(normalizedData.formId);
   const hasMultipleSteps = runtimeLayoutMode === "multi_step" && stepGroups.length > 1;
   const hasRuntimeFormReference = Boolean(normalizedData.formId);
@@ -609,6 +619,8 @@ export function FormEmbedBlock({ data, variant }: { data: FormEmbedData; variant
                                 borderColor: resolvedBorderColor,
                                 labelColor,
                                 helperColor,
+                                textareaRows: fieldPresentation.textareaRows,
+                                showSelectPrompt: fieldPresentation.showSelectPrompt,
                                 inputStyle: themeInputStyle,
                               })}
                             </div>
@@ -638,21 +650,14 @@ export function FormEmbedBlock({ data, variant }: { data: FormEmbedData; variant
                           borderColor: resolvedBorderColor,
                           labelColor,
                           helperColor,
+                          textareaRows: fieldPresentation.textareaRows,
+                          showSelectPrompt: fieldPresentation.showSelectPrompt,
                           inputStyle: themeInputStyle,
                         })}
                       </div>
                     ))}
                   </div>
                 )}
-                {submitSupportingText ? (
-                  <p
-                    className="text-xs"
-                    style={{ color: helperColor }}
-                    data-form-submit-supporting-text="true"
-                  >
-                    {submitSupportingText}
-                  </p>
-                ) : null}
                 <div className={joinClasses("flex", buttonAlignClassMap[layout.buttonAlignment])}>
                   {hasMultipleSteps ? (
                     <button
@@ -695,18 +700,31 @@ export function FormEmbedBlock({ data, variant }: { data: FormEmbedData; variant
                     {submitLabel}
                   </button>
                 </div>
+                {submitSupportingText ? (
+                  <p
+                    className="text-xs"
+                    style={{ color: helperColor }}
+                    data-form-submit-supporting-text="true"
+                    data-form-embed-success={supportingTextIsSuccessTarget ? "true" : undefined}
+                    aria-live={supportingTextIsSuccessTarget ? "polite" : undefined}
+                  >
+                    {submitSupportingText}
+                  </p>
+                ) : null}
               </div>
               {resolved?.botProtection?.siteKey ? (
                 <input type="hidden" name="captchaToken" value="" data-form-security-captcha="1" />
               ) : null}
-              <p
-                className="hidden text-xs text-[var(--color-text)]/65"
-                data-form-embed-success="true"
-                role="alert"
-                aria-live="polite"
-              >
-                {showSuccessMessage ? normalizedData.successMessage : ""}
-              </p>
+              {supportingTextIsSuccessTarget ? null : (
+                <p
+                  className="hidden text-xs text-[var(--color-text)]/65"
+                  data-form-embed-success="true"
+                  role="alert"
+                  aria-live="polite"
+                >
+                  {showSuccessMessage ? normalizedData.successMessage : ""}
+                </p>
+              )}
               <p
                 className="hidden text-xs text-rose-600"
                 data-form-embed-error="true"

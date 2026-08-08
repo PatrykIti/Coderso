@@ -6,9 +6,10 @@
 **Category:** Testing Infrastructure / Cleanup / Documentation / Closure
 **Estimated Effort:** Large
 **Dependencies:** TASK-552-04-L03 complete
-**Status:** 🚧 In Progress
+**Status:** ✅ Done
 **Started:** 2026-08-06
-**Changelog:** 1264 (family reclosure)
+**Completed:** 2026-08-08
+**Changelog:** 1264 (Final)
 
 ---
 
@@ -162,3 +163,35 @@ No API route changes. Deletion is bounded to the reviewed tracked manifest and
 is recoverable from git until commit. Runtime evidence is secret/PII-free,
 loopback-only and bounded; cleanup uses exact ownership identities, never broad
 database or filesystem patterns.
+
+## Completion Evidence
+
+- The reviewed legacy inventory is fully removed: zero executable `.mjs`
+  modules remain under `_docs/_workflows/task-540-smoke/`, and native graph
+  tests prove no runtime dependency on the deleted workflow.
+- Final-tree `fast` (`wf552-native-fast`) passed all seven scenarios, 496
+  logical actions, 13 PNG paths and zero console/page errors in `349.437s`
+  (`5:49.437`). It used 149 bounded `playwright-run-code` dispatches, five
+  profile workers / 31 worker requests, two repository snapshots, restored the
+  auth-window baseline, and completed 60 canonical cleanup receipts; resource
+  cleanup took `23.428s`.
+- Final-tree `certification` (`wf552-native-certification`) passed the identical
+  product contract in `682.228s` (`11:22.228`). It used the same 149 browser
+  dispatches, five workers / 29 requests, two snapshots, left the production
+  auth window unchanged, and completed 60 cleanup receipts; resource cleanup
+  took `23.792s`. Its longer duration is the expected cost of six real
+  `60s + 1s` auth-window barriers.
+- Compared with the comparable historical wrapped-fast receipt of
+  `1178.580s`, native fast is `70.35%` shorter (`3.373x` throughput speedup)
+  without removing scenarios or visible-effect assertions.
+- A real one- and two-row SEO cleanup exposed a stale exact-six assertion; the
+  production batch now enforces the existing bounded `0..6` contract. The
+  certification run also exposed a `30s` dispatcher timeout below its required
+  `61s` auth barrier; TASK-540 now owns a tested bounded `90s` process budget.
+- `bun test tests/unit/runtime-smoke` passed `164/164` tests and 6,760
+  assertions; `bun run lint:repo:types` and `git diff --check` passed. All 251
+  touched human-authored production/test files are at most 1,000 physical
+  lines (largest: 999).
+- Durable final receipts:
+  `_docs/_workflows/_smoke/task-552-task-540-native-fast-2026-08-08.md` and
+  `_docs/_workflows/_smoke/task-552-task-540-native-certification-2026-08-08.md`.

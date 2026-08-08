@@ -4,6 +4,7 @@ import { normalizeFormStatus } from "../../../core/services/forms/formStatus";
 import { normalizeSubmissionAccess } from "../../../core/services/forms/submissionAccess";
 import { normalizeFormFields } from "../../../core/services/forms/validation";
 import type { JsonObject, ResourceSeed } from "../../../core/services/kits/fullSitePackage/types";
+import { cleanJsonObject } from "../json";
 
 export const PROJECT_BRIEF_FORM_KEY = "project-brief";
 export const PROJECT_BRIEF_FORM_TITLE = "Zacznij projekt";
@@ -12,6 +13,7 @@ export const PROJECT_BRIEF_INITIAL_NOTE =
   "Odpisujemy zwykle w ciągu jednego dnia roboczego. Bez zobowiązań i bez sprzedażowej presji.";
 export const PROJECT_BRIEF_SUCCESS_MESSAGE =
   "Dziękujemy! Odezwiemy się z pierwszym pomysłem na Twój dom — do usłyszenia.";
+export const PROJECT_BRIEF_LOADING_LABEL = "Wysyłanie...";
 
 const FIELD_IDS = [
   "00000000-0000-4000-8000-000000000551",
@@ -188,7 +190,7 @@ export const normalizeProjectBriefDesired = (value: unknown): JsonObject => {
     throw new Error("project_brief_form_invalid");
   }
   record.actions.forEach(assertProjectBriefAction);
-  return {
+  return cleanJsonObject({
     name: record.name.trim(),
     slug: record.slug.trim(),
     status: normalizeFormStatus(record.status, "draft"),
@@ -199,7 +201,7 @@ export const normalizeProjectBriefDesired = (value: unknown): JsonObject => {
     settings: normalizeFormSettings(record.settings),
     fields: normalizeFormFields(record.fields as ReturnType<typeof rawFields>),
     actions: normalizeFormActionsInput(record.actions),
-  } as JsonObject;
+  });
 };
 
 export const buildProjectBriefForm = (): ResourceSeed => ({

@@ -1,7 +1,9 @@
 import { and, asc, eq, inArray, or } from "drizzle-orm";
 
 import { db } from "../../db/client";
+import { acquireNativeCmsWriterFence } from "../../db/nativeCmsWriterFence";
 import {
+  contentEntries,
   contentTaxonomies,
   contentTermAssignments,
   contentTerms,
@@ -51,6 +53,8 @@ export type EntryTaxonomyAssignments = {
 };
 
 export type TaxonomyExecutor = Pick<typeof db, "select" | "insert" | "delete">;
+
+type TaxonomyTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
 type PreparedTaxonomyTerm = Readonly<Pick<ContentTerm, "id" | "taxonomyId" | "name" | "slug">>;
 
@@ -106,6 +110,34 @@ const resolveContentTypeIdWithExecutor = async (executor: TaxonomyExecutor, iden
 const resolveContentTypeId = (identifier: string) =>
   resolveContentTypeIdWithExecutor(db, identifier);
 
+const lockContentTypeTx = async (tx: TaxonomyTransaction, typeId: string): Promise<void> => {
+  const [row] = await tx
+    .select({ id: contentTypes.id })
+    .from(contentTypes)
+    .where(eq(contentTypes.id, typeId))
+    .for("key share");
+  if (!row) throw new Error("taxonomy_not_found");
+};
+
+const lockTaxonomyContentTypeTx = async (
+  tx: TaxonomyTransaction,
+  taxonomyId: string
+): Promise<string> => {
+  const [observed] = await tx
+    .select({ typeId: contentTaxonomies.typeId })
+    .from(contentTaxonomies)
+    .where(eq(contentTaxonomies.id, taxonomyId));
+  if (!observed) throw new Error("taxonomy_not_found");
+  await lockContentTypeTx(tx, observed.typeId);
+  const [taxonomy] = await tx
+    .select({ id: contentTaxonomies.id, typeId: contentTaxonomies.typeId })
+    .from(contentTaxonomies)
+    .where(eq(contentTaxonomies.id, taxonomyId))
+    .for("key share");
+  if (!taxonomy || taxonomy.typeId !== observed.typeId) throw new Error("taxonomy_not_found");
+  return taxonomy.typeId;
+};
+
 const defaultTaxonomy = (kind: TaxonomyKind) => {
   if (kind === "category") {
     return { name: "Categories", slug: "categories" };
@@ -155,39 +187,35 @@ export async function getTaxonomyByKind(
 }
 
 export async function setTaxonomyConfig(typeId: string, config: TaxonomyConfig) {
-  const resolvedTypeId = await resolveContentTypeId(typeId);
-  if (!resolvedTypeId) throw new Error("taxonomy_not_found");
-
-  const existing = await listTaxonomies(resolvedTypeId);
-  const byKind = new Map(existing.map((item) => [item.kind, item]));
-
-  const handleKind = async (kind: TaxonomyKind, enabled?: boolean) => {
-    const current = byKind.get(kind);
-    if (enabled === undefined) return;
-    if (enabled && !current) {
-      const defaults = defaultTaxonomy(kind);
-      const [created] = await db
-        .insert(contentTaxonomies)
-        .values({
-          typeId: resolvedTypeId,
-          kind,
-          name: defaults.name,
-          slug: defaults.slug,
-        })
-        .returning();
-      if (created) byKind.set(kind, { ...created, kind });
-      return;
-    }
-    if (!enabled && current) {
-      await db.delete(contentTaxonomies).where(eq(contentTaxonomies.id, current.id));
-      byKind.delete(kind);
-    }
-  };
-
-  await handleKind("category", config.categories);
-  await handleKind("tag", config.tags);
-
-  return listTaxonomies(resolvedTypeId);
+  return db.transaction(
+    async (tx) => {
+      await acquireNativeCmsWriterFence(tx);
+      const resolvedTypeId = await resolveContentTypeIdWithExecutor(tx, typeId);
+      if (!resolvedTypeId) throw new Error("taxonomy_not_found");
+      await lockContentTypeTx(tx, resolvedTypeId);
+      const existing = await listTaxonomiesWithExecutor(tx, resolvedTypeId);
+      const byKind = new Map(existing.map((item) => [item.kind, item]));
+      const handleKind = async (kind: TaxonomyKind, enabled?: boolean) => {
+        const current = byKind.get(kind);
+        if (enabled === undefined) return;
+        if (enabled && !current) {
+          const defaults = defaultTaxonomy(kind);
+          const [created] = await tx
+            .insert(contentTaxonomies)
+            .values({ typeId: resolvedTypeId, kind, name: defaults.name, slug: defaults.slug })
+            .returning();
+          if (created) byKind.set(kind, { ...created, kind });
+        } else if (!enabled && current) {
+          await tx.delete(contentTaxonomies).where(eq(contentTaxonomies.id, current.id));
+          byKind.delete(kind);
+        }
+      };
+      await handleKind("category", config.categories);
+      await handleKind("tag", config.tags);
+      return listTaxonomiesWithExecutor(tx, resolvedTypeId);
+    },
+    { isolationLevel: "read committed" }
+  );
 }
 
 export async function listTerms(taxonomyId: string): Promise<ContentTerm[]> {
@@ -202,50 +230,64 @@ export async function createTerm(
   taxonomyId: string,
   input: { name: string; slug?: string | null }
 ) {
-  const name = normalizeString(input.name);
-  if (!name) throw new Error("term_name_required");
-  const slug = resolveSlug(name, input.slug);
-  if (!slug) throw new Error("term_slug_invalid");
-
-  const [row] = await db
-    .insert(contentTerms)
-    .values({
-      taxonomyId,
-      name,
-      slug,
-    })
-    .returning();
-  return row ?? null;
+  return db.transaction(
+    async (tx) => {
+      await acquireNativeCmsWriterFence(tx);
+      const name = normalizeString(input.name);
+      if (!name) throw new Error("term_name_required");
+      const slug = resolveSlug(name, input.slug);
+      if (!slug) throw new Error("term_slug_invalid");
+      await lockTaxonomyContentTypeTx(tx, taxonomyId);
+      const [row] = await tx.insert(contentTerms).values({ taxonomyId, name, slug }).returning();
+      return row ?? null;
+    },
+    { isolationLevel: "read committed" }
+  );
 }
 
 export async function updateTerm(
   id: string,
   input: { name?: string | null; slug?: string | null }
 ) {
-  const name = input.name ? normalizeString(input.name) : null;
-  if (input.name !== undefined && !name) {
-    throw new Error("term_name_required");
-  }
-  const slug = name ? resolveSlug(name, input.slug) : resolveSlug("", input.slug);
-  if (input.slug !== undefined && !slug) {
-    throw new Error("term_slug_invalid");
-  }
-
-  const [row] = await db
-    .update(contentTerms)
-    .set({
-      name: name ?? undefined,
-      slug: slug ?? undefined,
-      updatedAt: new Date(),
-    })
-    .where(eq(contentTerms.id, id))
-    .returning();
-  return row ?? null;
+  return db.transaction(
+    async (tx) => {
+      await acquireNativeCmsWriterFence(tx);
+      const name = input.name ? normalizeString(input.name) : null;
+      if (input.name !== undefined && !name) throw new Error("term_name_required");
+      const slug = name ? resolveSlug(name, input.slug) : resolveSlug("", input.slug);
+      if (input.slug !== undefined && !slug) throw new Error("term_slug_invalid");
+      const [observed] = await tx
+        .select({ taxonomyId: contentTerms.taxonomyId })
+        .from(contentTerms)
+        .where(eq(contentTerms.id, id));
+      if (!observed) return null;
+      await lockTaxonomyContentTypeTx(tx, observed.taxonomyId);
+      const [locked] = await tx
+        .select({ taxonomyId: contentTerms.taxonomyId })
+        .from(contentTerms)
+        .where(eq(contentTerms.id, id))
+        .for("update");
+      if (!locked || locked.taxonomyId !== observed.taxonomyId) return null;
+      const [row] = await tx
+        .update(contentTerms)
+        .set({ name: name ?? undefined, slug: slug ?? undefined, updatedAt: new Date() })
+        .where(eq(contentTerms.id, id))
+        .returning();
+      return row ?? null;
+    },
+    { isolationLevel: "read committed" }
+  );
 }
 
 export async function deleteTerm(id: string) {
-  const [row] = await db.delete(contentTerms).where(eq(contentTerms.id, id)).returning();
-  return row ?? null;
+  return db.transaction(
+    async (tx) => {
+      await acquireNativeCmsWriterFence(tx);
+      const [row] = await tx.delete(contentTerms).where(eq(contentTerms.id, id)).returning();
+      return row ?? null;
+    },
+    { isolationLevel: "read committed" }
+  );
 }
 
 export async function getTaxonomyOverview(typeId: string): Promise<TaxonomyOverview> {
@@ -461,17 +503,43 @@ export async function replaceEntryTaxonomies(
   typeIdOrSlug: string,
   input: { categoryId?: string | null; tagIds?: string[] }
 ): Promise<EntryTaxonomyAssignments> {
-  return db.transaction(async (tx) => {
-    if (input.categoryId === undefined && input.tagIds === undefined) {
-      const resolvedTypeId = await resolveContentTypeIdWithExecutor(tx, typeIdOrSlug);
-      if (!resolvedTypeId) {
-        return { category: null, tags: [] };
+  return db.transaction(
+    async (tx) => {
+      await acquireNativeCmsWriterFence(tx);
+      if (input.categoryId === undefined && input.tagIds === undefined) {
+        const resolvedTypeId = await resolveContentTypeIdWithExecutor(tx, typeIdOrSlug);
+        if (!resolvedTypeId) {
+          return { category: null, tags: [] };
+        }
       }
-    }
 
-    const plan = await prepareEntryTaxonomyMutation(tx, entryId, typeIdOrSlug, input);
-    return applyEntryTaxonomyMutation(tx, plan);
-  });
+      const plan = await prepareEntryTaxonomyMutation(tx, entryId, typeIdOrSlug, input);
+      await lockContentTypeTx(tx, plan.typeId);
+      const [entry] = await tx
+        .select({ id: contentEntries.id, typeId: contentEntries.typeId })
+        .from(contentEntries)
+        .where(eq(contentEntries.id, entryId))
+        .for("key share");
+      if (!entry || entry.typeId !== plan.typeId) throw new Error("taxonomy_not_found");
+      if (plan.assignmentTermIds.length > 0) {
+        const terms = await tx
+          .select({ id: contentTerms.id })
+          .from(contentTerms)
+          .where(inArray(contentTerms.id, [...plan.assignmentTermIds]))
+          .orderBy(asc(contentTerms.id))
+          .for("key share");
+        const expected = [...plan.assignmentTermIds].sort();
+        if (
+          terms.length !== expected.length ||
+          terms.some((term, index) => term.id !== expected[index])
+        ) {
+          throw new Error("taxonomy_term_missing");
+        }
+      }
+      return applyEntryTaxonomyMutation(tx, plan);
+    },
+    { isolationLevel: "read committed" }
+  );
 }
 
 export async function resolveEntryTagsFromTaxonomy(entryId: string, typeId: string) {

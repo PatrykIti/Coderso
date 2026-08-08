@@ -1,31 +1,43 @@
 import {
-  FULL_SITE_PACKAGE_ROOT_KEYS,
   FULL_SITE_PACKAGE_SCHEMA_VERSION,
-  FULL_SITE_PACKAGE_SETTING_ALLOWLIST,
-  DiagnosticCollector,
+  addDiagnostic,
+  assertDenseArray,
+  assertDesiredJsonDepthAndDensity,
   assertExactKeys,
   assertPackageByteSize,
   assertResourceCounts,
+  assertStrictRootKeys,
+  classifyForbiddenValue,
+  compareFullSitePackageObjectKeys,
+  compareFullSitePackageText,
+  createDiagnosticCollector,
+  isAllowedFullSitePackageSettingKey,
+  isExplicitBinaryCarrier,
+  isPrototypeSensitiveKey,
   isRecord,
-  normalizeJsonValue,
+  isSensitiveFieldKey,
   readBoundedString,
   readLocale,
   readPackageKey,
+  type DiagnosticCollector,
 } from "./schema";
 import {
   PACKAGE_LIMITS,
   PACKAGE_RESOURCE_COLLECTIONS,
   FullSitePackageError,
   type FullSitePackageCompatibility,
+  type FullSitePackageDiagnostic,
   type FullSitePackageResources,
   type FullSitePackageV1,
   type JsonObject,
+  type JsonValue,
   type ResourceSeed,
   type VerificationPlan,
   type VisualResidual,
 } from "./types";
 
 const METADATA_KEYS = new Set(["name", "locale", "description"]);
+const RESOURCE_KEYS = new Set<string>(PACKAGE_RESOURCE_COLLECTIONS);
 const SEED_KEYS = new Set(["key", "desired"]);
 const COMPATIBILITY_KEYS = new Set(["unresolvedVisuals"]);
 const RESIDUAL_KEYS = new Set([
@@ -39,17 +51,55 @@ const RESIDUAL_KEYS = new Set([
 ]);
 const IMPACT_KEYS = new Set(["functional", "accessibility", "data", "security", "testIntegrity"]);
 const VERIFICATION_KEYS = new Set(["scenarioIds"]);
+const RESIDUAL_ID_PATTERN = /^[a-z0-9](?:[a-z0-9-]{0,126}[a-z0-9])?$/;
+
+type PackageProseField =
+  | "prototypeEvidence"
+  | "cmsConstraint"
+  | "installedApproximation"
+  | "userVisibleDifference"
+  | "postInstallRemediation";
+
+const RESIDUAL_PROSE_FIELDS = Object.freeze([
+  "prototypeEvidence",
+  "cmsConstraint",
+  "installedApproximation",
+  "userVisibleDifference",
+  "postInstallRemediation",
+] as const satisfies readonly PackageProseField[]);
+
+const desiredDiagnosticPath = (collection: string, index: number): string =>
+  `$.resources.${collection}[${index}].desired.[redacted]`;
+
+const addDesiredDiagnostic = (
+  diagnostics: DiagnosticCollector<FullSitePackageDiagnostic>,
+  collection: string,
+  index: number,
+  reason: string
+): void => addDiagnostic(diagnostics, desiredDiagnosticPath(collection, index), reason);
+
+const readSafeProse = (
+  value: unknown,
+  path: string,
+  maxLength: number,
+  diagnostics: DiagnosticCollector<FullSitePackageDiagnostic>
+): string => {
+  const prose = readBoundedString(value, path, maxLength, diagnostics);
+  const reason = classifyForbiddenValue(value, { explicitBinaryCarrier: false });
+  if (reason) addDiagnostic(diagnostics, path, reason);
+  return prose;
+};
 
 const normalizeMetadata = (
   value: unknown,
-  diagnostics: DiagnosticCollector
+  diagnostics: DiagnosticCollector<FullSitePackageDiagnostic>
 ): FullSitePackageV1["metadata"] => {
   if (!isRecord(value)) {
-    diagnostics.add("$.metadata", "expected_object");
+    addDiagnostic(diagnostics, "$.metadata", "expected_object");
     return { name: "", locale: "" };
   }
   assertExactKeys(value, METADATA_KEYS, "$.metadata", diagnostics);
-  const name = readBoundedString(
+  const name = readSafeProse(
     value.name,
     "$.metadata.name",
     PACKAGE_LIMITS.metadataNameLength,
@@ -59,231 +109,348 @@ const normalizeMetadata = (
   const description =
     value.description === undefined
       ? undefined
-      : readBoundedString(
+      : readSafeProse(
           value.description,
           "$.metadata.description",
           PACKAGE_LIMITS.metadataDescriptionLength,
           diagnostics
         );
-  return { name, locale, ...(description !== undefined ? { description } : {}) };
+  return {
+    name,
+    locale,
+    ...(description === undefined ? {} : { description }),
+  };
+};
+
+type DesiredContext = Readonly<{
+  collection: string;
+  index: number;
+  explicitBinaryCarrier: boolean;
+  diagnostics: DiagnosticCollector<FullSitePackageDiagnostic>;
+}>;
+
+const normalizeDesiredJsonValue = (value: unknown, context: DesiredContext): JsonValue => {
+  const reason = classifyForbiddenValue(value, context);
+  if (reason) {
+    addDesiredDiagnostic(context.diagnostics, context.collection, context.index, reason);
+    return null;
+  }
+  if (value === null || typeof value === "boolean") return value;
+  if (typeof value === "number") {
+    if (!Number.isFinite(value)) {
+      addDesiredDiagnostic(
+        context.diagnostics,
+        context.collection,
+        context.index,
+        "non_finite_number"
+      );
+      return 0;
+    }
+    return Object.is(value, -0) ? 0 : value;
+  }
+  if (typeof value === "string") {
+    if (value.length > PACKAGE_LIMITS.stringLength) {
+      addDesiredDiagnostic(
+        context.diagnostics,
+        context.collection,
+        context.index,
+        "string_too_long"
+      );
+    }
+    return value;
+  }
+  if (Array.isArray(value)) {
+    const output: JsonValue[] = [];
+    for (let itemIndex = 0; itemIndex < value.length; itemIndex += 1) {
+      output.push(
+        Object.prototype.hasOwnProperty.call(value, itemIndex)
+          ? normalizeDesiredJsonValue(value[itemIndex], context)
+          : null
+      );
+    }
+    return output;
+  }
+  if (!isRecord(value)) {
+    addDesiredDiagnostic(context.diagnostics, context.collection, context.index, "non_json_value");
+    return null;
+  }
+  const output: JsonObject = {};
+  for (const key of Object.keys(value).sort(compareFullSitePackageObjectKeys)) {
+    if (isPrototypeSensitiveKey(key)) {
+      addDesiredDiagnostic(
+        context.diagnostics,
+        context.collection,
+        context.index,
+        "prototype_key_forbidden"
+      );
+      continue;
+    }
+    if (isSensitiveFieldKey(key)) {
+      addDesiredDiagnostic(
+        context.diagnostics,
+        context.collection,
+        context.index,
+        "secret_key_forbidden"
+      );
+      continue;
+    }
+    output[key] = normalizeDesiredJsonValue(value[key], {
+      ...context,
+      explicitBinaryCarrier: context.explicitBinaryCarrier || isExplicitBinaryCarrier(key),
+    });
+  }
+  return output;
 };
 
 const normalizeSeed = (
   value: unknown,
-  path: string,
-  diagnostics: DiagnosticCollector,
-  isSetting: boolean
-): { seed: ResourceSeed; referenceEdges: number } => {
+  collection: string,
+  index: number,
+  diagnostics: DiagnosticCollector<FullSitePackageDiagnostic>
+): ResourceSeed => {
+  const path = `$.resources.${collection}[${index}]`;
   if (!isRecord(value)) {
-    diagnostics.add(path, "expected_object");
-    return { seed: { key: "", desired: {} }, referenceEdges: 0 };
+    addDiagnostic(diagnostics, path, "expected_object");
+    return { key: "", desired: {} };
   }
   assertExactKeys(value, SEED_KEYS, path, diagnostics);
-  const key =
-    isSetting && typeof value.key === "string"
-      ? value.key
-      : readPackageKey(value.key, `${path}.key`, diagnostics);
-  if (!isRecord(value.desired)) {
-    diagnostics.add(`${path}.desired`, "expected_object");
-    return { seed: { key, desired: {} }, referenceEdges: 0 };
+  const isSetting = collection === "settings";
+  const key = isSetting
+    ? readBoundedString(value.key, `${path}.key`, PACKAGE_LIMITS.keyLength, diagnostics, {
+        trim: false,
+      })
+    : readPackageKey(value.key, `${path}.key`, diagnostics);
+  if (isSetting && !isAllowedFullSitePackageSettingKey(key)) {
+    addDiagnostic(diagnostics, `${path}.key`, "setting_forbidden");
   }
-  const normalized = normalizeJsonValue(value.desired, `${path}.desired`, diagnostics);
+  assertDesiredJsonDepthAndDensity(value.desired, diagnostics, `${path}.desired`);
+  const directDesiredReason = classifyForbiddenValue(value.desired, {
+    explicitBinaryCarrier: false,
+  });
+  if (directDesiredReason) {
+    addDesiredDiagnostic(diagnostics, collection, index, directDesiredReason);
+    return { key, desired: {} };
+  }
+  if (!isRecord(value.desired)) {
+    addDiagnostic(diagnostics, `${path}.desired`, "expected_object");
+    return { key, desired: {} };
+  }
   return {
-    seed: { key, desired: normalized.value as JsonObject },
-    referenceEdges: normalized.metrics.referenceEdges,
+    key,
+    desired: normalizeDesiredJsonValue(value.desired, {
+      collection,
+      index,
+      explicitBinaryCarrier: false,
+      diagnostics,
+    }) as JsonObject,
   };
 };
 
+const emptyResources = (): FullSitePackageResources => ({
+  contentTypes: [],
+  forms: [],
+  pageTemplates: [],
+  listingTemplates: [],
+  entries: [],
+  listingQueries: [],
+  detailPages: [],
+  pages: [],
+  menus: [],
+  settings: [],
+});
+
 const normalizeResources = (
   value: unknown,
-  diagnostics: DiagnosticCollector
-): { resources: FullSitePackageResources; referenceEdges: number } => {
+  diagnostics: DiagnosticCollector<FullSitePackageDiagnostic>
+): FullSitePackageResources => {
   if (!isRecord(value)) {
-    diagnostics.add("$.resources", "expected_object");
-    return {
-      resources: Object.fromEntries(
-        PACKAGE_RESOURCE_COLLECTIONS.map((collection) => [collection, []])
-      ) as unknown as FullSitePackageResources,
-      referenceEdges: 0,
-    };
+    addDiagnostic(diagnostics, "$.resources", "expected_object");
+    return emptyResources();
   }
-  assertExactKeys(value, new Set(PACKAGE_RESOURCE_COLLECTIONS), "$.resources", diagnostics);
+  assertExactKeys(value, RESOURCE_KEYS, "$.resources", diagnostics);
   assertResourceCounts(value, diagnostics);
-  let referenceEdges = 0;
-  const resources = Object.fromEntries(
-    PACKAGE_RESOURCE_COLLECTIONS.map((collection) => {
-      const input = value[collection];
-      if (!Array.isArray(input)) return [collection, []];
-      const seeds = input.map((seed, index) => {
-        const result = normalizeSeed(
-          seed,
-          `$.resources.${collection}[${index}]`,
-          diagnostics,
-          collection === "settings"
-        );
-        referenceEdges += result.referenceEdges;
-        return result.seed;
-      });
-      seeds.sort((left, right) => left.key.localeCompare(right.key));
-      return [collection, seeds];
-    })
-  ) as FullSitePackageResources;
-  if (referenceEdges > PACKAGE_LIMITS.referenceEdges) {
-    throw new FullSitePackageError("site_package_too_complex", [
-      { path: "$.resources", reason: "reference_edges_exceeded" },
-    ]);
+  const output = emptyResources();
+  for (const collection of PACKAGE_RESOURCE_COLLECTIONS) {
+    const input = value[collection];
+    if (!Array.isArray(input)) continue;
+    assertDenseArray(input, `$.resources.${collection}`, diagnostics);
+    const seeds: ResourceSeed[] = [];
+    for (let index = 0; index < input.length; index += 1) {
+      if (!Object.prototype.hasOwnProperty.call(input, index)) continue;
+      seeds.push(normalizeSeed(input[index], collection, index, diagnostics));
+    }
+    seeds.sort((left, right) => compareFullSitePackageText(left.key, right.key));
+    output[collection] = seeds;
   }
-  return { resources, referenceEdges };
+  return output;
 };
 
-const readResidualText = (value: unknown, path: string, diagnostics: DiagnosticCollector): string =>
-  readBoundedString(value, path, PACKAGE_LIMITS.residualTextLength, diagnostics);
+const normalizeImpact = (
+  value: unknown,
+  path: string,
+  diagnostics: DiagnosticCollector<FullSitePackageDiagnostic>
+): VisualResidual["impact"] => {
+  const impact = isRecord(value) ? value : {};
+  if (!isRecord(value)) addDiagnostic(diagnostics, path, "expected_object");
+  assertExactKeys(impact, IMPACT_KEYS, path, diagnostics);
+  for (const key of IMPACT_KEYS) {
+    if (impact[key] !== false) addDiagnostic(diagnostics, `${path}.${key}`, "expected_false");
+  }
+  return {
+    functional: false,
+    accessibility: false,
+    data: false,
+    security: false,
+    testIntegrity: false,
+  };
+};
 
 const normalizeResidual = (
   value: unknown,
-  path: string,
-  diagnostics: DiagnosticCollector
+  inputIndex: number,
+  diagnostics: DiagnosticCollector<FullSitePackageDiagnostic>
 ): VisualResidual => {
+  const path = `$.compatibility.unresolvedVisuals[${inputIndex}]`;
   const residual = isRecord(value) ? value : {};
-  if (!isRecord(value)) {
-    diagnostics.add(path, "expected_object");
-  }
+  if (!isRecord(value)) addDiagnostic(diagnostics, path, "expected_object");
   assertExactKeys(residual, RESIDUAL_KEYS, path, diagnostics);
-  const impactValue = residual.impact;
-  const impact = isRecord(impactValue) ? impactValue : {};
-  if (!isRecord(impactValue)) diagnostics.add(`${path}.impact`, "expected_object");
-  assertExactKeys(impact, IMPACT_KEYS, `${path}.impact`, diagnostics);
-  for (const key of IMPACT_KEYS) {
-    if (impact[key] !== false) diagnostics.add(`${path}.impact.${key}`, "expected_false");
-  }
+  const prose = Object.fromEntries(
+    RESIDUAL_PROSE_FIELDS.map((field) => [
+      field,
+      readSafeProse(
+        residual[field],
+        `${path}.${field}`,
+        PACKAGE_LIMITS.residualTextLength,
+        diagnostics
+      ),
+    ])
+  ) as Record<PackageProseField, string>;
   return {
     id: readBoundedString(residual.id, `${path}.id`, PACKAGE_LIMITS.residualIdLength, diagnostics, {
-      pattern: /^[a-z0-9](?:[a-z0-9-]{0,126}[a-z0-9])?$/,
+      pattern: RESIDUAL_ID_PATTERN,
+      trim: false,
     }),
-    prototypeEvidence: readResidualText(
-      residual.prototypeEvidence,
-      `${path}.prototypeEvidence`,
-      diagnostics
-    ),
-    cmsConstraint: readResidualText(residual.cmsConstraint, `${path}.cmsConstraint`, diagnostics),
-    installedApproximation: readResidualText(
-      residual.installedApproximation,
-      `${path}.installedApproximation`,
-      diagnostics
-    ),
-    userVisibleDifference: readResidualText(
-      residual.userVisibleDifference,
-      `${path}.userVisibleDifference`,
-      diagnostics
-    ),
-    impact: {
-      functional: false,
-      accessibility: false,
-      data: false,
-      security: false,
-      testIntegrity: false,
-    },
-    postInstallRemediation: readResidualText(
-      residual.postInstallRemediation,
-      `${path}.postInstallRemediation`,
-      diagnostics
-    ),
+    prototypeEvidence: prose.prototypeEvidence,
+    cmsConstraint: prose.cmsConstraint,
+    installedApproximation: prose.installedApproximation,
+    userVisibleDifference: prose.userVisibleDifference,
+    impact: normalizeImpact(residual.impact, `${path}.impact`, diagnostics),
+    postInstallRemediation: prose.postInstallRemediation,
   };
 };
 
 const normalizeCompatibility = (
   value: unknown,
-  diagnostics: DiagnosticCollector
+  diagnostics: DiagnosticCollector<FullSitePackageDiagnostic>
 ): FullSitePackageCompatibility | undefined => {
   if (value === undefined) return undefined;
   if (!isRecord(value)) {
-    diagnostics.add("$.compatibility", "expected_object");
+    addDiagnostic(diagnostics, "$.compatibility", "expected_object");
     return { unresolvedVisuals: [] };
   }
   assertExactKeys(value, COMPATIBILITY_KEYS, "$.compatibility", diagnostics);
   if (!Array.isArray(value.unresolvedVisuals)) {
-    diagnostics.add("$.compatibility.unresolvedVisuals", "expected_array");
+    addDiagnostic(diagnostics, "$.compatibility.unresolvedVisuals", "expected_array");
     return { unresolvedVisuals: [] };
   }
-  if (value.unresolvedVisuals.length > PACKAGE_LIMITS.diagnostics) {
-    throw new FullSitePackageError("site_package_too_complex", [
-      { path: "$.compatibility.unresolvedVisuals", reason: "residual_count_exceeded" },
-    ]);
+  assertDenseArray(value.unresolvedVisuals, "$.compatibility.unresolvedVisuals", diagnostics);
+  const residuals: VisualResidual[] = [];
+  const identities = new Set<string>();
+  for (let index = 0; index < value.unresolvedVisuals.length; index += 1) {
+    if (!Object.prototype.hasOwnProperty.call(value.unresolvedVisuals, index)) continue;
+    const residual = normalizeResidual(value.unresolvedVisuals[index], index, diagnostics);
+    if (identities.has(residual.id)) {
+      addDiagnostic(
+        diagnostics,
+        `$.compatibility.unresolvedVisuals[${index}].id`,
+        "duplicate_residual_id"
+      );
+    }
+    identities.add(residual.id);
+    residuals.push(residual);
   }
-  const unresolvedVisuals = value.unresolvedVisuals.map((residual, index) =>
-    normalizeResidual(residual, `$.compatibility.unresolvedVisuals[${index}]`, diagnostics)
-  );
-  unresolvedVisuals.sort((left, right) => left.id.localeCompare(right.id));
-  return { unresolvedVisuals };
+  residuals.sort((left, right) => compareFullSitePackageText(left.id, right.id));
+  return { unresolvedVisuals: residuals };
 };
 
 const normalizeVerification = (
   value: unknown,
-  diagnostics: DiagnosticCollector
+  diagnostics: DiagnosticCollector<FullSitePackageDiagnostic>
 ): VerificationPlan | undefined => {
   if (value === undefined) return undefined;
   if (!isRecord(value)) {
-    diagnostics.add("$.verification", "expected_object");
+    addDiagnostic(diagnostics, "$.verification", "expected_object");
     return { scenarioIds: [] };
   }
   assertExactKeys(value, VERIFICATION_KEYS, "$.verification", diagnostics);
   if (!Array.isArray(value.scenarioIds)) {
-    diagnostics.add("$.verification.scenarioIds", "expected_array");
+    addDiagnostic(diagnostics, "$.verification.scenarioIds", "expected_array");
     return { scenarioIds: [] };
   }
   if (value.scenarioIds.length > PACKAGE_LIMITS.verificationScenarios) {
     throw new FullSitePackageError("site_package_too_complex", [
-      { path: "$.verification.scenarioIds", reason: "scenario_count_exceeded" },
+      {
+        path: "$.verification.scenarioIds",
+        reason: "scenario_count_exceeded",
+      },
     ]);
   }
-  const scenarioIds = value.scenarioIds.map((scenarioId, index) =>
-    readPackageKey(scenarioId, `$.verification.scenarioIds[${index}]`, diagnostics)
-  );
-  return { scenarioIds: [...new Set(scenarioIds)] };
-};
-
-const assertAllowedSettings = (
-  resources: FullSitePackageResources,
-  diagnostics: DiagnosticCollector
-): void => {
-  for (let index = 0; index < resources.settings.length; index += 1) {
-    const setting = resources.settings[index];
-    if (!FULL_SITE_PACKAGE_SETTING_ALLOWLIST.has(setting.key)) {
-      diagnostics.add(`$.resources.settings[${index}].key`, "setting_forbidden");
+  assertDenseArray(value.scenarioIds, "$.verification.scenarioIds", diagnostics);
+  const scenarioIds: string[] = [];
+  const seen = new Set<string>();
+  for (let index = 0; index < value.scenarioIds.length; index += 1) {
+    if (!Object.prototype.hasOwnProperty.call(value.scenarioIds, index)) continue;
+    const scenarioId = readPackageKey(
+      value.scenarioIds[index],
+      `$.verification.scenarioIds[${index}]`,
+      diagnostics
+    );
+    if (!seen.has(scenarioId)) {
+      seen.add(scenarioId);
+      scenarioIds.push(scenarioId);
     }
   }
+  return { scenarioIds };
+};
+
+const throwCollectedDiagnostics = (
+  diagnostics: DiagnosticCollector<FullSitePackageDiagnostic>
+): void => {
+  const batch = diagnostics.read();
+  if (batch.overflowed) {
+    throw new FullSitePackageError("site_package_too_complex", batch.diagnostics);
+  }
+  if (batch.diagnostics.length === 0) return;
+  const code = batch.diagnostics.some((diagnostic) => diagnostic.reason === "setting_forbidden")
+    ? "site_package_setting_forbidden"
+    : "site_package_invalid";
+  throw new FullSitePackageError(code, batch.diagnostics);
 };
 
 export const normalizeFullSitePackageForWrite = (value: unknown): FullSitePackageV1 => {
   assertPackageByteSize(value);
-  const diagnostics = new DiagnosticCollector();
   if (!isRecord(value)) {
     throw new FullSitePackageError("site_package_invalid", [
       { path: "$", reason: "expected_object" },
     ]);
   }
-  assertExactKeys(value, FULL_SITE_PACKAGE_ROOT_KEYS, "$", diagnostics);
+  const diagnostics = createDiagnosticCollector<FullSitePackageDiagnostic>();
+  assertStrictRootKeys(value, diagnostics);
   if (value.schemaVersion !== FULL_SITE_PACKAGE_SCHEMA_VERSION) {
-    diagnostics.add("$.schemaVersion", "unsupported_schema_version");
+    addDiagnostic(diagnostics, "$.schemaVersion", "unsupported_schema_version");
   }
   const key = readPackageKey(value.key, "$.key", diagnostics);
   const metadata = normalizeMetadata(value.metadata, diagnostics);
-  const { resources } = normalizeResources(value.resources, diagnostics);
-  assertAllowedSettings(resources, diagnostics);
+  const resources = normalizeResources(value.resources, diagnostics);
   const compatibility = normalizeCompatibility(value.compatibility, diagnostics);
   const verification = normalizeVerification(value.verification, diagnostics);
-  const forbiddenSetting = diagnostics.diagnostics.some(
-    (diagnostic) => diagnostic.reason === "setting_forbidden"
-  );
-  diagnostics.throwIfAny(
-    forbiddenSetting ? "site_package_setting_forbidden" : "site_package_invalid"
-  );
+  throwCollectedDiagnostics(diagnostics);
   return {
     schemaVersion: 1,
     key,
     metadata,
     resources,
-    ...(compatibility ? { compatibility } : {}),
-    ...(verification ? { verification } : {}),
+    ...(compatibility === undefined ? {} : { compatibility }),
+    ...(verification === undefined ? {} : { verification }),
   };
 };

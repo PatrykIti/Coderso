@@ -6,8 +6,68 @@ const mockDb = vi.hoisted(() => {
     insertRows: [] as Array<Record<string, unknown>>,
     updateRows: [] as Array<Record<string, unknown>>,
     deleteRows: [] as Array<Record<string, unknown>>,
+    contentTypeRows: [
+      {
+        id: "products",
+        name: "Products",
+        slug: "products",
+        schema: { type: "object", properties: { name: { type: "string" } } },
+      },
+    ] as Array<Record<string, unknown>>,
     lastInsertValues: null as Record<string, unknown> | null,
     lastUpdateValues: null as Record<string, unknown> | null,
+    events: [] as string[],
+  };
+
+  const selectableRows = () => {
+    const result = Promise.resolve(mockDb.state.selectRows);
+    return {
+      then: result.then.bind(result),
+      for: vi.fn(async (lock: string) => {
+        mockDb.state.events.push(`select:${lock}`);
+        return lock === "key share" ? mockDb.state.contentTypeRows : mockDb.state.selectRows;
+      }),
+    };
+  };
+
+  const client = {
+    select: vi.fn(() => {
+      mockDb.state.events.push("select");
+      return {
+        from: vi.fn(() => ({
+          orderBy: vi.fn(async () => mockDb.state.selectRows),
+          where: vi.fn(() => selectableRows()),
+        })),
+      };
+    }),
+    insert: vi.fn(() => ({
+      values: vi.fn((input: Record<string, unknown>) => {
+        mockDb.state.events.push("insert");
+        mockDb.state.lastInsertValues = input;
+        return {
+          returning: vi.fn(async () => mockDb.state.insertRows),
+        };
+      }),
+    })),
+    update: vi.fn(() => ({
+      set: vi.fn((input: Record<string, unknown>) => {
+        mockDb.state.events.push("update");
+        mockDb.state.lastUpdateValues = input;
+        return {
+          where: vi.fn(() => ({
+            returning: vi.fn(async () => mockDb.state.updateRows),
+          })),
+        };
+      }),
+    })),
+    delete: vi.fn(() => ({
+      where: vi.fn(() => {
+        mockDb.state.events.push("delete");
+        return {
+          returning: vi.fn(async () => mockDb.state.deleteRows),
+        };
+      }),
+    })),
   };
 
   return {
@@ -17,39 +77,31 @@ const mockDb = vi.hoisted(() => {
       state.insertRows = [];
       state.updateRows = [];
       state.deleteRows = [];
+      state.contentTypeRows = [
+        {
+          id: "products",
+          name: "Products",
+          slug: "products",
+          schema: { type: "object", properties: { name: { type: "string" } } },
+        },
+      ];
       state.lastInsertValues = null;
       state.lastUpdateValues = null;
+      state.events = [];
     },
     db: {
-      select: vi.fn(() => ({
-        from: vi.fn(() => ({
-          orderBy: vi.fn(async () => mockDb.state.selectRows),
-          where: vi.fn(async () => mockDb.state.selectRows),
-        })),
-      })),
-      insert: vi.fn(() => ({
-        values: vi.fn((input: Record<string, unknown>) => {
-          mockDb.state.lastInsertValues = input;
-          return {
-            returning: vi.fn(async () => mockDb.state.insertRows),
-          };
-        }),
-      })),
-      update: vi.fn(() => ({
-        set: vi.fn((input: Record<string, unknown>) => {
-          mockDb.state.lastUpdateValues = input;
-          return {
-            where: vi.fn(() => ({
-              returning: vi.fn(async () => mockDb.state.updateRows),
-            })),
-          };
-        }),
-      })),
-      delete: vi.fn(() => ({
-        where: vi.fn(() => ({
-          returning: vi.fn(async () => mockDb.state.deleteRows),
-        })),
-      })),
+      ...client,
+      transaction: vi.fn(async (executeTransaction: (tx: unknown) => Promise<unknown>) => {
+        let fenceStatement = 0;
+        return executeTransaction({
+          ...client,
+          execute: vi.fn(async () => {
+            mockDb.state.events.push("fence");
+            fenceStatement += 1;
+            return fenceStatement === 1 ? [{ acquired: true }] : [];
+          }),
+        });
+      }),
     },
   };
 });
@@ -212,6 +264,7 @@ test("createCustomScreen normalizes defaults, sidebar config, and definitions", 
     definition,
   });
 
+  expect(mockDb.state.events[0]).toBe("fence");
   expect(mockDb.state.lastInsertValues).toMatchObject({
     name: "Catalog Tools",
     contentTypeId: "products",
@@ -349,6 +402,7 @@ test("updateCustomScreen preserves existing values and normalizes changed fields
     sidebarLabel: "   ",
   });
 
+  expect(mockDb.state.events[0]).toBe("fence");
   expect(mockDb.state.lastUpdateValues).toMatchObject({
     name: "Updated catalog",
     contentTypeId: "products",
@@ -550,7 +604,7 @@ test("TASK-505-01 updateCustomScreen runs the normalize-time GC safety net: a bl
       blockId: "ghost", // no live block in the document → block-orphan
       propPath: "value",
       source: "entry",
-      field: "beds",
+      field: "name",
       mode: "readwrite",
     },
   ];
@@ -573,7 +627,7 @@ test("TASK-505-01 updateCustomScreen runs the normalize-time GC safety net: a bl
   ).editorView.bindings;
   expect(writtenBindings.map((b) => b.blockId)).toEqual(["field-1"]);
   // The pruned field name surfaces on the transient PATCH-200 warnings carry.
-  expect(result?.warnings).toEqual([{ code: "binding_block_removed", fields: ["beds"] }]);
+  expect(result?.warnings).toEqual([{ code: "binding_block_removed", fields: ["name"] }]);
 });
 
 test("TASK-505-01 a stored block-orphan definition READS non-fatally (getCustomScreen resolves, no throw)", async () => {
@@ -640,6 +694,7 @@ test("deleteCustomScreen returns the normalized deleted record or null", async (
   mockDb.state.deleteRows = [createRow()];
 
   const deleted = await deleteCustomScreen("screen-1");
+  expect(mockDb.state.events[0]).toBe("fence");
   expect(deleted?.id).toBe("screen-1");
 
   mockDb.state.deleteRows = [];

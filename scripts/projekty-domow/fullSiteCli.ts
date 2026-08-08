@@ -1,15 +1,16 @@
-import { readFile, stat } from "node:fs/promises";
+import { constants as fsConstants } from "node:fs";
+import { open } from "node:fs/promises";
 
 import { normalizeFullSitePackageForWrite } from "../../core/services/kits/fullSitePackage/normalize";
-import {
-  PACKAGE_LIMITS,
-  type FullSitePackageV1,
-} from "../../core/services/kits/fullSitePackage/types";
+import { buildReferencePlan } from "../../core/services/kits/fullSitePackage/referenceGraph";
+import type { FullSitePackageV1 } from "../../core/services/kits/fullSitePackage/types";
 import { toSafeFullSiteErrorCode } from "../../core/services/kits/fullSiteInstallTypes";
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 export const DEFAULT_FORMA_DOM_PACKAGE_PATH = "_docs/_DEMO/projekty-domow.site.json";
+export const FULL_SITE_PACKAGE_RAW_SOURCE_BYTES = 8 * 1024 * 1024;
+export const FULL_SITE_PACKAGE_RAW_OPEN_FLAGS = fsConstants.O_RDONLY | fsConstants.O_NONBLOCK;
 
 export type FullSiteCliArgs =
   | {
@@ -27,10 +28,40 @@ export type FullSiteCliDeps = {
     actorId: string;
     dryRun: boolean;
     allowSettingTakeover: boolean;
-  }): Promise<{ runId: string; resources: unknown[] }>;
+  }): Promise<{ runId: string; resources: readonly unknown[] }>;
   rollback(input: { sourceRunId: string; actorId: string }): Promise<{ runId: string }>;
   writeOutput(value: string): void;
 };
+
+export interface FullSitePackageFileStat {
+  readonly dev: bigint;
+  readonly ino: bigint;
+  readonly size: bigint;
+  readonly mtimeNs: bigint;
+  readonly ctimeNs: bigint;
+  isFile(): boolean;
+}
+
+export interface FullSitePackageFileHandle {
+  stat(options: { readonly bigint: true }): Promise<FullSitePackageFileStat>;
+  read(
+    buffer: Uint8Array,
+    offset: number,
+    length: number,
+    position: number
+  ): Promise<Readonly<{ bytesRead: number }>>;
+  close(): Promise<void>;
+}
+
+export interface FullSitePackageFileDeps {
+  open(path: string, flags: number): Promise<FullSitePackageFileHandle>;
+}
+
+const DEFAULT_FILE_DEPS: FullSitePackageFileDeps = Object.freeze({
+  open: (path: string, flags: number) => open(path, flags) as Promise<FullSitePackageFileHandle>,
+});
+
+const fileInvalid = (): Error => new Error("site_package_file_invalid");
 
 const requireUuid = (value: string | undefined, code: string): string => {
   if (!value || !UUID_PATTERN.test(value)) throw new Error(code);
@@ -81,23 +112,153 @@ export const parseFullSiteCliArgs = (argv: readonly string[]): FullSiteCliArgs =
   };
 };
 
-export const readBoundedFullSitePackage = async (filePath: string): Promise<FullSitePackageV1> => {
-  const metadata = await stat(filePath);
-  if (!metadata.isFile() || metadata.size > PACKAGE_LIMITS.fileBytes) {
-    throw new Error("site_package_file_invalid");
-  }
-  const source = await readFile(filePath, "utf8");
-  if (new TextEncoder().encode(source).byteLength > PACKAGE_LIMITS.fileBytes) {
-    throw new Error("site_package_file_invalid");
-  }
-  let value: unknown;
+async function openPackageFile(
+  filePath: string,
+  deps: FullSitePackageFileDeps
+): Promise<FullSitePackageFileHandle> {
   try {
-    value = JSON.parse(source);
+    return await deps.open(filePath, FULL_SITE_PACKAGE_RAW_OPEN_FLAGS);
+  } catch {
+    throw fileInvalid();
+  }
+}
+
+async function readPackageStat(
+  handle: FullSitePackageFileHandle
+): Promise<FullSitePackageFileStat> {
+  try {
+    const stat = await handle.stat({ bigint: true });
+    if (
+      typeof stat?.isFile !== "function" ||
+      ![stat.dev, stat.ino, stat.size, stat.mtimeNs, stat.ctimeNs].every(
+        (value) => typeof value === "bigint"
+      )
+    ) {
+      throw fileInvalid();
+    }
+    return stat;
+  } catch {
+    throw fileInvalid();
+  }
+}
+
+function assertInitialStat(stat: FullSitePackageFileStat): void {
+  let regular = false;
+  try {
+    regular = stat.isFile() === true;
+  } catch {
+    throw fileInvalid();
+  }
+  if (!regular || stat.size < 0n || stat.size > BigInt(FULL_SITE_PACKAGE_RAW_SOURCE_BYTES)) {
+    throw fileInvalid();
+  }
+}
+
+async function readPackageBytes(
+  handle: FullSitePackageFileHandle,
+  expectedSize: bigint
+): Promise<Uint8Array> {
+  const limit = Math.min(FULL_SITE_PACKAGE_RAW_SOURCE_BYTES + 1, Number(expectedSize) + 1);
+  const buffer = new Uint8Array(limit);
+  let offset = 0;
+  while (offset < limit) {
+    const requested = limit - offset;
+    let result: Readonly<{ bytesRead: number }>;
+    try {
+      result = await handle.read(buffer, offset, requested, offset);
+    } catch {
+      throw fileInvalid();
+    }
+    let bytesRead: number;
+    try {
+      bytesRead = result.bytesRead;
+    } catch {
+      throw fileInvalid();
+    }
+    if (!Number.isSafeInteger(bytesRead) || bytesRead < 0 || bytesRead > requested) {
+      throw fileInvalid();
+    }
+    if (bytesRead === 0) break;
+    offset += bytesRead;
+  }
+  if (offset > FULL_SITE_PACKAGE_RAW_SOURCE_BYTES) throw fileInvalid();
+  return buffer.subarray(0, offset);
+}
+
+function assertStableStat(
+  before: FullSitePackageFileStat,
+  after: FullSitePackageFileStat,
+  bytesRead: number
+): void {
+  let regular = false;
+  try {
+    regular = after.isFile() === true;
+  } catch {
+    throw fileInvalid();
+  }
+  if (
+    !regular ||
+    before.dev !== after.dev ||
+    before.ino !== after.ino ||
+    before.size !== after.size ||
+    before.mtimeNs !== after.mtimeNs ||
+    before.ctimeNs !== after.ctimeNs ||
+    after.size !== BigInt(bytesRead)
+  ) {
+    throw fileInvalid();
+  }
+}
+
+function decodePackageSource(bytes: Uint8Array): string {
+  try {
+    const source = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+    if (source.includes("\uFFFD")) throw fileInvalid();
+    return source;
+  } catch {
+    throw fileInvalid();
+  }
+}
+
+function parsePackageSource(source: string): unknown {
+  try {
+    return JSON.parse(source) as unknown;
   } catch {
     throw new Error("site_package_json_invalid");
   }
-  return normalizeFullSitePackageForWrite(value);
-};
+}
+
+export async function readBoundedFullSitePackage(
+  filePath: string,
+  deps: FullSitePackageFileDeps = DEFAULT_FILE_DEPS
+): Promise<FullSitePackageV1> {
+  const handle = await openPackageFile(filePath, deps);
+  let outcome:
+    Readonly<{ ok: true; value: FullSitePackageV1 }> | Readonly<{ ok: false; error: unknown }>;
+  try {
+    const before = await readPackageStat(handle);
+    assertInitialStat(before);
+    const bytes = await readPackageBytes(handle, before.size);
+    const after = await readPackageStat(handle);
+    assertStableStat(before, after, bytes.byteLength);
+    const source = decodePackageSource(bytes);
+    outcome = Object.freeze({
+      ok: true,
+      value: normalizeFullSitePackageForWrite(parsePackageSource(source)),
+    });
+  } catch (error) {
+    outcome = Object.freeze({ ok: false, error });
+  }
+
+  let closeFailed = false;
+  try {
+    await handle.close();
+  } catch {
+    closeFailed = true;
+  }
+  if (!outcome.ok) throw outcome.error;
+  if (closeFailed) throw fileInvalid();
+  return outcome.value;
+}
 
 export const runFullSiteCli = async (
   argv: readonly string[],
@@ -113,6 +274,7 @@ export const runFullSiteCli = async (
     return;
   }
   const pkg = await deps.readPackage(args.file);
+  buildReferencePlan(pkg);
   const result = await deps.apply({
     package: pkg,
     actorId: args.actorId,

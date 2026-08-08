@@ -19,10 +19,6 @@ export const buildProjectDiscoveryResources = (): {
   settings: ResourceSeed[];
 } => {
   const contentRef = { ref: "content_type" as const, key: HOUSE_PROJECT_RESOURCE_KEY };
-  const listingQueryRef = {
-    ref: "listing_query" as const,
-    key: PROJECT_LISTING_QUERY_KEY,
-  };
   const detailRef = { ref: "detail_page" as const, key: PROJECT_DETAIL_KEY };
   return {
     listingTemplates: [{ key: PROJECT_LISTING_TEMPLATE_KEY, desired: buildProjectCardsDesired() }],
@@ -35,7 +31,7 @@ export const buildProjectDiscoveryResources = (): {
     detailPages: [
       {
         key: PROJECT_DETAIL_KEY,
-        desired: buildProjectDetailDesired(contentRef, listingQueryRef),
+        desired: buildProjectDetailDesired(contentRef),
       },
     ],
     settings: [

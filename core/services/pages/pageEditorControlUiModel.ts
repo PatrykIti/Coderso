@@ -191,6 +191,11 @@ export const pageEditorControlOptionLabelOverrides: Readonly<
     self: "Same tab",
     blank: "New tab",
   },
+  "block.form.props.successBehavior": {
+    "show-message-hide-form": "Hide form",
+    "show-message-reset-form": "Reset form",
+    "show-message-keep-form": "Keep form",
+  },
 };
 
 const humanizeOptionToken = (option: string): string => {

@@ -197,9 +197,15 @@ async function screenshotProof(root: string, path: string) {
 export function task540BrowserSegmentIds(plan: Task540NativePlan): readonly string[] {
   const dispatchPlan = compileTask540BrowserDispatchPlan(plan);
   return Object.freeze(
-    dispatchPlan.dispatches.map((dispatch) =>
-      dispatch.kind === "run-code" ? dispatch.segmentId : `standalone-${dispatch.actionId}`
-    )
+    dispatchPlan.dispatches.flatMap((dispatch) => {
+      if (dispatch.kind !== "run-code") return [`standalone-${dispatch.actionId}`];
+      return [
+        dispatch.segmentId,
+        ...dispatch.actionIds.map(
+          (_, index) => `${dispatch.segmentId}-part-${String(index + 1).padStart(2, "0")}`
+        ),
+      ];
+    })
   );
 }
 
@@ -236,7 +242,7 @@ export function createTask540NativeBrowser(input: {
     if (frame.status !== "success") {
       throw new SmokeError(
         "smoke_process_failed",
-        `TASK-540 browser action failed: ${frame.actionId}`
+        `TASK-540 browser action failed: ${frame.actionId} (${frame.failureCode})`
       );
     }
     const output = validateBrowserOutput(frame.output, action, input.plan);

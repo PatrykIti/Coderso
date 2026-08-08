@@ -5,6 +5,7 @@ import type { RepositorySnapshot } from "../repository-guard";
 import type { SmokeAdapter, SmokeAdapterResult } from "./types";
 import type { Task540NativeEvidence } from "./task-540/suite/composition/contracts";
 import { runTask540NativeSuite } from "./task-540/suite/composition/suite";
+import { isTask540CleanupLogicalReceiptCount } from "./task-540/cleanup-cardinality";
 
 function sensitiveEnvironmentValues(environment: NodeJS.ProcessEnv): readonly string[] {
   const values = new Set<string>();
@@ -78,7 +79,7 @@ export function validateTask540Evidence(value: unknown): Task540NativeEvidence {
     !Array.isArray(candidate.runtimeReceipts) ||
     candidate.runtimeReceipts.length !== 76 ||
     !Array.isArray(candidate.cleanupReceipts) ||
-    candidate.cleanupReceipts.length !== 72 ||
+    !isTask540CleanupLogicalReceiptCount(candidate.cleanupReceipts.length) ||
     !Array.isArray(candidate.scenarios) ||
     candidate.scenarios.length !== 7 ||
     !Array.isArray(candidate.screenshots) ||

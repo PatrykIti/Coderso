@@ -1,311 +1,291 @@
 import { describe, expect, it } from "vitest";
 
 import { normalizeFullSitePackageForWrite } from "../../../core/services/kits/fullSitePackage/normalize";
-import { assertPackageByteSize } from "../../../core/services/kits/fullSitePackage/schema";
 import {
+  assertPackageByteSize,
+  createDiagnosticCollector,
+} from "../../../core/services/kits/fullSitePackage/schema";
+import {
+  FULL_SITE_PACKAGE_SETTING_KEYS,
   PACKAGE_LIMITS,
   PACKAGE_RESOURCE_COLLECTIONS,
-  FullSitePackageError,
-  type FullSitePackageV1,
-  type FullSitePackageResources,
+  type FullSitePackageDiagnostic,
   type JsonObject,
 } from "../../../core/services/kits/fullSitePackage/types";
+import {
+  expectFullSitePackageCode,
+  validFullSitePackage,
+  validVisualResidual,
+} from "./fullSitePackageTestSupport";
 
-const emptyResources = (): FullSitePackageResources => ({
-  contentTypes: [],
-  forms: [],
-  pageTemplates: [],
-  listingTemplates: [],
-  entries: [],
-  listingQueries: [],
-  detailPages: [],
-  pages: [],
-  menus: [],
-  settings: [],
-});
-
-const validPackage = (): FullSitePackageV1 => ({
-  schemaVersion: 1,
-  key: "formadom-studio",
-  metadata: {
-    name: "FormaDom Studio",
-    locale: "pl-PL",
-    description: "Reference package",
-  },
-  resources: emptyResources(),
-});
-
-const expectCode = (callback: () => unknown, code: string) => {
-  try {
-    callback();
-  } catch (error) {
-    expect(error).toBeInstanceOf(FullSitePackageError);
-    expect((error as FullSitePackageError).code).toBe(code);
-    return error as FullSitePackageError;
-  }
-  throw new Error(`Expected ${code}`);
+const nestedObject = (level: number): JsonObject => {
+  let value: JsonObject = {};
+  for (let depth = 1; depth < level; depth += 1) value = { nested: value };
+  return value;
 };
 
-describe("full-site package schema", () => {
-  it("normalizes every strict resource envelope and sorts collections by key", () => {
-    const input = validPackage();
+describe("full-site package schema and limits", () => {
+  it("accepts all ten strict seed envelopes and canonicalizes collection order", () => {
+    const input = validFullSitePackage();
     for (const collection of PACKAGE_RESOURCE_COLLECTIONS) {
-      const prefix = collection.replace(/[A-Z]/g, (character) => `-${character.toLowerCase()}`);
       const keys =
-        collection === "settings" ? ["site.locale", "site.name"] : [`${prefix}-z`, `${prefix}-a`];
+        collection === "settings"
+          ? ["site.name", "site.locale"]
+          : [`${collection.toLowerCase()}-z`, `${collection.toLowerCase()}-a`];
       input.resources[collection].push(
-        { key: keys[0], desired: { nested: { value: true } } },
-        { key: keys[1], desired: { status: "published" } }
+        { key: keys[0], desired: { z: true } },
+        { key: keys[1], desired: { a: true } }
       );
     }
 
     const normalized = normalizeFullSitePackageForWrite(input);
 
     for (const collection of PACKAGE_RESOURCE_COLLECTIONS) {
-      const prefix = collection.replace(/[A-Z]/g, (character) => `-${character.toLowerCase()}`);
-      const expectedKeys =
-        collection === "settings" ? ["site.locale", "site.name"] : [`${prefix}-z`, `${prefix}-a`];
-      expect(normalized.resources[collection].map((seed) => seed.key)).toEqual([
-        ...expectedKeys.sort(),
-      ]);
-      expect(Object.keys(normalized.resources[collection][0] ?? {})).toEqual(["key", "desired"]);
+      expect(normalized.resources[collection].map(({ key }) => key)).toEqual(
+        collection === "settings"
+          ? ["site.locale", "site.name"]
+          : [`${collection.toLowerCase()}-a`, `${collection.toLowerCase()}-z`]
+      );
+      expect(Object.keys(normalized.resources[collection][0])).toEqual(["key", "desired"]);
     }
   });
 
-  it("rejects unknown root, metadata, resource, seed, compatibility and impact keys", () => {
-    const cases = [
-      () => ({ ...validPackage(), unexpected: true }),
-      () => ({ ...validPackage(), metadata: { name: "Name", locale: "pl", extra: true } }),
-      () => ({ ...validPackage(), resources: { ...emptyResources(), extra: [] } }),
-      () => ({
-        ...validPackage(),
+  it("rejects unknown keys at every package-owned envelope and database IDs", () => {
+    const cases: unknown[] = [
+      { ...validFullSitePackage(), extra: true },
+      {
+        ...validFullSitePackage(),
+        metadata: { name: "Name", locale: "en", extra: true },
+      },
+      {
+        ...validFullSitePackage(),
+        resources: { ...validFullSitePackage().resources, extra: [] },
+      },
+      {
+        ...validFullSitePackage(),
         resources: {
-          ...emptyResources(),
-          pages: [{ key: "home", desired: {}, id: "00000000-0000-4000-8000-000000000000" }],
+          ...validFullSitePackage().resources,
+          pages: [{ key: "home", desired: {}, id: "database-id" }],
         },
-      }),
-      () => ({
-        ...validPackage(),
+      },
+      {
+        ...validFullSitePackage(),
         compatibility: { unresolvedVisuals: [], extra: true },
-      }),
-      () => ({
-        ...validPackage(),
-        compatibility: {
-          unresolvedVisuals: [
-            {
-              ...validResidual(),
-              impact: { ...validResidual().impact, extra: false },
-            },
-          ],
-        },
-      }),
+      },
+      {
+        ...validFullSitePackage(),
+        verification: { scenarioIds: [], extra: true },
+      },
     ];
-
-    for (const build of cases) {
-      expectCode(() => normalizeFullSitePackageForWrite(build()), "site_package_invalid");
+    for (const value of cases) {
+      expectFullSitePackageCode(
+        () => normalizeFullSitePackageForWrite(value),
+        "site_package_invalid"
+      );
     }
   });
 
-  it("rejects prototype-sensitive parsed JSON keys before ref-like objects can bypass scans", () => {
-    for (const key of ["__proto__", "prototype", "constructor"] as const) {
-      const desired = JSON.parse(`{"${key}":{"ref":"page","key":"target"}}`) as JsonObject;
-      expect(Object.prototype.hasOwnProperty.call(desired, key)).toBe(true);
-      const input = validPackage();
-      input.resources.pages.push({ key: "home", desired });
-
-      const error = expectCode(
+  it("uses the canonical grammar without trimming package, resource, or scenario identities", () => {
+    for (const key of ["a", "a.b_c-d", `a${"x".repeat(126)}z`]) {
+      const input = validFullSitePackage();
+      input.key = key;
+      input.resources.pages.push({ key, desired: {} });
+      input.verification = { scenarioIds: [key] };
+      expect(() => normalizeFullSitePackageForWrite(input)).not.toThrow();
+    }
+    for (const key of [" A", "a ", "Upper", "a/b", `a${"x".repeat(127)}z`]) {
+      const input = validFullSitePackage();
+      input.key = key;
+      expectFullSitePackageCode(
         () => normalizeFullSitePackageForWrite(input),
         "site_package_invalid"
       );
-      expect(error.diagnostics).toContainEqual({
-        path: `_.resources.pages[0].desired.${key}`,
-        reason: "prototype_key_forbidden",
-      });
     }
   });
 
-  it("rejects database IDs and missing desired snapshots in seed envelopes", () => {
-    const withId = validPackage();
-    withId.resources.pages.push({
-      key: "home",
-      desired: {},
-      id: "de305d54-75b4-431b-adb2-eb6b9e546014",
-    } as never);
-    expectCode(() => normalizeFullSitePackageForWrite(withId), "site_package_invalid");
+  it("admits only the seven exact setting keys without applying the package-key grammar", () => {
+    const input = validFullSitePackage();
+    input.resources.settings = FULL_SITE_PACKAGE_SETTING_KEYS.map((key) => ({
+      key,
+      desired: { value: null },
+    }));
+    expect(
+      normalizeFullSitePackageForWrite(input).resources.settings.map(({ key }) => key)
+    ).toEqual([...FULL_SITE_PACKAGE_SETTING_KEYS].sort());
 
-    const withoutDesired = validPackage();
-    withoutDesired.resources.pages.push({ key: "home" } as never);
-    expectCode(() => normalizeFullSitePackageForWrite(withoutDesired), "site_package_invalid");
+    for (const key of ["site.name ", "site.unknown", "Site.name", "auth.providerKey"]) {
+      const invalid = validFullSitePackage();
+      invalid.resources.settings.push({ key, desired: { value: "sentinel-value" } });
+      const error = expectFullSitePackageCode(
+        () => normalizeFullSitePackageForWrite(invalid),
+        "site_package_setting_forbidden"
+      );
+      expect(JSON.stringify(error)).not.toContain(key);
+      expect(JSON.stringify(error)).not.toContain("sentinel-value");
+    }
   });
 
-  it("accepts exact resource limits and rejects one over each count limit", () => {
-    const exactCollection = validPackage();
+  it("accepts exact resource and serialized-byte limits and rejects one over", () => {
+    const exactCollection = validFullSitePackage();
     exactCollection.resources.pages = Array.from(
       { length: PACKAGE_LIMITS.resourcesPerCollection },
       (_, index) => ({ key: `page-${index}`, desired: {} })
     );
     expect(normalizeFullSitePackageForWrite(exactCollection).resources.pages).toHaveLength(256);
 
-    const overCollection = validPackage();
+    const overCollection = validFullSitePackage();
     overCollection.resources.pages = Array.from(
       { length: PACKAGE_LIMITS.resourcesPerCollection + 1 },
       (_, index) => ({ key: `page-${index}`, desired: {} })
     );
-    expectCode(() => normalizeFullSitePackageForWrite(overCollection), "site_package_too_large");
+    expectFullSitePackageCode(
+      () => normalizeFullSitePackageForWrite(overCollection),
+      "site_package_too_large"
+    );
 
-    const exactTotal = validPackage();
-    exactTotal.resources.pages = Array.from({ length: 256 }, (_, index) => ({
-      key: `page-${index}`,
-      desired: {},
-    }));
-    exactTotal.resources.entries = Array.from({ length: 256 }, (_, index) => ({
+    const total = validFullSitePackage();
+    total.resources.pages = exactCollection.resources.pages;
+    total.resources.entries = Array.from({ length: 256 }, (_, index) => ({
       key: `entry-${index}`,
       desired: {},
     }));
-    expect(normalizeFullSitePackageForWrite(exactTotal).resources.entries).toHaveLength(256);
+    expect(() => normalizeFullSitePackageForWrite(total)).not.toThrow();
+    total.resources.forms.push({ key: "extra", desired: {} });
+    expectFullSitePackageCode(
+      () => normalizeFullSitePackageForWrite(total),
+      "site_package_too_large"
+    );
 
-    const overTotal = validPackage();
-    overTotal.resources.pages = exactTotal.resources.pages;
-    overTotal.resources.entries = exactTotal.resources.entries;
-    overTotal.resources.forms = [{ key: "extra", desired: {} }];
-    expectCode(() => normalizeFullSitePackageForWrite(overTotal), "site_package_too_large");
+    const exactBytes = "x".repeat(PACKAGE_LIMITS.fileBytes - 2);
+    expect(() => assertPackageByteSize(exactBytes)).not.toThrow();
+    expectFullSitePackageCode(
+      () => assertPackageByteSize(`${exactBytes}x`),
+      "site_package_too_large"
+    );
   });
 
-  it("enforces the exact serialized byte cap", () => {
-    const JSON_STRING_OVERHEAD = 2;
-    const exact = "x".repeat(PACKAGE_LIMITS.fileBytes - JSON_STRING_OVERHEAD);
-    expect(() => assertPackageByteSize(exact)).not.toThrow();
-    expectCode(() => assertPackageByteSize(`${exact}x`), "site_package_too_large");
+  it("rejects sparse package-owned and recursive desired arrays", () => {
+    const sparseCollections = validFullSitePackage();
+    sparseCollections.resources.pages = new Array(1);
+    expectFullSitePackageCode(
+      () => normalizeFullSitePackageForWrite(sparseCollections),
+      "site_package_invalid"
+    );
+
+    const sparseDesired = validFullSitePackage();
+    sparseDesired.resources.pages.push({ key: "home", desired: { values: new Array(1) } });
+    expectFullSitePackageCode(
+      () => normalizeFullSitePackageForWrite(sparseDesired),
+      "site_package_invalid"
+    );
+
+    const sparseResiduals = validFullSitePackage();
+    sparseResiduals.compatibility = { unresolvedVisuals: new Array(1) };
+    expectFullSitePackageCode(
+      () => normalizeFullSitePackageForWrite(sparseResiduals),
+      "site_package_invalid"
+    );
+
+    const sparseScenarios = validFullSitePackage();
+    sparseScenarios.verification = { scenarioIds: new Array(1) };
+    expectFullSitePackageCode(
+      () => normalizeFullSitePackageForWrite(sparseScenarios),
+      "site_package_invalid"
+    );
   });
 
-  it("accepts depth 64 and rejects depth 65", () => {
-    const buildNested = (depth: number): JsonObject => {
-      let value: JsonObject = {};
-      for (let index = 1; index < depth; index += 1) value = { nested: value };
-      return value;
-    };
-    const exact = validPackage();
-    exact.resources.pages.push({ key: "home", desired: buildNested(64) });
+  it("accepts JSON level 64 and gives level 65 the static singleton", () => {
+    const exact = validFullSitePackage();
+    exact.resources.pages.push({ key: "home", desired: nestedObject(64) });
     expect(() => normalizeFullSitePackageForWrite(exact)).not.toThrow();
 
-    const over = validPackage();
-    over.resources.pages.push({ key: "home", desired: buildNested(65) });
-    expectCode(() => normalizeFullSitePackageForWrite(over), "site_package_too_complex");
-  });
-
-  it("accepts 4096 reference-shaped edges and rejects 4097", () => {
-    const build = (count: number) => {
-      const input = validPackage();
-      input.resources.pages.push({
-        key: "home",
-        desired: {
-          refs: Array.from({ length: count }, (_, index) => ({
-            ref: "page",
-            key: `page-${index}`,
-          })),
-        },
-      });
-      return input;
-    };
-    expect(() => normalizeFullSitePackageForWrite(build(4_096))).not.toThrow();
-    expectCode(() => normalizeFullSitePackageForWrite(build(4_097)), "site_package_too_complex");
-  });
-
-  it("bounds diagnostics to 100 and reports overflow as complexity", () => {
-    const input = validPackage() as Record<string, unknown>;
-    for (let index = 0; index < PACKAGE_LIMITS.diagnostics + 1; index += 1) {
-      input[`unknown-${index}`] = true;
-    }
-    const error = expectCode(
-      () => normalizeFullSitePackageForWrite(input),
+    const over = validFullSitePackage();
+    over.resources.pages.push({ key: "home", desired: nestedObject(65) });
+    over.resources.pages.push({ key: "home", desired: {} });
+    const error = expectFullSitePackageCode(
+      () => normalizeFullSitePackageForWrite(over),
       "site_package_too_complex"
     );
-    expect(error.diagnostics).toHaveLength(PACKAGE_LIMITS.diagnostics);
+    expect(error.diagnostics).toEqual([{ path: "$.resources", reason: "json_depth_exceeded" }]);
   });
 
-  it("rejects forbidden settings, secret fields, credential URLs, base64 and binary data", () => {
-    const forbiddenSetting = validPackage();
-    forbiddenSetting.resources.settings.push({ key: "auth.providerKey", desired: {} });
-    expectCode(
-      () => normalizeFullSitePackageForWrite(forbiddenSetting),
-      "site_package_setting_forbidden"
-    );
-
-    for (const desired of [
-      { providerKey: "value" },
-      { url: "https://user:password@example.test/path" },
-      { bytes: "QUJD".repeat(32) },
-      { bytes: new Uint8Array([1, 2, 3]) },
-    ]) {
-      const input = validPackage();
-      input.resources.pages.push({ key: "home", desired } as never);
-      expectCode(() => normalizeFullSitePackageForWrite(input), "site_package_invalid");
-    }
-  });
-
-  it("accepts complete visual residuals and rejects incomplete or unsafe residuals", () => {
-    const valid = validPackage();
-    valid.compatibility = { unresolvedVisuals: [validResidual()] };
-    expect(normalizeFullSitePackageForWrite(valid).compatibility).toEqual({
-      unresolvedVisuals: [validResidual()],
-    });
-
-    const bareCode = validPackage();
-    bareCode.compatibility = { unresolvedVisuals: ["favicon-not-installed"] as never };
-    expectCode(() => normalizeFullSitePackageForWrite(bareCode), "site_package_invalid");
-
-    const unsafe = validPackage();
-    unsafe.compatibility = {
-      unresolvedVisuals: [
-        {
-          ...validResidual(),
-          impact: { ...validResidual().impact, accessibility: true },
-        } as never,
-      ],
+  it("keeps verification strict, accepts 100 inputs, and deduplicates by first occurrence", () => {
+    const input = validFullSitePackage();
+    input.verification = {
+      scenarioIds: ["first", "second", "first", ...Array.from({ length: 97 }, (_, i) => `s-${i}`)],
     };
-    expectCode(() => normalizeFullSitePackageForWrite(unsafe), "site_package_invalid");
+    const normalized = normalizeFullSitePackageForWrite(input);
+    expect(normalized.verification?.scenarioIds.slice(0, 2)).toEqual(["first", "second"]);
+    expect(normalized.verification?.scenarioIds).toHaveLength(99);
+
+    const over = validFullSitePackage();
+    over.verification = {
+      scenarioIds: Array.from({ length: 101 }, (_, index) => `scenario-${index}`),
+    };
+    const error = expectFullSitePackageCode(
+      () => normalizeFullSitePackageForWrite(over),
+      "site_package_too_complex"
+    );
+    expect(error.diagnostics).toEqual([
+      { path: "$.verification.scenarioIds", reason: "scenario_count_exceeded" },
+    ]);
   });
 
-  it("canonicalizes complete desired snapshots and is idempotent", () => {
-    const input = validPackage();
+  it("uses one bounded collector with the 101st-attempt replacement singleton", () => {
+    const collector = createDiagnosticCollector<FullSitePackageDiagnostic>();
+    for (let index = 0; index < 100; index += 1) {
+      collector.add({ path: `$.trusted[${index}]`, reason: "test" });
+    }
+    expect(collector.read()).toMatchObject({ overflowed: false });
+    expect(collector.read().diagnostics).toHaveLength(100);
+    collector.add({ path: "$.trusted[100]", reason: "test" });
+    expect(collector.read()).toEqual({
+      overflowed: true,
+      diagnostics: [{ path: "$.resources", reason: "diagnostic_limit_exceeded" }],
+    });
+    collector.add({ path: "$.trusted[101]", reason: "test" });
+    expect(collector.read().diagnostics).toHaveLength(1);
+  });
+
+  it("does not count ref-shaped values at the structural boundary", () => {
+    const input = validFullSitePackage();
     input.resources.pages.push({
       key: "home",
       desired: {
-        z: 1,
-        children: [{ z: "last", a: "first" }],
-        a: { z: false, a: true },
-        status: "published",
+        arbitrary: Array.from({ length: PACKAGE_LIMITS.referenceEdges + 1 }, (_, index) => ({
+          ref: "page",
+          key: `page-${index}`,
+        })),
       },
     });
-    input.verification = { scenarioIds: ["mobile-navigation", "home-desktop-effects"] };
-
-    const first = normalizeFullSitePackageForWrite(input);
-    const second = normalizeFullSitePackageForWrite(first);
-
-    expect(second).toEqual(first);
-    expect(first.verification?.scenarioIds).toEqual(["mobile-navigation", "home-desktop-effects"]);
-    expect(Object.keys(first.resources.pages[0]?.desired ?? {})).toEqual([
-      "a",
-      "children",
-      "status",
-      "z",
-    ]);
-    expect(first.resources.pages[0]?.desired.children).toEqual([{ a: "first", z: "last" }]);
+    expect(() => normalizeFullSitePackageForWrite(input)).not.toThrow();
+    expect(PACKAGE_LIMITS.referenceEdges).toBe(4_096);
   });
-});
 
-const validResidual = () => ({
-  id: "favicon-not-installed",
-  prototypeEvidence: "Prototype contains a favicon.",
-  cmsConstraint: "The package has no media resource kind.",
-  installedApproximation: "The existing favicon remains.",
-  userVisibleDifference: "Brand favicon is not installed.",
-  impact: {
-    functional: false as const,
-    accessibility: false as const,
-    data: false as const,
-    security: false as const,
-    testIntegrity: false as const,
-  },
-  postInstallRemediation: "Upload the approved favicon through the media library.",
+  it("accepts complete residuals while rejecting missing fields and non-false impact", () => {
+    const input = validFullSitePackage();
+    input.compatibility = { unresolvedVisuals: [validVisualResidual()] };
+    expect(normalizeFullSitePackageForWrite(input).compatibility).toEqual(input.compatibility);
+
+    const incomplete = validFullSitePackage();
+    incomplete.compatibility = { unresolvedVisuals: ["residual"] as never };
+    expectFullSitePackageCode(
+      () => normalizeFullSitePackageForWrite(incomplete),
+      "site_package_invalid"
+    );
+
+    const unsafe = validFullSitePackage();
+    unsafe.compatibility = {
+      unresolvedVisuals: [
+        {
+          ...validVisualResidual(),
+          impact: { ...validVisualResidual().impact, accessibility: true },
+        } as never,
+      ],
+    };
+    expectFullSitePackageCode(
+      () => normalizeFullSitePackageForWrite(unsafe),
+      "site_package_invalid"
+    );
+  });
 });

@@ -2,6 +2,7 @@ import { expect, test } from "bun:test";
 import { randomUUID } from "node:crypto";
 import { eq, inArray } from "drizzle-orm";
 import { db } from "../../../core/db/client";
+import { acquireNativeCmsWriterFence } from "../../../core/db/nativeCmsWriterFence";
 import {
   contentEntries,
   contentTypes,
@@ -19,17 +20,18 @@ import {
   type NormalizedFormAction,
 } from "../../../core/services/forms/formActionsContract";
 import { createFullSiteCurrentResourceResolver } from "../../../core/services/kits/fullSiteInstall/currentResourceResolver";
+import { readFullSitePlanningResourcesBatch } from "../../../core/services/kits/fullSiteInstall/planningResourceBatchReader";
+import { createFullSitePlanningSnapshotLoader } from "../../../core/services/kits/fullSiteInstall/planningSnapshot";
 import { planFullSiteInstall } from "../../../core/services/kits/fullSiteInstallPlanner";
 import type {
   CurrentResourceState,
   FullSiteCurrentResourceResolver,
   FullSiteInstallLedgerPort,
   FullSiteInstallResourceKind,
-  ManagedResourceEvidence,
 } from "../../../core/services/kits/fullSiteInstallTypes";
 import {
   createLegacyInstallLedger,
-  withFullSiteInstallLocks,
+  findManagedResourceEvidenceBatch,
 } from "../../../core/services/kits/legacyInstallRunPersistence";
 import type {
   FullSitePackageResources,
@@ -132,14 +134,34 @@ const planPackage = (
   pkg: FullSitePackageV1,
   ledger: FullSiteInstallLedgerPort,
   resolveCurrentResource: FullSiteCurrentResourceResolver,
-  allowSettingTakeover?: true
-) =>
-  planFullSiteInstall(pkg, {
-    ledger,
-    resolveCurrentResource,
+  allowSettingTakeover?: true,
+  onSnapshotLoad?: () => void
+) => {
+  void ledger;
+  void resolveCurrentResource;
+  const loadSnapshot = createFullSitePlanningSnapshotLoader({
+    packageKey: pkg.key,
+    withReadTransaction: (read) =>
+      db.transaction(
+        async (tx) => {
+          await acquireNativeCmsWriterFence(tx);
+          return read({
+            findEvidence: (input) => findManagedResourceEvidenceBatch(tx, input),
+            readNative: (input) => readFullSitePlanningResourcesBatch(tx, input),
+          });
+        },
+        { isolationLevel: "read committed" }
+      ),
+  });
+  return planFullSiteInstall(pkg, {
+    loadPlanningSnapshot: (resources) => {
+      onSnapshotLoad?.();
+      return loadSnapshot(resources);
+    },
     normalizeDesired: identityNormalizer,
     ...(allowSettingTakeover ? { allowSettingTakeover } : {}),
   });
+};
 const projectPersistedFormActions = (input: unknown): NormalizedFormAction[] =>
   normalizeFormActionsInput(input)
     .sort((left, right) => left.orderIndex - right.orderIndex || left.id.localeCompare(right.id))
@@ -223,7 +245,7 @@ test("natural-key-only native equality remains an unmanaged planner conflict", a
     await cleanupOwnedIds(owned);
   }
 });
-test("dependency-bearing planning performs exactly one managed-evidence read per identity", async () => {
+test("dependency-bearing planning uses one batch snapshot and zero direct fallback reads", async () => {
   const scope = randomUUID();
   const packageKey = `ownership-evidence-count-${scope}`;
   const slug = `ownership-evidence-type-${scope}`;
@@ -253,14 +275,14 @@ test("dependency-bearing planning performs exactly one managed-evidence read per
       return originalFindEvidence(input);
     };
     const concreteResolver = createFullSiteCurrentResourceResolver(packageKey, ledger);
-    const handoffs: Array<ManagedResourceEvidence | null | undefined> = [];
+    let resolverCalls = 0;
     const resolver: FullSiteCurrentResourceResolver = async (
       kind,
       seed,
       expectedId,
       managedEvidence
     ) => {
-      handoffs.push(managedEvidence);
+      resolverCalls += 1;
       return concreteResolver(kind, seed, expectedId, managedEvidence);
     };
     const parentReference = { ref: "content_type" as const, key: "project" };
@@ -271,11 +293,13 @@ test("dependency-bearing planning performs exactly one managed-evidence read per
         desired: { slug: `aurora-${scope}`, contentTypeId: parentReference },
       });
     });
-    const plan = await planPackage(pkg, ledger, resolver);
-    expect(evidenceCalls).toBe(plan.operations.length);
-    expect(evidenceCalls).toBe(2);
-    expect(handoffs[0]).toMatchObject({ resourceId: contentTypeId });
-    expect(handoffs[1]).toBeNull();
+    let snapshotLoads = 0;
+    const plan = await planPackage(pkg, ledger, resolver, undefined, () => {
+      snapshotLoads += 1;
+    });
+    expect(snapshotLoads).toBe(1);
+    expect(evidenceCalls).toBe(0);
+    expect(resolverCalls).toBe(0);
     expect(plan.operations.map(({ operation }) => operation)).toEqual(["noop", "create"]);
     expect(plan.operations[1]?.desired.contentTypeId).toEqual(parentReference);
   } finally {
@@ -897,7 +921,7 @@ test("setting takeover is explicit and remains isolated from non-setting ownersh
   const settingKey = "site.name";
   const slug = `ownership-setting-form-${scope}`;
   const owned = createOwnedIds();
-  await withFullSiteInstallLocks(packageKey, async () => {
+  {
     const [priorSetting] = await db
       .select({ value: settings.value, updatedAt: settings.updatedAt })
       .from(settings)
@@ -973,5 +997,5 @@ test("setting takeover is explicit and remains isolated from non-setting ownersh
       }
       if (cleanupFailed) throw new Error(CLEANUP_FAILURE);
     }
-  });
+  }
 });

@@ -6,9 +6,10 @@
 **Category:** Developer Experience / Solution Kits / Setup
 **Estimated Effort:** Medium
 **Dependencies:** TASK-547-04
-**Status:** 🚧 In Progress
-**Validation:** Corrective lifecycle/error-contract work and fresh CLI/final
-gates are pending.
+**Status:** ✅ Done
+**Completed:** 2026-08-08
+**Validation:** CLI lifecycle, bounded error, shutdown and final repository gates
+passed on the completed working tree.
 
 ---
 
@@ -412,7 +413,7 @@ close path, never hang, reopen or issue a path stat.
 
 ## Sub-Tasks
 
-- [ ] **TASK-547-05-L01** — strict installer CLI, safe output and tests.
+- [x] **TASK-547-05-L01** — strict installer CLI, safe output and tests.
 
 ## Testing Requirements
 

@@ -7,9 +7,10 @@
 **Estimated Effort:** Very Large
 **Dependencies:** TASK-547-02-L01 plus the TASK-547-02-L03 pre-land
 compatibility checkpoint
-**Status:** 🚧 In Progress
-**Validation:** Corrective adapter/executor work and fresh L02-owned targeted
-gates are pending.
+**Status:** ✅ Done
+**Completed:** 2026-08-08
+**Validation:** Adapter/executor, native lifecycle and final repository gates passed
+on the completed working tree.
 
 ## Overview
 
@@ -968,12 +969,12 @@ Additional focused regressions pin:
 - [x] Implement exhaustive `satisfies FullSiteResourceAdapterRegistry` without editing L01 types; test every kind.
 - [x] Add safe snapshots/equality/run items/cache effects.
 - [x] Add targeted adapter DB tests.
-- [ ] Split facade/tests/legacy entry service by frozen ownership; preserve public imports and 1,000-line gate.
-- [ ] Enforce strict listing/`submit.supportingText` preflight and raw stored-locale versus canonical public resolution.
-- [ ] Build one pre-lock graph; reserved apply plans/prepares/initializes once, while initialized apply enters durable recovery.
-- [ ] Implement all nine exact-ID atomic APIs, conditional deletes, Form-action Tx and locked settings batches with races.
-- [ ] Fence ordinary writers shared-first and installer work owner-first; lock all live reverse-FK/content-route targets and exhaust inventory.
-- [ ] Persist intended IDs/dependencies/targets/complete captures; reject null IDs, overflow and CAS races; keep L03 outcome authority.
+- [x] Split facade/tests/legacy entry service by frozen ownership; preserve public imports and 1,000-line gate.
+- [x] Enforce strict listing/`submit.supportingText` preflight and raw stored-locale versus canonical public resolution.
+- [x] Build one pre-lock graph; reserved apply plans/prepares/initializes once, while initialized apply enters durable recovery.
+- [x] Implement all nine exact-ID atomic APIs, conditional deletes, Form-action Tx and locked settings batches with races.
+- [x] Fence ordinary writers shared-first and installer work owner-first; lock all live reverse-FK/content-route targets and exhaust inventory.
+- [x] Persist intended IDs/dependencies/targets/complete captures; reject null IDs, overflow and CAS races; keep L03 outcome authority.
 
 ## Testing Requirements
 

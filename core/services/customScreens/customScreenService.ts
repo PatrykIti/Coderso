@@ -1,6 +1,7 @@
 import { desc, eq, inArray } from "drizzle-orm";
 
 import { db } from "../../db/client";
+import { acquireNativeCmsWriterFence } from "../../db/nativeCmsWriterFence";
 import { contentTypes, customScreens } from "../../db/schema";
 import type { WidgetBlock } from "../../widgets/types";
 import {
@@ -118,6 +119,8 @@ type ContentTypeDefinitionContext = {
   };
 };
 
+type CustomScreenTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
+
 const mapRow = (
   row: typeof customScreens.$inferSelect,
   context?: { contentType?: ContentTypeDefinitionContext | null }
@@ -170,6 +173,20 @@ async function loadContentTypesById(ids: string[]) {
   return new Map(rows.map((row) => [row.id, mapContentTypeContext(row)!]));
 }
 
+const lockContentTypeContext = async (
+  tx: CustomScreenTransaction,
+  contentTypeId: string
+): Promise<ContentTypeDefinitionContext> => {
+  const [row] = await tx
+    .select()
+    .from(contentTypes)
+    .where(eq(contentTypes.id, contentTypeId))
+    .for("key share");
+  const context = mapContentTypeContext(row);
+  if (!context) throw new Error("custom_screen_invalid");
+  return context;
+};
+
 export async function listCustomScreens(): Promise<CustomScreenRecord[]> {
   const rows = await db.select().from(customScreens).orderBy(desc(customScreens.updatedAt));
   const contentTypesById = await loadContentTypesById(rows.map((row) => row.contentTypeId));
@@ -188,139 +205,154 @@ export async function getCustomScreen(id: string) {
 }
 
 export async function createCustomScreen(input: CustomScreenCreateInput) {
-  const name = normalizeName(input.name);
-  const contentTypeId = normalizeContentTypeId(input.contentTypeId);
-  const contentTypesById = await loadContentTypesById([contentTypeId]);
-  const contentType = contentTypesById.get(contentTypeId) ?? null;
-  const rawInput = input as Record<string, unknown>;
-  const sink: ScreenBindingWarningSink = { removedFieldOrphans: [], removedBlockOrphans: [] };
-  const definition = normalizeCustomScreenDefinitionForWrite(
-    {
-      definition: input.definition,
-      schemaVersion: input.schemaVersion,
-      blocks: rawInput.blocks,
-      bindings: rawInput.bindings,
+  const committed = await db.transaction(
+    async (tx) => {
+      await acquireNativeCmsWriterFence(tx);
+      const name = normalizeName(input.name);
+      const contentTypeId = normalizeContentTypeId(input.contentTypeId);
+      const contentType = await lockContentTypeContext(tx, contentTypeId);
+      const rawInput = input as Record<string, unknown>;
+      const sink: ScreenBindingWarningSink = { removedFieldOrphans: [], removedBlockOrphans: [] };
+      const definition = normalizeCustomScreenDefinitionForWrite(
+        {
+          definition: input.definition,
+          schemaVersion: input.schemaVersion,
+          blocks: rawInput.blocks,
+          bindings: rawInput.bindings,
+        },
+        { contentType },
+        sink
+      );
+      const sidebar = normalizeCustomScreenSidebarConfig({
+        showInSidebar: input.showInSidebar,
+        sidebarLabel: input.sidebarLabel,
+      });
+      const collectionLink = normalizeCustomScreenCollectionLink({
+        collectionRole: input.collectionRole,
+        compositionKey: input.compositionKey,
+      });
+      const now = new Date();
+      const [row] = await tx
+        .insert(customScreens)
+        .values({
+          name,
+          contentTypeId,
+          status: normalizeStatus(input.status),
+          collectionRole: collectionLink.collectionRole,
+          compositionKey: collectionLink.compositionKey,
+          showInSidebar: sidebar.showInSidebar,
+          sidebarLabel: sidebar.sidebarLabel,
+          schemaVersion: definition.schemaVersion,
+          definition,
+          createdAt: now,
+          updatedAt: now,
+        })
+        .returning();
+      if (!row) throw new Error("custom_screen_invalid");
+      return { row, contentType, warnings: buildBindingWarnings(sink) };
     },
-    { contentType },
-    sink
+    { isolationLevel: "read committed" }
   );
-  const sidebar = normalizeCustomScreenSidebarConfig({
-    showInSidebar: input.showInSidebar,
-    sidebarLabel: input.sidebarLabel,
-  });
-  const collectionLink = normalizeCustomScreenCollectionLink({
-    collectionRole: input.collectionRole,
-    compositionKey: input.compositionKey,
-  });
-
-  const now = new Date();
-  const [row] = await db
-    .insert(customScreens)
-    .values({
-      name,
-      contentTypeId,
-      status: normalizeStatus(input.status),
-      collectionRole: collectionLink.collectionRole,
-      compositionKey: collectionLink.compositionKey,
-      showInSidebar: sidebar.showInSidebar,
-      sidebarLabel: sidebar.sidebarLabel,
-      schemaVersion: definition.schemaVersion,
-      definition,
-      createdAt: now,
-      updatedAt: now,
-    })
-    .returning();
-
-  if (!row) throw new Error("custom_screen_invalid");
-  const warnings = buildBindingWarnings(sink);
   return {
-    ...mapRow(row, { contentType }),
-    ...(warnings.length > 0 ? { warnings } : {}),
+    ...mapRow(committed.row, { contentType: committed.contentType }),
+    ...(committed.warnings.length > 0 ? { warnings: committed.warnings } : {}),
   };
 }
 
 export async function updateCustomScreen(id: string, input: CustomScreenUpdateInput) {
-  const [existing] = await db.select().from(customScreens).where(eq(customScreens.id, id));
-  if (!existing) return null;
-
-  const nextContentTypeId =
-    input.contentTypeId !== undefined
-      ? normalizeContentTypeId(input.contentTypeId)
-      : existing.contentTypeId;
-  const contentTypesById = await loadContentTypesById([nextContentTypeId]);
-  const contentType = contentTypesById.get(nextContentTypeId) ?? null;
-  const baseDefinition = normalizeCustomScreenDefinitionForRead(
-    {
-      definition: existing.definition,
-      schemaVersion: existing.schemaVersion,
+  const committed = await db.transaction(
+    async (tx) => {
+      await acquireNativeCmsWriterFence(tx);
+      const [observed] = await tx.select().from(customScreens).where(eq(customScreens.id, id));
+      if (!observed) return null;
+      const nextContentTypeId =
+        input.contentTypeId !== undefined
+          ? normalizeContentTypeId(input.contentTypeId)
+          : observed.contentTypeId;
+      const contentType = await lockContentTypeContext(tx, nextContentTypeId);
+      const [existing] = await tx
+        .select()
+        .from(customScreens)
+        .where(eq(customScreens.id, id))
+        .for("update");
+      if (!existing) return null;
+      if (input.contentTypeId === undefined && existing.contentTypeId !== nextContentTypeId) {
+        throw new Error("custom_screen_invalid");
+      }
+      const baseDefinition = normalizeCustomScreenDefinitionForRead(
+        { definition: existing.definition, schemaVersion: existing.schemaVersion },
+        { contentType }
+      );
+      const nextSchemaVersion =
+        input.schemaVersion === undefined
+          ? baseDefinition.schemaVersion
+          : normalizeCustomScreenSchemaVersion(input.schemaVersion);
+      const rawInput = input as Record<string, unknown>;
+      const sink: ScreenBindingWarningSink = { removedFieldOrphans: [], removedBlockOrphans: [] };
+      const definition = normalizeCustomScreenDefinitionForWrite(
+        input.definition !== undefined ||
+          input.schemaVersion !== undefined ||
+          rawInput.blocks !== undefined ||
+          rawInput.bindings !== undefined
+          ? {
+              definition: input.definition ?? baseDefinition,
+              schemaVersion: nextSchemaVersion,
+              blocks: rawInput.blocks,
+              bindings: rawInput.bindings,
+            }
+          : { definition: baseDefinition },
+        { contentType },
+        sink
+      );
+      const sidebar = normalizeCustomScreenSidebarConfig({
+        showInSidebar: input.showInSidebar ?? existing.showInSidebar,
+        sidebarLabel: input.sidebarLabel !== undefined ? input.sidebarLabel : existing.sidebarLabel,
+      });
+      const collectionLink = normalizeCustomScreenCollectionLink({
+        collectionRole:
+          input.collectionRole !== undefined ? input.collectionRole : existing.collectionRole,
+        compositionKey:
+          input.compositionKey !== undefined ? input.compositionKey : existing.compositionKey,
+      });
+      const [row] = await tx
+        .update(customScreens)
+        .set({
+          name: input.name !== undefined ? normalizeName(input.name) : existing.name,
+          contentTypeId: nextContentTypeId,
+          status:
+            input.status !== undefined
+              ? normalizeStatus(input.status)
+              : normalizeStatus(existing.status),
+          collectionRole: collectionLink.collectionRole,
+          compositionKey: collectionLink.compositionKey,
+          showInSidebar: sidebar.showInSidebar,
+          sidebarLabel: sidebar.sidebarLabel,
+          schemaVersion: definition.schemaVersion,
+          definition,
+          updatedAt: new Date(),
+        })
+        .where(eq(customScreens.id, id))
+        .returning();
+      return row ? { row, contentType, warnings: buildBindingWarnings(sink) } : null;
     },
-    { contentType }
+    { isolationLevel: "read committed" }
   );
-  const nextSchemaVersion =
-    input.schemaVersion === undefined
-      ? baseDefinition.schemaVersion
-      : normalizeCustomScreenSchemaVersion(input.schemaVersion);
-  const rawInput = input as Record<string, unknown>;
-  // TASK-505-01 (Item B): collect pruned binding-orphan field names on Save (transient).
-  const sink: ScreenBindingWarningSink = { removedFieldOrphans: [], removedBlockOrphans: [] };
-  const definition = normalizeCustomScreenDefinitionForWrite(
-    input.definition !== undefined ||
-      input.schemaVersion !== undefined ||
-      rawInput.blocks !== undefined ||
-      rawInput.bindings !== undefined
-      ? {
-          definition: input.definition ?? baseDefinition,
-          schemaVersion: nextSchemaVersion,
-          blocks: rawInput.blocks,
-          bindings: rawInput.bindings,
-        }
-      : {
-          definition: baseDefinition,
-        },
-    { contentType },
-    sink
-  );
-  const sidebar = normalizeCustomScreenSidebarConfig({
-    showInSidebar: input.showInSidebar !== undefined ? input.showInSidebar : existing.showInSidebar,
-    sidebarLabel: input.sidebarLabel !== undefined ? input.sidebarLabel : existing.sidebarLabel,
-  });
-  const collectionLink = normalizeCustomScreenCollectionLink({
-    collectionRole:
-      input.collectionRole !== undefined ? input.collectionRole : existing.collectionRole,
-    compositionKey:
-      input.compositionKey !== undefined ? input.compositionKey : existing.compositionKey,
-  });
-
-  const [row] = await db
-    .update(customScreens)
-    .set({
-      name: input.name !== undefined ? normalizeName(input.name) : existing.name,
-      contentTypeId: nextContentTypeId,
-      status:
-        input.status !== undefined
-          ? normalizeStatus(input.status)
-          : normalizeStatus(existing.status),
-      collectionRole: collectionLink.collectionRole,
-      compositionKey: collectionLink.compositionKey,
-      showInSidebar: sidebar.showInSidebar,
-      sidebarLabel: sidebar.sidebarLabel,
-      schemaVersion: definition.schemaVersion,
-      definition,
-      updatedAt: new Date(),
-    })
-    .where(eq(customScreens.id, id))
-    .returning();
-
-  if (!row) return null;
-  const warnings = buildBindingWarnings(sink);
+  if (!committed) return null;
   return {
-    ...mapRow(row, { contentType }),
-    ...(warnings.length > 0 ? { warnings } : {}),
+    ...mapRow(committed.row, { contentType: committed.contentType }),
+    ...(committed.warnings.length > 0 ? { warnings: committed.warnings } : {}),
   };
 }
 
 export async function deleteCustomScreen(id: string) {
-  const [row] = await db.delete(customScreens).where(eq(customScreens.id, id)).returning();
+  const row = await db.transaction(
+    async (tx) => {
+      await acquireNativeCmsWriterFence(tx);
+      const [deleted] = await tx.delete(customScreens).where(eq(customScreens.id, id)).returning();
+      return deleted ?? null;
+    },
+    { isolationLevel: "read committed" }
+  );
   if (!row) return null;
   const contentTypesById = await loadContentTypesById([row.contentTypeId]);
   return mapRow(row, {

@@ -287,7 +287,8 @@ export function normalizeFormActionConfig<T extends FormActionType>(
 
 export function normalizeFormActionInput(
   input: FormActionInput,
-  fallbackOrderIndex: number
+  fallbackOrderIndex: number,
+  options: Readonly<{ requireStableIds?: boolean }> = {}
 ): NormalizedFormAction {
   if (!ACTION_TYPES.has(input.type)) {
     throw new Error("form_action_invalid_type");
@@ -297,7 +298,13 @@ export function normalizeFormActionInput(
   const label = readString(input.label) ?? resolveDefaultLabel(type);
 
   return {
-    id: readString(input.id) ?? createActionId(),
+    id:
+      readString(input.id) ??
+      (options.requireStableIds
+        ? (() => {
+            throw new Error("form_action_invalid_payload");
+          })()
+        : createActionId()),
     type,
     label,
     enabled: normalizeBoolean(input.enabled, true),
@@ -308,12 +315,19 @@ export function normalizeFormActionInput(
   };
 }
 
-export function normalizeFormActionsInput(input: unknown): NormalizedFormAction[] {
+export function normalizeFormActionsInput(
+  input: unknown,
+  options: Readonly<{ requireStableIds?: boolean }> = {}
+): NormalizedFormAction[] {
   if (!Array.isArray(input)) throw new Error("form_action_invalid_payload");
-  return input.map((item, index) => {
+  const normalized = input.map((item, index) => {
     if (!isRecord(item)) throw new Error("form_action_invalid_payload");
-    return normalizeFormActionInput(item as FormActionInput, index);
+    return normalizeFormActionInput(item as FormActionInput, index, options);
   });
+  if (new Set(normalized.map((action) => action.id)).size !== normalized.length) {
+    throw new Error("form_action_invalid_payload");
+  }
+  return normalized;
 }
 
 /**
@@ -321,8 +335,11 @@ export function normalizeFormActionsInput(input: unknown): NormalizedFormAction[
  * The stable id tie-breaker prevents equal authored order indexes from making
  * the resulting snapshot depend on input or database row order.
  */
-export function normalizeFormActionsForWrite(input: unknown): NormalizedFormAction[] {
-  return normalizeFormActionsInput(input)
+export function normalizeFormActionsForWrite(
+  input: unknown,
+  options: Readonly<{ requireStableIds?: boolean }> = {}
+): NormalizedFormAction[] {
+  return normalizeFormActionsInput(input, options)
     .sort((left, right) => left.orderIndex - right.orderIndex || left.id.localeCompare(right.id))
     .map((action, orderIndex) => ({ ...action, orderIndex }));
 }

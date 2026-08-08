@@ -6,10 +6,10 @@
 **Category:** Reference Example / Content Engine / Forms
 **Estimated Effort:** Large
 **Dependencies:** TASK-547-02
-**Status:** 🚧 In Progress
-**Reopened:** 2026-07-23 — the native resource graph is present, but its seeded
-public content drifted from the designated FormaDom reference and must be
-corrected before final validation.
+**Status:** ✅ Done
+**Completed:** 2026-08-08
+**Validation:** Corrected content, Forms, listings and installed-runtime gates
+passed, followed by the final 18/18 certification smoke.
 
 ---
 
@@ -332,11 +332,11 @@ determinism, SEO preservation and absence of secrets/DB/media IDs.
 
 ## Sub-Tasks
 
-- [ ] **TASK-547-03-L01** — correct the project schema and six source-derived
+- [x] **TASK-547-03-L01** — correct the project schema and six source-derived
   entry fixtures.
-- [ ] **TASK-547-03-L02** — correct listing/query/facets, Aurora detail SEO and
+- [x] **TASK-547-03-L02** — correct listing/query/facets, Aurora detail SEO and
   content-route setting support.
-- [ ] **TASK-547-03-L03** — correct the real contact form/action and aggregate
+- [x] **TASK-547-03-L03** — correct the real contact form/action and aggregate
   preservation tests.
 
 ## Testing Requirements

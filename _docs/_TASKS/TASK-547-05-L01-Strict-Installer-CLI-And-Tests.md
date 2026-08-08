@@ -6,9 +6,10 @@
 **Category:** Developer Experience / CLI
 **Estimated Effort:** Medium
 **Dependencies:** TASK-547-04
-**Status:** 🚧 In Progress
-**Validation:** Fresh CLI and final gates are pending after lifecycle/error
-contract remediation.
+**Status:** ✅ Done
+**Completed:** 2026-08-08
+**Validation:** Strict CLI, lifecycle/error-contract and final repository gates
+passed on the completed working tree.
 
 ## Overview
 
@@ -360,9 +361,9 @@ one close, with no hang, reopen or path stat.
 
 ## Sub-Tasks
 
-- [ ] Add the missing `buildReferencePlan` pre-DB seam, discard its result and
+- [x] Add the missing `buildReferencePlan` pre-DB seam, discard its result and
   assert bad-path rejection before `apply`/lazy DB acquisition with no plan dep.
-- [ ] First decouple the raw cap from serialized-object `PACKAGE_LIMITS.fileBytes`,
+- [x] First decouple the raw cap from serialized-object `PACKAGE_LIMITS.fileBytes`,
   then replace the path-stat/read race with the exact one-handle reader and its
   cap/race/UTF-8/static-error matrix; add exact takeover
   forwarding/rollback rejection, canonical loader rollback delegation, safe

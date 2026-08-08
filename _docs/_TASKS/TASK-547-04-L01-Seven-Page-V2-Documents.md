@@ -6,9 +6,10 @@
 **Category:** Pages / Reference Example
 **Estimated Effort:** Very Large
 **Dependencies:** TASK-547-03
-**Status:** 🚧 In Progress
-**Reopened:** 2026-07-23 — current builders contain non-source copy and facts;
-the corrected implementation and fresh validation are pending.
+**Status:** ✅ Done
+**Completed:** 2026-08-08
+**Validation:** All seven corrected Page documents, source-fidelity contracts and
+focused Page gates passed, followed by the final 18/18 certification smoke.
 
 ## Overview
 
@@ -949,15 +950,15 @@ The tests assert:
 
 ## Sub-Tasks
 
-- [ ] Split the Page document, renderer and editor registry into the frozen
+- [x] Split the Page document, renderer and editor registry into the frozen
   cohesive module map while preserving public imports and trusted sinks.
-- [ ] Add the strict present-only switcher accessible-name contract, editor
+- [x] Add the strict present-only switcher accessible-name contract, editor
   control and exact Polish FormaDom value.
-- [ ] Add strict present-only collection/Form presentation props, renderer
+- [x] Add strict present-only collection/Form presentation props, renderer
   bridges and editor controls; author only the exact FormaDom values.
-- [ ] Correct all seven Page v2 documents, static SEO, source copy, links,
+- [x] Correct all seven Page v2 documents, static SEO, source copy, links,
   anchors and native interaction bindings.
-- [ ] Add the five focused Page-core suites and pass the source-fidelity,
+- [x] Add the five focused Page-core suites and pass the source-fidelity,
   renderer/editor regression and line-count gates.
 
 ## Testing Requirements

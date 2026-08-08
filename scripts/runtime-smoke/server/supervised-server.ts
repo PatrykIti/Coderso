@@ -141,6 +141,7 @@ export const CODERSO_DEV_HOST_ENVIRONMENT_POLICY: SupervisedServerEnvironmentPol
       VITE_API_ORIGIN: "http://127.0.0.1:3000",
       VITE_ADMIN_STRICT_MODE: "false",
       CODERSO_PUBLIC_VITE_DEV_URL: "http://coderso-a.localhost:5173",
+      BUN_CONFIG_SKIP_INSTALL_PACKAGES: "1",
       CI: "true",
     }),
   }
@@ -175,11 +176,7 @@ async function canonicalPath(pathValue: string): Promise<string> {
     failArgument("server PATH is invalid");
   }
   const entries = pathValue.split(delimiter);
-  if (
-    entries.length === 0 ||
-    entries.length > MAXIMUM_PATH_ENTRIES ||
-    new Set(entries).size !== entries.length
-  ) {
+  if (entries.length === 0 || entries.length > MAXIMUM_PATH_ENTRIES) {
     failArgument("server PATH entry set is invalid");
   }
   const canonicalEntries: string[] = [];
@@ -196,9 +193,10 @@ async function canonicalPath(pathValue: string): Promise<string> {
     );
     if (!(await stat(canonical)).isDirectory())
       failArgument("server PATH entry is not a directory");
-    if (canonicalEntries.includes(canonical)) {
-      failArgument("server PATH contains a canonical duplicate");
-    }
+    // Keep the first canonical entry. Common Linux environments expose both
+    // /usr/bin and its /bin alias; projecting the canonical path removes that
+    // ambiguity without rejecting an otherwise valid developer host.
+    if (canonicalEntries.includes(canonical)) continue;
     canonicalEntries.push(canonical);
   }
   const projected = canonicalEntries.join(delimiter);

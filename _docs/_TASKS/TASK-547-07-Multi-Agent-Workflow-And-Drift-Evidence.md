@@ -6,9 +6,10 @@
 **Category:** Agent Workflow / Validation
 **Estimated Effort:** Large
 **Dependencies:** TASK-547 task family
-**Status:** 🚧 In Progress
-**Validation:** The interrupted branch is being re-inventoried on the merged
-working tree; current audit, implementation, gate and smoke evidence is pending.
+**Status:** ✅ Done
+**Completed:** 2026-08-08
+**Validation:** Dependency-shaped audit/gate evidence is recorded below; final
+repo typecheck, harness 26/26 and certification smoke 18/18 passed.
 
 ## Overview
 
@@ -99,8 +100,7 @@ stays Draft and absent from `_docs/_CHANGELOG/README.md` until final closure.
 TASK-547 registers `task-547` through the shared static entry point:
 
 ```text
-bun scripts/runtime-smoke.ts run --suite task-547 --profile fast --session wf547fast
-bun scripts/runtime-smoke.ts run --suite task-547 --profile certification --session wf547certification
+bun scripts/runtime-smoke.ts run --suite task-547 --profile certification --session wf547final
 ```
 
 Both profiles execute the same ordered 18 product-visible scenarios and the
@@ -126,8 +126,9 @@ timing and `SmokeAdapterResult`/`RuntimeSmokeReport`. It imports TASK-552-04's
 `SupervisedServerResource`/`startSupervisedServer(...)` from
 `scripts/runtime-smoke/server/supervised-server.ts` instead of copying either
 loop. It starts/stops the server only through `coderso-dev-core-host`.
-Screenshots and reports go under
-`_docs/_workflows/_smoke/task-547/`. No task-local CLI, tracked
+Screenshots go under `_docs/_workflows/_smoke/task-547/`; bounded JSON and
+Markdown reports go to stdout/stderr and may be captured as one task-scoped
+durable receipt. No task-local CLI, tracked
 `_docs/PLAYWRIGHT` evidence tree or generated ledger is closure authority.
 
 The adapter validates its exact suite and one of the two supported profiles
@@ -151,8 +152,8 @@ After implementation and draft documentation:
    cross-stream safety and test integrity);
 2. verify findings locally, fix HIGH/MEDIUM items and rerun only affected lenses
    and targeted gates;
-3. run `fast`, then run the final 18-scenario `certification` smoke on the final
-   candidate;
+3. prove `fast`/`certification` descriptor and plan identity statically, then run
+   the final 18-scenario `certification` smoke once on the final candidate;
 4. verify zero console/page errors, all screenshots, the single final exact-run
    rollback, set-based cleanup, prior-state equality and repository snapshot;
 5. terminalize descendants, parent, board and changelog index in dependency
@@ -197,11 +198,11 @@ for (const leaf of inventory.unfinishedOrChangedInDependencyOrder) {
 }
 
 await runPostAuditAndAffectedFixLoop();
-await runSharedSmoke({ suite: "task-547", profile: "fast", session: "wf547fast" });
+await proveProfileDescriptorAndPlanIdentity("task-547", "fast", "certification");
 await runSharedSmoke({
   suite: "task-547",
   profile: "certification",
-  session: "wf547certification",
+  session: "wf547final",
 });
 await closeDescendantsThenParentAndIndexes();
 ```
@@ -213,12 +214,13 @@ a generated receipt or by replaying unrelated clean work.
 
 ## Sub-Tasks
 
-- [ ] Inventory the interrupted merged branch and classify every leaf.
-- [ ] Complete one dependency-shaped pre-implementation audit/reconcile round.
-- [ ] Continue only unfinished/changed leaves with owning gates.
-- [ ] Complete one dependency-shaped post-audit and affected fixes.
-- [ ] Run both shared profiles with all 18 scenarios and clean rollback/cleanup.
-- [ ] Close TASK-547 in descendant order and index changelog 1260 last.
+- [x] Inventory the interrupted merged branch and classify every leaf.
+- [x] Complete one dependency-shaped pre-implementation audit/reconcile round.
+- [x] Continue only unfinished/changed leaves with owning gates.
+- [x] Complete one dependency-shaped post-audit and affected fixes.
+- [x] Prove static profile identity and run one final certification with all 18
+  scenarios and clean rollback/cleanup.
+- [x] Close TASK-547 in descendant order and index changelog 1260 last.
 
 ## Testing Requirements
 
@@ -228,8 +230,9 @@ a generated receipt or by replaying unrelated clean work.
   descriptor/worker/cleanup/browser tests;
 - `tests/unit/runtime-smoke/cli-registry.test.ts` proves exact four-file
   registration, both allowed profiles and unsupported suite/profile negatives;
-- both shared CLI commands above, with one fixture and identical 18-scenario
-  coverage followed by one final cleanup/rollback;
+- focused tests proving byte-identical profile descriptors/plans, followed by
+  the single final shared certification command above with one fixture, all 18
+  scenarios and one final cleanup/rollback;
 - serial DB acceptance lanes owned by TASK-547-06-L01;
 - canonical package generator zero-diff;
 - `bun run precommit:check`, `bun run gates:coderso` and
@@ -240,6 +243,6 @@ a generated receipt or by replaying unrelated clean work.
 ## Documentation Updates Required
 
 Record the verified inventory, changed-leaf gates, audit findings/remediation,
-both profile timings, 18-scenario result, cleanup proof and final closeout in the
+certification timing, 18-scenario result, cleanup proof and final closeout in the
 TASK-547 family and Draft changelog 1260. Add the changelog index row only after
 terminal closure.

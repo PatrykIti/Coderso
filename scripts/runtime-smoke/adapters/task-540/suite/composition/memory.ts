@@ -15,6 +15,7 @@ function captureCandidate(output: PlainJsonValue, name: string): unknown {
   if (name.endsWith(".id")) {
     return typeof output.id === "string" ? output.id : output.userId;
   }
+  if (name.startsWith("palette.")) return output.id;
   if (name === "media.resolved-url") {
     return output.resolvedUrl ?? output.url;
   }
@@ -104,7 +105,10 @@ export class Task540ExecutionMemory {
         value.includes("\0") ||
         this.#captures.has(name)
       ) {
-        throw new SmokeError("smoke_output_invalid", "TASK-540 declared capture is invalid");
+        throw new SmokeError(
+          "smoke_output_invalid",
+          `TASK-540 declared capture is invalid: ${action.id}/${name}`
+        );
       }
       this.#captures.set(name, value);
     }

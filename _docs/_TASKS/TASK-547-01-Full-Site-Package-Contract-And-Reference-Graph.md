@@ -6,10 +6,10 @@
 **Category:** Solution Kits / Schema / Security
 **Estimated Effort:** Large
 **Dependencies:** None
-**Status:** 🚧 In Progress
-**Reopened:** 2026-07-23 — final validation was invalidated by fresh drift findings;
-implementation remains present, but this contract must pass the current audit and
-gate cycle before closure.
+**Status:** ✅ Done
+**Completed:** 2026-08-08
+**Validation:** Dependency-shaped contract gates and final repository checks passed;
+the TASK-547 certification smoke completed 18/18 with cleanup on 2026-08-08.
 
 ---
 
@@ -543,9 +543,9 @@ full consumer contract must prove that the same bad path is rejected by
 
 ## Sub-Tasks
 
-- [ ] **TASK-547-01-L01** — package schema, normalizer, bounded complexity and
+- [x] **TASK-547-01-L01** — package schema, normalizer, bounded complexity and
   malicious-input tests.
-- [ ] **TASK-547-01-L02** — closed reference registry, graph planner and contract
+- [x] **TASK-547-01-L02** — closed reference registry, graph planner and contract
   tests.
 
 ## Testing Requirements

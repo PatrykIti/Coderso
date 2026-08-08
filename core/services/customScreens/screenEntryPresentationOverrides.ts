@@ -234,10 +234,11 @@ export function resolveActiveScreenEntryPresentationOverrides(input: {
 let defaultRepositoryPromise: Promise<ScreenEntryPresentationOverrideRepository> | null = null;
 
 const createDefaultRepository = async (): Promise<ScreenEntryPresentationOverrideRepository> => {
-  const [{ db }, schema, orm] = await Promise.all([
+  const [{ db }, schema, orm, { acquireNativeCmsWriterFence }] = await Promise.all([
     import("../../db/client"),
     import("../../db/schema"),
     import("drizzle-orm"),
+    import("../../db/nativeCmsWriterFence"),
   ]);
   const table = schema.customScreenEntryPresentationOverrides;
   const mapRow = (row: typeof table.$inferSelect): ScreenEntryPresentationOverrideRecord => ({
@@ -313,67 +314,103 @@ const createDefaultRepository = async (): Promise<ScreenEntryPresentationOverrid
       return rows.map(mapRow);
     },
     async replaceScopedOverrides(input) {
-      return db.transaction(async (tx) => {
-        await tx
-          .delete(table)
-          .where(
-            orm.and(orm.eq(table.screenId, input.screenId), orm.eq(table.entryId, input.entryId))
-          );
+      return db.transaction(
+        async (tx) => {
+          await acquireNativeCmsWriterFence(tx);
+          const [screen] = await tx
+            .select({
+              id: schema.customScreens.id,
+              contentTypeId: schema.customScreens.contentTypeId,
+            })
+            .from(schema.customScreens)
+            .where(orm.eq(schema.customScreens.id, input.screenId))
+            .for("key share");
+          const [entry] = await tx
+            .select({ id: schema.contentEntries.id, typeId: schema.contentEntries.typeId })
+            .from(schema.contentEntries)
+            .where(orm.eq(schema.contentEntries.id, input.entryId))
+            .for("key share");
+          if (!screen || !entry || entry.typeId !== screen.contentTypeId) {
+            throw createOverrideError("custom_screen_override_not_found");
+          }
+          await tx
+            .delete(table)
+            .where(
+              orm.and(orm.eq(table.screenId, input.screenId), orm.eq(table.entryId, input.entryId))
+            );
 
-        const now = new Date();
-        if (input.overrides.length > 0) {
-          await tx.insert(table).values(
-            input.overrides.map((override) => ({
-              screenId: input.screenId,
-              entryId: input.entryId,
-              blockId: override.blockId,
-              propPath: override.propPath,
-              value: override.value,
-              updatedBy: input.actorId,
-              createdAt: now,
-              updatedAt: now,
-            }))
-          );
-        }
+          const now = new Date();
+          if (input.overrides.length > 0) {
+            await tx.insert(table).values(
+              input.overrides.map((override) => ({
+                screenId: input.screenId,
+                entryId: input.entryId,
+                blockId: override.blockId,
+                propPath: override.propPath,
+                value: override.value,
+                updatedBy: input.actorId,
+                createdAt: now,
+                updatedAt: now,
+              }))
+            );
+          }
 
-        const rows = await tx
-          .select()
-          .from(table)
-          .where(
-            orm.and(orm.eq(table.screenId, input.screenId), orm.eq(table.entryId, input.entryId))
-          )
-          .orderBy(orm.asc(table.blockId), orm.asc(table.propPath));
-        return rows.map(mapRow);
-      });
+          const rows = await tx
+            .select()
+            .from(table)
+            .where(
+              orm.and(orm.eq(table.screenId, input.screenId), orm.eq(table.entryId, input.entryId))
+            )
+            .orderBy(orm.asc(table.blockId), orm.asc(table.propPath));
+          return rows.map(mapRow);
+        },
+        { isolationLevel: "read committed" }
+      );
     },
     async deleteByScreen(screenId) {
-      const rows = await db.delete(table).where(orm.eq(table.screenId, screenId)).returning();
-      return rows.length;
+      return db.transaction(
+        async (tx) => {
+          await acquireNativeCmsWriterFence(tx);
+          const rows = await tx.delete(table).where(orm.eq(table.screenId, screenId)).returning();
+          return rows.length;
+        },
+        { isolationLevel: "read committed" }
+      );
     },
     async deleteByEntry(entryId) {
-      const rows = await db.delete(table).where(orm.eq(table.entryId, entryId)).returning();
-      return rows.length;
+      return db.transaction(
+        async (tx) => {
+          await acquireNativeCmsWriterFence(tx);
+          const rows = await tx.delete(table).where(orm.eq(table.entryId, entryId)).returning();
+          return rows.length;
+        },
+        { isolationLevel: "read committed" }
+      );
     },
     async deleteExact(targets) {
       if (targets.length === 0) return 0;
-      return db.transaction(async (tx) => {
-        let deleted = 0;
-        for (const target of targets) {
-          const rows = await tx
-            .delete(table)
-            .where(
-              orm.and(
-                orm.eq(table.screenId, target.screenId),
-                orm.eq(table.entryId, target.entryId),
-                orm.eq(table.blockId, target.blockId),
-                orm.eq(table.propPath, target.propPath)
+      return db.transaction(
+        async (tx) => {
+          await acquireNativeCmsWriterFence(tx);
+          let deleted = 0;
+          for (const target of targets) {
+            const rows = await tx
+              .delete(table)
+              .where(
+                orm.and(
+                  orm.eq(table.screenId, target.screenId),
+                  orm.eq(table.entryId, target.entryId),
+                  orm.eq(table.blockId, target.blockId),
+                  orm.eq(table.propPath, target.propPath)
+                )
               )
-            )
-            .returning();
-          deleted += rows.length;
-        }
-        return deleted;
-      });
+              .returning();
+            deleted += rows.length;
+          }
+          return deleted;
+        },
+        { isolationLevel: "read committed" }
+      );
     },
   };
 };

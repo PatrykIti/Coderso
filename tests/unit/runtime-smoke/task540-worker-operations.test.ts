@@ -195,6 +195,39 @@ test("TASK-540 batches 32 DB operations while its outer loop preserves all 72 re
   expect(preserved.filter(({ authority }) => authority === "canonical+db")).toHaveLength(32);
   expect(preserved.filter(({ authority }) => authority === "canonical")).toHaveLength(40);
 
+  for (const seoResources of [0, 2]) {
+    const dynamicOperations = operations.filter(
+      ({ kind, resourceKey }) =>
+        kind !== "seo-document-entry" || Number(resourceKey.split(":").at(-1)) < seoResources
+    );
+    const dynamicDispatches = buildTask540CleanupDispatches(dynamicOperations, handlers.artifact);
+    expect(dynamicDispatches.filter(({ family }) => family === "seo")).toHaveLength(
+      seoResources === 0 ? 0 : 1
+    );
+    const dynamicOutputs = await Promise.all(
+      dynamicDispatches.map(async ({ descriptor, input }) =>
+        registry.executeOneShot(descriptor, input)
+      )
+    );
+    const dynamicReceipts = [
+      ...dynamicOperations.map(({ logicalId }) => ({ logicalId, authority: "canonical" })),
+      ...Array.from({ length: 40 }, (_value, index) => ({
+        logicalId: `cleanup/dynamic-${seoResources}-node-${index}`,
+        authority: "canonical",
+      })),
+    ];
+    const dynamicPreserved = preserveTask540CanonicalCleanupReceipts(
+      dynamicReceipts,
+      dynamicOutputs as unknown as readonly Task540CleanupBatchOutput[],
+      ({ logicalId }) => logicalId,
+      (receipt) => ({ ...receipt, authority: "canonical+db" })
+    );
+    expect(dynamicPreserved).toHaveLength(54 + seoResources * 3);
+    expect(dynamicPreserved.filter(({ authority }) => authority === "canonical+db")).toHaveLength(
+      14 + seoResources * 3
+    );
+  }
+
   const foreignSlot = operations.map((operation, index) =>
     index === 1 ? { ...operation, ownershipSha256: digest("foreign-owner") } : operation
   );

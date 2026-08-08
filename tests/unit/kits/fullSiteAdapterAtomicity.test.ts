@@ -5,21 +5,23 @@ import { isDeepStrictEqual } from "node:util";
 import { db } from "../../../core/db/client";
 import { solutionKitInstallRuns, users } from "../../../core/db/schema";
 import {
+  assertFullSiteSagaAdapterApplyInput,
   FULL_SITE_RESOURCE_ADAPTERS,
   createFormResourceAdapter,
   createMenuResourceAdapter,
+  type AdapterApplyInput,
+  type FullSiteNativeSnapshot,
+  type FullSiteSettingsApplyBatchInput,
   type ResourceAdapter,
 } from "../../../core/services/kits/fullSiteInstall/adapters";
 import { applyFullSitePackage } from "../../../core/services/kits/fullSiteInstall/execute";
 import { createFullSiteCurrentResourceResolver } from "../../../core/services/kits/fullSiteInstall/currentResourceResolver";
 import {
-  makeSagaSnapshot,
-  readSagaSnapshot,
-  recoverInterruptedSagaItems,
+  buildFullSiteDurableAfterSnapshotV1,
+  classifyInterruptedSagaItems,
+  readFullSiteDurableAfterSnapshotV1,
 } from "../../../core/services/kits/fullSiteInstall/staging";
 import type {
-  FullSiteCurrentResourceResolver,
-  FullSiteInstallLedgerItem,
   FullSiteInstallLedgerPort,
   PersistedFullSiteInstallLedgerItem,
 } from "../../../core/services/kits/fullSiteInstallTypes";
@@ -271,144 +273,6 @@ describe("full-site multi-step adapter atomicity", () => {
     ).toThrow("menu_invalid");
   });
 
-  test("creates and reapplies a noncanonical detail page from its canonical snapshot", async () => {
-    const source = buildFormaDomPackage();
-    const contentType = structuredClone(source.resources.contentTypes[0]!);
-    const detailPage = structuredClone(source.resources.detailPages[0]!);
-    contentType.desired.name = `  ${String(contentType.desired.name)}   `;
-    contentType.desired.slug = String(contentType.desired.slug).toUpperCase();
-    detailPage.desired.name = `  ${String(detailPage.desired.name)}  `;
-    detailPage.desired.contentTypeSlug = String(detailPage.desired.contentTypeSlug).toUpperCase();
-    delete detailPage.desired.related;
-    const pkg: FullSitePackageV1 = {
-      schemaVersion: 1,
-      key: `canonical-detail-${crypto.randomUUID()}`,
-      metadata: { name: "Canonical detail", locale: "pl" },
-      resources: {
-        contentTypes: [contentType],
-        forms: [],
-        pageTemplates: [],
-        listingTemplates: [],
-        entries: [],
-        listingQueries: [],
-        detailPages: [detailPage],
-        pages: [],
-        menus: [],
-        settings: [],
-      },
-    };
-    const typeId = "00000000-0000-4000-8000-000000000021";
-    const detailId = "00000000-0000-4000-8000-000000000022";
-    const state = new Map<string, { id: string; desired: JsonObject }>();
-    const recorded = new Map<string, PersistedFullSiteInstallLedgerItem[]>();
-    let runNumber = 0;
-    let managed = false;
-    let writes = 0;
-    const ledger: FullSiteInstallLedgerPort = {
-      createRun: async () => ({ id: `run-${++runNumber}` }),
-      recordItem: async (item) => {
-        const operation = item.operation;
-        if (operation === "delete" || operation === "restore") {
-          throw new Error("canonical_detail_fixture_unexpected_rollback_item");
-        }
-        const items = recorded.get(item.runId) ?? [];
-        items.push(
-          structuredClone({
-            position: item.position,
-            kind: item.kind,
-            key: item.key,
-            operation,
-            status: item.status,
-            beforeSnapshot: item.beforeSnapshot,
-            afterSnapshot: item.afterSnapshot,
-            rollbackAction: item.rollbackAction ?? null,
-            error: item.error,
-          })
-        );
-        recorded.set(item.runId, items);
-      },
-      finalizeRun: async () => undefined,
-      getRun: async () => null,
-      listItems: async (runId) => recorded.get(runId) ?? [],
-      createRollbackRun: async () => ({ id: "rollback" }),
-      hasSuccessfulRollback: async () => false,
-      findManagedResourceEvidence: async ({ kind, key }) => {
-        const current = state.get(`${kind}:${key}`);
-        return managed && current
-          ? {
-              runId: "run-1",
-              resourceId: current.id,
-              desired: current.desired,
-              successful: true,
-              rolledBack: false,
-            }
-          : null;
-      },
-    };
-    const adapters = {
-      ...FULL_SITE_RESOURCE_ADAPTERS,
-      content_type: {
-        ...FULL_SITE_RESOURCE_ADAPTERS.content_type,
-        applyDesired: async (input: Parameters<ResourceAdapter["applyDesired"]>[0]) => {
-          writes += 1;
-          const result = { id: typeId, desired: input.desired };
-          state.set(`content_type:${input.key}`, result);
-          return result;
-        },
-      },
-      detail_page: {
-        ...FULL_SITE_RESOURCE_ADAPTERS.detail_page,
-        applyStaged: async (input: Parameters<ResourceAdapter["applyStaged"]>[0]) => {
-          writes += 1;
-          const result = { id: detailId, desired: input.desired };
-          state.set(`detail_page:${input.key}`, {
-            id: detailId,
-            desired: { ...input.desired, status: "draft" },
-          });
-          return result;
-        },
-        publish: async () => {
-          const current = state.get(`detail_page:${detailPage.key}`);
-          if (!current) throw new Error("detail_fixture_missing");
-          state.set(`detail_page:${detailPage.key}`, {
-            id: current.id,
-            desired: { ...current.desired, status: "published" },
-          });
-        },
-      },
-    };
-    const resolveCurrentResource: FullSiteCurrentResourceResolver = async (kind, seed) =>
-      state.get(`${kind}:${seed.key}`) ?? null;
-
-    const first = await applyFullSitePackage(
-      { package: pkg, actorId: ACTOR_ID },
-      { ledger, adapters, resolveCurrentResource }
-    );
-    managed = true;
-    expect(writes).toBe(2);
-    const firstDetail = recorded
-      .get(first.runId)
-      ?.filter((item) => item.kind === "detail_page" && item.status === "success")
-      .at(-1);
-    const canonical = readSagaSnapshot(firstDetail?.afterSnapshot ?? null)?.desired;
-    expect(canonical?.name).toBe(String(detailPage.desired.name).trim());
-    expect(canonical?.contentTypeSlug).toBe(
-      String(detailPage.desired.contentTypeSlug).toLowerCase()
-    );
-    expect(Object.prototype.hasOwnProperty.call(canonical, "id")).toBe(false);
-
-    const reapplied = await applyFullSitePackage(
-      { package: pkg, actorId: ACTOR_ID },
-      { ledger, adapters, resolveCurrentResource }
-    );
-    expect(reapplied.resources.every((resource) => resource.operation === "noop")).toBe(true);
-    expect(writes).toBe(2);
-    const reappliedDetail = recorded
-      .get(reapplied.runId)
-      ?.find((item) => item.kind === "detail_page" && item.status === "success");
-    expect(reappliedDetail?.afterSnapshot).toEqual({ id: detailId, desired: canonical });
-  });
-
   test("passes canonical form and menu aggregates unchanged to native writes", async () => {
     const formWrites: unknown[] = [];
     const formAdapter = createFormResourceAdapter({
@@ -492,6 +356,8 @@ describe("full-site multi-step adapter atomicity", () => {
   test("persists ordinary create and update intents before each native mutation", async () => {
     const events: string[] = [];
     const before = { name: "Before", slug: "managed", status: "published" };
+    const createId = "00000000-0000-4000-8000-000000000031";
+    const updateId = "00000000-0000-4000-8000-000000000032";
     const pkg: FullSitePackageV1 = {
       schemaVersion: 1,
       key: "write-ahead-order",
@@ -515,106 +381,160 @@ describe("full-site multi-step adapter atomicity", () => {
         ],
       },
     };
+    const planning = new Map<string, FullSiteNativeSnapshot>([
+      ["content_type:update", { id: updateId, desired: before }],
+      ["setting:site.name", { id: "site.name", desired: { value: "before" } }],
+      ["setting:site.locale", { id: "site.locale", desired: { value: "before" } }],
+    ]);
+    const native = new Map<string, FullSiteNativeSnapshot>([
+      [`content_type:${updateId}`, { id: updateId, desired: before }],
+      ["setting:site.name", { id: "site.name", desired: { value: "before" } }],
+      ["setting:site.locale", { id: "site.locale", desired: { value: "before" } }],
+    ]);
+    const rows = new Map<number, PersistedFullSiteInstallLedgerItem>();
     const ledger: FullSiteInstallLedgerPort = {
-      createRun: async () => ({ id: "run" }),
+      withPackageLock: async (_reservation, execute) =>
+        execute({ intent: "apply", ownerRunId: "run", resumePhase: "reserved" }),
+      createRun: async () => ({ id: "unused" }),
       recordItem: async (input) => {
-        events.push(`ledger:${input.key}:${input.status}`);
+        if (input.operation === "delete" || input.operation === "restore") {
+          throw new Error("unexpected_rollback_item");
+        }
+        const phase = readFullSiteDurableAfterSnapshotV1(input.afterSnapshot)?.recovery.phase;
+        events.push(`phase:${input.key}:${phase}`);
+        rows.set(input.position, {
+          ...input,
+          operation: input.operation,
+          rollbackAction: input.rollbackAction ?? null,
+          error: input.error ?? null,
+        });
       },
-      finalizeRun: async (input) => {
-        events.push(`final:${input.status}`);
-      },
+      finalizeRun: async () => undefined,
       getRun: async () => null,
-      listItems: async () => [],
-      createRollbackRun: async () => ({ id: "rollback" }),
+      listItems: async () =>
+        [...rows.values()].sort((left, right) => left.position - right.position),
+      listRawItems: async () =>
+        [...rows.values()]
+          .sort((left, right) => left.position - right.position)
+          .map((item) => ({ ...item, error: item.error ?? null })),
+      initializeReservedRun: async (input) => {
+        events.push(`initialize:${input.items.map((item) => item.key).join(",")}`);
+        for (const item of input.items) {
+          rows.set(item.position, {
+            ...item,
+            status: "planned",
+            error: null,
+          });
+        }
+        return { id: input.ownerRunId };
+      },
+      finalizeOwnedRun: async (input) => {
+        events.push(`final:${input.status}`);
+        return { outcome: "desired_terminal" };
+      },
+      createRollbackRun: async () => ({ id: "unused-rollback" }),
       hasSuccessfulRollback: async () => false,
-      findManagedResourceEvidence: async ({ key }) =>
-        key === "update"
-          ? {
-              runId: "managed-run",
-              resourceId: "managed-id",
-              desired: before,
-              successful: true,
-              rolledBack: false,
-            }
-          : null,
+      findManagedResourceEvidence: async () => null,
     };
-    const adapter: ResourceAdapter = {
-      validateDesired: (input) => input.desired,
-      applyDesired: async (input) => {
+    const contentTypeAdapter = {
+      ...FULL_SITE_RESOURCE_ADAPTERS.content_type,
+      validateDesired: (input: Parameters<ResourceAdapter["validateDesired"]>[0]) => input.desired,
+      prepareNativeTargets: async (
+        input: Parameters<typeof FULL_SITE_RESOURCE_ADAPTERS.content_type.prepareNativeTargets>[0]
+      ) => ({
+        staged: null,
+        complete: {
+          id: input.operation === "create" ? input.intendedId : input.currentId,
+          desired: structuredClone(input.desired),
+        },
+      }),
+      captureSnapshotById: async (id: string) => {
+        const snapshot = native.get(`content_type:${id}`);
+        if (!snapshot) throw new Error("content_type_not_found");
+        return structuredClone(snapshot);
+      },
+      applyDesired: async (input: AdapterApplyInput) => {
+        assertFullSiteSagaAdapterApplyInput(input);
         events.push(`native:${input.key}`);
-        return { id: input.key === "update" ? "managed-id" : "created-id", desired: input.desired };
+        native.set(
+          `content_type:${input.targetSnapshot.id}`,
+          structuredClone(input.targetSnapshot)
+        );
+        return structuredClone(input.targetSnapshot);
       },
-      applyStaged: async () => {
-        throw new Error("unexpected_stage");
-      },
-      publish: async () => undefined,
     };
-    const settingAdapter: ResourceAdapter = {
-      validateDesired: (input) => input.desired,
-      applyDesired: async () => {
-        throw new Error("unexpected_single_setting_write");
-      },
-      applyBatch: async (inputs) => {
+    const settingAdapter = {
+      ...FULL_SITE_RESOURCE_ADAPTERS.setting,
+      validateDesired: (input: Parameters<ResourceAdapter["validateDesired"]>[0]) => input.desired,
+      prepareNativeTargets: async (
+        input: Parameters<typeof FULL_SITE_RESOURCE_ADAPTERS.setting.prepareNativeTargets>[0]
+      ) => ({ staged: null, complete: { id: input.key, desired: structuredClone(input.desired) } }),
+      captureSnapshotById: async (id: string) =>
+        structuredClone(native.get(`setting:${id}`) ?? { id, desired: { present: false } }),
+      applySettingsBatchAtomic: async ({ items }: FullSiteSettingsApplyBatchInput) => {
         events.push("native:settings-batch");
-        return inputs.map((input) => ({ id: input.key, desired: input.desired }));
+        return items.map((input) => {
+          assertFullSiteSagaAdapterApplyInput(input);
+          native.set(`setting:${input.targetSnapshot.id}`, structuredClone(input.targetSnapshot));
+          return structuredClone(input.targetSnapshot);
+        });
       },
-      applyStaged: async () => {
-        throw new Error("unexpected_stage");
-      },
-      publish: async () => undefined,
     };
     await applyFullSitePackage(
       { package: pkg, actorId: ACTOR_ID, allowSettingTakeover: true },
       {
         ledger,
-        resolveCurrentResource: async (kind, seed) => {
-          if (seed.key === "update") return { id: "managed-id", desired: before };
-          if (kind === "setting") return { id: seed.key, desired: { value: "before" } };
-          return null;
-        },
+        generateId: () => createId,
+        loadPlanningSnapshot: async (resources) =>
+          resources.map((resource) => {
+            const current = planning.get(resource.identity) ?? null;
+            return {
+              identity: resource.identity,
+              evidence:
+                resource.identity === "content_type:update" && current
+                  ? { runId: "managed-run", resourceId: current.id }
+                  : null,
+              current,
+            };
+          }),
         adapters: {
           ...FULL_SITE_RESOURCE_ADAPTERS,
-          content_type: adapter,
+          content_type: contentTypeAdapter,
           setting: settingAdapter,
         },
       }
     );
     expect(events).toEqual([
-      "ledger:create:planned",
-      "ledger:update:planned",
-      "ledger:site.name:planned",
-      "ledger:site.locale:planned",
-      "ledger:create:planned",
+      "initialize:create,update,site.name,site.locale",
       "native:create",
-      "ledger:create:success",
-      "ledger:update:planned",
+      "phase:create:complete",
       "native:update",
-      "ledger:update:success",
-      "ledger:site.name:planned",
-      "ledger:site.locale:planned",
+      "phase:update:complete",
       "native:settings-batch",
-      "ledger:site.name:success",
-      "ledger:site.locale:success",
+      "phase:site.name:complete",
+      "phase:site.locale:complete",
       "final:success",
     ]);
+    expect([...rows.values()].every((row) => row.status === "success")).toBe(true);
   });
 
-  test("recovers exact interrupted creates, updates and settings but fails closed on drift", async () => {
+  test("classifies every interrupted durable target by exact id without deciding recovery", async () => {
     const prepared = (
-      overrides: Partial<FullSiteInstallLedgerItem>
-    ): FullSiteInstallLedgerItem => ({
+      overrides: Partial<PersistedFullSiteInstallLedgerItem>
+    ): PersistedFullSiteInstallLedgerItem => ({
       position: 0,
       kind: "page",
       key: "created",
       operation: "create",
       status: "planned",
       beforeSnapshot: null,
-      afterSnapshot: makeSagaSnapshot({
-        id: null,
-        desired: { marker: "after" },
+      afterSnapshot: buildFullSiteDurableAfterSnapshotV1({
+        complete: { id: "created-id", desired: { marker: "after" } },
+        staged: null,
         phase: "prepared",
-        intendedDesired: { marker: "after" },
       }),
+      rollbackAction: null,
+      error: null,
       ...overrides,
     });
     const items = [
@@ -624,11 +544,10 @@ describe("full-site multi-step adapter atomicity", () => {
         key: "updated",
         operation: "update",
         beforeSnapshot: { id: "updated-id", desired: { marker: "before" } },
-        afterSnapshot: makeSagaSnapshot({
-          id: "updated-id",
-          desired: { marker: "after" },
+        afterSnapshot: buildFullSiteDurableAfterSnapshotV1({
+          complete: { id: "updated-id", desired: { marker: "after" } },
+          staged: null,
           phase: "prepared",
-          intendedDesired: { marker: "after" },
         }),
       }),
       ...["site.name", "site.locale"].map((key, index) =>
@@ -638,47 +557,44 @@ describe("full-site multi-step adapter atomicity", () => {
           key,
           operation: "update",
           beforeSnapshot: { id: key, desired: { value: "before" } },
-          afterSnapshot: makeSagaSnapshot({
-            id: key,
-            desired: { value: "after" },
+          afterSnapshot: buildFullSiteDurableAfterSnapshotV1({
+            complete: { id: key, desired: { value: "after" } },
+            staged: null,
             phase: "prepared",
-            intendedDesired: { value: "after" },
           }),
         })
       ),
     ];
-    const exact = await recoverInterruptedSagaItems({
+    const expectedIds: string[] = [];
+    const exact = await classifyInterruptedSagaItems({
       items,
-      resolveCurrentResource: async (_kind, seed) => ({
-        id:
-          seed.key === "created" ? "created-id" : seed.key === "updated" ? "updated-id" : seed.key,
-        desired: seed.desired,
-      }),
+      resolveCurrentResource: async (_kind, seed, expectedId) => {
+        expectedIds.push(expectedId ?? "missing");
+        return { id: expectedId!, desired: seed.desired };
+      },
     });
-    expect(exact.map((entry) => [entry.key, entry.status])).toEqual([
-      ["created", "success"],
-      ["updated", "success"],
-      ["site.name", "success"],
-      ["site.locale", "success"],
+    expect(exact.map(({ identity, hint }) => [identity, hint])).toEqual([
+      ["page:created", "applied"],
+      ["page:updated", "applied"],
+      ["setting:site.name", "applied"],
+      ["setting:site.locale", "applied"],
     ]);
-    await expect(
-      recoverInterruptedSagaItems({
-        items,
-        resolveCurrentResource: async (_kind, seed) => ({
-          id: seed.key === "created" ? "admin-race-id" : seed.key,
-          desired: seed.key === "created" ? { marker: "admin-drift" } : seed.desired,
-        }),
-      })
-    ).rejects.toThrow("site_package_recovery_conflict");
-    await expect(
-      recoverInterruptedSagaItems({
-        items: items.slice(2),
-        resolveCurrentResource: async (_kind, seed) => ({
-          id: seed.key,
-          desired: { value: seed.key === "site.name" ? "after" : "before" },
-        }),
-      })
-    ).rejects.toThrow("site_package_recovery_conflict");
+    expect(expectedIds).toEqual(["created-id", "updated-id", "site.name", "site.locale"]);
+
+    const notApplied = await classifyInterruptedSagaItems({
+      items,
+      resolveCurrentResource: async (_kind, seed, expectedId) => {
+        if (seed.key === "created") return null;
+        const before = items.find((item) => item.key === seed.key)?.beforeSnapshot;
+        return { id: expectedId!, desired: (before?.desired ?? {}) as JsonObject };
+      },
+    });
+    expect(notApplied.map(({ hint }) => hint)).toEqual([
+      "not_applied",
+      "not_applied",
+      "not_applied",
+      "not_applied",
+    ]);
   });
 
   test("requires stable nested ids and rejects unknown form/action/menu settings keys", async () => {

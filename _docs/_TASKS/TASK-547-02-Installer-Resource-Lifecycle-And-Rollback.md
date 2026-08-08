@@ -6,9 +6,10 @@
 **Category:** Solution Kits / Installer / Data Integrity
 **Estimated Effort:** Very Large
 **Dependencies:** TASK-547-01
-**Status:** 🚧 In Progress
-**Validation:** Lifecycle/recovery remediation and all affected final gates are
-pending on the current working tree.
+**Status:** ✅ Done
+**Completed:** 2026-08-08
+**Validation:** Lifecycle, crash-recovery, rollback, DB and final repository gates
+passed; certification cleanup used one official rollback and proved absence.
 
 ---
 
@@ -947,11 +948,11 @@ both the source failure and every success/failed/blocked compensation outcome.
 
 ## Sub-Tasks
 
-- [ ] **TASK-547-02-L01** — installer split and deterministic plan resolver.
-- [ ] **TASK-547-02-L02** — native resource adapters, ref resolution, complete
+- [x] **TASK-547-02-L01** — installer split and deterministic plan resolver.
+- [x] **TASK-547-02-L02** — native resource adapters, ref resolution, complete
   snapshot capture, post-capture zero-native noop execution and saga execution;
   consumes the L01 ledger.
-- [ ] **TASK-547-02-L03** — failure atomicity, reverse rollback and DB/security
+- [x] **TASK-547-02-L03** — failure atomicity, reverse rollback and DB/security
   tests, including strict noop source-evidence preflight and source-faithful
   zero-read/write noop outcomes.
 

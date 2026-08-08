@@ -19,6 +19,10 @@ import { Task540NativeRuntimeActions } from "./runtime-actions";
 import { createTask540NativeWorkerPool } from "./worker-pool";
 import type { Task540NativeEvidence, Task540NativePlan } from "./contracts";
 
+// Certification preserves the production auth window (up to 60 seconds), and
+// each barrier waits one extra second before proving the next bounded epoch.
+export const TASK540_RUN_CODE_TIMEOUT_MS = 90_000;
+
 class Task540PrivateWorkspace implements LifecycleResource {
   readonly name = "task540-private-workspace";
   readonly path: string;
@@ -113,6 +117,7 @@ export async function runTask540NativeSuite(
       session: context.input.session,
       workspace: workspace.path,
       segments: task540BrowserSegmentIds(plan),
+      runCodeTimeoutMs: TASK540_RUN_CODE_TIMEOUT_MS,
       runtimeEnvironment: environment,
     });
     transport = new BrowserTransport(context.input.session, dispatcher);

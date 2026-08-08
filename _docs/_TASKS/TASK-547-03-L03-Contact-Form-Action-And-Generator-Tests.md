@@ -6,10 +6,10 @@
 **Category:** Forms / Reference Example
 **Estimated Effort:** Large
 **Dependencies:** TASK-547-03-L01, TASK-547-03-L02
-**Status:** 🚧 In Progress
-**Reopened:** 2026-07-23 — the installed native Form exists, but its public
-fields, supporting note and success copy must be corrected to the designated
-reference and the aggregate must preserve the corrected SEO/content slices.
+**Status:** ✅ Done
+**Completed:** 2026-08-08
+**Validation:** Corrected Form/action, aggregate, UI and scoped DB gates passed;
+the final smoke proved public submissions, supporting text and complete cleanup.
 
 ## Overview
 
@@ -679,15 +679,15 @@ scoped submission cleanup evidence remains additionally owned by TASK-547-06.
 
 ## Sub-Tasks
 
-- [ ] Add the strict present-only submit supporting-text contract and split Form
+- [x] Add the strict present-only submit supporting-text contract and split Form
   Embed by cohesive responsibility without changing public imports or legacy
   output.
-- [ ] Correct exact Form constants, fields, settings and safe action.
-- [ ] Wire editor, canvas, runtime preview and public Form Embed placement plus
+- [x] Correct exact Form constants, fields, settings and safe action.
+- [x] Wire editor, canvas, runtime preview and public Form Embed placement plus
   present-only Form Embed rows/prompt/loading contracts; hand Page prop authoring
   and mapping to TASK-547-04-L01.
-- [ ] Preserve child slices, reference closure and dynamic SEO in the aggregate.
-- [ ] Add focused pure, UI-integration and scoped DB regression suites without
+- [x] Preserve child slices, reference closure and dynamic SEO in the aggregate.
+- [x] Add focused pure, UI-integration and scoped DB regression suites without
   modifying oversized legacy tests or weakening security/failure assertions.
 
 ## Testing Requirements

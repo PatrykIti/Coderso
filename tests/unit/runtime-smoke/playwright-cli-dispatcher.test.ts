@@ -28,6 +28,7 @@ interface RecordedRun {
   readonly args: readonly string[];
   readonly environmentKeys: readonly string[];
   readonly family: string | undefined;
+  readonly timeoutMs: number | undefined;
   readonly sourceMode?: number;
   readonly stateBasename?: string;
 }
@@ -45,6 +46,7 @@ class FakeProcesses {
       args: Object.freeze([...(spec.args ?? [])]),
       environmentKeys: Object.freeze(Object.keys(spec.env ?? {}).sort()),
       family: spec.family,
+      timeoutMs: spec.timeoutMs,
       ...(sourcePath === undefined ? {} : { sourceMode: (await stat(sourcePath)).mode & 0o777 }),
       ...(statePath === undefined ? {} : { stateBasename: statePath.split("/").at(-1) }),
     });
@@ -104,12 +106,16 @@ async function fixture(): Promise<{
   return { root, workspace, executable, processes, context };
 }
 
-function createDispatcher(input: Awaited<ReturnType<typeof fixture>>) {
+function createDispatcher(
+  input: Awaited<ReturnType<typeof fixture>>,
+  options: { readonly runCodeTimeoutMs?: number } = {}
+) {
   return new PlaywrightCliDispatcher({
     context: input.context,
     session: "wf552-dispatcher",
     workspace: input.workspace,
     segments: ["segment-one", "segment-two"],
+    runCodeTimeoutMs: options.runCodeTimeoutMs,
     environmentPath: dirname(input.executable),
     runtimeEnvironment: {},
     resolveExecutable: async () => input.executable,
@@ -160,6 +166,28 @@ test("Playwright dispatcher opens once, dispatches bounded private files, and cl
       1
     );
     expect(await dispatcher.proveAbsent()).toBe(true);
+  } finally {
+    await rm(input.root, { recursive: true, force: true });
+  }
+});
+
+test("Playwright dispatcher applies a bounded suite-specific run-code timeout", async () => {
+  const input = await fixture();
+  try {
+    const dispatcher = createDispatcher(input, { runCodeTimeoutMs: 90_000 });
+    await dispatcher.dispatch({
+      session: "wf552-dispatcher",
+      segmentId: "segment-one",
+      source: "async () => true",
+      maximumOutputBytes: 1024,
+    });
+    expect(
+      input.processes.runs.find(({ family }) => family === "playwright-run-code")?.timeoutMs
+    ).toBe(90_000);
+    await dispatcher.close();
+    expect(() => createDispatcher(input, { runCodeTimeoutMs: 300_001 })).toThrow(
+      "run-code timeout is invalid"
+    );
   } finally {
     await rm(input.root, { recursive: true, force: true });
   }

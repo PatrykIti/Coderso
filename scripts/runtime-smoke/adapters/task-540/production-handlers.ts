@@ -17,6 +17,7 @@ import type {
   Task540CleanupResult,
   Task540WorkerHandlers,
 } from "./worker-operations";
+import { task540CleanupCardinality } from "./cleanup-cardinality";
 
 const HANDLER_VERSION = "task-540-production-batches-v1";
 
@@ -157,9 +158,9 @@ async function cleanupSeo(input: Task540CleanupBatchInput): Promise<Task540Clean
     "delete",
     "absence",
   ]);
-  if (resources.length !== 6) {
-    throw new WorkerProtocolError("TASK-540 SEO cleanup batch must own six rows");
-  }
+  // SEO rows are created only for scenarios that actually author SEO state.
+  // Keep cleanup cardinality dynamic (1..6 here; zero skips this batch entirely).
+  task540CleanupCardinality(resources.length);
   const [{ db }, { seoDocuments }] = await Promise.all([
     import("../../../../core/db/client"),
     import("../../../../core/db/schema"),

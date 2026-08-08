@@ -1,9 +1,10 @@
 import { and, desc, eq } from "drizzle-orm";
 
 import { db } from "../../db/client";
-import { detailPageDocuments, detailPageRevisions } from "../../db/schema";
+import { acquireNativeCmsWriterFence } from "../../db/nativeCmsWriterFence";
+import { contentTypes, detailPageDocuments, detailPageRevisions } from "../../db/schema";
+import { clearSiteCache } from "../../site/cache/siteCache";
 import { areRevisionSnapshotsEqual } from "./revisionSnapshot";
-import { getContentType } from "./typeService";
 import { normalizeDetailPageDocument } from "./detailPageSchema";
 import type { DetailPageDocument, DetailPageRevisionKind } from "./detailPageTypes";
 
@@ -102,24 +103,34 @@ export async function discardDetailPageAutosaveRevision(
   detailPageId: string,
   revisionId: string
 ): Promise<DetailPageRevisionRecord> {
-  const [revision] = await db
-    .select()
-    .from(detailPageRevisions)
-    .where(
-      and(
-        eq(detailPageRevisions.detailPageId, detailPageId),
-        eq(detailPageRevisions.id, revisionId)
-      )
-    );
-
-  if (!revision) {
-    throw new Error("detail_page_revision_not_found");
-  }
-  if ((revision.kind ?? "publish") !== "autosave") {
-    throw new Error("detail_page_revision_delete_forbidden");
-  }
-
-  await db.delete(detailPageRevisions).where(eq(detailPageRevisions.id, revisionId));
+  const revision = await db.transaction(
+    async (tx) => {
+      await acquireNativeCmsWriterFence(tx);
+      const [detailPage] = await tx
+        .select({ id: detailPageDocuments.id })
+        .from(detailPageDocuments)
+        .where(eq(detailPageDocuments.id, detailPageId))
+        .for("key share");
+      if (!detailPage) throw new Error("detail_page_not_found");
+      const [current] = await tx
+        .select()
+        .from(detailPageRevisions)
+        .where(
+          and(
+            eq(detailPageRevisions.detailPageId, detailPageId),
+            eq(detailPageRevisions.id, revisionId)
+          )
+        )
+        .for("update");
+      if (!current) throw new Error("detail_page_revision_not_found");
+      if ((current.kind ?? "publish") !== "autosave") {
+        throw new Error("detail_page_revision_delete_forbidden");
+      }
+      await tx.delete(detailPageRevisions).where(eq(detailPageRevisions.id, revisionId));
+      return current;
+    },
+    { isolationLevel: "read committed" }
+  );
   return mapDetailPageRevisionRow(revision);
 }
 
@@ -127,59 +138,63 @@ export async function restoreDetailPageRevision(
   detailPageId: string,
   revisionId: string
 ): Promise<DetailPageRevisionRestoreResult> {
-  const [detailPage] = await db
-    .select()
-    .from(detailPageDocuments)
-    .where(eq(detailPageDocuments.id, detailPageId));
-  if (!detailPage) {
-    throw new Error("detail_page_not_found");
-  }
-
-  const [revision] = await db
-    .select()
-    .from(detailPageRevisions)
-    .where(
-      and(
-        eq(detailPageRevisions.detailPageId, detailPageId),
-        eq(detailPageRevisions.id, revisionId)
-      )
-    );
-  if (!revision) {
-    throw new Error("detail_page_revision_not_found");
-  }
-
-  const currentDocument = normalizeDetailPageDocument(detailPage.currentDocument);
-  const restoredDocument = normalizeRestoredDocumentForLifecycle(
-    detailPage,
-    normalizeDetailPageDocument(revision.document)
+  const result = await db.transaction(
+    async (tx) => {
+      await acquireNativeCmsWriterFence(tx);
+      const [detailPage] = await tx
+        .select()
+        .from(detailPageDocuments)
+        .where(eq(detailPageDocuments.id, detailPageId))
+        .for("update");
+      if (!detailPage) throw new Error("detail_page_not_found");
+      const [revision] = await tx
+        .select()
+        .from(detailPageRevisions)
+        .where(
+          and(
+            eq(detailPageRevisions.detailPageId, detailPageId),
+            eq(detailPageRevisions.id, revisionId)
+          )
+        )
+        .for("update");
+      if (!revision) throw new Error("detail_page_revision_not_found");
+      const [contentType] = await tx
+        .select({ slug: contentTypes.slug })
+        .from(contentTypes)
+        .where(eq(contentTypes.id, detailPage.contentTypeId))
+        .for("key share");
+      if (!contentType) throw new Error("detail_page_invalid");
+      const currentDocument = normalizeDetailPageDocument(detailPage.currentDocument);
+      const restoredDocument = normalizeRestoredDocumentForLifecycle(
+        detailPage,
+        normalizeDetailPageDocument(revision.document)
+      );
+      const restored = !areRevisionSnapshotsEqual(currentDocument, restoredDocument);
+      if (!restored) {
+        return {
+          restored: false,
+          revision: mapDetailPageRevisionRow(revision),
+          detailPage,
+        };
+      }
+      const [updated] = await tx
+        .update(detailPageDocuments)
+        .set({
+          name: restoredDocument.name,
+          currentDocument: { ...restoredDocument, contentTypeSlug: contentType.slug },
+          updatedAt: new Date(),
+        })
+        .where(eq(detailPageDocuments.id, detailPageId))
+        .returning();
+      if (!updated) throw new Error("detail_page_not_found");
+      return {
+        restored: true,
+        revision: mapDetailPageRevisionRow(revision),
+        detailPage: updated,
+      };
+    },
+    { isolationLevel: "read committed" }
   );
-  const restored = !areRevisionSnapshotsEqual(currentDocument, restoredDocument);
-
-  const contentType = await getContentType(detailPage.contentTypeId);
-  if (!contentType) {
-    throw new Error("detail_page_invalid");
-  }
-
-  const [updated] = await db
-    .update(detailPageDocuments)
-    .set({
-      name: restoredDocument.name,
-      currentDocument: {
-        ...restoredDocument,
-        contentTypeSlug: contentType.slug,
-      },
-      updatedAt: new Date(),
-    })
-    .where(eq(detailPageDocuments.id, detailPageId))
-    .returning();
-
-  if (!updated) {
-    throw new Error("detail_page_not_found");
-  }
-
-  return {
-    restored,
-    revision: mapDetailPageRevisionRow(revision),
-    detailPage: updated,
-  };
+  if (result.restored) clearSiteCache();
+  return result;
 }

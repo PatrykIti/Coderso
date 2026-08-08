@@ -6,11 +6,10 @@
 **Category:** Reference Example / Pages / Menu / Design
 **Estimated Effort:** Very Large
 **Dependencies:** TASK-547-03
-**Status:** 🚧 In Progress
-**Validation:** The interrupted branch is being re-inventoried on the merged
-working tree. This contract remains open until its unfinished implementation
-and dependency-shaped gates pass, followed by the shared TASK-547 runtime
-acceptance.
+**Status:** ✅ Done
+**Completed:** 2026-08-08
+**Validation:** Page, shell, canonical-package and dependency-shaped gates passed,
+followed by the shared TASK-547 18/18 runtime acceptance.
 
 ---
 
@@ -270,9 +269,9 @@ generation and zero artifact diff remain required.
 
 ## Sub-Tasks
 
-- [ ] **TASK-547-04-L01** — correct seven Page v2 documents and static SEO.
-- [ ] **TASK-547-04-L02** — correct shell/settings/package and canonical artifact.
-- [ ] **TASK-547-04-L03** — validate public Page/entry locale propagation.
+- [x] **TASK-547-04-L01** — correct seven Page v2 documents and static SEO.
+- [x] **TASK-547-04-L02** — correct shell/settings/package and canonical artifact.
+- [x] **TASK-547-04-L03** — validate public Page/entry locale propagation.
 
 ## Testing Requirements
 

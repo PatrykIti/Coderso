@@ -507,6 +507,12 @@ testIfDb(
     const now = new Date().toISOString();
     const seamArtifact: BackupArtifact = {
       ...artifact,
+      settings: artifact.settings
+        ? {
+            ...artifact.settings,
+            settings: { ...artifact.settings.settings, "site.contentRoutes": [] },
+          }
+        : null,
       database: {
         pages: [],
         contentTypes: [],

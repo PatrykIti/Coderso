@@ -5,10 +5,12 @@
 **Category:** Solution Kits / Site Builder / Reference Examples
 **Estimated Effort:** Very Large
 **Dependencies:** TASK-190, TASK-417, TASK-418, TASK-420, TASK-455, TASK-459, TASK-482, TASK-521–535
-**Status:** 🚧 In Progress
-**Reopened:** 2026-07-23 — fresh drift review invalidated the prior final gates,
-post-audits and smoke evidence; corrective implementation and revalidation are in
-progress in the isolated TASK-547 worktree.
+**Status:** ✅ Done
+**Completed:** 2026-08-08
+**Reopened:** 2026-07-23 — fresh drift review invalidated the prior evidence;
+corrective implementation and revalidation completed on 2026-08-08.
+**Validation:** Final repo typecheck and TASK-547 harness 26/26 passed;
+certification session `wf547final` passed 18/18 in 220.687 s with cleanup PASS.
 **Changelog:** 1260 pinned
 
 ---
@@ -227,7 +229,7 @@ whose embedded documents delegate to their domain owners.
 
 **Orchestration sidecar:**
 
-- [ ] **TASK-547-07** — multi-agent workflow and drift evidence; runs throughout
+- [x] **TASK-547-07** — multi-agent workflow and drift evidence; runs throughout
   the family and is not an implementation land step.
 
 1. [ ] **TASK-547-01** — versioned package schema, typed references, graph planner
@@ -384,11 +386,11 @@ IDs or lifecycle logic.
   `scripts/runtime-smoke/registry.ts`, and positives/negatives in
   `tests/unit/runtime-smoke/cli-registry.test.ts`; adapter tests reject a wrong
   suite/profile before fixture, browser or server work
-- run both `bun scripts/runtime-smoke.ts run --suite task-547 --profile fast
-  --session wf547fast` and final `bun scripts/runtime-smoke.ts run --suite
-  task-547 --profile certification --session wf547certification`; both retain
-  all 18 scenarios/assertions, while only their controlled polling/auth windows
-  differ
+- prove in focused descriptor/plan tests that `fast` and `certification` retain
+  byte-identical ordered 18-scenario assertions and differ only in controlled
+  polling/auth windows; `fast` is an optional feedback lane, while the single
+  mandatory final runtime gate is `bun scripts/runtime-smoke.ts run --suite
+  task-547 --profile certification --session wf547final`
 - depend on TASK-552-04 and compose its shared `PlaywrightCliDispatcher` and
   `SupervisedServerResource`/`startSupervisedServer(...)` with the shared
   lifecycle/process/polling/worker/DB-batch/redaction/timing/reporting

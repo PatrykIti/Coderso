@@ -1,106 +1,78 @@
-import { aliasedTable, and, asc, desc, eq, exists, inArray, notExists, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, sql } from "drizzle-orm";
+import { randomUUID } from "node:crypto";
 import postgres from "postgres";
 import { db } from "../../db/client";
 import { solutionKitInstallItems, solutionKitInstallRuns } from "../../db/schema";
+import {
+  acquireNativeCmsWriterFence,
+  assertNativeCmsWriterOwnerContextAbsent,
+  createNativeCmsWriterOwnerLease,
+  markNativeCmsWriterOwnerLost,
+  revokeNativeCmsWriterOwnerLease,
+  runWithNativeCmsWriterOwnerContext,
+  NATIVE_CMS_WRITER_FENCE_KEY,
+  NATIVE_CMS_WRITER_FENCE_NAMESPACE,
+  NATIVE_CMS_WRITER_FENCE_OPTION_KEY,
+  type NativeCmsWriterOwnerLease,
+} from "../../db/nativeCmsWriterFence";
 import { logAudit } from "../audit/auditService";
 import { getSolutionKitFromCatalog } from "./solutionKitsCatalog";
 import type { SolutionKitDefinition, SolutionKitId } from "./solutionKitTypes";
-import { asRecord, isRecord, planOperations } from "./legacyInstallPlanning";
+import { asRecord, planOperations } from "./legacyInstallPlanning";
 import type {
   ApplySolutionKitInstallInput,
   JsonRecord,
   QueryExecutor,
   RollbackSolutionKitInstallInput,
   SolutionKitInstallItemOperation,
-  SolutionKitInstallItemRecord,
-  SolutionKitInstallItemRow,
   SolutionKitInstallItemStatus,
   SolutionKitInstallMode,
   SolutionKitInstallResourceType,
   SolutionKitInstallResult,
   SolutionKitInstallRunRecord,
-  SolutionKitInstallRunRow,
   SolutionKitInstallStatus,
-  SolutionKitInstallSummary,
 } from "./legacyInstallPlanning";
 import { executeInstallOperation } from "./legacyInstallResourceHandlers";
 import { executeRollbackForItem } from "./legacyInstallRollback";
 import type {
+  FullSiteInstallLockContext,
+  FullSiteInstallLockReservation,
   FullSiteInstallLedgerPort,
   FullSiteInstallResourceKind,
-  ManagedResourceEvidence,
 } from "./fullSiteInstallTypes";
-import { toSafeFullSiteErrorCode } from "./fullSiteInstallTypes";
-import { DiagnosticCollector, readPackageKey } from "./fullSitePackage/schema";
-import type { JsonObject } from "./fullSitePackage/types";
-
-export const normalizeRunRow = (row: SolutionKitInstallRunRow): SolutionKitInstallRunRecord => ({
-  id: row.id,
-  kitId: row.kitId,
-  mode: row.mode as SolutionKitInstallMode,
-  status: row.status as SolutionKitInstallStatus,
-  actorId: row.actorId,
-  rollbackOfRunId: row.rollbackOfRunId,
-  options: asRecord(row.options),
-  summary: asRecord(row.summary),
-  error: row.error,
-  createdAt: row.createdAt,
-  updatedAt: row.updatedAt,
-  finishedAt: row.finishedAt,
-});
-
-export const normalizeItemRow = (row: SolutionKitInstallItemRow): SolutionKitInstallItemRecord => ({
-  id: row.id,
-  runId: row.runId,
-  position: row.position,
-  resourceType: row.resourceType as SolutionKitInstallResourceType,
-  resourceKey: row.resourceKey,
-  operation: row.operation as SolutionKitInstallItemOperation,
-  status: row.status as SolutionKitInstallItemStatus,
-  beforeSnapshot: isRecord(row.beforeSnapshot) ? (row.beforeSnapshot as JsonRecord) : null,
-  afterSnapshot: isRecord(row.afterSnapshot) ? (row.afterSnapshot as JsonRecord) : null,
-  rollbackAction: (row.rollbackAction ?? null) as JsonRecord | null,
-  error: row.error,
-  createdAt: row.createdAt,
-  updatedAt: row.updatedAt,
-});
-
-export const buildSummary = (
-  items: Pick<SolutionKitInstallItemRecord, "operation" | "status">[]
-): SolutionKitInstallSummary => {
-  const summary: SolutionKitInstallSummary = {
-    total: 0,
-    success: 0,
-    failed: 0,
-    planned: 0,
-    skipped: 0,
-    operations: {
-      create: 0,
-      update: 0,
-      noop: 0,
-      delete: 0,
-      restore: 0,
-    },
-  };
-
-  for (const item of items) {
-    summary.total += 1;
-    summary.operations[item.operation] += 1;
-    if (item.status === "success") summary.success += 1;
-    if (item.status === "failed") summary.failed += 1;
-    if (item.status === "planned") summary.planned += 1;
-    if (item.status === "skipped") summary.skipped += 1;
-  }
-  return summary;
-};
-
+import { readStrictInitializationPlanV1, toSafeFullSiteErrorCode } from "./fullSiteInstallTypes";
+import { createDiagnosticCollector, readPackageKey } from "./fullSitePackage/schema";
+import { PACKAGE_LIMITS, type JsonObject, type JsonValue } from "./fullSitePackage/types";
+import {
+  createOwnedRunFinalization,
+  finalizeInstallRun,
+} from "./legacyInstallRunPersistence/dryRunTerminalization";
+import {
+  buildSummary,
+  createLegacyInstallReadPersistence,
+  listSolutionKitInstallItems,
+  normalizeItemRow,
+  normalizeRunRow,
+} from "./legacyInstallRunPersistence/readPersistence";
+import { createRunInitialization } from "./legacyInstallRunPersistence/runInitialization";
+export {
+  buildManagedResourceEvidenceBatchQuery,
+  buildManagedResourceEvidenceQuery,
+  buildSummary,
+  findManagedResourceEvidence,
+  findManagedResourceEvidenceBatch,
+  listSolutionKitInstallItems,
+  MANAGED_EVIDENCE_LATERAL_REQUEST_LIMIT,
+  normalizeItemRow,
+  normalizeRunRow,
+} from "./legacyInstallRunPersistence/readPersistence";
+export { finalizeInstallRun } from "./legacyInstallRunPersistence/dryRunTerminalization";
 export const resolveKitDefinition = (kitId: SolutionKitId, override?: SolutionKitDefinition) => {
   if (override) return override;
   const kit = getSolutionKitFromCatalog(kitId);
   if (!kit) throw new Error("solution_kit_not_found");
   return kit;
 };
-
 export const createInstallRun = async (input: {
   kitId: string;
   mode: SolutionKitInstallMode;
@@ -163,29 +135,6 @@ export const appendInstallItem = async (
   return normalizeItemRow(row);
 };
 
-export const finalizeInstallRun = async (
-  runId: string,
-  input: {
-    status: SolutionKitInstallStatus;
-    summary: SolutionKitInstallSummary;
-    error?: string | null;
-  }
-) => {
-  const [row] = await db
-    .update(solutionKitInstallRuns)
-    .set({
-      status: input.status,
-      summary: input.summary,
-      error: input.error ?? null,
-      updatedAt: new Date(),
-      finishedAt: new Date(),
-    })
-    .where(eq(solutionKitInstallRuns.id, runId))
-    .returning();
-  if (!row) throw new Error("solution_kit_install_run_finalize_failed");
-  return normalizeRunRow(row);
-};
-
 export async function listSolutionKitInstallRuns(options?: {
   kitId?: string;
   mode?: SolutionKitInstallMode;
@@ -216,16 +165,6 @@ export async function getSolutionKitInstallRun(runId: string) {
     .from(solutionKitInstallRuns)
     .where(eq(solutionKitInstallRuns.id, runId));
   return row ? normalizeRunRow(row) : null;
-}
-
-export async function listSolutionKitInstallItems(runId: string) {
-  const rows = await db
-    .select()
-    .from(solutionKitInstallItems)
-    .where(eq(solutionKitInstallItems.runId, runId))
-    .orderBy(asc(solutionKitInstallItems.position), asc(solutionKitInstallItems.createdAt));
-
-  return rows.map(normalizeItemRow);
 }
 
 export async function applySolutionKitInstall(
@@ -440,121 +379,6 @@ export async function rollbackSolutionKitInstall(
   };
 }
 
-type PersistedResourceType = typeof solutionKitInstallItems.$inferSelect.resourceType;
-
-const readSnapshotId = (value: unknown): string | null =>
-  isRecord(value) && typeof value.id === "string" ? value.id : null;
-
-const readDesiredSnapshot = (value: unknown): JsonObject =>
-  isRecord(value) && isRecord(value.desired)
-    ? (value.desired as JsonObject)
-    : isRecord(value)
-      ? (value as JsonObject)
-      : {};
-
-export const buildManagedResourceEvidenceQuery = (input: {
-  packageKey: string;
-  kind: FullSiteInstallResourceKind;
-  key: string;
-}) => {
-  const candidateItem = aliasedTable(solutionKitInstallItems, "managed_candidate_item");
-  const candidateRun = aliasedTable(solutionKitInstallRuns, "managed_candidate_run");
-  const rollbackRun = aliasedTable(solutionKitInstallRuns, "managed_rollback_run");
-  const rollbackItem = aliasedTable(solutionKitInstallItems, "managed_rollback_item");
-  const candidateItemId = sql<string>`${candidateItem.id}`.as("candidate_item_id");
-  const candidateItemCreatedAt = sql<Date>`${candidateItem.createdAt}`.as(
-    "candidate_item_created_at"
-  );
-  const candidateItemForRun = db
-    .select({ candidateItemId, candidateItemCreatedAt })
-    .from(candidateItem)
-    .where(
-      and(
-        eq(candidateItem.runId, candidateRun.id),
-        eq(candidateItem.resourceType, input.kind as PersistedResourceType),
-        eq(candidateItem.resourceKey, input.key),
-        eq(candidateItem.status, "success"),
-        inArray(candidateItem.operation, ["create", "update"])
-      )
-    )
-    .orderBy(desc(candidateItemCreatedAt), desc(candidateItemId))
-    .limit(1)
-    .as("managed_candidate_item_for_run");
-  const matchingSuccessfulRollbackItem = db
-    .select({ one: sql<number>`1` })
-    .from(rollbackItem)
-    .where(
-      and(
-        eq(rollbackItem.runId, rollbackRun.id),
-        eq(rollbackItem.resourceType, input.kind as PersistedResourceType),
-        eq(rollbackItem.resourceKey, input.key),
-        eq(rollbackItem.status, "success")
-      )
-    );
-  const invalidatingRollbackRun = db
-    .select({ one: sql<number>`1` })
-    .from(rollbackRun)
-    .where(
-      and(
-        eq(rollbackRun.rollbackOfRunId, candidateRun.id),
-        eq(rollbackRun.mode, "rollback"),
-        or(eq(rollbackRun.status, "success"), exists(matchingSuccessfulRollbackItem))
-      )
-    );
-  const candidateRunId = sql<string>`${candidateRun.id}`.as("candidate_run_id");
-  const winner = db
-    .select({
-      candidateRunId,
-      candidateItemId: candidateItemForRun.candidateItemId,
-      candidateItemCreatedAt: candidateItemForRun.candidateItemCreatedAt,
-    })
-    .from(candidateRun)
-    .innerJoinLateral(candidateItemForRun, sql`true`)
-    .where(
-      and(
-        eq(candidateRun.kitId, input.packageKey),
-        eq(candidateRun.mode, "apply"),
-        eq(candidateRun.status, "success"),
-        notExists(invalidatingRollbackRun)
-      )
-    )
-    .orderBy(
-      desc(candidateRun.createdAt),
-      desc(candidateRun.updatedAt),
-      desc(candidateRunId),
-      desc(candidateItemForRun.candidateItemCreatedAt),
-      desc(candidateItemForRun.candidateItemId)
-    )
-    .limit(1)
-    .as("managed_resource_winner");
-
-  return db
-    .select({
-      runId: winner.candidateRunId,
-      afterSnapshot: solutionKitInstallItems.afterSnapshot,
-    })
-    .from(winner)
-    .innerJoin(solutionKitInstallItems, eq(solutionKitInstallItems.id, winner.candidateItemId));
-};
-
-export const findManagedResourceEvidence = async (input: {
-  packageKey: string;
-  kind: FullSiteInstallResourceKind;
-  key: string;
-}): Promise<ManagedResourceEvidence | null> => {
-  const [row] = await buildManagedResourceEvidenceQuery(input);
-  if (!row) return null;
-  const resourceId = readSnapshotId(row.afterSnapshot);
-  if (!resourceId) return null;
-  return {
-    runId: row.runId,
-    resourceId,
-    desired: readDesiredSnapshot(row.afterSnapshot),
-    successful: true,
-    rolledBack: false,
-  };
-};
-
 const toFullSiteRun = (run: SolutionKitInstallRunRecord) => ({
   id: run.id,
   packageKey: run.kitId,
@@ -565,15 +389,12 @@ const toFullSiteRun = (run: SolutionKitInstallRunRecord) => ({
 });
 
 const FULL_SITE_PACKAGE_LOCK_NAMESPACE = 547;
-const GLOBAL_FULL_SITE_LOCK_NAMESPACE = 548;
-const GLOBAL_FULL_SITE_LOCK_KEY = 0;
 
 const requireCanonicalPackageKey = (value: string): string => {
-  const diagnostics = new DiagnosticCollector();
+  const diagnostics = createDiagnosticCollector();
   const packageKey = readPackageKey(value, "$.key", diagnostics);
-  try {
-    diagnostics.throwIfAny();
-  } catch {
+  const batch = diagnostics.read();
+  if (batch.overflowed || batch.diagnostics.length > 0) {
     throw new Error("site_package_invalid");
   }
   if (packageKey !== value) throw new Error("site_package_invalid");
@@ -624,47 +445,409 @@ export const runFullSiteInstallTransactionLockLifecycle = async <T>(
   return outcome.value;
 };
 
-export const withFullSiteInstallLocks = async <T>(
-  packageKey: string,
-  execute: () => Promise<T>
-): Promise<T> => {
-  const canonicalPackageKey = requireCanonicalPackageKey(packageKey);
-  const databaseUrl = process.env.DATABASE_URL;
-  if (!databaseUrl) throw new Error("DATABASE_URL is not set");
-  const lockClient = postgres(databaseUrl, { max: 1, max_lifetime: null });
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const reservationAuthorities = new WeakSet<object>();
 
-  return runFullSiteInstallTransactionLockLifecycle(
-    {
-      runTransaction: async (run) => {
-        const result = await lockClient.begin(async (lockTransaction) => ({
-          value: await run({
-            acquireGlobal: async () => {
-              await lockTransaction`
-              select pg_advisory_xact_lock(
-                ${GLOBAL_FULL_SITE_LOCK_NAMESPACE},
-                ${GLOBAL_FULL_SITE_LOCK_KEY}
-              )
-            `;
-            },
-            acquirePackage: async () => {
-              await lockTransaction`
-              select pg_advisory_xact_lock(
-                ${FULL_SITE_PACKAGE_LOCK_NAMESPACE},
-                hashtext(${canonicalPackageKey})
-              )
-            `;
-            },
-          }),
-        }));
-        return result.value;
-      },
-      endClient: () => lockClient.end(),
+const canonicalJson = (value: JsonValue): string => {
+  if (Array.isArray(value)) return `[${value.map(canonicalJson).join(",")}]`;
+  if (value && typeof value === "object") {
+    return `{${Object.keys(value)
+      .sort()
+      .map((key) => `${JSON.stringify(key)}:${canonicalJson(value[key])}`)
+      .join(",")}}`;
+  }
+  return JSON.stringify(value);
+};
+
+const cloneReservationJson = (value: unknown, seen = new Set<object>()): JsonValue => {
+  if (value === null || typeof value === "string" || typeof value === "boolean") return value;
+  if (typeof value === "number" && Number.isFinite(value)) return Object.is(value, -0) ? 0 : value;
+  if (!value || typeof value !== "object" || seen.has(value))
+    throw new Error("site_package_invalid");
+  seen.add(value);
+  try {
+    if (Array.isArray(value)) {
+      const output = value.map((item, index) => {
+        if (!Object.prototype.hasOwnProperty.call(value, index))
+          throw new Error("site_package_invalid");
+        return cloneReservationJson(item, seen);
+      });
+      return output;
+    }
+    const descriptors = Object.getOwnPropertyDescriptors(value);
+    if (Reflect.ownKeys(descriptors).some((key) => typeof key !== "string")) {
+      throw new Error("site_package_invalid");
+    }
+    const output: JsonObject = {};
+    for (const [key, descriptor] of Object.entries(descriptors)) {
+      if (
+        !("value" in descriptor) ||
+        descriptor.enumerable !== true ||
+        key === NATIVE_CMS_WRITER_FENCE_OPTION_KEY
+      )
+        throw new Error("site_package_invalid");
+      output[key] = cloneReservationJson(descriptor.value, seen);
+    }
+    return output;
+  } finally {
+    seen.delete(value);
+  }
+};
+
+const readLockReservation = (
+  value: FullSiteInstallLockReservation
+): FullSiteInstallLockReservation => {
+  try {
+    if (!value || Array.isArray(value) || typeof value !== "object") throw new Error();
+    const expected =
+      value.intent === "apply"
+        ? ["intent", "packageKey", "actorId", "dryRun", "options"]
+        : ["intent", "packageKey", "actorId", "sourceRunId", "options"];
+    if (
+      Object.keys(value).length !== expected.length ||
+      Object.keys(value).some((key) => !expected.includes(key))
+    )
+      throw new Error();
+    const packageKey = requireCanonicalPackageKey(value.packageKey);
+    if (!UUID_PATTERN.test(value.actorId)) throw new Error();
+    const options = cloneReservationJson(value.options);
+    if (!options || Array.isArray(options) || typeof options !== "object") throw new Error();
+    if (value.intent === "apply") {
+      if (typeof value.dryRun !== "boolean") throw new Error();
+      return Object.freeze({ ...value, packageKey, options });
+    }
+    if (value.intent !== "explicit_rollback" || !UUID_PATTERN.test(value.sourceRunId))
+      throw new Error();
+    return Object.freeze({ ...value, packageKey, options });
+  } catch {
+    throw new Error("site_package_invalid");
+  }
+};
+
+const mintReservationAuthority = (): object => {
+  const authority = Object.freeze({});
+  reservationAuthorities.add(authority);
+  return authority;
+};
+
+const publicRequestOptions = (value: unknown): JsonObject => {
+  const options =
+    value && !Array.isArray(value) && typeof value === "object"
+      ? { ...(value as Record<string, JsonValue>) }
+      : {};
+  delete options[NATIVE_CMS_WRITER_FENCE_OPTION_KEY];
+  delete options.initializationPlanV1;
+  return options;
+};
+
+const OWNER_RESERVATION_SELECTION = {
+  id: solutionKitInstallRuns.id,
+  kitId: solutionKitInstallRuns.kitId,
+  mode: solutionKitInstallRuns.mode,
+  status: solutionKitInstallRuns.status,
+  actorId: solutionKitInstallRuns.actorId,
+  rollbackOfRunId: solutionKitInstallRuns.rollbackOfRunId,
+  options: solutionKitInstallRuns.options,
+} as const;
+
+type ReservedOwnerRow = Pick<
+  typeof solutionKitInstallRuns.$inferSelect,
+  "id" | "kitId" | "mode" | "status" | "actorId" | "rollbackOfRunId" | "options"
+>;
+
+const deriveResumePhase = async (
+  tx: Parameters<Parameters<typeof db.transaction>[0]>[0],
+  owner: ReservedOwnerRow
+): Promise<"reserved" | "initialized"> => {
+  const items = await tx
+    .select()
+    .from(solutionKitInstallItems)
+    .where(eq(solutionKitInstallItems.runId, owner.id))
+    .orderBy(asc(solutionKitInstallItems.position), asc(solutionKitInstallItems.id))
+    .limit(PACKAGE_LIMITS.resourcesTotal + 1);
+  if (items.length > PACKAGE_LIMITS.resourcesTotal)
+    throw new Error("native_cms_writer_recovery_required");
+  const rawPlan = (owner.options as Record<string, unknown>).initializationPlanV1;
+  if (rawPlan === undefined && items.length === 0) return "reserved";
+  let plan;
+  try {
+    plan = readStrictInitializationPlanV1(rawPlan);
+  } catch {
+    throw new Error("native_cms_writer_recovery_required");
+  }
+  if (
+    plan.length !== items.length ||
+    items.some((item, index) => {
+      const expected = plan[index];
+      return (
+        item.position !== expected.position ||
+        item.resourceType !== expected.kind ||
+        item.resourceKey !== expected.key ||
+        item.operation !== expected.operation
+      );
+    })
+  )
+    throw new Error("native_cms_writer_recovery_required");
+  return "initialized";
+};
+
+const reserveOrTakeOverActualOwner = async (
+  input: FullSiteInstallLockReservation,
+  authority: object
+): Promise<
+  Readonly<{
+    lease: NativeCmsWriterOwnerLease;
+    context: FullSiteInstallLockContext;
+  }>
+> => {
+  if (!reservationAuthorities.delete(authority)) throw new Error("native_cms_writer_fence_failed");
+  return db.transaction(
+    async (tx) => {
+      const candidates = await tx
+        .select(OWNER_RESERVATION_SELECTION)
+        .from(solutionKitInstallRuns)
+        .where(sql`${solutionKitInstallRuns.options} ? ${NATIVE_CMS_WRITER_FENCE_OPTION_KEY}`)
+        .orderBy(asc(solutionKitInstallRuns.createdAt), asc(solutionKitInstallRuns.id))
+        .limit(2)
+        .for("update");
+      if (candidates.length > 1) throw new Error("native_cms_writer_recovery_required");
+      const generation = randomUUID();
+      let owner: ReservedOwnerRow | undefined = candidates[0];
+      let interruptedApplySource: ReservedOwnerRow | undefined;
+      if (owner) {
+        if (
+          input.intent === "explicit_rollback" &&
+          owner.id === input.sourceRunId &&
+          owner.kitId === input.packageKey &&
+          owner.mode === "apply" &&
+          owner.status === "running" &&
+          owner.rollbackOfRunId === null &&
+          typeof owner.actorId === "string" &&
+          UUID_PATTERN.test(owner.actorId)
+        ) {
+          interruptedApplySource = owner;
+          owner = undefined;
+        } else {
+          const expectedMode =
+            input.intent === "apply" ? (input.dryRun ? "dry_run" : "apply") : "rollback";
+          if (
+            owner.kitId !== input.packageKey ||
+            owner.mode !== expectedMode ||
+            owner.status !== "running" ||
+            owner.actorId !== input.actorId ||
+            (input.intent === "explicit_rollback" && owner.rollbackOfRunId !== input.sourceRunId) ||
+            canonicalJson(publicRequestOptions(owner.options)) !== canonicalJson(input.options)
+          ) {
+            throw new Error("site_package_recovery_conflict");
+          }
+          const resumePhase = input.intent === "apply" ? await deriveResumePhase(tx, owner) : null;
+          const [updated] = await tx
+            .update(solutionKitInstallRuns)
+            .set({
+              options: {
+                ...(owner.options as JsonObject),
+                [NATIVE_CMS_WRITER_FENCE_OPTION_KEY]: { schemaVersion: 1, generation },
+              },
+              updatedAt: new Date(),
+            })
+            .where(eq(solutionKitInstallRuns.id, owner.id))
+            .returning(OWNER_RESERVATION_SELECTION);
+          if (!updated) throw new Error("native_cms_writer_fence_failed");
+          owner = updated;
+          const lease = createNativeCmsWriterOwnerLease(owner.id, generation);
+          return Object.freeze({
+            lease,
+            context:
+              input.intent === "apply"
+                ? Object.freeze({
+                    intent: "apply" as const,
+                    ownerRunId: owner.id,
+                    resumePhase: resumePhase!,
+                  })
+                : Object.freeze({ intent: "explicit_rollback" as const, ownerRunId: owner.id }),
+          });
+        }
+      }
+
+      if (input.intent === "explicit_rollback") {
+        const [source] = await tx
+          .select(OWNER_RESERVATION_SELECTION)
+          .from(solutionKitInstallRuns)
+          .where(eq(solutionKitInstallRuns.id, input.sourceRunId))
+          .limit(1)
+          .for("update");
+        if (
+          !source ||
+          source.kitId !== input.packageKey ||
+          source.mode !== "apply" ||
+          !["running", "success", "failed"].includes(source.status)
+        ) {
+          throw new Error("site_package_rollback_invalid_source");
+        }
+        const existing = await tx
+          .select(OWNER_RESERVATION_SELECTION)
+          .from(solutionKitInstallRuns)
+          .where(
+            and(
+              eq(solutionKitInstallRuns.rollbackOfRunId, source.id),
+              eq(solutionKitInstallRuns.mode, "rollback")
+            )
+          )
+          .orderBy(asc(solutionKitInstallRuns.createdAt), asc(solutionKitInstallRuns.id));
+        if (existing.some((run) => run.status === "success")) {
+          throw new Error("site_package_already_rolled_back");
+        }
+        owner = existing.find((run) => run.status === "running" || run.status === "failed");
+        if (
+          owner &&
+          (owner.actorId !== input.actorId ||
+            canonicalJson(publicRequestOptions(owner.options)) !== canonicalJson(input.options))
+        ) {
+          throw new Error("site_package_recovery_conflict");
+        }
+        if (interruptedApplySource) {
+          if (source.id !== interruptedApplySource.id) {
+            throw new Error("native_cms_writer_recovery_required");
+          }
+          const sourceOptions = { ...(source.options as JsonObject) };
+          delete sourceOptions[NATIVE_CMS_WRITER_FENCE_OPTION_KEY];
+          const [unmarked] = await tx
+            .update(solutionKitInstallRuns)
+            .set({
+              options: sourceOptions,
+              updatedAt: new Date(),
+            })
+            .where(eq(solutionKitInstallRuns.id, source.id))
+            .returning({ id: solutionKitInstallRuns.id });
+          if (!unmarked) throw new Error("native_cms_writer_fence_failed");
+        }
+      }
+      const ownerId = owner?.id ?? randomUUID();
+      const options = {
+        ...(owner ? (owner.options as JsonObject) : input.options),
+        [NATIVE_CMS_WRITER_FENCE_OPTION_KEY]: { schemaVersion: 1, generation },
+      };
+      if (owner) {
+        const [updated] = await tx
+          .update(solutionKitInstallRuns)
+          .set({
+            status: "running",
+            error: null,
+            finishedAt: null,
+            options,
+            updatedAt: new Date(),
+          })
+          .where(eq(solutionKitInstallRuns.id, owner.id))
+          .returning(OWNER_RESERVATION_SELECTION);
+        if (!updated) throw new Error("native_cms_writer_fence_failed");
+        owner = updated;
+      } else {
+        const [created] = await tx
+          .insert(solutionKitInstallRuns)
+          .values({
+            id: ownerId,
+            kitId: input.packageKey,
+            mode: input.intent === "apply" ? (input.dryRun ? "dry_run" : "apply") : "rollback",
+            status: "running",
+            actorId: input.actorId,
+            rollbackOfRunId: input.intent === "explicit_rollback" ? input.sourceRunId : null,
+            options,
+            summary: {},
+            error: null,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+            finishedAt: null,
+          })
+          .returning(OWNER_RESERVATION_SELECTION);
+        if (!created) throw new Error("native_cms_writer_fence_failed");
+        owner = created;
+      }
+      const lease = createNativeCmsWriterOwnerLease(owner.id, generation);
+      return Object.freeze({
+        lease,
+        context:
+          input.intent === "apply"
+            ? Object.freeze({
+                intent: "apply" as const,
+                ownerRunId: owner.id,
+                resumePhase: "reserved" as const,
+              })
+            : Object.freeze({ intent: "explicit_rollback" as const, ownerRunId: owner.id }),
+      });
     },
-    execute
+    { isolationLevel: "read committed" }
   );
 };
 
+export const withFullSiteInstallLocks = async <T>(
+  reservation: FullSiteInstallLockReservation,
+  execute: (context: FullSiteInstallLockContext) => Promise<T>
+): Promise<T> => {
+  assertNativeCmsWriterOwnerContextAbsent();
+  const input = readLockReservation(reservation);
+  const databaseUrl = process.env.DATABASE_URL;
+  if (!databaseUrl) throw new Error("DATABASE_URL is not set");
+  let lease: NativeCmsWriterOwnerLease | null = null;
+  let callbackPromise: Promise<T> | null = null;
+  let signalClosed: (() => void) | null = null;
+  const closed = new Promise<never>((_resolve, reject) => {
+    signalClosed = () => reject(new Error("native_cms_writer_fence_lost"));
+  });
+  const lockClient = postgres(databaseUrl, {
+    max: 1,
+    prepare: false,
+    onclose: () => {
+      if (lease) markNativeCmsWriterOwnerLost(lease);
+      signalClosed?.();
+    },
+  });
+  let primary: Error | null = null;
+  let result: Readonly<{ value: T }> | null = null;
+  try {
+    const holder = lockClient.begin(async (lockTransaction) => {
+      await lockTransaction`select pg_advisory_xact_lock(${NATIVE_CMS_WRITER_FENCE_NAMESPACE}, ${NATIVE_CMS_WRITER_FENCE_KEY})`;
+      await lockTransaction`select pg_advisory_xact_lock(${FULL_SITE_PACKAGE_LOCK_NAMESPACE}, hashtext(${input.packageKey}))`;
+      const authority = mintReservationAuthority();
+      const reserved = await reserveOrTakeOverActualOwner(input, authority);
+      lease = reserved.lease;
+      callbackPromise = runWithNativeCmsWriterOwnerContext(lease, () => execute(reserved.context));
+      const value = await callbackPromise;
+      revokeNativeCmsWriterOwnerLease(lease);
+      return { value };
+    });
+    result = await Promise.race([holder, closed]);
+  } catch (error) {
+    primary =
+      error instanceof Error
+        ? new Error(error.message)
+        : new Error("native_cms_writer_fence_failed");
+  }
+  if (callbackPromise) {
+    try {
+      await callbackPromise;
+    } catch (error) {
+      if (!primary) {
+        primary =
+          error instanceof Error
+            ? new Error(error.message)
+            : new Error("native_cms_writer_fence_failed");
+      }
+    }
+  }
+  try {
+    await lockClient.end();
+  } catch {
+    if (!primary) primary = new Error("native_cms_writer_fence_failed");
+  }
+  if (primary) throw primary;
+  if (!result) throw new Error("native_cms_writer_fence_failed");
+  return result.value;
+};
+
 export const createLegacyInstallLedger = (): FullSiteInstallLedgerPort => ({
+  ...createLegacyInstallReadPersistence(),
+  ...createRunInitialization(),
+  ...createOwnedRunFinalization(),
   withPackageLock: withFullSiteInstallLocks,
   async createRun(input) {
     return createInstallRun({
@@ -684,39 +867,47 @@ export const createLegacyInstallLedger = (): FullSiteInstallLedgerPort => ({
       ? toSafeFullSiteErrorCode(input.error, "solution_kit_operation_failed")
       : null;
     const rollbackActionWasSupplied = input.rollbackAction !== undefined;
-    await db
-      .insert(solutionKitInstallItems)
-      .values({
-        runId: input.runId,
-        position: input.position,
-        resourceType: input.kind as SolutionKitInstallResourceType,
-        resourceKey: input.key,
-        operation,
-        status: input.status,
-        beforeSnapshot: input.beforeSnapshot,
-        afterSnapshot: input.afterSnapshot,
-        rollbackAction: input.rollbackAction ?? null,
-        error: safeError,
-        createdAt: now,
-        updatedAt: now,
-      })
-      .onConflictDoUpdate({
-        target: [
-          solutionKitInstallItems.runId,
-          solutionKitInstallItems.resourceType,
-          solutionKitInstallItems.resourceKey,
-        ],
-        set: {
-          position: input.position,
-          operation,
-          status: input.status,
-          beforeSnapshot: input.beforeSnapshot,
-          afterSnapshot: input.afterSnapshot,
-          ...(rollbackActionWasSupplied ? { rollbackAction: input.rollbackAction ?? null } : {}),
-          error: safeError,
-          updatedAt: now,
-        },
-      });
+    await db.transaction(
+      async (tx) => {
+        await acquireNativeCmsWriterFence(tx);
+        await tx
+          .insert(solutionKitInstallItems)
+          .values({
+            runId: input.runId,
+            position: input.position,
+            resourceType: input.kind as SolutionKitInstallResourceType,
+            resourceKey: input.key,
+            operation,
+            status: input.status,
+            beforeSnapshot: input.beforeSnapshot,
+            afterSnapshot: input.afterSnapshot,
+            rollbackAction: input.rollbackAction ?? null,
+            error: safeError,
+            createdAt: now,
+            updatedAt: now,
+          })
+          .onConflictDoUpdate({
+            target: [
+              solutionKitInstallItems.runId,
+              solutionKitInstallItems.resourceType,
+              solutionKitInstallItems.resourceKey,
+            ],
+            set: {
+              position: input.position,
+              operation,
+              status: input.status,
+              beforeSnapshot: input.beforeSnapshot,
+              afterSnapshot: input.afterSnapshot,
+              ...(rollbackActionWasSupplied
+                ? { rollbackAction: input.rollbackAction ?? null }
+                : {}),
+              error: safeError,
+              updatedAt: now,
+            },
+          });
+      },
+      { isolationLevel: "read committed" }
+    );
   },
   async finalizeRun(input) {
     const items = await listSolutionKitInstallItems(input.runId);
@@ -763,25 +954,6 @@ export const createLegacyInstallLedger = (): FullSiteInstallLedgerPort => ({
       .orderBy(desc(solutionKitInstallRuns.createdAt), desc(solutionKitInstallRuns.id))
       .limit(1);
     return row ? toFullSiteRun(normalizeRunRow(row)) : null;
-  },
-  async listItems(runId) {
-    const items = await listSolutionKitInstallItems(runId);
-    return items
-      .filter(
-        (item) =>
-          item.operation === "create" || item.operation === "update" || item.operation === "noop"
-      )
-      .map((item) => ({
-        position: item.position,
-        kind: item.resourceType as FullSiteInstallResourceKind,
-        key: item.resourceKey,
-        operation: item.operation as "create" | "update" | "noop",
-        status: item.status,
-        beforeSnapshot: item.beforeSnapshot as JsonObject | null,
-        afterSnapshot: item.afterSnapshot as JsonObject | null,
-        rollbackAction: item.rollbackAction as JsonObject | null,
-        error: item.error,
-      }));
   },
   async createRollbackRun(input) {
     return createInstallRun({
@@ -896,7 +1068,6 @@ export const createLegacyInstallLedger = (): FullSiteInstallLedgerPort => ({
       .limit(1);
     return rows.length > 0;
   },
-  findManagedResourceEvidence,
 });
 
 export const defaultLegacyInstallLedger = createLegacyInstallLedger();

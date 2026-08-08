@@ -1,4 +1,10 @@
-import { DiagnosticCollector, readPackageKey } from "./fullSitePackage/schema";
+import {
+  compareFullSitePackageText,
+  createDiagnosticCollector,
+  isAllowedFullSitePackageSettingKey,
+  readPackageKey,
+} from "./fullSitePackage/schema";
+import type { PackageResourceIdentity } from "./fullSitePackage/referenceRegistry";
 import {
   PACKAGE_LIMITS,
   PACKAGE_RESOURCE_KINDS,
@@ -9,7 +15,7 @@ import {
 
 export type FullSiteInstallResourceKind = PackageResourceKind;
 
-export type FullSiteResourceIdentity = `${FullSiteInstallResourceKind}:${string}`;
+export type FullSiteResourceIdentity = PackageResourceIdentity;
 
 export type FullSiteRollbackActionV1 = {
   schemaVersion: 1;
@@ -26,15 +32,18 @@ const readCanonicalIdentity = (value: unknown): FullSiteResourceIdentity | null 
   const rawKey = value.slice(separator + 1);
   if (!FULL_SITE_RESOURCE_KINDS.has(kind)) return null;
 
-  const diagnostics = new DiagnosticCollector();
-  const key = readPackageKey(rawKey, "$.identity.key", diagnostics);
-  try {
-    diagnostics.throwIfAny();
-  } catch {
-    return null;
+  if (kind === "setting") {
+    return isAllowedFullSitePackageSettingKey(rawKey)
+      ? (`setting:${rawKey}` as PackageResourceIdentity)
+      : null;
   }
+
+  const diagnostics = createDiagnosticCollector();
+  const key = readPackageKey(rawKey, "$.identity.key", diagnostics);
+  const batch = diagnostics.read();
+  if (batch.overflowed || batch.diagnostics.length > 0) return null;
   if (key !== rawKey) return null;
-  return `${kind}:${key}` as FullSiteResourceIdentity;
+  return `${kind}:${key}` as PackageResourceIdentity;
 };
 
 const isPlainJsonObject = (value: unknown): value is Record<string, unknown> => {
@@ -71,7 +80,7 @@ export function buildFullSiteRollbackActionV1(input: {
 
   return {
     schemaVersion: 1,
-    dependencies: [...dependencies].sort(),
+    dependencies: [...dependencies].sort(compareFullSitePackageText),
   };
 }
 
@@ -192,6 +201,205 @@ export type PersistedFullSiteInstallLedgerItem = Omit<
   rollbackAction: JsonObject | null;
 };
 
+export type RawFullSiteInstallLedgerItem = Readonly<{
+  position: unknown;
+  kind: unknown;
+  key: unknown;
+  operation: unknown;
+  status: unknown;
+  beforeSnapshot: unknown;
+  afterSnapshot: unknown;
+  rollbackAction: unknown;
+  error: unknown;
+}>;
+
+export type FullSiteInitializationPlanV1 = readonly Readonly<{
+  position: number;
+  kind: FullSiteInstallResourceKind;
+  key: string;
+  operation: "create" | "update" | "noop";
+}>[];
+
+const INITIALIZATION_PLAN_KEYS = new Set(["position", "kind", "key", "operation"]);
+const INITIALIZATION_OPERATIONS = new Set(["create", "update", "noop"]);
+
+export const readStrictInitializationPlanV1 = (value: unknown): FullSiteInitializationPlanV1 => {
+  try {
+    if (!Array.isArray(value)) throw new Error("site_package_invalid");
+    const length = Reflect.get(value, "length");
+    if (
+      typeof length !== "number" ||
+      !Number.isSafeInteger(length) ||
+      length < 0 ||
+      length > PACKAGE_LIMITS.resourcesTotal
+    ) {
+      throw new Error(
+        length > PACKAGE_LIMITS.resourcesTotal ? "site_package_too_large" : "site_package_invalid"
+      );
+    }
+    const output: Array<FullSiteInitializationPlanV1[number]> = [];
+    const identities = new Set<FullSiteResourceIdentity>();
+    for (let index = 0; index < length; index += 1) {
+      if (!Object.prototype.hasOwnProperty.call(value, index))
+        throw new Error("site_package_invalid");
+      const row = Reflect.get(value, String(index));
+      if (!isPlainJsonObject(row)) throw new Error("site_package_invalid");
+      const keys = Reflect.ownKeys(row);
+      if (
+        keys.length !== INITIALIZATION_PLAN_KEYS.size ||
+        keys.some((key) => typeof key !== "string" || !INITIALIZATION_PLAN_KEYS.has(key))
+      ) {
+        throw new Error("site_package_invalid");
+      }
+      const position = Reflect.get(row, "position");
+      const kind = Reflect.get(row, "kind");
+      const key = Reflect.get(row, "key");
+      const operation = Reflect.get(row, "operation");
+      const identity = readCanonicalIdentity(`${String(kind)}:${String(key)}`);
+      if (
+        position !== index ||
+        typeof kind !== "string" ||
+        typeof key !== "string" ||
+        !identity ||
+        identities.has(identity) ||
+        typeof operation !== "string" ||
+        !INITIALIZATION_OPERATIONS.has(operation)
+      ) {
+        throw new Error("site_package_invalid");
+      }
+      identities.add(identity);
+      output.push(
+        Object.freeze({
+          position,
+          kind: kind as FullSiteInstallResourceKind,
+          key,
+          operation: operation as "create" | "update" | "noop",
+        })
+      );
+    }
+    if (Reflect.get(value, "length") !== length) throw new Error("site_package_invalid");
+    return Object.freeze(output);
+  } catch (error) {
+    if (error instanceof Error && error.message === "site_package_too_large") {
+      throw new Error("site_package_too_large");
+    }
+    throw new Error("site_package_invalid");
+  }
+};
+
+export type FullSiteInstallLockReservation =
+  | Readonly<{
+      intent: "apply";
+      packageKey: string;
+      actorId: string;
+      dryRun: boolean;
+      options: JsonObject;
+    }>
+  | Readonly<{
+      intent: "explicit_rollback";
+      packageKey: string;
+      actorId: string;
+      sourceRunId: string;
+      options: JsonObject;
+    }>;
+
+export type FullSiteInstallLockContext =
+  | Readonly<{
+      intent: "apply";
+      ownerRunId: string;
+      resumePhase: "reserved" | "initialized";
+    }>
+  | Readonly<{ intent: "explicit_rollback"; ownerRunId: string }>;
+
+export type FullSiteInitializedLedgerItemInput = Readonly<{
+  position: number;
+  kind: FullSiteInstallResourceKind;
+  key: string;
+  operation: "create" | "update" | "noop";
+  beforeSnapshot: JsonObject | null;
+  afterSnapshot: JsonObject;
+  rollbackAction: JsonObject;
+}>;
+
+export type FullSiteReservedRunInitializationInput = Readonly<{
+  ownerRunId: string;
+  packageKey: string;
+  actorId: string;
+  dryRun: boolean;
+  options: JsonObject;
+  items: readonly FullSiteInitializedLedgerItemInput[];
+}>;
+
+export type FullSiteOwnedRunFinalizationInput = Readonly<{
+  ownerRunId: string;
+  status: "success" | "failed";
+  error: string | null;
+  automaticCompensation?: Readonly<{
+    runId: string;
+    status: "success";
+    error: null;
+  }> | null;
+  interruptedApplySource?: Readonly<{
+    runId: string;
+    status: "failed";
+    error: "site_package_apply_interrupted";
+  }> | null;
+}>;
+
+export type FullSiteOwnedRunFinalizationResult = Readonly<{
+  outcome: "desired_terminal" | "different_terminal";
+}>;
+
+export type FullSitePlanningSnapshotRow = Readonly<{
+  identity: FullSiteResourceIdentity;
+  evidence: Readonly<{ runId: string; resourceId: string }> | null;
+  current: CurrentResourceState | null;
+}>;
+
+export type FullSitePlanningSnapshotLoader = (
+  resources: readonly import("./fullSitePackage/referenceGraph").PlannedPackageResource[]
+) => Promise<readonly FullSitePlanningSnapshotRow[]>;
+
+export type ManagedResourceEvidenceBatchReader = (
+  input: Readonly<{
+    packageKey: string;
+    resources: readonly Readonly<{
+      identity: FullSiteResourceIdentity;
+      kind: FullSiteInstallResourceKind;
+      key: string;
+    }>[];
+  }>
+) => Promise<
+  readonly Readonly<{
+    identity: FullSiteResourceIdentity;
+    evidence: Readonly<{ runId: string; resourceId: string }> | null;
+  }>[]
+>;
+
+export type FullSitePlanningResourceBatchReader = (
+  input: Readonly<{
+    resources: readonly import("./fullSitePackage/referenceGraph").PlannedPackageResource[];
+    evidence: readonly Readonly<{
+      identity: FullSiteResourceIdentity;
+      evidence: Readonly<{ runId: string; resourceId: string }> | null;
+    }>[];
+  }>
+) => Promise<
+  readonly Readonly<{
+    identity: FullSiteResourceIdentity;
+    current: CurrentResourceState | null;
+  }>[]
+>;
+
+export type FullSitePlanningReadTransaction = <T>(
+  read: (
+    scope: Readonly<{
+      findEvidence: ManagedResourceEvidenceBatchReader;
+      readNative: FullSitePlanningResourceBatchReader;
+    }>
+  ) => Promise<T>
+) => Promise<T>;
+
 export type FullSiteRollbackClaim = {
   id: string;
   state: "created" | "resumed" | "busy" | "complete";
@@ -296,6 +504,8 @@ const SAFE_FULL_SITE_ERROR_CODES = new Set([
   "site_package_conflict",
   "site_package_file_invalid",
   "site_package_invalid",
+  "site_package_ledger_initialization_failed",
+  "site_package_lock_reentrant",
   "site_package_json_invalid",
   "site_package_publish_unsupported",
   "site_package_recovery_conflict",
@@ -327,6 +537,10 @@ const SAFE_FULL_SITE_ERROR_CODES = new Set([
   "site_package_state_changed",
   "site_package_too_complex",
   "site_package_too_large",
+  "native_cms_writer_fence_busy",
+  "native_cms_writer_recovery_required",
+  "native_cms_writer_fence_lost",
+  "native_cms_writer_fence_failed",
   "entry_revision_snapshot_too_large",
   "detail_page_revision_snapshot_too_large",
   "solution_kit_install_failed",
@@ -378,11 +592,10 @@ export const toSafeFullSiteErrorCode = (
 };
 
 export type FullSiteInstallLedgerPort = {
-  /**
-   * Optional for pure fakes. The DB implementation holds global then package
-   * advisory locks for the complete plan -> preflight -> mutation lifecycle.
-   */
-  withPackageLock?<T>(packageKey: string, execute: () => Promise<T>): Promise<T>;
+  withPackageLock<T>(
+    reservation: FullSiteInstallLockReservation,
+    execute: (context: FullSiteInstallLockContext) => Promise<T>
+  ): Promise<T>;
   createRun(input: {
     packageKey: string;
     actorId: string | null;
@@ -412,6 +625,13 @@ export type FullSiteInstallLedgerPort = {
   /** Optional for narrow planner fakes; the default DB adapter always implements it. */
   findLatestSuccessfulApplyRun?(packageKey: string): Promise<FullSiteInstallRun | null>;
   listItems(runId: string): Promise<PersistedFullSiteInstallLedgerItem[]>;
+  listRawItems(runId: string): Promise<readonly RawFullSiteInstallLedgerItem[]>;
+  initializeReservedRun(
+    input: FullSiteReservedRunInitializationInput
+  ): Promise<Readonly<{ id: string }>>;
+  finalizeOwnedRun(
+    input: FullSiteOwnedRunFinalizationInput
+  ): Promise<FullSiteOwnedRunFinalizationResult>;
   createRollbackRun(input: {
     sourceRunId: string;
     packageKey: string;

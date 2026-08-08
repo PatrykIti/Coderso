@@ -37,69 +37,53 @@ import {
   normalizeListingRuntimeAliases,
   type ListingRuntimeAliasMap,
 } from "../search/filterContract";
-import { normalizeSiteLocale } from "../settings/siteLocale";
+import { resolvePrimarySiteLanguage } from "../settings/siteLocale";
 
-type PageListingRuntimeCopy = {
-  filters: {
-    title: string;
-    description: string;
-    searchLabel: string;
-    searchPlaceholder: string;
-    applyLabel: string;
-    copy: ListingFiltersCopy;
-  };
-  collection: {
-    ctaLabel: string;
-    emptyTitle: string;
-    emptyDescription: string;
-  };
+export type PageListingRuntimeCopy = {
+  title: string;
+  description: string;
+  searchLabel: string;
+  searchPlaceholder: string;
+  applyLabel: string;
+  copy: ListingFiltersCopy;
 };
 
 const polishPageListingRuntimeCopy: PageListingRuntimeCopy = {
-  filters: {
-    title: "Filtruj wyniki",
-    description: "Zawęź wyniki za pomocą dostępnych filtrów.",
-    searchLabel: "Szukaj",
-    searchPlaceholder: "Szukaj w wynikach...",
-    applyLabel: "Zastosuj filtry",
-    copy: {
-      configurationAriaLabel: "Konfiguracja filtrów wyników",
-      configurationHint: "Wybierz zapisane zapytanie, aby włączyć filtry.",
-      activeFilterSingular: "aktywny filtr",
-      activeFilterPlural: "aktywne filtry",
-      activeRangeFromLabel: "Od",
-      activeRangeUpToLabel: "Do",
-      activeSearchLabel: "Szukaj",
-      clearAllLabel: "Wyczyść wszystko",
-      autoApplyLabel: "Wyniki aktualizują się automatycznie.",
-      loadingLabel: "Aktualizowanie wyników...",
-      errorLabel: "Nie udało się odświeżyć wyników. Spróbuj ponownie.",
-      rejectedLabel: "Pominięto nieprawidłowe parametry filtrów.",
-      drawerLabel: "Panel filtrów",
-      emptyOptionsLabel: "Brak dostępnych opcji.",
-      optionSearchTemplate: "Szukaj w opcjach: {facet}",
-      defaultOrderLabel: "Domyślna kolejność",
-      dateFromLabel: "Od",
-      dateToLabel: "Do",
-      rangeMinLabel: "Minimum",
-      rangeMaxLabel: "Maksimum",
-      rangeMinSliderLabel: "Suwak minimum",
-      rangeMaxSliderLabel: "Suwak maksimum",
-    },
-  },
-  collection: {
-    ctaLabel: "Zobacz szczegóły",
-    emptyTitle: "Brak wyników",
-    emptyDescription: "Zmień filtry lub opublikuj pasujące treści.",
+  title: "Filtruj wyniki",
+  description: "Zawęź wyniki za pomocą dostępnych filtrów.",
+  searchLabel: "Szukaj",
+  searchPlaceholder: "Szukaj w wynikach...",
+  applyLabel: "Zastosuj filtry",
+  copy: {
+    configurationAriaLabel: "Konfiguracja filtrów wyników",
+    configurationHint: "Wybierz zapisane zapytanie, aby włączyć filtry.",
+    activeFilterSingular: "aktywny filtr",
+    activeFilterPlural: "aktywne filtry",
+    activeRangeFromLabel: "Od",
+    activeRangeUpToLabel: "Do",
+    activeSearchLabel: "Szukaj",
+    clearAllLabel: "Wyczyść wszystko",
+    autoApplyLabel: "Wyniki aktualizują się automatycznie.",
+    loadingLabel: "Aktualizowanie wyników...",
+    errorLabel: "Nie udało się odświeżyć wyników. Spróbuj ponownie.",
+    rejectedLabel: "Pominięto nieprawidłowe parametry filtrów.",
+    drawerLabel: "Panel filtrów",
+    emptyOptionsLabel: "Brak dostępnych opcji.",
+    optionSearchTemplate: "Szukaj w opcjach: {facet}",
+    defaultOrderLabel: "Domyślna kolejność",
+    dateFromLabel: "Od",
+    dateToLabel: "Do",
+    rangeMinLabel: "Minimum",
+    rangeMaxLabel: "Maksimum",
+    rangeMinSliderLabel: "Suwak minimum",
+    rangeMaxSliderLabel: "Suwak maksimum",
   },
 };
 
 export const resolvePageListingRuntimeCopy = (
-  siteLocale: string | null | undefined
-): PageListingRuntimeCopy | null => {
-  const locale = normalizeSiteLocale(siteLocale);
-  return locale?.split("-")[0] === "pl" ? polishPageListingRuntimeCopy : null;
-};
+  siteLocale: unknown
+): PageListingRuntimeCopy | null =>
+  resolvePrimarySiteLanguage(siteLocale) === "pl" ? polishPageListingRuntimeCopy : null;
 
 const readOptionalText = (value: unknown): string | null => {
   if (typeof value !== "string") return null;
@@ -182,21 +166,10 @@ const resolveCollectionBinding = async (
   deps: Required<Pick<PageRuntimeDataBindingDeps, "resolveContentListRuntimeData">>
 ): Promise<PageRuntimeCollectionBinding> => {
   const baseData = mapPageCollectionBlockToContentListData(block);
-  const localeCopy = resolvePageListingRuntimeCopy(options.siteLocale)?.collection;
-  const data = localeCopy
-    ? normalizeContentListData({
-        ...baseData,
-        style: { ...baseData.style, ctaLabel: localeCopy.ctaLabel },
-        emptyState: {
-          title: localeCopy.emptyTitle,
-          description: localeCopy.emptyDescription,
-        },
-      })
-    : baseData;
-  const listingQueryId = data.source?.listingQueryId?.trim() ?? "";
+  const listingQueryId = baseData.source?.listingQueryId?.trim() ?? "";
   let resolved: ContentListResolvedRuntimeData;
   try {
-    resolved = await deps.resolveContentListRuntimeData(data, {
+    resolved = await deps.resolveContentListRuntimeData(baseData, {
       preview: options.preview,
       contentRoutes: options.contentRoutes,
       runtimeSearchParams: options.runtimeSearchParams,
@@ -225,22 +198,15 @@ const resolveCollectionBinding = async (
   return {
     kind: "collection",
     data: normalizeContentListData({
-      ...data,
-      ...((presentation || localeCopy)
+      ...baseData,
+      ...(presentation
         ? {
             style: {
               ...contentListDefaults.style,
               ...presentation?.style,
-              ...(localeCopy ? { ctaLabel: localeCopy.ctaLabel } : {}),
             },
             emptyState: {
               ...contentListDefaults.emptyState,
-              ...(localeCopy
-                ? {
-                    title: localeCopy.emptyTitle,
-                    description: localeCopy.emptyDescription,
-                  }
-                : {}),
               ...presentation?.emptyState,
             },
           }
@@ -257,7 +223,7 @@ const resolveFiltersBinding = async (
   deps: Required<Pick<PageRuntimeDataBindingDeps, "resolveListingFiltersRuntimeData">>
 ): Promise<PageRuntimeFiltersBinding> => {
   const baseData = mapPageFiltersBlockToListingFiltersData(block);
-  const localeCopy = resolvePageListingRuntimeCopy(options.siteLocale)?.filters;
+  const localeCopy = resolvePageListingRuntimeCopy(options.siteLocale);
   const data = localeCopy
     ? normalizeListingFiltersData({
         ...baseData,

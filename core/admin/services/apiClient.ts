@@ -10,10 +10,7 @@ export type ApiErrorPayload = {
 };
 
 export type AdminApiFailureKind =
-  | "csrf_refresh"
-  | "session_expired"
-  | "permission_denied"
-  | "generic_error";
+  "csrf_refresh" | "session_expired" | "permission_denied" | "generic_error";
 
 export type AdminPermissionFailureEvent = {
   error: ApiClientError;
@@ -44,12 +41,16 @@ const permissionFailureListeners = new Set<(event: AdminPermissionFailureEvent) 
 
 const csrfRefreshErrorCodes = new Set(["csrf_invalid", "csrf_expired"]);
 
+const invalidateCachedCsrfToken = () => {
+  cachedCsrfToken = null;
+};
+
 export function isApiClientError(error: unknown): error is ApiClientError {
   return error instanceof ApiClientError;
 }
 
 export function resetCsrfToken() {
-  cachedCsrfToken = null;
+  invalidateCachedCsrfToken();
   csrfTokenPromise = null;
 }
 
@@ -190,13 +191,13 @@ export async function apiRequest<T>(
       const error = await parseError(response);
       annotateAdminApiFailure(error);
       if (options?.withCsrf && isRefreshableCsrfError(error)) {
-        resetCsrfToken();
+        invalidateCachedCsrfToken();
         response = await sendApiRequest(path, init, options, { force: true });
         if (!response.ok) {
           const retryError = await parseError(response);
           annotateAdminApiFailure(retryError);
           if (isRefreshableCsrfError(retryError)) {
-            resetCsrfToken();
+            invalidateCachedCsrfToken();
           }
           finishMetric({ status: response.status, ok: false, errorCode: "http_error" });
           notifyPermissionFailure({ error: retryError, method, path });

@@ -6,9 +6,10 @@
 **Category:** Solution Kits / Schema
 **Estimated Effort:** Medium
 **Dependencies:** None
-**Status:** 🚧 In Progress
-**Reopened:** 2026-07-23 — implementation remains present; fresh final audit and
-validation evidence are pending after drift remediation.
+**Status:** ✅ Done
+**Completed:** 2026-08-08
+**Validation:** Dependency-shaped contract gates and final repository checks passed;
+the TASK-547 certification smoke completed 18/18 with cleanup on 2026-08-08.
 
 ## Overview
 
@@ -959,7 +960,7 @@ suite neither imports nor source-inspects that later-owned reader.
 
 - [x] Implement types/schema/limits/normalizer.
 - [x] Add `tests/vitest/kits/full-site-package-schema.test.ts`.
-- [ ] Reject noncanonical package/non-setting keys without trimming; correct serialized-size semantics and exact verification/setting boundaries; freeze
+- [x] Reject noncanonical package/non-setting keys without trimming; correct serialized-size semantics and exact verification/setting boundaries; freeze
   scalar/canonical ordering, residual identity and secret/encoded-value policies,
   including all seven package-prose surfaces, dense arrays, compact credential
   aliases with exact `data|payload` suffixes, exact Authorization wrappers,

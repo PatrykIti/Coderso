@@ -6,9 +6,10 @@
 **Category:** QA / Documentation / Closure
 **Estimated Effort:** Large
 **Dependencies:** TASK-547-05, TASK-552-04 shared dispatcher/server extraction
-**Status:** 🚧 In Progress
-**Validation:** All previous final-gate, smoke, cleanup and closure claims are
-invalidated and await fresh evidence from the final working tree.
+**Status:** ✅ Done
+**Completed:** 2026-08-08
+**Validation:** TASK-547 harness tests passed 26/26; certification session
+`wf547final` passed 18/18 in 220.687 s with zero console errors and cleanup PASS.
 
 ## Overview
 
@@ -19,8 +20,9 @@ changelog
 task closure.
 The single guide artifact is `docs/develop/full-site-packages.md`.
 Historical smoke output does not prove the current candidate. Fresh screenshots
-and reports go under `_docs/_workflows/_smoke/task-547/` through the shared
-runner and are review evidence, not a generated task-state ledger.
+go under `_docs/_workflows/_smoke/task-547/`; the shared runner emits its
+bounded JSON/Markdown report on stdout/stderr. Both are review evidence, not a
+generated task-state ledger.
 Acceptance first verifies logical reference label `projekty-domow-wow-site` and
 aggregate ordered-manifest digest
 `d9cf34b5accf7f52b4ebc6d19516a2745936f746305b1f6a46aedbacd4745a4e`;
@@ -50,10 +52,11 @@ During its acceptance/closure phase this leaf is the sole writer for exactly:
 - runtime-smoke production paths
   `scripts/runtime-smoke/adapters/task-547.ts`,
   `scripts/runtime-smoke/adapters/task-547/descriptors.ts`,
-  `scripts/runtime-smoke/adapters/task-547/environment.ts`,
+  `scripts/runtime-smoke/adapters/task-547/host.ts`,
   `scripts/runtime-smoke/adapters/task-547/worker-operations.ts`,
   `scripts/runtime-smoke/adapters/task-547/fixture.ts`,
   `scripts/runtime-smoke/adapters/task-547/cleanup.ts`,
+  `scripts/runtime-smoke/adapters/task-547/workspace.ts`,
   `scripts/runtime-smoke/adapters/task-547/browser-segments.ts`,
   `scripts/runtime-smoke/adapters/task-547/assertions.ts` and
   `scripts/runtime-smoke/adapters/task-547/output-manifest.ts`; shared static registration in
@@ -62,9 +65,10 @@ During its acceptance/closure phase this leaf is the sole writer for exactly:
 - runtime-smoke tests `tests/unit/runtime-smoke/cli-registry.test.ts`,
   `tests/unit/runtime-smoke/task547-adapter.test.ts`,
   `tests/unit/runtime-smoke/task547-descriptors.test.ts`,
-  `tests/unit/runtime-smoke/task547-environment.test.ts`,
+  `tests/unit/runtime-smoke/task547-host.test.ts`,
   `tests/unit/runtime-smoke/task547-worker-operations.test.ts`,
   `tests/unit/runtime-smoke/task547-cleanup-batch.test.ts`,
+  `tests/unit/runtime-smoke/task547-workspace.test.ts`,
   `tests/unit/runtime-smoke/task547-browser-segments.test.ts` and
   `tests/unit/runtime-smoke/task547-output-manifest.test.ts`;
 - root integration surfaces `package.json`, `tests/README.md` and shared smoke
@@ -120,23 +124,17 @@ TASK-552-04 must land first. This leaf imports
 `scripts/runtime-smoke/server/supervised-server.ts`; it must not duplicate the
 private dispatcher/server loops from any existing adapter.
 
-The shared `startSupervisedServer(...)` resolves the literal
-`coderso-dev-core-host` through inherited `PATH` to an absolute executable and
-registers its returned resource with `context.lifecycle` before readiness work;
-the adapter must not register it again. The owned
-`projectTask547ServerEnvironment()` forwards only present values from this exact
-allowlist: `PATH`, `NODE_ENV`, `DATABASE_URL`, `DATABASE_DIRECT_URL`,
-`DATABASE_POOLED_PORT`, `DB_POOL_MAX`, `PUBLIC_BASE_URL`, `COOKIE_SECURE`,
-`PII_HASH_KEY`, `ANALYTICS_IP_HASH_SECRET`, `PII_ENC_KEY`,
-`AUTH_PASSWORD_PEPPER`, `FORM_SUBMIT_NONCE_SECRET`,
-`FORM_SUBMIT_NONCE_TTL_MINUTES`, `ANALYTICS_BEACON_NONCE_SECRET`,
-`ANALYTICS_BEACON_NONCE_TTL_MINUTES`, `MEDIA_SECRET_MASTER_KEY`,
-`MEDIA_STORAGE`, `MEDIA_DIR`, `MEDIA_BASE_URL`, `EMAIL_TRANSPORT`, `THEMES_DIR`,
-`PLUGINS_RUNTIME_DIR`, `PLUGINS_SAFE_MODE` and `PLUGIN_UPDATE_MODE`. `PATH` and
-`DATABASE_URL` are mandatory; blank required values and NUL in any allowlisted
-value fail before spawn, while every non-allowlisted ambient key is ignored. No
-ambient spread is allowed, and evidence exposes only key names plus redacted
-presence, never values.
+The shared `startSupervisedServer(context, spec)` resolves the literal
+`coderso-dev-core-host` through the validated `PATH` projection to an absolute
+executable and registers its returned resource with `context.lifecycle` before
+readiness work; the adapter must not register it again. TASK-547 passes the
+shared exact `CODERSO_DEV_HOST_ENVIRONMENT_POLICY` from
+`server/supervised-server.ts`. Its required, optional, inherited and fixed keys
+are the sole child environment authority; blank required values and NUL fail
+before spawn, every non-allowlisted ambient key is ignored, and
+`MEDIA_STORAGE`/`MEDIA_DIR` are deliberately rejected. No ambient spread or
+suite-local environment projector is allowed, and evidence exposes only key
+names plus redacted presence, never values.
 
 ## Security Contract
 
@@ -211,8 +209,8 @@ export async function runTask547Adapter(
   const timingPolicy = task547TimingPolicy(context.input.profile);
   // timingPolicy changes only bounded polling/auth windows; scenarioPlan is identical
   const scenarioPlan = buildTask547ScenarioPlan(TASK_547_SCENARIOS);
-  const outputs = buildExactTask547OutputManifest(context.input);
-  const repositoryBefore = await context.repository.snapshot(outputs.paths);
+  const screenshots = buildExactTask547ScreenshotManifest(context.input);
+  const repositoryBefore = await context.repository.snapshot(screenshots.paths);
 
   const workers = await WorkerPool.create({
     root: context.root,
@@ -233,23 +231,32 @@ export async function runTask547Adapter(
     resources.submissions = createTask547SubmissionCleanupResource({ workers, fixture });
     registerTask547Resources(context.lifecycle, resources);
 
-    resources.server = await startSupervisedServer({
-      context,
-      executableName: "coderso-dev-core-host",
+    resources.server = await startSupervisedServer(context, {
+      executable: { kind: "path-literal", name: "coderso-dev-core-host" },
       args: [context.root],
-      environment: projectTask547ServerEnvironment(process.env),
+      cwd: context.root,
+      environment: {
+        source: process.env,
+        policy: CODERSO_DEV_HOST_ENVIRONMENT_POLICY,
+      },
       ports: [3000, 5173, 5174],
-      readiness: task547Readiness(timingPolicy.healthTimeoutMs),
+      readiness: task547Readiness(),
+      readinessTimeoutMs: timingPolicy.healthTimeoutMs,
+      family: "task547-dev-host",
     });
 
+    resources.workspace = await createTask547PrivateWorkspace(context);
+    const dispatchPlan = materializeTask547BrowserDispatchPlan(
+      scenarioPlan.actions,
+    ); // includes all bounded source-byte splits
     const dispatcher = new PlaywrightCliDispatcher({
       context,
       session: context.input.session,
-      workspace: outputs.workspace,
+      workspace: resources.workspace.path,
+      segments: task547PhysicalSegmentIds(dispatchPlan),
     });
     resources.browser = new BrowserTransport(context.input.session, dispatcher);
     context.lifecycle.register(resources.browser);
-    const dispatchPlan = compileBrowserDispatchPlan(scenarioPlan.actions);
     const observations = await executeTask547Segments({
       browser: resources.browser,
       dispatchPlan,
@@ -263,6 +270,7 @@ export async function runTask547Adapter(
     const finalization = await finalizeTask547ResourcesNeverThrow({
       resources: [
         resources.browser,
+        resources.workspace,
         resources.server,
         resources.submissions,
         resources.reset,
@@ -274,7 +282,7 @@ export async function runTask547Adapter(
     const repository = await compareTask547RepositoryNeverThrow({
       guard: context.repository,
       before: repositoryBefore,
-      allowedPaths: outputs.paths,
+      allowedPaths: screenshots.paths,
     }); // takes the final snapshot
     primary = preservePrimaryWithCleanup(
       primary,
@@ -304,14 +312,16 @@ Data flow: the shared CLI creates `RuntimeSmokeContext`; suite-local factories
 construct a lifecycle-registered persistent `WorkerPool`, TASK-552-04's shared
 `SupervisedServerResource`/`startSupervisedServer(...)`, `pollUntil` health check
 and lifecycle-registered `BrowserTransport` backed by its shared
-`PlaywrightCliDispatcher`. `compileBrowserDispatchPlan()` batches compatible
-Playwright run-code actions without crossing scenario boundaries. DB fixture,
+`PlaywrightCliDispatcher`. The suite materializes and byte-splits compatible
+Playwright run-code actions without crossing scenario boundaries, then derives
+the dispatcher's exact physical segment allowlist from that final plan. DB fixture,
 proof and cleanup operations use bounded worker batches. One fixture supplies
 the Form/Page IDs for the exact same 18-row plan in both profiles; only timing-
 policy polling/auth timeout values differ.
 
-The adapter's `finally` phase closes browser, server, submission, reset and
-rollback resources in dependency-safe order and preserves cleanup failures. The
+The adapter's `finally` phase closes browser, its lifecycle-registered private
+workspace, server, submission, reset and rollback resources in dependency-safe
+order and preserves cleanup failures. The
 submission resource performs one bounded set-based deletion, reset restores the
 installed mutation baseline, and rollback performs exact-run rollback or
 expected-current atomic CAS once before proving zero scoped rows/temp state and
@@ -326,7 +336,7 @@ evidence ledger or claimed end-to-end checkpoint resume.
 
 ## Exact Shared-Adapter Scenario Descriptors
 
-| No. | ID | Browser segment | Normalized URL | Viewport |
+| No. | ID | Logical group | Normalized URL | Viewport |
 | --- | --- | --- | --- | --- |
 | 01 | `home-desktop-effects` | `wf547smoke` | `http://127.0.0.1:3000/` | `1440x1000` |
 | 02 | `all-routes-desktop-shell` | `wf547smoke` | `http://127.0.0.1:3000/` | `1440x1000` |
@@ -347,7 +357,11 @@ evidence ledger or claimed end-to-end checkpoint resume.
 | 17 | `page-editor-form-presentation-save-reload` | `wf547pageeditor` | `http://127.0.0.1:5173/admin/pages/{pageId}` | `1440x1000` |
 | 18 | `page-editor-publish-front-parity` | `wf547pageeditor` | `["http://127.0.0.1:3000/","http://127.0.0.1:3000/projekty","http://127.0.0.1:3000/kontakt"]` | `390x844` |
 
-Literal `{formId}`/`{pageId}` redactions are validated against the live installed
+The three `wf547*` values are descriptor metadata used to group review evidence;
+they are not Playwright sessions or dispatcher segment IDs. The only real
+Playwright session is `context.input.session`, while physical `segment-NNNN`
+and any `-part-NN` IDs come from the fully materialized dispatch plan. Literal
+`{formId}`/`{pageId}` redactions are validated against the live installed
 resource without persisting the raw ID. One strict suite-local descriptor
 projection owns exact `{number,id,segment,url,viewport,assertions}` rows.
 `assertions` is an ordered non-empty list of exact
@@ -363,8 +377,9 @@ rollback it before the Form Design and Page Editor segments consume its IDs.
 Resume from the actual merged branch inventory and land only unfinished units:
 
 1. acceptance/support tests owned by this leaf;
-2. TASK-547 descriptor, worker-operation, cleanup-batch, server-environment,
-   output-manifest and browser-segment helpers plus thin adapter;
+2. TASK-547 descriptor, worker-operation, cleanup-batch, supervised-host,
+   private-workspace, screenshot-manifest and browser-segment helpers plus thin
+   adapter;
 3. exhaustive `SUITE_IDS` registration in `scripts/runtime-smoke/contracts.ts`,
    `SUPPORTED_PROFILES` in `scripts/runtime-smoke/cli.ts`, `ADAPTER_PATHS` and
    descriptor-map registration in `scripts/runtime-smoke/registry.ts`, plus
@@ -457,11 +472,13 @@ DB/settings equality. An official rollback failure remains primary; fallback
 cleanup cannot turn the run into PASS.
 
 Before any fixture/server/browser side effect, the adapter takes an initial
-`RepositoryGuard` snapshot including the exact output manifest. After its final
-cleanup and before returning, it takes the final snapshot and calls
-`assertUnchanged` with only that run's exact 18 screenshot and JSON/Markdown
-report paths. A broad `_docs/_workflows/_smoke/task-547/` allowlist, an unlisted
-file or any source/doc mutation fails the smoke.
+`RepositoryGuard` snapshot including the exact screenshot manifest. After its
+final cleanup and before returning, it takes the final snapshot and calls
+`assertUnchanged` with only that run's exact 18 screenshot paths. The adapter
+does not write or duplicate the shared report: `scripts/runtime-smoke.ts` emits
+the final bounded JSON/Markdown report only after adapter and lifecycle cleanup.
+A broad `_docs/_workflows/_smoke/task-547/` allowlist, an unlisted file or any
+source/doc mutation fails the smoke.
 
 The profile policy is reject-unknown and may branch only on bounded polling/auth
 windows. Descriptor IDs/order/URLs/viewports/assertions, worker operations,
@@ -615,20 +632,21 @@ console/page/failure arrays.
 
 ## Sub-Tasks
 
-- [ ] Inventory the interrupted branch, finish acceptance-only tests and retain
+- [x] Inventory the interrupted branch, finish acceptance-only tests and retain
   exact expected-current atomic cleanup plus all 18 frozen assertion sets.
-- [ ] Add only the exact owned `task-547` adapter/helper/test files above, the
+- [x] Add only the exact owned `task-547` adapter/helper/test files above, the
   four-file static shared registration and focused tests; reuse TASK-552-04's
   dispatcher/server exports and all other shared platform loops.
-- [ ] Prove `fast` and `certification` have identical 01..18 descriptors,
+- [x] Prove `fast` and `certification` have identical 01..18 descriptors,
   assertions and cleanup behavior, differing only in bounded polling/auth
-  windows; run both through `scripts/runtime-smoke.ts`.
-- [ ] Prepare non-terminal docs/changelog/task drafts, complete one dependency-
+  windows; retain `fast` as an optional feedback lane and run certification
+  once as the final runtime gate.
+- [x] Prepare non-terminal docs/changelog/task drafts, complete one dependency-
   shaped post-audit, remediate verified HIGH/MEDIUM findings and rerun only
   invalidated lenses/gates.
-- [ ] Run the final 18-scenario certification smoke and verify screenshots,
+- [x] Run the final 18-scenario certification smoke and verify screenshots,
   zero console/page errors, exact rollback and set-based cleanup.
-- [ ] Confirm every TASK-547-01..05 leaf/parent is already terminal in descendant
+- [x] Confirm every TASK-547-01..05 leaf/parent is already terminal in descendant
   order; then terminalize TASK-547-07, this L01, TASK-547-06 and TASK-547.
   Keep the audited changelog 1260 file byte-identical, update only the task
   board/statistics and changelog-index row last, then run a read-only task-graph/
@@ -650,10 +668,14 @@ the closure gates `bun --cwd core lint:types`, `bun --cwd core lint`,
 zero-diff and touched-file line counts. Do not replay unchanged completed lanes
 after a harness-only correction.
 
-Run both shared entry-point commands:
+Focused descriptor/plan tests must prove profile parity. The final runtime gate
+is run once through the shared entry point:
 
-- `bun scripts/runtime-smoke.ts run --suite task-547 --profile fast --session wf547fast`;
-- `bun scripts/runtime-smoke.ts run --suite task-547 --profile certification --session wf547certification`.
+- `bun scripts/runtime-smoke.ts run --suite task-547 --profile certification --session wf547final`.
+
+The equivalent `fast` command remains available for optional development
+feedback; it is not replayed immediately before certification because it would
+repeat the same product proof.
 
 Both execute all 18 scenarios. The adapter uses argv-only `playwright-cli`
 through `BrowserTransport` and TASK-552-04's `PlaywrightCliDispatcher`, starts
@@ -694,5 +716,7 @@ this sequence passes.
 
 Sole writer for all shared TASK-547 documentation and closeout artifacts,
 including exact guide path `docs/develop/full-site-packages.md`, shared runner
-registration/docs and screenshots/reports under
-`_docs/_workflows/_smoke/task-547/`.
+registration/docs and screenshots under `_docs/_workflows/_smoke/task-547/`.
+The runner emits bounded JSON to stdout and Markdown to stderr; a durable
+task-scoped receipt may be stored beside the screenshots when closure requires
+it.

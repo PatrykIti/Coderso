@@ -17,10 +17,27 @@ import {
   type Task540CleanupResult,
   type Task540HandlerPackArtifact,
 } from "./worker-operations";
+import {
+  TASK540_CLEANUP_DB_BASE_OPERATIONS,
+  TASK540_CLEANUP_DB_OPERATIONS,
+  TASK540_CLEANUP_LOGICAL_BASE_RECEIPTS,
+  TASK540_CLEANUP_LOGICAL_RECEIPTS,
+  TASK540_CLEANUP_SEO_MAX_RESOURCES,
+  isTask540CleanupLogicalReceiptCount,
+  task540CleanupCardinality,
+} from "./cleanup-cardinality";
+
+export {
+  TASK540_CLEANUP_DB_BASE_OPERATIONS,
+  TASK540_CLEANUP_DB_OPERATIONS,
+  TASK540_CLEANUP_LOGICAL_BASE_RECEIPTS,
+  TASK540_CLEANUP_LOGICAL_RECEIPTS,
+  TASK540_CLEANUP_SEO_MAX_RESOURCES,
+  isTask540CleanupLogicalReceiptCount,
+  task540CleanupCardinality,
+} from "./cleanup-cardinality";
 
 export const TASK540_BASELINE_LOGICAL_RECEIPTS = 18;
-export const TASK540_CLEANUP_DB_OPERATIONS = 32;
-export const TASK540_CLEANUP_LOGICAL_RECEIPTS = 72;
 
 export interface Task540BaselineDispatch {
   readonly descriptor: WorkerOperationDescriptor;
@@ -190,7 +207,11 @@ function assertCleanupFamilyAuthority(operations: readonly Task540DbCleanupOpera
     const resources = [...byResource.values()].filter(
       ([operation]) => operation !== undefined && cleanupCategory(operation.kind) === family
     );
-    if (resources.length !== contract.resources) {
+    if (
+      family === "seo"
+        ? resources.length > TASK540_CLEANUP_SEO_MAX_RESOURCES
+        : resources.length !== contract.resources
+    ) {
       throw new WorkerProtocolError("TASK-540 cleanup resource cardinality drifted");
     }
     const identifiers = new Set<string>();
@@ -234,9 +255,16 @@ export function buildTask540CleanupDispatches(
   operations: readonly Task540DbCleanupOperation[],
   artifact: Task540HandlerPackArtifact
 ): readonly Task540CleanupDispatch[] {
-  if (operations.length !== TASK540_CLEANUP_DB_OPERATIONS) {
+  if (
+    operations.length < TASK540_CLEANUP_DB_BASE_OPERATIONS ||
+    operations.length > TASK540_CLEANUP_DB_OPERATIONS ||
+    (operations.length - TASK540_CLEANUP_DB_BASE_OPERATIONS) % 3 !== 0
+  ) {
     throw new WorkerProtocolError("TASK-540 DB cleanup operation cardinality drifted");
   }
+  const cardinality = task540CleanupCardinality(
+    (operations.length - TASK540_CLEANUP_DB_BASE_OPERATIONS) / 3
+  );
   const logicalIds = new Set<string>();
   const ordinals = new Set<number>();
   const categoryCounts = { seo: 0, setting: 0, user: 0, media: 0, override: 0 };
@@ -248,7 +276,7 @@ export function buildTask540CleanupDispatches(
       ordinals.has(operation.ordinal) ||
       !Number.isSafeInteger(operation.ordinal) ||
       operation.ordinal < 0 ||
-      operation.ordinal >= TASK540_CLEANUP_LOGICAL_RECEIPTS ||
+      operation.ordinal >= cardinality.logicalReceipts ||
       !Number.isSafeInteger(operation.wave) ||
       operation.wave < 0
     ) {
@@ -266,7 +294,7 @@ export function buildTask540CleanupDispatches(
     groups.set(groupKey, group);
   }
   if (
-    categoryCounts.seo !== 18 ||
+    categoryCounts.seo !== cardinality.seoResources * 3 ||
     categoryCounts.setting !== 4 ||
     categoryCounts.user !== 4 ||
     categoryCounts.media !== 3 ||
@@ -308,8 +336,13 @@ export function buildTask540CleanupDispatches(
     );
   }
   const seoDispatches = dispatches.filter(({ family }) => family === "seo");
-  if (seoDispatches.length !== 1 || seoDispatches[0]?.input.items.length !== 18) {
-    throw new WorkerProtocolError("TASK-540 six-SEO batch was split");
+  if (
+    cardinality.seoResources === 0
+      ? seoDispatches.length !== 0
+      : seoDispatches.length !== 1 ||
+        seoDispatches[0]?.input.items.length !== cardinality.seoResources * 3
+  ) {
+    throw new WorkerProtocolError("TASK-540 bounded SEO batch was split");
   }
   return Object.freeze(
     dispatches.sort(
@@ -329,11 +362,14 @@ export function preserveTask540CanonicalCleanupReceipts<T>(
   logicalIdForReceipt: (receipt: T) => string,
   mergeDbResult: (receipt: T, result: Task540CleanupResult) => T
 ): readonly T[] {
-  if (canonicalReceipts.length !== TASK540_CLEANUP_LOGICAL_RECEIPTS) {
+  if (!isTask540CleanupLogicalReceiptCount(canonicalReceipts.length)) {
     throw new WorkerProtocolError("TASK-540 canonical cleanup receipt cardinality drifted");
   }
+  const cardinality = task540CleanupCardinality(
+    (canonicalReceipts.length - TASK540_CLEANUP_LOGICAL_BASE_RECEIPTS) / 3
+  );
   const results = outputs.flatMap(({ results: batchResults }) => batchResults);
-  if (results.length !== TASK540_CLEANUP_DB_OPERATIONS) {
+  if (results.length !== cardinality.dbOperations) {
     throw new WorkerProtocolError("TASK-540 DB cleanup result cardinality drifted");
   }
   const byLogicalId = new Map<string, Task540CleanupResult>();
@@ -352,7 +388,7 @@ export function preserveTask540CanonicalCleanupReceipts<T>(
     merged += 1;
     return mergeDbResult(receipt, result);
   });
-  if (merged !== TASK540_CLEANUP_DB_OPERATIONS || byLogicalId.size !== 0) {
+  if (merged !== cardinality.dbOperations || byLogicalId.size !== 0) {
     throw new WorkerProtocolError("TASK-540 DB results do not match canonical cleanup receipts");
   }
   return Object.freeze(projected);
@@ -366,15 +402,19 @@ export function assertTask540SeoBatchBudget(
   const resourceKeys = new Set(dispatch.input.items.map(({ resourceKey }) => resourceKey));
   const operations = dispatch.input.items.map(({ operation }) => operation);
   if (
-    dispatch.input.items.length !== 18 ||
-    resourceKeys.size !== 6 ||
+    resourceKeys.size < 1 ||
+    resourceKeys.size > TASK540_CLEANUP_SEO_MAX_RESOURCES ||
+    dispatch.input.items.length !== resourceKeys.size * 3 ||
     ["provenance", "delete", "absence"].some(
-      (operation) => operations.filter((candidate) => candidate === operation).length !== 6
+      (operation) =>
+        operations.filter((candidate) => candidate === operation).length !== resourceKeys.size
     ) ||
     !Number.isSafeInteger(statementCount) ||
     statementCount <= 0 ||
     statementCount > 3
   ) {
-    throw new WorkerProtocolError("TASK-540 six-SEO cleanup exceeded its three-statement contract");
+    throw new WorkerProtocolError(
+      "TASK-540 bounded SEO cleanup exceeded its three-statement contract"
+    );
   }
 }

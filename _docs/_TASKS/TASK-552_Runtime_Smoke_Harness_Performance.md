@@ -6,12 +6,13 @@
 **Estimated Effort:** Very Large
 **Dependencies:** TASK-540 and TASK-546 complete
 **Related Tasks:** TASK-543, TASK-545, TASK-548, TASK-550, TASK-551
-**Status:** 🚧 In Progress
+**Status:** ✅ Done
 **Started:** 2026-08-06
 **Reopened:** 2026-08-06
+**Completed:** 2026-08-08
 **Previous Completion:** 2026-08-06 (superseded by the corrective reopen)
 **Historical Closure:** TASK-552-03-L02 fast-only evidence is superseded and is not final evidence
-**Changelog:** 1264 (Draft; not closure evidence while reopened)
+**Changelog:** 1264 (Final)
 
 ---
 
@@ -173,7 +174,7 @@ physical descendants):
 | TASK-552-01 | Shared Runtime Smoke Entry Point and Timings | ✅ Done | TASK-552-01-L01 |
 | TASK-552-02 | Profile-Scoped Persistent Bun Bridge and Batched Cleanup | ✅ Done | TASK-552-02-L01 |
 | TASK-552-03 | Browser Scenario Batching, Checkpoints, and Benchmarks | ✅ Done | TASK-552-03-L01, TASK-552-03-L02 |
-| TASK-552-04 | Native TASK-540 Suite Migration and Legacy Cleanup | 🚧 In Progress | TASK-552-04-L01, TASK-552-04-L02, TASK-552-04-L03, TASK-552-04-L04 |
+| TASK-552-04 | Native TASK-540 Suite Migration and Legacy Cleanup | ✅ Done | TASK-552-04-L01, TASK-552-04-L02, TASK-552-04-L03, TASK-552-04-L04 |
 
 Land strictly:
 
@@ -284,7 +285,28 @@ as a comparison baseline. They are not current TASK-552 closure evidence:
 - Durable receipt:
   `_docs/_workflows/_smoke/task-552-task-540-fast-2026-08-06.md`.
 
-Fresh reclosure evidence is owned by TASK-552-04-L04 and must prove zero
+The final reclosure evidence below, owned by TASK-552-04-L04, proves zero
 executable legacy modules plus both fast and certification profiles on the
 same final native tree. The old fast-only TASK-552-03-L02 closure stays
-historical/superseded even after the family recloses.
+historical/superseded after the family reclosure.
+
+## Final Reclosure Evidence
+
+TASK-552 reclosed on 2026-08-08 after the exact legacy deletion and native
+migration were proved from the final tree. The final comparable receipts are:
+
+- `fast`: PASS in `349.437s` (`5:49.437`), seven scenarios, 496 logical
+  actions, 13 PNG paths, zero console/page errors, two repository snapshots,
+  149 Playwright run-code dispatches, five worker starts / 31 requests, exact
+  auth-window restoration and 60 cleanup receipts;
+- `certification`: PASS in `682.228s` (`11:22.228`) with the identical product
+  contract, 149 dispatches, five worker starts / 29 requests, unchanged
+  production auth settings and 60 cleanup receipts.
+
+Native fast is `70.35%` shorter than the comparable `1178.580s` wrapped-fast
+receipt while preserving every scenario and assertion. The certification
+delta is intentionally dominated by six real production-strength auth-window
+barriers. The complete runtime-smoke unit lane passed 164 tests / 6,760
+assertions, repo-wide TypeScript and diff checks passed, the executable legacy
+count is zero, and every touched production/test file respects the 1,000-line
+limit. No schema, migration, snapshot, journal or product endpoint was added.

@@ -11,6 +11,8 @@ const SEGMENT = /^[a-z0-9][a-z0-9._/-]{0,159}$/u;
 const DEFAULT_MAXIMUM_SOURCE_BYTES = 1024 * 1024;
 const MAXIMUM_SOURCE_BYTES = 4 * 1024 * 1024;
 const MAXIMUM_DISPATCHES = 4_096;
+const DEFAULT_RUN_CODE_TIMEOUT_MS = 30_000;
+const MAXIMUM_RUN_CODE_TIMEOUT_MS = 5 * 60_000;
 const MAXIMUM_STORAGE_STATE_BYTES = 1024 * 1024;
 const MAXIMUM_PLAYWRIGHT_CONFIG_BYTES = 256 * 1024;
 const OPEN_OUTPUT_BYTES = 128 * 1024;
@@ -67,6 +69,7 @@ export interface PlaywrightCliDispatcherOptions {
   readonly workspace: string;
   readonly segments: readonly string[];
   readonly maximumSourceBytes?: number;
+  readonly runCodeTimeoutMs?: number;
   readonly environmentPath?: string;
   readonly runtimeEnvironment?: NodeJS.ProcessEnv;
   readonly resolveExecutable?: (pathValue: string) => Promise<string>;
@@ -91,6 +94,18 @@ function validateBound(value: number | undefined): number {
     return invalid("Playwright source byte bound is invalid");
   }
   return maximum;
+}
+
+function validateRunCodeTimeout(value: number | undefined): number {
+  const timeoutMs = value ?? DEFAULT_RUN_CODE_TIMEOUT_MS;
+  if (
+    !Number.isSafeInteger(timeoutMs) ||
+    timeoutMs <= 0 ||
+    timeoutMs > MAXIMUM_RUN_CODE_TIMEOUT_MS
+  ) {
+    return invalid("Playwright run-code timeout is invalid");
+  }
+  return timeoutMs;
 }
 
 function validateCanonicalRunCodeOutput(stdout: Uint8Array, maximumOutputBytes: number): void {
@@ -150,6 +165,7 @@ export class PlaywrightCliDispatcher implements BrowserTransportDispatcher {
   readonly #workspaceInput: string;
   readonly #segments: ReadonlySet<string>;
   readonly #maximumSourceBytes: number;
+  readonly #runCodeTimeoutMs: number;
   readonly #pathValue: string;
   readonly #playwrightConfigInput: string | null;
   readonly #playwrightBrowsersInput: string | null;
@@ -204,6 +220,7 @@ export class PlaywrightCliDispatcher implements BrowserTransportDispatcher {
     this.#workspaceInput = options.workspace;
     this.#segments = new Set(options.segments);
     this.#maximumSourceBytes = validateBound(options.maximumSourceBytes);
+    this.#runCodeTimeoutMs = validateRunCodeTimeout(options.runCodeTimeoutMs);
     this.#pathValue = pathValue;
     this.#playwrightConfigInput = playwrightConfigInput;
     this.#playwrightBrowsersInput = playwrightBrowsersInput;
@@ -239,7 +256,7 @@ export class PlaywrightCliDispatcher implements BrowserTransportDispatcher {
         const result = await this.#run({
           args: ["--raw", `-s=${this.#session}`, "run-code", "--filename", sourcePath],
           family: "playwright-run-code",
-          timeoutMs: 30_000,
+          timeoutMs: this.#runCodeTimeoutMs,
           maximumOutputBytes: request.maximumOutputBytes,
         });
         validateCanonicalRunCodeOutput(result.stdout, request.maximumOutputBytes);

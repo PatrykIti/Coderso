@@ -1,10 +1,11 @@
 import { createPageBlockV2 } from "../../../core/services/pages/pageDocumentV2";
 import {
+  FORMA_DOM_PAGE_GRADIENTS,
+  FORMA_DOM_PAGE_PALETTE,
+  FORMA_DOM_PAGE_SEO_DESCRIPTION,
   badge,
   buildPageSeed,
   button,
-  FORMA_COLORS,
-  FORMA_GRADIENTS,
   group,
   heroHeading,
   list,
@@ -15,261 +16,401 @@ import {
   text,
 } from "./shared";
 
-const homeHero = () =>
-  section(
-    "home-hero",
-    "Hero",
-    [
-      group("home-hero-copy", [
-        badge("home-eyebrow", "FORMA · FUNKCJA · DOM", { icon: "sparkles" }),
-        heroHeading("home-title", "Dom zaczyna się od dobrego pomysłu"),
-        text(
-          "home-lead",
-          "Projektujemy nowoczesne domy dopasowane do ludzi, działki i rytmu codzienności.",
-          { fontSizeCustom: "clamp(1.05rem,2vw,1.35rem)" }
-        ),
-        group(
-          "home-actions",
-          [
-            button("home-projects-cta", "Zobacz projekty", "/projekty", {
-              magnetic: true,
-              size: "lg",
-            }),
-            button("home-offer-cta", "Poznaj ofertę", "/oferta#zakres", {
-              variant: "ghost",
-              size: "lg",
-            }),
-          ],
-          { direction: "row", wrap: true, gap: 14 }
-        ),
-        createPageBlockV2("scrollHint", {
-          id: "home-scroll",
-          props: { label: "Poznaj FormaDom", glyph: "chevron" },
-          style: { textColor: FORMA_COLORS.cyan },
-        }),
-      ]),
-      surface(
-        "home-hero-blueprint",
+const safeHouseSvg = (id: string, label: string) =>
+  createPageBlockV2("customSvg", {
+    id,
+    props: {
+      svg: '<svg viewBox="0 0 320 180" xmlns="http://www.w3.org/2000/svg"><path d="M24 142h272L246 62l-74 48-52-72-96 104Z" fill="none" stroke="currentColor" stroke-width="4"/><path d="M92 142V98h54v44m44 0V96h42v46" fill="none" stroke="currentColor" stroke-width="3"/></svg>',
+      drawIn: true,
+      drawSpeed: 1800,
+      label,
+    },
+    style: { textColor: FORMA_DOM_PAGE_PALETTE.aqua },
+  });
+
+const serviceCard = (
+  id: string,
+  number: string,
+  title: string,
+  copy: string,
+  cta: string,
+  href: string
+) =>
+  surface(id, [
+    badge(`${id}-number`, number),
+    sectionHeading(`${id}-title`, title),
+    text(`${id}-copy`, copy),
+    button(`${id}-cta`, cta, href, { variant: "link" }),
+  ]);
+
+const projectCard = (id: string, title: string, copy: string, href: string) =>
+  createPageBlockV2("card", {
+    id,
+    props: { title, text: copy, image: null, href },
+    style: {
+      textColor: FORMA_DOM_PAGE_PALETTE.text,
+      background: FORMA_DOM_PAGE_PALETTE.backgroundSecondary,
+      backgroundType: "color",
+      borderColor: FORMA_DOM_PAGE_PALETTE.line,
+      borderWidth: 1,
+      borderStyle: "solid",
+      radius: 24,
+      padding: { top: 24, right: 24, bottom: 24, left: 24 },
+      hoverEffect: "lift",
+    },
+  });
+
+const processCard = (id: string, number: string, title: string, copy: string) =>
+  surface(id, [
+    badge(`${id}-number`, number),
+    sectionHeading(`${id}-title`, title),
+    text(`${id}-copy`, copy),
+  ]);
+
+export const buildHomePage = () =>
+  buildPageSeed({
+    key: "home",
+    route: "/",
+    seo: {
+      title: "Nowoczesne projekty domów — FormaDom Studio",
+      description: FORMA_DOM_PAGE_SEO_DESCRIPTION,
+    },
+    sections: [
+      section(
+        "home-hero",
+        "Hero",
         [
-          badge("home-blueprint-badge", "PROJEKT 01 / AURORA", { icon: "star" }),
-          sectionHeading("home-blueprint-title", "Światło. Spokój. Proporcja."),
-          text(
-            "home-blueprint-copy",
-            "Zwarta bryła otwiera się na ogród, a czytelny podział stref upraszcza każdy dzień."
-          ),
-          group(
-            "home-blueprint-stats",
+          group("home-hero-copy", [
+            badge("home-eyebrow", "Pracownia projektów domów przyszłości"),
+            heroHeading("home-title", "Dom, który wygląda jak przyszłość — i czuje się jak Ty."),
+            text(
+              "home-lead",
+              "Projektujemy domy jednorodzinne z efektem „wow”: czyste bryły, światło, funkcjonalny układ i wizualizacje, które pozwalają poczuć przestrzeń zanim powstanie pierwszy fundament."
+            ),
+            group(
+              "home-actions",
+              [
+                button("home-contact-cta", "Zaprojektujmy Twój dom", "/kontakt", {
+                  magnetic: true,
+                  size: "lg",
+                }),
+                button("home-projects-cta", "Zobacz projekty", "/projekty", {
+                  variant: "ghost",
+                  size: "lg",
+                }),
+              ],
+              { direction: "row", wrap: true, gap: 14 }
+            ),
+            list("home-trust", ["Projekty indywidualne", "Wizualizacje 3D", "Proces online"]),
+          ]),
+          surface(
+            "home-blueprint",
             [
-              statistic("home-area", "148 m²", "powierzchnia"),
-              statistic("home-energy", "A+", "standard energii"),
+              group(
+                "home-blueprint-top",
+                [
+                  text("home-blueprint-concept", "Concept 07 / Modern Barn"),
+                  text("home-blueprint-area", "142 m²"),
+                ],
+                { direction: "row", wrap: true }
+              ),
+              safeHouseSvg("home-blueprint-art", "Szkic domu Modern Barn"),
+              group(
+                "home-blueprint-chips",
+                [
+                  badge("home-chip-glass", "+ duże przeszklenia"),
+                  badge("home-chip-energy", "A++ ready"),
+                  badge("home-chip-vr", "VR / 3D"),
+                ],
+                { direction: "row", wrap: true, gap: 10 }
+              ),
+              group(
+                "home-blueprint-metrics",
+                [
+                  statistic("home-metric-variants", "3", "warianty układu"),
+                  statistic("home-metric-days", "21 dni", "koncepcja"),
+                  statistic("home-metric-light", "96%", "światło dzienne"),
+                ],
+                { direction: "row", wrap: true, gap: 10 }
+              ),
+              button("home-scroll-link", "Przewiń do treści", "#intro", { variant: "link" }),
             ],
-            { direction: "row", wrap: true, gap: 12 }
+            {
+              background: FORMA_DOM_PAGE_GRADIENTS.highlight,
+              backgroundType: "gradient",
+              composition: "layered",
+              glow: { color: "rgba(142,232,255,.28)", blur: 48, spread: 2 },
+            }
           ),
         ],
         {
-          background: FORMA_GRADIENTS.highlight,
-          backgroundType: "gradient",
-          glow: { color: "rgba(142,232,255,0.32)", blur: 54, spread: 4 },
-          tilt: "subtle",
-          tiltGlare: true,
-          radius: 30,
+          type: "hero",
+          variant: "split",
+          layout: { columns: 2, align: "center", maxWidth: 1240 },
+          style: {
+            background: FORMA_DOM_PAGE_GRADIENTS.hero,
+            backgroundType: "gradient",
+            columnTemplate: "minmax(0,1fr) minmax(420px,.9fr)",
+            surfacePreset: "ambient-orbs",
+            noiseOverlay: true,
+          },
+          spacing: { paddingTop: 112, paddingBottom: 96, gap: 50 },
+        }
+      ),
+      section(
+        "home-intro",
+        "Intro",
+        [
+          sectionHeading(
+            "home-intro-copy",
+            "Nie robimy katalogowych „pudełek”. Tworzymy domy, które dobrze wyglądają, dobrze działają i dobrze się starzeją."
+          ),
+          group(
+            "home-intro-ticker",
+            ["minimalizm", "światło", "komfort", "technologia", "natura"].map((item, index) =>
+              badge(`home-intro-ticker-${index + 1}`, item)
+            ),
+            {
+              direction: "row",
+              wrap: true,
+              gap: 16,
+              style: { marquee: { direction: "left", speed: 24 } },
+            }
+          ),
+        ],
+        {
+          anchor: "intro",
+          variant: "centered",
+          layout: { columns: 1, align: "center", maxWidth: 980 },
+          style: { background: FORMA_DOM_PAGE_PALETTE.backgroundSecondary },
+        }
+      ),
+      section(
+        "home-services",
+        "Co projektujemy",
+        [
+          badge("home-services-eyebrow", "Co projektujemy"),
+          sectionHeading(
+            "home-services-title",
+            "Architektura, która od pierwszego spojrzenia mówi: to mój dom.",
+            3
+          ),
+          text(
+            "home-services-lead",
+            "Prowadzimy Cię spokojnie, krok po kroku — od pierwszego zachwytu, przez poczucie, że jesteś w dobrych rękach, aż po jasny plan działania.",
+            { colSpan: 3 }
+          ),
+          serviceCard(
+            "home-service-individual",
+            "01",
+            "Projekty indywidualne",
+            "Dom od zera dopasowany do działki, światła, stylu życia i budżetu inwestora.",
+            "Poznaj zakres",
+            "/oferta#indywidualne"
+          ),
+          serviceCard(
+            "home-service-adaptation",
+            "02",
+            "Adaptacje gotowych projektów",
+            "Modernizacja gotowego projektu tak, żeby nie wyglądał jak kompromis.",
+            "Sprawdź adaptacje",
+            "/oferta#adaptacje"
+          ),
+          serviceCard(
+            "home-service-visualization",
+            "03",
+            "Wizualizacje 3D",
+            "Fotorealistyczne ujęcia, animacje bryły i materiały, które budują emocje.",
+            "Zobacz możliwości",
+            "/oferta#wizualizacje"
+          ),
+        ],
+        {
+          type: "feature-grid",
+          variant: "cards",
+          layout: { columns: 3 },
+          style: { background: FORMA_DOM_PAGE_PALETTE.background },
+        }
+      ),
+      section(
+        "home-switcher",
+        "Style domów",
+        [
+          group("home-switcher-intro", [
+            badge("home-switcher-eyebrow", "Interaktywne doświadczenie"),
+            sectionHeading(
+              "home-switcher-title",
+              "Wybierz klimat, w którym czujesz się jak u siebie."
+            ),
+            text(
+              "home-switcher-copy",
+              "Dotknij stylu, a bryła i nastrój zmienią się w rytm Twoich upodobań. To mały test wyobraźni, zanim zaczniemy projektować naprawdę."
+            ),
+          ]),
+          createPageBlockV2("switcher", {
+            id: "home-style-switcher",
+            props: {
+              tabs: [
+                { label: "Nowoczesna stodoła" },
+                { label: "Miejska willa" },
+                { label: "Dom eko" },
+              ],
+              activeIndex: 0,
+              variant: "pill",
+              ariaLabel: "Wybór stylu domu",
+            },
+            style: {
+              background: FORMA_DOM_PAGE_PALETTE.backgroundSecondary,
+              backgroundType: "color",
+              borderColor: FORMA_DOM_PAGE_PALETTE.line,
+              borderWidth: 1,
+              borderStyle: "solid",
+              radius: 24,
+              padding: { top: 24, right: 24, bottom: 24, left: 24 },
+            },
+            slots: {
+              "panel:1": [
+                text("home-style-barn-label", "Modern Barn", { fontWeight: "bold" }),
+                text(
+                  "home-style-barn-copy",
+                  "Prosta, elegancka bryła, wysoki salon, naturalne materiały i duże przeszklenia otwierające dom na ogród."
+                ),
+                safeHouseSvg("home-style-barn-art", "Modern Barn"),
+              ],
+              "panel:2": [
+                text("home-style-villa-label", "Urban Villa", { fontWeight: "bold" }),
+                text(
+                  "home-style-villa-copy",
+                  "Horyzontalna kompozycja, reprezentacyjne wejście, prywatne patio i wyważony luksus bez krzykliwych detali."
+                ),
+                safeHouseSvg("home-style-villa-art", "Urban Villa"),
+              ],
+              "panel:3": [
+                text("home-style-eco-label", "Eco Soft", { fontWeight: "bold" }),
+                text(
+                  "home-style-eco-copy",
+                  "Ciepła architektura, zielone rozwiązania, kompaktowa forma i materiały, które budują przyjazny mikroklimat."
+                ),
+                safeHouseSvg("home-style-eco-art", "Eco Soft"),
+              ],
+            },
+          }),
+        ],
+        {
+          variant: "split",
+          layout: { columns: 2, align: "center" },
+          style: {
+            background: FORMA_DOM_PAGE_GRADIENTS.aqua,
+            backgroundType: "gradient",
+            columnTemplate: "1fr 1.2fr",
+          },
+        }
+      ),
+      section(
+        "home-projects",
+        "Wybrane realizacje",
+        [
+          badge("home-projects-eyebrow", "Wybrane realizacje"),
+          sectionHeading(
+            "home-projects-title",
+            "Domy, które chce się oglądać jak ulubiony album z architekturą.",
+            3
+          ),
+          button("home-projects-all", "Pełne portfolio", "/projekty", { variant: "ghost" }),
+          projectCard(
+            "home-project-aurora",
+            "Dom Aurora",
+            "Nowoczesna stodoła · 142 m² · ogród południowy",
+            "/projekty/aurora"
+          ),
+          projectCard(
+            "home-project-linea",
+            "Dom Linea",
+            "Minimalistyczna willa · 188 m²",
+            "/projekty"
+          ),
+          projectCard("home-project-nova", "Dom Nova", "Parterowy premium · 121 m²", "/projekty"),
+        ],
+        {
+          type: "gallery",
+          variant: "grid",
+          layout: { columns: 3 },
+          style: { background: FORMA_DOM_PAGE_PALETTE.backgroundSecondary },
+        }
+      ),
+      section(
+        "home-process",
+        "Proces bez chaosu",
+        [
+          badge("home-process-eyebrow", "Proces bez chaosu"),
+          sectionHeading("home-process-title", "Od pierwszej rozmowy do gotowego projektu.", 4),
+          text(
+            "home-process-lead",
+            "Każdy etap ma prosty cel, jasne decyzje i materiały wizualne, które ułatwiają wybór.",
+            { colSpan: 4 }
+          ),
+          processCard(
+            "home-process-brief",
+            "01",
+            "Brief i działka",
+            "Analiza potrzeb, ograniczeń, stron świata i potencjału widokowego."
+          ),
+          processCard(
+            "home-process-concept",
+            "02",
+            "Koncepcja wow",
+            "Układ funkcjonalny, bryła, nastrój i pierwsze wizualizacje."
+          ),
+          processCard(
+            "home-process-project",
+            "03",
+            "Projekt budowlany",
+            "Dokumentacja techniczna i koordynacja branżowa."
+          ),
+          processCard(
+            "home-process-support",
+            "04",
+            "Wsparcie",
+            "Konsultacje materiałowe, zmiany i przygotowanie do budowy."
+          ),
+        ],
+        {
+          type: "timeline",
+          variant: "grid",
+          layout: { columns: 4 },
+          style: { background: FORMA_DOM_PAGE_PALETTE.background },
+        }
+      ),
+      section(
+        "home-cta",
+        "Final CTA",
+        [
+          badge("home-cta-eyebrow", "Gotowy na własny dom?"),
+          sectionHeading(
+            "home-cta-title",
+            "Zaprojektujmy dom, do którego codziennie chce się wracać."
+          ),
+          text(
+            "home-cta-copy",
+            "Napisz kilka słów o działce i stylu, który lubisz — odezwiemy się z pierwszym pomysłem na Twój dom.",
+            { align: "center" }
+          ),
+          button("home-cta-button", "Umów konsultację", "/kontakt", {
+            magnetic: true,
+            size: "lg",
+            style: { align: "center" },
+          }),
+        ],
+        {
+          type: "cta",
+          variant: "centered",
+          layout: { columns: 1, align: "center", justify: "center", maxWidth: 920 },
+          style: {
+            background: FORMA_DOM_PAGE_GRADIENTS.highlight,
+            backgroundType: "gradient",
+            surfacePreset: "radial-glow",
+          },
         }
       ),
     ],
-    {
-      type: "hero",
-      variant: "split",
-      anchor: "start",
-      layout: { columns: 2, maxWidth: 1240, align: "center" },
-      style: {
-        background: FORMA_GRADIENTS.hero,
-        backgroundType: "gradient",
-        columnTemplate: "minmax(0,1fr) minmax(420px,.9fr)",
-        surfacePreset: "ambient-orbs",
-        fullBleed: true,
-        glow: { color: "rgba(142,232,255,0.2)", blur: 80, spread: 8 },
-        noiseOverlay: true,
-      },
-      spacing: { paddingTop: 118, paddingBottom: 104, gap: 54 },
-    }
-  );
-
-const feature = (id: string, number: string, title: string, copy: string, span = {}) =>
-  surface(
-    id,
-    [
-      badge(`${id}-number`, number, { icon: "check" }),
-      sectionHeading(`${id}-title`, title),
-      text(`${id}-copy`, copy),
-    ],
-    span
-  );
-
-export const buildHomePage = () =>
-  buildPageSeed("home", "FormaDom — projekty domów", [
-    homeHero(),
-    section(
-      "home-features",
-      "Dlaczego FormaDom",
-      [
-        sectionHeading("home-features-title", "Projekt, który porządkuje życie", 3),
-        feature(
-          "home-feature-context",
-          "01",
-          "Zaczynamy od kontekstu",
-          "Analizujemy słońce, widoki, sąsiedztwo i ograniczenia działki, zanim powstanie pierwszy rzut.",
-          { colSpan: 2 }
-        ),
-        feature(
-          "home-feature-decisions",
-          "02",
-          "Decyzje bez chaosu",
-          "Każdy etap kończy się czytelnym rezultatem, zakresem decyzji i rekomendacją zespołu.",
-          { rowSpan: 2, background: FORMA_GRADIENTS.cyan, backgroundType: "gradient" }
-        ),
-        feature(
-          "home-feature-energy",
-          "03",
-          "Energia od początku",
-          "Orientacja bryły, przeszklenia i instalacje tworzą jeden przemyślany standard."
-        ),
-        feature(
-          "home-feature-support",
-          "04",
-          "Wsparcie aż do budowy",
-          "Koordynujemy branże i pomagamy utrzymać sens projektu podczas realizacji."
-        ),
-      ],
-      {
-        type: "feature-grid",
-        variant: "cards",
-        anchor: "dlaczego",
-        layout: { columns: 3 },
-        style: {
-          background: FORMA_COLORS.navy,
-          scrollEffect: "reveal-up",
-          border: {
-            top: { color: FORMA_COLORS.quietBorder, width: 1, style: "solid" },
-            right: { color: FORMA_COLORS.border, width: 2, style: "solid" },
-            bottom: { color: FORMA_COLORS.quietBorder, width: 1, style: "solid" },
-            left: { color: FORMA_COLORS.border, width: 2, style: "solid" },
-          },
-        },
-      }
-    ),
-    section(
-      "home-switcher",
-      "Style domów",
-      [
-        group("home-switch-intro", [
-          badge("home-switch-eyebrow", "TRZY KIERUNKI"),
-          sectionHeading("home-switch-title", "Wybierz charakter, nie katalogową etykietę"),
-          text(
-            "home-switch-copy",
-            "Każdy kierunek dopasowujemy do miejsca i programu. Forma wynika z potrzeb, nie odwrotnie."
-          ),
-        ]),
-        createPageBlockV2("switcher", {
-          id: "home-style-switcher",
-          props: {
-            tabs: [
-              { id: "barn", label: "Nowoczesna stodoła" },
-              { id: "villa", label: "Miejska willa" },
-              { id: "eco", label: "Dom eko" },
-            ],
-            activeIndex: 0,
-            variant: "pill",
-          },
-          style: {
-            background: FORMA_COLORS.surface,
-            backgroundType: "color",
-            borderColor: FORMA_COLORS.border,
-            borderWidth: 1,
-            borderStyle: "solid",
-            radius: 26,
-            padding: { top: 24, right: 24, bottom: 24, left: 24 },
-            glow: { color: "rgba(142,232,255,0.2)", blur: 36 },
-          },
-          slots: {
-            "panel:1": [
-              text("home-barn", "Prosta bryła, wysoka przestrzeń dzienna i naturalne materiały."),
-              list("home-barn-list", ["otwarcie na ogród", "czytelny dach", "elastyczny układ"]),
-            ],
-            "panel:2": [
-              text(
-                "home-villa",
-                "Kompaktowa elegancja, prywatne patio i światło prowadzone w głąb domu."
-              ),
-              list("home-villa-list", [
-                "miejska działka",
-                "chronione wnętrze",
-                "tarasy na piętrze",
-              ]),
-            ],
-            "panel:3": [
-              text(
-                "home-eco",
-                "Niska energia użytkowa, zdrowy mikroklimat i materiały o długim życiu."
-              ),
-              list("home-eco-list", ["standard A+", "pasywne zyski", "gotowość na OZE"]),
-            ],
-          },
-        }),
-      ],
-      {
-        variant: "split",
-        layout: { columns: 2, align: "center" },
-        style: {
-          columnTemplate: "1fr 1.2fr",
-          background: FORMA_GRADIENTS.cyan,
-          backgroundType: "gradient",
-        },
-      }
-    ),
-    section(
-      "home-proof",
-      "Dowody",
-      [
-        sectionHeading("home-proof-title", "Mniej obietnic, więcej mierzalnych decyzji", 4),
-        statistic("home-proof-years", "12+", "lat praktyki", "architektura mieszkaniowa"),
-        statistic("home-proof-houses", "86", "zaprojektowanych domów", "indywidualne historie"),
-        statistic("home-proof-energy", "74%", "projektów A lub A+", "energooszczędny standard"),
-        statistic("home-proof-rating", "4,9/5", "ocena współpracy", "po odbiorze projektu"),
-      ],
-      {
-        type: "feature-grid",
-        variant: "grid",
-        layout: { columns: 4 },
-        style: { background: FORMA_COLORS.ink, scrollEffect: "reveal-fade" },
-      }
-    ),
-    section(
-      "home-cta",
-      "Rozpocznij projekt",
-      [
-        badge("home-cta-eyebrow", "PIERWSZY KROK"),
-        sectionHeading("home-cta-title", "Opowiedz nam o miejscu, w którym chcesz zamieszkać"),
-        text(
-          "home-cta-copy",
-          "Krótki brief wystarczy, byśmy wrócili z konkretną propozycją następnego kroku.",
-          { align: "center" }
-        ),
-        button("home-contact-cta", "Umów rozmowę", "/kontakt#formularz", {
-          magnetic: true,
-          size: "lg",
-          style: { align: "center" },
-        }),
-      ],
-      {
-        type: "cta",
-        variant: "centered",
-        layout: { columns: 1, align: "center", justify: "center", maxWidth: 920 },
-        style: {
-          background: FORMA_GRADIENTS.highlight,
-          backgroundType: "gradient",
-          surfacePreset: "radial-glow",
-          glow: { color: "rgba(216,255,122,0.18)", blur: 50 },
-        },
-      }
-    ),
-  ]);
+  });

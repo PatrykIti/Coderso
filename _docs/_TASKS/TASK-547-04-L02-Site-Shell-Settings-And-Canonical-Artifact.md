@@ -6,9 +6,10 @@
 **Category:** Menu / Page Templates / Generator
 **Estimated Effort:** Large
 **Dependencies:** TASK-547-04-L01
-**Status:** 🚧 In Progress
-**Validation:** Current shell/package output does not match the pinned prototype;
-corrective implementation, zero-diff generation and fresh gates are pending.
+**Status:** ✅ Done
+**Completed:** 2026-08-08
+**Validation:** Corrected shell/package output, deterministic artifact generation
+and focused gates passed, followed by the final certification smoke.
 
 ## Overview
 
@@ -332,13 +333,13 @@ that boundary. It asserts:
 
 ## Sub-Tasks
 
-- [ ] Build the exact primary Menu document, ordered items, responsive CTAs,
+- [x] Build the exact primary Menu document, ordered items, responsive CTAs,
   disclosure and scrolled appearance.
-- [ ] Build the complete footer Page Template and strict source-derived shell
+- [x] Build the complete footer Page Template and strict source-derived shell
   settings/design-token seeds.
-- [ ] Assemble the corrected content/Page slices, exact residual objects and
+- [x] Assemble the corrected content/Page slices, exact residual objects and
   verification scenarios without duplicating SEO or content routes.
-- [ ] Regenerate the canonical artifact twice, require byte stability/zero diff,
+- [x] Regenerate the canonical artifact twice, require byte stability/zero diff,
   and pass the package, Menu, shell and line-count gates.
 
 ## Testing Requirements

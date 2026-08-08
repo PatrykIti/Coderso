@@ -122,6 +122,8 @@ export type FormEmbedFieldControlOptions = {
   borderColor: string;
   labelColor: string;
   helperColor: string;
+  textareaRows: number;
+  showSelectPrompt: boolean;
   inputStyle?: CSSProperties;
 };
 
@@ -139,6 +141,8 @@ export function renderFieldControl(
     borderColor,
     labelColor,
     helperColor,
+    textareaRows,
+    showSelectPrompt,
     inputStyle,
   } = options;
   const controlStyle: CSSProperties = inputStyle ?? { borderColor };
@@ -198,7 +202,7 @@ export function renderFieldControl(
             radiusClassName
           )}
           style={controlStyle}
-          rows={4}
+          rows={textareaRows}
         />
         {helper ? (
           <p id={ids.helperId} className="text-xs" style={{ color: helperColor }}>
@@ -299,9 +303,11 @@ export function renderFieldControl(
           defaultValue={field.settings?.defaultValue as string | undefined}
           disabled={optionsList.length === 0}
         >
-          <option value="">
-            {optionsList.length === 0 ? "No options configured" : "Select an option"}
-          </option>
+          {optionsList.length === 0 || showSelectPrompt ? (
+            <option value="">
+              {optionsList.length === 0 ? "No options configured" : "Select an option"}
+            </option>
+          ) : null}
           {optionsList.map((option) => (
             <option key={option} value={option}>
               {option}

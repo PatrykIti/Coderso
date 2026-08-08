@@ -225,6 +225,7 @@ test("supervised literal server registers before spawn and projects the exact sh
     expect(processes.spec?.env).not.toHaveProperty("MEDIA_STORAGE");
     expect(processes.spec?.env).not.toHaveProperty("MEDIA_DIR");
     expect(processes.spec?.env).not.toHaveProperty("UNRELATED_SECRET");
+    expect(processes.spec?.env?.BUN_CONFIG_SKIP_INSTALL_PACKAGES).toBe("1");
     expect(TASK540_DEV_HOST_ENVIRONMENT_POLICY).toBe(CODERSO_DEV_HOST_ENVIRONMENT_POLICY);
     await server.close();
     await server.close();
@@ -274,17 +275,16 @@ test("supervised server accepts a validated absolute production executable", asy
   }
 });
 
-test("server environment rejects canonical PATH aliases and missing required values", async () => {
+test("server environment canonicalizes PATH aliases and rejects missing required values", async () => {
   const fixture = await createLiteralFixture();
   try {
     const alias = join(fixture.root, "bin-alias");
     await symlink(fixture.bin, alias);
-    await expect(
-      projectSupervisedServerEnvironment({
-        source: devHostSource(`${fixture.bin}:${alias}`),
-        policy: CODERSO_DEV_HOST_ENVIRONMENT_POLICY,
-      })
-    ).rejects.toThrow("canonical duplicate");
+    const projected = await projectSupervisedServerEnvironment({
+      source: devHostSource(`${fixture.bin}:${alias}`),
+      policy: CODERSO_DEV_HOST_ENVIRONMENT_POLICY,
+    });
+    expect(projected.PATH).toBe(fixture.bin);
 
     const lifecycle = new RecordingLifecycle();
     const processes = new FakeProcesses(lifecycle);

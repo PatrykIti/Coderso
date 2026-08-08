@@ -6,9 +6,10 @@
 **Category:** Reference Example / Content
 **Estimated Effort:** Medium
 **Dependencies:** TASK-547-02
-**Status:** 🚧 In Progress
-**Reopened:** 2026-07-23 — the existing generators must replace drifted project
-facts with the exact designated-reference matrix before validation can resume.
+**Status:** ✅ Done
+**Completed:** 2026-08-08
+**Validation:** The corrected source matrix and focused generator/fixture gates
+passed, followed by the final 18/18 certification smoke.
 
 ## Overview
 
@@ -270,9 +271,9 @@ Update `tests/vitest/kits/projekty-domow-project-fixtures.test.ts` to prove:
 
 ## Sub-Tasks
 
-- [ ] Correct constants, strict schema, fixture types and exact source values.
-- [ ] Correct seed projection and strict JSON/ref/error guards.
-- [ ] Rebaseline the focused Vitest suite to the intended reference contract
+- [x] Correct constants, strict schema, fixture types and exact source values.
+- [x] Correct seed projection and strict JSON/ref/error guards.
+- [x] Rebaseline the focused Vitest suite to the intended reference contract
   without weakening behavioral assertions.
 
 ## Testing Requirements

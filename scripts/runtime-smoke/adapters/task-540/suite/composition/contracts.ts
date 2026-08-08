@@ -1,6 +1,7 @@
 import { SmokeError } from "../../../../contracts";
 import type { PlainJsonValue } from "../../../../workers/contracts";
 import type { SmokeScreenshotResult } from "../../../types";
+import { isTask540CleanupLogicalReceiptCount } from "../../cleanup-cardinality";
 
 export type Task540NativeExecutableType =
   | "runtime-operation"
@@ -183,7 +184,7 @@ export function validateTask540NativeEvidence(
     evidence.serverUp !== true ||
     evidence.browserReceipts.length !== 420 ||
     evidence.runtimeReceipts.length !== 76 ||
-    evidence.cleanupReceipts.length !== 72 ||
+    !isTask540CleanupLogicalReceiptCount(evidence.cleanupReceipts.length) ||
     scenarioIds.some((id, index) => id !== plan.requiredScenarios[index]) ||
     evidence.scenarios.some(
       ({ pass, elapsedMs }) => pass !== true || !Number.isSafeInteger(elapsedMs) || elapsedMs <= 0

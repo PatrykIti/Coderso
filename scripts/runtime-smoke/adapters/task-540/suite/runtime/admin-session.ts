@@ -6,7 +6,7 @@ import { runtimeInvariant, runtimeObject, runtimeString, runtimeUuid } from "./n
 const API_BASE = "http://127.0.0.1:3000/admin/api";
 const MAXIMUM_RESPONSE_BYTES = 4 * 1024 * 1024;
 const REQUEST_TIMEOUT_MS = 90_000;
-const ROUTE = /^\/[a-z0-9][a-z0-9._~!$&'()*+,;=:@%/-]{0,2047}$/u;
+const ROUTE = /^\/[A-Za-z0-9][A-Za-z0-9._~!$&'()*+,;=:@%/-]{0,2047}$/u;
 const HEADER = /^[a-z0-9][a-z0-9-]{0,127}$/u;
 
 export interface Task540AdminApiResponse {

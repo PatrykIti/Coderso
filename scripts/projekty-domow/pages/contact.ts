@@ -1,33 +1,98 @@
 import { createPageBlockV2 } from "../../../core/services/pages/pageDocumentV2";
 import type { PackageRef } from "../../../core/services/kits/fullSitePackage/types";
+import { PROJECT_BRIEF_FORM_TITLE, PROJECT_BRIEF_LOADING_LABEL } from "../content/projectForm";
 import {
+  FORMA_DOM_PAGE_GRADIENTS,
+  FORMA_DOM_PAGE_PALETTE,
+  FORMA_DOM_PAGE_SEO_DESCRIPTION,
+  PAGE_BINDING_PLACEHOLDERS,
   badge,
-  button,
   buildPageSeed,
-  FORMA_COLORS,
-  FORMA_GRADIENTS,
+  button,
   group,
   heroHeading,
-  list,
   section,
   sectionHeading,
   surface,
   text,
+  type FormaDomPageBinding,
 } from "./shared";
 
-const FORM_ID = "00000000-0000-4000-8000-000000000564";
+const buildContactForm = () =>
+  createPageBlockV2("form", {
+    id: "contact-form",
+    props: {
+      formId: PAGE_BINDING_PLACEHOLDERS.projectBriefForm,
+      title: PROJECT_BRIEF_FORM_TITLE,
+      textareaRows: 5,
+      showSelectPrompt: false,
+      loadingLabel: PROJECT_BRIEF_LOADING_LABEL,
+      successBehavior: "show-message-keep-form",
+    },
+    style: {
+      background: FORMA_DOM_PAGE_PALETTE.backgroundSecondary,
+      backgroundType: "color",
+      borderColor: FORMA_DOM_PAGE_PALETTE.line,
+      borderWidth: 1,
+      borderStyle: "solid",
+      radius: 28,
+      shadow: "lg",
+      padding: { top: 32, right: 32, bottom: 32, left: 32 },
+    },
+  });
+
+const contactBindings = (form: PackageRef): readonly FormaDomPageBinding[] => [
+  {
+    sectionId: "contact-form-section",
+    blockId: "contact-form",
+    blockType: "form",
+    prop: "formId",
+    value: form,
+  },
+];
+
+const buildMap = () =>
+  surface(
+    "contact-map",
+    [
+      createPageBlockV2("customSvg", {
+        id: "contact-map-art",
+        props: {
+          svg: '<svg viewBox="0 0 320 180" xmlns="http://www.w3.org/2000/svg"><path d="M18 38 92 18l68 30 72-24 70 28v108l-70-28-72 24-68-30-74 20V38Z" fill="none" stroke="currentColor" stroke-width="3"/><circle cx="170" cy="82" r="12" fill="none" stroke="currentColor" stroke-width="4"/><path d="M170 94v30" stroke="currentColor" stroke-width="4"/></svg>',
+          drawIn: true,
+          drawSpeed: 1800,
+          label: "Abstrakcyjna mapa lokalizacji",
+        },
+        style: { textColor: FORMA_DOM_PAGE_PALETTE.aqua },
+      }),
+      text("contact-map-label", "Studio", {
+        textColor: FORMA_DOM_PAGE_PALETTE.text,
+        fontWeight: "bold",
+        fontSize: "xl",
+      }),
+    ],
+    {
+      background: FORMA_DOM_PAGE_GRADIENTS.highlight,
+      backgroundType: "gradient",
+      surfacePreset: "glass-grid",
+    }
+  );
 
 export const buildContactPage = (form: PackageRef) =>
-  buildPageSeed(
-    "kontakt",
-    "Kontakt — FormaDom",
-    [
+  buildPageSeed({
+    key: "kontakt",
+    route: "/kontakt",
+    seo: {
+      title: "Kontakt — FormaDom Studio",
+      description: FORMA_DOM_PAGE_SEO_DESCRIPTION,
+    },
+    sections: [
       section(
         "contact-hero",
         "Kontakt",
         [
           group("contact-hero-copy", [
-            badge("contact-eyebrow", "Zacznij projekt", { icon: "sparkles" }),
+            badge("contact-eyebrow", "Zacznij projekt"),
             heroHeading("contact-title", "Opowiedz nam o działce, marzeniu albo pomyśle na dom."),
             text(
               "contact-lead",
@@ -40,100 +105,40 @@ export const buildContactPage = (form: PackageRef) =>
           variant: "centered",
           layout: { columns: 1, align: "center", maxWidth: 980 },
           style: {
-            background: FORMA_GRADIENTS.hero,
+            background: FORMA_DOM_PAGE_GRADIENTS.hero,
             backgroundType: "gradient",
             surfacePreset: "ambient-orbs",
             noiseOverlay: true,
           },
-          spacing: { paddingTop: 96, paddingBottom: 72, gap: 24 },
         }
       ),
       section(
         "contact-form-section",
         "Formularz",
         [
-          createPageBlockV2("form", {
-            id: "contact-form",
-            props: { formId: FORM_ID, title: "Zacznij projekt" },
-            style: {
-              background: FORMA_COLORS.surface,
-              backgroundType: "color",
-              borderColor: FORMA_COLORS.border,
-              borderWidth: 1,
-              borderStyle: "solid",
-              radius: 28,
-              shadow: "lg",
-              padding: { top: 32, right: 32, bottom: 32, left: 32 },
-              glow: { color: "rgba(142,232,255,0.18)", blur: 34 },
-            },
-          }),
-          group(
-            "contact-side",
-            [
-              surface(
-                "contact-direct",
-                [
-                  sectionHeading("contact-direct-title", "Kontakt bezpośredni"),
-                  button(
-                    "contact-direct-email",
-                    "kontakt@formadom.studio",
-                    "mailto:kontakt@formadom.studio",
-                    { variant: "link", style: { textColor: FORMA_COLORS.white } }
-                  ),
-                  button("contact-direct-phone", "+48 500 100 200", "tel:+48500100200", {
-                    variant: "link",
-                    style: { textColor: FORMA_COLORS.white },
-                  }),
-                  text(
-                    "contact-direct-copy",
-                    "Warszawa / projekty online w całej Polsce",
-                    { textColor: FORMA_COLORS.white }
-                  ),
-                ],
-                {
-                  background: FORMA_COLORS.surface,
-                  backgroundType: "color",
-                  glow: { color: "rgba(142,232,255,0.2)", blur: 38 },
-                }
-              ),
-              surface(
-                "contact-map-approximation",
-                [
-                  text("contact-map-label", "Studio", {
-                    textColor: FORMA_COLORS.white,
-                    fontWeight: "bold",
-                    fontSize: "xl",
-                  }),
-                ],
-                {
-                  background: FORMA_GRADIENTS.highlight,
-                  backgroundType: "gradient",
-                  surfacePreset: "glass-grid",
-                  glow: { color: "rgba(216,255,122,0.18)", blur: 42 },
-                  tilt: "subtle",
-                }
-              ),
-            ],
-            { gap: 24 }
-          ),
+          buildContactForm(),
+          surface("contact-direct", [
+            sectionHeading("contact-direct-title", "Kontakt bezpośredni"),
+            button("contact-email", "kontakt@formadom.studio", "mailto:kontakt@formadom.studio", {
+              variant: "link",
+            }),
+            button("contact-phone", "+48 500 100 200", "tel:+48500100200", {
+              variant: "link",
+            }),
+            text("contact-direct-location", "Warszawa / projekty online w całej Polsce"),
+          ]),
+          buildMap(),
         ],
         {
           type: "lead-form",
           variant: "split",
-          anchor: "formularz",
           layout: { columns: 2, align: "start", maxWidth: 1180 },
           style: {
-            background: FORMA_COLORS.navy,
+            background: FORMA_DOM_PAGE_PALETTE.backgroundSecondary,
             columnTemplate: "1.15fr .85fr",
-            scrollEffect: "reveal-up",
-            border: {
-              top: { color: FORMA_COLORS.quietBorder, width: 1, style: "solid" },
-              bottom: { color: FORMA_COLORS.quietBorder, width: 1, style: "solid" },
-            },
           },
-          spacing: { paddingTop: 96, paddingBottom: 104, gap: 36 },
         }
       ),
     ],
-    new Map([[FORM_ID, form]])
-  );
+    bindings: contactBindings(form),
+  });

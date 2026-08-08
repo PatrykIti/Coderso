@@ -16,7 +16,7 @@ const refs = {
 
 const pages = () => buildFormaDomPages(refs);
 const page = (key: string) => pages().find((seed) => seed.key === key)!;
-const document = (key: string) => page(key).desired.document as unknown as PageDocumentV2;
+const document = (key: string) => page(key).desired.data as unknown as PageDocumentV2;
 const serialized = (key: string) => JSON.stringify(page(key).desired);
 
 const walkBlocks = (blocks: PageBlockV2[]): PageBlockV2[] =>
@@ -31,39 +31,120 @@ const allBlocks = (key: string) =>
 const sectionById = (key: string, id: string): PageSectionV2 =>
   document(key).sections.find((entry) => entry.id === id)!;
 
-describe("Projekty Domów Page v2 documents", () => {
-  it("builds exactly seven published routes with complete normalized documents", () => {
-    const minimumSectionCount = new Map<string, number>([
-      ["kontakt", 2],
+const blockById = (key: string, id: string): PageBlockV2 =>
+  allBlocks(key).find((entry) => entry.id === id)!;
+
+const collectPackageRefs = (
+  value: unknown,
+  path: string[] = []
+): Array<{ path: string; ref: string; key: string }> => {
+  if (!value || typeof value !== "object") return [];
+  if (!Array.isArray(value)) {
+    const record = value as Record<string, unknown>;
+    if (typeof record.ref === "string" && typeof record.key === "string") {
+      return [{ path: path.join("."), ref: record.ref, key: record.key }];
+    }
+  }
+  return Object.entries(value).flatMap(([key, child]) => collectPackageRefs(child, [...path, key]));
+};
+
+describe("FormaDom Page v2 package documents", () => {
+  it("emits exactly seven published desired.data envelopes in canonical route order", () => {
+    expect(pages().map((seed) => [seed.key, seed.desired.slug, seed.desired.title])).toEqual([
+      ["home", "/", "Nowoczesne projekty domów — FormaDom Studio"],
+      ["oferta", "/oferta", "Oferta — FormaDom Studio"],
+      ["projekty", "/projekty", "Projekty domów — FormaDom Studio"],
+      ["proces", "/proces", "Proces projektowy — FormaDom Studio"],
+      ["cennik", "/cennik", "Cennik — FormaDom Studio"],
+      ["o-nas", "/o-nas", "O nas — FormaDom Studio"],
+      ["kontakt", "/kontakt", "Kontakt — FormaDom Studio"],
     ]);
-    expect(pages().map((seed) => [seed.key, seed.desired.slug])).toEqual([
-      ["home", "/"],
-      ["oferta", "/oferta"],
-      ["projekty", "/projekty"],
-      ["proces", "/proces"],
-      ["cennik", "/cennik"],
-      ["o-nas", "/o-nas"],
-      ["kontakt", "/kontakt"],
-    ]);
+
+    const sectionIds = {
+      home: [
+        "home-hero",
+        "home-intro",
+        "home-services",
+        "home-switcher",
+        "home-projects",
+        "home-process",
+        "home-cta",
+      ],
+      oferta: [
+        "offer-hero",
+        "offer-individual",
+        "offer-adaptation",
+        "offer-visualization",
+        "offer-plot",
+        "offer-interiors",
+        "offer-comparison",
+      ],
+      projekty: ["projects-hero", "projects-browser"],
+      proces: ["process-hero", "process-timeline", "process-cta"],
+      cennik: ["pricing-hero", "pricing-packages"],
+      "o-nas": ["about-hero", "about-approach", "about-team"],
+      kontakt: ["contact-hero", "contact-form-section"],
+    } as const;
+
     for (const seed of pages()) {
       expect(seed.desired.status).toBe("published");
-      expect(seed.desired.document).toMatchObject({
+      expect(seed.desired).toHaveProperty("data");
+      expect(seed.desired).not.toHaveProperty("document");
+      expect(seed.desired).not.toHaveProperty("id");
+      expect(seed.desired.data).toMatchObject({
         schemaVersion: 2,
         breakpoints: ["desktop", "tablet", "mobile"],
+        seo: {
+          title: seed.desired.title,
+          description:
+            "Nowoczesne projekty domów, architektura indywidualna, wizualizacje i kompleksowy proces projektowy.",
+        },
         settings: { template: "page-v2", background: "#07111f" },
       });
       expect(
-        (seed.desired.document as unknown as PageDocumentV2).sections.length
-      ).toBeGreaterThanOrEqual(minimumSectionCount.get(seed.key) ?? 4);
-      expect(seed.desired).not.toHaveProperty("id");
+        (seed.desired.data as unknown as PageDocumentV2).sections.map((section) => section.id)
+      ).toEqual(sectionIds[seed.key as keyof typeof sectionIds]);
     }
   });
 
-  it("ships a premium homepage composition with visible Page-v2 effects", () => {
-    const hero = sectionById("home", "home-hero");
-    const features = sectionById("home", "home-features");
+  it("attaches exactly the five allowlisted package references under desired.data", () => {
+    const found = pages().flatMap((seed) =>
+      collectPackageRefs(seed.desired.data, [seed.key]).map((entry) => ({
+        ...entry,
+        path: entry.path.replace(/\.sections\.(\d+)\.blocks\.(\d+)/, ".sections.$1.blocks.$2"),
+      }))
+    );
+    expect(found).toEqual([
+      {
+        path: "projekty.sections.1.blocks.1.props.queryId",
+        ref: "listing_query",
+        key: "published-projects",
+      },
+      {
+        path: "projekty.sections.1.blocks.2.props.contentTypeId",
+        ref: "content_type",
+        key: "house-project",
+      },
+      {
+        path: "projekty.sections.1.blocks.2.props.queryId",
+        ref: "listing_query",
+        key: "published-projects",
+      },
+      {
+        path: "projekty.sections.1.blocks.2.props.templateId",
+        ref: "listing_template",
+        key: "project-cards",
+      },
+      {
+        path: "kontakt.sections.1.blocks.0.props.formId",
+        ref: "form",
+        key: "project-brief",
+      },
+    ]);
+  });
 
-    expect(hero).toMatchObject({
+  it("preserves the premium home composition and the authored Polish switcher name", () => {
+    expect(sectionById("home", "home-hero")).toMatchObject({
       type: "hero",
       variant: "split",
       layout: { columns: 2 },
@@ -71,44 +152,118 @@ describe("Projekty Domów Page v2 documents", () => {
         backgroundType: "gradient",
         columnTemplate: "minmax(0,1fr) minmax(420px,.9fr)",
         surfacePreset: "ambient-orbs",
-        glow: { color: "rgba(142,232,255,0.2)" },
+        fullBleed: true,
+        noiseOverlay: true,
       },
     });
-    expect(hero.style.background).toContain("), linear-gradient(");
-    expect(allBlocks("home").find((block) => block.id === "home-title")?.style).toMatchObject({
-      fontSizeCustom: "clamp(2.8rem,6vw,6.5rem)",
+    expect(blockById("home", "home-title")).toMatchObject({
+      props: { text: "Dom, który wygląda jak przyszłość — i czuje się jak Ty." },
+      style: { fontSizeCustom: "clamp(2.8rem,6vw,6.5rem)" },
     });
-    expect(features.style.border).toEqual({
-      top: { color: "rgba(255,255,255,0.1)", width: 1, style: "solid" },
-      right: { color: "rgba(142,232,255,0.22)", width: 2, style: "solid" },
-      bottom: { color: "rgba(255,255,255,0.1)", width: 1, style: "solid" },
-      left: { color: "rgba(142,232,255,0.22)", width: 2, style: "solid" },
+    expect(blockById("home", "home-style-switcher").props).toMatchObject({
+      ariaLabel: "Wybór stylu domu",
+      tabs: [{ label: "Nowoczesna stodoła" }, { label: "Miejska willa" }, { label: "Dom eko" }],
     });
-    expect(allBlocks("home").some((block) => block.style?.colSpan === 2)).toBe(true);
-    expect(allBlocks("home").some((block) => block.style?.rowSpan === 2)).toBe(true);
-    expect(serialized("home")).toContain('"type":"switcher"');
-    expect(serialized("home")).toContain('"type":"scrollHint"');
-    expect(serialized("home")).toContain('"magnetic":true');
+    expect(blockById("home", "home-contact-cta").style?.magnetic).toBe(true);
+    expect(serialized("home")).toContain('"type":"customSvg"');
+    expect(serialized("home")).not.toContain('"type":"scrollHint"');
   });
 
-  it("resolves every hash CTA to a real section anchor on its target page", () => {
+  it("keeps offer, project, process and pricing source matrices exact", () => {
+    expect(
+      document("oferta")
+        .sections.map((entry) => entry.visibility.anchor)
+        .filter(Boolean)
+    ).toEqual(["indywidualne", "adaptacje", "wizualizacje"]);
+    expect(sectionById("oferta", "offer-comparison")).toMatchObject({
+      type: "comparison",
+      variant: "cards",
+      layout: { columns: 3 },
+    });
+
+    expect(blockById("projekty", "projects-filters").props).toMatchObject({
+      queryId: refs.listingQuery,
+      layout: "horizontal",
+      showSearch: false,
+      autoApply: false,
+    });
+    expect(blockById("projekty", "projects-collection").props).toMatchObject({
+      contentTypeId: refs.contentType,
+      queryId: refs.listingQuery,
+      templateId: refs.listingTemplate,
+      showCta: false,
+    });
+
+    expect(sectionById("proces", "process-timeline").blocks.map((block) => block.id)).toEqual([
+      "process-step-1",
+      "process-step-2",
+      "process-step-3",
+      "process-step-4",
+      "process-step-5",
+    ]);
+
+    expect(sectionById("cennik", "pricing-packages").blocks.map((block) => block.id)).toEqual([
+      "pricing-start",
+      "pricing-premium",
+      "pricing-complete",
+    ]);
+    expect(blockById("cennik", "pricing-premium").style).toMatchObject({
+      backgroundType: "gradient",
+      borderColor: "#8ee8ff",
+      borderWidth: 2,
+      glow: { color: "rgba(173,255,216,.28)", blur: 48, spread: 3 },
+    });
+  });
+
+  it("keeps about and contact native presentation on Page blocks", () => {
+    expect(sectionById("o-nas", "about-approach").blocks.map((block) => block.id)).toEqual([
+      "about-approach-title",
+      "about-approach-copy-1",
+      "about-approach-copy-2",
+      "about-value-shape",
+      "about-value-light",
+      "about-value-function",
+      "about-value-premium",
+    ]);
+    expect(sectionById("o-nas", "about-team").blocks).toHaveLength(3);
+
+    expect(blockById("kontakt", "contact-form").props).toMatchObject({
+      formId: refs.form,
+      title: "Zacznij projekt",
+      textareaRows: 5,
+      showSelectPrompt: false,
+      loadingLabel: "Wysyłanie...",
+      successBehavior: "show-message-keep-form",
+    });
+    expect(blockById("kontakt", "contact-email").props).toMatchObject({
+      label: "kontakt@formadom.studio",
+      href: "mailto:kontakt@formadom.studio",
+    });
+    expect(blockById("kontakt", "contact-phone").props).toMatchObject({
+      label: "+48 500 100 200",
+      href: "tel:+48500100200",
+    });
+    expect(serialized("kontakt")).not.toMatch(
+      /Poniedziałek–piątek|pierwsza rozmowa|ul\. Architektów 12/
+    );
+  });
+
+  it("resolves every authored hash CTA to a real target anchor", () => {
     const pageByPath = new Map(pages().map((seed) => [seed.desired.slug, seed]));
-    const hashHrefs = pages().flatMap((seed) => {
-      const doc = seed.desired.document as unknown as PageDocumentV2;
-      return doc.sections
+    const hashHrefs = pages().flatMap((seed) =>
+      (seed.desired.data as unknown as PageDocumentV2).sections
         .flatMap((entry) => walkBlocks(entry.blocks))
         .filter((block) => block.type === "button")
         .map((block) => block.props.href)
-        .filter((href): href is string => typeof href === "string" && href.includes("#"));
-    });
-
-    expect(hashHrefs.length).toBeGreaterThan(12);
+        .filter((href): href is string => typeof href === "string" && href.includes("#"))
+    );
+    expect(hashHrefs).toHaveLength(4);
     for (const href of hashHrefs) {
       const targetUrl = new URL(href, "https://formadom.test");
       const target = pageByPath.get(targetUrl.pathname);
       expect(target, `Missing target page for ${href}`).toBeDefined();
       const anchors = new Set(
-        (target!.desired.document as unknown as PageDocumentV2).sections
+        (target!.desired.data as unknown as PageDocumentV2).sections
           .map((entry) => entry.visibility.anchor)
           .filter(Boolean)
       );
@@ -116,156 +271,11 @@ describe("Projekty Domów Page v2 documents", () => {
     }
   });
 
-  it("builds offer cards, three service anchors and a comparison section", () => {
-    expect(
-      document("oferta")
-        .sections.map((entry) => entry.visibility.anchor)
-        .filter(Boolean)
-    ).toEqual(
-      expect.arrayContaining([
-        "zakres",
-        "projekt-indywidualny",
-        "adaptacja",
-        "wizualizacje",
-        "porownanie",
-      ])
-    );
-    expect(sectionById("oferta", "offer-comparison")).toMatchObject({
-      type: "comparison",
-      variant: "cards",
-      layout: { columns: 3 },
-    });
-    expect(
-      allBlocks("oferta").filter(
-        (block) => block.id.startsWith("offer-compare-") && block.type === "group"
-      )
-    ).toHaveLength(3);
-  });
-
-  it("keeps filters and collection refs on the authored /projekty catalogue page", () => {
-    const blocks = allBlocks("projekty");
-    const collection = blocks.find((block) => block.type === "collection");
-    expect(sectionById("projekty", "projects-browser")).toMatchObject({
-      type: "collection",
-      visibility: { anchor: "katalog" },
-    });
-    expect(collection?.props).toMatchObject({
-      contentTypeId: refs.contentType,
-      queryId: refs.listingQuery,
-      templateId: refs.listingTemplate,
-      limit: 24,
-    });
-    expect(blocks.find((block) => block.type === "filters")?.props).toMatchObject({
-      queryId: refs.listingQuery,
-      showSearch: true,
-      facets: expect.any(Array),
-    });
-  });
-
-  it("renders one visible five-step timeline instead of five generic sections", () => {
-    const timelines = document("proces").sections.filter((entry) => entry.type === "timeline");
-    expect(timelines).toHaveLength(1);
-    expect(timelines[0]).toMatchObject({
-      id: "process-timeline",
-      visibility: { visible: true, anchor: "etapy" },
-    });
-    expect(
-      timelines[0]!.blocks.filter((block) => /^process-step-[1-5]$/.test(block.id))
-    ).toHaveLength(5);
-    expect(document("proces").sections.some((entry) => /^process-step-[1-5]$/.test(entry.id))).toBe(
-      false
-    );
-  });
-
-  it("builds three pricing packages with a genuinely highlighted middle package", () => {
-    const packages = sectionById("cennik", "pricing-packages");
-    const cards = packages.blocks.filter(
-      (block) => block.type === "group" && block.id.startsWith("pricing-package-")
-    );
-    expect(packages).toMatchObject({
-      type: "comparison",
-      variant: "cards",
-      visibility: { anchor: "pakiety" },
-      layout: { columns: 3 },
-    });
-    expect(cards).toHaveLength(3);
-    expect(cards[1]).toMatchObject({
-      id: "pricing-package-project",
-      style: {
-        backgroundType: "gradient",
-        borderColor: "#d8ff7a",
-        borderWidth: 2,
-        shadow: "lg",
-        glow: { color: "rgba(216,255,122,0.3)", blur: 52, spread: 4 },
-      },
-    });
-    expect(cards[1]!.style?.background).toContain("), linear-gradient(");
-  });
-
-  it("includes approach, values, team, contact form and map approximation compositions", () => {
-    expect(document("o-nas").sections.map((entry) => entry.id)).toEqual(
-      expect.arrayContaining(["about-approach", "about-values", "about-team"])
-    );
-    expect(sectionById("o-nas", "about-approach").style.columnTemplate).toBe("1fr 1.2fr");
-    expect(
-      allBlocks("o-nas").filter(
-        (block) => block.id.startsWith("about-team-") && block.type === "group"
-      )
-    ).toHaveLength(3);
-
-    expect(allBlocks("kontakt").find((block) => block.id === "contact-eyebrow")?.props).toMatchObject({
-      text: "Zacznij projekt",
-    });
-    expect(allBlocks("kontakt").find((block) => block.id === "contact-title")?.props).toMatchObject({
-      text: "Opowiedz nam o działce, marzeniu albo pomyśle na dom.",
-    });
-    expect(allBlocks("kontakt").find((block) => block.id === "contact-lead")?.props).toMatchObject({
-      text:
-        "Nie musisz mieć gotowego planu ani wiedzy technicznej. Wystarczy kilka zdań — resztę spokojnie ustalimy razem.",
-    });
-    expect(sectionById("kontakt", "contact-form-section")).toMatchObject({
-      type: "lead-form",
-      visibility: { anchor: "formularz" },
-      style: { columnTemplate: "1.15fr .85fr" },
-    });
-    expect(allBlocks("kontakt").find((block) => block.id === "contact-form")?.props).toMatchObject({
-      formId: refs.form,
-      title: "Zacznij projekt",
-    });
-    expect(allBlocks("kontakt").find((block) => block.id === "contact-direct-title")?.props).toMatchObject({
-      text: "Kontakt bezpośredni",
-    });
-    expect(allBlocks("kontakt").find((block) => block.id === "contact-direct-email")?.props).toMatchObject({
-      label: "kontakt@formadom.studio",
-      href: "mailto:kontakt@formadom.studio",
-    });
-    expect(allBlocks("kontakt").find((block) => block.id === "contact-direct-phone")?.props).toMatchObject({
-      label: "+48 500 100 200",
-      href: "tel:+48500100200",
-    });
-    expect(allBlocks("kontakt").find((block) => block.id === "contact-direct-copy")?.props).toMatchObject({
-      text: "Warszawa / projekty online w całej Polsce",
-    });
-    expect(allBlocks("kontakt").find((block) => block.id === "contact-map-label")?.props).toMatchObject({
-      text: "Studio",
-    });
-    expect(
-      allBlocks("kontakt").find((block) => block.id === "contact-map-approximation")
-    ).toBeDefined();
-    expect(document("kontakt").sections.map((entry) => entry.id)).not.toContain("contact-next");
-    expect(serialized("kontakt")).not.toContain("Poniedziałek–piątek");
-    expect(serialized("kontakt")).not.toContain("pierwsza rozmowa");
-    expect(serialized("kontakt")).not.toContain("ul. Architektów 12");
-  });
-
-  it("uses no media IDs, raw CSS, scripts or unsupported embed widgets", () => {
+  it("emits no forbidden package aliases or unsafe Page content and stays deterministic", () => {
     const output = JSON.stringify(pages());
-    expect(output).not.toMatch(/(?:mediaId|assetId|<script|javascript:|rawCss)/i);
+    expect(output).not.toMatch(/(?:desired\.document|mediaId|assetId|<script|javascript:|rawCss)/i);
     expect(output).not.toContain('"type":"embed"');
     expect(output).not.toContain("/projekty-katalog");
-  });
-
-  it("is deterministic", () => {
     expect(pages()).toEqual(pages());
   });
 });

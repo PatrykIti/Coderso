@@ -1,6 +1,6 @@
 import { afterAll, afterEach, beforeEach, expect, test } from "bun:test";
 import { randomUUID } from "node:crypto";
-import { sql } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 
 import { db } from "../../../core/db/client";
 import {
@@ -9,6 +9,7 @@ import {
   formFields,
   forms,
   formSubmissions,
+  contentTypes,
 } from "../../../core/db/schema";
 import {
   countFormSubmissions,
@@ -41,6 +42,7 @@ const testIfDbWithOptions = testIfDb as unknown as (
   options: { timeout: number }
 ) => void;
 let originalContentRoutes: ContentRouteSetting[] | null = null;
+const routeContentTypeIds = new Set<string>();
 
 async function canConnect() {
   try {
@@ -58,6 +60,10 @@ const cleanup = async () => {
     await setSetting("site.contentRoutes", originalContentRoutes);
     originalContentRoutes = null;
   }
+  for (const id of routeContentTypeIds) {
+    await db.delete(contentTypes).where(eq(contentTypes.id, id));
+  }
+  routeContentTypeIds.clear();
   await db.delete(formActionRuns);
   await db.delete(formActions);
   await db.delete(formSubmissions);
@@ -82,17 +88,30 @@ const enableLinkedDetailRouteCache = async () => {
     originalContentRoutes ??
     ((await getSetting("site.contentRoutes")) as ContentRouteSetting[]) ??
     [];
+  const typeSlug = `products-${randomUUID()}`;
+  const [contentType] = await db
+    .insert(contentTypes)
+    .values({
+      name: `Products ${randomUUID()}`,
+      slug: typeSlug,
+      schema: { type: "object", additionalProperties: false, properties: {} },
+      status: "draft",
+      config: {},
+    })
+    .returning({ id: contentTypes.id });
+  if (!contentType) throw new Error("content_type_fixture_failed");
+  routeContentTypeIds.add(contentType.id);
   await setSetting("site.contentRoutes", [
     {
-      type: "products",
-      listPath: "/products",
-      detailPath: "/products/:slug",
+      type: typeSlug,
+      listPath: `/${typeSlug}`,
+      detailPath: `/${typeSlug}/:slug`,
       enabled: true,
       detailPageId: "14d7f4d4-48d8-53f7-a9e6-0d01f6b89e6c",
     } satisfies ContentRouteSetting,
   ]);
   configureSiteCache(300);
-  const key = buildSiteCacheKey("profile-1", "/products/example");
+  const key = buildSiteCacheKey("profile-1", `/${typeSlug}/example`);
   setSiteCacheEntry(key, "<html>cached</html>", 300, 0);
   expect(getSiteCacheEntry(key, 1)).toBe("<html>cached</html>");
   return key;

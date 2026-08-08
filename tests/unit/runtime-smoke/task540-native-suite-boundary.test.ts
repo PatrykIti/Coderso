@@ -29,6 +29,7 @@ import type { PlainJsonValue } from "../../../scripts/runtime-smoke/workers/cont
 import type { WorkerPool } from "../../../scripts/runtime-smoke/workers/pool";
 import { RuntimeLifecycle } from "../../../scripts/runtime-smoke/lifecycle";
 import type { PlaywrightCliNativeCommand } from "../../../scripts/runtime-smoke/browser/playwright-cli-dispatcher";
+import { TASK540_RUN_CODE_TIMEOUT_MS } from "../../../scripts/runtime-smoke/adapters/task-540/suite/composition/suite";
 
 const root = path.resolve(import.meta.dir, "../../..");
 
@@ -60,6 +61,25 @@ function seedRelatedEntryCapture(
     observationSha256: "a".repeat(64),
   });
 }
+
+test("TASK-540 dispatcher timeout covers the certification auth-window barrier", () => {
+  const maximumWindowSeconds = plan().requiredAuthRatePlan.requiredEnabledWindowSecondsMax;
+  if (typeof maximumWindowSeconds !== "number") {
+    throw new Error("TASK-540 auth-window maximum is absent");
+  }
+  expect(TASK540_RUN_CODE_TIMEOUT_MS).toBeGreaterThan((maximumWindowSeconds + 1) * 1_000);
+  expect(TASK540_RUN_CODE_TIMEOUT_MS).toBeLessThanOrEqual(5 * 60_000);
+});
+
+test("TASK-540 execution memory records runtime palette block captures", () => {
+  const planValue = plan();
+  const memory = new Task540ExecutionMemory(planValue);
+  const producer = planValue.actionManifest.find(({ id }) => id === "bi-005-button-capture");
+  if (producer === undefined) throw new Error("TASK-540 palette producer is absent");
+  const blockId = "00000000-0000-4000-8000-000000005405";
+  memory.record(producer, { id: blockId, type: "button" });
+  expect(memory.captures.get("palette.button")).toBe(blockId);
+});
 
 test("TASK-540 dispatches and validates every one of its 28 standalone browser actions", async () => {
   const planValue = plan();
@@ -343,6 +363,13 @@ test("TASK-540 partial API login cleanup captures CSRF before exact logout", asy
         headers: { "set-cookie": "session=owned-session; HttpOnly" },
       }
     ),
+    new Response(
+      JSON.stringify({
+        key: "customScreens.entry.preferences",
+        value: { version: 1, showFieldMetadata: false },
+      }),
+      { status: 200 }
+    ),
     new Response(JSON.stringify({ token: "owned-csrf" }), { status: 200 }),
     new Response(JSON.stringify({ ok: true }), { status: 200 }),
   ];
@@ -359,9 +386,13 @@ test("TASK-540 partial API login cleanup captures CSRF before exact logout", asy
     return response;
   }) as typeof globalThis.fetch);
   await session.login("admin@example.com", "private-password");
+  await session.request("GET", "/user-settings/customScreens.entry.preferences", {
+    csrf: false,
+  });
   await session.close();
   expect(requests).toEqual([
     { route: "/admin/api/auth/login", csrf: null },
+    { route: "/admin/api/user-settings/customScreens.entry.preferences", csrf: null },
     { route: "/admin/api/auth/csrf", csrf: null },
     { route: "/admin/api/auth/logout", csrf: "owned-csrf" },
   ]);

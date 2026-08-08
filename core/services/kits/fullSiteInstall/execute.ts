@@ -1,61 +1,65 @@
+import { db } from "../../../db/client";
+import { acquireNativeCmsWriterFence } from "../../../db/nativeCmsWriterFence";
 import { planFullSiteInstall } from "../fullSiteInstallPlanner";
 import type {
   FullSiteCurrentResourceResolver,
-  FullSiteInstallLedgerItem,
   FullSiteInstallLedgerPort,
-  FullSiteInstallPlan,
-  FullSiteInstallPlanItem,
-  FullSiteInstallResourceKind,
+  FullSiteOwnedRunFinalizationInput,
+  FullSiteOwnedRunFinalizationResult,
+  FullSitePlanningSnapshotLoader,
 } from "../fullSiteInstallTypes";
-import type { FullSitePackageV1, JsonObject } from "../fullSitePackage/types";
-import { defaultLegacyInstallLedger } from "../legacyInstallRunPersistence";
-import {
-  FULL_SITE_RESOURCE_ADAPTERS,
-  isLifecycleCapablePublishKind,
-  type AdapterApplyInput,
-  type AdapterApplyResult,
-  type ResourceAdapter,
-} from "./adapters";
-import {
-  compensateItems,
-  FULL_SITE_ROLLBACK_ADAPTERS,
-  type FullSiteRollbackAdapters,
-} from "./compensation";
-import { createFullSiteCurrentResourceResolver } from "./currentResourceResolver";
-import {
-  assertInstalledSnapshotCurrent,
-  assertPlanItemCurrent,
-  preflightFullSitePlan,
-  resolveFullSiteRefs,
-  validateFullSiteOperation,
-} from "./preflight";
-import { fullSitePackageFingerprint, initializeFullSiteSaga, makeSagaSnapshot } from "./staging";
 import { toSafeFullSiteErrorCode } from "../fullSiteInstallTypes";
+import { buildReferencePlan, type PlannedPackageResource } from "../fullSitePackage/referenceGraph";
+import type { FullSitePackageV1, JsonObject } from "../fullSitePackage/types";
+import {
+  defaultLegacyInstallLedger,
+  findManagedResourceEvidenceBatch,
+} from "../legacyInstallRunPersistence";
+import {
+  FULL_SITE_ROLLBACK_ADAPTERS,
+  FULL_SITE_RESOURCE_ADAPTERS,
+  type AdapterApplyInput,
+  type FullSiteRollbackAdapters,
+  type FullSiteResourceAdapterRegistry,
+} from "./adapters";
+import { compensateItems } from "./compensation";
+import { createFullSiteCurrentResourceResolver } from "./currentResourceResolver";
+import { executePreparedPlanWithDomainAtomicAdapters } from "./executePreparedSaga";
+import { readFullSitePlanningResourcesBatch } from "./planningResourceBatchReader";
+import { createFullSitePlanningSnapshotLoader } from "./planningSnapshot";
+import {
+  prepareFullSiteSaga,
+  toInitializedLedgerItem,
+  type PreparedFullSiteSaga,
+} from "./preparedSaga";
+import { fullSitePackageFingerprint, readFullSiteDurableAfterSnapshotV1 } from "./staging";
 
-export type ApplyFullSitePackageInput = {
+export type ApplyFullSitePackageInput = Readonly<{
   package: FullSitePackageV1;
   actorId: string;
   dryRun?: boolean;
   allowSettingTakeover?: boolean;
-};
+}>;
 
-export type FullSiteInstallExecutorDeps = {
+export type FullSiteInstallExecutorDeps = Readonly<{
   ledger?: FullSiteInstallLedgerPort;
+  loadPlanningSnapshot?: FullSitePlanningSnapshotLoader;
   resolveCurrentResource?: FullSiteCurrentResourceResolver;
-  adapters?: Record<FullSiteInstallResourceKind, ResourceAdapter>;
+  adapters?: FullSiteResourceAdapterRegistry;
   rollbackAdapters?: FullSiteRollbackAdapters;
-};
+  generateId?: () => string;
+}>;
 
-export type AppliedFullSiteResource = {
+export type AppliedFullSiteResource = Readonly<{
   identity: string;
-  id: string | null;
-  operation: FullSiteInstallPlanItem["operation"];
-};
+  id: string;
+  operation: "create" | "update" | "noop";
+}>;
 
-export type ApplyFullSitePackageResult = {
+export type ApplyFullSitePackageResult = Readonly<{
   runId: string;
-  resources: AppliedFullSiteResource[];
-};
+  resources: readonly AppliedFullSiteResource[];
+}>;
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -63,494 +67,347 @@ const assertActorUuid = (actorId: string): void => {
   if (!UUID_PATTERN.test(actorId)) throw new Error("site_package_actor_invalid");
 };
 
-const stagedDesired = (operation: FullSiteInstallPlanItem, desired: JsonObject): JsonObject =>
-  isLifecycleCapablePublishKind(operation.kind)
-    ? ({ ...desired, status: "draft" } as JsonObject)
-    : desired;
+const isDirectPlainObject = (value: unknown): value is Record<PropertyKey, unknown> => {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  try {
+    const prototype = Object.getPrototypeOf(value);
+    return prototype === Object.prototype || prototype === null;
+  } catch {
+    return false;
+  }
+};
 
-const beforeSnapshot = (operation: FullSiteInstallPlanItem): JsonObject | null =>
-  operation.currentId && operation.currentDesired
-    ? { id: operation.currentId, desired: operation.currentDesired }
-    : null;
+export const assertExactOwnedRunFinalizationResult = (
+  value: unknown
+): FullSiteOwnedRunFinalizationResult => {
+  if (!isDirectPlainObject(value)) throw new Error("native_cms_writer_fence_failed");
+  const keys = Reflect.ownKeys(value);
+  const outcome = Reflect.get(value, "outcome");
+  if (
+    keys.length !== 1 ||
+    keys[0] !== "outcome" ||
+    (outcome !== "desired_terminal" && outcome !== "different_terminal")
+  ) {
+    throw new Error("native_cms_writer_fence_failed");
+  }
+  return { outcome };
+};
 
-const toApplyInput = (
-  operation: FullSiteInstallPlanItem,
-  desired: JsonObject,
-  actorId: string
-): AdapterApplyInput => ({
-  operation: operation.currentId ? "update" : "create",
-  currentId: operation.currentId,
-  key: operation.key,
-  desired,
-  actorId,
+export const requireDesiredOwnedRunFinalization = async (
+  ledger: Pick<FullSiteInstallLedgerPort, "finalizeOwnedRun">,
+  input: FullSiteOwnedRunFinalizationInput
+): Promise<void> => {
+  const result = assertExactOwnedRunFinalizationResult(await ledger.finalizeOwnedRun(input));
+  if (result.outcome !== "desired_terminal") {
+    throw new Error("site_package_recovery_conflict");
+  }
+};
+
+const reservationOptions = (input: ApplyFullSitePackageInput): JsonObject => ({
+  fullSitePackage: true,
+  packageFingerprint: fullSitePackageFingerprint(input.package),
+  allowSettingTakeover: input.allowSettingTakeover === true,
+  rollbackDependencySchemaVersion: 1,
 });
 
-const applyOperation = async (
-  operation: FullSiteInstallPlanItem,
-  desired: JsonObject,
-  actorId: string,
-  adapter: ResourceAdapter
-): Promise<AdapterApplyResult> => {
-  const applyInput = toApplyInput(operation, desired, actorId);
-  return isLifecycleCapablePublishKind(operation.kind)
-    ? adapter.applyStaged(applyInput)
-    : adapter.applyDesired(applyInput);
-};
-
-const recordPlanItem = async (input: {
-  ledger: FullSiteInstallLedgerPort;
-  runId: string;
-  operation: FullSiteInstallPlanItem;
-  status: "planned" | "success";
-  afterSnapshot: JsonObject | null;
-}) => {
-  await input.ledger.recordItem({
-    runId: input.runId,
-    position: input.operation.position,
-    kind: input.operation.kind,
-    key: input.operation.key,
-    operation: input.operation.operation,
-    status: input.status,
-    beforeSnapshot: beforeSnapshot(input.operation),
-    afterSnapshot: input.afterSnapshot,
-  });
-};
-
-const dryRunInstall = async (input: {
-  plan: FullSiteInstallPlan;
-  actorId: string;
-  ledger: FullSiteInstallLedgerPort;
-  runId: string;
-  adapters: Record<FullSiteInstallResourceKind, ResourceAdapter>;
-}): Promise<AppliedFullSiteResource[]> => {
-  const ids = new Map<string, string>();
-  input.plan.operations.forEach((operation, index) => {
-    ids.set(
-      operation.identity,
-      operation.currentId ?? `00000000-0000-4000-8000-${String(index + 1).padStart(12, "0")}`
-    );
-  });
-  const resources: AppliedFullSiteResource[] = [];
-  for (const operation of input.plan.operations) {
-    const desired = resolveFullSiteRefs(operation.desired, ids) as JsonObject;
-    const normalized = await validateFullSiteOperation({
-      operation,
-      plan: input.plan,
-      desired,
-      actorId: input.actorId,
-      adapter: input.adapters[operation.kind],
-    });
-    await recordPlanItem({
-      ledger: input.ledger,
-      runId: input.runId,
-      operation,
-      status: "planned",
-      afterSnapshot:
-        operation.operation === "noop" && operation.currentId
-          ? { id: operation.currentId, desired: normalized }
-          : null,
-    });
-    resources.push({
-      identity: operation.identity,
-      id: operation.currentId,
-      operation: operation.operation,
-    });
+const assertAtomicRegistry = (
+  adapters: FullSiteResourceAdapterRegistry
+): FullSiteResourceAdapterRegistry => {
+  for (const adapter of Object.values(adapters)) {
+    if (
+      typeof adapter?.validateDesired !== "function" ||
+      typeof adapter?.prepareNativeTargets !== "function" ||
+      typeof adapter?.captureSnapshotById !== "function" ||
+      typeof adapter?.deleteSnapshotAtomic !== "function" ||
+      typeof adapter?.restoreSnapshotAtomic !== "function"
+    ) {
+      throw new Error("site_package_invalid");
+    }
   }
-  return resources;
+  if (
+    typeof adapters.setting.applySettingsBatchAtomic !== "function" ||
+    typeof adapters.setting.reverseSettingsBatch !== "function"
+  ) {
+    throw new Error("site_package_invalid");
+  }
+  return adapters;
 };
 
-const mergeCompletedItems = (
-  persisted: readonly FullSiteInstallLedgerItem[],
-  memory: readonly FullSiteInstallLedgerItem[]
-) => [
-  ...new Map(
-    [...persisted, ...memory].map((item) => [`${item.position}:${item.kind}:${item.key}`, item])
-  ).values(),
-];
-
-const applyFullSitePackageUnlocked = async (
-  input: ApplyFullSitePackageInput,
-  overrides: FullSiteInstallExecutorDeps = {}
-): Promise<ApplyFullSitePackageResult> => {
-  assertActorUuid(input.actorId);
-  const ledger = overrides.ledger ?? defaultLegacyInstallLedger;
-  const resolveCurrentResource =
-    overrides.resolveCurrentResource ??
-    createFullSiteCurrentResourceResolver(input.package.key, ledger);
-  const adapters = overrides.adapters ?? FULL_SITE_RESOURCE_ADAPTERS;
-  const rollbackAdapters = overrides.rollbackAdapters ?? FULL_SITE_ROLLBACK_ADAPTERS;
-  const plan = await planFullSiteInstall(input.package, {
-    ledger,
-    resolveCurrentResource,
-    allowSettingTakeover: input.allowSettingTakeover,
-    normalizeDesired: async ({ kind, key, currentId, desired }) =>
-      (await adapters[kind].validateDesired({
-        operation: "update",
-        currentId,
-        key,
-        desired,
-        actorId: input.actorId,
-      })) ?? desired,
+const createDefaultPlanningSnapshotLoader = (packageKey: string): FullSitePlanningSnapshotLoader =>
+  createFullSitePlanningSnapshotLoader({
+    packageKey,
+    withReadTransaction: (read) =>
+      db.transaction(
+        async (tx) => {
+          await acquireNativeCmsWriterFence(tx);
+          return read({
+            findEvidence: (input) => findManagedResourceEvidenceBatch(tx, input),
+            readNative: (input) => readFullSitePlanningResourcesBatch(tx, input),
+          });
+        },
+        { isolationLevel: "read committed" }
+      ),
   });
 
-  // Every owning native normalizer runs before the ledger or any domain row is
-  // written. Actual IDs are validated again immediately before each mutation.
-  await preflightFullSitePlan({ plan, actorId: input.actorId, adapters });
+const createPlanningNormalizer =
+  (actorId: string, adapters: FullSiteResourceAdapterRegistry) =>
+  async (
+    input: Readonly<{
+      kind: keyof FullSiteResourceAdapterRegistry;
+      key: string;
+      currentId: string;
+      desired: JsonObject;
+    }>
+  ): Promise<JsonObject> => {
+    const adapterInput: AdapterApplyInput = {
+      operation: "update",
+      currentId: input.currentId,
+      key: input.key,
+      desired: input.desired,
+      actorId,
+    };
+    const normalized = await adapters[input.kind].validateDesired(adapterInput);
+    return normalized ?? input.desired;
+  };
 
-  const run = await ledger.createRun({
-    packageKey: input.package.key,
+const sagaResources = (saga: PreparedFullSiteSaga): readonly AppliedFullSiteResource[] =>
+  saga.prepared.map((item) => ({
+    identity: item.operation.identity,
+    id: item.intendedId,
+    operation: item.operation.operation,
+  }));
+
+const initializedResources = async (
+  ledger: FullSiteInstallLedgerPort,
+  ownerRunId: string
+): Promise<readonly AppliedFullSiteResource[]> => {
+  const items = await ledger.listItems(ownerRunId);
+  return items.map((item) => {
+    const durable = readFullSiteDurableAfterSnapshotV1(item.afterSnapshot);
+    if (
+      !durable ||
+      (item.operation !== "create" && item.operation !== "update" && item.operation !== "noop")
+    ) {
+      throw new Error("site_package_recovery_invalid_source");
+    }
+    return {
+      identity: `${item.kind}:${item.key}`,
+      id: durable.id,
+      operation: item.operation,
+    };
+  });
+};
+
+const mayFinalizePreNativeFailure = (code: string): boolean =>
+  code === "site_package_ledger_initialization_failed" ||
+  (!code.startsWith("native_cms_writer_") && code !== "site_package_recovery_requires_rollback");
+
+const finalizeFailedOwnerPreservingPrimary = async (
+  ledger: FullSiteInstallLedgerPort,
+  ownerRunId: string,
+  code: string
+): Promise<void> => {
+  try {
+    await requireDesiredOwnedRunFinalization(ledger, {
+      ownerRunId,
+      status: "failed",
+      error: code,
+    });
+  } catch {
+    // The original deterministic failure remains authoritative.
+  }
+};
+
+const compensateInitializedFullSiteOwner = async (
+  input: Readonly<{
+    ownerRunId: string;
+    packageKey: string;
+    actorId: string;
+    safeApplyError: string;
+    ledger: FullSiteInstallLedgerPort;
+    adapters: FullSiteRollbackAdapters;
+    resolveCurrentResource: FullSiteCurrentResourceResolver;
+  }>
+): Promise<void> => {
+  if (!input.ledger.claimRollbackRun) {
+    throw new Error("site_package_rollback_claim_failed");
+  }
+  const claim = await input.ledger.claimRollbackRun({
+    sourceRunId: input.ownerRunId,
+    packageKey: input.packageKey,
     actorId: input.actorId,
-    dryRun: Boolean(input.dryRun),
-    options: {
-      fullSitePackage: true,
-      packageFingerprint: fullSitePackageFingerprint(input.package),
-      allowSettingTakeover: input.allowSettingTakeover === true,
+    options: { automaticCompensation: true, fullSitePackage: true },
+    resumeRunning: true,
+  });
+  if (claim.state === "busy") throw new Error("site_package_rollback_in_progress");
+  const currentSource = await input.ledger.getRun(input.ownerRunId);
+  if (
+    !currentSource ||
+    currentSource.id !== input.ownerRunId ||
+    currentSource.packageKey !== input.packageKey ||
+    currentSource.mode !== "apply" ||
+    currentSource.status !== "running"
+  ) {
+    throw new Error("site_package_recovery_invalid_source");
+  }
+  await compensateItems({
+    items: await input.ledger.listRawItems(currentSource.id),
+    priorOutcomes: await input.ledger.listRawItems(claim.id),
+    currentSource,
+    actorId: input.actorId,
+    adapters: input.adapters,
+    ledger: input.ledger,
+    rollbackRunId: claim.id,
+    resolveCurrentResource: input.resolveCurrentResource,
+  });
+  await requireDesiredOwnedRunFinalization(input.ledger, {
+    ownerRunId: currentSource.id,
+    status: "failed",
+    error: input.safeApplyError,
+    automaticCompensation: {
+      runId: claim.id,
+      status: "success",
+      error: null,
     },
   });
-  if (input.dryRun) {
-    try {
-      const resources = await dryRunInstall({
-        plan,
-        actorId: input.actorId,
-        ledger,
-        runId: run.id,
-        adapters,
-      });
-      await ledger.finalizeRun({ runId: run.id, status: "success" });
-      return { runId: run.id, resources };
-    } catch (error) {
-      await ledger.finalizeRun({
-        runId: run.id,
-        status: "failed",
-        error: error instanceof Error ? error.message : "site_package_apply_failed",
-      });
-      throw error;
-    }
-  }
+};
 
-  const installedIds = new Map<string, string>();
-  const staged: Array<{
-    operation: FullSiteInstallPlanItem;
-    id: string;
-    desired: JsonObject;
-    completedItem: FullSiteInstallLedgerItem;
-  }> = [];
-  const resources: AppliedFullSiteResource[] = [];
-  const completed: FullSiteInstallLedgerItem[] = [];
-
-  try {
-    await initializeFullSiteSaga({ ledger, runId: run.id, plan });
-    for (const operation of plan.operations.filter((candidate) => candidate.kind !== "setting")) {
-      const resolved = resolveFullSiteRefs(operation.desired, installedIds) as JsonObject;
-      const desired = await validateFullSiteOperation({
-        operation,
-        plan,
-        desired: resolved,
-        actorId: input.actorId,
-        adapter: adapters[operation.kind],
-      });
-      await assertPlanItemCurrent({
-        operation,
-        resolvedDesired: desired,
-        resolveCurrentResource,
-      });
-
-      if (operation.operation === "noop") {
-        if (!operation.currentId) throw new Error("site_package_invalid");
-        installedIds.set(operation.identity, operation.currentId);
-        resources.push({
-          identity: operation.identity,
-          id: operation.currentId,
-          operation: "noop",
-        });
-        await recordPlanItem({
-          ledger,
-          runId: run.id,
-          operation,
-          status: "success",
-          afterSnapshot: { id: operation.currentId, desired },
-        });
-        continue;
-      }
-
-      const preparedDesired = stagedDesired(operation, desired);
-      await ledger.recordItem({
-        runId: run.id,
-        position: operation.position,
-        kind: operation.kind,
-        key: operation.key,
-        operation: operation.operation,
-        status: "planned",
-        beforeSnapshot: beforeSnapshot(operation),
-        afterSnapshot: makeSagaSnapshot({
-          id: operation.currentId,
-          desired: preparedDesired,
-          phase: "prepared",
-          intendedDesired: desired,
-        }),
-        error: null,
-      });
-
-      const result = await applyOperation(
-        operation,
-        desired,
-        input.actorId,
-        adapters[operation.kind]
-      );
-      installedIds.set(operation.identity, result.id);
-      resources.push({
-        identity: operation.identity,
-        id: result.id,
-        operation: operation.operation,
-      });
-      const completedItem: FullSiteInstallLedgerItem = {
-        position: operation.position,
-        kind: operation.kind,
-        key: operation.key,
-        operation: operation.operation,
-        status: "success",
-        beforeSnapshot: beforeSnapshot(operation),
-        afterSnapshot: makeSagaSnapshot({
-          id: result.id,
-          desired: stagedDesired(operation, result.desired),
-          phase: isLifecycleCapablePublishKind(operation.kind) ? "staged" : "complete",
-          intendedDesired: result.desired,
-        }),
-      };
-      if (isLifecycleCapablePublishKind(operation.kind)) {
-        staged.push({
-          operation,
-          id: result.id,
-          desired: result.desired,
-          completedItem,
-        });
-      }
-      // Memory evidence precedes persistence so a ledger-write failure still
-      // compensates the native mutation.
-      completed.push(completedItem);
-      await ledger.recordItem({ runId: run.id, ...completedItem });
-    }
-
-    for (const item of staged) {
-      if (item.operation.desired.status !== "published") continue;
-      const stagedDesired = { ...item.desired, status: "draft" } as JsonObject;
-      await assertInstalledSnapshotCurrent({
-        operation: item.operation,
-        id: item.id,
-        desired: stagedDesired,
-        resolveCurrentResource,
-      });
-      await adapters[item.operation.kind].publish(item.id, input.actorId);
-      item.completedItem.afterSnapshot = makeSagaSnapshot({
-        id: item.id,
-        desired: item.desired,
-        phase: "complete",
-        intendedDesired: item.desired,
-      });
-      await ledger.recordItem({ runId: run.id, ...item.completedItem });
-    }
-
-    const settingOperations = plan.operations.filter((candidate) => candidate.kind === "setting");
-    const settingInputs: Array<{
-      operation: FullSiteInstallPlanItem;
-      desired: JsonObject;
-      input: AdapterApplyInput;
-    }> = [];
-    for (const operation of settingOperations) {
-      const resolved = resolveFullSiteRefs(operation.desired, installedIds) as JsonObject;
-      const desired = await validateFullSiteOperation({
-        operation,
-        plan,
-        desired: resolved,
-        actorId: input.actorId,
-        adapter: adapters.setting,
-      });
-      await assertPlanItemCurrent({
-        operation,
-        resolvedDesired: desired,
-        resolveCurrentResource,
-      });
-      settingInputs.push({
-        operation,
-        desired,
-        input: toApplyInput(operation, desired, input.actorId),
-      });
-    }
-
-    const settingMutations = settingInputs.filter(
-      ({ operation }) => operation.operation !== "noop"
-    );
-    for (const entry of settingMutations) {
-      await ledger.recordItem({
-        runId: run.id,
-        position: entry.operation.position,
-        kind: "setting",
-        key: entry.operation.key,
-        operation: entry.operation.operation,
-        status: "planned",
-        beforeSnapshot: beforeSnapshot(entry.operation),
-        afterSnapshot: makeSagaSnapshot({
-          id: entry.operation.currentId ?? entry.operation.key,
-          desired: entry.desired,
-          phase: "prepared",
-          intendedDesired: entry.desired,
-        }),
-        error: null,
-      });
-    }
-    const settingResults =
-      settingMutations.length === 0
-        ? []
-        : adapters.setting.applyBatch
-          ? await adapters.setting.applyBatch(settingMutations.map((entry) => entry.input))
-          : await Promise.all(
-              settingMutations.map((entry) => adapters.setting.applyDesired(entry.input))
-            );
-    if (settingResults.length !== settingMutations.length) {
-      throw new Error("setting_batch_write_failed");
-    }
-
-    const resultByIdentity = new Map(
-      settingMutations.map((entry, index) => [entry.operation.identity, settingResults[index]!])
-    );
-    const preparedSettings = settingInputs.map((entry) => {
-      const result =
-        entry.operation.operation === "noop"
-          ? {
-              id: entry.operation.currentId ?? entry.operation.key,
-              desired: entry.desired,
-            }
-          : resultByIdentity.get(entry.operation.identity);
-      if (!result) throw new Error("setting_batch_write_failed");
-      const ledgerItem: FullSiteInstallLedgerItem = {
-        position: entry.operation.position,
-        kind: "setting",
-        key: entry.operation.key,
-        operation: entry.operation.operation,
-        status: "success",
-        beforeSnapshot: beforeSnapshot(entry.operation),
-        afterSnapshot: makeSagaSnapshot({
-          id: result.id,
-          desired: result.desired,
-          phase: "complete",
-          intendedDesired: result.desired,
-        }),
-      };
-      return { entry, result, ledgerItem };
-    });
-    // The native batch is already committed. Capture every mutation in memory
-    // before the first ledger write so any persistence failure restores the
-    // whole settings stage, not just the prefix recorded so far.
-    completed.push(
-      ...preparedSettings
-        .filter(({ entry }) => entry.operation.operation !== "noop")
-        .map(({ ledgerItem }) => ledgerItem)
-    );
-    for (const { entry, result, ledgerItem } of preparedSettings) {
-      if (entry.operation.operation === "noop") {
-        await assertPlanItemCurrent({
-          operation: entry.operation,
-          resolvedDesired: entry.desired,
-          resolveCurrentResource,
-        });
-      }
-      installedIds.set(entry.operation.identity, result.id);
-      resources.push({
-        identity: entry.operation.identity,
-        id: result.id,
-        operation: entry.operation.operation,
-      });
-      await ledger.recordItem({ runId: run.id, ...ledgerItem });
-    }
-
-    await ledger.finalizeRun({ runId: run.id, status: "success" });
-    return { runId: run.id, resources };
-  } catch (error) {
-    const code = toSafeFullSiteErrorCode(error, "site_package_apply_failed");
-    let finalError = code;
-    if (completed.length > 0) {
-      let rollbackRunId: string | null = null;
-      try {
-        let compensationComplete = false;
-        let completedIdentities = new Set<string>();
-        if (ledger.claimRollbackRun) {
-          const claim = await ledger.claimRollbackRun({
-            sourceRunId: run.id,
-            packageKey: input.package.key,
-            actorId: input.actorId,
-            options: { automaticCompensation: true, fullSitePackage: true },
-          });
-          if (claim.state === "busy") {
-            throw new Error("site_package_rollback_in_progress");
-          }
-          rollbackRunId = claim.id;
-          compensationComplete = claim.state === "complete";
-          if (!compensationComplete) {
-            completedIdentities = new Set(
-              (await ledger.listItems(claim.id))
-                .filter((item) => item.status === "success")
-                .map((item) => `${item.kind}:${item.key}`)
-            );
-          }
-        } else {
-          rollbackRunId = (
-            await ledger.createRollbackRun({
-              sourceRunId: run.id,
-              packageKey: input.package.key,
-              actorId: input.actorId,
-              options: { automaticCompensation: true },
-            })
-          ).id;
-        }
-        if (!compensationComplete) {
-          const persisted = await ledger.listItems(run.id);
-          await compensateItems({
-            items: mergeCompletedItems(persisted, completed),
-            actorId: input.actorId,
-            adapters: rollbackAdapters,
-            ledger,
-            rollbackRunId,
-            packageKey: input.package.key,
-            resolveCurrentResource,
-            completedIdentities,
-          });
-          await ledger.finalizeRun({
-            runId: rollbackRunId,
-            status: "success",
-          });
-        }
-        finalError = code;
-      } catch (compensationError) {
-        const compensationCode = toSafeFullSiteErrorCode(
-          compensationError,
-          "site_package_compensation_failed"
-        );
-        if (rollbackRunId) {
-          await ledger.finalizeRun({
-            runId: rollbackRunId,
-            status: "failed",
-            error: compensationCode,
-          });
-        }
-        finalError = compensationCode;
-      }
-    }
-    await ledger.finalizeRun({
-      runId: run.id,
-      status: "failed",
-      error: finalError,
-    });
-    throw error;
-  }
+const planAndPrepare = async (
+  input: Readonly<{
+    request: ApplyFullSitePackageInput;
+    referencePlan: readonly PlannedPackageResource[];
+    adapters: FullSiteResourceAdapterRegistry;
+    ledger: FullSiteInstallLedgerPort;
+    overrides: FullSiteInstallExecutorDeps;
+  }>
+): Promise<PreparedFullSiteSaga> => {
+  const loadPlanningSnapshot =
+    input.overrides.loadPlanningSnapshot ??
+    createDefaultPlanningSnapshotLoader(input.request.package.key);
+  const plan = await planFullSiteInstall(input.request.package, input.referencePlan, {
+    loadPlanningSnapshot,
+    normalizeDesired: createPlanningNormalizer(input.request.actorId, input.adapters),
+    allowSettingTakeover: input.request.allowSettingTakeover,
+  });
+  return prepareFullSiteSaga({
+    plan,
+    referencePlan: input.referencePlan,
+    adapters: input.adapters,
+    actorId: input.request.actorId,
+    generateId: input.overrides.generateId,
+  });
 };
 
 export const applyFullSitePackage = async (
   input: ApplyFullSitePackageInput,
   overrides: FullSiteInstallExecutorDeps = {}
 ): Promise<ApplyFullSitePackageResult> => {
-  // Invalid actors must fail before the default lock port opens a DB session.
   assertActorUuid(input.actorId);
+  const referencePlan = buildReferencePlan(input.package);
+  const options = reservationOptions(input);
   const ledger = overrides.ledger ?? defaultLegacyInstallLedger;
-  const execute = () => applyFullSitePackageUnlocked(input, { ...overrides, ledger });
-  return ledger.withPackageLock ? ledger.withPackageLock(input.package.key, execute) : execute();
+  const dryRun = input.dryRun === true;
+
+  return ledger.withPackageLock(
+    {
+      intent: "apply",
+      packageKey: input.package.key,
+      actorId: input.actorId,
+      dryRun,
+      options,
+    },
+    async (context) => {
+      if (context.intent !== "apply") throw new Error("site_package_invalid");
+      const adapters = assertAtomicRegistry(overrides.adapters ?? FULL_SITE_RESOURCE_ADAPTERS);
+      const rollbackAdapters = overrides.rollbackAdapters ?? FULL_SITE_ROLLBACK_ADAPTERS;
+      const resolveCurrentResource =
+        overrides.resolveCurrentResource ??
+        createFullSiteCurrentResourceResolver(input.package.key, ledger);
+
+      if (context.resumePhase === "initialized") {
+        if (dryRun) {
+          const resources = await initializedResources(ledger, context.ownerRunId);
+          await requireDesiredOwnedRunFinalization(ledger, {
+            ownerRunId: context.ownerRunId,
+            status: "success",
+            error: null,
+          });
+          return { runId: context.ownerRunId, resources };
+        }
+        await compensateInitializedFullSiteOwner({
+          ownerRunId: context.ownerRunId,
+          packageKey: input.package.key,
+          actorId: input.actorId,
+          safeApplyError: "site_package_apply_interrupted",
+          ledger,
+          adapters: rollbackAdapters,
+          resolveCurrentResource,
+        });
+        throw new Error("site_package_apply_interrupted");
+      }
+
+      let saga: PreparedFullSiteSaga;
+      try {
+        saga = await planAndPrepare({
+          request: input,
+          referencePlan,
+          adapters,
+          ledger,
+          overrides,
+        });
+        await ledger.initializeReservedRun({
+          ownerRunId: context.ownerRunId,
+          packageKey: input.package.key,
+          actorId: input.actorId,
+          dryRun,
+          options,
+          items: saga.prepared.map(toInitializedLedgerItem),
+        });
+      } catch (primary) {
+        const code = toSafeFullSiteErrorCode(primary);
+        if (mayFinalizePreNativeFailure(code)) {
+          await finalizeFailedOwnerPreservingPrimary(ledger, context.ownerRunId, code);
+        }
+        throw primary;
+      }
+
+      const resources = sagaResources(saga);
+      if (dryRun) {
+        await requireDesiredOwnedRunFinalization(ledger, {
+          ownerRunId: context.ownerRunId,
+          status: "success",
+          error: null,
+        });
+        return { runId: context.ownerRunId, resources };
+      }
+
+      try {
+        await executePreparedPlanWithDomainAtomicAdapters({
+          saga,
+          actorId: input.actorId,
+          ownerRunId: context.ownerRunId,
+          adapters,
+          ledger,
+        });
+      } catch (primary) {
+        await compensateInitializedFullSiteOwner({
+          ownerRunId: context.ownerRunId,
+          packageKey: input.package.key,
+          actorId: input.actorId,
+          safeApplyError: toSafeFullSiteErrorCode(primary),
+          ledger,
+          adapters: rollbackAdapters,
+          resolveCurrentResource,
+        });
+        throw primary;
+      }
+
+      await requireDesiredOwnedRunFinalization(ledger, {
+        ownerRunId: context.ownerRunId,
+        status: "success",
+        error: null,
+      });
+      return { runId: context.ownerRunId, resources };
+    }
+  );
 };

@@ -6,9 +6,10 @@
 **Category:** Testing Infrastructure / Runtime / Performance / Cleanup
 **Estimated Effort:** Very Large
 **Dependencies:** TASK-552-01 through TASK-552-03 landed; corrective audit grounded on 2026-08-06
-**Status:** 🚧 In Progress
+**Status:** ✅ Done
 **Started:** 2026-08-06
-**Changelog:** 1264 (Draft; family reopened)
+**Completed:** 2026-08-08
+**Changelog:** 1264 (Final)
 
 ---
 
@@ -53,7 +54,7 @@ still transitively executes the old workflow tree:
 
 The historical `19:38.580` fast run remains valid evidence that the wrapped
 flow passed. It is not evidence that the old runtime was migrated or removable.
-Changelog 1264 therefore remains a draft until this corrective family closes.
+Changelog 1264 therefore remained a draft until this corrective family closed.
 
 ## Execution Leaves and Land Order
 
@@ -62,7 +63,7 @@ Changelog 1264 therefore remains a draft until this corrective family closes.
 | TASK-552-04-L01 | Native Suite Relocation and No-Docs-Import Boundary | ✅ Done |
 | TASK-552-04-L02 | Typed TASK-540 Operations and Persistent Worker | ✅ Done |
 | TASK-552-04-L03 | Shared Playwright Dev Host and Scenario Composition | ✅ Done |
-| TASK-552-04-L04 | Legacy Deletion, Benchmark, Docs, and Reclosure | 🚧 In Progress |
+| TASK-552-04-L04 | Legacy Deletion, Benchmark, Docs, and Reclosure | ✅ Done |
 
 Land strictly in this order:
 
@@ -161,5 +162,16 @@ lane, task-graph and line-count checks, `git diff --check`, zero executable
 legacy paths, and fresh green fast plus certification runs with cleanup proof on
 the same final native tree. The old TASK-552-03-L02 fast-only closure and
 `19:38.580` receipt remain historical/superseded comparison evidence. Changelog
-1264 and the board must stay draft/in progress until both current-tree results
-exist.
+Changelog 1264 and the board remained draft/in progress until both current-tree
+results existed.
+
+## Completion Evidence
+
+All four leaves are terminal. The 169-module legacy runtime is absent, the
+registered TASK-540 dependency graph is native, and the 57-handler/160-alias
+typed contract plus shared Playwright/dev-host composition are covered by the
+green 164-test runtime-smoke lane. On the same final native code, TASK-540 fast
+passed in `349.437s` and certification passed in `682.228s`; both retained all
+seven scenarios, 496 actions, 13 PNG paths, zero console/page errors, two
+repository snapshots and complete 60-receipt cleanup. Changelog 1264 and the
+board are therefore final.

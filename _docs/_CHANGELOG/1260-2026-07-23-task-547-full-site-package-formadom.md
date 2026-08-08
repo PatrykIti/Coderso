@@ -2,15 +2,14 @@
 
 Date: 2026-07-23
 Version: Unreleased
-Status: Draft — reserved for TASK-547; reopened validation is in progress and this
-file is not completion or release evidence.
+Status: Final — corrective implementation and reclosure completed 2026-08-08.
 Tasks: TASK-547, TASK-547-01, TASK-547-01-L01, TASK-547-01-L02,
 TASK-547-02, TASK-547-02-L01, TASK-547-02-L02, TASK-547-02-L03,
 TASK-547-03, TASK-547-03-L01, TASK-547-03-L02, TASK-547-03-L03,
 TASK-547-04, TASK-547-04-L01, TASK-547-04-L02, TASK-547-04-L03,
 TASK-547-05, TASK-547-05-L01, TASK-547-06, TASK-547-06-L01, TASK-547-07
 
-## Key Changes (draft implementation summary)
+## Key Changes
 
 ### Package and lifecycle contract
 
@@ -41,22 +40,23 @@ TASK-547-05, TASK-547-05-L01, TASK-547-06, TASK-547-06-L01, TASK-547-07
   adapters, atomicity, lifecycle, rollback, generator zero-diff, content,
   listing/detail/forms, Page/Menu/shell, locale, and CLI behavior.
 
-## Validation and smoke (pending)
+## Validation and smoke
 
-- The interrupted branch is being re-inventoried after merging current
-  `feat/implementations`. One dependency-shaped audit/reconcile round, unfinished
-  leaf gates, affected post-audit lenses, strict security scan, production site
-  build and both shared runtime-smoke profiles remain pending.
-- `fast` and `certification` will both run the same ordered 18 product-visible
+- Dependency-shaped implementation gates, core/root type checks and the final
+  repository type check passed. The focused TASK-547 shared-runner suite passed
+  26/26, including static fast/certification descriptor identity; the concurrent
+  CSRF retry regression suite passed 6/6.
+- Final certification session `wf547final` passed all 18 ordered product-visible
   scenarios (eight public FormaDom, five Form Design and five Page Editor flows)
-  through `scripts/runtime-smoke.ts`; only bounded polling/auth infrastructure
-  windows differ. Exact rollback equality, set-based scoped cleanup, zero
-  console/page errors and screenshots under `_docs/_workflows/_smoke/task-547/`
-  are required.
-- All earlier final counts, pass claims, screenshot hashes and cleanup claims
-  were invalidated when TASK-547 was reopened on 2026-07-23 and are intentionally
-  omitted from this draft. They must be replaced only by newly observed evidence
-  before this entry is indexed or any TASK-547 file is closed.
+  in 220.687 seconds. It produced 18 verified PNGs, reported `serverUp:true`, zero
+  console errors and zero scenario failures.
+- Cleanup passed with one official rollback, prior settings restored, terminal
+  resource-absence proof, five scoped submissions and three action runs deleted,
+  and three mutated resource slots restored. The persistent worker handled 23
+  requests with one start and zero reconnects (88 bounded statements / 80 rows).
+- The final Page Editor flow uses SPA transitions between Page editors, avoiding
+  repeated auth bootstrap/rate-limit churn while retaining scenario checkpoints,
+  visible-effect assertions and one final exact rollback.
 
 No public endpoint, catalog entry, migration, media import, RBAC/CSRF/rate-limit
 change, or alternative configurable widget surface was added.

@@ -37,6 +37,10 @@ import {
   type PageSectionType,
 } from "./pageDocumentV2";
 import {
+  FORM_EMBED_SUCCESS_BEHAVIORS,
+  FORM_EMBED_TEXTAREA_ROWS_LIMITS,
+} from "../../widgets/core/formEmbedContract";
+import {
   blockPropControl,
   control,
   type PageEditorControlDefinition,
@@ -193,6 +197,48 @@ export const pageBlockControlRegistry: Record<
       optionsSource: "forms",
     }),
     blockPropControl("form", "title", { label: "Title", input: "text" }),
+    control({
+      id: "block.form.props.textareaRows",
+      panel: "content",
+      target: "block",
+      label: "Textarea rows",
+      path: ["props", "textareaRows"],
+      input: "number",
+      responsive: false,
+      clamp: {
+        min: FORM_EMBED_TEXTAREA_ROWS_LIMITS.min,
+        max: FORM_EMBED_TEXTAREA_ROWS_LIMITS.max,
+      },
+      unit: "",
+    }),
+    control({
+      id: "block.form.props.showSelectPrompt",
+      panel: "content",
+      target: "block",
+      label: "Show select prompt",
+      path: ["props", "showSelectPrompt"],
+      input: "switch",
+      responsive: false,
+    }),
+    control({
+      id: "block.form.props.loadingLabel",
+      panel: "content",
+      target: "block",
+      label: "Loading label",
+      path: ["props", "loadingLabel"],
+      input: "text",
+      responsive: false,
+    }),
+    control({
+      id: "block.form.props.successBehavior",
+      panel: "content",
+      target: "block",
+      label: "After successful submission",
+      path: ["props", "successBehavior"],
+      input: "select",
+      responsive: false,
+      options: FORM_EMBED_SUCCESS_BEHAVIORS,
+    }),
   ],
   list: [
     blockPropControl("list", "items", { label: "Items", input: "items" }),
@@ -241,6 +287,15 @@ export const pageBlockControlRegistry: Record<
       input: "number",
       clamp: { min: PAGE_COLLECTION_LIMIT_CLAMP.min, max: PAGE_COLLECTION_LIMIT_CLAMP.max },
       unit: "",
+    }),
+    control({
+      id: "block.collection.props.showCta",
+      panel: "content",
+      target: "block",
+      label: "Show card action",
+      path: ["props", "showCta"],
+      input: "switch",
+      responsive: false,
     }),
   ],
   filters: [
@@ -462,6 +517,15 @@ export const pageBlockControlRegistry: Record<
       input: "segmented",
       panel: "style",
       options: switcherVariants,
+    }),
+    control({
+      id: "block.switcher.props.ariaLabel",
+      panel: "content",
+      target: "block",
+      label: "Tab list label",
+      path: ["props", "ariaLabel"],
+      input: "text",
+      responsive: false,
     }),
   ],
   scrollHint: [
