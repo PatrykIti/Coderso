@@ -13,6 +13,15 @@
 
 ---
 
+## Overview
+
+Reconstruct the three missing historical board parents strictly from committed
+board, changelog, workflow, and implementation evidence.
+
+## Sub-Tasks
+
+None; this is an executable leaf with the exclusive file ownership below.
+
 ## Exclusive ownership
 
 Create exactly one new board-parent `_docs/_TASKS/TASK-###_Short_Title.md` for
@@ -65,7 +74,7 @@ assert exactly one canonical parent for TASK-528/529/530, no parent field, termi
 plus evidence-backed Completed/changelog metadata, and the explicit historical exception
 that these three parents have no physical descendants. This leaf does not edit tests.
 
-## Validation
+## Testing Requirements
 
 ```bash
 for id in 528 529 530; do
@@ -74,3 +83,9 @@ for id in 528 529 530; do
 done
 git diff --check
 ```
+
+## Documentation Updates Required
+
+- Create only the three evidence-backed historical parent files; do not edit
+  indexes or fabricate retroactive execution claims.
+- TASK-545-04-L03 owns their final board linkage and changelog 1257 closure.

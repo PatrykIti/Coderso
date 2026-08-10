@@ -7,27 +7,41 @@
 **Priority:** High
 **Category:** Workflow Infrastructure / Reliability
 **Estimated Effort:** Small
-**Dependencies:** None inside TASK-545
+**Dependencies:** None
 **Status:** ⏳ To Do
 **Changelog:** 1257 (pinned; closure only)
 
 ---
 
+## Overview
+
+Add the pure identity-aware all-results guard that every TASK-545 workflow
+driver will use to fail closed before flattening or classifying agent results.
+
+## Sub-Tasks
+
+None; this is an executable leaf with the exclusive file ownership below.
+
 ## Exclusive ownership
 
 - new `_docs/_workflows/lib/workflow-contracts.mjs`
+- new `_docs/_workflows/lib/workflow-contracts.d.mts`
 - new `tests/unit/workflows/workflowContracts.test.ts`
 - helper-unit fixtures under `tests/fixtures/workflows/results/` if required
 
-No workflow script or live-tree static test is edited here.
+No workflow script or live-tree static test is edited here. The declaration
+types every runtime export consumed by strict TypeScript tests; tests import the
+`.mjs` owner and never add a local substitute declaration.
 
 ## Grounded anchors
 
-- Good but local missing-result guards:
-  `_docs/_workflows/task-drift-audit-only.mjs:125-159` and
-  `task-511-author-audit.mjs:222-260`.
-- False-clean pattern: `task-531-534-author.mjs:113-131` and
-  `task-533-impl.mjs:85-101`.
+- Tracked false-clean pattern:
+  `_docs/_workflows/task-522-author.mjs:168-179`.
+- Tracked local guards that TASK-545 will replace live in
+  `_docs/_workflows/task-543-implement.mjs:1986-2035`.
+- Historical examples such as `task-drift-audit-only.mjs` and
+  `task-531-534-author.mjs` were removed by `5facaf32`; they may be read from its
+  parent commit as design evidence but are not implementation targets.
 - Structured output contracts are already used by current workflows; the helper
   validates collection completeness, not finding schemas.
 
@@ -133,10 +147,22 @@ serialized payload or agent-controlled identity content in error messages. Drive
 fixtures prove a wrapped nullish return throws before `collectStructuredFindings` or any
 clean classification callback is invoked.
 
-## Validation
+## Testing Requirements
 
 ```bash
 node --check _docs/_workflows/lib/workflow-contracts.mjs
+bun run lint:repo:types
 bun test tests/unit/workflows/workflowContracts.test.ts
 git diff --check
 ```
+
+Because `_docs/_workflows/` is globally ignored, the new runtime and declaration
+are an explicit owner-review/force-track handoff. The implementing agent returns
+`owner_action_required` and stops; after the owner records it, a fresh run must
+prove `git ls-files --error-unmatch` and `git show HEAD:<path>` byte parity before
+any dependent migration imports it. Agents never invoke `git add`.
+
+## Documentation Updates Required
+
+- No shared documentation edit in this leaf.
+- Report validation to the parent; TASK-545-04-L03 owns board and changelog 1257.

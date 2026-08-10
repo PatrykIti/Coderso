@@ -5,7 +5,10 @@
 **Priority:** High
 **Category:** Documentation Platform / Release / Distribution
 **Estimated Effort:** Very Large
-**Dependencies:** TASK-548-04 and TASK-548-02-L03; TASK-545 must be `✅ Done` and TASK-547 must be fully terminal before dispatch
+**Dependencies:** TASK-548-04 and TASK-548-02-L02 (which owns ALL
+    dependency-bearing toolchain bytes including the root lock and Dockerfile;
+    TASK-548-02-L03 consumes them read-only); TASK-545 must be `✅ Done` and
+    TASK-547 must be fully terminal before dispatch
 **Status:** ⏳ To Do
 **Changelog:** 1261 (pinned; closure only)
 
@@ -15,7 +18,16 @@
 
 Package the validated static portal as an immutable, content-addressed SemVer
 artifact and publication capsule, then publish it from the existing
-semantic-release handoff. Exact versions remain permanently addressable, while
+semantic-release handoff. Semantic-release is the SOLE public release
+authority: the owner only reviews, commits and merges to the protected release
+branch and waits; semantic-release alone creates the generated
+version/lock/changelog release commit, the plain SemVer tag and the GitHub
+release, and TASK-548-05-L02's NORMAL RELEASE publication deploys Cloudflare
+only when `released == "true"` (the docs-rollback job requires only the exact
+normalized rollback mode plus a successful rollback job and never requires
+semantic-release output).
+The owner never runs `git tag`/`gh release` and never guesses a version or tag.
+Exact versions remain permanently addressable, while
 `latest` is a mutable byte-copy promoted only after the exact-version artifact
 and retained documentation tree verify. GitHub Actions orchestrates release,
 but production hosting is Cloudflare Pages so the verified root `_headers`
@@ -43,6 +55,7 @@ public write surface.
 - The repository's release tag is plain SemVer: `gitTag === productVersion`
   byte-for-byte (for example `1.2.3`, never `v1.2.3`). The tag must still
   resolve to `gitSha`, and the tag-pinned checkout `HEAD` must equal that SHA.
+  Semantic-release alone creates the tag; the owner never runs `git tag`.
 - L01 writes one strict canonical sibling
   `DocsReleaseArtifactReceiptV1` after reopening and verifying the final tar.
   The receipt binds release identity, portal/release manifest hashes, payload
@@ -60,7 +73,13 @@ public write surface.
 - The workflow follows the existing release pattern: semantic-release exports
   the same plain SemVer as version/tag; a fresh checkout resolves that tag;
   `HEAD`, tag SHA, SemVer, artifact manifest and artifact receipt must agree
-  before any upload.
+  before any upload. Semantic-release alone creates the tag and GitHub release
+  (the owner never runs `git tag`/`gh release` and never guesses a version or
+  tag); the docs NORMAL RELEASE publication workflow runs only when
+  `released == "true"` (docs rollback runs from its own dispatch and never
+  requires that output) and the fresh
+  release-resume trusts only verified semantic-release workflow outputs and the
+  generated release commit/tree.
 - An existing exact-version directory or release asset passes only when its
   manifest and every hash are identical. Different bytes fail; no clobber,
   force-push, delete, or overwrite fallback exists.
@@ -112,15 +131,28 @@ public write surface.
 - Workflow concurrency is serialized per repository with cancellation disabled.
   Rollback repoints `latest` to a verified retained version and never mutates or
   deletes an exact version.
-- L02 writes a strict successful
-  `DocsPostDeployHealthReceiptV1` to
-  `.tmp/docs-release/post-deploy/docs-post-deploy-health-v1.json` and uploads it
-  as the 90-day workflow artifact
-  `docs-post-deploy-health-<version>-<gitSha>-<workflowRunId>`. TASK-548-07
-  downloads that exact successful release/deployment-run artifact read-only. Its
-  archive inventory must contain exactly one root regular member
-  `docs-post-deploy-health-v1.json`, with no nested/extra/duplicate/symlink
-  member. Closure rejects missing, failed, stale, wrong-identity, malformed,
+- The two exclusive post-deploy health families are strict and never mix:
+  release runs write `DocsPostDeployHealthReceiptV1`
+  (`.tmp/docs-release/post-deploy/docs-post-deploy-health-v1.json`, uploaded as
+  the 90-day workflow artifact
+  `docs-post-deploy-health-<version>-<gitSha>-<workflowRunId>`, root member
+  `docs-post-deploy-health-v1.json`, discriminator
+  `coderso.docs-post-deploy-health@v1`, validated only by
+  `validateDocsPostDeployHealthReceiptV1`) and rollback runs write
+  `DocsPostDeployRollbackHealthReceiptV1`
+  (`.tmp/docs-release/post-deploy/docs-post-deploy-rollback-health-v1.json`,
+  uploaded as
+  `docs-post-deploy-rollback-health-<targetVersion>-<originalGitSha>-<workflowRunId>`,
+  root member `docs-post-deploy-rollback-health-v1.json`, discriminator
+  `coderso.docs-post-deploy-rollback-health@v1`, validated only by
+  `validateDocsPostDeployRollbackHealthReceiptV1`). TASK-548-07 enumerates the
+  selected run's health artifacts and requires exactly ONE matching family;
+  opposite/both/duplicate families fail. Its
+  archive inventory must contain exactly one root regular member, with no
+  nested/extra/duplicate/symlink
+  member, and both families share the strict `DocsPostDeployReadFactsV1` shape
+  bound to the selected public `DocsReleaseTreeBindingV1`. Closure rejects
+  missing, failed, stale, wrong-identity, malformed,
   hash-drifted, or oversized evidence and never republishes production.
 - Release computes the L01-normalized `DocsReleaseTreeBindingV1` once in the
   clean exact-tag checkout. Manifest, artifact receipt, retained capsule,
@@ -132,7 +164,7 @@ public write surface.
 | ID | Exclusive responsibility | Status |
 |---|---|---|
 | TASK-548-05-L01 | Release artifact schema, deterministic archive builder, manifest, content hashing, and local verification tests | ⏳ To Do |
-| TASK-548-05-L02 | `.github/workflows/release.yml`, retained-tree staging, Cloudflare Pages publishing, no-overwrite/latest ordering, and rollback tests | ⏳ To Do |
+| TASK-548-05-L02 | `.github/workflows/release.yml`, mandatory tag-built `task-548-portal` certification before publication, retained-tree staging, Cloudflare Pages publishing, no-overwrite/latest ordering, and rollback tests | ⏳ To Do |
 
 **Land order:** `TASK-548-05-L01 → TASK-548-05-L02`.
 
@@ -154,9 +186,14 @@ handoff shape. Every retained/network/archive JSON value passes the owning
 reject-unknown normalizer and canonical serialize→parse→normalize round trip
 before mutation; hash checks use those exact canonical bytes.
 
-TASK-548-02-L03 remains the sole writer of root `package.json`, `bun.lock`, and
-`.github/workflows/coderso-pr-gates.yml`, and it owns the prerequisite
-Dockerfile/core-package compatibility contract: all three documentation workspace
+TASK-548-02-L02 remains the sole writer of root `package.json`, `bun.lock`,
+`.github/workflows/coderso-pr-gates.yml`, the Dockerfile, all three
+documentation workspace manifests, root docs scripts and the exact root
+devDependency pins `@playwright/cli: 0.1.18`/`pixelmatch: 7.2.0` (the one
+lock-producing `bun install --lockfile-only` reconciliation plus the separate
+`bun install --frozen-lockfile` verification), and it owns the prerequisite
+Dockerfile/core-package compatibility contract (TASK-548-02-L03 consumes those
+bytes read-only): all three documentation workspace
 manifests are copied before frozen install, and `core/package.json` declares
 contracts, renderer and portal workspace dependencies required by release code. Wave 05 consumes
 and validates that landed contract only; it never edits `Dockerfile` or
@@ -233,15 +270,18 @@ const health = await verifyPublishedDocsReadOnly({ maxAttempts: 5 });
 await writeAndUploadDocsPostDeployHealthReceiptV1(health);
 ```
 
-**Data flow:** tag-pinned clean checkout → one canonical runtime-tree binding → portal validation → detached
-portal-manifest binding → content-addressed archive + capsule → exact two-asset
+**Data flow:** tag-pinned clean checkout → one canonical runtime-tree binding →
+portal validation → shared seven-flow certification → exact report/PNG workflow
+artifact → candidate cleanup + clean-checkout proof → detached portal-manifest
+binding → content-addressed archive + capsule → exact two-asset
 no-clobber release upload → retained exact tree/capsule → verified cumulative
 site-index merge plus byte-copy latest/global/runtime commit → protected
 Cloudflare Pages deployment → bounded same-origin read-only health verification → strict
 successful post-deploy receipt for read-only closure validation.
 
 **Error handling:** a `v`-prefixed/different/blank tag, tag/SHA/HEAD drift,
-invalid version/base URL, malformed artifact receipt, manifest/payload/archive
+invalid version/base URL, failed/stale/malformed portal certification evidence,
+candidate cleanup or dirty checkout, malformed artifact receipt, manifest/payload/archive
 hash/tree mismatch, malformed Git record stream, nondeterministic archive, remote digest conflict, concurrent
 branch movement, invalid rollback input, missing retained rollback version, or
 deployment failure is blocking. A failure before latest promotion leaves the
@@ -263,6 +303,11 @@ Wave 05 write to its owner files.
 
 ## Acceptance Criteria
 
+- Every release blocks before its first GitHub Release/retained-tree/Cloudflare
+  mutation unless the exact validated tag-built portal passes all seven
+  `task-548-portal` certification scenarios with zero errors, its bounded
+  report/screenshots are uploaded, candidates are removed, and the tag checkout
+  is still clean.
 - Every released docs artifact is reproducible, SemVer-bound, content-addressed,
   tag/SHA/tree-pinned, hash-closed, and independently verifiable.
 - Version and `gitTag` are the same plain SemVer, the tag target equals
@@ -275,7 +320,16 @@ Wave 05 write to its owner files.
 - Latest changes only after exact publication verifies; a failed attempt retains
   the previous alias.
 - Rollback is explicit, auditable, capsule-copy-only, and never changes exact
-  content.
+  content. Rollback is certifiable and deployable end-to-end: the complete
+  selected retained public capsule/tree is materialized into a confined
+  no-follow task-owned temp root, all five portal-certification inputs
+  (artifactRoot, productVersion, originalGitSha, portalManifestSha256,
+  artifactRootSha256) are derived and bound from verified bytes, the exact
+  certification gate runs BEFORE any retained mutation (a failure leaves
+  branch/Cloudflare untouched and the temp root is removed in `finally`), and
+  the rollback deploys through the pinned Wrangler with a rollback-specific
+  post-deploy health receipt binding from/to latest, target version, target
+  original identity/hashes, retained commit and deployment.
 - Cloudflare Pages publication uses protected `docs-production`, an exact
   account-scoped Pages-Edit token plus exact project allowlist, root `_headers`, and the retained branch without
   exposing credentials or expanding public behavior beyond static reads.
@@ -290,16 +344,41 @@ Wave 05 write to its owner files.
 - focused artifact and publication Bun/Vitest tests from both leaves
 - two clean builds and byte/hash comparison
 - workflow contract tests for tag/SHA, pinned actions, permissions, concurrency,
-  environment, SHA-1/SHA-256 tree parsing/binding, no-clobber, capsule layout, rollback,
+  environment, exact prepublication suite order/evidence/cleanup,
+  SHA-1/SHA-256 tree parsing/binding, no-clobber, capsule layout, rollback,
   post-deploy health, and cleanup
 - `DOCS_PRODUCT_VERSION=0.0.0-test DOCS_PUBLIC_ORIGIN=https://docs.example.invalid DOCS_PUBLIC_BASE_PATH=/docs SOURCE_DATE_EPOCH=0 bun --cwd packages/docs-portal build`
-- validate the TASK-548-02-L03-owned Dockerfile/core-package frozen-workspace
+- validate the TASK-548-02-L02-owned Dockerfile/core-package frozen-workspace
   contract and build the existing Docker image without modifying either owner
   file
 - `bun --cwd core lint:types`
 - `bun --cwd core lint`
 - `bun run precommit:check`
-- touched-file line counts and `git diff --check`
+- `git diff --check`
+- the canonical NUL-safe line-count gate over every added/modified production
+  and test file in the leaf write set (identical contract in every TASK-548
+  task file; a file above 1,000 makes the gate fail with `exit 1`, including a
+  non-newline final line); the verified pre-family baseline spans all
+  intermediate commits and staging and cannot narrow:
+
+  ```bash
+  # Canonical NUL-safe line-count gate over the leaf write set (identical
+  # contract in every TASK-548 task file; a file above 1,000 makes the gate fail
+  # with exit 1, including a non-newline final line). The verified pre-family
+  # baseline is the pinned commit 963733cae23456622bea1eef1b734723aaab2350;
+  # commits/staging cannot narrow the measured scope.
+  TASK_FAMILY_BASELINE_SHA="963733cae23456622bea1eef1b734723aaab2350"
+  git cat-file -e "${TASK_FAMILY_BASELINE_SHA}^{commit}" || { echo "invalid/missing baseline commit ${TASK_FAMILY_BASELINE_SHA}" >&2; exit 1; }
+  failed=0
+  while IFS= read -r -d '' f; do
+    lines=$(awk 'END { print NR }' "$f")
+    if [ "$lines" -gt 1000 ]; then
+      printf 'OVER-LIMIT %s %s\n' "$lines" "$f"
+      failed=1
+    fi
+  done < <({ git diff --name-only -z --diff-filter=ACMRT "$TASK_FAMILY_BASELINE_SHA" -- core packages scripts tests _docs/_workflows; git ls-files --others --exclude-standard -z -- core packages scripts tests _docs/_workflows; } | grep -zE '\.(ts|tsx|mjs|cjs|js|jsx|mts|cts)$' | grep -zvE '\.generated\.(ts|tsx|js|jsx|cjs|mjs|mts|cts)$' | sort -zu)
+  exit "$failed"
+  ```
 
 ## Documentation Updates Required
 

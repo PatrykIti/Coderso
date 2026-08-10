@@ -13,8 +13,9 @@
 
 ## Overview
 
-Split the oversized schema by cohesive domain, own the realizable canonical
-search vectors, add the cache invalidation outbox schema required later by
+Adopt the already-split `core/db/tables/**` schema through its guarded
+`core/db/schema.ts` facade, own the realizable canonical search vectors, add the
+cache invalidation outbox schema required later by
 TASK-551-08, and add only indexes/database constraints justified by the frozen
 query inventory and sanitized plans. Prove read gains, bounded write cost,
 constraint behavior, generated-expression immutability, and clean/prior/
@@ -23,18 +24,23 @@ other subtasks.
 
 ## Sub-Tasks
 
-1. `TASK-551-05-L01` is the sole TASK-551 schema/migration writer. It splits
-   schema first, preserves all exports/DDL, then adds canonical local search
+1. `TASK-551-05-L01` is the sole TASK-551 schema/migration writer. It first proves
+   the current table-module/facade snapshot has zero drift, then adds canonical local search
    vectors/indexes, the cache-invalidation-outbox table/export, and selected
    query indexes/constraints in one generated next-free migration triple plus
    its mandatory non-transactional online-index companion and resumable tool.
-2. `TASK-551-05-L02` runs sanitized before/after plan and concurrency evidence
+2. `TASK-551-05-L03` owns the normalized Solution Kit rollback authority
+   contract (four schema surfaces, named checks, and mandatory index rows)
+   that L01's one migration lands, plus the authority test suite; it writes no
+   schema, migration, or service code.
+3. `TASK-551-05-L02` runs sanitized before/after plan and concurrency evidence
    against L01; it owns no production schema, migration, or service code.
 
 L02 cannot start until L01 migration-from-clean and migration-from-prior pass.
-No unused index may be removed from polluted cumulative statistics alone;
-removal requires a separately observed, representative interval and explicit
-rollback evidence.
+L03 lands after L01 (its authority schema is part of L01's one migration) and
+before L02 (L02 verifies the authority catalog with the rest). No unused index
+may be removed from polluted cumulative statistics alone; removal requires a
+separately observed, representative interval and explicit rollback evidence.
 
 ## Migration and Collision Guard
 
@@ -55,8 +61,9 @@ rollback evidence.
   TASK-551 leaf may write or approximate that object.
 - TASK-511 backup behavior, TASK-517 entry/public-site logic, TASK-493 GSC
   behavior, TASK-518 role behavior, all query/cache implementations, and
-  task/changelog/workflow files are forbidden. Moving terminal table
-  declarations unchanged into cohesive schema modules is explicitly permitted.
+  task/changelog/workflow files are forbidden. The landed table-module split is
+  immutable architecture input; this task neither relocates existing declarations
+  nor creates a second `core/db/schema/**` hierarchy.
 
 ## Selected-Change Gate
 
@@ -205,7 +212,7 @@ completion updates and rejects availability/claim narrowing.
 
 ## Documentation Updates Required
 
-No shared docs are edited here. Supply the schema split, migration, exact FTS/
+No shared docs are edited here. Supply the table-module/facade adoption, migration, exact FTS/
 trigram contracts, selection receipt, constraints, plans, write/storage cost,
 and recovery handoff to TASK-551-10-L02, which owns shared docs and changelog
 1263.

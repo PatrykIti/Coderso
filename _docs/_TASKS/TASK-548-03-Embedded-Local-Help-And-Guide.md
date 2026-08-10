@@ -42,8 +42,10 @@ The dependency graph stays acyclic: `docs-contracts -> []`,
 Core host adapter imports `adminPaths`/live RBAC; Guide keeps its server gate.
 
 Consumer targets are fail-closed: embedded Help indexes/renders only documents
-whose `publicationTargets` contains `embedded-help`; Guide receives only
-`assistant`-targeted rows from ingest/retrieval. `public-docs` remains the portal
+whose `publicationTargets` contains `embedded-help`; Guide ingest/retrieval
+eligibility is the conjunction `assistant` AND `embedded-help` (every
+successful basic Guide answer carries one authorized non-null Help action;
+`public-docs` is additional but never required). `public-docs` remains the portal
 owner and is never an implicit Help or Guide fallback.
 
 The interactive site Designer/canvas and accepted-plan CMS mutation workflow
@@ -63,8 +65,9 @@ are outside TASK-548.
   mixes launcher geometry, one conversation history, docs Q&A, provider
   planning, dry-run, execute, and rendering.
 - `core/admin/ui/assistant/assistantConversationState.ts:22-36` persists one
-  mode-bearing snapshot, while TASK-182 intentionally removed the chat mode
-  selector.
+  mode-bearing snapshot today; L03 must retire both conversation-storage keys
+  without hydration because Guide evidence and Agent plans/results are not safe
+  browser-cache values. TASK-182 intentionally removed the chat mode selector.
 - `core/services/assistant/assistantService.ts:441-459` reports one global
   `enabled` state and lines 513-711 gate all chat behind it.
 - Existing assistant security is explicit in
@@ -138,18 +141,73 @@ are outside TASK-548.
 
 - Guide always sends `mode: "docs-only"` and depends on DB index readiness, not
   provider availability or `assistant.enabled`.
+- Guide defaults to exact `detailLevel: "basic"`: a primary answer of at most
+  440 Unicode scalar values and at most two prose sentences or three ordered
+  steps, plus an authorized non-null `Open in Help` deep link to the full
+  localized section. The full article, not the chat bubble, owns exhaustive
+  controls, examples, screenshots, and end-to-end workflow prose.
+- Using TASK-548-01's separate persisted
+  `DocsCapabilityCompositionCatalogV1` (the original area `capabilityIds` stay
+  byte-compatible),
+  an atomic-control answer may expose its containing composed workflow and a
+  composed-workflow answer may expose its ordered controls. Every related
+  evidence record is independently target/RBAC/locale-authorized; an
+  unauthorized relation is omitted without leaking title, ID, or route.
 - After existing `settings:read` authorization, the chat route resolves the
   current user's canonical permissions only through the injected server
   resolver/RBAC owner, strictly normalizes a ready snapshot, and passes it
   explicitly into the single DB retrieval/evidence projection. Client
   request/context fields can never supply or override permission state.
-- Guide card eligibility requires `assistant`; its Help action additionally
-  requires `embedded-help` and its official action additionally requires
-  `public-docs`. Missing cross-surface targets render no dead link.
+- Guide search context is one strict server-resolved DTO
+  (`AssistantDocsGuideSearchContextV1`, owned by TASK-548-01-L03): the browser
+  sends only bounded advisory `context.page`/`context.locale` hints validated
+  through the transport contract schema; the service resolves the canonical
+  locale, the installed `productVersion`, the canonical admin route/surface
+  and its catalog-validated capability IDs server-side, normalizes the
+  permission snapshot, and threads the strict DTO into DB options, exact
+  locale/version filtering, deterministic capability-context reranking, and
+  Help/official action projection. Authorization and version resolution are
+  server-owned; browser hints can never supply permissions, versions,
+  capabilities or routes.
+- Guide availability is preserved through the whole legacy→V2 cutover: L03
+  deploys TASK-548-01-L03's era-aware facade
+  (`searchAssistantDocsAuthoritativeV2`) before activation, so Guide is served
+  by the ACL-joined frozen V1 corpus (SQL authorization before projection/
+  LIMIT) until activation and by the active V2 snapshot after activation;
+  activation/rollback switch ONLY the DB pointer, and exactly one backend is
+  queried per question (never both). That facade cutover is
+  DISPATCH/DEPLOY-GATED: it may land only when the persisted cutover row is
+  EXACTLY `shadow_parity_clean` (never merely at/past
+  `backfill_complete`) with exactly one complete prepared snapshot, the
+  pointer's closed `legacy_acl_snapshot_id` binding, and facade code
+  compatible with the row's `deploymentIdentity`/`rolloutGeneration` — never
+  a preexisting rollout receipt, which is recorded for that exact facade build
+  AFTER deployment and proves zero V1-only serving replicas; before those
+  bytes are deployed the legacy service remains
+  serving Guide (including at `v1_active`/`v1_frozen`/`building`). Once the
+  facade lands, its V1 ready result uses the prepared/ACL snapshot identity as
+  its exact authorization/evidence snapshot; a facade binary starting without
+  the binding fails readiness (`docs_not_ready`), which the canonical deploy
+  order (freeze → backfill → parity → facade deployment → rollout receipt →
+  consumer readiness → activation) prevents — no availability gap. The
+  rollout receipt remains mandatory for `consumers_ready` and activation.
+  Rollback after activation restores
+  `v1_frozen` with the guards, frozen V1 rows, ACL binding and facade
+  preserved; resuming mutable legacy V1 is a separate destructive/maintenance
+  transition, never normal rollback.
+- Guide card eligibility requires both `assistant` and `embedded-help` (ingest
+  enforces the conjunction, so every returned answer has one authorized
+  `Open in Help` action to its complete localized section); the official
+  action additionally requires `public-docs`. Missing cross-surface targets
+  render no dead link.
 - Each authorized hit is one exact
-  `AssistantDocsLocalizedEvidenceV2` from the active
-  `{ snapshotId, generation, sourceHash }`, including complete localized
-  visual/example metadata and link/provenance inputs. Guide never repairs or
+  `AssistantDocsRankedLocalizedEvidenceV2` from the active
+  `{ snapshotId, generation, sourceHash }` — the unranked
+  `AssistantDocsLocalizedEvidenceV2` base (complete persisted chunk identity
+  and localized visual/example/link/provenance metadata) wrapped with the
+  query-derived `snippet`/`score`/`matchedTerms`/`rankingSignals` — while
+  capability relation sections use the unranked base and never invent
+  score/query terms. Guide never repairs or
   enriches it from a packaged bundle. A mixed identity fails closed before any
   source/card/action projection.
 - Browser Guide evidence is a recursively strict path-free DTO. It explicitly
@@ -180,7 +238,16 @@ are outside TASK-548.
 
 ### Exact Assistant status and chat transport v2
 
-TASK-548-03-L03 owns these recursively reject-unknown server/client DTOs. Status
+One new Bun-free, browser-safe transport contract module
+`core/services/assistant/assistantTransportContracts.ts` (single writer:
+TASK-548-03-L03) owns the recursively reject-unknown server/client DTOs below
+plus their strict schemas/normalizers, the bounded Guide request-context hint
+schema, and the strict reindex request/response unions
+(`AssistantReindexRequestV2` and `AssistantReindexResultV2` with
+`prepared`/`unchanged`/`activated` wire outcomes). `assistantRoutes.ts`,
+`assistantService.ts`,
+`assistantSchemas.ts`, `assistantClient.ts` and `assistantStatusClient.ts`
+import that module; no leaf implements or forks the unions. Status
 is additive and retains every existing field; `enabled` remains the persisted/API
 compatibility alias and must equal `agentEnabled` byte-for-byte.
 
@@ -204,12 +271,33 @@ export function normalizeAssistantStatusResponseV2(value: unknown):
 
 The status service settles DB status and Agent settings independently. Provider
 resolution runs only after valid Agent settings and is independently caught.
+The two DB rows derive EXACTLY from TASK-548-01-L03's DB-owned
+`AssistantDocsDbStatusV2.guideReadiness` strict union — `{ state: "ready";
+era: "v1" | "v2"; evidenceSnapshot: AssistantDocsSnapshotIdentityV2 }` or
+`{ state: "not_ready"; reason: "legacy_acl_unbound" | "building" |
+"active_snapshot_missing" | "cutover_not_ready" }` — with the exact truth
+table: ready v1 only with the frozen/immutable V1 era (the cutover record at/
+past `v1_frozen`, never `v1_active`) AND the closed/pinned
+`legacy_acl_snapshot_id` ACL snapshot (that snapshot's identity is the
+`evidenceSnapshot`); V1 readiness is independent of the ordinal cutover state
+(`v1_frozen` through `consumers_ready` qualify identically) and a concurrent
+replacement `building` snapshot never invalidates an existing binding (the
+old binding is retained/pinned while the new cohort is assembled, so V1 stays
+ready with no gap; only the final `building → prepared` transaction rebinds);
+ready v2 only with the complete active V2
+pointer/snapshot; unbound abort/destructive-resume/pre-first-backfill fail closed as
+`legacy_acl_unbound`/`cutover_not_ready`, an INITIAL mid-flight backfill with
+no prior binding as `building` (never a replacement backfill with a retained
+binding),
+and a dangling V2 pointer as `active_snapshot_missing`. The status service
+derives `guideReady === indexReady === (guideReadiness.state === "ready")`
+exactly from the union and NEVER guesses readiness from row counts.
 The exact truth table is:
 
 | Evidence | Required projection |
 | --- | --- |
-| DB ready | `guideReady=indexReady=true`, Guide reason null |
-| DB valid but not ready | both false, `docs_not_ready` |
+| DB ready (`guideReadiness.state === "ready"`, v1 or v2) | `guideReady=indexReady=true`, Guide reason null |
+| DB valid but not ready (`guideReadiness.state === "not_ready"`, any reason) | both false, `docs_not_ready` |
 | DB read rejects/malformed | both false, `docs_status_unavailable`, safe index error/count defaults |
 | settings reject/malformed | both Agent booleans false, `agent_status_unavailable`, compatibility `enabled=false` |
 | settings valid, `enabled=false` | `enabled=agentEnabled=agentAvailable=false`, `agent_disabled` |
@@ -217,9 +305,15 @@ The exact truth table is:
 | enabled and provider ready | all three Agent booleans true, Agent reason null |
 
 No DB state may alter Agent columns and no settings/provider state may alter Guide
-columns. The strict client normalizer verifies every derived equality and rejects
+columns. `indexBuilding` projects exactly `AssistantDocsDbStatusV2.indexBuilding`
+(the DB-owned equality invariant: true iff a `buildingSnapshot` exists AND a
+pending `request_kind='cutover_backfill'` run exists — the durable start
+transaction commits both atomically); it never implies `indexReady`. The strict
+client normalizer verifies every derived equality and rejects
 unknown/reason-inconsistent data before caching; legacy cache entries without the
-v2 discriminator are discarded, not guessed. The server always emits v2 while
+v2 discriminator are discarded, not guessed. This cache is status-only process
+memory, clears on identity transition, and never stores evidence, permissions,
+transcripts, plans or responses. The server always emits v2 while
 old structural clients may continue reading the retained original fields.
 
 The chat response is a complete product-discriminated union. It preserves the
@@ -231,6 +325,9 @@ type AssistantChatCommonV2 = Readonly<{
   schema: "coderso.assistant-chat-response@v2";
   answer: string; template: DocsAnswerTemplate; detailLevel: DocsDetailLevel;
   guideMode: DocsGuideMode; confidence: number;
+  truncated: boolean; // explicit lossless transport flag: true only when the
+                      // primary body was clamped (basic oracle) or the
+                      // non-basic adapter's bounded result was clamped
   followUpOptions: readonly DocsFollowUpOption[]; retrievalBackend: "db";
 }>;
 type GuideChatResponseV2 = AssistantChatCommonV2 & Readonly<{
@@ -255,14 +352,132 @@ export function normalizeAssistantChatResponseV2(value: unknown):
 
 Server projection copies Guide sources only into `GuideSourceIdentityV1` and
 normalizes the complete union immediately before return; `assistantClient.ts`
-normalizes unknown JSON before cache/storage/render. Agent provider success may
+normalizes unknown JSON before in-memory render. Agent provider success may
 attach only separately authorized path-free `docsEvidence`; its compatibility
 `sources` is the exact empty tuple. A provider branch that produces a docs-only
 fallback is not serializable as Agent v2 and maps to bounded
 `assistant_agent_guide_handoff_required`; UI offers an explicit Ask Guide handoff
 from the already-normalized user entry. Recursive canaries reject `path`,
 `docPath`, `sourcePath`, `assetPath`, line ranges and unknown fields at every
-root/source/evidence/card/action depth before response or persistence.
+root/source/evidence/card/action depth before response or in-memory state.
+
+The chat request-mode successor is defined exactly by TASK-548-03-L03's
+transport owner: accepted request modes remain `docs-only | llm-guide |
+llm-rag`; `llm-rag` is a DEPRECATED input-only alias normalized to the canonical
+`llm-guide`; an omitted mode resolves through the VALIDATED persisted
+`defaultMode` exactly as current behavior; responses (`mode`/`requestedMode`/
+`effectiveMode`) and `AssistantStatusResponseV2.defaultMode` emit ONLY the
+canonical modes `docs-only | llm-guide`; unknown modes reject. Admin tabs always
+send an explicit canonical mode (`docs-only` for Guide, `llm-guide` for Agent).
+
+The transport module also owns the strict reindex request/response unions:
+
+```ts
+type AssistantReindexRequestV2 = Readonly<{
+  force?: boolean; // NO request discriminator; exact reject-unknown; `{}` valid
+}>;
+type AssistantReindexResultV2 =
+  | Readonly<{
+      schema: "coderso.assistant-reindex-result@v2";
+      retrievalBackend: "db";
+      outcome: "prepared";      // fence not passed: pending activation
+      changed: boolean;         // true = new prepared snapshot written;
+                                // false = reused; never derived from outcome
+      activated: false;
+      snapshotId: string; generation: number; sourceHash: string;
+      activeSnapshotId: null; // frozen V1 pointer is never a V2 identity
+      builtAt: string; buildDurationMs: number;
+      docCount: number; chunkCount: number; totalTokens: number;
+      actorId: string | null;
+    }>
+  | Readonly<{
+      schema: "coderso.assistant-reindex-result@v2";
+      retrievalBackend: "db";
+      outcome: "unchanged";     // fence passed: same-hash no-op
+      changed: false;
+      activated: true;
+      snapshotId: string; generation: number; sourceHash: string;
+      // snapshot fields ARE the active snapshot identity
+      builtAt: string; buildDurationMs: number;
+      docCount: number; chunkCount: number; totalTokens: number;
+      actorId: string | null;
+    }>
+  | Readonly<{
+      schema: "coderso.assistant-reindex-result@v2";
+      retrievalBackend: "db";
+      outcome: "activated";     // fence passed: new snapshot activated
+      changed: true;
+      activated: true;
+      snapshotId: string; generation: number; sourceHash: string;
+      // snapshot fields ARE the active snapshot identity
+      builtAt: string; buildDurationMs: number;
+      docCount: number; chunkCount: number; totalTokens: number;
+      actorId: string | null;
+    }>;
+export function normalizeAssistantReindexRequestV2(value: unknown):
+  AssistantReindexRequestV2;
+export function normalizeAssistantReindexResultV2(value: unknown):
+  AssistantReindexResultV2;
+```
+
+`AssistantReindexResultV2` is a true three-member literal union: `prepared` has
+`activated: false` and `changed` true/false plus the literal
+`activeSnapshotId: null` (the frozen V1 pointer carries no V2 identity);
+`unchanged` has `activated: true` and `changed: false`
+with the active snapshot equal to the result identity; `activated` has
+`activated: true` and `changed: true` with the active snapshot equal to the
+result identity. The one-argument normalizer is PURE: it enforces wire/
+member/cross-field invariants only and never reads the database — it checks
+each member independently and never
+derives one field from another (`changed` is never computed as
+`outcome === "activated"`): `prepared` accepts only `activated: false` with
+`changed` true or false, `unchanged` requires exactly
+`changed: false, activated: true`, `activated` requires exactly
+`changed: true, activated: true`; it additionally enforces member-specific
+`activeSnapshotId` presence (`null` on `prepared`, absent on the post-fence
+members), and rejects any mixed or contradictory
+member. The committed active-pointer closure for the post-fence members is NOT a
+normalizer check: it is verified through the ONE canonical
+`assertAssistantDocsIngestResultClosureV2` helper over the ingest result's own
+transaction-verified closure (captured under the advisory lock/commit) —
+`reindexAssistantDocs` never re-asserts pointer currency after lock release,
+never rereads the current active/prepared status, and no stale
+`assertAssistantDocsDbStatusActiveV2` /
+`assertPreparedSnapshotMatchesStatusV2` / `assertSameAssistantDocsSnapshotIdentityV2`
+helper chain exists; the undefined
+`assertAssistantDocsSnapshotProvenanceByIdV2` symbol is never referenced. The
+status endpoint remains independent (`AssistantDocsDbStatusV2` is read only by
+the status service).
+
+The request preserves wire compatibility with the live `{ force?: boolean }`
+contract (no request discriminator; `additionalProperties: false`; `{}`
+valid; `force` boolean when present). The response retains its v2 schema
+discriminator and the strict `prepared`/`unchanged`/`activated` union.
+
+A pre-fence `prepared` result is a successful bounded pending-activation wire
+outcome (HTTP 200, `activated: false`, the complete inactive snapshot verified
+through the ONE canonical `assertAssistantDocsIngestResultClosureV2` over the
+immutable ingest result — response counts/identity come from that result with
+no current active/prepared status reread — and the literal
+`activeSnapshotId: null` — the frozen V1 pointer is never a V2 identity); it is never reported as failure. It is reachable only at the post-backfill
+preactivation states (`backfill_complete`/`shadow_parity_clean`/
+`consumers_ready`, same-hash prepared reuse with `changed: false`); at
+`v1_active`/`v1_frozen` manual reindex receives the bounded internal
+`deferred_cutover_backfill` ingest result and maps it to the public
+`assistant_docs_cutover_required`/409 operator-required conflict — it never
+creates a run or snapshot, because the
+cutover backfill command is the sole preactivation producer. Post-fence `unchanged`/
+`activated` outcomes are verified by the same canonical
+`assertAssistantDocsIngestResultClosureV2` over the result's committed
+`{ era: "v2", snapshot }` closure — never a post-lock current-pointer
+assertion. The internal
+`assistant_docs_search_context_invalid` maps to public `ApiError` code
+`validation_error`/400 with bounded details (never the sentinel code), and the
+internal `assistant_docs_v2_consumer_not_ready` is retained through
+preactivation and mapped to public `assistant_index_missing`/503 + the status
+`docs_not_ready`, so public error codes and internal sentinels stay distinct;
+the internal `deferred_cutover_backfill` startup result remains non-HTTP and
+`assistant_docs_cutover_required` is never collapsed into a generic 500.
 
 ## Architecture and Data Flow
 
@@ -286,11 +501,13 @@ trusted module memory, deriving one strict selected-article map before render.
 Guide's server matches optional visuals against that immutable receipt by the
 active DB source hash, then its browser receives only the bounded strict
 path-free response—never a full DB source/visual record, corpus or path
-resolver. Neither surface copies
-non-target corpus records, provider configuration, secrets, or permission
-snapshots to `localStorage`. Server Guide caches are keyed by exact active
-snapshot identity and invalidated from the durable activation outbox; the
-closure owner updates `_docs/ADMIN_CACHE.md` and `_docs/ADMIN_CACHE_MAP.md`.
+resolver. Neither surface copies non-target corpus records, provider
+configuration, secrets, permission snapshots, transcripts, evidence, plans,
+previews or execution results to `localStorage`/`sessionStorage`. L03 purges both
+retired conversation keys without reading them. Guide retrieval is PostgreSQL-
+authoritative for each question and creates no server cache, invalidation
+outbox, scheduler, worker or `cacheBus` family; cache documentation receives no
+Guide entry.
 
 ## Sub-Tasks
 
@@ -300,7 +517,7 @@ closure owner updates `_docs/ADMIN_CACHE.md` and `_docs/ADMIN_CACHE_MAP.md`.
 |---|---|---|
 | TASK-548-03-L01 | Extract the oversized Admin route registry plus Bun-free canonical route descriptors, own the strict pre-loss raw permission-state seam in `authClient.ts`, preserve route/RBAC parity, and add canonical Help path helpers; do not expose a Help link yet | ⏳ To Do |
 | TASK-548-03-L02 | Add the Help route, safe shared renderer/search projection, Core-only path/RBAC host adapter, target-only Vite payload/receipt, and atomic footer link | ⏳ To Do |
-| TASK-548-03-L03 | Split the oversized Assistant panel, own Assistant routes/service plus the one-time server visual registry, enforce docs RBAC, implement distinct Guide/Agent products, decouple Guide from Agent, and render safe evidence cards | ⏳ To Do |
+| TASK-548-03-L03 | Split the oversized Assistant panel, own Assistant routes/service plus the one-time server visual registry, own the server-only Guide composer adapter (`guideComposerAdapter.ts` with the single callable `composeGuideNonBasicAnswerV2` mapping EVERY required `DocsChunk`/`DocsSearchHit` field byte-for-byte from complete ranked V2 evidence — stable chunk id, full `headingPath`, `heading`, `lineStart`/`lineEnd`, `content`, `normalizedText`, `tokenCount`, bounded exact `tokenCounts`, `docTitle` mapped explicitly from `record.document.title` with `docPath` as a safe internal grouping identity only (the composer's basename fallback is never reachable as user-visible text), plus the query-result `snippet`, `score`, `matchedTerms` and exact `rankingSignals` — invoking the injected unchanged composer for non-basic/helper modes, dropping path-bearing composer sources, and returning transport-safe projection inputs; pure adapter suite in `tests/vitest/assistant/guideComposerAdapter.test.ts` with sourcePath/filename-canary final-answer tests, service wiring test in the Bun `assistantService.test.ts` lane), own the Bun-free transport contract module (`assistantTransportContracts.ts` with status/chat/reindex request/response unions — the chat request-mode successor accepts `docs-only | llm-guide | llm-rag` with `llm-rag` as a deprecated input-only alias normalized to canonical `llm-guide`, omitted mode resolves the validated persisted `defaultMode`, responses emit canonical modes only and unknown modes reject — including the explicit `truncated` chat field and the three-member `AssistantReindexResultV2` literal union whose one-argument normalizer is pure — the committed active-pointer closure is verified only through the ONE canonical `assertAssistantDocsIngestResultClosureV2` after ingest, never by the normalizer or a post-lock read) and the server-side Guide search-context resolution, deploy the era-aware facade `searchAssistantDocsAuthoritativeV2` before activation through the DISPATCH/DEPLOY-GATED consumer cutover (EXACTLY `shadow_parity_clean` — never merely at/past `backfill_complete` — + one complete prepared snapshot + closed `legacy_acl_snapshot_id` binding + facade code compatible with the row's `deploymentIdentity`/`rolloutGeneration` — never a preexisting rollout receipt, which is recorded for that exact facade build AFTER deployment; before those bytes are deployed the legacy service remains serving; Guide stays available over the ACL-joined frozen V1 corpus; activation/rollback switch only the DB pointer and rollback restores `v1_frozen`), enforce docs RBAC, retire conversation browser storage, implement distinct Guide/Agent products, decouple Guide from Agent, and render safe evidence cards; the legacy HTTP docs startup producer removal is TASK-548-01-L03-owned | ⏳ To Do |
 
 **Land order:** `TASK-548-03-L01 → TASK-548-03-L02 → TASK-548-03-L03`.
 Every source/test file has one leaf writer. L02 may add a route-module file but
@@ -310,7 +527,10 @@ editing the registry. L01 alone edits `core/admin/services/authClient.ts` and
 the route context is built. L03 must not re-open L01/L02 route, auth-normalizer
 or Help contracts. TASK-548-01-L03 first lands pure ingest/retriever/
 permission-normalizer code and does not touch `assistantRoutes.ts` or
-`assistantService.ts`; this child's L03 then solely edits both orchestration
+`assistantService.ts`; the legacy startup producer removal in
+`core/server/httpServer.ts`/`docsIndexService.ts` is TASK-548-01-L03-owned (V1
+freeze gate) and is not part of this child's orchestration ownership; this
+child's L03 then solely edits both orchestration
 files and their route/service tests. No later TASK-548 leaf reopens them.
 
 ## Security Contract
@@ -505,9 +725,10 @@ unauthorized card/reference. Receipt absence/invalidity, active-source-hash
 mismatch or missing output key omits only that optional visual; malformed DB
 evidence still rejects the evidence. Portal/network failure leaves local Help usable;
 DB index, snapshot-integrity or permission-snapshot failure affects Guide only;
-an activation commits its matching source hash and durable invalidation event
-atomically, so Guide observes one complete old/new snapshot. Provider failure
-affects Agent only; stale/malformed persisted transcript is discarded.
+an activation commits its matching source hash and active pointer atomically,
+so PostgreSQL-authoritative Guide reads observe one complete old/new snapshot.
+Provider failure affects Agent only; retired persisted transcript keys are
+purged without hydration.
 
 **Regression-test shape:** route parity before/after extraction; no broken Help
 link between leaves; any-auth Help route; locale-bearing deep links and
@@ -526,21 +747,46 @@ tampered Help evidence blocks only that article, whereas authorized Guide text/
 source survives an omitted unresolved optional card.
 Target-leak fixtures prove the Vite-emitted Admin payload contains and Help
 renders only `embedded-help` and multi-target records, while Guide evidence
-comes only from `assistant`-targeted persisted rows. Browser bundle scans seed
+comes only from `assistant`+`embedded-help`-eligible persisted rows (never
+`assistant`-only or `assistant`+`public` rows). Browser bundle scans seed
 distinct non-target canaries and reject the corpus envelope, full bundle,
 `sourcePath`, `assetPath`, output filesystem/repository paths or PNG bytes in
 Admin chunks. Compile-time non-assignability and runtime exact-key fixtures
 reject full-source documents/visuals. `public-docs`-only
 records appear in neither Help nor Guide. Help-only documents omit official
-links; embedded+public documents expose them. Guide tests cover assistant-only,
-assistant+embedded, assistant+public and all-three action combinations.
+links; embedded+public documents expose them. Guide tests cover the
+assistant+embedded and all-three action combinations only — `assistant`-only
+and `assistant`+`public` records fail ingest and can never be persisted or
+retrieved.
 Guide route tests inject canonical permissions server-side, reject every client
 snapshot/permissions/roles forgery, fail before query on missing/malformed/
 unknown/duplicate/mixed-wildcard state, and prove protected title/snippet/source/
-visual/example identities never leak. Per-query spies reject every packaged
+visual/example identities never leak. Search-context tests prove the route
+accepts only bounded advisory `context.page`/`context.locale` hints, resolves
+locale/productVersion/route/capability context server-side, rejects
+browser-supplied versions/capabilities/routes/permissions, and pins the exact
+locale/version predicates plus capability-context rerank determinism.
+Per-query spies reject every packaged
 loader/projection/Markdown/filesystem call; old/new snapshot race tests require
-one exact `{ snapshotId, generation, sourceHash }` per answer and exercise
-durable cache invalidation retry. Help tests independently prove its L02
+one exact `{ snapshotId, generation, sourceHash }` per answer. Statement-count
+fixtures count ONLY application data SQL statements issued through the
+transaction handle (BEGIN/COMMIT/ROLLBACK, `SET` and protocol commands never
+count) and pin the successful-path 0/2/3
+  statements through the era-aware facade on BOTH branches (empty-query 0;
+  plain 2; enriched-with-selected-hits 3 — an enriched zero-hit request stays
+  at 2 and never issues an empty relation query; the direct V2 retriever's
+  `requiredEra` mismatch is the controlled exactly-1 case: statement 1
+  executes and fails closed with the internal sentinel, no evidence statement
+  runs; statement 1 is the
+  era-resolving candidate statement
+  that returns the authoritative era/pointer/ACL inside its own result with no
+  separate preflight read,
+  statement 2 loads selected authorized evidence from exactly that era, and
+  optional statement 3 loads authorized relations; before activation/after
+  rollback statement 1 joins the ACL snapshot named by the pointer's
+  `legacy_acl_snapshot_id` (that ACL snapshot's identity is the ready result's
+  exact authorization/evidence snapshot), when the pointer era is `v2` it joins the active V2
+  snapshot; one backend per question, never both), and zero Guide cache/outbox/event path. Reindex tests pin the strict `AssistantReindexRequestV2` (no request discriminator, `{}` valid)/three-member `AssistantReindexResultV2` literal union wire contracts (pre-fence `prepared` with `activated: false`, `changed` true/false and the literal `activeSnapshotId: null`; post-fence `unchanged` with `activated: true`/`changed: false` and `activated` with `activated: true`/`changed: true`, active snapshot equal to the result; the pure one-argument normalizer checks each member independently — never `changed === (outcome === "activated")` — while the committed active-pointer closure is verified only through the ONE canonical `assertAssistantDocsIngestResultClosureV2` after ingest), pre-fence `prepared` (HTTP 200, verified complete inactive snapshot, frozen V1 pointer, never failure; manual reindex at `v1_active`/`v1_frozen` instead receives the bounded `deferred_cutover_backfill` ingest result and maps it to the public `assistant_docs_cutover_required`/409 conflict — it never creates a run or snapshot), post-fence `unchanged`/`activated` verified by the same canonical closure helper (never a post-lock current-pointer assertion), the explicit `truncated` chat-transport flag round-trips losslessly, the timeout-owned signal only, and the internal `assistant_docs_search_context_invalid` mapped to public `validation_error`/400 with bounded details while `assistant_docs_v2_consumer_not_ready` maps to `assistant_index_missing`/503 + `docs_not_ready`. Help tests independently prove its L02
 build-time packaged projection/assets still work with the Guide DB unavailable.
 Projection tests pin relative-link collision, traversal, locale, fragment,
 target and no-path behavior. Receipt tests pin canonical vectors, tamper/order/
@@ -569,6 +815,7 @@ bunx vitest run --config vitest.config.ts \
   tests/vitest/ui/assistant-tab-handoff.test.tsx \
   tests/vitest/ui/assistant-conversation-state.test.ts \
   tests/vitest/assistant/docsPermissionSnapshot.test.ts \
+  tests/vitest/assistant/guideBasicAnswerContract.test.ts \
   tests/vitest/assistant/docsAnswerComposer.test.ts
 
 bun test tests/unit/documentation/helpBuildAssetVerification.test.ts \
@@ -587,30 +834,56 @@ bun run check:admin-bundle
 git diff --check
 ```
 
-After restarting the task-owned server and checking Admin/front health, run
-these six distinct real flows with exact task-scoped `playwright-cli` sessions:
+Do not create a TASK-548-03 server/Playwright lifecycle or six independent
+smoke sessions. Hand these six visible subflows to TASK-548-07-L01, which
+executes them inside the statically registered shared `task-548` adapter and
+maps them onto its exact eight report IDs:
 
-1. `-s=wf548help-wide-light` — Help search/article/TOC and bounded visual in
+1. Help wide/light — Help search/article/TOC and bounded visual in
    wide light mode.
-2. `-s=wf548help-narrow-dark` — narrow dark navigation, focus restoration and
+2. Help narrow/dark — narrow dark navigation, focus restoration and
    geometry/no-overflow proof.
-3. `-s=wf548guide-agent-off` — grounded Guide answer/card with Agent/provider
+3. Guide/Agent-off — grounded Guide answer/card with Agent/provider
    disabled and isolated Agent unavailable state.
-4. `-s=wf548tabs-handoff` — separate histories and explicit redacted
+4. Tabs handoff — separate histories and explicit redacted
    Guide→Agent prefill that is not auto-sent.
-5. `-s=wf548help-permissions` — null, partial/full `allOf` and valid `anyOf`
+5. Help permissions — null, partial/full `allOf` and valid `anyOf`
    with visible/disabled `Open in CMS` DOM state.
-6. `-s=wf548help-a11y-motion` — keyboard landmarks/focus/Escape restoration
+6. Help a11y/motion — keyboard landmarks/focus/Escape restoration
    under reduced motion.
 
-Every flow asserts a visible effect through computed style, geometry, DOM or
-`aria-*` state, covers responsive light/dark behavior across the matrix,
-collects zero console/page errors, performs scoped cleanup and saves a unique
-review screenshot through the TASK-548 workflow-evidence owner.
+Every flow's handoff specifies computed style, geometry, DOM or `aria-*`
+visible effects and the responsive light/dark matrix. The shared adapter owns
+server restart/health, common helpers/workers, browser transport, zero
+console/page-error observation, screenshots, checkpoints, and scoped cleanup
+according to `docs/develop/runtime-smoke-cookbook.md`; this child adds no
+task-local wrapper/helper/worker/Playwright/DB/report loop.
 
-Re-run every named failure alone before classifying it. Run a physical
-line-count check across every touched human-authored production and test file;
-no result may exceed 1,000.
+Re-run every named failure alone before classifying it. Run the canonical
+NUL-safe line-count gate over every added/modified production and test file in
+this child's write set (identical contract in every TASK-548 task file; a file
+above 1,000 makes the gate fail with `exit 1`, including a non-newline final
+line):
+
+```bash
+# Canonical NUL-safe line-count gate over the leaf write set (identical
+# contract in every TASK-548 task file; a file above 1,000 makes the gate fail
+# with exit 1, including a non-newline final line). The verified pre-family
+# baseline is the pinned commit 963733cae23456622bea1eef1b734723aaab2350;
+# commits/staging cannot narrow the measured scope.
+TASK_FAMILY_BASELINE_SHA="963733cae23456622bea1eef1b734723aaab2350"
+git cat-file -e "${TASK_FAMILY_BASELINE_SHA}^{commit}" || { echo "invalid/missing baseline commit ${TASK_FAMILY_BASELINE_SHA}" >&2; exit 1; }
+failed=0
+while IFS= read -r -d '' f; do
+  lines=$(awk 'END { print NR }' "$f")
+  if [ "$lines" -gt 1000 ]; then
+    printf 'OVER-LIMIT %s %s\n' "$lines" "$f"
+    failed=1
+  fi
+done < <({ git diff --name-only -z --diff-filter=ACMRT "$TASK_FAMILY_BASELINE_SHA" -- core packages scripts tests _docs/_workflows; git ls-files --others --exclude-standard -z -- core packages scripts tests _docs/_workflows; } | grep -zE '\.(ts|tsx|mjs|cjs|js|jsx|mts|cts)$' | grep -zvE '\.generated\.(ts|tsx|js|jsx|cjs|mjs|mts|cts)$' | sort -zu)
+exit "$failed"
+```
+Intermediate commits never narrow the baseline.
 
 ## Acceptance Criteria
 
@@ -623,8 +896,15 @@ no result may exceed 1,000.
   prefetch, permission guard, settings context, SSR behavior, and 404 outcome.
 - The floating panel exposes distinct Guide and Agent tabs with separate state;
   it does not restore the TASK-182 mode selector.
+- Conversation content is memory-only; both retired localStorage keys are
+  deleted without hydration and no Guide evidence or Agent plan/result is
+  browser-persisted.
 - Guide remains DB-backed and usable when Agent/global AI is disabled. Agent
   remains provider-backed and review-first.
+- Guide's default response is concise and links to the complete internal
+  section. One atomic-control question and one composed-workflow question prove
+  bidirectional related evidence without duplicated prose or cross-locale/
+  permission leakage.
 - Visual/example cards are resolved by stable ids from the exact installed
   distribution and rendered without raw HTML or arbitrary URLs.
 - Invalid visual/example integrity blocks only the affected Help article;

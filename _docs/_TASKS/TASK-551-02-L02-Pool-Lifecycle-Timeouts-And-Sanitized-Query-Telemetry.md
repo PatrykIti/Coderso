@@ -194,6 +194,17 @@ export async function withDedicatedDatabaseSession<T>(
   }
 }
 
+export type DedicatedAdvisoryLockInput<T> = Readonly<{
+  key: bigint;
+  signal: AbortSignal;
+  conflictCode: string;
+  run: (session: DedicatedDatabaseSession) => Promise<T>;
+}>;
+
+export async function withDedicatedDatabaseAdvisoryLock<T>(
+  input: DedicatedAdvisoryLockInput<T>
+): Promise<T>;
+
 async function closeAllDatabaseClientsWithinAbsoluteDeadline(
   absoluteDeadline: number,
 ): Promise<void> {
@@ -386,6 +397,33 @@ Session loss rejects the active operation as
 `dedicated_database_session_lost`, publishes no result, and never returns a
 still-active lease to the pool.
 
+`withDedicatedDatabaseAdvisoryLock` is the sole public owner for a consumer that
+must hold a PostgreSQL session advisory lock across multiple transactions and
+non-DB work. It first awaits the same lifecycle-scoped affinity proof, reserves
+one maintenance session, executes one static parameterized
+`pg_try_advisory_lock(key)`, and throws the caller's bounded `conflictCode`
+without invoking `run` when false. It invokes `run` at most once with that same
+session. In `finally`, it cancels/rolls back active work and executes one static
+`pg_advisory_unlock(key)` on the same backend. Exact true permits normal release;
+false, error, abort, session loss, or ambiguous result uses the owner's private
+reserved-handle termination path, awaits backend disappearance, and never
+returns that connection to a pool. Consumer code receives no raw reserved
+handle, release, discard, terminate, or unlock primitive.
+
+The helper obeys the terminal maintenance-mode matrix. `off + primary` requires
+`DB_POOL_MAX >= 2` and the live affinity proof; `transaction + primary` is
+unavailable. A `direct|session` maintenance mode uses its separately budgeted
+URL/pool. A consumer that enables session-lock work under an incapable
+configuration receives `database_maintenance_session_unavailable` before its
+callback and must map that bounded code at its own boundary; no process mutex,
+ordinary pooled query, or silent extra client is a fallback. The exact
+`assertDedicatedDatabaseSessionBudget` helper additionally validates a
+consumer's requested `lockOwners + workSessions + ordinaryHeadroom` budget
+against the live mode and pool (for example the TASK-548 Guide ingest budget of
+two dedicated sessions plus one ordinary-query headroom slot requires
+`DB_POOL_MAX >= 3` under `off + primary`), so a session-affine consumer can
+never starve ordinary primary queries or exceed the budgeted maintenance pool.
+
 Do not issue a one-off `SET` query: it would configure only one checked-out
 session and leave the rest of the pool unbounded. The fixed-name startup
 parameters above apply to every initial and replacement physical connection.
@@ -397,8 +435,14 @@ configured capacity is at least 2. It never calls the affinity seam.
 `closeRuntimeLifecycle` are the only registry API. The separate
 `client.ts` exports `DedicatedDatabaseSession`,
 `assertMaintenanceSessionAffinity()`, and
-`withDedicatedDatabaseSession<T>(run)` as the only supported maintenance-
-connection boundary and is consumed by TASK-551-06-L03 for advisory-lock work.
+`withDedicatedDatabaseSession<T>(run)` plus
+`withDedicatedDatabaseAdvisoryLock<T>(input)` and the exact public
+`assertDedicatedDatabaseSessionBudget(input)` helper as the only supported
+maintenance-connection boundaries. TASK-551-06-L03 consumes the session
+wrapper; terminal
+TASK-548-01-L03 consumes BOTH `withDedicatedDatabaseAdvisoryLock` and
+`withDedicatedDatabaseSession`, plus `assertDedicatedDatabaseSessionBudget`,
+without transferring source ownership of any of them.
 The registry rejects
 duplicate IDs/late registration, starts database → cache → worker exactly once,
 rolls back already-started participants on failure, closes in reverse phase and

@@ -1,94 +1,103 @@
-# TASK-489-02: Dry-Run / Apply & Rollback Controls (privileged)
+# TASK-489-02: Strict Internal API and Identity-Safe Browser State
 # FileName: TASK-489-02-Dry-Run-Apply-And-Rollback-Controls.md
 
 **Parent Task:** TASK-489
-**Priority:** Medium
-**Category:** Solution Kits / Admin UI / Privileged Action
-**Estimated Effort:** Medium
-**Dependencies:** TASK-489-01 (history + detail surface, shared `runsState`). Consumes `useSolutionKitRuns` `apply` / `rollback` / `isMutating` / `mutationError` / `lastResult` / `latestApplyRunId` and the write routes `POST /solution-kits/:id/apply` + `POST /solution-kits/:id/rollback`.
+**Priority:** High
+**Category:** Solution Kits / Internal API / Admin Cache / Security
+**Estimated Effort:** Large
+**Dependencies:** All TASK-489 parent-level start gates; TASK-489-01; TASK-547 done; complete terminal TASK-551 and terminal TASK-414-03-L03 receipts
 **Status:** ⏳ To Do
-**Started:** `<YYYY-MM-DD>`
-**Completed:** `<YYYY-MM-DD>`
+**Changelog:** 1268 (pinned; closure only)
 
 ---
 
 ## Overview
 
-Add the **write** controls to the Solution Kits page, gated on
-`solution-kits:write`. Two surfaces:
-
-1. **Dry-run / Apply** (L01) — preview-then-execute an install for the active kit,
-   surfacing the resulting run (the hook auto-selects the new `run.id`, so the L01
-   history list + L02 detail update automatically).
-2. **Rollback** (L02) — the safety-critical action. It reverts a prior successful
-   apply run. It MUST be `solution-kits:write`-gated, behind an explicit confirm
-   step, and scoped to a chosen source run (defaulting to `latestApplyRunId`).
-
-Both controls call the hook's existing `apply` / `rollback` (which already prime
-caches, refresh runs, and follow the new run id). This subtask owns the
-**affordances + gating + confirm UX only** — it must not re-implement the
-mutation/caching logic in the hook or the client.
-
-> **Reconciliation:** the existing `tests/vitest/ui/solution-kits-page.test.tsx`
-> asserts the page does **not** contain the legacy wizard labels "Apply kit",
-> "Dry run", "Rerun", "Rollback latest". Choose labels for the new controls that do
-> not collide with the legacy wizard semantics (e.g. "Run install (dry run)",
-> "Install kit", "Roll back this install"), and update that test in
-> TASK-489-03-L02 so its assertions target the removed *legacy wizard*
-> specifically, not these new install-history controls.
-
----
-
-## Security Contract (subtask summary)
-
-Per-leaf contracts are authoritative.
-
-- **Endpoint visibility:** `internal` — `POST /admin/api/solution-kits/:id/apply`,
-  `POST /admin/api/solution-kits/:id/rollback`. No new/public surface.
-- **Auth model:** session (admin) via the shared `apiClient`.
-- **RBAC:** both writes require `solution-kits:write` (route-enforced). The UI
-  gates the controls client-side via `useAdminAuth().can("solution-kits:write")`
-  (defence-in-depth: hide/disable when absent). The route is the boundary.
-- **CSRF:** carried by `applySolutionKit` / `rollbackSolutionKit`
-  (`withCsrf: true`). No raw `fetch`.
-- **Rate-limit bucket:** `admin` (route-enforced).
-- **Validation:** server-owned `solutionKitApplyRequestSchema` /
-  `solutionKitRollbackRequestSchema` (strict). The UI sends only
-  `{ dryRun?, continueOnError? }` (apply) and `{ sourceRunId?, continueOnError? }`
-  (rollback).
-- **Rollback safety:** privileged + confirm-gated + source-scoped (see L02).
-- **Secret/PII handling:** results carry CMS resource snapshots, not secrets;
-  nothing extra is logged/cached beyond the hook-owned caches.
-
----
+Expose the safe service through strict prefixless internal routes, then consume
+those DTOs through the terminal TASK-551 Admin cache authority and a race-safe
+history/detail hook. This child does not add apply, dry-run, rerun, latest
+rollback, public access, or API-key access. Its route leaf also repairs the
+existing Setup apply boundary so service-owned atomic completion cannot be
+followed by a duplicate route audit that makes committed success look failed.
 
 ## Sub-Tasks
 
-| ID | File | Title | Status |
-|----|------|-------|--------|
-| TASK-489-02-L01 | `TASK-489-02-L01-Dry-Run-And-Apply-Controls.md` | Dry-run + apply controls (gated, result surfacing) | ⏳ To Do |
-| TASK-489-02-L02 | `TASK-489-02-L02-Rollback-Control-With-Confirm.md` | Rollback control (privileged, confirm step, source-scoped) | ⏳ To Do |
+| Order | ID | File | Status |
+|---:|---|---|---|
+| 3 | TASK-489-02-L01 | `TASK-489-02-L01-Dry-Run-And-Apply-Controls.md` | ⏳ To Do |
+| 4 | TASK-489-02-L02 | `TASK-489-02-L02-Rollback-Control-With-Confirm.md` | ⏳ To Do |
 
----
+## Route Contract
 
-## Dependencies
+- Prefixless registration only: `GET /solution-kits/runs`,
+  `GET /solution-kits/runs/:runId`, and
+  `POST /solution-kits/runs/:runId/rollback`.
+- The shared Admin router supplies `/admin/api`; no route literal duplicates it.
+- GET normalized query is strict reject-unknown. Rollback requires an actual
+  `application/json` body exactly `{}` and source identity comes only from the
+  path. The obsolete kit-key/latest rollback route is removed.
+- Terminal TASK-414 wire syntax/cap runs before session/RBAC/rate/CSRF/content
+  selection/parse, with the descriptor's exact safe `parseErrorCode`; this child
+  never reconstructs that transport order.
+- Read RBAC is `solution-kits:read`; rollback is require-all
+  `solution-kits:write` plus `settings:write`.
+- Rollback success/failed return HTTP 200; a durable claimed owner whose terminal
+  state cannot be proven returns strict HTTP 202 `recovery_required` with
+  `summary:null`. All use validated no-store responses.
+- The same route leaf is the sole TASK-489 writer of `setupRoutes.ts`. It removes
+  the route-owned `setup.starter_content.applied` audit and maps every Setup
+  recovery/conflict code named by L01/L02 to fixed safe responses. A resolved
+  `applyStarterContent` result is returned directly with no throwing post-service
+  audit/cache work.
 
-- TASK-489-01 (shared `runsState` from the single `useSolutionKitRuns` call).
-- `useAdminAuth` (`core/admin/ui/contexts/AdminAuthContext.tsx`) → `can(permission)`.
-- Existing confirm-dialog primitive in `@/components/ui/*` (e.g. `AlertDialog`) or
-  the project's standard confirm pattern — verify the available primitive before
-  building (L02 specifies the exact component to use after confirming it exists).
+## Browser Contract
 
----
+- Cache keys include the canonical package-scope/cursor page or exact run ID and can
+  contain only validated safe DTOs.
+- All installation, hydration, and in-flight completion behavior consumes the
+  terminal TASK-551-09-L04 authority/token/reset seam.
+- Auth/deployment/permission transition makes prior values inaccessible,
+  cancels installation of stale completions, and clears route-local selection.
+- Rollback invalidates every global history page, every page for the returned
+  authoritative source package, and the exact source/new rollback detail keys
+  after `success`, `failed`, or claimed-owner `recovery_required`. The first two
+  return HTTP 200 with terminal summaries; recovery returns HTTP 202 with the
+  durable rollback run ID and `summary:null`. Cursor expiry/key-rotation maps to
+  one safe code and causes at most one guarded page-one reset with a persistent
+  non-destructive notice. Cache failure never changes an authoritative result into
+  an API failure.
+- Terminal failed means locked zero-net/full compensation: refresh keeps the
+  source active and may re-enable a new exact retry with a new rollback owner.
+  Recovery means partial/unresolved or uncertain state: it retains the same
+  running owner and duplicate mutation stays disabled.
+
+## Security Contract
+
+- **Visibility:** internal session-only Admin routes.
+- **RBAC:** reads `solution-kits:read`; rollback require-all both writes.
+- **CSRF/rate limit:** rollback CSRF plus `admin_write`; GET uses `admin_read`.
+- **Validation:** strict normalized query, terminal signed cursor, canonical UUID,
+  exact JSON empty body, safe DTOs.
+- **Anti-abuse:** keyset limits and exact-source write; no public/API-key mode.
+- **Data:** TASK-489 history/detail/rollback cache and UI state persist no actor/
+  options/snapshots/rollback payload/raw error. Retained apply response contracts
+  outside these surfaces are not reclassified by this child.
 
 ## Testing Requirements
 
-- `bun --cwd core lint`
-- `bun --cwd core lint:types`
-- Vitest ui-integration (authored in TASK-489-03-L01):
-  controls hidden/disabled without `solution-kits:write`; apply calls
-  `apply({ dryRun })`; rollback requires confirm before calling
-  `rollback(sourceRunId)`; `mutationError` and `isMutating` (busy) states render.
-- `tests/vitest/admin/solutionKitsClient.test.ts` and the route suite
-  `tests/integration/routes/solutionKitsRoutes.test.ts` stay green (not extended).
-</content>
+Each leaf runs its route/client/hook suites, full lint/types, touched-file line
+counts, and `git diff --check`. L02 lands only after L01 is green.
+
+## Documentation Updates Required
+
+TASK-489-03-L02 owns final API, security, Admin cache-map, Solution Kits,
+changelog, board, and closure documentation. This child hands off its route
+matrix, response schemas, cache keys, identity reset, race, and invalidation
+contracts.
+
+## Forbidden Paths
+
+Domain read/dispatcher sources owned by TASK-489-01, UI composition,
+runtime-smoke, docs/changelog/board, DB schema/migrations, TASK-551 cache
+authority/retention owners, apply/dry-run paths, public router, and
+TASK-555/TASK-556.

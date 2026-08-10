@@ -36,6 +36,27 @@ None; this is an executable leaf.
 and migration files from L01/TASK-551-05, DB schema, assistant action/execution paths,
 TASK-493/TASK-511/TASK-517/TASK-518 paths, cache, task/changelog/workflow files.
 
+After terminal TASK-551, TASK-548-01-L03 is the one serialized successor writer
+of `docsDbRetriever.ts` and `assistantDocsCandidateQuery.ts`. It preserves this
+leaf's exact one-CTE tsquery contract, candidate
+limits, reranker fields, ordering, quality fixtures and query-plan budgets while
+adding V2 snapshot/SQL authorization predicates plus exactly ONE combined
+evidence-bearing V2 chunk generated vector/index: the SQL is exactly the
+imported TASK-551 legacy `assistantDocChunks` heading/content EXPRESSION plus
+the single additive evidence weight term, and the unused separate legacy-chunk
+V2 column/index is removed from this handoff. V2 retrieval runs only
+against the separate cohesive V2 table set that imports the exact
+document vector EXPRESSION and that single combined chunk vector; no V2 column
+or vector is ever added
+to the V1 tables. Its era-aware facade
+(`searchAssistantDocsAuthoritativeV2`) must also preserve the
+same one-input CTE, indexed candidate bound and Bun reranker contract in its
+pre-activation V1 branch (one bounded ACL-joined statement, authorization
+before projection/LIMIT) and its V2 branch — exactly one backend per question,
+never both; it cannot
+replace or silently respell TASK-551's expressions. TASK-551 does not reopen
+after that handoff and the two leaves cannot run concurrently.
+
 ## Implementation Pseudocode
 
 ```ts
@@ -127,6 +148,30 @@ never through an impossible cross-table chunk generated column.
 - `bun --cwd core lint:types`
 - `bun --cwd core lint`
 - `bun run gates:coderso:perf`
+- `git diff --check`
+- canonical baseline+untracked NUL-safe line-count gate over the leaf write
+  set (a file above 1,000 makes the gate fail with `exit 1`, including a
+  non-newline final line):
+
+  ```bash
+  # The pinned pre-family baseline spans intermediate commits and staging;
+  # neither can narrow this production/test/workflow inventory.
+  TASK_FAMILY_BASELINE_SHA="963733cae23456622bea1eef1b734723aaab2350"
+  git cat-file -e "${TASK_FAMILY_BASELINE_SHA}^{commit}" || { echo "invalid/missing baseline commit ${TASK_FAMILY_BASELINE_SHA}" >&2; exit 1; }
+  failed=0
+  while IFS= read -r -d '' f; do
+    lines=$(awk 'END { print NR }' "$f")
+    if [ "$lines" -gt 1000 ]; then
+      printf 'OVER-LIMIT %s %s\n' "$lines" "$f"
+      failed=1
+    fi
+  done < <({ git diff --name-only -z --diff-filter=ACMRT "$TASK_FAMILY_BASELINE_SHA" -- core packages scripts tests _docs/_workflows; git ls-files --others --exclude-standard -z -- core packages scripts tests _docs/_workflows; } | grep -zE '\.(ts|tsx|mjs|cjs|js|jsx|mts|cts)$' | grep -zvE '\.generated\.(ts|js|mjs|mts|cts)$' | sort -zu)
+  exit "$failed"
+  ```
+
+  Every touched human-authored production/test module is at most 1,000
+  physical lines; the baseline is the verified pre-task tree and intermediate
+  commits never narrow it.
 
 ## Documentation Updates Required
 

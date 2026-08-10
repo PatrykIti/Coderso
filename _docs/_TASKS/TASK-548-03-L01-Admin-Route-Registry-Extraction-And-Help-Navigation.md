@@ -30,15 +30,20 @@ This leaf is the only writer for:
 
 - `core/admin/app/AdminApp.tsx`;
 - new Bun-free `core/admin/app/adminRouteDescriptorContract.ts`;
+- new Bun-free `core/admin/app/adminControlDescriptorContract.ts`;
 - new `core/admin/app/adminRouteRegistry.tsx`;
 - new Bun-free
   `core/admin/app/routes/core.admin-route-descriptor.ts`;
+- new Bun-free
+  `core/admin/app/routes/core.admin-control-descriptor.ts`;
 - new `core/admin/app/routes/core.admin-route.tsx`;
 - `core/admin/services/authClient.ts`;
 - `core/admin/utils/adminPaths.ts`;
 - new `tests/vitest/admin/admin-route-registry.test.tsx`;
 - new exact
   `tests/vitest/admin/fixtures/core-admin-route-descriptors-v1.golden.json`;
+- new exact
+  `tests/vitest/admin/fixtures/core-admin-control-descriptors-v1.golden.json`;
 - the route-extraction assertions in `tests/vitest/admin/adminApp.test.tsx`;
 - strict raw permission-state assertions in
   `tests/vitest/admin/authClient.test.ts`;
@@ -86,6 +91,40 @@ TSX, Vite, DB or runtime adapter. L02 owns the named
 `HELP_ADMIN_ROUTE_DESCRIPTORS_V1` export at the paired pure path. TASK-548-06
 explicitly imports those pure constants and the generic owner normalizer; this
 leaf invents no aggregate coverage helper or parallel list.
+
+`core/admin/app/adminControlDescriptorContract.ts` separately owns the atomic
+control identity required by the composition compiler:
+
+```ts
+type AdminControlDescriptorV1 = {
+  schema: "coderso.admin-control-descriptor@v1";
+  controlId: DocsAtomicControlIdV1;
+  routeId: string;
+  controlIdInRoute: string;
+  productAreaCapabilityId: DocsCapabilityIdV1;
+  permissionRequirement: DocsPermissionRequirementV1 | null;
+  featureSourceId: string;
+};
+export function normalizeAdminControlDescriptorsV1(
+  value: unknown,
+): readonly AdminControlDescriptorV1[];
+```
+
+The complete current core control snapshot is the named
+`CORE_ADMIN_CONTROL_DESCRIPTORS_V1` export from
+`core.admin-control-descriptor.ts`, with exact bytes frozen in the matching
+golden fixture. Each stable `docs.control.*` ID joins one existing core route,
+one route-local stable control key, one area ID, one native feature source, and
+the exact control permission. It contains no label/prose/component/selector
+inference. The implementation freeze enumerates every user-operable route-level
+control plus the exact page/widget editor controls projected from
+`core/services/pages/pageEditorControlRegistry.ts#pageBlockControlRegistry`;
+each descriptor names a concrete owning test. New/removed descriptor modules,
+route-local control keys, registry controls, duplicates, or orphan route/
+feature IDs fail the golden/inventory gate. The ALREADY-LANDED exact compiler CLI consumes this exact
+pure export during its final-native-corpus-generated-bundle-handback-gate (a
+generated-artifact-only invocation, no agent writer); TASK-548-06 only
+validates the catalog already inside the bundle.
 
 Current `permission` becomes one-entry `allOf`; `anyPermissions` becomes
 `anyOf`; neither becomes null. Null means no extra catalog permission, while
@@ -456,21 +495,34 @@ bunx vitest run --config vitest.config.ts \
 bun --cwd core lint:types
 bun --cwd core lint
 bun run check:admin-boundary
-wc -l core/admin/app/AdminApp.tsx \
-  core/admin/app/adminRouteDescriptorContract.ts \
-  core/admin/app/adminRouteRegistry.tsx \
-  core/admin/app/routes/core.admin-route-descriptor.ts \
-  core/admin/app/routes/core.admin-route.tsx \
-  core/admin/services/authClient.ts \
-  tests/vitest/admin/admin-route-registry.test.tsx \
-  tests/vitest/admin/adminApp.test.tsx \
-  tests/vitest/admin/authClient.test.ts \
-  tests/vitest/admin/adminPaths.test.ts
 git diff --check
 ```
 
-Every count must be at most 1,000. Re-run a named failing test alone before
-classifying it.
+- the canonical NUL-safe line-count gate over the leaf write set (identical
+  contract in every TASK-548 task file; a file above 1,000 makes the gate fail
+  with `exit 1`, including a non-newline final line; the baseline spans the
+  full task/family dirty scope and commits/staging do not narrow it):
+
+  ```bash
+  # Canonical NUL-safe line-count gate over the leaf write set (identical
+  # contract in every TASK-548 task file; a file above 1,000 makes the gate fail
+  # with exit 1, including a non-newline final line). The verified pre-family
+  # baseline is the pinned commit 963733cae23456622bea1eef1b734723aaab2350;
+  # commits/staging cannot narrow the measured scope.
+  TASK_FAMILY_BASELINE_SHA="963733cae23456622bea1eef1b734723aaab2350"
+  git cat-file -e "${TASK_FAMILY_BASELINE_SHA}^{commit}" || { echo "invalid/missing baseline commit ${TASK_FAMILY_BASELINE_SHA}" >&2; exit 1; }
+  failed=0
+  while IFS= read -r -d '' f; do
+    lines=$(awk 'END { print NR }' "$f")
+    if [ "$lines" -gt 1000 ]; then
+      printf 'OVER-LIMIT %s %s\n' "$lines" "$f"
+      failed=1
+    fi
+  done < <({ git diff --name-only -z --diff-filter=ACMRT "$TASK_FAMILY_BASELINE_SHA" -- core packages scripts tests _docs/_workflows; git ls-files --others --exclude-standard -z -- core packages scripts tests _docs/_workflows; } | grep -zE '\.(ts|tsx|mjs|cjs|js|jsx|mts|cts)$' | grep -zvE '\.generated\.(ts|tsx|js|jsx|cjs|mjs|mts|cts)$' | sort -zu)
+  exit "$failed"
+  ```
+
+Re-run a named failing test alone before classifying it.
 
 ## Acceptance Criteria
 

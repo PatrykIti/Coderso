@@ -5,8 +5,17 @@
 **Priority:** Critical
 **Category:** Documentation Platform / CI / Visual Regression
 **Estimated Effort:** Large
-**Dependencies:** TASK-548-02-L02 and the one same-owner TASK-548-01-L02
-post-pilot bundle/report refresh and complete compiler gate
+**Dependencies:** TASK-548-02-L01 (whose staleness/diff contracts this leaf
+imports); TASK-548-02-L02 (sole owner of ALL dependency-bearing toolchain
+bytes — root/core package manifests, root bun.lock, Dockerfile, all three
+documentation workspace manifests, root docs scripts, exact root devDependency
+pins `@playwright/cli: 0.1.18`/`pixelmatch: 7.2.0`, the one lock-producing
+`bun install --lockfile-only` reconciliation plus the separate
+`bun install --frozen-lockfile` verification, repo-local-only dispatcher
+resolver and Chromium install/verify — landing and gating terminally before
+its pilots); plus the one post-pilot-generated-bundle-refresh-gate (see the
+post-pilot generated-bundle sequencing in the body). This leaf consumes the
+toolchain bytes READ-ONLY.
 **Status:** ⏳ To Do
 **Changelog:** 1261 (pinned; closure only)
 
@@ -15,21 +24,38 @@ post-pilot bundle/report refresh and complete compiler gate
 ## Overview
 
 Make visuals self-invalidating when scenarios/UI change. Add watch hashing, selection,
-deterministic diff, bounded reports and PR/full gates. Own docs check/recovery
-CLIs; focused diff/staleness/recovery and three
+deterministic diff, bounded reports and PR/full gates. Own the docs check/recovery
+CLIs and the focused diff/staleness/recovery/CI implementation: the three
 `scripts/docs/visual/ci/{docsVisualCiArtifactsV1,docsVisualCiOwnershipV1,runDocsVisualCiDiffReportAndAwaitedUploadsV1}.ts`
-modules; root/core packages, lock, Dockerfile, both docs workspace manifests,
-the PR workflow and focused tests. No other TASK-548 leaf edits those shared
-files/manifests.
+modules, the PR workflow and focused tests. No other TASK-548 leaf
+edits those files. TASK-548-02-L02 owns root/core packages, root bun.lock,
+Dockerfile, all three documentation workspace manifests, root docs scripts and
+the exact `@playwright/cli`/diff pins; this leaf consumes those bytes
+read-only and never rewrites a manifest, lock, Dockerfile, script or pin.
 
-Pin `@playwright/cli` and reviewed PNG-diff dependencies; no unpinned global
-install. Expose seven exact commands without changing test/precommit meanings.
+TASK-548-02-L03 is one normal POST-PILOT leaf: it lands only after L02
+promotes all five pilots and the post-pilot-generated-bundle-refresh-gate
+passes. L02's toolchain bytes (including the exact `@playwright/cli` and diff
+pins) are already landed and gated; this leaf verifies them read-only where it
+consumes them (the pinned dispatch executable
+`./node_modules/.bin/playwright-cli` and the exact install
+`./node_modules/.bin/playwright install --with-deps chromium`, with
+package/Playwright/Chromium version verification) and never re-reconciles the
+lock or reinstalls the browser.
 
-Implementation begins only after L02 promotes all five pilots and the TASK-548-01-L02 owner completes the one post-pilot
-bundle/report refresh. This leaf never writes that bundle/report and never
+The exact `@playwright/cli` package is pinned by TASK-548-02-L02 in its
+root
+`package.json`/`bun.lock` manifest contract (exact-version pinned with NO
+global install and NO `npx`-latest fallback; that manifest/lock contract is the
+sole pin authority) together with the reviewed PNG-diff dependencies. The
+seven exact root docs commands are L02-owned; this leaf consumes them.
+
+The implementation begins only after L02 promotes all five
+pilots and the post-pilot-generated-bundle-refresh-gate passes. This leaf never writes that bundle/report and never
 requests a per-scenario refresh.
 The ignored report is not a PR, clean-checkout, Docker, runtime, portal, release,
-or read-only check prerequisite. `docs:check` invokes L02's compiler; its byte
+or read-only check prerequisite. `docs:check` invokes TASK-548-01-L02's
+already-landed compiler; its byte
 path calls the same zero-input atomic loader once, then compares normalized
 packaged/recomputed bytes/hash with no separate workspace guard/read. Report-only
 state and debris fail closed. Only `docs:recover` mutates interrupted-write state;
@@ -37,8 +63,16 @@ it preserves bundle-only and never synthesizes a missing report.
 
 ## Workspace and Lock Contract
 
-This leaf creates all three downstream workspace manifests before the one
-TASK-548 `bun install`/lock reconciliation. Their exact initial contents are:
+TASK-548-02-L02 owns all dependency-bearing bytes below and lands them BEFORE
+its pilots: the three documentation workspace manifests, the root
+`package.json`/`bun.lock`, the three Core workspace dependencies and the
+`Dockerfile` before the one L02 lock-producing `bun install --lockfile-only`
+reconciliation (which MAY update `bun.lock`) plus the separate
+`bun install --frozen-lockfile` verification, and the
+pinned local Chromium install/verify. This leaf consumes those exact bytes
+read-only (byte/hash comparison on read where it depends on them) and never
+rewrites a manifest, lock, Dockerfile, script or pin.
+Their exact initial contents are:
 
 ```json
 {
@@ -133,7 +167,7 @@ For every direct Core package import landing from this activation onward,
 ```
 
 Merge both keys into the live dependency object without rewriting unrelated
-entries. Before the one frozen-lock install, `Dockerfile` must copy all three
+entries. Before the separate frozen-lockfile verification, `Dockerfile` must copy all three
 new workspace manifests in addition to existing root/core/store/SDK manifests:
 
 ```dockerfile
@@ -144,8 +178,11 @@ RUN bun install --frozen-lockfile
 ```
 
 All three `COPY` lines must precede that `RUN`; copying workspace source later
-does not satisfy dependency resolution. This leaf's gate runs the one
-`bun install --frozen-lockfile` after the manifest/lock reconciliation and
+does not satisfy dependency resolution. TASK-548-02-L02's gate runs the one
+lock-producing `bun install --lockfile-only` reconciliation (which may update
+`bun.lock`) and then the separate `bun install --frozen-lockfile` verification
+after the manifest/lock reconciliation; this
+leaf consumes the landed result read-only and
 statically parses the Dockerfile: all exact `COPY` instructions precede the
 frozen install; later source copy retains all four later-owner source files and
 the tracked bundle, but excludes `.tmp`. It pins contracts `.`, both Node
@@ -155,13 +192,13 @@ React/Vite/client side effects; Vite/client graphs reject it. It pins the build 
 
 Contracts source/private owners/Core shims now exist; renderer/portal build do
 not. The direct compiler/tsconfig gate covers private report/fixed sources. After
-install this leaf imports `.`, `./node-artifact-guard` and `./node-loader`, rejects
+L02 installs, this leaf imports `.`, `./node-artifact-guard` and `./node-loader`, rejects
 `./migration-report`, but does not check renderer/portal or build/run the image.
 TASK-548-03-L02 first imports renderer `.`, `./projection` and `./client-search`.
-TASK-548-04-L02 proves portal/final-Docker frozen exports. Both consume this
-leaf's manifests, lock, Core dependencies and Dockerfile read-only.
+TASK-548-04-L02 proves portal/final-Docker frozen exports. Both consume the
+L02-owned manifests, lock, Core dependencies and Dockerfile read-only.
 
-Root scripts added here are exactly:
+The root docs scripts added by TASK-548-02-L02 are exactly (consumed here):
 
 ```json
 {
@@ -177,6 +214,45 @@ Root scripts added here are exactly:
 
 Any new visual dependency is exact-version pinned, license reviewed and
 included in the same reconciliation.
+
+## Pinned Local Browser Install Contract
+
+Every fresh runner that starts a real browser — the changed-visual CI job and
+every release/rollback certification runner — MUST install and verify the LOCAL
+pinned browser before any certification suite executes. TASK-548-02-L02's owned
+manifest/lock contract is the sole `@playwright/cli` pin authority (L02 lands
+it, the one lock-producing `bun install --lockfile-only` reconciliation plus the separate `bun install --frozen-lockfile` verification and the Chromium install/verify BEFORE its
+pilots); there is no
+global install and no `npx`-latest fallback:
+
+1. Resolve the exact local DISPATCH executable ONLY from the L02-pinned
+   manifest/lock at `./node_modules/.bin/playwright-cli` and the exact
+   local install binary at `./node_modules/.bin/playwright` (both repo-local).
+   A missing package, a non-local resolution, or any ambient PATH/global/
+   `npx`-latest fallback blocks before any browser work. A repo-local-only
+   resolver is injected into `BrowserTransport`/`PlaywrightCliDispatcher`; it
+   resolves only `./node_modules/.bin/playwright-cli` relative to the pinned
+   repository root and never consults ambient PATH, a global install, or `npx`.
+2. Verify the installed local `@playwright/cli` package version equals the
+   exact pinned version declared in the L02 manifest contract and that the
+   dispatched `./node_modules/.bin/playwright-cli` binary is the pinned
+   package's own binary; version drift, a substituted binary, or an unpinned
+   resolution blocks with `docs_visual_tool_version_mismatch`.
+3. Run the local install binary exactly:
+   `./node_modules/.bin/playwright install --with-deps chromium`. No other
+   install command, browser or revision is acceptable.
+4. Verify the underlying Playwright version and the installed Chromium
+   executable/revision (the exact browser revision the pinned package
+   expects); missing browser, missing/version-drifted package or executable
+   blocks with `docs_visual_tool_version_mismatch` before any suite starts.
+5. Only then start the app and run the selected scenarios/certification.
+
+Missing browser, package, or version drift is a blocking environment failure,
+never a skipped success. This leaf consumes the contract read-only and never
+re-reconciles the lock or reinstalls the browser. The same contract is executed
+by TASK-548-05-L02
+before its release and rollback certification runs and is cross-referenced by
+TASK-548-04-L03/TASK-548-07-L01 runners.
 
 ## Staleness Contract
 
@@ -868,8 +944,15 @@ path-derived recursive remover.
 - PR gate always runs strict corpus compile `--check`, referential/orphan checks
   and read-only receipt/staleness validation. A clean-clone fixture containing
   the tracked bundle and no `.tmp` tree/report must pass with zero mutation.
-- A dedicated changed-visual job starts the real app, installs the pinned CLI
-  browser, runs selected scenarios with the exact maximum of two captures,
+- A dedicated changed-visual job FIRST executes the Pinned Local Browser
+  Install Contract above (local pinned `@playwright/cli` version verification,
+  repo-local `./node_modules/.bin/playwright-cli` dispatch binary through the
+  injected repo-local-only resolver with no ambient PATH/global/npx fallback,
+  `./node_modules/.bin/playwright install --with-deps chromium`, underlying
+  Playwright version and Chromium executable/revision verification; missing or
+  drifted browser/package blocks with `docs_visual_tool_version_mismatch`
+  before any scenario), then starts the real app,
+  runs selected scenarios with the exact maximum of two captures,
   requires zero console/page errors and invokes the bounded awaited uploader
   from inside the batch callback. No later workflow step reads artifact paths
   after the command returns. Diffs upload on failure only after the executable
@@ -881,6 +964,25 @@ path-derived recursive remover.
 
 ## Sub-Tasks
 
+TASK-548-02-L02 owns the dependency-bearing toolchain bytes (root/core package
+manifests, root bun.lock, Dockerfile, all three documentation workspace
+manifests, root docs scripts, exact root devDependency pins
+`@playwright/cli: 0.1.18`/`pixelmatch: 7.2.0`, the one lock-producing
+`bun install --lockfile-only` reconciliation plus the separate
+`bun install --frozen-lockfile` verification, repo-local-only dispatcher
+resolver and Chromium install/verify) and lands them BEFORE its pilots, then
+completes and gates
+terminally. This leaf is one normal post-pilot leaf and consumes those bytes
+read-only; it owns ONLY the staleness/diff/recovery/CI implementation, the PR
+workflow and focused tests:
+
+- [ ] Verify the landed toolchain bytes read-only (root/core package
+  manifests, root lock, Dockerfile, all three workspace manifests, root
+  scripts and dependency pins match the L02-landed byte identity; the pinned
+  dispatch executable `./node_modules/.bin/playwright-cli` and the exact
+  install `./node_modules/.bin/playwright install --with-deps chromium` with
+  package/Playwright/Chromium version verification resolve repo-local with no
+  ambient PATH/global/npx fallback); any drift returns to TASK-548-02-L02.
 - [ ] Add watch graph, staleness, pixel/geometry diff and bounded report modules.
 - [ ] Consume L02's exact lease-scoped CI batch API and add the independently
   capability-confined, atomic, sealed and always-cleaned
@@ -888,14 +990,6 @@ path-derived recursive remover.
 - [ ] Reject every unresolved durable image/receipt transaction through the
   read-only hazard inspector before reads; retain pre-capture staleness and
   enforce the distinct read-only/capture-mode order.
-- [ ] Pin tooling dependencies and add `docs:compile`, `docs:check`,
-  exact mutating `docs:recover`, `docs:coverage`, `docs:visual:capture`,
-  `docs:visual:promote` and `docs:visual:check` scripts (seven exact root
-  scripts total).
-- [ ] Create all three manifests, reconcile root `package.json`/`bun.lock` once,
-  add three Core dependencies and three preinstall Docker manifest copies, pin
-  contracts top-level/two Node exports, three renderer exports, portal entry and
-  acyclic edges, and forbid later manifest/lock/core-package/Dockerfile writers.
 - [ ] Own `recoverDocsArtifactsV1` plus its CLI: recover durable CI owners,
   remaining capture runs, workspace and visual pairs in the pinned order, using
   the exact L02 lease/recovery helpers and validator factory.
@@ -909,7 +1003,24 @@ path-derived recursive remover.
 
 ## Testing Requirements
 
-- `bun install --frozen-lockfile`
+TASK-548-02-L02's toolchain gates (owned by L02, executed before its pilots):
+the ONE lock-producing reconciliation (`bun install --lockfile-only`, which
+may update `bun.lock`) followed by the SEPARATE
+`bun install --frozen-lockfile` verification, and the
+pinned-toolchain install/verification — exact root devDependency pins
+`@playwright/cli: 0.1.18` and `pixelmatch: 7.2.0`
+in the L02-owned manifest/lock contract, repo-local
+`./node_modules/.bin/playwright-cli` dispatch binary verification,
+`./node_modules/.bin/playwright install --with-deps chromium`, underlying
+Playwright version and Chromium executable/revision verification; any
+ambient PATH/global/npx resolution, missing package or version-drifted
+browser blocks with `docs_visual_tool_version_mismatch`.
+
+This leaf's gates run after L02's pilots and the
+post-pilot-generated-bundle-refresh-gate, first proving the L02 toolchain
+bytes unchanged read-only (manifest/lock/Docker/script/pin byte identity),
+then:
+
 - `bun run docs:check`
 - `bun run docs:visual:check -- --all`
 - `bunx vitest run --config vitest.config.ts tests/vitest/documentation/docs-visual-staleness.test.ts tests/vitest/documentation/docs-visual-diff.test.ts tests/vitest/documentation/docs-visual-ci-contract.test.ts`
@@ -960,6 +1071,16 @@ path-derived recursive remover.
 - a clean-clone/tag fixture with the tracked bundle and no ignored report proves
   `docs:check`, the frozen install, and the static Docker workspace contract pass
   without filesystem mutation; stale/tampered packaged bytes still fail
+- pinned-browser fixtures prove the exact `@playwright/cli` pin in the owned
+  manifest/lock contract (no global/`npx`-latest resolution), the repo-local
+  `./node_modules/.bin/playwright-cli` dispatch binary resolution through the
+  injected repo-local-only resolver (ambient PATH/global/npx fallback blocks),
+  the local `./node_modules/.bin/playwright install --with-deps chromium`
+  invocation, the
+  local package/Playwright/Chromium executable-revision verification steps, and
+  that a missing package, missing/version-drifted Chromium, or any global
+  resolution blocks with `docs_visual_tool_version_mismatch` before a suite
+  starts; release/rollback certification runners execute the same contract
 - import-contract test pins the type-only capture/binding/request/outcome,
   `DocsVisualCiRecoveryIntentInputV1`, `DocsVisualCiRecoverySnapshotV1` and
   `DocsVisualCiRecoveryHandoffV1`, plus the exact constant, verifier, live-batch
@@ -991,7 +1112,29 @@ path-derived recursive remover.
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 - `bun run precommit:check`
-- touched-file line counts
+- the canonical NUL-safe line-count gate over the leaf write set (identical
+  contract in every TASK-548 task file; a file above 1,000 makes the gate fail
+  with `exit 1`, including a non-newline final line; the baseline spans the
+  full task/family dirty scope and commits/staging do not narrow it):
+
+  ```bash
+  # Canonical NUL-safe line-count gate over the leaf write set (identical
+  # contract in every TASK-548 task file; a file above 1,000 makes the gate fail
+  # with exit 1, including a non-newline final line). The verified pre-family
+  # baseline is the pinned commit 963733cae23456622bea1eef1b734723aaab2350;
+  # commits/staging cannot narrow the measured scope.
+  TASK_FAMILY_BASELINE_SHA="963733cae23456622bea1eef1b734723aaab2350"
+  git cat-file -e "${TASK_FAMILY_BASELINE_SHA}^{commit}" || { echo "invalid/missing baseline commit ${TASK_FAMILY_BASELINE_SHA}" >&2; exit 1; }
+  failed=0
+  while IFS= read -r -d '' f; do
+    lines=$(awk 'END { print NR }' "$f")
+    if [ "$lines" -gt 1000 ]; then
+      printf 'OVER-LIMIT %s %s\n' "$lines" "$f"
+      failed=1
+    fi
+  done < <({ git diff --name-only -z --diff-filter=ACMRT "$TASK_FAMILY_BASELINE_SHA" -- core packages scripts tests _docs/_workflows; git ls-files --others --exclude-standard -z -- core packages scripts tests _docs/_workflows; } | grep -zE '\.(ts|tsx|mjs|cjs|js|jsx|mts|cts)$' | grep -zvE '\.generated\.(ts|tsx|js|jsx|cjs|mjs|mts|cts)$' | sort -zu)
+  exit "$failed"
+  ```
 
 ## Documentation Updates Required
 

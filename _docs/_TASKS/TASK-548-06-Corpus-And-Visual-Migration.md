@@ -5,10 +5,11 @@
 **Priority:** High
 **Category:** Documentation / Migration / Coverage
 **Estimated Effort:** Very Large
-**Dependencies:** TASK-545 `✅ Done` and TASK-547 terminal plus a TASK-548
-parent amendment naming and serializing every literal final overlapping
-user/developer/shared-doc path before any implementation; TASK-548-05;
-TASK-548-01-L02 workspace-pair recovery and same-owner refresh/verification gates
+**Dependencies:** TASK-545 `✅ Done`; the frozen terminal TASK-547/TASK-552
+handoff and literal overlap ownership table recorded in the TASK-548 parent
+(see the parent); TASK-548-05; TASK-548-01-L02 (workspace-pair recovery;
+the generated-artifact-only post-pilot/final-native-corpus checkpoint gates
+are sequencing steps described in the body)
 **Status:** ⏳ To Do
 **Changelog:** 1261 (pinned; closure only)
 
@@ -103,9 +104,10 @@ not imply that a Polish Admin UI or Polish documentation is complete.
   `core/generated/docs/coderso-docs-v2.json` and its generated migration report.
   After all three L01 native-source/visual waves and promotions, L01 pauses
   and deterministically builds `DocsFinalNativePairExpectedIdentityV1` from the
-  caller migration run and intended final compile. Baseline state dispatches
-  one same-owner TASK-548-01-L02 regeneration; exact intended state and any
-  restart that recovers the landed intended pair dispatch none. After recovery,
+  caller migration run and intended final compile. Baseline state invokes the
+  ALREADY-LANDED exact compiler CLI generated-artifact-only once (the
+  final-native-corpus-generated-bundle-handback-gate); exact intended state and
+  any restart that recovers the landed intended pair invoke none. After recovery,
   the owner verifier reopens canonical
   report/bundle bytes, checks every expected hash and transaction identity, and
   returns only a strict in-memory `VerifiedDocsFinalNativePairHandbackV1`.
@@ -140,6 +142,16 @@ not imply that a Polish Admin UI or Polish documentation is complete.
   exact `(docId, locale)` identity, bind every example/visual asset to
   `{ docId, locale, sectionId }`, keep asset IDs bundle-global, and are
   canonically sorted by `(locale, docId)` with unknown fields rejected.
+  The same report consumes TASK-548-01's exact atomic-control list and composed
+  workflow relations. Each atomic ID maps to at least one eligible localized
+  section; each workflow ID maps to one full-flow section, expected outcome,
+  and its exact ordered atoms. Area-only `capabilityIds` do not satisfy either
+  class. Missing/orphan/duplicate/cyclic/order-drift, cross-locale,
+  permission-ineligible, target-ineligible, or stale control/workflow mappings
+  fail `--write` and `--check`.
+  Every section eligible for Guide carries both `assistant` and
+  `embedded-help`; an `assistant`-only record fails so every concise answer can
+  open its complete internal Help section.
   `_COVERAGE_MATRIX.md` is
   generated output, not acceptance evidence by itself. Coverage `--write`
   and `--check` both use one zero-input atomic packaged-bundle load with internal
@@ -152,11 +164,10 @@ not imply that a Polish Admin UI or Polish documentation is complete.
 ## TASK-547 Serialization
 
 TASK-545 must be `✅ Done` and TASK-547 must be terminal before any TASK-548
-implementation. After TASK-547 becomes terminal, the TASK-548 parent must be
-amended with every
-literal final overlapping user/developer/shared-doc path and a serialized
-single writer for each. Before L01 edits `docs/guide`, those literal paths are
-forbidden until its assigned handoff; L01 then reads final shipped bytes. L02
+implementation. The TASK-548 parent now records TASK-547's terminal
+source/merge identity, exact overlapping paths, and serialized writer for each.
+Before L01 edits `docs/guide`, it re-proves that handoff byte-for-byte; drift or
+a concurrent owner blocks dispatch. L01 then reads final shipped bytes. L02
 re-reads the shipped Admin route registry and Guide tree after that handoff.
 
 Planned TASK-547 routes/features are not documented as available. Because
@@ -172,19 +183,23 @@ parallel.
 | TASK-548-06-L01 | Native metadata/section/example migration and all non-pilot reviewed visual waves under `docs/guide` | ⏳ To Do |
 | TASK-548-06-L02 | Generated coverage matrix/report plus document/link/route/permission/publication reconciliation tooling and tests | ⏳ To Do |
 
-The global execution order already includes one same-owner
-`TASK-548-01-L02` post-pilot refresh/gate immediately after
-`TASK-548-02-L02` and before `TASK-548-02-L03`/TASK-548-03. Within this family,
+The global execution order already includes one
+post-pilot-generated-bundle-refresh-gate immediately after
+`TASK-548-02-L02` and before `TASK-548-02-L03`/TASK-548-03 — a
+generated-artifact-only invocation of the ALREADY-LANDED compiler CLI (no
+agent writer, no human-authored source/task/status edit, its own gate).
+Within this family,
 the land order is: `TASK-548-06-L01 recover workspace pair and atomically freeze
 original report+bundle capsule → all three source/visual waves and promotions →
 TASK-548-06-L01 build expected final identity and classify recovered state →
-TASK-548-01-L02 one final same-owner generated-pair write/gate only if baseline
+final-native-corpus-generated-bundle-handback-gate (the already-landed exact
+compiler CLI invoked generated-artifact-only, write/gate only if baseline)
 → TASK-548-06-L01 recover and call the idempotent owner verifier → consume its
 strict in-memory fact with the stored original only for final parity → read-only
 `bun run docs:check` with no migration object input →
 TASK-548-06-L02 one zero-input atomic packaged distribution load →
-coverage reconciliation in `--write` then `--check` mode`. Operational
-refresh/verification calls never change status or transfer/reopen source ownership.
+coverage reconciliation in `--write` then `--check` mode`. Generated-artifact-only
+invocations never change status or transfer/reopen source ownership.
 
 After `TASK-548-06-L02`, the global lifecycle is the exact three-invocation
 handoff owned by TASK-548-07-L01 and TASK-548-08:
@@ -192,7 +207,7 @@ handoff owned by TASK-548-07-L01 and TASK-548-08:
 ```text
 07-L01-release-inputs-and-prerelease-gates
 08-prerelease-post-audit-lenses/fixes/revalidation
-07-L01-owner-commit-merge-tag-release-cloudflare-deploy-pause
+07-L01-owner-commit-merge-release-branch-pause
 --- process terminates ---
 07-L01-release-resume-committed-head-tree-and-receipt-validation
 08-release-resume-fresh-committed-head-drift-gate
@@ -204,15 +219,34 @@ handoff owned by TASK-548-07-L01 and TASK-548-08:
 07-L01-terminal-metadata-closeout-and-mechanical-delta-verification
 ```
 
-The first invocation prepares release inputs/gates and ends at the owner-only
-commit/merge/plain-tag/release/Cloudflare action. Only a fresh eight-field
-release-resume may validate the committed HEAD plus TASK-548-05-L01's single
+The first invocation prepares release inputs/gates and ends when the owner
+reviews, commits, merges to the protected release branch, and waits for the
+semantic-release workflow. Semantic-release alone creates the generated
+release commit, plain-SemVer tag, and GitHub release; TASK-548-05-L02 deploys
+Cloudflare only for `released == "true"` (release publication only; the
+rollback job never requires the semantic-release output). Only a fresh release-resume with the
+recursively strict `runKind: "release" | "rollback"` union (release:
+version/tag/gitSha/run/attempt/deployment/origin/basePath; rollback:
+targetVersion/originalGitSha/run/attempt/deployment/origin/basePath; mixed or
+opposite keys reject) may validate the committed HEAD plus TASK-548-05-L01's
 pure `DocsReleaseTreeBindingV1` in the repository-selected SHA-1 or SHA-256
-object format, and require that identical binding across immutable release,
-publication and TASK-548-05-L02 health receipts before fresh drift, read-only
-preparation and smoke. Smoke consumes that already verified handoff and never
+object format. Docker recovery is always rejected; `released == "true"` is
+required only for release; rollback requires a successful `workflow_dispatch`
+with the exact rollback dispatch mode/target. The resume keeps TWO tree
+identities: `runtimeTree` from the clean workflow-run HEAD (committed-head
+drift/preparation identity) and `publicRuntimeTree` (equal to runtimeTree for
+release; derived from the separately verified target release/tag/capsule at
+targetVersion/originalGitSha for rollback, never from the workflow-run HEAD),
+and requires that identical PUBLIC binding across immutable release,
+publication, portal-prepublication evidence and TASK-548-05-L02 health receipts
+before fresh drift, read-only
+preparation and smoke (committed-head drift stays bound to `runtimeTree`).
+Smoke consumes that already verified handoff and never
 downloads health evidence. After the exact-six committed-bootstrap receipt gate,
-the exact seven-key TASK-545 phase-1 call pins changelog 1261, slug
+the exact TEN-key TASK-545 phase-1 call — `repoRoot`, `expectedTask`,
+`pinnedChangelogNumber`, `pinnedChangelogSlug`, `expectedWorkflowRole`,
+`executingImportMetaUrl`, `expectedSuite`, `expectedProfile`, `expectedSession`
+and `runtimeResult` — pins changelog 1261, slug
 `task-548-hybrid-visual-documentation`, role `implement`, the executing
 `import.meta.url`, and the smoke result, then pauses and terminates the second
 invocation. Only a fresh
@@ -286,7 +320,8 @@ report+bundle capsule → all three
 native v2 source/example/reviewed-visual waves using the same mapping →
 deterministic intended final compile and expected run/source/bundle/report/pair
 identity → recovery and baseline-or-intended classification → zero or one
-same-owner compiler regeneration → recovery → idempotent read-only owner
+generated-artifact-only invocation of the already-landed exact compiler CLI →
+recovery → idempotent read-only owner
 verifier → strict in-memory verified fact with its canonical reopened pair →
 final native-vs-original stable-identity/semantic comparison against the
 durable stored original, with the expected
@@ -354,6 +389,10 @@ completeness claim appears.
   hash.
 - Every active Admin route/capability has one valid documentation mapping or an
   explicit code-owned exclusion with a tested reason.
+- Every active in-scope atomic control and composed workflow has generated
+  zero-gap coverage through the exact catalog relation. A composed workflow is
+  documented as one complete construction while each referenced atom remains
+  independently deep-linkable.
 - Internal Help, Guide ingest, and public portal publication targets reconcile
   from the same document records.
 - One immutable pre-write report/bundle baseline drives all three waves.
@@ -376,8 +415,9 @@ completeness claim appears.
   `bun test tests/unit/documentation/docsGuideMigrationBaseline.test.ts`
 - `bun run docs:visual:check -- --all` after all non-pilot promotions and before
   the final regeneration dispatch
-- baseline state invokes exactly one TASK-548-01-L02 same-owner final
-  regeneration after all native source/visual changes; intended state and
+- baseline state invokes exactly one final-native-corpus-generated-bundle-
+  handback-gate (the already-landed exact compiler CLI, generated-artifact-only)
+  after all native source/visual changes; intended state and
   post-land restart invoke none. Recovery followed by the owner verifier checks
   canonical
   report/bundle bytes and expected run/source/bundle/report/transaction
@@ -408,11 +448,35 @@ completeness claim appears.
   `bun run docs:coverage -- --check`, including parser pre-`JSON.parse` byte-cap
   and same-`docId`/different-locale `{ docId, locale, sectionId }` identity/
   action/asset tests. These commands consume the seventh exact root
-  `docs:coverage` script owned by TASK-548-02-L03; this family does not edit
+  `docs:coverage` script owned by TASK-548-02-L02; this family does not edit
   root `package.json`
 - `bun --cwd core lint:types`
 - `bun --cwd core lint`
-- touched-file line counts and `git diff --check`
+- `git diff --check`
+- the canonical NUL-safe line-count gate over every added/modified production
+  and test file in the leaf write set (identical contract in every TASK-548
+  task file; a file above 1,000 makes the gate fail with `exit 1`, including a
+  non-newline final line); the verified pre-family baseline spans all
+  intermediate commits and staging and cannot narrow:
+
+  ```bash
+  # Canonical NUL-safe line-count gate over the leaf write set (identical
+  # contract in every TASK-548 task file; a file above 1,000 makes the gate fail
+  # with exit 1, including a non-newline final line). The verified pre-family
+  # baseline is the pinned commit 963733cae23456622bea1eef1b734723aaab2350;
+  # commits/staging cannot narrow the measured scope.
+  TASK_FAMILY_BASELINE_SHA="963733cae23456622bea1eef1b734723aaab2350"
+  git cat-file -e "${TASK_FAMILY_BASELINE_SHA}^{commit}" || { echo "invalid/missing baseline commit ${TASK_FAMILY_BASELINE_SHA}" >&2; exit 1; }
+  failed=0
+  while IFS= read -r -d '' f; do
+    lines=$(awk 'END { print NR }' "$f")
+    if [ "$lines" -gt 1000 ]; then
+      printf 'OVER-LIMIT %s %s\n' "$lines" "$f"
+      failed=1
+    fi
+  done < <({ git diff --name-only -z --diff-filter=ACMRT "$TASK_FAMILY_BASELINE_SHA" -- core packages scripts tests _docs/_workflows; git ls-files --others --exclude-standard -z -- core packages scripts tests _docs/_workflows; } | grep -zE '\.(ts|tsx|mjs|cjs|js|jsx|mts|cts)$' | grep -zvE '\.generated\.(ts|tsx|js|jsx|cjs|mjs|mts|cts)$' | sort -zu)
+  exit "$failed"
+  ```
 
 ## Documentation Updates Required
 

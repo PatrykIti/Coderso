@@ -99,19 +99,23 @@ export const DOCS_VISUAL_SCENARIO_LIMITS_V1 = {
   viewportHeight: { min: 240, max: 1_600 },
   capturePaddingPx: { min: 0, max: 64 },
 } as const;
-export const DOCS_VISUAL_FIXTURE_RECOVERY_LIMITS_V1 = {
-  serializedUtf8Bytes: 131_072, adapterIdUtf8Bytes: 64,
-  profileIdUtf8Bytes: 64, resourceRefs: 64, resourceKindUtf8Bytes: 64,
-  resourceIdUtf8Bytes: 128, adapterRecoveryTokenUtf8Bytes: 256,
-  diagnosticFieldPathUtf8Bytes: 256,
-} as const;
 ```
 
 Every string/count in the scenario or recovery union is governed by the closest
 named limit above; IDs additionally use their existing exact kebab/hash/run-ID
-patterns. `fixtureProfile`, `cleanupProfile`, and `fixtureValueRef` resolve
-byte-for-byte in immutable code-owned registries. Expanding a finite registry
-requires a schema-version task, security review, compiler mapping and tests.
+patterns. The fixture-recovery union's caps come ONLY from the single exported
+`DOCS_FIXTURE_RECOVERY_LIMITS_V1` owner (the strict intersection defined once
+below): record bytes `recordUtf8Bytes` (65_536), adapter identity
+`adapterIdUtf8Bytes` (64), fixture/cleanup profiles `profileIdUtf8Bytes` (64),
+resource count `resourceRefs` (64) plus per-ref `resourceKindUtf8Bytes` (64) /
+`resourceIdUtf8Bytes` (128), the opaque `adapterRecoveryTokenUtf8Bytes` (256),
+and diagnostics safe field paths `diagnosticFieldPathUtf8Bytes` (256). The
+competing `DOCS_VISUAL_FIXTURE_RECOVERY_LIMITS_V1` constant is DELETED; no
+schema, persistence module, adapter or test may reference it or define a second
+fixture-recovery limit authority. `fixtureProfile`, `cleanupProfile`, and
+`fixtureValueRef` resolve byte-for-byte in immutable code-owned registries.
+Expanding a finite registry requires a schema-version task, security review,
+compiler mapping and tests.
 
 All names and discriminator values above are exact. Unknown fields fail closed
 at every level. Locators must be semantic and exact enough to resolve one
@@ -130,15 +134,17 @@ validation. Manifests never contain passwords, tokens, real emails, free-form
 customer data or environment-variable names. `route` must be a canonical local
 `/admin...` path and may not include a host, query credentials or fragment.
 
-### Exact DSL-to-CLI compiler map
+### Exact DSL-to-shared-browser compiler map
 
-The runner obtains one bounded `playwright-cli snapshot`, resolves every locator
-against its finite role/label/text registry, and requires exactly one visible
-element reference. It never serializes locator text into JavaScript or a shell.
+TASK-548-02-L02's thin adapter obtains one bounded snapshot through the shared
+`BrowserTransport`, resolves every locator against its finite role/label/text
+registry, and requires exactly one visible element reference. The shared
+dispatcher is the only `playwright-cli` owner; this compiler never serializes
+locator text into JavaScript or a shell.
 
 | DSL member | Exact owned command/probe |
 | --- | --- |
-| `click` | `playwright-cli -s=<session> click <resolved-ref>` |
+| `click` | shared browser action `click <resolved-ref>` in the adapter-owned segment |
 | `fill` | registry value → stdin-safe argument → `fill <resolved-ref> <value>` |
 | `select` | registry value → stdin-safe argument → `select <resolved-ref> <value>` |
 | `press` | `click <resolved-ref>` → owned active-element identity probe → `press <allowed-key>` |
@@ -242,11 +248,13 @@ type DocsFixtureAdapter = {
 
 export const DOCS_FIXTURE_RECOVERY_LIMITS_V1 = {
   recordUtf8Bytes: 65_536,
+  adapterIdUtf8Bytes: 64,
+  profileIdUtf8Bytes: 64,
   resourceRefs: 64,
-  kindUtf8Bytes: 96,
-  idUtf8Bytes: 256,
-  adapterIdUtf8Bytes: 128,
-  recoveryTokenUtf8Bytes: 512,
+  resourceKindUtf8Bytes: 64,
+  resourceIdUtf8Bytes: 128,
+  adapterRecoveryTokenUtf8Bytes: 256,
+  diagnosticFieldPathUtf8Bytes: 256,
 } as const;
 
 export function normalizeDocsFixtureRecoveryRecordV1(
@@ -296,15 +304,22 @@ fsync; any other file, link, type, path, phase, hash or identity mismatch fails
 closed.
 
 Every record is recursively reject-unknown canonical JSON plus one final LF and
-is capped before parsing. `recoveryIdentitySha256` hashes the canonical
+is capped before parsing by `recordUtf8Bytes` (65_536). `recoveryIdentitySha256`
+hashes the canonical
 `coderso.docs-fixture-recovery-identity@v1` envelope containing the exact
 binding, `adapterId`, and recovery material. Later records hash-chain the exact
 prior phase bytes through `acquiredRecordSha256` and
 `cleaningRecordSha256`. All IDs, counts and UTF-8 strings obey the exported
-inclusive limits; hashes are lowercase SHA-256.
+inclusive limits of the single `DOCS_FIXTURE_RECOVERY_LIMITS_V1` owner: the
+binding's `fixtureProfile`/`cleanupProfile` are bounded by `profileIdUtf8Bytes`
+(64), the `resourceRefs[]` entries by `resourceRefs` (64) with
+`resourceKindUtf8Bytes` (64) / `resourceIdUtf8Bytes` (128), the opaque
+`adapterRecoveryToken` by `adapterRecoveryTokenUtf8Bytes` (256), and every
+bounded diagnostics safe field path by `diagnosticFieldPathUtf8Bytes` (256);
+hashes are lowercase SHA-256.
 
 Every adapter exposes one immutable canonical lower-kebab `id`, bounded by
-`adapterIdUtf8Bytes`. Registry keys and adapter `id` values are unique and must
+`adapterIdUtf8Bytes` (64). Registry keys and adapter `id` values are unique and must
 be byte-identical. Acquisition persists exactly that validated ID; every load,
 restart cleanup and absence assertion resolves the binding again and requires
 the persisted `adapterId`, registry key and `adapter.id` to be byte-identical.
@@ -623,7 +638,8 @@ becomes executable code.
 `docs_visual_fixture_recovery_invalid`, `docs_visual_fixture_acquire_failed`,
 `docs_visual_cleanup_failed` and `docs_visual_fixture_residue`. The structured
 diagnostic preserves primary, recovery, cleanup and absence codes. Errors
-contain stable IDs and safe field paths, never fixture values or recovery
+contain stable IDs and safe field paths — every path bounded by the exact
+`diagnosticFieldPathUtf8Bytes` cap — never fixture values or recovery
 material.
 
 **Regression-test shape:** reject every unknown key, unsafe locator/route/key,
@@ -640,7 +656,15 @@ unique resource ownership,
 cleanup after action/assertion/capture
 failures, `assertAbsent` execution after cleanup failure and preservation of all
 structured lifecycle errors. Pin the recovery schemas, exact directory/files,
-canonical hashes, caps and only-valid state prefixes. Prove side-effect-free
+canonical hashes, caps and only-valid state prefixes. Negative bounds tests pin
+the SINGLE `DOCS_FIXTURE_RECOVERY_LIMITS_V1` owner and one-neighbor rejection
+for every exact field: canonical record JSON over `recordUtf8Bytes` (65_536),
+`adapterIdUtf8Bytes` (64), `profileIdUtf8Bytes` (64), `resourceRefs` (64) with
+per-ref `resourceKindUtf8Bytes` (64) / `resourceIdUtf8Bytes` (128),
+`adapterRecoveryTokenUtf8Bytes` (256), and `diagnosticFieldPathUtf8Bytes`
+(256); the deleted `DOCS_VISUAL_FIXTURE_RECOVERY_LIMITS_V1` name never appears
+in any schema, persistence module, adapter import or test, and no second
+fixture-recovery limit authority compiles. Prove side-effect-free
 preparation and durable no-replace/fsync `acquired` bytes precede the first
 fixture mutation; reject unknown/extra/partial/reordered/tampered records,
 unsafe refs/tokens, symlinks and every forbidden persisted value. Reject
@@ -704,7 +728,29 @@ Those downstream suites prove pass-through and that receipts/bundles contain no
   owned-row-only deletion
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
-- touched-file line counts
+- the canonical NUL-safe line-count gate over the leaf write set (identical
+  contract in every TASK-548 task file; a file above 1,000 makes the gate fail
+  with `exit 1`, including a non-newline final line; the baseline spans the
+  full task/family dirty scope and commits/staging do not narrow it):
+
+  ```bash
+  # Canonical NUL-safe line-count gate over the leaf write set (identical
+  # contract in every TASK-548 task file; a file above 1,000 makes the gate fail
+  # with exit 1, including a non-newline final line). The verified pre-family
+  # baseline is the pinned commit 963733cae23456622bea1eef1b734723aaab2350;
+  # commits/staging cannot narrow the measured scope.
+  TASK_FAMILY_BASELINE_SHA="963733cae23456622bea1eef1b734723aaab2350"
+  git cat-file -e "${TASK_FAMILY_BASELINE_SHA}^{commit}" || { echo "invalid/missing baseline commit ${TASK_FAMILY_BASELINE_SHA}" >&2; exit 1; }
+  failed=0
+  while IFS= read -r -d '' f; do
+    lines=$(awk 'END { print NR }' "$f")
+    if [ "$lines" -gt 1000 ]; then
+      printf 'OVER-LIMIT %s %s\n' "$lines" "$f"
+      failed=1
+    fi
+  done < <({ git diff --name-only -z --diff-filter=ACMRT "$TASK_FAMILY_BASELINE_SHA" -- core packages scripts tests _docs/_workflows; git ls-files --others --exclude-standard -z -- core packages scripts tests _docs/_workflows; } | grep -zE '\.(ts|tsx|mjs|cjs|js|jsx|mts|cts)$' | grep -zvE '\.generated\.(ts|tsx|js|jsx|cjs|mjs|mts|cts)$' | sort -zu)
+  exit "$failed"
+  ```
 
 ## Documentation Updates Required
 

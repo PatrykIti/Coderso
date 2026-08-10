@@ -75,6 +75,7 @@ type KeysetSpec = StrictReadonly<{
 export type PaginationCursorKeyring = StrictReadonly<{
   current: { version: number; secret: Uint8Array };
   previous?: { version: number; secret: Uint8Array };
+  retired: readonly { version: number; secret: Uint8Array }[];
 }>;
 
 function parsePageLimit(value: unknown, options = { default: 50, max: 100 }): PageLimit {
@@ -86,7 +87,9 @@ export function loadPaginationCursorKeyring(env: NodeJS.ProcessEnv): PaginationC
   // PAGINATION_CURSOR_KEY_VERSION defaults to 1 and is an integer in 1..2^31-1.
   // PAGINATION_CURSOR_PREVIOUS_SECRET and PAGINATION_CURSOR_PREVIOUS_KEY_VERSION
   // are optional as a pair; the previous version must be lower and distinct.
-  // Reject missing, weak, partial, duplicate-version, or malformed configuration.
+  // PAGINATION_CURSOR_RETIRED_KEYS is an optional strict JSON tuple of <=16
+  // older {version,secret} pairs, excluding current/previous. Reject missing,
+  // weak, partial, duplicate-version, or malformed configuration.
 }
 
 function encodeKeysetCursor(input: CursorEncodeInput, spec: KeysetSpec,
@@ -98,9 +101,18 @@ function encodeKeysetCursor(input: CursorEncodeInput, spec: KeysetSpec,
 
 function decodeKeysetCursor(input: string, spec: KeysetSpec,
   keys: PaginationCursorKeyring): CursorPayload {
-  // Select only the declared current/previous key version, then verify HMAC in
-  // constant time before payload interpretation. Strict-parse and normalize the
-  // exact wire schema; require field name/type/order equality with the spec.
+  // After bounded token/base64 decoding, compute HMAC for every bounded current,
+  // previous, and retired secret without interpreting payload JSON. Constant-time
+  // compare every candidate, require exactly one matching secret, then strict-parse
+  // the exact wire schema and require payload.keyVersion to equal that matched key's
+  // declared version plus exact field name/type/order equality with the spec.
+}
+
+export function classifyPaginationCursorFailure(error: unknown):
+  "expired_or_retired" | "invalid" {
+  // Return the terminal class only for the internal 24-hour expiry code or a
+  // retired key whose MAC and payload were verified with its retained secret.
+  // Never return a version/key ID or parse detail.
 }
 
 function buildKeysetPredicate(spec: KeysetSpec, cursor: CursorPayload): SqlFragment {
@@ -196,16 +208,36 @@ last returned row for `next`, first returned row for `previous`.
 `items`, `nextCursor`, and `hasMore`. Errors are machine-readable:
 `page_limit_invalid`, `cursor_invalid`, `cursor_schema_invalid`,
 `cursor_value_invalid`, `cursor_spec_mismatch`, `cursor_scope_mismatch`,
-`cursor_version_unsupported`, and lifecycle-only
+`cursor_version_unsupported`, `cursor_expired`, `cursor_key_retired`, and lifecycle-only
 `pagination_cursor_keyring_unavailable`.
 Route boundaries map schema/value/spec/version/signature/age failures to the same
 generic `cursor_invalid` response and never expose the cursor, field value, MAC,
 spec, SQL fragment, or parse offset; internal exact codes remain testable.
 
+That generic mapping is the default, not loss of internal terminal semantics.
+`PaginationCursorKeyring` also carries an immutable, deduplicated, ascending
+`retired` tuple of at most 16 `{version,secret}` pairs whose versions are lower
+than current and different from previous and whose decoded secrets are at least
+32 bytes. The loader reads optional strict reject-unknown JSON
+`PAGINATION_CURSOR_RETIRED_KEYS`; malformed/weak pairs, duplicates,
+current/previous/future values, overflow, or more than 16 reject startup. The
+decoder verifies the bounded complete keyring before JSON interpretation as
+specified above. After exactly one MAC match, it strictly parses the payload and
+requires `keyVersion` equality with that matched declaration; a matched retired key
+then fails `cursor_key_retired`. Invalid/no/multiple MAC matches remain generic
+invalid. A validly signed payload whose embedded version differs from its matching
+key, including an unknown/future version, fails `cursor_version_unsupported`.
+`classifyPaginationCursorFailure` exposes only the
+coarse `expired_or_retired|invalid` result. A later internal route may map that
+coarse terminal class to one fixed refresh code, while malformed/signature/scope/
+unknown-version failures remain generic. No route may return a key version or
+distinguish age from retirement.
+
 The cursor lifetime is code-owned at 24 hours with at most 60 seconds of future
 clock skew. Rotation publishes a higher current key version while retaining at
-most one previous key for the 24-hour overlap; removing the previous pair
-invalidates any remaining old cursors. A process that mounts the paginated
+most one previous key for the 24-hour overlap. An intentionally revoked prior key
+may move to the bounded retired tuple so its valid cursors receive only the coarse
+terminal classification; deleting all copies makes them generic invalid. A process that mounts the paginated
 admin routes must load this keyring during startup and fail fast before
 accepting traffic when the current secret is absent or shorter than 32 UTF-8
 bytes. `loadPaginationCursorKeyring(env)` remains pure. The exact production
@@ -237,11 +269,20 @@ env; the runtime integration test owns scoped env setup/restore.
 - Missing/short current secrets, incomplete previous-key pairs, duplicate or
   non-monotonic key versions, expired cursors, and future issue times fail
   closed; current and previous keys pass only during the defined overlap.
+- Retired-key tests cover absent, one, 16, duplicate/current/previous/future/
+  weak-secret/17-member/malformed cases; only expired or MAC-valid explicitly
+  retired values classify terminal, while malformed/signature/scope/unknown-version
+  inputs classify invalid without exposing a version.
+- Verification-order tests instrument all configured HMAC candidates and prove no
+  payload JSON/keyVersion access occurs before the bounded current/previous/retired
+  comparisons complete; embedded-version mismatch and multiple-match configuration
+  fail closed without selecting an attacker-provided key.
 - Boundary tests pin defaults 50, maximum 100, and exactly `limit + 1` lookahead.
 - Import test proves the two pure production modules are Bun/runtime/DB-client
   free; only the named server adapter may import the lifecycle registry.
 - Contract tests pin the exact exported names `PaginationCursorKeyring`,
   `loadPaginationCursorKeyring`,
+  `classifyPaginationCursorFailure`,
   `registerPaginationCursorLifecycleParticipant`, and
   `requirePaginationCursorKeyring`.
 - Runtime integration calls register repeatedly and proves exactly one fixed-ID
@@ -254,8 +295,9 @@ env; the runtime integration test owns scoped env setup/restore.
 
 - Pure internal library plus a server-only lifecycle adapter; no endpoint, auth,
   RBAC, CSRF, rate-limit, nonce/HMAC public-write, or CAPTCHA changes.
-- Cursor HMAC keys come only from `PAGINATION_CURSOR_SECRET` and its optional
-  rotation pair through explicit dependencies. They are never persisted,
+- Cursor HMAC keys come only from `PAGINATION_CURSOR_SECRET`, its optional
+  rotation pair, and strict optional retired-key pairs through explicit
+  dependencies. They are never persisted,
   logged, returned to clients, placed in browser storage, or reused as a
   session/JWT/public-write signature key.
 - Strict reject-unknown payload parsing, constant-time MAC comparison, maximum
@@ -282,7 +324,8 @@ limits, and error codes to TASK-551-10-L02 for `.env.example`,
   trip byte-deterministically.
 - Startup rejects every missing/weak/partial keyring fixture before listen, and
   rotation tests prove one-current/one-previous verification with a fixed
-  24-hour expiry.
+  24-hour expiry; retired-key fixtures prove the coarse terminal class only for
+  verified retired/expired values and never expose a version.
 - The handoff registers exactly one participant, loads exactly once per started
   lifecycle, exposes one immutable required value, and requires zero environment
   reads from module registration, route handlers, or read services.

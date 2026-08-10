@@ -6,12 +6,13 @@
 **Priority:** High
 **Category:** Documentation / Content Migration / Visuals
 **Estimated Effort:** Very Large
-**Dependencies:** TASK-545 is `✅ Done` and TASK-547 is terminal; the TASK-548
-parent names every literal final TASK-547-overlapping
-user/developer/shared-doc path and serializes its owner before any
-implementation; TASK-548-05-L02;
-TASK-548-01-L02 recovery-capable original report/bundle pair before migration
-and one same-owner final regeneration dispatch after all three internal waves
+**Dependencies:** TASK-545 is `✅ Done`; the TASK-548 parent's frozen terminal
+TASK-547/TASK-552 source/merge identity (see the parent handoff and
+serialized-owner list in the body); TASK-548-05-L02;
+TASK-548-01-L02 (its recovery-capable original report/bundle pair before
+migration). The final-native-corpus-generated-bundle-handback-gate after all
+three internal waves is a generated-gate sequencing step described in the
+body, not a task edge.
 **Status:** ⏳ To Do
 **Changelog:** 1261 (pinned; closure only)
 
@@ -28,7 +29,9 @@ any owned write, load, link and freeze exactly one original migration report plu
 owner-generated bundle; every wave uses that immutable baseline. Native
 frontmatter changes source bytes, so the final deterministic `sourceHash` must
 change rather than equal the frozen legacy-adapted bundle hash. At most one final
-TASK-548-01-L02 regeneration is allowed after all source/visual edits; its
+generated-artifact-only compiler invocation is allowed after all source/visual
+edits (the already-landed exact CLI; it edits no human-authored source/task/
+status and uses no agent writer); its
 read-only verified handback fact is safely reconstructed on every restart.
 
 ## Exclusive Ownership
@@ -58,15 +61,17 @@ Do not edit `docs/guide/README.md`, `_TEMPLATE.md`, `corpus.manifest.json`,
 `_COVERAGE_MATRIX.md`, TASK-548-02's named pilot files, shared tooling, root
 package/lock/workflows, `core/generated/docs/coderso-docs-v2.json`, the generated
 migration report, or any guide path still owned by TASK-547. TASK-548-01-L02
-remains their sole generator/writer; this leaf dispatches at most one final
-regeneration and repeatably verifies its strict in-memory fact. L02 owns the
+remains their sole generator/writer and lands/gates ONCE as the sole
+compiler/source owner; this leaf requests at most one final
+generated-artifact-only invocation of the already-landed exact CLI and
+repeatably verifies its strict in-memory fact. L02 owns the
 generated matrix and reconciliation code.
 
-Implementation is blocked until TASK-545 is `✅ Done`, TASK-547 is terminal,
-and the TASK-548 parent has been amended with every literal final overlapping
-path.
-Those paths are forbidden here until the serialized TASK-547 handoff completes;
-no wildcard or prose-only ownership claim authorizes a concurrent edit.
+Implementation is blocked until TASK-545 is `✅ Done` and the TASK-548 parent
+still proves the frozen terminal TASK-547/TASK-552 source/merge identity plus
+every literal final overlapping path. Those paths are read-only here unless the
+parent's serialized ownership table assigns the exact path to this leaf; no
+wildcard or prose-only claim authorizes an edit.
 
 ## Migration Waves
 
@@ -272,7 +277,8 @@ fsync must recover to only `absent` or the exact complete capsule. Never
 overwrite an existing final capsule or snapshot changed source bytes.
 
 Restart/resume reopens the exact stored bytes and requires the same explicit
-`migrationRunId`; all three waves and the final TASK-548-01-L02 regeneration
+`migrationRunId`; all three waves and the final generated-artifact-only
+compiler invocation
 and owner verification retain that immutable identity. For each record, read
 the current path once no-follow and classify exact length/hash/bytes as
 `baseline` or `intended`; neither, duplicate/missing/extra source, or aggregate
@@ -284,8 +290,9 @@ re-freeze the current aggregate tree.
 
 The deterministic intended compile first produces the exact owner
 `DocsFinalNativePairExpectedIdentityV1`. If the recovered workspace is still the
-frozen original, orchestration dispatches the TASK-548-01-L02 writer exactly
-once; an already exact intended pair skips that dispatch. Both paths then call
+frozen original, orchestration invokes the ALREADY-LANDED exact compiler CLI
+generated-artifact-only exactly
+once; an already exact intended pair skips that invocation. Both paths then call
 `recoverDocsWorkspaceArtifactPromotionV1()` followed by the exact read-only
 `verifyDocsFinalNativePairHandbackV1({ expected })`. That owner helper reopens
 and canonical-byte/hash-validates its fixed bundle/report paths and returns a
@@ -320,7 +327,9 @@ occurrence, heading, and section ID joins once. Missing, duplicate, reordered,
 orphaned, detached, or alternate-location directives fail before writing.
 
 No per-wave/per-promotion regeneration is allowed. After the final edit, request
-exactly one same-owner TASK-548-01-L02 final write only when the recovered pair
+exactly one final-native-corpus-generated-bundle-handback-gate — a
+generated-artifact-only invocation of the ALREADY-LANDED exact compiler CLI —
+only when the recovered pair
 is still baseline. On crash/restart, rederive the expected identity and invoke
 the idempotent owner verifier; never request a second regeneration. Compare the
 verifier-returned final pair with the expected identity and stored original:
@@ -333,8 +342,10 @@ boundary, the parent runs read-only `bun run docs:check` without migration
 values; 06-L02 then calls its zero-input atomic packaged-distribution loader
 once before reconciliation.
 `runTask54801L02FinalNativeRegenerationOnce` is an orchestration-only callback:
-when invoked, the same 01-L02 owner compiles, proves its identity equals
-`expected`, and promotes once; it returns no pair, receipt, or persisted
+when invoked, the already-landed exact compiler CLI compiles, proves its
+identity equals
+`expected`, and promotes once; it uses no agent writer, edits no human-authored
+source/task/status byte, and returns no pair, receipt, or persisted
 handback. Baseline state invokes it once; intended state and any restart that
 recovers the already-landed intended pair invoke it zero times.
 
@@ -379,10 +390,12 @@ but does not rename, recapture, or re-promote it.
 
 ## TASK-547 Serialization
 
-TASK-545 must be `✅ Done` and TASK-547 must be terminal before this leaf
-implements anything. After TASK-547 is terminal, amend the TASK-548 parent with every
-literal final overlapping user/developer/shared-doc path and the serialized
-single writer for each. This leaf reads the resulting shipped bytes and migrates
+TASK-545 must be `✅ Done` before this leaf implements anything. Reverify that
+the TASK-548 parent still pins terminal TASK-547 source
+`a13d186167a05901e644bf1a3a7aefee6f780471`, merge
+`963733cae23456622bea1eef1b734723aaab2350`, every literal overlapping
+user/developer/shared-doc path, and the serialized single writer for each. This
+leaf reads those shipped bytes and migrates
 an overlapping Guide path only when that literal parent ownership row assigns
 it here. Never document a TASK-547 route or installer state from task prose;
 derive only from shipped route/permission/source state.
@@ -574,7 +587,8 @@ strict scenario and caller-owned run identity → full localized owner/result
 identity assertion → candidate inspection/promotion → one final
 deterministic intended compile → exact expected run/source/bundle/report/pair
 identity → recovery and baseline-or-intended classification → zero or one
-same-owner compiler regeneration → recovery → exact read-only owner verifier →
+generated-artifact-only invocation of the already-landed exact compiler CLI →
+recovery → exact read-only owner verifier →
 strict in-memory verified handback fact containing the canonical reopened pair
 → fact linked to the expected identity and frozen original → final
 native-vs-stored-original normalized parity plus source-hash-change report →
@@ -592,7 +606,8 @@ source or run identity, a write before atomic freeze, malformed/reused/colliding
 or capture-substituted `runId`, canonical run-ID serialization, capture identity
 mismatch in any `docId`, canonical `locale`, `sectionId`, `visualId`, or `runId`,
 including cross-locale/document/section ownership, per-wave/per-promotion
-regeneration, a second owner dispatch, dispatch before the last owned edit, or
+regeneration, a second generated-artifact-only invocation, an invocation
+before the last owned edit, or
 consumption without recovery also fails. A missing/stale/replaced final member,
 noncanonical on-disk bytes, report-to-bundle linkage mismatch, wrong expected
 `migrationRunId`, `sourceHash`, `bundleSha256`, `reportSha256`, or
@@ -606,7 +621,8 @@ its deterministic intended migrated state is a conflict and fails before any
 later write. The CLI has no wave/skip/reorder/resume-position input; the exact
 all-waves invocation always walks internal waves `1 → 2 → 3`. An already exact
 intended visual/receipt is not recaptured, and an already exact intended final
-owner pair is verified rather than requesting a second regeneration dispatch.
+pair is verified rather than requesting a second generated-artifact-only
+invocation of the already-landed exact compiler CLI.
 
 ## Sub-Tasks
 
@@ -647,8 +663,9 @@ owner pair is verified rather than requesting a second regeneration dispatch.
   `headingOccurrence`→`sectionId` joins;
 - prove this leaf never writes `core/generated/docs/coderso-docs-v2.json` or the
   generated report; per-wave/per-promotion regeneration rejects; exactly one
-  final owner regeneration dispatch occurs after the final edit from baseline
-  state; intended state and post-land restart dispatch zero times.
+  final generated-artifact-only invocation of the already-landed exact compiler
+  CLI occurs after the final edit from baseline
+  state; intended state and post-land restart invoke zero times.
   Missing/stale members,
   a second dispatch, or wrong expected identity blocks `docs:check` and coverage;
 - type/shape-negative fixtures pass `verifiedHandback.pair` where
@@ -676,7 +693,7 @@ owner pair is verified rather than requesting a second regeneration dispatch.
   promotion boundary; every restart reopens the same typed baseline, resumes
   internal waves `1 → 2 → 3`, accepts only exact baseline-or-intended state,
   and a complete rerun is byte-idempotent; a post-land restart invokes only the
-  owner verifier, with no second regeneration dispatch or writer;
+  owner verifier, with no second generated-artifact-only invocation or writer;
 - restart spies prove `complete` baseline recovery calls only
   `reopenFrozenGuideMigrationBaselineV1({ migrationRunId })`: it never walks the
   current source tree, recomputes intended bytes, calls the create path, or
@@ -720,8 +737,10 @@ bun --eval 'import { canConnect } from "./tests/utils/db"; const configured = Bo
   confirmation, or loop may auto-approve. The selected ID alone is claimed,
   journaled, recovered and consumed; an otherwise-eligible duplicate is unchanged;
 - after all three waves and every non-pilot promotion, run
-  `bun run docs:visual:check -- --all`, then request exactly one TASK-548-01-L02
-  same-owner final regeneration only from baseline state, run recovery, and call
+  `bun run docs:visual:check -- --all`, then request exactly one
+  final-native-corpus-generated-bundle-handback-gate (a generated-artifact-only
+  invocation of the already-landed exact compiler CLI) only from baseline state,
+  run recovery, and call
   the owner verifier with the deterministic expected identity. Return its strict
   in-memory fact only for parent final-parity verification; after simulated
   restart rederive the same expected identity and call the verifier again with
@@ -734,8 +753,30 @@ bun --eval 'import { canConnect } from "./tests/utils/db"; const configured = Bo
 - run `bunx vitest run --config vitest.config.ts
   tests/vitest/documentation/docs-corpus-native-migration.test.ts`;
 - run `bun --cwd core lint:types` and `bun --cwd core lint`;
-- count every touched human-authored production/test file, fail any count above
-  1,000 physical lines, and run `git diff --check`.
+- the canonical NUL-safe line-count gate over the leaf write set (identical
+  contract in every TASK-548 task file; a file above 1,000 makes the gate fail
+  with `exit 1`, including a non-newline final line; the baseline spans the
+  full task/family dirty scope and commits/staging do not narrow it):
+
+  ```bash
+  # Canonical NUL-safe line-count gate over the leaf write set (identical
+  # contract in every TASK-548 task file; a file above 1,000 makes the gate fail
+  # with exit 1, including a non-newline final line). The verified pre-family
+  # baseline is the pinned commit 963733cae23456622bea1eef1b734723aaab2350;
+  # commits/staging cannot narrow the measured scope.
+  TASK_FAMILY_BASELINE_SHA="963733cae23456622bea1eef1b734723aaab2350"
+  git cat-file -e "${TASK_FAMILY_BASELINE_SHA}^{commit}" || { echo "invalid/missing baseline commit ${TASK_FAMILY_BASELINE_SHA}" >&2; exit 1; }
+  failed=0
+  while IFS= read -r -d '' f; do
+    lines=$(awk 'END { print NR }' "$f")
+    if [ "$lines" -gt 1000 ]; then
+      printf 'OVER-LIMIT %s %s\n' "$lines" "$f"
+      failed=1
+    fi
+  done < <({ git diff --name-only -z --diff-filter=ACMRT "$TASK_FAMILY_BASELINE_SHA" -- core packages scripts tests _docs/_workflows; git ls-files --others --exclude-standard -z -- core packages scripts tests _docs/_workflows; } | grep -zE '\.(ts|tsx|mjs|cjs|js|jsx|mts|cts)$' | grep -zvE '\.generated\.(ts|tsx|js|jsx|cjs|mjs|mts|cts)$' | sort -zu)
+  exit "$failed"
+  ```
+- run `git diff --check`.
 
 ## Documentation Updates Required
 

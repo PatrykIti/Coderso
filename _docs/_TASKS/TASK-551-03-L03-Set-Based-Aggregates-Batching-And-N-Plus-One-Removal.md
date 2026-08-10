@@ -6,7 +6,8 @@
 **Priority:** Critical
 **Category:** Database / Performance / Reliability
 **Estimated Effort:** Extra Large
-**Dependencies:** TASK-551-03-L02
+**Dependencies:** TASK-551-03-L02; TASK-551-07-L01 and terminal
+TASK-551-08-L03 FINAL cache/invalidation runtime receipt
 **Status:** ⏳ To Do
 **Changelog:** 1263 (pinned; TASK-551-10-L02 closure only)
 
@@ -17,7 +18,8 @@
 Replace application-side aggregation, per-row lookups/writes, and unbounded
 install/retry arrays with set-based SQL, explicit projections, and bounded
 chunks. Split the oversized solution-kit installer before changing its behavior
-while preserving rollback, webhook retry, and solution-kit product contracts.
+and consume the already-terminal cache runtime for atomic mutation/invalidation
+receipts while preserving rollback, webhook retry, and solution-kit contracts.
 
 ## Sub-Tasks
 
@@ -39,7 +41,12 @@ None; this is an executable leaf.
 `core/services/kits/solutionKitInstallTypes.ts`,
 `core/services/kits/solutionKitInstallSnapshots.ts`,
 `core/services/kits/solutionKitInstallOperations.ts`, and
-`core/services/kits/solutionKitInstallRunRepository.ts`.
+`core/services/kits/solutionKitInstallRunRepository.ts`,
+`core/services/kits/legacyInstallRunPersistence.ts`, and new cohesive
+`core/services/kits/legacyInstallRunPersistence/runCrudPersistence.ts`,
+`core/services/kits/legacyInstallRunPersistence/legacyOperations.ts`,
+`core/services/kits/legacyInstallRunPersistence/lockLifecycle.ts`, and
+`core/services/kits/legacyInstallRunPersistence/ledgerAdapter.ts`.
 
 **Tests:** `tests/unit/analytics/analyticsService.test.ts`,
 `tests/unit/analytics/trafficAggregationQuery.test.ts`,
@@ -53,6 +60,7 @@ None; this is an executable leaf.
 `tests/vitest/ui/webhooks.test.tsx`,
 `tests/unit/kits/solutionKitsService.test.ts`,
 `tests/unit/kits/installService.test.ts`,
+`tests/unit/kits/legacyInstallRunPersistenceSplit.test.ts`,
 `tests/integration/routes/solutionKitsRoutes.test.ts`, and
 `tests/perf/database-set-based-batch-budgets.test.ts`.
 
@@ -158,6 +166,28 @@ no source edit. Move responsibilities without cyclic imports:
 - `solutionKitsInstallService.ts`: catalog resolution, orchestration, audit after
   finalization, and re-exports only; at most 1,000 lines.
 
+The live tree has already completed that facade extraction, but the remaining
+`legacyInstallRunPersistence.ts` barrel is 1,075 lines and is the actual mandatory
+pre-TASK-489 split. This leaf moves cohesive responsibilities exactly as follows:
+
+- `runCrudPersistence.ts`: create/append plus bounded run point/list persistence;
+- `legacyOperations.ts`: catalog definition resolution and retained legacy apply/
+  rollback compatibility orchestration;
+- `lockLifecycle.ts`: full-site package-lock reservation, owner lease, and direct
+  session lifecycle only;
+- `ledgerAdapter.ts`: `createLegacyInstallLedger`/`defaultLegacyInstallLedger`
+  assembly and exact full-site ledger method adapters;
+- `legacyInstallRunPersistence.ts`: import/re-export compatibility barrel only.
+
+Existing `readPersistence.ts`, `runInitialization.ts`, and
+`dryRunTerminalization.ts` retain their cohesive ownership. No extracted module
+imports the barrel, and dependency direction is CRUD/read/init/finalization/lock
+modules -> `ledgerAdapter` -> barrel; `legacyOperations` may consume the assembled
+adapter, but `ledgerAdapter` never imports `legacyOperations`. Public export/
+runtime identity and every current importer remain stable. TASK-489 later owns
+only its declared exact owner-selection successor region in `ledgerAdapter.ts`;
+it must not revive the barrel monolith.
+
 The normalized plan is at most 500 resource operations and 4 MiB canonical JSON;
 each persisted before/after/rollback snapshot is at most 512 KiB and all item
 snapshot JSON for one run is at most 16 MiB:
@@ -186,6 +216,17 @@ current product contract. Child changes inside one operation use set-based
 `INSERT ... VALUES`, keyed update, and scoped delete chunks, never per-child SQL.
 Final run update occurs once; `logAudit` remains post-finalize and outside domain
 transactions.
+
+Every legacy resource transaction also consumes the landed typed invalidation
+port: derive finite tags only from the actual normalized mutation, persist the
+backend-specific receipt with the domain mutation and item receipt in that same
+transaction, return its plan after commit, and await the one public
+`getServerCacheRuntime().invalidation.applyAfterCommit(plan)` boundary before
+continuing. Memory persists zero outbox rows but still returns its typed plan;
+Redis persists exactly one deduplicated event. Noop/rejected/rolled-back work emits
+none, and cache delivery failure preserves the committed result plus durable retry/
+bypass semantics. This leaf reruns the terminal L08 parity contract against both
+backends and hands the receipt to L09; L09 does not reopen these legacy adapters.
 
 `listSolutionKitInstallRuns` retains its array facade, strict optional
 `kitId,mode,limit`, default 50/max 100, exact run-record projection, and
@@ -229,10 +270,12 @@ async function applySolutionKitInstall(input: ApplyInput, deps = defaultDeps) {
 ```
 
 Extraction lands compile-green in this order: types → snapshots → operations →
-run repository → facade. The implementer reads the current 2,773-line module and
-moves cohesive declarations/functions, not arbitrary line ranges. A source guard
-pins the facade exports and asserts the legacy monolith has no duplicate type,
-snapshot, operation, or repository implementation after extraction.
+run repository → facade → run CRUD → lock lifecycle → ledger adapter → retained
+legacy operations → barrel. The implementer reads current files immediately
+before movement and moves cohesive declarations/functions, not arbitrary line
+ranges. A source guard pins both facade/barrel exports, rejects an extracted
+module importing the barrel, and asserts neither compatibility entry retains a
+duplicate CRUD/operation/lock/adapter implementation.
 
 ## Testing Requirements
 
@@ -250,9 +293,17 @@ snapshot, operation, or repository implementation after extraction.
   `LIMIT + 1` corruption, mid-child and mid-operation failures, atomic resource+
   receipt rollback, both `continueOnError` branches, dry-run zero domain writes,
   512-KiB/16-MiB snapshot edges, max bind count, and no whole-table materialization.
+- For every legacy apply/rollback/compensation mutation, assert domain change,
+  item receipt, and backend-specific invalidation receipt commit together; memory
+  writes zero outbox rows, Redis writes one; post-commit application is awaited
+  exactly once and transport failure never changes the authoritative result.
 - Solution-kit tests prove preview/apply/rollback and audit parity, reverse order,
   idempotency, bounded 501-item corruption failure, original facade export/type
   API, no importer edits, and every split file independently importable.
+- Split tests compare every pre-split `legacyInstallRunPersistence.ts` export by
+  name/runtime identity, exercise each new module directly, reject barrel imports
+  below the barrel, and pin the root barrel below 200 lines and every extracted
+  production/test file at most 1,000 lines.
 
 ## Security Contract
 
@@ -267,7 +318,7 @@ snapshot, operation, or repository implementation after extraction.
 
 ## Validation Commands
 
-- `set -a && source .env && set +a && bun test tests/unit/analytics/analyticsService.test.ts tests/unit/analytics/trafficAggregationQuery.test.ts tests/integration/analytics/trafficAggregation.test.ts tests/unit/dashboard/dashboardService.test.ts tests/unit/webhooks/webhooksService.test.ts tests/unit/webhooks/deliveryService.test.ts tests/unit/kits/solutionKitsService.test.ts tests/unit/kits/installService.test.ts`
+- `set -a && source .env && set +a && bun test tests/unit/analytics/analyticsService.test.ts tests/unit/analytics/trafficAggregationQuery.test.ts tests/integration/analytics/trafficAggregation.test.ts tests/unit/dashboard/dashboardService.test.ts tests/unit/webhooks/webhooksService.test.ts tests/unit/webhooks/deliveryService.test.ts tests/unit/kits/solutionKitsService.test.ts tests/unit/kits/installService.test.ts tests/unit/kits/legacyInstallRunPersistenceSplit.test.ts`
 - `set -a && source .env && set +a && bun test tests/integration/routes/webhooks.test.ts tests/integration/routes/solutionKitsRoutes.test.ts tests/perf/database-set-based-batch-budgets.test.ts`
 - `bunx vitest run tests/vitest/admin/webhooksClient.test.ts tests/vitest/ui-integration/webhooks.test.tsx tests/vitest/ui/webhooks.test.tsx`
 - `bun --cwd core lint:types`
@@ -289,6 +340,9 @@ split contracts to TASK-551-10-L02.
 - Large install/retry plans keep peak process memory below the L01 baseline
   budget, every domain success commits with its item receipt, and small-fixture
   outputs preserve existing product semantics.
+- `legacyInstallRunPersistence.ts` is a compatibility barrel below 200 lines;
+  its four extracted owners are cohesive, acyclic, independently runnable, and
+  each below 1,000 lines before TASK-489 starts.
 - SEO and import/export source/tests remain byte-untouched and are handed to
   TASK-551-09 as whole-module owners; there is no split-writer overlap.
 - Every touched/split production and test file is at most 1,000 physical lines.

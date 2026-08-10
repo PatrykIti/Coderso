@@ -13,64 +13,35 @@
 
 ---
 
+## Overview
+
+Converge implementation, fix, full, and post-audit workflows on exact lens
+identity, bounded fix loops, owner-controlled closure, and mandatory smoke.
+
+## Sub-Tasks
+
+None; this is an executable leaf with the exclusive script inventory below.
+
 ## Exclusive ownership
 
 - new `_docs/_workflows/lib/post-audit.mjs`;
+- new `_docs/_workflows/lib/post-audit.d.mts`;
 - new `tests/unit/workflows/postAudit.test.ts`;
-- exactly these 44 current scripts:
+- new `tests/unit/workflows/task543WorkflowModules.test.ts`;
+- exactly these three tracked implementation/fix entries after security-first
+  TASK-554 lands:
 
 ```text
-task-480-fix.mjs
-task-480-impl-audit.mjs
-task-482-implement.mjs
-task-483-implement.mjs
-task-484-implement.mjs
-task-497-02-implement.mjs
-task-498-implement.mjs
-task-499-contract-fix-reaudit.mjs
-task-499-implement.mjs
-task-500-implement.mjs
-task-501-implement.mjs
-task-502-implement.mjs
-task-503-implement.mjs
-task-504-implement.mjs
-task-505-implement.mjs
-task-506-implement.mjs
-task-507-fix.mjs
-task-508-implement.mjs
-task-509-security.mjs
-task-512-impl.mjs
-task-513-impl.mjs
-task-514-impl.mjs
-task-515-impl.mjs
-task-516-impl.mjs
-task-519-520-fix.mjs
-task-519-520-fix2.mjs
-task-519-520-fix3.mjs
-task-519-520-fix4.mjs
-task-519-impl.mjs
-task-520-impl.mjs
-task-521-impl.mjs
-task-522-impl.mjs
-task-523-full.mjs
-task-524-impl.mjs
-task-525-impl.mjs
-task-526-full.mjs
-task-528-full.mjs
-task-529-full.mjs
-task-530-full.mjs
-task-531-impl.mjs
-task-532-impl.mjs
-task-533-impl.mjs
-task-534-impl.mjs
-task-535-remediation.mjs
+task-543-implement.mjs
+task-554-fix.mjs
+task-554-implement.mjs
 ```
 
 ## Mandatory staged implementation order
 
-1. Create `post-audit.mjs` and `postAudit.test.ts` before touching any of the 44 scripts.
+1. Create `post-audit.mjs` and `postAudit.test.ts` before touching any of the three scripts.
 2. Run the helper contract, landed audit-round suite, and new synthetic post-audit suite.
-3. Only after those pass, migrate the exact 44-file inventory in lexical order.
+3. Only after those pass, migrate the exact three-file inventory in lexical order.
 4. Re-run both driver suites, helper tests, `node --check`, inventory checks and the
    owned-script violation scans before handing the tree to TASK-545-01-L02.
 
@@ -80,25 +51,66 @@ checkpoint/resume runtime behavior remains owned later by TASK-545-03-L01's
 live-tree static leaf checks their complete inventory shape without duplicating driver
 behavior tests.
 
-This explicitly includes the otherwise unmatched `task-509-security.mjs`, combined
-full pipelines, and the `task-519-520-fix*.mjs` series. Do not edit L01-owned scripts.
-Before editing, reconcile both exact inventories against all active top-level `.mjs`;
-any missing/new file blocks work until assigned to one leaf and freshly audited.
+Do not edit L01-owned scripts. Before editing, derive the top-level executable
+inventory from `git ls-files` and reconcile it against L01's two files plus this
+three-file set. Any missing or additional tracked entry blocks work until it is
+explicitly assigned and freshly audited. Ignored owner-local scripts and entries
+removed by `5facaf32` are not implementation targets.
 
 ## Grounded violation inventory
 
-- Result filters span implementation families 480, 482–484, 497–508, 512–516,
-  519–535 and the 519–520 fix series.
-- Only 2–3 post lenses appear in `task-523-full`, `524-impl`, `525-impl`,
-  `526-full`, `528-full`, `529-full`, `530-full`, `531-impl`, `532-impl`,
-  `533-impl`, `534-impl`, and `535-remediation`.
-- Agent commit directives remain in 20 scripts:
-  `512–516-impl`, `519–522-impl`, `524/525-impl`, `526/528/529/530-full`,
-  `531–534-impl`, and `535-remediation`.
-- Dynamic next-free language occurs in 498 and multiple 501–535 author/closure
-  prompts. Deferred smoke occurs at least in 482–484, 515, 519–522, 532, and 534.
+- `task-543-implement.mjs:6702-6740` has a two-pass all-lens replay loop instead
+  of finding-driven affected-lens reruns through the canonical post-audit driver.
+- Its local `requireAllResults` at `:1986-2035` is superseded by the shared
+  helper so workflow result semantics have one owner.
+- Literal `.filter(Boolean)` calls at `:2408`, `:2521`, and `:3340` filter URL or
+  process-domain data and are explicitly valid; they are not evidence of a
+  false-clean agent-result path.
+- TASK-554's two terminal entries are read fresh after their committed handoff
+  and migrated only where their canonical driver/import/closure contracts drift.
 
-The static scan, not this prose list, is authoritative and must reach zero.
+The tracked static scan, not ignored local files or deleted historical scripts,
+is authoritative and must reach zero semantic workflow violations.
+
+### Mandatory TASK-543 cohesive split before migration
+
+The tracked `task-543-implement.mjs` is 7,079 physical lines at the refreshed
+baseline. Before changing its driver behavior, split it by responsibility into a
+thin orchestration entry and these flat tracked libraries under
+`_docs/_workflows/lib/`:
+
+- `task-543-gate-contracts.mjs` — command allowlists, gate schemas, strict-scan
+  projections, and gate receipt validation;
+- `task-543-smoke-schema.mjs` — smoke constants and recursively strict result,
+  lifecycle, fixture, scenario, and evidence schemas;
+- `task-543-smoke-command-builders.mjs` — canonical CLI/process/browser command
+  construction and raw receipt parsing;
+- `task-543-smoke-operation-code.mjs` — bounded evidence-operation validation
+  and code-source generation;
+- `task-543-smoke-scenario-validation.mjs` — success scenario semantics,
+  geometry/DOM assertions, screenshot, and reset validation;
+- `task-543-smoke-failure-prefix.mjs` — acquired-resource and canonical
+  failure-prefix validation;
+- `task-543-smoke-cleanup-validation.mjs` — cleanup suffix, process/port,
+  fixture, route, state, and remaining-resource validation;
+- `task-543-smoke-timeline.mjs` — exact success/failure command timeline
+  construction and chronology checks;
+- `task-543-codeql-self-test.mjs` — the existing CodeQL source/execution
+  self-test; and
+- `task-543-prompts-and-closure.mjs` — bounded prompts, declared lenses, closure
+  plan, and final metadata-gate helpers.
+
+`task-543-implement.mjs` retains only `meta`, fixed task constants, phase order,
+agent dispatch, and calls to those owners. Public behavior, exact command bytes,
+schemas, validation order, smoke scenario inventory, and exports used by the
+existing security suite remain stable. No arbitrary line-range extraction or
+generic helper file is valid. If a named module would exceed 1,000 lines, split
+that responsibility once more with a specific name before continuing; do not
+merge responsibilities to reduce file count. The new module test pins import
+acyclicity, owner/export inventory, entry thinness, byte-equivalent golden
+commands/results, and the existing `task543ImplementSecurity.test.ts` contract.
+Measure every touched entry/library/test from the verified pre-family baseline
+through the final tree; every human-authored result must be at most 1,000 lines.
 
 ## Implementation Pseudocode
 
@@ -110,19 +122,21 @@ export async function runCanonicalPostAudit({
   fix,
   validate,
   fingerprint, // SHA-256 over the audited contract set + HEAD + relevant dirty context
+  maximumFixPasses,
   label,
 }) {
-  if (!Array.isArray(lenses) || lenses.length < 5) {
-    throw new WorkflowResultError("workflow_post_lenses_insufficient", label, ...);
-  }
+  requireNonEmptyUniqueDeclaredLensKeys(lenses); // no arbitrary minimum
+  requireBoundedMaximumFixPasses(maximumFixPasses); // 1..3
   const passes = [];
+  const currentReceipts = new Map();
   let expectedRevision = await fingerprint();
-  for (let pass = 1; pass <= 2; pass += 1) {
+  let pending = lenses;
+  for (let pass = 0; pass <= maximumFixPasses; pass += 1) {
     const before = await fingerprint();
     if (before !== expectedRevision) {
       throw new WorkflowResultError("workflow_post_revision_changed", label, `pass=${pass}`);
     }
-    const jobs = lenses.map((lens) => ({
+    const jobs = pending.map((lens) => ({
       identity: `lens:${lens.key}`,
       run: () => runLens(lens, pass),
     }));
@@ -139,20 +153,38 @@ export async function runCanonicalPostAudit({
     if (after !== before) {
       throw new WorkflowResultError("workflow_post_revision_changed", label, `pass=${pass}`);
     }
-    const findings = collectStructuredFindings(results.map((result) => result.value));
+    for (const result of results) currentReceipts.set(result.identity, result.value);
+    const findings = collectStructuredFindings([...currentReceipts.values()]);
     const blocking = highMedium(findings);
-    passes.push({ pass, expected: lenses.length, fingerprint: after, findings });
-    if (blocking.length === 0) return { pass: true, passes, findings };
-    if (pass === 2) {
+    passes.push({ pass, expected: pending.length, fingerprint: after,
+      lensKeys: pending.map((lens) => lens.key), findings });
+    if (blocking.length === 0) {
+      return { pass: true, passes, findings,
+        receipts: requireEveryDeclaredLensReceipt(currentReceipts, lenses) };
+    }
+    if (pass === maximumFixPasses) {
       return { pass: false, passes, findings, reason: "post_audit_not_converged" };
     }
-    await fix(blocking); // exactly one HIGH/MEDIUM fix opportunity
-    const fixed = await fingerprint();
-    if (fixed === after) {
+    const beforeFixUniverse = await fingerprintUniverse(lenses);
+    const beforeByLens = await fingerprintEveryLensInput(lenses);
+    const fixResult = await fix(blocking);
+    const declaredAffectedLensKeys = requireNonEmptyAffectedLensSubset(
+      fixResult.affectedLensKeys,
+      lenses
+    );
+    const afterByLens = await fingerprintEveryLensInput(lenses);
+    const fixed = await fingerprintUniverse(lenses);
+    const actualAffectedLensKeys = deriveChangedLensKeys(beforeByLens, afterByLens);
+    requireExactIdentitySet(
+      declaredAffectedLensKeys,
+      actualAffectedLensKeys,
+      `${label}:post-fix:${pass}`,
+    );
+    if (fixed === beforeFixUniverse) {
       throw new WorkflowResultError("workflow_post_fixer_no_change", label, `pass=${pass}`);
     }
-    await validate();
-    const validated = await fingerprint();
+    await validate({ ...fixResult, affectedLensKeys: actualAffectedLensKeys });
+    const validated = await fingerprintUniverse(lenses);
     if (validated !== fixed) {
       throw new WorkflowResultError(
         "workflow_post_validation_mutated_contract",
@@ -160,7 +192,9 @@ export async function runCanonicalPostAudit({
         `pass=${pass}`
       );
     }
-    expectedRevision = validated; // pass 2 is fresh and bound to the fixed/validated tree
+    pending = lenses.filter((lens) => actualAffectedLensKeys.includes(lens.key));
+    for (const lens of pending) currentReceipts.delete(`lens:${lens.key}`);
+    expectedRevision = validated;
   }
   throw new WorkflowResultError("workflow_post_audit_unreachable", label, "state");
 }
@@ -182,12 +216,18 @@ async function routeUiWorkflow(args) {
   rejectCallerWorkflowEntryOverride(args);
   if (args.resumeEvidence) {
     rejectImplementationOrMutationArguments(args);
+    const parsed = parseAuthoritativeTask545ResumeArgv(args.argv, {
+      expectedTask: PINNED_TASK_ID,
+      expectedSession: PINNED_SMOKE_SESSION,
+      rejectUnknownMissingDuplicateOrMixedModeArguments: true,
+    });
     const resume: Task545ClosureResume = await openWorkflowClosureResume({
       repoRoot: args.repoRoot,
       expectedTask: PINNED_TASK_ID,
-      checkpointPath: args.resumeEvidence,
-      checkpointSha256: args.checkpointSha256,
-      runId: args.runId,
+      checkpointPath: parsed.checkpointPath,
+      checkpointSha256: parsed.checkpointSha256,
+      runId: parsed.runId,
+      expectedSession: PINNED_SMOKE_SESSION,
       expectedWorkflowRole: PINNED_WORKFLOW_ROLE,
       executingImportMetaUrl: EXECUTING_IMPORT_META_URL,
     });
@@ -212,6 +252,9 @@ async function routeUiWorkflow(args) {
     pinnedChangelogSlug: PINNED_CHANGELOG_SLUG,
     expectedWorkflowRole: PINNED_WORKFLOW_ROLE,
     executingImportMetaUrl: EXECUTING_IMPORT_META_URL,
+    expectedSuite: PINNED_SMOKE_SUITE,
+    expectedProfile: PINNED_SMOKE_PROFILE,
+    expectedSession: PINNED_SMOKE_SESSION,
     runtimeResult,
   }); // structured owner_action_required; workflow stops here
 }
@@ -228,8 +271,8 @@ node <checkpoint.workflowEntry> --repo-root <real-root>
 The phase-1 result provides both a structured `resumeArgv` array and a display-only
 `resumeCommand` produced by the canonical shell-quoting helper; the argv array is
 authoritative. `workflowEntry` is derived from that script's `import.meta.url`, normalized
-relative to the real repository root, and integrity-bound in the checkpoint. The exact
-24+44 built-ins remain exact. A later owner is accepted only when its canonical path matches
+relative to the real repository root, and integrity-bound in the checkpoint. The initial
+five tracked TASK-545 migration entries remain exact. A later owner is accepted only when its canonical path matches
 its TASK ID and `author-audit|implement|fix` suffix (`TASK-9999` is the sole four-digit
 exception), is tracked, regular/non-symlink, byte-identical to `git show HEAD:<path>`, and
 passes TASK-545 static-contract/import gates. It is never accepted from an agent result or
@@ -237,20 +280,30 @@ caller override. On resume, the currently executing entry must equal the checkpo
 entry before tracked evidence or closure is examined. The smoke-evidence validator CLI may
 diagnose artifacts, but it is not the owner resume command and cannot close a task.
 
-Use approximately five independent lenses appropriate to each workflow, covering
-at least scope fidelity, security/fail-closed model, compatibility/present-only,
-cross-stream/runtime behavior, and test integrity. Do not reach five by splitting
-one duplicated prompt. Fingerprint the exact audited implementation/task/test/docs set,
-HEAD, and relevant porcelain dirty context immediately before and after every complete
-lens dispatch. A mismatch is stale evidence and cannot be classified. Fingerprint again
-after the one fixer and after targeted validation; validation may write excluded generated
-reports but must not mutate the audited contract set.
+Declare the exact independent lens IDs appropriate to each touched contract,
+selecting from scope fidelity, security/fail-closed model,
+compatibility/present-only, cross-stream/runtime behavior, and test integrity
+only where relevant. Do not inflate the set by splitting one duplicated prompt.
+Require all declared identities and rerun only lenses whose audited inputs
+actually changed. Each lens declares its exact normalized input path set; a
+shared input maps to every consuming lens. Fingerprint every lens input set and
+the full audited implementation/task/test/docs universe,
+HEAD, and relevant porcelain dirty context immediately before and after every
+initial or affected-lens dispatch. A mismatch is stale evidence and cannot be
+classified. Fingerprint again after every verified fixer and targeted
+validation; validation may write excluded generated reports but must not mutate
+the audited contract set. A fixer's declared affected set is checked against the
+before/after-derived set and is never trusted as authority. Declared `A` with
+actual `A+B`, declared `A+B` with actual `A`, or any unowned/unmappable change
+invalidates every retained receipt and requires a new complete initial pass.
+Only an exact verified set retains unaffected receipts and reruns narrowly.
 
-Replace `.filter(Boolean)` with `requireAllResults` before any map/flatMap/count.
-Remove all executable `git commit`/`git add` prompts, dynamic changelog scans or
-renumber instructions, and mandatory-smoke deferral. Historical completed task
-scripts receive their actual pinned changelog number; prospective scripts use
-their task contract pin.
+Replace filtering of agent-result collections with `requireAllResults` before
+any map/flatMap/count or clean classification. Do not rewrite legitimate
+domain/browser/process collection filters. Remove executable `git commit`/
+`git add` prompts, dynamic changelog scans or renumber instructions, and
+mandatory-smoke deferral. Historical completed task scripts receive their actual
+pinned changelog number; prospective scripts use their task contract pin.
 
 UI workflows restart the server and complete the required real flows before the
 closure agent changes statuses. Evidence is validated through TASK-545-03 in two phases:
@@ -292,11 +345,14 @@ product mutation.
 - Fewer/missing lens results fail; no partial clean.
 - Wrong, duplicate, or reordered stable lens identities fail before findings are read;
   identities come from trusted `lens:<key>` wrappers, not agent payloads.
-- First-pass HIGH/MEDIUM triggers exactly one fix, targeted gates, and one fresh
-  complete lens pass. Second-pass HIGH/MEDIUM returns explicit non-convergence and
-  blocks closure; it never recurses or fixes again silently.
-- Any contract-byte/HEAD/relevant-dirty change during a lens pass, between passes, or
-  during validation aborts stale classification and requires a fresh complete pass.
+- Initial HIGH/MEDIUM findings trigger a bounded verified fix, targeted gates,
+  and only the fingerprint-derived affected lens IDs. Unaffected clean receipts
+  remain current only after exact declared-versus-actual equality.
+  Residual HIGH/MEDIUM may repeat this bounded cycle up to
+  `maximumFixPasses`; exhaustion returns explicit non-convergence.
+- Any unexpected contract-byte/HEAD/relevant-dirty change during dispatch or
+  validation aborts stale classification and requires a fresh complete pass.
+  A verified fixer-owned change follows the affected-lens path above.
 - Unresolved findings block closure or become explicit non-blocking follow-up
   tasks with rationale; they are not discarded.
 - Agent output contains no commit SHA claim because owner commits separately.
@@ -312,30 +368,46 @@ product mutation.
 
 ## Synthetic behavior tests owned by this leaf
 
-`tests/unit/workflows/postAudit.test.ts` proves missing lens, one fix plus validation,
-fresh second-pass success,
+`tests/unit/workflows/postAudit.test.ts` proves non-empty exact declared lens
+identity without an arbitrary count, missing lens, one or multiple bounded fixes
+plus validation, affected-lens-only success with unaffected receipt retention,
 correctly identified envelopes carrying null/undefined values that abort before findings
-flattening, wrong/duplicate/reordered lens identities, second-pass non-convergence without another
-fix, independent lens labels, mutation during
-either lens pass, drift between passes, fixer no-op, and validation mutation. Exact
+flattening, wrong/duplicate/reordered lens identities, bounded non-convergence,
+unknown/empty affected sets, independent lens labels, mutation during initial or
+affected dispatch, unexpected drift between passes, fixer no-op, declared `A`
+versus actual `A+B`, declared `A+B` versus actual `A`, unmappable shared-input
+mutation with complete receipt invalidation, and validation mutation. Exact
 owner-stage/resume lifecycle, closure-only branching, idempotent replay, metadata
 allowlists, extensible entry rejection, every ordered-pair child-process kill
 boundary, UTC rollover and returned argv belong to later `smokeEvidence.test.ts`;
 do not create a pre-helper mock contract here.
 
-## Validation
+## Testing Requirements
 
 ```bash
 node --check _docs/_workflows/lib/post-audit.mjs
-for file in _docs/_workflows/*.mjs; do node --check "$file"; done
+git ls-files -z -- '_docs/_workflows/*.mjs' '_docs/_workflows/lib/*.mjs' |
+  xargs -0 -r -n1 node --check
 bun test tests/unit/workflows/workflowContracts.test.ts \
   tests/unit/workflows/auditRounds.test.ts \
-  tests/unit/workflows/postAudit.test.ts
-if rg -n -F '.filter(Boolean)' _docs/_workflows -g '*.mjs'; then exit 1; fi
-if rg -n 'git commit|Commit on the worktree|next[- ]free|smokeDeferred' \
-  _docs/_workflows -g '*.mjs'; then exit 1; fi
+  tests/unit/workflows/postAudit.test.ts \
+  tests/unit/workflows/task543WorkflowModules.test.ts \
+  tests/unit/workflows/task543ImplementSecurity.test.ts
+bun run lint:repo:types
+wc -l _docs/_workflows/task-543-implement.mjs \
+  _docs/_workflows/lib/task-543-*.mjs \
+  tests/unit/workflows/{task543WorkflowModules,task543ImplementSecurity}.test.ts
 git diff --check
 ```
 
-Both `rg` commands must produce no active-workflow violations; document any
-test-fixture matches separately rather than weakening the scan.
+L02 hands the migrated tree to TASK-545-01-L02, whose static suite enumerates
+tracked files and distinguishes agent-result filtering from domain-data
+  filtering. New ignored libraries/declarations or TASK-554 entries require an owner-review/
+force-track handoff and committed `git ls-files`/`git show HEAD` byte parity
+before this leaf imports or migrates them. Agents never stage files.
+
+## Documentation Updates Required
+
+- No shared documentation edit in this leaf; keep the owned script inventory
+  current in this contract.
+- TASK-545-04-L03 owns board and changelog 1257 closure evidence.

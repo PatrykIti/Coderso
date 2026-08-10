@@ -8,8 +8,8 @@
 **Dependencies:** compile-green sequence terminal with targeted gates green:
 TASK-551-01 → TASK-551-02 → 08-L03 INITIAL → TASK-551-05 →
 TASK-551-03-L01 → TASK-551-06-L01/L02/L03 → TASK-551-07-L01 →
-09-L04 INITIAL → TASK-551-03-L02 → TASK-551-03-L03 → TASK-551-04 →
-TASK-551-07-L02 → TASK-551-08-L01/L02/L03 FINAL →
+09-L04 INITIAL → TASK-551-03-L02 → TASK-551-07-L02 →
+TASK-551-08-L01/L02/L03 FINAL → TASK-551-03-L03 → TASK-551-04 →
 TASK-551-09-L01/L02/L03/L04 FINAL; then
 TASK-551-01-L01 re-dispatched with a fresh exact-set `phase: "final"` receipt;
 TASK-551-11 authoring-audit PASS and post-audit handoffs; parent external
@@ -480,12 +480,33 @@ type Task551CommandEvidenceV1 = Readonly<{
   discoveredTestCount: number | null; // test commands require a positive value
 }>;
 
+type Task489CompanionId =
+  | "task489-runs-all-keyset"
+  | "task489-runs-package-keyset"
+  | "task489-effective-supersession"
+  | "task489-active-starter-owner"
+  | "task489-safe-detail";
+
 type Task551AggregateGateEvidenceV1 = Readonly<{
   schema: "coderso.task551.aggregate-gates@v1";
   pass: boolean;
   summary: string;
   head: string;
   fixtureProfiles: readonly ("small" | "large")[];
+  task489Predecessor: Readonly<{
+    schema: "coderso.task551.task489-predecessor@v1";
+    pass: boolean;
+    smallRuns: 10_000; largeRuns: 1_000_000;
+    ids: readonly Task489CompanionId[]; // exact five
+    cases: readonly Readonly<{ id: Task489CompanionId; caseId: string;
+      statementIds: readonly [string] | readonly [string, string] }>[]; // exact fourteen
+    statementReceipts: readonly Readonly<{
+      id: Task489CompanionId; caseId: string; statementId: string;
+      profile: "small" | "large"; planSha256: string;
+      normalizedP95Ms: number; p95MsMax: number; pass: boolean;
+    }>[]; // exact thirty
+    errors: readonly string[];
+  }>;
   commands: readonly Task551CommandEvidenceV1[];
   ownerTargetedHandoffs: readonly {
     taskId: "TASK-551-09-L01" | "TASK-551-09-L02" |
@@ -593,9 +614,9 @@ async function closeTask551Family(): Promise<void> {
       "551-05-L01", "551-05-L02", "551-03-L01",
       "551-06-L01", "551-06-L02", "551-06-L03",
       "551-07-L01", "551-09-L04(initial)",
-      "551-03-L02", "551-03-L03", "551-04-L01", "551-04-L02",
-      "551-07-L02",
+      "551-03-L02", "551-07-L02",
       "551-08-L01", "551-08-L02", "551-08-L03(final)",
+      "551-03-L03", "551-04-L01", "551-04-L02",
       "551-09-L01", "551-09-L02", "551-09-L03", "551-09-L04(final)",
     ],
     finalInventoryRefresh: "551-01-L01(final)",

@@ -44,8 +44,9 @@ that landed contract read-only.
 - Confirm TASK-551-03-L03 and TASK-551-06-L03 are terminal before dispatch;
   their dependency chain must also contain terminal TASK-551-05-L02 with green
   vector/index migration evidence. This preserves the compile-green order
-  `01 -> 02 -> 05 -> 03-L01 -> 06 -> 07-L01 -> 09-L04 INITIAL + 08-L03
-  INITIAL -> 03-L02 -> 03-L03 -> 04`. If the landed
+  `01 -> 02 -> 08-L03 INITIAL -> 05 -> 03-L01 -> 06 -> 07-L01 ->
+  09-L04 INITIAL -> 03-L02 -> 07-L02 -> 08-L01/L02/L03 FINAL ->
+  03-L03 -> 04`. If the landed
   schema exports, generated expressions, or indexes cannot support the query
   contract, pause for a TASK-551-05 contract correction; do not patch schema or
   emit a second migration from this family.

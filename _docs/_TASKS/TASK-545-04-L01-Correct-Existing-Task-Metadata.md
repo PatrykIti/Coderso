@@ -13,6 +13,15 @@
 
 ---
 
+## Overview
+
+Correct only the enumerated stale task metadata from physical child and
+changelog evidence without reopening completed product work.
+
+## Sub-Tasks
+
+None; this is an executable leaf with the exclusive file ownership below.
+
 ## Exclusive ownership
 
 Only these existing task files:
@@ -75,10 +84,16 @@ table-driven assertions for every stale child cell, both removed self-parent fie
 the TASK-504-05 date, TASK-533 changelog/status metadata, and TASK-511's unchanged To Do
 state plus tracked/no-extra-worktree wording. This leaf does not edit the test.
 
-## Validation
+## Testing Requirements
 
 ```bash
 rg -n '^\*\*Status:|^\| TASK-|^\*\*Parent Task:|Changelog' \
   _docs/_TASKS/TASK-{498,499,502,503,504,511,512,533}*.md
 git diff --check
 ```
+
+## Documentation Updates Required
+
+- Update only the enumerated task files; do not edit either index or a
+  changelog in this leaf.
+- TASK-545-04-L03 owns the final board and changelog 1257 reconciliation.

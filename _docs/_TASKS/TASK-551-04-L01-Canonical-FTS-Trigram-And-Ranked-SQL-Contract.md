@@ -45,8 +45,8 @@ None; this is an executable leaf.
 `tests/integration/server/task551SearchRankedQueries.test.ts`, and
 `tests/perf/database-search-plans.test.ts`.
 
-Every other path is forbidden, including all `core/db/schema*` and
-`core/db/migrations/**` paths (TASK-551-05),
+Every other path is forbidden, including `core/db/schema.ts`,
+`core/db/tables/**`, and `core/db/migrations/**` paths (TASK-551-05),
 `core/services/search/searchHistoryContract.ts`,
 `core/services/search/searchHistoryService.ts`,
 `tests/vitest/search/searchHistoryContract.test.ts`, and
@@ -98,7 +98,7 @@ function buildTask551PrefixTsquery(input: string): string {
   return tokens.map((token) => `${token}:*`).join(" & ");
 }
 
-// Imported read-only from core/db/schema/searchVectors.ts; never reconstructed.
+// Imported read-only from core/db/searchVectorDefinitions.ts; never reconstructed.
 const normalizedNeedleSql = normalizeTask551TrigramSql(parameterizedQueryText);
 
 function parseSearchRequest(input: unknown): StrictSearchRequest {
@@ -302,6 +302,12 @@ no search cursor field or cursor-specific error in this v1 contract.
   `to_tsquery('simple',...)`, generated-column `@@`, and
   `ts_rank_cd(...,32)`, and reject plainto/websearch/local parser variants or
   raw interpolation.
+- Pin the exact bind-numbering contract: one input CTE where `$1` is the
+  normalized prefix tsquery (`to_tsquery('simple',$1)`), distinct `$2/$3/$4`
+  product-version major/minor/patch aliases, locale and other binds at later
+  distinct numbers, version predicates comparing the six bound columns against
+  the CTE aliases, and zero rebind/reuse/collision — a guard rejects a second
+  tsquery constructor or a version predicate that re-binds `$1`.
 - Search tests cover accents/Unicode, punctuation, prefix/fuzzy behavior,
   ties, dates, categories, public publication filters, admin authorization, and
   deterministic result identity across repeated runs.

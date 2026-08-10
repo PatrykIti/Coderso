@@ -114,6 +114,7 @@ ${GRANULARITY}
 ${DECISIONS}
 ${GROUNDING}`;
 
+async function main() {
 phase("Author");
 const authored = await agent(
   `${COMMON}\n\nAUTHOR the full ${TASK} family now (parent + all NN subtasks + all NN-LNN executable leaves) per the suggested decomposition (refine but keep granular + execution-ready). Ground every file:line vs live code + the reference. State the TASK-521 dependency explicitly. Return the structured result listing every file written.`,
@@ -209,3 +210,6 @@ return {
     .filter((f) => f.isReal)
     .map((f) => `[${f.severity}] ${f.file}: ${f.problem}`),
 };
+}
+
+await main();

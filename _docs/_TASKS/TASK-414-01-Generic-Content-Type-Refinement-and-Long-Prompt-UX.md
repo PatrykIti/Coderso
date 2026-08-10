@@ -5,10 +5,11 @@
 **Priority:** High
 **Category:** Assistant + Engine + Admin UI + Security + Runtime QA
 **Estimated Effort:** Large
-**Dependencies:** TASK-414, TASK-407, TASK-410
+**Dependencies:** TASK-407, TASK-410
 **Status:** ✅ Done
 **Started:** 2026-06-07
 **Completed:** 2026-06-07
+**Changelog:** 1138
 
 ---
 
@@ -52,6 +53,12 @@ explicit syntax in the prompt.
 - Data safety: schema refinement must merge against a server-hydrated full
   existing schema and preserve unrelated fields. Full schemas used for local
   merge must not be sent to providers or browser localStorage.
+
+## Sub-Tasks
+
+None. This historical executable child was completed before the refreshed
+TASK-414 program decomposition; its shipped behavior and evidence remain
+terminal and the new work starts at TASK-414-02.
 
 ## Implementation Pseudocode
 

@@ -15,7 +15,7 @@
 ## Overview
 
 Use the private `packages/docs-portal` workspace precreated and lock-pinned by
-TASK-548-02-L03 with the repo's current React/Vite/TypeScript/Bun stack. Build
+TASK-548-02-L02 with the repo's current React/Vite/TypeScript/Bun stack. Build
 the accessible public shell and
 version+locale search experience by importing the exact
 `packages/docs-renderer` implementation from TASK-548-03-L02 and the exact
@@ -28,7 +28,7 @@ props, evidence and article tree never cross the hydration boundary.
 Do not add Next.js, Astro, Docusaurus, an MDX/Markdown renderer, a search SaaS,
 or another UI/content pipeline. If the current stack cannot satisfy a verified
 requirement, stop and reconcile dependency, license, integrity, and
-security-scan evidence with TASK-548-02-L03, the root lock owner, before adding
+security-scan evidence with TASK-548-02-L02, the root lock owner, before adding
 a package.
 
 ## Exclusive Ownership
@@ -58,9 +58,10 @@ L02 exclusively owns `src/build/**`, `src/routes/**`, `src/seo/**`, and all
 static output shaping. L01 gates the shell with typecheck/Vitest/Vite client
 build and does not claim the final static generator until L02.
 
-TASK-548-02-L03 is the sole writer of
+TASK-548-02-L02 is the sole writer of
 `packages/docs-portal/package.json`, `packages/docs-renderer/package.json`, root
-`package.json`, and `bun.lock`; this leaf must not create or reopen any of them.
+`package.json`, root `bun.lock` and the Dockerfile; this leaf must not create or
+reopen any of them.
 Before implementation, assert the frozen lock already contains both workspace
 records and the local portal commands. TASK-548-05 must not edit portal source;
 it consumes L02 output through the predeclared package command.
@@ -160,7 +161,7 @@ otherwise import only strict site-index/payload contracts and shared components.
 - **Privacy:** no tracking by default; only theme preference may persist.
   Search query and corpus stay memory/URL local and are never sent remotely.
 - **Supply chain:** no new framework/dependency. Any verified dependency need
-  requires contract reconciliation with the TASK-548-02-L03 root lock owner
+  requires contract reconciliation with the TASK-548-02-L02 root lock owner
   before this leaf starts, plus license, integrity, and security-scan evidence.
 
 ## Implementation Pseudocode
@@ -701,19 +702,33 @@ else
   test ! -e packages/docs-portal/dist
 fi
 bun run precommit:check
-find packages/docs-portal/src/app packages/docs-portal/src/search \
-  packages/docs-portal/src/styles \
-  -type f \( -name '*.ts' -o -name '*.tsx' -o -name '*.css' \
-  -o -name '*.json' -o -name '*.svg' \) -exec wc -l {} +
-wc -l packages/docs-portal/tsconfig.json \
-  packages/docs-portal/vite.config.ts \
-  tests/vitest/docs-portal/portal-shell.test.tsx \
-  tests/vitest/docs-portal/portal-search.test.tsx
 git diff --check
 ```
 
-Inventory every L01-owned human-authored text file, including TS, TSX, CSS,
-configuration and text brand assets; every count must be at most 1,000.
+- the canonical NUL-safe line-count gate over the leaf write set (identical
+  contract in every TASK-548 task file; a file above 1,000 makes the gate fail
+  with `exit 1`, including a non-newline final line; the baseline spans the
+  full task/family dirty scope and commits/staging do not narrow it):
+
+  ```bash
+  # Canonical NUL-safe line-count gate over the leaf write set (identical
+  # contract in every TASK-548 task file; a file above 1,000 makes the gate fail
+  # with exit 1, including a non-newline final line). The verified pre-family
+  # baseline is the pinned commit 963733cae23456622bea1eef1b734723aaab2350;
+  # commits/staging cannot narrow the measured scope.
+  TASK_FAMILY_BASELINE_SHA="963733cae23456622bea1eef1b734723aaab2350"
+  git cat-file -e "${TASK_FAMILY_BASELINE_SHA}^{commit}" || { echo "invalid/missing baseline commit ${TASK_FAMILY_BASELINE_SHA}" >&2; exit 1; }
+  failed=0
+  while IFS= read -r -d '' f; do
+    lines=$(awk 'END { print NR }' "$f")
+    if [ "$lines" -gt 1000 ]; then
+      printf 'OVER-LIMIT %s %s\n' "$lines" "$f"
+      failed=1
+    fi
+  done < <({ git diff --name-only -z --diff-filter=ACMRT "$TASK_FAMILY_BASELINE_SHA" -- core packages scripts tests _docs/_workflows; git ls-files --others --exclude-standard -z -- core packages scripts tests _docs/_workflows; } | grep -zE '\.(ts|tsx|mjs|cjs|js|jsx|mts|cts)$' | grep -zvE '\.generated\.(ts|tsx|js|jsx|cjs|mjs|mts|cts)$' | sort -zu)
+  exit "$failed"
+  ```
+
 Re-run named failures alone before classification.
 
 ## Acceptance Criteria
@@ -734,7 +749,7 @@ Re-run named failures alone before classification.
 - Search/article rendering creates no remote runtime dependency or unsafe
   markup.
 - Root `package.json` and `bun.lock` remain untouched under the exclusive
-  TASK-548-02-L03 ownership, as do both documentation workspace manifests.
+  TASK-548-02-L02 ownership, as do all three documentation workspace manifests.
 
 ## Documentation Updates Required
 

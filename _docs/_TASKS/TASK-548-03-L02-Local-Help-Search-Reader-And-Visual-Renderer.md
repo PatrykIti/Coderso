@@ -6,8 +6,9 @@
 **Priority:** High
 **Category:** Admin Help / Documentation UI / Accessibility
 **Estimated Effort:** Very Large
-**Dependencies:** TASK-548-02-L03 and TASK-548-03-L01; TASK-547 terminal plus
-the parent literal-overlap amendment before dispatch
+**Dependencies:** TASK-548-02-L02 (sole owner of the package manifests and
+ALL dependency-bearing toolchain bytes — see its file); TASK-548-03-L01;
+TASK-547 terminal (parent literal-overlap amendment per the parent handoff)
 **Status:** ⏳ To Do
 **Changelog:** 1261 (pinned; closure only)
 
@@ -37,9 +38,11 @@ This leaf is the only writer for:
 
 - new `packages/docs-renderer/src/**` and
   `packages/docs-renderer/tsconfig.json`; the package manifest is frozen by
-  TASK-548-02-L03;
+  TASK-548-02-L02;
 - new Bun-free
   `core/admin/app/routes/help.admin-route-descriptor.ts`;
+- new Bun-free
+  `core/admin/app/routes/help.admin-control-descriptor.ts`;
 - new `core/admin/app/routes/help.admin-route.tsx`;
 - new `core/admin/ui/help/**`, including build-only `helpBuildAssetVerification.ts`;
 - new `core/services/documentation/help/embeddedHelpVitePlugin.ts` plus exact docs-plugin registration and image-root `server.fs.allow` orchestration in `core/vite.config.ts`;
@@ -55,13 +58,14 @@ This leaf is the only writer for:
 
 It must not edit L01's `adminRouteRegistry.tsx`, `AdminApp.tsx`,
 `adminPaths.ts`, or core route module. The new Help descriptor is discovered by
-the stable L01 registry seam. TASK-548-02-L03 is the sole writer of
+the stable L01 registry seam. TASK-548-02-L02 is the sole writer of
 `packages/docs-renderer/package.json`, `packages/docs-portal/package.json`, root
-`package.json`, and `bun.lock`; this leaf must not create or reopen them.
+`package.json`, root `bun.lock` and the Dockerfile (plus all other
+dependency-bearing toolchain bytes); this leaf must not create or reopen them.
 
 ## Renderer Workspace Activation Gate
 
-TASK-548-02-L03 deliberately validated only the renderer manifest, frozen
+TASK-548-02-L02 deliberately validated only the renderer manifest, frozen
 workspace install, dependency declaration, and Docker preinstall wiring because
 this source package did not exist at that earlier land point. After this leaf
 has created all `packages/docs-renderer/src/**` files and its `tsconfig.json`,
@@ -80,7 +84,7 @@ public exports through `@coderso/docs-renderer`, not through a relative source
 path. `tests/vitest/docs/docs-renderer.test.tsx`, which this leaf solely owns,
 also pins those named exports and their usable behavior. No command here builds
 the future portal or the final Docker image, and this runtime validation grants
-no write ownership of TASK-548-02-L03's manifests, lockfile, core dependency,
+no write ownership of TASK-548-02-L02's manifests, lockfile, core dependency,
 or Dockerfile.
 
 The Core-only `core/admin/ui/help/docsHelpHostAdapter.ts` owns canonical Admin
@@ -103,6 +107,15 @@ export const HELP_ADMIN_ROUTE_DESCRIPTORS_V1 = [{
   capabilityIds: ["docs.area.getting-started"],
 }] as const satisfies readonly AdminRouteDescriptorV1[];
 ```
+
+The paired pure control file exports exactly
+`HELP_ADMIN_CONTROL_DESCRIPTORS_V1` with stable controls
+`docs.control.help.search` (`controlIdInRoute: "search"`) and
+`docs.control.help.open-section` (`controlIdInRoute: "open-section"`), both
+joined to `help.home`, `docs.area.getting-started`, null route permission, and
+their exact documentation feature-source IDs. It imports L01's control
+contract, contains no React/labels/prose, and is consumed by the same final
+composition/coverage inventory as the core control export.
 
 `docs.area.getting-started` is the reviewed existing exact TASK-548-01
 capability-catalog member for this route. The descriptor normalizer and coverage
@@ -212,7 +225,10 @@ with the link table, then calls the same package's
 `hashDocsCanonicalJsonBodyV1(DOCS_PUBLICATION_PROJECTION_BODY_HASH_DOMAIN_V1,
 body)`. Thus projection hash bytes use L01's exact RFC-8785/no-LF/domain+NUL+
 u64-length framing and fixed `{}` vector; renderer defines no hash fork. It emits
-no brand/corpus/path/non-target record. The browser recursively normalizes once,
+no brand/corpus/path/non-target record. Publication visuals carry the
+compiler-derived `scenarioStepSearchText`; the search index consumes only that
+compiled field, and no raw scenario bytes enter the projection or Admin
+chunks. The browser recursively normalizes once,
 rechecks both hashes/target/order/closure and brands safe DTOs. Exact-key tests
 reject full-source/path rows plus domain/length/body/final-LF mutations.
 
@@ -244,7 +260,7 @@ export type DocsClientSearchRankingRecordV1 = {
   adminScreenPhraseTokens: string[]; canonicalAdminPath: string | null;
   headingTokens: string[];
   bodyTokens: string[]; visualCaptionAltTokens: string[];
-  exampleLabelTokens: string[]; productArea: string;
+  scenarioStepTokens: string[]; exampleLabelTokens: string[]; productArea: string;
   capabilityIds: string[]; curatedOrder: number | null;
   localeCompatibility: "selected" | "english-fallback";
   versionCompatibility: "exact" | "range";
@@ -267,13 +283,20 @@ export function searchDocsClientSearchRankingV1(
 
 The projection retains every public score input used by `searchDocs`: exact
 title/keyword/admin-screen phrase; normalized title/heading/body;
-caption+alt/example-label; product-area and bounded exact `capabilityIds`
+caption+alt, compiler-derived scenario-step and example-label tokens;
+product-area and bounded exact `capabilityIds`
 context; exact locale/version compatibility; and total
 `locale, docId, sectionId` tie break. It contains no Markdown/full record/
-private path/brand. Both APIs call one shared scorer; the client cannot omit or
+private path/brand/raw scenario DSL or fixture bytes. Both APIs call one shared
+scorer; the client cannot omit or
 reweight a signal. Unicode/case/diacritic/whitespace normalization and query/
 result/snippet/token clamps are shared. Empty query returns curated navigation.
 Search calls no DB, Assistant, provider, portal, analytics or network service.
+`scenarioStepTokens` is derived only from the compiled
+`visual.scenarioStepSearchText` projection in the publication records; the
+search index never reads scenario files and never re-derives tokens from the
+scenario DSL, so locators, `fixtureValueRef`, expected values and watch paths
+can never become searchable or leak into the client projection.
 
 The Help bootstrap requests literal `embedded-help`. Target absence fails
 closed. A multi-target document is eligible when it contains `embedded-help`;
@@ -916,6 +939,12 @@ article, and a deep link cannot focus outside its selected localized article.
   duplicate, missing, unlisted, orphan, wrong-media/hash/bytes and forged props;
 - every search signal, locale/version state and total tie break has byte-identical
   server/client results; target leaks yield no result/render/navigation;
+- scenario-step fixtures prove terms present only in the compiled
+  `scenarioStepSearchText` projection return the correct localized section,
+  tokens are bounded/deduped/deterministic, and locator/`fixtureValueRef`/
+  expected-value/watch-path bytes seeded into scenario files never become
+  searchable or reach the client projection (no scenario-file reads at index
+  or search time);
 - all Markdown token variants render safely; image/HTML tokens cannot synthesize
   evidence, examples remain escaped/copy-only after trusted activation;
 - Help and portal pin stored heading level/text/id, TOC order/hrefs, localized
@@ -964,15 +993,23 @@ bun --cwd core lint
 bun run check:admin-boundary
 bun --cwd core build:admin
 bun run check:admin-bundle
-find packages/docs-renderer core/admin/ui/help \
-  -type f \( -name '*.ts' -o -name '*.tsx' \) -exec wc -l {} +
-wc -l core/admin/app/routes/help.admin-route.tsx \
-  core/admin/app/routes/help.admin-route-descriptor.ts \
-  core/admin/ui/navigation/sidebarConfig.ts \
-  tests/vitest/docs/docs-renderer.test.tsx \
-  tests/vitest/docs/docs-search.test.ts \
-  tests/vitest/ui-integration/help-center.test.tsx
 git diff --check
+# Canonical NUL-safe line-count gate over the leaf write set (identical
+# contract in every TASK-548 task file; a file above 1,000 makes the gate fail
+# with exit 1, including a non-newline final line). The verified pre-family
+# baseline is the pinned commit 963733cae23456622bea1eef1b734723aaab2350;
+# commits/staging cannot narrow the measured scope.
+TASK_FAMILY_BASELINE_SHA="963733cae23456622bea1eef1b734723aaab2350"
+git cat-file -e "${TASK_FAMILY_BASELINE_SHA}^{commit}" || { echo "invalid/missing baseline commit ${TASK_FAMILY_BASELINE_SHA}" >&2; exit 1; }
+failed=0
+while IFS= read -r -d '' f; do
+  lines=$(awk 'END { print NR }' "$f")
+  if [ "$lines" -gt 1000 ]; then
+    printf 'OVER-LIMIT %s %s\n' "$lines" "$f"
+    failed=1
+  fi
+done < <({ git diff --name-only -z --diff-filter=ACMRT "$TASK_FAMILY_BASELINE_SHA" -- core packages scripts tests _docs/_workflows; git ls-files --others --exclude-standard -z -- core packages scripts tests _docs/_workflows; } | grep -zE '\.(ts|tsx|mjs|cjs|js|jsx|mts|cts)$' | grep -zvE '\.generated\.(ts|tsx|js|jsx|cjs|mjs|mts|cts)$' | sort -zu)
+exit "$failed"
 ```
 
 All counts must be at most 1,000. Re-run named failures alone before

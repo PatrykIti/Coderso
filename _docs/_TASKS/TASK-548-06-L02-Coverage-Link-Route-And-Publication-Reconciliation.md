@@ -6,11 +6,12 @@
 **Priority:** High
 **Category:** Documentation / Coverage / Quality Gates
 **Estimated Effort:** Large
-**Dependencies:** TASK-545 is `✅ Done` and TASK-547 is terminal; the TASK-548
-parent names and serializes every literal final TASK-547-overlapping path before
-any implementation; TASK-548-06-L01 plus final TASK-548-01-L02
-handback and read-only packaged-bundle verification; TASK-548-03-L01 Bun-free
-route-snapshot handoff
+**Dependencies:** TASK-545 is `✅ Done`; the TASK-548 parent's frozen terminal
+TASK-547/TASK-552 identity (see the parent handoff and serialized-owner list
+in the body); TASK-548-06-L01; TASK-548-03-L01 (Bun-free route-snapshot
+handoff). The final-native-corpus-generated-bundle-handback-gate and the
+read-only packaged-bundle verification are sequencing gates described in the
+body, not task edges.
 **Status:** ⏳ To Do
 **Changelog:** 1261 (pinned; closure only)
 
@@ -98,13 +99,20 @@ This leaf consumes only the exact TASK-548-03 pure owner modules:
 
 ```text
 core/admin/app/adminRouteDescriptorContract.ts
+core/admin/app/adminControlDescriptorContract.ts
 core/admin/app/routes/core.admin-route-descriptor.ts
+core/admin/app/routes/core.admin-control-descriptor.ts
 core/admin/app/routes/help.admin-route-descriptor.ts
+core/admin/app/routes/help.admin-control-descriptor.ts
 ```
 
 It imports `AdminRouteDescriptorV1`, the generic plural
 `normalizeAdminRouteDescriptorsV1`, and the named canonical constants
 `CORE_ADMIN_ROUTE_DESCRIPTORS_V1` and `HELP_ADMIN_ROUTE_DESCRIPTORS_V1`.
+It also imports `AdminControlDescriptorV1`,
+`normalizeAdminControlDescriptorsV1`, and
+`CORE_ADMIN_CONTROL_DESCRIPTORS_V1` plus the exact paired
+`HELP_ADMIN_CONTROL_DESCRIPTORS_V1` export; no control comes from inference.
 It does not require or invent a TASK-548-03-owned coverage loader or parity
 assertion. This leaf may define only this local composition helper inside its
 owned `docsCoverage.ts`:
@@ -159,6 +167,8 @@ export const DOCS_COVERAGE_LIMITS_V2 = {
   maxRoutes: 2_048,
   maxLinks: 65_536,
   maxAssets: 32_768,
+  maxAtomicControls: 16_384,
+  maxComposedWorkflows: 4_096,
   maxExclusions: 2_048,
   maxConsumerDocuments: 4_096,
   maxIdLength: 160,
@@ -184,6 +194,26 @@ export type DocsCoverageDocumentRecordV2 = {
   sectionIds: string[];
   exampleIds: string[];
   visualIds: string[];
+};
+
+export type DocsCoverageAtomicControlRecordV2 = {
+  controlId: string;
+  productAreaCapabilityId: string;
+  document: DocsCoverageDocumentIdentityV2;
+  sectionId: string;
+  permissionRequirement: DocsPermissionRequirementV1 | null;
+  publicationTargets: DocsPublicationTarget[];
+};
+
+export type DocsCoverageComposedWorkflowRecordV2 = {
+  workflowId: string;
+  productAreaCapabilityId: string;
+  expectedOutcome: string;
+  orderedAtomicControlIds: string[];
+  document: DocsCoverageDocumentIdentityV2;
+  sectionId: string;
+  permissionRequirement: DocsPermissionRequirementV1 | null;
+  publicationTargets: DocsPublicationTarget[];
 };
 
 export type DocsCoverageRouteRecordV2 = {
@@ -251,6 +281,8 @@ export type DocsCoverageReportV2 = {
   corpusVersion: string;
   sourceHash: string;
   documents: DocsCoverageDocumentRecordV2[];
+  atomicControls: DocsCoverageAtomicControlRecordV2[];
+  composedWorkflows: DocsCoverageComposedWorkflowRecordV2[];
   routes: DocsCoverageRouteRecordV2[];
   links: DocsCoverageLinkRecordV2[];
   assets: DocsCoverageAssetRecordV2[];
@@ -270,6 +302,14 @@ export function parseDocsCoverageReportV2(
   bytes: Uint8Array
 ): DocsCoverageReportV2;
 ```
+
+`atomicControls` plus `composedWorkflows` are the canonical serialized
+projection of the already-compiled bundle
+`DocsCapabilityCompositionCatalogV1` inside the existing coverage JSON. They do
+not create a third coverage output, do not expand document `capabilityIds`, and
+are never generated in this leaf. The pure L01 composition normalizer validates
+the bundle catalog before coverage writes and before Assistant ingest consumes
+it; coverage additionally reconciles it against the exact control descriptors.
 
 `serializeDocsCoverageReportV2(value)` is the sole report-to-bytes boundary.
 It does not trust the compile-time type: it first calls
@@ -339,6 +379,16 @@ For each document:
 - document `capabilityIds` and route `capabilityIds` resolve in the same
   code-owned catalog; every active catalog capability is covered or carries one
   exact tested exclusion, and no alternate label is derived;
+- every atomic-control relation ID resolves to one or more independently
+  eligible localized section records, while each composed-workflow ID resolves
+  to one complete workflow section and the exact ordered atomic list from the
+  relation owner. Area-only IDs cannot satisfy these records. Missing,
+  duplicate, orphaned, cyclic, order-drifted, cross-locale, permission-
+  ineligible or target-ineligible joins fail before either output is written;
+- every document/section eligible for Guide evidence carries both `assistant`
+  and `embedded-help`; either target missing fails Guide projection/coverage so
+  `Open in Help` is never nullable for a Guide answer. `public-docs` remains
+  independently optional;
 - `embedded-help`, `assistant`, and `public-docs` targets reconcile with content
   safety and generated consumers; public URLs exist only when `public-docs` is
   present. Each consumer projection contains exactly records carrying its target;
@@ -359,10 +409,12 @@ close. Schema support for BCP-47/`pl` is “ready”, not a translation claim:
 missing Polish documents create no fake routes, hreflang, search indexes, or
 coverage percentage.
 
-TASK-545 must be `✅ Done` and TASK-547 must be terminal before implementation.
-After TASK-547 is terminal, the TASK-548 parent must name every literal final
-overlapping user/developer/shared-doc path and serialize ownership. Re-read
-TASK-547's final shipped state and those paths after that handoff. Its actual
+TASK-545 must be `✅ Done` before implementation. Reverify that the TASK-548
+parent still pins terminal TASK-547 source
+`a13d186167a05901e644bf1a3a7aefee6f780471`, merge
+`963733cae23456622bea1eef1b734723aaab2350`, every literal final overlapping
+user/developer/shared-doc path, and its serialized owner. Re-read TASK-547's
+final shipped state and those paths from that frozen handoff. Its actual
 Admin paths and Guide owner must reconcile; planned paths/capabilities are never
 represented as active. Detect concurrent byte changes to a serialized path and
 fail with an ownership diagnostic instead of merging both versions.
@@ -460,6 +512,10 @@ record/hash/path tampering fails before either generated output is written.
   stale alias, bad parameter pattern, invalid exclusion, null/allOf/anyOf
   permission understatement, capability drift, broken anchor/link, orphan
   example/visual/receipt, hash mismatch, and target leak;
+- atom/workflow fixtures cover one atomic control reused by two workflows,
+  exact ordered composition, default concise Guide deep-link eligibility and
+  full-section ownership; mutate every control/workflow ID, order, outcome,
+  locale, permission, target and section owner and require a fail-closed report;
 - strict `DocsCoverageReportV2` tests prove
   `serialize(parse(serialize(value)))` byte identity and canonical-byte
   `serialize(parse(bytes))` identity; serializer output uses exact declared key
@@ -507,7 +563,7 @@ record/hash/path tampering fails before either generated output is written.
 - prove planned TASK-547 state is absent, shipped state joins, and concurrent
   serialized-path drift fails;
 - generate twice under different roots/order/timezone and compare JSON/Markdown;
-- consume the seventh exact root script owned by TASK-548-02-L03 and run
+- consume the seventh exact root script owned by TASK-548-02-L02 and run
   read-only `bun run docs:check`, then
   `bun run docs:coverage -- --write`, immediately followed by
   `bun run docs:coverage -- --check`; this leaf never edits root
@@ -522,9 +578,30 @@ record/hash/path tampering fails before either generated output is written.
   real filesystem/fsync/child-process recovery semantics;
 - run `bun run docs:visual:check -- --all`, `bun --cwd core lint:types`,
   `bun --cwd core lint`;
-- audit every added/modified human-authored production and test file from the
-  pre-task baseline with `wc -l`; any result above 1,000 fails; then run
-  `git diff --check`.
+- the canonical NUL-safe line-count gate over the leaf write set (identical
+  contract in every TASK-548 task file; a file above 1,000 makes the gate fail
+  with `exit 1`, including a non-newline final line; the baseline spans the
+  full task/family dirty scope and commits/staging do not narrow it):
+
+  ```bash
+  # Canonical NUL-safe line-count gate over the leaf write set (identical
+  # contract in every TASK-548 task file; a file above 1,000 makes the gate fail
+  # with exit 1, including a non-newline final line). The verified pre-family
+  # baseline is the pinned commit 963733cae23456622bea1eef1b734723aaab2350;
+  # commits/staging cannot narrow the measured scope.
+  TASK_FAMILY_BASELINE_SHA="963733cae23456622bea1eef1b734723aaab2350"
+  git cat-file -e "${TASK_FAMILY_BASELINE_SHA}^{commit}" || { echo "invalid/missing baseline commit ${TASK_FAMILY_BASELINE_SHA}" >&2; exit 1; }
+  failed=0
+  while IFS= read -r -d '' f; do
+    lines=$(awk 'END { print NR }' "$f")
+    if [ "$lines" -gt 1000 ]; then
+      printf 'OVER-LIMIT %s %s\n' "$lines" "$f"
+      failed=1
+    fi
+  done < <({ git diff --name-only -z --diff-filter=ACMRT "$TASK_FAMILY_BASELINE_SHA" -- core packages scripts tests _docs/_workflows; git ls-files --others --exclude-standard -z -- core packages scripts tests _docs/_workflows; } | grep -zE '\.(ts|tsx|mjs|cjs|js|jsx|mts|cts)$' | grep -zvE '\.generated\.(ts|tsx|js|jsx|cjs|mjs|mts|cts)$' | sort -zu)
+  exit "$failed"
+  ```
+- run `git diff --check`.
 
 ## Documentation Updates Required
 

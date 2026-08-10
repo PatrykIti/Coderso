@@ -13,6 +13,15 @@
 
 ---
 
+## Overview
+
+Add the tracked-inventory static gate after the helper and workflow migrations
+have landed, so future canonical workflow drift fails in a clean checkout.
+
+## Sub-Tasks
+
+None; this is an executable leaf with the exclusive file ownership below.
+
 ## Exclusive ownership
 
 - new `tests/unit/workflows/workflowStaticContract.test.ts`
@@ -24,69 +33,109 @@ files are read-only gates; this leaf reruns but never edits/rebaselines them.
 
 ## Grounded baseline
 
-- `rg -l -F 'filter(Boolean)' _docs/_workflows -g '*.mjs'` currently returns 61
-  active files; 58 contain the audit's unsafe result-filter class.
-- Short author loops: `task-517-author.mjs:168`, `task-524-author.mjs:79`,
-  `task-525-author.mjs:70`, `task-531-534-author.mjs:113`.
-- One reconcile outside the loop: `task-531-534-author.mjs:103-138`.
-- Two/three-lens post-audits: `task-523-full` through `task-535-remediation`,
-  including `task-533-impl.mjs:73-109`.
-- Commit prompts remain in 20 scripts from `task-512-impl` through
-  `task-535-remediation`; dynamic allocation and deferred-smoke strings remain
-  across author/implement/full scripts.
+- Commit `5facaf32` removed and globally ignored the former local workflow
+  corpus; a recursive filesystem scan is therefore non-reproducible.
+- Current HEAD tracks two executable entries, TASK-522 author and TASK-543
+  implement, plus the TASK-522 helper/type declaration. Terminal TASK-554 must
+  add three explicitly tracked entries before TASK-545 starts.
+- `task-522-author.mjs:168` is the only current tracked unsafe agent-result
+  filter. TASK-543's three literal `.filter(Boolean)` calls process URL/port
+  data and must remain legal.
+- TASK-522 and TASK-543 use local audit/result machinery that must import the
+  canonical drivers before this leaf lands.
 
 ## Implementation Pseudocode
 
 ```ts
-const ACTIVE_WORKFLOW_DIR = "_docs/_workflows";
+const WORKFLOW_GLOBS = [
+  "_docs/_workflows/*.mjs",
+  "_docs/_workflows/lib/*.mjs",
+] as const;
 
-function activeWorkflowFiles(): string[] {
-  return recursiveMjsFiles(ACTIVE_WORKFLOW_DIR)
-    .filter((path) => !path.includes("/_smoke/"));
+function trackedWorkflowFiles(): string[] {
+  return gitLsFilesNul(WORKFLOW_GLOBS).sort();
 }
 
-// Role-specific round/lens checks exclude pure lib modules, but the exact
-// `.filter(Boolean)` and forbidden-prompt scans cover every active .mjs,
-// including lib helpers.
+function trackedWorkflowEntries(): WorkflowEntry[] {
+  return trackedWorkflowFiles()
+    .filter((path) => !path.includes("/lib/"))
+    .map(classifyTrackedEntryOrThrow);
+}
 
-test("all workflows use the all-results guard", () => {
-  for (const file of workflowsReturningParallelResults()) {
-    const source = readFileSync(file, "utf8");
-    expect(source).not.toContain(".filter(Boolean)");
-    expect(source).toContain("requireAllResults(");
-    assertTrustedIdentityEnvelopes(source, file); // stable caller-owned IDs + expected order
+const REQUIRED_TASK_545_DRIVER_SUPPORT = [
+  "_docs/_workflows/lib/workflow-contracts.mjs",
+  "_docs/_workflows/lib/workflow-contracts.d.mts",
+  "_docs/_workflows/lib/audit-rounds.mjs",
+  "_docs/_workflows/lib/audit-rounds.d.mts",
+  "_docs/_workflows/lib/post-audit.mjs",
+  "_docs/_workflows/lib/post-audit.d.mts",
+] as const;
+
+test("canonical driver runtime and declarations are tracked HEAD bytes", () => {
+  for (const path of REQUIRED_TASK_545_DRIVER_SUPPORT) {
+    assertTrackedRegularFileNoSymlink(path);
+    assertBytesEqualGitShowHead(path);
   }
 });
 
-test("canonical author/audit workflows have >=5 rounds and one reconcile/round", () => {
-  for (const file of authorAuditFiles()) {
-    const source = readFileSync(file, "utf8");
-    assertCanonicalAuditDriver(source, file, {
-      minimumRounds: 5,
-      reconcilePerRound: 1,
-      requireAllResults: true,
-      requireExactOrderedIdentities: true,
-      requireRevisionFingerprint: true,
-      actionableExecutionWeakeningLow: true,
+test("initial migration entries and all future owners are tracked", () => {
+  expectTrackedInitialEntriesOrCanonicalExtensions(trackedWorkflowEntries(), [
+    ["task-522-author.mjs", "author-audit"],
+    ["task-543-implement.mjs", "implement"],
+    ["task-554-author-audit.mjs", "author-audit"],
+    ["task-554-implement.mjs", "implement"],
+    ["task-554-fix.mjs", "fix"],
+  ]);
+});
+
+test("agent-result collections use the all-results guard", () => {
+  for (const entry of trackedWorkflowEntries()) {
+    const ast = parseModule(entry.path);
+    assertCanonicalDriverImportAndCall(ast, entry.role);
+    assertNoUnguardedAgentResultConsumer(ast, entry.path, {
+      rejectFilterBooleanBeforeValidation: true,
+      rejectFlattenCountOrCleanBeforeValidation: true,
+      requireTrustedOrderedIdentityEnvelopes: true,
+      allowUnrelatedDomainCollectionFiltering: true,
     });
   }
 });
 
-test("implementation workflows have >=5 independent post lenses", () => {
-  for (const file of implementationWorkflowFiles()) {
+test("canonical author/audit workflows run one complete pass and affected reruns", () => {
+  for (const file of trackedWorkflowEntriesByRole("author-audit")) {
+    const source = readFileSync(file, "utf8");
+    assertCanonicalAuditDriver(source, file, {
+      requireInitialCompletePass: true,
+      reconcilePerPass: 1,
+      affectedScopesOnlyAfterVerifiedFix: true,
+      deriveActualChangedScopesFromPerScopeFingerprints: true,
+      requireDeclaredActualIdentitySetEquality: true,
+      invalidateAllReceiptsOnUnmappableChange: true,
+      requireAllResults: true,
+      requireExactOrderedIdentities: true,
+      requireRevisionFingerprint: true,
+    });
+  }
+});
+
+test("implementation workflows declare and complete their independent post lenses", () => {
+  for (const file of trackedWorkflowEntriesByRole("implement", "fix")) {
     const source = readFileSync(file, "utf8");
     assertCanonicalPostAuditDriver(source, file, {
-      minimumIndependentLenses: 5,
+      requireDeclaredIndependentLensIds: true,
       requireAllResults: true,
       requireExactOrderedIdentities: true,
       fingerprintBeforeAndAfterPass: true,
       fingerprintFixAndValidation: true,
+      deriveActualChangedLensesFromInputFingerprints: true,
+      requireDeclaredActualIdentitySetEquality: true,
+      invalidateAllReceiptsOnUnmappableChange: true,
     });
   }
 });
 
 test("UI closure pauses for owner evidence staging", () => {
-  for (const file of uiClosureWorkflowFiles()) {
+  for (const file of trackedUiClosureWorkflowFiles()) {
     const source = readFileSync(file, "utf8");
     assertPromptRequiresImmediateEvidenceValidation(source, file);
     assertPromptReturnsOwnerActionRequiredBeforeTrackedAudit(source, file);
@@ -101,7 +150,7 @@ test("UI closure pauses for owner evidence staging", () => {
 });
 
 test("owning workflow entries are tracked, clean, and task-bound", async () => {
-  for (const owner of owningWorkflowRegistrations()) {
+  for (const owner of trackedOwningWorkflowRegistrations()) {
     const entry = deriveOnlyFromExecutingImportMetaUrl(owner.importMetaUrl);
     if (isExactTask545BuiltinEntry(entry)) {
       assertExactBuiltinTaskAndRoleBinding(entry, owner.taskId);
@@ -119,8 +168,8 @@ test("owning workflow entries are tracked, clean, and task-bound", async () => {
   }
 });
 
-test("active prompts do not commit, allocate dynamically, or defer smoke", () => {
-  for (const file of activeWorkflowFiles()) {
+test("tracked prompts do not commit, allocate dynamically, or defer smoke", () => {
+  for (const file of trackedWorkflowEntries().map(({ path }) => path)) {
     const source = readFileSync(file, "utf8");
     assertNoForbiddenPatterns(source, file, [
       /git\s+commit/i, /commit on the worktree/i,
@@ -132,8 +181,9 @@ test("active prompts do not commit, allocate dynamically, or defer smoke", () =>
 ```
 
 Avoid a broad word ban that flags prose unrelated to an action. Match executable
-commands/prompt directives and test explicit negative fixtures. Conversely,
-`.filter(Boolean)` is an exact active-script ban, including incidental helpers.
+commands/prompt directives and test explicit negative fixtures. The AST rule is
+equally scoped: it rejects unguarded agent-result consumers but permits ordinary
+domain/browser/process filtering, including TASK-543's URL and port parsers.
 
 Static round checks should require imports/calls to the canonical drivers added
 by TASK-545-02 rather than infer safety from a comment or numeric literal. A
@@ -144,40 +194,52 @@ null/identity/fingerprint/fixer behavior belongs exclusively to the already-land
 to TASK-545-03-L01. This leaf adds only whole-inventory static enforcement and negative
 source fixtures, with no behavioral rebaseline.
 
-The existing TASK-545 24+44 built-in entry inventory remains an exact closed
-compatibility set, but it is not the universe of future owners. A non-built-in
-entry is accepted only through the canonical task-bound pattern above; three-digit
-TASK IDs and the sole `TASK-9999` sentinel follow repository naming rules. Its
-suffix must match its registered author-audit/implement/fix role and task ID.
-Resolution starts only from the currently executing module's `import.meta.url`;
-CLI/API path overrides are forbidden. Before phase 1, require `git ls-files`, a
-regular non-symlink path, byte equality with `git show HEAD:<path>`, and the same
-TASK-545 static contract/canonical-import gates used by the inventory scan.
+The five post-TASK-554 migration entries are the initial compatibility set, not
+the universe of future owners. A later entry is accepted only through the
+canonical task-bound pattern above; three-digit TASK IDs and the sole
+`TASK-9999` sentinel follow repository naming rules. Its suffix must match its
+registered author-audit/implement/fix role and task ID. Resolution starts only
+from the currently executing module's `import.meta.url`; CLI/API path overrides
+are forbidden. Before phase 1, require `git ls-files`, a regular non-symlink
+path, byte equality with `git show HEAD:<path>`, and the same TASK-545 static
+contract/canonical-import gates used by the inventory scan.
 
 ## Error/compatibility flow
 
 - Static test output names exact file and violated invariant.
-- New workflows automatically join the scan; no manually maintained filename
-  allowlist can hide them.
+- New tracked workflows automatically join the scan; ignored local artifacts do
+  not affect clean-checkout closure, and no filename allowlist can hide a
+  tracked entry.
 - Unknown built-ins, caller overrides, wrong task/suffix, noncanonical four-digit
   IDs, untracked/dirty files, symlinks, and static/import-gate failures reject.
-- A genuinely historical/non-executable workflow must be moved by an explicit
-  future migration, not silently excluded here.
+- A tracked workflow becomes historical/non-executable only through an explicit
+  migration. Files already deleted by `5facaf32` remain Git-history evidence,
+  not live inventory.
 
-## Validation
+## Testing Requirements
 
 ```bash
 bun test tests/unit/workflows/workflowContracts.test.ts \
   tests/unit/workflows/auditRounds.test.ts \
   tests/unit/workflows/postAudit.test.ts \
   tests/unit/workflows/workflowStaticContract.test.ts
-for file in _docs/_workflows/*.mjs _docs/_workflows/lib/*.mjs; do node --check "$file"; done
+git ls-files -z -- '_docs/_workflows/*.mjs' '_docs/_workflows/lib/*.mjs' |
+  xargs -0 -r -n1 node --check
 git diff --check
 ```
 
 Rerun a named failing test once. This leaf lands only after TASK-545-02-L02; do not
-weaken a pattern to baseline a residual violation. Any residual active-script failure
+weaken a pattern to baseline a residual violation. Any residual tracked-script failure
 returns ownership to its explicitly assigned TASK-545-02 leaf before this gate reruns.
 Fixtures cover every allowed future suffix, TASK-9999, wrong task/suffix/four-digit
 ID, caller override, untracked/dirty/HEAD-mismatched entry, regular-file failure,
-symlink, missing TASK-545 imports, and a comment-only static-contract fake.
+symlink, missing TASK-545 imports, an unguarded result-filter false-clean, a
+comment-only static-contract fake, and a legal unrelated domain
+`.filter(Boolean)` call. The suite also proves ignored local files cannot alter
+the tracked inventory.
+
+## Documentation Updates Required
+
+- No shared documentation edit in this leaf.
+- Report the zero-violation tracked inventory to the parent; TASK-545-04-L03 owns final
+  board and changelog 1257 updates.

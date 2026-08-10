@@ -745,18 +745,34 @@ SOURCE_DATE_EPOCH=0 \
   bun --cwd packages/docs-portal build
 bun --cwd core lint:types
 bun --cwd core lint
-wc -l core/services/documentation/release/*.ts \
-  scripts/docs/*release-artifact.ts \
-  tests/unit/documentation/docsReleaseArtifact.test.ts \
-  tests/vitest/docs/docs-release-tree-binding.test.ts
-find tests/fixtures/documentation/release-artifact \
-  -type f -exec wc -l {} +
 git diff --check
 ```
 
-The line-count gate inventories every human-authored L01-owned fixture file,
-regardless of extension, in addition to source and test modules. Each must
-remain at most 1,000 lines. Re-run a named failure alone before classifying it.
+- the canonical NUL-safe line-count gate over the leaf write set (identical
+  contract in every TASK-548 task file; a file above 1,000 makes the gate fail
+  with `exit 1`, including a non-newline final line; the baseline spans the
+  full task/family dirty scope and commits/staging do not narrow it):
+
+  ```bash
+  # Canonical NUL-safe line-count gate over the leaf write set (identical
+  # contract in every TASK-548 task file; a file above 1,000 makes the gate fail
+  # with exit 1, including a non-newline final line). The verified pre-family
+  # baseline is the pinned commit 963733cae23456622bea1eef1b734723aaab2350;
+  # commits/staging cannot narrow the measured scope.
+  TASK_FAMILY_BASELINE_SHA="963733cae23456622bea1eef1b734723aaab2350"
+  git cat-file -e "${TASK_FAMILY_BASELINE_SHA}^{commit}" || { echo "invalid/missing baseline commit ${TASK_FAMILY_BASELINE_SHA}" >&2; exit 1; }
+  failed=0
+  while IFS= read -r -d '' f; do
+    lines=$(awk 'END { print NR }' "$f")
+    if [ "$lines" -gt 1000 ]; then
+      printf 'OVER-LIMIT %s %s\n' "$lines" "$f"
+      failed=1
+    fi
+  done < <({ git diff --name-only -z --diff-filter=ACMRT "$TASK_FAMILY_BASELINE_SHA" -- core packages scripts tests _docs/_workflows; git ls-files --others --exclude-standard -z -- core packages scripts tests _docs/_workflows; } | grep -zE '\.(ts|tsx|mjs|cjs|js|jsx|mts|cts)$' | grep -zvE '\.generated\.(ts|tsx|js|jsx|cjs|mjs|mts|cts)$' | sort -zu)
+  exit "$failed"
+  ```
+
+Re-run a named failure alone before classifying it.
 
 ## Documentation Updates Required
 

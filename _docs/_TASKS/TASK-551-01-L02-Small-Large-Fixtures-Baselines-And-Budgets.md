@@ -29,6 +29,7 @@ None; this is an executable leaf.
 `tests/perf/fixtures/task551DatabaseScale.ts`,
 `tests/perf/fixtures/task551DatabaseBudgets.ts`, and
 `tests/perf/fixtures/task551AdminReadStatementShapes.ts`, and
+`tests/perf/fixtures/task489SolutionKitRunPredecessor.ts`, and
 `tests/perf/database-query-baseline.test.ts` only.
 
 **Forbidden:** production code, migration/meta files, task/changelog/workflow
@@ -66,6 +67,40 @@ Seed one isolated family scenario at a time with these exact row counts:
 | `form_action_runs` + `form_actions` support | 6,000 + 60 | 300,000 + 600 | exactly 3 runs/submission and 3 actions/form; action/run FKs cycle without orphan rows |
 | `solution_kit_install_runs` / items | 1,000 / 5,000 | 100,000 / 500,000 | 20 / 200 kit IDs; exactly 5 ordered items/run |
 | each page/content/post/widget/detail revision family | 2,000 | 100,000 | 20 / 100 versions for 100 / 1,000 parents |
+
+The general TASK-551 matrix above remains unchanged. In addition, the dedicated
+TASK-489 predecessor fixture is mandatory and deliberately separate from the
+closed 37-ID TASK-551 plan registry. It seeds exactly 10,000 small and 1,000,000
+large `solution_kit_install_runs` rows with ten-equal-timestamp groups, 20/2,000
+package keys, and only bounded item support: one 513-item detail sentinel run,
+one active Setup owner graph, one running rollback graph, and relation chains of
+0/1/511/512/513 newer successful applies with exact successful rollback rows.
+The 513-chain case has all 513 rolled back; companion cases place one unrolled
+row first/middle/last. Both all-history and package-history fixtures include one
+page of exactly 101 legacy candidates, each with up to 513 newer applies and
+indexed successful-rollback relations, so the endpoint's per-row classifier is
+measured as a whole page rather than one source. Owner/template-evidence/progress
+rows use only normalized TASK-551-05 schema columns and strict synthetic digests/
+event keys. IDs are UUIDv5 from the normal validated run scope; cleanup is
+relation-aware child-first and deletes only those IDs.
+
+TASK-551-01-L02 alone owns
+`tests/perf/fixtures/task489SolutionKitRunPredecessor.ts`. It exports exactly
+`Task489CompanionId`, `Task489StaticPlanStatement`,
+`TASK489_SOLUTION_KIT_RUN_PREDECESSOR_IDS`, and
+`TASK489_SOLUTION_KIT_RUN_PREDECESSOR_CASES`; the cases export is the sole registry
+of static parameterized statement builders and finite small/large numeric budgets
+for exactly five companion IDs:
+`task489-runs-all-keyset`, `task489-runs-package-keyset`,
+`task489-effective-supersession`, `task489-active-starter-owner`, and
+`task489-safe-detail`. They are future-query contracts consumed read-only by
+TASK-551-05-L02 and later byte-matched by TASK-489; no other leaf writes or forks
+this fixture, and they do not alter the TASK-551
+Admin planned-count or general plan-registry cardinality. Their exact companion
+shape is five IDs, fourteen logical cases, fifteen statement cases, and thirty
+numeric small/large statement receipts: two history cases per history ID; eight
+supersession cases; one active-owner case; and one safe-detail logical case with
+separate run-point and item-page statements.
 
 The row counts are insufficient without deterministic predicate selectivity, so
 the following distribution is equally frozen. Status/filter percentages are
@@ -151,10 +186,14 @@ these exact additional distributions and named budget cases:
 - `form-runs-child-first`: form runs inherit their submission's age bucket,
   producing `3,600/180,000` child and `1,200/60,000` parent candidates; the
   family remains disabled unless explicitly enabled and deletes children first;
-- `solution-kit-child-first`: statuses cycle
-  `success,rolled_back,failed,running`; each kit's newest success and rollback
-  anchor is forced recent, leaving `600/60,000` run and `3,000/300,000` item
-  candidates; items precede runs and the family remains disabled by default.
+- `solution-kit-child-first`: exact mode/status tuples cycle
+  `apply/success`, `rollback/success`, `apply/failed`, `apply/running` by
+  `ordinal % 4`. Every rollback/success row has non-null `finished_at` and an
+  exact fixture-owned `rollback_of_run_id` pointing to its apply source; rollback
+  is never represented as a status. Each kit's newest successful apply and exact
+  rollback relation anchor is forced recent, leaving `600/60,000` run and
+  `3,000/300,000` item candidates; items/rollback children precede source runs and
+  the family remains disabled by default.
 
 Every retention budget runs default batch `500`, max batch `2,000`, one-row-
 below/exactly-one/one-row-above-batch variants, and a ten-batch convergence case.
@@ -385,6 +424,13 @@ rows-returned, transferred-byte, and pool-wait ceilings to
   eligible/boundary/anchor counts, batch edges, child ordering, and dry-run zero-
   mutation behavior. Mutating one timestamp/status/anchor or omitting a policy
   family from the budget registry fails before measurement.
+- Pin the separate TASK-489 predecessor fixture at exactly 10,000/1,000,000 runs,
+  every 0/1/511/512/513 relation shape, normalized active-owner/evidence/progress rows,
+  both relation-heavy 101-candidate history pages, normalized template evidence,
+  the 513-item detail sentinel, five exact companion IDs/fourteen logical cases/
+  fifteen statements/thirty scale receipts, and scoped cleanup. Any JSON owner
+  predicate, random distribution, broad item seed, missing detail statement,
+  sixth ID, or inclusion in the closed TASK-551 37-ID registry fails.
 - Pin `public-html-dependencies-128`, including exact tuple/table split, root and
   canonical-byte caps, one aggregate result/statement, projection allowlist, and
   129/16,385/102 rejection cases.

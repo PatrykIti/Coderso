@@ -6,22 +6,22 @@
 **Priority:** High
 **Category:** Workflow Infrastructure / False-Clean Prevention / Static Tests
 **Estimated Effort:** Medium
-**Dependencies:** TASK-536–544 complete
+**Dependencies:** TASK-545-02
 **Status:** ⏳ To Do
 **Changelog:** 1257 (pinned; closure only)
 
 ---
 
-## Scope
+## Overview
 
-Create one pure all-results/identity guard and a static enforcement suite for every active
-workflow. Missing/null results, count mismatches, and wrong/duplicate/reordered job
+Create one pure all-results/identity guard and a static enforcement suite for every tracked
+canonical workflow. Missing/null results, count mismatches, and wrong/duplicate/reordered job
 identities must abort before findings
 are flattened, logged as clean, or passed to fixers. Static policy also provides
 the gate used by TASK-545-02/03 for round, reconcile, post-audit, commit, pin, and
 smoke rules.
 
-## Leaves and program order
+## Sub-Tasks
 
 | ID | Title | Exclusive ownership | Status |
 |---|---|---|---|
@@ -38,14 +38,33 @@ read-only and owns only additive live-tree enforcement.
 
 ## Current baseline
 
-The audit identified 58 unsafe agent-result `.filter(Boolean)` consumers. Fresh
-HEAD inspection finds the literal in 61 active `.mjs` files because three
-additional helper/non-result uses also remain. The completion invariant is zero
-literal `.filter(Boolean)` in all active workflow scripts, thereby covering the
-58 findings without preserving incidental exceptions.
+The original 58/61 finding inventory came from owner-local scripts removed and
+ignored by `5facaf32`; it is not reproducible in a fresh clone. Current
+`git ls-files` exposes two executable entries. `task-522-author.mjs:168` has the
+confirmed unsafe agent-result filter. TASK-543 has three unrelated
+`.filter(Boolean)` expressions for URL/port parsing inside browser/process
+helpers. The completion invariant is therefore semantic: every tracked
+agent-result collection uses the canonical guard before classification, while
+valid domain-data filtering remains untouched.
 
 ## Security Contract
 
 No product/API surface. Helpers accept in-memory structured agent results only
 and never log prompts, credentials, `.env`, private keys, raw logs, or user data.
 No scanner allowlist or exception.
+
+## Testing Requirements
+
+- Run the focused helper and static-contract unit suites owned by L01/L02.
+- Parse every tracked canonical workflow with `node --check` after TASK-545-02 lands.
+- Require the final live-tree scans to report zero unsafe result filtering or
+  workflow-contract exceptions; do not baseline a remaining violation.
+- Prove the scanned inventory came from `git ls-files`; ignored owner-local
+  scripts are out-of-scope diagnostics, never closure evidence.
+- Run `git diff --check` for every leaf and the combined subtask.
+
+## Documentation Updates Required
+
+- Keep this child table synchronized with the physical L01/L02 statuses.
+- Record implementation evidence only through the TASK-545 family changelog
+  1257 and final board closure owned by TASK-545-04-L03.

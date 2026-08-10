@@ -5,7 +5,9 @@
 **Priority:** Critical
 **Category:** Documentation Platform / Playwright / Asset Security
 **Estimated Effort:** Very Large
-**Dependencies:** TASK-548-02-L01
+**Dependencies:** TASK-548-02-L01; terminal TASK-545-03-L02; terminal TASK-554
+(shared registry, cookbook, and runtime-smoke adapter seams are serialized
+behind it; see the Shared runtime-smoke ownership section)
 **Status:** ⏳ To Do
 **Changelog:** 1261 (pinned; closure only)
 
@@ -13,28 +15,107 @@
 
 ## Overview
 
-Implement the task-scoped `playwright-cli` runner, visible-effect assertions,
-bounded capture, strict provenance, PNG sanitizer, review gate, atomic promotion
-and receipt. Own only `scripts/docs/capture-visual.ts`,
+Implement the thin shared-runtime `task-548` pilot adapter, visible-effect
+assertions, bounded capture, strict provenance, PNG sanitizer, review gate,
+atomic promotion and receipt. Own `scripts/docs/capture-visual.ts`,
 `scripts/docs/promote-visual.ts`, `scripts/docs/visual/capture/**`,
 `scripts/docs/visual/promotion/**`, `scripts/docs/visual/png/**`, and
-`scripts/docs/visual/lifecycle/**`; the inter-leaf shared wire remains exactly
+`scripts/docs/visual/state/**`; the inter-leaf shared wire remains exactly
 `scripts/docs/visual/capture/docsVisualCaptureRunV1.ts` and is also owned here.
 This leaf explicitly excludes L01-owned `scripts/docs/visual/contract/**` and
 `scripts/docs/visual/fixtures/**`, plus every L03-owned
 `scripts/docs/visual/ci/**` module. It also owns the canonical pilot
-scenarios/assets/receipts, `.gitignore` and focused tests.
+scenarios/assets/receipts, `.gitignore` and focused tests. It is also the
+serialized initial writer of the shared `task-548` suite registration, its thin
+adapter/browser/worker modules, central registry test, and exact cookbook
+capture recipe. It reads and preserves TASK-554's landed suite first.
+
+This leaf additionally owns ALL dependency-bearing toolchain bytes and lands
+them BEFORE its pilots, then completes and gates terminally:
+root/core package manifests, root `bun.lock`, the `Dockerfile`, all three
+documentation workspace manifests (`packages/docs-contracts`,
+`packages/docs-renderer`, `packages/docs-portal`), the seven exact root docs
+scripts, the exact root devDependency pins `@playwright/cli: 0.1.18` and
+`pixelmatch: 7.2.0` (plus any direct package identity the contract genuinely
+requires, each exact-version pinned), the ONE lock-producing reconciliation
+(`bun install --lockfile-only`, which MAY update `bun.lock`), then a SEPARATE
+`bun install --frozen-lockfile` verification step after that reconciliation
+(the frozen install never mutates the lock), the repo-local-only
+dispatcher resolver injected into
+`BrowserTransport`/`PlaywrightCliDispatcher`, and the Chromium
+install/verify. The shared
+`BrowserTransport`/`PlaywrightCliDispatcher` must resolve the dispatch
+executable only as repo-local `./node_modules/.bin/playwright-cli` (no ambient
+PATH/global/npx fallback) and the browser install must run exactly
+`./node_modules/.bin/playwright install --with-deps chromium`, with the
+package/Playwright/Chromium versions verified against the exact pins. L02's
+pilots run only after that toolchain lands and its gates pass.
+TASK-548-02-L03 consumes those bytes read-only. This leaf's packaged
+`bun scripts/docs/compile-corpus.ts --check` requirement is deferred to the
+post-pilot-generated-bundle-refresh-gate (a generated-artifact-only
+invocation of the ALREADY-LANDED compiler CLI with its own gate) that runs
+after all five pilots; L02 retains only its targeted visual join tests.
 
 Never extend `scripts/playwright-widget-contract-smoke.ts`. Raw captures remain under `.tmp/docs-visuals/<runId>/`; only reviewed images are promoted to
 `docs/guide/assets/images/<docId>/<locale>/<visualId>.png`.
 
+### Shared runtime-smoke ownership and successor handoff
+
+After terminal TASK-554, this leaf rereads and serially amends exactly:
+
+- `scripts/runtime-smoke/contracts.ts`, `cli.ts`, and `registry.ts` for BOTH
+  literal TASK-548 suite rows: `task-548` (pilot profiles `fast|certification`,
+  fixed adapter path `scripts/runtime-smoke/adapters/task-548.ts`) and the
+  second and final TASK-548 suite `task-548-portal` (profiles
+  `fast|certification`, fixed adapter path
+  `scripts/runtime-smoke/adapters/task-548-portal.ts`), each with its one fixed
+  adapter path;
+- `tests/unit/runtime-smoke/cli-registry.test.ts` for both exact rows;
+- `docs/develop/runtime-smoke-cookbook.md` for the pilot capture recipe AND the
+  fixed `task-548-portal` registration recipe;
+- `scripts/runtime-smoke/adapters/task-548.ts` plus focused
+  `task-548/browser-actions.ts`, `worker-entry.ts`, `worker-operations.ts`,
+  `production-handlers.ts`, and `capture-request.ts`; and
+- `tests/unit/runtime-smoke/task-548-adapter.test.ts` and
+  `task-548-worker.test.ts`.
+
+No other shared runtime-smoke file is touched, and NO later TASK-548 leaf ever
+rewrites `contracts.ts`, `cli.ts`, `registry.ts`,
+`tests/unit/runtime-smoke/cli-registry.test.ts`, or
+`docs/develop/runtime-smoke-cookbook.md` — the shared seams are sole-writer
+here. TASK-548-04-L03 later implements ONLY the focused portal scenario
+contribution modules behind the already-landed fixed `task-548-portal` row
+(`scripts/runtime-smoke/adapters/task-548-portal.ts` plus its
+`browser-actions.ts`/`artifact-fixture.ts`/`candidate-evidence.ts` modules and
+the focused `tests/unit/runtime-smoke/task-548-portal-adapter.test.ts`) and is
+consumed by that row; it does not register a suite. TASK-548-07-L01 later
+contributes ONLY the focused final eight-flow scenario contribution module
+consumed by the already-landed `task-548` adapter shell plus its focused test
+and never edits the adapter shell, a shared seam, or the cookbook. These are
+serialized writers of their owned contribution files, never concurrent owners
+of the shared seams.
+
+The pilot is the first direct consumer of TASK-545's generic visible-evidence
+recipe. Its adapter must call
+`requireManifestableScenarioResults(scenarios, globalScreenshots)` itself before
+returning; a task-local report/result builder or a projection that invents
+titles, variants, assertions, console state, or screenshot ownership is
+forbidden. The exact five pilot scenario IDs and titles are frozen beside the
+browser actions. Every profile returns all five in order, each with at least one
+profile-specific variant, one machine-observed visible-effect assertion, an
+empty variant `consoleErrors`, and one scenario-owned PNG. The report-level
+screenshot list is the exact unique ordered union of those five scenario lists.
+
 ## Capture Contract
 
-For every browser command use one full named prefix:
-
-```text
-playwright-cli -s=docs548-<bounded-run-id> ...
-```
+Every browser command is compiled by the thin adapter and dispatched through
+the shared `BrowserTransport` with the exact named session
+`docs548-<bounded-run-id>`. No `scripts/docs/**` module invokes
+`playwright-cli` directly. The shared
+`BrowserTransport`/`PlaywrightCliDispatcher` resolves the dispatch executable
+only as the repo-local `./node_modules/.bin/playwright-cli` through the
+L02-injected repo-local-only resolver and rejects ambient PATH/global/npx
+fallback.
 
 The only supported command surfaces are:
 
@@ -47,11 +128,19 @@ bun run docs:visual:promote --scenario <id> \
   --confirm-alt-caption
 ```
 
-The runner resolves the confined scenario and derives `docs548-<run-id>`. The capture CLI accepts one `--scenario` and rejects `--run-id`; it creates
+The capture frontend resolves the confined scenario, derives
+`docs548-<run-id>`, writes one strict request at the canonical temporary session
+path, and invokes the statically registered shared runtime-smoke entry with
+suite `task-548`, profile `fast`, and that session. The adapter executes all
+five pilot scenarios so a selected result cannot bypass matrix coverage; the
+frontend returns only the requested result after the complete report passes.
+The capture CLI accepts one `--scenario` and rejects `--run-id`; it creates
 `createDocsVisualRunIdV1({ scope: "cli" })` once and passes it with the exact localized owner. The promotion CLI requires the bounded canonical `runId`
 returned by capture plus one scenario/hash/reviewer/confirmation; missing, duplicate and unknown flags fail closed. `captureDocsVisual` is validation-only
 for CLI and migration: callers provide full identity/ID and it never rewrites them. L03 uses only the lease-retaining batch API. Runs write below
-`.tmp/docs-visuals/<runId>/`; promotion accepts no arbitrary path.
+`.tmp/docs-visuals/<runId>/`; promotion accepts no arbitrary path. The shared
+runner's canonical JSON is captured byte-for-byte below that temporary root and
+validated, never rebuilt by a docs-local reporter.
 
 The public CLI emits one bounded canonical JSON object and no unstructured
 browser output:
@@ -150,7 +239,11 @@ export type DocsVisualCapturePrivacyEvidenceV1 = {
   };
 };
 export const DOCS_VISUAL_CAPTURE_PRIVACY_LIMITS_V1 = {
-  serializedUtf8Bytes: 131_072, profileIdUtf8Bytes: 128,
+  serializedUtf8Bytes: 131_072, profileIdUtf8Bytes: 64,
+  // profileIdUtf8Bytes is the exact single profile-id cap bound by
+  // TASK-548-02-L01's sole DOCS_FIXTURE_RECOVERY_LIMITS_V1.profileIdUtf8Bytes
+  // (64); the privacy record records the same fixture profile ID and can never
+  // exceed it. No second fixture-recovery limit authority exists.
   captureTargetUtf8Bytes: 512, inspectedUtf8BytesPerTextChannel: 65_536,
   originCount: 8, originUtf8Bytes: 256, observedRequestCount: 256,
   matchedRuleIdUtf8Bytes: 128,
@@ -454,16 +547,15 @@ return settleDocsVisualCiOwnedBatchV1(ownership, () =>
 );
 ```
 
-The runner acquires TASK-548-02's exact
-`acquireDocsVisualTaskServerLeaseV1({ runId })` before fixtures or browser work,
-uses only its IPC-authenticated loopback origins, and loads `.env` without
-printing it. It never probes, restarts or kills a pre-existing fixed-port server.
-The transient `server-lease-v1.json` joins only active-root inventories; cleanup
-stops the retained child handle, proves all three origins unreachable, removes/
-fsyncs the record, then continues session/route/fixture teardown. Recovery never
-kills by PID/port and fails on `docs_visual_server_live`. After health, the runner
-authenticates normally, installs collectors before navigation and compiles L01's
-exact finite DSL command map to owned probes; manifests never supply `run-code`.
+The thin adapter registers shared lifecycle resources before work, starts the
+required real hosts through `startSupervisedServer()`/shared process
+supervision, and loads the exact least-privilege child environment without
+printing it. It never probes, restarts, or kills an ambient fixed-port server.
+The shared lifecycle proves hosts, ports, browser session, worker, fixture rows,
+and temporary request state absent during reverse-order cleanup. After health,
+the shared `BrowserTransport` authenticates normally, installs collectors
+before navigation, and materializes L01's exact finite DSL command map through
+suite-owned actions; manifests never supply `run-code`.
 Capture the unique semantic target plus bounded padding; reject unbounded,
 off-viewport, hidden, transparent/zero-area, over-dimension/byte output and
 normalize to device scale factor 1.
@@ -608,11 +700,47 @@ The image/receipt wrapper preserves original, recovery and cleanup diagnostics.
 - **Privacy:** persist only L01 recovery hashes, never recovery refs/tokens or
   lease values; reject secret/PII content, signed URLs and third-party images.
 - **Cleanup:** exact L01 restart recovery precedes route/session absence and
-  active/failed/consumed/discarded handling; stop only the task-owned server.
+  active/failed/consumed/discarded handling; shared lifecycle closes only its
+  registered hosts/browser/worker and proves exact fixture/request absence.
 
 ## Implementation Pseudocode
 
 ```ts
+export const TASK_548_PILOT_SCENARIOS = Object.freeze([
+  { id: "admin-orientation-wide-light", title: "Admin orientation, wide light" },
+  { id: "admin-orientation-narrow-dark", title: "Admin orientation, narrow dark" },
+  { id: "page-editor-visible-change", title: "Page editor visible change" },
+  { id: "roles-matrix-restricted", title: "Restricted roles matrix" },
+  { id: "first-publish-public-result", title: "First publish public result" },
+] as const);
+
+export async function runTask548PilotAdapter(
+  context: RuntimeSmokeContext,
+): Promise<SmokeAdapterResult> {
+  requireExactSuiteAndProfile(context.input, {
+    suite: "task-548",
+    profiles: ["fast", "certification"],
+  });
+  const rawScenarios = await runExactTask548PilotBrowserActions({
+    context,
+    scenarios: TASK_548_PILOT_SCENARIOS,
+    requireVisibleEffects: true,
+    requireEmptyVariantConsoleErrors: true,
+    requireOneOwnedScreenshotPerScenario: true,
+  });
+  const globalScreenshots = exactUniqueScenarioScreenshotUnion(rawScenarios);
+  const scenarios = requireManifestableScenarioResults(
+    rawScenarios,
+    globalScreenshots,
+  );
+  return Object.freeze({
+    serverUp: true,
+    scenarios,
+    screenshots: globalScreenshots,
+    consoleErrors: Object.freeze([]),
+  });
+}
+
 export async function runDocsVisualCaptureCli(argv: readonly string[]) {
   const scenario = await resolveScenarioFromConfinedRegistry(
     parseExactScenarioOnlyArgs(argv)
@@ -620,7 +748,15 @@ export async function runDocsVisualCaptureCli(argv: readonly string[]) {
   const identity = localizedCaptureIdentity(
     scenario, await createDocsVisualRunIdV1({ scope: "cli" })
   );
-  const captured = await captureDocsVisual(identity);
+  const request = await writeCanonicalTask548CaptureRequestNoReplace(identity);
+  const report = await invokeRegisteredTask548RuntimeSmoke({
+    argv: ["run", "--suite", "task-548", "--profile", "fast",
+      "--session", request.session],
+    request,
+  });
+  const captured = await selectVerifiedCaptureFromPassingSharedReport({
+    report, identity, expectedFivePilotScenarioIds: TASK_548_PILOT_IDS,
+  });
   assertExactCaptureIdentityFields(captured, identity);
   return normalizeDocsVisualCaptureCliResultV1({
     schema: "coderso.docs-visual-capture-result@v1",
@@ -694,7 +830,7 @@ async function captureDocsVisualRunRetainingLeaseV1(
       })
     : await claimNewDocsVisualCaptureRunV1({ runId });
   try {
-    const completed = await runOwnedBrowserCaptureWithAllSettledTeardownV1({
+    const completed = await invokeAndConsumeRegisteredTask548CaptureV1({
       ownership, identity, scenario, scenarioSha256, sourceHashInput,
       expectedToolVersions: environment.toolVersions,
       expectedBrowserContract: environment.browserContract,
@@ -868,12 +1004,15 @@ export async function promoteDocsVisual(input: DocsVisualPromotionInputV1) {
 }
 ```
 
-`scripts/docs/capture-visual.ts` canonical-JSON serializes the returned CLI
-object with one final LF. It redacts subprocess output and never adds fields.
+`scripts/docs/capture-visual.ts` canonical-JSON serializes the returned product
+result with one final LF. The runtime execution itself is the registered shared
+entry: the frontend supplies only canonical argv/request state, captures the
+shared report bytes without rewriting them, and never implements process,
+server, browser, cleanup, or report behavior.
 
-**Data flow:** scenario-only CLI/migration/CI identity → caller `runId` → atomic
-scan registration + per-run lease → strict scenario/hash → durable acquired
-record → fixture/session/actions/assertions → bounded PNG + privacy/network gates
+**Data flow:** scenario-only CLI/migration/CI identity → caller `runId` → strict
+session-bound capture request → registered `task-548` adapter → shared
+lifecycle/worker/server/browser → fixture/session/actions/assertions → bounded PNG + privacy/network gates
 → capsule → route/session/fixture absence → tombstone absence → ready/verified.
 CLI/migration releases for review; CI retains through callback, terminal discard
 and release-last. Manual promotion claims the exact reviewed `runId`, preserves
@@ -881,7 +1020,8 @@ that binding through its lease/consume journal, and holds it through verified
 reopen, sanitize, atomic image/receipt and cleanup; both members advance or
 neither.
 
-**Error handling:** use `docs_visual_server_unavailable`, `docs_visual_auth_failed`,
+**Error handling:** docs capture/promotion state uses
+`docs_visual_server_unavailable`, `docs_visual_auth_failed`,
 `docs_visual_action_failed`, `docs_visual_assertion_failed`,
 `docs_visual_console_error`, `docs_visual_capture_invalid`,
 `docs_visual_identity_mismatch`, `docs_visual_run_lock_invalid`,
@@ -892,6 +1032,8 @@ neither.
 `docs_visual_lifecycle_invalid`, `docs_visual_promotion_conflict` and
 `docs_visual_promotion_failed`.
 Identity/run drift rejects before review; failure never changes the canonical pair.
+At the runtime-smoke boundary these map only to existing generic `SmokeError`
+codes; no docs-specific value extends `SmokeErrorCode`.
 
 **Regression-test shape:** cover fake CLI success/failure/timeout, semantic
 actions, real output parsing, browser errors, invalid boxes/PNG/chunks/digests,
@@ -962,7 +1104,11 @@ coverage without changing the pipeline contract.
 
 ## Testing Requirements
 
-- Before runtime smoke: `set -a && source .env && set +a`
+- Before DB/settings-backed adapter tests: `set -a && source .env && set +a`.
+  Both the five-flow pilot and final acceptance enter through the same shared
+  registered `task-548` suite; the final eight-flow scenario contribution is
+  TASK-548-07-L01-owned and is consumed by this leaf's already-landed adapter
+  shell.
 - `bun test tests/unit/documentation/docsVisualCapture.test.ts tests/unit/documentation/docsVisualPromotion.test.ts`
 - exact CLI parser tests for capture `--run-id` rejection and promotion's required bounded returned `--run-id`; pin ID/hash bounds, duplicate/unknown
   rejection, arbitrary path/URL refusal, one capture CSPRNG ID and unchanged lower-API identity
@@ -973,11 +1119,12 @@ coverage without changing the pipeline contract.
 - crash registration and intent-only through final-discard recovery at every temp/fsync/rename boundary; prove gapless publication, continuous snapshot leases,
   reconstruction before L03 callback writes, same-snapshot handoff and no deletion until exact authorization. Failures preserve bytes/errors; absent fulfilled
   runs require the already-valid final chain
-- strict capsule/process tests pause real child A after lease plus fixture mutation and prove concurrent B skips A without any cross-cleanup; kill A at every
-  declared pre-fixture through post-ready boundary, then prove a fresh process alone claims the released kernel lease, performs L01-first recovery, proves
-  two simultaneous server supervisors use six distinct ephemeral ports, never
-  signal each other/pre-existing listeners, and leave no listener/session/timer;
-  fixture/session/routes absent and reaches ready or failed exactly once
+- strict capture-state tests pause run A after fixture mutation and prove B
+  skips A without cross-cleanup; kill at every declared pre-fixture through
+  post-ready boundary and prove fresh-process state recovery. Shared supervisor,
+  worker, browser, polling, and lifecycle behavior is covered by its existing
+  harness suites plus focused adapter composition tests; this leaf adds no
+  second supervisor/process implementation
 - exact five-field promotion-input tests proving `runId` is required but no path/provenance/tool/assertion override is accepted; cover duplicate eligible runs,
   wrong/restarted/successful selected runs, consume-journal binding and receipt projection from verified evidence
 - promotion integration coverage proving L01's exact source-hash helper output becomes the receipt `sourceHash`, plus direct factory tests for absent and strict
@@ -985,12 +1132,48 @@ coverage without changing the pipeline contract.
 - fresh-process image/receipt recovery after every journal phase/final rename, every preparing/staging boundary, and verified-commit rename followed by helper
   failure and cleanup retry
 - `bunx vitest run --config vitest.config.ts tests/vitest/documentation/docs-visual-scenario.test.ts`
-- five distinct real `playwright-cli -s=docs548-...` flows after server restart,
-  with visible effects, zero console/page errors, screenshots and cleanup
-- `bun scripts/docs/compile-corpus.ts --check`
+- both profiles run five distinct real flows through
+  `bun scripts/runtime-smoke.ts run --suite task-548 --profile
+  <fast|certification> --session <docs548-name>`, using shared supervised host
+  restart and `BrowserTransport`, with visible effects, zero console/page
+  errors, screenshots and cleanup
+- focused adapter tests pin every exact pilot ID/title and both profiles'
+  variant shape, then independently remove a title, variant, assertion, empty
+  console array, or scenario screenshot; flip one visible assertion; duplicate
+  screenshot ownership; and add/remove/reorder a global screenshot. Every
+  mutation must fail inside `requireManifestableScenarioResults` before report
+  serialization or manifest creation
+- `bun scripts/docs/compile-corpus.ts --check` is NOT a gate of this leaf: it
+  is deferred to the post-pilot-generated-bundle-refresh-gate (a
+  generated-artifact-only invocation of the ALREADY-LANDED compiler CLI with
+  its own gate) that runs after all five pilots; L02 retains only its targeted
+  visual join tests (`bunx vitest run --config vitest.config.ts
+  tests/vitest/documentation/docs-visual-scenario.test.ts`)
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
-- touched-file line counts
+- the canonical NUL-safe line-count gate over the leaf write set (identical
+  contract in every TASK-548 task file; a file above 1,000 makes the gate fail
+  with `exit 1`, including a non-newline final line; the baseline spans the
+  full task/family dirty scope and commits/staging do not narrow it):
+
+  ```bash
+  # Canonical NUL-safe line-count gate over the leaf write set (identical
+  # contract in every TASK-548 task file; a file above 1,000 makes the gate fail
+  # with exit 1, including a non-newline final line). The verified pre-family
+  # baseline is the pinned commit 963733cae23456622bea1eef1b734723aaab2350;
+  # commits/staging cannot narrow the measured scope.
+  TASK_FAMILY_BASELINE_SHA="963733cae23456622bea1eef1b734723aaab2350"
+  git cat-file -e "${TASK_FAMILY_BASELINE_SHA}^{commit}" || { echo "invalid/missing baseline commit ${TASK_FAMILY_BASELINE_SHA}" >&2; exit 1; }
+  failed=0
+  while IFS= read -r -d '' f; do
+    lines=$(awk 'END { print NR }' "$f")
+    if [ "$lines" -gt 1000 ]; then
+      printf 'OVER-LIMIT %s %s\n' "$lines" "$f"
+      failed=1
+    fi
+  done < <({ git diff --name-only -z --diff-filter=ACMRT "$TASK_FAMILY_BASELINE_SHA" -- core packages scripts tests _docs/_workflows; git ls-files --others --exclude-standard -z -- core packages scripts tests _docs/_workflows; } | grep -zE '\.(ts|tsx|mjs|cjs|js|jsx|mts|cts)$' | grep -zvE '\.generated\.(ts|tsx|js|jsx|cjs|mjs|mts|cts)$' | sort -zu)
+  exit "$failed"
+  ```
 
 ## Documentation Updates Required
 

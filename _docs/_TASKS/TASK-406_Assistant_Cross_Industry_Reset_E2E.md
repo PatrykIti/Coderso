@@ -1,126 +1,94 @@
-# TASK-406: Assistant Cross-Industry Reset E2E
+# TASK-406: Assistant Cross-Industry Reset E2E Handoff
 # FileName: TASK-406_Assistant_Cross_Industry_Reset_E2E.md
 
 **Priority:** High
-**Category:** Assistant + Site Builder + Media Profiles + Playwright QA
-**Estimated Effort:** Large
-**Dependencies:** TASK-405
-**Status:** To Do
+**Category:** Historical Assistant Acceptance / Runtime Smoke Handoff
+**Estimated Effort:** Small
+**Dependencies:** TASK-414-11-L01
+**Related Tasks:** TASK-405, TASK-407, TASK-414
+**Status:** ⏳ To Do
+**Contract Refreshed:** 2026-08-08
+**Planned Disposition:** TASK-414-11-L01 must mark this task `⏭️ Superseded`
+and list TASK-406 in changelog 1266 only after its stronger owner-scoped runtime
+suite passes.
 
 ---
 
 ## Overview
 
-Validate that the assistant behaves as a generic CMS helper and full-site
-generator after TASK-405, not as an architecture-only shortcut. The test must
-start from a cleaned site state, use a slightly nontechnical prompt for a
-different industry/theme, and verify that the assistant either selects a
-matching curated media profile or stays media-empty/fail-closed instead of
-reusing unrelated architecture imagery.
+The original task proposed deleting broad site state and rerunning one
+cross-industry “assistant builds a site” scenario. That contract is stale:
 
-This is a destructive/reset-style QA task and must run in an isolated local test
-database or a deliberately disposable seeded environment. It should not reuse
-the Studio Forma content produced by TASK-405 except as a comparison baseline.
+- Guide, Agent, and Designer are now separate products;
+- Agent is forbidden from generating a whole site;
+- Designer staging/reject/approve must be tested without deleting unrelated
+  shared-site data;
+- runtime smoke must use the shared `scripts/runtime-smoke.ts` entry point and
+  the wrappers, helpers, persistent profile workers, browser transport,
+  owner-scoped fixtures, checkpoints, and cleanup recipes registered through
+  `docs/develop/runtime-smoke-cookbook.md`, rather than a task-local reset or
+  Playwright/worker/DB/report loop; and
+- TASK-414-11-L01 already owns a broader matrix covering provider-off Guide,
+  multi-session Agent, cross-industry Designer staging/preview/revision,
+  reject/cleanup, promotion/front parity, and crash recovery.
 
-## Sub-Tasks
+TASK-406 therefore receives no independent implementation or reset harness.
+It remains open only so task/changelog closure stays valid: once the replacement
+flows pass, TASK-414-11-L01 records their evidence, changes this status to
+`⏭️ Superseded`, moves the board row to Done, and includes TASK-406 in changelog
+1266. Until then, this file is a required evidence handoff, not authorization to
+run a destructive reset.
 
-- Prepare an isolated reset strategy for pages, menus, forms, listings, custom
-  screens, content types, entries, SEO documents, and assistant conversation
-  state created by the previous full-site E2E.
-- Add or select at least one non-architecture test prompt, for example a
-  restaurant, clinic, fitness studio, or local service business.
-- If a matching curated profile exists, verify the selected media profile and
-  source/license metadata. If no matching profile exists, verify that no
-  unrelated curated images are inserted and media readiness does not claim
-  satisfaction.
-- Run the assistant through the real admin UI as a nontechnical user:
-  plan -> dry-run -> execute -> public runtime validation.
-- Verify the generated site feels like a real service website: home, offer,
-  proof/content, contact/lead capture, navigation/footer, SEO, detail routes
-  where applicable, and mobile rendering.
-- Repeat with Claude/agent UX review and fix any blocking drift before closure.
+## Requirements Preserved by TASK-414-11-L01
+
+| Original intent | Replacement evidence |
+|---|---|
+| Different industry/theme | `designer-cross-industry-matched-media` plus the distinct `designer-cross-industry-unsupported-media-empty` brief/theme/profile |
+| No unrelated architecture media | exact provenance in `designer-cross-industry-matched-media`; honest zero-media/needs-input proof in `designer-cross-industry-unsupported-media-empty` |
+| Clean starting state | uniquely owned workspace/resources; normal CMS read models prove staged rows are absent |
+| Plan, review, execute | Designer brief/compile/validation/preview followed by digest-bound explicit promotion |
+| Public runtime | approved full graph, navigation/forms/SEO/front parity, responsive visible-effect assertions |
+| Reset/rebuild | reject/expiry owner-scoped purge and a separate approve/crash/retry idempotency flow |
+
+The replacement must retain desktop/mobile, light/dark where Admin UI is
+involved, zero console/page errors, forms/public security, media source/license
+checks, and cleanup that deletes only task-owned records/assets.
 
 ## Security Contract
 
-- Endpoint visibility: no new endpoints; use existing internal admin assistant
-  routes under `/admin/api/assistant/actions/*`.
-- Auth model: existing admin session.
-- RBAC: existing assistant/page/content/menu/SEO/form write permissions.
-- CSRF: unchanged for admin/internal writes.
-- Rate-limit bucket: existing `assistant` bucket.
-- Reject unknown validation: all planned actions must continue through strict
-  assistant action schemas.
-- Anti-abuse: no public assistant write endpoint; public lead forms retain
-  existing nonce/CAPTCHA/session hardening.
-- Media trust boundary: unsupported industries must not receive unrelated
-  curated URLs. Arbitrary prompt/provider media URLs remain rejected unless a
-  backend-owned profile asset explicitly owns them.
-- Secret handling: do not print OpenRouter keys, cookies, CSRF tokens, or raw
-  auth state in logs, docs, screenshots, or task evidence.
+- **Endpoint visibility:** no new endpoint and no independent runtime harness.
+- **Auth/RBAC/CSRF/rate limits:** inherited from TASK-414-11-L01's real Guide,
+  Agent, Designer, native-resource, preview, and public-form flows.
+- **Validation:** this handoff cannot bypass strict schemas or create raw
+  package/provider actions.
+- **Anti-abuse:** no public write. Generated public Forms keep native nonce,
+  CAPTCHA policy, validation, and rate limits.
+- **Data safety:** never truncate tables, delete by a broad installation
+  predicate, clear another actor's Agent session, or reuse a shared database as
+  disposable. Every fixture carries an actor/workspace identity and cleanup
+  proves exact ownership.
+- **Secrets/privacy:** no provider/search key, cookie, CSRF/session value, raw
+  attachment, private URL, prompt with secrets, or user data enters evidence.
 
-## Files To Change
+## Sub-Tasks
 
-| Area | Files |
-|---|---|
-| Test harness | `.tmp/*` during local validation; committed harness only if reusable |
-| Assistant/media profiles | `core/services/media/curatedMediaProfiles.ts` if adding a new profile |
-| Planner/runtime tests | Relevant assistant planner/executor/runtime suites |
-| Docs/closure | `_docs/_TASKS/README.md`, `_docs/_CHANGELOG/README.md`, changelog entry |
-
-## Implementation Pseudocode
-
-```ts
-async function resetDisposableSiteState(db, ownerTag) {
-  await deleteRowsCreatedByAssistantE2E(ownerTag);
-  await clearAssistantConversationState();
-  await assertNoPublishedPagesFromPreviousRun();
-}
-
-async function runCrossIndustryPrompt(prompt) {
-  const plan = await assistant.plan(prompt);
-  assert(plan.status === "ready" || plan.questions.length > 0);
-
-  if (plan.intentId === "service-business-full-site") {
-    assert(!planContainsUnmatchedCuratedMedia(plan));
-  }
-
-  const dryRun = await assistant.dryRun(plan);
-  assertNoBlockingConflicts(dryRun);
-
-  const execution = await assistant.execute(plan);
-  assert(execution.summary.failed === 0);
-
-  await assertPublicSite({
-    pages: expectedPagesForPrompt(prompt),
-    noHorizontalScroll: true,
-    noConsoleErrors: true,
-    mediaPolicy: expectedMediaPolicyForPrompt(prompt),
-  });
-}
-```
+None. TASK-414-11-L01 owns the replacement implementation and this task's final
+status/board/changelog transition.
 
 ## Testing Requirements
 
-- Load environment before DB-backed reset or execution:
-  `set -a && source .env && set +a`.
-- Restart `coderso-dev-core-host` after code changes.
-- Use Playwright CLI against:
-  - admin: `http://coderso-b.localhost:5175/admin/`
-  - front: `http://coderso-b.localhost:3001/`
-  - site Vite assets: `http://coderso-b.localhost:5176/site/`
-- Verify plan/dry-run/execute, public pages, contact form, media policy,
-  desktop/mobile viewports, and console/page errors.
-- Run targeted planner/executor/runtime tests for any changed assistant or
-  media-profile contract.
-- Run `bun --cwd core lint`, `bun --cwd core lint:types`, and `git diff --check`.
+No standalone command is valid. TASK-406 closes only from TASK-414-11-L01's
+validated shared `task-414` runtime-smoke report containing the exact ordered
+25-ID inventory owned by that leaf, including both cross-industry IDs above,
+and complete family gates. The closure test imports the same canonical scenario
+constant and requires all 25 IDs plus both named replacement flows; it cannot
+maintain a second handwritten count/list. It must also assert that no TASK-406-local wrapper,
+helper, lifecycle, worker, reset, Playwright, DB cleanup, checkpoint, or report
+loop was introduced and that the adapter follows
+`docs/develop/runtime-smoke-cookbook.md`.
 
 ## Documentation Updates Required
 
-- `_docs/ASSISTANT_SITE_BUILDER.md` if the generic site-builder/media policy
-  contract changes.
-- `docs/develop/assistant.md` if contributor workflow or E2E expectations
-  change.
-- `_docs/MEDIA_SPEC.md` if media profile/provider rules change.
-- `_docs/_TASKS/README.md`
-- `_docs/_CHANGELOG/README.md`
-- New changelog entry for completed TASK-406.
+- TASK-414-11-L01 replacement-flow evidence
+- `_docs/_TASKS/README.md` row/status/statistics at terminal supersession
+- changelog 1266 explicitly listing TASK-406 and TASK-414-11-L01

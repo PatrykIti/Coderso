@@ -16,9 +16,9 @@
 
 Prove the built portal artifact is complete, public-safe, accessible, and usable
 in real browsers before TASK-548-05 may publish it. Add a deterministic
-artifact validator, focused security/accessibility tests, and at least five
-distinct `playwright-cli` flows that assert visible effects rather than control
-presence.
+artifact validator, focused security/accessibility tests, and seven distinct
+real-browser flows through the shared runtime-smoke entry point. Every flow
+asserts visible effects rather than control presence.
 
 This leaf is a gate owner, not a second portal implementation owner. A portal
 source defect is returned to the exclusive L01/L02 owner, fixed there, and all
@@ -31,16 +31,43 @@ This leaf is the only writer for:
 - new `packages/docs-portal/scripts/validate-built-portal.ts`;
 - new `tests/vitest/docs-portal/portal-security.test.ts`;
 - new `tests/vitest/docs-portal/portal-accessibility.test.tsx`;
-- task-scoped browser fixtures/driver under
-  `packages/docs-portal/scripts/browser-gate/**` if needed.
+- focused portal scenario contribution modules behind the ALREADY-LANDED fixed
+  `task-548-portal` suite row (registered by TASK-548-02-L02, the sole
+  shared-seam writer): thin
+  `scripts/runtime-smoke/adapters/task-548-portal.ts` plus focused
+  `scripts/runtime-smoke/adapters/task-548-portal/browser-actions.ts` and
+  `scripts/runtime-smoke/adapters/task-548-portal/artifact-fixture.ts` and
+  `scripts/runtime-smoke/adapters/task-548-portal/candidate-evidence.ts`;
+- focused test `tests/unit/runtime-smoke/task-548-portal-adapter.test.ts`.
 
 It must not edit portal shell/search/build/route/SEO production files,
-`packages/docs-renderer`, root workflow/release files, or task/changelog
-metadata. Findings go back to the owning leaf; missing results are a failed
+`packages/docs-renderer`, root workflow/release files, final
+`scripts/runtime-smoke/adapters/task-548.ts` and
+`scripts/runtime-smoke/adapters/task-548/**` implementation files, or
+task/changelog metadata. It must NOT rewrite any shared runtime-smoke seam:
+`scripts/runtime-smoke/contracts.ts`, `scripts/runtime-smoke/cli.ts`,
+`scripts/runtime-smoke/registry.ts`,
+`tests/unit/runtime-smoke/cli-registry.test.ts`, or
+`docs/develop/runtime-smoke-cookbook.md` — those are TASK-548-02-L02
+sole-writer files, and this leaf's fixed `task-548-portal` row/recipe is
+already landed there. TASK-548-02-L02 already registered and implemented the
+five-flow `task-548` pilot adapter; this leaf preserves its central row,
+adapter, tests, and recipe read-only while implementing the focused
+`task-548-portal` contribution modules.
+TASK-548-07-L01 later contributes only the focused final eight-flow scenario
+module to the same already-landed `task-548` adapter. Findings go back to the owning leaf; missing results are a failed
 gate, not a clean pass. Targeted-run screenshots/results stay below
-`.tmp/docs-portal-smoke/task-548-04/<bounded-run-id>/`; this leaf never writes
-the canonical TASK-545 evidence directory, `manifest.json`, or
+`_docs/_workflows/_smoke/candidates/task-548-portal/<session>/`; this leaf never
+writes the canonical TASK-545 evidence directory, `manifest.json`, or
 `resume-checkpoint.json`.
+
+The registry, CLI, contracts, central test, and cookbook are shared serialized
+seams owned sole-writer by TASK-548-02-L02. This leaf starts only after
+TASK-545 and every earlier active writer are
+terminal, rereads their current bytes, preserves every landed suite/profile,
+and implements only its focused portal contribution modules and focused test
+consumed by the already-landed fixed `task-548-portal` row. TASK-548-07-L01 and
+later TASK-414-11 consume those central bytes read-only.
 
 ## Artifact Validator Contract
 
@@ -172,8 +199,65 @@ failure returns a typed error and never emits a receipt with `status: "pass"`.
 
 ## Browser Gate Scenarios
 
-Restart the task-scoped static preview server before smoke, verify its health,
-and use named session `wf548portal`. Run at least these distinct real flows:
+Register and execute the following exact ordered scenario IDs through the thin
+shared `task-548-portal` adapter:
+
+1. `portal-wide-search-read-hydration`;
+2. `portal-keyboard-navigation`;
+3. `portal-responsive-layout`;
+4. `portal-dark-reduced-motion`;
+5. `portal-version-latest-deep-link`;
+6. `portal-locale-visual-truth`;
+7. `portal-offline-static-no-runtime`.
+
+Both profiles run all seven IDs:
+
+```bash
+bun scripts/runtime-smoke.ts run \
+  --suite task-548-portal --profile fast --session task-548-portal-fast
+TASK548_PORTAL_ARTIFACT_ROOT="$task548_portal_artifact_root" \
+TASK548_PORTAL_PRODUCT_VERSION="$task548_portal_product_version" \
+TASK548_PORTAL_GIT_SHA="$task548_portal_git_sha" \
+TASK548_PORTAL_MANIFEST_SHA256="$task548_portal_manifest_sha256" \
+TASK548_PORTAL_ARTIFACT_ROOT_SHA256="$task548_portal_artifact_root_sha256" \
+  bun scripts/runtime-smoke.ts run \
+    --suite task-548-portal --profile certification \
+    --session task-548-portal-certification
+```
+
+Fast accepts only the exact default built-artifact root and derives its test
+identity by running the same validator in-process. Certification rejects unless
+all five release-owned environment values above are present, bounded and equal
+to the independently validated artifact. Neither profile trusts ambient origin,
+version or filesystem values. In ROLLBACK mode (TASK-548-05-L02), the same
+certification profile runs against the materialized retained-capsule tree and
+binds all five inputs from the target capsule's ORIGINAL verified bytes
+(`VerifiedDocsRollbackCandidateV1`: artifactRoot = the confined materialized
+root, productVersion = the selected version, originalGitSha /
+portalManifestSha256 / artifactRootSha256 = the capsule's original release
+identity/hashes) — never ambient environment, the current checkout or guessed
+values; the gate executes BEFORE any retained mutation and a failure leaves
+branch/Cloudflare untouched. Before any profile starts a real browser, the
+fresh runner executes TASK-548-02-L02's Pinned Local Browser Install Contract:
+verify the local pinned `@playwright/cli` package version from the pinned
+manifest/lock, run `./node_modules/.bin/playwright install --with-deps
+chromium` (the exact local binary), and verify the underlying Playwright
+version and installed Chromium executable/revision; missing or version-drifted
+browser/package blocks with `docs_visual_tool_version_mismatch` before any
+scenario (global/`npx`-latest install paths are forbidden).
+
+Do not start a task-local static-server, Playwright, polling, worker, cleanup,
+checkpoint, or report lifecycle. The adapter composes the existing
+`RuntimeSmokeContext`, process supervisor, condition polling, browser segment
+compiler/`BrowserTransport`, repository guard, redaction, timing, screenshot,
+cleanup, and report helpers exactly as registered in
+`docs/develop/runtime-smoke-cookbook.md`. It allocates every preview process,
+port, browser session, temporary workspace, and settings override only after
+`context.lifecycle.assertAccepting()` and immediately registers an idempotent
+`LifecycleResource`; the shared runner remains the only outer lifecycle and
+report loop.
+
+The action/assertion meanings are:
 
 1. **Wide light search/read:** search a known screen, open a result, assert URL,
    H1, highlighted result text, TOC target geometry, screenshot/alt/caption, and
@@ -210,32 +294,68 @@ alternatives, noindex, functioning four-island UI, base-safe client requests,
 and no redirect or SPA-200 fallback.
 
 All scenarios require zero console/page errors and zero unexpected network
-requests. The targeted L03 run captures one screenshot for every scenario into
-its exact task-owned `.tmp` run directory for immediate human review.
+requests. The adapter result itself carries each exact title, public-surface
+variant, computed/geometry/DOM/ARIA assertion with expected and actual values,
+console array, and screenshot path/hash. The report's global screenshot list is
+the exact unique union of those seven scenario-owned screenshots. No workflow
+postprocessor may fabricate or enrich the result. The targeted run writes one
+screenshot per scenario into its exact task-owned candidate directory for
+immediate human review.
 
-## Canonical TASK-545 Evidence Handoff
+## Prepublication Gate And Canonical TASK-545 Handoff
 
-This leaf's seven scenario screenshots and structured results remain
-exclusively below
-`.tmp/docs-portal-smoke/task-548-04/<run-id>/`; they are targeted-gate inputs,
-not members of the final TASK-545 evidence directory.
+This leaf's local fast/certification candidates remain exclusively below
+`_docs/_workflows/_smoke/candidates/task-548-portal/<session>/`. They are
+targeted feedback, not final TASK-545 evidence and not publication authority.
+After review, the exact candidate-evidence cleanup verifies the seven-file
+screenshot allowlist plus report hash, removes only that resolved task-owned
+session root, proves it absent/no-symlink, and requires the repository status to
+return to its pre-run state. Runtime resources are still cleaned only by the
+shared `RuntimeLifecycle`; this evidence cleanup is not a server/browser/
+worker lifecycle and does not create a second report.
 
-TASK-548-07-L01 is the sole writer of
-`_docs/_workflows/_smoke/evidence/task-548/manifest.json` and its exact eight
-acceptance PNGs. It consumes this leaf's prior portal evidence read-only. If the
-final tree requires recapture, L01 requests one same-owner operational L03
-handback; L03 returns bounded results/screenshot bytes without status transfer,
-and L01 alone writes `06-portal-local-exact-latest-rollback.png` as the portal
-member of its exact canonical inventory. No `portal/*.png` subtree or other
-extra canonical member is valid.
+TASK-548-05-L02 must run the same `task-548-portal` certification profile in
+the tag-pinned release checkout after rebuilding and validating the exact
+`packages/docs-portal/dist`, but before any GitHub Release asset upload,
+retained-tree write, mutable-alias write, Cloudflare deployment, or rollback.
+The adapter receives only a validated repository-relative artifact root and
+the expected product version, Git SHA, portal manifest hash and artifact-root
+hash through an exact allowlisted environment projection. Every value is
+asserted as visible/report evidence; ambient values, alternate roots, stale
+candidate bytes, or a report from another run fail closed. For a docs-rollback
+run, TASK-548-05-L02 executes the SAME certification profile with the five
+inputs derived and bound from the materialized retained-capsule bytes
+(`VerifiedDocsRollbackCandidateV1`: artifactRoot/productVersion/originalGitSha/
+portalManifestSha256/artifactRootSha256) before any rollback mutation, after
+the Pinned Local Browser Install Contract verified the local browser.
 
-After L01 has written and validated only that manifest/eight-PNG inventory, it
-calls the imported TASK-545 phase-1 `createResumeCheckpoint` helper. That helper
-is the sole writer of
-`_docs/_workflows/_smoke/evidence/task-548/resume-checkpoint.json`.
-TASK-548-07-L01 owns the surrounding `owner_action_required` pause, owner staging
-review, resume identity/parity checks and fresh rerun after source drift, but it
-does not write checkpoint bytes itself. This leaf writes neither canonical
+That release job captures canonical runner JSON stdout byte-for-byte as
+`report.json`, requires the exact seven IDs/titles/variants/assertions,
+`pass: true`, `serverUp: true`, zero console/page/network errors, seven unique
+screenshots and successful shared cleanup, then uploads exactly the report, the
+seven candidate PNGs, and the canonical prepublication receipt
+(`docs-portal-prepublication-receipt-v1.json`) as the nine-member noncanonical
+workflow artifact
+`docs-portal-prepublication-gate-<productVersion>-<gitSha>-<workflowRunId>`.
+The artifact retention is 90 days and its upload does not authorize product
+publication. The workflow then removes/proves absent the exact candidate root
+and rechecks clean tag bytes before the first publication mutation. Any gate,
+upload, cleanup or clean-tree failure blocks publication.
+
+The fresh TASK-548-07-L01 release-resume downloads that exact successful-run
+artifact, verifies its bounded inventory, runner-report bytes, screenshot
+hashes and version/SHA/manifest/artifact-root assertions, and consumes it only
+as prepublication evidence. The final `task-548` adapter imports this leaf's
+seven action/assertion implementations read-only and independently executes
+them as seven variants of final scenario
+`portal-local-exact-latest-rollback` against its disposable retained-Pages
+session. One reviewed final scenario screenshot is sufficient because all
+seven variants retain machine-visible proofs in the shared report.
+
+TASK-548-07-L01 alone writes final
+`06-portal-local-exact-latest-rollback.png`, the exact eight-screenshot
+TASK-545 inventory and its report/manifest. TASK-545 `createResumeCheckpoint`
+alone writes `resume-checkpoint.json`. This leaf writes neither canonical
 evidence nor checkpoint and never closes metadata.
 
 ## Security Contract
@@ -291,18 +411,104 @@ export async function validateBuiltPortal(
   assertCanonicalReceiptRoundTripV1(receiptBytes, receipt);
   return { manifest, receipt, receiptBytes };
 }
+
+export const TASK_548_PORTAL_SCENARIO_IDS = Object.freeze([
+  "portal-wide-search-read-hydration",
+  "portal-keyboard-navigation",
+  "portal-responsive-layout",
+  "portal-dark-reduced-motion",
+  "portal-version-latest-deep-link",
+  "portal-locale-visual-truth",
+  "portal-offline-static-no-runtime",
+] as const);
+
+export async function runTask548PortalAdapter(
+  context: RuntimeSmokeContext
+): Promise<SmokeAdapterResult> {
+  requireExactSuiteAndProfile(context.input, {
+    suite: "task-548-portal",
+    profiles: ["fast", "certification"],
+  });
+  const input = await normalizePortalGateEnvironmentAndOpenExactArtifact({
+    root: context.root,
+    profile: context.input.profile,
+    environment: process.env,
+    fastDefaultRoot: "packages/docs-portal/dist",
+    certificationRequiresAllExpectedIdentity: true,
+  });
+  context.lifecycle.assertAccepting();
+  const preview = await createPortalPreviewResource(context, input);
+  context.lifecycle.register(preview);
+  context.lifecycle.assertAccepting();
+  const browser = await createSharedBrowserTransportResource(context);
+  context.lifecycle.register(browser);
+  const rawScenarios = await runExactPortalBrowserActions({
+    context,
+    browser,
+    preview,
+    ids: TASK_548_PORTAL_SCENARIO_IDS,
+    artifactIdentity: input.identity,
+  });
+  const globalScreenshots = exactUniqueScenarioScreenshotUnion(rawScenarios);
+  const scenarios = requireManifestableScenarioResults(
+    rawScenarios,
+    globalScreenshots,
+  );
+  return Object.freeze({
+    serverUp: true,
+    scenarios,
+    screenshots: globalScreenshots,
+    consoleErrors: Object.freeze([]),
+    cleanup: { restorationPendingSharedLifecycle: true },
+  });
+}
+
+const TASK_548_PORTAL_CANDIDATE_RELATIVE_PATHS = Object.freeze([
+  "report.json",
+  ...TASK_548_PORTAL_SCENARIO_IDS.map((id) => `${id}.png`),
+] as const);
+
+export async function removeTask548PortalCandidateEvidenceSubset(input: {
+  repoRoot: string;
+  session: "task-548-portal-fast" | "task-548-portal-certification";
+}): Promise<void> {
+  const root = resolveExactPortalCandidateRoot(input.repoRoot, input.session);
+  if (!(await pathExistsWithoutFollowingLinks(root))) return;
+  await requireRegularDirectoryWithoutSymlinkComponents(root);
+  const present = await enumerateRegularFilesNoSymlinks(root);
+  requirePresentSetIsAnySubsetOfExactAllowlist(
+    present,
+    TASK_548_PORTAL_CANDIDATE_RELATIVE_PATHS,
+  );
+  await removeOnlyExactAllowlistedRegularFiles(root, present);
+  await removeSessionDirectoryOnlyWhenEmpty(root);
+  await requirePathAbsentWithoutFollowingLinks(root);
+}
 ```
 
-**Data flow:** immutable L02 dist → bounded path-safe file walk → schema/hash/
-reference/content/a11y checks → mandatory local preview and temporary targeted
-Playwright evidence → TASK-548-07 final-tree rerun → L01-owned canonical
-manifest/eight PNGs → TASK-545 `createResumeCheckpoint` phase-1 checkpoint →
-owner review/stage → tracked resume evidence for TASK-548-05/closure.
+Cleanup is deliberately valid for any subset, including an empty or partial
+candidate produced when invocation, report serialization, validation, or upload
+fails. It never needs a successful `RuntimeSmokeReport` in order to clean.
+Unknown/foreign/nested/link/device entries fail cleanup rather than being
+deleted. The caller owns one `try/finally` around invocation through upload and
+always invokes this function by the pinned session.
 
-**Error handling:** first integrity/path/schema failure returns a machine-readable
-error plus safe relative evidence and nonzero exit; never repairs or deletes
-output. Preview startup/health failure, missing browser result, console error,
-unexpected request, absent screenshot, or skipped scenario is a failed gate.
+**Data flow:** immutable L02 dist → bounded path-safe file walk → schema/hash/
+reference/content/a11y checks → strict shared `task-548-portal` adapter → seven
+report-owned visible scenarios/screenshots → release-job certification against
+the same exact tag-built artifact → noncanonical workflow artifact and clean
+candidate removal → first publication mutation → fresh TASK-548-07 release
+resume validation → independent seven-variant final scenario → L01-owned
+canonical report/manifest/eight PNGs → TASK-545 phase-1 checkpoint.
+
+**Error handling:** first integrity/path/schema failure returns a
+machine-readable error plus safe relative evidence and nonzero exit; never
+repairs output. Unknown/ambient environment, wrong artifact root or identity,
+preview startup/health failure, missing browser result, console/page error,
+unexpected request, absent screenshot, skipped scenario, report mutation,
+workflow-artifact mismatch, candidate-cleanup failure, or dirty tag checkout is
+a failed gate. The shared lifecycle always closes registered resources and
+preserves cleanup failure separately from the primary error.
 
 **Regression-test shape:**
 
@@ -334,11 +540,28 @@ unexpected request, absent screenshot, or skipped scenario is a failed gate.
   `docs_portal_hydration_recoverable_error`, React mismatch/recovery console
   output, page error, root-count drift, or static article/navigation/TOC DOM
   replacement;
-- targeted output is confined to `.tmp`; static ownership tests reject writes
-  to canonical evidence, manifest/checkpoint, or the legacy smoke prefix;
-- final handoff fixtures pin all seven targeted IDs and `.tmp` paths, then prove
-  07-L01 writes only `06-portal-local-exact-latest-rollback.png` for the portal
-  inside its exact eight-image canonical inventory plus `manifest.json`;
+- read-only registration tests verify both profiles for the already-landed
+  fixed `task-548-portal` row and adapter path (the L02-owned
+  `cli-registry.test.ts` covers the rows; this leaf only verifies them
+  read-only) and byte-preservation of L02's runnable five-flow `task-548`
+  pilot descriptor/path; existing suites/profiles remain represented and no
+  third TASK-548 suite appears;
+- adapter/lifecycle tests prove exact environment projection, immutable artifact
+  identity, seven ordered report-bearing scenarios, one screenshot each,
+  pre-navigation collectors, immediate resource registration, reverse cleanup,
+  no copied server/browser/worker/report loop, and no fixed sleeps;
+- targeted output is confined to the exact candidate session root; static
+  ownership tests reject writes to canonical evidence, manifest/checkpoint or
+  legacy smoke prefixes, while exact cleanup rejects symlink/path/foreign-file
+  targets and restores pre-run status;
+- release workflow fixtures pin certification after build+validator and before
+  every release/retained/Cloudflare mutation, exact report capture/artifact
+  inventory/name/90-day retention, clean candidate removal and clean tag
+  recheck; every failure prevents publication;
+- final handoff fixtures pin all seven portal scenario IDs as variants of final
+  scenario 06 and prove 07-L01 writes only
+  `06-portal-local-exact-latest-rollback.png` for the portal inside its exact
+  eight-image canonical inventory plus `manifest.json`;
   TASK-545 `createResumeCheckpoint` alone writes the checkpoint, while
   `owner_action_required`, checkpoint hash/run/workflow validation, owner-only
   staging, tracked resume, and stale/tampered rerun remain 07-owned orchestration.
@@ -347,9 +570,14 @@ unexpected request, absent screenshot, or skipped scenario is a failed gate.
 
 - [ ] Implement strict artifact/hash/reference/content validator.
 - [ ] Add hostile security and accessibility fixture suites.
-- [ ] Run seven real browser flows in named Playwright session.
+- [ ] Implement the focused `task-548-portal` contribution modules behind the
+      already-landed fixed row, preserve the landed `task-548` pilot, and
+      prove seven real portal scenarios through the shared runner without a
+      local lifecycle or third suite; never edit the shared
+      registry/CLI/contracts/cookbook/central test.
 - [ ] Route defects to L01/L02, rebuild, and rerun until clean.
-- [ ] Hand structured manifest/report/screenshots to TASK-548-05 and closure.
+- [ ] Hand exact action modules and release-gate/report/screenshot requirements
+      to TASK-548-05 and closure.
 
 ## Testing Requirements
 
@@ -361,6 +589,13 @@ SOURCE_DATE_EPOCH=0 \
   bun --cwd packages/docs-portal build
 bun packages/docs-portal/scripts/validate-built-portal.ts \
   packages/docs-portal/dist
+bun scripts/runtime-smoke.ts run \
+  --suite task-548-portal --profile fast --session task-548-portal-fast
+bun test tests/unit/runtime-smoke/task-548-portal-adapter.test.ts \
+  tests/unit/runtime-smoke/cli-registry.test.ts \
+  tests/unit/runtime-smoke/lifecycle-timing.test.ts \
+  tests/unit/runtime-smoke/browser-transport.test.ts \
+  tests/unit/runtime-smoke/repository-report.test.ts
 bunx vitest run --config vitest.config.ts \
   tests/vitest/docs-portal/portal-security.test.ts \
   tests/vitest/docs-portal/portal-accessibility.test.tsx \
@@ -376,11 +611,6 @@ bun run scan:trivy:secret:strict
 trivy fs --scanners secret --exit-code 1 --timeout 5m \
   packages/docs-portal/dist
 bun run precommit:check
-wc -l packages/docs-portal/scripts/validate-built-portal.ts \
-  tests/vitest/docs-portal/portal-security.test.ts \
-  tests/vitest/docs-portal/portal-accessibility.test.tsx
-find packages/docs-portal/scripts/browser-gate \
-  -type f -exec wc -l {} +
 git diff --check
 ```
 
@@ -389,14 +619,45 @@ bounded command above is mandatory and targets the validated portal artifact
 without a `dist` exclusion. A workflow-contract test pins that target and
 fail-closed exit code.
 
-Then restart the preview server and run `playwright-cli -s=wf548portal` for all
-seven scenarios. Store all seven targeted screenshots only below the bounded
-`.tmp/docs-portal-smoke/task-548-04/<run-id>/` candidate directory. The final
-TASK-548-07 gate consumes or requests a same-owner recapture of the portal flow
-and alone writes only `06-portal-local-exact-latest-rollback.png` for the portal
-inside its exact eight-image inventory before TASK-545 phase 1. Count every
-human-authored browser-gate driver; every count must be at most 1,000, and every
-targeted scenario/result remains mandatory.
+Unit/contract tests validate the seven bounded action/assertion groups here.
+They pin every exact ID/title, both profiles' non-empty variant sets,
+machine-observed assertions, empty per-variant console arrays, one owned
+screenshot per scenario, and the exact unique ordered global screenshot union.
+Removing or altering any field, returning a false assertion, assigning one PNG
+to two scenarios, or drifting the global union must fail directly in
+`requireManifestableScenarioResults` before report serialization or upload.
+TASK-548-05-L02 executes the release certification profile against exact
+tag-built bytes before publication, and TASK-548-07-L01 later imports all seven
+groups read-only into final scenario 06. Shared runtime primitives own preview
+restart/health, named Playwright transport, candidate repository accounting,
+resource cleanup, and report creation. Every noncanonical candidate is removed
+and proven absent before publication. Only final TASK-548 certification writes
+`06-portal-local-exact-latest-rollback.png` inside its exact eight-image
+inventory before TASK-545 phase 1.
+
+- the canonical NUL-safe line-count gate over the leaf write set (identical
+  contract in every TASK-548 task file; a file above 1,000 makes the gate fail
+  with `exit 1`, including a non-newline final line; the baseline spans the
+  full task/family dirty scope and commits/staging do not narrow it):
+
+  ```bash
+  # Canonical NUL-safe line-count gate over the leaf write set (identical
+  # contract in every TASK-548 task file; a file above 1,000 makes the gate fail
+  # with exit 1, including a non-newline final line). The verified pre-family
+  # baseline is the pinned commit 963733cae23456622bea1eef1b734723aaab2350;
+  # commits/staging cannot narrow the measured scope.
+  TASK_FAMILY_BASELINE_SHA="963733cae23456622bea1eef1b734723aaab2350"
+  git cat-file -e "${TASK_FAMILY_BASELINE_SHA}^{commit}" || { echo "invalid/missing baseline commit ${TASK_FAMILY_BASELINE_SHA}" >&2; exit 1; }
+  failed=0
+  while IFS= read -r -d '' f; do
+    lines=$(awk 'END { print NR }' "$f")
+    if [ "$lines" -gt 1000 ]; then
+      printf 'OVER-LIMIT %s %s\n' "$lines" "$f"
+      failed=1
+    fi
+  done < <({ git diff --name-only -z --diff-filter=ACMRT "$TASK_FAMILY_BASELINE_SHA" -- core packages scripts tests _docs/_workflows; git ls-files --others --exclude-standard -z -- core packages scripts tests _docs/_workflows; } | grep -zE '\.(ts|tsx|mjs|cjs|js|jsx|mts|cts)$' | grep -zvE '\.generated\.(ts|tsx|js|jsx|cjs|mjs|mts|cts)$' | sort -zu)
+  exit "$failed"
+  ```
 
 ## Acceptance Criteria
 
@@ -411,21 +672,25 @@ targeted scenario/result remains mandatory.
 - The built page mounts exactly four sibling islands from identical server/
   client component-model-prefix inputs and produces zero recoverable hydration
   diagnostics, mismatch recovery, or static article/navigation/TOC replacement.
+- The release workflow blocks before any publication mutation unless the exact
+  tag-built portal passes the seven-scenario shared certification gate, uploads
+  its bounded noncanonical artifact, removes candidates, and proves a clean
+  checkout.
 - TASK-548-07-L01 writes only the canonical final eight screenshots and
   `manifest.json`; TASK-545 `createResumeCheckpoint` alone writes the phase-1
-  checkpoint. TASK-548-04-L03 keeps mandatory targeted evidence temporary and
-  cannot collide with final acceptance filenames.
+  checkpoint. L03 candidates cannot collide with final acceptance filenames.
 - Wide/narrow, light/dark, keyboard/focus, reduced-motion, deep-link/latest,
   typed 404, locale truth, and offline/static behavior are all demonstrated.
 - Cumulative online version navigation and current-only offline fallback are
   visibly proven without cross-document substitution.
 - No validation failure is suppressed, auto-baselined, or repaired in output;
   source fixes land through the exclusive L01/L02 owner and gates rerun.
-- TASK-548-05 receives a clean immutable artifact plus validator/browser
-  evidence suitable for publication.
+- TASK-548-05 receives a clean immutable artifact and executable registered
+  validator/browser gate suitable for mandatory prepublication execution.
 
 ## Documentation Updates Required
 
-Hand detached-manifest, capsule-input, explicit artifact-scan, browser,
-accessibility, CSP, offline, and failure-triage evidence to TASK-548-05/07; this
-leaf edits no shared closeout documentation.
+Write only the exact shared-runner registration recipes owned above. Hand
+detached-manifest, capsule-input, explicit artifact-scan, browser,
+accessibility, CSP, offline, and failure-triage requirements to TASK-548-05/07;
+this leaf edits no other shared closeout documentation.

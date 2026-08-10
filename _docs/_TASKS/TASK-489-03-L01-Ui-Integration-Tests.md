@@ -1,169 +1,201 @@
-# TASK-489-03-L01: Vitest UI-Integration Tests
+# TASK-489-03-L01: One-Writer Operational UI Composition in SolutionKitsPage
 # FileName: TASK-489-03-L01-Ui-Integration-Tests.md
 
 **Parent Subtask:** TASK-489-03
-**Priority:** Medium
-**Category:** Solution Kits / Admin UI / Tests
-**Estimated Effort:** Small–Medium
-**Dependencies:** TASK-489-01 + TASK-489-02 (the rendered surfaces). Mocks `core/admin/services/solutionKitsClient.ts` at the module boundary.
+**Priority:** High
+**Category:** Solution Kits / Admin UI / Accessibility / Security
+**Estimated Effort:** Large
+**Dependencies:** All TASK-489 parent-level start gates; TASK-489-02-L02; TASK-547 done; complete terminal TASK-551
 **Status:** ⏳ To Do
-**Started:** `<YYYY-MM-DD>`
-**Completed:** `<YYYY-MM-DD>`
+**Changelog:** 1268 (pinned; closure only)
 
 ---
 
 ## Overview
 
-- **Goal:** Author the Vitest **ui-integration** suite that proves the wiring:
-  history renders, run selection drives detail drill-down, write controls gate on
-  `solution-kits:write`, apply sends the right args, and **rollback only fires
-  after an explicit confirm** with the resolved source run id.
-- **Owning module(s) to create-or-extend:**
-  - Create `tests/vitest/ui-integration/solution-kits-runs.test.tsx`.
-  - Optionally create `tests/vitest/admin/solutionKitRunFormatting.test.ts` for the
-    pure formatting helpers (fast, no render).
-- **Source-of-truth docs:** `_docs/TESTING_STRATEGY.md` (lane selection: Vitest for
-  admin-UI render flows), `_docs/CMS_API.md` (run/item/apply/rollback shapes the
-  fixtures mirror), `_docs/ASSISTANT_SITE_BUILDER.md`.
-- **Out of scope:** route/security Bun tests (the routes are not changed; existing
-  `tests/integration/routes/solutionKitsRoutes.test.ts` covers them), and the
-  legacy-page test reconciliation (TASK-489-03-L02).
+Compose bounded history, sanitized detail, pagination, and exact rollback in the
+existing Solution Kits screen. Preserve the Reviewed Site Builder handoff and
+do not reintroduce apply/dry-run/rerun/latest behavior. This leaf is the single
+writer of `SolutionKitsPage.tsx` for the family.
 
----
+## Sub-Tasks
+
+None; this is an executable leaf.
+
+## Exact File Ownership
+
+**Production:**
+`core/admin/ui/kits/SolutionKitsPage.tsx`,
+`core/admin/ui/kits/SolutionKitRunOperationsPanel.tsx` (new),
+`core/admin/ui/kits/SolutionKitRunHistory.tsx` (new),
+`core/admin/ui/kits/SolutionKitRunDetail.tsx` (new), and
+`core/admin/ui/kits/solutionKitRunPresentation.ts` (new, pure safe labels only).
+
+**Tests:**
+`tests/vitest/ui-integration/solution-kits-runs.test.tsx` (new) and
+`tests/vitest/ui/solution-kits-page.test.tsx`.
+
+No service/route/client/cache/hook, shared `ConfirmActionDialog`, auth context,
+DB schema/migration, runtime-smoke/docs/task/changelog/board, apply/dry-run
+surface, public/API-key route, or TASK-555/TASK-556 may be edited.
+
+## UI Contract
+
+- Mount `useSolutionKitRuns({})` once as the first-class global operations view,
+  independent of legacy catalog selection. This keeps terminal TASK-547
+  `formadom-studio` runs reachable before TASK-555 adds a curated starter card.
+- The rendered history, detail, and rollback controls use the exact descriptive
+  IDs `solution-kits.run-history`, `solution-kits.run-detail`, and
+  `solution-kits.exact-rollback` from TASK-489-02-L01's pure contribution. These
+  IDs support Guide/capability evidence only and are never consulted for
+  authorization.
+- History shows safe mode, engine, status, counters, timestamp, and safe failure
+  code. A running row visibly says `In progress` and renders no summary counters
+  or fake zero values. It uses semantic buttons/list rows, `aria-current` or
+  `aria-pressed`, and keyboard selection. No raw JSON or prohibited fields.
+- A visible `Load more` requests exactly the current `nextCursor`; show an end
+  state from `hasMore=false`. No inert pagination or automatic all-page loop.
+- Detail shows all ten safe resource-kind labels, key, operation, status, and
+  safe code. `unknown` engine is visibly unsupported for rollback. A
+  `legacy_template_summary_only` detail renders explicit bounded copy that
+  exactly `omittedItemCount` template operations are represented by summary
+  counters only; it never implies that item rows are complete or exposes options.
+  A running detail renders the bounded current items as nonterminal, shows no
+  omitted count or final counters, and never labels the trace complete.
+- Loading preserves existing rows/detail with a busy indicator. Empty, denied,
+  malformed, and retryable error states are distinct and accessible.
+- The hook's `corrupt_detail` state renders fixed copy that stored run evidence
+  is invalid and cannot be operated on. It preserves the selected safe history
+  row for orientation, renders no item/counter guess, and exposes no rollback
+  trigger/dialog even when both permissions are present. It never prints the raw
+  server error or silently relabels corruption as empty/not-found.
+- The hook's cursor-reset notice remains visible and non-destructive after the
+  guarded page-one refresh; it is distinct from an error/empty state and may be
+  dismissed without changing history or selection.
+- Rollback button exists only when selected detail is rollback-eligible and the
+  user has both permissions. If either permission is absent, render read-only
+  explanatory copy and no active destructive control.
+- `rollbackIneligibleCode="solution_kit_rollback_source_superseded"` always
+  renders fixed superseded-source copy and no active confirm trigger, even when
+  both permissions are present. The UI never waits for snapshot mismatch to
+  discover this state.
+- `rollbackIneligibleCode="solution_kit_rollback_relation_limit_exceeded"`
+  renders fixed bounded-history/recovery copy and no confirm trigger; it never
+  guesses eligibility or silently scans another page.
+- Reuse `ConfirmActionDialog` with destructive tone, target package/source run
+  labels, typed confirmation equal to the bounded package key, and exact source
+  semantics. Cancel closes with zero request. Confirm calls only
+  `rollbackExact(selectedRun.id)` and remains pending/disabled until settled.
+- Terminal success visibly adds/selects the rollback run and announces a status
+  summary. Terminal failed keeps the exact source context, refreshes history, and
+  renders fixed safe copy/code/counters stating that no net rollback change
+  remains. It can expose a new exact confirm only after refreshed source detail is
+  eligible; the next request receives a new rollback owner. `recovery_required`
+  keeps source context, refreshes history, renders fixed partial/unresolved
+  recovery copy plus the same durable running rollback run ID and no counters, and
+  disables another confirm until that owner reaches a proven terminal state.
+  Pre-write rejection keeps context and creates no result row.
+- Light/dark token usage follows the existing screen. Mobile stacks panels and
+  preserves keyboard/focus return to the exact rollback trigger. L02's exact
+  `rollback-confirm-cancel` smoke measures this at 390x844: both panel and dialog
+  rectangles stay within the viewport, stacked panels do not overlap, document
+  horizontal overflow is zero, and cancel restores focused-trigger geometry.
 
 ## Security Contract
 
-Not a route/auth/data leaf itself (it is a test module). It **verifies** the
-Security-Contract behavior of 01/02 and must assert:
-
-- Write controls (Install / Dry-run / Roll back) are **absent/disabled** when the
-  permission snapshot lacks `solution-kits:write`, and present when it has it
-  (`useAdminAuth().can` driven by the render harness's user/permission fixture).
-- The UI calls `solutionKitsClient` functions (mocked), never a raw `fetch` — the
-  test mocks the client module, so any bypass would surface as an un-mocked
-  network call / unexpected behavior.
-- **Rollback is never invoked before confirm** — the strongest safety assertion.
-
----
+- **Endpoint visibility:** UI uses the internal TASK-489 client only.
+- **Auth model:** Admin session through existing shell/context.
+- **RBAC:** read surface requires `solution-kits:read`; destructive control uses
+  require-all client gate for `solution-kits:write` and `settings:write`.
+- **CSRF/rate limit:** client-owned exact rollback; UI never calls raw `fetch`.
+- **Validation:** receives strict safe hook state only; no dynamic HTML/JSON.
+- **Anti-abuse:** one pending rollback, exact selected source, typed confirm,
+  disabled double submit, bounded manual pagination.
+- **Sensitive data:** TASK-489 history/detail/rollback DOM, accessibility names,
+  toast, console, screenshot, and local state never contain actor/options/
+  snapshots/rollback payload/raw errors. Retained apply UI outside this operational
+  region is not reclassified by this claim.
 
 ## Implementation Pseudocode
 
-### Fixtures (mirror the verified client types)
+```tsx
+function SolutionKitRunOperationsPanel({ permissions }: Props) {
+  const runs = useSolutionKitRuns({});
+  const canRollback = permissions.can("solution-kits:write")
+    && permissions.can("settings:write");
+  const selected = runs.selectedRun;
 
-```ts
-const apply1: SolutionKitInstallRunRecord = {
-  id: "run-apply-1", kitId: "automotive-workshop", mode: "apply", status: "success",
-  actorId: "user-1", rollbackOfRunId: null, options: {},
-  summary: { total: 3, success: 3, failed: 0, planned: 0, skipped: 0,
-    operations: { create: 3, update: 0, noop: 0, delete: 0, restore: 0 } },
-  error: null, createdAt: "2026-06-01T10:00:00.000Z", updatedAt: "...", finishedAt: "...",
-};
-const dryRun1: SolutionKitInstallRunRecord = { ...apply1, id: "run-dry-1", mode: "dry_run" };
-const item1: SolutionKitInstallItemRecord = {
-  id: "item-1", runId: "run-apply-1", position: 0, resourceType: "page",
-  resourceKey: "home", operation: "create", status: "success",
-  beforeSnapshot: null, afterSnapshot: { title: "Home" }, rollbackAction: { type: "delete" },
-  error: null, createdAt: "...", updatedAt: "...",
-};
+  return <section aria-label="Install run operations">
+    <SolutionKitRunHistory {...safeHistoryProps(runs)} />
+    <SolutionKitRunDetail detail={selected} />
+    {selected?.run.rollbackEligible && canRollback ?
+      <ConfirmActionDialog
+        requireTypedValue={selected.run.packageKey}
+        onConfirm={() => runs.rollbackExact(selected.run.id)}
+      /> : <ReadOnlyRollbackState reason={resolveReason(selected, canRollback)} />}
+  </section>;
+}
 ```
 
-### Mock the client boundary
+**Data flow:** global operations region -> one race-safe hook -> safe keyset rows -> exact
+selection/detail -> require-all gate -> typed confirm -> exact source rollback ->
+safe refreshed history/detail.
 
-```ts
-vi.mock("@/services/solutionKitsClient", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@/services/solutionKitsClient")>();
-  return {
-    ...actual,
-    listSolutionKitRunsCached: vi.fn(async () => [apply1, dryRun1]),
-    getSolutionKitRunCached: vi.fn(async () => ({ run: apply1, items: [item1] })),
-    applySolutionKit: vi.fn(async () => ({ run: { ...apply1, id: "run-apply-2" }, items: [item1], summary: apply1.summary })),
-    rollbackSolutionKit: vi.fn(async () => ({ run: { ...apply1, id: "run-rb-1", mode: "rollback", rollbackOfRunId: "run-apply-1" }, items: [item1], summary: apply1.summary })),
-  };
-});
-```
+**Error handling:** use stable client code/status to choose fixed user copy.
+Never print arbitrary `Error.message`. Preserve already loaded safe state on
+page/detail/rollback failure, provide explicit retry, and restore focus after
+cancel/success/failure.
 
-### Test harness (repo idiom: happy-dom + `createRoot` + `React.act`)
+## Regression Tests
 
-The bulk of this suite is **interactive** (run selection drives detail, snapshot
-toggle, write-control clicks, confirm-gated rollback), so it uses the repo's real
-ui-integration idiom — **not** `renderAdminUi`, which is `renderToString` SSR (no
-effects, no DOM, no events) and would render `useSolutionKitRuns`'s initial empty
-state (the hook populates `runs` only from a mount `useEffect`, with no synchronous
-cache priming). There is **no `@testing-library`** in the repo — no `render` /
-`waitFor` / `findBy*` / `fireEvent`. Mirror
-`tests/vitest/ui-integration/custom-screen-record-interactions.test.tsx`:
-
-```ts
-// @vitest-environment happy-dom
-import React from "react";
-import { createRoot } from "react-dom/client";
-
-(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
-
-// Mount via createRoot inside React.act; drive the permission fixture so
-// useAdminAuth().can("solution-kits:write") returns the desired value per test
-// (provide the auth context / mock the provider as the sibling suites do).
-const mount = (canWrite: boolean) => {
-  const container = document.createElement("div");
-  document.body.appendChild(container);
-  const root = createRoot(container);
-  React.act(() => { root.render(<SolutionKitsPageHarness canWrite={canWrite} />); });
-  return { container, cleanup: () => { React.act(() => root.unmount()); container.remove(); } };
-};
-
-// Effects fetch on mount, so drain microtasks between act passes (no waitFor):
-const flush = async () => {
-  await React.act(async () => { for (let i = 0; i < 6; i += 1) await Promise.resolve(); });
-};
-
-// Interactions dispatch real DOM events inside React.act:
-const click = (el: Element | null | undefined) =>
-  React.act(() => { el?.dispatchEvent(new MouseEvent("click", { bubbles: true })); });
-const toggle = (el: HTMLInputElement | null | undefined) =>
-  React.act(() => { if (el) { el.checked = !el.checked; el.dispatchEvent(new Event("change", { bubbles: true })); } });
-```
-
-### Test cases
-
-**Interactive** (`mount(canWrite)` → `await flush()` → `click(...)` → `await flush()`
-→ assert via `container.querySelector` / `textContent` / mocked-client call args):
-
-```ts
-test("history lists runs for the selected kit");                 // after flush: rows for apply + dry_run (mode/status/summary)
-test("selecting a run loads its item trace");                    // click row → getSolutionKitRunCached called; item resourceKey + badges
-test("snapshot inspector toggles read-only JSON");               // click toggle → afterSnapshot revealed; null beforeSnapshot → no toggle
-test("dry run calls apply with dryRun:true");                    // click Dry-run → applySolutionKit arg assertion
-test("install calls apply with dryRun:false");                   // click Install → applySolutionKit arg assertion
-test("rollback is NOT called until confirm");                    // click Roll back opens dialog; assert rollbackSolutionKit NOT yet called
-test("confirm calls rollback with resolved sourceRunId");        // click confirm → rollbackSolutionKit("automotive-workshop", { sourceRunId: "run-apply-1", continueOnError: true })
-test("mutation error surfaces and dialog stays open on failure");// mock rollbackSolutionKit rejects → dialog stays mounted + error text
-```
-
-**Static markup only** (no interaction) — this case may use `renderAdminUi`
-(`renderToString`) since it depends solely on the synchronous `canWrite` gate,
-not on any effect; assert the rendered HTML string, make no interaction claim:
-
-```ts
-test("write controls hidden without solution-kits:write");       // SSR html omits Install / Dry-run / Roll back; shows the permission note
-```
-
-**Error handling under test:** mock the client functions to reject and assert the
-destructive alert / dialog-stays-open behavior inside `await React.act(...)`;
-assert no unhandled rejection.
-
-**Async note:** because the hook fetches on mount via effects, `await flush()`
-(the `await React.act(async () => …)` microtask drain above) after mount and after
-each interaction — the repo has **no** `waitFor` / `findBy*`.
-
----
+- History/empty/loading/error/denied states and manual next-cursor pagination.
+- Corrupt-detail state from `solution_kit_run_shape_invalid` retains the safe
+  selected row, shows fixed integrity copy, no synthesized items/counters, and
+  zero rollback callback for a fully permitted user.
+- One-shot cursor-expiry notice survives refresh/dismiss flow without losing
+  visible rows/detail or triggering another request.
+- Selection/detail rendering for every ten-kind label and no prohibited text or
+  serialized keys in DOM; both terminal item-trace variants render exact bounded
+  omitted copy and reject contradictory counts, while nonterminal trace has no
+  omitted count.
+- Both permissions independently missing and both missing: no active rollback.
+- Confirm opens with exact source/package, typed value required, cancel sends
+  zero request, double confirm sends one request.
+- Success selects/announces rollback; failure preserves source and safe code/
+  counters plus zero-net copy, then refreshed eligibility permits a new owner;
+  recovery preserves source, shows the same durable running run ID/safe code,
+  renders no counters, and disables duplicate confirmation.
+- Superseded source with both permissions has explicit disabled/read-only copy,
+  no confirm dialog, and zero rollback callback; terminal failed result still
+  refreshes and announces its bounded counters.
+- Relation-limit source has its distinct fixed read-only copy, no confirm dialog,
+  and zero rollback callback.
+- Running history/detail renders nonterminal copy with no zero summary. A
+  successful `C` rollback refresh makes restored `B` eligible; after successful
+  `B`, restored `A` becomes eligible, while failed/recovery results do not release
+  the predecessor. Failed releases only its own claim and may retry the same
+  source with a new owner; recovery retains the same owner.
+- Rapid page/run changes cannot display stale hook state (integration with mocked
+  delayed client); focus returns to trigger and mobile DOM remains usable.
+- Existing test continues to prove Reviewed Site Builder exists and legacy
+  apply/dry-run/rerun/latest controls remain absent.
+- UI test pins the three contribution control IDs to real rendered behavior and
+  proves permission checks remain the only control-authorization source.
 
 ## Testing Requirements
 
-- `bun --cwd core lint`
-- `bun --cwd core lint:types`
-- `NODE_ENV=test vitest run --config vitest.config.ts tests/vitest/ui-integration/solution-kits-runs.test.tsx`
-- (optional) `NODE_ENV=test vitest run --config vitest.config.ts tests/vitest/admin/solutionKitRunFormatting.test.ts`
-- Do not regress `tests/vitest/ui/solution-kits-page.test.tsx` (reconciled in
-  03-L02) or `tests/vitest/admin/solutionKitsClient.test.ts`.
-- No DB migration artifacts (test-only leaf).
-</content>
+```bash
+bun --cwd core lint:types
+bun --cwd core lint
+NODE_ENV=test vitest run --config vitest.config.ts tests/vitest/ui-integration/solution-kits-runs.test.tsx tests/vitest/ui/solution-kits-page.test.tsx
+wc -l core/admin/ui/kits/SolutionKitsPage.tsx core/admin/ui/kits/SolutionKitRunOperationsPanel.tsx core/admin/ui/kits/SolutionKitRunHistory.tsx core/admin/ui/kits/SolutionKitRunDetail.tsx core/admin/ui/kits/solutionKitRunPresentation.ts tests/vitest/ui-integration/solution-kits-runs.test.tsx tests/vitest/ui/solution-kits-page.test.tsx
+git diff --check
+```
+
+Every touched production/test file must be <=1,000 physical lines.
+
+## Documentation Updates Required
+
+TASK-489-03-L02 documents placement, read-only permission state, pagination,
+sanitized detail, exact typed-confirm rollback, accessibility/focus behavior,
+and separation from Reviewed Site Builder in user/developer docs.

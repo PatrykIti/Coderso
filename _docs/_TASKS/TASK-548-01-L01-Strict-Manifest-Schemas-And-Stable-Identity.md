@@ -23,12 +23,15 @@ src/docsCorpusTypes.ts
 src/docsCorpusSchemas.ts
 src/docsCorpusNormalizer.ts
 src/docsCorpusLimits.ts
+src/docsProductVersionRange.ts
 src/docsMarkdownParser.ts
 src/docsMarkdownTokens.ts
 src/docsSectionDirectives.ts
 src/docsPublicationTargets.ts
 src/docsPublicationDtos.ts
+src/docsCanonicalJsonHash.ts
 src/docsCapabilityCatalog.ts
+src/docsCapabilityComposition.ts
 src/docsPermissionCatalogSnapshot.generated.ts
 ```
 
@@ -48,19 +51,25 @@ portal UI.
 TASK-548-07-L01 is the sole writer of the Guide README and receives this leaf's
 verified authoring-contract handoff.
 
-TASK-548-02-L03 later creates the package manifest and performs the only
-workspace/lock/Docker reconciliation. Until then this leaf typechecks the
+TASK-548-02-L02 later creates the package manifest and performs the only
+workspace/lock/Docker reconciliation (it owns ALL dependency-bearing toolchain
+bytes: root/core package manifests, root bun.lock, Dockerfile, all three
+documentation workspace manifests, root docs scripts, exact `@playwright/cli`
+and diff pins (`@playwright/cli: 0.1.18`/`pixelmatch: 7.2.0`), the one lock-producing `bun install --lockfile-only` reconciliation plus the separate `bun install --frozen-lockfile` verification, the repo-local-only dispatcher resolver
+and the Chromium install/verify; it lands and gates terminally before its
+pilots; TASK-548-02-L03 consumes those bytes read-only). Until then this leaf
+typechecks the
 source through its direct `tsconfig.json`; it does not create a package manifest
 or edit the lock.
 
-Because workspace activation occurs only in TASK-548-02-L03, every L01-owned
+Because workspace activation occurs only in TASK-548-02-L02, every L01-owned
 shim under exact `core/services/documentation/` permanently uses the confined
 repo-relative target `../../../packages/docs-contracts/src/index.ts` (or the
 exact owner module below that same root), with named re-exports only. Static
 tests resolve the real target below that root and assert reference identity.
 No later leaf rewrites these shims. Their source targets are limited to the L01
 allowlist above; L02/L03 zero-input wrappers own the Node source edges.
-Direct consumers landing after 02-L03 use
+Direct consumers landing after 02-L02 use
 `@coderso/docs-contracts` through the activated manifest/dependency instead.
 
 ## Exact Shared Shapes
@@ -109,6 +118,7 @@ type DocsVisualV1 = {
   height: number;
   alt: string;
   caption: string;
+  scenarioStepSearchText: string[];
 };
 
 type DocsExampleV1 = {
@@ -159,6 +169,7 @@ type DocsDistributionBundleV2 = {
   defaultLocale: string;
   supportedLocales: string[];
   sourceHash: string;
+  capabilityComposition: DocsCapabilityCompositionCatalogV1;
   documents: DocsDocumentV2[];
 };
 
@@ -172,6 +183,7 @@ type DocsPublicationVisualV1 = {
   height: number;
   alt: string;
   caption: string;
+  scenarioStepSearchText: string[];
   assetPath?: never; // compile-time absence guard; never serialized
 };
 
@@ -215,6 +227,17 @@ contract. Their recursive exact-key validators reject `sourcePath`,
 `assetPath`, unknown keys and a full `DocsDocumentV2`/`DocsVisualV1` value.
 `outputKey` is exactly `docs-png-sha256-<lowercase 64-hex visual.sha256>`: an
 opaque domain-tagged content key with no filename or directory segment.
+`scenarioStepSearchText` is the compiler-derived safe scenario-step search
+projection: at most 16 tokens, each 1..24 UTF-8 bytes, aggregate at most 512
+UTF-8 bytes, unique after exact-match dedupe, deterministic first-DSL-
+occurrence order, and every token matches `^[a-z][a-z0-9-]{0,23}$`. Selector,
+URL, fixture and secret-bearing punctuation (for example `#`, `.`, `[`, `]`,
+`/`, `\`, `:`, `*`, `@`, `=`, `%`, `$`, `{`, `}`, `<`, `>`, the backtick,
+double and single quotes) and `key=value` patterns are rejected. The exact derivation table
+is owned by TASK-548-01-L02; this schema enforces shape, bounds, dedupe,
+order and charset, and both normalizers round-trip the projection
+byte-identically. An empty array is valid only when the visual has no
+compiled scenario.
 The optional-`never` members are type-only absence guards and are never emitted.
 Compile-time assertions prove neither full source type is assignable to its
 publication type; runtime exact-key tests prove spread/cast values still fail.
@@ -271,7 +294,10 @@ export function normalizeDocsDistributionBundleV2(
 recursively rejects unknown document/section/visual/example keys; normalizes
 locale, version range, target, permission and capability contracts; preserves
 section and ordered evidence-reference order; requires exact levels `1..4`;
-canonicalizes visual/example record order; revalidates safe Markdown/plain-text
+canonicalizes visual/example record order; normalizes every visual's
+`scenarioStepSearchText` (exact-token dedupe, first-occurrence order,
+token/aggregate bounds, allowed charset; unsafe punctuation and unknown keys
+fail closed); revalidates safe Markdown/plain-text
 parity and closes every local section/evidence reference. It never derives
 compiled fields from authoring Markdown.
 
@@ -299,7 +325,10 @@ The bundle-global IDs do not replace localized ownership:
 `assistant`, `embedded-help`, `public-docs` order. It is an enforceable
 distribution boundary: downstream assistant, Help and portal consumers must
 select only their matching target and must never treat target absence as a
-fallback.
+fallback. Assistant consumer eligibility is the conjunction `assistant` AND
+`embedded-help`; `selectDocumentsForPublicationTarget` remains the raw
+per-target selector, and Guide ingest applies the conjunction after selecting
+`assistant` (see TASK-548-01-L03).
 
 This leaf owns the exact target selector before any assistant, Help, renderer
 or portal consumer lands, at
@@ -317,6 +346,67 @@ input order, and includes a document only when its validated
 `publicationTargets` contains that target. Missing/unknown targets and
 unnormalized input fail closed. TASK-548-03-L02 re-exports this owner function
 through `@coderso/docs-renderer`; it must not reimplement the selection rule.
+
+### Canonical product-version range grammar
+
+There is exactly ONE canonical range grammar in the whole contract, owned by
+`packages/docs-contracts/src/docsProductVersionRange.ts` (added to this leaf's
+allowlist):
+
+```text
+>=MAJOR.MINOR.PATCH <MAJOR.MINOR.PATCH
+```
+
+Exact grammar rules: both bounds are ASCII decimal `MAJOR.MINOR.PATCH` with
+each component `0..2147483647`, no leading zeros except the single component
+`0`, no prerelease/build metadata (`-`/`+` suffixes are rejected), no extra
+whitespace, one literal ASCII space separates the two bounds, and the lower
+bound must be strictly less than the upper bound (lexicographic
+`(major, minor, patch)` tuple comparison). The source string is canonical and
+is preserved byte-for-byte for display/round-trip; the parsed six integer
+bounds (inclusive lower, exclusive upper) are the machine form.
+
+The owner exports exactly:
+
+```ts
+type DocsProductVersionRangeV1 = Readonly<{
+  source: string; // canonical `>=MAJOR.MINOR.PATCH <MAJOR.MINOR.PATCH`
+  lower: Readonly<{ major: number; minor: number; patch: number }>;
+  upper: Readonly<{ major: number; minor: number; patch: number }>;
+}>;
+export function normalizeDocsProductVersionRangeV1(value: unknown):
+  DocsProductVersionRangeV1;
+export function parseDocsProductVersionRangeV1(source: string):
+  DocsProductVersionRangeV1;
+export function assertDocsProductVersionRangeContainsV1(
+  range: DocsProductVersionRangeV1,
+  version: Readonly<{ major: number; minor: number; patch: number }>
+): boolean;
+```
+
+`normalizeDocsProductVersionRangeV1` accepts the canonical source string
+directly; `parseDocsProductVersionRangeV1` is the single parser both use. Both
+fail closed with `docs_corpus_version_invalid` on malformed input (leading
+zeros, prerelease/build metadata, extra whitespace, missing `>=`/`<` bounds,
+non-ASCII decimals, overflow above 2,147,483,647, or lower >= upper).
+`normalizeDocsDocumentV2` validates every `DocsDocumentV2.productVersionRange`
+through this exact owner — there is no second SemVer-range parser anywhere in
+the contracts, compiler, ingest, search context or SQL. TASK-548-01-L03
+persists the six parsed bound integers on `assistant_docs_v2_documents` and
+uses the same three-integer parse of `searchContext.productVersion` for its
+parameterized lexicographic tuple predicates (see its exact product-version
+range persistence and filtering section).
+
+Tests table-drive the grammar: lower/upper boundary tuples (for example
+`>=0.0.0 <1.0.0`, `>=1.0.0 <2.0.0`, `>=2147483647.0.0 <2147483647.0.1` —
+the valid three-component maximum-int boundary pair),
+malformed inputs (leading zeros such as `>=01.0.0 <2.0.0`, prerelease/build
+such as `>=1.0.0-beta <2.0.0` or `>=1.0.0+build <2.0.0`, extra whitespace,
+missing bound, `>=1.0.0 <1.0.0`, `>=2.0.0 <1.0.0`, overflow above
+2,147,483,647 such as `>=2147483648.0.0 <2147483649.0.0` — the `2147483648`
+negative fixtures stay),
+byte-identical source round-trip, and the containment helper on every
+boundary.
 
 ### Acyclic package and live-catalog contract
 
@@ -418,6 +508,76 @@ export function docsAreaCapabilityIdV1(
   productArea: string
 ): DocsCapabilityIdV1;
 ```
+
+`DocsCapabilityIdV1` remains the exact original area catalog. Its 33 keys and
+the legacy `capabilityIds` frontmatter/projection stay byte-compatible; atomic
+controls and workflows do not expand that union.
+
+The separate Bun-free `docsCapabilityComposition.ts` owns strict schemas and
+normalizers for one generated relation object:
+
+```ts
+type DocsCapabilitySectionIdentityV1 = Readonly<{
+  docId: string;
+  locale: string;
+  sectionId: string;
+}>;
+
+type DocsAtomicControlIdV1 = `docs.control.${string}`;
+type DocsComposedWorkflowIdV1 = `docs.workflow.${string}`;
+
+type DocsAtomicControlRelationV1 = Readonly<{
+  controlId: DocsAtomicControlIdV1;
+  productAreaCapabilityId: DocsCapabilityIdV1;
+  routeId: string;
+  controlIdInRoute: string;
+  sections: readonly DocsCapabilitySectionIdentityV1[];
+}>;
+
+type DocsComposedWorkflowRelationV1 = Readonly<{
+  workflowId: DocsComposedWorkflowIdV1;
+  productAreaCapabilityId: DocsCapabilityIdV1;
+  expectedOutcome: string;
+  orderedAtomicControlIds: readonly DocsAtomicControlIdV1[];
+  sections: readonly DocsCapabilitySectionIdentityV1[];
+}>;
+
+type DocsCapabilityCompositionCatalogV1 = Readonly<{
+  schema: "coderso.docs-capability-composition@v1";
+  atomicControls: readonly DocsAtomicControlRelationV1[];
+  composedWorkflows: readonly DocsComposedWorkflowRelationV1[];
+}>;
+```
+
+The exact tracked catalog is compiled by TASK-548-01-L02 before the distribution
+bundle from three L02-owned tracked sources:
+`docs/guide/capabilities/atomic-controls.v1.json`,
+`docs/guide/capabilities/composed-workflows.v1.json`, and
+`docs/guide/capabilities/section-bindings.v1.json`. L02 verifies those sources
+against the current pure Admin route/control descriptors, explicit shipped
+workflow identities, and exact localized document sections; there is no
+prose/title/path heuristic. The ALREADY-LANDED exact compiler CLI refreshes
+these sources during the already-declared post-pilot/final
+native-corpus generated-artifact-only checkpoints (no agent writer, no
+human-authored source/task/status edit) before compiling the bundle.
+TASK-548-06-L02 only validates and projects the catalog already inside the
+final bundle into its coverage outputs. Unknown
+controls, workflows without an eligible section, missing atoms, duplicate/
+reordered relations, cycles, cross-area references without an explicit owner,
+and stale inventory fail closed. The relation carries no path, URL, prose,
+permission grant, or publication override; Guide reauthorizes matching active
+DB evidence before use. `DocsDocumentV2`, frontmatter, and publication DTOs gain
+no key. The normalized distribution bundle carries the catalog once as a
+separate root object so ingest, Help, Guide, portal, and coverage consume
+identical relation bytes. TASK-414-02 consumes this exact separate object.
+After TASK-548 closure, exact post-terminal source/output successors are
+serialized as TASK-489, TASK-555, TASK-414-02-L02, then TASK-556. The first two
+own only their Solution Kits/curated-starter source and relation deltas;
+TASK-414-02-L02 owns final Agent/Designer/Figma reconciliation and the first CMS
+capability artifact; TASK-556 owns its later static-starter delta. Every
+successor uses these unchanged schemas plus landed compiler/output transactions
+and closes with current generated bytes. Runtime-installed packs use a DB/runtime
+overlay and never write these tracked files.
 
 `listDocsCapabilityIdsV1()` returns exact UTF-8 byte-order sorted keys.
 `docsAreaCapabilityIdV1(productArea)` accepts only an exact catalog value and
@@ -565,6 +725,11 @@ in TASK-548-03 imports this function and these owner types from
 - **Reject unknown:** every manifest/frontmatter/sidecar object is strict,
   including nested arrays and optional values. Native heading directives use
   only the exact compiler-owned grammar above and are removed before rendering.
+- **Version range:** every `productVersionRange` is validated through the ONE
+  canonical `>=MAJOR.MINOR.PATCH <MAJOR.MINOR.PATCH` grammar owner
+  (`docsProductVersionRange.ts`); leading zeros, prerelease/build metadata,
+  extra whitespace, overflow and lower >= upper fail closed. There is no
+  second range parser anywhere.
 - **Path/URL policy:** source paths must remain below `docs/guide`; `adminPath`
   is `null` or a default-base canonical `/admin...` path without query/hash,
   alias, traversal or protocol. Markdown links allow local anchors/relative docs
@@ -576,6 +741,14 @@ in TASK-548-03 imports this function and these owner types from
   locked `allOf`/`anyOf` semantics. Core rechecks the live catalog before use.
 - **Capabilities:** every `capabilityIds` entry matches the locked format,
   exists in `docsCapabilityCatalog.ts`, and is bounded, unique and sorted.
+  Atomic/workflow keys additionally close over the frozen control/workflow
+  inventory and ordered relation exports; classification never grants a CMS
+  permission or executable action.
+- **Scenario projection:** `scenarioStepSearchText` carries only the bounded
+  allowlisted DSL-derived tokens above. Locators, `fixtureValueRef`, expected
+  values, watch paths, route, viewport, theme and `alt`/`caption` never enter
+  it; selector/secret-bearing punctuation and out-of-bounds tokens fail
+  closed.
 - **Localized sidecars:** reject a noncanonical locale, a path/envelope
   mismatch, an absent/duplicate `(docId, locale)` owner, an absent/duplicate
   section within that owner, or a bundle-global example/visual ID collision.
@@ -610,7 +783,9 @@ export function normalizeDocsDocumentV2(
     summary: parsed.summary,
     audience: parsed.audience,
     productArea: parsed.productArea,
-    productVersionRange: parsed.productVersionRange,
+    productVersionRange: normalizeDocsProductVersionRangeV1(
+      parsed.productVersionRange
+    ).source,
     adminPath: parsed.adminPath,
     permissionRequirement: parsed.permissionRequirement,
     capabilityIds: parsed.capabilityIds,
@@ -646,13 +821,21 @@ export function normalizeDocsDistributionBundleV2(
     supportedLocales: parsed.supportedLocales,
   });
   const documents = parsed.documents.map(normalizeDocsDocumentV2);
+  const capabilityComposition = normalizeDocsCapabilityCompositionCatalogV1(
+    parsed.capabilityComposition,
+  );
   assertDocumentsUseSupportedLocales(documents, manifest.supportedLocales);
   assertCanonicalDocumentOrder(documents);
   assertStableDocumentIdentityPairs(documents);
   assertCompleteBundleReferenceClosure(documents);
+  assertCompositionSectionBindingsCloseOverDocuments(
+    capabilityComposition,
+    documents,
+  );
   return {
     ...manifest,
     sourceHash: assertExactSha256(parsed.sourceHash),
+    capabilityComposition,
     documents,
   };
 }
@@ -752,7 +935,13 @@ images, oversized/deep input and secret-like examples. Prove normalization
 idempotence, exact locale-then-`docId` and publication-target ordering, and
 multi-target round trips. Assert native parsing drops `headingOccurrence`,
 initializes both join arrays empty, and exposes only exact `DocsSectionV2` keys
-before sidecar joins.
+before sidecar joins. Table-drive the ONE canonical product-version range
+grammar owner (`docsProductVersionRange.ts`): lower/upper boundary tuples,
+malformed inputs (leading zeros, prerelease/build metadata, extra whitespace,
+missing bounds, lower >= upper, overflow above 2,147,483,647), byte-identical
+source round-trip through `normalizeDocsDocumentV2`, the parsed six integer
+bounds, and the containment helper on every boundary; prove no second range
+parser exists in the contracts graph.
 Import both exact named compiled-object normalizers in the owner contract test;
 prove their compile-time `unknown -> DocsDocumentV2` and
 `unknown -> DocsDistributionBundleV2` signatures, idempotence, recursive
@@ -768,6 +957,12 @@ Round-trip `DocsExampleSidecarV1` through its canonical
 `examples/<docId>/<locale>/<exampleId>.json` path. Use two locales with the same
 `docId` and `sectionId` to prove a sidecar joins only its explicit locale;
 reject path/envelope locale drift and noncanonical BCP-47 bytes.
+Round-trip `scenarioStepSearchText` on visual fixtures through both compiled
+normalizers: prove byte-identical projection output, exact-token dedupe,
+first-DSL-occurrence order, the 16/24/512 bounds, charset rejection of
+selector/URL/fixture/secret punctuation, and empty-array validity; negative
+fixtures seed locator, `fixtureValueRef`, expected-value and watch-path bytes
+and prove none normalize into the projection.
 Round-trip every valid native directive through the exact serializer/parser;
 reject missing/orphan/duplicate/unknown markers, non-contiguous ordinals, raw
 HTML substitutes, Setext headings and independently reordered markers. Reorder
@@ -780,7 +975,11 @@ access, duplicate/mixed wildcard snapshot rejection, full `allOf`, every
 modes/permissions, capability format/catalog/order failures, and capability
 round trips. Pin all 33 exact capability IDs, product-area reverse lookup,
 sorted enumeration, unknown product area rejection, and the single current
-orientation exception consumed by L02. Cover every token variant plus
+orientation exception consumed by L02. The separate composition tests reject
+missing atoms, duplicate/order drift, cycles, stale control or workflow
+inventory, a workflow documented only by its area key, cross-locale section
+ownership, and target/permission-ineligible mappings while preserving
+byte-compatible lookup of all original area IDs. Cover every token variant plus
 unclosed, nested, ragged, oversized and malicious inline variants.
 Regenerate the permission snapshot in memory and require byte/hash identity;
 mutate either side and prove the parity gate fails. Import every stable Core
@@ -797,11 +996,12 @@ Add compile-time non-assignability assertions for full source document/visual
 
 - [ ] Add dependency-neutral `packages/docs-contracts/src/docsCorpusTypes.ts`,
   `docsCorpusSchemas.ts`,
-  `docsCorpusNormalizer.ts`, `docsMarkdownParser.ts`,
+  `docsCorpusNormalizer.ts`, `docsProductVersionRange.ts`,
+  `docsMarkdownParser.ts`,
   `docsMarkdownTokens.ts`, `docsSectionDirectives.ts`,
   `docsPublicationTargets.ts`, `docsPublicationDtos.ts` strict schema/projector,
   `docsCanonicalJsonHash.ts`,
-  `docsCapabilityCatalog.ts`, generated permission snapshot and
+  `docsCapabilityCatalog.ts`, `docsCapabilityComposition.ts`, generated permission snapshot and
   `docsCorpusLimits.ts`, each below 1,000 lines, plus Core named re-export shims
   and `index.ts` exactly; exclude all four later-owner files and reverse dependencies.
 - [ ] Add the v2 root manifest and update only the author template with stable
@@ -820,7 +1020,28 @@ Add compile-time non-assignability assertions for full source document/visual
   source/asset-path canary gates
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
-- `wc -l` for every added/modified production and test file
+- the canonical NUL-safe line-count gate over the leaf write set (identical
+  contract in every TASK-548 task file; a file above 1,000 makes the gate fail
+  with `exit 1`, including a non-newline final line):
+
+  ```bash
+  # Canonical NUL-safe line-count gate over the leaf write set (identical
+  # contract in every TASK-548 task file; a file above 1,000 makes the gate fail
+  # with exit 1, including a non-newline final line). The verified pre-family
+  # baseline is the pinned commit 963733cae23456622bea1eef1b734723aaab2350;
+  # commits/staging cannot narrow the measured scope.
+  TASK_FAMILY_BASELINE_SHA="963733cae23456622bea1eef1b734723aaab2350"
+  git cat-file -e "${TASK_FAMILY_BASELINE_SHA}^{commit}" || { echo "invalid/missing baseline commit ${TASK_FAMILY_BASELINE_SHA}" >&2; exit 1; }
+  failed=0
+  while IFS= read -r -d '' f; do
+    lines=$(awk 'END { print NR }' "$f")
+    if [ "$lines" -gt 1000 ]; then
+      printf 'OVER-LIMIT %s %s\n' "$lines" "$f"
+      failed=1
+    fi
+  done < <({ git diff --name-only -z --diff-filter=ACMRT "$TASK_FAMILY_BASELINE_SHA" -- core packages scripts tests _docs/_workflows; git ls-files --others --exclude-standard -z -- core packages scripts tests _docs/_workflows; } | grep -zE '\.(ts|tsx|mjs|cjs|js|jsx|mts|cts)$' | grep -zvE '\.generated\.(ts|tsx|js|jsx|cjs|mjs|mts|cts)$' | sort -zu)
+  exit "$failed"
+  ```
 
 ## Documentation Updates Required
 

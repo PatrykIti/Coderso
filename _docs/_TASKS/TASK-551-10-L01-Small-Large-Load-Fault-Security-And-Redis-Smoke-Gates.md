@@ -8,8 +8,8 @@
 **Dependencies:** exact compile-green sequence landed with targeted gates:
 TASK-551-01 → TASK-551-02 → 08-L03 INITIAL → TASK-551-05 →
 TASK-551-03-L01 → TASK-551-06-L01/L02/L03 → TASK-551-07-L01 →
-09-L04 INITIAL → TASK-551-03-L02 → TASK-551-03-L03 → TASK-551-04 →
-TASK-551-07-L02 → TASK-551-08-L01/L02/L03 FINAL →
+09-L04 INITIAL → TASK-551-03-L02 → TASK-551-07-L02 →
+TASK-551-08-L01/L02/L03 FINAL → TASK-551-03-L03 → TASK-551-04 →
 TASK-551-09-L01/L02/L03/L04 FINAL;
 TASK-551-01-L01 post-09 final re-dispatch emitted a fresh exact-set receipt;
 TASK-551-11 pre-implementation audit PASS; parent external dispatch gate
@@ -535,6 +535,11 @@ emits `.tmp/task-551/aggregate-gates-v1.json` using
 duplicates/reordering, non-finite/negative metrics, raw namespace/URLs, unknown
 commands, required skips, and evidence above the bounded size declared by the
 harness.
+Before emitting the aggregate, the runner strictly parses
+`.tmp/task-551/task489-predecessor-v1.json`, requires its current fixture/plan
+identity plus exact 5/14/15/30 pass set, and embeds it unchanged as
+`task489Predecessor`. It never synthesizes counts from a missing receipt or drops the
+per-scale statement evidence.
 
 The tracked smoke evidence contains only version, digests, bounded aggregates,
 the exact `publicConsistency` SLO/TTL constants, assertion IDs, and pass/failure
@@ -886,16 +891,19 @@ bunx vitest run tests/vitest/db/databaseConfig.test.ts \
 bun test tests/integration/server/task551DatabaseLifecycle.test.ts \
   tests/integration/server/task551RuntimeEntrypoints.test.ts \
   tests/perf/database-pool-telemetry.test.ts
-bunx vitest run tests/vitest/db/schemaExports.test.ts \
-  tests/vitest/db/searchVectorDefinitions.test.ts
+bun test tests/unit/db/schemaTableFacade.test.ts \
+  tests/unit/db/schemaColumnTypeContracts.test.ts
+bunx vitest run tests/vitest/db/searchVectorDefinitions.test.ts
 bun run db:generate
 bun test tests/integration/server/task551SchemaMigrationParity.test.ts \
   tests/integration/server/task551SearchVectorMigration.test.ts \
   tests/integration/server/task551CacheInvalidationOutboxSchema.test.ts \
+  tests/integration/server/task551SolutionKitRollbackAuthoritySchema.test.ts \
   tests/integration/server/task551IndexAndConstraintCatalog.test.ts \
   tests/integration/server/task551OnlineIndexDeployment.test.ts \
   tests/perf/database-index-write-overhead.test.ts \
   tests/perf/database-explain-plans.test.ts \
+  tests/perf/task489-solution-kit-run-predecessor-plans.test.ts \
   tests/integration/server/task551ConcurrencyConstraints.test.ts
 TASK551_OFFLINE_SINGLE_ACK=all-coderso-processes-stopped bun scripts/task-551-online-indexes.ts rollout-forward --receipt .tmp/task551-migration-receipt.json --admission-mode offline-single
 TASK551_OFFLINE_SINGLE_ACK=all-coderso-processes-stopped bun scripts/task-551-online-indexes.ts rollout-forward --receipt .tmp/task551-migration-receipt.json --admission-mode offline-single

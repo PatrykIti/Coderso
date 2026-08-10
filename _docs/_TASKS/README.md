@@ -8,9 +8,11 @@ Task board for project work. Keep task files and this board in sync.
 3. Move to **In Progress** when work starts; update the task file status.
 4. When complete, move to **Done**, update the task file status, and add a changelog entry.
 5. Update any impacted docs after each task.
-6. For non-trivial task-contract or implementation work, follow the read-only
-   audit and drift-pass rules in root `AGENTS.md` when explicit external-agent
-   consultation approval exists.
+6. For non-trivial task-contract or implementation work, follow the mandatory
+   collaboration, read-only audit, implementation, and drift-pass rules in root
+   `AGENTS.md`; it is the authoritative workflow policy. Fresh-context internal
+   Codex collaboration agents author/audit/implement per that policy; do not
+   invoke external agent CLIs.
 
 ## Task file format
 - Board-level file name: `TASK-###_Short_Title.md` (see `EXAMPLE_TASK.md` for
@@ -81,9 +83,9 @@ Task board for project work. Keep task files and this board in sync.
   Do not move a leaf task to `Done` until either its standalone changelog
   exists or the family changelog records that leaf.
 
-- **To Do:** 453 tasks
+- **To Do:** 584 tasks
 - **In Progress:** 13 tasks
-- **Done:** 3119 tasks
+- **Done:** 3120 tasks
 
 > TASK-479 (25 subtasks 05–29 + 92 leaves) and TASK-480 (umbrella + 6 subtasks +
 > 18 leaves) were broken down 2026-06-27. The table below lists the
@@ -116,6 +118,36 @@ Task board for project work. Keep task files and this board in sync.
 > TASK-548-07-L01 security closeout. Those two TASK-548 writer leaves must still be
 > `⏳ To Do` when TASK-539 writes the shared Page guide/security files; afterward
 > TASK-548 consumes the landed bytes and owns its own final corpus/coverage sequence.
+>
+> 2026-08-09: TASK-555 was authored as 1 parent + 7 children + 21 leaves and
+> TASK-556 as 1 parent + 4 children + 8 leaves (42 To Do physical tasks total).
+> TASK-556 remains implementation-blocked until TASK-545 is exactly `✅ Done`
+> and TASK-414, TASK-489, TASK-547, and TASK-555 satisfy its terminal dependency
+> rule. TASK-545 has no superseded-successor exception.
+
+> 2026-08-08: stale TASK-414 was re-audited and rebuilt around three separate
+> products: provider-free Guide (TASK-548 owner), provider/model-only bounded
+> Agent, and staged full-site Designer. The family now has 11 children total
+> (historical TASK-414-01 Done plus 10 new children) and 34 executable leaves;
+> the 44 new open physical descendants are counted in Statistics but remain
+> linked from the umbrella/children rather than duplicated as board rows.
+> TASK-406 is now a non-executable acceptance handoff and remains To Do until
+> TASK-414-11-L01 passes, records changelog 1266 coverage, and marks it
+> Superseded. The audit also allocated critical TASK-554 for the independent
+> Post metadata publication-RBAC bypass; changelog 1267 is pinned.
+> TASK-545's pre-implementation audit contract was refreshed at the same time
+> to match `AGENTS.md`: one complete all-results pass plus one reconcile, then
+> only finding-driven affected-scope reruns. Its separate requirement for at
+> least five distinct runtime-smoke scenarios is unchanged.
+>
+> 2026-08-09 cross-worktree gate: rewritten TASK-489 plus new TASK-555/TASK-556
+> are being authored in the parallel root worktree (42 open physical tasks),
+> while this tree owns refreshed TASK-414/548/545/551 contracts and two new
+> TASK-414 leaves. The displayed statistics intentionally cover only this
+> worktree. Before implementation, merge one canonical contract tree, replace
+> the stale TASK-489 row, add TASK-555/556 rows, reserve changelogs 1266..1270,
+> and reconcile the expected combined `To Do` count from 497 to 539 before a
+> fresh graph audit. Neither current README may be accepted wholesale.
 
 ---
 
@@ -123,11 +155,14 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-551 | Scalable Database, Query, and Cache Optimization | High | Very Large | Priority implementation program from the measured PostgreSQL/code-query audit: bounded projections/keyset/batching, query/index alignment, search vectors, retention, pool guardrails, local-first server caching for single replicas, optional Redis for multi-replica scale, deterministic post-commit invalidation, and small/large performance gates. Dispatch after currently active collision owners are terminal or prove disjoint file ownership. Changelog 1263 pinned. 11 children + 25 executable leaves. |
-| TASK-548 | Hybrid Visual Documentation Platform | High | Very Large | One strict `coderso.docs-corpus@v2` source compiles into locally packaged Help, DB-backed Guide grounding, and a versioned public portal; includes reviewed Playwright visual authoring, independent Guide/optional Agent tabs, immutable release artifacts, generated coverage, and exactly eight ordered real-flow acceptance smoke scenarios. Changelog 1261 pinned. 8 children + 17 executable leaves. |
+| TASK-556 | FormaDom Code-Owned Static Starter to Designer Handoff | High | Very Large | Provider-free, owner-private seed/reopen of TASK-555's immutable FormaDom release into terminal Designer through one current-root binding, one-dispatch fenced persistence, run-bound receipt staging, the existing Designer facade/`admin_write` transport, TASK-555's memory-only Setup review continuation, terminal capability regeneration, Designer backup V2, two additive host CTAs, and exactly five shared runtime-smoke flows. Implementation gate is closed until TASK-545 is exactly `✅ Done`, TASK-414/TASK-489/TASK-547/TASK-555 satisfy the parent terminal dependency rule, and a fresh read-only audit passes against unchanged contracts; TASK-545 has no superseded-successor exception and local ignored orchestration sidecars are non-authorizing helpers. Changelog 1270 pinned. 4 children + 8 executable leaves. |
+| TASK-555 | Curated Full-Site Starters and FormaDom Admin/Setup Delivery | High | Very Large | Immutable curated release registry and verified runtime artifact loading, reviewed preview/apply/rollback, Solution Kits and Setup composition, drift/status validation, and nine shared real-flow smokes. Blocked on terminal TASK-545, terminal TASK-548, terminal rewritten TASK-489, terminal TASK-547, terminal TASK-551, terminal TASK-554, and terminal TASK-414-02-L01. Changelog 1269 pinned. 7 children + 21 executable leaves. |
+| TASK-554 | Post Metadata Publish RBAC Hardening | Critical | Medium | Surviving TASK-554 variant (canonical; the root Repair variant `TASK-554_Post_Metadata_Publication_RBAC_Repair.md` was `⏭️ Superseded` and removed at integration to keep one physical TASK-554). Security blocker discovered by the TASK-414 audit: `/posts/:id/metadata` accepts publication fields behind `content:write` and currently converts omitted `scheduledAt` to `null`. Require `content:publish` for own status/schedule fields, preserve absence, reject `{}`, keep writer-only taxonomy/tag/SEO, and prove seven flows through the shared `task-554` smoke adapter/cookbook. No `postsService.ts` edit without its mandatory split. Blocks TASK-555. Changelog 1267 pinned. One executable board task. |
+| TASK-551 | Scalable Database, Query, and Cache Optimization | High | Very Large | Priority implementation program from the measured PostgreSQL/code-query audit: bounded projections/keyset/batching, query/index alignment, search vectors, retention, pool guardrails, local-first server caching for single replicas, optional Redis for multi-replica scale, deterministic post-commit invalidation, and small/large performance gates. Dispatch after currently active collision owners are terminal or prove disjoint file ownership. Changelog 1263 pinned. 11 children + 26 executable leaves. |
+| TASK-548 | Hybrid Visual Documentation Platform | High | Very Large | One strict `coderso.docs-corpus@v2` source compiles into locally packaged Help, provider-free concise DB-backed Guide grounding, and a versioned public portal; includes atomic/composed documentation, reviewed Playwright visual authoring, independent Guide/optional Agent tabs, immutable release artifacts, generated coverage, a mandatory seven-flow shared `task-548-portal` certification before publication, and exactly eight ordered final flows through the shared cookbook-backed `task-548` adapter. Changelog 1261 pinned. 8 children + 17 executable leaves. |
 | TASK-539 | Page V2 Post-Audit Remediation II | High | Very Large | Residual Page v2 model, sanitizer, authoring, transform, renderer, responsive CSS, runtime-init, and narrow-canvas corrections after TASK-535. Changelog 1251 pinned. 8 children + 18 leaves. |
 | TASK-542 | Menu Determinism, Responsive Cascade, and Runtime Parity | High | Large | Strict deterministic MenuDocumentV2, complete responsive neutralizers, shared public projection/active identity, and dirty-safe revalidation. Changelog 1254 pinned. 4 children + 6 leaves. |
-| TASK-545 | Workflow, Smoke Evidence, and Task-Graph Integrity | High | Large | All-results guard, five-round workflow enforcement, durable hashed smoke manifests, and bounded historical graph/index repair. Changelog 1257 pinned. 4 children + 10 leaves. |
+| TASK-545 | Workflow, Smoke Evidence, and Task-Graph Integrity | High | Large | All-results guard, one complete initial audit pass plus finding-driven affected-scope reruns, exact post-audit lens identities, cookbook runner-bound suite/session smoke manifests, and bounded historical graph/index repair. Changelog 1257 pinned. 4 children + 10 leaves. |
 | TASK-478 | Page Editor Inline Link And Toolbar Placement UX | Medium | Medium | Inline links are invisible/uneditable/unremovable and hijack selection (navigate on click); plus a request to dock the mark toolbar to the block side so the picker doesn't cover the text. Live-verified 2026-06-27. |
 | TASK-478-01 | Inline Link Visual Feedback | Medium | Small | Linked fragments render as a bare `<a>` (no underline/color); add token-driven link styling on canvas+front (`pageRendererV2.tsx:780`). |
 | TASK-478-02 | Inline Link Edit, Remove, And Click-To-Select | Medium | Medium | No unlink control, can't clear via empty URL, URL field not seeded from existing href, and clicking a linked fragment navigates instead of selecting. Add remove/edit + suppress navigation while editing. |
@@ -140,7 +175,7 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-486 | Popups: Public Runtime Delivery & Trigger/Targeting Engine | High | Large | FEATURE: admin CRUD exists but popups never render on the site. Adds a public read endpoint + client trigger/targeting/frequency runtime + render injection. 4 subtasks (01–04) + 11 leaves. |
 | TASK-487 | Entries: Revision History & Restore | Medium | Medium | FEATURE: entry revisions are written but unviewable/unrestorable. Adds revisions/restore route+service + editor drawer (parity with Posts/Pages). 3 subtasks (01–03) + 6 leaves. |
 | TASK-488 | Commerce: Variant Editor & Collections CRUD UI | Medium | Medium | FEATURE (frontend-only; backend complete): variant add/edit/remove card + collections create/edit/delete UI. NOT orders (out of v1 scope). 3 subtasks (01–03) + 6 leaves. |
-| TASK-489 | Solution Kits: Install-Run History & Rollback UI | Medium | Medium | FEATURE (frontend wiring): mount the dead `useSolutionKitRuns` hook for install-run history + run detail + dry-run/apply + rollback. 3 subtasks (01–03) + 6 leaves. |
+| TASK-489 | Safe Solution Kit and Full-Site Install Run History, Sanitized Detail, and Exact Engine-Aware Rollback | High | Very Large | Bounded safe history/detail read models for legacy and full-site runs plus exact source-run rollback through the owning engine. No latest fallback, ledger recovery payload, apply, dry-run, rerun, or package-upload UI. Blocked on terminal TASK-414-03-L03, terminal TASK-545 workflow/evidence authority, terminal TASK-548 source/generator receipt, and landed terminal TASK-551 receipts; blocks TASK-555. Changelog 1268 pinned. 3 children + 6 leaves. |
 | TASK-490 | Forms: Submissions Export (CSV/JSON) | Medium | Small | FEATURE: submissions viewer is read-only; add an export route + client + download button (analytics CSV pattern). 2 subtasks (01–02) + 5 leaves. |
 | TASK-491 | Integrations Runtime Wiring (GA / Slack / Zapier / Sentry) | Medium | Medium | FEATURE: 4 of 7 integrations are decorative credential stores. Inject the GA tag, dispatch Slack/Zapier, init Sentry, real health checks. 4 subtasks (01–04) + 7 leaves. |
 | TASK-492 | Login Alert Delivery (Email + Webhook) & Recipient Settings | Medium | Small | FEATURE: new-device/location login alerts only write an audit row; add email/webhook delivery + recipient/webhook settings. 3 subtasks (01–03) + 6 leaves. |
@@ -153,7 +188,7 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-467-03-L02 | Admin Widget Loader Map And Eager Barrel Removal | High | Large | Replace the eager widget editor barrel with typed lazy editor component bundles. |
 | TASK-467-03-L03 | Shared Widget Editor Outlet And Builder Surface Wiring | High | Large | Route wizard, visual, and advanced editor rendering through local Suspense/error handling. |
 | TASK-467-03-L04 | Bundle Evidence Docs And Closure Validation | High | Medium | Enforce fresh registry split evidence, dynamic raw chunk budgets, docs, and closure validation. |
-| TASK-406 | Assistant Cross-Industry Reset E2E | High | Large | Follow-up destructive/reset validation: start from clean site state, use a non-architecture prompt, and verify generic assistant behavior plus media-profile fail-closed policy. |
+| TASK-406 | Assistant Cross-Industry Reset E2E Handoff | High | Small | No standalone destructive reset or task-local harness. TASK-414-11-L01 owns stronger owner-scoped Guide/Agent/Designer runtime flows and must mark TASK-406 Superseded under changelog 1266 only after they pass. |
 | TASK-239 | Coderso Membership and Client Portal Umbrella | High | Very Large | Execution-ready portal/member auth/access-rule program superseding TASK-054-20 |
 | TASK-240 | Coderso Multilingual and i18n Umbrella | High | Very Large | Execution-ready locale/translation/runtime routing program superseding TASK-054-21 |
 | TASK-105-08 | Final Per-File 100% Gap Closure | High | Large | Close final file-level line/branch/function gaps |
@@ -167,7 +202,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-414 | Generic CMS Site Assistant Product Completion | High | Very Large | In progress: TASK-414-01 is done; remaining children track broader generic assistant product gaps such as media/theme breadth, installed-site refinement, helper mode, and capability drift automation. |
+| TASK-414 | Guide, Agent, and Designer Product Completion | High | Very Large | Contract refreshed 2026-08-09: TASK-548-owned provider-free Guide; provider/model-only bounded Agent with durable sessions, controlled research, private multimodal inputs, transactional Post/resource work, rich trusted media and reviewed external configuration; isolated staged full-site Designer with same-origin navigable preview, generation-consistent approve/reject/recovery/backup, and disabled-by-default Figma import. After the shared route transport lands, rewritten TASK-489 then TASK-555 must close with current Guide/generated bytes and pure capability contributions before TASK-414 resumes; TASK-556 is the first post-terminal extension. One shared cookbook-backed `task-414` smoke suite owns exactly 25 flows. Historical TASK-414-01 Done; 10 new children + 34 executable leaves, including runtime plugin capability activation and the strict action contribution seam; changelog 1266 pinned. |
 | TASK-105 | Real Vitest 100% Coverage Program | High | Large | In progress: fresh 2026-03-15 baseline is `74.04%` lines with `61.35%` branches; `ThemeTemplateDrawer` and `UserList` are now line-closed, `UsersRolesPage` jumped into the high 80s, and the remaining backlog is increasingly broader low-line admin page/drawer tail |
 | TASK-105-04 | Themes, Booking, Listings, and Forms Wave | High | Large | In progress: booking leaf tabs, `ListingListPage`, `FormCanvas`, and `ThemeTemplateDrawer` are now line-closed; the wave tail is mostly branch-only theme/page-shell cleanup |
 | TASK-105-05 | Entries, Pages, and Posts Editor Wave | High | Large | In progress: `PageEditor` jumped above `82%` branches, and the next ROI is concentrated in smaller editor shell/media/async residue rather than broad component gaps |

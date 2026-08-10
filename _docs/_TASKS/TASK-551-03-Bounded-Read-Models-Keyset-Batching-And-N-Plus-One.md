@@ -59,8 +59,9 @@ receive new behavior.
 
 L02 and L03 may not land in parallel. Each leaf reads the current source before
 editing and has sole ownership of every path in its allowlist.
-The compile-green family order is 01 → 02 → 05 → 03-L01 → 06 → 07-L01 →
-09-L04 INITIAL + 08-L03 INITIAL → 03-L02 → 03-L03 → 04; no TASK-551-03
+The compile-green family order is 01 → 02 → 08-L03 INITIAL → 05 → 03-L01 →
+06 → 07-L01 → 09-L04 INITIAL → 03-L02 → 07-L02 → 08-L01 → 08-L02 →
+08-L03 FINAL → 03-L03 → 04; no TASK-551-03
 route/client/UI edit may precede all four L02 receipts. The two INITIAL phases
 remain nonterminal and their later owners must not reopen L02 clients/routes.
 TASK-551-02 has already landed the shared prod/dev lifecycle entrypoint before
@@ -84,7 +85,8 @@ modes and L02's smoke is not deferred to TASK-551-08.
   does not edit SEO source; TASK-551-09 owns any current SEO query/invalidation
   work after its explicit TASK-493 handoff.
 - TASK-518 owns its migration family. This subtask owns no migration artifacts.
-- Forbidden for all leaves: `core/db/schema.ts`, `core/db/schema/**`,
+- Forbidden for all leaves: `core/db/schema.ts`, `core/db/tables/**`,
+  TASK-551 pure DB contract modules,
   `core/services/search/**`, migration/meta files, cache implementation files,
   task board, changelog, and workflow scripts.
 

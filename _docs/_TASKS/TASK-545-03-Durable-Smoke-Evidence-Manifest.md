@@ -12,24 +12,37 @@
 
 ---
 
-## Scope
+## Overview
 
 Define one evidence-family contract: a strict, versioned smoke manifest plus its
 integrity-bound `resume-checkpoint.json` under the canonical real-repository path
-`_docs/_workflows/_smoke/evidence/task-###/`, verify screenshot hashes and visible
-assertions, and narrowly unignore that path. Existing loose
+`_docs/_workflows/_smoke/evidence/task-###/<validated-session>/`, verify the
+matching statically registered shared-runtime report, screenshot hashes and
+visible assertions, and narrowly unignore that path. Existing loose
 screenshots are not retroactively fabricated into evidence. Every scenario names
-an `admin|public` surface and theme; a manifest containing admin scenarios must
-cover both admin light and dark.
+one or more strict variants; every variant names an `admin|public` surface,
+theme, viewport, assertions, and console errors, while every scenario carries
+at least one reviewed screenshot/hash. A manifest
+containing Admin variants must cover both Admin light and dark without inventing
+duplicate scenario IDs.
+
+Manifest scenarios are a pure projection of generic shared-runner scenario
+results. L01 extends the shared adapter result type with optional strict visible
+variants/assertions/scenario screenshots for legacy compatibility, then requires
+those fields for every manifest-bearing suite. Exact scenario pass/title/order,
+variants, assertion actual/expected values, console arrays, screenshot ownership,
+and the report's global screenshot union must match byte-for-byte; a workflow
+cannot fabricate evidence after the adapter returns.
 
 Each manifest binds to the tested source state through mandatory `gitHead`,
 `workingTreeDirty`, and `workingTreeSha256` fields. The digest is calculated from
 HEAD plus sorted porcelain path/state/content records, including untracked files and
 excluding only the manifest's own evidence directory. Validation against the current
 expected task/revision runs immediately after smoke and before task/changelog closure
-mutates metadata. The validator derives the evidence directory from the real Git root and
-task ID; it rejects caller-selected roots, symlinked components, same-basename alternates,
-and traversal. Tracking proof is a separate owner-controlled phase: phase 1 validates
+mutates metadata. The validator derives the evidence directory from the real Git root,
+task ID, and report-bound validated session; it rejects caller-selected roots,
+unregistered suites/profiles, suite/task/session mismatches, symlinked components,
+same-basename alternates, and traversal. Tracking proof is a separate owner-controlled phase: phase 1 validates
 identity/schema/file set/hashes, atomically writes the strict checkpoint, returns an exact
 `owner_action_required` owning-workflow resume argv/command plus task/run/checkpoint hash,
 and pauses. The repository
@@ -38,8 +51,15 @@ branch verifies the unchanged checkpoint, exact executing workflow, and tracked 
 never replays implementation. The standalone evidence validator is diagnostic, not the
 owner's closure entrypoint.
 
+The product suite is always authored through
+`docs/develop/runtime-smoke-cookbook.md`. This family consumes the exact shared
+runner report and evidence paths; it does not own any task adapter, server,
+Playwright, worker, polling, DB cleanup, lifecycle, screenshot, or report
+implementation.
+
 The executing owner is derived only from its `import.meta.url`; callers cannot supply a
-workflow path. Existing 24+44 built-ins stay exact. A future owner must be canonical
+workflow path. The five post-TASK-554 tracked migration entries stay exact for
+TASK-545 closure. A future owner must be canonical
 `_docs/_workflows/task-<matching-id>-(author-audit|implement|fix).mjs` (`TASK-9999` is the
 only four-digit exception), tracked, regular/no-symlink, byte-identical to `git show HEAD`,
 task/suffix-bound, and green in TASK-545 static-contract/import gates.
@@ -66,16 +86,22 @@ evidence themselves.
 
 ## Fresh baseline
 
-There are currently 215 files under `_smoke`; only six similarly named TASK-511
-PNGs are tracked, and none has a validated scenario manifest. `.gitignore:19-21`
-still ignores global JPG/PNG. The earlier report's 209/zero count is obsolete,
-but the durability defect remains.
+The reproducible baseline is the NUL-safe output of
+`git ls-files -z -- '_docs/_workflows/_smoke/**'`: exactly 17 tracked files, all
+present in the clean isolated checkout, with zero TASK-511 files and no
+validated TASK-545 scenario manifest. Deleted TASK-511 screenshots are
+Git-history-only context, not current evidence. Filesystem-only ignored artifacts
+are deliberately excluded because CI and a fresh clone cannot reproduce them.
+`.gitignore:19-20` still ignores global JPG/PNG and `.gitignore:63` ignores the
+workflow parent, so L02 must re-include every traversed evidence parent while
+re-ignoring all non-evidence workflow/smoke siblings. The durability defect
+therefore remains without relying on an obsolete local-worktree count.
 
-## Leaves and order
+## Sub-Tasks
 
 | ID | Title | Exclusive ownership | Status |
 |---|---|---|---|
-| TASK-545-03-L01 | Define and validate smoke evidence manifests | manifest/checkpoint schemas, exact type declarations, canonical-root validator/resume/delta CLI, focused tests | ⏳ To Do |
+| TASK-545-03-L01 | Define and validate smoke evidence manifests | generic shared-runner visible-evidence result/normalizer, manifest/checkpoint schemas, exact type declarations, report-equality validator, canonical-root resume/delta CLI, focused tests | ⏳ To Do |
 | TASK-545-03-L02 | Track evidence screenshots | narrow `.gitignore` plus evidence docs only | ⏳ To Do |
 
 ## Security Contract
@@ -89,3 +115,21 @@ No scanner exception or public/product surface.
 The owner review/stage checkpoint is mandatory external coordination, not an implicit
 agent permission. If the owner does not stage the reviewed evidence, the UI task remains
 open with an `owner_action_required` result.
+
+## Testing Requirements
+
+- Run the manifest/checkpoint, shared visible-evidence adapter, Git tracking,
+  crash-recovery, and metadata-delta tests owned by L01/L02.
+- Verify both ignored and narrowly unignored evidence paths using asserted
+  `git check-ignore` exit codes.
+- Run repository type checks, touched-file line counts, and `git diff --check`.
+- A manifest-bearing UI workflow must also complete its registered shared
+  runtime-smoke suite before the owner review/stage checkpoint.
+
+## Documentation Updates Required
+
+- L02 owns `_docs/_workflows/SMOKE_EVIDENCE.md` and the narrow `.gitignore`
+  guidance; product suites continue to use
+  `docs/develop/runtime-smoke-cookbook.md`.
+- Record closure only in changelog 1257 and the TASK-545 board family through
+  TASK-545-04-L03.

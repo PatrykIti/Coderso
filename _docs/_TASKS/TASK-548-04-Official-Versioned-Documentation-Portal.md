@@ -84,8 +84,14 @@ verification.
 - Root workspaces already include `packages/*`, and the current React 19, Vite
   8, TypeScript 6, and Bun stack is sufficient. Do not add a portal framework or
   Markdown renderer.
-- TASK-548-02-L03 precreates and solely owns all documentation workspace package
-  manifests plus root `package.json`/`bun.lock`. Portal leaves consume that frozen
+- TASK-548-02-L02 precreates and solely owns all documentation workspace package
+  manifests plus root `package.json`/`bun.lock`, the Dockerfile, root docs
+  scripts and the exact root devDependency pins `@playwright/cli: 0.1.18`/
+  `pixelmatch: 7.2.0` plus the one lock-producing `bun install
+  --lockfile-only` reconciliation and the separate `bun install
+  --frozen-lockfile` verification (ALL dependency-bearing
+  toolchain bytes; it lands and gates terminally before its pilots;
+  TASK-548-02-L03 consumes them read-only). Portal leaves consume that frozen
   workspace state and never reopen a manifest or the lock.
 - Existing public React SSR patterns and canonical head tags are visible in
   `core/site/renderPublicPage.tsx:117-137` and
@@ -224,7 +230,7 @@ build epoch is held constant.
 |---|---|---|
 | TASK-548-04-L01 | Create `packages/docs-portal`, accessible shell, version/locale search UI, and shared-renderer integration using the existing pinned root toolchain | ⏳ To Do |
 | TASK-548-04-L02 | Implement deterministic route/static generation, latest/404, SEO, manifest/hashes, sitemap/robots, host-neutral metadata, and exact Cloudflare `_headers` | ⏳ To Do |
-| TASK-548-04-L03 | Add artifact/security/accessibility validators and at least five real Playwright portal flows with screenshots and zero console errors | ⏳ To Do |
+| TASK-548-04-L03 | Add artifact/security/accessibility validators; preserve L02's runnable `task-548` pilot; implement the second and final shared seven-flow `task-548-portal` gate through focused portal contribution modules behind L02's already-landed fixed suite row (never editing the shared registry/CLI/contracts/cookbook/central test); and provide report-owned visible evidence for prepublication/final reuse | ⏳ To Do |
 
 **Land order:** `TASK-548-04-L01 → TASK-548-04-L02 → TASK-548-04-L03`.
 TASK-548-03 must land first so the portal imports the exact shared renderer.
@@ -241,16 +247,18 @@ preceding `docs:check` is read-only, accepts a valid clean-checkout
 `packaged-bundle-only` state, and proves the packaged bundle still equals
 current canonical sources.
 
-L03's targeted browser gate remains mandatory, but its task-local candidates
-stay below `.tmp`. TASK-548-07-L01 is the sole writer of the exact eight final
-canonical PNGs and `manifest.json` under
-`_docs/_workflows/_smoke/evidence/task-548/`. It reads L03's portal handoff and,
-when final-tree recapture is required, requests one same-owner operational L03
-handback. L03 returns bounded results/screenshot bytes only; TASK-548-07-L01 alone
-writes the canonical `06-portal-local-exact-latest-rollback.png` member before
-TASK-545 phase 1. The imported TASK-545 `createResumeCheckpoint` helper is the
-sole writer of `resume-checkpoint.json`; neither L03 nor TASK-548-07-L01 writes
-that checkpoint directly.
+L03's seven-flow `task-548-portal` gate remains mandatory. Its local candidates
+stay below `_docs/_workflows/_smoke/candidates/task-548-portal/<session>/` and
+are never canonical evidence. TASK-548-05-L02 reruns certification against the
+exact tag-built artifact after validator success and before any release asset,
+retained-tree or Cloudflare mutation; it uploads the bounded report/seven-PNG
+workflow artifact, removes candidates and proves a clean checkout. A failure
+blocks publication. TASK-548-07-L01 validates that exact release-run artifact,
+then independently reuses L03's action/assertion module as seven variants of
+final scenario 06. L01 alone writes the final canonical
+`06-portal-local-exact-latest-rollback.png` and exact eight-image
+report/manifest inventory. TASK-545 `createResumeCheckpoint` alone writes
+`resume-checkpoint.json`.
 
 ## Security Contract
 
@@ -542,8 +550,31 @@ bun run scan:security
 git diff --check
 ```
 
-Run each named failure alone before classification. Count every touched
-human-authored source/test file and fail any result above 1,000 lines.
+Run each named failure alone before classification. Run the canonical
+NUL-safe line-count gate over every added/modified production and test file in
+the leaf write set (identical contract in every TASK-548 task file; a file
+above 1,000 makes the gate fail with `exit 1`, including a non-newline final
+line); the verified pre-family baseline spans all intermediate commits and
+staging and cannot narrow:
+
+```bash
+# Canonical NUL-safe line-count gate over the leaf write set (identical
+# contract in every TASK-548 task file; a file above 1,000 makes the gate fail
+# with exit 1, including a non-newline final line). The verified pre-family
+# baseline is the pinned commit 963733cae23456622bea1eef1b734723aaab2350;
+# commits/staging cannot narrow the measured scope.
+TASK_FAMILY_BASELINE_SHA="963733cae23456622bea1eef1b734723aaab2350"
+git cat-file -e "${TASK_FAMILY_BASELINE_SHA}^{commit}" || { echo "invalid/missing baseline commit ${TASK_FAMILY_BASELINE_SHA}" >&2; exit 1; }
+failed=0
+while IFS= read -r -d '' f; do
+  lines=$(awk 'END { print NR }' "$f")
+  if [ "$lines" -gt 1000 ]; then
+    printf 'OVER-LIMIT %s %s\n' "$lines" "$f"
+    failed=1
+  fi
+done < <({ git diff --name-only -z --diff-filter=ACMRT "$TASK_FAMILY_BASELINE_SHA" -- core packages scripts tests _docs/_workflows; git ls-files --others --exclude-standard -z -- core packages scripts tests _docs/_workflows; } | grep -zE '\.(ts|tsx|mjs|cjs|js|jsx|mts|cts)$' | grep -zvE '\.generated\.(ts|tsx|js|jsx|cjs|mjs|mts|cts)$' | sort -zu)
+exit "$failed"
+```
 
 ## Acceptance Criteria
 
@@ -566,14 +597,15 @@ human-authored source/test file and fail any result above 1,000 lines.
 - Portal's atomic loader holds the bundle across hazard inspection/read, works
   with the ignored report absent, and never writes
   output from report-only, tampered, crash-incomplete, stale, or invalid state.
-- At least five distinct Playwright flows assert visible behavior in wide,
+- Seven distinct shared-runner browser flows assert visible behavior in wide,
   narrow, light, dark, keyboard, reduced-motion, version/locale, and offline
   conditions with zero console errors.
-- All seven L03 targeted screenshots remain below `.tmp`; TASK-548-07-L01 writes
-  only the exact eight canonical PNGs plus `manifest.json` and adds only
-  `06-portal-local-exact-latest-rollback.png` for the portal to its exact
-  eight-image acceptance inventory. TASK-545 `createResumeCheckpoint` phase 1
-  alone writes `resume-checkpoint.json`.
+- All seven L03 targeted screenshots remain noncanonical candidates; the
+  tag-built release rerun must pass and be uploaded/cleaned before publication.
+  TASK-548-07-L01 writes only the exact eight canonical PNGs plus
+  `manifest.json` and adds only `06-portal-local-exact-latest-rollback.png` for
+  the portal. TASK-545 `createResumeCheckpoint` phase 1 alone writes
+  `resume-checkpoint.json`.
 - TASK-548-05 can publish/rollback the immutable `dist` artifact without editing
   portal source or reconstructing routes.
 - TASK-548-05 verifies deployed exact/latest/404 routes, retained manifests,

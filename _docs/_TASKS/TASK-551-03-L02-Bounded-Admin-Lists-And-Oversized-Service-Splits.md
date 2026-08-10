@@ -230,6 +230,26 @@ TASK-493 owns GSC/Search Console code; TASK-511 owns backup services; TASK-518
 owns its migration files. Schema, migration, search, cache, board, changelog,
 and workflow paths are forbidden.
 
+### Terminal TASK-554 Post metadata handoff
+
+TASK-554 lands first and remains the sole owner of
+`core/services/posts/postMetadataContract.ts` and the Post metadata mutation
+semantics. This leaf rereads its terminal receipt before touching
+`postsRoutes.ts`, `postSchemas.ts`, or `postsClient.ts`; changes in those three
+files are restricted to bounded Post list query/schema/envelope/client regions.
+It must preserve TASK-554's exact compatibility re-export of
+`postMetadataSchema`, shared `PostMetadataMutationV1` import/re-export,
+own-property/present-only projection, root non-empty validation, conditional
+`content:publish` middleware, and omission of publication fields from unrelated
+metadata saves. Pagination must not add a second metadata DTO/schema or weaken
+the writer-versus-publisher boundary.
+
+After its list changes, this leaf reruns TASK-554's terminal focused
+route/schema/client/RBAC and present-only tests unchanged. Any required edit to
+the metadata contract, conditional middleware, or metadata client behavior
+returns to TASK-554 ownership and blocks this leaf; it is never folded into a
+pagination fix.
+
 The only cache/transport handoff exceptions are read-only imports of
 `core/admin/utils/adminCacheAuthority.ts`,
 `core/admin/services/cachePolicy.ts`, `core/server/router.ts`, and execution of

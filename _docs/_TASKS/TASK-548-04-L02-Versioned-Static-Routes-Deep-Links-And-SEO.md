@@ -163,7 +163,7 @@ workspace can be executed. The targeted gate must:
    `DOCS_PUBLIC_ORIGIN=https://docs.example.invalid`,
    `DOCS_PUBLIC_BASE_PATH=/docs`, and `SOURCE_DATE_EPOCH=0`, then repeat it and
    prove full page plus Vite JS/CSS/asset/receipt byte identity;
-2. build the existing TASK-548-02-L03-owned Dockerfile and thereby execute its
+2. build the existing TASK-548-02-L02-owned Dockerfile and thereby execute its
    frozen workspace install plus existing Admin and site builds;
 3. run the resulting image from explicit unrelated workdir `/tmp` with its entrypoint overridden, resolve
    both public Node contracts subpaths and `@coderso/docs-renderer` from Core,
@@ -961,19 +961,38 @@ docker run --rm --entrypoint sh "$task548_docker_image" -ceu \
    test -z "$(find /app/core/generated/docs -type f \( -name "*.tmp*" -o -name "*.staged*" -o -name "*.backup*" -o -name "*promotion-transaction*" \) -print -quit)"'
 docker image rm "$task548_docker_image"
 task548_docker_image=""
-find packages/docs-portal/src/build packages/docs-portal/src/routes \
-  packages/docs-portal/src/seo \
-  -type f \( -name '*.ts' -o -name '*.tsx' \) -exec wc -l {} +
-wc -l tests/vitest/docs-portal/portal-routes.test.ts \
-  tests/vitest/docs-portal/portal-build.test.tsx \
-  tests/vitest/docs-portal/portal-seo.test.ts
 git diff --check
 ```
 
 The trap removes the exact validated `mktemp -d` result and, only when it
 matches the strict SHA-256 image ID read from this build's task-scoped
 `--iidfile`, that newly built image. Never substitute a fixed/shared path,
-tag, or unresolved variable. Every human-authored count must be at most 1,000.
+tag, or unresolved variable.
+
+- the canonical NUL-safe line-count gate over the leaf write set (identical
+  contract in every TASK-548 task file; a file above 1,000 makes the gate fail
+  with `exit 1`, including a non-newline final line; the baseline spans the
+  full task/family dirty scope and commits/staging do not narrow it):
+
+  ```bash
+  # Canonical NUL-safe line-count gate over the leaf write set (identical
+  # contract in every TASK-548 task file; a file above 1,000 makes the gate fail
+  # with exit 1, including a non-newline final line). The verified pre-family
+  # baseline is the pinned commit 963733cae23456622bea1eef1b734723aaab2350;
+  # commits/staging cannot narrow the measured scope.
+  TASK_FAMILY_BASELINE_SHA="963733cae23456622bea1eef1b734723aaab2350"
+  git cat-file -e "${TASK_FAMILY_BASELINE_SHA}^{commit}" || { echo "invalid/missing baseline commit ${TASK_FAMILY_BASELINE_SHA}" >&2; exit 1; }
+  failed=0
+  while IFS= read -r -d '' f; do
+    lines=$(awk 'END { print NR }' "$f")
+    if [ "$lines" -gt 1000 ]; then
+      printf 'OVER-LIMIT %s %s\n' "$lines" "$f"
+      failed=1
+    fi
+  done < <({ git diff --name-only -z --diff-filter=ACMRT "$TASK_FAMILY_BASELINE_SHA" -- core packages scripts tests _docs/_workflows; git ls-files --others --exclude-standard -z -- core packages scripts tests _docs/_workflows; } | grep -zE '\.(ts|tsx|mjs|cjs|js|jsx|mts|cts)$' | grep -zvE '\.generated\.(ts|tsx|js|jsx|cjs|mjs|mts|cts)$' | sort -zu)
+  exit "$failed"
+  ```
+
 Re-run failures alone.
 
 ## Acceptance Criteria

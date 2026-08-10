@@ -14,11 +14,13 @@
 
 ## Overview
 
-Decompose the 1,700+ line schema into stable domain modules without changing
-existing exports or generated DDL, then add the canonical local search vectors,
-cache-invalidation-outbox table, and minimum evidence-backed composite/reverse-
-FK/cutoff indexes and concurrency constraints required by later query/cache
-contracts. This is the sole TASK-551 schema and migration writer.
+Extend the already-split `core/db/tables/**` schema through its guarded
+`core/db/schema.ts` facade: canonical local search vectors, the cache-
+invalidation-outbox table, minimum evidence-backed composite/reverse-FK/cutoff
+indexes, the L03-owned Solution Kit rollback authority (landed here), and
+concurrency constraints required by later query/cache contracts. This is the
+sole TASK-551 schema and migration writer and must not create a second
+schema-module hierarchy.
 
 ## Sub-Tasks
 
@@ -26,94 +28,67 @@ None; this is an executable leaf.
 
 ## Exact File Ownership
 
-**Schema:** `core/db/schema.ts`, `core/db/schema/auth.ts`,
-`core/db/schema/content.ts`, `core/db/schema/operations.ts`,
-`core/db/schema/engagement.ts`, `core/db/schema/commerce.ts`, and
-`core/db/schema/analytics.ts`, plus
-`core/db/schema/searchVectors.ts` and
-`core/db/schema/cacheInvalidationOutbox.ts`.
+**Schema:** existing `core/db/schema.ts` only for exact facade re-exports;
+existing table owners
+`core/db/tables/analytics.ts`, `assistant.ts`, `bookings.ts`, `content.ts`,
+`forms.ts`, `identity.ts`, `integrations.ts`, `media.ts`, `observability.ts`,
+`operations.ts`, `pages.ts`, `platform.ts`, `posts.ts`, and `widgets.ts` only for
+their exact catalog members; new cohesive table owners
+`core/db/tables/cacheInvalidationOutbox.ts`,
+`core/db/tables/solutionKitRollbackAuthority.ts`, and
+`core/db/tables/task551MigrationOperations.ts`; and pure Bun-free definitions
+`core/db/searchVectorDefinitions.ts` plus
+`core/db/bookingReservationExclusion.ts`. Existing table declarations remain in
+their current owner modules; only the declared columns/indexes/checks/FKs are
+added.
 
-**Tests:** `tests/vitest/db/schemaExports.test.ts`,
+**Tests:** existing `tests/unit/db/schemaTableFacade.test.ts` and
+`tests/unit/db/schemaColumnTypeContracts.test.ts` for exact additions only, new
 `tests/vitest/db/searchVectorDefinitions.test.ts`,
 `tests/integration/server/task551SchemaMigrationParity.test.ts`,
 `tests/integration/server/task551SearchVectorMigration.test.ts`,
 `tests/integration/server/task551CacheInvalidationOutboxSchema.test.ts`,
 `tests/integration/server/task551IndexAndConstraintCatalog.test.ts`,
 `tests/integration/server/task551OnlineIndexDeployment.test.ts`, and
-`tests/perf/database-index-write-overhead.test.ts`.
+`tests/perf/database-index-write-overhead.test.ts`. The Solution Kit authority
+suite (`task551SolutionKitRollbackAuthoritySchema.test.ts`) is owned and run by
+TASK-551-05-L03 after this migration lands.
 
 **Migration:** exactly one next-free transactional SQL file with suffix
-`_task551_schema_search_indexes_constraints_outbox.sql`, its exact matching
+`_task551_search_indexes_constraints_outbox.sql`, its exact matching
 `meta/*_snapshot.json`, and the fresh `meta/_journal.json` entry. The same writer
 also owns the same-ID non-transactional companion with suffix
 `_task551_online_indexes.sql`, `scripts/task-551-online-indexes.ts`, and
 `tests/perf/fixtures/task551OnlineIndexManifest.ts`. At the start of either
 rollout command, the tool re-reads the journal and resolves the unique exact
 migration ID and paths; no human-entered migration number/path placeholder or
-separate resolver step is accepted. The companion is part of the same migration deployment contract but
-is deliberately absent from the transactional Drizzle journal; it may contain
-only the closed snapshot-owned index set rendered as `CREATE [UNIQUE] INDEX
-CONCURRENTLY` plus matching guarded drop/retry operations.
-
-The task-owned filesystem mirror is exactly
-`.tmp/task551-migration-receipt.json` and is not committed. Its strict version-2
-state is also stored in the migration-created
-`task551_migration_operations` table from `schema/operations.ts`. It records
-artifact identities/digest, preflight digest and selected classification/budgets,
-direction, admission mode, adapter executable digest, drain nonce and nonce-
-bound acknowledgements, transactional state, ordered forward/reverse group and
-member progress, catalog digests, resume authorization/completion, generation,
-and previous-state digest. Unknown fields, ambiguous suffix matches, non-fresh
-journal state, path escape, missing file, ID mismatch, generation regression, or
-hash drift fails `task551_migration_receipt_invalid` before database DDL.
-
-The canonical JSON passed into the transactional artifact is UTF-8, recursively
-key-sorted, contains no insignificant whitespace, and is `1..65,536` bytes. The
-orchestrator sets exactly three session-scoped custom GUCs on one reserved
-physical postgres-js connection:
-`coderso.task551_operation_id`, `coderso.task551_receipt_v2`, and
-`coderso.task551_receipt_sha256`. The digest is lowercase
-`encode(sha256(convert_to(receiptText,'UTF8')),'hex')`, using PostgreSQL core
-SHA-256 rather than an extension. The receipt is the already-validated successor
-state `transaction_applied`, linked to the durable filesystem
-`transaction_apply_pending` state by generation/previous-state digest.
-
-Before the transactional migration creates the receipt table, the crash-safe
-filesystem record is authoritative. The phase-2 transaction creates the table,
-applies expand DDL, and inserts the exact GUC receipt as `transaction_applied`
-atomically before Drizzle records the migration. Thereafter the DB row
-is authoritative and every transition is a generation compare-and-swap followed
-by an atomic `0600` temp-file write, file `fsync`, rename, and directory `fsync`.
-A behind mirror is repaired from the DB after validating the digest chain; an
-ahead/conflicting mirror fails closed. Reverse execution uses the DB row until
-the transaction that drops this task-owned table; its prior durable
-`reverse_transaction_pending` filesystem state plus exact live-catalog probe
-then distinguishes not-started from committed and completes recovery. A crash at
-any persistence boundary is tested; progress is never reset or inferred from an
-unchecked file alone.
+separate resolver step is accepted. The companion is part of the same migration
+deployment contract but is deliberately absent from the transactional Drizzle
+journal; it may contain only the closed snapshot-owned index set rendered as
+`CREATE [UNIQUE] INDEX CONCURRENTLY` plus matching guarded drop/retry operations.
+Its exact receipt/mirror/GUC/reverse semantics are the Locked Rollout
+Orchestrator contract below.
 
 No service, route, client, cache, or other test file may be edited. TASK-551-04
 search services and TASK-551-08 outbox services consume these schema exports
 read-only. The parent gate makes TASK-511/TASK-493/TASK-517/TASK-518 terminal by
 default; only its fresh exact all-path serialized handoff may substitute. Their
-final table declarations may then be moved
-byte-for-byte during the split, but their behavior is forbidden. TASK-517
+final table declarations remain neither moved nor duplicated; only this leaf's
+declared additions may touch their current table-owner modules. TASK-517
 entry/public behavior and all task/changelog/workflow files remain forbidden.
 The rollout script imports L01's `parseDatabaseFleetConfig` and L02's pure
-application-name builder read-only; it may not copy either parser or import the
+application-name builder read-only, never copying either parser or importing the
 live DB client.
 
-## Schema Split Contract
+## Existing Table-Facade Contract
 
-- `schema.ts` remains the sole public import surface and re-exports every
-  existing symbol with identical TypeScript and runtime identity.
-- Modules are cohesive: auth/security identity; content/search/revisions;
-  operations/settings/audit/webhooks/assistant; engagement/presentation/forms/
-  booking/kits; commerce; analytics; a pure local search-vector definition
-  module; and the cache-invalidation-outbox table. Cross-module foreign
-  references use narrow imports without circular initialization.
-- First run a split-only generation check and prove it emits zero DDL/artifacts;
-  only then add this leaf's generated columns, outbox, indexes, and constraints
+- `core/db/schema.ts` remains the sole public import surface. Its current 20
+  `./tables/*` exports stay byte-identical and it adds only the three new table-
+  module exports named above. `tests/unit/db/schemaTableFacade.test.ts` must pass
+  against the immediately-current committed snapshot before and after generation.
+- First run the current `bun run db:generate` path without source changes and
+  prove zero schema/snapshot drift; only then add this leaf's generated columns,
+  outbox, indexes, and constraints
   and generate exactly one migration triple. The final generated snapshot must
   describe every Drizzle-representable schema change. Every new snapshot-owned
   index is removed from the transactional SQL and emitted byte-for-byte by the
@@ -125,7 +100,11 @@ live DB client.
   explicit snapshot exception; the exception is tested and may not be inferred
   for any other object.
 - No unrelated default, enum, nullability, FK action, name, or column order
-  changes are allowed.
+  changes are allowed. The sole existing-FK action change is the explicitly
+  owned `solution_kit_install_runs.rollback_of_run_id` transition from
+  `ON DELETE SET NULL` to `ON DELETE RESTRICT`; its full authority contract,
+  named checks, and index rows are owned by TASK-551-05-L03 and landed by this
+  leaf's one migration; migration/catalog tests pin it.
 
 ## Locked Rollout Orchestrator, Admission, and Budgets
 
@@ -332,11 +311,13 @@ before authorization or loses ordered progress.
 ## Implementation Pseudocode
 
 ```ts
-export { users, roles, sessions, apiKeys, passwordResets } from "./schema/auth";
-export { pages, pageRevisions, contentEntries, contentRevisions, posts, postRevisions } from "./schema/content";
-export { cacheInvalidationOutbox } from "./schema/cacheInvalidationOutbox";
-export { BOOKING_RESERVATION_EXCLUSION_SQL } from "./schema/engagement";
-// operations, engagement, commerce, analytics retain the complete old surface.
+// core/db/schema.ts keeps its current 20 exports and adds only these table owners.
+export * from "./tables/cacheInvalidationOutbox";
+export * from "./tables/solutionKitRollbackAuthority";
+export * from "./tables/task551MigrationOperations";
+
+// Existing pages/content/posts/media/identity/assistant table modules import
+// generated-column literals from this Bun-free owner without moving tables.
 
 export const SEARCH_VECTOR_SQL = strictReadonly({
   pages: `setweight(to_tsvector('simple', coalesce(title, '')), 'A') || setweight(to_tsvector('simple', coalesce(slug, '')), 'B')`,
@@ -382,7 +363,7 @@ export const TRIGRAM_INDEXED_SOURCE_CONTRACT = strictReadonly({
   users: selectedOrNull(TRIGRAM_CANDIDATES.users),
 });
 
-// Exported from schema/engagement.ts. The installed Drizzle DSL cannot express
+// Exported from core/db/bookingReservationExclusion.ts. The installed Drizzle DSL cannot express
 // exclusion constraints, so this frozen descriptor is the schema-side source
 // of truth for the one explicitly custom migration fragment.
 export const BOOKING_RESERVATION_EXCLUSION_SQL = Object.freeze({
@@ -596,6 +577,18 @@ contract bytes; no generic builder may render a different expression. A stable
 variadic concatenation helper is forbidden in generated expressions because
 its PostgreSQL volatility is not immutable.
 
+### Normalized Solution Kit rollback authority
+
+Owned by `TASK-551-05-L03`; the contract bytes there are authoritative. This
+leaf lands the four schema surfaces (`solution_kit_starter_apply_owners`,
+`solution_kit_legacy_template_evidence`,
+`solution_kit_legacy_rollback_progress`, and the
+`solution_kit_install_runs.rollback_of_run_id`/template-plan/proof-column
+changes) with their named checks and mandatory index rows in this leaf's one
+generated migration triple, exactly as L03 declares them. This leaf stays the
+sole schema/migration writer; L03 owns the tests, named-check rows, and
+acceptance.
+
 The exact mandatory new btree catalog is:
 
 | Name | Table | Ordered columns | Predicate |
@@ -797,8 +790,11 @@ mismatch blocks deployment; there is no generic future operations choice.
 
 ## Testing Requirements
 
-- Snapshot all pre-split public exports and table/column/index/FK/default names;
-  prove split-only state is byte/DDL equivalent and imports remain stable.
+- Capture the current facade/table-module projection and newest committed
+  snapshot before source edits; prove zero initial drift. After additions,
+  `schemaTableFacade.test.ts`, `schemaColumnTypeContracts.test.ts`, generated
+  snapshot, and runtime exports must agree exactly, with no existing declaration
+  relocated or hidden.
 - Clean and prior-version databases migrate to equivalent catalogs; migration
   rollback/recovery and forward-reapply procedures are exercised on disposable
   fixtures, including exact custom exclusion add/drop SQL and preservation of
@@ -808,16 +804,15 @@ mismatch blocks deployment; there is no generic future operations choice.
   final receipt/catalog idempotence.
 - Invoke generic `db:migrate`, startup migration, a differently named client,
   direct SQL, a wrong/missing operation GUC, and a folder with another pending
-  migration; each fails before the first TASK-551 DDL/catalog change. The one
-  max-1 client reserves one physical connection and passes only
-  `drizzle(adaptedReserved)` to the installed migrator. A real-PostgreSQL suite
-  records the identical `pg_backend_pid()` at GUC set, first guard, representative
-  DDL, receipt insert, and Drizzle journal insert; it covers clean, immediately-
-  prior, replay rejection, pre-traffic reverse, and forward reapply. Injected
-  failures after DDL and receipt prove DDL, receipt, and journal roll back as one.
-  Valid GUCs on another session cannot authorize it; exactly the three canonical
-  custom GUCs exist, and missing/empty/tampered/noncanonical/65,537-byte/wrong-
-  operation/application/SHA/key/type/array cases fail atomically.
+  migration; each fails before the first TASK-551 DDL/catalog change. A real-
+  PostgreSQL suite records the identical `pg_backend_pid()` at GUC set, first
+  guard, representative DDL, receipt insert, and Drizzle journal insert; it
+  covers clean, immediately-prior, replay rejection, pre-traffic reverse, and
+  forward reapply. Injected failures after DDL and receipt prove DDL, receipt,
+  and journal roll back as one. Valid GUCs on another session cannot authorize
+  it; exactly the three canonical custom GUCs exist, and missing/empty/tampered/
+  noncanonical/65,537-byte/wrong-operation/application/SHA/key/type/array cases
+  fail atomically.
 - Against postgres.js 3.4.9 and Drizzle 0.45.2, assert the adapter is callable,
   its immutable `.options` reference is `=== poolClient.options`, Drizzle's exact
   parser/serializer map mutations affect reserved query round trips, `.unsafe`
@@ -871,6 +866,12 @@ mismatch blocks deployment; there is no generic future operations choice.
   role-leading `user_roles_role_user_idx`, webhook traversal indexes, and all
   three `jsonb_path_ops` containment indexes against their L03 parameterized
   `@>` predicate bytes.
+- Solution Kit authority tests are owned, run, and commanded by TASK-551-05-L03
+  (its Testing Requirements and Validation Commands carry the exact suite
+  command) and pin all three normalized tables, every FK/check/default/
+  nullability rule, proof columns, active-owner and one-running-rollback unique
+  partial indexes, plus the two successful relation indexes and all-runs history
+  index. This leaf defers to L03 after its migration lands.
 - Vector tests pin byte identity across the schema definition, generated-column
   DDL, migration SQL, snapshot, GIN index target, and the generated columns
   consumed by 04. Before PostgreSQL parsing, schema render, migration literal,
@@ -904,10 +905,9 @@ mismatch blocks deployment; there is no generic future operations choice.
   20% p95 regression or the L01 storage budget. It reports the incremental
   storage/write cost of the page/entry/typed-entry/post-author, role-leading,
   post/media tag, and webhook list/event indexes separately rather than hiding
-  them in an aggregate.
-  It also reports `cache_outbox_unprocessed_age_idx` storage and insert,
-  claim/retry, completion-update p95 deltas separately; each must stay within
-  the same 20% representative-write ceiling.
+  them in an aggregate. It also reports `cache_outbox_unprocessed_age_idx`
+  storage and insert, claim/retry, completion-update p95 deltas separately; each
+  must stay within the same 20% representative-write ceiling.
 
 ## Security Contract
 
@@ -918,8 +918,8 @@ mismatch blocks deployment; there is no generic future operations choice.
 - Migration diagnostics include counts/IDs only when synthetic; production
   guidance must never emit customer fields, binds, tokens, hashes, or secrets.
 - The task receipt contains only repository-relative artifact paths, digests,
-  fixed catalog identifiers, numeric budgets, and completion state. It contains
-  no connection URL, credentials, SQL binds, customer rows, or environment dump.
+  fixed catalog identifiers, numeric budgets, and completion state; no
+  connection URL, credentials, SQL binds, customer rows, or environment dump.
 - Session GUCs carry only the same bounded canonical receipt, operation UUID and
   SHA-256. They are parameterized, session-local, cleared before release, never
   logged, and never used as an authorization secret.
@@ -930,7 +930,7 @@ mismatch blocks deployment; there is no generic future operations choice.
 
 ## Validation Commands
 
-- `bunx vitest run tests/vitest/db/schemaExports.test.ts`
+- `bun test tests/unit/db/schemaTableFacade.test.ts tests/unit/db/schemaColumnTypeContracts.test.ts`
 - `bunx vitest run tests/vitest/db/searchVectorDefinitions.test.ts`
 - `set -a && source .env && set +a && bun run db:generate`
 - `set -a && source .env && set +a && bun test tests/integration/server/task551SchemaMigrationParity.test.ts tests/integration/server/task551SearchVectorMigration.test.ts tests/integration/server/task551CacheInvalidationOutboxSchema.test.ts tests/integration/server/task551IndexAndConstraintCatalog.test.ts tests/integration/server/task551OnlineIndexDeployment.test.ts tests/perf/database-index-write-overhead.test.ts`
@@ -943,14 +943,15 @@ mismatch blocks deployment; there is no generic future operations choice.
 
 ## Documentation Updates Required
 
-No shared docs. Supply the schema module map, exact DDL, phased rollout/rollback,
+No shared docs. Supply the table-module/facade map, exact DDL, phased rollout/rollback,
 storage, and write-cost evidence to TASK-551-10-L02.
 
 ## Quantified Acceptance
 
 - Pre-existing public schema exports and non-TASK-551 catalog definitions have
-  100% parity after the split; all nine human-authored schema files are at most
-  1,000 lines.
+  100% parity through the existing facade. Every touched existing/new table,
+  pure definition, production tool, and test file is at most 1,000 lines; no
+  second `core/db/schema/**` tree exists.
 - Seven local generated-vector definitions have byte-identical schema/DDL/
   migration/snapshot/index coverage; every called PostgreSQL function/operator
   is catalog-proven immutable and no definition references another table.
@@ -963,6 +964,13 @@ storage, and write-cost evidence to TASK-551-10-L02.
   `cache_outbox_unprocessed_age_idx` for all `processed_at IS NULL` ages.
 - Every new index/constraint has one inventory owner and evidence record; no
   speculative or duplicate-prefix index lands.
+- Normalized Solution Kit owner/template-evidence/progress/proof authority and
+  every named TASK-489 index/FK/check are migration/snapshot/catalog-identical.
+  Tests reject source/package/actor mismatch, progress linked to another rollback
+  or evidence row, proof/status mismatch, duplicate evidence identity, deletion
+  that would orphan a rollback relation, and duplicate running owners; active/
+  retry decisions require zero JSON predicate. The full authority acceptance
+  contract is owned by TASK-551-05-L03.
 - Clean/prior migrations both pass, generated artifacts are complete, and a
   fresh `db:generate` produces no unexplained drift. The one documented
   snapshot limitation is protected by the exact exported exclusion descriptor,
@@ -972,16 +980,15 @@ storage, and write-cost evidence to TASK-551-10-L02.
   companion and finish ready/valid within the 30-minute/member and 2-hour phase
   ceilings. Crash/resume and reverse rollback receipts are idempotent. External
   admission waits for the revision-integrity barrier plus compatible-binary gate;
-  offline-single admission waits for the complete exact catalog gate.
+  offline-single admission waits for the complete exact catalog gate. The old
+  `max(version)+1` writers remain drained through the revision-integrity group
+  and are never resumed; no crash point admits external traffic before its
+  durable barrier plus compatible TASK-551 binary/revision-writer receipt, and
+  the first acknowledged new-binary traffic irreversibly selects forward-fix.
 - The installed migrator executes the transactional artifact on exactly one
   reserved backend with strict operation/receipt/SHA/application-name GUC
   validation. DDL, receipt row and Drizzle journal commit atomically; every
   missing/tampered/different-session/oversized/replay/crash/rerun/reverse case
   has the fail-closed outcome specified above and no GUC leaks to pool reuse.
-- The old `max(version)+1` writers remain drained through the revision-integrity
-  group and are never resumed. No crash point admits external traffic before its
-  durable barrier plus compatible TASK-551 binary/revision-writer receipt;
-  offline-single remains drained through final catalog. The first acknowledged
-  new-binary traffic irreversibly selects forward-fix.
 - Write p95 regression is at most 20%; duplicate versions and overlapping active
   bookings are rejected in 100% of race fixtures.

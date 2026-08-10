@@ -115,6 +115,15 @@ Testing docs:
   tree. Alternatively, two streams may run in-place in the shared tree when
   their file ownership is disjoint and each carries the collision guards from
   the Multi-Agent Workflow Process section.
+- When creating a worktree, reuse the primary workspace's untracked `.opencode/`
+  directory through a symlink at the new worktree root. It contains the vector
+  index for the whole repository; sharing it avoids rebuilding duplicate indexes
+  and keeps repository tools responsive. Verify that the source directory exists
+  and the worktree target does not before linking; never replace an existing
+  target or user data. Keep `.opencode/` and `opencode.json` ignored and
+  untracked, and never copy, stage, or commit their contents. Create a separate
+  index only when the shared directory is unavailable or explicitly
+  incompatible, and record that exception in the task handoff.
 - If scope is unclear or a task is not broken down enough, split or refine the
   task before implementation. Do not silently downgrade agreed scope to a
   smaller MVP.
@@ -157,28 +166,42 @@ Testing docs:
   (`nonce` + signature/HMAC for public write; optional reCAPTCHA policy;
   `session` or `API key scope` for internal mode when applicable).
 - For non-trivial implementation or task-contract work, run a read-only
-  pre-implementation task audit with fresh-context internal Codex collaboration
-  agents before editing the implementation contract. All agent-delegated
-  repository research, analysis, planning, authoring, implementation, fixing,
-  validation, smoke and pre/post-audit work must use only those internal agents;
-  do not invoke Claude or another external model/CLI for repository work. Agent
-  prompts and reports must not expose secrets, credentials, private provider
-  keys, raw sensitive logs or unredacted user data. Use read-only planning by
-  default. Do not set artificial token, time or cost budgets unless the user
-  explicitly asks for that constraint.
+  pre-implementation task audit with fresh-context Codex collaboration agents
+  before editing the implementation contract.
+- Repository model roles are explicit and fail closed:
+  - Codex is the orchestrator and final reviewer. It owns scope decisions,
+    verifies every actionable finding against local files and command output,
+    reviews every delegated diff, and decides whether validation and closure
+    evidence are sufficient.
+  - The OpenCode `coder` agent uses the exact model
+    `deepseek/deepseek-v4-flash` with variant `max` as the default delegated
+    implementation and fix agent. It works only from an audited, current task
+    contract and its output is review evidence, never closure authority.
+  - Claude Code is allowed only when the owner explicitly requests it for a
+    named scope. It must never be invoked as an automatic fallback, and Codex
+    must independently verify its findings and changes before they affect the
+    repository or task state.
+  - If an approved model or provider is unavailable, stop and report the
+    blocker; do not silently switch models or execution paths.
+- Agent-delegated repository prompts and reports must not expose secrets,
+  credentials, private provider keys, raw sensitive logs or unredacted user
+  data. Use read-only planning by default. Do not set artificial token, time or
+  cost budgets unless the user explicitly asks for that constraint. Models or
+  external CLIs outside the approved roles above require an explicit owner
+  decision and a corresponding policy update before use.
 - Pre-implementation audit prompts must state the repo path, current HEAD and
   dirty-worktree context, task ID(s), that no files may be edited, and that
   findings must be ordered by severity with concrete file/line references. The
   audit must compare task file state, parent/child state, product and
   architecture constraints, current implementation, tests, validation lanes, and
   git diff.
-- Treat internal Codex agent reports as review evidence, not authority. Verify
-  every actionable finding against local files and command output before
-  changing code or task state.
+- Treat every collaboration-agent report as review evidence, not authority.
+  Codex verifies every actionable finding against local files and command output
+  before changing code or task state.
 - If a pre-implementation audit finds real task drift, stale assumptions,
   missing validation, or contradictions, fix the task contract first, validate
-  the correction, and rerun a fresh read-only audit with fresh-context internal
-  Codex collaboration agents before implementation. If a workflow includes
+  the correction, and rerun a fresh read-only audit with fresh-context Codex
+  collaboration agents before implementation. If a workflow includes
   manual commits, rerun on the new HEAD; otherwise rerun against the final
   working tree and record the dirty-worktree context.
 - Do not begin implementation from a stale pre-audit. If any task, changelog,
@@ -194,7 +217,7 @@ Testing docs:
   failed validation phase. Any behavioral test change or wider file change makes
   the earlier pass obsolete under the normal rule above.
 - After implementation, docs, validation, and commits are complete, run fresh
-  read-only drift passes with internal Codex collaboration agents on the final
+  read-only drift passes with fresh-context Codex collaboration agents on the final
   committed HEAD when the task includes manual commits. Otherwise run the final
   pass against the validated working tree and include HEAD plus diff/status
   context in the prompt.

@@ -28,6 +28,7 @@ None; this is an executable leaf.
 **Allowlist:** `scripts/task-551-explain-plans.ts`,
 `tests/perf/fixtures/task551QueryPlanContracts.ts`,
 `tests/perf/database-explain-plans.test.ts`, and
+`tests/perf/task489-solution-kit-run-predecessor-plans.test.ts`, and
 `tests/integration/server/task551ConcurrencyConstraints.test.ts` only.
 
 **Forbidden:** all production/schema/migration files; L01 tests; TASK-493,
@@ -62,6 +63,25 @@ type PlanScaleReceipt = StrictReadonly<{
   large: NumericPlanReceipt;
 }>;
 
+type Task489CompanionStatementCase = StrictReadonly<{
+  statement: Task489StaticPlanStatement;
+  p95MsMax: StrictReadonly<{ small: number; large: number }>;
+}>;
+
+type Task489CompanionLogicalCase = StrictReadonly<{
+  id: Task489CompanionId;
+  caseId: string;
+  statements: readonly [Task489CompanionStatementCase]
+    | readonly [Task489CompanionStatementCase, Task489CompanionStatementCase];
+  combinedP95MsMax?: StrictReadonly<{ small: number; large: number }>;
+}>;
+
+type Task489CompanionReceipt = StrictReadonly<{
+  ids: readonly Task489CompanionId[];       // exact five
+  cases: readonly Task489CompanionLogicalCase[]; // exact fourteen
+  statementReceipts: Readonly<Record<string, PlanScaleReceipt>>; // exact fifteen
+}>;
+
 type TrigramSelectionReceipt = StrictReadonly<Record<
   "pages" | "entries" | "posts" | "media" | "users",
   null | { column: "search_trigram_text"; index: string; opclass: "gin_trgm_ops";
@@ -75,6 +95,7 @@ const EXPECTED_TASK551_CATALOG = strictReadonly({
   constraints: EXACT_L01_CONSTRAINT_ROWS,
   outboxColumns: EXACT_L01_OUTBOX_COLUMNS,
   migrationOperationColumns: EXACT_L01_MIGRATION_OPERATION_COLUMNS,
+  solutionKitRollbackAuthority: EXACT_L01_SOLUTION_KIT_ROLLBACK_AUTHORITY,
   vectorExpressions: SEARCH_VECTOR_SQL,
   immutableProcSignatures: GENERATED_EXPRESSION_IMMUTABLE_PROC_SIGNATURES,
   bookingExclusion: BOOKING_RESERVATION_EXCLUSION_SQL,
@@ -88,12 +109,21 @@ async function assertExactTask551Catalog(db: Db, expected = EXPECTED_TASK551_CAT
   assertExactOrderedColumnsAndPredicates(actual, expected);
   assertExactOutboxColumnsDefaultsNullabilityAndChecks(actual, expected);
   assertExactMigrationOperationColumnsAndChecks(actual, expected);
+  assertExactSolutionKitRollbackAuthority(actual, expected.solutionKitRollbackAuthority);
   assertExactGeneratedExpressions(actual, expected.vectorExpressions);
   await assertGeneratedExpressionVolatility(db, expected.immutableProcSignatures);
   await assertBookingExclusionCustomSeam(db, expected.bookingExclusion);
   await assertOnlineIndexManifestParity(db, expected.onlineIndexManifest);
   assertNoUnexpectedTask551Object(actual, expected);
 }
+
+`EXACT_L01_SOLUTION_KIT_ROLLBACK_AUTHORITY` includes every column type/default/
+nullability, FK target/action, and the full SQL definitions of
+`solution_kit_starter_apply_owners_state_chk`,
+`solution_kit_legacy_template_evidence_state_chk`, and
+`solution_kit_legacy_progress_state_chk`. The verifier rejects a nullable owner
+package/actor, omitted grammar/state arm, weakened event/digest bound, or any
+extra authority constraint just as it rejects a missing named member.
 
 async function assertGeneratedExpressionVolatility(db: Db, signatures: readonly string[]) {
   // Resolve every exact to_regprocedure signature and each ->>, text/tsvector
@@ -135,6 +165,42 @@ authorized tenant/parent predicate and never a post-query filter; `keyset`
 means the declared two-column strict cursor predicate. Every page uses
 `LIMIT :limitPlusOne <=101`; summary SQL omits normalized row filters and
 returns one row; facets omit row filters and cap each arm at 51.
+
+The TASK-489 predecessor handoff is an explicit companion receipt outside those
+closed counts. This leaf imports read-only from TASK-551-01-L02's solely owned
+`tests/perf/fixtures/task489SolutionKitRunPredecessor.ts`: types
+`Task489CompanionId` and `Task489StaticPlanStatement`, plus
+`TASK489_SOLUTION_KIT_RUN_PREDECESSOR_IDS` and
+`TASK489_SOLUTION_KIT_RUN_PREDECESSOR_CASES`. It executes the registry's exact five static IDs,
+fourteen logical cases, fifteen statement cases, and thirty numeric small/large
+statement receipts at 10,000 and 1,000,000 runs. A logical case may be a fixed
+two-statement bundle, but every statement gets its own sanitized plan digest and
+finite budget:
+
+| Companion ID | Bound and required large-plan authority |
+|---|---|
+| `task489-runs-all-keyset` | cases `default` and `relation-heavy-101`; `created_at DESC,id DESC LIMIT <=101`; `solution_kit_runs_history_idx`; default visits <=404 base rows; relation-heavy evaluates exactly 101 returned candidates, each with up to 513 newer applies and indexed rollback-relation probes, bounded by 404 base + 51,813 newer-apply + 51,813 point-probe rows; p95 <=75/200 ms default and <=250/750 ms relation-heavy |
+| `task489-runs-package-keyset` | cases `default` and `relation-heavy-101`; exact `kit_id` plus the same keyset/bound; `solution_kit_runs_anchor_idx`; the same default/relation-heavy row and p95 bounds as the all-history ID |
+| `task489-effective-supersession` | eight cases `newer-0`, `newer-1`, `newer-511`, `newer-512`, `newer-513-all-rolled`, and `newer-513-unrolled-first|middle|last`; one source, at most 513 newer successful applies plus 513 indexed relation probes and one `active|clear|overflow` row; both successful relation indexes; p95 <=75/200 ms |
+| `task489-active-starter-owner` | normalized package/actor, `released_at IS NULL`, `LIMIT 2`; active-owner partial index; <=2 rows; p95 <=25 ms at both scales |
+| `task489-safe-detail` | one logical `point-plus-items` case containing statement `run-point` (one safe run row through PK, p95 <=25/50 ms) and statement `items-page` (ordered `LIMIT 513` explicit safe item columns through run-position index, p95 <=75/200 ms); separate receipts plus combined p95 <=100/250 ms |
+
+The large plans permit no growing-table sequential scan and select/transfer zero
+actor, options, summary payload, snapshots, rollback actions, envelope, or raw
+error bytes. The companion emits sanitized plan digests plus finite numeric small/
+large receipts under `task489Predecessor`, without changing `TASK551_QUERY_PLAN_RECEIPTS`
+or its 37/38/76 cardinality. Exact-set guards reject a sixth ID, missing/extra
+logical or statement case, a safe-detail bundle without both receipts, or a
+history plan without the relation-heavy page. TASK-551 closure must record all
+five IDs/fourteen cases/thirty statement-scale receipts as passed; TASK-489 later
+byte-matches its landed builders and may tighten but not rebaseline them.
+The owning test writes one strict reject-unknown
+`.tmp/task-551/task489-predecessor-v1.json` receipt with schema
+`coderso.task551.task489-predecessor@v1`, exact fixture counts, IDs, logical case IDs,
+statement IDs, thirty finite per-scale plan/budget results, overall pass, and bounded
+safe errors. TASK-551-10-L01 parses and embeds that immutable receipt unchanged in
+its aggregate gate evidence; missing, stale, extra, failed, or digest-mismatched
+receipt data blocks aggregation.
 
 | ID | Exact SQL projection | Exact predicate, order, and bound |
 |---|---|---|
@@ -355,6 +421,13 @@ emit neither a duplicate add nor the descriptor's `.dropSql`.
   `claim_token IS NULL`, availability, or expiry filtering and index mutations
   changing `created_at,id`, direction, or `processed_at IS NULL` fail. Report
   insert/claim/retry/complete write p95 and storage delta within the 20% ceiling.
+- Execute all five TASK-489 companion IDs, fourteen logical cases, and fifteen
+  statement cases at exact 10,000/1,000,000 fixture sizes. Pin both relation-heavy
+  101-row history pages, all eight 0/1/511/512/513 supersession cases, the active
+  owner, and separate run-point/item-page detail plans plus combined latency.
+  Mutating one predicate to JSON, one relation index, the 513 sentinel, either
+  detail statement or its independent p95 budget, or a prohibited projection fails without altering the closed
+  TASK-551 registry receipt.
 - Race 50 synchronized raw synthetic inserts at the same parent/version for each
   page/entry/post/widget/detail-page constraint, plus 50 overlapping/non-
   overlapping booking inserts. This verifies database constraints only—service
@@ -366,6 +439,13 @@ emit neither a duplicate add nor the descriptor's `.dropSql`.
   booking status/custom descriptor byte, outbox nullability/default/state
   branch, function volatility, and add one extra TASK-551-prefixed index; each
   exact-set verifier fails deterministically.
+- Solution Kit catalog/race fixtures reject owner source/package/actor mismatch,
+  unreleased `active:false`, released `active:true`, envelope contract/definition-
+  digest mismatch, typed/envelope phase mismatch,
+  progress linked to another rollback relation or template-evidence row,
+  proof/status mismatch, duplicate template evidence, and deletion of a source
+  that still has a rollback child. They prove `rollback_of_run_id` is
+  `ON DELETE RESTRICT` and no relation can silently become null.
 - Re-run each named failing perf file alone before classifying a failure.
 
 ## Security Contract
@@ -386,6 +466,7 @@ emit neither a duplicate add nor the descriptor's `.dropSql`.
 ## Validation Commands
 
 - `set -a && source .env && set +a && bun test tests/perf/database-explain-plans.test.ts`
+- `set -a && source .env && set +a && bun test tests/perf/task489-solution-kit-run-predecessor-plans.test.ts`
 - `set -a && source .env && set +a && bun test tests/perf/database-pg-stat-interval.test.ts`
 - `set -a && source .env && set +a && bun test tests/integration/server/task551ConcurrencyConstraints.test.ts`
 - `set -a && source .env && set +a && bun test tests/integration/server/task551OnlineIndexDeployment.test.ts`
@@ -426,6 +507,10 @@ TASK-551-10-L02.
   Post-land production SQL is byte-identical for every case; filtered Admin
   fixtures keep `matchingTotal:null`, bounded items/`hasMore`, byte-identical
   global summary/facets, and zero filtered count.
+- The separate TASK-489 predecessor receipt has exactly five IDs, fourteen
+  logical cases, fifteen statement cases, and thirty numeric scale receipts; all
+  pass their named index/projection/row/p95 contracts at 10,000/1,000,000 runs
+  and are not counted in or written into the 37-ID registry.
 - Page/entry/typed-entry/post-author, reverse-role, post-tag, media-AND-tag, and
   webhook list/event large cases use their exact L01 indexes and matching
   production predicate bytes with bounded rows/buffers and measured write/

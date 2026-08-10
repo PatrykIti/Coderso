@@ -49,12 +49,18 @@ native TASK-540 migration, shared widget Playwright/process adoption, exact
 legacy deletion, and fresh final-tree fast/certification validation.
 Changelog 1265 is consumed by the completed TASK-553 runtime-smoke authoring
 cookbook family.
+Changelogs 1266 and 1267 are reserved for TASK-414 Guide/Agent/Designer
+completion and the critical TASK-554 Post metadata publish-RBAC hardening
+(surviving variant; the root Repair variant is superseded by it), respectively.
+Changelog 1268 is reserved for rewritten TASK-489, 1269 for TASK-555, and 1270
+for TASK-556. These are closure-only cross-worktree reservations; their rows and
+files remain absent until each physical family closes.
 These remaining numbers are contract reservations only: do not add index
 rows or changelog files before the corresponding family is complete.
 If a completed family is reopened after its changelog draft was already authored, that draft
 may remain only with an explicit `Draft` status that supersedes its closure evidence; keep its
 index row absent until fresh reclosure validation succeeds.
-Use 1266 for the next unreserved changelog entry.
+Use 1271 for the next unreserved changelog entry.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|

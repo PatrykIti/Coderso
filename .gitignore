@@ -22,7 +22,7 @@ coverage/
 
 GENERATION_LIST.md
 .claude
-
+.opencode
 
 # Playwright cli
 .playwright-cli
@@ -61,3 +61,4 @@ _docs/PLAYWRIGHT/screenshots/
 
 # Local workflow orchestration and smoke evidence
 _docs/_workflows/
+opencode.json

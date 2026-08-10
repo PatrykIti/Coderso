@@ -13,6 +13,15 @@
 
 ---
 
+## Overview
+
+Normalize only the audited historical status and changelog evidence defects
+while preserving every terminal meaning and shipped product contract.
+
+## Sub-Tasks
+
+None; this is an executable leaf with the exclusive file ownership below.
+
 ## Exclusive ownership
 
 - exactly these 34 noncanonical-status files: all seven TASK-513 parent/child
@@ -84,7 +93,7 @@ and unique changelog numbers/task ownership. Parse each `Tasks:` field and compa
 task-ID set with the physical graph; do not ban Unicode ellipses in unrelated prose, CSS,
 TypeScript, payload examples, or code notation.
 
-## Validation
+## Testing Requirements
 
 ```bash
 rg --files _docs/_TASKS \
@@ -129,3 +138,9 @@ This leaf runs only the inline read-only structural check over its landed state.
 creates and then runs `tests/unit/workflows/taskGraphIntegrity.test.ts` for the full
 graph/changelog comparison after L04 has landed. Rerun a named failing audit alone before
 classification.
+
+## Documentation Updates Required
+
+- Update only the enumerated historical task/changelog evidence files; do not
+  edit board/changelog indexes in this leaf.
+- TASK-545-04-L03 owns final index reconciliation and changelog 1257 closure.

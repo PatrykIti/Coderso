@@ -1,14 +1,15 @@
 # TASK-551: Scalable Database, Query, and Cache Optimization
 # FileName: TASK-551_Scalable_Database_Query_And_Cache_Optimization.md
 
-**Priority:** High (next performance/reliability program after active collision
-owners reach a safe handoff)
+**Priority:** High (next performance/reliability program after active
+collision owners reach a safe handoff)
 **Category:** Database / Performance / Reliability / Cache / Security
 **Estimated Effort:** Very Large
-**Dependencies:** TASK-550 complete; the non-negotiable TASK-511/TASK-493/
-TASK-517/TASK-518 external dispatch gate below
+**Dependencies:** TASK-550 complete; TASK-545 exactly `✅ Done` after
+security-first TASK-554; the non-negotiable TASK-511/TASK-493/TASK-517/
+TASK-518 external dispatch gate below
 **Related Tasks:** TASK-360-06, TASK-459-04, TASK-483, TASK-511, TASK-517,
-TASK-518, TASK-493, TASK-550
+TASK-518, TASK-493, TASK-550, TASK-554, TASK-545
 **Status:** ⏳ To Do
 **Changelog:** 1263 pinned (closure only)
 
@@ -19,52 +20,51 @@ TASK-518, TASK-493, TASK-550
 Make the current PostgreSQL-backed runtime fast and predictable for both a
 small, single-process installation and a large multi-replica deployment. The
 program covers the complete production query inventory, data-integrity races,
-bounded list/search/read models, evidence-driven indexes, retention, pool and
-query observability, a typed local server cache, optional Redis, durable
-post-commit invalidation, and hot-path adoption.
-
-The small-site default remains operationally simple: PostgreSQL plus a
-byte-bounded in-process LRU. Redis is opt-in infrastructure for multiple
-replicas. In Redis mode, Redis is the shared value backend and the application
-does not retain a persistent per-process value cache. Every public request first
-performs exactly one uncached, authoritative `getSecuritySettings` read before
-security/rate middleware. Global Redis outage bypasses to DB; ambiguous/partial
-generation delivery may expose only unexpired safe-public old-generation bytes
-until durable delivery or policy TTL. Mutable content is never eligible on cache
+bounded list/search/read models, evidence-driven indexes, retention, pool
+and query observability, a typed local server cache, optional Redis, durable
+post-commit invalidation, and hot-path adoption. The small-site default
+remains operationally simple: PostgreSQL plus a byte-bounded in-process LRU;
+Redis is opt-in infrastructure for multiple replicas, where it is the shared
+value backend and the application retains no persistent per-process value
+cache. Every public request first performs exactly one uncached, authoritative
+`getSecuritySettings` read before security/rate middleware. Global Redis
+outage bypasses to DB; ambiguous/partial generation delivery may expose only
+unexpired safe-public old-generation bytes until durable delivery or policy
+TTL. Mutable content is never eligible on cache
 state alone: after safe manifest metadata, one parameterized
 `validatePublicHtmlDependencies` statement validates the root detail/list and
-every recursively rendered page/post/entry set-wise (at most 128 tuples, 16,384
-canonical bytes and 100+1 root rows), selecting no bodies/hashes. Safe structural
-requests total one query and mutable detail/list requests total two (security+
-validator), with zero other reads. This bounded-eventual contract
-is not linearizability/stale-while-revalidate and never applies to security/private data.
-
-This is not a promise to add every conceivable index or cache every response.
-Every optimization must have a caller, a bounded contract, representative
-small/large evidence, and before/after results. Private/password, draft/preview, auth/RBAC/security decisions, secrets, sessions and nonce-bearing output are
-unconditional exclusions no leaf may relax. Only explicitly non-security user-specific responses may prove identity partitioning and a bounded lifetime.
+every recursively rendered page/post/entry set-wise (at most 128 tuples,
+16,384 canonical bytes and 100+1 root rows), selecting no bodies/hashes.
+Safe structural requests total one query and mutable detail/list requests
+total two (security+validator), with zero other reads. This bounded-eventual
+contract is not linearizability/stale-while-revalidate and never applies to
+security/private data. This is not a promise to add every conceivable index
+or cache every response: every optimization must have a caller, a bounded
+contract, representative small/large evidence, and before/after results.
+Private/password, draft/preview, auth/RBAC/security decisions, secrets,
+sessions and nonce-bearing output are unconditional exclusions no leaf may
+relax; only explicitly non-security user-specific responses may prove
+identity partitioning and a bounded lifetime.
 
 ## Verified Baseline (2026-07-24)
 
 The owner-authorized read-only audit loaded `.env`, inspected the live
-PostgreSQL database and reviewed at least 64 production modules that import the
-database client. Raw credentials, bind values, user data, and secrets were not
-copied into this task.
-
+PostgreSQL database and reviewed at least 64 production modules that import
+the database client; raw credentials, bind values, user data, and secrets
+were not copied into this task.
 ### Live database evidence
-
-- PostgreSQL 18.3; database size approximately 97 MB; `pg_stat_statements` and
-  `pg_trgm` are installed.
+- PostgreSQL 18.3; database size approximately 97 MB; `pg_stat_statements`
+  and `pg_trgm` are installed.
 - The current dataset is still small enough to hide many scale defects behind
-  a near-100% buffer-cache hit rate. The statistics are also test-polluted and
-  must be re-baselined over a known interval before implementation decisions.
-- Owner-supplied Render evidence records a 4m51 full-schema diagnostic UNION of
-  `row_to_json(t)::text ~ ?` plus 30–60s+ `access_logs` text-regex scans; no repo
-  call site was found. Preserve only this sanitized shape/duration. Classify it
-  `external_diagnostic` only with operator evidence, otherwise `unknown`, and
-  exclude it from application prioritization; never index this one-off scan.
-  Reproduction uses a clean read-only interval, strict statement timeout,
-  preferably a replica, and explicit columns/selective predicates.
+  a near-100% buffer-cache hit rate; statistics are test-polluted and must be
+  re-baselined over a known interval before implementation decisions.
+- Owner-supplied Render evidence records a 4m51 full-schema diagnostic UNION
+  of `row_to_json(t)::text ~ ?` plus 30–60s+ `access_logs` text-regex scans;
+  no repo call site was found. Preserve only this sanitized shape/duration,
+  classify it `external_diagnostic` only with operator evidence (otherwise
+  `unknown`), exclude it from application prioritization, and never index this
+  one-off scan; reproduction uses a clean read-only interval, strict statement
+  timeout, preferably a replica, and explicit columns/selective predicates.
 - `settings` single-key reads account for roughly 562,980 recorded calls.
 - `access_logs` is the largest table family at roughly 94,000 live rows,
   11,800 dead rows, and 38 MB; `audit_logs` is roughly 12,400 rows and 7 MB.
@@ -75,50 +75,46 @@ copied into this task.
 - Server settings show a 103-connection PostgreSQL ceiling while the app
   configures `DB_POOL_MAX=10` independently per process and currently has no
   validated cluster connection budget or complete timeout policy.
-
 ### Highest-risk code evidence
-
 - `core/server/publicSite.tsx` checks redirect, settings, and theme/profile
   state before the current HTML cache; a warm hit normally still performs
   approximately four DB queries, and redirect chains add more.
-- `core/site/cache/siteCache.ts` is a synchronous per-process `Map`, bounded by
-  200 entries but not bytes, with no cross-replica invalidation, stampede
+- `core/site/cache/siteCache.ts` is a synchronous per-process `Map`, bounded
+  by 200 entries but not bytes, with no cross-replica invalidation, stampede
   protection, strict envelope, or safe structured key encoding.
-- `settingsService.getSetting` always reads the database. Security settings
-  also have a process-global cache that can remain stale indefinitely on other
-  replicas.
-- Published page/entry update and delete, menu mutations, footer-template
-  mutations, posts, and several settings dependencies do not completely
-  invalidate public output. `setSettingsTx` can invalidate before the caller's
-  outer transaction commits.
+- `settingsService.getSetting` always reads the database; security settings
+  also have a process-global cache that can remain stale indefinitely on
+  other replicas. Published page/entry update and delete, menu mutations,
+  footer-template mutations, posts, and several settings dependencies do not
+  completely invalidate public output; `setSettingsTx` can invalidate before
+  the caller's outer transaction commits.
 - Public and Admin list paths in pages, entries, posts, users, submissions,
   media, booking, revisions, and other domains load unbounded or overly wide
-  results. `usersService` can fetch password hashes/encrypted fields for list
-  work that does not consume them.
+  results; `usersService` can fetch password hashes/encrypted fields for
+  list work that does not consume them.
 - Search queries build expressions that differ from migration `0006` indexes;
-  some sources are queried sequentially without deterministic rank/order, and
-  assistant retrieval ranks an unbounded candidate set in Bun.
+  some sources are queried sequentially without deterministic rank/order,
+  and assistant retrieval ranks an unbounded candidate set in Bun.
 - Concurrent booking uses check-then-insert without a complete database
   exclusion contract. Page/entry/post/widget revisions allocate with an
   unlocked `max(version) + 1`; page and entry revisions lack the complete
   parent/version uniqueness guarantee. Last-admin/session/publication and
   assistant execution flows contain additional transaction-boundary risks.
 - Analytics/dashboard/SEO/webhook/import-export paths perform multiple
-  sequential aggregates, row-by-row updates, N+1 work, or full-list materialization.
-- Append-heavy access/audit/assistant/revision/submission/delivery/session data
-  does not have one complete bounded retention and pruning contract.
+  sequential aggregates, row-by-row updates, N+1 work, or full-list
+  materialization. Append-heavy access/audit/assistant/revision/submission/
+  delivery/session data does not have one complete bounded retention and
+  pruning contract.
 - `core/db/schema.ts`, `solutionKitsInstallService.ts`, `entryService.ts`,
   `bookingService.ts`, and `postsService.ts` are already at or above the
-  repository's 1,000-line limit. The leaf that first touches each file must
-  split it by cohesive ownership before extending behavior.
-
-All paths and symbols are implementation anchors to re-verify against the live
-tree immediately before a leaf edits them. A missing `rg` result on a known
-large file is not proof of absence.
-
+  repository's 1,000-line limit; the leaf that first touches each file must
+  split it by cohesive ownership before extending behavior. All paths and
+  symbols above are implementation anchors to re-verify against the live tree
+  immediately before a leaf edits them; a missing `rg` result on a known
+  large file is not proof of absence.
 ## Outcome and Realistic Impact Targets
 
-These are acceptance ranges to measure, not guaranteed marketing numbers:
+Acceptance ranges to measure, not guaranteed marketing numbers:
 
 | Area | Current shape | Target and realistic effect |
 |---|---|---|
@@ -132,34 +128,34 @@ These are acceptance ranges to measure, not guaranteed marketing numbers:
 | Integrity races | Possible duplicate versions/bookings and partial writes | Zero invariant violations in concurrent/rollback tests; correctness is the primary impact |
 | Append-heavy growth | Linear and incompletely pruned | Bounded scheduled work and stable query/backup/VACUUM behavior inside documented retention windows |
 
-Final budgets are frozen by TASK-551-01 from reproducible fixtures and current
-hardware. A leaf may tighten them but may not silently weaken them to make a
-gate pass.
-TASK-551-01 runs one deterministic family scenario at a time with exact target/
-support counts, UUIDv5 IDs from `(validatedRunScope,profile,family,ordinal)`,
-list timestamps grouped by ten and append timestamps unique by ordinal. Fixed
-distributions are users `80/10/10` across status with five roles/every tenth
-multi-role; content `50/30/10/10`; entry visibility `70/20/10`; forms
-`60/30/10`; submissions `70/20/10`; media `80/20` with 10% null folder; five
-booking statuses at 20% each; search uses the exact per-family integer common/
-rare table plus hidden/miss zero (never percentage rounding); and ten-row equal-
-sort groups. Small/large pools are `2/10`, with three repetitions of five
-warmups plus 30 samples after `20/100` calibration. P95 spread is
-`(max-min)/max(median,0.1)*100` with an all-zero result of zero and a `20%` cap;
-the accepted calibration factor is `0.80..1.20`, and frozen ceilings use
-`ceilToTenth(max(floor, medianRepetitionPercentile*1.25))`. Normal gates consume
-only stored finite ceilings and never silently freeze new ones.
-Summary/facet fixtures freeze `asOf=2026-01-15T12:00:00.000Z`. Submission `ordinal%4===0` is 1..6 days before; all others are 8..37 days before, yielding rolling-
-seven-day `500/25,000` and spam `200/10,000`. Booking UTC/New_York/Tokyo buckets `0..9/10..19/20..59/60..99` mean same-day past/future/next/prior, +60-minute end,
-and exact today `400/20,000`, upcoming/past-current `1,000/50,000` each, independent of host timezone.
-Evidence also freezes page/entry/typed-entry/post-author, role, post/media tag,
-webhook event/delivery, latest-page-autosave and 128-dependency cases. Retention
-uses `2036-01-01T00:00:00.000Z`, literal cutoff/anchor/child-first cases for every
-family, and `499/500/501/2,000/2,001` batch edges; omissions fail the gate.
-Initial inventory is 34 planned: 32 named Admin plus `cache-outbox-oldest-unprocessed` and `public-html-dependencies-128`. Plan registry
-is 37 IDs/38 cases/76 small+large receipts: those 32 once plus `webhooks-created-keyset`,
-`webhook-deliveries-parent-keyset`, `webhooks-event-batch`, `page-latest-autosave`,
-and `cache-outbox-oldest-unprocessed`.
+Final budgets are frozen by TASK-551-01 from reproducible fixtures andcurrent hardware; a leaf may tighten them but may not silently weaken them to
+make a gate pass. TASK-551-01 runs one deterministic family scenario at a time
+with exact target/support counts, UUIDv5 IDs from
+`(validatedRunScope,profile,family,ordinal)`, list timestamps grouped by ten
+and append timestamps unique by ordinal, and the exact fixed distributions
+(users `80/10/10`, content `50/30/10/10`, entry visibility `70/20/10`, forms
+`60/30/10`, submissions `70/20/10`, media `80/20` with 10% null folder, five
+booking statuses at 20%, per-family integer common/rare search table plus
+hidden/miss zero, ten-row equal-sort groups). Small/large pools are `2/10`,
+three repetitions of five warmups plus 30 samples after `20/100` calibration,
+P95 spread `(max-min)/max(median,0.1)*100` with a `20%` cap, calibration
+factor `0.80..1.20`, frozen ceilings `ceilToTenth(max(floor,
+medianRepetitionPercentile*1.25))`, and normal gates consume only stored
+finite ceilings. Summary/facet fixtures freeze `asOf=2026-01-15T12:00:00.000Z`;
+submission `ordinal%4===0` is 1..6 days before and others 8..37 (rolling
+seven-day `500/25,000`, spam `200/10,000`); booking UTC/New_York/Tokyo
+buckets `0..9/10..19/20..59/60..99`, exact today `400/20,000`,
+upcoming/past-current `1,000/50,000`. Evidence also freezes
+page/entry/typed-entry/post-author, role, post/media tag, webhook
+event/delivery, latest-page-autosave and 128-dependency cases; retention uses
+`2036-01-01T00:00:00.000Z`, literal cutoff/anchor/child-first cases, and
+`499/500/501/2,000/2,001` batch edges; omissions fail the gate. Initial
+inventory is 34 planned: 32 named Admin plus
+`cache-outbox-oldest-unprocessed` and `public-html-dependencies-128`; the plan
+registry is 37 IDs/38 cases/76 small+large receipts (those 32 once plus
+`webhooks-created-keyset`, `webhook-deliveries-parent-keyset`,
+`webhooks-event-batch`, `page-latest-autosave`,
+`cache-outbox-oldest-unprocessed`).
 
 ## Locked Architecture
 
@@ -177,26 +173,36 @@ tiebreaker. Full bodies, document JSON, hashes, encrypted fields, and secrets
 are detail-only. Search owns one stored/generated vector contract and performs
 ranking, deterministic ordering, and candidate limits in SQL. Set-based
 queries replace N+1 and per-row mutation loops with bounded concurrency where
-one statement is not possible.
-One L01-owned/exported `buildTask551PrefixTsquery` plus its constants tokenizes
+one statement is not possible. One L01-owned/exported
+`buildTask551PrefixTsquery` plus its constants tokenizes
 Unicode `L/M/N/_` runs into `token:*` joined by ` & `. Admin and assistant SQL
 each bind it once in an input CTE with literal `to_tsquery('simple',$1)` and
-reuse that tsquery for every vector predicate/rank; assistant-expanded terms are
-reranker-only. No local parser, raw interpolation, `websearch_to_tsquery`, or
-`plainto_tsquery` is allowed. Trigram keeps indexed `%` under transaction-local
+reuse that tsquery for every vector predicate/rank; assistant-expanded terms
+are reranker-only. The same input CTE aliases the parameterized product-version
+tuple as distinct `$2/$3/$4` (major/minor/patch) with locale and remaining
+binds at later distinct numbers and zero rebind/reuse (full bind-numbering
+contract in TASK-551-04-L01). No local parser, raw interpolation,
+`websearch_to_tsquery`, or `plainto_tsquery` is allowed. Trigram keeps indexed
+`%` under transaction-local
 static `SET LOCAL pg_trgm.similarity_threshold='0.300'`; LIKE/ILIKE/regex is
 forbidden, and closure updates `_docs/SEARCH_SPEC.md` to this exact contract.
 Executable known-interval `pg_stat_statements` receipts use only
 `application|migration|maintenance|external_diagnostic|unknown`, sanitize SQL,
-run before prioritization and before/after comparisons, and never reset shared stats.
+run before prioritization and before/after comparisons, and never reset shared
+stats.
 
 The cursor wire is exactly `<payload-base64url>.<mac-base64url>` with strict v1
 canonical JSON, HMAC-SHA-256, 24-hour lifetime and code-owned `KeysetSpec` of
 1..5 typed fields ending non-null UUID `id`. Cursor/request bytes never select a
 column, direction or null placement. The frozen ASC/DESC × NULLS FIRST/LAST ×
-after/before table drives lexicographic predicates; previous navigation reverses
-SQL direction/null placement and then output. Routes collapse schema/value/spec/
-version/signature/age faults to `cursor_invalid`; scope mismatch remains distinct.
+after/before table drives lexicographic predicates; previous navigation
+reverses SQL direction/null placement and then output. Routes collapse
+schema/value/spec/version/signature/age faults to `cursor_invalid`; scope
+mismatch remains distinct. The pure owner retains a coarse internal
+`expired_or_retired|invalid` classification; optional strict
+`PAGINATION_CURSOR_RETIRED_KEYS` carries at most 16 superseded version/secret
+pairs, and later internal routes may map only the coarse terminal class to
+fixed refresh behavior without exposing a version.
 
 Database constraints, not preflight reads, own uniqueness/invariants. Revision
 allocation, booking exclusivity, last-admin protection, session limits, and
@@ -215,17 +221,17 @@ represent the booking GiST exclusion, so the same leaf exports one deeply
 immutable `BOOKING_RESERVATION_EXCLUSION_SQL` descriptor whose exact custom
 fragment is `CREATE EXTENSION IF NOT EXISTS btree_gist` followed by
 `ALTER TABLE bookings ADD CONSTRAINT bookings_active_resource_window_excl
-EXCLUDE USING gist (resource_id WITH =, tsrange(starts_at, ends_at, '[)') WITH
-&&) WHERE (status IN ('pending', 'confirmed'))`; rollback is exactly
-`ALTER TABLE bookings DROP CONSTRAINT IF EXISTS bookings_active_resource_window_excl`
-and preserves the shared extension. The generated snapshot
-intentionally omits only that unrepresentable object; exact descriptor/migration/
-live `pg_constraint` parity, clean/prior apply, rollback/forward reapply, fresh-
-generator zero drift, and a no-generated-drop guard prove it. This satisfies the
-AGENTS atomic-artifact rule because L01 alone lands the schema exports and
-descriptor, the one SQL migration, matching generated snapshot and journal
-update, plus all guards in one change; it neither pretends DSL support nor
-defers an artifact to another writer.
+EXCLUDE USING gist (resource_id WITH =, tsrange(starts_at, ends_at, '[)')
+WITH &&) WHERE (status IN ('pending', 'confirmed'))`; rollback is exactly
+`ALTER TABLE bookings DROP CONSTRAINT IF EXISTS
+bookings_active_resource_window_excl` and preserves the shared extension. The
+generated snapshot intentionally omits only that unrepresentable object; exact
+descriptor/migration/live `pg_constraint` parity, clean/prior apply,
+rollback/forward reapply, fresh-generator zero drift, and a no-generated-drop
+guard prove it. This satisfies the AGENTS atomic-artifact rule because L01
+alone lands the schema exports and descriptor, the one SQL migration, matching
+generated snapshot and journal update, plus all guards in one change; it
+neither pretends DSL support nor defers an artifact to another writer.
 
 All snapshot-owned TASK-551 indexes live in one closed catalog, including every
 form/booking/list/reverse-FK/retention member; assistant ingest uses `started_at`.
@@ -235,39 +241,53 @@ Exact caller/index pairs include `pages_author_list_updated_id_idx`,
 `posts_author_list_updated_id_idx`, role-leading `user_roles_role_user_idx`,
 `webhooks_list_created_id_idx`, `webhook_deliveries_webhook_list_idx`,
 `page_revisions_page_kind_version_id_idx`, and `posts_tags_gin_idx`/
-`media_tags_gin_idx`/`webhooks_events_gin_idx` as `jsonb_path_ops` GIN for exact
-parameterized `@>` predicates.
-The read-performance catalog also owns `cache_outbox_unprocessed_age_idx(created_at ASC,id ASC) WHERE processed_at IS NULL`; planned
-`cacheInvalidationOutbox.ts#readOldestUnprocessedAge` uses fingerprint `cache_outbox_oldest_unprocessed` and exact `WHERE processed_at IS NULL ORDER BY
-created_at,id LIMIT 1`, including claimed/backed-off rows, with 1k/100k EXPLAIN plus insert/claim/retry/complete write-budget evidence.
-One version-2 `rollout-forward` orchestrator owns artifact resolution, admission
-drain, activity proof, transactional expand, concurrent groups and final catalog;
-generic/startup migration cannot execute the guarded artifact. External mode
-keeps the pre-TASK-551 `max(version)+1` binary stopped through the durable page/
-content/widget `revision-integrity` barrier, then admits only the digest-pinned
-compatible TASK-551 binary while read-performance indexes build. The old binary
-never resumes; first compatible traffic makes recovery forward-fix only.
-`offline-single` stays cold through final catalog. Transactional SQL creates no
-index; `rollout-forward` runs twice (second zero-DDL/zero-transition), then
-`status` proves the version-2 CAS/hash-chained receipt and exact catalog.
-It reserves one physical migration session and L01's sole
-`createTask551ReservedDrizzleClient(poolClient,reserved)` supplies the callable,
-same-handle `.begin` adapter required by postgres.js 3.4.9/Drizzle 0.45.2; only
-`drizzle(adaptedReserved)` is valid. Its non-reassignable `.options` is the exact
-pool object with shared mutable parser/serializer maps; SQL/BEGIN never dispatches
-through the pool after reserve. One PID spans exactly the operation/receipt/SHA
-GUC set, guard, DDL, receipt, and journal transaction. Clean/prior/replay/reverse,
-atomic rollback, RESET/same-PID/release/end, poison/hard-end, parser parity, and
-zero-pool-dispatch evidence are mandatory. Adapter incompatibility blocks rollout
-for a single custom-runner contract amendment; no runtime fallback/dual path ships.
+`media_tags_gin_idx`/`webhooks_events_gin_idx` as `jsonb_path_ops` GIN for
+exact parameterized `@>` predicates. The read-performance catalog also owns
+`cache_outbox_unprocessed_age_idx(created_at ASC,id ASC) WHERE processed_at IS
+NULL`; planned `cacheInvalidationOutbox.ts#readOldestUnprocessedAge` uses
+fingerprint `cache_outbox_oldest_unprocessed` and exact `WHERE processed_at IS
+NULL ORDER BY created_at,id LIMIT 1`, including claimed/backed-off rows, with
+1k/100k EXPLAIN plus insert/claim/retry/complete write-budget evidence.
+The same sole schema writer adds the L03-owned normalized Solution Kit
+Setup-owner, legacy-template-evidence, and rollback-progress tables, typed
+terminal proof columns, typed legacy-template plan count/digest columns, an
+`ON DELETE RESTRICT` rollback relation, enforceable composite relation keys,
+and exact history, successful-apply, successful-rollback-relation, active-owner,
+and one-running-rollback indexes. TASK-551-01/L05 produce a separate five-ID,
+fourteen-case, thirty-statement-scale-receipt TASK-489 predecessor plan handoff
+at 10,000/1,000,000 runs; it remains outside the closed 37-ID TASK-551 registry.
+L06 preserves the complete active/retry/relation/evidence graph, L03 adopts
+same-transaction legacy invalidation only after the terminal 08-L03 cache
+runtime, and L09-L03 proves all-ten-kind full-site apply/rollback/compensation
+adoption for memory and Redis; TASK-551 cannot close without that explicit
+handoff receipt. One version-2 `rollout-forward` orchestrator owns artifact
+resolution, admission drain, activity proof, transactional expand, concurrent
+groups and final catalog; generic/startup migration cannot execute the guarded
+artifact. External mode keeps the pre-TASK-551 `max(version)+1` binary stopped
+through the durable page/content/widget `revision-integrity` barrier, then
+admits only the digest-pinned compatible TASK-551 binary while read-performance
+indexes build. The old binary never resumes; first compatible traffic makes
+recovery forward-fix only. `offline-single` stays cold through final catalog.
+Transactional SQL creates no index; `rollout-forward` runs twice (second
+zero-DDL/zero-transition), then `status` proves the version-2 CAS/hash-chained
+receipt and exact catalog. It reserves one physical migration session and L01's
+sole `createTask551ReservedDrizzleClient(poolClient,reserved)` supplies the
+callable, same-handle `.begin` adapter required by postgres.js 3.4.9/Drizzle
+0.45.2; only `drizzle(adaptedReserved)` is valid. Its non-reassignable
+`.options` is the exact pool object with shared mutable parser/serializer maps;
+SQL/BEGIN never dispatches through the pool after reserve. One PID spans exactly
+the operation/receipt/SHA GUC set, guard, DDL, receipt, and journal transaction.
+Clean/prior/replay/reverse, atomic rollback, RESET/same-PID/release/end,
+poison/hard-end, parser parity, and zero-pool-dispatch evidence are mandatory.
+Adapter incompatibility blocks rollout for a single custom-runner contract
+amendment; no runtime fallback/dual path ships.
 
 ### Exact server-cache boundary
 
 The standalone server-only owner exports these exact concepts and fields;
 07-L01 may implement but may not rename, extend, narrow, or duplicate them
-without amending every consumer task first:
-
-The exact exported types live only in TASK-551-07-L01. Shared invariants are:
+without amending every consumer task first. Shared invariants follow; the full
+type/pseudocode contract lives in TASK-551-07-L01.
 
 - `CachePolicy<T>` owns finite family/schema/positive TTL/value/tags, nullable
   negative TTL, `stalePolicy:"forbid"`, strict decode and full-context branded
@@ -299,7 +319,7 @@ site:entries | site:posts | site:listings | site:forms | site:settings |
 site:themes | settings:security`. Record IDs, slugs, paths, and query variants
 never extend either union; they belong only in digested canonical key input.
 Generation values are fresh, non-reused opaque lowercase 32-hex tokens, not
-resettable counters. Missing tokens are atomically initialized before lookup,
+resettable counters; missing tokens are atomically initialized before lookup,
 and every finite-tag bump replaces the tokens atomically.
 
 Policy schema versions accept only `1..2_147_483_647`; positive policy and store
@@ -499,11 +519,11 @@ declare function getServerCacheRuntime(): ServerCacheRuntime;
 `getServerCacheRuntime()` never constructs a runtime: before start and after
 close it throws `server_cache_runtime_unavailable`; while started it returns one
 frozen process singleton. Store, controller, coordinator, workers, clients and
-stop/drain/close capabilities remain private. Internally the invalidation handle owns
-exact idempotent
-`stopClaiming()`, bounded `drain(timeoutMs)` and `close(timeoutMs)` semantics;
-shutdown awaits stop/drain/PubSub close, then distributed-coordinator close,
-cache/store close, and only then database close.
+stop/drain/close capabilities remain private; the invalidation handle owns
+exact idempotent `stopClaiming()`, bounded `drain(timeoutMs)` and
+`close(timeoutMs)` semantics, and shutdown awaits stop/drain/PubSub close,
+then distributed-coordinator close, cache/store close, and only then database
+close.
 
 ### Cache eligibility and invalidation
 
@@ -514,9 +534,12 @@ public HTML. Every renderer returns or registers the exact dependency tags it
 consumed. Global invalidation may initially bump a site generation; finer tags
 must remain bounded and evidence-driven.
 
-Minimal method+URL dispatch preserves the complete booking/Forms/analytics API before cache normalization/read/write: every booking path/method including
-`GET /api/booking/slots`, exact Forms submission/upload paths at every method, and analytics beacon at every method. Existing handlers retain access/session/
-API-key/CSRF/DNT/rate/nonce/HMAC/CAPTCHA/token and method/not-found behavior. Only unmatched surviving GET/HEAD normalizes a cache request; every request
+Minimal method+URL dispatch preserves the complete booking/Forms/analytics
+API before cache normalization/read/write: every booking path/method including
+`GET /api/booking/slots`, exact Forms submission/upload paths at every method,
+and analytics beacon at every method. Existing handlers retain access/session/
+API-key/CSRF/DNT/rate/nonce/HMAC/CAPTCHA/token and method/not-found behavior;
+only unmatched surviving GET/HEAD normalizes a cache request, and every request
 performs its one authoritative SecuritySettings query.
 Every mutable page/home/post/content-entry detail/list first reads only bounded
 safe manifest metadata, then executes one parameterized set-based root+nested
@@ -551,24 +574,23 @@ before its transaction and returns one deduplicated `CacheInvalidationPlan`
 covering old/new identities plus dependants. Nested settings/import/restore
 operations receive that same outer key and transaction and contribute finite
 tags through `collectInvalidationTagsTx`; they never allocate a nested key,
-persist/apply a nested plan, or use the global DB client. Memory mode writes zero
-outbox rows and performs exactly one awaited post-commit generation bump. Redis
-mode persists exactly one row in the same transaction and then awaits its
-immediate `applyAfterCommit(plan)` before returning the committed result; fire-
-and-forget is forbidden. The handle absorbs transport failure and resolves only
-after local observation or that exact event's affected-tag fence is visible.
-Only its later durable processed receipt clears the event fence. Rollback/no-op emits no
-invalidation. Once the DB
-and required outbox commit, a cache transport failure must not turn the API
-response into an apparent mutation failure; the worker retries and reads
-bypass values whose local incoherence is known. Globally unavailable Redis
-always causes DB/render bypass. During an ambiguous/partial delivery state, an
-otherwise safe public value may remain visible only while its original TTL is
-unexpired; healthy polling is at most 250 ms, invalidation lag targets p99 at
-most 1 second, and locally visible backlog/incoherence strictly above 5 seconds
-alerts, degrades readiness, and forces affected-family bypass until recovery.
-Public HTML TTL is at most 600 seconds and no server-cache policy exceeds 3,600
-seconds. Admin preview/readback
+persist/apply a nested plan, or use the global DB client. Memory mode writes
+zero outbox rows and performs exactly one awaited post-commit generation bump;
+Redis mode persists exactly one row in the same transaction and then awaits its
+immediate `applyAfterCommit(plan)` before returning the committed result.
+Fire-and-forget is forbidden: the handle absorbs transport failure and resolves
+only after local observation or that exact event's affected-tag fence is
+visible, only its later durable processed receipt clears the event fence, and
+rollback/no-op emits no invalidation. Once the DB and required outbox commit, a
+cache transport failure must not turn the API response into an apparent mutation
+failure; the worker retries and reads bypass values whose local incoherence is
+known. Globally unavailable Redis always causes DB/render bypass. During an
+ambiguous/partial delivery state, an otherwise safe public value may remain
+visible only while its original TTL is unexpired; healthy polling is at most 250
+ms, invalidation lag targets p99 at most 1 second, and locally visible
+backlog/incoherence strictly above 5 seconds alerts, degrades readiness, and
+forces affected-family bypass until recovery. Public HTML TTL is at most 600
+seconds and no server-cache policy exceeds 3,600 seconds. Admin preview/readback
 bypasses until its event is observed; auth, security, private/password, draft,
 preview, and nonce-bearing data remains uncached or fail-closed DB-backed.
 
@@ -590,7 +612,8 @@ entryModulePath}`. The fixed-order `AdminCacheScopePreimageV3` is
 permissions,roles}` with normalized sorted arrays. Its 367-byte vector hashes to
 `6c69458d5fdc22634a5fca20609e3accb4a6fe606905af2b2c522900770afbf7`; nonce-only
 `222...` rotation hashes to `4214d494f425d2f595de703cd19662a2513d0d85871bff748bdb5d5cb728611d`
-and rejects old storage/events/delayed installs. Delimiter, unknown, or oversized input fails.
+and rejects old storage/events/delayed installs; delimiter, unknown, or oversized
+input fails.
 
 Security-settings partial writes set local lock timeout `2s` and acquire advisory lock `(551,904)` before same-transaction read/merge/write. Redis writes add
 exactly one same-transaction outbox row; memory writes add zero and use exactly one awaited post-commit generation bump. Both map `55P03`/`40P01` to
@@ -611,7 +634,7 @@ because rendered form configuration does not consume action execution state.
   reads have no CSRF requirement; existing public write nonce/HMAC/CAPTCHA
   contracts are unchanged and their responses remain ineligible for HTML cache
   when a nonce is present.
-- **Rate limits:** existing route-family buckets remain. Redis/cache failures
+- **Rate limits:** existing route-family buckets remain; Redis/cache failures
   do not bypass rate limiting or bot controls.
 - **Validation:** reject unknown query/cursor/cache-envelope fields; clamp page,
   batch, TTL, key/tag count, value bytes, wait, lock, retry, and retention
@@ -619,14 +642,14 @@ because rendered form configuration does not consume action execution state.
   normalized as owned by the pagination contract.
 - **Secrets/privacy:** no secrets, hashes, encrypted payloads, cookies, tokens,
   nonces, raw PII, bind values, or private bodies in cache keys/values, logs,
-  metrics, EXPLAIN evidence, fixtures, Pub/Sub, or outbox payloads. Admin cache
+  metrics, EXPLAIN evidence, fixtures, Pub/Sub, or outbox payloads; Admin cache
   is identity/permission scoped.
 - **Redis:** TLS/auth configuration is supplied through `REDIS_URL`, never
-  browser code or Settings. Commands are bounded; no arbitrary command/key
+  browser code or Settings; commands are bounded, and no arbitrary command/key
   input crosses an API boundary.
-- **Anti-abuse:** no new public write means no new nonce/signature path. Existing
-  form/booking/analytics anti-abuse remains authoritative and is tested across
-  cache hit/miss/outage paths.
+- **Anti-abuse:** no new public write means no new nonce/signature path;
+  existing form/booking/analytics anti-abuse remains authoritative and is
+  tested across cache hit/miss/outage paths.
 
 ## Non-Negotiable External Dispatch Gate
 
@@ -635,20 +658,18 @@ TASK-511, TASK-493, TASK-517, or TASK-518 remains non-terminal. The only
 substitute is a fresh, exact, serialized handoff audit run immediately before
 the first product dispatch and revalidated before each affected leaf. That
 audit must prove one current writer and byte-disjoint work for every schema and
-migration path (`core/db/schema.ts`, `core/db/schema/**`, all migration SQL/meta,
-and `core/db/migrations/meta/_journal.json`), `.env.example`,
-`core/server/publicSite.tsx`, the
-whole entry service and tests, the whole SEO service/types/tests, the whole
-import/export service/tests plus backup integration, and lifecycle/startup
-paths (`httpServer.ts`, `prod.ts`, `dev.ts`, `dockerStart.ts`,
-`backupScheduler.ts`, and the shared lifecycle registry). It records final
-task status, exact paths, test ownership, land order, and immutable handoff
-bytes. Any unknown, wildcard, concurrent writer, stale byte, or partial handoff
-fails the gate; waiting for all four families to become terminal is the default.
-Read-only TASK-551-11 research/audit may run before this gate, but product
-source, tests, migrations, gates, docs, and environment files may not change.
-
-After the gate:
+migration path (`core/db/schema.ts`, `core/db/tables/**`, TASK-551's pure DB
+contract modules, all migration SQL/meta, and `core/db/migrations/meta/_journal.json`),
+`.env.example`, `core/server/publicSite.tsx`, the whole entry service and tests,
+the whole SEO service/types/tests, the whole import/export service/tests plus
+backup integration, and lifecycle/startup paths (`httpServer.ts`, `prod.ts`,
+`dev.ts`, `dockerStart.ts`, `backupScheduler.ts`, and the shared lifecycle
+registry). It records final task status, exact paths, test ownership, land
+order, and immutable handoff bytes. Any unknown, wildcard, concurrent writer,
+stale byte, or partial handoff fails the gate; waiting for all four families to
+become terminal is the default. Read-only TASK-551-11 research/audit may run
+before this gate, but product source, tests, migrations, gates, docs, and
+environment files may not change. After the gate:
 
 - TASK-511 remains sole owner of backup streaming/import/restore and scheduler
   behavior. TASK-551-09 consumes only its final post-commit plan seam.
@@ -668,118 +689,125 @@ After the gate:
 ## Single-Writer Domain Ownership
 
 - TASK-551-02: `core/db/client.ts`, DB config, runtime lifecycle registry,
-  `runtimeEntrypoint.ts`, and the sole `prod.ts` plus `dev.ts` start/signal paths,
-  sanitized DB telemetry, and exact `withDedicatedDatabaseSession<T>(run)` API.
-  Its pure `databaseApplicationIdentity.ts` strictly owns process kind
-  `runtime|worker`, separate runtime `1..256`/worker `0..256` fleet counts,
-  globally unique replica IDs, and every-session names
-  `coderso:runtime|worker|maintenance:<id>` or
-  `coderso:migration:<operationUuid>`; no host/URL/tenant/credential enters them.
-  TASK-551-05 imports only that pure builder for `pg_stat_activity` drain proof.
-  It also exports `assertMaintenanceSessionAffinity()`. `DB_MAINTENANCE_MODE=primary|direct|session`, pool max `2..4`, and secret `DB_MAINTENANCE_URL` are strict.
-  Ordinary primary startup never probes, so `off+primary+DB_POOL_MAX=1` is valid when the scheduler is disabled and `verifyDatabaseSessions` checks that one session only. Explicit direct/session probes once at DB start;
-  the lifecycle-scoped promise/result is reused. An enabled scheduler awaits the assertion before timer/listen and fails at capacity below two or transaction+primary.
-  Its reserved-session value exposes only signal-aware static `execute`, bounded `transaction`, `assertAlive`, and `cancelActiveAndRollback`; no active SQL/
-  transaction returns to the pool, and cancellation-aware workers confirm rollback/connection termination before close continues.
-  `runtimeEntrypoint.ts` is the sole lifecycle start/close, signal, listen and HTTP-drain owner; thin prod/dev adapters only select mode. It registers Vite as
-  a participant, awaits start, listens only after success/no startup signal, awaits the signal, drains HTTP gracefully for at most 10 seconds then forcibly,
-  and reverse-closes participants. Every close receives `RuntimeCloseContext{absoluteDeadline,signal}`. Total shutdown is at most 15 seconds; non-DB closes
-  are at most 5 seconds, while DB is the sole exception at `min(10 seconds, remaining absolute budget)` with no outer 5-second race or detached teardown. Start
-  failure awaits partial rollback and never listens; no participant/adapter owns another signal, lifecycle call, `server.stop`, or drain algorithm.
-  08-L03 composes only `httpServer.ts`.
-  Default Bun suites are `tests/integration/server/task551DatabaseLifecycle.test.ts`
-  and `tests/integration/server/task551RuntimeEntrypoints.test.ts`. One shared
-  parser serves pool/application identity/migration adapters: runtime processes
-  `1..256` default `1`, workers `0..256` default `0`, pool max default `10`, and
-  migration reserve `3`; default planned connections are `1*10 + 0*10 + 3 = 13`
-  and must be strictly below validated server availability. Lifecycle ceilings are
-  2,000/5,000/10,000/15,000 ms plus a 10-second DB close and late acquisitions
-  release once. Six families, five outcomes, 12 duration cells and nine row
-  cells including overflow produce 3,240 cells per fingerprint plus 44 pool
-  cells, using saturating counters and deterministic snapshot/reset. Its direct paths are `tests/vitest/db/databaseConfig.test.ts`,
-  `tests/vitest/db/queryFingerprintRegistry.test.ts`, the Bun lifecycle path above, and `tests/perf/database-pool-telemetry.test.ts`; measurement and pool
-  probing are opt-in and do not claim driver-wide row/wait telemetry. Registry
-  names are `QUERY_FAMILIES`, `QUERY_OUTCOMES`, `QUERY_DURATION_BUCKET_MAX_MS`, `ROWS_RETURNED_BUCKET_MAX`,
-  `POOL_WAIT_BUCKET_MAX_MS`, `POOL_OUTCOMES`, `MAX_QUERY_FINGERPRINTS=512`, and
-  `MAX_COUNTER_VALUE=Number.MAX_SAFE_INTEGER`.
+  `runtimeEntrypoint.ts`, and the sole `prod.ts` plus `dev.ts` start/signal
+  paths, sanitized DB telemetry, and exact `withDedicatedDatabaseSession<T>`
+  plus `withDedicatedDatabaseAdvisoryLock` APIs. Its pure
+  `databaseApplicationIdentity.ts` strictly owns process kind `runtime|worker`,
+  separate runtime `1..256`/worker `0..256` fleet counts, globally unique
+  replica IDs, and every-session names `coderso:runtime|worker|maintenance:<id>`
+  or `coderso:migration:<operationUuid>`; no host/URL/tenant/credential enters
+  them. TASK-551-05 imports only that pure builder for `pg_stat_activity` drain
+  proof; it also exports `assertMaintenanceSessionAffinity()`.
+  `DB_MAINTENANCE_MODE=primary|direct|session`, pool max `2..4`, and secret
+  `DB_MAINTENANCE_URL` are strict, with `off+primary+DB_POOL_MAX=1` valid when
+  the scheduler is disabled. `runtimeEntrypoint.ts` is the sole lifecycle
+  start/close, signal, listen and HTTP-drain owner; thin prod/dev adapters only
+  select mode. Total shutdown is at most 15 seconds (non-DB at most 5, DB the
+  sole exception at `min(10 seconds, remaining budget)`), no participant owns
+  another signal/lifecycle call/`server.stop`, and 08-L03 composes only
+  `httpServer.ts`. One shared parser serves pool/application
+  identity/migration adapters: runtime processes `1..256` default `1`, workers
+  `0..256` default `0`, pool max default `10`, and migration reserve `3`;
+  default planned connections are `1*10 + 0*10 + 3 = 13` and must be strictly
+  below validated server availability. Lifecycle ceilings are
+  2,000/5,000/10,000/15,000 ms plus a 10-second DB close. Telemetry uses six
+  families, five outcomes, 12 duration cells and nine row cells (3,240 cells
+  per fingerprint plus 44 pool cells) with saturating counters and
+  deterministic snapshot/reset; direct paths are
+  `tests/vitest/db/databaseConfig.test.ts`,
+  `tests/vitest/db/queryFingerprintRegistry.test.ts`, the Bun lifecycle suite,
+  and `tests/perf/database-pool-telemetry.test.ts`. Registry names are
+  `QUERY_FAMILIES`, `QUERY_OUTCOMES`, `QUERY_DURATION_BUCKET_MAX_MS`,
+  `ROWS_RETURNED_BUCKET_MAX`, `POOL_WAIT_BUCKET_MAX_MS`, `POOL_OUTCOMES`,
+  `MAX_QUERY_FINGERPRINTS=512`, and
+  `MAX_COUNTER_VALUE=Number.MAX_SAFE_INTEGER`; the complete contract and test
+  matrix lives in TASK-551-02-L02.
 - TASK-551-03: shared cursor/projection/batch owners, exact
   `PaginationCursorKeyring`, `loadPaginationCursorKeyring(env)`, idempotent
   `registerPaginationCursorLifecycleParticipant()`, and fail-closed
   `requirePaginationCursorKeyring()` plus the exact two-segment/code-owned-spec
   contract above. L02 consumes 09-L04 INITIAL installation authority and 08-L03
-  INITIAL closed response-header transport receipts before editing clients/routes. L02 owns the complete
-  `core/server/routes/index.ts` and calls only the register helper at module
-  evaluation before the generic lifecycle start. After all 06 services land,
-  L02 solely owns page/detail revision route/schema/client/UI envelope adoption,
-  the complete current eight-client consumer graph, bounded picker/search/load-
-  more behavior, every cohesive split needed for touched files above 1,000
-  lines, its direct tests, and the five-scenario UI smoke. L02 extracts
-  `formReadService` as the sole form-list SQL owner with exact `FormListItem`
-  `id,name,slug,status,description,submissionAccess,updatedAt`; `bookingReadService` owns
-  every booking list, including paginated reservation/resource/service/blackout
-  reads, capped service-resource/schedule arrays, and the 31-day/500-slot preview.
-  Existing Reservations/Resources/Services tabs consume narrow items; Services retains derived `submissionAccess`, edits await point detail, and Availability/
-  SlotPreview use bounded pickers. Submission payload uses one authorized parent-bound point query only after expansion, stays component-local/uncached, and
-  aborts/clears on close/unmount/logout/auth change; every success/error response sets `Cache-Control: private, no-store, max-age=0`, `Pragma: no-cache`,
-  `Expires: 0`, and its client passes `cache:"no-store"`. Media `name` derives originalName→title→sanitized key basename→asset; raw key stays omitted and utils consumes name.
-  Oversized legacy `booking-page.test.tsx`/`media-library.test.tsx` are deleted: exact fixtures are `bookingPageTestFixtures.tsx`/`mediaLibraryTestFixtures.tsx`,
-  with booking `loading-pagination|mutations|calendar` and media `loading-pagination|selection-folders|upload-edit` independently runnable suites.
-  Exact extraction stems are `BookingOverviewPanel`, `MediaLibraryFolderState/Results`, `UsersRolesContent`, `DetailTemplateRevisionPanel`, `MenuDesignCanvas/Inspector/DataSources`, `MenuEditorWorkspace`, `PostEditorMediaControls`, `ContentListSource/PresentationEditors`, `CtaBannerContentEditors`, `EntryTeaserSource/PresentationEditors`, `FeatureGridItemEditors`, `FooterNavigation/BrandEditors`, `GalleryMosaicItemEditors`, `HeroContent/Media/LayoutEditors`, `LogoCloudItemEditors`, `NavigationItem/PresentationEditors`, `PostsFeedSourceEditors`, `RichTextContent/LayoutEditors`, `SectionContent/LayoutEditors`, `TeamMember/LayoutEditors`, and `TestimonialItemEditors`. The page-editor flow becomes one shared
-  fixture plus eight named loading/editing/autosave/preview/publish/sections/
-  accessibility/persistence suites. The 06-L02 handoff preserves two summaries:
-  page `{id,pageId,version,kind,title,slug,createdAt,createdBy:{id,name,email}|null}`
-  and detail `{id,detailPageId,version,kind,createdAt,createdBy:string|null}`.
-  Each typed `{items,nextCursor,hasMore}` envelope uses input `{cursor?,limit?}`,
-  default/max `50/100`, `version DESC,id DESC`; bodies are point-only and
-  invented `reason` is forbidden. No raw-array,
-  auto-fetch-all, or silent first-page fallback exists.
-  Every metric-bearing Admin keyset response is `{items,nextCursor,hasMore,summary,facets}`. Arbitrary filters return `matchingTotal:null`/
-  `exactness:"not_computed"` and issue no filtered `COUNT`; fixed summary and bounded author/content-type/role/folder/tag facets are exact at one read-only
-  `REPEATABLE READ` authorized snapshot. Facet pages are strict, default/max
-  `50/100`, no auto-fetch. Page, fixed aggregate and optional facet are separately
-  budgeted/planned production SQL fingerprints and total at most three statements.
-  L03 owns bounded analytics/dashboard exports, webhook 50/100 pages plus one
-  lateral latest-delivery read, 100/250 event iterator/five retries, and the
-  500-operation/4-MiB solution-plan with 512-KiB item/16-MiB run snapshots.
-- TASK-551-04: search and assistant retrieval query owners only; it consumes the TASK-551-05 vector/index schema and owns no migration artifact. Search GETs
-  become provably write-free. The sole history write is internal `POST /admin/api/search/history`: session actor, `content:read`, shared CSRF, `admin_write`
-  bucket, strict four-key body and actor-bound UUID idempotency; conflict maps 409. `searchClient.ts` and `useSearchResults.ts` reuse one UUID per normalized UI
-  intent/retry, and no public/API-key/GET mutation alias exists.
-  Search has no cursor. Each of five source arms yields at most 51 exact-email → FTS → non-overlapping trigram candidates; at most 255 enter global dedup/rank
-  and 51 leave. Match tier precedes incomparable scores; per-arm rows/buffers/p95 evidence is independent of final top-k. L02 imports L01's prefix helper/constants,
-  binds one `to_tsquery('simple',$1)` CTE for both assistant vectors, removes expanded terms from SQL candidates (retaining reranker-only expansion), and rejects
-  websearch/plain/local-parser/raw-interpolation variants while pinning the shared Unicode/punctuation/token bounds.
+  INITIAL closed response-header transport receipts before editing
+  clients/routes; L02 owns the complete `core/server/routes/index.ts`, calls
+  only the register helper at module evaluation, and solely owns page/detail
+  revision route/schema/client/UI envelope adoption, the eight-client consumer
+  graph, bounded picker/search/load-more behavior, every cohesive split for
+  touched files above 1,000 lines, its direct tests, and the five-scenario UI
+  smoke. L02 extracts `formReadService` (exact `FormListItem` projection) and
+  `bookingReadService` (all bounded booking lists, capped service-resource/
+  schedule arrays, 31-day/500-slot preview) as the sole SQL owners; submission
+  payloads use one authorized parent-bound point query, stay
+  component-local/uncached, and abort/clear on close/unmount/logout/auth
+  change, with `Cache-Control: private, no-store, max-age=0`, `Pragma:
+  no-cache`, `Expires: 0` and client `cache:"no-store"`. Media `name` derives
+  originalName→title→sanitized key basename→asset; raw key stays omitted.
+  Oversized legacy `booking-page.test.tsx`/`media-library.test.tsx` are
+  deleted; exact fixtures are `bookingPageTestFixtures.tsx`/
+  `mediaLibraryTestFixtures.tsx` with independently runnable suites and the
+  exact extraction stems listed in TASK-551-03-L02. The page-editor flow
+  becomes one shared fixture plus eight named suites. The 06-L02 handoff
+  preserves page/detail summaries; every typed `{items,nextCursor,hasMore}`
+  envelope uses `{cursor?,limit?}` `50/100`, `version DESC,id DESC`, bodies are
+  point-only, and no raw-array/auto-fetch-all/silent-first-page fallback
+  exists. Every metric-bearing Admin keyset response is
+  `{items,nextCursor,hasMore,summary,facets}`; arbitrary filters return
+  `matchingTotal:null`/`exactness:"not_computed"` with no filtered `COUNT`, and
+  fixed summary plus bounded author/content-type/role/folder/tag facets are
+  exact at one read-only `REPEATABLE READ` snapshot (facet pages `50/100`, no
+  auto-fetch; page, aggregate and optional facet total at most three planned
+  statements). L03 owns bounded analytics/dashboard exports, webhook 50/100
+  pages plus one lateral latest-delivery read, 100/250 event iterator/five
+  retries, and the 500-operation/4-MiB solution-plan with 512-KiB item/16-MiB
+  run snapshots.
+- TASK-551-04: search and assistant retrieval query owners only; it consumes
+  the TASK-551-05 vector/index schema and owns no migration artifact. Search
+  GETs become provably write-free; the sole history write is internal
+  `POST /admin/api/search/history` (session actor, `content:read`, shared
+  CSRF, `admin_write` bucket, strict four-key body, actor-bound UUID
+  idempotency; conflict maps 409). `searchClient.ts` and `useSearchResults.ts`
+  reuse one UUID per normalized UI intent/retry, and no public/API-key/GET
+  mutation alias exists. Search has no cursor: each of five source arms yields
+  at most 51 exact-email → FTS → non-overlapping trigram candidates, at most
+  255 enter global dedup/rank and 51 leave; match tier precedes incomparable
+  scores, and per-arm rows/buffers/p95 evidence is independent of final top-k.
+  L02 imports L01's prefix helper/constants, binds one `to_tsquery('simple',$1)`
+  CTE for both assistant vectors, removes expanded terms from SQL candidates
+  (retaining reranker-only expansion), and rejects websearch/plain/
+  local-parser/raw-interpolation variants while pinning the shared
+  Unicode/punctuation/token bounds.
 - TASK-551-05: the sole TASK-551 owner of schema decomposition and every
   migration/vector/index/constraint/outbox schema artifact plus plan evidence;
   it also owns the one explicit Drizzle-unsupported exclusion descriptor/custom
-  seam and all generator/catalog/drift guards; it does not rewrite service query
-  logic owned elsewhere or claim a fake DSL representation.
+  seam and all generator/catalog/drift guards; it does not rewrite service
+  query logic owned elsewhere or claim a fake DSL representation.
 - TASK-551-06: access/audit/append-heavy retention, revision allocation and
   maintenance jobs assigned in its leaves, including exact
   `createRetentionSchedulerLifecycleParticipant`; it owns no migration,
-  `dockerStart.ts`, HTTP composition, or signal handler and hands the entry/post/
-  detail-document adoption contract to TASK-551-09. Every adopter uses exactly
-  `withRevisionParentLock(identity, tx, run)` with a zero-argument `run` that
-  closes over `tx`, and `allocateRevision(input, tx)`; tx-first overloads are
-  forbidden. L01 alone owns Bun-free `searchHistoryContract.ts` and its Vitest,
-  removes the real private `pruneHistory` declaration/call, and lands actor/UUIDv5-idempotent `recordSearch`; L04 imports that contract read-only for POST.
-  Scheduled retention lock/liveness/batches/unlock use one dedicated backend PID. Loss cancels and rolls back before reacquire, returns only
-  `retention_lock_lost`, and publishes no partial summary. Close aborts/cancels/confirms rollback or termination within `4,500 ms`; no detached work survives.
-  Analytics age is owned only by `ANALYTICS_RETENTION_DAYS`: absent/malformed/non-finite resolves to 365 and finite values floor then clamp to
-  `30..1095`; `Number(raw)` pins empty/whitespace/0/-1/1.9→30, 30.9→30,
-  `0x20`→32, `1e2`→100, 1095.9/1096→1095, while absent/non-finite/malformed→365.
-  Only `RETENTION_ANALYTICS_ENABLED` enables it and both age aliases reject.
-  Every present `ANALYTICS_PRUNE_INLINE_DISABLED` or
-  `ANALYTICS_PRUNE_INLINE_ENABLED` value is a separate raw-value-free warning-
-  once deprecated no-op. `RETENTION_DRY_RUN` is the sole exact lowercase boolean;
-  true performs bounded reads and zero destructive-row-lock/mutation/publication/
-  progress. Direct service calls take no scheduler advisory lock; scheduled dry-
-  run takes exactly one replica advisory lock before invoking the same service.
-  Request writes perform zero inline analytics pruning. Page autosave locks its
-  parent and selects only latest `kind='autosave'` by `version DESC,id DESC LIMIT
-  1`: equal normalized snapshot reuses it with zero writes; changed snapshot uses
-  the shared allocator and deletes only that exact predecessor. Older history is
-  scheduler-only; 100k-history/50-writer tests pin two/six-statement budgets.
+  `dockerStart.ts`, HTTP composition, or signal handler and hands the
+  entry/post/detail-document adoption contract to TASK-551-09. Every adopter
+  uses exactly `withRevisionParentLock(identity, tx, run)` with a zero-argument
+  `run` that closes over `tx`, and `allocateRevision(input, tx)`; tx-first
+  overloads are forbidden. L01 alone owns Bun-free `searchHistoryContract.ts`
+  and its Vitest, removes the real private `pruneHistory` declaration/call, and
+  lands actor/UUIDv5-idempotent `recordSearch`; L04 imports that contract
+  read-only for POST. Scheduled retention lock/liveness/batches/unlock use one
+  dedicated backend PID; loss cancels and rolls back before reacquire, returns
+  only `retention_lock_lost`, and publishes no partial summary. Close
+  aborts/cancels/confirms rollback or termination within `4,500 ms`; no
+  detached work survives. Analytics age is owned only by
+  `ANALYTICS_RETENTION_DAYS` (absent/malformed/non-finite→365, finite values
+  floor then clamp `30..1095`, `Number(raw)` pins the exact edge cases) and
+  only `RETENTION_ANALYTICS_ENABLED` enables it; both age aliases reject, and
+  present `ANALYTICS_PRUNE_INLINE_DISABLED/ENABLED` values are warning-once
+  deprecated no-ops. `RETENTION_DRY_RUN` is the sole exact lowercase boolean
+  (bounded reads, zero destructive mutation); direct service calls take no
+  scheduler advisory lock, scheduled dry-run takes exactly one replica advisory
+  lock, and request writes perform zero inline analytics pruning. Page autosave
+  locks its parent and selects only latest `kind='autosave'` by `version DESC,
+  id DESC LIMIT 1`: equal normalized snapshot reuses it with zero writes,
+  changed snapshot uses the shared allocator and deletes only that exact
+  predecessor, older history is scheduler-only, and 100k-history/50-writer
+  tests pin two/six-statement budgets.
 - TASK-551-07: standalone server-cache contracts/coordinator/memory adapter only,
   including complete store/trigger/observation-token/event-fence contracts,
   registered-policy capacity validation and private runtime capabilities.
@@ -791,36 +819,34 @@ After the gate:
   the cursor participant already registered by `routes/index.ts`. L03 never
   loads/injects the keyring, never edits `prod.ts`/`dev.ts`, and does not edit
   `backupScheduler.ts`; both entrypoints remain 02-L02 lifecycle adapters.
-  TASK-551-08 consumes TASK-551-05's outbox schema and owns no schema/migration.
-  L03 first lands only the closed three-header response transport after 02-L02;
-  its FINAL cache/runtime phase follows 07, 08-L01/L02 and the 03-L02 receipt.
+  TASK-551-08 consumes TASK-551-05's outbox schema and owns no schema/migration;
+  L03 lands its INITIAL header transport and FINAL cache/runtime phase per Land
+  Order.
 - TASK-551-09: the whole current public/entry/post/SEO/import-export/detail-page
-  adoption files and tests, settings/security cache, site-shell dependencies,
-  mutation invalidation, and Admin identity-cache safety; it adopts 03's query
-  and 06's revision handoffs without split writers. Its four leaves own and run
-  every direct existing suite named in their exact validation commands; 10
-  consumes those receipts and owns only aggregate/full gates and documentation.
-  L04 first lands only `adminCacheAuthority.ts` plus its direct test after 07-L01;
-  03-L02/04-L01 return adoption receipts, then L04 FINAL owns the exhaustive
-  remaining Admin module-cache/cross-tab/security-settings matrix.
+   adoption files and tests, settings/security cache, site-shell dependencies,
+   mutation invalidation, and Admin identity-cache safety; it adopts 03's query
+   and 06's revision handoffs without split writers. Its four leaves own and run
+   every direct existing suite named in their exact validation commands; 10
+   consumes those receipts and owns only aggregate/full gates and documentation.
+   L04 lands its INITIAL authority and FINAL Admin cache matrix per Land Order.
 - TASK-551-10: gates, fault/load harnesses, docs and closure only; it does not
   reopen production source contracts.
 
-The per-leaf exact allowlists override this summary. TASK-551-01-L01 is the sole
-writer of the machine-readable ownership matrix: it freezes the initial current
-inventory before TASK-551-02 and is re-dispatched after TASK-551-09 to replace
-the receipt with a fresh exact-set `phase: "final"` inventory. Later leaves and
-TASK-551-10 consume but never edit those artifacts. A discovered overlap is a
-task-contract defect and must be reconciled before dispatch, not resolved by two
-writers editing the same file.
+The per-leaf exact allowlists override this summary. TASK-551-01-L01 is the
+sole writer of the machine-readable ownership matrix, freezing the initial
+current inventory before TASK-551-02; the mandatory final inventory gate in
+Land Order below re-dispatches it after TASK-551-09. Later leaves and
+TASK-551-10 consume but never edit those artifacts; a discovered overlap is a
+task-contract defect reconciled before dispatch, never by two writers editing
+the same file.
 
 ## Sub-Tasks
 
 ### Land Order
 
-TASK-551-11 is an orchestration sidecar throughout. Product work lands strictly
-in this compile-green order (child names include their leaves unless a leaf is
-spelled out):
+TASK-551-11 is an orchestration sidecar throughout. Product work lands
+strictly in this compile-green order (child names include their leaves unless
+a leaf is spelled out):
 
 1. [ ] **TASK-551-01** — performance baseline, complete query inventory, and
    small/large budgets (2 leaves).
@@ -828,7 +854,9 @@ spelled out):
    and operations evidence (2 leaves).
    **08-L03 INITIAL:** land only the closed route-response-header seam.
 3. [ ] **TASK-551-05** — evidence-driven composite/partial/FK indexes and
-   concurrency constraints (2 leaves).
+   concurrency constraints (3 leaves; **05-L01 → 05-L03 → 05-L02** — L01 lands
+   the migration including L03's authority tables, L03 verifies the authority
+   contract/tests, L02 verifies plans/catalog).
 4. [ ] **TASK-551-03-L01** — cursor/bounded-read contracts and lifecycle adapter.
 5. [ ] **TASK-551-06-L01 → TASK-551-06-L02 → TASK-551-06-L03** —
    retention, bounded pruning, revision services, scheduling, and partition
@@ -837,34 +865,31 @@ spelled out):
 7. [ ] **TASK-551-09-L04 INITIAL** — installation-authority module/test only.
 8. [ ] **TASK-551-03-L02** — bounded Admin/revision route, schema, client, UI,
    consumer-graph and concurrency adoption after 06.
-9. [ ] **TASK-551-03-L03** — aggregate, webhook, and solution-kit batching.
-10. [ ] **TASK-551-04** — exact indexed full-text/trigram search and bounded
-   assistant candidates (2 leaves).
-11. [ ] **TASK-551-07-L02** — byte-bounded memory LRU/single-flight.
-12. [ ] **TASK-551-08-L01 → L02 → L03 FINAL** — Redis, durable invalidation,
-   distributed coalescing and runtime composition after 03-L02's header receipt.
+9. [ ] **TASK-551-07-L02** — byte-bounded memory LRU/single-flight.
+10. [ ] **TASK-551-08-L01 → L02 → L03 FINAL** — Redis, durable invalidation,
+    distributed coalescing and runtime composition after 03-L02's header receipt.
+11. [ ] **TASK-551-03-L03** — aggregate, webhook, and solution-kit batching;
+    legacy mutation/invalidation adoption consumes the terminal 08-L03 runtime.
+12. [ ] **TASK-551-04** — exact indexed full-text/trigram search and bounded
+    assistant candidates (2 leaves).
 13. [ ] **TASK-551-09-L01 → L02 → L03 → L04 FINAL** — hot-path adoption,
-   final Admin/security cache hardening after the 03/04 authority receipts,
-   one-query safe whole requests,
-   two-query mutable page/home/post/entry whole requests, complete post-commit
-   invalidation, and Admin/security cache hardening
-   (4 leaves).
+    final Admin/security cache hardening after the 03/04 authority receipts,
+    one-query safe whole requests, two-query mutable page/home/post/entry whole
+    requests, complete post-commit invalidation, and Admin/security cache
+    hardening (4 leaves).
 
    **Mandatory final inventory gate:** re-dispatch TASK-551-01-L01 from the
-   validated post-09 production tree. The same sole artifact writer refreshes
+   validated post-09 production tree; the same sole artifact writer refreshes
    exact set equality and emits a `phase: "final"` receipt with zero planned
    deltas before TASK-551-10-L01 may start.
-
 14. [ ] **TASK-551-10** — small/large load and fault matrix, documentation,
     operational runbooks, and family closure (2 leaves).
-
 **TASK-551-11** remains the author/audit/implementation/post-audit evidence
-sidecar throughout and has no product leaf or numbered product slot.
-
+sidecar with no product leaf or numbered product slot.
 ## Family Acceptance Criteria
-
-- Every production DB caller is recorded with one terminal disposition and one
-  source writer; active task handoffs are explicit and verified after landing.
+- Every production DB caller is recorded with one terminal disposition and
+  one source writer; active task handoffs are explicit and verified after
+  landing.
 - All growing request-path lists/searches are bounded at SQL, use narrow
   projections and deterministic ordering, and pass cursor/query-count tests.
 - The chosen indexes/constraints have complete migration artifacts and
@@ -876,72 +901,68 @@ sidecar throughout and has no product leaf or numbered product slot.
   idempotent jobs, distributed locking where multi-replica scheduling applies,
   and documented recovery.
 - Default memory cache passes byte/count/TTL/jitter/LRU/single-flight/corrupt/
-  oversize parity tests. Redis passes the same semantic contract plus two-
-  client invalidation, outage, reconnect, outbox retry, lease, and generation
-  race tests.
-- Coherence tests pin source watermarks, stale-completion rejection and event-
-  keyed fences: only the same event's durable processed receipt clears its
-  failed-post-commit fence. Duplicate observations advance epochs but clear
-  none; capacity saturation uses bounded hysteretic bypass while safe-integer
-  epoch overflow remains restart-fail-closed. Pub/Sub carries only event key plus
-  generation digest and resolves tags by outbox point read.
+  oversize parity tests. Redis passes the same semantic contract plus
+  two-client invalidation, outage, reconnect, outbox retry, lease, and
+  generation race tests.
+- Coherence tests pin source watermarks, stale-completion rejection and
+  event-keyed fences: only the same event's durable processed receipt clears
+  its failed-post-commit fence; duplicate observations advance epochs but
+  clear none. Pub/Sub carries only event key plus generation digest and
+  resolves tags by outbox point read.
 - Public Redis consistency is explicitly bounded-eventual: global outage
   bypasses on every replica; partial/ambiguous delivery may expose only safe,
-  still-unexpired public old-generation bytes until delivery or hard TTL. Poll
-  is at most 250 ms, healthy lag p99 at most 1 second, locally known incoherence
-  strictly above 5 seconds alerts, degrades readiness, and forces affected-family
-  bypass until recovery, public HTML TTL is at most 600 seconds,
-  and all policy TTLs are at most 3,600 seconds. Admin preview/readback bypasses
-  until observation; security/private/auth/nonce data has no stale allowance.
-- Every public request performs exactly one authoritative SecuritySettings read. A safe structurally non-mutable request has no other query. A mutable
-  detail/list adds one root+nested validator over the exact bounded metadata/caps
-  and no bodies. Both execute zero additional warm-hit queries; rejected bytes,
-  restricted/missing/malformed or changed dependency proof cannot return primed output. Preview,
-  private/password, nonce-bearing and unsafe variants never enter the cache. Old/new slug, update, delete,
-  selected menu/footer, theme, settings, SEO, redirects, forms and list
-  dependencies invalidate after commit only.
-- Admin cached values cannot cross deployment, 128-bit tab incarnation, cross-
-  tab auth-generation nonce, identity/permission or monotonic epoch/install
-  scopes. Rotation precedes login/logout/401/403/identity changes; every module-
-  level cache/promise is reset/fenced and failed storage forces persistent misses. Storage/cacheBus
-  errors cannot reverse a successful authoritative API result and no auth API
-  payload changes. Decrypted or secret-bearing security
-  settings are never cached and every read remains DB-authoritative; only finite
-  generation/coherence metadata and explicitly redacted projections are eligible.
-- Performance gates publish reproducible p50/p95/p99, rows read/returned, query
-  counts, pool wait/saturation, cache hit/miss/error, invalidation lag, bytes,
-  and coalescing evidence without secrets or raw user data.
-- All touched human-authored production and test modules are at most 1,000
-  physical lines. Relevant Bun/Vitest, DB, migration, performance, reliability,
-  security, lint/type, full combined, and multi-process smoke gates pass.
-
+  still-unexpired public old-generation bytes until delivery or hard TTL. All
+  latency/coherence ceilings (poll, lag, alert, HTML TTL, policy TTL) and the
+  Admin preview/readback and security/private/nonce stale rules are pinned in
+  Locked Architecture above.
+- Every public request performs exactly one authoritative SecuritySettings
+  read (one-query safe structural, two-query mutable detail/list) with zero
+  additional warm-hit queries; rejected/restricted/malformed/changed proof
+  cannot return primed output, unsafe variants never enter the cache, and
+  old/new slug, update, delete, menu/footer, theme, settings, SEO, redirects,
+  forms and list dependencies invalidate after commit only. Admin cached values
+  cannot cross deployment, 128-bit tab incarnation, cross-tab auth-generation
+  nonce, identity/permission or monotonic epoch/install scopes; rotation
+  precedes login/logout/401/403/identity changes, module caches reset/fence on
+  failed storage, storage/cacheBus errors cannot reverse an authoritative API
+  result, and decrypted/secret-bearing security settings are never cached (only
+  finite generation/coherence metadata and explicitly redacted projections are
+  eligible).
+- Performance gates publish reproducible p50/p95/p99, rows read/returned,
+  query counts, pool wait/saturation, cache hit/miss/error, invalidation lag,
+  bytes, and coalescing evidence without secrets or raw user data. All touched
+  human-authored production and test modules are at most 1,000 physical lines;
+  relevant Bun/Vitest, DB, migration, performance, reliability, security,
+  lint/type, full combined, and multi-process smoke gates pass.
 ## Testing Requirements
 
-- Load `.env` before every DB/settings lane. Prove DB reachability before the
-  full suite and use uniquely scoped fixtures with owned-row cleanup only.
+- Load `.env` before every DB/settings lane; prove DB reachability before
+  the full suite and use uniquely scoped fixtures with owned-row cleanup only.
 - Bun owns runtime DB/cache adapters, Redis/outbox workers, concurrency,
-  performance, security, and multi-process tests. Vitest owns only extracted
-  Bun-free cursor/policy/codec/read-model modules and Admin browser-cache logic.
-- Run per-leaf targeted tests plus `bun --cwd core lint:types` and
-  `bun --cwd core lint`. Re-run every named failure once in isolation before
+  performance, security, and multi-process tests; Vitest owns only extracted
+  Bun-free cursor/policy/codec/read-model modules and Admin browser-cache
+  logic. Run per-leaf targeted tests plus `bun --cwd core lint:types` and
+  `bun --cwd core lint`; re-run every named failure once in isolation before
   classification.
 - TASK-551-09 leaves themselves own and run all direct existing-suite paths in
-  their validation commands. TASK-551-10 consumes exact current receipts for
-  those paths; aggregate/full commands may rediscover them but never transfer
+  their validation commands; TASK-551-10 consumes exact current receipts for
+  those paths, aggregate/full commands may rediscover them but never transfer
   their ownership or edit/rebaseline them.
 - Closure runs full `bun run test`, `bun run precommit:check`,
-  `bun run gates:coderso`, the required strict security scan, exact performance
-  and reliability suites, migration-from-clean plus migration-from-prior
-  snapshots, at least five distinct two-process/Redis real-flow smokes, and the
-  TASK-551-03-L02 five-scenario Admin-list Playwright smoke in both light and dark
-  modes with screenshots, visible-effect assertions, and zero console errors.
-- TASK-551-01-L01 runs in `initial` phase before 02 and is re-dispatched after 09
-  in `final` phase. TASK-551-10-L01 rejects an initial/stale receipt, any planned
-  delta, or a final source-tree digest that does not match the current production
-  query surface.
-- Redis integration uses an isolated test namespace/database and cleans only
-  its own keys. If CI provisions Redis differently, the test command and
-  service version become part of the checked-in release-gate contract.
+  `bun run gates:coderso`, the required strict security scan, exact
+  performance and reliability suites, migration-from-clean plus
+  migration-from-prior snapshots, at least five distinct two-process/Redis
+  real-flow smokes, and the TASK-551-03-L02 five-scenario Admin-list Playwright
+  smoke in both light and dark modes with screenshots, visible-effect
+  assertions, and zero console errors.
+- TASK-551-01-L01 runs in `initial` phase before 02 and is re-dispatched
+  after 09 in `final` phase per the mandatory final inventory gate in Land
+  Order above; TASK-551-10-L01 rejects an initial/stale receipt, any planned
+  delta, or a final source-tree digest that does not match the current
+  production query surface. Redis integration uses an isolated test
+  namespace/database and cleans only its own keys; a differently provisioned
+  CI Redis makes the test command and service version part of the checked-in
+  release-gate contract.
 
 ## Documentation Updates Required
 
@@ -956,7 +977,9 @@ sidecar throughout and has no product leaf or numbered product slot.
   from server cache.
 - On closure, update all TASK-551 files and board statistics, create and index
   changelog 1263 listing every terminal descendant, and record exact validation
-  plus before/after measurements and any explicit safe non-goals.
+  plus before/after measurements and any explicit safe non-goals. Closure
+  authority is current state, not commit history; the exact reviewed-scope
+  contract is owned by TASK-551-10-L02.
 
 ## Implementation Pseudocode
 ```ts
@@ -972,5 +995,6 @@ if (result.plan) await getServerCacheRuntime().invalidation.applyAfterCommit(res
 return result.value;
 ```
 
-Public reads execute security first, validate mutable manifests before value GET,
-and render authoritatively without fill when proof fails. Tests cover all branches.
+Public reads execute security first, validate mutable manifests before value
+GET, and render authoritatively without fill when proof fails; tests cover all
+branches.

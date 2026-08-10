@@ -42,12 +42,20 @@ Sole writer of:
 - whole `core/services/tools/importExportService.ts` for handed-off bounded
   query/chunk behavior and explicit invalidation-plan propagation through its
   transaction wrapper;
+- `core/services/kits/fullSiteInstall/aggregateAdapters.ts`,
+  `core/services/kits/fullSiteInstall/lifecycleAdapters.ts`,
+  `core/services/kits/fullSiteInstall/executePreparedSaga.ts`,
+  `core/services/kits/fullSiteInstall/compensation.ts`,
+  `core/services/kits/fullSiteInstall/execute.ts`, and
+  `core/services/kits/fullSiteInstall/rollback.ts` only for complete full-site
+  mutation/compensation invalidation adoption;
 - new `core/services/cache/siteDependencyInvalidation.ts`;
 - new `tests/vitest/cache/site-dependency-invalidation.test.ts`;
 - new `tests/vitest/cache/redirect-cache-policy.test.ts`;
 - new `tests/integration/runtime/site-shell-cache-invalidation.test.ts`;
 - new `tests/integration/runtime/site-routing-cache-invalidation.test.ts`;
 - new `tests/integration/runtime/site-form-listing-cache-invalidation.test.ts`;
+- new `tests/integration/kits/fullSiteInstallInvalidation.test.ts`;
 - existing `tests/integration/runtime/site-shell-runtime.test.ts` for complete
   shell/render dependency adoption assertions;
 - existing `tests/integration/runtime/detail-page-preview-cache.test.ts` for
@@ -141,6 +149,17 @@ requirements without weakening their tests.
   linked route/content-type/list/detail dependencies through finite
   `site:listings`/`site:entries`/`site:html` generations. No path scan or
   `KEYS`/`SCAN`; broad uncertain linkage uses `site:all`.
+- Full-site apply, explicit rollback, interrupted-apply compensation, dependency-
+  branch compensation, and source-restoration adapters use the same transaction
+  handle for native mutation, run-item/progress receipt, finite-tag collection,
+  and backend-specific invalidation receipt. The adapter returns the exact plan
+  from that commit and the owning executor awaits the sole public
+  `applyAfterCommit(plan)` before advancing. Memory persists zero outbox rows;
+  Redis persists one deduplicated event per resource transaction. Noop/rejected/
+  rolled-back transactions emit none. A later failure retains earlier committed
+  receipts and requires compensation/recovery; cache delivery failure cannot turn
+  a committed install/rollback into apparent API failure. Tests cover all ten
+  TASK-547 kinds for apply and reversal, not only legacy Solution Kit resources.
 - All service mutations follow L02's transaction/outbox/after-commit pattern.
   Failed/no-op/rollback emits nothing; cache failure does not reverse success.
   The lifecycle-owned invalidation handle reports to the sole coherence
@@ -287,6 +306,11 @@ Add a source guard over production renderer/dependency/invalidation modules that
 fails on any `formActionsService`, `form_actions`, action-run cache tag or action-
 mutation invalidation reference; runtime spies prove action changes produce zero
 HTML cache/outbox activity while public form config/field changes still invalidate.
+Run full-site apply/rollback/compensation against memory and Redis and assert every
+actual mutation commits its run/progress plus exact backend receipt atomically,
+awaits one post-commit application, and leaves no receipt for noop/rejection/
+transaction rollback. Inject transport failure, mid-plan failure, compensation,
+and recovery; authoritative status and durable retry/bypass evidence remain true.
 
 ```bash
 set -a && source .env && set +a
@@ -299,6 +323,7 @@ SERVER_CACHE_BACKEND=memory bun test \
   tests/integration/runtime/public-site-cache-eligibility.test.ts \
   tests/integration/runtime/site-shell-runtime.test.ts \
   tests/integration/runtime/detail-page-preview-cache.test.ts \
+  tests/integration/kits/fullSiteInstallInvalidation.test.ts \
   tests/unit/menus/menuService.test.ts \
   tests/unit/pages/pageTemplateLibraryService.test.ts \
   tests/unit/pages/publicSiteShell.test.ts \
@@ -315,13 +340,15 @@ SERVER_CACHE_BACKEND=redis SERVER_CACHE_NAMESPACE=task551-09-l03 bun test \
   tests/integration/runtime/site-shell-cache-invalidation.test.ts \
   tests/integration/runtime/site-routing-cache-invalidation.test.ts \
   tests/integration/runtime/site-form-listing-cache-invalidation.test.ts \
-  tests/integration/runtime/public-site-cache-eligibility.test.ts
+  tests/integration/runtime/public-site-cache-eligibility.test.ts \
+  tests/integration/kits/fullSiteInstallInvalidation.test.ts
 bun --cwd core lint:types
 bun --cwd core lint
 git diff --check
 wc -l core/services/{menus/menuService,pages/pageTemplateLibraryService,pages/publicSiteShell,themes/themeProfileService,settings/settingsService,redirects/redirectService,forms/formsService,content/listingQueriesService,content/listingTemplatesService,content/detailPageDocumentService,tools/importExportService}.ts \
   core/services/cache/siteDependencyInvalidation.ts \
   core/services/redirects/redirectCachePolicy.ts \
+  core/services/kits/fullSiteInstall/{aggregateAdapters,lifecycleAdapters,executePreparedSaga,compensation,execute,rollback}.ts \
   tests/unit/menus/menuService.test.ts \
   tests/unit/pages/{pageTemplateLibraryService,publicSiteShell}.test.ts \
   tests/unit/themes/themeProfileService.test.ts \
@@ -338,7 +365,8 @@ wc -l core/services/{menus/menuService,pages/pageTemplateLibraryService,pages/pu
   tests/integration/runtime/site-routing-cache-invalidation.test.ts \
   tests/integration/runtime/site-form-listing-cache-invalidation.test.ts \
   tests/integration/runtime/site-shell-runtime.test.ts \
-  tests/integration/runtime/detail-page-preview-cache.test.ts
+  tests/integration/runtime/detail-page-preview-cache.test.ts \
+  tests/integration/kits/fullSiteInstallInvalidation.test.ts
 ```
 
 ## Documentation Updates Required

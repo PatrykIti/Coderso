@@ -78,7 +78,7 @@ secrets, raw PII, or customer payloads.
 | Leaf | Exact allowlist |
 |---|---|
 | TASK-551-01-L01 | `scripts/task-551-query-inventory.ts`; `tests/perf/fixtures/task551QueryInventory.ts`; `tests/perf/database-query-inventory.test.ts`; `tests/integration/server/task551BunLaneMembership.test.ts` |
-| TASK-551-01-L02 | `scripts/task-551-database-baseline.ts`; `tests/perf/fixtures/task551DatabaseScale.ts`; `tests/perf/fixtures/task551DatabaseBudgets.ts`; `tests/perf/fixtures/task551AdminReadStatementShapes.ts`; `tests/perf/database-query-baseline.test.ts` |
+| TASK-551-01-L02 | `scripts/task-551-database-baseline.ts`; `tests/perf/fixtures/task551DatabaseScale.ts`; `tests/perf/fixtures/task551DatabaseBudgets.ts`; `tests/perf/fixtures/task551AdminReadStatementShapes.ts`; `tests/perf/fixtures/task489SolutionKitRunPredecessor.ts`; `tests/perf/database-query-baseline.test.ts` |
 
 Both leaves forbid edits to production source, `core/db/migrations/**`,
 `core/db/migrations/meta/**`, `_docs/_TASKS/**`, `_docs/_CHANGELOG/**`, and

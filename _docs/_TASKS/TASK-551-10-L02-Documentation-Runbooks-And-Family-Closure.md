@@ -7,8 +7,8 @@
 **Estimated Effort:** Large
 **Dependencies:** exact compile-green owner sequence
 TASK-551-01 → 02 → 08-L03 INITIAL → 05 → 03-L01 → 06-L01/L02/L03 →
-07-L01 → 09-L04 INITIAL → 03-L02 → 03-L03 → 04 → 07-L02 →
-08-L01/L02/L03 FINAL → 09-L01/L02/L03/L04 FINAL →
+07-L01 → 09-L04 INITIAL → 03-L02 → 07-L02 → 08-L01/L02/L03 FINAL →
+03-L03 → 04 → 09-L01/L02/L03/L04 FINAL →
 01-L01 final refresh complete;
 TASK-551-10-L01 aggregate/full gates and Redis smoke PASS; TASK-551-11 post-
 audit plus fresh final-drift PASS; every production owner terminal-ready with no
@@ -22,7 +22,7 @@ unresolved finding
 
 Publish the final database-performance and server-cache sources of truth,
 document safe small-site and multi-replica operations, record measured outcomes
-and collision handoffs, then close all 37 physical TASK-551 tasks and changelog
+and collision handoffs, then close all 38 physical TASK-551 tasks and changelog
 1263 without reopening any production, test, migration, gate, or workflow
 contract.
 
@@ -89,6 +89,11 @@ formatter that rewrites unrelated documentation.
 - production query classification and inventory ownership;
 - explicit projections, point/detail boundaries, keyset cursor/version rules,
   stable ordering, batch/backpressure and N+1 prevention;
+- cursor rotation's strict optional `PAGINATION_CURSOR_RETIRED_KEYS` MAC-verifiable
+  version/secret pairs and coarse `classifyPaginationCursorFailure` terminal class: default
+  routes still expose generic invalid, while a later internal route may map only
+  expired/explicitly retired continuation state to fixed refresh copy without
+  exposing or distinguishing key versions;
 - search-vector/trigram ownership and exact query/index alignment;
 - constraints, index ordering/selectivity/write amplification, FK access paths,
   safe index removal evidence, and sanitized EXPLAIN workflow;
@@ -198,6 +203,31 @@ formatter that rewrites unrelated documentation.
   new-binary traffic makes rollback forward-fix only. Preserve numeric/crash/
   concurrent-drop gates; transaction has no index DDL. Run rollout-forward twice
   (second zero-DDL/transition), then `status`;
+- the normalized TASK-489 predecessor authority: exact
+  `solution_kit_starter_apply_owners` and
+  `solution_kit_legacy_template_evidence` and
+  `solution_kit_legacy_rollback_progress` tables, typed run proof columns,
+  typed high-level template-plan columns, composite relation FKs,
+  `rollback_of_run_id ON DELETE RESTRICT`, active-owner/
+  one-running-rollback/relation/history indexes and checks, no JSON owner/evidence/
+  progress/proof predicate, and the dedicated five-ID companion plan receipt at
+  10,000/1,000,000 runs. Record all fourteen logical cases, fifteen statement
+  cases, thirty finite scale receipts, exact named indexes, relation-heavy
+  101-candidate pages, two-statement detail, 512-plus-sentinel bounds, projection
+  exclusions, and p95 results without adding them to the closed 37-ID TASK-551
+  registry;
+- Solution Kit retention's locked set-based active/retry graph preservation and
+  child-first released/proof-complete pruning, terminal TASK-551-06's Bun-free
+  install-item/template-state/template-evidence/template-progress/combined-progress
+  digest owner with literal domain frames and exact state preimages
+  plus canonical core/template global-position map with known vectors and independent
+  retention recomputation, atomic <=2,000-row
+  deletion of one complete failed owner at a time for unbounded retries, and one
+  final atomic successful-relation/source graph, plus
+  memory/Redis adoption proving
+  every legacy and all-ten-kind full-site apply/rollback/compensation mutation
+  commits its backend-specific invalidation receipt with the resource/run receipt
+  and awaits the sole post-commit boundary;
 - TASK-551-06 analytics upgrade compatibility: only
   `ANALYTICS_RETENTION_DAYS`, absent/malformed/non-finite → 365, finite floor+
   clamp `30..1095`, enablement only through `RETENTION_ANALYTICS_ENABLED`, both
@@ -465,11 +495,11 @@ zero-impact LOW may use the permanent backlog with the parent's exact evidence.
 
 ## Terminal Task-Graph Contract
 
-The complete family is exactly 37 physical task files:
+The complete family is exactly 38 physical task files:
 
 - one parent;
 - 11 technical children;
-- 25 executable leaves distributed `2,2,3,2,2,3,2,3,4,2,0` across children
+- 26 executable leaves distributed `2,2,3,2,3,3,2,3,4,2,0` across children
   01 through 11.
 
 Changelog 1263 must list the parent ID, every child ID, and every leaf ID before
@@ -479,18 +509,29 @@ then children, then the parent. No parent closes over an open descendant.
 Read both indexes fresh immediately before closeout. Move only the TASK-551
 parent board row from its current bucket to Done; descendants remain represented
 through that row. Recompute statistics from the actual pre-close status of all
-37 verified task files. For every non-Done node transitioning to Done, subtract
+38 verified task files. For every non-Done node transitioning to Done, subtract
 one from its real source bucket (`To Do` or `In Progress`) and add one to Done;
 already-Done nodes contribute zero. Assert the per-bucket source counts, newly-
-Done total, and graph total 37 before writing. Never assume `-37/+37`, leave an
+Done total, and graph total 38 before writing. Never assume `-38/+38`, leave an
 In Progress count unchanged despite a real transition, or hardcode stale totals.
 
 Create exactly one changelog 1263 file with the actual UTC closure date, list
-all 37 IDs, before/after metrics, all command results and required skips (there
+all 38 IDs, before/after metrics, all command results and required skips (there
 must be none), Redis version/smoke scenario outcomes, migration and security
 evidence, collision handoffs, post-audit summary, docs, and explicit non-goals.
 Add exactly one index row and advance the next-unreserved pointer without
 disturbing other reservations.
+
+**Closure authority is current state, not commit history.** Closure validates the
+current source, tests, and docs, the current terminal statuses, board/changelog
+1263 synchronization, and truthful receipts. The repository owner may create one
+atomic closure commit containing the changelog 1263 file, its index row, all 38
+task-file status edits, and the board row/statistics as operational hygiene, but
+that commit's history — including any unique changelog ADD commit — is NOT an
+immutable downstream handoff gate. No task-local tool derives, requires, or
+verifies a closure commit as independent authority; no partial status is closed
+before the changelog file exists, and TASK-548-08 consumes current-state
+authority separately from any commit history.
 
 ## Security Contract
 
@@ -513,8 +554,8 @@ disturbing other reservations.
 async function closeTask551Metadata(input: ClosureReceipts): Promise<void> {
   const current = await readFreshTaskAndChangelogIndexes();
   const graph = await validateExactTask551Graph({
-    parent: 1, children: 11, leaves: 25,
-    leafDistribution: [2, 2, 3, 2, 2, 3, 2, 3, 4, 2, 0],
+    parent: 1, children: 11, leaves: 26,
+    leafDistribution: [2, 2, 3, 2, 3, 3, 2, 3, 4, 2, 0],
   });
   requireCurrentPassingReceipts(input, graph);
   requireCurrentFinalQueryInventoryReceipt(input.queryInventory, {
@@ -532,6 +573,15 @@ async function closeTask551Metadata(input: ClosureReceipts): Promise<void> {
       "TASK-551-09-L03", "TASK-551-09-L04"],
     exitCode: 0, skipped: false, requirePositiveTestDiscovery: true,
   });
+  requireTask489PredecessorReceipt(input.task489Predecessor, {
+    ids: 5, logicalCases: 14, statementCases: 15,
+    planScaleReceipts: 15, numericScaleReceipts: 30,
+    requiredCases: ["runs-all-relation-heavy-101",
+      "runs-package-relation-heavy-101", "safe-detail-run-point",
+      "safe-detail-items-page"],
+    smallRuns: 10_000, largeRuns: 1_000_000,
+    closedTask551RegistryUnchanged: true,
+  });
   requireNoUnresolvedFindings(input.finalDrift);
   requireEveryDocumentMatchesCurrentSource(input.docs);
 
@@ -543,7 +593,7 @@ async function closeTask551Metadata(input: ClosureReceipts): Promise<void> {
     handoffs: input.handoffs,
   });
   const statusDelta = deriveCurrentStatusBucketDelta(graph.currentStatuses, {
-    terminal: "Done", graphCount: 37,
+    terminal: "Done", graphCount: 38,
   });
   await writeNewChangelogAndIndexRow(changelog); // fail on existing/collision
   await markDescendantsThenParentsDone(graph);
@@ -553,7 +603,7 @@ async function closeTask551Metadata(input: ClosureReceipts): Promise<void> {
 ```
 
 **Data flow:** final source/gate/audit/smoke receipts → current-source docs and
-runbooks → strict 37-file graph/index validation → changelog 1263 coverage →
+runbooks → strict 38-file graph/index validation → changelog 1263 coverage →
 descendant-to-parent terminal metadata → board/statistics/index verification.
 
 **Error handling:** stale/missing receipt, doc/source mismatch, open descendant,
@@ -562,7 +612,7 @@ index drift, unresolved finding, required skip, leaked sensitive value, broken
 link, or unexpected diff aborts closure. Re-read after any conflict; never
 overwrite or revert another task's bytes.
 
-**Regression-test shape:** workflow/task-graph tests prove 37-file membership,
+**Regression-test shape:** workflow/task-graph tests prove 38-file membership,
 leaf distribution, changelog coverage before terminal status, child-before-parent
 closure, one board row move, current-status-derived per-bucket statistics deltas
 for mixed To Do/In Progress/already-Done fixtures, graph-total preservation, one
@@ -582,9 +632,14 @@ refusal on stale/concurrent index bytes.
   diff check, and complete touched production/test line-count gate below.
 - Do not write terminal metadata when any receipt is stale, skipped, malformed,
   missing a screenshot/theme, or carries a console error or unresolved finding.
-- Validate status statistics from the actual 37-node pre-close buckets; fixtures
+- Prepare exactly ONE reviewed closure scope for the owner (changelog 1263
+  file + index row + all 38 task-file status edits + board row/statistics) and
+  never close/commit partial status before the changelog file exists; the
+  changelog file's presence is a synchronization fact, not an immutable
+  commit-history gate.
+- Validate status statistics from the actual 38-node pre-close buckets; fixtures
   must cover the TASK-551-01 interim In Progress state and already-Done nodes,
-  and must reject a hardcoded `To Do -37 / Done +37` assumption.
+  and must reject a hardcoded `To Do -38 / Done +38` assumption.
 
 ## Exact Validation Commands
 

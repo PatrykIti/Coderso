@@ -6,20 +6,20 @@
 **Priority:** High
 **Category:** Task Metadata / Changelog / Historical Integrity / Closure
 **Estimated Effort:** Medium
-**Dependencies:** TASK-545-01..03
+**Dependencies:** TASK-545-01, TASK-545-02, TASK-545-03
 **Status:** ⏳ To Do
 **Changelog:** 1257 (pinned; closure only)
 
 ---
 
-## Scope
+## Overview
 
 Correct the enumerated stale task metadata, reconstruct only three missing
 historical parent files from evidence, then reconcile fresh board/changelog
 indexes/statistics and close TASK-545. Product implementation and statuses of
 completed TASK-495–535 families are not reopened.
 
-## Leaves and order
+## Sub-Tasks
 
 | ID | Title | Exclusive ownership | Status |
 |---|---|---|---|
@@ -48,3 +48,20 @@ the newly allocated historical-cleanup leaf is L04.
 Documentation/workflow metadata only. Do not copy exploit payloads, secrets,
 credentials, raw logs, or user data. No scanner allowlist, API, DB, auth, CSRF,
 rate-limit, nonce, or captcha change.
+
+## Testing Requirements
+
+- Run the focused task-graph integrity suite after L01, L02, and L04 land.
+- Recount board buckets and compare every TASK-545 descendant, reconstructed
+  historical parent, and changelog reference against physical files.
+- Run all TASK-545 workflow/evidence suites, repository gates, strict security
+  scan, and `git diff --check` before closure.
+- Block closure on any open descendant, stale statistic, missing evidence, or
+  non-allowlisted delta.
+
+## Documentation Updates Required
+
+- L03 is the sole final writer for `_docs/_TASKS/README.md`,
+  `_docs/_CHANGELOG/README.md`, changelog 1257, and TASK-545 completion fields.
+- L01/L02/L04 may edit only their explicitly enumerated historical metadata and
+  evidence files; they do not close the family.

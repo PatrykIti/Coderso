@@ -14,7 +14,8 @@
 ## Overview
 
 Own the reproducible TASK-551 multi-agent workflow: grounded research, authoring,
-at least five sequential contract drift-audit rounds, strict implementation
+one complete contract drift-audit round plus affected-scope repeats when needed,
+strict implementation
 dispatch in child/leaf order, per-leaf gates, independent post-audit lenses,
 two-process Redis-smoke dispatch, fresh final drift, and structured evidence.
 
@@ -35,7 +36,7 @@ This child may create or edit only:
 - `tests/unit/workflows/task551AuthorAudit.test.ts`;
 - `tests/unit/workflows/task551WorkflowContracts.test.ts`;
 - `_docs/_workflows/_smoke/task-551/audit-evidence/*.json`;
-- the 37 `TASK-551*.md` contract files during research/authoring/drift-fix
+- the 38 `TASK-551*.md` contract files during research/authoring/drift-fix
   rounds only, with no status/board/changelog transitions and no edits after
   implementation starts except evidence-backed contract corrections that rerun
   the required audits.
@@ -53,9 +54,10 @@ commits.
 
 ## Frozen Task Graph and Land Order
 
-The workflow requires exactly 37 TASK-551 files: one parent, 11 children, and 25
-leaves distributed `2,2,3,2,2,3,2,3,4,2,0`. Missing, duplicate, extra,
-misnamed, wrong-H1, wrong-FileName, wrong-parent, noncanonical status, or
+The workflow requires exactly 38 TASK-551 files: one parent, 11 children, and 26
+leaves distributed `2,2,3,2,3,3,2,3,4,2,0` (subtask 05 gained executable leaf
+05-L03 for the normalized Solution Kit rollback authority). Missing, duplicate,
+extra, misnamed, wrong-H1, wrong-FileName, wrong-parent, noncanonical status, or
 non-1263 task metadata fails before implementation. Every file must contain each
 literal level-two heading exactly once: `Overview`, `Sub-Tasks`,
 `Testing Requirements`, and `Documentation Updates Required`.
@@ -64,16 +66,17 @@ TASK-551-11 runs throughout, while compile-green dispatch executes strictly:
 
 ```text
 01-L01(initial) → 01-L02 → 02-L01 → 02-L02 → 08-L03(initial) →
-05-L01 → 05-L02 → 03-L01 → 06-L01 → 06-L02 →
-06-L03 → 07-L01 → 09-L04(initial) → 03-L02 → 03-L03 →
-04-L01 → 04-L02 → 07-L02 → 08-L01 → 08-L02 → 08-L03(final) →
+05-L01 → 05-L03 → 05-L02 → 03-L01 → 06-L01 → 06-L02 →
+06-L03 → 07-L01 → 09-L04(initial) → 03-L02 → 07-L02 →
+08-L01 → 08-L02 → 08-L03(final) → 03-L03 → 04-L01 → 04-L02 →
 09-L01 → 09-L02 → 09-L03 → 09-L04(final) → 01-L01(final) → 10-L01 →
 post-audit/fix/affected-gates/aggregate+smoke → final-drift →
 10-L02 docs/changelog/status/board closure
 ```
 
 The explicit interleave is mandatory: 06 services land after 03-L01 and before
-03-L02; 04 begins only after 03-L03. Within every non-interleaved child, leaves
+03-L02; terminal 08-L03 lands before 03-L03's first legacy invalidation edit;
+04 begins only after 03-L03. Within every non-interleaved child, leaves
 run numerically in the displayed order. TASK-551-01-L01 remains the sole
 inventory-artifact writer in both dispatches; no later leaf edits its files.
 The workflow loads the initial receipt for implementation, re-dispatches L01
@@ -92,24 +95,27 @@ Before any product implementation:
 2. Authors write only their assigned task contract. Every executable leaf must
    include exact ownership/forbidden paths, helper/function pseudocode, data flow,
    error handling, regression shape, security contract, DB/Redis fixture safety,
-   and correct commands. Every one of the 37 files must contain the four literal
+   and correct commands. Every one of the 38 files must contain the four literal
    required level-two headings validated above.
-3. Run at least five sequential rounds. Each round dispatches one read-only
-   per-file audit for every one of the 37 files plus exactly one cross-file
-   reconcile audit.
+3. Run one complete round: one read-only per-file audit for every one of the 38
+   files plus exactly one cross-file reconcile audit.
 4. Require every expected structured result. A timeout, malformed/missing result,
    or absent reconcile makes the whole round void; it is never a clean pass.
 5. Verify every finding locally. Dispatch per-file fixers plus one cross-file
-   fixer for real HIGH/MEDIUM findings, restricted to named task files. Record
-   LOW findings and apply the parent's strict TASK-9999 eligibility policy.
-6. After five completed rounds, run one fresh final reconcile. Product dispatch
-   requires zero findings of any severity and zero audit errors.
+   fixer for real HIGH/MEDIUM findings, restricted to named task files. After a
+   fix, rerun only every changed/affected per-file scope plus one fresh reconcile;
+   unchanged clean results remain valid. Do not replay clean scopes or require a
+   minimum round count. Record LOW findings and apply the parent's strict
+   TASK-9999 eligibility policy.
+6. Product dispatch requires a returned result from every required scope, zero
+   unresolved HIGH/MEDIUM, every LOW fixed or linked through eligible TASK-9999
+   evidence, and one fresh final reconcile over the current contracts.
 
 The reconcile checks only cross-file contradictions: exact writer/forbidden
 paths, shared type/helper/error/schema/key/tag/env names, clamp/budget values,
 test/evidence paths, migration ownership (including the full
 `core/db/migrations/meta/_journal.json` path), fixture profiles, Redis behavior,
-TASK-511/517/493/518 handoffs, land order, 37-file graph, and changelog 1263.
+TASK-511/517/493/518 handoffs, land order, 38-file graph, and changelog 1263.
 It explicitly pins `withDedicatedDatabaseSession`, `PaginationCursorKeyring`,
 `loadPaginationCursorKeyring`,
 `registerPaginationCursorLifecycleParticipant`,
@@ -397,7 +403,7 @@ ignored author-workflow path, fingerprint file SHA-256/mode or symlink target,
 and fingerprint the full git index; take before/after snapshots; require author
 `result.file` to equal its assigned filename; require each author/per-file fixer
 `changedPaths` to be empty or its one assigned task path; restrict the cross
-fixer to the exact frozen 37 task paths; and require the sorted union of reports
+fixer to the exact frozen 38 task paths; and require the sorted union of reports
 to equal the actual fingerprint delta exactly. Any index mutation or out-of-
 scope delta fails. Run the exact task-graph validator after each fixer batch/
 round and immediately before final reconcile. Author prompts must require
@@ -409,6 +415,13 @@ fresh reconcile before dispatch.
 
 ## Implementation and Gate Orchestration
 
+- Before the first product dispatch, all four sidecar workflow/lib files must be
+  tracked regular non-symlink files, byte-identical to HEAD, and green under the
+  two workflow tests. Because `_docs/_workflows/` is ignored in the current tree,
+  the owner must explicitly track and commit the reviewed files first; an ignored/
+  untracked local helper never authorizes implementation. Any later workflow or
+  task-contract change invalidates the audit and requires affected re-audit plus
+  fresh reconcile on the new current tree.
 - Before the first product dispatch, require TASK-511, TASK-493, TASK-517, and
   TASK-518 terminal. The only substitute is the parent's fresh exact serialized
   audit proving byte-disjoint schema/`core/db/migrations/meta/_journal.json`/
@@ -420,8 +433,11 @@ fresh reconcile before dispatch.
 - After each leaf, require every exact literal command from its current task
   manifest plus `bun --cwd core lint:types` and `bun --cwd core lint`; canonical
   argv/digest, zero exit/no skip, and positive test discovery are mandatory.
-  New default-lane TASK551 integration paths are under `tests/integration/server`,
-  never a legacy non-default integration tree. A fixer loop may run at
+  New TASK-551 integration paths follow dependency shape: server/route/runtime-kernel
+  boundaries use the existing Bun-owned `tests/integration/server` or
+  `tests/integration/runtime` lanes, while domain DB integration remains in its
+  existing `tests/integration/<domain>` lane. No leaf may invent a runner or move a
+  runtime contract to Vitest merely to satisfy path naming. A fixer loop may run at
   most three rounds and may edit only the same leaf-owned paths.
 - Prefer source correction. A test expectation changes only for an intended
   contract change and never weakens a behavior/security/performance assertion.
@@ -469,7 +485,7 @@ smoke gate, dispatch exactly five fresh read-only post-audit lenses:
 4. `performance-reliability-test-integrity` — frozen budgets, plans/query counts,
    fixture realism/cleanup, fault tests, no weakened assertions or false skips.
 5. `cross-stream-doc-task-closure` — ownership, TASK-511/517/493/518 state,
-   release-gate/runtime evidence, docs, 37-file graph, status order, board and
+   release-gate/runtime evidence, docs, 38-file graph, status order, board and
    changelog 1263 readiness.
 
 Every finding includes current `file:line` evidence. Verified HIGH/MEDIUM
@@ -526,9 +542,10 @@ type Task551RoundFixerResultV1 = Readonly<{
 
 type Task551RoundEvidenceV1 = Readonly<{
   schema: "coderso.task551.audit-round@v1";
-  round: 1 | 2 | 3 | 4 | 5;
-  expectedPerFile: 37;
-  returnedPerFile: 37;
+  sequence: number; // positive safe integer, contiguous from 1
+  scope: "complete" | "affected";
+  expectedPerFile: number; // complete=38; affected=exact nonempty affected set
+  returnedPerFile: number; // exact equality with expectedPerFile
   reconcileReturned: true;
   findingCounts: Readonly<{ high: number; medium: number; low: number }>;
   fixerResults: readonly Task551RoundFixerResultV1[];
@@ -539,15 +556,15 @@ type Task551AuthorAuditResultV1 = Readonly<{
   schema: "coderso.task551.author-audit@v1";
   pass: boolean;
   tree: "TASK-551";
-  expectedFiles: 37;
+  expectedFiles: 38;
   changelog: 1263;
   landOrder: readonly [
     "551-01-L01(initial)", "551-01-L02", "551-02-L01", "551-02-L02",
-    "551-08-L03(initial)", "551-05-L01", "551-05-L02", "551-03-L01",
+    "551-08-L03(initial)", "551-05-L01", "551-05-L03", "551-05-L02", "551-03-L01",
     "551-06-L01", "551-06-L02", "551-06-L03", "551-07-L01",
-    "551-09-L04(initial)", "551-03-L02", "551-03-L03", "551-04-L01",
-    "551-04-L02", "551-07-L02", "551-08-L01", "551-08-L02",
-    "551-08-L03(final)", "551-09-L01", "551-09-L02", "551-09-L03",
+    "551-09-L04(initial)", "551-03-L02", "551-07-L02", "551-08-L01",
+    "551-08-L02", "551-08-L03(final)", "551-03-L03", "551-04-L01",
+    "551-04-L02", "551-09-L01", "551-09-L02", "551-09-L03",
     "551-09-L04(final)", "551-01-L01(final)",
     "551-10-L01", "post-audit/fix/affected-gates/aggregate+smoke",
     "final-drift", "551-10-L02"
@@ -618,7 +635,8 @@ objects do not repeat a `schema`, summary, finding, or rejection field. Audit
 `pass` is true only when `errors` and HIGH/MEDIUM findings are empty;
 the final reconcile additionally requires zero findings of any severity. Fix
 results use the exact V1 owner/path/result shape above. Validate exact lens
-IDs/order, five rounds, result cardinality, file ownership, finite counts,
+IDs/order, one complete round plus only evidence-triggered affected repeats,
+result cardinality, file ownership, finite counts,
 canonical task IDs and lowercase SHA-256. Evidence contains no
 prompt transcript, provider metadata, env value, connection URL, SQL/bind,
 cached body, Redis key, cookie/token, raw log, PII, or secret.
@@ -641,17 +659,26 @@ cached body, Redis key, cookie/token, raw log, PII, or secret.
 
 ```ts
 async function runTask551Workflow(): Promise<Task551WorkflowResultV1> {
-  const graph = await requireExactTask551Graph(37, [2,2,3,2,2,3,2,3,4,2,0]);
+  const graph = await requireExactTask551Graph(38, [2,2,3,2,3,3,2,3,4,2,0]);
   const research = await requireAllResults(await runGroundedResearchScopes());
   await runScopedAuthors(graph, research);
 
   const rounds = [];
-  for (let round = 1 as 1 | 2 | 3 | 4 | 5; round <= 5; round++) {
-    const perFile = requireAllResults(await auditEveryTaskFile(graph));
-    const reconcile = requireOneResult(await auditCrossFileReconcile(graph));
+  let sequence = 1;
+  let perFile = requireAllResults(await auditEveryTaskFile(graph));
+  let reconcile = requireOneResult(await auditCrossFileReconcile(graph));
+  while (true) {
     const verified = await verifyFindingsLocally(perFile, reconcile);
-    const fixes = await runScopedTaskFixersForHighMedium(verified);
-    rounds.push(normalizeRoundEvidence(round, perFile, reconcile, fixes));
+    const resolution = await resolveVerifiedFindings(verified); // fix H/M;
+    // fix LOW or prove/link exact TASK-9999 eligibility
+    rounds.push(normalizeRoundEvidence({ sequence, scope: sequence === 1
+      ? "complete" : "affected", perFile, reconcile,
+      fixes: resolution.fixerResults }));
+    if (resolution.cleanForDispatch) break;
+    const affected = requireExactAffectedTaskSet(verified, resolution);
+    perFile = requireAllResults(await auditAffectedTaskFiles(affected));
+    reconcile = requireOneResult(await auditCrossFileReconcile(graph));
+    sequence += 1;
   }
   const finalReconcile = requireClean(await runFreshFinalReconcile(graph));
 
@@ -660,14 +687,13 @@ async function runTask551Workflow(): Promise<Task551WorkflowResultV1> {
     graph.task55101L01Initial, graph.task55101L02,
     graph.task55102L01, graph.task55102L02,
     graph.task55108L03Initial,
-    graph.task55105L01, graph.task55105L02,
+    graph.task55105L01, graph.task55105L03, graph.task55105L02,
     graph.task55103L01,
     graph.task55106L01, graph.task55106L02, graph.task55106L03,
     graph.task55107L01, graph.task55109L04Initial,
-    graph.task55103L02, graph.task55103L03,
-    graph.task55104L01, graph.task55104L02,
-    graph.task55107L02,
+    graph.task55103L02, graph.task55107L02,
     graph.task55108L01, graph.task55108L02, graph.task55108L03Final,
+    graph.task55103L03, graph.task55104L01, graph.task55104L02,
     graph.task55109L01, graph.task55109L02,
     graph.task55109L03, graph.task55109L04Final,
   ] as const;
@@ -702,7 +728,8 @@ async function runTask551Workflow(): Promise<Task551WorkflowResultV1> {
 ```
 
 **Data flow:** HEAD/status/diff + docs/source/tests/current task state → grounded
-research/authors → five complete audit/reconcile/fix rounds → final reconcile
+research/authors → one complete audit/reconcile/fix pass plus affected repeats
+only when required → final reconcile
 → sequential implementation through 09 and targeted gates → final 01-L01
 inventory refresh → L01 aggregate plus Admin UI/Redis smoke gate → five post-
 audit lenses/fixes/reruns → fresh final drift → L02 closeout.
@@ -713,9 +740,9 @@ evidence, missing service, task-graph drift, or unresolved finding terminates th
 phase. Resume only from freshly validated current state; do not infer success
 from an incomplete prior run.
 
-**Regression-test shape:** workflow tests assert exact 37-file graph and leaf
-distribution, five sequential rounds, 37/37 per-file results plus one reconcile
-per round, all four required headings, final reconcile, strict land order plus
+**Regression-test shape:** workflow tests assert exact 38-file graph and leaf
+distribution, one complete 38/38 pass plus exact affected-scope repeats and one
+reconcile per pass, all four required headings, final reconcile, strict land order plus
 the post-09 L01 final refresh, per-leaf gate/fix cap, collision
 owner verification, forbidden-path enforcement, five post-audit lenses, L01
 Redis and Admin-list UI evidence hash verification, L02-only metadata authority,
@@ -727,16 +754,17 @@ structured schema rejection, and non-zero failure on every false-clean condition
 
 ## Testing Requirements
 
-- Validate the exact 37-file membership, H1, `# FileName`, parent fields,
+- Validate the exact 38-file membership, H1, `# FileName`, parent fields,
   canonical status, changelog 1263, child/leaf distribution, and all four literal
   required headings before accepting author output or final reconcile.
-- Require five complete 37/37 rounds plus one reconcile each, exact structured
-  result shapes, and a fresh zero-finding final reconcile.
+- Require one complete 38/38 pass plus one reconcile, then only exact affected-
+  scope repeats after verified HIGH/MEDIUM fixes; reject ceremonial replay,
+  missing results, false-clean rounds, and stale final reconcile.
 - Test the initial and post-09 final TASK-551-01-L01 dispatches, zero planned
   deltas in the final receipt, the exact displayed interleave
   `01-L01(initial)→01-L02→02-L01→02-L02→08-L03(initial)→05-L01→05-L02→
-  03-L01→06-L01→06-L02→06-L03→07-L01→09-L04(initial)→03-L02→03-L03→
-  04-L01→04-L02→07-L02→08-L01→08-L02→08-L03(final)→09-L01→09-L02→
+  03-L01→06-L01→06-L02→06-L03→07-L01→09-L04(initial)→03-L02→07-L02→
+  08-L01→08-L02→08-L03(final)→03-L03→04-L01→04-L02→09-L01→09-L02→
   09-L03→09-L04(final)→01-L01(final)→10-L01`,
   and failure on a missing/stale refresh.
 - Validate every executable 01..09 leaf's exact literal argv manifest/SHA-256,
@@ -746,7 +774,7 @@ structured schema rejection, and non-zero failure on every false-clean condition
   themes, ten screenshots, and zero console errors before L02 dispatch.
 - Test dirty/untracked/ignored-workflow and git-index before/after guards,
   exact author `file`, per-agent assigned-only `changedPaths`, combined-report/
-  actual-delta equality, cross-fixer exact-37 allowlisting, rejection of index
+  actual-delta equality, cross-fixer exact-38 allowlisting, rejection of index
   or out-of-scope mutation, and task-graph validation after every fixer batch
   and before final reconcile.
 

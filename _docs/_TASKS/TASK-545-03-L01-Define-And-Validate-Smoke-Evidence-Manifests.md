@@ -13,28 +13,52 @@
 
 ---
 
+## Overview
+
+Define and validate the strict runtime-smoke evidence, checkpoint, Git binding,
+and owner-controlled resume contracts while consuming the shared smoke runner.
+
+## Sub-Tasks
+
+None; this is an executable leaf with the exclusive file ownership below.
+
 ## Exclusive ownership
 
 - new `_docs/_workflows/smoke-evidence.schema.json`
 - new `_docs/_workflows/smoke-evidence-checkpoint.schema.json`
 - new `_docs/_workflows/lib/smoke-evidence.mjs`
 - new `_docs/_workflows/lib/smoke-evidence.d.mts`
+- existing `scripts/runtime-smoke/adapters/types.ts`, only for the generic
+  backward-compatible visible-evidence result extension below
+- new `scripts/runtime-smoke/visible-evidence.ts`
 - new `tests/unit/workflows/smokeEvidence.test.ts`
+- new `tests/unit/runtime-smoke/visible-evidence.test.ts`
 - test fixtures under `tests/fixtures/workflows/smoke-evidence/`
 
-Do not edit `.gitignore`, real smoke screenshots, unrelated workflows, or docs in this
-leaf. TASK-545-03-L02 is the sole `.gitignore`/evidence-guidance writer.
+Because the two schemas, runtime, and declaration live below the globally
+ignored workflow tree, all four are explicit owner-review/force-track artifacts.
+The implementing agent returns their exact normalized paths and SHA-256 values
+and stops; a fresh invocation proves tracked regular-file, no-symlink, clean
+worktree, and `git show HEAD:<path>` byte parity before any workflow imports
+them. A pre-existing ignored lookalike is rebuilt and cannot authorize itself.
+This leaf is the sole owner of these artifacts; TASK-545-03-L02 owns `.gitignore`
+and evidence-guidance only.
 
 ## Manifest contract
 
 Each UI task writes
-`_docs/_workflows/_smoke/evidence/task-###/manifest.json` with exact top/nested
+`_docs/_workflows/_smoke/evidence/task-###/<session>/manifest.json` from the
+strict shared-runner report, with exact top/nested
 keys and:
 
 ```json
 {
   "schemaVersion": 1,
   "taskId": "TASK-540",
+  "suiteId": "task-540",
+  "profile": "certification",
+  "session": "task-540-certification",
+  "report": { "path": "report.json", "sha256": "64-lowercase-hex" },
   "revision": {
     "gitHead": "40-lowercase-hex",
     "workingTreeDirty": true,
@@ -46,42 +70,76 @@ keys and:
     {
       "id": "stable-kebab-id",
       "title": "human title",
-      "surface": "admin",
-      "theme": "light",
-      "viewport": { "width": 390, "height": 844 },
-      "assertions": [
+      "variants": [
         {
-          "kind": "computed-style",
-          "target": "safe selector/description",
-          "property": "display",
-          "expected": "none",
-          "actual": "none",
-          "pass": true
+          "id": "dark-narrow",
+          "surface": "admin",
+          "theme": "dark",
+          "viewport": { "width": 390, "height": 844 },
+          "assertions": [
+            {
+              "kind": "computed-style",
+              "target": "safe selector/description",
+              "property": "display",
+              "expected": "none",
+              "actual": "none",
+              "pass": true
+            }
+          ],
+          "consoleErrors": []
         }
       ],
-      "consoleErrors": [],
       "screenshots": [
-        { "path": "scenario-1.png", "sha256": "64-lowercase-hex" }
+        { "path": "stable-kebab-id.png", "sha256": "64-lowercase-hex" }
       ]
     }
   ]
 }
 ```
 
-At least five distinct scenarios are required. Every scenario has non-empty
-visible assertions, zero console errors, an explicit `admin|public` surface, a
-valid viewport/theme, and at least one screenshot/hash. If any admin surface is
-present, the manifest must contain both an admin-light and admin-dark scenario.
+At least five distinct scenario IDs are required. Every scenario has a non-empty
+strict `variants[]`; variant IDs are unique within the scenario. Every variant
+has non-empty visible assertions, zero console errors, an explicit
+`admin|public` surface, and a valid viewport/theme. Every scenario has at least
+one bounded screenshot/hash for human review; additional variant screenshots
+are allowed but not required when machine-visible proof distinguishes them. If
+any Admin surface is present, the manifest's variants must
+collectively contain both Admin light and Admin dark. Profile-specific contracts
+may require the same scenario in multiple theme/viewport variants without
+inventing extra scenario IDs.
 Assertion kinds are an enum:
 `computed-style|geometry|dom-state|aria`. Mere control/rule/string presence is
 not a valid visible assertion.
+
+The shared runner report, not a task workflow or handwritten manifest, is the
+sole authority for scenario pass state, title, variants, visible assertions,
+variant console errors, and screenshot path/hash assignment. The generic
+`SmokeScenarioResult` gains optional strict `title`, `variants`, and
+`screenshots` fields so existing non-manifest adapters remain source-compatible.
+Any suite entering this manifest lifecycle must provide all three, and every new
+or substantially changed UI adapter must do so. `scripts/runtime-smoke/
+visible-evidence.ts` owns their bounded recursive normalizer/builders; task-local
+copies or report postprocessors are forbidden.
+
+For a manifest-bearing report, the report's global `screenshots` array is
+byte-equivalent, after canonical ordering, to the unique union of scenario-owned
+screenshots. A screenshot belongs to exactly one scenario. Manifest generation
+is a pure projection that drops only runtime-only elapsed/timing/cleanup fields;
+it cannot add, rename, reinterpret, or mark passing a scenario, variant,
+assertion, console result, or screenshot. `requireManifestEqualsRunnerReport`
+requires exact ordered scenario IDs, every report `pass === true`, exact titles,
+deep byte-equivalent variants/assertions/console arrays, exact scenario
+screenshots, and exact global screenshot union. Missing report evidence,
+manifest-only evidence, duplicate ownership, or any difference fails before
+filesystem screenshot hashing.
 
 `revision` is mandatory. `workingTreeSha256` is SHA-256 over a canonical stream made
 from `gitHead`, sorted `git status --porcelain=v1 -z --untracked-files=all` records, and
 for each changed/untracked path its status, normalized repository-relative path, mode,
 and content hash (or deletion marker). The implementation derives the one exclusion from
-the real Git repository root and `expectedTask` as
-`_docs/_workflows/_smoke/evidence/task-###/`; callers cannot supply an evidence root.
+the real Git repository root, `expectedTask`, and strict report-bound
+`expectedSession` as
+`_docs/_workflows/_smoke/evidence/task-###/<session>/`; callers cannot supply an evidence root.
 Do not exclude source, tests, configuration, task contracts, runtime documentation, or
 other dirty files.
 
@@ -121,13 +179,64 @@ This keeps the runtime file valid JavaScript while allowing consumers to import
 the exact owner types from `./lib/smoke-evidence.mjs` without local substitutes.
 
 ```ts
-// smoke-evidence.d.mts
+// scripts/runtime-smoke/adapters/types.ts; optional only for legacy compatibility
+export interface SmokeVisibleAssertionResult {
+  readonly kind: "computed-style" | "geometry" | "dom-state" | "aria";
+  readonly target: string;
+  readonly property: string;
+  readonly expected: string;
+  readonly actual: string;
+  readonly pass: boolean;
+}
+export interface SmokeScenarioVariantResult {
+  readonly id: string;
+  readonly surface: "admin" | "public";
+  readonly theme: "light" | "dark";
+  readonly viewport: Readonly<{ width: number; height: number }>;
+  readonly assertions: readonly SmokeVisibleAssertionResult[];
+  readonly consoleErrors: readonly string[];
+}
+export interface SmokeScenarioResult {
+  readonly id: string;
+  readonly pass: boolean;
+  readonly elapsedMs: number;
+  readonly title?: string;
+  readonly variants?: readonly SmokeScenarioVariantResult[];
+  readonly screenshots?: readonly SmokeScreenshotResult[];
+}
+export function requireManifestableScenarioResults(
+  scenarios: readonly SmokeScenarioResult[],
+  globalScreenshots: readonly SmokeScreenshotResult[],
+): readonly ManifestableSmokeScenarioResult[] {
+  const normalized = scenarios.map(normalizeStrictManifestableScenario);
+  assertExactUniqueScreenshotUnion(normalized, globalScreenshots);
+  return Object.freeze(normalized);
+}
 declare const verifiedTask545Checkpoint: unique symbol;
+export type SmokeEvidenceCheckpointV1 = Readonly<{
+  schemaVersion: 1;
+  taskId: TaskId;
+  suiteId: string;
+  profile: "fast" | "certification";
+  session: string;
+  runId: string;
+  workflowEntry: string;
+  evidenceDirectory: string;
+  manifestSha256: string;
+  evidenceFiles: readonly Readonly<{ path: string; sha256: string }>[];
+  frozenRuntime: WorkingTreeRevision;
+  closureContract: SmokeEvidenceClosureContractV1;
+  phase1: Readonly<{
+    state: "owner_review_required";
+    generatedAt: string;
+  }>;
+}>;
 export type VerifiedTask545Checkpoint = Readonly<
   SmokeEvidenceCheckpointV1 & { [verifiedTask545Checkpoint]: true }
 >;
 export type Task545ClosureIdentity = Readonly<{
-  taskId: TaskId; runId: string; checkpointSha256: string;
+  taskId: TaskId; suiteId: string; profile: "fast" | "certification";
+  session: string; runId: string; checkpointSha256: string;
   changelogNumber: number; changelogSlug: string;
   closureUtcDate: CanonicalUtcDate;
   pinnedChangelogPath: `_docs/_CHANGELOG/${string}.md`;
@@ -138,13 +247,20 @@ export type VerifiedTask545MetadataRecoveryDelta = Readonly<{
   closureMetadataRevision: PublicWorkingTreeRevision;
   changedPaths: readonly string[];
 }>;
+export type SmokeEvidenceClosureContractV1 = Readonly<{
+  taskFiles: readonly string[];
+  supplementalTaskFiles: readonly string[];
+  taskIndex: "_docs/_TASKS/README.md";
+  changelogIndex: "_docs/_CHANGELOG/README.md";
+  changelogNumber: number;
+  changelogSlug: string;
+}>;
 export type Task545ClosureResume =
   | Readonly<{ state: "frozen"; checkpoint: VerifiedTask545Checkpoint;
       closureIdentity: Task545ClosureIdentity & { durableState: "none" } }>
   | Readonly<{ state: "metadata_recovery"; checkpoint: VerifiedTask545Checkpoint;
       closureIdentity: Task545ClosureIdentity & { durableState: "file-only" | "both" };
       delta: VerifiedTask545MetadataRecoveryDelta }>;
-
 export declare const TASK_548_COMMITTED_BOOTSTRAP_PATHS_V1: readonly [
   "_docs/_workflows/lib/task-548-contract.mjs",
   "_docs/_workflows/task-548-author-audit.mjs",
@@ -179,22 +295,33 @@ export function normalizeTask548CommittedSixPathBootstrapReceiptV1(
 export function requireTask548CommittedSixPathBootstrapAuthorizationV1(
   options: { repoRoot: string; receipt: unknown }
 ): Promise<VerifiedTask548CommittedSixPathBootstrapReceiptV1>;
-
-// smoke-evidence.mjs runtime contract
-export async function resolveCanonicalEvidenceDirectory(repoRoot, expectedTask) {
+export async function resolveCanonicalEvidenceDirectory(
+  repoRoot,
+  expectedTask,
+  expectedSession
+) {
   requireRepoTaskId(expectedTask); // TASK-[0-9]{3}, plus sole TASK-9999 sentinel
+  requireRuntimeSmokeSessionName(expectedSession);
   const realRepoRoot = await requireRealGitTopLevel(repoRoot);
   const expected = join(
     realRepoRoot,
     "_docs/_workflows/_smoke/evidence",
-    expectedTask.toLowerCase()
+    expectedTask.toLowerCase(),
+    expectedSession
   );
   await rejectSymlinkedExistingComponents(realRepoRoot, expected);
   return expected;
 }
-
-export async function computeWorkingTreeRevision(repoRoot, expectedTask) {
-  const evidenceRoot = await resolveCanonicalEvidenceDirectory(repoRoot, expectedTask);
+export async function computeWorkingTreeRevision(
+  repoRoot,
+  expectedTask,
+  expectedSession
+) {
+  const evidenceRoot = await resolveCanonicalEvidenceDirectory(
+    repoRoot,
+    expectedTask,
+    expectedSession
+  );
   const gitHead = await readExactGitHead(repoRoot);
   const records = await readPorcelainRecords(repoRoot, { includeUntracked: true });
   const outsideEvidence = canonicalStatusRecords(records, {
@@ -210,12 +337,12 @@ export async function computeWorkingTreeRevision(repoRoot, expectedTask) {
     records: outsideEvidence,
   };
 }
-
 export async function validateSmokeEvidence(options) {
-  requireExactExpectedRevisionOptions(options); // repo root, task, all revision fields
+  requireExactExpectedRevisionAndRunnerOptions(options); // repo root, task, suite/profile/session, report, revision
   const root = await resolveCanonicalEvidenceDirectory(
     options.repoRoot,
-    options.expectedTask
+    options.expectedTask,
+    options.expectedSession
   );
   const manifestPath = join(root, "manifest.json");
   await requireExactRealPath(dirname(manifestPath), root);
@@ -225,18 +352,32 @@ export async function validateSmokeEvidence(options) {
   if (raw.scenarios.length < 5) fail("smoke_scenarios_insufficient");
   if (!raw.serverUp) fail("smoke_server_down");
   if (raw.taskId !== options.expectedTask) fail("smoke_task_manifest_mismatch");
+  requireRegisteredRuntimeSmokeIdentity({
+    suiteId: raw.suiteId,
+    profile: raw.profile,
+    session: raw.session,
+    expectedSuite: options.expectedSuite,
+    expectedProfile: options.expectedProfile,
+    expectedSession: options.expectedSession,
+  });
+  const report = await readHashAndNormalizeSharedRuntimeSmokeReport(root, raw.report);
+  requireManifestEqualsRunnerReport(raw, report);
   if (!revisionEquals(raw.revision, options.expectedRevision)) fail("smoke_revision_mismatch");
-
   const ids = new Set();
   const adminThemes = new Set();
-  const referencedFiles = ["manifest.json"];
+  const referencedFiles = ["manifest.json", "report.json"];
   for (const scenario of raw.scenarios) {
     if (ids.has(scenario.id)) fail("smoke_scenario_duplicate");
     ids.add(scenario.id);
-    if (scenario.consoleErrors.length !== 0) fail("smoke_console_errors");
-    if (scenario.surface === "admin") adminThemes.add(scenario.theme);
-    if (!scenario.assertions.every((a) => a.pass === true)) fail("smoke_assertion_failed");
-    for (const shot of scenario.screenshots) {
+    const variantIds = new Set();
+    for (const variant of requireNonEmpty(scenario.variants)) {
+      if (variantIds.has(variant.id)) fail("smoke_variant_duplicate");
+      variantIds.add(variant.id);
+      if (variant.consoleErrors.length !== 0) fail("smoke_console_errors");
+      if (variant.surface === "admin") adminThemes.add(variant.theme);
+      if (!variant.assertions.every((a) => a.pass === true)) fail("smoke_assertion_failed");
+    }
+    for (const shot of requireNonEmpty(scenario.screenshots)) {
       const resolved = resolve(root, shot.path);
       if (!isStrictDescendant(root, resolved) || isSymlinkEscape(resolved)) fail(...);
       const actual = sha256(await readFile(resolved));
@@ -251,16 +392,37 @@ export async function validateSmokeEvidence(options) {
   return {
     pass: true,
     taskId: raw.taskId,
+    suiteId: raw.suiteId,
+    profile: raw.profile,
+    session: raw.session,
     revision: raw.revision,
     scenarios: raw.scenarios.length,
     referencedFiles: referencedFiles.sort(),
   };
 }
-
+function requireManifestEqualsRunnerReport(manifest, report) {
+  const scenarios = requireManifestableScenarioResults(
+    report.scenarios,
+    report.screenshots,
+  );
+  requireEveryScenarioPassed(scenarios);
+  requireExactOrderedIds(manifest.scenarios, scenarios);
+  requireCanonicalByteEquality(
+    manifest.scenarios,
+    scenarios.map(projectManifestScenarioWithoutElapsedMs),
+    "smoke_manifest_report_evidence_mismatch",
+  );
+  requireCanonicalByteEquality(
+    uniqueScenarioScreenshotUnion(manifest.scenarios),
+    report.screenshots,
+    "smoke_manifest_report_screenshot_mismatch",
+  );
+}
 export async function auditSmokeEvidenceDirectory(options) {
   const taskDir = await resolveCanonicalEvidenceDirectory(
     options.repoRoot,
-    options.expectedTask
+    options.expectedTask,
+    options.expectedSession
   );
   const result = await validateSmokeEvidence(options);
   const referenced = result.referencedFiles;
@@ -275,7 +437,6 @@ export async function auditSmokeEvidenceDirectory(options) {
   }
   return result;
 }
-
 async function requireTaskBoundOwningWorkflow(options) {
   requireNoWorkflowEntryOverride(options);
   requireCanonicalOwnerRole(options.expectedWorkflowRole);
@@ -300,7 +461,6 @@ async function requireTaskBoundOwningWorkflow(options) {
   await requireCanonicalTask545StaticContractAndImportGates(entry);
   return entry;
 }
-
 export async function requireTask548CommittedSixPathBootstrapAuthorizationV1(options) {
   requireExactKeys(options, ["repoRoot", "receipt"]);
   const receipt = normalizeTask548CommittedSixPathBootstrapReceiptV1(
@@ -317,11 +477,10 @@ export async function requireTask548CommittedSixPathBootstrapAuthorizationV1(opt
   });
   return brandVerifiedTask548CommittedBootstrapReceipt(receipt);
 }
-
 export async function createResumeCheckpoint(options) {
   requireExactKeys(options, ["repoRoot", "expectedTask", "pinnedChangelogNumber",
     "pinnedChangelogSlug", "expectedWorkflowRole", "executingImportMetaUrl",
-    "runtimeResult"]);
+    "expectedSuite", "expectedProfile", "expectedSession", "runtimeResult"]);
   requirePinnedClosureIdentity(
     options.pinnedChangelogNumber,
     options.pinnedChangelogSlug,
@@ -333,7 +492,11 @@ export async function createResumeCheckpoint(options) {
     changelogNumber: options.pinnedChangelogNumber,
     changelogSlug: options.pinnedChangelogSlug,
   });
-  const revision = await computeWorkingTreeRevision(options.repoRoot, options.expectedTask);
+  const revision = await computeWorkingTreeRevision(
+    options.repoRoot,
+    options.expectedTask,
+    options.expectedSession
+  );
   const result = await auditSmokeEvidenceDirectory({
     ...options,
     expectedRevision: publicRevision(revision),
@@ -343,9 +506,20 @@ export async function createResumeCheckpoint(options) {
   const checkpoint = exactCheckpoint({
     schemaVersion: 1,
     taskId: options.expectedTask,
-    runId: deterministicRunId(options.expectedTask, result, revision),
+    suiteId: options.expectedSuite,
+    profile: options.expectedProfile,
+    session: options.expectedSession,
+    runId: deterministicRunId(
+      options.expectedTask,
+      options.expectedSession,
+      result,
+      revision
+    ),
     workflowEntry,
-    evidenceDirectory: canonicalRepoRelativeEvidencePath(options.expectedTask),
+    evidenceDirectory: canonicalRepoRelativeEvidencePath(
+      options.expectedTask,
+      options.expectedSession
+    ),
     manifestSha256: sha256(await readCanonicalManifest(options)),
     evidenceFiles: await hashSortedReferencedFiles(result),
     frozenRuntime: revision,
@@ -354,6 +528,11 @@ export async function createResumeCheckpoint(options) {
         options.repoRoot,
         options.expectedTask
       ),
+      supplementalTaskFiles:
+        await resolveOwnerControlledSupplementalClosureTaskFiles(
+          options.repoRoot,
+          options.expectedTask,
+        ),
       taskIndex: "_docs/_TASKS/README.md",
       changelogIndex: "_docs/_CHANGELOG/README.md",
       changelogNumber: options.pinnedChangelogNumber,
@@ -365,15 +544,26 @@ export async function createResumeCheckpoint(options) {
   await requireExactPresentSet(result.referencedFiles, "resume-checkpoint.json");
   return ownerActionRequired(checkpoint, sha256(canonicalJson(checkpoint)));
 }
-
 export async function resumeTrackedEvidence(options) {
+  requireExactKeys(options, ["repoRoot", "expectedTask", "checkpointPath",
+    "checkpointSha256", "runId", "expectedSession", "expectedWorkflowRole",
+    "executingImportMetaUrl"]);
   const executingWorkflowEntry = await requireTaskBoundOwningWorkflow(options);
-  const canonicalPath = canonicalCheckpointPath(options.repoRoot, options.expectedTask);
+  const canonicalPath = canonicalCheckpointPath(
+    options.repoRoot,
+    options.expectedTask,
+    options.expectedSession
+  );
   requireExactPath(options.checkpointPath, canonicalPath);
   const bytes = await readCappedFileNoSymlink(canonicalPath);
   timingSafeRequireSha256(bytes, options.checkpointSha256);
   const checkpoint = validateExactSchema(JSON.parse(bytes), checkpointSchema);
-  requireTaskAndRun(checkpoint, options.expectedTask, options.runId);
+  requireTaskSessionAndRun(
+    checkpoint,
+    options.expectedTask,
+    options.expectedSession,
+    options.runId
+  );
   requireExecutingWorkflowEntry(
     options.repoRoot,
     checkpoint.workflowEntry,
@@ -381,11 +571,18 @@ export async function resumeTrackedEvidence(options) {
   );
   requireRevisionEquals(
     checkpoint.frozenRuntime,
-    await computeWorkingTreeRevision(options.repoRoot, options.expectedTask)
+    await computeWorkingTreeRevision(
+      options.repoRoot,
+      options.expectedTask,
+      options.expectedSession
+    )
   );
   await auditSmokeEvidenceDirectory({
     repoRoot: options.repoRoot,
     expectedTask: options.expectedTask,
+    expectedSuite: checkpoint.suiteId,
+    expectedProfile: checkpoint.profile,
+    expectedSession: checkpoint.session,
     expectedRevision: publicRevision(checkpoint.frozenRuntime),
     requireCheckpoint: true,
     requireTracked: true,
@@ -393,15 +590,21 @@ export async function resumeTrackedEvidence(options) {
   await requireEvidenceHashesEqualCheckpoint(checkpoint);
   return trackedEvidencePass(checkpoint); // read-only and replay-safe
 }
-
 export async function openWorkflowClosureResume(
   options
 ): Promise<Task545ClosureResume> {
+  requireExactKeys(options, ["repoRoot", "expectedTask", "checkpointPath",
+    "checkpointSha256", "runId", "expectedSession", "expectedWorkflowRole",
+    "executingImportMetaUrl"]);
   const executingWorkflowEntry = await requireTaskBoundOwningWorkflow(options);
   const checkpoint = await readVerifyCheckpointIdentityAndWorkflow({
     ...options, executingWorkflowEntry,
   });
-  let current = await computeWorkingTreeRevision(options.repoRoot, options.expectedTask);
+  let current = await computeWorkingTreeRevision(
+    options.repoRoot,
+    options.expectedTask,
+    options.expectedSession
+  );
   await requireEvidenceHashesAndTrackedParity(checkpoint, options);
   let pair = await inspectBoundOrderedChangelogPair(checkpoint, options, {
     validStates: ["none", "file-only", "both"],
@@ -409,7 +612,11 @@ export async function openWorkflowClosureResume(
   });
   if (pair.state === "none" && pair.staleBoundTempOrJournalOnly) {
     await cleanStaleBoundTransactionArtifactsAndFsyncDirectory(pair);
-    current = await computeWorkingTreeRevision(options.repoRoot, options.expectedTask);
+    current = await computeWorkingTreeRevision(
+      options.repoRoot,
+      options.expectedTask,
+      options.expectedSession
+    );
     pair = await inspectBoundOrderedChangelogPair(checkpoint, options, {
       validStates: ["none"], rejectAnyCanonicalMetadata: true,
     });
@@ -446,7 +653,11 @@ export async function openWorkflowClosureResume(
       pair, checkpoint, closureIdentity,
     });
     await cleanBoundTransactionArtifactsAndFsyncDirectory(pair);
-    current = await computeWorkingTreeRevision(options.repoRoot, options.expectedTask);
+    current = await computeWorkingTreeRevision(
+      options.repoRoot,
+      options.expectedTask,
+      options.expectedSession
+    );
     pair = await inspectBoundOrderedChangelogPair(checkpoint, options, {
       validStates: [closureIdentity.durableState],
       rejectAnyBoundTransactionArtifacts: true,
@@ -460,7 +671,6 @@ export async function openWorkflowClosureResume(
   );
   return { state: "metadata_recovery", checkpoint, closureIdentity, delta };
 }
-
 export async function writeOrResumeOrderedDurableChangelogFileThenIndexV1(options) {
   requireExactKeys(options, ["repoRoot", "checkpoint", "runId", "closureIdentity",
     "changelogBytes", "changelogIndexMutation", "protocol"]);
@@ -495,12 +705,15 @@ export async function writeOrResumeOrderedDurableChangelogFileThenIndexV1(option
   await removeBoundTempAndJournalThenFsyncDirectory(tx);
   return advanceClosureIdentity(options.closureIdentity, "both");
 }
-
 export async function validateMetadataOnlyClosureDelta(
   checkpoint, closureIdentity, repoRoot
 ): Promise<VerifiedTask545MetadataRecoveryDelta> {
   await requireCheckpointAndEvidenceStillExact(checkpoint, { closureIdentity, repoRoot });
-  const current = await computeWorkingTreeRevision(repoRoot, closureIdentity.taskId);
+  const current = await computeWorkingTreeRevision(
+    repoRoot,
+    closureIdentity.taskId,
+    closureIdentity.session
+  );
   if (current.gitHead !== checkpoint.frozenRuntime.gitHead) fail("smoke_head_changed");
   await requireExactOrderedChangelogPrefix(checkpoint, closureIdentity, current);
   const changed = diffCanonicalRecords(checkpoint.frozenRuntime.records, current.records);
@@ -520,21 +733,57 @@ export async function validateMetadataOnlyClosureDelta(
     changedPaths: uniqueSorted(changed.map((entry) => entry.path)),
   };
 }
-
+const TASK_414_SUPPLEMENTAL_CLOSURE_TASK_FILES = Object.freeze([
+  "_docs/_TASKS/TASK-406_Assistant_Cross_Industry_Reset_E2E.md",
+]);
+async function resolveOwnerControlledSupplementalClosureTaskFiles(
+  repoRoot,
+  expectedTask,
+) {
+  // This is an owner-side static switch. No task workflow, CLI argument,
+  // manifest, checkpoint caller, or agent result may extend this set.
+  const paths = expectedTask === "TASK-414"
+    ? TASK_414_SUPPLEMENTAL_CLOSURE_TASK_FILES
+    : [];
+  await requireEveryRepoRelativePathRegularNoSymlinkTrackedAtHead(repoRoot, paths);
+  return paths;
+}
+function buildExactClosureMetadataAllowlist({
+  frozenContract,
+  pinnedChangelogPath,
+  closureUtcDate,
+}) {
+  validateExactFrozenClosureContract(frozenContract, {
+    requireSortedUniqueTaskAndSupplementalFiles: true,
+    requireDisjointTaskAndSupplementalFiles: true,
+    rejectUnknownKeys: true,
+  });
+  requirePinnedChangelogPathMatchesFrozenNumberSlugAndDate(
+    pinnedChangelogPath,
+    frozenContract,
+    closureUtcDate,
+  );
+  return new Set([
+    ...frozenContract.taskFiles,
+    ...frozenContract.supplementalTaskFiles,
+    frozenContract.taskIndex,
+    frozenContract.changelogIndex,
+    pinnedChangelogPath,
+  ]);
+}
 // Owning workflow API only; no CLI/API workflow-entry override exists:
 // await requireTask548CommittedSixPathBootstrapAuthorizationV1({
 //   repoRoot, receipt: committedExactSixPathReceipt }) // TASK-548 only, immediately first
-// createResumeCheckpoint({ repoRoot, expectedTask, pinnedChangelogNumber,
-//   pinnedChangelogSlug, expectedWorkflowRole,
-//   executingImportMetaUrl: import.meta.url, runtimeResult })
-// -> {pass:false,code:"owner_action_required",action:"review_and_stage_evidence",
-//     taskId,evidenceDirectory,checkpointPath,checkpointSha256,runId,resumeArgv,
-//     resumeCommand,frozenRuntimeRevision}
+// createResumeCheckpoint({...}) -> {pass:false,code:"owner_action_required",
+//   action:"review_and_stage_evidence",taskId,evidenceDirectory,checkpointPath,
+//   checkpointSha256,runId,resumeArgv,resumeCommand,frozenRuntimeRevision}
 // Diagnostic only (never the owner closure command):
 // node smoke-evidence.mjs validate-tracked --repo-root <root> --task TASK-###
+//   --suite <registered-suite> --profile <fast|certification> --session <session>
 //   --checkpoint <canonical-path> --checkpoint-sha256 <sha> --run-id <run-id>
 //   --audit-directory --require-tracked
 // node smoke-evidence.mjs closure-delta --repo-root <root> --task TASK-###
+//   --suite <registered-suite> --profile <fast|certification> --session <session>
 //   --checkpoint <canonical-path> --checkpoint-sha256 <sha> --run-id <run-id>
 // The diagnostic recovers the identity from the checkpoint plus strict on-disk
 // changelog/index facts; callers never supply a path or date.
@@ -553,15 +802,13 @@ agent after smoke:
            taskId, evidenceDirectory, checkpointPath, checkpointSha256, runId,
            resumeArgv, resumeCommand, frozenRuntimeRevision }
   pause; do not edit task/changelog closure metadata and do not run git add
-
 repository owner:
-  inspect screenshots, manifest and checkpoint for visible correctness and secret/PII safety
+  inspect report, screenshots, manifest and checkpoint for visible correctness and secret/PII safety
   stage only the reviewed task evidence directory; do not stage source/task metadata here
   invoke the returned owning-workflow resume argv with the unchanged checkpoint hash/run ID
-
 resumed agent:
   verify exact canonical checkpoint path/hash/schema/task/run/owning workflow
-  run --audit-directory --require-tracked with manifest/screenshots/checkpoint parity
+  run --audit-directory --require-tracked with report/manifest/screenshots/checkpoint parity
   continue only in the closure branch; do not replay implementation/fix/source mutation
   after all closure edits, validate the exact metadata-only delta and return its digest/paths
 ```
@@ -579,10 +826,38 @@ machine-readable failure. Missing owner staging remains a machine-readable pause
 downgraded pass.
 
 The tracked resume freezes the audited runtime snapshot. Closure may then change only
-physical task-family files for that exact task, exact `_docs/_TASKS/README.md`, the exact
+physical task-family files for that exact task, the frozen owner-controlled supplemental
+task-file set, exact `_docs/_TASKS/README.md`, the exact
 pinned/date-resolved changelog file, and exact `_docs/_CHANGELOG/README.md`. Allowlist
-membership comes from the checkpoint's frozen task-file list and immutable pinned
-number/slug. `openWorkflowClosureResume` computes the current revision before resolving
+membership comes from the checkpoint's frozen task-file lists and immutable pinned
+number/slug. The only non-family exception is the TASK-545-owned static mapping from
+TASK-414 to exactly
+`_docs/_TASKS/TASK-406_Assistant_Cross_Industry_Reset_E2E.md`; every other task maps to
+an empty supplemental list. Callers cannot supply, override, or broaden it.
+
+Path membership is only the outer boundary. Before the first metadata write,
+`buildClosureMetadataMutationPlanV1` reads the checkpoint-frozen bytes and the
+fresh indexes and produces a deeply frozen exact plan whose records contain
+`path`, `beforeSha256`, ordered semantic operations, and `expectedAfterSha256`.
+Allowed operations are limited to canonical task `Status` plus dedicated
+`Started`/`Completed`/`Superseded By` fields; the exact owning board row and
+Statistics values; the pinned changelog file generated from a strict bounded
+closure-evidence template; and the exact changelog index row/next pointer. The
+TASK-414 supplemental TASK-406 plan may change only those same terminal fields
+and its own board row. Scenario inventories, acceptance text, dependencies,
+pseudocode, security contracts, arbitrary prose, another board row, or another
+statistic are not metadata operations.
+
+The writer applies that plan in memory to the exact frozen bytes, refuses a
+missing/duplicate/ambiguous field or row, writes with the existing durable
+protocol, and rereads every file. `closure-delta` recomputes each final SHA-256
+and requires exact equality with the plan; a caller-provided path/hunk/hash is
+never accepted. Recovery reconstructs the identical plan from checkpoint,
+`closureIdentity`, and durable current prefix and may complete only its next
+missing operation. Thus an arbitrary edit inside an allowlisted file fails just
+as an unallowlisted path does.
+
+`openWorkflowClosureResume` computes the current revision before resolving
 an identity. Only `none`, `file-only`, and `both` are valid canonical states. Bound
 temp/journal-only residue is cleaned and directory-fsynced, the revision recomputed,
 and `frozen` is allowed only when no canonical closure metadata delta remains; residue never supplies
@@ -609,7 +884,8 @@ the allowed changed paths for the owner handoff. No file may change after the fi
 Any non-allowlisted delta invalidates the smoke and requires a new runtime smoke/phase 1.
 
 Reject absolute paths, `..`, symlinks escaping the task directory, unknown keys,
-duplicate scenario IDs, invalid surface/theme/dimensions/timestamps/hash grammar,
+duplicate scenario/variant IDs, empty variants, unregistered or mismatched
+suite/profile/session/report identity, invalid surface/theme/dimensions/timestamps/hash grammar,
 missing light-or-dark admin coverage, empty
 assertions/screenshots, false assertions, and any console error. Cap manifest bytes
 before JSON parsing, then cap string/array counts and each screenshot byte size before
@@ -638,20 +914,35 @@ No manifest is rewritten or hash auto-updated during validation.
 
 `tests/unit/workflows/smokeEvidence.test.ts` owns a temporary Git-repository corpus:
 valid five-flow evidence with admin light+dark; deterministic clean/dirty/untracked/
-deleted-file revision digests; evidence-directory self-exclusion derived only from the real
-repository root/task; rejection of an alternate same-basename root, external root,
-symlinked component, traversal and prefix lookalike; mandatory task/path/HEAD/dirty/digest
-matching; changed byte/hash; missing/untracked/unreferenced file; oversized manifest/
-screenshot; console error; failed assertion; duplicate ID; and unknown key.
+deleted-file revision digests; evidence-directory self-exclusion derived only from
+the real repository root/task; rejection of an alternate same-basename root, external
+root, symlinked component, traversal and prefix lookalike; mandatory
+task/path/HEAD/dirty/digest matching; changed byte/hash; missing/untracked/
+unreferenced file; oversized manifest/screenshot; console error; failed assertion;
+duplicate ID; and unknown key.
+
+`tests/unit/runtime-smoke/visible-evidence.test.ts` owns the generic report-side
+contract: legacy scenario results without optional evidence remain valid for
+non-manifest suites; manifestable scenarios require exact title/nonempty unique
+variants/visible assertions/scenario screenshots; all scalar/array/dimension/
+byte caps and unknowns fail closed; global screenshots equal the unique scenario
+union. Cross-suite fixtures prove TASK-548 and TASK-414 manifests are generated
+only from their runner-returned variants/assertions/screenshots, and mutate each
+report/manifest ID, pass bit, title, variant, assertion expected/actual/pass,
+console error, screenshot path/hash/order/ownership to require mismatch failure.
 
 The same suite covers phase-1 checkpoint schema/caps/safe contents/atomic no-overwrite and
 the exact `owner_action_required` resume payload; resume failure before owner staging;
-success after staging only manifest/screenshots/checkpoint; wrong task/run/hash/path,
+success after staging only report/manifest/screenshots/checkpoint; wrong task/run/hash/path,
 wrong owning/executing workflow entry, unsafe shell arguments, tampered checkpoint, stale
 revision, extra tracked file, and non-evidence staging; execution of the exact returned argv;
 repeated pre-closure resume success with no byte/status mutation; crash recovery from an
 allowlisted partial closure; completed-closure replay without duplicate metadata; and
 prevention of every implementation/fix/post-audit/smoke dispatch on resume.
+Checkpoint fixtures prove the supplemental list is strict and frozen: TASK-414 receives
+exactly TASK-406, every other task receives `[]`, TASK-406 may change only during the
+TASK-414 metadata-only closure, and a caller-supplied, unknown, extra, prefix-lookalike,
+untracked, symlinked, or non-regular supplemental path fails closed.
 Both `frozen` and `metadata_recovery` fixtures call the exact owner export
 `writeOrResumeOrderedDurableChangelogFileThenIndexV1` with literal marker
 `ordered-durable-changelog-file-then-index@v1`; a task-local alias, skipped recovery call,
@@ -661,33 +952,47 @@ caller override, wrong task/suffix, untracked/dirty/HEAD-mismatched, symlink/non
 and static/import failures reject. TASK-548 fixtures require the TASK-545-owned current-HEAD,
 exact-six-path committed-bootstrap gate immediately before the exact-argument phase-1 call;
 missing/stale/wrong-entry receipts, reordering, an intervening action, an unknown phase-1
-option, or passing the receipt into `createResumeCheckpoint` rejects.
-TASK-548 fixtures also round-trip the exact receipt, mutate every root/nested
-key, path/order/hash/HEAD/parent/aggregate/workflow entry, and prove the branded
-receipt is returned only after live Git direct-parent/diff/tracked-byte checks.
-Child-process fixtures kill after every journal/temp
-write, file fsync, rename, and directory-fsync boundary. They prove only none/file-only/
-both recover, stale temp/journal-only cleanup restarts safely, file-only completes the
-index once, both validates, bound residue accompanying either state is cleaned only after
-identity verification, and index-only/corrupt/multiple state fails. A UTC rollover
-after the no-replace changelog write retains its date. Strict path/body/row mismatches fail
-before allowlist validation.
+option, or passing the receipt into `createResumeCheckpoint` rejects. TASK-548 fixtures
+also round-trip the exact receipt, mutate every root/nested key, path/order/hash/HEAD/
+parent/aggregate/workflow entry, and prove the branded receipt is returned only after
+live Git direct-parent/diff/tracked-byte checks.
+Child-process fixtures kill after every journal/temp write, file fsync, rename, and
+directory-fsync boundary. They prove only none/file-only/both recover, stale temp/journal-
+only cleanup restarts safely, file-only completes the index once, both validates, bound
+residue accompanying either state is cleaned only after identity verification, and
+index-only/corrupt/multiple state fails. A UTC rollover after the no-replace changelog
+write retains its date. Strict path/body/row mismatches fail before allowlist validation.
 Type fixtures import the three exact owner exports plus `Task545ClosureResume`,
 pin both discriminants/state-specific fields, and reject widened/local substitute shapes.
-Metadata-delta cases prove task-family/index/exact pinned-changelog edits pass while source,
-tests, config, runtime/security docs, workflow/evidence, HEAD, another task/changelog,
-new same-family task files absent from the frozen list, wrong number/slug/date, traversal,
-and prefix-lookalike changes fail. Repeated delta validation is idempotent and
-returns a deterministic sorted path list. L02 does not reopen this test file; it runs the
-suite after changing `.gitignore` and separately asserts ignore behavior with shell exit
-codes.
+Metadata-delta cases prove the exact planned status/completion/board/statistics/
+pinned-changelog operations and after-hashes pass while source, tests, config,
+runtime/security docs, workflow/evidence, HEAD, another task/changelog, new
+same-family task files absent from the frozen list, wrong number/slug/date,
+traversal, prefix-lookalike changes, arbitrary prose in an allowed task, a changed
+scenario or dependency line, another board row, an unplanned statistic, and declared
+after-hash drift fail. Kill/recovery fixtures prove every prefix rebuilds the same
+plan and cannot skip or add an operation; repeated delta validation is idempotent
+and returns a deterministic sorted path list. L02 does not reopen this test file; it
+runs the suite after changing `.gitignore` and separately asserts ignore behavior
+with shell exit codes.
 
-## Validation
+## Testing Requirements
 
 ```bash
 node --check _docs/_workflows/lib/smoke-evidence.mjs
 node _docs/_workflows/lib/smoke-evidence.mjs --help
 bun test tests/unit/workflows/smokeEvidence.test.ts
+bun test tests/unit/runtime-smoke/visible-evidence.test.ts
 bun run lint:repo:types
 git diff --check
+wc -l scripts/runtime-smoke/adapters/types.ts \
+  scripts/runtime-smoke/visible-evidence.ts \
+  tests/unit/runtime-smoke/visible-evidence.test.ts \
+  tests/unit/workflows/smokeEvidence.test.ts
 ```
+
+## Documentation Updates Required
+
+- No guidance file is edited here; TASK-545-03-L02 owns the evidence guide and
+  the serialized generic cookbook recipe for this visible-evidence extension.
+- TASK-545-04-L03 owns board and changelog 1257 closure evidence.
