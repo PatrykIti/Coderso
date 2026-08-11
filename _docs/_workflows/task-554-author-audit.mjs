@@ -372,7 +372,7 @@ async function bootstrapSelfTest() {
     verify();
 
     const auditIdentity = "task-554:audit:self-test";
-    const lowOnly = { identity: auditIdentity, pass: true, summary: "low only", findings: [{ severity: "LOW", area: "test", finding: "test", evidence: "test:1", recommendation: "test" }] };
+    const lowOnly = { pass: true, summary: "low only", findings: [{ severity: "LOW", area: "test", finding: "test", evidence: "test:1", recommendation: "test" }] };
     normalizeAuthorAuditResult(auditIdentity, lowOnly);
     const expectAuditFailure = (value, prefix) => {
       try { normalizeAuthorAuditResult(auditIdentity, value); } catch (error) {
@@ -383,14 +383,15 @@ async function bootstrapSelfTest() {
     };
     expectAuditFailure({ ...lowOnly, findings: undefined }, "task_554_author_audit_invalid");
     expectAuditFailure({ ...lowOnly, findings: {} }, "task_554_author_audit_invalid");
+    expectAuditFailure({ ...lowOnly, identity: auditIdentity }, "task_554_author_audit_invalid");
     expectAuditFailure({ ...lowOnly, unexpected: true }, "task_554_author_audit_invalid");
     expectAuditFailure({ ...lowOnly, findings: [{ ...lowOnly.findings[0], severity: "OTHER" }] }, "task_554_author_finding_invalid");
     expectAuditFailure({ ...lowOnly, pass: false }, "task_554_author_audit_inconsistent");
-    const receiptLenses = TASK_554_AUTHOR_AUDIT_LENS_IDS.map((identity) => ({ identity, pass: true, summary: "clean", findings: [] }));
-    const receiptReconcile = { identity: "task-554:audit:reconcile", pass: true, summary: "clean", findings: [] };
-    assertAuthorAuditReceiptInputs(receiptLenses, receiptReconcile);
+    const receiptLensPayloads = TASK_554_AUTHOR_AUDIT_LENS_IDS.map(() => ({ pass: true, summary: "clean", findings: [] }));
+    const receiptReconcilePayload = { pass: true, summary: "clean", findings: [] };
+    const receiptLenses = assertAuthorAuditReceiptInputs(receiptLensPayloads, receiptReconcilePayload).lenses;
     let receiptInputsRejected = false;
-    try { assertAuthorAuditReceiptInputs(receiptLenses.slice(1), receiptReconcile); } catch (error) {
+    try { assertAuthorAuditReceiptInputs(receiptLensPayloads.slice(1), receiptReconcilePayload); } catch (error) {
       if (!String(error?.message).startsWith("task_554_author_receipt_inputs_invalid")) throw error;
       receiptInputsRejected = true;
     }
@@ -528,6 +529,7 @@ async function bootstrapSelfTest() {
       divergentBaselineRejected: true,
       trackedExtraWouldReject: true,
       strictAuditResultRejected: true,
+      agentIdentityRejected: true,
       ignoredWorkflowMutationRejected: true,
       emptyWorkflowDirectoryMutationRejected: true,
       authorReceiptBound: true,
@@ -545,9 +547,8 @@ async function bootstrapSelfTest() {
 const AUDIT_SCHEMA = Object.freeze({
   type: "object",
   additionalProperties: false,
-  required: ["identity", "pass", "summary", "findings"],
+  required: ["pass", "summary", "findings"],
   properties: {
-    identity: { type: "string" },
     pass: { type: "boolean" },
     summary: { type: "string" },
     findings: {
@@ -568,7 +569,7 @@ const AUDIT_SCHEMA = Object.freeze({
   },
 });
 
-const AUDIT_RESULT_KEYS = Object.freeze(["identity", "pass", "summary", "findings"]);
+const AUDIT_RESULT_KEYS = Object.freeze(["pass", "summary", "findings"]);
 const AUDIT_FINDING_KEYS = Object.freeze(["severity", "area", "finding", "evidence", "recommendation"]);
 
 function hasExactKeys(value, keys) {
@@ -576,13 +577,13 @@ function hasExactKeys(value, keys) {
 }
 
 export function normalizeAuthorAuditResult(identity, audit) {
-  if (!hasExactKeys(audit, AUDIT_RESULT_KEYS) || audit.identity !== identity || typeof audit.pass !== "boolean" || typeof audit.summary !== "string" || audit.summary.trim().length === 0 || !Array.isArray(audit.findings)) throw new Error("task_554_author_audit_invalid");
+  if (!hasExactKeys(audit, AUDIT_RESULT_KEYS) || typeof audit.pass !== "boolean" || typeof audit.summary !== "string" || audit.summary.trim().length === 0 || !Array.isArray(audit.findings)) throw new Error("task_554_author_audit_invalid");
   for (const finding of audit.findings) {
     if (!hasExactKeys(finding, AUDIT_FINDING_KEYS) || !["HIGH", "MEDIUM", "LOW"].includes(finding.severity) || AUDIT_FINDING_KEYS.slice(1).some((key) => typeof finding[key] !== "string" || finding[key].trim().length === 0)) throw new Error("task_554_author_finding_invalid");
   }
   const blockers = audit.findings.filter((finding) => finding.severity === "HIGH" || finding.severity === "MEDIUM");
   if (audit.pass !== (blockers.length === 0)) throw new Error("task_554_author_audit_inconsistent");
-  return audit;
+  return Object.freeze({ identity, ...audit });
 }
 
 function assertAuditClean(label, identity, audit) {
@@ -617,23 +618,22 @@ async function runWorkflow() {
     Object.freeze({ identity: TASK_554_AUTHOR_AUDIT_LENS_IDS[1], prompt: "Audit Admin client, Classic editor baseline/dirty/race behavior, and browser-boundary tests." }),
     Object.freeze({ identity: TASK_554_AUTHOR_AUDIT_LENS_IDS[2], prompt: "Audit workflow, smoke architecture, task graph, writer ownership, validation and closure rules." }),
   ]);
-  const lenses = await assertReadOnlyAudit("contract_audit", () => parallel(lensDefinitions.map((lens) => () => {
+  const lensPayloads = await assertReadOnlyAudit("contract_audit", () => parallel(lensDefinitions.map((lens) => () => {
     assertTask554Bootstrap();
     assertAuthorDispatchState();
-    return agent(`${COMMON}\n${lens.prompt}\nReturn identity=${lens.identity}.`, { label: lens.identity, phase: "Contract audit", schema: AUDIT_SCHEMA });
+    return agent(`${COMMON}\n${lens.prompt}\nReturn only the declared audit payload.`, { label: lens.identity, phase: "Contract audit", schema: AUDIT_SCHEMA });
   })));
-  if (lenses.length !== lensDefinitions.length) throw new Error("task_554_audit_missing_results");
-  for (const [index, lens] of lenses.entries()) {
-    assertAuditClean(`task_554_audit_${index + 1}`, lensDefinitions[index].identity, lens);
-  }
+  if (lensPayloads.length !== lensDefinitions.length) throw new Error("task_554_audit_missing_results");
+  const lenses = lensPayloads.map((audit, index) => assertAuditClean(`task_554_audit_${index + 1}`, lensDefinitions[index].identity, audit));
   phase("Cross-file reconcile");
   assertTask554Bootstrap();
-  const reconcile = assertAuditClean("task_554_reconcile", "task-554:audit:reconcile", await assertReadOnlyAudit("reconcile", () => {
+  const reconcilePayload = await assertReadOnlyAudit("reconcile", () => {
     assertTask554Bootstrap();
     assertAuthorDispatchState();
-    return agent(`${COMMON}\nRead only the shared contracts/seams. Reconcile type names, allowed fields, ownership, test paths, exact seven smoke IDs, writer order, land order, exact calendar parsing, Post cache generation, snapshot authority, and pinned closure deltas. Return identity=task-554:audit:reconcile.`, { label: "task-554:audit:reconcile", phase: "Cross-file reconcile", schema: AUDIT_SCHEMA });
-  }));
-  const receipt = recordTask554AuthorAuditReceipt(ROOT, lenses, reconcile);
+    return agent(`${COMMON}\nRead only the shared contracts/seams. Reconcile type names, allowed fields, ownership, test paths, exact seven smoke IDs, writer order, land order, exact calendar parsing, Post cache generation, snapshot authority, and pinned closure deltas. Return only the declared audit payload.`, { label: "task-554:audit:reconcile", phase: "Cross-file reconcile", schema: AUDIT_SCHEMA });
+  });
+  const reconcile = assertAuditClean("task_554_reconcile", "task-554:audit:reconcile", reconcilePayload);
+  const receipt = recordTask554AuthorAuditReceipt(ROOT, lensPayloads, reconcilePayload);
   return Object.freeze({ pass: true, bootstrap, lenses, reconcile, receipt });
 }
 

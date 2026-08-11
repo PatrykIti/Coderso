@@ -1,22 +1,10 @@
 import { createHash } from "node:crypto";
 import { execFileSync, spawnSync } from "node:child_process";
-import { chmodSync, closeSync, existsSync, lstatSync, mkdirSync, mkdtempSync, openSync, readFileSync, readdirSync, readlinkSync, rmSync, symlinkSync, unlinkSync, writeFileSync } from "node:fs";
+import { chmodSync, closeSync, constants, existsSync, fchmodSync, fstatSync, lstatSync, mkdirSync, mkdtempSync, openSync, readFileSync, readdirSync, readlinkSync, renameSync, rmdirSync, rmSync, symlinkSync, unlinkSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
-export const meta = Object.freeze({
-  name: "task-554-implement",
-  description: "Implement TASK-554 sequentially with fail-closed ownership, executable gates, shared smoke, and an owner-review handoff.",
-  phases: Object.freeze([
-    Object.freeze({ title: "Start gate" }),
-    Object.freeze({ title: "Sequential owners" }),
-    Object.freeze({ title: "Documentation" }),
-    Object.freeze({ title: "Full validation" }),
-    Object.freeze({ title: "Post-audit" }),
-    Object.freeze({ title: "Runtime smoke" }),
-    Object.freeze({ title: "Owner review" }),
-  ]),
-});
+export const meta = Object.freeze({ name: "task-554-implement", description: "Implement TASK-554 sequentially with fail-closed ownership, executable gates, shared smoke, and an owner-review handoff.", phases: Object.freeze([Object.freeze({ title: "Start gate" }), Object.freeze({ title: "Sequential owners" }), Object.freeze({ title: "Documentation" }), Object.freeze({ title: "Full validation" }), Object.freeze({ title: "Post-audit" }), Object.freeze({ title: "Runtime smoke" }), Object.freeze({ title: "Owner review" })]) });
 const ROOT = "/home/coder/project/Coderso";
 export const TASK_554_BASELINE_SHA = "f6705443e129c9e89c32763405800b72ba3a0680";
 const TASK = "TASK-554";
@@ -29,36 +17,15 @@ const MAXIMUM_PNG_BYTES = 16 * 1024 * 1024;
 const MAXIMUM_PNG_DIMENSION = 16_384;
 const MAX_WORKFLOW_TREE_ENTRIES = 4096;
 const MAX_WORKFLOW_TREE_DEPTH = 64;
+const RELEASE_GATE_REPORT_PATH = ".tmp/coderso-release-gates.json";
 export const TASK_554_SMOKE_SCENARIO_IDS = Object.freeze(["writer-metadata-save-preserves-schedule", "writer-status-publish-denied", "writer-schedule-denied", "publisher-schedule", "publisher-publish", "publisher-unpublish", "publisher-archive"]);
-const RESULT_SCHEMA = Object.freeze({ type: "object", additionalProperties: false, required: ["identity", "pass", "summary", "errors"], properties: { identity: { type: "string" }, pass: { type: "boolean" }, summary: { type: "string" }, errors: { type: "array", items: { type: "string" } } } });
-const AUDIT_SCHEMA = Object.freeze({ type: "object", additionalProperties: false, required: ["identity", "pass", "summary", "findings"], properties: { identity: { type: "string" }, pass: { type: "boolean" }, summary: { type: "string" }, findings: { type: "array", items: { type: "object", additionalProperties: false, required: ["severity", "area", "finding", "evidence", "recommendation"], properties: { severity: { type: "string", enum: ["HIGH", "MEDIUM", "LOW"] }, area: { type: "string" }, finding: { type: "string" }, evidence: { type: "string" }, recommendation: { type: "string" } } } } } });
+const RESULT_SCHEMA = Object.freeze({ type: "object", additionalProperties: false, required: ["pass", "summary", "errors"], properties: { pass: { type: "boolean" }, summary: { type: "string" }, errors: { type: "array", items: { type: "string" } } } });
+const AUDIT_SCHEMA = Object.freeze({ type: "object", additionalProperties: false, required: ["pass", "summary", "findings"], properties: { pass: { type: "boolean" }, summary: { type: "string" }, findings: { type: "array", items: { type: "object", additionalProperties: false, required: ["severity", "area", "finding", "evidence", "recommendation"], properties: { severity: { type: "string", enum: ["HIGH", "MEDIUM", "LOW"] }, area: { type: "string" }, finding: { type: "string" }, evidence: { type: "string" }, recommendation: { type: "string" } } } } } });
 const owner = (id, paths) => Object.freeze({ id, paths: Object.freeze(paths) });
-const OWNERS = Object.freeze([
-  owner("workflow-contract-tests", ["tests/unit/workflows/task554AuthorAudit.test.ts", "tests/unit/workflows/task554WorkflowContracts.test.ts"]),
-  owner("contract-schema-route", ["core/services/posts/postMetadataContract.ts", "core/server/validation/postSchemas.ts", "core/server/routes/postsRoutes.ts", "core/server/routes/index.ts", "core/server/httpServer.ts", "tests/vitest/server/postMetadataContract.test.ts", "tests/vitest/validation/postSchemas.test.ts", "tests/integration/routes/postsRoutes.test.ts", "tests/integration/routes/postMetadataRbac.test.ts"]),
-  owner("admin-client", ["core/admin/services/postsClient.ts", "tests/vitest/admin/postsClient.test.ts"]),
-  owner("classic-metadata-ui", ["core/admin/ui/posts/editor/postMetadataMutationPayload.ts", "core/admin/ui/posts/editor/PostClassicEditorShell.tsx", "tests/vitest/ui/post-metadata-mutation-payload.test.ts", "tests/vitest/ui/post-classic-editor-shell-wave.test.tsx", "tests/vitest/ui/post-classic-metadata-hydration.test.tsx", "tests/vitest/ui/post-editor-state-metadata-boundary.test.ts"]),
-  owner("smoke-adapter", ["scripts/runtime-smoke/contracts.ts", "scripts/runtime-smoke/cli.ts", "scripts/runtime-smoke/registry.ts", "scripts/runtime-smoke/adapters/task-554.ts", "scripts/runtime-smoke/adapters/task-554/browser-actions.ts", "scripts/runtime-smoke/adapters/task-554/output-manifest.ts", "scripts/runtime-smoke/adapters/task-554/worker-entry.ts", "scripts/runtime-smoke/adapters/task-554/worker-operations.ts", "scripts/runtime-smoke/adapters/task-554/production-handlers.ts", "tests/unit/runtime-smoke/cli-registry.test.ts", "tests/unit/runtime-smoke/task-554-adapter.test.ts", "tests/unit/runtime-smoke/task-554-worker.test.ts"]),
-]);
+const OWNERS = Object.freeze([owner("workflow-contract-tests", ["tests/unit/workflows/task554AuthorAudit.test.ts", "tests/unit/workflows/task554WorkflowContracts.test.ts"]), owner("contract-schema-route", ["core/services/posts/postMetadataContract.ts", "core/server/validation/postSchemas.ts", "core/server/routes/postsRoutes.ts", "core/server/routes/index.ts", "core/server/httpServer.ts", "tests/vitest/server/postMetadataContract.test.ts", "tests/vitest/validation/postSchemas.test.ts", "tests/integration/routes/postsRoutes.test.ts", "tests/integration/routes/postMetadataRbac.test.ts"]), owner("admin-client", ["core/admin/services/postsClient.ts", "tests/vitest/admin/postsClient.test.ts"]), owner("classic-metadata-ui", ["core/admin/ui/posts/editor/postMetadataMutationPayload.ts", "core/admin/ui/posts/editor/PostClassicEditorShell.tsx", "tests/vitest/ui/post-metadata-mutation-payload.test.ts", "tests/vitest/ui/post-classic-editor-shell-wave.test.tsx", "tests/vitest/ui/post-classic-metadata-hydration.test.tsx", "tests/vitest/ui/post-editor-state-metadata-boundary.test.ts"]), owner("smoke-adapter", ["scripts/runtime-smoke/contracts.ts", "scripts/runtime-smoke/cli.ts", "scripts/runtime-smoke/registry.ts", "scripts/runtime-smoke/adapters/task-554.ts", "scripts/runtime-smoke/adapters/task-554/browser-actions.ts", "scripts/runtime-smoke/adapters/task-554/output-manifest.ts", "scripts/runtime-smoke/adapters/task-554/worker-entry.ts", "scripts/runtime-smoke/adapters/task-554/worker-operations.ts", "scripts/runtime-smoke/adapters/task-554/production-handlers.ts", "tests/unit/runtime-smoke/cli-registry.test.ts", "tests/unit/runtime-smoke/task-554-adapter.test.ts", "tests/unit/runtime-smoke/task-554-worker.test.ts"])]);
 const DOCUMENTATION_OWNER = owner("documentation", ["_docs/CMS_API.md", "_docs/RBAC_SPEC.md", "_docs/SECURITY_SPEC.md", "_docs/ADMIN_CACHE.md", "_docs/ADMIN_CACHE_MAP.md", "docs/develop/runtime-smoke-cookbook.md", "docs/develop/assistant.md"]);
-const FORBIDDEN_PATHS = Object.freeze([
-  "_TMP-task-dispatch-plan-2026-08-10.md",
-  "core/services/content/postsService.ts",
-  "core/services/posts/postMutationService.ts",
-  "_docs/_TASKS/TASK-414",
-  "_docs/_TASKS/TASK-547",
-  "_docs/_CHANGELOG/1266-",
-  "core/services/kits/fullSitePackage/",
-  "core/services/kits/fullSiteInstall/",
-  "core/admin/ui/posts/editor/hooks/usePostEditorState.ts",
-]);
-const POST_AUDIT_LENSES = Object.freeze([
-  "scope-fidelity",
-  "rbac-fail-closed",
-  "present-only-byte-identity",
-  "cross-stream-smoke",
-  "test-integrity",
-]);
+const FORBIDDEN_PATHS = Object.freeze(["_TMP-task-dispatch-plan-2026-08-10.md", "core/services/content/postsService.ts", "core/services/posts/postMutationService.ts", "_docs/_TASKS/TASK-414", "_docs/_TASKS/TASK-547", "_docs/_CHANGELOG/1266-", "core/services/kits/fullSitePackage/", "core/services/kits/fullSiteInstall/", "core/admin/ui/posts/editor/hooks/usePostEditorState.ts"]);
+const POST_AUDIT_LENSES = Object.freeze(["scope-fidelity", "rbac-fail-closed", "present-only-byte-identity", "cross-stream-smoke", "test-integrity"]);
 const command = (label, commandName, args) => Object.freeze({ label, command: commandName, args: Object.freeze(args) });
 const FULL_GATE_COMMANDS = Object.freeze([
   command("task_554_vitest", "bunx", ["vitest", "run", "--config", "vitest.config.ts", "tests/vitest/validation/postSchemas.test.ts", "tests/vitest/server/postMetadataContract.test.ts", "tests/vitest/admin/postsClient.test.ts", "tests/vitest/ui/post-metadata-mutation-payload.test.ts", "tests/vitest/ui/post-classic-editor-shell-wave.test.tsx", "tests/vitest/ui/post-classic-metadata-hydration.test.tsx", "tests/vitest/ui/post-editor-state-metadata-boundary.test.ts"]),
@@ -68,83 +35,31 @@ const FULL_GATE_COMMANDS = Object.freeze([
   command("task_554_types", "bun", ["--cwd", "core", "lint:types"]), command("task_554_lint", "bun", ["--cwd", "core", "lint"]), command("task_554_admin_boundary", "bun", ["run", "check:admin-boundary"]), command("task_554_security_scan", "bun", ["run", "scan:security:strict"]), command("task_554_coderso_release_gates", "bun", ["run", "gates:coderso"]), command("task_554_precommit", "bun", ["run", "precommit:check"]),
   command("task_554_author_syntax", "node", ["--check", "_docs/_workflows/task-554-author-audit.mjs"]), command("task_554_implement_syntax", "node", ["--check", "_docs/_workflows/task-554-implement.mjs"]), command("task_554_fix_syntax", "node", ["--check", "_docs/_workflows/task-554-fix.mjs"]),
 ]);
-const OWNER_GATE_COMMANDS = Object.freeze({
-  "workflow-contract-tests": Object.freeze([
-    command("task_554_workflow_contracts", "bun", ["test", "tests/unit/workflows/task554AuthorAudit.test.ts", "tests/unit/workflows/task554WorkflowContracts.test.ts"]), command("task_554_author_syntax", "node", ["--check", "_docs/_workflows/task-554-author-audit.mjs"]), command("task_554_implement_syntax", "node", ["--check", "_docs/_workflows/task-554-implement.mjs"]), command("task_554_fix_syntax", "node", ["--check", "_docs/_workflows/task-554-fix.mjs"]),
-  ]),
-  "contract-schema-route": Object.freeze([
-    command("task_554_contract_vitest", "bunx", ["vitest", "run", "--config", "vitest.config.ts", "tests/vitest/validation/postSchemas.test.ts", "tests/vitest/server/postMetadataContract.test.ts"]), command("task_554_contract_bun", "bun", ["test", "tests/integration/routes/postsRoutes.test.ts", "tests/integration/routes/postMetadataRbac.test.ts", "tests/unit/auth/rbac.test.ts"]), command("task_554_types", "bun", ["--cwd", "core", "lint:types"]), command("task_554_lint", "bun", ["--cwd", "core", "lint"]),
-  ]),
-  "admin-client": Object.freeze([
-    command("task_554_client_vitest", "bunx", ["vitest", "run", "--config", "vitest.config.ts", "tests/vitest/admin/postsClient.test.ts"]), command("task_554_types", "bun", ["--cwd", "core", "lint:types"]), command("task_554_lint", "bun", ["--cwd", "core", "lint"]),
-  ]),
-  "classic-metadata-ui": Object.freeze([
-    command("task_554_ui_vitest", "bunx", ["vitest", "run", "--config", "vitest.config.ts", "tests/vitest/ui/post-metadata-mutation-payload.test.ts", "tests/vitest/ui/post-classic-editor-shell-wave.test.tsx", "tests/vitest/ui/post-classic-metadata-hydration.test.tsx", "tests/vitest/ui/post-editor-state-metadata-boundary.test.ts"]), command("task_554_types", "bun", ["--cwd", "core", "lint:types"]), command("task_554_lint", "bun", ["--cwd", "core", "lint"]),
-  ]),
-  "smoke-adapter": Object.freeze([
-    command("task_554_runtime_harness", "bun", ["test", "tests/unit/runtime-smoke/cli-registry.test.ts", "tests/unit/runtime-smoke/task-554-adapter.test.ts", "tests/unit/runtime-smoke/task-554-worker.test.ts"]), command("task_554_types", "bun", ["--cwd", "core", "lint:types"]), command("task_554_lint", "bun", ["--cwd", "core", "lint"]),
-  ]),
-});
-function commandOutput(root, command, args, environment) {
-  return execFileSync(command, args, { cwd: root, encoding: "buffer", stdio: ["ignore", "pipe", "pipe"], ...(environment ? { env: { ...process.env, ...environment } } : {}) });
-}
-function commandStatus(root, command, args) {
-  try {
-    commandOutput(root, command, args);
-    return 0;
-  } catch (error) {
-    return typeof error?.status === "number" ? error.status : 255;
-  }
-}
-function parseNul(bytes) {
-  return bytes.toString("utf8").split("\0").filter(Boolean);
-}
-function assertNoUnexpectedArguments() {
-  const args = process.argv.slice(2);
-  if (args.length === 0) return false;
-  if (args.length === 1 && args[0] === SELF_TEST_ARG) return true;
-  throw new Error(`task_554_unknown_arguments:${args.join(",")}`);
-}
-const RESULT_KEYS = Object.freeze(["identity", "pass", "summary", "errors"]);
-const AUDIT_KEYS = Object.freeze(["identity", "pass", "summary", "findings"]);
+const OWNER_GATE_COMMANDS = Object.freeze({ "workflow-contract-tests": Object.freeze([command("task_554_workflow_contracts", "bun", ["test", "tests/unit/workflows/task554AuthorAudit.test.ts", "tests/unit/workflows/task554WorkflowContracts.test.ts"]), command("task_554_author_syntax", "node", ["--check", "_docs/_workflows/task-554-author-audit.mjs"]), command("task_554_implement_syntax", "node", ["--check", "_docs/_workflows/task-554-implement.mjs"]), command("task_554_fix_syntax", "node", ["--check", "_docs/_workflows/task-554-fix.mjs"])]), "contract-schema-route": Object.freeze([command("task_554_contract_vitest", "bunx", ["vitest", "run", "--config", "vitest.config.ts", "tests/vitest/validation/postSchemas.test.ts", "tests/vitest/server/postMetadataContract.test.ts"]), command("task_554_contract_bun", "bun", ["test", "tests/integration/routes/postsRoutes.test.ts", "tests/integration/routes/postMetadataRbac.test.ts", "tests/unit/auth/rbac.test.ts"]), command("task_554_types", "bun", ["--cwd", "core", "lint:types"]), command("task_554_lint", "bun", ["--cwd", "core", "lint"])]), "admin-client": Object.freeze([command("task_554_client_vitest", "bunx", ["vitest", "run", "--config", "vitest.config.ts", "tests/vitest/admin/postsClient.test.ts"]), command("task_554_types", "bun", ["--cwd", "core", "lint:types"]), command("task_554_lint", "bun", ["--cwd", "core", "lint"])]), "classic-metadata-ui": Object.freeze([command("task_554_ui_vitest", "bunx", ["vitest", "run", "--config", "vitest.config.ts", "tests/vitest/ui/post-metadata-mutation-payload.test.ts", "tests/vitest/ui/post-classic-editor-shell-wave.test.tsx", "tests/vitest/ui/post-classic-metadata-hydration.test.tsx", "tests/vitest/ui/post-editor-state-metadata-boundary.test.ts"]), command("task_554_types", "bun", ["--cwd", "core", "lint:types"]), command("task_554_lint", "bun", ["--cwd", "core", "lint"])]), "smoke-adapter": Object.freeze([command("task_554_runtime_harness", "bun", ["test", "tests/unit/runtime-smoke/cli-registry.test.ts", "tests/unit/runtime-smoke/task-554-adapter.test.ts", "tests/unit/runtime-smoke/task-554-worker.test.ts"]), command("task_554_types", "bun", ["--cwd", "core", "lint:types"]), command("task_554_lint", "bun", ["--cwd", "core", "lint"])]) });
+function commandOutput(root, command, args, environment) { return execFileSync(command, args, { cwd: root, encoding: "buffer", stdio: ["ignore", "pipe", "pipe"], ...(environment ? { env: { ...process.env, ...environment } } : {}) }); }
+function commandStatus(root, command, args) { try { commandOutput(root, command, args); return 0; } catch (error) { return typeof error?.status === "number" ? error.status : 255; } }
+function parseNul(bytes) { return bytes.toString("utf8").split("\0").filter(Boolean); }
+function assertNoUnexpectedArguments() { const args = process.argv.slice(2); if (args.length === 0) return false; if (args.length === 1 && args[0] === SELF_TEST_ARG) return true; throw new Error(`task_554_unknown_arguments:${args.join(",")}`); }
+const RESULT_KEYS = Object.freeze(["pass", "summary", "errors"]);
+const AUDIT_KEYS = Object.freeze(["pass", "summary", "findings"]);
 const FINDING_KEYS = Object.freeze(["severity", "area", "finding", "evidence", "recommendation"]);
 const MAX_RESULT_ITEMS = 40;
 const MAX_RESULT_FIELD_LENGTH = 2048;
-function hasExactKeys(value, keys) {
-  return Boolean(value) && typeof value === "object" && !Array.isArray(value) && Object.keys(value).length === keys.length && keys.every((key) => Object.hasOwn(value, key));
-}
-function nonEmptyBoundedString(value) {
-  return typeof value === "string" && value.trim().length > 0 && value.length <= MAX_RESULT_FIELD_LENGTH;
-}
+function hasExactKeys(value, keys) { return Boolean(value) && typeof value === "object" && !Array.isArray(value) && Object.keys(value).length === keys.length && keys.every((key) => Object.hasOwn(value, key)); }
+function nonEmptyBoundedString(value) { return typeof value === "string" && value.trim().length > 0 && value.length <= MAX_RESULT_FIELD_LENGTH; }
 function requirePass(label, identity, result) {
-  if (!hasExactKeys(result, RESULT_KEYS) || result.identity !== identity || result.pass !== true || !nonEmptyBoundedString(result.summary) || !Array.isArray(result.errors) || result.errors.length > MAX_RESULT_ITEMS || result.errors.some((error) => !nonEmptyBoundedString(error)) || result.errors.length !== 0) throw new Error(`${label}:invalid_result:${JSON.stringify(result)}`);
-  return result;
+  if (!hasExactKeys(result, RESULT_KEYS) || result.pass !== true || !nonEmptyBoundedString(result.summary) || !Array.isArray(result.errors) || result.errors.length > MAX_RESULT_ITEMS || result.errors.some((error) => !nonEmptyBoundedString(error)) || result.errors.length !== 0) throw new Error(`${label}:invalid_result:${JSON.stringify(result)}`);
+  return Object.freeze({ identity, ...result });
 }
 function requireCleanAudit(label, identity, result) {
-  if (!hasExactKeys(result, AUDIT_KEYS) || result.identity !== identity || typeof result.pass !== "boolean" || !nonEmptyBoundedString(result.summary) || !Array.isArray(result.findings) || result.findings.length > MAX_RESULT_ITEMS) throw new Error(`${label}:invalid_result:${JSON.stringify(result)}`);
+  if (!hasExactKeys(result, AUDIT_KEYS) || typeof result.pass !== "boolean" || !nonEmptyBoundedString(result.summary) || !Array.isArray(result.findings) || result.findings.length > MAX_RESULT_ITEMS) throw new Error(`${label}:invalid_result:${JSON.stringify(result)}`);
   for (const finding of result.findings) if (!hasExactKeys(finding, FINDING_KEYS) || !["HIGH", "MEDIUM", "LOW"].includes(finding.severity) || FINDING_KEYS.slice(1).some((key) => !nonEmptyBoundedString(finding[key]))) throw new Error(`${label}:invalid_finding:${JSON.stringify(finding)}`);
   const blockers = result.findings.filter((finding) => finding.severity === "HIGH" || finding.severity === "MEDIUM");
   if (result.pass !== (blockers.length === 0)) throw new Error(`${label}:invalid_result:${JSON.stringify(result)}`);
   if (result.findings.length !== 0) throw new Error(`${label}:findings:${JSON.stringify(result.findings)}`);
-  return result;
+  return Object.freeze({ identity, ...result });
 }
-export function verifyTask554Bootstrap(root = ROOT) {
-  const output = commandOutput(root, "node", [path.join(root, AUTHOR_AUDIT_PATH), "--task-554-bootstrap-verify"]);
-  let parsed;
-  try {
-    parsed = JSON.parse(output.toString("utf8"));
-  } catch (error) {
-    throw new Error("task_554_bootstrap_verifier_invalid_output", { cause: error });
-  }
-  if (
-    parsed?.baseline !== TASK_554_BASELINE_SHA ||
-    !Array.isArray(parsed?.paths) ||
-    parsed.paths.length !== 3
-  ) {
-    throw new Error("task_554_bootstrap_verifier_invalid_receipt");
-  }
-  return parsed;
-}
+export function verifyTask554Bootstrap(root = ROOT) { let parsed; try { parsed = JSON.parse(commandOutput(root, "node", [path.join(root, AUTHOR_AUDIT_PATH), "--task-554-bootstrap-verify"]).toString("utf8")); } catch (error) { throw new Error("task_554_bootstrap_verifier_invalid_output", { cause: error }); } if (parsed?.baseline !== TASK_554_BASELINE_SHA || !Array.isArray(parsed?.paths) || parsed.paths.length !== 3) throw new Error("task_554_bootstrap_verifier_invalid_receipt"); return parsed; }
 function verifyBeforeDispatch(phaseName, root = ROOT) {
   try {
     const bootstrap = verifyTask554Bootstrap(root);
@@ -323,11 +238,66 @@ export function assertTask554LineLimit(root = ROOT, baseline = TASK_554_BASELINE
   }
   return Object.freeze(counted);
 }
-function runRequiredCommand(root, entry) {
+function runRequiredCommandDirect(root, entry) {
   const result = spawnSync(entry.command, entry.args, { cwd: root, stdio: "inherit" });
   if (result.error || result.status !== 0 || result.signal) {
     throw new Error(`${entry.label}:failed:${result.error?.message ?? result.status ?? result.signal}`);
   }
+}
+function releaseGateSnapshot(root) {
+  const directory = path.join(root, ".tmp");
+  let directoryStats;
+  try { directoryStats = lstatSync(directory); } catch (error) {
+    if (error && typeof error === "object" && error.code === "ENOENT") return Object.freeze({ directory: false, report: null });
+    throw error;
+  }
+  if (!directoryStats.isDirectory() || directoryStats.isSymbolicLink()) throw new Error("task_554_release_gate_tmp_invalid");
+  const reportPath = path.join(root, RELEASE_GATE_REPORT_PATH);
+  try {
+    const reportStats = lstatSync(reportPath);
+    if (!reportStats.isFile() || reportStats.isSymbolicLink()) throw new Error("task_554_release_gate_report_invalid");
+    return Object.freeze({ directory: true, report: Object.freeze({ bytes: readFileSync(reportPath), mode: reportStats.mode }) });
+  } catch (error) {
+    if (error && typeof error === "object" && error.code === "ENOENT") return Object.freeze({ directory: true, report: null });
+    throw error;
+  }
+}
+function sameReleaseGateSnapshot(left, right) {
+  return left.directory === right.directory && left.report?.mode === right.report?.mode && Boolean(left.report) === Boolean(right.report) && (!left.report || left.report.bytes.equals(right.report.bytes));
+}
+function restoreReleaseGateSnapshot(root, expected) {
+  const directory = path.join(root, ".tmp");
+  const reportPath = path.join(root, RELEASE_GATE_REPORT_PATH);
+  if (!expected.directory) {
+    const actual = releaseGateSnapshot(root);
+    if (actual.report) { unlinkSync(reportPath); }
+    if (existsSync(directory)) {
+      const stats = lstatSync(directory);
+      if (!stats.isDirectory() || stats.isSymbolicLink() || readdirSync(directory).length !== 0) throw new Error("task_554_release_gate_tmp_not_empty");
+      rmdirSync(directory);
+    }
+  } else {
+    const actual = releaseGateSnapshot(root);
+    if (actual.report) unlinkSync(reportPath);
+    if (expected.report) {
+      const descriptor = openSync(reportPath, constants.O_WRONLY | constants.O_CREAT | constants.O_TRUNC | constants.O_NOFOLLOW, expected.report.mode);
+      try { writeFileSync(descriptor, expected.report.bytes); fchmodSync(descriptor, expected.report.mode); } finally { closeSync(descriptor); }
+    }
+  }
+  if (!sameReleaseGateSnapshot(expected, releaseGateSnapshot(root))) throw new Error("task_554_release_gate_report_restore_failed");
+}
+function runTask554ReleaseGate(root, work) {
+  const expected = releaseGateSnapshot(root); let primary = null;
+  try { work(); } catch (error) { primary = error; }
+  try { restoreReleaseGateSnapshot(root, expected); } catch (restoration) {
+    if (primary) throw new AggregateError([primary, restoration], "TASK-554 release gate and restoration failures");
+    throw restoration;
+  }
+  if (primary) throw primary;
+}
+function runRequiredCommand(root, entry) {
+  if (entry.label === "task_554_coderso_release_gates") return runTask554ReleaseGate(root, () => runRequiredCommandDirect(root, entry));
+  return runRequiredCommandDirect(root, entry);
 }
 function runOwnerGateCommands(root, ownerId) {
   return runReadOnlyGate(`task_554_owner_gate_mutated:${ownerId}`, root, () => {
@@ -454,33 +424,45 @@ function assertExactSmokeSessionFiles(root, session, expectedPaths) {
   }
   return actual;
 }
-function assertBoundedPng(root, relativePath) {
+function sameStableFile(left, right) {
+  return left.dev === right.dev && left.ino === right.ino && left.mode === right.mode && left.size === right.size && left.mtimeMs === right.mtimeMs && left.ctimeMs === right.ctimeMs;
+}
+function readStableSmokeFile(root, relativePath, maximumBytes, label) {
   assertNofollowTask554SmokeRoot(root);
-  const absolute = path.resolve(root, relativePath);
-  const stats = lstatSync(absolute);
-  if (!stats.isFile() || stats.isSymbolicLink()) throw new Error(`task_554_smoke_png_invalid:${relativePath}`);
-  const bytes = readFileSync(absolute);
+  const absolute = path.resolve(root, relativePath); const initial = lstatSync(absolute);
+  if (!initial.isFile() || initial.isSymbolicLink()) throw new Error(`${label}_not_regular:${relativePath}`);
+  let descriptor;
+  try {
+    if (!Number.isInteger(constants.O_NOFOLLOW)) throw new Error("task_554_smoke_nofollow_unsupported");
+    descriptor = openSync(absolute, constants.O_RDONLY | constants.O_NOFOLLOW);
+    const before = fstatSync(descriptor);
+    if (!before.isFile() || before.size < 1 || before.size > maximumBytes) throw new Error(`${label}_invalid:${relativePath}`);
+    const bytes = Buffer.from(readFileSync(descriptor)); const after = fstatSync(descriptor);
+    const final = lstatSync(absolute);
+    if (!sameStableFile(before, after) || !sameStableFile(after, final) || bytes.byteLength !== after.size) throw new Error(`${label}_changed:${relativePath}`);
+    return bytes;
+  } finally { if (descriptor !== undefined) closeSync(descriptor); }
+}
+function assertBoundedPng(root, relativePath) {
+  const bytes = readStableSmokeFile(root, relativePath, MAXIMUM_PNG_BYTES, "task_554_smoke_png");
   if (bytes.byteLength < 33 || bytes.byteLength > MAXIMUM_PNG_BYTES || !bytes.subarray(0, PNG_SIGNATURE.length).equals(PNG_SIGNATURE) || bytes.toString("ascii", 12, 16) !== "IHDR") throw new Error(`task_554_smoke_png_invalid:${relativePath}`);
   const width = bytes.readUInt32BE(16);
   const height = bytes.readUInt32BE(20);
   if (width === 0 || height === 0 || width > MAXIMUM_PNG_DIMENSION || height > MAXIMUM_PNG_DIMENSION) throw new Error(`task_554_smoke_png_dimensions:${relativePath}`);
   return bytes;
 }
-function assertDecodedTask554Pngs(root, paths) {
+function assertDecodedTask554Pngs(root, pngBytes) {
   const manifestModule = pathToFileURL(path.join(root, "scripts/runtime-smoke/adapters/task-554/output-manifest.ts")).href;
   const source = [
     `import { decodeTask554Png } from ${JSON.stringify(manifestModule)};`,
-    'import { readFileSync } from "node:fs";',
-    `const paths = ${JSON.stringify(paths.map((relativePath) => path.resolve(root, relativePath)))};`,
-    "process.stdout.write(JSON.stringify(paths.map((filePath) => decodeTask554Png(readFileSync(filePath)))));",
+    "const bytes = new Uint8Array(await new Response(Bun.stdin.stream()).arrayBuffer());",
+    "process.stdout.write(JSON.stringify(decodeTask554Png(bytes)));",
   ].join("\n");
-  let decoded;
-  try {
-    decoded = JSON.parse(commandOutput(root, "bun", ["--eval", source]).toString("utf8"));
-  } catch (error) {
-    throw new Error("task_554_smoke_png_decode_invalid", { cause: error });
-  }
-  if (!Array.isArray(decoded) || decoded.length !== paths.length || decoded.some((entry) => !entry || Object.keys(entry).length !== 2 || !Number.isSafeInteger(entry.width) || !Number.isSafeInteger(entry.height) || entry.width <= 0 || entry.height <= 0 || entry.width > MAXIMUM_PNG_DIMENSION || entry.height > MAXIMUM_PNG_DIMENSION)) {
+  const decoded = pngBytes.map((bytes) => {
+    const result = spawnSync("bun", ["--eval", source], { cwd: root, input: bytes, encoding: "buffer", stdio: ["pipe", "pipe", "pipe"] });
+    try { if (result.error || result.status !== 0 || result.signal) throw result.error ?? new Error(String(result.status ?? result.signal)); return JSON.parse(result.stdout.toString("utf8")); } catch (error) { throw new Error("task_554_smoke_png_decode_invalid", { cause: error }); }
+  });
+  if (decoded.length !== pngBytes.length || decoded.some((entry) => !entry || Object.keys(entry).length !== 2 || !Number.isSafeInteger(entry.width) || !Number.isSafeInteger(entry.height) || entry.width <= 0 || entry.height <= 0 || entry.width > MAXIMUM_PNG_DIMENSION || entry.height > MAXIMUM_PNG_DIMENSION)) {
     throw new Error("task_554_smoke_png_decode_shape");
   }
   return Object.freeze(decoded.map(({ width, height }) => Object.freeze({ width, height })));
@@ -504,7 +486,7 @@ function assertExactReport(report, profile, session, manifest, root) {
     throw new Error("task_554_smoke_report_screenshot_count");
   }
   const pngBytes = manifest.paths.map((relativePath) => assertBoundedPng(root, relativePath));
-  assertDecodedTask554Pngs(root, manifest.paths);
+  assertDecodedTask554Pngs(root, pngBytes);
   for (const [index, screenshot] of report.screenshots.entries()) {
     const expectedPath = manifest.paths[index];
     if (!screenshot || Object.keys(screenshot).length !== 2 || screenshot.path !== expectedPath || typeof screenshot.sha256 !== "string" || !SHA256.test(screenshot.sha256)) {
@@ -513,6 +495,7 @@ function assertExactReport(report, profile, session, manifest, root) {
     const actualDigest = createHash("sha256").update(pngBytes[index]).digest("hex");
     if (screenshot.sha256 !== actualDigest) throw new Error(`task_554_smoke_report_hash:${index}`);
   }
+  return Object.freeze(pngBytes);
 }
 export function assertExactTask554SmokeEvidence(root, profile, session, manifest, reportBytes) {
   const checkedManifest = assertExactTask554Manifest(root, profile, session, manifest);
@@ -521,15 +504,13 @@ export function assertExactTask554SmokeEvidence(root, profile, session, manifest
   const stats = lstatSync(sessionDirectory);
   if (!stats.isDirectory() || stats.isSymbolicLink()) throw new Error("task_554_smoke_session_not_directory");
   const reportPath = ensureInsideRoot(root, path.join(sessionDirectory, "report.json"), "smoke_report");
-  const reportStats = lstatSync(path.resolve(root, reportPath));
-  if (!reportStats.isFile() || reportStats.isSymbolicLink()) throw new Error("task_554_smoke_report_not_regular");
   const bytes = Buffer.from(reportBytes);
   if (bytes.byteLength === 0 || bytes.byteLength > 1_048_576 || bytes[bytes.byteLength - 1] !== 0x0a) {
     throw new Error("task_554_smoke_report_bytes_invalid");
   }
   const reportText = bytes.toString("utf8");
   if (!Buffer.from(reportText, "utf8").equals(bytes)) throw new Error("task_554_smoke_report_utf8_invalid");
-  if (!readFileSync(path.resolve(root, reportPath)).equals(bytes)) throw new Error("task_554_smoke_report_file_mismatch");
+  if (!readStableSmokeFile(root, reportPath, 1_048_576, "task_554_smoke_report").equals(bytes)) throw new Error("task_554_smoke_report_file_mismatch");
   let report;
   try {
     report = JSON.parse(reportText);
@@ -537,17 +518,11 @@ export function assertExactTask554SmokeEvidence(root, profile, session, manifest
     throw new Error("task_554_smoke_report_json_invalid", { cause: error });
   }
   assertExactSmokeSessionFiles(root, session, [reportPath, ...checkedManifest.paths]);
-  for (const relativePath of [reportPath]) {
-    const fileStats = lstatSync(path.resolve(root, relativePath));
-    if (!fileStats.isFile() || fileStats.isSymbolicLink() || fileStats.size <= 0) {
-      throw new Error(`task_554_smoke_output_invalid:${relativePath}`);
-    }
-  }
-  assertExactReport(report, profile, session, checkedManifest, root);
-  return Object.freeze({ manifest: checkedManifest, report });
+  const pngBytes = assertExactReport(report, profile, session, checkedManifest, root);
+  return Object.freeze({ manifest: checkedManifest, report, reportBytes: bytes, pngBytes });
 }
 function captureSmokeEvidenceSnapshot(root, evidence) {
-  assertNofollowTask554SmokeRoot(root);
+  assertExactTask554SmokeEvidence(root, evidence.report.profile, evidence.report.session, evidence.manifest, evidence.reportBytes);
   const sessionPath = ensureInsideRoot(root, task554SessionDirectory(root, evidence.report.session), "smoke_session");
   const reportPath = ensureInsideRoot(root, path.join(task554SessionDirectory(root, evidence.report.session), "report.json"), "smoke_report");
   return new Map([sessionPath, reportPath, ...evidence.manifest.paths].map((relativePath) => [relativePath, fingerprintPath(root, relativePath)]));
@@ -596,7 +571,7 @@ export function runTask554SmokeProfile(root, profile, session) {
     }
     if (execution?.error || execution?.status !== 0 || execution?.signal) throw new Error(`task_554_smoke_runner_failed:${execution?.error?.message ?? execution?.status ?? execution?.signal}`);
     assertNofollowTask554SmokeRoot(root);
-    const reportBytes = readFileSync(reportPath);
+    const reportBytes = readStableSmokeFile(root, ensureInsideRoot(root, reportPath, "smoke_report"), 1_048_576, "task_554_smoke_report");
     if (reportBytes.byteLength === 0) throw new Error("task_554_smoke_report_missing");
     evidence = assertExactTask554SmokeEvidence(root, profile, session, manifest, reportBytes);
     evidenceSnapshot = captureSmokeEvidenceSnapshot(root, evidence);
@@ -606,9 +581,7 @@ export function runTask554SmokeProfile(root, profile, session) {
     let evidenceRevalidated = false;
     try {
       if (evidenceSnapshot !== null && evidence !== null) {
-        assertNofollowTask554SmokeRoot(root);
-        const reportPath = ensureInsideRoot(root, path.join(task554SessionDirectory(root, evidence.report.session), "report.json"), "smoke_report");
-        assertExactSmokeSessionFiles(root, session, [reportPath, ...evidence.manifest.paths]);
+        assertExactTask554SmokeEvidence(root, evidence.report.profile, evidence.report.session, evidence.manifest, evidence.reportBytes);
         assertSmokeEvidenceSnapshot(evidenceSnapshot, root);
         evidenceRevalidated = true;
       }
@@ -829,6 +802,15 @@ function workflowSelfTest() {
     if (currentDirtyPaths(tempRoot).includes(stableEmptyDirectory) || !captureRepositoryFingerprint(tempRoot).has(stableEmptyDirectory)) {
       throw new Error("task_554_self_test_stable_empty_directory_preflight");
     }
+    const releaseReport = path.join(tempRoot, RELEASE_GATE_REPORT_PATH);
+    const releaseAbsent = releaseGateSnapshot(tempRoot);
+    runTask554ReleaseGate(tempRoot, () => writeTinyFile(releaseReport, "{\"created\":true}\n"));
+    if (!sameReleaseGateSnapshot(releaseAbsent, releaseGateSnapshot(tempRoot))) throw new Error("task_554_self_test_release_gate_created_report");
+    writeTinyFile(releaseReport, "{\"original\":true}\n"); chmodSync(releaseReport, 0o600);
+    const releasePresent = releaseGateSnapshot(tempRoot);
+    runTask554ReleaseGate(tempRoot, () => writeTinyFile(releaseReport, "{\"changed\":true}\n"));
+    if (!sameReleaseGateSnapshot(releasePresent, releaseGateSnapshot(tempRoot))) throw new Error("task_554_self_test_release_gate_existing_report");
+    rmSync(path.join(tempRoot, ".tmp"), { recursive: true, force: true });
     const baseline = commandOutput(tempRoot, "git", ["rev-parse", "HEAD"]).toString("utf8").trim();
     writeTinyFile(path.join(tempRoot, "core/tracked.ts"), "export const tracked = 1;\nexport const finalLine = true;");
     writeTinyFile(path.join(tempRoot, "tests/untracked.ts"), "one\ntwo\nthree");
@@ -845,12 +827,14 @@ function workflowSelfTest() {
     const fastInvocation = task554SmokeInvocation("fast", "task-554-fast");
     const certificationInvocation = task554SmokeInvocation("certification", "task-554-certification");
     if (fastInvocation.profile !== "fast" || fastInvocation.session !== "task-554-fast" || certificationInvocation.profile !== "certification" || certificationInvocation.session !== "task-554-certification") throw new Error("task_554_self_test_manifest_input_binding");
-    const validResult = { identity: "task-554:self-test", pass: true, summary: "clean", errors: [] };
-    requirePass("task_554_self_test_result", validResult.identity, validResult);
-    expectFailure(() => requirePass("task_554_self_test_result", validResult.identity, { ...validResult, extra: true }), "task_554_self_test_result:invalid_result:");
-    const validAudit = { identity: "task-554:self-audit", pass: true, summary: "clean", findings: [] };
-    requireCleanAudit("task_554_self_test_post_audit", validAudit.identity, validAudit);
-    expectFailure(() => requireCleanAudit("task_554_self_test_final_drift", validAudit.identity, { ...validAudit, findings: [{ severity: "LOW", area: "a", finding: "b", evidence: "c", recommendation: "d", extra: true }] }), "task_554_self_test_final_drift:invalid_finding:");
+    const validResultIdentity = "task-554:self-test";
+    const validResult = { pass: true, summary: "clean", errors: [] };
+    requirePass("task_554_self_test_result", validResultIdentity, validResult);
+    expectFailure(() => requirePass("task_554_self_test_result", validResultIdentity, { ...validResult, identity: validResultIdentity }), "task_554_self_test_result:invalid_result:");
+    const validAuditIdentity = "task-554:self-audit";
+    const validAudit = { pass: true, summary: "clean", findings: [] };
+    requireCleanAudit("task_554_self_test_post_audit", validAuditIdentity, validAudit);
+    expectFailure(() => requireCleanAudit("task_554_self_test_final_drift", validAuditIdentity, { ...validAudit, findings: [{ severity: "LOW", area: "a", finding: "b", evidence: "c", recommendation: "d", extra: true }] }), "task_554_self_test_final_drift:invalid_finding:");
     const before = captureRepositoryFingerprint(tempRoot);
     writeTinyFile(path.join(tempRoot, "tests/allowed.ts"), "export const allowed = true;\n");
     assertScopedRepositoryMutation("task_554_self_test_allowed", before, captureRepositoryFingerprint(tempRoot), ["tests/allowed.ts"], tempRoot);
@@ -922,6 +906,10 @@ function workflowSelfTest() {
     const evidence = assertExactTask554SmokeEvidence(tempRoot, "fast", session, manifest, readFileSync(reportPath));
     const evidenceSnapshot = captureSmokeEvidenceSnapshot(tempRoot, evidence);
     assertNoRepositoryMutation("task_554_self_test_validated_smoke", smokeBefore, captureRepositoryFingerprint(tempRoot, [...evidenceSnapshot.keys()]), tempRoot);
+    const replacement = `${reportPath}.replacement`;
+    writeTinyFile(replacement, Buffer.concat([Buffer.from(" "), report])); renameSync(replacement, reportPath);
+    expectFailure(() => assertExactTask554SmokeEvidence(tempRoot, "fast", session, manifest, evidence.reportBytes), "task_554_smoke_report_file_mismatch");
+    writeTinyFile(reportPath, report);
     writeTinyFile(path.join(tempRoot, manifest.paths[0]), Buffer.from("not-a-png"));
     expectFailure(() => assertExactTask554SmokeEvidence(tempRoot, "fast", session, manifest, readFileSync(reportPath)), "task_554_smoke_png_invalid:");
     writeTinyFile(path.join(tempRoot, manifest.paths[0]), pngBytes);
@@ -968,6 +956,8 @@ function workflowSelfTest() {
       emptyIgnoredDirectoriesBound: true,
       manifestInputBound: true,
       strictMutationAndAuditResultsRejected: true,
+      agentIdentityRejected: true,
+      releaseGateReportRestored: true,
       forbiddenScopeRejected: true,
       directStdoutCapture: true,
       boundedPngEvidenceRejected: true,
@@ -981,6 +971,7 @@ function workflowSelfTest() {
       smokeFinallyRestorationRejected: true,
       failedEmptySmokeDirectoryRejected: true,
       exactEvidenceRevalidationRejected: true,
+      replacementEvidenceRejected: true,
       duplicateScreenshotHashesAllowed: true,
       snapshotMismatchRejected: true,
       narrowClosureRejected: true,

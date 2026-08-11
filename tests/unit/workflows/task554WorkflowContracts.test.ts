@@ -98,6 +98,9 @@ test("TASK-554 implementation workflow executes fail-closed ownership, line, and
   expect(implement).toContain("task_554_smoke_png_invalid");
   expect(implement).toContain("assertNofollowTask554SmokeRoot");
   expect(implement).toContain("gates:coderso");
+  expect(implement).toContain("runTask554ReleaseGate");
+  expect(implement).toContain("readStableSmokeFile");
+  expect(implement).toContain("constants.O_NOFOLLOW");
   expect(implement).toContain("runReadOnlyGate");
   expect(implement).toContain("shared lifecycle, dispatcher, worker, cleanup, browser");
   expect(implement).toContain("do not edit postsService.ts or add a cache wrapper");
@@ -113,6 +116,8 @@ test("TASK-554 implementation workflow executes fail-closed ownership, line, and
     emptyIgnoredDirectoriesBound: true,
     manifestInputBound: true,
     strictMutationAndAuditResultsRejected: true,
+    agentIdentityRejected: true,
+    releaseGateReportRestored: true,
     forbiddenScopeRejected: true,
     directStdoutCapture: true,
     boundedPngEvidenceRejected: true,
@@ -126,6 +131,7 @@ test("TASK-554 implementation workflow executes fail-closed ownership, line, and
     smokeFinallyRestorationRejected: true,
     failedEmptySmokeDirectoryRejected: true,
     exactEvidenceRevalidationRejected: true,
+    replacementEvidenceRejected: true,
     duplicateScreenshotHashesAllowed: true,
     snapshotMismatchRejected: true,
     narrowClosureRejected: true,
@@ -149,6 +155,8 @@ test("TASK-554 fix workflow derives scopes from bounded owner and lens evidence"
   expect(fix).toContain("ownersForChangedPaths");
   expect(fix).toContain("task_554_fix_affected_gates_mutated");
   expect(fix).toContain("assertFixPreflight();");
+  expect(fix).toContain("_docs/ADMIN_CACHE_MAP.md");
+  expect(fix).toContain('required: ["pass", "summary", "findings"]');
   expect(runWorkflowSelfTest(fixPath, "--task-554-fix-self-test")).toEqual({
     pass: true,
     forbiddenScopeRejected: true,
@@ -157,6 +165,7 @@ test("TASK-554 fix workflow derives scopes from bounded owner and lens evidence"
     ownerMappingRejected: true,
     lensMappingRejected: true,
     strictResultRejected: true,
+    agentIdentityRejected: true,
     terminalOwnerEscalated: true,
     actualAffectedReceipt: true,
     workflowRebootstrapEscalated: true,
