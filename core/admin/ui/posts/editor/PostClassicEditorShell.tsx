@@ -1,5 +1,5 @@
 import { Eye, RefreshCcw, Save, Send, SlidersHorizontal } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -23,12 +23,16 @@ import {
 } from "@/services/postsClient";
 import { EntryMetadataPanel, type EntryStatus } from "@/ui/entries/EntryMetadataPanel";
 import { buildEntryChecklist } from "@/ui/entries/entryChecklist";
+import { entryFieldEditedKey, useEntryEditTracker } from "@/ui/entries/useEntryEditTracker";
+import { useEntrySnapshotAuthority } from "@/ui/entries/useEntrySnapshotAuthority";
 import { AdminShell } from "@/ui/layouts/AdminShell";
 import { RuntimePreviewDialog } from "@/ui/preview/RuntimePreviewDialog";
 import { useAdminRouter } from "@/ui/contexts/AdminRouterContext";
 import { subscribeCacheEvents } from "@/utils/cacheBus";
 
 import type { ContentField } from "../../content-types/SchemaBuilder";
+
+import { buildPostMetadataMutationPayload } from "./postMetadataMutationPayload";
 
 const resolvePostIdFromPath = (path: string): string | null => {
   const pathname = path.split(/[?#]/)[0] ?? "";
@@ -107,6 +111,68 @@ const parseStatus = (value: PostStatus): EntryStatus => {
   return "draft";
 };
 
+type PostRouteIdentity = Readonly<{
+  postId: string;
+  routeEpoch: number;
+}>;
+
+type PostMetadataBaseline = Readonly<
+  PostRouteIdentity & {
+    detail: PostDetail;
+  }
+>;
+
+type PostMutationLease = Readonly<
+  PostRouteIdentity & {
+    operationId: number;
+  }
+>;
+
+type PostLoadOptions = Readonly<{
+  discardLocalEdits?: boolean;
+  isBaseline?: boolean;
+  lease?: PostMutationLease;
+  setLoading?: boolean;
+}>;
+
+const classicContentEditKeys = [
+  "title",
+  "slug",
+  entryFieldEditedKey("excerpt"),
+  entryFieldEditedKey("content"),
+  entryFieldEditedKey("featuredImage"),
+  entryFieldEditedKey("featured"),
+] as const;
+
+const readPostData = (detail: PostDetail | null): Record<string, unknown> =>
+  isRecord(detail?.data) ? detail.data : {};
+
+const mergeClassicContent = (current: PostDetail | null, next: PostDetail): PostDetail => {
+  if (!current || current.id !== next.id) return next;
+  return {
+    ...current,
+    title: next.title,
+    slug: next.slug,
+    data: { ...readPostData(current), ...readPostData(next) },
+    updatedAt: next.updatedAt,
+  };
+};
+
+const mergePostMetadata = (current: PostDetail | null, next: PostDetail): PostDetail => {
+  if (!current || current.id !== next.id) return next;
+  return {
+    ...current,
+    status: next.status,
+    tags: next.tags,
+    taxonomy: next.taxonomy,
+    scheduledAt: next.scheduledAt,
+    updatedAt: next.updatedAt,
+    publishedAt: next.publishedAt,
+    author: next.author,
+    seo: next.seo,
+  };
+};
+
 export function PostClassicEditorShell() {
   const { path } = useAdminRouter();
   const postId = useMemo(() => resolvePostIdFromPath(path), [path]);
@@ -133,9 +199,8 @@ export function PostClassicEditorShell() {
   const [scheduledAt, setScheduledAt] = useState(() => post?.scheduledAt ?? "");
   const [seoDescription, setSeoDescription] = useState(() => post?.seo?.description ?? "");
 
-  const [isLoading, setIsLoading] = useState(() => !post);
+  const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
-  const [isPublishing, setIsPublishing] = useState(false);
   const [isSavingMetadata, setIsSavingMetadata] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [previewOpen, setPreviewOpen] = useState(false);
@@ -143,118 +208,339 @@ export function PostClassicEditorShell() {
   const [previewLoading, setPreviewLoading] = useState(false);
   const [previewError, setPreviewError] = useState<string | null>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
-  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [remoteUpdatePending, setRemoteUpdatePending] = useState(false);
+  const [routeEpoch, setRouteEpoch] = useState(0);
+  const [baselineIdentity, setBaselineIdentity] = useState<PostRouteIdentity | null>(null);
+  const [leaseOperationId, setLeaseOperationId] = useState<number | null>(null);
 
-  const hasUnsavedChangesRef = useRef(false);
-  const setUnsavedChanges = useCallback((value: boolean) => {
-    hasUnsavedChangesRef.current = value;
-    setHasUnsavedChanges(value);
-  }, []);
+  const {
+    begin: beginSnapshotWrite,
+    claim: claimSnapshotWrite,
+    isAuthoritative: isSnapshotAuthoritative,
+    supersedeAll: supersedeSnapshotWrites,
+  } = useEntrySnapshotAuthority();
+  const {
+    beginSubmit,
+    editedKeys,
+    hasContentEdits,
+    hasEdits,
+    hasMetadataEdits,
+    markEdited,
+    resetEdits,
+    settleSubmit,
+  } = useEntryEditTracker();
+  const routeEpochRef = useRef(0);
+  const routePostIdRef = useRef<string | null>(postId);
+  const baselineRef = useRef<PostMetadataBaseline | null>(null);
+  const leaseRef = useRef<PostMutationLease | null>(null);
+  const nextLeaseOperationIdRef = useRef(0);
+  const metadataDraftRevisionRef = useRef(0);
 
-  const applyPost = useCallback(
-    (next: PostDetail) => {
-      setPost(next);
-      setTitle(next.title);
-      setSlug(next.slug);
-      const source = isRecord(next.data) ? next.data : {};
+  const currentRouteIdentity = useCallback((): PostRouteIdentity | null => {
+    if (!postId || routePostIdRef.current !== postId) return null;
+    return { postId, routeEpoch: routeEpochRef.current };
+  }, [postId]);
+
+  const isCurrentRoute = useCallback(
+    (identity: PostRouteIdentity) =>
+      routePostIdRef.current === identity.postId &&
+      postId === identity.postId &&
+      routeEpochRef.current === identity.routeEpoch,
+    [postId]
+  );
+
+  const hasCurrentBaseline = useCallback(
+    (identity: PostRouteIdentity | null) => {
+      const baseline = baselineRef.current;
+      return Boolean(
+        identity &&
+        baseline &&
+        baseline.postId === identity.postId &&
+        baseline.routeEpoch === identity.routeEpoch &&
+        isCurrentRoute(identity)
+      );
+    },
+    [isCurrentRoute]
+  );
+
+  const ownsCurrentLease = useCallback(
+    (lease: PostMutationLease) =>
+      leaseRef.current?.operationId === lease.operationId && hasCurrentBaseline(lease),
+    [hasCurrentBaseline]
+  );
+
+  const installMetadataBaseline = useCallback(
+    (identity: PostRouteIdentity, detail: PostDetail) => {
+      if (!isCurrentRoute(identity)) return false;
+      baselineRef.current = { ...identity, detail };
+      setBaselineIdentity(identity);
+      return true;
+    },
+    [isCurrentRoute]
+  );
+
+  const applyContentSnapshot = useCallback(
+    (identity: PostRouteIdentity, next: PostDetail) => {
+      if (!isCurrentRoute(identity)) return false;
+      const kept = editedKeys();
+      const source = readPostData(next);
+      setPost((current) => mergeClassicContent(current, next));
+      if (!kept.has("title")) setTitle(next.title);
+      if (!kept.has("slug")) setSlug(next.slug);
+      if (!kept.has(entryFieldEditedKey("excerpt"))) {
+        setExcerpt(readOptionalString(source.excerpt));
+      }
+      if (!kept.has(entryFieldEditedKey("content"))) {
+        setContent(readOptionalString(source.content));
+      }
+      if (!kept.has(entryFieldEditedKey("featuredImage"))) {
+        setFeaturedImage(readOptionalString(source.featuredImage));
+      }
+      if (!kept.has(entryFieldEditedKey("featured"))) {
+        setFeatured(readOptionalBoolean(source.featured));
+      }
+      return true;
+    },
+    [editedKeys, isCurrentRoute]
+  );
+
+  const applyMetadataSnapshot = useCallback(
+    (identity: PostRouteIdentity, next: PostDetail, submittedMetadataRevision: number) => {
+      if (!installMetadataBaseline(identity, next)) return false;
+      const kept = editedKeys();
+      setPost((current) => mergePostMetadata(current, next));
+      if (metadataDraftRevisionRef.current === submittedMetadataRevision) {
+        if (!kept.has("status")) setStatus(parseStatus(next.status));
+        if (!kept.has("scheduledAt")) setScheduledAt(next.scheduledAt ?? "");
+        if (!kept.has("seoDescription")) setSeoDescription(next.seo?.description ?? "");
+      }
+      setError(null);
+      setRemoteUpdatePending(false);
+      return true;
+    },
+    [editedKeys, installMetadataBaseline]
+  );
+
+  const acquirePostMutationLease = useCallback((): PostMutationLease | null => {
+    const identity = currentRouteIdentity();
+    if (!identity || !hasCurrentBaseline(identity) || leaseRef.current) return null;
+    const lease = {
+      ...identity,
+      operationId: (nextLeaseOperationIdRef.current += 1),
+    };
+    leaseRef.current = lease;
+    setLeaseOperationId(lease.operationId);
+    return lease;
+  }, [currentRouteIdentity, hasCurrentBaseline]);
+
+  const releasePostMutationLease = useCallback(
+    (lease: PostMutationLease) => {
+      if (!ownsCurrentLease(lease)) return;
+      leaseRef.current = null;
+      setLeaseOperationId(null);
+    },
+    [ownsCurrentLease]
+  );
+
+  const loadPost = useCallback(
+    async (options: PostLoadOptions = {}, exactIdentity?: PostRouteIdentity): Promise<boolean> => {
+      const identity = exactIdentity ?? currentRouteIdentity();
+      if (!identity || !isCurrentRoute(identity)) return false;
+      if (options.lease) {
+        if (!ownsCurrentLease(options.lease)) return false;
+      } else {
+        if (leaseRef.current) {
+          if (hasCurrentBaseline(identity)) setRemoteUpdatePending(true);
+          return false;
+        }
+        if (!options.isBaseline && !options.discardLocalEdits && hasEdits()) {
+          setRemoteUpdatePending(true);
+          return false;
+        }
+      }
+
+      const snapshotTicket = beginSnapshotWrite();
+      const metadataDraftRevision = metadataDraftRevisionRef.current;
+      try {
+        const refreshed = await getPostCached(identity.postId, { force: true });
+        if (
+          !isCurrentRoute(identity) ||
+          (options.lease !== undefined && !ownsCurrentLease(options.lease))
+        ) {
+          return false;
+        }
+        if (options.lease === undefined && leaseRef.current) {
+          if (hasCurrentBaseline(identity)) setRemoteUpdatePending(true);
+          return false;
+        }
+        if (!isSnapshotAuthoritative(snapshotTicket) && hasCurrentBaseline(identity)) return false;
+        claimSnapshotWrite(snapshotTicket);
+        if (!refreshed) {
+          setError("Post not found.");
+          return false;
+        }
+        if (options.discardLocalEdits) resetEdits();
+        if (!applyContentSnapshot(identity, refreshed)) return false;
+        if (!applyMetadataSnapshot(identity, refreshed, metadataDraftRevision)) return false;
+        return true;
+      } catch (err) {
+        if (isCurrentRoute(identity) && isSnapshotAuthoritative(snapshotTicket)) {
+          setError(isApiClientError(err) ? err.message : "Failed to load post.");
+        }
+        return false;
+      } finally {
+        if (options.setLoading && isCurrentRoute(identity)) setIsLoading(false);
+      }
+    },
+    [
+      applyContentSnapshot,
+      applyMetadataSnapshot,
+      beginSnapshotWrite,
+      claimSnapshotWrite,
+      currentRouteIdentity,
+      hasCurrentBaseline,
+      hasEdits,
+      isCurrentRoute,
+      isSnapshotAuthoritative,
+      ownsCurrentLease,
+      resetEdits,
+    ]
+  );
+
+  useLayoutEffect(() => {
+    const nextRouteEpoch = (routeEpochRef.current += 1);
+    routePostIdRef.current = postId;
+    baselineRef.current = null;
+    leaseRef.current = null;
+    supersedeSnapshotWrites();
+    setRouteEpoch(nextRouteEpoch);
+    setBaselineIdentity(null);
+    setLeaseOperationId(null);
+  }, [postId, supersedeSnapshotWrites]);
+
+  useEffect(() => {
+    const routeEpoch = routeEpochRef.current;
+    const preview = postId ? getCachedPostDetail(postId) : null;
+    void Promise.resolve().then(() => {
+      if (routeEpochRef.current !== routeEpoch || routePostIdRef.current !== postId) return;
+      const source = readPostData(preview);
+      setPost(preview);
+      setTitle(preview?.title ?? "");
+      setSlug(preview?.slug ?? "");
       setExcerpt(readOptionalString(source.excerpt));
       setContent(readOptionalString(source.content));
       setFeaturedImage(readOptionalString(source.featuredImage));
       setFeatured(readOptionalBoolean(source.featured));
-      setStatus(parseStatus(next.status));
-      setScheduledAt(next.scheduledAt ?? "");
-      setSeoDescription(next.seo?.description ?? "");
+      setStatus(parseStatus(preview?.status ?? "draft"));
+      setScheduledAt(preview?.scheduledAt ?? "");
+      setSeoDescription(preview?.seo?.description ?? "");
       setError(null);
       setRemoteUpdatePending(false);
-      setUnsavedChanges(false);
-    },
-    [setUnsavedChanges]
-  );
-
-  const refreshPost = useCallback(
-    async (options?: { allowUnsaved?: boolean; setLoading?: boolean }) => {
-      if (!postId) return;
-      const shouldSetLoading = options?.setLoading !== false;
-      if (shouldSetLoading) setIsLoading(true);
-      setError(null);
-      try {
-        const refreshed = await getPostCached(postId, { force: true });
-        if (!refreshed) {
-          setError("Post not found.");
-          return;
-        }
-        if (!options?.allowUnsaved && hasUnsavedChangesRef.current) {
-          setRemoteUpdatePending(true);
-          return;
-        }
-        applyPost(refreshed);
-      } catch (err) {
-        if (isApiClientError(err)) {
-          setError(err.message);
-        } else {
-          setError("Failed to load post.");
-        }
-      } finally {
-        if (shouldSetLoading) setIsLoading(false);
-      }
-    },
-    [applyPost, postId]
-  );
+      setLeaseOperationId(null);
+      setIsSaving(false);
+      setIsSavingMetadata(false);
+      setIsLoading(postId !== null);
+      resetEdits();
+    });
+  }, [postId, resetEdits]);
 
   useEffect(() => {
-    if (!postId) return;
-    let active = true;
-    getPostCached(postId, { force: true })
-      .then((refreshed) => {
-        if (!active || !refreshed) return;
-        if (hasUnsavedChangesRef.current) {
-          setRemoteUpdatePending(true);
-          return;
-        }
-        applyPost(refreshed);
-      })
-      .catch((err) => {
-        if (!active) return;
-        if (isApiClientError(err)) {
-          setError(err.message);
-        } else {
-          setError("Failed to load post.");
-        }
-      })
-      .finally(() => {
-        if (active) setIsLoading(false);
-      });
-    return () => {
-      active = false;
-    };
-  }, [applyPost, postId]);
+    const identity = currentRouteIdentity();
+    if (!identity) return;
+    void Promise.resolve().then(() => loadPost({ isBaseline: true, setLoading: true }, identity));
+  }, [currentRouteIdentity, loadPost, postId]);
 
   useEffect(() => {
     if (!postId) return;
     return subscribeCacheEvents((event) => {
       if (event.key !== cacheKeys.postDetail(postId)) return;
-      refreshPost({ setLoading: false }).catch(() => undefined);
+      const identity = currentRouteIdentity();
+      if (!identity || !hasCurrentBaseline(identity)) return;
+      if (leaseRef.current || hasEdits()) {
+        setRemoteUpdatePending(true);
+        return;
+      }
+      void loadPost({}, identity);
     });
-  }, [postId, refreshPost]);
+  }, [currentRouteIdentity, hasCurrentBaseline, hasEdits, loadPost, postId]);
+
+  const hasHydratedCurrentPostBaseline =
+    baselineIdentity?.postId === postId && baselineIdentity.routeEpoch === routeEpoch;
+  const isPostMutationInFlight = leaseOperationId !== null;
+  const canMutateCurrentPost = hasHydratedCurrentPostBaseline && !isPostMutationInFlight;
+  const isEditorLoading = isLoading || !hasHydratedCurrentPostBaseline;
+  const hasUnsavedChanges = hasContentEdits || hasMetadataEdits;
+
+  const canEditCurrentPost = () => hasCurrentBaseline(currentRouteIdentity());
 
   const handleTitleChange = (value: string) => {
+    if (!canEditCurrentPost()) return;
     setTitle(value);
-    setUnsavedChanges(true);
+    markEdited("title");
   };
 
   const handleSlugChange = (value: string) => {
+    if (!canEditCurrentPost()) return;
     setSlug(value);
-    setUnsavedChanges(true);
+    markEdited("slug");
   };
 
-  const handleSaveDraft = async () => {
-    if (!postId) return;
+  const handleExcerptChange = (value: string) => {
+    if (!canEditCurrentPost()) return;
+    setExcerpt(value);
+    markEdited(entryFieldEditedKey("excerpt"));
+  };
+
+  const handleContentChange = (value: string) => {
+    if (!canEditCurrentPost()) return;
+    setContent(value);
+    markEdited(entryFieldEditedKey("content"));
+  };
+
+  const handleFeaturedImageChange = (value: string) => {
+    if (!canEditCurrentPost()) return;
+    setFeaturedImage(value);
+    markEdited(entryFieldEditedKey("featuredImage"));
+  };
+
+  const handleFeaturedChange = (value: boolean) => {
+    if (!canEditCurrentPost()) return;
+    setFeatured(value);
+    markEdited(entryFieldEditedKey("featured"));
+  };
+
+  const handleStatusChange = (value: EntryStatus) => {
+    if (!canEditCurrentPost()) return;
+    metadataDraftRevisionRef.current += 1;
+    setStatus(value);
+    markEdited("status");
+  };
+
+  const handleScheduledAtChange = (value: string) => {
+    if (!canEditCurrentPost()) return;
+    metadataDraftRevisionRef.current += 1;
+    setScheduledAt(value);
+    markEdited("scheduledAt");
+  };
+
+  const handleSeoDescriptionChange = (value: string) => {
+    if (!canEditCurrentPost()) return;
+    metadataDraftRevisionRef.current += 1;
+    setSeoDescription(value);
+    markEdited("seoDescription");
+  };
+
+  const handleSaveDraft = async (options?: { lease?: PostMutationLease }): Promise<boolean> => {
+    const lease = options?.lease ?? acquirePostMutationLease();
+    if (!lease || !ownsCurrentLease(lease)) return false;
+    const shouldReleaseLease = options?.lease === undefined;
+    const submittedTick = beginSubmit();
+    const snapshotTicket = beginSnapshotWrite();
     setIsSaving(true);
     setError(null);
     try {
-      const source = isRecord(post?.data) ? post.data : {};
-      const updated = await updatePost(postId, {
+      const source = readPostData(post);
+      const updated = await updatePost(lease.postId, {
         title,
         slug,
         data: {
@@ -266,17 +552,23 @@ export function PostClassicEditorShell() {
           document: buildClassicDocument(title, content, excerpt),
         },
       });
-      if (updated) {
-        applyPost(updated);
+      if (!ownsCurrentLease(lease) || !isSnapshotAuthoritative(snapshotTicket) || !updated) {
+        return false;
       }
+      settleSubmit(classicContentEditKeys, submittedTick);
+      supersedeSnapshotWrites();
+      applyContentSnapshot(lease, updated);
+      setError(null);
+      setRemoteUpdatePending(false);
+      return true;
     } catch (err) {
-      if (isApiClientError(err)) {
-        setError(err.message);
-      } else {
-        setError("Failed to save post.");
+      if (ownsCurrentLease(lease)) {
+        setError(isApiClientError(err) ? err.message : "Failed to save post.");
       }
+      return false;
     } finally {
-      setIsSaving(false);
+      if (ownsCurrentLease(lease)) setIsSaving(false);
+      if (shouldReleaseLease) releasePostMutationLease(lease);
     }
   };
 
@@ -294,77 +586,92 @@ export function PostClassicEditorShell() {
   );
 
   const handlePublish = async () => {
-    if (!postId) return;
+    const lease = acquirePostMutationLease();
+    if (!lease || !ownsCurrentLease(lease)) return;
     if (checklist.blockingIssues.length > 0) {
       setError(checklist.blockingIssues.join(" "));
+      releasePostMutationLease(lease);
       return;
     }
 
-    setIsPublishing(true);
     setError(null);
     try {
       if (status === "published") {
-        await handleSaveDraft();
+        const updated = await handleSaveDraft({ lease });
+        if (updated && ownsCurrentLease(lease)) {
+          await loadPost({ lease, setLoading: false }, lease);
+        }
       } else {
-        await publishPost(postId);
-        await refreshPost({ allowUnsaved: true, setLoading: false });
+        const submittedTick = beginSubmit();
+        const snapshotTicket = beginSnapshotWrite();
+        await publishPost(lease.postId);
+        if (!ownsCurrentLease(lease) || !isSnapshotAuthoritative(snapshotTicket)) return;
+        settleSubmit(["status"], submittedTick);
+        supersedeSnapshotWrites();
+        await loadPost({ lease, setLoading: false }, lease);
       }
     } catch (err) {
-      if (isApiClientError(err)) {
-        setError(err.message);
-      } else {
-        setError("Failed to publish post.");
+      if (ownsCurrentLease(lease)) {
+        setError(isApiClientError(err) ? err.message : "Failed to publish post.");
       }
     } finally {
-      setIsPublishing(false);
+      releasePostMutationLease(lease);
     }
   };
 
   const handleSaveMetadata = async () => {
-    if (!postId) return;
+    const lease = acquirePostMutationLease();
+    if (!lease || !ownsCurrentLease(lease)) return;
     setIsSavingMetadata(true);
     setError(null);
-
-    let scheduledAtIso: string | null = null;
-    if (scheduledAt.trim()) {
-      const parsed = new Date(scheduledAt);
-      if (Number.isNaN(parsed.getTime())) {
-        setError("Schedule date must be a valid ISO timestamp.");
-        setIsSavingMetadata(false);
+    try {
+      const baseline = baselineRef.current;
+      if (!baseline || !hasCurrentBaseline(lease)) return;
+      const submittedTick = beginSubmit();
+      const submittedMetadataRevision = metadataDraftRevisionRef.current;
+      const built = buildPostMetadataMutationPayload(baseline.detail, {
+        status,
+        scheduledAt,
+        seoDescription,
+      });
+      if (built.kind === "schedule_required") {
+        setError("Schedule date is required for scheduled entries.");
         return;
       }
-      scheduledAtIso = parsed.toISOString();
-    }
-
-    if (status === "scheduled" && !scheduledAtIso) {
-      setError("Schedule date is required for scheduled entries.");
-      setIsSavingMetadata(false);
-      return;
-    }
-
-    try {
-      const updated = await updatePostMetadata(postId, {
-        status,
-        scheduledAt: status === "scheduled" ? scheduledAtIso : null,
-        seo: { description: seoDescription },
-      });
-      if (updated) {
-        applyPost(updated);
+      if (built.kind === "invalid_schedule") {
+        setError("Schedule date must be a valid ISO timestamp.");
+        return;
       }
+      if (built.kind === "noop") {
+        settleSubmit(built.settleKeys, submittedTick);
+        applyMetadataSnapshot(lease, baseline.detail, submittedMetadataRevision);
+        return;
+      }
+      const snapshotTicket = beginSnapshotWrite();
+      const updated = await updatePostMetadata(lease.postId, built.payload);
+      if (!ownsCurrentLease(lease) || !isSnapshotAuthoritative(snapshotTicket) || !updated) return;
+      settleSubmit(built.settleKeys, submittedTick);
+      supersedeSnapshotWrites();
+      applyMetadataSnapshot(lease, updated, submittedMetadataRevision);
     } catch (err) {
-      if (isApiClientError(err)) {
-        setError(err.message);
-      } else {
-        setError("Failed to save metadata.");
+      if (ownsCurrentLease(lease)) {
+        setError(isApiClientError(err) ? err.message : "Failed to save metadata.");
       }
     } finally {
-      setIsSavingMetadata(false);
+      if (ownsCurrentLease(lease)) setIsSavingMetadata(false);
+      releasePostMutationLease(lease);
     }
+  };
+
+  const handleRefreshPost = () => {
+    if (leaseRef.current) return;
+    void loadPost({ discardLocalEdits: true, setLoading: false });
   };
 
   const handlePreview = async () => {
     setPreviewOpen(true);
-    if (!postId) {
+    const identity = currentRouteIdentity();
+    if (!identity) {
       setPreviewLoading(false);
       setPreviewError(null);
       setPreviewUrl(null);
@@ -373,9 +680,11 @@ export function PostClassicEditorShell() {
     setPreviewLoading(true);
     setPreviewError(null);
     try {
-      const result = await previewPost(postId, 30);
+      const result = await previewPost(identity.postId, 30);
+      if (!isCurrentRoute(identity)) return;
       setPreviewUrl(result.previewUrl);
     } catch (err) {
+      if (!isCurrentRoute(identity)) return;
       if (isApiClientError(err)) {
         setPreviewError(err.message);
       } else {
@@ -383,7 +692,7 @@ export function PostClassicEditorShell() {
       }
       setPreviewUrl(null);
     } finally {
-      setPreviewLoading(false);
+      if (isCurrentRoute(identity)) setPreviewLoading(false);
     }
   };
 
@@ -392,7 +701,7 @@ export function PostClassicEditorShell() {
       activeHref="/admin/posts"
       showSearch={false}
       contentClassName="p-0 overflow-hidden"
-      breadcrumbs={["Content", "Posts", post?.title ?? "Edit Post"]}
+      breadcrumbs={["Content", "Posts", post?.id === postId ? post.title : "Edit Post"]}
       topbarActions={
         <div className="flex items-center gap-2">
           <Badge variant="outline" className="text-[10px] uppercase">
@@ -412,7 +721,7 @@ export function PostClassicEditorShell() {
                   size="sm"
                   className="gap-2"
                   onClick={handlePreview}
-                  disabled={isLoading}
+                  disabled={isEditorLoading || previewLoading}
                 >
                   <Eye className="h-4 w-4" />
                   Runtime preview
@@ -422,8 +731,8 @@ export function PostClassicEditorShell() {
                     variant="secondary"
                     size="sm"
                     className="gap-2"
-                    onClick={handleSaveDraft}
-                    disabled={isSaving || isLoading}
+                    onClick={() => void handleSaveDraft()}
+                    disabled={!canMutateCurrentPost}
                   >
                     <Save className="h-4 w-4" />
                     {isSaving ? "Saving..." : "Save draft"}
@@ -432,7 +741,7 @@ export function PostClassicEditorShell() {
                     size="sm"
                     className="gap-2"
                     onClick={handlePublish}
-                    disabled={isPublishing || isLoading}
+                    disabled={!canMutateCurrentPost}
                   >
                     <Send className="h-4 w-4" />
                     {status === "published" ? "Update" : "Publish"}
@@ -462,7 +771,7 @@ export function PostClassicEditorShell() {
                 </Alert>
               ) : null}
 
-              {remoteUpdatePending ? (
+              {remoteUpdatePending && hasHydratedCurrentPostBaseline ? (
                 <Alert>
                   <AlertTitle>Updated in another tab</AlertTitle>
                   <AlertDescription className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -470,7 +779,8 @@ export function PostClassicEditorShell() {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => refreshPost({ allowUnsaved: true, setLoading: false })}
+                      onClick={handleRefreshPost}
+                      disabled={isPostMutationInFlight}
                     >
                       <RefreshCcw className="mr-2 h-4 w-4" />
                       Refresh
@@ -503,6 +813,7 @@ export function PostClassicEditorShell() {
                       rows={1}
                       className="min-h-0 h-auto resize-none overflow-hidden rounded-lg border bg-background px-3 py-1 text-3xl font-semibold leading-tight tracking-tight focus-visible:ring-1 focus-visible:ring-ring"
                       placeholder="Enter post title..."
+                      disabled={!hasHydratedCurrentPostBaseline}
                     />
                   </div>
 
@@ -517,12 +828,14 @@ export function PostClassicEditorShell() {
                         onChange={(event) => handleSlugChange(event.target.value)}
                         className="h-auto border-0 bg-transparent px-0 py-0 text-sm font-mono focus-visible:ring-0"
                         placeholder="post-slug"
+                        disabled={!hasHydratedCurrentPostBaseline}
                       />
                       <Button
                         type="button"
                         variant="ghost"
                         size="xs"
                         onClick={() => handleSlugChange(slugify(title))}
+                        disabled={!hasHydratedCurrentPostBaseline}
                       >
                         Generate
                       </Button>
@@ -535,12 +848,10 @@ export function PostClassicEditorShell() {
                     </label>
                     <Textarea
                       value={excerpt}
-                      onChange={(event) => {
-                        setExcerpt(event.target.value);
-                        setUnsavedChanges(true);
-                      }}
+                      onChange={(event) => handleExcerptChange(event.target.value)}
                       rows={4}
                       placeholder="Short summary shown in post listings."
+                      disabled={!hasHydratedCurrentPostBaseline}
                     />
                   </div>
 
@@ -550,12 +861,10 @@ export function PostClassicEditorShell() {
                     </label>
                     <Textarea
                       value={content}
-                      onChange={(event) => {
-                        setContent(event.target.value);
-                        setUnsavedChanges(true);
-                      }}
+                      onChange={(event) => handleContentChange(event.target.value)}
                       rows={14}
                       placeholder="Write your post body here."
+                      disabled={!hasHydratedCurrentPostBaseline}
                     />
                   </div>
 
@@ -566,11 +875,9 @@ export function PostClassicEditorShell() {
                       </label>
                       <Input
                         value={featuredImage}
-                        onChange={(event) => {
-                          setFeaturedImage(event.target.value);
-                          setUnsavedChanges(true);
-                        }}
+                        onChange={(event) => handleFeaturedImageChange(event.target.value)}
                         placeholder="media-id"
+                        disabled={!hasHydratedCurrentPostBaseline}
                       />
                     </div>
                     <label className="flex items-center gap-2 text-sm">
@@ -578,10 +885,8 @@ export function PostClassicEditorShell() {
                         type="checkbox"
                         className="h-4 w-4"
                         checked={featured}
-                        onChange={(event) => {
-                          setFeatured(event.target.checked);
-                          setUnsavedChanges(true);
-                        }}
+                        onChange={(event) => handleFeaturedChange(event.target.checked)}
+                        disabled={!hasHydratedCurrentPostBaseline}
                       />
                       Featured post
                     </label>
@@ -595,13 +900,13 @@ export function PostClassicEditorShell() {
         <aside className="hidden h-full w-[340px] shrink-0 border-l bg-muted/20 lg:block">
           <EntryMetadataPanel
             status={status}
-            onStatusChange={setStatus}
+            onStatusChange={handleStatusChange}
             scheduledAt={scheduledAt}
-            onScheduledAtChange={setScheduledAt}
+            onScheduledAtChange={handleScheduledAtChange}
             title={title}
             slug={slug}
             seoDescription={seoDescription}
-            onSeoDescriptionChange={setSeoDescription}
+            onSeoDescriptionChange={handleSeoDescriptionChange}
             checklist={checklist}
             helpItems={[
               "Classic mode keeps a textarea-based authoring flow for fallback operations.",
@@ -611,6 +916,7 @@ export function PostClassicEditorShell() {
             author={post?.author ?? null}
             onSave={handleSaveMetadata}
             isSaving={isSavingMetadata}
+            canSave={canMutateCurrentPost}
           />
         </aside>
       </div>
@@ -625,13 +931,13 @@ export function PostClassicEditorShell() {
             <div className="px-6 py-6">
               <EntryMetadataPanel
                 status={status}
-                onStatusChange={setStatus}
+                onStatusChange={handleStatusChange}
                 scheduledAt={scheduledAt}
-                onScheduledAtChange={setScheduledAt}
+                onScheduledAtChange={handleScheduledAtChange}
                 title={title}
                 slug={slug}
                 seoDescription={seoDescription}
-                onSeoDescriptionChange={setSeoDescription}
+                onSeoDescriptionChange={handleSeoDescriptionChange}
                 checklist={checklist}
                 helpItems={[
                   "Classic mode keeps a textarea-based authoring flow for fallback operations.",
@@ -641,13 +947,14 @@ export function PostClassicEditorShell() {
                 author={post?.author ?? null}
                 onSave={handleSaveMetadata}
                 isSaving={isSavingMetadata}
+                canSave={canMutateCurrentPost}
               />
             </div>
             <div className="border-t px-6 py-4">
               <Button
                 className="w-full"
-                onClick={handleSaveDraft}
-                disabled={isSaving || isPublishing}
+                onClick={() => void handleSaveDraft()}
+                disabled={!canMutateCurrentPost}
               >
                 {isSaving ? "Saving..." : "Save draft"}
               </Button>

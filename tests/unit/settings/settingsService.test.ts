@@ -27,7 +27,10 @@ import {
 } from "../../../core/services/settings/siteLocale";
 
 const hasDb = Boolean(process.env.DATABASE_URL) && (await canConnect());
-const testIfDb = hasDb ? test : test.skip;
+// The repository's compile-time bun:test shim re-exports Vitest, while Bun's
+// runtime API provides `test.serial`. These DB tests mutate global settings.
+const serialTest = (test as unknown as { readonly serial: typeof test }).serial;
+const testIfDb = hasDb ? serialTest : test.skip;
 const dbTestTimeoutMs = 360_000;
 
 async function canConnect() {
@@ -112,69 +115,73 @@ afterAll(async () => {
   clearSiteCache();
 }, dbTestTimeoutMs);
 
-testIfDb("set/get/list/delete settings", async () => {
-  const siteName = `Coderso-${randomUUID()}`;
-  await setSetting("site.name", siteName);
-  await setSetting("site.locale", "pl-PL");
-  await setSetting("site.adminBaseUrl", "https://admin.example.com");
-  await setSetting("site.publicBaseUrl", "https://www.example.com");
-  await setSetting("site.baseUrl", "https://legacy.example.com");
-  await setSetting("site.adminPath", "/super-admin");
-  await setSetting("site.adminRedirectEnabled", true);
-  await setSetting("auth.sessionTtlDays", 30);
-  await setSetting("auth.resetTtlMinutes", 90);
-  await setSetting("posts.editor.mode", "classic");
-  await setSetting("setup.completed", true);
-  await setSetting("design.tokens", {
-    colors: { primary: "#111111" },
-  });
+testIfDb(
+  "set/get/list/delete settings",
+  async () => {
+    const siteName = `Coderso-${randomUUID()}`;
+    await setSetting("site.name", siteName);
+    await setSetting("site.locale", "pl-PL");
+    await setSetting("site.adminBaseUrl", "https://admin.example.com");
+    await setSetting("site.publicBaseUrl", "https://www.example.com");
+    await setSetting("site.baseUrl", "https://legacy.example.com");
+    await setSetting("site.adminPath", "/super-admin");
+    await setSetting("site.adminRedirectEnabled", true);
+    await setSetting("auth.sessionTtlDays", 30);
+    await setSetting("auth.resetTtlMinutes", 90);
+    await setSetting("posts.editor.mode", "classic");
+    await setSetting("setup.completed", true);
+    await setSetting("design.tokens", {
+      colors: { primary: "#111111" },
+    });
 
-  const fetchedName = await getSetting("site.name");
-  expect(fetchedName).toBe(siteName);
+    const fetchedName = await getSetting("site.name");
+    expect(fetchedName).toBe(siteName);
 
-  const list = await listSettings();
-  expect(list["site.name"]).toBe(siteName);
-  expect(list["site.locale"]).toBe("pl-PL");
-  expect(list["site.adminBaseUrl"]).toBe("https://admin.example.com/");
-  expect(list["site.publicBaseUrl"]).toBe("https://legacy.example.com/");
-  expect(await getSetting("site.baseUrl")).toBe("https://legacy.example.com/");
-  expect(list["site.adminPath"]).toBe("/super-admin");
-  expect(list["site.adminRedirectEnabled"]).toBe(true);
-  expect(list["auth.sessionTtlDays"]).toBe(30);
-  expect(list["auth.resetTtlMinutes"]).toBe(90);
-  expect(list["posts.editor.mode"]).toBe("classic");
-  expect(list["setup.completed"]).toBe(true);
-  expect(list["design.tokens"]).toEqual({
-    colors: { primary: "#111111" },
-  });
+    const list = await listSettings();
+    expect(list["site.name"]).toBe(siteName);
+    expect(list["site.locale"]).toBe("pl-PL");
+    expect(list["site.adminBaseUrl"]).toBe("https://admin.example.com/");
+    expect(list["site.publicBaseUrl"]).toBe("https://legacy.example.com/");
+    expect(await getSetting("site.baseUrl")).toBe("https://legacy.example.com/");
+    expect(list["site.adminPath"]).toBe("/super-admin");
+    expect(list["site.adminRedirectEnabled"]).toBe(true);
+    expect(list["auth.sessionTtlDays"]).toBe(30);
+    expect(list["auth.resetTtlMinutes"]).toBe(90);
+    expect(list["posts.editor.mode"]).toBe("classic");
+    expect(list["setup.completed"]).toBe(true);
+    expect(list["design.tokens"]).toEqual({
+      colors: { primary: "#111111" },
+    });
 
-  const bulk = await setSettings({
-    "site.name": "Coderso Updated",
-    "site.locale": "en-US",
-    "site.adminBaseUrl": null,
-    "site.baseUrl": "https://public.example.com",
-    "site.adminPath": "admin-panel",
-    "site.adminRedirectEnabled": false,
-    "auth.sessionTtlDays": 14,
-    "auth.resetTtlMinutes": 45,
-    "posts.editor.mode": "blocks",
-    "setup.completed": false,
-  });
-  expect(bulk["site.name"]).toBe("Coderso Updated");
-  expect(bulk["site.locale"]).toBe("en-US");
-  expect(bulk["site.adminBaseUrl"]).toBeNull();
-  expect(bulk["site.publicBaseUrl"]).toBe("https://public.example.com/");
-  expect(bulk["site.adminPath"]).toBe("/admin-panel");
-  expect(bulk["site.adminRedirectEnabled"]).toBe(false);
-  expect(bulk["auth.sessionTtlDays"]).toBe(14);
-  expect(bulk["auth.resetTtlMinutes"]).toBe(45);
-  expect(bulk["posts.editor.mode"]).toBe("blocks");
-  expect(bulk["setup.completed"]).toBe(false);
+    const bulk = await setSettings({
+      "site.name": "Coderso Updated",
+      "site.locale": "en-US",
+      "site.adminBaseUrl": null,
+      "site.baseUrl": "https://public.example.com",
+      "site.adminPath": "admin-panel",
+      "site.adminRedirectEnabled": false,
+      "auth.sessionTtlDays": 14,
+      "auth.resetTtlMinutes": 45,
+      "posts.editor.mode": "blocks",
+      "setup.completed": false,
+    });
+    expect(bulk["site.name"]).toBe("Coderso Updated");
+    expect(bulk["site.locale"]).toBe("en-US");
+    expect(bulk["site.adminBaseUrl"]).toBeNull();
+    expect(bulk["site.publicBaseUrl"]).toBe("https://public.example.com/");
+    expect(bulk["site.adminPath"]).toBe("/admin-panel");
+    expect(bulk["site.adminRedirectEnabled"]).toBe(false);
+    expect(bulk["auth.sessionTtlDays"]).toBe(14);
+    expect(bulk["auth.resetTtlMinutes"]).toBe(45);
+    expect(bulk["posts.editor.mode"]).toBe("blocks");
+    expect(bulk["setup.completed"]).toBe(false);
 
-  await deleteSetting("site.name");
-  const defaultName = await getSetting("site.name");
-  expect(defaultName).toBe("Coderso");
-});
+    await deleteSetting("site.name");
+    const defaultName = await getSetting("site.name");
+    expect(defaultName).toBe("Coderso");
+  },
+  30_000
+);
 
 testIfDb("enforces auth TTL bounds and setup boolean type", async () => {
   await expect(setSetting("auth.sessionTtlDays", 0)).rejects.toThrow("settings_value_invalid");

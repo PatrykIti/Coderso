@@ -11,14 +11,19 @@ import {
   restorePostRevision,
   unpublishPost,
   updatePost,
-  updatePostMetadata,
+  type PostDetail,
+  type UpdatePostMetadataInput,
 } from "../../services/content/postsService";
 import { runPostsBackfill } from "../../services/posts/migration/postsBackfillService";
-import { ApiError } from "../errorHandler";
 import {
-  createPublicUrlContextFromHeaders,
-  resolvePreviewUrl,
-} from "../utils/previewUrls";
+  parseExactRfc3339DateTime,
+  projectPostMetadataMutation,
+  requestsPostPublicationMutation,
+  type PostMetadataMutationV1,
+} from "../../services/posts/postMetadataContract";
+import { ApiError } from "../errorHandler";
+import type { PermissionRequirement } from "../middleware/rbac";
+import { createPublicUrlContextFromHeaders, resolvePreviewUrl } from "../utils/previewUrls";
 import {
   postAutosaveSchema,
   postBackfillSchema,
@@ -31,9 +36,16 @@ import type { RouteContext } from "../router";
 
 export type PostsRouteHandler = (ctx: RouteContext) => Promise<unknown> | unknown;
 
+export type PostMetadataUpdater = (
+  id: string,
+  input: UpdatePostMetadataInput,
+  actorId?: string
+) => Promise<PostDetail | null>;
+
 export type PostsRouteDeps = {
-  requirePermission: (permission: string) => PostsRouteHandler;
+  requirePermission: (permission: PermissionRequirement) => PostsRouteHandler;
   validate: (schema: unknown, payload: unknown) => void;
+  updatePostMetadata: PostMetadataUpdater;
 };
 
 export type Router = {
@@ -56,23 +68,11 @@ export const mapPostError = (error: unknown) => {
     case "post_data_invalid":
       return new ApiError("post_data_invalid", "Post data is invalid.", 400);
     case "post_document_invalid":
-      return new ApiError(
-        "post_document_invalid",
-        "Post document is invalid.",
-        400
-      );
+      return new ApiError("post_document_invalid", "Post document is invalid.", 400);
     case "post_slug_conflict":
-      return new ApiError(
-        "post_slug_conflict",
-        "Post with this slug already exists.",
-        409
-      );
+      return new ApiError("post_slug_conflict", "Post with this slug already exists.", 409);
     case "post_validation_failed":
-      return new ApiError(
-        "post_validation_failed",
-        "Post data failed schema validation.",
-        400
-      );
+      return new ApiError("post_validation_failed", "Post data failed schema validation.", 400);
     case "post_create_failed":
       return new ApiError("post_create_failed", "Failed to create post.", 500);
     case "scheduled_at_invalid":
@@ -94,17 +94,9 @@ export const mapPostError = (error: unknown) => {
         400
       );
     case "taxonomy_tag_disabled":
-      return new ApiError(
-        "taxonomy_tag_disabled",
-        "Tags are disabled for this post type.",
-        400
-      );
+      return new ApiError("taxonomy_tag_disabled", "Tags are disabled for this post type.", 400);
     case "taxonomy_term_invalid":
-      return new ApiError(
-        "taxonomy_term_invalid",
-        "Term does not belong to taxonomy.",
-        400
-      );
+      return new ApiError("taxonomy_term_invalid", "Term does not belong to taxonomy.", 400);
     case "taxonomy_term_missing":
       return new ApiError("taxonomy_term_missing", "Term not found.", 404);
     case "auth_required":
@@ -114,11 +106,7 @@ export const mapPostError = (error: unknown) => {
     case "post_revision_not_found":
       return new ApiError("post_revision_not_found", "Revision not found.", 404);
     case "post_revision_create_failed":
-      return new ApiError(
-        "post_revision_create_failed",
-        "Failed to create post revision.",
-        500
-      );
+      return new ApiError("post_revision_create_failed", "Failed to create post revision.", 500);
     default:
       return null;
   }
@@ -146,8 +134,52 @@ const withPostErrors = async <T>(
   }
 };
 
+const invalidScheduledAt = () =>
+  new ApiError("validation_error", "Invalid payload", 400, [
+    {
+      path: "scheduledAt",
+      message: 'must match format "date-time"',
+      keyword: "format",
+    },
+  ]);
+
+export const toPostMetadataServicePatch = (
+  value: PostMetadataMutationV1
+): UpdatePostMetadataInput => {
+  const patch: UpdatePostMetadataInput = {};
+  if (Object.hasOwn(value, "status")) patch.status = value.status;
+  if (Object.hasOwn(value, "tags")) patch.tags = value.tags;
+  if (Object.hasOwn(value, "taxonomy")) patch.taxonomy = value.taxonomy;
+  if (Object.hasOwn(value, "seo")) patch.seo = value.seo;
+  if (!Object.hasOwn(value, "scheduledAt")) return patch;
+
+  const scheduledAtValue = value.scheduledAt;
+  if (scheduledAtValue === null) {
+    patch.scheduledAt = null;
+    return patch;
+  }
+
+  if (typeof scheduledAtValue !== "string") throw invalidScheduledAt();
+  const scheduledAt = parseExactRfc3339DateTime(scheduledAtValue);
+  if (!scheduledAt) throw invalidScheduledAt();
+  patch.scheduledAt = scheduledAt;
+  return patch;
+};
+
+const asValidatedRecord = (value: unknown): Record<string, unknown> => {
+  if (value === null || typeof value !== "object" || Array.isArray(value)) {
+    throw new ApiError("validation_error", "Invalid payload", 400);
+  }
+  return value as Record<string, unknown>;
+};
+
 export function registerPostsRoutes(router: Router, deps: PostsRouteDeps) {
-  const { requirePermission, validate } = deps;
+  const { requirePermission, updatePostMetadata, validate } = deps;
+  const requirePostMetadataWrite = requirePermission("content:write");
+  const requirePostMetadataWriteAndPublish = requirePermission([
+    "content:write",
+    "content:publish",
+  ]);
 
   router.get("/posts", requirePermission("content:read"), async () => {
     return withPostErrors(async () => listPosts());
@@ -170,25 +202,21 @@ export function registerPostsRoutes(router: Router, deps: PostsRouteDeps) {
     });
   });
 
-  router.post(
-    "/posts/migration/backfill",
-    requirePermission("settings:write"),
-    async (ctx) => {
-      return withPostErrors(async () => {
-        validate(postBackfillSchema, ctx.body ?? {});
-        const body = (ctx.body ?? {}) as {
-          dryRun?: boolean;
-          shadowRead?: boolean;
-          entryIds?: string[];
-        };
-        return runPostsBackfill({
-          dryRun: body.dryRun ?? true,
-          shadowRead: body.shadowRead ?? true,
-          entryIds: body.entryIds,
-        });
+  router.post("/posts/migration/backfill", requirePermission("settings:write"), async (ctx) => {
+    return withPostErrors(async () => {
+      validate(postBackfillSchema, ctx.body ?? {});
+      const body = (ctx.body ?? {}) as {
+        dryRun?: boolean;
+        shadowRead?: boolean;
+        entryIds?: string[];
+      };
+      return runPostsBackfill({
+        dryRun: body.dryRun ?? true,
+        shadowRead: body.shadowRead ?? true,
+        entryIds: body.entryIds,
       });
-    }
-  );
+    });
+  });
 
   router.get("/posts/:id", requirePermission("content:read"), async (ctx) => {
     return withPostErrors(async () => {
@@ -212,50 +240,31 @@ export function registerPostsRoutes(router: Router, deps: PostsRouteDeps) {
     });
   });
 
-  router.patch(
-    "/posts/:id/metadata",
-    requirePermission("content:write"),
-    async (ctx) => {
-      return withPostErrors(async () => {
-        validate(postMetadataSchema, ctx.body ?? {});
-        const body = (ctx.body ?? {}) as {
-          status?: "draft" | "published" | "scheduled" | "archived";
-          scheduledAt?: string | null;
-          tags?: string[];
-          taxonomy?: {
-            categoryId?: string | null;
-            tagIds?: string[];
-          };
-          seo?: {
-            title?: string;
-            description?: string;
-            canonicalUrl?: string;
-            robots?: string;
-          };
-        };
-        const scheduledAt =
-          body.scheduledAt === null ||
-          body.scheduledAt === undefined ||
-          body.scheduledAt === ""
-            ? null
-            : new Date(body.scheduledAt);
+  router.patch("/posts/:id/metadata", async (ctx) => {
+    if (!ctx.user?.id) throw new Error("auth_required");
+    const actorId = ctx.user.id;
 
-        const updated = await updatePostMetadata(
-          ctx.params.id,
-          {
-            status: body.status,
-            scheduledAt,
-            tags: body.tags,
-            taxonomy: body.taxonomy,
-            seo: body.seo,
-          },
-          ctx.user?.id
-        );
+    const rawBody = ctx.body ?? {};
+    validate(postMetadataSchema, rawBody);
+    const body = projectPostMetadataMutation(asValidatedRecord(rawBody));
+    const patch = toPostMetadataServicePatch(body);
+    const requireMetadataPermission = requestsPostPublicationMutation(body)
+      ? requirePostMetadataWriteAndPublish
+      : requirePostMetadataWrite;
+    await requireMetadataPermission(ctx);
+
+    return withPostErrors(
+      async () => {
+        const updated = await updatePostMetadata(ctx.params.id, patch, actorId);
         if (!updated) throw new Error("post_not_found");
         return updated;
-      });
-    }
-  );
+      },
+      {
+        code: "post_metadata_update_failed",
+        message: "Failed to update post metadata.",
+      }
+    );
+  });
 
   router.post("/posts/:id/publish", requirePermission("content:publish"), async (ctx) => {
     return withPostErrors(async () => {
@@ -270,16 +279,12 @@ export function registerPostsRoutes(router: Router, deps: PostsRouteDeps) {
     });
   });
 
-  router.post(
-    "/posts/:id/unpublish",
-    requirePermission("content:publish"),
-    async (ctx) => {
-      return withPostErrors(async () => {
-        await unpublishPost(ctx.params.id);
-        return { ok: true };
-      });
-    }
-  );
+  router.post("/posts/:id/unpublish", requirePermission("content:publish"), async (ctx) => {
+    return withPostErrors(async () => {
+      await unpublishPost(ctx.params.id);
+      return { ok: true };
+    });
+  });
 
   router.post("/posts/:id/preview", requirePermission("content:read"), async (ctx) => {
     return withPostErrors(async () => {

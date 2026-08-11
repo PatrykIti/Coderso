@@ -1,6 +1,6 @@
 import path from "node:path";
 import { ApiError, toErrorResponse } from "./errorHandler";
-import { parseRequestBody } from "./requestBody";
+import { parseRequestBody, type ParseRequestBodyOptions } from "./requestBody";
 import { attachUserFromSession, requireAuth } from "./middleware/auth";
 import { applyCorsHeaders } from "./middleware/cors";
 import { enforceCsrf } from "./middleware/csrf";
@@ -11,11 +11,18 @@ import { applySecurityHeaders } from "./middleware/securityHeaders";
 import { recordAccessLog } from "./middleware/accessLog";
 import { enforceIpAllowlist } from "./middleware/ipAllowlist";
 import { enforceHostPolicy } from "./middleware/hostPolicy";
-import { createRouter, matchRoute, normalizePath, type RouteContext } from "./router";
+import {
+  createRouter,
+  matchRoute,
+  normalizePath,
+  type RouteContext,
+  type RouteDefinition,
+} from "./router";
 import { registerAllRoutes } from "./routes";
 import { validate } from "./validation/schemaValidator";
 import { getSecuritySettings } from "../services/settings/securitySettings";
 import { initializeDocsIndexOnBootIfEnabled } from "../services/assistant/docsIndexService";
+import { POST_METADATA_REQUEST_MAX_BYTES } from "../services/posts/postMetadataContract";
 import { ensureThemesLoaded } from "../themes/registry";
 import { startBackupScheduler } from "./jobs/backupScheduler";
 import { handlePublicRequest } from "./publicSite";
@@ -28,6 +35,29 @@ const MEDIA_PREFIX = "/media";
 const READ_METHODS = new Set(["GET", "HEAD"]);
 
 const isReadMethod = (method: string) => READ_METHODS.has(method.toUpperCase());
+
+const POST_METADATA_ROUTE_BODY_OPTIONS: ParseRequestBodyOptions = Object.freeze({
+  maxBytes: POST_METADATA_REQUEST_MAX_BYTES,
+});
+
+const PARSER_ERROR_CODES = new Set([
+  "invalid_json",
+  "invalid_form",
+  "payload_too_large",
+  "rate_limited",
+]);
+
+export const resolveMatchedRouteBodyOptions = (
+  route: Pick<RouteDefinition, "method" | "path">
+): ParseRequestBodyOptions | undefined =>
+  route.method === "PATCH" && route.path === "/posts/:id/metadata"
+    ? POST_METADATA_ROUTE_BODY_OPTIONS
+    : undefined;
+
+const normalizeParserError = (error: unknown): ApiError => {
+  if (error instanceof ApiError && PARSER_ERROR_CODES.has(error.code)) return error;
+  return new ApiError("invalid_request_body", "Invalid request body.", 400);
+};
 
 /**
  * Select the rate-limit bucket for a request. Exported so security tests can
@@ -360,6 +390,22 @@ const handleApi = async (req: Request, apiPrefix: string) => {
     return response;
   }
 
+  const parserErrorResponse = (error: unknown) => {
+    const response = errorResponse(normalizeParserError(error));
+    responseHeaders.forEach((value, key) => response.headers.append(key, value));
+    void recordAccessLog({
+      method: req.method,
+      path: url.pathname,
+      status: response.status,
+      ip: resolveIp(req) ?? null,
+      userAgent: req.headers.get("user-agent") ?? null,
+      userId: null,
+      sessionId: null,
+      durationMs: Date.now() - requestStart,
+    });
+    return response;
+  };
+
   for (const route of router.routes) {
     if (route.method !== req.method) continue;
     const match = matchRoute(route.path, pathname);
@@ -371,10 +417,30 @@ const handleApi = async (req: Request, apiPrefix: string) => {
     });
     const cookies = parseCookies(req.headers.get("cookie"));
 
+    let body: unknown;
+    try {
+      body = await parseRequestBody(req, resolveMatchedRouteBodyOptions(route));
+    } catch (parseError) {
+      try {
+        checkRateLimit(
+          resolveRateLimitBucket(req.method, pathname),
+          {
+            ip: resolveIp(req),
+            userAgent: req.headers.get("user-agent") ?? undefined,
+          },
+          security.rateLimit,
+          { isAuthenticated: false }
+        );
+      } catch (rateLimitError) {
+        return parserErrorResponse(rateLimitError);
+      }
+      return parserErrorResponse(parseError);
+    }
+
     const ctx: RouteContext = {
       params: match.params,
       query: Object.fromEntries(url.searchParams.entries()),
-      body: await parseRequestBody(req),
+      body,
       headers: headersObj,
       cookies,
       ip: resolveIp(req),

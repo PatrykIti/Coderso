@@ -62,6 +62,14 @@ Post mutation wrapper.
   TASK-548-02-L02 -> TASK-548-04-L03 -> TASK-548-07-L01 -> TASK-414-11-L01.
   TASK-554 rereads every current shared file and preserves all existing suites;
   concurrent or reverse-order central-seam edits are forbidden.
+- The owner-authorized final security-gate repair additionally owns only the
+  root `package.json` / `bun.lock` vulnerability overrides for `js-yaml`
+  `4.3.1` and `nanoid` `3.3.17`, plus TASK-540's fixed-loopback public
+  bot-protection smoke preflight and its focused boundary test. It must not
+  alter the production bot-protection route, suppress Semgrep/Trivy/Bun-audit,
+  or widen TASK-540's smoke host. This narrow repair is validated by a fresh
+  dependency/security audit, its focused harness test, package install,
+  strict security scan, and the complete TASK-554 validation tail.
 - Terminal TASK-551-03-L02 is the later serialized writer of bounded Post-list
   regions in `routes/index.ts`, `postsRoutes.ts`, `postSchemas.ts`, and
   `postsClient.ts`. Its canonical task dependency is TASK-554. It must preserve
@@ -284,6 +292,12 @@ repair dispatch targets.
   `core/admin/ui/posts/editor/postMetadataMutationPayload.ts`, which owns the
   baseline-versus-draft comparison and its discriminated result: `noop`,
   `schedule_required`, `invalid_schedule`, or a non-empty present-only DTO;
+- `core/admin/ui/posts/PostEditorPage.tsx` is a read-only integration seam in
+  this task. TASK-554 does not key, remount, or otherwise change that page;
+  `PostClassicEditorShell`'s identity-bound route epoch is the authoritative
+  A-to-B navigation guard and must remain correct when the page reuses the
+  shell instance. The focused shell hydration test owns this proof, not a page
+  behavior change;
 - `core/admin/ui/posts/editor/hooks/usePostEditorState.ts` around baseline line
   1581 is a read-only verified control: its `snapshot.metadataPayload` already
   contains only tags/taxonomy/SEO. Do not touch this 2,713-line legacy module in
@@ -644,9 +658,21 @@ const reconcileLostDetailMutation = async (id: string) => {
   }
   return fresh;
 };
+const invalidateFailedCurrentReconciliation = (id: string, readTicket: DetailReadTicket) => {
+  // Only the still-current failed reconciliation may invalidate. A later
+  // accepted detail/read or delete has already changed the ticket/tombstone.
+  if (!isCurrentDetailReadAuthority(readTicket) || hasPostDetailDeletionTombstone(id)) return;
+  removeCachedPost(id, { invalidateListRow: true });
+  broadcastCacheEvent({ key: cacheKeys.postsList, action: "invalidate" });
+  broadcastCacheEvent({ key: cacheKeys.postDetail(id), action: "invalidate" });
+};
 const publishDetailMutation = async (id: string, dispatchGeneration: number, detail: PostDetail) => {
   if (postDetailGeneration(id) !== dispatchGeneration || hasPostDetailDeletionTombstone(id)) {
-    await reconcileLostDetailMutation(id); return false;
+    const reconciliation = await reconcileLostDetailMutation(id);
+    if (reconciliation.status === "failed") {
+      invalidateFailedCurrentReconciliation(id, reconciliation.readTicket);
+    }
+    return reconciliation.status === "accepted";
   }
   advancePostDetailGeneration(id); clearPostDetailDeletionTombstone(id);
   upsertCachedPost(detail); publishPostMutationCacheEvents(id); return true;
@@ -760,6 +786,12 @@ must likewise end with `scheduledAt: null` in both cache projections and emit
 its update only after that fresh read. A deferred list GET started before each
 metadata/status/delete mutation, including one initiated by a list cache-bus
 event, must return and cache a list that retains the newer detail or tombstone.
+If a stale successful non-delete mutation loses authority and its guarded
+reconciliation read fails, the still-current exact detail/list projection is
+removed with list-row protection and exactly one ordered list/detail
+`invalidate` pair; it must never leave an older accepted projection
+authoritative. A subsequent accepted read/mutation or delete wins this fallback
+and suppresses its invalidation.
 Delete -> `clearPostsCache` -> a fresh detail/list read must prove that no prior
 tombstone, generation, row epoch, or in-flight list authority leaks across the
 existing reset boundary.
@@ -827,15 +859,59 @@ data, or task-local browser/DB lifecycle is allowed.
 
 Both profiles report exactly these seven distinct scenarios in order:
 
+For the browser-visible scenarios, the `writer` actor has
+`content:read + content:write` and explicitly lacks `content:publish`; the
+additional read permission is required only to hydrate the Admin editor through
+the existing `GET /posts/:id` boundary. The `publisher` actor has
+`content:read + content:write + content:publish`. This smoke-fixture access
+does not change the route contract: the authorization proof remains that a
+writer lacking `content:publish` cannot mutate either publication-owned field.
+
 | # | Scenario ID | Visible and persisted proof |
 | ---: | --- | --- |
-| 1 | `writer-metadata-save-preserves-schedule` | `content:write`-only actor edits SEO/tags on a scheduled Post; visible success and cache refresh occur, while persisted status and exact schedule remain unchanged |
+| 1 | `writer-metadata-save-preserves-schedule` | `content:read + content:write` actor without `content:publish` edits only the visible Classic SEO description on a scheduled Post; visible success and cache refresh occur, while persisted status and exact schedule remain unchanged |
 | 2 | `writer-status-publish-denied` | writer submits own `status: published`; safe permission denial is visible and there is zero Post mutation/revision/Post browser-cache broadcast; the standard permission-denial notification/permission refresh remains allowed |
 | 3 | `writer-schedule-denied` | writer submits own schedule fields, including the UI's status/date pair; safe denial is visible and the prior draft/schedule bytes remain unchanged |
-| 4 | `publisher-schedule` | actor holding both permissions schedules a Post; normalized time and scheduled state are visibly and persistently exact |
-| 5 | `publisher-publish` | actor holding both permissions publishes; Admin state and bounded persisted read model agree |
-| 6 | `publisher-unpublish` | actor holding both permissions intentionally returns the Post to draft; Admin state and bounded persisted read model agree |
-| 7 | `publisher-archive` | actor holding both permissions archives; Admin state and bounded persisted read model agree |
+| 4 | `publisher-schedule` | actor holding all three browser-flow permissions schedules a Post; normalized time and scheduled state are visibly and persistently exact |
+| 5 | `publisher-publish` | actor holding all three browser-flow permissions publishes; Admin state and bounded persisted read model agree |
+| 6 | `publisher-unpublish` | actor holding all three browser-flow permissions intentionally returns the Post to draft; Admin state and bounded persisted read model agree |
+| 7 | `publisher-archive` | actor holding all three browser-flow permissions archives; Admin state and bounded persisted read model agree |
+
+Tags/taxonomy remain exercised by the real HTTP route lane, not this browser
+suite: the unmodified Classic shell intentionally exposes only its SEO and
+publication controls. Every smoke row is an immutable descriptor in
+`browser-actions.ts` containing its exact owned baseline, actor, editor mode,
+metadata DTO, expected DOM/ARIA/geometry proof, bounded persisted projection,
+variant matrix, and canonical screenshot variant. All seven rows use
+`?editor=classic`, the metadata panel's status/date/SEO controls, and **Save
+metadata**. The browser listener records one safe request receipt for the
+expected `PATCH /admin/api/posts/:id/metadata` own-property key set. Every
+publication row requires the exact `{ status, scheduledAt }` pair, and no row
+may issue `/publish` or `/unpublish`; the top-bar Publish/Update control is
+not part of this smoke. This makes the visible flows prove the repaired
+conditional all-of metadata guard rather than the independent publish routes.
+
+The adapter creates equivalent, separate owned Post fixtures per required
+variant rather than replaying a mutation or attempting to reset an uncertain
+one. Fast maps its seven rows across all four `light|dark × 1440x900|390x844`
+combinations. Certification executes each row from four equivalent owned
+baselines, once for every combination, and captures the canonical
+`light-1440x900` variant as that row's sole manifest PNG; the other three
+variants still return and validate their complete visible/persistence receipts.
+
+The worker `install` operation receives bounded, per-run synthetic actor
+credential specifications from the adapter and returns only opaque fixture IDs,
+markers, and bounded read-model identities — never a password, session token,
+cookie, or raw actor data. The adapter uses the shared admin-auth helper to
+write private `0600` storage states for those known synthetic credentials, and
+never includes them in browser frames or reports. Its `RunFixtureLedger` owns
+the synthetic Posts and Post children, access logs, login audit rows, sessions,
+user-role joins, users, and roles. Registered worker cleanup uses FK-safe
+waves and the shared set-based transactional batch helpers: first it proves and
+removes the exact Post/log/session/join observability rows by fixture identity
+and run marker, then removes Posts and finally identities/roles. Its terminal
+bounded proof verifies every owned row is absent **before** the identity rows
+are deleted, so `ON DELETE SET NULL` cannot erase ownership evidence.
 
 Each scenario starts from a deterministic owned baseline, asserts computed
 visibility/DOM/ARIA plus the bounded DB/read-model state, captures a reviewed
@@ -882,32 +958,29 @@ allowed; only each row's path-to-file digest equality is authoritative. This
 makes the required zero page-error and repository-restoration evidence explicit
 without adding a task-local reporter.
 
-Evidence is only below `_docs/_workflows/_smoke/task-554/<session>/`. The workflow
-rejects a pre-existing session, creates exactly one new directory, and redirects
-canonical runner stdout directly to `report.json` without reconstruction. It
-validates saved report/PNG bytes through `O_NOFOLLOW` descriptors, passes those
-same PNG bytes (never paths) to the task decoder via `bun --eval` stdin, and
-compares the retained report/PNG bytes at revalidation; a renamed valid-but-
-different report or image therefore fails. Fast evidence is removed/proven absent
-before certification. The guard permits only the exact flat report/PNG set after
-semantic revalidation, including in `finally`; it rejects extra output and keeps
-the primary error. Before every create/read/collect/cleanup it `lstat`s each
-ancestor through `_docs/_workflows/_smoke/task-554`, rejects symlinks/non-
-directories, and creates one level at a time. No TASK-545 checkpoint exists.
+Evidence is only below `_docs/_workflows/_smoke/task-554/<session>/`. The
+canonical smoke-only workflow mode rejects a pre-existing session, creates
+exactly one new directory, and securely opens private `report.json` before it
+invokes the shared wrapper. It validates saved report/PNG bytes through
+`O_NOFOLLOW` descriptors, passes those same PNG bytes (never paths) to the task
+decoder via `bun --eval` stdin, and compares the retained report/PNG bytes at
+revalidation; a renamed valid-but-different report or image therefore fails.
+It runs `fast`, removes and proves its evidence absent, and only then runs
+`certification`; it dispatches no agents. The guard permits only the exact flat
+report/PNG set after semantic revalidation, including in `finally`; it rejects
+extra output and keeps the primary error. Before every create/read/collect/
+cleanup it `lstat`s each ancestor through `_docs/_workflows/_smoke/task-554`,
+rejects symlinks/non-directories, and creates one level at a time. No TASK-545
+checkpoint exists.
 
-The exact commands are:
+The exact canonical command is:
 ```bash
-test ! -e _docs/_workflows/_smoke/task-554/task-554-fast
-mkdir -p _docs/_workflows/_smoke/task-554/task-554-fast
-bun scripts/runtime-smoke.ts run \
-  --suite task-554 --profile fast --session task-554-fast \
-  > _docs/_workflows/_smoke/task-554/task-554-fast/report.json
-test ! -e _docs/_workflows/_smoke/task-554/task-554-certification
-mkdir -p _docs/_workflows/_smoke/task-554/task-554-certification
-bun scripts/runtime-smoke.ts run \
-  --suite task-554 --profile certification --session task-554-certification \
-  > _docs/_workflows/_smoke/task-554/task-554-certification/report.json
+node _docs/_workflows/task-554-implement.mjs --task-554-smoke
 ```
+It delegates to the shared wrapper and its existing `runTask554SmokeProfile`
+capture. Do not pre-create evidence directories or redirect wrapper output from
+a shell; that bypasses the capture's ordered report-creation and validation
+contract.
 The implementation workflow builds the manifest evaluation with the literal,
 JSON-injected immutable input `{ command: "run", suite: "task-554", profile,
 session }`; it never relies on an ambient `TASK_554_SMOKE_*` environment value.
@@ -949,16 +1022,7 @@ node --check _docs/_workflows/task-554-author-audit.mjs
 node --check _docs/_workflows/task-554-implement.mjs
 node --check _docs/_workflows/task-554-fix.mjs
 node --check _docs/_workflows/task-554-closeout.mjs
-test ! -e _docs/_workflows/_smoke/task-554/task-554-fast
-mkdir -p _docs/_workflows/_smoke/task-554/task-554-fast
-bun scripts/runtime-smoke.ts run \
-  --suite task-554 --profile fast --session task-554-fast \
-  > _docs/_workflows/_smoke/task-554/task-554-fast/report.json
-test ! -e _docs/_workflows/_smoke/task-554/task-554-certification
-mkdir -p _docs/_workflows/_smoke/task-554/task-554-certification
-bun scripts/runtime-smoke.ts run \
-  --suite task-554 --profile certification --session task-554-certification \
-  > _docs/_workflows/_smoke/task-554/task-554-certification/report.json
+node _docs/_workflows/task-554-implement.mjs --task-554-smoke
 git diff --check "$TASK_554_BASELINE_SHA"...HEAD
 git diff --check
 ```

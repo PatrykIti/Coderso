@@ -45,7 +45,7 @@ const testIfDbWithOptions = testIfDb as unknown as (
   fn: () => Promise<void>,
   options: { timeout: number }
 ) => void;
-const dbRuntimeTimeout = 15_000;
+const dbRuntimeTimeout = 30_000;
 
 async function canConnect() {
   try {

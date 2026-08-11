@@ -6,6 +6,7 @@ import {
   createPost,
   duplicatePost,
   getPostCached,
+  getCachedPostDetail,
   getCachedPostRevisions,
   listPostRevisions,
   listPostRevisionsCached,
@@ -267,7 +268,7 @@ test("post mutations patch revisions cache from returned revision payloads", asy
     updatedAt: "2026-02-21T10:00:00.000Z",
   };
 
-  globalThis.fetch = async (input) => {
+  globalThis.fetch = async (input, init) => {
     const url = String(input);
     if (url.endsWith("/auth/csrf")) return jsonResponse({ token: "csrf-token" });
     if (url.endsWith("/autosave")) {
@@ -283,6 +284,14 @@ test("post mutations patch revisions cache from returned revision payloads", asy
         ok: true,
         revision: revisionTwo,
         reusedRevision: false,
+      });
+    }
+    if (url.endsWith("/posts/post-1") && init?.method === "GET") {
+      return jsonResponse({
+        ...post,
+        status: "published",
+        scheduledAt: null,
+        taxonomy: null,
       });
     }
     if (url.endsWith("/revisions/rev-1/restore")) {
@@ -302,15 +311,17 @@ test("post mutations patch revisions cache from returned revision payloads", asy
     resetCaches();
 
     await autosavePost("post-1", { title: "Cached" });
-    expect(getCachedPostRevisions("post-1")?.map((revision) => revision.id)).toEqual([
-      "rev-1",
-    ]);
+    expect(getCachedPostRevisions("post-1")?.map((revision) => revision.id)).toEqual(["rev-1"]);
 
     await publishPost("post-1");
     expect(getCachedPostRevisions("post-1")?.map((revision) => revision.id)).toEqual([
       "rev-2",
       "rev-1",
     ]);
+    expect(getCachedPostDetail("post-1")).toMatchObject({
+      status: "published",
+      scheduledAt: null,
+    });
 
     await restorePostRevision("post-1", "rev-1");
     expect(getCachedPostRevisions("post-1")?.map((revision) => revision.id)).toEqual([
@@ -427,10 +438,7 @@ test("listPostsCached reads from local storage", async () => {
         author: null,
       },
     ];
-    storage.setItem(
-      cacheKeys.postsList,
-      JSON.stringify({ value: cached, savedAt: Date.now() })
-    );
+    storage.setItem(cacheKeys.postsList, JSON.stringify({ value: cached, savedAt: Date.now() }));
 
     const result = await listPostsCached();
     expect(result).toEqual(cached);
@@ -487,10 +495,7 @@ test("listPostsCached ignores expired in-memory list cache", async () => {
 
   try {
     resetCaches();
-    storage.setItem(
-      cacheKeys.postsList,
-      JSON.stringify({ value: stale, savedAt: Date.now() })
-    );
+    storage.setItem(cacheKeys.postsList, JSON.stringify({ value: stale, savedAt: Date.now() }));
     expect(await listPostsCached()).toEqual(stale);
 
     vi.setSystemTime(new Date(Date.now() + cacheTtlMs.list + 1000));

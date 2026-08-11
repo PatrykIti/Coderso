@@ -998,6 +998,34 @@ contract; in that case persisted `posts.tags` mirrors the selected taxonomy tag
 names.
 `scheduledAt`, when present, must be an RFC 3339 `date-time` string.
 
+### Post metadata authorization and payload contract (TASK-554)
+
+`PATCH /admin/api/posts/:id/metadata` is an internal Admin endpoint. It requires
+an authenticated session, the shared CSRF header for the unsafe request, and the
+existing `admin_write` rate-limit bucket. A missing actor is rejected before
+schema validation, authorization lookup, Post reads, or mutation work.
+
+The payload is a non-empty, strict object. Unknown keys, inherited-only values,
+empty `seo`/`taxonomy` objects, invalid status values, and invalid calendar
+dates are rejected. The route copies only explicitly present own properties into
+the service patch: omitting `scheduledAt` preserves the stored schedule, while
+an explicit `null` clears it. Datetimes must use the exact RFC3339 wire shape
+and pass calendar validation before a `Date` is created; JavaScript date
+rollover is not accepted.
+
+SEO, tags, and taxonomy-only changes require `content:write`. The presence of
+either own `status` or own `scheduledAt` field requires both `content:write`
+and `content:publish`, including a value equal to the currently stored value.
+That all-of decision is one server-owned permission snapshot; a denied request
+does not call the metadata service or publish a cache event. Unknown metadata
+service failures use the stable redacted `post_metadata_update_failed` response.
+
+Only this exact PATCH route has a 64 KiB request-body cap. Parsing occurs before
+session attachment: malformed or oversized anonymous input is charged to the
+matched anonymous Admin bucket and receives the existing bounded 400/413 (or
+429) envelope without body data in logs. Other Post and media routes retain
+their existing parser limits.
+
 Autosave response (summary):
 
 ```json

@@ -269,7 +269,9 @@ vi.mock("@/services/postsClient", () => ({
     const next = {
       ...current,
       status: (payload.status as PostStatus | undefined) ?? current.status,
-      scheduledAt: (payload.scheduledAt as string | null | undefined) ?? current.scheduledAt,
+      scheduledAt: Object.hasOwn(payload, "scheduledAt")
+        ? (payload.scheduledAt as string | null)
+        : current.scheduledAt,
       seo: {
         ...(current.seo ?? {}),
         ...((payload.seo as Record<string, unknown> | undefined) ?? {}),
@@ -326,6 +328,9 @@ vi.mock("@/ui/entries/EntryMetadataPanel", () => ({
       </button>
       <button type="button" onClick={() => onScheduledAtChange("not-a-date")}>
         set-invalid-schedule
+      </button>
+      <button type="button" onClick={() => onScheduledAtChange("")}>
+        set-empty-schedule
       </button>
       <button type="button" onClick={() => onScheduledAtChange("2026-03-13T08:00:00Z")}>
         set-valid-schedule
@@ -529,8 +534,6 @@ test("PostClassicEditorShell hydrates cached data, saves draft, previews, and ap
     expect(classicState.updateMetadataCalls).toContainEqual({
       id: "post 1",
       payload: {
-        status: "draft",
-        scheduledAt: null,
         seo: { description: "Updated SEO" },
       },
     });
@@ -538,6 +541,9 @@ test("PostClassicEditorShell hydrates cached data, saves draft, previews, and ap
     React.act(() => {
       Array.from(view.container.querySelectorAll("button"))
         .find((button) => button.textContent === "set-scheduled")
+        ?.click();
+      Array.from(view.container.querySelectorAll("button"))
+        .find((button) => button.textContent === "set-empty-schedule")
         ?.click();
     });
     await flush();
@@ -677,8 +683,14 @@ test("PostClassicEditorShell surfaces refresh conflicts, publish errors, and met
     classicState.nextMetadataError = classicState.apiError("Metadata blocked");
     React.act(() => {
       buttons()
+        .find((button) => button.textContent === "set-scheduled")
+        ?.click();
+      buttons()
         .find((button) => button.textContent === "set-valid-schedule")
         ?.click();
+    });
+    await flush();
+    React.act(() => {
       buttons()
         .find((button) => button.textContent === "save-metadata")
         ?.click();
@@ -689,6 +701,12 @@ test("PostClassicEditorShell surfaces refresh conflicts, publish errors, and met
     classicState.nextGetError = classicState.apiError("Refresh failed");
     React.act(() => {
       classicState.trigger("post:post-3");
+    });
+    await flush();
+    React.act(() => {
+      buttons()
+        .find((button) => button.textContent?.includes("Refresh"))
+        ?.click();
     });
     await flush();
     expect(view.container.textContent).toContain("Refresh failed");

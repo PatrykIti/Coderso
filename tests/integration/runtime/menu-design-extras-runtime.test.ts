@@ -47,7 +47,7 @@ const testIfDbWithOptions = testIfDb as unknown as (
   fn: () => Promise<void>,
   options: { timeout: number }
 ) => void;
-const dbRuntimeTimeout = 20_000;
+const dbRuntimeTimeout = 30_000;
 
 async function canConnect() {
   try {
@@ -323,5 +323,6 @@ testIfDbWithOptions(
     expect(legacyHtml).not.toContain("data-site-nav-extras");
     expect(legacyHtml).toContain(`Home ${token}`);
   },
-  { timeout: dbRuntimeTimeout }
+  // This scenario performs five full public-shell renders plus fixture cleanup.
+  { timeout: dbRuntimeTimeout * 2 }
 );

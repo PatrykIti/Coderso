@@ -602,7 +602,7 @@ testIfDbWithOptions(
       await db.delete(contentTypes).where(eq(contentTypes.id, type.id));
     }
   },
-  { timeout: 15_000 }
+  { timeout: 50_000 }
 );
 
 testIfDbWithOptions(

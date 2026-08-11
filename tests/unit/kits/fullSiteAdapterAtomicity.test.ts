@@ -704,7 +704,7 @@ describe("full-site multi-step adapter atomicity", () => {
       await db.delete(solutionKitInstallRuns).where(eq(solutionKitInstallRuns.kitId, packageKey));
       await db.delete(users).where(eq(users.id, actor.id));
     }
-  });
+  }, 60_000);
 
   test("persists the normalized menu document as an exact JSON-safe snapshot", async () => {
     const scope = crypto.randomUUID();

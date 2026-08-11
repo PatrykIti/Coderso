@@ -32,6 +32,12 @@ import { clearSiteCache } from "../../../core/site/cache/siteCache";
 
 const hasDb = Boolean(process.env.DATABASE_URL) && (await canConnect());
 const testIfDb = hasDb ? test : test.skip;
+const testIfDbWithOptions = testIfDb as unknown as (
+  name: string,
+  fn: () => Promise<void>,
+  options: { timeout: number }
+) => void;
+const dbRuntimeTimeout = 30_000;
 
 async function canConnect() {
   try {
@@ -269,7 +275,7 @@ const insertDetailPageDocument = async (input: {
   trackedDetailPageIds.add(input.id);
 };
 
-testIfDb(
+testIfDbWithOptions(
   "detail-page preview tokens render current documents with server-side sample-entry context",
   async () => {
     resetRateLimitBuckets();
@@ -307,10 +313,10 @@ testIfDb(
     expect(html).not.toContain("Published detail template body");
     expect(html).toContain("Preview mode");
   },
-  15_000
+  { timeout: dbRuntimeTimeout }
 );
 
-testIfDb(
+testIfDbWithOptions(
   "detail-page preview applies detail-page title and SEO field mappings",
   async () => {
     resetRateLimitBuckets();
@@ -369,10 +375,10 @@ testIfDb(
     );
     expect(html).not.toContain("Entry SEO fallback should not win in preview");
   },
-  15_000
+  { timeout: dbRuntimeTimeout }
 );
 
-testIfDb(
+testIfDbWithOptions(
   "content preview reuses the canonical route-linked published detail template with draft entry data",
   async () => {
     resetRateLimitBuckets();
@@ -418,10 +424,10 @@ testIfDb(
     expect(html).toContain("Published detail template body");
     expect(html).toContain("Preview mode");
   },
-  15_000
+  { timeout: dbRuntimeTimeout }
 );
 
-testIfDb(
+testIfDbWithOptions(
   "content route cache invalidates when the linked detail-page template changes",
   async () => {
     resetRateLimitBuckets();
@@ -473,10 +479,10 @@ testIfDb(
     expect(secondHtml).toContain("Second cached detail template body");
     expect(secondHtml).not.toContain("First cached detail template body");
   },
-  15_000
+  { timeout: dbRuntimeTimeout }
 );
 
-testIfDb(
+testIfDbWithOptions(
   "entry metadata commits refresh cached SEO globally and draft status through targeted invalidation",
   async () => {
     resetRateLimitBuckets();
@@ -520,10 +526,10 @@ testIfDb(
     const draftResponse = await requestPublicPath(publicPath);
     expect(draftResponse.status).toBe(404);
   },
-  20_000
+  { timeout: dbRuntimeTimeout }
 );
 
-testIfDb(
+testIfDbWithOptions(
   "detail-page preview returns 404 when preview mode is disabled",
   async () => {
     resetRateLimitBuckets();
@@ -555,10 +561,10 @@ testIfDb(
     );
     expect(response.status).toBe(404);
   },
-  15_000
+  { timeout: dbRuntimeTimeout }
 );
 
-testIfDb(
+testIfDbWithOptions(
   "detail-page preview returns 410 for expired tokens and 404 for draft sample entries",
   async () => {
     resetRateLimitBuckets();
@@ -605,10 +611,10 @@ testIfDb(
     );
     expect(draftResponse.status).toBe(404);
   },
-  15_000
+  { timeout: dbRuntimeTimeout }
 );
 
-testIfDb(
+testIfDbWithOptions(
   "content preview with detailPageId fails closed for draft and mismatched detail pages",
   async () => {
     resetRateLimitBuckets();
@@ -663,5 +669,5 @@ testIfDb(
     );
     expect(mismatchedResponse.status).toBe(404);
   },
-  15_000
+  { timeout: dbRuntimeTimeout }
 );

@@ -957,6 +957,53 @@ suite such as `production-boundary` may validly have no screenshots.
 - [ ] Reports contain no secrets, PII, raw DOM, SQL, headers, or raw logs.
 - [ ] Targeted unit/type/link/format checks and the affected live smoke pass.
 
+## 17. TASK-554 Post metadata recipe
+
+`task-554` is a reference for a narrow Admin-editor suite that must prove a
+conditional server authorization boundary rather than a similarly named legacy
+route. Register its literal id in `contracts.ts`, both profiles in `cli.ts`,
+the fixed adapter path in `registry.ts`, and the exact registry test. Its
+canonical human entry point is the narrow, agent-free evidence mode:
+
+```bash
+node _docs/_workflows/task-554-implement.mjs --task-554-smoke
+```
+
+That mode calls the existing `runTask554SmokeProfile` capture for `fast`,
+removes and proves its evidence absent, then calls the same capture for
+`certification`. It accepts no profile, session, or output-path override and
+does not dispatch workflow agents. The capture owns nofollow directory
+validation, private `report.json` creation, stdout capture, and strict evidence
+validation; do not pre-create a session directory or redirect the shared wrapper
+from a shell.
+
+The thin adapter composes the shared supervised host, lifecycle, `WorkerPool`,
+`RunFixtureLedger`, browser segment compiler, `BrowserTransport`,
+`PlaywrightCliDispatcher`, repository guard, timing, redaction, and report. Its
+task-owned files define only strict Post fixture operations, the seven immutable
+Classic-editor descriptors, selectors, receipts, and the ordered PNG manifest.
+Do not substitute a direct `playwright-cli` command or a second server/worker,
+cleanup, polling, or report loop.
+
+Each browser action opens Classic editor metadata via **Save metadata** and
+listens before navigation. It accepts exactly one
+`PATCH /admin/api/posts/:id/metadata` with the descriptor's present-only keys
+and values, rejects any other Post mutation (including `/publish` and
+`/unpublish`), checks panel visibility/geometry, a safe 403 denial or bounded
+persisted projection, and zero console/page errors. `fast` distributes the
+seven scenarios across light/dark desktop/mobile variants. `certification`
+runs each scenario against four equivalent fixtures and captures only the
+canonical light desktop PNG for each scenario.
+
+Evidence is exactly seven regular decoded PNGs plus the wrapper's `report.json`
+under `_docs/_workflows/_smoke/task-554/<session>/`. The task validator binds
+profile, session, ordered scenario IDs, file names, hashes, and repository
+snapshots; it permits equal hashes only at distinct valid paths. Credentials,
+cookies, password pepper, and raw request payloads stay in private workspace or
+worker boundaries and never enter frames or reports. Cleanup derives its exact
+FK-safe scope from the shared ledger, removes owned observability rows before
+identities, and proves absence before completion.
+
 ## Common mistakes
 
 | Mistake | Correct pattern |

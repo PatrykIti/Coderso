@@ -252,6 +252,26 @@ co pozwala egzekwowac TTL bez dodatkowych kolumn w DB.
   skutkow; awaria post-commit invalidatora jest raportowana stabilnym,
   zredagowanym kodem i nie zmienia trwale zapisanego wyniku w blad requestu.
 
+### Post metadata mutation (TASK-554)
+
+- `PATCH /admin/api/posts/:id/metadata` is internal-only: it uses the Admin
+  session, shared CSRF enforcement, and the existing `admin_write` bucket. It
+  has no public/API-key mode and no nonce, HMAC, or CAPTCHA path.
+- The route's strict non-empty schema rejects unknown fields at every level.
+  Only own `status` or `scheduledAt` fields are publication-owned, and their
+  presence requires all-of `content:write` plus `content:publish`; other
+  metadata remains `content:write`-only. The server, not UI state, makes this
+  decision from one permission snapshot.
+- A matched-route 64 KiB body cap applies only to this PATCH. Parsing remains
+  before session attachment so malformed and oversized input is charged once to
+  the anonymous `admin_write` identity and logged once with null actor/session.
+  Known parser errors keep their 400/413/429 envelopes; unknown parser failures
+  become redacted `invalid_request_body`/400. Body bytes, permissions, session
+  values, and driver details are never written to the response or access log.
+- Exact RFC3339 calendar validation and service-error mapping run before the
+  mutation boundary. Unexpected metadata-service failures are the fixed,
+  non-sensitive `post_metadata_update_failed`/500 envelope.
+
 ### Custom Screens admin API (TASK-054-22-02)
 
 - Endpointy (internal):

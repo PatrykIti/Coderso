@@ -47,7 +47,12 @@ const expectedClearableCallInventory: Readonly<Record<string, ClearableCallInven
     "core/widgets/core/ctaBanner.tsx": { profile: "inherited-render", calls: 1, nested: 0 },
     "core/widgets/core/divider.tsx": { profile: "inherited-render", calls: 2, nested: 1 },
     "core/widgets/core/footer.tsx": { profile: "inherited-render", calls: 1, nested: 0 },
-    "core/widgets/core/formEmbed.tsx": { profile: "inherited-render", calls: 15, nested: 0 },
+    "core/widgets/core/formEmbed.tsx": { profile: "inherited-render", calls: 13, nested: 0 },
+    "core/widgets/core/formEmbedContract.ts": {
+      profile: "inherited-render",
+      calls: 2,
+      nested: 0,
+    },
     "core/widgets/core/galleryMosaic.tsx": {
       profile: "inherited-render",
       calls: 2,

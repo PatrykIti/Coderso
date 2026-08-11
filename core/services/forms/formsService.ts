@@ -236,10 +236,10 @@ export async function listFormFields(formId: string) {
 }
 
 export async function setFormFields(formId: string, fieldsInput: FormFieldInput[]) {
+  const fieldsSnapshot = snapshotFormFieldsWriteShape(fieldsInput);
   const inserted = await db.transaction(
     async (tx) => {
       await acquireNativeCmsWriterFence(tx);
-      const fieldsSnapshot = snapshotFormFieldsWriteShape(fieldsInput);
       const [form] = await tx
         .select({ id: forms.id })
         .from(forms)

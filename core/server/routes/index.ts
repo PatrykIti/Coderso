@@ -46,6 +46,7 @@ import { registerReviewsRoutes } from "./reviewsRoutes";
 import { registerSolutionKitsRoutes } from "./solutionKitsRoutes";
 import { registerSetupRoutes } from "./setupRoutes";
 import { registerPostsRoutes } from "./postsRoutes";
+import { updatePostMetadata } from "../../services/content/postsService";
 
 export type RouteDeps = {
   requireAuth: (ctx: RouteContext) => Promise<void> | void;
@@ -83,6 +84,7 @@ export function registerAllRoutes(router: Router, deps: RouteDeps) {
   registerPostsRoutes(router, {
     requirePermission: deps.requirePermission,
     validate: deps.validate,
+    updatePostMetadata,
   });
   registerSearchRoutes(router, { requirePermission: deps.requirePermission });
   registerAuditRoutes(router, {

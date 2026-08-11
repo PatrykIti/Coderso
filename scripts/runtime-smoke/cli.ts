@@ -13,6 +13,7 @@ const EXPECTED_OPTIONS = new Set(["--suite", "--profile", "--session"]);
 const SUPPORTED_PROFILES: Readonly<Record<SmokeSuiteId, readonly SmokeProfileId[]>> = {
   "task-540": ["fast", "certification"],
   "task-547": ["fast", "certification"],
+  "task-554": ["fast", "certification"],
   "widget-contract": ["fast"],
   "production-boundary": ["certification"],
 };

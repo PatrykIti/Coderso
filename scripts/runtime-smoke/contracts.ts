@@ -3,6 +3,7 @@ import { isAbsolute, relative, resolve } from "node:path";
 export const SUITE_IDS = [
   "task-540",
   "task-547",
+  "task-554",
   "widget-contract",
   "production-boundary",
 ] as const;

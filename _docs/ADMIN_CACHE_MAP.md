@@ -32,11 +32,20 @@ This file maps admin UI surfaces to their implementation files and the cached AP
   - UI: `core/admin/ui/posts/PostsListPage.tsx`
   - Cached APIs: `listPostsCached`, `getCachedPosts`
   - Cache bus: `posts:list`, `posts:detail:<id>`
+  - Authority: an in-flight list is reconciled against newer detail/list-row
+    publications and delete tombstones before it becomes the cached list.
 - Post editor
-  - UI: `core/admin/ui/posts/editor/PostBlockEditorShell.tsx`
+  - UI: `core/admin/ui/posts/editor/PostBlockEditorShell.tsx`,
+    `core/admin/ui/posts/editor/PostClassicEditorShell.tsx`
   - Cached APIs: `getPostCached`, `getCachedPostDetail`,
     `listPostRevisionsCached`, `getCachedPostRevisions`
   - Cache bus: `posts:list`, `posts:detail:<id>`, `posts:revisions:<id>`
+  - Mutation authority: detail generations/read sequences and per-id tombstones
+    reject stale metadata, autosave, restore, and status continuations; a
+    still-authoritative failed reconciliation emits ordered list/detail
+    invalidations.
+  - Hydration: Classic editor cache continuations defer while a mutation lease
+    owns the route identity, preserving dirty metadata and remote-update state.
 
 ## Content Entries
 - Entries list

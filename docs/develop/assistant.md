@@ -71,6 +71,14 @@ POST /assistant/actions/execute
 
 Planner responses are tagged so the UI can render without parsing prompt text: `docs`, `inspection`, `action_plan`, `needs_input`, or `gated`.
 
+### Post-action dependency (TASK-414)
+
+Any future typed Assistant action that mutates a Post remains gated on terminal
+`TASK-554` metadata authorization hardening. It must reuse the strict
+present-only Post metadata contract and server-owned `content:write` plus
+conditional `content:publish` authorization; an action plan or browser
+permission hint cannot bypass that route boundary.
+
 Generic CMS refinements stay in this typed action path. For existing content
 types, `content-type.field.add` can add supported scalar/select/media fields
 from a resolved target and a field list while preserving the rest of the schema.

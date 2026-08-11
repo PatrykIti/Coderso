@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url";
 import { eq, inArray, sql } from "drizzle-orm";
 import postgres from "postgres";
 import { toSafeFullSiteErrorCode } from "../../../core/services/kits/fullSiteInstallTypes";
+import { startFullSiteLockContender, type FullSiteLockContender } from "./fullSiteLockContender";
 const readSource = (relativePath: string) =>
   Bun.file(fileURLToPath(new URL(relativePath, import.meta.url))).text();
 const DIRECT_SELECTION_MEMBER =
@@ -138,7 +139,7 @@ const createDeferred = <T = void>() => {
   });
   return { promise, resolve };
 };
-const DB_EVENTUALLY_DEADLINE_MS = 360_000;
+const DB_EVENTUALLY_DEADLINE_MS = 50_000;
 const pollUntil = async <T>(read: () => Promise<T | null>): Promise<T> => {
   const deadline = performance.now() + DB_EVENTUALLY_DEADLINE_MS;
   while (performance.now() < deadline) {
@@ -157,6 +158,12 @@ const createLockActor = async (harness: DbHarness): Promise<string> => {
     name: "Full-site lock test",
   });
   return actorId;
+};
+const TWO_LOCK_FIXTURE = "full-site-legacy-ledger-composition-two-lock-v1";
+const clearTwoLockFixtures = async (harness: DbHarness): Promise<void> => {
+  await harness.db
+    .delete(harness.solutionKitInstallRuns)
+    .where(sql`${harness.solutionKitInstallRuns.options}->>'testFixture' = ${TWO_LOCK_FIXTURE}`);
 };
 test("catalog kit installer delegates run-table work to the shared ledger port", async () => {
   const source = await readSource("../../../core/services/kits/kitInstaller.ts");
@@ -475,56 +482,81 @@ testIfDb("shared ledger metadata patch persists JSON and redacts unsafe errors",
     await harness.db.delete(solutionKitInstallRuns).where(eq(solutionKitInstallRuns.id, run.id));
   }
 });
-testIfDb(
-  "two-lock composition serializes exact takeover and rejects a different package",
-  async () => {
-    const harness = dbHarness;
-    const databaseUrl = process.env.DATABASE_URL;
-    if (!harness || !databaseUrl) throw new Error("db_test_unavailable");
-    const probe = postgres(databaseUrl, { max: 1 });
-    const actorId = await createLockActor(harness);
-    const ownerRunIds = new Set<string>();
+const assertTwoLockComposition = async (useDifferentPackage: boolean): Promise<void> => {
+  const harness = dbHarness;
+  const databaseUrl = process.env.DATABASE_URL;
+  if (!harness || !databaseUrl) throw new Error("db_test_unavailable");
+  const probe = postgres(databaseUrl, { max: 1 });
+  let actorId: string | null = null;
+  let contender: FullSiteLockContender | null = null;
+  const release = createDeferred();
+  let first: Promise<void> | null = null;
+  try {
+    await clearTwoLockFixtures(harness);
+    actorId = await createLockActor(harness);
+    const lockActorId = actorId;
+    const scope = randomUUID();
+    const firstKey = `lock-first-${scope}`;
+    const secondKey = useDifferentPackage ? `lock-second-${scope}` : firstKey;
+    const reservation = (packageKey: string) => ({
+      intent: "apply" as const,
+      packageKey,
+      actorId: lockActorId,
+      dryRun: false,
+      options: { request: scope, testFixture: TWO_LOCK_FIXTURE },
+    });
+    const entered = createDeferred();
+    const events: string[] = [];
+    let active = 0;
+    let maxActive = 0;
+    let firstEntered = false;
+    let contenderSettledBeforeContention = false;
+    const firstRun = harness.withFullSiteInstallLocks(reservation(firstKey), async () => {
+      firstEntered = true;
+      active += 1;
+      maxActive = Math.max(maxActive, active);
+      events.push("first-enter");
+      entered.resolve();
+      await release.promise;
+      events.push("first-exit");
+      active -= 1;
+    });
+    first = firstRun;
+    const firstOutcome = firstRun.then(
+      () => ({ ok: true as const, error: null }),
+      (error: unknown) => ({
+        ok: false as const,
+        error: error instanceof Error ? error : new Error("native_cms_writer_fence_failed"),
+      })
+    );
+    await Promise.race([
+      entered.promise,
+      firstOutcome.then((outcome) => {
+        if (firstEntered) return;
+        if (!outcome.ok) throw outcome.error;
+        throw new Error("full_site_lock_callback_not_entered");
+      }),
+    ]);
     try {
-      for (const useDifferentPackage of [false, true]) {
-        const scope = randomUUID();
-        const firstKey = `lock-first-${scope}`;
-        const secondKey = useDifferentPackage ? `lock-second-${scope}` : firstKey;
-        const reservation = (packageKey: string) => ({
-          intent: "apply" as const,
-          packageKey,
-          actorId,
-          dryRun: false,
-          options: { request: scope },
-        });
-        const entered = createDeferred();
-        const release = createDeferred();
-        const events: string[] = [];
-        let active = 0;
-        let maxActive = 0;
-        const first = harness.withFullSiteInstallLocks(reservation(firstKey), async (context) => {
-          ownerRunIds.add(context.ownerRunId);
-          active += 1;
-          maxActive = Math.max(maxActive, active);
-          events.push("first-enter");
-          entered.resolve();
-          await release.promise;
-          events.push("first-exit");
-          active -= 1;
-        });
-        await entered.promise;
-        let secondCallbackCalled = false;
-        const second = harness.withFullSiteInstallLocks(reservation(secondKey), async (context) => {
-          ownerRunIds.add(context.ownerRunId);
-          secondCallbackCalled = true;
-          active += 1;
-          maxActive = Math.max(maxActive, active);
-          events.push("second-enter");
-          active -= 1;
-          events.push("second-exit");
-        });
-        try {
-          const lockState = await pollUntil(async () => {
-            const [row] = await probe`
+      contender = startFullSiteLockContender({
+        actorId: lockActorId,
+        fixture: TWO_LOCK_FIXTURE,
+        packageKey: secondKey,
+        request: scope,
+      });
+      void contender.outcome.then(
+        () => {
+          contenderSettledBeforeContention = true;
+        },
+        () => {
+          contenderSettledBeforeContention = true;
+        }
+      );
+      const lockState = await pollUntil(async () => {
+        if (contenderSettledBeforeContention) {
+          throw new Error("full_site_lock_contender_settled_before_contention");
+        }
+        const [row] = await probe`
             select
               exists (
                 select 1
@@ -547,44 +579,48 @@ testIfDb(
                   and package_lock.granted
               ) as same_session
           `;
-            return row?.waiting === true ? row : null;
-          });
-          expect(lockState.same_session).toBe(true);
-        } finally {
-          release.resolve();
-        }
-        await first;
-        if (useDifferentPackage) {
-          await expect(second).rejects.toThrow("site_package_recovery_conflict");
-          expect(secondCallbackCalled).toBe(false);
-        } else {
-          await second;
-          expect(secondCallbackCalled).toBe(true);
-        }
-        expect(maxActive).toBe(1);
-        expect(events).toEqual(
-          useDifferentPackage
-            ? ["first-enter", "first-exit"]
-            : ["first-enter", "first-exit", "second-enter", "second-exit"]
-        );
-        for (const ownerRunId of ownerRunIds) {
-          await harness.db
-            .delete(harness.solutionKitInstallRuns)
-            .where(eq(harness.solutionKitInstallRuns.id, ownerRunId));
-        }
-        ownerRunIds.clear();
-      }
+        return row?.waiting === true ? row : null;
+      });
+      expect(lockState.same_session).toBe(true);
     } finally {
-      for (const ownerRunId of ownerRunIds) {
-        await harness.db
-          .delete(harness.solutionKitInstallRuns)
-          .where(eq(harness.solutionKitInstallRuns.id, ownerRunId));
-      }
-      await harness.db.delete(harness.users).where(eq(harness.users.id, actorId));
-      await probe.end();
+      release.resolve();
     }
+    await firstRun;
+    if (!contender) throw new Error("full_site_lock_contender_missing");
+    const secondOutcome = await contender.outcome;
+    if (useDifferentPackage) {
+      expect(secondOutcome).toMatchObject({
+        ok: false,
+        error: "site_package_recovery_conflict",
+      });
+      expect(secondOutcome.callbackCalled).toBe(false);
+    } else {
+      expect(secondOutcome).toEqual({ ok: true, callbackCalled: true, error: null });
+    }
+    expect(maxActive).toBe(1);
+    expect(events).toEqual(["first-enter", "first-exit"]);
+  } finally {
+    release.resolve();
+    if (first) await Promise.allSettled([first]);
+    if (contender) await contender.stop();
+    await clearTwoLockFixtures(harness);
+    if (actorId) await harness.db.delete(harness.users).where(eq(harness.users.id, actorId));
+    await probe.end();
+  }
+};
+testIfDb(
+  "two-lock composition serializes exact takeover for the same package",
+  async () => {
+    await assertTwoLockComposition(false);
   },
-  360_000
+  60_000
+);
+testIfDb(
+  "two-lock composition rejects takeover for a different package",
+  async () => {
+    await assertTwoLockComposition(true);
+  },
+  60_000
 );
 testIfDb(
   "partial package-lock acquisition failure releases the global transaction lock",
@@ -679,7 +715,7 @@ testIfDb(
       await Promise.all([holder.end(), probe.end()]);
     }
   },
-  360_000
+  60_000
 );
 testIfDb(
   "explicit rollback transfers the writer marker from an interrupted apply source",
@@ -745,7 +781,7 @@ testIfDb(
       await harness.db.delete(harness.users).where(eq(harness.users.id, actorId));
     }
   },
-  360_000
+  60_000
 );
 testIfDb("lock entry rejects a non-canonical package key before invoking work", async () => {
   const harness = dbHarness;

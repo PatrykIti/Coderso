@@ -20,6 +20,7 @@ const TASK = "TASK-554";
 const AUTHOR_AUDIT_PATH = "_docs/_workflows/task-554-author-audit.mjs";
 const SELF_TEST_ARG = "--task-554-workflow-self-test";
 const RESUME_AFTER_FIX_ARG = "--task-554-resume-after-fix";
+const SMOKE_ONLY_ARG = "--task-554-smoke";
 const SHA256 = /^[a-f0-9]{64}$/u;
 const SOURCE_OR_TEST_EXTENSION = /\.(?:ts|tsx|js|jsx|mjs|cjs|mts|cts)$/u;
 const GENERATED_ARTIFACT_EXTENSION = /\.generated\.(?:ts|tsx|js|jsx|mjs|cjs|mts|cts)$/u;
@@ -51,7 +52,7 @@ const OWNER_GATE_COMMANDS = Object.freeze({ "workflow-contract-tests": Object.fr
 function commandOutput(root, command, args, environment) { return execFileSync(command, args, { cwd: root, encoding: "buffer", stdio: ["ignore", "pipe", "pipe"], ...(environment ? { env: { ...process.env, ...environment } } : {}) }); }
 function commandStatus(root, command, args) { try { commandOutput(root, command, args); return 0; } catch (error) { return typeof error?.status === "number" ? error.status : 255; } }
 function parseNul(bytes) { return bytes.toString("utf8").split("\0").filter(Boolean); }
-function parseImplementationMode() { const args = process.argv.slice(2); if (args.length === 0) return "run"; if (args.length === 1 && args[0] === SELF_TEST_ARG) return "self-test"; if (args.length === 1 && args[0] === RESUME_AFTER_FIX_ARG) return "resume"; throw new Error(`task_554_unknown_arguments:${args.join(",")}`); }
+function parseImplementationMode() { const args = process.argv.slice(2); if (args.length === 0) return "run"; if (args.length === 1 && args[0] === SELF_TEST_ARG) return "self-test"; if (args.length === 1 && args[0] === RESUME_AFTER_FIX_ARG) return "resume"; if (args.length === 1 && args[0] === SMOKE_ONLY_ARG) return "smoke"; throw new Error(`task_554_unknown_arguments:${args.join(",")}`); }
 const RESULT_KEYS = Object.freeze(["pass", "summary", "errors"]);
 const AUDIT_KEYS = Object.freeze(["pass", "summary", "findings"]);
 const FINDING_KEYS = Object.freeze(["severity", "area", "finding", "evidence", "recommendation"]);
@@ -627,7 +628,13 @@ function removeFastSmokeEvidence(root) {
   if (directory !== expected || !existsSync(directory)) throw new Error("task_554_fast_evidence_missing_before_cleanup");
   const stats = lstatSync(directory);
   if (!stats.isDirectory() || stats.isSymbolicLink()) throw new Error("task_554_fast_evidence_not_owned_directory");
-  rmSync(directory, { recursive: true, force: false }); if (existsSync(directory)) throw new Error("task_554_fast_evidence_cleanup_failed");
+  rmSync(directory, { recursive: true, force: false }); try { lstatSync(directory); } catch (error) { if (error?.code === "ENOENT") return; throw error; } throw new Error("task_554_fast_evidence_cleanup_failed");
+}
+export function runTask554SmokeSequence(root = ROOT, operations = Object.freeze({ runProfile: runTask554SmokeProfile, removeFastEvidence: removeFastSmokeEvidence })) {
+  const fast = operations.runProfile(root, "fast", "task-554-fast");
+  operations.removeFastEvidence(root);
+  const certification = operations.runProfile(root, "certification", "task-554-certification");
+  return Object.freeze({ fast, certification });
 }
 const COMMON = `Repository: ${ROOT}; task: ${TASK}; changelog: 1267.
 Read current HEAD/status/diff, root AGENTS.md, TASK-554/board, relevant architecture/API/RBAC/security/testing docs, source and tests. The pre-existing untracked _TMP-task-dispatch-plan-2026-08-10.md is owner state and must remain untouched.
@@ -710,9 +717,7 @@ async function runWorkflow() {
   phase("Full validation"); const validation = runTask554FullValidation();
   phase("Post-audit"); const audits = await runPostAudit();
   phase("Runtime smoke");
-  const fast = runTask554SmokeProfile(ROOT, "fast", "task-554-fast");
-  removeFastSmokeEvidence(ROOT);
-  const certification = runTask554SmokeProfile(ROOT, "certification", "task-554-certification");
+  const { fast, certification } = runTask554SmokeSequence(ROOT);
   phase("Owner review");
   return Object.freeze({ pass: false, ownerActionRequired: "owner_review_certification", preflight, start, owners: Object.freeze(owners), documentation, validation, audits, fast, certification });
 }
@@ -721,9 +726,7 @@ async function runResumeAfterFixWorkflow() {
   phase("Full validation"); const validation = runTask554FullValidation();
   phase("Post-audit"); const audits = await runPostAudit();
   phase("Runtime smoke");
-  const fast = runTask554SmokeProfile(ROOT, "fast", "task-554-fast");
-  removeFastSmokeEvidence(ROOT);
-  const certification = runTask554SmokeProfile(ROOT, "certification", "task-554-certification");
+  const { fast, certification } = runTask554SmokeSequence(ROOT);
   phase("Owner review");
   return Object.freeze({ pass: false, ownerActionRequired: "owner_review_certification", resume: "resume_full_validation_post_audit_smoke", preflight, validation, audits, fast, certification });
 }
@@ -971,5 +974,8 @@ export const result = mode === "self-test"
     ? null
     : mode === "resume"
       ? await runResumeAfterFixWorkflow()
-      : await runWorkflow();
+      : mode === "smoke"
+        ? runTask554SmokeSequence(ROOT)
+        : await runWorkflow();
 if (mode === "self-test") process.stdout.write(`${JSON.stringify(result)}\n`);
+if (mode === "smoke") process.stdout.write(`${JSON.stringify({ pass: true, fast: { profile: result.fast.profile, session: result.fast.session }, certification: { profile: result.certification.profile, session: result.certification.session } })}\n`);

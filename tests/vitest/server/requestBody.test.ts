@@ -2,6 +2,11 @@ import { describe, expect, test } from "vitest";
 
 import { parseRequestBody } from "../../../core/server/requestBody";
 import { ApiError } from "../../../core/server/errorHandler";
+import { POST_METADATA_REQUEST_MAX_BYTES } from "../../../core/services/posts/postMetadataContract";
+
+process.env.DATABASE_URL ??= "postgres://localhost/nextless_test";
+
+const { resolveMatchedRouteBodyOptions } = await import("../../../core/server/httpServer");
 
 type StreamCounters = {
   pulls: number;
@@ -196,6 +201,18 @@ test("parseRequestBody ignores unsupported content types", async () => {
   expect(body).toBeUndefined();
 });
 
+test("only the metadata PATCH route receives the frozen 64 KiB body cap", () => {
+  const metadataOptions = resolveMatchedRouteBodyOptions({
+    method: "PATCH",
+    path: "/posts/:id/metadata",
+  });
+
+  expect(metadataOptions).toEqual({ maxBytes: POST_METADATA_REQUEST_MAX_BYTES });
+  expect(Object.isFrozen(metadataOptions)).toBe(true);
+  expect(resolveMatchedRouteBodyOptions({ method: "PATCH", path: "/posts/:id" })).toBeUndefined();
+  expect(resolveMatchedRouteBodyOptions({ method: "POST", path: "/media" })).toBeUndefined();
+});
+
 describe("bounded request bodies", () => {
   test.each(["6", "999999999999999999999999999999999999999999"])(
     "declared Content-Length %s rejects before pulling the stream",
@@ -242,6 +259,21 @@ describe("bounded request bodies", () => {
       "media_file_too_large",
       413
     );
+    expect(counters).toEqual({ pulls: 1, cancels: 1 });
+  });
+
+  test("the metadata cap cancels a streamed 64 KiB + 1 request at its sentinel", async () => {
+    const options = resolveMatchedRouteBodyOptions({
+      method: "PATCH",
+      path: "/posts/:id/metadata",
+    });
+    if (!options) throw new Error("missing_post_metadata_body_options");
+    const { request, counters } = streamRequest(
+      [new Uint8Array(POST_METADATA_REQUEST_MAX_BYTES + 1)],
+      { "content-type": "application/json" }
+    );
+
+    await expectApiError(parseRequestBody(request, options), "payload_too_large", 413);
     expect(counters).toEqual({ pulls: 1, cancels: 1 });
   });
 

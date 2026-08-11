@@ -25,6 +25,20 @@ import {
   trackPage,
 } from "./pages-runtime-test-support";
 
+const createRouteOnlyContentType = async (token: string) => {
+  const contentType = await createContentType({
+    name: `Route-only content type ${token}`,
+    slug: `missing-type-${token}`,
+    schema: {
+      type: "object",
+      additionalProperties: false,
+      properties: {},
+    },
+  });
+  trackContentType(contentType.id);
+  return contentType;
+};
+
 testIfDbWithOptions(
   "public page runtime renders published data while preview renders current draft data",
   async () => {
@@ -114,12 +128,13 @@ testIfDbWithOptions(
   { timeout: dbRuntimeTimeout }
 );
 
-testIfDb(
+testIfDbWithOptions(
   "public page runtime derives site dev assets from the admin dev url for published and preview pages",
   async () => {
     resetRateLimitBuckets();
     await setTestSetting("site.cacheTtlSeconds", 0);
     await setTestSetting("site.contentRoutes", []);
+    await setTestSetting("site.previewEnabled", true);
 
     const previousSiteDevUrl = process.env.VITE_SITE_DEV_SERVER_URL;
     const previousAdminDevUrl = process.env.VITE_DEV_SERVER_URL;
@@ -167,7 +182,8 @@ testIfDb(
         process.env.CODERSO_PUBLIC_VITE_DEV_URL = previousPublicAdminDevUrl;
       }
     }
-  }
+  },
+  { timeout: dbRuntimeTimeout }
 );
 
 testIfDb("public root renders the configured homepage by page id", async () => {
@@ -362,9 +378,10 @@ testIfDb("published static page wins an exact content-list route overlap", async
   resetRateLimitBuckets();
   await setTestSetting("site.cacheTtlSeconds", 0);
   const fixture = await createPublishedPageWithDraft();
+  const contentType = await createRouteOnlyContentType(fixture.token);
   const contentRoutes: ContentRouteSetting[] = [
     {
-      type: `missing-type-${fixture.token}`,
+      type: contentType.slug,
       listPath: fixture.slug,
       detailPath: `${fixture.slug}/:slug`,
       enabled: true,
@@ -392,9 +409,10 @@ testIfDb("dynamic content-detail route remains content-owned over an exact page 
     authorId: fixture.actor.id,
     data: pageData(authoredHeadline),
   });
+  const contentType = await createRouteOnlyContentType(fixture.token);
   const contentRoutes: ContentRouteSetting[] = [
     {
-      type: `missing-type-${fixture.token}`,
+      type: contentType.slug,
       listPath: fixture.slug,
       detailPath: `${fixture.slug}/:slug`,
       enabled: true,

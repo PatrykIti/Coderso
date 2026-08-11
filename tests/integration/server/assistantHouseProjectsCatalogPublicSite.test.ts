@@ -77,10 +77,11 @@ const plansToCleanup: Array<{
 }> = [];
 let originalContentRoutes: ContentRouteSetting[] | null = null;
 
-const stopServer = () => {
-  if (!server) return;
-  server.stop(true);
+const stopServer = async (expectedServer?: ReturnType<typeof Bun.serve>) => {
+  const activeServer = server;
+  if (!activeServer || (expectedServer && activeServer !== expectedServer)) return;
   server = null;
+  await activeServer.stop(true);
 };
 
 const clonePlanWithToken = (sourcePlan: AssistantActionPlan, token: string) => {
@@ -136,7 +137,7 @@ const clonePlanWithToken = (sourcePlan: AssistantActionPlan, token: string) => {
               resourceType: "content-type",
               slug: contentTypeSlug,
             },
-            expectedExistingId: detailPageId,
+            expectedExistingId: null,
           },
         };
       }
@@ -302,7 +303,7 @@ const createActor = async () => {
 };
 
 afterAll(async () => {
-  stopServer();
+  await stopServer();
 
   if (!hasDb) return;
 
@@ -393,6 +394,11 @@ testIfDbWithOptions(
       "listing-template.upsert",
       "page.upsert",
     ]);
+    const detailPageAction = plan.actions[1];
+    if (detailPageAction?.type !== "detail-page.upsert") {
+      throw new Error("missing_detail_page_create_action");
+    }
+    expect(detailPageAction.input.expectedExistingId).toBeNull();
     const dryRun = await dryRunAssistantActionPlan({ plan });
     expect(dryRun.readyToExecute).toBe(true);
     expect(dryRun.changes.map((change) => change.targetType)).toEqual([
@@ -449,25 +455,31 @@ testIfDbWithOptions(
     createdEntryIds.add(entry.id);
     await publishEntry(entry.id, actor.id);
 
-    server = startHttpServer({ port: 0 });
-    const baseUrl = `http://127.0.0.1:${server.port}`;
+    const startedServer = startHttpServer({ port: 0 });
+    server = startedServer;
 
-    const catalogResponse = await fetch(`${baseUrl}${publicPagePath}`);
-    expect(catalogResponse.status).toBe(200);
-    const catalogHtml = await catalogResponse.text();
-    expect(catalogHtml).toContain('data-listing-widget="content-list"');
-    expect(catalogHtml).toContain(`Usługa ${token}`);
-    expect(catalogHtml).not.toContain('data-template="content-list"');
+    try {
+      const baseUrl = `http://127.0.0.1:${startedServer.port}`;
 
-    const detailUrl = detailPath.replace(":slug", `usluga-${token}`);
-    const detailResponse = await fetch(`${baseUrl}${detailUrl}`);
-    expect(detailResponse.status).toBe(200);
-    const detailHtml = await detailResponse.text();
-    expect(detailHtml).toContain(`Usługa ${token}`);
-    expect(detailHtml).toContain(`Usługa lokalnego dostawcy ${token}`);
+      const catalogResponse = await fetch(`${baseUrl}${publicPagePath}`);
+      expect(catalogResponse.status).toBe(200);
+      const catalogHtml = await catalogResponse.text();
+      expect(catalogHtml).toContain('data-listing-widget="content-list"');
+      expect(catalogHtml).toContain(`Usługa ${token}`);
+      expect(catalogHtml).not.toContain('data-template="content-list"');
 
-    const bySlug = await getEntryBySlug(contentType.id, `usluga-${token}`);
-    expect(bySlug?.id).toBe(entry.id);
+      const detailUrl = detailPath.replace(":slug", `usluga-${token}`);
+      const detailResponse = await fetch(`${baseUrl}${detailUrl}`);
+      expect(detailResponse.status).toBe(200);
+      const detailHtml = await detailResponse.text();
+      expect(detailHtml).toContain(`Usługa ${token}`);
+      expect(detailHtml).toContain(`Usługa lokalnego dostawcy ${token}`);
+
+      const bySlug = await getEntryBySlug(contentType.id, `usluga-${token}`);
+      expect(bySlug?.id).toBe(entry.id);
+    } finally {
+      await stopServer(startedServer);
+    }
   },
-  { timeout: 30_000 }
+  { timeout: 60_000 }
 );

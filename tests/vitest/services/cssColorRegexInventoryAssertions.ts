@@ -71,7 +71,7 @@ const expectedRegexInventory: Readonly<Record<string, RegexInventory>> = Object.
   "core/widgets/core/ctaBanner.tsx": { literals: 0, constructors: 1 },
   "core/widgets/core/divider.tsx": { literals: 3, constructors: 0 },
   "core/widgets/core/footer.tsx": { literals: 5, constructors: 0 },
-  "core/widgets/core/formEmbed.tsx": { literals: 3, constructors: 0 },
+  "core/widgets/core/formEmbed.tsx": { literals: 1, constructors: 0 },
   "core/widgets/core/galleryMosaic.tsx": { literals: 0, constructors: 0 },
   "core/widgets/core/gridColumns.tsx": { literals: 0, constructors: 0 },
   "core/widgets/core/hero.tsx": { literals: 2, constructors: 0 },
@@ -364,7 +364,7 @@ export const assertRegexAstInventoryHasNoCopiedSimpleColorGrammar = (): void => 
   }
 
   expect(issues).toEqual([]);
-  expect(records).toHaveLength(66);
+  expect(records).toHaveLength(64);
   expect(actual).toEqual(expectedRegexInventory);
   expect(records.filter((record) => recognizesProbeGrammar(record, simpleColorProbePairs))).toEqual(
     []

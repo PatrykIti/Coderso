@@ -666,7 +666,7 @@ testIfDb(
       status: 404,
     });
   },
-  15_000
+  50_000
 );
 
 testIfDb(

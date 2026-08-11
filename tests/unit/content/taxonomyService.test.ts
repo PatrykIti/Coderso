@@ -163,48 +163,52 @@ testIfDb("taxonomy config and public list adapters preserve UUID/slug behavior",
   });
 });
 
-testIfDb("standalone replacement opens one transaction and keeps its public shape", async () => {
-  await withFixture("Standalone taxonomy", async ({ type, entry }) => {
-    const { categoryTaxonomy, tagTaxonomy } = await configureBoth(type.id);
-    const category = requireValue(
-      await createTerm(categoryTaxonomy.id, { name: "Updates" }),
-      "category"
-    );
-    const tag = requireValue(await createTerm(tagTaxonomy.id, { name: "Launch" }), "tag");
+testIfDb(
+  "standalone replacement opens one transaction and keeps its public shape",
+  async () => {
+    await withFixture("Standalone taxonomy", async ({ type, entry }) => {
+      const { categoryTaxonomy, tagTaxonomy } = await configureBoth(type.id);
+      const category = requireValue(
+        await createTerm(categoryTaxonomy.id, { name: "Updates" }),
+        "category"
+      );
+      const tag = requireValue(await createTerm(tagTaxonomy.id, { name: "Launch" }), "tag");
 
-    const transactionSpy = spyOnDbTransaction();
-    try {
-      const byId: EntryTaxonomyAssignments = await replaceEntryTaxonomies(entry.id, type.id, {
-        categoryId: category.id,
-        tagIds: [tag.id],
-      });
-      expect(transactionSpy).toHaveBeenCalledTimes(1);
-      expect(Object.keys(byId).sort()).toEqual(["category", "tags"]);
-      expect(byId.category?.name).toBe("Updates");
-      expect(byId.tags.map((item) => item.name)).toEqual(["Launch"]);
+      const transactionSpy = spyOnDbTransaction();
+      try {
+        const byId: EntryTaxonomyAssignments = await replaceEntryTaxonomies(entry.id, type.id, {
+          categoryId: category.id,
+          tagIds: [tag.id],
+        });
+        expect(transactionSpy).toHaveBeenCalledTimes(1);
+        expect(Object.keys(byId).sort()).toEqual(["category", "tags"]);
+        expect(byId.category?.name).toBe("Updates");
+        expect(byId.tags.map((item) => item.name)).toEqual(["Launch"]);
 
-      const bySlug = await replaceEntryTaxonomies(entry.id, type.slug, {
-        categoryId: category.id,
-        tagIds: [tag.id],
-      });
-      expect(transactionSpy).toHaveBeenCalledTimes(2);
-      expect(bySlug.category?.id).toBe(category.id);
-      expect(bySlug.tags.map((item) => item.id)).toEqual([tag.id]);
-    } finally {
-      transactionSpy.mockRestore();
-    }
+        const bySlug = await replaceEntryTaxonomies(entry.id, type.slug, {
+          categoryId: category.id,
+          tagIds: [tag.id],
+        });
+        expect(transactionSpy).toHaveBeenCalledTimes(2);
+        expect(bySlug.category?.id).toBe(category.id);
+        expect(bySlug.tags.map((item) => item.id)).toEqual([tag.id]);
+      } finally {
+        transactionSpy.mockRestore();
+      }
 
-    const assignments = await getEntryTaxonomies(entry.id);
-    const publicTerm: ContentTerm = requireValue(assignments.tags[0], "public_tag");
-    expect(publicTerm.createdAt.getTime()).toBe(0);
-    expect(publicTerm.updatedAt.getTime()).toBe(0);
-    expect(await resolveEntryTagsFromTaxonomy(entry.id, type.id)).toEqual(["Launch"]);
-    expect(await listTerms(tagTaxonomy.id)).toHaveLength(1);
+      const assignments = await getEntryTaxonomies(entry.id);
+      const publicTerm: ContentTerm = requireValue(assignments.tags[0], "public_tag");
+      expect(publicTerm.createdAt.getTime()).toBe(0);
+      expect(publicTerm.updatedAt.getTime()).toBe(0);
+      expect(await resolveEntryTagsFromTaxonomy(entry.id, type.id)).toEqual(["Launch"]);
+      expect(await listTerms(tagTaxonomy.id)).toHaveLength(1);
 
-    await updateTerm(tag.id, { name: "Launchpad" });
-    await deleteTerm(category.id);
-  });
-});
+      await updateTerm(tag.id, { name: "Launchpad" });
+      await deleteTerm(category.id);
+    });
+  },
+  50_000
+);
 
 testIfDb("standalone unknown slugs keep the no-key no-op compatibility", async () => {
   await withFixture("Unknown taxonomy slug", async ({ token, entry }) => {

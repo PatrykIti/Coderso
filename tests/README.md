@@ -78,7 +78,7 @@ Reusable local runtime smokes use one strict entry point:
 
 ```bash
 bun scripts/runtime-smoke.ts run \
-  --suite <task-540|task-547|widget-contract|production-boundary> \
+  --suite <task-540|task-547|task-554|widget-contract|production-boundary> \
   --profile <fast|certification> \
   --session <task-scoped-name>
 ```
@@ -112,6 +112,12 @@ The current adapters are:
   persistent worker bridge, segmented Playwright transport, transactional
   cleanup, exact observation manifest, and the same scenario descriptors in
   `fast` and `certification` profiles.
+- `task-554`: seven Classic Post metadata flows. `fast` distributes the seven
+  flows across light/dark desktop/mobile variants; `certification` runs every
+  flow in all four variants. It proves the exact metadata PATCH receipt,
+  persisted projection, zero console/page errors, seven manifest PNGs, and
+  synthetic fixture cleanup through the shared host, worker, browser, and
+  reporting platform.
 - `widget-contract`: a focused `gallery-mosaic` adapter over the retained
   widget contract harness plus a fresh public browser error probe.
 - `production-boundary`: a certification-only production build/server probe

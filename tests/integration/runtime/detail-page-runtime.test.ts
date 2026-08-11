@@ -29,6 +29,7 @@ const testIfDbWithOptions = testIfDb as unknown as (
   fn: () => Promise<void>,
   options: { timeout: number }
 ) => void;
+const dbRuntimeTimeout = 30_000;
 
 async function canConnect() {
   try {
@@ -277,7 +278,7 @@ testIfDbWithOptions(
     expect(html).toContain(`Runtime product ${fixture.token}`);
     expect(html).not.toContain("Composed detail template body");
   },
-  { timeout: 30_000 }
+  { timeout: dbRuntimeTimeout }
 );
 
 testIfDbWithOptions(
@@ -310,7 +311,7 @@ testIfDbWithOptions(
     expect(html).toContain(`Bound detail headline ${fixture.token}`);
     expect(html).toContain("Composed detail template body");
   },
-  { timeout: 15_000 }
+  { timeout: dbRuntimeTimeout }
 );
 
 testIfDbWithOptions(
@@ -343,7 +344,7 @@ testIfDbWithOptions(
     expect(html).toContain(`Bound detail headline ${fixture.token}`);
     expect(html).toContain("Composed detail template body");
   },
-  { timeout: 15_000 }
+  { timeout: dbRuntimeTimeout }
 );
 
 testIfDbWithOptions(
@@ -370,7 +371,7 @@ testIfDbWithOptions(
     expect(html).toContain(`Bound detail headline ${fixture.token}`);
     expect(html).not.toContain("Composed detail template body");
   },
-  { timeout: 15_000 }
+  { timeout: dbRuntimeTimeout }
 );
 
 testIfDbWithOptions(
@@ -421,7 +422,7 @@ testIfDbWithOptions(
     expect(html).toContain(`name="${searchToken}"`);
     expect(html).toContain('value="desk"');
   },
-  { timeout: 15_000 }
+  { timeout: dbRuntimeTimeout }
 );
 
 testIfDbWithOptions(
@@ -463,7 +464,7 @@ testIfDbWithOptions(
     const html = await response.text();
     expect(html).toContain(`rel="canonical" href="${canonicalUrl}"`);
   },
-  { timeout: 15_000 }
+  { timeout: dbRuntimeTimeout }
 );
 
 testIfDbWithOptions(
@@ -516,7 +517,7 @@ testIfDbWithOptions(
       `property="og:image" content="/media/detail-cover-${fixture.token}.jpg"`
     );
   },
-  { timeout: 15_000 }
+  { timeout: dbRuntimeTimeout }
 );
 
 testIfDbWithOptions(
@@ -546,5 +547,5 @@ testIfDbWithOptions(
 
     expect(response.status).toBe(404);
   },
-  { timeout: 15_000 }
+  { timeout: dbRuntimeTimeout }
 );

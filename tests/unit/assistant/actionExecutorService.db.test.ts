@@ -12,6 +12,7 @@ import { planAssistantActions } from "../../../core/services/assistant/actionPla
 import { buildHouseProjectsCatalogPlan } from "../../../core/services/assistant/blueprints/houseProjectsCatalogBlueprint";
 import { executeAssistantActionPlan } from "../../../core/services/assistant/actionExecutorService";
 import {
+  createContentType,
   deleteContentType,
   getContentTypeBySlug,
 } from "../../../core/services/content/typeService";
@@ -36,7 +37,10 @@ import {
 } from "../../../core/services/settings/settingsService";
 
 const hasDb = Boolean(process.env.DATABASE_URL) && (await canConnect());
-const testIfDb = (hasDb ? test : test.skip) as typeof test;
+// The repository's compile-time bun:test shim re-exports Vitest, while Bun's
+// runtime API provides `test.serial`. These DB tests mutate global settings.
+const serialTest = (test as unknown as { readonly serial: typeof test }).serial;
+const testIfDb = (hasDb ? serialTest : test.skip) as typeof test;
 type DbTestOptions = { timeout?: number; retry?: number; repeats?: number };
 const testIfDbWithOptions = testIfDb as unknown as (
   name: string,
@@ -53,8 +57,7 @@ async function canConnect() {
     `);
     const rows = Array.isArray(result) ? result : [];
     const first = rows[0] as
-      | { executions_table?: string | null; undo_table?: string | null }
-      | undefined;
+      { executions_table?: string | null; undo_table?: string | null } | undefined;
     return (
       first?.executions_table === "assistant_action_executions" &&
       first.undo_table === "assistant_action_undo_items"
@@ -66,6 +69,7 @@ async function canConnect() {
 
 const createdUserIds = new Set<string>();
 const idempotencyKeysToCleanup = new Set<string>();
+const contentRouteRootIdsToCleanup = new Set<string>();
 const plansToCleanup: Array<{
   contentTypeSlug: string;
   customScreenName: string;
@@ -75,6 +79,26 @@ const plansToCleanup: Array<{
   detailPageId: string;
 }> = [];
 let originalContentRoutes: ContentRouteSetting[] | null = null;
+
+const ensureContentRouteRoots = async (routes: readonly ContentRouteSetting[]) => {
+  const typeSlugs = [...new Set(routes.map((route) => route.type))].sort();
+  for (const slug of typeSlugs) {
+    if (await getContentTypeBySlug(slug)) continue;
+    const created = await createContentType({
+      name: `Route root ${randomUUID()}`,
+      slug,
+      schema: {
+        type: "object",
+        additionalProperties: false,
+        properties: {},
+      },
+    });
+    contentRouteRootIdsToCleanup.add(created.id);
+  }
+
+  const roots = await Promise.all(typeSlugs.map((slug) => getContentTypeBySlug(slug)));
+  expect(roots.map((root) => root?.slug)).toEqual(typeSlugs);
+};
 
 const clonePlanWithToken = (token: string) => {
   const plan = JSON.parse(JSON.stringify(buildHouseProjectsCatalogPlan())) as ReturnType<
@@ -113,7 +137,7 @@ const clonePlanWithToken = (token: string) => {
           id: `${action.id}-${token}`,
           input: {
             ...action.input,
-            expectedExistingId: detailPageId,
+            expectedExistingId: null,
             document: {
               ...action.input.document,
               id: detailPageId,
@@ -274,6 +298,11 @@ afterAll(async () => {
     }
   }
 
+  for (const contentTypeId of contentRouteRootIdsToCleanup) {
+    await deleteContentType(contentTypeId).catch(() => undefined);
+  }
+  contentRouteRootIdsToCleanup.clear();
+
   for (const userId of createdUserIds) {
     await db
       .delete(users)
@@ -290,6 +319,7 @@ testIfDbWithOptions(
       originalContentRoutes ??
       ((await getSetting("site.contentRoutes")) as ContentRouteSetting[]) ??
       [];
+    await ensureContentRouteRoots(originalContentRoutes);
 
     const token = randomUUID().slice(0, 8);
     const actor = await createActor();
@@ -301,6 +331,15 @@ testIfDbWithOptions(
       listingTemplateSlug,
       pageSlug,
     } = clonePlanWithToken(token);
+    const contentTypeActionIndex = plan.actions.findIndex(
+      (action) => action.type === "content-type.upsert" && action.input.slug === contentTypeSlug
+    );
+    const contentRouteActionIndex = plan.actions.findIndex(
+      (action) =>
+        action.type === "setting.content-route.upsert" && action.input.typeSlug === contentTypeSlug
+    );
+    expect(contentTypeActionIndex).toBeGreaterThanOrEqual(0);
+    expect(contentRouteActionIndex).toBeGreaterThan(contentTypeActionIndex);
 
     const first = await executeAssistantActionPlan({
       plan,
@@ -455,8 +494,7 @@ testIfDbWithOptions(
 
     const refinedPage = await getPageBySlug(pageSlug);
     const refinedData = refinedPage?.currentData as
-      | { sections?: Array<{ type?: string; blocks?: Array<{ type?: string }> }> }
-      | undefined;
+      { sections?: Array<{ type?: string; blocks?: Array<{ type?: string }> }> } | undefined;
     const sections = Array.isArray(refinedData?.sections) ? refinedData.sections : [];
     const blocks = sections.flatMap((section) => section.blocks ?? []);
     expect(sections.some((section) => section.type === "filters")).toBe(true);
@@ -465,7 +503,7 @@ testIfDbWithOptions(
   { timeout: 40_000 }
 );
 
-testIfDb(
+testIfDbWithOptions(
   "content route actions persist detailPageId preserve, clear, and replace semantics",
   async () => {
     const token = randomUUID().slice(0, 8);
@@ -475,15 +513,16 @@ testIfDb(
       [];
 
     const actor = await createActor();
-    await setSetting("site.contentRoutes", [
-      {
-        type: "blog",
-        listPath: "/blog",
-        detailPath: "/blog/:slug",
-        enabled: true,
-        detailPageId: "4dd7f4d4-48d8-53f7-a9e6-0d01f6b89e6c",
-      },
-    ]);
+    const contentRouteTypeSlug = `blog-${token}`;
+    const initialContentRoute: ContentRouteSetting = {
+      type: contentRouteTypeSlug,
+      listPath: "/blog",
+      detailPath: "/blog/:slug",
+      enabled: true,
+      detailPageId: "4dd7f4d4-48d8-53f7-a9e6-0d01f6b89e6c",
+    };
+    await ensureContentRouteRoots([initialContentRoute]);
+    await setSetting("site.contentRoutes", [initialContentRoute]);
 
     await executeAssistantActionPlan({
       plan: {
@@ -505,7 +544,7 @@ testIfDb(
             title: "Update blog route",
             description: "Update the route without changing the detail page link.",
             input: {
-              typeSlug: "blog",
+              typeSlug: contentRouteTypeSlug,
               listPath: "/blog",
               detailPath: "/blog/:slug",
               enabled: true,
@@ -541,7 +580,7 @@ testIfDb(
             title: "Clear blog route link",
             description: "Clear the linked detail page.",
             input: {
-              typeSlug: "blog",
+              typeSlug: contentRouteTypeSlug,
               listPath: "/blog",
               detailPath: "/blog/:slug",
               enabled: true,
@@ -578,7 +617,7 @@ testIfDb(
             title: "Replace blog route link",
             description: "Replace the linked detail page.",
             input: {
-              typeSlug: "blog",
+              typeSlug: contentRouteTypeSlug,
               listPath: "/blog",
               detailPath: "/blog/:slug",
               enabled: true,
@@ -594,5 +633,6 @@ testIfDb(
 
     contentRoutes = ((await getSetting("site.contentRoutes")) as ContentRouteSetting[]) ?? [];
     expect(contentRoutes[0]?.detailPageId).toBe("6dd7f4d4-48d8-53f7-a9e6-0d01f6b89e6c");
-  }
+  },
+  { timeout: 30_000 }
 );

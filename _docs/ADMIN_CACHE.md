@@ -547,6 +547,21 @@ Clients update caches and broadcast events on:
 - The Posts editor hydrates revision drawer state from the cached list and from
   same-tab/cache-bus updates while keeping dirty editor content protected by the
   existing detail-refresh guard.
+- TASK-554 adds a bounded per-Post detail authority barrier: generation and
+  read-sequence tickets prevent a late detail read, metadata response, autosave,
+  restore, or status refresh from overwriting a newer accepted projection.
+  A losing mutation reconciles through one guarded detail read; if that read
+  fails while still authoritative, the exact detail/list row is removed and the
+  ordered `posts:list` then `posts:detail:<id>` invalidation pair is broadcast.
+- Successful accepted mutations upsert the exact detail and its list summary,
+  then broadcast the ordered update pair. Delete installs a per-id tombstone,
+  clears detail/revision state and blocks stale reads or responses from
+  repopulating it. `clearPostsCache()` resets generations, tombstones, row
+  epochs, and in-flight authority as one boundary.
+- The Classic editor hydrates from its protected baseline and performs a
+  background refresh only when no mutation lease owns the route identity. A
+  cache/read continuation that resumes under a lease is deferred, so it cannot
+  overwrite a newer metadata draft or clear its remote-update indication.
 
 ### Entries list/detail cache note
 

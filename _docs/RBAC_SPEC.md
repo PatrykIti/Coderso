@@ -143,6 +143,19 @@ UI behavior:
   tego statementu sa widoczne. Zmiany zatwierdzone po rozpoczeciu jego snapshotu
   nie zmieniaja wstecznie biezacej decyzji; zobaczy je kolejny guard.
 
+### Post metadata conditional authorization (TASK-554)
+
+- `PATCH /admin/api/posts/:id/metadata` remains an internal Admin-session
+  mutation. A missing actor fails before payload validation, RBAC, Post reads,
+  or service work; the shared CSRF and `admin_write` controls still apply.
+- A non-publication metadata patch (SEO, tags, or taxonomy) requires
+  `content:write`. The presence of own `status` or `scheduledAt` requires one
+  all-of snapshot for `content:write` and `content:publish`; truthiness and a
+  no-op value never weaken that rule.
+- The browser permission snapshot may hide or disable controls, but it is only
+  defense in depth. The route owns the conditional decision and a denied
+  request does not invoke the mutation service or publish a Post cache event.
+
 ## Plugin permissions
 
 - Plugin permissions sa niezalezne od RBAC.

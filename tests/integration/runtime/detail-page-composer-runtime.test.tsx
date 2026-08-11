@@ -43,6 +43,12 @@ type RuntimeFixtureSpec = {
 
 const hasDb = Boolean(process.env.DATABASE_URL) && (await canConnect());
 const testIfDb = hasDb ? test : test.skip;
+const testIfDbWithOptions = testIfDb as unknown as (
+  name: string,
+  fn: () => Promise<void>,
+  options: { timeout: number }
+) => void;
+const dbRuntimeTimeout = 30_000;
 
 async function canConnect() {
   try {
@@ -471,47 +477,49 @@ const setFixtureRoute = async (input: {
   ]);
 };
 
-testIfDb(
-  "runtime renders composed detail pages for every local composer fixture",
-  async () => {
-    resetRateLimitBuckets();
-    await setTestSetting("site.cacheTtlSeconds", 0);
+const assertComposedDetailPage = async (spec: RuntimeFixtureSpec) => {
+  resetRateLimitBuckets();
+  await setTestSetting("site.cacheTtlSeconds", 0);
 
-    for (const spec of runtimeFixtures) {
-      const fixture = await createRuntimeFixture(spec, "published");
-      const detailPageId = buildDeterministicDetailPageId({
-        contentTypeId: fixture.contentType.id,
-        pageRole: "supporting-page",
-        compositionKey: `${spec.key}-${fixture.token}`,
-      });
-      await insertDetailPageDocument({
-        spec,
-        id: detailPageId,
-        contentTypeId: fixture.contentType.id,
-        contentTypeSlug: fixture.contentType.slug,
-      });
-      await setFixtureRoute({
-        contentTypeSlug: fixture.contentType.slug,
-        listPath: `/${spec.listBase}-${fixture.token}`,
-        detailPath: `/${spec.listBase}-${fixture.token}/:slug`,
-        detailPageId,
-      });
+  const fixture = await createRuntimeFixture(spec, "published");
+  const detailPageId = buildDeterministicDetailPageId({
+    contentTypeId: fixture.contentType.id,
+    pageRole: "supporting-page",
+    compositionKey: `${spec.key}-${fixture.token}`,
+  });
+  await insertDetailPageDocument({
+    spec,
+    id: detailPageId,
+    contentTypeId: fixture.contentType.id,
+    contentTypeSlug: fixture.contentType.slug,
+  });
+  await setFixtureRoute({
+    contentTypeSlug: fixture.contentType.slug,
+    listPath: `/${spec.listBase}-${fixture.token}`,
+    detailPath: `/${spec.listBase}-${fixture.token}/:slug`,
+    detailPageId,
+  });
 
-      const response = await requestPublicPath(
-        `/${spec.listBase}-${fixture.token}/${fixture.entry.slug}`
-      );
-      expect(response.status).toBe(200);
-      const html = await response.text();
-      expect(html).toContain(spec.headline);
-      expect(html).toContain(spec.summary);
-      expect(html).toContain(spec.primaryFact);
-      expect(html).toContain(`/${spec.listBase}-${fixture.token}/${fixture.entry.slug}`);
-    }
-  },
-  30_000
-);
+  const response = await requestPublicPath(
+    `/${spec.listBase}-${fixture.token}/${fixture.entry.slug}`
+  );
+  expect(response.status).toBe(200);
+  const html = await response.text();
+  expect(html).toContain(spec.headline);
+  expect(html).toContain(spec.summary);
+  expect(html).toContain(spec.primaryFact);
+  expect(html).toContain(`/${spec.listBase}-${fixture.token}/${fixture.entry.slug}`);
+};
 
-testIfDb(
+for (const spec of runtimeFixtures) {
+  testIfDbWithOptions(
+    `runtime renders the ${spec.key} composed detail-page fixture`,
+    async () => assertComposedDetailPage(spec),
+    { timeout: dbRuntimeTimeout }
+  );
+}
+
+testIfDbWithOptions(
   "draft entries stay hidden behind route-linked detail pages",
   async () => {
     resetRateLimitBuckets();
@@ -538,10 +546,10 @@ testIfDb(
     );
     expect(response.status).toBe(404);
   },
-  15_000
+  { timeout: dbRuntimeTimeout }
 );
 
-testIfDb(
+testIfDbWithOptions(
   "detail-page preview renders current draft detail data with a valid token only",
   async () => {
     resetRateLimitBuckets();
@@ -580,10 +588,10 @@ testIfDb(
     expect(html).not.toContain("Published composer preview body");
     expect(html).toContain("Preview mode");
   },
-  15_000
+  { timeout: dbRuntimeTimeout }
 );
 
-testIfDb(
+testIfDbWithOptions(
   "legacy content detail route still renders without a linked detail-page document",
   async () => {
     resetRateLimitBuckets();
@@ -606,5 +614,5 @@ testIfDb(
     expect(html).toContain(spec.headline);
     expect(html).not.toContain(spec.staticBody);
   },
-  15_000
+  { timeout: dbRuntimeTimeout }
 );

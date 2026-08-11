@@ -19,44 +19,7 @@ export const postUpdateSchema = {
   additionalProperties: false,
 };
 
-export const postMetadataSchema = {
-  type: "object",
-  properties: {
-    status: {
-      type: "string",
-      enum: ["draft", "published", "scheduled", "archived"],
-    },
-    scheduledAt: { type: ["string", "null"], format: "date-time" },
-    tags: {
-      type: "array",
-      maxItems: 20,
-      items: { type: "string", minLength: 1, maxLength: 24 },
-    },
-    taxonomy: {
-      type: "object",
-      properties: {
-        categoryId: { type: ["string", "null"] },
-        tagIds: {
-          type: "array",
-          maxItems: 20,
-          items: { type: "string", minLength: 1 },
-        },
-      },
-      additionalProperties: false,
-    },
-    seo: {
-      type: "object",
-      properties: {
-        title: { type: ["string", "null"] },
-        description: { type: ["string", "null"] },
-        canonicalUrl: { type: ["string", "null"] },
-        robots: { type: ["string", "null"] },
-      },
-      additionalProperties: false,
-    },
-  },
-  additionalProperties: false,
-};
+export { postMetadataSchema } from "../../services/posts/postMetadataContract";
 
 export const postPreviewSchema = {
   type: "object",

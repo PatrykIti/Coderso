@@ -1,6 +1,6 @@
 import { afterEach, expect, test } from "bun:test";
 import { randomUUID } from "node:crypto";
-import { inArray, sql } from "drizzle-orm";
+import { inArray } from "drizzle-orm";
 
 import { db } from "../../../core/db/client";
 import {
@@ -28,23 +28,14 @@ import { clearSiteCache, getSiteCacheStats } from "../../../core/site/cache/site
 import { handlePublicRequest } from "../../../core/server/publicSite";
 import { resetRateLimitBuckets } from "../../../core/server/middleware/rateLimit";
 
-const hasDb = Boolean(process.env.DATABASE_URL) && (await canConnect());
+const hasDb = Boolean(process.env.DATABASE_URL);
 const testIfDb = hasDb ? test : test.skip;
 const testIfDbWithOptions = testIfDb as unknown as (
   name: string,
   fn: () => Promise<void>,
   options: { timeout: number }
 ) => void;
-const dbRuntimeTimeout = 15_000;
-
-async function canConnect() {
-  try {
-    await db.execute(sql`select 1`);
-    return true;
-  } catch {
-    return false;
-  }
-}
+const dbRuntimeTimeout = 30_000;
 
 const trackedPageIds = new Set<string>();
 const trackedUserIds = new Set<string>();
