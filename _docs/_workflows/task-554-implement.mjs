@@ -428,8 +428,8 @@ function sameStableFile(left, right) {
   return left.dev === right.dev && left.ino === right.ino && left.mode === right.mode && left.size === right.size && left.mtimeMs === right.mtimeMs && left.ctimeMs === right.ctimeMs;
 }
 function readStableSmokeFile(root, relativePath, maximumBytes, label) {
-  assertNofollowTask554SmokeRoot(root);
-  const absolute = path.resolve(root, relativePath); const initial = lstatSync(absolute);
+  const absolute = path.resolve(root, relativePath); const smokeRoot = assertNofollowTask554SmokeRoot(root); const assertSession = () => { const directory = path.dirname(absolute); const stats = lstatSync(directory); if (path.dirname(directory) !== smokeRoot || !stats.isDirectory() || stats.isSymbolicLink()) throw new Error("task_554_smoke_session_not_directory"); };
+  assertSession(); const initial = lstatSync(absolute);
   if (!initial.isFile() || initial.isSymbolicLink()) throw new Error(`${label}_not_regular:${relativePath}`);
   let descriptor;
   try {
@@ -438,7 +438,7 @@ function readStableSmokeFile(root, relativePath, maximumBytes, label) {
     const before = fstatSync(descriptor);
     if (!before.isFile() || before.size < 1 || before.size > maximumBytes) throw new Error(`${label}_invalid:${relativePath}`);
     const bytes = Buffer.from(readFileSync(descriptor)); const after = fstatSync(descriptor);
-    const final = lstatSync(absolute);
+    const final = lstatSync(absolute); assertSession(); assertNofollowTask554SmokeRoot(root);
     if (!sameStableFile(before, after) || !sameStableFile(after, final) || bytes.byteLength !== after.size) throw new Error(`${label}_changed:${relativePath}`);
     return bytes;
   } finally { if (descriptor !== undefined) closeSync(descriptor); }
