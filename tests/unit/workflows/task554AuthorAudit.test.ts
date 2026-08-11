@@ -65,6 +65,7 @@ test("TASK-554 bootstrap pins the exact regular tracked files and HEAD bytes", (
     "_docs/_workflows/task-554-author-audit.mjs",
     "_docs/_workflows/task-554-implement.mjs",
     "_docs/_workflows/task-554-fix.mjs",
+    "_docs/_workflows/task-554-closeout.mjs",
   ]) {
     expect(source).toContain(pathName);
   }

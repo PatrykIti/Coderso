@@ -4,27 +4,39 @@ import { chmodSync, closeSync, constants, existsSync, fchmodSync, fstatSync, lin
 import os from "node:os";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
+import {
+  assertTask554BoardClosureDelta,
+  assertTask554ChangelogClosureDelta,
+  assertTask554TerminalStatusDelta,
+  CHANGELOG_1267_ENTRY_BYTES,
+  CHANGELOG_1267_INDEX_ROW,
+  CHANGELOG_RESERVATION_AFTER,
+  CHANGELOG_RESERVATION_BEFORE,
+} from "./task-554-closeout.mjs";
 export const meta = Object.freeze({ name: "task-554-implement", description: "Implement TASK-554 sequentially with fail-closed ownership, executable gates, shared smoke, and an owner-review handoff.", phases: Object.freeze([Object.freeze({ title: "Start gate" }), Object.freeze({ title: "Sequential owners" }), Object.freeze({ title: "Documentation" }), Object.freeze({ title: "Full validation" }), Object.freeze({ title: "Post-audit" }), Object.freeze({ title: "Runtime smoke" }), Object.freeze({ title: "Owner review" })]) });
 const ROOT = "/home/coder/project/Coderso";
 export const TASK_554_BASELINE_SHA = "f6705443e129c9e89c32763405800b72ba3a0680";
 const TASK = "TASK-554";
 const AUTHOR_AUDIT_PATH = "_docs/_workflows/task-554-author-audit.mjs";
 const SELF_TEST_ARG = "--task-554-workflow-self-test";
+const RESUME_AFTER_FIX_ARG = "--task-554-resume-after-fix";
 const SHA256 = /^[a-f0-9]{64}$/u;
 const SOURCE_OR_TEST_EXTENSION = /\.(?:ts|tsx|js|jsx|mjs|cjs|mts|cts)$/u;
+const GENERATED_ARTIFACT_EXTENSION = /\.generated\.(?:ts|tsx|js|jsx|mjs|cjs|mts|cts)$/u;
 const PNG_SIGNATURE = Buffer.from("89504e470d0a1a0a", "hex");
 const MAXIMUM_PNG_BYTES = 16 * 1024 * 1024;
 const MAXIMUM_PNG_DIMENSION = 16_384;
 const MAX_WORKFLOW_TREE_ENTRIES = 4096;
 const MAX_WORKFLOW_TREE_DEPTH = 64;
 const RELEASE_GATE_REPORT_PATH = ".tmp/coderso-release-gates.json";
+const TASK_554_WORKFLOW_PATHS = Object.freeze(["_docs/_workflows/task-554-author-audit.mjs", "_docs/_workflows/task-554-implement.mjs", "_docs/_workflows/task-554-fix.mjs", "_docs/_workflows/task-554-closeout.mjs"]);
 export const TASK_554_SMOKE_SCENARIO_IDS = Object.freeze(["writer-metadata-save-preserves-schedule", "writer-status-publish-denied", "writer-schedule-denied", "publisher-schedule", "publisher-publish", "publisher-unpublish", "publisher-archive"]);
 const RESULT_SCHEMA = Object.freeze({ type: "object", additionalProperties: false, required: ["pass", "summary", "errors"], properties: { pass: { type: "boolean" }, summary: { type: "string" }, errors: { type: "array", items: { type: "string" } } } });
 const AUDIT_SCHEMA = Object.freeze({ type: "object", additionalProperties: false, required: ["pass", "summary", "findings"], properties: { pass: { type: "boolean" }, summary: { type: "string" }, findings: { type: "array", items: { type: "object", additionalProperties: false, required: ["severity", "area", "finding", "evidence", "recommendation"], properties: { severity: { type: "string", enum: ["HIGH", "MEDIUM", "LOW"] }, area: { type: "string" }, finding: { type: "string" }, evidence: { type: "string" }, recommendation: { type: "string" } } } } } });
 const owner = (id, paths) => Object.freeze({ id, paths: Object.freeze(paths) });
 const OWNERS = Object.freeze([owner("workflow-contract-tests", ["tests/unit/workflows/task554AuthorAudit.test.ts", "tests/unit/workflows/task554WorkflowContracts.test.ts"]), owner("contract-schema-route", ["core/services/posts/postMetadataContract.ts", "core/server/validation/postSchemas.ts", "core/server/routes/postsRoutes.ts", "core/server/routes/index.ts", "core/server/httpServer.ts", "tests/vitest/server/postMetadataContract.test.ts", "tests/vitest/server/requestBody.test.ts", "tests/vitest/validation/postSchemas.test.ts", "tests/integration/routes/postsRoutes.test.ts", "tests/integration/routes/postMetadataRbac.test.ts"]), owner("admin-client", ["core/admin/services/postsClient.ts", "tests/vitest/admin/postsClient.test.ts"]), owner("classic-metadata-ui", ["core/admin/ui/posts/editor/postMetadataMutationPayload.ts", "core/admin/ui/posts/editor/PostClassicEditorShell.tsx", "tests/vitest/ui/post-metadata-mutation-payload.test.ts", "tests/vitest/ui/post-classic-editor-shell-wave.test.tsx", "tests/vitest/ui/post-classic-metadata-hydration.test.tsx", "tests/vitest/ui/post-editor-state-metadata-boundary.test.ts"]), owner("smoke-adapter", ["scripts/runtime-smoke/contracts.ts", "scripts/runtime-smoke/cli.ts", "scripts/runtime-smoke/registry.ts", "scripts/runtime-smoke/adapters/task-554.ts", "scripts/runtime-smoke/adapters/task-554/browser-actions.ts", "scripts/runtime-smoke/adapters/task-554/output-manifest.ts", "scripts/runtime-smoke/adapters/task-554/worker-entry.ts", "scripts/runtime-smoke/adapters/task-554/worker-operations.ts", "scripts/runtime-smoke/adapters/task-554/production-handlers.ts", "tests/unit/runtime-smoke/cli-registry.test.ts", "tests/unit/runtime-smoke/task-554-adapter.test.ts", "tests/unit/runtime-smoke/task-554-worker.test.ts"])]);
 const DOCUMENTATION_OWNER = owner("documentation", ["_docs/CMS_API.md", "_docs/RBAC_SPEC.md", "_docs/SECURITY_SPEC.md", "_docs/ADMIN_CACHE.md", "_docs/ADMIN_CACHE_MAP.md", "docs/develop/runtime-smoke-cookbook.md", "docs/develop/assistant.md"]);
-const FORBIDDEN_PATHS = Object.freeze(["_TMP-task-dispatch-plan-2026-08-10.md", "core/services/content/postsService.ts", "core/services/content/postMutationService.ts", "_docs/_TASKS/TASK-414", "_docs/_TASKS/TASK-547", "_docs/_CHANGELOG/1266-", "core/services/kits/fullSitePackage/", "core/services/kits/fullSiteInstall/", "core/admin/ui/posts/editor/hooks/usePostEditorState.ts"]);
+const FORBIDDEN_PATHS = Object.freeze([...TASK_554_WORKFLOW_PATHS, "_TMP-task-dispatch-plan-2026-08-10.md", "core/services/content/postsService.ts", "core/services/content/postMutationService.ts", "_docs/_TASKS/TASK-414", "_docs/_TASKS/TASK-547", "_docs/_CHANGELOG/1266-", "core/services/kits/fullSitePackage/", "core/services/kits/fullSiteInstall/", "core/admin/ui/posts/editor/hooks/usePostEditorState.ts"]);
 const POST_AUDIT_LENSES = Object.freeze(["scope-fidelity", "rbac-fail-closed", "present-only-byte-identity", "cross-stream-smoke", "test-integrity"]);
 const command = (label, commandName, args) => Object.freeze({ label, command: commandName, args: Object.freeze(args) });
 const FULL_GATE_COMMANDS = Object.freeze([
@@ -33,13 +45,13 @@ const FULL_GATE_COMMANDS = Object.freeze([
   command("task_554_runtime_harness", "bun", ["test", "tests/unit/runtime-smoke/cli-registry.test.ts", "tests/unit/runtime-smoke/task-554-adapter.test.ts", "tests/unit/runtime-smoke/task-554-worker.test.ts"]),
   command("task_554_workflow_contracts", "bun", ["test", "tests/unit/workflows/task554AuthorAudit.test.ts", "tests/unit/workflows/task554WorkflowContracts.test.ts"]),
   command("task_554_types", "bun", ["--cwd", "core", "lint:types"]), command("task_554_lint", "bun", ["--cwd", "core", "lint"]), command("task_554_admin_boundary", "bun", ["run", "check:admin-boundary"]), command("task_554_security_scan", "bun", ["run", "scan:security:strict"]), command("task_554_coderso_release_gates", "bun", ["run", "gates:coderso"]), command("task_554_precommit", "bun", ["run", "precommit:check"]),
-  command("task_554_author_syntax", "node", ["--check", "_docs/_workflows/task-554-author-audit.mjs"]), command("task_554_implement_syntax", "node", ["--check", "_docs/_workflows/task-554-implement.mjs"]), command("task_554_fix_syntax", "node", ["--check", "_docs/_workflows/task-554-fix.mjs"]),
+  command("task_554_author_syntax", "node", ["--check", "_docs/_workflows/task-554-author-audit.mjs"]), command("task_554_implement_syntax", "node", ["--check", "_docs/_workflows/task-554-implement.mjs"]), command("task_554_fix_syntax", "node", ["--check", "_docs/_workflows/task-554-fix.mjs"]), command("task_554_closeout_syntax", "node", ["--check", "_docs/_workflows/task-554-closeout.mjs"]),
 ]);
 const OWNER_GATE_COMMANDS = Object.freeze({ "workflow-contract-tests": Object.freeze([command("task_554_workflow_contracts", "bun", ["test", "tests/unit/workflows/task554AuthorAudit.test.ts", "tests/unit/workflows/task554WorkflowContracts.test.ts"]), command("task_554_author_syntax", "node", ["--check", "_docs/_workflows/task-554-author-audit.mjs"]), command("task_554_implement_syntax", "node", ["--check", "_docs/_workflows/task-554-implement.mjs"]), command("task_554_fix_syntax", "node", ["--check", "_docs/_workflows/task-554-fix.mjs"])]), "contract-schema-route": Object.freeze([command("task_554_contract_vitest", "bunx", ["vitest", "run", "--config", "vitest.config.ts", "tests/vitest/validation/postSchemas.test.ts", "tests/vitest/server/postMetadataContract.test.ts", "tests/vitest/server/requestBody.test.ts"]), command("task_554_contract_bun", "bun", ["test", "tests/integration/routes/postsRoutes.test.ts", "tests/integration/routes/postMetadataRbac.test.ts", "tests/unit/auth/rbac.test.ts"]), command("task_554_types", "bun", ["--cwd", "core", "lint:types"]), command("task_554_lint", "bun", ["--cwd", "core", "lint"])]), "admin-client": Object.freeze([command("task_554_client_vitest", "bunx", ["vitest", "run", "--config", "vitest.config.ts", "tests/vitest/admin/postsClient.test.ts"]), command("task_554_types", "bun", ["--cwd", "core", "lint:types"]), command("task_554_lint", "bun", ["--cwd", "core", "lint"])]), "classic-metadata-ui": Object.freeze([command("task_554_ui_vitest", "bunx", ["vitest", "run", "--config", "vitest.config.ts", "tests/vitest/ui/post-metadata-mutation-payload.test.ts", "tests/vitest/ui/post-classic-editor-shell-wave.test.tsx", "tests/vitest/ui/post-classic-metadata-hydration.test.tsx", "tests/vitest/ui/post-editor-state-metadata-boundary.test.ts"]), command("task_554_types", "bun", ["--cwd", "core", "lint:types"]), command("task_554_lint", "bun", ["--cwd", "core", "lint"])]), "smoke-adapter": Object.freeze([command("task_554_runtime_harness", "bun", ["test", "tests/unit/runtime-smoke/cli-registry.test.ts", "tests/unit/runtime-smoke/task-554-adapter.test.ts", "tests/unit/runtime-smoke/task-554-worker.test.ts"]), command("task_554_types", "bun", ["--cwd", "core", "lint:types"]), command("task_554_lint", "bun", ["--cwd", "core", "lint"])]) });
 function commandOutput(root, command, args, environment) { return execFileSync(command, args, { cwd: root, encoding: "buffer", stdio: ["ignore", "pipe", "pipe"], ...(environment ? { env: { ...process.env, ...environment } } : {}) }); }
 function commandStatus(root, command, args) { try { commandOutput(root, command, args); return 0; } catch (error) { return typeof error?.status === "number" ? error.status : 255; } }
 function parseNul(bytes) { return bytes.toString("utf8").split("\0").filter(Boolean); }
-function assertNoUnexpectedArguments() { const args = process.argv.slice(2); if (args.length === 0) return false; if (args.length === 1 && args[0] === SELF_TEST_ARG) return true; throw new Error(`task_554_unknown_arguments:${args.join(",")}`); }
+function parseImplementationMode() { const args = process.argv.slice(2); if (args.length === 0) return "run"; if (args.length === 1 && args[0] === SELF_TEST_ARG) return "self-test"; if (args.length === 1 && args[0] === RESUME_AFTER_FIX_ARG) return "resume"; throw new Error(`task_554_unknown_arguments:${args.join(",")}`); }
 const RESULT_KEYS = Object.freeze(["pass", "summary", "errors"]);
 const AUDIT_KEYS = Object.freeze(["pass", "summary", "findings"]);
 const FINDING_KEYS = Object.freeze(["severity", "area", "finding", "evidence", "recommendation"]);
@@ -59,7 +71,7 @@ function requireCleanAudit(label, identity, result) {
   if (result.findings.length !== 0) throw new Error(`${label}:findings:${JSON.stringify(result.findings)}`);
   return Object.freeze({ identity, ...result });
 }
-export function verifyTask554Bootstrap(root = ROOT) { let parsed; try { parsed = JSON.parse(commandOutput(root, "node", [path.join(root, AUTHOR_AUDIT_PATH), "--task-554-bootstrap-verify"]).toString("utf8")); } catch (error) { throw new Error("task_554_bootstrap_verifier_invalid_output", { cause: error }); } if (parsed?.baseline !== TASK_554_BASELINE_SHA || !Array.isArray(parsed?.paths) || parsed.paths.length !== 3) throw new Error("task_554_bootstrap_verifier_invalid_receipt"); return parsed; }
+export function verifyTask554Bootstrap(root = ROOT) { let parsed; try { parsed = JSON.parse(commandOutput(root, "node", [path.join(root, AUTHOR_AUDIT_PATH), "--task-554-bootstrap-verify"]).toString("utf8")); } catch (error) { throw new Error("task_554_bootstrap_verifier_invalid_output", { cause: error }); } if (parsed?.baseline !== TASK_554_BASELINE_SHA || !Array.isArray(parsed?.paths) || parsed.paths.length !== TASK_554_WORKFLOW_PATHS.length || parsed.paths.some((entry, index) => entry !== TASK_554_WORKFLOW_PATHS[index])) throw new Error("task_554_bootstrap_verifier_invalid_receipt"); return parsed; }
 function verifyBeforeDispatch(phaseName, root = ROOT) {
   try {
     const bootstrap = verifyTask554Bootstrap(root);
@@ -87,6 +99,7 @@ const INITIAL_DIRTY_PATHS = Object.freeze([
   "_docs/_TASKS/README.md",
   "_docs/_TASKS/TASK-554_Post_Metadata_Publish_RBAC_Hardening.md",
 ]);
+const RESUME_ALLOWED_DIRTY_PATHS = Object.freeze([...new Set([...INITIAL_DIRTY_PATHS, ...OWNERS.flatMap((owner) => owner.paths), ...DOCUMENTATION_OWNER.paths])]);
 function currentDirtyPaths(root) {
   const paths = [
     ...parseNul(commandOutput(root, "git", ["diff", "--name-only", "-z"])),
@@ -106,6 +119,13 @@ function assertImplementationPreflight(root = ROOT) {
   const forbidden = dirty.filter((relativePath) => pathMatchesForbidden(relativePath) && relativePath !== "_TMP-task-dispatch-plan-2026-08-10.md");
   if (unexpected.length > 0 || forbidden.length > 0) throw new Error(`task_554_start_state_invalid:${JSON.stringify({ forbidden, unexpected })}`);
   return Object.freeze({ receipt: verifyTask554AuthorAuditReceipt(root), dirty: Object.freeze(dirty) });
+}
+function assertResumePreflight(root = ROOT) {
+  verifyBeforeDispatch("resume_preflight", root);
+  const dirty = currentDirtyPaths(root);
+  const unexpected = dirty.filter((relativePath) => !RESUME_ALLOWED_DIRTY_PATHS.includes(relativePath));
+  if (unexpected.length > 0) throw new Error(`task_554_resume_state_invalid:${JSON.stringify({ unexpected })}`);
+  return Object.freeze({ dirty: Object.freeze(dirty) });
 }
 function normalizedRepositoryPath(value) {
   if (typeof value !== "string" || value.includes("\0") || value.includes("\\")) {
@@ -237,7 +257,7 @@ export function listTask554LineCountCandidates(root = ROOT, baseline = TASK_554_
   ]));
   return Object.freeze([...new Set([...comparison, ...untracked])]
     .map(normalizedRepositoryPath)
-    .filter((candidate) => SOURCE_OR_TEST_EXTENSION.test(candidate))
+    .filter((candidate) => SOURCE_OR_TEST_EXTENSION.test(candidate) && !GENERATED_ARTIFACT_EXTENSION.test(candidate))
     .sort((left, right) => left.localeCompare(right)));
 }
 export function countPhysicalLines(filePath) {
@@ -298,10 +318,13 @@ function runOwnerGateCommands(root, ownerId) {
   return runReadOnlyGate(`task_554_owner_gate_mutated:${ownerId}`, root, () => {
     const commands = OWNER_GATE_COMMANDS[ownerId];
     if (!Array.isArray(commands)) throw new Error(`task_554_owner_gate_missing:${ownerId}`);
-    for (const command of commands) runRequiredCommand(root, command);
+    const ownerCommands = ownerId === "workflow-contract-tests"
+      ? [...commands, command("task_554_closeout_syntax", "node", ["--check", "_docs/_workflows/task-554-closeout.mjs"])]
+      : commands;
+    for (const command of ownerCommands) runRequiredCommand(root, command);
     assertTask554LineLimit(root);
     runRequiredCommand(root, Object.freeze({ label: `task_554_owner_diff_${ownerId}`, command: "git", args: Object.freeze(["diff", "--check"]) }));
-    return Object.freeze(commands.map(({ label }) => label));
+    return Object.freeze(ownerCommands.map(({ label }) => label));
   });
 }
 export function runTask554FullValidation(root = ROOT) {
@@ -317,6 +340,11 @@ export function runTask554FullValidation(root = ROOT) {
 function assertExactScenarioIds(value, label) {
   if (!Array.isArray(value) || value.length !== TASK_554_SMOKE_SCENARIO_IDS.length) throw new Error(`${label}:scenario_count`);
   for (const [index, actual] of value.entries()) if (actual !== TASK_554_SMOKE_SCENARIO_IDS[index]) throw new Error(`${label}:scenario_order:${index}`);
+}
+const TASK_554_SMOKE_SESSIONS = Object.freeze({ fast: "task-554-fast", certification: "task-554-certification" });
+function assertTask554SmokePair(profile, session) {
+  if (profile !== "fast" && profile !== "certification") throw new Error("task_554_smoke_profile_invalid");
+  if (session !== TASK_554_SMOKE_SESSIONS[profile]) throw new Error(`task_554_smoke_profile_session_mismatch:${profile}:${session}`);
 }
 function task554SessionDirectory(root, session) {
   if (session !== "task-554-fast" && session !== "task-554-certification") throw new Error(`task_554_smoke_session_invalid:${session}`);
@@ -343,7 +371,7 @@ function ensureInsideRoot(root, candidate, label) {
   return relativePath.split(path.sep).join("/");
 }
 export function assertExactTask554Manifest(root, profile, session, manifest) {
-  if (profile !== "fast" && profile !== "certification") throw new Error("task_554_smoke_profile_invalid");
+  assertTask554SmokePair(profile, session);
   if (!manifest || !Array.isArray(manifest.entries) || !Array.isArray(manifest.paths)) {
     throw new Error("task_554_smoke_manifest_invalid");
   }
@@ -367,8 +395,7 @@ export function assertExactTask554Manifest(root, profile, session, manifest) {
   return Object.freeze({ entries: Object.freeze(manifest.entries.map((entry) => Object.freeze({ scenarioId: entry.scenarioId, path: normalizedRepositoryPath(entry.path) }))), paths: Object.freeze(normalizedPaths) });
 }
 export function task554SmokeInvocation(profile, session) {
-  if (profile !== "fast" && profile !== "certification") throw new Error("task_554_smoke_profile_invalid");
-  if (session !== "task-554-fast" && session !== "task-554-certification") throw new Error("task_554_smoke_session_invalid");
+  assertTask554SmokePair(profile, session);
   return Object.freeze({ command: "run", suite: "task-554", profile, session });
 }
 function loadTask554Manifest(root, profile, session) {
@@ -673,76 +700,7 @@ cross-stream collision risks. Return no findings only when the lens is actually 
   if (checks.length !== POST_AUDIT_LENSES.length) throw new Error("task_554_post_audit_missing_results");
   return Object.freeze(checks);
 }
-const CHANGELOG_RESERVATION_BEFORE = "Changelogs 1266 and 1267 are reserved for TASK-414 Guide/Agent/Designer\ncompletion and the critical TASK-554 Post metadata publish-RBAC hardening\n(surviving variant; the root Repair variant is superseded by it), respectively.";
-const CHANGELOG_RESERVATION_AFTER = "Changelog 1266 remains reserved for TASK-414 Guide/Agent/Designer completion.\nChangelog 1267 is consumed by completed TASK-554 Post Metadata Publish RBAC\nHardening (surviving variant; the root Repair variant is superseded by it).";
-const CHANGELOG_1267_INDEX_ROW = "| 1267 | 2026-08-11 | TASK-554 Post Metadata Publish RBAC Hardening — conditional all-of publish authorization, present-only metadata, exact calendar validation, race-safe Admin cache/editor hydration, and seven-flow shared smoke | Posts/RBAC/Security/Admin UI/Caching/Testing/Docs/Task Board |";
-const CHANGELOG_1267_ENTRY_BYTES = Buffer.from(["# 1267 - TASK-554 Post Metadata Publish RBAC Hardening", "", "**Date:** 2026-08-11", "**Version:** Unreleased", "**Tasks:** TASK-554", "", "## Key Changes", "", "- Required `content:publish` together with `content:write` for Post metadata publication fields while preserving present-only writer metadata updates.", "- Added exact RFC3339 calendar validation, one-snapshot RBAC coverage, and race-safe Admin cache/editor hydration.", "- Registered the shared `task-554` smoke suite with seven verified publication flows."].join("\n") + "\n", "utf8");
-const TASK_BOARD_STATISTIC = /^- \*\*(To Do|In Progress|Done):\*\* (\d+) tasks$/u;
-function onlyTask554Row(text) {
-  let section = null;
-  const matches = [];
-  for (const line of text.split("\n")) {
-    const heading = /^## (To Do|In Progress|Done)$/u.exec(line);
-    if (heading) section = heading[1];
-    if (line.startsWith("| TASK-554 |")) matches.push({ line, section });
-  }
-  if (matches.length !== 1 || !matches[0]?.section) throw new Error("task_554_closure_board_row_invalid");
-  return matches[0];
-}
-function boardStatistics(text) {
-  const values = new Map();
-  for (const [index, line] of text.split("\n").entries()) {
-    const match = TASK_BOARD_STATISTIC.exec(line);
-    if (match) {
-      if (values.has(match[1])) throw new Error("task_554_closure_board_statistics_duplicate");
-      values.set(match[1], Object.freeze({ index, value: Number(match[2]) }));
-    }
-  }
-  if (["To Do", "In Progress", "Done"].some((name) => !Number.isSafeInteger(values.get(name)?.value))) {
-    throw new Error("task_554_closure_board_statistics_invalid");
-  }
-  return values;
-}
-export function assertTask554BoardClosureDelta(before, after) {
-  const beforeRow = onlyTask554Row(before);
-  const afterRow = onlyTask554Row(after);
-  if (beforeRow.section !== "In Progress" || afterRow.section !== "Done" || !beforeRow.line.includes("In progress 2026-08-11.") || afterRow.line !== beforeRow.line.replace("In progress 2026-08-11.", "✅ Done (2026-08-11):")) {
-    throw new Error("task_554_closure_board_row_delta_invalid");
-  }
-  const beforeStats = boardStatistics(before);
-  const afterStats = boardStatistics(after);
-  if (["To Do", "In Progress", "Done"].some((name) => beforeStats.get(name).index !== afterStats.get(name).index) || afterStats.get("To Do").value !== beforeStats.get("To Do").value || afterStats.get("In Progress").value !== beforeStats.get("In Progress").value - 1 || afterStats.get("Done").value !== beforeStats.get("Done").value + 1 || [...beforeStats.values()].reduce((sum, entry) => sum + entry.value, 0) !== [...afterStats.values()].reduce((sum, entry) => sum + entry.value, 0)) {
-    throw new Error("task_554_closure_board_statistics_delta_invalid");
-  }
-  const preserve = (text) => text.split("\n").filter((line) => !TASK_BOARD_STATISTIC.test(line) && !line.startsWith("| TASK-554 |")).join("\n");
-  if (preserve(before) !== preserve(after)) throw new Error("task_554_closure_board_scope_invalid");
-}
-export function assertTask554ChangelogClosureDelta(beforeIndex, afterIndex, beforeEntry, afterEntry) {
-  const beforeRows = beforeIndex.split("\n").filter((line) => line.startsWith("| 1267 |"));
-  const afterRows = afterIndex.split("\n").filter((line) => line.startsWith("| 1267 |"));
-  if (beforeRows.length !== 0 || afterRows.length !== 1 || afterRows[0] !== CHANGELOG_1267_INDEX_ROW) {
-    throw new Error("task_554_closure_changelog_row_invalid");
-  }
-  if (!beforeIndex.includes(CHANGELOG_RESERVATION_BEFORE) || afterIndex.includes(CHANGELOG_RESERVATION_BEFORE) || !afterIndex.includes(CHANGELOG_RESERVATION_AFTER)) {
-    throw new Error("task_554_closure_reservation_invalid");
-  }
-  const preserve = (text, reservation) => text.replace(reservation, "").split("\n").filter((line) => !line.startsWith("| 1267 |")).join("\n");
-  if (preserve(beforeIndex, CHANGELOG_RESERVATION_BEFORE) !== preserve(afterIndex, CHANGELOG_RESERVATION_AFTER)) throw new Error("task_554_closure_changelog_scope_invalid");
-  if (beforeEntry !== null || !Buffer.isBuffer(afterEntry) || !afterEntry.equals(CHANGELOG_1267_ENTRY_BYTES)) throw new Error("task_554_closure_entry_invalid");
-}
-export function assertTask554TerminalStatusDelta(before, after) {
-  const fields = (text, name) => text.split("\n").filter((line) => line.startsWith(`**${name}:**`));
-  const beforeStatus = fields(before, "Status");
-  const afterStatus = fields(after, "Status");
-  const beforeCompleted = fields(before, "Completed");
-  const afterCompleted = fields(after, "Completed");
-  const preserve = (text) => text.split("\n").filter((line) => !line.startsWith("**Status:**") && !line.startsWith("**Completed:**")).join("\n");
-  if (beforeStatus.length !== 1 || beforeStatus[0] !== "**Status:** 🚧 In Progress" || afterStatus.length !== 1 || afterStatus[0] !== "**Status:** ✅ Done" || beforeCompleted.length !== 0 || afterCompleted.length !== 1 || afterCompleted[0] !== "**Completed:** 2026-08-11" || preserve(before) !== preserve(after)) {
-    throw new Error("task_554_closure_terminal_status_invalid");
-  }
-}
 async function runWorkflow() {
-  if (assertNoUnexpectedArguments()) return workflowSelfTest();
   phase("Start gate"); const preflight = assertImplementationPreflight();
   const startStep = await dispatchScopedResult("Start gate", "task-554:start-gate", `Read-only. Verify the current author/audit/reconcile receipt, exact workflow bootstrap, reachable baseline, dependencies/collisions, and dirty state. Do not edit.`, []);
   const start = startStep.result;
@@ -757,6 +715,17 @@ async function runWorkflow() {
   const certification = runTask554SmokeProfile(ROOT, "certification", "task-554-certification");
   phase("Owner review");
   return Object.freeze({ pass: false, ownerActionRequired: "owner_review_certification", preflight, start, owners: Object.freeze(owners), documentation, validation, audits, fast, certification });
+}
+async function runResumeAfterFixWorkflow() {
+  phase("Start gate"); const preflight = assertResumePreflight();
+  phase("Full validation"); const validation = runTask554FullValidation();
+  phase("Post-audit"); const audits = await runPostAudit();
+  phase("Runtime smoke");
+  const fast = runTask554SmokeProfile(ROOT, "fast", "task-554-fast");
+  removeFastSmokeEvidence(ROOT);
+  const certification = runTask554SmokeProfile(ROOT, "certification", "task-554-certification");
+  phase("Owner review");
+  return Object.freeze({ pass: false, ownerActionRequired: "owner_review_certification", resume: "resume_full_validation_post_audit_smoke", preflight, validation, audits, fast, certification });
 }
 function writeTinyFile(filePath, content) { mkdirSync(path.dirname(filePath), { recursive: true }); writeFileSync(filePath, content, "utf8"); }
 function sha256(bytes) { return createHash("sha256").update(bytes).digest("hex"); }
@@ -827,9 +796,16 @@ function workflowSelfTest() {
     writeTinyFile(path.join(tempRoot, "scripts/too-long.ts"), `${"x\n".repeat(1001)}`);
     expectFailure(() => assertTask554LineLimit(tempRoot, baseline), "task_554_line_limit:scripts/too-long.ts:1001");
     rmSync(path.join(tempRoot, "scripts/too-long.ts"));
+    writeTinyFile(path.join(tempRoot, "scripts/exempt.generated.ts"), `${"x\n".repeat(1001)}`);
+    if (listTask554LineCountCandidates(tempRoot, baseline).includes("scripts/exempt.generated.ts")) {
+      throw new Error("task_554_self_test_generated_line_candidate");
+    }
+    assertTask554LineLimit(tempRoot, baseline);
+    rmSync(path.join(tempRoot, "scripts/exempt.generated.ts"));
     const fastInvocation = task554SmokeInvocation("fast", "task-554-fast");
     const certificationInvocation = task554SmokeInvocation("certification", "task-554-certification");
     if (fastInvocation.profile !== "fast" || fastInvocation.session !== "task-554-fast" || certificationInvocation.profile !== "certification" || certificationInvocation.session !== "task-554-certification") throw new Error("task_554_self_test_manifest_input_binding");
+    expectFailure(() => task554SmokeInvocation("fast", "task-554-certification"), "task_554_smoke_profile_session_mismatch:fast:task-554-certification");
     const validResultIdentity = "task-554:self-test";
     const validResult = { pass: true, summary: "clean", errors: [] };
     requirePass("task_554_self_test_result", validResultIdentity, validResult);
@@ -955,9 +931,11 @@ function workflowSelfTest() {
       pass: true,
       unterminatedLineCount: true,
       trackedAndUntrackedCandidates: true,
+      generatedArtifactExcluded: true,
       stableIgnoredArtifactsBound: true,
       emptyIgnoredDirectoriesBound: true,
       manifestInputBound: true,
+      smokeProfileSessionPairRejected: true,
       strictMutationAndAuditResultsRejected: true,
       agentIdentityRejected: true,
       releaseGateReportRestored: true, releaseGateSiblingResidueRejected: true, tmpMutationRejected: true, releaseGateHardlinkRejected: true, releaseGateDirectoryIdentityRejected: true, releaseGateReportIdentityRejected: true,
@@ -985,6 +963,13 @@ function workflowSelfTest() {
     rmSync(tempRoot, { recursive: true, force: true });
   }
 }
-const selfTest = assertNoUnexpectedArguments();
-export const result = selfTest ? workflowSelfTest() : await runWorkflow();
-if (selfTest) process.stdout.write(`${JSON.stringify(result)}\n`);
+const mode = parseImplementationMode();
+const importedForVerification = process.env.TASK_554_WORKFLOW_IMPORT === "1";
+export const result = mode === "self-test"
+  ? workflowSelfTest()
+  : importedForVerification
+    ? null
+    : mode === "resume"
+      ? await runResumeAfterFixWorkflow()
+      : await runWorkflow();
+if (mode === "self-test") process.stdout.write(`${JSON.stringify(result)}\n`);

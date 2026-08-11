@@ -37,6 +37,7 @@ export const TASK_554_WORKFLOW_PATHS = Object.freeze([
   "_docs/_workflows/task-554-author-audit.mjs",
   "_docs/_workflows/task-554-implement.mjs",
   "_docs/_workflows/task-554-fix.mjs",
+  "_docs/_workflows/task-554-closeout.mjs",
 ]);
 export const TASK_554_AUTHOR_AUDIT_LENS_IDS = Object.freeze([
   "task-554:audit:security",

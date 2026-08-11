@@ -6,7 +6,7 @@
 **Priority:** Critical
 **Category:** Database / API / Admin / Performance
 **Estimated Effort:** Extra Large
-**Dependencies:** TASK-551-03-L01, TASK-551-05-L02, TASK-551-06-L03;
+**Dependencies:** TASK-554, TASK-551-03-L01, TASK-551-05-L02, TASK-551-06-L03;
 TASK-551-09-L04 INITIAL Admin-authority receipt; TASK-551-08-L03 INITIAL
 route-response-header receipt
 **Status:** ⏳ To Do
@@ -232,11 +232,13 @@ and workflow paths are forbidden.
 
 ### Terminal TASK-554 Post metadata handoff
 
-TASK-554 lands first and remains the sole owner of
-`core/services/posts/postMetadataContract.ts` and the Post metadata mutation
-semantics. This leaf rereads its terminal receipt before touching
-`postsRoutes.ts`, `postSchemas.ts`, or `postsClient.ts`; changes in those three
-files are restricted to bounded Post list query/schema/envelope/client regions.
+TASK-554 terminal is a hard prerequisite. TASK-554 lands first and remains the
+sole owner of `core/services/posts/postMetadataContract.ts`, the Post metadata
+mutation semantics, and the metadata updater injection in `routes/index.ts`.
+This leaf rereads its terminal receipt before touching `routes/index.ts`,
+`postsRoutes.ts`, `postSchemas.ts`, or `postsClient.ts`; changes in those files
+are restricted to bounded Post list query/schema/envelope/client regions and
+must preserve the existing metadata factory injection.
 It must preserve TASK-554's exact compatibility re-export of
 `postMetadataSchema`, shared `PostMetadataMutationV1` import/re-export,
 own-property/present-only projection, root non-empty validation, conditional

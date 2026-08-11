@@ -23,6 +23,7 @@ const MAX_FIX_ROUNDS = 3;
 const MAX_FINDINGS = 40;
 const MAX_FIELD_LENGTH = 2048;
 const COUNTABLE_EXTENSION = /\.(?:ts|tsx|js|jsx|mjs|cjs|mts|cts)$/u;
+const GENERATED_ARTIFACT_EXTENSION = /\.generated\.(?:ts|tsx|js|jsx|mjs|cjs|mts|cts)$/u;
 const MAX_WORKFLOW_TREE_ENTRIES = 4096;
 const MAX_WORKFLOW_TREE_DEPTH = 64;
 const MAX_TMP_ENTRY_BYTES = 16 * 1024 * 1024;
@@ -30,6 +31,7 @@ const WORKFLOW_PATHS = Object.freeze([
   "_docs/_workflows/task-554-author-audit.mjs",
   "_docs/_workflows/task-554-implement.mjs",
   "_docs/_workflows/task-554-fix.mjs",
+  "_docs/_workflows/task-554-closeout.mjs",
 ]);
 const TERMINAL_OWNER_IDS = Object.freeze(["metadata-closure", "terminal-status"]);
 
@@ -282,7 +284,7 @@ async function readOnlyFixPhase(label, work) {
 function verifyBootstrap(root = ROOT) {
   const result = output(root, "node", [path.join(root, AUTHOR_AUDIT_PATH), "--task-554-bootstrap-verify"]);
   const receipt = JSON.parse(result.toString("utf8"));
-  if (receipt?.baseline !== TASK_554_BASELINE_SHA || !Array.isArray(receipt?.paths) || receipt.paths.length !== 3) {
+  if (receipt?.baseline !== TASK_554_BASELINE_SHA || !Array.isArray(receipt?.paths) || receipt.paths.length !== WORKFLOW_PATHS.length || receipt.paths.some((entry, index) => entry !== WORKFLOW_PATHS[index])) {
     throw new Error("task_554_fix_bootstrap_invalid_receipt");
   }
   return receipt;
@@ -358,6 +360,7 @@ const OWNER_GATES = Object.freeze({
     command("workflow-syntax", "node", ["--check", "_docs/_workflows/task-554-author-audit.mjs"]),
     command("workflow-implement-syntax", "node", ["--check", "_docs/_workflows/task-554-implement.mjs"]),
     command("workflow-fix-syntax", "node", ["--check", "_docs/_workflows/task-554-fix.mjs"]),
+    command("workflow-closeout-syntax", "node", ["--check", "_docs/_workflows/task-554-closeout.mjs"]),
   ]),
   "contract-schema-route": Object.freeze([
     command("contract-vitest", "bunx", ["vitest", "run", "--config", "vitest.config.ts", "tests/vitest/validation/postSchemas.test.ts", "tests/vitest/server/postMetadataContract.test.ts", "tests/vitest/server/requestBody.test.ts"]),
@@ -384,13 +387,13 @@ function runCommand(root, entry) {
   if (result.error || result.status !== 0 || result.signal) throw new Error(`task_554_fix_gate_failed:${entry.label}`);
 }
 
-function assertTouchedLineLimit(root) {
-  if (status(root, "git", ["cat-file", "-e", `${TASK_554_BASELINE_SHA}^{commit}`]) !== 0 || status(root, "git", ["merge-base", "--is-ancestor", TASK_554_BASELINE_SHA, "HEAD"]) !== 0) {
+function assertTouchedLineLimit(root, baseline = TASK_554_BASELINE_SHA) {
+  if (status(root, "git", ["cat-file", "-e", `${baseline}^{commit}`]) !== 0 || status(root, "git", ["merge-base", "--is-ancestor", baseline, "HEAD"]) !== 0) {
     throw new Error("task_554_fix_line_baseline_invalid");
   }
-  const changed = parseNul(output(root, "git", ["diff", "--name-only", "-z", "--diff-filter=ACMRT", TASK_554_BASELINE_SHA, "--", "core", "packages", "scripts", "tests", "_docs/_workflows"]));
+  const changed = parseNul(output(root, "git", ["diff", "--name-only", "-z", "--diff-filter=ACMRT", baseline, "--", "core", "packages", "scripts", "tests", "_docs/_workflows"]));
   const untracked = parseNul(output(root, "git", ["ls-files", "--others", "--exclude-standard", "-z", "--", "core", "packages", "scripts", "tests", "_docs/_workflows"]));
-  for (const relativePath of [...new Set([...changed, ...untracked])].map(normalizePath).filter((candidate) => COUNTABLE_EXTENSION.test(candidate))) {
+  for (const relativePath of [...new Set([...changed, ...untracked])].map(normalizePath).filter((candidate) => COUNTABLE_EXTENSION.test(candidate) && !GENERATED_ARTIFACT_EXTENSION.test(candidate))) {
     const absolute = path.resolve(root, relativePath);
     const file = lstatSync(absolute);
     if (!file.isFile() || file.isSymbolicLink()) throw new Error(`task_554_fix_line_non_regular:${relativePath}`);
@@ -508,7 +511,14 @@ async function runWorkflow() {
     if (rebootstrap) return rebootstrap;
     const terminalReceipt = terminalPhaseReceiptRequired(audit.findings);
     if (terminalReceipt) return terminalReceipt;
-    if (audit.findings.length === 0) return Object.freeze({ pass: true, summary: `TASK-554 clean after ${round - 1} fix rounds.`, audit });
+    if (audit.findings.length === 0) {
+      return Object.freeze({
+        pass: false,
+        ownerActionRequired: "resume_full_validation_post_audit_smoke",
+        summary: `TASK-554 clean after ${round - 1} fix rounds; resume certification is required.`,
+        audit,
+      });
+    }
     const proposedOwners = Object.freeze([...new Set(audit.findings.map((finding) => finding.owner))]);
     phase("Fix");
     const applied = await applyFix(round, audit.findings, proposedOwners, audit.receipt);
@@ -523,7 +533,15 @@ async function runWorkflow() {
     const reconcileTerminalReceipt = terminalPhaseReceiptRequired(reconciliation.findings);
     if (reconcileTerminalReceipt) return reconcileTerminalReceipt;
     if (reconciliation.findings.length === 0) {
-      return Object.freeze({ pass: true, summary: `TASK-554 fixed in ${round} round(s).`, applied, owners, lenses, reconciliation });
+      return Object.freeze({
+        pass: false,
+        ownerActionRequired: "resume_full_validation_post_audit_smoke",
+        summary: `TASK-554 fixed in ${round} round(s); resume certification is required.`,
+        applied,
+        owners,
+        lenses,
+        reconciliation,
+      });
     }
   }
   throw new Error("task_554_fix_round_limit");
@@ -554,6 +572,7 @@ function fixSelfTest() {
     writeFile(path.join(root, "tests/owned.ts"), "export const owned = 1;\n");
     output(root, "git", ["add", ".gitignore", "tests/owned.ts"]);
     output(root, "git", ["commit", "-qm", "baseline"]);
+    const baseline = output(root, "git", ["rev-parse", "HEAD"]).toString("utf8").trim();
     const before = captureFixFingerprint(root);
     writeFile(path.join(root, "tests/owned.ts"), "export const owned = 2;\n");
     assertFixScope("task_554_fix_self_test_owned", before, captureFixFingerprint(root), ["tests/owned.ts"], root);
@@ -610,7 +629,13 @@ function fixSelfTest() {
     symlinkSync("target-b.ts", linkPath);
     expectFailure(() => assertFixScope("task_554_fix_self_test_symlink", symlinkBefore, captureFixFingerprint(root), [], root), "task_554_fix_self_test_symlink:scope_violation:");
     unlinkSync(linkPath);
-    return Object.freeze({ pass: true, forbiddenScopeRejected: true, ignoredWorkflowMutationRejected: true, emptyWorkflowDirectoryMutationRejected: true, tmpMutationRejected: true, ownerMappingRejected: true, lensMappingRejected: true, strictResultRejected: true, agentIdentityRejected: true, terminalOwnerEscalated: true, actualAffectedReceipt: true, workflowRebootstrapEscalated: true, modeAndSymlinkFingerprintRejected: true });
+    writeFile(path.join(root, "scripts/exempt.generated.ts"), `${"x\n".repeat(1001)}`);
+    assertTouchedLineLimit(root, baseline);
+    writeFile(path.join(root, "scripts/human.ts"), `${"x\n".repeat(1001)}`);
+    expectFailure(() => assertTouchedLineLimit(root, baseline), "task_554_fix_line_limit:scripts/human.ts:1001");
+    rmSync(path.join(root, "scripts/human.ts"));
+    rmSync(path.join(root, "scripts/exempt.generated.ts"));
+    return Object.freeze({ pass: true, forbiddenScopeRejected: true, ignoredWorkflowMutationRejected: true, emptyWorkflowDirectoryMutationRejected: true, tmpMutationRejected: true, ownerMappingRejected: true, lensMappingRejected: true, strictResultRejected: true, agentIdentityRejected: true, terminalOwnerEscalated: true, actualAffectedReceipt: true, workflowRebootstrapEscalated: true, modeAndSymlinkFingerprintRejected: true, generatedArtifactExcluded: true, humanLineLimitRejected: true });
   } finally {
     rmSync(root, { recursive: true, force: true });
   }

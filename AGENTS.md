@@ -177,12 +177,20 @@ Testing docs:
     `deepseek/deepseek-v4-flash` with variant `max` as the default delegated
     implementation and fix agent. It works only from an audited, current task
     contract and its output is review evidence, never closure authority.
+  - If that default is unavailable or the owner explicitly prohibits its use,
+    the OpenCode `coder` agent may use `openai/gpt-5.6-terra` with variant
+    `xhigh` or `max` for the named implementation or fix scope. Record the
+    fallback, model, and variant in the task handoff; it remains review evidence
+    and never closure authority. If the OpenCode CLI cannot invoke its `coder`
+    subagent directly, its primary `build` invocation may execute that same
+    named fallback under the identical scope, model, variant, and handoff
+    requirements.
   - Claude Code is allowed only when the owner explicitly requests it for a
     named scope. It must never be invoked as an automatic fallback, and Codex
     must independently verify its findings and changes before they affect the
     repository or task state.
-  - If an approved model or provider is unavailable, stop and report the
-    blocker; do not silently switch models or execution paths.
+  - If no approved model/provider is available, stop and report the blocker;
+    do not silently switch models or execution paths.
 - Agent-delegated repository prompts and reports must not expose secrets,
   credentials, private provider keys, raw sensitive logs or unredacted user
   data. Use read-only planning by default. Do not set artificial token, time or
