@@ -123,11 +123,12 @@ read-only through Git history for migration evidence, but TASK-545 neither edits
 nor claims to repair those deleted artifacts.
 
 After terminal TASK-554, the expected initial executable migration set is
-exactly five tracked entries:
+exactly six tracked entries:
 
 - `_docs/_workflows/task-522-author.mjs`;
 - `_docs/_workflows/task-543-implement.mjs`;
 - `_docs/_workflows/task-554-author-audit.mjs`;
+- `_docs/_workflows/task-554-closeout.mjs`;
 - `_docs/_workflows/task-554-implement.mjs`;
 - `_docs/_workflows/task-554-fix.mjs`.
 
@@ -198,7 +199,7 @@ applies a deterministic metadata mutation plan: exact frozen before-hashes,
 exact field/row operations, and exact expected after-hashes. A path allowlist by
 itself is never sufficient. Product source is a forbidden path.
 
-The initial migration inventory is the five-entry tracked set frozen above.
+The initial migration inventory is the six-entry tracked set frozen above.
 TASK-545 may migrate the already-landed TASK-554 workflow contracts, but it does
 not reinterpret or retroactively convert TASK-554's completed loose smoke
 evidence into a TASK-545 manifest/checkpoint family.

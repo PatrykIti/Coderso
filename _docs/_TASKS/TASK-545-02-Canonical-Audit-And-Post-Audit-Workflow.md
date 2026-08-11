@@ -35,8 +35,9 @@ the additive zero-violation repository scan is activated by TASK-545-01-L02.
 
 No script or behavior-test file is edited by both leaves. Each driver and its synthetic
 suite must pass before that leaf migrates live scripts. The initial post-TASK-554
-inventory is exactly five tracked entries: L01 owns TASK-522 author plus TASK-554
-author-audit; L02 owns TASK-543 implement plus TASK-554 implement/fix.
+inventory is exactly six tracked entries: L01 owns TASK-522 author plus TASK-554
+author-audit; L02 owns TASK-543 implement plus TASK-554
+`task-554-closeout.mjs`, implement, and fix.
 Unexpected tracked entries require a contract update and fresh affected audit.
 Ignored local/deleted historical scripts are never wildcard-migrated.
 

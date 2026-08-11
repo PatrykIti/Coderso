@@ -37,7 +37,7 @@ files are read-only gates; this leaf reruns but never edits/rebaselines them.
   corpus; a recursive filesystem scan is therefore non-reproducible.
 - Current HEAD tracks two executable entries, TASK-522 author and TASK-543
   implement, plus the TASK-522 helper/type declaration. Terminal TASK-554 must
-  add three explicitly tracked entries before TASK-545 starts.
+  add four explicitly tracked entries before TASK-545 starts.
 - `task-522-author.mjs:168` is the only current tracked unsafe agent-result
   filter. TASK-543's three literal `.filter(Boolean)` calls process URL/port
   data and must remain legal.
@@ -83,6 +83,7 @@ test("initial migration entries and all future owners are tracked", () => {
     ["task-522-author.mjs", "author-audit"],
     ["task-543-implement.mjs", "implement"],
     ["task-554-author-audit.mjs", "author-audit"],
+    ["task-554-closeout.mjs", "closeout"],
     ["task-554-implement.mjs", "implement"],
     ["task-554-fix.mjs", "fix"],
   ]);
@@ -91,6 +92,10 @@ test("initial migration entries and all future owners are tracked", () => {
 test("agent-result collections use the all-results guard", () => {
   for (const entry of trackedWorkflowEntries()) {
     const ast = parseModule(entry.path);
+    if (entry.role === "closeout") {
+      assertTask554CloseoutGuardContract(ast, entry.path);
+      continue;
+    }
     assertCanonicalDriverImportAndCall(ast, entry.role);
     assertNoUnguardedAgentResultConsumer(ast, entry.path, {
       rejectFilterBooleanBeforeValidation: true,
@@ -157,7 +162,7 @@ test("owning workflow entries are tracked, clean, and task-bound", async () => {
     } else {
       assertCanonicalFutureEntry(entry, owner.taskId, {
         pattern:
-          /^_docs\/_workflows\/task-(?:[0-9]{3}|9999)-(author-audit|implement|fix)\.mjs$/,
+          /^(?:_docs\/_workflows\/task-554-closeout\.mjs|_docs\/_workflows\/task-(?:[0-9]{3}|9999)-(author-audit|implement|fix)\.mjs)$/,
         requireTaskIdAndSuffixBinding: true,
       });
     }
@@ -194,11 +199,14 @@ null/identity/fingerprint/fixer behavior belongs exclusively to the already-land
 to TASK-545-03-L01. This leaf adds only whole-inventory static enforcement and negative
 source fixtures, with no behavioral rebaseline.
 
-The five post-TASK-554 migration entries are the initial compatibility set, not
+The six post-TASK-554 migration entries are the initial compatibility set, not
 the universe of future owners. A later entry is accepted only through the
 canonical task-bound pattern above; three-digit TASK IDs and the sole
 `TASK-9999` sentinel follow repository naming rules. Its suffix must match its
-registered author-audit/implement/fix role and task ID. Resolution starts only
+registered author-audit/implement/fix role and task ID, except that the exact
+TASK-554 closeout guard has the dedicated `closeout` role and is validated by
+`assertTask554CloseoutGuardContract` rather than an agent-driver import.
+Resolution starts only
 from the currently executing module's `import.meta.url`; CLI/API path overrides
 are forbidden. Before phase 1, require `git ls-files`, a regular non-symlink
 path, byte equality with `git show HEAD:<path>`, and the same TASK-545 static

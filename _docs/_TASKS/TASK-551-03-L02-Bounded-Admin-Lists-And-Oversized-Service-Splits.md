@@ -246,11 +246,22 @@ own-property/present-only projection, root non-empty validation, conditional
 metadata saves. Pagination must not add a second metadata DTO/schema or weaken
 the writer-versus-publisher boundary.
 
+The bounded list migration must also preserve or adapt TASK-554's narrow local
+Post-cache authority contract for its new list key/envelope: `clearPostsCache`
+resets detail generations, delete tombstones, row-publication/list epochs, and
+in-flight list bookkeeping; a stale list GET merges the current newer detail or
+tombstone before it writes and returns; and each accepted current non-delete
+detail emits exactly one list `update` followed by one detail `update`, while a
+delete emits only the existing ordered invalidates. It must retain the named
+TASK-554 deferred list/detail, status-only schedule, tombstone, reset, and
+cache-bus race assertions unchanged or update them only through a fresh
+TASK-554 contract handoff.
+
 After its list changes, this leaf reruns TASK-554's terminal focused
-route/schema/client/RBAC and present-only tests unchanged. Any required edit to
-the metadata contract, conditional middleware, or metadata client behavior
-returns to TASK-554 ownership and blocks this leaf; it is never folded into a
-pagination fix.
+route/schema/client/RBAC, present-only, and local cache-race tests unchanged.
+Any required edit to the metadata contract, conditional middleware, or metadata
+client race behavior returns to TASK-554 ownership and blocks this leaf; it is
+never folded into a pagination fix.
 
 The only cache/transport handoff exceptions are read-only imports of
 `core/admin/utils/adminCacheAuthority.ts`,

@@ -34,10 +34,10 @@ task-522-author.mjs
 task-554-author-audit.mjs
 ```
 
-Combined `*implement*`, `*impl*`, `*full*`, `*fix*`, and `*remediation*`
-entries belong to L02. Immediately before editing, derive the top-level
+Combined `*closeout*`, `*implement*`, `*impl*`, `*full*`, `*fix*`, and
+`*remediation*` entries belong to L02. Immediately before editing, derive the top-level
 executable inventory from `git ls-files`, classify every tracked entry, and
-compare it with L01's two files plus L02's three files. A missing or additional
+compare it with L01's two files plus L02's four files. A missing or additional
 tracked entry is blocking contract drift requiring explicit assignment and a
 fresh affected audit; neither leaf silently widens a wildcard. Ignored local
 scripts and scripts removed by `5facaf32` are diagnostics/history only and must

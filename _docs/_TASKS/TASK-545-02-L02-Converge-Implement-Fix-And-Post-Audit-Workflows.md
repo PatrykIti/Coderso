@@ -28,20 +28,21 @@ None; this is an executable leaf with the exclusive script inventory below.
 - new `_docs/_workflows/lib/post-audit.d.mts`;
 - new `tests/unit/workflows/postAudit.test.ts`;
 - new `tests/unit/workflows/task543WorkflowModules.test.ts`;
-- exactly these three tracked implementation/fix entries after security-first
-  TASK-554 lands:
+- exactly these four tracked implementation/fix/closeout entries after security-first
+TASK-554 lands:
 
 ```text
 task-543-implement.mjs
+task-554-closeout.mjs
 task-554-fix.mjs
 task-554-implement.mjs
 ```
 
 ## Mandatory staged implementation order
 
-1. Create `post-audit.mjs` and `postAudit.test.ts` before touching any of the three scripts.
+1. Create `post-audit.mjs` and `postAudit.test.ts` before touching any of the four scripts.
 2. Run the helper contract, landed audit-round suite, and new synthetic post-audit suite.
-3. Only after those pass, migrate the exact three-file inventory in lexical order.
+3. Only after those pass, migrate the exact four-file inventory in lexical order.
 4. Re-run both driver suites, helper tests, `node --check`, inventory checks and the
    owned-script violation scans before handing the tree to TASK-545-01-L02.
 
@@ -53,7 +54,7 @@ behavior tests.
 
 Do not edit L01-owned scripts. Before editing, derive the top-level executable
 inventory from `git ls-files` and reconcile it against L01's two files plus this
-three-file set. Any missing or additional tracked entry blocks work until it is
+four-file set. Any missing or additional tracked entry blocks work until it is
 explicitly assigned and freshly audited. Ignored owner-local scripts and entries
 removed by `5facaf32` are not implementation targets.
 
@@ -66,7 +67,7 @@ removed by `5facaf32` are not implementation targets.
 - Literal `.filter(Boolean)` calls at `:2408`, `:2521`, and `:3340` filter URL or
   process-domain data and are explicitly valid; they are not evidence of a
   false-clean agent-result path.
-- TASK-554's two terminal entries are read fresh after their committed handoff
+- TASK-554's three terminal entries are read fresh after their committed handoff
   and migrated only where their canonical driver/import/closure contracts drift.
 
 The tracked static scan, not ignored local files or deleted historical scripts,
@@ -272,8 +273,9 @@ The phase-1 result provides both a structured `resumeArgv` array and a display-o
 `resumeCommand` produced by the canonical shell-quoting helper; the argv array is
 authoritative. `workflowEntry` is derived from that script's `import.meta.url`, normalized
 relative to the real repository root, and integrity-bound in the checkpoint. The initial
-five tracked TASK-545 migration entries remain exact. A later owner is accepted only when its canonical path matches
-its TASK ID and `author-audit|implement|fix` suffix (`TASK-9999` is the sole four-digit
+six tracked TASK-545 migration entries remain exact. A later owner is accepted only when its canonical path matches
+its TASK ID and `author-audit|implement|fix` suffix, except the explicitly
+inventoried `task-554-closeout.mjs` guard (`TASK-9999` is the sole four-digit
 exception), is tracked, regular/non-symlink, byte-identical to `git show HEAD:<path>`, and
 passes TASK-545 static-contract/import gates. It is never accepted from an agent result or
 caller override. On resume, the currently executing entry must equal the checkpoint

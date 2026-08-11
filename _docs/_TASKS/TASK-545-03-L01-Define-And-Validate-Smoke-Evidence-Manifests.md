@@ -156,7 +156,9 @@ The owning entry is derived only from the executing module's `import.meta.url`.
 Exact built-ins remain accepted; a future entry must match the task-bound
 `task-(three digits|9999)-(author-audit|implement|fix).mjs` rule, be tracked,
 regular/no-symlink, byte-identical to `git show HEAD`, and pass TASK-545 static/
-canonical-import gates. Caller path overrides fail.
+canonical-import gates. The exact tracked `task-554-closeout.mjs` guard is
+validated by TASK-545's dedicated `closeout` static role and never reaches this
+smoke-evidence owning-entry function. Caller path overrides fail.
 
 The TASK-548 bootstrap exception uses the declaration-owned exact six-path
 constant and receipt below. Its normalizer recursively rejects unknowns,

@@ -58,8 +58,9 @@ Playwright, worker, polling, DB cleanup, lifecycle, screenshot, or report
 implementation.
 
 The executing owner is derived only from its `import.meta.url`; callers cannot supply a
-workflow path. The five post-TASK-554 tracked migration entries stay exact for
-TASK-545 closure. A future owner must be canonical
+workflow path. The six post-TASK-554 tracked migration entries stay exact for
+TASK-545 closure. The exact `task-554-closeout.mjs` guard is an inventory-only
+`closeout` exception, never a smoke-evidence owning resume entry. A future owner must be canonical
 `_docs/_workflows/task-<matching-id>-(author-audit|implement|fix).mjs` (`TASK-9999` is the
 only four-digit exception), tracked, regular/no-symlink, byte-identical to `git show HEAD`,
 task/suffix-bound, and green in TASK-545 static-contract/import gates.

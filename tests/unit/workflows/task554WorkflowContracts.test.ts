@@ -9,6 +9,18 @@ const implementPath = path.join(root, "_docs/_workflows/task-554-implement.mjs")
 const fixPath = path.join(root, "_docs/_workflows/task-554-fix.mjs");
 const closeoutPath = path.join(root, "_docs/_workflows/task-554-closeout.mjs");
 const taskPath = path.join(root, "_docs/_TASKS/TASK-554_Post_Metadata_Publish_RBAC_Hardening.md");
+const task545Path = path.join(
+  root,
+  "_docs/_TASKS/TASK-545_Workflow_Smoke_Evidence_and_Task_Graph_Integrity.md"
+);
+const task545AuditPath = path.join(
+  root,
+  "_docs/_TASKS/TASK-545-02-Canonical-Audit-And-Post-Audit-Workflow.md"
+);
+const task545ImplementPath = path.join(
+  root,
+  "_docs/_TASKS/TASK-545-02-L02-Converge-Implement-Fix-And-Post-Audit-Workflows.md"
+);
 
 function source(filePath: string) {
   return readFileSync(filePath, "utf8");
@@ -82,6 +94,7 @@ test("TASK-554 implementation workflow executes fail-closed ownership, line, and
   expect(implement).toContain('owner("documentation"');
   expect(implement).toContain("core/server/routes/index.ts");
   expect(implement).toContain("core/server/httpServer.ts");
+  expect(implement).toContain("tests/README.md");
   expect(implement).toContain("assertScopedRepositoryMutation");
   expect(implement).toContain("verifyTask554Bootstrap");
   expect(implement).toContain("verifyTask554AuthorAuditReceipt");
@@ -266,4 +279,21 @@ test("TASK-554 contract keeps public invalidation with TASK-551 and specifies ex
   expect(task).toContain("_docs/ADMIN_CACHE_MAP.md");
   expect(task).toContain("deferred exact-id 404");
   expect(task).toContain("bun run gates:coderso");
+  expect(task).toContain("invalid_request_body");
+  expect(task).toContain("publishPostMutationCacheEvents");
+  expect(task).toContain("clearPostsCache");
+  expect(task).toContain("tests/README.md");
+});
+
+test("TASK-545 recognizes the fourth TASK-554 closeout workflow as a single-owner exception", () => {
+  const task545 = source(task545Path);
+  const audit = source(task545AuditPath);
+  const implement = source(task545ImplementPath);
+
+  for (const document of [task545, audit, implement]) {
+    expect(document).toContain("task-554-closeout.mjs");
+  }
+  expect(task545).toContain("exactly six tracked entries");
+  expect(audit).toContain("exactly six tracked entries");
+  expect(implement).toContain("exactly these four tracked implementation/fix/closeout entries");
 });

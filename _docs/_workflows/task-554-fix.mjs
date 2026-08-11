@@ -86,6 +86,7 @@ const OWNER_PATHS = Object.freeze({
     "_docs/ADMIN_CACHE_MAP.md",
     "docs/develop/runtime-smoke-cookbook.md",
     "docs/develop/assistant.md",
+    "tests/README.md",
   ]),
 });
 

@@ -240,9 +240,11 @@ repair dispatch targets.
   other route (including `POST /media`); the parser consumes that selector
   before session attachment. It
   catches only that parser failure, charges the existing matched anonymous
-  route bucket, maps it through the existing JSON error response and records
-  one anonymous access-log receipt, then returns. It does not move session,
-  CSRF, or route middleware;
+  route bucket, normalizes an unknown non-`ApiError` to the redacted stable
+  `invalid_request_body` / 400 envelope before the existing JSON error response,
+  and records one anonymous access-log receipt, then returns. Known
+  `invalid_json`, `invalid_form`, `payload_too_large`, and `rate_limited`
+  envelopes remain unchanged. It does not move session, CSRF, or route middleware;
 - `core/admin/services/postsClient.ts`: import/re-export the exact shared
   metadata DTO and retain existing CSRF/cache behavior. Focused private
   per-Post-detail generations capture every forced detail GET/detail mutator
@@ -261,7 +263,14 @@ repair dispatch targets.
   regardless of a cached detail, so it cannot retain a cleared schedule. A
   stale GET returns current detail when present. If delete crossed its
   generation, its `null` tombstone wins over resolved or exact `ApiClientError`
-  404 stale GETs without retry or cache repopulation. This is not a new cache
+  404 stale GETs without retry or cache repopulation. The existing
+  `clearPostsCache` atomically resets every TASK-554 detail generation,
+  tombstone, row-publication epoch, list epoch, and in-flight list bookkeeping
+  structure with the existing caches. A private
+  `publishPostMutationCacheEvents(id)` emits exactly one existing list `update`
+  event followed by exactly one detail `update` event only after a current,
+  non-tombstoned full detail is accepted; delete keeps its existing ordered
+  list/detail `invalidate` events and never emits an update. This is not a new cache
   wrapper, generic cache redesign, or public-cache invalidation surface;
 - `core/admin/ui/posts/editor/PostClassicEditorShell.tsx` around the verified
   `handleSaveMetadata` call (baseline line 346), which currently sends `status`
@@ -306,7 +315,8 @@ proves a service edit is unavoidable, stop and amend the task; first split the
   malformed or oversized body, it charges the existing route-selected anonymous
   bucket using only resolved IP/user-agent and `isAuthenticated: false`; it
   never derives an identifier from unparsed bytes. Within quota it maps to
-  `invalid_json` / 400 or `payload_too_large` / 413 and records exactly one
+  `invalid_json` / 400, `invalid_form` / 400, `payload_too_large` / 413, or an
+  unknown parser failure to redacted `invalid_request_body` / 400 and records exactly one
   anonymous access log (`userId`/`sessionId` null). Declared over-limit input
   fails before a pull; missing or lying `Content-Length` is cancelled at 64 KiB
   + 1 bytes. Exhausted quota maps/logs the existing `rate_limited` / 429
@@ -457,7 +467,13 @@ try {
   return anonymousParserErrorResponse(parseError); // exactly one invalid_json log
 }
 function anonymousParserErrorResponse(error: unknown) {
-  const response = errorResponse(error);
+  const known = error instanceof ApiError && new Set([
+    "invalid_json", "invalid_form", "payload_too_large", "rate_limited",
+  ]).has(error.code);
+  const safeError = known
+    ? error
+    : new ApiError("invalid_request_body", "Invalid request body.", 400);
+  const response = errorResponse(safeError); // never serializes a raw stream/parser error
   responseHeaders.forEach((value, key) => response.headers.append(key, value));
   void recordAccessLog({
     method: req.method,
@@ -607,12 +623,24 @@ const mergeStaleListRead = (received: PostSummary[], capturedEpoch: number) => {
   // Then prime and return this reconciled list; never overwrite a newer row with GET bytes.
   return reconcilePostListRows(received, capturedEpoch);
 };
+const clearPostsCache = () => {
+  cachedPostsPromise = null;
+  cachedPostDetails.clear(); cachedPostRevisions.clear(); postsListCache.clear();
+  detailGenerations.clear(); detailTombstones.clear();
+  rowPublicationEpochs.clear(); resetPostListPublicationEpoch();
+  clearInFlightPostListBookkeeping();
+};
+const publishPostMutationCacheEvents = (id: string) => {
+  // Call only after the current non-tombstoned full detail is cached.
+  broadcastCacheEvent({ key: cacheKeys.postsList, action: "update" });
+  broadcastCacheEvent({ key: cacheKeys.postDetail(id), action: "update" });
+};
 const reconcileLostDetailMutation = async (id: string) => {
   if (hasPostDetailDeletionTombstone(id)) return null;
   const observed = postDetailGeneration(id);
   const fresh = await getPostCached(id, { force: true });
   if (fresh && postDetailGeneration(id) === observed && !hasPostDetailDeletionTombstone(id)) {
-    broadcastPostDetailUpdate(id); // emits only the accepted fresh server projection
+    publishPostMutationCacheEvents(id); // emits only the accepted fresh server projection
   }
   return fresh;
 };
@@ -621,7 +649,7 @@ const publishDetailMutation = async (id: string, dispatchGeneration: number, det
     await reconcileLostDetailMutation(id); return false;
   }
   advancePostDetailGeneration(id); clearPostDetailDeletionTombstone(id);
-  upsertCachedPost(detail); broadcastPostDetailUpdate(id); return true;
+  upsertCachedPost(detail); publishPostMutationCacheEvents(id); return true;
 };
 const publishStatusMutation = async (id: string, dispatchGeneration: number) => {
   if (postDetailGeneration(id) === dispatchGeneration && !hasPostDetailDeletionTombstone(id)) {
@@ -630,7 +658,8 @@ const publishStatusMutation = async (id: string, dispatchGeneration: number) => 
   await reconcileLostDetailMutation(id); // never status-patch a cached scheduled Post
 };
 // updatePost/metadata/autosave/restore await publishDetailMutation after success;
-// status-only publish/unpublish await publishStatusMutation; delete advances/tombstones/removes.
+// status-only publish/unpublish await publishStatusMutation; delete advances/tombstones/removes,
+// records its row epoch, and emits only the existing ordered invalidates.
 // PostClassicEditorShell.tsx -- existing helpers, no new generic hook
 const lease = acquirePostMutationLease({ postId, routeEpoch });
 if (!lease) return; // a competing user action/cache continuation defers
@@ -725,12 +754,15 @@ byte-identical no-op,
 and a force GET begun at A cannot overwrite either the browser cache or current
 editor state after metadata mutation B. Two deferred non-delete A/B mutations
 settling in both orders must finish with a guarded fresh read whose detail/list
-cache and final list/detail cache-bus events match the server, not whichever
+cache and exactly-one ordered list/detail cache-bus events match the server, not whichever
 response won locally. A cached scheduled Post followed by publish and unpublish
 must likewise end with `scheduledAt: null` in both cache projections and emit
 its update only after that fresh read. A deferred list GET started before each
 metadata/status/delete mutation, including one initiated by a list cache-bus
 event, must return and cache a list that retains the newer detail or tombstone.
+Delete -> `clearPostsCache` -> a fresh detail/list read must prove that no prior
+tombstone, generation, row epoch, or in-flight list authority leaks across the
+existing reset boundary.
 An accepted deferred metadata response must replace unchanged submitted controls
 with server-normalized values while preserving a post-dispatch edit as dirty. A
 baseline-equal SEO and scheduled -> draft -> no-op each make zero requests/events,
@@ -1067,8 +1099,10 @@ both accepted deltas and rejection of another task row or task-contract edit.
 - TASK-414-05 lists TASK-554 terminal as a hard dependency before Agent Post
   actions.
 - TASK-551-03-L02 lists TASK-554 terminal as a hard dependency, limits its
-  shared Post-file edits to list contracts, preserves the metadata contract,
-  and reruns this task's unchanged route/schema/client/RBAC tests.
+  shared Post-file edits to list contracts, preserves the metadata and local
+  browser-cache race contract (generation/tombstone reset, row epoch,
+  stale-list merge/write/return, and ordered paired events), and reruns this
+  task's unchanged route/schema/client/RBAC tests.
 ## Documentation Updates Required
 - `_docs/CMS_API.md`
 - `_docs/RBAC_SPEC.md`
@@ -1079,6 +1113,8 @@ both accepted deltas and rejection of another task row or task-contract edit.
   registration, task-specific adapter/operation/selector/manifest contribution,
   shared-wrapper/helper/worker reuse, profile, and command recipe
 - `docs/develop/assistant.md` only for the TASK-414 Post-action dependency
+- `tests/README.md` for the registered `task-554` suite, both profiles, and its
+  seven-flow evidence boundary
 - `_docs/_TASKS/README.md`
 - changelog 1267 and changelog index
 
