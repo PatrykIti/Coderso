@@ -32,6 +32,7 @@ test("TASK-554 bootstrap rejects a tracked extra while ignoring a local untracke
     agentIdentityRejected: true,
     ignoredWorkflowMutationRejected: true,
     emptyWorkflowDirectoryMutationRejected: true,
+    tmpMutationRejected: true,
     authorReceiptBound: true,
     receiptInputsValidated: true,
     receiptAncestorSymlinkRejected: true,
@@ -92,6 +93,9 @@ test("TASK-554 bootstrap pins the exact regular tracked files and HEAD bytes", (
   expect(source).toContain("return Object.freeze({ identity, ...audit })");
   expect(source).toContain("task_554_author_audit_invalid");
   expect(source).toContain("workflowTreePaths");
+  expect(source).toContain("captureTmpAuditEntries");
+  expect(source).toContain("task_554_author_tmp_entry_invalid");
+  expect(source).toContain("constants.O_NOFOLLOW");
   expect(source).toContain("assertNofollowDirectory");
   expect(source).not.toContain("git add");
   expect(source).not.toContain("git commit");

@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { execFileSync, spawnSync } from "node:child_process";
-import { chmodSync, lstatSync, mkdtempSync, readFileSync, readlinkSync, rmSync, symlinkSync, unlinkSync, writeFileSync, mkdirSync, readdirSync } from "node:fs";
+import { chmodSync, closeSync, constants, fstatSync, lstatSync, mkdtempSync, openSync, readFileSync, readlinkSync, rmSync, symlinkSync, unlinkSync, writeFileSync, mkdirSync, readdirSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
@@ -25,6 +25,7 @@ const MAX_FIELD_LENGTH = 2048;
 const COUNTABLE_EXTENSION = /\.(?:ts|tsx|js|jsx|mjs|cjs|mts|cts)$/u;
 const MAX_WORKFLOW_TREE_ENTRIES = 4096;
 const MAX_WORKFLOW_TREE_DEPTH = 64;
+const MAX_TMP_ENTRY_BYTES = 16 * 1024 * 1024;
 const WORKFLOW_PATHS = Object.freeze([
   "_docs/_workflows/task-554-author-audit.mjs",
   "_docs/_workflows/task-554-implement.mjs",
@@ -44,6 +45,7 @@ const OWNER_PATHS = Object.freeze({
     "core/server/routes/index.ts",
     "core/server/httpServer.ts",
     "tests/vitest/server/postMetadataContract.test.ts",
+    "tests/vitest/server/requestBody.test.ts",
     "tests/vitest/validation/postSchemas.test.ts",
     "tests/integration/routes/postsRoutes.test.ts",
     "tests/integration/routes/postMetadataRbac.test.ts",
@@ -98,7 +100,7 @@ const FORBIDDEN_PATHS = Object.freeze([
   ...WORKFLOW_PATHS,
   "_TMP-task-dispatch-plan-2026-08-10.md",
   "core/services/content/postsService.ts",
-  "core/services/posts/postMutationService.ts",
+  "core/services/content/postMutationService.ts",
   "core/admin/ui/posts/editor/hooks/usePostEditorState.ts",
   "_docs/_TASKS/TASK-414",
   "_docs/_TASKS/TASK-547",
@@ -212,9 +214,43 @@ function workflowTreePaths(root) {
   return entries;
 }
 
+function tmpNode(stats) { return Object.freeze({ dev: stats.dev, ino: stats.ino, mode: stats.mode, nlink: stats.nlink }); }
+
+function sameTmpNode(left, right) { return left.dev === right.dev && left.ino === right.ino && left.mode === right.mode && left.nlink === right.nlink; }
+
+function fingerprintTmpFile(absolutePath) {
+  const initial = lstatSync(absolutePath);
+  if (!initial.isFile() || initial.isSymbolicLink() || initial.nlink !== 1 || initial.size > MAX_TMP_ENTRY_BYTES) throw new Error("task_554_fix_tmp_entry_invalid");
+  let handle;
+  try {
+    handle = openSync(absolutePath, constants.O_RDONLY | constants.O_NOFOLLOW);
+    const before = fstatSync(handle);
+    if (!before.isFile() || before.nlink !== 1 || before.size > MAX_TMP_ENTRY_BYTES) throw new Error("task_554_fix_tmp_entry_invalid");
+    const bytes = Buffer.from(readFileSync(handle)); const after = fstatSync(handle); const final = lstatSync(absolutePath); const node = tmpNode(before);
+    if (!sameTmpNode(tmpNode(initial), node) || !sameTmpNode(node, tmpNode(after)) || !sameTmpNode(node, tmpNode(final)) || bytes.byteLength !== after.size) throw new Error("task_554_fix_tmp_entry_changed");
+    return `file:${node.dev}:${node.ino}:${node.mode}:${node.nlink}:${createHash("sha256").update(bytes).digest("hex")}`;
+  } finally { if (handle !== undefined) closeSync(handle); }
+}
+
+function captureTmpFixEntries(root) {
+  const directory = path.join(root, ".tmp"); let initial;
+  try { initial = lstatSync(directory); } catch (error) { if (error && typeof error === "object" && error.code === "ENOENT") return Object.freeze([[".tmp", "missing"]]); throw error; }
+  if (!initial.isDirectory() || initial.isSymbolicLink()) throw new Error("task_554_fix_tmp_root_invalid");
+  const entries = [[".tmp", `directory:${initial.dev}:${initial.ino}:${initial.mode}:${initial.nlink}`]];
+  const visit = (absolutePath, relativePath, depth) => {
+    if (depth > MAX_WORKFLOW_TREE_DEPTH || entries.length >= MAX_WORKFLOW_TREE_ENTRIES) throw new Error("task_554_fix_tmp_tree_limit");
+    const stats = lstatSync(absolutePath); if (stats.isSymbolicLink()) throw new Error("task_554_fix_tmp_entry_invalid");
+    if (stats.isDirectory()) { const node = tmpNode(stats); entries.push([relativePath, `directory:${node.dev}:${node.ino}:${node.mode}:${node.nlink}`]); for (const name of readdirSync(absolutePath).sort((left, right) => left.localeCompare(right))) visit(path.join(absolutePath, name), `${relativePath}/${name}`, depth + 1); if (!sameTmpNode(node, tmpNode(lstatSync(absolutePath)))) throw new Error("task_554_fix_tmp_ancestor_changed"); return; }
+    if (!stats.isFile()) throw new Error("task_554_fix_tmp_entry_invalid"); entries.push([relativePath, fingerprintTmpFile(absolutePath)]);
+  };
+  for (const name of readdirSync(directory).sort((left, right) => left.localeCompare(right))) visit(path.join(directory, name), `.tmp/${name}`, 1);
+  if (!sameTmpNode(tmpNode(initial), tmpNode(lstatSync(directory)))) throw new Error("task_554_fix_tmp_ancestor_changed");
+  return Object.freeze(entries.map((entry) => Object.freeze(entry)));
+}
+
 export function captureFixFingerprint(root = ROOT) {
   const paths = [...new Set([...parseNul(output(root, "git", ["ls-files", "-co", "--exclude-standard", "-z"])), ...workflowTreePaths(root)])];
-  return new Map(paths.map(normalizePath).sort((left, right) => left.localeCompare(right)).map((relativePath) => Object.freeze([relativePath, fingerprintEntry(root, relativePath)])));
+  return new Map([...paths.map(normalizePath).sort((left, right) => left.localeCompare(right)).map((relativePath) => Object.freeze([relativePath, fingerprintEntry(root, relativePath)])), ...captureTmpFixEntries(root)]);
 }
 
 function assertNoStaging(root) {
@@ -324,7 +360,7 @@ const OWNER_GATES = Object.freeze({
     command("workflow-fix-syntax", "node", ["--check", "_docs/_workflows/task-554-fix.mjs"]),
   ]),
   "contract-schema-route": Object.freeze([
-    command("contract-vitest", "bunx", ["vitest", "run", "--config", "vitest.config.ts", "tests/vitest/validation/postSchemas.test.ts", "tests/vitest/server/postMetadataContract.test.ts"]),
+    command("contract-vitest", "bunx", ["vitest", "run", "--config", "vitest.config.ts", "tests/vitest/validation/postSchemas.test.ts", "tests/vitest/server/postMetadataContract.test.ts", "tests/vitest/server/requestBody.test.ts"]),
     command("contract-bun", "bun", ["test", "tests/integration/routes/postsRoutes.test.ts", "tests/integration/routes/postMetadataRbac.test.ts", "tests/unit/auth/rbac.test.ts"]),
     command("types", "bun", ["--cwd", "core", "lint:types"]), command("lint", "bun", ["--cwd", "core", "lint"]),
   ]),
@@ -514,7 +550,7 @@ function fixSelfTest() {
     output(root, "git", ["init", "-q"]);
     output(root, "git", ["config", "user.email", "task-554@example.invalid"]);
     output(root, "git", ["config", "user.name", "TASK-554 fix self-test"]);
-    writeFile(path.join(root, ".gitignore"), "_docs/_workflows/\n");
+    writeFile(path.join(root, ".gitignore"), "_docs/_workflows/\n.tmp\n");
     writeFile(path.join(root, "tests/owned.ts"), "export const owned = 1;\n");
     output(root, "git", ["add", ".gitignore", "tests/owned.ts"]);
     output(root, "git", ["commit", "-qm", "baseline"]);
@@ -536,6 +572,10 @@ function fixSelfTest() {
     mkdirSync(path.join(root, "_docs/_workflows/empty-fix-side-effect"));
     expectFailure(() => assertFixScope("task_554_fix_self_test_empty_directory", emptyDirectoryBefore, captureFixFingerprint(root), [], root), "task_554_fix_self_test_empty_directory:scope_violation:");
     rmSync(path.join(root, "_docs/_workflows/empty-fix-side-effect"), { recursive: true });
+    const tmpBefore = captureFixFingerprint(root);
+    writeFile(path.join(root, ".tmp/ignored-fix-side-effect.txt"), "ignored tmp\n");
+    expectFailure(() => assertFixScope("task_554_fix_self_test_tmp", tmpBefore, captureFixFingerprint(root), [], root), "task_554_fix_self_test_tmp:scope_violation:");
+    rmSync(path.join(root, ".tmp"), { recursive: true, force: true });
     const validIdentity = "task-554:fix:audit:1";
     const valid = { pass: false, summary: "finding", findings: [{ severity: "MEDIUM", area: "test", finding: "test", evidence: "test:1", recommendation: "test", owner: "admin-client", lens: "test-integrity" }] };
     normalizeAuditFindings(validIdentity, valid);
@@ -570,7 +610,7 @@ function fixSelfTest() {
     symlinkSync("target-b.ts", linkPath);
     expectFailure(() => assertFixScope("task_554_fix_self_test_symlink", symlinkBefore, captureFixFingerprint(root), [], root), "task_554_fix_self_test_symlink:scope_violation:");
     unlinkSync(linkPath);
-    return Object.freeze({ pass: true, forbiddenScopeRejected: true, ignoredWorkflowMutationRejected: true, emptyWorkflowDirectoryMutationRejected: true, ownerMappingRejected: true, lensMappingRejected: true, strictResultRejected: true, agentIdentityRejected: true, terminalOwnerEscalated: true, actualAffectedReceipt: true, workflowRebootstrapEscalated: true, modeAndSymlinkFingerprintRejected: true });
+    return Object.freeze({ pass: true, forbiddenScopeRejected: true, ignoredWorkflowMutationRejected: true, emptyWorkflowDirectoryMutationRejected: true, tmpMutationRejected: true, ownerMappingRejected: true, lensMappingRejected: true, strictResultRejected: true, agentIdentityRejected: true, terminalOwnerEscalated: true, actualAffectedReceipt: true, workflowRebootstrapEscalated: true, modeAndSymlinkFingerprintRejected: true });
   } finally {
     rmSync(root, { recursive: true, force: true });
   }

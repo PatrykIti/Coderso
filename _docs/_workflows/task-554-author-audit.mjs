@@ -53,7 +53,7 @@ const AUTHOR_ALLOWED_DIRTY_PATHS = Object.freeze([
 ]);
 const AUTHOR_FORBIDDEN_PATHS = Object.freeze([
   "core/services/content/postsService.ts",
-  "core/services/posts/postMutationService.ts",
+  "core/services/content/postMutationService.ts",
   "core/admin/ui/posts/editor/hooks/usePostEditorState.ts",
   "_docs/_TASKS/TASK-414",
   "_docs/_TASKS/TASK-547",
@@ -61,6 +61,7 @@ const AUTHOR_FORBIDDEN_PATHS = Object.freeze([
 ]);
 const MAX_WORKFLOW_TREE_ENTRIES = 4096;
 const MAX_WORKFLOW_TREE_DEPTH = 64;
+const MAX_TMP_ENTRY_BYTES = 16 * 1024 * 1024;
 const MAX_AUDIT_FINDINGS = 40;
 const MAX_AUDIT_FIELD_LENGTH = 2048;
 
@@ -140,6 +141,61 @@ function workflowTreePaths(root) {
   return entries;
 }
 
+function tmpNode(stats) {
+  return Object.freeze({ dev: stats.dev, ino: stats.ino, mode: stats.mode, nlink: stats.nlink });
+}
+
+function sameTmpNode(left, right) {
+  return left.dev === right.dev && left.ino === right.ino && left.mode === right.mode && left.nlink === right.nlink;
+}
+
+function fingerprintTmpFile(absolutePath) {
+  const initial = lstatSync(absolutePath);
+  if (!initial.isFile() || initial.isSymbolicLink() || initial.nlink !== 1 || initial.size > MAX_TMP_ENTRY_BYTES) throw new Error("task_554_author_tmp_entry_invalid");
+  let handle;
+  try {
+    handle = openSync(absolutePath, constants.O_RDONLY | constants.O_NOFOLLOW);
+    const before = fstatSync(handle);
+    if (!before.isFile() || before.nlink !== 1 || before.size > MAX_TMP_ENTRY_BYTES) throw new Error("task_554_author_tmp_entry_invalid");
+    const bytes = Buffer.from(readFileSync(handle));
+    const after = fstatSync(handle);
+    const final = lstatSync(absolutePath);
+    const node = tmpNode(before);
+    if (!sameTmpNode(tmpNode(initial), node) || !sameTmpNode(node, tmpNode(after)) || !sameTmpNode(node, tmpNode(final)) || bytes.byteLength !== after.size) throw new Error("task_554_author_tmp_entry_changed");
+    return `file:${node.dev}:${node.ino}:${node.mode}:${node.nlink}:${createHash("sha256").update(bytes).digest("hex")}`;
+  } finally {
+    if (handle !== undefined) closeSync(handle);
+  }
+}
+
+function captureTmpAuditEntries(root) {
+  const directory = path.join(root, ".tmp");
+  let initial;
+  try { initial = lstatSync(directory); } catch (error) {
+    if (error && typeof error === "object" && error.code === "ENOENT") return [".tmp\0missing"];
+    throw error;
+  }
+  if (!initial.isDirectory() || initial.isSymbolicLink()) throw new Error("task_554_author_tmp_root_invalid");
+  const entries = [`.tmp\0directory:${initial.dev}:${initial.ino}:${initial.mode}:${initial.nlink}`];
+  const visit = (absolutePath, relativePath, depth) => {
+    if (depth > MAX_WORKFLOW_TREE_DEPTH || entries.length >= MAX_WORKFLOW_TREE_ENTRIES) throw new Error("task_554_author_tmp_tree_limit");
+    const stats = lstatSync(absolutePath);
+    if (stats.isSymbolicLink()) throw new Error("task_554_author_tmp_entry_invalid");
+    if (stats.isDirectory()) {
+      const node = tmpNode(stats);
+      entries.push(`${relativePath}\0directory:${node.dev}:${node.ino}:${node.mode}:${node.nlink}`);
+      for (const name of readdirSync(absolutePath).sort((left, right) => left.localeCompare(right))) visit(path.join(absolutePath, name), `${relativePath}/${name}`, depth + 1);
+      if (!sameTmpNode(node, tmpNode(lstatSync(absolutePath)))) throw new Error("task_554_author_tmp_ancestor_changed");
+      return;
+    }
+    if (!stats.isFile()) throw new Error("task_554_author_tmp_entry_invalid");
+    entries.push(`${relativePath}\0${fingerprintTmpFile(absolutePath)}`);
+  };
+  for (const name of readdirSync(directory).sort((left, right) => left.localeCompare(right))) visit(path.join(directory, name), `.tmp/${name}`, 1);
+  if (!sameTmpNode(tmpNode(initial), tmpNode(lstatSync(directory)))) throw new Error("task_554_author_tmp_ancestor_changed");
+  return entries;
+}
+
 function captureAuditFingerprint(root, excludedPaths = []) {
   const excluded = new Set(excludedPaths);
   const paths = [...new Set([...gitNulPaths(root, ["ls-files", "-co", "--exclude-standard", "-z"]), ...workflowTreePaths(root)])].sort();
@@ -157,7 +213,7 @@ function captureAuditFingerprint(root, excludedPaths = []) {
       if (error && typeof error === "object" && error.code === "ENOENT") return `${relativePath}\0missing`;
       throw error;
     }
-  }).join("\0");
+  }).concat(captureTmpAuditEntries(root)).join("\0");
 }
 
 function auditFingerprintDigest(root) {
@@ -326,7 +382,7 @@ async function bootstrapSelfTest() {
     }
     runGit(tempRoot, ["add", ...TASK_554_WORKFLOW_PATHS]);
     runGit(tempRoot, ["commit", "-qm", "bootstrap"]);
-    writeFileSync(path.join(tempRoot, ".gitignore"), "_docs/_workflows/\n", "utf8");
+    writeFileSync(path.join(tempRoot, ".gitignore"), "_docs/_workflows/\n.tmp\n", "utf8");
     runGit(tempRoot, ["add", ".gitignore"]);
     runGit(tempRoot, ["commit", "-qm", "ignore workflows"]);
     const auditStagingBefore = readFileSync(path.join(tempRoot, TASK_554_WORKFLOW_PATHS[0]));
@@ -410,6 +466,11 @@ async function bootstrapSelfTest() {
     mkdirSync(emptyWorkflowDirectory);
     if (captureAuditFingerprint(tempRoot) === auditFingerprint) throw new Error("task_554_author_self_test_empty_directory_fingerprint");
     rmSync(emptyWorkflowDirectory, { recursive: true });
+    const tmpAuditFingerprint = captureAuditFingerprint(tempRoot);
+    mkdirSync(path.join(tempRoot, ".tmp"));
+    writeFileSync(path.join(tempRoot, ".tmp/ignored-audit-side-effect.txt"), "audit side effect\n", "utf8");
+    if (captureAuditFingerprint(tempRoot) === tmpAuditFingerprint) throw new Error("task_554_author_self_test_tmp_fingerprint");
+    rmSync(path.join(tempRoot, ".tmp"), { recursive: true, force: true });
     const externalReceiptRoot = mkdtempSync(path.join(os.tmpdir(), "task-554-receipt-external-"));
     const receiptAncestor = path.join(tempRoot, "_docs/_workflows/_smoke/task-554");
     mkdirSync(path.dirname(receiptAncestor), { recursive: true });
@@ -538,6 +599,7 @@ async function bootstrapSelfTest() {
       agentIdentityRejected: true,
       ignoredWorkflowMutationRejected: true,
       emptyWorkflowDirectoryMutationRejected: true,
+      tmpMutationRejected: true,
       authorReceiptBound: true,
       receiptInputsValidated: true,
       receiptAncestorSymlinkRejected: true,

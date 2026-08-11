@@ -99,8 +99,12 @@ test("TASK-554 implementation workflow executes fail-closed ownership, line, and
   expect(implement).toContain("assertNofollowTask554SmokeRoot");
   expect(implement).toContain("gates:coderso");
   expect(implement).toContain("runTask554ReleaseGate");
-  expect(implement).toContain("releaseGateTmpInventory");
-  expect(implement).toContain("task_554_release_gate_tmp_entry_invalid");
+  expect(implement).toContain("captureTask554TmpSnapshot");
+  expect(implement).toContain("task_554_tmp_entry_invalid");
+  expect(implement).toContain("task_554_release_gate_tmp_identity_changed");
+  expect(implement).toContain("task_554_release_gate_report_identity_changed");
+  expect(implement).toContain("core/services/content/postMutationService.ts");
+  expect(implement).toContain("tests/vitest/server/requestBody.test.ts");
   expect(implement).toContain("readStableSmokeFile");
   expect(implement).toContain("constants.O_NOFOLLOW");
   expect(implement).toContain("runReadOnlyGate");
@@ -121,6 +125,10 @@ test("TASK-554 implementation workflow executes fail-closed ownership, line, and
     agentIdentityRejected: true,
     releaseGateReportRestored: true,
     releaseGateSiblingResidueRejected: true,
+    tmpMutationRejected: true,
+    releaseGateHardlinkRejected: true,
+    releaseGateDirectoryIdentityRejected: true,
+    releaseGateReportIdentityRejected: true,
     forbiddenScopeRejected: true,
     directStdoutCapture: true,
     boundedPngEvidenceRejected: true,
@@ -157,6 +165,9 @@ test("TASK-554 fix workflow derives scopes from bounded owner and lens evidence"
   expect(fix).toContain("task_554_fix_audit_receipt_stale");
   expect(fix).toContain("ownersForChangedPaths");
   expect(fix).toContain("task_554_fix_affected_gates_mutated");
+  expect(fix).toContain("captureTmpFixEntries");
+  expect(fix).toContain("task_554_fix_tmp_entry_invalid");
+  expect(fix).toContain("core/services/content/postMutationService.ts");
   expect(fix).toContain("assertFixPreflight();");
   expect(fix).toContain("_docs/ADMIN_CACHE_MAP.md");
   expect(fix).toContain('required: ["pass", "summary", "findings"]');
@@ -165,6 +176,7 @@ test("TASK-554 fix workflow derives scopes from bounded owner and lens evidence"
     forbiddenScopeRejected: true,
     ignoredWorkflowMutationRejected: true,
     emptyWorkflowDirectoryMutationRejected: true,
+    tmpMutationRejected: true,
     ownerMappingRejected: true,
     lensMappingRejected: true,
     strictResultRejected: true,
@@ -197,8 +209,12 @@ test("TASK-554 contract keeps public invalidation with TASK-551 and specifies ex
   expect(task).toContain("core/server/httpServer.ts");
   expect(task).toContain("POST_METADATA_REQUEST_MAX_BYTES = 64 * 1024");
   expect(task).toContain("chunked/missing-length 64 KiB+1 metadata bodies");
+  expect(task).toContain("resolveMatchedRouteBodyOptions");
+  expect(task).toContain("tests/vitest/server/requestBody.test.ts");
+  expect(task).toContain("core/services/content/postMutationService.ts");
   expect(task).toContain("useEntryEditTracker");
-  expect(task).toContain("uncached status-only publish/unpublish");
+  expect(task).toContain("status-only publish/unpublish await publishStatusMutation");
+  expect(task).toContain("settling in both orders");
   expect(task).toContain("with exactly these UTF-8 bytes");
   expect(task).toContain("buildExactTask554ScreenshotManifest(input)");
   expect(task).toContain("_docs/ADMIN_CACHE_MAP.md");

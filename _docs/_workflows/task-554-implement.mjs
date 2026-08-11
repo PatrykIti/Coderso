@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { execFileSync, spawnSync } from "node:child_process";
-import { chmodSync, closeSync, constants, existsSync, fchmodSync, fstatSync, lstatSync, mkdirSync, mkdtempSync, openSync, readFileSync, readdirSync, readlinkSync, renameSync, rmdirSync, rmSync, symlinkSync, unlinkSync, writeFileSync } from "node:fs";
+import { chmodSync, closeSync, constants, existsSync, fchmodSync, fstatSync, linkSync, lstatSync, mkdirSync, mkdtempSync, openSync, readFileSync, readdirSync, readlinkSync, renameSync, rmdirSync, rmSync, symlinkSync, unlinkSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
@@ -22,20 +22,20 @@ export const TASK_554_SMOKE_SCENARIO_IDS = Object.freeze(["writer-metadata-save-
 const RESULT_SCHEMA = Object.freeze({ type: "object", additionalProperties: false, required: ["pass", "summary", "errors"], properties: { pass: { type: "boolean" }, summary: { type: "string" }, errors: { type: "array", items: { type: "string" } } } });
 const AUDIT_SCHEMA = Object.freeze({ type: "object", additionalProperties: false, required: ["pass", "summary", "findings"], properties: { pass: { type: "boolean" }, summary: { type: "string" }, findings: { type: "array", items: { type: "object", additionalProperties: false, required: ["severity", "area", "finding", "evidence", "recommendation"], properties: { severity: { type: "string", enum: ["HIGH", "MEDIUM", "LOW"] }, area: { type: "string" }, finding: { type: "string" }, evidence: { type: "string" }, recommendation: { type: "string" } } } } } });
 const owner = (id, paths) => Object.freeze({ id, paths: Object.freeze(paths) });
-const OWNERS = Object.freeze([owner("workflow-contract-tests", ["tests/unit/workflows/task554AuthorAudit.test.ts", "tests/unit/workflows/task554WorkflowContracts.test.ts"]), owner("contract-schema-route", ["core/services/posts/postMetadataContract.ts", "core/server/validation/postSchemas.ts", "core/server/routes/postsRoutes.ts", "core/server/routes/index.ts", "core/server/httpServer.ts", "tests/vitest/server/postMetadataContract.test.ts", "tests/vitest/validation/postSchemas.test.ts", "tests/integration/routes/postsRoutes.test.ts", "tests/integration/routes/postMetadataRbac.test.ts"]), owner("admin-client", ["core/admin/services/postsClient.ts", "tests/vitest/admin/postsClient.test.ts"]), owner("classic-metadata-ui", ["core/admin/ui/posts/editor/postMetadataMutationPayload.ts", "core/admin/ui/posts/editor/PostClassicEditorShell.tsx", "tests/vitest/ui/post-metadata-mutation-payload.test.ts", "tests/vitest/ui/post-classic-editor-shell-wave.test.tsx", "tests/vitest/ui/post-classic-metadata-hydration.test.tsx", "tests/vitest/ui/post-editor-state-metadata-boundary.test.ts"]), owner("smoke-adapter", ["scripts/runtime-smoke/contracts.ts", "scripts/runtime-smoke/cli.ts", "scripts/runtime-smoke/registry.ts", "scripts/runtime-smoke/adapters/task-554.ts", "scripts/runtime-smoke/adapters/task-554/browser-actions.ts", "scripts/runtime-smoke/adapters/task-554/output-manifest.ts", "scripts/runtime-smoke/adapters/task-554/worker-entry.ts", "scripts/runtime-smoke/adapters/task-554/worker-operations.ts", "scripts/runtime-smoke/adapters/task-554/production-handlers.ts", "tests/unit/runtime-smoke/cli-registry.test.ts", "tests/unit/runtime-smoke/task-554-adapter.test.ts", "tests/unit/runtime-smoke/task-554-worker.test.ts"])]);
+const OWNERS = Object.freeze([owner("workflow-contract-tests", ["tests/unit/workflows/task554AuthorAudit.test.ts", "tests/unit/workflows/task554WorkflowContracts.test.ts"]), owner("contract-schema-route", ["core/services/posts/postMetadataContract.ts", "core/server/validation/postSchemas.ts", "core/server/routes/postsRoutes.ts", "core/server/routes/index.ts", "core/server/httpServer.ts", "tests/vitest/server/postMetadataContract.test.ts", "tests/vitest/server/requestBody.test.ts", "tests/vitest/validation/postSchemas.test.ts", "tests/integration/routes/postsRoutes.test.ts", "tests/integration/routes/postMetadataRbac.test.ts"]), owner("admin-client", ["core/admin/services/postsClient.ts", "tests/vitest/admin/postsClient.test.ts"]), owner("classic-metadata-ui", ["core/admin/ui/posts/editor/postMetadataMutationPayload.ts", "core/admin/ui/posts/editor/PostClassicEditorShell.tsx", "tests/vitest/ui/post-metadata-mutation-payload.test.ts", "tests/vitest/ui/post-classic-editor-shell-wave.test.tsx", "tests/vitest/ui/post-classic-metadata-hydration.test.tsx", "tests/vitest/ui/post-editor-state-metadata-boundary.test.ts"]), owner("smoke-adapter", ["scripts/runtime-smoke/contracts.ts", "scripts/runtime-smoke/cli.ts", "scripts/runtime-smoke/registry.ts", "scripts/runtime-smoke/adapters/task-554.ts", "scripts/runtime-smoke/adapters/task-554/browser-actions.ts", "scripts/runtime-smoke/adapters/task-554/output-manifest.ts", "scripts/runtime-smoke/adapters/task-554/worker-entry.ts", "scripts/runtime-smoke/adapters/task-554/worker-operations.ts", "scripts/runtime-smoke/adapters/task-554/production-handlers.ts", "tests/unit/runtime-smoke/cli-registry.test.ts", "tests/unit/runtime-smoke/task-554-adapter.test.ts", "tests/unit/runtime-smoke/task-554-worker.test.ts"])]);
 const DOCUMENTATION_OWNER = owner("documentation", ["_docs/CMS_API.md", "_docs/RBAC_SPEC.md", "_docs/SECURITY_SPEC.md", "_docs/ADMIN_CACHE.md", "_docs/ADMIN_CACHE_MAP.md", "docs/develop/runtime-smoke-cookbook.md", "docs/develop/assistant.md"]);
-const FORBIDDEN_PATHS = Object.freeze(["_TMP-task-dispatch-plan-2026-08-10.md", "core/services/content/postsService.ts", "core/services/posts/postMutationService.ts", "_docs/_TASKS/TASK-414", "_docs/_TASKS/TASK-547", "_docs/_CHANGELOG/1266-", "core/services/kits/fullSitePackage/", "core/services/kits/fullSiteInstall/", "core/admin/ui/posts/editor/hooks/usePostEditorState.ts"]);
+const FORBIDDEN_PATHS = Object.freeze(["_TMP-task-dispatch-plan-2026-08-10.md", "core/services/content/postsService.ts", "core/services/content/postMutationService.ts", "_docs/_TASKS/TASK-414", "_docs/_TASKS/TASK-547", "_docs/_CHANGELOG/1266-", "core/services/kits/fullSitePackage/", "core/services/kits/fullSiteInstall/", "core/admin/ui/posts/editor/hooks/usePostEditorState.ts"]);
 const POST_AUDIT_LENSES = Object.freeze(["scope-fidelity", "rbac-fail-closed", "present-only-byte-identity", "cross-stream-smoke", "test-integrity"]);
 const command = (label, commandName, args) => Object.freeze({ label, command: commandName, args: Object.freeze(args) });
 const FULL_GATE_COMMANDS = Object.freeze([
-  command("task_554_vitest", "bunx", ["vitest", "run", "--config", "vitest.config.ts", "tests/vitest/validation/postSchemas.test.ts", "tests/vitest/server/postMetadataContract.test.ts", "tests/vitest/admin/postsClient.test.ts", "tests/vitest/ui/post-metadata-mutation-payload.test.ts", "tests/vitest/ui/post-classic-editor-shell-wave.test.tsx", "tests/vitest/ui/post-classic-metadata-hydration.test.tsx", "tests/vitest/ui/post-editor-state-metadata-boundary.test.ts"]),
+  command("task_554_vitest", "bunx", ["vitest", "run", "--config", "vitest.config.ts", "tests/vitest/validation/postSchemas.test.ts", "tests/vitest/server/postMetadataContract.test.ts", "tests/vitest/server/requestBody.test.ts", "tests/vitest/admin/postsClient.test.ts", "tests/vitest/ui/post-metadata-mutation-payload.test.ts", "tests/vitest/ui/post-classic-editor-shell-wave.test.tsx", "tests/vitest/ui/post-classic-metadata-hydration.test.tsx", "tests/vitest/ui/post-editor-state-metadata-boundary.test.ts"]),
   command("task_554_route_and_rbac", "bun", ["test", "tests/integration/routes/postsRoutes.test.ts", "tests/integration/routes/postMetadataRbac.test.ts", "tests/unit/auth/rbac.test.ts"]),
   command("task_554_runtime_harness", "bun", ["test", "tests/unit/runtime-smoke/cli-registry.test.ts", "tests/unit/runtime-smoke/task-554-adapter.test.ts", "tests/unit/runtime-smoke/task-554-worker.test.ts"]),
   command("task_554_workflow_contracts", "bun", ["test", "tests/unit/workflows/task554AuthorAudit.test.ts", "tests/unit/workflows/task554WorkflowContracts.test.ts"]),
   command("task_554_types", "bun", ["--cwd", "core", "lint:types"]), command("task_554_lint", "bun", ["--cwd", "core", "lint"]), command("task_554_admin_boundary", "bun", ["run", "check:admin-boundary"]), command("task_554_security_scan", "bun", ["run", "scan:security:strict"]), command("task_554_coderso_release_gates", "bun", ["run", "gates:coderso"]), command("task_554_precommit", "bun", ["run", "precommit:check"]),
   command("task_554_author_syntax", "node", ["--check", "_docs/_workflows/task-554-author-audit.mjs"]), command("task_554_implement_syntax", "node", ["--check", "_docs/_workflows/task-554-implement.mjs"]), command("task_554_fix_syntax", "node", ["--check", "_docs/_workflows/task-554-fix.mjs"]),
 ]);
-const OWNER_GATE_COMMANDS = Object.freeze({ "workflow-contract-tests": Object.freeze([command("task_554_workflow_contracts", "bun", ["test", "tests/unit/workflows/task554AuthorAudit.test.ts", "tests/unit/workflows/task554WorkflowContracts.test.ts"]), command("task_554_author_syntax", "node", ["--check", "_docs/_workflows/task-554-author-audit.mjs"]), command("task_554_implement_syntax", "node", ["--check", "_docs/_workflows/task-554-implement.mjs"]), command("task_554_fix_syntax", "node", ["--check", "_docs/_workflows/task-554-fix.mjs"])]), "contract-schema-route": Object.freeze([command("task_554_contract_vitest", "bunx", ["vitest", "run", "--config", "vitest.config.ts", "tests/vitest/validation/postSchemas.test.ts", "tests/vitest/server/postMetadataContract.test.ts"]), command("task_554_contract_bun", "bun", ["test", "tests/integration/routes/postsRoutes.test.ts", "tests/integration/routes/postMetadataRbac.test.ts", "tests/unit/auth/rbac.test.ts"]), command("task_554_types", "bun", ["--cwd", "core", "lint:types"]), command("task_554_lint", "bun", ["--cwd", "core", "lint"])]), "admin-client": Object.freeze([command("task_554_client_vitest", "bunx", ["vitest", "run", "--config", "vitest.config.ts", "tests/vitest/admin/postsClient.test.ts"]), command("task_554_types", "bun", ["--cwd", "core", "lint:types"]), command("task_554_lint", "bun", ["--cwd", "core", "lint"])]), "classic-metadata-ui": Object.freeze([command("task_554_ui_vitest", "bunx", ["vitest", "run", "--config", "vitest.config.ts", "tests/vitest/ui/post-metadata-mutation-payload.test.ts", "tests/vitest/ui/post-classic-editor-shell-wave.test.tsx", "tests/vitest/ui/post-classic-metadata-hydration.test.tsx", "tests/vitest/ui/post-editor-state-metadata-boundary.test.ts"]), command("task_554_types", "bun", ["--cwd", "core", "lint:types"]), command("task_554_lint", "bun", ["--cwd", "core", "lint"])]), "smoke-adapter": Object.freeze([command("task_554_runtime_harness", "bun", ["test", "tests/unit/runtime-smoke/cli-registry.test.ts", "tests/unit/runtime-smoke/task-554-adapter.test.ts", "tests/unit/runtime-smoke/task-554-worker.test.ts"]), command("task_554_types", "bun", ["--cwd", "core", "lint:types"]), command("task_554_lint", "bun", ["--cwd", "core", "lint"])]) });
+const OWNER_GATE_COMMANDS = Object.freeze({ "workflow-contract-tests": Object.freeze([command("task_554_workflow_contracts", "bun", ["test", "tests/unit/workflows/task554AuthorAudit.test.ts", "tests/unit/workflows/task554WorkflowContracts.test.ts"]), command("task_554_author_syntax", "node", ["--check", "_docs/_workflows/task-554-author-audit.mjs"]), command("task_554_implement_syntax", "node", ["--check", "_docs/_workflows/task-554-implement.mjs"]), command("task_554_fix_syntax", "node", ["--check", "_docs/_workflows/task-554-fix.mjs"])]), "contract-schema-route": Object.freeze([command("task_554_contract_vitest", "bunx", ["vitest", "run", "--config", "vitest.config.ts", "tests/vitest/validation/postSchemas.test.ts", "tests/vitest/server/postMetadataContract.test.ts", "tests/vitest/server/requestBody.test.ts"]), command("task_554_contract_bun", "bun", ["test", "tests/integration/routes/postsRoutes.test.ts", "tests/integration/routes/postMetadataRbac.test.ts", "tests/unit/auth/rbac.test.ts"]), command("task_554_types", "bun", ["--cwd", "core", "lint:types"]), command("task_554_lint", "bun", ["--cwd", "core", "lint"])]), "admin-client": Object.freeze([command("task_554_client_vitest", "bunx", ["vitest", "run", "--config", "vitest.config.ts", "tests/vitest/admin/postsClient.test.ts"]), command("task_554_types", "bun", ["--cwd", "core", "lint:types"]), command("task_554_lint", "bun", ["--cwd", "core", "lint"])]), "classic-metadata-ui": Object.freeze([command("task_554_ui_vitest", "bunx", ["vitest", "run", "--config", "vitest.config.ts", "tests/vitest/ui/post-metadata-mutation-payload.test.ts", "tests/vitest/ui/post-classic-editor-shell-wave.test.tsx", "tests/vitest/ui/post-classic-metadata-hydration.test.tsx", "tests/vitest/ui/post-editor-state-metadata-boundary.test.ts"]), command("task_554_types", "bun", ["--cwd", "core", "lint:types"]), command("task_554_lint", "bun", ["--cwd", "core", "lint"])]), "smoke-adapter": Object.freeze([command("task_554_runtime_harness", "bun", ["test", "tests/unit/runtime-smoke/cli-registry.test.ts", "tests/unit/runtime-smoke/task-554-adapter.test.ts", "tests/unit/runtime-smoke/task-554-worker.test.ts"]), command("task_554_types", "bun", ["--cwd", "core", "lint:types"]), command("task_554_lint", "bun", ["--cwd", "core", "lint"])]) });
 function commandOutput(root, command, args, environment) { return execFileSync(command, args, { cwd: root, encoding: "buffer", stdio: ["ignore", "pipe", "pipe"], ...(environment ? { env: { ...process.env, ...environment } } : {}) }); }
 function commandStatus(root, command, args) { try { commandOutput(root, command, args); return 0; } catch (error) { return typeof error?.status === "number" ? error.status : 255; } }
 function parseNul(bytes) { return bytes.toString("utf8").split("\0").filter(Boolean); }
@@ -151,15 +151,38 @@ function workflowTreePaths(root) {
   visit(base, 0);
   return entries;
 }
+function task554TmpNode(stats) { return Object.freeze({ dev: stats.dev, ino: stats.ino, mode: stats.mode, nlink: stats.nlink }); }
+function sameTask554TmpNode(left, right) { return left.dev === right.dev && left.ino === right.ino && left.mode === right.mode && left.nlink === right.nlink; }
+function readStableTask554TmpFile(absolute, label) {
+  const initial = lstatSync(absolute); if (!initial.isFile() || initial.isSymbolicLink() || initial.nlink !== 1 || initial.size > 16 * 1024 * 1024) throw new Error(`${label}_invalid`);
+  let descriptor;
+  try {
+    descriptor = openSync(absolute, constants.O_RDONLY | constants.O_NOFOLLOW); const before = fstatSync(descriptor);
+    if (!before.isFile() || before.nlink !== 1 || before.size > 16 * 1024 * 1024) throw new Error(`${label}_invalid`);
+    const bytes = Buffer.from(readFileSync(descriptor)); const after = fstatSync(descriptor); const final = lstatSync(absolute); const node = task554TmpNode(before);
+    if (!sameTask554TmpNode(task554TmpNode(initial), node) || !sameTask554TmpNode(node, task554TmpNode(after)) || !sameTask554TmpNode(node, task554TmpNode(final)) || bytes.byteLength !== after.size) throw new Error(`${label}_changed`);
+    return Object.freeze({ bytes, node, value: `file:${node.dev}:${node.ino}:${node.mode}:${node.nlink}:${createHash("sha256").update(bytes).digest("hex")}` });
+  } finally { if (descriptor !== undefined) closeSync(descriptor); }
+}
+function captureTask554TmpSnapshot(root) {
+  const directory = path.join(root, ".tmp"); let initial;
+  try { initial = lstatSync(directory); } catch (error) { if (error && typeof error === "object" && error.code === "ENOENT") return Object.freeze({ directory: false, entries: Object.freeze([[".tmp", "missing"]]), files: new Map() }); throw error; }
+  if (!initial.isDirectory() || initial.isSymbolicLink()) throw new Error("task_554_tmp_root_invalid");
+  const entries = [[".tmp", `directory:${initial.dev}:${initial.ino}:${initial.mode}:${initial.nlink}`]]; const files = new Map();
+  const visit = (absolute, relative, depth) => {
+    if (depth > MAX_WORKFLOW_TREE_DEPTH || entries.length >= MAX_WORKFLOW_TREE_ENTRIES) throw new Error("task_554_tmp_tree_limit");
+    const stats = lstatSync(absolute); if (stats.isSymbolicLink()) throw new Error("task_554_tmp_entry_invalid");
+    if (stats.isDirectory()) { const node = task554TmpNode(stats); entries.push([relative, `directory:${node.dev}:${node.ino}:${node.mode}:${node.nlink}`]); for (const name of readdirSync(absolute).sort((a, b) => a.localeCompare(b))) visit(path.join(absolute, name), `${relative}/${name}`, depth + 1); if (!sameTask554TmpNode(node, task554TmpNode(lstatSync(absolute)))) throw new Error("task_554_tmp_ancestor_changed"); return; }
+    if (!stats.isFile()) throw new Error("task_554_tmp_entry_invalid"); const file = readStableTask554TmpFile(absolute, "task_554_tmp_entry"); entries.push([relative, file.value]); files.set(relative, file);
+  };
+  for (const name of readdirSync(directory).sort((a, b) => a.localeCompare(b))) visit(path.join(directory, name), `.tmp/${name}`, 1);
+  if (!sameTask554TmpNode(task554TmpNode(initial), task554TmpNode(lstatSync(directory)))) throw new Error("task_554_tmp_ancestor_changed");
+  return Object.freeze({ directory: true, entries: Object.freeze(entries.map((entry) => Object.freeze(entry))), files });
+}
 export function captureRepositoryFingerprint(root = ROOT, excludedPaths = []) {
-  const excluded = new Set(excludedPaths.map(normalizedRepositoryPath));
-  const paths = [...new Set([...parseNul(commandOutput(root, "git", ["ls-files", "-co", "--exclude-standard", "-z"])), ...workflowTreePaths(root)])];
-  const entries = paths
-    .map(normalizedRepositoryPath)
-    .filter((relativePath) => !excluded.has(relativePath))
-    .sort((left, right) => left.localeCompare(right))
-    .map((relativePath) => Object.freeze([relativePath, fingerprintPath(root, relativePath)]));
-  return new Map(entries);
+  const excluded = new Set(excludedPaths.map(normalizedRepositoryPath)); const paths = [...new Set([...parseNul(commandOutput(root, "git", ["ls-files", "-co", "--exclude-standard", "-z"])), ...workflowTreePaths(root)])];
+  const entries = paths.map(normalizedRepositoryPath).filter((relativePath) => !excluded.has(relativePath)).sort((left, right) => left.localeCompare(right)).map((relativePath) => Object.freeze([relativePath, fingerprintPath(root, relativePath)]));
+  return new Map([...entries, ...captureTask554TmpSnapshot(root).entries]);
 }
 function changedRepositoryPaths(before, after) {
   const paths = new Set([...before.keys(), ...after.keys()]);
@@ -244,43 +267,18 @@ function runRequiredCommandDirect(root, entry) {
     throw new Error(`${entry.label}:failed:${result.error?.message ?? result.status ?? result.signal}`);
   }
 }
-function readStableReleaseGateFile(absolute, label) {
-  const initial = lstatSync(absolute); if (!initial.isFile() || initial.isSymbolicLink() || initial.size > 16 * 1024 * 1024) throw new Error(`${label}_invalid`);
+function releaseGateSnapshot(root) { const temporary = captureTask554TmpSnapshot(root); return Object.freeze({ temporary, report: temporary.files.get(RELEASE_GATE_REPORT_PATH) ?? null }); }
+function sameReleaseGateSnapshot(left, right) { return left.temporary.entries.length === right.temporary.entries.length && left.temporary.entries.every((entry, index) => entry[0] === right.temporary.entries[index]?.[0] && entry[1] === right.temporary.entries[index]?.[1]); }
+function restoreReleaseGateReport(reportPath, expected) {
+  const current = readStableTask554TmpFile(reportPath, "task_554_release_gate_report"); if (!sameTask554TmpNode(current.node, expected.node)) throw new Error("task_554_release_gate_report_identity_changed");
   let descriptor;
-  try {
-    descriptor = openSync(absolute, constants.O_RDONLY | constants.O_NOFOLLOW); const before = fstatSync(descriptor);
-    if (!before.isFile() || before.size > 16 * 1024 * 1024) throw new Error(`${label}_invalid`);
-    const bytes = Buffer.from(readFileSync(descriptor)); const after = fstatSync(descriptor); const final = lstatSync(absolute);
-    if (!sameStableFile(before, after) || !sameStableFile(after, final) || bytes.byteLength !== after.size) throw new Error(`${label}_changed`);
-    return Object.freeze({ bytes, mode: before.mode });
-  } finally { if (descriptor !== undefined) closeSync(descriptor); }
+  try { descriptor = openSync(reportPath, constants.O_WRONLY | constants.O_TRUNC | constants.O_NOFOLLOW); const before = fstatSync(descriptor); if (!sameTask554TmpNode(task554TmpNode(before), expected.node)) throw new Error("task_554_release_gate_report_identity_changed"); writeFileSync(descriptor, expected.bytes); fchmodSync(descriptor, expected.node.mode); const after = fstatSync(descriptor); const final = lstatSync(reportPath); if (!sameTask554TmpNode(expected.node, task554TmpNode(after)) || !sameTask554TmpNode(expected.node, task554TmpNode(final))) throw new Error("task_554_release_gate_report_identity_changed"); } finally { if (descriptor !== undefined) closeSync(descriptor); }
 }
-function releaseGateTmpInventory(directory) {
-  const entries = []; const walk = (absolute, relative, depth) => {
-    if (depth > MAX_WORKFLOW_TREE_DEPTH || entries.length >= MAX_WORKFLOW_TREE_ENTRIES) throw new Error("task_554_release_gate_tmp_limit");
-    const stats = lstatSync(absolute);
-    if (stats.isSymbolicLink()) throw new Error("task_554_release_gate_tmp_entry_invalid");
-    if (stats.isDirectory()) { entries.push(`directory:${stats.mode}:${relative}`); for (const name of readdirSync(absolute).sort((a, b) => a.localeCompare(b))) walk(path.join(absolute, name), `${relative}/${name}`, depth + 1); return; }
-    if (!stats.isFile()) throw new Error("task_554_release_gate_tmp_entry_invalid");
-    const file = readStableReleaseGateFile(absolute, "task_554_release_gate_tmp_entry"); entries.push(`file:${file.mode}:${relative}:${createHash("sha256").update(file.bytes).digest("hex")}`);
-  };
-  for (const name of readdirSync(directory).sort((a, b) => a.localeCompare(b))) walk(path.join(directory, name), name, 1);
-  return Object.freeze(entries);
-}
-function releaseGateSnapshot(root) {
-  const directory = path.join(root, ".tmp"); let stats;
-  try { stats = lstatSync(directory); } catch (error) { if (error && typeof error === "object" && error.code === "ENOENT") return Object.freeze({ directory: false, report: null, inventory: Object.freeze([]) }); throw error; }
-  if (!stats.isDirectory() || stats.isSymbolicLink()) throw new Error("task_554_release_gate_tmp_invalid");
-  const reportPath = path.join(root, RELEASE_GATE_REPORT_PATH); let report = null;
-  try { report = readStableReleaseGateFile(reportPath, "task_554_release_gate_report"); } catch (error) { if (!error || typeof error !== "object" || error.code !== "ENOENT") throw error; }
-  return Object.freeze({ directory: true, report, inventory: releaseGateTmpInventory(directory) });
-}
-function sameReleaseGateSnapshot(left, right) { return left.directory === right.directory && left.report?.mode === right.report?.mode && Boolean(left.report) === Boolean(right.report) && (!left.report || left.report.bytes.equals(right.report.bytes)) && left.inventory.length === right.inventory.length && left.inventory.every((entry, index) => entry === right.inventory[index]); }
 function restoreReleaseGateSnapshot(root, expected) {
   const directory = path.join(root, ".tmp"); const reportPath = path.join(root, RELEASE_GATE_REPORT_PATH); const actual = releaseGateSnapshot(root);
-  if (actual.report) unlinkSync(reportPath);
-  if (!expected.directory && existsSync(directory)) { const stats = lstatSync(directory); if (!stats.isDirectory() || stats.isSymbolicLink() || readdirSync(directory).length !== 0) throw new Error("task_554_release_gate_tmp_not_empty"); rmdirSync(directory); }
-  if (expected.report) { const descriptor = openSync(reportPath, constants.O_WRONLY | constants.O_CREAT | constants.O_TRUNC | constants.O_NOFOLLOW, expected.report.mode); try { writeFileSync(descriptor, expected.report.bytes); fchmodSync(descriptor, expected.report.mode); } finally { closeSync(descriptor); } }
+  if (expected.temporary.entries.some(([name, value]) => value.startsWith("directory:") && actual.temporary.entries.find(([actualName]) => actualName === name)?.[1] !== value)) throw new Error("task_554_release_gate_tmp_identity_changed");
+  if (expected.report) restoreReleaseGateReport(reportPath, expected.report); else if (actual.report) unlinkSync(reportPath);
+  if (!expected.temporary.directory && existsSync(directory)) { const stats = lstatSync(directory); if (!stats.isDirectory() || stats.isSymbolicLink() || readdirSync(directory).length !== 0) throw new Error("task_554_release_gate_tmp_not_empty"); rmdirSync(directory); }
   if (!sameReleaseGateSnapshot(expected, releaseGateSnapshot(root))) throw new Error("task_554_release_gate_report_restore_failed");
 }
 function runTask554ReleaseGate(root, work) {
@@ -811,7 +809,11 @@ function workflowSelfTest() {
     const releaseWithSibling = releaseGateSnapshot(tempRoot); const unexpectedSibling = path.join(tempRoot, ".tmp/unexpected-after-gate.txt");
     expectFailure(() => runTask554ReleaseGate(tempRoot, () => writeTinyFile(unexpectedSibling, "unexpected\n")), "task_554_release_gate_report_restore_failed");
     unlinkSync(unexpectedSibling); if (!sameReleaseGateSnapshot(releaseWithSibling, releaseGateSnapshot(tempRoot))) throw new Error("task_554_self_test_release_gate_sibling");
-    rmSync(path.join(tempRoot, ".tmp"), { recursive: true, force: true });
+    const tmpMutationBefore = captureRepositoryFingerprint(tempRoot); writeTinyFile(path.join(tempRoot, ".tmp/gate-side-effect.txt"), "side effect\n"); expectFailure(() => assertNoRepositoryMutation("task_554_self_test_tmp", tmpMutationBefore, captureRepositoryFingerprint(tempRoot), tempRoot), "task_554_self_test_tmp:scope_violation:"); rmSync(path.join(tempRoot, ".tmp"), { recursive: true, force: true });
+    const hardlinkSource = path.join(tempRoot, ".tmp/hardlink-source"); writeTinyFile(hardlinkSource, "hard link\n"); linkSync(hardlinkSource, path.join(tempRoot, ".tmp/hardlink-peer")); expectFailure(() => captureTask554TmpSnapshot(tempRoot), "task_554_tmp_entry_invalid"); rmSync(path.join(tempRoot, ".tmp"), { recursive: true, force: true });
+    const nestedDirectory = path.join(tempRoot, ".tmp/nested"); writeTinyFile(path.join(nestedDirectory, "entry"), "nested\n"); const nestedExpected = releaseGateSnapshot(tempRoot); const movedNested = path.join(tempRoot, "nested-original"); renameSync(nestedDirectory, movedNested); mkdirSync(nestedDirectory); expectFailure(() => restoreReleaseGateSnapshot(tempRoot, nestedExpected), "task_554_release_gate_tmp_identity_changed"); rmSync(path.join(tempRoot, ".tmp"), { recursive: true, force: true }); rmSync(movedNested, { recursive: true, force: true });
+    writeTinyFile(path.join(tempRoot, ".tmp/root-entry"), "root\n"); const rootExpected = releaseGateSnapshot(tempRoot); const movedRoot = path.join(tempRoot, ".tmp-original"); renameSync(path.join(tempRoot, ".tmp"), movedRoot); mkdirSync(path.join(tempRoot, ".tmp")); expectFailure(() => restoreReleaseGateSnapshot(tempRoot, rootExpected), "task_554_release_gate_tmp_identity_changed"); rmSync(path.join(tempRoot, ".tmp"), { recursive: true, force: true }); rmSync(movedRoot, { recursive: true, force: true });
+    writeTinyFile(releaseReport, "{\"original\":true}\n"); const reportIdentity = releaseGateSnapshot(tempRoot); expectFailure(() => runTask554ReleaseGate(tempRoot, () => { renameSync(releaseReport, `${releaseReport}.moved`); writeTinyFile(releaseReport, "{\"replaced\":true}\n"); }), "task_554_release_gate_report_identity_changed"); if (!reportIdentity.report) throw new Error("task_554_self_test_release_gate_report_identity"); rmSync(path.join(tempRoot, ".tmp"), { recursive: true, force: true });
     const baseline = commandOutput(tempRoot, "git", ["rev-parse", "HEAD"]).toString("utf8").trim();
     writeTinyFile(path.join(tempRoot, "core/tracked.ts"), "export const tracked = 1;\nexport const finalLine = true;");
     writeTinyFile(path.join(tempRoot, "tests/untracked.ts"), "one\ntwo\nthree");
@@ -958,8 +960,7 @@ function workflowSelfTest() {
       manifestInputBound: true,
       strictMutationAndAuditResultsRejected: true,
       agentIdentityRejected: true,
-      releaseGateReportRestored: true,
-      releaseGateSiblingResidueRejected: true,
+      releaseGateReportRestored: true, releaseGateSiblingResidueRejected: true, tmpMutationRejected: true, releaseGateHardlinkRejected: true, releaseGateDirectoryIdentityRejected: true, releaseGateReportIdentityRejected: true,
       forbiddenScopeRejected: true,
       directStdoutCapture: true,
       boundedPngEvidenceRejected: true,
