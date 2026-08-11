@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { execFileSync, spawnSync } from "node:child_process";
-import { lstatSync, mkdtempSync, readFileSync, rmSync, writeFileSync, mkdirSync } from "node:fs";
+import { chmodSync, lstatSync, mkdtempSync, readFileSync, readlinkSync, rmSync, symlinkSync, unlinkSync, writeFileSync, mkdirSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
@@ -28,6 +28,7 @@ const WORKFLOW_PATHS = Object.freeze([
   "_docs/_workflows/task-554-implement.mjs",
   "_docs/_workflows/task-554-fix.mjs",
 ]);
+const TERMINAL_OWNER_IDS = Object.freeze(["metadata-closure", "terminal-status"]);
 
 const OWNER_PATHS = Object.freeze({
   "workflow-contract-tests": Object.freeze([
@@ -78,12 +79,6 @@ const OWNER_PATHS = Object.freeze({
     "docs/develop/runtime-smoke-cookbook.md",
     "docs/develop/assistant.md",
   ]),
-  "metadata-closure": Object.freeze([
-    "_docs/_CHANGELOG/1267-2026-08-11-task-554-post-metadata-publish-rbac-hardening.md",
-    "_docs/_CHANGELOG/README.md",
-    "_docs/_TASKS/README.md",
-  ]),
-  "terminal-status": Object.freeze(["_docs/_TASKS/TASK-554_Post_Metadata_Publish_RBAC_Hardening.md"]),
 });
 
 const LENSES = Object.freeze([
@@ -140,7 +135,7 @@ const AUDIT_SCHEMA = Object.freeze({
           finding: { type: "string" },
           evidence: { type: "string" },
           recommendation: { type: "string" },
-          owner: { type: "string", enum: Object.keys(OWNER_PATHS) },
+          owner: { type: "string", enum: [...Object.keys(OWNER_PATHS), ...TERMINAL_OWNER_IDS] },
           lens: { type: "string", enum: LENSES },
         },
       },
@@ -183,9 +178,9 @@ function fingerprintEntry(root, relativePath) {
   const absolute = path.resolve(root, normalizePath(relativePath));
   try {
     const stats = lstatSync(absolute);
-    if (stats.isSymbolicLink()) return "symlink";
+    if (stats.isSymbolicLink()) return `symlink:${stats.mode}:${readlinkSync(absolute)}`;
     if (!stats.isFile()) return `non_file:${stats.mode}`;
-    return `file:${createHash("sha256").update(readFileSync(absolute)).digest("hex")}`;
+    return `file:${stats.mode}:${createHash("sha256").update(readFileSync(absolute)).digest("hex")}`;
   } catch (error) {
     if (error && typeof error === "object" && error.code === "ENOENT") return "missing";
     throw error;
@@ -244,29 +239,54 @@ function beforeDispatch(phaseName) {
   }
 }
 
+function currentDirtyPaths(root = ROOT) {
+  return [...new Set([
+    ...parseNul(output(root, "git", ["diff", "--name-only", "-z"])),
+    ...parseNul(output(root, "git", ["ls-files", "--others", "--exclude-standard", "-z"])),
+    ...parseNul(output(root, "git", ["ls-files", "--others", "--ignored", "--exclude-standard", "-z", "--", "_docs/_workflows"])),
+  ])].map(normalizePath).sort((left, right) => left.localeCompare(right));
+}
+
+function sameFingerprint(left, right) {
+  const names = new Set([...left.keys(), ...right.keys()]);
+  return [...names].every((name) => left.get(name) === right.get(name));
+}
+
+function assertFixPreflight(root = ROOT) {
+  assertNoStaging(root);
+  const forbidden = currentDirtyPaths(root).filter((relativePath) => pathIsForbidden(relativePath) && relativePath !== "_TMP-task-dispatch-plan-2026-08-10.md");
+  if (forbidden.length > 0) throw new Error(`task_554_fix_start_forbidden_dirty:${JSON.stringify(forbidden)}`);
+  return captureFixFingerprint(root);
+}
+
+const RESULT_KEYS = Object.freeze(["identity", "pass", "summary", "errors"]);
+const AUDIT_KEYS = Object.freeze(["identity", "pass", "summary", "findings"]);
+const FINDING_KEYS = Object.freeze(["severity", "area", "finding", "evidence", "recommendation", "owner", "lens"]);
+
+function hasExactKeys(value, keys) {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value) && Object.keys(value).length === keys.length && keys.every((key) => Object.hasOwn(value, key));
+}
+
+function boundedString(value) {
+  return typeof value === "string" && value.trim().length > 0 && value.length <= MAX_FIELD_LENGTH;
+}
+
 function requireResult(identity, result) {
-  if (result?.identity !== identity || result.pass !== true || !Array.isArray(result.errors) || result.errors.length !== 0) {
-    throw new Error(`task_554_fix_result_invalid:${identity}`);
-  }
+  if (!hasExactKeys(result, RESULT_KEYS) || result.identity !== identity || result.pass !== true || !boundedString(result.summary) || !Array.isArray(result.errors) || result.errors.length > MAX_FINDINGS || result.errors.some((error) => !boundedString(error)) || result.errors.length !== 0) throw new Error(`task_554_fix_result_invalid:${identity}`);
   return result;
 }
 
 export function normalizeAuditFindings(identity, result) {
-  if (result?.identity !== identity || !Array.isArray(result.findings) || result.findings.length > MAX_FINDINGS) {
-    throw new Error("task_554_fix_audit_invalid");
-  }
+  if (!hasExactKeys(result, AUDIT_KEYS) || result.identity !== identity || typeof result.pass !== "boolean" || !boundedString(result.summary) || !Array.isArray(result.findings) || result.findings.length > MAX_FINDINGS) throw new Error("task_554_fix_audit_invalid");
   const blockers = result.findings.filter((finding) => finding?.severity === "HIGH" || finding?.severity === "MEDIUM");
   if (result.pass !== (blockers.length === 0)) throw new Error("task_554_fix_audit_inconsistent");
   return Object.freeze(result.findings.map((finding, index) => {
-    const fields = ["severity", "area", "finding", "evidence", "recommendation", "owner", "lens"];
-    for (const field of fields) {
-      if (typeof finding?.[field] !== "string" || finding[field].length === 0 || finding[field].length > MAX_FIELD_LENGTH) {
-        throw new Error(`task_554_fix_finding_invalid:${index}:${field}`);
-      }
-    }
-    if (!Object.hasOwn(OWNER_PATHS, finding.owner)) throw new Error(`task_554_fix_finding_owner:${index}`);
+    if (!hasExactKeys(finding, FINDING_KEYS)) throw new Error(`task_554_fix_finding_invalid:${index}:keys`);
+    for (const field of FINDING_KEYS) if (!boundedString(finding[field])) throw new Error(`task_554_fix_finding_invalid:${index}:${field}`);
+    if (!['HIGH', 'MEDIUM', 'LOW'].includes(finding.severity)) throw new Error(`task_554_fix_finding_invalid:${index}:severity`);
+    if (!Object.hasOwn(OWNER_PATHS, finding.owner) && !TERMINAL_OWNER_IDS.includes(finding.owner)) throw new Error(`task_554_fix_finding_owner:${index}`);
     if (!LENSES.includes(finding.lens)) throw new Error(`task_554_fix_finding_lens:${index}`);
-    return Object.freeze(Object.fromEntries(fields.map((field) => [field, finding[field]])));
+    return Object.freeze(Object.fromEntries(FINDING_KEYS.map((field) => [field, finding[field]])));
   }));
 }
 
@@ -299,8 +319,6 @@ const OWNER_GATES = Object.freeze({
     command("types", "bun", ["--cwd", "core", "lint:types"]), command("lint", "bun", ["--cwd", "core", "lint"]),
   ]),
   documentation: Object.freeze([]),
-  "metadata-closure": Object.freeze([]),
-  "terminal-status": Object.freeze([]),
 });
 
 function runCommand(root, entry) {
@@ -347,7 +365,8 @@ TASK-551-09-L02. Every touched production/test module must remain <=1000 lines.`
 async function askAudit(round) {
   const identity = `task-554:fix:audit:${round}`;
   beforeDispatch("Audit");
-  return readOnlyFixPhase(identity, async () => {
+  const before = assertFixPreflight();
+  const findings = await readOnlyFixPhase(identity, async () => {
     const result = await agent(
       `${COMMON}\nFresh read-only audit round ${round}. Return only reproducible current file:line findings.
 Every finding must name one exact owner from ${Object.keys(OWNER_PATHS).join(", ")} and one lens from
@@ -356,26 +375,35 @@ ${LENSES.join(", ")}, plus exact affected gates. Do not edit. Return identity=${
     );
     return normalizeAuditFindings(identity, result);
   });
+  if (!sameFingerprint(before, captureFixFingerprint())) throw new Error("task_554_fix_audit_receipt_stale");
+  return Object.freeze({ findings, receipt: before });
 }
 
-async function applyFix(round, findings, owners) {
+async function applyFix(round, findings, owners, auditReceipt) {
   const identity = `task-554:fix:apply:${round}`;
   const allowed = [...new Set(owners.flatMap((owner) => OWNER_PATHS[owner]))];
-  const before = captureFixFingerprint();
+  const before = assertFixPreflight();
+  if (!sameFingerprint(auditReceipt, before)) throw new Error("task_554_fix_audit_receipt_stale");
   beforeDispatch("Fix");
-  const result = requireResult(identity, await agent(
-    `${COMMON}\nFix only this bounded, verified evidence in dependency order. Allowed paths: ${allowed.join(", ")}.
+  let result;
+  let changed;
+  try {
+    result = requireResult(identity, await agent(
+      `${COMMON}\nFix only this bounded, verified evidence in dependency order. Allowed paths: ${allowed.join(", ")}.
 Re-read every file immediately before editing. If scope would broaden, report a blocker instead.
 BEGIN_TASK_554_FINDINGS_JSON\n${JSON.stringify({ schema: "task-554-findings/v2", findings }, null, 2)}\nEND_TASK_554_FINDINGS_JSON`,
-    { label: identity, phase: "Fix", schema: RESULT_SCHEMA },
-  ));
-  const changed = assertFixScope(identity, before, captureFixFingerprint(), allowed);
+      { label: identity, phase: "Fix", schema: RESULT_SCHEMA },
+    ));
+  } finally {
+    changed = assertFixScope(identity, before, captureFixFingerprint(), allowed);
+  }
   return Object.freeze({ result, changed });
 }
 
 async function reconcile(round, owners, lenses) {
   const identity = `task-554:fix:reconcile:${round}`;
   beforeDispatch("Reconcile");
+  assertFixPreflight();
   return readOnlyFixPhase(identity, async () => {
     const result = await agent(
       `${COMMON}\nFresh read-only affected-scope reconcile after fix round ${round}. Inspect only changed owners
@@ -407,25 +435,34 @@ function ownerReviewRebootstrap(findings) {
   return finding ? Object.freeze({ pass: false, ownerActionRequired: "owner_review_rebootstrap", finding }) : null;
 }
 
+function terminalPhaseReceiptRequired(findings) {
+  const finding = findings.find((item) => TERMINAL_OWNER_IDS.includes(item.owner));
+  return finding ? Object.freeze({ pass: false, ownerActionRequired: "terminal_phase_receipt_required", finding }) : null;
+}
+
 async function runWorkflow() {
   if (assertArguments()) return fixSelfTest();
   for (let round = 1; round <= MAX_FIX_ROUNDS; round += 1) {
     phase("Audit");
-    const findings = await askAudit(round);
-    const rebootstrap = ownerReviewRebootstrap(findings);
+    const audit = await askAudit(round);
+    const rebootstrap = ownerReviewRebootstrap(audit.findings);
     if (rebootstrap) return rebootstrap;
-    if (findings.length === 0) return Object.freeze({ pass: true, summary: `TASK-554 clean after ${round - 1} fix rounds.` });
-    const proposedOwners = Object.freeze([...new Set(findings.map((finding) => finding.owner))]);
+    const terminalReceipt = terminalPhaseReceiptRequired(audit.findings);
+    if (terminalReceipt) return terminalReceipt;
+    if (audit.findings.length === 0) return Object.freeze({ pass: true, summary: `TASK-554 clean after ${round - 1} fix rounds.`, audit });
+    const proposedOwners = Object.freeze([...new Set(audit.findings.map((finding) => finding.owner))]);
     phase("Fix");
-    const applied = await applyFix(round, findings, proposedOwners);
+    const applied = await applyFix(round, audit.findings, proposedOwners, audit.receipt);
     const owners = ownersForChangedPaths(applied.changed);
-    const lenses = lensesForChangedOwners(findings, owners);
+    const lenses = lensesForChangedOwners(audit.findings, owners);
     phase("Affected gates");
     runAffectedGates(owners);
     phase("Reconcile");
     const reconciliation = await reconcile(round, owners, lenses);
     const reconcileRebootstrap = ownerReviewRebootstrap(reconciliation.findings);
     if (reconcileRebootstrap) return reconcileRebootstrap;
+    const reconcileTerminalReceipt = terminalPhaseReceiptRequired(reconciliation.findings);
+    if (reconcileTerminalReceipt) return reconcileTerminalReceipt;
     if (reconciliation.findings.length === 0) {
       return Object.freeze({ pass: true, summary: `TASK-554 fixed in ${round} round(s).`, applied, owners, lenses, reconciliation });
     }
@@ -467,11 +504,12 @@ function fixSelfTest() {
       () => assertFixScope("task_554_fix_self_test_forbidden", forbiddenBefore, captureFixFingerprint(root), ["core/services/content/postsService.ts"], root),
       "task_554_fix_self_test_forbidden:scope_violation:",
     );
+    rmSync(path.join(root, "core/services/content/postsService.ts"));
     const ignoredBefore = captureFixFingerprint(root);
     writeFile(path.join(root, "_docs/_workflows/ignored-fix-side-effect.mjs"), "export const ignored = true;\n");
     expectFailure(() => assertFixScope("task_554_fix_self_test_ignored", ignoredBefore, captureFixFingerprint(root), [], root), "task_554_fix_self_test_ignored:scope_violation:");
     rmSync(path.join(root, "_docs/_workflows/ignored-fix-side-effect.mjs"));
-    const valid = { identity: "task-554:fix:audit:1", pass: false, findings: [{ severity: "MEDIUM", area: "test", finding: "test", evidence: "test:1", recommendation: "test", owner: "admin-client", lens: "test-integrity" }] };
+    const valid = { identity: "task-554:fix:audit:1", pass: false, summary: "finding", findings: [{ severity: "MEDIUM", area: "test", finding: "test", evidence: "test:1", recommendation: "test", owner: "admin-client", lens: "test-integrity" }] };
     normalizeAuditFindings(valid.identity, valid);
     expectFailure(
       () => normalizeAuditFindings(valid.identity, { ...valid, findings: [{ ...valid.findings[0], owner: "unknown" }] }),
@@ -481,11 +519,29 @@ function fixSelfTest() {
       () => normalizeAuditFindings(valid.identity, { ...valid, findings: [{ ...valid.findings[0], lens: "unknown" }] }),
       "task_554_fix_finding_lens:0",
     );
+    expectFailure(() => normalizeAuditFindings(valid.identity, { ...valid, extra: true }), "task_554_fix_audit_invalid");
+    expectFailure(() => normalizeAuditFindings(valid.identity, { ...valid, findings: [{ ...valid.findings[0], extra: true }] }), "task_554_fix_finding_invalid:0:keys");
+    expectFailure(() => requireResult("task-554:fix:result", { identity: "task-554:fix:result", pass: true, summary: "clean", errors: [], extra: true }), "task_554_fix_result_invalid:");
     if (JSON.stringify(ownersForChangedPaths(["core/admin/services/postsClient.ts"])) !== JSON.stringify(["admin-client"]) || JSON.stringify(lensesForChangedOwners(valid.findings, ["admin-client"])) !== JSON.stringify(["test-integrity"])) throw new Error("task_554_fix_self_test_affected_receipt");
     expectFailure(() => ownersForChangedPaths([]), "task_554_fix_empty_repair");
     const rebootstrap = ownerReviewRebootstrap([{ ...valid.findings[0], lens: "test-integrity", evidence: `${WORKFLOW_PATHS[0]}:1` }]);
     if (rebootstrap?.ownerActionRequired !== "owner_review_rebootstrap") throw new Error("task_554_fix_self_test_rebootstrap");
-    return Object.freeze({ pass: true, forbiddenScopeRejected: true, ignoredWorkflowMutationRejected: true, ownerMappingRejected: true, lensMappingRejected: true, actualAffectedReceipt: true, workflowRebootstrapEscalated: true });
+    const terminal = terminalPhaseReceiptRequired([{ ...valid.findings[0], owner: "terminal-status" }]);
+    if (terminal?.ownerActionRequired !== "terminal_phase_receipt_required") throw new Error("task_554_fix_self_test_terminal");
+    const modeBefore = captureFixFingerprint(root);
+    chmodSync(path.join(root, "tests/owned.ts"), 0o755);
+    expectFailure(() => assertFixScope("task_554_fix_self_test_mode", modeBefore, captureFixFingerprint(root), [], root), "task_554_fix_self_test_mode:scope_violation:");
+    chmodSync(path.join(root, "tests/owned.ts"), 0o644);
+    writeFile(path.join(root, "tests/target-a.ts"), "export const target = 'a';\n");
+    writeFile(path.join(root, "tests/target-b.ts"), "export const target = 'b';\n");
+    const linkPath = path.join(root, "tests/target.ts");
+    symlinkSync("target-a.ts", linkPath);
+    const symlinkBefore = captureFixFingerprint(root);
+    unlinkSync(linkPath);
+    symlinkSync("target-b.ts", linkPath);
+    expectFailure(() => assertFixScope("task_554_fix_self_test_symlink", symlinkBefore, captureFixFingerprint(root), [], root), "task_554_fix_self_test_symlink:scope_violation:");
+    unlinkSync(linkPath);
+    return Object.freeze({ pass: true, forbiddenScopeRejected: true, ignoredWorkflowMutationRejected: true, ownerMappingRejected: true, lensMappingRejected: true, strictResultRejected: true, terminalOwnerEscalated: true, actualAffectedReceipt: true, workflowRebootstrapEscalated: true, modeAndSymlinkFingerprintRejected: true });
   } finally {
     rmSync(root, { recursive: true, force: true });
   }

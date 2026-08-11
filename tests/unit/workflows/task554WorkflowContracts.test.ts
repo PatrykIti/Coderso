@@ -78,6 +78,9 @@ test("TASK-554 implementation workflow executes fail-closed ownership, line, and
   expect(implement).toContain("core/server/httpServer.ts");
   expect(implement).toContain("assertScopedRepositoryMutation");
   expect(implement).toContain("verifyTask554Bootstrap");
+  expect(implement).toContain("verifyTask554AuthorAuditReceipt");
+  expect(implement).toContain("assertImplementationPreflight");
+  expect(implement).toContain("dispatchScopedResult");
   expect(implement).toContain('"END { print NR }"');
   expect(implement).toContain("buildExactTask554ScreenshotManifest");
   expect(implement).toContain("task554SmokeInvocation");
@@ -91,6 +94,8 @@ test("TASK-554 implementation workflow executes fail-closed ownership, line, and
   expect(implement).toContain("assertTask554TerminalStatusDelta");
   expect(implement).toContain("CHANGELOG_1267_ENTRY_BYTES");
   expect(implement).toContain("preserveSmokePrimaryFailure");
+  expect(implement).toContain("assertSmokeEvidenceSnapshot");
+  expect(implement).toContain("task_554_smoke_png_invalid");
   expect(implement).toContain("runReadOnlyGate");
   expect(implement).toContain("shared lifecycle, dispatcher, worker, cleanup, browser");
   expect(implement).toContain("do not edit postsService.ts or add a cache wrapper");
@@ -103,16 +108,21 @@ test("TASK-554 implementation workflow executes fail-closed ownership, line, and
     unterminatedLineCount: true,
     trackedAndUntrackedCandidates: true,
     manifestInputBound: true,
+    strictMutationAndAuditResultsRejected: true,
     forbiddenScopeRejected: true,
     directStdoutCapture: true,
+    boundedPngEvidenceRejected: true,
     extraSmokeOutputRejected: true,
     reportReserializationRejected: true,
     gateMutationRejected: true,
     ignoredWorkflowMutationRejected: true,
+    modeAndSymlinkFingerprintRejected: true,
     smokeFinallyRestorationRejected: true,
+    exactEvidenceRevalidationRejected: true,
     duplicateScreenshotHashesAllowed: true,
     snapshotMismatchRejected: true,
     narrowClosureRejected: true,
+    duplicateBoardStatisticRejected: true,
     canonicalClosureRejected: true,
   });
 });
@@ -127,6 +137,8 @@ test("TASK-554 fix workflow derives scopes from bounded owner and lens evidence"
   expect(fix).toContain("task_554_fix_finding_lens");
   expect(fix).toContain("--task-554-bootstrap-verify");
   expect(fix).toContain("owner_review_rebootstrap");
+  expect(fix).toContain("terminal_phase_receipt_required");
+  expect(fix).toContain("task_554_fix_audit_receipt_stale");
   expect(fix).toContain("ownersForChangedPaths");
   expect(fix).toContain("task_554_fix_affected_gates_mutated");
   expect(runWorkflowSelfTest(fixPath, "--task-554-fix-self-test")).toEqual({
@@ -135,8 +147,11 @@ test("TASK-554 fix workflow derives scopes from bounded owner and lens evidence"
     ignoredWorkflowMutationRejected: true,
     ownerMappingRejected: true,
     lensMappingRejected: true,
+    strictResultRejected: true,
+    terminalOwnerEscalated: true,
     actualAffectedReceipt: true,
     workflowRebootstrapEscalated: true,
+    modeAndSymlinkFingerprintRejected: true,
   });
 });
 

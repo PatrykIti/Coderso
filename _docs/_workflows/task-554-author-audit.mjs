@@ -1,12 +1,16 @@
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import {
+  chmodSync,
   mkdtempSync,
   lstatSync,
   mkdirSync,
   readFileSync,
+  readlinkSync,
+  renameSync,
   rmSync,
   symlinkSync,
+  unlinkSync,
   writeFileSync,
 } from "node:fs";
 import os from "node:os";
@@ -31,6 +35,7 @@ export const TASK_554_WORKFLOW_PATHS = Object.freeze([
 ]);
 const SELF_TEST_ARG = "--task-554-bootstrap-self-test";
 const VERIFY_ARG = "--task-554-bootstrap-verify";
+export const TASK_554_AUTHOR_RECEIPT_PATH = "_docs/_workflows/_smoke/task-554/author-audit-receipt.json";
 
 function runGit(root, args) {
   return execFileSync("git", args, { cwd: root, encoding: "buffer", stdio: ["ignore", "pipe", "pipe"] });
@@ -62,22 +67,91 @@ function assertGitPathIsClean(root, relativePath) {
   }
 }
 
-function captureAuditFingerprint(root) {
+function captureAuditFingerprint(root, excludedPaths = []) {
+  const excluded = new Set(excludedPaths);
   const parsePaths = (args) => runGit(root, args).toString("utf8").split("\0").filter(Boolean);
   const paths = [...new Set([...parsePaths(["ls-files", "-co", "--exclude-standard", "-z"]), ...parsePaths(["ls-files", "--others", "--ignored", "--exclude-standard", "-z", "--", "_docs/_workflows"])])].sort();
-  return paths.map((relativePath) => {
+  return paths.filter((relativePath) => !excluded.has(relativePath)).map((relativePath) => {
     const absolutePath = path.join(root, relativePath);
     try {
       const stats = lstatSync(absolutePath);
-      const value = stats.isFile() && !stats.isSymbolicLink()
-        ? createHash("sha256").update(readFileSync(absolutePath)).digest("hex")
-        : `non_regular:${stats.mode}`;
+      const value = stats.isSymbolicLink()
+        ? `symlink:${stats.mode}:${readlinkSync(absolutePath)}`
+        : stats.isFile()
+          ? `file:${stats.mode}:${createHash("sha256").update(readFileSync(absolutePath)).digest("hex")}`
+          : `non_regular:${stats.mode}`;
       return `${relativePath}\0${value}`;
     } catch (error) {
       if (error && typeof error === "object" && error.code === "ENOENT") return `${relativePath}\0missing`;
       throw error;
     }
   }).join("\0");
+}
+
+function auditFingerprintDigest(root) {
+  return createHash("sha256")
+    .update(captureAuditFingerprint(root, [TASK_554_AUTHOR_RECEIPT_PATH]))
+    .digest("hex");
+}
+
+function authorReceiptPath(root) {
+  return path.resolve(root, TASK_554_AUTHOR_RECEIPT_PATH);
+}
+
+function assertReceiptTarget(root) {
+  const target = authorReceiptPath(root);
+  const directory = path.dirname(target);
+  mkdirSync(directory, { recursive: true, mode: 0o700 });
+  for (const candidate of [directory, target]) {
+    try {
+      if (lstatSync(candidate).isSymbolicLink()) throw new Error("task_554_author_receipt_symlink");
+    } catch (error) {
+      if (error && typeof error === "object" && error.code === "ENOENT") continue;
+      throw error;
+    }
+  }
+  return target;
+}
+
+function exactReceipt(value) {
+  const keys = ["schemaVersion", "task", "baseline", "head", "fingerprint", "lenses", "reconcile"];
+  if (!value || typeof value !== "object" || Array.isArray(value) || Object.keys(value).length !== keys.length || keys.some((key) => !Object.hasOwn(value, key))) return false;
+  return value.schemaVersion === 1 && value.task === "TASK-554" && value.baseline === TASK_554_BASELINE_SHA && typeof value.head === "string" && /^[a-f0-9]{40}$/u.test(value.head) && typeof value.fingerprint === "string" && /^[a-f0-9]{64}$/u.test(value.fingerprint) && Array.isArray(value.lenses) && value.lenses.length === 3 && value.lenses.every((identity) => typeof identity === "string") && value.reconcile === "task-554:audit:reconcile";
+}
+
+function writeAuthorAuditReceipt(root, lenses) {
+  const target = assertReceiptTarget(root);
+  const receipt = Object.freeze({
+    schemaVersion: 1,
+    task: "TASK-554",
+    baseline: TASK_554_BASELINE_SHA,
+    head: runGit(root, ["rev-parse", "HEAD"]).toString("utf8").trim(),
+    fingerprint: auditFingerprintDigest(root),
+    lenses: lenses.map((lens) => lens.identity),
+    reconcile: "task-554:audit:reconcile",
+  });
+  const staged = `${target}.tmp`;
+  writeFileSync(staged, `${JSON.stringify(receipt)}\n`, { encoding: "utf8", mode: 0o600, flag: "w" });
+  renameSync(staged, target);
+  return receipt;
+}
+
+export function assertTask554AuthorAuditReceipt(root = ROOT) {
+  const target = authorReceiptPath(root);
+  let receipt;
+  try {
+    const stats = lstatSync(target);
+    if (!stats.isFile() || stats.isSymbolicLink()) throw new Error("task_554_author_receipt_not_regular");
+    receipt = JSON.parse(readFileSync(target, "utf8"));
+  } catch (error) {
+    if (error && typeof error === "object" && error.code === "ENOENT") throw new Error("task_554_author_receipt_missing");
+    throw error;
+  }
+  if (!exactReceipt(receipt)) throw new Error("task_554_author_receipt_invalid");
+  if (receipt.head !== runGit(root, ["rev-parse", "HEAD"]).toString("utf8").trim() || receipt.fingerprint !== auditFingerprintDigest(root)) {
+    throw new Error("task_554_author_receipt_stale");
+  }
+  return Object.freeze(receipt);
 }
 
 async function assertReadOnlyAudit(label, work) {
@@ -199,6 +273,34 @@ function bootstrapSelfTest() {
     writeFileSync(path.join(tempRoot, "_docs/_workflows/ignored-audit-side-effect.mjs"), "export const sideEffect = true;\n", "utf8");
     if (captureAuditFingerprint(tempRoot) === auditFingerprint) throw new Error("task_554_author_self_test_ignored_fingerprint");
     rmSync(path.join(tempRoot, "_docs/_workflows/ignored-audit-side-effect.mjs"));
+    const receipt = writeAuthorAuditReceipt(tempRoot, [
+      { identity: "task-554:audit:security" },
+      { identity: "task-554:audit:ui" },
+      { identity: "task-554:audit:workflow" },
+    ]);
+    if (assertTask554AuthorAuditReceipt(tempRoot).fingerprint !== receipt.fingerprint) throw new Error("task_554_author_self_test_receipt");
+    mkdirSync(path.join(tempRoot, "core"), { recursive: true });
+    writeFileSync(path.join(tempRoot, "core/receipt-drift.ts"), "export const drift = true;\n", "utf8");
+    let staleReceiptRejected = false;
+    try { assertTask554AuthorAuditReceipt(tempRoot); } catch (error) {
+      if (!String(error?.message).startsWith("task_554_author_receipt_stale")) throw error;
+      staleReceiptRejected = true;
+    }
+    if (!staleReceiptRejected) throw new Error("task_554_author_self_test_receipt_stale");
+    rmSync(path.join(tempRoot, "core/receipt-drift.ts"));
+    const modeBefore = captureAuditFingerprint(tempRoot);
+    chmodSync(path.join(tempRoot, TASK_554_WORKFLOW_PATHS[0]), 0o755);
+    if (captureAuditFingerprint(tempRoot) === modeBefore) throw new Error("task_554_author_self_test_mode_fingerprint");
+    chmodSync(path.join(tempRoot, TASK_554_WORKFLOW_PATHS[0]), 0o644);
+    writeFileSync(path.join(tempRoot, "core/target-a.ts"), "export const target = 'a';\n", "utf8");
+    writeFileSync(path.join(tempRoot, "core/target-b.ts"), "export const target = 'b';\n", "utf8");
+    const linkPath = path.join(tempRoot, "core/target.ts");
+    symlinkSync("target-a.ts", linkPath);
+    const symlinkBefore = captureAuditFingerprint(tempRoot);
+    unlinkSync(linkPath);
+    symlinkSync("target-b.ts", linkPath);
+    if (captureAuditFingerprint(tempRoot) === symlinkBefore) throw new Error("task_554_author_self_test_symlink_fingerprint");
+    unlinkSync(linkPath);
 
     const localExtra = path.join(tempRoot, "_docs/_workflows/task-554-local-only.mjs");
     writeFileSync(localExtra, "// ignored/local is non-authorizing\n", "utf8");
@@ -272,6 +374,8 @@ function bootstrapSelfTest() {
       trackedExtraWouldReject: true,
       strictAuditResultRejected: true,
       ignoredWorkflowMutationRejected: true,
+      authorReceiptBound: true,
+      modeAndSymlinkFingerprintRejected: true,
     });
   } finally {
     rmSync(tempRoot, { recursive: true, force: true });
@@ -366,7 +470,8 @@ async function runWorkflow() {
     `${COMMON}\nRead only the shared contracts/seams. Reconcile type names, allowed fields, ownership, test paths, exact seven smoke IDs, writer order, land order, exact calendar parsing, Post cache generation, snapshot authority, and pinned closure deltas. Return identity=task-554:audit:reconcile.`,
     { label: "task-554:audit:reconcile", phase: "Cross-file reconcile", schema: AUDIT_SCHEMA },
   )));
-  return Object.freeze({ pass: true, bootstrap, lenses, reconcile });
+  const receipt = writeAuthorAuditReceipt(ROOT, lenses);
+  return Object.freeze({ pass: true, bootstrap, lenses, reconcile, receipt });
 }
 
 const mode = parseMode();

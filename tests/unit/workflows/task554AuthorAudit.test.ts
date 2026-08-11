@@ -29,6 +29,8 @@ test("TASK-554 bootstrap rejects a tracked extra while ignoring a local untracke
     trackedExtraWouldReject: true,
     strictAuditResultRejected: true,
     ignoredWorkflowMutationRejected: true,
+    authorReceiptBound: true,
+    modeAndSymlinkFingerprintRejected: true,
   });
 });
 
@@ -68,6 +70,8 @@ test("TASK-554 bootstrap pins the exact regular tracked files and HEAD bytes", (
   expect(source).toContain("task_554_workflow_staged_dirty");
   expect(source).toContain("function parseMode()");
   expect(source).toContain("task_554_audit_mutated_repository");
+  expect(source).toContain("assertTask554AuthorAuditReceipt");
+  expect(source).toContain("author-audit-receipt.json");
   expect(source).toContain("normalizeAuthorAuditResult");
   expect(source).toContain("task_554_author_audit_invalid");
   expect(source).toContain('"--ignored", "--exclude-standard"');
