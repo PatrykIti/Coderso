@@ -12,10 +12,12 @@ import type {
 import { Task540ExecutionMemory } from "../../../scripts/runtime-smoke/adapters/task-540/suite/composition/memory";
 import { validateTask540ActionOutput } from "../../../scripts/runtime-smoke/adapters/task-540/suite/composition/output-validation";
 import { buildTask540ResponseLostBaselineItems } from "../../../scripts/runtime-smoke/adapters/task-540/suite/runtime/response-lost-baselines";
+import { executeTask540PlatformAction } from "../../../scripts/runtime-smoke/adapters/task-540/suite/runtime/platform-actions";
 import {
   TASK540_NATIVE_RUNTIME_ACTION_IDS,
   Task540NativeRuntime,
 } from "../../../scripts/runtime-smoke/adapters/task-540/suite/runtime/native-runtime";
+import type { Task540RuntimeState } from "../../../scripts/runtime-smoke/adapters/task-540/suite/runtime/contracts";
 import { task540IsolatedReadExpectation } from "../../../scripts/runtime-smoke/adapters/task-540/suite/runtime/override-actions";
 import { assertTask540SeoCleanupCandidate } from "../../../scripts/runtime-smoke/adapters/task-540/suite/runtime/cleanup";
 import { restoreTask540BootstrapBaseline } from "../../../scripts/runtime-smoke/adapters/task-540/suite/runtime/bootstrap-restoration";
@@ -271,6 +273,77 @@ test("TASK-540 runtime invariant failures retain a bounded classified smoke toke
     code: "smoke_output_invalid",
     message: "TASK-540 runtime action order drifted",
   });
+});
+
+test("TASK-540 bot-protection preflight uses the fixed anonymous loopback boundary", async () => {
+  const planValue = plan();
+  const action = planValue.actionManifest.find(
+    ({ id }) => id === "set-004a-bot-protection-preflight"
+  );
+  if (action === undefined) throw new Error("TASK-540 bot-protection preflight is absent");
+  const state = { plan: planValue } as Task540RuntimeState;
+  const body = Object.freeze({
+    enabled: false,
+    enforceOnLocalhost: true,
+    provider: "recaptcha_v3",
+    siteKey: null,
+  });
+  const requests: Array<{
+    readonly credentials: RequestCredentials | undefined;
+    readonly redirect: RequestRedirect | undefined;
+    readonly signalPresent: boolean;
+    readonly url: string;
+    readonly userAgent: string | null;
+  }> = [];
+  const result = await executeTask540PlatformAction(state, action, (async (url, init) => {
+    requests.push({
+      credentials: init?.credentials,
+      redirect: init?.redirect,
+      signalPresent: init?.signal instanceof AbortSignal,
+      url: String(url),
+      userAgent: new Headers(init?.headers).get("User-Agent"),
+    });
+    return new Response(JSON.stringify(body), { status: 200 });
+  }) as typeof globalThis.fetch);
+
+  expect(result).toMatchObject({ captureBindings: {} });
+  expect(requests).toEqual([
+    {
+      credentials: "omit",
+      redirect: "manual",
+      signalPresent: true,
+      url: "http://127.0.0.1:3000/admin/api/auth/bot-protection",
+      userAgent: "wf540-0123456789ab-public-preflight",
+    },
+  ]);
+
+  const invalidBodies: readonly PlainJsonValue[] = [
+    { enabled: false, enforceOnLocalhost: true, provider: "recaptcha_v3" },
+    { ...body, unexpected: true },
+    { ...body, provider: "unexpected" },
+    { ...body, siteKey: 42 },
+    { ...body, enforceOnLocalhost: "true" },
+  ];
+  for (const invalidBody of invalidBodies) {
+    await expect(
+      executeTask540PlatformAction(
+        state,
+        action,
+        (async () =>
+          new Response(JSON.stringify(invalidBody), { status: 200 })) as typeof globalThis.fetch
+      )
+    ).rejects.toThrow("TASK-540 bot protection response is invalid");
+  }
+  await expect(
+    executeTask540PlatformAction(
+      state,
+      action,
+      (async () =>
+        new Response(JSON.stringify({ ...body, enabled: true }), {
+          status: 200,
+        })) as typeof globalThis.fetch
+    )
+  ).rejects.toThrow("TASK-540 bot protection must be disabled");
 });
 
 test("TASK-540 bootstrap restoration performs one exact typed CAS between bounded proofs", async () => {

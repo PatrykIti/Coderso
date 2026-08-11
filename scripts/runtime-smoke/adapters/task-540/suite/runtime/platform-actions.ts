@@ -24,9 +24,48 @@ import {
 } from "./bootstrap-restoration";
 
 const MAXIMUM_PUBLIC_RESPONSE_BYTES = 4 * 1024 * 1024;
+const TASK540_BOT_PROTECTION_PATH = "/admin/api/auth/bot-protection";
+const TASK540_LOOPBACK_API_ORIGIN = "http://127.0.0.1:3000";
+const TASK540_BOT_PROTECTION_RESPONSE_KEYS = Object.freeze([
+  "enabled",
+  "enforceOnLocalhost",
+  "provider",
+  "siteKey",
+] as const);
 
 type ContentTypeKey = "editable" | "relatedA" | "relatedB" | "relatedFailure";
 type RelatedEntryKey = "a1" | "a2" | "b1" | "b2" | "failure1";
+
+function task540BotProtectionUrl(): URL {
+  const url = new URL(TASK540_BOT_PROTECTION_PATH, TASK540_LOOPBACK_API_ORIGIN);
+  runtimeInvariant(
+    url.protocol === "http:" &&
+      url.hostname === "127.0.0.1" &&
+      url.port === "3000" &&
+      url.username === "" &&
+      url.password === "" &&
+      url.pathname === TASK540_BOT_PROTECTION_PATH &&
+      url.search === "" &&
+      url.hash === "",
+    "TASK-540 bot protection URL is invalid"
+  );
+  return url;
+}
+
+function parseTask540BotProtectionResponse(value: PlainJsonValue): PlainJsonObject {
+  const response = runtimeObject(value, "TASK-540 bot protection");
+  const keys = Object.keys(response).sort();
+  runtimeInvariant(
+    keys.length === TASK540_BOT_PROTECTION_RESPONSE_KEYS.length &&
+      keys.every((key, index) => key === TASK540_BOT_PROTECTION_RESPONSE_KEYS[index]) &&
+      typeof response.enabled === "boolean" &&
+      response.provider === "recaptcha_v3" &&
+      (typeof response.siteKey === "string" || response.siteKey === null) &&
+      typeof response.enforceOnLocalhost === "boolean",
+    "TASK-540 bot protection response is invalid"
+  );
+  return response;
+}
 
 function environmentSecret(environment: NodeJS.ProcessEnv, name: string): string {
   return runtimeString(environment[name], `TASK-540 ${name}`, 16_384);
@@ -574,7 +613,8 @@ async function provePreference(state: Task540RuntimeState, key: "a" | "b") {
 
 export async function executeTask540PlatformAction(
   state: Task540RuntimeState,
-  action: Task540NativeAction
+  action: Task540NativeAction,
+  fetchImpl: typeof globalThis.fetch = globalThis.fetch
 ): Promise<PlainJsonValue | undefined> {
   switch (action.id) {
     case "set-001-storage-preflight":
@@ -591,7 +631,8 @@ export async function executeTask540PlatformAction(
     case "set-004a-bot-protection-preflight": {
       let response: Response;
       try {
-        response = await fetch("http://127.0.0.1:3000/admin/api/auth/bot-protection", {
+        response = await fetchImpl(task540BotProtectionUrl(), {
+          credentials: "omit",
           headers: {
             "User-Agent": fixtureString(
               state.plan.fixtureBlueprint,
@@ -608,12 +649,11 @@ export async function executeTask540PlatformAction(
         });
       }
       runtimeInvariant(response.ok, "TASK-540 bot protection request failed");
-      const value = runtimeObject(
+      const value = parseTask540BotProtectionResponse(
         decodePublicJson(
           await readBoundedPublicResponse(response, "TASK-540 bot protection"),
           "TASK-540 bot protection"
-        ),
-        "TASK-540 bot protection"
+        )
       );
       runtimeInvariant(value.enabled === false, "TASK-540 bot protection must be disabled");
       return runtimeSafeProjection({ enabled: false });
