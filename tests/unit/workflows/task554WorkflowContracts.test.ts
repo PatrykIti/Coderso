@@ -99,6 +99,8 @@ test("TASK-554 implementation workflow executes fail-closed ownership, line, and
   expect(implement).toContain("assertNofollowTask554SmokeRoot");
   expect(implement).toContain("gates:coderso");
   expect(implement).toContain("runTask554ReleaseGate");
+  expect(implement).toContain("releaseGateTmpInventory");
+  expect(implement).toContain("task_554_release_gate_tmp_entry_invalid");
   expect(implement).toContain("readStableSmokeFile");
   expect(implement).toContain("constants.O_NOFOLLOW");
   expect(implement).toContain("runReadOnlyGate");
@@ -118,6 +120,7 @@ test("TASK-554 implementation workflow executes fail-closed ownership, line, and
     strictMutationAndAuditResultsRejected: true,
     agentIdentityRejected: true,
     releaseGateReportRestored: true,
+    releaseGateSiblingResidueRejected: true,
     forbiddenScopeRejected: true,
     directStdoutCapture: true,
     boundedPngEvidenceRejected: true,
@@ -192,6 +195,8 @@ test("TASK-554 contract keeps public invalidation with TASK-551 and specifies ex
   expect(task).toContain("equal SHA-256 values across different valid PNG paths are");
   expect(task).toContain("Pinned Closure Delta");
   expect(task).toContain("core/server/httpServer.ts");
+  expect(task).toContain("POST_METADATA_REQUEST_MAX_BYTES = 64 * 1024");
+  expect(task).toContain("chunked/missing-length 64 KiB+1 metadata bodies");
   expect(task).toContain("useEntryEditTracker");
   expect(task).toContain("uncached status-only publish/unpublish");
   expect(task).toContain("with exactly these UTF-8 bytes");

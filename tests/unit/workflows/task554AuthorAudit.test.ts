@@ -28,6 +28,7 @@ test("TASK-554 bootstrap rejects a tracked extra while ignoring a local untracke
     divergentBaselineRejected: true,
     trackedExtraWouldReject: true,
     strictAuditResultRejected: true,
+    boundedAuditResultRejected: true,
     agentIdentityRejected: true,
     ignoredWorkflowMutationRejected: true,
     emptyWorkflowDirectoryMutationRejected: true,
@@ -84,6 +85,9 @@ test("TASK-554 bootstrap pins the exact regular tracked files and HEAD bytes", (
   expect(source).toContain("assertAuthorAuditReceiptInputs");
   expect(source).toContain("author-audit-receipt.json");
   expect(source).toContain("normalizeAuthorAuditResult");
+  expect(source).toContain("MAX_AUDIT_FIELD_LENGTH");
+  expect(source).toContain("MAX_AUDIT_FINDINGS");
+  expect(source).toContain("maxLength: MAX_AUDIT_FIELD_LENGTH");
   expect(source).toContain('required: ["pass", "summary", "findings"]');
   expect(source).toContain("return Object.freeze({ identity, ...audit })");
   expect(source).toContain("task_554_author_audit_invalid");

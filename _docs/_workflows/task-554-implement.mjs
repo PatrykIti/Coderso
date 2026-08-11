@@ -244,46 +244,43 @@ function runRequiredCommandDirect(root, entry) {
     throw new Error(`${entry.label}:failed:${result.error?.message ?? result.status ?? result.signal}`);
   }
 }
-function releaseGateSnapshot(root) {
-  const directory = path.join(root, ".tmp");
-  let directoryStats;
-  try { directoryStats = lstatSync(directory); } catch (error) {
-    if (error && typeof error === "object" && error.code === "ENOENT") return Object.freeze({ directory: false, report: null });
-    throw error;
-  }
-  if (!directoryStats.isDirectory() || directoryStats.isSymbolicLink()) throw new Error("task_554_release_gate_tmp_invalid");
-  const reportPath = path.join(root, RELEASE_GATE_REPORT_PATH);
+function readStableReleaseGateFile(absolute, label) {
+  const initial = lstatSync(absolute); if (!initial.isFile() || initial.isSymbolicLink() || initial.size > 16 * 1024 * 1024) throw new Error(`${label}_invalid`);
+  let descriptor;
   try {
-    const reportStats = lstatSync(reportPath);
-    if (!reportStats.isFile() || reportStats.isSymbolicLink()) throw new Error("task_554_release_gate_report_invalid");
-    return Object.freeze({ directory: true, report: Object.freeze({ bytes: readFileSync(reportPath), mode: reportStats.mode }) });
-  } catch (error) {
-    if (error && typeof error === "object" && error.code === "ENOENT") return Object.freeze({ directory: true, report: null });
-    throw error;
-  }
+    descriptor = openSync(absolute, constants.O_RDONLY | constants.O_NOFOLLOW); const before = fstatSync(descriptor);
+    if (!before.isFile() || before.size > 16 * 1024 * 1024) throw new Error(`${label}_invalid`);
+    const bytes = Buffer.from(readFileSync(descriptor)); const after = fstatSync(descriptor); const final = lstatSync(absolute);
+    if (!sameStableFile(before, after) || !sameStableFile(after, final) || bytes.byteLength !== after.size) throw new Error(`${label}_changed`);
+    return Object.freeze({ bytes, mode: before.mode });
+  } finally { if (descriptor !== undefined) closeSync(descriptor); }
 }
-function sameReleaseGateSnapshot(left, right) {
-  return left.directory === right.directory && left.report?.mode === right.report?.mode && Boolean(left.report) === Boolean(right.report) && (!left.report || left.report.bytes.equals(right.report.bytes));
+function releaseGateTmpInventory(directory) {
+  const entries = []; const walk = (absolute, relative, depth) => {
+    if (depth > MAX_WORKFLOW_TREE_DEPTH || entries.length >= MAX_WORKFLOW_TREE_ENTRIES) throw new Error("task_554_release_gate_tmp_limit");
+    const stats = lstatSync(absolute);
+    if (stats.isSymbolicLink()) throw new Error("task_554_release_gate_tmp_entry_invalid");
+    if (stats.isDirectory()) { entries.push(`directory:${stats.mode}:${relative}`); for (const name of readdirSync(absolute).sort((a, b) => a.localeCompare(b))) walk(path.join(absolute, name), `${relative}/${name}`, depth + 1); return; }
+    if (!stats.isFile()) throw new Error("task_554_release_gate_tmp_entry_invalid");
+    const file = readStableReleaseGateFile(absolute, "task_554_release_gate_tmp_entry"); entries.push(`file:${file.mode}:${relative}:${createHash("sha256").update(file.bytes).digest("hex")}`);
+  };
+  for (const name of readdirSync(directory).sort((a, b) => a.localeCompare(b))) walk(path.join(directory, name), name, 1);
+  return Object.freeze(entries);
 }
+function releaseGateSnapshot(root) {
+  const directory = path.join(root, ".tmp"); let stats;
+  try { stats = lstatSync(directory); } catch (error) { if (error && typeof error === "object" && error.code === "ENOENT") return Object.freeze({ directory: false, report: null, inventory: Object.freeze([]) }); throw error; }
+  if (!stats.isDirectory() || stats.isSymbolicLink()) throw new Error("task_554_release_gate_tmp_invalid");
+  const reportPath = path.join(root, RELEASE_GATE_REPORT_PATH); let report = null;
+  try { report = readStableReleaseGateFile(reportPath, "task_554_release_gate_report"); } catch (error) { if (!error || typeof error !== "object" || error.code !== "ENOENT") throw error; }
+  return Object.freeze({ directory: true, report, inventory: releaseGateTmpInventory(directory) });
+}
+function sameReleaseGateSnapshot(left, right) { return left.directory === right.directory && left.report?.mode === right.report?.mode && Boolean(left.report) === Boolean(right.report) && (!left.report || left.report.bytes.equals(right.report.bytes)) && left.inventory.length === right.inventory.length && left.inventory.every((entry, index) => entry === right.inventory[index]); }
 function restoreReleaseGateSnapshot(root, expected) {
-  const directory = path.join(root, ".tmp");
-  const reportPath = path.join(root, RELEASE_GATE_REPORT_PATH);
-  if (!expected.directory) {
-    const actual = releaseGateSnapshot(root);
-    if (actual.report) { unlinkSync(reportPath); }
-    if (existsSync(directory)) {
-      const stats = lstatSync(directory);
-      if (!stats.isDirectory() || stats.isSymbolicLink() || readdirSync(directory).length !== 0) throw new Error("task_554_release_gate_tmp_not_empty");
-      rmdirSync(directory);
-    }
-  } else {
-    const actual = releaseGateSnapshot(root);
-    if (actual.report) unlinkSync(reportPath);
-    if (expected.report) {
-      const descriptor = openSync(reportPath, constants.O_WRONLY | constants.O_CREAT | constants.O_TRUNC | constants.O_NOFOLLOW, expected.report.mode);
-      try { writeFileSync(descriptor, expected.report.bytes); fchmodSync(descriptor, expected.report.mode); } finally { closeSync(descriptor); }
-    }
-  }
+  const directory = path.join(root, ".tmp"); const reportPath = path.join(root, RELEASE_GATE_REPORT_PATH); const actual = releaseGateSnapshot(root);
+  if (actual.report) unlinkSync(reportPath);
+  if (!expected.directory && existsSync(directory)) { const stats = lstatSync(directory); if (!stats.isDirectory() || stats.isSymbolicLink() || readdirSync(directory).length !== 0) throw new Error("task_554_release_gate_tmp_not_empty"); rmdirSync(directory); }
+  if (expected.report) { const descriptor = openSync(reportPath, constants.O_WRONLY | constants.O_CREAT | constants.O_TRUNC | constants.O_NOFOLLOW, expected.report.mode); try { writeFileSync(descriptor, expected.report.bytes); fchmodSync(descriptor, expected.report.mode); } finally { closeSync(descriptor); } }
   if (!sameReleaseGateSnapshot(expected, releaseGateSnapshot(root))) throw new Error("task_554_release_gate_report_restore_failed");
 }
 function runTask554ReleaseGate(root, work) {
@@ -810,6 +807,10 @@ function workflowSelfTest() {
     const releasePresent = releaseGateSnapshot(tempRoot);
     runTask554ReleaseGate(tempRoot, () => writeTinyFile(releaseReport, "{\"changed\":true}\n"));
     if (!sameReleaseGateSnapshot(releasePresent, releaseGateSnapshot(tempRoot))) throw new Error("task_554_self_test_release_gate_existing_report");
+    const releaseSibling = path.join(tempRoot, ".tmp/stable-before-gate.txt"); writeTinyFile(releaseSibling, "stable\n");
+    const releaseWithSibling = releaseGateSnapshot(tempRoot); const unexpectedSibling = path.join(tempRoot, ".tmp/unexpected-after-gate.txt");
+    expectFailure(() => runTask554ReleaseGate(tempRoot, () => writeTinyFile(unexpectedSibling, "unexpected\n")), "task_554_release_gate_report_restore_failed");
+    unlinkSync(unexpectedSibling); if (!sameReleaseGateSnapshot(releaseWithSibling, releaseGateSnapshot(tempRoot))) throw new Error("task_554_self_test_release_gate_sibling");
     rmSync(path.join(tempRoot, ".tmp"), { recursive: true, force: true });
     const baseline = commandOutput(tempRoot, "git", ["rev-parse", "HEAD"]).toString("utf8").trim();
     writeTinyFile(path.join(tempRoot, "core/tracked.ts"), "export const tracked = 1;\nexport const finalLine = true;");
@@ -958,6 +959,7 @@ function workflowSelfTest() {
       strictMutationAndAuditResultsRejected: true,
       agentIdentityRejected: true,
       releaseGateReportRestored: true,
+      releaseGateSiblingResidueRejected: true,
       forbiddenScopeRejected: true,
       directStdoutCapture: true,
       boundedPngEvidenceRejected: true,

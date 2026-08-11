@@ -61,6 +61,8 @@ const AUTHOR_FORBIDDEN_PATHS = Object.freeze([
 ]);
 const MAX_WORKFLOW_TREE_ENTRIES = 4096;
 const MAX_WORKFLOW_TREE_DEPTH = 64;
+const MAX_AUDIT_FINDINGS = 40;
+const MAX_AUDIT_FIELD_LENGTH = 2048;
 
 function runGit(root, args) {
   return execFileSync("git", args, { cwd: root, encoding: "buffer", stdio: ["ignore", "pipe", "pipe"] });
@@ -385,7 +387,10 @@ async function bootstrapSelfTest() {
     expectAuditFailure({ ...lowOnly, findings: {} }, "task_554_author_audit_invalid");
     expectAuditFailure({ ...lowOnly, identity: auditIdentity }, "task_554_author_audit_invalid");
     expectAuditFailure({ ...lowOnly, unexpected: true }, "task_554_author_audit_invalid");
+    expectAuditFailure({ ...lowOnly, summary: "x".repeat(MAX_AUDIT_FIELD_LENGTH + 1) }, "task_554_author_audit_invalid");
+    expectAuditFailure({ ...lowOnly, findings: Array.from({ length: MAX_AUDIT_FINDINGS + 1 }, () => lowOnly.findings[0]) }, "task_554_author_audit_invalid");
     expectAuditFailure({ ...lowOnly, findings: [{ ...lowOnly.findings[0], severity: "OTHER" }] }, "task_554_author_finding_invalid");
+    expectAuditFailure({ ...lowOnly, findings: [{ ...lowOnly.findings[0], evidence: "x".repeat(MAX_AUDIT_FIELD_LENGTH + 1) }] }, "task_554_author_finding_invalid");
     expectAuditFailure({ ...lowOnly, pass: false }, "task_554_author_audit_inconsistent");
     const receiptLensPayloads = TASK_554_AUTHOR_AUDIT_LENS_IDS.map(() => ({ pass: true, summary: "clean", findings: [] }));
     const receiptReconcilePayload = { pass: true, summary: "clean", findings: [] };
@@ -529,6 +534,7 @@ async function bootstrapSelfTest() {
       divergentBaselineRejected: true,
       trackedExtraWouldReject: true,
       strictAuditResultRejected: true,
+      boundedAuditResultRejected: true,
       agentIdentityRejected: true,
       ignoredWorkflowMutationRejected: true,
       emptyWorkflowDirectoryMutationRejected: true,
@@ -550,19 +556,20 @@ const AUDIT_SCHEMA = Object.freeze({
   required: ["pass", "summary", "findings"],
   properties: {
     pass: { type: "boolean" },
-    summary: { type: "string" },
+    summary: { type: "string", minLength: 1, maxLength: MAX_AUDIT_FIELD_LENGTH },
     findings: {
       type: "array",
+      maxItems: MAX_AUDIT_FINDINGS,
       items: {
         type: "object",
         additionalProperties: false,
         required: ["severity", "area", "finding", "evidence", "recommendation"],
         properties: {
           severity: { type: "string", enum: ["HIGH", "MEDIUM", "LOW"] },
-          area: { type: "string" },
-          finding: { type: "string" },
-          evidence: { type: "string" },
-          recommendation: { type: "string" },
+          area: { type: "string", minLength: 1, maxLength: MAX_AUDIT_FIELD_LENGTH },
+          finding: { type: "string", minLength: 1, maxLength: MAX_AUDIT_FIELD_LENGTH },
+          evidence: { type: "string", minLength: 1, maxLength: MAX_AUDIT_FIELD_LENGTH },
+          recommendation: { type: "string", minLength: 1, maxLength: MAX_AUDIT_FIELD_LENGTH },
         },
       },
     },
@@ -577,9 +584,9 @@ function hasExactKeys(value, keys) {
 }
 
 export function normalizeAuthorAuditResult(identity, audit) {
-  if (!hasExactKeys(audit, AUDIT_RESULT_KEYS) || typeof audit.pass !== "boolean" || typeof audit.summary !== "string" || audit.summary.trim().length === 0 || !Array.isArray(audit.findings)) throw new Error("task_554_author_audit_invalid");
+  if (!hasExactKeys(audit, AUDIT_RESULT_KEYS) || typeof audit.pass !== "boolean" || typeof audit.summary !== "string" || audit.summary.trim().length === 0 || audit.summary.length > MAX_AUDIT_FIELD_LENGTH || !Array.isArray(audit.findings) || audit.findings.length > MAX_AUDIT_FINDINGS) throw new Error("task_554_author_audit_invalid");
   for (const finding of audit.findings) {
-    if (!hasExactKeys(finding, AUDIT_FINDING_KEYS) || !["HIGH", "MEDIUM", "LOW"].includes(finding.severity) || AUDIT_FINDING_KEYS.slice(1).some((key) => typeof finding[key] !== "string" || finding[key].trim().length === 0)) throw new Error("task_554_author_finding_invalid");
+    if (!hasExactKeys(finding, AUDIT_FINDING_KEYS) || !["HIGH", "MEDIUM", "LOW"].includes(finding.severity) || AUDIT_FINDING_KEYS.slice(1).some((key) => typeof finding[key] !== "string" || finding[key].trim().length === 0 || finding[key].length > MAX_AUDIT_FIELD_LENGTH)) throw new Error("task_554_author_finding_invalid");
   }
   const blockers = audit.findings.filter((finding) => finding.severity === "HIGH" || finding.severity === "MEDIUM");
   if (audit.pass !== (blockers.length === 0)) throw new Error("task_554_author_audit_inconsistent");
