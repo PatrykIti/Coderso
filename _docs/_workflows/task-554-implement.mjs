@@ -6,7 +6,7 @@ import path from "node:path";
 import { pathToFileURL } from "node:url";
 export const meta = Object.freeze({
   name: "task-554-implement",
-  description: "Implement TASK-554 sequentially with fail-closed ownership, executable gates, shared smoke, and terminal metadata closure.",
+  description: "Implement TASK-554 sequentially with fail-closed ownership, executable gates, shared smoke, and an owner-review handoff.",
   phases: Object.freeze([
     Object.freeze({ title: "Start gate" }),
     Object.freeze({ title: "Sequential owners" }),
@@ -14,9 +14,7 @@ export const meta = Object.freeze({
     Object.freeze({ title: "Full validation" }),
     Object.freeze({ title: "Post-audit" }),
     Object.freeze({ title: "Runtime smoke" }),
-    Object.freeze({ title: "Metadata closure" }),
-    Object.freeze({ title: "Final drift" }),
-    Object.freeze({ title: "Terminal status" }),
+    Object.freeze({ title: "Owner review" }),
   ]),
 });
 const ROOT = "/home/coder/project/Coderso";
@@ -42,8 +40,6 @@ const OWNERS = Object.freeze([
   owner("smoke-adapter", ["scripts/runtime-smoke/contracts.ts", "scripts/runtime-smoke/cli.ts", "scripts/runtime-smoke/registry.ts", "scripts/runtime-smoke/adapters/task-554.ts", "scripts/runtime-smoke/adapters/task-554/browser-actions.ts", "scripts/runtime-smoke/adapters/task-554/output-manifest.ts", "scripts/runtime-smoke/adapters/task-554/worker-entry.ts", "scripts/runtime-smoke/adapters/task-554/worker-operations.ts", "scripts/runtime-smoke/adapters/task-554/production-handlers.ts", "tests/unit/runtime-smoke/cli-registry.test.ts", "tests/unit/runtime-smoke/task-554-adapter.test.ts", "tests/unit/runtime-smoke/task-554-worker.test.ts"]),
 ]);
 const DOCUMENTATION_OWNER = owner("documentation", ["_docs/CMS_API.md", "_docs/RBAC_SPEC.md", "_docs/SECURITY_SPEC.md", "docs/develop/runtime-smoke-cookbook.md", "docs/develop/assistant.md"]);
-const METADATA_CLOSURE_OWNER = owner("metadata-closure", ["_docs/_CHANGELOG/1267-2026-08-11-task-554-post-metadata-publish-rbac-hardening.md", "_docs/_CHANGELOG/README.md", "_docs/_TASKS/README.md"]);
-const TERMINAL_STATUS_OWNER = owner("terminal-status", ["_docs/_TASKS/TASK-554_Post_Metadata_Publish_RBAC_Hardening.md"]);
 const FORBIDDEN_PATHS = Object.freeze([
   "_TMP-task-dispatch-plan-2026-08-10.md",
   "core/services/content/postsService.ts",
@@ -150,7 +146,10 @@ export function verifyTask554Bootstrap(root = ROOT) {
 }
 function verifyBeforeDispatch(phaseName, root = ROOT) {
   try {
-    return verifyTask554Bootstrap(root);
+    const bootstrap = verifyTask554Bootstrap(root);
+    assertNoStagedChanges(root);
+    assertNoForbiddenDirty(root);
+    return bootstrap;
   } catch (error) {
     throw new Error(`task_554_bootstrap_before_${phaseName.replaceAll(" ", "_")}:${error instanceof Error ? error.message : String(error)}`);
   }
@@ -171,18 +170,22 @@ const INITIAL_DIRTY_PATHS = Object.freeze([
   "_TMP-task-dispatch-plan-2026-08-10.md",
   "_docs/_TASKS/README.md",
   "_docs/_TASKS/TASK-554_Post_Metadata_Publish_RBAC_Hardening.md",
-  AUTHOR_AUDIT_RECEIPT_PATH,
 ]);
-function currentDirtyPaths(root) {
-  return [...new Set([
+function currentDirtyPaths(root, includeIgnored = false) {
+  const paths = [
     ...parseNul(commandOutput(root, "git", ["diff", "--name-only", "-z"])),
     ...parseNul(commandOutput(root, "git", ["ls-files", "--others", "--exclude-standard", "-z"])),
-    ...ignoredWorkflowPaths(root),
-  ])].map(normalizedRepositoryPath).sort((left, right) => left.localeCompare(right));
+    ...(includeIgnored ? ignoredWorkflowPaths(root) : []),
+  ];
+  return [...new Set(paths)].map(normalizedRepositoryPath).sort((left, right) => left.localeCompare(right));
+}
+function assertNoForbiddenDirty(root = ROOT) {
+  const forbidden = currentDirtyPaths(root).filter((relativePath) => pathMatchesForbidden(relativePath) && relativePath !== "_TMP-task-dispatch-plan-2026-08-10.md");
+  if (forbidden.length) throw new Error(`task_554_forbidden_dirty:${JSON.stringify(forbidden)}`);
+  return Object.freeze(forbidden);
 }
 function assertImplementationPreflight(root = ROOT) {
   verifyBeforeDispatch("implementation_preflight", root);
-  assertNoStagedChanges(root);
   const dirty = currentDirtyPaths(root);
   const unexpected = dirty.filter((relativePath) => !INITIAL_DIRTY_PATHS.includes(relativePath));
   const forbidden = dirty.filter((relativePath) => pathMatchesForbidden(relativePath) && relativePath !== "_TMP-task-dispatch-plan-2026-08-10.md");
@@ -252,6 +255,8 @@ function assertNoRepositoryMutation(label, before, after, root = ROOT) {
   return assertScopedRepositoryMutation(label, before, after, [], root);
 }
 function runReadOnlyGate(label, root, work) {
+  assertNoStagedChanges(root);
+  assertNoForbiddenDirty(root);
   const before = captureRepositoryFingerprint(root);
   try {
     return work();
@@ -400,6 +405,8 @@ function loadTask554Manifest(root, profile, session) {
 }
 function collectSessionFiles(root, session) {
   const directory = task554SessionDirectory(root, session);
+  const directoryStats = lstatSync(directory);
+  if (!directoryStats.isDirectory() || directoryStats.isSymbolicLink()) throw new Error("task_554_smoke_session_not_directory");
   const files = [];
   const walk = (absolute) => {
     for (const entry of readdirSync(absolute, { withFileTypes: true })) {
@@ -418,6 +425,14 @@ function collectSessionFiles(root, session) {
   walk(directory);
   return Object.freeze(files.sort((left, right) => left.localeCompare(right)));
 }
+function assertExactSmokeSessionFiles(root, session, expectedPaths) {
+  const expected = new Set(expectedPaths);
+  const actual = collectSessionFiles(root, session);
+  if (actual.length !== expected.size || actual.some((filePath) => !expected.has(filePath))) {
+    throw new Error(`task_554_smoke_output_extra_or_missing:${JSON.stringify(actual)}`);
+  }
+  return actual;
+}
 function assertBoundedPng(root, relativePath) {
   const absolute = path.resolve(root, relativePath);
   const stats = lstatSync(absolute);
@@ -428,6 +443,25 @@ function assertBoundedPng(root, relativePath) {
   const height = bytes.readUInt32BE(20);
   if (width === 0 || height === 0 || width > MAXIMUM_PNG_DIMENSION || height > MAXIMUM_PNG_DIMENSION) throw new Error(`task_554_smoke_png_dimensions:${relativePath}`);
   return bytes;
+}
+function assertDecodedTask554Pngs(root, paths) {
+  const manifestModule = pathToFileURL(path.join(root, "scripts/runtime-smoke/adapters/task-554/output-manifest.ts")).href;
+  const source = [
+    `import { decodeTask554Png } from ${JSON.stringify(manifestModule)};`,
+    'import { readFileSync } from "node:fs";',
+    `const paths = ${JSON.stringify(paths.map((relativePath) => path.resolve(root, relativePath)))};`,
+    "process.stdout.write(JSON.stringify(paths.map((filePath) => decodeTask554Png(readFileSync(filePath)))));",
+  ].join("\n");
+  let decoded;
+  try {
+    decoded = JSON.parse(commandOutput(root, "bun", ["--eval", source]).toString("utf8"));
+  } catch (error) {
+    throw new Error("task_554_smoke_png_decode_invalid", { cause: error });
+  }
+  if (!Array.isArray(decoded) || decoded.length !== paths.length || decoded.some((entry) => !entry || Object.keys(entry).length !== 2 || !Number.isSafeInteger(entry.width) || !Number.isSafeInteger(entry.height) || entry.width <= 0 || entry.height <= 0 || entry.width > MAXIMUM_PNG_DIMENSION || entry.height > MAXIMUM_PNG_DIMENSION)) {
+    throw new Error("task_554_smoke_png_decode_shape");
+  }
+  return Object.freeze(decoded.map(({ width, height }) => Object.freeze({ width, height })));
 }
 function assertExactReport(report, profile, session, manifest, root) {
   if (!report || typeof report !== "object" || Array.isArray(report)) throw new Error("task_554_smoke_report_shape");
@@ -447,12 +481,14 @@ function assertExactReport(report, profile, session, manifest, root) {
   if (!Array.isArray(report.screenshots) || report.screenshots.length !== manifest.paths.length) {
     throw new Error("task_554_smoke_report_screenshot_count");
   }
+  const pngBytes = manifest.paths.map((relativePath) => assertBoundedPng(root, relativePath));
+  assertDecodedTask554Pngs(root, manifest.paths);
   for (const [index, screenshot] of report.screenshots.entries()) {
     const expectedPath = manifest.paths[index];
     if (!screenshot || Object.keys(screenshot).length !== 2 || screenshot.path !== expectedPath || typeof screenshot.sha256 !== "string" || !SHA256.test(screenshot.sha256)) {
       throw new Error(`task_554_smoke_report_screenshot:${index}`);
     }
-    const actualDigest = createHash("sha256").update(assertBoundedPng(root, expectedPath)).digest("hex");
+    const actualDigest = createHash("sha256").update(pngBytes[index]).digest("hex");
     if (screenshot.sha256 !== actualDigest) throw new Error(`task_554_smoke_report_hash:${index}`);
   }
 }
@@ -477,11 +513,7 @@ export function assertExactTask554SmokeEvidence(root, profile, session, manifest
   } catch (error) {
     throw new Error("task_554_smoke_report_json_invalid", { cause: error });
   }
-  const expected = new Set([reportPath, ...checkedManifest.paths]);
-  const actual = collectSessionFiles(root, session);
-  if (actual.length !== expected.size || actual.some((filePath) => !expected.has(filePath))) {
-    throw new Error(`task_554_smoke_output_extra_or_missing:${JSON.stringify(actual)}`);
-  }
+  assertExactSmokeSessionFiles(root, session, [reportPath, ...checkedManifest.paths]);
   for (const relativePath of [reportPath]) {
     const fileStats = lstatSync(path.resolve(root, relativePath));
     if (!fileStats.isFile() || fileStats.isSymbolicLink() || fileStats.size <= 0) {
@@ -492,11 +524,15 @@ export function assertExactTask554SmokeEvidence(root, profile, session, manifest
   return Object.freeze({ manifest: checkedManifest, report });
 }
 function captureSmokeEvidenceSnapshot(root, evidence) {
+  const sessionPath = ensureInsideRoot(root, task554SessionDirectory(root, evidence.report.session), "smoke_session");
   const reportPath = ensureInsideRoot(root, path.join(task554SessionDirectory(root, evidence.report.session), "report.json"), "smoke_report");
-  return new Map([reportPath, ...evidence.manifest.paths].map((relativePath) => [relativePath, fingerprintPath(root, relativePath)]));
+  return new Map([sessionPath, reportPath, ...evidence.manifest.paths].map((relativePath) => [relativePath, fingerprintPath(root, relativePath)]));
 }
 function assertSmokeEvidenceSnapshot(snapshot, root) {
   for (const [relativePath, value] of snapshot) if (fingerprintPath(root, relativePath) !== value) throw new Error(`task_554_smoke_evidence_changed:${relativePath}`);
+}
+function smokeEvidenceFilePaths(snapshot) {
+  return [...snapshot.keys()].filter((relativePath) => relativePath.endsWith(".png") || relativePath.endsWith("/report.json"));
 }
 function createEmptySmokeSession(root, session) {
   const directory = task554SessionDirectory(root, session);
@@ -541,9 +577,19 @@ export function runTask554SmokeProfile(root, profile, session) {
   } catch (error) {
     primary = error;
   } finally {
+    let evidenceRevalidated = false;
     try {
-      if (evidenceSnapshot !== null) assertSmokeEvidenceSnapshot(evidenceSnapshot, root);
-      const excluded = evidenceSnapshot === null ? [] : [...evidenceSnapshot.keys()];
+      if (evidenceSnapshot !== null && evidence !== null) {
+        const reportPath = ensureInsideRoot(root, path.join(task554SessionDirectory(root, evidence.report.session), "report.json"), "smoke_report");
+        assertExactSmokeSessionFiles(root, session, [reportPath, ...evidence.manifest.paths]);
+        assertSmokeEvidenceSnapshot(evidenceSnapshot, root);
+        evidenceRevalidated = true;
+      }
+    } catch (restoration) {
+      primary = preserveSmokePrimaryFailure(primary, restoration);
+    }
+    try {
+      const excluded = evidenceSnapshot !== null && evidenceRevalidated ? smokeEvidenceFilePaths(evidenceSnapshot) : [];
       assertNoRepositoryMutation("task_554_smoke_repository_restoration", before, captureRepositoryFingerprint(root, excluded), root);
     } catch (restoration) {
       primary = preserveSmokePrimaryFailure(primary, restoration);
@@ -553,6 +599,8 @@ export function runTask554SmokeProfile(root, profile, session) {
   return Object.freeze({ pass: true, profile, session, evidence });
 }
 function removeFastSmokeEvidence(root) {
+  assertNoStagedChanges(root);
+  assertNoForbiddenDirty(root);
   const directory = task554SessionDirectory(root, "task-554-fast");
   const expected = path.resolve(root, "_docs/_workflows/_smoke/task-554/task-554-fast");
   if (directory !== expected || !existsSync(directory)) throw new Error("task_554_fast_evidence_missing_before_cleanup");
@@ -641,26 +689,11 @@ cross-stream collision risks. Return no findings only when the lens is actually 
   if (checks.length !== POST_AUDIT_LENSES.length) throw new Error("task_554_post_audit_missing_results");
   return Object.freeze(checks);
 }
-const CHANGELOG_1267_PATH = "_docs/_CHANGELOG/1267-2026-08-11-task-554-post-metadata-publish-rbac-hardening.md";
 const CHANGELOG_RESERVATION_BEFORE = "Changelogs 1266 and 1267 are reserved for TASK-414 Guide/Agent/Designer\ncompletion and the critical TASK-554 Post metadata publish-RBAC hardening\n(surviving variant; the root Repair variant is superseded by it), respectively.";
 const CHANGELOG_RESERVATION_AFTER = "Changelog 1266 remains reserved for TASK-414 Guide/Agent/Designer completion.\nChangelog 1267 is consumed by completed TASK-554 Post Metadata Publish RBAC\nHardening (surviving variant; the root Repair variant is superseded by it).";
 const CHANGELOG_1267_INDEX_ROW = "| 1267 | 2026-08-11 | TASK-554 Post Metadata Publish RBAC Hardening — conditional all-of publish authorization, present-only metadata, exact calendar validation, race-safe Admin cache/editor hydration, and seven-flow shared smoke | Posts/RBAC/Security/Admin UI/Caching/Testing/Docs/Task Board |";
 const CHANGELOG_1267_ENTRY_BYTES = Buffer.from(["# 1267 - TASK-554 Post Metadata Publish RBAC Hardening", "", "**Date:** 2026-08-11", "**Version:** Unreleased", "**Tasks:** TASK-554", "", "## Key Changes", "", "- Required `content:publish` together with `content:write` for Post metadata publication fields while preserving present-only writer metadata updates.", "- Added exact RFC3339 calendar validation, one-snapshot RBAC coverage, and race-safe Admin cache/editor hydration.", "- Registered the shared `task-554` smoke suite with seven verified publication flows."].join("\n") + "\n", "utf8");
 const TASK_BOARD_STATISTIC = /^- \*\*(To Do|In Progress|Done):\*\* (\d+) tasks$/u;
-function closureBytes(root, relativePath) {
-  try {
-    const stats = lstatSync(path.resolve(root, relativePath));
-    if (!stats.isFile() || stats.isSymbolicLink()) throw new Error(`task_554_closure_not_regular:${relativePath}`);
-    return readFileSync(path.resolve(root, relativePath));
-  } catch (error) {
-    if (error && typeof error === "object" && error.code === "ENOENT") return null;
-    throw error;
-  }
-}
-function closureText(root, relativePath) {
-  const bytes = closureBytes(root, relativePath);
-  return bytes === null ? null : bytes.toString("utf8");
-}
 function onlyTask554Row(text) {
   let section = null;
   const matches = [];
@@ -724,53 +757,6 @@ export function assertTask554TerminalStatusDelta(before, after) {
     throw new Error("task_554_closure_terminal_status_invalid");
   }
 }
-async function runMetadataClosure() {
-  const identity = "task-554:metadata-closure";
-  const before = captureRepositoryFingerprint();
-  const beforeIndex = closureText(ROOT, "_docs/_CHANGELOG/README.md");
-  const beforeBoard = closureText(ROOT, "_docs/_TASKS/README.md");
-  const beforeEntry = closureBytes(ROOT, CHANGELOG_1267_PATH);
-  let result;
-  let changed;
-  try {
-    result = await dispatchResult("Metadata closure", identity,
-      `After owner-reviewed certification evidence, edit only these metadata closure paths:
-${METADATA_CLOSURE_OWNER.paths.join("\n")}.
-Create the pinned 1267 entry with exactly these bytes:\n${CHANGELOG_1267_ENTRY_BYTES.toString("utf8")}Make only the TASK-554-pinned reservation/index delta, and move only
-TASK-554’s board row/statistics exactly as the task contract requires. Re-read both indexes immediately
-before editing. Do not edit source, tests, workflows, product docs,
-TASK-554 status, another task family, stage, or commit.`);
-  } finally {
-    changed = assertScopedRepositoryMutation(identity, before, captureRepositoryFingerprint(), METADATA_CLOSURE_OWNER.paths);
-  }
-  assertTask554ChangelogClosureDelta(beforeIndex ?? "", closureText(ROOT, "_docs/_CHANGELOG/README.md") ?? "", beforeEntry, closureBytes(ROOT, CHANGELOG_1267_PATH));
-  assertTask554BoardClosureDelta(beforeBoard ?? "", closureText(ROOT, "_docs/_TASKS/README.md") ?? "");
-  return Object.freeze({ changed, result });
-}
-async function runFinalDrift() {
-  return dispatchAudit("Final drift", "task-554:final-drift",
-    `Fresh read-only final metadata drift pass. Verify task graph/status order, changelog 1267 and
-index, TASK-554 board/statistics, source/doc validation receipts, security invariants, exact
-certification evidence, fast-evidence absence, repository restoration, and every known drift risk.
-The task is intentionally still In Progress before this pass; do not edit.`);
-}
-async function runTerminalStatus() {
-  const identity = "task-554:terminal-status";
-  const before = captureRepositoryFingerprint();
-  const beforeTask = closureText(ROOT, TERMINAL_STATUS_OWNER.paths[0]);
-  let result;
-  let changed;
-  try {
-    result = await dispatchResult("Terminal status", identity,
-      `Only after all prior receipts are green, update only TASK-554’s own status/completed evidence in
-${TERMINAL_STATUS_OWNER.paths[0]}. It must become ✅ Done last. Do not alter implementation,
-tests, product docs, changelog/index, board, any other task, stage, or commit.`);
-  } finally {
-    changed = assertScopedRepositoryMutation(identity, before, captureRepositoryFingerprint(), TERMINAL_STATUS_OWNER.paths);
-  }
-  assertTask554TerminalStatusDelta(beforeTask ?? "", closureText(ROOT, TERMINAL_STATUS_OWNER.paths[0]) ?? "");
-  return Object.freeze({ changed, result });
-}
 async function runWorkflow() {
   if (assertNoUnexpectedArguments()) return workflowSelfTest();
   phase("Start gate");
@@ -793,13 +779,8 @@ Do not edit.`, []);
   const fast = runTask554SmokeProfile(ROOT, "fast", "task-554-fast");
   removeFastSmokeEvidence(ROOT);
   const certification = runTask554SmokeProfile(ROOT, "certification", "task-554-certification");
-  phase("Metadata closure");
-  const closure = await runMetadataClosure();
-  phase("Final drift");
-  const finalDrift = await runFinalDrift();
-  phase("Terminal status");
-  const terminal = await runTerminalStatus();
-  return Object.freeze({ pass: true, preflight, start, owners: Object.freeze(owners), documentation, validation, audits, fast, certification, closure, finalDrift, terminal });
+  phase("Owner review");
+  return Object.freeze({ pass: false, ownerActionRequired: "owner_review_certification", preflight, start, owners: Object.freeze(owners), documentation, validation, audits, fast, certification });
 }
 function writeTinyFile(filePath, content) {
   mkdirSync(path.dirname(filePath), { recursive: true });
@@ -835,6 +816,11 @@ function workflowSelfTest() {
     writeTinyFile(path.join(tempRoot, "core/tracked.ts"), "export const tracked = 1;\n");
     commandOutput(tempRoot, "git", ["add", ".gitignore", "core/tracked.ts"]);
     commandOutput(tempRoot, "git", ["commit", "-qm", "baseline"]);
+    const stableIgnoredPath = "_docs/_workflows/stable-before-task-554.mjs";
+    writeTinyFile(path.join(tempRoot, stableIgnoredPath), "export const stable = true;\n");
+    if (currentDirtyPaths(tempRoot).includes(stableIgnoredPath) || !captureRepositoryFingerprint(tempRoot).has(stableIgnoredPath)) {
+      throw new Error("task_554_self_test_stable_ignored_preflight");
+    }
     const baseline = commandOutput(tempRoot, "git", ["rev-parse", "HEAD"]).toString("utf8").trim();
     writeTinyFile(path.join(tempRoot, "core/tracked.ts"), "export const tracked = 1;\nexport const finalLine = true;");
     writeTinyFile(path.join(tempRoot, "tests/untracked.ts"), "one\ntwo\nthree");
@@ -866,6 +852,7 @@ function workflowSelfTest() {
       () => assertScopedRepositoryMutation("task_554_self_test_forbidden", forbiddenBefore, captureRepositoryFingerprint(tempRoot), ["core/services/content/postsService.ts"], tempRoot),
       "task_554_self_test_forbidden:scope_violation:",
     );
+    rmSync(path.join(tempRoot, "core/services/content/postsService.ts"));
     expectFailure(
       () => runReadOnlyGate("task_554_self_test_gate", tempRoot, () => writeTinyFile(path.join(tempRoot, "tests/gate-side-effect.ts"), "export const sideEffect = true;\n")),
       "task_554_self_test_gate:scope_violation:",
@@ -890,9 +877,10 @@ function workflowSelfTest() {
     unlinkSync(linkPath);
     const session = "task-554-fast";
     const manifest = makeSelfTestManifest(tempRoot, session);
+    const pngBytes = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIHWP4z8DwHwAFgAI/ScLZ4QAAAABJRU5ErkJggg==", "base64");
+    writeTinyFile(path.join(tempRoot, "scripts/runtime-smoke/adapters/task-554/output-manifest.ts"), `export function decodeTask554Png(bytes: Uint8Array) { if (bytes.byteLength !== ${pngBytes.byteLength} || bytes[12] !== 73 || bytes[13] !== 72 || bytes[14] !== 68 || bytes[15] !== 82) throw new Error("invalid_png"); const read = (offset: number) => (((bytes[offset] << 24) | (bytes[offset + 1] << 16) | (bytes[offset + 2] << 8) | bytes[offset + 3]) >>> 0); return { width: read(16), height: read(20) }; }\n`);
     const smokeBefore = captureRepositoryFingerprint(tempRoot);
     const sessionDirectory = createEmptySmokeSession(tempRoot, session);
-    const pngBytes = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIHWP4z8DwHwAFgAI/ScLZ4QAAAABJRU5ErkJggg==", "base64");
     const screenshots = manifest.paths.map((relativePath) => {
       writeTinyFile(path.join(tempRoot, relativePath), pngBytes);
       return Object.freeze({ path: relativePath, sha256: sha256(pngBytes) });
@@ -916,6 +904,7 @@ function workflowSelfTest() {
     expectFailure(() => assertExactTask554SmokeEvidence(tempRoot, "fast", session, manifest, readFileSync(reportPath)), "task_554_smoke_png_invalid:");
     writeTinyFile(path.join(tempRoot, manifest.paths[0]), pngBytes);
     writeTinyFile(path.join(tempRoot, manifest.paths[1]), Buffer.concat([pngBytes, Buffer.from("changed")]));
+    expectFailure(() => assertExactTask554SmokeEvidence(tempRoot, "fast", session, manifest, readFileSync(reportPath)), "task_554_smoke_png_decode_invalid");
     expectFailure(() => assertSmokeEvidenceSnapshot(evidenceSnapshot, tempRoot), "task_554_smoke_evidence_changed:");
     writeTinyFile(path.join(tempRoot, manifest.paths[1]), pngBytes);
     writeTinyFile(path.join(tempRoot, "_docs/_workflows/ignored-sibling.mjs"), "export const ignoredSibling = true;\n");
@@ -929,6 +918,9 @@ function workflowSelfTest() {
       "task_554_smoke_output_extra_or_missing:",
     );
     rmSync(path.join(sessionDirectory, "extra.txt"));
+    mkdirSync(path.join(sessionDirectory, "empty"));
+    expectFailure(() => assertExactTask554SmokeEvidence(tempRoot, "fast", session, manifest, readFileSync(reportPath)), "task_554_smoke_output_nested_directory:");
+    rmSync(path.join(sessionDirectory, "empty"), { recursive: true });
     const reserialized = Buffer.from(JSON.stringify(JSON.parse(report.toString("utf8"))), "utf8");
     expectFailure(() => assertByteIdenticalReport(reserialized, reportPath), "task_554_smoke_report_not_stdout_identical");
     const boardBefore = ["- **To Do:** 1 tasks", "- **In Progress:** 2 tasks", "- **Done:** 3 tasks", "## In Progress", "| ID |", "| TASK-554 | title | priority | effort | In progress 2026-08-11. details |", "## Done", "| ID |", "| TASK-999 | retained |"].join("\n");
@@ -950,11 +942,13 @@ function workflowSelfTest() {
       pass: true,
       unterminatedLineCount: true,
       trackedAndUntrackedCandidates: true,
+      stableIgnoredArtifactsBound: true,
       manifestInputBound: true,
       strictMutationAndAuditResultsRejected: true,
       forbiddenScopeRejected: true,
       directStdoutCapture: true,
       boundedPngEvidenceRejected: true,
+      decodedPngEvidenceRejected: true,
       extraSmokeOutputRejected: true,
       reportReserializationRejected: true,
       gateMutationRejected: true,

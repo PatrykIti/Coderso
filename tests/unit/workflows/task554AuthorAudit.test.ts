@@ -30,6 +30,7 @@ test("TASK-554 bootstrap rejects a tracked extra while ignoring a local untracke
     strictAuditResultRejected: true,
     ignoredWorkflowMutationRejected: true,
     authorReceiptBound: true,
+    forgedReceiptLensesRejected: true,
     modeAndSymlinkFingerprintRejected: true,
   });
 });
@@ -71,6 +72,9 @@ test("TASK-554 bootstrap pins the exact regular tracked files and HEAD bytes", (
   expect(source).toContain("function parseMode()");
   expect(source).toContain("task_554_audit_mutated_repository");
   expect(source).toContain("assertTask554AuthorAuditReceipt");
+  expect(source).toContain("TASK_554_AUTHOR_AUDIT_LENS_IDS");
+  expect(source).toContain("task_554_author_staged_changes_forbidden");
+  expect(source).toContain("task_554_author_dirty_state_invalid");
   expect(source).toContain("author-audit-receipt.json");
   expect(source).toContain("normalizeAuthorAuditResult");
   expect(source).toContain("task_554_author_audit_invalid");

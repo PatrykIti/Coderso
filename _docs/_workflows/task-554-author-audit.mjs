@@ -33,9 +33,27 @@ export const TASK_554_WORKFLOW_PATHS = Object.freeze([
   "_docs/_workflows/task-554-implement.mjs",
   "_docs/_workflows/task-554-fix.mjs",
 ]);
+export const TASK_554_AUTHOR_AUDIT_LENS_IDS = Object.freeze([
+  "task-554:audit:security",
+  "task-554:audit:ui",
+  "task-554:audit:workflow",
+]);
 const SELF_TEST_ARG = "--task-554-bootstrap-self-test";
 const VERIFY_ARG = "--task-554-bootstrap-verify";
 export const TASK_554_AUTHOR_RECEIPT_PATH = "_docs/_workflows/_smoke/task-554/author-audit-receipt.json";
+const AUTHOR_ALLOWED_DIRTY_PATHS = Object.freeze([
+  "_TMP-task-dispatch-plan-2026-08-10.md",
+  "_docs/_TASKS/README.md",
+  "_docs/_TASKS/TASK-554_Post_Metadata_Publish_RBAC_Hardening.md",
+]);
+const AUTHOR_FORBIDDEN_PATHS = Object.freeze([
+  "core/services/content/postsService.ts",
+  "core/services/posts/postMutationService.ts",
+  "core/admin/ui/posts/editor/hooks/usePostEditorState.ts",
+  "_docs/_TASKS/TASK-414",
+  "_docs/_TASKS/TASK-547",
+  "_docs/_CHANGELOG/1266-",
+]);
 
 function runGit(root, args) {
   return execFileSync("git", args, { cwd: root, encoding: "buffer", stdio: ["ignore", "pipe", "pipe"] });
@@ -67,10 +85,35 @@ function assertGitPathIsClean(root, relativePath) {
   }
 }
 
+function gitNulPaths(root, args) {
+  return runGit(root, args).toString("utf8").split("\0").filter(Boolean);
+}
+
+function pathMatches(paths, relativePath) {
+  return paths.some((entry) => relativePath === entry || relativePath.startsWith(entry));
+}
+
+function currentAuthorDirtyPaths(root) {
+  return [...new Set([
+    ...gitNulPaths(root, ["diff", "--name-only", "-z"]),
+    ...gitNulPaths(root, ["ls-files", "--others", "--exclude-standard", "-z"]),
+  ])].sort((left, right) => left.localeCompare(right));
+}
+
+function assertAuthorDispatchState(root = ROOT) {
+  if (gitStatus(root, ["diff", "--cached", "--quiet"]) !== 0) throw new Error("task_554_author_staged_changes_forbidden");
+  const dirty = currentAuthorDirtyPaths(root);
+  const forbidden = dirty.filter((relativePath) => pathMatches(AUTHOR_FORBIDDEN_PATHS, relativePath));
+  const unexpected = dirty.filter((relativePath) => !AUTHOR_ALLOWED_DIRTY_PATHS.includes(relativePath));
+  if (forbidden.length || unexpected.length) {
+    throw new Error(`task_554_author_dirty_state_invalid:${JSON.stringify({ forbidden, unexpected })}`);
+  }
+  return Object.freeze(dirty);
+}
+
 function captureAuditFingerprint(root, excludedPaths = []) {
   const excluded = new Set(excludedPaths);
-  const parsePaths = (args) => runGit(root, args).toString("utf8").split("\0").filter(Boolean);
-  const paths = [...new Set([...parsePaths(["ls-files", "-co", "--exclude-standard", "-z"]), ...parsePaths(["ls-files", "--others", "--ignored", "--exclude-standard", "-z", "--", "_docs/_workflows"])])].sort();
+  const paths = [...new Set([...gitNulPaths(root, ["ls-files", "-co", "--exclude-standard", "-z"]), ...gitNulPaths(root, ["ls-files", "--others", "--ignored", "--exclude-standard", "-z", "--", "_docs/_workflows"])])].sort();
   return paths.filter((relativePath) => !excluded.has(relativePath)).map((relativePath) => {
     const absolutePath = path.join(root, relativePath);
     try {
@@ -116,7 +159,7 @@ function assertReceiptTarget(root) {
 function exactReceipt(value) {
   const keys = ["schemaVersion", "task", "baseline", "head", "fingerprint", "lenses", "reconcile"];
   if (!value || typeof value !== "object" || Array.isArray(value) || Object.keys(value).length !== keys.length || keys.some((key) => !Object.hasOwn(value, key))) return false;
-  return value.schemaVersion === 1 && value.task === "TASK-554" && value.baseline === TASK_554_BASELINE_SHA && typeof value.head === "string" && /^[a-f0-9]{40}$/u.test(value.head) && typeof value.fingerprint === "string" && /^[a-f0-9]{64}$/u.test(value.fingerprint) && Array.isArray(value.lenses) && value.lenses.length === 3 && value.lenses.every((identity) => typeof identity === "string") && value.reconcile === "task-554:audit:reconcile";
+  return value.schemaVersion === 1 && value.task === "TASK-554" && value.baseline === TASK_554_BASELINE_SHA && typeof value.head === "string" && /^[a-f0-9]{40}$/u.test(value.head) && typeof value.fingerprint === "string" && /^[a-f0-9]{64}$/u.test(value.fingerprint) && Array.isArray(value.lenses) && value.lenses.length === TASK_554_AUTHOR_AUDIT_LENS_IDS.length && value.lenses.every((identity, index) => identity === TASK_554_AUTHOR_AUDIT_LENS_IDS[index]) && value.reconcile === "task-554:audit:reconcile";
 }
 
 function writeAuthorAuditReceipt(root, lenses) {
@@ -134,6 +177,12 @@ function writeAuthorAuditReceipt(root, lenses) {
   writeFileSync(staged, `${JSON.stringify(receipt)}\n`, { encoding: "utf8", mode: 0o600, flag: "w" });
   renameSync(staged, target);
   return receipt;
+}
+
+export function recordTask554AuthorAuditReceipt(root = ROOT) {
+  assertTask554Bootstrap(root);
+  assertAuthorDispatchState(root);
+  return writeAuthorAuditReceipt(root, TASK_554_AUTHOR_AUDIT_LENS_IDS.map((identity) => ({ identity })));
 }
 
 export function assertTask554AuthorAuditReceipt(root = ROOT) {
@@ -154,12 +203,13 @@ export function assertTask554AuthorAuditReceipt(root = ROOT) {
   return Object.freeze(receipt);
 }
 
-async function assertReadOnlyAudit(label, work) {
-  const before = captureAuditFingerprint(ROOT);
+async function assertReadOnlyAudit(label, work, root = ROOT) {
+  assertAuthorDispatchState(root);
+  const before = captureAuditFingerprint(root);
   try {
     return await work();
   } finally {
-    if (captureAuditFingerprint(ROOT) !== before) throw new Error(`task_554_audit_mutated_repository:${label}`);
+    if (captureAuditFingerprint(root) !== before) throw new Error(`task_554_audit_mutated_repository:${label}`);
   }
 }
 
@@ -279,6 +329,18 @@ function bootstrapSelfTest() {
       { identity: "task-554:audit:workflow" },
     ]);
     if (assertTask554AuthorAuditReceipt(tempRoot).fingerprint !== receipt.fingerprint) throw new Error("task_554_author_self_test_receipt");
+    const receiptTarget = authorReceiptPath(tempRoot);
+    const receiptBytes = readFileSync(receiptTarget);
+    const forgedReceipt = JSON.parse(receiptBytes.toString("utf8"));
+    forgedReceipt.lenses[2] = "task-554:audit:forged";
+    writeFileSync(receiptTarget, `${JSON.stringify(forgedReceipt)}\n`, "utf8");
+    let forgedLensRejected = false;
+    try { assertTask554AuthorAuditReceipt(tempRoot); } catch (error) {
+      if (!String(error?.message).startsWith("task_554_author_receipt_invalid")) throw error;
+      forgedLensRejected = true;
+    }
+    if (!forgedLensRejected) throw new Error("task_554_author_self_test_receipt_lenses");
+    writeFileSync(receiptTarget, receiptBytes);
     mkdirSync(path.join(tempRoot, "core"), { recursive: true });
     writeFileSync(path.join(tempRoot, "core/receipt-drift.ts"), "export const drift = true;\n", "utf8");
     let staleReceiptRejected = false;
@@ -375,6 +437,7 @@ function bootstrapSelfTest() {
       strictAuditResultRejected: true,
       ignoredWorkflowMutationRejected: true,
       authorReceiptBound: true,
+      forgedReceiptLensesRejected: true,
       modeAndSymlinkFingerprintRejected: true,
     });
   } finally {
@@ -449,27 +512,30 @@ workflow bootstrap, validation lanes, and line-count limits.`;
 async function runWorkflow() {
   phase("Bootstrap verification");
   const bootstrap = assertTask554Bootstrap();
+  assertAuthorDispatchState();
   phase("Contract audit");
   assertTask554Bootstrap();
   const lensDefinitions = Object.freeze([
-    Object.freeze({ identity: "task-554:audit:security", prompt: "Audit server schema/route/RBAC/CSRF/error behavior and real HTTP test feasibility." }),
-    Object.freeze({ identity: "task-554:audit:ui", prompt: "Audit Admin client, Classic editor baseline/dirty/race behavior, and browser-boundary tests." }),
-    Object.freeze({ identity: "task-554:audit:workflow", prompt: "Audit workflow, smoke architecture, task graph, writer ownership, validation and closure rules." }),
+    Object.freeze({ identity: TASK_554_AUTHOR_AUDIT_LENS_IDS[0], prompt: "Audit server schema/route/RBAC/CSRF/error behavior and real HTTP test feasibility." }),
+    Object.freeze({ identity: TASK_554_AUTHOR_AUDIT_LENS_IDS[1], prompt: "Audit Admin client, Classic editor baseline/dirty/race behavior, and browser-boundary tests." }),
+    Object.freeze({ identity: TASK_554_AUTHOR_AUDIT_LENS_IDS[2], prompt: "Audit workflow, smoke architecture, task graph, writer ownership, validation and closure rules." }),
   ]);
-  const lenses = await assertReadOnlyAudit("contract_audit", () => parallel(lensDefinitions.map((lens) => () => agent(
-    `${COMMON}\n${lens.prompt}\nReturn identity=${lens.identity}.`,
-    { label: lens.identity, phase: "Contract audit", schema: AUDIT_SCHEMA },
-  ))));
+  const lenses = await assertReadOnlyAudit("contract_audit", () => parallel(lensDefinitions.map((lens) => () => {
+    assertTask554Bootstrap();
+    assertAuthorDispatchState();
+    return agent(`${COMMON}\n${lens.prompt}\nReturn identity=${lens.identity}.`, { label: lens.identity, phase: "Contract audit", schema: AUDIT_SCHEMA });
+  })));
   if (lenses.length !== lensDefinitions.length) throw new Error("task_554_audit_missing_results");
   for (const [index, lens] of lenses.entries()) {
     assertAuditClean(`task_554_audit_${index + 1}`, lensDefinitions[index].identity, lens);
   }
   phase("Cross-file reconcile");
   assertTask554Bootstrap();
-  const reconcile = assertAuditClean("task_554_reconcile", "task-554:audit:reconcile", await assertReadOnlyAudit("reconcile", () => agent(
-    `${COMMON}\nRead only the shared contracts/seams. Reconcile type names, allowed fields, ownership, test paths, exact seven smoke IDs, writer order, land order, exact calendar parsing, Post cache generation, snapshot authority, and pinned closure deltas. Return identity=task-554:audit:reconcile.`,
-    { label: "task-554:audit:reconcile", phase: "Cross-file reconcile", schema: AUDIT_SCHEMA },
-  )));
+  const reconcile = assertAuditClean("task_554_reconcile", "task-554:audit:reconcile", await assertReadOnlyAudit("reconcile", () => {
+    assertTask554Bootstrap();
+    assertAuthorDispatchState();
+    return agent(`${COMMON}\nRead only the shared contracts/seams. Reconcile type names, allowed fields, ownership, test paths, exact seven smoke IDs, writer order, land order, exact calendar parsing, Post cache generation, snapshot authority, and pinned closure deltas. Return identity=task-554:audit:reconcile.`, { label: "task-554:audit:reconcile", phase: "Cross-file reconcile", schema: AUDIT_SCHEMA });
+  }));
   const receipt = writeAuthorAuditReceipt(ROOT, lenses);
   return Object.freeze({ pass: true, bootstrap, lenses, reconcile, receipt });
 }

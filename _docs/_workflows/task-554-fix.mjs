@@ -233,7 +233,9 @@ function verifyBootstrap(root = ROOT) {
 
 function beforeDispatch(phaseName) {
   try {
-    return verifyBootstrap();
+    const bootstrap = verifyBootstrap();
+    assertFixPreflight();
+    return bootstrap;
   } catch (error) {
     throw new Error(`task_554_fix_bootstrap_before_${phaseName.replaceAll(" ", "_")}:${error instanceof Error ? error.message : String(error)}`);
   }
@@ -344,6 +346,7 @@ function assertTouchedLineLimit(root) {
 }
 
 function runAffectedGates(owners) {
+  assertFixPreflight();
   const before = captureFixFingerprint();
   try {
     for (const owner of owners) for (const entry of OWNER_GATES[owner]) runCommand(ROOT, entry);
