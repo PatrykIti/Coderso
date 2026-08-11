@@ -34,6 +34,12 @@ const WORKFLOW_PATHS = Object.freeze([
   "_docs/_workflows/task-554-closeout.mjs",
 ]);
 const TERMINAL_OWNER_IDS = Object.freeze(["metadata-closure", "terminal-status"]);
+export const TASK_554_SECURITY_GATE_REPAIR_PATHS = Object.freeze([
+  "package.json",
+  "bun.lock",
+  "scripts/runtime-smoke/adapters/task-540/suite/runtime/platform-actions.ts",
+  "tests/unit/runtime-smoke/task540-native-suite-boundary.test.ts",
+]);
 
 const OWNER_PATHS = Object.freeze({
   "workflow-contract-tests": Object.freeze([
@@ -73,11 +79,13 @@ const OWNER_PATHS = Object.freeze({
     "scripts/runtime-smoke/adapters/task-554/output-manifest.ts",
     "scripts/runtime-smoke/adapters/task-554/worker-entry.ts",
     "scripts/runtime-smoke/adapters/task-554/worker-operations.ts",
+    "scripts/runtime-smoke/adapters/task-554/routing-settings-lease.ts",
     "scripts/runtime-smoke/adapters/task-554/production-handlers.ts",
     "tests/unit/runtime-smoke/cli-registry.test.ts",
     "tests/unit/runtime-smoke/task-554-adapter.test.ts",
     "tests/unit/runtime-smoke/task-554-worker.test.ts",
   ]),
+  "security-gate-repair": TASK_554_SECURITY_GATE_REPAIR_PATHS,
   documentation: Object.freeze([
     "_docs/CMS_API.md",
     "_docs/RBAC_SPEC.md",
@@ -380,6 +388,11 @@ const OWNER_GATES = Object.freeze({
     command("smoke-tests", "bun", ["test", "tests/unit/runtime-smoke/cli-registry.test.ts", "tests/unit/runtime-smoke/task-554-adapter.test.ts", "tests/unit/runtime-smoke/task-554-worker.test.ts"]),
     command("types", "bun", ["--cwd", "core", "lint:types"]), command("lint", "bun", ["--cwd", "core", "lint"]),
   ]),
+  "security-gate-repair": Object.freeze([
+    command("task-540-boundary", "bun", ["test", "tests/unit/runtime-smoke/task540-native-suite-boundary.test.ts"]),
+    command("frozen-install", "bun", ["install", "--frozen-lockfile"]),
+    command("strict-security-scan", "bun", ["run", "scan:security:strict"]),
+  ]),
   documentation: Object.freeze([]),
 });
 
@@ -612,6 +625,8 @@ function fixSelfTest() {
     expectFailure(() => normalizeAuditFindings(validIdentity, { ...valid, findings: [{ ...valid.findings[0], extra: true }] }), "task_554_fix_finding_invalid:0:keys");
     expectFailure(() => requireResult("task-554:fix:result", { pass: true, summary: "clean", errors: [], identity: "task-554:fix:result" }), "task_554_fix_result_invalid:");
     if (JSON.stringify(ownersForChangedPaths(["core/admin/services/postsClient.ts"])) !== JSON.stringify(["admin-client"]) || JSON.stringify(lensesForChangedOwners(valid.findings, ["admin-client"])) !== JSON.stringify(["test-integrity"])) throw new Error("task_554_fix_self_test_affected_receipt");
+    if (JSON.stringify(ownersForChangedPaths(TASK_554_SECURITY_GATE_REPAIR_PATHS)) !== JSON.stringify(["security-gate-repair"])) throw new Error("task_554_fix_self_test_security_gate_repair_scope");
+    expectFailure(() => ownersForChangedPaths([...TASK_554_SECURITY_GATE_REPAIR_PATHS, "core/server/routes/authRoutes.ts"]), "task_554_fix_changed_path_unowned:core/server/routes/authRoutes.ts");
     expectFailure(() => ownersForChangedPaths([]), "task_554_fix_empty_repair");
     const rebootstrap = ownerReviewRebootstrap([{ ...valid.findings[0], lens: "test-integrity", evidence: `${WORKFLOW_PATHS[0]}:1` }]);
     if (rebootstrap?.ownerActionRequired !== "owner_review_rebootstrap") throw new Error("task_554_fix_self_test_rebootstrap");
@@ -636,7 +651,7 @@ function fixSelfTest() {
     expectFailure(() => assertTouchedLineLimit(root, baseline), "task_554_fix_line_limit:scripts/human.ts:1001");
     rmSync(path.join(root, "scripts/human.ts"));
     rmSync(path.join(root, "scripts/exempt.generated.ts"));
-    return Object.freeze({ pass: true, forbiddenScopeRejected: true, ignoredWorkflowMutationRejected: true, emptyWorkflowDirectoryMutationRejected: true, tmpMutationRejected: true, ownerMappingRejected: true, lensMappingRejected: true, strictResultRejected: true, agentIdentityRejected: true, terminalOwnerEscalated: true, actualAffectedReceipt: true, workflowRebootstrapEscalated: true, modeAndSymlinkFingerprintRejected: true, generatedArtifactExcluded: true, humanLineLimitRejected: true });
+    return Object.freeze({ pass: true, forbiddenScopeRejected: true, ignoredWorkflowMutationRejected: true, emptyWorkflowDirectoryMutationRejected: true, tmpMutationRejected: true, ownerMappingRejected: true, lensMappingRejected: true, strictResultRejected: true, agentIdentityRejected: true, terminalOwnerEscalated: true, actualAffectedReceipt: true, securityGateRepairScopeBound: true, workflowRebootstrapEscalated: true, modeAndSymlinkFingerprintRejected: true, generatedArtifactExcluded: true, humanLineLimitRejected: true });
   } finally {
     rmSync(root, { recursive: true, force: true });
   }

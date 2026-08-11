@@ -65,7 +65,9 @@ Post mutation wrapper.
 - The owner-authorized final security-gate repair additionally owns only the
   root `package.json` / `bun.lock` vulnerability overrides for `js-yaml`
   `4.3.1` and `nanoid` `3.3.17`, plus TASK-540's fixed-loopback public
-  bot-protection smoke preflight and its focused boundary test. It must not
+  bot-protection smoke preflight and its focused boundary test. Both pinned
+  workflows assign exactly these four paths to the sole `security-gate-repair`
+  owner; resume accepts that bounded owner scope. It must not
   alter the production bot-protection route, suppress Semgrep/Trivy/Bun-audit,
   or widen TASK-540's smoke host. This narrow repair is validated by a fresh
   dependency/security audit, its focused harness test, package install,
@@ -834,7 +836,8 @@ registrations/handlers:
 - `scripts/runtime-smoke/adapters/task-554/browser-actions.ts`;
 - `scripts/runtime-smoke/adapters/task-554/output-manifest.ts`;
 - `scripts/runtime-smoke/adapters/task-554/worker-entry.ts`;
-- `scripts/runtime-smoke/adapters/task-554/worker-operations.ts`; and
+- `scripts/runtime-smoke/adapters/task-554/worker-operations.ts`;
+- `scripts/runtime-smoke/adapters/task-554/routing-settings-lease.ts`; and
 - `scripts/runtime-smoke/adapters/task-554/production-handlers.ts`.
 
 These files compose the already-owned shared lifecycle, process supervisor,

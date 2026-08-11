@@ -35,7 +35,8 @@ export const TASK_554_SMOKE_SCENARIO_IDS = Object.freeze(["writer-metadata-save-
 const RESULT_SCHEMA = Object.freeze({ type: "object", additionalProperties: false, required: ["pass", "summary", "errors"], properties: { pass: { type: "boolean" }, summary: { type: "string" }, errors: { type: "array", items: { type: "string" } } } });
 const AUDIT_SCHEMA = Object.freeze({ type: "object", additionalProperties: false, required: ["pass", "summary", "findings"], properties: { pass: { type: "boolean" }, summary: { type: "string" }, findings: { type: "array", items: { type: "object", additionalProperties: false, required: ["severity", "area", "finding", "evidence", "recommendation"], properties: { severity: { type: "string", enum: ["HIGH", "MEDIUM", "LOW"] }, area: { type: "string" }, finding: { type: "string" }, evidence: { type: "string" }, recommendation: { type: "string" } } } } } });
 const owner = (id, paths) => Object.freeze({ id, paths: Object.freeze(paths) });
-const OWNERS = Object.freeze([owner("workflow-contract-tests", ["tests/unit/workflows/task554AuthorAudit.test.ts", "tests/unit/workflows/task554WorkflowContracts.test.ts"]), owner("contract-schema-route", ["core/services/posts/postMetadataContract.ts", "core/server/validation/postSchemas.ts", "core/server/routes/postsRoutes.ts", "core/server/routes/index.ts", "core/server/httpServer.ts", "tests/vitest/server/postMetadataContract.test.ts", "tests/vitest/server/requestBody.test.ts", "tests/vitest/validation/postSchemas.test.ts", "tests/integration/routes/postsRoutes.test.ts", "tests/integration/routes/postMetadataRbac.test.ts"]), owner("admin-client", ["core/admin/services/postsClient.ts", "tests/vitest/admin/postsClient.test.ts"]), owner("classic-metadata-ui", ["core/admin/ui/posts/editor/postMetadataMutationPayload.ts", "core/admin/ui/posts/editor/PostClassicEditorShell.tsx", "tests/vitest/ui/post-metadata-mutation-payload.test.ts", "tests/vitest/ui/post-classic-editor-shell-wave.test.tsx", "tests/vitest/ui/post-classic-metadata-hydration.test.tsx", "tests/vitest/ui/post-editor-state-metadata-boundary.test.ts"]), owner("smoke-adapter", ["scripts/runtime-smoke/contracts.ts", "scripts/runtime-smoke/cli.ts", "scripts/runtime-smoke/registry.ts", "scripts/runtime-smoke/adapters/task-554.ts", "scripts/runtime-smoke/adapters/task-554/browser-actions.ts", "scripts/runtime-smoke/adapters/task-554/output-manifest.ts", "scripts/runtime-smoke/adapters/task-554/worker-entry.ts", "scripts/runtime-smoke/adapters/task-554/worker-operations.ts", "scripts/runtime-smoke/adapters/task-554/routing-settings-lease.ts", "scripts/runtime-smoke/adapters/task-554/production-handlers.ts", "tests/unit/runtime-smoke/cli-registry.test.ts", "tests/unit/runtime-smoke/task-554-adapter.test.ts", "tests/unit/runtime-smoke/task-554-worker.test.ts"])]);
+export const TASK_554_SECURITY_GATE_REPAIR_PATHS = Object.freeze(["package.json", "bun.lock", "scripts/runtime-smoke/adapters/task-540/suite/runtime/platform-actions.ts", "tests/unit/runtime-smoke/task540-native-suite-boundary.test.ts"]);
+const OWNERS = Object.freeze([owner("workflow-contract-tests", ["tests/unit/workflows/task554AuthorAudit.test.ts", "tests/unit/workflows/task554WorkflowContracts.test.ts"]), owner("contract-schema-route", ["core/services/posts/postMetadataContract.ts", "core/server/validation/postSchemas.ts", "core/server/routes/postsRoutes.ts", "core/server/routes/index.ts", "core/server/httpServer.ts", "tests/vitest/server/postMetadataContract.test.ts", "tests/vitest/server/requestBody.test.ts", "tests/vitest/validation/postSchemas.test.ts", "tests/integration/routes/postsRoutes.test.ts", "tests/integration/routes/postMetadataRbac.test.ts"]), owner("admin-client", ["core/admin/services/postsClient.ts", "tests/vitest/admin/postsClient.test.ts"]), owner("classic-metadata-ui", ["core/admin/ui/posts/editor/postMetadataMutationPayload.ts", "core/admin/ui/posts/editor/PostClassicEditorShell.tsx", "tests/vitest/ui/post-metadata-mutation-payload.test.ts", "tests/vitest/ui/post-classic-editor-shell-wave.test.tsx", "tests/vitest/ui/post-classic-metadata-hydration.test.tsx", "tests/vitest/ui/post-editor-state-metadata-boundary.test.ts"]), owner("smoke-adapter", ["scripts/runtime-smoke/contracts.ts", "scripts/runtime-smoke/cli.ts", "scripts/runtime-smoke/registry.ts", "scripts/runtime-smoke/adapters/task-554.ts", "scripts/runtime-smoke/adapters/task-554/browser-actions.ts", "scripts/runtime-smoke/adapters/task-554/output-manifest.ts", "scripts/runtime-smoke/adapters/task-554/worker-entry.ts", "scripts/runtime-smoke/adapters/task-554/worker-operations.ts", "scripts/runtime-smoke/adapters/task-554/routing-settings-lease.ts", "scripts/runtime-smoke/adapters/task-554/production-handlers.ts", "tests/unit/runtime-smoke/cli-registry.test.ts", "tests/unit/runtime-smoke/task-554-adapter.test.ts", "tests/unit/runtime-smoke/task-554-worker.test.ts"]), owner("security-gate-repair", TASK_554_SECURITY_GATE_REPAIR_PATHS)]);
 const DOCUMENTATION_OWNER = owner("documentation", ["_docs/CMS_API.md", "_docs/RBAC_SPEC.md", "_docs/SECURITY_SPEC.md", "_docs/ADMIN_CACHE.md", "_docs/ADMIN_CACHE_MAP.md", "docs/develop/runtime-smoke-cookbook.md", "docs/develop/assistant.md", "tests/README.md"]);
 const FORBIDDEN_PATHS = Object.freeze([...TASK_554_WORKFLOW_PATHS, "_TMP-task-dispatch-plan-2026-08-10.md", "core/services/content/postsService.ts", "core/services/content/postMutationService.ts", "_docs/_TASKS/TASK-414", "_docs/_TASKS/TASK-547", "_docs/_CHANGELOG/1266-", "core/services/kits/fullSitePackage/", "core/services/kits/fullSiteInstall/", "core/admin/ui/posts/editor/hooks/usePostEditorState.ts"]);
 const POST_AUDIT_LENSES = Object.freeze(["scope-fidelity", "rbac-fail-closed", "present-only-byte-identity", "cross-stream-smoke", "test-integrity"]);
@@ -48,7 +49,7 @@ const FULL_GATE_COMMANDS = Object.freeze([
   command("task_554_types", "bun", ["--cwd", "core", "lint:types"]), command("task_554_lint", "bun", ["--cwd", "core", "lint"]), command("task_554_admin_boundary", "bun", ["run", "check:admin-boundary"]), command("task_554_security_scan", "bun", ["run", "scan:security:strict"]), command("task_554_coderso_release_gates", "bun", ["run", "gates:coderso"]), command("task_554_precommit", "bun", ["run", "precommit:check"]),
   command("task_554_author_syntax", "node", ["--check", "_docs/_workflows/task-554-author-audit.mjs"]), command("task_554_implement_syntax", "node", ["--check", "_docs/_workflows/task-554-implement.mjs"]), command("task_554_fix_syntax", "node", ["--check", "_docs/_workflows/task-554-fix.mjs"]), command("task_554_closeout_syntax", "node", ["--check", "_docs/_workflows/task-554-closeout.mjs"]),
 ]);
-const OWNER_GATE_COMMANDS = Object.freeze({ "workflow-contract-tests": Object.freeze([command("task_554_workflow_contracts", "bun", ["test", "tests/unit/workflows/task554AuthorAudit.test.ts", "tests/unit/workflows/task554WorkflowContracts.test.ts"]), command("task_554_author_syntax", "node", ["--check", "_docs/_workflows/task-554-author-audit.mjs"]), command("task_554_implement_syntax", "node", ["--check", "_docs/_workflows/task-554-implement.mjs"]), command("task_554_fix_syntax", "node", ["--check", "_docs/_workflows/task-554-fix.mjs"])]), "contract-schema-route": Object.freeze([command("task_554_contract_vitest", "bunx", ["vitest", "run", "--config", "vitest.config.ts", "tests/vitest/validation/postSchemas.test.ts", "tests/vitest/server/postMetadataContract.test.ts", "tests/vitest/server/requestBody.test.ts"]), command("task_554_contract_bun", "bun", ["test", "tests/integration/routes/postsRoutes.test.ts", "tests/integration/routes/postMetadataRbac.test.ts", "tests/unit/auth/rbac.test.ts"]), command("task_554_types", "bun", ["--cwd", "core", "lint:types"]), command("task_554_lint", "bun", ["--cwd", "core", "lint"])]), "admin-client": Object.freeze([command("task_554_client_vitest", "bunx", ["vitest", "run", "--config", "vitest.config.ts", "tests/vitest/admin/postsClient.test.ts"]), command("task_554_types", "bun", ["--cwd", "core", "lint:types"]), command("task_554_lint", "bun", ["--cwd", "core", "lint"])]), "classic-metadata-ui": Object.freeze([command("task_554_ui_vitest", "bunx", ["vitest", "run", "--config", "vitest.config.ts", "tests/vitest/ui/post-metadata-mutation-payload.test.ts", "tests/vitest/ui/post-classic-editor-shell-wave.test.tsx", "tests/vitest/ui/post-classic-metadata-hydration.test.tsx", "tests/vitest/ui/post-editor-state-metadata-boundary.test.ts"]), command("task_554_types", "bun", ["--cwd", "core", "lint:types"]), command("task_554_lint", "bun", ["--cwd", "core", "lint"])]), "smoke-adapter": Object.freeze([command("task_554_runtime_harness", "bun", ["test", "tests/unit/runtime-smoke/cli-registry.test.ts", "tests/unit/runtime-smoke/task-554-adapter.test.ts", "tests/unit/runtime-smoke/task-554-worker.test.ts"]), command("task_554_types", "bun", ["--cwd", "core", "lint:types"]), command("task_554_lint", "bun", ["--cwd", "core", "lint"])]) });
+const OWNER_GATE_COMMANDS = Object.freeze({ "workflow-contract-tests": Object.freeze([command("task_554_workflow_contracts", "bun", ["test", "tests/unit/workflows/task554AuthorAudit.test.ts", "tests/unit/workflows/task554WorkflowContracts.test.ts"]), command("task_554_author_syntax", "node", ["--check", "_docs/_workflows/task-554-author-audit.mjs"]), command("task_554_implement_syntax", "node", ["--check", "_docs/_workflows/task-554-implement.mjs"]), command("task_554_fix_syntax", "node", ["--check", "_docs/_workflows/task-554-fix.mjs"])]), "contract-schema-route": Object.freeze([command("task_554_contract_vitest", "bunx", ["vitest", "run", "--config", "vitest.config.ts", "tests/vitest/validation/postSchemas.test.ts", "tests/vitest/server/postMetadataContract.test.ts", "tests/vitest/server/requestBody.test.ts"]), command("task_554_contract_bun", "bun", ["test", "tests/integration/routes/postsRoutes.test.ts", "tests/integration/routes/postMetadataRbac.test.ts", "tests/unit/auth/rbac.test.ts"]), command("task_554_types", "bun", ["--cwd", "core", "lint:types"]), command("task_554_lint", "bun", ["--cwd", "core", "lint"])]), "admin-client": Object.freeze([command("task_554_client_vitest", "bunx", ["vitest", "run", "--config", "vitest.config.ts", "tests/vitest/admin/postsClient.test.ts"]), command("task_554_types", "bun", ["--cwd", "core", "lint:types"]), command("task_554_lint", "bun", ["--cwd", "core", "lint"])]), "classic-metadata-ui": Object.freeze([command("task_554_ui_vitest", "bunx", ["vitest", "run", "--config", "vitest.config.ts", "tests/vitest/ui/post-metadata-mutation-payload.test.ts", "tests/vitest/ui/post-classic-editor-shell-wave.test.tsx", "tests/vitest/ui/post-classic-metadata-hydration.test.tsx", "tests/vitest/ui/post-editor-state-metadata-boundary.test.ts"]), command("task_554_types", "bun", ["--cwd", "core", "lint:types"]), command("task_554_lint", "bun", ["--cwd", "core", "lint"])]), "smoke-adapter": Object.freeze([command("task_554_runtime_harness", "bun", ["test", "tests/unit/runtime-smoke/cli-registry.test.ts", "tests/unit/runtime-smoke/task-554-adapter.test.ts", "tests/unit/runtime-smoke/task-554-worker.test.ts"]), command("task_554_types", "bun", ["--cwd", "core", "lint:types"]), command("task_554_lint", "bun", ["--cwd", "core", "lint"])]), "security-gate-repair": Object.freeze([command("task_540_boundary", "bun", ["test", "tests/unit/runtime-smoke/task540-native-suite-boundary.test.ts"]), command("task_554_frozen_install", "bun", ["install", "--frozen-lockfile"]), command("task_554_security_scan", "bun", ["run", "scan:security:strict"])]) });
 function commandOutput(root, command, args, environment) { return execFileSync(command, args, { cwd: root, encoding: "buffer", stdio: ["ignore", "pipe", "pipe"], ...(environment ? { env: { ...process.env, ...environment } } : {}) }); }
 function commandStatus(root, command, args) { try { commandOutput(root, command, args); return 0; } catch (error) { return typeof error?.status === "number" ? error.status : 255; } }
 function parseNul(bytes) { return bytes.toString("utf8").split("\0").filter(Boolean); }
@@ -100,7 +101,7 @@ const INITIAL_DIRTY_PATHS = Object.freeze([
   "_docs/_TASKS/README.md",
   "_docs/_TASKS/TASK-554_Post_Metadata_Publish_RBAC_Hardening.md",
 ]);
-const RESUME_ALLOWED_DIRTY_PATHS = Object.freeze([...new Set([...INITIAL_DIRTY_PATHS, ...OWNERS.flatMap((owner) => owner.paths), ...DOCUMENTATION_OWNER.paths])]);
+export const TASK_554_RESUME_ALLOWED_DIRTY_PATHS = Object.freeze([...new Set([...INITIAL_DIRTY_PATHS, ...OWNERS.flatMap((owner) => owner.paths), ...DOCUMENTATION_OWNER.paths])]);
 function currentDirtyPaths(root) {
   const paths = [
     ...parseNul(commandOutput(root, "git", ["diff", "--name-only", "-z"])),
@@ -124,7 +125,7 @@ function assertImplementationPreflight(root = ROOT) {
 function assertResumePreflight(root = ROOT) {
   verifyBeforeDispatch("resume_preflight", root);
   const dirty = currentDirtyPaths(root);
-  const unexpected = dirty.filter((relativePath) => !RESUME_ALLOWED_DIRTY_PATHS.includes(relativePath));
+  const unexpected = dirty.filter((relativePath) => !TASK_554_RESUME_ALLOWED_DIRTY_PATHS.includes(relativePath));
   if (unexpected.length > 0) throw new Error(`task_554_resume_state_invalid:${JSON.stringify({ unexpected })}`);
   return Object.freeze({ dirty: Object.freeze(dirty) });
 }
@@ -601,6 +602,19 @@ function preserveSmokePrimaryFailure(primary, restoration) {
     cause: new AggregateError([primary, restoration], "TASK-554 smoke primary and restoration failures"),
   });
 }
+function restoreFailedTask554SmokeRun(root, session, ownedFailedSession, before, primary) {
+  let failure = primary;
+  try { if (ownedFailedSession !== null) removeOwnedTask554FailedSmokeSession(root, session, ownedFailedSession); } catch (restoration) { failure = preserveSmokePrimaryFailure(failure, restoration); }
+  try { assertNoRepositoryMutation("task_554_smoke_repository_restoration", before, captureRepositoryFingerprint(root), root); } catch (restoration) { failure = preserveSmokePrimaryFailure(failure, restoration); }
+  return failure;
+}
+function finalizeTask554SmokeProfile(root, session, ownedFailedSession, before, evidenceSnapshot, evidence, primary) {
+  let failure = primary; let evidenceRevalidated = false;
+  try { if (evidenceSnapshot === null || evidence === null) throw new Error("task_554_smoke_evidence_missing"); assertExactTask554SmokeEvidence(root, evidence.report.profile, evidence.report.session, evidence.manifest, evidence.reportBytes); assertSmokeEvidenceSnapshot(evidenceSnapshot, root); evidenceRevalidated = true; } catch (restoration) { failure = preserveSmokePrimaryFailure(failure, restoration); }
+  if (failure !== null) return restoreFailedTask554SmokeRun(root, session, ownedFailedSession, before, failure);
+  try { assertNoRepositoryMutation("task_554_smoke_repository_restoration", before, captureRepositoryFingerprint(root, smokeEvidencePaths(evidenceSnapshot)), root); } catch (restoration) { failure = preserveSmokePrimaryFailure(failure, restoration); }
+  return failure === null && evidenceRevalidated ? null : restoreFailedTask554SmokeRun(root, session, ownedFailedSession, before, failure);
+}
 export function runTask554SmokeProfile(root, profile, session) {
   verifyBeforeDispatch("runtime_smoke", root);
   const before = captureRepositoryFingerprint(root);
@@ -627,29 +641,7 @@ export function runTask554SmokeProfile(root, profile, session) {
     evidenceSnapshot = captureSmokeEvidenceSnapshot(root, evidence);
   } catch (error) {
     primary = error;
-  } finally {
-    let evidenceRevalidated = false;
-    try {
-      if (evidenceSnapshot !== null && evidence !== null) {
-        assertExactTask554SmokeEvidence(root, evidence.report.profile, evidence.report.session, evidence.manifest, evidence.reportBytes);
-        assertSmokeEvidenceSnapshot(evidenceSnapshot, root);
-        evidenceRevalidated = true;
-      }
-    } catch (restoration) {
-      primary = preserveSmokePrimaryFailure(primary, restoration);
-    }
-    try {
-      if (evidenceSnapshot === null && ownedFailedSession !== null) removeOwnedTask554FailedSmokeSession(root, session, ownedFailedSession);
-    } catch (restoration) {
-      primary = preserveSmokePrimaryFailure(primary, restoration);
-    }
-    try {
-      const excluded = evidenceSnapshot !== null && evidenceRevalidated ? smokeEvidencePaths(evidenceSnapshot) : [];
-      assertNoRepositoryMutation("task_554_smoke_repository_restoration", before, captureRepositoryFingerprint(root, excluded), root);
-    } catch (restoration) {
-      primary = preserveSmokePrimaryFailure(primary, restoration);
-    }
-  }
+  } finally { primary = finalizeTask554SmokeProfile(root, session, ownedFailedSession, before, evidenceSnapshot, evidence, primary); }
   if (primary !== null) throw primary;
   return Object.freeze({ pass: true, profile, session, evidence });
 }
@@ -904,7 +896,7 @@ function workflowSelfTest() {
     const pngBytes = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIHWP4z8DwHwAFgAI/ScLZ4QAAAABJRU5ErkJggg==", "base64");
     writeTinyFile(path.join(tempRoot, "scripts/runtime-smoke/adapters/task-554/output-manifest.ts"), `export function decodeTask554Png(bytes: Uint8Array) { if (bytes.byteLength !== ${pngBytes.byteLength} || bytes[12] !== 73 || bytes[13] !== 72 || bytes[14] !== 68 || bytes[15] !== 82) throw new Error("invalid_png"); const read = (offset: number) => (((bytes[offset] << 24) | (bytes[offset + 1] << 16) | (bytes[offset + 2] << 8) | bytes[offset + 3]) >>> 0); return { width: read(16), height: read(20) }; }\n`);
     const smokeBefore = captureRepositoryFingerprint(tempRoot);
-    const sessionDirectory = createEmptySmokeSession(tempRoot, session);
+    const ownedEvidenceSession = createOwnedTask554SmokeSession(tempRoot, session); const sessionDirectory = ownedEvidenceSession.directory;
     const screenshots = manifest.paths.map((relativePath) => {
       writeTinyFile(path.join(tempRoot, relativePath), pngBytes);
       return Object.freeze({ path: relativePath, sha256: sha256(pngBytes) });
@@ -958,6 +950,10 @@ function workflowSelfTest() {
     rmSync(path.join(sessionDirectory, "empty"), { recursive: true });
     const reserialized = Buffer.from(JSON.stringify(JSON.parse(report.toString("utf8"))), "utf8");
     expectFailure(() => assertByteIdenticalReport(reserialized, reportPath), "task_554_smoke_report_not_stdout_identical");
+    chmodSync(path.join(tempRoot, manifest.paths[0]), 0o600);
+    const revalidationFailure = finalizeTask554SmokeProfile(tempRoot, session, ownedEvidenceSession, smokeBefore, evidenceSnapshot, evidence, null);
+    expectFailure(() => { if (revalidationFailure !== null) throw revalidationFailure; }, "task_554_smoke_evidence_changed:");
+    if (existsSync(sessionDirectory)) throw new Error("task_554_self_test_failed_evidence_revalidation_session_residue");
     const boardBefore = ["- **To Do:** 1 tasks", "- **In Progress:** 2 tasks", "- **Done:** 3 tasks", "## In Progress", "| ID |", "| TASK-554 | title | priority | effort | In progress 2026-08-11. details |", "## Done", "| ID |", "| TASK-999 | retained |"].join("\n");
     const boardAfter = ["- **To Do:** 1 tasks", "- **In Progress:** 1 tasks", "- **Done:** 4 tasks", "## In Progress", "| ID |", "## Done", "| ID |", "| TASK-999 | retained |", "| TASK-554 | title | priority | effort | ✅ Done (2026-08-11): details |"].join("\n");
     assertTask554BoardClosureDelta(boardBefore, boardAfter);
@@ -978,7 +974,7 @@ function workflowSelfTest() {
       tmpMutationRejected: true, releaseGateHardlinkRejected: true, releaseGateDirectoryIdentityRejected: true, releaseGateReportIdentityRejected: true, forbiddenScopeRejected: true, directStdoutCapture: true,
       boundedPngEvidenceRejected: true, decodedPngEvidenceRejected: true, extraSmokeOutputRejected: true, reportReserializationRejected: true, gateMutationRejected: true, ignoredWorkflowMutationRejected: true,
       modeAndSymlinkFingerprintRejected: true, smokeAncestorSymlinkRejected: true, smokeFinallyRestorationRejected: true, failedEmptySmokeDirectoryRejected: true, failedSmokeRestored: true, failedRunnerRestored: true,
-      exactEvidenceRevalidationRejected: true, replacementEvidenceRejected: true, duplicateScreenshotHashesAllowed: true, snapshotMismatchRejected: true, narrowClosureRejected: true, duplicateBoardStatisticRejected: true, canonicalClosureRejected: true });
+      exactEvidenceRevalidationRejected: true, failedEvidenceRevalidationRestored: true, replacementEvidenceRejected: true, duplicateScreenshotHashesAllowed: true, snapshotMismatchRejected: true, narrowClosureRejected: true, duplicateBoardStatisticRejected: true, canonicalClosureRejected: true });
   } finally {
     rmSync(tempRoot, { recursive: true, force: true });
   }
