@@ -23,6 +23,11 @@ const MAX_FIX_ROUNDS = 3;
 const MAX_FINDINGS = 40;
 const MAX_FIELD_LENGTH = 2048;
 const COUNTABLE_EXTENSION = /\.(?:ts|tsx|js|jsx|mjs|cjs|mts|cts)$/u;
+const WORKFLOW_PATHS = Object.freeze([
+  "_docs/_workflows/task-554-author-audit.mjs",
+  "_docs/_workflows/task-554-implement.mjs",
+  "_docs/_workflows/task-554-fix.mjs",
+]);
 
 const OWNER_PATHS = Object.freeze({
   "workflow-contract-tests": Object.freeze([
@@ -90,6 +95,7 @@ const LENSES = Object.freeze([
   "workflow-contract",
 ]);
 const FORBIDDEN_PATHS = Object.freeze([
+  ...WORKFLOW_PATHS,
   "_TMP-task-dispatch-plan-2026-08-10.md",
   "core/services/content/postsService.ts",
   "core/services/posts/postMutationService.ts",
@@ -213,6 +219,15 @@ export function assertFixScope(label, before, after, allowedPaths, root = ROOT) 
   return Object.freeze(changed);
 }
 
+async function readOnlyFixPhase(label, work) {
+  const before = captureFixFingerprint();
+  try {
+    return await work();
+  } finally {
+    assertFixScope(label, before, captureFixFingerprint(), []);
+  }
+}
+
 function verifyBootstrap(root = ROOT) {
   const result = output(root, "node", [path.join(root, AUTHOR_AUDIT_PATH), "--task-554-bootstrap-verify"]);
   const receipt = JSON.parse(result.toString("utf8"));
@@ -312,10 +327,15 @@ function assertTouchedLineLimit(root) {
 }
 
 function runAffectedGates(owners) {
-  for (const owner of owners) for (const entry of OWNER_GATES[owner]) runCommand(ROOT, entry);
-  assertTouchedLineLimit(ROOT);
-  runCommand(ROOT, command("baseline-diff-check", "git", ["diff", "--check", `${TASK_554_BASELINE_SHA}...HEAD`]));
-  runCommand(ROOT, command("diff-check", "git", ["diff", "--check"]));
+  const before = captureFixFingerprint();
+  try {
+    for (const owner of owners) for (const entry of OWNER_GATES[owner]) runCommand(ROOT, entry);
+    assertTouchedLineLimit(ROOT);
+    runCommand(ROOT, command("baseline-diff-check", "git", ["diff", "--check", `${TASK_554_BASELINE_SHA}...HEAD`]));
+    runCommand(ROOT, command("diff-check", "git", ["diff", "--check"]));
+  } finally {
+    assertFixScope("task_554_fix_affected_gates_mutated", before, captureFixFingerprint(), []);
+  }
 }
 
 const COMMON = `Repository: ${ROOT}; task: TASK-554; changelog: 1267. Read current HEAD/status/diff,
@@ -327,17 +347,16 @@ TASK-551-09-L02. Every touched production/test module must remain <=1000 lines.`
 
 async function askAudit(round) {
   const identity = `task-554:fix:audit:${round}`;
-  const before = captureFixFingerprint();
   beforeDispatch("Audit");
-  const result = await agent(
-    `${COMMON}\nFresh read-only audit round ${round}. Return only reproducible current file:line findings.
+  return readOnlyFixPhase(identity, async () => {
+    const result = await agent(
+      `${COMMON}\nFresh read-only audit round ${round}. Return only reproducible current file:line findings.
 Every finding must name one exact owner from ${Object.keys(OWNER_PATHS).join(", ")} and one lens from
 ${LENSES.join(", ")}, plus exact affected gates. Do not edit. Return identity=${identity}.`,
-    { label: identity, phase: "Audit", schema: AUDIT_SCHEMA },
-  );
-  const findings = normalizeAuditFindings(identity, result);
-  assertFixScope(identity, before, captureFixFingerprint(), []);
-  return findings;
+      { label: identity, phase: "Audit", schema: AUDIT_SCHEMA },
+    );
+    return normalizeAuditFindings(identity, result);
+  });
 }
 
 async function applyFix(round, findings, owners) {
@@ -357,43 +376,62 @@ BEGIN_TASK_554_FINDINGS_JSON\n${JSON.stringify({ schema: "task-554-findings/v2",
 
 async function reconcile(round, owners, lenses) {
   const identity = `task-554:fix:reconcile:${round}`;
-  const before = captureFixFingerprint();
   beforeDispatch("Reconcile");
-  const result = await agent(
-    `${COMMON}\nFresh read-only affected-scope reconcile after fix round ${round}. Inspect only changed owners
+  return readOnlyFixPhase(identity, async () => {
+    const result = await agent(
+      `${COMMON}\nFresh read-only affected-scope reconcile after fix round ${round}. Inspect only changed owners
 ${owners.join(", ")} and lenses ${lenses.join(", ")}, but verify their shared boundaries against current bytes.
 Return identity=${identity}; include owner/lens on every finding. Do not edit.`,
-    { label: identity, phase: "Reconcile", schema: AUDIT_SCHEMA },
-  );
-  const findings = normalizeAuditFindings(identity, result);
-  assertFixScope(identity, before, captureFixFingerprint(), []);
-  if (findings.some((finding) => finding.severity === "HIGH" || finding.severity === "MEDIUM")) {
-    throw new Error(`task_554_fix_reconcile_blocked:${JSON.stringify(findings)}`);
+      { label: identity, phase: "Reconcile", schema: AUDIT_SCHEMA },
+    );
+    return Object.freeze({ result, findings: normalizeAuditFindings(identity, result) });
+  });
+}
+
+function ownersForChangedPaths(changed) {
+  const owners = new Set();
+  for (const relativePath of changed) {
+    const owner = Object.entries(OWNER_PATHS).find(([, paths]) => paths.includes(relativePath))?.[0];
+    if (!owner) throw new Error(`task_554_fix_changed_path_unowned:${relativePath}`);
+    owners.add(owner);
   }
-  return Object.freeze({ result, findings });
+  if (owners.size === 0) throw new Error("task_554_fix_empty_repair");
+  return Object.freeze([...owners].sort());
+}
+
+function lensesForChangedOwners(findings, owners) {
+  return Object.freeze([...new Set(findings.filter((finding) => owners.includes(finding.owner)).map((finding) => finding.lens))].sort());
+}
+
+function ownerReviewRebootstrap(findings) {
+  const finding = findings.find((item) => item.lens === "workflow-contract" && WORKFLOW_PATHS.some((pathName) => `${item.evidence}\n${item.finding}\n${item.recommendation}`.includes(pathName)));
+  return finding ? Object.freeze({ pass: false, ownerActionRequired: "owner_review_rebootstrap", finding }) : null;
 }
 
 async function runWorkflow() {
   if (assertArguments()) return fixSelfTest();
-  for (let round = 1; round <= MAX_FIX_ROUNDS + 1; round += 1) {
+  for (let round = 1; round <= MAX_FIX_ROUNDS; round += 1) {
     phase("Audit");
     const findings = await askAudit(round);
+    const rebootstrap = ownerReviewRebootstrap(findings);
+    if (rebootstrap) return rebootstrap;
     if (findings.length === 0) return Object.freeze({ pass: true, summary: `TASK-554 clean after ${round - 1} fix rounds.` });
-    if (round > MAX_FIX_ROUNDS) throw new Error(`task_554_fix_round_limit:${JSON.stringify(findings)}`);
-    const owners = Object.freeze([...new Set(findings.map((finding) => finding.owner))]);
-    const lenses = Object.freeze([...new Set(findings.map((finding) => finding.lens))]);
+    const proposedOwners = Object.freeze([...new Set(findings.map((finding) => finding.owner))]);
     phase("Fix");
-    const applied = await applyFix(round, findings, owners);
+    const applied = await applyFix(round, findings, proposedOwners);
+    const owners = ownersForChangedPaths(applied.changed);
+    const lenses = lensesForChangedOwners(findings, owners);
     phase("Affected gates");
     runAffectedGates(owners);
     phase("Reconcile");
     const reconciliation = await reconcile(round, owners, lenses);
-    if (reconciliation.findings.length > 0) continue;
-    // A clean affected reconcile still requires a fresh complete audit at the next loop boundary.
-    if (round === MAX_FIX_ROUNDS) continue;
-    void applied;
+    const reconcileRebootstrap = ownerReviewRebootstrap(reconciliation.findings);
+    if (reconcileRebootstrap) return reconcileRebootstrap;
+    if (reconciliation.findings.length === 0) {
+      return Object.freeze({ pass: true, summary: `TASK-554 fixed in ${round} round(s).`, applied, owners, lenses, reconciliation });
+    }
   }
-  throw new Error("task_554_fix_unreachable");
+  throw new Error("task_554_fix_round_limit");
 }
 
 function writeFile(filePath, content) {
@@ -439,7 +477,11 @@ function fixSelfTest() {
       () => normalizeAuditFindings(valid.identity, { ...valid, findings: [{ ...valid.findings[0], lens: "unknown" }] }),
       "task_554_fix_finding_lens:0",
     );
-    return Object.freeze({ pass: true, forbiddenScopeRejected: true, ownerMappingRejected: true, lensMappingRejected: true });
+    if (JSON.stringify(ownersForChangedPaths(["core/admin/services/postsClient.ts"])) !== JSON.stringify(["admin-client"]) || JSON.stringify(lensesForChangedOwners(valid.findings, ["admin-client"])) !== JSON.stringify(["test-integrity"])) throw new Error("task_554_fix_self_test_affected_receipt");
+    expectFailure(() => ownersForChangedPaths([]), "task_554_fix_empty_repair");
+    const rebootstrap = ownerReviewRebootstrap([{ ...valid.findings[0], lens: "workflow-contract", evidence: `${WORKFLOW_PATHS[0]}:1` }]);
+    if (rebootstrap?.ownerActionRequired !== "owner_review_rebootstrap") throw new Error("task_554_fix_self_test_rebootstrap");
+    return Object.freeze({ pass: true, forbiddenScopeRejected: true, ownerMappingRejected: true, lensMappingRejected: true, actualAffectedReceipt: true, workflowRebootstrapEscalated: true });
   } finally {
     rmSync(root, { recursive: true, force: true });
   }

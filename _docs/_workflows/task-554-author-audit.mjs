@@ -1,4 +1,5 @@
 import { execFileSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import {
   mkdtempSync,
   lstatSync,
@@ -44,11 +45,12 @@ function gitStatus(root, args) {
   }
 }
 
-function assertNoUnexpectedArgs() {
-  const unexpected = process.argv
-    .slice(2)
-    .filter((arg) => arg !== SELF_TEST_ARG && arg !== VERIFY_ARG);
-  if (unexpected.length > 0) throw new Error(`task_554_unknown_arguments:${unexpected.join(",")}`);
+function parseMode() {
+  const args = process.argv.slice(2);
+  if (args.length === 0) return "run";
+  if (args.length === 1 && args[0] === SELF_TEST_ARG) return "self-test";
+  if (args.length === 1 && args[0] === VERIFY_ARG) return "verify";
+  throw new Error(`task_554_unknown_arguments:${args.join(",")}`);
 }
 
 function assertGitPathIsClean(root, relativePath) {
@@ -57,6 +59,36 @@ function assertGitPathIsClean(root, relativePath) {
   }
   if (gitStatus(root, ["diff", "--cached", "--quiet", "--", relativePath]) !== 0) {
     throw new Error(`task_554_workflow_staged_dirty:${relativePath}`);
+  }
+}
+
+function captureAuditFingerprint(root) {
+  const paths = runGit(root, ["ls-files", "-co", "--exclude-standard", "-z"])
+    .toString("utf8")
+    .split("\0")
+    .filter(Boolean)
+    .sort();
+  return paths.map((relativePath) => {
+    const absolutePath = path.join(root, relativePath);
+    try {
+      const stats = lstatSync(absolutePath);
+      const value = stats.isFile() && !stats.isSymbolicLink()
+        ? createHash("sha256").update(readFileSync(absolutePath)).digest("hex")
+        : `non_regular:${stats.mode}`;
+      return `${relativePath}\0${value}`;
+    } catch (error) {
+      if (error && typeof error === "object" && error.code === "ENOENT") return `${relativePath}\0missing`;
+      throw error;
+    }
+  }).join("\0");
+}
+
+async function assertReadOnlyAudit(label, work) {
+  const before = captureAuditFingerprint(ROOT);
+  try {
+    return await work();
+  } finally {
+    if (captureAuditFingerprint(ROOT) !== before) throw new Error(`task_554_audit_mutated_repository:${label}`);
   }
 }
 
@@ -275,7 +307,6 @@ payload behavior, hydration/draft preservation, static smoke seam ownership,
 workflow bootstrap, validation lanes, and line-count limits.`;
 
 async function runWorkflow() {
-  assertNoUnexpectedArgs();
   phase("Bootstrap verification");
   const bootstrap = assertTask554Bootstrap();
   phase("Contract audit");
@@ -285,31 +316,30 @@ async function runWorkflow() {
     Object.freeze({ identity: "task-554:audit:ui", prompt: "Audit Admin client, Classic editor baseline/dirty/race behavior, and browser-boundary tests." }),
     Object.freeze({ identity: "task-554:audit:workflow", prompt: "Audit workflow, smoke architecture, task graph, writer ownership, validation and closure rules." }),
   ]);
-  const lenses = await parallel(lensDefinitions.map((lens) => () => agent(
+  const lenses = await assertReadOnlyAudit("contract_audit", () => parallel(lensDefinitions.map((lens) => () => agent(
     `${COMMON}\n${lens.prompt}\nReturn identity=${lens.identity}.`,
     { label: lens.identity, phase: "Contract audit", schema: AUDIT_SCHEMA },
-  )));
+  ))));
   if (lenses.length !== lensDefinitions.length) throw new Error("task_554_audit_missing_results");
   for (const [index, lens] of lenses.entries()) {
     assertAuditClean(`task_554_audit_${index + 1}`, lensDefinitions[index].identity, lens);
   }
   phase("Cross-file reconcile");
   assertTask554Bootstrap();
-  const reconcile = assertAuditClean("task_554_reconcile", "task-554:audit:reconcile", await agent(
-    `${COMMON}\nRead only the shared contracts/seams. Reconcile type names, allowed fields, ownership, test paths, exact seven smoke IDs, writer order, and land order. Return identity=task-554:audit:reconcile.`,
+  const reconcile = assertAuditClean("task_554_reconcile", "task-554:audit:reconcile", await assertReadOnlyAudit("reconcile", () => agent(
+    `${COMMON}\nRead only the shared contracts/seams. Reconcile type names, allowed fields, ownership, test paths, exact seven smoke IDs, writer order, land order, exact calendar parsing, Post cache generation, snapshot authority, and pinned closure deltas. Return identity=task-554:audit:reconcile.`,
     { label: "task-554:audit:reconcile", phase: "Cross-file reconcile", schema: AUDIT_SCHEMA },
-  ));
+  )));
   return Object.freeze({ pass: true, bootstrap, lenses, reconcile });
 }
 
-const selfTest = process.argv.includes(SELF_TEST_ARG);
-const verifyOnly = process.argv.includes(VERIFY_ARG);
+const mode = parseMode();
 const importedForVerification = process.env.TASK_554_WORKFLOW_IMPORT === "1";
-export const result = selfTest
+export const result = mode === "self-test"
   ? bootstrapSelfTest()
-  : verifyOnly
+  : mode === "verify"
     ? assertTask554Bootstrap()
     : importedForVerification
       ? null
       : await runWorkflow();
-if (selfTest || verifyOnly) process.stdout.write(`${JSON.stringify(result)}\n`);
+if (mode !== "run") process.stdout.write(`${JSON.stringify(result)}\n`);
