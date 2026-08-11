@@ -63,11 +63,8 @@ function assertGitPathIsClean(root, relativePath) {
 }
 
 function captureAuditFingerprint(root) {
-  const paths = runGit(root, ["ls-files", "-co", "--exclude-standard", "-z"])
-    .toString("utf8")
-    .split("\0")
-    .filter(Boolean)
-    .sort();
+  const parsePaths = (args) => runGit(root, args).toString("utf8").split("\0").filter(Boolean);
+  const paths = [...new Set([...parsePaths(["ls-files", "-co", "--exclude-standard", "-z"]), ...parsePaths(["ls-files", "--others", "--ignored", "--exclude-standard", "-z", "--", "_docs/_workflows"])])].sort();
   return paths.map((relativePath) => {
     const absolutePath = path.join(root, relativePath);
     try {
@@ -150,6 +147,9 @@ function bootstrapSelfTest() {
     }
     runGit(tempRoot, ["add", ...TASK_554_WORKFLOW_PATHS]);
     runGit(tempRoot, ["commit", "-qm", "bootstrap"]);
+    writeFileSync(path.join(tempRoot, ".gitignore"), "_docs/_workflows/\n", "utf8");
+    runGit(tempRoot, ["add", ".gitignore"]);
+    runGit(tempRoot, ["commit", "-qm", "ignore workflows"]);
     const originalBaseline = TASK_554_BASELINE_SHA;
     const head = runGit(tempRoot, ["rev-parse", "HEAD"]).toString("utf8").trim();
     // The self-test validates the same inventory/byte logic against a disposable Git repo.
@@ -179,6 +179,27 @@ function bootstrapSelfTest() {
       `], { ...importOptions, stdio: ["ignore", "pipe", "pipe"] });
     verify();
 
+    const auditIdentity = "task-554:audit:self-test";
+    const lowOnly = { identity: auditIdentity, pass: true, summary: "low only", findings: [{ severity: "LOW", area: "test", finding: "test", evidence: "test:1", recommendation: "test" }] };
+    normalizeAuthorAuditResult(auditIdentity, lowOnly);
+    const expectAuditFailure = (value, prefix) => {
+      try { normalizeAuthorAuditResult(auditIdentity, value); } catch (error) {
+        if (String(error?.message).startsWith(prefix)) return;
+        throw error;
+      }
+      throw new Error(`task_554_author_self_test_expected_failure:${prefix}`);
+    };
+    expectAuditFailure({ ...lowOnly, findings: undefined }, "task_554_author_audit_invalid");
+    expectAuditFailure({ ...lowOnly, findings: {} }, "task_554_author_audit_invalid");
+    expectAuditFailure({ ...lowOnly, unexpected: true }, "task_554_author_audit_invalid");
+    expectAuditFailure({ ...lowOnly, findings: [{ ...lowOnly.findings[0], severity: "OTHER" }] }, "task_554_author_finding_invalid");
+    expectAuditFailure({ ...lowOnly, pass: false }, "task_554_author_audit_inconsistent");
+
+    const auditFingerprint = captureAuditFingerprint(tempRoot);
+    writeFileSync(path.join(tempRoot, "_docs/_workflows/ignored-audit-side-effect.mjs"), "export const sideEffect = true;\n", "utf8");
+    if (captureAuditFingerprint(tempRoot) === auditFingerprint) throw new Error("task_554_author_self_test_ignored_fingerprint");
+    rmSync(path.join(tempRoot, "_docs/_workflows/ignored-audit-side-effect.mjs"));
+
     const localExtra = path.join(tempRoot, "_docs/_workflows/task-554-local-only.mjs");
     writeFileSync(localExtra, "// ignored/local is non-authorizing\n", "utf8");
     verify();
@@ -206,7 +227,7 @@ function bootstrapSelfTest() {
     writeFileSync(lookalike, "// tracked lookalike\n", "utf8");
     writeFileSync(nested, "// tracked nested entry\n", "utf8");
     runGit(tempRoot, [
-      "add",
+      "add", "-f",
       "_docs/_workflows/task-554-local-only.mjs",
       "_docs/_workflows/task-554-lookalike.js",
       "_docs/_workflows/task-554-nested/entry.mjs",
@@ -249,6 +270,8 @@ function bootstrapSelfTest() {
       missingNamedRejected: true,
       divergentBaselineRejected: true,
       trackedExtraWouldReject: true,
+      strictAuditResultRejected: true,
+      ignoredWorkflowMutationRejected: true,
     });
   } finally {
     rmSync(tempRoot, { recursive: true, force: true });
@@ -281,15 +304,28 @@ const AUDIT_SCHEMA = Object.freeze({
   },
 });
 
-function assertAuditClean(label, identity, audit) {
-  const blockers = audit?.findings?.filter((finding) =>
-    finding.severity === "HIGH" || finding.severity === "MEDIUM"
-  ) ?? [];
-  if (!audit || audit.identity !== identity || audit.pass !== (blockers.length === 0)) {
-    throw new Error(`${label}:invalid_result`);
+const AUDIT_RESULT_KEYS = Object.freeze(["identity", "pass", "summary", "findings"]);
+const AUDIT_FINDING_KEYS = Object.freeze(["severity", "area", "finding", "evidence", "recommendation"]);
+
+function hasExactKeys(value, keys) {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value) && Object.keys(value).length === keys.length && keys.every((key) => Object.hasOwn(value, key));
+}
+
+export function normalizeAuthorAuditResult(identity, audit) {
+  if (!hasExactKeys(audit, AUDIT_RESULT_KEYS) || audit.identity !== identity || typeof audit.pass !== "boolean" || typeof audit.summary !== "string" || audit.summary.trim().length === 0 || !Array.isArray(audit.findings)) throw new Error("task_554_author_audit_invalid");
+  for (const finding of audit.findings) {
+    if (!hasExactKeys(finding, AUDIT_FINDING_KEYS) || !["HIGH", "MEDIUM", "LOW"].includes(finding.severity) || AUDIT_FINDING_KEYS.slice(1).some((key) => typeof finding[key] !== "string" || finding[key].trim().length === 0)) throw new Error("task_554_author_finding_invalid");
   }
-  if (blockers.length) throw new Error(`${label}:blocked:${JSON.stringify(blockers)}`);
+  const blockers = audit.findings.filter((finding) => finding.severity === "HIGH" || finding.severity === "MEDIUM");
+  if (audit.pass !== (blockers.length === 0)) throw new Error("task_554_author_audit_inconsistent");
   return audit;
+}
+
+function assertAuditClean(label, identity, audit) {
+  const normalized = normalizeAuthorAuditResult(identity, audit);
+  const blockers = normalized.findings.filter((finding) => finding.severity === "HIGH" || finding.severity === "MEDIUM");
+  if (blockers.length) throw new Error(`${label}:blocked:${JSON.stringify(blockers)}`);
+  return normalized;
 }
 
 const COMMON = `Repository: ${ROOT}

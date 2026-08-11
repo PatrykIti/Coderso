@@ -37,7 +37,7 @@ const AUDIT_SCHEMA = Object.freeze({ type: "object", additionalProperties: false
 const owner = (id, paths) => Object.freeze({ id, paths: Object.freeze(paths) });
 const OWNERS = Object.freeze([
   owner("workflow-contract-tests", ["tests/unit/workflows/task554AuthorAudit.test.ts", "tests/unit/workflows/task554WorkflowContracts.test.ts"]),
-  owner("contract-schema-route", ["core/services/posts/postMetadataContract.ts", "core/server/validation/postSchemas.ts", "core/server/routes/postsRoutes.ts", "core/server/routes/index.ts", "tests/vitest/server/postMetadataContract.test.ts", "tests/vitest/validation/postSchemas.test.ts", "tests/integration/routes/postsRoutes.test.ts", "tests/integration/routes/postMetadataRbac.test.ts"]),
+  owner("contract-schema-route", ["core/services/posts/postMetadataContract.ts", "core/server/validation/postSchemas.ts", "core/server/routes/postsRoutes.ts", "core/server/routes/index.ts", "core/server/httpServer.ts", "tests/vitest/server/postMetadataContract.test.ts", "tests/vitest/validation/postSchemas.test.ts", "tests/integration/routes/postsRoutes.test.ts", "tests/integration/routes/postMetadataRbac.test.ts"]),
   owner("admin-client", ["core/admin/services/postsClient.ts", "tests/vitest/admin/postsClient.test.ts"]),
   owner("classic-metadata-ui", ["core/admin/ui/posts/editor/postMetadataMutationPayload.ts", "core/admin/ui/posts/editor/PostClassicEditorShell.tsx", "tests/vitest/ui/post-metadata-mutation-payload.test.ts", "tests/vitest/ui/post-classic-editor-shell-wave.test.tsx", "tests/vitest/ui/post-classic-metadata-hydration.test.tsx", "tests/vitest/ui/post-editor-state-metadata-boundary.test.ts"]),
   owner("smoke-adapter", ["scripts/runtime-smoke/contracts.ts", "scripts/runtime-smoke/cli.ts", "scripts/runtime-smoke/registry.ts", "scripts/runtime-smoke/adapters/task-554.ts", "scripts/runtime-smoke/adapters/task-554/browser-actions.ts", "scripts/runtime-smoke/adapters/task-554/output-manifest.ts", "scripts/runtime-smoke/adapters/task-554/worker-entry.ts", "scripts/runtime-smoke/adapters/task-554/worker-operations.ts", "scripts/runtime-smoke/adapters/task-554/production-handlers.ts", "tests/unit/runtime-smoke/cli-registry.test.ts", "tests/unit/runtime-smoke/task-554-adapter.test.ts", "tests/unit/runtime-smoke/task-554-worker.test.ts"]),
@@ -192,10 +192,16 @@ function fingerprintPath(root, relativePath) {
   return `file:${createHash("sha256").update(readFileSync(absolute)).digest("hex")}`;
 }
 
-export function captureRepositoryFingerprint(root = ROOT) {
-  const paths = parseNul(commandOutput(root, "git", ["ls-files", "-co", "--exclude-standard", "-z"]));
+function ignoredWorkflowPaths(root) {
+  return parseNul(commandOutput(root, "git", ["ls-files", "--others", "--ignored", "--exclude-standard", "-z", "--", "_docs/_workflows"]));
+}
+
+export function captureRepositoryFingerprint(root = ROOT, excludedPrefixes = []) {
+  const excluded = new Set(excludedPrefixes.map(normalizedRepositoryPath));
+  const paths = [...new Set([...parseNul(commandOutput(root, "git", ["ls-files", "-co", "--exclude-standard", "-z"])), ...ignoredWorkflowPaths(root)])];
   const entries = paths
     .map(normalizedRepositoryPath)
+    .filter((relativePath) => ![...excluded].some((prefix) => relativePath === prefix || relativePath.startsWith(`${prefix}/`)))
     .sort((left, right) => left.localeCompare(right))
     .map((relativePath) => Object.freeze([relativePath, fingerprintPath(root, relativePath)]));
   return new Map(entries);
@@ -485,29 +491,44 @@ function assertByteIdenticalReport(expectedBytes, reportPath) {
   if (!Buffer.from(expectedBytes).equals(actualBytes)) throw new Error("task_554_smoke_report_not_stdout_identical");
 }
 
+function preserveSmokePrimaryFailure(primary, restoration) {
+  if (primary === null) return restoration;
+  return new Error(primary instanceof Error ? primary.message : String(primary), {
+    cause: new AggregateError([primary, restoration], "TASK-554 smoke primary and restoration failures"),
+  });
+}
+
 export function runTask554SmokeProfile(root, profile, session) {
   verifyBeforeDispatch("runtime_smoke", root);
   const before = captureRepositoryFingerprint(root);
-  const manifest = loadTask554Manifest(root, profile, session);
-  const directory = createEmptySmokeSession(root, session);
-  const reportPath = path.join(directory, "report.json");
-  const reportFd = openSync(reportPath, "wx", 0o600);
-  let execution;
+  let evidence = null;
+  let primary = null;
   try {
-    execution = spawnSync("bun", [
-      "scripts/runtime-smoke.ts", "run", "--suite", "task-554", "--profile", profile, "--session", session,
-    ], { cwd: root, stdio: ["ignore", reportFd, "inherit"] });
+    const manifest = loadTask554Manifest(root, profile, session);
+    const directory = createEmptySmokeSession(root, session);
+    const reportPath = path.join(directory, "report.json");
+    const reportFd = openSync(reportPath, "wx", 0o600);
+    let execution;
+    try {
+      execution = spawnSync("bun", ["scripts/runtime-smoke.ts", "run", "--suite", "task-554", "--profile", profile, "--session", session], { cwd: root, stdio: ["ignore", reportFd, "inherit"] });
+    } finally {
+      closeSync(reportFd);
+    }
+    if (execution?.error || execution?.status !== 0 || execution?.signal) throw new Error(`task_554_smoke_runner_failed:${execution?.error?.message ?? execution?.status ?? execution?.signal}`);
+    const reportBytes = readFileSync(reportPath);
+    if (reportBytes.byteLength === 0) throw new Error("task_554_smoke_report_missing");
+    evidence = assertExactTask554SmokeEvidence(root, profile, session, manifest, reportBytes);
+  } catch (error) {
+    primary = error;
   } finally {
-    closeSync(reportFd);
+    try {
+      const excluded = evidence === null ? [] : [ensureInsideRoot(root, task554SessionDirectory(root, session), "smoke_session")];
+      assertNoRepositoryMutation("task_554_smoke_repository_restoration", before, captureRepositoryFingerprint(root, excluded), root);
+    } catch (restoration) {
+      primary = preserveSmokePrimaryFailure(primary, restoration);
+    }
   }
-  if (execution?.error || execution?.status !== 0 || execution?.signal) {
-    throw new Error(`task_554_smoke_runner_failed:${execution?.error?.message ?? execution?.status ?? execution?.signal}`);
-  }
-  const reportBytes = readFileSync(reportPath);
-  if (reportBytes.byteLength === 0) throw new Error("task_554_smoke_report_missing");
-  const evidence = assertExactTask554SmokeEvidence(root, profile, session, manifest, reportBytes);
-  const after = captureRepositoryFingerprint(root);
-  assertNoRepositoryMutation("task_554_smoke_repository_restoration", before, after, root);
+  if (primary !== null) throw primary;
   return Object.freeze({ pass: true, profile, session, evidence });
 }
 
@@ -606,17 +627,24 @@ cross-stream collision risks. Return no findings only when the lens is actually 
 const CHANGELOG_1267_PATH = "_docs/_CHANGELOG/1267-2026-08-11-task-554-post-metadata-publish-rbac-hardening.md";
 const CHANGELOG_RESERVATION_BEFORE = "Changelogs 1266 and 1267 are reserved for TASK-414 Guide/Agent/Designer\ncompletion and the critical TASK-554 Post metadata publish-RBAC hardening\n(surviving variant; the root Repair variant is superseded by it), respectively.";
 const CHANGELOG_RESERVATION_AFTER = "Changelog 1266 remains reserved for TASK-414 Guide/Agent/Designer completion.\nChangelog 1267 is consumed by completed TASK-554 Post Metadata Publish RBAC\nHardening (surviving variant; the root Repair variant is superseded by it).";
+const CHANGELOG_1267_INDEX_ROW = "| 1267 | 2026-08-11 | TASK-554 Post Metadata Publish RBAC Hardening — conditional all-of publish authorization, present-only metadata, exact calendar validation, race-safe Admin cache/editor hydration, and seven-flow shared smoke | Posts/RBAC/Security/Admin UI/Caching/Testing/Docs/Task Board |";
+const CHANGELOG_1267_ENTRY_BYTES = Buffer.from(["# 1267 - TASK-554 Post Metadata Publish RBAC Hardening", "", "**Date:** 2026-08-11", "**Version:** Unreleased", "**Tasks:** TASK-554", "", "## Key Changes", "", "- Required `content:publish` together with `content:write` for Post metadata publication fields while preserving present-only writer metadata updates.", "- Added exact RFC3339 calendar validation, one-snapshot RBAC coverage, and race-safe Admin cache/editor hydration.", "- Registered the shared `task-554` smoke suite with seven verified publication flows."].join("\n") + "\n", "utf8");
 const TASK_BOARD_STATISTIC = /^- \*\*(To Do|In Progress|Done):\*\* (\d+) tasks$/u;
 
-function closureText(root, relativePath) {
+function closureBytes(root, relativePath) {
   try {
     const stats = lstatSync(path.resolve(root, relativePath));
     if (!stats.isFile() || stats.isSymbolicLink()) throw new Error(`task_554_closure_not_regular:${relativePath}`);
-    return readFileSync(path.resolve(root, relativePath), "utf8");
+    return readFileSync(path.resolve(root, relativePath));
   } catch (error) {
     if (error && typeof error === "object" && error.code === "ENOENT") return null;
     throw error;
   }
+}
+
+function closureText(root, relativePath) {
+  const bytes = closureBytes(root, relativePath);
+  return bytes === null ? null : bytes.toString("utf8");
 }
 
 function onlyTask554Row(text) {
@@ -661,7 +689,7 @@ export function assertTask554BoardClosureDelta(before, after) {
 export function assertTask554ChangelogClosureDelta(beforeIndex, afterIndex, beforeEntry, afterEntry) {
   const beforeRows = beforeIndex.split("\n").filter((line) => line.startsWith("| 1267 |"));
   const afterRows = afterIndex.split("\n").filter((line) => line.startsWith("| 1267 |"));
-  if (beforeRows.length !== 0 || afterRows.length !== 1 || !afterRows[0]?.startsWith("| 1267 | 2026-08-11 | TASK-554 Post Metadata Publish RBAC Hardening")) {
+  if (beforeRows.length !== 0 || afterRows.length !== 1 || afterRows[0] !== CHANGELOG_1267_INDEX_ROW) {
     throw new Error("task_554_closure_changelog_row_invalid");
   }
   if (!beforeIndex.includes(CHANGELOG_RESERVATION_BEFORE) || afterIndex.includes(CHANGELOG_RESERVATION_BEFORE) || !afterIndex.includes(CHANGELOG_RESERVATION_AFTER)) {
@@ -669,7 +697,7 @@ export function assertTask554ChangelogClosureDelta(beforeIndex, afterIndex, befo
   }
   const preserve = (text, reservation) => text.replace(reservation, "").split("\n").filter((line) => !line.startsWith("| 1267 |")).join("\n");
   if (preserve(beforeIndex, CHANGELOG_RESERVATION_BEFORE) !== preserve(afterIndex, CHANGELOG_RESERVATION_AFTER)) throw new Error("task_554_closure_changelog_scope_invalid");
-  if (beforeEntry !== null || afterEntry === null || !afterEntry.startsWith("# 1267 - TASK-554 Post Metadata Publish RBAC Hardening\n")) throw new Error("task_554_closure_entry_invalid");
+  if (beforeEntry !== null || !Buffer.isBuffer(afterEntry) || !afterEntry.equals(CHANGELOG_1267_ENTRY_BYTES)) throw new Error("task_554_closure_entry_invalid");
 }
 
 export function assertTask554TerminalStatusDelta(before, after) {
@@ -689,16 +717,16 @@ async function runMetadataClosure() {
   const before = captureRepositoryFingerprint();
   const beforeIndex = closureText(ROOT, "_docs/_CHANGELOG/README.md");
   const beforeBoard = closureText(ROOT, "_docs/_TASKS/README.md");
-  const beforeEntry = closureText(ROOT, CHANGELOG_1267_PATH);
+  const beforeEntry = closureBytes(ROOT, CHANGELOG_1267_PATH);
   const result = await dispatchResult("Metadata closure", identity,
     `After owner-reviewed certification evidence, edit only these metadata closure paths:
 ${METADATA_CLOSURE_OWNER.paths.join("\n")}.
-Create the pinned 1267 entry, make only the TASK-554-pinned reservation/index delta, and move only
+Create the pinned 1267 entry with exactly these bytes:\n${CHANGELOG_1267_ENTRY_BYTES.toString("utf8")}Make only the TASK-554-pinned reservation/index delta, and move only
 TASK-554’s board row/statistics exactly as the task contract requires. Re-read both indexes immediately
 before editing. Do not edit source, tests, workflows, product docs,
 TASK-554 status, another task family, stage, or commit.`);
   const changed = assertScopedRepositoryMutation(identity, before, captureRepositoryFingerprint(), METADATA_CLOSURE_OWNER.paths);
-  assertTask554ChangelogClosureDelta(beforeIndex ?? "", closureText(ROOT, "_docs/_CHANGELOG/README.md") ?? "", beforeEntry, closureText(ROOT, CHANGELOG_1267_PATH));
+  assertTask554ChangelogClosureDelta(beforeIndex ?? "", closureText(ROOT, "_docs/_CHANGELOG/README.md") ?? "", beforeEntry, closureBytes(ROOT, CHANGELOG_1267_PATH));
   assertTask554BoardClosureDelta(beforeBoard ?? "", closureText(ROOT, "_docs/_TASKS/README.md") ?? "");
   return Object.freeze({ changed, result });
 }
@@ -797,8 +825,9 @@ function workflowSelfTest() {
     commandOutput(tempRoot, "git", ["init", "-q"]);
     commandOutput(tempRoot, "git", ["config", "user.email", "task-554@example.invalid"]);
     commandOutput(tempRoot, "git", ["config", "user.name", "TASK-554 workflow self-test"]);
+    writeTinyFile(path.join(tempRoot, ".gitignore"), "_docs/_workflows/\n");
     writeTinyFile(path.join(tempRoot, "core/tracked.ts"), "export const tracked = 1;\n");
-    commandOutput(tempRoot, "git", ["add", "core/tracked.ts"]);
+    commandOutput(tempRoot, "git", ["add", ".gitignore", "core/tracked.ts"]);
     commandOutput(tempRoot, "git", ["commit", "-qm", "baseline"]);
     const baseline = commandOutput(tempRoot, "git", ["rev-parse", "HEAD"]).toString("utf8").trim();
     writeTinyFile(path.join(tempRoot, "core/tracked.ts"), "export const tracked = 1;\nexport const finalLine = true;");
@@ -831,9 +860,14 @@ function workflowSelfTest() {
       "task_554_self_test_gate:scope_violation:",
     );
     rmSync(path.join(tempRoot, "tests/gate-side-effect.ts"));
+    const ignoredBefore = captureRepositoryFingerprint(tempRoot);
+    writeTinyFile(path.join(tempRoot, "_docs/_workflows/ignored-side-effect.mjs"), "export const ignored = true;\n");
+    expectFailure(() => assertNoRepositoryMutation("task_554_self_test_ignored", ignoredBefore, captureRepositoryFingerprint(tempRoot), tempRoot), "task_554_self_test_ignored:scope_violation:");
+    rmSync(path.join(tempRoot, "_docs/_workflows/ignored-side-effect.mjs"));
 
     const session = "task-554-fast";
     const manifest = makeSelfTestManifest(tempRoot, session);
+    const smokeBefore = captureRepositoryFingerprint(tempRoot);
     const sessionDirectory = createEmptySmokeSession(tempRoot, session);
     const screenshots = manifest.paths.map((relativePath) => {
       const bytes = Buffer.from("fake-png");
@@ -853,6 +887,11 @@ function workflowSelfTest() {
     if (capture.error || capture.status !== 0) throw new Error("task_554_self_test_report_capture");
     assertByteIdenticalReport(report, reportPath);
     assertExactTask554SmokeEvidence(tempRoot, "fast", session, manifest, readFileSync(reportPath));
+    const sessionPrefix = ensureInsideRoot(tempRoot, task554SessionDirectory(tempRoot, session), "smoke_session");
+    assertNoRepositoryMutation("task_554_self_test_validated_smoke", smokeBefore, captureRepositoryFingerprint(tempRoot, [sessionPrefix]), tempRoot);
+    writeTinyFile(path.join(tempRoot, "_docs/_workflows/ignored-sibling.mjs"), "export const ignoredSibling = true;\n");
+    expectFailure(() => assertNoRepositoryMutation("task_554_self_test_smoke_sibling", smokeBefore, captureRepositoryFingerprint(tempRoot, [sessionPrefix]), tempRoot), "task_554_self_test_smoke_sibling:scope_violation:");
+    rmSync(path.join(tempRoot, "_docs/_workflows/ignored-sibling.mjs"));
     const snapshotMismatch = { ...JSON.parse(report.toString("utf8")), snapshots: 1 };
     expectFailure(() => assertExactReport(snapshotMismatch, "fast", session, manifest, tempRoot), "task_554_smoke_report_failure");
     writeTinyFile(path.join(sessionDirectory, "extra.txt"), "not allowed\n");
@@ -869,9 +908,13 @@ function workflowSelfTest() {
     assertTask554BoardClosureDelta(boardBefore, boardAfter);
     expectFailure(() => assertTask554BoardClosureDelta(boardBefore, boardAfter.replace("TASK-999", "TASK-998")), "task_554_closure_board_scope_invalid");
     const indexBefore = `prefix\n${CHANGELOG_RESERVATION_BEFORE}\n| No. | Date | Title | Type |`;
-    const indexAfter = `prefix\n${CHANGELOG_RESERVATION_AFTER}\n| No. | Date | Title | Type |\n| 1267 | 2026-08-11 | TASK-554 Post Metadata Publish RBAC Hardening | Testing |`;
-    assertTask554ChangelogClosureDelta(indexBefore, indexAfter, null, "# 1267 - TASK-554 Post Metadata Publish RBAC Hardening\n");
-    expectFailure(() => assertTask554ChangelogClosureDelta(indexBefore, indexAfter.replace("prefix", "other"), null, "# 1267 - TASK-554 Post Metadata Publish RBAC Hardening\n"), "task_554_closure_changelog_scope_invalid");
+    const indexAfter = `prefix\n${CHANGELOG_RESERVATION_AFTER}\n| No. | Date | Title | Type |\n${CHANGELOG_1267_INDEX_ROW}`;
+    assertTask554ChangelogClosureDelta(indexBefore, indexAfter, null, CHANGELOG_1267_ENTRY_BYTES);
+    expectFailure(() => assertTask554ChangelogClosureDelta(indexBefore, indexAfter.replace("prefix", "other"), null, CHANGELOG_1267_ENTRY_BYTES), "task_554_closure_changelog_scope_invalid");
+    expectFailure(() => assertTask554ChangelogClosureDelta(indexBefore, indexAfter, null, Buffer.concat([CHANGELOG_1267_ENTRY_BYTES, Buffer.from("unrelated\n")])), "task_554_closure_entry_invalid");
+    const primary = new Error("task_554_smoke_primary");
+    const combined = preserveSmokePrimaryFailure(primary, new Error("task_554_smoke_restoration"));
+    if (!(combined instanceof Error) || combined.message !== primary.message || !(combined.cause instanceof AggregateError) || combined.cause.errors[0] !== primary) throw new Error("task_554_self_test_smoke_primary_preserved");
     assertTask554TerminalStatusDelta("**Status:** 🚧 In Progress\n**Started:** 2026-08-11", "**Status:** ✅ Done\n**Completed:** 2026-08-11\n**Started:** 2026-08-11");
     expectFailure(() => assertTask554TerminalStatusDelta("**Status:** 🚧 In Progress\nbody", "**Status:** ✅ Done\n**Completed:** 2026-08-11\nchanged"), "task_554_closure_terminal_status_invalid");
 
@@ -885,9 +928,12 @@ function workflowSelfTest() {
       extraSmokeOutputRejected: true,
       reportReserializationRejected: true,
       gateMutationRejected: true,
+      ignoredWorkflowMutationRejected: true,
+      smokeFinallyRestorationRejected: true,
       duplicateScreenshotHashesAllowed: true,
       snapshotMismatchRejected: true,
       narrowClosureRejected: true,
+      canonicalClosureRejected: true,
     });
   } finally {
     rmSync(tempRoot, { recursive: true, force: true });

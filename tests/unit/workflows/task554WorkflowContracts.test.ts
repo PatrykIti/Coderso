@@ -75,6 +75,7 @@ test("TASK-554 implementation workflow executes fail-closed ownership, line, and
   expect(implement).toContain('owner("smoke-adapter"');
   expect(implement).toContain('owner("documentation"');
   expect(implement).toContain("core/server/routes/index.ts");
+  expect(implement).toContain("core/server/httpServer.ts");
   expect(implement).toContain("assertScopedRepositoryMutation");
   expect(implement).toContain("verifyTask554Bootstrap");
   expect(implement).toContain('"END { print NR }"');
@@ -88,6 +89,8 @@ test("TASK-554 implementation workflow executes fail-closed ownership, line, and
   expect(implement).toContain("task_554_smoke_report_failure");
   expect(implement).toContain("assertTask554BoardClosureDelta");
   expect(implement).toContain("assertTask554TerminalStatusDelta");
+  expect(implement).toContain("CHANGELOG_1267_ENTRY_BYTES");
+  expect(implement).toContain("preserveSmokePrimaryFailure");
   expect(implement).toContain("runReadOnlyGate");
   expect(implement).toContain("shared lifecycle, dispatcher, worker, cleanup, browser");
   expect(implement).toContain("do not edit postsService.ts or add a cache wrapper");
@@ -105,9 +108,12 @@ test("TASK-554 implementation workflow executes fail-closed ownership, line, and
     extraSmokeOutputRejected: true,
     reportReserializationRejected: true,
     gateMutationRejected: true,
+    ignoredWorkflowMutationRejected: true,
+    smokeFinallyRestorationRejected: true,
     duplicateScreenshotHashesAllowed: true,
     snapshotMismatchRejected: true,
     narrowClosureRejected: true,
+    canonicalClosureRejected: true,
   });
 });
 
@@ -126,6 +132,7 @@ test("TASK-554 fix workflow derives scopes from bounded owner and lens evidence"
   expect(runWorkflowSelfTest(fixPath, "--task-554-fix-self-test")).toEqual({
     pass: true,
     forbiddenScopeRejected: true,
+    ignoredWorkflowMutationRejected: true,
     ownerMappingRejected: true,
     lensMappingRejected: true,
     actualAffectedReceipt: true,
@@ -151,4 +158,8 @@ test("TASK-554 contract keeps public invalidation with TASK-551 and specifies ex
   expect(task).toContain("owner_review_rebootstrap");
   expect(task).toContain("equal SHA-256 values across different valid PNG paths are");
   expect(task).toContain("Pinned Closure Delta");
+  expect(task).toContain("core/server/httpServer.ts");
+  expect(task).toContain("useEntryEditTracker");
+  expect(task).toContain("uncached status-only publish/unpublish");
+  expect(task).toContain("with exactly these UTF-8 bytes");
 });

@@ -39,6 +39,7 @@ const OWNER_PATHS = Object.freeze({
     "core/server/validation/postSchemas.ts",
     "core/server/routes/postsRoutes.ts",
     "core/server/routes/index.ts",
+    "core/server/httpServer.ts",
     "tests/vitest/server/postMetadataContract.test.ts",
     "tests/vitest/validation/postSchemas.test.ts",
     "tests/integration/routes/postsRoutes.test.ts",
@@ -196,10 +197,8 @@ function parseNul(bytes) {
 }
 
 export function captureFixFingerprint(root = ROOT) {
-  return new Map(parseNul(output(root, "git", ["ls-files", "-co", "--exclude-standard", "-z"]))
-    .map(normalizePath)
-    .sort((left, right) => left.localeCompare(right))
-    .map((relativePath) => Object.freeze([relativePath, fingerprintEntry(root, relativePath)])));
+  const paths = [...new Set([...parseNul(output(root, "git", ["ls-files", "-co", "--exclude-standard", "-z"])), ...parseNul(output(root, "git", ["ls-files", "--others", "--ignored", "--exclude-standard", "-z", "--", "_docs/_workflows"]))])];
+  return new Map(paths.map(normalizePath).sort((left, right) => left.localeCompare(right)).map((relativePath) => Object.freeze([relativePath, fingerprintEntry(root, relativePath)])));
 }
 
 function assertNoStaging(root) {
@@ -404,7 +403,7 @@ function lensesForChangedOwners(findings, owners) {
 }
 
 function ownerReviewRebootstrap(findings) {
-  const finding = findings.find((item) => item.lens === "workflow-contract" && WORKFLOW_PATHS.some((pathName) => `${item.evidence}\n${item.finding}\n${item.recommendation}`.includes(pathName)));
+  const finding = findings.find((item) => WORKFLOW_PATHS.some((pathName) => `${item.area}\n${item.finding}\n${item.evidence}\n${item.recommendation}`.includes(pathName)));
   return finding ? Object.freeze({ pass: false, ownerActionRequired: "owner_review_rebootstrap", finding }) : null;
 }
 
@@ -455,8 +454,9 @@ function fixSelfTest() {
     output(root, "git", ["init", "-q"]);
     output(root, "git", ["config", "user.email", "task-554@example.invalid"]);
     output(root, "git", ["config", "user.name", "TASK-554 fix self-test"]);
+    writeFile(path.join(root, ".gitignore"), "_docs/_workflows/\n");
     writeFile(path.join(root, "tests/owned.ts"), "export const owned = 1;\n");
-    output(root, "git", ["add", "tests/owned.ts"]);
+    output(root, "git", ["add", ".gitignore", "tests/owned.ts"]);
     output(root, "git", ["commit", "-qm", "baseline"]);
     const before = captureFixFingerprint(root);
     writeFile(path.join(root, "tests/owned.ts"), "export const owned = 2;\n");
@@ -467,6 +467,10 @@ function fixSelfTest() {
       () => assertFixScope("task_554_fix_self_test_forbidden", forbiddenBefore, captureFixFingerprint(root), ["core/services/content/postsService.ts"], root),
       "task_554_fix_self_test_forbidden:scope_violation:",
     );
+    const ignoredBefore = captureFixFingerprint(root);
+    writeFile(path.join(root, "_docs/_workflows/ignored-fix-side-effect.mjs"), "export const ignored = true;\n");
+    expectFailure(() => assertFixScope("task_554_fix_self_test_ignored", ignoredBefore, captureFixFingerprint(root), [], root), "task_554_fix_self_test_ignored:scope_violation:");
+    rmSync(path.join(root, "_docs/_workflows/ignored-fix-side-effect.mjs"));
     const valid = { identity: "task-554:fix:audit:1", pass: false, findings: [{ severity: "MEDIUM", area: "test", finding: "test", evidence: "test:1", recommendation: "test", owner: "admin-client", lens: "test-integrity" }] };
     normalizeAuditFindings(valid.identity, valid);
     expectFailure(
@@ -479,9 +483,9 @@ function fixSelfTest() {
     );
     if (JSON.stringify(ownersForChangedPaths(["core/admin/services/postsClient.ts"])) !== JSON.stringify(["admin-client"]) || JSON.stringify(lensesForChangedOwners(valid.findings, ["admin-client"])) !== JSON.stringify(["test-integrity"])) throw new Error("task_554_fix_self_test_affected_receipt");
     expectFailure(() => ownersForChangedPaths([]), "task_554_fix_empty_repair");
-    const rebootstrap = ownerReviewRebootstrap([{ ...valid.findings[0], lens: "workflow-contract", evidence: `${WORKFLOW_PATHS[0]}:1` }]);
+    const rebootstrap = ownerReviewRebootstrap([{ ...valid.findings[0], lens: "test-integrity", evidence: `${WORKFLOW_PATHS[0]}:1` }]);
     if (rebootstrap?.ownerActionRequired !== "owner_review_rebootstrap") throw new Error("task_554_fix_self_test_rebootstrap");
-    return Object.freeze({ pass: true, forbiddenScopeRejected: true, ownerMappingRejected: true, lensMappingRejected: true, actualAffectedReceipt: true, workflowRebootstrapEscalated: true });
+    return Object.freeze({ pass: true, forbiddenScopeRejected: true, ignoredWorkflowMutationRejected: true, ownerMappingRejected: true, lensMappingRejected: true, actualAffectedReceipt: true, workflowRebootstrapEscalated: true });
   } finally {
     rmSync(root, { recursive: true, force: true });
   }
