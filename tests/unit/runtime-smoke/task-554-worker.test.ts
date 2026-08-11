@@ -4,6 +4,9 @@ import {
   buildTask554CleanupLedger,
   buildTask554CleanupPlans,
   assertTask554PreIdentityAbsence,
+  Task554AdminPathLease,
+  Task554ProductionHandlers,
+  type Task554ProductionHandlerDependencies,
 } from "../../../scripts/runtime-smoke/adapters/task-554/production-handlers";
 import {
   TASK554_WORKER_DESCRIPTORS,
@@ -64,6 +67,7 @@ const cleanup: Task554CleanupOutput = {
   rolesRemoved: 2,
   preIdentityAbsenceProved: true,
   identityAbsenceProved: true,
+  settingsRestored: true,
   statements: 17,
   rows: 17,
 };
@@ -72,9 +76,50 @@ const proof: Task554ProofOutput = {
   schemaVersion: 1,
   fixturesAbsent: true,
   identitiesAbsent: true,
+  settingsRestored: true,
   statements: 3,
   rows: 0,
 };
+
+function createAdminPathDependencies(
+  initialValue: string | null,
+  hashPassword: Task554ProductionHandlerDependencies["hashPassword"] = async () => {
+    throw new Error("fixture hash failure");
+  }
+): Readonly<{
+  readonly adminPathApplied: Promise<void>;
+  readonly dependencies: Task554ProductionHandlerDependencies;
+  readonly events: string[];
+  readonly readValue: () => string | null;
+}> {
+  let value = initialValue;
+  const events: string[] = [];
+  let resolveAdminPathApplied: (() => void) | undefined;
+  const adminPathApplied = new Promise<void>((resolve) => {
+    resolveAdminPathApplied = resolve;
+  });
+  const dependencies: Task554ProductionHandlerDependencies = {
+    async closeDatabase() {
+      events.push("close-database");
+    },
+    async deleteSetting() {
+      events.push("delete-setting");
+      value = null;
+    },
+    async getSettingRecord() {
+      events.push("get-setting");
+      return value === null ? null : { value };
+    },
+    hashPassword,
+    async setSetting(_key, nextValue) {
+      events.push("set-setting");
+      if (typeof nextValue !== "string") throw new Error("unexpected fixture setting value");
+      value = nextValue;
+      if (nextValue === "/admin") resolveAdminPathApplied?.();
+    },
+  };
+  return Object.freeze({ adminPathApplied, dependencies, events, readValue: () => value });
+}
 
 function handlers(): Task554WorkerHandlers {
   let closed = false;
@@ -130,6 +175,135 @@ test("TASK-554 worker owns the four strict registered operations and never retur
   ).rejects.toThrow("unknown or missing fields");
   await registry.close();
   expect(await registry.proveAbsent()).toBe(true);
+});
+
+test("TASK-554 production handler closes its database client once and fails closed", async () => {
+  let closeCalls = 0;
+  let signalDatabaseClose: (() => void) | undefined;
+  const databaseCloseStarted = new Promise<void>((resolve) => {
+    signalDatabaseClose = resolve;
+  });
+  let releaseClose: (() => void) | undefined;
+  const closeStarted = new Promise<void>((resolve) => {
+    releaseClose = resolve;
+  });
+  const handlers = new Task554ProductionHandlers(async () => {
+    closeCalls += 1;
+    signalDatabaseClose?.();
+    await closeStarted;
+  });
+
+  const firstClose = handlers.close();
+  const secondClose = handlers.close();
+  await databaseCloseStarted;
+  expect(closeCalls).toBe(1);
+  expect(await handlers.proveAbsent()).toBe(false);
+  releaseClose?.();
+  await Promise.all([firstClose, secondClose]);
+  expect(closeCalls).toBe(1);
+  expect(await handlers.proveAbsent()).toBe(true);
+
+  let failedCloseCalls = 0;
+  const failedHandlers = new Task554ProductionHandlers(async () => {
+    failedCloseCalls += 1;
+    throw new Error("database shutdown failed");
+  });
+  await expect(failedHandlers.close()).rejects.toThrow("database shutdown failed");
+  await expect(failedHandlers.close()).rejects.toThrow("database shutdown failed");
+  expect(failedCloseCalls).toBe(1);
+  expect(await failedHandlers.proveAbsent()).toBe(false);
+});
+
+test("TASK-554 admin path lease restores its exact existing snapshot during cleanup", async () => {
+  const fixture = createAdminPathDependencies("/admin-panel");
+  const lease = new Task554AdminPathLease(fixture.dependencies);
+
+  await lease.apply();
+  expect(fixture.readValue()).toBe("/admin");
+  await lease.restore();
+
+  expect(fixture.readValue()).toBe("/admin-panel");
+  expect(lease.active).toBe(false);
+  expect(lease.restored).toBe(true);
+});
+
+test("TASK-554 failed install restores existing and absent admin path snapshots", async () => {
+  const installInput = createTask554InstallInput({
+    profile: "fast",
+    runMarker: marker,
+    actors: credentials,
+  });
+  for (const baseline of ["/admin-panel", null] as const) {
+    const fixture = createAdminPathDependencies(baseline);
+    const handler = new Task554ProductionHandlers(fixture.dependencies);
+
+    await expect(handler.install(installInput)).rejects.toThrow("fixture hash failure");
+    expect(fixture.readValue()).toBe(baseline);
+    expect(fixture.events).toEqual(
+      baseline === null
+        ? ["get-setting", "set-setting", "delete-setting", "get-setting"]
+        : ["get-setting", "set-setting", "set-setting", "get-setting"]
+    );
+    await handler.close();
+    expect(await handler.proveAbsent()).toBe(true);
+  }
+});
+
+test("TASK-554 close restores an active admin path lease before closing the database", async () => {
+  const installInput = createTask554InstallInput({
+    profile: "fast",
+    runMarker: marker,
+    actors: credentials,
+  });
+  for (const baseline of ["/admin-panel", null] as const) {
+    let rejectHash: ((error: Error) => void) | undefined;
+    const hashPending = new Promise<string>((_resolve, reject) => {
+      rejectHash = reject;
+    });
+    const fixture = createAdminPathDependencies(baseline, async () => hashPending);
+    const handler = new Task554ProductionHandlers(fixture.dependencies);
+    const installing = handler.install(installInput);
+    await fixture.adminPathApplied;
+
+    await handler.close();
+    rejectHash?.(new Error("fixture hash cancellation"));
+    await expect(installing).rejects.toThrow("fixture hash cancellation");
+    expect(fixture.readValue()).toBe(baseline);
+    expect(fixture.events.at(-1)).toBe("close-database");
+    expect(await handler.proveAbsent()).toBe(true);
+  }
+});
+
+test("TASK-554 shutdown preserves restoration and database failures without proving absence", async () => {
+  let rejectHash: ((error: Error) => void) | undefined;
+  const hashPending = new Promise<string>((_resolve, reject) => {
+    rejectHash = reject;
+  });
+  const fixture = createAdminPathDependencies("/admin-panel", async () => hashPending);
+  const handler = new Task554ProductionHandlers({
+    ...fixture.dependencies,
+    async closeDatabase() {
+      throw new Error("fixture database close failure");
+    },
+    async setSetting(key, value) {
+      if (value === "/admin") return fixture.dependencies.setSetting(key, value);
+      throw new Error("fixture setting restoration failure");
+    },
+  });
+  const installing = handler.install(
+    createTask554InstallInput({ profile: "fast", runMarker: marker, actors: credentials })
+  );
+  await fixture.adminPathApplied;
+
+  await expect(handler.close()).rejects.toBeInstanceOf(AggregateError);
+  rejectHash?.(new Error("fixture hash cancellation"));
+  await installing.catch((error: unknown) => {
+    expect(error).toBeInstanceOf(AggregateError);
+    expect((error as AggregateError).errors).toContainEqual(
+      expect.objectContaining({ message: "fixture hash cancellation" })
+    );
+  });
+  expect(await handler.proveAbsent()).toBe(false);
 });
 
 test("TASK-554 worker rejects credential and exact fixture-matrix drift", async () => {

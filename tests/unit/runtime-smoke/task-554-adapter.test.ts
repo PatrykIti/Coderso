@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 import { deflateSync } from "node:zlib";
-import { mkdtemp, mkdir, readdir, rm, symlink, writeFile } from "node:fs/promises";
+import { lstat, mkdtemp, mkdir, readdir, rm, symlink, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 
@@ -85,6 +85,7 @@ const cleanup: Task554CleanupOutput = {
   rolesRemoved: 2,
   preIdentityAbsenceProved: true,
   identityAbsenceProved: true,
+  settingsRestored: true,
   statements: 17,
   rows: 24,
 };
@@ -93,6 +94,7 @@ const proof: Task554ProofOutput = {
   schemaVersion: 1,
   fixturesAbsent: true,
   identitiesAbsent: true,
+  settingsRestored: true,
   statements: 3,
   rows: 0,
 };
@@ -129,6 +131,43 @@ test("TASK-554 workspace rejects a redirected .tmp ancestor before private files
   }
 });
 
+test("TASK-554 workspace removes only the empty parent directories it created", async () => {
+  const root = await mkdtemp(join(tmpdir(), "task554-workspace-cleanup-"));
+  const context = {
+    input,
+    root,
+    lifecycle: new RuntimeLifecycle(),
+  } as RuntimeSmokeContext;
+  const parent = join(root, ".tmp", "runtime-smoke");
+  try {
+    const created = await createTask554PrivateWorkspace(context);
+    await created.close();
+    expect(await created.proveAbsent()).toBe(true);
+    await expect(lstat(parent)).rejects.toMatchObject({ code: "ENOENT" });
+    await expect(lstat(join(root, ".tmp"))).rejects.toMatchObject({ code: "ENOENT" });
+
+    await mkdir(parent, { recursive: true, mode: 0o700 });
+    const [tmpBefore, parentBefore] = await Promise.all([lstat(join(root, ".tmp")), lstat(parent)]);
+    const retained = await createTask554PrivateWorkspace({
+      ...context,
+      lifecycle: new RuntimeLifecycle(),
+    });
+    await retained.close();
+    const [tmpAfter, parentAfter] = await Promise.all([lstat(join(root, ".tmp")), lstat(parent)]);
+    expect({ dev: tmpAfter.dev, ino: tmpAfter.ino }).toEqual({
+      dev: tmpBefore.dev,
+      ino: tmpBefore.ino,
+    });
+    expect({ dev: parentAfter.dev, ino: parentAfter.ino }).toEqual({
+      dev: parentBefore.dev,
+      ino: parentBefore.ino,
+    });
+    expect(await readdir(parent)).toEqual([]);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
 test("TASK-554 projects seven terminal scenarios and fixed cleanup receipts without private values", () => {
   const workers = {
     counters: () => ({
@@ -158,6 +197,7 @@ test("TASK-554 projects seven terminal scenarios and fixed cleanup receipts with
   expect(result.cleanup).toMatchObject({
     pageErrors: 0,
     repositorySnapshots: 2,
+    settingsRestored: true,
     postsRemoved: 7,
     workerStarts: 1,
   });
@@ -166,6 +206,26 @@ test("TASK-554 projects seven terminal scenarios and fixed cleanup receipts with
     "synthetic@example.test",
     "task554-private-pepper",
   ]);
+  expect(() =>
+    projectTask554AdapterResult({
+      scenarios: [],
+      screenshots: [],
+      cleanup: { ...cleanup, settingsRestored: false } as never,
+      proof,
+      workers,
+      repositorySnapshots: 2,
+    })
+  ).toThrow("admin path restoration proof");
+  expect(() =>
+    projectTask554AdapterResult({
+      scenarios: [],
+      screenshots: [],
+      cleanup,
+      proof: { ...proof, settingsRestored: false } as never,
+      workers,
+      repositorySnapshots: 2,
+    })
+  ).toThrow("admin path restoration proof");
   expect(() =>
     assertTask554SafeProjection({ ...result, leaked: "synthetic-password" } as never, [
       "synthetic-password",

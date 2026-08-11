@@ -96,6 +96,7 @@ export interface Task554CleanupOutput extends PlainJsonObject {
   readonly rolesRemoved: number;
   readonly preIdentityAbsenceProved: true;
   readonly identityAbsenceProved: true;
+  readonly settingsRestored: true;
   readonly statements: number;
   readonly rows: number;
 }
@@ -104,6 +105,7 @@ export interface Task554ProofOutput extends PlainJsonObject {
   readonly schemaVersion: 1;
   readonly fixturesAbsent: true;
   readonly identitiesAbsent: true;
+  readonly settingsRestored: true;
   readonly statements: number;
   readonly rows: number;
 }
@@ -368,6 +370,7 @@ function cleanupOutput(value: unknown): Task554CleanupOutput {
       "rolesRemoved",
       "preIdentityAbsenceProved",
       "identityAbsenceProved",
+      "settingsRestored",
       "statements",
       "rows",
     ],
@@ -384,7 +387,11 @@ function cleanupOutput(value: unknown): Task554CleanupOutput {
     "rolesRemoved",
   ] as const)
     requireInteger(result[key], 0, `TASK-554 ${key}`);
-  if (result.preIdentityAbsenceProved !== true || result.identityAbsenceProved !== true)
+  if (
+    result.preIdentityAbsenceProved !== true ||
+    result.identityAbsenceProved !== true ||
+    result.settingsRestored !== true
+  )
     fail("TASK-554 cleanup absence proof failed");
   return result;
 }
@@ -392,10 +399,21 @@ function cleanupOutput(value: unknown): Task554CleanupOutput {
 function proofOutput(value: unknown): Task554ProofOutput {
   const result = output(
     value,
-    ["schemaVersion", "fixturesAbsent", "identitiesAbsent", "statements", "rows"],
+    [
+      "schemaVersion",
+      "fixturesAbsent",
+      "identitiesAbsent",
+      "settingsRestored",
+      "statements",
+      "rows",
+    ],
     "TASK-554 proof output"
   ) as unknown as Task554ProofOutput;
-  if (result.fixturesAbsent !== true || result.identitiesAbsent !== true)
+  if (
+    result.fixturesAbsent !== true ||
+    result.identitiesAbsent !== true ||
+    result.settingsRestored !== true
+  )
     fail("TASK-554 terminal proof failed");
   return result;
 }

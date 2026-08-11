@@ -208,6 +208,8 @@ test("TASK-554 implementation workflow executes fail-closed ownership, line, and
     smokeAncestorSymlinkRejected: true,
     smokeFinallyRestorationRejected: true,
     failedEmptySmokeDirectoryRejected: true,
+    failedSmokeRestored: true,
+    failedRunnerRestored: true,
     exactEvidenceRevalidationRejected: true,
     replacementEvidenceRejected: true,
     duplicateScreenshotHashesAllowed: true,

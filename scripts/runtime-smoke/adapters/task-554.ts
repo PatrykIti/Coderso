@@ -1,5 +1,5 @@
 import { createHash, randomBytes } from "node:crypto";
-import { chmod, lstat, mkdir, mkdtemp, realpath, rm } from "node:fs/promises";
+import { chmod, lstat, mkdir, mkdtemp, realpath, readdir, rmdir, rm } from "node:fs/promises";
 import { isAbsolute, join, relative } from "node:path";
 
 import { resolveInsideRoot, SmokeError } from "../contracts";
@@ -58,60 +58,159 @@ interface Task554ProjectionInput {
   readonly repositorySnapshots: number;
 }
 
+interface Task554WorkspaceParentDirectory {
+  readonly path: string;
+  readonly dev: number | bigint;
+  readonly ino: number | bigint;
+  readonly uid: number | bigint;
+  readonly mode: number | bigint;
+}
+
+interface Task554WorkspaceParent {
+  readonly path: string;
+  readonly created: readonly Task554WorkspaceParentDirectory[];
+}
+
 function isWithin(root: string, candidate: string): boolean {
   const rel = relative(root, candidate);
   return rel === "" || (!rel.startsWith("..") && !isAbsolute(rel));
 }
 
-async function createTask554WorkspaceParent(root: string): Promise<string> {
-  let directory = root;
-  const processUid = typeof process.getuid === "function" ? process.getuid() : null;
-  for (const [index, component] of [".tmp", "runtime-smoke"].entries()) {
-    const candidate = join(directory, component);
-    let info = await lstat(candidate).catch((error: NodeJS.ErrnoException) => {
+function workspaceParentDirectory(
+  path: string,
+  info: Awaited<ReturnType<typeof lstat>>
+): Task554WorkspaceParentDirectory {
+  return Object.freeze({
+    path,
+    dev: info.dev,
+    ino: info.ino,
+    uid: info.uid,
+    mode: info.mode,
+  });
+}
+
+function isSameWorkspaceParentDirectory(
+  expected: Task554WorkspaceParentDirectory,
+  actual: Awaited<ReturnType<typeof lstat>>
+): boolean {
+  return (
+    expected.dev === actual.dev &&
+    expected.ino === actual.ino &&
+    expected.uid === actual.uid &&
+    expected.mode === actual.mode
+  );
+}
+
+async function removeCreatedTask554WorkspaceParents(
+  root: string,
+  created: readonly Task554WorkspaceParentDirectory[]
+): Promise<void> {
+  for (const expected of [...created].reverse()) {
+    const info = await lstat(expected.path).catch((error: NodeJS.ErrnoException) => {
       if (error.code === "ENOENT") return null;
       throw error;
     });
-    if (info === null) {
-      await mkdir(candidate, { mode: 0o700 }).catch((error: unknown) => {
-        throw new SmokeError("smoke_repository_invalid", "TASK-554 workspace parent is invalid", {
-          cause: error,
-        });
-      });
-      info = await lstat(candidate).catch((error: unknown) => {
-        throw new SmokeError("smoke_repository_invalid", "TASK-554 workspace parent is invalid", {
-          cause: error,
-        });
-      });
-    }
-    const canonical = await realpath(candidate).catch((error: unknown) => {
-      throw new SmokeError("smoke_repository_invalid", "TASK-554 workspace parent is invalid", {
+    if (info === null) continue;
+    const canonical = await realpath(expected.path).catch((error: unknown) => {
+      throw new SmokeError("smoke_repository_invalid", "TASK-554 workspace parent changed", {
         cause: error,
       });
     });
-    const expectedUid = processUid ?? info.uid;
     if (
       info.isSymbolicLink() ||
       !info.isDirectory() ||
-      canonical !== candidate ||
+      canonical !== expected.path ||
       !isWithin(root, canonical) ||
-      (index === 1 && (info.uid !== expectedUid || (info.mode & 0o777) !== 0o700))
+      !isSameWorkspaceParentDirectory(expected, info)
     ) {
-      throw new SmokeError("smoke_repository_invalid", "TASK-554 workspace parent is invalid");
+      throw new SmokeError("smoke_repository_invalid", "TASK-554 workspace parent changed");
     }
-    directory = candidate;
+    if ((await readdir(expected.path)).length > 0) continue;
+    try {
+      await rmdir(expected.path);
+    } catch (error) {
+      const code = (error as NodeJS.ErrnoException).code;
+      if (code === "ENOENT" || code === "ENOTEMPTY") continue;
+      throw new SmokeError("smoke_cleanup_failed", "TASK-554 workspace parent cleanup failed", {
+        cause: error,
+      });
+    }
   }
-  return directory;
+}
+
+async function createTask554WorkspaceParent(root: string): Promise<Task554WorkspaceParent> {
+  let directory = root;
+  const processUid = typeof process.getuid === "function" ? process.getuid() : null;
+  const created: Task554WorkspaceParentDirectory[] = [];
+  try {
+    for (const [index, component] of [".tmp", "runtime-smoke"].entries()) {
+      const candidate = join(directory, component);
+      let info = await lstat(candidate).catch((error: NodeJS.ErrnoException) => {
+        if (error.code === "ENOENT") return null;
+        throw error;
+      });
+      let wasCreated = false;
+      if (info === null) {
+        await mkdir(candidate, { mode: 0o700 }).catch((error: unknown) => {
+          throw new SmokeError("smoke_repository_invalid", "TASK-554 workspace parent is invalid", {
+            cause: error,
+          });
+        });
+        wasCreated = true;
+        info = await lstat(candidate).catch((error: unknown) => {
+          throw new SmokeError("smoke_repository_invalid", "TASK-554 workspace parent is invalid", {
+            cause: error,
+          });
+        });
+      }
+      const canonical = await realpath(candidate).catch((error: unknown) => {
+        throw new SmokeError("smoke_repository_invalid", "TASK-554 workspace parent is invalid", {
+          cause: error,
+        });
+      });
+      const expectedUid = processUid ?? info.uid;
+      if (
+        info.isSymbolicLink() ||
+        !info.isDirectory() ||
+        canonical !== candidate ||
+        !isWithin(root, canonical) ||
+        (index === 1 && (info.uid !== expectedUid || (info.mode & 0o777) !== 0o700))
+      ) {
+        throw new SmokeError("smoke_repository_invalid", "TASK-554 workspace parent is invalid");
+      }
+      if (wasCreated) created.push(workspaceParentDirectory(candidate, info));
+      directory = candidate;
+    }
+    return Object.freeze({ path: directory, created: Object.freeze(created) });
+  } catch (error) {
+    try {
+      await removeCreatedTask554WorkspaceParents(root, created);
+    } catch (cleanupError) {
+      throw new SmokeError("smoke_cleanup_failed", "TASK-554 workspace setup cleanup failed", {
+        cause: new AggregateError([error, cleanupError]),
+      });
+    }
+    throw error;
+  }
 }
 
 export class Task554Workspace implements LifecycleResource {
   readonly name: string;
   readonly path: string;
+  readonly #root: string;
+  readonly #createdParents: readonly Task554WorkspaceParentDirectory[];
   #closed = false;
 
-  private constructor(session: string, path: string) {
+  private constructor(
+    session: string,
+    path: string,
+    root: string,
+    createdParents: readonly Task554WorkspaceParentDirectory[]
+  ) {
     this.name = `task554-workspace-${session}`;
     this.path = path;
+    this.#root = root;
+    this.#createdParents = createdParents;
   }
 
   static async create(context: RuntimeSmokeContext): Promise<Task554Workspace> {
@@ -123,10 +222,10 @@ export class Task554Workspace implements LifecycleResource {
     });
     resolveInsideRoot(root, ".tmp/runtime-smoke", "TASK-554 workspace root");
     const parent = await createTask554WorkspaceParent(root);
-    const parentInfo = await lstat(parent);
+    const parentInfo = await lstat(parent.path);
     const uid = typeof process.getuid === "function" ? process.getuid() : parentInfo.uid;
     if (
-      !isWithin(root, parent) ||
+      !isWithin(root, parent.path) ||
       parentInfo.isSymbolicLink() ||
       !parentInfo.isDirectory() ||
       parentInfo.uid !== uid ||
@@ -136,7 +235,7 @@ export class Task554Workspace implements LifecycleResource {
     }
     let candidate: string | null = null;
     try {
-      candidate = await mkdtemp(join(parent, `${context.input.session}-task554-`));
+      candidate = await mkdtemp(join(parent.path, `${context.input.session}-task554-`));
       await chmod(candidate, 0o700);
       const [canonical, info] = await Promise.all([realpath(candidate), lstat(candidate)]);
       if (
@@ -149,11 +248,33 @@ export class Task554Workspace implements LifecycleResource {
       ) {
         throw new SmokeError("smoke_repository_invalid", "TASK-554 workspace is not private");
       }
-      const workspace = new Task554Workspace(context.input.session, canonical);
+      const workspace = new Task554Workspace(
+        context.input.session,
+        canonical,
+        root,
+        parent.created
+      );
       context.lifecycle.register(workspace);
       return workspace;
     } catch (error) {
-      if (candidate !== null) await rm(candidate, { recursive: true, force: true });
+      const cleanupErrors: unknown[] = [];
+      if (candidate !== null) {
+        try {
+          await rm(candidate, { recursive: true, force: true });
+        } catch (cleanupError) {
+          cleanupErrors.push(cleanupError);
+        }
+      }
+      try {
+        await removeCreatedTask554WorkspaceParents(root, parent.created);
+      } catch (cleanupError) {
+        cleanupErrors.push(cleanupError);
+      }
+      if (cleanupErrors.length > 0) {
+        throw new SmokeError("smoke_cleanup_failed", "TASK-554 workspace setup cleanup failed", {
+          cause: new AggregateError([error, ...cleanupErrors]),
+        });
+      }
       throw error;
     }
   }
@@ -161,6 +282,7 @@ export class Task554Workspace implements LifecycleResource {
   async close(): Promise<void> {
     if (this.#closed) return;
     await rm(this.path, { recursive: true, force: true });
+    await removeCreatedTask554WorkspaceParents(this.#root, this.#createdParents);
     this.#closed = true;
   }
 
@@ -207,7 +329,8 @@ class Task554FixtureCleanup implements LifecycleResource {
     this.#workers.recordDatabaseBatch(this.#output.statements, this.#output.rows);
     if (
       this.#output.preIdentityAbsenceProved !== true ||
-      this.#output.identityAbsenceProved !== true
+      this.#output.identityAbsenceProved !== true ||
+      this.#output.settingsRestored !== true
     ) {
       throw new SmokeError("smoke_cleanup_failed", "TASK-554 fixture cleanup proof is incomplete");
     }
@@ -340,6 +463,12 @@ export function assertTask554SafeProjection(
 }
 
 export function projectTask554AdapterResult(input: Task554ProjectionInput): SmokeAdapterResult {
+  if (input.cleanup.settingsRestored !== true || input.proof.settingsRestored !== true) {
+    throw new SmokeError(
+      "smoke_cleanup_failed",
+      "TASK-554 admin path restoration proof is incomplete"
+    );
+  }
   const counters = input.workers.counters();
   return Object.freeze({
     pass: true,
@@ -363,6 +492,7 @@ export function projectTask554AdapterResult(input: Task554ProjectionInput): Smok
       rows: counters.rows,
       pageErrors: 0,
       repositorySnapshots: input.repositorySnapshots,
+      settingsRestored: true,
       fixturesAbsent: input.proof.fixturesAbsent,
       identitiesAbsent: input.proof.identitiesAbsent,
     }),
@@ -560,7 +690,11 @@ export async function runTask554Adapter(context: RuntimeSmokeContext): Promise<S
         Object.freeze({})
       )) as Task554ProofOutput;
       workers.recordDatabaseBatch(terminal.statements, terminal.rows);
-      if (terminal.fixturesAbsent !== true || terminal.identitiesAbsent !== true) {
+      if (
+        terminal.fixturesAbsent !== true ||
+        terminal.identitiesAbsent !== true ||
+        terminal.settingsRestored !== true
+      ) {
         throw new SmokeError("smoke_cleanup_failed", "TASK-554 terminal proof is incomplete");
       }
     } catch (error) {

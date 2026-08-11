@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 
 import { and, eq, inArray } from "drizzle-orm";
 
-import { db } from "../../../../core/db/client";
+import { closeDatabase, db } from "../../../../core/db/client";
 import {
   accessLogs,
   auditLogs,
@@ -16,6 +16,11 @@ import {
   users,
 } from "../../../../core/db/schema";
 import { hashPassword } from "../../../../core/services/auth/password";
+import {
+  deleteSetting,
+  getSettingRecord,
+  setSetting,
+} from "../../../../core/services/settings/settingsService";
 import { RunFixtureLedger } from "../../database/fixture-ledger";
 import { buildCleanupBatchPlan, type CleanupBatchPlan } from "../../database/batch-contract";
 import { SmokeError } from "../../contracts";
@@ -46,6 +51,117 @@ interface InstalledState {
   readonly actors: readonly ActorState[];
   readonly fixtures: readonly FixtureState[];
   readonly ledger: ReturnType<RunFixtureLedger["freeze"]>;
+}
+
+const TASK554_ADMIN_PATH_SETTING_KEY = "site.adminPath" as const;
+const TASK554_SMOKE_ADMIN_PATH = "/admin";
+
+type Task554AdminPathSnapshot =
+  | Readonly<{ readonly exists: false }>
+  | Readonly<{ readonly exists: true; readonly value: unknown }>;
+
+export interface Task554ProductionHandlerDependencies {
+  readonly closeDatabase: () => Promise<void>;
+  readonly deleteSetting: (key: typeof TASK554_ADMIN_PATH_SETTING_KEY) => Promise<unknown>;
+  readonly getSettingRecord: (
+    key: typeof TASK554_ADMIN_PATH_SETTING_KEY
+  ) => Promise<Readonly<{ readonly value: unknown }> | null>;
+  readonly hashPassword: (password: string) => Promise<string>;
+  readonly setSetting: (
+    key: typeof TASK554_ADMIN_PATH_SETTING_KEY,
+    value: unknown
+  ) => Promise<unknown>;
+}
+
+const TASK554_PRODUCTION_HANDLER_DEPENDENCIES: Task554ProductionHandlerDependencies = Object.freeze(
+  {
+    closeDatabase,
+    deleteSetting,
+    getSettingRecord,
+    hashPassword,
+    setSetting,
+  }
+);
+
+type Task554ProductionHandlerDependencyOverrides = Readonly<
+  Partial<Task554ProductionHandlerDependencies>
+>;
+
+export class Task554AdminPathLease {
+  #active = false;
+  #applyAttempted = false;
+  #applyPromise: Promise<void> | null = null;
+  #restored = false;
+  #restorePromise: Promise<void> | null = null;
+  #snapshot: Task554AdminPathSnapshot | null = null;
+
+  constructor(private readonly dependencies: Task554ProductionHandlerDependencies) {}
+
+  get active(): boolean {
+    return this.#active;
+  }
+
+  get restored(): boolean {
+    return this.#restored;
+  }
+
+  get wasApplied(): boolean {
+    return this.#applyAttempted || this.#active || this.#restored;
+  }
+
+  async apply(): Promise<void> {
+    if (this.#applyPromise !== null || this.#snapshot !== null || this.#active || this.#restored) {
+      throw new SmokeError("smoke_output_invalid", "TASK-554 admin path lease cannot be replayed");
+    }
+    this.#applyPromise = this.#applySnapshot();
+    await this.#applyPromise;
+  }
+
+  async #applySnapshot(): Promise<void> {
+    const record = await this.dependencies.getSettingRecord(TASK554_ADMIN_PATH_SETTING_KEY);
+    this.#snapshot =
+      record === null
+        ? Object.freeze({ exists: false })
+        : Object.freeze({ exists: true, value: record.value });
+    this.#applyAttempted = true;
+    await this.dependencies.setSetting(TASK554_ADMIN_PATH_SETTING_KEY, TASK554_SMOKE_ADMIN_PATH);
+    this.#active = true;
+  }
+
+  async restore(): Promise<void> {
+    if (this.#applyPromise !== null) {
+      try {
+        await this.#applyPromise;
+      } catch {
+        // A write can fail after its database transaction is committed. Restore
+        // the captured raw record instead of assuming the setting is unchanged.
+      }
+    }
+    if (!this.#active && !this.#applyAttempted) return;
+    this.#restorePromise ??= this.#restoreActive();
+    await this.#restorePromise;
+  }
+
+  async #restoreActive(): Promise<void> {
+    const snapshot = this.#snapshot;
+    if (snapshot === null) {
+      throw new SmokeError("smoke_cleanup_failed", "TASK-554 admin path snapshot is absent");
+    }
+    if (snapshot.exists) {
+      await this.dependencies.setSetting(TASK554_ADMIN_PATH_SETTING_KEY, snapshot.value);
+    } else {
+      await this.dependencies.deleteSetting(TASK554_ADMIN_PATH_SETTING_KEY);
+    }
+    const restoredRecord = await this.dependencies.getSettingRecord(TASK554_ADMIN_PATH_SETTING_KEY);
+    if (
+      (snapshot.exists && (restoredRecord === null || restoredRecord.value !== snapshot.value)) ||
+      (!snapshot.exists && restoredRecord !== null)
+    ) {
+      throw new SmokeError("smoke_cleanup_failed", "TASK-554 admin path restoration proof failed");
+    }
+    this.#active = false;
+    this.#restored = true;
+  }
 }
 
 function digest(value: unknown): string {
@@ -291,120 +407,180 @@ export function assertTask554PreIdentityAbsence(
 }
 
 export class Task554ProductionHandlers implements Task554WorkerHandlers {
+  #adminPathLease: Task554AdminPathLease;
   #state: InstalledState | null = null;
   #cleaned = false;
   #closed = false;
+  #databaseClosed = false;
+  #fixturesInstalled = false;
+  #closePromise: Promise<void> | null = null;
+  #dependencies: Task554ProductionHandlerDependencies;
+
+  constructor(
+    dependencies: Task554ProductionHandlerDependencyOverrides | (() => Promise<void>) = {}
+  ) {
+    this.#dependencies = Object.freeze({
+      ...TASK554_PRODUCTION_HANDLER_DEPENDENCIES,
+      ...(typeof dependencies === "function" ? { closeDatabase: dependencies } : dependencies),
+    });
+    this.#adminPathLease = new Task554AdminPathLease(this.#dependencies);
+  }
+
+  async #restoreAdminPathAfterFailure(error: unknown, message: string): Promise<never> {
+    try {
+      await this.#adminPathLease.restore();
+    } catch (restoreError) {
+      throw new AggregateError([error, restoreError], message);
+    }
+    throw error;
+  }
+
+  async #closeResources(): Promise<void> {
+    let restoreError: unknown;
+    let restoreFailed = false;
+    try {
+      await this.#adminPathLease.restore();
+    } catch (error) {
+      restoreError = error;
+      restoreFailed = true;
+    }
+
+    let databaseError: unknown;
+    let databaseFailed = false;
+    try {
+      await this.#dependencies.closeDatabase();
+      this.#databaseClosed = true;
+    } catch (error) {
+      databaseError = error;
+      databaseFailed = true;
+    }
+
+    if (restoreFailed && databaseFailed) {
+      throw new AggregateError([restoreError, databaseError], "TASK-554 worker shutdown failed");
+    }
+    if (restoreFailed) throw restoreError;
+    if (databaseFailed) throw databaseError;
+  }
 
   async install(input: Task554InstallInput): Promise<Task554InstallOutput> {
     if (this.#state !== null || this.#cleaned)
       throw new SmokeError("smoke_output_invalid", "TASK-554 install cannot be replayed");
-    const passwordHashes = await Promise.all(
-      input.actors.map(({ password }) => hashPassword(password))
-    );
-    const result = await db.transaction(async (tx) => {
-      const insertedRoles = await tx
-        .insert(roles)
-        .values(
-          input.actors.map(({ kind }) => ({
-            name: `task554-${input.runMarker}-${kind}`,
-            description: "TASK-554 synthetic runtime smoke role",
-            permissions:
-              kind === "writer"
-                ? ["content:read", "content:write"]
-                : ["content:read", "content:write", "content:publish"],
-          }))
-        )
-        .returning({ id: roles.id, name: roles.name });
-      const rolesByKind = new Map(
-        input.actors.map(({ kind }, index) => [kind, insertedRoles[index]?.id])
+    try {
+      await this.#adminPathLease.apply();
+      const passwordHashes = await Promise.all(
+        input.actors.map(({ password }) => this.#dependencies.hashPassword(password))
       );
-      if (
-        rolesByKind.size !== 2 ||
-        [...rolesByKind.values()].some((value) => typeof value !== "string")
-      )
-        throw new SmokeError("smoke_output_invalid", "TASK-554 roles were not created");
-      const insertedUsers = await tx
-        .insert(users)
-        .values(
-          input.actors.map(({ kind, email }, index) => ({
-            email,
-            name: `TASK-554 ${kind}`,
-            passwordHash: passwordHashes[index]!,
-            status: "active",
-          }))
+      const result = await db.transaction(async (tx) => {
+        const insertedRoles = await tx
+          .insert(roles)
+          .values(
+            input.actors.map(({ kind }) => ({
+              name: `task554-${input.runMarker}-${kind}`,
+              description: "TASK-554 synthetic runtime smoke role",
+              permissions:
+                kind === "writer"
+                  ? ["content:read", "content:write"]
+                  : ["content:read", "content:write", "content:publish"],
+            }))
+          )
+          .returning({ id: roles.id, name: roles.name });
+        const rolesByKind = new Map(
+          input.actors.map(({ kind }, index) => [kind, insertedRoles[index]?.id])
+        );
+        if (
+          rolesByKind.size !== 2 ||
+          [...rolesByKind.values()].some((value) => typeof value !== "string")
         )
-        .returning({ id: users.id, email: users.email });
-      if (insertedUsers.length !== 2)
-        throw new SmokeError("smoke_output_invalid", "TASK-554 users were not created");
-      const actors = input.actors.map(({ kind, email }) => {
-        const user = insertedUsers.find((entry) => entry.email === email);
-        const roleId = rolesByKind.get(kind);
-        if (user === undefined || roleId === undefined)
-          throw new SmokeError("smoke_output_invalid", "TASK-554 actor creation drifted");
-        return Object.freeze({ kind, userId: user.id, roleId });
-      });
-      await tx.insert(userRoles).values(actors.map(({ userId, roleId }) => ({ userId, roleId })));
-      const insertedPosts = await tx
-        .insert(posts)
-        .values(
-          input.fixtures.map((fixture) => {
-            const descriptor = task554ScenarioDescriptor(fixture.scenarioId);
-            return {
-              authorId: actors.find(({ kind }) => kind === descriptor.actor)!.userId,
-              slug: `task554-${input.runMarker}-${fixture.scenarioId}-${fixture.variantId}`,
-              title: `TASK-554 ${fixture.scenarioId} ${fixture.variantId}`,
-              status: fixture.baseline.status,
-              scheduledAt:
-                fixture.baseline.scheduledAt === null
-                  ? null
-                  : new Date(fixture.baseline.scheduledAt),
-              seo: { description: fixture.baseline.seoDescription },
-              data: {},
-              metadata: {},
-              tags: [],
-            };
-          })
-        )
-        .returning({ id: posts.id, slug: posts.slug });
-      if (insertedPosts.length !== input.fixtures.length)
-        throw new SmokeError("smoke_output_invalid", "TASK-554 posts were not created");
-      const fixtures = input.fixtures.map((fixture) => {
-        const slug = `task554-${input.runMarker}-${fixture.scenarioId}-${fixture.variantId}`;
-        const post = insertedPosts.find((entry) => entry.slug === slug);
-        if (post === undefined)
-          throw new SmokeError("smoke_output_invalid", "TASK-554 post fixture is absent");
+          throw new SmokeError("smoke_output_invalid", "TASK-554 roles were not created");
+        const insertedUsers = await tx
+          .insert(users)
+          .values(
+            input.actors.map(({ kind, email }, index) => ({
+              email,
+              name: `TASK-554 ${kind}`,
+              passwordHash: passwordHashes[index]!,
+              status: "active",
+            }))
+          )
+          .returning({ id: users.id, email: users.email });
+        if (insertedUsers.length !== 2)
+          throw new SmokeError("smoke_output_invalid", "TASK-554 users were not created");
+        const actors = input.actors.map(({ kind, email }) => {
+          const user = insertedUsers.find((entry) => entry.email === email);
+          const roleId = rolesByKind.get(kind);
+          if (user === undefined || roleId === undefined)
+            throw new SmokeError("smoke_output_invalid", "TASK-554 actor creation drifted");
+          return Object.freeze({ kind, userId: user.id, roleId });
+        });
+        await tx.insert(userRoles).values(actors.map(({ userId, roleId }) => ({ userId, roleId })));
+        const insertedPosts = await tx
+          .insert(posts)
+          .values(
+            input.fixtures.map((fixture) => {
+              const descriptor = task554ScenarioDescriptor(fixture.scenarioId);
+              return {
+                authorId: actors.find(({ kind }) => kind === descriptor.actor)!.userId,
+                slug: `task554-${input.runMarker}-${fixture.scenarioId}-${fixture.variantId}`,
+                title: `TASK-554 ${fixture.scenarioId} ${fixture.variantId}`,
+                status: fixture.baseline.status,
+                scheduledAt:
+                  fixture.baseline.scheduledAt === null
+                    ? null
+                    : new Date(fixture.baseline.scheduledAt),
+                seo: { description: fixture.baseline.seoDescription },
+                data: {},
+                metadata: {},
+                tags: [],
+              };
+            })
+          )
+          .returning({ id: posts.id, slug: posts.slug });
+        if (insertedPosts.length !== input.fixtures.length)
+          throw new SmokeError("smoke_output_invalid", "TASK-554 posts were not created");
+        const fixtures = input.fixtures.map((fixture) => {
+          const slug = `task554-${input.runMarker}-${fixture.scenarioId}-${fixture.variantId}`;
+          const post = insertedPosts.find((entry) => entry.slug === slug);
+          if (post === undefined)
+            throw new SmokeError("smoke_output_invalid", "TASK-554 post fixture is absent");
+          return Object.freeze({
+            scenarioId: fixture.scenarioId,
+            variantId: fixture.variantId,
+            postId: post.id,
+          });
+        });
         return Object.freeze({
-          scenarioId: fixture.scenarioId,
-          variantId: fixture.variantId,
-          postId: post.id,
+          actors: Object.freeze(actors),
+          fixtures: Object.freeze(fixtures),
+          statements: 4,
+          rows: 4 + input.fixtures.length,
         });
       });
-      return Object.freeze({
-        actors: Object.freeze(actors),
-        fixtures: Object.freeze(fixtures),
-        statements: 4,
-        rows: 4 + input.fixtures.length,
-      });
-    });
-    const state = Object.freeze({
-      marker: input.runMarker,
-      actors: result.actors,
-      fixtures: result.fixtures,
-      ledger: buildTask554CleanupLedger({
+      this.#fixturesInstalled = true;
+      const state = Object.freeze({
         marker: input.runMarker,
         actors: result.actors,
         fixtures: result.fixtures,
-      }),
-    });
-    this.#state = state;
-    return Object.freeze({
-      schemaVersion: 1,
-      runMarker: input.runMarker,
-      actors: state.actors,
-      fixtures: state.fixtures,
-      statements: result.statements,
-      rows: result.rows,
-    });
+        ledger: buildTask554CleanupLedger({
+          marker: input.runMarker,
+          actors: result.actors,
+          fixtures: result.fixtures,
+        }),
+      });
+      this.#state = state;
+      return Object.freeze({
+        schemaVersion: 1,
+        runMarker: input.runMarker,
+        actors: state.actors,
+        fixtures: state.fixtures,
+        statements: result.statements,
+        rows: result.rows,
+      });
+    } catch (error) {
+      return await this.#restoreAdminPathAfterFailure(
+        error,
+        "TASK-554 install failed and admin path restoration failed"
+      );
+    }
   }
 
   async read(input: Task554ReadInput): Promise<Task554ReadOutput> {
@@ -446,122 +622,135 @@ export class Task554ProductionHandlers implements Task554WorkerHandlers {
     const state = requireInstalled(this.#state);
     if (this.#cleaned)
       throw new SmokeError("smoke_output_invalid", "TASK-554 cleanup cannot be replayed");
-    const authority = task554CleanupAuthority(state);
-    const { postIds, userIds, roleIds } = authority;
-    const output = await db.transaction(async (tx) => {
-      const access = await tx
-        .delete(accessLogs)
-        .where(inArray(accessLogs.userId, userIds))
-        .returning({ id: accessLogs.id });
-      const audit = await tx
-        .delete(auditLogs)
-        .where(inArray(auditLogs.actorId, userIds))
-        .returning({ id: auditLogs.id });
-      const assignments = await tx
-        .delete(postTermAssignments)
-        .where(inArray(postTermAssignments.postId, postIds))
-        .returning({ postId: postTermAssignments.postId });
-      const previews = await tx
-        .delete(postPreviewTokens)
-        .where(inArray(postPreviewTokens.postId, postIds))
-        .returning({ id: postPreviewTokens.id });
-      const revisions = await tx
-        .delete(postRevisions)
-        .where(inArray(postRevisions.postId, postIds))
-        .returning({ id: postRevisions.id });
-      const deletedPosts = await tx
-        .delete(posts)
-        .where(inArray(posts.id, postIds))
-        .returning({ id: posts.id });
-      const deletedSessions = await tx
-        .delete(sessions)
-        .where(inArray(sessions.userId, userIds))
-        .returning({ id: sessions.id });
-      const joins = await tx
-        .delete(userRoles)
-        .where(inArray(userRoles.userId, userIds))
-        .returning({ userId: userRoles.userId });
-      const remainingPosts = await tx
-        .select({ id: posts.id })
-        .from(posts)
-        .where(inArray(posts.id, postIds));
-      const remainingAccess = await tx
-        .select({ id: accessLogs.id })
-        .from(accessLogs)
-        .where(inArray(accessLogs.userId, userIds));
-      const remainingAudit = await tx
-        .select({ id: auditLogs.id })
-        .from(auditLogs)
-        .where(inArray(auditLogs.actorId, userIds));
-      const remainingAssignments = await tx
-        .select({ postId: postTermAssignments.postId })
-        .from(postTermAssignments)
-        .where(inArray(postTermAssignments.postId, postIds));
-      const remainingPreviews = await tx
-        .select({ id: postPreviewTokens.id })
-        .from(postPreviewTokens)
-        .where(inArray(postPreviewTokens.postId, postIds));
-      const remainingRevisions = await tx
-        .select({ id: postRevisions.id })
-        .from(postRevisions)
-        .where(inArray(postRevisions.postId, postIds));
-      const remainingSessions = await tx
-        .select({ id: sessions.id })
-        .from(sessions)
-        .where(inArray(sessions.userId, userIds));
-      const remainingJoins = await tx
-        .select({ userId: userRoles.userId })
-        .from(userRoles)
-        .where(inArray(userRoles.userId, userIds));
-      assertTask554PreIdentityAbsence({
-        posts: remainingPosts,
-        accessLogs: remainingAccess,
-        auditLogs: remainingAudit,
-        postTermAssignments: remainingAssignments,
-        postPreviewTokens: remainingPreviews,
-        postRevisions: remainingRevisions,
-        sessions: remainingSessions,
-        userRoles: remainingJoins,
-      });
-      const deletedUsers = await tx
-        .delete(users)
-        .where(inArray(users.id, userIds))
-        .returning({ id: users.id });
-      const deletedRoles = await tx
-        .delete(roles)
-        .where(
-          and(
-            inArray(roles.id, roleIds),
-            inArray(
-              roles.name,
-              state.actors.map(({ kind }) => `task554-${state.marker}-${kind}`)
+    const output = await (async () => {
+      try {
+        const authority = task554CleanupAuthority(state);
+        const { postIds, userIds, roleIds } = authority;
+        return await db.transaction(async (tx) => {
+          const access = await tx
+            .delete(accessLogs)
+            .where(inArray(accessLogs.userId, userIds))
+            .returning({ id: accessLogs.id });
+          const audit = await tx
+            .delete(auditLogs)
+            .where(inArray(auditLogs.actorId, userIds))
+            .returning({ id: auditLogs.id });
+          const assignments = await tx
+            .delete(postTermAssignments)
+            .where(inArray(postTermAssignments.postId, postIds))
+            .returning({ postId: postTermAssignments.postId });
+          const previews = await tx
+            .delete(postPreviewTokens)
+            .where(inArray(postPreviewTokens.postId, postIds))
+            .returning({ id: postPreviewTokens.id });
+          const revisions = await tx
+            .delete(postRevisions)
+            .where(inArray(postRevisions.postId, postIds))
+            .returning({ id: postRevisions.id });
+          const deletedPosts = await tx
+            .delete(posts)
+            .where(inArray(posts.id, postIds))
+            .returning({ id: posts.id });
+          const deletedSessions = await tx
+            .delete(sessions)
+            .where(inArray(sessions.userId, userIds))
+            .returning({ id: sessions.id });
+          const joins = await tx
+            .delete(userRoles)
+            .where(inArray(userRoles.userId, userIds))
+            .returning({ userId: userRoles.userId });
+          const remainingPosts = await tx
+            .select({ id: posts.id })
+            .from(posts)
+            .where(inArray(posts.id, postIds));
+          const remainingAccess = await tx
+            .select({ id: accessLogs.id })
+            .from(accessLogs)
+            .where(inArray(accessLogs.userId, userIds));
+          const remainingAudit = await tx
+            .select({ id: auditLogs.id })
+            .from(auditLogs)
+            .where(inArray(auditLogs.actorId, userIds));
+          const remainingAssignments = await tx
+            .select({ postId: postTermAssignments.postId })
+            .from(postTermAssignments)
+            .where(inArray(postTermAssignments.postId, postIds));
+          const remainingPreviews = await tx
+            .select({ id: postPreviewTokens.id })
+            .from(postPreviewTokens)
+            .where(inArray(postPreviewTokens.postId, postIds));
+          const remainingRevisions = await tx
+            .select({ id: postRevisions.id })
+            .from(postRevisions)
+            .where(inArray(postRevisions.postId, postIds));
+          const remainingSessions = await tx
+            .select({ id: sessions.id })
+            .from(sessions)
+            .where(inArray(sessions.userId, userIds));
+          const remainingJoins = await tx
+            .select({ userId: userRoles.userId })
+            .from(userRoles)
+            .where(inArray(userRoles.userId, userIds));
+          assertTask554PreIdentityAbsence({
+            posts: remainingPosts,
+            accessLogs: remainingAccess,
+            auditLogs: remainingAudit,
+            postTermAssignments: remainingAssignments,
+            postPreviewTokens: remainingPreviews,
+            postRevisions: remainingRevisions,
+            sessions: remainingSessions,
+            userRoles: remainingJoins,
+          });
+          const deletedUsers = await tx
+            .delete(users)
+            .where(inArray(users.id, userIds))
+            .returning({ id: users.id });
+          const deletedRoles = await tx
+            .delete(roles)
+            .where(
+              and(
+                inArray(roles.id, roleIds),
+                inArray(
+                  roles.name,
+                  state.actors.map(({ kind }) => `task554-${state.marker}-${kind}`)
+                )
+              )
             )
-          )
-        )
-        .returning({ id: roles.id });
-      const remainingUsers = await tx
-        .select({ id: users.id })
-        .from(users)
-        .where(inArray(users.id, userIds));
-      const remainingRoles = await tx
-        .select({ id: roles.id })
-        .from(roles)
-        .where(inArray(roles.id, roleIds));
-      if (remainingUsers.length !== 0 || remainingRoles.length !== 0)
-        throw new SmokeError("smoke_cleanup_failed", "TASK-554 identity absence proof failed");
-      return Object.freeze({
-        access,
-        audit,
-        assignments,
-        previews,
-        revisions,
-        deletedPosts,
-        deletedSessions,
-        joins,
-        deletedUsers,
-        deletedRoles,
-      });
-    });
+            .returning({ id: roles.id });
+          const remainingUsers = await tx
+            .select({ id: users.id })
+            .from(users)
+            .where(inArray(users.id, userIds));
+          const remainingRoles = await tx
+            .select({ id: roles.id })
+            .from(roles)
+            .where(inArray(roles.id, roleIds));
+          if (remainingUsers.length !== 0 || remainingRoles.length !== 0)
+            throw new SmokeError("smoke_cleanup_failed", "TASK-554 identity absence proof failed");
+          return Object.freeze({
+            access,
+            audit,
+            assignments,
+            previews,
+            revisions,
+            deletedPosts,
+            deletedSessions,
+            joins,
+            deletedUsers,
+            deletedRoles,
+          });
+        });
+      } catch (error) {
+        return await this.#restoreAdminPathAfterFailure(
+          error,
+          "TASK-554 cleanup failed and admin path restoration failed"
+        );
+      }
+    })();
+    await this.#adminPathLease.restore();
+    if (!this.#adminPathLease.restored) {
+      throw new SmokeError("smoke_cleanup_failed", "TASK-554 admin path restoration is unproven");
+    }
     this.#cleaned = true;
     const postChildrenRemoved =
       removedCount(output.assignments) +
@@ -588,6 +777,7 @@ export class Task554ProductionHandlers implements Task554WorkerHandlers {
       rolesRemoved: removedCount(output.deletedRoles),
       preIdentityAbsenceProved: true,
       identityAbsenceProved: true,
+      settingsRestored: true,
       statements: 20,
       rows,
     });
@@ -595,7 +785,7 @@ export class Task554ProductionHandlers implements Task554WorkerHandlers {
 
   async prove(): Promise<Task554ProofOutput> {
     const state = requireInstalled(this.#state);
-    if (!this.#cleaned)
+    if (!this.#cleaned || !this.#adminPathLease.restored)
       throw new SmokeError("smoke_cleanup_failed", "TASK-554 cleanup proof was requested early");
     const postRows = await db
       .select({ id: posts.id })
@@ -630,6 +820,7 @@ export class Task554ProductionHandlers implements Task554WorkerHandlers {
       schemaVersion: 1,
       fixturesAbsent: true,
       identitiesAbsent: true,
+      settingsRestored: true,
       statements: 3,
       rows: 0,
     });
@@ -637,9 +828,16 @@ export class Task554ProductionHandlers implements Task554WorkerHandlers {
 
   async close(): Promise<void> {
     this.#closed = true;
+    this.#closePromise ??= this.#closeResources();
+    await this.#closePromise;
   }
 
   async proveAbsent(): Promise<boolean> {
-    return this.#closed && this.#cleaned;
+    if (!this.#closed || !this.#databaseClosed) return false;
+    if (this.#fixturesInstalled && !this.#cleaned) return false;
+    return (
+      !this.#adminPathLease.active &&
+      (!this.#adminPathLease.wasApplied || this.#adminPathLease.restored)
+    );
   }
 }

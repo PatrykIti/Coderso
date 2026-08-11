@@ -351,18 +351,18 @@ function task554SessionDirectory(root, session) {
   if (session !== "task-554-fast" && session !== "task-554-certification") throw new Error(`task_554_smoke_session_invalid:${session}`);
   return path.resolve(root, "_docs/_workflows/_smoke/task-554", session);
 }
-function assertNofollowTask554SmokeRoot(root, create = false) {
+function task554SmokeDirectoryNode(stats) { return Object.freeze({ dev: stats.dev, ino: stats.ino, uid: stats.uid, mode: stats.mode }); }
+function sameTask554SmokeDirectoryNode(left, right) { return left.dev === right.dev && left.ino === right.ino && left.uid === right.uid && left.mode === right.mode; }
+function assertNofollowTask554SmokeRoot(root, create = false, createdDirectories = null) {
   let directory = root;
   for (const component of ["_docs", "_workflows", "_smoke", "task-554"]) {
-    directory = path.join(directory, component);
-    let stats;
+    directory = path.join(directory, component); let stats; let created = false;
     try { stats = lstatSync(directory); } catch (error) {
-      if (!error || typeof error !== "object" || error.code !== "ENOENT") throw error;
-      if (!create) throw new Error("task_554_smoke_ancestor_missing");
-      mkdirSync(directory, { mode: 0o700 });
-      stats = lstatSync(directory);
+      if (!error || typeof error !== "object" || error.code !== "ENOENT") throw error; if (!create) throw new Error("task_554_smoke_ancestor_missing");
+      mkdirSync(directory, { mode: 0o700 }); stats = lstatSync(directory); created = true;
     }
     if (!stats.isDirectory() || stats.isSymbolicLink()) throw new Error("task_554_smoke_ancestor_invalid");
+    if (created && createdDirectories !== null) createdDirectories.push(Object.freeze({ path: directory, node: task554SmokeDirectoryNode(stats) }));
   }
   return directory;
 }
@@ -502,7 +502,7 @@ function assertExactReport(report, profile, session, manifest, root) {
   }
   const scenarioIds = report.scenarios?.map((scenario) => scenario?.id);
   assertExactScenarioIds(scenarioIds, "task_554_smoke_report");
-  if (report.scenarios.some((scenario) => !scenario || Object.keys(scenario).length !== 3 || scenario?.pass !== true || !Number.isFinite(scenario?.elapsedMs)) || !Array.isArray(report.consoleErrors) || report.consoleErrors.length !== 0 || !Array.isArray(report.failures) || report.failures.length !== 0 || report.cleanup?.pass !== true || !Number.isSafeInteger(report.snapshots) || report.snapshots !== 2 || report.suiteCleanup?.pageErrors !== 0 || report.suiteCleanup?.repositorySnapshots !== report.snapshots) {
+  if (report.scenarios.some((scenario) => !scenario || Object.keys(scenario).length !== 3 || scenario?.pass !== true || !Number.isFinite(scenario?.elapsedMs)) || !Array.isArray(report.consoleErrors) || report.consoleErrors.length !== 0 || !Array.isArray(report.failures) || report.failures.length !== 0 || report.cleanup?.pass !== true || !Number.isSafeInteger(report.snapshots) || report.snapshots !== 2 || report.suiteCleanup?.pageErrors !== 0 || report.suiteCleanup?.repositorySnapshots !== report.snapshots || report.suiteCleanup?.settingsRestored !== true) {
     throw new Error("task_554_smoke_report_failure");
   }
   if (!Array.isArray(report.screenshots) || report.screenshots.length !== manifest.paths.length) {
@@ -546,9 +546,9 @@ export function assertExactTask554SmokeEvidence(root, profile, session, manifest
 }
 function captureSmokeEvidenceSnapshot(root, evidence) {
   assertExactTask554SmokeEvidence(root, evidence.report.profile, evidence.report.session, evidence.manifest, evidence.reportBytes);
-  const sessionPath = ensureInsideRoot(root, task554SessionDirectory(root, evidence.report.session), "smoke_session");
+  const smokeRoot = ensureInsideRoot(root, assertNofollowTask554SmokeRoot(root), "smoke_ancestor"); const sessionPath = ensureInsideRoot(root, task554SessionDirectory(root, evidence.report.session), "smoke_session");
   const reportPath = ensureInsideRoot(root, path.join(task554SessionDirectory(root, evidence.report.session), "report.json"), "smoke_report");
-  return new Map([sessionPath, reportPath, ...evidence.manifest.paths].map((relativePath) => [relativePath, fingerprintPath(root, relativePath)]));
+  return new Map([smokeRoot, sessionPath, reportPath, ...evidence.manifest.paths].map((relativePath) => [relativePath, fingerprintPath(root, relativePath)]));
 }
 function assertSmokeEvidenceSnapshot(snapshot, root) {
   for (const [relativePath, value] of snapshot) if (fingerprintPath(root, relativePath) !== value) throw new Error(`task_554_smoke_evidence_changed:${relativePath}`);
@@ -556,14 +556,40 @@ function assertSmokeEvidenceSnapshot(snapshot, root) {
 function smokeEvidencePaths(snapshot) {
   return [...snapshot.keys()];
 }
-function createEmptySmokeSession(root, session) {
-  assertNofollowTask554SmokeRoot(root, true);
+function createEmptySmokeSession(root, session, createdDirectories = null) {
+  assertNofollowTask554SmokeRoot(root, true, createdDirectories);
   const directory = task554SessionDirectory(root, session);
   if (existsSync(directory)) throw new Error(`task_554_smoke_session_preexisting:${session}`);
   mkdirSync(directory, { recursive: true, mode: 0o700 });
   const stats = lstatSync(directory);
   if (!stats.isDirectory() || stats.isSymbolicLink()) throw new Error(`task_554_smoke_session_create_failed:${session}`);
   return directory;
+}
+function createOwnedTask554SmokeSession(root, session) {
+  const createdDirectories = []; const directory = createEmptySmokeSession(root, session, createdDirectories); const smokeRoot = assertNofollowTask554SmokeRoot(root); const stats = lstatSync(directory);
+  if (path.dirname(directory) !== smokeRoot || !stats.isDirectory() || stats.isSymbolicLink()) throw new Error(`task_554_smoke_session_create_failed:${session}`);
+  return Object.freeze({ directory, node: task554SmokeDirectoryNode(stats), createdDirectories: Object.freeze(createdDirectories) });
+}
+function removeOwnedTask554SmokeDirectory(root, expected) {
+  const directory = ensureInsideRoot(root, expected.path, "smoke_ancestor"); const absolute = path.resolve(root, directory); let stats;
+  try { stats = lstatSync(absolute); } catch (error) { if (error?.code === "ENOENT") return; throw error; }
+  if (!stats.isDirectory() || stats.isSymbolicLink() || !sameTask554SmokeDirectoryNode(expected.node, task554SmokeDirectoryNode(stats))) throw new Error(`task_554_smoke_ancestor_changed:${directory}`);
+  if (readdirSync(absolute).length !== 0) return; rmdirSync(absolute);
+  try { lstatSync(absolute); } catch (error) { if (error?.code === "ENOENT") return; throw error; }
+  throw new Error(`task_554_smoke_ancestor_cleanup_failed:${directory}`);
+}
+function removeOwnedTask554FailedSmokeSession(root, session, owned) {
+  const smokeRoot = assertNofollowTask554SmokeRoot(root); const directory = task554SessionDirectory(root, session);
+  if (owned.directory !== directory || path.dirname(directory) !== smokeRoot) throw new Error(`task_554_smoke_session_ownership_invalid:${session}`);
+  let stats;
+  try { stats = lstatSync(directory); } catch (error) { if (error?.code !== "ENOENT") throw error; stats = null; }
+  if (stats !== null) {
+    if (!stats.isDirectory() || stats.isSymbolicLink() || !sameTask554SmokeDirectoryNode(owned.node, task554SmokeDirectoryNode(stats))) throw new Error(`task_554_smoke_session_changed:${session}`);
+    rmSync(directory, { recursive: true, force: false });
+    try { lstatSync(directory); } catch (error) { if (error?.code !== "ENOENT") throw error; stats = null; }
+    if (stats !== null) throw new Error(`task_554_smoke_session_cleanup_failed:${session}`);
+  }
+  for (const expected of [...owned.createdDirectories].reverse()) removeOwnedTask554SmokeDirectory(root, expected);
 }
 function assertByteIdenticalReport(expectedBytes, reportPath) {
   const actualBytes = readFileSync(reportPath);
@@ -579,11 +605,12 @@ export function runTask554SmokeProfile(root, profile, session) {
   verifyBeforeDispatch("runtime_smoke", root);
   const before = captureRepositoryFingerprint(root);
   let evidence = null;
-  let evidenceSnapshot = null;
+  let evidenceSnapshot = null; let ownedFailedSession = null;
   let primary = null;
   try {
     const manifest = loadTask554Manifest(root, profile, session);
-    const directory = createEmptySmokeSession(root, session);
+    ownedFailedSession = createOwnedTask554SmokeSession(root, session);
+    const directory = ownedFailedSession.directory;
     const reportPath = path.join(directory, "report.json");
     const reportFd = openSync(reportPath, "wx", 0o600);
     let execution;
@@ -608,6 +635,11 @@ export function runTask554SmokeProfile(root, profile, session) {
         assertSmokeEvidenceSnapshot(evidenceSnapshot, root);
         evidenceRevalidated = true;
       }
+    } catch (restoration) {
+      primary = preserveSmokePrimaryFailure(primary, restoration);
+    }
+    try {
+      if (evidenceSnapshot === null && ownedFailedSession !== null) removeOwnedTask554FailedSmokeSession(root, session, ownedFailedSession);
     } catch (restoration) {
       primary = preserveSmokePrimaryFailure(primary, restoration);
     }
@@ -860,9 +892,13 @@ function workflowSelfTest() {
     rmSync(smokeAncestor);
     rmSync(externalSmokeRoot, { recursive: true, force: true });
     const failedSmokeBefore = captureRepositoryFingerprint(tempRoot);
-    const failedSmokeDirectory = createEmptySmokeSession(tempRoot, "task-554-certification");
+    const failedSmokeDirectories = [];
+    const failedSmokeDirectory = createEmptySmokeSession(tempRoot, "task-554-certification", failedSmokeDirectories);
+    const failedSmokeStats = lstatSync(failedSmokeDirectory);
+    const failedSmokeSession = Object.freeze({ directory: failedSmokeDirectory, node: task554SmokeDirectoryNode(failedSmokeStats), createdDirectories: Object.freeze(failedSmokeDirectories) });
     expectFailure(() => assertNoRepositoryMutation("task_554_self_test_failed_empty_smoke", failedSmokeBefore, captureRepositoryFingerprint(tempRoot), tempRoot), "task_554_self_test_failed_empty_smoke:scope_violation:");
-    rmSync(failedSmokeDirectory, { recursive: true });
+    removeOwnedTask554FailedSmokeSession(tempRoot, "task-554-certification", failedSmokeSession);
+    assertNoRepositoryMutation("task_554_self_test_failed_smoke_restored", failedSmokeBefore, captureRepositoryFingerprint(tempRoot), tempRoot);
     const session = "task-554-fast";
     const manifest = makeSelfTestManifest(tempRoot, session);
     const pngBytes = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIHWP4z8DwHwAFgAI/ScLZ4QAAAABJRU5ErkJggg==", "base64");
@@ -877,7 +913,7 @@ function workflowSelfTest() {
       schemaVersion: 1, suiteId: "task-554", profile: "fast", session, pass: true, serverUp: true,
       timings: [], processes: {}, snapshots: 2,
       scenarios: TASK_554_SMOKE_SCENARIO_IDS.map((id) => ({ id, pass: true, elapsedMs: 1 })),
-      screenshots, consoleErrors: [], suiteCleanup: { pageErrors: 0, repositorySnapshots: 2 }, cleanup: { pass: true }, failures: [],
+      screenshots, consoleErrors: [], suiteCleanup: { pageErrors: 0, repositorySnapshots: 2, settingsRestored: true }, cleanup: { pass: true }, failures: [],
     })}\n`);
     const reportPath = path.join(sessionDirectory, "report.json");
     const reportFd = openSync(reportPath, "wx", 0o600);
@@ -888,6 +924,13 @@ function workflowSelfTest() {
     const evidence = assertExactTask554SmokeEvidence(tempRoot, "fast", session, manifest, readFileSync(reportPath));
     const evidenceSnapshot = captureSmokeEvidenceSnapshot(tempRoot, evidence);
     assertNoRepositoryMutation("task_554_self_test_validated_smoke", smokeBefore, captureRepositoryFingerprint(tempRoot, [...evidenceSnapshot.keys()]), tempRoot);
+    const fakeBunDirectory = path.join(tempRoot, ".task-554-fake-bun"); const fakeManifest = makeSelfTestManifest(tempRoot, "task-554-certification");
+    writeTinyFile(path.join(tempRoot, AUTHOR_AUDIT_PATH), `if (process.argv[2] === "--task-554-bootstrap-verify") process.stdout.write(${JSON.stringify(JSON.stringify({ baseline: TASK_554_BASELINE_SHA, paths: TASK_554_WORKFLOW_PATHS }))});\n`);
+    const fakeBun = path.join(fakeBunDirectory, "bun"); writeTinyFile(fakeBun, `#!/usr/bin/env node\nif (process.argv[2] === "--eval") process.stdout.write(${JSON.stringify(JSON.stringify(fakeManifest))}); else { process.stdout.write("{\\"pass\\":false}\\n"); process.exit(1); }\n`); chmodSync(fakeBun, 0o755);
+    const runnerBefore = captureRepositoryFingerprint(tempRoot); const previousPath = process.env.PATH; process.env.PATH = `${fakeBunDirectory}:${previousPath ?? ""}`;
+    try { expectFailure(() => runTask554SmokeProfile(tempRoot, "certification", "task-554-certification"), "task_554_smoke_runner_failed:1"); } finally { if (previousPath === undefined) delete process.env.PATH; else process.env.PATH = previousPath; }
+    if (existsSync(task554SessionDirectory(tempRoot, "task-554-certification"))) throw new Error("task_554_self_test_failed_runner_session_residue");
+    assertNoRepositoryMutation("task_554_self_test_failed_runner_restored", runnerBefore, captureRepositoryFingerprint(tempRoot), tempRoot); rmSync(fakeBunDirectory, { recursive: true, force: true }); rmSync(path.join(tempRoot, AUTHOR_AUDIT_PATH));
     const replacement = `${reportPath}.replacement`;
     writeTinyFile(replacement, Buffer.concat([Buffer.from(" "), report])); renameSync(replacement, reportPath);
     expectFailure(() => assertExactTask554SmokeEvidence(tempRoot, "fast", session, manifest, evidence.reportBytes), "task_554_smoke_report_file_mismatch");
@@ -930,38 +973,12 @@ function workflowSelfTest() {
     if (!(combined instanceof Error) || combined.message !== primary.message || !(combined.cause instanceof AggregateError) || combined.cause.errors[0] !== primary) throw new Error("task_554_self_test_smoke_primary_preserved");
     assertTask554TerminalStatusDelta("**Status:** 🚧 In Progress\n**Started:** 2026-08-11", "**Status:** ✅ Done\n**Completed:** 2026-08-11\n**Started:** 2026-08-11");
     expectFailure(() => assertTask554TerminalStatusDelta("**Status:** 🚧 In Progress\nbody", "**Status:** ✅ Done\n**Completed:** 2026-08-11\nchanged"), "task_554_closure_terminal_status_invalid");
-    return Object.freeze({
-      pass: true,
-      unterminatedLineCount: true,
-      trackedAndUntrackedCandidates: true,
-      generatedArtifactExcluded: true,
-      stableIgnoredArtifactsBound: true,
-      emptyIgnoredDirectoriesBound: true,
-      manifestInputBound: true,
-      smokeProfileSessionPairRejected: true,
-      strictMutationAndAuditResultsRejected: true,
-      agentIdentityRejected: true,
-      releaseGateReportRestored: true, releaseGateSiblingResidueRejected: true, tmpMutationRejected: true, releaseGateHardlinkRejected: true, releaseGateDirectoryIdentityRejected: true, releaseGateReportIdentityRejected: true,
-      forbiddenScopeRejected: true,
-      directStdoutCapture: true,
-      boundedPngEvidenceRejected: true,
-      decodedPngEvidenceRejected: true,
-      extraSmokeOutputRejected: true,
-      reportReserializationRejected: true,
-      gateMutationRejected: true,
-      ignoredWorkflowMutationRejected: true,
-      modeAndSymlinkFingerprintRejected: true,
-      smokeAncestorSymlinkRejected: true,
-      smokeFinallyRestorationRejected: true,
-      failedEmptySmokeDirectoryRejected: true,
-      exactEvidenceRevalidationRejected: true,
-      replacementEvidenceRejected: true,
-      duplicateScreenshotHashesAllowed: true,
-      snapshotMismatchRejected: true,
-      narrowClosureRejected: true,
-      duplicateBoardStatisticRejected: true,
-      canonicalClosureRejected: true,
-    });
+    return Object.freeze({ pass: true, unterminatedLineCount: true, trackedAndUntrackedCandidates: true, generatedArtifactExcluded: true, stableIgnoredArtifactsBound: true, emptyIgnoredDirectoriesBound: true,
+      manifestInputBound: true, smokeProfileSessionPairRejected: true, strictMutationAndAuditResultsRejected: true, agentIdentityRejected: true, releaseGateReportRestored: true, releaseGateSiblingResidueRejected: true,
+      tmpMutationRejected: true, releaseGateHardlinkRejected: true, releaseGateDirectoryIdentityRejected: true, releaseGateReportIdentityRejected: true, forbiddenScopeRejected: true, directStdoutCapture: true,
+      boundedPngEvidenceRejected: true, decodedPngEvidenceRejected: true, extraSmokeOutputRejected: true, reportReserializationRejected: true, gateMutationRejected: true, ignoredWorkflowMutationRejected: true,
+      modeAndSymlinkFingerprintRejected: true, smokeAncestorSymlinkRejected: true, smokeFinallyRestorationRejected: true, failedEmptySmokeDirectoryRejected: true, failedSmokeRestored: true, failedRunnerRestored: true,
+      exactEvidenceRevalidationRejected: true, replacementEvidenceRejected: true, duplicateScreenshotHashesAllowed: true, snapshotMismatchRejected: true, narrowClosureRejected: true, duplicateBoardStatisticRejected: true, canonicalClosureRejected: true });
   } finally {
     rmSync(tempRoot, { recursive: true, force: true });
   }
