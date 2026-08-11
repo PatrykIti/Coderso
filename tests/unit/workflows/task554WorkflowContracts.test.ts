@@ -96,6 +96,8 @@ test("TASK-554 implementation workflow executes fail-closed ownership, line, and
   expect(implement).toContain("task_554_forbidden_dirty");
   expect(implement).toContain("task_554_workflow_tree_limit");
   expect(implement).toContain("task_554_smoke_png_invalid");
+  expect(implement).toContain("assertNofollowTask554SmokeRoot");
+  expect(implement).toContain("gates:coderso");
   expect(implement).toContain("runReadOnlyGate");
   expect(implement).toContain("shared lifecycle, dispatcher, worker, cleanup, browser");
   expect(implement).toContain("do not edit postsService.ts or add a cache wrapper");
@@ -120,6 +122,7 @@ test("TASK-554 implementation workflow executes fail-closed ownership, line, and
     gateMutationRejected: true,
     ignoredWorkflowMutationRejected: true,
     modeAndSymlinkFingerprintRejected: true,
+    smokeAncestorSymlinkRejected: true,
     smokeFinallyRestorationRejected: true,
     failedEmptySmokeDirectoryRejected: true,
     exactEvidenceRevalidationRejected: true,
@@ -183,4 +186,8 @@ test("TASK-554 contract keeps public invalidation with TASK-551 and specifies ex
   expect(task).toContain("useEntryEditTracker");
   expect(task).toContain("uncached status-only publish/unpublish");
   expect(task).toContain("with exactly these UTF-8 bytes");
+  expect(task).toContain("buildExactTask554ScreenshotManifest(input)");
+  expect(task).toContain("_docs/ADMIN_CACHE_MAP.md");
+  expect(task).toContain("deferred exact-id 404");
+  expect(task).toContain("bun run gates:coderso");
 });

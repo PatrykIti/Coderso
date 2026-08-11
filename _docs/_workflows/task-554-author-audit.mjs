@@ -1,10 +1,14 @@
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import {
+  constants,
   chmodSync,
+  closeSync,
+  fstatSync,
   mkdtempSync,
   lstatSync,
   mkdirSync,
+  openSync,
   readdirSync,
   readFileSync,
   readlinkSync,
@@ -160,21 +164,34 @@ function auditFingerprintDigest(root) {
     .digest("hex");
 }
 
-function authorReceiptPath(root) {
-  return path.resolve(root, TASK_554_AUTHOR_RECEIPT_PATH);
+function assertNofollowDirectory(root, relativeDirectory, create = false) {
+  let directory = root;
+  for (const component of relativeDirectory.split("/")) {
+    directory = path.join(directory, component);
+    let stats;
+    try {
+      stats = lstatSync(directory);
+    } catch (error) {
+      if (!error || typeof error !== "object" || error.code !== "ENOENT") throw error;
+      if (!create) throw new Error(`task_554_author_receipt_ancestor_missing:${relativeDirectory}`);
+      mkdirSync(directory, { mode: 0o700 });
+      stats = lstatSync(directory);
+    }
+    if (!stats.isDirectory() || stats.isSymbolicLink()) {
+      throw new Error(`task_554_author_receipt_ancestor_invalid:${relativeDirectory}`);
+    }
+  }
+  return directory;
 }
 
-function assertReceiptTarget(root) {
-  const target = authorReceiptPath(root);
-  const directory = path.dirname(target);
-  mkdirSync(directory, { recursive: true, mode: 0o700 });
-  for (const candidate of [directory, target]) {
-    try {
-      if (lstatSync(candidate).isSymbolicLink()) throw new Error("task_554_author_receipt_symlink");
-    } catch (error) {
-      if (error && typeof error === "object" && error.code === "ENOENT") continue;
-      throw error;
-    }
+function assertReceiptTarget(root, create = false) {
+  const target = path.join(assertNofollowDirectory(root, path.dirname(TASK_554_AUTHOR_RECEIPT_PATH), create), path.basename(TASK_554_AUTHOR_RECEIPT_PATH));
+  try {
+    const stats = lstatSync(target);
+    if (!stats.isFile() || stats.isSymbolicLink()) throw new Error("task_554_author_receipt_not_regular");
+  } catch (error) {
+    if (error && typeof error === "object" && error.code === "ENOENT") return target;
+    throw error;
   }
   return target;
 }
@@ -186,7 +203,7 @@ function exactReceipt(value) {
 }
 
 function writeAuthorAuditReceipt(root, lenses) {
-  const target = assertReceiptTarget(root);
+  const target = assertReceiptTarget(root, true);
   const receipt = Object.freeze({
     schemaVersion: 1,
     task: "TASK-554",
@@ -197,7 +214,10 @@ function writeAuthorAuditReceipt(root, lenses) {
     reconcile: "task-554:audit:reconcile",
   });
   const staged = `${target}.tmp`;
-  writeFileSync(staged, `${JSON.stringify(receipt)}\n`, { encoding: "utf8", mode: 0o600, flag: "w" });
+  try { lstatSync(staged); throw new Error("task_554_author_receipt_staging_exists"); } catch (error) {
+    if (!error || typeof error !== "object" || error.code !== "ENOENT") throw error;
+  }
+  writeFileSync(staged, `${JSON.stringify(receipt)}\n`, { encoding: "utf8", mode: 0o600, flag: "wx" });
   renameSync(staged, target);
   return receipt;
 }
@@ -216,14 +236,16 @@ export function recordTask554AuthorAuditReceipt(root = ROOT, lenses, reconcile) 
 }
 
 export function assertTask554AuthorAuditReceipt(root = ROOT) {
-  const target = authorReceiptPath(root);
   let receipt;
   try {
-    const stats = lstatSync(target);
-    if (!stats.isFile() || stats.isSymbolicLink()) throw new Error("task_554_author_receipt_not_regular");
-    receipt = JSON.parse(readFileSync(target, "utf8"));
+    const target = assertReceiptTarget(root);
+    const handle = openSync(target, constants.O_RDONLY | constants.O_NOFOLLOW);
+    try {
+      if (!fstatSync(handle).isFile()) throw new Error("task_554_author_receipt_not_regular");
+      receipt = JSON.parse(readFileSync(handle, "utf8"));
+    } finally { closeSync(handle); }
   } catch (error) {
-    if (error && typeof error === "object" && error.code === "ENOENT") throw new Error("task_554_author_receipt_missing");
+    if ((error && typeof error === "object" && error.code === "ENOENT") || String(error?.message).startsWith("task_554_author_receipt_ancestor_missing:")) throw new Error("task_554_author_receipt_missing");
     throw error;
   }
   if (!exactReceipt(receipt)) throw new Error("task_554_author_receipt_invalid");
@@ -382,13 +404,25 @@ async function bootstrapSelfTest() {
     mkdirSync(emptyWorkflowDirectory);
     if (captureAuditFingerprint(tempRoot) === auditFingerprint) throw new Error("task_554_author_self_test_empty_directory_fingerprint");
     rmSync(emptyWorkflowDirectory, { recursive: true });
+    const externalReceiptRoot = mkdtempSync(path.join(os.tmpdir(), "task-554-receipt-external-"));
+    const receiptAncestor = path.join(tempRoot, "_docs/_workflows/_smoke/task-554");
+    mkdirSync(path.dirname(receiptAncestor), { recursive: true });
+    symlinkSync(externalReceiptRoot, receiptAncestor, "dir");
+    let receiptAncestorSymlinkRejected = false;
+    try { writeAuthorAuditReceipt(tempRoot, receiptLenses); } catch (error) {
+      if (!String(error?.message).startsWith("task_554_author_receipt_ancestor_invalid:")) throw error;
+      receiptAncestorSymlinkRejected = true;
+    }
+    if (!receiptAncestorSymlinkRejected || readdirSync(externalReceiptRoot).length !== 0) throw new Error("task_554_author_self_test_receipt_ancestor_symlink");
+    rmSync(receiptAncestor);
+    rmSync(externalReceiptRoot, { recursive: true, force: true });
     const receipt = writeAuthorAuditReceipt(tempRoot, [
       { identity: "task-554:audit:security" },
       { identity: "task-554:audit:ui" },
       { identity: "task-554:audit:workflow" },
     ]);
     if (assertTask554AuthorAuditReceipt(tempRoot).fingerprint !== receipt.fingerprint) throw new Error("task_554_author_self_test_receipt");
-    const receiptTarget = authorReceiptPath(tempRoot);
+    const receiptTarget = assertReceiptTarget(tempRoot);
     const receiptBytes = readFileSync(receiptTarget);
     const forgedReceipt = JSON.parse(receiptBytes.toString("utf8"));
     forgedReceipt.lenses[2] = "task-554:audit:forged";
@@ -498,6 +532,7 @@ async function bootstrapSelfTest() {
       emptyWorkflowDirectoryMutationRejected: true,
       authorReceiptBound: true,
       receiptInputsValidated: true,
+      receiptAncestorSymlinkRejected: true,
       forgedReceiptLensesRejected: true,
       stagedAuditRejected: true,
       modeAndSymlinkFingerprintRejected: true,
