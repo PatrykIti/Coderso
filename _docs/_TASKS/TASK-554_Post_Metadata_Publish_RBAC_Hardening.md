@@ -913,6 +913,18 @@ and run marker, then removes Posts and finally identities/roles. Its terminal
 bounded proof verifies every owned row is absent **before** the identity rows
 are deleted, so `ON DELETE SET NULL` cannot erase ownership evidence.
 
+Before fixture installation, task-owned `routing-settings-lease.ts` atomically
+captures raw JSON and timestamps for exactly `site.adminPath`,
+`site.adminBaseUrl`, and `site.publicBaseUrl`, then applies the temporary target
+`/admin`, `null`, and `null`. The persistent worker retains its private PostgreSQL
+`xmin` ownership version, never placing settings values, timestamps, or that
+version in a worker output, browser frame, or report. Cleanup must use that
+ownership CAS to restore the exact JSON/timestamp records, or delete only rows
+that were absent in the baseline; any current-record or ownership drift fails
+closed without overwriting it. Each committed apply/restore uses the canonical
+settings cache invalidation path, and terminal cleanup proof is true only after
+the exact restore/delete proof succeeds.
+
 Each scenario starts from a deterministic owned baseline, asserts computed
 visibility/DOM/ARIA plus the bounded DB/read-model state, captures a reviewed
 PNG, proves zero `console`/`pageerror` events, restores all rows/cache/settings,

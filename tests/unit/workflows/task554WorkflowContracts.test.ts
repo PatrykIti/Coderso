@@ -135,6 +135,7 @@ test("TASK-554 implementation workflow executes fail-closed ownership, line, and
   expect(implement).toContain('owner("documentation"');
   expect(implement).toContain("core/server/routes/index.ts");
   expect(implement).toContain("core/server/httpServer.ts");
+  expect(implement).toContain("scripts/runtime-smoke/adapters/task-554/routing-settings-lease.ts");
   expect(implement).toContain("tests/README.md");
   expect(implement).toContain("assertScopedRepositoryMutation");
   expect(implement).toContain("verifyTask554Bootstrap");
@@ -328,6 +329,9 @@ test("TASK-554 contract keeps public invalidation with TASK-551 and specifies ex
   expect(task).toContain("clearPostsCache");
   expect(task).toContain("tests/README.md");
   expect(task).toContain("--task-554-smoke");
+  expect(task).toContain("routing-settings-lease.ts");
+  expect(task).toContain("private PostgreSQL\n`xmin` ownership version");
+  expect(task).toContain("exact JSON/timestamp records");
   expect(task).not.toContain("mkdir -p _docs/_workflows/_smoke/task-554");
   expect(task).not.toContain("> _docs/_workflows/_smoke/task-554");
   expect(cookbook).toContain("--task-554-smoke");

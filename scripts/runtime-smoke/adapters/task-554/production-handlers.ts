@@ -16,15 +16,15 @@ import {
   users,
 } from "../../../../core/db/schema";
 import { hashPassword } from "../../../../core/services/auth/password";
-import {
-  deleteSetting,
-  getSettingRecord,
-  setSetting,
-} from "../../../../core/services/settings/settingsService";
 import { RunFixtureLedger } from "../../database/fixture-ledger";
 import { buildCleanupBatchPlan, type CleanupBatchPlan } from "../../database/batch-contract";
 import { SmokeError } from "../../contracts";
 import { task554ScenarioDescriptor, type Task554ActorKind } from "./browser-actions";
+import {
+  Task554DatabaseRoutingSettingsPersistence,
+  Task554RoutingSettingsLease,
+  type Task554RoutingSettingsPersistence,
+} from "./routing-settings-lease";
 import type {
   Task554CleanupOutput,
   Task554InstallInput,
@@ -53,116 +53,23 @@ interface InstalledState {
   readonly ledger: ReturnType<RunFixtureLedger["freeze"]>;
 }
 
-const TASK554_ADMIN_PATH_SETTING_KEY = "site.adminPath" as const;
-const TASK554_SMOKE_ADMIN_PATH = "/admin";
-
-type Task554AdminPathSnapshot =
-  | Readonly<{ readonly exists: false }>
-  | Readonly<{ readonly exists: true; readonly value: unknown }>;
-
 export interface Task554ProductionHandlerDependencies {
   readonly closeDatabase: () => Promise<void>;
-  readonly deleteSetting: (key: typeof TASK554_ADMIN_PATH_SETTING_KEY) => Promise<unknown>;
-  readonly getSettingRecord: (
-    key: typeof TASK554_ADMIN_PATH_SETTING_KEY
-  ) => Promise<Readonly<{ readonly value: unknown }> | null>;
   readonly hashPassword: (password: string) => Promise<string>;
-  readonly setSetting: (
-    key: typeof TASK554_ADMIN_PATH_SETTING_KEY,
-    value: unknown
-  ) => Promise<unknown>;
+  readonly routingSettings: Task554RoutingSettingsPersistence;
 }
 
 const TASK554_PRODUCTION_HANDLER_DEPENDENCIES: Task554ProductionHandlerDependencies = Object.freeze(
   {
     closeDatabase,
-    deleteSetting,
-    getSettingRecord,
     hashPassword,
-    setSetting,
+    routingSettings: new Task554DatabaseRoutingSettingsPersistence(),
   }
 );
 
 type Task554ProductionHandlerDependencyOverrides = Readonly<
   Partial<Task554ProductionHandlerDependencies>
 >;
-
-export class Task554AdminPathLease {
-  #active = false;
-  #applyAttempted = false;
-  #applyPromise: Promise<void> | null = null;
-  #restored = false;
-  #restorePromise: Promise<void> | null = null;
-  #snapshot: Task554AdminPathSnapshot | null = null;
-
-  constructor(private readonly dependencies: Task554ProductionHandlerDependencies) {}
-
-  get active(): boolean {
-    return this.#active;
-  }
-
-  get restored(): boolean {
-    return this.#restored;
-  }
-
-  get wasApplied(): boolean {
-    return this.#applyAttempted || this.#active || this.#restored;
-  }
-
-  async apply(): Promise<void> {
-    if (this.#applyPromise !== null || this.#snapshot !== null || this.#active || this.#restored) {
-      throw new SmokeError("smoke_output_invalid", "TASK-554 admin path lease cannot be replayed");
-    }
-    this.#applyPromise = this.#applySnapshot();
-    await this.#applyPromise;
-  }
-
-  async #applySnapshot(): Promise<void> {
-    const record = await this.dependencies.getSettingRecord(TASK554_ADMIN_PATH_SETTING_KEY);
-    this.#snapshot =
-      record === null
-        ? Object.freeze({ exists: false })
-        : Object.freeze({ exists: true, value: record.value });
-    this.#applyAttempted = true;
-    await this.dependencies.setSetting(TASK554_ADMIN_PATH_SETTING_KEY, TASK554_SMOKE_ADMIN_PATH);
-    this.#active = true;
-  }
-
-  async restore(): Promise<void> {
-    if (this.#applyPromise !== null) {
-      try {
-        await this.#applyPromise;
-      } catch {
-        // A write can fail after its database transaction is committed. Restore
-        // the captured raw record instead of assuming the setting is unchanged.
-      }
-    }
-    if (!this.#active && !this.#applyAttempted) return;
-    this.#restorePromise ??= this.#restoreActive();
-    await this.#restorePromise;
-  }
-
-  async #restoreActive(): Promise<void> {
-    const snapshot = this.#snapshot;
-    if (snapshot === null) {
-      throw new SmokeError("smoke_cleanup_failed", "TASK-554 admin path snapshot is absent");
-    }
-    if (snapshot.exists) {
-      await this.dependencies.setSetting(TASK554_ADMIN_PATH_SETTING_KEY, snapshot.value);
-    } else {
-      await this.dependencies.deleteSetting(TASK554_ADMIN_PATH_SETTING_KEY);
-    }
-    const restoredRecord = await this.dependencies.getSettingRecord(TASK554_ADMIN_PATH_SETTING_KEY);
-    if (
-      (snapshot.exists && (restoredRecord === null || restoredRecord.value !== snapshot.value)) ||
-      (!snapshot.exists && restoredRecord !== null)
-    ) {
-      throw new SmokeError("smoke_cleanup_failed", "TASK-554 admin path restoration proof failed");
-    }
-    this.#active = false;
-    this.#restored = true;
-  }
-}
 
 function digest(value: unknown): string {
   return createHash("sha256").update(JSON.stringify(value)).digest("hex");
@@ -407,7 +314,7 @@ export function assertTask554PreIdentityAbsence(
 }
 
 export class Task554ProductionHandlers implements Task554WorkerHandlers {
-  #adminPathLease: Task554AdminPathLease;
+  #routingSettingsLease: Task554RoutingSettingsLease;
   #state: InstalledState | null = null;
   #cleaned = false;
   #closed = false;
@@ -423,12 +330,14 @@ export class Task554ProductionHandlers implements Task554WorkerHandlers {
       ...TASK554_PRODUCTION_HANDLER_DEPENDENCIES,
       ...(typeof dependencies === "function" ? { closeDatabase: dependencies } : dependencies),
     });
-    this.#adminPathLease = new Task554AdminPathLease(this.#dependencies);
+    this.#routingSettingsLease = new Task554RoutingSettingsLease(
+      this.#dependencies.routingSettings
+    );
   }
 
-  async #restoreAdminPathAfterFailure(error: unknown, message: string): Promise<never> {
+  async #restoreRoutingSettingsAfterFailure(error: unknown, message: string): Promise<never> {
     try {
-      await this.#adminPathLease.restore();
+      await this.#routingSettingsLease.restore();
     } catch (restoreError) {
       throw new AggregateError([error, restoreError], message);
     }
@@ -439,7 +348,7 @@ export class Task554ProductionHandlers implements Task554WorkerHandlers {
     let restoreError: unknown;
     let restoreFailed = false;
     try {
-      await this.#adminPathLease.restore();
+      await this.#routingSettingsLease.restore();
     } catch (error) {
       restoreError = error;
       restoreFailed = true;
@@ -466,7 +375,7 @@ export class Task554ProductionHandlers implements Task554WorkerHandlers {
     if (this.#state !== null || this.#cleaned)
       throw new SmokeError("smoke_output_invalid", "TASK-554 install cannot be replayed");
     try {
-      await this.#adminPathLease.apply();
+      await this.#routingSettingsLease.apply();
       const passwordHashes = await Promise.all(
         input.actors.map(({ password }) => this.#dependencies.hashPassword(password))
       );
@@ -576,9 +485,9 @@ export class Task554ProductionHandlers implements Task554WorkerHandlers {
         rows: result.rows,
       });
     } catch (error) {
-      return await this.#restoreAdminPathAfterFailure(
+      return await this.#restoreRoutingSettingsAfterFailure(
         error,
-        "TASK-554 install failed and admin path restoration failed"
+        "TASK-554 install failed and routing settings restoration failed"
       );
     }
   }
@@ -741,15 +650,18 @@ export class Task554ProductionHandlers implements Task554WorkerHandlers {
           });
         });
       } catch (error) {
-        return await this.#restoreAdminPathAfterFailure(
+        return await this.#restoreRoutingSettingsAfterFailure(
           error,
-          "TASK-554 cleanup failed and admin path restoration failed"
+          "TASK-554 cleanup failed and routing settings restoration failed"
         );
       }
     })();
-    await this.#adminPathLease.restore();
-    if (!this.#adminPathLease.restored) {
-      throw new SmokeError("smoke_cleanup_failed", "TASK-554 admin path restoration is unproven");
+    await this.#routingSettingsLease.restore();
+    if (!this.#routingSettingsLease.restored) {
+      throw new SmokeError(
+        "smoke_cleanup_failed",
+        "TASK-554 routing settings restoration is unproven"
+      );
     }
     this.#cleaned = true;
     const postChildrenRemoved =
@@ -785,7 +697,7 @@ export class Task554ProductionHandlers implements Task554WorkerHandlers {
 
   async prove(): Promise<Task554ProofOutput> {
     const state = requireInstalled(this.#state);
-    if (!this.#cleaned || !this.#adminPathLease.restored)
+    if (!this.#cleaned || !this.#routingSettingsLease.restored)
       throw new SmokeError("smoke_cleanup_failed", "TASK-554 cleanup proof was requested early");
     const postRows = await db
       .select({ id: posts.id })
@@ -836,8 +748,8 @@ export class Task554ProductionHandlers implements Task554WorkerHandlers {
     if (!this.#closed || !this.#databaseClosed) return false;
     if (this.#fixturesInstalled && !this.#cleaned) return false;
     return (
-      !this.#adminPathLease.active &&
-      (!this.#adminPathLease.wasApplied || this.#adminPathLease.restored)
+      !this.#routingSettingsLease.active &&
+      (!this.#routingSettingsLease.wasApplied || this.#routingSettingsLease.restored)
     );
   }
 }
