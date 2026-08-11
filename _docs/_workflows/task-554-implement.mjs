@@ -28,6 +28,8 @@ const SOURCE_OR_TEST_EXTENSION = /\.(?:ts|tsx|js|jsx|mjs|cjs|mts|cts)$/u;
 const PNG_SIGNATURE = Buffer.from("89504e470d0a1a0a", "hex");
 const MAXIMUM_PNG_BYTES = 16 * 1024 * 1024;
 const MAXIMUM_PNG_DIMENSION = 16_384;
+const MAX_WORKFLOW_TREE_ENTRIES = 4096;
+const MAX_WORKFLOW_TREE_DEPTH = 64;
 export const TASK_554_SMOKE_SCENARIO_IDS = Object.freeze(["writer-metadata-save-preserves-schedule", "writer-status-publish-denied", "writer-schedule-denied", "publisher-schedule", "publisher-publish", "publisher-unpublish", "publisher-archive"]);
 const RESULT_SCHEMA = Object.freeze({ type: "object", additionalProperties: false, required: ["identity", "pass", "summary", "errors"], properties: { identity: { type: "string" }, pass: { type: "boolean" }, summary: { type: "string" }, errors: { type: "array", items: { type: "string" } } } });
 const AUDIT_SCHEMA = Object.freeze({ type: "object", additionalProperties: false, required: ["identity", "pass", "summary", "findings"], properties: { identity: { type: "string" }, pass: { type: "boolean" }, summary: { type: "string" }, findings: { type: "array", items: { type: "object", additionalProperties: false, required: ["severity", "area", "finding", "evidence", "recommendation"], properties: { severity: { type: "string", enum: ["HIGH", "MEDIUM", "LOW"] }, area: { type: "string" }, finding: { type: "string" }, evidence: { type: "string" }, recommendation: { type: "string" } } } } } });
@@ -171,11 +173,10 @@ const INITIAL_DIRTY_PATHS = Object.freeze([
   "_docs/_TASKS/README.md",
   "_docs/_TASKS/TASK-554_Post_Metadata_Publish_RBAC_Hardening.md",
 ]);
-function currentDirtyPaths(root, includeIgnored = false) {
+function currentDirtyPaths(root) {
   const paths = [
     ...parseNul(commandOutput(root, "git", ["diff", "--name-only", "-z"])),
     ...parseNul(commandOutput(root, "git", ["ls-files", "--others", "--exclude-standard", "-z"])),
-    ...(includeIgnored ? ignoredWorkflowPaths(root) : []),
   ];
   return [...new Set(paths)].map(normalizedRepositoryPath).sort((left, right) => left.localeCompare(right));
 }
@@ -218,12 +219,27 @@ function fingerprintPath(root, relativePath) {
   if (!stats.isFile()) return `non_file:${stats.mode}`;
   return `file:${stats.mode}:${createHash("sha256").update(readFileSync(absolute)).digest("hex")}`;
 }
-function ignoredWorkflowPaths(root) {
-  return parseNul(commandOutput(root, "git", ["ls-files", "--others", "--ignored", "--exclude-standard", "-z", "--", "_docs/_workflows"]));
+function workflowTreePaths(root) {
+  const base = path.join(root, "_docs/_workflows");
+  const entries = [];
+  const visit = (absolutePath, depth) => {
+    if (depth > MAX_WORKFLOW_TREE_DEPTH || entries.length >= MAX_WORKFLOW_TREE_ENTRIES) throw new Error("task_554_workflow_tree_limit");
+    let stats;
+    try { stats = lstatSync(absolutePath); } catch (error) {
+      if (error && typeof error === "object" && error.code === "ENOENT" && absolutePath === base) return;
+      throw error;
+    }
+    const relativePath = normalizedRepositoryPath(path.relative(root, absolutePath).split(path.sep).join("/"));
+    entries.push(relativePath);
+    if (!stats.isDirectory() || stats.isSymbolicLink()) return;
+    for (const name of readdirSync(absolutePath).sort((left, right) => left.localeCompare(right))) visit(path.join(absolutePath, name), depth + 1);
+  };
+  visit(base, 0);
+  return entries;
 }
 export function captureRepositoryFingerprint(root = ROOT, excludedPaths = []) {
   const excluded = new Set(excludedPaths.map(normalizedRepositoryPath));
-  const paths = [...new Set([...parseNul(commandOutput(root, "git", ["ls-files", "-co", "--exclude-standard", "-z"])), ...ignoredWorkflowPaths(root)])];
+  const paths = [...new Set([...parseNul(commandOutput(root, "git", ["ls-files", "-co", "--exclude-standard", "-z"])), ...workflowTreePaths(root)])];
   const entries = paths
     .map(normalizedRepositoryPath)
     .filter((relativePath) => !excluded.has(relativePath))
@@ -531,8 +547,8 @@ function captureSmokeEvidenceSnapshot(root, evidence) {
 function assertSmokeEvidenceSnapshot(snapshot, root) {
   for (const [relativePath, value] of snapshot) if (fingerprintPath(root, relativePath) !== value) throw new Error(`task_554_smoke_evidence_changed:${relativePath}`);
 }
-function smokeEvidenceFilePaths(snapshot) {
-  return [...snapshot.keys()].filter((relativePath) => relativePath.endsWith(".png") || relativePath.endsWith("/report.json"));
+function smokeEvidencePaths(snapshot) {
+  return [...snapshot.keys()];
 }
 function createEmptySmokeSession(root, session) {
   const directory = task554SessionDirectory(root, session);
@@ -589,7 +605,7 @@ export function runTask554SmokeProfile(root, profile, session) {
       primary = preserveSmokePrimaryFailure(primary, restoration);
     }
     try {
-      const excluded = evidenceSnapshot !== null && evidenceRevalidated ? smokeEvidenceFilePaths(evidenceSnapshot) : [];
+      const excluded = evidenceSnapshot !== null && evidenceRevalidated ? smokeEvidencePaths(evidenceSnapshot) : [];
       assertNoRepositoryMutation("task_554_smoke_repository_restoration", before, captureRepositoryFingerprint(root, excluded), root);
     } catch (restoration) {
       primary = preserveSmokePrimaryFailure(primary, restoration);
@@ -821,6 +837,11 @@ function workflowSelfTest() {
     if (currentDirtyPaths(tempRoot).includes(stableIgnoredPath) || !captureRepositoryFingerprint(tempRoot).has(stableIgnoredPath)) {
       throw new Error("task_554_self_test_stable_ignored_preflight");
     }
+    const stableEmptyDirectory = "_docs/_workflows/stable-empty-before-task-554";
+    mkdirSync(path.join(tempRoot, stableEmptyDirectory));
+    if (currentDirtyPaths(tempRoot).includes(stableEmptyDirectory) || !captureRepositoryFingerprint(tempRoot).has(stableEmptyDirectory)) {
+      throw new Error("task_554_self_test_stable_empty_directory_preflight");
+    }
     const baseline = commandOutput(tempRoot, "git", ["rev-parse", "HEAD"]).toString("utf8").trim();
     writeTinyFile(path.join(tempRoot, "core/tracked.ts"), "export const tracked = 1;\nexport const finalLine = true;");
     writeTinyFile(path.join(tempRoot, "tests/untracked.ts"), "one\ntwo\nthree");
@@ -875,6 +896,10 @@ function workflowSelfTest() {
     symlinkSync("link-target-b.ts", linkPath);
     expectFailure(() => assertNoRepositoryMutation("task_554_self_test_symlink", symlinkBefore, captureRepositoryFingerprint(tempRoot), tempRoot), "task_554_self_test_symlink:scope_violation:");
     unlinkSync(linkPath);
+    const failedSmokeBefore = captureRepositoryFingerprint(tempRoot);
+    const failedSmokeDirectory = createEmptySmokeSession(tempRoot, "task-554-certification");
+    expectFailure(() => assertNoRepositoryMutation("task_554_self_test_failed_empty_smoke", failedSmokeBefore, captureRepositoryFingerprint(tempRoot), tempRoot), "task_554_self_test_failed_empty_smoke:scope_violation:");
+    rmSync(failedSmokeDirectory, { recursive: true });
     const session = "task-554-fast";
     const manifest = makeSelfTestManifest(tempRoot, session);
     const pngBytes = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIHWP4z8DwHwAFgAI/ScLZ4QAAAABJRU5ErkJggg==", "base64");
@@ -943,6 +968,7 @@ function workflowSelfTest() {
       unterminatedLineCount: true,
       trackedAndUntrackedCandidates: true,
       stableIgnoredArtifactsBound: true,
+      emptyIgnoredDirectoriesBound: true,
       manifestInputBound: true,
       strictMutationAndAuditResultsRejected: true,
       forbiddenScopeRejected: true,
@@ -955,6 +981,7 @@ function workflowSelfTest() {
       ignoredWorkflowMutationRejected: true,
       modeAndSymlinkFingerprintRejected: true,
       smokeFinallyRestorationRejected: true,
+      failedEmptySmokeDirectoryRejected: true,
       exactEvidenceRevalidationRejected: true,
       duplicateScreenshotHashesAllowed: true,
       snapshotMismatchRejected: true,

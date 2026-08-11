@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { execFileSync, spawnSync } from "node:child_process";
-import { chmodSync, lstatSync, mkdtempSync, readFileSync, readlinkSync, rmSync, symlinkSync, unlinkSync, writeFileSync, mkdirSync } from "node:fs";
+import { chmodSync, lstatSync, mkdtempSync, readFileSync, readlinkSync, rmSync, symlinkSync, unlinkSync, writeFileSync, mkdirSync, readdirSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
@@ -23,6 +23,8 @@ const MAX_FIX_ROUNDS = 3;
 const MAX_FINDINGS = 40;
 const MAX_FIELD_LENGTH = 2048;
 const COUNTABLE_EXTENSION = /\.(?:ts|tsx|js|jsx|mjs|cjs|mts|cts)$/u;
+const MAX_WORKFLOW_TREE_ENTRIES = 4096;
+const MAX_WORKFLOW_TREE_DEPTH = 64;
 const WORKFLOW_PATHS = Object.freeze([
   "_docs/_workflows/task-554-author-audit.mjs",
   "_docs/_workflows/task-554-implement.mjs",
@@ -191,8 +193,27 @@ function parseNul(bytes) {
   return bytes.toString("utf8").split("\0").filter(Boolean);
 }
 
+function workflowTreePaths(root) {
+  const base = path.join(root, "_docs/_workflows");
+  const entries = [];
+  const visit = (absolutePath, depth) => {
+    if (depth > MAX_WORKFLOW_TREE_DEPTH || entries.length >= MAX_WORKFLOW_TREE_ENTRIES) throw new Error("task_554_workflow_tree_limit");
+    let stats;
+    try { stats = lstatSync(absolutePath); } catch (error) {
+      if (error && typeof error === "object" && error.code === "ENOENT" && absolutePath === base) return;
+      throw error;
+    }
+    const relativePath = normalizePath(path.relative(root, absolutePath).split(path.sep).join("/"));
+    entries.push(relativePath);
+    if (!stats.isDirectory() || stats.isSymbolicLink()) return;
+    for (const name of readdirSync(absolutePath).sort((left, right) => left.localeCompare(right))) visit(path.join(absolutePath, name), depth + 1);
+  };
+  visit(base, 0);
+  return entries;
+}
+
 export function captureFixFingerprint(root = ROOT) {
-  const paths = [...new Set([...parseNul(output(root, "git", ["ls-files", "-co", "--exclude-standard", "-z"])), ...parseNul(output(root, "git", ["ls-files", "--others", "--ignored", "--exclude-standard", "-z", "--", "_docs/_workflows"]))])];
+  const paths = [...new Set([...parseNul(output(root, "git", ["ls-files", "-co", "--exclude-standard", "-z"])), ...workflowTreePaths(root)])];
   return new Map(paths.map(normalizePath).sort((left, right) => left.localeCompare(right)).map((relativePath) => Object.freeze([relativePath, fingerprintEntry(root, relativePath)])));
 }
 
@@ -245,7 +266,6 @@ function currentDirtyPaths(root = ROOT) {
   return [...new Set([
     ...parseNul(output(root, "git", ["diff", "--name-only", "-z"])),
     ...parseNul(output(root, "git", ["ls-files", "--others", "--exclude-standard", "-z"])),
-    ...parseNul(output(root, "git", ["ls-files", "--others", "--ignored", "--exclude-standard", "-z", "--", "_docs/_workflows"])),
   ])].map(normalizePath).sort((left, right) => left.localeCompare(right));
 }
 
@@ -512,6 +532,10 @@ function fixSelfTest() {
     writeFile(path.join(root, "_docs/_workflows/ignored-fix-side-effect.mjs"), "export const ignored = true;\n");
     expectFailure(() => assertFixScope("task_554_fix_self_test_ignored", ignoredBefore, captureFixFingerprint(root), [], root), "task_554_fix_self_test_ignored:scope_violation:");
     rmSync(path.join(root, "_docs/_workflows/ignored-fix-side-effect.mjs"));
+    const emptyDirectoryBefore = captureFixFingerprint(root);
+    mkdirSync(path.join(root, "_docs/_workflows/empty-fix-side-effect"));
+    expectFailure(() => assertFixScope("task_554_fix_self_test_empty_directory", emptyDirectoryBefore, captureFixFingerprint(root), [], root), "task_554_fix_self_test_empty_directory:scope_violation:");
+    rmSync(path.join(root, "_docs/_workflows/empty-fix-side-effect"), { recursive: true });
     const valid = { identity: "task-554:fix:audit:1", pass: false, summary: "finding", findings: [{ severity: "MEDIUM", area: "test", finding: "test", evidence: "test:1", recommendation: "test", owner: "admin-client", lens: "test-integrity" }] };
     normalizeAuditFindings(valid.identity, valid);
     expectFailure(
@@ -544,7 +568,7 @@ function fixSelfTest() {
     symlinkSync("target-b.ts", linkPath);
     expectFailure(() => assertFixScope("task_554_fix_self_test_symlink", symlinkBefore, captureFixFingerprint(root), [], root), "task_554_fix_self_test_symlink:scope_violation:");
     unlinkSync(linkPath);
-    return Object.freeze({ pass: true, forbiddenScopeRejected: true, ignoredWorkflowMutationRejected: true, ownerMappingRejected: true, lensMappingRejected: true, strictResultRejected: true, terminalOwnerEscalated: true, actualAffectedReceipt: true, workflowRebootstrapEscalated: true, modeAndSymlinkFingerprintRejected: true });
+    return Object.freeze({ pass: true, forbiddenScopeRejected: true, ignoredWorkflowMutationRejected: true, emptyWorkflowDirectoryMutationRejected: true, ownerMappingRejected: true, lensMappingRejected: true, strictResultRejected: true, terminalOwnerEscalated: true, actualAffectedReceipt: true, workflowRebootstrapEscalated: true, modeAndSymlinkFingerprintRejected: true });
   } finally {
     rmSync(root, { recursive: true, force: true });
   }

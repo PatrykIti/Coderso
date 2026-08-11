@@ -94,6 +94,7 @@ test("TASK-554 implementation workflow executes fail-closed ownership, line, and
   expect(implement).toContain("decodeTask554Png");
   expect(implement).toContain("task_554_smoke_png_decode_invalid");
   expect(implement).toContain("task_554_forbidden_dirty");
+  expect(implement).toContain("task_554_workflow_tree_limit");
   expect(implement).toContain("task_554_smoke_png_invalid");
   expect(implement).toContain("runReadOnlyGate");
   expect(implement).toContain("shared lifecycle, dispatcher, worker, cleanup, browser");
@@ -107,6 +108,7 @@ test("TASK-554 implementation workflow executes fail-closed ownership, line, and
     unterminatedLineCount: true,
     trackedAndUntrackedCandidates: true,
     stableIgnoredArtifactsBound: true,
+    emptyIgnoredDirectoriesBound: true,
     manifestInputBound: true,
     strictMutationAndAuditResultsRejected: true,
     forbiddenScopeRejected: true,
@@ -119,6 +121,7 @@ test("TASK-554 implementation workflow executes fail-closed ownership, line, and
     ignoredWorkflowMutationRejected: true,
     modeAndSymlinkFingerprintRejected: true,
     smokeFinallyRestorationRejected: true,
+    failedEmptySmokeDirectoryRejected: true,
     exactEvidenceRevalidationRejected: true,
     duplicateScreenshotHashesAllowed: true,
     snapshotMismatchRejected: true,
@@ -147,6 +150,7 @@ test("TASK-554 fix workflow derives scopes from bounded owner and lens evidence"
     pass: true,
     forbiddenScopeRejected: true,
     ignoredWorkflowMutationRejected: true,
+    emptyWorkflowDirectoryMutationRejected: true,
     ownerMappingRejected: true,
     lensMappingRejected: true,
     strictResultRejected: true,

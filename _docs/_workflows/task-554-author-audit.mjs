@@ -5,6 +5,7 @@ import {
   mkdtempSync,
   lstatSync,
   mkdirSync,
+  readdirSync,
   readFileSync,
   readlinkSync,
   renameSync,
@@ -54,6 +55,8 @@ const AUTHOR_FORBIDDEN_PATHS = Object.freeze([
   "_docs/_TASKS/TASK-547",
   "_docs/_CHANGELOG/1266-",
 ]);
+const MAX_WORKFLOW_TREE_ENTRIES = 4096;
+const MAX_WORKFLOW_TREE_DEPTH = 64;
 
 function runGit(root, args) {
   return execFileSync("git", args, { cwd: root, encoding: "buffer", stdio: ["ignore", "pipe", "pipe"] });
@@ -111,9 +114,29 @@ function assertAuthorDispatchState(root = ROOT) {
   return Object.freeze(dirty);
 }
 
+function workflowTreePaths(root) {
+  const base = path.join(root, "_docs/_workflows");
+  const entries = [];
+  const visit = (absolutePath, depth) => {
+    if (depth > MAX_WORKFLOW_TREE_DEPTH || entries.length >= MAX_WORKFLOW_TREE_ENTRIES) throw new Error("task_554_workflow_tree_limit");
+    let stats;
+    try { stats = lstatSync(absolutePath); } catch (error) {
+      if (error && typeof error === "object" && error.code === "ENOENT" && absolutePath === base) return;
+      throw error;
+    }
+    const relativePath = path.relative(root, absolutePath).split(path.sep).join("/");
+    if (!relativePath || relativePath.startsWith("../") || path.posix.isAbsolute(relativePath) || relativePath.includes("\0")) throw new Error("task_554_workflow_tree_escape");
+    entries.push(relativePath);
+    if (!stats.isDirectory() || stats.isSymbolicLink()) return;
+    for (const name of readdirSync(absolutePath).sort((left, right) => left.localeCompare(right))) visit(path.join(absolutePath, name), depth + 1);
+  };
+  visit(base, 0);
+  return entries;
+}
+
 function captureAuditFingerprint(root, excludedPaths = []) {
   const excluded = new Set(excludedPaths);
-  const paths = [...new Set([...gitNulPaths(root, ["ls-files", "-co", "--exclude-standard", "-z"]), ...gitNulPaths(root, ["ls-files", "--others", "--ignored", "--exclude-standard", "-z", "--", "_docs/_workflows"])])].sort();
+  const paths = [...new Set([...gitNulPaths(root, ["ls-files", "-co", "--exclude-standard", "-z"]), ...workflowTreePaths(root)])].sort();
   return paths.filter((relativePath) => !excluded.has(relativePath)).map((relativePath) => {
     const absolutePath = path.join(root, relativePath);
     try {
@@ -179,10 +202,17 @@ function writeAuthorAuditReceipt(root, lenses) {
   return receipt;
 }
 
-export function recordTask554AuthorAuditReceipt(root = ROOT) {
+function assertAuthorAuditReceiptInputs(lenses, reconcile) {
+  if (!Array.isArray(lenses) || lenses.length !== TASK_554_AUTHOR_AUDIT_LENS_IDS.length) throw new Error("task_554_author_receipt_inputs_invalid");
+  const checkedLenses = lenses.map((lens, index) => assertAuditClean(`task_554_audit_${index + 1}`, TASK_554_AUTHOR_AUDIT_LENS_IDS[index], lens));
+  const checkedReconcile = assertAuditClean("task_554_reconcile", "task-554:audit:reconcile", reconcile);
+  return Object.freeze({ lenses: Object.freeze(checkedLenses), reconcile: checkedReconcile });
+}
+
+export function recordTask554AuthorAuditReceipt(root = ROOT, lenses, reconcile) {
   assertTask554Bootstrap(root);
   assertAuthorDispatchState(root);
-  return writeAuthorAuditReceipt(root, TASK_554_AUTHOR_AUDIT_LENS_IDS.map((identity) => ({ identity })));
+  return writeAuthorAuditReceipt(root, assertAuthorAuditReceiptInputs(lenses, reconcile).lenses);
 }
 
 export function assertTask554AuthorAuditReceipt(root = ROOT) {
@@ -209,6 +239,7 @@ async function assertReadOnlyAudit(label, work, root = ROOT) {
   try {
     return await work();
   } finally {
+    assertAuthorDispatchState(root);
     if (captureAuditFingerprint(root) !== before) throw new Error(`task_554_audit_mutated_repository:${label}`);
   }
 }
@@ -258,7 +289,7 @@ export function assertTask554Bootstrap(root = ROOT) {
   return Object.freeze({ baseline: TASK_554_BASELINE_SHA, paths: TASK_554_WORKFLOW_PATHS });
 }
 
-function bootstrapSelfTest() {
+async function bootstrapSelfTest() {
   const tempRoot = mkdtempSync(path.join(os.tmpdir(), "task-554-bootstrap-"));
   try {
     runGit(tempRoot, ["init", "-q"]);
@@ -274,6 +305,21 @@ function bootstrapSelfTest() {
     writeFileSync(path.join(tempRoot, ".gitignore"), "_docs/_workflows/\n", "utf8");
     runGit(tempRoot, ["add", ".gitignore"]);
     runGit(tempRoot, ["commit", "-qm", "ignore workflows"]);
+    const auditStagingBefore = readFileSync(path.join(tempRoot, TASK_554_WORKFLOW_PATHS[0]));
+    let stagedAuditRejected = false;
+    try {
+      await assertReadOnlyAudit("staged_audit", async () => {
+        writeFileSync(path.join(tempRoot, TASK_554_WORKFLOW_PATHS[0]), "// staged audit side effect\n", "utf8");
+        runGit(tempRoot, ["add", TASK_554_WORKFLOW_PATHS[0]]);
+        writeFileSync(path.join(tempRoot, TASK_554_WORKFLOW_PATHS[0]), auditStagingBefore);
+      }, tempRoot);
+    } catch (error) {
+      if (!String(error?.message).startsWith("task_554_author_staged_changes_forbidden")) throw error;
+      stagedAuditRejected = true;
+    }
+    if (!stagedAuditRejected) throw new Error("task_554_author_self_test_staged_audit");
+    runGit(tempRoot, ["reset", "--", TASK_554_WORKFLOW_PATHS[0]]);
+    writeFileSync(path.join(tempRoot, TASK_554_WORKFLOW_PATHS[0]), runGit(tempRoot, ["show", `HEAD:${TASK_554_WORKFLOW_PATHS[0]}`]));
     const originalBaseline = TASK_554_BASELINE_SHA;
     const head = runGit(tempRoot, ["rev-parse", "HEAD"]).toString("utf8").trim();
     // The self-test validates the same inventory/byte logic against a disposable Git repo.
@@ -318,11 +364,24 @@ function bootstrapSelfTest() {
     expectAuditFailure({ ...lowOnly, unexpected: true }, "task_554_author_audit_invalid");
     expectAuditFailure({ ...lowOnly, findings: [{ ...lowOnly.findings[0], severity: "OTHER" }] }, "task_554_author_finding_invalid");
     expectAuditFailure({ ...lowOnly, pass: false }, "task_554_author_audit_inconsistent");
+    const receiptLenses = TASK_554_AUTHOR_AUDIT_LENS_IDS.map((identity) => ({ identity, pass: true, summary: "clean", findings: [] }));
+    const receiptReconcile = { identity: "task-554:audit:reconcile", pass: true, summary: "clean", findings: [] };
+    assertAuthorAuditReceiptInputs(receiptLenses, receiptReconcile);
+    let receiptInputsRejected = false;
+    try { assertAuthorAuditReceiptInputs(receiptLenses.slice(1), receiptReconcile); } catch (error) {
+      if (!String(error?.message).startsWith("task_554_author_receipt_inputs_invalid")) throw error;
+      receiptInputsRejected = true;
+    }
+    if (!receiptInputsRejected) throw new Error("task_554_author_self_test_receipt_inputs");
 
     const auditFingerprint = captureAuditFingerprint(tempRoot);
     writeFileSync(path.join(tempRoot, "_docs/_workflows/ignored-audit-side-effect.mjs"), "export const sideEffect = true;\n", "utf8");
     if (captureAuditFingerprint(tempRoot) === auditFingerprint) throw new Error("task_554_author_self_test_ignored_fingerprint");
     rmSync(path.join(tempRoot, "_docs/_workflows/ignored-audit-side-effect.mjs"));
+    const emptyWorkflowDirectory = path.join(tempRoot, "_docs/_workflows/empty-audit-side-effect");
+    mkdirSync(emptyWorkflowDirectory);
+    if (captureAuditFingerprint(tempRoot) === auditFingerprint) throw new Error("task_554_author_self_test_empty_directory_fingerprint");
+    rmSync(emptyWorkflowDirectory, { recursive: true });
     const receipt = writeAuthorAuditReceipt(tempRoot, [
       { identity: "task-554:audit:security" },
       { identity: "task-554:audit:ui" },
@@ -436,8 +495,11 @@ function bootstrapSelfTest() {
       trackedExtraWouldReject: true,
       strictAuditResultRejected: true,
       ignoredWorkflowMutationRejected: true,
+      emptyWorkflowDirectoryMutationRejected: true,
       authorReceiptBound: true,
+      receiptInputsValidated: true,
       forgedReceiptLensesRejected: true,
+      stagedAuditRejected: true,
       modeAndSymlinkFingerprintRejected: true,
     });
   } finally {
@@ -536,14 +598,14 @@ async function runWorkflow() {
     assertAuthorDispatchState();
     return agent(`${COMMON}\nRead only the shared contracts/seams. Reconcile type names, allowed fields, ownership, test paths, exact seven smoke IDs, writer order, land order, exact calendar parsing, Post cache generation, snapshot authority, and pinned closure deltas. Return identity=task-554:audit:reconcile.`, { label: "task-554:audit:reconcile", phase: "Cross-file reconcile", schema: AUDIT_SCHEMA });
   }));
-  const receipt = writeAuthorAuditReceipt(ROOT, lenses);
+  const receipt = recordTask554AuthorAuditReceipt(ROOT, lenses, reconcile);
   return Object.freeze({ pass: true, bootstrap, lenses, reconcile, receipt });
 }
 
 const mode = parseMode();
 const importedForVerification = process.env.TASK_554_WORKFLOW_IMPORT === "1";
 export const result = mode === "self-test"
-  ? bootstrapSelfTest()
+  ? await bootstrapSelfTest()
   : mode === "verify"
     ? assertTask554Bootstrap()
     : importedForVerification
