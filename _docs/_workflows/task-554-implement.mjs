@@ -203,7 +203,8 @@ function captureTask554TmpSnapshot(root) {
 export function captureRepositoryFingerprint(root = ROOT, excludedPaths = []) {
   const excluded = new Set(excludedPaths.map(normalizedRepositoryPath)); const paths = [...new Set([...parseNul(commandOutput(root, "git", ["ls-files", "-co", "--exclude-standard", "-z"])), ...workflowTreePaths(root)])];
   const entries = paths.map(normalizedRepositoryPath).filter((relativePath) => !excluded.has(relativePath)).sort((left, right) => left.localeCompare(right)).map((relativePath) => Object.freeze([relativePath, fingerprintPath(root, relativePath)]));
-  return new Map([...entries, ...captureTask554TmpSnapshot(root).entries]);
+  const tmpEntries = captureTask554TmpSnapshot(root).entries.filter(([relativePath]) => !excluded.has(relativePath));
+  return new Map([...entries, ...tmpEntries]);
 }
 function changedRepositoryPaths(before, after) {
   const paths = new Set([...before.keys(), ...after.keys()]);
