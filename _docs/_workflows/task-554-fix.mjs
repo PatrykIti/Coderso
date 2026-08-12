@@ -70,8 +70,10 @@ export const OWNER_PATHS = Object.freeze({
   ]),
   "classic-metadata-ui": Object.freeze([
     "core/admin/ui/posts/editor/postMetadataMutationPayload.ts",
+    "core/admin/ui/posts/editor/postExternalUpdateAuthority.ts",
     "core/admin/ui/posts/editor/PostClassicEditorShell.tsx",
     "tests/vitest/ui/post-metadata-mutation-payload.test.ts",
+    "tests/vitest/ui/post-external-update-authority.test.ts",
     "tests/vitest/ui/post-classic-editor-shell-wave.test.tsx",
     "tests/vitest/ui/post-classic-metadata-hydration.test.tsx",
     "tests/vitest/ui/post-editor-state-metadata-boundary.test.ts",
@@ -390,7 +392,7 @@ export const OWNER_GATES = Object.freeze({
     command("types", "bun", ["--cwd", "core", "lint:types"]), command("lint", "bun", ["--cwd", "core", "lint"]),
   ]),
   "classic-metadata-ui": Object.freeze([
-    command("ui-vitest", "bunx", ["vitest", "run", "--config", "vitest.config.ts", "tests/vitest/ui/post-metadata-mutation-payload.test.ts", "tests/vitest/ui/post-classic-editor-shell-wave.test.tsx", "tests/vitest/ui/post-classic-metadata-hydration.test.tsx", "tests/vitest/ui/post-editor-state-metadata-boundary.test.ts"]),
+    command("ui-vitest", "bunx", ["vitest", "run", "--config", "vitest.config.ts", "tests/vitest/ui/post-metadata-mutation-payload.test.ts", "tests/vitest/ui/post-external-update-authority.test.ts", "tests/vitest/ui/post-classic-editor-shell-wave.test.tsx", "tests/vitest/ui/post-classic-metadata-hydration.test.tsx", "tests/vitest/ui/post-editor-state-metadata-boundary.test.ts"]),
     command("types", "bun", ["--cwd", "core", "lint:types"]), command("lint", "bun", ["--cwd", "core", "lint"]),
   ]),
   "smoke-adapter": Object.freeze([

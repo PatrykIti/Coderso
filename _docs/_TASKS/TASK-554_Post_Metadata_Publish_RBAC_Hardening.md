@@ -416,6 +416,12 @@ repair dispatch targets.
   the identity-bound hydration gate, route epoch, metadata baseline/draft
   revision, opaque synchronous mutation lease, and stale-response protection
   for all Classic Post mutation continuations;
+- new focused `core/admin/ui/posts/editor/postExternalUpdateAuthority.ts`,
+  which owns only the route-scoped observed/resolved external-event generation
+  state and exact self-token classification; its pure focused test is
+  `tests/vitest/ui/post-external-update-authority.test.ts`. The Classic shell
+  composes this helper so it remains below the 1,000-line hard gate rather than
+  embedding another state machine;
 - new focused
   `core/admin/ui/posts/editor/postMetadataMutationPayload.ts`, which owns the
   baseline-versus-draft comparison and its discriminated result: `noop`,
@@ -541,7 +547,23 @@ cannot clear that newer draft.
 Background cache refresh during a local draft or another lease is deferred
 through the existing remote-update indication; explicit refresh is the only
 action that may discard a draft and it cannot start while a lease is held. The
-client-side force-read generation barrier also prevents a response begun before
+shell owns separate per-route monotonic observed and resolved external
+Post-detail event generations. Each mutation lease owns one
+`CacheEventOperationToken` and passes it through the existing `postsClient`
+mutation to both ordered cache broadcasts. Only `origin: "local"` with that
+exact current lease token is a self-event and is ignored. Every `remote` event,
+and every untagged or differently tagged local event, is external: it advances
+the observed generation and makes the remote-update indication unresolved.
+Mutation responses and baseline-equal no-ops never advance the resolved
+generation. A forced read captures the observed generation before dispatch and
+may advance resolved to that value only after its current route/snapshot result
+is accepted and only when no newer external event arrived during the read.
+Consequently an external event from before or during a lease remains visibly
+unresolved after settlement; only that accepted forced hydration clears it.
+The baseline-equal no-op still performs zero request and emits zero cache
+events, clears only its submitted dirty keys, and never consumes an already
+deferred external event.
+The client-side force-read generation barrier also prevents a response begun before
 a successful mutation from overwriting that mutation in the browser cache. A
 successful non-delete response that lost publication authority must await a
 guarded post-generation forced read rather than leave the cache at an earlier
@@ -772,10 +794,13 @@ const clearPostsCache = () => {
   rowPublicationEpochs.clear(); resetPostListPublicationEpoch();
   clearInFlightPostListBookkeeping();
 };
-const publishPostMutationCacheEvents = (id: string) => {
+const publishPostMutationCacheEvents = (
+  id: string,
+  options: CacheEventBroadcastOptions = {},
+) => {
   // Call only after the current non-tombstoned full detail is cached.
-  broadcastCacheEvent({ key: cacheKeys.postsList, action: "update" });
-  broadcastCacheEvent({ key: cacheKeys.postDetail(id), action: "update" });
+  broadcastCacheEvent({ key: cacheKeys.postsList, action: "update" }, options);
+  broadcastCacheEvent({ key: cacheKeys.postDetail(id), action: "update" }, options);
 };
 const reconcileLostDetailMutation = async (id: string) => {
   if (hasPostDetailDeletionTombstone(id)) return null;
@@ -811,11 +836,24 @@ const publishStatusMutation = async (id: string, dispatchGeneration: number) => 
   }
   await reconcileLostDetailMutation(id); // never status-patch a cached scheduled Post
 };
-// updatePost/metadata/autosave/restore await publishDetailMutation after success;
-// status-only publish/unpublish await publishStatusMutation; delete advances/tombstones/removes,
+// updatePost/updatePostMetadata/publishPost accept optional
+// CacheEventBroadcastOptions and pass the caller token through every accepted/
+// reconciled update or invalidate pair. Other callers omit it. Autosave/restore
+// await publishDetailMutation after success; status-only publish/unpublish await publishStatusMutation;
+// delete advances/tombstones/removes,
 // records its row epoch, and emits only the existing ordered invalidates.
-// PostClassicEditorShell.tsx -- existing helpers, no new generic hook
-const lease = acquirePostMutationLease({ postId, routeEpoch });
+// postExternalUpdateAuthority.ts -- pure route-scoped state, not a generic hook
+const externalUpdates = createPostExternalUpdateAuthority();
+externalUpdates.observe(origin, eventToken, activeLease?.cacheEventOperationToken);
+const hydrationGeneration = externalUpdates.captureHydration();
+// Only an accepted current forced read calls resolveHydration(hydrationGeneration).
+// Mutation/no-op settlement never resolves an external event.
+// PostClassicEditorShell.tsx -- composes existing helpers plus the pure authority
+const lease = acquirePostMutationLease({
+  postId,
+  routeEpoch,
+  cacheEventOperationToken: createCacheEventOperationToken(),
+});
 if (!lease) return; // a competing user action/cache continuation defers
 const submittedTick = edits.beginSubmit();
 try {
@@ -831,7 +869,9 @@ try {
   if (built.kind === "noop") {
     edits.settleSubmit(built.settleKeys, submittedTick); return;
   }
-  const updated = await updatePostMetadata(postId, built.payload);
+  const updated = await updatePostMetadata(postId, built.payload, {
+    operationToken: lease.cacheEventOperationToken,
+  });
   if (ownsCurrentLease(lease) && updated) {
     edits.settleSubmit(["status", "scheduledAt", "seoDescription"], submittedTick);
     applyMetadataSnapshotPreservingEditedKeys(updated, edits.editedKeys());
@@ -935,7 +975,17 @@ likewise returns its API result but cannot clear B's tombstone, repopulate
 detail/list cache, or broadcast update. Deferred A→B
 navigation leaves metadata Save, Save draft, and
 Publish/Update disabled/no-op until B hydrates; A's late result cannot hydrate
-or mutate B. A synchronous local cache event during mutation is deferred;
+or mutate B. A synchronous local event carrying the current mutation lease's
+exact operation token is ignored as its own cache projection. Remote, untagged
+local, and differently tagged local events before or during content/metadata
+mutation remain visibly unresolved after the response. The focused UI matrix
+covers remote-before-lease, remote-during-content-response,
+remote-during-metadata-response, and remote-before-baseline-equal-no-op; the
+no-op makes zero request/event. It also proves that an accepted forced refresh
+clears only the observed generation it captured and that a newer event during
+that read stays pending. The cache-bus mock accepts exact
+`(event, origin, operationToken)` arguments, while the focused `postsClient`
+test proves both ordered local mutation events carry the same caller token;
 newer metadata drafts and edits made after a deferred `updatePost` dispatch to
 title/body/featured fields survive metadata, draft-save, published Update,
 publish-refresh, and older force responses. The test also proves a published
@@ -1042,17 +1092,74 @@ and run marker, then removes Posts and finally identities/roles. Its terminal
 bounded proof verifies every owned row is absent **before** the identity rows
 are deleted, so `ON DELETE SET NULL` cannot erase ownership evidence.
 
+Cleanup authority is registered with the shared lifecycle immediately after
+the `WorkerPool` exists and **before** the mutating install dispatch. It owns an
+immutable `Task554RecoveryAuthority` exactly
+`{ schemaVersion: 1, runMarker, profile, recoveryKey }`, where `runMarker` is
+the adapter's bounded lowercase-hex marker, `profile` is
+`fast | certification`, and `recoveryKey` is a fresh 32-byte base64url HMAC key
+created in the parent before install. The authority remains only in parent
+memory and private worker frames; its key is redacted as a credential and never
+enters logs, errors, reports, screenshots, fixtures, or the database, and
+does not depend on receiving or validating the install response. Install is
+still a non-retryable mutation. If its response is lost after commit or its
+worker exits, cleanup starts a fresh shared-pool worker and reconstructs only
+the exact canonical fixture matrix: deterministic role names, actor emails,
+Post slugs, and their verified relational IDs for that marker/profile. It must
+never replay install, infer a wider prefix, or delete a row whose marker,
+scenario, variant, actor kind, author, or relationship does not match.
+
 Before fixture installation, task-owned `routing-settings-lease.ts` atomically
 captures raw JSON and timestamps for exactly `site.adminPath`,
 `site.adminBaseUrl`, and `site.publicBaseUrl`, then applies the temporary target
-`/admin`, `null`, and `null`. The persistent worker retains its private PostgreSQL
-`xmin` ownership version, never placing settings values, timestamps, or that
-version in a worker output, browser frame, or report. Cleanup must use that
-ownership CAS to restore the exact JSON/timestamp records, or delete only rows
-that were absent in the baseline; any current-record or ownership drift fails
-closed without overwriting it. Each committed apply/restore uses the canonical
-settings cache invalidation path, and terminal cleanup proof is true only after
-the exact restore/delete proof succeeds.
+`/admin`, `null`, and `null`. In the same fenced/table-locked transaction it
+persists one deterministic private recovery receipt as the exact `settings`
+row `runtimeSmoke.task554.<runMarker>`. That row must be absent at acquisition.
+Its value is the exact plain JSON object
+`{ schemaVersion: 1, runMarker, profile, snapshot, owned, receiptHmac }`;
+`snapshot` and
+`owned` each have exactly the three canonical routing keys, every snapshot
+member is `null | { valueJson, updatedAt }`, and every owned member is
+`{ valueJson, updatedAt, version }`. All strings are non-empty/NUL-free,
+timestamps and `xmin` remain their canonical PostgreSQL text, duplicate or
+unknown keys fail closed, and the complete serialized value is at most 16 KiB.
+`receiptHmac` is the lowercase 64-hex HMAC-SHA-256 over a canonical fixed-key-
+order serialization of the other five fields, verified with a constant-time
+comparison against `recoveryKey` before any cleanup or restore write. A
+well-shaped receipt with a modified baseline therefore fails closed just like
+an ownership mismatch and remains available for owner recovery.
+The receipt never enters a worker response, browser frame, log, screenshot, or
+report. A replacement
+worker validates the exact receipt and uses its three-key CAS to restore the
+exact JSON/timestamp records, or delete only rows that were absent in the
+baseline. Restoration and receipt deletion are one fenced transaction. Any
+current-record, marker, schema, key-set, size, or ownership drift fails closed
+without overwriting it and retains the receipt for owner recovery. An absent
+receipt is accepted only when the exact marker-owned fixture identities are
+also absent, proving install never committed or cleanup already completed.
+Each committed apply/restore uses the canonical settings cache invalidation
+path, and terminal cleanup proof is true only after exact fixture absence,
+identity absence, three-setting restoration, and recovery-receipt absence.
+
+Focused worker tests simulate commit followed by response loss and handler
+termination, then construct a fresh handler and invoke cleanup/proof from only
+the parent-held recovery authority. They prove no second install, exact FK-safe
+fixture and identity absence, byte/timestamp-exact routing restoration, receipt
+absence, and fail-closed behavior for unrelated or ownership-drifted rows.
+`task-554/cleanup` and `task-554/prove` both reject unknown input and accept
+exactly `Task554RecoveryAuthority`; no empty-input compatibility path remains.
+`task-554/install` accepts that same nested authority, requires its marker and
+profile to match the canonical fixture matrix, and uses its key only to
+authenticate the private receipt.
+Cleanup pseudocode is: validate authority -> build the canonical expected
+actor/role/slug matrix for its profile -> point-read those exact names/emails/
+slugs -> accept either the complete relationally matching matrix or complete
+absence -> perform one FK-safe set-based fixture transaction when present ->
+restore the exact receipt by three-key CAS and delete it atomically -> prove
+exact marker identities/slugs and receipt absent. Receipt absence before
+restore is success only when that exact matrix is completely absent; a partial
+matrix, author/role mismatch, unexpected receipt shape, or CAS drift retains
+all unowned/current bytes and fails cleanup.
 
 Each scenario starts from a deterministic owned baseline, asserts computed
 visibility/DOM/ARIA plus the bounded DB/read-model state, captures a reviewed
@@ -1198,6 +1305,7 @@ bunx vitest run --config vitest.config.ts \
   tests/vitest/admin/postsClient.test.ts \
   tests/vitest/admin/postsClientCacheAuthority.test.ts \
   tests/vitest/ui/post-metadata-mutation-payload.test.ts \
+  tests/vitest/ui/post-external-update-authority.test.ts \
   tests/vitest/ui/post-classic-editor-shell-wave.test.tsx \
   tests/vitest/ui/post-classic-metadata-hydration.test.tsx \
   tests/vitest/ui/post-editor-state-metadata-boundary.test.ts

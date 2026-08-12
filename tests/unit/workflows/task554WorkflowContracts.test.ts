@@ -34,6 +34,10 @@ const securityGateRepairPaths = [
 const routingSettingsLeasePath =
   "scripts/runtime-smoke/adapters/task-554/routing-settings-lease.ts";
 const postsClientCacheAuthorityPath = "tests/vitest/admin/postsClientCacheAuthority.test.ts";
+const postExternalUpdateAuthorityPaths = [
+  "core/admin/ui/posts/editor/postExternalUpdateAuthority.ts",
+  "tests/vitest/ui/post-external-update-authority.test.ts",
+];
 const sharedSmokeFailurePaths = [
   "scripts/runtime-smoke/server/supervised-server.ts",
   "tests/unit/runtime-smoke/supervised-server.test.ts",
@@ -240,6 +244,20 @@ test("TASK-554 pins one exact security-gate repair owner and its resume scope", 
     "admin-client",
   ]);
   expect(ownerIdsForPath(fixOwnerPaths, postsClientCacheAuthorityPath)).toEqual(["admin-client"]);
+  for (const authorityPath of postExternalUpdateAuthorityPaths) {
+    expect(ownerIdsForPath(implementationOwnerPaths, authorityPath)).toEqual([
+      "classic-metadata-ui",
+    ]);
+    expect(ownerIdsForPath(fixOwnerPaths, authorityPath)).toEqual(["classic-metadata-ui"]);
+    expect(
+      implementationOwnerGates["classic-metadata-ui"].filter(({ args }) =>
+        args.includes(authorityPath)
+      )
+    ).toHaveLength(authorityPath.startsWith("tests/") ? 1 : 0);
+    expect(
+      fixOwnerGates["classic-metadata-ui"].filter(({ args }) => args.includes(authorityPath))
+    ).toHaveLength(authorityPath.startsWith("tests/") ? 1 : 0);
+  }
   expect(
     implementationOwnerGates["admin-client"].filter(({ args }) =>
       args.includes(postsClientCacheAuthorityPath)
@@ -527,7 +545,8 @@ test("TASK-554 contract keeps public invalidation with TASK-551 and specifies ex
   expect(task).toContain("nonrecursive `rmdir`");
   expect(task).toContain("`spawn_failed`,\n`terminated`, `exit_<0..255>`, or `invalid_result`");
   expect(task).toContain("task_554_workflow_import_direct_invocation");
-  expect(task).toContain("private PostgreSQL\n`xmin` ownership version");
+  expect(task).toContain("`runtimeSmoke.task554.<runMarker>`");
+  expect(task).toContain("HMAC-SHA-256");
   expect(task).toContain("exact JSON/timestamp records");
   expect(task).toContain("smoke_server_unexpected_exit");
   expect(task).toContain("smoke_authentication_failed");
