@@ -451,8 +451,10 @@ function manifestDigest(value: unknown): string {
 }
 
 function sourceReceipt(frame: BrowserActionFrame): unknown {
-  if (frame.status !== "success")
+  if (frame.status !== "success") {
+    console.error("[DIAG] frame failure code:", frame.failureCode ?? "none");
     throw new SmokeError("smoke_output_invalid", "TASK-554 browser action failed");
+  }
   return frame.output;
 }
 
@@ -632,8 +634,9 @@ export async function runTask554Adapter(context: RuntimeSmokeContext): Promise<S
       // The run-code process itself needs more than the shared 30s default:
       // the supervised dev host compiles the admin editor modules on first
       // load (30-60s), and in-page waits alone do not extend the process
-      // budget. Bounded at 120s; the scenario assertions still fail closed.
-      runCodeTimeoutMs: 120_000,
+      // budget. Set to the shared maximum (300s); the scenario assertions
+      // still fail closed.
+      runCodeTimeoutMs: 300_000,
     });
     transport = new BrowserTransport(context.input.session, dispatcher);
     context.lifecycle.register(transport);
