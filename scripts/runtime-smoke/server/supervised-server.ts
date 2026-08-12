@@ -1,6 +1,7 @@
 import { constants } from "node:fs";
 import { access, realpath, stat } from "node:fs/promises";
 import { createServer, connect, type Server } from "node:net";
+import { rm } from "node:fs/promises";
 import { delimiter, isAbsolute, relative, resolve } from "node:path";
 import { assertExactKeys, assertOwnedPort, isPlainObject, SmokeError } from "../contracts";
 import type { LifecycleResource, RuntimeSmokeContext } from "../lifecycle";
@@ -721,6 +722,15 @@ export async function startSupervisedServer(
     const executable = await resolveServerExecutable(spec.executable, environment.PATH!);
     const [root, cwd] = await Promise.all([realpath(context.root), realpath(spec.cwd)]);
     if (!isWithin(root, cwd)) failArgument("server cwd escapes the repository root");
+    // The dev host starts vite with --force, which rmdir's and rebuilds
+    // core/node_modules/.vite; a leftover non-empty deps tree from a prior
+    // run makes that rmdir fail with ENOTEMPTY and kills the whole host.
+    // Clear the stale vite cache (bounded, best-effort) before spawning.
+    try {
+      await rm(resolve(root, "core/node_modules/.vite"), { recursive: true, force: true });
+    } catch {
+      // Best-effort: a fresh install has no cache to clear.
+    }
     const handle = await context.processes.start({
       executable,
       args: spec.args,
