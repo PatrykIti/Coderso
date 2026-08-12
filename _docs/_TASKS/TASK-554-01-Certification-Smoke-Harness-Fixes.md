@@ -1,10 +1,11 @@
 # TASK-554-01: Certification Smoke Harness Fixes
 # FileName: TASK-554-01-Certification-Smoke-Harness-Fixes.md
 **Parent Task:** TASK-554
-**Status:** 🚧 In Progress
+**Status:** ✅ Done
 **Started:** 2026-08-12
-**Completed:** (pending)
+**Completed:** 2026-08-12
 **Diagnosis Agents:** dove (v4 pro), cricket (glm-5.2 openrouter), dog (glm-5.2), v4 flash
+**Result:** canonical workflow fast + certification PASS (exit 0); 206 tests green; lint/types green; commits c233f769, ef2a0f46, 79793def, 6a8ae454
 **Evidence:** dove report (report.json wrapper-owned; direct CLI cannot pass the
 exact-set gate; AGENTS.md requires the shared CLI entry), cricket report
 (server logs never surfaced on unexpected exit; exit code/signal discarded;
