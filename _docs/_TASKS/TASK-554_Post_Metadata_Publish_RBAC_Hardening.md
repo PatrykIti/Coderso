@@ -72,6 +72,40 @@ Post mutation wrapper.
   or widen TASK-540's smoke host. This narrow repair is validated by a fresh
   dependency/security audit, its focused harness test, package install,
   strict security scan, and the complete TASK-554 validation tail.
+- Owner review of the first complete Bun/Vitest lanes authorized one closed,
+  historical validation-reconciliation exception in commit `7c77f2e1`. It is
+  not a reusable implementation owner and grants no future write authority.
+  The exact non-metadata paths are:
+  `core/services/forms/formsService.ts`;
+  `tests/integration/routes/contentTypes.test.ts`;
+  `tests/integration/routes/detailPages.test.ts`;
+  `tests/integration/runtime/detail-page-composer-runtime.test.tsx`;
+  `tests/integration/runtime/detail-page-preview-cache.test.ts`;
+  `tests/integration/runtime/detail-page-runtime.test.ts`;
+  `tests/integration/runtime/menu-design-extras-runtime.test.ts`;
+  `tests/integration/runtime/pages-runtime-test-support.ts`;
+  `tests/integration/runtime/pages-runtime.test.ts`;
+  `tests/integration/runtime/site-shell-runtime.test.ts`;
+  `tests/integration/server/assistantHouseProjectsCatalogPublicSite.test.ts`;
+  `tests/unit/assistant/actionExecutorService.db.test.ts`;
+  `tests/unit/content/taxonomyService.test.ts`;
+  `tests/unit/kits/fullSiteAdapterAtomicity.test.ts`;
+  `tests/unit/kits/fullSiteLegacyLedgerComposition.test.ts`;
+  `tests/unit/kits/fullSiteLockContender.ts`;
+  `tests/unit/settings/settingsService.test.ts`;
+  `tests/vitest/pages/page-editor-content-controls.test.ts`;
+  `tests/vitest/pages/page-editor-control-registry.test.ts`;
+  `tests/vitest/pages/page-editor-visual-controls.test.ts`;
+  `tests/vitest/services/cssColorClearableInventoryAssertions.ts`; and
+  `tests/vitest/services/cssColorRegexInventoryAssertions.ts`.
+  These changes repaired only evidence-backed pre-existing fixture contracts,
+  deterministic DB serialization/cleanup, bounded 30/50/60-second test budgets,
+  the two-lock contender process, and cohesive test-file modularity needed by
+  the 1,000-line gate. The sole production line moves the detached Form-field
+  input snapshot before the writer-fence await, with the pre-existing
+  `forms.test.ts` mutation regression owning that behavior. No assertion was
+  weakened and no database index or unrelated product fallback was added. Any
+  later edit to one of these paths belongs to its domain task, not TASK-554.
 - Terminal TASK-551-03-L02 is the later serialized writer of bounded Post-list
   regions in `routes/index.ts`, `postsRoutes.ts`, `postSchemas.ts`, and
   `postsClient.ts`. Its canonical task dependency is TASK-554. It must preserve
@@ -363,6 +397,17 @@ repair dispatch targets.
   non-tombstoned full detail is accepted; delete keeps its existing ordered
   list/detail `invalidate` events and never emits an update. This is not a new cache
   wrapper, generic cache redesign, or public-cache invalidation surface;
+  `tests/vitest/admin/postsClientCacheAuthority.test.ts` is the focused owner
+  of its generation/tombstone/list-epoch/cache-event race matrix and must run
+  with the ordinary `postsClient.test.ts` Admin-client lane. Before the next
+  workflow bootstrap, owner review must add this exact path to the pinned
+  implementation/fix Admin-client owner maps, their focused owner gates, and
+  the implementation full-validation Vitest gate. The same owner review must
+  replace the implementation workflow's current partial success-report check
+  and incomplete success fixture with the exact nested validator and
+  nested-surface negative self-tests specified below. The current workflow
+  bytes must not be used for implementation or smoke until both pinned repairs
+  are committed, bootstrap-verified, and freshly audited;
 - `core/admin/ui/posts/editor/PostClassicEditorShell.tsx` around the verified
   `handleSaveMetadata` call (baseline line 346), which currently sends `status`
   and `scheduledAt` on every metadata save. It reuses the existing unmodified
@@ -1045,14 +1090,45 @@ adding a second reporter or shared scenario field.
 
 The task adapter records `pageErrors: 0` and `repositorySnapshots: 2` in its
 existing `suiteCleanup` record (which already permits numeric receipts); it
-does not widen a shared report type. The workflow rejects a report unless both
-receipts agree with `schemaVersion: 1` and top-level `snapshots: 2`,
-`cleanup.pass`, zero `consoleErrors`, the exact ordered scenarios, and the
-exact validated screenshot path/hash rows agree. Distinct canonical PNG paths
-are required, but equal SHA-256 values across different valid PNG paths are
-allowed; only each row's path-to-file digest equality is authoritative. This
-makes the required zero page-error and repository-restoration evidence explicit
-without adding a task-local reporter.
+does not widen a shared report type. Successful durable evidence is accepted
+only with exact nested schemas. With `N = 7` for `fast` and `N = 28` for
+`certification`, the exact requirements are:
+
+- `timings` is the ordered four-row vector
+  `cleanup/all`, `snapshot/task554-after`, `snapshot/task554-before`, and
+  `suite/task-554`; every row has exactly
+  `{ kind, name, count, failed, elapsedMs }`, `count: 1`, `failed: 0`, and a
+  non-negative safe-integer `elapsedMs`;
+- `processes` is exactly `{ git: 2, "playwright-close": 1,
+  "playwright-open": 1, "playwright-run-code": N,
+  "playwright-state-load": 2, "task554-dev-host": 1,
+  "task554-worker-db": 1 }` and has no other family;
+- `suiteCleanup` has exactly the 18 keys `postChildrenRemoved`,
+  `accessLogsRemoved`, `loginAuditRowsRemoved`, `sessionsRemoved`,
+  `userRolesRemoved`, `postsRemoved`, `usersRemoved`, `rolesRemoved`,
+  `workerStarts`, `workerRequests`, `databaseBatches`, `statements`, `rows`,
+  `pageErrors`, `repositorySnapshots`, `settingsRestored`, `fixturesAbsent`,
+  and `identitiesAbsent`. Its first eight values and all numeric receipts are
+  non-negative safe integers; `postsRemoved === N`, `workerStarts === 1`,
+  `workerRequests === databaseBatches === N + 3`, `statements === N + 27`,
+  `pageErrors === 0`, and `repositorySnapshots === 2`. `rows` equals
+  `4 + 2 * N` plus the sum of the first eight removal counters. The final
+  three proof values are exactly `true`;
+- lifecycle `cleanup` is exactly `{ pass: true, failures: [] }`; and
+- `scenarios` is the canonical seven-ID order declared above, with every row
+  exactly `{ id, pass, elapsedMs }`, `pass: true`, and a non-negative
+  safe-integer `elapsedMs`.
+
+Unknown or missing keys, wrong ordering/cardinality, string/object payloads,
+invalid names, duplicates, inconsistent formulas, or additional failure data
+are rejected before retention. The workflow also requires `schemaVersion: 1`,
+top-level `snapshots: 2`, zero `consoleErrors`, and the exact validated
+screenshot path/hash rows. Distinct canonical PNG paths are required, but equal
+SHA-256 values across different valid PNG paths are allowed; only each row's
+path-to-file digest equality is authoritative. Negative self-tests mutate each
+nested surface (`timings`, `processes`, `suiteCleanup`, `cleanup`, and
+`scenarios`) and prove rejection. This makes zero page-error and repository-
+restoration evidence explicit without adding a task-local reporter.
 
 The shared supervised-server resource keeps generic `smoke_process_failed` for
 an unattached resource, but classifies an attached exit as the reusable,
@@ -1120,6 +1196,7 @@ bunx vitest run --config vitest.config.ts \
   tests/vitest/server/postMetadataContract.test.ts \
   tests/vitest/server/requestBody.test.ts \
   tests/vitest/admin/postsClient.test.ts \
+  tests/vitest/admin/postsClientCacheAuthority.test.ts \
   tests/vitest/ui/post-metadata-mutation-payload.test.ts \
   tests/vitest/ui/post-classic-editor-shell-wave.test.tsx \
   tests/vitest/ui/post-classic-metadata-hydration.test.tsx \

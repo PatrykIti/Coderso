@@ -66,6 +66,7 @@ export const OWNER_PATHS = Object.freeze({
   "admin-client": Object.freeze([
     "core/admin/services/postsClient.ts",
     "tests/vitest/admin/postsClient.test.ts",
+    "tests/vitest/admin/postsClientCacheAuthority.test.ts",
   ]),
   "classic-metadata-ui": Object.freeze([
     "core/admin/ui/posts/editor/postMetadataMutationPayload.ts",
@@ -385,7 +386,7 @@ export const OWNER_GATES = Object.freeze({
     command("types", "bun", ["--cwd", "core", "lint:types"]), command("lint", "bun", ["--cwd", "core", "lint"]),
   ]),
   "admin-client": Object.freeze([
-    command("client-vitest", "bunx", ["vitest", "run", "--config", "vitest.config.ts", "tests/vitest/admin/postsClient.test.ts"]),
+    command("client-vitest", "bunx", ["vitest", "run", "--config", "vitest.config.ts", "tests/vitest/admin/postsClient.test.ts", "tests/vitest/admin/postsClientCacheAuthority.test.ts"]),
     command("types", "bun", ["--cwd", "core", "lint:types"]), command("lint", "bun", ["--cwd", "core", "lint"]),
   ]),
   "classic-metadata-ui": Object.freeze([

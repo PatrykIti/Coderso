@@ -33,6 +33,7 @@ const securityGateRepairPaths = [
 ];
 const routingSettingsLeasePath =
   "scripts/runtime-smoke/adapters/task-554/routing-settings-lease.ts";
+const postsClientCacheAuthorityPath = "tests/vitest/admin/postsClientCacheAuthority.test.ts";
 const sharedSmokeFailurePaths = [
   "scripts/runtime-smoke/server/supervised-server.ts",
   "tests/unit/runtime-smoke/supervised-server.test.ts",
@@ -47,7 +48,7 @@ const securityGateCommands = [
 
 type WorkflowOwner = { id: string; paths: string[] };
 type WorkflowOwnerPaths = Record<string, string[]>;
-type WorkflowGate = { command: string; args: string[] };
+type WorkflowGate = { label: string; command: string; args: string[] };
 
 function source(filePath: string) {
   return readFileSync(filePath, "utf8");
@@ -235,6 +236,24 @@ test("TASK-554 pins one exact security-gate repair owner and its resume scope", 
     ]);
     expect(ownerIdsForPath(fixOwnerPaths, sharedSmokeFailurePath)).toEqual(["smoke-adapter"]);
   }
+  expect(ownerIdsForPath(implementationOwnerPaths, postsClientCacheAuthorityPath)).toEqual([
+    "admin-client",
+  ]);
+  expect(ownerIdsForPath(fixOwnerPaths, postsClientCacheAuthorityPath)).toEqual(["admin-client"]);
+  expect(
+    implementationOwnerGates["admin-client"].filter(({ args }) =>
+      args.includes(postsClientCacheAuthorityPath)
+    )
+  ).toHaveLength(1);
+  expect(
+    fixOwnerGates["admin-client"].filter(({ args }) => args.includes(postsClientCacheAuthorityPath))
+  ).toHaveLength(1);
+  expect(
+    fullGates.filter(
+      ({ label, args }) =>
+        label === "task_554_vitest" && args.includes(postsClientCacheAuthorityPath)
+    )
+  ).toHaveLength(1);
   expect(gateCommands(implementationOwnerGates["security-gate-repair"])).toEqual(
     securityGateCommands
   );
@@ -306,7 +325,7 @@ test("TASK-554 implementation workflow executes fail-closed ownership, line, and
   expect(implement).toContain("task_554_smoke_report_not_stdout_identical");
   expect(implement).toContain("pageErrors");
   expect(implement).toContain("repositorySnapshots");
-  expect(implement).toContain("task_554_smoke_report_failure");
+  expect(implement).toContain("task_554_smoke_report_suite_cleanup");
   expect(implement).toContain("assertTask554BoardClosureDelta");
   expect(implement).toContain("assertTask554TerminalStatusDelta");
   expect(implement).toContain("CHANGELOG_1267_ENTRY_BYTES");
@@ -379,6 +398,8 @@ test("TASK-554 implementation workflow executes fail-closed ownership, line, and
     failedEvidenceRevalidationRestored: true,
     replacementEvidenceRejected: true,
     duplicateScreenshotHashesAllowed: true,
+    nestedSuccessReportRejected: true,
+    certificationReportProfileBound: true,
     snapshotMismatchRejected: true,
     narrowClosureRejected: true,
     duplicateBoardStatisticRejected: true,
@@ -474,7 +495,7 @@ test("TASK-554 contract keeps public invalidation with TASK-551 and specifies ex
   expect(task).toContain("owner-dispatched read-only metadata-drift pass");
   expect(task).toContain("parseExactRfc3339DateTime");
   expect(task).toContain("owner_review_rebootstrap");
-  expect(task).toContain("equal SHA-256 values across different valid PNG paths are");
+  expect(task).toMatch(/equal\s+SHA-256 values across different valid PNG paths are/u);
   expect(task).toContain("Pinned Closure Delta");
   expect(task).toContain("core/server/httpServer.ts");
   expect(task).toContain("POST_METADATA_REQUEST_MAX_BYTES = 64 * 1024");
@@ -511,6 +532,9 @@ test("TASK-554 contract keeps public invalidation with TASK-551 and specifies ex
   expect(task).toContain("smoke_server_unexpected_exit");
   expect(task).toContain("smoke_authentication_failed");
   expect(task).toContain("task_554_smoke_runner_failed:report_invalid");
+  expect(task).toContain('"playwright-run-code": N');
+  expect(task).toContain("workerRequests === databaseBatches === N + 3");
+  expect(task).toContain("nested-surface negative self-tests");
   expect(task).toContain(
     "runner error text, status,\nsignal, logs, and report bytes are never interpolated"
   );
