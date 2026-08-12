@@ -815,7 +815,11 @@ test("TASK-554 real isolated frozen installer leaves no task-scoped temporary di
     inputs: TASK_554_FROZEN_INSTALL_INPUTS,
   });
   expect(task554TemporaryDirectories()).toEqual(before);
-}, 50_000);
+// Bounded 120s budget: the real frozen install downloads 745 packages into a
+// fresh sandbox-local cache on every run; cold-cache runs measured 56.8s in
+// the full suite versus 15.8s warm, and the previous 50s budget flaked the
+// first-try full `bun run test:bun` gate without any assertion weakening.
+}, 120_000);
 
 test("TASK-554 isolated frozen install never cleans a hostile mkdtemp result outside an owned sandbox", () => {
   const root = createProject();
