@@ -611,7 +611,7 @@ function restoreFailedTask554SmokeRun(root, session, ownedFailedSession, before,
 }
 function finalizeTask554SmokeProfile(root, session, ownedFailedSession, before, evidenceSnapshot, evidence, primary) {
   let failure = primary; let evidenceRevalidated = false;
-  try { if (evidenceSnapshot === null || evidence === null) throw new Error("task_554_smoke_evidence_missing"); assertExactTask554SmokeEvidence(root, evidence.report.profile, evidence.report.session, evidence.manifest, evidence.reportBytes); assertSmokeEvidenceSnapshot(evidenceSnapshot, root); evidenceRevalidated = true; } catch (restoration) { failure = preserveSmokePrimaryFailure(failure, restoration); }
+  try { if (evidenceSnapshot === null || evidence === null) throw new Error("task_554_smoke_evidence_missing"); assertExactTask554SmokeEvidence(root, evidence.report.profile, evidence.report.session, evidence.manifest, evidence.reportBytes); assertSmokeEvidenceSnapshot(evidenceSnapshot, root); evidenceRevalidated = true; } catch (restoration) { console.error(`[finalize] evidence revalidation failed: ${restoration instanceof Error ? restoration.message : String(restoration)}`); failure = preserveSmokePrimaryFailure(failure, restoration); }
   if (failure !== null) return restoreFailedTask554SmokeRun(root, session, ownedFailedSession, before, failure);
   try { assertNoRepositoryMutation("task_554_smoke_repository_restoration", before, captureRepositoryFingerprint(root, smokeEvidencePaths(evidenceSnapshot, root, session)), root); } catch (restoration) { failure = preserveSmokePrimaryFailure(failure, restoration); }
   return failure === null && evidenceRevalidated ? null : restoreFailedTask554SmokeRun(root, session, ownedFailedSession, before, failure);
