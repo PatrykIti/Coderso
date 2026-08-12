@@ -343,19 +343,17 @@ export function materializeTask554BrowserAction(input: {
     const count = (value) => Math.min(value + 1, 2);
     const expectedCacheEventKinds =
       cfg.expectedResponseStatus === 200 ? ["posts:list:update", "posts:detail:update"] : [];
-    let cacheWitnessTimer = null;
     let resolveCacheWitness = null;
     let rejectCacheWitness = null;
     let cacheWitness = null;
-    let cacheChannel = null;
     const armCacheWitness = () => {
       if (expectedCacheEventKinds.length === 0) return;
       cacheWitness = new Promise((resolve, reject) => {
         resolveCacheWitness = resolve;
         rejectCacheWitness = reject;
-        cacheWitnessTimer = setTimeout(
+        void page.waitForTimeout(15000).then(
           () => reject(new Error("task554_post_cache_timeout")),
-          15000
+          () => undefined
         );
       });
       void cacheWitness.catch(() => undefined);
@@ -400,19 +398,25 @@ export function materializeTask554BrowserAction(input: {
       }
       if (cacheEventKinds.length < 3) cacheEventKinds.push(kind);
       if (JSON.stringify(cacheEventKinds) === JSON.stringify(expectedCacheEventKinds)) {
-        clearTimeout(cacheWitnessTimer);
         resolveCacheWitness?.();
       } else if (cacheEventKinds.length >= expectedCacheEventKinds.length) {
         rejectCacheWitness?.(new Error("task554_post_cache_order"));
       }
     };
-    const onRequest = (request) => {
-      let pathname: string | null = null;
-      try {
-        pathname = new URL(request.url()).pathname;
-      } catch {
-        return; // non-parseable URLs (about:, blob:, data:, malformed) are not Post API calls
+    const pathnameOf = (rawUrl) => {
+      const value = String(rawUrl);
+      const withoutFragment = value.split("#")[0];
+      const withoutQuery = withoutFragment.split("?")[0];
+      const schemeSeparator = withoutQuery.indexOf("://");
+      if (schemeSeparator === -1) {
+        return withoutQuery.startsWith("/") ? withoutQuery : "/" + withoutQuery;
       }
+      const afterScheme = withoutQuery.slice(schemeSeparator + 3);
+      const slashIndex = afterScheme.indexOf("/");
+      return slashIndex === -1 ? "/" : afterScheme.slice(slashIndex);
+    };
+    const onRequest = (request) => {
+      const pathname = pathnameOf(request.url());
       const method = request.method();
       const postMutation =
         !["GET", "HEAD", "OPTIONS"].includes(method) &&
@@ -453,6 +457,18 @@ export function materializeTask554BrowserAction(input: {
       if (await panel.count() !== 1) throw new Error("task554_visible_metadata_panel");
       const save = panel.getByRole("button", { name: "Save metadata", exact: true });
       await save.waitFor({ state: "visible", timeout: 15000 });
+      // The metadata controls render before the identity-bound baseline
+      // hydration completes; a draft edited before hydration can be
+      // overwritten by the accepted forced read (payload builder then
+      // produces a no-op and zero requests). Wait until the save control is
+      // enabled, which gates on hasHydratedCurrentPostBaseline.
+      await page.waitForFunction(() => {
+        const buttons = Array.from(document.querySelectorAll("button"));
+        const target = buttons.find((button) => button.textContent?.trim() === "Save metadata");
+        return target !== undefined && !target.disabled;
+      }, { timeout: 20000 }).catch((error) => {
+        throw new Error("task554_hydration_gate_timeout", { cause: error });
+      });
       if (Object.hasOwn(cfg.metadata, "status")) {
         const statusLabel = {
           archived: "Archived",
@@ -485,21 +501,67 @@ export function materializeTask554BrowserAction(input: {
         if (await seo.count() !== 1) throw new Error("task554_seo_control");
         await seo.fill(String(cfg.metadata.seo.description));
       }
-      cacheChannel = new BroadcastChannel("coderso.admin.cache");
-      cacheChannel.addEventListener("message", onCacheMessage);
+      // The CLI eval context has no browser BroadcastChannel global, so the
+      // cache-bus witness channel is created inside the page (same origin as
+      // the Admin app) and bridged back through an exposed function.
+      await page.exposeFunction("__task554CacheEvent", (value) => onCacheMessage({ data: value }));
+      await page.evaluate(() => {
+        const channel = new BroadcastChannel("coderso.admin.cache");
+        window.__task554CacheChannel = channel;
+        channel.addEventListener("message", (event) => {
+          window.__task554CacheEvent(event.data);
+        });
+      });
       armCacheWitness();
       const responsePromise = page.waitForResponse((response) => {
         const request = response.request();
-        let responsePathname: string | null = null;
-        try {
-          responsePathname = new URL(response.url()).pathname;
-        } catch {
-          return false;
-        }
-        return request.method() === "PATCH" && responsePathname === metadataPath;
+        return request.method() === "PATCH" && pathnameOf(response.url()) === metadataPath;
       }, { timeout: 15000 });
       await save.click();
-      const response = await responsePromise;
+      let response;
+      try {
+        response = await responsePromise;
+      } catch (error) {
+        const diag = await page.evaluate((expected) => {
+          const visible = Array.from(document.querySelectorAll('[data-entry-metadata-panel="true"]')).filter(
+            (node) => {
+              const style = getComputedStyle(node);
+              return style.display !== "none" && style.visibility !== "hidden" && node.getClientRects().length > 0;
+            }
+          );
+          const panel = visible[0];
+          const labels = panel ? Array.from(panel.querySelectorAll("label")) : [];
+          const statusHost = labels.find((label) => label.textContent?.trim() === "Status")?.parentElement;
+          const scheduleHost = labels.find((label) => label.textContent?.trim() === "Schedule date")?.parentElement;
+          const seoHost = labels.find((label) => label.textContent?.trim() === "Meta description")?.parentElement;
+          const status = statusHost?.querySelector('[role="combobox"]');
+          const schedule = scheduleHost?.querySelector("input");
+          const seo = seoHost?.querySelector("textarea");
+          const badges = panel ? Array.from(panel.querySelectorAll('[data-slot="badge"]')).map((badge) => badge.textContent?.trim()) : [];
+          return {
+            panelCount: visible.length,
+            statusText: status?.textContent?.trim() ?? null,
+            scheduleValue: schedule?.value ?? null,
+            scheduleDisabled: schedule?.disabled ?? null,
+            seoValue: seo?.value ?? null,
+            badges,
+            expected,
+          };
+        }, cfg.expectedDom);
+        return {
+          diagTimeout: true,
+          diagCause: String(error?.message ?? error).slice(0, 200),
+          diagPanel: diag,
+          postMutationCount,
+          metadataPatchCount,
+          unexpectedPostMutationCount,
+          requestKeys,
+          requestValuesValid,
+          consoleErrors,
+          pageErrors,
+          url: page.url(),
+        };
+      }
       const request = response.request();
       if (
         postMutationCount !== 1 ||
@@ -527,7 +589,7 @@ export function materializeTask554BrowserAction(input: {
           const schedule = scheduleHost?.querySelector("input");
           const seo = seoHost?.querySelector("textarea");
           const badgeCount = Array.from(panel.querySelectorAll('[data-slot="badge"]')).filter(
-            (badge) => badge.textContent?.trim() === statusLabel
+            (badge) => badge.textContent?.trim().toLowerCase() === expected.status
           ).length;
           return (
             status?.textContent?.trim() === statusLabel &&
@@ -539,13 +601,56 @@ export function materializeTask554BrowserAction(input: {
         },
         cfg.expectedDom,
         { timeout: 15000 }
-      );
+      ).catch(async (error) => {
+        const diag = await page.evaluate((expected) => {
+          const visible = Array.from(document.querySelectorAll('[data-entry-metadata-panel="true"]')).filter(
+            (node) => {
+              const style = getComputedStyle(node);
+              return style.display !== "none" && style.visibility !== "hidden" && node.getClientRects().length > 0;
+            }
+          );
+          const panel = visible[0];
+          const labels = panel ? Array.from(panel.querySelectorAll("label")) : [];
+          const statusHost = labels.find((label) => label.textContent?.trim() === "Status")?.parentElement;
+          const scheduleHost = labels.find((label) => label.textContent?.trim() === "Schedule date")?.parentElement;
+          const seoHost = labels.find((label) => label.textContent?.trim() === "Meta description")?.parentElement;
+          const status = statusHost?.querySelector('[role="combobox"]');
+          const schedule = scheduleHost?.querySelector("input");
+          const seo = seoHost?.querySelector("textarea");
+          const badges = panel ? Array.from(panel.querySelectorAll('[data-slot="badge"]')).map((badge) => badge.textContent?.trim()) : [];
+          return {
+            panelCount: visible.length,
+            statusText: status?.textContent?.trim() ?? null,
+            scheduleValue: schedule?.value ?? null,
+            scheduleDisabled: schedule?.disabled ?? null,
+            seoValue: seo?.value ?? null,
+            badges,
+            expected,
+          };
+        }, cfg.expectedDom);
+        return {
+          diagTimeout: true,
+          diagCause: String(error?.message ?? error).slice(0, 200),
+          diagPanel: diag,
+          responseStatus: response.status(),
+          requestMethod: request.method(),
+          requestKeys,
+          postMutationCount,
+          metadataPatchCount,
+          unexpectedPostMutationCount,
+          requestValuesValid,
+          consoleErrors,
+          pageErrors,
+        };
+      });
       if (cfg.expectedResponseStatus === 403) {
         await page.waitForFunction(
           () => /permission|forbidden|not authorized/i.test(document.body.innerText),
           undefined,
           { timeout: 15000 }
-        );
+        ).catch((error) => {
+          throw new Error("task554_403_witness_timeout", { cause: error });
+        });
       }
       const visibleProof = await panel.evaluate((node, expected) => {
         const statusLabel = { archived: "Archived", draft: "Draft", published: "Published", scheduled: "Scheduled" }[expected.status];
@@ -557,7 +662,7 @@ export function materializeTask554BrowserAction(input: {
         const schedule = scheduleHost?.querySelector("input");
         const seo = seoHost?.querySelector("textarea");
         const badgeCount = Array.from(node.querySelectorAll('[data-slot="badge"]')).filter(
-          (badge) => badge.textContent?.trim() === statusLabel
+          (badge) => badge.textContent?.trim().toLowerCase() === expected.status
         ).length;
         return {
           statusControlMatches: status?.textContent?.trim() === statusLabel,
@@ -600,9 +705,11 @@ export function materializeTask554BrowserAction(input: {
       page.off("console", onConsole);
       page.off("pageerror", onPageError);
       page.off("request", onRequest);
-      cacheChannel?.removeEventListener("message", onCacheMessage);
-      cacheChannel?.close();
-      if (cacheWitnessTimer !== null) clearTimeout(cacheWitnessTimer);
+      await page.evaluate(() => {
+        const channel = window.__task554CacheChannel;
+        if (channel !== undefined && channel !== null) channel.close();
+        delete window.__task554CacheChannel;
+      }).catch(() => undefined);
     }
   }`;
 }
