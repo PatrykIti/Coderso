@@ -800,13 +800,19 @@ export async function runTask554Adapter(context: RuntimeSmokeContext): Promise<S
     screenshots = await validateTask554ScreenshotOutputs(context.root, context.input, manifest);
   } catch (error) {
     primary = error;
+    const diagLines: string[] = [
+      `=== TASK-554 adapter failure ${new Date().toISOString()} ===`,
+      `primary=${primary instanceof SmokeError ? primary.code : "unknown"} :: ${primary instanceof Error ? primary.message : String(primary)}`,
+    ];
     if (server !== null) {
       try {
         const log = server.snapshotLogs();
-        console.error(`[DIAG] server stdout tail: ${log.stdout.slice(-1200)}`);
-        console.error(`[DIAG] server stderr tail: ${log.stderr.slice(-1200)}`);
+        diagLines.push(`server stdout tail: ${log.stdout.slice(-4000)}`);
+        diagLines.push(`server stderr tail: ${log.stderr.slice(-4000)}`);
+        console.error(`[server-log] stdout=${log.stdout.length}B stderr=${log.stderr.length}B`);
       } catch {}
     }
+    appendDiagnostics(context.root, context.input.session, diagLines);
     // A failed session must contain only report.json for the workflow's
     // failure-code reader; remove this run's screenshot PNGs best-effort
     // (bounded owned paths under the session directory). Evidence-set

@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 import { closeSync, constants, fchmodSync, fstatSync, lstatSync, mkdirSync, openSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { parseRuntimeSmokeArgs } from "./runtime-smoke/cli";
+import { appendDiagnostics } from "./runtime-smoke/diagnostics";
 import { mapSmokeError, type SmokeError } from "./runtime-smoke/contracts";
 import { installLifecycleSignals, RuntimeLifecycle } from "./runtime-smoke/lifecycle";
 import { ProcessSupervisor, resolveExecutableOnPath } from "./runtime-smoke/process-supervisor";
@@ -125,6 +126,18 @@ export async function runRuntimeSmoke(
   if (evidenceReportPath !== null) {
     writeEvidenceReport(evidenceReportPath, `${json}\n`);
   }
+  appendDiagnostics(root, input.session, [
+    `=== run finished ${new Date().toISOString()} ===`,
+    `suite=${input.suite} profile=${input.profile} session=${input.session}`,
+    `pass=${report.pass} serverUp=${report.serverUp}`,
+    `failures=${JSON.stringify(report.failures)}`,
+    `timings=${JSON.stringify(report.timings)}`,
+    `processes=${JSON.stringify(report.processCounters)}`,
+    `scenarios=${JSON.stringify(report.scenarios)}`,
+    `cleanup=${JSON.stringify(report.cleanup)}`,
+    `evidenceReport=${evidenceReportPath}`,
+    `=== end run ===`,
+  ]);
   return report;
 }
 

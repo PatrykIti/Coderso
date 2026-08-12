@@ -220,6 +220,7 @@ export function assertScopedRepositoryMutation(label, before, after, allowedPath
   const changed = changedRepositoryPaths(before, after);
   const forbidden = changed.filter(pathMatchesForbidden);
   const outside = changed.filter((pathName) => !allowed.has(pathName));
+  console.error(`[scope] changed=${JSON.stringify(changed)} allowed=${JSON.stringify([...allowed])}`);
   if (forbidden.length > 0 || outside.length > 0) {
     throw new Error(`${label}:scope_violation:${JSON.stringify({ forbidden, outside })}`);
   }
