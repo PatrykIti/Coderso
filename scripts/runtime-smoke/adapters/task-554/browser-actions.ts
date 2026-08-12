@@ -580,6 +580,17 @@ export function materializeTask554BrowserAction(input: {
         !requestValuesValid ||
         JSON.stringify(requestKeys) !== JSON.stringify(cfg.expectedPatchKeys)
       ) throw new Error("task554_metadata_mutation_witness");
+      if (cfg.expectedResponseStatus === 403) {
+        await page.waitForFunction(
+          () => /permission|forbidden|not authorized|insufficient|no permission/i.test(document.body.innerText),
+          undefined,
+          { timeout: 30000 }
+        ).catch(async (error) => {
+          const body = await page.evaluate(() => document.body.innerText.slice(0, 600)).catch(() => "n/a");
+          console.error("[DIAG-403]", JSON.stringify({ body, url: page.url() }));
+          throw new Error("task554_403_witness_timeout", { cause: error });
+        });
+      }
       await page.waitForFunction(
         (expected) => {
           const visible = Array.from(document.querySelectorAll('[data-entry-metadata-panel="true"]')).filter(
@@ -653,15 +664,6 @@ export function materializeTask554BrowserAction(input: {
           pageErrors,
         };
       });
-      if (cfg.expectedResponseStatus === 403) {
-        await page.waitForFunction(
-          () => /permission|forbidden|not authorized|insufficient|no permission/i.test(document.body.innerText),
-          undefined,
-          { timeout: 30000 }
-        ).catch((error) => {
-          throw new Error("task554_403_witness_timeout", { cause: error });
-        });
-      }
       const visibleProof = await panel.evaluate((node, expected) => {
         const statusLabel = { archived: "Archived", draft: "Draft", published: "Published", scheduled: "Scheduled" }[expected.status];
         const labels = Array.from(node.querySelectorAll("label"));
