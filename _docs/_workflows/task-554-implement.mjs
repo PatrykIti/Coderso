@@ -222,8 +222,7 @@ export function assertScopedRepositoryMutation(label, before, after, allowedPath
   const forbidden = changed.filter(pathMatchesForbidden);
   const outside = changed.filter((pathName) => !allowed.has(pathName));
   if (forbidden.length > 0 || outside.length > 0) {
-    console.error(`[scope] changed=${JSON.stringify(changed)} allowed=${JSON.stringify([...allowed])}`);
-    throw new Error(`${label}:scope_violation:${JSON.stringify({ forbidden, outside })}`);
+      throw new Error(`${label}:scope_violation:${JSON.stringify({ forbidden, outside })}`);
   }
   return Object.freeze(changed);
 }
@@ -557,7 +556,6 @@ function assertSmokeEvidenceSnapshot(snapshot, root) {
 }
 function smokeEvidencePaths(snapshot, root, session) {
   const result = [...snapshot.keys(), `.tmp/runtime-smoke/${session}.diag.log`, `.tmp/runtime-smoke`];
-  console.error(`[evidence] snapshotKeys=${JSON.stringify([...snapshot.keys()])} allowed=${JSON.stringify(result)}`);
   return result;
 }
 function createEmptySmokeSession(root, session, createdDirectories = null) {
@@ -606,14 +604,12 @@ function preserveSmokePrimaryFailure(primary, restoration) {
   });
 }
 function restoreFailedTask554SmokeRun(root, session, ownedFailedSession, before, primary) {
-  console.error(`[restoreFailed] session=${session} primary=${primary instanceof Error ? primary.message : String(primary)}`);
   let failure = primary;
   try { if (ownedFailedSession !== null) removeOwnedTask554FailedSmokeSession(root, session, ownedFailedSession); } catch (restoration) { failure = preserveSmokePrimaryFailure(failure, restoration); }
   try { const allowed = [...smokeEvidencePaths(new Map(), root, session), ensureInsideRoot(root, task554SessionDirectory(root, session), "smoke_session"), ensureInsideRoot(root, assertNofollowTask554SmokeRoot(root), "smoke_ancestor")]; assertScopedRepositoryMutation("task_554_smoke_repository_restoration", before, captureRepositoryFingerprint(root, allowed), allowed, root); } catch (restoration) { failure = preserveSmokePrimaryFailure(failure, restoration); }
   return failure;
 }
 function finalizeTask554SmokeProfile(root, session, ownedFailedSession, before, evidenceSnapshot, evidence, primary) {
-  console.error(`[finalize-entry] session=${session} primary=${primary instanceof Error ? primary.message : String(primary)} evidence=${evidence !== null}`);
   let failure = primary; let evidenceRevalidated = false;
   try { if (evidenceSnapshot === null || evidence === null) throw new Error("task_554_smoke_evidence_missing"); assertExactTask554SmokeEvidence(root, evidence.report.profile, evidence.report.session, evidence.manifest, evidence.reportBytes); assertSmokeEvidenceSnapshot(evidenceSnapshot, root); evidenceRevalidated = true; } catch (restoration) { console.error(`[finalize] evidence revalidation failed: ${restoration instanceof Error ? restoration.message : String(restoration)}`); failure = preserveSmokePrimaryFailure(failure, restoration); }
   if (failure !== null) return restoreFailedTask554SmokeRun(root, session, ownedFailedSession, before, failure);
