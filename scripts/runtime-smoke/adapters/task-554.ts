@@ -451,8 +451,10 @@ function manifestDigest(value: unknown): string {
 }
 
 function sourceReceipt(frame: BrowserActionFrame): unknown {
-  if (frame.status !== "success")
+  if (frame.status !== "success") {
+    console.error("[DIAG] frame failure code:", frame.failureCode ?? "none");
     throw new SmokeError("smoke_output_invalid", "TASK-554 browser action failed");
+  }
   return frame.output;
 }
 
@@ -689,7 +691,25 @@ export async function runTask554Adapter(context: RuntimeSmokeContext): Promise<S
         })
       );
       if (warmupFrames.length !== 1 || warmupFrames[0]!.status !== "success") {
-        throw new SmokeError("smoke_output_invalid", "TASK-554 warmup could not converge");
+        // The first Playwright dispatch after the dev-host start can crash
+        // transiently (cold browser process); the warmup is read-only, so one
+        // bounded retry is safe and keeps the scored scenarios authoritative.
+        const retryFrames = await transport.runSegment(
+          Object.freeze({
+            segment: warmupSegment,
+            actions: Object.freeze([{ actionId: warmupActionId, source: warmupSource }]),
+          }),
+          Object.freeze({
+            runId: marker,
+            manifestSha256: manifestDigest(manifest),
+            scenarioId: warmupDescriptor.id,
+            segmentId: warmupSegment.segmentId,
+            actionIds: warmupSegment.actionIds,
+          })
+        ).catch(() => []);
+        if (retryFrames.length !== 1 || retryFrames[0]!.status !== "success") {
+          throw new SmokeError("smoke_output_invalid", "TASK-554 warmup could not converge");
+        }
       }
     }
     const scenarioTimes = new Map(TASK554_SCENARIOS.map(({ id }) => [id, 0]));
