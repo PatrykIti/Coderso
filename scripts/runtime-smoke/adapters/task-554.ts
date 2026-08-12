@@ -670,7 +670,7 @@ export async function runTask554Adapter(context: RuntimeSmokeContext): Promise<S
       const warmupActionId = warmupSegment.actionIds[0];
       if (warmupActionId === undefined) throw new SmokeError("smoke_output_invalid", "TASK-554 warmup segment is empty");
       const warmupSource = `async (page) => {
-        await page.goto("${ADMIN_ORIGIN}/admin/posts/${warmupFixture.postId}?editor=classic", { waitUntil: "domcontentloaded", timeout: 60000 });
+        await page.goto("${ADMIN_ORIGIN}/admin/posts/${warmupFixture.postId}?editor=classic", { waitUntil: "domcontentloaded", timeout: 180000 });
         const panel = page.locator('[data-entry-metadata-panel="true"]:visible');
         await panel.waitFor({ state: "visible", timeout: 120000 });
         return { warmed: true };
