@@ -664,26 +664,21 @@ export async function runTask554Adapter(context: RuntimeSmokeContext): Promise<S
     const warmupFixture = install.fixtures[0];
     const warmupDescriptor = TASK554_SCENARIOS.find(({ id }) => id === warmupFixture?.scenarioId);
     const warmupAuth = warmupDescriptor === undefined ? undefined : authPaths.get(warmupDescriptor.actor);
-    if (warmupFixture !== undefined && warmupDescriptor !== undefined && warmupAuth !== undefined) {
+    const warmupSegment = segments[0];
+    if (warmupFixture !== undefined && warmupDescriptor !== undefined && warmupAuth !== undefined && warmupSegment !== undefined) {
       await dispatcher.loadStorageState(warmupAuth);
+      const warmupActionId = warmupSegment.actionIds[0];
+      if (warmupActionId === undefined) throw new SmokeError("smoke_output_invalid", "TASK-554 warmup segment is empty");
       const warmupSource = `async (page) => {
         await page.goto("${ADMIN_ORIGIN}/admin/posts/${warmupFixture.postId}?editor=classic", { waitUntil: "domcontentloaded", timeout: 60000 });
         const panel = page.locator('[data-entry-metadata-panel="true"]:visible');
         await panel.waitFor({ state: "visible", timeout: 120000 });
         return { warmed: true };
       }`;
-      const warmupSegment: BrowserRunCodeDispatch = Object.freeze({
-        schemaVersion: 1,
-        kind: "run-code",
-        segmentId: "segment-warmup",
-        scenarioId: warmupDescriptor.id,
-        actionIds: Object.freeze(["task554-action-warmup"]),
-        estimatedSourceBytes: Buffer.byteLength(warmupSource),
-      });
       const warmupFrames = await transport.runSegment(
         Object.freeze({
           segment: warmupSegment,
-          actions: Object.freeze([{ actionId: "task554-action-warmup", source: warmupSource }]),
+          actions: Object.freeze([{ actionId: warmupActionId, source: warmupSource }]),
         }),
         Object.freeze({
           runId: marker,
