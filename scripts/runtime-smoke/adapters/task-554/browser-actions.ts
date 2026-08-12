@@ -407,8 +407,13 @@ export function materializeTask554BrowserAction(input: {
       }
     };
     const onRequest = (request) => {
+      let pathname: string | null = null;
+      try {
+        pathname = new URL(request.url()).pathname;
+      } catch {
+        return; // non-parseable URLs (about:, blob:, data:, malformed) are not Post API calls
+      }
       const method = request.method();
-      const pathname = new URL(request.url()).pathname;
       const postMutation =
         !["GET", "HEAD", "OPTIONS"].includes(method) &&
         (pathname === "/admin/api/posts" || pathname.startsWith("/admin/api/posts/"));
@@ -485,7 +490,13 @@ export function materializeTask554BrowserAction(input: {
       armCacheWitness();
       const responsePromise = page.waitForResponse((response) => {
         const request = response.request();
-        return request.method() === "PATCH" && new URL(response.url()).pathname === metadataPath;
+        let responsePathname: string | null = null;
+        try {
+          responsePathname = new URL(response.url()).pathname;
+        } catch {
+          return false;
+        }
+        return request.method() === "PATCH" && responsePathname === metadataPath;
       }, { timeout: 15000 });
       await save.click();
       const response = await responsePromise;
