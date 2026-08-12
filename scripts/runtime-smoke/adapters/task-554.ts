@@ -3,7 +3,10 @@ import { chmod, lstat, mkdir, mkdtemp, realpath, readdir, rmdir, rm } from "node
 import { isAbsolute, join, relative } from "node:path";
 
 import { resolveInsideRoot, SmokeError } from "../contracts";
-import { createAdminAuthStorageState } from "../browser/admin-auth";
+import {
+  createAdminAuthStorageState,
+  type AdminAuthStorageStateResult,
+} from "../browser/admin-auth";
 import { BrowserTransport } from "../browser/transport";
 import { PlaywrightCliDispatcher } from "../browser/playwright-cli-dispatcher";
 import { compileBrowserDispatchPlan } from "../browser/segment-compiler";
@@ -48,6 +51,53 @@ export { assertExactTask554Invocation } from "./task-554/output-manifest";
 
 const ADMIN_ORIGIN = "http://127.0.0.1:5173";
 const FRONT_ORIGIN = "http://127.0.0.1:3000";
+const ADMIN_AUTH_FAILURE =
+  /^(?:credentials_missing|login_network_failed|login_failed:[3-5]\d{2}|session_cookie_(?:missing|invalid))$/u;
+
+function hasExactKeys(value: Record<string, unknown>, keys: readonly string[]): boolean {
+  return (
+    Object.keys(value).length === keys.length && keys.every((key) => Object.hasOwn(value, key))
+  );
+}
+
+export function assertTask554AdminAuthOutcome(
+  outcome: unknown
+): asserts outcome is AdminAuthStorageStateResult {
+  if (outcome === null || typeof outcome !== "object" || Array.isArray(outcome)) {
+    throw new SmokeError("smoke_output_invalid", "TASK-554 authentication output is invalid");
+  }
+  const value = outcome as Record<string, unknown>;
+  if (value.attempted !== true) {
+    throw new SmokeError("smoke_output_invalid", "TASK-554 authentication output is invalid");
+  }
+  if (
+    value.authenticated === true &&
+    hasExactKeys(value, ["attempted", "authenticated", "sessionValue"]) &&
+    typeof value.sessionValue === "string" &&
+    value.sessionValue.length > 0 &&
+    Buffer.byteLength(value.sessionValue) <= 16 * 1024 &&
+    !value.sessionValue.includes("\0")
+  ) {
+    return;
+  }
+  if (
+    value.authenticated === false &&
+    hasExactKeys(value, ["attempted", "authenticated", "error"]) &&
+    typeof value.error === "string" &&
+    ADMIN_AUTH_FAILURE.test(value.error)
+  ) {
+    throw new SmokeError("smoke_authentication_failed", "TASK-554 authentication failed");
+  }
+  throw new SmokeError("smoke_output_invalid", "TASK-554 authentication output is invalid");
+}
+
+export async function awaitTask554AdminAuthentication(
+  authentication: Promise<AdminAuthStorageStateResult>,
+  unexpectedServerExit: Promise<never>
+): Promise<void> {
+  const outcome = await Promise.race([authentication, unexpectedServerExit]);
+  assertTask554AdminAuthOutcome(outcome);
+}
 
 interface Task554ProjectionInput {
   readonly scenarios: readonly SmokeScenarioResult[];
@@ -574,17 +624,18 @@ export async function runTask554Adapter(context: RuntimeSmokeContext): Promise<S
     const authPaths = new Map<Task554ActorKind, string>();
     for (const actor of credentials) {
       const path = join(workspace.path, `${actor.kind}-auth.json`);
-      const outcome = await createAdminAuthStorageState({
-        adminUrl: `${ADMIN_ORIGIN}/admin`,
-        workspace: workspace.path,
-        storageStatePath: path,
-        environment: Object.freeze({
-          CODERSO_PLAYWRIGHT_EMAIL: actor.email,
-          CODERSO_PLAYWRIGHT_PASSWORD: actor.password,
+      await awaitTask554AdminAuthentication(
+        createAdminAuthStorageState({
+          adminUrl: `${ADMIN_ORIGIN}/admin`,
+          workspace: workspace.path,
+          storageStatePath: path,
+          environment: Object.freeze({
+            CODERSO_PLAYWRIGHT_EMAIL: actor.email,
+            CODERSO_PLAYWRIGHT_PASSWORD: actor.password,
+          }),
         }),
-      });
-      if (outcome.authenticated !== true)
-        throw new SmokeError("smoke_process_failed", "TASK-554 synthetic actor login failed");
+        server.waitForUnexpectedExit()
+      );
       authPaths.set(actor.kind, path);
     }
     const scenarioTimes = new Map(TASK554_SCENARIOS.map(({ id }) => [id, 0]));

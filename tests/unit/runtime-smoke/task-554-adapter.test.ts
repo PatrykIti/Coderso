@@ -6,10 +6,13 @@ import { tmpdir } from "node:os";
 
 import adapter, {
   assertExactTask554Invocation,
+  assertTask554AdminAuthOutcome,
   assertTask554SafeProjection,
+  awaitTask554AdminAuthentication,
   createTask554PrivateWorkspace,
   projectTask554AdapterResult,
 } from "../../../scripts/runtime-smoke/adapters/task-554";
+import { SmokeError } from "../../../scripts/runtime-smoke/contracts";
 import {
   assertExactTask554ScreenshotManifest,
   buildExactTask554ScreenshotManifest,
@@ -111,6 +114,60 @@ test("TASK-554 adapter registers only the two exact profiles and rejects invocat
   ]) {
     expect(() => assertExactTask554Invocation(candidate)).toThrow();
   }
+});
+
+test("TASK-554 maps only bounded expected admin-auth false outcomes without exposing input", () => {
+  const secret = "private-auth-session-or-status";
+  for (const error of [
+    "credentials_missing",
+    "login_network_failed",
+    "login_failed:401",
+    "login_failed:599",
+    "session_cookie_missing",
+    "session_cookie_invalid",
+  ]) {
+    expect(() =>
+      assertTask554AdminAuthOutcome({ attempted: true, authenticated: false, error })
+    ).toThrow(expect.objectContaining({ code: "smoke_authentication_failed" }));
+  }
+  expect(() =>
+    assertTask554AdminAuthOutcome({
+      attempted: true,
+      authenticated: true,
+      sessionValue: secret,
+    })
+  ).not.toThrow();
+  for (const outcome of [
+    { attempted: true, authenticated: false, error: `login_failed:401:${secret}` },
+    { attempted: true, authenticated: false, error: "login_failed:200" },
+    { attempted: true, authenticated: false, error: "login_failed:99" },
+    { attempted: true, authenticated: false, error: secret },
+    { attempted: false, authenticated: false, error: "credentials_missing" },
+    { attempted: true, authenticated: false, error: "credentials_missing", secret },
+    { attempted: true, authenticated: true, sessionValue: "" },
+    null,
+  ]) {
+    try {
+      assertTask554AdminAuthOutcome(outcome);
+      throw new Error("expected TASK-554 auth outcome rejection");
+    } catch (error) {
+      expect(error).toEqual(expect.objectContaining({ code: "smoke_output_invalid" }));
+      expect(error instanceof Error ? error.message : "").not.toContain(secret);
+    }
+  }
+});
+
+test("TASK-554 authentication propagates a post-readiness server exit before pending auth", async () => {
+  let rejectServerExit!: (reason: unknown) => void;
+  const authentication = new Promise<never>(() => undefined);
+  const serverExit = new Promise<never>((_resolve, reject) => {
+    rejectServerExit = reject;
+  });
+  const result = awaitTask554AdminAuthentication(authentication, serverExit);
+  rejectServerExit(
+    new SmokeError("smoke_server_unexpected_exit", "bounded post-readiness server exit")
+  );
+  await expect(result).rejects.toMatchObject({ code: "smoke_server_unexpected_exit" });
 });
 
 test("TASK-554 workspace rejects a redirected .tmp ancestor before private files are created", async () => {

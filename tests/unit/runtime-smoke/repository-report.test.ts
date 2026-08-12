@@ -94,3 +94,22 @@ test("report is deterministic, bounded, and redacts known secret shapes", () => 
   expect(encoded.endsWith("\n")).toBe(true);
   expect(encodeReportJson(report)).toBe(encoded);
 });
+
+test("report serializes new smoke failure codes without error messages or causes", () => {
+  const secret = "private-auth-cause-should-not-appear";
+  for (const code of ["smoke_authentication_failed", "smoke_server_unexpected_exit"] as const) {
+    const report = createRuntimeSmokeReport({
+      request: { command: "run", suite: "task-554", profile: "fast", session: "task-554-fast" },
+      adapter: null,
+      primary: new SmokeError(code, secret, { cause: new Error(secret) }),
+      cleanup: { pass: true, failures: [] },
+      timings: [],
+      processCounters: {},
+      snapshots: 1,
+    });
+    const encoded = encodeReportJson(report);
+    expect(report.failures).toEqual([{ code }]);
+    expect(encoded).toContain(code);
+    expect(encoded).not.toContain(secret);
+  }
+});

@@ -27,12 +27,21 @@ const securityGateRepairPaths = [
   "bun.lock",
   "scripts/runtime-smoke/adapters/task-540/suite/runtime/platform-actions.ts",
   "tests/unit/runtime-smoke/task540-native-suite-boundary.test.ts",
+  "scripts/task-554-isolated-frozen-install.mjs",
+  "scripts/task-554-isolated-frozen-install.d.mts",
+  "tests/unit/workflows/task554IsolatedFrozenInstall.test.ts",
 ];
 const routingSettingsLeasePath =
   "scripts/runtime-smoke/adapters/task-554/routing-settings-lease.ts";
+const sharedSmokeFailurePaths = [
+  "scripts/runtime-smoke/server/supervised-server.ts",
+  "tests/unit/runtime-smoke/supervised-server.test.ts",
+  "tests/unit/runtime-smoke/repository-report.test.ts",
+];
 const securityGateCommands = [
-  ["bun", "test", "tests/unit/runtime-smoke/task540-native-suite-boundary.test.ts"],
   ["bun", "install", "--frozen-lockfile"],
+  ["bun", "test", "tests/unit/workflows/task554IsolatedFrozenInstall.test.ts"],
+  ["bun", "test", "tests/unit/runtime-smoke/task540-native-suite-boundary.test.ts"],
   ["bun", "run", "scan:security:strict"],
 ];
 
@@ -95,6 +104,36 @@ function readWorkflowExport<T>(workflowPath: string, exportName: string): T {
   return JSON.parse(result.stdout) as T;
 }
 
+function importWithArbitraryArguments(workflowPath: string) {
+  return spawnSync(
+    "node",
+    [
+      "--input-type=module",
+      "--eval",
+      `import(${JSON.stringify(`file://${workflowPath}`)});`,
+      "--",
+      "--unexpected-import-argument",
+    ],
+    {
+      cwd: root,
+      encoding: "utf8",
+      timeout: 30_000,
+      env: { ...process.env, TASK_554_WORKFLOW_IMPORT: "1" },
+    }
+  );
+}
+
+function expectDirectImportBypassRejection(workflowPath: string, arguments_: string[]) {
+  const result = spawnSync("node", [workflowPath, ...arguments_], {
+    cwd: root,
+    encoding: "utf8",
+    timeout: 30_000,
+    env: { ...process.env, TASK_554_WORKFLOW_IMPORT: "1" },
+  });
+  expect(result.status).not.toBe(0);
+  expect(result.stderr).toContain("task_554_workflow_import_direct_invocation");
+}
+
 function gateCommands(gates: WorkflowGate[]) {
   return gates.map(({ command, args }) => [command, ...args]);
 }
@@ -153,6 +192,22 @@ test("TASK-554 workflows retain the immutable execution and owner-review handoff
   expect(fix).toContain("task_554_unknown_arguments");
 });
 
+test("TASK-554 workflows are safe to import from arbitrary argv and reject direct import-mode bypasses", () => {
+  for (const workflowPath of [authorPath, implementPath, fixPath, closeoutPath]) {
+    const imported = importWithArbitraryArguments(workflowPath);
+    expect(imported.status).toBe(0);
+    expect(imported.stderr).toBe("");
+    expect(imported.stdout).toBe("");
+  }
+  expectDirectImportBypassRejection(authorPath, ["--task-554-bootstrap-verify"]);
+  expectDirectImportBypassRejection(implementPath, ["--task-554-resume-after-fix"]);
+  expectDirectImportBypassRejection(fixPath, []);
+  expectDirectImportBypassRejection(closeoutPath, [
+    "--task-554-closeout-terminal-validate",
+    "/tmp/task-554-closeout-snapshot.json",
+  ]);
+});
+
 test("TASK-554 pins one exact security-gate repair owner and its resume scope", () => {
   const implementationOwners = readWorkflowExport<WorkflowOwner[]>(implementPath, "OWNERS");
   const implementationOwnerPaths = Object.fromEntries(
@@ -174,6 +229,12 @@ test("TASK-554 pins one exact security-gate repair owner and its resume scope", 
     "smoke-adapter",
   ]);
   expect(ownerIdsForPath(fixOwnerPaths, routingSettingsLeasePath)).toEqual(["smoke-adapter"]);
+  for (const sharedSmokeFailurePath of sharedSmokeFailurePaths) {
+    expect(ownerIdsForPath(implementationOwnerPaths, sharedSmokeFailurePath)).toEqual([
+      "smoke-adapter",
+    ]);
+    expect(ownerIdsForPath(fixOwnerPaths, sharedSmokeFailurePath)).toEqual(["smoke-adapter"]);
+  }
   expect(gateCommands(implementationOwnerGates["security-gate-repair"])).toEqual(
     securityGateCommands
   );
@@ -183,10 +244,24 @@ test("TASK-554 pins one exact security-gate repair owner and its resume scope", 
       securityGateCommands.some((expected) => command.join("\0") === expected.join("\0"))
     )
   ).toEqual(securityGateCommands);
+  expect(gateCommands(fullGates)[0]).toEqual(securityGateCommands[0]);
+  expect(gateCommands(implementationOwnerGates["security-gate-repair"])[0]).toEqual(
+    securityGateCommands[0]
+  );
+  expect(gateCommands(fixOwnerGates["security-gate-repair"])[0]).toEqual(securityGateCommands[0]);
   expect(readWorkflowExport(implementPath, "TASK_554_RESUME_ALLOWED_DIRTY_PATHS")).toEqual(
     expect.arrayContaining(securityGateRepairPaths)
   );
   const fix = source(fixPath);
+  const implement = source(implementPath);
+  expect(implement.indexOf("runIsolatedFrozenInstallFirst(root, FULL_GATE_COMMANDS)")).toBeLessThan(
+    implement.indexOf('runReadOnlyGate("task_554_full_validation_mutated"')
+  );
+  expect(fix.indexOf("const gates = runIsolatedFrozenInstallFirst(owners.flatMap")).toBeLessThan(
+    fix.indexOf("const before = captureFixFingerprint();", fix.indexOf("function runAffectedGates"))
+  );
+  expect(implement).toContain('runReadOnlyGate("task_554_isolated_frozen_install_mutated"');
+  expect(fix).toContain('assertFixScope("task_554_isolated_frozen_install_mutated"');
   expect(fix).toContain("task_554_fix_self_test_security_gate_repair_scope");
   expect(fix).toContain("task_554_fix_changed_path_unowned:core/server/routes/authRoutes.ts");
 });
@@ -253,6 +328,11 @@ test("TASK-554 implementation workflow executes fail-closed ownership, line, and
   expect(implement).toContain("core/services/content/postMutationService.ts");
   expect(implement).toContain("tests/vitest/server/requestBody.test.ts");
   expect(implement).toContain("readStableSmokeFile");
+  expect(implement).toContain("readTask554SmokeFailureCode");
+  expect(implement).toContain("TASK_554_SAFE_SMOKE_FAILURE_CODES");
+  expect(implement).toContain("task_554_smoke_runner_failed:${readTask554SmokeFailureCode");
+  expect(implement).not.toContain("execution?.error?.message");
+  expect(implement).not.toContain("task_554_smoke_runner_failed:${execution");
   expect(implement).toContain("constants.O_NOFOLLOW");
   expect(implement).toContain("runReadOnlyGate");
   expect(implement).toContain("shared lifecycle, dispatcher, worker, cleanup, browser");
@@ -292,6 +372,9 @@ test("TASK-554 implementation workflow executes fail-closed ownership, line, and
     failedEmptySmokeDirectoryRejected: true,
     failedSmokeRestored: true,
     failedRunnerRestored: true,
+    classifiedRunnerFailureRejected: true,
+    malformedRunnerReportRejected: true,
+    unknownRunnerReportRejected: true,
     exactEvidenceRevalidationRejected: true,
     failedEvidenceRevalidationRestored: true,
     replacementEvidenceRejected: true,
@@ -362,7 +445,7 @@ test("TASK-554 closeout guard is import-safe and has executable nofollow modes",
 
   const imported = spawnSync(
     "node",
-    ["--input-type=module", "--eval", `import(${JSON.stringify(`file://${implementPath}`)});`],
+    ["--input-type=module", "--eval", `import(${JSON.stringify(`file://${closeoutPath}`)});`],
     {
       cwd: root,
       encoding: "utf8",
@@ -413,10 +496,24 @@ test("TASK-554 contract keeps public invalidation with TASK-551 and specifies ex
   expect(task).toContain("tests/README.md");
   expect(task).toContain("--task-554-smoke");
   expect(task).toContain("routing-settings-lease.ts");
-  expect(task).toContain("exactly these four paths to the sole");
+  expect(task).toContain("exactly these seven paths to the sole");
   expect(task).toContain("`security-gate-repair`");
+  expect(task).toContain("isolated frozen\ninstall validator");
+  expect(task).not.toMatch(/^bun install --frozen-lockfile$/mu);
+  expect(task).toContain("never install into this repository working tree");
+  expect(task).toContain("it never writes or restores root `node_modules`");
+  expect(task).toContain("atomically renames the verified sandbox");
+  expect(task).toContain("nonrecursive `rmdir`");
+  expect(task).toContain("`spawn_failed`,\n`terminated`, `exit_<0..255>`, or `invalid_result`");
+  expect(task).toContain("task_554_workflow_import_direct_invocation");
   expect(task).toContain("private PostgreSQL\n`xmin` ownership version");
   expect(task).toContain("exact JSON/timestamp records");
+  expect(task).toContain("smoke_server_unexpected_exit");
+  expect(task).toContain("smoke_authentication_failed");
+  expect(task).toContain("task_554_smoke_runner_failed:report_invalid");
+  expect(task).toContain(
+    "runner error text, status,\nsignal, logs, and report bytes are never interpolated"
+  );
   expect(task).not.toContain("mkdir -p _docs/_workflows/_smoke/task-554");
   expect(task).not.toContain("> _docs/_workflows/_smoke/task-554");
   expect(cookbook).toContain("--task-554-smoke");

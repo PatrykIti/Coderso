@@ -21,6 +21,7 @@ export interface SmokeInput {
 
 export type SmokeErrorCode =
   | "smoke_adapter_unavailable"
+  | "smoke_authentication_failed"
   | "smoke_argument_invalid"
   | "smoke_cleanup_failed"
   | "smoke_output_invalid"
@@ -29,7 +30,8 @@ export type SmokeErrorCode =
   | "smoke_process_spawn_failed"
   | "smoke_process_timeout"
   | "smoke_repository_changed"
-  | "smoke_repository_invalid";
+  | "smoke_repository_invalid"
+  | "smoke_server_unexpected_exit";
 
 export class SmokeError extends Error {
   readonly code: SmokeErrorCode;

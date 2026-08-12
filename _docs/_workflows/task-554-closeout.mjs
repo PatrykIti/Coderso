@@ -1,4 +1,4 @@
-import { constants, closeSync, fstatSync, lstatSync, mkdirSync, mkdtempSync, openSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { constants, closeSync, fstatSync, lstatSync, mkdirSync, mkdtempSync, openSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -228,10 +228,17 @@ function parseMode() {
 }
 
 function isDirectInvocation() {
-  return process.env.TASK_554_WORKFLOW_IMPORT !== "1" && process.argv[1] !== undefined && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);
+  try {
+    return typeof process.argv[1] === "string" && realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url));
+  } catch {
+    return false;
+  }
 }
 
-export const result = isDirectInvocation()
+const invokedDirectly = isDirectInvocation();
+if (process.env.TASK_554_WORKFLOW_IMPORT === "1" && invokedDirectly) throw new Error("task_554_workflow_import_direct_invocation");
+
+export const result = invokedDirectly
   ? (() => {
     const command = parseMode();
     if (command.mode === "self-test") return selfTest();
@@ -240,4 +247,4 @@ export const result = isDirectInvocation()
     return command.mode === "metadata" ? validateTask554MetadataCloseout(ROOT, snapshot) : validateTask554TerminalCloseout(ROOT, snapshot);
   })()
   : null;
-if (isDirectInvocation()) process.stdout.write(`${JSON.stringify(result)}\n`);
+if (invokedDirectly) process.stdout.write(`${JSON.stringify(result)}\n`);

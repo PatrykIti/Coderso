@@ -66,7 +66,7 @@ Post mutation wrapper.
   root `package.json` / `bun.lock` vulnerability overrides for `js-yaml`
   `4.3.1` and `nanoid` `3.3.17`, plus TASK-540's fixed-loopback public
   bot-protection smoke preflight and its focused boundary test. Both pinned
-  workflows assign exactly these four paths to the sole `security-gate-repair`
+  workflows assign exactly these seven paths to the sole `security-gate-repair`
   owner; resume accepts that bounded owner scope. It must not
   alter the production bot-protection route, suppress Semgrep/Trivy/Bun-audit,
   or widen TASK-540's smoke host. This narrow repair is validated by a fresh
@@ -98,6 +98,10 @@ and lands these pre-TASK-545 workflow files and no others:
 - `_docs/_workflows/task-554-closeout.mjs`;
 - `tests/unit/workflows/task554AuthorAudit.test.ts`; and
 - `tests/unit/workflows/task554WorkflowContracts.test.ts`.
+The security-gate-repair owner additionally owns only
+`scripts/task-554-isolated-frozen-install.mjs`, its adjacent typed declaration,
+and its focused `tests/unit/workflows/task554IsolatedFrozenInstall.test.ts`
+companion; they are not additional workflow entry points.
 The scripts pin task ID `TASK-554`, changelog `1267`, the source/test/docs/smoke
 ownership in this contract, and the concurrent-stream forbidden paths above.
 They reject caller-supplied task IDs, changelog numbers, file owners, workflow
@@ -177,7 +181,80 @@ device+inode+mode; SHA-256 bytes; regular files require one link; symlinks,
 hard links, oversized entries, and ancestor replacement fail closed). A write
 is a failed read-only gate, except literal `bun run gates:coderso`: its sole
 report is restored in place only when its original identity survives, then the
-full `.tmp` inventory must match; unexpected residue fails closed. Repairs
+full `.tmp` inventory must match; unexpected residue fails closed. The only
+permitted side effect outside the repository is TASK-554's isolated frozen
+install validator: before every dependency-consuming full/security-repair gate
+it pins the raw project root with `O_DIRECTORY|O_NOFOLLOW` and exact
+`lstat`/`fstat` identity, then keeps that descriptor through copy, runner, and
+final cleanup. It resolves `.npmrc` and exactly `package.json`, `bun.lock`,
+`bunfig.toml`, the three workspace manifests, and the two pinned patch files
+component by component beneath that descriptor anchor; every directory is
+opened nofollow and every leaf uses stable nofollow descriptor reads. The raw
+root must still identify the retained descriptor before copy, immediately
+before and after the runner, and again in `finally` before close; a whole-root
+rename/replacement fails with fixed nonsecret errors and replacement bytes can
+never enter the sandbox. The validator calls `tmpdir` exactly once, requires an
+absolute normalized NUL-free path, rejects symlinks in every ancestor or at the
+root, and pins that directory with `O_DIRECTORY|O_NOFOLLOW` plus exact
+`lstat`/`fstat` identity. Descriptor-resolved real paths prove the temp root is
+outside the pinned project root. The retained temp-root descriptor owns both
+`mkdtemp` prefixes; neither sandbox nor cleanup creation re-reads `tmpdir` or
+uses the replaceable raw temp path. Raw temp-root identity is checked around
+creation/runner and in `finally`, while cleanup remains anchored to the retained
+descriptor if the raw path was replaced. The validator creates one sandbox and
+copies the pinned bytes through a retained sandbox directory descriptor.
+Destination parents are created one component at a time and opened
+with `O_DIRECTORY|O_NOFOLLOW`; leaf files use `O_EXCL|O_NOFOLLOW`, descriptor
+writes/reads, and a final anchored identity check. Immediately before the
+runner, the sandbox must contain only the exact pinned files/parent directories
+and an empty `.bun-cache`; every copied byte is re-read through the sandbox FD,
+and `.npmrc` or any extra entry fails before invocation. Pinned bytes and
+`.npmrc` absence are revalidated after the runner, while `node_modules` and
+cache output are then allowed. It runs `bun install --frozen-lockfile
+--ignore-scripts` against the explicit canonical npm registry, with `cwd` and
+`--cache-dir` set to their exact
+`/proc/self/fd/<number>` descriptor anchors, not their replaceable raw paths.
+The default runner inherits those exact descriptor numbers, and the cache
+descriptor remains open through the complete synchronous runner call before it
+is closed in `finally`, ahead of sandbox cleanup. Its environment is a fixed
+nonsecret map containing only `PATH`, `CI`, and `NO_COLOR`; arbitrary caller
+environment variables and npm configuration are not inherited. The validator removes only
+that verified owned sandbox in `finally`. Cleanup creates a separately verified private
+temporary directory, opens it with `O_DIRECTORY|O_NOFOLLOW`, and constructs the
+unique quarantine child only beneath that retained descriptor anchor. It
+atomically renames the verified sandbox to that child, revalidates both the quarantined inode and that the source
+path remains absent, then performs a bounded bottom-up nofollow walk anchored at
+the still-open sandbox descriptor. It unlinks non-directories and removes each
+verified empty directory with nonrecursive `rmdir`; no recursive pathname delete
+is permitted, and the root descriptor remains open through quarantine-root
+`rmdir`. Any substitution detected by the descriptor/path identity checks fails
+closed, leaves the possible replacement untouched, and keeps the primary
+failure. The cleanup-root descriptor remains open through quarantine cleanup
+and the final raw-root identity check plus nonrecursive `rmdir`; a raw
+cleanup-root rename/symlink replacement can leave only an empty original-root
+residue and never redirects the sandbox into the replacement target. Node
+exposes no descriptor-relative `unlinkat`: a same-UID replacement
+inside the final anchored `lstat`-to-`unlink`/`rmdir` leaf window can at most
+remove that one non-directory or empty directory entry; cleanup never follows
+or recursively enters it. The validator rejects source replacement, links,
+non-regular or changed inputs, destination replacement, and any project
+`.npmrc`; it never writes or restores root `node_modules`. A returned runner
+failure, a synchronous runner throw, or a getter/proxy trap while classifying
+the returned result emits only the safe token `spawn_failed`,
+`terminated`, `exit_<0..255>`, or `invalid_result`, never raw error, signal,
+or runner text. Each result field is read once: only absent/null `error`,
+absent/null or canonical bounded `SIG[A-Z0-9]+` signal, and integer status
+`0..255` are valid; Error-like values map to `spawn_failed`, canonical signals
+to `terminated`, and every other shape to `invalid_result`.
+
+This validator provides path/substitution integrity and destructive-cleanup
+defense; it is not an OS security boundary against a malicious process running
+as the same operating-system UID. Such a process can inspect `/proc`, trace the
+runner, or race and restore mutations during the synchronous install window.
+The immediate pre/post checks detect observable drift but do not claim
+immutability during that window. Hostile same-UID workloads require a dedicated
+CI account, container, or stronger operating-system isolation. The same root
+before/after repository fingerprint wraps the operation. Repairs
 derive affected owner/lens from actual changed paths, not incoming claims; empty
 repairs fail, clean reconcile succeeds, and a non-clean reconcile starts the
 next bounded round. Fingerprints cover tracked/unignored paths and a bounded
@@ -214,7 +291,11 @@ modify a pinned script. The author/audit parser permits only normal run,
 bootstrap self-test, or bootstrap verification. The implementation parser adds
 only the mutually exclusive `--task-554-resume-after-fix` continuation; the
 closeout module permits only its snapshot/self-test/two validation modes. The
-author/audit, implementation post-audit/final-drift, and fix workflows
+four pinned modules are safe imports even from an arbitrary host `argv`, but a
+direct invocation with `TASK_554_WORKFLOW_IMPORT=1` fails before parsing or
+validation with `task_554_workflow_import_direct_invocation`; import mode can
+never suppress an executable workflow, closeout, gate, or validation command.
+The author/audit, implementation post-audit/final-drift, and fix workflows
 independently reject a result unless it has exactly the declared top-level and
 finding keys, bounded non-empty summary/evidence fields, allowed severity,
 boolean `pass`, and findings whose HIGH/MEDIUM contents agree with `pass`; an
@@ -973,6 +1054,18 @@ allowed; only each row's path-to-file digest equality is authoritative. This
 makes the required zero page-error and repository-restoration evidence explicit
 without adding a task-local reporter.
 
+The shared supervised-server resource keeps generic `smoke_process_failed` for
+an unattached resource, but classifies an attached exit as the reusable,
+message-neutral `smoke_server_unexpected_exit`. Each TASK-554 admin-auth
+attempt races that shared exit promise. Only the finite false outcomes emitted
+by the shared admin-auth helper (`credentials_missing`, `login_network_failed`,
+bounded failing `login_failed:<300..599>`, and missing/invalid session cookie) map to
+the reusable, message-neutral `smoke_authentication_failed`; impossible output
+fails closed as `smoke_output_invalid`, with no credential, cookie, URL,
+response, or helper-error interpolation. The adapter owns the shared server
+source plus its supervised-server and repository-report tests in both pinned
+workflow maps.
+
 Evidence is only below `_docs/_workflows/_smoke/task-554/<session>/`. The
 canonical smoke-only workflow mode rejects a pre-existing session, creates
 exactly one new directory, and securely opens private `report.json` before it
@@ -996,6 +1089,14 @@ It delegates to the shared wrapper and its existing `runTask554SmokeProfile`
 capture. Do not pre-create evidence directories or redirect wrapper output from
 a shell; that bypasses the capture's ordered report-creation and validation
 contract.
+After the private report fd closes, a nonzero/error/signalled wrapper is never
+treated as success: the workflow performs a stable nofollow <=1 MiB read of
+only its owned `report.json` before cleanup, accepts only the exact current
+suite/profile/session failure-report shape with one allowlisted safe code, and
+throws only `task_554_smoke_runner_failed:<code>`. Missing, malformed,
+mismatched, or unknown-code reports fail closed as
+`task_554_smoke_runner_failed:report_invalid`; runner error text, status,
+signal, logs, and report bytes are never interpolated.
 The implementation workflow builds the manifest evaluation with the literal,
 JSON-injected immutable input `{ command: "run", suite: "task-554", profile,
 session }`; it never relies on an ambient `TASK_554_SMOKE_*` environment value.
@@ -1005,7 +1106,14 @@ directories (`fast` only with `task-554-fast`; `certification` only with
 rejects mismatched top-level/suite-cleanup snapshot receipts, ignored workflow
 side effects, a failed-smoke residue, and an invalid session exclusion.
 ## Testing Requirements
-Run these exact owning lanes:
+Run these exact owning lanes. The logical frozen-install line is executed only
+by the isolated validator described above: it performs the real frozen Bun
+install with descriptor anchors that resolve to the sandbox working directory
+and its sandbox-local `--cache-dir`, never raw paths or the repository root,
+before the first
+dependency-consuming full or security-repair command.
+Run its focused injected-runner/filesystem cases and its real isolated-install
+cleanup case with the workflow lane as well.
 ```bash
 bunx vitest run --config vitest.config.ts \
   tests/vitest/validation/postSchemas.test.ts \
@@ -1022,16 +1130,20 @@ bun test \
   tests/unit/auth/rbac.test.ts
 bun test \
   tests/unit/runtime-smoke/cli-registry.test.ts \
+  tests/unit/runtime-smoke/supervised-server.test.ts \
+  tests/unit/runtime-smoke/repository-report.test.ts \
   tests/unit/runtime-smoke/task-554-adapter.test.ts \
   tests/unit/runtime-smoke/task-554-worker.test.ts
 bun test tests/unit/runtime-smoke/task540-native-suite-boundary.test.ts
 bun test \
   tests/unit/workflows/task554AuthorAudit.test.ts \
+  tests/unit/workflows/task554IsolatedFrozenInstall.test.ts \
   tests/unit/workflows/task554WorkflowContracts.test.ts
 bun --cwd core lint:types
 bun --cwd core lint
 bun run check:admin-boundary
-bun install --frozen-lockfile
+# The workflow executes its logical frozen-install gate through
+# runTask554IsolatedFrozenInstall; never install into this repository working tree.
 bun run scan:security:strict
 bun run gates:coderso
 bun run precommit:check

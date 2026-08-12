@@ -1,18 +1,11 @@
 import { createHash } from "node:crypto";
 import { execFileSync, spawnSync } from "node:child_process";
-import { chmodSync, closeSync, constants, existsSync, fchmodSync, fstatSync, linkSync, lstatSync, mkdirSync, mkdtempSync, openSync, readFileSync, readdirSync, readlinkSync, renameSync, rmdirSync, rmSync, symlinkSync, unlinkSync, writeFileSync } from "node:fs";
+import { chmodSync, closeSync, constants, existsSync, fchmodSync, fstatSync, linkSync, lstatSync, mkdirSync, mkdtempSync, openSync, readFileSync, readdirSync, readlinkSync, realpathSync, renameSync, rmdirSync, rmSync, symlinkSync, unlinkSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { pathToFileURL } from "node:url";
-import {
-  assertTask554BoardClosureDelta,
-  assertTask554ChangelogClosureDelta,
-  assertTask554TerminalStatusDelta,
-  CHANGELOG_1267_ENTRY_BYTES,
-  CHANGELOG_1267_INDEX_ROW,
-  CHANGELOG_RESERVATION_AFTER,
-  CHANGELOG_RESERVATION_BEFORE,
-} from "./task-554-closeout.mjs";
+import { fileURLToPath, pathToFileURL } from "node:url";
+import { runTask554IsolatedFrozenInstall } from "../../scripts/task-554-isolated-frozen-install.mjs";
+import { assertTask554BoardClosureDelta, assertTask554ChangelogClosureDelta, assertTask554TerminalStatusDelta, CHANGELOG_1267_ENTRY_BYTES, CHANGELOG_1267_INDEX_ROW, CHANGELOG_RESERVATION_AFTER, CHANGELOG_RESERVATION_BEFORE } from "./task-554-closeout.mjs";
 export const meta = Object.freeze({ name: "task-554-implement", description: "Implement TASK-554 sequentially with fail-closed ownership, executable gates, shared smoke, and an owner-review handoff.", phases: Object.freeze([Object.freeze({ title: "Start gate" }), Object.freeze({ title: "Sequential owners" }), Object.freeze({ title: "Documentation" }), Object.freeze({ title: "Full validation" }), Object.freeze({ title: "Post-audit" }), Object.freeze({ title: "Runtime smoke" }), Object.freeze({ title: "Owner review" })]) });
 const ROOT = "/home/coder/project/Coderso";
 export const TASK_554_BASELINE_SHA = "f6705443e129c9e89c32763405800b72ba3a0680";
@@ -35,24 +28,26 @@ export const TASK_554_SMOKE_SCENARIO_IDS = Object.freeze(["writer-metadata-save-
 const RESULT_SCHEMA = Object.freeze({ type: "object", additionalProperties: false, required: ["pass", "summary", "errors"], properties: { pass: { type: "boolean" }, summary: { type: "string" }, errors: { type: "array", items: { type: "string" } } } });
 const AUDIT_SCHEMA = Object.freeze({ type: "object", additionalProperties: false, required: ["pass", "summary", "findings"], properties: { pass: { type: "boolean" }, summary: { type: "string" }, findings: { type: "array", items: { type: "object", additionalProperties: false, required: ["severity", "area", "finding", "evidence", "recommendation"], properties: { severity: { type: "string", enum: ["HIGH", "MEDIUM", "LOW"] }, area: { type: "string" }, finding: { type: "string" }, evidence: { type: "string" }, recommendation: { type: "string" } } } } } });
 const owner = (id, paths) => Object.freeze({ id, paths: Object.freeze(paths) });
-export const TASK_554_SECURITY_GATE_REPAIR_PATHS = Object.freeze(["package.json", "bun.lock", "scripts/runtime-smoke/adapters/task-540/suite/runtime/platform-actions.ts", "tests/unit/runtime-smoke/task540-native-suite-boundary.test.ts"]);
-export const OWNERS = Object.freeze([owner("workflow-contract-tests", ["tests/unit/workflows/task554AuthorAudit.test.ts", "tests/unit/workflows/task554WorkflowContracts.test.ts"]), owner("contract-schema-route", ["core/services/posts/postMetadataContract.ts", "core/server/validation/postSchemas.ts", "core/server/routes/postsRoutes.ts", "core/server/routes/index.ts", "core/server/httpServer.ts", "tests/vitest/server/postMetadataContract.test.ts", "tests/vitest/server/requestBody.test.ts", "tests/vitest/validation/postSchemas.test.ts", "tests/integration/routes/postsRoutes.test.ts", "tests/integration/routes/postMetadataRbac.test.ts"]), owner("admin-client", ["core/admin/services/postsClient.ts", "tests/vitest/admin/postsClient.test.ts"]), owner("classic-metadata-ui", ["core/admin/ui/posts/editor/postMetadataMutationPayload.ts", "core/admin/ui/posts/editor/PostClassicEditorShell.tsx", "tests/vitest/ui/post-metadata-mutation-payload.test.ts", "tests/vitest/ui/post-classic-editor-shell-wave.test.tsx", "tests/vitest/ui/post-classic-metadata-hydration.test.tsx", "tests/vitest/ui/post-editor-state-metadata-boundary.test.ts"]), owner("smoke-adapter", ["scripts/runtime-smoke/contracts.ts", "scripts/runtime-smoke/cli.ts", "scripts/runtime-smoke/registry.ts", "scripts/runtime-smoke/adapters/task-554.ts", "scripts/runtime-smoke/adapters/task-554/browser-actions.ts", "scripts/runtime-smoke/adapters/task-554/output-manifest.ts", "scripts/runtime-smoke/adapters/task-554/worker-entry.ts", "scripts/runtime-smoke/adapters/task-554/worker-operations.ts", "scripts/runtime-smoke/adapters/task-554/routing-settings-lease.ts", "scripts/runtime-smoke/adapters/task-554/production-handlers.ts", "tests/unit/runtime-smoke/cli-registry.test.ts", "tests/unit/runtime-smoke/task-554-adapter.test.ts", "tests/unit/runtime-smoke/task-554-worker.test.ts"]), owner("security-gate-repair", TASK_554_SECURITY_GATE_REPAIR_PATHS)]);
+export const TASK_554_SECURITY_GATE_REPAIR_PATHS = Object.freeze(["package.json", "bun.lock", "scripts/runtime-smoke/adapters/task-540/suite/runtime/platform-actions.ts", "tests/unit/runtime-smoke/task540-native-suite-boundary.test.ts", "scripts/task-554-isolated-frozen-install.mjs", "scripts/task-554-isolated-frozen-install.d.mts", "tests/unit/workflows/task554IsolatedFrozenInstall.test.ts"]);
+export const OWNERS = Object.freeze([owner("workflow-contract-tests", ["tests/unit/workflows/task554AuthorAudit.test.ts", "tests/unit/workflows/task554WorkflowContracts.test.ts"]), owner("contract-schema-route", ["core/services/posts/postMetadataContract.ts", "core/server/validation/postSchemas.ts", "core/server/routes/postsRoutes.ts", "core/server/routes/index.ts", "core/server/httpServer.ts", "tests/vitest/server/postMetadataContract.test.ts", "tests/vitest/server/requestBody.test.ts", "tests/vitest/validation/postSchemas.test.ts", "tests/integration/routes/postsRoutes.test.ts", "tests/integration/routes/postMetadataRbac.test.ts"]), owner("admin-client", ["core/admin/services/postsClient.ts", "tests/vitest/admin/postsClient.test.ts"]), owner("classic-metadata-ui", ["core/admin/ui/posts/editor/postMetadataMutationPayload.ts", "core/admin/ui/posts/editor/PostClassicEditorShell.tsx", "tests/vitest/ui/post-metadata-mutation-payload.test.ts", "tests/vitest/ui/post-classic-editor-shell-wave.test.tsx", "tests/vitest/ui/post-classic-metadata-hydration.test.tsx", "tests/vitest/ui/post-editor-state-metadata-boundary.test.ts"]), owner("smoke-adapter", ["scripts/runtime-smoke/contracts.ts", "scripts/runtime-smoke/cli.ts", "scripts/runtime-smoke/registry.ts", "scripts/runtime-smoke/server/supervised-server.ts", "scripts/runtime-smoke/adapters/task-554.ts", "scripts/runtime-smoke/adapters/task-554/browser-actions.ts", "scripts/runtime-smoke/adapters/task-554/output-manifest.ts", "scripts/runtime-smoke/adapters/task-554/worker-entry.ts", "scripts/runtime-smoke/adapters/task-554/worker-operations.ts", "scripts/runtime-smoke/adapters/task-554/routing-settings-lease.ts", "scripts/runtime-smoke/adapters/task-554/production-handlers.ts", "tests/unit/runtime-smoke/cli-registry.test.ts", "tests/unit/runtime-smoke/supervised-server.test.ts", "tests/unit/runtime-smoke/repository-report.test.ts", "tests/unit/runtime-smoke/task-554-adapter.test.ts", "tests/unit/runtime-smoke/task-554-worker.test.ts"]), owner("security-gate-repair", TASK_554_SECURITY_GATE_REPAIR_PATHS)]);
 const DOCUMENTATION_OWNER = owner("documentation", ["_docs/CMS_API.md", "_docs/RBAC_SPEC.md", "_docs/SECURITY_SPEC.md", "_docs/ADMIN_CACHE.md", "_docs/ADMIN_CACHE_MAP.md", "docs/develop/runtime-smoke-cookbook.md", "docs/develop/assistant.md", "tests/README.md"]);
 const FORBIDDEN_PATHS = Object.freeze([...TASK_554_WORKFLOW_PATHS, "_TMP-task-dispatch-plan-2026-08-10.md", "core/services/content/postsService.ts", "core/services/content/postMutationService.ts", "_docs/_TASKS/TASK-414", "_docs/_TASKS/TASK-547", "_docs/_CHANGELOG/1266-", "core/services/kits/fullSitePackage/", "core/services/kits/fullSiteInstall/", "core/admin/ui/posts/editor/hooks/usePostEditorState.ts"]);
 const POST_AUDIT_LENSES = Object.freeze(["scope-fidelity", "rbac-fail-closed", "present-only-byte-identity", "cross-stream-smoke", "test-integrity"]);
 const command = (label, commandName, args) => Object.freeze({ label, command: commandName, args: Object.freeze(args) });
 export const FULL_GATE_COMMANDS = Object.freeze([
+  command("task_554_frozen_install", "bun", ["install", "--frozen-lockfile"]),
+  command("task_554_frozen_install_test", "bun", ["test", "tests/unit/workflows/task554IsolatedFrozenInstall.test.ts"]),
   command("task_554_vitest", "bunx", ["vitest", "run", "--config", "vitest.config.ts", "tests/vitest/validation/postSchemas.test.ts", "tests/vitest/server/postMetadataContract.test.ts", "tests/vitest/server/requestBody.test.ts", "tests/vitest/admin/postsClient.test.ts", "tests/vitest/ui/post-metadata-mutation-payload.test.ts", "tests/vitest/ui/post-classic-editor-shell-wave.test.tsx", "tests/vitest/ui/post-classic-metadata-hydration.test.tsx", "tests/vitest/ui/post-editor-state-metadata-boundary.test.ts"]),
   command("task_554_route_and_rbac", "bun", ["test", "tests/integration/routes/postsRoutes.test.ts", "tests/integration/routes/postMetadataRbac.test.ts", "tests/unit/auth/rbac.test.ts"]),
-  command("task_554_runtime_harness", "bun", ["test", "tests/unit/runtime-smoke/cli-registry.test.ts", "tests/unit/runtime-smoke/task-554-adapter.test.ts", "tests/unit/runtime-smoke/task-554-worker.test.ts"]),
+  command("task_554_runtime_harness", "bun", ["test", "tests/unit/runtime-smoke/cli-registry.test.ts", "tests/unit/runtime-smoke/supervised-server.test.ts", "tests/unit/runtime-smoke/repository-report.test.ts", "tests/unit/runtime-smoke/task-554-adapter.test.ts", "tests/unit/runtime-smoke/task-554-worker.test.ts"]),
   command("task_554_workflow_contracts", "bun", ["test", "tests/unit/workflows/task554AuthorAudit.test.ts", "tests/unit/workflows/task554WorkflowContracts.test.ts"]),
-  command("task_554_types", "bun", ["--cwd", "core", "lint:types"]), command("task_554_lint", "bun", ["--cwd", "core", "lint"]), command("task_554_admin_boundary", "bun", ["run", "check:admin-boundary"]), command("task_540_boundary", "bun", ["test", "tests/unit/runtime-smoke/task540-native-suite-boundary.test.ts"]), command("task_554_frozen_install", "bun", ["install", "--frozen-lockfile"]), command("task_554_security_scan", "bun", ["run", "scan:security:strict"]), command("task_554_coderso_release_gates", "bun", ["run", "gates:coderso"]), command("task_554_precommit", "bun", ["run", "precommit:check"]),
+  command("task_554_types", "bun", ["--cwd", "core", "lint:types"]), command("task_554_lint", "bun", ["--cwd", "core", "lint"]), command("task_554_admin_boundary", "bun", ["run", "check:admin-boundary"]), command("task_540_boundary", "bun", ["test", "tests/unit/runtime-smoke/task540-native-suite-boundary.test.ts"]), command("task_554_security_scan", "bun", ["run", "scan:security:strict"]), command("task_554_coderso_release_gates", "bun", ["run", "gates:coderso"]), command("task_554_precommit", "bun", ["run", "precommit:check"]),
   command("task_554_author_syntax", "node", ["--check", "_docs/_workflows/task-554-author-audit.mjs"]), command("task_554_implement_syntax", "node", ["--check", "_docs/_workflows/task-554-implement.mjs"]), command("task_554_fix_syntax", "node", ["--check", "_docs/_workflows/task-554-fix.mjs"]), command("task_554_closeout_syntax", "node", ["--check", "_docs/_workflows/task-554-closeout.mjs"]),
 ]);
 export const OWNER_GATE_COMMANDS = Object.freeze({
   "workflow-contract-tests": Object.freeze([command("task_554_workflow_contracts", "bun", ["test", "tests/unit/workflows/task554AuthorAudit.test.ts", "tests/unit/workflows/task554WorkflowContracts.test.ts"]), command("task_554_author_syntax", "node", ["--check", "_docs/_workflows/task-554-author-audit.mjs"]), command("task_554_implement_syntax", "node", ["--check", "_docs/_workflows/task-554-implement.mjs"]), command("task_554_fix_syntax", "node", ["--check", "_docs/_workflows/task-554-fix.mjs"])]), "contract-schema-route": Object.freeze([command("task_554_contract_vitest", "bunx", ["vitest", "run", "--config", "vitest.config.ts", "tests/vitest/validation/postSchemas.test.ts", "tests/vitest/server/postMetadataContract.test.ts", "tests/vitest/server/requestBody.test.ts"]), command("task_554_contract_bun", "bun", ["test", "tests/integration/routes/postsRoutes.test.ts", "tests/integration/routes/postMetadataRbac.test.ts", "tests/unit/auth/rbac.test.ts"]), command("task_554_types", "bun", ["--cwd", "core", "lint:types"]), command("task_554_lint", "bun", ["--cwd", "core", "lint"])]),
   "admin-client": Object.freeze([command("task_554_client_vitest", "bunx", ["vitest", "run", "--config", "vitest.config.ts", "tests/vitest/admin/postsClient.test.ts"]), command("task_554_types", "bun", ["--cwd", "core", "lint:types"]), command("task_554_lint", "bun", ["--cwd", "core", "lint"])]), "classic-metadata-ui": Object.freeze([command("task_554_ui_vitest", "bunx", ["vitest", "run", "--config", "vitest.config.ts", "tests/vitest/ui/post-metadata-mutation-payload.test.ts", "tests/vitest/ui/post-classic-editor-shell-wave.test.tsx", "tests/vitest/ui/post-classic-metadata-hydration.test.tsx", "tests/vitest/ui/post-editor-state-metadata-boundary.test.ts"]), command("task_554_types", "bun", ["--cwd", "core", "lint:types"]), command("task_554_lint", "bun", ["--cwd", "core", "lint"])]),
-  "smoke-adapter": Object.freeze([command("task_554_runtime_harness", "bun", ["test", "tests/unit/runtime-smoke/cli-registry.test.ts", "tests/unit/runtime-smoke/task-554-adapter.test.ts", "tests/unit/runtime-smoke/task-554-worker.test.ts"]), command("task_554_types", "bun", ["--cwd", "core", "lint:types"]), command("task_554_lint", "bun", ["--cwd", "core", "lint"])]), "security-gate-repair": Object.freeze([command("task_540_boundary", "bun", ["test", "tests/unit/runtime-smoke/task540-native-suite-boundary.test.ts"]), command("task_554_frozen_install", "bun", ["install", "--frozen-lockfile"]), command("task_554_security_scan", "bun", ["run", "scan:security:strict"])]),
+  "smoke-adapter": Object.freeze([command("task_554_runtime_harness", "bun", ["test", "tests/unit/runtime-smoke/cli-registry.test.ts", "tests/unit/runtime-smoke/supervised-server.test.ts", "tests/unit/runtime-smoke/repository-report.test.ts", "tests/unit/runtime-smoke/task-554-adapter.test.ts", "tests/unit/runtime-smoke/task-554-worker.test.ts"]), command("task_554_types", "bun", ["--cwd", "core", "lint:types"]), command("task_554_lint", "bun", ["--cwd", "core", "lint"])]), "security-gate-repair": Object.freeze([command("task_554_frozen_install", "bun", ["install", "--frozen-lockfile"]), command("task_554_frozen_install_test", "bun", ["test", "tests/unit/workflows/task554IsolatedFrozenInstall.test.ts"]), command("task_540_boundary", "bun", ["test", "tests/unit/runtime-smoke/task540-native-suite-boundary.test.ts"]), command("task_554_security_scan", "bun", ["run", "scan:security:strict"])]),
 });
 function commandOutput(root, command, args, environment) { return execFileSync(command, args, { cwd: root, encoding: "buffer", stdio: ["ignore", "pipe", "pipe"], ...(environment ? { env: { ...process.env, ...environment } } : {}) }); }
 function commandStatus(root, command, args) { try { commandOutput(root, command, args); return 0; } catch (error) { return typeof error?.status === "number" ? error.status : 255; } }
@@ -317,17 +312,18 @@ function runTask554ReleaseGate(root, work) {
   if (primary) throw primary;
 }
 function runRequiredCommand(root, entry) {
+  if (entry.label === "task_554_frozen_install") throw new Error("task_554_frozen_install_must_run_first");
   if (entry.label === "task_554_coderso_release_gates") return runTask554ReleaseGate(root, () => runRequiredCommandDirect(root, entry));
   return runRequiredCommandDirect(root, entry);
 }
+function runIsolatedFrozenInstallFirst(root, entries) { const installs = entries.filter((entry) => entry.label === "task_554_frozen_install"); if (installs.length > 1) throw new Error("task_554_frozen_install_duplicate"); if (installs.length) runReadOnlyGate("task_554_isolated_frozen_install_mutated", root, () => runTask554IsolatedFrozenInstall(root)); return entries.filter((entry) => entry.label !== "task_554_frozen_install"); }
 function runOwnerGateCommands(root, ownerId) {
+  const commands = OWNER_GATE_COMMANDS[ownerId];
+  if (!Array.isArray(commands)) throw new Error(`task_554_owner_gate_missing:${ownerId}`);
+  const ownerCommands = ownerId === "workflow-contract-tests" ? [...commands, command("task_554_closeout_syntax", "node", ["--check", "_docs/_workflows/task-554-closeout.mjs"])] : commands;
+  const gates = runIsolatedFrozenInstallFirst(root, ownerCommands);
   return runReadOnlyGate(`task_554_owner_gate_mutated:${ownerId}`, root, () => {
-    const commands = OWNER_GATE_COMMANDS[ownerId];
-    if (!Array.isArray(commands)) throw new Error(`task_554_owner_gate_missing:${ownerId}`);
-    const ownerCommands = ownerId === "workflow-contract-tests"
-      ? [...commands, command("task_554_closeout_syntax", "node", ["--check", "_docs/_workflows/task-554-closeout.mjs"])]
-      : commands;
-    for (const command of ownerCommands) runRequiredCommand(root, command);
+    for (const command of gates) runRequiredCommand(root, command);
     assertTask554LineLimit(root);
     runRequiredCommand(root, Object.freeze({ label: `task_554_owner_diff_${ownerId}`, command: "git", args: Object.freeze(["diff", "--check"]) }));
     return Object.freeze(ownerCommands.map(({ label }) => label));
@@ -335,8 +331,9 @@ function runOwnerGateCommands(root, ownerId) {
 }
 export function runTask554FullValidation(root = ROOT) {
   verifyBeforeDispatch("full_validation", root);
+  const gates = runIsolatedFrozenInstallFirst(root, FULL_GATE_COMMANDS);
   return runReadOnlyGate("task_554_full_validation_mutated", root, () => {
-    for (const entry of FULL_GATE_COMMANDS) runRequiredCommand(root, entry);
+    for (const entry of gates) runRequiredCommand(root, entry);
     const lineCounts = assertTask554LineLimit(root);
     runRequiredCommand(root, Object.freeze({ label: "task_554_baseline_diff_check", command: "git", args: Object.freeze(["diff", "--check", `${TASK_554_BASELINE_SHA}...HEAD`]) }));
     runRequiredCommand(root, Object.freeze({ label: "task_554_worktree_diff_check", command: "git", args: Object.freeze(["diff", "--check"]) }));
@@ -499,32 +496,31 @@ function assertExactReport(report, profile, session, manifest, root) {
   if (!report || typeof report !== "object" || Array.isArray(report)) throw new Error("task_554_smoke_report_shape");
   const reportKeys = Object.keys(report).sort();
   const expectedReportKeys = ["schemaVersion", "suiteId", "profile", "session", "pass", "serverUp", "timings", "processes", "snapshots", "scenarios", "screenshots", "consoleErrors", "suiteCleanup", "cleanup", "failures"].sort();
-  if (reportKeys.length !== expectedReportKeys.length || reportKeys.some((key, index) => key !== expectedReportKeys[index])) {
-    throw new Error("task_554_smoke_report_keys");
-  }
-  if (report.schemaVersion !== 1 || report.suiteId !== "task-554" || report.profile !== profile || report.session !== session || report.pass !== true || report.serverUp !== true) {
-    throw new Error("task_554_smoke_report_identity");
-  }
+  if (reportKeys.length !== expectedReportKeys.length || reportKeys.some((key, index) => key !== expectedReportKeys[index])) throw new Error("task_554_smoke_report_keys");
+  if (report.schemaVersion !== 1 || report.suiteId !== "task-554" || report.profile !== profile || report.session !== session || report.pass !== true || report.serverUp !== true) throw new Error("task_554_smoke_report_identity");
   const scenarioIds = report.scenarios?.map((scenario) => scenario?.id);
   assertExactScenarioIds(scenarioIds, "task_554_smoke_report");
-  if (report.scenarios.some((scenario) => !scenario || Object.keys(scenario).length !== 3 || scenario?.pass !== true || !Number.isFinite(scenario?.elapsedMs)) || !Array.isArray(report.consoleErrors) || report.consoleErrors.length !== 0 || !Array.isArray(report.failures) || report.failures.length !== 0 || report.cleanup?.pass !== true || !Number.isSafeInteger(report.snapshots) || report.snapshots !== 2 || report.suiteCleanup?.pageErrors !== 0 || report.suiteCleanup?.repositorySnapshots !== report.snapshots || report.suiteCleanup?.settingsRestored !== true) {
-    throw new Error("task_554_smoke_report_failure");
-  }
-  if (!Array.isArray(report.screenshots) || report.screenshots.length !== manifest.paths.length) {
-    throw new Error("task_554_smoke_report_screenshot_count");
-  }
+  if (report.scenarios.some((scenario) => !scenario || Object.keys(scenario).length !== 3 || scenario?.pass !== true || !Number.isFinite(scenario?.elapsedMs)) || !Array.isArray(report.consoleErrors) || report.consoleErrors.length !== 0 || !Array.isArray(report.failures) || report.failures.length !== 0 || report.cleanup?.pass !== true || !Number.isSafeInteger(report.snapshots) || report.snapshots !== 2 || report.suiteCleanup?.pageErrors !== 0 || report.suiteCleanup?.repositorySnapshots !== report.snapshots || report.suiteCleanup?.settingsRestored !== true) throw new Error("task_554_smoke_report_failure");
+  if (!Array.isArray(report.screenshots) || report.screenshots.length !== manifest.paths.length) throw new Error("task_554_smoke_report_screenshot_count");
   const pngBytes = manifest.paths.map((relativePath) => assertBoundedPng(root, relativePath));
   assertDecodedTask554Pngs(root, pngBytes);
   for (const [index, screenshot] of report.screenshots.entries()) {
     const expectedPath = manifest.paths[index];
-    if (!screenshot || Object.keys(screenshot).length !== 2 || screenshot.path !== expectedPath || typeof screenshot.sha256 !== "string" || !SHA256.test(screenshot.sha256)) {
-      throw new Error(`task_554_smoke_report_screenshot:${index}`);
-    }
+    if (!screenshot || Object.keys(screenshot).length !== 2 || screenshot.path !== expectedPath || typeof screenshot.sha256 !== "string" || !SHA256.test(screenshot.sha256)) throw new Error(`task_554_smoke_report_screenshot:${index}`);
     const actualDigest = createHash("sha256").update(pngBytes[index]).digest("hex");
     if (screenshot.sha256 !== actualDigest) throw new Error(`task_554_smoke_report_hash:${index}`);
   }
   return Object.freeze(pngBytes);
 }
+const TASK_554_SAFE_SMOKE_FAILURE_CODES = new Set(["smoke_adapter_unavailable", "smoke_authentication_failed", "smoke_argument_invalid", "smoke_cleanup_failed", "smoke_output_invalid", "smoke_poll_timeout", "smoke_process_failed", "smoke_process_spawn_failed", "smoke_process_timeout", "smoke_repository_changed", "smoke_repository_invalid", "smoke_server_unexpected_exit"]);
+function task554SmokeFailureCode(report, profile, session) {
+  if (!hasExactKeys(report, ["schemaVersion", "suiteId", "profile", "session", "pass", "serverUp", "timings", "processes", "snapshots", "scenarios", "screenshots", "consoleErrors", "suiteCleanup", "cleanup", "failures"])) return null;
+  const failure = report.failures?.[0]; const cleanup = report.cleanup; const timingKinds = new Set(["suite", "phase", "scenario", "process", "snapshot", "cleanup"]);
+  if (report.schemaVersion !== 1 || report.suiteId !== "task-554" || report.profile !== profile || report.session !== session || report.pass !== false || report.serverUp !== false || !Array.isArray(report.timings) || !Array.isArray(report.scenarios) || report.scenarios.length !== 0 || !Array.isArray(report.screenshots) || report.screenshots.length !== 0 || !Array.isArray(report.consoleErrors) || report.consoleErrors.length !== 0 || !hasExactKeys(report.processes, Object.keys(report.processes)) || !Object.entries(report.processes).every(([key, value]) => /^[a-z0-9][a-z0-9._-]{0,63}$/u.test(key) && Number.isSafeInteger(value) && value >= 0) || !Number.isSafeInteger(report.snapshots) || report.snapshots < 0 || !hasExactKeys(report.suiteCleanup, []) || !hasExactKeys(cleanup, ["pass", "failures"]) || typeof cleanup.pass !== "boolean" || !Array.isArray(cleanup.failures) || !cleanup.failures.every((entry) => hasExactKeys(entry, ["resource", "phase", "code"]) && /^[a-z0-9][a-z0-9._-]{0,63}$/u.test(entry.resource) && ["close", "absence"].includes(entry.phase) && entry.code === "smoke_cleanup_failed")) return null;
+  if (!report.timings.every((entry) => hasExactKeys(entry, ["kind", "name", "count", "failed", "elapsedMs"]) && timingKinds.has(entry.kind) && /^[a-z0-9][a-z0-9._-]{0,63}$/u.test(entry.name) && [entry.count, entry.failed, entry.elapsedMs].every((value) => Number.isSafeInteger(value) && value >= 0))) return null;
+  return Array.isArray(report.failures) && report.failures.length === 1 && hasExactKeys(failure, ["code"]) && typeof failure.code === "string" && TASK_554_SAFE_SMOKE_FAILURE_CODES.has(failure.code) ? failure.code : null;
+}
+function readTask554SmokeFailureCode(root, reportPath, profile, session) { try { const bytes = readStableSmokeFile(root, reportPath, 1_048_576, "task_554_smoke_report"); const text = bytes.toString("utf8"); if (!Buffer.from(text, "utf8").equals(bytes) || bytes[bytes.byteLength - 1] !== 0x0a) return null; assertExactSmokeSessionFiles(root, session, [reportPath]); return task554SmokeFailureCode(JSON.parse(text), profile, session); } catch { return null; } }
 export function assertExactTask554SmokeEvidence(root, profile, session, manifest, reportBytes) {
   const checkedManifest = assertExactTask554Manifest(root, profile, session, manifest);
   assertNofollowTask554SmokeRoot(root);
@@ -637,7 +633,7 @@ export function runTask554SmokeProfile(root, profile, session) {
     } finally {
       closeSync(reportFd);
     }
-    if (execution?.error || execution?.status !== 0 || execution?.signal) throw new Error(`task_554_smoke_runner_failed:${execution?.error?.message ?? execution?.status ?? execution?.signal}`);
+    if (execution?.error || execution?.status !== 0 || execution?.signal) throw new Error(`task_554_smoke_runner_failed:${readTask554SmokeFailureCode(root, ensureInsideRoot(root, reportPath, "smoke_report"), profile, session) ?? "report_invalid"}`);
     assertNofollowTask554SmokeRoot(root);
     const reportBytes = readStableSmokeFile(root, ensureInsideRoot(root, reportPath, "smoke_report"), 1_048_576, "task_554_smoke_report");
     if (reportBytes.byteLength === 0) throw new Error("task_554_smoke_report_missing");
@@ -922,9 +918,10 @@ function workflowSelfTest() {
     assertNoRepositoryMutation("task_554_self_test_validated_smoke", smokeBefore, captureRepositoryFingerprint(tempRoot, [...evidenceSnapshot.keys()]), tempRoot);
     const fakeBunDirectory = path.join(tempRoot, ".task-554-fake-bun"); const fakeManifest = makeSelfTestManifest(tempRoot, "task-554-certification");
     writeTinyFile(path.join(tempRoot, AUTHOR_AUDIT_PATH), `if (process.argv[2] === "--task-554-bootstrap-verify") process.stdout.write(${JSON.stringify(JSON.stringify({ baseline: TASK_554_BASELINE_SHA, paths: TASK_554_WORKFLOW_PATHS }))});\n`);
-    const fakeBun = path.join(fakeBunDirectory, "bun"); writeTinyFile(fakeBun, `#!/usr/bin/env node\nif (process.argv[2] === "--eval") process.stdout.write(${JSON.stringify(JSON.stringify(fakeManifest))}); else { process.stdout.write("{\\"pass\\":false}\\n"); process.exit(1); }\n`); chmodSync(fakeBun, 0o755);
-    const runnerBefore = captureRepositoryFingerprint(tempRoot); const previousPath = process.env.PATH; process.env.PATH = `${fakeBunDirectory}:${previousPath ?? ""}`;
-    try { expectFailure(() => runTask554SmokeProfile(tempRoot, "certification", "task-554-certification"), "task_554_smoke_runner_failed:1"); } finally { if (previousPath === undefined) delete process.env.PATH; else process.env.PATH = previousPath; }
+    const failureReport = (code) => `${JSON.stringify({ schemaVersion: 1, suiteId: "task-554", profile: "certification", session: "task-554-certification", pass: false, serverUp: false, timings: [], processes: {}, snapshots: 0, scenarios: [], screenshots: [], consoleErrors: [], suiteCleanup: {}, cleanup: { pass: true, failures: [] }, failures: [{ code }] })}\n`;
+    const fakeBun = path.join(fakeBunDirectory, "bun"); writeTinyFile(fakeBun, `#!/usr/bin/env node\nif (process.argv[2] === "--eval") process.stdout.write(${JSON.stringify(JSON.stringify(fakeManifest))}); else { process.stdout.write(process.env.TASK_554_SELF_TEST_REPORT ?? ""); process.exit(1); }\n`); chmodSync(fakeBun, 0o755);
+    const runnerBefore = captureRepositoryFingerprint(tempRoot); const previousPath = process.env.PATH; const previousReport = process.env.TASK_554_SELF_TEST_REPORT; process.env.PATH = `${fakeBunDirectory}:${previousPath ?? ""}`;
+    try { process.env.TASK_554_SELF_TEST_REPORT = failureReport("smoke_process_failed"); expectFailure(() => runTask554SmokeProfile(tempRoot, "certification", "task-554-certification"), "task_554_smoke_runner_failed:smoke_process_failed"); process.env.TASK_554_SELF_TEST_REPORT = "{}\n"; expectFailure(() => runTask554SmokeProfile(tempRoot, "certification", "task-554-certification"), "task_554_smoke_runner_failed:report_invalid"); process.env.TASK_554_SELF_TEST_REPORT = failureReport("smoke_unknown"); expectFailure(() => runTask554SmokeProfile(tempRoot, "certification", "task-554-certification"), "task_554_smoke_runner_failed:report_invalid"); } finally { if (previousPath === undefined) delete process.env.PATH; else process.env.PATH = previousPath; if (previousReport === undefined) delete process.env.TASK_554_SELF_TEST_REPORT; else process.env.TASK_554_SELF_TEST_REPORT = previousReport; }
     if (existsSync(task554SessionDirectory(tempRoot, "task-554-certification"))) throw new Error("task_554_self_test_failed_runner_session_residue");
     assertNoRepositoryMutation("task_554_self_test_failed_runner_restored", runnerBefore, captureRepositoryFingerprint(tempRoot), tempRoot); rmSync(fakeBunDirectory, { recursive: true, force: true }); rmSync(path.join(tempRoot, AUTHOR_AUDIT_PATH));
     const replacement = `${reportPath}.replacement`;
@@ -977,14 +974,16 @@ function workflowSelfTest() {
       manifestInputBound: true, smokeProfileSessionPairRejected: true, strictMutationAndAuditResultsRejected: true, agentIdentityRejected: true, releaseGateReportRestored: true, releaseGateSiblingResidueRejected: true,
       tmpMutationRejected: true, releaseGateHardlinkRejected: true, releaseGateDirectoryIdentityRejected: true, releaseGateReportIdentityRejected: true, forbiddenScopeRejected: true, directStdoutCapture: true,
       boundedPngEvidenceRejected: true, decodedPngEvidenceRejected: true, extraSmokeOutputRejected: true, reportReserializationRejected: true, gateMutationRejected: true, ignoredWorkflowMutationRejected: true,
-      modeAndSymlinkFingerprintRejected: true, smokeAncestorSymlinkRejected: true, smokeFinallyRestorationRejected: true, failedEmptySmokeDirectoryRejected: true, failedSmokeRestored: true, failedRunnerRestored: true,
+      modeAndSymlinkFingerprintRejected: true, smokeAncestorSymlinkRejected: true, smokeFinallyRestorationRejected: true, failedEmptySmokeDirectoryRejected: true, failedSmokeRestored: true, failedRunnerRestored: true, classifiedRunnerFailureRejected: true, malformedRunnerReportRejected: true, unknownRunnerReportRejected: true,
       exactEvidenceRevalidationRejected: true, failedEvidenceRevalidationRestored: true, replacementEvidenceRejected: true, duplicateScreenshotHashesAllowed: true, snapshotMismatchRejected: true, narrowClosureRejected: true, duplicateBoardStatisticRejected: true, canonicalClosureRejected: true });
   } finally {
     rmSync(tempRoot, { recursive: true, force: true });
   }
 }
-const mode = parseImplementationMode();
 const importedForVerification = process.env.TASK_554_WORKFLOW_IMPORT === "1";
+const isDirectInvocation = () => { try { return typeof process.argv[1] === "string" && realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url)); } catch { return false; } };
+if (importedForVerification && isDirectInvocation()) throw new Error("task_554_workflow_import_direct_invocation");
+const mode = importedForVerification ? "import" : parseImplementationMode();
 export const result = mode === "self-test"
   ? workflowSelfTest()
   : importedForVerification

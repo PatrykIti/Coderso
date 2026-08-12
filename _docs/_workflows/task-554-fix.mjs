@@ -1,8 +1,10 @@
 import { createHash } from "node:crypto";
 import { execFileSync, spawnSync } from "node:child_process";
-import { chmodSync, closeSync, constants, fstatSync, lstatSync, mkdtempSync, openSync, readFileSync, readlinkSync, rmSync, symlinkSync, unlinkSync, writeFileSync, mkdirSync, readdirSync } from "node:fs";
+import { chmodSync, closeSync, constants, fstatSync, lstatSync, mkdtempSync, openSync, readFileSync, readlinkSync, realpathSync, rmSync, symlinkSync, unlinkSync, writeFileSync, mkdirSync, readdirSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
+import { runTask554IsolatedFrozenInstall } from "../../scripts/task-554-isolated-frozen-install.mjs";
 
 export const meta = Object.freeze({
   name: "task-554-fix",
@@ -39,6 +41,9 @@ export const TASK_554_SECURITY_GATE_REPAIR_PATHS = Object.freeze([
   "bun.lock",
   "scripts/runtime-smoke/adapters/task-540/suite/runtime/platform-actions.ts",
   "tests/unit/runtime-smoke/task540-native-suite-boundary.test.ts",
+  "scripts/task-554-isolated-frozen-install.mjs",
+  "scripts/task-554-isolated-frozen-install.d.mts",
+  "tests/unit/workflows/task554IsolatedFrozenInstall.test.ts",
 ]);
 
 export const OWNER_PATHS = Object.freeze({
@@ -74,6 +79,7 @@ export const OWNER_PATHS = Object.freeze({
     "scripts/runtime-smoke/contracts.ts",
     "scripts/runtime-smoke/cli.ts",
     "scripts/runtime-smoke/registry.ts",
+    "scripts/runtime-smoke/server/supervised-server.ts",
     "scripts/runtime-smoke/adapters/task-554.ts",
     "scripts/runtime-smoke/adapters/task-554/browser-actions.ts",
     "scripts/runtime-smoke/adapters/task-554/output-manifest.ts",
@@ -82,6 +88,8 @@ export const OWNER_PATHS = Object.freeze({
     "scripts/runtime-smoke/adapters/task-554/routing-settings-lease.ts",
     "scripts/runtime-smoke/adapters/task-554/production-handlers.ts",
     "tests/unit/runtime-smoke/cli-registry.test.ts",
+    "tests/unit/runtime-smoke/supervised-server.test.ts",
+    "tests/unit/runtime-smoke/repository-report.test.ts",
     "tests/unit/runtime-smoke/task-554-adapter.test.ts",
     "tests/unit/runtime-smoke/task-554-worker.test.ts",
   ]),
@@ -385,21 +393,25 @@ export const OWNER_GATES = Object.freeze({
     command("types", "bun", ["--cwd", "core", "lint:types"]), command("lint", "bun", ["--cwd", "core", "lint"]),
   ]),
   "smoke-adapter": Object.freeze([
-    command("smoke-tests", "bun", ["test", "tests/unit/runtime-smoke/cli-registry.test.ts", "tests/unit/runtime-smoke/task-554-adapter.test.ts", "tests/unit/runtime-smoke/task-554-worker.test.ts"]),
+    command("smoke-tests", "bun", ["test", "tests/unit/runtime-smoke/cli-registry.test.ts", "tests/unit/runtime-smoke/supervised-server.test.ts", "tests/unit/runtime-smoke/repository-report.test.ts", "tests/unit/runtime-smoke/task-554-adapter.test.ts", "tests/unit/runtime-smoke/task-554-worker.test.ts"]),
     command("types", "bun", ["--cwd", "core", "lint:types"]), command("lint", "bun", ["--cwd", "core", "lint"]),
   ]),
   "security-gate-repair": Object.freeze([
+    command("task_554_frozen_install", "bun", ["install", "--frozen-lockfile"]),
+    command("task_554_frozen_install_test", "bun", ["test", "tests/unit/workflows/task554IsolatedFrozenInstall.test.ts"]),
     command("task-540-boundary", "bun", ["test", "tests/unit/runtime-smoke/task540-native-suite-boundary.test.ts"]),
-    command("frozen-install", "bun", ["install", "--frozen-lockfile"]),
     command("strict-security-scan", "bun", ["run", "scan:security:strict"]),
   ]),
   documentation: Object.freeze([]),
 });
 
 function runCommand(root, entry) {
+  if (entry.label === "task_554_frozen_install") throw new Error("task_554_frozen_install_must_run_first");
   const result = spawnSync(entry.command, entry.args, { cwd: root, stdio: "inherit" });
   if (result.error || result.status !== 0 || result.signal) throw new Error(`task_554_fix_gate_failed:${entry.label}`);
 }
+
+function runIsolatedFrozenInstallFirst(entries) { const installs = entries.filter((entry) => entry.label === "task_554_frozen_install"); if (installs.length > 1) throw new Error("task_554_frozen_install_duplicate"); if (installs.length) { const before = captureFixFingerprint(); try { runTask554IsolatedFrozenInstall(ROOT); } finally { assertFixScope("task_554_isolated_frozen_install_mutated", before, captureFixFingerprint(), []); } } return entries.filter((entry) => entry.label !== "task_554_frozen_install"); }
 
 function assertTouchedLineLimit(root, baseline = TASK_554_BASELINE_SHA) {
   if (status(root, "git", ["cat-file", "-e", `${baseline}^{commit}`]) !== 0 || status(root, "git", ["merge-base", "--is-ancestor", baseline, "HEAD"]) !== 0) {
@@ -420,9 +432,10 @@ function assertTouchedLineLimit(root, baseline = TASK_554_BASELINE_SHA) {
 
 function runAffectedGates(owners) {
   assertFixPreflight();
+  const gates = runIsolatedFrozenInstallFirst(owners.flatMap((owner) => OWNER_GATES[owner]));
   const before = captureFixFingerprint();
   try {
-    for (const owner of owners) for (const entry of OWNER_GATES[owner]) runCommand(ROOT, entry);
+    for (const entry of gates) runCommand(ROOT, entry);
     assertTouchedLineLimit(ROOT);
     runCommand(ROOT, command("baseline-diff-check", "git", ["diff", "--check", `${TASK_554_BASELINE_SHA}...HEAD`]));
     runCommand(ROOT, command("diff-check", "git", ["diff", "--check"]));
@@ -656,6 +669,9 @@ function fixSelfTest() {
   }
 }
 
-const selfTest = assertArguments();
-export const result = selfTest ? fixSelfTest() : process.env.TASK_554_WORKFLOW_IMPORT === "1" ? null : await runWorkflow();
+const importedForVerification = process.env.TASK_554_WORKFLOW_IMPORT === "1";
+const isDirectInvocation = () => { try { return typeof process.argv[1] === "string" && realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url)); } catch { return false; } };
+if (importedForVerification && isDirectInvocation()) throw new Error("task_554_workflow_import_direct_invocation");
+const selfTest = importedForVerification ? false : assertArguments();
+export const result = selfTest ? fixSelfTest() : importedForVerification ? null : await runWorkflow();
 if (selfTest) process.stdout.write(`${JSON.stringify(result)}\n`);

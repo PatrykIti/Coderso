@@ -563,7 +563,7 @@ export class SupervisedServerResource implements LifecycleResource {
       );
     }
     return this.#handle.wait().then(() => {
-      throw new SmokeError("smoke_process_failed", "server exited before readiness");
+      throw new SmokeError("smoke_server_unexpected_exit", "server exited unexpectedly");
     });
   }
 

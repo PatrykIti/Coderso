@@ -68,13 +68,18 @@ class FakeHandle implements ManagedProcessHandle {
     elapsedMs: number;
   }) => void;
 
-  constructor(alreadyDestroyed = false) {
+  constructor(alreadyDestroyed = false, immediateExit = false) {
     this.#exit = new Promise((resolveExit) => {
       this.#resolveExit = resolveExit;
     });
     if (alreadyDestroyed) {
       this.stdout.destroy();
       this.stderr.destroy();
+    }
+    if (immediateExit) {
+      queueMicrotask(() => {
+        this.#resolveExit({ exitCode: 1, signal: null, elapsedMs: 1 });
+      });
     }
   }
 
@@ -84,6 +89,13 @@ class FakeHandle implements ManagedProcessHandle {
 
   wait(): Promise<{ exitCode: number; signal: NodeJS.Signals | null; elapsedMs: number }> {
     return this.#exit;
+  }
+
+  exitUnexpectedly(): void {
+    this.terminated = true;
+    this.stdout.end();
+    this.stderr.end();
+    this.#resolveExit({ exitCode: 1, signal: null, elapsedMs: 1 });
   }
 
   async terminate(): Promise<void> {
@@ -103,9 +115,9 @@ class FakeProcesses {
   registrationCountAtStart = 0;
   spec: ProcessSpec | null = null;
 
-  constructor(lifecycle: RecordingLifecycle, alreadyDestroyed = false) {
+  constructor(lifecycle: RecordingLifecycle, alreadyDestroyed = false, immediateExit = false) {
     this.lifecycle = lifecycle;
-    this.handle = new FakeHandle(alreadyDestroyed);
+    this.handle = new FakeHandle(alreadyDestroyed, immediateExit);
   }
 
   async start(spec: ProcessSpec): Promise<ManagedProcessHandle> {
@@ -320,6 +332,48 @@ test("readiness failure preserves the primary error while lifecycle exposes port
     const cleanup = await lifecycle.closeAllNeverThrow();
     expect(cleanup.pass).toBe(false);
     expect(cleanup.failures.map(({ phase }) => phase)).toEqual(["close", "absence"]);
+  } finally {
+    await rm(fixture.root, { recursive: true, force: true });
+  }
+});
+
+test("supervised server classifies an attached unexpected exit and still closes its resource", async () => {
+  const fixture = await createLiteralFixture();
+  try {
+    const lifecycle = new RecordingLifecycle();
+    const processes = new FakeProcesses(lifecycle, false, true);
+    const available = async (): Promise<boolean> =>
+      processes.startCalls === 0 || processes.handle.terminated;
+    await expect(
+      startSupervisedServer(
+        context(fixture.root, lifecycle, processes),
+        literalSpec(fixture, devHostSource(fixture.bin), available, async () => false)
+      )
+    ).rejects.toMatchObject({ code: "smoke_server_unexpected_exit" });
+    expect(processes.handle.terminateCalls).toBe(1);
+    expect(await lifecycle.closeAllNeverThrow()).toEqual({ pass: true, failures: [] });
+  } finally {
+    await rm(fixture.root, { recursive: true, force: true });
+  }
+});
+
+test("supervised server reports an unexpected exit after readiness", async () => {
+  const fixture = await createLiteralFixture();
+  try {
+    const lifecycle = new RecordingLifecycle();
+    const processes = new FakeProcesses(lifecycle);
+    const available = async (): Promise<boolean> =>
+      processes.startCalls === 0 || processes.handle.terminated;
+    const server = await startSupervisedServer(
+      context(fixture.root, lifecycle, processes),
+      literalSpec(fixture, devHostSource(fixture.bin), available)
+    );
+    const unexpectedExit = server.waitForUnexpectedExit();
+    processes.handle.exitUnexpectedly();
+    await expect(unexpectedExit).rejects.toMatchObject({ code: "smoke_server_unexpected_exit" });
+    await server.close();
+    expect(await server.proveAbsent()).toBe(true);
+    expect(await lifecycle.closeAllNeverThrow()).toEqual({ pass: true, failures: [] });
   } finally {
     await rm(fixture.root, { recursive: true, force: true });
   }

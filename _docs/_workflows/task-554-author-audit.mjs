@@ -12,6 +12,7 @@ import {
   readdirSync,
   readFileSync,
   readlinkSync,
+  realpathSync,
   renameSync,
   rmSync,
   symlinkSync,
@@ -20,6 +21,7 @@ import {
 } from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 export const meta = Object.freeze({
   name: "task-554-author-audit",
@@ -707,8 +709,10 @@ async function runWorkflow() {
   return Object.freeze({ pass: true, bootstrap, lenses, reconcile, receipt });
 }
 
-const mode = parseMode();
 const importedForVerification = process.env.TASK_554_WORKFLOW_IMPORT === "1";
+const isDirectInvocation = () => { try { return typeof process.argv[1] === "string" && realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url)); } catch { return false; } };
+if (importedForVerification && isDirectInvocation()) throw new Error("task_554_workflow_import_direct_invocation");
+const mode = importedForVerification ? "import" : parseMode();
 export const result = mode === "self-test"
   ? await bootstrapSelfTest()
   : mode === "verify"
@@ -716,4 +720,4 @@ export const result = mode === "self-test"
     : importedForVerification
       ? null
       : await runWorkflow();
-if (mode !== "run") process.stdout.write(`${JSON.stringify(result)}\n`);
+if (mode !== "run" && mode !== "import") process.stdout.write(`${JSON.stringify(result)}\n`);
