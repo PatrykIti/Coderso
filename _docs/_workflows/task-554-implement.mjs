@@ -606,6 +606,7 @@ function preserveSmokePrimaryFailure(primary, restoration) {
   });
 }
 function restoreFailedTask554SmokeRun(root, session, ownedFailedSession, before, primary) {
+  console.error(`[restoreFailed] session=${session} primary=${primary instanceof Error ? primary.message : String(primary)}`);
   let failure = primary;
   try { if (ownedFailedSession !== null) removeOwnedTask554FailedSmokeSession(root, session, ownedFailedSession); } catch (restoration) { failure = preserveSmokePrimaryFailure(failure, restoration); }
   try { assertNoRepositoryMutation("task_554_smoke_repository_restoration", before, captureRepositoryFingerprint(root, [...smokeEvidencePaths(new Map(), root, session), ensureInsideRoot(root, task554SessionDirectory(root, session), "smoke_session"), ensureInsideRoot(root, assertNofollowTask554SmokeRoot(root), "smoke_ancestor")]), root); } catch (restoration) { failure = preserveSmokePrimaryFailure(failure, restoration); }
