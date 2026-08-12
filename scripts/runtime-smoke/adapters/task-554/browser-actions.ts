@@ -520,8 +520,14 @@ export function materializeTask554BrowserAction(input: {
       // cache-bus witness channel is created inside the page (same origin as
       // the Admin app) and bridged back through an exposed function.
       // The page is shared across scenarios in one Playwright session, so the
-      // exposed bridge name must be unique per scenario run.
-      const cacheBridgeName = "__task554CacheEvent_" + cfg.scenarioId.replaceAll("-", "_");
+      // exposed bridge name must be unique per fixture run: the
+      // certification profile runs two variants (light/dark) of every
+      // scenario on the same page, so the variant id is part of the name.
+      const cacheBridgeName =
+        "__task554CacheEvent_" +
+        cfg.scenarioId.replaceAll("-", "_") +
+        "_" +
+        cfg.variant.id.replaceAll("-", "_");
       await page.exposeFunction(cacheBridgeName, (value) => onCacheMessage({ data: value }));
       await page.evaluate((bridgeName) => {
         const channel = new BroadcastChannel("coderso.admin.cache");
