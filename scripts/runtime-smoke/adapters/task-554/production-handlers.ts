@@ -16,6 +16,16 @@ import {
   users,
 } from "../../../../core/db/schema";
 import { hashPassword } from "../../../../core/services/auth/password";
+import {
+  buildEmailFields,
+  hashEmail,
+} from "../../../../core/services/security/piiEmail";
+import {
+  getSecuritySettings,
+  setSecuritySettings,
+  type SecuritySettings,
+  type SecuritySettingsUpdate,
+} from "../../../../core/services/settings/securitySettings";
 import { RunFixtureLedger } from "../../database/fixture-ledger";
 import { buildCleanupBatchPlan, type CleanupBatchPlan } from "../../database/batch-contract";
 import { SmokeError } from "../../contracts";
@@ -69,6 +79,8 @@ export interface Task554ProductionHandlerDependencies {
   readonly hashPassword: (password: string) => Promise<string>;
   readonly afterFixtureCommit: () => void;
   readonly routingSettings: Task554RoutingSettingsPersistence;
+  readonly getSecuritySettings: () => Promise<SecuritySettings>;
+  readonly setSecuritySettings: (update: SecuritySettingsUpdate) => Promise<SecuritySettings>;
 }
 
 export interface Task554FixtureRecoveryPersistence {
@@ -104,6 +116,8 @@ const TASK554_PRODUCTION_HANDLER_DEPENDENCIES: Task554ProductionHandlerDependenc
     hashPassword,
     afterFixtureCommit: () => undefined,
     routingSettings: new Task554DatabaseRoutingSettingsPersistence(),
+    getSecuritySettings,
+    setSecuritySettings,
   }
 );
 
@@ -122,9 +136,15 @@ function requireInstalled(state: InstalledState | null): InstalledState {
 }
 
 function expectedActorIdentity(authority: Task554RecoveryAuthority, kind: Task554ActorKind) {
+  const email = `task554-${authority.runMarker}-${kind}@smoke.invalid`;
   return Object.freeze({
     kind,
-    email: `task554-${authority.runMarker}-${kind}@smoke.invalid`,
+    email,
+    // The Admin login flow stores users with the app's PII email fields
+    // (email = HMAC, emailHash, emailEncrypted) and never rewrites a row
+    // that already carries them; the recovery matrix must therefore match
+    // users by the same canonical hash the app derives.
+    emailHash: hashEmail(email),
     roleName: `task554-${authority.runMarker}-${kind}`,
     permissions:
       kind === "writer"
@@ -160,7 +180,7 @@ async function reconstructTask554RecoveryState(
       .where(
         inArray(
           users.email,
-          expectedActors.map(({ email }) => email)
+          expectedActors.map(({ emailHash }) => emailHash)
         )
       ),
     tx
@@ -198,7 +218,7 @@ async function reconstructTask554RecoveryState(
     throw new SmokeError("smoke_cleanup_failed", "TASK-554 recovery matrix is partial");
   }
   const actors = expectedActors.map((expected) => {
-    const user = userRows.find(({ email }) => email === expected.email);
+    const user = userRows.find(({ email }) => email === expected.emailHash);
     const role = roleRows.find(({ name }) => name === expected.roleName);
     if (
       user === undefined ||
@@ -656,19 +676,24 @@ async function installTask554Fixtures(
     const insertedUsers = await tx
       .insert(users)
       .values(
-        input.actors.map(({ kind, email }, index) => ({
-          email,
-          name: `TASK-554 ${kind}`,
-          passwordHash: passwordHashes[index]!,
-          status: "active",
-        }))
+        input.actors.map(({ kind, email }, index) => {
+          const fields = buildEmailFields(email);
+          return {
+            email: fields.email,
+            emailHash: fields.emailHash,
+            emailEncrypted: fields.emailEncrypted,
+            name: `TASK-554 ${kind}`,
+            passwordHash: passwordHashes[index]!,
+            status: "active",
+          };
+        })
       )
       .returning({ id: users.id, email: users.email });
     if (insertedUsers.length !== 2) {
       throw new SmokeError("smoke_output_invalid", "TASK-554 users were not created");
     }
     const actors = input.actors.map(({ kind, email }) => {
-      const user = insertedUsers.find((entry) => entry.email === email);
+      const user = insertedUsers.find((entry) => entry.email === hashEmail(email));
       const roleId = rolesByKind.get(kind);
       if (user === undefined || roleId === undefined) {
         throw new SmokeError("smoke_output_invalid", "TASK-554 actor creation drifted");
@@ -745,6 +770,7 @@ export class Task554ProductionHandlers implements Task554WorkerHandlers {
   #databaseClosed = false;
   #fixturesInstalled = false;
   #recoveryStarted = false;
+  #rateLimitEnabledBefore: boolean | null = null;
   #closePromise: Promise<void> | null = null;
   #dependencies: Task554ProductionHandlerDependencies;
 
@@ -804,6 +830,13 @@ export class Task554ProductionHandlers implements Task554WorkerHandlers {
       throw new SmokeError("smoke_output_invalid", "TASK-554 install cannot be replayed");
     try {
       await this.#routingSettingsLease.apply(input.authority);
+      // The Admin app boots once per scenario and each boot calls the auth
+      // bootstrap endpoints; the auth rate-limit bucket (10 req/60s) would
+      // 429 them across the suite and make the app retry CSRF-bound writes.
+      // Disable the rate limit for the smoke run and restore it on cleanup.
+      const securityBefore = await this.#dependencies.getSecuritySettings();
+      await this.#dependencies.setSecuritySettings({ rateLimit: { enabled: false } });
+      this.#rateLimitEnabledBefore = securityBefore.rateLimit.enabled;
       const passwordHashes = await Promise.all(
         input.actors.map(({ password }) => this.#dependencies.hashPassword(password))
       );
@@ -893,6 +926,12 @@ export class Task554ProductionHandlers implements Task554WorkerHandlers {
       !(await this.#routingSettingsLease.proveReceiptAbsent(authority))
     ) {
       throw new SmokeError("smoke_cleanup_failed", "TASK-554 routing restoration is unproven");
+    }
+    if (this.#rateLimitEnabledBefore !== null) {
+      await this.#dependencies.setSecuritySettings({
+        rateLimit: { enabled: this.#rateLimitEnabledBefore },
+      });
+      this.#rateLimitEnabledBefore = null;
     }
     this.#cleaned = true;
     const rows = Object.values(counts).reduce((sum, count) => sum + count, 0);

@@ -391,6 +391,16 @@ function createRoutingDependencies(
     hashPassword,
     afterFixtureCommit() {},
     routingSettings: routing,
+    async getSecuritySettings() {
+      events.push("get-security-settings");
+      return {
+        rateLimit: { enabled: true, buckets: {} as never },
+      } as never;
+    },
+    async setSecuritySettings() {
+      events.push("set-security-settings");
+      return { rateLimit: { enabled: false, buckets: {} as never } } as never;
+    },
   };
   return Object.freeze({ dependencies, events, fixtureRecovery, routing });
 }
@@ -942,17 +952,20 @@ test("TASK-554 cleanup derives the five applied FK-safe authorities from the sha
   expect(plans[2]!.resources.map(({ kind }) => kind)).toEqual(["user-role", "user-role"]);
 });
 
-test("TASK-554 worker environment carries only the bounded server pepper needed for login parity", () => {
+test("TASK-554 worker environment carries only the bounded PII keys and server pepper needed for login parity", () => {
   const withoutPepper = projectTask554WorkerEnvironment({
     PATH: "/usr/bin",
     DATABASE_URL: "postgres://private",
     CODERSO_PLAYWRIGHT_EMAIL: "synthetic@example.test",
     CODERSO_PLAYWRIGHT_PASSWORD: "synthetic-password",
-    PII_HASH_KEY: "private",
+    PII_HASH_KEY: "hash-key-12345678901234567890123456789012",
+    PII_ENC_KEY: "enc-key-12345678901234567890123456789012",
   });
   expect(withoutPepper).toEqual({
     PATH: "/usr/bin",
     DATABASE_URL: "postgres://private",
+    PII_HASH_KEY: "hash-key-12345678901234567890123456789012",
+    PII_ENC_KEY: "enc-key-12345678901234567890123456789012",
     DB_POOL_MAX: "1",
   });
   const withPepper = projectTask554WorkerEnvironment({
@@ -960,11 +973,15 @@ test("TASK-554 worker environment carries only the bounded server pepper needed 
     DATABASE_URL: "postgres://private",
     AUTH_PASSWORD_PEPPER: "task554-private-pepper",
     CODERSO_PLAYWRIGHT_PASSWORD: "synthetic-password",
+    PII_HASH_KEY: "hash-key-12345678901234567890123456789012",
+    PII_ENC_KEY: "enc-key-12345678901234567890123456789012",
   });
   expect(withPepper).toEqual({
     PATH: "/usr/bin",
     DATABASE_URL: "postgres://private",
     AUTH_PASSWORD_PEPPER: "task554-private-pepper",
+    PII_HASH_KEY: "hash-key-12345678901234567890123456789012",
+    PII_ENC_KEY: "enc-key-12345678901234567890123456789012",
     DB_POOL_MAX: "1",
   });
   expect(JSON.stringify(withPepper)).not.toContain("synthetic-password");
@@ -972,9 +989,18 @@ test("TASK-554 worker environment carries only the bounded server pepper needed 
     projectTask554WorkerEnvironment({
       PATH: "/usr/bin",
       DATABASE_URL: "postgres://private",
+      PII_HASH_KEY: "hash-key-12345678901234567890123456789012",
+      PII_ENC_KEY: "enc-key-12345678901234567890123456789012",
       AUTH_PASSWORD_PEPPER: "invalid\0pepper",
     })
   ).toThrow("password pepper");
+  expect(() =>
+    projectTask554WorkerEnvironment({
+      PATH: "/usr/bin",
+      DATABASE_URL: "postgres://private",
+      AUTH_PASSWORD_PEPPER: "task554-private-pepper",
+    })
+  ).toThrow("worker environment is incomplete");
 });
 
 test("TASK-554 cleanup and terminal proof validators require pre-identity and terminal absence", async () => {

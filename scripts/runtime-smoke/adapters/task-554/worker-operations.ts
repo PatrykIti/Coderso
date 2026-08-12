@@ -568,6 +568,11 @@ export function projectTask554WorkerEnvironment(
     PATH: requiredEnvironment(source, "PATH"),
     DATABASE_URL: requiredEnvironment(source, "DATABASE_URL"),
     ...(passwordPepper === null ? {} : { AUTH_PASSWORD_PEPPER: passwordPepper }),
+    // The worker creates and reconciles the fixture users through the app's
+    // canonical PII email fields (HMAC email, hash and encrypted variants),
+    // so it needs the same PII keys the Admin login flow resolves.
+    PII_HASH_KEY: requiredEnvironment(source, "PII_HASH_KEY"),
+    PII_ENC_KEY: requiredEnvironment(source, "PII_ENC_KEY"),
     DB_POOL_MAX: "1",
   });
 }
