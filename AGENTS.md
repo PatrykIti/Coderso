@@ -177,13 +177,21 @@ Testing docs:
     `deepseek/deepseek-v4-flash` with variant `max` as the default delegated
     implementation and fix agent. It works only from an audited, current task
     contract and its output is review evidence, never closure authority.
-  - If that default is unavailable or the owner explicitly prohibits its use,
-    the OpenCode `coder` agent may use `openai/gpt-5.6-terra` with variant
-    `xhigh` or `max` for the named implementation or fix scope. Record the
-    fallback, model, and variant in the task handoff; it remains review evidence
-    and never closure authority. If the OpenCode CLI cannot invoke its `coder`
-    subagent directly, its primary `build` invocation may execute that same
-    named fallback under the identical scope, model, variant, and handoff
+  - Fresh-context audit agents (pre-implementation contract audits and
+    post-implementation five-lens audits) use GLM 5.2 through the local 9router
+    proxy, alternating between the `9router:glm/glm-5.2` and
+    `9router:openrouter/z-ai/glm-5.2` routes with bounded reasoning effort.
+    Their reports are read-only review evidence, never closure authority, and
+    the orchestrator verifies every finding against local files and command
+    output.
+  - `openai/gpt-5.6-terra` (variant `xhigh` or `max`) is the last-resort
+    fallback only when the default `deepseek/deepseek-v4-flash` is unavailable
+    or the owner explicitly prohibits its use, and it is used only for the
+    named implementation or fix scope. Record the fallback, model, and variant
+    in the task handoff; it remains review evidence and never closure
+    authority. If the OpenCode CLI cannot invoke its `coder` subagent
+    directly, its primary `build` invocation may execute that same named
+    fallback under the identical scope, model, variant, and handoff
     requirements.
   - Claude Code is allowed only when the owner explicitly requests it for a
     named scope. It must never be invoked as an automatic fallback, and Codex
