@@ -451,10 +451,8 @@ function manifestDigest(value: unknown): string {
 }
 
 function sourceReceipt(frame: BrowserActionFrame): unknown {
-  if (frame.status !== "success") {
-    console.error("[DIAG] frame failure code:", frame.failureCode ?? "none");
+  if (frame.status !== "success")
     throw new SmokeError("smoke_output_invalid", "TASK-554 browser action failed");
-  }
   return frame.output;
 }
 
