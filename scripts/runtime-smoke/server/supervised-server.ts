@@ -562,8 +562,13 @@ export class SupervisedServerResource implements LifecycleResource {
         new SmokeError("smoke_process_failed", "server process was not attached")
       );
     }
-    return this.#handle.wait().then(() => {
-      throw new SmokeError("smoke_server_unexpected_exit", "server exited unexpectedly");
+    return this.#handle.wait().then((outcome) => {
+      const exitCode = outcome.exitCode ?? "none";
+      const signal = outcome.signal ?? "none";
+      throw new SmokeError(
+        "smoke_server_unexpected_exit",
+        `server exited unexpectedly (exitCode=${exitCode}, signal=${signal})`
+      );
     });
   }
 
@@ -610,6 +615,13 @@ export class SupervisedServerResource implements LifecycleResource {
   logs(): SupervisedServerLogSnapshot {
     if (!this.#closeFinished || this.#stdout === null || this.#stderr === null) {
       throw new SmokeError("smoke_output_invalid", "server logs are not settled");
+    }
+    return this.snapshotLogs();
+  }
+
+  snapshotLogs(): SupervisedServerLogSnapshot {
+    if (this.#stdout === null || this.#stderr === null) {
+      throw new SmokeError("smoke_output_invalid", "server logs are not attached");
     }
     const stdout = this.#stdout.snapshot(this.#redact);
     const stderr = this.#stderr.snapshot(this.#redact);
@@ -731,6 +743,13 @@ export async function startSupervisedServer(
     ]);
     return resource;
   } catch (error) {
+    try {
+      const log = resource.snapshotLogs();
+      console.error(`[server-log] stdout tail: ${log.stdout.slice(-800)}`);
+      console.error(`[server-log] stderr tail: ${log.stderr.slice(-800)}`);
+    } catch {
+      // Logs may be unattached when the failure happens before spawn.
+    }
     await resource.close().catch(() => undefined);
     throw error;
   }

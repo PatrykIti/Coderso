@@ -625,13 +625,11 @@ export function runTask554SmokeProfile(root, profile, session) {
     ownedFailedSession = createOwnedTask554SmokeSession(root, session);
     const directory = ownedFailedSession.directory;
     const reportPath = path.join(directory, "report.json");
-    const reportFd = openSync(reportPath, "wx", 0o600);
-    let execution;
-    try {
-      execution = spawnSync("bun", ["scripts/runtime-smoke.ts", "run", "--suite", "task-554", "--profile", profile, "--session", session], { cwd: root, stdio: ["ignore", reportFd, "inherit"] });
-    } finally {
-      closeSync(reportFd);
-    }
+    // The shared runner is now the single owner of the evidence report: it
+    // pre-creates report.json in the evidence session dir before the adapter
+    // runs and rewrites it with the final report after the run, so the
+    // wrapper no longer redirects stdout into a pre-opened descriptor.
+    const execution = spawnSync("bun", ["scripts/runtime-smoke.ts", "run", "--suite", "task-554", "--profile", profile, "--session", session], { cwd: root, stdio: ["ignore", "ignore", "inherit"] });
     if (execution?.error || execution?.status !== 0 || execution?.signal) throw new Error(`task_554_smoke_runner_failed:${readTask554SmokeFailureCode(root, ensureInsideRoot(root, reportPath, "smoke_report"), profile, session) ?? "report_invalid"}`);
     assertNofollowTask554SmokeRoot(root);
     const reportBytes = readStableSmokeFile(root, ensureInsideRoot(root, reportPath, "smoke_report"), 1_048_576, "task_554_smoke_report");

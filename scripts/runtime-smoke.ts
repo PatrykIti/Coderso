@@ -2,6 +2,8 @@ import { spawn } from "node:child_process";
 import { realpath } from "node:fs/promises";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { closeSync, constants, fchmodSync, fstatSync, lstatSync, mkdirSync, openSync, writeFileSync } from "node:fs";
+import { dirname, resolve } from "node:path";
 import { parseRuntimeSmokeArgs } from "./runtime-smoke/cli";
 import { mapSmokeError, type SmokeError } from "./runtime-smoke/contracts";
 import { installLifecycleSignals, RuntimeLifecycle } from "./runtime-smoke/lifecycle";
@@ -23,6 +25,58 @@ export interface RuntimeSmokeDependencies {
   readonly writeMarkdown?: (value: string) => void;
 }
 
+function stableEvidenceNode(stats: ReturnType<typeof fstatSync>): string {
+  return `${stats.dev}:${stats.ino}:${stats.mode & 0o7777}:${stats.nlink}`;
+}
+
+function precreateEvidenceReport(evidenceDirectory: string): string {
+  mkdirSync(evidenceDirectory, { recursive: true, mode: 0o700 });
+  const reportPath = resolve(evidenceDirectory, "report.json");
+  let descriptor: number | undefined;
+  try {
+    try {
+      descriptor = openSync(reportPath, constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL | constants.O_NOFOLLOW, 0o600);
+    } catch (error) {
+      const code = (error as NodeJS.ErrnoException | null)?.code;
+      if (code === "EEXIST") {
+        const existing = lstatSync(reportPath);
+        if (!existing.isFile() || existing.isSymbolicLink() || existing.nlink !== 1 || (existing.mode & 0o777) !== 0o600) {
+          throw new SmokeError("smoke_output_invalid", "evidence report already exists with invalid ownership");
+        }
+        return reportPath;
+      }
+      throw error;
+    }
+    const before = fstatSync(descriptor);
+    if (!before.isFile() || before.nlink !== 1 || (before.mode & 0o777) !== 0o600) {
+      throw new SmokeError("smoke_output_invalid", "evidence report ownership is invalid");
+    }
+    return reportPath;
+  } finally {
+    if (descriptor !== undefined) closeSync(descriptor);
+  }
+}
+
+function writeEvidenceReport(reportPath: string, json: string): void {
+  let descriptor: number | undefined;
+  try {
+    descriptor = openSync(reportPath, constants.O_WRONLY | constants.O_TRUNC | constants.O_NOFOLLOW);
+    const before = fstatSync(descriptor);
+    if (!before.isFile() || before.nlink !== 1 || (before.mode & 0o777) !== 0o600) {
+      throw new SmokeError("smoke_output_invalid", "evidence report ownership is invalid");
+    }
+    writeFileSync(descriptor, json, "utf8");
+    fchmodSync(descriptor, 0o600);
+    const after = fstatSync(descriptor);
+    const final = lstatSync(reportPath);
+    if (stableEvidenceNode(before) !== stableEvidenceNode(after) || stableEvidenceNode(after) !== stableEvidenceNode(final)) {
+      throw new SmokeError("smoke_output_invalid", "evidence report identity changed while writing");
+    }
+  } finally {
+    if (descriptor !== undefined) closeSync(descriptor);
+  }
+}
+
 export async function runRuntimeSmoke(
   argv: readonly string[],
   dependencies: RuntimeSmokeDependencies = {}
@@ -38,13 +92,18 @@ export async function runRuntimeSmoke(
   const disposeSignals = installLifecycleSignals(lifecycle);
   let adapterResult: SmokeAdapterResult | null = null;
   let primary: SmokeError | null = null;
+  let evidenceReportPath: string | null = null;
   try {
     const adapter = await descriptor.loadFixedAdapter(root);
+    const evidenceDirectory = adapter.evidenceDirectory?.(input, root) ?? null;
+    evidenceReportPath =
+      evidenceDirectory === null ? null : precreateEvidenceReport(evidenceDirectory);
     adapterResult = await timing.measure("suite", input.suite, () =>
       adapter.run({ input, root, lifecycle, timing, processes, repository })
     );
   } catch (error) {
     primary = mapSmokeError(error);
+    console.error(`[primary] ${primary.code} :: ${primary.message}`);
   } finally {
     disposeSignals();
   }
@@ -58,10 +117,14 @@ export async function runRuntimeSmoke(
     processCounters: processes.counters(),
     snapshots: repository.count(),
   });
-  (dependencies.writeJson ?? ((value) => process.stdout.write(value)))(encodeReportJson(report));
+  const json = encodeReportJson(report);
+  (dependencies.writeJson ?? ((value) => process.stdout.write(value)))(json);
   (dependencies.writeMarkdown ?? ((value) => process.stderr.write(value)))(
     encodeReportMarkdown(report)
   );
+  if (evidenceReportPath !== null) {
+    writeEvidenceReport(evidenceReportPath, `${json}\n`);
+  }
   return report;
 }
 
@@ -118,7 +181,9 @@ async function main(): Promise<void> {
 if (isDirectExecution()) {
   void main().catch((error: unknown) => {
     const failure = mapSmokeError(error);
-    process.stderr.write(`${JSON.stringify({ code: failure.code })}\n`);
+    process.stderr.write(
+      `${JSON.stringify({ code: failure.code, message: failure.message, cause: failure.cause instanceof Error ? failure.cause.message : String(failure.cause) })}\n`
+    );
     process.exitCode = 1;
   });
 }

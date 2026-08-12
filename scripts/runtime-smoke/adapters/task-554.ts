@@ -33,6 +33,8 @@ import {
   assertExactTask554ScreenshotManifest,
   buildExactTask554ScreenshotManifest,
   validateTask554ScreenshotOutputs,
+  EVIDENCE_ROOT,
+  validateTask554ScreenshotOutputs,
 } from "./task-554/output-manifest";
 import {
   TASK554_WORKER_DESCRIPTORS,
@@ -451,8 +453,10 @@ function manifestDigest(value: unknown): string {
 }
 
 function sourceReceipt(frame: BrowserActionFrame): unknown {
-  if (frame.status !== "success")
+  if (frame.status !== "success") {
+    console.error(`[DIAG] frame failure actionId=${frame.actionId} code=${frame.failureCode ?? "none"}`);
     throw new SmokeError("smoke_output_invalid", "TASK-554 browser action failed");
+  }
   return frame.output;
 }
 
@@ -796,12 +800,25 @@ export async function runTask554Adapter(context: RuntimeSmokeContext): Promise<S
     screenshots = await validateTask554ScreenshotOutputs(context.root, context.input, manifest);
   } catch (error) {
     primary = error;
+    if (server !== null) {
+      try {
+        const log = server.snapshotLogs();
+        console.error(`[DIAG] server stdout tail: ${log.stdout.slice(-1200)}`);
+        console.error(`[DIAG] server stderr tail: ${log.stderr.slice(-1200)}`);
+      } catch {}
+    }
     // A failed session must contain only report.json for the workflow's
     // failure-code reader; remove this run's screenshot PNGs best-effort
-    // (bounded owned paths under the session directory).
-    for (const relativePath of manifest.paths) {
-      const pngPath = resolveInsideRoot(context.root, relativePath, "task_554_failed_png");
-      await unlink(pngPath).catch(() => undefined);
+    // (bounded owned paths under the session directory). Evidence-set
+    // validation failures keep the PNGs so the failure stays inspectable.
+    const evidenceSetFailure =
+      primary instanceof SmokeError &&
+      primary.message.includes("screenshot evidence set is invalid");
+    if (!evidenceSetFailure) {
+      for (const relativePath of manifest.paths) {
+        const pngPath = resolveInsideRoot(context.root, relativePath, "task_554_failed_png");
+        await unlink(pngPath).catch(() => undefined);
+      }
     }
   }
 
@@ -894,6 +911,9 @@ const adapter: SmokeAdapter = Object.freeze({
   suiteId: "task-554",
   supportedProfiles: Object.freeze(["fast", "certification"] as const),
   run: runTask554Adapter,
+  evidenceDirectory(input, root) {
+    return resolveInsideRoot(root, `${EVIDENCE_ROOT}/${input.session}`, "task_554_evidence");
+  },
 });
 
 export default adapter;

@@ -457,6 +457,9 @@ export function materializeTask554BrowserAction(input: {
     page.on("console", onConsole);
     page.on("pageerror", onPageError);
     page.on("request", onRequest);
+    // Declared before the try so the finally block can release the bridge
+    // binding; the name is unique per fixture run (scenario + variant).
+    let cacheBridgeName = "";
     try {
       await page.emulateMedia({ colorScheme: cfg.variant.colorScheme });
       await page.setViewportSize(cfg.variant.viewport);
@@ -523,7 +526,7 @@ export function materializeTask554BrowserAction(input: {
       // exposed bridge name must be unique per fixture run: the
       // certification profile runs two variants (light/dark) of every
       // scenario on the same page, so the variant id is part of the name.
-      const cacheBridgeName =
+      cacheBridgeName =
         "__task554CacheEvent_" +
         cfg.scenarioId.replaceAll("-", "_") +
         "_" +
@@ -725,6 +728,13 @@ export function materializeTask554BrowserAction(input: {
         if (channel !== undefined && channel !== null) channel.close();
         delete window.__task554CacheChannel;
       }).catch(() => undefined);
+      // Release the JS-side bridge binding so Playwright's binding registry
+      // does not accumulate one entry per scenario over a certification run.
+      await page
+        .evaluate((name) => {
+          delete window[name];
+        }, cacheBridgeName)
+        .catch(() => undefined);
     }
   }`;
 }
