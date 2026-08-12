@@ -28,6 +28,17 @@ const securityGateRepairPaths = [
   "scripts/runtime-smoke/adapters/task-540/suite/runtime/platform-actions.ts",
   "tests/unit/runtime-smoke/task540-native-suite-boundary.test.ts",
 ];
+const routingSettingsLeasePath =
+  "scripts/runtime-smoke/adapters/task-554/routing-settings-lease.ts";
+const securityGateCommands = [
+  ["bun", "test", "tests/unit/runtime-smoke/task540-native-suite-boundary.test.ts"],
+  ["bun", "install", "--frozen-lockfile"],
+  ["bun", "run", "scan:security:strict"],
+];
+
+type WorkflowOwner = { id: string; paths: string[] };
+type WorkflowOwnerPaths = Record<string, string[]>;
+type WorkflowGate = { command: string; args: string[] };
 
 function source(filePath: string) {
   return readFileSync(filePath, "utf8");
@@ -68,7 +79,7 @@ function runTask554SmokeSequenceContract() {
   return JSON.parse(result.stdout) as Record<string, unknown>;
 }
 
-function readWorkflowExport(workflowPath: string, exportName: string) {
+function readWorkflowExport<T>(workflowPath: string, exportName: string): T {
   const moduleSource = [
     `import { ${exportName} } from ${JSON.stringify(`file://${workflowPath}`)};`,
     `process.stdout.write(JSON.stringify(${exportName}));`,
@@ -81,15 +92,17 @@ function readWorkflowExport(workflowPath: string, exportName: string) {
   });
   expect(result.status).toBe(0);
   expect(result.stderr).toBe("");
-  return JSON.parse(result.stdout) as string[];
+  return JSON.parse(result.stdout) as T;
 }
 
-function securityGateRepairPathsFromSource(workflow: string) {
-  const match = workflow.match(
-    /export const TASK_554_SECURITY_GATE_REPAIR_PATHS = Object\.freeze\(\[([\s\S]*?)\]\);/
-  );
-  expect(match).not.toBeNull();
-  return [...(match?.[1] ?? "").matchAll(/"([^"]+)"/g)].map(([, pathName]) => pathName);
+function gateCommands(gates: WorkflowGate[]) {
+  return gates.map(({ command, args }) => [command, ...args]);
+}
+
+function ownerIdsForPath(owners: Record<string, string[]>, targetPath: string) {
+  return Object.entries(owners)
+    .filter(([, paths]) => paths.includes(targetPath))
+    .map(([ownerId]) => ownerId);
 }
 
 test("TASK-554 workflows retain the immutable execution and owner-review handoff ordering", () => {
@@ -141,25 +154,41 @@ test("TASK-554 workflows retain the immutable execution and owner-review handoff
 });
 
 test("TASK-554 pins one exact security-gate repair owner and its resume scope", () => {
-  const implement = source(implementPath);
-  const fix = source(fixPath);
+  const implementationOwners = readWorkflowExport<WorkflowOwner[]>(implementPath, "OWNERS");
+  const implementationOwnerPaths = Object.fromEntries(
+    implementationOwners.map(({ id, paths }) => [id, paths])
+  ) as WorkflowOwnerPaths;
+  const fixOwnerPaths = readWorkflowExport<WorkflowOwnerPaths>(fixPath, "OWNER_PATHS");
+  const implementationOwnerGates = readWorkflowExport<Record<string, WorkflowGate[]>>(
+    implementPath,
+    "OWNER_GATE_COMMANDS"
+  );
+  const fixOwnerGates = readWorkflowExport<Record<string, WorkflowGate[]>>(fixPath, "OWNER_GATES");
+  const fullGates = readWorkflowExport<WorkflowGate[]>(implementPath, "FULL_GATE_COMMANDS");
 
-  expect(securityGateRepairPathsFromSource(implement)).toEqual(securityGateRepairPaths);
-  expect(securityGateRepairPathsFromSource(fix)).toEqual(securityGateRepairPaths);
+  expect(implementationOwners.filter(({ id }) => id === "security-gate-repair")).toEqual([
+    { id: "security-gate-repair", paths: securityGateRepairPaths },
+  ]);
+  expect(fixOwnerPaths["security-gate-repair"]).toEqual(securityGateRepairPaths);
+  expect(ownerIdsForPath(implementationOwnerPaths, routingSettingsLeasePath)).toEqual([
+    "smoke-adapter",
+  ]);
+  expect(ownerIdsForPath(fixOwnerPaths, routingSettingsLeasePath)).toEqual(["smoke-adapter"]);
+  expect(gateCommands(implementationOwnerGates["security-gate-repair"])).toEqual(
+    securityGateCommands
+  );
+  expect(gateCommands(fixOwnerGates["security-gate-repair"])).toEqual(securityGateCommands);
+  expect(
+    gateCommands(fullGates).filter((command) =>
+      securityGateCommands.some((expected) => command.join("\0") === expected.join("\0"))
+    )
+  ).toEqual(securityGateCommands);
   expect(readWorkflowExport(implementPath, "TASK_554_RESUME_ALLOWED_DIRTY_PATHS")).toEqual(
     expect.arrayContaining(securityGateRepairPaths)
   );
-  expect(implement.match(/owner\("security-gate-repair"/g)).toHaveLength(1);
-  expect(fix.match(/"security-gate-repair": TASK_554_SECURITY_GATE_REPAIR_PATHS/g)).toHaveLength(1);
-  for (const workflow of [implement, fix]) {
-    expect(workflow).toContain('"security-gate-repair"');
-    expect(workflow).toContain("task540-native-suite-boundary.test.ts");
-    expect(workflow).toContain('"install", "--frozen-lockfile"');
-    expect(workflow).toContain('"scan:security:strict"');
-  }
+  const fix = source(fixPath);
   expect(fix).toContain("task_554_fix_self_test_security_gate_repair_scope");
   expect(fix).toContain("task_554_fix_changed_path_unowned:core/server/routes/authRoutes.ts");
-  expect(fix).toContain("scripts/runtime-smoke/adapters/task-554/routing-settings-lease.ts");
 });
 
 test("TASK-554 smoke-only mode orders the shared capture, absence proof, and certification", () => {

@@ -41,7 +41,7 @@ export const TASK_554_SECURITY_GATE_REPAIR_PATHS = Object.freeze([
   "tests/unit/runtime-smoke/task540-native-suite-boundary.test.ts",
 ]);
 
-const OWNER_PATHS = Object.freeze({
+export const OWNER_PATHS = Object.freeze({
   "workflow-contract-tests": Object.freeze([
     "tests/unit/workflows/task554AuthorAudit.test.ts",
     "tests/unit/workflows/task554WorkflowContracts.test.ts",
@@ -363,7 +363,7 @@ function command(label, commandName, args) {
   return Object.freeze({ label, command: commandName, args: Object.freeze(args) });
 }
 
-const OWNER_GATES = Object.freeze({
+export const OWNER_GATES = Object.freeze({
   "workflow-contract-tests": Object.freeze([
     command("workflow-tests", "bun", ["test", "tests/unit/workflows/task554AuthorAudit.test.ts", "tests/unit/workflows/task554WorkflowContracts.test.ts"]),
     command("workflow-syntax", "node", ["--check", "_docs/_workflows/task-554-author-audit.mjs"]),
@@ -628,8 +628,7 @@ function fixSelfTest() {
     if (JSON.stringify(ownersForChangedPaths(TASK_554_SECURITY_GATE_REPAIR_PATHS)) !== JSON.stringify(["security-gate-repair"])) throw new Error("task_554_fix_self_test_security_gate_repair_scope");
     expectFailure(() => ownersForChangedPaths([...TASK_554_SECURITY_GATE_REPAIR_PATHS, "core/server/routes/authRoutes.ts"]), "task_554_fix_changed_path_unowned:core/server/routes/authRoutes.ts");
     expectFailure(() => ownersForChangedPaths([]), "task_554_fix_empty_repair");
-    const rebootstrap = ownerReviewRebootstrap([{ ...valid.findings[0], lens: "test-integrity", evidence: `${WORKFLOW_PATHS[0]}:1` }]);
-    if (rebootstrap?.ownerActionRequired !== "owner_review_rebootstrap") throw new Error("task_554_fix_self_test_rebootstrap");
+    if (!WORKFLOW_PATHS.every((workflowPath) => ownerReviewRebootstrap([{ ...valid.findings[0], lens: "test-integrity", evidence: `${workflowPath}:1` }])?.ownerActionRequired === "owner_review_rebootstrap")) throw new Error("task_554_fix_self_test_rebootstrap");
     const terminal = terminalPhaseReceiptRequired([{ ...valid.findings[0], owner: "terminal-status" }]);
     if (terminal?.ownerActionRequired !== "terminal_phase_receipt_required") throw new Error("task_554_fix_self_test_terminal");
     const modeBefore = captureFixFingerprint(root);
@@ -658,5 +657,5 @@ function fixSelfTest() {
 }
 
 const selfTest = assertArguments();
-export const result = selfTest ? fixSelfTest() : await runWorkflow();
+export const result = selfTest ? fixSelfTest() : process.env.TASK_554_WORKFLOW_IMPORT === "1" ? null : await runWorkflow();
 if (selfTest) process.stdout.write(`${JSON.stringify(result)}\n`);

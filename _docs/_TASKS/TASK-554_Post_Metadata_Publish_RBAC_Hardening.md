@@ -1024,12 +1024,14 @@ bun test \
   tests/unit/runtime-smoke/cli-registry.test.ts \
   tests/unit/runtime-smoke/task-554-adapter.test.ts \
   tests/unit/runtime-smoke/task-554-worker.test.ts
+bun test tests/unit/runtime-smoke/task540-native-suite-boundary.test.ts
 bun test \
   tests/unit/workflows/task554AuthorAudit.test.ts \
   tests/unit/workflows/task554WorkflowContracts.test.ts
 bun --cwd core lint:types
 bun --cwd core lint
 bun run check:admin-boundary
+bun install --frozen-lockfile
 bun run scan:security:strict
 bun run gates:coderso
 bun run precommit:check
