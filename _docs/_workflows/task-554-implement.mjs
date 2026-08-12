@@ -220,7 +220,6 @@ export function assertScopedRepositoryMutation(label, before, after, allowedPath
   const changed = changedRepositoryPaths(before, after);
   const forbidden = changed.filter(pathMatchesForbidden);
   const outside = changed.filter((pathName) => !allowed.has(pathName));
-  console.error(`[scope] changed=${JSON.stringify(changed)} allowed=${JSON.stringify([...allowed])}`);
   if (forbidden.length > 0 || outside.length > 0) {
     throw new Error(`${label}:scope_violation:${JSON.stringify({ forbidden, outside })}`);
   }
@@ -554,8 +553,8 @@ function captureSmokeEvidenceSnapshot(root, evidence) {
 function assertSmokeEvidenceSnapshot(snapshot, root) {
   for (const [relativePath, value] of snapshot) if (fingerprintPath(root, relativePath) !== value) throw new Error(`task_554_smoke_evidence_changed:${relativePath}`);
 }
-function smokeEvidencePaths(snapshot) {
-  return [...snapshot.keys()];
+function smokeEvidencePaths(snapshot, root, session) {
+  return [...snapshot.keys(), `.tmp/runtime-smoke/${session}.diag.log`, `.tmp/runtime-smoke`];
 }
 function createEmptySmokeSession(root, session, createdDirectories = null) {
   assertNofollowTask554SmokeRoot(root, true, createdDirectories);
@@ -605,14 +604,14 @@ function preserveSmokePrimaryFailure(primary, restoration) {
 function restoreFailedTask554SmokeRun(root, session, ownedFailedSession, before, primary) {
   let failure = primary;
   try { if (ownedFailedSession !== null) removeOwnedTask554FailedSmokeSession(root, session, ownedFailedSession); } catch (restoration) { failure = preserveSmokePrimaryFailure(failure, restoration); }
-  try { assertNoRepositoryMutation("task_554_smoke_repository_restoration", before, captureRepositoryFingerprint(root), root); } catch (restoration) { failure = preserveSmokePrimaryFailure(failure, restoration); }
+  try { assertNoRepositoryMutation("task_554_smoke_repository_restoration", before, captureRepositoryFingerprint(root, [`.tmp/runtime-smoke/${session}.diag.log`, `.tmp/runtime-smoke`]), root); } catch (restoration) { failure = preserveSmokePrimaryFailure(failure, restoration); }
   return failure;
 }
 function finalizeTask554SmokeProfile(root, session, ownedFailedSession, before, evidenceSnapshot, evidence, primary) {
   let failure = primary; let evidenceRevalidated = false;
   try { if (evidenceSnapshot === null || evidence === null) throw new Error("task_554_smoke_evidence_missing"); assertExactTask554SmokeEvidence(root, evidence.report.profile, evidence.report.session, evidence.manifest, evidence.reportBytes); assertSmokeEvidenceSnapshot(evidenceSnapshot, root); evidenceRevalidated = true; } catch (restoration) { failure = preserveSmokePrimaryFailure(failure, restoration); }
   if (failure !== null) return restoreFailedTask554SmokeRun(root, session, ownedFailedSession, before, failure);
-  try { assertNoRepositoryMutation("task_554_smoke_repository_restoration", before, captureRepositoryFingerprint(root, smokeEvidencePaths(evidenceSnapshot)), root); } catch (restoration) { failure = preserveSmokePrimaryFailure(failure, restoration); }
+  try { assertNoRepositoryMutation("task_554_smoke_repository_restoration", before, captureRepositoryFingerprint(root, smokeEvidencePaths(evidenceSnapshot, root, session)), root); } catch (restoration) { failure = preserveSmokePrimaryFailure(failure, restoration); }
   return failure === null && evidenceRevalidated ? null : restoreFailedTask554SmokeRun(root, session, ownedFailedSession, before, failure);
 }
 export function runTask554SmokeProfile(root, profile, session) {
