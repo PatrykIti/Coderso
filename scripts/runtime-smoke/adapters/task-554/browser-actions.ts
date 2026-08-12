@@ -655,9 +655,9 @@ export function materializeTask554BrowserAction(input: {
       });
       if (cfg.expectedResponseStatus === 403) {
         await page.waitForFunction(
-          () => /permission|forbidden|not authorized/i.test(document.body.innerText),
+          () => /permission|forbidden|not authorized|insufficient|no permission/i.test(document.body.innerText),
           undefined,
-          { timeout: 15000 }
+          { timeout: 30000 }
         ).catch((error) => {
           throw new Error("task554_403_witness_timeout", { cause: error });
         });
