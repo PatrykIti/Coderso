@@ -3,7 +3,7 @@ import type {
   PostMetadataMutationV1,
   PostMetadataStatus,
 } from "../../services/posts/postMetadataContract";
-import { broadcastCacheEvent } from "@/utils/cacheBus";
+import { broadcastCacheEvent, type CacheEventBroadcastOptions } from "@/utils/cacheBus";
 import { cacheKeys, cacheTtlMs } from "@/services/cachePolicy";
 import {
   clearLocalCache,
@@ -330,9 +330,9 @@ export const getCachedPostRevisions = (id: string) => {
   return null;
 };
 
-const publishPostMutationCacheEvents = (id: string) => {
-  broadcastCacheEvent({ key: cacheKeys.postsList, action: "update" });
-  broadcastCacheEvent({ key: cacheKeys.postDetail(id), action: "update" });
+const publishPostMutationCacheEvents = (id: string, options?: CacheEventBroadcastOptions) => {
+  broadcastCacheEvent({ key: cacheKeys.postsList, action: "update" }, options);
+  broadcastCacheEvent({ key: cacheKeys.postDetail(id), action: "update" }, options);
 };
 
 const reconcilePostListRead = (received: PostSummary[], capturedListPublicationEpoch: number) => {
@@ -458,7 +458,10 @@ const acceptCurrentPostDetailMutation = (
   return upsertCachedPost(post);
 };
 
-const reconcileLostPostDetailMutation = async (id: string): Promise<PostDetailReconciliation> => {
+const reconcileLostPostDetailMutation = async (
+  id: string,
+  options?: CacheEventBroadcastOptions
+): Promise<PostDetailReconciliation> => {
   if (postDetailTombstones.has(id)) {
     return { status: "not_accepted", readTicket: null };
   }
@@ -468,7 +471,7 @@ const reconcileLostPostDetailMutation = async (id: string): Promise<PostDetailRe
     if (!outcome.accepted || !outcome.detail || postDetailTombstones.has(id)) {
       return { status: "not_accepted", readTicket };
     }
-    publishPostMutationCacheEvents(id);
+    publishPostMutationCacheEvents(id, options);
     return { status: "accepted", readTicket };
   } catch {
     return { status: "failed", readTicket };
@@ -477,7 +480,8 @@ const reconcileLostPostDetailMutation = async (id: string): Promise<PostDetailRe
 
 const invalidateFailedPostDetailReconciliation = (
   id: string,
-  reconciliation: PostDetailReconciliation
+  reconciliation: PostDetailReconciliation,
+  options?: CacheEventBroadcastOptions
 ) => {
   if (
     reconciliation.status !== "failed" ||
@@ -487,8 +491,8 @@ const invalidateFailedPostDetailReconciliation = (
     return false;
   }
   removeCachedPost(id, { invalidateListRow: true });
-  broadcastCacheEvent({ key: cacheKeys.postsList, action: "invalidate" });
-  broadcastCacheEvent({ key: cacheKeys.postDetail(id), action: "invalidate" });
+  broadcastCacheEvent({ key: cacheKeys.postsList, action: "invalidate" }, options);
+  broadcastCacheEvent({ key: cacheKeys.postDetail(id), action: "invalidate" }, options);
   return true;
 };
 
@@ -496,28 +500,33 @@ const settlePostDetailMutation = async (
   id: string,
   ticket: PostDetailAuthorityTicket,
   post: PostDetail,
-  onAccepted?: () => void
+  onAccepted?: () => void,
+  options?: CacheEventBroadcastOptions
 ) => {
   if (ticket.cacheAuthorityEpoch !== postsCacheAuthorityEpoch) return false;
   if (acceptCurrentPostDetailMutation(id, ticket, post)) {
     onAccepted?.();
-    publishPostMutationCacheEvents(id);
+    publishPostMutationCacheEvents(id, options);
     return true;
   }
-  const reconciliation = await reconcileLostPostDetailMutation(id);
-  invalidateFailedPostDetailReconciliation(id, reconciliation);
+  const reconciliation = await reconcileLostPostDetailMutation(id, options);
+  invalidateFailedPostDetailReconciliation(id, reconciliation, options);
   return reconciliation.status === "accepted";
 };
 
-const settlePostStatusMutation = async (id: string, ticket: PostDetailAuthorityTicket) => {
+const settlePostStatusMutation = async (
+  id: string,
+  ticket: PostDetailAuthorityTicket,
+  options?: CacheEventBroadcastOptions
+) => {
   if (ticket.cacheAuthorityEpoch !== postsCacheAuthorityEpoch) return false;
   if (isCurrentPostDetailAuthority(ticket)) {
     advancePostDetailGeneration(id);
     supersedePostDetailReads(id);
     postDetailTombstones.delete(id);
   }
-  const reconciliation = await reconcileLostPostDetailMutation(id);
-  invalidateFailedPostDetailReconciliation(id, reconciliation);
+  const reconciliation = await reconcileLostPostDetailMutation(id, options);
+  invalidateFailedPostDetailReconciliation(id, reconciliation, options);
   return reconciliation.status === "accepted";
 };
 
@@ -546,7 +555,11 @@ export async function createPost(payload: PostPayload) {
   return created;
 }
 
-export async function updatePost(id: string, payload: Partial<PostPayload>) {
+export async function updatePost(
+  id: string,
+  payload: Partial<PostPayload>,
+  options?: CacheEventBroadcastOptions
+) {
   const ticket = capturePostDetailAuthority(id);
   const updated = await apiRequest<PostDetail>(
     `/posts/${id}`,
@@ -557,11 +570,15 @@ export async function updatePost(id: string, payload: Partial<PostPayload>) {
     },
     { withCsrf: true }
   );
-  if (updated) await settlePostDetailMutation(id, ticket, updated);
+  if (updated) await settlePostDetailMutation(id, ticket, updated, undefined, options);
   return updated;
 }
 
-export async function updatePostMetadata(id: string, payload: PostMetadataMutationV1) {
+export async function updatePostMetadata(
+  id: string,
+  payload: PostMetadataMutationV1,
+  options?: CacheEventBroadcastOptions
+) {
   const ticket = capturePostDetailAuthority(id);
   const updated = await apiRequest<PostDetail>(
     `/posts/${id}/metadata`,
@@ -572,7 +589,7 @@ export async function updatePostMetadata(id: string, payload: PostMetadataMutati
     },
     { withCsrf: true }
   );
-  if (updated) await settlePostDetailMutation(id, ticket, updated);
+  if (updated) await settlePostDetailMutation(id, ticket, updated, undefined, options);
   return updated;
 }
 
@@ -641,7 +658,7 @@ export async function restorePostRevision(id: string, revisionId: string) {
   return result;
 }
 
-export async function publishPost(id: string) {
+export async function publishPost(id: string, options?: CacheEventBroadcastOptions) {
   const ticket = capturePostDetailAuthority(id);
   const result = await apiRequest<{
     ok: boolean;
@@ -649,7 +666,7 @@ export async function publishPost(id: string) {
     reusedRevision?: boolean;
   }>(`/posts/${id}/publish`, { method: "POST" }, { withCsrf: true });
   if (result?.ok) {
-    const accepted = await settlePostStatusMutation(id, ticket);
+    const accepted = await settlePostStatusMutation(id, ticket, options);
     if (accepted && result.revision) {
       upsertCachedPostRevision(id, result.revision);
       broadcastCacheEvent({ key: cacheKeys.postRevisions(id), action: "update" });

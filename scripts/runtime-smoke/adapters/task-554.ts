@@ -38,12 +38,14 @@ import {
   TASK554_WORKER_DESCRIPTORS,
   assertTask554FixtureMatrix,
   createTask554InstallInput,
+  createTask554RecoveryAuthority,
   createTask554WorkerPool,
   createTask554WorkerRegistry,
   type Task554ActorCredentials,
   type Task554CleanupOutput,
   type Task554InstallOutput,
   type Task554ProofOutput,
+  type Task554RecoveryAuthority,
 } from "./task-554/worker-operations";
 import type { WorkerPool } from "../workers/pool";
 
@@ -354,11 +356,13 @@ export function createTask554PrivateWorkspace(
 class Task554FixtureCleanup implements LifecycleResource {
   readonly name = "task554-fixture-cleanup";
   readonly #workers: WorkerPool;
+  readonly #authority: Task554RecoveryAuthority;
   #output: Task554CleanupOutput | null = null;
   #closed: Promise<void> | null = null;
 
-  constructor(workers: WorkerPool) {
+  constructor(workers: WorkerPool, authority: Task554RecoveryAuthority) {
     this.#workers = workers;
+    this.#authority = authority;
   }
 
   output(): Task554CleanupOutput | null {
@@ -373,7 +377,7 @@ class Task554FixtureCleanup implements LifecycleResource {
   async #closeOnce(): Promise<void> {
     const output = await this.#workers.dispatch(
       TASK554_WORKER_DESCRIPTORS.cleanup,
-      Object.freeze({})
+      this.#authority
     );
     this.#output = output as Task554CleanupOutput;
     this.#workers.recordDatabaseBatch(this.#output.statements, this.#output.rows);
@@ -565,6 +569,12 @@ export async function runTask554Adapter(context: RuntimeSmokeContext): Promise<S
     context.repository.snapshot(manifest.paths)
   );
   const marker = randomBytes(12).toString("hex");
+  const recoveryKey = randomBytes(32).toString("base64url");
+  const recoveryAuthority = createTask554RecoveryAuthority({
+    profile: context.input.profile,
+    runMarker: marker,
+    recoveryKey,
+  });
   const credentials = actorCredentials(marker);
   let workers: WorkerPool | null = null;
   let install: Task554InstallOutput | null = null;
@@ -580,18 +590,19 @@ export async function runTask554Adapter(context: RuntimeSmokeContext): Promise<S
 
   try {
     workers = await createTask554WorkerPool(context, createTask554WorkerRegistry());
+    cleanup = new Task554FixtureCleanup(workers, recoveryAuthority);
+    context.lifecycle.register(cleanup);
     install = (await workers.dispatch(
       TASK554_WORKER_DESCRIPTORS.install,
       createTask554InstallInput({
         profile: context.input.profile,
         runMarker: marker,
+        recoveryKey,
         actors: credentials,
       })
     )) as Task554InstallOutput;
     assertTask554FixtureMatrix(context.input.profile, install.fixtures);
     workers.recordDatabaseBatch(install.statements, install.rows);
-    cleanup = new Task554FixtureCleanup(workers);
-    context.lifecycle.register(cleanup);
     server = await task554Host(context);
     workspace = await Task554Workspace.create(context);
     const fixtureMap = new Map(
@@ -738,7 +749,7 @@ export async function runTask554Adapter(context: RuntimeSmokeContext): Promise<S
     try {
       terminal = (await workers.dispatch(
         TASK554_WORKER_DESCRIPTORS.prove,
-        Object.freeze({})
+        recoveryAuthority
       )) as Task554ProofOutput;
       workers.recordDatabaseBatch(terminal.statements, terminal.rows);
       if (
@@ -804,6 +815,7 @@ export async function runTask554Adapter(context: RuntimeSmokeContext): Promise<S
     ...credentials.map(({ password }) => password),
     ...credentials.map(({ email }) => email),
     process.env.AUTH_PASSWORD_PEPPER ?? "",
+    recoveryKey,
     context.root,
     workspace?.path ?? "",
   ]);

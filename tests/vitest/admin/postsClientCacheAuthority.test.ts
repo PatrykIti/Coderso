@@ -19,7 +19,11 @@ import {
 } from "../../../core/admin/services/postsClient";
 import { resetCsrfToken } from "../../../core/admin/services/apiClient";
 import { cacheKeys } from "../../../core/admin/services/cachePolicy";
-import { broadcastCacheEvent, subscribeCacheEvents } from "../../../core/admin/utils/cacheBus";
+import {
+  broadcastCacheEvent,
+  createCacheEventOperationToken,
+  subscribeCacheEvents,
+} from "../../../core/admin/utils/cacheBus";
 
 const originalFetch = globalThis.fetch;
 
@@ -69,12 +73,19 @@ const isCsrfRequest = (url: string) => url.endsWith("/auth/csrf");
 
 const capturePostEvents = () => {
   const events: string[] = [];
-  const unsubscribe = subscribeCacheEvents((event) => {
+  const deliveries: Array<{
+    key: string;
+    action: string;
+    origin: string;
+    operationToken: symbol | undefined;
+  }> = [];
+  const unsubscribe = subscribeCacheEvents((event, origin, operationToken) => {
     if (event.key === cacheKeys.postsList || event.key === cacheKeys.postDetail("post-1")) {
       events.push(`${event.key}:${event.action}`);
+      deliveries.push({ key: event.key, action: event.action, origin, operationToken });
     }
   });
-  return { events, unsubscribe };
+  return { deliveries, events, unsubscribe };
 };
 
 afterEach(() => {
@@ -86,7 +97,8 @@ afterEach(() => {
 test("a stale force detail GET returns the current metadata mutation detail without overwriting it", async () => {
   const initialRead = deferred<Response>();
   const updated = post({ title: "Metadata B", seo: { title: "Metadata B" } });
-  const { events, unsubscribe } = capturePostEvents();
+  const operationToken = createCacheEventOperationToken();
+  const { deliveries, events, unsubscribe } = capturePostEvents();
 
   globalThis.fetch = async (input, init) => {
     const url = String(input);
@@ -98,13 +110,52 @@ test("a stale force detail GET returns the current metadata mutation detail with
 
   try {
     const staleRead = getPostCached("post-1", { force: true });
-    await updatePostMetadata("post-1", { seo: { title: "Metadata B" } });
+    await updatePostMetadata("post-1", { seo: { title: "Metadata B" } }, { operationToken });
     initialRead.resolve(jsonResponse(post({ title: "Stale A" })));
 
     await expect(staleRead).resolves.toMatchObject({ title: "Metadata B" });
     expect(getCachedPostDetail("post-1")?.title).toBe("Metadata B");
     expect(getCachedPosts()?.find((item) => item.id === "post-1")?.title).toBe("Metadata B");
     expect(events).toEqual(["posts:list:update", "posts:detail:post-1:update"]);
+    expect(deliveries.map(({ origin, operationToken: token }) => [origin, token])).toEqual([
+      ["local", operationToken],
+      ["local", operationToken],
+    ]);
+  } finally {
+    unsubscribe();
+  }
+});
+
+test("an accepted content update preserves one caller token across its ordered cache pair", async () => {
+  const operationToken = createCacheEventOperationToken();
+  const updated = post({ title: "Accepted content" });
+  const { deliveries, unsubscribe } = capturePostEvents();
+
+  globalThis.fetch = async (input, init) => {
+    const url = String(input);
+    if (isCsrfRequest(url)) return jsonResponse({ token: "csrf-token" });
+    if (url.endsWith("/posts/post-1") && init?.method === "PATCH") {
+      return jsonResponse(updated);
+    }
+    throw new Error(`Unexpected request ${init?.method ?? "GET"} ${url}`);
+  };
+
+  try {
+    await updatePost("post-1", { title: "Accepted content" }, { operationToken });
+    expect(deliveries).toEqual([
+      {
+        key: cacheKeys.postsList,
+        action: "update",
+        origin: "local",
+        operationToken,
+      },
+      {
+        key: cacheKeys.postDetail("post-1"),
+        action: "update",
+        origin: "local",
+        operationToken,
+      },
+    ]);
   } finally {
     unsubscribe();
   }
@@ -114,7 +165,9 @@ test("two deferred metadata mutations reconcile A after B through one guarded fr
   const mutationA = deferred<Response>();
   const mutationB = deferred<Response>();
   const freshRead = post({ title: "Server B", seo: { title: "Server B" } });
-  const { events, unsubscribe } = capturePostEvents();
+  const tokenA = createCacheEventOperationToken();
+  const tokenB = createCacheEventOperationToken();
+  const { deliveries, events, unsubscribe } = capturePostEvents();
 
   globalThis.fetch = async (input, init) => {
     const url = String(input);
@@ -128,8 +181,20 @@ test("two deferred metadata mutations reconcile A after B through one guarded fr
   };
 
   try {
-    const requestA = updatePostMetadata("post-1", { seo: { title: "A" } });
-    const requestB = updatePostMetadata("post-1", { seo: { title: "B" } });
+    const requestA = updatePostMetadata(
+      "post-1",
+      { seo: { title: "A" } },
+      {
+        operationToken: tokenA,
+      }
+    );
+    const requestB = updatePostMetadata(
+      "post-1",
+      { seo: { title: "B" } },
+      {
+        operationToken: tokenB,
+      }
+    );
     mutationB.resolve(jsonResponse(freshRead));
     await requestB;
     mutationA.resolve(jsonResponse(post({ title: "Server A", seo: { title: "A" } })));
@@ -142,6 +207,12 @@ test("two deferred metadata mutations reconcile A after B through one guarded fr
       "posts:detail:post-1:update",
       "posts:list:update",
       "posts:detail:post-1:update",
+    ]);
+    expect(deliveries.map(({ operationToken }) => operationToken)).toEqual([
+      tokenB,
+      tokenB,
+      tokenA,
+      tokenA,
     ]);
   } finally {
     unsubscribe();
@@ -344,7 +415,8 @@ test("publish and unpublish always replace a cached schedule with a forced full 
   const publishedRead = deferred<Response>();
   const draftRead = deferred<Response>();
   const detailReads: string[] = [];
-  const { events, unsubscribe } = capturePostEvents();
+  const publishToken = createCacheEventOperationToken();
+  const { deliveries, events, unsubscribe } = capturePostEvents();
 
   globalThis.fetch = async (input, init) => {
     const url = String(input);
@@ -361,7 +433,7 @@ test("publish and unpublish always replace a cached schedule with a forced full 
 
   try {
     await getPostCached("post-1", { force: true });
-    const publishing = publishPost("post-1");
+    const publishing = publishPost("post-1", { operationToken: publishToken });
     await vi.waitFor(() => expect(detailReads).toHaveLength(2));
     expect(events).toEqual([]);
     expect(getCachedPostDetail("post-1")).toMatchObject({
@@ -379,8 +451,13 @@ test("publish and unpublish always replace a cached schedule with a forced full 
     });
     expect(getCachedPosts()).toMatchObject([{ status: "published", scheduledAt: null }]);
     expect(events).toEqual(["posts:list:update", "posts:detail:post-1:update"]);
+    expect(deliveries.map(({ operationToken }) => operationToken)).toEqual([
+      publishToken,
+      publishToken,
+    ]);
 
     events.splice(0);
+    deliveries.splice(0);
     const unpublishing = unpublishPost("post-1");
     await vi.waitFor(() => expect(detailReads).toHaveLength(3));
     expect(events).toEqual([]);
@@ -408,7 +485,8 @@ test("a failed status refresh invalidates a cached schedule instead of leaving i
     status: "scheduled",
     scheduledAt: "2026-08-12T12:00:00.000Z",
   });
-  const { events, unsubscribe } = capturePostEvents();
+  const operationToken = createCacheEventOperationToken();
+  const { deliveries, events, unsubscribe } = capturePostEvents();
   let detailReadCount = 0;
 
   globalThis.fetch = async (input, init) => {
@@ -425,11 +503,15 @@ test("a failed status refresh invalidates a cached schedule instead of leaving i
 
   try {
     await getPostCached("post-1", { force: true });
-    await expect(publishPost("post-1")).resolves.toEqual({ ok: true });
+    await expect(publishPost("post-1", { operationToken })).resolves.toEqual({ ok: true });
 
     expect(getCachedPostDetail("post-1")).toBeNull();
     expect(getCachedPosts()).toEqual([]);
     expect(events).toEqual(["posts:list:invalidate", "posts:detail:post-1:invalidate"]);
+    expect(deliveries.map(({ operationToken: token }) => token)).toEqual([
+      operationToken,
+      operationToken,
+    ]);
   } finally {
     unsubscribe();
   }

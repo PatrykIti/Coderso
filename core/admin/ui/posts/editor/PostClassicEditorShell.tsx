@@ -32,6 +32,11 @@ import { subscribeCacheEvents } from "@/utils/cacheBus";
 
 import type { ContentField } from "../../content-types/SchemaBuilder";
 
+import {
+  createPostExternalUpdateAuthority,
+  createPostMutationLease,
+  type PostMutationLease,
+} from "./postExternalUpdateAuthority";
 import { buildPostMetadataMutationPayload } from "./postMetadataMutationPayload";
 
 const resolvePostIdFromPath = (path: string): string | null => {
@@ -119,12 +124,6 @@ type PostRouteIdentity = Readonly<{
 type PostMetadataBaseline = Readonly<
   PostRouteIdentity & {
     detail: PostDetail;
-  }
->;
-
-type PostMutationLease = Readonly<
-  PostRouteIdentity & {
-    operationId: number;
   }
 >;
 
@@ -235,6 +234,7 @@ export function PostClassicEditorShell() {
   const leaseRef = useRef<PostMutationLease | null>(null);
   const nextLeaseOperationIdRef = useRef(0);
   const metadataDraftRevisionRef = useRef(0);
+  const externalUpdateAuthorityRef = useRef(createPostExternalUpdateAuthority());
 
   const currentRouteIdentity = useCallback((): PostRouteIdentity | null => {
     if (!postId || routePostIdRef.current !== postId) return null;
@@ -315,7 +315,6 @@ export function PostClassicEditorShell() {
         if (!kept.has("seoDescription")) setSeoDescription(next.seo?.description ?? "");
       }
       setError(null);
-      setRemoteUpdatePending(false);
       return true;
     },
     [editedKeys, installMetadataBaseline]
@@ -324,10 +323,7 @@ export function PostClassicEditorShell() {
   const acquirePostMutationLease = useCallback((): PostMutationLease | null => {
     const identity = currentRouteIdentity();
     if (!identity || !hasCurrentBaseline(identity) || leaseRef.current) return null;
-    const lease = {
-      ...identity,
-      operationId: (nextLeaseOperationIdRef.current += 1),
-    };
+    const lease = createPostMutationLease(identity, (nextLeaseOperationIdRef.current += 1));
     leaseRef.current = lease;
     setLeaseOperationId(lease.operationId);
     return lease;
@@ -359,6 +355,7 @@ export function PostClassicEditorShell() {
         }
       }
 
+      const hydrationGeneration = externalUpdateAuthorityRef.current.captureHydration();
       const snapshotTicket = beginSnapshotWrite();
       const metadataDraftRevision = metadataDraftRevisionRef.current;
       try {
@@ -382,6 +379,10 @@ export function PostClassicEditorShell() {
         if (options.discardLocalEdits) resetEdits();
         if (!applyContentSnapshot(identity, refreshed)) return false;
         if (!applyMetadataSnapshot(identity, refreshed, metadataDraftRevision)) return false;
+        if (options.lease === undefined) {
+          externalUpdateAuthorityRef.current.resolveHydration(hydrationGeneration);
+        }
+        setRemoteUpdatePending(externalUpdateAuthorityRef.current.hasPendingUpdate());
         return true;
       } catch (err) {
         if (isCurrentRoute(identity) && isSnapshotAuthoritative(snapshotTicket)) {
@@ -412,6 +413,7 @@ export function PostClassicEditorShell() {
     routePostIdRef.current = postId;
     baselineRef.current = null;
     leaseRef.current = null;
+    externalUpdateAuthorityRef.current = createPostExternalUpdateAuthority();
     supersedeSnapshotWrites();
     setRouteEpoch(nextRouteEpoch);
     setBaselineIdentity(null);
@@ -452,12 +454,21 @@ export function PostClassicEditorShell() {
 
   useEffect(() => {
     if (!postId) return;
-    return subscribeCacheEvents((event) => {
+    return subscribeCacheEvents((event, origin, operationToken) => {
       if (event.key !== cacheKeys.postDetail(postId)) return;
       const identity = currentRouteIdentity();
       if (!identity || !hasCurrentBaseline(identity)) return;
+      if (
+        !externalUpdateAuthorityRef.current.observe(
+          origin,
+          operationToken,
+          leaseRef.current?.cacheEventOperationToken
+        )
+      ) {
+        return;
+      }
+      setRemoteUpdatePending(true);
       if (leaseRef.current || hasEdits()) {
-        setRemoteUpdatePending(true);
         return;
       }
       void loadPost({}, identity);
@@ -540,18 +551,22 @@ export function PostClassicEditorShell() {
     setError(null);
     try {
       const source = readPostData(post);
-      const updated = await updatePost(lease.postId, {
-        title,
-        slug,
-        data: {
-          ...source,
-          excerpt,
-          content,
-          featuredImage,
-          featured,
-          document: buildClassicDocument(title, content, excerpt),
+      const updated = await updatePost(
+        lease.postId,
+        {
+          title,
+          slug,
+          data: {
+            ...source,
+            excerpt,
+            content,
+            featuredImage,
+            featured,
+            document: buildClassicDocument(title, content, excerpt),
+          },
         },
-      });
+        { operationToken: lease.cacheEventOperationToken }
+      );
       if (!ownsCurrentLease(lease) || !isSnapshotAuthoritative(snapshotTicket) || !updated) {
         return false;
       }
@@ -559,7 +574,6 @@ export function PostClassicEditorShell() {
       supersedeSnapshotWrites();
       applyContentSnapshot(lease, updated);
       setError(null);
-      setRemoteUpdatePending(false);
       return true;
     } catch (err) {
       if (ownsCurrentLease(lease)) {
@@ -604,7 +618,9 @@ export function PostClassicEditorShell() {
       } else {
         const submittedTick = beginSubmit();
         const snapshotTicket = beginSnapshotWrite();
-        await publishPost(lease.postId);
+        await publishPost(lease.postId, {
+          operationToken: lease.cacheEventOperationToken,
+        });
         if (!ownsCurrentLease(lease) || !isSnapshotAuthoritative(snapshotTicket)) return;
         settleSubmit(["status"], submittedTick);
         supersedeSnapshotWrites();
@@ -648,7 +664,9 @@ export function PostClassicEditorShell() {
         return;
       }
       const snapshotTicket = beginSnapshotWrite();
-      const updated = await updatePostMetadata(lease.postId, built.payload);
+      const updated = await updatePostMetadata(lease.postId, built.payload, {
+        operationToken: lease.cacheEventOperationToken,
+      });
       if (!ownsCurrentLease(lease) || !isSnapshotAuthoritative(snapshotTicket) || !updated) return;
       settleSubmit(built.settleKeys, submittedTick);
       supersedeSnapshotWrites();

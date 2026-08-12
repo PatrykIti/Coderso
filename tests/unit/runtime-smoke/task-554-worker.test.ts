@@ -5,11 +5,16 @@ import {
   buildTask554CleanupPlans,
   assertTask554PreIdentityAbsence,
   Task554ProductionHandlers,
+  type Task554FixtureInstallResult,
+  type Task554FixtureRecoveryPersistence,
   type Task554ProductionHandlerDependencies,
+  type Task554RemovalCounts,
 } from "../../../scripts/runtime-smoke/adapters/task-554/production-handlers";
 import {
   TASK554_ROUTING_SETTING_KEYS,
   Task554RoutingSettingsLease,
+  assertTask554RecoveryReceipt,
+  createTask554RecoveryReceipt,
   type Task554RoutingSettingKey,
   type Task554RoutingSettingRecord,
   type Task554RoutingSettingsLeaseState,
@@ -23,18 +28,26 @@ import {
   assertTask554FixtureMatrix,
   assertTask554WorkerDescriptorParity,
   createTask554InstallInput,
+  createTask554RecoveryAuthority,
   createTask554WorkerRegistry,
   projectTask554WorkerEnvironment,
   type Task554CleanupOutput,
   type Task554InstallOutput,
   type Task554ProofOutput,
   type Task554ReadOutput,
+  type Task554RecoveryAuthority,
   type Task554WorkerHandlers,
 } from "../../../scripts/runtime-smoke/adapters/task-554/worker-operations";
 import { buildTask554FixtureSpecs } from "../../../scripts/runtime-smoke/adapters/task-554/browser-actions";
 
 const uuid = (value: number) => `00000000-0000-4000-8000-${String(value).padStart(12, "0")}`;
 const marker = "a".repeat(24);
+const recoveryKey = Buffer.alloc(32, 7).toString("base64url");
+const authority = createTask554RecoveryAuthority({
+  profile: "fast",
+  runMarker: marker,
+  recoveryKey,
+});
 const credentials = Object.freeze([
   Object.freeze({
     kind: "writer" as const,
@@ -48,7 +61,7 @@ const credentials = Object.freeze([
   }),
 ]);
 
-const install: Task554InstallOutput = {
+const installedOutput: Task554InstallOutput = {
   schemaVersion: 1,
   runMarker: marker,
   actors: [
@@ -111,6 +124,13 @@ class InMemoryRoutingSettingsPersistence implements Task554RoutingSettingsPersis
   readonly #records = new Map<Task554RoutingSettingKey, RoutingFixtureRecord>();
   readonly #events: string[];
   #nextVersion = 0;
+  readonly #receipts = new Map<
+    string,
+    Readonly<{
+      readonly authority: Task554RecoveryAuthority;
+      readonly state: Task554RoutingSettingsLeaseState;
+    }>
+  >();
   #signalApplied: (() => void) | undefined;
   readonly applied = new Promise<void>((resolve) => {
     this.#signalApplied = resolve;
@@ -152,8 +172,20 @@ class InMemoryRoutingSettingsPersistence implements Task554RoutingSettingsPersis
     this.#records.set(key, { ...record, version: this.#version() });
   }
 
-  async applyTargets(): Promise<Task554RoutingSettingsLeaseState> {
+  hasReceipt(inputAuthority = authority): boolean {
+    return this.#receipts.has(inputAuthority.runMarker);
+  }
+
+  receiptState(inputAuthority = authority): Task554RoutingSettingsLeaseState {
+    const receipt = this.#receipts.get(inputAuthority.runMarker);
+    if (receipt === undefined) throw new Error("fixture receipt is absent");
+    this.#assertAuthority(receipt.authority, inputAuthority);
+    return receipt.state;
+  }
+
+  async applyTargets(inputAuthority = authority): Promise<void> {
     this.#events.push("apply-routing");
+    if (this.#receipts.has(inputAuthority.runMarker)) throw new Error("fixture receipt exists");
     const snapshot = this.#snapshot();
     for (const key of TASK554_ROUTING_SETTING_KEYS) {
       this.#records.set(key, {
@@ -163,14 +195,28 @@ class InMemoryRoutingSettingsPersistence implements Task554RoutingSettingsPersis
       });
     }
     this.#signalApplied?.();
-    return Object.freeze({ snapshot, owned: this.#owned() });
+    this.#receipts.set(inputAuthority.runMarker, {
+      authority: inputAuthority,
+      state: Object.freeze({ snapshot, owned: this.#owned() }),
+    });
+  }
+
+  async inspectRecovery(inputAuthority = authority): Promise<"absent" | "recoverable"> {
+    const receipt = this.#receipts.get(inputAuthority.runMarker);
+    if (receipt === undefined) return "absent";
+    this.#assertAuthority(receipt.authority, inputAuthority);
+    return "recoverable";
   }
 
   invalidate(): void {
     this.#events.push("invalidate-routing");
   }
 
-  async restoreIfOwned(state: Task554RoutingSettingsLeaseState): Promise<void> {
+  async restoreIfOwned(inputAuthority = authority): Promise<"absent" | "restored"> {
+    const receipt = this.#receipts.get(inputAuthority.runMarker);
+    if (receipt === undefined) return "absent";
+    this.#assertAuthority(receipt.authority, inputAuthority);
+    const state = receipt.state;
     this.#events.push("restore-routing");
     for (const key of TASK554_ROUTING_SETTING_KEYS) {
       const current = this.#records.get(key);
@@ -195,6 +241,26 @@ class InMemoryRoutingSettingsPersistence implements Task554RoutingSettingsPersis
           version: this.#version(),
         });
       }
+    }
+    this.#receipts.delete(inputAuthority.runMarker);
+    return "restored";
+  }
+
+  async proveReceiptAbsent(inputAuthority = authority): Promise<boolean> {
+    const receipt = this.#receipts.get(inputAuthority.runMarker);
+    if (receipt === undefined) return true;
+    this.#assertAuthority(receipt.authority, inputAuthority);
+    return false;
+  }
+
+  #assertAuthority(expected: Task554RecoveryAuthority, actual: Task554RecoveryAuthority): void {
+    if (
+      expected.schemaVersion !== actual.schemaVersion ||
+      expected.runMarker !== actual.runMarker ||
+      expected.profile !== actual.profile ||
+      expected.recoveryKey !== actual.recoveryKey
+    ) {
+      throw new Error("fixture recovery authority drift");
     }
   }
 
@@ -230,6 +296,77 @@ class InMemoryRoutingSettingsPersistence implements Task554RoutingSettingsPersis
   }
 }
 
+class InMemoryTask554FixtureRecovery implements Task554FixtureRecoveryPersistence {
+  #state: "absent" | "complete" | "partial" = "absent";
+  readonly #authority: Task554RecoveryAuthority;
+  installCalls = 0;
+  removeCalls = 0;
+  readonly unrelatedRows = 1;
+
+  constructor(inputAuthority = authority) {
+    this.#authority = inputAuthority;
+  }
+  async install(
+    input: Parameters<Task554FixtureRecoveryPersistence["install"]>[0],
+    passwordHashes: readonly string[]
+  ): Promise<Task554FixtureInstallResult> {
+    this.#assertAuthority(input.authority);
+    if (this.#state !== "absent" || passwordHashes.length !== 2) {
+      throw new Error("fixture install drift");
+    }
+    this.installCalls += 1;
+    this.#state = "complete";
+    return Object.freeze({
+      actors: input.actors.map(({ kind }, index) => ({
+        kind,
+        userId: uuid(index * 2 + 1),
+        roleId: uuid(index * 2 + 2),
+      })),
+      fixtures: input.fixtures.map((fixture, index) => ({
+        scenarioId: fixture.scenarioId,
+        variantId: fixture.variantId,
+        postId: uuid(index + 5),
+      })),
+      statements: 4,
+      rows: 4 + input.fixtures.length,
+    });
+  }
+  async inspect(inputAuthority: Task554RecoveryAuthority): Promise<"absent" | "complete"> {
+    this.#assertAuthority(inputAuthority);
+    if (this.#state === "partial") throw new Error("fixture recovery matrix is partial");
+    return this.#state;
+  }
+  async remove(inputAuthority: Task554RecoveryAuthority): Promise<Task554RemovalCounts> {
+    this.#assertAuthority(inputAuthority);
+    if (this.#state !== "complete") throw new Error("fixture recovery matrix is not complete");
+    this.removeCalls += 1;
+    this.#state = "absent";
+    return Object.freeze({
+      postChildrenRemoved: cleanup.postChildrenRemoved,
+      accessLogsRemoved: cleanup.accessLogsRemoved,
+      loginAuditRowsRemoved: cleanup.loginAuditRowsRemoved,
+      sessionsRemoved: cleanup.sessionsRemoved,
+      userRolesRemoved: cleanup.userRolesRemoved,
+      postsRemoved: cleanup.postsRemoved,
+      usersRemoved: cleanup.usersRemoved,
+      rolesRemoved: cleanup.rolesRemoved,
+    });
+  }
+  markPartial(): void {
+    this.#state = "partial";
+  }
+  #assertAuthority(actual: Task554RecoveryAuthority): void {
+    if (
+      actual.schemaVersion !== this.#authority.schemaVersion ||
+      actual.runMarker !== this.#authority.runMarker ||
+      actual.profile !== this.#authority.profile ||
+      actual.recoveryKey !== this.#authority.recoveryKey
+    ) {
+      throw new Error("fixture recovery authority drift");
+    }
+  }
+}
+
 function createRoutingDependencies(
   records: Partial<
     Readonly<Record<Task554RoutingSettingKey, Omit<RoutingFixtureRecord, "version">>>
@@ -240,25 +377,29 @@ function createRoutingDependencies(
 ): Readonly<{
   readonly dependencies: Task554ProductionHandlerDependencies;
   readonly events: string[];
+  readonly fixtureRecovery: InMemoryTask554FixtureRecovery;
   readonly routing: InMemoryRoutingSettingsPersistence;
 }> {
   const events: string[] = [];
   const routing = new InMemoryRoutingSettingsPersistence(records, events);
+  const fixtureRecovery = new InMemoryTask554FixtureRecovery();
   const dependencies: Task554ProductionHandlerDependencies = {
     async closeDatabase() {
       events.push("close-database");
     },
+    fixtureRecovery,
     hashPassword,
+    afterFixtureCommit() {},
     routingSettings: routing,
   };
-  return Object.freeze({ dependencies, events, routing });
+  return Object.freeze({ dependencies, events, fixtureRecovery, routing });
 }
 
 function handlers(): Task554WorkerHandlers {
   let closed = false;
   return {
     async install() {
-      return install;
+      return installedOutput;
     },
     async read(input) {
       return {
@@ -293,6 +434,7 @@ test("TASK-554 worker owns the four strict registered operations and never retur
   const input = createTask554InstallInput({
     profile: "fast",
     runMarker: marker,
+    recoveryKey,
     actors: credentials,
   });
   const output = await registry.executeOneShot(TASK554_WORKER_DESCRIPTORS.install, input);
@@ -303,6 +445,7 @@ test("TASK-554 worker owns the four strict registered operations and never retur
   });
   expect(JSON.stringify(output)).not.toContain(credentials[0].password);
   expect(JSON.stringify(output)).not.toContain(credentials[1].password);
+  expect(JSON.stringify(output)).not.toContain(recoveryKey);
   await expect(
     registry.executeOneShot(TASK554_WORKER_DESCRIPTORS.install, { ...input, unknown: true })
   ).rejects.toThrow("unknown or missing fields");
@@ -367,7 +510,7 @@ test("TASK-554 routing lease restores the exact three-setting snapshot", async (
   const fixture = createRoutingDependencies(baseline);
   const lease = new Task554RoutingSettingsLease(fixture.routing);
 
-  await lease.apply();
+  await lease.apply(authority);
   expect(fixture.routing.read("site.adminPath")).toMatchObject({ valueJson: '"/admin"' });
   expect(fixture.routing.read("site.adminBaseUrl")).toMatchObject({ valueJson: "null" });
   expect(fixture.routing.read("site.publicBaseUrl")).toMatchObject({ valueJson: "null" });
@@ -397,7 +540,7 @@ test("TASK-554 routing lease deletes absent baseline rows and rejects version ow
   >;
   const deletionFixture = createRoutingDependencies(existing);
   const deletionLease = new Task554RoutingSettingsLease(deletionFixture.routing);
-  await deletionLease.apply();
+  await deletionLease.apply(authority);
   await deletionLease.restore();
   expect(deletionFixture.routing.read("site.adminPath")).toMatchObject(existing["site.adminPath"]!);
   expect(deletionFixture.routing.read("site.adminBaseUrl")).toBeNull();
@@ -405,7 +548,7 @@ test("TASK-554 routing lease deletes absent baseline rows and rejects version ow
 
   const driftFixture = createRoutingDependencies(existing);
   const driftLease = new Task554RoutingSettingsLease(driftFixture.routing);
-  await driftLease.apply();
+  await driftLease.apply(authority);
   const owned = driftFixture.routing.read("site.adminPath")!;
   driftFixture.routing.rewriteSameTarget("site.adminPath");
   const drifted = driftFixture.routing.read("site.adminPath")!;
@@ -434,7 +577,8 @@ test("TASK-554 routing lease restores after post-commit cache invalidation fails
   const fixture = createRoutingDependencies(baseline);
   let invalidateFailed = false;
   const persistence: Task554RoutingSettingsPersistence = {
-    applyTargets: () => fixture.routing.applyTargets(),
+    applyTargets: (inputAuthority) => fixture.routing.applyTargets(inputAuthority),
+    inspectRecovery: (inputAuthority) => fixture.routing.inspectRecovery(inputAuthority),
     invalidate() {
       fixture.routing.invalidate();
       if (!invalidateFailed) {
@@ -442,11 +586,12 @@ test("TASK-554 routing lease restores after post-commit cache invalidation fails
         throw new Error("fixture cache invalidation failure");
       }
     },
-    restoreIfOwned: (state) => fixture.routing.restoreIfOwned(state),
+    restoreIfOwned: (inputAuthority) => fixture.routing.restoreIfOwned(inputAuthority),
+    proveReceiptAbsent: (inputAuthority) => fixture.routing.proveReceiptAbsent(inputAuthority),
   };
   const lease = new Task554RoutingSettingsLease(persistence);
 
-  await expect(lease.apply()).rejects.toThrow("cache invalidation failure");
+  await expect(lease.apply(authority)).rejects.toThrow("cache invalidation failure");
   expect(lease.active).toBe(true);
   await lease.restore();
 
@@ -465,7 +610,8 @@ test("TASK-554 routing lease retains logical restoration when restore invalidati
   });
   let invalidationCalls = 0;
   const persistence: Task554RoutingSettingsPersistence = {
-    applyTargets: () => fixture.routing.applyTargets(),
+    applyTargets: (inputAuthority) => fixture.routing.applyTargets(inputAuthority),
+    inspectRecovery: (inputAuthority) => fixture.routing.inspectRecovery(inputAuthority),
     invalidate() {
       fixture.routing.invalidate();
       invalidationCalls += 1;
@@ -473,11 +619,12 @@ test("TASK-554 routing lease retains logical restoration when restore invalidati
         throw new Error("fixture restore cache invalidation failure");
       }
     },
-    restoreIfOwned: (state) => fixture.routing.restoreIfOwned(state),
+    restoreIfOwned: (inputAuthority) => fixture.routing.restoreIfOwned(inputAuthority),
+    proveReceiptAbsent: (inputAuthority) => fixture.routing.proveReceiptAbsent(inputAuthority),
   };
   const lease = new Task554RoutingSettingsLease(persistence);
 
-  await lease.apply();
+  await lease.apply(authority);
   await expect(lease.restore()).rejects.toThrow("restore cache invalidation failure");
   expect(lease.active).toBe(false);
   expect(lease.restored).toBe(true);
@@ -494,7 +641,8 @@ test("TASK-554 close preserves restore-invalidation failure without retrying the
   });
   let invalidationCalls = 0;
   const persistence: Task554RoutingSettingsPersistence = {
-    applyTargets: () => fixture.routing.applyTargets(),
+    applyTargets: (inputAuthority) => fixture.routing.applyTargets(inputAuthority),
+    inspectRecovery: (inputAuthority) => fixture.routing.inspectRecovery(inputAuthority),
     invalidate() {
       fixture.routing.invalidate();
       invalidationCalls += 1;
@@ -502,7 +650,8 @@ test("TASK-554 close preserves restore-invalidation failure without retrying the
         throw new Error("fixture restore cache invalidation failure");
       }
     },
-    restoreIfOwned: (state) => fixture.routing.restoreIfOwned(state),
+    restoreIfOwned: (inputAuthority) => fixture.routing.restoreIfOwned(inputAuthority),
+    proveReceiptAbsent: (inputAuthority) => fixture.routing.proveReceiptAbsent(inputAuthority),
   };
   const handler = new Task554ProductionHandlers({
     ...fixture.dependencies,
@@ -511,7 +660,12 @@ test("TASK-554 close preserves restore-invalidation failure without retrying the
 
   await expect(
     handler.install(
-      createTask554InstallInput({ profile: "fast", runMarker: marker, actors: credentials })
+      createTask554InstallInput({
+        profile: "fast",
+        runMarker: marker,
+        recoveryKey,
+        actors: credentials,
+      })
     )
   ).rejects.toBeInstanceOf(AggregateError);
   await expect(handler.close()).rejects.toThrow("restore cache invalidation failure");
@@ -523,6 +677,7 @@ test("TASK-554 failed install restores existing and absent routing settings", as
   const installInput = createTask554InstallInput({
     profile: "fast",
     runMarker: marker,
+    recoveryKey,
     actors: credentials,
   });
   const existing = {
@@ -575,7 +730,12 @@ test("TASK-554 close restores active routing settings before database close", as
   const fixture = createRoutingDependencies(baseline, async () => hashPending);
   const handler = new Task554ProductionHandlers(fixture.dependencies);
   const installing = handler.install(
-    createTask554InstallInput({ profile: "fast", runMarker: marker, actors: credentials })
+    createTask554InstallInput({
+      profile: "fast",
+      runMarker: marker,
+      recoveryKey,
+      actors: credentials,
+    })
   );
   await fixture.routing.applied;
 
@@ -604,11 +764,13 @@ test("TASK-554 shutdown aggregates routing restoration and database failures", a
     async () => hashPending
   );
   const failingRouting: Task554RoutingSettingsPersistence = {
-    applyTargets: () => fixture.routing.applyTargets(),
+    applyTargets: (inputAuthority) => fixture.routing.applyTargets(inputAuthority),
+    inspectRecovery: (inputAuthority) => fixture.routing.inspectRecovery(inputAuthority),
     invalidate: () => fixture.routing.invalidate(),
     async restoreIfOwned() {
       throw new Error("fixture routing restoration failure");
     },
+    proveReceiptAbsent: (inputAuthority) => fixture.routing.proveReceiptAbsent(inputAuthority),
   };
   const handler = new Task554ProductionHandlers({
     ...fixture.dependencies,
@@ -618,7 +780,12 @@ test("TASK-554 shutdown aggregates routing restoration and database failures", a
     routingSettings: failingRouting,
   });
   const installing = handler.install(
-    createTask554InstallInput({ profile: "fast", runMarker: marker, actors: credentials })
+    createTask554InstallInput({
+      profile: "fast",
+      runMarker: marker,
+      recoveryKey,
+      actors: credentials,
+    })
   );
   await fixture.routing.applied;
 
@@ -633,11 +800,77 @@ test("TASK-554 shutdown aggregates routing restoration and database failures", a
   expect(await handler.proveAbsent()).toBe(false);
 });
 
+test("TASK-554 fresh handler recovers a lost install response and retains drift authority", async () => {
+  const input = createTask554InstallInput({
+    profile: "fast",
+    runMarker: marker,
+    recoveryKey,
+    actors: credentials,
+  });
+  const fixture = createRoutingDependencies({}, async () => "fixture-password-hash");
+  const first = new Task554ProductionHandlers(fixture.dependencies);
+  await first.install(input);
+  await first.close();
+  expect(await first.proveAbsent()).toBe(false);
+  expect(fixture.routing.hasReceipt()).toBe(true);
+  const replacement = new Task554ProductionHandlers(fixture.dependencies);
+  const recovered = await replacement.cleanup(authority);
+  expect(recovered).toMatchObject({ postsRemoved: 7, settingsRestored: true, rows: 17 });
+  expect(await replacement.prove(authority)).toMatchObject({ fixturesAbsent: true });
+  await replacement.close();
+  expect(await replacement.proveAbsent()).toBe(true);
+  expect(fixture.fixtureRecovery.installCalls).toBe(1);
+  expect(fixture.fixtureRecovery.removeCalls).toBe(1);
+  expect(fixture.fixtureRecovery.unrelatedRows).toBe(1);
+  expect(fixture.routing.hasReceipt()).toBe(false);
+  for (const key of TASK554_ROUTING_SETTING_KEYS) expect(fixture.routing.read(key)).toBeNull();
+  const drift = createRoutingDependencies({}, async () => "fixture-password-hash");
+  const lost = new Task554ProductionHandlers(drift.dependencies);
+  await lost.install(input);
+  await lost.close();
+  drift.fixtureRecovery.markPartial();
+  const receipt = createTask554RecoveryReceipt(authority, drift.routing.receiptState());
+  expect(() => assertTask554RecoveryReceipt(receipt, authority)).not.toThrow();
+  const tampered = {
+    ...receipt,
+    snapshot: { ...receipt.snapshot, "site.adminPath": { valueJson: '"/drift"', updatedAt: "x" } },
+  };
+  expect(() => assertTask554RecoveryReceipt(tampered, authority)).toThrow("HMAC");
+  const blocked = new Task554ProductionHandlers(drift.dependencies);
+  await expect(blocked.cleanup(authority)).rejects.toThrow("matrix is partial");
+  await blocked.close();
+  expect(await blocked.proveAbsent()).toBe(false);
+  expect(drift.fixtureRecovery.removeCalls).toBe(0);
+  expect(drift.routing.hasReceipt()).toBe(true);
+  expect(drift.events.filter((event) => event === "restore-routing")).toHaveLength(0);
+  const postCommit = createRoutingDependencies({}, async () => "fixture-password-hash");
+  const faulted = new Task554ProductionHandlers({
+    ...postCommit.dependencies,
+    afterFixtureCommit() {
+      throw new Error("fixture post-commit response loss");
+    },
+  });
+  await expect(faulted.install(input)).rejects.toThrow("post-commit response loss");
+  await faulted.close();
+  expect(await faulted.proveAbsent()).toBe(false);
+  expect(postCommit.routing.hasReceipt()).toBe(true);
+  expect(postCommit.events.filter((event) => event === "restore-routing")).toHaveLength(0);
+  const cleanedResponseLost = createRoutingDependencies({}, async () => "fixture-password-hash");
+  const installed = new Task554ProductionHandlers(cleanedResponseLost.dependencies);
+  await installed.install(input);
+  await installed.close();
+  const cleaner = new Task554ProductionHandlers(cleanedResponseLost.dependencies);
+  await cleaner.cleanup(authority); // Simulate losing the successful cleanup response.
+  const prover = new Task554ProductionHandlers(cleanedResponseLost.dependencies);
+  expect(await prover.prove(authority)).toMatchObject({ fixturesAbsent: true });
+});
+
 test("TASK-554 worker rejects credential and exact fixture-matrix drift", async () => {
   const registry = createTask554WorkerRegistry(handlers());
   const input = createTask554InstallInput({
     profile: "certification",
     runMarker: marker,
+    recoveryKey,
     actors: credentials,
   });
   await expect(
@@ -694,7 +927,7 @@ test("TASK-554 cleanup derives the five applied FK-safe authorities from the sha
     variantId: fixture.variantId,
     postId: uuid(index + 5),
   }));
-  const ledger = buildTask554CleanupLedger({ marker, actors: install.actors, fixtures });
+  const ledger = buildTask554CleanupLedger({ marker, actors: installedOutput.actors, fixtures });
   const plans = buildTask554CleanupPlans(ledger);
   expect(ledger.entries).toHaveLength(26);
   expect(plans.map(({ batchId, wave }) => `${wave}:${batchId}`)).toEqual([
@@ -746,15 +979,20 @@ test("TASK-554 worker environment carries only the bounded server pepper needed 
 
 test("TASK-554 cleanup and terminal proof validators require pre-identity and terminal absence", async () => {
   const registry = createTask554WorkerRegistry(handlers());
-  expect(await registry.executeOneShot(TASK554_WORKER_DESCRIPTORS.cleanup, {})).toMatchObject({
+  expect(
+    await registry.executeOneShot(TASK554_WORKER_DESCRIPTORS.cleanup, authority)
+  ).toMatchObject({
     preIdentityAbsenceProved: true,
     identityAbsenceProved: true,
   });
-  expect(await registry.executeOneShot(TASK554_WORKER_DESCRIPTORS.prove, {})).toMatchObject({
+  expect(await registry.executeOneShot(TASK554_WORKER_DESCRIPTORS.prove, authority)).toMatchObject({
     fixturesAbsent: true,
     identitiesAbsent: true,
   });
   await expect(
-    registry.executeOneShot(TASK554_WORKER_DESCRIPTORS.cleanup, { replay: true })
+    registry.executeOneShot(TASK554_WORKER_DESCRIPTORS.cleanup, {
+      ...authority,
+      replay: true,
+    })
   ).rejects.toThrow("unknown or missing fields");
 });

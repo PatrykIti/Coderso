@@ -5,6 +5,9 @@ import { createRoot } from "react-dom/client";
 import { afterEach, expect, test, vi } from "vitest";
 
 type CacheEvent = Readonly<{ key: string }>;
+type CacheEventOrigin = "local" | "remote";
+type CacheEventOperationToken = symbol;
+type MutationOptions = Readonly<{ operationToken?: CacheEventOperationToken }>;
 type PostStatus = "draft" | "published" | "scheduled" | "archived";
 type TestPost = Readonly<{
   id: string;
@@ -36,7 +39,9 @@ const deferred = <Value,>(): Deferred<Value> => {
 };
 
 const classicState = vi.hoisted(() => {
-  const listeners = new Set<(event: CacheEvent) => void>();
+  const listeners = new Set<
+    (event: CacheEvent, origin: CacheEventOrigin, operationToken?: CacheEventOperationToken) => void
+  >();
   const posts = new Map<string, TestPost>();
   const state = {
     path: "/admin/posts/post-1?editor=classic",
@@ -46,10 +51,25 @@ const classicState = vi.hoisted(() => {
     updatePostCalls: [] as Array<{ id: string; payload: Record<string, unknown> }>,
     updateMetadataCalls: [] as Array<{ id: string; payload: Record<string, unknown> }>,
     publishPostCalls: [] as string[],
+    emittedEvents: [] as Array<{
+      id: string;
+      origin: CacheEventOrigin;
+      operationToken?: CacheEventOperationToken;
+    }>,
     updatePostHandler: null as
-      ((id: string, payload: Record<string, unknown>) => Promise<TestPost | null>) | null,
+      | ((
+          id: string,
+          payload: Record<string, unknown>,
+          options?: MutationOptions
+        ) => Promise<TestPost | null>)
+      | null,
     updateMetadataHandler: null as
-      ((id: string, payload: Record<string, unknown>) => Promise<TestPost | null>) | null,
+      | ((
+          id: string,
+          payload: Record<string, unknown>,
+          options?: MutationOptions
+        ) => Promise<TestPost | null>)
+      | null,
     createPost(
       id: string,
       status: PostStatus = "draft",
@@ -77,10 +97,21 @@ const classicState = vi.hoisted(() => {
         ...overrides,
       };
     },
-    emit(id: string) {
-      for (const listener of listeners) listener({ key: `post:${id}` });
+    emit(
+      id: string,
+      origin: CacheEventOrigin = "remote",
+      operationToken?: CacheEventOperationToken
+    ) {
+      state.emittedEvents.push({ id, origin, operationToken });
+      for (const listener of listeners) listener({ key: `post:${id}` }, origin, operationToken);
     },
-    subscribe(listener: (event: CacheEvent) => void) {
+    subscribe(
+      listener: (
+        event: CacheEvent,
+        origin: CacheEventOrigin,
+        operationToken?: CacheEventOperationToken
+      ) => void
+    ) {
       listeners.add(listener);
       return () => listeners.delete(listener);
     },
@@ -93,6 +124,7 @@ const classicState = vi.hoisted(() => {
       state.updatePostCalls = [];
       state.updateMetadataCalls = [];
       state.publishPostCalls = [];
+      state.emittedEvents = [];
       state.updatePostHandler = null;
       state.updateMetadataHandler = null;
     },
@@ -175,21 +207,31 @@ vi.mock("@/services/postsClient", () => ({
     previewUrl: `https://preview.test/${id}`,
     expiresAt: "2026-08-11T08:30:00.000Z",
   })),
-  publishPost: vi.fn(async (id: string) => {
+  publishPost: vi.fn(async (id: string, options?: MutationOptions) => {
     classicState.publishPostCalls.push(id);
-    classicState.emit(id);
+    classicState.emit(id, "local", options?.operationToken);
     return { ok: true };
   }),
-  updatePost: vi.fn((id: string, payload: Record<string, unknown>) => {
-    classicState.updatePostCalls.push({ id, payload });
-    if (classicState.updatePostHandler) return classicState.updatePostHandler(id, payload);
-    return Promise.resolve(classicState.posts.get(id) ?? null);
-  }),
-  updatePostMetadata: vi.fn((id: string, payload: Record<string, unknown>) => {
-    classicState.updateMetadataCalls.push({ id, payload });
-    if (classicState.updateMetadataHandler) return classicState.updateMetadataHandler(id, payload);
-    return Promise.resolve(classicState.posts.get(id) ?? null);
-  }),
+  updatePost: vi.fn(
+    async (id: string, payload: Record<string, unknown>, options?: MutationOptions) => {
+      classicState.updatePostCalls.push({ id, payload });
+      const updated = classicState.updatePostHandler
+        ? await classicState.updatePostHandler(id, payload, options)
+        : (classicState.posts.get(id) ?? null);
+      if (updated) classicState.emit(id, "local", options?.operationToken);
+      return updated;
+    }
+  ),
+  updatePostMetadata: vi.fn(
+    async (id: string, payload: Record<string, unknown>, options?: MutationOptions) => {
+      classicState.updateMetadataCalls.push({ id, payload });
+      const updated = classicState.updateMetadataHandler
+        ? await classicState.updateMetadataHandler(id, payload, options)
+        : (classicState.posts.get(id) ?? null);
+      if (updated) classicState.emit(id, "local", options?.operationToken);
+      return updated;
+    }
+  ),
 }));
 
 vi.mock("@/ui/contexts/AdminRouterContext", () => ({
@@ -252,7 +294,14 @@ vi.mock("@/ui/preview/RuntimePreviewDialog", () => ({
 }));
 
 vi.mock("@/utils/cacheBus", () => ({
-  subscribeCacheEvents: (listener: (event: CacheEvent) => void) => classicState.subscribe(listener),
+  createCacheEventOperationToken: () => Symbol(),
+  subscribeCacheEvents: (
+    listener: (
+      event: CacheEvent,
+      origin: CacheEventOrigin,
+      operationToken?: CacheEventOperationToken
+    ) => void
+  ) => classicState.subscribe(listener),
 }));
 
 const mount = (node: React.ReactNode) => {
@@ -362,9 +411,8 @@ test("metadata responses normalize untouched controls and preserve a post-dispat
   classicState.posts.set("post-metadata", initial);
   classicState.getQueue = [Promise.resolve(initial)];
   let request = 0;
-  classicState.updateMetadataHandler = (id) => {
+  classicState.updateMetadataHandler = () => {
     request += 1;
-    classicState.emit(id);
     return request === 1 ? firstResponse.promise : secondResponse.promise;
   };
   const view = mount(<PostClassicEditorShell />);
@@ -462,10 +510,7 @@ test("a published Update keeps its lease through the refresh and preserves later
   classicState.path = "/admin/posts/post-published?editor=classic";
   classicState.posts.set("post-published", initial);
   classicState.getQueue = [Promise.resolve(initial), refreshResponse.promise];
-  classicState.updatePostHandler = (id) => {
-    classicState.emit(id);
-    return updateResponse.promise;
-  };
+  classicState.updatePostHandler = () => updateResponse.promise;
   const view = mount(<PostClassicEditorShell />);
 
   try {
@@ -496,6 +541,167 @@ test("a published Update keeps its lease through the refresh and preserves later
     ).toBe("Typed after Update");
     expect(view.container.textContent).toContain("Unsaved changes");
     expect(isDisabled(button(view.container, "Update"))).toBe(false);
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("an external event during Save draft remains unresolved after the content response", async () => {
+  const { PostClassicEditorShell } =
+    await import("../../../core/admin/ui/posts/editor/PostClassicEditorShell");
+  const initial = classicState.createPost("post-content-external");
+  const saveResponse = deferred<TestPost | null>();
+  classicState.path = "/admin/posts/post-content-external?editor=classic";
+  classicState.posts.set("post-content-external", initial);
+  classicState.getQueue = [Promise.resolve(initial)];
+  classicState.updatePostHandler = () => saveResponse.promise;
+  const view = mount(<PostClassicEditorShell />);
+
+  try {
+    await flush();
+    React.act(() => button(view.container, "Save draft")?.click());
+    await flush();
+    React.act(() => classicState.emit("post-content-external", "remote"));
+    expect(view.container.textContent).toContain("Updated in another tab");
+
+    saveResponse.resolve(initial);
+    await flush();
+
+    expect(view.container.textContent).toContain("Updated in another tab");
+    expect(classicState.getPostCalls).toHaveLength(1);
+    expect(classicState.emittedEvents.at(-1)).toMatchObject({
+      id: "post-content-external",
+      origin: "local",
+      operationToken: expect.any(Symbol),
+    });
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("an external event during metadata Save remains unresolved after its response", async () => {
+  const { PostClassicEditorShell } =
+    await import("../../../core/admin/ui/posts/editor/PostClassicEditorShell");
+  const initial = classicState.createPost("post-metadata-external");
+  const metadataResponse = deferred<TestPost | null>();
+  classicState.path = "/admin/posts/post-metadata-external?editor=classic";
+  classicState.posts.set("post-metadata-external", initial);
+  classicState.getQueue = [Promise.resolve(initial)];
+  classicState.updateMetadataHandler = () => metadataResponse.promise;
+  const view = mount(<PostClassicEditorShell />);
+
+  try {
+    await flush();
+    React.act(() => button(view.container, "metadata-set-seo-request")?.click());
+    React.act(() => button(view.container, "metadata-save")?.click());
+    await flush();
+    React.act(() => classicState.emit("post-metadata-external", "remote"));
+
+    metadataResponse.resolve(
+      classicState.createPost("post-metadata-external", "draft", {
+        seo: { description: "Server metadata" },
+      })
+    );
+    await flush();
+
+    expect(view.container.textContent).toContain("metadata-seo:Server metadata");
+    expect(view.container.textContent).toContain("Updated in another tab");
+    expect(classicState.getPostCalls).toHaveLength(1);
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("a baseline-equal metadata no-op emits nothing and preserves an older external event", async () => {
+  const { PostClassicEditorShell } =
+    await import("../../../core/admin/ui/posts/editor/PostClassicEditorShell");
+  const initial = classicState.createPost("post-metadata-noop", "draft", {
+    seo: { description: "Request SEO" },
+  });
+  classicState.path = "/admin/posts/post-metadata-noop?editor=classic";
+  classicState.posts.set("post-metadata-noop", initial);
+  classicState.getQueue = [Promise.resolve(initial)];
+  const view = mount(<PostClassicEditorShell />);
+
+  try {
+    await flush();
+    React.act(() => button(view.container, "metadata-set-seo-request")?.click());
+    React.act(() => classicState.emit("post-metadata-noop", "remote"));
+    const emittedBeforeSave = classicState.emittedEvents.length;
+    React.act(() => button(view.container, "metadata-save")?.click());
+    await flush();
+
+    expect(classicState.updateMetadataCalls).toEqual([]);
+    expect(classicState.emittedEvents).toHaveLength(emittedBeforeSave);
+    expect(classicState.getPostCalls).toHaveLength(1);
+    expect(view.container.textContent).toContain("Updated in another tab");
+    expect(view.container.textContent).not.toContain("Unsaved changes");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("an exact local self-event stays silent while an untagged local event remains external", async () => {
+  const { PostClassicEditorShell } =
+    await import("../../../core/admin/ui/posts/editor/PostClassicEditorShell");
+  const initial = classicState.createPost("post-local-token");
+  classicState.path = "/admin/posts/post-local-token?editor=classic";
+  classicState.posts.set("post-local-token", initial);
+  classicState.getQueue = [Promise.resolve(initial)];
+  const view = mount(<PostClassicEditorShell />);
+
+  try {
+    await flush();
+    React.act(() => button(view.container, "metadata-set-seo-request")?.click());
+    React.act(() => button(view.container, "metadata-save")?.click());
+    await flush();
+
+    expect(classicState.updateMetadataCalls).toHaveLength(1);
+    expect(classicState.emittedEvents.at(-1)).toMatchObject({
+      id: "post-local-token",
+      origin: "local",
+      operationToken: expect.any(Symbol),
+    });
+    expect(view.container.textContent).not.toContain("Updated in another tab");
+
+    React.act(() => button(view.container, "metadata-set-seo-newer")?.click());
+    React.act(() => classicState.emit("post-local-token", "local"));
+    expect(view.container.textContent).toContain("Updated in another tab");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("forced refresh resolves only the external generation captured before dispatch", async () => {
+  const { PostClassicEditorShell } =
+    await import("../../../core/admin/ui/posts/editor/PostClassicEditorShell");
+  const initial = classicState.createPost("post-refresh-generation");
+  const staleRefresh = deferred<TestPost | null>();
+  const latest = classicState.createPost("post-refresh-generation", "draft", {
+    seo: { description: "Latest external SEO" },
+  });
+  classicState.path = "/admin/posts/post-refresh-generation?editor=classic";
+  classicState.posts.set("post-refresh-generation", initial);
+  classicState.getQueue = [Promise.resolve(initial), staleRefresh.promise, Promise.resolve(latest)];
+  const view = mount(<PostClassicEditorShell />);
+
+  try {
+    await flush();
+    React.act(() => button(view.container, "metadata-set-seo-request")?.click());
+    React.act(() => classicState.emit("post-refresh-generation", "remote"));
+    React.act(() => button(view.container, "Refresh")?.click());
+    await flush();
+    React.act(() => classicState.emit("post-refresh-generation", "remote"));
+
+    staleRefresh.resolve(initial);
+    await flush();
+    expect(view.container.textContent).toContain("Updated in another tab");
+
+    React.act(() => button(view.container, "Refresh")?.click());
+    await flush();
+    expect(view.container.textContent).not.toContain("Updated in another tab");
+    expect(view.container.textContent).toContain("metadata-seo:Latest external SEO");
+    expect(classicState.getPostCalls).toHaveLength(3);
   } finally {
     view.cleanup();
   }

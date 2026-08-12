@@ -31,6 +31,13 @@ export const TASK554_WORKER_OPERATION_IDS = Object.freeze([
   "task-554/prove",
 ] as const);
 
+export interface Task554RecoveryAuthority extends PlainJsonObject {
+  readonly schemaVersion: 1;
+  readonly runMarker: string;
+  readonly profile: "fast" | "certification";
+  readonly recoveryKey: string;
+}
+
 export interface Task554ActorCredentials extends PlainJsonObject {
   readonly kind: Task554ActorKind;
   readonly email: string;
@@ -38,7 +45,7 @@ export interface Task554ActorCredentials extends PlainJsonObject {
 }
 
 export interface Task554InstallInput extends PlainJsonObject {
-  readonly runMarker: string;
+  readonly authority: Task554RecoveryAuthority;
   readonly actors: readonly Task554ActorCredentials[];
   readonly fixtures: readonly Task554FixtureInput[];
 }
@@ -113,8 +120,8 @@ export interface Task554ProofOutput extends PlainJsonObject {
 export interface Task554WorkerHandlers {
   install(input: Task554InstallInput): Promise<Task554InstallOutput>;
   read(input: Task554ReadInput): Promise<Task554ReadOutput>;
-  cleanup(): Promise<Task554CleanupOutput>;
-  prove(): Promise<Task554ProofOutput>;
+  cleanup(input: Task554RecoveryAuthority): Promise<Task554CleanupOutput>;
+  prove(input: Task554RecoveryAuthority): Promise<Task554ProofOutput>;
   close(): Promise<void>;
   proveAbsent(): Promise<boolean>;
 }
@@ -123,6 +130,7 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-
 const MARKER = /^[a-f0-9]{12,32}$/u;
 const EMAIL = /^task554-[a-f0-9]{12,32}-(writer|publisher)@smoke\.invalid$/u;
 const PASSWORD = /^[A-Za-z0-9_-]{24,128}$/u;
+const RECOVERY_KEY = /^[A-Za-z0-9_-]{43}$/u;
 const STATUSES = new Set(["draft", "published", "scheduled", "archived"]);
 const MAX_PASSWORD_PEPPER_BYTES = 8 * 1024;
 
@@ -194,6 +202,26 @@ function fixture(value: unknown): Task554FixtureInput {
   return Object.freeze(entry as unknown as Task554FixtureInput);
 }
 
+function recoveryAuthority(value: unknown): Task554RecoveryAuthority {
+  const authority = exactObject(
+    value,
+    ["schemaVersion", "runMarker", "profile", "recoveryKey"],
+    "TASK-554 recovery authority"
+  );
+  if (
+    authority.schemaVersion !== 1 ||
+    typeof authority.runMarker !== "string" ||
+    !MARKER.test(authority.runMarker) ||
+    (authority.profile !== "fast" && authority.profile !== "certification") ||
+    typeof authority.recoveryKey !== "string" ||
+    !RECOVERY_KEY.test(authority.recoveryKey) ||
+    Buffer.from(authority.recoveryKey, "base64url").length !== 32
+  ) {
+    fail("TASK-554 recovery authority is invalid");
+  }
+  return Object.freeze(authority as unknown as Task554RecoveryAuthority);
+}
+
 type Task554FixtureIdentity = Readonly<{
   readonly scenarioId: Task554ScenarioId;
   readonly variantId: Task554VariantId;
@@ -250,13 +278,9 @@ function assertFixtureBaselines(
 }
 
 function installInput(value: unknown): Task554InstallInput {
-  const input = exactObject(value, ["runMarker", "actors", "fixtures"], "TASK-554 install input");
-  if (
-    typeof input.runMarker !== "string" ||
-    !MARKER.test(input.runMarker) ||
-    !Array.isArray(input.actors) ||
-    !Array.isArray(input.fixtures)
-  ) {
+  const input = exactObject(value, ["authority", "actors", "fixtures"], "TASK-554 install input");
+  const authority = recoveryAuthority(input.authority);
+  if (!Array.isArray(input.actors) || !Array.isArray(input.fixtures)) {
     fail("TASK-554 install input is invalid");
   }
   const actors = input.actors.map(credential);
@@ -268,14 +292,17 @@ function installInput(value: unknown): Task554InstallInput {
     fail("TASK-554 actor identity set is invalid");
   }
   if (
-    actors.some((actor) => actor.email !== `task554-${input.runMarker}-${actor.kind}@smoke.invalid`)
+    actors.some(
+      (actor) => actor.email !== `task554-${authority.runMarker}-${actor.kind}@smoke.invalid`
+    )
   )
     fail("TASK-554 actor marker drifted");
   const fixtures = input.fixtures.map(fixture);
   const profile = inferTask554FixtureProfile(fixtures);
+  if (profile !== authority.profile) fail("TASK-554 recovery profile drifted");
   assertFixtureBaselines(profile, fixtures);
   return Object.freeze({
-    runMarker: input.runMarker,
+    authority,
     actors: Object.freeze(actors),
     fixtures: Object.freeze(fixtures),
   });
@@ -285,11 +312,6 @@ function readInput(value: unknown): Task554ReadInput {
   const input = exactObject(value, ["postId"], "TASK-554 read input");
   requireUuid(input.postId, "TASK-554 post ID");
   return Object.freeze(input as unknown as Task554ReadInput);
-}
-
-function emptyInput(value: unknown): PlainJsonObject {
-  exactObject(value, [], "TASK-554 worker input");
-  return Object.freeze({});
 }
 
 function output(value: unknown, keys: readonly string[], label: string): Record<string, unknown> {
@@ -418,7 +440,7 @@ function proofOutput(value: unknown): Task554ProofOutput {
   return result;
 }
 
-const OPERATION_DIGEST = createHash("sha256").update("task-554-worker-v1").digest("hex");
+const OPERATION_DIGEST = createHash("sha256").update("task-554-worker-v2").digest("hex");
 
 function descriptor(
   operationId: (typeof TASK554_WORKER_OPERATION_IDS)[number],
@@ -463,10 +485,12 @@ export function createTask554WorkerRegistry(
       definition(TASK554_WORKER_DESCRIPTORS.read, readInput, readOutput, (input) =>
         handlers.read(input)
       ),
-      definition(TASK554_WORKER_DESCRIPTORS.cleanup, emptyInput, cleanupOutput, () =>
-        handlers.cleanup()
+      definition(TASK554_WORKER_DESCRIPTORS.cleanup, recoveryAuthority, cleanupOutput, (input) =>
+        handlers.cleanup(input)
       ),
-      definition(TASK554_WORKER_DESCRIPTORS.prove, emptyInput, proofOutput, () => handlers.prove()),
+      definition(TASK554_WORKER_DESCRIPTORS.prove, recoveryAuthority, proofOutput, (input) =>
+        handlers.prove(input)
+      ),
     ],
     { close: () => handlers.close(), proveAbsent: () => handlers.proveAbsent() }
   );
@@ -475,14 +499,32 @@ export function createTask554WorkerRegistry(
 export function createTask554InstallInput(input: {
   readonly profile: "fast" | "certification";
   readonly runMarker: string;
+  readonly recoveryKey: string;
   readonly actors: readonly Task554ActorCredentials[];
 }): Task554InstallInput {
   const fixtures = buildTask554FixtureSpecs(input.profile).map((entry) =>
     Object.freeze({ ...entry })
   );
   return installInput(
-    Object.freeze({ runMarker: input.runMarker, actors: input.actors, fixtures })
+    Object.freeze({
+      authority: Object.freeze({
+        schemaVersion: 1,
+        runMarker: input.runMarker,
+        profile: input.profile,
+        recoveryKey: input.recoveryKey,
+      }),
+      actors: input.actors,
+      fixtures,
+    })
   );
+}
+
+export function createTask554RecoveryAuthority(input: {
+  readonly profile: "fast" | "certification";
+  readonly runMarker: string;
+  readonly recoveryKey: string;
+}): Task554RecoveryAuthority {
+  return recoveryAuthority(Object.freeze({ schemaVersion: 1, ...input }));
 }
 
 export function assertTask554WorkerDescriptorParity(

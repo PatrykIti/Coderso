@@ -406,6 +406,7 @@ vi.mock("@/ui/preview/RuntimePreviewDialog", () => ({
 }));
 
 vi.mock("@/utils/cacheBus", () => ({
+  createCacheEventOperationToken: () => Symbol(),
   subscribeCacheEvents: (listener: (event: CacheEvent) => void) => classicState.subscribe(listener),
 }));
 
