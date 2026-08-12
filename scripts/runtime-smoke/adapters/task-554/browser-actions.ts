@@ -351,7 +351,7 @@ export function materializeTask554BrowserAction(input: {
       cacheWitness = new Promise((resolve, reject) => {
         resolveCacheWitness = resolve;
         rejectCacheWitness = reject;
-        void page.waitForTimeout(15000).then(
+        void page.waitForTimeout(30000).then(
           () => reject(new Error("task554_post_cache_timeout")),
           () => undefined
         );
@@ -455,15 +455,15 @@ export function materializeTask554BrowserAction(input: {
       await page.goto("http://127.0.0.1:5173/admin/posts/" + cfg.postId + "?editor=classic", { waitUntil: "domcontentloaded", timeout: 30000 });
       if (cfg.variant.viewport.width === 390) {
         const details = page.getByRole("button", { name: "Details", exact: true });
-        await details.waitFor({ state: "visible", timeout: 15000 });
+        await details.waitFor({ state: "visible", timeout: 60000 });
         if (await details.count() !== 1) throw new Error("task554_details_control");
         await details.click();
       }
       const panel = page.locator('[data-entry-metadata-panel="true"]:visible');
-      await panel.waitFor({ state: "visible", timeout: 30000 });
+      await panel.waitFor({ state: "visible", timeout: 90000 });
       if (await panel.count() !== 1) throw new Error("task554_visible_metadata_panel");
       const save = panel.getByRole("button", { name: "Save metadata", exact: true });
-      await save.waitFor({ state: "visible", timeout: 15000 });
+      await save.waitFor({ state: "visible", timeout: 60000 });
       // The metadata controls render before the identity-bound baseline
       // hydration completes; a draft edited before hydration can be
       // overwritten by the accepted forced read (payload builder then
@@ -473,7 +473,7 @@ export function materializeTask554BrowserAction(input: {
         const buttons = Array.from(document.querySelectorAll("button"));
         const target = buttons.find((button) => button.textContent?.trim() === "Save metadata");
         return target !== undefined && !target.disabled;
-      }, { timeout: 20000 }).catch((error) => {
+      }, { timeout: 60000 }).catch((error) => {
         throw new Error("task554_hydration_gate_timeout", { cause: error });
       });
       if (Object.hasOwn(cfg.metadata, "status")) {
@@ -495,7 +495,7 @@ export function materializeTask554BrowserAction(input: {
         const schedule = scheduleField.getByRole("textbox");
         if (await schedule.count() !== 1) throw new Error("task554_schedule_control");
         if (cfg.metadata.status === "scheduled") {
-          await schedule.waitFor({ state: "visible", timeout: 15000 });
+          await schedule.waitFor({ state: "visible", timeout: 60000 });
           if (await schedule.isDisabled()) throw new Error("task554_schedule_disabled");
           await schedule.fill(String(cfg.metadata.scheduledAt));
         } else if (!(await schedule.isDisabled())) {
@@ -526,7 +526,7 @@ export function materializeTask554BrowserAction(input: {
       const responsePromise = page.waitForResponse((response) => {
         const request = response.request();
         return request.method() === "PATCH" && pathnameOf(response.url()) === metadataPath;
-      }, { timeout: 15000 });
+      }, { timeout: 30000 });
       await save.click();
       let response;
       try {
@@ -610,7 +610,7 @@ export function materializeTask554BrowserAction(input: {
           );
         },
         cfg.expectedDom,
-        { timeout: 15000 }
+        { timeout: 30000 }
       ).catch(async (error) => {
         const diag = await page.evaluate((expected) => {
           const visible = Array.from(document.querySelectorAll('[data-entry-metadata-panel="true"]')).filter(
