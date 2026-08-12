@@ -67,6 +67,8 @@ export function buildBatchRunCodeSource(input: {
       if (message.includes("Timeout") && message.includes("exceeded")) return "playwright_action_timeout";
       if (message.includes("does not handle the modal state")) return "playwright_modal_state";
       if (message.includes("strict mode violation")) return "playwright_strict_mode";
+      const slug = message.toLowerCase().replace(/[^a-z0-9_]+/g, "_").replace(/^_+|_+$/g, "").slice(0, 56);
+      if (slug.length > 0) return "task554_" + slug;
       return "browser_action_failed";
       return "browser_action_failed";
     };

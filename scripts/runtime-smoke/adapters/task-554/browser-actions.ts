@@ -377,7 +377,14 @@ export function materializeTask554BrowserAction(input: {
       }
       return body.status === cfg.metadata.status && body.scheduledAt === cfg.metadata.scheduledAt;
     };
-    const onConsole = (message) => { if (message.type() === "error") consoleErrors.push(message.text().slice(0, 512)); };
+    const onConsole = (message) => {
+      if (message.type() !== "error") return;
+      const text = message.text().slice(0, 512);
+      // The denied PATCH response logs a browser-level 403 resource error
+      // that is the expected outcome for publication-denied scenarios.
+      if (/Failed to load resource: the server responded with a status of 403/.test(text) && cfg.expectedResponseStatus === 403) return;
+      consoleErrors.push(text);
+    };
     const onPageError = (error) => pageErrors.push(String(error?.message ?? "pageerror").slice(0, 512));
     const onCacheMessage = (event) => {
       const value = event.data;
@@ -504,14 +511,17 @@ export function materializeTask554BrowserAction(input: {
       // The CLI eval context has no browser BroadcastChannel global, so the
       // cache-bus witness channel is created inside the page (same origin as
       // the Admin app) and bridged back through an exposed function.
-      await page.exposeFunction("__task554CacheEvent", (value) => onCacheMessage({ data: value }));
-      await page.evaluate(() => {
+      // The page is shared across scenarios in one Playwright session, so the
+      // exposed bridge name must be unique per scenario run.
+      const cacheBridgeName = "__task554CacheEvent_" + cfg.scenarioId.replaceAll("-", "_");
+      await page.exposeFunction(cacheBridgeName, (value) => onCacheMessage({ data: value }));
+      await page.evaluate((bridgeName) => {
         const channel = new BroadcastChannel("coderso.admin.cache");
         window.__task554CacheChannel = channel;
         channel.addEventListener("message", (event) => {
-          window.__task554CacheEvent(event.data);
+          window[bridgeName](event.data);
         });
-      });
+      }, cacheBridgeName);
       armCacheWitness();
       const responsePromise = page.waitForResponse((response) => {
         const request = response.request();
