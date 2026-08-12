@@ -556,7 +556,9 @@ function assertSmokeEvidenceSnapshot(snapshot, root) {
   for (const [relativePath, value] of snapshot) if (fingerprintPath(root, relativePath) !== value) throw new Error(`task_554_smoke_evidence_changed:${relativePath}`);
 }
 function smokeEvidencePaths(snapshot, root, session) {
-  return [...snapshot.keys(), `.tmp/runtime-smoke/${session}.diag.log`, `.tmp/runtime-smoke`];
+  const result = [...snapshot.keys(), `.tmp/runtime-smoke/${session}.diag.log`, `.tmp/runtime-smoke`];
+  console.error(`[evidence] snapshotKeys=${JSON.stringify([...snapshot.keys()])} allowed=${JSON.stringify(result)}`);
+  return result;
 }
 function createEmptySmokeSession(root, session, createdDirectories = null) {
   assertNofollowTask554SmokeRoot(root, true, createdDirectories);
