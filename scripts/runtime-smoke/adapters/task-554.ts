@@ -1,5 +1,5 @@
 import { createHash, randomBytes } from "node:crypto";
-import { chmod, lstat, mkdir, mkdtemp, realpath, readdir, rmdir, rm } from "node:fs/promises";
+import { chmod, lstat, mkdir, mkdtemp, realpath, readdir, rmdir, rm, unlink } from "node:fs/promises";
 import { isAbsolute, join, relative } from "node:path";
 
 import { resolveInsideRoot, SmokeError } from "../contracts";
@@ -629,6 +629,11 @@ export async function runTask554Adapter(context: RuntimeSmokeContext): Promise<S
       session: context.input.session,
       workspace: workspace.path,
       segments: segments.map(({ segmentId }) => segmentId),
+      // The run-code process itself needs more than the shared 30s default:
+      // the supervised dev host compiles the admin editor modules on first
+      // load (30-60s), and in-page waits alone do not extend the process
+      // budget. Bounded at 120s; the scenario assertions still fail closed.
+      runCodeTimeoutMs: 120_000,
     });
     transport = new BrowserTransport(context.input.session, dispatcher);
     context.lifecycle.register(transport);
@@ -735,6 +740,13 @@ export async function runTask554Adapter(context: RuntimeSmokeContext): Promise<S
     screenshots = await validateTask554ScreenshotOutputs(context.root, context.input, manifest);
   } catch (error) {
     primary = error;
+    // A failed session must contain only report.json for the workflow's
+    // failure-code reader; remove this run's screenshot PNGs best-effort
+    // (bounded owned paths under the session directory).
+    for (const relativePath of manifest.paths) {
+      const pngPath = resolveInsideRoot(context.root, relativePath, "task_554_failed_png");
+      await unlink(pngPath).catch(() => undefined);
+    }
   }
 
   const cleanupErrors: unknown[] = [];
