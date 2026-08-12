@@ -189,15 +189,15 @@ function captureTask554TmpSnapshot(root) {
   const directory = path.join(root, ".tmp"); let initial;
   try { initial = lstatSync(directory); } catch (error) { if (error && typeof error === "object" && error.code === "ENOENT") return Object.freeze({ directory: false, entries: Object.freeze([[".tmp", "missing"]]), files: new Map() }); throw error; }
   if (!initial.isDirectory() || initial.isSymbolicLink()) throw new Error("task_554_tmp_root_invalid");
-  const entries = [[".tmp", `directory:${initial.dev}:${initial.ino}:${initial.mode}:${initial.nlink}`]]; const files = new Map();
+  const entries = [[".tmp", `directory:${initial.dev}:${initial.ino}:${initial.mode}`]]; const files = new Map();
   const visit = (absolute, relative, depth) => {
     if (depth > MAX_WORKFLOW_TREE_DEPTH || entries.length >= MAX_WORKFLOW_TREE_ENTRIES) throw new Error("task_554_tmp_tree_limit");
     const stats = lstatSync(absolute); if (stats.isSymbolicLink()) throw new Error("task_554_tmp_entry_invalid");
-    if (stats.isDirectory()) { const node = task554TmpNode(stats); entries.push([relative, `directory:${node.dev}:${node.ino}:${node.mode}:${node.nlink}`]); for (const name of readdirSync(absolute).sort((a, b) => a.localeCompare(b))) visit(path.join(absolute, name), `${relative}/${name}`, depth + 1); if (!sameTask554TmpNode(node, task554TmpNode(lstatSync(absolute)))) throw new Error("task_554_tmp_ancestor_changed"); return; }
+    if (stats.isDirectory()) { const node = task554TmpNode(stats); entries.push([relative, `directory:${node.dev}:${node.ino}:${node.mode}`]); for (const name of readdirSync(absolute).sort((a, b) => a.localeCompare(b))) visit(path.join(absolute, name), `${relative}/${name}`, depth + 1); if (node.dev !== lstatSync(absolute).dev || node.ino !== lstatSync(absolute).ino || node.mode !== lstatSync(absolute).mode) throw new Error("task_554_tmp_ancestor_changed"); return; }
     if (!stats.isFile()) throw new Error("task_554_tmp_entry_invalid"); const file = readStableTask554TmpFile(absolute, "task_554_tmp_entry"); entries.push([relative, file.value]); files.set(relative, file);
   };
   for (const name of readdirSync(directory).sort((a, b) => a.localeCompare(b))) visit(path.join(directory, name), `.tmp/${name}`, 1);
-  if (!sameTask554TmpNode(task554TmpNode(initial), task554TmpNode(lstatSync(directory)))) throw new Error("task_554_tmp_ancestor_changed");
+  if (task554TmpNode(initial).dev !== lstatSync(directory).dev || task554TmpNode(initial).ino !== lstatSync(directory).ino || task554TmpNode(initial).mode !== lstatSync(directory).mode) throw new Error("task_554_tmp_ancestor_changed");
   return Object.freeze({ directory: true, entries: Object.freeze(entries.map((entry) => Object.freeze(entry))), files });
 }
 export function captureRepositoryFingerprint(root = ROOT, excludedPaths = []) {

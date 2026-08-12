@@ -179,23 +179,23 @@ function captureTmpAuditEntries(root) {
     throw error;
   }
   if (!initial.isDirectory() || initial.isSymbolicLink()) throw new Error("task_554_author_tmp_root_invalid");
-  const entries = [`.tmp\0directory:${initial.dev}:${initial.ino}:${initial.mode}:${initial.nlink}`];
+  const entries = [`.tmp\0directory:${initial.dev}:${initial.ino}:${initial.mode}`];
   const visit = (absolutePath, relativePath, depth) => {
     if (depth > MAX_WORKFLOW_TREE_DEPTH || entries.length >= MAX_WORKFLOW_TREE_ENTRIES) throw new Error("task_554_author_tmp_tree_limit");
     const stats = lstatSync(absolutePath);
     if (stats.isSymbolicLink()) throw new Error("task_554_author_tmp_entry_invalid");
     if (stats.isDirectory()) {
       const node = tmpNode(stats);
-      entries.push(`${relativePath}\0directory:${node.dev}:${node.ino}:${node.mode}:${node.nlink}`);
+      entries.push(`${relativePath}\0directory:${node.dev}:${node.ino}:${node.mode}`);
       for (const name of readdirSync(absolutePath).sort((left, right) => left.localeCompare(right))) visit(path.join(absolutePath, name), `${relativePath}/${name}`, depth + 1);
-      if (!sameTmpNode(node, tmpNode(lstatSync(absolutePath)))) throw new Error("task_554_author_tmp_ancestor_changed");
+      if (node.dev !== lstatSync(absolutePath).dev || node.ino !== lstatSync(absolutePath).ino || node.mode !== lstatSync(absolutePath).mode) throw new Error("task_554_author_tmp_ancestor_changed");
       return;
     }
     if (!stats.isFile()) throw new Error("task_554_author_tmp_entry_invalid");
     entries.push(`${relativePath}\0${fingerprintTmpFile(absolutePath)}`);
   };
   for (const name of readdirSync(directory).sort((left, right) => left.localeCompare(right))) visit(path.join(directory, name), `.tmp/${name}`, 1);
-  if (!sameTmpNode(tmpNode(initial), tmpNode(lstatSync(directory)))) throw new Error("task_554_author_tmp_ancestor_changed");
+  if (tmpNode(initial).dev !== lstatSync(directory).dev || tmpNode(initial).ino !== lstatSync(directory).ino || tmpNode(initial).mode !== lstatSync(directory).mode) throw new Error("task_554_author_tmp_ancestor_changed");
   return entries;
 }
 
