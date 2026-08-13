@@ -1,0 +1,219 @@
+{
+  "schemaVersion": 1,
+  "suiteId": "task-414",
+  "profile": "certification",
+  "session": "task-414-certification",
+  "pass": true,
+  "serverUp": true,
+  "timings": [],
+  "processes": {},
+  "snapshots": 0,
+  "scenarios": [
+    {
+      "id": "414-admin-light-wide",
+      "pass": true,
+      "elapsedMs": 12,
+      "title": "414 admin light wide layout",
+      "variants": [
+        {
+          "id": "414-light-wide",
+          "surface": "admin",
+          "theme": "light",
+          "viewport": {
+            "width": 1280,
+            "height": 800
+          },
+          "assertions": [
+            {
+              "kind": "computed-style",
+              "target": "topbar",
+              "property": "display",
+              "expected": "grid",
+              "actual": "grid",
+              "pass": true
+            }
+          ],
+          "consoleErrors": []
+        }
+      ],
+      "screenshots": [
+        {
+          "path": "414-light-wide.png",
+          "sha256": "17d8d0ede5b98c4d8a373130808443c55c4df76f1a948b39abed5bf5db7d35dc"
+        },
+        {
+          "path": "414-light-wide-2.png",
+          "sha256": "be59e6563d277c0dc1286c33e6dd92097bcae17f1da897a45be443fe1be454c9"
+        }
+      ]
+    },
+    {
+      "id": "414-admin-dark-narrow",
+      "pass": true,
+      "elapsedMs": 12,
+      "title": "414 admin dark narrow viewport",
+      "variants": [
+        {
+          "id": "414-dark-narrow",
+          "surface": "admin",
+          "theme": "dark",
+          "viewport": {
+            "width": 390,
+            "height": 844
+          },
+          "assertions": [
+            {
+              "kind": "dom-state",
+              "target": "menu-button",
+              "property": "aria-expanded",
+              "expected": "false",
+              "actual": "false",
+              "pass": true
+            }
+          ],
+          "consoleErrors": []
+        }
+      ],
+      "screenshots": [
+        {
+          "path": "414-dark-narrow.png",
+          "sha256": "70e4c648fcc98e64d25813ff9233a4dd59f9a1055354768c073c4c0b8bbcffe6"
+        }
+      ]
+    },
+    {
+      "id": "414-form-validation",
+      "pass": true,
+      "elapsedMs": 12,
+      "title": "414 admin form validation state",
+      "variants": [
+        {
+          "id": "414-light-wide",
+          "surface": "admin",
+          "theme": "light",
+          "viewport": {
+            "width": 1280,
+            "height": 800
+          },
+          "assertions": [
+            {
+              "kind": "computed-style",
+              "target": "email-input",
+              "property": "border-color",
+              "expected": "rgb(220, 38, 38)",
+              "actual": "rgb(220, 38, 38)",
+              "pass": true
+            }
+          ],
+          "consoleErrors": []
+        }
+      ],
+      "screenshots": [
+        {
+          "path": "414-form-validation.png",
+          "sha256": "c824b7ff5b7dfcbba48ad3025e096c93c0bcd05e6621a30ea1132ac0853c4081"
+        }
+      ]
+    },
+    {
+      "id": "414-modal-open",
+      "pass": true,
+      "elapsedMs": 12,
+      "title": "414 admin modal open state",
+      "variants": [
+        {
+          "id": "414-light-wide",
+          "surface": "admin",
+          "theme": "light",
+          "viewport": {
+            "width": 1280,
+            "height": 800
+          },
+          "assertions": [
+            {
+              "kind": "geometry",
+              "target": "modal",
+              "property": "width",
+              "expected": "640",
+              "actual": "640",
+              "pass": true
+            }
+          ],
+          "consoleErrors": []
+        }
+      ],
+      "screenshots": [
+        {
+          "path": "414-modal-open.png",
+          "sha256": "86a4bc625f15d21ae4f5f3dd7905536a58020a71c7460dd9a493f0eb7ca2d465"
+        }
+      ]
+    },
+    {
+      "id": "414-public-hero",
+      "pass": true,
+      "elapsedMs": 12,
+      "title": "414 public hero section",
+      "variants": [
+        {
+          "id": "414-hero",
+          "surface": "public",
+          "theme": "light",
+          "viewport": {
+            "width": 1280,
+            "height": 800
+          },
+          "assertions": [
+            {
+              "kind": "aria",
+              "target": "hero",
+              "property": "role",
+              "expected": "banner",
+              "actual": "banner",
+              "pass": true
+            }
+          ],
+          "consoleErrors": []
+        }
+      ],
+      "screenshots": [
+        {
+          "path": "414-hero.png",
+          "sha256": "78487999610d28c7d95f405cac460b42004e9918e50ad9709cda5aee918297e2"
+        }
+      ]
+    }
+  ],
+  "screenshots": [
+    {
+      "path": "414-light-wide.png",
+      "sha256": "17d8d0ede5b98c4d8a373130808443c55c4df76f1a948b39abed5bf5db7d35dc"
+    },
+    {
+      "path": "414-light-wide-2.png",
+      "sha256": "be59e6563d277c0dc1286c33e6dd92097bcae17f1da897a45be443fe1be454c9"
+    },
+    {
+      "path": "414-dark-narrow.png",
+      "sha256": "70e4c648fcc98e64d25813ff9233a4dd59f9a1055354768c073c4c0b8bbcffe6"
+    },
+    {
+      "path": "414-form-validation.png",
+      "sha256": "c824b7ff5b7dfcbba48ad3025e096c93c0bcd05e6621a30ea1132ac0853c4081"
+    },
+    {
+      "path": "414-modal-open.png",
+      "sha256": "86a4bc625f15d21ae4f5f3dd7905536a58020a71c7460dd9a493f0eb7ca2d465"
+    },
+    {
+      "path": "414-hero.png",
+      "sha256": "78487999610d28c7d95f405cac460b42004e9918e50ad9709cda5aee918297e2"
+    }
+  ],
+  "consoleErrors": [],
+  "suiteCleanup": {},
+  "cleanup": {
+    "pass": true
+  },
+  "failures": []
+}

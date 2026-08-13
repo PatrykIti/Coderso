@@ -1,0 +1,154 @@
+{
+  "schemaVersion": 1,
+  "suiteId": "task-545",
+  "profile": "certification",
+  "session": "task-545-certification",
+  "pass": true,
+  "serverUp": true,
+  "timings": [],
+  "processes": {},
+  "snapshots": 0,
+  "scenarios": [
+    {
+      "id": "admin-light-wide",
+      "pass": true,
+      "elapsedMs": 12,
+      "title": "Admin light theme wide layout",
+      "variants": [
+        {
+          "id": "light-wide",
+          "surface": "admin",
+          "theme": "light",
+          "viewport": { "width": 1280, "height": 800 },
+          "assertions": [
+            {
+              "kind": "computed-style",
+              "target": "sidebar",
+              "property": "display",
+              "expected": "flex",
+              "actual": "flex",
+              "pass": true
+            }
+          ],
+          "consoleErrors": []
+        }
+      ],
+      "screenshots": [{ "path": "light-wide.png", "sha256": "c1c3b62579e2cb2c15ba9ca1a726c68d251d163cc1701547b21a75a5d719fff7" }]
+    },
+    {
+      "id": "admin-dark-narrow",
+      "pass": true,
+      "elapsedMs": 15,
+      "title": "Admin dark theme narrow viewport",
+      "variants": [
+        {
+          "id": "dark-narrow",
+          "surface": "admin",
+          "theme": "dark",
+          "viewport": { "width": 390, "height": 844 },
+          "assertions": [
+            {
+              "kind": "dom-state",
+              "target": "nav-toggle",
+              "property": "aria-expanded",
+              "expected": "false",
+              "actual": "false",
+              "pass": true
+            }
+          ],
+          "consoleErrors": []
+        }
+      ],
+      "screenshots": [{ "path": "dark-narrow.png", "sha256": "ed16fae618b8080fa0677e3c3d1f39b360087d057fd9d778b5d08952e5a5b388" }]
+    },
+    {
+      "id": "admin-form-focus",
+      "pass": true,
+      "elapsedMs": 9,
+      "title": "Admin form focus ring",
+      "variants": [
+        {
+          "id": "light-wide",
+          "surface": "admin",
+          "theme": "light",
+          "viewport": { "width": 1280, "height": 800 },
+          "assertions": [
+            {
+              "kind": "computed-style",
+              "target": "name-input",
+              "property": "outline-style",
+              "expected": "solid",
+              "actual": "solid",
+              "pass": true
+            }
+          ],
+          "consoleErrors": []
+        }
+      ],
+      "screenshots": [{ "path": "form-focus.png", "sha256": "52876bfff824a35f938064c34532b9dc6252801d5b4875d01e782c551a688683" }]
+    },
+    {
+      "id": "admin-menu-open",
+      "pass": true,
+      "elapsedMs": 11,
+      "title": "Admin menu open state",
+      "variants": [
+        {
+          "id": "light-wide",
+          "surface": "admin",
+          "theme": "light",
+          "viewport": { "width": 1280, "height": 800 },
+          "assertions": [
+            {
+              "kind": "geometry",
+              "target": "dropdown",
+              "property": "height",
+              "expected": "320",
+              "actual": "320",
+              "pass": true
+            }
+          ],
+          "consoleErrors": []
+        }
+      ],
+      "screenshots": [{ "path": "menu-open.png", "sha256": "6eaacd7de9f29a214793275bb1212d2e06279fcf33ff82f6d4a828b2e6991025" }]
+    },
+    {
+      "id": "public-mobile-nav",
+      "pass": true,
+      "elapsedMs": 8,
+      "title": "Public mobile navigation",
+      "variants": [
+        {
+          "id": "mobile-nav",
+          "surface": "public",
+          "theme": "light",
+          "viewport": { "width": 390, "height": 844 },
+          "assertions": [
+            {
+              "kind": "aria",
+              "target": "main-nav",
+              "property": "role",
+              "expected": "navigation",
+              "actual": "navigation",
+              "pass": true
+            }
+          ],
+          "consoleErrors": []
+        }
+      ],
+      "screenshots": [{ "path": "mobile-nav.png", "sha256": "f77f56f5e5b4c0db7bde20761e4fad3d23b785205a9ca098ea1e23d8c8f3049a" }]
+    }
+  ],
+  "screenshots": [
+    { "path": "light-wide.png", "sha256": "c1c3b62579e2cb2c15ba9ca1a726c68d251d163cc1701547b21a75a5d719fff7" },
+    { "path": "dark-narrow.png", "sha256": "ed16fae618b8080fa0677e3c3d1f39b360087d057fd9d778b5d08952e5a5b388" },
+    { "path": "form-focus.png", "sha256": "52876bfff824a35f938064c34532b9dc6252801d5b4875d01e782c551a688683" },
+    { "path": "menu-open.png", "sha256": "6eaacd7de9f29a214793275bb1212d2e06279fcf33ff82f6d4a828b2e6991025" },
+    { "path": "mobile-nav.png", "sha256": "f77f56f5e5b4c0db7bde20761e4fad3d23b785205a9ca098ea1e23d8c8f3049a" }
+  ],
+  "consoleErrors": [],
+  "suiteCleanup": {},
+  "cleanup": { "pass": true },
+  "failures": []
+}

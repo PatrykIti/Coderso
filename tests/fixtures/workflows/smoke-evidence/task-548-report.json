@@ -1,0 +1,219 @@
+{
+  "schemaVersion": 1,
+  "suiteId": "task-548",
+  "profile": "certification",
+  "session": "task-548-certification",
+  "pass": true,
+  "serverUp": true,
+  "timings": [],
+  "processes": {},
+  "snapshots": 0,
+  "scenarios": [
+    {
+      "id": "548-admin-light-wide",
+      "pass": true,
+      "elapsedMs": 12,
+      "title": "548 admin light wide layout",
+      "variants": [
+        {
+          "id": "548-light-wide",
+          "surface": "admin",
+          "theme": "light",
+          "viewport": {
+            "width": 1280,
+            "height": 800
+          },
+          "assertions": [
+            {
+              "kind": "computed-style",
+              "target": "sidebar",
+              "property": "display",
+              "expected": "flex",
+              "actual": "flex",
+              "pass": true
+            }
+          ],
+          "consoleErrors": []
+        }
+      ],
+      "screenshots": [
+        {
+          "path": "548-light-wide.png",
+          "sha256": "5325f5e88e7c3a7be1eed99fc1b7e048cee33c45b5931ea333434ca12e1864e1"
+        },
+        {
+          "path": "548-light-wide-2.png",
+          "sha256": "da4e41b9350b3f99711f76cc2864a32709240e28e0732b4bb45273aeb29fe35a"
+        }
+      ]
+    },
+    {
+      "id": "548-admin-dark-narrow",
+      "pass": true,
+      "elapsedMs": 12,
+      "title": "548 admin dark narrow viewport",
+      "variants": [
+        {
+          "id": "548-dark-narrow",
+          "surface": "admin",
+          "theme": "dark",
+          "viewport": {
+            "width": 390,
+            "height": 844
+          },
+          "assertions": [
+            {
+              "kind": "dom-state",
+              "target": "nav-toggle",
+              "property": "aria-expanded",
+              "expected": "false",
+              "actual": "false",
+              "pass": true
+            }
+          ],
+          "consoleErrors": []
+        }
+      ],
+      "screenshots": [
+        {
+          "path": "548-dark-narrow.png",
+          "sha256": "fdcbb3fbca64a88e992d6deff23c5d013c0e960a78eb54f6e8c80b6fe30d4c9c"
+        }
+      ]
+    },
+    {
+      "id": "548-form-focus",
+      "pass": true,
+      "elapsedMs": 12,
+      "title": "548 admin form focus ring",
+      "variants": [
+        {
+          "id": "548-light-wide",
+          "surface": "admin",
+          "theme": "light",
+          "viewport": {
+            "width": 1280,
+            "height": 800
+          },
+          "assertions": [
+            {
+              "kind": "computed-style",
+              "target": "name-input",
+              "property": "outline-style",
+              "expected": "solid",
+              "actual": "solid",
+              "pass": true
+            }
+          ],
+          "consoleErrors": []
+        }
+      ],
+      "screenshots": [
+        {
+          "path": "548-form-focus.png",
+          "sha256": "703daebe84d1c47977cbd1d3ed35f975964051f861af13ec3c20e993c429dfc3"
+        }
+      ]
+    },
+    {
+      "id": "548-menu-open",
+      "pass": true,
+      "elapsedMs": 12,
+      "title": "548 admin menu open state",
+      "variants": [
+        {
+          "id": "548-light-wide",
+          "surface": "admin",
+          "theme": "light",
+          "viewport": {
+            "width": 1280,
+            "height": 800
+          },
+          "assertions": [
+            {
+              "kind": "geometry",
+              "target": "dropdown",
+              "property": "height",
+              "expected": "320",
+              "actual": "320",
+              "pass": true
+            }
+          ],
+          "consoleErrors": []
+        }
+      ],
+      "screenshots": [
+        {
+          "path": "548-menu-open.png",
+          "sha256": "535e6b3b1afc1f1215ebf95b17d4989a4e83f05f0d6d1562beb3676f8e2c714e"
+        }
+      ]
+    },
+    {
+      "id": "548-public-nav",
+      "pass": true,
+      "elapsedMs": 12,
+      "title": "548 public mobile navigation",
+      "variants": [
+        {
+          "id": "548-mobile-nav",
+          "surface": "public",
+          "theme": "light",
+          "viewport": {
+            "width": 390,
+            "height": 844
+          },
+          "assertions": [
+            {
+              "kind": "aria",
+              "target": "main-nav",
+              "property": "role",
+              "expected": "navigation",
+              "actual": "navigation",
+              "pass": true
+            }
+          ],
+          "consoleErrors": []
+        }
+      ],
+      "screenshots": [
+        {
+          "path": "548-mobile-nav.png",
+          "sha256": "c181cbd2a980a28c7c83c06b20d3058eee2bf9140e8c28023a3d52338546c16b"
+        }
+      ]
+    }
+  ],
+  "screenshots": [
+    {
+      "path": "548-light-wide.png",
+      "sha256": "5325f5e88e7c3a7be1eed99fc1b7e048cee33c45b5931ea333434ca12e1864e1"
+    },
+    {
+      "path": "548-light-wide-2.png",
+      "sha256": "da4e41b9350b3f99711f76cc2864a32709240e28e0732b4bb45273aeb29fe35a"
+    },
+    {
+      "path": "548-dark-narrow.png",
+      "sha256": "fdcbb3fbca64a88e992d6deff23c5d013c0e960a78eb54f6e8c80b6fe30d4c9c"
+    },
+    {
+      "path": "548-form-focus.png",
+      "sha256": "703daebe84d1c47977cbd1d3ed35f975964051f861af13ec3c20e993c429dfc3"
+    },
+    {
+      "path": "548-menu-open.png",
+      "sha256": "535e6b3b1afc1f1215ebf95b17d4989a4e83f05f0d6d1562beb3676f8e2c714e"
+    },
+    {
+      "path": "548-mobile-nav.png",
+      "sha256": "c181cbd2a980a28c7c83c06b20d3058eee2bf9140e8c28023a3d52338546c16b"
+    }
+  ],
+  "consoleErrors": [],
+  "suiteCleanup": {},
+  "cleanup": {
+    "pass": true
+  },
+  "failures": []
+}
