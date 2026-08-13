@@ -61,4 +61,14 @@ _docs/PLAYWRIGHT/screenshots/
 
 # Local workflow orchestration and smoke evidence
 _docs/_workflows/
+
+# Keep the globally ignored workflow tree traversable only far enough to
+# re-include canonical evidence. Every other immediate workflow/smoke child
+# remains ignored; tracked workflow modules keep their existing Git status.
+!/_docs/_workflows/
+/_docs/_workflows/*
+!/_docs/_workflows/_smoke/
+/_docs/_workflows/_smoke/*
+!/_docs/_workflows/_smoke/evidence/
+!/_docs/_workflows/_smoke/evidence/**
 opencode.json
