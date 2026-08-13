@@ -1,14 +1,76 @@
+import { execFileSync } from "node:child_process";
+import { createHash } from "node:crypto";
+import { readFileSync } from "node:fs";
+import path from "node:path";
 import { buildTask522FixPrompt } from "./lib/task-522-findings-prompt.mjs";
+import { runCanonicalAuditRounds } from "./lib/audit-rounds.mjs";
 
 export const meta = {
   name: "task-522-author",
   description:
-    "Author TASK-522 (Rich hero/section composition: sanitized custom-SVG block + floating-drift decoration + tilt-on-any-block + layered hero/section canvas + glass/glow presets) as a GRANULAR execution-ready contract (parent + NN + NN-LNN leaves w/ pseudocode), grounded in the reference wow-site + the live code + TASK-521 outputs, then a drift-audit LOOP (up to 5 rounds) until 0 HIGH/MEDIUM. Docs-only.",
+    "Author TASK-522 (Rich hero/section composition: sanitized custom-SVG block + floating-drift decoration + tilt-on-any-block + layered hero/section canvas + glass/glow presets) as a GRANULAR execution-ready contract (parent + NN + NN-LNN leaves w/ pseudocode), grounded in the reference wow-site + the live code + TASK-521 outputs, then a canonical drift-audit LOOP until 0 HIGH/MEDIUM. Docs-only.",
   phases: [{ title: "Author" }, { title: "DriftAudit" }, { title: "FinalReconcile" }],
 };
 
 const ROOT = "/home/coder/project/Coderso";
 const TASK = "TASK-522";
+// TASK-522's actual post-merge changelog pin (literal historical pin).
+const CHANGELOG_PIN = "1235";
+
+function runGit(args) {
+  return execFileSync("git", args, { cwd: ROOT, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] });
+}
+
+function currentHead() {
+  return runGit(["rev-parse", "HEAD"]).trim();
+}
+
+function dirtyContext() {
+  return runGit(["status", "--porcelain"]).split("\n").filter(Boolean).sort();
+}
+
+function scopeFileFingerprint(relativePath) {
+  const absolutePath = path.join(ROOT, relativePath);
+  let bytes;
+  try {
+    bytes = readFileSync(absolutePath);
+  } catch (error) {
+    if (error && typeof error === "object" && error.code === "ENOENT") {
+      return `${relativePath}\0missing`;
+    }
+    throw error;
+  }
+  return `${relativePath}\0${createHash("sha256").update(bytes).digest("hex")}`;
+}
+
+function fingerprintPayload(relativePaths) {
+  const parts = [`head=${currentHead()}`, `dirty=${JSON.stringify(dirtyContext())}`];
+  parts.push(...[...new Set(relativePaths)].sort().map(scopeFileFingerprint));
+  return parts.join("|");
+}
+
+// SHA-256 over the current scopes' sorted audited paths and bytes, plus HEAD
+// and the porcelain dirty context. A change during dispatch aborts the round.
+const fingerprintScopes = async (scopes) =>
+  createHash("sha256").update(fingerprintPayload(scopes.map((group) => group.repoRelativePath))).digest("hex");
+
+// Full-universe fingerprint: every declared group plus HEAD and dirty context.
+const fingerprintUniverse = async (groups) =>
+  createHash("sha256").update(fingerprintPayload(groups.map((group) => group.repoRelativePath))).digest("hex");
+
+// Per-scope fingerprint over each scope's exact normalized path and bytes.
+const fingerprintEveryScope = async (groups) => {
+  const out = {};
+  for (const group of groups) {
+    out[group.repoRelativePath] = createHash("sha256")
+      .update(scopeFileFingerprint(group.repoRelativePath))
+      .digest("hex");
+  }
+  return out;
+};
+
+const AUDIT_CONTEXT = () =>
+  `Repository: ${ROOT}\nHEAD: ${currentHead()}\nDirty: ${JSON.stringify(dirtyContext())}\nTask: ${TASK}; changelog pin: ${CHANGELOG_PIN}.\nREAD-ONLY audit: do NOT edit any file. Order findings by severity; require concrete file:line evidence; never expose secrets, credentials, private data, or raw sensitive logs.`;
 
 const GROUNDING = `GROUNDED FACTS (verify each vs live code at ${ROOT}; large .tsx read as binary to rg — use grep -an/Read: PageEditor.tsx, pageRendererV2.tsx, pageDocumentV2.ts, pageEditorControlRegistry.ts, hero.tsx):
 
@@ -34,10 +96,10 @@ const DECISIONS = `OWNER INTENT (baked in): the owner wants to BUILD a rich hero
 NO new npm dependency (all inline-SVG + CSS + the existing runtime). NO DB migration (everything present-only jsonb on block/section style + a new SVG block type). All effects respect prefers-reduced-motion. Reuse TASK-521's pageEffectsRuntime + tilt primitive rather than duplicating.`;
 
 const GRANULARITY = `GRANULARITY + FILE RULES (AGENTS.md — MANDATORY):
-- board parent ${TASK}_Short_Title.md (Overview; grounded gap analysis w/ file:line; Schema-extension plan; Subtask breakdown table w/ SINGLE-WRITER ownership + strict land order; Coordination guards incl. the pageRendererV2/pageEditorControlRegistry additive seams shared with TASK-521 [522 must edit DISJOINT regions/NEW block cases, and land AFTER 521]; Security Contract [SVG sanitization allowlist, icon allowlist, no CSS/JS injection via effect config]; Hard Invariants [present-only, reduced-motion, no-dep, no-migration, reuse-521-runtime]; Acceptance Criteria measured LIVE vs the reference; changelog pin) -> technical subtasks ${TASK}-NN -> EXECUTABLE LEAVES ${TASK}-NN-LNN with implementation PSEUDOCODE (helper/function shape, data flow, error handling) + regression-TEST shape + correct lane (Bun tests/unit/*, Vitest tests/vitest/*).
+- board parent ${TASK}_Short_Title.md (Overview; grounded gap analysis w/ file:line; Schema-extension plan; Subtask breakdown table w/ SINGLE-WRITER ownership + strict land order; Coordination guards incl. the pageRendererV2/pageEditorControlRegistry additive seams shared with TASK-521 [522 must edit DISJOINT regions/NEW block cases, and land AFTER 521]; Security Contract [SVG sanitization allowlist, icon allowlist, no CSS/JS injection via effect config]; Hard Invariants [present-only, reduced-motion, no-dep, no-migration, reuse-521-runtime]; Acceptance Criteria measured LIVE vs the reference; changelog pin ${CHANGELOG_PIN}) -> technical subtasks ${TASK}-NN -> EXECUTABLE LEAVES ${TASK}-NN-LNN with implementation PSEUDOCODE (helper/function shape, data flow, error handling) + regression-TEST shape + correct lane (Bun tests/unit/*, Vitest tests/vitest/*).
 - File naming: parent underscores; children hyphens (${TASK}-NN-Title.md, ${TASK}-NN-LNN-Title.md); H1==physical ID; a '# FileName:' line==filename; child parent field; Status ⏳ To Do; zero-padded NN from 01 / LNN from L01.
 - SINGLE-WRITER: one owner per production file/region (or a documented additive seam). Strict land order: model/runtime FIRST, then the block/effect consumers, then the canvas+presets, then closure. DEPENDS ON TASK-521 (state it; 522 implements AFTER 521 merges).
-- Do NOT edit _docs/_TASKS/README.md or _docs/_CHANGELOG/* (orchestrator owns those); PIN the changelog as the next-free-at-closure (as of authoring next-free is 1229; 519=1232/520=1233 on disk, 521 pending -> 522 resolves at its closure; do NOT hardcode a colliding number).
+- Do NOT edit _docs/_TASKS/README.md or _docs/_CHANGELOG/* (orchestrator owns those); PIN the changelog to the literal task pin ${CHANGELOG_PIN} (TASK-522's actual post-merge changelog; never scan, guess next-free, or renumber at closure).
 
 SUGGESTED DECOMPOSITION (author may refine, keep granular):
 - 522-01 Composition + decoration MODEL + runtime extensions (custom-SVG block model + sanitizer; floating-drift decoration model; block-level tilt flag; layered-canvas container model; glass/glow preset tokens; extend 521's pageEffectsRuntime with drift + tilt-on-block binding). Foundation — leaves per model region + sanitizer + runtime + tests.
@@ -99,13 +161,16 @@ const AUDIT_SCHEMA = {
     verdict: { type: "string", enum: ["clean", "issues"] },
   },
 };
+// The fixer must declare the exact repo-relative paths it edited; the
+// canonical driver checks that claim against the before/after fingerprints.
 const FIX_SCHEMA = {
   type: "object",
   additionalProperties: false,
-  required: ["applied", "residual"],
+  required: ["applied", "residual", "affectedScopeIds"],
   properties: {
     applied: { type: "array", items: { type: "string" } },
     residual: { type: "array", items: { type: "string" } },
+    affectedScopeIds: { type: "array", items: { type: "string" } },
   },
 };
 
@@ -114,17 +179,7 @@ ${GRANULARITY}
 ${DECISIONS}
 ${GROUNDING}`;
 
-async function main() {
-phase("Author");
-const authored = await agent(
-  `${COMMON}\n\nAUTHOR the full ${TASK} family now (parent + all NN subtasks + all NN-LNN executable leaves) per the suggested decomposition (refine but keep granular + execution-ready). Ground every file:line vs live code + the reference. State the TASK-521 dependency explicitly. Return the structured result listing every file written.`,
-  { label: "author:522", phase: "Author", schema: AUTHOR_SCHEMA }
-);
-log(
-  `Authored ${TASK}: ${authored?.subtaskFiles?.length || 0} subtasks + ${authored?.leafFiles?.length || 0} leaves, changelog ${authored?.changelogPin}, migration=${authored?.migrationNeeded}, newDep=${authored?.newDependency}, dependsOn=${authored?.dependsOn}`
-);
-
-const LENSES = [
+const LENS_ASKS = [
   {
     key: "grounding",
     ask: "GROUNDING: open every cited file:line (grep -an/Read for big files) — exists + says what is claimed; the reference app.js/styles.css patterns are cited accurately; the 521 outputs 522 depends on are referenced as VERIFY-at-implement (not assumed present now).",
@@ -147,50 +202,75 @@ const LENSES = [
   },
 ];
 
-phase("DriftAudit");
-let round = 0,
-  clean = false;
-while (round < 5 && !clean) {
-  round += 1;
-  const audits = await parallel([
-    ...LENSES.map(
-      (l) => () =>
-        agent(
-          `Round ${round} adversarial DRIFT-AUDIT of ${TASK} (read parent + ALL NN + NN-LNN files under ${ROOT}/_docs/_TASKS/). LENS: ${l.ask}\n${GROUNDING}\n${DECISIONS}\nFindings with concrete fixes; isReal only if defensible.`,
-          { label: `audit-r${round}:${l.key}`, phase: "DriftAudit", schema: AUDIT_SCHEMA }
-        ).then((a) => ({ ...a, key: l.key }))
-    ),
-    () =>
-      agent(
-        `Round ${round} cross-file RECONCILE of ${TASK} (read ALL files). Check ONLY cross-file contradictions: single-writer ownership + the 521-shared seams disjoint, identical shared enum/type/clamp/CSS-var/keyframe-name shapes across files, helper/effect/glyph names consumers reference == names the owning subtask defines, per-device consistency, promised test-file names vs delivered, land order (after 521), changelog pin. ${GROUNDING}\nFindings (isReal + fix).`,
-        { label: `reconcile-r${round}`, phase: "DriftAudit", schema: AUDIT_SCHEMA }
-      ).then((a) => ({ ...a, key: "reconcile" })),
-  ]);
-  const returned = audits.filter(Boolean);
-  const expected = LENSES.length + 1;
-  const real = returned.flatMap((a) =>
-    (a.findings || []).filter((f) => f.isReal).map((f) => ({ ...f, lens: a.key }))
-  );
-  const hm = real.filter((f) => f.severity === "HIGH" || f.severity === "MEDIUM");
-  log(
-    `Round ${round}: audits ${returned.length}/${expected} | real HIGH/MED=${hm.length} LOW=${real.length - hm.length}`
-  );
-  if (returned.length === expected && hm.length === 0) {
-    clean = true;
-    log(`Round ${round}: CLEAN.`);
-    break;
-  }
-  if (hm.length > 0)
-    await agent(buildTask522FixPrompt({ common: COMMON, round, task: TASK, findings: hm }), {
-      label: `fix-r${round}`,
-      phase: "DriftAudit",
-      schema: FIX_SCHEMA,
-    });
+function auditFilePrompt(relativePath, round) {
+  const dimensions = LENS_ASKS.map((lens) => `${lens.key.toUpperCase()}: ${lens.ask}`).join("\n");
+  return `${AUDIT_CONTEXT()}\nRound ${round} adversarial DRIFT-AUDIT of ${TASK} file ${relativePath} (read ${relativePath} first; read the sibling parent/NN/NN-LNN files only as needed to judge it). LENS DIMENSIONS for this file:\n${dimensions}\n${GROUNDING}\n${DECISIONS}\nFindings with concrete fixes; isReal only if defensible.`;
 }
+
+function reconcilePrompt(round) {
+  return `${AUDIT_CONTEXT()}\nRound ${round} cross-file RECONCILE of ${TASK} (read ALL files). Check ONLY cross-file contradictions: single-writer ownership + the 521-shared seams disjoint, identical shared enum/type/clamp/CSS-var/keyframe-name shapes across files, helper/effect/glyph names consumers reference == names the owning subtask defines, per-device consistency, promised test-file names vs delivered, land order (after 521), changelog pin ${CHANGELOG_PIN}. ${GROUNDING}\nFindings (isReal + fix).`;
+}
+
+async function main() {
+phase("Author");
+const authored = await agent(
+  `${COMMON}\n\nAUTHOR the full ${TASK} family now (parent + all NN subtasks + all NN-LNN executable leaves) per the suggested decomposition (refine but keep granular + execution-ready). Ground every file:line vs live code + the reference. State the TASK-521 dependency explicitly. Return the structured result listing every file written.`,
+  { label: "author:522", phase: "Author", schema: AUTHOR_SCHEMA }
+);
+log(
+  `Authored ${TASK}: ${authored?.subtaskFiles?.length || 0} subtasks + ${authored?.leafFiles?.length || 0} leaves, changelog ${authored?.changelogPin}, migration=${authored?.migrationNeeded}, newDep=${authored?.newDependency}, dependsOn=${authored?.dependsOn}`
+);
+
+phase("DriftAudit");
+const authoredFiles = [
+  ...new Set(
+    [authored?.parentFile, ...(authored?.subtaskFiles ?? []), ...(authored?.leafFiles ?? [])].filter(Boolean)
+  ),
+];
+if (authoredFiles.length === 0) throw new Error("task_522_author_no_files");
+const groups = authoredFiles
+  .map((repoRelativePath) => Object.freeze({ repoRelativePath }))
+  .sort((left, right) => left.repoRelativePath.localeCompare(right.repoRelativePath));
+const drift = await runCanonicalAuditRounds({
+  maximumFixPasses: 4,
+  groups,
+  auditFile: async (group, round) => {
+    const result = await agent(auditFilePrompt(group.repoRelativePath, round), {
+      label: `audit-r${round}:${group.repoRelativePath}`,
+      phase: "DriftAudit",
+      schema: AUDIT_SCHEMA,
+    });
+    return { ...result, findings: (result.findings ?? []).map((item) => ({ ...item, lens: group.repoRelativePath })) };
+  },
+  reconcile: async ({ round }) => {
+    const result = await agent(reconcilePrompt(round), {
+      label: `reconcile-r${round}`,
+      phase: "DriftAudit",
+      schema: AUDIT_SCHEMA,
+    });
+    return { ...result, findings: (result.findings ?? []).map((item) => ({ ...item, lens: "reconcile" })) };
+  },
+  fix: async (actionable, round) =>
+    agent(
+      `${buildTask522FixPrompt({ common: COMMON, round, task: TASK, findings: actionable })}\n\nDeclare affectedScopeIds: the exact repo-relative paths of the files you edited (only paths from the audited file set; omit every file you did not change).`,
+      { label: `fix-r${round}`, phase: "DriftAudit", schema: FIX_SCHEMA }
+    ),
+  fingerprint: fingerprintScopes,
+  fingerprintUniverse,
+  fingerprintEveryScope,
+  label: "task-522:drift-audit",
+});
+const driftRounds = drift.rounds.length;
+const residualBlockers = drift.findings.filter(
+  (finding) => finding.severity === "HIGH" || finding.severity === "MEDIUM"
+);
+log(
+  `DriftAudit ${drift.pass ? "CLEAN" : "NOT CONVERGED"} after ${driftRounds} round(s); ${residualBlockers.length} HIGH/MED residual`
+);
 
 phase("FinalReconcile");
 const final = await agent(
-  `FINAL fresh read-only reconcile + readiness check of ${TASK} (parent + all NN + NN-LNN files). Confirm 0 HIGH/MEDIUM drift across grounding/granularity/completeness/single-writer/security; every executable leaf has pseudocode + test shape + lane; land order (after 521) + changelog pin consistent; SVG sanitizer allowlist + test vectors present; no-dependency + no-migration + present-only + reduced-motion + reuse-521-runtime invariants hold. ${GROUNDING}\n${DECISIONS}\nReturn remaining REAL findings — empty + verdict 'clean' = implementation-ready.`,
+  `FINAL fresh read-only reconcile + readiness check of ${TASK} (parent + all NN + NN-LNN files). Confirm 0 HIGH/MEDIUM drift across grounding/granularity/completeness/single-writer/security; every executable leaf has pseudocode + test shape + lane; land order (after 521) + changelog pin ${CHANGELOG_PIN} consistent; SVG sanitizer allowlist + test vectors present; no-dependency + no-migration + present-only + reduced-motion + reuse-521-runtime invariants hold. ${GROUNDING}\n${DECISIONS}\nReturn remaining REAL findings — empty + verdict 'clean' = implementation-ready.`,
   { label: "final-reconcile:522", phase: "FinalReconcile", schema: AUDIT_SCHEMA }
 );
 
@@ -203,8 +283,8 @@ return {
     newDependency: authored?.newDependency,
     dependsOn: authored?.dependsOn,
   },
-  driftRounds: round,
-  convergedClean: clean,
+  driftRounds,
+  convergedClean: drift.pass,
   finalVerdict: final?.verdict,
   finalResidual: (final?.findings || [])
     .filter((f) => f.isReal)

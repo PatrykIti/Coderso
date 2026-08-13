@@ -679,34 +679,90 @@ the pure browser-safe contract boundary, exact one-snapshot RBAC, present-only
 payload behavior, hydration/draft preservation, static smoke seam ownership,
 workflow bootstrap, validation lanes, and line-count limits.`;
 
+// The three TASK-554 author/audit lenses, each pinned to a real declared
+// audited file so the canonical driver's trusted `file:<path>` identity holds.
+// The audit itself stays lens-scoped (the TASK-554 receipt records exactly
+// these three lens identities plus the reconcile identity).
+const AUTHOR_AUDIT_LENS_GROUPS = Object.freeze([
+  Object.freeze({
+    repoRelativePath: "_docs/_TASKS/TASK-554_Post_Metadata_Publish_RBAC_Hardening.md",
+    identity: TASK_554_AUTHOR_AUDIT_LENS_IDS[0],
+    prompt: "Audit server schema/route/RBAC/CSRF/error behavior and real HTTP test feasibility.",
+  }),
+  Object.freeze({
+    repoRelativePath: "core/admin/ui/posts/editor/hooks/usePostEditorState.ts",
+    identity: TASK_554_AUTHOR_AUDIT_LENS_IDS[1],
+    prompt: "Audit Admin client, Classic editor baseline/dirty/race behavior, and browser-boundary tests.",
+  }),
+  Object.freeze({
+    repoRelativePath: "_docs/_workflows/task-554-author-audit.mjs",
+    identity: TASK_554_AUTHOR_AUDIT_LENS_IDS[2],
+    prompt: "Audit workflow, smoke architecture, task graph, writer ownership, validation and closure rules.",
+  }),
+]);
+
+function currentAuditContext() {
+  const head = runGit(ROOT, ["rev-parse", "HEAD"]).toString("utf8").trim();
+  const dirty = runGit(ROOT, ["status", "--porcelain"]).toString("utf8").split("\n").filter(Boolean).sort();
+  return `Repository: ${ROOT}\nHEAD: ${head}\nDirty: ${JSON.stringify(dirty)}`;
+}
+
 async function runWorkflow() {
+  // Lazy dynamic import: the bootstrap self-test copies this module into a
+  // disposable repo that contains only the four workflow entries, so a static
+  // top-level import of lib/audit-rounds.mjs would fail its verifier. The
+  // canonical driver is only needed on the live run path.
+  const { runCanonicalAuditRounds } = await import("./lib/audit-rounds.mjs");
   phase("Bootstrap verification");
   const bootstrap = assertTask554Bootstrap();
   assertAuthorDispatchState();
   phase("Contract audit");
-  assertTask554Bootstrap();
-  const lensDefinitions = Object.freeze([
-    Object.freeze({ identity: TASK_554_AUTHOR_AUDIT_LENS_IDS[0], prompt: "Audit server schema/route/RBAC/CSRF/error behavior and real HTTP test feasibility." }),
-    Object.freeze({ identity: TASK_554_AUTHOR_AUDIT_LENS_IDS[1], prompt: "Audit Admin client, Classic editor baseline/dirty/race behavior, and browser-boundary tests." }),
-    Object.freeze({ identity: TASK_554_AUTHOR_AUDIT_LENS_IDS[2], prompt: "Audit workflow, smoke architecture, task graph, writer ownership, validation and closure rules." }),
-  ]);
-  const lensPayloads = await assertReadOnlyAudit("contract_audit", () => parallel(lensDefinitions.map((lens) => () => {
-    assertTask554Bootstrap();
-    assertAuthorDispatchState();
-    return agent(`${COMMON}\n${lens.prompt}\nReturn only the declared audit payload.`, { label: lens.identity, phase: "Contract audit", schema: AUDIT_SCHEMA });
-  })));
-  if (lensPayloads.length !== lensDefinitions.length) throw new Error("task_554_audit_missing_results");
-  const lenses = lensPayloads.map((audit, index) => assertAuditClean(`task_554_audit_${index + 1}`, lensDefinitions[index].identity, audit));
-  phase("Cross-file reconcile");
-  assertTask554Bootstrap();
-  const reconcilePayload = await assertReadOnlyAudit("reconcile", () => {
-    assertTask554Bootstrap();
-    assertAuthorDispatchState();
-    return agent(`${COMMON}\nRead only the shared contracts/seams. Reconcile type names, allowed fields, ownership, test paths, exact seven smoke IDs, writer order, land order, exact calendar parsing, Post cache generation, snapshot authority, and pinned closure deltas. Return only the declared audit payload.`, { label: "task-554:audit:reconcile", phase: "Cross-file reconcile", schema: AUDIT_SCHEMA });
+  const auditPayloads = new Map();
+  const drift = await runCanonicalAuditRounds({
+    // Read-only pre-implementation audit: one complete pass, then a blocking
+    // fixer so any HIGH/MEDIUM finding aborts exactly like the historical
+    // assertAuditClean throw instead of being silently repaired.
+    maximumFixPasses: 1,
+    groups: AUTHOR_AUDIT_LENS_GROUPS,
+    auditFile: async (group) => {
+      assertTask554Bootstrap();
+      assertAuthorDispatchState();
+      const payload = await assertReadOnlyAudit(`contract_audit:${group.repoRelativePath}`, () =>
+        agent(`${currentAuditContext()}\n${COMMON}\n${group.prompt}\nReturn only the declared audit payload.`, { label: group.identity, phase: "Contract audit", schema: AUDIT_SCHEMA })
+      );
+      auditPayloads.set(group.identity, payload);
+      return normalizeAuthorAuditResult(group.identity, payload);
+    },
+    reconcile: async () => {
+      assertTask554Bootstrap();
+      assertAuthorDispatchState();
+      const payload = await assertReadOnlyAudit("reconcile", () =>
+        agent(`${currentAuditContext()}\n${COMMON}\nRead only the shared contracts/seams. Reconcile type names, allowed fields, ownership, test paths, exact seven smoke IDs, writer order, land order, exact calendar parsing, Post cache generation, snapshot authority, and pinned closure deltas. Return only the declared audit payload.`, { label: "task-554:audit:reconcile", phase: "Cross-file reconcile", schema: AUDIT_SCHEMA })
+      );
+      auditPayloads.set("task-554:audit:reconcile", payload);
+      return normalizeAuthorAuditResult("task-554:audit:reconcile", payload);
+    },
+    fix: async (actionable, round) => {
+      // No fixer exists for a read-only contract audit: blockers abort and
+      // require owner-driven repair before a fresh complete pass.
+      throw new Error(`task_554_author_audit_blocked:round=${round}:${JSON.stringify(actionable)}`);
+    },
+    fingerprint: () => auditFingerprintDigest(ROOT),
+    fingerprintUniverse: () => auditFingerprintDigest(ROOT),
+    fingerprintEveryScope: () => Object.fromEntries(AUTHOR_AUDIT_LENS_GROUPS.map((group) => [group.repoRelativePath, auditFingerprintDigest(ROOT)])),
+    label: "task-554:author-audit",
   });
-  const reconcile = assertAuditClean("task_554_reconcile", "task-554:audit:reconcile", reconcilePayload);
+  if (!drift.pass) {
+    return Object.freeze({ pass: false, reason: "audit_not_converged", findings: drift.findings });
+  }
+  const lensPayloads = TASK_554_AUTHOR_AUDIT_LENS_IDS.map((identity) => auditPayloads.get(identity));
+  const reconcilePayload = auditPayloads.get("task-554:audit:reconcile");
+  if (lensPayloads.some((payload) => payload === undefined) || reconcilePayload === undefined) {
+    throw new Error("task_554_author_audit_missing_results");
+  }
+  const checked = assertAuthorAuditReceiptInputs(lensPayloads, reconcilePayload);
   const receipt = recordTask554AuthorAuditReceipt(ROOT, lensPayloads, reconcilePayload);
-  return Object.freeze({ pass: true, bootstrap, lenses, reconcile, receipt });
+  return Object.freeze({ pass: true, bootstrap, lenses: checked.lenses, reconcile: checked.reconcile, receipt });
 }
 
 const importedForVerification = process.env.TASK_554_WORKFLOW_IMPORT === "1";
