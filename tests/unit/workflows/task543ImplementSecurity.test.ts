@@ -5,9 +5,14 @@ import { spawnSync } from "node:child_process";
 
 const root = path.resolve(import.meta.dir, "../../..");
 const workflowPath = path.join(root, "_docs/_workflows/task-543-implement.mjs");
+const libDir = path.join(root, "_docs/_workflows/lib");
 
 function readWorkflow(): string {
   return readFileSync(workflowPath, "utf8");
+}
+
+function readLib(name: string): string {
+  return readFileSync(path.join(libDir, name), "utf8");
 }
 
 test("TASK-543 CodeQL self-test passes before workflow side effects", () => {
@@ -44,14 +49,14 @@ test("TASK-543 CodeQL self-test passes before workflow side effects", () => {
 });
 
 test("scenario values cross the run-code boundary only as bounded canonical data", () => {
-  const source = readWorkflow();
+  const source = readLib("task-543-smoke-operation-code.mjs");
 
   expect(source).toContain("function validateEvidenceOperationPayload(operation, input)");
   expect(source).toContain("function canonicalEvidenceOperationEncoding(operation, input)");
   expect(source).toContain("function codeQlSafeJavaScriptStringLiteral(value)");
   expect(source).toContain("function buildEvidenceOperationRunCodeSource(operation, input)");
   expect(source).toContain('return source.replace(/\\r?\\n[\\t ]*/gu, " ")');
-  expect(source).toContain("const RUN_CODE_COMMAND_MAX_BYTES = 10_000");
+  expect(readLib("task-543-smoke-schema.mjs")).toContain("const RUN_CODE_COMMAND_MAX_BYTES = 10_000");
   expect(source).toContain('Buffer.byteLength(command, "utf8") >= RUN_CODE_COMMAND_MAX_BYTES');
   expect(source).toContain('Buffer.byteLength(json, "utf8") > RUN_CODE_PAYLOAD_MAX_BYTES');
   expect(source).toContain('decoded.toString("base64url") !== encoded');
@@ -69,7 +74,7 @@ test("scenario values cross the run-code boundary only as bounded canonical data
 });
 
 test("host switch emits one complete bounded source per operation", () => {
-  const source = readWorkflow();
+  const source = readLib("task-543-smoke-operation-code.mjs");
   const start = source.indexOf("function buildEvidenceOperationRunCodeSource(operation, input)");
   const end = source.indexOf("function smokeRunOperation(operation, input)", start);
   const builder = source.slice(start, end);
@@ -82,12 +87,16 @@ test("host switch emits one complete bounded source per operation", () => {
   expect(builder.match(/source = `async \(page\) => \{/gu)).toHaveLength(12);
   expect(builder).not.toContain("const operationKinds =");
   expect(builder).not.toContain("if (operation ===");
-  expect(source).toContain("contains the ${otherOperation} operation marker");
-  expect(source).toContain("isFullSmokeCliCommand(command)");
+  expect(readLib("task-543-codeql-self-test.mjs")).toContain(
+    "contains the ${otherOperation} operation marker"
+  );
+  expect(readLib("task-543-smoke-scenario-validation.mjs")).toContain(
+    "isFullSmokeCliCommand(command)"
+  );
 });
 
 test("all final, transient, zero-command, and reset operations are closed mappings", () => {
-  const source = readWorkflow();
+  const source = readLib("task-543-smoke-scenario-validation.mjs");
 
   for (const operation of [
     "assert-clean-close",
@@ -115,7 +124,7 @@ test("all final, transient, zero-command, and reset operations are closed mappin
 });
 
 test("password receipts are classified before secret-free SHA-256 integrity", () => {
-  const source = readWorkflow();
+  const source = readLib("task-543-smoke-timeline.mjs");
 
   expect(source).toContain("function credentialReceiptValidWithoutDigest(");
   expect(source).toContain("function bootstrapPasswordReceiptValid(smoke)");
@@ -125,7 +134,9 @@ test("password receipts are classified before secret-free SHA-256 integrity", ()
   expect(source).toContain("record?.command === SMOKE_PASSWORD_FILL_COMMAND");
   expect(source).toContain("bootstrapPasswordReceiptValid(smoke) &&");
   expect(source).toContain("successTimelineReceiptIntegrityValid(record, smoke) &&");
-  expect(source).toContain("failurePrefixTimelineReceiptIntegrityValid(record, smoke)");
+  expect(readLib("task-543-smoke-cleanup-validation.mjs")).toContain(
+    "failurePrefixTimelineReceiptIntegrityValid(record, smoke)"
+  );
   expect(source).toContain(
     "return timelineReceiptIntegrityValid(record, SMOKE_PASSWORD_FILL_COMMAND, digest)"
   );
@@ -136,7 +147,7 @@ test("password receipts are classified before secret-free SHA-256 integrity", ()
 });
 
 test("self-test covers hostile data, decoder rejection, and digest cardinality", () => {
-  const source = readWorkflow();
+  const source = readLib("task-543-codeql-self-test.mjs");
 
   for (const marker of [
     "</script>",
