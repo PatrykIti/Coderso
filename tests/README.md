@@ -174,3 +174,21 @@ repo root (`bun scripts/bun-lane-classify.ts`) and classifies every
 classification examples, and byte-stable regeneration. New lane test files are
 picked up automatically on the next regeneration; do not hand-edit the
 manifest.
+
+## Bun lane timings
+
+`tests/bun-lane-timings.json` stores per-file wall time (ms) for the Bun lane,
+measured serially by `scripts/bun-lane-time.ts` (the TASK-557-01-L02 timing
+probe). The TASK-557-05 weighted partitioner consumes these values. Refresh
+from the repo root:
+
+- `bun scripts/bun-lane-time.ts` times all non-C files (default; C files
+  contend on shared state), merging with prior values and keeping the min.
+- `bun scripts/bun-lane-time.ts --include-c` additionally times C files
+  serially on a dedicated worker schema.
+
+The probe requires `DATABASE_DIRECT_URL` (direct 5432; a pooler is not
+allowed), never runs while another process uses the shared `public` schema,
+and is a maintenance tool, not part of the normal gate.
+`tests/unit/toolchain/bunLaneTimings.test.ts` pins the merge semantics and the
+import guard.

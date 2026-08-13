@@ -1,13 +1,5 @@
 declare module "bun:test" {
-  export {
-    afterAll,
-    afterEach,
-    beforeAll,
-    beforeEach,
-    describe,
-    expect,
-    test,
-  } from "vitest";
+  export { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } from "vitest";
 }
 
 interface ImportMeta {
@@ -34,6 +26,7 @@ declare namespace Bun {
     readonly exited: Promise<number>;
     readonly stdout: BodyInit;
     readonly stderr: BodyInit;
+    kill(signal?: string | number): void;
   };
 
   type Server = {

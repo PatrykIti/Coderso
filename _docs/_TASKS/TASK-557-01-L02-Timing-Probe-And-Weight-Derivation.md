@@ -86,8 +86,10 @@ sum is minimized.
 
 Regression-test shape (`tests/unit/toolchain/bunLaneTimings.test.ts`):
 - `mergeTimings(prev, next)` keeps the min and preserves unknown keys (byte-stable).
-- `weightMs` falls back to bucket defaults when a file is missing.
-- `--dry-run` prints the projected per-worker sums without spawning.
+- Weight derivation and the `--dry-run` projected-sum report belong to the
+  runner leaves: `weightMs` fallback to bucket defaults is tested in
+  TASK-557-05-L01, and the dry-run per-worker sums in TASK-557-05-L03. This leaf
+  owns only the timing probe + merge helper so it can land before 05.
 
 ## Testing Requirements
 - `bun --cwd core lint` + `bun --cwd core lint:types` green.
