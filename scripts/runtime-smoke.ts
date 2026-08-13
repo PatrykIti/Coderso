@@ -1,12 +1,11 @@
 import { spawn } from "node:child_process";
 import { realpath } from "node:fs/promises";
-import { resolve } from "node:path";
+import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { closeSync, constants, fchmodSync, fstatSync, lstatSync, mkdirSync, openSync, writeFileSync } from "node:fs";
-import { dirname, resolve } from "node:path";
 import { parseRuntimeSmokeArgs } from "./runtime-smoke/cli";
 import { appendDiagnostics } from "./runtime-smoke/diagnostics";
-import { mapSmokeError, type SmokeError } from "./runtime-smoke/contracts";
+import { SmokeError, mapSmokeError } from "./runtime-smoke/contracts";
 import { installLifecycleSignals, RuntimeLifecycle } from "./runtime-smoke/lifecycle";
 import { ProcessSupervisor, resolveExecutableOnPath } from "./runtime-smoke/process-supervisor";
 import { staticSmokeRegistry } from "./runtime-smoke/registry";
@@ -27,7 +26,7 @@ export interface RuntimeSmokeDependencies {
 }
 
 function stableEvidenceNode(stats: ReturnType<typeof fstatSync>): string {
-  return `${stats.dev}:${stats.ino}:${stats.mode & 0o7777}:${stats.nlink}`;
+  return `${stats.dev}:${stats.ino}:${Number(stats.mode) & 0o7777}:${stats.nlink}`;
 }
 
 function precreateEvidenceReport(evidenceDirectory: string): string {
@@ -132,7 +131,7 @@ export async function runRuntimeSmoke(
     `pass=${report.pass} serverUp=${report.serverUp}`,
     `failures=${JSON.stringify(report.failures)}`,
     `timings=${JSON.stringify(report.timings)}`,
-    `processes=${JSON.stringify(report.processCounters)}`,
+    `processes=${JSON.stringify(report.processes)}`,
     `scenarios=${JSON.stringify(report.scenarios)}`,
     `cleanup=${JSON.stringify(report.cleanup)}`,
     `evidenceReport=${evidenceReportPath}`,

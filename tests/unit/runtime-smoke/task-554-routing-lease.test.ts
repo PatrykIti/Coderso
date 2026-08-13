@@ -5,6 +5,7 @@ import {
   type Task554FixtureInstallResult,
   type Task554FixtureRecoveryPersistence,
   type Task554ProductionHandlerDependencies,
+  type Task554RemovalCounts,
 } from "../../../scripts/runtime-smoke/adapters/task-554/production-handlers";
 import {
   TASK554_ROUTING_SETTING_KEYS,
@@ -14,6 +15,7 @@ import {
   type Task554RoutingSettingKey,
   type Task554RoutingSettingRecord,
   type Task554RoutingSettingsLeaseState,
+  type Task554RoutingSettingsOwnedRecord,
   type Task554RoutingSettingsPersistence,
   type Task554RoutingSettingsSnapshot,
 } from "../../../scripts/runtime-smoke/adapters/task-554/routing-settings-lease";

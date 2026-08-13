@@ -2,7 +2,8 @@ import { createHash, randomBytes } from "node:crypto";
 import { chmod, lstat, mkdir, mkdtemp, realpath, readdir, rmdir, rm, unlink } from "node:fs/promises";
 import { isAbsolute, join, relative } from "node:path";
 
-import { resolveInsideRoot, SmokeError } from "../contracts";
+import { resolveInsideRoot, SmokeError, type SmokeInput } from "../contracts";
+import { appendDiagnostics } from "../diagnostics";
 import {
   createAdminAuthStorageState,
   type AdminAuthStorageStateResult,
@@ -34,7 +35,6 @@ import {
   buildExactTask554ScreenshotManifest,
   validateTask554ScreenshotOutputs,
   EVIDENCE_ROOT,
-  validateTask554ScreenshotOutputs,
 } from "./task-554/output-manifest";
 import {
   TASK554_WORKER_DESCRIPTORS,
@@ -917,7 +917,7 @@ const adapter: SmokeAdapter = Object.freeze({
   suiteId: "task-554",
   supportedProfiles: Object.freeze(["fast", "certification"] as const),
   run: runTask554Adapter,
-  evidenceDirectory(input, root) {
+  evidenceDirectory(input: SmokeInput, root: string) {
     return resolveInsideRoot(root, `${EVIDENCE_ROOT}/${input.session}`, "task_554_evidence");
   },
 });
