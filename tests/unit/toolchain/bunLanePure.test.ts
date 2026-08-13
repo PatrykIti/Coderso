@@ -62,7 +62,10 @@ function writeManifest(dir: string, rows: unknown[]): string {
  * to `dumpPath`, writes its argv to `<dir>/args.txt`, and exits `exitCode`.
  * The paths are JSON-stringified into the script so shell quoting stays valid.
  */
-function writeStubBun(dir: string, exitCode: number): { bin: string; envDump: string; args: string } {
+function writeStubBun(
+  dir: string,
+  exitCode: number
+): { bin: string; envDump: string; args: string } {
   const bin = path.join(dir, "fake-bun");
   const envDump = path.join(dir, "env-dump.txt");
   const args = path.join(dir, "args.txt");
@@ -135,9 +138,18 @@ test("child env strips DATABASE_URL and DATABASE_DIRECT_URL but inherits everyth
       expect(envLines.some((line) => line.startsWith("DATABASE_DIRECT_URL="))).toBe(false);
 
       // Exactly the A files are run, with the pinned flags and the real `bun`
-      // argv shape (`bun test --parallel=16 --timeout=15000 <a-files>`).
+      // argv shape (`bun test --env-file=/dev/null --parallel=16 --timeout=15000
+      // <a-files>`). `--env-file=/dev/null` disables Bun's `.env` autoload in
+      // the child, which would otherwise re-inject the stripped DATABASE_*
+      // values and defeat the fail-loud guard.
       const args = readFileSync(stub.args, "utf8").trim().split("\n");
-      expect(args).toEqual(["test", "--parallel=16", "--timeout=15000", ...aFiles]);
+      expect(args).toEqual([
+        "test",
+        "--env-file=/dev/null",
+        "--parallel=16",
+        "--timeout=15000",
+        ...aFiles,
+      ]);
     } finally {
       delete process.env.DATABASE_URL;
       delete process.env.DATABASE_DIRECT_URL;

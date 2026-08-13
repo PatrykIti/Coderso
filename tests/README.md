@@ -272,10 +272,12 @@ perf isolation, no loss/duplication, and the error contract.
 
 `scripts/run-bun-pure-lane.ts` (TASK-557-06-L01) runs exactly the A manifest
 files (`bucket === "A"` in `tests/bun-lane-manifest.json`) with
-`bun test --parallel=16 --timeout=15000 <a-files>` and NO database env: the
-child env strips `DATABASE_URL` and `DATABASE_DIRECT_URL`, so any "DB-free"
-file that accidentally touches the DB fails loudly instead of silently hitting
-the shared `public` schema. Run it from the repo root:
+`bun test --env-file=/dev/null --parallel=16 --timeout=15000 <a-files>` and NO
+database env: the child env strips `DATABASE_URL` and `DATABASE_DIRECT_URL`,
+and `--env-file=/dev/null` disables Bun's `.env` autoload (which would
+otherwise re-inject those values from the repo `.env`), so any "DB-free" file
+that accidentally touches the DB fails loudly instead of silently hitting the
+shared `public` schema. Run it from the repo root:
 
 ```bash
 bun scripts/run-bun-pure-lane.ts
@@ -320,3 +322,50 @@ is documentation + policy shape only and the runner never enforces per-file
 durations from a worker-level report. `validatePerfBudgets` was removed as
 dead code. `tests/unit/toolchain/bunLanePerfPolicy.test.ts` pins the budgets,
 the quiet-env overlay, and the worker-name guard.
+
+## Bun lane parallel runner
+
+`scripts/run-bun-parallel.ts` (TASK-557-05-L02) is the orchestrator behind
+`bun run test:bun` (`bun scripts/run-bun-parallel.ts --lane all`). It reads
+`tests/bun-lane-manifest.json` + `tests/bun-lane-timings.json`, partitions B
+files across workers with the weighted partitioner, keeps C files serial on
+one dedicated worker, runs the pure A lane (TASK-557-06) concurrently, and
+runs perf strictly AFTER all B/C/A workers finish (wall-time gates are
+CPU-contention sensitive). B worker count is `K-1` (single lanes) or `K-2`
+under `--lane all` (the extra slot is the pure A lane); default `K=8` ->
+6 B workers, 1 C worker, perf serial-after, pure A worker.
+
+Flags (named errors fail closed):
+
+- `--workers N` (default `BUN_TEST_WORKERS`, see `resolveWorkerCount`; integer
+  >= 1, else `worker_count_invalid`).
+- `--pool N` (default 1; integer >= 1, else `worker_pool_max_invalid`). The
+  aggregate guard `workers x pool <= 10`
+  (`worker_pool_budget_exceeded`) runs BEFORE provisioning.
+- `--lane b|c|perf|all` (default `all`; else `lane_invalid`). `--lane perf`
+  with `--workers > 1` is rejected (`perf_lane_parallel_invalid`, the perf
+  lane is serial and CPU-isolated).
+- `--dry-run` prints `partitionSummary` and exits 0 without spawning.
+- `--no-provision` skips worker schema provisioning (fake-worker tests).
+- `--no-retry` disables the single flake retry (`attempted` stays 1).
+- `--report <path>` (default `tests/bun-lane-report.json`).
+- Unknown flag -> `flag_unknown:<arg>`.
+
+Each worker spawns `bun test --parallel=1 --timeout=15000 <files>` with
+`resolveWorkerEnv(i, {poolMax, fenceOffset: i+1})` (per-worker schema URL,
+`NODE_ENV=test`, fence offset). stdout/stderr are streamed with a `[b0]`,
+`[c]`, `[perf]` prefix; a non-zero exit retries the worker's whole file set
+once (flake guard, `attempted` records 1 or 2). Spawn failure ->
+`worker_spawn_failed:<name>`. Provisioning failure aborts before any spawn.
+The report is `{results, totalMs}` with one entry per worker (`{name, files,
+exit, durationMs, attempted}`); `totalMs` is the max of worker durations.
+Exit code is 0 iff every worker passed after retry; otherwise 1 plus a
+`[run-bun-parallel] FAILED worker <name> (<exit>)` line per failing worker.
+
+Test seams (defaults match production): `BUN_LANE_MANIFEST_PATH`,
+`BUN_LANE_TIMINGS_PATH` (missing -> `{}`), and `BUN_LANE_BUN_BIN` (fake-worker
+tests substitute a stub `bun`). The full runner integration suite lives in
+`tests/integration/toolchain/runBunParallel.test.ts` (TASK-557-05-L03);
+`tests/integration/toolchain/runBunParallelFakeWorker.test.ts` pins the
+fake-worker retry-once, aggregation, `--no-retry`, serial-after perf
+ordering, and pre-provision connection-budget invariants without a database.

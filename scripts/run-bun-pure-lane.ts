@@ -21,6 +21,13 @@
  * - `import.meta.main` CLI prints `[bun-lane-pure] <seconds>s exit=<code>`
  *   and exits with the child's code.
  *
+ * The DB guard is two layers because `bun test` auto-loads `.env` into the
+ * child: stripping the vars from the spawn env alone is NOT enough (Bun
+ * re-injects `DATABASE_URL`/`DATABASE_DIRECT_URL` from the repo `.env`), so
+ * the child also runs with `--env-file=/dev/null` to disable `.env`
+ * autoload entirely. A misclassified DB file in A then fails loudly (empty
+ * URL / absent vars) instead of silently hitting the shared `public` schema.
+ *
  * Testability seams (defaults match production behavior exactly):
  * - `BUN_LANE_MANIFEST_PATH` overrides the manifest path.
  * - `BUN_LANE_BUN_BIN` overrides the spawned binary.
@@ -40,11 +47,13 @@ export type PureLaneResult = {
 };
 
 /**
- * Run exactly the A manifest files with `bun test --parallel=16
- * --timeout=15000` and a DB-env-stripped child environment. Returns the
- * child exit code (non-zero propagates), wall time, the A file list, and
- * `attempted: 1`. An empty A set returns `{exit: 0, durationMs: 0, files: [],
- * attempted: 0}` without spawning.
+ * Run exactly the A manifest files with `bun test --env-file=/dev/null
+ * --parallel=16 --timeout=15000` and a DB-env-stripped child environment.
+ * `--env-file=/dev/null` stops Bun from re-injecting `DATABASE_*` from the
+ * repo `.env`, so the fail-loud guard is airtight. Returns the child exit
+ * code (non-zero propagates), wall time, the A file list, and `attempted: 1`.
+ * An empty A set returns `{exit: 0, durationMs: 0, files: [], attempted: 0}`
+ * without spawning.
  */
 export async function runPureLane(): Promise<PureLaneResult> {
   const manifestPath = process.env.BUN_LANE_MANIFEST_PATH ?? DEFAULT_MANIFEST_PATH;
@@ -69,19 +78,26 @@ export async function runPureLane(): Promise<PureLaneResult> {
 
   const started = performance.now();
   // Fail-loud guard: strip the DB env so any "DB-free" file that touches the
-  // DB fails here instead of silently writing to `public`.
-  const env: Record<string, string> = { ...process.env };
+  // DB fails here instead of silently writing to `public`. `process.env` may
+  // carry `undefined` values, which `Bun.spawn`'s env contract allows.
+  const env = { ...process.env };
   delete env.DATABASE_URL;
   delete env.DATABASE_DIRECT_URL;
 
   let proc: ReturnType<typeof Bun.spawn>;
   try {
     // Bun.spawn is the repo convention (scripts/run-bun-lane.ts); keep it.
-    proc = Bun.spawn([bunBin, "test", "--parallel=16", "--timeout=15000", ...aFiles], {
-      env,
-      stdout: "inherit",
-      stderr: "inherit" as const,
-    });
+    // `--env-file=/dev/null` disables Bun's `.env` autoload in the child,
+    // which would otherwise re-inject the stripped DATABASE_* values from the
+    // repo `.env` and defeat the fail-loud guard above.
+    proc = Bun.spawn(
+      [bunBin, "test", "--env-file=/dev/null", "--parallel=16", "--timeout=15000", ...aFiles],
+      {
+        env,
+        stdout: "inherit",
+        stderr: "inherit" as const,
+      }
+    );
   } catch (cause) {
     throw new Error(`pure_lane_spawn_failed:${bunBin}`, { cause });
   }

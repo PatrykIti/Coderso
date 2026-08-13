@@ -48,13 +48,8 @@ test("weightMs precedence: timings > row.weightMs > DEFAULT_WEIGHT", () => {
 });
 
 test("B assignment is longest-first and balances sums on bWorkers=2", () => {
-  const rows = [
-    row("a", "B"),
-    row("b", "B"),
-    row("c", "B"),
-    row("d", "B"),
-  ];
-  const timings = { a: 100, b: 90, c: 80, d: 70 };
+  const rows = [row("a", "B"), row("b", "B"), row("c", "B"), row("d", "B")];
+  const timings: Record<string, number> = { a: 100, b: 90, c: 80, d: 70 };
   const p = partition(rows, timings, 2);
 
   expect(p.b).toHaveLength(2);
@@ -102,7 +97,12 @@ test("perf files never appear in b and never merge with C", () => {
     row("c.test.ts", "C"),
     row("b.test.ts", "B"),
   ];
-  const timings = { "perf1.test.ts": 999_999, "perf2.test.ts": 888_888, "b.test.ts": 50, "c.test.ts": 1 };
+  const timings = {
+    "perf1.test.ts": 999_999,
+    "perf2.test.ts": 888_888,
+    "b.test.ts": 50,
+    "c.test.ts": 1,
+  };
   const p = partition(rows, timings, 2);
 
   expect(p.b.flat()).toEqual(["b.test.ts"]);
@@ -159,7 +159,12 @@ test("unknown bucket throws manifest_bucket_invalid:<file>", () => {
 
 test("timings entries absent from the manifest are ignored", () => {
   const rows = [row("b.test.ts", "B"), row("c.test.ts", "C")];
-  const timings = { "b.test.ts": 100, "c.test.ts": 50, "ghost.test.ts": 999_999, "ghost2.test.ts": 1 };
+  const timings = {
+    "b.test.ts": 100,
+    "c.test.ts": 50,
+    "ghost.test.ts": 999_999,
+    "ghost2.test.ts": 1,
+  };
   const p = partition(rows, timings, 2);
   const pClean = partition(rows, { "b.test.ts": 100, "c.test.ts": 50 }, 2);
 
@@ -169,7 +174,12 @@ test("timings entries absent from the manifest are ignored", () => {
 });
 
 test("DEFAULT_WEIGHT fallback drives a balanced B partition without timings", () => {
-  const rows = [row("a.test.ts", "B"), row("b.test.ts", "B"), row("c.test.ts", "B"), row("d.test.ts", "B")];
+  const rows = [
+    row("a.test.ts", "B"),
+    row("b.test.ts", "B"),
+    row("c.test.ts", "B"),
+    row("d.test.ts", "B"),
+  ];
   const p = partition(rows, {}, 2);
 
   // All four share DEFAULT_WEIGHT.B, so greedy assignment yields 2 per worker.

@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-13T20:12:52.447Z",
+  "generatedAt": "2026-08-13T20:59:28.998Z",
   "rows": [
     {
       "file": "tests/integration/analytics/trafficAggregation.test.ts",
@@ -527,6 +527,11 @@
     },
     {
       "file": "tests/integration/toolchain/fenceIsolation.test.ts",
+      "bucket": "A",
+      "weightMs": 0
+    },
+    {
+      "file": "tests/integration/toolchain/runBunParallelFakeWorker.test.ts",
       "bucket": "A",
       "weightMs": 0
     },
@@ -1750,6 +1755,21 @@
     },
     {
       "file": "tests/unit/toolchain/bunLaneMigrate.test.ts",
+      "bucket": "A",
+      "weightMs": 0
+    },
+    {
+      "file": "tests/unit/toolchain/bunLanePartition.test.ts",
+      "bucket": "A",
+      "weightMs": 0
+    },
+    {
+      "file": "tests/unit/toolchain/bunLanePerfPolicy.test.ts",
+      "bucket": "A",
+      "weightMs": 0
+    },
+    {
+      "file": "tests/unit/toolchain/bunLanePure.test.ts",
       "bucket": "A",
       "weightMs": 0
     },
