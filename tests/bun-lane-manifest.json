@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-13T12:20:36.835Z",
+  "generatedAt": "2026-08-13T13:03:09.833Z",
   "rows": [
     {
       "file": "tests/integration/analytics/trafficAggregation.test.ts",
@@ -931,6 +931,11 @@
     {
       "file": "tests/unit/dashboard/dashboardService.test.ts",
       "bucket": "B",
+      "weightMs": 0
+    },
+    {
+      "file": "tests/unit/db/bunLaneWorkerSchema.test.ts",
+      "bucket": "A",
       "weightMs": 0
     },
     {

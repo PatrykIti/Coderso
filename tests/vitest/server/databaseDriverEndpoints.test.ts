@@ -18,6 +18,16 @@ import {
   type DriverDial,
 } from "../../../core/db/driverEndpoints";
 import { createSessionDatabaseClient } from "../../../core/db/sessionClient";
+import {
+  CONNECTION_BUDGET_MAX,
+  DEFAULT_WORKER_POOL_MAX,
+  MAX_WORKER_POOL_MAX,
+  assertDirectUrl,
+  buildWorkerDatabaseUrl,
+  resolveWorkerEnv,
+  resolveWorkerPoolMax,
+  workerSchemaName,
+} from "../../../scripts/bun-lane-worker-url";
 
 /**
  * The pooler-port guard is only worth anything if its model of "where will the
@@ -606,5 +616,79 @@ describe("postgres.js option-surface audit", () => {
     // `socket` is in the audited key set, so this is a recognised dial — just not
     // one with an endpoint to read.
     expect(classifyDriverDial(options)).toEqual({ kind: "custom_transport" });
+  });
+});
+
+/**
+ * The parallel-lane worker URL builder (`scripts/bun-lane-worker-url.ts`) is
+ * only safe if its output stays compatible with the endpoint guard above: the
+ * appended `?options=-csearch_path=` parameter must not move the dial, and the
+ * per-worker pool budget must fit the Render direct-connection reserve. Pure
+ * contract cases, no DB — the same guard as everything above this block,
+ * applied to the worker lane's URLs instead of the session lane's.
+ */
+describe("worker URL builder guard compatibility", () => {
+  const DIRECT_URL = "postgresql://u:p@db.example.com:5432/coderso?sslmode=require";
+  const POOLED_URL = "postgresql://u:p@db.example.com:6432/coderso?sslmode=require";
+
+  test("a worker URL with ?options=-csearch_path= still resolves as direct, non-pooled", () => {
+    const url = buildWorkerDatabaseUrl(DIRECT_URL, 3);
+    expect(url).toContain("options=-csearch_path%3Dbun_worker_3");
+
+    // The driver's own dial, per this file's discipline: the appended parameter
+    // must not move host or port, or the guard would certify the wrong endpoint.
+    expect(askDriver(url, {})).toEqual({ dial: "tcp", hosts: ["db.example.com"], ports: [5432] });
+    expect(inspectDatabaseUrl(url, POOLED_PORT)).toEqual({
+      verified: true,
+      port: 5432,
+      pooled: false,
+    });
+  });
+
+  test("a pooled URL is rejected by assertDirectUrl", () => {
+    const url = buildWorkerDatabaseUrl(POOLED_URL, 0);
+    expect(() => assertDirectUrl(url, POOLED_PORT)).toThrow("worker_direct_url_pooled");
+  });
+
+  test("the verdict tracks the configured pooled port, so a wrong one over-refuses, never certifies the pooler", () => {
+    // The L02 contract pseudocode expected assertDirectUrl(url, 5432) to throw
+    // as "unverifiable". It cannot: the guard compares the dial port to the
+    // CONFIGURED pooled port and knows nothing about the pooler's real port
+    // (connectionTargets.ts documents the cost — "an unusable value is a hard
+    // error", but a plausible-but-wrong one silently weakens the comparison).
+    // Pin the actual behavior so a fail-closed change turns this red.
+    const url = buildWorkerDatabaseUrl(POOLED_URL, 0);
+    expect(inspectDatabaseUrl(url, 5432)).toEqual({ verified: true, port: 6432, pooled: false });
+
+    // The fail-closed direction of the same misconfiguration: a direct 5432 URL
+    // with pooledPort=5432 is over-refused, never silently accepted as direct.
+    expect(() => assertDirectUrl(buildWorkerDatabaseUrl(DIRECT_URL, 3), 5432)).toThrow(
+      "worker_direct_url_pooled"
+    );
+  });
+
+  test("worker schema names are stable and bounded", () => {
+    expect(workerSchemaName(0)).toBe("bun_worker_0");
+    expect(workerSchemaName(9)).toBe("bun_worker_9");
+    expect(() => workerSchemaName(-1)).toThrow("worker_index_invalid");
+    expect(() => workerSchemaName(1.5)).toThrow("worker_index_invalid");
+  });
+
+  test("workers x pool stays within the direct-connection reserve", () => {
+    const workers = 8; // the resolveWorkerCount default
+    const pool = DEFAULT_WORKER_POOL_MAX; // 1
+    expect(workers * pool).toBeLessThanOrEqual(CONNECTION_BUDGET_MAX); // 10, Render direct reserve
+    expect(pool).toBeLessThanOrEqual(MAX_WORKER_POOL_MAX); // 4
+  });
+
+  test("ambient DB_POOL_MAX=20 is clamped, never inherited, never throws", () => {
+    const env: DatabaseEnvMap = { DB_POOL_MAX: "20", DATABASE_DIRECT_URL: DIRECT_URL };
+    expect(resolveWorkerPoolMax(env)).toBeLessThanOrEqual(MAX_WORKER_POOL_MAX);
+    expect(resolveWorkerPoolMax(env, 2)).toBe(2);
+    expect(() => resolveWorkerPoolMax(env, 0)).toThrow("worker_pool_max_invalid");
+
+    const workerEnv = resolveWorkerEnv(0, {}, env);
+    expect(Number(workerEnv.DB_POOL_MAX)).toBeLessThanOrEqual(MAX_WORKER_POOL_MAX);
+    expect(workerEnv.NODE_ENV).toBe("test");
   });
 });

@@ -204,6 +204,14 @@ import guard.
 - `assertDirectUrl` reuses `inspectDatabaseUrl` (pooled port passed
   positionally, required) and fails closed with `worker_direct_url_unverifiable`
   / `worker_direct_url_pooled`; the direct URL must never point at the pooler.
+  The built worker URL (with `options=-csearch_path=` appended) is
+  guard-compatible: the driver-endpoint Vitest lane
+  (`tests/vitest/server/databaseDriverEndpoints.test.ts`) proves it still
+  resolves as direct 5432, non-pooled, via the driver's own dial, and the Bun
+  integration test (`tests/unit/db/bunLaneWorkerSchema.test.ts`) proves
+  postgres.js forwards the parameter to the StartupMessage (`search_path` =
+  `bun_worker_<i>`; `current_schema()` returns the first EXISTING schema, so
+  it is not the throwaway name until the schema is provisioned).
 - `resolveWorkerPoolMax` clamps `DB_POOL_MAX` to [1, 4] and never inherits an
   ambient value (the real `.env` sets 20 for the pooled client); only explicit
   non-integer or <1 requested values throw. The aggregate budget is
