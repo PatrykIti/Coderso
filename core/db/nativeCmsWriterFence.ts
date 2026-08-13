@@ -1,7 +1,10 @@
 import { AsyncLocalStorage } from "node:async_hooks";
 import { sql } from "drizzle-orm";
 
+/** Production advisory-lock namespace for the CMS writer fence. */
 export const NATIVE_CMS_WRITER_FENCE_NAMESPACE = 548 as const;
+/** Env key that parallel Bun-lane workers set to shift the writer fence namespace. */
+export const FENCE_NAMESPACE_OFFSET_ENV = "BUN_TEST_FENCE_NAMESPACE_OFFSET" as const;
 export const NATIVE_CMS_WRITER_FENCE_KEY = 0 as const;
 export const NATIVE_CMS_WRITER_FENCE_OPTION_KEY = "nativeCmsWriterFenceV1" as const;
 
@@ -71,10 +74,33 @@ const executeRows = async (
   }
 };
 
+/**
+ * Resolve the advisory-lock namespace for the CURRENT process.
+ *
+ * Production and ordinary tests: 548 (unchanged, byte-identical behavior).
+ * Parallel Bun-lane workers: 548 + offset, ONLY when the offset env is set AND
+ * NODE_ENV === "test". Any other combination fails closed to 548 so no
+ * production or non-lane path can ever observe a different namespace.
+ */
+export const resolveFenceNamespace = (
+  env: Record<string, string | undefined> = process.env
+): number => {
+  if (env.NODE_ENV !== "test") return NATIVE_CMS_WRITER_FENCE_NAMESPACE;
+  const raw = env[FENCE_NAMESPACE_OFFSET_ENV];
+  if (raw === undefined) return NATIVE_CMS_WRITER_FENCE_NAMESPACE;
+  const normalized = raw.trim();
+  if (normalized === "") return NATIVE_CMS_WRITER_FENCE_NAMESPACE;
+  const offset = Number(normalized);
+  if (!Number.isInteger(offset) || offset < 1 || offset > 1000) {
+    throw new Error(`fence_namespace_offset_invalid:${raw}`);
+  }
+  return NATIVE_CMS_WRITER_FENCE_NAMESPACE + offset;
+};
+
 const acquireOrdinaryFence = async (tx: NativeCmsWriterFenceExecutor): Promise<void> => {
   const lockRows = await executeRows(
     tx,
-    sql`select pg_try_advisory_xact_lock_shared(${NATIVE_CMS_WRITER_FENCE_NAMESPACE}, ${NATIVE_CMS_WRITER_FENCE_KEY}) as acquired`
+    sql`select pg_try_advisory_xact_lock_shared(${resolveFenceNamespace()}, ${NATIVE_CMS_WRITER_FENCE_KEY}) as acquired`
   );
   if (lockRows.length !== 1 || typeof lockRows[0].acquired !== "boolean") {
     throw freshError("native_cms_writer_fence_failed");
