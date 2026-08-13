@@ -34,6 +34,7 @@ const LANE_DIRS = [
   "tests/integration/store",
   "tests/integration/plugins",
   "tests/integration/analytics",
+  "tests/integration/toolchain",
   "tests/perf",
   "tests/security",
 ] as const;

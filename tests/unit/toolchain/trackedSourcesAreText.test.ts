@@ -130,7 +130,9 @@ function nulOffsets(relativePath: string): readonly number[] {
   return offsets;
 }
 
-test("no tracked text source carries a NUL byte", () => {
+// The scan reads and byte-checks every tracked file (>5,000 paths), so it needs
+// more than Bun's 5s default under parallel IO contention with sibling suites.
+test("no tracked text source carries a NUL byte", { timeout: 15_000 }, () => {
   const scanned = trackedPaths().filter((relativePath) => !isBinaryExtension(relativePath));
 
   // Guard the guard: a broken enumeration or an over-eager filter would make every

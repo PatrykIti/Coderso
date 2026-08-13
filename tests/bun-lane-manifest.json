@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-13T13:03:09.833Z",
+  "generatedAt": "2026-08-13T15:31:24.070Z",
   "rows": [
     {
       "file": "tests/integration/analytics/trafficAggregation.test.ts",
@@ -508,6 +508,11 @@
     {
       "file": "tests/integration/store/revocations.test.ts",
       "bucket": "B",
+      "weightMs": 0
+    },
+    {
+      "file": "tests/integration/toolchain/bunLaneMigrate.test.ts",
+      "bucket": "A",
       "weightMs": 0
     },
     {
@@ -1715,6 +1720,11 @@
     },
     {
       "file": "tests/unit/toolchain/bunLaneManifest.test.ts",
+      "bucket": "A",
+      "weightMs": 0
+    },
+    {
+      "file": "tests/unit/toolchain/bunLaneMigrate.test.ts",
       "bucket": "A",
       "weightMs": 0
     },

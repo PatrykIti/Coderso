@@ -158,9 +158,10 @@ test("manifest rows are internally consistent", async () => {
 test("static import exposes the classifier contract", () => {
   expect(typeof collectLaneFiles).toBe("function");
   expect(typeof classify).toBe("function");
-  expect(LANE_DIRS.length).toBe(9);
+  expect(LANE_DIRS.length).toBe(10);
   expect(LANE_DIRS).toContain("tests/unit");
   expect(LANE_DIRS).toContain("tests/perf");
+  expect(LANE_DIRS).toContain("tests/integration/toolchain");
 });
 
 afterAll(() => {

@@ -6,6 +6,7 @@ This repository uses a hybrid testing model aligned with the product architectur
 
 - Bun owns runtime-kernel validation:
   - `tests/integration/routes/*`
+  - `tests/integration/toolchain/*`
   - `tests/integration/runtime/*`
     - `tests/integration/runtime/detail-page-runtime-lite.test.ts` keeps the
       public detail-page route contract executable even when local DB fixtures
@@ -229,3 +230,17 @@ import guard.
 
 `tests/unit/toolchain/bunLaneWorkerUrl.test.ts` pins the contract; the runner
 (TASK-557-05) maps the named errors to `mapWorkerEnvError` before spawning.
+
+## Bun lane migration applier
+
+`scripts/bun-lane-migrate.ts` (TASK-557-03-L01) replaces drizzle's migrator
+for the Bun lane: it applies every `core/db/migrations/<tag>.sql` file from
+`meta/_journal.json` into one named schema via per-file transactions with
+`SET LOCAL search_path TO <schema>, public`, tracks applied tags in
+`<schema>._bun_migrations`, and is idempotent (re-runs apply 0). Run it with
+`bun scripts/bun-lane-migrate.ts <schema>` (requires `DATABASE_DIRECT_URL`).
+Pure helpers are pinned in `tests/unit/toolchain/bunLaneMigrate.test.ts`; the
+DB-backed idempotency proof lives in
+`tests/integration/toolchain/bunLaneMigrate.test.ts` (skips cleanly without
+`DATABASE_DIRECT_URL`). Production `core/server/startupMigrations.ts` and
+drizzle-kit are untouched.
