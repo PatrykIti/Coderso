@@ -142,3 +142,7 @@ export const popupListQuerySchema = {
   },
   additionalProperties: false,
 } as const;
+
+// Owned by the domain/service contract module (TASK-486-01-L01); re-exported
+// here so routes import the public query schema from one validation surface.
+export { popupPublicQuerySchema } from "../../services/popups/popupPublicContract";
