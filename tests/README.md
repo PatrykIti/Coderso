@@ -244,3 +244,9 @@ DB-backed idempotency proof lives in
 `tests/integration/toolchain/bunLaneMigrate.test.ts` (skips cleanly without
 `DATABASE_DIRECT_URL`). Production `core/server/startupMigrations.ts` and
 drizzle-kit are untouched.
+
+- Provisioning: `bun scripts/bun-lane-provision.ts <workers>` (default 8,
+  integer 1..16, requires `DATABASE_DIRECT_URL`) drops only the exact
+  `bun_worker_<i>` schemas it derives (never a wildcard, never `public` or
+  non-worker schemas) and migrates each concurrently; see
+  `tests/integration/toolchain/bunLaneProvision.test.ts`.
