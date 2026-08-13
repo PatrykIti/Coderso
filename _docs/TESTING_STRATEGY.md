@@ -133,6 +133,15 @@ timings belong to the matching closeout receipt.
 - Public write protection and runtime security hardening.
 - Performance budgets.
 - Contract tests that must execute against the real Bun runtime.
+- Perf gates (`tests/perf/*`) are host-isolated: the 4 wall-time p95 gates
+  (admin-request-baseline 25ms, analyticsIngestion 25ms, codersoPerformanceGate
+  300ms cached / 900ms cold / 150ms navigation, post-editor-load 220ms) are
+  CPU-contention-invalidated, so the Bun lane runs them serially on a dedicated
+  quiet worker with no other workers on the same host and no `--parallel`
+  fan-out (`PERF_SERIAL` + `PERF_QUIET_ENV` from
+  `scripts/bun-lane-perf-policy.ts`, TASK-557-06-L02). The authoritative
+  budgets stay inside the test files; the lane only isolates, never weakens
+  them.
 - The repo `test:bun` command runs the DB/runtime gate serially with a
   `15000ms` per-test timeout because real database fixtures and runtime renders
   can exceed Bun's default `5000ms` timeout under full-suite load.

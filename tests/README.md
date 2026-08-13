@@ -267,3 +267,56 @@ unknown bucket throws `manifest_bucket_invalid:<file>`. The runner CLI
 (TASK-557-05-L02) wires this pure surface to `--dry-run` / `--split-c`.
 `tests/unit/toolchain/bunLanePartition.test.ts` pins balance, C determinism,
 perf isolation, no loss/duplication, and the error contract.
+
+## Bun lane pure A-lane runner
+
+`scripts/run-bun-pure-lane.ts` (TASK-557-06-L01) runs exactly the A manifest
+files (`bucket === "A"` in `tests/bun-lane-manifest.json`) with
+`bun test --parallel=16 --timeout=15000 <a-files>` and NO database env: the
+child env strips `DATABASE_URL` and `DATABASE_DIRECT_URL`, so any "DB-free"
+file that accidentally touches the DB fails loudly instead of silently hitting
+the shared `public` schema. Run it from the repo root:
+
+```bash
+bun scripts/run-bun-pure-lane.ts
+```
+
+It prints `[bun-lane-pure] <seconds>s exit=<code>` and exits with the child's
+code; an A-less manifest returns `exit 0` immediately without spawning.
+`runPureLane()` is importable and returns `{ exit, durationMs, files,
+attempted }` (the TASK-557-05-L02 orchestrator consumes it for `--lane all`).
+Unreadable manifest -> `manifest_read_failed:<path>`, spawn failure ->
+`pure_lane_spawn_failed:<bin>`. `BUN_LANE_MANIFEST_PATH` and `BUN_LANE_BUN_BIN`
+are test-only seams. `tests/unit/toolchain/bunLanePure.test.ts` pins the
+0-file fast exit, the env-strip guard (stub `bun` dumps its env), exact argv
+(only A files, pinned flags), non-zero exit propagation, and the error
+contract.
+
+## Bun lane perf policy
+
+`scripts/bun-lane-perf-policy.ts` (TASK-557-06-L02) is the serial/quiet policy
+for the perf bucket (`tests/perf/*`): 5 files, 4 of which are wall-time p95
+gates (admin-request-baseline 25ms, analyticsIngestion 25ms,
+codersoPerformanceGate 300ms cached / 900ms cold / 150ms navigation,
+post-editor-load 220ms; admin-prefetch-budget is request-count based). These
+gates are invalidated by CPU contention, so:
+
+- `PERF_SERIAL` is always `true`: perf files never run with `--parallel`
+  fan-out.
+- `PERF_QUIET_ENV` (`{UV_THREADPOOL_SIZE: "4", BUN_TEST_PERF_QUIET: "1"}`) is an
+  ADDITIVE overlay on `resolveWorkerEnv` — the perf worker still needs
+  `DATABASE_URL`/`DATABASE_DIRECT_URL`/`NODE_ENV=test` from the base resolver
+  (analyticsIngestion is a DB-backed gate), so the runner spawns it with
+  `{ ...resolveWorkerEnv(i, { poolMax, fenceOffset }), ...PERF_QUIET_ENV }`,
+  never a replacement.
+- `assertQuietPerfWorker(name)` fails closed: assigning perf files to any
+  non-`perf` worker throws `perf_lane_worker_misassigned:<name>`.
+- The runner (TASK-557-05-L02) rejects `--lane perf` with `--workers > 1`
+  (`perf_lane_parallel_invalid`) and schedules perf AFTER the B/C workers in
+  `--lane all` so the quiet host carries no other load.
+
+The authoritative p95 budgets live INSIDE each perf test file; `PERF_BUDGETS`
+is documentation + policy shape only and the runner never enforces per-file
+durations from a worker-level report. `validatePerfBudgets` was removed as
+dead code. `tests/unit/toolchain/bunLanePerfPolicy.test.ts` pins the budgets,
+the quiet-env overlay, and the worker-name guard.
