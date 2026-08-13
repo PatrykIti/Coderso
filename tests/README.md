@@ -192,3 +192,32 @@ allowed), never runs while another process uses the shared `public` schema,
 and is a maintenance tool, not part of the normal gate.
 `tests/unit/toolchain/bunLaneTimings.test.ts` pins the merge semantics and the
 import guard.
+
+## Bun lane worker URL contract
+
+`scripts/bun-lane-worker-url.ts` (TASK-557-02-L01) builds per-worker
+`DATABASE_URL` values and worker env without any DB or runtime coupling:
+
+- `buildWorkerDatabaseUrl` appends URL-encoded
+  `options=-csearch_path=bun_worker_<i>` (`?` or `&`, preserving existing
+  params), so each worker session uses its own schema.
+- `assertDirectUrl` reuses `inspectDatabaseUrl` (pooled port passed
+  positionally, required) and fails closed with `worker_direct_url_unverifiable`
+  / `worker_direct_url_pooled`; the direct URL must never point at the pooler.
+- `resolveWorkerPoolMax` clamps `DB_POOL_MAX` to [1, 4] and never inherits an
+  ambient value (the real `.env` sets 20 for the pooled client); only explicit
+  non-integer or <1 requested values throw. The aggregate budget is
+  `workers x pool <= 10` (`assertConnectionBudget`, Render's direct-connect
+  reserve), so 8 workers at pool 1 fit but 6 x 2 does not.
+- `resolveWorkerEnv` returns `DATABASE_URL` (worker URL), `DATABASE_DIRECT_URL`
+  as-is, `DB_POOL_MAX`, `BUN_TEST_WORKER_INDEX`, `NODE_ENV=test`, and
+  `BUN_TEST_FENCE_NAMESPACE_OFFSET` when requested. `NODE_ENV=test` is
+  mandatory because `bun test` does not set it and the TASK-557-04 fence
+  honors the offset only under test.
+- `resolveWorkerCount` reads `BUN_TEST_WORKERS` (default 8; CI sets 4); absent
+  means default, present-but-empty or invalid throws `worker_count_invalid`.
+- `describeWorkerTarget` is the only permitted target log shape
+  (`schema@host:port`); the module never prints credentials.
+
+`tests/unit/toolchain/bunLaneWorkerUrl.test.ts` pins the contract; the runner
+(TASK-557-05) maps the named errors to `mapWorkerEnvError` before spawning.
