@@ -83,7 +83,7 @@ Task board for project work. Keep task files and this board in sync.
   Do not move a leaf task to `Done` until either its standalone changelog
   exists or the family changelog records that leaf.
 
-- **To Do:** 583 tasks
+- **To Do:** 586 tasks
 - **In Progress:** 13 tasks
 - **Done:** 3121 tasks
 
@@ -170,7 +170,10 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-548 | Hybrid Visual Documentation Platform | High | Very Large | One strict `coderso.docs-corpus@v2` source compiles into locally packaged Help, provider-free concise DB-backed Guide grounding, and a versioned public portal; includes atomic/composed documentation, reviewed Playwright visual authoring, independent Guide/optional Agent tabs, immutable release artifacts, generated coverage, a mandatory seven-flow shared `task-548-portal` certification before publication, and exactly eight ordered final flows through the shared cookbook-backed `task-548` adapter. Changelog 1261 pinned. 8 children + 17 executable leaves. |
 | TASK-539 | Page V2 Post-Audit Remediation II | High | Very Large | Residual Page v2 model, sanitizer, authoring, transform, renderer, responsive CSS, runtime-init, and narrow-canvas corrections after TASK-535. Changelog 1251 pinned. 8 children + 18 leaves. |
 | TASK-542 | Menu Determinism, Responsive Cascade, and Runtime Parity | High | Large | Strict deterministic MenuDocumentV2, complete responsive neutralizers, shared public projection/active identity, and dirty-safe revalidation. Changelog 1254 pinned. 4 children + 6 leaves. |
-| TASK-545 | Workflow, Smoke Evidence, and Task-Graph Integrity | High | Large | All-results guard, one complete initial audit pass plus finding-driven affected-scope reruns, exact post-audit lens identities, cookbook runner-bound suite/session smoke manifests, and bounded historical graph/index repair. Changelog 1257 pinned. 4 children + 10 leaves. |
+| TASK-545 | Workflow, Smoke Evidence, and Task-Graph Integrity | High | Large | All-results guard, one complete initial audit pass plus finding-driven affected-scope reruns, exact post-audit lens identities, cookbook runner-bound suite/session smoke manifests, and bounded historical graph/index repair. Changelog 1257 pinned. 4 children + 13 leaves. |
+| TASK-545-03-L03 | Checkpoint and Owner Resume | High | Medium | Phase-1 checkpoint schema, atomic no-overwrite checkpoint, owner_action_required pause payload, and exact-path/hash tracked resume with a canonical none/file-only/both closure-resume state machine. |
+| TASK-545-03-L04 | Closure Metadata Delta and Closure-Delta CLI | High | Medium | Frozen closure metadata mutation plan, ordered-durable changelog-then-index writer, metadata-only delta validation, and the closure-delta CLI. |
+| TASK-545-03-L05 | TASK-548 Committed Bootstrap Gate | High | Medium | TASK-548 six-path committed-bootstrap receipt types plus normalize/require authorization with live Git direct-parent/diff/tracked-byte checks. |
 | TASK-478 | Page Editor Inline Link And Toolbar Placement UX | Medium | Medium | Inline links are invisible/uneditable/unremovable and hijack selection (navigate on click); plus a request to dock the mark toolbar to the block side so the picker doesn't cover the text. Live-verified 2026-06-27. |
 | TASK-478-01 | Inline Link Visual Feedback | Medium | Small | Linked fragments render as a bare `<a>` (no underline/color); add token-driven link styling on canvas+front (`pageRendererV2.tsx:780`). |
 | TASK-478-02 | Inline Link Edit, Remove, And Click-To-Select | Medium | Medium | No unlink control, can't clear via empty URL, URL field not seeded from existing href, and clicking a linked fragment navigates instead of selecting. Add remove/edit + suppress navigation while editing. |
