@@ -838,7 +838,10 @@ TASK-414 to exactly
 an empty supplemental list. Callers cannot supply, override, or broaden it.
 
 Path membership is only the outer boundary. Before the first metadata write,
-`buildClosureMetadataMutationPlanV1` reads the checkpoint-frozen bytes and the
+`buildClosureMetadataMutationPlanV1` — an export OWNED by this leaf's
+`lib/smoke-evidence.mjs` (declared in the `.d.mts`; consumed by
+TASK-545-04-L03's closure path, which must import it, never redefine it) —
+reads the checkpoint-frozen bytes and the
 fresh indexes and produces a deeply frozen exact plan whose records contain
 `path`, `beforeSha256`, ordered semantic operations, and `expectedAfterSha256`.
 Allowed operations are limited to canonical task `Status` plus dedicated

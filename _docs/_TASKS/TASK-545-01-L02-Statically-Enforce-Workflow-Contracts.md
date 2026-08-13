@@ -35,10 +35,10 @@ files are read-only gates; this leaf reruns but never edits/rebaselines them.
 
 - Commit `5facaf32` removed and globally ignored the former local workflow
   corpus; a recursive filesystem scan is therefore non-reproducible.
-- Current HEAD tracks two executable entries, TASK-522 author and TASK-543
-  implement, plus the TASK-522 helper/type declaration. Terminal TASK-554 must
-  add four explicitly tracked entries before TASK-545 starts.
-- `task-522-author.mjs:168` is the only current tracked unsafe agent-result
+- Current HEAD tracks six executable entries: TASK-522 author, TASK-543
+  implement, and the four TASK-554 entries, plus the TASK-522 helper/type
+  declaration (`task-522-findings-prompt.mjs`).
+- `task-522-author.mjs:169` is the only current tracked unsafe agent-result
   filter. TASK-543's three literal `.filter(Boolean)` calls process URL/port
   data and must remain legal.
 - TASK-522 and TASK-543 use local audit/result machinery that must import the

@@ -18,8 +18,10 @@ The original audit inspected a local workflow corpus that no longer exists in a
 clean checkout. Commit `5facaf3212739b0bd31f9aadc1e9357d497fc566`
 intentionally removed and globally ignored `_docs/_workflows/`; later commit
 `0ca8ad5b` restored only the four modules required by tracked tests. At refreshed
-HEAD, `git ls-files` therefore owns exactly two executable workflow entries:
-`task-522-author.mjs` and `task-543-implement.mjs`. The first has one confirmed
+HEAD, `git ls-files` therefore owns exactly six executable workflow entries:
+`task-522-author.mjs`, `task-543-implement.mjs`, and the four TASK-554 entries
+(`task-554-author-audit.mjs`, `task-554-implement.mjs`, `task-554-fix.mjs`,
+`task-554-closeout.mjs`), plus the `task-522-findings-prompt.mjs` helper. The first has one confirmed
 false-clean agent-result `audits.filter(Boolean)` consumer; the three literal
 uses in TASK-543 are ordinary browser/path/process-data filtering and are not
 agent-result guards.

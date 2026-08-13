@@ -6,7 +6,7 @@
 **Priority:** High
 **Category:** Workflow Infrastructure / False-Clean Prevention / Static Tests
 **Estimated Effort:** Medium
-**Dependencies:** TASK-545-02
+**Dependencies:** TASK-545-01-L02 (terminal leaf; it requires TASK-545-02-L02, so this parent completes only after the 545-02 line lands)
 **Status:** ⏳ To Do
 **Changelog:** 1257 (pinned; closure only)
 
@@ -40,7 +40,9 @@ read-only and owns only additive live-tree enforcement.
 
 The original 58/61 finding inventory came from owner-local scripts removed and
 ignored by `5facaf32`; it is not reproducible in a fresh clone. Current
-`git ls-files` exposes two executable entries. `task-522-author.mjs:168` has the
+`git ls-files` exposes six executable entries (`task-522-author.mjs`,
+`task-543-implement.mjs`, and the four TASK-554 entries) plus the
+`task-522-findings-prompt.mjs` helper. `task-522-author.mjs:169` has the
 confirmed unsafe agent-result filter. TASK-543 has three unrelated
 `.filter(Boolean)` expressions for URL/port parsing inside browser/process
 helpers. The completion invariant is therefore semantic: every tracked

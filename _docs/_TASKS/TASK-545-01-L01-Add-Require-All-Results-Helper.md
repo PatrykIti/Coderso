@@ -36,9 +36,9 @@ types every runtime export consumed by strict TypeScript tests; tests import the
 ## Grounded anchors
 
 - Tracked false-clean pattern:
-  `_docs/_workflows/task-522-author.mjs:168-179`.
+  `_docs/_workflows/task-522-author.mjs:169-179`.
 - Tracked local guards that TASK-545 will replace live in
-  `_docs/_workflows/task-543-implement.mjs:1986-2035`.
+  `_docs/_workflows/task-543-implement.mjs:1986-1999`.
 - Historical examples such as `task-drift-audit-only.mjs` and
   `task-531-534-author.mjs` were removed by `5facaf32`; they may be read from its
   parent commit as design evidence but are not implementation targets.
@@ -102,6 +102,29 @@ export function requireAllResults(results, expectedIdentities, label) {
     }
   }
   return results;
+}
+
+// Shared structured-findings normalizer (single owner: this leaf's
+// workflow-contracts.mjs). Consumed by 545-02-L01 (audit-round driver) and
+// 545-02-L02 (post-audit driver) BEFORE severity filtering; it must never
+// drop a finding, reorder severity, or invent one. `findings` is any subset of
+// {severity: "HIGH"|"MEDIUM"|"LOW", area, finding, evidence, recommendation}.
+export function collectStructuredFindings(values) {
+  if (!Array.isArray(values)) {
+    throw new WorkflowResultError("workflow_findings_invalid", "collect", "not_array");
+  }
+  const out = [];
+  for (const value of values) {
+    if (value == null) continue; // envelope was already validated by requireAllResults
+    const findings = Array.isArray(value.findings) ? value.findings : [];
+    for (const f of findings) {
+      if (!f || !["HIGH", "MEDIUM", "LOW"].includes(f.severity)) {
+        throw new WorkflowResultError("workflow_findings_invalid", "collect", "severity");
+      }
+      out.push(f);
+    }
+  }
+  return out;
 }
 ```
 
