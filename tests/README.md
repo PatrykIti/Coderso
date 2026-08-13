@@ -163,3 +163,14 @@ debugging. The durable evidence is written to `_docs/PLAYWRIGHT`.
 - Keep Bun-free production modules import-safe for Vitest: avoid top-level imports of DB/settings/runtime services in pure helpers; use pure seams or lazy default deps instead.
 - Use `// @vitest-environment happy-dom` for DOM-heavy Vitest files.
 - Do not move runtime/plugin/install/security/perf suites to Vitest only for coverage.
+
+## Bun lane manifest
+
+`tests/bun-lane-manifest.json` is the partitioner source of truth for the Bun
+lane. `scripts/bun-lane-classify.ts` regenerates it deterministically from the
+repo root (`bun scripts/bun-lane-classify.ts`) and classifies every
+`*.test.{ts,tsx}` file under the `test:bun` lane dirs into `perf` / A / B / C;
+`tests/unit/toolchain/bunLaneManifest.test.ts` pins the golden file set,
+classification examples, and byte-stable regeneration. New lane test files are
+picked up automatically on the next regeneration; do not hand-edit the
+manifest.
