@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-13T18:25:09.466Z",
+  "generatedAt": "2026-08-13T20:12:52.447Z",
   "rows": [
     {
       "file": "tests/integration/analytics/trafficAggregation.test.ts",
@@ -526,6 +526,11 @@
       "weightMs": 0
     },
     {
+      "file": "tests/integration/toolchain/fenceIsolation.test.ts",
+      "bucket": "A",
+      "weightMs": 0
+    },
+    {
       "file": "tests/perf/admin-prefetch-budget.test.ts",
       "bucket": "perf",
       "weightMs": 0
@@ -954,6 +959,11 @@
       "weightMs": 0
     },
     {
+      "file": "tests/unit/db/fenceNamespace.test.ts",
+      "bucket": "A",
+      "weightMs": 0
+    },
+    {
       "file": "tests/unit/db/schemaColumnTypeContracts.test.ts",
       "bucket": "B",
       "weightMs": 0
@@ -1124,6 +1134,11 @@
     },
     {
       "file": "tests/unit/kits/kitManifest.test.ts",
+      "bucket": "A",
+      "weightMs": 0
+    },
+    {
+      "file": "tests/unit/kits/legacyInstallRunPersistenceInventory.test.ts",
       "bucket": "A",
       "weightMs": 0
     },
