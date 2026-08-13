@@ -56,10 +56,10 @@ export type TriggerEnv = {
   now: () => number;
   setTimeout: (fn: () => void, ms: number) => unknown;
   clearTimeout: (h: unknown) => void;
-  addEventListener: (t: string, fn: (e: any) => void, opts?: any) => void;
-  removeEventListener: (t: string, fn: (e: any) => void) => void;
+  addEventListener: (t: string, fn: (e: unknown) => void, opts?: unknown) => void;
+  removeEventListener: (t: string, fn: (e: unknown) => void) => void;
   scrollMetrics: () => { y: number; viewport: number; full: number };
-  matches: (el: any, selector: string) => boolean; // delegated cta match
+  matches: (el: unknown, selector: string) => boolean; // delegated cta match
 };
 
 export type Dispose = () => void;
@@ -87,20 +87,26 @@ export function watchTrigger(
         }
       };
       env.addEventListener("scroll", handler, { passive: true });
-      handler(); // evaluate initial position
+      // Defer the initial-position evaluation: `fire()` can run synchronously,
+      // and the caller (popupRuntime orchestrator) arms watchers before
+      // assigning `dispose`. A synchronous fire would hit the TDZ
+      // `ReferenceError: Cannot access 'dispose' before initialization`. The
+      // 0ms timer guarantees the caller has bound `dispose` first.
+      env.setTimeout(handler, 0);
       return () => env.removeEventListener("scroll", handler);
     }
     case "exit_intent": {
-      const handler = (e: any) => {
-        if ((e?.clientY ?? 1) <= 0 && (!e?.relatedTarget)) fire();
+      const handler = (e: unknown) => {
+        const event = e as MouseEvent | null;
+        if ((event?.clientY ?? 1) <= 0 && !event?.relatedTarget) fire();
       };
       env.addEventListener("mouseout", handler);
       return () => env.removeEventListener("mouseout", handler);
     }
     case "cta_click": {
-      const handler = (e: any) => {
+      const handler = (e: unknown) => {
         try {
-          let el = e?.target;
+          let el = (e as Event | null)?.target as Element | null;
           while (el) {
             if (env.matches(el, trigger.selector)) { fire(); break; }
             el = el.parentElement;
@@ -139,4 +145,4 @@ and guards divide-by-zero.
 
 - **Vitest** (`tests/vitest/popups/trigger-watchers.test.ts`) with injected
   clock + event-target fakes; no real `window`.
-- Gates: `bun run lint`, `bun run typecheck`, `bun run test:vitest`.
+- Gates: `bun run lint`, `bun --cwd core lint:types`, `bun run test:vitest`.

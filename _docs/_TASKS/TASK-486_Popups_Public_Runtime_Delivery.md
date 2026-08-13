@@ -6,6 +6,7 @@
 **Estimated Effort:** Large
 **Dependencies:** TASK-054-12 (popups admin CRUD + publish, DONE — admin-only)
 **Status:** ⏳ To Do
+**Changelog:** 1272 (pinned; closure only — 1268..1271 are reserved for 489/555/556/557)
 **Started:** `<YYYY-MM-DD>`
 **Completed:** `<YYYY-MM-DD>`
 
@@ -41,8 +42,9 @@ popup on the live site.
   from session, never trusted from the client), a sanitized PII-free DTO,
   anonymous read, and `public_read` rate limiting.
 - A **client runtime engine** (pure, testable TS): trigger detection
-  (time/scroll/exit-intent/cta), client-side path/audience guard, and
-  frequency/cooldown gating via browser storage.
+  (time/scroll/exit-intent/cta) and frequency/cooldown gating via browser
+  storage. Targeting/audience is **server-authoritative**: the DTO omits
+  `targeting`, so there is NO client-side path/audience guard (see TASK-486-02).
 - A **render component** that builds the popup DOM (placement, overlay,
   dismiss, CTA with safe-href sanitization) and a **global runtime injection**
   wired into the public-site response boundary so popups load on every public
@@ -86,7 +88,7 @@ popup on the live site.
 - **Vitest lane** (`tests/vitest/*`, `tests/vitest/ui-integration/*`) for the
   pure engine logic (trigger thresholds, frequency/cooldown gate, targeting
   match) and the render component (placement/overlay/dismiss/CTA-safe-href).
-- Existing gates stay green: `bun run lint`, `bun run typecheck`,
+- Existing gates stay green: `bun --cwd core lint`, `bun --cwd core lint:types`,
   `bun test`, `bun run test:vitest`.
 
 ---
@@ -108,7 +110,7 @@ popup on the live site.
 ## Notes
 
 - **No DB change.** This feature is read-only against the existing `popups`
-  table (`core/db/schema.ts` ~L1158) and its `popups_status_idx`; no migration
+  table (`core/db/tables/engagement.ts:19`, re-exported by `core/db/schema.ts`) and its `popups_status_idx`; no migration
   artifacts are required. Any leaf that later adds a write MUST ship full
   migration artifacts (SQL + `meta/*_snapshot.json` + `meta/_journal.json`).
 - **Anti-abuse forward guard.** The public surface is intentionally a single

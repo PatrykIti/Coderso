@@ -41,7 +41,7 @@ No DOM rendering happens here (that is TASK-486-03); this subtask emits decision
 | --- | --- | --- | --- |
 | TASK-486-02-L01 | Trigger watchers (time/scroll/exit-intent/cta) | Vitest | ⏳ To Do |
 | TASK-486-02-L02 | Frequency/cooldown storage gate | Vitest | ⏳ To Do |
-| TASK-486-02-L03 | Runtime orchestrator + client path/audience guard | Vitest | ⏳ To Do |
+| TASK-486-02-L03 | Runtime orchestrator (server-authoritative targeting) | Vitest | ⏳ To Do |
 
 ---
 
@@ -59,4 +59,4 @@ No DOM rendering happens here (that is TASK-486-03); this subtask emits decision
 - All three leaves → **Vitest** (`tests/vitest/popups/*`). Use injectable
   clock/storage/event-target fakes — no real `window` dependency in the unit
   tests. Cover trigger thresholds, gate strategies, cooldown boundaries, and
-  path/audience guard truth-tables.
+  orchestrator start/stop semantics.

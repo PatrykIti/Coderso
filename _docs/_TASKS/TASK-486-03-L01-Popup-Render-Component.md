@@ -24,8 +24,11 @@
   the DTO type + a shared safe-href helper — serializable into the IIFE).
 - **Source-of-truth docs:** `_docs/SECURITY_SPEC.md` (output sanitization /
   no injection), `_docs/ARCHITECTURE.md` (DOM behind adapters). Safe-href
-  precedent: the `startsWith("/" | "http://" | "https://")` guard in
-  `core/server/publicSite.tsx` (~L759).
+  precedents: `normalizeWidgetSafeHref` (`core/widgets/core/widgetSafeHref.ts:17`)
+  and `normalizeAuthoringSafeHref`/`sanitizeAuthoringLinkHref`
+  (`core/services/pages/pageAuthoringSanitizers.ts:260,266`); the
+  `startsWith("/" | "http://" | "https://")` rule also appears in
+  `core/server/publicSiteEntryRuntime.tsx:85-87`.
 - **Out of scope:** trigger/frequency (TASK-486-02), `<script>` assembly +
   page injection (TASK-486-03-L02), CSS theming beyond minimal inline/utility
   styles.
@@ -40,10 +43,16 @@ No endpoint or permission model changes. Client render only — but it is the
 - **Text content** (`title`, `body`, `ctaLabel`) is set via `textContent` /
   created text nodes — **never** `innerHTML` — so authored content cannot inject
   markup/script.
-- **CTA href sanitization:** reuse a shared `isSafeHref` allowing only values
-  that `startsWith("/")`, `"http://"`, or `"https://"` (mirrors publicSite). Any
-  other scheme (e.g. `javascript:`, `data:`) ⇒ render the CTA **without** an
-  `href` (or omit the CTA). Add `rel="noopener noreferrer"` for external links.
+- **CTA href sanitization:** the leaf's local `isSafeHref` (below) is
+  intentional — it must be IIFE-serializable with its `SAFE` regex, so it
+  reimplements the `startsWith("/")`/`http(s)://` rule locally instead of
+  importing the shared `normalizeWidgetSafeHref`/`normalizeAuthoringSafeHref`
+  (which close over module state and cannot be `.toString()`-serialized). Keep
+  the allowed schemes identical to the shared precedents (`/`, `http://`,
+  `https://`) while intentionally tightening case handling and rejecting
+  protocol-relative `//`. Any other scheme (e.g. `javascript:`, `data:`)
+  ⇒ render the CTA **without** an `href` (or omit the CTA). Add
+  `rel="noopener noreferrer"` for external links.
 - **No PII / no secrets** rendered; nothing logged.
 
 > **Shared boundary `core/server/publicSite.tsx`** is also extended by TASK-483/486/491/493 — additive injection only; reuse the existing forms/booking public-write nonce evaluator, do not invent a competing one-off nonce.
@@ -58,7 +67,7 @@ import type { PublicPopup } from "../popupPublicContract";
 
 export type RenderEnv = { document: Document; mountTo?: HTMLElement };
 
-const SAFE = /^(\/(?!\/)|https?:\/\/)/i;
+export const SAFE = /^(\/(?!\/)|https?:\/\/)/i;
 export const isSafeHref = (href: string | null): href is string =>
   typeof href === "string" && SAFE.test(href.trim());
 
@@ -135,4 +144,4 @@ valid `PublicPopup` input.
 
 - **Vitest ui-integration** (`tests/vitest/ui-integration/popup-render.test.tsx`)
   with jsdom `document`.
-- Gates: `bun run lint`, `bun run typecheck`, `bun run test:vitest`.
+- Gates: `bun run lint`, `bun --cwd core lint:types`, `bun run test:vitest`.

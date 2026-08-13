@@ -19,8 +19,11 @@
   `recordPopupShown(...)` persists the new record. Strategies map to:
   `always` (cooldown only), `session_once` (once per browser session),
   `daily_once` (once per calendar UTC day). `cooldownMinutes` adds a minimum gap
-  on top of any strategy. Storage is injected (`sessionStorage`-like /
-  `localStorage`-like adapters) so the gate is fully testable.
+  on top of any strategy. Storage is injected through a single `FrequencyEnv`
+  adapter; the orchestrator's real adapter dual-writes every record to both
+  `sessionStorage` and `localStorage` (session id in sessionStorage,
+  last-shown in both) so the gate survives reloads and works in private mode —
+  the gate itself stays storage-agnostic and fully testable.
 - **Owning module(s) to create-or-extend:** create
   `core/services/popups/runtime/frequencyGate.ts` (self-contained, no imports
   except the frequency type — serializable into the runtime IIFE).
@@ -60,7 +63,7 @@ export type FrequencyEnv = {
   setRecord: (popupId: string, rec: { lastShownMs: number; sessionId: string }) => void;
 };
 
-const sameUtcDay = (a: number, b: number) =>
+export const sameUtcDay = (a: number, b: number) =>
   new Date(a).toISOString().slice(0, 10) === new Date(b).toISOString().slice(0, 10);
 
 export function shouldShowPopup(
@@ -112,4 +115,4 @@ time math is integer-safe.
 
 - **Vitest** (`tests/vitest/popups/frequency-gate.test.ts`) with injected clock
   + in-memory/throwing storage fakes.
-- Gates: `bun run lint`, `bun run typecheck`, `bun run test:vitest`.
+- Gates: `bun run lint`, `bun --cwd core lint:types`, `bun run test:vitest`.

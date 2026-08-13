@@ -1,4 +1,4 @@
-# TASK-486-02-L03: Runtime Orchestrator + Client Path/Audience Guard
+# TASK-486-02-L03: Runtime Orchestrator (Server-Authoritative Targeting)
 # FileName: TASK-486-02-L03-Runtime-Orchestrator.md
 
 **Parent Subtask:** TASK-486-02
@@ -69,12 +69,12 @@ export function createPopupRuntime(deps: PopupRuntimeDeps) {
   let disposers: Array<() => void> = [];
   let started = false;
 
-  const stop = () => { disposers.forEach((d) => d()); disposers = []; };
+  const stop = () => { disposers.forEach((d) => d()); disposers = []; started = false; };
 
   const start = async () => {
     if (started) return; started = true;
     let popups: PublicPopup[] = [];
-    try { popups = await deps.fetchPopups(deps.currentPath()); } catch { return; }
+    try { popups = await deps.fetchPopups(deps.currentPath()); } catch { started = false; return; }
 
     for (const popup of popups) {
       // server already targeted by path + audience; the DTO carries no
@@ -120,4 +120,4 @@ races; all storage/selector failures are already swallowed by L01/L02.
 
 - **Vitest** (`tests/vitest/popups/popup-runtime.test.ts`) with fake
   `fetchPopups` + injected trigger/frequency envs + a spy `render`.
-- Gates: `bun run lint`, `bun run typecheck`, `bun run test:vitest`.
+- Gates: `bun run lint`, `bun --cwd core lint:types`, `bun run test:vitest`.

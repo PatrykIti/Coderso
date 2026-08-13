@@ -85,4 +85,4 @@ safe-href + escaping + frequency suppression on re-start.
 
 - **Vitest** (`tests/vitest/popups/*`, `tests/vitest/ui-integration/*`) with
   jsdom + injected clock/storage/event fakes.
-- Gates: `bun run lint`, `bun run typecheck`, `bun run test:vitest`.
+- Gates: `bun run lint`, `bun --cwd core lint:types`, `bun run test:vitest`.

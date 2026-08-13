@@ -88,7 +88,7 @@ maps them with `mapPopupError`. A malformed stored row that fails a `normalize*`
 call surfaces as a `popup_*` domain error (already handled by `mapPopupError`).
 
 **No DB migration:** read-only against the existing `popups` table + existing
-`popups_status_idx` (`core/db/schema.ts` ~L1158/L1176). **No SQL file, no
+`popups_status_idx` (`core/db/tables/engagement.ts:19,37`, re-exported by `core/db/schema.ts`). **No SQL file, no
 `meta/*_snapshot.json`, no `meta/_journal.json` required.**
 
 **Regression-test shape (Bun, DB-backed):**
@@ -104,4 +104,4 @@ call surfaces as a `popup_*` domain error (already handled by `mapPopupError`).
 - **Bun** (`tests/integration/routes/popups-public.test.ts` shares the harness,
   or a dedicated `tests/integration/...` DB test): exercises `resolvePublicPopups`
   against a seeded DB.
-- Gates: `bun run lint`, `bun run typecheck`, `bun test`.
+- Gates: `bun run lint`, `bun --cwd core lint:types`, `bun test`.

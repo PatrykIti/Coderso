@@ -64,25 +64,40 @@
 
 ```ts
 // core/services/popups/popupPublicContract.ts
-import type { Popup, PopupTrigger, PopupFrequency, PopupContent, PopupSettings }
+import type { Popup, PopupTrigger, PopupFrequency, PopupSettings }
   from "./popupTypes";
+
+export type PublicPopupContent = {
+  title: string | null;
+  body: string | null;
+  ctaLabel: string | null;
+  ctaHref: string | null;
+};
 
 export type PublicPopup = {
   id: string;
   slug: string;
   trigger: PopupTrigger;
   frequency: PopupFrequency;
-  content: PopupContent;
+  content: PublicPopupContent;   // templateId stripped
   settings: PopupSettings;
 };
 
-// PII gate: drop name/status/targeting/timestamps.
+// PII gate: drop name/status/targeting/timestamps AND the internal
+// `content.templateId` (admin render-template id, useless to the client and
+// must not leak). Never spread `p.content` wholesale — the real PopupContent
+// carries templateId.
 export const toPublicPopup = (p: Popup): PublicPopup => ({
   id: p.id,
   slug: p.slug,
   trigger: p.trigger,
   frequency: p.frequency,
-  content: p.content,
+  content: {
+    title: p.content.title,
+    body: p.content.body,
+    ctaLabel: p.content.ctaLabel,
+    ctaHref: p.content.ctaHref,
+  },
   settings: p.settings,
 });
 
@@ -117,7 +132,11 @@ export const matchPopupRequest = (
 ```
 
 ```ts
-// core/server/validation/popupSchemas.ts (append)
+// core/services/popups/popupPublicContract.ts — the schema is OWNED here
+// (domain/service contract module per AGENTS.md); core/server/validation/
+// popupSchemas.ts only re-exports it (`export { popupPublicQuerySchema } from
+// "../../services/popups/popupPublicContract";`). Routes import via this
+// popupSchemas re-export (see TASK-486-01-L03).
 export const popupPublicQuerySchema = {
   type: "object",
   required: ["path"],
@@ -149,4 +168,4 @@ here.
 
 - **Vitest** (`tests/vitest/popups/public-contract.test.ts`): pure matcher truth
   tables + DTO key-set assertion + `popupPublicQuerySchema` reject-unknown.
-- Gates: `bun run lint`, `bun run typecheck`, `bun run test:vitest`.
+- Gates: `bun run lint`, `bun --cwd core lint:types`, `bun run test:vitest`.
