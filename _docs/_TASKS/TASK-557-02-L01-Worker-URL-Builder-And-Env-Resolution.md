@@ -24,7 +24,12 @@ Build `scripts/bun-lane-worker-url.ts` exposing pure helpers:
 - `workerSchemaName(workerIndex: number): string` = `bun_worker_${index}`.
 - `assertDirectUrl(directUrl: string, pooledPort: number)` — fail-fast: parse
   with `inspectDatabaseUrl`
-  (from `core/db/connectionTargets.ts`); throw `worker_direct_url_pooled` if
+  (from `core/db/connectionTargets.ts`). The REAL signature is
+  `inspectDatabaseUrl(url: string, pooledPort: number, env?: DatabaseEnvMap)` —
+  `pooledPort` is a REQUIRED positional argument (the Render direct pool port
+  to compare against), not optional, and the env map defaults to
+  `process.env`; call it with `inspectDatabaseUrl(directUrl, pooledPort)` and
+  never omit the port. Throw `worker_direct_url_pooled` if
   `inspection.pooled` is true (port 6432), throw `worker_direct_url_unverifiable`
   if not verified. Reuse the existing guard — do not duplicate port logic.
 

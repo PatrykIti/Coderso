@@ -4,11 +4,11 @@
 **Priority:** High
 **Category:** Testing / Tooling
 **Estimated Effort:** Medium
-**Dependencies:** TASK-557-01 (manifest), TASK-557-05 (runner integration)
+**Dependencies:** TASK-557-01 (manifest), TASK-557-07 (hygiene; pure A lane and perf policy do not depend on the runner — the runner 05-L02 imports 06-L01's `runPureLane` and 06-L02's PERF_* constants, so 06 lands BEFORE 05 and 05-L02 depends on 06-L01/06-L02)
 **Status:** ⏳ To Do
 ---
 ## Overview
-The A bucket (218 DB-free files) needs no database at all and parallelizes
+The A bucket (225 DB-free files) needs no database at all and parallelizes
 freely with `bun test --parallel=16` — the single cheapest win. The perf bucket
 (5 files, 4 of which are wall-time p95 gates with 25/25/300/900/150/220ms
 budgets across 6 wall-time assertions: admin-request-baseline 25, analyticsIngestion

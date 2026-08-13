@@ -141,7 +141,8 @@ Regression-test shape (`tests/unit/toolchain/bunLaneManifest.test.ts`):
 ## Testing Requirements
 - `bun --cwd core lint` + `bun --cwd core lint:types` green.
 - `bun test tests/unit/toolchain/bunLaneManifest.test.ts` green.
-- Run `bun scripts/bun-lane-classify.ts` and confirm counts A≈218, B≈112, C≈30, perf=5 (364 total; the audit measured 254 unit + 66 routes + 19 runtime + 5 server + 2 store + 3 plugins + 4 analytics + 5 perf + 6 security = 364 lane files; perf moves 4 DB-free files out of A and 1 DB-backed file out of B, so A≈222-4=218, B≈113-1=112, C≈30, perf=5). Record actual counts in the leaf handoff.
+- Run `bun scripts/bun-lane-classify.ts` and confirm counts A=225, B=107, C=27, perf=5 (364 total; the audit measured 254 unit + 66 routes + 19 runtime + 5 server + 2 store + 3 plugins + 4 analytics + 5 perf + 6 security = 364 lane files; perf moves 4 DB-free files out of A and 1 DB-backed file out of B, so A≈229-4=225, B≈108-1=107, C≈27, perf=5). Record actual counts in the leaf handoff.
+- Scope note: 364 is EXACTLY the `package.json:30` `test:bun` lane set (9 dirs: tests/unit, tests/integration/{routes,runtime,server,store,plugins,analytics}, tests/perf, tests/security). Other non-vitest suites are intentionally OUT of the lane and must not be migrated or touched: `tests/integration/assistant-live` (15), `tests/integration/kits` (11), `tests/integration/posts` (3) — the full non-vitest total is 393, but only the 364 lane files are in scope.
 
 ## Documentation Updates Required
 - `tests/README.md`: manifest is the partitioner source of truth.

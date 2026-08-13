@@ -4,7 +4,7 @@
 **Priority:** High
 **Category:** Testing / Tooling / Developer Experience
 **Estimated Effort:** Large
-**Dependencies:** TASK-557-01 (manifest+timings), TASK-557-02 (worker env), TASK-557-03 (provisioning), TASK-557-04 (fence), TASK-557-07 (hygiene)
+**Dependencies:** TASK-557-01 (manifest+timings), TASK-557-02 (worker env), TASK-557-03 (provisioning), TASK-557-04 (fence), TASK-557-07 (hygiene), TASK-557-06 (pure A lane + perf policy; lands before 05 per umbrella order)
 **Status:** ⏳ To Do
 ---
 ## Overview

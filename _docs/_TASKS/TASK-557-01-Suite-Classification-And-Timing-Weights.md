@@ -12,7 +12,7 @@ The parallel runner needs a deterministic, machine-readable classification of
 every lane file into conflict classes (perf = tests/perf/*, A = DB-free,
 B = DB-backed self-scoped, C = shared mutable state) plus measured per-file
 timings to drive weighted partitioning. Today the audit produced these numbers
-ad hoc (218/112/30/5); this subtask turns them into a checked-in manifest and a
+ad hoc (225/107/27/5); this subtask turns them into a checked-in manifest and a
 reproducible probe so the partitioner never guesses.
 
 Deliverables:

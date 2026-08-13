@@ -28,7 +28,8 @@ import { workerSchemaName } from "./bun-lane-worker-url";
 // linked through roles + user_roles. Password is hashed with the same
 // argon2id helper (`hashPassword` from core/services/auth/password.ts), never
 // a placeholder. Email PII fields use `buildEmailFields` from
-// core/security/piiEmail.ts (emailHash/emailEncrypted).
+// core/services/security/piiEmail.ts (emailHash/emailEncrypted; verified
+// buildEmailFields lives at core/services/security/piiEmail.ts:138).
 export async function seedWorkerSchema(
   databaseUrl: string,
   workerIndex: number,

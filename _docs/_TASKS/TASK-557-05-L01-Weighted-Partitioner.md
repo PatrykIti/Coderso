@@ -26,7 +26,7 @@ Pure partition logic in `scripts/bun-lane-partition.ts`:
 ```ts
 // scripts/bun-lane-partition.ts
 export type Bucket = "A" | "B" | "C" | "perf";
-export type ManifestRow = { file: string; bucket: Bucket; weightMs?: number; dir?: string; conflictKey?: string };
+export type ManifestRow = { file: string; bucket: Bucket; weightMs?: number; conflictKey?: string };
 export type Partition = { b: string[][]; c: string[]; perf: string[] };
 
 const DEFAULT_WEIGHT: Record<Bucket, number> = { A: 1000, B: 10000, C: 20000, perf: 20000 };

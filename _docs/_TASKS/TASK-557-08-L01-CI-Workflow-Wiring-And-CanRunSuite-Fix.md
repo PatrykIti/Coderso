@@ -24,8 +24,9 @@ Two CI changes:
    `test:bun`); do not reference a script that does not exist. Worker count
    reaches the runner through the `BUN_TEST_WORKERS` env var: the runner reads
    `BUN_TEST_WORKERS` (default 8) when `--workers` is absent.
-   `timeout-minutes` may need to drop from 25 to ~15 after the speedup; keep a
-   safety margin (20).
+   `timeout-minutes` may need to drop from 25 (current value, verified at
+   coderso-pr-gates.yml:109) to ~15 after the speedup; keep a safety margin
+   (20).
 
 ## Implementation Pseudocode
 ```ts

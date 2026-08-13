@@ -4,7 +4,7 @@
 **Priority:** High
 **Category:** Testing / Tooling
 **Estimated Effort:** Large
-**Dependencies:** TASK-557-05-L01 (partition), TASK-557-02 (env), TASK-557-03 (provision), TASK-557-04 (fence)
+**Dependencies:** TASK-557-05-L01 (partition), TASK-557-02 (env), TASK-557-03 (provision), TASK-557-04 (fence), TASK-557-06-L01 (pure A lane `runPureLane`), TASK-557-06-L02 (PERF_SERIAL/PERF_BUDGETS/PERF_QUIET_ENV)
 **Status:** ⏳ To Do
 ---
 ## Overview
@@ -39,7 +39,7 @@ The pure A lane is invoked by the same runner when `--lane all` (TASK-557-06).
 ```ts
 // scripts/run-bun-parallel.ts
 import { readFile, writeFile } from "node:fs/promises";
-import { partition, type Partition } from "./bun-lane-partition";
+import { partition, partitionSummary, type Partition } from "./bun-lane-partition";
 import { resolveWorkerEnv, resolveWorkerPoolMax, assertConnectionBudget, resolveWorkerCount } from "./bun-lane-worker-url";
 import { provisionWorkers } from "./bun-lane-provision";
 import { runPureLane } from "./run-bun-pure-lane"; // TASK-557-06-L01
@@ -188,6 +188,10 @@ reserve). This is the aggregate guard behind the per-worker clamp in
 unit-tested (TASK-557-02-L02).
 
 Regression-test shape (integration, `tests/integration/toolchain/runBunParallel.test.ts`):
+the full integration suite for the orchestrator is owned by TASK-557-05-L03
+(runner tests and dry-run). L02 keeps only the fake-worker retry and ordering
+assertions it needs to prove aggregation, and L03 owns the file as the single
+writer. Shared assertions (both leaves must hold):
 - `--dry-run` produces the partition summary and exits 0 without spawning.
 - Fake-worker mode: a stub `bun` script (a test helper file) that fails for one
   named file exercises retry-once and exit-code aggregation.
