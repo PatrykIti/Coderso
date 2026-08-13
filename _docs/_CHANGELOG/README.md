@@ -49,9 +49,9 @@ native TASK-540 migration, shared widget Playwright/process adoption, exact
 legacy deletion, and fresh final-tree fast/certification validation.
 Changelog 1265 is consumed by the completed TASK-553 runtime-smoke authoring
 cookbook family.
-Changelogs 1266 and 1267 are reserved for TASK-414 Guide/Agent/Designer
-completion and the critical TASK-554 Post metadata publish-RBAC hardening
-(surviving variant; the root Repair variant is superseded by it), respectively.
+Changelog 1266 remains reserved for TASK-414 Guide/Agent/Designer completion.
+Changelog 1267 is consumed by completed TASK-554 Post Metadata Publish RBAC
+Hardening (surviving variant; the root Repair variant is superseded by it).
 Changelog 1268 is reserved for rewritten TASK-489, 1269 for TASK-555, and 1270
 for TASK-556. These are closure-only cross-worktree reservations; their rows and
 files remain absent until each physical family closes.
@@ -65,6 +65,7 @@ Use 1271 for the next unreserved changelog entry.
 | No. | Date | Title | Type |
 |-----|------|-------|------|
 | 1265 | 2026-08-06 | TASK-553 Runtime Smoke Authoring Cookbook — one source-grounded contributor recipe for static suite registration, thin adapters, lifecycle, persistent Bun/DB workers, transactional batches, Playwright segmentation, evidence, truthful checkpoint scope, reports, focused tests, and shared-wrapper reuse | Testing/Developer Experience/Documentation/Task Board |
+| 1267 | 2026-08-11 | TASK-554 Post Metadata Publish RBAC Hardening — conditional all-of publish authorization, present-only metadata, exact calendar validation, race-safe Admin cache/editor hydration, and seven-flow shared smoke | Posts/RBAC/Security/Admin UI/Caching/Testing/Docs/Task Board |
 | 1264 | 2026-08-06 | TASK-552 Runtime Smoke Harness Performance — native TASK-540 migration, exact legacy deletion, shared persistent workers/Playwright/dev-host lifecycle, and final 5:49 fast plus 11:22 certification proof | Testing/Developer Experience/Performance/Reliability/Security/Docs/Task Board |
 | 1262 | 2026-07-24 | TASK-550 Database Query and Server Cache Engineering Rules — mandatory bounded-query, schema/index, transaction, retention, pool, measured-performance, local-first cache, optional Redis, post-commit invalidation, and cache-security rules; TASK-551 implementation program prioritized | Docs/Process/Database/Queries/Caching/Performance/Task Board |
 | 1260 | 2026-07-23 | TASK-547 Full-Site Package and FormaDom Installer — strict native package/reference contract, crash-safe lifecycle and rollback, seven-page Polish example site, strict CLI, shared-runner acceptance, and clean 18/18 certification | Solution Kits/Pages/Content/Forms/Installer/Reliability/Testing/Docs/Task Board |
