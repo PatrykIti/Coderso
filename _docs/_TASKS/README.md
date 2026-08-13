@@ -148,6 +148,14 @@ Task board for project work. Keep task files and this board in sync.
 > the stale TASK-489 row, add TASK-555/556 rows, reserve changelogs 1266..1270,
 > and reconcile the expected combined `To Do` count from 497 to 539 before a
 > fresh graph audit. Neither current README may be accepted wholesale.
+>
+> 2026-08-13: TASK-557 was authored as 1 parent + 8 children + 18 leaves (27
+> physical tasks total) after a read-only 4-agent audit of the Bun test lane.
+> Changelog 1271 is reserved. TASK-557 is standalone (no dependency on the
+> TASK-489/555/556/414 terminal gate) and implements the remote direct-5432
+> parallel lane: per-worker schemas, custom migration applier, weighted runner,
+> fence namespace isolation, pure A lane, serial perf lane, CI wiring, docs and
+> closure.
 
 ---
 
@@ -155,6 +163,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-557 | Bun Test Lane Remote Parallel Speedup (direct 5432, 10-15 min) | High | Very Large | Authored 2026-08-13 after a read-only 4-agent audit: `bun run test:bun` (~365 files, ~50 min) rebuilds on a remote direct-5432 database only — per-worker `bun_worker_N` schemas + custom migration applier (71 unqualified SQL files, journal v7 breakpoints), weighted parallel runner, DB-free A lane at `--parallel=16`, serial perf lane, test-only fence namespace offset (fail-closed), schema-aware `hasTable`, CI `canRunSuite` double-run fix, and `DATABASE_DIRECT_URL` secret wiring. Target 10-15 min. Changelog 1271 pinned. 8 children + 18 executable leaves. |
 | TASK-556 | FormaDom Code-Owned Static Starter to Designer Handoff | High | Very Large | Provider-free, owner-private seed/reopen of TASK-555's immutable FormaDom release into terminal Designer through one current-root binding, one-dispatch fenced persistence, run-bound receipt staging, the existing Designer facade/`admin_write` transport, TASK-555's memory-only Setup review continuation, terminal capability regeneration, Designer backup V2, two additive host CTAs, and exactly five shared runtime-smoke flows. Implementation gate is closed until TASK-545 is exactly `✅ Done`, TASK-414/TASK-489/TASK-547/TASK-555 satisfy the parent terminal dependency rule, and a fresh read-only audit passes against unchanged contracts; TASK-545 has no superseded-successor exception and local ignored orchestration sidecars are non-authorizing helpers. Changelog 1270 pinned. 4 children + 8 executable leaves. |
 | TASK-555 | Curated Full-Site Starters and FormaDom Admin/Setup Delivery | High | Very Large | Immutable curated release registry and verified runtime artifact loading, reviewed preview/apply/rollback, Solution Kits and Setup composition, drift/status validation, and nine shared real-flow smokes. Blocked on terminal TASK-545, terminal TASK-548, terminal rewritten TASK-489, terminal TASK-547, terminal TASK-551, terminal TASK-554, and terminal TASK-414-02-L01. Changelog 1269 pinned. 7 children + 21 executable leaves. |
 | TASK-551 | Scalable Database, Query, and Cache Optimization | High | Very Large | Priority implementation program from the measured PostgreSQL/code-query audit: bounded projections/keyset/batching, query/index alignment, search vectors, retention, pool guardrails, local-first server caching for single replicas, optional Redis for multi-replica scale, deterministic post-commit invalidation, and small/large performance gates. Dispatch after currently active collision owners are terminal or prove disjoint file ownership. Changelog 1263 pinned. 11 children + 26 executable leaves. |

@@ -61,6 +61,8 @@ If a completed family is reopened after its changelog draft was already authored
 may remain only with an explicit `Draft` status that supersedes its closure evidence; keep its
 index row absent until fresh reclosure validation succeeds.
 Use 1271 for the next unreserved changelog entry.
+Changelog 1271 is reserved for the implementation closure of TASK-557 (Bun Test Lane Remote
+Parallel Speedup on direct 5432).
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
