@@ -18,19 +18,24 @@ Core behavior:
 2. For each tag, read `core/db/migrations/<tag>.sql` and split on the exact
    marker `--> statement-breakpoint` (each chunk is one statement group).
 3. Run each chunk inside one transaction with `SET LOCAL search_path TO
-   <schema>` so tables/indexes land in the worker schema (unqualified DDL
-   verified: zero `public.` in all 71 files).
+   <schema>, public` so tables/indexes land in the worker schema (unqualified
+   DDL verified: zero `public.` in all 71 files) while `public` stays resolvable
+   for extension objects — migration `0006_search_indexes.sql` uses the
+   `gin_trgm_ops` operator class created by `pg_trgm`, and operator classes are
+   resolved through `search_path`. `public` is NOT implicitly searched, so a
+   single-schema search_path would break 0006's GIN indexes.
 4. Track applied tags in `<schema>._bun_migrations(tag text primary key)`:
    insert after each file's chunks commit; re-run skips already-applied tags.
 5. `CREATE EXTENSION IF NOT EXISTS pg_trgm` (0006) runs on the first worker
    and is a per-database no-op afterwards (idempotent by `IF NOT EXISTS`).
+   With `search_path = <schema>, public`, the extension object stays visible in
+   `public` for every worker.
 
 ## Implementation Pseudocode
 ```ts
 // scripts/bun-lane-migrate.ts
 import { readFile, readdir } from "node:fs/promises";
 import postgres from "postgres";
-import { sql } from "drizzle-orm";
 
 const MIGRATIONS_DIR = "core/db/migrations";
 const JOURNAL_PATH = `${MIGRATIONS_DIR}/meta/_journal.json`;
@@ -69,7 +74,10 @@ export async function applyMigrationFile(
   statements: string[]
 ): Promise<void> {
   await client.begin(async (tx) => {
-    await tx.unsafe(`set local search_path to "${schema}"`);
+    // Include `public` AFTER the worker schema: unqualified DDL lands in the
+    // worker schema (first search_path entry), while `gin_trgm_ops` (pg_trgm
+    // extension, installed in public) stays resolvable for 0006 GIN indexes.
+    await tx.unsafe(`set local search_path to "${schema}", public`);
     for (const statement of statements) {
       await tx.unsafe(statement);
     }

@@ -8,17 +8,24 @@
 **Status:** ⏳ To Do
 ---
 ## Overview
-Fix every hardcoded `public.` reference in the test harness so probes resolve
-within the worker's `search_path`:
+Fix EVERY hardcoded `public.` reference in the test harness so probes resolve
+within the worker's `search_path`. The audit verified 4 in-lane hardcoded
+sites (grep `to_regclass('public.` repo-wide):
 - `tests/utils/db.ts:17` — `hasTable` uses `to_regclass('public.<name>')`.
-- 3 other `to_regclass` sites (grep confirmed only
-  `tests/utils/db.ts:17` in-lane; the audit counted 4 sites repo-wide —
-  re-grep and fix any in-lane hit).
-- `tests/integration/analytics/trafficSchema*` — `information_schema` /
-  `pg_indexes` queries must filter `table_schema = current_schema()` (or the
-  worker schema), otherwise they see every worker's tables.
-- Any `SET search_path` or schema-qualified `SELECT` in test files that pins
-  `public` explicitly.
+- `tests/integration/routes/dashboard.test.ts:39` — `to_regclass('public.pages')`
+  (or equivalent) — convert to `currentSchema()`-aware probe.
+- `tests/unit/assistant/actionExecutorService.db.test.ts:56` — same conversion.
+- `tests/unit/assistant/actionExecutorService.detailPage.db.test.ts:26` — same
+  conversion.
+All four must be fixed and covered by a re-grep gate: after the fix,
+`grep -rn "to_regclass('public" tests/` returns zero in-lane hits.
+- `tests/integration/analytics/trafficSchema*` — the `information_schema.columns`
+  and `pg_indexes` queries currently have NO schema filter, so they see every
+  worker's tables across the shared database. There is no existing
+  `table_schema = 'public'` filter to replace — ADD one: `table_schema =
+  current_schema()` for `information_schema` queries, and `schemaname =
+  current_schema()` for `pg_indexes` (pg_indexes has no `table_schema` column;
+  it uses `schemaname`).
 
 The helpers must remain backward-compatible when running against `public`
 (local/CI single-schema runs): resolve the CURRENT schema from the connection
@@ -59,8 +66,10 @@ export async function hasTable(tableName: string): Promise<boolean> {
 
 `currentSchema()` is cached per process — worker processes are per-file in the
 Bun lane, and per-file the schema never changes (the whole worker uses one
-search_path), so caching is safe. For `trafficSchema` queries, replace
-`table_schema = 'public'` filters with `table_schema = current_schema()`.
+search_path), so caching is safe. For `trafficSchema` queries, ADD
+`table_schema = current_schema()` (information_schema) and `schemaname =
+current_schema()` (pg_indexes) filters — there is no `public` literal today,
+so this is additive narrowing, not replacement.
 
 Error handling: `currentSchema()` falls back to `"public"` only when the query
 itself fails (defensive, matching today's `hasTable` try/catch); never throw
@@ -72,7 +81,10 @@ Regression-test shape (`tests/unit/db/testHelpers.test.ts` + DB-gated):
 - DB-gated: against a throwaway schema, `hasTable("pages")` is true and
   `hasTable("no_such_table")` is false; `currentSchema()` equals the worker
   schema name.
-- trafficSchema: `pg_indexes` query returns only rows of the current schema.
+- trafficSchema: `pg_indexes` query returns only rows where
+  `schemaname = current_schema()`; `information_schema.columns` only rows where
+  `table_schema = current_schema()`.
+- Re-grep gate: `grep -rn "to_regclass('public" tests/` returns zero hits.
 
 ## Testing Requirements
 - `bun --cwd core lint` + `bun --cwd core lint:types` green.

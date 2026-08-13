@@ -9,23 +9,28 @@
 ---
 ## Overview
 Produce `scripts/bun-lane-classify.ts` that walks the exact lane file set from
-`package.json` `test:bun` and classifies each file into A/B/C using the same
-static signals the audit used, then writes a committed
+`package.json` `test:bun` and classifies each file into `perf`/A/B/C using the
+same static signals the audit used, then writes a committed
 `tests/bun-lane-manifest.json`. The manifest is the single source of truth for
 TASK-557-05 partitioner. Classification must be deterministic and reproducible;
-bucket labels: `A` (DB-free), `B` (DB-backed, self-scoped), `C` (shared mutable
+bucket labels: `perf` (any file under `tests/perf/`, checked FIRST by path),
+`A` (DB-free), `B` (DB-backed, self-scoped), `C` (shared mutable
 state, needs isolation or serial order).
 
 Classification signals (static, no DB calls):
-- `C` first (strongest): file imports/uses `core/services/settings/settingsService`
+- `perf` first (path-based, checked before any DB signal): any file whose path
+  starts with `tests/perf/` gets bucket `perf` regardless of DB usage. The
+  partitioner (TASK-557-05-L01) and the perf-lane policy (TASK-557-06-L02)
+  depend on this exact bucket value.
+- `C` next (strongest): file imports/uses `core/services/settings/settingsService`
   setters that mutate global keys (`site.contentRoutes`, `site.cacheTtlSeconds`,
   `site.previewEnabled`, `auth.sessionTtlDays`, `auth.resetTtlMinutes`,
   `site.navigationMenuId`, `site.footerTemplateId`, `site.homepageId`,
   `site.adminBaseUrl`), the singleton `backup_schedules` table
   (backupService/backups route/backupScheduler), starterContent first-admin
   assumption (`users` limit 1), or the fixed `4dd7f4d4` detailPageId literal.
-  Also files with module-level `testIfDb` that snapshot/restore whole settings
-  rows but mutate shared keys across files.
+  Also files with module-level settings-mutation helpers that snapshot/restore
+  whole settings rows but mutate shared keys across files.
 - `B`: imports `core/db/client` or `core/db/schema`, uses `testIfDb`, and only
   creates rows with `randomUUID()` keys + deletes its own rows (own-row
   cleanup).
@@ -51,8 +56,12 @@ const LANE_DIRS = [
   "tests/perf",
   "tests/security",
 ];
+const PERF_DIR = "tests/perf/";
 const EXT = /\.test\.(ts|tsx)$/;
 const MANIFEST_PATH = "tests/bun-lane-manifest.json";
+
+type Bucket = "perf" | "A" | "B" | "C";
+type BucketRow = { file: string; bucket: Bucket; weightMs?: number; conflictKey?: string };
 
 // C signals: shared settings keys, singleton tables, first-admin, fixed literal
 const C_SETTING_KEYS = [
@@ -76,6 +85,9 @@ async function collectLaneFiles(): Promise<string[]> {
 
 async function classify(file: string): Promise<BucketRow> {
   const src = await readFile(file, "utf8");
+  // perf path override FIRST: the perf-lane policy routes by bucket value, and
+  // tests/perf/* must never be merged into A/B workers.
+  if (file.startsWith(PERF_DIR)) return { file, bucket: "perf", weightMs: 0 };
   const hasDb = /from\s+["'](?:\.\.\/)+core\/db\/(?:client|schema)["']/.test(src)
     || /await\s+db\./.test(src);
   if (!hasDb) return { file, bucket: "A", weightMs: 0 };
@@ -110,8 +122,10 @@ async function main() {
 }
 
 // export for tests
+if (import.meta.main) {
+  await main();
+}
 export { collectLaneFiles, classify, LANE_DIRS };
-void main();
 ```
 
 Error handling: reject on unreadable file with a named error (`manifest_read_failed:<path>`); never guess a bucket for an unreadable file — abort so the manifest cannot silently drift.
@@ -119,13 +133,15 @@ Error handling: reject on unreadable file with a named error (`manifest_read_fai
 Regression-test shape (`tests/unit/toolchain/bunLaneManifest.test.ts`):
 - `collectLaneFiles()` returns the same set as a golden list derived from `git ls-files 'tests/**/*.test.ts*'` intersected with LANE_DIRS.
 - `classify("tests/unit/settings/settingsService.test.ts")` is `C`; a pure file like `tests/unit/widgets/validator.test.ts` is `A`; `tests/unit/content/entryService.test.ts` is `B`.
+- `classify("tests/perf/codersoPerformanceGate.test.ts")` is `perf` even though it has no `core/db` import (path override beats DB signals); `classify("tests/perf/analyticsIngestion.test.ts")` is `perf` even though it imports `core/db`.
+- Importing the module in a test does NOT write the manifest (guard: no `bun-lane-manifest.json` created on import).
 - Manifest file on disk equals re-running the script on a clean tree (byte compare of the `rows` array, ignoring `generatedAt`).
 - No row has `weightMs: 0` after TASK-557-01-L02 fills weights; until then the partitioner must fall back to bucket default weights.
 
 ## Testing Requirements
 - `bun --cwd core lint` + `bun --cwd core lint:types` green.
 - `bun test tests/unit/toolchain/bunLaneManifest.test.ts` green.
-- Run `bun scripts/bun-lane-classify.ts` and confirm counts A≈222, B≈113, C≈30 (±5 allowed; the audit used slightly different signal sets). Record actual counts in the leaf handoff.
+- Run `bun scripts/bun-lane-classify.ts` and confirm counts A≈218, B≈112, C≈30, perf=5 (364 total; the audit measured 254 unit + 66 routes + 19 runtime + 5 server + 2 store + 3 plugins + 4 analytics + 5 perf + 6 security = 364 lane files; perf moves 4 DB-free files out of A and 1 DB-backed file out of B, so A≈222-4=218, B≈113-1=112, C≈30, perf=5). Record actual counts in the leaf handoff.
 
 ## Documentation Updates Required
 - `tests/README.md`: manifest is the partitioner source of truth.

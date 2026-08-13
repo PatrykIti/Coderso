@@ -25,7 +25,11 @@ when `BUN_TEST_FENCE_NAMESPACE_OFFSET` is set AND `NODE_ENV === "test"`.
 All fence users (nativeCmsWriterFence.ts plus `legacyInstallRunPersistence.ts`
 holder/createLegacyInstallLedger) route their advisory-lock namespace through
 the same resolver so shared and exclusive users of the same worker share the
-worker's namespace and cannot leak across workers.
+worker's namespace and cannot leak across workers. Because touching
+`legacyInstallRunPersistence.ts` (1,075 lines > 1,000) requires a cohesive
+split, TASK-557-04-L01 also extracts the lock holder into
+`core/services/kits/legacyInstallRunLocks.ts` with a backward-compatible
+re-export.
 
 ## Sub-Tasks
 - TASK-557-04-L01: resolveFenceNamespace seam + call-site migration

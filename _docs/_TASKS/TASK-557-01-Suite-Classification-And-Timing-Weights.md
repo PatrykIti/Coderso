@@ -9,11 +9,11 @@
 ---
 ## Overview
 The parallel runner needs a deterministic, machine-readable classification of
-every lane file into conflict classes (A = DB-free, B = DB-backed self-scoped,
-C = shared mutable state) plus measured per-file timings to drive weighted
-partitioning. Today the audit produced these numbers ad hoc (222/113/30); this
-subtask turns them into a checked-in manifest and a reproducible probe so the
-partitioner never guesses.
+every lane file into conflict classes (perf = tests/perf/*, A = DB-free,
+B = DB-backed self-scoped, C = shared mutable state) plus measured per-file
+timings to drive weighted partitioning. Today the audit produced these numbers
+ad hoc (218/112/30/5); this subtask turns them into a checked-in manifest and a
+reproducible probe so the partitioner never guesses.
 
 Deliverables:
 - `scripts/bun-lane-classify.ts` — static classifier over the exact lane file
@@ -21,7 +21,8 @@ Deliverables:
 - `scripts/bun-lane-time.ts` — optional timing probe that runs each file once
   serially (or a sampled subset) and writes `tests/bun-lane-timings.json`.
 - `tests/bun-lane-manifest.json` (committed baseline) with `{file, bucket,
-  dir, weightMs, conflictKey?}` rows.
+  weightMs, conflictKey?}` rows. `dir` is NOT part of the manifest contract —
+  no consumer needs it (L01 must not emit it, 05-L01 must not read it).
 - Owned tests asserting manifest completeness (every lane file present, no
   out-of-lane file) and bucket stability on re-run.
 

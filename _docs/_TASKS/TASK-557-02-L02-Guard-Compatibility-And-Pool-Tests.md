@@ -18,8 +18,9 @@ production code changes; this leaf extends the existing driver-endpoint lane
 ## Implementation Pseudocode
 ```ts
 // extend tests/unit/db/driverEndpoints.test.ts (or the lane that owns it)
+import postgres from "postgres";
 import { inspectDatabaseUrl } from "../../../core/db/connectionTargets";
-import { buildWorkerDatabaseUrl, workerSchemaName } from "../../../scripts/bun-lane-worker-url";
+import { assertDirectUrl, buildWorkerDatabaseUrl, resolveWorkerEnv, resolveWorkerPoolMax, workerSchemaName } from "../../../scripts/bun-lane-worker-url";
 
 const DIRECT_URL = "postgresql://u:p@db.example.com:5432/coderso?sslmode=require";
 const POOLED_URL = "postgresql://u:p@db.example.com:6432/coderso?sslmode=require";
@@ -34,9 +35,11 @@ test("worker URL with search_path option still resolves as direct, non-pooled", 
 
 test("pooled URL is rejected by assertDirectUrl", () => {
   const url = buildWorkerDatabaseUrl(POOLED_URL, 0);
-  const inspection = inspectDatabaseUrl(url, 6432);
-  expect(inspection.port).toBe(6432);
-  expect(inspection.pooled).toBe(true);
+  expect(() => assertDirectUrl(url, 6432)).toThrow("worker_direct_url_pooled");
+  // And the same pooled URL is accepted as a direct 5432 target only when the
+  // pooled port matches reality; with the wrong pooledPort the guard still
+  // flags it as unverifiable rather than silently passing.
+  expect(() => assertDirectUrl(url, 5432)).toThrow();
 });
 
 test("worker schema names are stable and bounded", () => {
@@ -65,8 +68,22 @@ Pool budget test (pure, no DB):
 ```ts
 test("workers x pool stays within the direct-connection reserve", () => {
   const workers = 8;
-  const pool = 2;
+  const pool = 1; // DEFAULT_WORKER_POOL_MAX; 8 x 1 = 8 <= 10
   expect(workers * pool).toBeLessThanOrEqual(10); // Render direct reserve
+  expect(pool).toBeLessThanOrEqual(4); // MAX_WORKER_POOL_MAX
+});
+```
+
+Budget clamp test (pure, no DB):
+```ts
+test("ambient DB_POOL_MAX=20 is clamped, never inherited, never throws", () => {
+  const env = { DB_POOL_MAX: "20" } as Record<string, string | undefined>;
+  expect(resolveWorkerPoolMax(env)).toBeLessThanOrEqual(4);
+  expect(resolveWorkerPoolMax(env, 2)).toBe(2);
+  expect(() => resolveWorkerPoolMax(env, 0)).toThrow();
+  const workerEnv = resolveWorkerEnv(0, {}, env);
+  expect(Number(workerEnv.DB_POOL_MAX)).toBeLessThanOrEqual(4);
+  expect(workerEnv.NODE_ENV).toBe("test");
 });
 ```
 

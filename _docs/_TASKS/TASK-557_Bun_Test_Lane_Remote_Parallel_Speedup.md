@@ -10,8 +10,8 @@
 **Changelog:** 1271 (pinned)
 ---
 ## Overview
-`bun run test:bun` executes `bun test --parallel=1 --timeout=15000` over ~365
-files (255 unit, 66 routes, 19 runtime, 5 server, 2 store, 3 plugins, 4
+`bun run test:bun` executes `bun test --parallel=1 --timeout=15000` over 364
+files (254 unit, 66 routes, 19 runtime, 5 server, 2 store, 3 plugins, 4
 analytics, 5 perf, 6 security) serially against Render Frankfurt PgBouncer
 (port 6432, transaction pooling). The lane takes ~50 min locally today, of
 which ~45 min is DB-bound: ~12-15k round trips at 50-110 ms each, plus serial
@@ -26,7 +26,7 @@ perf-gate isolation. Measured targets: ~10-15 min total.
 
 ### Verified facts (audit 2026-08-13, read-only, 4 collaboration agents)
 - Lane: `bun test --parallel=1 --timeout=15000 tests/unit tests/integration/{routes,runtime,server,store,plugins,analytics} tests/perf tests/security` (package.json:30).
-- Classification (otter): A=222 DB-free, B=113 DB-backed self-scoped, C=30 shared mutable state (settings keys, `backup_schedules` singleton, starterContent first-admin). Per-dir A/B/C: unit 160/84/11, routes 47/13/6, runtime 4/4/11, server 2/1/2, store 0/2/0, plugins 1/2/0, analytics 0/4/0, perf 4/1/0, security 4/2/0.
+- Classification (otter): A=218 DB-free, B=112 DB-backed self-scoped, C=30 shared mutable state (settings keys, `backup_schedules` singleton, starterContent first-admin), perf=5 (tests/perf/* carved out by path before any DB signal). Per-dir A/B/C/perf: unit 160/84/11/0, routes 47/13/6/0, runtime 4/4/11/0, server 2/1/2/0, store 0/2/0/0, plugins 1/2/0/0, analytics 0/4/0/0, perf 0/0/0/5, security 4/2/0/0.
 - Measured anchors (mouse): settingsService 22.0s, entryService 85.7s, menus 26.3s, seoService 8.5s; warm RT 26ms, under load 50-110ms; cold connect 531ms.
 - All 71 migration SQL files are unqualified (zero `public.`); journal `core/db/migrations/meta/_journal.json` is v7 with `breakpoints: true`; `0006_search_indexes.sql` uses `CREATE EXTENSION IF NOT EXISTS pg_trgm` (extensions are per-database, so a single creation serves all worker schemas).
 - drizzle `PgDialect.migrate` writes its journal to a FIXED shared `drizzle` schema (pg-core/dialect.cjs), so `search_path` alone migrates only the first worker. The custom applier in TASK-557-03 avoids drizzle's migrator entirely.
@@ -38,8 +38,8 @@ perf-gate isolation. Measured targets: ~10-15 min total.
 
 ### Architecture (summary)
 1. **TASK-557-01** classification manifest + measured timing weights (`tests/bun-lane-manifest.json`, `timings.json`) — single source of truth for the partitioner.
-2. **TASK-557-02** worker connection adapter: builds `DATABASE_URL` per worker as `DATABASE_DIRECT_URL + ?options=-csearch_path=bun_worker_N`, resolves `DATABASE_DIRECT_URL` (already in `.env`), validates guard compatibility, sets `DB_POOL_MAX=2-4` per worker.
-3. **TASK-557-03** custom per-schema migration applier: reads `_journal.json`, applies each tagged SQL file with `SET search_path TO bun_worker_N` honoring `--> statement-breakpoint`, tracks applied tags in a per-schema `_bun_migrations` table, and provisions N worker schemas (`DROP SCHEMA IF EXISTS ... CASCADE; CREATE SCHEMA bun_worker_N;`).
+2. **TASK-557-02** worker connection adapter: builds `DATABASE_URL` per worker as `DATABASE_DIRECT_URL + ?options=-csearch_path=bun_worker_N`, resolves `DATABASE_DIRECT_URL` (already in `.env`), validates guard compatibility, sets `DB_POOL_MAX` = 1 per worker by default (clamped to [1,4]; the runner enforces `workers x pool <= 10`).
+3. **TASK-557-03** custom per-schema migration applier: reads `_journal.json`, applies each tagged SQL file with `SET search_path TO bun_worker_N, public` honoring `--> statement-breakpoint` (public stays resolvable for extension operator classes like `gin_trgm_ops`), tracks applied tags in a per-schema `_bun_migrations` table, and provisions N worker schemas (`DROP SCHEMA IF EXISTS ... CASCADE; CREATE SCHEMA bun_worker_N;`).
 4. **TASK-557-04** fence isolation: `resolveFenceNamespace()` returns `548` by default and `548 + BUN_TEST_FENCE_NAMESPACE_OFFSET` only when the offset env is set AND `NODE_ENV === "test"` (fail-closed); all fence users route through it.
 5. **TASK-557-05** weighted parallel runner (`scripts/run-bun-parallel.ts`): partitions files by conflict class (C files each isolated or serial-ordered, B weighted, A to a pure lane), spawns `K` worker processes with per-worker env, provisions schemas, aggregates exit codes, supports `--dry-run`, `--workers`, `--lane` flags, and retries flaky failures once.
 6. **TASK-557-06** DB-free lane (`A` bucket) under `--parallel=16` without any DATABASE_URL override, plus a dedicated serial perf lane for the 4 wall-time p95 gates.
@@ -47,10 +47,10 @@ perf-gate isolation. Measured targets: ~10-15 min total.
 8. **TASK-557-08** CI + docs + closure: fix `canRunSuite` double-run, wire runner into `coderso-pr-gates.yml` (needs `DATABASE_DIRECT_URL` secret), changelog 1271, board/statistics, tests/README and TESTING_STRATEGY updates.
 
 ### Expected time model (remote direct 5432, K=8 workers)
-- A lane (222 files, --parallel=16): ~1-2 min
-- B lane (113 files weighted over 6 workers): ~4-6 min
+- A lane (218 files, --parallel=16): ~1-2 min
+- B lane (112 files weighted over 6 workers): ~4-6 min
 - C lane (30 files, serial-order over 1-2 workers): ~6-8 min
-- Perf lane (5 files serial): ~2-4 min (wall-time p95 gates, CPU-contention sensitive)
+- Perf lane (5 files serial, AFTER B/C, CPU-isolated): ~2-4 min (wall-time p95 gates, CPU-contention sensitive; never concurrent with B/C)
 - Provisioning (migrations × 8 schemas, concurrent): ~1-2 min
 - **Total: ~10-15 min** (measured per-suite timings feed TASK-557-01-L02 weights; final numbers recorded in changelog 1271).
 
@@ -86,7 +86,7 @@ Land in dependency order to avoid rework: runner (05) must not start before
 - Migration applier tests must prove: full 71-migration apply into a fresh schema is idempotent on re-run, `--> statement-breakpoint` splitting works, and `to_regclass`-based `hasTable` resolves within the worker schema.
 
 ## Documentation Updates Required
-- `tests/README.md` (new runner surface: `bun run test:bun` still works, `bun run test:bun:parallel --workers=8 --dry-run`).
+- `tests/README.md` (new runner surface: `bun run test:bun` still works through the runner; dry-run via `bun scripts/run-bun-parallel.ts --dry-run --workers=8`).
 - `_docs/TESTING_STRATEGY.md` (remote-direct-5432 parallel lane architecture, worker schemas, fence isolation).
 - `_docs/_CHANGELOG/1271-2026-08-13-bun-test-lane-remote-parallel-speedup.md` + `_docs/_CHANGELOG/README.md` index row.
 - `_docs/_TASKS/README.md` board rows + statistics.

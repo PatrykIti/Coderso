@@ -24,7 +24,10 @@ Critical constraint (Render docs, verified): PgBouncer 6432 is
 `pool_mode=transaction`; session-level state (search_path, advisory locks) does
 not survive, so workers MUST use direct 5432. Render reserves ~10 direct
 connections (`max_connections - 10` backend pool), so
-`workers × DB_POOL_MAX ≤ 8-10` is the safe budget; `DB_POOL_MAX=2-4` per worker.
+`workers × DB_POOL_MAX ≤ 10` is the safe budget; `DB_POOL_MAX` defaults to 1
+per worker (8 workers × 1 = 8 ≤ 10) and is clamped to `[1, MAX_WORKER_POOL_MAX]`
+(4). The runner enforces the aggregate budget with a named error before
+spawning any worker.
 
 ## Sub-Tasks
 - TASK-557-02-L01: Worker URL builder and env resolution

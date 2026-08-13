@@ -29,6 +29,20 @@ Call-site migration:
 - Keep `NATIVE_CMS_WRITER_FENCE_NAMESPACE` exported as the production constant;
   add `resolveFenceNamespace` and keep both doc-commented.
 
+Mandatory file split (line-limit gate): `legacyInstallRunPersistence.ts` is
+currently 1,075 physical lines (> 1,000). Touching it here REQUIRES splitting
+it by cohesive responsibility as part of this same substantive change. Extract
+the full-site-install lock holder (the `withFullSiteInstallLocks` closure plus
+its helpers `readLockReservation`, `mintReservationAuthority`,
+`reserveOrTakeOverActualOwner`, and the `FULL_SITE_PACKAGE_LOCK_NAMESPACE`
+constant, roughly lines 780-845 today) into
+`core/services/kits/legacyInstallRunLocks.ts`, and re-export
+`withFullSiteInstallLocks` from `legacyInstallRunPersistence.ts` for backward
+compatibility (existing importers stay stable). The remaining persistence
+module must end below 1,000 lines; the new locks module must stay below 1,000
+lines. Do not move unrelated helpers (run creation, rollback resolution,
+ledger creation stay in place); split by cohesive responsibility only.
+
 ## Implementation Pseudocode
 ```ts
 // core/db/nativeCmsWriterFence.ts (additive)
@@ -64,11 +78,59 @@ const namespace = resolveFenceNamespace();
 sql`select pg_try_advisory_xact_lock_shared(${namespace}, ${NATIVE_CMS_WRITER_FENCE_KEY}) as acquired`
 ```
 
-In `legacyInstallRunPersistence.ts:807-810`:
+In `legacyInstallRunLocks.ts` (new file, extracted holder):
 ```ts
-const namespace = resolveFenceNamespace();
-await lockTransaction`select pg_advisory_xact_lock(${namespace}, ${NATIVE_CMS_WRITER_FENCE_KEY})`;
+// core/services/kits/legacyInstallRunLocks.ts
+import postgres from "postgres";
+import { resolveFenceNamespace, type NativeCmsWriterOwnerLease } from "../../db/nativeCmsWriterFence";
+import type { FullSiteInstallLockContext, FullSiteInstallLockReservation } from "./fullSiteInstallTypes";
+
+export const FULL_SITE_PACKAGE_LOCK_NAMESPACE = 547 as const;
+
+export const withFullSiteInstallLocks = async <T>(
+  reservation: FullSiteInstallLockReservation,
+  execute: (context: FullSiteInstallLockContext) => Promise<T>
+): Promise<T> => {
+  assertNativeCmsWriterOwnerContextAbsent();
+  const input = readLockReservation(reservation);
+  const databaseUrl = process.env.DATABASE_URL;
+  if (!databaseUrl) throw new Error("DATABASE_URL is not set");
+  let lease: NativeCmsWriterOwnerLease | null = null;
+  let callbackPromise: Promise<T> | null = null;
+  let signalClosed: (() => void) | null = null;
+  const closed = new Promise<never>((_resolve, reject) => {
+    signalClosed = () => reject(new Error("native_cms_writer_fence_lost"));
+  });
+  const lockClient = postgres(databaseUrl, { max: 1, prepare: false, onclose: () => { if (lease) markNativeCmsWriterOwnerLost(lease); signalClosed?.(); } });
+  let primary: Error | null = null;
+  let result: Readonly<{ value: T }> | null = null;
+  try {
+    const holder = lockClient.begin(async (lockTransaction) => {
+      const namespace = resolveFenceNamespace();
+      await lockTransaction`select pg_advisory_xact_lock(${namespace}, ${NATIVE_CMS_WRITER_FENCE_KEY})`;
+      await lockTransaction`select pg_advisory_xact_lock(${FULL_SITE_PACKAGE_LOCK_NAMESPACE}, hashtext(${input.packageKey}))`;
+      const authority = mintReservationAuthority();
+      const reserved = await reserveOrTakeOverActualOwner(input, authority);
+      lease = reserved.lease;
+      callbackPromise = runWithNativeCmsWriterOwnerContext(lease, () => execute(reserved.context));
+      const value = await callbackPromise;
+      revokeNativeCmsWriterOwnerLease(lease);
+      return { value };
+    });
+    result = await Promise.race([holder, closed]);
+  } catch (error) { /* unchanged handling */ }
+  /* unchanged teardown */
+};
 ```
+
+In `legacyInstallRunPersistence.ts`, replace the local definition with:
+```ts
+import { withFullSiteInstallLocks } from "./legacyInstallRunLocks";
+export { withFullSiteInstallLocks } from "./legacyInstallRunLocks"; // backward-compatible re-export
+```
+The `:969` call site in `claimRollbackRun` keeps `pg_advisory_xact_lock(hashtext(...))`
+(one-arg form, already per-run, no namespace) — no change needed there beyond
+what already exists.
 
 Error handling: invalid offset values throw `fence_namespace_offset_invalid`
 (fail loud, never silently fall back — a mistyped env must not make workers
@@ -77,12 +139,17 @@ collide with production). Empty string or whitespace is treated as unset
 
 Regression-test shape (pure, `tests/unit/db/fenceNamespace.test.ts`):
 - No env / NODE_ENV !== test / unset offset -> 548.
-- NODE_ENV=test + offset "3" -> 551; offset "0"/"-1"/"1001"/"abc" throws.
+- NODE_ENV=test + offset "3" -> 551; offset "0"/"-1"/"1001"/"abc" throws;
+  whitespace-only offset "   " -> 548 (trim before parse).
 - Production fence suite (`tests/unit/kits/nativeCmsWriterFenceInventory.test.ts`
   and any DB-backed fence test) stays green with no env.
 - Kits exclusive path with offset set uses the offset namespace (DB-backed
   assertion: acquiring the exclusive lock in namespace `548+offset` while
   namespace `548` is free succeeds).
+- File-split gate: both `legacyInstallRunPersistence.ts` and
+  `legacyInstallRunLocks.ts` are <= 1,000 physical lines each, and every
+  exported symbol that `legacyInstallRunPersistence.ts` exported before the
+  split is still importable from it (import-compat test).
 
 ## Testing Requirements
 - `bun --cwd core lint` + `bun --cwd core lint:types` green.

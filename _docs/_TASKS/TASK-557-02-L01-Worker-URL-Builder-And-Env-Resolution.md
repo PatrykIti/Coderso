@@ -14,11 +14,16 @@ Build `scripts/bun-lane-worker-url.ts` exposing pure helpers:
   already has a query), preserving all existing params.
 - `resolveWorkerEnv(workerIndex: number, overrides?: Record<string,string>)` —
   returns the full env object for a spawned worker: `DATABASE_URL` = worker
-  URL, `DATABASE_DIRECT_URL` kept as-is, `DB_POOL_MAX` = 2-4 (default 2, from
-  `--pool` flag), `BUN_TEST_WORKER_INDEX`, and
-  `BUN_TEST_FENCE_NAMESPACE_OFFSET` (for TASK-557-04).
+  URL, `DATABASE_DIRECT_URL` kept as-is, `DB_POOL_MAX` = 1-4 (default 1, from
+  `--pool` flag, clamped to `MAX_WORKER_POOL_MAX`), `BUN_TEST_WORKER_INDEX`,
+  `NODE_ENV=test`, and
+  `BUN_TEST_FENCE_NAMESPACE_OFFSET` (for TASK-557-04). `NODE_ENV=test` is
+  mandatory: `resolveFenceNamespace` (TASK-557-04) only honors the offset when
+  `NODE_ENV === "test"`, and `bun test` does NOT set `NODE_ENV` by default
+  (verified at runtime).
 - `workerSchemaName(workerIndex: number): string` = `bun_worker_${index}`.
-- `assertDirectUrl(directUrl: string)` — fail-fast: parse with `inspectDatabaseUrl`
+- `assertDirectUrl(directUrl: string, pooledPort: number)` — fail-fast: parse
+  with `inspectDatabaseUrl`
   (from `core/db/connectionTargets.ts`); throw `worker_direct_url_pooled` if
   `inspection.pooled` is true (port 6432), throw `worker_direct_url_unverifiable`
   if not verified. Reuse the existing guard — do not duplicate port logic.
@@ -33,7 +38,7 @@ log lines render `describeWorkerTarget` (schema name + port only).
 import { inspectDatabaseUrl, resolveDatabasePoolMax, resolveDefaultDatabaseTarget } from "../core/db/connectionTargets";
 
 export const WORKER_SCHEMA_PREFIX = "bun_worker_";
-export const DEFAULT_WORKER_POOL_MAX = 2;
+export const DEFAULT_WORKER_POOL_MAX = 1;
 export const MAX_WORKER_POOL_MAX = 4;
 
 export function workerSchemaName(index: number): string {
@@ -62,11 +67,35 @@ export function assertDirectUrl(directUrl: string, pooledPort: number): { verifi
 }
 
 export function resolveWorkerPoolMax(env: Record<string, string | undefined> = process.env as never, requested?: number): number {
+  // Clamp, never throw on a too-high ambient value: the real `.env` sets
+  // DB_POOL_MAX=20 for the pooled default client, and workers must NOT inherit
+  // it. An explicit `--pool` is honored up to MAX_WORKER_POOL_MAX; the ambient
+  // value is always clamped to [1, MAX_WORKER_POOL_MAX]. The runner's
+  // connection-budget check (workers x pool <= 10) enforces the aggregate.
   const raw = requested ?? Number(env.DB_POOL_MAX ?? DEFAULT_WORKER_POOL_MAX);
-  if (!Number.isInteger(raw) || raw < 1 || raw > MAX_WORKER_POOL_MAX) {
+  if (!Number.isInteger(raw) || raw < 1) {
     throw new Error(`worker_pool_max_invalid:${raw}`);
   }
-  return raw;
+  return Math.min(raw, MAX_WORKER_POOL_MAX);
+}
+
+// Render reserves ~10 direct connections (max_connections - 10 backend pool).
+export const CONNECTION_BUDGET_MAX = 10;
+
+export function assertConnectionBudget(workers: number, poolMax: number): void {
+  if (workers * poolMax > CONNECTION_BUDGET_MAX) {
+    throw new Error(`worker_pool_budget_exceeded:${workers}x${poolMax}>${CONNECTION_BUDGET_MAX}`);
+  }
+}
+
+export function resolveWorkerCount(env: Record<string, string | undefined> = process.env as never): number {
+  const raw = env.BUN_TEST_WORKERS;
+  if (raw === undefined || raw.trim() === "") return 8; // default K=8
+  const count = Number(raw);
+  if (!Number.isInteger(count) || count < 1 || count > 16) {
+    throw new Error(`worker_count_invalid:${raw}`);
+  }
+  return count;
 }
 
 export function resolveWorkerEnv(
@@ -81,6 +110,7 @@ export function resolveWorkerEnv(
   const poolMax = resolveWorkerPoolMax(baseEnv, opts.poolMax);
   return {
     ...baseEnv,
+    NODE_ENV: "test",
     DATABASE_URL: buildWorkerDatabaseUrl(directUrl, workerIndex),
     DATABASE_DIRECT_URL: directUrl,
     DB_POOL_MAX: String(poolMax),
@@ -107,10 +137,17 @@ Regression-test shape (`tests/unit/toolchain/bunLaneWorkerUrl.test.ts`):
 - `buildWorkerDatabaseUrl("postgresql://u:p@host:5432/db", 0)` ends with
   `?options=-csearch_path=bun_worker_0` (encoded); `&options=...` when the URL
   already has `?sslmode=require`.
-- `assertDirectUrl` accepts a 5432 URL and throws `worker_direct_url_pooled`
-  for a 6432 URL.
-- `resolveWorkerEnv` returns `DB_POOL_MAX` clamped to 2-4 and sets
-  `BUN_TEST_WORKER_INDEX`.
+- `assertDirectUrl(url, 6432)` accepts a 5432 URL and throws `worker_direct_url_pooled`
+  for a 6432 URL (pooledPort passed explicitly).
+- `resolveWorkerEnv(0, {}, { DB_POOL_MAX: "20" })` with ambient `DB_POOL_MAX=20`
+  and no `opts.poolMax` does NOT throw and yields `DB_POOL_MAX <= MAX_WORKER_POOL_MAX`
+  (clamp regression: the real `.env` has DB_POOL_MAX=20).
+- `resolveWorkerEnv` sets `NODE_ENV=test` and `BUN_TEST_WORKER_INDEX`; with
+  `fenceOffset` set it also sets `BUN_TEST_FENCE_NAMESPACE_OFFSET`.
+- `assertConnectionBudget(8, 1)` passes; `(8, 4)` throws
+  `worker_pool_budget_exceeded`; `(6, 2)` passes.
+- `resolveWorkerCount({})` == 8; `({ BUN_TEST_WORKERS: "4" })` == 4;
+  `({ BUN_TEST_WORKERS: "0" })` / `"abc"` / `"20"` throw `worker_count_invalid`.
 - `describeWorkerTarget` contains no `u:p@` substring.
 
 ## Testing Requirements

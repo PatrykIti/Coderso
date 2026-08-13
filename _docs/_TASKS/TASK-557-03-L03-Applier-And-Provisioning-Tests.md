@@ -64,8 +64,10 @@ testIfDb("migrateSchema applies all migrations idempotently into one schema", as
   const rows = await sql.unsafe(
     `select to_regclass('${SCHEMA}.pages') as pages, to_regclass('${SCHEMA}.settings') as settings`
   );
-  expect(rows[0].pages).toBe(`"${SCHEMA}.pages"`);
-  expect(rows[0].settings).toBe(`"${SCHEMA}.settings"`);
+  // to_regclass returns simple identifiers UNQUOTED (no double quotes):
+  // `bun_provision_test.pages`, not `"bun_provision_test.pages"`.
+  expect(rows[0].pages).toBe(`${SCHEMA}.pages`);
+  expect(rows[0].settings).toBe(`${SCHEMA}.settings`);
 });
 
 testIfDb("pg_trgm extension exists exactly once database-wide", async () => {
@@ -85,9 +87,13 @@ testIfDb("provisionWorkers creates disjoint migrated schemas and drops stale sta
   await provisionWorkers(process.env.DATABASE_DIRECT_URL!, 2, 2);
   const stale = await sql.unsafe(`select count(*)::int as n from "bun_worker_0"."_bun_migrations" where tag = 'stale'`);
   expect(stale[0].n).toBe(0);
-  // Control schema survives.
+  // Control schema survives: create a real marker table, then re-provision,
+  // then assert the marker still exists. (Checking to_regclass of a table that
+  // was never created proves nothing — the earlier tautology.)
+  await sql.unsafe(`create table if not exists "${CONTROL}"."_marker" (id int)`);
+  await provisionWorkers(process.env.DATABASE_DIRECT_URL!, 2, 2);
   const control = await sql.unsafe(`select to_regclass('${CONTROL}._marker') as t`);
-  expect(control[0].t).toBeNull(); // control has no tables, but schema itself exists
+  expect(control[0].t).toBe(`${CONTROL}._marker`);
 });
 
 testIfDb("failing statement aborts its file transaction only", async () => {

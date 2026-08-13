@@ -13,8 +13,11 @@ shape before its tests run. drizzle's own migrator writes its journal to a
 FIXED shared `drizzle` schema (pg-core/dialect.cjs:47-51), so `search_path`
 alone migrates only the first worker. This subtask owns a custom applier that
 reads `core/db/migrations/meta/_journal.json` (v7, `breakpoints: true`), runs
-each tagged SQL file with `SET search_path TO bun_worker_N` honoring
-`--> statement-breakpoint` splits, and tracks applied tags in a per-schema
+each tagged SQL file with `SET search_path TO bun_worker_N, public` honoring
+`--> statement-breakpoint` splits (the trailing `public` keeps extension
+operator classes resolvable — `0006_search_indexes.sql` builds GIN indexes with
+`gin_trgm_ops`, and operator classes are resolved through search_path, so a
+single-schema path would break 0006), and tracks applied tags in a per-schema
 `_bun_migrations` table (schema-local, so each worker migrates exactly its own
 tables). All 71 SQL files are unqualified (zero `public.`), verified;
 `0006_search_indexes.sql` uses `CREATE EXTENSION IF NOT EXISTS pg_trgm` which is

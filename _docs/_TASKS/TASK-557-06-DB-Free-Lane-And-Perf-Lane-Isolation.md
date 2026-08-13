@@ -8,12 +8,14 @@
 **Status:** ⏳ To Do
 ---
 ## Overview
-The A bucket (222 DB-free files) needs no database at all and parallelizes
+The A bucket (218 DB-free files) needs no database at all and parallelizes
 freely with `bun test --parallel=16` — the single cheapest win. The perf bucket
-(5 files, 4 of which are wall-time p95 gates with 25/300/900/220ms budgets) is
-CPU-contention-invalidated, so it must run serially on a quiet worker with no
-other load. This subtask adds the pure-lane runner and the perf-lane policy,
-both invoked from TASK-557-05-L02's `--lane all`.
+(5 files, 4 of which are wall-time p95 gates with 25/25/300/900/150/220ms
+budgets across 6 wall-time assertions: admin-request-baseline 25, analyticsIngestion
+25, codersoPerformanceGate 300 cached / 900 cold / 150 navigation,
+post-editor-load 220) is CPU-contention-invalidated, so it must run serially on
+a quiet worker with no other load. This subtask adds the pure-lane runner and
+the perf-lane policy, both invoked from TASK-557-05-L02's `--lane all`.
 
 ## Sub-Tasks
 - TASK-557-06-L01: Pure A-lane runner (--parallel=16, no DB)

@@ -4,7 +4,7 @@
 **Priority:** High
 **Category:** CI
 **Estimated Effort:** Small
-**Dependencies:** TASK-557-05-L02 (runner), TASK-557-06-L01/L02 (lanes)
+**Dependencies:** TASK-557-05-L02 (runner), TASK-557-06-L01/L02 (lanes), TASK-557-07-L01 (schema-aware helpers)
 **Status:** ⏳ To Do
 ---
 ## Overview
@@ -13,13 +13,19 @@ Two CI changes:
    `bun test <suite>` as its probe, then the lane runs the suite again — each
    DB route suite executes ~2x in CI. Replace the probe with a cheap
    connectivity check (`canConnect()` + `hasTable` on the suite's core table,
-   using the schema-aware helpers from TASK-557-07-L01). The lane still runs
-   the suite once.
+   using the schema-aware helpers from TASK-557-07-L01 — the `hasTable` fix
+   must land FIRST or the probe still reads `public.`). The lane still runs the
+   suite once.
 2. `coderso-pr-gates.yml` bun-lane job: add `DATABASE_DIRECT_URL` from
-   secrets/vars, keep `DATABASE_URL`, and switch `bun run test:bun:lane` to
-   `bun run test:bun` (the new runner) or a dedicated
-   `bun run test:bun:parallel --workers=4`. `timeout-minutes` may need to drop
-   from 25 to ~15 after the speedup; keep a safety margin (20).
+   secrets/vars, keep `DATABASE_URL`, and run `bun run test:bun` — the new
+   runner (TASK-557-05-L02 rewires `package.json` `test:bun` to
+   `bun scripts/run-bun-parallel.ts --lane all`). There is NO
+   `test:bun:parallel` script (the audit confirmed the runner is invoked via
+   `test:bun`); do not reference a script that does not exist. Worker count
+   reaches the runner through the `BUN_TEST_WORKERS` env var: the runner reads
+   `BUN_TEST_WORKERS` (default 8) when `--workers` is absent.
+   `timeout-minutes` may need to drop from 25 to ~15 after the speedup; keep a
+   safety margin (20).
 
 ## Implementation Pseudocode
 ```ts
@@ -59,9 +65,10 @@ CI workflow patch (`coderso-pr-gates.yml`, bun-lane job):
       DATABASE_DIRECT_URL: ${{ secrets.DATABASE_DIRECT_URL || vars.DATABASE_DIRECT_URL }}
       BUN_TEST_WORKERS: "4"   # ubuntu-latest = 4 vCPU
 ```
-and the run step: `bun run test:bun:parallel --workers=${{ env.BUN_TEST_WORKERS }}`
-(or keep `test:bun:lane` if the runner is adopted there; record the choice).
-Add `DATABASE_DIRECT_URL` to the repo's secret/variable documentation
+and the run step: `bun run test:bun` (the runner, rewired by TASK-557-05-L02;
+`BUN_TEST_WORKERS` env controls parallelism, default 8, CI sets 4). Do NOT
+reference `test:bun:parallel` — that script does not exist. Add
+`DATABASE_DIRECT_URL` to the repo's secret/variable documentation
 (`docs/develop/*` or the CI env docs).
 
 Error handling: `canRunSuite` never throws (returns false on probe failure ->
@@ -70,12 +77,13 @@ CI loudly if `DATABASE_DIRECT_URL` is missing (named error).
 
 Regression-test shape:
 - Pure: `tableForSuite("tests/integration/routes/menus.test.ts")` == "menus";
-  unknown suite -> null.
+  unknown suite -> null. `resolveWorkerCount({ BUN_TEST_WORKERS: "4" })` == 4;
+  `resolveWorkerCount({})` == default (8); invalid env -> named error.
 - DB-gated: `canRunSuite("tests/integration/routes/menus.test.ts")` is true
   against a migrated worker schema and false when the table is absent
   (throwaway schema without migration).
-- CI: YAML parses; the lane step runs the runner (validated in a PR run or
-  recorded as CI-only).
+- CI: YAML parses; the lane step runs `bun run test:bun` (validated in a PR run
+  or recorded as CI-only).
 
 ## Testing Requirements
 - `bun --cwd core lint` + `bun --cwd core lint:types` green.

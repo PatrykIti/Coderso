@@ -12,35 +12,33 @@
 `bun test --parallel=16 --timeout=15000 <a-files>` and NO database env
 (`DATABASE_URL` unset in the child env so any accidental DB dependency fails
 loudly instead of silently hitting the shared DB). Returns non-zero on any
-failure. The orchestrator (TASK-557-05-L02 `--lane all`) runs this first (A is
-the fastest lane and warms nothing), then B/C/perf workers.
+failure. The orchestrator (TASK-557-05-L02 `--lane all`) runs it concurrently
+with the B/C workers (A has no DB dependency and no CPU-isolation requirement —
+only the perf lane needs an idle host), and the perf lane runs strictly after
+the whole batch.
 
 ## Implementation Pseudocode
 ```ts
 // scripts/run-bun-pure-lane.ts
-import { spawn } from "node:child_process";
 import { readFile } from "node:fs/promises";
 
-export async function runPureLane(): Promise<{ exit: number; durationMs: number }> {
+export async function runPureLane(): Promise<{ exit: number; durationMs: number; files: string[]; attempted: number }> {
   const manifest = JSON.parse(await readFile("tests/bun-lane-manifest.json", "utf8"));
   const aFiles = manifest.rows.filter((r: { bucket: string }) => r.bucket === "A").map((r: { file: string }) => r.file);
-  if (aFiles.length === 0) return { exit: 0, durationMs: 0 };
+  if (aFiles.length === 0) return { exit: 0, durationMs: 0, files: [], attempted: 0 };
 
   const started = performance.now();
   const env = { ...process.env };
   delete env.DATABASE_URL; // fail loudly if any "DB-free" file touches the DB
   delete env.DATABASE_DIRECT_URL;
 
-  const exit = await new Promise<number>((resolve, reject) => {
-    const child = spawn(
-      "bun",
-      ["test", "--parallel=16", "--timeout=15000", ...aFiles],
-      { env, stdio: ["inherit", "inherit", "inherit"] }
-    );
-    child.on("error", reject);
-    child.on("exit", (code) => resolve(code ?? 1));
+  // Bun.spawn is the repo convention (scripts/run-bun-lane.ts:87,114); keep it.
+  const proc = Bun.spawn(["bun", "test", "--parallel=16", "--timeout=15000", ...aFiles], {
+    env, stdout: "inherit", stderr: "inherit" as const,
   });
-  return { exit, durationMs: performance.now() - started };
+  const exitCode = await proc.exited;
+  const exit = typeof exitCode === "number" ? exitCode : 1;
+  return { exit, durationMs: performance.now() - started, files: aFiles, attempted: 1 };
 }
 
 if (import.meta.main) {

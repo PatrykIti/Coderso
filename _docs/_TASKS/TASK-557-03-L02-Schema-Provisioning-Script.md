@@ -20,6 +20,7 @@ touch the `public` schema or non-worker schemas.
 ## Implementation Pseudocode
 ```ts
 // scripts/bun-lane-provision.ts
+import postgres from "postgres";
 import { migrateSchema } from "./bun-lane-migrate";
 import { workerSchemaName } from "./bun-lane-worker-url";
 
