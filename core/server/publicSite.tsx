@@ -55,6 +55,7 @@ import { publicSearchRequestSchema } from "./validation/filterSchemas";
 import { validate } from "./validation/schemaValidator";
 import { handlePublicBookingApi } from "./publicBookingApi";
 import { handlePublicFormsApi } from "./publicFormsApi";
+import { handlePublicPopupsApi } from "./publicPopupsApi";
 import { ANALYTICS_BEACON_PATH, handlePublicAnalyticsApi } from "./publicAnalyticsApi";
 import {
   collectPrehydratedDetailBlockIds,
@@ -684,6 +685,14 @@ export async function handlePublicRequest(req: Request) {
     security,
   });
   if (formsApiResponse) return formsApiResponse;
+
+  const popupsApiResponse = await handlePublicPopupsApi(req, {
+    url,
+    ip,
+    userAgent,
+    security,
+  });
+  if (popupsApiResponse) return popupsApiResponse;
 
   // Public analytics beacon collector (TASK-483-02). handlePublicAnalyticsApi
   // always returns a Response (never null), so it is dispatched by an explicit
