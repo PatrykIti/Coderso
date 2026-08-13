@@ -250,3 +250,20 @@ drizzle-kit are untouched.
   `bun_worker_<i>` schemas it derives (never a wildcard, never `public` or
   non-worker schemas) and migrates each concurrently; see
   `tests/integration/toolchain/bunLaneProvision.test.ts`.
+
+## Bun lane partitioner
+
+`scripts/bun-lane-partition.ts` (TASK-557-05-L01) is the pure weighted
+partitioner for the Bun lane. `partition(rows, timings, bWorkers)` assigns B
+files longest-processing-time-first (sorted by weight descending, each placed
+on the currently lightest worker), keeps C files serial in filename order on
+one dedicated worker by default (the future `--split-c` flag enables
+one-C-per-worker), and keeps perf files serial on their own dedicated worker.
+A files are not partitioned here (pure lane, TASK-557-06). Weights come from
+`timings[file] ?? row.weightMs ?? DEFAULT_WEIGHT[bucket]`
+(`{A: 1000, B: 10000, C: 20000, perf: 20000}`); timings entries absent from
+the manifest are ignored. `bWorkers < 1` throws `worker_count_invalid` and an
+unknown bucket throws `manifest_bucket_invalid:<file>`. The runner CLI
+(TASK-557-05-L02) wires this pure surface to `--dry-run` / `--split-c`.
+`tests/unit/toolchain/bunLanePartition.test.ts` pins balance, C determinism,
+perf isolation, no loss/duplication, and the error contract.
