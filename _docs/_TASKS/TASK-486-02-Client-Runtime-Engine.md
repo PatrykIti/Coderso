@@ -6,9 +6,9 @@
 **Category:** Engagement / Popups / Public Site
 **Estimated Effort:** Medium
 **Dependencies:** TASK-486-01 (consumes the public DTO shape)
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-08-14
 **Started:** `<YYYY-MM-DD>`
-**Completed:** `<YYYY-MM-DD>`
 
 ---
 

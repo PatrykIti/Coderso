@@ -6,9 +6,9 @@
 **Category:** Engagement / Popups / Public Site
 **Estimated Effort:** Medium
 **Dependencies:** None (reads the existing `popups` table from TASK-054-12)
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-08-14
 **Started:** `<YYYY-MM-DD>`
-**Completed:** `<YYYY-MM-DD>`
 
 ---
 

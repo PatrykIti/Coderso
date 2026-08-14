@@ -6,9 +6,9 @@
 **Category:** Engagement / Popups / Public Site
 **Estimated Effort:** Medium
 **Dependencies:** TASK-486-02-L01/L02/L03, TASK-486-03-L01, TASK-486-01-L03
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-08-14
 **Started:** `<YYYY-MM-DD>`
-**Completed:** `<YYYY-MM-DD>`
 
 ---
 

@@ -5,10 +5,10 @@
 **Category:** Engagement / Popups / Public Site
 **Estimated Effort:** Large
 **Dependencies:** TASK-054-12 (popups admin CRUD + publish, DONE — admin-only)
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-08-14
 **Changelog:** 1272 (pinned; closure only — 1268..1271 are reserved for 489/555/556/557)
 **Started:** `<YYYY-MM-DD>`
-**Completed:** `<YYYY-MM-DD>`
 
 ---
 

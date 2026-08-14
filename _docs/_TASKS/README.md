@@ -83,9 +83,9 @@ Task board for project work. Keep task files and this board in sync.
   Do not move a leaf task to `Done` until either its standalone changelog
   exists or the family changelog records that leaf.
 
-- **To Do:** 583 tasks
-- **In Progress:** 13 tasks
-- **Done:** 3121 tasks
+- **To Do:** 388 tasks
+- **In Progress:** 7 tasks
+- **Done:** 3352 tasks
 
 > TASK-479 (25 subtasks 05–29 + 92 leaves) and TASK-480 (umbrella + 6 subtasks +
 > 18 leaves) were broken down 2026-06-27. The table below lists the
@@ -180,7 +180,6 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-517 | Entry Visibility — Public Front Enforcement | High | Medium | Follow-up to TASK-514: enforce `content_entries.visibility` on the PUBLIC render path — `private`→auth-gate (404 anon, no existence leak), `password`→HMAC-signed prompt-gate (verify vs hashed `access_password`), cache exclusion for gated bodies. Parent authored 2026-07-06. Changelog 1230; no own migration (reuses 514 model). 3 subtasks (to be broken down). |
 | TASK-518 | Seed Default Admin Role via Migration (stable id, admin-only) | High | Small | Seed the default `admin` role (`["*"]`) via a migration with a STABLE fixed id (idempotent), so a fresh `db:migrate` is complete + RBAC backup/restore (511) is cross-install consistent; point createFirstAdmin + seedAdmin at it. Owner: admin-only, NO editor/viewer (security first). Parent authored 2026-07-06. Changelog 1231; migration next-free. 2 subtasks (to be broken down). |
 | TASK-485 | Plugin Store: Real Registry & Install Pipeline | High | Large | FEATURE: the store UI is 100% mock; wire it to the real `core/store` + `installService` + `/plugins` pipeline (browse/install/update/uninstall). 5 subtasks (01–05) + 15 leaves. |
-| TASK-486 | Popups: Public Runtime Delivery & Trigger/Targeting Engine | High | Large | FEATURE: admin CRUD exists but popups never render on the site. Adds a public read endpoint + client trigger/targeting/frequency runtime + render injection. 4 subtasks (01–04) + 11 leaves. |
 | TASK-487 | Entries: Revision History & Restore | Medium | Medium | FEATURE: entry revisions are written but unviewable/unrestorable. Adds revisions/restore route+service + editor drawer (parity with Posts/Pages). 3 subtasks (01–03) + 6 leaves. |
 | TASK-488 | Commerce: Variant Editor & Collections CRUD UI | Medium | Medium | FEATURE (frontend-only; backend complete): variant add/edit/remove card + collections create/edit/delete UI. NOT orders (out of v1 scope). 3 subtasks (01–03) + 6 leaves. |
 | TASK-489 | Safe Solution Kit and Full-Site Install Run History, Sanitized Detail, and Exact Engine-Aware Rollback | High | Very Large | Bounded safe history/detail read models for legacy and full-site runs plus exact source-run rollback through the owning engine. No latest fallback, ledger recovery payload, apply, dry-run, rerun, or package-upload UI. Blocked on terminal TASK-414-03-L03, terminal TASK-545 workflow/evidence authority, terminal TASK-548 source/generator receipt, and landed terminal TASK-551 receipts; blocks TASK-555. Changelog 1268 pinned. 3 children + 6 leaves. |
@@ -218,6 +217,7 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-9999 | Permanent Deferred Non-User-Facing Low-Severity Backlog | Low | Very Large | Sole four-digit sentinel and intentionally permanent final board item. Accepts only evidence-backed LOW findings that satisfy the strict zero-user-visible and zero-contract-impact policy in `AGENTS.md`; source tasks must link deduplicated execution-ready leaves with exact rationale. Completed children/leaves retain normal changelog + board/stat closure. Current intake: TASK-9999-01 from TASK-540 with 1 open leaf and 1 superseded leaf (changelog 1258). |
 ## Done
 
+| TASK-486 | Popups: Public Runtime Delivery & Trigger/Targeting Engine | High | Large | ✅ Done (2026-08-14): public read endpoint (published-only, server-side targeting, PII-free DTO), client trigger/targeting/frequency runtime, render + script injection, lane-correct tests, and docs. Changelog 1272. All 4 subtasks + 11 leaves terminal. |
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
 | TASK-554 | Post Metadata Publish RBAC Hardening | Critical | Medium | ✅ Done (2026-08-11): Security blocker discovered by the TASK-414 audit: `/posts/:id/metadata` accepts publication fields behind `content:write` and converts omitted `scheduledAt` to `null`. Require `content:publish` for own status/schedule fields, preserve absence, reject empty/unknown payloads, retain writer-only taxonomy/tag/SEO, and prove seven shared `task-554` smoke flows. No `postsService.ts` edit; public Post-cache invalidation/front parity is explicitly owned by TASK-551-09-L02. Blocks TASK-555. Changelog 1267 pinned. One executable board task. |
