@@ -213,3 +213,37 @@ export function writeSmokeEvidenceManifest(input: {
   readonly expectedSession: string;
   readonly manifest: SmokeEvidenceManifestV1;
 }): Promise<{ readonly path: string; readonly sha256: string }>;
+
+// Thin re-export type surface for TASK-545-03-L03 (checkpoint/resume);
+// mirrors the runtime re-export on smoke-evidence.mjs.
+export {
+  createResumeCheckpoint,
+  openWorkflowClosureResume,
+  requireTaskBoundOwningWorkflow,
+  resumeTrackedEvidence,
+} from "./smoke-evidence-checkpoint.mjs";
+export type {
+  SmokeEvidenceCheckpointV1,
+  SmokeEvidenceClosureContractV1,
+  Task545ClosureIdentity,
+  Task545ClosureResume,
+  VerifiedTask545Checkpoint,
+  VerifiedTask545MetadataRecoveryDelta,
+} from "./smoke-evidence-checkpoint.mjs";
+
+// Thin re-export surface for TASK-545-03-L04 (closure metadata delta);
+// mirrors the runtime re-export on smoke-evidence.mjs.
+export {
+  buildClosureMetadataMutationPlanV1,
+  buildExactClosureMetadataAllowlist,
+  runClosureDeltaCli,
+  validateMetadataOnlyClosureDelta,
+  writeOrResumeOrderedDurableChangelogFileThenIndexV1,
+} from "./smoke-evidence-closure.mjs";
+export type {
+  ClosureDeltaCliSuccessV1,
+  ClosureMetadataMutationPlanV1,
+  ClosureMetadataMutationRecordV1,
+  ChangelogIndexMutationV1,
+  OrderedDurableWriterOptionsV1,
+} from "./smoke-evidence-closure.mjs";

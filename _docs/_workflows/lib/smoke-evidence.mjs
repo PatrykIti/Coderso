@@ -921,6 +921,15 @@ async function main(argv) {
     await runValidateTracked(flags);
     return;
   }
+  if (command === "closure-delta") {
+    // TASK-545-03-L04 thin dispatch: the closure-delta CLI entry and its
+    // usage/validation live only in smoke-evidence-closure.mjs (1,000-line
+    // gate). Failures surface through the shared SmokeEvidenceError catch
+    // below; usage errors set exit code 2 inside the delegated entry.
+    const { runClosureDeltaCli } = await import("./smoke-evidence-closure.mjs");
+    await runClosureDeltaCli(argv.slice(1));
+    return;
+  }
   fail("smoke_cli_unknown_command", command, "command");
 }
 
@@ -936,3 +945,24 @@ if (isMain) {
     process.exitCode = 1;
   });
 }
+
+// Thin re-export surface for TASK-545-03-L03 (checkpoint/resume). The
+// checkpoint implementation lives only in smoke-evidence-checkpoint.mjs; this
+// shared module must never absorb it (1,000-line gate).
+export {
+  createResumeCheckpoint,
+  openWorkflowClosureResume,
+  requireTaskBoundOwningWorkflow,
+  resumeTrackedEvidence,
+} from "./smoke-evidence-checkpoint.mjs";
+
+// Thin re-export surface for TASK-545-03-L04 (closure metadata delta). The
+// closure implementation lives only in smoke-evidence-closure.mjs; this shared
+// module must never absorb it (1,000-line gate).
+export {
+  buildClosureMetadataMutationPlanV1,
+  buildExactClosureMetadataAllowlist,
+  runClosureDeltaCli,
+  validateMetadataOnlyClosureDelta,
+  writeOrResumeOrderedDurableChangelogFileThenIndexV1,
+} from "./smoke-evidence-closure.mjs";
