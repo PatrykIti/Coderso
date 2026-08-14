@@ -62,10 +62,11 @@ may remain only with an explicit `Draft` status that supersedes its closure evid
 index row absent until fresh reclosure validation succeeds.
 Changelog 1271 is consumed by the completed TASK-557 Bun Test Lane Remote Parallel Speedup
 family. Changelog 1272 is consumed by the completed TASK-486 popups public-runtime family.
-Changelog 1273 is reserved for TASK-558 (Popup Visual Theming) and 1274 for TASK-559 (Bun Lane C-Split). Use 1275 for the next unreserved changelog entry.
+Changelog 1273 is consumed by the completed TASK-558 popup visual theming family. Changelog 1274 remains reserved for TASK-559 (Bun Lane C-Split). Use 1275 for the next unreserved changelog entry.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 1273 | 2026-08-14 | TASK-558 Popup Visual Theming — present-only fixed-preset theme (card/backdrop/close/z-index 9999), viewport clamping, focus/ESC/Tab-trap/reduced-motion, byte-identical no-override; 7-scenario runtime smoke (wf558smoke). One executable task terminal. | Engagement/Popups/Public Runtime/Accessibility/Testing/Docs/Task Board |
 | 1272 | 2026-08-14 | TASK-486 Popups: Public Runtime Delivery & Trigger/Targeting Engine — public read endpoint (published-only, server-side targeting, PII-free DTO), client trigger/targeting/frequency runtime, render + script injection, lane-correct tests, docs, and 8-scenario runtime smoke. 4 subtasks + 11 leaves terminal. | Engagement/Popups/Public Runtime/Security/Testing/Docs/Task Board |
 | 1271 | 2026-08-14 | TASK-557 Bun Test Lane Remote Parallel Speedup (direct 5432) — per-worker schemas + FK-rewriting migration applier, weighted parallel runner with retry-once, DB-free A lane, serial perf lane, fence isolation; full-lane acceptance PASS 2414 tests in 22m15s (2.3x speedup). 8 children + 18 leaves terminal. | Toolchain/Testing/DB/Performance/Docs/Task Board |
 | 1257 | 2026-08-14 | TASK-545 Workflow, Smoke Evidence, and Task-Graph Integrity — all-results guard, canonical workflow drivers, durable smoke-evidence manifest/checkpoint/closure/TASK-548-bootstrap family, bounded historical graph/index repair (TASK-528/529/530 parents, TASK-533 changelog 1247, normalized statuses), and the whole-inventory taskGraphIntegrity gate. 4 children + 13 leaves terminal; board statistics recalculated from physical files. | Workflow/Task Graph/Docs/Testing/Task Board |

@@ -83,9 +83,9 @@ Task board for project work. Keep task files and this board in sync.
   Do not move a leaf task to `Done` until either its standalone changelog
   exists or the family changelog records that leaf.
 
-- **To Do:** 349 tasks
+- **To Do:** 348 tasks
 - **In Progress:** 6 tasks
-- **Done:** 3400 tasks
+- **Done:** 3401 tasks
 
 > TASK-479 (25 subtasks 05–29 + 92 leaves) and TASK-480 (umbrella + 6 subtasks +
 > 18 leaves) were broken down 2026-06-27. The table below lists the
@@ -162,7 +162,6 @@ Task board for project work. Keep task files and this board in sync.
 ## To Do
 
 | TASK-559 | Bun Lane C-Split to Reach the 10-15 Minute Target (Follow-up to TASK-557) | Medium | Medium | Follow-up: full test:bun passes (22m15s, exit 0) but the serial C lane (39 files, ~1334s) is the wall bound above the 10-15 min target. Split/shard C (two serial C workers with disjoint self-scoped files, per-worker C sub-schemas, or proven self-scoped heavies to B) while preserving shared-state serialization, fence isolation, pool budget, and the fail-loud DB guard. Acceptance: exit 0 AND <=15 min on remote direct-5432. Changelog 1274 pinned. One executable task. |
-| TASK-558 | Popup Visual Theming (Follow-up to TASK-486) | Medium | Medium | Follow-up: TASK-486 popups render the full DOM/aria contract but are unstyled (CSS theming scoped out in TASK-486-03-L01). Present-only visual theme (surface/border/shadow/radius, backdrop, close affordance, z-index, mobile clamping), accessibility (focus, aria-modal, ESC, reduced-motion), fixed presets or bounded author-configurable theme, byte-identical no-override documents, and a 5+ scenario runtime smoke (wf558smoke). Changelog 1273 pinned. One executable task. |
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
 | TASK-556 | FormaDom Code-Owned Static Starter to Designer Handoff | High | Very Large | Provider-free, owner-private seed/reopen of TASK-555's immutable FormaDom release into terminal Designer through one current-root binding, one-dispatch fenced persistence, run-bound receipt staging, the existing Designer facade/`admin_write` transport, TASK-555's memory-only Setup review continuation, terminal capability regeneration, Designer backup V2, two additive host CTAs, and exactly five shared runtime-smoke flows. Implementation gate is closed until TASK-545 is exactly `✅ Done`, TASK-414/TASK-489/TASK-547/TASK-555 satisfy the parent terminal dependency rule, and a fresh read-only audit passes against unchanged contracts; TASK-545 has no superseded-successor exception and local ignored orchestration sidecars are non-authorizing helpers. Changelog 1270 pinned. 4 children + 8 executable leaves. |
@@ -217,6 +216,7 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-9999 | Permanent Deferred Non-User-Facing Low-Severity Backlog | Low | Very Large | Sole four-digit sentinel and intentionally permanent final board item. Accepts only evidence-backed LOW findings that satisfy the strict zero-user-visible and zero-contract-impact policy in `AGENTS.md`; source tasks must link deduplicated execution-ready leaves with exact rationale. Completed children/leaves retain normal changelog + board/stat closure. Current intake: TASK-9999-01 from TASK-540 with 1 open leaf and 1 superseded leaf (changelog 1258). |
 ## Done
 
+| TASK-558 | Popup Visual Theming (Follow-up to TASK-486) | Medium | Medium | ✅ Done (2026-08-14): present-only fixed-preset theme (card/backdrop/close/z-index 9999), viewport clamping, focus/ESC/Tab-trap/reduced-motion, byte-identical no-override; 7-scenario runtime smoke PASS (wf558smoke). Changelog 1273. One executable task terminal. |
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
 | TASK-557 | Bun Test Lane Remote Parallel Speedup (direct 5432) | High | Very Large | ✅ Done (2026-08-14): `bun run test:bun` now runs the weighted parallel orchestrator on remote direct-5432 — per-worker `bun_worker_N` schemas + custom migration applier (FK references rewritten per schema), weighted B/C runner with retry-once, DB-free A lane (transitive-import classifier + module-scope await following), serial perf lane, fence namespace isolation, pool 2 / workers 5 (row-lock safe). Full-lane acceptance PASS (exit 0): 2414 tests / 380 files, 2390 pass / 24 skip / 0 fail in 22m15s (2.3× speedup from ~50 min). Changelog 1271. All 8 children + 18 leaves terminal. The 10-15 min target needs a C-lane split (follow-up). |

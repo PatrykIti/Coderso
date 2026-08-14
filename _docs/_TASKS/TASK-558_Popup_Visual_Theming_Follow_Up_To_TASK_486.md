@@ -7,7 +7,8 @@
 **Category:** Engagement / Popups / Public Site / Present-only
 **Estimated Effort:** Medium
 **Dependencies:** TASK-486 (terminal)
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-08-14
 **Changelog:** 1273 (pinned; closure only)
 
 ---
