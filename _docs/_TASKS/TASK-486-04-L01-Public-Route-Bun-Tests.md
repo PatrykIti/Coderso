@@ -6,9 +6,9 @@
 **Category:** Engagement / Popups / Public Site
 **Estimated Effort:** Medium
 **Dependencies:** TASK-486-01 (all leaves), TASK-486-03-L02
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-08-14
 **Started:** `<YYYY-MM-DD>`
-**Completed:** `<YYYY-MM-DD>`
 
 ---
 
@@ -20,9 +20,12 @@
   untouched. This is the security/runtime gate for the feature.
 - **Owning module(s) to create-or-extend:** create
   `tests/integration/routes/popups-public.test.ts` and
-  `tests/security/popups-public.test.ts`. Reuse the harness/seed helpers from
-  `tests/integration/routes/popupsRoutes.test.ts` and
-  `tests/integration/routes/bookingRoutes.test.ts`.
+  `tests/security/popups-public.test.ts`. Use the REAL DB-backed harness shape
+  from `tests/integration/routes/postMetadataRbac.test.ts` (shared `db`
+  helpers, `createSession`, `SESSION_COOKIE_NAME`, `resetRateLimitBuckets`,
+  `startHttpServer`), NOT `popupsRoutes.test.ts`/`bookingRoutes.test.ts` —
+  those are mock-router unit tests with no seed helpers. Seed popups via the
+  `createPopup` service with explicit published/draft/archived statuses.
 - **Source-of-truth docs:** `_docs/SECURITY_SPEC.md`, `_docs/CMS_API.md`.
 - **Out of scope:** Vitest engine/render assertions (TASK-486-04-L02), docs
   (TASK-486-04-L03).
@@ -105,4 +108,4 @@ PII-gate, rate-limit, RBAC isolation.
 
 - **Bun** (`tests/integration/routes/*`, `tests/security/*`). Reset rate-limit
   + DB between tests.
-- Gates: `bun run lint`, `bun run typecheck`, `bun test`.
+- Gates: `bun run lint`, `bun --cwd core lint:types`, `bun test`.

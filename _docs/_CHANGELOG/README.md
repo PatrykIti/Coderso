@@ -61,10 +61,12 @@ If a completed family is reopened after its changelog draft was already authored
 may remain only with an explicit `Draft` status that supersedes its closure evidence; keep its
 index row absent until fresh reclosure validation succeeds.
 Changelog 1271 is consumed by the completed TASK-557 Bun Test Lane Remote Parallel Speedup
-family. Changelog 1273 is reserved for TASK-558 (Popup Visual Theming) and 1274 for TASK-559 (Bun Lane C-Split). Use 1275 for the next unreserved changelog entry.
+family. Changelog 1272 is consumed by the completed TASK-486 popups public-runtime family.
+Changelog 1273 is reserved for TASK-558 (Popup Visual Theming) and 1274 for TASK-559 (Bun Lane C-Split). Use 1275 for the next unreserved changelog entry.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 1272 | 2026-08-14 | TASK-486 Popups: Public Runtime Delivery & Trigger/Targeting Engine — public read endpoint (published-only, server-side targeting, PII-free DTO), client trigger/targeting/frequency runtime, render + script injection, lane-correct tests, docs, and 8-scenario runtime smoke. 4 subtasks + 11 leaves terminal. | Engagement/Popups/Public Runtime/Security/Testing/Docs/Task Board |
 | 1271 | 2026-08-14 | TASK-557 Bun Test Lane Remote Parallel Speedup (direct 5432) — per-worker schemas + FK-rewriting migration applier, weighted parallel runner with retry-once, DB-free A lane, serial perf lane, fence isolation; full-lane acceptance PASS 2414 tests in 22m15s (2.3x speedup). 8 children + 18 leaves terminal. | Toolchain/Testing/DB/Performance/Docs/Task Board |
 | 1265 | 2026-08-06 | TASK-553 Runtime Smoke Authoring Cookbook — one source-grounded contributor recipe for static suite registration, thin adapters, lifecycle, persistent Bun/DB workers, transactional batches, Playwright segmentation, evidence, truthful checkpoint scope, reports, focused tests, and shared-wrapper reuse | Testing/Developer Experience/Documentation/Task Board |
 | 1267 | 2026-08-11 | TASK-554 Post Metadata Publish RBAC Hardening — conditional all-of publish authorization, present-only metadata, exact calendar validation, race-safe Admin cache/editor hydration, and seven-flow shared smoke | Posts/RBAC/Security/Admin UI/Caching/Testing/Docs/Task Board |

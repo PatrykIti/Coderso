@@ -6,9 +6,9 @@
 **Category:** Engagement / Popups / Public Site
 **Estimated Effort:** Medium
 **Dependencies:** None (reads the existing `popups` table from TASK-054-12)
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-08-14
 **Started:** `<YYYY-MM-DD>`
-**Completed:** `<YYYY-MM-DD>`
 
 ---
 
@@ -46,9 +46,11 @@ endpoint's DTO).
   `popupTypes.ts`, `popupValidation.ts`,
   `core/server/validation/popupSchemas.ts`.
 - Existing public dispatch + helpers in `core/server/publicSite.tsx`
-  (`handlePublicRequest`, `jsonResponse`, `resolveIp`, `getSecuritySettings`,
-  `checkRateLimit`) and `core/server/middleware/auth.ts`
-  (`attachUserFromSession`).
+  (`handlePublicRequest`, `getSecuritySettings`, `checkRateLimit`; note
+  `jsonResponse` and `resolveIp` are module-private there — the public popups
+  route self-defines its own `json`, and the dispatch call site in
+  `handlePublicRequest` supplies `ip`/`userAgent`/`security` already) and
+  `core/server/middleware/auth.ts` (`attachUserFromSession`).
 - Reference public-read precedent: `core/server/publicBookingApi.ts`
   (`GET /api/booking/slots`).
 

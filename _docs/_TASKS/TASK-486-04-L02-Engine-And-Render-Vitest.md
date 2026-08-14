@@ -6,9 +6,9 @@
 **Category:** Engagement / Popups / Public Site
 **Estimated Effort:** Small
 **Dependencies:** TASK-486-02 (all leaves), TASK-486-03-L01
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-08-14
 **Started:** `<YYYY-MM-DD>`
-**Completed:** `<YYYY-MM-DD>`
 
 ---
 
@@ -85,4 +85,4 @@ safe-href + escaping + frequency suppression on re-start.
 
 - **Vitest** (`tests/vitest/popups/*`, `tests/vitest/ui-integration/*`) with
   jsdom + injected clock/storage/event fakes.
-- Gates: `bun run lint`, `bun run typecheck`, `bun run test:vitest`.
+- Gates: `bun run lint`, `bun --cwd core lint:types`, `bun run test:vitest`.

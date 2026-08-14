@@ -6,9 +6,9 @@
 **Category:** Engagement / Popups / Public Site
 **Estimated Effort:** Medium
 **Dependencies:** TASK-486-01-L01, TASK-486-01-L02
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-08-14
 **Started:** `<YYYY-MM-DD>`
-**Completed:** `<YYYY-MM-DD>`
 
 ---
 
@@ -46,7 +46,7 @@
 - **Rate-limit bucket:** `public_read` via `checkRateLimit("public_read", { ip,
   userAgent }, security.rateLimit)` — same bucket/shape as
   `GET /api/booking/slots` and `/api/search`.
-- **Validation:** `popupPublicQuerySchema` (owned in `popupSchemas.ts`, L01),
+- **Validation:** `popupPublicQuerySchema` (owned in `popupPublicContract.ts`, re-exported via `popupSchemas.ts`, L01),
   `additionalProperties: false`. Reject unknown query params → 400
   `validation_error`. `path` length-bounded (≤500).
 - **Anti-abuse:** rate-limit only (no nonce/HMAC/CAPTCHA — read-only,
@@ -73,6 +73,7 @@ import { popupPublicQuerySchema } from "./validation/popupSchemas";
 import { validate } from "./validation/schemaValidator";
 import { checkRateLimit } from "./middleware/rateLimit";
 import { attachUserFromSession } from "./middleware/auth";
+import type { AuthContext } from "./middleware/auth";
 import { ApiError, toErrorResponse } from "./errorHandler";
 import { mapPopupError } from "./routes/popupsRoutes";   // re-use domain mapping
 import type { SecuritySettings } from "../services/settings/securitySettings";
@@ -82,7 +83,7 @@ const json = (p: unknown, status = 200) =>
 
 // Parse the Cookie header into a record so attachUserFromSession can read the
 // session token. Mirror the existing `parseCookies` in publicBookingApi.ts:239 /
-// publicFormsApi.ts:36 (do not invent a new one).
+// publicFormsApi.ts:179 (do not invent a new one).
 const parseCookies = (header: string | null): Record<string, string> => {
   if (!header) return {};
   const cookies: Record<string, string> = {};
@@ -108,7 +109,11 @@ export async function handlePublicPopupsApi(
   try {
     checkRateLimit("public_read", { ip: ctx.ip, userAgent: ctx.userAgent }, ctx.security.rateLimit);
 
-    const query = { path: ctx.url.searchParams.get("path") ?? "" };
+    // Validate the FULL parsed query (all params), not a hand-picked `{ path }`:
+    // the schema has `additionalProperties:false`, so a filtered object would
+    // never see unknown params and reject-unknown would silently no-op
+    // (`?foo=bar&path=/` must 400, not 200). Bounded: searchParams entries.
+    const query = Object.fromEntries(ctx.url.searchParams.entries());
     validate(popupPublicQuerySchema, query);   // reject-unknown, bounded
 
     // audience resolved server-side; client cannot assert it.
@@ -117,7 +122,7 @@ export async function handlePublicPopupsApi(
     // (core/server/middleware/auth.ts:19). Without populated cookies the token
     // is undefined, `user` stays unset, and `isLoggedIn` silently collapses to
     // false — breaking the logged_in/logged_out audience. Mirror booking/forms.
-    const routeCtx: any = {
+    const routeCtx: AuthContext = {
       headers: {},
       cookies: parseCookies(req.headers.get("cookie")),
     };
@@ -131,8 +136,9 @@ export async function handlePublicPopupsApi(
     if (error instanceof ApiError) return json(toErrorResponse(error), error.status);
     const mapped = mapPopupError(error);
     if (mapped) return json(toErrorResponse(mapped), mapped.status);
-    // validation errors from `validate` ⇒ 400
-    return json({ error: { code: "validation_error", message: "Invalid popup request" } }, 400);
+    // Unmapped errors (DB outage, driver failure) are server faults, not
+    // client errors: mirror publicBookingApi.ts:52 and return 500, never 400.
+    return json(toErrorResponse(error), 500);
   }
 }
 ```
@@ -151,7 +157,8 @@ all targeting/projection lives in the service/contract modules.
 **Error handling:** machine-readable domain codes (`popup_*`) mapped via the
 re-used `mapPopupError` at the boundary; `ApiError` passes through
 `toErrorResponse`; schema failures → 400 `validation_error`. Never leak stack or
-raw row data.
+raw row data in production (dev-mode stack exposure via shared `toErrorResponse`
+is the existing project pattern).
 
 **Regression-test shape (Bun):** see TASK-486-04-L01 — registration/visibility,
 anonymous 200, rate-limit, audience-by-session, published-only, no-PII payload,
@@ -165,4 +172,4 @@ reject-unknown query, `405/404` on non-GET.
   `tests/security/popups-public.test.ts`): served through the real public
   request path; verifies anonymous read, rate-limit bucket, session-derived
   audience, no-PII payload, and that admin `/popups` RBAC is unchanged.
-- Gates: `bun run lint`, `bun run typecheck`, `bun test`.
+- Gates: `bun run lint`, `bun --cwd core lint:types`, `bun test`.

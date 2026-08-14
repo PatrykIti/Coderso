@@ -128,12 +128,9 @@ export async function updatePopup(popupId: string, input: PopupUpdateInput) {
   const [existing] = await db.select().from(popups).where(eq(popups.id, popupId));
   if (!existing) return null;
 
-  const nextName =
-    input.name === undefined ? existing.name : normalizePopupName(input.name);
+  const nextName = input.name === undefined ? existing.name : normalizePopupName(input.name);
   const nextSlug =
-    input.slug === undefined
-      ? existing.slug
-      : normalizePopupSlug(input.slug, nextName);
+    input.slug === undefined ? existing.slug : normalizePopupSlug(input.slug, nextName);
   const nextStatus =
     input.status === undefined
       ? normalizePopupStatus(existing.status, "draft")
@@ -160,10 +157,7 @@ export async function updatePopup(popupId: string, input: PopupUpdateInput) {
       : normalizePopupSettings(input.settings);
 
   const now = new Date();
-  const publishedAt =
-    nextStatus === "published"
-      ? existing.publishedAt ?? now
-      : null;
+  const publishedAt = nextStatus === "published" ? (existing.publishedAt ?? now) : null;
 
   const [row] = await db
     .update(popups)
@@ -204,4 +198,28 @@ export async function setPopupStatus(popupId: string, status: PopupStatus) {
 export async function deletePopup(popupId: string) {
   const [row] = await db.delete(popups).where(eq(popups.id, popupId)).returning();
   return row ? mapPopup(row) : null;
+}
+
+import { matchPopupRequest, toPublicPopup, type PublicPopup } from "./popupPublicContract";
+
+export type PublicPopupRequest = {
+  path: string;
+  isLoggedIn: boolean;
+};
+
+export async function resolvePublicPopups(req: PublicPopupRequest): Promise<PublicPopup[]> {
+  const path = typeof req.path === "string" ? req.path : "/";
+  const isLoggedIn = Boolean(req.isLoggedIn);
+
+  const rows = await db
+    .select()
+    .from(popups)
+    .where(eq(popups.status, "published")) // uses popups_status_idx
+    .orderBy(desc(popups.updatedAt))
+    .limit(200); // hard cap, mirrors listPopups
+
+  return rows
+    .map(mapPopup) // existing normalizer
+    .filter((p) => matchPopupRequest(p, { path, isLoggedIn }))
+    .map(toPublicPopup);
 }

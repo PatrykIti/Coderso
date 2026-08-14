@@ -2404,8 +2404,19 @@ Reviews:
 - `PATCH /reviews/:id/status`
 - `DELETE /reviews/:id`
 
+Public API (anonymous read, `public_read` rate-limit):
+
+- `GET /api/popups?path=<pathname>` → `{ items: PublicPopup[] }`.
+- `PublicPopup` = `{ id, slug, trigger, frequency, content, settings }`. The
+  deliberate omission of `name`/`status`/`targeting`/timestamps is the PII gate:
+  targeting/audience are resolved server-side (`matchPopupRequest`) and never
+  shipped to the client.
+- Semantics: anonymous read, `public_read` rate-limit bucket, published-only
+  popups, server-side path/audience targeting, `toPublicPopup` projection.
+
 Notes:
-- v1 engagement routes are internal-only (no public `/api/popups` / `/api/reviews` routes).
+- Popups now expose a public read route (`GET /api/popups`); reviews remain
+  internal-only (no public `/api/reviews` route).
 - Menu metadata (`menu_items.settings`) is exposed to navigation runtime as deterministic `items[].meta`:
   - `meta.visibility`: `all | logged_in | logged_out`
   - `meta.badge`: `{ label: string, tone: default|accent|success|warning|danger } | null`

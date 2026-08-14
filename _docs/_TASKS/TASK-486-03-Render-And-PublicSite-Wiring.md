@@ -6,9 +6,9 @@
 **Category:** Engagement / Popups / Public Site
 **Estimated Effort:** Medium
 **Dependencies:** TASK-486-02 (orchestrator emits the show decision)
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-08-14
 **Started:** `<YYYY-MM-DD>`
-**Completed:** `<YYYY-MM-DD>`
 
 ---
 
@@ -49,7 +49,9 @@ public response.
   has no body-script seam, which is why injection happens at the response
   boundary).
 - Safe-href precedent: the `startsWith("/" | "http://" | "https://")` guard
-  already in `core/server/publicSite.tsx`.
+  already in `core/widgets/core/widgetSafeHref.ts:17` /
+  `core/services/pages/pageAuthoringSanitizers.ts:260,266` /
+  `core/server/publicSiteEntryRuntime.tsx:85-87`.
 
 ---
 

@@ -6,9 +6,9 @@
 **Category:** Engagement / Popups / Public Site
 **Estimated Effort:** Small
 **Dependencies:** TASK-486-01-L03, TASK-486-03-L02
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-08-14
 **Started:** `<YYYY-MM-DD>`
-**Completed:** `<YYYY-MM-DD>`
 
 ---
 
@@ -21,7 +21,8 @@
   `_docs/SECURITY_SPEC.md`, `_docs/ARCHITECTURE.md`.
 - **Source-of-truth docs:** the three files above (they ARE the targets).
 - **Out of scope:** code/tests; the task board README (the orchestrator syncs
-  it); changelog (created at closure by the program, not here).
+  it); changelog **1272** (pinned in the umbrella; created at closure by the
+  program, not here — 1268..1271 are reserved for 489/555/556/557).
 
 ---
 

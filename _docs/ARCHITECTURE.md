@@ -1040,8 +1040,19 @@ Zakres CMS, model danych, auth i security opisane sa w:
   - `/popups` CRUD + `PATCH /popups/:id/status`,
   - `/reviews` CRUD + `PATCH /reviews/:id/status`.
 - Security contract:
-  - endpointy popups/reviews sa internal-only i wymagaja RBAC (`popups:*`, `reviews:*`),
-  - w v1 brak publicznych endpointow `/api/popups` i `/api/reviews`.
+  - admin endpointy popups/reviews sa internal-only i wymagaja RBAC (`popups:*`, `reviews:*`),
+  - popups expose a public read route (`GET /api/popups`, anonymous,
+    `public_read` bucket); reviews pozostaja internal-only.
+- Public popup runtime delivery path:
+  - `GET /api/popups` (server-side path/audience targeting, published-only,
+    `toPublicPopup` PII projection) → injected static IIFE
+    (`buildPopupRuntimeScript`, cache-safe) → client engine
+    (triggers/frequency) → `renderPopup`.
+  - Serialization constraint: runtime fns sa dependency-free, wiec moga byc
+    `.toString()`-embedded do inline scripta.
+  - Inline-script/CSP consideration: jak przy analytics snippet, admin CSP
+    `script-src` musi pozwolic `'unsafe-inline'` (albo dodac hash), zeby inline
+    script dzialal.
 - Navigation/runtime contract:
   - menu metadata jest normalizowana server-side i mapowana do `navigation.items[].meta`,
   - shape `meta` jest deterministyczny (`visibility`, `badge`, `description`, `icon`).

@@ -6,9 +6,9 @@
 **Category:** Engagement / Popups / Public Site
 **Estimated Effort:** Medium
 **Dependencies:** TASK-486-02-L01/L02/L03, TASK-486-03-L01, TASK-486-01-L03
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-08-14
 **Started:** `<YYYY-MM-DD>`
-**Completed:** `<YYYY-MM-DD>`
 
 ---
 
@@ -48,9 +48,11 @@
 - **Secret/PII handling:** the script is **static and identical for every page**
   (it carries no per-page or per-user data — popups are fetched at runtime), so
   it is **safe to inject into cached HTML**. No secret, token, or session value
-  is ever inlined. CSP note: the script is inline; if a strict CSP/nonce is
-  later enforced on the public site, thread the existing page nonce through
-  `injectPopupRuntime` (call out in ARCHITECTURE).
+  is ever inlined. CSP note: the script is inline; there is currently NO
+  nonce-based CSP on the public site, so no nonce is threaded today. If a
+  strict CSP/nonce is later enforced on the public site, the injection point in
+  `buildHtmlResponse` must render a fresh per-response nonce into both the CSP
+  header and the script tag (call out in ARCHITECTURE).
 
 > **Shared boundary `core/server/publicSite.tsx`** is also extended by TASK-483/486/491/493 — additive injection only; reuse the existing forms/booking public-write nonce evaluator, do not invent a competing one-off nonce.
 
@@ -61,14 +63,28 @@
 ```ts
 // core/server/popupRuntimeScript.ts
 import { watchTrigger, scrollDepthPercent } from "../services/popups/runtime/triggerWatchers";
-import { shouldShowPopup, recordPopupShown } from "../services/popups/runtime/frequencyGate";
+import { shouldShowPopup, recordPopupShown, sameUtcDay } from "../services/popups/runtime/frequencyGate";
 import { createPopupRuntime } from "../services/popups/runtime/popupRuntime";
-import { renderPopup, isSafeHref } from "../services/popups/runtime/renderPopup";
+import { renderPopup, isSafeHref, SAFE } from "../services/popups/runtime/renderPopup";
 
-// Each imported fn is dependency-free ⇒ serialize via .toString() into the IIFE.
-const SERIALIZED = [scrollDepthPercent, watchTrigger, shouldShowPopup,
-  recordPopupShown, isSafeHref, renderPopup, createPopupRuntime]
-  .map((fn) => fn.toString()).join("\n");
+// Serialize as NAMED consts — `fn.toString()` on an arrow const yields an
+// anonymous expression, so a bare join would emit `(m) => {...}` with no
+// binding and the IIFE would throw ReferenceError. Every function's free
+// variables must be serialized too (SAFE inside isSafeHref, sameUtcDay inside
+// shouldShowPopup), and each emitted line must be `const <name> = <src>;`.
+// This mirrors the retained `listingRuntimeScript.ts` String.raw discipline:
+// full named source, no bare function expressions.
+const SERIALIZED = [
+  `const sameUtcDay = ${sameUtcDay.toString()};`,
+  `const SAFE = ${SAFE.toString()};`,
+  `const scrollDepthPercent = ${scrollDepthPercent.toString()};`,
+  `const isSafeHref = ${isSafeHref.toString()};`,
+  `const watchTrigger = ${watchTrigger.toString()};`,
+  `const shouldShowPopup = ${shouldShowPopup.toString()};`,
+  `const recordPopupShown = ${recordPopupShown.toString()};`,
+  `const renderPopup = ${renderPopup.toString()};`,
+  `const createPopupRuntime = ${createPopupRuntime.toString()};`,
+].join("\n");
 
 let cached: string | null = null;
 export function buildPopupRuntimeScript(): string {
@@ -120,8 +136,14 @@ export function injectPopupRuntime(html: string): string {
 
 ```ts
 // core/server/publicSite.tsx — wrap the public HTML responses
-// e.g. where a page/entry/template HTML string becomes a Response:
-return new Response(injectPopupRuntime(result.html), { headers: { ... } });
+// `buildHtmlResponse(html)` (publicSite.tsx:105) builds every public HTML
+// Response at 11 call sites (:239, :765, :776, :798, :812, :822, :878, :898,
+// :927, :943, :956). Do NOT edit each site: change the single helper to
+// `const buildHtmlResponse = (html: string) =>
+//   new Response(injectPopupRuntime(html),
+//     { headers: { "Content-Type": "text/html" } });` so every public HTML
+// response (fresh renders AND the cache-hit path at :878) carries the script.
+// Keep the helper additive and side-effect free; the injection is memoized.
 ```
 
 **Data flow:** server builds the IIFE once (memoized) → injected before
@@ -133,10 +155,16 @@ absent; the IIFE guards `typeof window`, a re-entry flag, and swallows all
 storage/fetch failures (engine already does). A blocked fetch ⇒ no popups, page
 unaffected.
 
-**Constraint (serialization):** all imported runtime fns MUST stay
-dependency-free (no closures over module imports) so `.toString()` produces
-valid standalone source. Enforce with a Vitest guard that `buildPopupRuntimeScript()`
-output contains each function name and parses (e.g. `new Function(stripTags(...))`).
+**Constraint (serialization):** every serialized function's free variables MUST
+be serialized too (named consts, including `SAFE` and `sameUtcDay`), and each
+emitted line must be `const <name> = <src>;` so the IIFE binds names. Enforce
+with a Vitest guard that `buildPopupRuntimeScript()` output (a) parses as
+JavaScript, and (b) references no identifier that is not bound by the emitted
+`const` lines or a standard global (`window`, `document`, `sessionStorage`,
+`localStorage`, `fetch`, `location`, `Date`, `Math`, `JSON`, `setTimeout`,
+`clearTimeout`, `encodeURIComponent`, `addEventListener`,
+`removeEventListener`, `requestAnimationFrame`). A free `SAFE` or `sameUtcDay`
+inside a serialized function fails the guard (no bare anonymous expressions).
 
 **Regression-test shape (Bun):** served public page/entry HTML contains exactly
 one `data-coderso-runtime-script="popups"` `<script>` immediately before
@@ -152,4 +180,4 @@ string is syntactically valid.
   injected script is present (page + entry paths) and cache-stable.
 - A small **Vitest** parse-guard for `buildPopupRuntimeScript()`
   (`tests/vitest/popups/runtime-script-build.test.ts`).
-- Gates: `bun run lint`, `bun run typecheck`, `bun test`, `bun run test:vitest`.
+- Gates: `bun run lint`, `bun --cwd core lint:types`, `bun test`, `bun run test:vitest`.
