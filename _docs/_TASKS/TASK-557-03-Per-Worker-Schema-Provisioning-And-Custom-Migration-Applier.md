@@ -5,7 +5,8 @@
 **Category:** Testing / Database
 **Estimated Effort:** Large
 **Dependencies:** TASK-557-02 (worker URL builder)
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-08-14
 ---
 ## Overview
 Each worker schema (`bun_worker_N`) must receive the full 71-migration schema

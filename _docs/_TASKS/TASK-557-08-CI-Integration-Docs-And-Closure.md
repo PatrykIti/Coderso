@@ -5,7 +5,8 @@
 **Category:** CI / Documentation / Task Board
 **Estimated Effort:** Medium
 **Dependencies:** TASK-557-05, TASK-557-06 (runner green)
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-08-14
 ---
 ## Overview
 Wire the new parallel runner into CI (`coderso-pr-gates.yml` bun-lane job) and

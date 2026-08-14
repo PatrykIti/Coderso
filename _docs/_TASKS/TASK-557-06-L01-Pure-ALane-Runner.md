@@ -5,7 +5,8 @@
 **Category:** Testing / Tooling
 **Estimated Effort:** Small
 **Dependencies:** TASK-557-01-L01 (manifest with A bucket)
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-08-14
 ---
 ## Overview
 `scripts/run-bun-pure-lane.ts` runs exactly the A manifest files with

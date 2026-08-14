@@ -5,7 +5,8 @@
 **Category:** Testing / Database / Reliability
 **Estimated Effort:** Small
 **Dependencies:** TASK-557-04-L01 (seam exists)
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-08-14
 ---
 ## Overview
 Prove that the per-worker fence namespace actually isolates advisory locks

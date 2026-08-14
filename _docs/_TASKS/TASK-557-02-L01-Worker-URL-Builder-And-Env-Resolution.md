@@ -5,7 +5,8 @@
 **Category:** Testing / Database
 **Estimated Effort:** Small
 **Dependencies:** None
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-08-14
 ---
 ## Overview
 Build `scripts/bun-lane-worker-url.ts` exposing pure helpers:

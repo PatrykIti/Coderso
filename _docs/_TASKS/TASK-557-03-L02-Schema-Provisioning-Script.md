@@ -5,7 +5,8 @@
 **Category:** Testing / Database
 **Estimated Effort:** Small
 **Dependencies:** TASK-557-03-L01 (applier)
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-08-14
 ---
 ## Overview
 Provide `scripts/bun-lane-provision.ts` that, for a given worker count `K`,

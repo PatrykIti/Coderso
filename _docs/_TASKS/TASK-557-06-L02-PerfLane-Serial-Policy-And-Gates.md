@@ -5,7 +5,8 @@
 **Category:** Testing / Performance
 **Estimated Effort:** Small
 **Dependencies:** TASK-557-01-L01 (perf bucket), TASK-557-06-L01 (policy file consumed by the runner 05-L02; no dependency on 05 itself)
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-08-14
 ---
 ## Overview
 The perf bucket holds `tests/perf/*` — 5 files, 4 of which are wall-time p95

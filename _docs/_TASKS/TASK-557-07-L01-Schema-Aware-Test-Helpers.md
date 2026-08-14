@@ -5,7 +5,8 @@
 **Category:** Testing / Database
 **Estimated Effort:** Small
 **Dependencies:** None
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-08-14
 ---
 ## Overview
 Fix EVERY hardcoded `public.` reference in the test harness so probes resolve

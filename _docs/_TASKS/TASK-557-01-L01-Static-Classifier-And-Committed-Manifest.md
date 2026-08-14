@@ -5,7 +5,8 @@
 **Category:** Testing / Tooling
 **Estimated Effort:** Medium
 **Dependencies:** None
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-08-14
 ---
 ## Overview
 Produce `scripts/bun-lane-classify.ts` that walks the exact lane file set from

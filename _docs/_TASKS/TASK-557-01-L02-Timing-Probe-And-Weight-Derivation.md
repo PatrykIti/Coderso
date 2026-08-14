@@ -5,7 +5,8 @@
 **Category:** Testing / Tooling
 **Estimated Effort:** Medium
 **Dependencies:** TASK-557-01-L01 (manifest exists)
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-08-14
 ---
 ## Overview
 Produce `scripts/bun-lane-time.ts` that runs each lane file once (serially,

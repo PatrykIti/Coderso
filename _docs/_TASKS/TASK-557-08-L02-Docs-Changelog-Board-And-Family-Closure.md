@@ -5,7 +5,8 @@
 **Category:** Documentation / Task Board
 **Estimated Effort:** Medium
 **Dependencies:** All implementation leaves green
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-08-14
 ---
 ## Overview
 Final documentation + task-board + changelog closure for TASK-557. This is the

@@ -5,7 +5,8 @@
 **Category:** Testing / Database / Reliability
 **Estimated Effort:** Medium
 **Dependencies:** None
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-08-14
 ---
 ## Overview
 Add `resolveFenceNamespace(env?)` to `core/db/nativeCmsWriterFence.ts` and

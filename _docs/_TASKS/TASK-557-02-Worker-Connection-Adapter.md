@@ -5,7 +5,8 @@
 **Category:** Testing / Database
 **Estimated Effort:** Medium
 **Dependencies:** TASK-557-01 (manifest defines worker file sets)
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-08-14
 ---
 ## Overview
 Each parallel worker process must connect to the SAME remote database but an

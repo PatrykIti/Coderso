@@ -5,7 +5,8 @@
 **Category:** Testing / Tooling
 **Estimated Effort:** Large
 **Dependencies:** TASK-557-05-L01 (partition), TASK-557-02 (env), TASK-557-03 (provision), TASK-557-04 (fence), TASK-557-06-L01 (pure A lane `runPureLane`), TASK-557-06-L02 (PERF_SERIAL/PERF_BUDGETS/PERF_QUIET_ENV)
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-08-14
 ---
 ## Overview
 `scripts/run-bun-parallel.ts` wires everything together:

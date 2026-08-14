@@ -5,7 +5,8 @@
 **Category:** Testing / Tooling
 **Estimated Effort:** Medium
 **Dependencies:** TASK-557-01 (manifest + timings)
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-08-14
 ---
 ## Overview
 Pure partition logic in `scripts/bun-lane-partition.ts`:

@@ -5,7 +5,8 @@
 **Category:** Testing / Tooling
 **Estimated Effort:** Medium
 **Dependencies:** None (foundation; must land before TASK-557-05 runner)
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-08-14
 ---
 ## Overview
 The parallel runner needs a deterministic, machine-readable classification of

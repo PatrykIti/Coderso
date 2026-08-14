@@ -5,7 +5,8 @@
 **Category:** Testing / Database
 **Estimated Effort:** Medium
 **Dependencies:** TASK-557-02-L01 (worker URL)
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-08-14
 ---
 ## Overview
 Implement `scripts/bun-lane-migrate.ts` with a pure journal reader and a

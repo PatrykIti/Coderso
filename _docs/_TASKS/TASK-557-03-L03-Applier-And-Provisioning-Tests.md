@@ -5,7 +5,8 @@
 **Category:** Testing / Database
 **Estimated Effort:** Medium
 **Dependencies:** TASK-557-03-L01, TASK-557-03-L02
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-08-14
 ---
 ## Overview
 Consolidate the regression matrix for the applier and the provisioning script

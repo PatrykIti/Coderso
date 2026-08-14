@@ -5,7 +5,8 @@
 **Category:** Testing / Database
 **Estimated Effort:** Small
 **Dependencies:** TASK-557-02-L01 (builder exists)
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-08-14
 ---
 ## Overview
 Prove the worker URL builder is compatible with the repository's fail-closed

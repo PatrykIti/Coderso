@@ -5,7 +5,8 @@
 **Category:** CI
 **Estimated Effort:** Small
 **Dependencies:** TASK-557-05-L02 (runner), TASK-557-06-L01/L02 (lanes), TASK-557-07-L01 (schema-aware helpers)
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-08-14
 ---
 ## Overview
 Two CI changes:

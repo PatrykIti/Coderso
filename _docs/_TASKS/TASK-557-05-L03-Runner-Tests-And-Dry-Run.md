@@ -5,7 +5,8 @@
 **Category:** Testing / Tooling
 **Estimated Effort:** Medium
 **Dependencies:** TASK-557-05-L02 (orchestration)
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-08-14
 ---
 ## Overview
 Own the regression suite for the partitioner + orchestrator so the runner's

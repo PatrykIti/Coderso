@@ -5,7 +5,8 @@
 **Category:** Testing / Database
 **Estimated Effort:** Medium
 **Dependencies:** TASK-557-03 (worker schemas exist to validate against)
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-08-14
 ---
 ## Overview
 Fresh worker schemas are empty after migration: no admin user, no starter

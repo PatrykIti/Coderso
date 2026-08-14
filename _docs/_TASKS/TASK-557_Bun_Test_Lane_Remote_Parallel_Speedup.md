@@ -5,7 +5,8 @@
 **Estimated Effort:** Very Large
 **Dependencies:** None (standalone; must not collide with TASK-555/556/489/414 closures)
 **Related Tasks:** TASK-102, TASK-230, TASK-509, TASK-551-02, TASK-545
-**Status:** 🚧 In Progress
+**Status:** ✅ Done
+**Completed:** 2026-08-14
 **Started:** 2026-08-13
 **Changelog:** 1271 (pinned)
 ---

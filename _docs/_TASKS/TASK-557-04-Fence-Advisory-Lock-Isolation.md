@@ -5,7 +5,8 @@
 **Category:** Testing / Database / Reliability
 **Estimated Effort:** Medium
 **Dependencies:** TASK-557-02 (worker env carries the offset)
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-08-14
 ---
 ## Overview
 The CMS writer fence uses `pg_try_advisory_xact_lock_shared(548, 0)` on every
