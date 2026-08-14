@@ -18,7 +18,7 @@
  *   `worker_pool_max_invalid`. The runner's aggregate check
  *   (`workers x pool <= CONNECTION_BUDGET_MAX = 10`, the Render direct-connect
  *   reserve) enforces the budget.
- * - `resolveWorkerCount` reads `BUN_TEST_WORKERS` (default 8). A present-but-
+ * - `resolveWorkerCount` reads `BUN_TEST_WORKERS` (default 5). A present-but-
  *   empty value is a misconfiguration and throws fail-closed
  *   `worker_count_invalid`; absent means "use the default".
  * - `resolveWorkerEnv` returns the full env object for a spawned worker:
@@ -39,7 +39,7 @@
 import { inspectDatabaseUrl, type DatabaseEnvMap } from "../core/db/connectionTargets";
 
 export const WORKER_SCHEMA_PREFIX = "bun_worker_";
-export const DEFAULT_WORKER_POOL_MAX = 1;
+export const DEFAULT_WORKER_POOL_MAX = 2;
 export const MAX_WORKER_POOL_MAX = 4;
 
 /** Render reserves ~10 direct connections (max_connections - 10 backend pool). */
@@ -119,14 +119,14 @@ export function assertConnectionBudget(workers: number, poolMax: number): void {
 }
 
 /**
- * Worker count from `BUN_TEST_WORKERS`, default 8. Absent or present-but-empty
+ * Worker count from `BUN_TEST_WORKERS`, default 5. Absent or present-but-empty
  * means the default (contract: `raw === undefined || raw.trim() === ""` →
- * 8); non-integer, <1, and >16 values throw fail-closed
+ * 5); non-integer, <1, and >16 values throw fail-closed
  * `worker_count_invalid`.
  */
 export function resolveWorkerCount(env: DatabaseEnvMap = process.env): number {
   const raw = env.BUN_TEST_WORKERS;
-  if (raw === undefined || raw.trim() === "") return 8; // default K=8
+  if (raw === undefined || raw.trim() === "") return 5; // default K=5
   const count = Number(raw);
   if (!Number.isInteger(count) || count < 1 || count > 16) {
     throw new Error(`worker_count_invalid:${raw}`);

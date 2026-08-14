@@ -20,9 +20,9 @@
  *   pseudocode and the parent budget rule `workers x DB_POOL_MAX <= 10`
  *   (TASK-557-02): 6 x 2 = 12 > 10, so it throws. (8, 1) passes and (5, 2) is
  *   the exact boundary (10 <= 10).
- * - `resolveWorkerCount` defaults to 8 when `BUN_TEST_WORKERS` is absent or
+ * - `resolveWorkerCount` defaults to 5 when `BUN_TEST_WORKERS` is absent or
  *   present-but-empty (contract: `raw === undefined || raw.trim() === ""` →
- *   8); non-integer, <1, and >16 values throw fail-closed
+ *   5); non-integer, <1, and >16 values throw fail-closed
  *   `worker_count_invalid`.
  * - `describeWorkerTarget` is credential-free: `schema@host:port`, never a
  *   `u:p@` substring.
@@ -88,7 +88,7 @@ test("assertDirectUrl throws worker_direct_url_unverifiable for unparsable URLs"
 
 test("ambient DB_POOL_MAX=20 is clamped, never inherited, never throws", () => {
   expect(resolveWorkerPoolMax({ DB_POOL_MAX: "20" })).toBe(4);
-  expect(resolveWorkerPoolMax({}, undefined)).toBe(1);
+  expect(resolveWorkerPoolMax({}, undefined)).toBe(2);
   expect(resolveWorkerPoolMax({}, 2)).toBe(2);
   expect(resolveWorkerPoolMax({ DB_POOL_MAX: "20" }, 4)).toBe(4);
   expect(() => resolveWorkerPoolMax({}, 0)).toThrow("worker_pool_max_invalid");
@@ -132,8 +132,8 @@ test("assertConnectionBudget enforces workers x pool <= 10", () => {
   expect(() => assertConnectionBudget(6, 2)).toThrow("worker_pool_budget_exceeded");
 });
 
-test("resolveWorkerCount defaults to 8 when BUN_TEST_WORKERS is absent", () => {
-  expect(resolveWorkerCount({})).toBe(8);
+test("resolveWorkerCount defaults to 5 when BUN_TEST_WORKERS is absent", () => {
+  expect(resolveWorkerCount({})).toBe(5);
 });
 
 test("resolveWorkerCount honors a valid BUN_TEST_WORKERS", () => {
@@ -148,10 +148,10 @@ test("resolveWorkerCount throws worker_count_invalid for invalid values", () => 
   expect(() => resolveWorkerCount({ BUN_TEST_WORKERS: "4.5" })).toThrow("worker_count_invalid");
 });
 
-test("resolveWorkerCount defaults to 8 for absent or empty BUN_TEST_WORKERS", () => {
-  expect(resolveWorkerCount({})).toBe(8);
-  expect(resolveWorkerCount({ BUN_TEST_WORKERS: "" })).toBe(8);
-  expect(resolveWorkerCount({ BUN_TEST_WORKERS: " " })).toBe(8);
+test("resolveWorkerCount defaults to 5 for absent or empty BUN_TEST_WORKERS", () => {
+  expect(resolveWorkerCount({})).toBe(5);
+  expect(resolveWorkerCount({ BUN_TEST_WORKERS: "" })).toBe(5);
+  expect(resolveWorkerCount({ BUN_TEST_WORKERS: " " })).toBe(5);
 });
 
 test("describeWorkerTarget is credential-free schema@host:port", () => {

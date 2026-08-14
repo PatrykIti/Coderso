@@ -23,7 +23,7 @@
  *   awaited before the report write).
  *
  * Flags: `--workers N` (default `resolveWorkerCount()` = `BUN_TEST_WORKERS`),
- * `--pool N` (default 1), `--lane b|c|perf|all` (default all), `--dry-run`,
+ * `--pool N` (default 2), `--lane b|c|perf|all` (default all), `--dry-run`,
  * `--no-provision`, `--no-retry`, `--report <path>` (default
  * `tests/bun-lane-report.json`). `--lane perf` with `--workers > 1` is
  * rejected (`perf_lane_parallel_invalid`, TASK-557-06-L02: perf gates are
@@ -40,6 +40,7 @@ import { readFile, writeFile } from "node:fs/promises";
 
 import { partition, partitionSummary, type Partition } from "./bun-lane-partition";
 import {
+  DEFAULT_WORKER_POOL_MAX,
   assertConnectionBudget,
   resolveWorkerCount,
   resolveWorkerEnv,
@@ -76,7 +77,7 @@ type Flags = {
 export function parseFlags(argv: string[]): Flags {
   const flags: Flags = {
     workers: resolveWorkerCount(),
-    pool: 1,
+    pool: DEFAULT_WORKER_POOL_MAX,
     lane: "all",
     dryRun: false,
     noProvision: false,

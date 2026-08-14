@@ -217,13 +217,14 @@ import guard.
   ambient value (the real `.env` sets 20 for the pooled client); only explicit
   non-integer or <1 requested values throw. The aggregate budget is
   `workers x pool <= 10` (`assertConnectionBudget`, Render's direct-connect
-  reserve), so 8 workers at pool 1 fit but 6 x 2 does not.
+  reserve), so the default 5 workers x pool 2 = 10 hits the exact budget, but
+  6 x 2 = 12 does not.
 - `resolveWorkerEnv` returns `DATABASE_URL` (worker URL), `DATABASE_DIRECT_URL`
   as-is, `DB_POOL_MAX`, `BUN_TEST_WORKER_INDEX`, `NODE_ENV=test`, and
   `BUN_TEST_FENCE_NAMESPACE_OFFSET` when requested. `NODE_ENV=test` is
   mandatory because `bun test` does not set it and the TASK-557-04 fence
   honors the offset only under test.
-- `resolveWorkerCount` reads `BUN_TEST_WORKERS` (default 8; CI sets 4); absent
+- `resolveWorkerCount` reads `BUN_TEST_WORKERS` (default 5; CI sets 4); absent
   means default, present-but-empty or invalid throws `worker_count_invalid`.
 - `describeWorkerTarget` is the only permitted target log shape
   (`schema@host:port`); the module never prints credentials.
@@ -332,14 +333,14 @@ files across workers with the weighted partitioner, keeps C files serial on
 one dedicated worker, runs the pure A lane (TASK-557-06) concurrently, and
 runs perf strictly AFTER all B/C/A workers finish (wall-time gates are
 CPU-contention sensitive). B worker count is `K-1` (single lanes) or `K-2`
-under `--lane all` (the extra slot is the pure A lane); default `K=8` ->
-6 B workers, 1 C worker, perf serial-after, pure A worker.
+under `--lane all` (the extra slot is the pure A lane); default `K=5` ->
+3 B workers, 1 C worker, perf serial-after, pure A worker.
 
 Flags (named errors fail closed):
 
 - `--workers N` (default `BUN_TEST_WORKERS`, see `resolveWorkerCount`; integer
   >= 1, else `worker_count_invalid`).
-- `--pool N` (default 1; integer >= 1, else `worker_pool_max_invalid`). The
+- `--pool N` (default 2; integer >= 1, else `worker_pool_max_invalid`). The
   aggregate guard `workers x pool <= 10`
   (`worker_pool_budget_exceeded`) runs BEFORE provisioning.
 - `--lane b|c|perf|all` (default `all`; else `lane_invalid`). `--lane perf`

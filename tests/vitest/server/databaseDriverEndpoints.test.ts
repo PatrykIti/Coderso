@@ -675,8 +675,8 @@ describe("worker URL builder guard compatibility", () => {
   });
 
   test("workers x pool stays within the direct-connection reserve", () => {
-    const workers = 8; // the resolveWorkerCount default
-    const pool = DEFAULT_WORKER_POOL_MAX; // 1
+    const workers = 5; // the resolveWorkerCount default
+    const pool = DEFAULT_WORKER_POOL_MAX; // 2
     expect(workers * pool).toBeLessThanOrEqual(CONNECTION_BUDGET_MAX); // 10, Render direct reserve
     expect(pool).toBeLessThanOrEqual(MAX_WORKER_POOL_MAX); // 4
   });

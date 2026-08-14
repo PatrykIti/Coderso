@@ -17,7 +17,7 @@
    B workers = `K - 1` under `--lane b|c|perf`, or `K - 2` under `--lane all`
    (the extra slot is the pure A lane, which is not a DB worker). The perf lane
    runs AFTER the B and C workers finish (wall-time gates are CPU-contention
-   sensitive; never in parallel with B/C). Default K=8 -> 6 B workers, 1 C
+   sensitive; never in parallel with B/C). Default K=5 -> 3 B workers, 1 C
    worker, perf worker serial-after, pure A worker.
 4. Stream each worker's stdout/stderr with a prefixed tag `[b0] ...`; capture
    exit codes; on non-zero, retry the worker's whole file set ONCE
@@ -26,7 +26,7 @@
    `tests/bun-lane-report.json` with per-worker status/duration/failures.
 6. Flags: `--workers N`, `--dry-run`, `--lane <b|c|perf|all>`, `--no-provision`,
    `--pool N`, `--no-retry`, `--report <path>`. `--pool` defaults to
-   `DEFAULT_WORKER_POOL_MAX` (1) and is clamped by `resolveWorkerPoolMax`;
+   `DEFAULT_WORKER_POOL_MAX` (2) and is clamped by `resolveWorkerPoolMax`;
    the runner enforces `workers * pool <= 10` with a named error
    (`worker_pool_budget_exceeded`) before provisioning or spawning, so a
    too-large `--pool` fails fast instead of exhausting the direct-connection
