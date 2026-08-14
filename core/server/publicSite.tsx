@@ -56,6 +56,7 @@ import { validate } from "./validation/schemaValidator";
 import { handlePublicBookingApi } from "./publicBookingApi";
 import { handlePublicFormsApi } from "./publicFormsApi";
 import { handlePublicPopupsApi } from "./publicPopupsApi";
+import { injectPopupRuntime } from "./popupRuntimeScript";
 import { ANALYTICS_BEACON_PATH, handlePublicAnalyticsApi } from "./publicAnalyticsApi";
 import {
   collectPrehydratedDetailBlockIds,
@@ -103,8 +104,12 @@ const resolvePublicThemeName = async () => {
   return profile?.themeName ?? "default";
 };
 
+// Builds every public HTML Response (fresh renders AND the cache-hit path).
+// The popup runtime script (TASK-486-03-L02) is injected after cache
+// read/write since it is static and identical for every page; injection is
+// memoized and side-effect free.
 const buildHtmlResponse = (html: string) =>
-  new Response(html, { headers: { "Content-Type": "text/html" } });
+  new Response(injectPopupRuntime(html), { headers: { "Content-Type": "text/html" } });
 
 type PublicHtmlRenderResult = {
   html: string;
