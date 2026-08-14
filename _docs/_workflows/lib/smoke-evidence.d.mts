@@ -247,3 +247,17 @@ export type {
   ChangelogIndexMutationV1,
   OrderedDurableWriterOptionsV1,
 } from "./smoke-evidence-closure.mjs";
+
+// Thin re-export surface for TASK-545-03-L05 (TASK-548 committed bootstrap
+// gate); mirrors the runtime re-export on smoke-evidence.mjs.
+export {
+  TASK_548_COMMITTED_BOOTSTRAP_PATHS_V1,
+  normalizeTask548CommittedSixPathBootstrapReceiptV1,
+  requireTask548CommittedSixPathBootstrapAuthorizationV1,
+} from "./smoke-evidence-task548.mjs";
+export type {
+  Task548CommittedBootstrapFileV1,
+  Task548CommittedBootstrapSixFilesV1,
+  Task548CommittedSixPathBootstrapReceiptV1,
+  VerifiedTask548CommittedSixPathBootstrapReceiptV1,
+} from "./smoke-evidence-task548.mjs";

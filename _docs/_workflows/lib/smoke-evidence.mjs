@@ -966,3 +966,12 @@ export {
   validateMetadataOnlyClosureDelta,
   writeOrResumeOrderedDurableChangelogFileThenIndexV1,
 } from "./smoke-evidence-closure.mjs";
+
+// Thin re-export surface for TASK-545-03-L05 (TASK-548 committed bootstrap
+// gate). The implementation lives only in smoke-evidence-task548.mjs; this
+// shared module must never absorb it (1,000-line gate).
+export {
+  TASK_548_COMMITTED_BOOTSTRAP_PATHS_V1,
+  normalizeTask548CommittedSixPathBootstrapReceiptV1,
+  requireTask548CommittedSixPathBootstrapAuthorizationV1,
+} from "./smoke-evidence-task548.mjs";
