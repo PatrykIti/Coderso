@@ -30,12 +30,18 @@ None; this is an executable leaf with the exclusive file ownership below.
 
 ## Exclusive ownership
 
-- new `_docs/_workflows/lib/smoke-evidence.mjs` closure exports
-  (`buildClosureMetadataMutationPlanV1`,
+- new `_docs/_workflows/lib/smoke-evidence-closure.mjs` (all closure exports:
+  `buildClosureMetadataMutationPlanV1`,
   `writeOrResumeOrderedDurableChangelogFileThenIndexV1`,
   `validateMetadataOnlyClosureDelta`, `buildExactClosureMetadataAllowlist`, and
-  their private helpers)
-- new `_docs/_workflows/lib/smoke-evidence.d.mts` closure type declarations
+  their private helpers, plus the `closure-delta` CLI entry)
+- new `_docs/_workflows/lib/smoke-evidence-closure.d.mts` (closure type
+  declarations)
+- `_docs/_workflows/lib/smoke-evidence.mjs` ONLY as a thin re-export surface
+  (`export { ... } from "./smoke-evidence-closure.mjs"`; a few lines, because
+  the 1,000-line gate is why this family was split from L01)
+- `_docs/_workflows/lib/smoke-evidence.d.mts` ONLY as a thin re-export type
+  surface mirroring the `.mjs` re-export
 - new `tests/unit/workflows/smokeEvidenceClosureDelta.test.ts`
 - test fixtures under `tests/fixtures/workflows/smoke-evidence/closure/`
 
@@ -250,13 +256,16 @@ TASK-545-03-L03 and TASK-545-03-L05, not this leaf.
 
 ```bash
 node --check _docs/_workflows/lib/smoke-evidence.mjs
+node --check _docs/_workflows/lib/smoke-evidence-closure.mjs
 node _docs/_workflows/lib/smoke-evidence.mjs closure-delta --help
 bun test tests/unit/workflows/smokeEvidenceClosureDelta.test.ts
 bun test tests/unit/workflows/smokeEvidenceCheckpoint.test.ts
 bun run lint:repo:types
 git diff --check
 wc -l _docs/_workflows/lib/smoke-evidence.mjs \
+  _docs/_workflows/lib/smoke-evidence-closure.mjs \
   _docs/_workflows/lib/smoke-evidence.d.mts \
+  _docs/_workflows/lib/smoke-evidence-closure.d.mts \
   tests/unit/workflows/smokeEvidenceClosureDelta.test.ts
 ```
 

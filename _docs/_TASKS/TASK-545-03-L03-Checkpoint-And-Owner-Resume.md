@@ -42,11 +42,20 @@ None; this is an executable leaf with the exclusive file ownership below.
 
 - existing `_docs/_workflows/smoke-evidence-checkpoint.schema.json` (checkpoint
   schema; owned with TASK-545-03-L01 for the manifest schema sibling)
-- new `_docs/_workflows/lib/smoke-evidence.mjs` checkpoint/resume exports
-  (`createResumeCheckpoint`, `resumeTrackedEvidence`, `openWorkflowClosureResume`,
-  `requireTaskBoundOwningWorkflow`, and their private helpers)
-- new `_docs/_workflows/lib/smoke-evidence.d.mts` checkpoint/closure type
-  declarations below
+- new `_docs/_workflows/lib/smoke-evidence-checkpoint.mjs` (all checkpoint/resume
+  exports: `createResumeCheckpoint`, `resumeTrackedEvidence`,
+  `openWorkflowClosureResume`, `requireTaskBoundOwningWorkflow`, and their
+  private helpers)
+- new `_docs/_workflows/lib/smoke-evidence-checkpoint.d.mts` (checkpoint/closure
+  type declarations below)
+- `_docs/_workflows/lib/smoke-evidence.mjs` ONLY as a thin re-export surface:
+  `export { createResumeCheckpoint, resumeTrackedEvidence,
+  openWorkflowClosureResume, requireTaskBoundOwningWorkflow } from
+  "./smoke-evidence-checkpoint.mjs"` (a few lines; the 1,000-line gate is why
+  this leaf was split from L01, so the shared module must never absorb the
+  checkpoint implementation)
+- `_docs/_workflows/lib/smoke-evidence.d.mts` ONLY as a thin re-export type
+  surface mirroring the `.mjs` re-export
 - new `tests/unit/workflows/smokeEvidenceCheckpoint.test.ts`
 - test fixtures under `tests/fixtures/workflows/smoke-evidence/checkpoint/`
 
@@ -454,12 +463,15 @@ changelog marker fixtures belong to TASK-545-03-L04, not this leaf.
 
 ```bash
 node --check _docs/_workflows/lib/smoke-evidence.mjs
+node --check _docs/_workflows/lib/smoke-evidence-checkpoint.mjs
 bun test tests/unit/workflows/smokeEvidenceCheckpoint.test.ts
 bun test tests/unit/workflows/smokeEvidence.test.ts
 bun run lint:repo:types
 git diff --check
 wc -l _docs/_workflows/lib/smoke-evidence.mjs \
+  _docs/_workflows/lib/smoke-evidence-checkpoint.mjs \
   _docs/_workflows/lib/smoke-evidence.d.mts \
+  _docs/_workflows/lib/smoke-evidence-checkpoint.d.mts \
   tests/unit/workflows/smokeEvidenceCheckpoint.test.ts
 ```
 

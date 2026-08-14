@@ -29,13 +29,18 @@ None; this is an executable leaf with the exclusive file ownership below.
 
 ## Exclusive ownership
 
-- new `_docs/_workflows/lib/smoke-evidence.mjs` TASK-548 bootstrap exports
-  (`TASK_548_COMMITTED_BOOTSTRAP_PATHS_V1`,
+- new `_docs/_workflows/lib/smoke-evidence-task548.mjs` (all TASK-548 bootstrap
+  exports: `TASK_548_COMMITTED_BOOTSTRAP_PATHS_V1`,
   `normalizeTask548CommittedSixPathBootstrapReceiptV1`,
   `requireTask548CommittedSixPathBootstrapAuthorizationV1`, and their private
   helpers)
-- new `_docs/_workflows/lib/smoke-evidence.d.mts` TASK-548 receipt type
-  declarations below
+- new `_docs/_workflows/lib/smoke-evidence-task548.d.mts` (TASK-548 receipt type
+  declarations)
+- `_docs/_workflows/lib/smoke-evidence.mjs` ONLY as a thin re-export surface
+  (`export { ... } from "./smoke-evidence-task548.mjs"`; a few lines, because
+  the 1,000-line gate is why this family was split from L01)
+- `_docs/_workflows/lib/smoke-evidence.d.mts` ONLY as a thin re-export type
+  surface mirroring the `.mjs` re-export
 - new `tests/unit/workflows/smokeEvidenceTask548Bootstrap.test.ts`
 - test fixtures under `tests/fixtures/workflows/smoke-evidence/task548/`
 
@@ -153,12 +158,15 @@ shapes belong to TASK-545-03-L03 and TASK-545-03-L04, not this leaf.
 
 ```bash
 node --check _docs/_workflows/lib/smoke-evidence.mjs
+node --check _docs/_workflows/lib/smoke-evidence-task548.mjs
 bun test tests/unit/workflows/smokeEvidenceTask548Bootstrap.test.ts
 bun test tests/unit/workflows/smokeEvidenceCheckpoint.test.ts
 bun run lint:repo:types
 git diff --check
 wc -l _docs/_workflows/lib/smoke-evidence.mjs \
+  _docs/_workflows/lib/smoke-evidence-task548.mjs \
   _docs/_workflows/lib/smoke-evidence.d.mts \
+  _docs/_workflows/lib/smoke-evidence-task548.d.mts \
   tests/unit/workflows/smokeEvidenceTask548Bootstrap.test.ts
 ```
 
