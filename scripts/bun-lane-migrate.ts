@@ -17,12 +17,20 @@
  *   tags. Re-runs skip already-applied tags.
  * - `applyMigrationFile` runs one file's chunks inside ONE transaction with
  *   `SET LOCAL search_path TO <schema>, public`. Unqualified DDL lands in the
- *   worker schema (first search_path entry; all 71 migration files contain
- *   zero `public.` qualified DDL), while `public` stays resolvable for
- *   extension objects: `0006_search_indexes.sql` uses the `gin_trgm_ops`
+ *   worker schema (first search_path entry), while `public` stays resolvable
+ *   for extension objects: `0006_search_indexes.sql` uses the `gin_trgm_ops`
  *   operator class created by `pg_trgm`, and operator classes are resolved
  *   through `search_path`. `public` is NOT implicitly searched, so a
- *   single-schema search_path would break 0006's GIN indexes. The applied tag
+ *   single-schema search_path would break 0006's GIN indexes.
+ * - The migration files are shared verbatim with the production/public path
+ *   (drizzle migrator + `startupMigrations.ts`), so they stay byte-identical.
+ *   Drizzle emits `REFERENCES "public"."<table>"` for every FK (73 clauses
+ *   across 34 files). `rewritePublicReferences` rewrites those clauses to the
+ *   TARGET schema (`REFERENCES "<schema>"."<table>"`) at apply time, so
+ *   worker-schema FKs resolve within the worker schema instead of dangling
+ *   into `public` (PostgreSQL 23503 on every cross-table insert). All
+ *   referenced tables are created by the migration set itself, so the
+ *   rewritten target always exists in the migrated schema. The applied tag
  *   row commits atomically with that file's chunks.
  * - `migrateSchema` creates the schema if missing, applies every pending
  *   journal tag with per-file transactions (NEVER one whole-run transaction:
@@ -65,6 +73,26 @@ export function splitStatements(sqlText: string): string[] {
     .filter((chunk) => chunk.length > 0);
 }
 
+/**
+ * Rewrite drizzle-generated `REFERENCES "public"."<table>"` clauses to the
+ * target schema at apply time. The migration SQL files are shared verbatim
+ * with the production/public path (drizzle migrator + startupMigrations), so
+ * they must stay byte-identical; only the worker-schema applier rewrites the
+ * public qualification so every FK resolves inside the worker schema.
+ *
+ * Every referenced table is created by the migration set itself (verified:
+ * 73 clauses across 34 files, 31 distinct tables, none missing), so the
+ * rewritten target always exists in the migrated schema. `public` stays
+ * resolvable through `search_path` for extension objects (pg_trgm operator
+ * classes); only explicit `REFERENCES "public"."X"` is rewritten.
+ */
+export function rewritePublicReferences(statement: string, schema: string): string {
+  return statement.replace(
+    /REFERENCES\s+"public"\."([^"]+)"/g,
+    (_match, table: string) => `REFERENCES "${schema}"."${table}"`
+  );
+}
+
 export async function appliedTags(client: postgres.Sql, schema: string): Promise<Set<string>> {
   await client.unsafe(
     `create table if not exists "${schema}"."${TRACK_TABLE}" ("tag" text primary key)`
@@ -85,7 +113,7 @@ export async function applyMigrationFile(
     // extension, installed in public) stays resolvable for 0006 GIN indexes.
     await tx.unsafe(`set local search_path to "${schema}", public`);
     for (const statement of statements) {
-      await tx.unsafe(statement);
+      await tx.unsafe(rewritePublicReferences(statement, schema));
     }
     await tx.unsafe(`insert into "${schema}"."${TRACK_TABLE}" ("tag") values ('${tag}')`);
   });

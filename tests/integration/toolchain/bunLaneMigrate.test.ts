@@ -15,6 +15,12 @@
  *   in `_bun_migrations`).
  * - `to_regclass('bun_provision_test.pages')` / `settings` are non-null after
  *   the run (unqualified DDL landed in the worker schema via search_path).
+ * - Worker-schema FKs resolve INSIDE the worker schema: every FK whose
+ *   referencing table lives in `bun_provision_test` references a table in the
+ *   same schema (confrelid proof), and zero FKs reference `public`. The
+ *   applier rewrites drizzle's `REFERENCES "public"."X"` to the target schema
+ *   at apply time; without the rewrite every cross-table insert would hit
+ *   PostgreSQL 23503.
  * - `pg_trgm` exists exactly once database-wide in `pg_extension`.
  *
  * The throwaway `bun_provision_test` schema is dropped before and after the
@@ -56,6 +62,49 @@ test.skipIf(!DATABASE_DIRECT_URL)(
     );
     expect(rows[0].pages).toBe(`${SCHEMA}.pages`);
     expect(rows[0].settings).toBe(`${SCHEMA}.settings`);
+  },
+  120000
+);
+
+test.skipIf(!DATABASE_DIRECT_URL)(
+  "worker-schema FKs resolve inside the worker schema, never into public (confrelid proof)",
+  async () => {
+    // The applier rewrites `REFERENCES "public"."X"` to the target schema at
+    // apply time (TASK-557 FK fix). Pin the catalog result: every FK whose
+    // referencing table lives in this schema must reference a table in the
+    // SAME schema. Before the fix, confrelid pointed at public.<table>, so
+    // every cross-table insert hit PostgreSQL 23503.
+    const constraints = await sql!.unsafe(
+      `select con.conname,
+              relns.nspname as referencing_schema,
+              refns.nspname as referenced_schema,
+              refrel.relname as referenced_table
+       from pg_constraint con
+       join pg_class rel on rel.oid = con.conrelid
+       join pg_namespace relns on relns.oid = rel.relnamespace
+       join pg_class refrel on refrel.oid = con.confrelid
+       join pg_namespace refns on refns.oid = refrel.relnamespace
+       where con.contype = 'f'
+         and relns.nspname = '${SCHEMA}'
+       order by con.conname`
+    );
+    expect(constraints.length).toBeGreaterThan(0);
+    for (const c of constraints) {
+      expect(c.referenced_schema, c.conname).toBe(SCHEMA);
+    }
+    // And no FK in this schema references the public schema at all.
+    const intoPublic = await sql!.unsafe(
+      `select count(*)::int as n
+       from pg_constraint con
+       join pg_class rel on rel.oid = con.conrelid
+       join pg_namespace relns on relns.oid = rel.relnamespace
+       join pg_class refrel on refrel.oid = con.confrelid
+       join pg_namespace refns on refns.oid = refrel.relnamespace
+       where con.contype = 'f'
+         and relns.nspname = '${SCHEMA}'
+         and refns.nspname = 'public'`
+    );
+    expect(intoPublic[0].n).toBe(0);
   },
   120000
 );
