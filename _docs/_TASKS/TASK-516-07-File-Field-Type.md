@@ -13,7 +13,8 @@ TASK-516-06 (`formEmbed.tsx` + `FormRuntimePreviewDialog.tsx` primary owners —
 ship first so 516-07 can add the File controls), TASK-516-03 (`FieldLibrary.tsx` +
 `FormBuilderPage.tsx` primary owners — must ship first so 516-07 can add the File
 rail item). Lands LAST — see the File-case ownership note below.
-**Status:** ✅ Done (2026-07-06)
+**Status:** ✅ Done
+**Completed:** 2026-07-06
 
 ---
 

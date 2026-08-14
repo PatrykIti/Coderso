@@ -2,7 +2,7 @@
 
 Date: 2026-07-09
 Version: Unreleased
-Tasks: TASK-531 (+ 531-01 / 531-02 subtasks + 531-01-L01…L04 leaves)
+Tasks: TASK-531, TASK-531-01, TASK-531-01-L01, TASK-531-01-L02, TASK-531-01-L03, TASK-531-01-L04, TASK-531-02
 
 ## Key Changes
 
@@ -158,9 +158,10 @@ allowlist-hardened at write + BOTH render boundaries.
 - `test:vitest` — changed pages files (`page-authoring-sanitizers`, `page-document-v2`,
   `page-editor-control-registry`, `page-renderer-v2`, `page-responsive-css`) 377/377;
   broad `tests/vitest/pages/` 635/635 (23 files).
-- `test:bun` — <FILL: pass/skip/fail> (the DB-backed lanes; any residual fail = the
-  known shared-remote-DB seed-count / 15s-timeout transient, green in isolation).
-- `gates:coderso` — <FILL: N/5> (functional, ux, performance, security, reliability);
+- `test:bun` — 1489 pass / 1 skip / 7 fail on the full run (all 7 = the known
+  slow-remote-DB 15s-timeout transient class; `detailPages` routes green 10/0 in
+  isolation at 30s; no pages suite fails).
+- `gates:coderso` — 5/5 PASS (functional, ux, performance, security, reliability);
   the SECURITY gate is green (the one new attack surface — the relaxed multi-layer
   background — rejects `url()`/`javascript:`/`data:text/html`/`expression`/`@import`/
   over-cap at write AND both render boundaries; glow is a structured spec, no raw string

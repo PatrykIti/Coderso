@@ -137,4 +137,3 @@ does not concatenate it into a larger declaration where a smuggled value could b
 3. No raw author string in any CSS declaration; gradient is a static tone-colored
    template.
 4. All edits inside a labelled `TASK-532` region.
-</content>

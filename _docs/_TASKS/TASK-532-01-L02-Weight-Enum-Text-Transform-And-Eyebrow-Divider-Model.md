@@ -168,4 +168,3 @@ render (author color retint via the divider's frame `style.background` /
    and responsive-override (no `partialBlockStyleJsonSchema`), `additionalProperties:false`.
 4. Owned enum-membership tests re-baselined for 4→6; all edits inside a labelled
    `TASK-532` region.
-</content>

@@ -8,7 +8,8 @@
 **Estimated Effort:** Medium
 **Dependencies:** TASK-516-01 (foundation only; no shared write). Independent of
 516-03/04.
-**Status:** ✅ Done (2026-07-06)
+**Status:** ✅ Done
+**Completed:** 2026-07-06
 
 ---
 

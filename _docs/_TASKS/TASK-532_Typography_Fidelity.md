@@ -407,5 +407,3 @@ Vitest, `bun test`, `gates:coderso`); ≥5-scenario Playwright smoke passes ligh
 with 0 console errors side-by-side vs the prototype; closure documented under the
 then-current next-free changelog (grep `_docs/_CHANGELOG/` highest+1; highest on disk
 1242 at authoring; 531–534 take 1243+).
-</content>
-</invoke>

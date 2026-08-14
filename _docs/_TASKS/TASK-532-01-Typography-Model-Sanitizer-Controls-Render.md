@@ -55,4 +55,3 @@ the fence ordering keeps the file coherent.
    `sanitizeAuthoringCssBackground`; enums fail-closed.
 4. Every shared-file edit inside a labelled `TASK-532` region.
 5. Owned enum-membership tests re-baselined for the 4→6 weight growth (L02).
-</content>

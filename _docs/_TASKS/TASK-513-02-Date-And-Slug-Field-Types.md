@@ -7,7 +7,8 @@
 **Category:** Content (Engine) / Field Model / JSON-Schema Mapping / Entry Rendering
 **Estimated Effort:** Medium
 **Dependencies:** none code-wise (independent of 513-01); lands 2nd in order
-**Status:** ✅ Done (2026-07-06)
+**Status:** ✅ Done
+**Completed:** 2026-07-06
 
 ---
 

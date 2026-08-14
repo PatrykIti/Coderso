@@ -22,7 +22,8 @@
   machinery every new style field rides for free), TASK-522/524/525 (the composition
   toolkit, `surfaceTint`, present-only style-field precedent already on this tree).
 
-**Status:** ✅ Done (2026-07-09)
+**Status:** ✅ Done
+**Completed:** 2026-07-09
 **Closure changelog:** Assigned at closure as the then-current next-free (grep
 `_docs/_CHANGELOG/` highest+1). As of authoring the highest on disk is **1242**
 (TASK-530); **531–534 take 1243+** (531 = the first of the four premium-fidelity

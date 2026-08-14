@@ -19,7 +19,8 @@ composable-effects program. No code dependency beyond those seams; it corrects
 regressions/edge-cases the program introduced and hardens the shared render/
 sanitizer paths.
 
-**Status:** ✅ Done (2026-07-09)
+**Status:** ✅ Done
+**Completed:** 2026-07-09
 **Closure changelog:** 1243.
 
 ---

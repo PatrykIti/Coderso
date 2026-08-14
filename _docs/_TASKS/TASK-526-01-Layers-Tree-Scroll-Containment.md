@@ -6,7 +6,8 @@
 **Priority:** Medium
 **Category:** Admin UI / Pages (Page Editor v2) / Accessibility
 **Estimated Effort:** Small
-**Status:** ✅ Done (2026-07-08)
+**Status:** ✅ Done
+**Completed:** 2026-07-08
 **Depends on:** — (foundation; the only subtask of TASK-526).
 
 ---

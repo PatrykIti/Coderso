@@ -7,7 +7,8 @@
 **Category:** Admin UI / Entries
 **Estimated Effort:** Medium
 **Dependencies:** TASK-514-02 (client `visibility`/`hasPassword` fields + payload)
-**Status:** ✅ Done (2026-07-06)
+**Status:** ✅ Done
+**Completed:** 2026-07-06
 
 ---
 

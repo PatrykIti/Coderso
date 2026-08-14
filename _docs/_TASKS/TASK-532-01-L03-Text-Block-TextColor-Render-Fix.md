@@ -125,4 +125,3 @@ prop. The rich HTML body remains sanitized by `sanitizeAuthoringRichTextHtml`
 2. No model, allowlist, schema, or control change (all pre-exist); render-only fix.
 3. Color exclusively via `sanitizeAuthoringCssColor` (fail-soft to omitted).
 4. Plain-text path unchanged; rich-path fix inside a labelled `TASK-532` fence.
-</content>

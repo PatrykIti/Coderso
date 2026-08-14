@@ -6,7 +6,8 @@
 **Category:** Admin UI / Entries / Schema
 **Estimated Effort:** Large
 **Dependencies:** TASK-479 (Soft-Violet admin redesign; `PageHeader`/`SectionCard`/`StatusTabs`/`AdminShell` shared patterns), TASK-468 (entries model + editor foundations), relates to **TASK-487** (revision history/restore + SEO-field surfacing — scopes kept DISTINCT; this task leaves a clean seam, see Coordination)
-**Status:** ✅ Done (2026-07-06)
+**Status:** ✅ Done
+**Completed:** 2026-07-06
 
 ---
 

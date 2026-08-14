@@ -5,7 +5,8 @@
 **Priority:** High
 **Category:** Admin UI / Content (Engine / Content Types) / Editor Fidelity / Schema Extension
 **Estimated Effort:** Large
-**Status:** ✅ Done (2026-07-06)
+**Status:** ✅ Done
+**Completed:** 2026-07-06
 **Closure Changelog (pinned):** 1226
 
 ---

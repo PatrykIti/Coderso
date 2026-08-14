@@ -7,7 +7,8 @@
 **Priority:** High
 **Category:** Security / Site Render
 **Estimated Effort:** Medium
-**Status:** ✅ Done (2026-07-09)
+**Status:** ✅ Done
+**Completed:** 2026-07-09
 
 ---
 

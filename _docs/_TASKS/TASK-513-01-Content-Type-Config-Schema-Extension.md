@@ -7,7 +7,8 @@
 **Category:** Content (Engine) / DB Migration / Service Contract / Validation
 **Estimated Effort:** Medium
 **Dependencies:** none (foundation — lands FIRST)
-**Status:** ✅ Done (2026-07-06)
+**Status:** ✅ Done
+**Completed:** 2026-07-06
 
 ---
 

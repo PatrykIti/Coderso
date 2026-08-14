@@ -131,4 +131,3 @@ No control introduces a raw-CSS or raw-color path.
 2. `fontWeight` options grow via the enum reference (no manual option list).
 3. Reset paths use the enum `"none"` member / `fallback`, never a bogus `""` option.
 4. All additions inside a labelled `TASK-532` region; divider controls are per-type.
-</content>

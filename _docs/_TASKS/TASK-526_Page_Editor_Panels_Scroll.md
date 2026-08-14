@@ -16,7 +16,8 @@
   (`core/admin/ui/pages/editor/`) — `PageEditorCommandPalette.tsx` is the in-repo
   reference implementation of the sticky-header + scroll-body shape this task copies.
 
-**Status:** ✅ Done (2026-07-08)
+**Status:** ✅ Done
+**Completed:** 2026-07-08
 **Closure changelog:** 1236. Assigned at closure as the then-current next-free (grep
 `_docs/_CHANGELOG/` highest+1). As of authoring the highest on disk is **1235**, so
 this task takes the then-current next-free at ITS closure (do **NOT** hardcode a

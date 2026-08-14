@@ -9,7 +9,8 @@
 **Dependencies:** TASK-513-01 (client `config`/save), TASK-513-02 (`FieldType` union widened with
 `date`/`slug` — the prerequisite that makes this file's new palette entries type-valid — plus the
 `buildSchemaFromFields`/`fieldsFromSchema` mapping and `FieldEditor` config UI)
-**Status:** ✅ Done (2026-07-06)
+**Status:** ✅ Done
+**Completed:** 2026-07-06
 
 ---
 
