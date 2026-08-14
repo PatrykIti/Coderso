@@ -53,9 +53,11 @@ bun run check:admin-bundle
 for the Vitest process so React test helpers and test-only assistant diagnostics
 do not inherit production shell settings. CI can provide the same values through
 job environment variables without creating a local `.env` file.
-`test:bun` runs the DB/runtime lane serially with a `15000ms` per-test timeout;
-the lane exercises real database and runtime flows that can exceed Bun's default
-`5000ms` timeout under full-suite load.
+`test:bun` runs the parallel lane orchestrator (`bun scripts/run-bun-parallel.ts
+--lane all`): DB-backed B/C files across per-worker schemas, the pure A lane at
+`--parallel=16`, and the serial perf lane after B/C/A. Each worker test uses a
+`15000ms` per-test timeout; the lane exercises real database and runtime flows
+that can exceed Bun's default `5000ms` timeout under full-suite load.
 Selected DB-backed runtime HTTP suites may also pass a higher `idleTimeout` to
 `startHttpServer` so Bun does not reset an in-flight request while the handler
 waits on database-backed settings or auth checks.
