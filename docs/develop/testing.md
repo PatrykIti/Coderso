@@ -92,6 +92,58 @@ tests/perf/          # performance budgets
 tests/security/      # public-write hardening + security baseline
 ```
 
+## Writing a new Bun lane test (A/B/C/perf buckets)
+
+Every `*.test.{ts,tsx}` under the `test:bun` lane dirs is classified into one
+of four buckets by `scripts/bun-lane-classify.ts` (`tests/bun-lane-manifest.json`
+is the source of truth; **never hand-edit it**). Before writing a Bun test,
+decide which bucket it belongs to — the classifier decides automatically, but
+you must write the test so the classification is correct:
+
+- **`perf`** — anything under `tests/perf/`. Runs serially, strictly after all
+  other workers (CPU-isolated). Never add wall-time gates outside `tests/perf/`.
+- **`A` (DB-free, parallel)** — the module-load graph must NOT reach
+  `core/db/client` or `core/db/schema`, directly or transitively. The pure lane
+  strips `DATABASE_URL` and runs with `--env-file=/dev/null`, so any file whose
+  import graph touches the DB fails loudly. The classifier follows transitive
+  static imports AND module-scope top-level `await import(...)`; it honors
+  module-scope mocks (`mock.module`, `vi.mock`) that stub the awaited graph.
+  Type-only imports are fine (erased at compile time).
+- **`B` (DB-backed, self-scoped, parallel)** — uses the DB but owns its rows:
+  unique `randomUUID()` keys, delete-only cleanup, no shared mutable tables.
+  Runs on per-worker schemas (`bun_worker_N`), so FK references are rewritten
+  to the worker schema automatically.
+- **`C` (shared mutable state, serial)** — touches global settings keys
+  (`setSetting`/`setSettings`), the singleton `backup_schedules` table, the
+  fixed `4dd7f4d4` detailPageId literal, or otherwise contends across workers.
+  Runs serially on one worker. Prefer scoping your fixtures to B instead.
+
+Practical rules for every new Bun test:
+
+1. **No top-level DB coupling in A-class files** — even through a helper chain
+   (`tokenService -> settingsService -> db/client`). If a pure-looking module
+   transitively imports `core/db/client`, move it to `tests/vitest/` (after
+   fixing the production seam) or accept the B bucket.
+2. **Row-lock / concurrency tests need 2+ connections** — the lane default is
+   `DB_POOL_MAX=2` (workers × pool ≤ 10, default 5 workers). Do not write a
+   test that holds a row lock on its only connection and then needs a second
+   one for the mutation; open a second client explicitly if required.
+3. **Cleanup only what you own** — never truncate/delete whole domain tables;
+   use unique keys and delete-only teardown so workers never collide.
+4. **Use `TMPDIR=/tmp` when running locally** — the jcode scratch dir has
+   metadata-inconsistent semantics that break identity-sensitive tests.
+
+After adding or moving a Bun test file, regenerate the manifest from the repo
+root:
+
+```bash
+bun scripts/bun-lane-classify.ts   # deterministic; updates tests/bun-lane-manifest.json
+bun test tests/unit/toolchain/bunLaneManifest.test.ts  # pins golden set + DB-free invariant
+```
+
+Then run your file in isolation (fast feedback), and the full lane via
+`bun run test:bun` before closing the task.
+
 ## Release gates (brief)
 
 Five mandatory gates back every release; any failure exits non-zero and blocks the release. The runner is `scripts/coderso-release-gates.ts`.
