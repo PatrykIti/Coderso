@@ -7,7 +7,8 @@
 **Category:** Workflow Infrastructure / False-Clean Prevention / Static Tests
 **Estimated Effort:** Medium
 **Dependencies:** TASK-545-01-L02 (terminal leaf; it requires TASK-545-02-L02, so this parent completes only after the 545-02 line lands)
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-08-14
 **Changelog:** 1257 (pinned; closure only)
 
 ---

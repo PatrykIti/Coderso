@@ -8,7 +8,8 @@
 **Category:** Workflow Static Tests / Contributor Safety
 **Estimated Effort:** Medium
 **Dependencies:** TASK-545-01-L01, TASK-545-02-L02
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-08-14
 **Changelog:** 1257 (pinned; closure only)
 
 ---

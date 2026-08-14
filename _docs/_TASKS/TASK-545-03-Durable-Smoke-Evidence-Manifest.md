@@ -7,7 +7,8 @@
 **Category:** Workflow Evidence / Runtime Smoke / Integrity
 **Estimated Effort:** Medium
 **Dependencies:** TASK-545-01-L02, TASK-545-02
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-08-14
 **Changelog:** 1257 (pinned; closure only)
 
 ---

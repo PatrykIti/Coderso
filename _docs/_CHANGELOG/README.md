@@ -37,9 +37,9 @@ Changelog 1258 is consumed by the terminal TASK-9999-01-L02 re-triage and supers
 by completed TASK-540-02-L01.
 Changelog 1259 is consumed by the completed TASK-546 family.
 Changelog 1260 is consumed by the completed TASK-547 family.
-Changelog 1252 is consumed by the completed TASK-540 family. Changelogs 1251, 1254,
-and 1257 remain reserved for the implementation closure of TASK-539, TASK-542, and
-TASK-545, respectively.
+Changelog 1252 is consumed by the completed TASK-540 family. Changelogs 1251 and 1254 remain reserved for the implementation closure of
+TASK-539 and TASK-542, respectively. Changelog 1257 is consumed by the completed
+TASK-545 workflow/evidence/task-graph family.
 Changelog 1261 is reserved for the implementation closure of TASK-548.
 Changelog 1262 is consumed by the completed TASK-550 docs/process task.
 Changelog 1263 is reserved for the implementation closure of TASK-551.
@@ -66,6 +66,7 @@ Parallel Speedup on direct 5432).
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 1257 | 2026-08-14 | TASK-545 Workflow, Smoke Evidence, and Task-Graph Integrity — all-results guard, canonical workflow drivers, durable smoke-evidence manifest/checkpoint/closure/TASK-548-bootstrap family, bounded historical graph/index repair (TASK-528/529/530 parents, TASK-533 changelog 1247, normalized statuses), and the whole-inventory taskGraphIntegrity gate. 4 children + 13 leaves terminal; board statistics recalculated from physical files. | Workflow/Task Graph/Docs/Testing/Task Board |
 | 1265 | 2026-08-06 | TASK-553 Runtime Smoke Authoring Cookbook — one source-grounded contributor recipe for static suite registration, thin adapters, lifecycle, persistent Bun/DB workers, transactional batches, Playwright segmentation, evidence, truthful checkpoint scope, reports, focused tests, and shared-wrapper reuse | Testing/Developer Experience/Documentation/Task Board |
 | 1267 | 2026-08-11 | TASK-554 Post Metadata Publish RBAC Hardening — conditional all-of publish authorization, present-only metadata, exact calendar validation, race-safe Admin cache/editor hydration, and seven-flow shared smoke | Posts/RBAC/Security/Admin UI/Caching/Testing/Docs/Task Board |
 | 1264 | 2026-08-06 | TASK-552 Runtime Smoke Harness Performance — native TASK-540 migration, exact legacy deletion, shared persistent workers/Playwright/dev-host lifecycle, and final 5:49 fast plus 11:22 certification proof | Testing/Developer Experience/Performance/Reliability/Security/Docs/Task Board |

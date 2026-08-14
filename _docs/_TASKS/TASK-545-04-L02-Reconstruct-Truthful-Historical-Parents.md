@@ -8,7 +8,8 @@
 **Category:** Task Graph / Historical Reconstruction
 **Estimated Effort:** Small
 **Dependencies:** TASK-545-04-L01
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-08-14
 **Changelog:** 1257 (pinned; closure only)
 
 ---

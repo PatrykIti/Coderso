@@ -8,7 +8,8 @@
 **Category:** Workflow Evidence / Schema / Integrity
 **Estimated Effort:** Medium
 **Dependencies:** TASK-545-01-L02, TASK-545-02-L02
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-08-14
 **Changelog:** 1257 (pinned; closure only)
 **Split:** 2026-08-13 — scope A retained here; checkpoint/resume → TASK-545-03-L03, closure metadata/delta + `closure-delta` CLI → TASK-545-03-L04, TASK-548 bootstrap gate → TASK-545-03-L05
 
