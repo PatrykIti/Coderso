@@ -1,0 +1,13 @@
+{
+  "taskId": "TASK-545",
+  "suiteId": "task-545",
+  "profile": "certification",
+  "session": "task-545-certification",
+  "runId": "1111111111111111111111111111111111111111111111111111111111111111",
+  "checkpointSha256": "abababababababababababababababababababababababababababababababab",
+  "changelogNumber": 1257,
+  "changelogSlug": "task-545-smoke-evidence-checkpoint",
+  "closureUtcDate": "2026-08-14",
+  "pinnedChangelogPath": "_docs/_CHANGELOG/1257-2026-08-14-task-545-smoke-evidence-checkpoint.md",
+  "durableState": "both"
+}

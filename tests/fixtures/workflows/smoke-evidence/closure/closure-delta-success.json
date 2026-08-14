@@ -1,0 +1,15 @@
+{
+  "pass": true,
+  "taskId": "TASK-545",
+  "runId": "1111111111111111111111111111111111111111111111111111111111111111",
+  "durableState": "both",
+  "closureMetadataRevision": {
+    "gitHead": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "workingTreeDirty": true,
+    "workingTreeSha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+  },
+  "changedPaths": [
+    "_docs/_CHANGELOG/1257-2026-08-14-task-545-smoke-evidence-checkpoint.md",
+    "_docs/_CHANGELOG/README.md"
+  ]
+}
