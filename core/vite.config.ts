@@ -3,9 +3,18 @@ import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import { defineConfig } from "vite";
 
+// The admin base path mirrors the backend's `site.adminPath` setting (default
+// `/admin`). The dev host resolves that setting from the DB and exports
+// `VITE_ADMIN_BASE_PATH` (e.g. `/admin-panel/`) so the SPA, the proxy, and the
+// redirect all honor the operator-chosen path. Build output stays relative.
+const adminBase = process.env.VITE_ADMIN_BASE_PATH ?? "/admin/";
+const normalizedAdminBase = adminBase.endsWith("/") ? adminBase : `${adminBase}/`;
+const adminPath = normalizedAdminBase.slice(0, -1);
+const apiPrefix = `${adminPath}/api`;
+
 export default defineConfig(({ command }) => ({
   root: path.resolve(__dirname, "./admin"),
-  base: command === "build" ? "./" : "/admin/",
+  base: command === "build" ? "./" : normalizedAdminBase,
   plugins: [
     react(),
     tailwindcss(),
@@ -13,9 +22,9 @@ export default defineConfig(({ command }) => ({
       name: "admin-base-redirect",
       configureServer(server) {
         server.middlewares.use((req, res, next) => {
-          if (req.url === "/admin") {
+          if (req.url === adminPath) {
             res.statusCode = 307;
-            res.setHeader("Location", "/admin/");
+            res.setHeader("Location", `${adminPath}/`);
             res.end();
             return;
           }
@@ -36,7 +45,7 @@ export default defineConfig(({ command }) => ({
       allow: [path.resolve(__dirname)],
     },
     proxy: {
-      "/admin/api": {
+      [apiPrefix]: {
         target: process.env.VITE_API_ORIGIN ?? "http://localhost:3000",
         changeOrigin: true,
       },
