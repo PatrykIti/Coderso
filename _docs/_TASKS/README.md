@@ -83,9 +83,9 @@ Task board for project work. Keep task files and this board in sync.
   Do not move a leaf task to `Done` until either its standalone changelog
   exists or the family changelog records that leaf.
 
-- **To Do:** 349 tasks
+- **To Do:** 348 tasks
 - **In Progress:** 6 tasks
-- **Done:** 3400 tasks
+- **Done:** 3403 tasks
 
 > TASK-479 (25 subtasks 05–29 + 92 leaves) and TASK-480 (umbrella + 6 subtasks +
 > 18 leaves) were broken down 2026-06-27. The table below lists the
@@ -178,7 +178,6 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-481 | Page Editor Canvas Brand-Token WYSIWYG | Medium | Medium | Brand colors (primary/secondary/accent/border) applied to a block render admin-themed in the canvas (admin `@theme` wins) while previews/front show the site token. Emit site brand `--color-*` on a content-only scope that excludes editor chrome (rings/outlines/tiles), then unify inline+block-level brand previews. Follow-up to TASK-477-02 (neutrals done). 4 subtasks (01–04) + 9 leaves. |
 | TASK-511 | Backup v2 — Scalable, Compressed, Encrypted, Importable | High | Very Large | FEATURE (follow-up to TASK-484): streaming/batched export+restore (no OOM at scale), gzip + AES-256-GCM/scrypt encrypted `.cbk` archive (NDJSON+tar), media file bytes, opt-in users+RBAC-matrix include (encrypted-only), import-of-file pipeline, scheduler full-backup + admin UI. Contracts authored + drift-audited (tracked on this branch; no extra worktree). Changelog 1229; migration next-free. To Do; obsolete-audit per TASK-545-04-L01. 7 subtasks (01–07). |
 | TASK-517 | Entry Visibility — Public Front Enforcement | High | Medium | Follow-up to TASK-514: enforce `content_entries.visibility` on the PUBLIC render path — `private`→auth-gate (404 anon, no existence leak), `password`→HMAC-signed prompt-gate (verify vs hashed `access_password`), cache exclusion for gated bodies. Parent authored 2026-07-06. Changelog 1230; no own migration (reuses 514 model). 3 subtasks (to be broken down). |
-| TASK-518 | Seed Default Admin Role via Migration (stable id, admin-only) | High | Small | Seed the default `admin` role (`["*"]`) via a migration with a STABLE fixed id (idempotent), so a fresh `db:migrate` is complete + RBAC backup/restore (511) is cross-install consistent; point createFirstAdmin + seedAdmin at it. Owner: admin-only, NO editor/viewer (security first). Parent authored 2026-07-06. Changelog 1231; migration next-free. 2 subtasks (to be broken down). |
 | TASK-485 | Plugin Store: Real Registry & Install Pipeline | High | Large | FEATURE: the store UI is 100% mock; wire it to the real `core/store` + `installService` + `/plugins` pipeline (browse/install/update/uninstall). 5 subtasks (01–05) + 15 leaves. |
 | TASK-487 | Entries: Revision History & Restore | Medium | Medium | FEATURE: entry revisions are written but unviewable/unrestorable. Adds revisions/restore route+service + editor drawer (parity with Posts/Pages). 3 subtasks (01–03) + 6 leaves. |
 | TASK-488 | Commerce: Variant Editor & Collections CRUD UI | Medium | Medium | FEATURE (frontend-only; backend complete): variant add/edit/remove card + collections create/edit/delete UI. NOT orders (out of v1 scope). 3 subtasks (01–03) + 6 leaves. |
@@ -217,6 +216,7 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-9999 | Permanent Deferred Non-User-Facing Low-Severity Backlog | Low | Very Large | Sole four-digit sentinel and intentionally permanent final board item. Accepts only evidence-backed LOW findings that satisfy the strict zero-user-visible and zero-contract-impact policy in `AGENTS.md`; source tasks must link deduplicated execution-ready leaves with exact rationale. Completed children/leaves retain normal changelog + board/stat closure. Current intake: TASK-9999-01 from TASK-540 with 1 open leaf and 1 superseded leaf (changelog 1258). |
 ## Done
 
+| TASK-518 | Seed Default Admin Role via Migration (Stable ID, Admin-Only) | High | Small | ✅ Done (2026-08-14): stable DEFAULT_ADMIN_ROLE_ID + idempotent migration 0071 (fresh db:migrate has exactly one admin role), createFirstAdmin/seedAdmin aligned with legacy fallback; admin role only, no privilege change. Changelog 1231. 2 subtasks terminal. |
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
 | TASK-557 | Bun Test Lane Remote Parallel Speedup (direct 5432) | High | Very Large | ✅ Done (2026-08-14): `bun run test:bun` now runs the weighted parallel orchestrator on remote direct-5432 — per-worker `bun_worker_N` schemas + custom migration applier (FK references rewritten per schema), weighted B/C runner with retry-once, DB-free A lane (transitive-import classifier + module-scope await following), serial perf lane, fence namespace isolation, pool 2 / workers 5 (row-lock safe). Full-lane acceptance PASS (exit 0): 2414 tests / 380 files, 2390 pass / 24 skip / 0 fail in 22m15s (2.3× speedup from ~50 min). Changelog 1271. All 8 children + 18 leaves terminal. The 10-15 min target needs a C-lane split (follow-up). |

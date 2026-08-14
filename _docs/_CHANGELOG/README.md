@@ -29,8 +29,8 @@ Ordinary new entries continue at 1195.
 
 Numbers 1034-1090 are consumed by the 31-05 Admin Tools, Admin UI,
 TASK-361 through TASK-398 widget remediation waves, and the 2026-06-03
-assistant policy coverage fix. 1229/1230/1231 are reserved (pinned) for the
-in-flight TASK-511/517/518; TASK-519 took its pinned 1232; TASK-520 took 1233.
+assistant policy coverage fix. 1229/1230 are reserved (pinned) for the
+in-flight TASK-511/517; 1231 is consumed by the completed TASK-518 admin-role migration family; TASK-519 took its pinned 1232; TASK-520 took 1233.
 Changelogs 1248, 1249, 1250, 1253, 1255, and 1256 are consumed by the completed
 TASK-536, TASK-537, TASK-538, TASK-541, TASK-543, and TASK-544 families.
 Changelog 1258 is consumed by the terminal TASK-9999-01-L02 re-triage and supersession
@@ -66,6 +66,7 @@ Changelog 1273 is reserved for TASK-558 (Popup Visual Theming) and 1274 for TASK
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 1231 | 2026-08-14 | TASK-518 Seed Default Admin Role via Migration — stable DEFAULT_ADMIN_ROLE_ID, idempotent migration 0071 (fresh db:migrate has exactly one admin role), createFirstAdmin/seedAdmin aligned, legacy random-id role untouched. Admin-only; no privilege change. | Auth/RBAC/Data/Installer/Migration/Testing/Task Board |
 | 1272 | 2026-08-14 | TASK-486 Popups: Public Runtime Delivery & Trigger/Targeting Engine — public read endpoint (published-only, server-side targeting, PII-free DTO), client trigger/targeting/frequency runtime, render + script injection, lane-correct tests, docs, and 8-scenario runtime smoke. 4 subtasks + 11 leaves terminal. | Engagement/Popups/Public Runtime/Security/Testing/Docs/Task Board |
 | 1271 | 2026-08-14 | TASK-557 Bun Test Lane Remote Parallel Speedup (direct 5432) — per-worker schemas + FK-rewriting migration applier, weighted parallel runner with retry-once, DB-free A lane, serial perf lane, fence isolation; full-lane acceptance PASS 2414 tests in 22m15s (2.3x speedup). 8 children + 18 leaves terminal. | Toolchain/Testing/DB/Performance/Docs/Task Board |
 | 1257 | 2026-08-14 | TASK-545 Workflow, Smoke Evidence, and Task-Graph Integrity — all-results guard, canonical workflow drivers, durable smoke-evidence manifest/checkpoint/closure/TASK-548-bootstrap family, bounded historical graph/index repair (TASK-528/529/530 parents, TASK-533 changelog 1247, normalized statuses), and the whole-inventory taskGraphIntegrity gate. 4 children + 13 leaves terminal; board statistics recalculated from physical files. | Workflow/Task Graph/Docs/Testing/Task Board |

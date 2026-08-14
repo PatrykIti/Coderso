@@ -6,7 +6,8 @@
 **Category:** Auth / RBAC / Data / Installer
 **Estimated Effort:** Small
 **Dependencies:** none hard (relates to TASK-482 installer + TASK-511-04 RBAC backup/restore)
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-08-14
 **Started:** 2026-07-06
 
 ---
