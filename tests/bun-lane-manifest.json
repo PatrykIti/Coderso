@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-13T20:59:28.998Z",
+  "generatedAt": "2026-08-14T08:02:47.170Z",
   "rows": [
     {
       "file": "tests/integration/analytics/trafficAggregation.test.ts",
@@ -38,22 +38,22 @@
     },
     {
       "file": "tests/integration/routes/accessLogs.test.ts",
-      "bucket": "A",
+      "bucket": "B",
       "weightMs": 0
     },
     {
       "file": "tests/integration/routes/adminRoles.test.ts",
-      "bucket": "A",
+      "bucket": "B",
       "weightMs": 0
     },
     {
       "file": "tests/integration/routes/adminUsers.test.ts",
-      "bucket": "A",
+      "bucket": "B",
       "weightMs": 0
     },
     {
       "file": "tests/integration/routes/analytics.test.ts",
-      "bucket": "A",
+      "bucket": "B",
       "weightMs": 0
     },
     {
@@ -63,7 +63,7 @@
     },
     {
       "file": "tests/integration/routes/apiKeys.test.ts",
-      "bucket": "A",
+      "bucket": "B",
       "weightMs": 0
     },
     {
@@ -78,22 +78,23 @@
     },
     {
       "file": "tests/integration/routes/assistant-rate-limit.test.ts",
-      "bucket": "A",
+      "bucket": "B",
       "weightMs": 0
     },
     {
       "file": "tests/integration/routes/assistant.test.ts",
-      "bucket": "A",
-      "weightMs": 0
+      "bucket": "C",
+      "weightMs": 0,
+      "conflictKey": "4dd7f4d4"
     },
     {
       "file": "tests/integration/routes/audit.test.ts",
-      "bucket": "A",
+      "bucket": "B",
       "weightMs": 0
     },
     {
       "file": "tests/integration/routes/auth.test.ts",
-      "bucket": "A",
+      "bucket": "B",
       "weightMs": 0
     },
     {
@@ -103,12 +104,12 @@
     },
     {
       "file": "tests/integration/routes/bookingRoutes.test.ts",
-      "bucket": "A",
+      "bucket": "B",
       "weightMs": 0
     },
     {
       "file": "tests/integration/routes/commerceRoutes.test.ts",
-      "bucket": "A",
+      "bucket": "B",
       "weightMs": 0
     },
     {
@@ -129,7 +130,7 @@
     },
     {
       "file": "tests/integration/routes/cors.test.ts",
-      "bucket": "A",
+      "bucket": "B",
       "weightMs": 0
     },
     {
@@ -155,27 +156,27 @@
     },
     {
       "file": "tests/integration/routes/emailSettings.test.ts",
-      "bucket": "A",
+      "bucket": "B",
       "weightMs": 0
     },
     {
       "file": "tests/integration/routes/entryTeaserPreview.test.ts",
-      "bucket": "A",
+      "bucket": "B",
       "weightMs": 0
     },
     {
       "file": "tests/integration/routes/filters.test.ts",
-      "bucket": "A",
+      "bucket": "B",
       "weightMs": 0
     },
     {
       "file": "tests/integration/routes/formActionsRoutes.test.ts",
-      "bucket": "A",
+      "bucket": "B",
       "weightMs": 0
     },
     {
       "file": "tests/integration/routes/formSupportingTextRoutes.test.ts",
-      "bucket": "A",
+      "bucket": "B",
       "weightMs": 0
     },
     {
@@ -185,27 +186,27 @@
     },
     {
       "file": "tests/integration/routes/importExport.test.ts",
-      "bucket": "A",
+      "bucket": "B",
       "weightMs": 0
     },
     {
       "file": "tests/integration/routes/install.test.ts",
-      "bucket": "A",
+      "bucket": "B",
       "weightMs": 0
     },
     {
       "file": "tests/integration/routes/integrations.test.ts",
-      "bucket": "A",
+      "bucket": "B",
       "weightMs": 0
     },
     {
       "file": "tests/integration/routes/ipAllowlist.test.ts",
-      "bucket": "A",
+      "bucket": "B",
       "weightMs": 0
     },
     {
       "file": "tests/integration/routes/listings.test.ts",
-      "bucket": "A",
+      "bucket": "B",
       "weightMs": 0
     },
     {
@@ -225,12 +226,13 @@
     },
     {
       "file": "tests/integration/routes/onboardingFlow.test.ts",
-      "bucket": "A",
-      "weightMs": 0
+      "bucket": "C",
+      "weightMs": 0,
+      "conflictKey": "site.navigationMenuId"
     },
     {
       "file": "tests/integration/routes/pageTemplates.test.ts",
-      "bucket": "A",
+      "bucket": "B",
       "weightMs": 0
     },
     {
@@ -240,12 +242,12 @@
     },
     {
       "file": "tests/integration/routes/pluginsRoutes.test.ts",
-      "bucket": "A",
+      "bucket": "B",
       "weightMs": 0
     },
     {
       "file": "tests/integration/routes/popupsRoutes.test.ts",
-      "bucket": "A",
+      "bucket": "B",
       "weightMs": 0
     },
     {
@@ -256,22 +258,22 @@
     },
     {
       "file": "tests/integration/routes/postsRoutes.test.ts",
-      "bucket": "A",
+      "bucket": "B",
       "weightMs": 0
     },
     {
       "file": "tests/integration/routes/productComparePreview.test.ts",
-      "bucket": "A",
+      "bucket": "B",
       "weightMs": 0
     },
     {
       "file": "tests/integration/routes/productGalleryPreview.test.ts",
-      "bucket": "A",
+      "bucket": "B",
       "weightMs": 0
     },
     {
       "file": "tests/integration/routes/productTablePreview.test.ts",
-      "bucket": "A",
+      "bucket": "B",
       "weightMs": 0
     },
     {
@@ -286,12 +288,12 @@
     },
     {
       "file": "tests/integration/routes/reviewsRoutes.test.ts",
-      "bucket": "A",
+      "bucket": "B",
       "weightMs": 0
     },
     {
       "file": "tests/integration/routes/search.test.ts",
-      "bucket": "A",
+      "bucket": "B",
       "weightMs": 0
     },
     {
@@ -301,22 +303,22 @@
     },
     {
       "file": "tests/integration/routes/securitySettings.test.ts",
-      "bucket": "A",
+      "bucket": "B",
       "weightMs": 0
     },
     {
       "file": "tests/integration/routes/seo.test.ts",
-      "bucket": "A",
+      "bucket": "B",
       "weightMs": 0
     },
     {
       "file": "tests/integration/routes/sessions.test.ts",
-      "bucket": "A",
+      "bucket": "B",
       "weightMs": 0
     },
     {
       "file": "tests/integration/routes/settings.test.ts",
-      "bucket": "A",
+      "bucket": "B",
       "weightMs": 0
     },
     {
@@ -326,12 +328,12 @@
     },
     {
       "file": "tests/integration/routes/setupStarterContent.test.ts",
-      "bucket": "A",
+      "bucket": "B",
       "weightMs": 0
     },
     {
       "file": "tests/integration/routes/solutionKitsRoutes.test.ts",
-      "bucket": "A",
+      "bucket": "B",
       "weightMs": 0
     },
     {
@@ -342,12 +344,12 @@
     },
     {
       "file": "tests/integration/routes/taxonomy.test.ts",
-      "bucket": "A",
+      "bucket": "B",
       "weightMs": 0
     },
     {
       "file": "tests/integration/routes/themes.test.ts",
-      "bucket": "A",
+      "bucket": "B",
       "weightMs": 0
     },
     {
@@ -363,12 +365,12 @@
     },
     {
       "file": "tests/integration/routes/webhooks.test.ts",
-      "bucket": "A",
+      "bucket": "B",
       "weightMs": 0
     },
     {
       "file": "tests/integration/routes/widgets.test.ts",
-      "bucket": "A",
+      "bucket": "B",
       "weightMs": 0
     },
     {
@@ -395,8 +397,9 @@
     },
     {
       "file": "tests/integration/runtime/detail-page-runtime-lite.test.ts",
-      "bucket": "A",
-      "weightMs": 0
+      "bucket": "C",
+      "weightMs": 0,
+      "conflictKey": "site.contentRoutes"
     },
     {
       "file": "tests/integration/runtime/detail-page-runtime.test.ts",
@@ -417,8 +420,9 @@
     },
     {
       "file": "tests/integration/runtime/pages-runtime-blocks.test.ts",
-      "bucket": "A",
-      "weightMs": 0
+      "bucket": "C",
+      "weightMs": 0,
+      "conflictKey": "site.contentRoutes"
     },
     {
       "file": "tests/integration/runtime/pages-runtime-listings.test.ts",
@@ -428,8 +432,9 @@
     },
     {
       "file": "tests/integration/runtime/pages-runtime-responsive.test.ts",
-      "bucket": "A",
-      "weightMs": 0
+      "bucket": "C",
+      "weightMs": 0,
+      "conflictKey": "site.contentRoutes"
     },
     {
       "file": "tests/integration/runtime/pages-runtime.test.ts",
@@ -459,8 +464,9 @@
     },
     {
       "file": "tests/integration/runtime/projekty-domow-detail-route.test.ts",
-      "bucket": "A",
-      "weightMs": 0
+      "bucket": "C",
+      "weightMs": 0,
+      "conflictKey": "site.contentRoutes"
     },
     {
       "file": "tests/integration/runtime/redirects-runtime.test.ts",
@@ -531,6 +537,11 @@
       "weightMs": 0
     },
     {
+      "file": "tests/integration/toolchain/runBunParallel.test.ts",
+      "bucket": "A",
+      "weightMs": 0
+    },
+    {
       "file": "tests/integration/toolchain/runBunParallelFakeWorker.test.ts",
       "bucket": "A",
       "weightMs": 0
@@ -567,7 +578,7 @@
     },
     {
       "file": "tests/security/codersoSecurityGate.test.ts",
-      "bucket": "A",
+      "bucket": "B",
       "weightMs": 0
     },
     {
@@ -577,22 +588,22 @@
     },
     {
       "file": "tests/security/installAdmin.test.ts",
-      "bucket": "A",
+      "bucket": "B",
       "weightMs": 0
     },
     {
       "file": "tests/security/installerSelfDisable.test.ts",
-      "bucket": "A",
+      "bucket": "B",
       "weightMs": 0
     },
     {
       "file": "tests/security/setupStarterContent.security.test.ts",
-      "bucket": "A",
+      "bucket": "B",
       "weightMs": 0
     },
     {
       "file": "tests/unit/access/accessLogExport.test.ts",
-      "bucket": "A",
+      "bucket": "B",
       "weightMs": 0
     },
     {
@@ -652,57 +663,60 @@
     },
     {
       "file": "tests/unit/analytics/trafficAggregationQuery.test.ts",
-      "bucket": "A",
+      "bucket": "B",
       "weightMs": 0
     },
     {
       "file": "tests/unit/assistant/actionExecutorAutomationBlueprints.test.ts",
-      "bucket": "A",
+      "bucket": "B",
       "weightMs": 0
     },
     {
       "file": "tests/unit/assistant/actionExecutorCatalogBlueprints.test.ts",
-      "bucket": "A",
-      "weightMs": 0
+      "bucket": "C",
+      "weightMs": 0,
+      "conflictKey": "site.contentRoutes"
     },
     {
       "file": "tests/unit/assistant/actionExecutorContentUpdates.test.ts",
-      "bucket": "A",
-      "weightMs": 0
+      "bucket": "C",
+      "weightMs": 0,
+      "conflictKey": "site.contentRoutes"
     },
     {
       "file": "tests/unit/assistant/actionExecutorCustomScreens.test.ts",
-      "bucket": "A",
+      "bucket": "B",
       "weightMs": 0
     },
     {
       "file": "tests/unit/assistant/actionExecutorDetailPages.test.ts",
-      "bucket": "A",
+      "bucket": "B",
       "weightMs": 0
     },
     {
       "file": "tests/unit/assistant/actionExecutorForms.test.ts",
-      "bucket": "A",
+      "bucket": "B",
       "weightMs": 0
     },
     {
       "file": "tests/unit/assistant/actionExecutorIdempotencyAndSiteKit.test.ts",
-      "bucket": "A",
-      "weightMs": 0
+      "bucket": "C",
+      "weightMs": 0,
+      "conflictKey": "site.contentRoutes"
     },
     {
       "file": "tests/unit/assistant/actionExecutorListingsAndWidgets.test.ts",
-      "bucket": "A",
+      "bucket": "B",
       "weightMs": 0
     },
     {
       "file": "tests/unit/assistant/actionExecutorMenusAndSeo.test.ts",
-      "bucket": "A",
+      "bucket": "B",
       "weightMs": 0
     },
     {
       "file": "tests/unit/assistant/actionExecutorPages.test.ts",
-      "bucket": "A",
+      "bucket": "B",
       "weightMs": 0
     },
     {
@@ -718,32 +732,32 @@
     },
     {
       "file": "tests/unit/assistant/actionExecutorService.test.ts",
-      "bucket": "A",
+      "bucket": "B",
       "weightMs": 0
     },
     {
       "file": "tests/unit/assistant/actionExecutorSupportingPageLinks.test.ts",
-      "bucket": "A",
+      "bucket": "B",
       "weightMs": 0
     },
     {
       "file": "tests/unit/assistant/assistantService.test.ts",
-      "bucket": "A",
+      "bucket": "B",
       "weightMs": 0
     },
     {
       "file": "tests/unit/assistant/assistantSiteBuilderIntakeDryRun.test.ts",
-      "bucket": "A",
+      "bucket": "B",
       "weightMs": 0
     },
     {
       "file": "tests/unit/assistant/siteBuilderExecutor.test.ts",
-      "bucket": "A",
+      "bucket": "B",
       "weightMs": 0
     },
     {
       "file": "tests/unit/audit/auditExport.test.ts",
-      "bucket": "A",
+      "bucket": "B",
       "weightMs": 0
     },
     {
@@ -753,12 +767,12 @@
     },
     {
       "file": "tests/unit/auth/authRoutes.test.ts",
-      "bucket": "A",
+      "bucket": "B",
       "weightMs": 0
     },
     {
       "file": "tests/unit/auth/loginAlert.test.ts",
-      "bucket": "A",
+      "bucket": "B",
       "weightMs": 0
     },
     {
@@ -784,7 +798,7 @@
     },
     {
       "file": "tests/unit/auth/sessionCookieOptions.test.ts",
-      "bucket": "A",
+      "bucket": "B",
       "weightMs": 0
     },
     {
@@ -816,17 +830,17 @@
     },
     {
       "file": "tests/unit/commerce/checkoutAdapter.test.ts",
-      "bucket": "A",
+      "bucket": "B",
       "weightMs": 0
     },
     {
       "file": "tests/unit/commerce/commerceQueryService.test.ts",
-      "bucket": "A",
+      "bucket": "B",
       "weightMs": 0
     },
     {
       "file": "tests/unit/commerce/commerceRuntimeResolver.test.ts",
-      "bucket": "A",
+      "bucket": "B",
       "weightMs": 0
     },
     {
@@ -841,7 +855,7 @@
     },
     {
       "file": "tests/unit/commerce/commerceWidgetRuntime.test.ts",
-      "bucket": "A",
+      "bucket": "B",
       "weightMs": 0
     },
     {
@@ -851,7 +865,7 @@
     },
     {
       "file": "tests/unit/content/contentListResolver.test.ts",
-      "bucket": "A",
+      "bucket": "B",
       "weightMs": 0
     },
     {
@@ -1056,7 +1070,7 @@
     },
     {
       "file": "tests/unit/kits/fullSiteAggregateAdapters.test.ts",
-      "bucket": "A",
+      "bucket": "B",
       "weightMs": 0
     },
     {
@@ -1104,7 +1118,7 @@
     },
     {
       "file": "tests/unit/kits/fullSiteLifecycleAdapters.test.ts",
-      "bucket": "A",
+      "bucket": "B",
       "weightMs": 0
     },
     {
@@ -1114,17 +1128,19 @@
     },
     {
       "file": "tests/unit/kits/fullSiteResourceAdapterExecution.test.ts",
-      "bucket": "A",
-      "weightMs": 0
+      "bucket": "C",
+      "weightMs": 0,
+      "conflictKey": "site.contentRoutes"
     },
     {
       "file": "tests/unit/kits/fullSiteResourceAdapters.test.ts",
-      "bucket": "A",
-      "weightMs": 0
+      "bucket": "C",
+      "weightMs": 0,
+      "conflictKey": "site.contentRoutes"
     },
     {
       "file": "tests/unit/kits/fullSiteTransactionLockLifecycle.test.ts",
-      "bucket": "A",
+      "bucket": "B",
       "weightMs": 0
     },
     {
@@ -1144,7 +1160,7 @@
     },
     {
       "file": "tests/unit/kits/legacyInstallRunPersistenceInventory.test.ts",
-      "bucket": "A",
+      "bucket": "B",
       "weightMs": 0
     },
     {
@@ -1169,7 +1185,7 @@
     },
     {
       "file": "tests/unit/kits/solutionKitsService.test.ts",
-      "bucket": "A",
+      "bucket": "B",
       "weightMs": 0
     },
     {
@@ -1239,7 +1255,7 @@
     },
     {
       "file": "tests/unit/navigation/navigationRuntimeResolver.test.ts",
-      "bucket": "A",
+      "bucket": "B",
       "weightMs": 0
     },
     {
@@ -1309,7 +1325,7 @@
     },
     {
       "file": "tests/unit/plugins/pluginManifest.test.ts",
-      "bucket": "A",
+      "bucket": "B",
       "weightMs": 0
     },
     {
@@ -1364,7 +1380,7 @@
     },
     {
       "file": "tests/unit/runtime-smoke/cli-registry.test.ts",
-      "bucket": "A",
+      "bucket": "B",
       "weightMs": 0
     },
     {
@@ -1404,17 +1420,18 @@
     },
     {
       "file": "tests/unit/runtime-smoke/task-554-adapter.test.ts",
-      "bucket": "A",
+      "bucket": "B",
       "weightMs": 0
     },
     {
       "file": "tests/unit/runtime-smoke/task-554-routing-lease.test.ts",
-      "bucket": "A",
-      "weightMs": 0
+      "bucket": "C",
+      "weightMs": 0,
+      "conflictKey": "site.adminBaseUrl"
     },
     {
       "file": "tests/unit/runtime-smoke/task-554-worker.test.ts",
-      "bucket": "A",
+      "bucket": "B",
       "weightMs": 0
     },
     {
@@ -1559,7 +1576,7 @@
     },
     {
       "file": "tests/unit/sdk/assets.test.ts",
-      "bucket": "A",
+      "bucket": "B",
       "weightMs": 0
     },
     {
@@ -1589,7 +1606,7 @@
     },
     {
       "file": "tests/unit/security/ipAllowlistMiddleware.test.ts",
-      "bucket": "A",
+      "bucket": "B",
       "weightMs": 0
     },
     {
@@ -1639,7 +1656,7 @@
     },
     {
       "file": "tests/unit/server/adminAssetsRouting.test.ts",
-      "bucket": "A",
+      "bucket": "B",
       "weightMs": 0
     },
     {
@@ -1690,7 +1707,7 @@
     },
     {
       "file": "tests/unit/settings/tokenService.test.ts",
-      "bucket": "A",
+      "bucket": "B",
       "weightMs": 0
     },
     {
@@ -1700,7 +1717,7 @@
     },
     {
       "file": "tests/unit/site/cache.test.ts",
-      "bucket": "A",
+      "bucket": "B",
       "weightMs": 0
     },
     {
@@ -1815,7 +1832,7 @@
     },
     {
       "file": "tests/unit/tools/importExport.test.ts",
-      "bucket": "A",
+      "bucket": "B",
       "weightMs": 0
     },
     {
@@ -1840,12 +1857,12 @@
     },
     {
       "file": "tests/unit/widgets/contentList.test.tsx",
-      "bucket": "A",
+      "bucket": "B",
       "weightMs": 0
     },
     {
       "file": "tests/unit/widgets/entryTeaser.test.tsx",
-      "bucket": "A",
+      "bucket": "B",
       "weightMs": 0
     },
     {
@@ -1855,7 +1872,7 @@
     },
     {
       "file": "tests/unit/widgets/postsFeedWidget.test.tsx",
-      "bucket": "A",
+      "bucket": "B",
       "weightMs": 0
     },
     {
@@ -1880,7 +1897,7 @@
     },
     {
       "file": "tests/unit/widgets/widgetTemplateCategoryService.test.ts",
-      "bucket": "A",
+      "bucket": "B",
       "weightMs": 0
     },
     {

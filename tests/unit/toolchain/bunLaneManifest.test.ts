@@ -27,7 +27,12 @@ import path from "node:path";
 
 import { afterAll, expect, test } from "bun:test";
 
-import { classify, collectLaneFiles, LANE_DIRS } from "../../../scripts/bun-lane-classify";
+import {
+  classify,
+  collectLaneFiles,
+  LANE_DIRS,
+  reachesDbTransitively,
+} from "../../../scripts/bun-lane-classify";
 
 const ROOT = path.resolve(import.meta.dir, "../../..");
 const MANIFEST_PATH = path.join(ROOT, "tests", "bun-lane-manifest.json");
@@ -109,6 +114,89 @@ test("classify examples match the contract signals", async () => {
   expect(perfIngestion.bucket).toBe("perf");
 });
 
+test("transitive DB-coupling is detected through the value-import closure", async () => {
+  // cache.test.ts imports `siteCache` -> `settingsService` -> `core/db/client`
+  // with no direct `core/db` import of its own; the pure A lane strips
+  // DATABASE_URL, so this file must NOT be A (module load would throw
+  // `DATABASE_URL is not set`).
+  expect(reachesDbTransitively("tests/unit/site/cache.test.ts")).toBe(true);
+  expect((await classify("tests/unit/site/cache.test.ts")).bucket).not.toBe("A");
+
+  // A genuinely DB-free file stays A.
+  expect(reachesDbTransitively("tests/unit/widgets/validator.test.ts")).toBe(false);
+  expect((await classify("tests/unit/widgets/validator.test.ts")).bucket).toBe("A");
+});
+
+test("transitive detection follows re-exports and skips type-only imports", async () => {
+  // schema.ts re-exports tables via `export * from "./tables/..."`, and
+  // securitySettings imports `../../db/schema`; cors.test.ts reaches the DB
+  // schema transitively through securitySettings even though it never names
+  // core/db itself.
+  expect(reachesDbTransitively("tests/integration/routes/cors.test.ts")).toBe(true);
+  expect((await classify("tests/integration/routes/cors.test.ts")).bucket).not.toBe("A");
+});
+
+test("transitive detection follows statically-declared file-URL loads", async () => {
+  // cli-registry.test.ts imports the runtime-smoke registry, whose
+  // `loadFixedAdapter` does `await import(pathToFileURL(adapterPath).href)`
+  // where adapterPath comes from the static ADAPTER_PATHS string map
+  // (e.g. "scripts/runtime-smoke/adapters/task-554.ts"). That adapter module
+  // statically reaches core/db/client, so at test runtime the dynamic load
+  // throws `DATABASE_URL is not set` in the pure A lane. The classifier must
+  // treat those static path literals as part of the registry's closure.
+  expect(reachesDbTransitively("scripts/runtime-smoke/registry.ts")).toBe(true);
+  expect(reachesDbTransitively("tests/unit/runtime-smoke/cli-registry.test.ts")).toBe(true);
+  expect((await classify("tests/unit/runtime-smoke/cli-registry.test.ts")).bucket).not.toBe("A");
+});
+
+test("module-scope await imports are followed, lazy and type forms are not", async () => {
+  // detail-page-runtime-lite.test.ts loads the real public site at module
+  // scope (`const { handlePublicRequest } = await import(".../publicSite")`),
+  // and publicSite's static closure reaches core/db/client through
+  // previewService. In the pure A lane that top-level await throws
+  // `DATABASE_URL is not set`, so the file must not stay A.
+  expect(reachesDbTransitively("tests/integration/runtime/detail-page-runtime-lite.test.ts")).toBe(
+    true
+  );
+  expect(
+    (await classify("tests/integration/runtime/detail-page-runtime-lite.test.ts")).bucket
+  ).not.toBe("A");
+
+  // postBlockRuntimeMapper only mentions mediaService via a lazy function-body
+  // `await import(...)` and a `typeof import(...)` type query, neither of which
+  // loads the module at evaluation time, so it must NOT be flagged as DB
+  // coupled through those forms. post-rendering-parity.test.tsx reaches it
+  // transitively and genuinely stays DB-free.
+  expect(reachesDbTransitively("core/services/posts/runtime/postBlockRuntimeMapper.ts")).toBe(
+    false
+  );
+  expect(reachesDbTransitively("tests/integration/runtime/post-rendering-parity.test.tsx")).toBe(
+    false
+  );
+});
+
+test("module-scope mock registrations stub the awaited graph (mock-aware walk)", async () => {
+  // appointment-form-runtime-hydration.test.ts awaits renderPublicPage and
+  // bookingRuntimeResolver at module scope, but registers 26 module-scope
+  // `bunMock?.module(...)` stubs (pageService, previewService, entryService,
+  // postsService, settingsService, ...) BEFORE those awaits. Every DB path is
+  // intercepted, so the file is genuinely DB-free and stays A.
+  expect(
+    reachesDbTransitively("tests/integration/runtime/appointment-form-runtime-hydration.test.ts")
+  ).toBe(false);
+  expect(
+    (await classify("tests/integration/runtime/appointment-form-runtime-hydration.test.ts")).bucket
+  ).toBe("A");
+
+  // detailPageRuntimeResolver.test.ts mocks core/db/client (and the binding
+  // resolver) at module scope before awaiting detailPageRuntimeResolver. The
+  // client mock stubs the whole DB access surface, including the pure
+  // table-definitions schema module the resolver imports, so the file is
+  // genuinely DB-free and stays A.
+  expect(reachesDbTransitively("tests/unit/content/detailPageRuntimeResolver.test.ts")).toBe(false);
+  expect((await classify("tests/unit/content/detailPageRuntimeResolver.test.ts")).bucket).toBe("A");
+});
+
 test("classify rejects unreadable files with a named error", async () => {
   await expect(classify("tests/unit/toolchain/__no_such_lane_test__.test.ts")).rejects.toThrow(
     /manifest_read_failed:tests\/unit\/toolchain\/__no_such_lane_test__\.test\.ts/
@@ -151,6 +239,19 @@ test("manifest rows are internally consistent", async () => {
       expect(typeof row.conflictKey).toBe("string");
     }
   }
+});
+
+test("every A row is truly DB-free at module load (pure-lane invariant)", () => {
+  // The pure A lane strips DATABASE_URL and runs with --env-file=/dev/null, so
+  // an A row whose static value-import closure reaches core/db/client or
+  // core/db/schema would throw `DATABASE_URL is not set` at import time and
+  // fail the whole lane. This pins the TASK-557 transitive-coupling fix: the
+  // committed manifest must never put a transitively DB-coupled file in A.
+  const dbCoupled = readManifestRows()
+    .filter((row) => row.bucket === "A")
+    .filter((row) => reachesDbTransitively(row.file))
+    .map((row) => row.file);
+  expect(dbCoupled).toEqual([]);
 });
 
 // The import-guard subprocess above only exercises a fresh process; the
