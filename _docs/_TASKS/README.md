@@ -83,7 +83,7 @@ Task board for project work. Keep task files and this board in sync.
   Do not move a leaf task to `Done` until either its standalone changelog
   exists or the family changelog records that leaf.
 
-- **To Do:** 378 tasks
+- **To Do:** 379 tasks
 - **In Progress:** 6 tasks
 - **Done:** 3363 tasks
 
@@ -161,6 +161,7 @@ Task board for project work. Keep task files and this board in sync.
 
 ## To Do
 
+| TASK-558 | Popup Visual Theming (Follow-up to TASK-486) | Medium | Medium | Follow-up: TASK-486 popups render the full DOM/aria contract but are unstyled (CSS theming scoped out in TASK-486-03-L01). Present-only visual theme (surface/border/shadow/radius, backdrop, close affordance, z-index, mobile clamping), accessibility (focus, aria-modal, ESC, reduced-motion), fixed presets or bounded author-configurable theme, byte-identical no-override documents, and a 5+ scenario runtime smoke (wf558smoke). Changelog 1273 pinned. One executable task. |
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
 | TASK-556 | FormaDom Code-Owned Static Starter to Designer Handoff | High | Very Large | Provider-free, owner-private seed/reopen of TASK-555's immutable FormaDom release into terminal Designer through one current-root binding, one-dispatch fenced persistence, run-bound receipt staging, the existing Designer facade/`admin_write` transport, TASK-555's memory-only Setup review continuation, terminal capability regeneration, Designer backup V2, two additive host CTAs, and exactly five shared runtime-smoke flows. Implementation gate is closed until TASK-545 is exactly `✅ Done`, TASK-414/TASK-489/TASK-547/TASK-555 satisfy the parent terminal dependency rule, and a fresh read-only audit passes against unchanged contracts; TASK-545 has no superseded-successor exception and local ignored orchestration sidecars are non-authorizing helpers. Changelog 1270 pinned. 4 children + 8 executable leaves. |
