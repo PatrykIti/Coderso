@@ -1,6 +1,7 @@
 import { eq, sql } from "drizzle-orm";
 
 import { db } from "../../db/client";
+import { DEFAULT_ADMIN_ROLE_ID } from "../../db/seedConstants";
 import { roles, userRoles, users } from "../../db/schema";
 import { hashPassword } from "../auth/password";
 import { buildEmailFields, normalizeEmail } from "../security/piiEmail";
@@ -110,15 +111,15 @@ export async function createFirstAdmin(
       // 2) TOCTOU re-check: authoritative now that the lock serializes us.
       if ((await countTx(tx)) !== 0) throw new Error("first_run_unavailable");
 
-      // Ensure the admin role exists (seed.ts pattern).
-      let [role] = await tx.select().from(roles).where(eq(roles.name, "admin"));
+      // Resolve the admin role by the migration-guaranteed stable id
+      // (TASK-518, core/db/seedConstants.ts), falling back to select-by-name
+      // "admin" for pre-518 installs whose role carries a legacy random id.
+      // Never create a duplicate role and never renumber an existing one.
+      let [role] = await tx.select().from(roles).where(eq(roles.id, DEFAULT_ADMIN_ROLE_ID));
       if (!role) {
-        [role] = await tx
-          .insert(roles)
-          .values({ name: "admin", permissions: ["*"] })
-          .returning();
+        [role] = await tx.select().from(roles).where(eq(roles.name, "admin"));
       }
-      if (!role) throw new Error("first_admin_create_failed");
+      if (!role) throw new Error("first_admin_role_missing");
 
       const [user] = await tx
         .insert(users)

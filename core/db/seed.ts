@@ -1,5 +1,6 @@
 import { and, eq } from "drizzle-orm";
 import { db } from "./client";
+import { DEFAULT_ADMIN_ROLE_ID } from "./seedConstants";
 import { getUserByEmail } from "../services/auth/userService";
 import { buildEmailFields, normalizeEmail } from "../services/security/piiEmail";
 import { adminThemeProfiles, adminThemeTemplates, roles, userRoles, users } from "./schema";
@@ -10,7 +11,19 @@ import {
   runDefaultAdminThemeSeed,
 } from "./seedAdminTheme";
 
-export async function seedAdmin() {
+/**
+ * Injectable seams for `seedAdmin` (mirrors `CreateFirstAdminDeps` in
+ * `core/services/admin/firstRunService.ts`) so DB-backed tests can point the
+ * whole seed at one worker schema without touching the shared `public` tables.
+ */
+export type SeedAdminDeps = {
+  db?: typeof db;
+  getUserByEmail?: typeof getUserByEmail;
+};
+
+export async function seedAdmin(deps: SeedAdminDeps = {}) {
+  const database = deps.db ?? db;
+  const lookupUser = deps.getUserByEmail ?? getUserByEmail;
   const adminEmail = process.env.ADMIN_EMAIL;
   const adminPassword = process.env.ADMIN_PASSWORD;
 
@@ -21,30 +34,25 @@ export async function seedAdmin() {
 
   console.log(`Seeding admin user: ${adminEmail}`);
 
-  // 1. Create or get admin role.
-  let [role] = await db.select().from(roles).where(eq(roles.name, "admin"));
-
+  // 1. Resolve the admin role: migration-guaranteed stable id first
+  //    (TASK-518, core/db/seedConstants.ts), then select-by-name "admin" for
+  //    pre-518 installs whose role carries a legacy random id. Never create a
+  //    duplicate role and never renumber an existing one.
+  let [role] = await database.select().from(roles).where(eq(roles.id, DEFAULT_ADMIN_ROLE_ID));
   if (!role) {
-    [role] = await db
-      .insert(roles)
-      .values({
-        name: "admin",
-        permissions: ["*"],
-      })
-      .returning();
-    console.log("Created admin role");
-  } else {
-    console.log("Admin role already exists");
+    [role] = await database.select().from(roles).where(eq(roles.name, "admin"));
   }
+  if (!role) throw new Error("admin_role_missing");
+  console.log("Resolved admin role");
 
   // 2. Create or get admin user.
   const normalizedEmail = normalizeEmail(adminEmail);
-  let user = await getUserByEmail(normalizedEmail);
+  let user = await lookupUser(normalizedEmail);
 
   if (!user) {
     const passwordHash = await hashSeedAdminPassword(adminPassword);
     const emailFields = buildEmailFields(normalizedEmail);
-    [user] = await db
+    [user] = await database
       .insert(users)
       .values({
         email: emailFields.email,
@@ -60,13 +68,16 @@ export async function seedAdmin() {
   }
 
   // 3. Assign Role
-  const [existingUserRole] = await db
+  const [existingUserRole] = await database
     .select()
     .from(userRoles)
     .where(and(eq(userRoles.userId, user.id), eq(userRoles.roleId, role.id)));
 
   if (!existingUserRole) {
-    await db.insert(userRoles).values({ userId: user.id, roleId: role.id }).onConflictDoNothing();
+    await database
+      .insert(userRoles)
+      .values({ userId: user.id, roleId: role.id })
+      .onConflictDoNothing();
     console.log("Assigned admin role to user");
   } else {
     console.log("Admin role already assigned");

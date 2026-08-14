@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-14T14:27:26.792641Z",
+  "generatedAt": "2026-08-14T15:12:17.722Z",
   "rows": [
     {
       "file": "tests/integration/analytics/trafficAggregation.test.ts",
@@ -555,6 +555,11 @@
     {
       "file": "tests/integration/toolchain/runBunParallelFakeWorker.test.ts",
       "bucket": "A",
+      "weightMs": 0
+    },
+    {
+      "file": "tests/integration/toolchain/seedAdminConsumer.test.ts",
+      "bucket": "B",
       "weightMs": 0
     },
     {

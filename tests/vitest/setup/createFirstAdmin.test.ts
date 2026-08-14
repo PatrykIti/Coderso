@@ -6,6 +6,7 @@ import { beforeAll, expect, test, vi } from "vitest";
 vi.mock("../../../core/db/client", () => ({ db: {} }));
 
 import { roles, userRoles, users } from "../../../core/db/schema";
+import { DEFAULT_ADMIN_ROLE_ID } from "../../../core/db/seedConstants";
 import {
   createFirstAdmin,
   type CreateFirstAdminDeps,
@@ -21,6 +22,8 @@ beforeAll(() => {
   process.env.PII_ENC_KEY ??= "1".repeat(64);
 });
 
+type RoleRow = { id: string; permissions: string[] };
+
 type Captured = {
   roleInsert: Record<string, unknown> | null;
   userInsert: Record<string, unknown> | null;
@@ -28,12 +31,29 @@ type Captured = {
   executes: number;
 };
 
-function makeFakeDb(existingRole: { id: string; permissions: string[] } | null = null) {
+/**
+ * TASK-518-02: `createFirstAdmin` resolves the admin role by the stable
+ * `DEFAULT_ADMIN_ROLE_ID` (migration-guaranteed) with a select-by-name fallback
+ * for pre-518 legacy installs, and NEVER inserts a role itself. The fake db
+ * mirrors that two-select order: the FIRST role lookup (by stable id) answers
+ * from `stableRole`, and the name fallback from `legacyRole`.
+ */
+function makeFakeDb({
+  stableRole = null,
+  legacyRole = null,
+}: { stableRole?: RoleRow | null; legacyRole?: RoleRow | null } = {}) {
   const captured: Captured = {
     roleInsert: null,
     userInsert: null,
     userRoleInsert: null,
     executes: 0,
+  };
+
+  let roleSelectCount = 0;
+  const selectRole = async (): Promise<RoleRow[]> => {
+    roleSelectCount += 1;
+    if (roleSelectCount === 1) return stableRole ? [stableRole] : [];
+    return legacyRole ? [legacyRole] : [];
   };
 
   const tx = {
@@ -42,7 +62,7 @@ function makeFakeDb(existingRole: { id: string; permissions: string[] } | null =
     },
     select: () => ({
       from: (table: unknown) => ({
-        where: async () => (table === roles && existingRole ? [existingRole] : []),
+        where: async () => (table === roles ? selectRole() : []),
       }),
     }),
     insert: (table: unknown) => ({
@@ -67,9 +87,10 @@ function makeFakeDb(existingRole: { id: string; permissions: string[] } | null =
 }
 
 const baseInput = { name: "Ada Admin", email: "Ada@Example.com", password: "correct horse" };
+const stableRole = { id: DEFAULT_ADMIN_ROLE_ID, permissions: ["*"] };
 
-test("happy path creates an active admin with the ['*'] role and a verifiable hash", async () => {
-  const { db, captured } = makeFakeDb();
+test("happy path assigns the migration-guaranteed stable-id admin role (no ad-hoc role insert)", async () => {
+  const { db, captured } = makeFakeDb({ stableRole });
   const result = await createFirstAdmin(baseInput, {
     db,
     isFirstRun: async () => true,
@@ -82,33 +103,51 @@ test("happy path creates an active admin with the ['*'] role and a verifiable ha
     email: "ada@example.com", // normalized
     name: "Ada Admin",
     status: "active",
-    roleId: "role-1",
+    roleId: DEFAULT_ADMIN_ROLE_ID,
   });
   // Distinguishes this from usersService.createUser's random-password default.
   expect(captured.userInsert?.status).toBe("active");
   const storedHash = captured.userInsert?.passwordHash as string;
   expect(typeof storedHash).toBe("string");
   expect(await verifyPassword(storedHash, baseInput.password)).toBe(true);
-  expect(captured.roleInsert).toEqual({ name: "admin", permissions: ["*"] });
-  expect(captured.userRoleInsert).toEqual({ userId: "user-1", roleId: "role-1" });
+  // TASK-518-02: the role comes from the migration; the service never inserts one.
+  expect(captured.roleInsert).toBeNull();
+  expect(captured.userRoleInsert).toEqual({
+    userId: "user-1",
+    roleId: DEFAULT_ADMIN_ROLE_ID,
+  });
   // advisory lock statement ran as first tx statement
   expect(captured.executes).toBe(1);
 });
 
-test("reuses an existing admin role instead of inserting a duplicate", async () => {
-  const { db, captured } = makeFakeDb({ id: "role-existing", permissions: ["*"] });
+test("falls back to select-by-name for a legacy random-id admin role (no duplicate, no renumber)", async () => {
+  const legacyRole = { id: "0f2c1e9a-0000-4000-8000-0000000000aa", permissions: ["*"] };
+  const { db, captured } = makeFakeDb({ legacyRole });
   const result = await createFirstAdmin(baseInput, {
     db,
     isFirstRun: async () => true,
     countUsersTx: async () => 0,
     hashPassword: async () => "hash",
   });
-  expect(result.roleId).toBe("role-existing");
-  expect(captured.roleInsert).toBeNull(); // no new role inserted
+  expect(result.roleId).toBe(legacyRole.id);
+  expect(captured.roleInsert).toBeNull(); // never inserts a duplicate role
+});
+
+test("fails loud when the admin role is missing entirely (migration invariant violated)", async () => {
+  const { db, captured } = makeFakeDb();
+  await expect(
+    createFirstAdmin(baseInput, {
+      db,
+      isFirstRun: async () => true,
+      countUsersTx: async () => 0,
+      hashPassword: async () => "hash",
+    })
+  ).rejects.toThrow("first_admin_role_missing");
+  expect(captured.userInsert).toBeNull(); // never created a user without a role
 });
 
 test("rejects with first_run_unavailable when a user already exists (pre-check)", async () => {
-  const { db } = makeFakeDb();
+  const { db } = makeFakeDb({ stableRole });
   await expect(
     createFirstAdmin(baseInput, {
       db,
@@ -121,7 +160,7 @@ test("rejects with first_run_unavailable when a user already exists (pre-check)"
 
 test("rejects with first_run_unavailable on the in-transaction TOCTOU re-check", async () => {
   // Pre-check passes (stale read), but the re-check under the advisory lock sees a row.
-  const { db, captured } = makeFakeDb();
+  const { db, captured } = makeFakeDb({ stableRole });
   await expect(
     createFirstAdmin(baseInput, {
       db,
@@ -134,7 +173,7 @@ test("rejects with first_run_unavailable on the in-transaction TOCTOU re-check",
 });
 
 test("maps a unique-violation to first_run_unavailable (same-email race defence)", async () => {
-  const { db } = makeFakeDb();
+  const { db } = makeFakeDb({ stableRole });
   const failing = {
     transaction: async () => {
       const err = new Error("duplicate key value violates unique constraint");
@@ -158,7 +197,7 @@ test.each([
   ["empty email", { ...baseInput, email: "  " }],
   ["short password", { ...baseInput, password: "short" }],
 ])("rejects invalid input (%s) with first_admin_invalid", async (_label, input) => {
-  const { db } = makeFakeDb();
+  const { db } = makeFakeDb({ stableRole });
   await expect(
     createFirstAdmin(input, {
       db,
