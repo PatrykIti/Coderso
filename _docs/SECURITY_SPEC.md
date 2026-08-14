@@ -1096,3 +1096,28 @@ uprzywilejowane (`POST /auth/install/admin`, Faza 1 onboardingu, TASK-482).
   the inline snippet to run. When a strict CSP without `'unsafe-inline'` is
   required, prefer the optional external-asset variant (`GET /_analytics/a.js`)
   instead of the inline snippet.
+
+## Public popups API (TASK-486)
+
+- Endpoint: `GET /api/popups?path=<pathname>` → `{ items: PublicPopup[] }`,
+  dispatched from `handlePublicRequest` (not under `/admin/api/*`).
+- Rate-limit bucket: `public_read` via
+  `checkRateLimit("public_read", { ip, userAgent }, security.rateLimit)` — same
+  bucket/shape as `GET /api/booking/slots` and `/api/search`.
+- Auth model: anonymous read. The session is attached only to derive the
+  `isLoggedIn` audience signal; a missing session is valid (treated as
+  `logged_out`). Audience is **server-derived, never client-asserted** — it is
+  not a query field (`popupPublicQuerySchema` validates only `path`, bounded to
+  500 chars, reject-unknown).
+- No-PII output contract: the response is `toPublicPopup`-projected only —
+  `{ id, slug, trigger, frequency, content, settings }`. `name`, `status`,
+  `targeting`, timestamps, the internal `content.templateId`, session
+  identifiers, and raw row data are never shipped to the client or logged. The
+  visitor-supplied `path` is reflected as JSON only, never unescaped HTML.
+- Published-only: drafts/archived popups are excluded at the resolver query, so
+  anonymous read cannot reach unpublished content.
+- Forward guard: any future popup impression/dismissal **write** MUST use the
+  `public_write` bucket plus nonce+HMAC via the shared forms/booking evaluators
+  (`core/services/forms/submissionNonce.ts` /
+  `core/services/booking/bookingSubmissionNonce.ts`) and the optional reCAPTCHA
+  policy — never a competing one-off nonce.
