@@ -875,7 +875,11 @@ function parseFlags(argv) {
 }
 
 async function runValidateTracked(flags) {
-  const { repoRoot, task, suite, profile, session } = flags;
+  const repoRoot = flags["repo-root"];
+  const task = flags.task;
+  const suite = flags.suite;
+  const profile = flags.profile;
+  const session = flags.session;
   if (
     typeof repoRoot !== "string" || typeof task !== "string" || typeof suite !== "string" ||
     typeof profile !== "string" || typeof session !== "string"
