@@ -83,7 +83,7 @@ Task board for project work. Keep task files and this board in sync.
   Do not move a leaf task to `Done` until either its standalone changelog
   exists or the family changelog records that leaf.
 
-- **To Do:** 379 tasks
+- **To Do:** 380 tasks
 - **In Progress:** 6 tasks
 - **Done:** 3363 tasks
 
@@ -161,6 +161,7 @@ Task board for project work. Keep task files and this board in sync.
 
 ## To Do
 
+| TASK-559 | Bun Lane C-Split to Reach the 10-15 Minute Target (Follow-up to TASK-557) | Medium | Medium | Follow-up: full test:bun passes (22m15s, exit 0) but the serial C lane (39 files, ~1334s) is the wall bound above the 10-15 min target. Split/shard C (two serial C workers with disjoint self-scoped files, per-worker C sub-schemas, or proven self-scoped heavies to B) while preserving shared-state serialization, fence isolation, pool budget, and the fail-loud DB guard. Acceptance: exit 0 AND <=15 min on remote direct-5432. Changelog 1274 pinned. One executable task. |
 | TASK-558 | Popup Visual Theming (Follow-up to TASK-486) | Medium | Medium | Follow-up: TASK-486 popups render the full DOM/aria contract but are unstyled (CSS theming scoped out in TASK-486-03-L01). Present-only visual theme (surface/border/shadow/radius, backdrop, close affordance, z-index, mobile clamping), accessibility (focus, aria-modal, ESC, reduced-motion), fixed presets or bounded author-configurable theme, byte-identical no-override documents, and a 5+ scenario runtime smoke (wf558smoke). Changelog 1273 pinned. One executable task. |
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|

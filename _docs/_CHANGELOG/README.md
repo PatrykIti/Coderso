@@ -61,7 +61,7 @@ If a completed family is reopened after its changelog draft was already authored
 may remain only with an explicit `Draft` status that supersedes its closure evidence; keep its
 index row absent until fresh reclosure validation succeeds.
 Changelog 1271 is consumed by the completed TASK-557 Bun Test Lane Remote Parallel Speedup
-family. Use 1273 for the next unreserved changelog entry (1272 is consumed by TASK-486).
+family. Changelog 1273 is reserved for TASK-558 (Popup Visual Theming) and 1274 for TASK-559 (Bun Lane C-Split). Use 1275 for the next unreserved changelog entry.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
