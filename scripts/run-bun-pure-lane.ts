@@ -12,12 +12,17 @@
  * after the whole batch.
  *
  * Contract:
- * - `runPureLane()` returns `{ exit, durationMs, files, attempted }`; exit is
- *   the child's exit code (non-zero propagates), `files` is exactly the A
- *   manifest set, and `attempted` is 1 when a child ran (0 for an empty A
- *   set, which returns immediately without spawning).
+ * - `runPureLane(options?)` returns `{ exit, durationMs, files, attempted }`;
+ *   exit is the child's exit code (non-zero propagates), `files` is exactly
+ *   the A manifest set, and `attempted` is 1 or 2 when a child ran (0 for an
+ *   empty A set, which returns immediately without spawning).
+ * - Retry-once flake guard mirrors the B/C workers: on a non-zero exit the
+ *   FULL A file set is rerun once unless `options.noRetry` is set; `attempted`
+ *   records 1 or 2 runs truthfully and the final exit is the retry's exit
+ *   (0 when the retry passes). A spawn failure throws
+ *   `pure_lane_spawn_failed:<bin>` WITHOUT retry, matching the B/C workers'
+ *   `worker_spawn_failed` behavior.
  * - Unreadable/invalid manifest -> `manifest_read_failed:<path>`.
- * - Spawn failure -> `pure_lane_spawn_failed:<bin>`.
  * - `import.meta.main` CLI prints `[bun-lane-pure] <seconds>s exit=<code>`
  *   and exits with the child's code.
  *
@@ -50,14 +55,23 @@ export type PureLaneResult = {
  * Run exactly the A manifest files with `bun test --env-file=/dev/null
  * --parallel=16 --timeout=15000` and a DB-env-stripped child environment.
  * `--env-file=/dev/null` stops Bun from re-injecting `DATABASE_*` from the
- * repo `.env`, so the fail-loud guard is airtight. Returns the child exit
- * code (non-zero propagates), wall time, the A file list, and `attempted: 1`.
- * An empty A set returns `{exit: 0, durationMs: 0, files: [], attempted: 0}`
- * without spawning.
+ * repo `.env`, so the fail-loud guard is airtight.
+ *
+ * Retry-once flake guard (mirrors the B/C workers in `run-bun-parallel.ts`):
+ * a non-zero first exit reruns the FULL A file set once, so load-induced
+ * timeouts under full 5-worker CPU pressure (the final3 A-lane flakes) can
+ * recover. `attempted` records 1 or 2 runs truthfully; the final exit is the
+ * retry's exit (0 when the retry passes). `options.noRetry` disables the
+ * retry, matching the orchestrator's `--no-retry` flag. A spawn failure
+ * throws `pure_lane_spawn_failed:<bin>` without retry. Returns the final exit
+ * code, wall time, the A file list, and the attempted count. An empty A set
+ * returns `{exit: 0, durationMs: 0, files: [], attempted: 0}` without
+ * spawning.
  */
-export async function runPureLane(): Promise<PureLaneResult> {
+export async function runPureLane(options?: { noRetry?: boolean }): Promise<PureLaneResult> {
   const manifestPath = process.env.BUN_LANE_MANIFEST_PATH ?? DEFAULT_MANIFEST_PATH;
   const bunBin = process.env.BUN_LANE_BUN_BIN ?? DEFAULT_BUN_BIN;
+  const noRetry = options?.noRetry ?? false;
 
   let manifest: { rows: { file: string; bucket: string }[] };
   try {
@@ -84,32 +98,44 @@ export async function runPureLane(): Promise<PureLaneResult> {
   delete env.DATABASE_URL;
   delete env.DATABASE_DIRECT_URL;
 
-  let proc: ReturnType<typeof Bun.spawn>;
-  try {
-    // Bun.spawn is the repo convention (scripts/run-bun-lane.ts); keep it.
-    // `--env-file=/dev/null` disables Bun's `.env` autoload in the child,
-    // which would otherwise re-inject the stripped DATABASE_* values from the
-    // repo `.env` and defeat the fail-loud guard above.
-    proc = Bun.spawn(
-      [bunBin, "test", "--env-file=/dev/null", "--parallel=16", "--timeout=15000", ...aFiles],
-      {
-        env,
-        stdout: "inherit",
-        stderr: "inherit" as const,
-      }
-    );
-  } catch (cause) {
-    throw new Error(`pure_lane_spawn_failed:${bunBin}`, { cause });
-  }
+  // Spawn one child and await its exit; a spawn failure rejects so the caller
+  // sees `pure_lane_spawn_failed:<bin>` WITHOUT retry (same fail-loud shape as
+  // the B/C workers' `worker_spawn_failed`).
+  const runOnce = async (): Promise<number> => {
+    let proc: ReturnType<typeof Bun.spawn>;
+    try {
+      // Bun.spawn is the repo convention (scripts/run-bun-lane.ts); keep it.
+      // `--env-file=/dev/null` disables Bun's `.env` autoload in the child,
+      // which would otherwise re-inject the stripped DATABASE_* values from the
+      // repo `.env` and defeat the fail-loud guard above.
+      proc = Bun.spawn(
+        [bunBin, "test", "--env-file=/dev/null", "--parallel=16", "--timeout=15000", ...aFiles],
+        {
+          env,
+          stdout: "inherit",
+          stderr: "inherit" as const,
+        }
+      );
+    } catch (cause) {
+      throw new Error(`pure_lane_spawn_failed:${bunBin}`, { cause });
+    }
 
-  let exitCode: number;
-  try {
-    exitCode = await proc.exited;
-  } catch (cause) {
-    throw new Error(`pure_lane_spawn_failed:${bunBin}`, { cause });
+    let exitCode: number;
+    try {
+      exitCode = await proc.exited;
+    } catch (cause) {
+      throw new Error(`pure_lane_spawn_failed:${bunBin}`, { cause });
+    }
+    return typeof exitCode === "number" ? exitCode : 1;
+  };
+
+  let attempted = 1;
+  let exit = await runOnce();
+  if (exit !== 0 && !noRetry) {
+    attempted = 2;
+    exit = await runOnce();
   }
-  const exit = typeof exitCode === "number" ? exitCode : 1;
-  return { exit, durationMs: performance.now() - started, files: aFiles, attempted: 1 };
+  return { exit, durationMs: performance.now() - started, files: aFiles, attempted };
 }
 
 if (import.meta.main) {

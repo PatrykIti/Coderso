@@ -303,6 +303,34 @@ test("--no-retry keeps attempted at 1 even on failure", () => {
   expect(b0?.exit).toBe(1);
 });
 
+test("fake worker: the pure A lane retries once and the report records attempted 2", () => {
+  const { exitCode, reportPath } = runRunner(
+    ["--lane", "all", "--workers", "3", "--no-provision"],
+    { FAKE_FAIL_MARKER: "a-pure", FAKE_ALWAYS_FAIL: "0" }
+  );
+  expect(exitCode).toBe(0); // the A retry passes, so the whole run passes
+  const report = readReport(reportPath);
+  const a = report.results.find((r) => r.name === "a");
+  expect(a).toBeDefined();
+  expect(a?.attempted).toBe(2); // A-lane flake retried exactly once
+  expect(a?.exit).toBe(0);
+  for (const worker of report.results) {
+    if (worker.name !== "a") expect(worker.attempted).toBe(1);
+  }
+});
+
+test("fake worker: --no-retry also disables the pure A lane retry", () => {
+  const { exitCode, stderr, reportPath } = runRunner(
+    ["--lane", "all", "--workers", "3", "--no-provision", "--no-retry"],
+    { FAKE_FAIL_MARKER: "a-pure", FAKE_ALWAYS_FAIL: "1" }
+  );
+  expect(exitCode).toBe(1);
+  expect(stderr).toContain("[run-bun-parallel] FAILED worker a");
+  const a = readReport(reportPath).results.find((r) => r.name === "a");
+  expect(a?.attempted).toBe(1);
+  expect(a?.exit).toBe(1);
+});
+
 test("report JSON has one entry per worker with truthful attempted and totalMs = max", () => {
   const { exitCode, reportPath } = runRunner(["--lane", "all", "--workers", "3", "--no-provision"]);
   expect(exitCode).toBe(0);

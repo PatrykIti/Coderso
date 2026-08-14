@@ -263,7 +263,7 @@ export async function main(): Promise<void> {
   }
   if (flags.lane === "all") {
     workers.push(
-      runPureLane().then((pure) => ({
+      runPureLane({ noRetry: flags.noRetry }).then((pure) => ({
         name: "a",
         files: pure.files,
         exit: pure.exit,
