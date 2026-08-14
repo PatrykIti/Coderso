@@ -164,7 +164,15 @@ export async function runWorker(
         }
       ): Promise<void> => {
         if (!stream) return;
-        for await (const chunk of stream) target.write(`${prefix}${decoder.decode(chunk)}`);
+        // Reader loop instead of `for await`: the DOM `ReadableStream` type in
+        // this tsconfig lacks an async iterator contract, but `getReader()` is
+        // always available on the runtime stream.
+        const reader = stream.getReader();
+        for (;;) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          target.write(`${prefix}${decoder.decode(value)}`);
+        }
       };
       (async () => {
         try {
