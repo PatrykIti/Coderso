@@ -34,7 +34,10 @@
   `--reveal-delay` is emitted alongside, present-only, DISJOINT from the 522
   composition vars.
 
-**Status:** ✅ Done (2026-07-08). Both subtasks landed in order on `feature/task-525`;
+**Status:** ✅ Done
+**Completed:** 2026-07-08
+**Completion Note:** Both subtasks landed in order on `feature/task-525`;
+
 the branch-point concern is moot — the section-render seam
 (`toPageSectionStyle` / `PageSectionContent` / `toPageSectionRenderProps`) was
 re-grepped against the on-disk state at implement time and 525 owns DISJOINT

@@ -7,7 +7,8 @@
 **Category:** Workflow Evidence / Runtime Smoke / Integrity
 **Estimated Effort:** Medium
 **Dependencies:** TASK-545-01-L02, TASK-545-02
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-08-14
 **Changelog:** 1257 (pinned; closure only)
 
 ---
@@ -102,8 +103,11 @@ therefore remains without relying on an obsolete local-worktree count.
 
 | ID | Title | Exclusive ownership | Status |
 |---|---|---|---|
-| TASK-545-03-L01 | Define and validate smoke evidence manifests | generic shared-runner visible-evidence result/normalizer, manifest/checkpoint schemas, exact type declarations, report-equality validator, canonical-root resume/delta CLI, focused tests | ⏳ To Do |
+| TASK-545-03-L01 | Define and validate smoke evidence manifests | generic shared-runner visible-evidence result/normalizer, manifest schema, exact type declarations, report-equality validator, evidence-directory revision digest, focused tests | ⏳ To Do |
 | TASK-545-03-L02 | Track evidence screenshots | narrow `.gitignore` plus evidence docs only | ⏳ To Do |
+| TASK-545-03-L03 | Checkpoint and owner resume | phase-1 checkpoint schema, atomic no-overwrite checkpoint, owner_action_required pause, exact-path/hash tracked resume, closure-resume state machine | ⏳ To Do |
+| TASK-545-03-L04 | Closure metadata delta and closure-delta CLI | closure metadata mutation plan, ordered-durable changelog-then-index writer, metadata-only delta validation, closure-delta CLI | ⏳ To Do |
+| TASK-545-03-L05 | TASK-548 committed bootstrap gate | six-path committed-bootstrap receipt types plus normalize/require authorization | ⏳ To Do |
 
 ## Security Contract
 
@@ -120,7 +124,7 @@ open with an `owner_action_required` result.
 ## Testing Requirements
 
 - Run the manifest/checkpoint, shared visible-evidence adapter, Git tracking,
-  crash-recovery, and metadata-delta tests owned by L01/L02.
+  crash-recovery, and metadata-delta tests owned by L01/L03/L04.
 - Verify both ignored and narrowly unignored evidence paths using asserted
   `git check-ignore` exit codes.
 - Run repository type checks, touched-file line counts, and `git diff --check`.

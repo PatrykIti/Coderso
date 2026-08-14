@@ -884,7 +884,107 @@ Redaction is a last line of defense, not permission to put credentials,
 cookies, tokens, headers, SQL/binds, PII, or raw logs in any intermediate
 result.
 
-## 15. Test the touched contracts
+## 15. Manifestable visible evidence recipe
+
+Use this recipe when the suite report must become durable TASK-545 smoke
+evidence under `_docs/_workflows/_smoke/evidence/`. It adds one strict contract
+on top of the thin adapter from section 4: every scenario carries exact visible
+evidence and the report proves a byte-exact projection of it before any manifest
+is created. The schema/validator owner is
+[`_docs/_workflows/lib/smoke-evidence.mjs`](../../_docs/_workflows/lib/smoke-evidence.mjs);
+adapters use only the thin runner-side delegate
+[`scripts/runtime-smoke/visible-evidence.ts`](../../scripts/runtime-smoke/visible-evidence.ts)
+and never import the manifest writer.
+
+Build the strict scenarios from machine-observed proof: exact kebab-case `id`,
+`pass: true`, a non-empty `title`, non-empty profile-specific `variants` (each
+with machine-observed visible `assertions` and an empty `consoleErrors`
+array), and at least one scenario-owned `screenshots` entry with a bounded,
+signature-verified PNG path and SHA-256. A manifest-bearing suite must provide
+all of these; Admin variants must cover both Admin light and dark without
+inventing duplicate scenario IDs.
+
+```ts
+import { requireManifestableScenarioResults } from "../visible-evidence";
+import type { SmokeScenarioResult, SmokeScreenshotResult } from "./types";
+
+const scenarios: readonly SmokeScenarioResult[] = Object.freeze([
+  Object.freeze({
+    id: "editor-visible-effect",
+    pass: true,
+    elapsedMs: Math.ceil(performance.now() - started),
+    title: "Editor shows the saved block effect",
+    variants: Object.freeze([
+      Object.freeze({
+        id: "admin-light-desktop",
+        surface: "admin",
+        theme: "light",
+        viewport: Object.freeze({ width: 1280, height: 800 }),
+        assertions: Object.freeze([
+          Object.freeze({
+            kind: "computed-style",
+            target: "#block-preview",
+            property: "display",
+            expected: "flex",
+            actual: "flex",
+            pass: true,
+          }),
+        ]),
+        consoleErrors: Object.freeze([]),
+      }),
+    ]),
+    screenshots: Object.freeze([
+      Object.freeze({ path: evidencePath, sha256: screenshotSha256 }),
+    ]),
+  }),
+]);
+
+// Prove the strict manifestable shape and the exact global screenshot union
+// BEFORE returning the shared report. Call the delegate directly; it performs
+// no projection. A one-line named adapter delegate that forwards both
+// arguments unchanged is the only allowed wrapper.
+const manifestable = requireManifestableScenarioResults(
+  scenarios,
+  globalScreenshots
+);
+
+return Object.freeze({
+  pass: true,
+  serverUp: true,
+  scenarios: manifestable,
+  screenshots: globalScreenshots,
+  consoleErrors: Object.freeze([]),
+  cleanup: Object.freeze({ productStateRestored: true }),
+});
+```
+
+`requireManifestableScenarioResults(scenarios, globalScreenshots)` strictly
+normalizes every scenario (exact keys, caps, unique variant ids, all
+assertions passing, zero console errors, at least one screenshot per scenario)
+and proves `globalScreenshots` is byte-equivalent to the unique ordered union
+of scenario-owned screenshots. A screenshot belongs to exactly one scenario;
+duplicate ownership, extra, missing, reordered, or unknown-typed entries fail
+closed before manifest creation. The report's `screenshots` array must be that
+exact union.
+
+The recipe composes the shared platform, never a task-local loop: TASK-552
+lifecycle and polling, process supervision, one lazy persistent profile worker,
+set-based DB helpers and reverse cleanup, `BrowserTransport`,
+checkpoints, redaction, timing, and reporting (sections 5-14). The adapter owns
+only selectors, fixtures, scenario order, registered operations, reset logic,
+and the strict evidence proof above. It creates no server, browser, worker, or
+report loop of its own.
+
+Pinned validation lives in
+[`tests/unit/runtime-smoke/visible-evidence.test.ts`](../../tests/unit/runtime-smoke/visible-evidence.test.ts)
+and [`tests/unit/workflows/smokeEvidence.test.ts`](../../tests/unit/workflows/smokeEvidence.test.ts):
+missing title/variant/assertion/scenario screenshot, a false assertion,
+non-empty console errors, duplicate screenshot ownership, and global-union
+drift all fail before any manifest is created. The TASK-548 pilot is the first
+real adapter consumer of this recipe; do not add a second enumerator or
+validator in a suite.
+
+## 16. Test the touched contracts
 
 Every new adapter needs focused tests for:
 
@@ -933,7 +1033,7 @@ cleanup proof—not just green unit tests. A UI/browser suite additionally
 requires its screenshots and zero browser/page errors; a process/network-only
 suite such as `production-boundary` may validly have no screenshots.
 
-## 16. Review checklist
+## 17. Review checklist
 
 - [ ] The suite is registered in contracts, CLI profiles, registry paths,
       descriptors, and tests.
@@ -957,7 +1057,7 @@ suite such as `production-boundary` may validly have no screenshots.
 - [ ] Reports contain no secrets, PII, raw DOM, SQL, headers, or raw logs.
 - [ ] Targeted unit/type/link/format checks and the affected live smoke pass.
 
-## 17. TASK-554 Post metadata recipe
+## 18. TASK-554 Post metadata recipe
 
 `task-554` is a reference for a narrow Admin-editor suite that must prove a
 conditional server authorization boundary rather than a similarly named legacy

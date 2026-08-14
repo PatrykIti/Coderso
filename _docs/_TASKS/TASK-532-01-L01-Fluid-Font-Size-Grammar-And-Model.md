@@ -141,4 +141,3 @@ declaration. Corpus includes injection + parser-differential vectors (532-01-L06
    key rejects (`additionalProperties:false`).
 4. All edits inside a labelled `TASK-532` region; the gradient helpers (531) are
    not touched.
-</content>

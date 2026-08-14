@@ -8,7 +8,8 @@
 **Category:** Task Metadata / Historical Integrity
 **Estimated Effort:** Small
 **Dependencies:** TASK-545-03-L02
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-08-14
 **Changelog:** 1257 (pinned; closure only)
 
 ---

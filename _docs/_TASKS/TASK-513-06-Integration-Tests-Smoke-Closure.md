@@ -7,7 +7,8 @@
 **Category:** Content (Engine) / Tests / Smoke / Closure
 **Estimated Effort:** Medium
 **Dependencies:** TASK-513-01, -02, -03, -04, -05 (all land first)
-**Status:** ✅ Done (2026-07-06)
+**Status:** ✅ Done
+**Completed:** 2026-07-06
 
 ---
 

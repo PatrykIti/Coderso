@@ -7,7 +7,8 @@
 **Category:** QA / Docs / Closure
 **Estimated Effort:** Medium
 **Dependencies:** TASK-514-01, -02, -03, -04, -05 (all landed)
-**Status:** ✅ Done (2026-07-06)
+**Status:** ✅ Done
+**Completed:** 2026-07-06
 
 ---
 

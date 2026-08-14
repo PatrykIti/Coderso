@@ -8,7 +8,8 @@
 **Category:** Workflow Orchestration / Implementation / Post-Audit
 **Estimated Effort:** Large
 **Dependencies:** TASK-545-02-L01
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-08-14
 **Changelog:** 1257 (pinned; closure only)
 
 ---
@@ -60,9 +61,12 @@ removed by `5facaf32` are not implementation targets.
 
 ## Grounded violation inventory
 
-- `task-543-implement.mjs:6702-6740` has a two-pass all-lens replay loop instead
-  of finding-driven affected-lens reruns through the canonical post-audit driver.
-- Its local `requireAllResults` at `:1986-2035` is superseded by the shared
+- `task-543-implement.mjs:6702-6740` AND `:7041-7071` each have a two-pass
+  all-lens replay loop instead
+  of finding-driven affected-lens reruns through the canonical post-audit driver
+  (the first is the post-audit loop, the second is the "Final drift" phase with
+  `FINAL_LENSES`).
+- Its local `requireAllResults` at `:1986-1998` is superseded by the shared
   helper so workflow result semantics have one owner.
 - Literal `.filter(Boolean)` calls at `:2408`, `:2521`, and `:3340` filter URL or
   process-domain data and are explicitly valid; they are not evidence of a
@@ -79,6 +83,20 @@ The tracked `task-543-implement.mjs` is 7,079 physical lines at the refreshed
 baseline. Before changing its driver behavior, split it by responsibility into a
 thin orchestration entry and these flat tracked libraries under
 `_docs/_workflows/lib/`:
+
+- **Import timing for TASK-545-03-L01 symbols:** this leaf lands BEFORE
+  `TASK-545-03-L01` (land order 01-L01 → 02-L01 → 02-L02 → 01-L02 → 03 →
+  04), but its migrated call sites must reference `createResumeCheckpoint` and
+  `openWorkflowClosureResume`, which 545-03-L01 owns in
+  `lib/smoke-evidence.mjs`. Therefore every reference MUST be a **lazy dynamic
+  import** resolved inside the executing function
+  (`const { createResumeCheckpoint } = await import("./lib/smoke-evidence.mjs");`),
+  never a top-level static import — a static import would fail this leaf's own
+  gates because the existing `task543ImplementSecurity.test.ts` spawns
+  `node task-543-implement.mjs --codeql-self-test` before 03-L01 has landed.
+  The 02-L02 static checks are AST-only: they assert the call-site shape
+  (named reference + expected arguments) without executing the module, and
+  03-L01's `smokeEvidence.test.ts` owns the live runtime behavior.
 
 - `task-543-gate-contracts.mjs` — command allowlists, gate schemas, strict-scan
   projections, and gate receipt validation;
@@ -301,7 +319,10 @@ invalidates every retained receipt and requires a new complete initial pass.
 Only an exact verified set retains unaffected receipts and reruns narrowly.
 
 Replace filtering of agent-result collections with `requireAllResults` before
-any map/flatMap/count or clean classification. Do not rewrite legitimate
+any map/flatMap/count or clean classification. Both `requireAllResults` and
+`collectStructuredFindings` are imported from 545-01-L01's
+`lib/workflow-contracts.mjs` (single owner); do not redefine them locally. Do
+not rewrite legitimate
 domain/browser/process collection filters. Remove executable `git commit`/
 `git add` prompts, dynamic changelog scans or renumber instructions, and
 mandatory-smoke deferral. Historical completed task scripts receive their actual

@@ -8,7 +8,8 @@
 **Category:** Workflow Evidence / Git Tracking / Documentation
 **Estimated Effort:** Small
 **Dependencies:** TASK-545-03-L01
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-08-14
 **Changelog:** 1257 (pinned; closure only)
 
 ---
@@ -86,15 +87,16 @@ fixtures. Do not commit a fake product screenshot as historical smoke proof. The
 real Playwright evidence under task directories. Documentation requires human
 review for synthetic-data/secret/PII safety before adding evidence.
 
-Document all three exact L01 CLI stages. Phase 1 is
-`phase1 --repo-root <root> --task TASK-### --suite <registered-suite>
---profile certification --session <validated-session> --audit-directory`; it
-derives the canonical task/session
+Document the two exact L01 diagnostic CLI stages plus the phase-1
+programmatic API exactly as L01 defines them. Phase 1 is the owning-workflow
+API `createResumeCheckpoint({...})` — there is NO `phase1` CLI command and no
+CLI/API workflow-entry override (L01:776). It derives the canonical task/session
 directory, creates `resume-checkpoint.json`, returns the task/run/checkpoint hash and exact
 owning-workflow resume argv/command, then pauses. Only after the repository owner reviews
 and stages that exact directory may that closure-only workflow command use the same
 canonical checkpoint path, hash, run ID and bound workflow entry while internally requiring
-tracked parity. The standalone validator command is diagnostic only. After closure metadata edits,
+tracked parity. The standalone validator CLI (`validate-tracked`,
+`closure-delta`) is diagnostic only and never the owner closure command. After closure metadata edits,
 `closure-delta` validates the exact pinned changelog path and bounded metadata allowlist.
 The agent returns `owner_action_required` and never stages/commits files. The tracked resume
 enumerates manifest-referenced files plus the checkpoint control file, validates every

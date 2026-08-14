@@ -6,7 +6,8 @@
 **Category:** Contributor Workflow / Audit Integrity / Evidence / Task Graph
 **Estimated Effort:** Large
 **Dependencies:** TASK-554
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-08-14
 **Contract Refreshed:** 2026-08-08 (canonical finding-driven audit passes)
 **Changelog:** 1257 (pinned; create only at implementation closure)
 
@@ -172,7 +173,7 @@ No scanner exception or allowlist is added.
 |---|---|---|---|
 | TASK-545-01 | All-results guard and static workflow contract | TASK-545-01-L01, L02 | ⏳ To Do |
 | TASK-545-02 | Canonical audit and post-audit workflow | TASK-545-02-L01, L02 | ⏳ To Do |
-| TASK-545-03 | Durable smoke evidence manifest | TASK-545-03-L01, L02 | ⏳ To Do |
+| TASK-545-03 | Durable smoke evidence manifest | TASK-545-03-L01..L05 | ⏳ To Do |
 | TASK-545-04 | Task graph, changelog repair, and closure | TASK-545-04-L01..L04 | ⏳ To Do |
 
 ## Finding coverage matrix
@@ -183,7 +184,7 @@ No scanner exception or allowlist is added.
 | bespoke/misplaced audit and incomplete post-audit identities | 545-02/L01..L02 | AST/static assertions plus workflow smoke show one complete initial pass, one reconcile per pass, affected-scope-only reruns, and exact declared lens results |
 | agent commits, dynamic pins, deferred smoke | 545-02/L01 + L02 | static scan of tracked entries has zero forbidden prompt/lookup patterns |
 | already-remediated TASK-522 prompt-injection/Semgrep boundary | 545-02/L01 | changelog 1259's tracked formatter and focused test stay read-only; targeted regression + strict scan remain green with no suppression |
-| untracked unverifiable smoke | 545-03/L01..L02 | canonical-root phase 1 writes a strict checkpoint and pauses; exact owner-only resume proves tracked parity; wrong/stale replay and non-metadata closure drift fail |
+| untracked unverifiable smoke | 545-03/L01..L05 | canonical-root phase 1 writes a strict checkpoint and pauses; exact owner-only resume proves tracked parity; wrong/stale replay and non-metadata closure drift fail |
 | enumerated task/board/changelog drift | 545-04/L01..L04 | physical graph/index/statistics/status/changelog evidence audit returns zero scoped contradictions |
 
 ## Ownership and land order

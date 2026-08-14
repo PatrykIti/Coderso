@@ -73,4 +73,3 @@ stored docs. The smoke's security-negative scenario (item 2f) is a required gate
 1. Closure owns tests-confirmation + docs + statuses only; no source contract change.
 2. Changelog + board numbers grepped FRESH at closure; only TASK-532 rows touched.
 3. All final gates green; ≥5-scenario smoke passes light + dark, 0 console errors.
-</content>

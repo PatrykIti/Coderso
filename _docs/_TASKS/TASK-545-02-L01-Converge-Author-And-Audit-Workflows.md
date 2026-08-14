@@ -8,7 +8,8 @@
 **Category:** Workflow Orchestration / Pre-Implementation Audit
 **Estimated Effort:** Large
 **Dependencies:** TASK-545-01-L01
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-08-14
 **Changelog:** 1257 (pinned; closure only)
 
 ---
@@ -45,11 +46,11 @@ not be modified or counted as migrated.
 
 ## Grounded files requiring canonical-pass repair
 
-- `task-522-author.mjs:159-194` owns a bespoke fixed five-round loop, uses
+- `task-522-author.mjs:152-194` (loop header at 153) owns a bespoke fixed five-round loop, uses
   `audits.filter(Boolean)`, and can classify a partial result set as clean.
 - TASK-546/changelog 1259 already remediated the former prompt-injection/Semgrep
   finding through tracked `lib/task-522-findings-prompt.mjs` plus
-  `tests/unit/workflows/task522FindingsPrompt.test.ts`; current line 183 calls
+  `tests/unit/workflows/task522FindingsPrompt.test.ts`; current line 184 calls
   that formatter. Both are read-only regression inputs for this leaf. Preserve
   their contract and prove the focused test plus targeted scan remain green.
 - TASK-554's terminal author/audit entry is expected to use the agreed
@@ -102,6 +103,8 @@ export async function runCanonicalAuditRounds({
       throw new WorkflowResultError("workflow_audit_revision_changed", label, `round=${round}`);
     }
     const findings = collectStructuredFindings(results.map((result) => result.value));
+    // collectStructuredFindings + requireAllResults come from 545-01-L01's
+    // lib/workflow-contracts.mjs (single owner); never redefine locally.
     const actionable = highMedium(findings);
     const retainedLow = findings.filter((finding) => finding.severity === "LOW");
     rounds.push({

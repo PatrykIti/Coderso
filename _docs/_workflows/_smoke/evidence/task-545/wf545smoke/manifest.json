@@ -1,0 +1,314 @@
+{
+  "generatedAt": "2026-08-14T05:55:02.000Z",
+  "profile": "fast",
+  "report": {
+    "path": "report.json",
+    "sha256": "05bb8a52d84a80f0bbfc8ed3bc59e3a92da39ac545a02daf4a246633cae08041"
+  },
+  "revision": {
+    "gitHead": "7d7494dfdcf4be147c73bfc7287285392916c7a5",
+    "workingTreeDirty": true,
+    "workingTreeSha256": "1ea0c1689fc0cc9f0db0a1d89ef54f92e76069c680b79185e716ce3e7efa4612"
+  },
+  "scenarios": [
+    {
+      "id": "public-home-renders",
+      "screenshots": [
+        {
+          "path": "shots/01-public-home-renders.png",
+          "sha256": "bf361c60ebf06c246af0eb6e5de1d74f015895c73d5b15d0d7834c51902de381"
+        }
+      ],
+      "title": "Public homepage loads and renders visible content",
+      "variants": [
+        {
+          "assertions": [
+            {
+              "actual": "664x60",
+              "expected": "664x60",
+              "kind": "geometry",
+              "pass": true,
+              "property": "box",
+              "target": "h1"
+            },
+            {
+              "actual": "48px",
+              "expected": "48px",
+              "kind": "computed-style",
+              "pass": true,
+              "property": "font-size",
+              "target": "h1"
+            },
+            {
+              "actual": "Published Runtime 33b3c0e2",
+              "expected": "Published Runtime 33b3c0e2",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "text",
+              "target": "h1"
+            },
+            {
+              "actual": "complete",
+              "expected": "complete",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "readyState",
+              "target": "document"
+            }
+          ],
+          "consoleErrors": [],
+          "id": "home-light-desktop",
+          "surface": "public",
+          "theme": "light",
+          "viewport": { "height": 720, "width": 1280 }
+        }
+      ]
+    },
+    {
+      "id": "public-route-served",
+      "screenshots": [
+        {
+          "path": "shots/02-public-route-served.png",
+          "sha256": "997c2e1a424772621553734016ad521c887e7aa78ebc3d9c5ce60edb914f0fd2"
+        }
+      ],
+      "title": "Public route is served with 200 text/html and renders",
+      "variants": [
+        {
+          "assertions": [
+            {
+              "actual": "complete",
+              "expected": "complete",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "readyState",
+              "target": "document"
+            },
+            {
+              "actual": "584x319",
+              "expected": "584x319",
+              "kind": "geometry",
+              "pass": true,
+              "property": "box",
+              "target": "h1"
+            },
+            {
+              "actual": "Projektujemy domy do prawdziwego życia",
+              "expected": "Projektujemy domy do prawdziwego życia",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "text",
+              "target": "h1"
+            },
+            {
+              "actual": "O nas — FormaDom e8100ea7",
+              "expected": "O nas — FormaDom e8100ea7",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "text",
+              "target": "title"
+            }
+          ],
+          "consoleErrors": [],
+          "id": "route-light-desktop",
+          "surface": "public",
+          "theme": "light",
+          "viewport": { "height": 720, "width": 1280 }
+        }
+      ]
+    },
+    {
+      "id": "distinct-public-pages",
+      "screenshots": [
+        {
+          "path": "shots/03-distinct-pages-a.png",
+          "sha256": "70ceee78a21075c864fba78eac40b66a068b2f3385428706f0ef94fc884402a9"
+        },
+        {
+          "path": "shots/03-distinct-pages-b.png",
+          "sha256": "76531081bf3ce7418a78c2318a5c7f8f6375be9e140c2fcba2fbf2a553c6c3fb"
+        }
+      ],
+      "title": "Two public pages produce distinct visible content",
+      "variants": [
+        {
+          "assertions": [
+            {
+              "actual": "Projektujemy domy do prawdziwego życia",
+              "expected": "Projektujemy domy do prawdziwego życia",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "text",
+              "target": "h1"
+            },
+            {
+              "actual": "584x319",
+              "expected": "584x319",
+              "kind": "geometry",
+              "pass": true,
+              "property": "box",
+              "target": "h1"
+            }
+          ],
+          "consoleErrors": [],
+          "id": "page-a-o-nas",
+          "surface": "public",
+          "theme": "light",
+          "viewport": { "height": 720, "width": 1280 }
+        },
+        {
+          "assertions": [
+            {
+              "actual": "Znajdź punkt wyjścia dla swojego domu",
+              "expected": "Znajdź punkt wyjścia dla swojego domu",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "text",
+              "target": "h1"
+            },
+            {
+              "actual": "584x240",
+              "expected": "584x240",
+              "kind": "geometry",
+              "pass": true,
+              "property": "box",
+              "target": "h1"
+            }
+          ],
+          "consoleErrors": [],
+          "id": "page-b-projekty",
+          "surface": "public",
+          "theme": "light",
+          "viewport": { "height": 720, "width": 1280 }
+        }
+      ]
+    },
+    {
+      "id": "form-control-visible-focusable",
+      "screenshots": [
+        {
+          "path": "shots/04-form-control.png",
+          "sha256": "6054d1a5f119ab57cbd028621dec79540ec805852b5d45cae90ed53794161ba6"
+        }
+      ],
+      "title": "Page with a form renders a visible focusable interactive control",
+      "variants": [
+        {
+          "assertions": [
+            {
+              "actual": "true",
+              "expected": "true",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "present",
+              "target": "form"
+            },
+            {
+              "actual": "462x42",
+              "expected": "462x42",
+              "kind": "geometry",
+              "pass": true,
+              "property": "box",
+              "target": "input[type=text]"
+            },
+            {
+              "actual": "true",
+              "expected": "true",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "focused",
+              "target": "input[type=text]"
+            },
+            {
+              "actual": "6",
+              "expected": "6",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "controlCount",
+              "target": "form"
+            },
+            {
+              "actual": "WF545 Form Smoke",
+              "expected": "WF545 Form Smoke",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "text",
+              "target": "h1"
+            }
+          ],
+          "consoleErrors": [],
+          "id": "form-light-desktop",
+          "surface": "public",
+          "theme": "light",
+          "viewport": { "height": 720, "width": 1280 }
+        }
+      ]
+    },
+    {
+      "id": "navigation-menu-click",
+      "screenshots": [
+        {
+          "path": "shots/05-navigation-menu-click.png",
+          "sha256": "712d51e1f688724969ef362169452b53f06fa7a80a0c645a2b2f866624a859bc"
+        }
+      ],
+      "title": "Page navigation menu is visible and a click changes URL and content",
+      "variants": [
+        {
+          "assertions": [
+            {
+              "actual": "true",
+              "expected": "true",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "present",
+              "target": "nav[data-site-nav]"
+            },
+            {
+              "actual": "WF545 Smoke Menu",
+              "expected": "WF545 Smoke Menu",
+              "kind": "aria",
+              "pass": true,
+              "property": "aria-label",
+              "target": "nav[data-site-nav]"
+            },
+            {
+              "actual": "279x40",
+              "expected": "279x40",
+              "kind": "geometry",
+              "pass": true,
+              "property": "box",
+              "target": "nav[data-site-nav]"
+            },
+            {
+              "actual": "/cennik-e8100ea7",
+              "expected": "/cennik-e8100ea7",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "pathname",
+              "target": "location"
+            },
+            {
+              "actual": "Przejrzyste pakiety projektowe",
+              "expected": "Przejrzyste pakiety projektowe",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "text",
+              "target": "h1"
+            }
+          ],
+          "consoleErrors": [],
+          "id": "nav-light-desktop",
+          "surface": "public",
+          "theme": "light",
+          "viewport": { "height": 720, "width": 1280 }
+        }
+      ]
+    }
+  ],
+  "schemaVersion": 1,
+  "serverUp": true,
+  "session": "wf545smoke",
+  "suiteId": "task-545",
+  "taskId": "TASK-545"
+}

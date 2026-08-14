@@ -2,7 +2,6 @@
 
 # FileName: TASK-512_Media_Library_Prototype_Fidelity_And_Schema.md
 
-**Parent Task:** TASK-512 (board umbrella)
 **Priority:** High
 **Category:** Admin UI / Media / DB Schema / Services / Routes / Prototype Fidelity
 **Estimated Effort:** Large
@@ -89,13 +88,13 @@ legacy rows byte-safe on read. (Current last migration = `0066_dashboard_layouts
 
 | ID | Title | File | Status |
 |----|-------|------|--------|
-| TASK-512-01 | Schema & Migration — media_folders + media metadata columns | `TASK-512-01-Schema-And-Migration.md` | ⏳ To Do |
-| TASK-512-02 | Services, Validation & Storage Quota | `TASK-512-02-Services-Validation-Storage-Quota.md` | ⏳ To Do |
-| TASK-512-03 | Routes & Security — media meta + folders CRUD | `TASK-512-03-Routes-And-Security.md` | ⏳ To Do |
-| TASK-512-04 | Admin Client, Cache & Types | `TASK-512-04-Admin-Client-Cache-Types.md` | ⏳ To Do |
-| TASK-512-05 | UI Components — Prototype Fidelity & New Controls | `TASK-512-05-UI-Components-Fidelity-And-Controls.md` | ⏳ To Do |
-| TASK-512-06 | Media Library Page Assembly & Prototype Layout | `TASK-512-06-Page-Assembly-And-Layout.md` | ⏳ To Do |
-| TASK-512-07 | Tests, Docs, Smoke & Closure | `TASK-512-07-Tests-Docs-Smoke-Closure.md` | ⏳ To Do |
+| TASK-512-01 | Schema & Migration — media_folders + media metadata columns | `TASK-512-01-Schema-And-Migration.md` | ✅ Done |
+| TASK-512-02 | Services, Validation & Storage Quota | `TASK-512-02-Services-Validation-Storage-Quota.md` | ✅ Done |
+| TASK-512-03 | Routes & Security — media meta + folders CRUD | `TASK-512-03-Routes-And-Security.md` | ✅ Done |
+| TASK-512-04 | Admin Client, Cache & Types | `TASK-512-04-Admin-Client-Cache-Types.md` | ✅ Done |
+| TASK-512-05 | UI Components — Prototype Fidelity & New Controls | `TASK-512-05-UI-Components-Fidelity-And-Controls.md` | ✅ Done |
+| TASK-512-06 | Media Library Page Assembly & Prototype Layout | `TASK-512-06-Page-Assembly-And-Layout.md` | ✅ Done |
+| TASK-512-07 | Tests, Docs, Smoke & Closure | `TASK-512-07-Tests-Docs-Smoke-Closure.md` | ✅ Done |
 
 ### Land order (strictly sequential — each lands green before the next opens)
 

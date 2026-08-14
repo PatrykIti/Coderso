@@ -8,7 +8,8 @@
 **Estimated Effort:** Large
 **Dependencies:** TASK-513-01 (`config` types + client), TASK-513-02 (`date`/`slug` types +
 exported `FIELD_TYPE_LABELS` map for the type badges), TASK-513-04 (`ContentTypePermissionsPanel`)
-**Status:** ✅ Done (2026-07-06)
+**Status:** ✅ Done
+**Completed:** 2026-07-06
 
 ---
 

@@ -133,4 +133,3 @@ key must not merge without its round-trip + reject-unknown assertion here.
 3. Byte-identity of post-530 no-effect docs asserted.
 4. The weight-enum membership re-baseline is the ONLY test change to existing
    assertions; no behavior weakening.
-</content>

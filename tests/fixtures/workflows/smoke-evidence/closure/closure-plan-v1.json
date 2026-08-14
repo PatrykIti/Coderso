@@ -1,0 +1,79 @@
+[
+  {
+    "path": "_docs/_TASKS/TASK-545-01-All-Results-Guard-And-Static-Workflow-Contract.md",
+    "beforeSha256": "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+    "operations": [
+      {
+        "kind": "replace_once",
+        "label": "task_status",
+        "search": "**Status:** \u23f3 To Do",
+        "replacement": "**Status:** \u2705 Done"
+      },
+      {
+        "kind": "upsert_field",
+        "label": "task_started",
+        "field": "Started",
+        "afterField": "Status",
+        "value": "2026-08-14"
+      },
+      {
+        "kind": "upsert_field",
+        "label": "task_completed",
+        "field": "Completed",
+        "afterField": "Started",
+        "value": "2026-08-14"
+      }
+    ],
+    "expectedAfterSha256": "b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1"
+  },
+  {
+    "path": "_docs/_TASKS/README.md",
+    "beforeSha256": "c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1",
+    "operations": [
+      {
+        "kind": "replace_board_row",
+        "label": "board_row",
+        "from": "| TASK-545 | Title | High | Large | \u23f3 To Do |",
+        "to": "| TASK-545 | Title | High | Large | \u2705 Done |"
+      },
+      {
+        "kind": "replace_statistics_row",
+        "label": "statistics",
+        "from": "| TASK-545 | \u23f3 To Do | 4 | 13 |",
+        "to": "| TASK-545 | \u2705 Done | 4 | 13 |"
+      }
+    ],
+    "expectedAfterSha256": "d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1"
+  },
+  {
+    "path": "_docs/_CHANGELOG/README.md",
+    "beforeSha256": "e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1",
+    "operations": [
+      {
+        "kind": "insert_after",
+        "label": "changelog_index_row",
+        "anchor": "|-----|------|-------|------|",
+        "line": "| 1257 | 2026-08-14 | Task 545 Smoke Evidence Checkpoint | TASK-545 |"
+      },
+      {
+        "kind": "replace_once",
+        "label": "changelog_index_pointer",
+        "search": "Next changelog number: 1257.",
+        "replacement": "Next changelog number: 1258."
+      }
+    ],
+    "expectedAfterSha256": "f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1"
+  },
+  {
+    "path": "_docs/_CHANGELOG/1257-2026-08-14-task-545-smoke-evidence-checkpoint.md",
+    "beforeSha256": "0000000000000000000000000000000000000000000000000000000000000000",
+    "operations": [
+      {
+        "kind": "create_file",
+        "label": "changelog_file",
+        "bytes": "# 1257 - Task 545 Smoke Evidence Checkpoint\n\n**Date:** 2026-08-14\n**Version:** Unreleased\n**Tasks:** TASK-545\n\n## Key Changes\n\n- Metadata-only closure delta validated and applied under the smoke evidence contract.\n"
+      }
+    ],
+    "expectedAfterSha256": "1111111111111111111111111111111111111111111111111111111111111111"
+  }
+]

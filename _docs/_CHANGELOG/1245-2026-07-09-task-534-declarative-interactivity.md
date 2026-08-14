@@ -5,9 +5,9 @@ Version: Unreleased
 Tasks: TASK-534 (absorbs TASK-527)
 
 > Changelog number resolved next-free at closure. `1243` (TASK-535) was the last
-> used in this tree; TASK-534 takes `1244`. The orchestrator owns
-> `_docs/_TASKS/README.md` + the changelog registry and may renumber on merge if
-> 531/532/533 land intermediate numbers.
+> used in this tree; TASK-534 takes `1245` (its actual changelog — this file). The
+> orchestrator owns `_docs/_TASKS/README.md` + the changelog registry; the number
+> stayed stable on merge as 1245.
 
 ## Key Changes
 

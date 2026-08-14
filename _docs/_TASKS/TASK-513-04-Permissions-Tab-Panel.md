@@ -7,7 +7,8 @@
 **Category:** Content (Engine) / Admin UI / Config Surface
 **Estimated Effort:** Medium
 **Dependencies:** TASK-513-01 (`ContentTypeConfig.permissions` shape + client types)
-**Status:** ✅ Done (2026-07-06)
+**Status:** ✅ Done
+**Completed:** 2026-07-06
 
 ---
 

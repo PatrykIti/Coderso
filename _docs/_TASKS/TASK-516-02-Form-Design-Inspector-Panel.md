@@ -7,7 +7,8 @@
 **Category:** Admin UI / Content (Forms)
 **Estimated Effort:** Medium
 **Dependencies:** TASK-516-01 (`FormFormTheme` type, enum sets, `resolveFormTheme`).
-**Status:** ✅ Done (2026-07-06)
+**Status:** ✅ Done
+**Completed:** 2026-07-06
 
 ---
 

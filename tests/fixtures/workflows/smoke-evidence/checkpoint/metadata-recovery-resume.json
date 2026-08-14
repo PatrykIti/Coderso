@@ -1,0 +1,78 @@
+{
+  "state": "metadata_recovery",
+  "checkpoint": {
+    "schemaVersion": 1,
+    "taskId": "TASK-545",
+    "suiteId": "task-545",
+    "profile": "certification",
+    "session": "task-545-certification",
+    "runId": "1111111111111111111111111111111111111111111111111111111111111111",
+    "workflowEntry": "_docs/_workflows/task-545-implement.mjs",
+    "evidenceDirectory": "_docs/_workflows/_smoke/evidence/task-545/task-545-certification",
+    "manifestSha256": "2222222222222222222222222222222222222222222222222222222222222222",
+    "evidenceFiles": [
+      {
+        "path": "admin-light-wide.png",
+        "sha256": "3333333333333333333333333333333333333333333333333333333333333333"
+      },
+      {
+        "path": "manifest.json",
+        "sha256": "4444444444444444444444444444444444444444444444444444444444444444"
+      },
+      {
+        "path": "report.json",
+        "sha256": "5555555555555555555555555555555555555555555555555555555555555555"
+      }
+    ],
+    "frozenRuntime": {
+      "gitHead": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "workingTreeDirty": false,
+      "workingTreeSha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+    },
+    "closureContract": {
+      "taskFiles": [
+        "_docs/_TASKS/TASK-545-01-L01-Add-Require-All-Results-Helper.md",
+        "_docs/_TASKS/TASK-545_Workflow_Smoke_Evidence_and_Task_Graph_Integrity.md"
+      ],
+      "supplementalTaskFiles": [],
+      "taskIndex": "_docs/_TASKS/README.md",
+      "changelogIndex": "_docs/_CHANGELOG/README.md",
+      "changelogNumber": 1257,
+      "changelogSlug": "task-545-smoke-evidence-checkpoint"
+    },
+    "phase1": {
+      "state": "owner_review_required",
+      "generatedAt": "2026-08-14T00:00:00.000Z"
+    }
+  },
+  "closureIdentity": {
+    "taskId": "TASK-545",
+    "suiteId": "task-545",
+    "profile": "certification",
+    "session": "task-545-certification",
+    "runId": "1111111111111111111111111111111111111111111111111111111111111111",
+    "checkpointSha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+    "changelogNumber": 1257,
+    "changelogSlug": "task-545-smoke-evidence-checkpoint",
+    "closureUtcDate": "2026-08-14",
+    "pinnedChangelogPath": "_docs/_CHANGELOG/1257-2026-08-14-task-545-smoke-evidence-checkpoint.md",
+    "durableState": "both"
+  },
+  "delta": {
+    "pass": true,
+    "taskId": "TASK-545",
+    "runId": "1111111111111111111111111111111111111111111111111111111111111111",
+    "closureMetadataRevision": {
+      "gitHead": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "workingTreeDirty": false,
+      "workingTreeSha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+    },
+    "changedPaths": [
+      "_docs/_CHANGELOG/1257-2026-08-14-task-545-smoke-evidence-checkpoint.md",
+      "_docs/_CHANGELOG/README.md",
+      "_docs/_TASKS/README.md",
+      "_docs/_TASKS/TASK-545-01-L01-Add-Require-All-Results-Helper.md",
+      "_docs/_TASKS/TASK-545_Workflow_Smoke_Evidence_and_Task_Graph_Integrity.md"
+    ]
+  }
+}

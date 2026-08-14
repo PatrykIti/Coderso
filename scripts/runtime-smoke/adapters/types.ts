@@ -10,10 +10,41 @@ export interface SmokeAdapterResult {
   readonly cleanup: Readonly<Record<string, boolean | number | string>>;
 }
 
+// Visible-evidence result extension (TASK-545-03-L01). The generic
+// SmokeScenarioResult gains optional strict `title`, `variants`, and
+// `screenshots` fields so existing non-manifest adapters remain
+// source-compatible. Any suite entering the smoke-evidence manifest lifecycle
+// must provide all three; every new or substantially changed UI adapter must
+// do so. `scripts/runtime-smoke/visible-evidence.ts` owns the bounded
+// recursive normalizer/builders; task-local copies or report postprocessors
+// are forbidden.
+export type SmokeVisibleAssertionKind = "computed-style" | "geometry" | "dom-state" | "aria";
+
+export interface SmokeVisibleAssertionResult {
+  readonly kind: SmokeVisibleAssertionKind;
+  readonly target: string;
+  readonly property: string;
+  readonly expected: string;
+  readonly actual: string;
+  readonly pass: boolean;
+}
+
+export interface SmokeScenarioVariantResult {
+  readonly id: string;
+  readonly surface: "admin" | "public";
+  readonly theme: "light" | "dark";
+  readonly viewport: Readonly<{ width: number; height: number }>;
+  readonly assertions: readonly SmokeVisibleAssertionResult[];
+  readonly consoleErrors: readonly string[];
+}
+
 export interface SmokeScenarioResult {
   readonly id: string;
   readonly pass: boolean;
   readonly elapsedMs: number;
+  readonly title?: string;
+  readonly variants?: readonly SmokeScenarioVariantResult[];
+  readonly screenshots?: readonly SmokeScreenshotResult[];
 }
 
 export interface SmokeScreenshotResult {
