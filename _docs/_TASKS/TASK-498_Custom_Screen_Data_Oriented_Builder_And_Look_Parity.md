@@ -121,10 +121,10 @@ avoid touching any route. See TASK-498-03 for its explicit Security Contract sub
 
 | Subtask | Status |
 |---|---|
-| TASK-498-01 Look Parity + List-View Removal | ⏳ To Do |
-| TASK-498-02 Data Block Kinds + Model | ⏳ To Do |
-| TASK-498-03 Related-List Runtime + Entry Rendering | ⏳ To Do |
-| TASK-498-04 Tests, Docs + Closure | ⏳ To Do |
+| TASK-498-01 Look Parity + List-View Removal | ✅ Done |
+| TASK-498-02 Data Block Kinds + Model | ✅ Done |
+| TASK-498-03 Related-List Runtime + Entry Rendering | ✅ Done |
+| TASK-498-04 Tests, Docs + Closure | ✅ Done |
 
 ---
 

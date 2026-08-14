@@ -379,7 +379,7 @@ bun run gates:coderso                # repo gate alias
 
 ### 4. Closure
 
-- **Changelog:** `_docs/_CHANGELOG/1213-2026-07-02-task-504-menu-styling-depth-brand-and-per-level.md`
+- **Changelog:** `_docs/_CHANGELOG/1213-2026-07-03-task-504-menu-styling-depth-brand-and-per-level.md`
   (1212 is the last used number = TASK-503 — RE-VERIFY "next free" at closing time;
   link TASK-504 + all five subtasks). State explicitly: no new public endpoint, no
   RBAC change, no migration (`document` rides `PATCH /menus/:id`, `menuSchemas.ts`

@@ -113,11 +113,11 @@ PART 2 — Design tab = menuDocumentV2 on the shared shell
 
 | ID | Title | Status |
 |---|---|---|
-| TASK-499-01 | Menu Items Editor Restyle (three-pane prototype) | ⏳ To Do |
-| TASK-499-02 | menuDocumentV2 Contract + Persistence | ⏳ To Do |
-| TASK-499-03 | Menu Design Tab — Shared-Shell Editor | ⏳ To Do |
-| TASK-499-04 | Menu Front Renderer + Default Fallback | ⏳ To Do |
-| TASK-499-05 | Menu Tests, Docs, Closure | ⏳ To Do |
+| TASK-499-01 | Menu Items Editor Restyle (three-pane prototype) | ✅ Done |
+| TASK-499-02 | menuDocumentV2 Contract + Persistence | ✅ Done |
+| TASK-499-03 | Menu Design Tab — Shared-Shell Editor | ✅ Done |
+| TASK-499-04 | Menu Front Renderer + Default Fallback | ✅ Done |
+| TASK-499-05 | Menu Tests, Docs, Closure | ✅ Done |
 
 **Sequencing:** 499-01 ships independently (PART 1). 499-02 (schema + persistence)
 is the keystone gate that blocks 499-03/04. 499-03 (authoring) repoints the route

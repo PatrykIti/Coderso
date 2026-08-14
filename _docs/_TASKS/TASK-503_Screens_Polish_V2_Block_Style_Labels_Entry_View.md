@@ -325,10 +325,10 @@ ADD/EDIT tests (503-04 + per-subtask; see Testing Requirements)
 
 | ID | Title | File | Status |
 |---|---|---|---|
-| TASK-503-01 | Screen Block Style Contract | TASK-503-01-Screen-Block-Style-Contract.md | ⏳ To Do |
-| TASK-503-02 | Screen Renderer — Style, Labels, Entry Chrome | TASK-503-02-Screen-Renderer-Style-Labels-Entry-Chrome.md | ⏳ To Do |
-| TASK-503-03 | Screen Inspector & Entry Preferences | TASK-503-03-Screen-Inspector-And-Entry-Preferences.md | ⏳ To Do |
-| TASK-503-04 | Screens Polish Tests, Docs, Closure | TASK-503-04-Screens-Polish-Tests-Docs-Closure.md | ⏳ To Do |
+| TASK-503-01 | Screen Block Style Contract | TASK-503-01-Screen-Block-Style-Contract.md | ✅ Done |
+| TASK-503-02 | Screen Renderer — Style, Labels, Entry Chrome | TASK-503-02-Screen-Renderer-Style-Labels-Entry-Chrome.md | ✅ Done |
+| TASK-503-03 | Screen Inspector & Entry Preferences | TASK-503-03-Screen-Inspector-And-Entry-Preferences.md | ✅ Done |
+| TASK-503-04 | Screens Polish Tests, Docs, Closure | TASK-503-04-Screens-Polish-Tests-Docs-Closure.md | ✅ Done |
 
 - **503-01 (keystone — model).** `ScreenBlockStyleV1` + the ~30-line
   screen-local validator (unknown keys throw, values coerce/clamp, sparse +

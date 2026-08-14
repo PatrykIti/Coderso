@@ -2,7 +2,6 @@
 
 # FileName: TASK-504_Menu_Styling_Depth_Brand_And_Per_Level.md
 
-**Parent Task:** TASK-504
 **Priority:** High
 **Category:** Admin UI / Menus / Site Shell
 **Estimated Effort:** Large

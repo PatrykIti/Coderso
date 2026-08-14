@@ -25,25 +25,26 @@
 - **NO DB migration, NO `PAGE_DOCUMENT_SCHEMA_VERSION` bump
   (`pageDocumentV2.ts:29` stays `2`), NO npm dependency.**
 
-**Status:** ✅ Done (2026-07-09). All three subtasks landed in order on
-`feature/task-533` (533-01 grid span + asymmetric `columnTemplate`, 533-02 per-edge
-section border, 533-03 native timeline vertical axis + glow dots). Present-only,
-reject-unknown, fail-soft, additive to PageDocumentV2 in labelled `TASK-533` regions;
-no migration, no `PAGE_DOCUMENT_SCHEMA_VERSION` bump, no route, no npm dep;
-`columnTemplate` strict-allowlist-sanitized via the new `sanitizeAuthoringGridTemplate`,
-spans/border widths via `readOptionalClampedNumber`, border colors via
-`sanitizeAuthoringCssColor`, timeline axis is fixed structure off
-`--coderso-section-accent`. An audit-remediation pass (2026-07-09) tightened the span
-suppression inside per-column composition and hoisted the timeline axis to a full-height
-per-item segment (no intra-item break). All gates green (core lint, `bun --cwd core
-lint:types`, root `tsc -p tsconfig.json --noEmit`, `test:bun` 1495/0, pages vitest
-667/667, `gates:coderso` 5/5). `PAGE_MODEL.md` synced (layout/border/timeline). Closure
-changelog `1245`.
+**Status:** ✅ Done
+**Completed:** 2026-07-09
+**Completion Note:** All three subtasks landed in order on `feature/task-533`
+(533-01 grid span + asymmetric `columnTemplate`, 533-02 per-edge section border,
+533-03 native timeline vertical axis + glow dots). Present-only, reject-unknown,
+fail-soft, additive to PageDocumentV2 in labelled `TASK-533` regions; no migration,
+no `PAGE_DOCUMENT_SCHEMA_VERSION` bump, no route, no npm dep; `columnTemplate`
+strict-allowlist-sanitized via the new `sanitizeAuthoringGridTemplate`, spans/border
+widths via `readOptionalClampedNumber`, border colors via `sanitizeAuthoringCssColor`,
+timeline axis is fixed structure off `--coderso-section-accent`. An audit-remediation
+pass (2026-07-09) tightened the span suppression inside per-column composition and
+hoisted the timeline axis to a full-height per-item segment (no intra-item break).
+Validation evidence: all gates green (core lint, `bun --cwd core lint:types`, root
+`tsc -p tsconfig.json --noEmit`, `test:bun` 1495/0, pages vitest 667/667,
+`gates:coderso` 5/5); `PAGE_MODEL.md` synced (layout/border/timeline). Closure
+changelog `1247`.
 
-**Closure changelog:** Assigned at closure as the then-current next-free (grep
-`_docs/_CHANGELOG/` highest+1). `1242` is the last used (TASK-530); 531–534 take
-`1243+`. Do **NOT** hardcode a colliding number and do **NOT** edit `_CHANGELOG/*`
-or `_TASKS/README.md` — the orchestrator owns those.
+**Closure changelog:** `1247` —
+`_docs/_CHANGELOG/1247-2026-07-09-task-533-layout-grid-span-asymmetric-border-timeline.md`
+(verified present on disk; links TASK-533 + all three subtasks).
 
 ---
 
@@ -310,8 +311,7 @@ any concurrently-merged sibling-bundle land.
 - rg misdetects `pageRendererV2.tsx` / `pageDocumentV2.ts` as binary — use `Read`
   / `grep -an`, never trust an empty `rg`.
 - Do NOT edit `_docs/_TASKS/README.md` or `_docs/_CHANGELOG/*` (orchestrator owns
-  them). Closure changelog = then-current next-free at closure (grep
-  `_docs/_CHANGELOG/` highest+1; `1242` last used).
+  them). Closure changelog = `1247` (`_docs/_CHANGELOG/1247-2026-07-09-task-533-layout-grid-span-asymmetric-border-timeline.md`).
 
 ## Security Contract
 

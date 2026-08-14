@@ -64,19 +64,15 @@ validation before any write, transactional restore, backend-only secrets).
 
 - **Changelog number:** the closure subtask creates `_docs/_CHANGELOG/1229-*.md`.
   **`1229` is PINNED by the orchestrator — it is NOT the naive next-free number.**
-  `_docs/_CHANGELOG/README.md:32` in this worktree reads *"Use 1223 for the next
-  changelog entry"* and the highest entry on disk is `1222` (TASK-484), so the
-  on-disk arithmetic alone would suggest `1223`. But `1223` and the whole band
-  `1220-1228` are unavailable in the merge target: **TASK-480 owns `1223` in
-  `feature/tasks`**, and **`1220-1228` are reserved by parallel streams
-  (482-484 / 512-516)**. The first free number after those reservations is
-  therefore `1229`. Closure must NOT renumber 511 to `1223` (or any value in
-  `1220-1228`); it VERIFIES there is no `1229` collision on disk and creates
-  `_docs/_CHANGELOG/1229-*.md`, then bumps the README pointer to the true
-  next-free-after-merge number (NOT a decrease into the reserved band). Only the
-  closure subtask edits `_docs/_TASKS/*` and `_docs/_CHANGELOG/*`.
-- **Branch/worktree:** `feature/task-511` (worktree `/home/coder/project/Coderso-task-511`),
-  branched from `feature/tasks` HEAD `6f1dee36`.
+  Closure must NOT renumber 511 (e.g. to the naive on-disk next-free); it VERIFIES
+  there is no `1229` collision on disk and creates `_docs/_CHANGELOG/1229-*.md`,
+  then bumps the README pointer to the true next-free number. Only the closure
+  subtask edits `_docs/_TASKS/*` and `_docs/_CHANGELOG/*`.
+- **Branch/worktree:** current files are tracked on `feature/tasks-fixes`; no extra
+  511 worktree exists.
+- **Security re-author/audit:** the previously pinned coordination facts are
+  obsolete. TASK-511 stays `⏳ To Do`; a fresh security re-author/audit is required
+  before implementation.
 - **No parallel streams currently** — single stream. Standard single-writer
   ownership per source file across subtasks; strictly sequential land order.
   - **Region-level ownership on shared backup files (by design).** Four existing

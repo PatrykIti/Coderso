@@ -449,11 +449,11 @@ that lands them, closure sweep 502-05.
 
 | ID | Title | File | Status |
 |---|---|---|---|
-| TASK-502-01 | Menu Model — Brand Text & Tablet Breakpoint | TASK-502-01-Menu-Model-Brand-Text-And-Tablet-Breakpoint.md | ⏳ To Do |
-| TASK-502-02 | Menu CSS — Tablet Branch, Separators & Nested Sublists | TASK-502-02-Menu-CSS-Tablet-Branch-Separators-And-Nested-Sublists.md | ⏳ To Do |
-| TASK-502-03 | Front — Recursive Nav & Brand Render | TASK-502-03-Front-Recursive-Nav-And-Brand-Render.md | ⏳ To Do |
-| TASK-502-04 | Design Editor — Canvas WYSIWYG & Device Controls | TASK-502-04-Design-Editor-Canvas-WYSIWYG-And-Device-Controls.md | ⏳ To Do |
-| TASK-502-05 | Menu Fixes Tests, Docs, Closure | TASK-502-05-Menu-Fixes-Tests-Docs-Closure.md | ⏳ To Do |
+| TASK-502-01 | Menu Model — Brand Text & Tablet Breakpoint | TASK-502-01-Menu-Model-Brand-Text-And-Tablet-Breakpoint.md | ✅ Done |
+| TASK-502-02 | Menu CSS — Tablet Branch, Separators & Nested Sublists | TASK-502-02-Menu-CSS-Tablet-Branch-Separators-And-Nested-Sublists.md | ✅ Done |
+| TASK-502-03 | Front — Recursive Nav & Brand Render | TASK-502-03-Front-Recursive-Nav-And-Brand-Render.md | ✅ Done |
+| TASK-502-04 | Design Editor — Canvas WYSIWYG & Device Controls | TASK-502-04-Design-Editor-Canvas-WYSIWYG-And-Device-Controls.md | ✅ Done |
+| TASK-502-05 | Menu Fixes Tests, Docs, Closure | TASK-502-05-Menu-Fixes-Tests-Docs-Closure.md | ✅ Done |
 
 - **502-01 (keystone)** — the model: `brand.props.text` (validated, trimmed,
   120-cap, sparse) + the CONSCIOUS `BRAND_PROP_KEYS` extension; `"tablet"` in
