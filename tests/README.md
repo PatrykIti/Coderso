@@ -275,7 +275,7 @@ perf isolation, no loss/duplication, and the error contract.
 
 `scripts/run-bun-pure-lane.ts` (TASK-557-06-L01) runs exactly the A manifest
 files (`bucket === "A"` in `tests/bun-lane-manifest.json`) with
-`bun test --env-file=/dev/null --parallel=16 --timeout=15000 <a-files>` and NO
+`bun test --env-file=/dev/null --parallel=16 --timeout=60000 <a-files>` and NO
 database env: the child env strips `DATABASE_URL` and `DATABASE_DIRECT_URL`,
 and `--env-file=/dev/null` disables Bun's `.env` autoload (which would
 otherwise re-inject those values from the repo `.env`), so any "DB-free" file
@@ -328,20 +328,49 @@ the quiet-env overlay, and the worker-name guard.
 
 ## Bun lane parallel runner
 
-`scripts/run-bun-parallel.ts` (TASK-557-05-L02) is the orchestrator behind
-`bun run test:bun` (`bun scripts/run-bun-parallel.ts --lane all`). It reads
+`scripts/run-bun-parallel.ts` (TASK-557-05-L02, C1/C2 split per TASK-559) is
+the orchestrator behind `bun run test:bun`
+(`bun scripts/run-bun-parallel.ts --lane all`). It reads
 `tests/bun-lane-manifest.json` + `tests/bun-lane-timings.json`, partitions B
-files across workers with the weighted partitioner, keeps C files serial on
-one dedicated worker, runs the pure A lane (TASK-557-06) concurrently, and
-runs perf strictly AFTER all B/C/A workers finish (wall-time gates are
-CPU-contention sensitive). B worker count is `K-1` (single lanes) or `K-2`
-under `--lane all` (the extra slot is the pure A lane); default `K=5` ->
-3 B workers, 1 C worker, perf serial-after, pure A worker.
+files across workers with the weighted partitioner, splits the C lane into two
+serial workers, runs the pure A lane (TASK-557-06) concurrently, and runs perf
+strictly AFTER all B/C/A workers finish (wall-time gates are CPU-contention
+sensitive).
+
+Manifest v2 (`scripts/bun-lane-classify.ts`): every row carries
+`conflictKeys: string[]` (ALL matched C signals in deterministic
+C_SETTING_KEYS -> C_TABLES -> C_LITERALS order, replacing the lossy single
+`conflictKey`) and `cWriteGlobal: boolean` (true when a `set\w*Setting` call
+appears in a before-hook, or `backup_schedules` DML, or the fixed `4dd7f4d4`
+fixture literal). The partitioner splits C rows into:
+
+- `c1` (strict): every `cWriteGlobal` C file, filename order, serial.
+- `c2` (self-scoped): every other C file (read-only signals only), filename
+  order, serial, running in parallel with `c1`.
+
+This split is a conservative LOAD-BALANCE heuristic, not a safety invariant:
+every C file runs on a per-worker schema (`search_path`) with a unique fence
+offset, so no cross-worker table contention exists. `--lane c` runs both C
+workers; a partition with an empty `c2` (no read-only C files) spawns only
+`c1`.
+
+Budget math (default `K = BUN_TEST_WORKERS = 5`): `cWorkers = 2` is reserved
+in every lane, and `--lane all` additionally reserves the pure A slot, so
+`bWorkerCount = max(1, K - reservedForPureA - 2)` — default 2 B workers, c1,
+c2, pure A worker, perf serial-after (5 total DB workers, `5 x 2 = 10`
+connection budget). Worker indices are consecutive: `b0..b(B-1)`, `c1@bLen`,
+`c2@bLen+1` (when non-empty), `perf@bLen+2` (or `bLen+1` when `c2` is empty).
+A lane-aware lower bound `worker_count_too_low:<n>` fails fast BEFORE
+provisioning when `--workers` cannot hold every spawned index:
+`dbWorkersNeeded = bWorkerCount + cWorkers + 1` for `--lane all` (min 4),
+`bWorkerCount` for `--lane b` (min 1), `bWorkerCount + 2` for `--lane c`
+(min 3), `1` for `--lane perf`.
 
 Flags (named errors fail closed):
 
 - `--workers N` (default `BUN_TEST_WORKERS`, see `resolveWorkerCount`; integer
-  >= 1, else `worker_count_invalid`).
+  >= 1, else `worker_count_invalid`; below the lane's `dbWorkersNeeded`, else
+  `worker_count_too_low:<n>`).
 - `--pool N` (default 2; integer >= 1, else `worker_pool_max_invalid`). The
   aggregate guard `workers x pool <= 10`
   (`worker_pool_budget_exceeded`) runs BEFORE provisioning.
@@ -357,8 +386,8 @@ Flags (named errors fail closed):
 Each worker spawns `bun test --parallel=1 --timeout=15000 <files>` with
 `resolveWorkerEnv(i, {poolMax, fenceOffset: i+1})` (per-worker schema URL,
 `NODE_ENV=test`, fence offset). stdout/stderr are streamed with a `[b0]`,
-`[c]`, `[perf]` prefix; a non-zero exit retries the worker's whole file set
-once (flake guard, `attempted` records 1 or 2). Spawn failure ->
+`[c1]`, `[c2]`, `[perf]` prefix; a non-zero exit retries the worker's whole
+file set once (flake guard, `attempted` records 1 or 2). Spawn failure ->
 `worker_spawn_failed:<name>`. Provisioning failure aborts before any spawn.
 The report is `{results, totalMs}` with one entry per worker (`{name, files,
 exit, durationMs, attempted}`); `totalMs` is the max of worker durations.
@@ -371,4 +400,6 @@ tests substitute a stub `bun`). The full runner integration suite lives in
 `tests/integration/toolchain/runBunParallel.test.ts` (TASK-557-05-L03);
 `tests/integration/toolchain/runBunParallelFakeWorker.test.ts` pins the
 fake-worker retry-once, aggregation, `--no-retry`, serial-after perf
-ordering, and pre-provision connection-budget invariants without a database.
+ordering, C1/C2 spawn order + per-worker env (schema index + fence offset),
+`worker_count_too_low`, and pre-provision connection-budget invariants
+without a database.

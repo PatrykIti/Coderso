@@ -6,7 +6,7 @@
  *
  * Pure (DB-free) coverage:
  *
- * - `readJournal` returns 71 entries with monotonic `idx` 0..70.
+ * - `readJournal` returns 72 entries with monotonic `idx` 0..71.
  * - `splitStatements` respects the `--> statement-breakpoint` marker and drops
  *   empty chunks.
  * - `workerSchemaName` output is always the exact `bun_worker_<index>` drop
@@ -18,7 +18,7 @@
  * runner loads `.env`, this file only reads `process.env` and never sources it
  * itself, same gating pattern as the sibling suites in this directory):
  *
- * - `migrateSchema(url, schema)` applies all 71 journal migrations on the
+ * - `migrateSchema(url, schema)` applies all 72 journal migrations on the
  *   first call and 0 on the second (idempotent, tag-tracked in
  *   `_bun_migrations`), and `to_regclass` resolves `pages`/`settings`.
  * - `pg_trgm` exists exactly once database-wide in `pg_extension`.
@@ -48,16 +48,13 @@ import {
   splitStatements,
 } from "../../../scripts/bun-lane-migrate";
 import { provisionWorkers } from "../../../scripts/bun-lane-provision";
-import {
-  workerSchemaName,
-  WORKER_SCHEMA_PREFIX,
-} from "../../../scripts/bun-lane-worker-url";
+import { workerSchemaName, WORKER_SCHEMA_PREFIX } from "../../../scripts/bun-lane-worker-url";
 
 const DATABASE_DIRECT_URL = process.env.DATABASE_DIRECT_URL;
 const SCHEMA = "bun_provision_test";
 const CONTROL = "bun_control_schema";
 const SCRATCH = "bun_provision_fail";
-const MIGRATION_COUNT = 71;
+const MIGRATION_COUNT = 72;
 
 let sql: postgres.Sql | undefined;
 
@@ -79,7 +76,7 @@ afterAll(async () => {
   await sql.end();
 });
 
-test("journal has 71 monotonic entries", async () => {
+test("journal has 72 monotonic entries", async () => {
   const journal = await readJournal();
   expect(journal.entries.length).toBe(MIGRATION_COUNT);
   journal.entries.forEach((entry, i) => expect(entry.idx).toBe(i));
@@ -139,7 +136,7 @@ test.skipIf(!DATABASE_DIRECT_URL)(
     expect(rows[0].pages).toBe(`${SCHEMA}.pages`);
     expect(rows[0].settings).toBe(`${SCHEMA}.settings`);
   },
-  // 71 files at ~3s/file under shared-DB load is ~213s; cap with headroom.
+  // 72 files at ~3s/file under shared-DB load is ~216s; cap with headroom.
   300000
 );
 
@@ -159,15 +156,11 @@ test.skipIf(!DATABASE_DIRECT_URL)(
     const results = await provisionWorkers(DATABASE_DIRECT_URL!, 2, 2);
     expect(results.map((r) => r.schema)).toEqual(["bun_worker_0", "bun_worker_1"]);
     for (const r of results) {
-      const table = await sql!.unsafe(
-        `select to_regclass('${r.schema}.content_entries') as t`
-      );
+      const table = await sql!.unsafe(`select to_regclass('${r.schema}.content_entries') as t`);
       expect(table[0].t).toBeTruthy();
     }
     // Stale marker in bun_worker_0 must be wiped by drop/create.
-    await sql!.unsafe(
-      `insert into "bun_worker_0"."_bun_migrations" ("tag") values ('stale')`
-    );
+    await sql!.unsafe(`insert into "bun_worker_0"."_bun_migrations" ("tag") values ('stale')`);
     await provisionWorkers(DATABASE_DIRECT_URL!, 2, 2);
     const stale = await sql!.unsafe(
       `select count(*)::int as n from "bun_worker_0"."_bun_migrations" where tag = 'stale'`
@@ -181,8 +174,8 @@ test.skipIf(!DATABASE_DIRECT_URL)(
     const control = await sql!.unsafe(`select to_regclass('${CONTROL}._marker') as t`);
     expect(control[0].t).toBe(`${CONTROL}._marker`);
   },
-  // Three full provision cycles (2 schemas concurrent x 71 files each) run in
-  // this one test: ~213s per cycle at ~3s/file under shared-DB load, so the
+  // Three full provision cycles (2 schemas concurrent x 72 files each) run in
+  // this one test: ~216s per cycle at ~3s/file under shared-DB load, so the
   // cap needs ~3x the idle-DB runtime (measured 139s idle).
   720000
 );
@@ -193,7 +186,7 @@ test.skipIf(!DATABASE_DIRECT_URL)(
     // Migrate a scratch schema fully, then apply a bogus migration file whose
     // second statement fails. The failing statement must abort that file's
     // transaction: the partial table is rolled back, the file tag is never
-    // recorded, and the 71 already-applied migrations stay intact.
+    // recorded, and the 72 already-applied migrations stay intact.
     //
     // The contract's original sketch sent a raw `begin; ...; commit;` string
     // through sql.unsafe; postgres.js rejects transaction-control statements
@@ -213,9 +206,7 @@ test.skipIf(!DATABASE_DIRECT_URL)(
         ])
       ).rejects.toThrow(/no_such_table/);
       // Partial work from the failed file rolled back with its transaction.
-      const partial = await sql!.unsafe(
-        `select to_regclass('${SCRATCH}._partial') as t`
-      );
+      const partial = await sql!.unsafe(`select to_regclass('${SCRATCH}._partial') as t`);
       expect(partial[0].t).toBeNull();
       // The failed file's tag was never recorded.
       const tag = await sql!.unsafe(
@@ -230,8 +221,8 @@ test.skipIf(!DATABASE_DIRECT_URL)(
     expect(again).toBe(0);
     await sql!.unsafe(`drop schema if exists "${SCRATCH}" cascade`);
   },
-  // A full 71-file migrate into the scratch schema is setup here; under
-  // shared-DB load it measured ~3s/file (~213s total), so the cap needs
+  // A full 72-file migrate into the scratch schema is setup here; under
+  // shared-DB load it measured ~3s/file (~216s total), so the cap needs
   // headroom above the ~180s the same migrate needs when the DB is idle.
   300000
 );

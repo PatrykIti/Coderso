@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test";
 
+import { DEFAULT_ADMIN_ROLE_ID } from "../../core/db/seedConstants";
 import { roles, users } from "../../core/db/schema";
 import { createFirstAdmin } from "../../core/services/admin/firstRunService";
 
@@ -52,6 +53,12 @@ function makeTx(store: Store) {
  */
 function makeSeam() {
   const store: Store = { users: [], roles: [] };
+  // Migration 0071 (TASK-518) seeds the stable admin role id; the race runs
+  // against that pre-seeded role exactly like a post-migration install. The
+  // fake select returns the whole roles store for either lookup path the
+  // implementation uses: by stable id (`DEFAULT_ADMIN_ROLE_ID`) first, then
+  // the by-name fallback (`name = "admin"`) for pre-518 installs.
+  store.roles.push({ id: DEFAULT_ADMIN_ROLE_ID, name: "admin", permissions: ["*"] });
   let chain: Promise<unknown> = Promise.resolve();
   const db = {
     transaction: (fn: (tx: ReturnType<typeof makeTx>) => unknown) => {

@@ -6,7 +6,7 @@
  *
  * - `splitStatements` splits exactly on the `--> statement-breakpoint` marker
  *   and drops empty chunks, so each chunk is one statement group.
- * - `readJournal` returns all 71 journal entries (idx 0..70) with monotonic
+ * - `readJournal` returns all 72 journal entries (idx 0..71) with monotonic
  *   `idx` and unique tags, in order.
  *
  * Importing `scripts/bun-lane-migrate` opens no connection: the postgres.js
@@ -35,16 +35,16 @@ test("splitStatements trims whitespace and keeps single-chunk files intact", () 
   expect(splitStatements("")).toEqual([]);
 });
 
-test("readJournal returns 71 entries with monotonic idx and unique tags", async () => {
+test("readJournal returns 72 entries with monotonic idx and unique tags", async () => {
   const journal = await readJournal();
-  expect(journal.entries.length).toBe(71);
+  expect(journal.entries.length).toBe(72); // live journal: 0071_seed_admin_role added 2026-08-14
   const tags = new Set<string>();
   journal.entries.forEach((entry, index) => {
     expect(entry.idx).toBe(index);
     expect(entry.tag.length).toBeGreaterThan(0);
     tags.add(entry.tag);
   });
-  expect(tags.size).toBe(71);
+  expect(tags.size).toBe(72);
 });
 
 test("rewritePublicReferences retargets public-qualified REFERENCES to the worker schema", () => {

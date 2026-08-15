@@ -15,7 +15,7 @@
  * - the committed manifest equals a fresh in-process re-run of the classifier
  *   (byte-identical `rows`, ignoring `generatedAt`),
  * - the manifest rows are internally consistent (valid buckets, C rows carry
- *   a conflictKey, no out-of-lane file).
+ *   a conflictKeys array + cWriteGlobal boolean, no out-of-lane file).
  *
  * The classifier resolves lane paths relative to the repo root, so this suite
  * pins the working directory to the repo root on load.
@@ -29,7 +29,9 @@ import { afterAll, expect, test } from "bun:test";
 
 import {
   classify,
+  collectConflictKeys,
   collectLaneFiles,
+  hasCWriteGlobal,
   LANE_DIRS,
   reachesDbTransitively,
 } from "../../../scripts/bun-lane-classify";
@@ -46,11 +48,12 @@ if (process.cwd() !== ROOT) {
 
 const BUCKETS = ["perf", "A", "B", "C"] as const;
 type Bucket = (typeof BUCKETS)[number];
-type BucketRow = {
+type BucketRowV2 = {
   file: string;
   bucket: Bucket;
   weightMs?: number;
-  conflictKey?: string;
+  conflictKeys: string[];
+  cWriteGlobal: boolean;
 };
 
 /**
@@ -72,10 +75,10 @@ function gitGoldenLaneFiles(): string[] {
     .sort();
 }
 
-function readManifestRows(): BucketRow[] {
+function readManifestRows(): BucketRowV2[] {
   const manifest = JSON.parse(readFileSync(MANIFEST_PATH, "utf8")) as {
     generatedAt: string;
-    rows: BucketRow[];
+    rows: BucketRowV2[];
   };
   return manifest.rows;
 }
@@ -98,10 +101,14 @@ test("collectLaneFiles returns deterministic sorted relative paths", async () =>
 test("classify examples match the contract signals", async () => {
   const settings = await classify("tests/unit/settings/settingsService.test.ts");
   expect(settings.bucket).toBe("C");
-  expect(settings.conflictKey).toBe("site.contentRoutes");
+  expect(settings.conflictKeys).toContain("site.contentRoutes");
+  expect(settings.conflictKeys).toContain("site.adminBaseUrl");
+  expect(settings.cWriteGlobal).toBe(true); // setSetting in a before-hook
 
   const validator = await classify("tests/unit/widgets/validator.test.ts");
   expect(validator.bucket).toBe("A");
+  expect(validator.conflictKeys).toEqual([]);
+  expect(validator.cWriteGlobal).toBe(false);
 
   const entryService = await classify("tests/unit/content/entryService.test.ts");
   expect(entryService.bucket).toBe("B");
@@ -226,7 +233,7 @@ test("committed manifest equals a fresh classification run", async () => {
   expect(JSON.stringify(freshRows)).toBe(JSON.stringify(onDiskRows));
 });
 
-test("manifest rows are internally consistent", async () => {
+test("manifest rows are internally consistent", () => {
   const rows = readManifestRows();
   const golden = gitGoldenLaneFiles();
   expect(rows.length).toBe(golden.length);
@@ -235,9 +242,25 @@ test("manifest rows are internally consistent", async () => {
     expect(BUCKETS).toContain(row.bucket);
     expect(row.file).toMatch(/\.test\.(ts|tsx)$/);
     expect(LANE_DIRS.some((dir) => row.file.startsWith(`${dir}/`))).toBe(true);
-    if (row.bucket === "C") {
-      expect(typeof row.conflictKey).toBe("string");
-    }
+    // v2 row shape: conflictKeys is a required array on every row.
+    expect(Array.isArray(row.conflictKeys)).toBe(true);
+    expect(typeof row.cWriteGlobal).toBe("boolean");
+  }
+});
+
+test("every C row carries the v2 fields and matches a fresh signal scan", () => {
+  const rows = readManifestRows();
+  const cRows = rows.filter((row) => row.bucket === "C");
+  expect(cRows.length).toBeGreaterThan(0);
+  for (const row of cRows) {
+    expect(Array.isArray(row.conflictKeys)).toBe(true);
+    expect(typeof row.cWriteGlobal).toBe("boolean");
+    const src = readFileSync(path.join(ROOT, row.file), "utf8");
+    // Consistency assertion: no committed cWriteGlobal may drift from the
+    // classifier rule (a `false` row must really be read-only), and the
+    // conflict set must equal ALL matched signals in classifier order.
+    expect(hasCWriteGlobal(src)).toBe(row.cWriteGlobal);
+    expect(collectConflictKeys(src)).toEqual(row.conflictKeys);
   }
 });
 

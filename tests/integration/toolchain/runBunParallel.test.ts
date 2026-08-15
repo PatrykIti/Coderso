@@ -7,8 +7,9 @@
  * contract so it stays truthful:
  *
  * - deterministic assignment: the pure weighted partitioner keeps C files
- *   serial on their own worker, perf files on their own worker, and balances
- *   B files across the remaining workers (longest-processing-time-first);
+ *   serial on their own two workers (c1 write-global, c2 read-only since
+ *   TASK-559), perf files on their own worker, and balances B files across
+ *   the remaining workers (longest-processing-time-first);
  * - dry-run stability: `--dry-run` prints `partitionSummary`, exits 0, writes
  *   no report, and never spawns a worker (no DB needed at all);
  * - retry-once flake policy: a worker failing for one named file is retried
@@ -48,7 +49,7 @@ import {
   partition,
   partitionSummary,
   weightMs,
-  type ManifestRow,
+  type ManifestRowV2,
 } from "../../../scripts/bun-lane-partition";
 import { provisionWorkers } from "../../../scripts/bun-lane-provision";
 import { resolveWorkerEnv } from "../../../scripts/bun-lane-worker-url";
@@ -56,7 +57,11 @@ import { resolveWorkerEnv } from "../../../scripts/bun-lane-worker-url";
 const ROOT = path.resolve(import.meta.dir, "..", "..", "..");
 const RUNNER = "scripts/run-bun-parallel.ts";
 const SETTINGS_TEST = "tests/unit/settings/settingsService.test.ts";
-const MIGRATION_COUNT = 71;
+// Tracks the live migration journal (core/db/migrations/meta/_journal.json),
+// currently 72 entries (migration 0071_seed_admin_role was added by an
+// unrelated task; the applier applies the full journal, so this count must
+// equal journal.entries.length).
+const MIGRATION_COUNT = 72;
 const WORKER_SCHEMAS = ["bun_worker_0", "bun_worker_1"];
 
 // Never dialed in fake-worker mode: `assertDirectUrl`/`inspectDatabaseUrl`
@@ -69,21 +74,22 @@ const UNREACHABLE_DIRECT_URL = "postgres://lane:lane@127.0.0.1:1/lane_test?conne
 // Pure partitioner contract (deterministic assignment, C isolation, balance).
 // ---------------------------------------------------------------------------
 
-const ROWS: ManifestRow[] = [
-  { file: "a.test.ts", bucket: "B", weightMs: 100 },
-  { file: "b.test.ts", bucket: "B", weightMs: 90 },
-  { file: "c.test.ts", bucket: "B", weightMs: 80 },
-  { file: "d.test.ts", bucket: "B", weightMs: 70 },
-  { file: "x.test.ts", bucket: "C" },
-  { file: "y.test.ts", bucket: "C" },
-  { file: "p1.test.ts", bucket: "perf" },
+const ROWS: ManifestRowV2[] = [
+  { file: "a.test.ts", bucket: "B", weightMs: 100, conflictKeys: [] },
+  { file: "b.test.ts", bucket: "B", weightMs: 90, conflictKeys: [] },
+  { file: "c.test.ts", bucket: "B", weightMs: 80, conflictKeys: [] },
+  { file: "d.test.ts", bucket: "B", weightMs: 70, conflictKeys: [] },
+  { file: "x.test.ts", bucket: "C", conflictKeys: [], cWriteGlobal: true },
+  { file: "y.test.ts", bucket: "C", conflictKeys: [] },
+  { file: "p1.test.ts", bucket: "perf", conflictKeys: [] },
 ];
 
-test("partition keeps C and perf separate and balances B deterministically", () => {
+test("partition keeps C1/C2 and perf separate and balances B deterministically", () => {
   const p = partition(ROWS, {}, 2);
-  expect(p.c).toEqual(["x.test.ts", "y.test.ts"]);
+  expect(p.c1).toEqual(["x.test.ts"]); // write-global C stays on the strict worker
+  expect(p.c2).toEqual(["y.test.ts"]); // read-only C goes to the self-scoped worker
   expect(p.perf).toEqual(["p1.test.ts"]);
-  const union = [...p.b.flat(), ...p.c, ...p.perf].sort();
+  const union = [...p.b.flat(), ...p.c1, ...p.c2, ...p.perf].sort();
   expect(union).toEqual(ROWS.map((r) => r.file).sort());
   const weightOf = (file: string): number =>
     weightMs(
@@ -102,7 +108,8 @@ test("partitionSummary is stable on fixed timings", () => {
   const summary = partitionSummary(p, {});
   expect(summary).toContain("worker-b0: 2 files, 0ms");
   expect(summary).toContain("worker-b1: 2 files, 0ms");
-  expect(summary).toContain("worker-c: 2 files (serial)");
+  expect(summary).toContain("worker-c1: 1 files (serial)");
+  expect(summary).toContain("worker-c2: 1 files (serial)");
   expect(summary).toContain("worker-perf: 1 files (serial)");
 });
 
@@ -114,7 +121,18 @@ const FIXTURE_MANIFEST = {
   rows: [
     { file: "b-good.test.ts", bucket: "B" },
     { file: "b-flaky.test.ts", bucket: "B" },
-    { file: "c-shared.test.ts", bucket: "C", conflictKey: "site.contentRoutes" },
+    {
+      file: "c-shared.test.ts",
+      bucket: "C",
+      conflictKeys: ["site.contentRoutes"],
+      cWriteGlobal: true,
+    },
+    {
+      file: "c-readonly.test.ts",
+      bucket: "C",
+      conflictKeys: ["site.homepageId"],
+      cWriteGlobal: false,
+    },
     { file: "perf-gate.test.ts", bucket: "perf" },
     { file: "a-pure.test.ts", bucket: "A" },
   ],
@@ -133,6 +151,7 @@ const STUB_BUN = `#!/bin/sh
 perf="batch"
 [ "$BUN_TEST_PERF_QUIET" = "1" ] && perf="perf"
 printf '%s\\n' "start:$perf" >> "$FAKE_LOG"
+printf '%s\\n' "worker:$perf:idx=\${BUN_TEST_WORKER_INDEX:-}:fence=\${BUN_TEST_FENCE_NAMESPACE_OFFSET:-}" >> "$FAKE_LOG"
 if [ "$perf" != "perf" ]; then sleep 0.3; fi
 printf '%s\\n' "end:$perf" >> "$FAKE_LOG"
 if [ -n "$FAKE_FAIL_MARKER" ]; then
@@ -252,12 +271,13 @@ test("--dry-run prints the partition summary, exits 0, and never spawns", () => 
     "--lane",
     "all",
     "--workers",
-    "3",
+    "4",
     "--dry-run",
   ]);
   expect(exitCode).toBe(0);
   expect(stdout).toContain("worker-b0: 2 files, 0ms");
-  expect(stdout).toContain("worker-c: 1 files (serial)");
+  expect(stdout).toContain("worker-c1: 1 files (serial)");
+  expect(stdout).toContain("worker-c2: 1 files (serial)");
   expect(stdout).toContain("worker-perf: 1 files (serial)");
   expect(stderr).toBe("");
   expect(readLog()).toEqual([]); // no worker ever spawned
@@ -266,7 +286,7 @@ test("--dry-run prints the partition summary, exits 0, and never spawns", () => 
 
 test("fake worker: a flaky worker passes after exactly one retry", () => {
   const { exitCode, reportPath } = runRunner(
-    ["--lane", "all", "--workers", "3", "--no-provision"],
+    ["--lane", "all", "--workers", "4", "--no-provision"],
     { FAKE_FAIL_MARKER: "b-flaky", FAKE_ALWAYS_FAIL: "0" }
   );
   expect(exitCode).toBe(0);
@@ -282,7 +302,7 @@ test("fake worker: a flaky worker passes after exactly one retry", () => {
 
 test("fake worker: retry exhaustion aggregates into a non-zero run", () => {
   const { exitCode, stderr, reportPath } = runRunner(
-    ["--lane", "all", "--workers", "3", "--no-provision"],
+    ["--lane", "all", "--workers", "4", "--no-provision"],
     { FAKE_FAIL_MARKER: "b-flaky", FAKE_ALWAYS_FAIL: "1" }
   );
   expect(exitCode).toBe(1);
@@ -294,7 +314,7 @@ test("fake worker: retry exhaustion aggregates into a non-zero run", () => {
 
 test("--no-retry keeps attempted at 1 even on failure", () => {
   const { exitCode, reportPath } = runRunner(
-    ["--lane", "all", "--workers", "3", "--no-provision", "--no-retry"],
+    ["--lane", "all", "--workers", "4", "--no-provision", "--no-retry"],
     { FAKE_FAIL_MARKER: "b-flaky", FAKE_ALWAYS_FAIL: "1" }
   );
   expect(exitCode).toBe(1);
@@ -305,7 +325,7 @@ test("--no-retry keeps attempted at 1 even on failure", () => {
 
 test("fake worker: the pure A lane retries once and the report records attempted 2", () => {
   const { exitCode, reportPath } = runRunner(
-    ["--lane", "all", "--workers", "3", "--no-provision"],
+    ["--lane", "all", "--workers", "4", "--no-provision"],
     { FAKE_FAIL_MARKER: "a-pure", FAKE_ALWAYS_FAIL: "0" }
   );
   expect(exitCode).toBe(0); // the A retry passes, so the whole run passes
@@ -321,7 +341,7 @@ test("fake worker: the pure A lane retries once and the report records attempted
 
 test("fake worker: --no-retry also disables the pure A lane retry", () => {
   const { exitCode, stderr, reportPath } = runRunner(
-    ["--lane", "all", "--workers", "3", "--no-provision", "--no-retry"],
+    ["--lane", "all", "--workers", "4", "--no-provision", "--no-retry"],
     { FAKE_FAIL_MARKER: "a-pure", FAKE_ALWAYS_FAIL: "1" }
   );
   expect(exitCode).toBe(1);
@@ -332,10 +352,10 @@ test("fake worker: --no-retry also disables the pure A lane retry", () => {
 });
 
 test("report JSON has one entry per worker with truthful attempted and totalMs = max", () => {
-  const { exitCode, reportPath } = runRunner(["--lane", "all", "--workers", "3", "--no-provision"]);
+  const { exitCode, reportPath } = runRunner(["--lane", "all", "--workers", "4", "--no-provision"]);
   expect(exitCode).toBe(0);
   const report = readReport(reportPath);
-  expect(report.results.map((r) => r.name).sort()).toEqual(["a", "b0", "c", "perf"]);
+  expect(report.results.map((r) => r.name).sort()).toEqual(["a", "b0", "c1", "c2", "perf"]);
   for (const worker of report.results) {
     expect(worker.attempted).toBe(1);
     expect(worker.durationMs).toBeGreaterThan(0);
@@ -348,7 +368,7 @@ test("report JSON has one entry per worker with truthful attempted and totalMs =
 });
 
 test("ordering: perf runs strictly after every B/C/A worker exits", () => {
-  const { exitCode } = runRunner(["--lane", "all", "--workers", "3", "--no-provision"]);
+  const { exitCode } = runRunner(["--lane", "all", "--workers", "4", "--no-provision"]);
   expect(exitCode).toBe(0);
   const lines = readLog();
   const perfStarts = lines.map((line, i) => (line === "start:perf" ? i : -1)).filter((i) => i >= 0);
@@ -368,9 +388,34 @@ test("connection budget: --pool 4 --workers 8 fails before provisioning and spaw
   expect(readLog()).toEqual([]);
 });
 
+test("worker_count_too_low fires per lane mode before provisioning", () => {
+  // --lane all needs bWorkerCount + cWorkers + 1 = max(1,3-3)+3 = 4 workers.
+  const all = runRunner(["--lane", "all", "--workers", "3", "--no-provision"]);
+  expect(all.exitCode).toBe(1);
+  expect(all.stderr).toContain("worker_count_too_low:3");
+  // --lane c needs bWorkerCount + 2 = max(1,2-2)+2 = 3 workers (c1@bLen, c2@bLen+1).
+  const c = runRunner(["--lane", "c", "--workers", "2", "--no-provision"]);
+  expect(c.exitCode).toBe(1);
+  expect(c.stderr).toContain("worker_count_too_low:2");
+  // No worker ever spawned in either failing mode.
+  expect(readLog()).toEqual([]);
+});
+
+test("--lane b --workers 1 and --lane perf --workers 1 are valid minima", () => {
+  const b = runRunner(["--lane", "b", "--workers", "1", "--no-provision"]);
+  expect(b.exitCode).toBe(0);
+  const bReport = readReport(b.reportPath);
+  expect(bReport.results.map((r) => r.name)).toEqual(["b0"]);
+
+  const perf = runRunner(["--lane", "perf", "--workers", "1", "--no-provision"]);
+  expect(perf.exitCode).toBe(0);
+  const perfReport = readReport(perf.reportPath);
+  expect(perfReport.results.map((r) => r.name)).toEqual(["perf"]);
+});
+
 test("provision failure aborts before any worker spawns", () => {
   const { exitCode, stderr, reportPath } = runRunner(
-    ["--lane", "all", "--workers", "2", "--pool", "1"],
+    ["--lane", "all", "--workers", "4", "--pool", "1"],
     { DATABASE_DIRECT_URL: UNREACHABLE_DIRECT_URL }
   );
   expect(exitCode).toBe(1);

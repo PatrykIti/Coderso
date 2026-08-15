@@ -92,6 +92,18 @@ const sha = (bytes: Uint8Array | string): string =>
 const revBytes = (root: string, path: string): Buffer =>
   execFileSync("git", ["show", `HEAD:${path}`], { cwd: root, encoding: "buffer" });
 
+// The checkpoint lib derives the pinned changelog path from the current UTC
+// date (TASK-545 closure identity), so all corpus expectations must reference
+// the same derived name instead of a frozen historical literal.
+const pinnedChangelogName = `${CHANGELOG_NUMBER}-${CLOSURE_DATE}-${CHANGELOG_SLUG}.md`;
+// A calendar-valid UTC date guaranteed to differ from the derived closure
+// date, for fail-closed negative fixtures that must never collide with today.
+function shiftedDate(days: number): string {
+  const date = new Date();
+  date.setUTCDate(date.getUTCDate() + days);
+  return date.toISOString().slice(0, 10);
+}
+
 async function errorCodeAsync(promise: Promise<unknown>): Promise<string> {
   try {
     await promise;
@@ -271,7 +283,7 @@ describe("buildExactClosureMetadataAllowlist", () => {
     const duplicate = {
       frozenContract,
       pinnedChangelogPath:
-        "_docs/_CHANGELOG/1257-2026-08-14-other-slug.md" as `_docs/_CHANGELOG/${string}.md`,
+        `_docs/_CHANGELOG/${CHANGELOG_NUMBER}-${shiftedDate(-1)}-other-slug.md` as `_docs/_CHANGELOG/${string}.md`,
       closureUtcDate: identity.closureUtcDate,
     };
     expect(errorCodeSync(call(duplicate))).toBe("smoke_changelog_path_invalid");
@@ -660,8 +672,11 @@ describe("validateMetadataOnlyClosureDelta", () => {
 
     const wrongSlug = await bothCorpus();
     const changelogDir = join(wrongSlug.root, "_docs", "_CHANGELOG");
-    await rm(join(changelogDir, "1257-2026-08-14-task-545-smoke-evidence-checkpoint.md"));
-    await writeFile(join(changelogDir, "1257-2026-08-14-other-slug.md"), CHANGELOG_TEMPLATE);
+    await rm(join(changelogDir, pinnedChangelogName));
+    await writeFile(
+      join(changelogDir, `${CHANGELOG_NUMBER}-${CLOSURE_DATE}-other-slug.md`),
+      CHANGELOG_TEMPLATE
+    );
     await expect(
       errorCodeAsync(
         validateMetadataOnlyClosureDelta(
@@ -674,10 +689,11 @@ describe("validateMetadataOnlyClosureDelta", () => {
 
     const wrongDate = await bothCorpus();
     const dateDir = join(wrongDate.root, "_docs", "_CHANGELOG");
-    await rm(join(dateDir, "1257-2026-08-14-task-545-smoke-evidence-checkpoint.md"));
+    await rm(join(dateDir, pinnedChangelogName));
+    const wrongClosureDate = shiftedDate(1);
     await writeFile(
-      join(dateDir, "1257-2026-08-15-task-545-smoke-evidence-checkpoint.md"),
-      CHANGELOG_TEMPLATE.replace("2026-08-14", "2026-08-15")
+      join(dateDir, `${CHANGELOG_NUMBER}-${wrongClosureDate}-${CHANGELOG_SLUG}.md`),
+      CHANGELOG_TEMPLATE.replace(`**Date:** ${CLOSURE_DATE}`, `**Date:** ${wrongClosureDate}`)
     );
     await expect(
       errorCodeAsync(
@@ -692,7 +708,7 @@ describe("validateMetadataOnlyClosureDelta", () => {
     const lookalike = await bothCorpus();
     const lookDir = join(lookalike.root, "_docs", "_CHANGELOG");
     await writeFile(
-      join(lookDir, "1257-2026-08-14-task-545-smoke-evidence-checkpoint-extra.md"),
+      join(lookDir, `${CHANGELOG_NUMBER}-${CLOSURE_DATE}-${CHANGELOG_SLUG}-extra.md`),
       CHANGELOG_TEMPLATE
     );
     await expect(
@@ -707,9 +723,9 @@ describe("validateMetadataOnlyClosureDelta", () => {
 
     const wrongNumber = await bothCorpus();
     const numDir = join(wrongNumber.root, "_docs", "_CHANGELOG");
-    await rm(join(numDir, "1257-2026-08-14-task-545-smoke-evidence-checkpoint.md"));
+    await rm(join(numDir, pinnedChangelogName));
     await writeFile(
-      join(numDir, "1258-2026-08-14-task-545-smoke-evidence-checkpoint.md"),
+      join(numDir, `${CHANGELOG_NUMBER + 1}-${CLOSURE_DATE}-${CHANGELOG_SLUG}.md`),
       CHANGELOG_TEMPLATE
     );
     await expect(
@@ -926,6 +942,6 @@ describe("fixture and corpus integrity", () => {
     expect(CHANGELOG_INDEX_AFTER).toContain(mutation.pointerTo);
     expect(CHANGELOG_INDEX_AFTER).not.toContain("Next changelog number: 1257.");
     expect(today()).toMatch(/^\d{4}-\d{2}-\d{2}$/u);
-    expect(CLOSURE_DATE).toBe("2026-08-14");
+    expect(CLOSURE_DATE).toBe(today());
   });
 });

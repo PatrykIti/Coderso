@@ -3,7 +3,7 @@
  *
  * Runs exactly the A manifest files (`bucket === "A"` in
  * `tests/bun-lane-manifest.json`) with
- * `bun test --parallel=16 --timeout=15000 <a-files>` and NO database env in
+ * `bun test --parallel=16 --timeout=60000 <a-files>` and NO database env in
  * the child: `DATABASE_URL` and `DATABASE_DIRECT_URL` are stripped so any
  * accidental DB dependency fails loudly at runtime instead of silently
  * hitting the shared `public` schema. The orchestrator (TASK-557-05-L02
@@ -53,7 +53,11 @@ export type PureLaneResult = {
 
 /**
  * Run exactly the A manifest files with `bun test --env-file=/dev/null
- * --parallel=16 --timeout=15000` and a DB-env-stripped child environment.
+ * --parallel=16 --timeout=60000` and a DB-env-stripped child environment.
+ * A-lane files are DB-free, so the per-test timeout (60s, raised from 15s by
+ * TASK-559) only guards against true hangs: repo-wide inventory scans (NUL/DML
+ * graph/npm-bundle checks) take 15-23s under full 5-worker CPU pressure and
+ * kept tripping the 15s timeout on both retry attempts.
  * `--env-file=/dev/null` stops Bun from re-injecting `DATABASE_*` from the
  * repo `.env`, so the fail-loud guard is airtight.
  *
@@ -109,7 +113,7 @@ export async function runPureLane(options?: { noRetry?: boolean }): Promise<Pure
       // which would otherwise re-inject the stripped DATABASE_* values from the
       // repo `.env` and defeat the fail-loud guard above.
       proc = Bun.spawn(
-        [bunBin, "test", "--env-file=/dev/null", "--parallel=16", "--timeout=15000", ...aFiles],
+        [bunBin, "test", "--env-file=/dev/null", "--parallel=16", "--timeout=60000", ...aFiles],
         {
           env,
           stdout: "inherit",

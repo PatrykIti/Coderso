@@ -83,9 +83,9 @@ Task board for project work. Keep task files and this board in sync.
   Do not move a leaf task to `Done` until either its standalone changelog
   exists or the family changelog records that leaf.
 
-- **To Do:** 347 tasks
+- **To Do:** 346 tasks
 - **In Progress:** 6 tasks
-- **Done:** 3404 tasks
+- **Done:** 3405 tasks
 
 > TASK-479 (25 subtasks 05–29 + 92 leaves) and TASK-480 (umbrella + 6 subtasks +
 > 18 leaves) were broken down 2026-06-27. The table below lists the
@@ -161,7 +161,7 @@ Task board for project work. Keep task files and this board in sync.
 
 ## To Do
 
-| TASK-559 | Bun Lane C-Split to Reach the 10-15 Minute Target (Follow-up to TASK-557) | Medium | Medium | Follow-up: full test:bun passes (22m15s, exit 0) but the serial C lane (39 files, ~1334s) is the wall bound above the 10-15 min target. Split/shard C (two serial C workers with disjoint self-scoped files, per-worker C sub-schemas, or proven self-scoped heavies to B) while preserving shared-state serialization, fence isolation, pool budget, and the fail-loud DB guard. Acceptance: exit 0 AND <=15 min on remote direct-5432. Changelog 1274 pinned. One executable task. |
+| TASK-559 | Bun Lane C-Split to Reach the 10-15 Minute Target (Follow-up to TASK-557) | Medium | Medium | ✅ Done (2026-08-15): C lane split into two parallel serial workers (manifest v2 conflictKeys/cWriteGlobal, lane-aware worker_count_too_low guard); full test:bun acceptance exit 0 in 9.98 min (target ≤15); pre-existing A-lane test repairs recorded. Changelog 1274. One executable task terminal. |
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
 | TASK-556 | FormaDom Code-Owned Static Starter to Designer Handoff | High | Very Large | Provider-free, owner-private seed/reopen of TASK-555's immutable FormaDom release into terminal Designer through one current-root binding, one-dispatch fenced persistence, run-bound receipt staging, the existing Designer facade/`admin_write` transport, TASK-555's memory-only Setup review continuation, terminal capability regeneration, Designer backup V2, two additive host CTAs, and exactly five shared runtime-smoke flows. Implementation gate is closed until TASK-545 is exactly `✅ Done`, TASK-414/TASK-489/TASK-547/TASK-555 satisfy the parent terminal dependency rule, and a fresh read-only audit passes against unchanged contracts; TASK-545 has no superseded-successor exception and local ignored orchestration sidecars are non-authorizing helpers. Changelog 1270 pinned. 4 children + 8 executable leaves. |

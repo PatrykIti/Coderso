@@ -7,14 +7,25 @@
  * offset, retries flaky workers once, and writes a machine-readable report.
  *
  * Safety invariants:
- * - C files never share a worker with each other (one dedicated serial C
- *   worker); B files are weighted (longest-first) across `K-2` workers under
- *   `--lane all` (one slot reserved for the pure A lane) or `K-1` otherwise;
- *   perf files run strictly AFTER all B/C/A workers finish (wall-time gates
- *   are CPU-contention sensitive), never concurrently.
+ * - C files never share a worker with each other and run serially on their
+ *   own workers: since TASK-559 the C lane is SPLIT into `c1` (write-global C
+ *   files) and `c2` (read-only C files), two dedicated serial workers with
+ *   consecutive worker indices/fence offsets (c1 at `b.length`, c2 at
+ *   `b.length + 1` when non-empty). B files are weighted (longest-first)
+ *   across `K - reservedForPureA - cWorkers` workers under `--lane all` (one
+ *   slot reserved for the pure A lane, two for the C workers) or `K - 2`
+ *   otherwise; perf files run strictly AFTER all B/C/A workers finish
+ *   (wall-time gates are CPU-contention sensitive), never concurrently.
  * - `assertConnectionBudget(workers, pool)` enforces `workers x pool <= 10`
  *   (Render direct-connect reserve) BEFORE provisioning; provisioning failure
  *   aborts before any worker spawns.
+ * - `worker_count_too_low:<n>` (TASK-559 M3) is a lane-aware lower bound on
+ *   `--workers` checked BEFORE provisioning: `dbWorkersNeeded = bWorkerCount +
+ *   cWorkers + 1` for `--lane all` (min 4), `bWorkerCount` for `--lane b` (min
+ *   1), `bWorkerCount + 2` for `--lane c` (c1@bLen, c2@bLen+1; min 3), `1` for
+ *   `--lane perf` (workers must be 1 anyway via `perf_lane_parallel_invalid`).
+ *   Every spawned worker index (including perf) must be < `flags.workers`
+ *   because provisioning creates exactly `bun_worker_0..{workers-1}`.
  * - The perf worker env is an ADDITIVE overlay of `PERF_QUIET_ENV` on
  *   `resolveWorkerEnv`: `DATABASE_URL`/`DATABASE_DIRECT_URL`/`NODE_ENV` come
  *   from the base resolver (the perf lane needs real DB access).
@@ -38,7 +49,7 @@
  */
 import { readFile, writeFile } from "node:fs/promises";
 
-import { partition, partitionSummary, type Partition } from "./bun-lane-partition";
+import { partition, partitionSummary, type PartitionV2 } from "./bun-lane-partition";
 import {
   DEFAULT_WORKER_POOL_MAX,
   assertConnectionBudget,
@@ -221,11 +232,26 @@ export async function main(): Promise<void> {
   const timings = await safeRead(process.env.BUN_LANE_TIMINGS_PATH ?? DEFAULT_TIMINGS_PATH);
 
   // Lane-aware B worker allocation: `--lane all` reserves one slot for the
-  // pure A lane; single-lane runs hand every DB worker to that lane.
+  // pure A lane; every lane reserves the two C workers (TASK-559 split).
   const reservedForPureA = flags.lane === "all" ? 1 : 0;
-  const bWorkerCount = Math.max(1, flags.workers - 1 - reservedForPureA);
+  const cWorkers: 1 | 2 = 2; // always split; keep constant until evidence says otherwise
+  const bWorkerCount = Math.max(1, flags.workers - reservedForPureA - cWorkers);
+  // M3: lane-aware provisioning lower bound, checked BEFORE provisioning. Every
+  // spawned index (b0..bLen-1, c1@bLen, c2@bLen+1, perf last) must be
+  // < flags.workers because provisionWorkers creates exactly bun_worker_0..K-1.
+  const dbWorkersNeeded =
+    flags.lane === "all"
+      ? bWorkerCount + cWorkers + 1
+      : flags.lane === "b"
+        ? bWorkerCount
+        : flags.lane === "c"
+          ? bWorkerCount + 2
+          : 1; // perf (workers must be 1 anyway)
+  if (flags.workers < dbWorkersNeeded) {
+    throw new Error(`worker_count_too_low:${flags.workers}`);
+  }
   const pool = resolveWorkerPoolMax(process.env, flags.pool);
-  const part: Partition = partition(manifest.rows, timings, bWorkerCount);
+  const part: PartitionV2 = partition(manifest.rows, timings, bWorkerCount, cWorkers);
   if (flags.dryRun) {
     console.log(partitionSummary(part, timings));
     return;
@@ -242,11 +268,13 @@ export async function main(): Promise<void> {
 
   const results: WorkerResult[] = [];
   const bEnvs = part.b.map((_, i) => resolveWorkerEnv(i, { poolMax: pool, fenceOffset: i + 1 }));
-  const cIndex = part.b.length;
-  const perfIndex = cIndex + 1;
+  const c1Index = part.b.length;
+  const c2Index = c1Index + 1;
+  // perf index shifts by one when c2 exists (c1@bLen, c2@bLen+1, perf last).
+  const perfIndex = part.c2.length > 0 ? c2Index + 1 : c1Index + 1;
 
-  // B + C + pure A run in parallel (A has no DB dependency and needs no CPU
-  // isolation); perf runs strictly after ALL of them (serial, CPU-isolated).
+  // B + C1/C2 + pure A run in parallel (A has no DB dependency and needs no
+  // CPU isolation); perf runs strictly after ALL of them (serial, CPU-isolated).
   const workers: Promise<WorkerResult>[] = [];
   if (flags.lane === "all" || flags.lane === "b") {
     workers.push(...part.b.map((files, i) => runWorker(`b${i}`, files, bEnvs[i], flags.noRetry)));
@@ -254,12 +282,22 @@ export async function main(): Promise<void> {
   if (flags.lane === "all" || flags.lane === "c") {
     workers.push(
       runWorker(
-        "c",
-        part.c,
-        resolveWorkerEnv(cIndex, { poolMax: pool, fenceOffset: cIndex + 1 }),
+        "c1",
+        part.c1,
+        resolveWorkerEnv(c1Index, { poolMax: pool, fenceOffset: c1Index + 1 }),
         flags.noRetry
       )
     );
+    if (part.c2.length > 0) {
+      workers.push(
+        runWorker(
+          "c2",
+          part.c2,
+          resolveWorkerEnv(c2Index, { poolMax: pool, fenceOffset: c2Index + 1 }),
+          flags.noRetry
+        )
+      );
+    }
   }
   if (flags.lane === "all") {
     workers.push(

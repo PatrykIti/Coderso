@@ -36,16 +36,22 @@ export const PROFILE = "certification";
 export const SESSION = "task-545-certification";
 export const CHANGELOG_NUMBER = 1257;
 export const CHANGELOG_SLUG = "task-545-smoke-evidence-checkpoint";
-export const CLOSURE_DATE = "2026-08-14";
+
+// The checkpoint lib derives the closure identity date from the current UTC
+// date (`currentCanonicalUtcDate` in smoke-evidence-checkpoint.mjs), so the
+// corpus must derive its pinned date the same way instead of freezing a
+// historical literal (a frozen date drifts every midnight and breaks the
+// exact-path assertions).
+export const sha = (text: string): string => createHash("sha256").update(text).digest("hex");
+export const today = (): string => new Date().toISOString().slice(0, 10);
+export const CLOSURE_DATE = today();
 export const RUN_ID = "1111111111111111111111111111111111111111111111111111111111111111";
 export const WORKFLOW_ENTRY = "_docs/_workflows/task-545-implement.mjs";
 export const WRITER_PROTOCOL = "ordered-durable-changelog-file-then-index@v1";
-export const PINNED_CHANGELOG_REL = `_docs/_CHANGELOG/${CHANGELOG_NUMBER}-${CLOSURE_DATE}-${CHANGELOG_SLUG}.md`;
+export const PINNED_CHANGELOG_REL =
+  `_docs/_CHANGELOG/${CHANGELOG_NUMBER}-${CLOSURE_DATE}-${CHANGELOG_SLUG}.md` as `_docs/_CHANGELOG/${string}.md`;
 export const CHANGELOG_INDEX_REL = "_docs/_CHANGELOG/README.md";
 export const TASK_INDEX_REL = "_docs/_TASKS/README.md";
-
-export const sha = (text: string): string => createHash("sha256").update(text).digest("hex");
-export const today = (): string => new Date().toISOString().slice(0, 10);
 
 // Frozen task files at HEAD: exactly one canonical Status line, a Dependencies
 // line, and scenario prose that must never drift during closure.
@@ -111,7 +117,7 @@ export const FROZEN_CHANGELOG_INDEX =
 export const CHANGELOG_TEMPLATE = [
   "# 1257 - Task 545 Smoke Evidence Checkpoint",
   "",
-  "**Date:** 2026-08-14",
+  `**Date:** ${CLOSURE_DATE}`,
   "**Version:** Unreleased",
   "**Tasks:** TASK-545",
   "",
@@ -120,8 +126,7 @@ export const CHANGELOG_TEMPLATE = [
   "- Metadata-only closure delta validated and applied under the smoke evidence contract.",
   "",
 ].join("\n");
-export const CHANGELOG_ROW =
-  "| 1257 | 2026-08-14 | Task 545 Smoke Evidence Checkpoint | TASK-545 |";
+export const CHANGELOG_ROW = `| 1257 | ${CLOSURE_DATE} | Task 545 Smoke Evidence Checkpoint | TASK-545 |`;
 // The exact post-mutation changelog index (row after separator, pointer bumped).
 export const CHANGELOG_INDEX_AFTER = (() => {
   const lines = FROZEN_CHANGELOG_INDEX.split("\n");

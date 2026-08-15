@@ -1,2030 +1,2807 @@
 {
-  "generatedAt": "2026-08-14T15:12:17.722Z",
+  "generatedAt": "2026-08-14T21:00:45.316Z",
   "rows": [
     {
       "file": "tests/integration/analytics/trafficAggregation.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/integration/analytics/trafficRepository.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/integration/analytics/trafficRetention.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/integration/analytics/trafficSchema.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/integration/plugins/assets.test.ts",
       "bucket": "A",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/integration/plugins/autoDisable.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/integration/plugins/safeMode.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/integration/routes/accessLogs.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/integration/routes/adminRoles.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/integration/routes/adminUsers.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/integration/routes/analytics.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/integration/routes/analyticsTraffic.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/integration/routes/apiKeys.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/integration/routes/assistant-openai-live.test.ts",
       "bucket": "A",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/integration/routes/assistant-openrouter-live.test.ts",
       "bucket": "A",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/integration/routes/assistant-rate-limit.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/integration/routes/assistant.test.ts",
       "bucket": "C",
       "weightMs": 0,
-      "conflictKey": "4dd7f4d4"
+      "conflictKeys": ["4dd7f4d4"],
+      "cWriteGlobal": true
     },
     {
       "file": "tests/integration/routes/audit.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/integration/routes/auth.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/integration/routes/backups.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/integration/routes/bookingRoutes.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/integration/routes/commerceRoutes.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/integration/routes/contentEntriesRoutes.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/integration/routes/contentTypeConfigRoundTrip.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/integration/routes/contentTypes.test.ts",
       "bucket": "C",
       "weightMs": 0,
-      "conflictKey": "site.contentRoutes"
+      "conflictKeys": ["site.contentRoutes"],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/integration/routes/cors.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/integration/routes/customScreensDefinitionIntegrityRoutes.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/integration/routes/customScreensRoutes.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/integration/routes/dashboard.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/integration/routes/detailPages.test.ts",
       "bucket": "C",
       "weightMs": 0,
-      "conflictKey": "site.contentRoutes"
+      "conflictKeys": ["site.contentRoutes"],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/integration/routes/emailSettings.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/integration/routes/entryTeaserPreview.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/integration/routes/filters.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/integration/routes/formActionsRoutes.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/integration/routes/formSupportingTextRoutes.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/integration/routes/forms.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/integration/routes/importExport.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/integration/routes/install.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/integration/routes/integrations.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/integration/routes/ipAllowlist.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/integration/routes/listings.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/integration/routes/media-folders.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/integration/routes/media.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/integration/routes/menus.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/integration/routes/onboardingFlow.test.ts",
       "bucket": "C",
       "weightMs": 0,
-      "conflictKey": "site.navigationMenuId"
+      "conflictKeys": [
+        "site.navigationMenuId",
+        "site.footerTemplateId",
+        "site.homepageId",
+        "auth.sessionTtlDays"
+      ],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/integration/routes/pageTemplates.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/integration/routes/pages.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/integration/routes/pluginsRoutes.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/integration/routes/popups-public.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/integration/routes/popups-runtime-injection.test.ts",
       "bucket": "C",
       "weightMs": 0,
-      "conflictKey": "site.contentRoutes"
+      "conflictKeys": ["site.contentRoutes", "site.cacheTtlSeconds"],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/integration/routes/popupsRoutes.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/integration/routes/postMetadataRbac.test.ts",
       "bucket": "C",
       "weightMs": 0,
-      "conflictKey": "site.adminBaseUrl"
+      "conflictKeys": ["site.adminBaseUrl"],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/integration/routes/postsRoutes.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/integration/routes/productComparePreview.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/integration/routes/productGalleryPreview.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/integration/routes/productTablePreview.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/integration/routes/publicAnalytics.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/integration/routes/redirects.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/integration/routes/reviewsRoutes.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/integration/routes/search.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/integration/routes/securityHeaders.test.ts",
       "bucket": "A",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/integration/routes/securitySettings.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/integration/routes/seo.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/integration/routes/sessions.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/integration/routes/settings.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/integration/routes/setupAdvancedWizardPayloads.test.ts",
       "bucket": "A",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/integration/routes/setupStarterContent.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/integration/routes/solutionKitsRoutes.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/integration/routes/starterContent.test.ts",
       "bucket": "C",
       "weightMs": 0,
-      "conflictKey": "site.navigationMenuId"
+      "conflictKeys": ["site.navigationMenuId", "site.footerTemplateId", "site.homepageId"],
+      "cWriteGlobal": true
     },
     {
       "file": "tests/integration/routes/taxonomy.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/integration/routes/themes.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/integration/routes/userSettings.test.ts",
       "bucket": "C",
       "weightMs": 0,
-      "conflictKey": "site.adminBaseUrl"
+      "conflictKeys": ["site.adminBaseUrl"],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/integration/routes/userSettingsAccessLogHarness.test.ts",
       "bucket": "A",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/integration/routes/webhooks.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/integration/routes/widgets.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/integration/runtime/appointment-form-runtime-hydration.test.ts",
       "bucket": "A",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/integration/runtime/backupScheduler.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/integration/runtime/detail-page-composer-runtime.test.tsx",
       "bucket": "C",
       "weightMs": 0,
-      "conflictKey": "site.contentRoutes"
+      "conflictKeys": ["site.contentRoutes", "site.cacheTtlSeconds", "site.previewEnabled"],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/integration/runtime/detail-page-preview-cache.test.ts",
       "bucket": "C",
       "weightMs": 0,
-      "conflictKey": "site.contentRoutes"
+      "conflictKeys": ["site.contentRoutes", "site.cacheTtlSeconds", "site.previewEnabled"],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/integration/runtime/detail-page-runtime-lite.test.ts",
       "bucket": "C",
       "weightMs": 0,
-      "conflictKey": "site.contentRoutes"
+      "conflictKeys": ["site.contentRoutes", "site.cacheTtlSeconds", "4dd7f4d4"],
+      "cWriteGlobal": true
     },
     {
       "file": "tests/integration/runtime/detail-page-runtime.test.ts",
       "bucket": "C",
       "weightMs": 0,
-      "conflictKey": "site.contentRoutes"
+      "conflictKeys": ["site.contentRoutes", "site.cacheTtlSeconds"],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/integration/runtime/menu-design-extras-runtime.test.ts",
       "bucket": "C",
       "weightMs": 0,
-      "conflictKey": "site.contentRoutes"
+      "conflictKeys": ["site.contentRoutes", "site.cacheTtlSeconds"],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/integration/runtime/page-template-preview.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/integration/runtime/pages-runtime-blocks.test.ts",
       "bucket": "C",
       "weightMs": 0,
-      "conflictKey": "site.contentRoutes"
+      "conflictKeys": ["site.contentRoutes", "site.cacheTtlSeconds", "site.previewEnabled"],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/integration/runtime/pages-runtime-listings.test.ts",
       "bucket": "C",
       "weightMs": 0,
-      "conflictKey": "site.contentRoutes"
+      "conflictKeys": ["site.contentRoutes", "site.cacheTtlSeconds"],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/integration/runtime/pages-runtime-responsive.test.ts",
       "bucket": "C",
       "weightMs": 0,
-      "conflictKey": "site.contentRoutes"
+      "conflictKeys": ["site.contentRoutes", "site.cacheTtlSeconds", "site.previewEnabled"],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/integration/runtime/pages-runtime.test.ts",
       "bucket": "C",
       "weightMs": 0,
-      "conflictKey": "site.contentRoutes"
+      "conflictKeys": [
+        "site.contentRoutes",
+        "site.cacheTtlSeconds",
+        "site.previewEnabled",
+        "site.homepageId"
+      ],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/integration/runtime/post-rendering-parity.test.tsx",
       "bucket": "A",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/integration/runtime/post-writing-canvas-wrap.test.tsx",
       "bucket": "A",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/integration/runtime/posts-feed-runtime-pagination.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/integration/runtime/product-table-runtime-pagination.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/integration/runtime/projekty-domow-detail-route.test.ts",
       "bucket": "C",
       "weightMs": 0,
-      "conflictKey": "site.contentRoutes"
+      "conflictKeys": ["site.contentRoutes"],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/integration/runtime/redirects-runtime.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/integration/runtime/site-shell-runtime.test.ts",
       "bucket": "C",
       "weightMs": 0,
-      "conflictKey": "site.contentRoutes"
+      "conflictKeys": ["site.contentRoutes", "site.cacheTtlSeconds", "site.previewEnabled"],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/integration/server/assistantFullServiceSitePublicRuntime.test.ts",
       "bucket": "A",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/integration/server/assistantHouseProjectsCatalogPublicSite.test.ts",
       "bucket": "C",
       "weightMs": 0,
-      "conflictKey": "site.contentRoutes"
+      "conflictKeys": ["site.contentRoutes"],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/integration/server/formsWriteMounts.test.ts",
       "bucket": "C",
       "weightMs": 0,
-      "conflictKey": "site.adminBaseUrl"
+      "conflictKeys": ["site.adminBaseUrl"],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/integration/server/media-schema-0067.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/integration/server/mediaDeliveryAccess.test.ts",
       "bucket": "A",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/integration/store/install.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/integration/store/revocations.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/integration/toolchain/bunLaneMigrate.test.ts",
       "bucket": "A",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/integration/toolchain/bunLaneProvision.test.ts",
       "bucket": "A",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/integration/toolchain/bunLaneProvisioning.test.ts",
       "bucket": "A",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/integration/toolchain/fenceIsolation.test.ts",
       "bucket": "A",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/integration/toolchain/runBunParallel.test.ts",
       "bucket": "A",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/integration/toolchain/runBunParallelFakeWorker.test.ts",
       "bucket": "A",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/integration/toolchain/seedAdminConsumer.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/integration/toolchain/seedAdminRoleMigration.test.ts",
       "bucket": "A",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/perf/admin-prefetch-budget.test.ts",
       "bucket": "perf",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/perf/admin-request-baseline.test.ts",
       "bucket": "perf",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/perf/analyticsIngestion.test.ts",
       "bucket": "perf",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/perf/codersoPerformanceGate.test.ts",
       "bucket": "perf",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/perf/post-editor-load.test.tsx",
       "bucket": "perf",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/security/analyticsBeacon.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/security/codersoSecurityGate.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/security/firstAdminRace.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/security/installAdmin.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/security/installerSelfDisable.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/security/popups-public.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/security/setupStarterContent.security.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/access/accessLogExport.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/access/accessLogService.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/admin/roleAuditMetadata.test.ts",
       "bucket": "A",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/admin/rolesService.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/admin/sessionAdminService.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/admin/usersService.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/adminThemes/adminDefaultThemeJson.test.ts",
       "bucket": "A",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/adminThemes/seedAdminTheme.test.ts",
       "bucket": "A",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/adminThemes/tokenCss.test.ts",
       "bucket": "A",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/adminThemes/tokenTypes.test.ts",
       "bucket": "A",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/adminThemes/tokenValidation.test.ts",
       "bucket": "A",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/analytics/analyticsService.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/analytics/trafficAggregationQuery.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/assistant/actionExecutorAutomationBlueprints.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/assistant/actionExecutorCatalogBlueprints.test.ts",
       "bucket": "C",
       "weightMs": 0,
-      "conflictKey": "site.contentRoutes"
+      "conflictKeys": ["site.contentRoutes"],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/assistant/actionExecutorContentUpdates.test.ts",
       "bucket": "C",
       "weightMs": 0,
-      "conflictKey": "site.contentRoutes"
+      "conflictKeys": ["site.contentRoutes", "4dd7f4d4"],
+      "cWriteGlobal": true
     },
     {
       "file": "tests/unit/assistant/actionExecutorCustomScreens.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/assistant/actionExecutorDetailPages.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/assistant/actionExecutorForms.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/assistant/actionExecutorIdempotencyAndSiteKit.test.ts",
       "bucket": "C",
       "weightMs": 0,
-      "conflictKey": "site.contentRoutes"
+      "conflictKeys": ["site.contentRoutes"],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/assistant/actionExecutorListingsAndWidgets.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/assistant/actionExecutorMenusAndSeo.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/assistant/actionExecutorPages.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/assistant/actionExecutorService.db.test.ts",
       "bucket": "C",
       "weightMs": 0,
-      "conflictKey": "site.contentRoutes"
+      "conflictKeys": ["site.contentRoutes", "4dd7f4d4"],
+      "cWriteGlobal": true
     },
     {
       "file": "tests/unit/assistant/actionExecutorService.detailPage.db.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/assistant/actionExecutorService.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/assistant/actionExecutorSupportingPageLinks.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/assistant/assistantService.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/assistant/assistantSiteBuilderIntakeDryRun.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/assistant/siteBuilderExecutor.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/audit/auditExport.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/audit/auditService.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/auth/authRoutes.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/auth/loginAlert.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/auth/password.test.ts",
       "bucket": "A",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/auth/passwordResetService.test.ts",
       "bucket": "C",
       "weightMs": 0,
-      "conflictKey": "auth.resetTtlMinutes"
+      "conflictKeys": ["auth.resetTtlMinutes"],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/auth/rbac.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/auth/seedAdminPassword.test.ts",
       "bucket": "A",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/auth/sessionCookieOptions.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/auth/sessionService.test.ts",
       "bucket": "C",
       "weightMs": 0,
-      "conflictKey": "auth.sessionTtlDays"
+      "conflictKeys": ["auth.sessionTtlDays"],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/backups/backupRemoteStorage.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/backups/backupService.test.ts",
       "bucket": "C",
       "weightMs": 0,
-      "conflictKey": "site.contentRoutes"
+      "conflictKeys": ["site.contentRoutes", "backup_schedules"],
+      "cWriteGlobal": true
     },
     {
       "file": "tests/unit/booking/bookingAccess.test.ts",
       "bucket": "A",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/booking/bookingService.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/commerce/checkoutAdapter.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/commerce/commerceQueryService.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/commerce/commerceRuntimeResolver.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/commerce/commerceService.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/commerce/commerceValidation.test.ts",
       "bucket": "A",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/commerce/commerceWidgetRuntime.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/commerce/schema.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/content/contentListResolver.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/content/contentMediaResolver.test.ts",
       "bucket": "A",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/content/detailPageDocumentLifecycleMutation.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/content/detailPageDocumentService.test.ts",
       "bucket": "C",
       "weightMs": 0,
-      "conflictKey": "site.contentRoutes"
+      "conflictKeys": ["site.contentRoutes"],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/content/detailPageRevisionService.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/content/detailPageRuntimeResolver.test.ts",
       "bucket": "A",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/content/entryLifecycleMutationService.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/content/entryService.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/content/entryServiceFacadeFence.test.ts",
       "bucket": "A",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/content/listingPushdown.test.ts",
       "bucket": "A",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/content/listingQueriesService.test.ts",
       "bucket": "C",
       "weightMs": 0,
-      "conflictKey": "site.contentRoutes"
+      "conflictKeys": ["site.contentRoutes"],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/content/listingRuntimeResolver.test.ts",
       "bucket": "A",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/content/listingSchemas.test.ts",
       "bucket": "A",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/content/listingSources.test.ts",
       "bucket": "A",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/content/listingTemplatesService.test.ts",
       "bucket": "C",
       "weightMs": 0,
-      "conflictKey": "site.contentRoutes"
+      "conflictKeys": ["site.contentRoutes"],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/content/postsService.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/content/queryBuilderService.test.ts",
       "bucket": "A",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/content/taxonomyService.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/content/typeService.test.ts",
       "bucket": "C",
       "weightMs": 0,
-      "conflictKey": "site.contentRoutes"
+      "conflictKeys": ["site.contentRoutes"],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/content/validation.test.ts",
       "bucket": "A",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/dashboard/dashboardService.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/db/bunLaneWorkerSchema.test.ts",
       "bucket": "A",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/db/fenceNamespace.test.ts",
       "bucket": "A",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/db/schemaColumnTypeContracts.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/db/schemaTableFacade.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/email/emailSettingsService.test.ts",
-      "bucket": "B",
-      "weightMs": 0
+      "bucket": "C",
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": true
     },
     {
       "file": "tests/unit/engagement/popupService.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/engagement/popupValidation.test.ts",
       "bucket": "A",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/engagement/popupsPublicResolver.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/engagement/reviewService.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/engagement/reviewValidation.test.ts",
       "bucket": "A",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/engagement/schema.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/forms/fileSubmission.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/forms/formActionsService.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/forms/formAggregateService.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/forms/formSupportingTextPersistence.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/forms/formsService.test.ts",
       "bucket": "C",
       "weightMs": 0,
-      "conflictKey": "site.contentRoutes"
+      "conflictKeys": ["site.contentRoutes"],
+      "cWriteGlobal": true
     },
     {
       "file": "tests/unit/forms/schema.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/forms/submissionService.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/integrations/integrationsService.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/kits/fullSiteAdapterAtomicity.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/kits/fullSiteAggregateAdapters.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/kits/fullSiteCli.test.ts",
       "bucket": "A",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/kits/fullSiteCompensationDependencies.test.ts",
       "bucket": "A",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/kits/fullSiteInstallDbLedgerLifecycle.test.ts",
       "bucket": "C",
       "weightMs": 0,
-      "conflictKey": "site.homepageId"
+      "conflictKeys": ["site.homepageId"],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/kits/fullSiteInstallService.test.ts",
       "bucket": "C",
       "weightMs": 0,
-      "conflictKey": "site.contentRoutes"
+      "conflictKeys": ["site.contentRoutes", "site.homepageId"],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/kits/fullSiteLegacyLedgerComposition.test.ts",
       "bucket": "A",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/kits/fullSiteLegacyLedgerDryRunTerminalization.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/kits/fullSiteLegacyLedgerReadPersistence.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/kits/fullSiteLegacyLedgerRunInitialization.test.ts",
       "bucket": "C",
       "weightMs": 0,
-      "conflictKey": "site.contentRoutes"
+      "conflictKeys": ["site.contentRoutes"],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/kits/fullSiteLifecycleAdapters.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/kits/fullSiteLifecycleUpdates.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/kits/fullSiteResourceAdapterExecution.test.ts",
       "bucket": "C",
       "weightMs": 0,
-      "conflictKey": "site.contentRoutes"
+      "conflictKeys": [
+        "site.contentRoutes",
+        "site.navigationMenuId",
+        "site.footerTemplateId",
+        "site.homepageId"
+      ],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/kits/fullSiteResourceAdapters.test.ts",
       "bucket": "C",
       "weightMs": 0,
-      "conflictKey": "site.contentRoutes"
+      "conflictKeys": ["site.contentRoutes"],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/kits/fullSiteTransactionLockLifecycle.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/kits/installService.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/kits/kitInstaller.test.ts",
       "bucket": "A",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/kits/kitManifest.test.ts",
       "bucket": "A",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/kits/legacyInstallRunPersistenceInventory.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/kits/nativeCmsWriterFence.test.ts",
       "bucket": "A",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/kits/nativeCmsWriterFenceInventory.test.ts",
       "bucket": "A",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/kits/schema.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/kits/solutionKitsCatalog.test.ts",
       "bucket": "A",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/kits/solutionKitsService.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/media/azureAdapter.test.ts",
       "bucket": "A",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/media/imageDimensions.test.ts",
       "bucket": "A",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/media/localAdapter.test.ts",
       "bucket": "A",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/media/mediaAccess.test.ts",
       "bucket": "A",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/media/mediaFoldersService.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/media/mediaMeta.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/media/mediaService.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/media/mediaUsageService.test.ts",
       "bucket": "A",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/media/mediaUsageSubmission.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/media/s3Adapter.test.ts",
       "bucket": "A",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/media/storageResolver.test.ts",
-      "bucket": "B",
-      "weightMs": 0
+      "bucket": "C",
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": true
     },
     {
       "file": "tests/unit/menus/menuAggregateAtomicity.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/menus/menuService.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/navigation/navigationRuntimeResolver.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/pages/layoutSettings.test.ts",
       "bucket": "A",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/pages/pageLifecycleMutation.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/pages/pageRevisionAutosave.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/pages/pageService.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/pages/pageTemplateLibraryService.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/pages/pageTemplateService.test.ts",
       "bucket": "A",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/pages/previewService.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/pages/publicSiteShell.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/pages/revisionService.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/pages/siteShellCss.test.ts",
       "bucket": "A",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/pages/validation.test.ts",
       "bucket": "A",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/plugins/compat.test.ts",
       "bucket": "A",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/plugins/loader.test.ts",
       "bucket": "A",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/plugins/pluginManifest.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/plugins/registry.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/posts/schema.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/redirects/redirectService.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/release/imageBootGateConfig.test.ts",
       "bucket": "A",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/release/imagePromotionGate.test.ts",
       "bucket": "A",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/release/releaseConfig.test.ts",
       "bucket": "A",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/release/releaseWorkflowConfig.test.ts",
       "bucket": "A",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/runtime-smoke/browser-segments.test.ts",
       "bucket": "A",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/runtime-smoke/browser-transport.test.ts",
       "bucket": "A",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/runtime-smoke/checkpoints.test.ts",
       "bucket": "A",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/runtime-smoke/cli-registry.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/runtime-smoke/database-batches.test.ts",
       "bucket": "A",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/runtime-smoke/lifecycle-timing.test.ts",
       "bucket": "A",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/runtime-smoke/playwright-cli-dispatcher.test.ts",
       "bucket": "A",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/runtime-smoke/process-supervisor.test.ts",
       "bucket": "A",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/runtime-smoke/production-boundary-adapter.test.ts",
       "bucket": "A",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/runtime-smoke/repository-report.test.ts",
       "bucket": "A",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/runtime-smoke/supervised-server.test.ts",
       "bucket": "A",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/runtime-smoke/task-554-adapter.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/runtime-smoke/task-554-routing-lease.test.ts",
       "bucket": "C",
       "weightMs": 0,
-      "conflictKey": "site.adminBaseUrl"
+      "conflictKeys": ["site.adminBaseUrl"],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/runtime-smoke/task-554-worker.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/runtime-smoke/task540-adapter.test.ts",
       "bucket": "A",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/runtime-smoke/task540-browser-plan.test.ts",
       "bucket": "A",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/runtime-smoke/task540-legacy-test-coverage.test.ts",
       "bucket": "A",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/runtime-smoke/task540-native-source-inventory.test.ts",
       "bucket": "A",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/runtime-smoke/task540-native-suite-boundary.test.ts",
       "bucket": "A",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/runtime-smoke/task540-operation-handlers.test.ts",
       "bucket": "A",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/runtime-smoke/task540-operation-registry.test.ts",
       "bucket": "A",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/runtime-smoke/task540-persistent-bridge.test.ts",
       "bucket": "A",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/runtime-smoke/task540-scenario-resets.test.ts",
       "bucket": "A",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/runtime-smoke/task540-worker-operations.test.ts",
       "bucket": "A",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/runtime-smoke/task547-adapter.test.ts",
       "bucket": "A",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/runtime-smoke/task547-browser-segments.test.ts",
       "bucket": "A",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/runtime-smoke/task547-cleanup-batch.test.ts",
       "bucket": "A",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/runtime-smoke/task547-descriptors.test.ts",
       "bucket": "A",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/runtime-smoke/task547-host.test.ts",
       "bucket": "A",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/runtime-smoke/task547-output-manifest.test.ts",
       "bucket": "A",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/runtime-smoke/task547-worker-operations.test.ts",
       "bucket": "A",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/runtime-smoke/task547-workspace.test.ts",
       "bucket": "A",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/runtime-smoke/visible-evidence.test.ts",
       "bucket": "A",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/runtime-smoke/widget-adapter.test.ts",
       "bucket": "A",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/runtime-smoke/widget-contract-admin-probe.test.ts",
       "bucket": "A",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/runtime-smoke/widget-contract-cli.test.ts",
       "bucket": "A",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/runtime-smoke/widget-contract-fixtures.test.ts",
       "bucket": "A",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/runtime-smoke/widget-contract-inventory.test.ts",
       "bucket": "A",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/runtime-smoke/widget-contract-public-probe.test.ts",
       "bucket": "A",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/runtime-smoke/widget-contract-report.test.ts",
       "bucket": "A",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/runtime-smoke/worker-lifecycle.test.ts",
       "bucket": "A",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/runtime-smoke/worker-profile-isolation.test.ts",
       "bucket": "A",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/runtime-smoke/worker-protocol.test.ts",
       "bucket": "A",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/sdk/assets.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/sdk/storageScope.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/search/searchHistoryService.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/search/searchServiceDateRange.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/security/apiKeysService.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/security/csrf.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/security/ipAllowlistMiddleware.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/security/ipAllowlistService.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/security/piiEmail.test.ts",
       "bucket": "A",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/security/rateLimit.test.ts",
       "bucket": "A",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/security/requestId.test.ts",
       "bucket": "A",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/security/secretStore.test.ts",
       "bucket": "A",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/security/securityGateConfig.test.ts",
       "bucket": "A",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/security/securitySettings.test.ts",
-      "bucket": "B",
-      "weightMs": 0
+      "bucket": "C",
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": true
     },
     {
       "file": "tests/unit/seo/seoSchema.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/seo/seoService.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/server/adminAssetsRouting.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/server/publicBookingApi.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/server/publicFormsApi.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/server/publicFormsUploadApi.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/server/schemaValidator.test.ts",
       "bucket": "A",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/settings/contentRoutesValidation.test.ts",
       "bucket": "A",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/settings/fullSiteSettingsAtomicService.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/settings/settingsService.test.ts",
       "bucket": "C",
       "weightMs": 0,
-      "conflictKey": "site.contentRoutes"
+      "conflictKeys": [
+        "site.contentRoutes",
+        "site.cacheTtlSeconds",
+        "site.navigationMenuId",
+        "site.footerTemplateId",
+        "site.adminBaseUrl",
+        "auth.sessionTtlDays",
+        "auth.resetTtlMinutes"
+      ],
+      "cWriteGlobal": true
     },
     {
       "file": "tests/unit/settings/storageSettings-quota.test.ts",
-      "bucket": "B",
-      "weightMs": 0
+      "bucket": "C",
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": true
     },
     {
       "file": "tests/unit/settings/storageSettings.test.ts",
-      "bucket": "B",
-      "weightMs": 0
+      "bucket": "C",
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": true
     },
     {
       "file": "tests/unit/settings/tokenService.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/settings/userSettingsService.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/site/cache.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/site/menu-document-render.test.tsx",
       "bucket": "A",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/site/publicEntryRenderer.test.tsx",
       "bucket": "A",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/store/updater.test.ts",
       "bucket": "A",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/store/verifier.test.ts",
       "bucket": "A",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/templates/templateInstaller.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/themes/registry.test.ts",
       "bucket": "A",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/themes/resolver.test.ts",
       "bucket": "A",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/themes/themeProfileService.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/toolchain/bunInstallSecurityConfig.test.ts",
       "bucket": "A",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/toolchain/bunLaneManifest.test.ts",
       "bucket": "A",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/toolchain/bunLaneMigrate.test.ts",
       "bucket": "A",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/toolchain/bunLanePartition.test.ts",
       "bucket": "A",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/toolchain/bunLanePerfPolicy.test.ts",
       "bucket": "A",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/toolchain/bunLanePure.test.ts",
       "bucket": "A",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/toolchain/bunLaneTimings.test.ts",
       "bucket": "A",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/toolchain/bunLaneWorkerUrl.test.ts",
       "bucket": "A",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/toolchain/bunProductionJsxRuntime.test.ts",
       "bucket": "A",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/toolchain/node26VitestConfig.test.ts",
       "bucket": "A",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/toolchain/npmBundledDependencySecurityPatch.test.ts",
       "bucket": "A",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/toolchain/npmBundledIpAddressPatch.test.ts",
       "bucket": "A",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/toolchain/trackedSourcesAreText.test.ts",
       "bucket": "A",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/toolchain/vitestCoverageArgs.test.ts",
       "bucket": "A",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/tools/importExport.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/tools/packageScripts.test.ts",
       "bucket": "A",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/tools/toolsAuditMatrix.test.ts",
       "bucket": "A",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/webhooks/deliveryService.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/webhooks/webhooksService.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/widgets/contentList.test.tsx",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/widgets/entryTeaser.test.tsx",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/widgets/modulePackMatrix.test.ts",
       "bucket": "A",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/widgets/postsFeedWidget.test.tsx",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/widgets/registry.test.ts",
       "bucket": "A",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/widgets/runtimeRegistry.test.ts",
       "bucket": "A",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/widgets/validator.test.ts",
       "bucket": "A",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/widgets/widgetCatalogService.test.ts",
       "bucket": "A",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/widgets/widgetTemplateCategoryService.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/widgets/widgetTemplateRevisionService.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/widgets/widgetTemplateService.test.ts",
       "bucket": "B",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/workflows/auditRounds.test.ts",
       "bucket": "A",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/workflows/postAudit.test.ts",
       "bucket": "A",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/workflows/precommitFormatStagedIgnoredPaths.test.ts",
       "bucket": "A",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/workflows/smokeEvidence.test.ts",
       "bucket": "A",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/workflows/smokeEvidenceCheckpoint.test.ts",
       "bucket": "A",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/workflows/smokeEvidenceClosureDelta.test.ts",
       "bucket": "A",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/workflows/smokeEvidenceTask548Bootstrap.test.ts",
       "bucket": "A",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/workflows/task522FindingsPrompt.test.ts",
       "bucket": "A",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/workflows/task543ImplementSecurity.test.ts",
       "bucket": "A",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/workflows/task543WorkflowModules.test.ts",
       "bucket": "A",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/workflows/task554AuthorAudit.test.ts",
       "bucket": "A",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/workflows/task554IsolatedFrozenInstall.test.ts",
       "bucket": "A",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/workflows/task554WorkflowContracts.test.ts",
       "bucket": "A",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/workflows/taskGraphIntegrity.test.ts",
       "bucket": "A",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/workflows/workflowContracts.test.ts",
       "bucket": "A",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/workflows/workflowStaticContract.test.ts",
       "bucket": "A",
-      "weightMs": 0
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     }
   ]
 }

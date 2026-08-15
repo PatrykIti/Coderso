@@ -38,6 +38,14 @@
  * file rejects with a named error (`manifest_read_failed:<path>`) and aborts
  * the whole run so the manifest can never silently drift.
  *
+ * Manifest v2 (TASK-559): each row carries `conflictKeys: string[]` (ALL
+ * matched C signals in deterministic C_SETTING_KEYS -> C_TABLES -> C_LITERALS
+ * order, so multi-signal files like `detail-page-runtime-lite.test.ts` are no
+ * longer lossy) and `cWriteGlobal: boolean` (true when any write-global signal
+ * matched: a `set\w*Setting` call inside a before-hook, `backup_schedules`
+ * DML presence, or the fixed `4dd7f4d4` fixture literal). The old single
+ * `conflictKey?: string` field is gone.
+ *
  * Run from the repo root: `bun scripts/bun-lane-classify.ts`.
  */
 import { readdir, readFile, writeFile } from "node:fs/promises";
@@ -62,7 +70,13 @@ const EXT = /\.test\.(ts|tsx)$/;
 const MANIFEST_PATH = "tests/bun-lane-manifest.json";
 
 type Bucket = "perf" | "A" | "B" | "C";
-type BucketRow = { file: string; bucket: Bucket; weightMs?: number; conflictKey?: string };
+type BucketRowV2 = {
+  file: string;
+  bucket: Bucket;
+  weightMs?: number;
+  conflictKeys: string[];
+  cWriteGlobal: boolean;
+};
 
 // C signals: shared settings keys, singleton tables, first-admin, fixed literal
 const C_SETTING_KEYS = [
@@ -641,7 +655,36 @@ async function collectLaneFiles(): Promise<string[]> {
   return files.sort(); // deterministic order
 }
 
-async function classify(file: string): Promise<BucketRow> {
+/**
+ * All matched C contention signals in deterministic order: C_SETTING_KEYS,
+ * then C_TABLES, then C_LITERALS (the same precedence the old single
+ * `firstConflict` used, but keeping every match instead of only the first).
+ */
+export function collectConflictKeys(src: string): string[] {
+  return [
+    ...C_SETTING_KEYS.filter((k) => src.includes(k)),
+    ...C_TABLES.filter((t) => src.includes(t)),
+    ...C_LITERALS.filter((l) => src.includes(l)),
+  ];
+}
+
+/**
+ * Write-global C signal (TASK-559 M1 fix): any `set\w*Setting` helper call
+ * (`setSetting`, `setSettings`, `setTestSetting`, ...) inside a before-hook
+ * writes shared settings; `backup_schedules` is a singleton table; the fixed
+ * `4dd7f4d4` literal is a fixture write marker. Presence-based and
+ * conservative: the C1/C2 split is a load-balance heuristic, not a safety
+ * invariant (per-worker schemas + unique fence offsets already make any
+ * partition correct).
+ */
+export function hasCWriteGlobal(src: string): boolean {
+  const writesSettings = /set\w*Setting/.test(src) && /beforeAll|beforeEach/.test(src);
+  const writesBackupSchedule = /backup_schedules/.test(src);
+  const writesFixedLiteral = /4dd7f4d4/.test(src);
+  return writesSettings || writesBackupSchedule || writesFixedLiteral;
+}
+
+async function classify(file: string): Promise<BucketRowV2> {
   let src: string;
   try {
     src = await readFile(file, "utf8");
@@ -650,33 +693,31 @@ async function classify(file: string): Promise<BucketRow> {
   }
   // perf path override FIRST: the perf-lane policy routes by bucket value, and
   // tests/perf/* must never be merged into A/B workers.
-  if (file.startsWith(PERF_DIR)) return { file, bucket: "perf", weightMs: 0 };
+  if (file.startsWith(PERF_DIR)) {
+    return { file, bucket: "perf", weightMs: 0, conflictKeys: [], cWriteGlobal: false };
+  }
   const hasDb =
     /from\s+["'](?:\.\.\/)+core\/db\/(?:client|schema)["']/.test(src) ||
     /await\s+db\./.test(src) ||
     reachesDbTransitively(file);
-  if (!hasDb) return { file, bucket: "A", weightMs: 0 };
+  if (!hasDb) return { file, bucket: "A", weightMs: 0, conflictKeys: [], cWriteGlobal: false };
 
-  const hitsC =
-    C_SETTING_KEYS.some((k) => src.includes(k)) ||
-    C_TABLES.some((t) => src.includes(t)) ||
-    C_LITERALS.some((l) => src.includes(l)) ||
-    (/setSetting|setSettings/.test(src) && /beforeAll|beforeEach/.test(src));
+  const keys = collectConflictKeys(src);
+  const hitsC = keys.length > 0 || (/set\w*Setting/.test(src) && /beforeAll|beforeEach/.test(src));
   const cleansOwnRows = /delete\(|\.delete\(/.test(src) && /randomUUID/.test(src);
 
   if (hitsC) {
-    return { file, bucket: "C", weightMs: 0, conflictKey: firstConflict(src) };
+    return {
+      file,
+      bucket: "C",
+      weightMs: 0,
+      conflictKeys: keys,
+      cWriteGlobal: hasCWriteGlobal(src),
+    };
   }
-  if (cleansOwnRows) return { file, bucket: "B", weightMs: 0 };
-  return { file, bucket: "B", weightMs: 0 }; // DB-backed but not obviously shared
-}
-
-function firstConflict(src: string): string | undefined {
-  const key = C_SETTING_KEYS.find((k) => src.includes(k));
-  if (key) return key;
-  const table = C_TABLES.find((t) => src.includes(t));
-  if (table) return table;
-  return C_LITERALS.find((l) => src.includes(l));
+  if (cleansOwnRows)
+    return { file, bucket: "B", weightMs: 0, conflictKeys: [], cWriteGlobal: false };
+  return { file, bucket: "B", weightMs: 0, conflictKeys: [], cWriteGlobal: false }; // DB-backed but not obviously shared
 }
 
 async function main(): Promise<void> {
@@ -695,4 +736,4 @@ async function main(): Promise<void> {
 if (import.meta.main) {
   await main();
 }
-export { collectLaneFiles, classify, LANE_DIRS };
+export { classify, collectLaneFiles, LANE_DIRS };

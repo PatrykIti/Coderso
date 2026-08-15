@@ -13,7 +13,7 @@
  * - the child env never contains `DATABASE_URL` or `DATABASE_DIRECT_URL`
  *   (asserted via a stub `bun` that dumps its env to a file) while every
  *   other variable is inherited,
- * - the child argv is exactly `test --parallel=16 --timeout=15000` plus the A
+ * - the child argv is exactly `test --parallel=16 --timeout=60000` plus the A
  *   manifest files (a manifest row in another bucket is never run),
  * - a DB-dependent file fails the lane: the stub exits non-zero, the lane is
  *   retried once (attempted 2), and `runPureLane` propagates the retry's exact
@@ -176,7 +176,7 @@ test("child env strips DATABASE_URL and DATABASE_DIRECT_URL but inherits everyth
       expect(envLines.some((line) => line.startsWith("DATABASE_DIRECT_URL="))).toBe(false);
 
       // Exactly the A files are run, with the pinned flags and the real `bun`
-      // argv shape (`bun test --env-file=/dev/null --parallel=16 --timeout=15000
+      // argv shape (`bun test --env-file=/dev/null --parallel=16 --timeout=60000
       // <a-files>`). `--env-file=/dev/null` disables Bun's `.env` autoload in
       // the child, which would otherwise re-inject the stripped DATABASE_*
       // values and defeat the fail-loud guard.
@@ -185,7 +185,7 @@ test("child env strips DATABASE_URL and DATABASE_DIRECT_URL but inherits everyth
         "test",
         "--env-file=/dev/null",
         "--parallel=16",
-        "--timeout=15000",
+        "--timeout=60000",
         ...aFiles,
       ]);
     } finally {
@@ -240,7 +240,7 @@ test("a flaky first run is retried once and the retry's exit 0 wins", async () =
       "test",
       "--env-file=/dev/null",
       "--parallel=16",
-      "--timeout=15000",
+      "--timeout=60000",
       ...aFiles,
     ]);
   } finally {

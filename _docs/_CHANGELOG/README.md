@@ -62,10 +62,11 @@ may remain only with an explicit `Draft` status that supersedes its closure evid
 index row absent until fresh reclosure validation succeeds.
 Changelog 1271 is consumed by the completed TASK-557 Bun Test Lane Remote Parallel Speedup
 family. Changelog 1272 is consumed by the completed TASK-486 popups public-runtime family.
-Changelog 1273 is consumed by the completed TASK-558 popup visual theming family. Changelog 1274 remains reserved for TASK-559 (Bun Lane C-Split). Use 1275 for the next unreserved changelog entry.
+Changelog 1273 is consumed by the completed TASK-558 popup visual theming family. Changelog 1274 is consumed by the completed TASK-559 Bun Lane C-Split family. Use 1275 for the next unreserved changelog entry.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 1274 | 2026-08-15 | TASK-559 Bun Lane C-Split — two parallel serial C workers (manifest v2 conflictKeys/cWriteGlobal, lane-aware guard), full test:bun 22m15s → 9.98 min exit 0; pre-existing A-lane test repairs recorded. | Toolchain/Testing/DB/Performance/Task Board |
 | 1273 | 2026-08-14 | TASK-558 Popup Visual Theming — present-only fixed-preset theme (card/backdrop/close/z-index 9999), viewport clamping, focus/ESC/Tab-trap/reduced-motion, byte-identical no-override; 7-scenario runtime smoke (wf558smoke). One executable task terminal. | Engagement/Popups/Public Runtime/Accessibility/Testing/Docs/Task Board |
 | 1231 | 2026-08-14 | TASK-518 Seed Default Admin Role via Migration — stable DEFAULT_ADMIN_ROLE_ID, idempotent migration 0071 (fresh db:migrate has exactly one admin role), createFirstAdmin/seedAdmin aligned, legacy random-id role untouched. Admin-only; no privilege change. | Auth/RBAC/Data/Installer/Migration/Testing/Task Board |
 | 1272 | 2026-08-14 | TASK-486 Popups: Public Runtime Delivery & Trigger/Targeting Engine — public read endpoint (published-only, server-side targeting, PII-free DTO), client trigger/targeting/frequency runtime, render + script injection, lane-correct tests, docs, and 8-scenario runtime smoke. 4 subtasks + 11 leaves terminal. | Engagement/Popups/Public Runtime/Security/Testing/Docs/Task Board |
