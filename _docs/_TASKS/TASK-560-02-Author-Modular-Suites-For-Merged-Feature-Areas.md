@@ -44,17 +44,44 @@ cache exemption, authed bypass).
 
 ## Implementation pseudocode
 
-1. `scripts/runtime-smoke/adapters/task-517.ts` (and siblings): export a suite
-   descriptor `{ id: "task-517", profiles: { fast: {...} }, scenarios: [...] }`
-   following the `task-554.ts` adapter shape; each scenario registers browser
-   segments via the shared segment helpers and uses the shared checkpoint
-   primitives (`assertVisibleEffect`, `expectNoConsoleErrors`).
-2. Register each new suite in the static suite registry used by
-   `scripts/runtime-smoke.ts` (single array; alphabetical).
-3. Add cookbook examples if a new pattern is introduced (only additive).
-4. Run each new suite locally (fast) against the running dev servers; fix
-   harness defects until green; record evidence under
-   `_docs/_workflows/_smoke/evidence/<task>/<session>/`.
+Real adapter contract (audited 2026-08-15): `scripts/runtime-smoke/adapters/types.ts:55-68`
+defines `SmokeAdapter` as `{ suiteId, supportedProfiles, run(context): Promise<SmokeAdapterResult>,
+evidenceDirectory?(input, root): string | null }`. There is NO `{id, profiles, scenarios}`
+descriptor object; scenarios are built INSIDE `run()` and returned as part of
+`SmokeAdapterResult`. Mirror the task-554 adapter file structure. The shared
+checkpoint/evidence helpers are in `scripts/runtime-smoke/visible-evidence.ts`
+(e.g. `normalizeStrictManifestableScenario`, `assertExactUniqueScreenshotUnion`);
+console-error validation is inline per adapter (mirror task-554/browser-actions.ts
+`consoleErrors.length === 0` pattern). Visible-effect assertions are adapter-inline.
+
+```ts
+// scripts/runtime-smoke/adapters/task-517.ts — thin statically registered adapter
+import type { SmokeAdapter } from "./types";
+const adapter: SmokeAdapter = {
+  suiteId: "task-517",
+  supportedProfiles: ["fast", "certification"],
+  evidenceDirectory: (input) =>
+    `_docs/_workflows/_smoke/evidence/task-517/${input.session}`,
+  async run(context) {
+    // scenarios built here using the shared lifecycle/workers/browser
+    // segments/checkpoints; assert visible effect + 0 console errors inline
+    return { pass, scenarios, consoleErrors, screenshots, failures };
+  },
+};
+export default adapter;
+```
+
+Registration is FOUR places (cookbook §3 `docs/develop/runtime-smoke-cookbook.md:82-106`):
+1. `scripts/runtime-smoke/contracts.ts` — add id to `SUITE_IDS`.
+2. `scripts/runtime-smoke/cli.ts` — `SUPPORTED_PROFILES`/option allowlists if required.
+3. `scripts/runtime-smoke/registry.ts` — `ADAPTER_PATHS` entry + `DESCRIPTORS` entry.
+4. `tests/unit/runtime-smoke/cli-registry.test.ts` — registry expectations.
+
+Evidence root: canonical `_docs/_workflows/_smoke/evidence/<suite-id>/<session>/`
+(task-545 convention). Do NOT copy task-554's legacy root
+`_docs/_workflows/_smoke/task-554/<session>/` (audit finding MEDIUM-2).
+
+Add cookbook examples only if a new pattern is introduced (additive only).
 
 ## Acceptance
 

@@ -30,6 +30,27 @@ re-verified after it.
    distinguish real regression (fix, root cause) from under-load flake
    (record and re-run).
 
+## Known environment issue (diagnosed 2026-08-15, task-540)
+
+The shared DB setting `site.adminPath` is `/admin-panel` (custom admin base
+path, TASK-486 parity: the dev host resolves it via
+`coderso-admin-path-fetch.mjs` and serves admin/API under `/admin-panel/`), but
+the task-540 suite hardcodes `/admin` in readiness/health/fixtures
+(`platform-actions.ts:627` probes `:5173/admin/advanced/custom-screens` → 404 →
+`smoke_output_invalid`). Secondary: stale `site.homepageId` makes the front
+probe `:3000/` 404.
+
+Fix options (verified by the diagnosis agent):
+1. Mirror task-554's routing-settings lease in the task-540 native setup:
+   snapshot `site.adminPath`/`site.adminBaseUrl`/`site.publicBaseUrl`, force
+   `/admin`, restore in cleanup; also fix/lease `site.homepageId` or stop
+   depending on a pre-existing published homepage.
+2. Alternatively derive the ambient admin path from the DB across
+   readiness/health/fixture/API code.
+
+Apply one option, verify the suite to green, then run the remaining legacy
+suites (task-547, task-554, widget-contract fast where registered).
+
 ## Acceptance
 
 - task-540 fast, task-547 fast, task-554 fast all exit 0 on the merged tree.
