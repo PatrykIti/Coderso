@@ -68,7 +68,11 @@ const adapter: SmokeAdapter = {
   suiteId: "task-517",
   supportedProfiles: ["fast", "certification"],
   evidenceDirectory: (input, root) =>
-    resolveInsideRoot(root, `_docs/_workflows/_smoke/evidence/task-517/${input.session}`),
+    resolveInsideRoot(
+      root,
+      `_docs/_workflows/_smoke/evidence/task-517/${input.session}`,
+      "task_517_evidence"
+    ), // resolveInsideRoot(root, candidate, label) — 3 required params (contracts.ts:101)
   async run(context) {
     // scenarios built here using the shared lifecycle/workers/browser
     // segments/checkpoints; assert visible effect + 0 console errors inline
