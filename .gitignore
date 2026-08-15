@@ -19,6 +19,9 @@ coverage/
 *.jpg
 *.png
 !banner.png
+# The whole workflow tree (scripts, libs, smoke evidence) is tracked from 2026-08-15;
+# re-include after the broad image patterns above.
+!_docs/_workflows/**
 
 GENERATION_LIST.md
 .claude
