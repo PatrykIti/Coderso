@@ -1,0 +1,86 @@
+{
+  "cleanup": { "failures": [], "pass": true },
+  "consoleErrors": [],
+  "failures": [],
+  "pass": true,
+  "processes": {
+    "git": 2,
+    "playwright-close": 1,
+    "playwright-open": 1,
+    "playwright-run-code": 29,
+    "playwright-state-load": 3,
+    "task554-dev-host": 1,
+    "task554-worker-db": 1
+  },
+  "profile": "certification",
+  "scenarios": [
+    { "elapsedMs": 14123, "id": "writer-metadata-save-preserves-schedule", "pass": true },
+    { "elapsedMs": 13628, "id": "writer-status-publish-denied", "pass": true },
+    { "elapsedMs": 13840, "id": "writer-schedule-denied", "pass": true },
+    { "elapsedMs": 14849, "id": "publisher-schedule", "pass": true },
+    { "elapsedMs": 14493, "id": "publisher-publish", "pass": true },
+    { "elapsedMs": 14754, "id": "publisher-unpublish", "pass": true },
+    { "elapsedMs": 14155, "id": "publisher-archive", "pass": true }
+  ],
+  "schemaVersion": 1,
+  "screenshots": [
+    {
+      "path": "_docs/_workflows/_smoke/task-554/task-554-certification/01-writer-metadata-save-preserves-schedule.png",
+      "sha256": "5145cb4282a93d7df9c28be85819384fef243c4ce2c5f01ccd447daa5a0e3c3b"
+    },
+    {
+      "path": "_docs/_workflows/_smoke/task-554/task-554-certification/02-writer-status-publish-denied.png",
+      "sha256": "5b78009b0ff973e6db0248f40c134b9c845602ca806767ebf36cf10d7de7aa63"
+    },
+    {
+      "path": "_docs/_workflows/_smoke/task-554/task-554-certification/03-writer-schedule-denied.png",
+      "sha256": "bb4c3fe568d9cc7f30bb13b2dd8bf0ebe72c6b6503393d5dfe2f5d90422d465f"
+    },
+    {
+      "path": "_docs/_workflows/_smoke/task-554/task-554-certification/04-publisher-schedule.png",
+      "sha256": "3f5b9d9877b65b42d83bb421426f9c908e790ee0e44b4ba3ea282479201445ca"
+    },
+    {
+      "path": "_docs/_workflows/_smoke/task-554/task-554-certification/05-publisher-publish.png",
+      "sha256": "5ae2331db55a92c3e2bd18493415e2dd8635a014cb3a4e84a70772b7a5ceb487"
+    },
+    {
+      "path": "_docs/_workflows/_smoke/task-554/task-554-certification/06-publisher-unpublish.png",
+      "sha256": "bc1ad4f9efc111b362010ce13ef01156208be3e45860e3b9e409de034e77164b"
+    },
+    {
+      "path": "_docs/_workflows/_smoke/task-554/task-554-certification/07-publisher-archive.png",
+      "sha256": "a98c47f5132acb5e63bfce89a82058d39b29b5bb5da3e76e4a827cf9e625fdd2"
+    }
+  ],
+  "serverUp": true,
+  "session": "task-554-certification",
+  "snapshots": 2,
+  "suiteCleanup": {
+    "accessLogsRemoved": 154,
+    "databaseBatches": 31,
+    "fixturesAbsent": true,
+    "identitiesAbsent": true,
+    "loginAuditRowsRemoved": 2,
+    "pageErrors": 0,
+    "postChildrenRemoved": 0,
+    "postsRemoved": 28,
+    "repositorySnapshots": 2,
+    "rolesRemoved": 2,
+    "rows": 252,
+    "sessionsRemoved": 2,
+    "settingsRestored": true,
+    "statements": 55,
+    "userRolesRemoved": 2,
+    "usersRemoved": 2,
+    "workerRequests": 31,
+    "workerStarts": 1
+  },
+  "suiteId": "task-554",
+  "timings": [
+    { "count": 1, "elapsedMs": 1, "failed": 0, "kind": "cleanup", "name": "all" },
+    { "count": 1, "elapsedMs": 202, "failed": 0, "kind": "snapshot", "name": "task554-after" },
+    { "count": 1, "elapsedMs": 291, "failed": 0, "kind": "snapshot", "name": "task554-before" },
+    { "count": 1, "elapsedMs": 118714, "failed": 0, "kind": "suite", "name": "task-554" }
+  ]
+}
