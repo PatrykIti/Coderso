@@ -150,7 +150,11 @@ byte-identycznie). Slug kolumny = **API ID** w edytorze (mono input).
 - Odczyty uzywane przez update, publish, delete i koordynator metadanych maja
   jawne minimalne projekcje. Hash `accessPassword` nie jest materializowany w
   wyniku, cache ani logu; SQL wylicza jedynie `hasPassword`. Tekst jawny istnieje
-  tylko podczas przygotowania hasha przed zapisem.
+  tylko podczas przygotowania hasha przed zapisem. Jedyny serwerowy odczyt hasha
+  poza adminem to waski loader unlock endpointu
+  `getEntryAccessPasswordHash` (TASK-517: tylko kolumna `access_password`, tylko
+  `POST /entries/:id/unlock`, do weryfikacji Argon2id) — nigdy w projekcji
+  renderu/listy/wyszukiwarki.
 - Skutki cache serwera nastepuja dopiero po commicie: mutacja z SEO wykonuje
   jedno globalne czyszczenie, a inna rzeczywista zmiana metadanych/statusu jedna
   celowana invalidacje wpisu. Rollback i no-op nie uruchamiaja tych skutkow.

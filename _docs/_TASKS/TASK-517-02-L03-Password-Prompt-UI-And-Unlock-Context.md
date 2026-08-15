@@ -7,7 +7,8 @@
 **Priority:** High
 **Category:** Public Runtime / Security
 **Estimated Effort:** Medium
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-08-14
 
 ---
 
@@ -16,7 +17,7 @@
 Executable leaf. Fills the two seams 517-01-L03 defined in `publicSite.tsx`:
 (a) `buildEntryUnlockContext(cookies)` → a real `{ hasValidUnlockFor(entryId) }` backed by
 `verifyEntryUnlockToken` (517-02-L01) reading the per-entry cookie; and
-(b) `renderEntryPasswordPromptResult(entry, options, returnPath)` → a real 200
+(b) `renderEntryPasswordPromptResult(entry, options, requestPath)` → a real 200
 password-prompt HTML page whose form POSTs to `POST /entries/:id/unlock` (517-02-L02),
 built via a NEW small string renderer `renderPublicPasswordPromptHtml(...)` added next to
 `renderPublicEntryDetailHtml` in `core/site/renderPublicEntry.tsx` (the file that already
@@ -29,33 +30,36 @@ renderer in `renderPublicEntry.tsx`.
 
 - Seams defined by 517-01-L03: `buildEntryUnlockContext(cookies)` (placeholder →
   `hasValidUnlockFor: () => false`) and `renderEntryPasswordPromptResult(entry, options,
-  returnPath)` (**3-arg** placeholder → `null`, ignoring `returnPath`). 517-01-L03 lands this
-  signature 3-arg from the start (the gate-insertion call site already passes `options?.returnPath`,
-  and `renderEntryDetailHtml` already carries the `returnPath?` option), so this leaf swaps ONLY the
+  requestPath)` (**3-arg** placeholder → `null`, ignoring `requestPath`). 517-01-L03 lands this
+  signature 3-arg from the start (the gate-insertion call site already passes `options?.requestPath`,
+  the ALREADY-EXISTING `requestPath?` option on `renderEntryDetailHtml`), so this leaf swaps ONLY the
   placeholder BODIES for real implementations — never the signature and never the call site
   (Hard Invariant #5). This leaf swaps both for real implementations.
 - Cookie name scheme `entry_unlock_<hashEntryCookieId(entryId)>`. `hashEntryCookieId` is
   imported READ-ONLY from 517-02-L01's `core/services/content/entryUnlockToken.ts` (its
   SINGLE owner/definition) — the SAME import the WRITE side (517-02-L02) uses, so the read
   name here byte-matches the written name (no silent unlock failure). Parse cookies via
-  `parseCookies(req.headers.get("cookie"))` (`httpServer.ts:78` / `publicFormsApi.ts:46`) —
-  already parsed once in `handlePublicRequest` per 517-01-L03.
+  `parseCookies(req.headers.get("cookie"))` (`httpServer.ts:95` / `publicFormsApi.ts:179` /
+  `publicBookingApi.ts:239` — all module-local, NOT importable) — already parsed once in
+  `handlePublicRequest` per 517-01-L03.
 - Verify: `verifyEntryUnlockToken(entryId, token)` (517-02-L01, boolean, never throws).
-- The prompt page reuses the EXISTING render machinery: `resolvePublicStyles()`
-  (`publicSite.tsx:207`, used by the detail render at `:1236`) for theme (light/dark) + a
-  NEW small string renderer `renderPublicPasswordPromptHtml(...)` added next to
-  `renderPublicEntryDetailHtml` in `core/site/renderPublicEntry.tsx` (same `renderDocument`
-  shell, `renderToString` from `react-dom/server` @ `renderPublicEntry.tsx:3/236-237` —
-  publicSite.tsx does NOT import `renderToStaticMarkup` and has NO `PublicShell` component).
+- The prompt page reuses the EXISTING render machinery: `resolvePublicStyles()` (imported from
+  `./publicSiteAssets` @ `publicSite.tsx:85`, used by the generic detail render at `:420`) for
+  theme (light/dark) + a NEW small string renderer `renderPublicPasswordPromptHtml(...)` added
+  next to `renderPublicEntryDetailHtml` in `core/site/renderPublicEntry.tsx` (same
+  `renderDocument` shell @ `:181`, `renderToString` from `react-dom/server` @
+  `renderPublicEntry.tsx:3`, detail renderer @ `:378` — publicSite.tsx does NOT import
+  `renderToStaticMarkup` and has NO `PublicShell` component).
 - Return type: `renderEntryDetailHtml` returns `PublicHtmlRenderResult | string | null`
-  (`publicSite.tsx:1226`, object type @ `:664` with `cacheable: boolean`). The prompt result
-  returns the OBJECT form with `cacheable: false` (gated → never cached; 517-03 also
-  exempts the cache read).
+  (`publicSite.tsx:367`, object type `PublicHtmlRenderResult` @ `:114-119` with
+  `cacheable: boolean`). The prompt result returns the OBJECT form with `cacheable: false`
+  (gated → never cached; 517-03 also exempts the cache read).
 - Return path: the current detail path is passed IN from 517-01-L03's content-route call
-  site (derived from the matched route/slug already in scope) and emitted as the hidden
-  `returnPath` field; 517-02-L02's `unlockSchema` DECLARES `returnPath` so the strict
-  validator accepts it, and `resolveSafeEntryReturnPath` validates it same-origin. There is
-  no `currentEntryDetailPath()` helper — do not invent one.
+  site as the ALREADY-EXISTING `requestPath` option (threaded at `publicSite.tsx:932`) and
+  emitted as the hidden `returnPath` field; 517-02-L02's `unlockSchema` DECLARES `returnPath` so
+  the strict validator accepts it, and `resolveSafeEntryReturnPath` validates it same-origin.
+  There is no `currentEntryDetailPath()` helper — do not invent one (the 3rd arg is
+  `options?.requestPath`, already in scope).
 
 ## Implementation pseudocode
 
@@ -77,7 +81,7 @@ function buildEntryUnlockContext(cookies: Record<string, string>) {
 async function renderEntryPasswordPromptResult(
   entry: { id: string; slug: string; title?: string | null },
   options?: RenderEntryDetailOptions,
-  returnPath?: string,                       // the current detail path, passed in by 517-01-L03's call site
+  requestPath?: string,                     // the current detail path (ALREADY-EXISTING options.requestPath), passed by 517-01-L03's call site
 ): Promise<PublicHtmlRenderResult> {
   // Reuse the SAME render machinery the file already uses for detail pages: resolve the
   // public styles and hand a small prompt <body> to `renderPublicEntryDetailHtml`'s sibling
@@ -86,11 +90,11 @@ async function renderEntryPasswordPromptResult(
   // Concretely: add a tiny `renderPublicPasswordPromptHtml({ title, inlineCss, cssHref,
   // devModuleScripts, actionUrl, returnPath, themeName })` next to `renderPublicEntryDetailHtml`
   // in core/site/renderPublicEntry.tsx (same `renderDocument(...)` shell → returns a string),
-  // and call it here — mirroring the detail path at publicSite.tsx:1236-1237.
-  const { inlineCss, cssHref, devModuleScripts } = await resolvePublicStyles();  // :207
+  // and call it here — mirroring the generic detail render at publicSite.tsx:420.
+  const { inlineCss, cssHref, devModuleScripts } = await resolvePublicStyles();  // imported from ./publicSiteAssets (publicSite.tsx:85)
   const actionUrl = `/entries/${encodeURIComponent(entry.id)}/unlock`;
-  // returnPath is the same-origin detail path (already in scope at the L03 call site from the
-  // matched route/slug — NOT a nonexistent currentEntryDetailPath()); emitted as a hidden
+  // requestPath is the same-origin detail path (ALREADY in scope as options.requestPath at the
+  // L03 call site — NOT a nonexistent currentEntryDetailPath()); emitted as a hidden
   // field so 517-02-L02's unlockSchema (which DECLARES returnPath) accepts it and
   // resolveSafeEntryReturnPath validates it same-origin before the 302.
   const html = renderPublicPasswordPromptHtml({
@@ -98,7 +102,7 @@ async function renderEntryPasswordPromptResult(
     inlineCss, cssHref, devModuleScripts,
     themeName: options?.themeName,
     actionUrl,
-    returnPath: returnPath ?? "/",          // same-origin; validated by 517-02-L02
+    returnPath: requestPath ?? "/",        // same-origin; validated by 517-02-L02
     // form fields: name="password" type="password" required maxLength=256 autoFocus;
     // hidden name="returnPath"; autoComplete="off"; NO entry body included (withheld).
   });

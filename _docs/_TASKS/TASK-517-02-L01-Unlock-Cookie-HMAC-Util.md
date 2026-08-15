@@ -7,7 +7,8 @@
 **Priority:** High
 **Category:** Security
 **Estimated Effort:** Small
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-08-14
 
 ---
 
@@ -52,7 +53,9 @@ const resolveSecret = () => {
   return secret;
 };
 
-const resolveTtlMs = () => {
+// TTL resolver is EXPORTED so 517-02-L02 derives the Set-Cookie `Max-Age` from the SAME
+// source (no drift between the token expiry and the cookie lifetime).
+export const resolveEntryUnlockTtlMs = () => {
   const raw = process.env.ENTRY_UNLOCK_TTL_HOURS;
   const parsed = raw ? Number(raw) : NaN;
   if (!Number.isFinite(parsed) || parsed <= 0) return DEFAULT_TTL_HOURS * 3600 * 1000;
@@ -92,7 +95,7 @@ export function verifyEntryUnlockToken(
   const timestamp = Number(timestampRaw);
   if (!signature || !Number.isFinite(timestamp)) return false;
   if (timestamp > now + MAX_FUTURE_SKEW_MS) return false;         // future-skew
-  if (now - timestamp > resolveTtlMs()) return false;            // expired
+  if (now - timestamp > resolveEntryUnlockTtlMs()) return false;            // expired
   let secret: string;
   try { secret = resolveSecret(); } catch { return false; }      // missing secret → locked, never 500 a GET render
   const expected = signPayload(secret, `${entryId}.${timestamp}`);

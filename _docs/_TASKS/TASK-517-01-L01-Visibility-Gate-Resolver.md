@@ -7,7 +7,8 @@
 **Priority:** High
 **Category:** Content / Security
 **Estimated Effort:** Small
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-08-14
 
 ---
 
@@ -22,11 +23,13 @@ the unlock endpoint's post-success redirect target (517-02).
 
 ## Grounded anchors
 
-- `content_entries.visibility` values `public | private | password` (`core/db/schema.ts:792`).
+- `content_entries.visibility` values `public | private | password`
+  (`core/db/tables/content.ts:48`, re-exported via `core/db/schema.ts:28`).
 - The public loaders already expose `visibility: EntryVisibility` + a DERIVED
-  `hasPassword: boolean` (`entryService.ts` `getEntry` `:618`, projection `:627-628` →
-  map `:654-655`; `getEntryBySlug` `:690`). The resolver consumes ONLY these two + the
-  caller-computed auth/unlock booleans — never the raw hash.
+  `hasPassword: boolean` (`entryReadService.ts` `getEntry` `:149`, selection
+  `entryListSelection` `:24-25` → `mapEntryListSelectionRow` `:63-64`; `getEntryBySlug`
+  `:173`). The resolver consumes ONLY these two + the caller-computed auth/unlock booleans —
+  never the raw hash.
 - Fail-closed precedent: enum decisions treat unknown values as the most restrictive
   branch (never a bare permissive default).
 
@@ -34,14 +37,12 @@ the unlock endpoint's post-success redirect target (517-02).
 
 ```ts
 // core/services/content/entryVisibilityGate.ts — pure, no imports beyond the type.
-import type { EntryVisibility } from "./entryService"; // real declaration site: entryService.ts:28
-// NOTE: there is NO ./entryTypes module (verified: core/services/content/entryTypes.ts does not
-// exist). `EntryVisibility` is single-sourced at entryService.ts:28
-// (`export type EntryVisibility = "public" | "private" | "password";`). Import from there — do
-// NOT create entryTypes.ts. This introduces a light type-only coupling of the pure resolver back
-// to entryService; if that coupling is ever undesirable, extract `EntryVisibility` into a new
-// shared types module and re-export it from entryService — but do NOT invent the ungrounded
-// ./entryTypes path.
+import type { EntryVisibility } from "./entryTypes"; // real declaration site: entryTypes.ts:4
+// `EntryVisibility` is single-sourced at core/services/content/entryTypes.ts:4
+// (`export type EntryVisibility = "public" | "private" | "password";`), re-exported by
+// entryService.ts. Import it from the owning ./entryTypes module — do NOT re-declare it and do
+// NOT create a second type module. This keeps the pure resolver type-only coupled to the real
+// owner with no DB/runtime coupling.
 
 export type EntryGateDecision =
   | { kind: "allow" }

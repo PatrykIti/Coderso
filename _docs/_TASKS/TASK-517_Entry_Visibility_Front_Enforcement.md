@@ -8,11 +8,13 @@
 **Dependencies:** TASK-514 (Entries editor — ships the `content_entries.visibility` model:
 `public` | `private` | `password` + hashed `access_password`, persisted + surfaced in
 admin, respected in the admin editor only; front enforcement was explicitly DEFERRED to
-this task). TASK-514-01 added both columns to `core/db/schema.ts` (`visibility` @
-`schema.ts:792`, `accessPassword` @ `schema.ts:793`); the public read loaders already
-expose `visibility` + a DERIVED `hasPassword` boolean (the raw hash is deliberately never
-selected into a render projection).
-**Status:** ⏳ To Do
+this task). TASK-514-01 added both columns to `core/db/tables/content.ts` (`visibility` @
+`content.ts:48`, `accessPassword` @ `content.ts:49`, re-exported via `core/db/schema.ts:28`);
+the public read loaders (now in `core/services/content/entryReadService.ts`, re-exported by
+`entryService.ts`) already expose `visibility` + a DERIVED `hasPassword` boolean (the raw
+hash is deliberately never selected into a render projection).
+**Status:** ✅ Done
+**Completed:** 2026-08-14
 **Started:** 2026-07-06
 
 ---
@@ -43,59 +45,84 @@ actually protected when served to visitors:
   not-yet-unlocked, a dedicated 200 password-prompt page is served (a distinct, acceptable
   fail state — password entries are meant to be discoverable-but-locked).
 
-## Grounded render-path map (verified on disk 2026-07-07)
+## Grounded render-path map (verified on disk 2026-08-14, HEAD f75343de)
 
-- Dispatcher: `core/server/publicSite.tsx` (NOT the stale `core/site/publicSite.tsx` —
-  that path does not exist). The pure HTML renderer is `core/site/renderPublicEntry.tsx`.
-- Branch selection: `renderEntryDetailHtml(typeSlug, routeValue, options)`
-  (`publicSite.tsx:1213`). Options object at `:1216-1225` (additive seam: thread the
-  auth/preview flag + parsed unlock-cookie values here). The post-content-type vs generic
-  split: `if (!options?.preferGenericEntry && isPostContentTypeSlug(typeSlug))` (`:1229`).
-  - **Post branch — NOT gated.** Loads via `getPost`/`getPostBySlug` (`:1230`) returning
-    `PostDetail` (`postsService.ts:116-139`) from the SEPARATE `posts` table
-    (`schema.ts:870-892`), which has NO `visibility`/`access_password` — those columns exist
-    ONLY on `content_entries` (`schema.ts:792/793`). Gating this branch would 404 every post
-    for anon visitors, so the post render (`:1232-1237`) is left untouched. (Gating posts
-    would require first extending the posts model — a separate 514-scope task.)
-  - **Generic branch — the ONLY gated branch.** Loads via `getEntryBySlug` (`:1265`) then
-    `getEntry` (`:1263/:1270`); existing published guard at `:1274` (`entryDetail`) → gate
+- Dispatcher: `core/server/publicSite.tsx` (`handlePublicRequest` @ `:672`; the pure HTML
+  renderers are `core/site/renderPublicEntry.tsx` + `core/site/renderPublicPage.tsx`).
+  There is NO `core/site/publicSite.tsx` (that path does not exist).
+- Cache read happens FIRST (BEFORE dispatch): cache key
+  `buildSiteCacheKey(cacheProfileId, slugPath, searchSignature.signature)` @ `:888`,
+  `shouldUseCache` const @ `:878`, and the read block @ `:889-894`
+  (`if (shouldUseCache) { const cachedHtml = getSiteCacheEntry(cacheKey); if (cachedHtml)
+  return buildHtmlResponse(cachedHtml); }`). It is keyed ONLY on path + searchSignature — it
+  does NOT vary on auth or the unlock cookie, which is exactly why gated entries must be
+  cache-exempt (517-03).
+- Dispatch was refactored away from an inline `if (match)` block into
+  `resolvePublicSiteRouteTarget` (`core/server/publicSiteRoutePrecedence.ts:11-18`) +
+  explicit `routeTarget` branches. In `handlePublicRequest`: `contentRoutes =
+  getSetting("site.contentRoutes")` @ `:916`, `match = matchContentRoute(slugPath,
+  contentRoutes)` @ `:917`, `page = match?.mode === "detail" ? null :
+  getPageBySlug(slugPath)` @ `:918`, `hasPublishedStaticPage` @ `:919`, `routeTarget =
+  resolvePublicSiteRouteTarget(match, hasPublishedStaticPage)` @ `:920`, then the
+  `content-detail` (@ `:922`), `static-page` (@ `:944`), `content-list` (@ `:960`) and
+  final 404 (@ `:973`) branches.
+- `renderEntryDetailHtml(typeSlug, routeValue, options)` @ `:352`. Options object @
+  `:355-366` (additive seam: thread the auth/preview flag + parsed unlock-cookie values
+  here; `requestPath`/`requestOrigin` ALREADY exist and are threaded at the detail call
+  site @ `:932-933`).
+  - **Post branch — NOT gated.** `if (!options?.preferGenericEntry &&
+    isPostContentTypeSlug(typeSlug))` @ `:370`; loads via `getPost`/`getPostBySlug`
+    (`:371`) returning `PostDetail` (`core/services/content/postsService.ts`) from the
+    SEPARATE `posts` table, which has NO `visibility`/`access_password` — those columns
+    exist ONLY on `content_entries` (`core/db/tables/content.ts:48-49`). Gating this branch
+    would 404 every post for anon visitors, so the post render (`:378-397`) is left
+    untouched. (Gating posts would require first extending the posts model — a separate
+    514-scope task.)
+  - **Generic branch — the ONLY gated branch.** `contentType = getContentTypeBySlug` @
+    `:400`; `entryDetail` resolved via `getEntry(routeValue)` (`:405`, id route) or
+    `getEntryBySlug(contentType.id, routeValue)` → published guard → `getEntry(entry.id)`
+    (`:407-412`, slug route). The resolved `entryDetail` published guard
+    `if (!options?.preview && !isEntryPublished(entryDetail)) return null;` @ `:416` → gate
     slots in AFTER it (covering the linked-detail-page AND default-generic sub-branches).
-    The loaded `entryDetail` already carries `visibility` + `hasPassword` (proven by their
-    use in the detail-page runtime calls further down).
-  - Gate returns `null` → the caller emits the uniform 404 (`publicSite.tsx:1766` for the
-    generic detail path via `handlePublicRequest`, `:1751` for list).
-  - **List branch — ALSO gated (no existence leak via enumeration).** The `match.mode==='list'`
-    dispatch (`publicSite.tsx:1746-1755`) calls `renderEntryListHtml` (`:1145`), which for generic
-    types lists via `listEntries(contentType.id)` (`:1183`) and paginates through
-    `paginateEntryListEntries` (`:1110`) — which filters ONLY by `isEntryPublished` (`:1116`), NOT
-    by `visibility`. So a PUBLISHED `private`/`password` entry would otherwise appear in the auto
-    entry-list route with its title + detail href (`buildDetailHref`, `:1189`), enumerable by any
-    anonymous visitor even though its detail page 404s. That contradicts the "never expose whether
-    a private entry exists" invariant below, so 517-01-L05 filters non-`public` entries out of the
-    list branch for the anon (non-content-read) path, mirroring the detail gate's authed bypass.
-    `listEntries` already projects `visibility` (`entryService.ts:448` select / `:487` mapped row;
-    `hasPassword` @ `:449`/`:488`), so no extra fetch is needed.
+    `entryDetail` already carries `visibility` + `hasPassword` (`EntryDetail`,
+    `entryTypes.ts:20-21`).
+  - Gate returns `null` → the caller emits the uniform 404: detail branch @ `:935`
+    (`if (!detailHtml) return new Response("Not Found", { status: 404 });`).
+  - **List branch — ALSO gated (no existence leak via enumeration).** The
+    `routeTarget === "content-list"` branch @ `:960-971` calls `renderEntryListHtml`
+    (`:282`), which for generic types lists via `listEntries(contentType.id)` (`:321`) and
+    paginates through `paginateEntryListEntries` (`:320`) — which filters ONLY by
+    `isEntryPublished` (`core/server/publicSiteRouteRuntime.ts:71`), NOT by `visibility`. So
+    a PUBLISHED `private`/`password` entry would otherwise appear in the auto entry-list
+    route with its title + detail href (`buildDetailHref`, `:327`), enumerable by any
+    anonymous visitor even though its detail page 404s. That contradicts the "never expose
+    whether a private entry exists" invariant below, so 517-01-L05 filters non-`public`
+    entries out of the list branch for the anon (non-content-read) path, mirroring the
+    detail gate's authed bypass. `listEntries` already projects `visibility`
+    (`entryReadService.ts:24` select / `:63` mapped row; `hasPassword` @ `:25`), so no
+    extra fetch is needed.
 - The unlock-cookie value must be parsed from `req.headers` in `handlePublicRequest(req)`
-  (`:1507`, which HAS `req`) near the content-route match (`:1744-1766`) and threaded into
-  the `renderEntryDetailHtml` options at the call site (`:1759-1765`), OR the gate is
-  enforced at that call site — `renderEntryDetailHtml` does not currently receive the
-  `Request`.
-- Public read loaders (`core/services/content/entryService.ts`): `getEntry(id)` (`:618`),
-  `getEntryBySlug(typeId, slug)` (`:690`), `listEntries` (`:448`) — ALL project
-  `visibility` + a DERIVED `hasPassword` (`sql\`... is not null\``), NONE select the raw
-  `access_password` hash. **Do NOT widen these.** Password verification needs a NARROW
-  server-only helper `getEntryAccessPasswordHash(entryId)` that selects ONLY the hash,
-  invoked EXCLUSIVELY by the unlock-submit endpoint.
+  (`:672`, which HAS `req`) and threaded into the `renderEntryDetailHtml` options at the
+  detail call site (`:926-934`), OR the gate is enforced at that call site —
+  `renderEntryDetailHtml` does not currently receive the `Request`.
+- Public read loaders (`core/services/content/entryReadService.ts`, re-exported by
+  `entryService.ts:25-32`): `listEntries(typeId)` (`:84`), `getEntry(id)` (`:149`),
+  `getEntryBySlug(typeId, slug)` (`:173`) — ALL project `visibility` + a DERIVED
+  `hasPassword` (`sql\`... is not null\``), NONE select the raw `access_password` hash.
+  **Do NOT widen these.** Password verification needs a NARROW server-only helper
+  `getEntryAccessPasswordHash(entryId)` that selects ONLY the hash, invoked EXCLUSIVELY by
+  the unlock-submit endpoint.
 
 ## Coordination (pinned facts)
 
-- **Changelog number:** closure creates `_docs/_CHANGELOG/1236-*.md` — 1235 is TAKEN
-  (522); the highest on disk at authoring is 1235, so **1236 is next-free** (the old
-  contract's 1230 pin was STALE and is corrected here). Only the closure subtask (517-03)
-  edits `_docs/_TASKS/*` + `_docs/_CHANGELOG/*`.
-- **Branch/worktree:** dedicated `feature/task-517` worktree, branched from
-  `feature/tasks-fixes` HEAD (517 depends on 514's shipped model — a fresh
-  pre-implementation audit re-grounds 514's real column + helper names first).
+- **Changelog number:** closure creates `_docs/_CHANGELOG/1280-*.md` — live changelog
+  entries exist through 1273 and 1274 is reserved for TASK-559, so **1280 is the pinned
+  next-free number** for 517's closure (the old contract's 1230/1236 pins were STALE and
+  are corrected here). Only the closure subtask (517-03) edits `_docs/_TASKS/*` +
+  `_docs/_CHANGELOG/*`.
+- **Branch/worktree:** dedicated `task/stream-517` worktree (HEAD f75343de). 517 depends on
+  514's shipped model (`content_entries.visibility` + `access_password` in
+  `core/db/tables/content.ts:48-49`).
 - **No DB migration of its own** — reuses 514's `content_entries.visibility` +
   `access_password` columns. The signed-unlock token is a **stateless HMAC-signed cookie**
   (mirror `core/services/forms/submissionNonce.ts` + the secure-cookie machinery in
@@ -125,26 +152,28 @@ actually protected when served to visitors:
   flags `HttpOnly; Secure(per COOKIE_SECURE/NODE_ENV); SameSite=Strict; Path=/;
   Max-Age=<ttl>`). The submit endpoint is a public write: `public_write` rate-limit bucket
   + strict reject-unknown validation (`additionalProperties:false`) + bot/DNT-neutral.
-- **No secret/PII leak:** never expose whether a private entry exists — enforced on BOTH the
-  detail path (private-anon → uniform 404, byte-identical to not-published) AND the auto
-  entry-list path (a `private`/`password` entry is NOT enumerable — its title + detail href are
-  filtered out of the anon list body by 517-01-L05, mirroring the detail gate's authed bypass, so
-  it never leaks via `renderEntryListHtml`). The list no-enumeration invariant also holds on the
-  CACHE path: 517-01-L05 suppresses the list cache WRITE for an authed content:read render
-  (`setSiteCacheEntry` gated on `shouldUseCache && !isAuthenticated`, `publicSite.tsx:1752`) so the
-  authed FULL-list body — which carries gated titles/hrefs — can never be written under the
-  auth-independent cache key and served to anonymous visitors; only the anon public-only list body
-  is ever cached. Never expose the password hash, never confirm which entries exist from the unlock
+- **No secret/PII leak:** never expose whether a private entry exists — enforced on the
+  detail path (private-anon → uniform 404, byte-identical to not-published), the auto
+  entry-list path (517-01-L05), the public search path (`/api/search`,
+  `searchIndexService.ts:152-168` → 517-01-L06), and the static-page listing-block path
+  (`listingSources.ts:43-74` → 517-01-L06) — a `private`/`password` entry is NOT
+  enumerable via any anonymous surface (title + detail href filtered out). The list
+  no-enumeration invariant also holds on the CACHE path: 517-01-L05 suppresses the list
+  cache WRITE for an authed content:read render (`setSiteCacheEntry` gated on
+  `shouldUseCache && !isAuthenticated`, `publicSite.tsx:967-969`) so the authed FULL-list
+  body — which carries gated titles/hrefs — can never be written under the
+  auth-independent cache key and served to anonymous visitors; only the anon public-only list
+  body is ever cached. Never expose the password hash, never confirm which entries exist from the unlock
   endpoint's failure responses.
 - **Caching:** `private` + `password` entries are FULLY cache-exempt on BOTH read and
-  write — the shared `siteCache` read (`publicSite.tsx:1716-1721`) happens BEFORE route
+  write — the shared `siteCache` read (`publicSite.tsx:889-894`) happens BEFORE route
   dispatch keyed only on path + searchSignature (it does NOT vary on the unlock cookie), so
   a locked page could otherwise serve a previously-cached unlocked body (and vice-versa).
   The WRITE side is closed from the first landed leaf: 517-01-L03 returns `{ html,
   cacheable:false }` for gated `allow` renders (including the authed/preview bypass), so an
   authed render can never poison the shared anon-served cache — no fail-open window exists
   after 01+02 land but before 03. 517-03 then bypasses the cache READ for gated routes and
-  adds the canonical auth-independent `entryRouteIsGated` short-circuit (belt-and-braces on
+  adds the canonical auth-independent `routeIsGatedEntry` short-circuit (belt-and-braces on
   both read AND write). Only `public` entries keep the existing 30 s public HTML cache.
 
 ## Sub-Tasks
@@ -157,7 +186,7 @@ actually protected when served to visitors:
 
 ### Leaf inventory
 
-- **TASK-517-01** (5 leaves):
+- **TASK-517-01** (6 leaves):
   - 517-01-L01 — pure visibility resolver (`resolveEntryVisibilityGate`) + unit tests.
   - 517-01-L02 — narrow `getEntryAccessPasswordHash` server-only loader (additive; no
     widening of `getEntry`/`getEntryBySlug`).
@@ -173,6 +202,11 @@ actually protected when served to visitors:
     detail-only gate would otherwise leave open. Bun list-leak test (gated entry NOT in anon list
     body; present when content:read-authed). No DB migration; `listEntries` already projects
     `visibility`.
+  - 517-01-L06 — public-vector visibility filters: drop non-`public` entries from the
+    anonymous public search index (`/api/search`, `searchIndexService.ts:152-168`) AND the
+    static-page listing-block entries source (`listingSources.ts:43-74`) so a
+    `private`/`password` entry is not enumerable via either anonymous surface (see the parent
+    no-existence-leak invariant). DB-backed Bun tests for both vectors.
 - **TASK-517-02** (4 leaves):
   - 517-02-L01 — HMAC unlock-cookie sign/verify util (`entryUnlockToken.ts`) + unit tests.
   - 517-02-L02 — `POST /entries/:id/unlock` endpoint (`handlePublicEntryUnlockApi`):
@@ -183,7 +217,7 @@ actually protected when served to visitors:
     serves body, tampered cookie rejected).
 - **TASK-517-03** (single closure subtask, no leaves): cache exclusion (read + write) for
   gated entries, the full gate-matrix Bun test aggregate, docs (SECURITY_SPEC +
-  PAGE/ENTRY model note), and closure under changelog 1236.
+  PAGE/ENTRY model note), and closure under changelog 1280.
 
 Land order strictly sequential **01 → 02 → 03**; each leaf is single-writer with documented
 additive seams. Each subtask carries execution-ready pseudocode, a Security Contract
