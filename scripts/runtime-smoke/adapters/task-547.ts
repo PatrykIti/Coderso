@@ -23,10 +23,12 @@ import {
   preserveTask547PrimaryFailure,
   type Task547CleanupResources,
   type Task547FinalCleanupProof,
+  type Task547FinalizationFailure,
 } from "./task-547/cleanup";
 import { task547ScenarioDescriptors } from "./task-547/descriptors";
 import { createTask547WorkerPool, installTask547FixtureInBatches } from "./task-547/fixture";
 import { startTask547DevHost, task547TimingPolicy } from "./task-547/host";
+import { RuntimeSmokeRoutingSettingsLease } from "./routing-settings-lease";
 import {
   assertExactTask547ScreenshotManifest,
   buildExactTask547ScreenshotManifest,
@@ -139,6 +141,9 @@ export async function runTask547Adapter(context: RuntimeSmokeContext): Promise<S
   let screenshots: SmokeAdapterResult["screenshots"] | null = null;
   let primary: unknown | null = null;
   let finalProof: Task547FinalCleanupProof | null = null;
+  let routingLease: RuntimeSmokeRoutingSettingsLease | null = null;
+  let routingRestored = false;
+  const leaseFailures: Task547FinalizationFailure[] = [];
 
   try {
     workers = await context.timing.measure("phase", "task547-workers", () =>
@@ -157,6 +162,14 @@ export async function runTask547Adapter(context: RuntimeSmokeContext): Promise<S
       workers,
       descriptors: TASK547_WORKER_DESCRIPTORS,
     });
+    // The dev host resolves the admin base path from the DB at boot, so the
+    // routing targets must be applied BEFORE it spawns and restored once the
+    // suite is done (TASK-547 runtime-smoke fix, shared task-540 lease). The
+    // browser scenarios hardcode `/admin` and the readiness probes hit `/` and
+    // `/admin/`, which only hold while `site.adminPath` is pinned to `/admin`
+    // and `site.homepageId` points at an existing published page.
+    routingLease = new RuntimeSmokeRoutingSettingsLease();
+    await context.timing.measure("phase", "routing-settings-apply", () => routingLease!.apply());
     server = await context.timing.measure("phase", "task547-server", () =>
       startTask547DevHost(context, { timing })
     );
@@ -204,6 +217,22 @@ export async function runTask547Adapter(context: RuntimeSmokeContext): Promise<S
     });
   } catch (error) {
     primary = error;
+  } finally {
+    // Restore the ambient routing settings in finally so a failed suite can
+    // never leave `site.adminPath` / `site.homepageId` pinned. The lease is
+    // idempotent: when apply() never completed, restore() is a safe no-op.
+    if (routingLease !== null && !routingRestored) {
+      try {
+        await context.timing.measure("phase", "routing-settings-restore", () =>
+          routingLease!.restore()
+        );
+        routingRestored = true;
+      } catch (error) {
+        leaseFailures.push(
+          Object.freeze({ resource: "task547-routing-settings", phase: "close", error })
+        );
+      }
+    }
   }
 
   if (workers !== null) {
@@ -218,7 +247,11 @@ export async function runTask547Adapter(context: RuntimeSmokeContext): Promise<S
       })
     );
     finalProof = finalization.proof;
-    primary = preserveTask547PrimaryFailure(primary, finalization.failures, null);
+    primary = preserveTask547PrimaryFailure(
+      primary,
+      [...finalization.failures, ...leaseFailures],
+      null
+    );
   }
 
   if (primary === null && accepted !== null) {

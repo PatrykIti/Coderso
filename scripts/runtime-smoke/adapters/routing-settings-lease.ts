@@ -1,20 +1,21 @@
 import { asc, inArray, isNotNull, sql } from "drizzle-orm";
 
-import { SmokeError } from "../../../../contracts";
-import type { SettingKey } from "../../../../../../core/services/settings/settingsService";
+import { SmokeError } from "../contracts";
+import type { SettingKey } from "../../../core/services/settings/settingsService";
 
 /**
- * TASK-540 owned routing-settings lease.
+ * Shared runtime-smoke routing-settings lease (extracted from the task-540
+ * suite, now also owned by task-547).
  *
- * The task-540 suite expects the shared dev host on the canonical `/admin`
+ * The runtime-smoke suites expect the shared dev host on the canonical `/admin`
  * base path, but the ambient DB `site.adminPath` is operator-chosen (today
  * `/admin-panel`). The dev host resolves the admin path from the DB:
  * `core/server/utils/adminPath.ts` (`resolveAdminPath()` reads
  * `getSetting("site.adminPath")`), consumed by `core/server/middleware/hostPolicy.ts`
- * and mirrored by `core/vite.config.ts`. The suite must apply its owned routing
+ * and mirrored by `core/vite.config.ts`. A suite must apply its owned routing
  * targets BEFORE the host spawns and restore the exact ambient snapshot
  * afterwards. `site.homepageId` is leased too: the front health probe hits `/`
- * and the ambient value can point at a deleted page, so the suite pins it to an
+ * and the ambient value can point at a deleted page, so the lease pins it to an
  * existing published page for the run.
  *
  * The assistant launcher avatar keys are leased for the same reason: the admin
@@ -34,7 +35,7 @@ import type { SettingKey } from "../../../../../../core/services/settings/settin
  * call paths, never at module scope.
  */
 
-export const TASK540_LEASED_SETTING_KEYS = Object.freeze([
+export const ROUTING_SMOKE_LEASED_SETTING_KEYS = Object.freeze([
   "site.adminPath",
   "site.adminBaseUrl",
   "site.publicBaseUrl",
@@ -43,34 +44,36 @@ export const TASK540_LEASED_SETTING_KEYS = Object.freeze([
   "assistant.launcher.avatarAsset",
 ] as const);
 
-export type Task540LeasedSettingKey = (typeof TASK540_LEASED_SETTING_KEYS)[number];
+export type RuntimeSmokeLeasedSettingKey = (typeof ROUTING_SMOKE_LEASED_SETTING_KEYS)[number];
 
 /**
  * PostgreSQL's canonical text forms stay private to the lease. They preserve
  * JSONB representation and timestamp microseconds across restoration.
  */
-export type Task540RoutingSettingRecord = Readonly<{
-  readonly key: Task540LeasedSettingKey;
+export type RuntimeSmokeRoutingSettingRecord = Readonly<{
+  readonly key: RuntimeSmokeLeasedSettingKey;
   readonly updatedAt: string;
   readonly valueJson: string;
 }>;
 
-export type Task540RoutingSettingsOwnedRecord = Readonly<{
-  readonly record: Task540RoutingSettingRecord;
+export type RuntimeSmokeRoutingSettingsOwnedRecord = Readonly<{
+  readonly record: RuntimeSmokeRoutingSettingRecord;
   readonly version: string;
 }>;
 
-export type Task540RoutingSettingsSnapshot = Readonly<
-  Record<Task540LeasedSettingKey, Task540RoutingSettingRecord | null>
+export type RuntimeSmokeRoutingSettingsSnapshot = Readonly<
+  Record<RuntimeSmokeLeasedSettingKey, RuntimeSmokeRoutingSettingRecord | null>
 >;
 
-type Task540RoutingSettingsState = Readonly<{
-  readonly owned: Readonly<Record<Task540LeasedSettingKey, Task540RoutingSettingsOwnedRecord>>;
-  readonly snapshot: Task540RoutingSettingsSnapshot;
+type RuntimeSmokeRoutingSettingsState = Readonly<{
+  readonly owned: Readonly<
+    Record<RuntimeSmokeLeasedSettingKey, RuntimeSmokeRoutingSettingsOwnedRecord>
+  >;
+  readonly snapshot: RuntimeSmokeRoutingSettingsSnapshot;
 }>;
 
-const TASK540_LEASED_TARGETS: Readonly<
-  Record<Exclude<Task540LeasedSettingKey, "site.homepageId">, string>
+const ROUTING_SMOKE_LEASED_TARGETS: Readonly<
+  Record<Exclude<RuntimeSmokeLeasedSettingKey, "site.homepageId">, string>
 > = Object.freeze({
   "site.adminPath": JSON.stringify("/admin"),
   "site.adminBaseUrl": "null",
@@ -80,35 +83,35 @@ const TASK540_LEASED_TARGETS: Readonly<
 });
 
 type DbTransaction = Parameters<
-  Parameters<typeof import("../../../../../../core/db/client").db.transaction>[0]
+  Parameters<typeof import("../../../core/db/client").db.transaction>[0]
 >[0];
 
-type Task540RoutingSettingRow = Readonly<{
+type RuntimeSmokeRoutingSettingRow = Readonly<{
   readonly key: string;
   readonly updatedAt: string;
   readonly valueJson: string;
   readonly version?: string;
 }>;
 
-interface Task540RoutingCoreHandles {
+interface RuntimeSmokeRoutingCoreHandles {
   readonly acquireNativeCmsWriterFence: (tx: DbTransaction) => Promise<void>;
-  readonly db: typeof import("../../../../../../core/db/client").db;
+  readonly db: typeof import("../../../core/db/client").db;
   readonly invalidateSiteShellCachesForKeys: (keys: Iterable<SettingKey>) => void;
-  readonly pages: typeof import("../../../../../../core/db/schema").pages;
-  readonly settings: typeof import("../../../../../../core/db/schema").settings;
+  readonly pages: typeof import("../../../core/db/schema").pages;
+  readonly settings: typeof import("../../../core/db/schema").settings;
 }
 
-async function task540RoutingCore(): Promise<Task540RoutingCoreHandles> {
+async function runtimeSmokeRoutingCore(): Promise<RuntimeSmokeRoutingCoreHandles> {
   const [
     { db },
     { acquireNativeCmsWriterFence },
     { pages, settings },
     { invalidateSiteShellCachesForKeys },
   ] = await Promise.all([
-    import("../../../../../../core/db/client"),
-    import("../../../../../../core/db/nativeCmsWriterFence"),
-    import("../../../../../../core/db/schema"),
-    import("../../../../../../core/services/settings/settingsService"),
+    import("../../../core/db/client"),
+    import("../../../core/db/nativeCmsWriterFence"),
+    import("../../../core/db/schema"),
+    import("../../../core/services/settings/settingsService"),
   ]);
   return Object.freeze({
     acquireNativeCmsWriterFence,
@@ -123,11 +126,11 @@ function cleanupFailure(message: string): never {
   throw new SmokeError("smoke_cleanup_failed", message);
 }
 
-function isLeasedSettingKey(value: string): value is Task540LeasedSettingKey {
-  return (TASK540_LEASED_SETTING_KEYS as readonly string[]).includes(value);
+function isLeasedSettingKey(value: string): value is RuntimeSmokeLeasedSettingKey {
+  return (ROUTING_SMOKE_LEASED_SETTING_KEYS as readonly string[]).includes(value);
 }
 
-function freezeRecord(input: Task540RoutingSettingRow): Task540RoutingSettingRecord {
+function freezeRecord(input: RuntimeSmokeRoutingSettingRow): RuntimeSmokeRoutingSettingRecord {
   if (
     !isLeasedSettingKey(input.key) ||
     typeof input.valueJson !== "string" ||
@@ -135,7 +138,7 @@ function freezeRecord(input: Task540RoutingSettingRow): Task540RoutingSettingRec
     typeof input.updatedAt !== "string" ||
     input.updatedAt.length === 0
   ) {
-    throw new SmokeError("smoke_cleanup_failed", "TASK-540 routing setting row is invalid");
+    throw new SmokeError("smoke_cleanup_failed", "runtime-smoke routing setting row is invalid");
   }
   return Object.freeze({
     key: input.key,
@@ -144,46 +147,48 @@ function freezeRecord(input: Task540RoutingSettingRow): Task540RoutingSettingRec
   });
 }
 
-function freezeSnapshot(rows: readonly Task540RoutingSettingRow[]): Task540RoutingSettingsSnapshot {
+function freezeSnapshot(
+  rows: readonly RuntimeSmokeRoutingSettingRow[]
+): RuntimeSmokeRoutingSettingsSnapshot {
   const byKey = new Map(rows.map((row) => [row.key, row]));
   if (byKey.size !== rows.length || rows.some((row) => !isLeasedSettingKey(row.key))) {
-    throw new SmokeError("smoke_cleanup_failed", "TASK-540 routing setting rows are invalid");
+    throw new SmokeError("smoke_cleanup_failed", "runtime-smoke routing setting rows are invalid");
   }
   return Object.freeze(
     Object.fromEntries(
-      TASK540_LEASED_SETTING_KEYS.map((key) => {
+      ROUTING_SMOKE_LEASED_SETTING_KEYS.map((key) => {
         const row = byKey.get(key);
         return [key, row === undefined ? null : freezeRecord(row)];
       })
-    ) as Record<Task540LeasedSettingKey, Task540RoutingSettingRecord | null>
+    ) as Record<RuntimeSmokeLeasedSettingKey, RuntimeSmokeRoutingSettingRecord | null>
   );
 }
 
 function requireCompleteOwnedRecords(
-  rows: readonly Task540RoutingSettingRow[]
-): Readonly<Record<Task540LeasedSettingKey, Task540RoutingSettingsOwnedRecord>> {
+  rows: readonly RuntimeSmokeRoutingSettingRow[]
+): Readonly<Record<RuntimeSmokeLeasedSettingKey, RuntimeSmokeRoutingSettingsOwnedRecord>> {
   const snapshot = freezeSnapshot(rows);
   const versions = new Map(rows.map((row) => [row.key, row.version]));
   if (
-    TASK540_LEASED_SETTING_KEYS.some(
+    ROUTING_SMOKE_LEASED_SETTING_KEYS.some(
       (key) => snapshot[key] === null || typeof versions.get(key) !== "string" || !versions.get(key)
     )
   ) {
-    throw new SmokeError("smoke_cleanup_failed", "TASK-540 routing targets are incomplete");
+    throw new SmokeError("smoke_cleanup_failed", "runtime-smoke routing targets are incomplete");
   }
   return Object.freeze(
     Object.fromEntries(
-      TASK540_LEASED_SETTING_KEYS.map(
+      ROUTING_SMOKE_LEASED_SETTING_KEYS.map(
         (key) =>
           [key, Object.freeze({ record: snapshot[key]!, version: versions.get(key)! })] as const
       )
-    ) as Record<Task540LeasedSettingKey, Task540RoutingSettingsOwnedRecord>
+    ) as Record<RuntimeSmokeLeasedSettingKey, RuntimeSmokeRoutingSettingsOwnedRecord>
   );
 }
 
 function recordMatches(
-  current: Task540RoutingSettingRecord | null,
-  expected: Task540RoutingSettingRecord
+  current: RuntimeSmokeRoutingSettingRecord | null,
+  expected: RuntimeSmokeRoutingSettingRecord
 ): boolean {
   return (
     current !== null &&
@@ -194,8 +199,8 @@ function recordMatches(
 }
 
 function ownedRecordMatches(
-  current: Task540RoutingSettingsOwnedRecord | null,
-  expected: Task540RoutingSettingsOwnedRecord
+  current: RuntimeSmokeRoutingSettingsOwnedRecord | null,
+  expected: RuntimeSmokeRoutingSettingsOwnedRecord
 ): boolean {
   return (
     current !== null &&
@@ -205,10 +210,10 @@ function ownedRecordMatches(
 }
 
 function snapshotMatches(
-  current: Task540RoutingSettingsSnapshot,
-  expected: Task540RoutingSettingsSnapshot
+  current: RuntimeSmokeRoutingSettingsSnapshot,
+  expected: RuntimeSmokeRoutingSettingsSnapshot
 ): boolean {
-  return TASK540_LEASED_SETTING_KEYS.every((key) => {
+  return ROUTING_SMOKE_LEASED_SETTING_KEYS.every((key) => {
     const currentRecord = current[key];
     const expectedRecord = expected[key];
     return (
@@ -221,9 +226,9 @@ function snapshotMatches(
 }
 
 async function readRoutingSettingsForUpdate(
-  core: Task540RoutingCoreHandles,
+  core: RuntimeSmokeRoutingCoreHandles,
   tx: DbTransaction
-): Promise<readonly Task540RoutingSettingRow[]> {
+): Promise<readonly RuntimeSmokeRoutingSettingRow[]> {
   return await tx
     .select({
       key: core.settings.key,
@@ -232,20 +237,20 @@ async function readRoutingSettingsForUpdate(
       version: sql<string>`xmin::text`.as("version"),
     })
     .from(core.settings)
-    .where(inArray(core.settings.key, TASK540_LEASED_SETTING_KEYS))
+    .where(inArray(core.settings.key, ROUTING_SMOKE_LEASED_SETTING_KEYS))
     .orderBy(asc(core.settings.key))
     .for("update");
 }
 
 async function lockRoutingSettingsTable(
-  core: Task540RoutingCoreHandles,
+  core: RuntimeSmokeRoutingCoreHandles,
   tx: DbTransaction
 ): Promise<void> {
   await tx.execute(sql`LOCK TABLE ${core.settings} IN SHARE ROW EXCLUSIVE MODE`);
 }
 
-async function resolveTask540HomepageId(
-  core: Task540RoutingCoreHandles,
+async function resolveRuntimeSmokeHomepageId(
+  core: RuntimeSmokeRoutingCoreHandles,
   tx: DbTransaction
 ): Promise<string> {
   const rows = await tx
@@ -255,24 +260,24 @@ async function resolveTask540HomepageId(
     .orderBy(asc(core.pages.id))
     .limit(1);
   if (rows.length !== 1 || typeof rows[0]?.id !== "string" || !rows[0].id) {
-    cleanupFailure("TASK-540 published homepage target is unavailable");
+    cleanupFailure("runtime-smoke published homepage target is unavailable");
   }
   return rows[0]!.id;
 }
 
 async function writeRoutingTargets(
-  core: Task540RoutingCoreHandles,
+  core: RuntimeSmokeRoutingCoreHandles,
   tx: DbTransaction,
   homepageId: string
 ): Promise<void> {
-  const targetJson: Readonly<Record<Task540LeasedSettingKey, string>> = Object.freeze({
-    ...TASK540_LEASED_TARGETS,
+  const targetJson: Readonly<Record<RuntimeSmokeLeasedSettingKey, string>> = Object.freeze({
+    ...ROUTING_SMOKE_LEASED_TARGETS,
     "site.homepageId": JSON.stringify(homepageId),
   });
   await tx
     .insert(core.settings)
     .values(
-      TASK540_LEASED_SETTING_KEYS.map((key) => ({
+      ROUTING_SMOKE_LEASED_SETTING_KEYS.map((key) => ({
         key,
         updatedAt: sql`clock_timestamp()`,
         value: sql`${targetJson[key]}::jsonb`,
@@ -288,9 +293,9 @@ async function writeRoutingTargets(
 }
 
 async function writeSnapshotRecords(
-  core: Task540RoutingCoreHandles,
+  core: RuntimeSmokeRoutingCoreHandles,
   tx: DbTransaction,
-  records: readonly Task540RoutingSettingRecord[]
+  records: readonly RuntimeSmokeRoutingSettingRecord[]
 ): Promise<void> {
   if (records.length === 0) return;
   await tx
@@ -311,14 +316,14 @@ async function writeSnapshotRecords(
     });
 }
 
-async function applyTask540RoutingTargets(): Promise<Task540RoutingSettingsState> {
-  const core = await task540RoutingCore();
+async function applyRuntimeSmokeRoutingTargets(): Promise<RuntimeSmokeRoutingSettingsState> {
+  const core = await runtimeSmokeRoutingCore();
   return await core.db.transaction(
     async (tx) => {
       await core.acquireNativeCmsWriterFence(tx);
       await lockRoutingSettingsTable(core, tx);
       const snapshot = freezeSnapshot(await readRoutingSettingsForUpdate(core, tx));
-      const homepageId = await resolveTask540HomepageId(core, tx);
+      const homepageId = await resolveRuntimeSmokeHomepageId(core, tx);
       await writeRoutingTargets(core, tx, homepageId);
       const owned = requireCompleteOwnedRecords(await readRoutingSettingsForUpdate(core, tx));
       return Object.freeze({ snapshot, owned });
@@ -327,39 +332,45 @@ async function applyTask540RoutingTargets(): Promise<Task540RoutingSettingsState
   );
 }
 
-async function restoreTask540RoutingSettings(
-  snapshot: Task540RoutingSettingsSnapshot,
-  owned: Readonly<Record<Task540LeasedSettingKey, Task540RoutingSettingsOwnedRecord>>
+async function restoreRuntimeSmokeRoutingSettings(
+  snapshot: RuntimeSmokeRoutingSettingsSnapshot,
+  owned: Readonly<Record<RuntimeSmokeLeasedSettingKey, RuntimeSmokeRoutingSettingsOwnedRecord>>
 ): Promise<void> {
-  const core = await task540RoutingCore();
+  const core = await runtimeSmokeRoutingCore();
   await core.db.transaction(
     async (tx) => {
       await core.acquireNativeCmsWriterFence(tx);
       await lockRoutingSettingsTable(core, tx);
       let currentOwned: Readonly<
-        Record<Task540LeasedSettingKey, Task540RoutingSettingsOwnedRecord>
+        Record<RuntimeSmokeLeasedSettingKey, RuntimeSmokeRoutingSettingsOwnedRecord>
       >;
       try {
         currentOwned = requireCompleteOwnedRecords(await readRoutingSettingsForUpdate(core, tx));
       } catch {
-        throw new SmokeError("smoke_cleanup_failed", "TASK-540 routing setting ownership drifted");
+        throw new SmokeError(
+          "smoke_cleanup_failed",
+          "runtime-smoke routing setting ownership drifted"
+        );
       }
       if (
-        TASK540_LEASED_SETTING_KEYS.some(
+        ROUTING_SMOKE_LEASED_SETTING_KEYS.some(
           (key) => !ownedRecordMatches(currentOwned[key], owned[key])
         )
       ) {
-        throw new SmokeError("smoke_cleanup_failed", "TASK-540 routing setting ownership drifted");
+        throw new SmokeError(
+          "smoke_cleanup_failed",
+          "runtime-smoke routing setting ownership drifted"
+        );
       }
       await writeSnapshotRecords(
         core,
         tx,
-        TASK540_LEASED_SETTING_KEYS.flatMap((key) => {
+        ROUTING_SMOKE_LEASED_SETTING_KEYS.flatMap((key) => {
           const baseline = snapshot[key];
           return baseline === null ? [] : [baseline];
         })
       );
-      const absentKeys = TASK540_LEASED_SETTING_KEYS.filter((key) => snapshot[key] === null);
+      const absentKeys = ROUTING_SMOKE_LEASED_SETTING_KEYS.filter((key) => snapshot[key] === null);
       if (absentKeys.length > 0) {
         await tx.delete(core.settings).where(inArray(core.settings.key, absentKeys));
       }
@@ -367,7 +378,7 @@ async function restoreTask540RoutingSettings(
       if (!snapshotMatches(restored, snapshot)) {
         throw new SmokeError(
           "smoke_cleanup_failed",
-          "TASK-540 routing setting restoration proof failed"
+          "runtime-smoke routing setting restoration proof failed"
         );
       }
     },
@@ -375,19 +386,20 @@ async function restoreTask540RoutingSettings(
   );
 }
 
-async function invalidateTask540RoutingCaches(): Promise<void> {
-  const core = await task540RoutingCore();
-  core.invalidateSiteShellCachesForKeys(TASK540_LEASED_SETTING_KEYS);
+async function invalidateRuntimeSmokeRoutingCaches(): Promise<void> {
+  const core = await runtimeSmokeRoutingCore();
+  core.invalidateSiteShellCachesForKeys(ROUTING_SMOKE_LEASED_SETTING_KEYS);
 }
 
-export class Task540RoutingSettingsLease {
+export class RuntimeSmokeRoutingSettingsLease {
   #active = false;
   #applyPromise: Promise<void> | null = null;
-  #owned: Readonly<Record<Task540LeasedSettingKey, Task540RoutingSettingsOwnedRecord>> | null =
-    null;
+  #owned: Readonly<
+    Record<RuntimeSmokeLeasedSettingKey, RuntimeSmokeRoutingSettingsOwnedRecord>
+  > | null = null;
   #restored = false;
   #restorePromise: Promise<void> | null = null;
-  #snapshot: Task540RoutingSettingsSnapshot | null = null;
+  #snapshot: RuntimeSmokeRoutingSettingsSnapshot | null = null;
 
   get active(): boolean {
     return this.#active;
@@ -401,7 +413,7 @@ export class Task540RoutingSettingsLease {
     if (this.#applyPromise !== null || this.#restored) {
       throw new SmokeError(
         "smoke_output_invalid",
-        "TASK-540 routing settings lease cannot be replayed"
+        "runtime-smoke routing settings lease cannot be replayed"
       );
     }
     this.#applyPromise = this.#applyOnce();
@@ -409,11 +421,11 @@ export class Task540RoutingSettingsLease {
   }
 
   async #applyOnce(): Promise<void> {
-    const state = await applyTask540RoutingTargets();
+    const state = await applyRuntimeSmokeRoutingTargets();
     this.#snapshot = state.snapshot;
     this.#owned = state.owned;
     this.#active = true;
-    await invalidateTask540RoutingCaches();
+    await invalidateRuntimeSmokeRoutingCaches();
   }
 
   async restore(): Promise<void> {
@@ -434,11 +446,14 @@ export class Task540RoutingSettingsLease {
 
   async #restoreOnce(): Promise<void> {
     if (this.#snapshot === null || this.#owned === null) {
-      throw new SmokeError("smoke_cleanup_failed", "TASK-540 routing settings snapshot is absent");
+      throw new SmokeError(
+        "smoke_cleanup_failed",
+        "runtime-smoke routing settings snapshot is absent"
+      );
     }
-    await restoreTask540RoutingSettings(this.#snapshot, this.#owned);
+    await restoreRuntimeSmokeRoutingSettings(this.#snapshot, this.#owned);
     this.#active = false;
     this.#restored = true;
-    await invalidateTask540RoutingCaches();
+    await invalidateRuntimeSmokeRoutingCaches();
   }
 }

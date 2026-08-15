@@ -58,13 +58,20 @@ test("runtime smoke CLI accepts only the exact public shape", () => {
   }
 });
 
-test("static registry reserves exactly five fixed adapters", async () => {
+test("static registry reserves exactly twelve fixed adapters", async () => {
   expect(staticSmokeRegistry.ids()).toEqual([
     "task-540",
     "task-547",
     "task-554",
     "widget-contract",
     "production-boundary",
+    "task-487",
+    "task-488",
+    "task-490",
+    "task-491",
+    "task-492",
+    "task-511",
+    "task-517",
   ]);
   expect(staticSmokeRegistry.require("task-540").adapterPath).toBe(
     "scripts/runtime-smoke/adapters/task-540.ts"

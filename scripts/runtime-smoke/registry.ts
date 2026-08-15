@@ -14,6 +14,13 @@ const ADAPTER_PATHS: Readonly<Record<SmokeSuiteId, string>> = Object.freeze({
   "task-554": "scripts/runtime-smoke/adapters/task-554.ts",
   "widget-contract": "scripts/runtime-smoke/adapters/widget-contract.ts",
   "production-boundary": "scripts/runtime-smoke/adapters/production-boundary.ts",
+  "task-487": "scripts/runtime-smoke/adapters/task-487.ts",
+  "task-488": "scripts/runtime-smoke/adapters/task-488.ts",
+  "task-490": "scripts/runtime-smoke/adapters/task-490.ts",
+  "task-491": "scripts/runtime-smoke/adapters/task-491.ts",
+  "task-492": "scripts/runtime-smoke/adapters/task-492.ts",
+  "task-511": "scripts/runtime-smoke/adapters/task-511.ts",
+  "task-517": "scripts/runtime-smoke/adapters/task-517.ts",
 });
 
 function adapterDefault(loaded: unknown): unknown {
@@ -57,6 +64,13 @@ const DESCRIPTORS = new Map<SmokeSuiteId, SmokeSuiteDescriptor>([
   ["task-554", descriptor("task-554")],
   ["widget-contract", descriptor("widget-contract")],
   ["production-boundary", descriptor("production-boundary")],
+  ["task-487", descriptor("task-487")],
+  ["task-488", descriptor("task-488")],
+  ["task-490", descriptor("task-490")],
+  ["task-491", descriptor("task-491")],
+  ["task-492", descriptor("task-492")],
+  ["task-511", descriptor("task-511")],
+  ["task-517", descriptor("task-517")],
 ]);
 
 export const staticSmokeRegistry = Object.freeze({
