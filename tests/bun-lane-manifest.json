@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-15T09:26:53.876Z",
+  "generatedAt": "2026-08-15T11:11:29.556Z",
   "rows": [
     {
       "file": "tests/integration/analytics/trafficAggregation.test.ts",
@@ -1252,10 +1252,10 @@
     },
     {
       "file": "tests/unit/backups/backupImport.test.ts",
-      "bucket": "B",
+      "bucket": "C",
       "weightMs": 0,
       "conflictKeys": [],
-      "cWriteGlobal": false
+      "cWriteGlobal": true
     },
     {
       "file": "tests/unit/backups/backupMediaArchive.test.ts",
