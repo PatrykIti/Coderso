@@ -33,8 +33,10 @@ re-verified after it.
 ## Known environment issue (diagnosed 2026-08-15, task-540)
 
 The shared DB setting `site.adminPath` is `/admin-panel` (custom admin base
-path, TASK-486 parity: the dev host resolves it via
-`coderso-admin-path-fetch.mjs` and serves admin/API under `/admin-panel/`), but
+path; the dev host resolves it via `core/server/utils/adminPath.ts:11-14`
+`resolveAdminPath` → `getSetting("site.adminPath")`, enforced by
+`core/server/middleware/hostPolicy.ts:70-98` and `core/vite.config.ts:8-10`,
+and serves admin/API under `/admin-panel/`), but
 the task-540 suite hardcodes `/admin` in readiness/health/fixtures
 (`platform-actions.ts:627` probes `:5173/admin/advanced/custom-screens` → 404 →
 `smoke_output_invalid`). Secondary: stale `site.homepageId` makes the front
