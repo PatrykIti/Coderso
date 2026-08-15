@@ -11,6 +11,7 @@ import {
 } from "../../auth-window";
 import { createTask540NativeBrowser, task540BrowserSegmentIds } from "../browser/native-browser";
 import { startTask540DevHost } from "../host/dev-host";
+import { Task540RoutingSettingsLease } from "../host/routing-settings-lease";
 import { Task540NativeRuntime } from "../runtime/native-runtime";
 import { executeTask540NativePlan } from "./executor";
 import { Task540ExecutionMemory } from "./memory";
@@ -100,6 +101,8 @@ export async function runTask540NativeSuite(
   let transport: BrowserTransport | null = null;
   let authPrepared = false;
   let authRestored = false;
+  let routingLease: Task540RoutingSettingsLease | null = null;
+  let routingRestored = false;
   let primary: unknown;
   let evidence: Task540NativeEvidence | undefined;
   try {
@@ -110,6 +113,11 @@ export async function runTask540NativeSuite(
       );
       authPrepared = true;
     }
+    // The dev host resolves the admin base path from the DB at boot, so the
+    // routing targets must be applied BEFORE it spawns and restored once the
+    // plan is done (TASK-540 runtime-smoke fix).
+    routingLease = new Task540RoutingSettingsLease();
+    await context.timing.measure("phase", "routing-settings-apply", () => routingLease!.apply());
     await startTask540DevHost(context, { environment });
     workspace = await Task540PrivateWorkspace.create(context);
     const dispatcher = new PlaywrightCliDispatcher({
@@ -158,6 +166,12 @@ export async function runTask540NativeSuite(
       measure: (kind, name, operation) => context.timing.measure(kind, name, operation),
       now: () => performance.now(),
     });
+    if (routingLease !== null && !routingRestored) {
+      await context.timing.measure("phase", "routing-settings-restore", () =>
+        routingLease!.restore()
+      );
+      routingRestored = true;
+    }
     if (authPrepared) {
       await context.timing.measure("phase", "auth-window-restore", () =>
         pool!.dispatch(TASK540_AUTH_RESTORE_DESCRIPTOR, {})
@@ -171,6 +185,14 @@ export async function runTask540NativeSuite(
   } catch (error) {
     primary = error;
   } finally {
+    if (routingLease !== null && !routingRestored) {
+      try {
+        await routingLease.restore();
+        routingRestored = true;
+      } catch (error) {
+        primary = preserveFailure(primary, error);
+      }
+    }
     if (authPrepared && !authRestored && pool !== null) {
       try {
         await pool.dispatch(TASK540_AUTH_RESTORE_DESCRIPTOR, {});
