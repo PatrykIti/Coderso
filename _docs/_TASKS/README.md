@@ -83,8 +83,8 @@ Task board for project work. Keep task files and this board in sync.
   Do not move a leaf task to `Done` until either its standalone changelog
   exists or the family changelog records that leaf.
 
-- **To Do:** 275 tasks
-- **In Progress:** 6 tasks
+- **To Do:** 276 tasks
+- **In Progress:** 7 tasks
 - **Done:** 3477 tasks
 
 > TASK-479 (25 subtasks 05–29 + 92 leaves) and TASK-480 (umbrella + 6 subtasks +
@@ -162,6 +162,7 @@ Task board for project work. Keep task files and this board in sync.
 ## To Do
 
 | TASK-559 | Bun Lane C-Split to Reach the 10-15 Minute Target (Follow-up to TASK-557) | Medium | Medium | ✅ Done (2026-08-15): C lane split into two parallel serial workers (manifest v2 conflictKeys/cWriteGlobal, lane-aware worker_count_too_low guard); full test:bun acceptance exit 0 in 9.98 min (target ≤15); pre-existing A-lane test repairs recorded. Changelog 1274. One executable task terminal. |
+| TASK-560 | Runtime Smoke Modular Migration, Evidence Backfill, and Legacy Verification | High | Large | Smoke-surface inventory (modular vs legacy), modular suites authored through the shared runtime-smoke entry for 490/492/487/488/491/511/517 areas, legacy registered suites (540/547/554) re-run on the merged tree, durable evidence committed under `_docs/_workflows/_smoke/evidence/`. Changelog 1282 pinned. 5 subtasks. |
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
 | TASK-556 | FormaDom Code-Owned Static Starter to Designer Handoff | High | Very Large | Provider-free, owner-private seed/reopen of TASK-555's immutable FormaDom release into terminal Designer through one current-root binding, one-dispatch fenced persistence, run-bound receipt staging, the existing Designer facade/`admin_write` transport, TASK-555's memory-only Setup review continuation, terminal capability regeneration, Designer backup V2, two additive host CTAs, and exactly five shared runtime-smoke flows. Implementation gate is closed until TASK-545 is exactly `✅ Done`, TASK-414/TASK-489/TASK-547/TASK-555 satisfy the parent terminal dependency rule, and a fresh read-only audit passes against unchanged contracts; TASK-545 has no superseded-successor exception and local ignored orchestration sidecars are non-authorizing helpers. Changelog 1270 pinned. 4 children + 8 executable leaves. |
