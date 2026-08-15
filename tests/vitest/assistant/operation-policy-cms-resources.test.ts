@@ -67,6 +67,22 @@ test("assistantOperationPolicy includes migrated CMS and admin resources", () =>
   ]);
 });
 
+test("assistantOperationPolicy login alerts redacts webhookSecret and exposes webhookUrl field", () => {
+  const policy = getResourcePolicy(assistantOperationPolicy, "settings-login-alerts");
+  if (!policy) throw new Error("missing_settings_login_alerts_policy");
+
+  expect(policy.secrets).toMatchObject({
+    redacted: true,
+    secretFields: expect.arrayContaining([
+      "loginAlerts.recipients",
+      "loginAlerts.webhookUrl",
+      "loginAlerts.webhookSecret",
+      "loginAlerts.deliveryError",
+    ]),
+  });
+  expect(getFieldPolicy(policy, "webhook")?.field).toBe("webhookUrl");
+});
+
 test("assistantOperationPolicy covers page actions aliases filters and fields", () => {
   const page = getResourcePolicy(assistantOperationPolicy, "page");
   if (!page) throw new Error("missing_page_policy");

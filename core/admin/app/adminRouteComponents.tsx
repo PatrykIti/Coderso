@@ -203,6 +203,11 @@ export const CommerceEditorRoute = lazyNamedRoute(
   "CommerceEditorPage"
 );
 
+export const CommerceCollectionsRoute = lazyNamedRoute(
+  () => import("@/ui/commerce/CommerceCollectionsPage"),
+  "CommerceCollectionsPage"
+);
+
 export const PopupsListRoute = lazyNamedRoute(
   () => import("@/ui/popups/PopupsListPage"),
   "PopupsListPage"

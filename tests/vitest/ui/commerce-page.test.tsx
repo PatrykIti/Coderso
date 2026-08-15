@@ -2,6 +2,8 @@ import React from "react";
 import { expect, test } from "vitest";
 
 import { cacheKeys } from "../../../core/admin/services/cachePolicy";
+import { resolveAdminRoute } from "../../../core/admin/app/adminRoutes";
+import { CommerceCollectionsPage } from "../../../core/admin/ui/commerce/CommerceCollectionsPage";
 import { CommerceEditorPage } from "../../../core/admin/ui/commerce/CommerceEditorPage";
 import { CommerceListPage } from "../../../core/admin/ui/commerce/CommerceListPage";
 import { renderAdminUi } from "../../utils/adminRouterRender";
@@ -106,4 +108,54 @@ test("CommerceEditorPage renders product editor controls in create mode", () => 
   expect(html).toContain("Inventory");
   expect(html).toContain("Save changes");
   expect(html).toContain("Publish");
+});
+
+test("product editor renders the Variants card and Add variant control", () => {
+  const html = renderAdminUi(<CommerceEditorPage />, {
+    path: "/admin/advanced/commerce/new",
+  });
+
+  expect(html).toContain("Variants");
+  expect(html).toContain("Add variant");
+});
+
+test("commerce list header exposes Manage collections", () => {
+  const html = renderAdminUi(<CommerceListPage />, {
+    path: "/admin/advanced/commerce",
+  });
+
+  expect(html).toContain("Manage collections");
+});
+
+test("editor collections panel exposes a working create-collection affordance", () => {
+  const html = renderAdminUi(<CommerceEditorPage />, {
+    path: "/admin/advanced/commerce/new",
+  });
+
+  expect(html).toContain("Create your first collection");
+});
+
+test("commerce collections page renders its heading", () => {
+  const html = renderAdminUi(<CommerceCollectionsPage />, {
+    path: "/admin/advanced/commerce/collections",
+  });
+
+  expect(html).toContain("Collections");
+});
+
+test("literal /advanced/commerce/collections route wins over the :id param route", () => {
+  // First-match-wins: `collections` must resolve as a literal route (no `id`
+  // param captured), while a real product id still resolves as `:id`.
+  const collectionsRoute = resolveAdminRoute("/advanced/commerce/collections", {
+    isProtected: false,
+    canAccessRoute: () => true,
+  });
+  expect(collectionsRoute.params).toEqual({});
+  expect(collectionsRoute.permission).toBe("commerce:read");
+
+  const editorRoute = resolveAdminRoute("/advanced/commerce/product-1", {
+    isProtected: false,
+    canAccessRoute: () => true,
+  });
+  expect(editorRoute.params).toEqual({ id: "product-1" });
 });

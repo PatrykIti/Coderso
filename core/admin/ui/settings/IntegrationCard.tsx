@@ -6,7 +6,10 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
+import { integrationHealthMeta, type IntegrationHealth } from "./integrationHealth";
+
 export type IntegrationStatus = "connected" | "disconnected";
+export type { IntegrationHealth } from "./integrationHealth";
 
 type IntegrationAccent = "amber" | "emerald" | "orange" | "rose" | "violet";
 
@@ -14,6 +17,7 @@ export type IntegrationCardProps = {
   name: string;
   description: string;
   status: IntegrationStatus;
+  health?: IntegrationHealth;
   icon: LucideIcon;
   accent: IntegrationAccent;
   className?: string;
@@ -62,6 +66,7 @@ export function IntegrationCard({
   name,
   description,
   status,
+  health,
   icon: Icon,
   accent,
   className,
@@ -80,13 +85,27 @@ export function IntegrationCard({
         >
           <Icon className="h-5 w-5" />
         </div>
-        <Badge
-          variant="outline"
-          className={cn("gap-2 border-transparent text-[10px]", statusStyles[status])}
-        >
-          <span className={cn("h-1.5 w-1.5 rounded-full", statusDotStyles[status])} />
-          {statusLabels[status]}
-        </Badge>
+        <div className="flex flex-col items-end gap-1.5">
+          <Badge
+            variant="outline"
+            className={cn("gap-2 border-transparent text-[10px]", statusStyles[status])}
+          >
+            <span className={cn("h-1.5 w-1.5 rounded-full", statusDotStyles[status])} />
+            {statusLabels[status]}
+          </Badge>
+          {health ? (
+            <Badge
+              variant="outline"
+              className={cn(
+                "gap-2 border-transparent text-[10px]",
+                integrationHealthMeta[health].text
+              )}
+            >
+              <span className={cn("h-1.5 w-1.5 rounded-full", integrationHealthMeta[health].dot)} />
+              {integrationHealthMeta[health].label}
+            </Badge>
+          ) : null}
+        </div>
       </div>
       <div className="space-y-2">
         <h3 className="text-lg font-semibold">{name}</h3>

@@ -6,7 +6,8 @@
 **Category:** Engine / Entries
 **Estimated Effort:** Small
 **Dependencies:** TASK-487-01-L01
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-08-14
 **Started:** `<YYYY-MM-DD>`
 **Completed:** `<YYYY-MM-DD>`
 

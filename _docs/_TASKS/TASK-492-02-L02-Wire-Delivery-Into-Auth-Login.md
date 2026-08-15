@@ -7,8 +7,9 @@
 **Category:** Settings / Security
 **Estimated Effort:** Small
 **Dependencies:** TASK-492-02-L01
-**Status:** ⏳ To Do
-**Started:** `<YYYY-MM-DD>`
+**Status:** ✅ Done
+**Completed:** 2026-08-14
+**Started:** 2026-07-05
 **Completed:** `<YYYY-MM-DD>`
 
 ## Overview
@@ -102,14 +103,16 @@ if (shouldAlert) {
     userAgent: ctx.userAgent,
   });
 
-  // NEW: best-effort delivery; never blocks/fails the login response.
+  // NEW: best-effort, FIRE-AND-FORGET delivery (audit M3): detached, never
+  // awaited inline, never blocks/fails the login response. The service is
+  // designed not to throw; the catch is a defensive guard on the detached task.
   try {
-    await sendLoginAlert({
+    void sendLoginAlert({
       user: { id: user.id, email: resolveUserEmail(user), name: user.name ?? null },
       flags: alertFlags,
       current: { ip: ctx.ip ?? null, userAgent: ctx.userAgent ?? null },
       at: new Date(),
-    });
+    }).catch(() => undefined);
   } catch {
     // delivery service is designed not to throw; defensive guard only.
   }
@@ -119,8 +122,8 @@ return { user: toPublicUser(user), session: { expiresAt: session.expiresAt } };
 ```
 
 - **Data flow:** successful login → detect alert (existing) → audit (existing) →
-  `deliverLoginAlert` (new, awaited but failure-isolated) → unchanged `200`
-  response.
+  `sendLoginAlert` (new, FIRE-AND-FORGET — invoked via `void ... .catch()`,
+  detached, never awaited inline) → unchanged `200` response.
 - **Error handling:** the delivery service returns a status union and self-records
   `deliveryError`; the route wraps the call in a defensive `try/catch` so no
   domain error reaches the client. No new `map*Error` codes.

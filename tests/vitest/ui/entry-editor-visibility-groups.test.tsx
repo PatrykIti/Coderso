@@ -29,15 +29,48 @@ const state = vi.hoisted(() => {
     createdAt: "2026-06-18T10:00:00Z",
     updatedAt: "2026-06-27T10:00:00Z",
     scheduledAt: null,
-    seo: { description: "Meta" },
+    seo: {
+      title: "Hello SEO",
+      description: "Meta",
+      canonicalUrl: "https://site.test/hello",
+      robots: "index,follow",
+    },
     taxonomy: { category: null, tags: [] },
     author: { name: "Maria Nowak", email: "maria@example.com" },
     data: { title: "Hello", summary: "Summary" },
   };
 
+  const revisions = [
+    {
+      id: "rev-1",
+      entryId: "entry-42",
+      version: 1,
+      data: { title: "Hello", summary: "Old summary" },
+      createdAt: "2026-06-18T10:00:00Z",
+      createdBy: { id: "user-1", name: "Maria Nowak", email: "maria@example.com" },
+    },
+    {
+      id: "rev-2",
+      entryId: "entry-42",
+      version: 2,
+      data: { title: "Hello", summary: "Summary" },
+      createdAt: "2026-06-27T10:00:00Z",
+      createdBy: { id: "user-1", name: "Maria Nowak", email: "maria@example.com" },
+    },
+  ];
+
+  const restoredEntry = {
+    ...entry,
+    title: "Restored Title",
+    slug: "restored-slug",
+    data: { title: "Restored Title", summary: "Restored summary" },
+  };
+
   return {
     contentType,
     entry,
+    revisions,
+    restoredEntry,
     updateMetadataCalls: [] as Array<Record<string, unknown>>,
     subscribers: new Set<(event: { key: string }) => void>(),
     reset() {
@@ -94,7 +127,7 @@ vi.mock("@/components/ui/input", () => ({
     value?: string;
     onChange?: (event: React.ChangeEvent<HTMLInputElement>) => void;
     [key: string]: unknown;
-  }) => <input defaultValue={value} onChange={onChange} {...props} />,
+  }) => <input value={value} onChange={onChange} {...props} />,
 }));
 
 vi.mock("@/components/ui/scroll-area", () => ({
@@ -103,6 +136,7 @@ vi.mock("@/components/ui/scroll-area", () => ({
 
 vi.mock("@/components/ui/sheet", () => ({
   Sheet: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  SheetClose: ({ children }: { children: React.ReactNode }) => <>{children}</>,
   SheetContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   SheetDescription: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   SheetTitle: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
@@ -121,7 +155,7 @@ vi.mock("@/components/ui/textarea", () => ({
     },
     ref: React.Ref<HTMLTextAreaElement>
   ) {
-    return <textarea ref={ref} defaultValue={value} onChange={onChange} {...props} />;
+    return <textarea ref={ref} value={value} onChange={onChange} {...props} />;
   }),
 }));
 
@@ -144,9 +178,12 @@ vi.mock("@/services/contentTypesClient", () => ({
 vi.mock("@/services/entriesClient", () => ({
   deleteEntry: vi.fn(async () => ({ ok: true })),
   getCachedEntryDetail: () => state.entry,
+  getCachedEntryRevisions: () => null,
   getEntryCached: vi.fn(async () => state.entry),
+  listEntryRevisionsCached: vi.fn(async () => state.revisions),
   previewEntry: vi.fn(async () => ({ previewUrl: "https://preview.test/entry" })),
   publishEntry: vi.fn(async () => ({ ok: true })),
+  restoreEntryRevision: vi.fn(async () => ({ entry: state.restoredEntry })),
   updateEntry: vi.fn(async (_type: string, _id: string, input) => ({ ...state.entry, ...input })),
   updateEntryMetadata: vi.fn(async (_type: string, _id: string, input) => {
     state.updateMetadataCalls.push(input);
@@ -156,7 +193,12 @@ vi.mock("@/services/entriesClient", () => ({
       visibility: input.visibility ?? state.entry.visibility,
       hasPassword: input.visibility === "password" ? true : false,
       scheduledAt: input.scheduledAt,
-      seo: { description: input.seo?.description ?? "" },
+      seo: {
+        title: input.seo?.title ?? "",
+        description: input.seo?.description ?? "",
+        canonicalUrl: input.seo?.canonicalUrl ?? "",
+        robots: input.seo?.robots ?? "",
+      },
     };
   }),
 }));
@@ -234,6 +276,9 @@ vi.mock("../../../core/admin/ui/entries/EntryMetadataPanel", () => ({
     createdAt,
     updatedAt,
     entryId,
+    seoTitle,
+    seoCanonicalUrl,
+    seoRobots,
     onSave,
   }: {
     visibility?: string;
@@ -243,6 +288,9 @@ vi.mock("../../../core/admin/ui/entries/EntryMetadataPanel", () => ({
     createdAt?: string | null;
     updatedAt?: string | null;
     entryId?: string | null;
+    seoTitle?: string;
+    seoCanonicalUrl?: string;
+    seoRobots?: string;
     onSave?: () => void;
   }) => (
     <div data-metadata-panel="true">
@@ -251,6 +299,9 @@ vi.mock("../../../core/admin/ui/entries/EntryMetadataPanel", () => ({
       <span>{`created:${createdAt ?? "—"}`}</span>
       <span>{`updated:${updatedAt ?? "—"}`}</span>
       <span>{`entryId:${entryId ?? "—"}`}</span>
+      <span>{`seoTitle:${seoTitle ?? ""}`}</span>
+      <span>{`seoCanonicalUrl:${seoCanonicalUrl ?? ""}`}</span>
+      <span>{`seoRobots:${seoRobots ?? ""}`}</span>
       <button type="button" onClick={() => onVisibilityChange?.("password")}>
         vis-password
       </button>
@@ -265,6 +316,36 @@ vi.mock("../../../core/admin/ui/entries/EntryMetadataPanel", () => ({
       </button>
     </div>
   ),
+}));
+
+vi.mock("@/ui/shared/ConfirmActionDialog", () => ({
+  ConfirmActionDialog: ({
+    open,
+    title,
+    description,
+    confirmLabel,
+    isConfirming,
+    onConfirm,
+    children,
+  }: {
+    open: boolean;
+    title: React.ReactNode;
+    description?: React.ReactNode;
+    confirmLabel: string;
+    isConfirming?: boolean;
+    onConfirm: () => void;
+    children?: React.ReactNode;
+  }) =>
+    open ? (
+      <div role="dialog">
+        <p>{title}</p>
+        {description ? <p>{description}</p> : null}
+        {children}
+        <button type="button" onClick={onConfirm} disabled={Boolean(isConfirming)}>
+          {confirmLabel}
+        </button>
+      </div>
+    ) : null,
 }));
 
 vi.mock("../../../core/admin/ui/entries/FieldRenderer", () => ({
@@ -422,6 +503,138 @@ test("switching away from password clears the hash (accessPassword: null)", asyn
     const payload = state.updateMetadataCalls[0];
     expect(payload.visibility).toBe("public");
     expect(payload.accessPassword).toBeNull();
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("loading an entry hydrates the SEO title/canonical/robots into the metadata panel", async () => {
+  window.history.replaceState({}, "", "/admin/entries/articles/entry-42");
+  const { EntryEditor } = await import("../../../core/admin/ui/entries/EntryEditor");
+  const view = mount(<EntryEditor />);
+  try {
+    await flushAsync();
+    const text = view.container.textContent ?? "";
+    // All three new fields come from entry.seo, not from panel defaults.
+    expect(text).toContain("seoTitle:Hello SEO");
+    expect(text).toContain("seoCanonicalUrl:https://site.test/hello");
+    expect(text).toContain("seoRobots:index,follow");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("saving metadata sends the full seo object with all four fields", async () => {
+  window.history.replaceState({}, "", "/admin/entries/articles/entry-42");
+  const { EntryEditor } = await import("../../../core/admin/ui/entries/EntryEditor");
+  const view = mount(<EntryEditor />);
+  try {
+    await flushAsync();
+    clickButton(view.container, "save-metadata");
+    await flushAsync();
+
+    const payload = state.updateMetadataCalls[0];
+    expect(payload.seo).toEqual({
+      title: "Hello SEO",
+      description: "Meta",
+      canonicalUrl: "https://site.test/hello",
+      robots: "index,follow",
+    });
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("History opens the revision drawer and revalidates through the client", async () => {
+  window.history.replaceState({}, "", "/admin/entries/articles/entry-42");
+  const { EntryEditor } = await import("../../../core/admin/ui/entries/EntryEditor");
+  const view = mount(<EntryEditor />);
+  try {
+    await flushAsync();
+    expect(view.container.textContent).not.toContain("Version 2");
+    clickButton(view.container, "History");
+    await flushAsync();
+
+    // No cached revisions (getCachedEntryRevisions -> null), so the drawer
+    // fetches without force and lists both revisions.
+    const listMock = (await import("@/services/entriesClient")).listEntryRevisionsCached;
+    expect(listMock).toHaveBeenCalledWith("articles", "entry-42", { force: false });
+    expect(view.container.textContent).toContain("Version 2");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("restoring a revision re-hydrates title, slug and field values", async () => {
+  window.history.replaceState({}, "", "/admin/entries/articles/entry-42");
+  const entriesClient = await import("@/services/entriesClient");
+  // One revision in the drawer so the Restore action is unambiguous.
+  (entriesClient.listEntryRevisionsCached as ReturnType<typeof vi.fn>).mockResolvedValueOnce([
+    state.revisions[1],
+  ]);
+  const { EntryEditor } = await import("../../../core/admin/ui/entries/EntryEditor");
+  const view = mount(<EntryEditor />);
+  try {
+    await flushAsync();
+    clickButton(view.container, "History");
+    await flushAsync();
+
+    // The restored snapshot replaces the editor's title and slug columns.
+    const titleInput = view.container.querySelector('textarea[placeholder="Enter post title..."]');
+    const slugInput = view.container.querySelector("input");
+    expect((titleInput as HTMLTextAreaElement | null)?.value).toBe("Hello");
+    expect((slugInput as HTMLInputElement | null)?.value).toBe("hello");
+
+    clickButton(view.container, "Restore");
+    // Confirm-gated: nothing happens until the dialog confirm is clicked.
+    expect((await import("@/services/entriesClient")).restoreEntryRevision).not.toHaveBeenCalled();
+
+    const dialog = view.container.querySelector('[role="dialog"]');
+    expect(dialog?.textContent).toContain("Restore revision?");
+    React.act(() => {
+      Array.from(dialog?.querySelectorAll("button") ?? []).forEach((button) => {
+        if (button.textContent === "Restore") {
+          button.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+        }
+      });
+    });
+    await flushAsync();
+
+    const restoreMock = (await import("@/services/entriesClient")).restoreEntryRevision;
+    expect(restoreMock).toHaveBeenCalledWith("articles", "entry-42", "rev-2");
+    expect((titleInput as HTMLTextAreaElement | null)?.value).toBe("Restored Title");
+    expect((slugInput as HTMLInputElement | null)?.value).toBe("restored-slug");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("restore failure renders the error and keeps the editor mounted", async () => {
+  window.history.replaceState({}, "", "/admin/entries/articles/entry-42");
+  const { EntryEditor } = await import("../../../core/admin/ui/entries/EntryEditor");
+  const entriesClient = await import("@/services/entriesClient");
+  (entriesClient.restoreEntryRevision as ReturnType<typeof vi.fn>).mockRejectedValueOnce(
+    new Error("entry_validation_failed")
+  );
+  const view = mount(<EntryEditor />);
+  try {
+    await flushAsync();
+    clickButton(view.container, "History");
+    await flushAsync();
+    clickButton(view.container, "Restore");
+    React.act(() => {
+      const dialog = view.container.querySelector('[role="dialog"]');
+      Array.from(dialog?.querySelectorAll("button") ?? []).forEach((button) => {
+        if (button.textContent === "Restore") {
+          button.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+        }
+      });
+    });
+    await flushAsync();
+
+    expect(view.container.textContent).toContain("entry_validation_failed");
+    // The editor shell is still mounted and interactive.
+    expect(view.container.querySelector('[data-metadata-panel="true"]')).not.toBeNull();
   } finally {
     view.cleanup();
   }

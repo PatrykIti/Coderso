@@ -7,8 +7,9 @@
 **Category:** Settings / Security
 **Estimated Effort:** Small
 **Dependencies:** TASK-492-01-L01, TASK-492-01-L02
-**Status:** ⏳ To Do
-**Started:** `<YYYY-MM-DD>`
+**Status:** ✅ Done
+**Completed:** 2026-08-14
+**Started:** 2026-07-05
 **Completed:** `<YYYY-MM-DD>`
 
 ## Overview

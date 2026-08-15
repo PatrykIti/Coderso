@@ -6,13 +6,20 @@
 **Category:** Commerce / Admin UI
 **Estimated Effort:** Small
 **Dependencies:** TASK-488-02-L01
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-08-15
 **Started:** `<YYYY-MM-DD>`
 **Completed:** `<YYYY-MM-DD>`
 
 ---
 
 ## Overview
+
+> **Line-gate note (audit M5):** `core/admin/app/AdminApp.tsx` is 1,237 lines
+> (over the 1,000-line gate). This leaf splits it by cohesive responsibility
+> BEFORE adding the collections route (extract the commerce route block into a
+> sibling module or a commerce routes file), keeping imports/public contracts
+> stable; AdminApp.tsx must end below 1,000 lines.
 
 - **Goal:** Make the collections manager reachable: register a lazy
   `/advanced/commerce/collections` admin route and add navigation entry points
@@ -130,4 +137,4 @@ identical to every other gated route.
   the literal route mounts the manager; the list header exposes "Manage
   collections"; the editor panel exposes a working create link.
 - No DB changes → no migration artifacts.
-- Green under `bun run lint`, `bun run typecheck`, Vitest suite.
+- Green under `bun run lint`, `bun --cwd core lint:types`, Vitest suite.

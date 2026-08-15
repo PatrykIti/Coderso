@@ -9,6 +9,9 @@ export type EntryMetadataFormValues = Readonly<{
   accessPassword: string;
   scheduledAt: string;
   seoDescription: string;
+  seoTitle: string;
+  seoCanonicalUrl: string;
+  seoRobots: string;
   taxonomyOverview: TaxonomyOverview | null;
   selectedCategoryId: string | null;
   selectedTagIds: string[];
@@ -30,6 +33,9 @@ export function buildEntryMetadataUpdate({
   accessPassword,
   scheduledAt,
   seoDescription,
+  seoTitle,
+  seoCanonicalUrl,
+  seoRobots,
   taxonomyOverview,
   selectedCategoryId,
   selectedTagIds,
@@ -68,7 +74,12 @@ export function buildEntryMetadataUpdate({
         visibility !== "password" ? null : accessPassword === "" ? undefined : accessPassword,
       scheduledAt: status === "scheduled" ? scheduledAtIso : null,
       taxonomy: taxonomyPayload,
-      seo: { description: seoDescription },
+      seo: {
+        title: seoTitle.trim() || undefined,
+        description: seoDescription,
+        canonicalUrl: seoCanonicalUrl.trim() || undefined,
+        robots: seoRobots.trim() || undefined,
+      },
     },
   };
 }

@@ -6,8 +6,10 @@
 **Category:** Settings / Security
 **Estimated Effort:** Small
 **Dependencies:** None (extends existing login-alert detection + email/webhook infra)
-**Status:** ⏳ To Do
-**Started:** `<YYYY-MM-DD>`
+**Status:** ✅ Done
+**Completed:** 2026-08-14
+**Changelog:** 1276 (pinned by the orchestrator; closure only)
+**Started:** 2026-07-05
 **Completed:** `<YYYY-MM-DD>`
 
 ## Business Goal

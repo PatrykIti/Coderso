@@ -13,11 +13,13 @@ znajduja sie w osobnych plikach (linki ponizej).
 - Revisions i publish workflow (draft/published).
 - Plugin registry i settings.
 - Plugin store (browse, install/update, enable/disable, update policy).
+- Commerce v1 preview (internal admin CRUD): produkty, warianty i kolekcje.
 
 Poza zakresem v1:
 - Multi-site.
 - Localization.
-- Zaawansowany e-commerce (jako plugin).
+- Zaawansowany e-commerce (checkout/cart/payments, jako plugin) — katalog
+  (produkty, warianty, kolekcje) jest w v1 jako wewnetrzny admin CRUD.
 
 ## Dokumenty powiazane
 

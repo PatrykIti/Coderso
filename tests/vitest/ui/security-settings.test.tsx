@@ -49,6 +49,10 @@ const securitySettingsResponse = (): SecuritySettingsResponse => ({
     enabled: true,
     notifyOnNewDevice: true,
     notifyOnNewLocation: true,
+    recipients: [],
+    webhookUrl: null,
+    webhookSecret: { configured: false },
+    deliveryError: null,
   },
   botProtection: {
     enabled: false,

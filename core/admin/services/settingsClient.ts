@@ -152,6 +152,10 @@ export type SecuritySettingsResponse = {
     enabled: boolean;
     notifyOnNewDevice: boolean;
     notifyOnNewLocation: boolean;
+    recipients: string[];
+    webhookUrl: string | null;
+    webhookSecret: { configured: boolean };
+    deliveryError: string | null;
   };
   botProtection: {
     enabled: boolean;
@@ -189,7 +193,17 @@ export type SecuritySettingsUpdate = {
   validation?: Partial<SecuritySettingsResponse["validation"]>;
   plugins?: Partial<SecuritySettingsResponse["plugins"]>;
   session?: Partial<SecuritySettingsResponse["session"]>;
-  loginAlerts?: Partial<SecuritySettingsResponse["loginAlerts"]>;
+  // Client-writable subset only: webhookSecret is a write-only string and
+  // deliveryError is service-writable (excluded here and rejected by the route
+  // schema via reject-unknown).
+  loginAlerts?: Partial<{
+    enabled: boolean;
+    notifyOnNewDevice: boolean;
+    notifyOnNewLocation: boolean;
+    recipients: string[];
+    webhookUrl: string | null;
+    webhookSecret: string | null;
+  }>;
   botProtection?: {
     enabled?: boolean;
     provider?: "recaptcha_v3";

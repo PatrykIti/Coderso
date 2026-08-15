@@ -7,6 +7,7 @@ import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 import { isApiClientError } from "@/services/apiClient";
 import {
+  checkIntegration,
   listIntegrations,
   requestIntegration,
   updateIntegration,
@@ -63,6 +64,7 @@ export function IntegrationsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isRequesting, setIsRequesting] = useState(false);
+  const [checkingId, setCheckingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [drawerError, setDrawerError] = useState<string | null>(null);
   const [requestError, setRequestError] = useState<string | null>(null);
@@ -134,6 +136,23 @@ export function IntegrationsPage() {
       }
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handleTestConnection = async (id: string) => {
+    setCheckingId(id);
+    setDrawerError(null);
+    try {
+      const { item } = await checkIntegration(id);
+      setItems((prev) => prev.map((current) => (current.id === id ? item : current)));
+    } catch (err) {
+      if (isApiClientError(err)) {
+        setDrawerError(err.message);
+      } else {
+        setDrawerError("Failed to test connection.");
+      }
+    } finally {
+      setCheckingId(null);
     }
   };
 
@@ -237,6 +256,7 @@ export function IntegrationsPage() {
                         name={integration.name}
                         description={integration.description}
                         status={integration.status}
+                        health={integration.health.status}
                         icon={visuals.icon}
                         accent={visuals.accent}
                         onAction={() => handleOpenIntegration(integration)}
@@ -264,8 +284,11 @@ export function IntegrationsPage() {
             : null
         }
         isSaving={isSaving}
+        isChecking={checkingId === activeIntegration?.id}
         error={drawerError}
+        health={activeIntegration?.health ?? null}
         onSave={handleSaveIntegration}
+        onCheck={handleTestConnection}
       />
       <IntegrationRequestDialog
         key={requestOpen ? "request-open" : "request-closed"}

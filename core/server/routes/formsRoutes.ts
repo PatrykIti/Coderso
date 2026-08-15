@@ -16,6 +16,7 @@ import {
 } from "../../services/forms/submissionAccess";
 import { assertFormSubmissionNonce } from "../../services/forms/submissionNonce";
 import { listSubmissions, submitForm } from "../../services/forms/submissionService";
+import { buildFormSubmissionsExport } from "../../services/forms/submissionExport";
 import { runFormAutomation } from "../../services/forms/formAutomationRunner";
 import { normalizeFormSettings } from "../../services/forms/formSettings";
 import { isFormStatus, type FormStatus } from "../../services/forms/formStatus";
@@ -28,6 +29,7 @@ import {
   formCreateSchema,
   formFieldsSchema,
   formSubmissionSchema,
+  formSubmissionsExportQuerySchema,
   formUpdateSchema,
 } from "../validation/formSchemas";
 
@@ -413,6 +415,26 @@ const throwMappedFormError = (error: unknown): never => {
   throw error;
 };
 
+// Strict query guard for the submissions export (TASK-490), mirroring
+// analyticsRoutes.assertKnownQuery: reject any query key other than `format`
+// BEFORE coercion, so unknown params 400 even when the coerced payload would
+// otherwise satisfy the schema.
+const EXPORT_QUERY_KEYS = new Set(["format"]);
+const assertKnownExportQuery = (query: Record<string, string | undefined>) => {
+  const unknown = Object.keys(query).find(
+    (key) => query[key] !== undefined && !EXPORT_QUERY_KEYS.has(key)
+  );
+  if (unknown) {
+    throw new ApiError("validation_error", "Invalid payload", 400, [
+      {
+        path: unknown,
+        message: "must NOT have additional properties",
+        keyword: "additionalProperties",
+      },
+    ]);
+  }
+};
+
 type SubmissionBody = {
   data: Record<string, unknown>;
   captchaToken?: string;
@@ -678,6 +700,17 @@ export function registerFormsRoutes(router: Router, deps: FormsRouteDeps) {
     validate(formFieldsSchema, ctx.body);
     try {
       return await setFormFields(ctx.params.id, ctx.body as Parameters<typeof setFormFields>[1]);
+    } catch (error) {
+      throwMappedFormError(error);
+    }
+  });
+
+  router.get("/forms/:id/submissions/export", requirePermission("forms:read"), async (ctx) => {
+    assertKnownExportQuery(ctx.query);
+    const format = ctx.query.format ?? "csv";
+    validate(formSubmissionsExportQuerySchema, { format }); // enum + reject-unknown
+    try {
+      return await buildFormSubmissionsExport(ctx.params.id, format as "csv" | "json");
     } catch (error) {
       throwMappedFormError(error);
     }

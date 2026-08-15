@@ -6,7 +6,9 @@ import {
   getEntry,
   listEntriesWithContentTypes,
   listEntries,
+  listEntryRevisions,
   publishEntry,
+  restoreEntryRevision,
   unpublishEntry,
   updateEntryMetadataForRoute,
   updateEntry,
@@ -113,6 +115,8 @@ export const mapContentEntryError = (error: unknown) => {
       return new ApiError("content_type_not_found", "Content type not found.", 404);
     case "entry_not_found":
       return new ApiError("entry_not_found", "Entry not found.", 404);
+    case "entry_revision_not_found":
+      return new ApiError("entry_revision_not_found", "Revision not found.", 404);
     case "entry_validation_failed":
       return new ApiError("entry_validation_failed", "Entry validation failed.", 400);
     case "entry_slug_conflict":
@@ -392,6 +396,44 @@ export function registerContentEntryRoutes(router: Router, deps: ContentEntryRou
         if (!entry || entry.typeId !== type.id) throw new Error("entry_not_found");
         await unpublishEntry(entry.id);
         return { ok: true };
+      });
+    }
+  );
+
+  router.get(
+    "/content/:type/entries/:id/revisions",
+    requirePermission("content:read"),
+    async (ctx) => {
+      return withContentEntryErrors(async () => {
+        const type = await getContentTypeBySlug(ctx.params.type);
+        if (!type) throw new Error("content_type_not_found");
+        const entry = await getEntry(ctx.params.id);
+        if (!entry || entry.typeId !== type.id) throw new Error("entry_not_found");
+        return listEntryRevisions(entry.id);
+      });
+    }
+  );
+
+  router.post(
+    "/content/:type/entries/:id/revisions/:revisionId/restore",
+    requirePermission("content:write"),
+    async (ctx) => {
+      return withContentEntryErrors(async () => {
+        const type = await getContentTypeBySlug(ctx.params.type);
+        if (!type) throw new Error("content_type_not_found");
+        const entry = await getEntry(ctx.params.id);
+        if (!entry || entry.typeId !== type.id) throw new Error("entry_not_found");
+        const result = await restoreEntryRevision(
+          entry.id,
+          ctx.params.revisionId,
+          ctx.user?.id ?? null
+        );
+        return {
+          ok: true,
+          restored: result.restored,
+          revision: result.revision,
+          entry: result.entry,
+        };
       });
     }
   );

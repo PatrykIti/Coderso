@@ -6,13 +6,25 @@
 **Category:** Settings / Integrations
 **Estimated Effort:** Medium
 **Dependencies:** TASK-491-01-L01, TASK-491-02-L02, TASK-491-03-L01
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-08-15
 **Started:** `<YYYY-MM-DD>`
 **Completed:** `<YYYY-MM-DD>`
 
 ---
 
 ## Overview
+
+> **L3 note (audit):** the integrations check route maps only
+> `integration_not_found`; `decryptSecret` throws
+> `secret_master_key_missing`/`invalid` — mirror the PATCH mappings
+> (`integrationsRoutes.ts:91-93`).
+
+> **M1 fix (audit):** this leaf ALSO resets `updateIntegration`
+> (`integrationsService.ts:233` stamps `healthStatus: status === "connected" ?
+> "healthy" : "unknown"`) — on config change set `healthStatus: "unknown"` +
+> clear `lastCheckedAt`/`lastError` so a stale "healthy" can never display
+> for an invalid new config.
 
 - **Goal:** Add a deterministic per-integration health evaluator, a manual
   "Test connection" endpoint that runs it and persists the result, and stop the

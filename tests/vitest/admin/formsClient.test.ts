@@ -3,6 +3,7 @@ import { expect, test } from "vitest";
 import {
   clearFormsCache,
   createForm,
+  exportFormSubmissions,
   getFormDetailCached,
   listFormActionsCached,
   listForms,
@@ -12,7 +13,7 @@ import {
   updateFormActions,
   type FormFormTheme,
 } from "../../../core/admin/services/formsClient";
-import { resetCsrfToken } from "../../../core/admin/services/apiClient";
+import { ApiClientError, resetCsrfToken } from "../../../core/admin/services/apiClient";
 import { cacheKeys } from "../../../core/admin/services/cachePolicy";
 
 const jsonResponse = (payload: unknown, status = 200) =>
@@ -380,6 +381,90 @@ test("retryFormActionRun posts retry request", async () => {
     const response = await retryFormActionRun("run-1");
     expect(calls[1]?.input).toBe("/admin/api/forms/action-runs/run-1/retry");
     expect(response?.run?.id).toBe("run-1");
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+const exportEnvelope = {
+  fileName: "coderso-form-contact-submissions-2026-06-28.csv",
+  contentType: "text/csv",
+  content: "Submission ID,Received At,Status\n",
+  totalRows: 0,
+};
+
+test("exportFormSubmissions defaults to format=csv on the export URL", async () => {
+  const originalFetch = globalThis.fetch;
+  const calls: Array<{ input: RequestInfo | URL; init?: RequestInit }> = [];
+
+  globalThis.fetch = async (input, init) => {
+    calls.push({ input, init });
+    return jsonResponse(exportEnvelope);
+  };
+
+  try {
+    const result = await exportFormSubmissions("form-1");
+    expect(calls).toHaveLength(1);
+    expect(calls[0]?.input).toBe("/admin/api/forms/form-1/submissions/export?format=csv");
+    expect(calls[0]?.init?.method).toBe("GET");
+    expect(result).toEqual(exportEnvelope);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("exportFormSubmissions supports format=json", async () => {
+  const originalFetch = globalThis.fetch;
+  const calls: Array<{ input: RequestInfo | URL; init?: RequestInit }> = [];
+
+  globalThis.fetch = async (input, init) => {
+    calls.push({ input, init });
+    return jsonResponse({ ...exportEnvelope, contentType: "application/json" });
+  };
+
+  try {
+    const result = await exportFormSubmissions("form-1", "json");
+    expect(calls[0]?.input).toBe("/admin/api/forms/form-1/submissions/export?format=json");
+    expect(result?.contentType).toBe("application/json");
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("exportFormSubmissions never writes to the local cache", async () => {
+  const originalFetch = globalThis.fetch;
+  const originalLocal = (globalThis as { localStorage?: unknown }).localStorage;
+  const storage = createLocalStorage();
+
+  globalThis.fetch = async () => jsonResponse(exportEnvelope);
+  (globalThis as { localStorage?: unknown }).localStorage = storage as unknown;
+
+  try {
+    await exportFormSubmissions("form-1", "csv");
+    expect(storage.getItem(cacheKeys.formsList)).toBeNull();
+    expect(storage.getItem(cacheKeys.formDetail("form-1"))).toBeNull();
+  } finally {
+    globalThis.fetch = originalFetch;
+    if (originalLocal === undefined) {
+      delete (globalThis as { localStorage?: unknown }).localStorage;
+    } else {
+      (globalThis as { localStorage?: unknown }).localStorage = originalLocal;
+    }
+  }
+});
+
+test("exportFormSubmissions propagates an ApiClientError on non-2xx", async () => {
+  const originalFetch = globalThis.fetch;
+
+  globalThis.fetch = async () =>
+    jsonResponse({ error: { code: "form_not_found", message: "Form not found." } }, 404);
+
+  try {
+    await expect(exportFormSubmissions("missing", "csv")).rejects.toBeInstanceOf(ApiClientError);
+    await expect(exportFormSubmissions("missing", "csv")).rejects.toMatchObject({
+      code: "form_not_found",
+      status: 404,
+    });
   } finally {
     globalThis.fetch = originalFetch;
   }

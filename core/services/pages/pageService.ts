@@ -25,6 +25,7 @@ import {
 } from "./pageDocumentV2";
 import { createSecureRandomHexFragment } from "../security/secureRandom";
 import { resolveEmailValue } from "../security/piiEmail";
+import { emitIntegrationEventSafe } from "../integrations/integrationEventDispatch";
 import { MAX_PAGE_REVISION_RETENTION, resolvePageRevisionRetention } from "./revisionRetention";
 
 export type PageStatus = "draft" | "published" | "scheduled" | "archived";
@@ -267,6 +268,13 @@ export async function publishPage(id: string, userId: string, data?: PageData) {
     if (notFoundPageId && notFoundPageId === updated.id) {
       invalidateSiteCachePath("/404");
     }
+
+    emitIntegrationEventSafe("page.published", {
+      type: "page",
+      id: updated.id,
+      title: updated.title,
+      slug: updated.slug,
+    });
   }
 
   return updated;

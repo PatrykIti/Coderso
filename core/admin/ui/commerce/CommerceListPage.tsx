@@ -1,4 +1,4 @@
-import { CheckCircle2, PackageX, Plus, ShoppingBag } from "lucide-react";
+import { CheckCircle2, FolderTree, PackageX, Plus, ShoppingBag } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -255,6 +255,14 @@ export function CommerceListPage() {
                   variant="inline"
                 />
               ) : null}
+              <Button
+                variant="outline"
+                className="gap-2"
+                onClick={() => navigate("/advanced/commerce/collections")}
+              >
+                <FolderTree className="h-4 w-4" />
+                Manage collections
+              </Button>
               <Button className="gap-2" onClick={() => navigate("/advanced/commerce/new")}>
                 <Plus className="h-4 w-4" />
                 New

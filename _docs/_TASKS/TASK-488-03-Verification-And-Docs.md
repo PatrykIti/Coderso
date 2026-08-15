@@ -6,7 +6,8 @@
 **Category:** Commerce / Admin UI
 **Estimated Effort:** Small
 **Dependencies:** TASK-488-01, TASK-488-02
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-08-15
 **Started:** `<YYYY-MM-DD>`
 **Completed:** `<YYYY-MM-DD>`
 
@@ -34,5 +35,5 @@ changelog, no board-README edits (orchestrator-owned).
 ## Testing Requirements
 
 - Vitest lane only — the consolidated suite must be green together with
-  `bun run lint` and `bun run typecheck` before closure.
+  `bun run lint` and `bun --cwd core lint:types` before closure.
 - No DB changes; no migration artifacts.

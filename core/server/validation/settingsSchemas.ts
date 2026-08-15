@@ -256,6 +256,13 @@ export const securitySettingsSchema = {
         enabled: { type: "boolean" },
         notifyOnNewDevice: { type: "boolean" },
         notifyOnNewLocation: { type: "boolean" },
+        recipients: { type: "array", items: { type: "string" } },
+        webhookUrl: { type: ["string", "null"] },
+        // Write-only secret: accepted on PATCH, never present in responses
+        // (the public projection exposes only `{ configured }`).
+        webhookSecret: { type: ["string", "null"] },
+        // deliveryError is intentionally absent: service-writable only, so
+        // additionalProperties: false rejects it from client payloads.
       },
     },
   },

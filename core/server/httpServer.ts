@@ -28,6 +28,10 @@ import { startBackupScheduler } from "./jobs/backupScheduler";
 import { handlePublicRequest } from "./publicSite";
 import { resolveAdminPath } from "./utils/adminPath";
 import { handleMediaDeliveryRequest } from "./mediaDelivery";
+import {
+  captureServerError,
+  initializeErrorMonitoringOnBoot,
+} from "../services/integrations/errorMonitoring";
 import { executePreparedFormWrite, mapFormWriteBoundaryError } from "./publicFormsApi";
 
 const MEDIA_PREFIX = "/media";
@@ -537,6 +541,9 @@ export function startHttpServer(options: HttpServerOptions = {}) {
   void initializeDocsIndexOnBootIfEnabled().catch((error) => {
     console.warn("Assistant docs index initialization failed:", error);
   });
+  void initializeErrorMonitoringOnBoot().catch(() => {
+    console.warn("sentry_init_failed");
+  });
   startBackupScheduler(); // shared seam: dev.ts and prod.ts both call startHttpServer;
   // dockerStart.ts imports ./prod. Env-gated opt-in outside production (see backupScheduler.ts).
 
@@ -548,18 +555,23 @@ export function startHttpServer(options: HttpServerOptions = {}) {
       const adminPath = await resolveAdminPath();
       const apiPrefix = `${adminPath}/api`;
 
-      const hostPolicy = await enforceHostPolicy(req);
-      if (hostPolicy) return hostPolicy;
-      if (url.pathname.startsWith(apiPrefix)) {
-        return handleApi(req, apiPrefix);
+      try {
+        const hostPolicy = await enforceHostPolicy(req);
+        if (hostPolicy) return hostPolicy;
+        if (url.pathname.startsWith(apiPrefix)) {
+          return handleApi(req, apiPrefix);
+        }
+        if (url.pathname.startsWith(MEDIA_PREFIX)) {
+          return handleMediaDeliveryRequest(req);
+        }
+        if (url.pathname.startsWith(adminPath)) {
+          return handleAdmin(req, adminPath, adminDevUrl);
+        }
+        return handlePublicRequest(req);
+      } catch (error) {
+        captureServerError(error, { path: url.pathname });
+        throw error; // preserve existing error-response behavior
       }
-      if (url.pathname.startsWith(MEDIA_PREFIX)) {
-        return handleMediaDeliveryRequest(req);
-      }
-      if (url.pathname.startsWith(adminPath)) {
-        return handleAdmin(req, adminPath, adminDevUrl);
-      }
-      return handlePublicRequest(req);
     },
   };
 

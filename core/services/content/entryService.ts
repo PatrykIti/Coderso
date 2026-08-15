@@ -6,6 +6,7 @@ import { hashPassword } from "../auth/password";
 import { contentEntries, contentRevisions, contentTypes, previewTokens } from "../../db/schema";
 import { hashPreviewToken } from "../pages/previewService";
 import { clearSiteCache, invalidateContentEntryCache } from "../../site/cache/siteCache";
+import { emitIntegrationEventSafe } from "../integrations/integrationEventDispatch";
 import {
   applyPreparedSeoMutationWithExecutor,
   prepareSeoMutationWithExecutor,
@@ -29,8 +30,12 @@ import {
   listEntriesForListing,
   listEntriesWithContentTypes,
   listEntryRevisions,
+  type EntryRevision,
+  type EntryRevisionAuthor,
 } from "./entryReadService";
 import { duplicateEntry } from "./entryDuplicationService";
+import { areRevisionSnapshotsEqual } from "./revisionSnapshot";
+import { getContentType } from "./typeService";
 import type {
   CreateEntryInput,
   EntryData,
@@ -57,6 +62,8 @@ export type {
   EntryData,
   EntryDetail,
   EntryListItem,
+  EntryRevision,
+  EntryRevisionAuthor,
   EntrySeo,
   EntryStatus,
   EntryVisibility,
@@ -514,6 +521,7 @@ export async function publishEntry(entryId: string, userId: string) {
         entrySlug: entry.slug,
         entryId: entry.id,
       },
+      title: entry.title,
     };
   });
 
@@ -522,6 +530,12 @@ export async function publishEntry(entryId: string, userId: string) {
       changed: true,
       seoChanged: false,
       cacheRef: committed.cacheRef,
+    });
+    emitIntegrationEventSafe("entry.published", {
+      type: "entry",
+      id: committed.updated.id,
+      title: committed.title,
+      slug: committed.updated.slug,
     });
   }
 
@@ -789,6 +803,62 @@ export async function createEntryRevisionTx(
     .returning();
 
   return row ?? null;
+}
+
+/**
+ * Restore an entry's `data` from a stored revision, mirroring
+ * `restorePostRevision`. The current data is snapshotted as a new revision first
+ * (when an actor is supplied) so the restore is itself reversible, then the
+ * snapshot is written through `updateEntry`, which re-runs
+ * `validateEntryData` against the CURRENT content-type schema — an old snapshot
+ * that no longer validates surfaces as `ContentValidationError`, not a 500.
+ *
+ * The write goes through a cache-aware path: after commit the entry site cache is
+ * invalidated exactly like `publishEntry` (`applyEntryPostCommitCache`), and a
+ * cache failure is reported without turning the committed restore into a failed
+ * request (M4).
+ */
+export async function restoreEntryRevision(
+  entryId: string,
+  revisionId: string,
+  actorId?: string | null
+) {
+  const entry = await getEntry(entryId);
+  if (!entry) throw new Error("entry_not_found");
+  const contentType = await getContentType(entry.typeId);
+  if (!contentType) throw new Error("content_type_not_found");
+
+  const revisions = await listEntryRevisions(entryId);
+  const revision = revisions.find((item) => item.id === revisionId);
+  if (!revision) throw new Error("entry_revision_not_found");
+
+  const currentData = entry.data as EntryData;
+  const targetData = revision.data;
+
+  // No-op when current data already equals the snapshot (stable-key JSON compare).
+  if (areRevisionSnapshotsEqual(currentData, targetData)) {
+    return { restored: false, revision, entry };
+  }
+
+  // Snapshot current state before overwrite so restore is itself reversible.
+  if (actorId) {
+    await createEntryRevision(entryId, currentData, actorId);
+  }
+
+  const updated = await updateEntry(entryId, { data: targetData });
+  if (!updated) throw new Error("entry_not_found");
+
+  await applyEntryPostCommitCache(entryMutationDeps, {
+    changed: true,
+    seoChanged: false,
+    cacheRef: {
+      typeSlug: contentType.slug,
+      entrySlug: updated.slug,
+      entryId: updated.id,
+    },
+  });
+
+  return { restored: true, revision, entry: updated };
 }
 
 export async function createEntryPreview(entryId: string, ttlMinutes?: number) {

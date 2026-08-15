@@ -6,7 +6,8 @@
 **Category:** Forms / admin-ui + docs
 **Estimated Effort:** Small
 **Dependencies:** TASK-490-01 (the export route + envelope must exist before the client/UI can call it).
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-08-14
 **Started:** `<YYYY-MM-DD>`
 **Completed:** `<YYYY-MM-DD>`
 

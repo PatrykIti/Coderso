@@ -25,6 +25,9 @@ export type EntryEditedKey =
   | "accessPassword"
   | "scheduledAt"
   | "seoDescription"
+  | "seoTitle"
+  | "seoCanonicalUrl"
+  | "seoRobots"
   | "category"
   | "tags"
   | `field:${string}`;

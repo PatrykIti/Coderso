@@ -4,8 +4,10 @@ import { eq } from "drizzle-orm";
 
 import { db } from "../../../core/db/client";
 import { settings } from "../../../core/db/schema";
+import { isEncryptedSecret } from "../../../core/services/security/secretStore";
 import {
   getSecuritySettings,
+  getSecuritySettingsPublic,
   resetSecuritySettingsCache,
   SECURITY_SETTINGS_DEFAULTS,
   setSecuritySettings,
@@ -69,6 +71,10 @@ testIfDb("getSecuritySettings returns defaults when missing", async () => {
     enabled: true,
     notifyOnNewDevice: true,
     notifyOnNewLocation: true,
+    recipients: [],
+    webhookUrl: null,
+    webhookSecret: null,
+    deliveryError: null,
   });
   expect(current.botProtection).toEqual({
     enabled: false,
@@ -147,4 +153,123 @@ testIfDb("cors wildcard disables credentials", async () => {
   const updated = await getSecuritySettings();
   expect(updated.cors.allowedOrigins).toEqual(["*"]);
   expect(updated.cors.allowCredentials).toBe(false);
+});
+
+testIfDb("loginAlerts recipients normalize, dedupe, clamp, lowercase", async () => {
+  const many = Array.from({ length: 14 }, (_, index) => `sec${index}@example.com`);
+  await setSecuritySettings({
+    loginAlerts: {
+      recipients: [
+        "Admin@Example.COM",
+        " admin@example.com ",
+        "not-an-email",
+        " ops@example.com ",
+        ...many,
+      ],
+    },
+  });
+
+  const updated = await getSecuritySettings();
+  expect(updated.loginAlerts.recipients).toHaveLength(10);
+  expect(updated.loginAlerts.recipients[0]).toBe("admin@example.com");
+  expect(updated.loginAlerts.recipients[1]).toBe("ops@example.com");
+  expect(updated.loginAlerts.recipients).toEqual(
+    expect.arrayContaining([
+      "admin@example.com",
+      "ops@example.com",
+      ...Array.from({ length: 8 }, (_, index) => `sec${index}@example.com`),
+    ])
+  );
+  expect(updated.loginAlerts.recipients.some((entry) => entry.includes("not-an-email"))).toBe(
+    false
+  );
+});
+
+testIfDb("loginAlerts webhookUrl accepts https and localhost http with secret", async () => {
+  await setSecuritySettings({
+    loginAlerts: {
+      webhookUrl: "https://example.com/login-hook",
+      webhookSecret: "s3cr3t-value",
+    },
+  });
+  const updated = await getSecuritySettings();
+  expect(updated.loginAlerts.webhookUrl).toBe("https://example.com/login-hook");
+
+  await setSecuritySettings({
+    loginAlerts: {
+      webhookUrl: "http://localhost:3000/hook",
+      webhookSecret: "s3cr3t-value",
+    },
+  });
+  const local = await getSecuritySettings();
+  expect(local.loginAlerts.webhookUrl).toBe("http://localhost:3000/hook");
+});
+
+testIfDb("loginAlerts webhookUrl rejects non-https non-localhost and private hosts", async () => {
+  const rejected = [
+    "http://example.com/hook",
+    "ftp://example.com/hook",
+    "https://10.0.0.5/hook",
+    "https://192.168.1.10/hook",
+    "https://169.254.169.254/hook",
+    "https://[::1]/hook",
+    "https://user:pass@example.com/hook",
+  ];
+  for (const webhookUrl of rejected) {
+    await expect(
+      setSecuritySettings({ loginAlerts: { webhookUrl, webhookSecret: "s3cr3t-value" } })
+    ).rejects.toThrow("security_settings_invalid");
+  }
+});
+
+testIfDb("loginAlerts webhookUrl without secret fails closed", async () => {
+  await expect(
+    setSecuritySettings({ loginAlerts: { webhookUrl: "https://example.com/hook" } })
+  ).rejects.toThrow("security_settings_invalid");
+});
+
+testIfDb(
+  "loginAlerts webhookSecret stored encrypted; public exposes only {configured}",
+  async () => {
+    await setSecuritySettings({
+      loginAlerts: {
+        webhookUrl: "https://example.com/login-hook",
+        webhookSecret: "s3cr3t-value",
+      },
+    });
+
+    // The server-side in-memory read stays raw for delivery (mirroring the
+    // botProtection secret); encryption happens at rest in `toStoredSettings`.
+    const cached = await getSecuritySettings();
+    expect(cached.loginAlerts.webhookUrl).toBe("https://example.com/login-hook");
+    expect(cached.loginAlerts.webhookSecret).toBe("s3cr3t-value");
+
+    resetSecuritySettingsCache();
+    const reloaded = await getSecuritySettings();
+    expect(isEncryptedSecret(reloaded.loginAlerts.webhookSecret)).toBe(true);
+    expect(JSON.stringify(reloaded)).not.toContain("s3cr3t-value");
+
+    const pub = await getSecuritySettingsPublic();
+    expect(pub.loginAlerts.webhookSecret).toEqual({ configured: true });
+    expect(JSON.stringify(pub)).not.toContain("s3cr3t-value");
+  }
+);
+
+testIfDb("loginAlerts rejects unknown keys (security_settings_invalid)", async () => {
+  await expect(setSecuritySettings({ loginAlerts: { unknownKey: true } as never })).rejects.toThrow(
+    "security_settings_invalid"
+  );
+  await expect(
+    setSecuritySettings({ loginAlerts: { channels: ["email"] } as never })
+  ).rejects.toThrow("security_settings_invalid");
+});
+
+testIfDb("deliveryError round-trips and is clamped", async () => {
+  await setSecuritySettings({ loginAlerts: { deliveryError: "x".repeat(300) } });
+  const updated = await getSecuritySettings();
+  expect(updated.loginAlerts.deliveryError).toBe("x".repeat(240));
+
+  await setSecuritySettings({ loginAlerts: { deliveryError: null } });
+  const cleared = await getSecuritySettings();
+  expect(cleared.loginAlerts.deliveryError).toBeNull();
 });

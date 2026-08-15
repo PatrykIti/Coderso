@@ -159,6 +159,19 @@ test("mapSettingsRouteError maps invalid setting values (e.g. an invalid timezon
   expect(mapped.message).toBe("Invalid setting value");
 });
 
+test("mapSettingsRouteError maps security_settings_invalid to 400", () => {
+  // TASK-492-01-L01: the `securitySettings.ts` contract throws
+  // `security_settings_invalid` for deep loginAlerts violations (recipients,
+  // webhook URL, reject-unknown); the route boundary must not fall through to
+  // a 500.
+  const mapped = mapSettingsRouteError(new Error("security_settings_invalid"));
+
+  expect(mapped).toBeInstanceOf(ApiError);
+  expect(mapped.code).toBe("security_settings_invalid");
+  expect(mapped.status).toBe(400);
+  expect(mapped.message).toBe("Invalid security settings");
+});
+
 test("PATCH /settings/:key propagates settings_key_invalid for an unknown key as a 400", async () => {
   // TASK-482-05-L01: the PATCH handler resolves the key inside
   // `withSettingsErrors`, so an unknown key surfaces as a mapped 400 ApiError

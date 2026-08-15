@@ -7,8 +7,9 @@
 **Category:** Settings / Security
 **Estimated Effort:** Small
 **Dependencies:** TASK-492-01
-**Status:** ⏳ To Do
-**Started:** `<YYYY-MM-DD>`
+**Status:** ✅ Done
+**Completed:** 2026-08-14
+**Started:** 2026-07-05
 **Completed:** `<YYYY-MM-DD>`
 
 ## Overview
@@ -21,7 +22,10 @@ affected user plus configured recipients (via `sendSystemEmail`) and POSTs a
 signed payload to `webhookUrl` when configured, then wires it into the login path
 behind an injectable dependency so it stays testable in the Bun route lane.
 
-Delivery is **best-effort and non-blocking for login**: a failed email/webhook
+Delivery is **best-effort and non-blocking for login** (audit M3: delivery is
+  FIRE-AND-FORGET — 02-L02 invokes `void sendLoginAlert(...)` detached, never
+  awaited inline; the service never throws and never holds the login response;
+  the 8s AbortController is a bound on the detached task only). A failed email/webhook
 must never fail the login response; failures are sanitized, recorded as the
 `loginAlerts.deliveryError` status (from TASK-492-01), and logged via the audit
 record metadata.

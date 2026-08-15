@@ -68,10 +68,9 @@ import { preparePageRuntimeDocument } from "../services/pages/pageRuntimeDataPre
 import type { PageRuntimeCacheMode } from "../services/pages/pageRuntimeBindingContract";
 import { resolvePageTemplateInput } from "../services/pages/pageTemplateBoundary";
 import type { PageBreakpoint } from "../services/pages/pageDocumentV2";
-import {
-  buildLiveAnalyticsScriptHtml,
-  resolvePublicSiteShellContext,
-} from "./publicSitePageRuntime";
+import { buildLiveAnalyticsScriptHtml, resolvePublicAnalyticsHeadSnippet } from "./publicHeadTags";
+import { resolvePublicSiteShellContext } from "./publicSitePageRuntime";
+import { renderDetailPagePreviewHtml, resolvePublicThemeName } from "./publicSitePreview";
 import {
   buildDetailHref,
   isEntryPublished,
@@ -97,11 +96,6 @@ const resolveIp = (req: Request) => {
   const forwarded = req.headers.get("x-forwarded-for");
   if (forwarded) return forwarded.split(",")[0]?.trim();
   return undefined;
-};
-
-const resolvePublicThemeName = async () => {
-  const profile = await getActiveThemeProfile();
-  return profile?.themeName ?? "default";
 };
 
 // Builds every public HTML Response (fresh renders AND the cache-hit path).
@@ -155,6 +149,12 @@ const renderPublicPageHtmlInternal = async (
      * `activePath` null ⇒ no stamp.
      */
     requestPath?: string | null;
+    /**
+     * GA4 head snippet (TASK-491-01-L02): resolved once per PUBLIC request in
+     * `handlePublicRequest`; preview/token render paths omit it (null) so the
+     * renderer never emits the GA tag for preview traffic.
+     */
+    analyticsHeadSnippet?: string | null;
   }
 ): Promise<PublicHtmlRenderResult> => {
   const { inlineCss, cssHref, devModuleScripts } = await resolvePublicStyles();
@@ -231,6 +231,7 @@ const renderPublicPageHtmlInternal = async (
       renderBodyScripts,
       analyticsScriptHtml,
       siteLocale,
+      analyticsHeadSnippet: options?.analyticsHeadSnippet ?? null,
     }),
     cacheable: preparedRuntime.cacheable,
     cacheMode: preparedRuntime.cacheMode,
@@ -282,7 +283,12 @@ const renderPageTemplatePreviewHtml = async (
 const renderEntryListHtml = async (
   typeSlug: string,
   detailPath: string,
-  options?: { preview?: boolean; themeName?: string; runtimeSearchParams?: URLSearchParams }
+  options?: {
+    preview?: boolean;
+    themeName?: string;
+    runtimeSearchParams?: URLSearchParams;
+    analyticsHeadSnippet?: string | null;
+  }
 ) => {
   if (isPostContentTypeSlug(typeSlug)) {
     const paged = paginateEntryListEntries(await listPosts(), options?.runtimeSearchParams);
@@ -311,6 +317,7 @@ const renderEntryListHtml = async (
       themeName: options?.themeName ?? (await resolvePublicThemeName()),
       analyticsScriptHtml: await buildLiveAnalyticsScriptHtml(options?.preview === true),
       siteLocale: await getSetting("site.locale"),
+      analyticsHeadSnippet: options?.analyticsHeadSnippet ?? null,
     });
   }
 
@@ -346,6 +353,7 @@ const renderEntryListHtml = async (
     themeName: options?.themeName ?? (await resolvePublicThemeName()),
     siteLocale: await getSetting("site.locale"),
     analyticsScriptHtml: await buildLiveAnalyticsScriptHtml(options?.preview === true),
+    analyticsHeadSnippet: options?.analyticsHeadSnippet ?? null,
   });
 };
 
@@ -363,6 +371,7 @@ const renderEntryDetailHtml = async (
     runtimeSearchParams?: URLSearchParams;
     requestPath?: string | null;
     requestOrigin?: string | null;
+    analyticsHeadSnippet?: string | null;
   }
 ): Promise<PublicHtmlRenderResult | string | null> => {
   const routeParam = options?.routeParam ?? "slug";
@@ -394,6 +403,7 @@ const renderEntryDetailHtml = async (
       robots: post.seo?.robots ?? null,
       analyticsScriptHtml: await buildLiveAnalyticsScriptHtml(options?.preview === true),
       siteLocale: await getSetting("site.locale"),
+      analyticsHeadSnippet: options?.analyticsHeadSnippet ?? null,
     });
   }
 
@@ -549,6 +559,7 @@ const renderEntryDetailHtml = async (
         themeName: options?.themeName ?? (await resolvePublicThemeName()),
         templateKey: detailPage.document.settings.template,
         analyticsScriptHtml: await buildLiveAnalyticsScriptHtml(options?.preview === true),
+        analyticsHeadSnippet: options?.analyticsHeadSnippet ?? null,
       }),
       cacheable: blocksAllowSiteHtmlCache(blocks),
     };
@@ -587,85 +598,7 @@ const renderEntryDetailHtml = async (
     siteLocale: await getSetting("site.locale"),
     robots: resolvedSeo.robots,
     analyticsScriptHtml: await buildLiveAnalyticsScriptHtml(options?.preview === true),
-  });
-};
-
-const renderDetailPagePreviewHtml = async (input: {
-  detailPageId: string;
-  sampleEntryId: string;
-  previewDevice: DeviceTarget;
-  runtimeSearchParams: URLSearchParams;
-}) => {
-  const entryDetail = await getEntry(input.sampleEntryId);
-  if (!entryDetail || !isEntryPublished(entryDetail)) return null;
-
-  const contentType = await getContentType(entryDetail.typeId);
-  if (!contentType) return null;
-
-  const contentRoutes = (await getSetting("site.contentRoutes")) as ContentRouteSetting[];
-  const detailPage = await resolvePreviewDetailPageRuntime({
-    detailPageId: input.detailPageId,
-    documentSource: "current",
-    entry: {
-      id: entryDetail.id,
-      typeId: entryDetail.typeId,
-      title: entryDetail.title,
-      slug: entryDetail.slug,
-      status: entryDetail.status,
-      visibility: entryDetail.visibility,
-      hasPassword: entryDetail.hasPassword,
-      tags: entryDetail.tags ?? [],
-      data: entryDetail.data ?? {},
-      publishedAt: entryDetail.publishedAt ?? null,
-      scheduledAt: entryDetail.scheduledAt ?? null,
-      createdAt: entryDetail.createdAt ?? null,
-      updatedAt: entryDetail.updatedAt ?? null,
-      author: entryDetail.author ?? null,
-    },
-    contentType: {
-      id: contentType.id,
-      slug: contentType.slug,
-      schema: contentType.schema as ContentSchema,
-    },
-    contentRoutes,
-  });
-  if (!detailPage) return null;
-
-  const { inlineCss, cssHref, devModuleScripts } = await resolvePublicStyles();
-  const detailSeo = resolveDetailPageRuntimeSeo({
-    document: detailPage.document,
-    entry: entryDetail,
-    contentTypeName: contentType.name,
-  });
-  const { siteShell, siteName } = await resolvePublicSiteShellContext({
-    document: null,
-    includeResponsiveCss: false,
-  });
-
-  return renderPublicPageRuntimeHtml({
-    title: detailSeo.title,
-    blocks: await hydrateRuntimeBlocks(detailPage.blocks, {
-      preview: true,
-      contentRoutes,
-      runtimeSearchParams: input.runtimeSearchParams,
-      runtimeCache: {},
-      prehydratedBlockIds: collectPrehydratedDetailBlockIds(detailPage.document),
-    }),
-    cssHref,
-    inlineCss,
-    devModuleScripts,
-    isPreview: true,
-    previewDevice: input.previewDevice,
-    layoutSettings: detailPage.document.settings.layout,
-    metaDescription: detailSeo.metaDescription,
-    canonicalUrl: detailSeo.canonicalUrl,
-    robots: entryDetail.seo?.robots ?? null,
-    siteShell,
-    siteName,
-    siteLocale: await getSetting("site.locale"),
-    imageUrl: detailSeo.imageUrl,
-    themeName: await resolvePublicThemeName(),
-    templateKey: detailPage.document.settings.template,
+    analyticsHeadSnippet: options?.analyticsHeadSnippet ?? null,
   });
 };
 
@@ -848,6 +781,10 @@ export async function handlePublicRequest(req: Request) {
     }
   }
 
+  // GA4 head snippet (TASK-491-01-L02): resolved once per PUBLIC request.
+  // Preview/token paths above never reach this point, so they stay tag-free.
+  const analyticsHeadSnippet = await resolvePublicAnalyticsHeadSnippet();
+
   try {
     const redirect = await resolvePublicRedirect(url.pathname);
     if (redirect) {
@@ -904,6 +841,7 @@ export async function handlePublicRequest(req: Request) {
         themeName,
         runtimeSearchParams: url.searchParams,
         requestPath: slugPath,
+        analyticsHeadSnippet,
       });
       const homepageTtlSeconds = resolveRenderCacheTtl(result);
       if (shouldUseCache && homepageTtlSeconds > 0) {
@@ -931,6 +869,7 @@ export async function handlePublicRequest(req: Request) {
       runtimeSearchParams: url.searchParams,
       requestPath: slugPath,
       requestOrigin: url.origin,
+      analyticsHeadSnippet,
     });
     if (!detailHtml) return new Response("Not Found", { status: 404 });
     const html = typeof detailHtml === "string" ? detailHtml : detailHtml.html;
@@ -949,6 +888,7 @@ export async function handlePublicRequest(req: Request) {
       themeName,
       runtimeSearchParams: url.searchParams,
       requestPath: slugPath,
+      analyticsHeadSnippet,
     });
     const pageTtlSeconds = resolveRenderCacheTtl(result);
     if (shouldUseCache && pageTtlSeconds > 0) {
@@ -962,6 +902,7 @@ export async function handlePublicRequest(req: Request) {
     const html = await renderEntryListHtml(match.type, match.detailPath, {
       themeName,
       runtimeSearchParams: url.searchParams,
+      analyticsHeadSnippet,
     });
     if (!html) return new Response("Not Found", { status: 404 });
     if (shouldUseCache) {

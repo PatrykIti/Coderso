@@ -6,7 +6,8 @@
 **Category:** Engine / Entries
 **Estimated Effort:** Small
 **Dependencies:** TASK-487-01
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-08-14
 **Started:** `<YYYY-MM-DD>`
 **Completed:** `<YYYY-MM-DD>`
 
@@ -116,11 +117,15 @@ export async function restoreEntryRevision(typeSlug: string, id: string, revisio
     { withCsrf: true }
   );
   if (result?.entry) {
-    upsertCachedEntry(typeSlug, result.entry); // existing helper :152
+    // M1 fix: no `upsertCachedEntry` exists — mirror the authority pattern
+    // (publishSuccessfulEntryMutation :326 + versioned authority:
+    // pendingEntryDetails / cachedEntryDetailVersions / revokePendingEntryDetail
+    // / invalidateEntryDetailsAtOrBefore), cf postsClient.ts:643-657.
+    publishSuccessfulEntryMutation(typeSlug, result.entry);
     // restore may write a new "pre-restore" revision -> invalidate the list
     broadcastCacheEvent({ key: cacheKeys.entryRevisions(id), action: "invalidate" });
     broadcastCacheEvent({ key: cacheKeys.entriesList(typeSlug), action: "update" });
-    broadcastAllEntriesListEvent("update"); // existing :236
+    broadcastAllEntriesListEvent("update"); // existing :503
     broadcastCacheEvent({ key: cacheKeys.entryDetail(typeSlug, id), action: "update" });
   }
   return result;

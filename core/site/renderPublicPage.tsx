@@ -48,6 +48,13 @@ export type PublicPageRenderOptions = {
    */
   analyticsScriptHtml?: string | null;
   siteLocale?: unknown;
+  /**
+   * GA4 head snippet (TASK-491-01-L02): the validated `gtag.js` head tag built
+   * by `resolvePublicAnalyticsHead`. Rendered as a raw `<head>` script on LIVE
+   * renders only; skipped whenever `isPreview` is set so preview traffic never
+   * fires GA hits. Absent/null → no tag.
+   */
+  analyticsHeadSnippet?: string | null;
 };
 
 export type PublicPageRuntimeRenderOptions = PublicPageRenderOptions & {
@@ -134,7 +141,8 @@ const renderDocument = (
   renderBodyScripts?: () => ReactNode,
   responsiveCss?: string | null,
   analyticsScriptHtml?: string | null,
-  siteLocale?: unknown
+  siteLocale?: unknown,
+  analyticsHeadSnippet?: string | null
 ) => {
   const headTags: ReactNode[] = [
     <meta key="charset" charSet="utf-8" />,
@@ -195,6 +203,14 @@ const renderDocument = (
       if (!src) continue;
       headTags.push(<script key={`dev-module-${index}`} type="module" src={src}></script>);
     }
+  }
+
+  // GA4 head tag (TASK-491-01-L02): LIVE renders only — never on previews, so
+  // editors/preview tokens never trigger GA hits. The snippet is pre-built from
+  // a format-validated measurement id (see analyticsRuntime.ts), so it is safe
+  // to inject as raw script text.
+  if (analyticsHeadSnippet && !isPreview) {
+    headTags.push(<script key="ga4" dangerouslySetInnerHTML={{ __html: analyticsHeadSnippet }} />);
   }
 
   const head = renderToString(<>{headTags}</>);
@@ -358,7 +374,8 @@ export function renderPublicPageHtml(options: PublicPageRenderOptions) {
     () => runtimeScripts.renderScripts(),
     null, // responsiveCss (legacy path has none)
     options.analyticsScriptHtml,
-    options.siteLocale
+    options.siteLocale,
+    options.analyticsHeadSnippet
   );
 }
 
@@ -442,7 +459,8 @@ export async function renderPublicPageRuntimeHtml(options: PublicPageRuntimeRend
     () => runtimeScripts.renderScripts(),
     responsiveCss,
     options.analyticsScriptHtml,
-    options.siteLocale
+    options.siteLocale,
+    options.analyticsHeadSnippet
   );
 }
 
@@ -518,6 +536,7 @@ export function renderPublicPageV2RuntimeHtml(options: PublicPageV2RuntimeRender
     renderBodyScripts ?? undefined,
     responsiveCss,
     options.analyticsScriptHtml,
-    options.siteLocale
+    options.siteLocale,
+    options.analyticsHeadSnippet
   );
 }

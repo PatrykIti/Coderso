@@ -4,6 +4,8 @@ import React from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, expect, test, vi } from "vitest";
 
+import type { FormSubmissionsExport } from "../../../core/admin/services/formsClient";
+
 const submissionsState = vi.hoisted(() => {
   const apiError = (message: string) => ({
     name: "ApiClientError",
@@ -60,12 +62,17 @@ const submissionsState = vi.hoisted(() => {
     listCalls: [] as string[],
     detailCalls: [] as string[],
     navigateCalls: [] as string[],
+    exportCalls: [] as Array<{ id: string; format: string }>,
+    exportError: null as unknown,
+    exportResult: {} as FormSubmissionsExport | Promise<FormSubmissionsExport>,
     reset() {
       this.submissions = [...this.defaultSubmissions];
       this.listError = null;
       this.listCalls = [];
       this.detailCalls = [];
       this.navigateCalls = [];
+      this.exportCalls = [];
+      this.exportError = null;
     },
   };
 });
@@ -113,6 +120,11 @@ vi.mock("@/services/formsClient", () => ({
     submissionsState.listCalls.push(id);
     if (submissionsState.listError) throw submissionsState.listError;
     return submissionsState.submissions;
+  }),
+  exportFormSubmissions: vi.fn(async (id: string, format: "csv" | "json") => {
+    submissionsState.exportCalls.push({ id, format });
+    if (submissionsState.exportError) throw submissionsState.exportError;
+    return submissionsState.exportResult;
   }),
 }));
 
@@ -314,5 +326,166 @@ test("FormSubmissionsPage reports api and generic load errors and shows the empt
     expect(emptyView.container.textContent).toContain("No submissions yet.");
   } finally {
     emptyView.cleanup();
+  }
+});
+
+const installDownloadMocks = () => {
+  const originalCreate = URL.createObjectURL;
+  const originalRevoke = URL.revokeObjectURL;
+  const createObjectURL = vi.fn(() => "blob:export");
+  const revokeObjectURL = vi.fn();
+  Object.defineProperty(URL, "createObjectURL", {
+    configurable: true,
+    value: createObjectURL,
+  });
+  Object.defineProperty(URL, "revokeObjectURL", {
+    configurable: true,
+    value: revokeObjectURL,
+  });
+  const click = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
+  return {
+    createObjectURL,
+    revokeObjectURL,
+    click,
+    restore: () => {
+      Object.defineProperty(URL, "createObjectURL", {
+        configurable: true,
+        value: originalCreate,
+      });
+      Object.defineProperty(URL, "revokeObjectURL", {
+        configurable: true,
+        value: originalRevoke,
+      });
+      click.mockRestore();
+    },
+  };
+};
+
+const findExportButton = (container: HTMLElement, label: string) =>
+  Array.from(container.querySelectorAll("button")).find((candidate) =>
+    candidate.textContent?.includes(label)
+  );
+
+test("FormSubmissionsPage exports submissions as CSV through the Blob download", async () => {
+  window.history.replaceState({}, "", "/admin/advanced/forms/form-1/submissions");
+  const { FormSubmissionsPage } = await import("../../../core/admin/ui/forms/FormSubmissionsPage");
+
+  const view = mount(<FormSubmissionsPage />);
+  await flush();
+  expect(view.container.textContent).toContain("Export CSV");
+
+  const download = installDownloadMocks();
+  try {
+    clickByText(view.container, "Export CSV");
+    await flush();
+    expect(submissionsState.exportCalls).toEqual([{ id: "form-1", format: "csv" }]);
+    expect(download.createObjectURL).toHaveBeenCalledTimes(1);
+    expect(download.click).toHaveBeenCalledTimes(1);
+    expect(download.revokeObjectURL).toHaveBeenCalledWith("blob:export");
+  } finally {
+    download.restore();
+    view.cleanup();
+  }
+});
+
+test("FormSubmissionsPage exports submissions as JSON on the JSON action", async () => {
+  window.history.replaceState({}, "", "/admin/advanced/forms/form-1/submissions");
+  const { FormSubmissionsPage } = await import("../../../core/admin/ui/forms/FormSubmissionsPage");
+
+  const view = mount(<FormSubmissionsPage />);
+  await flush();
+
+  const download = installDownloadMocks();
+  try {
+    clickByText(view.container, "Export JSON");
+    await flush();
+    expect(submissionsState.exportCalls).toEqual([{ id: "form-1", format: "json" }]);
+    expect(download.createObjectURL).toHaveBeenCalledTimes(1);
+  } finally {
+    download.restore();
+    view.cleanup();
+  }
+});
+
+test("FormSubmissionsPage disables export buttons while loading, when empty, and mid-export", async () => {
+  window.history.replaceState({}, "", "/admin/advanced/forms/form-1/submissions");
+  const { FormSubmissionsPage } = await import("../../../core/admin/ui/forms/FormSubmissionsPage");
+
+  const view = mount(<FormSubmissionsPage />);
+  try {
+    const whileLoading = Array.from(view.container.querySelectorAll("button")).filter((button) =>
+      button.textContent?.includes("Export")
+    );
+    expect(whileLoading.length).toBeGreaterThan(0);
+    expect(whileLoading.every((button) => (button as HTMLButtonElement).disabled)).toBe(true);
+  } finally {
+    view.cleanup();
+  }
+
+  submissionsState.reset();
+  window.history.replaceState({}, "", "/admin/advanced/forms/form-1/submissions");
+  submissionsState.submissions = [];
+  const emptyView = mount(<FormSubmissionsPage />);
+  try {
+    await flush();
+    const emptyButtons = Array.from(emptyView.container.querySelectorAll("button")).filter(
+      (button) => button.textContent?.includes("Export")
+    );
+    expect(emptyButtons.every((button) => (button as HTMLButtonElement).disabled)).toBe(true);
+  } finally {
+    emptyView.cleanup();
+  }
+
+  submissionsState.reset();
+  window.history.replaceState({}, "", "/admin/advanced/forms/form-1/submissions");
+  let resolveExport: (value: FormSubmissionsExport) => void = () => {};
+  submissionsState.exportResult = new Promise<FormSubmissionsExport>((resolve) => {
+    resolveExport = resolve;
+  });
+  const inFlightView = mount(<FormSubmissionsPage />);
+  try {
+    await flush();
+    const download = installDownloadMocks();
+    clickByText(inFlightView.container, "Export CSV");
+    await flush();
+    const inFlightButton = findExportButton(inFlightView.container, "Exporting");
+    expect(inFlightButton).toBeDefined();
+    expect((inFlightButton as HTMLButtonElement).disabled).toBe(true);
+    resolveExport({
+      fileName: "coderso-form-contact-submissions-2026-06-28.csv",
+      contentType: "text/csv",
+      content: "Submission ID,Received At,Status\n",
+      totalRows: 0,
+    });
+    await flush();
+    expect(inFlightView.container.textContent).toContain("Export CSV");
+    expect(
+      (findExportButton(inFlightView.container, "Export CSV") as HTMLButtonElement).disabled
+    ).toBe(false);
+    download.restore();
+  } finally {
+    inFlightView.cleanup();
+  }
+});
+
+test("FormSubmissionsPage shows the error alert and re-enables buttons when export fails", async () => {
+  window.history.replaceState({}, "", "/admin/advanced/forms/form-1/submissions");
+  const { FormSubmissionsPage } = await import("../../../core/admin/ui/forms/FormSubmissionsPage");
+
+  submissionsState.exportError = submissionsState.apiError("Export denied");
+  const view = mount(<FormSubmissionsPage />);
+  try {
+    await flush();
+    const download = installDownloadMocks();
+    clickByText(view.container, "Export CSV");
+    await flush();
+    expect(view.container.textContent).toContain("Export denied");
+    expect(view.container.textContent).toContain("Export CSV");
+    expect((findExportButton(view.container, "Export CSV") as HTMLButtonElement).disabled).toBe(
+      false
+    );
+    download.restore();
+  } finally {
+    view.cleanup();
   }
 });

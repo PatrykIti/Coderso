@@ -5,7 +5,9 @@
 **Category:** Commerce / Admin UI
 **Estimated Effort:** Medium
 **Dependencies:** None (backend already shipped — frontend-only)
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-08-15
+**Changelog:** 1278 (pinned by the orchestrator; closure only)
 **Started:** `<YYYY-MM-DD>`
 **Completed:** `<YYYY-MM-DD>`
 
@@ -18,7 +20,7 @@ variants** and supports full **collections CRUD**, but the admin UI exposes
 neither:
 
 1. `core/admin/ui/commerce/components/CommerceEditorSections.tsx` renders only
-   Identity / Pricing / Stock cards — there is **no variant control**, so
+   Details / Media / Pricing / Inventory cards — there is **no variant control**, so
    variants can only be authored by hand-crafting raw `/admin/api/commerce/*`
    calls. The product draft already carries `variants`
    (`commerceEditorModel.ts`) and round-trips them through
@@ -97,7 +99,7 @@ contracts. No new backend, no schema/migration work.
 - Extend the existing `tests/vitest/ui/commerce-page.test.tsx` to assert the new
   variant card renders in the product editor.
 - No migration artifacts are required (no DB changes).
-- Full gate before closure: `bun run lint`, `bun run typecheck`, and the Vitest
+- Full gate before closure: `bun run lint`, `bun --cwd core lint:types`, and the Vitest
   suite must be green.
 
 ## Documentation Updates Required

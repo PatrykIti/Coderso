@@ -3,7 +3,7 @@ import { afterEach, expect, test } from "bun:test";
 import { eq } from "drizzle-orm";
 
 import { db } from "../../../core/db/client";
-import { forms } from "../../../core/db/schema";
+import { forms, formSubmissions } from "../../../core/db/schema";
 import { mapFormError, registerFormsRoutes } from "../../../core/server/routes/formsRoutes";
 import {
   formAttachmentUploadSchema,
@@ -75,8 +75,14 @@ const makeRouter = () => {
 };
 
 const ownedFormIds: string[] = [];
+const submissionFixtureFormIds: string[] = [];
 
 afterEach(async () => {
+  // Export-route fixtures attach submissions (FK restrict), so delete the
+  // rows this file owns before the owning form itself can be removed.
+  for (const formId of submissionFixtureFormIds.splice(0).reverse()) {
+    await db.delete(formSubmissions).where(eq(formSubmissions.formId, formId));
+  }
   for (const id of ownedFormIds.splice(0).reverse()) {
     await deleteForm(id);
   }
@@ -127,6 +133,7 @@ test("registerFormsRoutes wires endpoints", () => {
       "DELETE /forms/:id",
       "GET /forms/:id/fields",
       "PUT /forms/:id/fields",
+      "GET /forms/:id/submissions/export",
       "GET /forms/:id/submissions",
       "POST /forms/:id/uploads",
       "POST /forms/:id/submissions",
@@ -184,6 +191,144 @@ test("Form create/update routes retain forms:write and the shared nested theme s
   expect(() =>
     validateSchema(formUpdateSchema, { settings: { theme: buildFormColorTheme("raw") } })
   ).not.toThrow();
+});
+
+test("submissions export route is registered with forms:read and no anonymous surface", () => {
+  const { router, routes } = makeRouter();
+  const permissionByHandler = new Map<RouteHandler, string>();
+  registerFormsRoutes(router, {
+    requirePermission: (permission) => {
+      const handler: RouteHandler = async () => undefined;
+      permissionByHandler.set(handler, permission);
+      return handler;
+    },
+    validate: () => undefined,
+  });
+
+  const exportRoute = routes.find(
+    (entry) => entry.method === "GET" && entry.path === "/forms/:id/submissions/export"
+  );
+  expect(exportRoute).toBeDefined();
+  expect(exportRoute!.handlers).toHaveLength(2); // permission gate + handler
+  expect(permissionByHandler.get(exportRoute!.handlers[0]!)).toBe("forms:read");
+
+  const submissionsRoute = routes.find(
+    (entry) => entry.method === "GET" && entry.path === "/forms/:id/submissions"
+  );
+  expect(permissionByHandler.get(submissionsRoute!.handlers[0]!)).toBe("forms:read");
+});
+
+test("GET /forms/:id/submissions/export returns a CSV envelope and defaults format to csv", async () => {
+  const form = await createOwnedForm();
+  const routes = registerExecutableFormsRouter();
+
+  const result = (await executeRoute(routes, "GET", "/forms/:id/submissions/export", {
+    params: { id: form.id },
+    query: {},
+    body: undefined,
+  })) as { fileName: string; contentType: string; content: string; totalRows: number };
+
+  expect(result.contentType).toBe("text/csv");
+  expect(result.fileName).toMatch(/^coderso-form-.*-submissions-\d{4}-\d{2}-\d{2}\.csv$/);
+  expect(result.totalRows).toBe(0);
+  expect(result.content).toBe("Submission ID,Received At,Status");
+});
+
+test("GET /forms/:id/submissions/export?format=csv emits the header row and omits ip/userAgent", async () => {
+  const form = await createOwnedForm();
+  await db.insert(formSubmissions).values({
+    formId: form.id,
+    payload: { fullName: "Ada" },
+    status: "new",
+    ip: "203.0.113.7",
+    userAgent: "Mozilla/5.0",
+    createdAt: new Date("2026-06-28T10:00:00.000Z"),
+  });
+  submissionFixtureFormIds.push(form.id);
+  const routes = registerExecutableFormsRouter();
+
+  const result = (await executeRoute(routes, "GET", "/forms/:id/submissions/export", {
+    params: { id: form.id },
+    query: { format: "csv" },
+    body: undefined,
+  })) as { contentType: string; content: string; totalRows: number };
+
+  expect(result.contentType).toBe("text/csv");
+  expect(result.totalRows).toBe(1);
+  const lines = result.content.split("\n");
+  expect(lines[0]).toBe("Submission ID,Received At,Status,fullName");
+  expect(lines[1]).toContain("Ada");
+  expect(result.content).not.toContain("203.0.113.7");
+  expect(result.content).not.toContain("Mozilla");
+});
+
+test("GET /forms/:id/submissions/export?format=json returns a parseable array without ip/userAgent", async () => {
+  const form = await createOwnedForm();
+  await db.insert(formSubmissions).values({
+    formId: form.id,
+    payload: { fullName: "Ada" },
+    status: "new",
+    ip: "203.0.113.7",
+    userAgent: "Mozilla/5.0",
+    createdAt: new Date("2026-06-28T10:00:00.000Z"),
+  });
+  submissionFixtureFormIds.push(form.id);
+  const routes = registerExecutableFormsRouter();
+
+  const result = (await executeRoute(routes, "GET", "/forms/:id/submissions/export", {
+    params: { id: form.id },
+    query: { format: "json" },
+    body: undefined,
+  })) as { contentType: string; content: string; totalRows: number };
+
+  expect(result.contentType).toBe("application/json");
+  expect(result.totalRows).toBe(1);
+  const parsed = JSON.parse(result.content) as Array<Record<string, unknown>>;
+  expect(parsed).toHaveLength(1);
+  expect(parsed[0]).toEqual({
+    id: expect.any(String),
+    createdAt: "2026-06-28T10:00:00.000Z",
+    status: "new",
+    data: { fullName: "Ada" },
+  });
+  expect(result.content).not.toContain("203.0.113.7");
+  expect(result.content).not.toContain("Mozilla");
+});
+
+test("GET /forms/:id/submissions/export rejects unknown query params and out-of-enum formats", async () => {
+  const form = await createOwnedForm();
+  const routes = registerExecutableFormsRouter();
+
+  await expect(
+    executeRoute(routes, "GET", "/forms/:id/submissions/export", {
+      params: { id: form.id },
+      query: { format: "csv", limit: "10" },
+      body: undefined,
+    })
+  ).rejects.toMatchObject({
+    code: "validation_error",
+    status: 400,
+    details: [{ path: "limit", keyword: "additionalProperties" }],
+  });
+
+  await expect(
+    executeRoute(routes, "GET", "/forms/:id/submissions/export", {
+      params: { id: form.id },
+      query: { format: "xml" },
+      body: undefined,
+    })
+  ).rejects.toMatchObject({ code: "validation_error", status: 400 });
+});
+
+test("GET /forms/:id/submissions/export maps an unknown form to 404 form_not_found", async () => {
+  const routes = registerExecutableFormsRouter();
+  await expect(
+    executeRoute(routes, "GET", "/forms/:id/submissions/export", {
+      params: { id: randomUUID() },
+      query: { format: "csv" },
+      body: undefined,
+    })
+  ).rejects.toMatchObject({ code: "form_not_found", status: 404 });
 });
 
 test("mapFormError returns stable API errors for known form domain failures", () => {

@@ -219,6 +219,7 @@ export function CommerceEditorPage() {
       onToggleCollection={toggleCollection}
       onStatusChange={(status) => patchDraft({ status })}
       onPublish={() => handleSave(publishTargetStatus)}
+      onCreateCollection={() => navigate("/advanced/commerce/collections")}
     />
   );
 

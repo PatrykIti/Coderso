@@ -6,7 +6,8 @@
 **Category:** Settings / Integrations
 **Estimated Effort:** Medium
 **Dependencies:** None
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-08-15
 **Started:** `<YYYY-MM-DD>`
 **Completed:** `<YYYY-MM-DD>`
 
@@ -20,9 +21,9 @@ builds a small, fixed one and POSTs server-side to each configured integration.
 
 Defined event set (fixed, closed enum — do not over-generalize):
 
-- `entry.published` — emitted from `publishEntry` (`core/services/content/entryService.ts:816`).
-- `page.published` — emitted from `publishPage` (`core/services/pages/pageService.ts:200`).
-- `form.submission` — emitted from `submitForm` (`core/services/forms/submissionService.ts:29`).
+- `entry.published` — emitted from `publishEntry` (`core/services/content/entryService.ts:498 (publishEntry; audit M4)`).
+- `page.published` — emitted from `publishPage` (`core/services/pages/pageService.ts:218`).
+- `form.submission` — emitted from `submitForm` (`core/services/forms/submissionService.ts:28`).
 
 Delivery reuses the existing retry/backoff core from
 `core/services/webhooks/deliveryService.ts` (`deliverWebhook` loop: max 3

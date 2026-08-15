@@ -461,6 +461,7 @@ test("commerce leaf panels render states and forward changes", () => {
   const onToggleCollection = vi.fn();
   const onStatusChange = vi.fn();
   const onPublish = vi.fn();
+  const onCreateCollection = vi.fn();
   const onChange = vi.fn();
   const html = renderToString(
     <CommerceCollectionsPanel
@@ -475,10 +476,14 @@ test("commerce leaf panels render states and forward changes", () => {
       onToggleCollection={onToggleCollection}
       onStatusChange={onStatusChange}
       onPublish={onPublish}
+      onCreateCollection={onCreateCollection}
     />
   );
 
-  expect(html).toContain("No collections yet.");
+  // TASK-488-02-L02: the dead "Commerce API/UI flow" hint was replaced with a
+  // working create-collection affordance that navigates to the collections
+  // manager.
+  expect(html).toContain("Create your first collection");
 
   const view = mount(
     <>
@@ -503,6 +508,7 @@ test("commerce leaf panels render states and forward changes", () => {
         onToggleCollection={onToggleCollection}
         onStatusChange={onStatusChange}
         onPublish={onPublish}
+        onCreateCollection={onCreateCollection}
       />
       <CommerceEditorSections
         draft={{

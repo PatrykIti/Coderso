@@ -111,6 +111,11 @@ export type PublicEntryListOptions = {
    */
   analyticsScriptHtml?: string | null;
   siteLocale?: unknown;
+  /**
+   * GA4 head snippet (TASK-491-01-L02): validated `gtag.js` head tag; rendered
+   * on LIVE list renders only, skipped on previews. Absent/null → no tag.
+   */
+  analyticsHeadSnippet?: string | null;
 };
 
 export type PublicEntryDetailOptions = {
@@ -133,6 +138,11 @@ export type PublicEntryDetailOptions = {
    */
   analyticsScriptHtml?: string | null;
   siteLocale?: unknown;
+  /**
+   * GA4 head snippet (TASK-491-01-L02): validated `gtag.js` head tag; rendered
+   * on LIVE detail renders only, skipped on previews. Absent/null → no tag.
+   */
+  analyticsHeadSnippet?: string | null;
 };
 
 type TemplateComponent<Props> = (props: Props) => ReactNode;
@@ -189,7 +199,8 @@ const renderDocument = (
   devModuleScripts?: string[] | null,
   isPreview?: boolean,
   analyticsScriptHtml?: string | null,
-  siteLocale?: unknown
+  siteLocale?: unknown,
+  analyticsHeadSnippet?: string | null
 ) => {
   const headTags: ReactNode[] = [
     <meta key="charset" charSet="utf-8" />,
@@ -235,6 +246,11 @@ const renderDocument = (
       if (!src) continue;
       headTags.push(<script key={`dev-module-${index}`} type="module" src={src}></script>);
     }
+  }
+
+  // GA4 head tag (TASK-491-01-L02): LIVE renders only — never on previews.
+  if (analyticsHeadSnippet && !isPreview) {
+    headTags.push(<script key="ga4" dangerouslySetInnerHTML={{ __html: analyticsHeadSnippet }} />);
   }
 
   const head = renderToString(<>{headTags}</>);
@@ -371,7 +387,8 @@ export async function renderPublicEntryListHtml(options: PublicEntryListOptions)
     devModuleScripts,
     isPreview,
     analyticsScriptHtml,
-    options.siteLocale
+    options.siteLocale,
+    options.analyticsHeadSnippet
   );
 }
 
@@ -431,6 +448,7 @@ export async function renderPublicEntryDetailHtml(options: PublicEntryDetailOpti
     devModuleScripts,
     isPreview,
     analyticsScriptHtml,
-    options.siteLocale
+    options.siteLocale,
+    options.analyticsHeadSnippet
   );
 }

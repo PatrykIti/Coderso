@@ -5,9 +5,12 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { isApiClientError } from "@/services/apiClient";
 import {
+  exportFormSubmissions,
   getFormDetailCached,
   listFormSubmissions,
   type FormSubmission,
+  type FormSubmissionsExport,
+  type FormSubmissionsExportFormat,
 } from "@/services/formsClient";
 import { AdminShell } from "@/ui/layouts/AdminShell";
 import { PageHeader } from "@/ui/shared/PageHeader";
@@ -45,6 +48,22 @@ const formatPayloadValue = (value: unknown) => {
   }
 };
 
+// Reused Blob/anchor download (same shape as analytics TopPagesDrawer.downloadTextFile).
+const downloadExportFile = (file: FormSubmissionsExport) => {
+  if (typeof document === "undefined" || typeof URL.createObjectURL !== "function") {
+    throw new Error("download_unavailable");
+  }
+  const blob = new Blob([file.content], { type: file.contentType });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = file.fileName;
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  URL.revokeObjectURL(url);
+};
+
 /**
  * Read-only form submissions list (client-readiness FIX 2): the data already
  * lands through the public submit endpoint and the admin API, but had no admin
@@ -66,6 +85,7 @@ export function FormSubmissionsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(0);
+  const [exporting, setExporting] = useState<FormSubmissionsExportFormat | null>(null);
 
   const load = useCallback(async () => {
     if (!formId) return;
@@ -126,6 +146,22 @@ export function FormSubmissionsPage() {
     }
   }, [applyResult, handleLoadError, load]);
 
+  const handleExport = useCallback(
+    async (format: FormSubmissionsExportFormat) => {
+      if (!formId || exporting) return;
+      setExporting(format);
+      setError(null);
+      try {
+        downloadExportFile(await exportFormSubmissions(formId, format));
+      } catch (err) {
+        setError(isApiClientError(err) ? err.message : "Failed to export submissions.");
+      } finally {
+        setExporting(null);
+      }
+    },
+    [exporting, formId]
+  );
+
   // The admin client has no server-side pagination for submissions, so the
   // list paginates client-side. The API returns newest first.
   const pageCount = Math.max(1, Math.ceil(submissions.length / PAGE_SIZE));
@@ -155,6 +191,20 @@ export function FormSubmissionsPage() {
           description="Review what visitors submitted through this form (read-only)."
           actions={
             <div className="flex gap-2">
+              <Button
+                variant="outline"
+                disabled={isLoading || submissions.length === 0 || exporting !== null}
+                onClick={() => handleExport("csv")}
+              >
+                {exporting === "csv" ? "Exporting…" : "Export CSV"}
+              </Button>
+              <Button
+                variant="outline"
+                disabled={isLoading || submissions.length === 0 || exporting !== null}
+                onClick={() => handleExport("json")}
+              >
+                {exporting === "json" ? "Exporting…" : "Export JSON"}
+              </Button>
               <Button
                 variant="outline"
                 onClick={() => {

@@ -75,6 +75,8 @@ export const mapSettingsRouteError = (error: unknown) => {
       return new ApiError("settings_key_invalid", "Unknown setting key", 400);
     case "settings_value_invalid":
       return new ApiError("settings_value_invalid", "Invalid setting value", 400);
+    case "security_settings_invalid":
+      return new ApiError("security_settings_invalid", "Invalid security settings", 400);
     case "design_tokens_invalid":
       return new ApiError("design_tokens_invalid", "Invalid design tokens", 400);
     case "site_shell_menu_not_found":

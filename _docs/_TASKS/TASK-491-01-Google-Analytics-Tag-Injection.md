@@ -6,7 +6,8 @@
 **Category:** Settings / Integrations
 **Estimated Effort:** Small
 **Dependencies:** None
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-08-15
 **Started:** `<YYYY-MM-DD>`
 **Completed:** `<YYYY-MM-DD>`
 

@@ -8,14 +8,10 @@ import {
   type EncryptedSecret,
 } from "../security/secretStore";
 import { isPasswordPepperConfigured } from "../auth/passwordPepper";
+import { isLikelyEmail } from "../security/piiEmail";
 
 export type RateLimitBucket =
-  | "auth"
-  | "admin_read"
-  | "admin_write"
-  | "public_read"
-  | "public_write"
-  | "assistant";
+  "auth" | "admin_read" | "admin_write" | "public_read" | "public_write" | "assistant";
 
 export type RateLimitBucketConfig = {
   windowSeconds: number;
@@ -37,6 +33,20 @@ export type BotProtectionSettings = {
 
 export type BotProtectionSettingsPublic = Omit<BotProtectionSettings, "secretKey"> & {
   secretKey: { configured: boolean };
+};
+
+export type LoginAlertsSettings = {
+  enabled: boolean;
+  notifyOnNewDevice: boolean;
+  notifyOnNewLocation: boolean;
+  recipients: string[];
+  webhookUrl: string | null;
+  webhookSecret: string | EncryptedSecret | null;
+  deliveryError: string | null;
+};
+
+export type LoginAlertsSettingsPublic = Omit<LoginAlertsSettings, "webhookSecret"> & {
+  webhookSecret: { configured: boolean };
 };
 
 export type SecuritySettings = {
@@ -80,16 +90,13 @@ export type SecuritySettings = {
     maxPerUser: number;
     singleSession: boolean;
   };
-  loginAlerts: {
-    enabled: boolean;
-    notifyOnNewDevice: boolean;
-    notifyOnNewLocation: boolean;
-  };
+  loginAlerts: LoginAlertsSettings;
   botProtection: BotProtectionSettings;
 };
 
-export type SecuritySettingsPublic = Omit<SecuritySettings, "botProtection"> & {
+export type SecuritySettingsPublic = Omit<SecuritySettings, "botProtection" | "loginAlerts"> & {
   botProtection: BotProtectionSettingsPublic;
+  loginAlerts: LoginAlertsSettingsPublic;
   passwordPepperConfigured: boolean;
 };
 
@@ -137,6 +144,10 @@ const RATE_LIMIT_BUCKETS: RateLimitBucket[] = [
   "public_write",
   "assistant",
 ];
+
+const MAX_LOGIN_ALERT_RECIPIENTS = 10;
+const MAX_LOGIN_ALERT_DELIVERY_ERROR_LENGTH = 240;
+const LOGIN_ALERT_LOOPBACK_HOSTNAMES = new Set(["localhost", "127.0.0.1"]);
 
 const DEFAULT_SECURITY_SETTINGS: SecuritySettings = {
   requestId: {
@@ -190,6 +201,10 @@ const DEFAULT_SECURITY_SETTINGS: SecuritySettings = {
     enabled: true,
     notifyOnNewDevice: true,
     notifyOnNewLocation: true,
+    recipients: [],
+    webhookUrl: null,
+    webhookSecret: null,
+    deliveryError: null,
   },
   botProtection: {
     enabled: false,
@@ -357,6 +372,105 @@ const resolveBotSecretValue = (secret: BotProtectionSettings["secretKey"]) => {
   return null;
 };
 
+const isLoginWebhookLoopbackHost = (hostname: string) =>
+  LOGIN_ALERT_LOOPBACK_HOSTNAMES.has(hostname.toLowerCase());
+
+const isLoginWebhookPrivateHost = (hostname: string) => {
+  const host = hostname.toLowerCase().replace(/^\[|\]$/g, "");
+  if (host === "::1") return true;
+  const ipv4 = host.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
+  if (ipv4) {
+    const first = Number(ipv4[1]);
+    const second = Number(ipv4[2]);
+    if (first === 10) return true;
+    if (first === 127) return true;
+    if (first === 172 && second >= 16 && second <= 31) return true;
+    if (first === 192 && second === 168) return true;
+    if (first === 169 && second === 254) return true;
+    if (first === 0) return true;
+    if (first === 100 && second >= 64 && second <= 127) return true;
+    if (first >= 224) return true;
+    return false;
+  }
+  if (host.includes(":")) {
+    if (host.startsWith("fc") || host.startsWith("fd")) return true;
+    if (
+      host.startsWith("fe8") ||
+      host.startsWith("fe9") ||
+      host.startsWith("fea") ||
+      host.startsWith("feb")
+    ) {
+      return true;
+    }
+    if (host === "::" || host.startsWith("0:0:0:0:0:0:0:")) return true;
+    return false;
+  }
+  return false;
+};
+
+const normalizeLoginRecipients = (value: unknown, fallback: string[]) => {
+  const list = normalizeStringList(value, fallback, { lowerCase: true });
+  return list.filter((entry) => isLikelyEmail(entry)).slice(0, MAX_LOGIN_ALERT_RECIPIENTS);
+};
+
+const normalizeLoginWebhookUrl = (value: unknown, fallback: string | null) => {
+  if (value === undefined) return fallback;
+  if (value === null) return null;
+  if (typeof value !== "string") throw new Error("security_settings_invalid");
+  const trimmed = value.trim();
+  if (!trimmed) throw new Error("security_settings_invalid");
+
+  let url: URL;
+  try {
+    url = new URL(trimmed);
+  } catch {
+    throw new Error("security_settings_invalid");
+  }
+
+  const loopback = isLoginWebhookLoopbackHost(url.hostname);
+  if (url.protocol !== "https:" && !(url.protocol === "http:" && loopback)) {
+    throw new Error("security_settings_invalid");
+  }
+  if (!loopback && isLoginWebhookPrivateHost(url.hostname)) {
+    throw new Error("security_settings_invalid");
+  }
+  if (url.username || url.password) {
+    throw new Error("security_settings_invalid");
+  }
+  return url.toString();
+};
+
+const normalizeLoginWebhookSecret = (
+  value: unknown,
+  fallback: LoginAlertsSettings["webhookSecret"]
+): LoginAlertsSettings["webhookSecret"] => normalizeBotSecret(value, fallback);
+
+const normalizeLoginDeliveryError = (value: unknown, fallback: string | null) => {
+  if (value === undefined) return fallback;
+  if (value === null) return null;
+  if (typeof value !== "string") throw new Error("security_settings_invalid");
+  const trimmed = value.trim();
+  return trimmed ? trimmed.slice(0, MAX_LOGIN_ALERT_DELIVERY_ERROR_LENGTH) : null;
+};
+
+const hasLoginWebhookSecretConfigured = (secret: LoginAlertsSettings["webhookSecret"]) => {
+  if (typeof secret === "string") return Boolean(secret.trim());
+  if (isEncryptedSecret(secret)) return true;
+  return false;
+};
+
+export const resolveLoginWebhookSecret = (secret: LoginAlertsSettings["webhookSecret"]) => {
+  if (typeof secret === "string") return secret.trim() || null;
+  if (isEncryptedSecret(secret)) {
+    try {
+      return decryptSecret(secret);
+    } catch {
+      return null;
+    }
+  }
+  return null;
+};
+
 const mergeSecuritySettings = (
   base: SecuritySettings,
   update: SecuritySettingsUpdate
@@ -442,7 +556,15 @@ const mergeSecuritySettings = (
     assertAllowedKeys(update.session, ["ttlDays", "maxPerUser", "singleSession"]);
   }
   if (update.loginAlerts) {
-    assertAllowedKeys(update.loginAlerts, ["enabled", "notifyOnNewDevice", "notifyOnNewLocation"]);
+    assertAllowedKeys(update.loginAlerts, [
+      "enabled",
+      "notifyOnNewDevice",
+      "notifyOnNewLocation",
+      "recipients",
+      "webhookUrl",
+      "webhookSecret",
+      "deliveryError",
+    ]);
   }
   if (update.botProtection) {
     assertAllowedKeys(update.botProtection, [
@@ -578,7 +700,27 @@ const mergeSecuritySettings = (
       update.loginAlerts?.notifyOnNewLocation,
       base.loginAlerts.notifyOnNewLocation
     ),
+    recipients: normalizeLoginRecipients(
+      update.loginAlerts?.recipients,
+      base.loginAlerts.recipients
+    ),
+    webhookUrl: normalizeLoginWebhookUrl(
+      update.loginAlerts?.webhookUrl,
+      base.loginAlerts.webhookUrl
+    ),
+    webhookSecret: normalizeLoginWebhookSecret(
+      update.loginAlerts?.webhookSecret,
+      base.loginAlerts.webhookSecret
+    ),
+    deliveryError: normalizeLoginDeliveryError(
+      update.loginAlerts?.deliveryError,
+      base.loginAlerts.deliveryError
+    ),
   };
+
+  if (loginAlerts.webhookUrl && !hasLoginWebhookSecretConfigured(loginAlerts.webhookSecret)) {
+    throw new Error("security_settings_invalid");
+  }
 
   const botProtection = {
     enabled: normalizeBoolean(update.botProtection?.enabled, base.botProtection.enabled),
@@ -631,13 +773,24 @@ const normalizeStoredSettings = (value: unknown): SecuritySettings => {
 };
 
 const toStoredSettings = (settings: SecuritySettings): SecuritySettings => {
-  const secret = settings.botProtection.secretKey;
-  const encryptedSecret = (() => {
-    if (typeof secret === "string") {
-      return encryptSecret(secret);
+  const botSecret = settings.botProtection.secretKey;
+  const encryptedBotSecret = (() => {
+    if (typeof botSecret === "string") {
+      return encryptSecret(botSecret);
     }
-    if (isEncryptedSecret(secret)) {
-      return secret;
+    if (isEncryptedSecret(botSecret)) {
+      return botSecret;
+    }
+    return null;
+  })();
+
+  const loginWebhookSecret = settings.loginAlerts.webhookSecret;
+  const encryptedLoginWebhookSecret = (() => {
+    if (typeof loginWebhookSecret === "string") {
+      return encryptSecret(loginWebhookSecret);
+    }
+    if (isEncryptedSecret(loginWebhookSecret)) {
+      return loginWebhookSecret;
     }
     return null;
   })();
@@ -646,7 +799,11 @@ const toStoredSettings = (settings: SecuritySettings): SecuritySettings => {
     ...settings,
     botProtection: {
       ...settings.botProtection,
-      secretKey: encryptedSecret,
+      secretKey: encryptedBotSecret,
+    },
+    loginAlerts: {
+      ...settings.loginAlerts,
+      webhookSecret: encryptedLoginWebhookSecret,
     },
   };
 };
@@ -656,6 +813,12 @@ const toPublicSettings = (settings: SecuritySettings): SecuritySettingsPublic =>
   botProtection: {
     ...settings.botProtection,
     secretKey: { configured: hasBotSecretConfigured(settings.botProtection.secretKey) },
+  },
+  loginAlerts: {
+    ...settings.loginAlerts,
+    webhookSecret: {
+      configured: hasLoginWebhookSecretConfigured(settings.loginAlerts.webhookSecret),
+    },
   },
   passwordPepperConfigured: isPasswordPepperConfigured(),
 });

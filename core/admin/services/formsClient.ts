@@ -74,6 +74,15 @@ export type FormSubmission = {
   userAgent: string | null;
 };
 
+export type FormSubmissionsExportFormat = "csv" | "json";
+
+export type FormSubmissionsExport = {
+  fileName: string;
+  contentType: "text/csv" | "application/json";
+  content: string;
+  totalRows: number;
+};
+
 export type FormCreateInput = {
   name: string;
   slug?: string | null;
@@ -398,6 +407,16 @@ export async function updateFormFields(formId: string, fields: FormFieldInput[])
 
 export async function listFormSubmissions(formId: string) {
   return apiRequest<FormSubmission[]>(`/forms/${formId}/submissions`, {
+    method: "GET",
+  });
+}
+
+export async function exportFormSubmissions(
+  formId: string,
+  format: FormSubmissionsExportFormat = "csv"
+) {
+  const params = new URLSearchParams({ format });
+  return apiRequest<FormSubmissionsExport>(`/forms/${formId}/submissions/export?${params}`, {
     method: "GET",
   });
 }

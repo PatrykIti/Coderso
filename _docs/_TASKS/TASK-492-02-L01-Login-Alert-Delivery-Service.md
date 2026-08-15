@@ -7,8 +7,9 @@
 **Category:** Settings / Security
 **Estimated Effort:** Small
 **Dependencies:** TASK-492-01-L01
-**Status:** ⏳ To Do
-**Started:** `<YYYY-MM-DD>`
+**Status:** ✅ Done
+**Completed:** 2026-08-14
+**Started:** 2026-07-05
 **Completed:** `<YYYY-MM-DD>`
 
 ## Overview
@@ -59,7 +60,8 @@ existing webhook HMAC pattern. It records the last sanitized failure into
   body as `HMAC_SHA256(secret, "<timestamp>.<payload>")` via
   `createWebhookSignature` and send `X-Coderso-Signature` / `X-Coderso-Timestamp`
   (+ `X-Nextless-*` mirrors) and `X-Coderso-Event: auth.login.alert`. Enforce a
-  request timeout via `AbortController` (mirror `deliveryService.ts`, ~8s) and a
+  request timeout via `AbortController` (mirror `deliveryService.ts`, ~8s; bound on
+  the DETACHED task only — never awaited by the login route, audit M3) and a
   small attempt budget; no unbounded retries inside the login path.
 - **Secret/PII handling:**
   - Resolve `webhookSecret` only here via `resolveLoginWebhookSecret`

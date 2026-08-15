@@ -1,4 +1,10 @@
 import { expect, test } from "bun:test";
+import { sql } from "drizzle-orm";
+import { eq } from "drizzle-orm";
+
+import { db } from "../../core/db/client";
+import { settings } from "../../core/db/schema";
+import { redactAuditText } from "../../core/services/audit/auditRedaction";
 
 import {
   evaluateSubmissionAccess,
@@ -16,7 +22,12 @@ import {
   assertBookingSubmissionNonce,
   createBookingSubmissionNonce,
 } from "../../core/services/booking/bookingSubmissionNonce";
-import { SECURITY_SETTINGS_DEFAULTS } from "../../core/services/settings/securitySettings";
+import {
+  getSecuritySettingsPublic,
+  resetSecuritySettingsCache,
+  SECURITY_SETTINGS_DEFAULTS,
+  setSecuritySettings,
+} from "../../core/services/settings/securitySettings";
 import { resolveRateLimitBucket } from "../../core/server/httpServer";
 
 const NONCE_SECRET = "coderso_release_gate_nonce_secret_32";
@@ -252,4 +263,75 @@ test("security gate: default rate-limit and bot-protection baselines are hardene
   expect(bot.provider).toBe("recaptcha_v3");
   expect(bot.thresholds.publicWrite).toBeGreaterThan(0);
   expect(bot.thresholds.publicWrite).toBeLessThanOrEqual(1);
+});
+
+// --- TASK-492 login alert secret/PII leak guard -----------------------------
+// The public projection round-trip is db-backed (setSecuritySettings /
+// getSecuritySettingsPublic), so self-gate it with the repo testIfDb pattern
+// mirroring tests/unit/security/securitySettings.test.ts. The canonical
+// encrypted-at-rest round-trip is owned by TASK-492-01-L01 in that same file;
+// this gate keeps a focused cleartext leak guard instead of duplicating it.
+
+const hasDb = Boolean(process.env.DATABASE_URL) && (await canConnect());
+const testIfDb = hasDb ? test : test.skip;
+
+async function canConnect() {
+  try {
+    await db.execute(sql`select 1`);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+const SETTINGS_KEY = "security.settings";
+
+const cleanupSecuritySettingsRow = async () => {
+  if (!hasDb) return;
+  await db.delete(settings).where(eq(settings.key, SETTINGS_KEY));
+  resetSecuritySettingsCache();
+};
+
+testIfDb("login alert webhookSecret is {configured} only in the public projection", async () => {
+  try {
+    await setSecuritySettings({
+      loginAlerts: {
+        webhookUrl: "https://example.com/hook",
+        webhookSecret: "s3cr3t-value",
+      },
+    });
+
+    const pub = await getSecuritySettingsPublic();
+    expect(pub.loginAlerts.webhookSecret).toEqual({ configured: true });
+  } finally {
+    await cleanupSecuritySettingsRow();
+  }
+});
+
+testIfDb(
+  "login alert webhookSecret cleartext is absent from the public projection JSON",
+  async () => {
+    try {
+      await setSecuritySettings({
+        loginAlerts: {
+          webhookUrl: "https://example.com/hook",
+          webhookSecret: "s3cr3t-value",
+        },
+      });
+
+      const pub = await getSecuritySettingsPublic();
+      expect(JSON.stringify(pub)).not.toContain("s3cr3t-value");
+    } finally {
+      await cleanupSecuritySettingsRow();
+    }
+  }
+);
+
+test("login alert deliveryError defaults null and stays sanitized of secret-shaped substrings", () => {
+  expect(SECURITY_SETTINGS_DEFAULTS.loginAlerts.deliveryError).toBeNull();
+
+  // Mirrors the delivery service's sanitization path (redactAuditText + clamp):
+  // a secret-shaped token inside a delivery failure must never survive redaction.
+  const sanitized = redactAuditText("webhook http 502 body: token=whsec_abc123 failed");
+  expect(sanitized).not.toContain("whsec_abc123");
 });

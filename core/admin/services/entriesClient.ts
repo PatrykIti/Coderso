@@ -68,6 +68,23 @@ export type EntrySeo = {
   robots?: string | null;
 };
 
+// Author-joined, PII-redacted revision shape; the server resolves the email
+// through `resolveEmailValue` so raw/encrypted email never reaches this cache.
+export type EntryRevisionAuthor = {
+  id: string;
+  name: string | null;
+  email: string;
+};
+
+export type EntryRevision = {
+  id: string;
+  entryId: string;
+  version: number;
+  data: Record<string, unknown>;
+  createdAt: string;
+  createdBy: EntryRevisionAuthor | null;
+};
+
 export type EntryPayload = {
   title: string;
   slug: string;
@@ -125,6 +142,7 @@ const pendingEntryDetails = new Map<string, Map<string, PendingVersioned<EntryDe
 const settledEntryItemAuthority = new Map<string, Map<string, EntryItemAuthority>>();
 const committedEntryListVersions = new Map<string, number>();
 const knownEntryDetailIds = new Map<string, Set<string>>();
+const cachedEntryRevisions = new Map<string, EntryRevision[]>();
 let entryPublicationVersion = 0;
 
 const isEntryList = (value: unknown): value is EntrySummary[] => Array.isArray(value);
@@ -166,6 +184,17 @@ const readEntryDetailCache = (typeSlug: string, id: string) =>
 
 const writeEntryDetailCache = (typeSlug: string, entry: EntryDetail) => {
   writeLocalCache(cacheKeys.entryDetail(typeSlug, entry.id), entry);
+};
+
+const isEntryRevisionList = (value: unknown): value is EntryRevision[] => Array.isArray(value);
+
+const readEntryRevisionsCache = (id: string) =>
+  readLocalCache(cacheKeys.entryRevisions(id), cacheTtlMs.detail, isEntryRevisionList);
+
+const writeEntryRevisionsCache = (id: string, revisions: EntryRevision[]) => {
+  const sorted = [...revisions].sort((left, right) => right.version - left.version);
+  cachedEntryRevisions.set(id, sorted);
+  writeLocalCache(cacheKeys.entryRevisions(id), sorted);
 };
 
 const primeEntriesCacheInternal = (typeSlug: string, items: EntrySummary[]) => {
@@ -473,6 +502,17 @@ export const getCachedEntryDetail = (typeSlug: string, id: string) => {
   return null;
 };
 
+export const getCachedEntryRevisions = (id: string) => {
+  const existing = cachedEntryRevisions.get(id);
+  if (existing) return existing;
+  const stored = readEntryRevisionsCache(id);
+  if (stored) {
+    cachedEntryRevisions.set(id, stored);
+    return stored;
+  }
+  return null;
+};
+
 export const clearEntriesCache = (typeSlug: string) => {
   const detailIds = new Set<string>([
     ...(knownEntryDetailIds.get(typeSlug) ?? []),
@@ -491,7 +531,11 @@ export const clearEntriesCache = (typeSlug: string) => {
   committedEntryListVersions.delete(typeSlug);
   knownEntryDetailIds.delete(typeSlug);
   clearLocalCache(cacheKeys.entriesList(typeSlug));
-  for (const id of detailIds) clearLocalCache(cacheKeys.entryDetail(typeSlug, id));
+  for (const id of detailIds) {
+    clearLocalCache(cacheKeys.entryDetail(typeSlug, id));
+    cachedEntryRevisions.delete(id);
+    clearLocalCache(cacheKeys.entryRevisions(id));
+  }
 };
 
 export const clearAllEntriesCache = () => {
@@ -765,6 +809,50 @@ export async function deleteEntry(typeSlug: string, id: string) {
       key: cacheKeys.entryDetail(typeSlug, id),
       action: "invalidate",
     });
+  }
+  return result;
+}
+
+export async function listEntryRevisions(typeSlug: string, id: string) {
+  return apiRequest<EntryRevision[]>(`/content/${typeSlug}/entries/${id}/revisions`, {
+    method: "GET",
+  });
+}
+
+export async function listEntryRevisionsCached(
+  typeSlug: string,
+  id: string,
+  options?: { force?: boolean }
+) {
+  if (!options?.force) {
+    const cached = getCachedEntryRevisions(id);
+    if (cached) return cached;
+  }
+  const revisions = await listEntryRevisions(typeSlug, id);
+  writeEntryRevisionsCache(id, revisions);
+  return revisions;
+}
+
+export async function restoreEntryRevision(typeSlug: string, id: string, revisionId: string) {
+  const result = await apiRequest<{
+    ok: boolean;
+    restored: boolean;
+    revision: EntryRevision;
+    entry: EntryDetail;
+  }>(
+    `/content/${typeSlug}/entries/${id}/revisions/${revisionId}/restore`,
+    { method: "POST" },
+    { withCsrf: true }
+  );
+  if (result?.entry) {
+    // The restored snapshot IS the persisted state: patch the entry detail and
+    // list through the versioned-authority path, then invalidate the revisions
+    // list (restore may have written a new pre-restore revision) and broadcast.
+    publishSuccessfulEntryMutation(typeSlug, result.entry);
+    broadcastCacheEvent({ key: cacheKeys.entryRevisions(id), action: "invalidate" });
+    broadcastCacheEvent({ key: cacheKeys.entriesList(typeSlug), action: "update" });
+    broadcastAllEntriesListEvent("update");
+    broadcastCacheEvent({ key: cacheKeys.entryDetail(typeSlug, id), action: "update" });
   }
   return result;
 }

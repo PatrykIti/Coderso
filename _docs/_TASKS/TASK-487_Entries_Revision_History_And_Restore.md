@@ -5,7 +5,9 @@
 **Category:** Engine / Entries
 **Estimated Effort:** Medium
 **Dependencies:** None
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-08-14
+**Changelog:** 1277 (pinned by the orchestrator; closure only)
 **Started:** `<YYYY-MM-DD>`
 **Completed:** `<YYYY-MM-DD>`
 
@@ -15,10 +17,10 @@
 
 Content entries already accumulate revisions on every publish, but those
 snapshots can never be viewed or restored. `publishEntry`
-(`core/services/content/entryService.ts:816`) calls `createEntryRevisionTx`
-(`:828`), which writes a row into the `content_revisions` table
-(`core/db/schema.ts:825`). A read helper `listEntryRevisions` exists
-(`core/services/content/entryService.ts:962`) but is **unused by any route**:
+(`core/services/content/entryService.ts:492`) calls `createEntryRevisionTx`
+(`:768`), which writes a row into the `content_revisions` table
+(`core/db/tables/content.ts:79`). A read helper `listEntryRevisions` exists
+(`core/services/content/entryReadService.ts:196`) but is **unused by any route**:
 there is no `/revisions` or `/restore` endpoint in
 `core/server/routes/contentEntryRoutes.ts`, no client method in
 `core/admin/services/entriesClient.ts`, no restore service, and no UI.
@@ -129,3 +131,19 @@ the content engine, so this is a contract completion, not a new product surface.
 - Revision `createdBy` is a user id; the read shape must join `users` and run
   email through `resolveEmailValue` (`core/services/security/piiEmail.ts:118`)
   so raw/encrypted email never reaches the client cache.
+
+
+## Audit reconciliation (2026-08-14, pre-implementation)
+
+- **M4 — restore cache invalidation:** restore must NOT use the plain
+  `updateEntry` path alone (it skips site-cache effects). Restore routes through
+  a cache-aware path: post-commit `invalidateContentEntryCache`/`clearSiteCache`
+  effects exactly like `publishEntry` (`entryService.ts:512-524`) and
+  `unpublishEntry` (`:552`); regression test asserts a restored published entry
+  invalidates the site cache.
+- **L3 — RBAC decision:** restore stays `content:write` (consistent with the
+  PATCH entry route and posts restore; publish/unpublish keep `content:publish`).
+  Recorded decision, no change.
+- **L4 — shared writer order:** `entryService.ts` is also edited by
+  TASK-491-02-L01 (integration event on publishEntry). Stream order is STRICT:
+  TASK-487 lands BEFORE TASK-491; 491 reads the landed bytes.

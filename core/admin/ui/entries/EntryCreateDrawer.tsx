@@ -18,6 +18,7 @@ import { isApiClientError } from "@/services/apiClient";
 import type { ContentSchema } from "@/services/contentTypesClient";
 import {
   createEntry,
+  updateEntryMetadata,
   type EntryData,
   type EntryDataValue,
   type EntryDetail,
@@ -80,11 +81,19 @@ export function EntryCreateDrawer({
   const [slugTouched, setSlugTouched] = useState(false);
   const [openAfterCreate, setOpenAfterCreate] = useState(true);
   const [editedValuesByType, setEditedValuesByType] = useState<Record<string, EntryData>>({});
+  const [tagsInput, setTagsInput] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
   const resolvedSlug = slugTouched ? slug : title ? slugify(title) : "";
   const resolvedTypeSlug = typeSlug || defaultTypeSlug || "";
+
+  /** Free-text tags are comma-split, trimmed and blank-dropped; the server re-validates. */
+  const parseTags = (raw: string) =>
+    raw
+      .split(",")
+      .map((tag) => tag.trim())
+      .filter(Boolean);
 
   const resetForm = () => {
     setTypeSlug("");
@@ -93,6 +102,7 @@ export function EntryCreateDrawer({
     setSlugTouched(false);
     setOpenAfterCreate(true);
     setEditedValuesByType({});
+    setTagsInput("");
     setError(null);
     setIsSaving(false);
   };
@@ -201,7 +211,15 @@ export function EntryCreateDrawer({
           schemaFieldNames,
         }),
       });
-      onCreated?.(created, resolvedTypeSlug, openAfterCreate);
+      let entry = created;
+      const tags = parseTags(tagsInput);
+      if (created && tags.length > 0) {
+        // The metadata PATCH keeps the same cache family (detail/list/broadcasts) as create,
+        // so tagging right after insert stays consistent with every other metadata save.
+        const withTags = await updateEntryMetadata(resolvedTypeSlug, created.id, { tags });
+        if (withTags) entry = withTags;
+      }
+      onCreated?.(entry, resolvedTypeSlug, openAfterCreate);
       handleOpenChange(false);
     } catch (err) {
       if (isApiClientError(err)) {
@@ -310,7 +328,12 @@ export function EntryCreateDrawer({
               <label className="text-xs font-semibold uppercase text-muted-foreground">Tags</label>
               <div className="relative">
                 <Tag className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <Input placeholder="news, release, update" className="pl-9" />
+                <Input
+                  placeholder="news, release, update"
+                  className="pl-9"
+                  value={tagsInput}
+                  onChange={(event) => setTagsInput(event.target.value)}
+                />
               </div>
             </div>
           </div>

@@ -6,7 +6,8 @@
 **Category:** Engine / Entries
 **Estimated Effort:** Medium
 **Dependencies:** None
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-08-14
 **Started:** `<YYYY-MM-DD>`
 **Completed:** `<YYYY-MM-DD>`
 
@@ -19,9 +20,13 @@
   unused `listEntryRevisions` read helper into a typed, author-joined,
   PII-redacted shape suitable for the route response and admin client.
 - **Owning module(s) to create-or-extend:**
-  `core/services/content/entryService.ts` (extend — owns entry domain logic,
-  schemas, `normalize*`, and the existing revision helpers `listEntryRevisions`
-  `:962`, `createEntryRevisionTx` `:974`, `publishEntry` `:816`).
+  `core/services/content/entryReadService.ts` (upgrade the EXISTING
+  `listEntryRevisions` at `:196` — it already lives HERE, NOT in
+  entryService.ts; audit H1 fix) + `core/services/content/entryService.ts`
+  (re-export `listEntryRevisions` — it already imports `:31` and re-exports
+  `:53` the read helper, so the leaf upgrades the read module and re-exports,
+  NEVER redeclares the symbol; `createEntryRevisionTx` `:768`, `publishEntry`
+  `:492`).
 - **Source-of-truth docs:** `_docs/CONTENT_TYPES_SPEC.md` (revisions for
   entries, `:9`), `_docs/CMS_API.md` (revision contract reference, posts at
   `:791`), `_docs/SECURITY_SPEC.md` (PII redaction seams).
@@ -61,7 +66,8 @@
 ## Implementation Pseudocode
 
 ```ts
-// core/services/content/entryService.ts
+// core/services/content/entryReadService.ts  (upgrade; entryService.ts
+// re-exports the upgraded symbol — see H1 fix above)
 
 // 1) Typed, author-joined, PII-safe read shape (replaces the raw-row helper).
 //    Existing callers only read `.length`, so the array contract is preserved.

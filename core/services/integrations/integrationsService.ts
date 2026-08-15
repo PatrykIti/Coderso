@@ -14,6 +14,9 @@ import {
   type IntegrationDefinition,
   type IntegrationField,
 } from "./registry";
+import { evaluateIntegrationHealth } from "./healthEvaluator";
+
+export { evaluateIntegrationHealth } from "./healthEvaluator";
 
 export type IntegrationStatus = "connected" | "disconnected";
 export type IntegrationHealth = "unknown" | "healthy" | "issue";
@@ -85,8 +88,7 @@ const normalizeStoredConfig = (value: unknown): StoredConfig => {
   return value as StoredConfig;
 };
 
-const isConfiguredValue = (value: unknown) =>
-  typeof value === "string" || isEncryptedSecret(value);
+const isConfiguredValue = (value: unknown) => typeof value === "string" || isEncryptedSecret(value);
 
 const toFieldSummary = (field: IntegrationField, config: StoredConfig): IntegrationFieldSummary => {
   const raw = config[field.key];
@@ -126,10 +128,15 @@ const resolveStatus = (definition: IntegrationDefinition, config: StoredConfig) 
   return (missingRequired ? "disconnected" : "connected") as IntegrationStatus;
 };
 
-const toSummary = (definition: IntegrationDefinition, row?: IntegrationRow | null): IntegrationSummary => {
+const toSummary = (
+  definition: IntegrationDefinition,
+  row?: IntegrationRow | null
+): IntegrationSummary => {
   const config = normalizeStoredConfig(row?.config);
   const status = resolveStatus(definition, config);
-  const healthStatus = (row?.healthStatus ?? (status === "connected" ? "healthy" : "unknown")) as IntegrationHealth;
+  // Mirror the stored health exactly; never auto-promote a connected row to
+  // "healthy" (TASK-491-04-L01). Health is real state from deliveries/checks.
+  const healthStatus = (row?.healthStatus ?? "unknown") as IntegrationHealth;
 
   return {
     id: definition.id,
@@ -226,11 +233,20 @@ export async function updateIntegration(
   }
 
   const status = resolveStatus(definition, nextConfig);
+  const configChanged = Boolean(input.config && Object.keys(input.config).length > 0);
+  // A config change invalidates any previously recorded health: reset to
+  // "unknown" and clear the last check so a stale "healthy" can never display
+  // for an invalid new config (TASK-491-04-L01 M1 fix).
+  const healthStatus = configChanged
+    ? "unknown"
+    : ((existing?.healthStatus ?? "unknown") as IntegrationHealth);
   const payload = {
     id,
     config: nextConfig,
     status,
-    healthStatus: status === "connected" ? "healthy" : "unknown",
+    healthStatus,
+    lastCheckedAt: configChanged ? null : (existing?.lastCheckedAt ?? null),
+    lastError: configChanged ? null : (existing?.lastError ?? null),
     updatedAt: new Date(),
   } satisfies Partial<IntegrationRow> & { id: string; config: StoredConfig };
 
@@ -287,9 +303,7 @@ export async function requestIntegration(input: IntegrationRequestInput) {
   return row as IntegrationRequestRow;
 }
 
-export function decryptIntegrationConfig(
-  config: StoredConfig
-): IntegrationRuntimeConfig {
+export function decryptIntegrationConfig(config: StoredConfig): IntegrationRuntimeConfig {
   const resolved: IntegrationRuntimeConfig = {};
   for (const [key, value] of Object.entries(config)) {
     if (typeof value === "string") {
@@ -313,4 +327,53 @@ export async function getIntegrationRuntimeConfig(
   if (!row) return {};
 
   return decryptIntegrationConfig(normalizeStoredConfig(row.config));
+}
+
+/**
+ * Persist a per-target health outcome (TASK-491-02-L02). Called by the Slack /
+ * Zapier delivery adapters after a real outbound delivery (`ok` boolean) and by
+ * the manual health-check flow (TASK-491-04-L01, `ok: null` for "unknown").
+ * `lastError` must be a machine-readable code only — never a URL, secret, or
+ * response body.
+ */
+export async function recordIntegrationHealth(
+  id: string,
+  input: { ok: boolean | null; lastError: string | null }
+): Promise<void> {
+  const healthStatus = input.ok === null ? "unknown" : input.ok ? "healthy" : "issue";
+  await db
+    .update(integrations)
+    .set({
+      healthStatus,
+      lastCheckedAt: new Date(),
+      lastError: input.ok ? null : input.lastError,
+      updatedAt: new Date(),
+    })
+    .where(eq(integrations.id, id));
+}
+
+/**
+ * Deterministic manual health check (TASK-491-04-L01): resolve + decrypt the
+ * runtime config, evaluate it against the definition's validators, persist the
+ * outcome, and return the refreshed (masked) summary. No live network probes:
+ * a Slack/Zapier webhook has no safe no-op ping, so health reflects configured
+ * validity plus the last real delivery outcome.
+ */
+export async function runIntegrationHealthCheck(id: string): Promise<IntegrationSummary> {
+  const definition = getIntegrationDefinition(id);
+  if (!definition) {
+    throw new Error("integration_not_found");
+  }
+
+  const [row] = await db.select().from(integrations).where(eq(integrations.id, id));
+  const config = decryptIntegrationConfig(normalizeStoredConfig(row?.config));
+  const result = evaluateIntegrationHealth(definition, config, row?.lastError ?? null);
+  const ok = result.status === "healthy" ? true : result.status === "issue" ? false : null;
+  await recordIntegrationHealth(id, { ok, lastError: result.lastError });
+
+  const updated = await getIntegration(id);
+  if (!updated) {
+    throw new Error("integration_update_failed");
+  }
+  return updated;
 }

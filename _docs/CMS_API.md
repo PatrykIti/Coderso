@@ -412,7 +412,32 @@ Permissions: `settings:read`, `settings:write`
 - `GET /settings/integrations`
 - `GET /settings/integrations/:id`
 - `PATCH /settings/integrations/:id`
+- `POST /settings/integrations/:id/check`
 - `POST /settings/integrations/requests`
+
+`POST /settings/integrations/:id/check` requires `settings:write` (it mutates
+health state). It deterministically evaluates the stored config for the
+integration, persists the outcome (`health.status`, `lastCheckedAt`,
+`lastError`), and returns the refreshed summary in the same shape as the other
+item endpoints. Unknown ids map to `integration_not_found` (404); a missing
+secret master key maps to `secret_master_key_missing` (400) and an invalid one
+maps to `secret_master_key_invalid` (400). No body is accepted.
+
+Per-provider runtime behavior:
+
+- `google-analytics` — health is `healthy` when `measurementId` matches the GA4
+  `G-...` format (`measurement_id_invalid` otherwise).
+- `sentry` — health is `healthy` when `dsn` parses as a Sentry DSN URL
+  (`dsn_invalid` otherwise).
+- `slack` / `zapier` — health reflects the last real outbound delivery recorded
+  by the event dispatch adapters; a recorded failure code is preserved as
+  `issue`, otherwise a configured webhook evaluates as `healthy`. There is no
+  live network probe (a webhook has no safe no-op ping).
+- Other providers — baseline `healthy` when all required fields are configured.
+
+Health is never auto-promoted: a config change resets the stored health to
+`unknown` and clears `lastCheckedAt`/`lastError` until the next delivery or
+manual check.
 
 List response (summary):
 
@@ -1790,6 +1815,14 @@ Runtime behavior (v1):
 - v1 **nie dodaje** publicznych endpointow `/api/commerce/*`.
 - checkout/cart provider contract jest warstwa service + plugin hooks (`commerce:checkout:adapters`) i nie jest public API route.
 
+Admin UI (internal, RBAC `commerce:read` to view / `commerce:write` to mutate):
+- Product editor edits product **variants** inline (title, SKU, pricing, stock,
+  attributes, single default). Variants persist through the existing
+  `POST/PATCH /commerce/products[/:id]` payload `variants[]` — no new endpoint.
+- Collections have a full admin CRUD surface (list/create/edit/delete) at
+  `/admin/advanced/commerce/collections`, wiring the existing
+  `POST/PATCH/DELETE /commerce/collections[/:id]` endpoints — no new endpoint.
+
 ---
 
 ## Retained Renderer Compatibility APIs
@@ -2742,6 +2775,19 @@ Przyklad payload:
 - `POST /content/:type/entries/:id/preview`
 - `POST /content/:type/entries/:id/publish`
 - `POST /content/:type/entries/:id/unpublish`
+- `GET /content/:type/entries/:id/revisions`
+- `POST /content/:type/entries/:id/revisions/:revisionId/restore`
+
+Entry revision history mirrors the posts contract: `GET .../revisions`
+(`content:read`) returns the entry's snapshots ordered by `version` descending
+with the creating user as a PII-redacted `createdBy` (`name` + `email`; raw
+encrypted emails are never exposed). `POST .../revisions/:revisionId/restore`
+(`content:write`, CSRF, admin bucket) re-validates the snapshot against the
+current content type schema, snapshots the current data as a new revision when
+an actor is supplied, writes the restored data through the normal update path,
+and applies the same post-commit cache invalidation as any metadata/status
+mutation. Schema-incompatible snapshots fail with `entry_validation_failed`
+(400); a missing revision fails with `entry_revision_not_found` (404).
 
 Create content type payload (summary):
 
@@ -2797,8 +2843,9 @@ client reusing these endpoints:
   schema validation fails.
 - `entry_slug_conflict` -> HTTP 409 with `details.field = "slug"` when the UI
   can bind the conflict to the slug input.
-- `content_type_not_found`, `entry_not_found`, `media_asset_missing`,
-  `relation_target_not_found`, and `relation_entry_missing` -> HTTP 404.
+- `content_type_not_found`, `entry_not_found`, `entry_revision_not_found`,
+  `media_asset_missing`, `relation_target_not_found`, and
+  `relation_entry_missing` -> HTTP 404.
 - `media_value_invalid`, `media_type_not_allowed`, `relation_value_invalid`,
   and `entry_duplicate_failed` -> HTTP 400. Media/relation field errors may
   also include `details.field` so admin clients can render inline field
@@ -4826,10 +4873,19 @@ Permissions: `settings:read`, `settings:write`
   "loginAlerts": {
     "enabled": true,
     "notifyOnNewDevice": true,
-    "notifyOnNewLocation": true
+    "notifyOnNewLocation": true,
+    "recipients": ["security@example.com"],
+    "webhookUrl": "https://example.com/login-hook",
+    "webhookSecret": "set-once-write-only"
   }
 }
 ```
+
+- `webhookSecret` jest write-only: `PATCH` moze go ustawic/pominac (pusty =
+  bez zmian), a `GET /settings/security` zwraca wylacznie
+  `{ "configured": true }` — nigdy surowej wartosci.
+- `deliveryError` jest read-only (server-written, sanitized) i NIE jest
+  przyjmowany w payloadzie `PATCH` (reject-unknown).
 
 Uwaga: zmiany obowiazuja natychmiast, bez restartu serwera.
 
@@ -4847,6 +4903,8 @@ Permissions: `forms:read`, `forms:write`
 - `GET /forms/:id/fields`
 - `PUT /forms/:id/fields`
 - `GET /forms/:id/submissions`
+- `GET /forms/:id/submissions/export?format=csv|json` (internal admin read,
+  TASK-490; CSV/JSON download envelope described below)
 - `POST /forms/:id/submissions` (form-scoped public/internal write; mounted both
   through the admin API router and the public site request handler)
 - `POST /forms/:id/uploads` (form-scoped public/internal file-field upload;
@@ -5113,6 +5171,30 @@ The upload creates its media row before the final submission. If a visitor
 uploads and abandons the form, the row/object can remain unreferenced. Automatic
 TTL/pending-upload cleanup remains the explicit TASK-516-07 residual and is not
 claimed by TASK-536.
+
+`GET /forms/:id/submissions/export`
+
+Internal admin read (`forms:read`, `admin_read` bucket, no CSRF). `format` is
+required and must be `csv` or `json`; unknown query params and other formats are
+rejected with `validation_error`. Like the analytics export, the file payload is
+returned in a JSON envelope so the admin UI builds the browser download:
+
+```json
+{
+  "fileName": "coderso-form-contact-submissions-2026-06-28.csv",
+  "contentType": "text/csv",
+  "content": "Submission ID,Received At,Status,Full name,Email\n...",
+  "totalRows": 12
+}
+```
+
+CSV columns are `Submission ID, Received At, Status` followed by one column per
+form field (header = field **label**, in `orderIndex` order), then any extra
+payload keys not in the current schema. `format=json` returns
+`contentType: "application/json"` whose `content` is a JSON array of
+`{ id, createdAt, status, data }`. `ip` and `userAgent` are intentionally
+excluded from both formats (the export is a subset of the submissions read
+surface and never widens PII exposure).
 
 `PUT /forms/:id/actions`
 
