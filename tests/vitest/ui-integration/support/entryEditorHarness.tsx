@@ -107,6 +107,7 @@ export const scrollAreaModule = {
 
 export const sheetModule = {
   Sheet: ({ children }: ChildrenProps) => <div>{children}</div>,
+  SheetClose: ({ children }: ChildrenProps) => <div>{children}</div>,
   SheetContent: ({ children }: ChildrenProps) => <div>{children}</div>,
   SheetDescription: ({ children }: ChildrenProps) => <div>{children}</div>,
   SheetTitle: ({ children }: ChildrenProps) => <div>{children}</div>,
