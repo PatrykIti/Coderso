@@ -72,3 +72,4 @@ _docs/_workflows/
 !/_docs/_workflows/_smoke/evidence/
 !/_docs/_workflows/_smoke/evidence/**
 opencode.json
+tests/bun-lane-report.json
