@@ -308,6 +308,7 @@ bunMock?.module("../../../core/services/widgets/templateSectionRuntime", () => (
 }));
 
 bunMock?.module("../../../core/services/seo/seoService", () => ({
+  getSeoDocumentByTarget: async () => null,
   resolvePublicSeoMetadata: async (input: {
     fallback?: {
       title?: string | null;

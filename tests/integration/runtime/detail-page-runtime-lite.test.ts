@@ -22,6 +22,8 @@ const entry: {
   title: string;
   slug: string;
   status: "published";
+  visibility: "public";
+  hasPassword: false;
   tags: string[];
   data: Record<string, unknown>;
   publishedAt: Date;
@@ -38,6 +40,8 @@ const entry: {
   title: "Runtime product",
   slug: "runtime-product",
   status: "published",
+  visibility: "public",
+  hasPassword: false,
   tags: [],
   data: {
     headline: "Bound headline",
@@ -204,6 +208,8 @@ bunMock?.module("../../../core/services/content/entryService", () => ({
           title: entry.title,
           slug: entry.slug,
           status: entry.status,
+          visibility: entry.visibility,
+          hasPassword: entry.hasPassword,
           tags: [...entry.tags],
           data: { ...entry.data },
           publishedAt: entry.publishedAt,
@@ -306,6 +312,7 @@ bunMock?.module("../../../core/services/content/entryTeaserResolver", () => ({
 }));
 
 bunMock?.module("../../../core/services/seo/seoService", () => ({
+  getSeoDocumentByTarget: async () => null,
   resolvePublicSeoMetadata: async (input: {
     fallback?: {
       title?: string | null;
