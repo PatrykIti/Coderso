@@ -32,7 +32,7 @@ import { provisionWorkers } from "../../../scripts/bun-lane-provision";
 const DATABASE_DIRECT_URL = process.env.DATABASE_DIRECT_URL;
 const WORKER_SCHEMAS = ["bun_worker_0", "bun_worker_1"];
 const CONTROL_SCHEMA = "bun_control_schema";
-const MIGRATION_COUNT = 71;
+const MIGRATION_COUNT = 73;
 
 let sql: postgres.Sql | undefined;
 
@@ -105,9 +105,7 @@ test.skipIf(!DATABASE_DIRECT_URL)(
       `select count(*)::int as n from "${WORKER_SCHEMAS[0]}"."_bun_migrations" where "tag" = 'provision_marker'`
     );
     expect(markerRows[0].n).toBe(0);
-    const pages = await sql!.unsafe(
-      `select to_regclass('${WORKER_SCHEMAS[0]}.pages') as p`
-    );
+    const pages = await sql!.unsafe(`select to_regclass('${WORKER_SCHEMAS[0]}.pages') as p`);
     expect(pages[0].p).toBe(`${WORKER_SCHEMAS[0]}.pages`);
   },
   240000

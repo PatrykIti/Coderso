@@ -190,7 +190,9 @@ managed-shared~core/services/admin/usersService.ts~deleteUser|delete|users
 adjacent-reviewed~core/services/adminThemes/adminThemeProfileService.ts~activateAdminThemeProfile|update|adminThemeProfiles;activateAdminThemeProfile|update|adminThemeProfiles;createAdminThemeProfile|insert|adminThemeProfiles;createAdminThemeProfile|insert|adminThemeProfiles;createAdminThemeProfile|update|adminThemeProfiles;updateAdminThemeProfile|update|adminThemeProfiles
 adjacent-reviewed~core/services/adminThemes/adminThemeTemplateService.ts~createAdminThemeTemplate|insert|adminThemeTemplates;deleteAdminThemeTemplate|delete|adminThemeTemplates;updateAdminThemeTemplate|update|adminThemeTemplates
 adjacent-reviewed~core/services/auth/userService.ts~getUserByEmail|update|users;updateLastLogin|update|users;updatePassword|update|users
-managed-shared~core/services/backups/backupService.ts~replaceSnapshotTables|delete|table;replaceSnapshotTables|insert|table
+managed-shared~core/services/backups/backupImport.ts~restoreArchiveStreamTx|delete|table;restoreArchiveStreamTx|insert|table
+managed-shared~core/services/backups/backupRestore.ts~replaceSnapshotTables|delete|table;replaceSnapshotTables|insert|table
+managed-shared~core/services/backups/backupUsersSection.ts~restoreUsersSectionTx|insert|users
 managed-shared~core/services/content/detailPageDocumentLifecycleMutation.ts~mutateDetailPageDocumentLifecycleAtomic|delete|detailPageDocuments;mutateDetailPageDocumentLifecycleAtomic|insert|detailPageDocuments;mutateDetailPageDocumentLifecycleAtomic|update|detailPageDocuments;writeRevisionsTx|delete|detailPageRevisions;writeRevisionsTx|insert|detailPageRevisions
 managed-shared~core/services/content/detailPageDocumentService.ts~createDetailPageRevisionTx|insert|detailPageRevisions;createOrReplaceDetailPageAutosaveRevisionTx|delete|detailPageRevisions;createOrReplaceDetailPageAutosaveRevisionTx|delete|detailPageRevisions;deleteDetailPageDocument|delete|detailPageDocuments;issueDetailPagePreview|insert|previewTokens;persistDetailPageDocument|insert|detailPageDocuments;persistDetailPageDocument|update|detailPageDocuments;publishDetailPageDocument|update|detailPageDocuments;unpublishDetailPageDocument|update|detailPageDocuments
 managed-shared~core/services/content/detailPageRevisionService.ts~discardDetailPageAutosaveRevision|delete|detailPageRevisions;restoreDetailPageRevision|update|detailPageDocuments
@@ -545,7 +547,8 @@ const expectedTxCallers: readonly string[] = [
   "createOrReplaceDetailPageAutosaveRevisionTx|core/services/content/detailPageDocumentService.ts|autosaveDetailPageDocument",
   "createOrReplaceAutosaveRevisionTx|core/services/pages/pageService.ts|autosavePage",
   "createOrReplaceAutosaveRevisionTx|core/services/pages/revisionService.ts|createOrReplaceAutosaveRevision",
-  "importConfigTx|core/services/backups/backupService.ts|restoreArtifactTx",
+  "importConfigTx|core/services/backups/backupImport.ts|restoreArchiveStreamTx",
+  "importConfigTx|core/services/backups/backupRestore.ts|restoreArtifactTx",
   "importConfigTx|core/services/tools/importExportService.ts|importConfig",
   "lockContentRouteSettingRootsTx|core/services/settings/fullSiteSettingsAtomicService.ts|mutateSettingsBatch",
   "lockContentRouteSettingRootsTx|core/services/settings/settingsService.ts|setSetting",
@@ -569,7 +572,7 @@ const expectedTxCallers: readonly string[] = [
   "replaceMenuItemsWithClient|core/services/menus/menuService.ts|deleteMenuItem",
   "replaceMenuItemsWithClient|core/services/menus/menuService.ts|replaceMenuItems",
   "replaceMenuItemsWithClient|core/services/menus/menuService.ts|replaceMenuItemsTx",
-  "replaceSnapshotTables|core/services/backups/backupService.ts|restoreArtifactTx",
+  "replaceSnapshotTables|core/services/backups/backupRestore.ts|restoreArtifactTx",
   "restoreArtifactTx|core/services/backups/backupService.ts|restoreBackup",
   "setFormActionsTx|core/services/forms/formActionsService.ts|setFormActions",
   "setFormActionsTx|core/services/forms/formAggregateService.ts|mutateFormAggregateAtomic",

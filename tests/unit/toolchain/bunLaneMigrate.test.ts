@@ -37,14 +37,14 @@ test("splitStatements trims whitespace and keeps single-chunk files intact", () 
 
 test("readJournal returns 72 entries with monotonic idx and unique tags", async () => {
   const journal = await readJournal();
-  expect(journal.entries.length).toBe(72); // live journal: 0071_seed_admin_role added 2026-08-14
+  expect(journal.entries.length).toBe(73); // live journal: 0072_backup_schedule_include added 2026-08-15
   const tags = new Set<string>();
   journal.entries.forEach((entry, index) => {
     expect(entry.idx).toBe(index);
     expect(entry.tag.length).toBeGreaterThan(0);
     tags.add(entry.tag);
   });
-  expect(tags.size).toBe(72);
+  expect(tags.size).toBe(73);
 });
 
 test("rewritePublicReferences retargets public-qualified REFERENCES to the worker schema", () => {

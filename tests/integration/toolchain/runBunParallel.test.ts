@@ -61,7 +61,7 @@ const SETTINGS_TEST = "tests/unit/settings/settingsService.test.ts";
 // currently 72 entries (migration 0071_seed_admin_role was added by an
 // unrelated task; the applier applies the full journal, so this count must
 // equal journal.entries.length).
-const MIGRATION_COUNT = 72;
+const MIGRATION_COUNT = 73;
 const WORKER_SCHEMAS = ["bun_worker_0", "bun_worker_1"];
 
 // Never dialed in fake-worker mode: `assertDirectUrl`/`inspectDatabaseUrl`

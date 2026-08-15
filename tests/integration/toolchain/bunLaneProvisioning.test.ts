@@ -54,7 +54,7 @@ const DATABASE_DIRECT_URL = process.env.DATABASE_DIRECT_URL;
 const SCHEMA = "bun_provision_test";
 const CONTROL = "bun_control_schema";
 const SCRATCH = "bun_provision_fail";
-const MIGRATION_COUNT = 72;
+const MIGRATION_COUNT = 73;
 
 let sql: postgres.Sql | undefined;
 

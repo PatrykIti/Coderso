@@ -32,7 +32,7 @@ const DATABASE_DIRECT_URL = process.env.DATABASE_DIRECT_URL;
 const SCHEMA = "seed_admin_role_test";
 const LEGACY_SCHEMA = "seed_admin_role_test_legacy";
 const MIGRATION_TAG = "0071_seed_admin_role";
-const TOTAL_MIGRATIONS = 72;
+const TOTAL_MIGRATIONS = 73;
 
 let sql: postgres.Sql | undefined;
 
