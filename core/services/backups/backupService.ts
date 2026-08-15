@@ -1,44 +1,25 @@
-import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, readFile, rm } from "node:fs/promises";
 import path from "node:path";
-import { and, desc, eq, getTableColumns, inArray, lt } from "drizzle-orm";
-import type { PgTable } from "drizzle-orm/pg-core";
+import { and, desc, eq, inArray, lt } from "drizzle-orm";
 
 import { db } from "../../db/client";
 import { acquireNativeCmsWriterFence } from "../../db/nativeCmsWriterFence";
 import { clearSiteCache } from "../../site/cache/siteCache";
-import {
-  backups,
-  backupSchedules,
-  contentEntries,
-  contentRevisions,
-  contentTaxonomies,
-  contentTermAssignments,
-  contentTerms,
-  contentTypes,
-  customScreenEntryPresentationOverrides,
-  customScreens,
-  detailPageDocuments,
-  detailPageRevisions,
-  media,
-  menuItems,
-  menus,
-  pageRevisions,
-  pages,
-  postPreviewTokens,
-  postRevisions,
-  postTermAssignments,
-  posts,
-  redirects,
-  themeProfiles,
-  themeRoutes,
-} from "../../db/schema";
+import { backups, backupSchedules } from "../../db/schema";
 import { getStorageSettings } from "../settings/storageSettings";
 import { getMediaStorageAdapter } from "../media/storage";
 import type { StoredMedia, UploadFile } from "../media/storage/adapter";
-import { exportConfig, importConfigTx } from "../tools/importExportService";
+import { packBackupArchive } from "./backupArchive"; // 01 — full orchestrator (06 injects exporters)
+import {
+  BACKUP_ARCHIVE_CONTENT_TYPE,
+  BACKUP_ARCHIVE_EXTENSION,
+  backupArchiveFileName,
+  encryptBackupArchive,
+  normalizeBackupPassphrase,
+} from "./backupCrypto"; // 02 — .cbk naming + mandatory encryption
+import { streamMediaIntoArchive } from "./mediaArchive"; // 03 — mediaExporter
+import { assertUsersEncryptionAllowed, exportUsersSection } from "./backupUsersSection"; // 04 — usersExporter + encrypted-only guard
 import type {
-  BackupArtifact,
-  BackupArtifactDatabase,
   BackupCreateInput,
   BackupDeleteResult,
   BackupDownload,
@@ -59,16 +40,24 @@ import type {
 } from "./backupTypes";
 import { backupIncludeOptions } from "./backupTypes";
 
-type DbTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
+// Legacy v1 `.json` restore helpers now live in ./backupRestore (06 split to
+// keep this module under the 1,000-line gate). Imported for the in-place v1
+// restore body below and re-exported so routes/tests keep their import surface.
+import { parseBackupArtifact, restoreArtifactTx } from "./backupRestore";
+export { parseBackupArtifact, replaceSnapshotTables, restoreArtifactTx } from "./backupRestore";
 
 const DEFAULT_FREQUENCY: BackupFrequency = "daily";
 const DEFAULT_RETENTION_DAYS = 30;
 const DEFAULT_INCLUDE: BackupIncludeOption[] = ["database", "media"];
+// Full-backup default for SCHEDULES: everything EXCEPT the sensitive users matrix.
+const DEFAULT_SCHEDULE_INCLUDE: BackupIncludeOption[] = ["database", "settings", "media"];
 const DEFAULT_PAGE = 1;
 const DEFAULT_LIMIT = 10;
 const MAX_LIMIT = 100;
 const QUEUE_WARNING_MINUTES = 15;
-const BACKUP_ARTIFACT_VERSION = 1;
+// v1 legacy artifact constants (kept for pre-existing `.json` rows: download,
+// parse, restore-by-id all still work for v1 — v2 `.cbk` rows fail fast via
+// `backup_restore_superseded`). The CREATE path now emits only v2 `.cbk`.
 const BACKUP_ARTIFACT_CONTENT_TYPE = "application/json";
 
 const getBackupStorageDir = () =>
@@ -79,11 +68,8 @@ const isPathInside = (baseDir: string, targetPath: string) =>
 
 const resolveBackupArtifactPath = (id: string) => {
   const baseDir = getBackupStorageDir();
-  return {
-    baseDir,
-    filePath: path.join(baseDir, `coderso-backup-${id}.json`),
-    fileName: `coderso-backup-${id}.json`,
-  };
+  const fileName = backupArchiveFileName(id); // `coderso-backup-<id>.cbk` (02)
+  return { baseDir, filePath: path.join(baseDir, fileName), fileName };
 };
 
 const isBackupIncludeOption = (value: unknown): value is BackupIncludeOption =>
@@ -187,12 +173,26 @@ const mapBackup = (
   finishedAt: row.finishedAt ?? null,
 });
 
+// Defensive read of the stored schedule `include` jsonb (legacy/NULL rows fall
+// back to the full-minus-users default). Strict validation happens on INPUT via
+// normalizeBackupInclude inside setBackupSchedule.
+const normalizeScheduleInclude = (raw: unknown): BackupIncludeOption[] => {
+  if (!Array.isArray(raw) || raw.length === 0) return [...DEFAULT_SCHEDULE_INCLUDE];
+  const selected: BackupIncludeOption[] = [];
+  for (const value of raw) {
+    if (!isBackupIncludeOption(value)) return [...DEFAULT_SCHEDULE_INCLUDE];
+    if (!selected.includes(value)) selected.push(value);
+  }
+  return selected;
+};
+
 const mapSchedule = (row: typeof backupSchedules.$inferSelect): BackupSchedule => ({
   id: row.id,
   enabled: row.enabled,
   frequency: asFrequency(row.frequency),
   retentionDays: row.retentionDays,
   storageDriver: asStorageDriver(row.storageDriver),
+  include: normalizeScheduleInclude(row.include),
   nextRunAt: row.nextRunAt ?? null,
   lastRunAt: row.lastRunAt ?? null,
   createdAt: row.createdAt,
@@ -292,99 +292,64 @@ export const sanitizeBackupError = (error: unknown, options?: { maxLength?: numb
 export const sanitizeBackupErrorForLog = (error: unknown): string =>
   sanitizeBackupError(error, { maxLength: LOGGED_BACKUP_ERROR_MAX_LENGTH });
 
-// Capture EVERY snapshot table (the 10 top-level parents + every cascade/RESTRICT
-// child transitively reachable from them). Missing a cascade child here means the
-// backup never captured it, so a later restore would DELETE it (via parent cascade)
-// with nothing to re-insert. Keep in lock-step with `snapshotTableOrder` +
-// `BACKUP_SNAPSHOT_TABLE_KEYS`.
-const buildDatabaseSnapshot = async (): Promise<BackupArtifactDatabase> => {
-  const [
-    pageRows,
-    contentTypeRows,
-    contentEntryRows,
-    postRows,
-    mediaRows,
-    menuRows,
-    menuItemRows,
-    themeProfileRows,
-    themeRouteRows,
-    redirectRows,
-    pageRevisionRows,
-    detailPageDocumentRows,
-    detailPageRevisionRows,
-    customScreenRows,
-    customScreenOverrideRows,
-    contentRevisionRows,
-    contentTaxonomyRows,
-    contentTermRows,
-    contentTermAssignmentRows,
-    postRevisionRows,
-    postPreviewTokenRows,
-    postTermAssignmentRows,
-  ] = await Promise.all([
-    db.select().from(pages),
-    db.select().from(contentTypes),
-    db.select().from(contentEntries),
-    db.select().from(posts),
-    db.select().from(media),
-    db.select().from(menus),
-    db.select().from(menuItems),
-    db.select().from(themeProfiles),
-    db.select().from(themeRoutes),
-    db.select().from(redirects),
-    db.select().from(pageRevisions),
-    db.select().from(detailPageDocuments),
-    db.select().from(detailPageRevisions),
-    db.select().from(customScreens),
-    db.select().from(customScreenEntryPresentationOverrides),
-    db.select().from(contentRevisions),
-    db.select().from(contentTaxonomies),
-    db.select().from(contentTerms),
-    db.select().from(contentTermAssignments),
-    db.select().from(postRevisions),
-    db.select().from(postPreviewTokens),
-    db.select().from(postTermAssignments),
-  ]);
-
-  return {
-    pages: pageRows,
-    contentTypes: contentTypeRows,
-    contentEntries: contentEntryRows,
-    posts: postRows,
-    media: mediaRows,
-    menus: menuRows,
-    menuItems: menuItemRows,
-    themeProfiles: themeProfileRows,
-    themeRoutes: themeRouteRows,
-    redirects: redirectRows,
-    pageRevisions: pageRevisionRows,
-    detailPageDocuments: detailPageDocumentRows,
-    detailPageRevisions: detailPageRevisionRows,
-    customScreens: customScreenRows,
-    customScreenEntryPresentationOverrides: customScreenOverrideRows,
-    contentRevisions: contentRevisionRows,
-    contentTaxonomies: contentTaxonomyRows,
-    contentTerms: contentTermRows,
-    contentTermAssignments: contentTermAssignmentRows,
-    postRevisions: postRevisionRows,
-    postPreviewTokens: postPreviewTokenRows,
-    postTermAssignments: postTermAssignmentRows,
-  };
+// 06-owned BINARY sink: pump the encrypted `.cbk` ReadableStream through
+// Bun's FileWriter (chunk-by-chunk, never buffering the whole archive) and
+// return the byte count for markBackupComplete. This is the local-driver
+// no-OOM guarantee's persistence half (01 produces the stream, 02 wraps it,
+// 06 sinks it). A manual pump is used because Bun's `write(path, Response)`
+// overload does not consume a plain ReadableStream body (it hangs), and the
+// installed bun-types expose no ReadableStream overload for Bun.write.
+const writeStreamToFile = async (
+  archiveStream: ReadableStream<Uint8Array>,
+  filePath: string
+): Promise<number> => {
+  const writer = Bun.file(filePath).writer();
+  const reader = archiveStream.getReader();
+  let sizeBytes = 0;
+  try {
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      writer.write(value);
+      sizeBytes += value.byteLength;
+    }
+    await writer.end();
+  } catch (error) {
+    // Best-effort release on a partial write; the caller's finally cleanup
+    // deletes the incomplete artifact. end() may already be closed after a
+    // failed write — swallow so the ORIGINAL error propagates.
+    try {
+      await writer.end();
+    } catch {
+      // ignore best-effort flush failure
+    }
+    throw error;
+  }
+  return sizeBytes;
 };
 
-// Build an UploadFile from the in-memory artifact bytes and persist it through
+// Build an UploadFile from the encrypted archive STREAM and persist it through
 // the CONFIGURED media storage adapter (same driver as `storageSettings.driver`).
 // Storage credentials are only ever touched inside the adapter — this helper
 // never reads/logs/returns raw keys. On adapter failure the raw error (which may
 // echo credentials/connection strings) is logged server-side ONLY and swallowed;
 // the machine-readable `backup_upload_failed` is the sole thing that surfaces to
-// `sanitizeBackupError` -> `row.error` (which performs no credential redaction).
-const uploadBackupArtifact = async (id: string, content: string) => {
-  const bytes = Buffer.from(content, "utf8");
-  const fileName = `coderso-backup-${id}.json`;
+// `sanitizeBackupError` -> `row.error`.
+// ⚠ SCOPED CONSTRAINT (06 Open Question #4 — RESOLVED): the remote (s3/azure)
+// branch buffers the archive into one ArrayBuffer because `adapter.put(UploadFile)`
+// is arrayBuffer()-only and the final `.cbk` byte size isn't known until the
+// stream finishes (03's streaming `putAt` needs a pre-declared ContentLength).
+// The no-OOM guarantee is therefore LOCAL-DRIVER-ONLY; streaming remote upload is
+// a recorded 03/06 follow-up (see TASK-511-06 §A0-persist).
+const uploadBackupArtifact = async (
+  id: string,
+  archiveStream: ReadableStream<Uint8Array>,
+  fileName: string
+) => {
+  const bytes = new Uint8Array(await new Response(archiveStream).arrayBuffer());
   const file: UploadFile = {
     name: fileName,
-    type: BACKUP_ARTIFACT_CONTENT_TYPE,
+    type: BACKUP_ARCHIVE_CONTENT_TYPE,
     size: bytes.byteLength,
     arrayBuffer: async () =>
       bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength),
@@ -402,42 +367,41 @@ const uploadBackupArtifact = async (id: string, content: string) => {
   return { artifactPath: stored.url, artifactKey: stored.key, sizeBytes: bytes.byteLength };
 };
 
-const createBackupArtifact = async (backup: BackupRecord, include: BackupIncludeOption[]) => {
-  const mediaRows = include.includes("media") ? await db.select().from(media) : null;
-  const settingsExport = include.includes("settings")
-    ? await exportConfig({ target: "settings" })
-    : null;
-  const artifact = {
-    version: BACKUP_ARTIFACT_VERSION,
-    id: backup.id,
-    createdAt: new Date().toISOString(),
+// v2 CREATE PATH (06): full-orchestrator packBackupArchive (01) → always
+// encryptBackupArchive (02) → binary sink (local writeStreamToFile / remote
+// uploadBackupArtifact). Produces `coderso-backup-<id>.cbk` — never `.json`.
+// 01's `PackedArchive.cleanup` removes the per-run temp spool dir; 06 owns
+// running it (02 only sees the byte stream), ALWAYS in `finally` — success AND
+// throw paths (no spool leak across manual/scheduled runs).
+const createBackupArtifact = async (
+  backup: BackupRecord,
+  include: BackupIncludeOption[],
+  passphrase: string
+) => {
+  const { stream, cleanup } = await packBackupArchive({
     include,
-    storageDriver: backup.storageDriver,
-    database: include.includes("database") ? await buildDatabaseSnapshot() : null,
-    settings: settingsExport,
-    media: mediaRows
-      ? {
-          note: "Media file bytes stay in the configured media storage. This backup stores the media library metadata and URLs.",
-          items: mediaRows,
-        }
-      : null,
-  };
+    mediaExporter: streamMediaIntoArchive, // 03 — invoked only when include.includes("media")
+    usersExporter: exportUsersSection, // 04 — invoked only when include.includes("users")
+  });
 
-  const content = `${JSON.stringify(artifact, null, 2)}\n`;
-  // Driver-aware persistence: `local` keeps the filesystem path (null key);
-  // `s3`/`azure` upload via the reused media adapter and store the public URL
-  // (artifactPath) + object key (artifactKey).
-  if (backup.storageDriver === "local") {
-    const { baseDir, filePath } = resolveBackupArtifactPath(backup.id);
-    await mkdir(baseDir, { recursive: true });
-    await writeFile(filePath, content, { encoding: "utf8" });
-    return {
-      artifactPath: filePath,
-      artifactKey: null as string | null,
-      sizeBytes: Buffer.byteLength(content, "utf8"),
-    };
+  try {
+    // 02: gzip + AES-256-GCM in ONE call over the plaintext tar stream. Every
+    // v2 archive is encrypted — there is NO unencrypted `.cbk` variant.
+    const archiveStream = encryptBackupArchive(stream, passphrase);
+    const fileName = backupArchiveFileName(backup.id); // `coderso-backup-<id>.cbk`
+
+    if (backup.storageDriver === "local") {
+      const { baseDir, filePath } = resolveBackupArtifactPath(backup.id);
+      await mkdir(baseDir, { recursive: true });
+      const sizeBytes = await writeStreamToFile(archiveStream, filePath);
+      return { artifactPath: filePath, artifactKey: null as string | null, sizeBytes };
+    }
+    // `return await` (not a bare return) so the `finally` cleanup() runs AFTER
+    // the remote upload has drained the archive stream.
+    return await uploadBackupArtifact(backup.id, archiveStream, fileName);
+  } finally {
+    await cleanup();
   }
-  return uploadBackupArtifact(backup.id, content);
 };
 
 export async function listBackups(input: BackupListQuery = {}): Promise<BackupListResult> {
@@ -478,7 +442,21 @@ export async function createBackup(input: BackupCreateInput = {}): Promise<Backu
   const backup = mapBackup(row);
 
   try {
-    const artifact = await createBackupArtifact(backup, include);
+    // FAIL-CLOSED, PRE-READ (04 §4.2, its SOLE call-site): users export is
+    // encrypted-only. Runs FIRST so a users-including request with no passphrase
+    // yields the SPECIFIC `backup_users_requires_encryption` (mapped 400 by 04),
+    // not the generic passphrase code. A throw is CAUGHT below →
+    // markBackupFailed (persisted `failed` row), never propagated.
+    assertUsersEncryptionAllowed(include, {
+      enabled: input.passphrase != null && String(input.passphrase).length > 0,
+    });
+    // Every v2 `.cbk` is ALWAYS encrypted (02 format has no unencrypted variant;
+    // 05's import always decrypts) — a passphrase is MANDATORY for every backup.
+    // Throws `backup_passphrase_required` / `backup_passphrase_invalid`; the
+    // catch turns any throw into markBackupFailed(sanitizeBackupError). Never logged.
+    const passphrase = normalizeBackupPassphrase(input.passphrase);
+
+    const artifact = await createBackupArtifact(backup, include, passphrase);
     return markBackupComplete(
       backup.id,
       artifact.artifactPath,
@@ -543,183 +521,6 @@ export async function markBackupFailed(id: string, error: string): Promise<Backu
   return mapBackup(row);
 }
 
-// Snapshot tables in FK-safe INSERT order (parents before children). This mirrors
-// `buildDatabaseSnapshot()` one-to-one. Delete runs in the reverse order (children
-// before parents). Keep this list and `buildDatabaseSnapshot` in lock-step.
-//
-// The reverse-delete ordering is also what resolves detail_page_documents' RESTRICT
-// FK to content_types: detailPageDocuments (below) is deleted BEFORE contentTypes,
-// so the parent delete never trips the RESTRICT.
-const snapshotTableOrder: Array<{ key: keyof BackupArtifactDatabase; table: PgTable }> = [
-  // Roots / top-level parents.
-  { key: "pages", table: pages },
-  { key: "contentTypes", table: contentTypes },
-  { key: "media", table: media },
-  { key: "menus", table: menus },
-  { key: "themeProfiles", table: themeProfiles },
-  { key: "redirects", table: redirects },
-  // First-level children.
-  { key: "contentEntries", table: contentEntries },
-  { key: "posts", table: posts },
-  { key: "menuItems", table: menuItems },
-  { key: "themeRoutes", table: themeRoutes },
-  { key: "pageRevisions", table: pageRevisions },
-  { key: "detailPageDocuments", table: detailPageDocuments },
-  { key: "customScreens", table: customScreens },
-  { key: "contentTaxonomies", table: contentTaxonomies },
-  // Deeper children (depend on the first-level children above).
-  { key: "detailPageRevisions", table: detailPageRevisions },
-  { key: "contentTerms", table: contentTerms },
-  { key: "contentRevisions", table: contentRevisions },
-  {
-    key: "customScreenEntryPresentationOverrides",
-    table: customScreenEntryPresentationOverrides,
-  },
-  { key: "postRevisions", table: postRevisions },
-  { key: "postPreviewTokens", table: postPreviewTokens },
-  // Junctions that depend on contentTerms (must come after it).
-  { key: "contentTermAssignments", table: contentTermAssignments },
-  { key: "postTermAssignments", table: postTermAssignments },
-];
-
-// JSON round-trips Date columns to ISO strings; drizzle's timestamp writer calls
-// `.toISOString()` on insert, so revive `date`-typed columns back to `Date` before
-// writing. Other column types (jsonb, uuid, text, numeric) round-trip verbatim.
-const reviveRowsForInsert = (
-  table: PgTable,
-  rows: Record<string, unknown>[]
-): Record<string, unknown>[] => {
-  const columns = getTableColumns(table);
-  return rows.map((row) => {
-    const next: Record<string, unknown> = { ...row };
-    for (const [key, column] of Object.entries(columns)) {
-      const value = next[key];
-      if (typeof value === "string" && column.dataType === "date") {
-        next[key] = new Date(value);
-      }
-    }
-    return next;
-  });
-};
-
-// Transactional guarded delete+insert of every snapshot table inside the caller's
-// `tx`. Exposed so tests can exercise the restore body inside a deliberately
-// rolled-back transaction (the shared-DB dry-run seam) without committing.
-export async function replaceSnapshotTables(
-  tx: DbTransaction,
-  database: BackupArtifactDatabase
-): Promise<void> {
-  // Delete children -> parents (reverse of the FK-safe insert order).
-  for (const { table } of [...snapshotTableOrder].reverse()) {
-    await tx.delete(table);
-  }
-  // Insert parents -> children so FK references always resolve.
-  for (const { key, table } of snapshotTableOrder) {
-    const rows = database[key];
-    if (!Array.isArray(rows) || rows.length === 0) continue;
-    await tx.insert(table).values(reviveRowsForInsert(table, rows) as never);
-  }
-}
-
-// The tx-scoped restore body: snapshot tables + settings, sharing ONE outer `tx`
-// so the whole restore is genuinely all-or-nothing. Exposed for the rollback-scoped
-// regression seam.
-export async function restoreArtifactTx(
-  tx: DbTransaction,
-  artifact: BackupArtifact
-): Promise<void> {
-  if (artifact.database) {
-    await replaceSnapshotTables(tx, artifact.database);
-  }
-  if (artifact.settings) {
-    // Share the OUTER tx: importConfigTx is the transaction-aware body of
-    // importConfig (still runs validateBundle + setSettingsTx). Do NOT call the
-    // public importConfig() here — it opens its own db.transaction, which would
-    // commit/rollback independently and break all-or-nothing.
-    await importConfigTx(tx, artifact.settings);
-  }
-}
-
-const isPlainObject = (value: unknown): value is Record<string, unknown> =>
-  typeof value === "object" && value !== null && !Array.isArray(value);
-
-const BACKUP_ARTIFACT_TOP_LEVEL_KEYS = new Set([
-  "version",
-  "id",
-  "createdAt",
-  "include",
-  "storageDriver",
-  "database",
-  "settings",
-  "media",
-]);
-
-const BACKUP_SNAPSHOT_TABLE_KEYS: Array<keyof BackupArtifactDatabase> = [
-  "pages",
-  "contentTypes",
-  "contentEntries",
-  "posts",
-  "media",
-  "menus",
-  "menuItems",
-  "themeProfiles",
-  "themeRoutes",
-  "redirects",
-  "pageRevisions",
-  "detailPageDocuments",
-  "detailPageRevisions",
-  "customScreens",
-  "customScreenEntryPresentationOverrides",
-  "contentRevisions",
-  "contentTaxonomies",
-  "contentTerms",
-  "contentTermAssignments",
-  "postRevisions",
-  "postPreviewTokens",
-  "postTermAssignments",
-];
-
-// Strict, fail-closed parse of the stored artifact. Rejects unknown top-level
-// keys, requires version === BACKUP_ARTIFACT_VERSION, and validates each snapshot
-// table is an array (settings is deep-validated later by validateBundle via
-// importConfigTx). No raw artifact data is written un-validated.
-export function parseBackupArtifact(raw: string): BackupArtifact {
-  let json: unknown;
-  try {
-    json = JSON.parse(raw);
-  } catch {
-    throw new Error("backup_restore_invalid_artifact");
-  }
-  if (!isPlainObject(json)) throw new Error("backup_restore_invalid_artifact");
-  for (const key of Object.keys(json)) {
-    if (!BACKUP_ARTIFACT_TOP_LEVEL_KEYS.has(key)) {
-      throw new Error("backup_restore_invalid_artifact");
-    }
-  }
-  if (json.version !== BACKUP_ARTIFACT_VERSION) {
-    throw new Error("backup_restore_invalid_artifact");
-  }
-
-  const { database, settings, media: mediaSection } = json;
-  if (database !== null && database !== undefined) {
-    if (!isPlainObject(database)) throw new Error("backup_restore_invalid_artifact");
-    for (const key of BACKUP_SNAPSHOT_TABLE_KEYS) {
-      const value = (database as Record<string, unknown>)[key];
-      if (value !== undefined && value !== null && !Array.isArray(value)) {
-        throw new Error("backup_restore_invalid_artifact");
-      }
-    }
-  }
-  if (settings !== null && settings !== undefined && !isPlainObject(settings)) {
-    throw new Error("backup_restore_invalid_artifact");
-  }
-  if (mediaSection !== null && mediaSection !== undefined && !isPlainObject(mediaSection)) {
-    throw new Error("backup_restore_invalid_artifact");
-  }
-
-  return json as BackupArtifact;
-}
-
 // Read the artifact bytes from wherever it lives, reusing the download resolver:
 // local files are path-traversal guarded + returned as `content`; remote artifacts
 // return a public URL that is fetched here.
@@ -742,6 +543,14 @@ export async function restoreBackup(
   if (!row) throw new Error("backup_not_found");
   if (row.status !== "complete" || !row.artifactPath) {
     throw new Error("backup_not_ready");
+  }
+  // FAIL-FAST v2 supersession (06): a stored `.cbk` cannot be restored by id (no
+  // stored passphrase — parent §decision 3); the v2 restore flow is download →
+  // Import dialog (05) with the operator-supplied passphrase. Guard BEFORE any
+  // byte read/parse so a v2 row never reaches the v1 parseBackupArtifact path
+  // and fails cryptically. Legacy v1 `.json` rows keep the in-place restore body.
+  if (row.artifactPath.endsWith(BACKUP_ARCHIVE_EXTENSION)) {
+    throw new Error("backup_restore_superseded");
   }
   if (input.confirm !== true) {
     throw new Error("backup_restore_confirmation_required");
@@ -780,11 +589,28 @@ export async function resolveBackupDownload(id: string): Promise<BackupDownload>
   if (!isPathInside(baseDir, artifactPath)) {
     throw new Error("backup_artifact_invalid");
   }
+  const fileName = path.basename(artifactPath);
+  if (fileName.endsWith(BACKUP_ARCHIVE_EXTENSION)) {
+    // v2 `.cbk`: byte-exact base64 transport. The /backups/:id/download handler
+    // returns this object straight to the JSON serializer, and JSON cannot carry
+    // raw bytes (a Uint8Array serializes to a `{"0":..}` object and corrupts the
+    // archive) — base64 is JSON-safe and round-trips byte-exact, so the download
+    // → Import restore path stays re-importable.
+    const bytes = await readFile(artifactPath); // no 'utf8' → Buffer
+    return {
+      url: null,
+      path: null,
+      fileName,
+      contentType: BACKUP_ARCHIVE_CONTENT_TYPE,
+      content: bytes.toString("base64"),
+      encoding: "base64",
+    };
+  }
   const content = await readFile(artifactPath, "utf8");
   return {
     url: null,
     path: null,
-    fileName: path.basename(artifactPath),
+    fileName,
     contentType: BACKUP_ARTIFACT_CONTENT_TYPE,
     content,
   };
@@ -866,6 +692,7 @@ export async function getBackupSchedule(): Promise<BackupSchedule> {
       frequency: DEFAULT_FREQUENCY,
       retentionDays: DEFAULT_RETENTION_DAYS,
       storageDriver: storageSettings.driver,
+      include: DEFAULT_SCHEDULE_INCLUDE,
       nextRunAt: computeNextRunAt(DEFAULT_FREQUENCY, now),
       lastRunAt: null,
       createdAt: now,
@@ -881,11 +708,17 @@ export async function setBackupSchedule(update: BackupScheduleUpdate): Promise<B
   const current = await getBackupSchedule();
   const retention = update.retentionDays ?? current.retentionDays;
   assertRetentionDays(retention);
+  // Strict normalize on INPUT: `include: []` → backup_include_required, an
+  // out-of-enum item → backup_include_invalid (rejected at the boundary, never
+  // persisted). Absent → keep the current stored scope.
+  const include =
+    update.include === undefined ? current.include : normalizeBackupInclude(update.include);
   const next = {
     enabled: update.enabled ?? current.enabled,
     frequency: update.frequency ?? current.frequency,
     retentionDays: retention,
     storageDriver: update.storageDriver ?? current.storageDriver,
+    include,
   };
 
   const frequencyChanged = update.frequency !== undefined && update.frequency !== current.frequency;
@@ -903,6 +736,7 @@ export async function setBackupSchedule(update: BackupScheduleUpdate): Promise<B
       frequency: next.frequency,
       retentionDays: next.retentionDays,
       storageDriver: next.storageDriver,
+      include: next.include,
       nextRunAt,
       updatedAt: new Date(),
     })

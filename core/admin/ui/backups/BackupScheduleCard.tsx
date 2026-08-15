@@ -3,6 +3,7 @@ import { useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
   SelectContent,
@@ -14,6 +15,7 @@ import { cn } from "@/lib/utils";
 import { SectionCard } from "@/ui/shared/SectionCard";
 import type {
   BackupFrequency,
+  BackupIncludeOption,
   BackupSchedule,
   BackupScheduleUpdate,
   BackupStorageDriver,
@@ -31,6 +33,23 @@ const storageOptions: Array<{ id: BackupStorageDriver; label: string }> = [
   { id: "azure", label: "Azure Blob" },
 ];
 
+// Scheduled include set. `users` stays OFF by default: it is sensitive and
+// encrypted-only (04 guard); operators opt in explicitly.
+const scheduleIncludeOptions: Array<{
+  id: BackupIncludeOption;
+  label: string;
+  defaultChecked: boolean;
+}> = [
+  { id: "database", label: "Database snapshot", defaultChecked: true },
+  { id: "media", label: "Media assets", defaultChecked: true },
+  { id: "settings", label: "Settings & tokens", defaultChecked: true },
+  { id: "users", label: "Users & roles", defaultChecked: false },
+];
+
+const defaultScheduleInclude = scheduleIncludeOptions
+  .filter((item) => item.defaultChecked)
+  .map((item) => item.id);
+
 type BackupScheduleCardProps = {
   schedule: BackupSchedule | null;
   isLoading: boolean;
@@ -38,10 +57,6 @@ type BackupScheduleCardProps = {
   onSave: (update: BackupScheduleUpdate) => void;
 };
 
-// TASK-479-26-L04: schedule card ported to the soft SectionCard look. Controls +
-// the existing `onSave({ frequency, storageDriver })` wiring are unchanged; the
-// prototype's "next backup scheduled for …" line is dropped (no `nextRunAt` on
-// the real BackupSchedule).
 export function BackupScheduleCard({
   schedule,
   isLoading,
@@ -52,12 +67,25 @@ export function BackupScheduleCard({
   const [storageDriver, setStorageDriver] = useState<BackupStorageDriver>(
     schedule?.storageDriver ?? "local"
   );
+  const [include, setInclude] = useState<BackupIncludeOption[]>(
+    schedule?.include?.length ? schedule.include : defaultScheduleInclude
+  );
+
+  const toggleInclude = (id: BackupIncludeOption, checked: boolean | "indeterminate") => {
+    setInclude((current) => {
+      if (checked === true) {
+        return current.includes(id) ? current : [...current, id];
+      }
+      return current.filter((item) => item !== id);
+    });
+  };
 
   const handleSave = () => {
     if (!schedule) return;
     onSave({
       frequency,
       storageDriver,
+      include,
     });
   };
 
@@ -133,17 +161,43 @@ export function BackupScheduleCard({
             </SelectContent>
           </Select>
         </div>
-        <div className="flex items-end">
-          <Button
-            variant="outline"
-            size="sm"
-            className="w-full"
-            disabled={isLoading || isSaving || !schedule}
-            onClick={handleSave}
-          >
-            {isSaving ? "Saving..." : "Update Schedule"}
-          </Button>
+        <div className="space-y-3">
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+            Include
+          </p>
+          <div className="space-y-2">
+            {scheduleIncludeOptions.map((item) => (
+              <label key={item.id} className="flex items-center gap-2 text-sm">
+                <Checkbox
+                  checked={include.includes(item.id)}
+                  onCheckedChange={(checked) => toggleInclude(item.id, checked)}
+                  disabled={isLoading || isSaving}
+                />
+                <span>{item.label}</span>
+              </label>
+            ))}
+          </div>
+          {include.includes("users") ? (
+            <p className="text-xs text-destructive">
+              Users &amp; roles are sensitive and require BACKUP_ENCRYPTION_PASSPHRASE to run
+              unattended.
+            </p>
+          ) : null}
+          {include.length === 0 ? (
+            <p className="text-xs text-destructive">Select at least one section.</p>
+          ) : null}
         </div>
+      </div>
+      <div className="mt-5 flex items-end justify-end">
+        <Button
+          variant="outline"
+          size="sm"
+          className="w-full sm:w-auto"
+          disabled={isLoading || isSaving || !schedule || include.length === 0}
+          onClick={handleSave}
+        >
+          {isSaving ? "Saving..." : "Update Schedule"}
+        </Button>
       </div>
     </SectionCard>
   );

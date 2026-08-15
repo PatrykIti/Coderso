@@ -57,16 +57,22 @@ Uwaga:
   Szczegoly: `_docs/SECURITY_SPEC.md`.
 
 Backup artefakty (remote):
-- Backupy (TASK-484) **reużywaja tych samych driverow storage** przez
+- Backupy (TASK-511, v2) **reużywaja tych samych driverow storage** przez
   `getMediaStorageAdapter()`: gdy schedule ma `storageDriver` `s3`/`azure`,
-  artefakt JSON jest uploadowany tym samym adapterem (`put` → `{ url, key }`),
-  a publiczny URL trafia do `backups.artifact_path`, natomiast klucz obiektu do
-  server-internal `backups.artifact_key` (uzywany do `delete` przy retencji).
+  artefakt `.cbk` (skompresowany + zaszyfrowany archiwum) jest uploadowany tym
+  samym adapterem (`put` → `{ url, key }`), a publiczny URL trafia do
+  `backups.artifact_path`, natomiast klucz obiektu do server-internal
+  `backups.artifact_key` (uzywany do `delete` przy retencji). Legacy v1 `.json`
+  artefakty pozostaja czytelne przez ten sam kontrakt.
 - Credentiale storage sa czytane wylacznie backend-only
   (`getStorageSettingsInternal()`) i nigdy nie sa zapisywane do artefaktu,
   logow ani odpowiedzi klienta.
-- Backup artefakt zawiera metadane biblioteki mediow + URL-e, ale **nie
-  archiwizuje bajtow plikow mediow** — restore nie pobiera ponownie plikow.
+- Od v2 backup artefakt **archiwizuje bajty plikow mediow** (membery `media/*`
+  streamowane do `.cbk`), a Import odtwarza je po commicie transakcji DB —
+  dlatego obowiazuje opt-in maintenance mode i streamed-upload ceilings
+  (`BACKUP_IMPORT_MAX_BYTES` / `BACKUP_IMPORT_MAX_DECOMPRESSED_BYTES`).
+  Bajty mediow nigdy nie sa pobierane z URL przy restore; podrozuja w
+  zaszyfrowanym archiwum.
 
 ## Upload rules
 

@@ -22,6 +22,10 @@ import type {
 } from "../../../core/services/media/storage/adapter";
 import { resetStorageSettingsCache } from "../../../core/services/settings/storageSettings";
 
+// TASK-511-06 contract: every v2 `.cbk` create is encrypted, so the create path
+// REQUIRES a passphrase (mandatory since the backupRemoteStorage suite predates it).
+const TEST_PASSPHRASE = "test-backup-passphrase-511";
+
 const hasDb = Boolean(process.env.DATABASE_URL) && (await canConnect());
 const testIfDb = hasDb ? test : test.skip;
 
@@ -39,6 +43,7 @@ async function canConnect() {
 type AdapterCalls = {
   put: Array<{ name: string; type: string; size: number }>;
   putMedia: number;
+  putAt: Array<{ key: string; size: number; contentType: string }>;
   delete: string[];
 };
 
@@ -56,6 +61,14 @@ const makeFakeAdapter = (
   putMedia: async (_upload: CanonicalStoredUpload): Promise<StoredMedia> => {
     calls.putMedia += 1;
     throw new Error("backup_put_media_forbidden");
+  },
+  putAt: async (
+    key: string,
+    _body: AsyncIterable<Uint8Array>,
+    size: number,
+    contentType: string
+  ) => {
+    calls.putAt.push({ key, size, contentType });
   },
   delete: async (key: string) => {
     calls.delete.push(key);
@@ -123,7 +136,11 @@ const rawRow = async (id: string) => {
 
 testIfDb("local driver writes FS, no artifact_key", async () => {
   const created = await withStorageDriver("local", async () => {
-    const backup = await createBackup({ kind: "manual", include: ["database"] });
+    const backup = await createBackup({
+      kind: "manual",
+      include: ["database"],
+      passphrase: TEST_PASSPHRASE,
+    });
     createdIds.push(backup.id);
     return backup;
   });
@@ -133,26 +150,33 @@ testIfDb("local driver writes FS, no artifact_key", async () => {
   expect(row?.artifactKey).toBeNull();
   // Local artifact path is an absolute FS path, not a public URL.
   expect(row?.artifactPath?.startsWith("http")).toBe(false);
-  // The artifact is genuinely on disk (download resolves inline content).
+  // The artifact is genuinely on disk: the v2 archive is encrypted bytes, so
+  // download resolves inline base64 ciphertext (never the plaintext id).
   const dl = await resolveBackupDownload(created.id);
   expect(dl.url).toBeNull();
-  expect(dl.content).toContain(created.id);
+  expect(dl.encoding).toBe("base64");
+  expect(dl.content).toBeTruthy();
+  expect(dl.content).not.toContain(created.id);
 });
 
 testIfDb("s3 driver uploads via adapter and stores url + key", async () => {
-  const calls: AdapterCalls = { put: [], putMedia: 0, delete: [] };
+  const calls: AdapterCalls = { put: [], putMedia: 0, putAt: [], delete: [] };
   __setMediaStorageAdapterForTests(makeFakeAdapter(calls));
 
   const created = await withStorageDriver("s3", async () => {
-    const backup = await createBackup({ kind: "manual", include: ["database"] });
+    const backup = await createBackup({
+      kind: "manual",
+      include: ["database"],
+      passphrase: TEST_PASSPHRASE,
+    });
     createdIds.push(backup.id);
     return backup;
   });
 
   expect(calls.put.length).toBe(1);
   expect(calls.put[0]).toEqual({
-    name: `coderso-backup-${created.id}.json`,
-    type: "application/json",
+    name: `coderso-backup-${created.id}.cbk`,
+    type: "application/octet-stream",
     size: expect.any(Number),
   });
   expect(calls.put[0]!.size).toBeGreaterThan(0);
@@ -160,21 +184,25 @@ testIfDb("s3 driver uploads via adapter and stores url + key", async () => {
   const row = await rawRow(created.id);
   expect(row?.storageDriver).toBe("s3");
   expect(row?.artifactPath).toBe(
-    `https://cdn.example.com/backups/2026/06/coderso-backup-${created.id}.json`
+    `https://cdn.example.com/backups/2026/06/coderso-backup-${created.id}.cbk`
   );
-  expect(row?.artifactKey).toBe(`backups/2026/06/coderso-backup-${created.id}.json`);
+  expect(row?.artifactKey).toBe(`backups/2026/06/coderso-backup-${created.id}.cbk`);
   await expect(resolveBackupDownload(created.id)).resolves.toEqual({
-    url: `https://cdn.example.com/backups/2026/06/coderso-backup-${created.id}.json`,
+    url: `https://cdn.example.com/backups/2026/06/coderso-backup-${created.id}.cbk`,
     path: null,
   });
 });
 
 testIfDb("artifact_key never leaks to the client-facing record", async () => {
-  const calls: AdapterCalls = { put: [], putMedia: 0, delete: [] };
+  const calls: AdapterCalls = { put: [], putMedia: 0, putAt: [], delete: [] };
   __setMediaStorageAdapterForTests(makeFakeAdapter(calls));
 
   const created = await withStorageDriver("s3", async () => {
-    const backup = await createBackup({ kind: "manual", include: ["database"] });
+    const backup = await createBackup({
+      kind: "manual",
+      include: ["database"],
+      passphrase: TEST_PASSPHRASE,
+    });
     createdIds.push(backup.id);
     return backup;
   });
@@ -192,17 +220,21 @@ testIfDb("artifact_key never leaks to the client-facing record", async () => {
 
   // But the key IS persisted server-side (proves the redaction is at the mapper).
   const row = await rawRow(created.id);
-  expect(row?.artifactKey).toBe(`backups/2026/06/coderso-backup-${created.id}.json`);
+  expect(row?.artifactKey).toBe(`backups/2026/06/coderso-backup-${created.id}.cbk`);
 });
 
 testIfDb("deleteBackup removes the remote object for remote rows", async () => {
-  const calls: AdapterCalls = { put: [], putMedia: 0, delete: [] };
+  const calls: AdapterCalls = { put: [], putMedia: 0, putAt: [], delete: [] };
   __setMediaStorageAdapterForTests(makeFakeAdapter(calls));
 
   await withStorageDriver("s3", async () => {
-    const created = await createBackup({ kind: "manual", include: ["database"] });
+    const created = await createBackup({
+      kind: "manual",
+      include: ["database"],
+      passphrase: TEST_PASSPHRASE,
+    });
     createdIds.push(created.id);
-    const storedKey = `backups/2026/06/coderso-backup-${created.id}.json`;
+    const storedKey = `backups/2026/06/coderso-backup-${created.id}.cbk`;
 
     // Same driver on delete => remote object is deleted via the adapter.
     await deleteBackup(created.id);
@@ -219,7 +251,7 @@ testIfDb("deleteBackup removes the remote object for remote rows", async () => {
 testIfDb(
   "upload failure marks backup failed with a machine-readable, credential-free error",
   async () => {
-    const calls: AdapterCalls = { put: [], putMedia: 0, delete: [] };
+    const calls: AdapterCalls = { put: [], putMedia: 0, putAt: [], delete: [] };
     const sentinel = "topsecret";
     __setMediaStorageAdapterForTests(
       makeFakeAdapter(calls, {
@@ -232,7 +264,11 @@ testIfDb(
     );
 
     const created = await withStorageDriver("s3", async () => {
-      const backup = await createBackup({ kind: "manual", include: ["database"] });
+      const backup = await createBackup({
+        kind: "manual",
+        include: ["database"],
+        passphrase: TEST_PASSPHRASE,
+      });
       createdIds.push(backup.id);
       return backup;
     });
@@ -253,12 +289,16 @@ testIfDb(
 testIfDb(
   "deleteBackup skips the remote delete on driver drift (no wrong-backend call)",
   async () => {
-    const calls: AdapterCalls = { put: [], putMedia: 0, delete: [] };
+    const calls: AdapterCalls = { put: [], putMedia: 0, putAt: [], delete: [] };
     __setMediaStorageAdapterForTests(makeFakeAdapter(calls));
 
     // Create a remote (s3) row.
     const created = await withStorageDriver("s3", async () => {
-      const backup = await createBackup({ kind: "manual", include: ["database"] });
+      const backup = await createBackup({
+        kind: "manual",
+        include: ["database"],
+        passphrase: TEST_PASSPHRASE,
+      });
       createdIds.push(backup.id);
       return backup;
     });

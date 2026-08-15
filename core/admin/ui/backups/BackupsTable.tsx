@@ -90,8 +90,17 @@ const getActionState = (
       download: "Backup artifact is not ready.",
     };
   }
+  // v2 encrypted `.cbk` archives cannot be restored by id (no stored passphrase);
+  // the restore path is download → Import dialog. Legacy v1 `.json` rows keep
+  // the in-place restore-by-id flow.
+  if (backup.artifactPath.endsWith(".cbk")) {
+    return {
+      restore: "Download this backup and use Import to restore it.",
+      download: null,
+    };
+  }
   return {
-    restore: "Restore is not available for CMS-managed backup files yet.",
+    restore: null,
     download: null,
   };
 };

@@ -8,7 +8,8 @@
 **Estimated Effort:** Large
 **Depends On:** TASK-484 (backups v1 — merged; provides the FK-safe snapshot table set + reverse-delete restore we reuse the *knowledge* of, but do not rewrite)
 **Blocks:** TASK-511-02 (compression + encryption wrap), -03 (media members), -04 (users/RBAC members), -05 (import pipeline), -06 (scheduler + UI), -07 (docs/closure)
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-08-15
 
 ---
 
@@ -18,10 +19,10 @@ Build the **streaming, batched export engine** and the **archive container forma
 manifest** that all later Backup-v2 subtasks build on.
 
 Today `createBackupArtifact()` in
-`core/services/backups/backupService.ts:366` builds the whole snapshot **in memory**
-via `buildDatabaseSnapshot()` (`backupService.ts:261-334` — 22 parallel
+`core/services/backups/backupService.ts:405` builds the whole snapshot **in memory**
+via `buildDatabaseSnapshot()` (`backupService.ts:300-373` — 22 parallel
 `db.select().from(table)` with no paging) and serializes it with
-`JSON.stringify(artifact, null, 2)` (`backupService.ts:387`). On a data-heavy site
+`JSON.stringify(artifact, null, 2)` (`backupService.ts:426`). On a data-heavy site
 this OOMs the container.
 
 511-01 replaces the *data-shape* of the archive (not the v1 restore internals) with:
@@ -47,8 +48,8 @@ this OOMs the container.
 - No `users`/RBAC members — 04 appends them (encrypted-only path).
 - No import/restore — 05 owns the reverse pipeline. This subtask does **not** touch
   `replaceSnapshotTables` / `restoreArtifactTx` / `restoreBackup`
-  (`backupService.ts:569,588,698`); it only reuses the *knowledge* of the FK-safe
-  table set and ordering (`snapshotTableOrder`, `backupService.ts:514-544`).
+  (`backupService.ts:608,627,737`); it only reuses the *knowledge* of the FK-safe
+  table set and ordering (`snapshotTableOrder`, `backupService.ts:553-583`).
 - No route changes, no `createBackup()` rewiring — 06 wires the engine into
   `createBackupArtifact`. This subtask ships a self-contained, test-covered library.
 
@@ -92,7 +93,7 @@ Engine-level security invariants (defense-in-depth, verified by review + tests):
 - **No artifact data logged.** Row values, ids, and temp-spool paths are never
   `console.*`-ed. Errors throw machine-readable codes (`backup_archive_export_failed`,
   `backup_archive_tempdir_failed`) that the service layer already runs through
-  `sanitizeBackupError()` (`backupService.ts:247`, strips `cwd` + backup-dir) before
+  `sanitizeBackupError()` (`backupService.ts:272`, strips `cwd` + backup-dir) before
   it reaches `row.error`.
 - **Bounded temp spool, always cleaned.** Per-table NDJSON is spooled to a
   per-run directory. **Spool-dir resolution (owner-confirmed 2026-07-06), first match wins:**
@@ -117,7 +118,7 @@ Engine-level security invariants (defense-in-depth, verified by review + tests):
 All shapes below are grounded in the real code: drizzle helpers already imported in
 `backupService.ts:3` (`and, desc, eq, getTableColumns, inArray, lt` — 01 additionally
 imports `asc, gt, sql` and `type AnyColumn`), the `db` client (`core/db/client.ts:13`), the schema tables,
-and the FK-safe order from `snapshotTableOrder` (`backupService.ts:514-544`).
+and the FK-safe order from `snapshotTableOrder` (`backupService.ts:553-583`).
 
 ### 4.1 Envelope + manifest types/constants (the shared contract)
 
@@ -140,7 +141,8 @@ import {
   postRevisions, postPreviewTokens, contentTermAssignments, postTermAssignments,
 } from "../../db/schema";
 import type { BackupIncludeOption } from "./backupTypes";
-import { exportConfig } from "../tools/importExportService"; // 484 (exported :287) — settings.json member (§4.6a step 3)
+import { getStorageSettings } from "../settings/storageSettings"; // 3-tier spool base (§4.5/§4.6a)
+import { exportConfig } from "../tools/importExportService"; // 484 (exported :289) — settings.json member (§4.6a step 3)
 
 // v1 JSON artifact = version 1 (backupService BACKUP_ARTIFACT_VERSION). The tar
 // archive is a NEW artifact format — start at 2 so a reader can tell them apart.
@@ -211,20 +213,38 @@ export type TarMember = {
 };
 ```
 
+**Shared spool-base resolver (3-tier, owner-confirmed §3/§7 — the single source of
+truth both `packDatabaseArchive` §4.5 and `packBackupArchive` §4.6a call):**
+
+```ts
+// First match wins: (1) BACKUP_TMP_DIR env override; (2) a LOCAL/filesystem
+// persistent base from getStorageSettings() → `${base}/backups-tmp` (ONLY for a
+// local driver — remote s3/azure yields no local spool path and falls through);
+// (3) os.tmpdir(). The per-run leaf stays a fresh `coderso-backup-<uuid>` subdir.
+async function resolveSpoolBase(): Promise<string> {
+  if (process.env.BACKUP_TMP_DIR) return process.env.BACKUP_TMP_DIR;
+  const storage = await getStorageSettings();          // ../settings/storageSettings (:281)
+  if (storage.driver === "local" && storage.local.dir) {
+    return path.join(storage.local.dir, "backups-tmp");
+  }
+  return os.tmpdir();
+}
+```
+
 ### 4.2 Table descriptors + keyset cursor (mirrors 484's FK-safe set)
 
 ```ts
 // Cursor columns per table: single PK for most, COMPOSITE for the two junctions.
-// GROUNDED: postTermAssignments PK = [postId, termId] (schema.ts:968);
-// contentTermAssignments PK = [entryId, termId] (schema.ts:986); postPreviewTokens
-// id is uuid (schema.ts:903); all other snapshot tables use a single uuid/text id.
+// GROUNDED: postTermAssignments PK = [postId, termId] (core/db/tables/posts.ts:95);
+// contentTermAssignments PK = [entryId, termId] (core/db/tables/content.ts:134); postPreviewTokens
+// id is uuid (core/db/tables/posts.ts:77); all other snapshot tables use a single uuid/text id.
 type TableDescriptor = {
   key: keyof import("./backupTypes").BackupArtifactDatabase;
   table: PgTable;
   cursor: string[]; // ordered PK column property names on the drizzle table
 };
 
-// Order MIRRORS snapshotTableOrder (backupService.ts:514-544). Export order does not
+// Order MIRRORS snapshotTableOrder (backupService.ts:553-583). Export order does not
 // need FK-safety (no writes), but keeping the same order makes the drift test 1:1.
 export const ARCHIVE_TABLE_DESCRIPTORS: TableDescriptor[] = [
   { key: "pages", table: pages, cursor: ["id"] },
@@ -286,7 +306,7 @@ async function defaultRunBatch(
   // builder is a STAGED, phantom-typed chain — `.where()` must precede
   // `.orderBy()/.limit()`, and a query variable CANNOT be reassigned across
   // conditional method calls without `.$dynamic()` (the whole repo uses single
-  // unbroken chains, e.g. backupService.ts:408; zero `$dynamic` usage). So compute
+  // unbroken chains, e.g. backupService.ts:494; zero `$dynamic` usage). So compute
   // the WHERE expression FIRST, then build ONE unbroken chain. `where(undefined)`
   // is a valid no-op in drizzle (drops the clause), so the first page needs no
   // branch. Passing `undefined` keeps the types happy without `.$dynamic()`.
@@ -341,7 +361,7 @@ sort key itself.
 ```ts
 // Serialize one DB row to a single NDJSON line. JSON.stringify renders Date columns
 // as ISO strings (drizzle timestamps) and jsonb as objects — this is exactly what
-// 484's reviveRowsForInsert (backupService.ts:549-564) expects to revive on restore,
+// 484's reviveRowsForInsert (backupService.ts:588-607) expects to revive on restore,
 // so the round-trip is lossless. numeric columns round-trip as strings (postgres-js).
 const toNdjsonLine = (row: unknown) => `${JSON.stringify(row)}\n`;
 
@@ -444,7 +464,7 @@ export async function packDatabaseArchive(
   // (§3/§7). The per-run leaf is ALWAYS a fresh `coderso-backup-<uuid>` subdir — neither
   // env nor settings overrides the unique leaf, so no user input enters the path
   // (traversal-safe) and concurrent/repeat runs never collide or wipe each other.
-  const baseTmp = process.env.BACKUP_TMP_DIR ?? os.tmpdir();
+  const baseTmp = await resolveSpoolBase(); // 3-tier, §3/§7 (env → local storage base → os.tmpdir)
   const tmpDir = opts.tmpDir ?? path.join(baseTmp, `coderso-backup-${randomUUID()}`);
   const batchSize = opts.batchSize ?? EXPORT_BATCH_SIZE;
   const runBatch = opts.runBatch ?? defaultRunBatch;
@@ -624,7 +644,7 @@ export async function packBackupArchive(opts: PackBackupArchiveOptions): Promise
   // (§3/§7). The per-run leaf is ALWAYS a fresh `coderso-backup-<uuid>` subdir — neither
   // env nor settings overrides the unique leaf, so no user input enters the path
   // (traversal-safe) and concurrent/repeat runs never collide or wipe each other.
-  const baseTmp = process.env.BACKUP_TMP_DIR ?? os.tmpdir();
+  const baseTmp = await resolveSpoolBase(); // 3-tier, §3/§7 (env → local storage base → os.tmpdir)
   const tmpDir = opts.tmpDir ?? path.join(baseTmp, `coderso-backup-${randomUUID()}`);
   const batchSize = opts.batchSize ?? EXPORT_BATCH_SIZE;
   const runBatch = opts.runBatch ?? defaultRunBatch;
@@ -798,7 +818,7 @@ glob includes `tests/unit`).
   `packDatabaseArchive`/`packBackupArchive` export **whole tables** by design —
   `defaultRunBatch` (§4.2) does an unscoped `db.select().from(table)` paged only by
   the keyset cursor, with **no** seeded-id filter (mirrors 484's unbounded
-  `buildDatabaseSnapshot`, `backupService.ts:261-308`). On the shared REMOTE DB every
+  `buildDatabaseSnapshot`, `backupService.ts:300-373`). On the shared REMOTE DB every
   snapshot table already holds ambient/other-test/real rows, so **no snapshot table
   is ever empty** and a real full-table run pages the ambient rows too. Therefore any
   test that asserts an **exact** `rowCount` or an **exact** `runBatch` call count MUST
@@ -862,8 +882,8 @@ glob includes `tests/unit`).
    `tables/<key>.ndjson`.
 6. **Drift guard (lock-step with 484)** — assert `ARCHIVE_TABLE_DESCRIPTORS` has 22
    entries and its ordered key list equals the documented snapshot set/order from
-   `snapshotTableOrder` (`backupService.ts:514-544`) / `BackupArtifactDatabase`
-   (`backupTypes.ts:105-130`); assert the two junction descriptors carry composite
+   `snapshotTableOrder` (`backupService.ts:553-583`) / `BackupArtifactDatabase`
+   (`backupTypes.ts:105-133`); assert the two junction descriptors carry composite
    cursors (`["entryId","termId"]`, `["postId","termId"]`). Fails loudly if 484's set
    changes without updating the descriptor.
 7. **Cleanup** — after draining + `cleanup()`, assert the temp spool dir no longer
@@ -884,8 +904,8 @@ glob includes `tests/unit`).
 
 ## 7. Coordination
 
-- **Changelog:** do NOT create `_docs/_CHANGELOG/1229-*.md` here. Only the closure
-  subtask **511-07** writes the changelog (1229, next free per parent §Coordination)
+- **Changelog:** do NOT create `_docs/_CHANGELOG/1281-*.md` here. Only the closure
+  subtask **511-07** writes the changelog (1281, pinned per parent §Coordination)
   and edits `_docs/_TASKS/*`. 01 ships code + tests only.
 - **Land order:** strictly sequential **01 → 02 → 03 → 04 → 05 → 06 → 07**. 01 lands
   first as the foundation.

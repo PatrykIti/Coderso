@@ -64,7 +64,17 @@ vi.mock("@/components/ui/input", () => ({
     value?: string;
     onChange?: (event: React.ChangeEvent<HTMLInputElement>) => void;
     [key: string]: unknown;
-  }) => <input value={value} onChange={onChange} {...props} />,
+  }) => (
+    <input
+      value={value}
+      onChange={onChange}
+      // happy-dom does not route dispatched `input` events through React's
+      // delegated onChange, so mirror the access-logs mock and forward the
+      // native onInput listener as well.
+      onInput={(event) => onChange?.(event as unknown as React.ChangeEvent<HTMLInputElement>)}
+      {...props}
+    />
+  ),
 }));
 
 vi.mock("@/components/ui/separator", () => ({
@@ -140,30 +150,48 @@ test("BackupsPage renders schedule and table", () => {
   expect(html).toContain("Create");
 });
 
-test("BackupNowDialog sends selected include options and blocks empty selections", async () => {
+const typeInto = (container: HTMLElement, id: string, value: string) => {
+  const input = container.querySelector<HTMLInputElement>(`#${id}`);
+  if (!(input instanceof HTMLInputElement)) throw new Error(`Missing input ${id}`);
+  React.act(() => {
+    input.value = value;
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+    input.dispatchEvent(new Event("change", { bubbles: true }));
+  });
+};
+
+test("BackupNowDialog sends selected include options + passphrase and blocks empty/no-passphrase submits", async () => {
   const onCreate = vi.fn(async () => true);
   const view = mount(
     <BackupNowDialog open onOpenChange={() => undefined} onCreate={onCreate} isSubmitting={false} />
   );
 
   try {
+    // Defaults: database + media checked. Toggle media OFF, settings ON, then
+    // type the mandatory encryption passphrase and submit.
     const checkboxes = Array.from(
       view.container.querySelectorAll<HTMLButtonElement>("[role='checkbox']")
     );
     React.act(() => {
-      checkboxes[1]?.click();
-      checkboxes[2]?.click();
+      checkboxes[1]?.click(); // media -> off
+      checkboxes[2]?.click(); // settings -> on
     });
+    // Without a passphrase the submit stays disabled: no call fires.
+    clickByText(view.container, "Start Backup");
+    expect(onCreate).not.toHaveBeenCalled();
+
+    typeInto(view.container, "backup-passphrase", "test-passphrase");
     await React.act(async () => {
       clickByText(view.container, "Start Backup");
       await Promise.resolve();
     });
 
-    expect(onCreate).toHaveBeenCalledWith(["database", "settings"]);
+    expect(onCreate).toHaveBeenCalledWith(["database", "settings"], "test-passphrase");
   } finally {
     view.cleanup();
   }
 
+  // Empty selection: submit disabled + inline error, even with a passphrase.
   const emptyView = mount(
     <BackupNowDialog open onOpenChange={() => undefined} onCreate={onCreate} isSubmitting={false} />
   );
@@ -173,9 +201,10 @@ test("BackupNowDialog sends selected include options and blocks empty selections
       emptyView.container.querySelectorAll<HTMLButtonElement>("[role='checkbox']")
     );
     React.act(() => {
-      checkboxes[0]?.click();
-      checkboxes[1]?.click();
+      checkboxes[0]?.click(); // database -> off
+      checkboxes[1]?.click(); // media -> off
     });
+    typeInto(emptyView.container, "backup-passphrase", "test-passphrase");
     expect(emptyView.container.textContent).toContain("Select at least one backup section.");
     expect(
       Array.from(emptyView.container.querySelectorAll("button")).find((button) =>
@@ -187,7 +216,29 @@ test("BackupNowDialog sends selected include options and blocks empty selections
   }
 });
 
-test("BackupsTable shows worker boundary, disabled reasons, and real pagination/delete actions", () => {
+test("BackupNowDialog flags users selection as sensitive and encrypted-only", async () => {
+  const onCreate = vi.fn(async () => true);
+  const view = mount(
+    <BackupNowDialog open onOpenChange={() => undefined} onCreate={onCreate} isSubmitting={false} />
+  );
+
+  try {
+    const checkboxes = Array.from(
+      view.container.querySelectorAll<HTMLButtonElement>("[role='checkbox']")
+    );
+    React.act(() => {
+      checkboxes[3]?.click(); // users -> on
+    });
+    expect(view.container.textContent).toContain("Users & roles are sensitive.");
+    expect(view.container.textContent).toContain(
+      "encrypted with the passphrase below and can only be restored through Import"
+    );
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("BackupsTable shows worker boundary, disabled reasons, v2 import-only restore, and pagination", () => {
   const onPageChange = vi.fn();
   const onQueryChange = vi.fn();
   const onDelete = vi.fn();
@@ -207,11 +258,11 @@ test("BackupsTable shows worker boundary, disabled reasons, and real pagination/
             finishedAt: null,
           },
           {
-            id: "backup-local-artifact",
+            id: "backup-v2-cbk",
             kind: "manual",
             status: "complete",
             storageDriver: "local",
-            artifactPath: "/var/backups/backup-local-artifact.zip",
+            artifactPath: "/var/backups/backup-v2-cbk.cbk",
             sizeBytes: 128,
             error: null,
             createdAt: "2026-06-01T00:00:00.000Z",
@@ -245,7 +296,9 @@ test("BackupsTable shows worker boundary, disabled reasons, and real pagination/
 
   expect(html).toContain("CMS backup worker has jobs running longer than expected.");
   expect(html).toContain("Backup is still being processed.");
-  expect(html).toContain("Restore is not available for CMS-managed backup files yet.");
+  // v2 `.cbk` archives have no stored passphrase: restore-by-id is impossible,
+  // so the row explains the download → Import flow instead.
+  expect(html).toContain("Download this backup and use Import to restore it.");
   expect(html.replace(/<!-- -->/g, "")).toContain("Showing 2 of 11 backups");
 
   const view = mount(

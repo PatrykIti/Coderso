@@ -604,6 +604,23 @@ const renderEntryDetailHtml = async (
 
 export async function handlePublicRequest(req: Request) {
   const url = new URL(req.url);
+
+  // Disaster-restore gate (TASK-511-05): while `site.maintenanceMode` is ON, the
+  // whole public surface (pages + the non-admin public API dispatchers hosted
+  // below) returns 503 so a full/disaster import can never race public
+  // registrations or content writes. Admin SPA, /auth/* and /admin/api/* are
+  // dispatched BEFORE this handler (httpServer.ts fetch), so the admin can drive
+  // the restore and flip the flag back.
+  if ((await getSetting("site.maintenanceMode")) === true) {
+    return new Response("Service temporarily unavailable", {
+      status: 503,
+      headers: {
+        "content-type": "text/plain; charset=utf-8",
+        "retry-after": "3600",
+      },
+    });
+  }
+
   const security = await getSecuritySettings();
   const ip = resolveIp(req);
   const userAgent = req.headers.get("user-agent") ?? undefined;

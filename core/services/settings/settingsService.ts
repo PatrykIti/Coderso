@@ -63,6 +63,10 @@ const DEFAULT_SETTINGS = {
   "site.previewEnabled": true,
   "site.contentRoutes": DEFAULT_CONTENT_ROUTES,
   "site.cacheTtlSeconds": 30,
+  // Disaster-restore gate (TASK-511-05): while ON, the whole PUBLIC surface
+  // (pages + non-admin public APIs) returns 503; admin SPA + /admin/api/* stay
+  // reachable so the admin can drive the backup import and flip the flag back.
+  "site.maintenanceMode": false,
   "auth.sessionTtlDays": 14,
   "auth.resetTtlMinutes": 60,
   "posts.editor.mode": "blocks" as PostEditorMode,
@@ -424,6 +428,10 @@ function validateSettingValue(key: SettingKey, value: unknown): SettingValueMap[
     return value;
   }
 
+  if (key === "site.maintenanceMode") {
+    return normalizeBooleanValue(value);
+  }
+
   if (key === "site.cacheTtlSeconds") {
     if (typeof value !== "number" || !Number.isFinite(value)) {
       throw new Error("settings_value_invalid");
@@ -648,6 +656,11 @@ export async function listSettings(): Promise<SettingValueMap> {
     }
 
     if (key === "site.previewEnabled") {
+      merged[key] = Boolean(row.value);
+      continue;
+    }
+
+    if (key === "site.maintenanceMode") {
       merged[key] = Boolean(row.value);
       continue;
     }

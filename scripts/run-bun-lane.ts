@@ -57,6 +57,15 @@ const routeSuites = [
 
 const baselineSuites = [
   "tests/integration/plugins/assets.test.ts",
+  "tests/integration/runtime/backupScheduler.test.ts",
+  "tests/unit/backups/backupArchive.test.ts",
+  "tests/unit/backups/backupCrypto.test.ts",
+  "tests/unit/backups/backupImport.test.ts",
+  "tests/unit/backups/backupMediaArchive.test.ts",
+  "tests/unit/backups/backupRemoteStorage.test.ts",
+  "tests/unit/backups/backupRestore.test.ts",
+  "tests/unit/backups/backupService.test.ts",
+  "tests/unit/backups/backupUsersSection.test.ts",
   "tests/perf/admin-request-baseline.test.ts",
   "tests/perf/admin-prefetch-budget.test.ts",
   "tests/perf/analyticsIngestion.test.ts",

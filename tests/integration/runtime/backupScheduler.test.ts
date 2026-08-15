@@ -2,7 +2,7 @@ import { afterAll, afterEach, beforeAll, expect, test } from "bun:test";
 import { rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { eq, inArray, sql } from "drizzle-orm";
+import { and, eq, gte, inArray, sql } from "drizzle-orm";
 import postgres from "postgres";
 
 import {
@@ -15,6 +15,23 @@ import { resolveSessionDatabaseTarget } from "../../../core/db/connectionTargets
 import { db } from "../../../core/db/client";
 import { auditLogs, backups, backupSchedules } from "../../../core/db/schema";
 import { deleteBackup, getBackupSchedule } from "../../../core/services/backups/backupService";
+
+// Every v2 `.cbk` is encrypted; the unattended scheduler passphrase comes ONLY
+// from BACKUP_ENCRYPTION_PASSPHRASE (never a request, never stored). Tests that
+// run a REAL archive must set it; tests that exercise the fail-closed branch
+// must NOT have it set.
+const TEST_PASSPHRASE = "scheduler-test-passphrase-511";
+
+const withScheduledPassphrase = async <T>(passphrase: string, fn: () => Promise<T>): Promise<T> => {
+  const prev = process.env.BACKUP_ENCRYPTION_PASSPHRASE;
+  process.env.BACKUP_ENCRYPTION_PASSPHRASE = passphrase;
+  try {
+    return await fn();
+  } finally {
+    if (prev === undefined) delete process.env.BACKUP_ENCRYPTION_PASSPHRASE;
+    else process.env.BACKUP_ENCRYPTION_PASSPHRASE = prev;
+  }
+};
 
 async function canConnect() {
   try {
@@ -57,6 +74,7 @@ const restoreSchedule = async () => {
       frequency: originalSchedule.frequency,
       retentionDays: originalSchedule.retentionDays,
       storageDriver: originalSchedule.storageDriver,
+      include: originalSchedule.include, // column from 0072 (06)
       nextRunAt: originalSchedule.nextRunAt, // column from 484-01
       lastRunAt: originalSchedule.lastRunAt, // column from 484-01
     })
@@ -99,23 +117,31 @@ const forceDue = async () => {
 // --- cases -------------------------------------------------------------------
 
 testIfDb("runs a due scheduled backup and advances next_run_at", async () => {
-  await forceDue();
-  const id = await runDueScheduledBackups(new Date());
-  expect(id).not.toBeNull();
-  if (id) createdIds.push(id);
-  const after = await getBackupSchedule();
-  expect(after.nextRunAt!.getTime()).toBeGreaterThan(Date.now());
-  expect(after.lastRunAt).not.toBeNull();
+  await withScheduledPassphrase(TEST_PASSPHRASE, async () => {
+    await forceDue();
+    const id = await runDueScheduledBackups(new Date());
+    expect(id).not.toBeNull();
+    if (id) createdIds.push(id);
+    const after = await getBackupSchedule();
+    expect(after.nextRunAt!.getTime()).toBeGreaterThan(Date.now());
+    expect(after.lastRunAt).not.toBeNull();
 
-  const [row] = await db.select().from(backups).where(eq(backups.id, id!));
-  expect(row!.kind).toBe("scheduled");
+    const [row] = await db.select().from(backups).where(eq(backups.id, id!));
+    expect(row!.kind).toBe("scheduled");
+    expect(row!.status).toBe("complete"); // passphrase reached createBackup
 
-  const [audit] = await db.select().from(auditLogs).where(eq(auditLogs.targetId, id!));
-  expect(audit).toBeTruthy();
-  expect(audit!.actorId).toBeNull();
-  expect(audit!.action).toBe("backups.create");
-  expect((audit!.metadata as Record<string, unknown>).source).toBe("scheduler");
-  expect((audit!.metadata as Record<string, unknown>).kind).toBe("scheduled");
+    const [audit] = await db.select().from(auditLogs).where(eq(auditLogs.targetId, id!));
+    expect(audit).toBeTruthy();
+    expect(audit!.actorId).toBeNull();
+    expect(audit!.action).toBe("backups.create");
+    const metadata = audit!.metadata as Record<string, unknown>;
+    expect(metadata.source).toBe("scheduler");
+    expect(metadata.kind).toBe("scheduled");
+    // Success audit must NOT carry a `result` marker — and the passphrase never
+    // reaches audit metadata or any column.
+    expect(metadata.result).toBeUndefined();
+    expect(JSON.stringify(audit)).not.toContain(TEST_PASSPHRASE);
+  });
 });
 
 testIfDb("skips when not due", async () => {
@@ -137,14 +163,16 @@ testIfDb("skips when schedule disabled", async () => {
 });
 
 testIfDb("single-flight (in-process): overlapping calls run at most one backup", async () => {
-  await forceDue();
-  const [a, b] = await Promise.all([
-    runDueScheduledBackups(new Date()),
-    runDueScheduledBackups(new Date()),
-  ]);
-  const ids = [a, b].filter((x): x is string => Boolean(x));
-  createdIds.push(...ids);
-  expect(ids.length).toBe(1);
+  await withScheduledPassphrase(TEST_PASSPHRASE, async () => {
+    await forceDue();
+    const [a, b] = await Promise.all([
+      runDueScheduledBackups(new Date()),
+      runDueScheduledBackups(new Date()),
+    ]);
+    const ids = [a, b].filter((x): x is string => Boolean(x));
+    createdIds.push(...ids);
+    expect(ids.length).toBe(1);
+  });
 });
 
 testIfDb("advisory lock (cross-session): held elsewhere => due run is skipped", async () => {
@@ -162,22 +190,24 @@ testIfDb("advisory lock (cross-session): held elsewhere => due run is skipped", 
 testIfDb(
   "advisory lock: released after a normal run (nothing left on the shared DB)",
   async () => {
-    await forceDue();
-    const id = await runDueScheduledBackups(new Date());
-    if (id) createdIds.push(id);
-    const probe = postgres(sessionLockUrl(), { max: 1 }); // fresh DIRECT session
-    try {
-      const [row] = await probe<{ locked: boolean }[]>`
-      select pg_try_advisory_lock(${BACKUP_SCHEDULER_LOCK_NAMESPACE}, ${BACKUP_SCHEDULER_LOCK_KEY}) as locked
-    `;
-      expect(row!.locked).toBe(true); // acquirable => job released it
-    } finally {
-      await probe`select pg_advisory_unlock(${BACKUP_SCHEDULER_LOCK_NAMESPACE}, ${BACKUP_SCHEDULER_LOCK_KEY})`;
-      await probe.end();
-    }
-    // Full DB-snapshot backup + a fresh TLS probe connection against the shared
-    // REMOTE Postgres sits right at the 5s default; give it headroom (env latency,
-    // not logic) so it does not flake.
+    await withScheduledPassphrase(TEST_PASSPHRASE, async () => {
+      await forceDue();
+      const id = await runDueScheduledBackups(new Date());
+      if (id) createdIds.push(id);
+      const probe = postgres(sessionLockUrl(), { max: 1 }); // fresh DIRECT session
+      try {
+        const [row] = await probe<{ locked: boolean }[]>`
+        select pg_try_advisory_lock(${BACKUP_SCHEDULER_LOCK_NAMESPACE}, ${BACKUP_SCHEDULER_LOCK_KEY}) as locked
+      `;
+        expect(row!.locked).toBe(true); // acquirable => job released it
+      } finally {
+        await probe`select pg_advisory_unlock(${BACKUP_SCHEDULER_LOCK_NAMESPACE}, ${BACKUP_SCHEDULER_LOCK_KEY})`;
+        await probe.end();
+      }
+      // Full DB-snapshot backup + a fresh TLS probe connection against the shared
+      // REMOTE Postgres sits right at the 5s default; give it headroom (env latency,
+      // not logic) so it does not flake.
+    });
   },
   15000
 );
@@ -189,25 +219,115 @@ testIfDb("a failing createBackup still advances schedule and does not throw", as
   // call via getBackupStorageDir(), so an env swap here is picked up immediately.
   // Use a path whose PARENT is a regular file so mkdir(baseDir, { recursive: true })
   // throws ENOTDIR deterministically for any user.
-  const sentinelFile = path.join(os.tmpdir(), `backup-scheduler-test-${crypto.randomUUID()}`);
-  await writeFile(sentinelFile, "not a directory");
-  const prevBackupDir = process.env.BACKUP_DIR;
-  process.env.BACKUP_DIR = path.join(sentinelFile, "nested"); // mkdir => ENOTDIR
-  try {
-    await forceDue();
-    const id = await runDueScheduledBackups(new Date()); // must RESOLVE, not throw
-    expect(id).not.toBeNull(); // failed row still created + returned
-    if (id) createdIds.push(id); // per-id cleanup of the failed row
-    const [row] = await db.select().from(backups).where(eq(backups.id, id!));
-    expect(row!.status).toBe("failed");
-    // error is sanitized (sanitizeBackupError maps the backup dir/cwd) — no raw path leaks
-    expect(row!.error ?? "").not.toContain(os.tmpdir());
-    const after = await getBackupSchedule();
-    expect(after.nextRunAt!.getTime()).toBeGreaterThan(Date.now()); // schedule advanced anyway
-    expect(after.lastRunAt).not.toBeNull();
-  } finally {
-    if (prevBackupDir === undefined) delete process.env.BACKUP_DIR;
-    else process.env.BACKUP_DIR = prevBackupDir; // always restore the env
-    await rm(sentinelFile, { force: true });
-  }
+  // The passphrase is SET so the run goes through the real create path (then
+  // fails on the write) instead of the missing-passphrase fail-closed branch —
+  // that keeps this test about archive I/O failure, and resets the noise guard.
+  await withScheduledPassphrase(TEST_PASSPHRASE, async () => {
+    const sentinelFile = path.join(os.tmpdir(), `backup-scheduler-test-${crypto.randomUUID()}`);
+    await writeFile(sentinelFile, "not a directory");
+    const prevBackupDir = process.env.BACKUP_DIR;
+    process.env.BACKUP_DIR = path.join(sentinelFile, "nested"); // mkdir => ENOTDIR
+    try {
+      await forceDue();
+      const id = await runDueScheduledBackups(new Date()); // must RESOLVE, not throw
+      expect(id).not.toBeNull(); // failed row still created + returned
+      if (id) createdIds.push(id); // per-id cleanup of the failed row
+      const [row] = await db.select().from(backups).where(eq(backups.id, id!));
+      expect(row!.status).toBe("failed");
+      // error is sanitized (sanitizeBackupError maps the backup dir/cwd) — no raw path leaks
+      expect(row!.error ?? "").not.toContain(os.tmpdir());
+      const after = await getBackupSchedule();
+      expect(after.nextRunAt!.getTime()).toBeGreaterThan(Date.now()); // schedule advanced anyway
+      expect(after.lastRunAt).not.toBeNull();
+    } finally {
+      if (prevBackupDir === undefined) delete process.env.BACKUP_DIR;
+      else process.env.BACKUP_DIR = prevBackupDir; // always restore the env
+      await rm(sentinelFile, { force: true });
+    }
+  });
 });
+
+testIfDb(
+  "missing BACKUP_ENCRYPTION_PASSPHRASE is fail-closed, advances, and is noise-guarded per config",
+  async () => {
+    // This whole test runs WITHOUT the env passphrase: createBackup self-marks
+    // `failed` and the scheduler never returns a backup id. The in-memory noise
+    // guard bounds this to ONE row + audit per schedule+include configuration,
+    // so a misconfigured server cannot accumulate a failed row per tick.
+    const priorInclude = (await getBackupSchedule()).include;
+    try {
+      // --- standard include: record ONCE ---
+      await forceDue();
+      const first = await runDueScheduledBackups(new Date());
+      expect(first).toBeNull(); // fail-closed branch returns null, never an id
+      const [failed] = await db
+        .select({ id: backups.id, error: backups.error })
+        .from(backups)
+        .where(eq(backups.kind, "scheduled"))
+        .orderBy(sql`created_at desc`)
+        .limit(1);
+      expect(failed?.error).toBe("backup_passphrase_required");
+      const failedId = failed!.id;
+      createdIds.push(failedId); // per-id cleanup of the failed row + audits
+      const after = await getBackupSchedule();
+      expect(after.nextRunAt!.getTime()).toBeGreaterThan(Date.now()); // advanced anyway
+
+      const [audit] = await db.select().from(auditLogs).where(eq(auditLogs.targetId, failedId));
+      expect(audit).toBeTruthy();
+      const metadata = audit!.metadata as Record<string, unknown>;
+      expect(metadata.source).toBe("scheduler");
+      expect(metadata.kind).toBe("scheduled");
+      expect(metadata.result).toBe("failed"); // explicit fail marker on the failure audit
+
+      // --- same config again: NO new row (noise guard) ---
+      const beforeNoise = new Date();
+      await forceDue();
+      expect(await runDueScheduledBackups(new Date())).toBeNull();
+      const newRows = await db
+        .select({ id: backups.id })
+        .from(backups)
+        .where(and(eq(backups.kind, "scheduled"), gte(backups.createdAt, beforeNoise)));
+      expect(newRows.length).toBe(0);
+
+      // --- users include is a DISTINCT config: records its own failure once ---
+      const s = await getBackupSchedule();
+      await db
+        .update(backupSchedules)
+        .set({ include: ["database", "users"] })
+        .where(eq(backupSchedules.id, s.id));
+      const beforeUsers = new Date();
+      await forceDue();
+      expect(await runDueScheduledBackups(new Date())).toBeNull();
+      const [usersFailed] = await db
+        .select({ id: backups.id, error: backups.error })
+        .from(backups)
+        .where(eq(backups.kind, "scheduled"))
+        .orderBy(sql`created_at desc`)
+        .limit(1);
+      expect(usersFailed?.error).toBe("backup_users_requires_encryption");
+      createdIds.push(usersFailed!.id);
+      // The audit row also carries the fail marker for the users config.
+      const [usersAudit] = await db
+        .select()
+        .from(auditLogs)
+        .where(eq(auditLogs.targetId, usersFailed!.id));
+      expect((usersAudit!.metadata as Record<string, unknown>).result).toBe("failed");
+
+      // --- users config again: NO new row ---
+      const beforeUsersNoise = new Date();
+      await forceDue();
+      expect(await runDueScheduledBackups(new Date())).toBeNull();
+      const usersNewRows = await db
+        .select({ id: backups.id })
+        .from(backups)
+        .where(and(eq(backups.kind, "scheduled"), gte(backups.createdAt, beforeUsersNoise)));
+      expect(usersNewRows.length).toBe(0);
+    } finally {
+      await db
+        .update(backupSchedules)
+        .set({ include: priorInclude })
+        .where(eq(backupSchedules.id, (await getBackupSchedule()).id));
+    }
+  },
+  60000
+);

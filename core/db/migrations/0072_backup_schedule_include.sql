@@ -1,0 +1,1 @@
+ALTER TABLE "backup_schedules" ADD COLUMN "include" jsonb DEFAULT '["database","settings","media"]'::jsonb NOT NULL;

@@ -45,12 +45,14 @@ const backupsState = vi.hoisted(() => ({
     frequency: "daily",
     retentionDays: 30,
     storageDriver: "local",
+    include: ["database", "settings", "media"],
     createdAt: "2026-03-15T07:00:00.000Z",
     updatedAt: "2026-03-15T07:00:00.000Z",
-  },
+  } as BackupSchedule,
   nextListError: null as unknown,
   nextScheduleError: null as unknown,
   nextCreateError: null as unknown,
+  nextImportError: null as unknown,
   nextUpdateError: null as unknown,
   nextRestoreError: null as unknown,
   nextDownloadError: null as unknown,
@@ -90,6 +92,14 @@ const backupsState = vi.hoisted(() => ({
       throw error;
     }
     return backupsState.listItems[0];
+  }),
+  importBackup: vi.fn(async () => {
+    if (backupsState.nextImportError) {
+      const error = backupsState.nextImportError;
+      backupsState.nextImportError = null;
+      throw error;
+    }
+    return { tablesRestored: 4, rowsRestored: 12, usersRestored: 2, mediaRestored: 3 };
   }),
   updateBackupSchedule: vi.fn(async (payload: Record<string, unknown>) => {
     if (backupsState.nextUpdateError) {
@@ -171,12 +181,14 @@ const backupsState = vi.hoisted(() => ({
       frequency: "daily",
       retentionDays: 30,
       storageDriver: "local",
+      include: ["database", "settings", "media"],
       createdAt: "2026-03-15T07:00:00.000Z",
       updatedAt: "2026-03-15T07:00:00.000Z",
     };
     backupsState.nextListError = null;
     backupsState.nextScheduleError = null;
     backupsState.nextCreateError = null;
+    backupsState.nextImportError = null;
     backupsState.nextUpdateError = null;
     backupsState.nextRestoreError = null;
     backupsState.nextDownloadError = null;
@@ -185,6 +197,7 @@ const backupsState = vi.hoisted(() => ({
     backupsState.listBackups.mockClear();
     backupsState.getBackupSchedule.mockClear();
     backupsState.createBackup.mockClear();
+    backupsState.importBackup.mockClear();
     backupsState.updateBackupSchedule.mockClear();
     backupsState.restoreBackup.mockClear();
     backupsState.downloadBackup.mockClear();
@@ -234,6 +247,7 @@ vi.mock("@/services/backupsClient", () => ({
   getBackupScheduleCached: backupsState.getBackupSchedule,
   getCachedBackupSchedule: vi.fn(() => null),
   createBackup: backupsState.createBackup,
+  importBackup: backupsState.importBackup,
   updateBackupSchedule: backupsState.updateBackupSchedule,
   restoreBackup: backupsState.restoreBackup,
   downloadBackup: backupsState.downloadBackup,
@@ -303,15 +317,53 @@ vi.mock("../../../core/admin/ui/backups/BackupNowDialog", () => ({
   }: {
     open: boolean;
     onOpenChange: (open: boolean) => void;
-    onCreate: (include: BackupIncludeOption[]) => Promise<boolean>;
+    onCreate: (include: BackupIncludeOption[], passphrase: string) => Promise<boolean>;
   }) =>
     open ? (
       <div>
-        <button type="button" onClick={() => void onCreate(["database", "media"])}>
+        <button
+          type="button"
+          onClick={() => void onCreate(["database", "media"], "mock-passphrase")}
+        >
           backup-now-confirm
         </button>
         <button type="button" onClick={() => onOpenChange(false)}>
           backup-now-close
+        </button>
+      </div>
+    ) : null,
+}));
+
+vi.mock("../../../core/admin/ui/backups/BackupImportDialog", () => ({
+  BackupImportDialog: ({
+    open,
+    onOpenChange,
+    onImport,
+  }: {
+    open: boolean;
+    onOpenChange: (open: boolean) => void;
+    onImport: (input: {
+      file: File;
+      passphrase: string;
+      restoreUsers: boolean;
+    }) => Promise<boolean>;
+  }) =>
+    open ? (
+      <div>
+        <button
+          type="button"
+          onClick={() =>
+            void onImport({
+              file: new File([new Uint8Array([1, 2, 3])], "backup.cbk"),
+              passphrase: "import-passphrase",
+              restoreUsers: true,
+            })
+          }
+        >
+          import-confirm
+        </button>
+        <button type="button" onClick={() => onOpenChange(false)}>
+          import-close
         </button>
       </div>
     ) : null,
@@ -472,6 +524,7 @@ test("BackupsPage loads data, creates manual backups, updates schedule, restores
     expect(backupsState.createBackup).toHaveBeenCalledWith({
       kind: "manual",
       include: ["database", "media"],
+      passphrase: "mock-passphrase",
     });
     expect(backupsState.listBackups).toHaveBeenCalledTimes(2);
 
@@ -489,6 +542,20 @@ test("BackupsPage loads data, creates manual backups, updates schedule, restores
     clickByText(view.container, "restore:backup-1");
     await flush();
     expect(backupsState.restoreBackup).toHaveBeenCalledWith("backup-1");
+
+    // v2 import flow: open the Import dialog and confirm; the client forwards
+    // file + passphrase + restoreUsers to the maintenance-mode import route.
+    clickByText(view.container, "Import");
+    await flush();
+    clickByText(view.container, "import-confirm");
+    await flush();
+    expect(backupsState.importBackup).toHaveBeenCalledWith({
+      file: expect.objectContaining({ name: "backup.cbk" }),
+      passphrase: "import-passphrase",
+      restoreUsers: true,
+    });
+    // initial load + create refresh + restore refresh + import refresh
+    expect(backupsState.listBackups).toHaveBeenCalledTimes(4);
 
     clickByText(view.container, "download:backup-1");
     await flush();
@@ -550,6 +617,13 @@ test("BackupsPage surfaces load and action errors, including missing download UR
     clickByText(view.container, "backup-now-confirm");
     await flush();
     expect(view.container.textContent).toContain("Failed to create backup.");
+
+    backupsState.nextImportError = new Error("import exploded");
+    clickByText(view.container, "Import");
+    await flush();
+    clickByText(view.container, "import-confirm");
+    await flush();
+    expect(view.container.textContent).toContain("Failed to import backup.");
 
     backupsState.nextUpdateError = backupsState.apiError("Schedule denied");
     clickByText(view.container, "schedule-save");

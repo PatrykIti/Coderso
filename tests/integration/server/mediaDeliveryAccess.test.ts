@@ -308,6 +308,9 @@ function installHarness(overrides: Partial<MediaDeliveryDeps> = {}): void {
     async putMedia() {
       throw new Error("media_put_forbidden");
     },
+    async putAt() {
+      throw new Error("media_put_forbidden");
+    },
     async get(key) {
       calls.gets.push(key);
       return adapterGet(key);

@@ -5,7 +5,7 @@ export type BackupKind = "manual" | "scheduled";
 export type BackupStorageDriver = "local" | "s3" | "azure";
 export type BackupFrequency = "daily" | "weekly" | "monthly";
 
-export const backupIncludeOptions = ["database", "media", "settings"] as const;
+export const backupIncludeOptions = ["database", "media", "settings", "users"] as const;
 export type BackupIncludeOption = (typeof backupIncludeOptions)[number];
 
 export type BackupRecord = {
@@ -24,6 +24,9 @@ export type BackupRecord = {
 export type BackupCreateInput = {
   kind?: BackupKind;
   include?: BackupIncludeOption[];
+  // Create-path encryption passphrase (02 normalizeBackupPassphrase). Every v2
+  // .cbk is encrypted — this is REQUIRED; never persisted, logged, or audited.
+  passphrase?: string;
 };
 
 export type BackupListQuery = {
@@ -65,7 +68,10 @@ export type BackupDownload = {
   path: string | null;
   fileName?: string;
   contentType?: string;
+  // v2 .cbk artifacts carry the byte-exact archive base64-encoded (JSON-safe
+  // transport for the route); legacy v1 .json artifacts keep utf8 with no marker.
   content?: string;
+  encoding?: "base64";
 };
 
 export type BackupSchedule = {
@@ -74,6 +80,7 @@ export type BackupSchedule = {
   frequency: BackupFrequency;
   retentionDays: number;
   storageDriver: BackupStorageDriver;
+  include: BackupIncludeOption[]; // scheduled/full backup scope
   nextRunAt: Date | null;
   lastRunAt: Date | null;
   createdAt: Date;
@@ -85,6 +92,7 @@ export type BackupScheduleUpdate = {
   frequency?: BackupFrequency;
   retentionDays?: number;
   storageDriver?: BackupStorageDriver;
+  include?: BackupIncludeOption[]; // NEW (06)
 };
 
 // A single snapshot table is stored as an opaque array of DB rows. The rows are

@@ -87,6 +87,10 @@ export const backupSchedules = pgTable(
     frequency: text("frequency").notNull().default("daily"),
     retentionDays: integer("retention_days").notNull().default(30),
     storageDriver: text("storage_driver").notNull().default("local"),
+    // Which sections scheduled/full backups capture (BackupIncludeOption[],
+    // jsonb string[] validated app-side). Default = full minus the sensitive
+    // users/RBAC matrix (opt-in only). Added by migration 0072_backup_schedule_include.
+    include: jsonb("include").notNull().default(["database", "settings", "media"]),
     nextRunAt: timestamp("next_run_at"),
     lastRunAt: timestamp("last_run_at"),
     createdAt: timestamp("created_at").defaultNow().notNull(),

@@ -28,6 +28,16 @@ export const BACKUP_SCHEDULER_SESSION_PURPOSE = "scheduled backup single-flight 
 let timer: ReturnType<typeof setInterval> | null = null;
 let isRunning = false;
 
+// In-memory noise guard for the missing-passphrase state (06): the FIRST due
+// tick without BACKUP_ENCRYPTION_PASSPHRASE persists a `failed` backup row +
+// audit entry (fail-closed, correct), but a misconfigured server must not
+// accumulate one failed row + audit per tick. Keyed by schedule id + the
+// users-vs-standard include configuration, so each distinct config state records
+// its failure once. Reset on any successful passphrase run so a later
+// misconfiguration re-records once. Single-process state only — the guard bounds
+// per-tick write amplification; it is not a correctness lock.
+let lastNoPassphraseFailureKey: string | null = null;
+
 // OPT-IN outside production (default OFF) — parent rationale: the flag exists
 // "so multiple dev instances sharing the remote test DB do not all tick".
 // The seeded singleton schedule defaults enabled: true (getBackupSchedule seed
@@ -43,6 +53,13 @@ const schedulerEnabled = () => {
   if (flag !== undefined && flag !== "") return truthy(flag);
   return process.env.NODE_ENV === "production"; // opt-in outside production
 };
+
+// Backend-only, 02 env contract: the unattended scheduler passphrase. Never read
+// from a request, never returned by any route, never logged.
+function resolveScheduledPassphrase(): string | null {
+  const raw = process.env.BACKUP_ENCRYPTION_PASSPHRASE;
+  return raw && raw.trim() !== "" ? raw : null;
+}
 
 // 484-03 lands `pruneExpiredBackups` AFTER this leaf (land order 01 -> 02 -> 03).
 // Guarded runtime feature-detect (NOT a static import, which would fail lint:types
@@ -83,7 +100,39 @@ export async function runDueScheduledBackups(now: Date): Promise<string | null> 
         if (!fresh.enabled || !fresh.nextRunAt || fresh.nextRunAt.getTime() > now.getTime()) {
           return null;
         }
-        const backup = await createBackup({ kind: "scheduled" }); // never throws (it self-marks failed)
+        // 06: resolve the unattended passphrase BEFORE any archive work. Every v2
+        // `.cbk` is encrypted (02 has no unencrypted variant; 05 always decrypts),
+        // so a missing env var must NEVER emit an archive.
+        const passphrase = resolveScheduledPassphrase();
+        if (passphrase === null) {
+          // FAIL-CLOSED + noise-guarded: createBackup without a passphrase
+          // self-marks `failed` (backup_passphrase_required, or the 04 users
+          // guard's backup_users_requires_encryption when include has users).
+          // Still advance nextRunAt, but persist the failed row + audit only ONCE
+          // per schedule+include configuration while the misconfiguration persists.
+          const failureKey = `${fresh.id}:${fresh.include.includes("users") ? "users" : "standard"}`;
+          await markScheduleRun(fresh.id, now);
+          if (lastNoPassphraseFailureKey !== failureKey) {
+            lastNoPassphraseFailureKey = failureKey;
+            const backup = await createBackup({ kind: "scheduled", include: fresh.include });
+            await logAudit({
+              actorId: null,
+              action: "backups.create",
+              targetType: "backup",
+              targetId: backup.id,
+              metadata: { kind: "scheduled", source: "scheduler", result: "failed" },
+            });
+          }
+          return null;
+        }
+        // A successful run proves the passphrase IS configured — reset the guard
+        // so a later misconfiguration re-records its failure once.
+        lastNoPassphraseFailureKey = null;
+        const backup = await createBackup({
+          kind: "scheduled",
+          include: fresh.include,
+          passphrase, // never logged, never stored on the row
+        }); // never throws (it self-marks failed)
         await markScheduleRun(fresh.id, now); // advances next_run_at from `now`
         await logAudit({
           actorId: null, // system actor — no session, no fabricated user

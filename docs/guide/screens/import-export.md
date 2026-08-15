@@ -18,6 +18,10 @@ of the system and bringing structured bundles back in. It is where you choose
 what to export, upload import files, preview importable data, and monitor recent
 import runs.
 
+> **Backup files are separate:** restoring a backup `.cbk` archive (a full,
+> encrypted backup) happens on the **Backups** screen via Import with the
+> passphrase that encrypted it — not through this config import/export surface.
+
 In the current UI, this screen includes:
 - a disabled topbar `Activity Log` action while activity remains session-local,
 - `Export Data` cards for:

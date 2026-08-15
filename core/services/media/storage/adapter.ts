@@ -95,4 +95,16 @@ export interface MediaStorageAdapter {
   get(key: string): Promise<NodeJS.ReadableStream>;
   delete(key: string): Promise<void>;
   getPublicUrl(key: string): string;
+  /**
+   * Keyed, streamed write (Backup v2 restore). Places bytes at a caller-chosen
+   * key — the ORIGINAL storage key preserved from the archive — unlike `put`,
+   * which always mints a fresh key via buildKey(). Never buffers the whole file:
+   * `body` is consumed as a stream and each driver adapts it to its transport.
+   */
+  putAt(
+    key: string,
+    body: AsyncIterable<Uint8Array>,
+    size: number,
+    contentType: string
+  ): Promise<void>;
 }

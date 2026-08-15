@@ -8,7 +8,8 @@
 **Parent Task:** TASK-511 (`TASK-511_Backup_V2_Scalable_Compressed_Encrypted_Importable.md`)
 **Depends on:** TASK-511-01 (streaming export engine + archive/tar writer + manifest), TASK-511-02 (gzip + AES-256-GCM encryption)
 **Blocks:** TASK-511-05 (import/restore pipeline consumes the media restore helper)
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-08-15
 **Land order:** strictly sequential 01 → 02 → **03** → 04 → 05 → 06 → 07
 
 ---
@@ -16,7 +17,7 @@
 ## 1. Overview / Goal
 
 TASK-484's artifact stored media as **metadata only**. `createBackupArtifact()`
-(`core/services/backups/backupService.ts:366-402`) writes a `media` section whose
+(`core/services/backups/backupService.ts:354`) writes a `media` section whose
 own note admits it: *"Media file bytes stay in the configured media storage. This
 backup stores the media library metadata and URLs."* A restore onto a fresh /
 wiped storage backend therefore resurrects `media` rows that point at object keys
@@ -104,12 +105,12 @@ the **file bytes** that those rows reference).
   empty-Body path), and the deferred local `ENOENT`. `isMissing()` (§4.2) matches
   all of these; matching only the sentinels would let a real missing cloud object
   abort the whole export.
-- **Media table** — `core/db/schema.ts:1104` `media` has
+- **Media table** — `core/db/tables/media.ts:41` `media` has
   `key` (storage key, `notNull`), `url`, `mimeType` (`notNull`), `size`
   (`integer notNull`), `type`, `originalName`, … `key` is the join between a DB
   row and its stored bytes.
 - **Adapter errors may echo credentials.** `uploadBackupArtifact()`
-  (`backupService.ts:343-364`) already establishes the required pattern: catch the
+  (`backupService.ts:300-373`) already establishes the required pattern: catch the
   raw adapter error, `console.error` it **server-side only**, and surface a
   machine-readable, credential-free code (`backup_upload_failed`). This subtask
   reuses that pattern (§4.2 / §4.3).
@@ -304,7 +305,7 @@ export async function streamMediaIntoArchive(
       // pushing the member (with that declared size) ONLY on a match (01 §4.6a
       // lines 529-533) — so a mismatch can NEVER desync/corrupt the tar (01 simply
       // never emits the member). But 03 has no authoritative upfront size other
-      // than the DB `media.size` (schema.ts:1111), which can legitimately DRIFT
+      // than the DB `media.size` (media.ts:50), which can legitimately DRIFT
       // from the real on-disk byte count. If 03 passed the drifted DB size, 01's
       // assertion would throw the generic `backup_archive_export_failed` and abort
       // the WHOLE export — contradicting §1's "never a hard failure". So `row.size`
@@ -469,14 +470,14 @@ export async function restoreMediaFromArchive(
 
   for await (const entry of reader.entries()) {
     if (!entry.name.startsWith(MEDIA_MEMBER_PREFIX)) {
-      // 05's readTarMembers is a FRESH full-archive reader (05 line 425:
+      // 05's readTarMembers is a FRESH full-archive reader (05 §5.5:
       // `restoreMediaFromArchive(readTarMembers(fileStream(tarPath)))`) that yields
       // manifest.json FIRST, then tables/<key>.ndjson, then settings.json, then the
       // media/* members — so this branch is hit for real, and for the very first
       // member every restore. 05's reader is a rolling-buffer ustar parser whose
       // documented contract is: "The consumer MUST fully drain each member's body
-      // before advancing" (05 §5.2 lines 461-462; 05's own validateArchive obeys it
-      // at §5.4 line 531). A bare `continue` here would leave the undrained body's
+      // before advancing" (05 §5.2; 05's own validateArchive obeys it in §5.4). A bare
+      // `continue` here would leave the undrained body's
       // bytes in the stream, so the reader's "consume padding to the next 512
       // boundary" step would read PAYLOAD bytes as the next 512-byte header →
       // checksum/typeflag failure or corrupt media extraction. Since manifest.json
@@ -511,7 +512,7 @@ export async function restoreMediaFromArchive(
   `mimeFromExt` helper defined in the §4.3 code block above (small `EXT_TO_MIME`
   map; no core util exists for this — grep confirms zero ext→mime helper in
   `core/`, and the reverse `mediaClient.ts` map is admin-side mime→ext). The exact
-  `mimeType` also lives on the restored `media` row (`schema.ts:1110`), but
+  `mimeType` also lives on the restored `media` row (`media.ts:49`), but
   decoupling from the DB keeps the media-bytes stream independent of restore
   ordering (bytes are written OUTSIDE the DB `tx`, and the reader may run before or
   regardless of a given row being present). **Fidelity tradeoff (explicit):** on
@@ -705,7 +706,7 @@ two entrypoints adapt (they are the only integration points):
    `appendStream` asserts the streamed byte count equals `size`, pushing the member
    ONLY on a match (01 §4.6a lines 529-533). 03 imports `BackupArchiveWriter` from
    `backupArchive.ts` and codes against exactly this signature. `media.size`
-   (schema.ts:1111) is the declared size passed in. **Size-drift handling (03's
+   (media.ts:50) is the declared size passed in. **Size-drift handling (03's
    responsibility, no 01 change):** because a wrong `media.size` would make 01's
    assertion throw `backup_archive_export_failed` and abort the whole export, 03
    wraps the body in `countingStream` (§4.2) which raises a DISTINCT
@@ -739,12 +740,12 @@ two entrypoints adapt (they are the only integration points):
    reconcile/owner pass; until then 03 folds size-drift into `"missing"`.
 4. **Restore invocation point** (05): 05 calls `restoreMediaFromArchive` AFTER the
    DB `media` rows are restored and OUTSIDE the DB `tx`. 05 threads a FRESH
-   full-archive reader (05 line 425: `restoreMediaFromArchive(readTarMembers(
+   full-archive reader (05 §5.5: `restoreMediaFromArchive(readTarMembers(
    fileStream(tarPath)))`), so 03 receives manifest.json FIRST, then `tables/*`,
    `settings.json`, then `media/*`. Per 05's `readTarMembers` contract ("the
-   consumer MUST fully drain each member's body before advancing", 05 §5.2 lines
-   461-462), 03 §4.3 **drains** every non-media member's body before `continue`
-   (same discipline as 05's own `validateArchive`, §5.4 line 531) so the ustar
+   consumer MUST fully drain each member's body before advancing", 05 §5.2), 03
+   §4.3 **drains** every non-media member's body before `continue`
+   (same discipline as 05's own `validateArchive`, 05 §5.4) so the ustar
    rolling-buffer cursor never desyncs. This is 03's responsibility on the seam
    (03 cannot edit 05); no 05 change needed, and no media-only-filtered reader is
    required. Test case §6.9 pins it.
@@ -754,7 +755,7 @@ two entrypoints adapt (they are the only integration points):
 ## 8. Coordination
 
 - **Changelog:** none in this subtask. The single closure subtask **TASK-511-07**
-  creates `_docs/_CHANGELOG/1229-*.md` and is the ONLY subtask that edits
+  creates `_docs/_CHANGELOG/1281-*.md` and is the ONLY subtask that edits
   `_docs/_TASKS/*` / `_docs/_CHANGELOG/*` (parent §Coordination). 03 edits only
   the source files in §3.
 - **Land order:** strictly sequential — 03 lands AFTER 01 (writer + manifest seams)

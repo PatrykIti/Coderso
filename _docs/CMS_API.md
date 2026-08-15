@@ -3386,38 +3386,43 @@ fabricate fallback analytics.
 
 ---
 
-## Backups (v1)
+## Backups (v2)
 
 Permissions: `backups:read`, `backups:write`
 
-Note: backups are CMS-managed metadata rows plus a `version: 1` JSON artifact.
-`POST /backups` creates the row, writes the artifact, and returns a completed row
-when artifact creation succeeds. The artifact is stored according to the active
-storage driver: `local` writes under `BACKUP_DIR` or `storage/backups`; `s3` /
-`azure` upload via the shared media storage adapters and store the object's
-public URL as `artifactPath` (the server-internal storage key is never returned
-to clients). A remote upload failure surfaces as the machine-readable
-`backup_upload_failed` error only — raw adapter/credential text is never leaked.
+Note: backups are CMS-managed metadata rows plus a compressed + encrypted `.cbk`
+archive. `POST /backups` creates the row, writes the encrypted archive, and
+returns a completed row when archive creation succeeds. **Every v2 archive is
+encrypted (AES-256-GCM, scrypt KDF) — there is no unencrypted variant.** The
+artifact is stored according to the active storage driver: `local` writes under
+`BACKUP_DIR` or `storage/backups`; `s3` / `azure` upload via the shared media
+storage adapters and store the object's public URL as `artifactPath` (the
+server-internal storage key is never returned to clients). A remote upload
+failure surfaces as the machine-readable `backup_upload_failed` error only —
+raw adapter/credential text is never leaked. Legacy v1 `.json` rows (metadata +
+settings only, no media bytes) still download and restore in place.
 
 The `backup_schedules` singleton drives an in-process scheduler (opt-in outside
 production via `BACKUP_SCHEDULER_ENABLED`): when a schedule is `enabled` and due
-(`next_run_at <= now`), a system-actor run creates a `kind: "scheduled"` backup,
-advances `next_run_at` (and sets `last_run_at`), then prunes expired backups by
-`retentionDays`. Retention can also be triggered manually via `POST
-/backups/prune`.
+(`next_run_at <= now`), a system-actor run creates a `kind: "scheduled"` backup
+with the schedule's `include` set (unattended runs read the passphrase only from
+`BACKUP_ENCRYPTION_PASSPHRASE` and **fail closed** — never an unencrypted
+archive — when it is unset), advances `next_run_at` (and sets `last_run_at`),
+then prunes expired backups by `retentionDays`. Retention can also be triggered
+manually via `POST /backups/prune`.
 
-`POST /backups/:id/restore` performs a real, **destructive**, confirmation-gated
-restore from the `version: 1` artifact. It restores CMS **metadata + settings
-only** — the artifact stores media library rows/URLs but never file bytes, so
-media files are not re-fetched. The whole restore runs in a single transaction
-(snapshot tables replaced + settings imported share one `tx`), so a malformed
-artifact or mid-restore failure rolls back with no partial state. Requires
-`backups:write` and a body of exactly `{ "confirm": true }` (unknown keys and
-`confirm: false`/missing are rejected `400`).
+`POST /backups/:id/restore` performs the legacy **destructive**,
+confirmation-gated restore **only for v1 `.json` artifacts** (metadata +
+settings transactionally; media library rows/URLs, never file bytes). For a v2
+`.cbk` row it fails fast with `backup_restore_superseded` (422) — v2 backups
+restore via **download → Import** with the passphrase that encrypted them.
+Requires `backups:write` and a body of exactly `{ "confirm": true }` (unknown
+keys and `confirm: false`/missing are rejected `400`).
 
 - `GET /backups?page=1&limit=10&query=queued`
-- `POST /backups` (manual create)
-- `POST /backups/:id/restore` (body `{ "confirm": true }`, destructive)
+- `POST /backups` (manual create — `passphrase` required)
+- `POST /backups/import` (multipart `.cbk` upload, full encrypted restore)
+- `POST /backups/:id/restore` (body `{ "confirm": true }`, v1 `.json` rows only)
 - `GET /backups/:id/download`
 - `DELETE /backups/:id`
 - `POST /backups/prune` (`backups:write`, retention pruning)
@@ -3425,20 +3430,27 @@ artifact or mid-restore failure rolls back with no partial state. Requires
 - `GET /backups/schedule`
 - `PATCH /backups/schedule`
 
-Create payload (optional):
+Create payload (passphrase required — every v2 archive is encrypted):
 
 ```json
 {
   "kind": "manual",
-  "include": ["database", "media"]
+  "include": ["database", "media"],
+  "passphrase": "operator-supplied passphrase"
 }
 ```
 
-`include` is optional and defaults to `["database", "media"]`. Allowed values
-are `database`, `media`, and `settings`; the array must contain 1-3 unique
-values. The selected option keys are accepted by the service and recorded in
-audit metadata, but v1 does not persist secret values or artifact contents in
-the browser/API payload.
+`passphrase` is required by the route schema and the service: a create without
+it fails closed (`validation_error` 400 at the boundary, or
+`backup_passphrase_required` 400 if validation is bypassed). It is forwarded to
+`POST /backups` only — never logged, audited, cached, or returned (audit
+metadata stays `{ kind, include }`). `include` defaults to
+`["database", "media"]` for manual creates; allowed values are `database`,
+`media`, `settings`, and the opt-in, encrypted-only `users` (RBAC matrix). A
+request that includes `users` without a passphrase fails pre-read with
+`backup_users_requires_encryption` (400). The selected option keys are accepted
+by the service and recorded in audit metadata, but v2 never persists secret
+values or archive contents in the browser/API payload.
 
 List query:
 
@@ -3493,32 +3505,43 @@ Schedule payload (`PATCH /backups/schedule`, all fields optional,
   "enabled": true,
   "frequency": "daily",
   "retentionDays": 30,
-  "storageDriver": "s3"
+  "storageDriver": "s3",
+  "include": ["database", "settings", "media"]
 }
 ```
+
+`include` (`array`, `minItems: 1`, `maxItems: 4`, `uniqueItems`, item enum
+`["database", "media", "settings", "users"]`) selects which sections scheduled
+full backups capture. The default is `["database", "settings", "media"]`; the
+sensitive `users` option is off by default and is encrypted-only.
 
 `GET /backups/schedule` returns the singleton including the scheduler-managed
 `nextRunAt` / `lastRunAt` timestamps (nullable). Enabling a schedule (or changing
 `frequency`) recomputes `nextRunAt`; the scheduler advances it after each run.
 
-Download response:
+Download response (v2 `.cbk` archive — base64-encoded binary):
 
 ```json
 {
   "url": null,
   "path": null,
-  "fileName": "coderso-backup-backup-id.json",
-  "contentType": "application/json",
-  "content": "{...redacted example...}"
+  "fileName": "coderso-backup-backup-id.cbk",
+  "contentType": "application/octet-stream",
+  "content": "<base64-encoded encrypted archive bytes>",
+  "encoding": "base64"
 }
 ```
 
 Download returns `backup_not_ready` for queued/running/failed/artifact-less
 rows and `backup_artifact_invalid` when a completed row has a non-downloadable
-artifact path outside the configured backup directory. Local CMS artifacts are
-returned as JSON content with `url: null` and `path: null`; remote (`s3`/`azure`)
-artifacts return the public `http(s)` URL as `url` and are fetched server-side
-for restore. List responses and browser cache redact local artifact paths to
+artifact path outside the configured backup directory. A v2 `.cbk` local
+artifact is returned as a base64 `content` string with
+`encoding: "base64"` and `contentType: application/octet-stream` (JSON cannot
+carry raw bytes; the decoded bytes are byte-exact and re-importable). Legacy v1
+`.json` artifacts keep the UTF-8 `content` string with no `encoding` and
+`contentType: application/json`. Remote (`s3`/`azure`) artifacts return the
+public `http(s)` URL as `url` and are fetched server-side for restore. List
+responses and browser cache redact local artifact paths to
 `artifactPath: "local"`, keep the server-internal storage key null to clients,
 and never persist downloaded artifact content.
 
@@ -3527,10 +3550,41 @@ queued/running/failed/artifact-less rows, `backup_restore_confirmation_required`
 (400) when `confirm` is not exactly `true`, `backup_restore_invalid_artifact`
 (422) when the stored artifact is missing/garbage or not `version: 1` (strict
 parse rejects unknown top-level keys before any write),
-`backup_artifact_unreadable` (502) when a remote artifact cannot be fetched. The
-legacy `backup_restore_unsupported` (409) code is retained for back-compat but is
-no longer emitted. The restore response is the redacted backup record; the audit
-log records `{ status }` only (no artifact contents, paths, or secrets).
+`backup_artifact_unreadable` (502) when a remote artifact cannot be fetched. A
+v2 `.cbk` row returns `backup_restore_superseded` (422) — download the archive
+and use Import with its passphrase. The legacy `backup_restore_unsupported`
+(409) code is retained for back-compat but is no longer emitted. The restore
+response is the redacted backup record; the audit log records `{ status }` only
+(no artifact contents, paths, or secrets).
+
+Import (`POST /backups/import`, `backups:write`, CSRF, rate-limited):
+
+- Multipart body with the `.cbk` `file`, the `passphrase` that encrypted it,
+  `confirm: "true"`, and an optional `restoreUsers: "true" | "false"` scalar
+  (opt-in users-section restore).
+- Maintenance mode must be enabled first (`backup_maintenance_required`, 409).
+- The upload is a streamed multipart body ceilinged by `BACKUP_IMPORT_MAX_BYTES`
+  (default 2 GiB, compressed); decompression is bounded by
+  `BACKUP_IMPORT_MAX_DECOMPRESSED_BYTES` (default 4× the upload ceiling) as a
+  compression-bomb guard.
+- The archive is decrypted, and the manifest/checksum/GCM auth are validated
+  **before any DB write**; restore is confirmation-gated and transactional
+  (all-or-nothing). Media file bytes are written after the DB transaction
+  commits (object storage is not transactional).
+- Import does **not** create a `backups` row — it returns an ImportResult
+  summary instead:
+
+```json
+{
+  "status": "restored",
+  "artifactVersion": 2,
+  "tablesRestored": 4,
+  "rowsRestored": 12,
+  "mediaRestored": 3,
+  "usersRestored": 2,
+  "skippedMedia": 0
+}
+```
 
 Prune request/response:
 
@@ -3587,18 +3641,34 @@ when the path resolves inside the configured backup directory.
 
 Known backup error codes:
 
-- `backup_not_found`
-- `backup_not_ready`
-- `backup_restore_confirmation_required`
-- `backup_restore_invalid_artifact`
-- `backup_artifact_unreadable`
+- `backup_not_found` (404)
+- `backup_not_ready` (409)
+- `backup_restore_confirmation_required` (400)
+- `backup_restore_invalid_artifact` (422)
+- `backup_artifact_unreadable` (502)
 - `backup_upload_failed`
 - `backup_restore_unsupported` (legacy; retained for back-compat, no longer emitted)
-- `backup_artifact_invalid`
-- `backup_include_required`
-- `backup_include_invalid`
-- `backup_schedule_invalid`
-- `backup_schedule_not_found`
+- `backup_restore_superseded` (422) — v2 `.cbk` rows must restore via download → Import
+- `backup_artifact_invalid` (400)
+- `backup_include_required` (400)
+- `backup_include_invalid` (400)
+- `backup_schedule_invalid` (400)
+- `backup_schedule_not_found` (404)
+- `backup_users_requires_encryption` (400) — `users` include without a passphrase
+- `backup_users_restore_no_admin` (409) — users restore would leave no admin (rolled back)
+- `backup_maintenance_required` (409) — import while maintenance mode is off
+- `backup_decrypt_failed` (422) — wrong passphrase or corrupt archive (GCM auth)
+- `backup_archive_unsupported` (422) — not a Coderso archive / unsupported version
+- `backup_passphrase_required` (400)
+- `backup_passphrase_invalid` (400)
+- `backup_import_too_large` (413) — above `BACKUP_IMPORT_MAX_BYTES`
+- `backup_import_invalid_file` (400)
+- `backup_manifest_invalid` (422)
+- `backup_checksum_mismatch` (422)
+- `backup_restore_fk_violation` (422)
+- `backup_media_key_unsafe` (422)
+- `backup_media_too_large` (422) — media member above `BACKUP_MEDIA_MAX_FILE_BYTES`
+- `backup_media_write_failed` (500)
 
 ---
 

@@ -505,6 +505,13 @@
       "when": 1786717610889,
       "tag": "0071_seed_admin_role",
       "breakpoints": true
+    },
+    {
+      "idx": 72,
+      "version": "7",
+      "when": 1786749550945,
+      "tag": "0072_backup_schedule_include",
+      "breakpoints": true
     }
   ]
 }

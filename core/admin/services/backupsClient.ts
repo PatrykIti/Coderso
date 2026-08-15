@@ -11,7 +11,7 @@ export type BackupStatus = "queued" | "running" | "complete" | "failed";
 export type BackupKind = "manual" | "scheduled";
 export type BackupStorageDriver = "local" | "s3" | "azure";
 export type BackupFrequency = "daily" | "weekly" | "monthly";
-export type BackupIncludeOption = "database" | "media" | "settings";
+export type BackupIncludeOption = "database" | "media" | "settings" | "users";
 
 export type BackupItem = {
   id: string;
@@ -49,6 +49,7 @@ export type BackupSchedule = {
   frequency: BackupFrequency;
   retentionDays: number;
   storageDriver: BackupStorageDriver;
+  include: BackupIncludeOption[];
   createdAt: string;
   updatedAt: string;
 };
@@ -58,6 +59,7 @@ export type BackupScheduleUpdate = {
   frequency?: BackupFrequency;
   retentionDays?: number;
   storageDriver?: BackupStorageDriver;
+  include?: BackupIncludeOption[];
 };
 
 export type BackupListOptions = {
@@ -69,6 +71,9 @@ export type BackupListOptions = {
 export type BackupCreatePayload = {
   kind?: BackupKind;
   include?: BackupIncludeOption[];
+  // Every v2 `.cbk` is encrypted; the operator-supplied passphrase is forwarded
+  // to POST /backups only and never stored/logged server-side.
+  passphrase?: string;
 };
 
 type BackupListCachedOptions = BackupListOptions & {
@@ -81,6 +86,15 @@ export type BackupDownload = {
   fileName?: string;
   contentType?: string;
   content?: string;
+  // v2 `.cbk` payloads are base64-encoded binary (JSON cannot carry raw bytes).
+  encoding?: "base64";
+};
+
+export type BackupImportResult = {
+  tablesRestored: number;
+  rowsRestored: number;
+  usersRestored: number;
+  mediaRestored: number;
 };
 
 let cachedBackupSchedulePromise: Promise<BackupSchedule> | null = null;
@@ -386,6 +400,32 @@ export async function restoreBackup(id: string) {
   );
   if (restored) invalidateBackupListCaches();
   return restored;
+}
+
+// v2 disaster restore (TASK-511-05): upload a downloaded `.cbk` archive with the
+// passphrase that encrypted it. Multipart, mirroring mediaClient's FormData
+// pattern — the browser sets the boundary; no manual Content-Type. Scalar fields
+// arrive as strings on the server, so `confirm`/`restoreUsers` use "true"/"false".
+export async function importBackup(input: {
+  file: File;
+  passphrase: string;
+  restoreUsers?: boolean;
+}) {
+  const formData = new FormData();
+  formData.set("file", input.file, input.file.name);
+  formData.set("passphrase", input.passphrase);
+  formData.set("confirm", "true");
+  formData.set("restoreUsers", input.restoreUsers ? "true" : "false");
+  const result = await apiRequest<BackupImportResult>(
+    "/backups/import",
+    {
+      method: "POST",
+      body: formData,
+    },
+    { withCsrf: true }
+  );
+  if (result) invalidateBackupListCaches();
+  return result;
 }
 
 export async function downloadBackup(id: string) {

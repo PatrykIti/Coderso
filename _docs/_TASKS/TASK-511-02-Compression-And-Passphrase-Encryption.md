@@ -9,7 +9,8 @@
 **Depends on:** TASK-511-01 (streaming batched export engine + tar archive stream & manifest)
 **Blocks:** TASK-511-03, -04, -05, -06 (all consume the crypto/compression layer)
 **Land order:** strictly sequential — lands after 01, before 03 (01→02→03→04→05→06→07)
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-08-15
 
 ---
 
@@ -76,7 +77,8 @@ for create, 05 for import/restore) wires in.
   / `DecompressionStream`, Web `ReadableStream` / `TransformStream`, and
   `node:crypto` `createCipheriv("aes-256-gcm", …)` / `createDecipheriv` /
   `getAuthTag`/`setAuthTag` / `scrypt`. (Verified via `bun -e` in this worktree.)
-- Users/roles tables (`users`, `roles`, `userRoles`) exist in `core/db/schema.ts`
+- Users/roles tables (`users`, `roles`, `userRoles`) exist in
+  `core/db/tables/identity.ts` (`:23`/`:36`/`:44`; re-exported by `core/db/schema.ts`)
   (04's concern; noted only because `users` is encrypted-archive-only and this
   layer is what makes "encrypted-only" enforceable).
 
@@ -213,6 +215,12 @@ const NONCE_PREFIX_BYTES = 8;
 const NONCE_BYTES = 12;   // 8 prefix + 4 counter
 const TAG_BYTES = 16;
 const DEFAULT_CHUNK_SIZE = 256 * 1024;
+// Fixed plaintext header size (big-endian layout in §Archive format): magic(4) +
+// formatVersion(1) + cipherId(1) + kdfId(1) + kdfLogN(1) + kdfR(4) + kdfP(4) +
+// saltLen(1) + salt(16) + noncePrefixLen(1) + noncePrefix(8) + chunkSize(4) = 46.
+// `decodeHeader`/the decrypt reader use this as the minimum byte count before
+// attempting a header parse.
+const HEADER_MIN_LEN = 4 + 1 + 1 + 1 + 1 + 4 + 4 + 1 + SALT_BYTES + 1 + NONCE_PREFIX_BYTES + 4; // 46
 // scrypt cost — server-owned defaults (documented in .env.example by 07 if made env-tunable).
 const DEFAULT_KDF = { logN: 15, r: 8, p: 1 };            // N = 32768
 const scryptMaxmem = (N: number, r: number) => 256 * N * r; // headroom above 128*N*r
@@ -383,10 +391,12 @@ export function decryptBackupArchive(source: ByteStream, passphrase: string): By
         if (sawFinal) throw new Error("backup_decrypt_failed"); // bytes after final frame
         const ct = Buffer.from(buf.subarray(4, 4 + ctLen));
         const tag = Buffer.from(buf.subarray(4 + ctLen, frameLen));
-        // trial-decrypt final-flag=false first, then true, to learn finality without a length field?
-        // NO — finality is deterministic: it is encoded via AAD only, so we must know it.
-        // We DO know it: a frame is final iff no more frames follow. We cannot look ahead mid-stream,
-        // so decrypt is attempted with isFinal=false; if that AND isFinal=true both fail => auth error.
+        // Finality is deterministic but NOT length-prefixed: it is encoded via the
+        // per-frame AAD (finalFlag bit). A stream cannot look ahead, so `openFrame`
+        // trial-decrypts `finalFlag=false` first (authentic for every NON-final frame
+        // → succeeds on the FIRST attempt), then `finalFlag=true` (only the LAST frame).
+        // Net decrypt cost: exactly ONE extra GCM decrypt for the final frame — not 2×
+        // the stream. Both attempts failing ⇒ wrong passphrase/tamper ⇒ auth error.
         const plain = openFrame(ct, tag, counter);           // see below; throws backup_decrypt_failed
         ctrl.enqueue(new Uint8Array(plain.data));
         if (plain.isFinal) sawFinal = true;
@@ -430,14 +440,17 @@ export function decryptBackupArchive(source: ByteStream, passphrase: string): By
 }
 ```
 
-> Design note on the `isFinal` trial: because a stream can't look ahead, each
-> frame is trial-decrypted with `finalFlag=false` then `true`; exactly one
-> succeeds for an authentic frame (the AAD differs by that one bit). Both failing
-> ⇒ auth failure ⇒ `backup_decrypt_failed`. This keeps a single deterministic
-> code path and preserves the anti-truncation guarantee (the last authentic frame
-> is the one whose `finalFlag=true` verifies). `timingSafeEqual` is used inside
-> `decodeHeader` for the magic compare; GCM's own tag check is already
-> constant-time.
+> Design note on the `isFinal` trial (chosen over a length-prefixed final flag to
+> keep the on-disk frame layout minimal and the final-flag authenticated purely via
+> AAD): because a stream can't look ahead, each frame is trial-decrypted with
+> `finalFlag=false` then `true`; exactly one succeeds for an authentic frame (the AAD
+> differs by that one bit). The `false`-first ordering means every non-final frame
+> authenticates on its FIRST attempt, so the trial costs **one extra GCM decrypt on
+> the final frame only**, not 2× the whole stream. Both failing ⇒ auth failure ⇒
+> `backup_decrypt_failed`. This keeps a single deterministic code path and preserves
+> the anti-truncation guarantee (the last authentic frame is the one whose
+> `finalFlag=true` verifies). `timingSafeEqual` is used inside `decodeHeader` for the
+> magic compare; GCM's own tag check is already constant-time.
 
 ### Error handling / data flow summary
 
@@ -567,7 +580,7 @@ land, the whole Bun lane (`bun run test:bun`) plus `bun --cwd core lint` +
 (new pure module — no test-side excess-prop risk, but run root tsc per the
 typecheck-scope rule since a new exported type surface is added).
 
-## Coordination note
+## Coordination
 
 - **Land order:** strictly sequential — **after 511-01, before 511-03**
   (01→02→03→04→05→06→07). 02 must not land until 01's export-stream boundary
@@ -578,7 +591,7 @@ typecheck-scope rule since a new exported type surface is added).
   `.cbk` naming/content-type swap in `resolveBackupArtifactPath`/create path,
   scheduler/UI passphrase capture) is done by the owning subtasks (05/06),
   consuming the constants/functions 02 exports.
-- **Changelog:** **1229 is created only by the closure subtask 511-07** — 02 does
+- **Changelog:** **1281 is created only by the closure subtask 511-07** — 02 does
   **not** create or edit any `_docs/_CHANGELOG/*` or other `_docs/_TASKS/*` file,
   and does not flip `Status` anywhere but this file at closure time.
 - **New env (if made tunable):** if scrypt cost is exposed via env

@@ -8,7 +8,8 @@
 **Parent Task:** TASK-511 (Backup v2 — Scalable, Compressed, Encrypted, Importable)
 **Depends On:** TASK-511-01 (streaming batched export engine + archive format & manifest), TASK-511-02 (compression + passphrase encryption), TASK-511-03 (media file streaming)
 **Blocks:** TASK-511-05 (import-file pipeline — restores the users section via this module's tx helper)
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-08-15
 **Land order:** strictly sequential — lands 4th (after 01→02→03, before 05→06→07).
 
 ---
@@ -42,35 +43,35 @@ This subtask owns the users/roles/user_roles export + restore logic as a
 dedicated module and makes only minimal, additive extensions to the shared
 allowlists introduced by 01/02.
 
-### Verified schema (grounded in `core/db/schema.ts`)
+### Verified schema (grounded in `core/db/tables/identity.ts`, re-exported by `core/db/schema.ts`)
 
 The three tables and their real column names (SQL identifier in parentheses):
 
-- **`users`** (`pgTable("users")`, `schema.ts:15`): `id` (uuid pk), `email`
+- **`users`** (`pgTable("users")`, `identity.ts:23`): `id` (uuid pk), `email`
   (`email`, notNull unique — **plaintext for legacy rows**), `emailHash`
   (`email_hash`, nullable), `emailEncrypted` (`email_encrypted` jsonb, nullable),
   `passwordHash` (`password_hash`, notNull — **opaque argon2 hash**, see
   `core/services/auth/password.ts` `@node-rs/argon2`), `name` (`name`), `status`
   (`status`, default `"active"`), `createdAt` (`created_at`), `updatedAt`
   (`updated_at`), `lastLoginAt` (`last_login_at`).
-- **`roles`** (`pgTable("roles")`, `schema.ts:28`): `id` (uuid pk), `name`
+- **`roles`** (`pgTable("roles")`, `identity.ts:36`): `id` (uuid pk), `name`
   (`name`, notNull unique), `description` (`description`), `permissions`
   (`permissions` jsonb notNull — string[] or `["*"]`), `createdAt` (`created_at`).
-- **`user_roles`** (`pgTable("user_roles")`, `schema.ts:36`): composite PK
+- **`user_roles`** (`pgTable("user_roles")`, `identity.ts:44`): composite PK
   `[userId, roleId]`; `userId` (`user_id` → `users.id` ON DELETE CASCADE),
   `roleId` (`role_id` → `roles.id` ON DELETE CASCADE).
 
 **Corrected assumption / critical trap (do NOT delete-all users on restore):**
-The parent's snapshot restore (`replaceSnapshotTables`, `backupService.ts:569`)
+The parent's snapshot restore (`replaceSnapshotTables`, `backupService.ts:608`)
 does *delete-all-then-reinsert* for the **content** table set, and that set
 **deliberately excludes** `users`/`roles`/`user_roles`. `users.id` is an FK
 target of MANY out-of-scope tables, across all three delete behaviours:
-**cascade** children — `sessions.userId` (`schema.ts:57`), `searchHistory.userId`
-(`schema.ts:154`), `password_resets`, `user_settings`; **set-null** children —
-`pages.authorId` (`schema.ts:224`) and `posts.authorId` (`schema.ts:850`); and
+**cascade** children — `sessions.userId` (`identity.ts:63`), `searchHistory.userId`
+(`platform.ts:63`), `password_resets`, `user_settings`; **set-null** children —
+`pages.authorId` (`pages.ts:29`) and `posts.authorId` (`posts.ts:27`); and
 several `created_by` columns declared with **no `onDelete`** (i.e. RESTRICT), e.g.
-`widgetTemplateRevisions.createdBy` (`schema.ts:306`) and `pageRevisions.createdBy`
-(`schema.ts:345`), plus audit-log actor FKs.
+`widgetTemplateRevisions.createdBy` (`widgets.ts:90`) and `pageRevisions.createdBy`
+(`pages.ts:73`), plus audit-log actor FKs.
 A blanket `DELETE FROM users` during restore would either **cascade-wipe**
 sessions/revisions or be **blocked by RESTRICT**, and could corrupt or destroy
 data owned by other tables that are not part of this archive. Therefore the users
@@ -118,11 +119,11 @@ these lines):**
 - **Named call-site of the encrypted-only guard (single owner, cannot be dropped).**
   `assertUsersEncryptionAllowed` is defined here (04) but its sole invocation lives in
   **06's create-rewiring**: 06 calls `assertUsersEncryptionAllowed(include, { enabled })`
-  inside `createBackup` (`backupService.ts:425`) **inside the create `try/catch`, AFTER
-  the `running`-row insert (`backupService.ts:429-436`)** so a throw self-marks that row
-  `failed` via `markBackupFailed` (`backupService.ts:441-450` route throws to
+  inside `createBackup` (`backupService.ts:464`) **inside the create `try/catch`, AFTER
+  the `running`-row insert (`backupService.ts:470-471`)** so a throw self-marks that row
+  `failed` via `markBackupFailed` (`backupService.ts:528` route throws to
   `markBackupFailed`). It operates on the include set already resolved by
-  `normalizeBackupInclude(input.include)` (`backupService.ts:428`) and runs **before any
+  `normalizeBackupInclude(input.include)` (`backupService.ts:92`) and runs **before any
   user/role row is read or `packBackupArchive` is invoked** — the fail-closed pre-read
   gate that yields a **PERSISTED** `failed` backups row carrying the coded
   `backup_users_requires_encryption` (which 06 surfaces via `createBackup`'s self-fail
@@ -223,7 +224,7 @@ Security Contract:
 
 All in `core/services/backups/backupUsersSection.ts` unless noted. Reuse the
 engine's `db` (`core/db/client`) and the local `DbTransaction` type shape
-(`backupService.ts:60` — `Parameters<Parameters<typeof db.transaction>[0]>[0]`).
+(`backupService.ts:62` — `Parameters<Parameters<typeof db.transaction>[0]>[0]`).
 
 ### 4.1 Table descriptors + reject-unknown normalizers
 
@@ -233,12 +234,12 @@ import { listPermissionIds } from "../admin/permissionsCatalog";
 import { getAdminRoleIds } from "../admin/rolesService";
 import {
   USERS_MEMBER_NAME, ROLES_MEMBER_NAME, USER_ROLES_MEMBER_NAME,
-  type ArchiveUsersManifest, // 01 — pinned manifest counts type (01 §4.6a line 179)
+  type ArchiveUsersManifest, // 01 — pinned manifest counts type (01 §4.1 ArchiveUsersManifest)
 } from "./backupArchive"; // 01 — PINNED section member names (writer↔reader agreement)
 
 // Column allowlists (SQL identifiers as they appear in NDJSON — drizzle select
 // yields the JS keys; the engine serializes JS keys, matching the content
-// snapshot path). Keep in lock-step with schema.ts.
+// snapshot path). Keep in lock-step with core/db/tables/identity.ts (users/roles).
 const USER_KEYS   = ["id","email","emailHash","emailEncrypted","passwordHash",
                      "name","status","createdAt","updatedAt","lastLoginAt"] as const;
 const ROLE_KEYS   = ["id","name","description","permissions","createdAt"] as const;
@@ -251,14 +252,14 @@ export type RoleRow = typeof roles.$inferSelect;
 export type UserRoleRow = typeof userRoles.$inferSelect;
 
 // Strict, fail-closed per-row parse (mirrors parseBackupArtifact's reject-unknown
-// posture, backupService.ts:647). Reject rows with unknown keys; require the
+// posture, backupService.ts:686 (reject-unknown top-level loop :693-697)). Reject rows with unknown keys; require the
 // notNull columns; NEVER include a row value in the thrown message.
 // EXPORTED — 05 imports and reuses these three normalizers directly (05 §7 Q4);
 // `normalizeRolePermissions` below stays module-internal.
 export function normalizeUserRow(raw: unknown): UserRow { /* isPlainObject; reject
   unknown keys vs USER_KEYS; require id+email+passwordHash+status; revive
   created/updated/lastLogin date strings -> Date (same as reviveRowsForInsert,
-  backupService.ts:549); passwordHash copied verbatim, unread */ }
+  backupService.ts:588); passwordHash copied verbatim, unread */ }
 export function normalizeRoleRow(raw: unknown): RoleRow { /* reject unknown; require
   id+name+permissions; permissions -> normalizeRolePermissions() */ }
 export function normalizeUserRoleRow(raw: unknown): UserRoleRow { /* reject unknown;
@@ -295,11 +296,11 @@ export function assertUsersEncryptionAllowed(
 // (`appendStream`) + `appendNdjson` NDJSON sink. 04 does not redeclare it.
 // Return type is 01's PINNED `ArchiveUsersManifest = { users; roles; userRoles }`
 // (imported above) so exportUsersSection satisfies 01's injection seam verbatim:
-// `usersExporter?: (engine: ExportEngine) => Promise<ArchiveUsersManifest>` (01 line 572,
-// invoked at 01 line 634). No local/phantom count type is introduced.
+// `usersExporter?: (engine: ExportEngine) => Promise<ArchiveUsersManifest>` (01 §4.6a
+// usersExporter seam, invoked in packBackupArchive). No local/phantom count type is introduced.
 export async function exportUsersSection(engine: ExportEngine): Promise<ArchiveUsersManifest> {
   // Precondition already asserted by assertUsersEncryptionAllowed — invoked by 06's
-  // createBackup (backupService.ts:425) inside the create try/catch (after the `running`
+  // createBackup (backupService.ts:464) inside the create try/catch (after the `running`
   // row insert, so a throw self-marks the row failed), BEFORE any user/role read.
   // exportUsersSection does NOT re-assert (single named call-site).
   // Member names come from 01's PINNED constants (imported from backupArchive.ts) so
@@ -314,9 +315,10 @@ export async function exportUsersSection(engine: ExportEngine): Promise<ArchiveU
 
 **Keyset-pagination helper (the novel runtime piece — spelled out).** `exportUsersSection`
 above delegates every table to one `streamTableNdjson` wrapper over 01's `appendNdjson`
-(`backupArchive.ts:500` — `appendNdjson(memberName, rows: AsyncIterable<Record<string,
-unknown>>): Promise<ArchiveTableManifest>`, 01 line 500). `appendNdjson` **returns an
-`ArchiveTableManifest`** whose `.rowCount` (`backupArchive.ts:162`) is exactly the count
+(01 §4.6a — `appendNdjson(memberName, rows: AsyncIterable<Record<string,
+unknown>>): Promise<ArchiveTableManifest>`). `appendNdjson` **returns an
+`ArchiveTableManifest`** whose `.rowCount` (01 §4.1 ArchiveTableManifest.rowCount) is
+exactly the count
 `ArchiveUsersManifest` wants, so the wrapper just hands the async row generator IN and
 hands the `rowCount` back OUT — no local count type is invented. The generator is a
 **keyset (seek) pager**: fixed-size batches ordered by a stable key, cursor advanced by the
@@ -354,7 +356,7 @@ async function streamTableNdjson(
 // `.id`/`.userId`/`.roleId` as concrete columns, so `gt(table.id, …)` / `asc(table.id)` /
 // `table[k]` are TS2339 / TS7053 and `table.userId` in the `sql` template is likewise
 // untyped. Resolve columns through `getTableColumns(table)` (the repo's canonical
-// access, `backupService.ts:553`) cast to `Record<string, AnyColumn>` — NOT
+// access, `backupService.ts:592`) cast to `Record<string, AnyColumn>` — NOT
 // `Record<string, unknown>`: `asc`/`gt`/`sql` require `AnyColumn | SQLWrapper`, so
 // `unknown` fails `lint:types` / root `tsc` (01 §4.2). `AnyColumn` is exported from the
 // `drizzle-orm` root (re-exported via `column.js`). This is the SAME pattern 01 applies
@@ -408,8 +410,8 @@ UPSERT/reconcile loops — `function chunk<T>(a: T[], n: number): T[][]` slices 
 `ceil(a.length / n)` runs of ≤ `n` (n = 500 there); no DB access. Covered by the same Bun
 test file (it is exercised transitively by scenario 3's round-trip).
 
-Data flow (export): `createBackup` (`backupService.ts:425`) → `normalizeBackupInclude`
-(`:428`) → **06 invokes `assertUsersEncryptionAllowed(include, { enabled })`**
+Data flow (export): `createBackup` (`backupService.ts:464`) → `normalizeBackupInclude`
+(`:92`) → **06 invokes `assertUsersEncryptionAllowed(include, { enabled })`**
 (fail-closed, pre-read; 04 defines it, 06 is the sole named caller)
 → engine opens encrypted (02) gzip (02) tar (01) → `exportUsersSection` streams
 three NDJSON members keyset-batched → manifest records the three counts +
@@ -458,7 +460,7 @@ per-member checksum. Password hashes ride inside the encrypted stream, untouched
 
 ```ts
 // Called by 511-05's transactional restore body (the Backup v2 successor of
-// restoreArtifactTx, backupService.ts:588), inside the ONE outer tx so users +
+// restoreArtifactTx, backupService.ts:627), inside the ONE outer tx so users +
 // content + settings are all-or-nothing. `sections` = validated NDJSON row
 // arrays already parsed by normalize* above. Runs ONLY when opt-in + confirmed.
 export async function restoreUsersSectionTx(
@@ -472,8 +474,8 @@ export async function restoreUsersSectionTx(
   // 0. Secondary-unique (natural-key) collision guard — fail-closed, PRE-WRITE.
   //    CHOSEN BEHAVIOUR (a): id-faithful reproduction. Besides the primary keys,
   //    schema.ts declares TWO more UNIQUE constraints on this section:
-  //    `users.email` notNull().unique() (schema.ts:17) and `roles.name`
-  //    notNull().unique() (schema.ts:30). (`email_hash` is NULLABLE and NOT unique.)
+  //    `users.email` notNull().unique() (identity.ts:25) and `roles.name`
+  //    notNull().unique() (identity.ts:38). (`email_hash` is NULLABLE and NOT unique.)
   //    The step-1/2 UPSERT is targeted only at the PK (roles.id / users.id): if the
   //    target env already holds a DIFFERENT-uuid row with the same email / role name
   //    — the parent's headline "move the identity graph between environments"
@@ -488,10 +490,17 @@ export async function restoreUsersSectionTx(
   //    an archived row could change that account's privileges / lockout state in a
   //    way the archive never stated (privilege-safety > convenience). PII-safe: the
   //    offending email / role name is NEVER placed in the thrown message or any log.
+  // BATCHED natural-key reads (parent DB rules §Query): the `inArray` sets are
+  // derived from the ARCHIVED section, so they can be large on a big identity
+  // graph. Chunk them at 500 (the same bound as the upsert batches below) to keep
+  // the bind-parameter count and query size bounded instead of one giant `IN (...)`.
   const roleNames = section.roles.map((r) => r.name);
+  const existingRoles: Array<{ id: string; name: string }> = [];
+  for (const batch of chunk(roleNames, 500)) {
+    existingRoles.push(...await tx.select({ id: roles.id, name: roles.name })
+      .from(roles).where(inArray(roles.name, batch)));
+  }
   if (roleNames.length) {
-    const existingRoles = await tx.select({ id: roles.id, name: roles.name })
-      .from(roles).where(inArray(roles.name, roleNames));
     const archivedRoleIdByName = new Map(section.roles.map((r) => [r.name, r.id]));
     // collision = existing row shares an archived name but has a DIFFERENT id
     if (existingRoles.some((r) => archivedRoleIdByName.get(r.name) !== r.id)) {
@@ -499,9 +508,12 @@ export async function restoreUsersSectionTx(
     }
   }
   const emails = section.users.map((u) => u.email);
+  const existingUsers: Array<{ id: string; email: string }> = [];
+  for (const batch of chunk(emails, 500)) {
+    existingUsers.push(...await tx.select({ id: users.id, email: users.email })
+      .from(users).where(inArray(users.email, batch)));
+  }
   if (emails.length) {
-    const existingUsers = await tx.select({ id: users.id, email: users.email })
-      .from(users).where(inArray(users.email, emails));
     const archivedUserIdByEmail = new Map(section.users.map((u) => [u.email, u.id]));
     if (existingUsers.some((u) => archivedUserIdByEmail.get(u.email) !== u.id)) {
       throw new Error("backup_restore_invalid_artifact"); // users.email natural-key clash
@@ -560,15 +572,23 @@ export async function restoreUsersSectionTx(
       )];
       if (missingRoleIds.length) {
         // roleIds not in the archive — check whether the target env already holds them
-        const existingRoleRows = await tx.select({ id: roles.id })
-          .from(roles).where(inArray(roles.id, missingRoleIds));
+        // (BATCHED at 500, same bound: missingRoleIds is archive-derived and can grow).
+        const existingRoleRows: Array<{ id: string }> = [];
+        for (const batch of chunk(missingRoleIds, 500)) {
+          existingRoleRows.push(...await tx.select({ id: roles.id })
+            .from(roles).where(inArray(roles.id, batch)));
+        }
         for (const row of existingRoleRows) allowedRoleIds.add(row.id);
       }
       if (scopedUserRoles.some((ur) => !allowedRoleIds.has(ur.roleId))) {
         throw new Error("backup_restore_invalid_artifact"); // FK-missing roleId, PII-free
       }
     }
-    await tx.delete(userRoles).where(inArray(userRoles.userId, archivedUserIds));
+    // BATCHED delete (bounded IN list, same 500 bound): one giant `inArray` over
+    // every archived user id could exceed bind limits on a large identity graph.
+    for (const batch of chunk(archivedUserIds, 500)) {
+      await tx.delete(userRoles).where(inArray(userRoles.userId, batch));
+    }
     for (const batch of chunk(scopedUserRoles, 500)) {
       await tx.insert(userRoles).values(batch).onConflictDoNothing();
       // onConflictDoNothing: composite-pk safety; roleIds validated to exist (3a).
@@ -578,6 +598,8 @@ export async function restoreUsersSectionTx(
   //    (any status, matching v1 lockout semantics), using getAdminRoleIds
   //    (hasFullAccess only; name "admin" alone does NOT count).
   const adminRoleIds = await getAdminRoleIds(undefined, tx);
+  // adminRoleIds is catalog-bounded (a handful of roles), so this inArray needs no
+  // chunking — unlike the archive-derived sets in steps 0/3a/3 above.
   const admins = adminRoleIds.length
     ? await tx.select({ userId: userRoles.userId }).from(userRoles)
         .where(inArray(userRoles.roleId, adminRoleIds))
@@ -608,7 +630,7 @@ code needed).
 
 **Secondary-unique (natural-key) collision — enumerated, reuses 422.** Beyond the
 PK, the section carries two more UNIQUE constraints: `users.email`
-(`schema.ts:17`, notNull unique) and `roles.name` (`schema.ts:30`, notNull unique)
+(`identity.ts:25`, notNull unique) and `roles.name` (`identity.ts:38`, notNull unique)
 (`email_hash` is nullable, NOT unique). Because the UPSERT is targeted at the PK
 only (§4.3 steps 1–2), a target env that already holds a **different-uuid** row
 with the same email / role name — the parent's cross-environment scenario — would
@@ -722,7 +744,7 @@ five scenarios per area"):
    happy path is unaffected: same email/name WITH the SAME id (a genuine
    round-trip re-import) passes step 0 and upserts normally.
 
-## 6. Coordination note
+## 6. Coordination
 
 - **Single stream, strictly sequential land order 01→02→03→04→05→06→07.** 04 must
   land only after 01/02/03 are merged (it consumes their engine + encryption
@@ -742,14 +764,14 @@ five scenarios per area"):
   as `packBackupArchive`'s `usersExporter`) is 06's create-path (01 §4.6a
   land-order-safe injection), not an edit to 01's module. No other subtask edits 04's
   declared lines.
-- **Changelog:** do NOT create `_docs/_CHANGELOG/1229-*.md` or edit
+- **Changelog:** do NOT create `_docs/_CHANGELOG/1281-*.md` or edit
   `_docs/_TASKS/*` here — only the closure subtask **TASK-511-07** writes the
-  single `1229` changelog and flips statuses (parent §Coordination). `1229` is
-  the **reserved** number for TASK-511: `1223` is claimed by TASK-480 in the
-  merge target `feature/tasks`, and `1220-1228` are reserved by parallel streams
-  (482-484 / 512-516). Do NOT "correct" `1229` down to the `1223` shown in this
-  worktree's `_docs/_CHANGELOG/README.md` — that worktree README was branched
-  before those numbers were consumed and is stale.
+  single `1281` changelog and flips statuses (parent §Coordination). `1281` is
+  the **reserved** number for TASK-511: the journal now runs through `1273`,
+  `1274` is claimed by TASK-559, and `1275-1279` are reserved by the small-feature
+  stream — so 511 closure is pinned to `1281`. Do NOT "correct" `1281` down to an
+  older number shown in a stale worktree `_docs/_CHANGELOG/README.md`; re-read
+  `_docs/_CHANGELOG/README.md` fresh at closure.
 - **New env/config:** none introduced by 04 (encryption/passphrase policy is
   02's). If a "users disabled by policy" toggle is later wanted it is 06's UI/env.
 - **Shared REMOTE test DB:** see §5 — fixture-scoped, rollback-seam restores,

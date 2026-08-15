@@ -6,6 +6,7 @@ import {
 } from "@aws-sdk/client-s3";
 import { randomUUID } from "node:crypto";
 import path from "node:path";
+import { Readable } from "node:stream";
 import { safeMediaDisposition } from "../mediaFileTrust";
 import {
   assertCanonicalStorageKey,
@@ -126,6 +127,19 @@ export function createS3Adapter(options?: S3StorageOptions): MediaStorageAdapter
       }
 
       return result.Body as NodeJS.ReadableStream;
+    },
+    async putAt(key: string, body: AsyncIterable<Uint8Array>, size: number, contentType: string) {
+      // SDK v3 PutObject Body does not accept a bare async iterable — wrap it in
+      // a Node Readable. ContentLength avoids buffering the whole file.
+      await client.send(
+        new PutObjectCommand({
+          Bucket: bucket,
+          Key: key,
+          Body: Readable.from(body),
+          ContentLength: size,
+          ContentType: contentType,
+        })
+      );
     },
     async delete(key: string) {
       await client.send(new DeleteObjectCommand({ Bucket: bucket, Key: key }));

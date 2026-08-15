@@ -8,7 +8,8 @@
 **Estimated Effort:** Large
 **Depends On:** TASK-511-01 (streaming export engine + tar archive/manifest + `ARCHIVE_TABLE_DESCRIPTORS` + version/section-name constants), TASK-511-02 (compression + AES-256-GCM/scrypt `decryptBackupArchive` + `normalizeBackupPassphrase` + `.cbk` header codec + error codes), TASK-511-03 (media-file restore helper `restoreMediaFromArchive`), TASK-511-04 (users/RBAC restore helper `restoreUsersSectionTx` + `"users"` include enum)
 **Blocks:** TASK-511-06 (Admin Import dialog + `backupsClient.importBackup` call the `POST /backups/import` route defined here)
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-08-15
 **Land order:** strictly sequential — lands **5th** (after 01→02→03→04 have merged, before 06→07). 05 imports 01's tar/manifest + `ARCHIVE_TABLE_DESCRIPTORS` + section-name constants, 02's `decryptBackupArchive`/`normalizeBackupPassphrase`, 03's `restoreMediaFromArchive`, and 04's `restoreUsersSectionTx`; therefore all four must be landed first.
 
 ---
@@ -17,9 +18,9 @@
 
 TASK-484 can *restore a backup the CMS itself created and still holds*
 (`restoreBackup(id)` reads a stored `coderso-backup-<id>.json` artifact by id —
-`backupService.ts:698`), but it **cannot import an uploaded file**: there is no route
+`backupService.ts:737`), but it **cannot import an uploaded file**: there is no route
 that accepts a byte upload, no decrypt step, and the v1 parser only understands the
-in-memory JSON artifact (`parseBackupArtifact`, `backupService.ts:647`). The parent
+in-memory JSON artifact (`parseBackupArtifact`, `backupService.ts:686`). The parent
 Overview calls this out: *"It also cannot import an uploaded backup file."*
 
 This subtask builds the **reverse of the Backup-v2 export pipeline** as an uploadable
@@ -52,19 +53,28 @@ TASK-484 established.
 A full/disaster import delete-replaces the content snapshot tables, so it MUST run with
 no concurrent front-end registrations / content writes racing it. This subtask introduces
 a **maintenance mode** and gates the import on it:
-- **Setting:** `site.maintenanceMode` boolean in the settings service (`DEFAULT_SETTINGS`
-  = `false`, joins the reject-unknown allowlist + a round-trip test), toggled by an admin
-  (existing `PATCH /settings` write path; `settings:write` + CSRF). Single-writer:
-  settingsService is owned here for this key (coordinate — no sibling 511 subtask writes it).
-- **Public 503 middleware:** while `site.maintenanceMode === true`, public site
-  (`publicSite.tsx handlePublicRequest`) + non-admin public API return `503 Service
-  Unavailable` with a small "under maintenance" body; the admin SPA, `/auth/*`, and the
-  `/admin/api/*` surface (incl. this import route) stay reachable so the admin can drive
-  the restore + flip the flag back.
-- **Import gate:** `POST /backups/import` fails closed with `backup_maintenance_required`
-  (409, mapped via `mapBackupError`) when maintenance mode is OFF — the admin must enable
-  it first. Users-section restore inside the import stays **MERGE** (04's UPSERT, never
-  delete-all) — maintenance mode just guarantees no races during the destructive content replace.
+- **Setting (single-writer: `settingsService.ts`).** Add `site.maintenanceMode` boolean
+  to `DEFAULT_SETTINGS` (`core/services/settings/settingsService.ts:51`) with value
+  `false`; because `ALLOWED_KEYS` (`settingsService.ts:98`) is derived from
+  `Object.keys(DEFAULT_SETTINGS)`, the new key joins the reject-unknown allowlist
+  automatically — add the explicit round-trip persistence test the contract requires.
+  Toggled via the existing `PATCH /settings` write path (`settings:write` + CSRF). No
+  sibling 511 subtask writes this key.
+- **Public 503 middleware (single-writer: `publicSite.tsx`).** Insert the guard at the
+  top of `handlePublicRequest` (`core/server/publicSite.tsx:672`) so BOTH the public
+  pages AND the non-admin public API dispatchers it hosts
+  (`handlePublicBookingApi` `:678`, `handlePublicFormsApi` `:686`,
+  `handlePublicPopupsApi` `:694`, `handlePublicAnalyticsApi` `:707`, `/api/search`
+  `:718`) return `503 Service Unavailable` with a small "under maintenance" body while
+  `site.maintenanceMode === true`. `handlePublicRequest` is dispatched at
+  `core/server/httpServer.ts:562`, AFTER the admin branch at `:560`
+  (`handleAdmin`) — so admin SPA, `/auth/*`, and `/admin/api/*` (incl. this import
+  route) stay reachable and the admin can drive the restore + flip the flag back.
+- **Import gate (single-writer: 05's `backupRoutes.ts`).** `POST /backups/import` fails
+  closed with `backup_maintenance_required` (409, mapped via `mapBackupError`) when
+  maintenance mode is OFF — the admin must enable it first. Users-section restore inside
+  the import stays **MERGE** (04's UPSERT, never delete-all) — maintenance mode just
+  guarantees no races during the destructive content replace.
 - Regression tests: import refused (409) when maintenance OFF; import proceeds when ON;
   public request → 503 while ON; admin/import routes reachable while ON; `site.maintenanceMode`
   round-trips through settings. (Bun lane for the route/middleware; scoped fixtures; restore
@@ -93,34 +103,34 @@ Re-checked against `/home/coder/project/Coderso-task-511` (`grep -an`/Read, per 
 rg-binary trap):
 
 **Restore internals to reuse the *knowledge* of (do NOT edit — TASK-484):**
-- `restoreBackup(id, { confirm })` — `backupService.ts:698`: fail-closed confirm gate
-  (`input.confirm !== true` → `backup_restore_confirmation_required`, `:707`),
-  strict-parse **before** any write (`:713`), single outer `db.transaction` wrapping
-  `restoreArtifactTx` (`:717`). 05 preserves this posture but sources bytes from the
+- `restoreBackup(id, { confirm })` — `backupService.ts:737`: fail-closed confirm gate
+  (`input.confirm !== true` → `backup_restore_confirmation_required`, `:747`),
+  strict-parse **before** any write (`:752`), single outer `db.transaction` wrapping
+  `restoreArtifactTx` (`:757-759`). 05 preserves this posture but sources bytes from the
   **upload**, not a stored id.
-- `restoreArtifactTx(tx, artifact)` — `backupService.ts:588`: `if (artifact.database)
-  replaceSnapshotTables(tx, …)` then `if (artifact.settings) importConfigTx(tx, …)`
-  inside the caller's tx. 05's streaming successor mirrors both the `database`-guard
-  and the settings step but never loads the whole DB section into memory.
-- `replaceSnapshotTables(tx, database)` — `backupService.ts:569`: reverse-delete
+- `restoreArtifactTx(tx, artifact)` — `backupService.ts:627`: `if (artifact.database)
+  replaceSnapshotTables(tx, …)` (`:631`) then `if (artifact.settings) importConfigTx(tx, …)`
+  (`:634`) inside the caller's tx. 05's streaming successor mirrors both the
+  `database`-guard and the settings step but never loads the whole DB section into memory.
+- `replaceSnapshotTables(tx, database)` — `backupService.ts:608`: reverse-delete
   (children→parents) then insert (parents→children). **In-memory** (takes a whole
   `BackupArtifactDatabase`); 05 does the same *ordering* but **batched from the tar
   spool**, not from an in-memory object. Its delete loop is
   `for (const { table } of [...snapshotTableOrder].reverse()) await tx.delete(table)`
-  (`:574`) — 05 mirrors this over `ARCHIVE_TABLE_DESCRIPTORS`.
-- `reviveRowsForInsert(table, rows)` — `backupService.ts:549`: revives `date`-dataType
+  (`:613`) — 05 mirrors this over `ARCHIVE_TABLE_DESCRIPTORS`.
+- `reviveRowsForInsert(table, rows)` — `backupService.ts:588`: revives `date`-dataType
   columns (`typeof value === "string" && column.dataType === "date"` → `new Date`)
-  using `getTableColumns(table)`. Private const; 05 re-implements the identical tiny
-  helper (documented lock-step) to avoid editing 484's file (single-writer).
-- `DbTransaction` type — `backupService.ts:60`
+  using `getTableColumns(table)` (`:592`). Private const; 05 re-implements the identical
+  tiny helper (documented lock-step) to avoid editing 484's file (single-writer).
+- `DbTransaction` type — `backupService.ts:62`
   (`Parameters<Parameters<typeof db.transaction>[0]>[0]`) — 05 declares the same local
   alias (it is not exported).
 - `importConfigTx(tx, bundle)` — **exported** from
-  `services/tools/importExportService.ts:402`
+  `services/tools/importExportService.ts:404`
   (`(tx: DbTransaction, bundle: ExportBundle) => Promise<ImportResult>`; runs
-  `validateBundle(bundle)` first — `:406`), already imported by `backupService.ts:36`.
+  `validateBundle(bundle)` first — `:408`), already imported by `backupService.ts:38`.
   05 imports it directly for the `settings.json` member.
-- `sanitizeBackupError(error)` — `backupService.ts:247`: strips `cwd` + backup-dir; 05
+- `sanitizeBackupError(error)` — `backupService.ts:272`: strips `cwd` + backup-dir; 05
   surfaces every uncoded error either through `mapBackupError` or, at the service edge,
   through this (it is already exported).
 
@@ -186,7 +196,7 @@ rg-binary trap):
   would fail root `tsc`.
 
 **01 exports 05 consumes** (`core/services/backups/backupArchive.ts`): `ARCHIVE_TABLE_DESCRIPTORS`
-(22 entries — key + table + cursor, mirrors `snapshotTableOrder` `backupService.ts:514-544`),
+(22 entries — key + table + cursor, mirrors `snapshotTableOrder` `backupService.ts:553-583`),
 `ARCHIVE_ARTIFACT_VERSION` (=2), `ARCHIVE_SCHEMA_VERSION`, `ARCHIVE_ENGINE_VERSION`,
 `MANIFEST_MEMBER_NAME` (`"manifest.json"`), `TABLE_MEMBER_DIR` (`"tables"`), the pinned
 section-member names `SETTINGS_MEMBER_NAME` (`"settings.json"`), `USERS_MEMBER_NAME`
@@ -251,7 +261,7 @@ Contract and TASK-484's fail-closed posture:
   **defense-in-depth**: it is unreachable on the coerced route path (a passing schema forces
   `confirm === "true"`, so `body.confirm === "true"` is always `true`), but it fires when
   `importBackupFromUpload({ confirm: false, … })` is invoked **directly** — mirroring 484's
-  own service-level gate at `backupService.ts:707-708`, which is likewise schema-shadowed on
+  own service-level gate at `backupService.ts:747`, which is likewise schema-shadowed on
   the route and exercised only by direct `restoreBackup({ confirm: false })` calls
   (`tests/unit/backups/backupService.test.ts:433-435`). Keeping the strict enum (NOT
   broadening it to `["true","false"]`) is what preserves true 484 parity; §5.7 and tests
@@ -260,7 +270,7 @@ Contract and TASK-484's fail-closed posture:
 - **Upload size ceiling (DoS guard) before the expensive decrypt/restore path.** The
   handler enforces `BACKUP_IMPORT_MAX_BYTES` (server-owned env, sane default 2 GiB,
   parsed by 05's own 2-arg local `parsePositiveIntEnv(value, fallback): number` — NOT the
-  private 1-arg one in `backupService.ts:919`, see §5) **three ways** (mirroring
+  private 1-arg one in `backupService.ts:963`, see §5) **three ways** (mirroring
   `readCappedJson`, `publicAnalyticsApi.ts:67-75`): (a) reject when the declared
   `content-length` header exceeds `BACKUP_IMPORT_MAX_BYTES` (413 `backup_import_too_large`);
   (b) reject when `file.size` (the COMPRESSED upload) exceeds `BACKUP_IMPORT_MAX_BYTES`;
@@ -282,14 +292,14 @@ Contract and TASK-484's fail-closed posture:
   `backup_manifest_invalid` / `backup_checksum_mismatch` (05) or
   `backup_restore_invalid_artifact` (NDJSON reject-unknown) — in every case **zero rows
   are written**. This preserves TASK-484's "malformed artifact never opens the
-  transaction" (`backupService.ts:711-713`).
+  transaction" (`backupService.ts:752`).
 - **Confirmation-gated, transactional, all-or-nothing.** Restore runs only when
   `confirm === true`. On the route, an absent/`"false"` `confirm` is rejected by the strict
   schema enum as `validation_error` (400) exactly as 484's route
   (`tests/integration/routes/backups.test.ts:244-245`); the coded
   `backup_restore_confirmation_required` (400) is the defense-in-depth orchestrator gate
   reachable via a direct `importBackupFromUpload` call, mirroring 484's service gate
-  (`backupService.ts:707-708`). Either way, restore never proceeds without an explicit
+  (`backupService.ts:747`). Either way, restore never proceeds without an explicit
   confirmation (see the dedicated confirm bullet above). Content tables + settings +
   (opt-in) users all run inside **one** outer
   `db.transaction`; any failure rolls the whole restore back. Media bytes are the only
@@ -297,7 +307,7 @@ Contract and TASK-484's fail-closed posture:
   behavior) and run **after** the DB commit.
 - **Non-database archive never wipes content (484 `database`-guard).** The content
   delete-all + re-insert runs ONLY when `manifest.include.includes("database")` (mirrors
-  `if (artifact.database)` at `backupService.ts:592`). A settings-only / media-only /
+  `if (artifact.database)` at `backupService.ts:631`). A settings-only / media-only /
   users-only `.cbk` (independently opt-in includes, parent decision 5) with `confirm:true`
   MUST NOT delete the 22 content tables. This is a HIGH-severity data-loss guard (§6 test
   15).
@@ -375,7 +385,7 @@ Contract and TASK-484's fail-closed posture:
   - `validateManifest(raw): ArchiveManifest` — strict reject-unknown + version handshake
     (§4.3).
   - per-table NDJSON `normalizeContentRow` reject-unknown parser + `reviveForInsert` (the
-    tiny date-reviver, lock-step with `reviveRowsForInsert`, `backupService.ts:549`).
+    tiny date-reviver, lock-step with `reviveRowsForInsert`, `backupService.ts:588`).
   - `validateArchive(tarPath): ArchiveManifest` — PASS 1 (§4.4).
   - `restoreArchiveStreamTx(tx, tarPath, manifest, opts)` — the streaming, batched,
     FK-safe transactional restore body (successor of `restoreArtifactTx`), reusing 01's
@@ -425,11 +435,11 @@ import {
 } from "./backupUsersSection";                                // 04 (tx helper + normalize*/row types)
 import { importConfigTx } from "../tools/importExportService"; // 484 (exported :402)
 
-type DbTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0]; // = backupService.ts:60
+type DbTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0]; // = backupService.ts:62
 
 const IMPORT_BATCH_SIZE = 5_000; // parent §decision 4 (5–10k window); insert batch on restore
 
-// 05 defines its OWN local env parser. `parsePositiveIntEnv` in backupService.ts:919 is a
+// 05 defines its OWN local env parser. `parsePositiveIntEnv` in backupService.ts:963 is a
 // PRIVATE const (not exported), 1-arg, returns `number | null` (no default). 05 must not
 // edit backupService.ts (single-writer) and cannot import it. This 2-arg variant always
 // returns a number:
@@ -682,7 +692,7 @@ export async function restoreArchiveStreamTx(
 
   // 0) 484 DATABASE-GUARD (HIGH data-loss guard, §3): the reverse-delete of the 22 content
   //    tables runs ONLY when this archive carries a database section — mirrors
-  //    `if (artifact.database)` (backupService.ts:592). A settings-/media-/users-only .cbk
+  //    `if (artifact.database)` (backupService.ts:631). A settings-/media-/users-only .cbk
   //    must NEVER wipe content (test 15).
   if (includeDb) {
     // FK-safe reverse-delete (children -> parents), reusing 01's ARCHIVE_TABLE_DESCRIPTORS
@@ -695,9 +705,10 @@ export async function restoreArchiveStreamTx(
 
   // 0.5) FK-SAFE USERS PRE-RESTORE (upsert users BEFORE any content insert) — *** HIGH FK-ordering
   //   fix (cross-env / DR restore). *** The 22 content tables carry NOT-relaxable FK references to
-  //   `users.id` that Postgres checks AT INSERT: pages.author_id (schema.ts:224), posts.author_id
-  //   (:850), media.created_by (:1118), page_revisions.created_by (:345), content_entries.author_id
-  //   (:764) — among others. An `onDelete: "set null"` does NOT relax the INSERT check, and NO
+  //   `users.id` that Postgres checks AT INSERT: pages.author_id (pages.ts:29), posts.author_id
+  //   (posts.ts:27), media.created_by (media.ts:63), page_revisions.created_by (pages.ts:73),
+  //   content_entries.author_id (content.ts:39) — among others. An `onDelete: "set null"` does NOT
+  //   relax the INSERT check, and NO
   //   constraint is DEFERRABLE, so a content row whose author/creator user is ABSENT fails Postgres
   //   23503 at insert time. In a SAME-env restore the referenced users are never deleted (step 0
   //   deletes content, NOT users) so they still exist and content inserts succeed — which MASKS the
@@ -842,10 +853,10 @@ Helpers (all local to `backupImport.ts`):
   `isPlainObject`, reject-unknown against that table's column keys
   (`Object.keys(getTableColumns(desc.table))`), throw `backup_restore_invalid_artifact`
   on any violation (mirrors `parseBackupArtifact`'s fail-closed posture,
-  `backupService.ts:647`).
+  `backupService.ts:686`).
 - `reviveForInsert(table, rows)`: identical to `reviveRowsForInsert`
-  (`backupService.ts:549`) — a `date`-dataType string → `new Date` via
-  `getTableColumns(table)`; jsonb/uuid/text/numeric round-trip verbatim.
+  (`backupService.ts:588`) — a `date`-dataType string → `new Date` via
+  `getTableColumns(table)` (`:592`); jsonb/uuid/text/numeric round-trip verbatim.
 - `isFkViolation(error)`: narrow a thrown DB error to a Postgres foreign-key violation
   (SQLSTATE `23503`) so §5.5 step 1 can remap it to the coded `backup_restore_fk_violation`
   (→ 422) instead of leaking a raw 500. The postgres-js driver surfaces the SQLSTATE on
@@ -973,7 +984,7 @@ mutates shared DB rows runs inside a **deliberately rolled-back transaction** �
 committed against the shared DB.** §5.5 step 0 performs an **unscoped delete-all** of all
 22 content tables (`if (includeDb) { for (const desc of [...ARCHIVE_TABLE_DESCRIPTORS]
 .reverse()) await tx.delete(desc.table); }` — no `.where()`, mirroring
-`replaceSnapshotTables`, `backupService.ts:575`) whenever `include` contains `"database"`,
+`replaceSnapshotTables`, `backupService.ts:608`) whenever `include` contains `"database"`,
 and `importConfigTx` overwrites global settings via `setSettingsTx` and deletes menus
 absent from the bundle (`importExportService.ts:410,424`) whenever `include` contains
 `"settings"`. A committed round-trip of either therefore does **NOT** "touch only owned
@@ -1149,8 +1160,9 @@ scenarios per area"):**
    pre-`formData` content-length reject desired? If so it is a separate, framework-owned
    change (not 05).
 6. **Content↔users FK restore ordering (01 / 04 / 05) — RESOLVED (HIGH).** The 22 content tables
-   FK `users.id` at INSERT (pages.author_id `schema.ts:224`, posts.author_id `:850`,
-   media.created_by `:1118`, page_revisions.created_by `:345`, content_entries.author_id `:764`),
+   FK `users.id` at INSERT (pages.author_id `pages.ts:29`, posts.author_id `posts.ts:27`,
+   media.created_by `media.ts:63`, page_revisions.created_by `pages.ts:73`,
+   content_entries.author_id `content.ts:39`),
    `onDelete` does NOT relax the INSERT and no constraint is DEFERRABLE, so a cross-env / DR restore
    of a `database`+`users` archive whose users are absent from the target must upsert **users before
    content** or every content insert 23503s. **Resolution owned wholly by 05** (no 01 or 04 edit
@@ -1168,12 +1180,13 @@ scenarios per area"):**
 
 ## 8. Coordination
 
-- **Changelog:** do NOT create `_docs/_CHANGELOG/1229-*.md` or edit `_docs/_TASKS/*` here —
-  only the closure subtask **TASK-511-07** writes the single `1229` changelog and flips
-  statuses (parent §Coordination; `1229` is the orchestrator-**PINNED** number — NOT the
-  naive next-free, which `_docs/_CHANGELOG/README.md:32` shows as `1223` — because `1220-1228`
-  are reserved by parallel streams, see parent §Coordination). 05 ships code + tests only, and
-  touches no `Status:` field outside this file.
+- **Changelog:** do NOT create `_docs/_CHANGELOG/1281-*.md` or edit `_docs/_TASKS/*` here —
+  only the closure subtask **TASK-511-07** writes the single `1281` changelog and flips
+  statuses (parent §Coordination; `1281` is the orchestrator-**PINNED** number — the journal
+  now runs through `1273`, `1274` is claimed by TASK-559, and `1275-1279` are reserved by the
+  small-feature stream, so 511 closure is pinned to `1281`; a stale worktree
+  `_docs/_CHANGELOG/README.md` must be re-read fresh at closure, not "corrected" downward).
+  05 ships code + tests only, and touches no `Status:` field outside this file.
 - **Land order:** strictly sequential **01 → 02 → 03 → 04 → 05 → 06 → 07**. 05 lands only
   after 01/02/03/04 are merged (it imports `ARCHIVE_TABLE_DESCRIPTORS`/version/section-name
   constants from 01, `decryptBackupArchive`/`normalizeBackupPassphrase` from 02,

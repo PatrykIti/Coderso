@@ -158,6 +158,9 @@ function createFakeAdapter(overrides: Partial<MediaStorageAdapter> = {}): {
         },
       };
     },
+    async putAt() {
+      throw new Error("generic_put_forbidden");
+    },
     async get(key) {
       calls.get.push(key);
       return Readable.from([pngOneByOne]);

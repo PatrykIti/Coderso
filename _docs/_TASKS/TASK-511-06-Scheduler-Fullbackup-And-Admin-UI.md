@@ -7,7 +7,8 @@
 **Estimated Effort:** Large
 **Parent Task:** TASK-511 (Backup v2 — Scalable, Compressed, Encrypted, Importable)
 **Depends On:** TASK-511-01 (export engine + manifest + `packDatabaseArchive`), TASK-511-02 (compression + passphrase encryption / KDF contract + `encryptBackupArchive` / `normalizeBackupPassphrase` / `.cbk` naming constants), TASK-511-03 (media file streaming), TASK-511-04 (users + RBAC include), TASK-511-05 (import-file pipeline + route)
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-08-15
 **Started:** 2026-07-05
 
 ---
@@ -50,8 +51,9 @@ Grounded on the current code (all in `/home/coder/project/Coderso-task-511`):
 `core/server/validation/backupSchemas.ts` (`scheduleUpdateSchema`, `createBackupSchema`),
 `core/server/routes/backupRoutes.ts` (`PATCH /backups/schedule`, `POST /backups`),
 `core/admin/services/backupsClient.ts`, `core/admin/ui/backups/{BackupsPage,BackupNowDialog,
-BackupScheduleCard}.tsx`, `core/db/schema.ts` (`backupSchedules` line 547; `users`/`roles`/
-`userRoles` lines 15/28/36).
+BackupScheduleCard}.tsx`, `core/db/tables/operations.ts` (`backupSchedules` :82);
+`core/db/tables/identity.ts` (`users`/`roles`/`userRoles` :23/:36/:44; both re-exported by
+`core/db/schema.ts`).
 
 ---
 
@@ -62,16 +64,16 @@ writer of every file it touches at land time. It **extends** files that 01–05 
 (their contracts must have landed first) and **creates** one new UI file.
 
 **Backend (extend):**
-- `core/db/schema.ts` — add `include jsonb` column to `backupSchedules` (default full set).
-- `core/db/migrations/0066_backup_schedule_include.sql` (**new**) + `core/db/migrations/meta/
-  0066_snapshot.json` (**new**) + append entry `idx: 66` to `core/db/migrations/meta/_journal.json`.
-  (Next free index — current last is `0065_backup_run_metadata`, journal has 66 entries idx 0–65.)
+- `core/db/tables/operations.ts` — add `include jsonb` column to `backupSchedules` (default full set).
+- `core/db/migrations/0072_backup_schedule_include.sql` (**new**) + `core/db/migrations/meta/
+  0072_snapshot.json` (**new**) + append entry `idx: 72` to `core/db/migrations/meta/_journal.json`.
+  (Next free index — current last is `0071_seed_admin_role`, journal has 72 entries idx 0–71.)
   ⚠ **Re-verify the index against `feature/tasks` at 06's land time** — this is the SAME staleness the
-  changelog pin (1229, below) exists for: this worktree was cut before parallel streams
+  changelog pin (1281, below) exists for: this worktree was cut before parallel streams
   (480 / 482-484 / 512-516) landed, and migration indices are sequential integers merged into the
-  same target with an identical collision surface. `0066` is next-free only relative to this
-  pre-branch worktree; a parallel stream landing a migration first could claim `0066`. Do NOT
-  hard-commit `idx: 66` blindly — at land time re-check the last migration on `feature/tasks`,
+  same target with an identical collision surface. `0072` is next-free only relative to this
+  pre-branch worktree; a parallel stream landing a migration first could claim `0072`. Do NOT
+  hard-commit `idx: 72` blindly — at land time re-check the last migration on `feature/tasks`,
   renumber the SQL file if needed, and regenerate the snapshot + journal via the drizzle toolchain
   (do not hand-edit them).
 - `core/services/backups/backupTypes.ts` — add `include: BackupIncludeOption[]` to `BackupSchedule`
@@ -99,22 +101,22 @@ writer of every file it touches at land time. It **extends** files that 01–05 
   logged nor added to `backups.create` audit metadata.
   **Binary `.cbk` coupling — 06 owns every backupService.ts function the artifact-format flip
   touches (sole writer at land time), not just the constants (see §A0-persist):**
-  - `resolveBackupArtifactPath` (`backupService.ts:78`) — swap the `.json` literals for 02's
+  - `resolveBackupArtifactPath` (`backupService.ts:80`) — swap the `.json` literals for 02's
     `backupArchiveFileName` (`.cbk`).
   - `writeStreamToFile(stream, filePath): Promise<number>` (**new 06-owned private helper in
     `backupService.ts`**) — the local binary sink: pipe the encrypted archive `ReadableStream` to
     `filePath` (e.g. `Bun.write(filePath, stream)` or a `Writable` pipe) without buffering the whole
     archive, returning the byte count for `markBackupComplete`. Replaces the v1
-    `writeFile(..., 'utf8')` (`backupService.ts:394`). This is 06's helper (01 owns the archive
+    `writeFile(..., 'utf8')` (`backupService.ts:433`). This is 06's helper (01 owns the archive
     stream producer; 06 owns the create-path persistence sink) — attributed here so it is not an
     unowned symbol.
-  - `uploadBackupArtifact` (`backupService.ts:343`) — the remote (s3/azure) path must upload a
+  - `uploadBackupArtifact` (`backupService.ts:382`) — the remote (s3/azure) path must upload a
     **binary stream** named `.cbk` (`backupArchiveFileName`) with `type:
     BACKUP_ARCHIVE_CONTENT_TYPE` (`application/octet-stream`), NOT a utf8 string named `.json`
     (`BACKUP_ARTIFACT_CONTENT_TYPE = application/json`) — otherwise remote backups upload a corrupt
     `.json`-named object.
-  - `resolveBackupDownload` (`backupService.ts:725`) — for a v2 `.cbk` read the local artifact as
-    **bytes** (`readFile(path)` without `'utf8'`, `backupService.ts:739`) and return them
+  - `resolveBackupDownload` (`backupService.ts:769`) — for a v2 `.cbk` read the local artifact as
+    **bytes** (`readFile(path)` without `'utf8'`, `backupService.ts:782`) and return them
     **base64-encoded** in `content` with `contentType: BACKUP_ARCHIVE_CONTENT_TYPE`
     (`application/octet-stream`) plus a new `encoding: "base64"` marker. **Why base64, not raw bytes
     (the HIGH transport fix):** the `/backups/:id/download` handler (`backupRoutes.ts:189`) returns the
@@ -127,7 +129,7 @@ writer of every file it touches at land time. It **extends** files that 01–05 
     legacy `.json`) and gains a new optional `encoding?: "base64"` field. It is deliberately **not**
     widened to `string | Uint8Array`: that both breaks the JSON route (above) and would force a
     tsc-breaking widening of `readBackupArtifactContent`'s `Promise<string>` return
-    (`backupService.ts:687-689`, `return dl.content`). base64-as-string avoids both — so
+    (`backupService.ts:726-728`, `return dl.content`). base64-as-string avoids both — so
     `readBackupArtifactContent` (v1-only; v2 fails fast in `restoreBackup`, see below) keeps returning
     a `string` unchanged and needs no type guard.
   - **Client download surfaces — 06-owned (the HIGH client half; not owned by any earlier subtask).**
@@ -271,10 +273,10 @@ codes — all **05**). This subtask **consumes** those exports: the 05 route fro
 ### A0. Create-path rewiring (backend) — `createBackup` / `createBackupArtifact` (**the load-bearing 06 change**)
 
 The single most important 06 edit: replace the v1 **in-memory `JSON.stringify` `.json` artifact**
-(`backupService.ts:366` `createBackupArtifact`, `backupService.ts:387`
-`JSON.stringify(artifact,null,2)`, `backupService.ts:394` `writeFile(...,'utf8')` /
-`backupService.ts:401` `uploadBackupArtifact`) with the **streaming compressed encrypted `.cbk`**
-engine. `createBackup` (`backupService.ts:425`) currently calls
+(`backupService.ts:405` `createBackupArtifact`, `backupService.ts:426`
+`JSON.stringify(artifact,null,2)`, `backupService.ts:433` `writeFile(...,'utf8')` /
+`backupService.ts:440` `uploadBackupArtifact`) with the **streaming compressed encrypted `.cbk`**
+engine. `createBackup` (`backupService.ts:464`) currently calls
 `createBackupArtifact(backup, include)` with **no** passphrase — 06 threads `input.passphrase`
 through and injects 03/04's section exporters (so 01 never hard-imports them — 01 §4.6a
 land-order-safe injection).
@@ -294,7 +296,7 @@ export async function createBackup(input: BackupCreateInput = {}): Promise<Backu
   const kind = input.kind === "scheduled" ? "scheduled" : "manual";
   const include = normalizeBackupInclude(input.include);
 
-  // Insert the `running` row FIRST (mirrors the current v1 shape at backupService.ts:429-436), so
+  // Insert the `running` row FIRST (mirrors the current v1 shape at backupService.ts:470-471), so
   // EVERY downstream throw — including the two fail-closed guards below — is caught by the try/catch
   // and self-marked `failed` via markBackupFailed. createBackup MUST NOT throw to its caller for a
   // guard failure: the scheduler (§D) and the route/service tests (Bun Test 1 + Bun Test 3
@@ -424,7 +426,7 @@ asserts the spool dir is gone after a create completes AND after a create that f
 The v1 helpers are hard-coded to `.json`/utf8 strings and must flip to binary `.cbk`:
 
 ```ts
-// resolveBackupArtifactPath — swap the .json literals (backupService.ts:82-83) for 02's naming:
+// resolveBackupArtifactPath — swap the .json literals (backupService.ts:84-85) for 02's naming:
 const resolveBackupArtifactPath = (id: string) => {
   const baseDir = getBackupStorageDir();
   const fileName = backupArchiveFileName(id); // `coderso-backup-<id>.cbk`
@@ -466,7 +468,7 @@ const uploadBackupArtifact = async (id: string, archiveStream: ReadableStream, f
 // claim remote streaming (07 §"Streaming / no-OOM scope", lines 105-113 — already carries this). The
 // prior wording ("there is NO streaming put") was inaccurate given 03's putAt and is corrected here.
 
-// resolveBackupDownload (backupService.ts:725) — read a v2 .cbk as BYTES then base64-encode for the
+// resolveBackupDownload (backupService.ts:769) — read a v2 .cbk as BYTES then base64-encode for the
 // JSON route (raw bytes cannot survive JSON.serialize — see §Owning modules download bullet):
 //   const bytes = await readFile(artifactPath);              // NO 'utf8' -> Buffer/Uint8Array
 //   return { url:null, path:null, fileName: path.basename(artifactPath),
@@ -480,13 +482,13 @@ const uploadBackupArtifact = async (id: string, archiveStream: ReadableStream, f
 // NOTE: this download path reads the whole stored artifact (bounded by artifact size — identical to
 // v1's readFile). It is the convenience "download to browser" path, NOT the streaming export/import
 // path; the parent no-OOM streaming guarantee applies to packBackupArchive/import, not this fetch.
-// readBackupArtifactContent (backupService.ts:687) is v1-ONLY (v2 fails fast in restoreBackup) and
+// readBackupArtifactContent (backupService.ts:726) is v1-ONLY (v2 fails fast in restoreBackup) and
 // keeps returning `string` unchanged (dl.content is a utf8 string for v1 .json) — no widening, no guard.
 ```
 
 > **Restore-from-stored (`restoreBackup(id)`) vs the v2 `.cbk` download.** Today
-> `readBackupArtifactContent` (`backupService.ts:687`, `res.text()`) + `parseBackupArtifact`
-> (`backupService.ts:647`) drive the TASK-484 restore-from-stored path, which only understands the
+> `readBackupArtifactContent` (`backupService.ts:726`, `res.text()`) + `parseBackupArtifact`
+> (`backupService.ts:686`) drive the TASK-484 restore-from-stored path, which only understands the
 > v1 utf8 JSON artifact and **cannot decrypt a `.cbk`** (no stored passphrase — parent §decision 3
 > keeps the passphrase client/env-only). For v2 archives the restore path is the **download → Import
 > dialog (05) re-upload** flow (operator supplies the passphrase): 06 serves the raw `.cbk` bytes
@@ -505,7 +507,7 @@ const uploadBackupArtifact = async (id: string, archiveStream: ReadableStream, f
 
 ### A. Schema + migration (backend)
 
-`core/db/schema.ts` — extend `backupSchedules`:
+`core/db/tables/operations.ts` — extend `backupSchedules`:
 
 ```ts
 export const backupSchedules = pgTable("backup_schedules", {
@@ -517,20 +519,20 @@ export const backupSchedules = pgTable("backup_schedules", {
 }, (t) => ({ /* existing indexes unchanged */ }));
 ```
 
-`core/db/migrations/0066_backup_schedule_include.sql`:
+`core/db/migrations/0072_backup_schedule_include.sql`:
 
 ```sql
 ALTER TABLE "backup_schedules" ADD COLUMN "include" jsonb DEFAULT '["database","settings","media"]'::jsonb NOT NULL;
 ```
 
 Regenerate the snapshot with the drizzle toolchain (`core/db/drizzle.config.ts`) so
-`0066_snapshot.json` + the `_journal.json` `idx: 66` entry match the hand-written SQL (do not
+`0072_snapshot.json` + the `_journal.json` `idx: 72` entry match the hand-written SQL (do not
 hand-edit the snapshot). Migration must be idempotent-safe under the shared remote test DB
 (additive column with a default; existing rows backfill to the full default set).
-**Reconcile the index at land time** (mirrors the changelog pin): `0066` is correct only relative to
-this pre-branch worktree (verified: last migration `0065_backup_run_metadata`, journal idx 0–65). A
+**Reconcile the index at land time** (mirrors the changelog pin): `0072` is correct only relative to
+this pre-branch worktree (verified: last migration `0071_seed_admin_role`, journal idx 0–71). A
 parallel stream (480 / 482-484 / 512-516) could land a migration into `feature/tasks` first and claim
-`0066` — so at 06's land time re-check the last migration on the merge target and renumber (SQL file
+`0072` — so at 06's land time re-check the last migration on the merge target and renumber (SQL file
 name + `idx`) if needed, regenerating the snapshot/journal via drizzle rather than committing a
 hard-coded index.
 
@@ -639,6 +641,19 @@ passphrase → `createBackup` (02/03/04 do the streamed compressed encrypted arc
 complete/failed → `markScheduleRun` advances `nextRunAt` → audit → prune. **Error handling:**
 `createBackup` never throws (self-marks failed); the scheduler tick wrapper already logs only
 `sanitizeBackupError(error)`; no raw passphrase can reach a log.
+
+> **Failed-row noise guard (no-passphrase state).** The missing-passphrase branch above persists a
+> NEW `failed` `backups` row + audit entry on every due tick, which is correct fail-closed behavior
+> but would accumulate rows and log noise on a misconfigured server (no `BACKUP_ENCRYPTION_PASSPHRASE`)
+> with a frequent schedule. 06 must therefore **throttle the no-passphrase branch to once per
+> schedule period / configuration state** (e.g. a `lastNoPassphraseLoggedAt` in-memory guard, or skip
+> the extra `createBackup`+audit when the previous tick already recorded the identical
+> `backup_passphrase_required` failure for the same schedule): still advance `nextRunAt` and still
+> fail closed, but do NOT emit a fresh failed row + audit entry on every single tick. The retention
+> pruner bounds the *stored* row count but not the per-tick write amplification, so the guard lives
+> here rather than relying on prune. Extend the scheduler Bun test (item 1,
+> `backupScheduler.test.ts`) to cover "two consecutive no-passphrase ticks produce at most one new
+> failed row".
 
 ### E. Validation (backend)
 
@@ -988,13 +1003,12 @@ typecheck-scope gotcha (core-only lint misses `tests/` excess-prop errors).
   the sequential order (see parent §Coordination).
 - **Single-writer:** at 06's land time it is the sole writer of every file listed under *Owning
   modules*; do not pre-touch files still owned by an unlanded earlier subtask.
-- **Changelog:** do **not** add a changelog entry here. The pinned free number is **1229** — this is
-  the orchestrator pin, NOT the value in this worktree's `_docs/_CHANGELOG/README.md:32` (which is
-  stale: it literally reads "Use 1223 for the next changelog entry" because this branch was cut before
-  1220-1228 were reserved). 1229 is authoritative because 1223 is owned by TASK-480 in the merge
-  target `feature/tasks`, and 1220-1228 are reserved by parallel streams (482-484 / 512-516). Do NOT
-  default to the README's 1223 — it would collide. **Only the closure subtask 511-07** writes
-  `_docs/_CHANGELOG/1229-*.md` and edits `_docs/_TASKS/*` status.
+- **Changelog:** do **not** add a changelog entry here. The pinned free number is **1281** — this is
+  the orchestrator pin, NOT the value in a stale worktree `_docs/_CHANGELOG/README.md` (which can lag
+  because it was branched before later numbers were consumed). The journal now runs through `1273`,
+  `1274` is owned by TASK-559, and `1275-1279` are reserved by the small-feature stream, so 1281 is
+  authoritative for 511. Do NOT default to an older README number — it would collide. **Only the
+  closure subtask 511-07** writes `_docs/_CHANGELOG/1281-*.md` and edits `_docs/_TASKS/*` status.
 - **New env/config:** the scheduler passphrase env (`BACKUP_ENCRYPTION_PASSPHRASE`, reused from 02)
   must be documented in `.env.example` + `docs/develop/getting-started.md` — that documentation is
   performed by **511-07** (docs & closure), consistent with the parent Coordination note. This
@@ -1013,7 +1027,7 @@ typecheck-scope gotcha (core-only lint misses `tests/` excess-prop errors).
    is also readable as "scheduled backups are always full". Confirm the column approach (chosen here
    for operator control + UI checkboxes on the schedule card) vs a fixed full scheduled scope with no
    new column/migration.
-2. **Scheduled passphrase env name — RESOLVED.** 02 §"Coordination note → Passphrase source policy"
+2. **Scheduled passphrase env name — RESOLVED.** 02 §"Coordination → Passphrase source policy"
    now names the sole backend-only scheduled-passphrase env var **`BACKUP_ENCRYPTION_PASSPHRASE`**
    (the "default backup-encryption key" hinted in the parent Coordination), read only by 06's
    `resolveScheduledPassphrase()` for unattended runs and normalized through 02's
