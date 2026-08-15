@@ -146,9 +146,15 @@ Entry visibility (TASK-514, migration `0069_past_leopardon`):
     `hasPassword = false`).
 - Duplicate-entry rule: a duplicated entry copies `visibility` but a `password`
   source is downgraded to `private` and the hash is NEVER copied.
-- Public-front ENFORCEMENT of `private`/`password` on the render path is out of
-  scope here (persist + surface + respect-in-admin only) and is deferred to
-  TASK-517 (Entry Visibility — Public Front Enforcement).
+- Public-front ENFORCEMENT of `private`/`password` on the render path is
+  implemented by TASK-517: fail-closed detail gate (`public` → render;
+  `private` → uniform anonymous 404, render under `content:read`;
+  `password` → server-rendered prompt + `POST /entries/:id/unlock` HMAC unlock
+  cookie), public-list/search/listing-block omission of non-`public` entries,
+  and full read+write exemption of gated routes from the shared public HTML
+  cache. See `_docs/SECURITY_SPEC.md` → "Public entry-visibility gate (TASK-517)".
+  The unlock hash is only read server-side by the unlock endpoint's narrow
+  `getEntryAccessPasswordHash` loader; it never enters a render/list projection.
 
 Visitor listing indexes (TASK-459-04):
 

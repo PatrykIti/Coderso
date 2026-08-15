@@ -63,9 +63,12 @@ index row absent until fresh reclosure validation succeeds.
 Changelog 1271 is consumed by the completed TASK-557 Bun Test Lane Remote Parallel Speedup
 family. Changelog 1272 is consumed by the completed TASK-486 popups public-runtime family.
 Changelog 1273 is consumed by the completed TASK-558 popup visual theming family. Changelog 1274 remains reserved for TASK-559 (Bun Lane C-Split). Use 1275 for the next unreserved changelog entry.
+Changelog 1280 is consumed by the completed TASK-517 Entry Visibility — Public Front
+Enforcement family (pinned stream reservation; 1275–1279 left free for other streams).
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 1280 | 2026-08-14 | TASK-517 Entry Visibility — Public Front Enforcement — fail-closed `public`/`private`/`password` gate on the public render path (uniform anonymous 404 for private, no existence leak via detail/list/search/listing blocks), `POST /entries/:id/unlock` with Argon2id verify + timing-equalized dummy path + reject-unknown + `public_write` rate-limit + stateless HMAC unlock cookie (SameSite=Strict, HttpOnly, Secure), full read+write cache exemption for gated routes, docs + closure. 3 subtasks + 10 leaves terminal. | Content/Security/Public Runtime/Testing/Docs/Task Board |
 | 1273 | 2026-08-14 | TASK-558 Popup Visual Theming — present-only fixed-preset theme (card/backdrop/close/z-index 9999), viewport clamping, focus/ESC/Tab-trap/reduced-motion, byte-identical no-override; 7-scenario runtime smoke (wf558smoke). One executable task terminal. | Engagement/Popups/Public Runtime/Accessibility/Testing/Docs/Task Board |
 | 1231 | 2026-08-14 | TASK-518 Seed Default Admin Role via Migration — stable DEFAULT_ADMIN_ROLE_ID, idempotent migration 0071 (fresh db:migrate has exactly one admin role), createFirstAdmin/seedAdmin aligned, legacy random-id role untouched. Admin-only; no privilege change. | Auth/RBAC/Data/Installer/Migration/Testing/Task Board |
 | 1272 | 2026-08-14 | TASK-486 Popups: Public Runtime Delivery & Trigger/Targeting Engine — public read endpoint (published-only, server-side targeting, PII-free DTO), client trigger/targeting/frequency runtime, render + script injection, lane-correct tests, docs, and 8-scenario runtime smoke. 4 subtasks + 11 leaves terminal. | Engagement/Popups/Public Runtime/Security/Testing/Docs/Task Board |

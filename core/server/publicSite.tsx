@@ -1,15 +1,10 @@
 import type { ReactNode } from "react";
 
 import type { DeviceTarget } from "../widgets/types";
-import { ensureRecord, hydrateRuntimeBlocks } from "./publicSiteRenderContext";
-import {
-  renderPublicPageRuntimeHtml,
-  renderPublicPageV2RuntimeHtml,
-} from "../site/renderPublicPage";
-import { renderPublicEntryDetailHtml, renderPublicEntryListHtml } from "../site/renderPublicEntry";
+import { ensureRecord } from "./publicSiteRenderContext";
+import { renderPublicPageV2RuntimeHtml } from "../site/renderPublicPage";
 import {
   DEFAULT_SITE_CACHE_TTL_SECONDS,
-  blocksAllowSiteHtmlCache,
   buildSiteCacheKey,
   configureSiteCache,
   getSiteCacheEntry,
@@ -20,34 +15,18 @@ import {
 import { matchContentRoute } from "../site/contentRouteMatcher";
 import { getPageBySlug, getPage } from "../services/pages/pageService";
 import { validatePreviewToken } from "../services/pages/previewService";
-import { getEntry, getEntryBySlug, listEntries } from "../services/content/entryService";
-import {
-  DEFAULT_POST_CONTENT_SCHEMA,
-  getPost,
-  getPostBySlug,
-  listPosts,
-  POST_CONTENT_TYPE_NAME,
-  POST_CONTENT_TYPE_SLUG,
-} from "../services/content/postsService";
-import {
-  resolvePreviewDetailPageRuntime,
-  resolvePublishedDetailPageRuntime,
-} from "../services/content/detailPageRuntimeResolver";
+import { getEntry } from "../services/content/entryService";
+import { getPost, POST_CONTENT_TYPE_SLUG } from "../services/content/postsService";
 import { getPageTemplatePreviewModel } from "../services/pages/pageTemplateLibraryService";
 import { isPageTemplateError } from "../services/pages/pageTemplateLibrarySchema";
-import { getContentType, getContentTypeBySlug } from "../services/content/typeService";
+import { getContentType } from "../services/content/typeService";
 import { resolvePublicSeoMetadata } from "../services/seo/seoService";
 import { getSetting } from "../services/settings/settingsService";
 import type { ContentRouteSetting } from "../services/settings/settingsContracts";
 import { getActiveThemeProfile } from "../services/themes/themeProfileService";
 import { resolvePublicRedirect } from "../services/redirects/redirectService";
-import type { ContentSchema } from "../services/content/validation";
 import { getListingRuntimeClientScript } from "../widgets/core/listingRuntimeScript";
 import { createWidgetRuntimeScriptRegistry } from "../widgets/runtimeScripts";
-import {
-  isPostContentTypeSlug,
-  resolvePostRuntimeMetaDescription,
-} from "../services/posts/runtime/postBlockRuntimeMapper";
 import { checkRateLimit } from "./middleware/rateLimit";
 import { getSecuritySettings } from "../services/settings/securitySettings";
 import { searchPublicIndex } from "../services/search/searchIndexService";
@@ -55,17 +34,12 @@ import { publicSearchRequestSchema } from "./validation/filterSchemas";
 import { validate } from "./validation/schemaValidator";
 import { handlePublicBookingApi } from "./publicBookingApi";
 import { handlePublicFormsApi } from "./publicFormsApi";
+import { handlePublicEntryUnlockApi } from "./publicEntryUnlockApi";
 import { handlePublicPopupsApi } from "./publicPopupsApi";
 import { injectPopupRuntime } from "./popupRuntimeScript";
 import { ANALYTICS_BEACON_PATH, handlePublicAnalyticsApi } from "./publicAnalyticsApi";
-import {
-  collectPrehydratedDetailBlockIds,
-  resolveDetailPageImageUrl,
-  resolveDetailPageRuntimeSeo,
-  toPublicSeoText,
-} from "./publicSiteEntryRuntime";
+import { resolveDetailPageImageUrl, toPublicSeoText } from "./publicSiteEntryRuntime";
 import { preparePageRuntimeDocument } from "../services/pages/pageRuntimeDataPreparation";
-import type { PageRuntimeCacheMode } from "../services/pages/pageRuntimeBindingContract";
 import { resolvePageTemplateInput } from "../services/pages/pageTemplateBoundary";
 import type { PageBreakpoint } from "../services/pages/pageDocumentV2";
 import {
@@ -73,16 +47,23 @@ import {
   resolvePublicSiteShellContext,
 } from "./publicSitePageRuntime";
 import {
-  buildDetailHref,
-  isEntryPublished,
   normalizePreviewDetailPageId,
-  paginateEntryListEntries,
-  resolveLinkedDetailPageId,
   resolvePreviewDevice,
   resolvePreviewTargetType,
 } from "./publicSiteRouteRuntime";
 import { resolvePublicSiteRouteTarget } from "./publicSiteRoutePrecedence";
 import { isSiteAsset, resolvePublicStyles, serveSiteAsset } from "./publicSiteAssets";
+import {
+  buildEntryUnlockContext,
+  entryRouteIsGated,
+  resolveEntryRequestAuth,
+} from "./publicEntryGateUi";
+import {
+  renderDetailPagePreviewHtml,
+  renderEntryDetailHtml,
+  renderEntryListHtml,
+  type PublicHtmlRenderResult,
+} from "./publicEntryRender";
 
 export type PublicPageData = {
   id: string;
@@ -93,15 +74,12 @@ export type PublicPageData = {
   currentData?: Record<string, unknown> | null;
 };
 
+// Module-local cookie/header helpers now live in publicEntryGateUi.tsx
+// (TASK-517 seams); see resolveEntryRequestAuth / buildEntryUnlockContext.
 const resolveIp = (req: Request) => {
   const forwarded = req.headers.get("x-forwarded-for");
   if (forwarded) return forwarded.split(",")[0]?.trim();
   return undefined;
-};
-
-const resolvePublicThemeName = async () => {
-  const profile = await getActiveThemeProfile();
-  return profile?.themeName ?? "default";
 };
 
 // Builds every public HTML Response (fresh renders AND the cache-hit path).
@@ -110,30 +88,6 @@ const resolvePublicThemeName = async () => {
 // memoized and side-effect free.
 const buildHtmlResponse = (html: string) =>
   new Response(injectPopupRuntime(html), { headers: { "Content-Type": "text/html" } });
-
-type PublicHtmlRenderResult = {
-  html: string;
-  cacheable: boolean;
-  /** Granular cache policy for v2 page renders. */
-  cacheMode?: PageRuntimeCacheMode;
-};
-
-const resolveRequestCanonicalUrl = (input: {
-  canonicalUrl: string | null;
-  requestOrigin?: string | null;
-  requestPath?: string | null;
-}): string | null => {
-  if (input.canonicalUrl) return input.canonicalUrl;
-  if (!input.requestOrigin || !input.requestPath) return null;
-  try {
-    const origin = new URL(input.requestOrigin);
-    if (origin.protocol !== "http:" && origin.protocol !== "https:") return null;
-    const canonical = new URL(input.requestPath, origin);
-    return canonical.origin === origin.origin ? canonical.href : null;
-  } catch {
-    return null;
-  }
-};
 
 const jsonResponse = (payload: unknown, status = 200) =>
   new Response(JSON.stringify(payload), {
@@ -279,396 +233,6 @@ const renderPageTemplatePreviewHtml = async (
   return result.html;
 };
 
-const renderEntryListHtml = async (
-  typeSlug: string,
-  detailPath: string,
-  options?: { preview?: boolean; themeName?: string; runtimeSearchParams?: URLSearchParams }
-) => {
-  if (isPostContentTypeSlug(typeSlug)) {
-    const paged = paginateEntryListEntries(await listPosts(), options?.runtimeSearchParams);
-    const postItems = paged.entries.map((entry) => ({
-      id: entry.id,
-      title: entry.title,
-      href: buildDetailHref(detailPath, entry.slug, entry.id),
-      entry,
-    }));
-
-    const { inlineCss, cssHref, devModuleScripts } = await resolvePublicStyles();
-    return renderPublicEntryListHtml({
-      title: POST_CONTENT_TYPE_NAME,
-      contentType: {
-        id: POST_CONTENT_TYPE_SLUG,
-        name: POST_CONTENT_TYPE_NAME,
-        slug: POST_CONTENT_TYPE_SLUG,
-        schema: DEFAULT_POST_CONTENT_SCHEMA as unknown as ContentSchema,
-      },
-      items: postItems,
-      pagination: paged.pagination,
-      cssHref,
-      inlineCss,
-      devModuleScripts,
-      isPreview: options?.preview ?? false,
-      themeName: options?.themeName ?? (await resolvePublicThemeName()),
-      analyticsScriptHtml: await buildLiveAnalyticsScriptHtml(options?.preview === true),
-      siteLocale: await getSetting("site.locale"),
-    });
-  }
-
-  const contentType = await getContentTypeBySlug(typeSlug);
-  if (!contentType) return null;
-
-  const paged = paginateEntryListEntries(
-    await listEntries(contentType.id),
-    options?.runtimeSearchParams
-  );
-  const items = paged.entries.map((entry) => ({
-    id: entry.id,
-    title: entry.title,
-    href: buildDetailHref(detailPath, entry.slug, entry.id),
-    entry,
-  }));
-
-  const { inlineCss, cssHref, devModuleScripts } = await resolvePublicStyles();
-  return renderPublicEntryListHtml({
-    title: contentType.name,
-    contentType: {
-      id: contentType.id,
-      name: contentType.name,
-      slug: contentType.slug,
-      schema: contentType.schema as ContentSchema,
-    },
-    items,
-    pagination: paged.pagination,
-    cssHref,
-    inlineCss,
-    devModuleScripts,
-    isPreview: options?.preview ?? false,
-    themeName: options?.themeName ?? (await resolvePublicThemeName()),
-    siteLocale: await getSetting("site.locale"),
-    analyticsScriptHtml: await buildLiveAnalyticsScriptHtml(options?.preview === true),
-  });
-};
-
-const renderEntryDetailHtml = async (
-  typeSlug: string,
-  routeValue: string,
-  options?: {
-    preview?: boolean;
-    previewDevice?: DeviceTarget;
-    themeName?: string;
-    preferGenericEntry?: boolean;
-    routeParam?: "slug" | "id";
-    detailPageId?: string | null;
-    contentRoutes?: ContentRouteSetting[];
-    runtimeSearchParams?: URLSearchParams;
-    requestPath?: string | null;
-    requestOrigin?: string | null;
-  }
-): Promise<PublicHtmlRenderResult | string | null> => {
-  const routeParam = options?.routeParam ?? "slug";
-
-  if (!options?.preferGenericEntry && isPostContentTypeSlug(typeSlug)) {
-    const post = routeParam === "id" ? await getPost(routeValue) : await getPostBySlug(routeValue);
-    if (!post) return null;
-    if (!options?.preview && !isEntryPublished(post)) {
-      return null;
-    }
-
-    const { inlineCss, cssHref, devModuleScripts } = await resolvePublicStyles();
-    return renderPublicEntryDetailHtml({
-      title: post.seo?.title ?? post.title ?? POST_CONTENT_TYPE_NAME,
-      contentType: {
-        id: POST_CONTENT_TYPE_SLUG,
-        name: POST_CONTENT_TYPE_NAME,
-        slug: POST_CONTENT_TYPE_SLUG,
-        schema: DEFAULT_POST_CONTENT_SCHEMA as unknown as ContentSchema,
-      },
-      entry: post,
-      cssHref,
-      inlineCss,
-      devModuleScripts,
-      isPreview: options?.preview ?? false,
-      themeName: options?.themeName ?? (await resolvePublicThemeName()),
-      metaDescription: post.seo?.description ?? resolvePostRuntimeMetaDescription(post.data),
-      canonicalUrl: post.seo?.canonicalUrl ?? null,
-      robots: post.seo?.robots ?? null,
-      analyticsScriptHtml: await buildLiveAnalyticsScriptHtml(options?.preview === true),
-      siteLocale: await getSetting("site.locale"),
-    });
-  }
-
-  const contentType = await getContentTypeBySlug(typeSlug);
-  if (!contentType) return null;
-
-  const entryDetail =
-    routeParam === "id"
-      ? await getEntry(routeValue)
-      : await (async () => {
-          const entry = await getEntryBySlug(contentType.id, routeValue);
-          if (!entry) return null;
-          if (!options?.preview && !isEntryPublished(entry)) {
-            return null;
-          }
-          return getEntry(entry.id);
-        })();
-  if (!entryDetail) return null;
-  if (entryDetail.typeId !== contentType.id) return null;
-  if (!options?.preview && !isEntryPublished(entryDetail)) {
-    return null;
-  }
-
-  const { inlineCss, cssHref, devModuleScripts } = await resolvePublicStyles();
-  const contentTypeSnapshot = {
-    id: contentType.id,
-    name: contentType.name,
-    slug: contentType.slug,
-    schema: contentType.schema as ContentSchema,
-  };
-  const contentRoutes = options?.contentRoutes ?? [];
-  const activeDetailPageId =
-    options?.detailPageId ??
-    (options?.preview ? resolveLinkedDetailPageId(contentType.slug, contentRoutes) : null);
-
-  if (activeDetailPageId) {
-    const detailPage = options?.preview
-      ? await resolvePreviewDetailPageRuntime({
-          detailPageId: activeDetailPageId,
-          documentSource: "published",
-          entry: {
-            id: entryDetail.id,
-            typeId: entryDetail.typeId,
-            title: entryDetail.title,
-            slug: entryDetail.slug,
-            status: entryDetail.status,
-            visibility: entryDetail.visibility,
-            hasPassword: entryDetail.hasPassword,
-            tags: entryDetail.tags ?? [],
-            data: entryDetail.data ?? {},
-            publishedAt: entryDetail.publishedAt ?? null,
-            scheduledAt: entryDetail.scheduledAt ?? null,
-            createdAt: entryDetail.createdAt ?? null,
-            updatedAt: entryDetail.updatedAt ?? null,
-            author: entryDetail.author ?? null,
-          },
-          contentType: {
-            id: contentType.id,
-            slug: contentType.slug,
-            schema: contentType.schema as ContentSchema,
-          },
-          contentRoutes,
-        })
-      : await resolvePublishedDetailPageRuntime({
-          detailPageId: activeDetailPageId,
-          entry: {
-            id: entryDetail.id,
-            typeId: entryDetail.typeId,
-            title: entryDetail.title,
-            slug: entryDetail.slug,
-            status: entryDetail.status,
-            visibility: entryDetail.visibility,
-            hasPassword: entryDetail.hasPassword,
-            tags: entryDetail.tags ?? [],
-            data: entryDetail.data ?? {},
-            publishedAt: entryDetail.publishedAt ?? null,
-            scheduledAt: entryDetail.scheduledAt ?? null,
-            createdAt: entryDetail.createdAt ?? null,
-            updatedAt: entryDetail.updatedAt ?? null,
-            author: entryDetail.author ?? null,
-          },
-          contentType: {
-            id: contentType.id,
-            slug: contentType.slug,
-            schema: contentType.schema as ContentSchema,
-          },
-          contentRoutes,
-        });
-    if (!detailPage) return null;
-
-    const detailSeo = resolveDetailPageRuntimeSeo({
-      document: detailPage.document,
-      entry: entryDetail,
-      contentTypeName: contentType.name,
-    });
-    const resolvedSeo = options?.preview
-      ? {
-          title: detailSeo.title,
-          description: detailSeo.metaDescription,
-          canonicalUrl: detailSeo.canonicalUrl,
-          robots: entryDetail.seo?.robots ?? null,
-        }
-      : await resolvePublicSeoMetadata({
-          targetType: "entry",
-          targetId: entryDetail.id,
-          slug: entryDetail.slug,
-          fallback: {
-            title: detailSeo.title,
-            description: detailSeo.metaDescription,
-            canonicalUrl: detailSeo.canonicalUrl,
-            robots: entryDetail.seo?.robots ?? null,
-          },
-        });
-    const blocks = await hydrateRuntimeBlocks(detailPage.blocks, {
-      preview: options?.preview ?? false,
-      contentRoutes,
-      runtimeSearchParams: options?.runtimeSearchParams,
-      runtimeCache: {},
-      prehydratedBlockIds: collectPrehydratedDetailBlockIds(detailPage.document),
-    });
-    const { siteShell, siteName, responsiveCss } = await resolvePublicSiteShellContext({
-      document: null,
-      includeResponsiveCss: !options?.previewDevice,
-    });
-    return {
-      html: await renderPublicPageRuntimeHtml({
-        title:
-          detailPage.document.seo?.titlePattern || detailPage.document.titlePattern
-            ? detailSeo.title
-            : (resolvedSeo.title ?? detailSeo.title),
-        blocks,
-        cssHref,
-        inlineCss,
-        devModuleScripts,
-        isPreview: options?.preview ?? false,
-        previewDevice: options?.previewDevice,
-        layoutSettings: detailPage.document.settings.layout,
-        metaDescription: detailPage.document.seo?.descriptionField
-          ? detailSeo.metaDescription
-          : resolvedSeo.description,
-        canonicalUrl: resolveRequestCanonicalUrl({
-          canonicalUrl: resolvedSeo.canonicalUrl,
-          requestOrigin: options?.requestOrigin,
-          requestPath: options?.requestPath,
-        }),
-        robots: resolvedSeo.robots,
-        imageUrl: detailSeo.imageUrl,
-        responsiveCss,
-        siteShell,
-        siteName,
-        activePath: options?.requestPath ?? null,
-        siteLocale: await getSetting("site.locale"),
-        themeName: options?.themeName ?? (await resolvePublicThemeName()),
-        templateKey: detailPage.document.settings.template,
-        analyticsScriptHtml: await buildLiveAnalyticsScriptHtml(options?.preview === true),
-      }),
-      cacheable: blocksAllowSiteHtmlCache(blocks),
-    };
-  }
-
-  const fallbackSeo = {
-    title: entryDetail.seo?.title ?? entryDetail.title ?? contentType.name,
-    description:
-      "seo" in entryDetail && entryDetail.seo
-        ? (entryDetail.seo.description ?? resolvePostRuntimeMetaDescription(entryDetail.data))
-        : resolvePostRuntimeMetaDescription(entryDetail.data),
-    canonicalUrl:
-      "seo" in entryDetail && entryDetail.seo ? (entryDetail.seo.canonicalUrl ?? null) : null,
-    robots: "seo" in entryDetail && entryDetail.seo ? (entryDetail.seo.robots ?? null) : null,
-  };
-  const resolvedSeo = options?.preview
-    ? fallbackSeo
-    : await resolvePublicSeoMetadata({
-        targetType: "entry",
-        targetId: entryDetail.id,
-        slug: entryDetail.slug,
-        fallback: fallbackSeo,
-      });
-
-  return renderPublicEntryDetailHtml({
-    title: resolvedSeo.title ?? entryDetail.title ?? contentType.name,
-    contentType: contentTypeSnapshot,
-    entry: entryDetail,
-    cssHref,
-    inlineCss,
-    devModuleScripts,
-    isPreview: options?.preview ?? false,
-    themeName: options?.themeName ?? (await resolvePublicThemeName()),
-    metaDescription: resolvedSeo.description,
-    canonicalUrl: resolvedSeo.canonicalUrl,
-    siteLocale: await getSetting("site.locale"),
-    robots: resolvedSeo.robots,
-    analyticsScriptHtml: await buildLiveAnalyticsScriptHtml(options?.preview === true),
-  });
-};
-
-const renderDetailPagePreviewHtml = async (input: {
-  detailPageId: string;
-  sampleEntryId: string;
-  previewDevice: DeviceTarget;
-  runtimeSearchParams: URLSearchParams;
-}) => {
-  const entryDetail = await getEntry(input.sampleEntryId);
-  if (!entryDetail || !isEntryPublished(entryDetail)) return null;
-
-  const contentType = await getContentType(entryDetail.typeId);
-  if (!contentType) return null;
-
-  const contentRoutes = (await getSetting("site.contentRoutes")) as ContentRouteSetting[];
-  const detailPage = await resolvePreviewDetailPageRuntime({
-    detailPageId: input.detailPageId,
-    documentSource: "current",
-    entry: {
-      id: entryDetail.id,
-      typeId: entryDetail.typeId,
-      title: entryDetail.title,
-      slug: entryDetail.slug,
-      status: entryDetail.status,
-      visibility: entryDetail.visibility,
-      hasPassword: entryDetail.hasPassword,
-      tags: entryDetail.tags ?? [],
-      data: entryDetail.data ?? {},
-      publishedAt: entryDetail.publishedAt ?? null,
-      scheduledAt: entryDetail.scheduledAt ?? null,
-      createdAt: entryDetail.createdAt ?? null,
-      updatedAt: entryDetail.updatedAt ?? null,
-      author: entryDetail.author ?? null,
-    },
-    contentType: {
-      id: contentType.id,
-      slug: contentType.slug,
-      schema: contentType.schema as ContentSchema,
-    },
-    contentRoutes,
-  });
-  if (!detailPage) return null;
-
-  const { inlineCss, cssHref, devModuleScripts } = await resolvePublicStyles();
-  const detailSeo = resolveDetailPageRuntimeSeo({
-    document: detailPage.document,
-    entry: entryDetail,
-    contentTypeName: contentType.name,
-  });
-  const { siteShell, siteName } = await resolvePublicSiteShellContext({
-    document: null,
-    includeResponsiveCss: false,
-  });
-
-  return renderPublicPageRuntimeHtml({
-    title: detailSeo.title,
-    blocks: await hydrateRuntimeBlocks(detailPage.blocks, {
-      preview: true,
-      contentRoutes,
-      runtimeSearchParams: input.runtimeSearchParams,
-      runtimeCache: {},
-      prehydratedBlockIds: collectPrehydratedDetailBlockIds(detailPage.document),
-    }),
-    cssHref,
-    inlineCss,
-    devModuleScripts,
-    isPreview: true,
-    previewDevice: input.previewDevice,
-    layoutSettings: detailPage.document.settings.layout,
-    metaDescription: detailSeo.metaDescription,
-    canonicalUrl: detailSeo.canonicalUrl,
-    robots: entryDetail.seo?.robots ?? null,
-    siteShell,
-    siteName,
-    siteLocale: await getSetting("site.locale"),
-    imageUrl: detailSeo.imageUrl,
-    themeName: await resolvePublicThemeName(),
-    templateKey: detailPage.document.settings.template,
-  });
-};
-
 export async function handlePublicRequest(req: Request) {
   const url = new URL(req.url);
   const security = await getSecuritySettings();
@@ -690,6 +254,15 @@ export async function handlePublicRequest(req: Request) {
     security,
   });
   if (formsApiResponse) return formsApiResponse;
+
+  // Public entry-unlock submit (TASK-517-02-L02): POST /entries/:id/unlock.
+  const unlockApiResponse = await handlePublicEntryUnlockApi(req, {
+    url,
+    ip,
+    userAgent,
+    security,
+  });
+  if (unlockApiResponse) return unlockApiResponse;
 
   const popupsApiResponse = await handlePublicPopupsApi(req, {
     url,
@@ -875,7 +448,12 @@ export async function handlePublicRequest(req: Request) {
   // (filtered variants under a short TTL); any other param keeps the request
   // uncacheable, exactly like before.
   const searchSignature = resolveSiteCacheSearchSignature(url.searchParams);
-  const shouldUseCache = cacheTtlSeconds > 0 && searchSignature.cacheable;
+  // TASK-517-03: contentRoutes + match hoisted above the cache read so the
+  // gated-route signal exists before BOTH the read and the writes.
+  const contentRoutes = (await getSetting("site.contentRoutes")) as ContentRouteSetting[];
+  const match = matchContentRoute(slugPath, contentRoutes);
+  const routeIsGatedEntry = match?.mode === "detail" ? await entryRouteIsGated(match) : false;
+  const shouldUseCache = cacheTtlSeconds > 0 && searchSignature.cacheable && !routeIsGatedEntry;
   const shortCacheTtlSeconds = Math.min(cacheTtlSeconds, DEFAULT_SITE_CACHE_TTL_SECONDS);
   const defaultStoreTtlSeconds = searchSignature.signature ? shortCacheTtlSeconds : cacheTtlSeconds;
   const resolveRenderCacheTtl = (result: PublicHtmlRenderResult) => {
@@ -913,8 +491,12 @@ export async function handlePublicRequest(req: Request) {
     }
   }
 
-  const contentRoutes = (await getSetting("site.contentRoutes")) as ContentRouteSetting[];
-  const match = matchContentRoute(slugPath, contentRoutes);
+  // ── SHARED AUTH SEAM (TASK-517-01-L03/L05, impl in publicEntryGateUi) ───────
+  // session→content:read boolean + cookies derived ONCE above the routeTarget
+  // branches; bypass is PERMISSION-bounded, not bare Boolean(user).
+  const { isAuthenticated, cookies } = await resolveEntryRequestAuth(req);
+  // ── END SHARED AUTH SEAM ────────────────────────────────────────────────────
+
   const page = match?.mode === "detail" ? null : await getPageBySlug(slugPath);
   const hasPublishedStaticPage = Boolean(page && page.status === "published" && page.publishedData);
   const routeTarget = resolvePublicSiteRouteTarget(match, hasPublishedStaticPage);
@@ -931,6 +513,8 @@ export async function handlePublicRequest(req: Request) {
       runtimeSearchParams: url.searchParams,
       requestPath: slugPath,
       requestOrigin: url.origin,
+      isAuthenticated,
+      unlockContext: buildEntryUnlockContext(cookies),
     });
     if (!detailHtml) return new Response("Not Found", { status: 404 });
     const html = typeof detailHtml === "string" ? detailHtml : detailHtml.html;
@@ -962,9 +546,12 @@ export async function handlePublicRequest(req: Request) {
     const html = await renderEntryListHtml(match.type, match.detailPath, {
       themeName,
       runtimeSearchParams: url.searchParams,
+      isAuthenticated,
     });
     if (!html) return new Response("Not Found", { status: 404 });
-    if (shouldUseCache) {
+    // TASK-517-01-L05 anti-poisoning: the authed FULL-list body is never
+    // written under the auth-independent cache key.
+    if (shouldUseCache && !isAuthenticated) {
       setSiteCacheEntry(cacheKey, html, defaultStoreTtlSeconds);
     }
     return buildHtmlResponse(html);

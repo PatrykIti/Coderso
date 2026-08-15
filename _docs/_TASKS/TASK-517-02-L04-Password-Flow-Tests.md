@@ -7,7 +7,8 @@
 **Priority:** High
 **Category:** Tests / Security / Public Runtime
 **Estimated Effort:** Small
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-08-14
 
 ---
 
@@ -22,8 +23,8 @@ placeholder-404 expectation to the real 200-prompt expectation.
 
 ## Grounded anchors
 
-- Dispatch: `handlePublicRequest(req)` (`publicSite.tsx:1507`); unlock endpoint dispatched
-  before content-route match (517-02-L02); content-route detail render at `:1759`.
+- Dispatch: `handlePublicRequest(req)` (`publicSite.tsx:672`); unlock endpoint dispatched
+  before content-route match (517-02-L02); content-route detail render at `:926`.
 - Endpoint: `POST /entries/:id/unlock` → `handlePublicEntryUnlockApi` (517-02-L02); uniform
   401 failure; `302` + `Set-Cookie: entry_unlock_<hash>=…; …; SameSite=Strict; HttpOnly`.
 - Cookie verify on the render path: `buildEntryUnlockContext` + `verifyEntryUnlockToken`

@@ -200,3 +200,22 @@ export async function listEntryRevisions(entryId: string) {
     .where(eq(contentRevisions.entryId, entryId))
     .orderBy(desc(contentRevisions.version));
 }
+
+/**
+ * SERVER-ONLY, NARROW. Returns the HASHED access_password for a single entry, or null.
+ * Used EXCLUSIVELY by the public unlock-submit endpoint (TASK-517-02) to verify a
+ * submitted password. NEVER call this from a render/list path — the hash must never enter
+ * a projection that maps into rendered HTML.
+ */
+const entryUuidPattern =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+export async function getEntryAccessPasswordHash(entryId: string): Promise<string | null> {
+  if (!entryId || !entryUuidPattern.test(entryId)) return null;
+  const [row] = await db
+    .select({ accessPassword: contentEntries.accessPassword })
+    .from(contentEntries)
+    .where(eq(contentEntries.id, entryId))
+    .limit(1);
+  return row?.accessPassword ?? null; // null when no entry OR no password set
+}

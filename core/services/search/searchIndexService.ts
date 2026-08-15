@@ -166,6 +166,7 @@ const buildDefaultDeps = async (): Promise<SearchPublicIndexDeps> => {
         .where(
           and(
             eq(contentEntries.status, "published"),
+            eq(contentEntries.visibility, "public"), // anonymous search never lists non-public entries
             notInArray(contentTypes.slug, [...POST_TYPE_SLUGS]),
             or(
               sql`to_tsvector('simple', coalesce(${contentEntries.title}, '') || ' ' || ${contentEntries.slug} || ' ' || coalesce(${contentEntries.data} ->> 'title', '')) @@ to_tsquery('simple', ${tsQuery})`,
@@ -271,30 +272,26 @@ export async function searchPublicIndex(
       })
     : [];
 
-  const entryItems = entryRows.map(
-    (row): PublicSearchItem => ({
-      id: row.id,
-      source: "entries",
-      title: row.title,
-      slug: row.slug,
-      href: resolveEntryHref(row.typeSlug, row.slug, row.id, routes),
-      updatedAt: resolveIso(row.updatedAt),
-      typeSlug: row.typeSlug,
-    })
-  );
+  const entryItems = entryRows.map((row): PublicSearchItem => ({
+    id: row.id,
+    source: "entries",
+    title: row.title,
+    slug: row.slug,
+    href: resolveEntryHref(row.typeSlug, row.slug, row.id, routes),
+    updatedAt: resolveIso(row.updatedAt),
+    typeSlug: row.typeSlug,
+  }));
 
   const postTypeSlug = resolvePostsRouteType(routes);
-  const postItems = postRows.map(
-    (row): PublicSearchItem => ({
-      id: row.id,
-      source: "posts",
-      title: row.title,
-      slug: row.slug,
-      href: resolveEntryHref(postTypeSlug, row.slug, row.id, routes),
-      updatedAt: resolveIso(row.updatedAt),
-      typeSlug: postTypeSlug,
-    })
-  );
+  const postItems = postRows.map((row): PublicSearchItem => ({
+    id: row.id,
+    source: "posts",
+    title: row.title,
+    slug: row.slug,
+    href: resolveEntryHref(postTypeSlug, row.slug, row.id, routes),
+    updatedAt: resolveIso(row.updatedAt),
+    typeSlug: postTypeSlug,
+  }));
 
   const pageItems: PublicSearchItem[] = pageRows.map((row) => ({
     id: row.id,

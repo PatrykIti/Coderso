@@ -66,6 +66,67 @@ Zakres: podstawowe zabezpieczenia w core. Rozszerzenia przez pluginy.
 - Build stages may use root for dependency installation/build steps, but the
   final runtime process must not run as root.
 
+## Public entry-visibility gate (TASK-517)
+
+`content_entries.visibility` is ENFORCED on the public front render path, not
+only in the admin editor. The enforcement is fail-closed: unknown/empty
+visibility values resolve to `not-found`, and a `private` entry is
+indistinguishable from a non-existent slug for anonymous visitors (uniform 404
+body, no existence leak).
+
+- `public` — renders to everyone.
+- `private` — renders only to an authenticated session with `content:read`;
+  anonymous (and non-`content:read`) requests get the SAME 404 body as a
+  missing slug. No redirect, no login prompt, no enumeration.
+- `password` — anonymous visitors get a server-rendered password prompt page
+  (never the body). The prompt posts to `POST /entries/:id/unlock`.
+- The gate applies to the entry DETAIL render, the public LIST render, the
+  anonymous SEARCH index, and static-page LISTING blocks. Lists and search omit
+  non-`public` entries entirely; the detail page itself enforces the gate.
+  A content-type detail route bound to a linked detail-page runtime is gated
+  the same way as the default-generic detail exit.
+
+### Unlock submit endpoint (`POST /entries/:id/unlock`)
+
+- Password verification is server-side `verifyPassword` against the stored
+  Argon2id hash (`content_entries.access_password`, added by TASK-514). The hash
+  is NEVER sent to the client and never enters a render/list projection.
+- Wrong password, a missing entry, and a non-password entry all return the SAME
+  `entry_unlock_failed` 401 AND pay the same Argon2 verify cost (dummy-hash
+  timing equalization) — no entry-existence oracle by response or latency.
+- Payloads are reject-unknown validated (`{ password }` only; extra keys → 400
+  `validation_error`). Malformed path encoding → 400, never 500.
+- Exactly one `public_write` rate-limit charge, keyed by entry id. On the
+  configured bucket hit → 429 before any password work.
+- Success sets a stateless per-entry HMAC unlock cookie
+  (`entry_unlock_<entryId-hash>`) with `Path=/; Max-Age=<ENTRY_UNLOCK_TTL_HOURS,
+  default 12 h>; SameSite=Strict; HttpOnly` (+ `Secure` under
+  `COOKIE_SECURE`/production). The token is `HMAC(ENTRY_UNLOCK_SECRET, entryId
+  + timestamp)`; tampered, expired, or cross-entry cookies are rejected and the
+  visitor stays locked. There is no server-side unlock session state.
+- Post-success redirect honors only a same-origin `returnPath` (validated
+  against the `Referer`; otherwise `/`); attacker-controlled hosts/backslash
+  variants never survive (`resolveSafeEntryReturnPath`).
+
+### Cache exclusion (read + write)
+
+Gated (`private`/`password`) entry routes are fully exempt from the shared
+public HTML cache on BOTH sides: the route probe (`entryRouteIsGated`) runs
+auth-independently before the cache read and write, so a previously-rendered
+unlocked body (or a poisoned entry) is NEVER served to an ungated visitor and a
+gated body is never written under the plain path key. Only `public` entries keep
+the configured public HTML cache. The probe is memoization-free (a stale
+"public" memo would fail open on a visibility mutation) and never reads
+`access_password`.
+
+### Environment
+
+- `ENTRY_UNLOCK_SECRET` (dedicated, distinct from `FORM_SUBMIT_NONCE_SECRET`) is
+  required to mint/verify unlock cookies; missing at creation time is a 500
+  server misconfiguration, missing at verify time fails closed (locked).
+- `ENTRY_UNLOCK_TTL_HOURS` (optional, default 12) and `COOKIE_SECURE` (optional;
+  see Session policy) tune the cookie.
+
 ## Release Gate Security Checks (Coderso)
 
 Security gate automation is defined in:

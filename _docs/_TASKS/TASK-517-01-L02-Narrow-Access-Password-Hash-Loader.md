@@ -7,39 +7,43 @@
 **Priority:** High
 **Category:** Content / Security / DB
 **Estimated Effort:** Small
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-08-14
 
 ---
 
 ## Scope
 
 Executable leaf. Adds ONE new exported function `getEntryAccessPasswordHash(entryId)` to
-`core/services/content/entryService.ts` that selects ONLY `contentEntries.accessPassword`
+`core/services/content/entryReadService.ts` (the real read-service home of the public read
+loaders, re-exported by `entryService.ts`) that selects ONLY `contentEntries.accessPassword`
 (the HASHED value) for a single entry id. This is the ONLY read path that touches the hash;
 it is invoked EXCLUSIVELY by the 517-02 unlock-submit endpoint. Introduced in 517-01 (not
-517-02) so `entryService.ts` keeps a single writer within 517 and 517-02 imports it
-read-only. **NO widening** of `getEntry` / `getEntryBySlug` / `listEntries` — those
-projections stay hash-free by design.
+517-02) so `entryReadService.ts` keeps a single writer within 517 and 517-02 imports it
+read-only (directly from `entryReadService.ts`; `entryService.ts` is left untouched).
+**NO widening** of `getEntry` / `getEntryBySlug` / `listEntries` — those projections stay
+hash-free by design.
 
 ## Grounded anchors
 
-- `contentEntries.accessPassword = text("access_password")` (`core/db/schema.ts:793`,
-  HASHED, null unless `visibility='password'`). The comment at `schema.ts:791` +
-  `entryService.ts:691-693` document that the hash is deliberately omitted from every read
-  projection.
-- Existing narrow-select precedent in this service: `getEntry` (`:618`) selects a fixed
-  column list; `getEntryBySlug` (`:690`) resolves slug→id. Mirror the same
-  `db.select({...}).from(contentEntries).where(eq(contentEntries.id, entryId)).limit(1)`
-  shape.
-- `hashPassword` is already imported here (`entryService.ts:3`, `import { hashPassword }
-  from "../auth/password"`), confirming the auth/password module is the write side; the
+- `contentEntries.accessPassword = text("access_password")`
+  (`core/db/tables/content.ts:49`, HASHED, null unless `visibility='password'`;
+  `visibility` @ `content.ts:48`). The comment at `content.ts:45-47` documents that the hash
+  is deliberately omitted from every read map (see `entryService`).
+- Existing narrow-select precedent in this service: `getEntry` (`:149`) selects a fixed
+  column list; `getEntryBySlug` (`:173`) resolves slug→id with its own dedicated select.
+  Mirror the same `db.select({...}).from(contentEntries).where(eq(contentEntries.id,
+  entryId)).limit(1)` shape.
+- The write side (`hashPassword`, `core/services/auth/password.ts:8`) is imported by the
+  MUTATION service `entryService.ts:5`, confirming the auth/password module owns hashing; the
   verify side lives in 517-02, not here.
 
 ## Implementation pseudocode
 
 ```ts
-// core/services/content/entryService.ts — ADD this exported fn; touch NOTHING else in the
-// existing read projections (getEntry/getEntryBySlug/listEntries stay hash-free).
+// core/services/content/entryReadService.ts — ADD this exported fn; touch NOTHING else in the
+// existing read projections (getEntry/getEntryBySlug/listEntries stay hash-free). `eq` and
+// `contentEntries` are already imported at the top of this file.
 
 /**
  * SERVER-ONLY, NARROW. Returns the HASHED access_password for a single entry, or null.

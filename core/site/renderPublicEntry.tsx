@@ -375,6 +375,76 @@ export async function renderPublicEntryListHtml(options: PublicEntryListOptions)
   );
 }
 
+export type PublicPasswordPromptOptions = {
+  title: string;
+  cssHref?: string | null;
+  inlineCss?: string | null;
+  devModuleScripts?: string[] | null;
+  themeName?: string | null;
+  /** POST target for the unlock form (always `/entries/:id/unlock`). */
+  actionUrl: string;
+  /** Same-origin detail path carried to the unlock endpoint as the return target. */
+  returnPath: string;
+  siteLocale?: unknown;
+};
+
+/**
+ * TASK-517-02-L03: small server-rendered password-prompt page. Plain
+ * `<form method="POST">` (no JS required, CSP-safe), built with the same
+ * `renderDocument` shell the detail renderer uses. The locked entry body is
+ * NEVER included — only neutral copy + the form.
+ */
+export function renderPublicPasswordPromptHtml(options: PublicPasswordPromptOptions) {
+  const { title, cssHref, inlineCss, devModuleScripts, actionUrl, returnPath, siteLocale } =
+    options;
+
+  const body = (
+    <div className="min-h-screen bg-[var(--color-bg)] text-[var(--color-text)]">
+      <main className="mx-auto flex w-full max-w-xl flex-col gap-6 px-6 py-12">
+        <h1 className="text-2xl font-semibold">{title}</h1>
+        <p className="text-sm text-[var(--color-text)]/70">
+          This content is password protected. Enter the password to view it.
+        </p>
+        <form method="POST" action={actionUrl} autoComplete="off" className="flex flex-col gap-4">
+          <label className="flex flex-col gap-1 text-sm">
+            Password
+            <input
+              type="password"
+              name="password"
+              required
+              maxLength={256}
+              autoFocus
+              autoComplete="off"
+              className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-[var(--color-text)]"
+            />
+          </label>
+          <input type="hidden" name="returnPath" value={returnPath} />
+          <button
+            type="submit"
+            className="rounded-md bg-[var(--color-primary)] px-4 py-2 text-sm font-semibold text-[var(--color-bg)]"
+          >
+            Unlock
+          </button>
+        </form>
+      </main>
+    </div>
+  );
+
+  return renderDocument(
+    title,
+    body,
+    cssHref,
+    inlineCss,
+    undefined,
+    undefined,
+    undefined,
+    devModuleScripts,
+    false,
+    undefined,
+    siteLocale
+  );
+}
+
 export async function renderPublicEntryDetailHtml(options: PublicEntryDetailOptions) {
   const {
     title,

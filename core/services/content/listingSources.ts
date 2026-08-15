@@ -57,7 +57,13 @@ const fetchEntriesRows = async (
     dataPredicates: pushdown?.predicates ?? [],
   });
 
-  return filtered.map((row) => ({
+  // TASK-517-01-L06: anonymous static-page listing blocks never render
+  // non-public entries (no existence leak). Unconditional — null/unknown
+  // legacy visibility is treated as non-public (fail-closed). Filtered
+  // in-memory at this boundary so the shared loader stays untouched.
+  const publicOnly = filtered.filter((row) => row.visibility === "public");
+
+  return publicOnly.map((row) => ({
     id: row.id,
     typeId: row.typeId,
     title: row.title,

@@ -7,7 +7,8 @@
 **Priority:** High
 **Category:** Tests / Security / Public Runtime
 **Estimated Effort:** Small
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-08-14
 
 ---
 
@@ -22,9 +23,9 @@ resolver (that is 517-01-L01's Vitest suite).
 
 ## Grounded anchors
 
-- Entry point under test: `handlePublicRequest(req)` (`publicSite.tsx:1507`) → content-route
-  match → `renderEntryDetailHtml` (`:1759`) → uniform 404 `new Response("Not Found",
-  { status: 404 })` (`:1766`) when the gate returns `null`.
+- Entry point under test: `handlePublicRequest(req)` (`publicSite.tsx:672`) → `routeTarget =
+  "content-detail"` dispatch (`:922`) → `renderEntryDetailHtml` (`:926`) → uniform 404
+  `new Response("Not Found", { status: 404 })` (`:935`) when the gate returns `null`.
 - Existing render/route Bun test precedent for driving `handlePublicRequest` with a seeded
   entry + a content route (`site.contentRoutes` setting) lives under
   `tests/integration/runtime/*` (e.g. `detail-page-runtime.test.ts`,
@@ -68,7 +69,7 @@ resolver (that is 517-01-L01's Vitest suite).
      `Boolean(user)`. Seed a low-privilege role/user (or a role lacking `content:read`) for this.
   7. **Gated-allow cache non-write at BOTH detail exits (REQUIRED — L03 Hard Invariant #7):**
      under the `content:read` bypass, a gated entry rendered via (a) the linked-detail-page
-     runtime exit (`publicSite.tsx:1397`) AND (b) the default-generic string exit (`:1420`) is
+     runtime exit (`publicSite.tsx:553`) AND (b) the default-generic string exit (`:576-590`) is
      NOT written to the shared `siteCache` (assert via `canCache=false` / a cache-instrumentation
      probe): a subsequent anon request for the same path is NOT served a cached gated body.
 - **Shared-DB safety:** unique type slug + entry slugs per run, per-test/`afterAll`
@@ -84,6 +85,6 @@ resolver (that is 517-01-L01's Vitest suite).
    NOT bypass (still 404) — the permission-bounded-bypass guard (L03 Hard Invariant #6).
 4. Password-anon is withheld (never renders the body); the placeholder-404 vs 200-prompt
    expectation is owned jointly with 517-02-L04.
-5. Gated-allow cache non-write asserted at BOTH detail exits (linked-detail-page `:1397` object +
-   default-generic `:1420` string) under the bypass (L03 Hard Invariant #7).
+5. Gated-allow cache non-write asserted at BOTH detail exits (linked-detail-page `:553` object +
+   default-generic `:576-590` string) under the bypass (L03 Hard Invariant #7).
 6. Shared-DB scoped fixtures; no truncation.

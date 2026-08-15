@@ -6,7 +6,8 @@
 **Priority:** High
 **Category:** Security / Server Routes / Public Runtime
 **Estimated Effort:** Medium
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-08-14
 **Depends on:** TASK-517-01 (landed: pure resolver, narrow `getEntryAccessPasswordHash`,
 gate insertion with the two named seams `renderEntryPasswordPromptResult` +
 `buildEntryUnlockContext`). Lands SECOND (01 → 02 → 03).
@@ -39,11 +40,12 @@ real 200 prompt page). The hash is NEVER sent to the client and is read ONLY via
 
 - **Endpoint visibility:** public — NEW `POST /entries/:id/unlock`, dispatched from a new
   `handlePublicEntryUnlockApi(req, ctx)` invoked in `handlePublicRequest` alongside
-  `handlePublicFormsApi` (`publicSite.tsx:1521`), BEFORE the content-route match. Match by
+  `handlePublicFormsApi` (`publicSite.tsx:686-692`), BEFORE the content-route match. Match by
   regex `^/entries/([^/]+)/unlock$`, guard `req.method === "POST"`.
 - **Rate-limit:** `checkRateLimit("public_write", { ip, userAgent, identifier: entryId },
-  security.rateLimit)` (bucket in `core/server/middleware/rateLimit.ts`), mirroring
-  `handlePublicFormsApi` (`publicFormsApi.ts:81`).
+  security.rateLimit)` (bucket in `core/server/middleware/rateLimit.ts:9-10`,
+  `checkRateLimit` @ `:48`), mirroring `handlePublicFormsApi`
+  (`publicFormsApi.ts:548`).
 - **Validation:** parse body via `parseRequestBody` (`core/server/requestBody.ts`), then
   `validate(unlockSchema, body)` where `unlockSchema = { type:"object", properties:{
   password:{ type:"string", minLength:1, maxLength:256 }, returnPath:{ type:"string",

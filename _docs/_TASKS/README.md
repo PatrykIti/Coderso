@@ -83,9 +83,9 @@ Task board for project work. Keep task files and this board in sync.
   Do not move a leaf task to `Done` until either its standalone changelog
   exists or the family changelog records that leaf.
 
-- **To Do:** 347 tasks
+- **To Do:** 333 tasks
 - **In Progress:** 6 tasks
-- **Done:** 3404 tasks
+- **Done:** 3418 tasks
 
 > TASK-479 (25 subtasks 05–29 + 92 leaves) and TASK-480 (umbrella + 6 subtasks +
 > 18 leaves) were broken down 2026-06-27. The table below lists the
@@ -176,7 +176,7 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-478-03 | Dockable Inline Mark Toolbar (Top/Left/Right) | Low | Small | Toolbar is pinned `-top-9` above the text; add a control to dock it left/right so neither it nor the native color picker covers the edited text. |
 | TASK-481 | Page Editor Canvas Brand-Token WYSIWYG | Medium | Medium | Brand colors (primary/secondary/accent/border) applied to a block render admin-themed in the canvas (admin `@theme` wins) while previews/front show the site token. Emit site brand `--color-*` on a content-only scope that excludes editor chrome (rings/outlines/tiles), then unify inline+block-level brand previews. Follow-up to TASK-477-02 (neutrals done). 4 subtasks (01–04) + 9 leaves. |
 | TASK-511 | Backup v2 — Scalable, Compressed, Encrypted, Importable | High | Very Large | FEATURE (follow-up to TASK-484): streaming/batched export+restore (no OOM at scale), gzip + AES-256-GCM/scrypt encrypted `.cbk` archive (NDJSON+tar), media file bytes, opt-in users+RBAC-matrix include (encrypted-only), import-of-file pipeline, scheduler full-backup + admin UI. Contracts authored + drift-audited (tracked on this branch; no extra worktree). Changelog 1229; migration next-free. To Do; obsolete-audit per TASK-545-04-L01. 7 subtasks (01–07). |
-| TASK-517 | Entry Visibility — Public Front Enforcement | High | Medium | Follow-up to TASK-514: enforce `content_entries.visibility` on the PUBLIC render path — `private`→auth-gate (404 anon, no existence leak), `password`→HMAC-signed prompt-gate (verify vs hashed `access_password`), cache exclusion for gated bodies. Parent authored 2026-07-06. Changelog 1230; no own migration (reuses 514 model). 3 subtasks (to be broken down). |
+| TASK-517 | Entry Visibility — Public Front Enforcement | High | Medium | ✅ Done (2026-08-14): fail-closed `public`/`private`/`password` gate on the public render path (uniform anonymous 404 for private, no existence leak via detail/list/search/listing blocks), `POST /entries/:id/unlock` with Argon2id verify + timing-equalized dummy + `public_write` rate-limit + stateless HMAC unlock cookie (SameSite=Strict, HttpOnly, Secure), cache exemption for gated routes, docs; 8-scenario runtime smoke PASS (wf517smoke). Changelog 1280. 3 subtasks + 10 leaves terminal. |
 | TASK-485 | Plugin Store: Real Registry & Install Pipeline | High | Large | FEATURE: the store UI is 100% mock; wire it to the real `core/store` + `installService` + `/plugins` pipeline (browse/install/update/uninstall). 5 subtasks (01–05) + 15 leaves. |
 | TASK-487 | Entries: Revision History & Restore | Medium | Medium | FEATURE: entry revisions are written but unviewable/unrestorable. Adds revisions/restore route+service + editor drawer (parity with Posts/Pages). 3 subtasks (01–03) + 6 leaves. |
 | TASK-488 | Commerce: Variant Editor & Collections CRUD UI | Medium | Medium | FEATURE (frontend-only; backend complete): variant add/edit/remove card + collections create/edit/delete UI. NOT orders (out of v1 scope). 3 subtasks (01–03) + 6 leaves. |
