@@ -1,9 +1,6 @@
-import {
-  createDeliveryLog,
-  getWebhookForDelivery,
-  recordDeliveryAttempt,
-} from "./webhooksService";
+import { createDeliveryLog, getWebhookForDelivery, recordDeliveryAttempt } from "./webhooksService";
 import { createWebhookSignature } from "./signing";
+import { postWithRetry } from "./retryPost";
 
 export type WebhookDeliveryResult = {
   status: "success" | "failed";
@@ -13,11 +10,9 @@ export type WebhookDeliveryResult = {
   deliveryId: string;
 };
 
-const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
-
-const setWebhookHeader = (headers: Headers, name: string, value: string) => {
-  headers.set(`X-Coderso-${name}`, value);
-  headers.set(`X-Nextless-${name}`, value);
+const setWebhookHeader = (headers: Record<string, string>, name: string, value: string) => {
+  headers[`X-Coderso-${name}`] = value;
+  headers[`X-Nextless-${name}`] = value;
 };
 
 export type WebhookDeliveryInput = {
@@ -29,16 +24,10 @@ export type WebhookDeliveryInput = {
   baseDelayMs?: number;
 };
 
-export async function deliverWebhook(
-  input: WebhookDeliveryInput
-): Promise<WebhookDeliveryResult> {
+export async function deliverWebhook(input: WebhookDeliveryInput): Promise<WebhookDeliveryResult> {
   const webhook = await getWebhookForDelivery(input.webhookId);
   if (!webhook) throw new Error("webhook_not_found");
   if (!webhook.enabled) throw new Error("webhook_disabled");
-
-  const maxAttempts = input.attempts ?? 3;
-  const timeoutMs = input.timeoutMs ?? 8000;
-  const baseDelayMs = input.baseDelayMs ?? 400;
 
   const payload = JSON.stringify(input.payload);
   const delivery = await createDeliveryLog({
@@ -46,77 +35,41 @@ export async function deliverWebhook(
     event: input.event,
   });
 
-  let attempts = 0;
-  let lastError: string | null = null;
-  let responseCode: number | null = null;
-
-  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
-    attempts = attempt;
-    const headers = new Headers({ "Content-Type": "application/json" });
-    setWebhookHeader(headers, "Event", input.event);
-    setWebhookHeader(headers, "Delivery", delivery.id);
-    setWebhookHeader(headers, "Attempt", String(attempt));
-
-    if (webhook.secret) {
-      const signature = createWebhookSignature(webhook.secret, payload);
-      setWebhookHeader(headers, "Signature", signature.signature);
-      setWebhookHeader(headers, "Timestamp", signature.timestamp);
-    }
-
-    try {
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), timeoutMs);
-      const response = await fetch(webhook.url, {
-        method: "POST",
-        headers,
-        body: payload,
-        signal: controller.signal,
-      });
-      clearTimeout(timeout);
-      responseCode = response.status;
-
-      if (response.ok) {
-        await recordDeliveryAttempt({
-          id: delivery.id,
-          attempts,
-          status: "success",
-          responseCode,
-          lastError: null,
-          deliveredAt: new Date(),
-        });
-        return {
-          status: "success",
-          attempts,
-          responseCode,
-          lastError: null,
-          deliveryId: delivery.id,
-        };
-      }
-
-      lastError = `HTTP ${response.status}`;
-    } catch (error) {
-      lastError = error instanceof Error ? error.message : "delivery_failed";
-    }
-
-    const finalAttempt = attempt >= maxAttempts;
-    await recordDeliveryAttempt({
-      id: delivery.id,
-      attempts,
-      status: finalAttempt ? "failed" : "pending",
-      responseCode,
-      lastError,
-    });
-
-    if (!finalAttempt) {
-      await sleep(baseDelayMs * Math.pow(2, attempt - 1));
-    }
+  // Signature headers are stable across attempts (they sign the unchanged
+  // payload); the per-attempt Attempt header is added by the transport.
+  const baseHeaders: Record<string, string> = {};
+  setWebhookHeader(baseHeaders, "Event", input.event);
+  setWebhookHeader(baseHeaders, "Delivery", delivery.id);
+  if (webhook.secret) {
+    const signature = createWebhookSignature(webhook.secret, payload);
+    setWebhookHeader(baseHeaders, "Signature", signature.signature);
+    setWebhookHeader(baseHeaders, "Timestamp", signature.timestamp);
   }
 
+  const result = await postWithRetry({
+    url: webhook.url,
+    body: payload,
+    headers: baseHeaders,
+    attempts: input.attempts,
+    timeoutMs: input.timeoutMs,
+    baseDelayMs: input.baseDelayMs,
+    onAttempt: async (state) => {
+      await recordDeliveryAttempt({
+        id: delivery.id,
+        attempts: state.attempt,
+        status: state.ok ? "success" : state.finalAttempt ? "failed" : "pending",
+        responseCode: state.responseCode,
+        lastError: state.lastError,
+        deliveredAt: state.ok ? new Date() : null,
+      });
+    },
+  });
+
   return {
-    status: "failed",
-    attempts,
-    responseCode,
-    lastError,
+    status: result.ok ? "success" : "failed",
+    attempts: result.attempts,
+    responseCode: result.responseCode,
+    lastError: result.lastError,
     deliveryId: delivery.id,
   };
 }

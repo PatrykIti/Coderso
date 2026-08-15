@@ -6,13 +6,20 @@
 **Category:** Commerce / Admin UI
 **Estimated Effort:** Small
 **Dependencies:** TASK-488-01, TASK-488-02
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-08-15
 **Started:** `<YYYY-MM-DD>`
 **Completed:** `<YYYY-MM-DD>`
 
 ---
 
 ## Overview
+
+> **Admin-cache docs (audit M6):** the collections manager is a new admin
+> cached-resource UI (reads/writes `commerce:collections:list` cache family +
+> `create/update/deleteCommerceCollection` cache-bus events). This leaf ALSO
+> updates `_docs/ADMIN_CACHE.md` / `_docs/ADMIN_CACHE_MAP.md` (read on-disk
+> state first — 487 may be editing them concurrently).
 
 - **Goal:** Record the new admin-UI capabilities in the source-of-truth docs:
   product variants are now editable in the product editor, and collections have

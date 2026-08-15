@@ -193,10 +193,58 @@ export async function getEntryBySlug(typeId: string, slug: string) {
   return row ?? null;
 }
 
-export async function listEntryRevisions(entryId: string) {
-  return db
-    .select()
+export type EntryRevisionAuthor = { id: string; name: string | null; email: string };
+
+export type EntryRevision = {
+  id: string;
+  entryId: string;
+  version: number;
+  data: EntryData;
+  createdAt: Date;
+  createdBy: EntryRevisionAuthor | null;
+};
+
+/**
+ * Author-joined, PII-redacted revision list for an entry. `createdBy` resolves the
+ * author's email through `resolveEmailValue` (encrypted fields stay encrypted, plaintext
+ * hash fields stay hashes) so raw or encrypted email never leaves the service. Existing
+ * callers only read `.length`, so the array contract is preserved.
+ */
+export async function listEntryRevisions(entryId: string): Promise<EntryRevision[]> {
+  const rows = await db
+    .select({
+      id: contentRevisions.id,
+      entryId: contentRevisions.entryId,
+      version: contentRevisions.version,
+      data: contentRevisions.data,
+      createdAt: contentRevisions.createdAt,
+      createdById: users.id,
+      createdByName: users.name,
+      createdByEmail: users.email,
+      createdByEmailEncrypted: users.emailEncrypted,
+    })
     .from(contentRevisions)
+    .leftJoin(users, eq(contentRevisions.createdBy, users.id))
     .where(eq(contentRevisions.entryId, entryId))
     .orderBy(desc(contentRevisions.version));
+
+  return rows.map((row) => ({
+    id: row.id,
+    entryId: row.entryId,
+    version: row.version,
+    data: row.data as EntryData,
+    createdAt: row.createdAt,
+    createdBy:
+      row.createdById && (row.createdByEmail || row.createdByEmailEncrypted)
+        ? {
+            id: row.createdById,
+            name: row.createdByName ?? null,
+            email:
+              resolveEmailValue({
+                emailEncrypted: row.createdByEmailEncrypted,
+                email: row.createdByEmail,
+              }) ?? "",
+          }
+        : null,
+  }));
 }

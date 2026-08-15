@@ -7,8 +7,9 @@
 **Category:** Settings / Security
 **Estimated Effort:** Small
 **Dependencies:** None
-**Status:** ⏳ To Do
-**Started:** `<YYYY-MM-DD>`
+**Status:** ✅ Done
+**Completed:** 2026-08-14
+**Started:** 2026-07-05
 **Completed:** `<YYYY-MM-DD>`
 
 ## Overview
@@ -53,7 +54,13 @@ and a public projection that hides the raw secret.
   `notifyOnNewLocation`, `recipients`, `webhookUrl`, `webhookSecret`.
   `deliveryError` is **service-writable only**: include it in the normalize
   allowlist so internal delivery code may persist it, but it is excluded from the
-  route JSON schema (L02) so admin clients cannot set/poison it. Unknown keys
+  route JSON schema (L02) and the admin-client type (`settingsClient.ts`
+  `SecuritySettingsUpdate`) so admin clients cannot set/poison it. Typing
+  (audit M2): the SERVER-side `SecuritySettings`/`SecuritySettingsUpdate` types
+  include `deliveryError: string | null` (service-writable); the public/route
+  projection excludes it. 02-L01 persists via
+  `setSecuritySettings({ loginAlerts: { deliveryError } })` — typechecks only
+  because the server-side update type carries the field. Unknown keys
   continue to throw `security_settings_invalid` via the existing
   `assertAllowedKeys` path.
 - **Anti-abuse for public writes:** N/A — no public write is added.
@@ -110,6 +117,9 @@ const DEFAULT loginAlerts = {
 // normalizeLoginWebhookUrl(value, fallback): undefined->fallback; null->null (allowNull);
 //   string -> new URL(trimmed); require protocol https: (allow http: only when hostname is
 //   localhost/127.0.0.1); else throw security_settings_invalid.
+//   webhookUrl set with empty webhookSecret => throw security_settings_invalid
+//   (fail closed: an unsigned webhook is never sent, audit L4).
+//   SSRF note (audit L5): also reject private/loopback/link-local IP hosts.
 
 // normalizeLoginWebhookSecret = reuse the existing normalizeBotSecret shape
 //   (string|EncryptedSecret|null). deliveryError = normalizeString(..., {allowNull:true})
@@ -135,7 +145,12 @@ const DEFAULT loginAlerts = {
   `getSecuritySettingsPublic` (redacted secret) for admin.
 - **Error handling:** keep the existing machine-readable
   `security_settings_invalid` domain error; the route maps it through the
-  existing `withSettingsErrors` / `map*Error` boundary (no new codes needed).
+  existing `withSettingsErrors` / `map*Error` boundary. NOTE (audit M1):
+  `mapSettingsRouteError` (`core/server/routes/settingsRoutes.ts:65-92`) has NO
+  `security_settings_invalid` case today and would fall through to a 500 — this
+  leaf ADDS `case "security_settings_invalid" -> 400 ApiError` and owns
+  `core/server/routes/settingsRoutes.ts` (mapSettingsRouteError) as an
+  additional owning module.
 - **No DB migration:** `settings.value` is `jsonb` (`core/db/schema.ts:375`);
   `normalizeStoredSettings` defaults the new fields for legacy rows. Do **not**
   add `meta/*_snapshot.json` / `_journal.json` entries.

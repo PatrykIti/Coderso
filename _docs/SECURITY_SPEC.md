@@ -196,7 +196,9 @@ Semgrep local suppressions:
   - botProtection (reCAPTCHA v3, thresholds, enforceOnLocalhost)
   - headers (frameOptions, referrerPolicy, CSP, HSTS, itd.)
   - session (ttlDays, maxPerUser, singleSession)
-  - loginAlerts (notifyOnNewDevice, notifyOnNewLocation)
+  - loginAlerts (enabled, notifyOnNewDevice, notifyOnNewLocation, recipients,
+    webhookUrl, webhookSecret [backend-only, exposed as `{ configured }`],
+    deliveryError [read-only, server-written])
   - plugins (safeMode)
   - validation (rejectUnknownFields)
 
@@ -211,6 +213,10 @@ Semgrep local suppressions:
 - Raw SMTP/storage/integration/webhook/API-key credentials, bot-protection
   secret, provider keys, session/csrf material i inne sekrety nie moga trafic
   do `localStorage`, debug payloadow ani cache-bus eventow.
+- `loginAlerts.webhookSecret` nigdy nie opuszcza backendu w formie jawnej:
+  API zwraca tylko `{ configured }`, a redacted browser cache
+  (`settings:redacted`) zawiera wylacznie configured flagi — nigdy surowego
+  secreta ani surowej listy `recipients`.
 - Credential-bearing Email Settings and Integrations endpoints return only
   configured flags for SMTP passwords and provider secrets such as
   `resend.apiKey`.
@@ -399,6 +405,13 @@ ranges, and dangerous or unknown functions before persistence or inline-style
 emission. Field-by-field fail-soft normalization remains only for
 non-destructive legacy/read defense, never as raw pass-through. Present-only
 emission still omits unauthored keys.
+
+### Forms submissions export (TASK-490)
+
+`GET /forms/:id/submissions/export` is an internal `forms:read`, `admin_read`,
+no-CSRF read whose payload is a subset of `GET /forms/:id/submissions`
+(`ip`/`userAgent` omitted). The route is strict: unknown query params and
+formats other than `csv`/`json` are rejected with `validation_error`.
 
 ### Master key (storage secrets)
 
@@ -1031,18 +1044,30 @@ uprzywilejowane (`POST /auth/install/admin`, Faza 1 onboardingu, TASK-482).
 - **Brak wycieku sekretow.** Odpowiedz zwraca tylko `{ id, email, name }` — nigdy
   `passwordHash`, `roleId`, tokenow ani cookie.
 
-## Login alerts (v1.0)
+## Login alerts (v2.0)
 
 - Konfigurowalne w Admin UI: Settings → Security → Login Alerts.
 - Pola:
   - `loginAlerts.enabled`
   - `loginAlerts.notifyOnNewDevice`
   - `loginAlerts.notifyOnNewLocation` (proxy: zmiana IP)
+  - `loginAlerts.recipients` (max 10, lowercase/trim, dedupe)
+  - `loginAlerts.webhookUrl` (HTTPS; HTTP tylko dla loopbacku; brak userinfo)
+  - `loginAlerts.webhookSecret` (backend-only, szyfrowany w DB, write-only:
+    API zwraca tylko `{ configured }`, nigdy surowej wartosci)
+  - `loginAlerts.deliveryError` (read-only, server-written, sanitized
+    `redactAuditText` + clamp 240)
 - W momencie logowania porownujemy `ip` i `userAgent` z ostatnia sesja.
 - Gdy ustawienia aktywne i wykryjemy zmiane, zapisujemy audit event:
   - `action = auth.login.alert`
   - `metadata = { newDevice, newLocation, lastIp, lastUserAgent }`
-- Wysylka email/SMS/webhook w v2 (v1 tylko audit).
+- Wysylka powiadomien (best-effort, fire-and-forget, nigdy nie blokuje
+  odpowiedzi logowania):
+  - email do wlasciciela konta + skonfigurowanych `recipients`
+    (payload maskuje email, nie zawiera surowego IP/UA/secreta),
+  - webhook z podpisem HMAC (`X-Coderso-Signature` / `X-Nextless-Signature`),
+  - ostatni blad dostarczenia zapisywany do
+    `security.settings.loginAlerts.deliveryError`.
 
 ## Plugin security
 

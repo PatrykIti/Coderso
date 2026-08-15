@@ -6,13 +6,20 @@
 **Category:** Settings / Integrations
 **Estimated Effort:** Medium
 **Dependencies:** None
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-08-15
 **Started:** `<YYYY-MM-DD>`
 **Completed:** `<YYYY-MM-DD>`
 
 ---
 
 ## Overview
+
+> **M2 fix (audit):** `deliveryService.ts:53-113` interleaves per-attempt
+> `recordDeliveryAttempt` (:102-108) and signature headers (:55-64); the
+> "verbatim" `postWithRetry` extraction must be BEHAVIOR-PRESERVING — extract
+> single-attempt fetch only (or add an `onAttempt` hook) so per-attempt
+> delivery logs + signature headers still fire; re-run `deliverWebhook` tests.
 
 - **Goal:** Build the outbound integration event hub and wire the three fixed
   emission points, plus extract the reusable retry-POST transport so we do not

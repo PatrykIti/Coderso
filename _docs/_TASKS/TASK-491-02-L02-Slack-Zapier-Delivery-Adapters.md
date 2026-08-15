@@ -6,13 +6,19 @@
 **Category:** Settings / Integrations
 **Estimated Effort:** Small
 **Dependencies:** TASK-491-02-L01
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-08-15
 **Started:** `<YYYY-MM-DD>`
 **Completed:** `<YYYY-MM-DD>`
 
 ---
 
 ## Overview
+
+> **M3 fix (audit):** `submissionService.ts:5-8` selects only `{id: forms.id}`
+> and `submitForm` returns the transaction directly (:28-41); the form-submitted
+> seam must select `forms.name` (or drop the title) and emit after
+> `db.transaction` resolves using the returned row.
 
 - **Goal:** Implement the two outbound adapters the dispatcher (L01) calls:
   format + POST the normalized event to Slack and Zapier, and record per-target

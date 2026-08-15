@@ -31,6 +31,7 @@ export const cacheKeys = {
   entriesAllList: "entries:list:all",
   entriesList: (typeSlug: string) => `entries:list:${typeSlug}`,
   entryDetail: (typeSlug: string, id: string) => `entries:detail:${typeSlug}:${id}`,
+  entryRevisions: (id: string) => `entries:revisions:${id}`,
   customScreensList: "customScreens:list",
   customScreenDetail: (id: string) => `customScreens:detail:${id}`,
   customScreenEntryOverrides: (screenId: string, entryId: string) =>

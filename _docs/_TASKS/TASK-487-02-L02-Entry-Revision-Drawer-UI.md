@@ -6,7 +6,8 @@
 **Category:** Engine / Entries
 **Estimated Effort:** Medium
 **Dependencies:** TASK-487-02-L01
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-08-14
 **Started:** `<YYYY-MM-DD>`
 **Completed:** `<YYYY-MM-DD>`
 
@@ -87,6 +88,12 @@ const [revisionsError, setRevisionsError] = useState<string | null>(null);
 const [restoringId, setRestoringId] = useState<string | null>(null);
 
 // 2) open handler — hydrate from cache, then revalidate (no mount-force loop)
+// M2 fix (audit): the History button + handleOpenRevisions ALREADY exist from
+// TASK-514-03 (EntryEditor.tsx:623-626 no-op, :845 onHistory wired,
+// EntryEditorHeader.tsx History button "Revision history (coming soon)",
+// drawer mount-point comment :954-956). This leaf FILLS the existing seam:
+// implement the no-op handler + mount the drawer at the existing comment
+// point — do NOT redeclare handleOpenRevisions or add a second History button.
 const handleOpenRevisions = async () => {
   setRevisionsOpen(true);
   const cached = getCachedEntryRevisions(entryId);
@@ -109,7 +116,9 @@ const handleRestoreRevision = async (revisionId: string) => {
   try {
     const result = await restoreEntryRevision(typeSlug, entryId, revisionId);
     if (result?.entry) {
-      setValues(buildInitialValues(fields, result.entry.data)); // re-hydrate :80
+      // M3 fix (audit): buildInitialValues requires (fields, data, columns:
+// EntryLinkedColumnValues) — mirror EntryEditor.tsx:222-226.
+setValues(buildInitialValues(mappedFields, result.entry.data, columns)); // re-hydrate
       setTitle(result.entry.title);
       setSlug(result.entry.slug);
       // mark clean: restored state IS the persisted state

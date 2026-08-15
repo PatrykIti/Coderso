@@ -5,7 +5,8 @@
 **Category:** Forms
 **Estimated Effort:** Small
 **Dependencies:** None. Builds on the shipped read surface (`GET /forms/:id/submissions`, `core/services/forms/submissionService.ts`, `core/admin/ui/forms/FormSubmissionsPage.tsx`) and reuses the established analytics CSV export pattern (`core/services/analytics/analyticsService.ts` → JSON envelope → client Blob download). No DB change.
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-08-14
 **Started:** `<YYYY-MM-DD>`
 **Completed:** `<YYYY-MM-DD>`
 
@@ -26,7 +27,7 @@ as **CSV** (spreadsheet-friendly, one column per form field using the field
 follows the only existing export precedent in the codebase — the Analytics
 top-content export — which returns the file payload in a **JSON envelope**
 (`{ fileName, contentType, content, totalRows }`) so the admin UI builds the
-browser download client-side (see `core/admin/ui/analytics/TopContentDrawer.tsx`
+browser download client-side (see `core/admin/ui/analytics/TopPagesDrawer.tsx`
 `downloadTextFile`). No new data surface is introduced: the export carries a
 **subset** of what `forms:read` already returns via `GET /forms/:id/submissions`.
 
@@ -49,7 +50,7 @@ browser download client-side (see `core/admin/ui/analytics/TopContentDrawer.tsx`
 - An admin client method `exportFormSubmissions(formId, format)` in
   `core/admin/services/formsClient.ts`.
 - **Export CSV / Export JSON** actions in `FormSubmissionsPage.tsx`, reusing the
-  same Blob/anchor download helper shape as `TopContentDrawer`.
+  same Blob/anchor download helper shape as `TopPagesDrawer`.
 - Docs: `_docs/CMS_API.md` Forms section (new route + envelope) and a one-line
   confirmation in `_docs/SECURITY_SPEC.md` that the route is an internal
   `admin_read` GET (no CSRF, `forms:read`).

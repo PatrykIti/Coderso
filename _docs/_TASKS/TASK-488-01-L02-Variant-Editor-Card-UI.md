@@ -6,7 +6,8 @@
 **Category:** Commerce / Admin UI
 **Estimated Effort:** Medium
 **Dependencies:** TASK-488-01-L01
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-08-15
 **Started:** `<YYYY-MM-DD>`
 **Completed:** `<YYYY-MM-DD>`
 
@@ -24,8 +25,14 @@
 - **Owning module(s) to create-or-extend:**
   `core/admin/ui/commerce/components/CommerceEditorSections.tsx` (extend) and,
   if the card grows large, a new
+  NEW `core/admin/ui/commerce/components/AttributesEditor.tsx` (per-variant
+  metadata key/value editor rendered inside the variant card; audit L2),
   `core/admin/ui/commerce/components/CommerceVariantsCard.tsx` rendered by it.
-  Also extend `commerceEditorModel.ts` `toCommerceProductInput` to call
+  CONSUMES `commerceEditorModel.ts` helpers (ALL model edits incl.
+  `toCommerceProductInput` wiring + `parseIntegerOrNull` export belong to
+  488-01-L01, single-writer; L02 imports/consumes only, audit M2). It does
+  NOT edit commerceEditorModel.ts itself.
+  (Legacy note removed: `toCommerceProductInput` change lives in L01.)
   `serializeDraftVariants` (per L01).
 - **Source-of-truth docs:** `_docs/CMS_API.md` (Commerce v1 — variant shape),
   `_docs/CMS_SPEC.md` (Commerce v1 scope).
@@ -194,4 +201,4 @@ editor's existing `error` Alert with `isApiClientError(error)?.message`. The
 - Verify the save payload uses `serializeDraftVariants` (blank-title variant is
   dropped, currency uppercased).
 - No DB changes → no migration artifacts.
-- Green under `bun run lint`, `bun run typecheck`, Vitest suite.
+- Green under `bun run lint`, `bun --cwd core lint:types`, Vitest suite.

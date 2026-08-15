@@ -25,12 +25,7 @@ import {
   resolveContentSlugRouteContext,
   type SiteSettingsResponse,
 } from "@/services/siteSettingsClient";
-import {
-  createTaxonomyTerm,
-  getTaxonomyOverview,
-  type ContentTerm,
-  type TaxonomyOverview,
-} from "@/services/taxonomyClient";
+import { getTaxonomyOverview, type TaxonomyOverview } from "@/services/taxonomyClient";
 import { useAdminRouter } from "@/ui/contexts/AdminRouterContext";
 import { AdminShell } from "@/ui/layouts/AdminShell";
 import { useAdminDirtyNavigationGuard } from "@/ui/shared/AdminDirtyNavigationGuard";
@@ -44,6 +39,7 @@ import { EntryEditorHeaderActions } from "./EntryEditorHeader";
 import { EntryFieldSections } from "./EntryFieldSections";
 import { EntryFieldsPlaceholder } from "./EntryFieldsPlaceholder";
 import { EntryMetadataPanel, type EntryStatus } from "./EntryMetadataPanel";
+import { EntryRevisionDrawer } from "./EntryRevisionDrawer";
 import { EntryTitleSlugFields } from "./EntryTitleSlugFields";
 import { getContentTypeLabels } from "./contentTypeLabels";
 import { buildEntryChecklist } from "./entryChecklist";
@@ -67,8 +63,10 @@ import {
   mergeEditedFieldValues,
 } from "./entryValueMapping";
 import { useEntryRelationTargets } from "./useEntryRelationTargets";
+import { useEntryRevisions } from "./useEntryRevisions";
 import { useEntryRuntimePreview } from "./useEntryRuntimePreview";
 import { useEntrySnapshotAuthority } from "./useEntrySnapshotAuthority";
+import { useEntryTaxonomyTermCreate } from "./useEntryTaxonomyTermCreate";
 import {
   entryFieldEditedKey,
   useEntryEditTracker,
@@ -179,6 +177,9 @@ function EntryEditorInstance({ type, id }: EntryEditorInstanceProps) {
   const [remoteUpdatePending, setRemoteUpdatePending] = useState(false);
   const [scheduledAt, setScheduledAt] = useState("");
   const [seoDescription, setSeoDescription] = useState("");
+  const [seoTitle, setSeoTitle] = useState("");
+  const [seoCanonicalUrl, setSeoCanonicalUrl] = useState("");
+  const [seoRobots, setSeoRobots] = useState("");
   const [title, setTitle] = useState("");
   const [slug, setSlug] = useState("");
   const [siteSettings, setSiteSettings] = useState<SiteSettingsResponse | null>(null);
@@ -231,6 +232,9 @@ function EntryEditorInstance({ type, id }: EntryEditorInstanceProps) {
       if (!kept.has("accessPassword")) setAccessPassword("");
       if (!kept.has("scheduledAt")) setScheduledAt(entryResult.scheduledAt ?? "");
       if (!kept.has("seoDescription")) setSeoDescription(entryResult.seo?.description ?? "");
+      if (!kept.has("seoTitle")) setSeoTitle(entryResult.seo?.title ?? "");
+      if (!kept.has("seoCanonicalUrl")) setSeoCanonicalUrl(entryResult.seo?.canonicalUrl ?? "");
+      if (!kept.has("seoRobots")) setSeoRobots(entryResult.seo?.robots ?? "");
       // `taxonomy` is optional on EntryDetail: absent means the payload carried no
       // taxonomy information, which must not be read as "no category, no tags".
       const taxonomy = entryResult.taxonomy;
@@ -607,6 +611,21 @@ function EntryEditorInstance({ type, id }: EntryEditorInstanceProps) {
     markEdited("seoDescription");
   };
 
+  const handleSeoTitleChange = (value: string) => {
+    setSeoTitle(value);
+    markEdited("seoTitle");
+  };
+
+  const handleSeoCanonicalUrlChange = (value: string) => {
+    setSeoCanonicalUrl(value);
+    markEdited("seoCanonicalUrl");
+  };
+
+  const handleSeoRobotsChange = (value: string) => {
+    setSeoRobots(value);
+    markEdited("seoRobots");
+  };
+
   const handleCategoryChange = (categoryId: string | null) => {
     setSelectedCategoryId(categoryId);
     markEdited("category");
@@ -617,48 +636,29 @@ function EntryEditorInstance({ type, id }: EntryEditorInstanceProps) {
     markEdited("tags");
   };
 
-  // Revisions seam (TASK-487-02-L02): opens the future revision drawer. No-op
-  // for now so the PageHeader "History" action renders as a documented insertion
-  // point without fetching/rendering revision data.
-  const handleOpenRevisions = () => {
-    // Intentionally empty until TASK-487-02-L02 wires the EntryRevisionDrawer.
+  // Revisions (TASK-487-02-L02): the drawer state and handlers live in
+  // `useEntryRevisions`; the editor only re-hydrates from the restored snapshot.
+  // The restored state IS the persisted state, so every local edit is forgotten
+  // and the snapshot is applied through the same authority path as the other
+  // mutations (a superseded response must not overwrite newer state).
+  const handleRevisionRestored = (snapshot: EntryDetail) => {
+    if (!isSnapshotAuthoritative(beginSnapshotWrite())) return;
+    supersedeSnapshotWrites();
+    resetEdits();
+    hydrateFromSnapshot(snapshot, fields, new Set());
+    setRemoteUpdatePending(false);
   };
+  const revisions = useEntryRevisions({
+    typeSlug: type,
+    entryId: id,
+    onRestored: handleRevisionRestored,
+  });
 
-  const handleCreateTerm = async (
-    kind: "category" | "tag",
-    name: string
-  ): Promise<ContentTerm | null> => {
-    const taxonomy =
-      kind === "category"
-        ? taxonomyOverview?.taxonomies.category
-        : taxonomyOverview?.taxonomies.tag;
-    if (!taxonomy) return null;
-    try {
-      const created = await createTaxonomyTerm(taxonomy.id, { name });
-      setTaxonomyOverview((prev) => {
-        if (!prev) return prev;
-        const termsKey = kind === "category" ? "categories" : "tags";
-        const nextTerms = [...prev.terms[termsKey], created].sort((a, b) =>
-          a.name.localeCompare(b.name)
-        );
-        return {
-          ...prev,
-          terms: {
-            ...prev.terms,
-            [termsKey]: nextTerms,
-          },
-        };
-      });
-      return created;
-    } catch (err) {
-      if (isApiClientError(err)) {
-        setError(err.message);
-      } else {
-        setError("Failed to create term.");
-      }
-      return null;
-    }
-  };
+  const handleCreateTerm = useEntryTaxonomyTermCreate({
+    taxonomyOverview,
+    setTaxonomyOverview,
+    setError,
+  });
 
   const handleSaveMetadata = async () => {
     if (!type || !id) return;
@@ -669,6 +669,9 @@ function EntryEditorInstance({ type, id }: EntryEditorInstanceProps) {
       accessPassword,
       scheduledAt,
       seoDescription,
+      seoTitle,
+      seoCanonicalUrl,
+      seoRobots,
       taxonomyOverview,
       selectedCategoryId,
       selectedTagIds,
@@ -804,6 +807,12 @@ function EntryEditorInstance({ type, id }: EntryEditorInstanceProps) {
     seoPreviewUrl: seoDisplay.value,
     seoDescription,
     onSeoDescriptionChange: handleSeoDescriptionChange,
+    seoTitle,
+    onSeoTitleChange: handleSeoTitleChange,
+    seoCanonicalUrl,
+    onSeoCanonicalUrlChange: handleSeoCanonicalUrlChange,
+    seoRobots,
+    onSeoRobotsChange: handleSeoRobotsChange,
     checklist,
     taxonomy: taxonomyState,
     onCategoryChange: handleCategoryChange,
@@ -842,7 +851,7 @@ function EntryEditorInstance({ type, id }: EntryEditorInstanceProps) {
                 onPreview={openPreview}
                 onSaveDraft={() => void handleSaveDraft()}
                 onPublish={handlePublish}
-                onHistory={handleOpenRevisions}
+                onHistory={revisions.handleOpenRevisions}
               />
               <Button
                 variant="outline"
@@ -951,10 +960,10 @@ function EntryEditorInstance({ type, id }: EntryEditorInstanceProps) {
           </div>
         </SheetContent>
       </Sheet>
-      {/* TASK-487-02-L02 mount point: the <EntryRevisionDrawer> (a Sheet sibling
-          of the delete dialog) plugs in here, opened by the PageHeader "History"
-          action (handleOpenRevisions). 514-03 provides the trigger + seam only —
-          no revision fetch/render. */}
+      {/* TASK-487-02-L02: revision drawer, opened by the PageHeader "History"
+          action (revisions.handleOpenRevisions). 514-03 provided the trigger +
+          seam; this is the Sheet sibling that renders the history/restore UI. */}
+      <EntryRevisionDrawer {...revisions.drawerProps} />
       <EntryDeleteDialog
         open={deleteDialogOpen}
         onOpenChange={(open) => {

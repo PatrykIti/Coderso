@@ -6,7 +6,8 @@
 **Category:** Settings / Integrations
 **Estimated Effort:** Medium
 **Dependencies:** TASK-491-01, TASK-491-02, TASK-491-03
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-08-15
 **Started:** `<YYYY-MM-DD>`
 **Completed:** `<YYYY-MM-DD>`
 

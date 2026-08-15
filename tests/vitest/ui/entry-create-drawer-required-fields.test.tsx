@@ -38,6 +38,15 @@ const entriesState = vi.hoisted(() => ({
     typeSlug,
     data: input.data,
   })),
+  updateEntryMetadata: vi.fn(
+    async (typeSlug: string, id: string, payload: { tags?: string[] }) => ({
+      id,
+      title: "Tagged Entry",
+      slug: "tagged-entry",
+      typeSlug,
+      tags: payload.tags ?? [],
+    })
+  ),
   listEntriesCached: vi.fn(async () => []),
   reset() {
     entriesState.createEntry.mockReset();
@@ -48,6 +57,16 @@ const entriesState = vi.hoisted(() => ({
         slug: input.slug,
         typeSlug,
         data: input.data,
+      })
+    );
+    entriesState.updateEntryMetadata.mockReset();
+    entriesState.updateEntryMetadata.mockImplementation(
+      async (typeSlug: string, id: string, payload: { tags?: string[] }) => ({
+        id,
+        title: "Tagged Entry",
+        slug: "tagged-entry",
+        typeSlug,
+        tags: payload.tags ?? [],
       })
     );
     entriesState.listEntriesCached.mockClear();
@@ -112,7 +131,7 @@ vi.mock("@/components/ui/input", () => ({
     value?: string;
     onChange?: (event: React.ChangeEvent<HTMLInputElement>) => void;
     [key: string]: unknown;
-  }) => <input defaultValue={value} onChange={onChange} {...props} />,
+  }) => <input value={value} onChange={onChange} {...props} />,
 }));
 
 vi.mock("@/components/ui/select", () => {
@@ -181,6 +200,7 @@ vi.mock("@/services/apiClient", () => ({
 
 vi.mock("@/services/entriesClient", () => ({
   createEntry: entriesState.createEntry,
+  updateEntryMetadata: entriesState.updateEntryMetadata,
   listEntriesCached: entriesState.listEntriesCached,
 }));
 
@@ -578,5 +598,91 @@ test("EntryCreateDrawer reports rejected create mutations through optional list 
     expect(onCreateError).toHaveBeenCalledTimes(1);
   } finally {
     directView.cleanup();
+  }
+});
+
+test("EntryCreateDrawer attaches comma-separated tags through the metadata PATCH", async () => {
+  const { EntryCreateDrawer } = await import("../../../core/admin/ui/entries/EntryCreateDrawer");
+
+  const onCreated = vi.fn();
+
+  const view = mount(
+    <EntryCreateDrawer
+      open
+      onOpenChange={vi.fn()}
+      types={[{ id: "type-1", slug: "articles", name: "Articles", schema: defaultSchema }]}
+      defaultTypeSlug="articles"
+      onCreated={onCreated}
+    />
+  );
+
+  try {
+    await React.act(async () => {
+      setInputValue(titleInputOf(view.container), "Tagged Entry");
+      setInputValue(slugInputOf(view.container), "tagged-entry");
+      setInputValue(
+        view.container.querySelector('input[placeholder="news, release, update"]'),
+        "a, b ,"
+      );
+      await Promise.resolve();
+    });
+
+    await React.act(async () => {
+      createButtonOf(view.container)?.click();
+      await Promise.resolve();
+    });
+
+    // The create returns the plain row; tags attach through the existing metadata PATCH,
+    // which normalizes away the trailing commas and blanks.
+    expect(entriesState.updateEntryMetadata).toHaveBeenCalledWith("articles", "entry-1", {
+      tags: ["a", "b"],
+    });
+    expect(onCreated).toHaveBeenCalledWith(
+      expect.objectContaining({ id: "entry-1", tags: ["a", "b"] }),
+      "articles",
+      true
+    );
+
+    // Closing the drawer (handleSubmit -> handleOpenChange(false)) resets the form, so a
+    // subsequent open starts with a clean tags input.
+    const tagsInput = view.container.querySelector('input[placeholder="news, release, update"]');
+    expect((tagsInput as HTMLInputElement | null)?.value).toBe("");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("EntryCreateDrawer skips the metadata PATCH when only whitespace tags are typed", async () => {
+  const { EntryCreateDrawer } = await import("../../../core/admin/ui/entries/EntryCreateDrawer");
+
+  const view = mount(
+    <EntryCreateDrawer
+      open
+      onOpenChange={vi.fn()}
+      types={[{ id: "type-1", slug: "articles", name: "Articles", schema: defaultSchema }]}
+      defaultTypeSlug="articles"
+    />
+  );
+
+  try {
+    await React.act(async () => {
+      setInputValue(titleInputOf(view.container), "Untagged Entry");
+      setInputValue(slugInputOf(view.container), "untagged-entry");
+      setInputValue(
+        view.container.querySelector('input[placeholder="news, release, update"]'),
+        " , "
+      );
+      await Promise.resolve();
+    });
+
+    await React.act(async () => {
+      createButtonOf(view.container)?.click();
+      await Promise.resolve();
+    });
+
+    expect(entriesState.createEntry).toHaveBeenCalledTimes(1);
+    expect(entriesState.updateEntryMetadata).not.toHaveBeenCalled();
+  } finally {
+    view.cleanup();
   }
 });

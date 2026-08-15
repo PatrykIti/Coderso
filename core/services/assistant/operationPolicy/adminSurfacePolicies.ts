@@ -634,10 +634,12 @@ export const settingsLoginAlertsPolicy: AssistantResourcePolicy = settingsSurfac
       "number"
     ),
     recipients: field("recipients", ["recipients", "emails", "odbiorcy"], "record"),
+    webhookUrl: field("webhookUrl", ["webhook", "webhook url", "webhook endpoint"], "string"),
   },
   secrets: redactedSecrets([
     "loginAlerts.recipients",
     "loginAlerts.webhookUrl",
+    "loginAlerts.webhookSecret",
     "loginAlerts.deliveryError",
   ]),
   notes: "Login alert configuration prompts stay redacted and non-executable.",

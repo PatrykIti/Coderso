@@ -14,6 +14,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { SectionCard } from "@/ui/shared/SectionCard";
 
 import type { CommerceProductDraft } from "../commerceEditorModel";
+import { CommerceVariantsCard } from "./CommerceVariantsCard";
 
 type CommerceEditorSectionsProps = {
   draft: CommerceProductDraft;
@@ -220,6 +221,8 @@ export function CommerceEditorSections({ draft, onChange }: CommerceEditorSectio
           </div>
         </div>
       </SectionCard>
+
+      <CommerceVariantsCard draft={draft} onChange={onChange} />
     </div>
   );
 }

@@ -6,7 +6,8 @@
 **Category:** Forms / admin-ui
 **Estimated Effort:** Small
 **Dependencies:** TASK-490-02-L01 (`exportFormSubmissions`).
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-08-14
 **Started:** `<YYYY-MM-DD>`
 **Completed:** `<YYYY-MM-DD>`
 
@@ -17,7 +18,7 @@
 - **Goal:** Add **Export CSV** and **Export JSON** actions to
   `FormSubmissionsPage`'s `PageHeader` actions slot (next to Back/Refresh) that
   call `exportFormSubmissions` and trigger a browser download from the envelope,
-  reusing the `downloadTextFile` shape from `TopContentDrawer`.
+  reusing the `downloadTextFile` shape from `TopPagesDrawer`.
 - **Owning module(s) to create-or-extend:** `core/admin/ui/forms/FormSubmissionsPage.tsx`
   (header actions, a small `downloadExportFile` helper, export busy/error state).
 - **Source-of-truth docs:** `_docs/CMS_API.md`, `_docs/SECURITY_SPEC.md`,
@@ -42,7 +43,7 @@
   answers. It lives only in a transient `Blob`/object URL that is **revoked**
   immediately after the click; it is never logged or persisted by the app. The
   download helper no-ops safely in non-DOM/test environments
-  (`typeof document === "undefined"` guard, as `TopContentDrawer` does).
+  (`typeof document === "undefined"` guard, as `TopPagesDrawer` does).
 
 ---
 
@@ -60,7 +61,7 @@ import {
   type FormSubmissionsExportFormat,
 } from "@/services/formsClient";
 
-// Reused Blob/anchor download (same shape as analytics TopContentDrawer.downloadTextFile)
+// Reused Blob/anchor download (same shape as analytics TopPagesDrawer.downloadTextFile)
 const downloadExportFile = (file: FormSubmissionsExport) => {
   if (typeof document === "undefined" || typeof URL.createObjectURL !== "function") {
     throw new Error("download_unavailable");

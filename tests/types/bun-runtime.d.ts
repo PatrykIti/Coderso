@@ -1,5 +1,15 @@
 declare module "bun:test" {
-  export { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } from "vitest";
+  export {
+    afterAll,
+    afterEach,
+    beforeAll,
+    beforeEach,
+    describe,
+    expect,
+    mock,
+    test,
+    vi,
+  } from "vitest";
 }
 
 interface ImportMeta {

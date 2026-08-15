@@ -51,8 +51,9 @@ This file maps admin UI surfaces to their implementation files and the cached AP
 - Entries list
   - UI: `core/admin/ui/entries/EntryList.tsx`
   - Cached APIs: `listContentTypesCached`, `listAllEntriesCached`, `getCachedAllEntries`
-  - Mutations: `duplicateEntry`, `deleteEntry`, `updateEntryMetadata`
-  - Cache bus: `entries:list:all`, `entries:list:<typeSlug>`, `entries:detail:<typeSlug>:<id>`
+  - Mutations: `duplicateEntry`, `deleteEntry`, `updateEntryMetadata`, `restoreEntryRevision`
+  - Cache bus: `entries:list:all`, `entries:list:<typeSlug>`, `entries:detail:<typeSlug>:<id>`,
+    `entries:revisions:<id>`
   - Type-scoped authority: one monotonic order spans complete
     `entries:list:<typeSlug>` reads, per-entry details, successful mutations, and
     delete tombstones. Older lists preserve newer authority for the same entry while
@@ -63,9 +64,11 @@ This file maps admin UI surfaces to their implementation files and the cached AP
     list/detail promises from publishing.
 - Entry editor
   - UI: `core/admin/ui/entries/EntryEditor.tsx`
-  - Cached APIs: `listContentTypesCached`, `getEntryCached`, `getCachedEntryDetail`
-  - Mutations: `updateEntry`, `updateEntryMetadata`, `deleteEntry`
-  - Cache bus: `entries:list:<typeSlug>`, `entries:detail:<typeSlug>:<id>`
+  - Cached APIs: `listContentTypesCached`, `getEntryCached`, `getCachedEntryDetail`,
+    `listEntryRevisionsCached`, `getCachedEntryRevisions`
+  - Mutations: `updateEntry`, `updateEntryMetadata`, `deleteEntry`, `restoreEntryRevision`
+  - Cache bus: `entries:list:<typeSlug>`, `entries:detail:<typeSlug>:<id>`,
+    `entries:revisions:<id>`
 
 ## Forms
 - Forms list
@@ -105,6 +108,14 @@ This file maps admin UI surfaces to their implementation files and the cached AP
   - UI: `core/admin/ui/commerce/CommerceEditorPage.tsx`
   - Cached APIs: `getCommerceProductCached`, `getCachedCommerceProduct`,
     `listCommerceCollectionsCached`
+- Commerce collections manager (TASK-488)
+  - UI: `core/admin/ui/commerce/CommerceCollectionsPage.tsx`
+  - Cached APIs: `listCommerceCollectionsCached`, `getCachedCommerceCollections`
+  - Mutations: `createCommerceCollection`, `updateCommerceCollection`,
+    `deleteCommerceCollection`
+  - Cache bus: `commerce:collections:list` (update on create/update,
+    invalidate on delete; the manager re-reads with `{ force: true }` after
+    each mutation)
 
 ## Engagement
 - Popups list

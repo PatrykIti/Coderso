@@ -790,6 +790,39 @@ Zakres CMS, model danych, auth i security opisane sa w:
   screen-owned `sections[].blocks[]`; the compatibility type is not exposed as
   their authoring model.
 
+## Integrations runtime (TASK-491)
+
+Configured third-party integrations act at runtime through four seams, all
+owned under `core/services/integrations/` and driven by the same
+`getIntegrationRuntimeConfig` reader (decrypted, never exposed to the browser):
+
+- **GA head injection** — `analyticsRuntime.ts` builds the `gtag.js` snippet
+  from a validated `measurementId` (fail closed on anything else).
+  `core/server/publicSite.tsx` resolves the snippet once per public request and
+  injects it into the non-preview document `<head>`. Preview/token requests
+  stay tag-free.
+- **Event dispatch hub** — `integrationEventDispatch.ts` emits normalized,
+  PII-free events to the configured Slack/Zapier adapters
+  (`slackDelivery.ts` / `zapierDelivery.ts`) over the shared retry transport
+  (`core/services/webhooks/retryPost.ts`: 3 attempts, 8s timeout, exponential
+  backoff, per-attempt headers). Emission points: entry publish
+  (`entry.published`), page publish (`page.published`), and form submission
+  (`form.submission`) — the latter two after the authoritative transaction
+  commits, fire-and-forget so delivery failure never fails the mutation.
+- **Sentry boot init + capture** — `errorMonitoring.ts` initializes
+  `@sentry/node` once at server boot when a `sentry` `dsn` is configured
+  (idempotent, fail closed, no-op without a DSN). `core/server/httpServer.ts`
+  wraps the fetch dispatch so unhandled request errors go through
+  `captureServerError` before the existing error response. The DSN is a secret:
+  never logged, never returned.
+- **Health evaluation** — `healthEvaluator.ts` is the pure, Bun-free evaluator
+  (reusing the GA/Sentry validators, never duplicating them);
+  `integrationsService.runIntegrationHealthCheck` persists the outcome, and
+  `POST /settings/integrations/:id/check` (admin, `settings:write`) exposes it.
+  The admin UI renders `unknown | healthy | issue` on cards and in the drawer
+  with a "Test connection" action. Health is never auto-promoted; a config
+  change resets it to `unknown`.
+
 ## SEO Manager (v1)
 
 - Metadane SEO i wyniki audytu przechowywane w `seo_documents`.

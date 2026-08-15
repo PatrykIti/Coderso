@@ -6,13 +6,21 @@
 **Category:** Commerce / Admin UI
 **Estimated Effort:** Small
 **Dependencies:** TASK-488-01, TASK-488-02
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-08-15
 **Started:** `<YYYY-MM-DD>`
 **Completed:** `<YYYY-MM-DD>`
 
 ---
 
 ## Overview
+
+> **Single-writer (audit M3):** this leaf OWNS the creation of
+> `tests/vitest/ui/commerce-page.test.tsx` extensions,
+> `tests/vitest/ui/commerce-variant-editor.test.tsx`, and
+> `tests/vitest/ui/commerce-collections-manager.test.tsx`. Implementation
+> leaves (488-01-L02, 488-02-L01/L02) DESCRIBE assertion shapes only and must
+> NOT create those files.
 
 - **Goal:** Add the cross-cutting Vitest UI-integration coverage that proves the
   full author round-trip: (a) editing variants in the product editor produces a
@@ -130,6 +138,6 @@ round-trip payload assertions are present.
 ## Testing Requirements
 
 - **Lane:** Vitest only (`tests/vitest/*`, `tests/vitest/ui-integration/*`).
-- The full Vitest suite plus `bun run lint` and `bun run typecheck` must be
+- The full Vitest suite plus `bun run lint` and `bun --cwd core lint:types` must be
   green; record results in the closeout summary and note any skipped test.
 - No DB changes → no migration artifacts.

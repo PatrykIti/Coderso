@@ -6,13 +6,17 @@
 **Category:** Settings / Integrations
 **Estimated Effort:** Small
 **Dependencies:** None
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-08-15
 **Started:** `<YYYY-MM-DD>`
 **Completed:** `<YYYY-MM-DD>`
 
 ---
 
 ## Overview
+
+> **L4 note (audit):** `captureServerError` must NOT `require("@sentry/node")`
+> in ESM/Bun — reuse the loaded module reference from the init import.
 
 - **Goal:** Initialize Sentry on the server at boot from the configured
   `dsn`/`environment`, and capture unhandled errors from the request handler, so

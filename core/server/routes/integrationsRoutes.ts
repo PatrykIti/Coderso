@@ -4,6 +4,7 @@ import {
   getIntegration,
   listIntegrations,
   requestIntegration,
+  runIntegrationHealthCheck,
   updateIntegration,
 } from "../../services/integrations/integrationsService";
 import {
@@ -33,49 +34,66 @@ export type IntegrationsRouteDeps = {
   validate: (schema: unknown, payload: unknown) => void;
 };
 
-export function registerIntegrationsRoutes(
-  router: Router,
-  deps: IntegrationsRouteDeps
-) {
+export function registerIntegrationsRoutes(router: Router, deps: IntegrationsRouteDeps) {
   const { requirePermission, validate } = deps;
 
-  router.get(
-    "/settings/integrations",
-    requirePermission("settings:read"),
-    async () => {
-      const items = await listIntegrations();
-      return { items };
-    }
-  );
+  router.get("/settings/integrations", requirePermission("settings:read"), async () => {
+    const items = await listIntegrations();
+    return { items };
+  });
 
-  router.get(
-    "/settings/integrations/:id",
-    requirePermission("settings:read"),
-    async (ctx) => {
-      const item = await getIntegration(ctx.params.id);
-      if (!item) {
-        throw new ApiError("integration_not_found", "Integration not found", 404);
+  router.get("/settings/integrations/:id", requirePermission("settings:read"), async (ctx) => {
+    const item = await getIntegration(ctx.params.id);
+    if (!item) {
+      throw new ApiError("integration_not_found", "Integration not found", 404);
+    }
+    return { item };
+  });
+
+  router.patch("/settings/integrations/:id", requirePermission("settings:write"), async (ctx) => {
+    validate(integrationUpdateSchema, ctx.body);
+    try {
+      const updated = await updateIntegration(
+        ctx.params.id,
+        ctx.body as { config?: Record<string, string | null> }
+      );
+      await logAudit({
+        actorId: ctx.user?.id ?? null,
+        action: "integration.update",
+        targetType: "integration",
+        targetId: ctx.params.id,
+        metadata: { keys: Object.keys((ctx.body as { config?: object })?.config ?? {}) },
+        ip: ctx.ip,
+        userAgent: ctx.userAgent,
+      });
+      return { item: updated };
+    } catch (error) {
+      if (error instanceof Error) {
+        if (error.message === "integration_not_found") {
+          throw new ApiError("integration_not_found", "Integration not found", 404);
+        }
+        if (error.message === "integration_config_invalid") {
+          throw new ApiError("integration_config_invalid", "Invalid integration config", 400);
+        }
+        if (error.message === "secret_master_key_invalid") {
+          throw new ApiError("secret_master_key_invalid", "Master key invalid", 400);
+        }
       }
-      return { item };
+      throw error;
     }
-  );
+  });
 
-  router.patch(
-    "/settings/integrations/:id",
+  router.post(
+    "/settings/integrations/:id/check",
     requirePermission("settings:write"),
     async (ctx) => {
-      validate(integrationUpdateSchema, ctx.body);
       try {
-        const updated = await updateIntegration(
-          ctx.params.id,
-          ctx.body as { config?: Record<string, string | null> }
-        );
+        const updated = await runIntegrationHealthCheck(ctx.params.id);
         await logAudit({
           actorId: ctx.user?.id ?? null,
-          action: "integration.update",
+          action: "integration.check",
           targetType: "integration",
           targetId: ctx.params.id,
-          metadata: { keys: Object.keys((ctx.body as { config?: object })?.config ?? {}) },
           ip: ctx.ip,
           userAgent: ctx.userAgent,
         });
@@ -85,8 +103,8 @@ export function registerIntegrationsRoutes(
           if (error.message === "integration_not_found") {
             throw new ApiError("integration_not_found", "Integration not found", 404);
           }
-          if (error.message === "integration_config_invalid") {
-            throw new ApiError("integration_config_invalid", "Invalid integration config", 400);
+          if (error.message === "secret_master_key_missing") {
+            throw new ApiError("secret_master_key_missing", "Master key missing", 400);
           }
           if (error.message === "secret_master_key_invalid") {
             throw new ApiError("secret_master_key_invalid", "Master key invalid", 400);

@@ -32,6 +32,7 @@ import {
   assertSetPasswordEmailConfigured,
   sendSetPasswordEmail,
 } from "../../services/auth/setPasswordEmailService";
+import { deliverLoginAlert } from "../../services/auth/loginAlertDeliveryService";
 import {
   getAdminPermissionSnapshot,
   type AdminPermissionSnapshot,
@@ -50,6 +51,17 @@ export type AuthRouteDeps = {
   updatePassword?: typeof updatePassword;
   revokeAllSessions?: typeof revokeAllSessions;
   logAudit?: typeof logAudit;
+  // TASK-492-02-L02: login-gate prerequisites + alert delivery, all additive
+  // with real-import defaults. They let the route lane drive a successful login
+  // (and the fire-and-forget alert delivery) without a real db/SMTP.
+  deliverLoginAlert?: typeof deliverLoginAlert;
+  getSecuritySettings?: typeof getSecuritySettings;
+  getUserByEmail?: typeof getUserByEmail;
+  verifyPassword?: typeof verifyPassword;
+  getLastSessionFingerprint?: typeof getLastSessionFingerprint;
+  evaluateLoginAlert?: typeof evaluateLoginAlert;
+  createSession?: typeof createSession;
+  updateLastLogin?: typeof updateLastLogin;
 };
 
 type LoginBody = { email: string; password: string; captchaToken?: string };
@@ -171,9 +183,17 @@ export function registerAuthRoutes(router: Router, deps: AuthRouteDeps) {
   const updateUserPassword = deps.updatePassword ?? updatePassword;
   const revokeUserSessions = deps.revokeAllSessions ?? revokeAllSessions;
   const writeAudit = deps.logAudit ?? logAudit;
+  const sendLoginAlert = deps.deliverLoginAlert ?? deliverLoginAlert;
+  const readSecuritySettings = deps.getSecuritySettings ?? getSecuritySettings;
+  const findUserByEmail = deps.getUserByEmail ?? getUserByEmail;
+  const checkPassword = deps.verifyPassword ?? verifyPassword;
+  const readLastSessionFingerprint = deps.getLastSessionFingerprint ?? getLastSessionFingerprint;
+  const evaluateAlertFlags = deps.evaluateLoginAlert ?? evaluateLoginAlert;
+  const establishSession = deps.createSession ?? createSession;
+  const touchLastLogin = deps.updateLastLogin ?? updateLastLogin;
 
   router.get("/auth/bot-protection", async () => {
-    const settings = await getSecuritySettings();
+    const settings = await readSecuritySettings();
     return {
       enabled: settings.botProtection.enabled,
       provider: settings.botProtection.provider,
@@ -186,7 +206,7 @@ export function registerAuthRoutes(router: Router, deps: AuthRouteDeps) {
     validate(authLoginSchema, ctx.body);
     const body = ctx.body as LoginBody;
 
-    const securitySettings = await getSecuritySettings();
+    const securitySettings = await readSecuritySettings();
     await enforceBotProtection({
       token: body.captchaToken,
       action: "login",
@@ -194,23 +214,23 @@ export function registerAuthRoutes(router: Router, deps: AuthRouteDeps) {
       settings: securitySettings.botProtection,
     });
 
-    const user = await getUserByEmail(body.email);
+    const user = await findUserByEmail(body.email);
     if (!user || user.status !== "active") {
       throw new ApiError("auth_failed", "Invalid credentials", 401);
     }
 
-    const ok = await verifyPassword(user.passwordHash, body.password);
+    const ok = await checkPassword(user.passwordHash, body.password);
     if (!ok) {
       throw new ApiError("auth_failed", "Invalid credentials", 401);
     }
 
-    const lastFingerprint = await getLastSessionFingerprint(user.id);
-    const alertFlags = evaluateLoginAlert(lastFingerprint, {
+    const lastFingerprint = await readLastSessionFingerprint(user.id);
+    const alertFlags = evaluateAlertFlags(lastFingerprint, {
       ip: ctx.ip ?? null,
       userAgent: ctx.userAgent ?? null,
     });
 
-    const { token, session, ttlDays } = await createSession({
+    const { token, session, ttlDays } = await establishSession({
       userId: user.id,
       ip: ctx.ip,
       userAgent: ctx.userAgent,
@@ -218,7 +238,7 @@ export function registerAuthRoutes(router: Router, deps: AuthRouteDeps) {
 
     ctx.setCookie?.(SESSION_COOKIE_NAME, token, buildSessionCookieOptions(ttlDays));
 
-    await updateLastLogin(user.id);
+    await touchLastLogin(user.id);
     await writeAudit({
       actorId: user.id,
       action: "auth.login",
@@ -249,6 +269,21 @@ export function registerAuthRoutes(router: Router, deps: AuthRouteDeps) {
         ip: ctx.ip,
         userAgent: ctx.userAgent,
       });
+
+      // TASK-492-02-L02: best-effort, FIRE-AND-FORGET delivery — detached,
+      // never awaited inline, never blocks or fails the login response. The
+      // service is designed not to throw; the catch is a defensive guard on
+      // the detached task only.
+      try {
+        void sendLoginAlert({
+          user: { id: user.id, email: resolveUserEmail(user), name: user.name ?? null },
+          flags: alertFlags,
+          current: { ip: ctx.ip ?? null, userAgent: ctx.userAgent ?? null },
+          at: new Date(),
+        }).catch(() => undefined);
+      } catch {
+        // delivery service is designed not to throw; defensive guard only.
+      }
     }
 
     return {
@@ -328,7 +363,7 @@ export function registerAuthRoutes(router: Router, deps: AuthRouteDeps) {
     validate(authResetSchema, ctx.body);
     const body = ctx.body as ResetBody;
 
-    const securitySettings = await getSecuritySettings();
+    const securitySettings = await readSecuritySettings();
     await enforceBotProtection({
       token: body.captchaToken,
       action: "reset",

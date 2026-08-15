@@ -10,6 +10,8 @@ export type IntegrationField = {
   configured: boolean;
 };
 
+export type IntegrationHealth = "unknown" | "healthy" | "issue";
+
 export type IntegrationRecord = {
   id: string;
   name: string;
@@ -18,7 +20,7 @@ export type IntegrationRecord = {
   scopes: string[];
   status: "connected" | "disconnected";
   health: {
-    status: string;
+    status: IntegrationHealth;
     lastCheckedAt: string | null;
     lastError: string | null;
   };
@@ -27,18 +29,14 @@ export type IntegrationRecord = {
 };
 
 export async function listIntegrations() {
-  const response = await apiRequest<{ items: IntegrationRecord[] }>(
-    "/settings/integrations",
-    { method: "GET" }
-  );
+  const response = await apiRequest<{ items: IntegrationRecord[] }>("/settings/integrations", {
+    method: "GET",
+  });
   return response.items ?? [];
 }
 
 export async function getIntegration(id: string) {
-  return apiRequest<{ item: IntegrationRecord }>(
-    `/settings/integrations/${id}`,
-    { method: "GET" }
-  );
+  return apiRequest<{ item: IntegrationRecord }>(`/settings/integrations/${id}`, { method: "GET" });
 }
 
 export async function updateIntegration(
@@ -52,6 +50,14 @@ export async function updateIntegration(
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     },
+    { withCsrf: true }
+  );
+}
+
+export async function checkIntegration(id: string) {
+  return apiRequest<{ item: IntegrationRecord }>(
+    `/settings/integrations/${id}/check`,
+    { method: "POST" },
     { withCsrf: true }
   );
 }

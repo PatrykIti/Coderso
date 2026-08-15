@@ -7,8 +7,9 @@
 **Category:** Settings / Security
 **Estimated Effort:** Small
 **Dependencies:** TASK-492-01-L01
-**Status:** ⏳ To Do
-**Started:** `<YYYY-MM-DD>`
+**Status:** ✅ Done
+**Completed:** 2026-08-14
+**Started:** 2026-07-05
 **Completed:** `<YYYY-MM-DD>`
 
 ## Overview
@@ -98,7 +99,9 @@ secrets: redactedSecrets([
   `mergeSecuritySettings` (deep contract validation + normalize from L01).
 - **Error handling:** schema rejects shape/unknown-field violations as the
   existing `validation_error`; deep semantic violations surface as
-  `security_settings_invalid` (mapped by `withSettingsErrors`). No new codes.
+  `security_settings_invalid` (mapped by `withSettingsErrors`; 01-L01 adds the
+  missing `security_settings_invalid` -> 400 case to `mapSettingsRouteError` per
+  audit M1 — no OTHER new codes). Changelog 1276 pinned by the orchestrator.
 
 ### Regression-test shape
 ```ts

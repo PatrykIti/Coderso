@@ -402,6 +402,18 @@ Clients update caches and broadcast events on:
   - Redirect create/update/delete patches `redirects:list` and broadcasts an
     update so other tabs refresh public-routing-affecting rows promptly.
 
+### Commerce collections manager cache note (TASK-488)
+The collections manager (`CommerceCollectionsPage.tsx`) is a cached-resource
+admin UI over the existing `commerce:collections:list` family:
+- Mount reads `listCommerceCollectionsCached({ force: true })` and hydrates the
+  list from the patched memory/local cache.
+- `createCommerceCollection` / `updateCommerceCollection` patch the local
+  `commerce:collections:list` cache (`upsertCollection`) and broadcast an
+  `update` cache-bus event; `deleteCommerceCollection` removes the row
+  (`removeCollection`) and broadcasts an `invalidate` event. The page re-reads
+  with `{ force: true }` after every mutation, so the shared list stays the
+  source of truth for other tabs and the Commerce list shell.
+
 ### Page templates cache note (TASK-420-03)
 
 - Page Templates are owned by `core/admin/services/pageTemplatesClient.ts`
@@ -602,6 +614,25 @@ Clients update caches and broadcast events on:
   events remain client-owned and are not server transaction side effects.
 - Entry editor background refresh must not overwrite unsaved content or metadata
   edits; the editor defers active reload while either dirty flag is set.
+
+### Entries revisions cache note
+
+- Entry revision history uses the shared cache contract through
+  `core/admin/services/entriesClient.ts` with the `entries:revisions:<id>` key
+  (entry id, not type-scoped, matching the restore broadcast) and
+  `listEntryRevisionsCached()`.
+- The cached revision list is sorted by `version` descending; reads hydrate from
+  module memory or `localStorage` and revalidate with `{ force: Boolean(cached) }`
+  so the drawer opens instantly and refreshes in the background.
+- `restoreEntryRevision` POSTs through the internal route (CSRF, `content:write`),
+  re-hydrates the editor from the returned entry, then force-refreshes the
+  revision list and broadcasts `entries:revisions:<id>` plus the usual
+  `entries:list:<typeSlug>`, `entries:list:all`, and
+  `entries:detail:<typeSlug>:<id>` events, because restore may write a new
+  pre-restore revision and always changes the entry's current data.
+- Restore is confirm-gated in the drawer so unsaved editor edits are not silently
+  replaced; a schema-incompatible snapshot surfaces the server's
+  `entry_validation_failed` message in the drawer's error slot.
 
 ### Custom Screens list/detail cache note
 

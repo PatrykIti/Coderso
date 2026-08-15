@@ -6,13 +6,19 @@
 **Category:** Settings / Integrations
 **Estimated Effort:** Small
 **Dependencies:** TASK-491-01-L01
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-08-15
 **Started:** `<YYYY-MM-DD>`
 **Completed:** `<YYYY-MM-DD>`
 
 ---
 
 ## Overview
+
+> **L2 note (audit):** `renderDocument` signatures differ between
+> `renderPublicPage.tsx:123` (has imageUrl/renderBodyScripts/responsiveCss) and
+> `renderPublicEntry.tsx:181` (lacks them); append the GA tag after `siteLocale`
+> in BOTH variants.
 
 - **Goal:** Thread the resolved GA head snippet (from L01) into every public,
   non-preview render so the GA4 tag appears in the live site `<head>`. Resolve it

@@ -10,7 +10,7 @@ process.env.DATABASE_URL ??= "postgres://localhost/nextless_test";
 const { db } = await import("../../../core/db/client");
 const { contentEntries, contentRevisions, contentTypes, seoDocuments, users } =
   await import("../../../core/db/schema");
-const { createEntry, getEntry, updateEntryMetadata } =
+const { createEntry, getEntry, publishEntry, updateEntry, updateEntryMetadata } =
   await import("../../../core/services/content/entryService");
 const { createContentType } = await import("../../../core/services/content/typeService");
 const { validate: validateSchema } =
@@ -91,6 +91,8 @@ test("registerContentEntryRoutes wires content entry endpoints and permissions",
       "POST /content/:type/entries/:id/preview",
       "POST /content/:type/entries/:id/publish",
       "POST /content/:type/entries/:id/unpublish",
+      "GET /content/:type/entries/:id/revisions",
+      "POST /content/:type/entries/:id/revisions/:revisionId/restore",
     ])
   );
   expect(requestedPermissions).toEqual([
@@ -105,12 +107,18 @@ test("registerContentEntryRoutes wires content entry endpoints and permissions",
     "content:read",
     "content:publish",
     "content:publish",
+    "content:read",
+    "content:write",
   ]);
 });
 
 test("mapContentEntryError maps entry domain errors to route ApiErrors", () => {
   expect(mapContentEntryError(new Error("content_type_not_found"))?.status).toBe(404);
   expect(mapContentEntryError(new Error("entry_not_found"))?.status).toBe(404);
+  expect(mapContentEntryError(new Error("entry_revision_not_found"))).toMatchObject({
+    code: "entry_revision_not_found",
+    status: 404,
+  });
   expect(mapContentEntryError(new Error("entry_slug_conflict"))?.status).toBe(409);
   expect(mapContentEntryError(new Error("media_value_invalid"))?.status).toBe(400);
   expect(mapContentEntryError(new Error("media_asset_missing"))?.status).toBe(404);
@@ -353,6 +361,106 @@ testIfDbWithOptions(
       }
       const afterInvalidSeo = await getEntry(entry.id);
       expect(afterInvalidSeo?.tags).toEqual(beforeInvalidSeo?.tags);
+    } finally {
+      if (entryId) {
+        await db.delete(seoDocuments).where(eq(seoDocuments.targetId, entryId));
+        await db.delete(contentRevisions).where(eq(contentRevisions.entryId, entryId));
+        await db.delete(contentEntries).where(eq(contentEntries.id, entryId));
+      }
+      if (type) await db.delete(contentTypes).where(eq(contentTypes.id, type.id));
+      await db.delete(users).where(eq(users.id, actor.id));
+    }
+  },
+  { timeout: 45_000 }
+);
+
+testIfDbWithOptions(
+  "revisions and restore routes read and restore entry snapshots",
+  async () => {
+    const [actor] = await db
+      .insert(users)
+      .values({
+        email: `entry-revision-route-${randomUUID()}@example.com`,
+        passwordHash: "test",
+        status: "active",
+      })
+      .returning({ id: users.id });
+    if (!actor) throw new Error("missing_entry_revision_route_actor");
+    let type: Awaited<ReturnType<typeof createContentType>> | null = null;
+    let entryId: string | null = null;
+
+    try {
+      type = await createContentType({
+        name: `Entry revision route ${randomUUID()}`,
+        slug: `entry-revision-route-${randomUUID()}`,
+        schema: {
+          type: "object",
+          additionalProperties: false,
+          required: ["title"],
+          properties: { title: { type: "string" } },
+        },
+      });
+      const typeSlug = type.slug;
+      const entry = await createEntry(type.id, {
+        title: "Entry revision route fixture",
+        slug: `entry-revision-route-${randomUUID()}`,
+        data: { title: "Entry revision route fixture" },
+        authorId: actor.id,
+      });
+      entryId = entry.id;
+      await publishEntry(entry.id, actor.id);
+      await updateEntry(entry.id, { data: { title: "Second version" } });
+
+      const { router, routes } = makeRouter();
+      registerContentEntryRoutes(router, {
+        requirePermission: () => async () => undefined,
+        validate: validateSchema,
+      });
+      const findRoute = (method: string, path: string) =>
+        routes.find((route) => route.method === method && route.path === path);
+      const revisionsRoute = findRoute("GET", "/content/:type/entries/:id/revisions");
+      const restoreRoute = findRoute(
+        "POST",
+        "/content/:type/entries/:id/revisions/:revisionId/restore"
+      );
+      if (!revisionsRoute || !restoreRoute) throw new Error("missing_revision_route");
+      const invokeRoute = async (
+        route: Route,
+        params: Record<string, string>
+      ): Promise<unknown> => {
+        let result: unknown;
+        const ctx: RouteContext = { params, query: {}, body: {}, user: { id: actor.id } };
+        for (const handler of route.handlers) {
+          result = await handler(ctx);
+        }
+        return result;
+      };
+
+      const listed = (await invokeRoute(revisionsRoute, {
+        type: typeSlug,
+        id: entry.id,
+      })) as Array<{ id: string; version: number; createdBy: { id: string } | null }>;
+      expect(listed).toHaveLength(1);
+      expect(listed[0]?.version).toBe(1);
+      expect(listed[0]?.createdBy?.id).toBe(actor.id);
+      expect(JSON.stringify(listed)).not.toContain("emailEncrypted");
+
+      const restored = (await invokeRoute(restoreRoute, {
+        type: typeSlug,
+        id: entry.id,
+        revisionId: listed[0]?.id ?? "",
+      })) as { ok: boolean; restored: boolean; entry: { data: unknown } };
+      expect(restored.ok).toBe(true);
+      expect(restored.restored).toBe(true);
+      expect(restored.entry.data).toEqual({ title: "Entry revision route fixture" });
+
+      const badRevision = (await invokeRoute(restoreRoute, {
+        type: typeSlug,
+        id: entry.id,
+        revisionId: randomUUID(),
+      }).catch((error: unknown) => error)) as { code?: string; status?: number };
+      expect(badRevision.code).toBe("entry_revision_not_found");
+      expect(badRevision.status).toBe(404);
     } finally {
       if (entryId) {
         await db.delete(seoDocuments).where(eq(seoDocuments.targetId, entryId));

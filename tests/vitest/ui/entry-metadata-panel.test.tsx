@@ -360,6 +360,64 @@ test("regression: checklist, SEO description, tag add, save metadata remain wire
   cleanup();
 });
 
+test("SEO title, canonical URL and robots controls render and fire when wired", () => {
+  const onSeoTitleChange = vi.fn();
+  const onSeoCanonicalUrlChange = vi.fn();
+  const onSeoRobotsChange = vi.fn();
+  const { container, cleanup } = mount(
+    <EntryMetadataPanel
+      {...baseProps}
+      seoTitle="Launch title"
+      onSeoTitleChange={onSeoTitleChange}
+      seoCanonicalUrl="https://site.test/launch"
+      onSeoCanonicalUrlChange={onSeoCanonicalUrlChange}
+      seoRobots="noindex,nofollow"
+      onSeoRobotsChange={onSeoRobotsChange}
+    />
+  );
+
+  const titleInput = container.querySelector(
+    'input[placeholder="Search result title (defaults to the entry title)"]'
+  );
+  const canonicalInput = container.querySelector(
+    'input[placeholder="https://example.com/entry-slug"]'
+  );
+  const robotsInput = container.querySelector('input[placeholder="index,follow"]');
+  expect(titleInput).not.toBeNull();
+  expect(canonicalInput).not.toBeNull();
+  expect(robotsInput).not.toBeNull();
+  expect((titleInput as HTMLInputElement | null)?.value).toBe("Launch title");
+  expect((canonicalInput as HTMLInputElement | null)?.value).toBe("https://site.test/launch");
+  expect((robotsInput as HTMLInputElement | null)?.value).toBe("noindex,nofollow");
+
+  // The snippet preview prefers the SEO title over the entry title.
+  expect(container.textContent).toContain("Launch title");
+
+  React.act(() => {
+    setInputValue(titleInput, "Renamed title");
+    setInputValue(canonicalInput, "https://site.test/renamed");
+    setInputValue(robotsInput, "index,follow");
+  });
+  expect(onSeoTitleChange).toHaveBeenCalledWith("Renamed title");
+  expect(onSeoCanonicalUrlChange).toHaveBeenCalledWith("https://site.test/renamed");
+  expect(onSeoRobotsChange).toHaveBeenCalledWith("index,follow");
+  cleanup();
+
+  // The shared post mount wires none of the three: the controls stay hidden
+  // instead of rendering no-op inputs, keeping the post panel byte-identical.
+  const bare = mount(<EntryMetadataPanel {...baseProps} />);
+  expect(
+    bare.container.querySelector(
+      'input[placeholder="Search result title (defaults to the entry title)"]'
+    )
+  ).toBeNull();
+  expect(
+    bare.container.querySelector('input[placeholder="https://example.com/entry-slug"]')
+  ).toBeNull();
+  expect(bare.container.querySelector('input[placeholder="index,follow"]')).toBeNull();
+  bare.cleanup();
+});
+
 test("save and delete stay fail-closed until the host confirms a hydrated entry", () => {
   const onSave = vi.fn();
   const onDelete = vi.fn();

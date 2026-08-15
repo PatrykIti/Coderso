@@ -5,7 +5,9 @@
 **Category:** Settings / Integrations
 **Estimated Effort:** Medium
 **Dependencies:** None
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-08-15
+**Changelog:** 1279 (pinned by the orchestrator; closure only)
 **Started:** `<YYYY-MM-DD>`
 **Completed:** `<YYYY-MM-DD>`
 

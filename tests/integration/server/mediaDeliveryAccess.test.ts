@@ -94,7 +94,15 @@ const securitySettings: SecuritySettings = {
   validation: { rejectUnknownFields: true },
   plugins: { safeMode: false },
   session: { ttlDays: 7, maxPerUser: 10, singleSession: false },
-  loginAlerts: { enabled: false, notifyOnNewDevice: false, notifyOnNewLocation: false },
+  loginAlerts: {
+    enabled: false,
+    notifyOnNewDevice: false,
+    notifyOnNewLocation: false,
+    recipients: [],
+    webhookUrl: null,
+    webhookSecret: null,
+    deliveryError: null,
+  },
   botProtection: {
     enabled: false,
     provider: "recaptcha_v3",

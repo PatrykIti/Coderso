@@ -6,7 +6,8 @@
 **Category:** Commerce / Admin UI
 **Estimated Effort:** Small
 **Dependencies:** None
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-08-15
 **Started:** `<YYYY-MM-DD>`
 **Completed:** `<YYYY-MM-DD>`
 
@@ -153,6 +154,14 @@ export const serializeDraftVariants = (variants: CommerceVariant[]): CommerceVar
       } satisfies CommerceVariant;
     })
     .filter((v) => v.title.length > 0); // server requires non-empty title
+
+// Audit M2 fix: this leaf OWNS the `parseIntegerOrNull` export consumed by
+// the variant editor card (L02 imports it; L01 is the single writer).
+export const parseIntegerOrNull = (value: unknown): number | null => {
+  if (value === null || value === undefined || value === "") return null;
+  const parsed = typeof value === "number" ? value : Number(String(value).trim());
+  return Number.isInteger(parsed) ? parsed : null;
+};
 ```
 
 **Data flow:** card mutates `draft.variants` only through these helpers →
@@ -165,7 +174,7 @@ instead of passing `draft.variants` raw → existing `createCommerceProduct` /
 domain errors continue to surface via the existing route boundary mapping
 (`mapCommerceError`, e.g. an over-long `sku` → `commerce_variant_sku_invalid`
 → 400) and are rendered by the editor's existing `error` Alert. The client
-shaping keeps well-formed inputs from ever reaching that path.
+shaping defensively trims/normalizes well-formed inputs before they reach (a malformed key still 400s server-side — audit L3) that path.
 
 **Regression-test shape:**
 
@@ -182,4 +191,4 @@ shaping keeps well-formed inputs from ever reaching that path.
 - New file: `tests/vitest/admin/commerceVariantModel.test.ts` (or extend an
   existing commerce model spec) covering every helper and edge case above.
 - No DB changes → no migration artifacts.
-- Must pass under `bun run typecheck` and the Vitest suite.
+- Must pass under `bun --cwd core lint:types` and the Vitest suite.

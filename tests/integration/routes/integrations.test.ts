@@ -46,6 +46,7 @@ test("registerIntegrationsRoutes wires endpoints", () => {
       "GET /settings/integrations",
       "GET /settings/integrations/:id",
       "PATCH /settings/integrations/:id",
+      "POST /settings/integrations/:id/check",
       "POST /settings/integrations/requests",
     ])
   );
@@ -66,6 +67,7 @@ test("registerIntegrationsRoutes requests the expected permission guards", () =>
   expect(requestedPermissions).toEqual([
     "settings:read",
     "settings:read",
+    "settings:write",
     "settings:write",
     "settings:write",
   ]);

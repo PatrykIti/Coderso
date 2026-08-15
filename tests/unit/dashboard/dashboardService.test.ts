@@ -94,6 +94,10 @@ const baselineSecuritySettings: SecuritySettings = {
     enabled: true,
     notifyOnNewDevice: true,
     notifyOnNewLocation: true,
+    recipients: [],
+    webhookUrl: null,
+    webhookSecret: null,
+    deliveryError: null,
   },
   botProtection: {
     enabled: false,

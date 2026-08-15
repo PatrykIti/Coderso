@@ -6,7 +6,8 @@
 **Category:** Commerce / Admin UI
 **Estimated Effort:** Medium
 **Dependencies:** None
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-08-15
 **Started:** `<YYYY-MM-DD>`
 **Completed:** `<YYYY-MM-DD>`
 
@@ -110,7 +111,7 @@ export function CommerceCollectionsPage() {
   const refresh = (force = true) =>
     listCommerceCollectionsCached({ force }).then(setCollections);
 
-  useEffect(() => { refresh().catch(setApiError).finally(() => setIsLoading(false)); }, []);
+  useEffect(() => { refresh().catch(setError).finally(() => setIsLoading(false)); }, []);
 
   const handleSave = async () => {
     if (!editing || !isCollectionDraftValid(editing)) return;
@@ -176,4 +177,4 @@ button stays disabled until `isCollectionDraftValid` (non-empty name).
   (`tests/vitest/ui/commerce-page.test.tsx` localStorage cache seeding pattern,
   or module-level mock of `commerceClient`), keeping the test pure (no network).
 - No DB changes → no migration artifacts.
-- Green under `bun run lint`, `bun run typecheck`, Vitest suite.
+- Green under `bun run lint`, `bun --cwd core lint:types`, Vitest suite.

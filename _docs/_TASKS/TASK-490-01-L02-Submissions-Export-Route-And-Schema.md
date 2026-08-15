@@ -6,7 +6,8 @@
 **Category:** Forms / admin-api
 **Estimated Effort:** Small
 **Dependencies:** TASK-490-01-L01 (`buildFormSubmissionsExport` + `FormSubmissionsExport`).
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-08-14
 **Started:** `<YYYY-MM-DD>`
 **Completed:** `<YYYY-MM-DD>`
 

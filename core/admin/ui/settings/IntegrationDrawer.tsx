@@ -17,6 +17,7 @@ import { cn } from "@/lib/utils";
 import { ConfirmActionDialog } from "@/ui/shared/ConfirmActionDialog";
 import { useRegisterSettingsDirty } from "@/ui/settings/SettingsDirtyNavigation";
 
+import { integrationHealthMeta, type IntegrationHealth } from "./integrationHealth";
 import type { IntegrationStatus } from "./IntegrationCard";
 
 type IntegrationDrawerField = {
@@ -49,6 +50,12 @@ const getIntegrationDirtySignature = (
     })
   );
 
+type IntegrationDrawerHealth = {
+  status: IntegrationHealth;
+  lastCheckedAt: string | null;
+  lastError: string | null;
+};
+
 type IntegrationDrawerProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -60,18 +67,24 @@ type IntegrationDrawerProps = {
     scopes: string[];
     fields: IntegrationDrawerField[];
   } | null;
+  health?: IntegrationDrawerHealth | null;
   isSaving?: boolean;
+  isChecking?: boolean;
   error?: string | null;
   onSave?: (id: string, config: Record<string, string | null>) => void | Promise<void>;
+  onCheck?: (id: string) => void | Promise<void>;
 };
 
 export function IntegrationDrawer({
   open,
   onOpenChange,
   integration,
+  health,
   isSaving = false,
+  isChecking = false,
   error,
   onSave,
+  onCheck,
 }: IntegrationDrawerProps) {
   const fields = useMemo(() => integration?.fields ?? [], [integration?.fields]);
   const [values, setValues] = useState<Record<string, string>>(() => {
@@ -188,6 +201,38 @@ export function IntegrationDrawer({
                 {integration?.status ?? "disconnected"}
               </Badge>
             </div>
+            {integration && health ? (
+              <div className="rounded-xl border bg-muted/30 p-4">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2 text-sm font-semibold">
+                    <span
+                      className={cn(
+                        "h-2 w-2 rounded-full",
+                        integrationHealthMeta[health.status].dot
+                      )}
+                    />
+                    {integrationHealthMeta[health.status].label}
+                  </div>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() => onCheck?.(integration.id)}
+                    disabled={isChecking || !onCheck}
+                  >
+                    {isChecking ? "Checking..." : "Test connection"}
+                  </Button>
+                </div>
+                {health.lastCheckedAt ? (
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    Last checked: {new Date(health.lastCheckedAt).toLocaleString()}
+                  </p>
+                ) : null}
+                {health.lastError ? (
+                  <p className="mt-1 text-xs text-destructive">{health.lastError}</p>
+                ) : null}
+              </div>
+            ) : null}
             {error || localError ? (
               <div className="rounded-xl border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive">
                 {error ?? localError}

@@ -6,6 +6,7 @@ import { formFields, forms, formSubmissions, media } from "../../db/schema";
 import { toFieldRecord } from "./formsService";
 import { validateSubmissionPayload } from "./validation";
 import { verifyFileReferences } from "./formAttachment";
+import { emitIntegrationEventSafe } from "../integrations/integrationEventDispatch";
 
 export type SubmissionMeta = {
   ip?: string;
@@ -26,11 +27,11 @@ export async function getSubmission(id: string) {
 }
 
 export async function submitForm(formId: string, payload: unknown, meta?: SubmissionMeta) {
-  return db.transaction(
+  const result = await db.transaction(
     async (tx) => {
       await acquireNativeCmsWriterFence(tx);
       const [form] = await tx
-        .select({ id: forms.id })
+        .select({ id: forms.id, name: forms.name })
         .from(forms)
         .where(eq(forms.id, formId))
         .for("key share");
@@ -62,8 +63,19 @@ export async function submitForm(formId: string, payload: unknown, meta?: Submis
           userAgent: meta?.userAgent ?? null,
         })
         .returning();
-      return row ?? null;
+      return row ? { row, formName: form.name } : null;
     },
     { isolationLevel: "read committed" }
   );
+
+  // Emit only after the transaction commits (fire-and-forget, never blocks).
+  if (result?.row) {
+    emitIntegrationEventSafe("form.submission", {
+      type: "form-submission",
+      id: result.row.id,
+      title: result.formName,
+    });
+  }
+
+  return result?.row ?? null;
 }

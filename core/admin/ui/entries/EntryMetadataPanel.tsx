@@ -109,6 +109,15 @@ type EntryMetadataPanelProps = {
   seoPreviewUrl?: string;
   seoDescription: string;
   onSeoDescriptionChange: (value: string) => void;
+  // SEO title / canonical URL / robots join as a unit: the entry editor passes all three,
+  // the shared post mount passes none. Optional so that mount keeps compiling (it already
+  // omits the visibility group for the same reason).
+  seoTitle?: string;
+  onSeoTitleChange?: (value: string) => void;
+  seoCanonicalUrl?: string;
+  onSeoCanonicalUrlChange?: (value: string) => void;
+  seoRobots?: string;
+  onSeoRobotsChange?: (value: string) => void;
   checklist?: EntryChecklist | null;
   taxonomy?: EntryTaxonomyState | null;
   onCategoryChange?: (categoryId: string | null) => void;
@@ -156,6 +165,12 @@ export function EntryMetadataPanel({
   seoPreviewUrl,
   seoDescription,
   onSeoDescriptionChange,
+  seoTitle = "",
+  onSeoTitleChange,
+  seoCanonicalUrl = "",
+  onSeoCanonicalUrlChange,
+  seoRobots = "",
+  onSeoRobotsChange,
   checklist,
   taxonomy,
   onCategoryChange,
@@ -185,7 +200,7 @@ export function EntryMetadataPanel({
     if (typeof window === "undefined") return false;
     return window.localStorage.getItem("entries.metadataHelpCollapsed") === "true";
   });
-  const previewTitle = title || "Content title";
+  const previewTitle = seoTitle || title || "Content title";
   const previewUrl = seoPreviewUrl ?? `/${slug || "entry-slug"}`;
   const canSchedule = status === "scheduled";
   const currentVisibility = visibility ?? "public";
@@ -504,6 +519,45 @@ export function EntryMetadataPanel({
             placeholder="Write a short description for search results..."
           />
         </div>
+        {onSeoTitleChange ? (
+          <>
+            <div className="space-y-2">
+              <label className="text-[11px] font-semibold uppercase text-muted-foreground">
+                SEO title
+              </label>
+              <Input
+                value={seoTitle}
+                onChange={(event) => onSeoTitleChange(event.target.value)}
+                maxLength={60}
+                className="bg-muted/30"
+                placeholder="Search result title (defaults to the entry title)"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-[11px] font-semibold uppercase text-muted-foreground">
+                Canonical URL
+              </label>
+              <Input
+                value={seoCanonicalUrl}
+                onChange={(event) => onSeoCanonicalUrlChange?.(event.target.value)}
+                className="bg-muted/30"
+                placeholder="https://example.com/entry-slug"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-[11px] font-semibold uppercase text-muted-foreground">
+                Robots
+              </label>
+              <Input
+                value={seoRobots}
+                onChange={(event) => onSeoRobotsChange?.(event.target.value)}
+                maxLength={120}
+                className="bg-muted/30"
+                placeholder="index,follow"
+              />
+            </div>
+          </>
+        ) : null}
       </SectionCard>
       <SectionCard title="Taxonomy" bodyClassName="space-y-4">
         {!taxonomyEnabled ? (

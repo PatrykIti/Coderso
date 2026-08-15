@@ -48,6 +48,17 @@ export const formUpdateSchema = {
   additionalProperties: false,
 } as const;
 
+// Strict query schema for `GET /forms/:id/submissions/export` (TASK-490):
+// reject-unknown at the schema boundary, `format` constrained to csv|json.
+export const formSubmissionsExportQuerySchema = {
+  type: "object",
+  additionalProperties: false,
+  required: ["format"],
+  properties: {
+    format: { type: "string", enum: ["csv", "json"] },
+  },
+} as const;
+
 export {
   formAttachmentUploadWriteSchema as formAttachmentUploadSchema,
   formFieldsWriteSchema as formFieldsSchema,

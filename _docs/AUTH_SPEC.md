@@ -21,6 +21,19 @@ Poza zakresem v1:
   password hashy, cookie, API key secrets ani zaszyfrowanych PII.
 - CSRF token pobierany przez `GET /auth/csrf` i uzywany w mutacjach (`X-CSRF-Token`).
 
+### Login alerts
+
+- Logowanie z nowego urzadzenia / nowej lokalizacji emituje powiadomienie
+  oprocz rekordu audytowego `auth.login.alert`: email do wlasciciela konta
+  (+ skonfigurowani `recipients`) oraz opcjonalny webhook podpisany HMAC
+  (`X-Coderso-Signature` / `X-Nextless-Signature`).
+- Dostarczenie jest best-effort i fire-and-forget — nigdy nie blokuje
+  odpowiedzi logowania; ostatni blad dostarczenia trafia do
+  `security.settings.loginAlerts.deliveryError` (read-only, sanitized).
+- Webhook payload maskuje email i nie zawiera surowego IP/user-agent ani
+  sekretow; `webhookSecret` pozostaje backend-only (szyfrowany w DB, API zwraca
+  tylko `{ configured }`).
+
 ## First-run installer (v1.2)
 
 Faza 1 dwufazowego onboardingu (TASK-482). Publiczny, pre-login namespace

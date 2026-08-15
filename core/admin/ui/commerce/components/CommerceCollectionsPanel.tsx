@@ -27,6 +27,7 @@ type CommerceCollectionsPanelProps = {
   onToggleCollection: (id: string, checked: boolean) => void;
   onStatusChange: (status: CommerceProductStatus) => void;
   onPublish: () => void;
+  onCreateCollection: () => void;
 };
 
 const parseMinorUnits = (value: string) => {
@@ -61,6 +62,7 @@ export function CommerceCollectionsPanel({
   onToggleCollection,
   onStatusChange,
   onPublish,
+  onCreateCollection,
 }: CommerceCollectionsPanelProps) {
   // Render-time price summary derivation over the EXISTING minor-units draft
   // fields. Pure display — writes no state.
@@ -108,9 +110,15 @@ export function CommerceCollectionsPanel({
         <ScrollArea className="max-h-64 min-h-0">
           <div className="flex flex-col gap-2 p-4">
             {collections.length === 0 ? (
-              <p className="text-xs text-muted-foreground">
-                No collections yet. Create collections from the Commerce API/UI flow.
-              </p>
+              <Button
+                type="button"
+                variant="link"
+                size="sm"
+                className="h-auto justify-start px-0 text-xs"
+                onClick={onCreateCollection}
+              >
+                Create your first collection
+              </Button>
             ) : (
               collections.map((collection) => {
                 const checked = selectedIds.includes(collection.id);
