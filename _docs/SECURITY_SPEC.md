@@ -927,10 +927,10 @@ fail-closed:
 - Payload do podpisu: `${timestamp}.${body}`.
 - Sekrety webhookow sa szyfrowane w DB (AES-256-GCM) z tym samym master key.
 
-## Backups (v1)
+## Backups (v2)
 
 - Wszystkie route backupow sa `internal` (`/admin/api/*`), cookie sesyjny admina;
-  reads wymagaja `backups:read`, writes (create/restore/prune/schedule) wymagaja
+  reads wymagaja `backups:read`, writes (create/import/restore/prune/schedule) wymagaja
   `backups:write` + `enforceCsrf` + bucket `admin_write`. Zaden nowy permission
   nie jest wprowadzany.
 - Scheduler (`core/server/jobs/backupScheduler.ts`) dziala jako **system actor**
@@ -939,13 +939,28 @@ fail-closed:
   (`BACKUP_SCHEDULER_ENABLED`) i single-flight (in-process flag + Postgres
   advisory lock), zeby wiele instancji na wspoldzielonej DB nie odpalalo backupow
   rownolegle.
-- Restore jest **destrukcyjny** i confirmation-gated: wymaga `{ "confirm": true }`
-  (strict schema, `confirm: false`/brak/unknown keys → 400) zarowno na route jak
-  i w serwisie. Artefakt jest strict-parsowany fail-closed (walidacja
-  `version: 1`, reject unknown top-level keys) **przed** jakimkolwiek zapisem,
-  a caly restore idzie w jednej `db.transaction` (all-or-nothing, wspoldzieli
-  `importConfigTx`). Sekrety pozostaja zaszyfrowane bo restore ustawien idzie
-  przez seam `importConfig`.
+- **Kazdy v2 `.cbk` jest zaszyfrowany — nie istnieje nieszyfrowany wariant
+  archiwum.** Szyfrowanie to AES-256-GCM; klucz pochodzi z `scrypt(passphrase,
+  per-archive salt)`; header archiwum niesie salt/IV/parametry KDF. Zly
+  passphrase konczy sie fail-closed (niepowodzenie auth GCM →
+  `backup_decrypt_failed`, 422) z ZERO zapisow do DB — zadnego czesciowego
+  restore. Passphrase, klucz pochodny, salt/IV i parametry KDF sa
+  **backend-only**: nigdy nie logowane, cache'owane, zwracane klientowi ani
+  zapisywane do wiersza `backups`/`backup_schedules`/audytu (audyt trzyma tylko
+  `{ kind, include }` / liczniki).
+- Passphrase jest obowiazkowy: interaktywny create/import bierze go z body
+  requestu (create bez passphrase → fail-closed `backup_passphrase_required`,
+  400; `users` bez passphrase → `backup_users_requires_encryption`, 400),
+  a zaplanowane (unattended) przebiegi czytaja WYLACZNIE
+  `BACKUP_ENCRYPTION_PASSPHRASE` z env i **fail-closed** (nigdy nie emituja
+  nieszyfrowanego archiwum), gdy zmienna nie jest ustawiona.
+- Restore **destrukcyjny** i confirmation-gated (`{ "confirm": true }`, strict
+  schema, unknown keys → 400) dotyczy teraz WYLACZNIE legacy v1 `.json`
+  artefaktow (metadata + settings, bez bajtow mediow; calosc w jednej
+  `db.transaction`, all-or-nothing, strict-parse fail-closed przed zapisem).
+  Dla wiersza v2 `.cbk` restore-by-id zawodzi natychmiast z
+  `backup_restore_superseded` (422): sciezka jest download → Import z
+  passphrase.
 - Sekrety/PII: artefakty backupu **nigdy** nie zawieraja credentiali storage
   (czytane tylko przez `getStorageSettingsInternal()`); `artifactPath` jest
   redagowany do klientow, a `artifactKey` (klucz obiektu remote) jest
@@ -953,6 +968,35 @@ fail-closed:
   `backup_upload_failed` — surowy tekst bledu adaptera/credentiale nigdy nie
   trafiaja do pol widocznych dla klienta ani do logow (`sanitizeBackupError`
   usuwa sciezki cwd + backup-dir).
+- **Users/RBAC include jest opt-in i encrypted-only.** `users` +
+  `roles` + `user_roles` (w tym nieprzezroczyste `users.password_hash`) moga
+  podrozowac wyłącznie WEWNATRZ zaszyfrowanego archiwum; niezabezpieczony eksport
+  users jest odrzucany przed odczytem przez `assertUsersEncryptionAllowed`
+  (`backup_users_requires_encryption`, 400). Import users jest
+  confirmation-gated (opcjonalny `restoreUsers`) z guardem lockoutu
+  (`backup_users_restore_no_admin`, 409 → rollback) i nie moze eskalowac
+  uprawnien.
+- Import (`POST /backups/import`, `backups:write`, CSRF, `admin_write`): upload
+  to streamowany multipart z sufitami `BACKUP_IMPORT_MAX_BYTES` (domyslnie
+  2 GiB, skompresowane) + `BACKUP_IMPORT_MAX_DECOMPRESSED_BYTES` (guard
+  compression-bomb, domyslnie 4x). Plik jest deszyfrowany, a manifest/checksum/
+  auth GCM walidowane **PRZED jakimkolwiek zapisem**; restore jest
+  confirmation-gated i transakcyjny (all-or-nothing), z FK-safe reverse-delete
+  cascade-complete (TASK-484). Wymaga wlaczonego maintenance mode
+  (`backup_maintenance_required`, 409). Zapisy bajtow mediow to jedyny krok
+  nie-transakcyjny (po commicie; object storage nie jest transakcyjny).
+- **Streaming / no-OOM** — gwarancja obowiazuje symetrycznie dla content
+  `tables/*` i memberow mediow na EKSPORCIE i IMPORCIE (batch-streaming /
+  bounded window) oraz dla eksportu memberow RBAC users/roles/user_roles
+  (keyset-streaming). Zakres tej gwarancji dla create-path: **local** driver
+  pisze `.cbk` strumieniowo; **remote (s3/azure)** create nadal buforuje
+  archiwum w pamieci (v1 `adapter.put(UploadFile)`) — zdalne streamowanie jest
+  follow-up, NIE obiecane. Jedynym usankcjonowanym wyjatkiem od symetrii jest
+  **users-section RESTORE**: 05 `collectLines` zbiera te trzy membery do pelnych
+  tablic, bo fail-closed guards 04 (detekcja kolizji natural-key email/role-name,
+  reconcile `user_roles`, FK-missing-roleId, guard lockoutu admina) musza widziec
+  CALY archiwalny zbior przed zapisem w jednym poison-on-error outer tx —
+  scoped do opt-in, encrypted-only sekcji users, nie cichy wyjatek.
 - Backupy pozostaja **non-LLM-executable** (patrz nota wyzej: settings/users/
   roles/backups/... nie sa wykonywalne z LLM Guide bez typed contract).
 

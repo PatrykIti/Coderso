@@ -58,6 +58,9 @@ const fakeAdapter: MediaStorageAdapter = {
       },
     };
   },
+  async putAt() {
+    throw new Error("generic_put_forbidden");
+  },
   async get() {
     throw new Error("unused");
   },

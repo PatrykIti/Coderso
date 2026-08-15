@@ -1,7 +1,8 @@
-import { CloudUpload, X } from "lucide-react";
+import { CloudUpload, KeyRound, X } from "lucide-react";
 import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -9,14 +10,14 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import type { BackupIncludeOption } from "@/services/backupsClient";
 
 type BackupNowDialogProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onCreate: (include: BackupIncludeOption[]) => Promise<boolean>;
+  onCreate: (include: BackupIncludeOption[], passphrase: string) => Promise<boolean>;
   isSubmitting: boolean;
 };
 
@@ -24,6 +25,9 @@ const includeOptions: Array<{ id: BackupIncludeOption; label: string; defaultChe
   { id: "database", label: "Database snapshot", defaultChecked: true },
   { id: "media", label: "Media assets", defaultChecked: true },
   { id: "settings", label: "Settings & tokens", defaultChecked: false },
+  // users/RBAC is fail-closed opt-in (04 enforces it server-side too): it is
+  // encrypted-only, so it can never be selected without a passphrase below.
+  { id: "users", label: "Users & roles", defaultChecked: false },
 ];
 
 const defaultInclude = includeOptions.filter((item) => item.defaultChecked).map((item) => item.id);
@@ -35,6 +39,7 @@ export function BackupNowDialog({
   isSubmitting,
 }: BackupNowDialogProps) {
   const [selected, setSelected] = useState<BackupIncludeOption[]>(defaultInclude);
+  const [passphrase, setPassphrase] = useState("");
 
   const toggleInclude = (id: BackupIncludeOption, checked: boolean | "indeterminate") => {
     setSelected((current) => {
@@ -46,15 +51,23 @@ export function BackupNowDialog({
   };
 
   const handleOpenChange = (nextOpen: boolean) => {
-    if (!nextOpen) setSelected(defaultInclude);
+    if (!nextOpen) {
+      setSelected(defaultInclude);
+      setPassphrase("");
+    }
     onOpenChange(nextOpen);
   };
 
   const handleCreate = async () => {
-    if (selected.length === 0) return;
-    const ok = await onCreate(selected);
-    if (ok) handleOpenChange(false);
+    if (selected.length === 0 || passphrase.trim() === "") return;
+    const ok = await onCreate(selected, passphrase);
+    if (ok) {
+      setPassphrase("");
+      handleOpenChange(false);
+    }
   };
+
+  const canSubmit = selected.length > 0 && passphrase.trim() !== "" && !isSubmitting;
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -63,7 +76,7 @@ export function BackupNowDialog({
           <div>
             <DialogTitle>Create Backup</DialogTitle>
             <DialogDescription>
-              Select what should be included in the on-demand backup.
+              Select what should be included in the on-demand backup. Every backup is encrypted.
             </DialogDescription>
           </div>
           <Button
@@ -85,20 +98,47 @@ export function BackupNowDialog({
               <span>{item.label}</span>
             </label>
           ))}
+          {selected.includes("users") ? (
+            <p className="text-xs text-destructive">
+              Users &amp; roles are sensitive. This section is encrypted with the passphrase below
+              and can only be restored through Import.
+            </p>
+          ) : null}
           {selected.length === 0 ? (
             <p className="text-sm text-destructive">Select at least one backup section.</p>
           ) : null}
+          <Separator />
+          <div className="space-y-2">
+            <label
+              htmlFor="backup-passphrase"
+              className="text-xs font-semibold uppercase text-muted-foreground"
+            >
+              Encryption passphrase
+            </label>
+            <div className="relative">
+              <KeyRound className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                id="backup-passphrase"
+                type="password"
+                className="pl-9"
+                placeholder="Passphrase used to encrypt this backup"
+                value={passphrase}
+                onChange={(event) => setPassphrase(event.target.value)}
+                autoComplete="new-password"
+              />
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Store it safely. It is required to download-restore this backup and is never stored on
+              the server.
+            </p>
+          </div>
         </div>
         <Separator />
         <div className="flex flex-col gap-3 bg-muted/30 px-6 py-4 sm:flex-row sm:justify-end">
           <Button variant="outline" onClick={() => handleOpenChange(false)} disabled={isSubmitting}>
             Cancel
           </Button>
-          <Button
-            className="gap-2"
-            onClick={handleCreate}
-            disabled={isSubmitting || selected.length === 0}
-          >
+          <Button className="gap-2" onClick={handleCreate} disabled={!canSubmit}>
             <CloudUpload className="h-4 w-4" />
             {isSubmitting ? "Starting..." : "Start Backup"}
           </Button>

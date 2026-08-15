@@ -1,6 +1,7 @@
 import { BlobServiceClient, StorageSharedKeyCredential } from "@azure/storage-blob";
 import { randomUUID } from "node:crypto";
 import path from "node:path";
+import { Readable } from "node:stream";
 import { safeMediaDisposition } from "../mediaFileTrust";
 import {
   assertCanonicalStoredUpload,
@@ -136,6 +137,18 @@ export function createAzureAdapter(options?: AzureStorageOptions): MediaStorageA
         throw new Error("azure_object_missing");
       }
       return response.readableStreamBody;
+    },
+    async putAt(
+      keyName: string,
+      body: AsyncIterable<Uint8Array>,
+      _size: number,
+      contentType: string
+    ) {
+      const containerClient = service.getContainerClient(container);
+      const blockBlob = containerClient.getBlockBlobClient(keyName);
+      await blockBlob.uploadStream(Readable.from(body), undefined, undefined, {
+        blobHTTPHeaders: { blobContentType: contentType },
+      });
     },
     async delete(keyName: string) {
       const containerClient = service.getContainerClient(container);

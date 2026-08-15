@@ -1,7 +1,9 @@
-import { createReadStream } from "node:fs";
+import { createReadStream, createWriteStream } from "node:fs";
 import { mkdir, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
+import { Readable } from "node:stream";
+import { pipeline } from "node:stream/promises";
 import {
   assertCanonicalStoredUpload,
   buildCanonicalStorageKey,
@@ -70,6 +72,12 @@ export function createLocalAdapter(options?: LocalStorageOptions): MediaStorageA
     async get(key: string) {
       const baseDir = getLocalMediaDir(options);
       return createReadStream(path.join(baseDir, key));
+    },
+    async putAt(key: string, body: AsyncIterable<Uint8Array>, _size: number, _contentType: string) {
+      const baseDir = getLocalMediaDir(options);
+      const target = path.join(baseDir, key);
+      await ensureDir(path.dirname(target));
+      await pipeline(Readable.from(body), createWriteStream(target)); // streamed, no full buffer
     },
     async delete(key: string) {
       const baseDir = getLocalMediaDir(options);

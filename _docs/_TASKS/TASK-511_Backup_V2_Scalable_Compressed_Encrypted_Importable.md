@@ -6,7 +6,8 @@
 **Category:** Backups / Data / Security / Admin
 **Estimated Effort:** Very Large
 **Dependencies:** TASK-484 (backups v1 — scheduler/retention/restore/remote storage, merged)
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-08-15
 **Started:** 2026-07-05
 
 ---
@@ -62,14 +63,21 @@ validation before any write, transactional restore, backend-only secrets).
 
 ## Coordination (pinned facts)
 
-- **Changelog number:** the closure subtask creates `_docs/_CHANGELOG/1229-*.md`.
-  **`1229` is PINNED by the orchestrator — it is NOT the naive next-free number.**
-  Closure must NOT renumber 511 (e.g. to the naive on-disk next-free); it VERIFIES
-  there is no `1229` collision on disk and creates `_docs/_CHANGELOG/1229-*.md`,
+- **Changelog number:** the closure subtask creates `_docs/_CHANGELOG/1281-*.md`.
+  **`1281` is PINNED by the orchestrator (re-pinned 2026-08-14) — it is NOT the
+  naive next-free number.** On-disk changelogs now run through **1273**; `1274` is
+  reserved for TASK-559 and `1275–1279` are allocated to the small-feature stream,
+  so 511's closure number is **1281**. Closure must NOT renumber 511; it VERIFIES
+  there is no `1281` collision on disk and creates `_docs/_CHANGELOG/1281-*.md`,
   then bumps the README pointer to the true next-free number. Only the closure
   subtask edits `_docs/_TASKS/*` and `_docs/_CHANGELOG/*`.
-- **Branch/worktree:** current files are tracked on `feature/tasks-fixes`; no extra
-  511 worktree exists.
+- **Migration index:** 511's one schema migration lands as **0072**
+  (`0072_backup_schedule_include`). The live `core/db/migrations/meta/_journal.json`
+  has 72 entries (last `0071_seed_admin_role`), so 0072 is next-free. 06 re-verifies
+  the journal at its land time (a concurrent stream could claim it first); never
+  hard-commit the index blindly.
+- **Branch/worktree:** current files are tracked on `task/stream-511` (HEAD
+  `f75343de`, worktree `/home/coder/project/Coderso-task-511`).
 - **Security re-author/audit:** the previously pinned coordination facts are
   obsolete. TASK-511 stays `⏳ To Do`; a fresh security re-author/audit is required
   before implementation.
@@ -89,6 +97,16 @@ validation before any write, transactional restore, backend-only secrets).
     use **explicit per-region single-writer ownership** (each subtask names the
     lines/region it owns) enforced by the strictly-sequential land order — each
     subtask edits only its declared region on top of the prior merge.
+- **Byte-disjoint land order vs TASK-551 (DB/query/cache optimization).** TASK-551
+  demands byte-disjoint single-writer ownership over `core/db/schema.ts`,
+  `core/db/tables/**`, all migration SQL/meta + `_journal.json`, `.env.example`,
+  `core/server/publicSite.tsx`, and `backupScheduler.ts` lifecycle. 511's regions
+  in those files — 511-06's `core/db/tables/operations.ts` `backup_schedules.include`
+  column + migration `0072` (SQL/snapshot/`_journal.json`), 511-07's `.env.example`
+  `# Backups` section, 511-05's `publicSite.tsx` maintenance-mode region, and
+  511-06's `backupScheduler.ts` full-backup wiring — land BEFORE any TASK-551
+  product dispatch and are the sole 511-owned bytes there. TASK-551 must not
+  concurrently rewrite those regions, and 511 must not widen beyond them.
 - **Shared REMOTE test DB** (render.com, `DATABASE_URL` in `.env`). All DB tests
   use uniquely scoped fixtures + clean up only their own rows; never truncate
   shared tables. Restore/import tests must NEVER commit a destructive restore

@@ -82,6 +82,19 @@ The defaults already wired in `.env.example` for local work: `PORT=3000`, `PUBLI
 
 > The `TEST_OPENAI_*` / `TEST_OPENROUTER_*` keys are used only by opt-in Assistant live tests — leave them empty for normal development.
 
+### Backups (v2)
+
+Every v2 `.cbk` archive is encrypted (AES-256-GCM, scrypt KDF). Backups run on demand from the Admin UI with a per-request passphrase, so local development needs no extra env — but **scheduled** backups run unattended and read their passphrase from `BACKUP_ENCRYPTION_PASSPHRASE`:
+
+| Variable | Purpose |
+| --- | --- |
+| `BACKUP_ENCRYPTION_PASSPHRASE` | Passphrase for unattended/scheduled encrypted `.cbk` archives. When unset, scheduled runs **fail closed** — they never emit an unencrypted archive. |
+| `BACKUP_SCHEDULER_ENABLED` | Opt-in scheduler outside production (default off). |
+| `BACKUP_SCHEDULER_TICK_MS` | Scheduler tick in ms (default `60000`). |
+| `BACKUP_MAX_TOTAL_BYTES` | Optional quota signal for `GET /backups/usage` (bytes; empty = no quota). |
+
+`BACKUP_DIR` (default `./storage/backups`) is the local archive directory. Import/upload limits are `BACKUP_IMPORT_MAX_BYTES` (default 2 GiB, compressed) and `BACKUP_IMPORT_MAX_DECOMPRESSED_BYTES` (default 4×, compression-bomb guard); `BACKUP_TMP_DIR` sets the import spool directory (default system tmp). See `_docs/CMS_API.md` → Backups (v2) for the full contract.
+
 ## Run database migrations
 
 Migrations are Drizzle SQL files versioned in `core/db/migrations/`, driven by `core/db/drizzle.config.ts`. Both DB scripts source `.env` automatically, so set `DATABASE_URL` first, then:

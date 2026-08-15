@@ -7,10 +7,19 @@ interface ImportMeta {
 }
 
 declare namespace Bun {
+  // Minimal FileWriter shape used by the TASK-511-06 backup sink (chunk pump +
+  // flush on end). The production FileWriter also returns a write() byte count;
+  // the stub only needs what core actually calls.
+  type FileWriter = {
+    write(chunk: Uint8Array): void;
+    end(): Promise<void> | void;
+  };
+
   type BunFile = Blob & {
     readonly type: string;
     exists(): Promise<boolean>;
     text(): Promise<string>;
+    writer(): FileWriter;
   };
 
   type SpawnOptions = {

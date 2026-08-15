@@ -100,6 +100,8 @@ Secrets are backend-only and encrypted at rest. Do **not** log tokens or passwor
 | Passwords | Optional pepper `AUTH_PASSWORD_PEPPER` (rotating it forces password resets) |
 | API keys | Hashed with argon2id; plaintext never stored; secret shown once; 6-char prefix kept for lookup; revoke sets `revokedAt` |
 | LLM provider keys | Read backend-only from encrypted integration config (e.g. integration id `openrouter`, `apiKey` encrypted); redacted in audit metadata and error payloads |
+| Backup `.cbk` archives | Every v2 archive is encrypted (AES-256-GCM, scrypt KDF, per-archive salt/IV). Passphrase/key/salt/IV are backend-only — never logged, cached, audited, or returned; wrong passphrase fails closed with `backup_decrypt_failed` before any write |
+| Users/RBAC backup include | `users`/`roles`/`user_roles` (including opaque password hashes) travel only inside an encrypted archive; unencrypted users export is rejected pre-read (`backup_users_requires_encryption`) |
 
 These keys are critical infrastructure ENV values, applied at boot only:
 
@@ -109,6 +111,7 @@ PII_ENC_KEY               # AES-256-GCM key for email encryption (32 bytes)
 PII_HASH_KEY              # HMAC key for email lookup hash (32+ bytes)
 AUTH_PASSWORD_PEPPER      # optional password pepper
 FORM_SUBMIT_NONCE_SECRET  # HMAC secret for public form nonces
+BACKUP_ENCRYPTION_PASSPHRASE  # unattended scheduled backup passphrase (fail-closed when unset)
 ```
 
 Audit log metadata is stripped of secrets before it's written; `ip` and `userAgent` are retained.

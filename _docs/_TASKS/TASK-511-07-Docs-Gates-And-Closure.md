@@ -9,7 +9,8 @@
 **Estimated Effort:** Medium
 **Depends On:** TASK-511-01 → 06 (all must be landed first — this is the terminal subtask)
 **Blocks:** none — terminal subtask.
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-08-15
 **Started:** 2026-07-05
 **Land order:** strictly sequential — lands **7th and last**, only after 01→02→03→04→05→06 have all merged and their gates are green. This is the ONLY subtask permitted to edit `_docs/_TASKS/*` and `_docs/_CHANGELOG/*`.
 
@@ -21,7 +22,7 @@ Terminal subtask of TASK-511 (Backup v2 — scalable, compressed, encrypted, imp
 01–06 ship the code (streaming/batched NDJSON export engine + `.cbk` tar/manifest, gzip +
 AES-256-GCM/scrypt encryption, media-file streaming, opt-in users/RBAC include,
 upload→decrypt→validate→transactional restore import pipeline + `POST /backups/import`, scheduler
-full-backup wiring + Admin UI + create-path `.cbk` rewiring + migration `0066`). 511-07 makes the
+full-backup wiring + Admin UI + create-path `.cbk` rewiring + migration `0072`). 511-07 makes the
 release real and closes the tree: it registers the standing test matrix, syncs every spec/doc the
 code touched, documents every backup env var, writes the changelog, updates the task-board rows +
 statistics, and flips statuses to Done.
@@ -32,17 +33,14 @@ changelog, per the parent §Coordination). Because it touches no routes, no rout
 Contract applies; instead it carries a **Security Documentation Contract** (§4) that asserts the
 security posture the docs must accurately describe.
 
-> **⚠ CHANGELOG NUMBER — use `1229`. READ FIRST.** The closure changelog is **`1229`** by
-> orchestrator PIN. GROUNDING (true on-disk state — do NOT restate the README as saying 1229):
-> `_docs/_CHANGELOG/README.md:32` currently reads *"Use 1223 for the next changelog entry"* and the
-> highest entry on disk is **`1222`** (`1222-2026-07-05-task-484-backups-…md`; TASK-484 also claims
-> 1222 on the board). `1229` is NOT the README's stated next-free number — it is pinned by the
-> orchestrator because `1220–1228` are reserved by parallel streams (482–484 / 512–516) and TASK-480
-> owns `1223` in the merge target `feature/tasks`. This contract therefore uses **`1229`** across the
-> parent + all subtasks (01–06). At closure, 07 VERIFIES the whole 511 tree references `1229` (this
-> is a check of the 511 files, NOT of README:32, which legitimately still reads 1223 until land) and
-> creates `_docs/_CHANGELOG/1229-*.md`. **Do NOT create any other number and do NOT edit README:32 to
-> say 1229.**
+> **⚠ CHANGELOG NUMBER — use `1281`. READ FIRST.** The closure changelog is **`1281`** by
+> orchestrator PIN. GROUNDING (true on-disk state — re-read `_docs/_CHANGELOG/README.md` FRESH at
+> closure): the changelog journal currently runs through **`1273`**, `1274` is claimed by TASK-559,
+> and `1275–1279` are reserved by the small-feature stream, so `1281` is the orchestrator-pinned
+> safe number for TASK-511. This contract therefore uses **`1281`** across the parent + all subtasks
+> (01–06). At closure, 07 VERIFIES the whole 511 tree references `1281` (a check of the 511 files,
+> NOT of a possibly-stale README pointer) and creates `_docs/_CHANGELOG/1281-*.md`. **Do NOT create
+> any other number and do NOT edit the README pointer to read 1281.**
 
 ## 2. Goal
 
@@ -50,10 +48,10 @@ security posture the docs must accurately describe.
   posture is reflected in the canonical specs, WITH anchors matching the real shipped code.
 - The standing CI test matrix runs every new backup-v2 test file: they already execute under the
   `package.json` `test:bun` glob, and the curated coverage-lane arrays in `scripts/run-bun-lane.ts`
-  are extended to list them (TASK-483 closure precedent — board README line 158).
+  are extended to list them (TASK-483 closure precedent — board README `## Statistics` block).
 - `.env.example` + `docs/develop/getting-started.md` document every backup env var (the pre-existing
   undocumented v1 set PLUS the new ones 02/03/05/06 introduced).
-- Changelog `1229` exists and is indexed; the task board reflects TASK-511 (+ all subtasks) as Done;
+- Changelog `1281` exists and is indexed; the task board reflects TASK-511 (+ all subtasks) as Done;
   Statistics counters are adjusted; every 511 **Status:** is `✅ Done`.
 
 ## 3. Owning Modules / Files (single-writer for this subtask)
@@ -61,31 +59,31 @@ security posture the docs must accurately describe.
 Docs + standing-CI registration only. No other 511 subtask edits these.
 
 **Create:**
-- `_docs/_CHANGELOG/1229-2026-07-05-task-511-backup-v2-scalable-compressed-encrypted-importable.md`
+- `_docs/_CHANGELOG/1281-2026-07-05-task-511-backup-v2-scalable-compressed-encrypted-importable.md`
 
 **Edit — task board / changelog (07 is the sole 511 writer):**
 - `_docs/_TASKS/README.md` — board rows (511 is absent at HEAD, so ADD to `## Done`) + Statistics
   (increment Done only; see §5.9).
 - `_docs/_TASKS/TASK-511_Backup_V2_*.md` — flip parent `**Status:**` (`:9`) + the `## Sub-Tasks`
   table statuses (table body `:151–157`; heading `## Sub-Tasks` at `:147`) to `✅ Done`. The changelog number at `:49`,`:50` already reads
-  `1229` (reconciled) — verify, do not renumber.
+  `1281` (reconciled) — verify, do not renumber.
 - `_docs/_TASKS/TASK-511-01…06-*.md` — flip each `**Status:**` to `✅ Done`. All six already
-  reference `1229` (reconciled tree-wide) — verify none carries a stale number.
-- `_docs/_CHANGELOG/README.md` — add the `1229` Index row (top of the table, `:35`). `README:32`
-  currently reads *"Use 1223…"*; after creating `1229`, set the pointer to the next genuinely-free
-  number at land time (**≥ 1230**), verified against the LIVE merge-target README — never `1224`
-  (claimed by a parallel stream) and never below `1229`.
+  reference `1281` (reconciled tree-wide) — verify none carries a stale number.
+- `_docs/_CHANGELOG/README.md` — add the `1281` Index row (top of the table). After creating `1281`,
+  set the pointer to the next genuinely-free number at land time (**≥ 1282**), verified against the
+  LIVE merge-target README — never a number already reserved by a parallel stream and never below
+  `1281`.
 
 **Edit — specs (edit under existing headings; anchors must match real code):**
-- `_docs/DATA_MODEL.md` — `## Backups` (`:434`): new `backup_schedules.include jsonb` column +
-  migration `0066_backup_schedule_include`; v2 `.cbk` artifact note; import creates no `backups` row.
-- `_docs/CMS_API.md` — `## Backups (v1)` (`:3060`): retitle to v2; document `POST /backups/import`,
+- `_docs/DATA_MODEL.md` — `## Backups` (`:540`): new `backup_schedules.include jsonb` column +
+  migration `0072_backup_schedule_include`; v2 `.cbk` artifact note; import creates no `backups` row.
+- `_docs/CMS_API.md` — `## Backups (v1)` (`:3342`): retitle to v2; document `POST /backups/import`,
   create-body `passphrase`, schedule `include`, `.cbk` base64 download `encoding`,
   `backup_restore_superseded`, and the new error codes.
-- `_docs/SECURITY_SPEC.md` — `## Backups (v1)` (`:625`, Polish prose): retitle to v2; encryption
+- `_docs/SECURITY_SPEC.md` — `## Backups (v1)` (`:930`, Polish prose): retitle to v2; encryption
   (AES-256-GCM + scrypt KDF), passphrase handling (never logged/cached/returned), users encrypted-only
   posture (opaque hashes), import validate-before-write + confirm-gated transactional restore.
-- `_docs/MEDIA_SPEC.md` — `Backup artefakty` (`:47`): correct the now-false `:56` "metadata + URLs
+- `_docs/MEDIA_SPEC.md` — `Backup artefakty` (`:59`): correct the now-false `:68` "metadata + URLs
   only" claim — media file **bytes** are now streamed into/out of the `.cbk` archive.
 - `docs/develop/security.md` — operator-facing security note mirroring the SECURITY_SPEC deltas
   (passphrase is the only way to decrypt; a lost passphrase makes the archive unrecoverable).
@@ -114,7 +112,7 @@ is a follow-up") and MUST NOT claim remote (s3/azure) streaming or remote no-OOM
 Question #4 resolves in favor of streaming. 07 corrects any doc that overclaims to match this scope.
 
 **Do NOT touch:** any `core/**` product code, `tests/**` suite bodies (07 only *registers* their
-paths), or the migration artifacts (06 owns `0066`). If a doc claim cannot be grounded against the
+paths), or the migration artifacts (06 owns `0072`). If a doc claim cannot be grounded against the
 landed 01–06 code, 07 corrects the doc to match the code — it never edits code to match a doc.
 
 ## 4. Security Documentation Contract
@@ -141,7 +139,7 @@ state — and 07 MUST verify against the real code before writing:
 - The `users` include is opt-in, permitted ONLY into an encrypted archive (which is every v2
   archive); an unencrypted user export is rejected pre-read by `assertUsersEncryptionAllowed`
   (`backup_users_requires_encryption`, 400); password hashes (`users.password_hash`,
-  `core/db/schema.ts:20`) travel as opaque values inside the encrypted archive, never emitted to
+  `core/db/tables/identity.ts:28`) travel as opaque values inside the encrypted archive, never emitted to
   logs/unencrypted output/clients; import of users is confirmation-gated (opt-in `restoreUsers`) with
   a lockout guard (`backup_users_restore_no_admin`, 409 → rollback) and must not escalate privileges.
 - Import upload is a size-ceilinged (`BACKUP_IMPORT_MAX_BYTES`) streamed multipart body; the file is
@@ -178,12 +176,12 @@ Executed strictly AFTER 01–06 are landed (sequential land order 01→02→03�
 ### 5.1 Reconcile shipped surface vs. the parent contract (read-only ground-truth sweep)
 
 ```
-grep/Read the shipped 511 code to capture the GROUND TRUTH for docs. At authoring HEAD (6f1dee36)
+grep/Read the shipped 511 code to capture the GROUND TRUTH for docs. At the repaired authoring HEAD (f75343de)
 the v1 baseline is:
-  - BACKUP_ARTIFACT_VERSION = 1 (backupService.ts:69); BACKUP_ARTIFACT_CONTENT_TYPE =
-    "application/json" (:70); artifact file coderso-backup-<id>.json (:82-83).
+  - BACKUP_ARTIFACT_VERSION = 1 (backupService.ts:71); BACKUP_ARTIFACT_CONTENT_TYPE =
+    "application/json" (:72); artifact file coderso-backup-<id>.json (:84-85).
   - BackupIncludeOption v1 = ["database","media","settings"] (backupTypes.ts).
-  - No backup_schedules.include column; last migration idx 65 = 0065_backup_run_metadata.
+  - No backup_schedules.include column; last migration idx 71 = 0071_seed_admin_role.
 Confirm the v2 deltas 01–06 actually shipped (document ONLY what is real):
   - v2 archive: .cbk extension + AES-256-GCM/scrypt envelope; the artifact/manifest version bump
     (`ARCHIVE_ARTIFACT_VERSION = 2`, owned + exported by 01 in `backupArchive.ts` and consumed by 05 —
@@ -192,9 +190,10 @@ Confirm the v2 deltas 01–06 actually shipped (document ONLY what is real):
     allowlist BOTH include it (the "new validated key joins its allowlist" rule).
   - New route: POST /backups/import (05) — path/verb/schema + its mapBackupError codes; verify the
     exact code→status map in backupRoutes.ts (:80 mapBackupError) — the doc mirrors the code.
-  - Migration: backup_schedules.include jsonb (06) — use the NEXT-FREE index at implement time, NOT `0066`:
-    in the merge target `feature/tasks`, `0066` = `0066_dashboard_layouts` (TASK-480) and `0067`–`0069` are
-    reserved by TASK-512/513/514, so 511 takes the next free after those (grep the migrations dir + journal at land).
+  - Migration: backup_schedules.include jsonb (06) — pinned to the NEXT-FREE index `0072` at this
+    worktree's HEAD (journal has 72 entries, last `0071_seed_admin_role`), but RE-VERIFY at land:
+    `0066` already exists as `0066_dashboard_layouts`, so a parallel stream landing a migration first
+    could consume `0072`; grep the migrations dir + journal at land and renumber if needed.
   - Env vars introduced: BACKUP_ENCRYPTION_PASSPHRASE (02/06 unattended passphrase),
     BACKUP_IMPORT_MAX_BYTES (05, default 2 GiB) + BACKUP_IMPORT_MAX_DECOMPRESSED_BYTES (05,
     compression-bomb ceiling, default 4× the upload ceiling), BACKUP_MEDIA_MAX_FILE_BYTES (03),
@@ -202,14 +201,14 @@ Confirm the v2 deltas 01–06 actually shipped (document ONLY what is real):
     `process.env.BACKUP_SCRYPT_LOGN` read; baseline 02 uses fixed DEFAULT_KDF with no env.) Plus the pre-existing undocumented v1 set —
     AUTHORITATIVE INSTRUCTION: this list is NOT hardcoded; run
     `grep -rn 'process.env.BACKUP' core/services/backups core/server/jobs/backupScheduler.ts` at
-    land time and document EVERY read it returns. At authoring HEAD 6f1dee36 that sweep returns FOUR
+    land time and document EVERY read it returns. At the repaired authoring HEAD f75343de that sweep returns FOUR
     pre-existing v1 reads, ALL of which must be documented:
-      - BACKUP_DIR — local artifact directory (backupService.ts:73; default ./storage/backups).
-      - BACKUP_SCHEDULER_ENABLED — in-process scheduler opt-in flag (backupScheduler.ts:32; default
+      - BACKUP_DIR — local artifact directory (backupService.ts:75; default ./storage/backups).
+      - BACKUP_SCHEDULER_ENABLED — in-process scheduler opt-in flag (backupScheduler.ts:42; default
         off outside production, on in production).
-      - BACKUP_SCHEDULER_TICK_MS — scheduler tick/poll interval in ms (backupScheduler.ts:11;
+      - BACKUP_SCHEDULER_TICK_MS — scheduler tick/poll interval in ms (backupScheduler.ts:10;
         default 60000).
-      - BACKUP_MAX_TOTAL_BYTES — storage-usage quota ceiling in bytes (backupService.ts:943 via
+      - BACKUP_MAX_TOTAL_BYTES — storage-usage quota ceiling in bytes (backupService.ts:987 via
         parsePositiveIntEnv; unset ⇒ no quota / overQuota never trips).
     (CMS_API currently documents only BACKUP_DIR/BACKUP_SCHEDULER_ENABLED at :3067,:3074 — the two
     tick/quota vars are undocumented today; 07 must document all four.)
@@ -244,7 +243,7 @@ grouping. Vitest pure-logic suites (`tests/vitest/ui/backups.test.tsx`,
 `tests/vitest/admin/backupsClient.test.ts` — 06) run via `test:vitest` (`vitest.config.ts`) and need
 no glob edit. Proof: `bun run test:bun:lane` completes with the new suites listed and green.
 
-### 5.3 DATA_MODEL sync — `_docs/DATA_MODEL.md` `## Backups` (:434)
+### 5.3 DATA_MODEL sync — `_docs/DATA_MODEL.md` `## Backups` (:540)
 
 Under `backup_schedules (singleton)` (`:450`), add:
 
@@ -252,7 +251,7 @@ Under `backup_schedules (singleton)` (`:450`), add:
 - `include jsonb NOT NULL DEFAULT '["database","settings","media"]'` — which sections a scheduled
   full backup captures (`database` | `settings` | `media` file bytes | opt-in `users` RBAC matrix);
   app-validated as a `BackupIncludeOption[]`; sensitive `users` is off by default. Added by migration
-  `0066_backup_schedule_include` (idx 66, gapless after TASK-484's `0065_backup_run_metadata`).
+  `0072_backup_schedule_include` (idx 72, gapless after `0071_seed_admin_role`).
 ```
 
 Add a one-line note that the v2 artifact is a compressed+encrypted `.cbk` (not a `version:1` JSON
@@ -260,7 +259,7 @@ blob) and that **import does not create a `backups` row** (restore-from-upload).
 backups-domain column in TASK-511 is `backup_schedules.include`; `backups`/`users`/`roles`/
 `user_roles` are unchanged — do not invent columns.
 
-### 5.4 CMS_API sync — `_docs/CMS_API.md` `## Backups` (:3060)
+### 5.4 CMS_API sync — `_docs/CMS_API.md` `## Backups` (:3342)
 
 - Retitle `## Backups (v1)` → `## Backups (v2)` (keep v1 back-compat notes where legacy `.json` rows
   still download/restore).
@@ -287,7 +286,7 @@ backups-domain column in TASK-511 is `backup_schedules.include`; `backups`/`user
   `backup_restore_superseded` 422. **Verify each against the landed `mapBackupError`
   (`backupRoutes.ts`) — the doc must match the code, not this list.**
 
-### 5.5 SECURITY_SPEC sync — `_docs/SECURITY_SPEC.md` `## Backups` (:625, Polish prose)
+### 5.5 SECURITY_SPEC sync — `_docs/SECURITY_SPEC.md` `## Backups` (:930, Polish prose)
 
 Retitle `(v1)`→`(v2)` and extend in the section's language/voice with: v2 archives always encrypted
 (AES-256-GCM, scrypt KDF, per-archive salt/IV/params in the header; wrong passphrase →
@@ -300,9 +299,9 @@ enforced server-side by `assertUsersEncryptionAllowed` (`backup_users_requires_e
 confirm-gated + transactional (all-or-nothing) with the users-restore lockout guard
 (`backup_users_restore_no_admin` → rollback). Keep the v1 notes where still true.
 
-### 5.6 MEDIA_SPEC sync — `_docs/MEDIA_SPEC.md` `Backup artefakty` (:47)
+### 5.6 MEDIA_SPEC sync — `_docs/MEDIA_SPEC.md` `Backup artefakty` (:59)
 
-Correct the now-false `:56` claim: v2 `.cbk` **streams media file bytes** into a `media/<storageKey>`
+Correct the now-false `:68` claim: v2 `.cbk` **streams media file bytes** into a `media/<storageKey>`
 member (03), read from the active storage adapter; import writes them back via `putAt(...)` **after**
 the DB tx commits (object storage is not transactional). Per-file ceiling `BACKUP_MEDIA_MAX_FILE_BYTES`;
 member keys are traversal-guarded (`assertSafeMediaKey` → `backup_media_key_unsafe`, 422). Keep the v1
@@ -360,46 +359,45 @@ Then add a short "Backups (v2)" paragraph to `docs/develop/getting-started.md`: 
 encrypted `.cbk`; set `BACKUP_ENCRYPTION_PASSPHRASE` for scheduled backups (else they fail closed);
 the same passphrase is required to import; `users` include is encrypted-only + opt-in.
 
-### 5.9 Changelog `1229` + Index
+### 5.9 Changelog `1281` + Index
 
-Create `_docs/_CHANGELOG/1229-2026-07-05-task-511-backup-v2-*.md` following the `1222` (TASK-484)
-entry shape: Title line, `Date`/`Version`/`Tasks`, Key Changes grouped by area (Archive format &
+Create `_docs/_CHANGELOG/1281-2026-07-05-task-511-backup-v2-*.md` following the latest entry
+shape: Title line, `Date`/`Version`/`Tasks`, Key Changes grouped by area (Archive format &
 manifest, Compression+encryption, Media bytes, Users/RBAC include, Import pipeline, Scheduler+Admin
-UI, Migration `0066`, Docs/Data Model/API/Security/Media, Testing, Task Board). `Tasks:` TASK-511 +
-01..07. Then add the Index row at the TOP of the table (`_docs/_CHANGELOG/README.md:35`):
+UI, Migration `0072`, Docs/Data Model/API/Security/Media, Testing, Task Board). `Tasks:` TASK-511 +
+01..07. Then add the Index row at the TOP of the table:
 
 ```md
-| 1229 | 2026-07-05 | TASK-511 Backup v2 — Scalable, Compressed, Encrypted, Importable — … | Backups/Data/Security/Streaming/Media/Admin UI/Schema/API/Testing/Docs/Task Board |
+| 1281 | 2026-07-05 | TASK-511 Backup v2 — Scalable, Compressed, Encrypted, Importable — … | Backups/Data/Security/Streaming/Media/Admin UI/Schema/API/Testing/Docs/Task Board |
 ```
 
-then update the pointer at `_docs/_CHANGELOG/README.md:32` (currently *"Use 1223…"*) to the next
-genuinely-free number at land time — **≥ 1230**, verified against the LIVE merge-target README; never
-`1224` (reserved by a parallel stream) and never below `1229`.
+then update the pointer to the next genuinely-free number at land time — **≥ 1282**, verified
+against the LIVE merge-target README; never a number already reserved by a parallel stream and never
+below `1281`.
 
 ### 5.10 Task board + statuses — `_docs/_TASKS/README.md`
 
 ```
-1. VERIFY placement first: grep -c 'TASK-511' _docs/_TASKS/README.md. At HEAD 6f1dee36 this is 0 —
-   TASK-511 and its 01..07 rows are NOT on the board (authored straight into the worktree; the current
-   To Do: 260 count does NOT include any 511 row). Do NOT "move" rows that aren't there; do NOT
-   decrement To Do.
+1. VERIFY placement first: grep -c 'TASK-511' _docs/_TASKS/README.md — confirm 511 and its 01..07
+   rows are absent (authored straight into the worktree; the current To Do count does NOT include any
+   511 row). Do NOT "move" rows that aren't there; do NOT decrement To Do.
 2. ADD the TASK-511 parent + each subtask row (01..07) DIRECTLY to the ## Done table, each with a
-   Done(2026-07-05) summary in the Notes column (shape template: TASK-484 row at :157 — end with
-   "Changelog 1229. 7 subtasks (01–07).").
-3. Statistics (:81-83): INCREMENT Done by 8 (1 umbrella + 7 subtasks; the 511 tree has NO leaves):
-   2868 → 2876. Leave To Do: 260 and In Progress: 5 UNCHANGED. Apply the +8 delta to the LIVE numbers
-   at land time (they drift as other tasks land), not these snapshots.
+   Done(2026-07-05) summary in the Notes column — end with "Changelog 1281. 7 subtasks (01–07).".
+3. Statistics (the `## Statistics` block at the top of `_docs/_TASKS/README.md`): INCREMENT Done by
+   8 (1 umbrella + 7 subtasks; the 511 tree has NO leaves). Do NOT hard-code any snapshot — read the
+   LIVE counters immediately before editing (they drift as other tasks land), apply the +8 delta to
+   those live numbers, and leave To Do / In Progress UNCHANGED.
    (Contingency) If a prior agent DID add 511 rows to ## To Do before closure, instead MOVE those
    rows To Do→Done and decrement To Do by exactly that many while incrementing Done by the same.
 4. Parent contract file: flip **Status:** ⏳ To Do → ✅ Done (add **Completed:** 2026-07-05); flip
-   every ## Sub-Tasks table Status cell (01..07, table body :151-157; heading ## Sub-Tasks at :147) to ✅ Done. The changelog number at
-   :49,:50 already reads 1229 — verify, do not change.
-5. Each subtask file (01..06): flip its own **Status:** to ✅ Done. All six already reference 1229
+   every ## Sub-Tasks table Status cell (01..07) to ✅ Done. The changelog number already reads
+   1281 — verify, do not change.
+5. Each subtask file (01..06): flip its own **Status:** to ✅ Done. All six already reference 1281
    (reconciled tree-wide) — verify only.
    Confirm no conflicting uncommitted owner drift-agent edits before editing (parallel-agent hygiene).
 6. Final check: grep -rn "⏳ To Do\|🚧 In Progress" _docs/_TASKS/TASK-511* returns nothing; no
-   superseded/phantom changelog file exists (`ls _docs/_CHANGELOG/12{2,3}9-* 2>/dev/null` empty) and
-   the README Index has exactly one 511 row, pointing to 1229.
+   superseded/phantom changelog file exists and the README Index has exactly one 511 row, pointing
+   to 1281.
 ```
 
 ## 6. Testing / Gates Requirements
@@ -422,8 +420,8 @@ discipline; typecheck-scope gotcha):
    are picked up and green.
 6. Security/release gates: `tests/security/codersoSecurityGate.test.ts` green, and (if available in
    this worktree) `bun run gates:coderso` / `scan:security:strict`.
-7. Docs sanity: the new changelog file number is unique (no `1229` collision, no superseded/phantom
-   changelog file under `_docs/_CHANGELOG/`), the Index row is well-formed and points to `1229`;
+7. Docs sanity: the new changelog file number is unique (no `1281` collision, no superseded/phantom
+   changelog file under `_docs/_CHANGELOG/`), the Index row is well-formed and points to `1281`;
    grep the edited specs for stale "v1 / metadata+URLs only / JSON artifact" claims
    where v2 superseded them, and confirm every documented route/error-code/env var maps to a real
    symbol in the shipped code (fail-closed: if it isn't in the code, it isn't in the docs).
@@ -441,17 +439,17 @@ statuses to Done or write a "green" changelog claim until every gate above passe
 
 ## 7. Open Questions / cross-subtask reconcile (for the orchestrator)
 
-1. **Changelog `1229` — orchestrator-PINNED and reconciled tree-wide.** The number is **`1229`** by
-   orchestrator pin: `README:32` currently reads *"Use 1223…"* and highest-on-disk is `1222`, but
-   `1220–1228` are reserved by parallel streams (482–484 / 512–516) and TASK-480 owns `1223` in the
-   merge target, so the next number safe for 511 is `1229`. All seven 511 files reference `1229`, so
-   no closure-time renumbering is required — 07 VERIFIES the 511 tree references `1229` (a check of
-   the 511 files, NOT of README:32) and creates the `1229` changelog. 07 does NOT edit README:32 to
-   read 1229; at land it advances the pointer to the next genuinely-free number ≥ 1230.
-2. **Board Statistics arithmetic + To Do presence.** TASK-511 is absent from the board (grep: 0), so
-   closure ADDS 8 rows (umbrella + 7 subtasks, no leaves) straight to `## Done` and increments Done by
-   8 (2868→2876), To Do/In Progress unchanged. Confirm this, that there are genuinely no leaves under
-   any 511 subtask, and that 07 applies the +8 delta to the LIVE counts at land time (not the snapshot).
+1. **Changelog `1281` — orchestrator-PINNED and reconciled tree-wide.** The number is **`1281`** by
+   orchestrator pin: the journal runs through `1273`, `1274` is claimed by TASK-559, and
+   `1275–1279` are reserved by the small-feature stream, so the next number safe for 511 is `1281`.
+   All seven 511 files reference `1281`, so no closure-time renumbering is required — 07 VERIFIES
+   the 511 tree references `1281` (a check of the 511 files, NOT of a possibly-stale README pointer)
+   and creates the `1281` changelog. At land it advances the pointer to the next genuinely-free
+   number ≥ 1282.
+2. **Board Statistics arithmetic + To Do presence.** TASK-511 is absent from the board, so closure
+   ADDS 8 rows (umbrella + 7 subtasks, no leaves) straight to `## Done` and increments Done by 8
+   (applied to the LIVE counters read immediately before editing — do NOT use a stale snapshot). To
+   Do/In Progress unchanged. Confirm there are genuinely no leaves under any 511 subtask.
 3. **CMS_API/SECURITY_SPEC section retitle vs dual v1/v2.** This contract retitles `(v1)`→`(v2)` while
    preserving v1 back-compat notes (legacy `.json` rows still download/restore). Confirm preferred
    presentation (single retitled section with caveats vs a separate `### Legacy v1` subsection).
@@ -464,10 +462,10 @@ statuses to Done or write a "green" changelog claim until every gate above passe
 
 ## 8. Coordination
 
-- **Changelog `1229` is created ONLY here** (closure 511-07); no other 511 subtask writes
-  `_docs/_CHANGELOG/*` or `_docs/_TASKS/*`. After creating `1229`, set the README pointer (`:32`,
-  currently *"Use 1223…"*) to the next genuinely-free number at land time (**≥ 1230**), verified
-  against the LIVE merge-target README — never `1224` and never below `1229`.
+- **Changelog `1281` is created ONLY here** (closure 511-07); no other 511 subtask writes
+  `_docs/_CHANGELOG/*` or `_docs/_TASKS/*`. After creating `1281`, set the README pointer to the next
+  genuinely-free number at land time (**≥ 1282**), verified against the LIVE merge-target README —
+  never a number already reserved by a parallel stream and never below `1281`.
 - **Strictly sequential land order:** 01→02→03→04→05→06→07. 07 runs last and presumes 01–06 are
   merged; it documents the ACTUAL shipped surface, not the planned one — reconcile against real code
   first (§5.1).
@@ -479,8 +477,8 @@ statuses to Done or write a "green" changelog claim until every gate above passe
   `BACKUP_SCRYPT_LOGN` (OPTIONAL — only if 02 ships a real `process.env.BACKUP_SCRYPT_LOGN` read) (+ the pre-existing v1 set,
   ALL of which 07 documents: `BACKUP_DIR`, `BACKUP_SCHEDULER_ENABLED`, `BACKUP_SCHEDULER_TICK_MS`,
   `BACKUP_MAX_TOTAL_BYTES` — grep `process.env.BACKUP` at land time to confirm the full set).
-- **Branch/worktree:** `feature/task-511` (`/home/coder/project/Coderso-task-511`), branched from
-  `feature/tasks` HEAD `6f1dee36`.
+- **Branch/worktree:** `task/stream-511` (`/home/coder/project/Coderso-task-511`), at
+  `feat/implementations` HEAD `f75343de` (2026-08-14).
 - **Shared REMOTE test DB** (`DATABASE_URL` in `.env`): gate runs only; never commit a destructive
   restore/import against it.
 - **Parallel-agent hygiene:** the owner may run their own drift-fixer agents in the shared tree. 07

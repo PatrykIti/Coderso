@@ -559,6 +559,12 @@ pageviews so retention pruning removes both without FK violations.
 - frequency (string: daily|weekly|monthly, default daily)
 - retention_days (integer, default 30)
 - storage_driver (string: local|s3|azure, default local)
+- include (jsonb NOT NULL DEFAULT '["database","settings","media"]') — which
+  sections a scheduled full backup captures (`database` | `settings` | `media`
+  file bytes | opt-in `users` RBAC matrix); app-validated as a
+  `BackupIncludeOption[]`; sensitive `users` is off by default. Added by
+  migration `0072_backup_schedule_include` (idx 72, gapless after
+  `0071_seed_admin_role`).
 - next_run_at (timestamp, nullable) — scheduler-managed; when `enabled` and
   `next_run_at <= now` the schedule is due
 - last_run_at (timestamp, nullable) — set after each scheduled run
@@ -566,12 +572,18 @@ pageviews so retention pruning removes both without FK violations.
 - updated_at
 
 Scheduler / retention lifecycle: when a schedule is `enabled` and due, the
-in-process scheduler runs `createBackup({ kind: "scheduled" })`, advances
-`next_run_at` (recomputed from `frequency`) and sets `last_run_at`, then prunes
-expired terminal backups older than `retention_days`. Remote (`s3`/`azure`)
-artifacts store the public URL in `artifact_path` and the object key in
-`artifact_key`; restore reads + strict-parses the `version: 1` artifact and
-restores metadata + settings transactionally (never media file bytes).
+in-process scheduler runs `createBackup({ kind: "scheduled", include })`,
+advances `next_run_at` (recomputed from `frequency`) and sets `last_run_at`,
+then prunes expired terminal backups older than `retention_days`. Remote
+(`s3`/`azure`) artifacts store the public URL in `artifact_path` and the object
+key in `artifact_key`.
+
+Artifact format: every v2 backup is a compressed + encrypted `.cbk` archive
+(AES-256-GCM, scrypt KDF; see CMS_API/SECURITY_SPEC) — not a `version: 1` JSON
+blob. Legacy v1 `.json` rows still download/restore in place; v2 rows restore
+via download → Import with the passphrase (`backup_restore_superseded` for
+one-click restore-by-id). **Import does not create a `backups` row** — it
+restores from an uploaded archive.
 
 ## Optional (v1.1+)
 

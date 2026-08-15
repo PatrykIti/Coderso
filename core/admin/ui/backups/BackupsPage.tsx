@@ -1,4 +1,4 @@
-import { CloudUpload, Database, HardDrive, Server } from "lucide-react";
+import { CloudUpload, Database, FileUp, HardDrive, Server } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 
@@ -13,6 +13,7 @@ import {
   getBackupScheduleCached,
   getCachedBackups,
   getCachedBackupSchedule,
+  importBackup,
   listBackupsCached,
   restoreBackup,
   updateBackupSchedule,
@@ -28,6 +29,7 @@ import { PageHeader } from "@/ui/shared/PageHeader";
 import { SectionCard } from "@/ui/shared/SectionCard";
 import { subscribeCacheEvents } from "@/utils/cacheBus";
 
+import { BackupImportDialog } from "./BackupImportDialog";
 import { BackupNowDialog } from "./BackupNowDialog";
 import { BackupScheduleCard } from "./BackupScheduleCard";
 import { BackupsTable } from "./BackupsTable";
@@ -55,10 +57,15 @@ const downloadBackupContent = (payload: {
   content?: string;
   contentType?: string;
   fileName?: string;
+  encoding?: "base64";
 }) => {
   if (typeof document === "undefined") return false;
   if (!payload.content) return false;
-  const blob = new Blob([payload.content], {
+  // v2 `.cbk` payloads arrive base64-encoded (JSON cannot carry raw bytes);
+  // decode byte-exactly or the Blob would contain the base64 text, corrupting
+  // the archive and making it un-importable.
+  const bytes = payload.encoding === "base64" ? atob(payload.content) : payload.content;
+  const blob = new Blob([bytes], {
     type: payload.contentType ?? "application/octet-stream",
   });
   const url = URL.createObjectURL(blob);
@@ -83,6 +90,7 @@ const createInitialBackupsState = () => {
 export function BackupsPage() {
   const [initialState] = useState(createInitialBackupsState);
   const [backupOpen, setBackupOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
   const [backupList, setBackupList] = useState<BackupListResult>(initialState.backupList);
   const [schedule, setSchedule] = useState<BackupSchedule | null>(initialState.schedule);
   const [isLoading, setIsLoading] = useState(!initialState.hasCache);
@@ -208,11 +216,11 @@ export function BackupsPage() {
     return () => window.clearInterval(interval);
   }, [loadBackups, shouldPollBackups]);
 
-  const handleCreateBackup = async (include: BackupIncludeOption[]) => {
+  const handleCreateBackup = async (include: BackupIncludeOption[], passphrase: string) => {
     setIsSaving(true);
     setError(null);
     try {
-      const backup = await createBackup({ kind: "manual", include });
+      const backup = await createBackup({ kind: "manual", include, passphrase });
       const cached = getCachedBackups({ page: 1, limit: backupPageSize, query });
       if (cached) {
         setBackupList(cached);
@@ -226,7 +234,7 @@ export function BackupsPage() {
         toast.error(message);
         return false;
       }
-      toast.success("Backup created.");
+      toast.success("Backup created. Keep your passphrase safe.");
       return true;
     } catch (err) {
       if (isApiClientError(err)) {
@@ -234,6 +242,37 @@ export function BackupsPage() {
         toast.error(err.message);
       } else {
         const message = "Failed to create backup.";
+        setError(message);
+        toast.error(message);
+      }
+      return false;
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleImportBackup = async (input: {
+    file: File;
+    passphrase: string;
+    restoreUsers: boolean;
+  }) => {
+    setIsSaving(true);
+    setError(null);
+    try {
+      const result = await importBackup(input);
+      await refresh({ force: true });
+      toast.success(
+        `Import complete: ${result.tablesRestored} tables, ${result.rowsRestored} rows` +
+          `${result.mediaRestored > 0 ? `, ${result.mediaRestored} media` : ""}` +
+          `${result.usersRestored > 0 ? `, ${result.usersRestored} users` : ""}.`
+      );
+      return true;
+    } catch (err) {
+      if (isApiClientError(err)) {
+        setError(err.message);
+        toast.error(err.message);
+      } else {
+        const message = "Failed to import backup.";
         setError(message);
         toast.error(message);
       }
@@ -444,6 +483,10 @@ export function BackupsPage() {
                   </Button>
                 </>
               ) : null}
+              <Button className="gap-2" onClick={() => setImportOpen(true)} disabled={isSaving}>
+                <FileUp className="h-4 w-4" />
+                Import
+              </Button>
               <Button className="gap-2" onClick={() => setBackupOpen(true)} disabled={isSaving}>
                 <CloudUpload className="h-4 w-4" />
                 Create
@@ -529,6 +572,12 @@ export function BackupsPage() {
         open={backupOpen}
         onOpenChange={setBackupOpen}
         onCreate={handleCreateBackup}
+        isSubmitting={isSaving}
+      />
+      <BackupImportDialog
+        open={importOpen}
+        onOpenChange={setImportOpen}
+        onImport={handleImportBackup}
         isSubmitting={isSaving}
       />
       <ConfirmActionDialog

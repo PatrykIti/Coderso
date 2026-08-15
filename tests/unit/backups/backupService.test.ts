@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { writeFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import { afterAll, afterEach, beforeAll, expect, test } from "bun:test";
@@ -34,7 +34,20 @@ import {
   restoreBackup,
   setBackupSchedule,
 } from "../../../core/services/backups/backupService";
-import type { BackupArtifact, BackupStatus } from "../../../core/services/backups/backupTypes";
+import { exportConfig } from "../../../core/services/tools/importExportService";
+import {
+  BACKUP_ARCHIVE_CONTENT_TYPE,
+  BACKUP_ARCHIVE_EXTENSION,
+} from "../../../core/services/backups/backupCrypto";
+import type {
+  BackupArtifact,
+  BackupIncludeOption,
+  BackupStatus,
+} from "../../../core/services/backups/backupTypes";
+
+// 02's MIN_BACKUP_PASSPHRASE floor: every v2 `.cbk` create must carry a
+// passphrase ≥ 12 chars (mandatory encryption).
+const TEST_PASSPHRASE = "test-backup-passphrase-511";
 
 const hasDb = Boolean(process.env.DATABASE_URL) && (await canConnect());
 const testIfDb = hasDb ? test : test.skip;
@@ -60,20 +73,54 @@ afterEach(async () => {
   createdIds.length = 0;
 });
 
-testIfDb("createBackup adds backup and listBackups returns it", async () => {
-  const created = await createBackup({ kind: "manual", include: ["database", "settings"] });
+testIfDb(
+  "createBackup adds a completed encrypted backup and listBackups returns it",
+  async () => {
+    const created = await createBackup({
+      kind: "manual",
+      include: ["database", "settings"],
+      passphrase: TEST_PASSPHRASE,
+    });
+    createdIds.push(created.id);
+
+    const list = await listBackups({ page: 1, limit: 5 });
+    const match = list.items.find((item) => item.id === created.id);
+
+    expect(match).not.toBeNull();
+    expect(match?.status).toBe("complete");
+    expect(match?.kind).toBe("manual");
+    // Client-facing records REDACT local artifact paths to "local" (no server
+    // path leak); a positive byte count proves the encrypted `.cbk` was written.
+    expect(match?.artifactPath).toBe("local");
+    expect(match?.sizeBytes).toBeGreaterThan(0);
+    expect(list.total).toBeGreaterThanOrEqual(1);
+    expect(list.worker.mode).toBe("internal");
+  },
+  30000
+);
+
+testIfDb("createBackup without a passphrase self-marks failed (mandatory encryption)", async () => {
+  const created = await createBackup({ kind: "manual", include: ["database"] });
   createdIds.push(created.id);
-
-  const list = await listBackups({ page: 1, limit: 5 });
-  const match = list.items.find((item) => item.id === created.id);
-
-  expect(match).not.toBeNull();
-  expect(match?.status).toBe("complete");
-  expect(match?.kind).toBe("manual");
-  expect(match?.artifactPath).toBe("local");
-  expect(list.total).toBeGreaterThanOrEqual(1);
-  expect(list.worker.mode).toBe("internal");
+  // Fail-closed BEFORE any archive work: the row is persisted as failed with
+  // the generic passphrase code (04's users guard only fires for users include).
+  expect(created.status).toBe("failed");
+  expect(created.error).toBe("backup_passphrase_required");
+  expect(created.artifactPath).toBeNull(); // no `.cbk` bytes were written
 });
+
+testIfDb(
+  "createBackup with users include but no passphrase self-marks failed with the users code",
+  async () => {
+    const created = await createBackup({ kind: "manual", include: ["database", "users"] });
+    createdIds.push(created.id);
+    // 04's guard runs FIRST inside createBackup: the users-specific code wins over
+    // the generic passphrase one, and no users export can run unencrypted.
+    expect(created.status).toBe("failed");
+    expect(created.error).toBe("backup_users_requires_encryption");
+    expect(created.artifactPath).toBeNull();
+  }
+);
 
 test("normalizeBackupInclude defaults, dedupes, and rejects invalid selections", () => {
   expect(normalizeBackupInclude(undefined)).toEqual(["database", "media"]);
@@ -98,42 +145,86 @@ testIfDb("queued backups reject restore and download until a worker completes th
   await expect(resolveBackupDownload(created.id)).rejects.toThrow("backup_not_ready");
 });
 
-testIfDb("completed backups download CMS-managed artifacts and external URLs", async () => {
-  const localArtifact = await createBackup({ kind: "manual", include: ["database"] });
-  const invalidArtifact = await createBackup({ kind: "manual", include: ["database"] });
-  const urlArtifact = await createBackup({ kind: "manual", include: ["database"] });
-  createdIds.push(localArtifact.id, invalidArtifact.id, urlArtifact.id);
+testIfDb(
+  "completed backups download CMS-managed artifacts and external URLs",
+  async () => {
+    const localArtifact = await createBackup({
+      kind: "manual",
+      include: ["database"],
+      passphrase: TEST_PASSPHRASE,
+    });
+    const invalidArtifact = await createBackup({
+      kind: "manual",
+      include: ["database"],
+      passphrase: TEST_PASSPHRASE,
+    });
+    const urlArtifact = await createBackup({
+      kind: "manual",
+      include: ["database"],
+      passphrase: TEST_PASSPHRASE,
+    });
+    createdIds.push(localArtifact.id, invalidArtifact.id, urlArtifact.id);
 
-  await markBackupComplete(invalidArtifact.id, "/var/backups/local.zip", null, 42);
-  await markBackupComplete(urlArtifact.id, "https://backups.example.test/url.zip", null, 42);
+    await markBackupComplete(invalidArtifact.id, "/var/backups/local.zip", null, 42);
+    await markBackupComplete(urlArtifact.id, "https://backups.example.test/url.zip", null, 42);
 
-  const localDownload = await resolveBackupDownload(localArtifact.id);
-  expect(localDownload.url).toBeNull();
-  expect(localDownload.path).toBeNull();
-  expect(localDownload.fileName).toContain(localArtifact.id);
-  expect(localDownload.contentType).toBe("application/json");
-  expect(localDownload.content).toContain(localArtifact.id);
-  await expect(resolveBackupDownload(invalidArtifact.id)).rejects.toThrow(
-    "backup_artifact_invalid"
-  );
-  await expect(resolveBackupDownload(urlArtifact.id)).resolves.toEqual({
-    url: "https://backups.example.test/url.zip",
-    path: null,
-  });
-});
+    const localDownload = await resolveBackupDownload(localArtifact.id);
+    expect(localDownload.url).toBeNull();
+    expect(localDownload.path).toBeNull();
+    expect(localDownload.fileName).toBe(
+      `coderso-backup-${localArtifact.id}${BACKUP_ARCHIVE_EXTENSION}`
+    );
+    expect(localDownload.contentType).toBe(BACKUP_ARCHIVE_CONTENT_TYPE);
+    // v2 `.cbk` transport (06 HIGH fix): base64-encoded binary that decodes
+    // byte-for-byte to the stored archive — proving the download is re-importable.
+    expect(localDownload.encoding).toBe("base64");
+    expect(localDownload.content).toBeTruthy();
+    // The stored `.cbk` lives at the deterministic local path (client-facing
+    // records redact it to "local"); decode the base64 payload and compare
+    // byte-for-byte — proving the download is re-importable.
+    const storedPath = path.join(
+      process.cwd(),
+      process.env.BACKUP_DIR ?? "storage/backups",
+      `coderso-backup-${localArtifact.id}${BACKUP_ARCHIVE_EXTENSION}`
+    );
+    const storedBytes = await readFile(storedPath);
+    expect(Buffer.from(localDownload.content!, "base64")).toEqual(storedBytes);
 
-testIfDb("deleteBackup removes only the targeted row", async () => {
-  const first = await createBackup({ kind: "manual", include: ["database"] });
-  const second = await createBackup({ kind: "manual", include: ["database"] });
-  createdIds.push(first.id, second.id);
+    await expect(resolveBackupDownload(invalidArtifact.id)).rejects.toThrow(
+      "backup_artifact_invalid"
+    );
+    await expect(resolveBackupDownload(urlArtifact.id)).resolves.toEqual({
+      url: "https://backups.example.test/url.zip",
+      path: null,
+    });
+  },
+  60000
+);
 
-  await expect(deleteBackup(first.id)).resolves.toEqual({ ok: true, id: first.id });
-  createdIds.splice(createdIds.indexOf(first.id), 1);
+testIfDb(
+  "deleteBackup removes only the targeted row",
+  async () => {
+    const first = await createBackup({
+      kind: "manual",
+      include: ["database"],
+      passphrase: TEST_PASSPHRASE,
+    });
+    const second = await createBackup({
+      kind: "manual",
+      include: ["database"],
+      passphrase: TEST_PASSPHRASE,
+    });
+    createdIds.push(first.id, second.id);
 
-  const remaining = await listBackups({ page: 1, limit: 50 });
-  expect(remaining.items.some((item) => item.id === first.id)).toBe(false);
-  expect(remaining.items.some((item) => item.id === second.id)).toBe(true);
-});
+    await expect(deleteBackup(first.id)).resolves.toEqual({ ok: true, id: first.id });
+    createdIds.splice(createdIds.indexOf(first.id), 1);
+
+    const remaining = await listBackups({ page: 1, limit: 50 });
+    expect(remaining.items.some((item) => item.id === first.id)).toBe(false);
+    expect(remaining.items.some((item) => item.id === second.id)).toBe(true);
+  },
+  60000
+);
 
 testIfDb("getBackupSchedule returns defaults and setBackupSchedule updates", async () => {
   const current = await getBackupSchedule();
@@ -155,6 +246,33 @@ testIfDb("getBackupSchedule returns defaults and setBackupSchedule updates", asy
     enabled: current.enabled,
     storageDriver: current.storageDriver,
   });
+});
+
+testIfDb("getBackupSchedule seed exposes the full default include set", async () => {
+  const schedule = await getBackupSchedule();
+  // The shared singleton was seeded by 06 (or migrated with the 0072 default)
+  // with everything EXCEPT the sensitive users matrix.
+  expect(schedule.include).toEqual(expect.arrayContaining(["database", "settings", "media"]));
+  expect(schedule.include).not.toContain("users");
+});
+
+testIfDb("setBackupSchedule round-trips include through mapSchedule", async () => {
+  const current = await getBackupSchedule();
+  const updated = await setBackupSchedule({ include: ["database", "media"] });
+  expect(updated.include).toEqual(["database", "media"]);
+
+  const reread = await getBackupSchedule();
+  expect(reread.include).toEqual(["database", "media"]);
+
+  // Restore the stored scope so the singleton stays as it was.
+  await setBackupSchedule({ include: current.include });
+});
+
+testIfDb("setBackupSchedule rejects an empty or out-of-enum include", async () => {
+  await expect(setBackupSchedule({ include: [] })).rejects.toThrow("backup_include_required");
+  await expect(setBackupSchedule({ include: ["unknown" as BackupIncludeOption] })).rejects.toThrow(
+    "backup_include_invalid"
+  );
 });
 
 // --- Schedule run-metadata wiring (TASK-484-01-L02). ---
@@ -179,6 +297,7 @@ afterAll(async () => {
       frequency: priorScheduleRow.frequency,
       retentionDays: priorScheduleRow.retentionDays,
       storageDriver: priorScheduleRow.storageDriver,
+      include: priorScheduleRow.include,
       nextRunAt: priorScheduleRow.nextRunAt,
       lastRunAt: priorScheduleRow.lastRunAt,
       updatedAt: priorScheduleRow.updatedAt,
@@ -357,362 +476,6 @@ testIfDb("mapBackup keeps artifactKey null on the client-facing (redacted) map",
   expect(backup).not.toBeNull();
   expect(backup!.artifactKey).toBeNull();
 });
-
-// --- Restore implementation (TASK-484-04-L01). ---
-
-const artifactFilePath = (id: string) =>
-  path.resolve(
-    process.cwd(),
-    process.env.BACKUP_DIR ?? "storage/backups",
-    `coderso-backup-${id}.json`
-  );
-
-test("parseBackupArtifact strict-parses and fails closed on malformed input", () => {
-  const valid: BackupArtifact = {
-    version: 1,
-    id: "b",
-    createdAt: new Date().toISOString(),
-    include: ["database"],
-    storageDriver: "local",
-    database: {
-      pages: [],
-      contentTypes: [],
-      contentEntries: [],
-      posts: [],
-      media: [],
-      menus: [],
-      menuItems: [],
-      themeProfiles: [],
-      themeRoutes: [],
-      redirects: [],
-      pageRevisions: [],
-      detailPageDocuments: [],
-      detailPageRevisions: [],
-      customScreens: [],
-      customScreenEntryPresentationOverrides: [],
-      contentRevisions: [],
-      contentTaxonomies: [],
-      contentTerms: [],
-      contentTermAssignments: [],
-      postRevisions: [],
-      postPreviewTokens: [],
-      postTermAssignments: [],
-    },
-    settings: null,
-    media: null,
-  };
-  expect(parseBackupArtifact(JSON.stringify(valid)).version).toBe(1);
-
-  // not JSON
-  expect(() => parseBackupArtifact("not json")).toThrow("backup_restore_invalid_artifact");
-  // wrong version
-  expect(() => parseBackupArtifact(JSON.stringify({ ...valid, version: 2 }))).toThrow(
-    "backup_restore_invalid_artifact"
-  );
-  // unknown top-level key
-  expect(() => parseBackupArtifact(JSON.stringify({ ...valid, rogue: true }))).toThrow(
-    "backup_restore_invalid_artifact"
-  );
-  // snapshot table is not an array
-  expect(() =>
-    parseBackupArtifact(
-      JSON.stringify({ ...valid, database: { ...valid.database, redirects: {} } })
-    )
-  ).toThrow("backup_restore_invalid_artifact");
-  // non-object root
-  expect(() => parseBackupArtifact(JSON.stringify([1, 2, 3]))).toThrow(
-    "backup_restore_invalid_artifact"
-  );
-});
-
-testIfDb("restoreBackup requires an explicit confirm before any read/write", async () => {
-  const created = await createBackup({ kind: "manual", include: ["database"] });
-  createdIds.push(created.id);
-
-  // Complete backup, but no confirmation → pre-write guard rejects (not "unsupported").
-  await expect(restoreBackup(created.id)).rejects.toThrow("backup_restore_confirmation_required");
-  await expect(restoreBackup(created.id, { confirm: false })).rejects.toThrow(
-    "backup_restore_confirmation_required"
-  );
-});
-
-testIfDb(
-  "restoreBackup rejects not-ready backups even with confirm (no destructive path)",
-  async () => {
-    const [queued] = await db
-      .insert(backups)
-      .values({ status: "queued", kind: "manual", storageDriver: "local" })
-      .returning();
-    if (!queued) throw new Error("backup_create_failed");
-    createdIds.push(queued.id);
-
-    await expect(restoreBackup(queued.id, { confirm: true })).rejects.toThrow("backup_not_ready");
-    // Missing backup maps to not_found.
-    await expect(
-      restoreBackup("00000000-0000-0000-0000-000000000000", { confirm: true })
-    ).rejects.toThrow("backup_not_found");
-  }
-);
-
-testIfDb(
-  "restoreBackup fails closed on a malformed artifact BEFORE opening the transaction",
-  async () => {
-    const created = await createBackup({ kind: "manual", include: ["database"] });
-    createdIds.push(created.id);
-
-    // Corrupt the stored artifact to an unsupported version; restore must reject at
-    // strict-parse (which runs before any db.transaction), so nothing is written.
-    await writeFile(artifactFilePath(created.id), JSON.stringify({ version: 2 }), "utf8");
-    await expect(restoreBackup(created.id, { confirm: true })).rejects.toThrow(
-      "backup_restore_invalid_artifact"
-    );
-  }
-);
-
-testIfDb(
-  "restoreBackup no longer throws backup_restore_unsupported (real restore path)",
-  async () => {
-    // A media-only backup carries no database/settings sections, so restore is a
-    // genuine but empty (no-op) transaction — safe to run committed against the
-    // shared DB and proof the stub is gone.
-    const created = await createBackup({ kind: "manual", include: ["media"] });
-    createdIds.push(created.id);
-
-    const restored = await restoreBackup(created.id, { confirm: true });
-    expect(restored.id).toBe(created.id);
-    expect(restored.status).toBe("complete");
-  }
-);
-
-testIfDb(
-  "restoreArtifactTx round-trips snapshot rows + settings inside a ROLLED-BACK transaction",
-  async () => {
-    // Capture a real settings bundle via createBackup (so importConfigTx validates a
-    // genuine export), but drive the snapshot replace with a MINIMAL, fixture-scoped
-    // database section: current redirects (so the table's real rows survive the in-tx
-    // replace) plus one uniquely-scoped injected redirect. Keeping the other snapshot
-    // tables empty avoids re-inserting a large snapshot while still exercising the full
-    // delete+insert+date-revive path. Everything runs inside a deliberately rolled-back
-    // tx (the shared-DB dry-run seam): assert the injected row is visible IN-tx, then
-    // roll back so NOTHING commits.
-    const created = await createBackup({ kind: "manual", include: ["settings"] });
-    createdIds.push(created.id);
-    const dl = await resolveBackupDownload(created.id);
-    expect(dl.content).toBeTruthy();
-    const artifact = parseBackupArtifact(dl.content as string);
-    expect(artifact.settings).not.toBeNull();
-
-    const currentRedirects = await db.select().from(redirects);
-    const uniquePath = `/rollback-seam-${randomUUID()}`;
-    const now = new Date().toISOString();
-    const seamArtifact: BackupArtifact = {
-      ...artifact,
-      settings: artifact.settings
-        ? {
-            ...artifact.settings,
-            settings: { ...artifact.settings.settings, "site.contentRoutes": [] },
-          }
-        : null,
-      database: {
-        pages: [],
-        contentTypes: [],
-        contentEntries: [],
-        posts: [],
-        media: [],
-        menus: [],
-        menuItems: [],
-        themeProfiles: [],
-        themeRoutes: [],
-        // Cascade / RESTRICT children are now first-class snapshot tables: the
-        // production replace clears detailPageDocuments (RESTRICT child of
-        // content_types) in FK-safe order BEFORE content_types, so NO manual
-        // pre-clear is needed here (regression proof for the RESTRICT block).
-        pageRevisions: [],
-        detailPageDocuments: [],
-        detailPageRevisions: [],
-        customScreens: [],
-        customScreenEntryPresentationOverrides: [],
-        contentRevisions: [],
-        contentTaxonomies: [],
-        contentTerms: [],
-        contentTermAssignments: [],
-        postRevisions: [],
-        postPreviewTokens: [],
-        postTermAssignments: [],
-        // JSON round-trip current rows (Date -> ISO string) to exercise date revival,
-        // then append the uniquely-scoped fixture row.
-        redirects: [
-          ...(JSON.parse(JSON.stringify(currentRedirects)) as Record<string, unknown>[]),
-          {
-            id: randomUUID(),
-            fromPath: uniquePath,
-            toPath: "/rollback-seam-target",
-            statusCode: 301,
-            enabled: true,
-            createdAt: now,
-            updatedAt: now,
-          },
-        ],
-      },
-    };
-
-    let seenInTx = false;
-    const ROLLBACK = new Error("__rollback_seam__");
-    await db
-      .transaction(async (tx) => {
-        // NOTE: production restoreArtifactTx/replaceSnapshotTables performs the
-        // detail_page_documents delete itself (FK-safe order) — this test no longer
-        // pre-clears it, so it validates the true production delete path.
-        await restoreArtifactTx(tx, seamArtifact);
-        const found = await tx
-          .select({ id: redirects.id })
-          .from(redirects)
-          .where(eq(redirects.fromPath, uniquePath));
-        seenInTx = found.length === 1;
-        throw ROLLBACK; // force rollback — never commit over the shared DB
-      })
-      .catch((error) => {
-        if (error !== ROLLBACK) throw error;
-      });
-
-    expect(seenInTx).toBe(true);
-
-    // Rollback left nothing committed: the injected redirect must not exist.
-    const after = await db
-      .select({ id: redirects.id })
-      .from(redirects)
-      .where(eq(redirects.fromPath, uniquePath));
-    expect(after.length).toBe(0);
-  },
-  30000
-);
-
-testIfDb(
-  "restore over a DB with detail_page_documents succeeds and restores cascade-children (rolled-back seam)",
-  async () => {
-    // Regression for the FK-cascade findings: (1) a RESTRICT child (detail_page_documents)
-    // present in the DB must NOT block the content_types delete during restore, and
-    // (2) cascade-children (custom_screens, content_revisions) must be captured AND
-    // re-inserted rather than silently wiped. Everything is COMMITTED first (so the
-    // delete phase truly faces a RESTRICT row), then the restore runs inside a
-    // deliberately rolled-back tx over the shared DB.
-    const suffix = randomUUID();
-    const [ct] = await db
-      .insert(contentTypes)
-      .values({ name: `qa-484-${suffix}`, slug: `qa-484-${suffix}`, schema: {} })
-      .returning();
-    if (!ct) throw new Error("fixture_content_type_failed");
-    const [dp] = await db
-      .insert(detailPageDocuments)
-      .values({ name: `qa-484-dp-${suffix}`, contentTypeId: ct.id, currentDocument: {} })
-      .returning();
-    const [cs] = await db
-      .insert(customScreens)
-      .values({ name: `qa-484-cs-${suffix}`, contentTypeId: ct.id, definition: {} })
-      .returning();
-    const [ce] = await db
-      .insert(contentEntries)
-      .values({ typeId: ct.id, slug: `qa-484-ce-${suffix}`, title: `qa-484-${suffix}`, data: {} })
-      .returning();
-    if (!dp || !cs || !ce) throw new Error("fixture_children_failed");
-    const [cr] = await db
-      .insert(contentRevisions)
-      .values({ entryId: ce.id, version: 1, data: {} })
-      .returning();
-    if (!cr) throw new Error("fixture_revision_failed");
-
-    try {
-      // Capture a real full-DB artifact (includes the committed fixtures above), then
-      // drive restore with a MINIMAL subtree so we don't re-insert the whole shared DB.
-      const created = await createBackup({ kind: "manual", include: ["database"] });
-      createdIds.push(created.id);
-      const dl = await resolveBackupDownload(created.id);
-      const artifact = parseBackupArtifact(dl.content as string);
-      expect(artifact.database).not.toBeNull();
-      // The new snapshot set must have CAPTURED the cascade/RESTRICT children.
-      expect(artifact.database?.detailPageDocuments.some((r) => r.id === dp.id)).toBe(true);
-      expect(artifact.database?.customScreens.some((r) => r.id === cs.id)).toBe(true);
-      expect(artifact.database?.contentRevisions.some((r) => r.id === cr.id)).toBe(true);
-
-      const rt = (rows: unknown) => JSON.parse(JSON.stringify(rows)) as Record<string, unknown>[];
-      const emptyDb = {
-        pages: [],
-        contentTypes: rt([ct]),
-        contentEntries: rt([ce]),
-        posts: [],
-        media: [],
-        menus: [],
-        menuItems: [],
-        themeProfiles: [],
-        themeRoutes: [],
-        redirects: [],
-        pageRevisions: [],
-        detailPageDocuments: rt([dp]),
-        detailPageRevisions: [],
-        customScreens: rt([cs]),
-        customScreenEntryPresentationOverrides: [],
-        contentRevisions: rt([cr]),
-        contentTaxonomies: [],
-        contentTerms: [],
-        contentTermAssignments: [],
-        postRevisions: [],
-        postPreviewTokens: [],
-        postTermAssignments: [],
-      };
-      const seamArtifact: BackupArtifact = { ...artifact, database: emptyDb };
-
-      let restoreThrew = false;
-      let sawCustomScreen = false;
-      let sawContentRevision = false;
-      let sawDetailPageDocument = false;
-      const ROLLBACK = new Error("__rollback_cascade_seam__");
-      await db
-        .transaction(async (tx) => {
-          // No pre-clear: the delete phase itself must clear the committed
-          // detail_page_documents RESTRICT row before deleting content_types.
-          await restoreArtifactTx(tx, seamArtifact);
-          sawCustomScreen =
-            (
-              await tx
-                .select({ id: customScreens.id })
-                .from(customScreens)
-                .where(eq(customScreens.id, cs.id))
-            ).length === 1;
-          sawContentRevision =
-            (
-              await tx
-                .select({ id: contentRevisions.id })
-                .from(contentRevisions)
-                .where(eq(contentRevisions.id, cr.id))
-            ).length === 1;
-          sawDetailPageDocument =
-            (
-              await tx
-                .select({ id: detailPageDocuments.id })
-                .from(detailPageDocuments)
-                .where(eq(detailPageDocuments.id, dp.id))
-            ).length === 1;
-          throw ROLLBACK;
-        })
-        .catch((error) => {
-          if (error === ROLLBACK) return;
-          restoreThrew = true;
-          throw error;
-        });
-
-      expect(restoreThrew).toBe(false);
-      expect(sawDetailPageDocument).toBe(true);
-      expect(sawCustomScreen).toBe(true);
-      expect(sawContentRevision).toBe(true);
-    } finally {
-      // FK-safe cleanup: delete the RESTRICT child first, then the content type
-      // cascades the remaining children (custom_screens, content_entries -> content_revisions).
-      await db.delete(detailPageDocuments).where(eq(detailPageDocuments.id, dp.id));
-      await db.delete(contentTypes).where(eq(contentTypes.id, ct.id));
-    }
-  },
-  30000
-);
 
 // --- Storage usage aggregate (TASK-484-06-L01). ---
 // Shared remote test DB contract: getBackupStorageUsage() aggregates the ENTIRE

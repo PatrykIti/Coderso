@@ -10,6 +10,7 @@ import {
   getBackupScheduleCached,
   getCachedBackups,
   getCachedBackupSchedule,
+  importBackup,
   listBackups,
   listBackupsCached,
   restoreBackup,
@@ -99,13 +100,18 @@ const backupListResult = (items = [backupItem()]) => ({
 });
 
 const backupSchedule = (
-  overrides: Partial<{ id: string; frequency: "daily" | "weekly" | "monthly" }> = {}
+  overrides: Partial<
+    { id: string; frequency: "daily" | "weekly" | "monthly" } & {
+      include: Array<"database" | "media" | "settings" | "users">;
+    }
+  > = {}
 ) => ({
   id: overrides.id ?? "schedule-1",
   enabled: true,
   frequency: overrides.frequency ?? "daily",
   retentionDays: 30,
   storageDriver: "local" as const,
+  include: overrides.include ?? ["database", "settings", "media"],
   createdAt: "2026-06-01T00:00:00.000Z",
   updatedAt: "2026-06-01T00:00:00.000Z",
 });
@@ -180,7 +186,7 @@ test("listBackupsCached reads local cache and force refreshes by page, limit, an
   }
 });
 
-test("createBackup sends include options with CSRF and POST", async () => {
+test("createBackup forwards the passphrase with include options via CSRF and POST", async () => {
   const originalFetch = globalThis.fetch;
   const calls: Array<{ input: RequestInfo | URL; init?: RequestInit }> = [];
 
@@ -195,12 +201,22 @@ test("createBackup sends include options with CSRF and POST", async () => {
 
   try {
     resetCsrfToken();
-    await createBackup({ kind: "manual", include: ["database", "settings"] });
+    // v2 create REQUIRES the passphrase at the route schema AND the service;
+    // the client forwards it to POST /backups only.
+    await createBackup({
+      kind: "manual",
+      include: ["database", "settings"],
+      passphrase: "test-passphrase",
+    });
     expect(calls[0]?.input).toBe("/admin/api/auth/csrf");
     expect(calls[1]?.input).toBe("/admin/api/backups");
     expect(calls[1]?.init?.method).toBe("POST");
     expect(calls[1]?.init?.body).toBe(
-      JSON.stringify({ kind: "manual", include: ["database", "settings"] })
+      JSON.stringify({
+        kind: "manual",
+        include: ["database", "settings"],
+        passphrase: "test-passphrase",
+      })
     );
   } finally {
     globalThis.fetch = originalFetch;
@@ -339,6 +355,91 @@ test("downloadBackup hits GET /backups/:id/download", async () => {
   }
 });
 
+test("importBackup posts multipart FormData with file, passphrase, confirm, restoreUsers", async () => {
+  const originalFetch = globalThis.fetch;
+  const calls: Array<{ input: RequestInfo | URL; init?: RequestInit }> = [];
+
+  globalThis.fetch = async (input, init) => {
+    calls.push({ input, init });
+    const url = String(input);
+    if (url.endsWith("/auth/csrf")) {
+      return jsonResponse({ token: "csrf-token" });
+    }
+    return jsonResponse({
+      tablesRestored: 4,
+      rowsRestored: 12,
+      usersRestored: 2,
+      mediaRestored: 3,
+    });
+  };
+
+  try {
+    resetCsrfToken();
+    const file = new File([new Uint8Array([1, 2, 3])], "backup.cbk", {
+      type: "application/octet-stream",
+    });
+    const result = await importBackup({
+      file,
+      passphrase: "import-passphrase",
+      restoreUsers: true,
+    });
+
+    expect(calls[0]?.input).toBe("/admin/api/auth/csrf");
+    expect(calls[1]?.input).toBe("/admin/api/backups/import");
+    expect(calls[1]?.init?.method).toBe("POST");
+    expect(calls[1]?.init?.body).toBeInstanceOf(FormData);
+    const form = calls[1]?.init?.body as FormData;
+    // apiRequest may clone the multipart body, so the File is identity-remade;
+    // assert on its observable fields instead of object identity.
+    const fileField = form.get("file") as File;
+    expect(fileField.name).toBe("backup.cbk");
+    expect(fileField.size).toBe(3);
+    expect(fileField.type).toBe("application/octet-stream");
+    expect(form.get("passphrase")).toBe("import-passphrase");
+    expect(form.get("confirm")).toBe("true");
+    expect(form.get("restoreUsers")).toBe("true");
+    // No manual Content-Type — the browser sets the multipart boundary.
+    const headers = new Headers(calls[1]?.init?.headers);
+    expect(headers.get("content-type")).toBeNull();
+    expect(result).toEqual({
+      tablesRestored: 4,
+      rowsRestored: 12,
+      usersRestored: 2,
+      mediaRestored: 3,
+    });
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("downloadBackup returns the base64-encoded v2 content payload unchanged", async () => {
+  const originalFetch = globalThis.fetch;
+  const calls: Array<{ input: RequestInfo | URL; init?: RequestInit }> = [];
+
+  globalThis.fetch = async (input, init) => {
+    calls.push({ input, init });
+    return jsonResponse({
+      url: null,
+      path: null,
+      fileName: "coderso-backup-x.cbk",
+      contentType: "application/x-coderso-backup",
+      content: "aGVsbG8gd29ybGQ=",
+      encoding: "base64",
+    });
+  };
+
+  try {
+    const result = await downloadBackup("backup-2");
+    expect(calls[0]?.input).toBe("/admin/api/backups/backup-2/download");
+    expect(calls[0]?.init?.method).toBe("GET");
+    expect(result?.encoding).toBe("base64");
+    expect(result?.content).toBe("aGVsbG8gd29ybGQ=");
+    expect(result?.fileName).toBe("coderso-backup-x.cbk");
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
 test("getBackupSchedule hits GET /backups/schedule", async () => {
   const originalFetch = globalThis.fetch;
   const calls: Array<{ input: RequestInfo | URL; init?: RequestInit }> = [];
@@ -394,10 +495,13 @@ test("updateBackupSchedule uses CSRF and PATCH", async () => {
 
   try {
     resetCsrfToken();
-    await updateBackupSchedule({ frequency: "weekly" });
+    await updateBackupSchedule({ frequency: "weekly", include: ["database", "media"] });
     expect(calls[0]?.input).toBe("/admin/api/auth/csrf");
     expect(calls[1]?.input).toBe("/admin/api/backups/schedule");
     expect(calls[1]?.init?.method).toBe("PATCH");
+    expect(calls[1]?.init?.body).toBe(
+      JSON.stringify({ frequency: "weekly", include: ["database", "media"] })
+    );
   } finally {
     globalThis.fetch = originalFetch;
   }
