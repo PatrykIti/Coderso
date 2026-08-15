@@ -9,7 +9,7 @@
  */
 import { createHash, randomUUID } from "node:crypto";
 
-import { afterEach, expect, test } from "bun:test";
+import { afterAll, afterEach, beforeAll, expect, test } from "bun:test";
 import { and, eq, inArray } from "drizzle-orm";
 
 import { db } from "../../../core/db/client";
@@ -46,6 +46,42 @@ const scopedRole = (label: string) => `bkp-511-04-${runId}-${label}`;
 
 const seededUserIds: string[] = [];
 const seededRoleIds: string[] = [];
+
+// Ambient admin (TASK-511-04): the admin-lockout guard and the no-admin test
+// need >=1 full-access holder in the ACTIVE schema. The public dev schema has
+// one from real installs, but lane worker schemas are fresh, so the suite seeds
+// its own scoped admin in beforeAll and removes it in afterAll. Tracked in a
+// SEPARATE list so afterEach's fixture cleanup never deletes it mid-suite.
+const ADMIN_EMAIL = `bkp-511-04-admin-${runId}@example.test`;
+const ADMIN_ROLE = `bkp-511-04-admin-${runId}`;
+const adminUserIds: string[] = [];
+const adminRoleIdsScoped: string[] = [];
+
+beforeAll(async () => {
+  const [role] = await db
+    .insert(roles)
+    .values({ name: ADMIN_ROLE, permissions: ["*"] })
+    .returning({ id: roles.id });
+  const [user] = await db
+    .insert(users)
+    .values({ email: ADMIN_EMAIL, passwordHash: "hash-admin", name: "Ambient Admin" })
+    .returning({ id: users.id });
+  await db.insert(userRoles).values({ userId: user.id, roleId: role.id });
+  adminUserIds.push(user.id);
+  adminRoleIdsScoped.push(role.id);
+});
+
+afterAll(async () => {
+  if (adminUserIds.length) {
+    await db.delete(userRoles).where(inArray(userRoles.userId, adminUserIds));
+    await db.delete(users).where(inArray(users.id, adminUserIds));
+  }
+  if (adminRoleIdsScoped.length) {
+    await db.delete(roles).where(inArray(roles.id, adminRoleIdsScoped));
+  }
+  adminUserIds.length = 0;
+  adminRoleIdsScoped.length = 0;
+});
 
 const seedUser = async (email: string, passwordHash: string, name?: string) => {
   const [row] = await db

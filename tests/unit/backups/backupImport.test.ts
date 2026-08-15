@@ -17,7 +17,7 @@ import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
-import { afterEach, expect, test } from "bun:test";
+import { afterAll, afterEach, beforeAll, expect, test } from "bun:test";
 import { eq, inArray, sql } from "drizzle-orm";
 
 import { db } from "../../../core/db/client";
@@ -80,6 +80,42 @@ const scopedMediaKey = (label: string) => `t511-05/${runId}/${label}.txt`;
 const contentRowIds: string[] = [];
 const identityRowIds: string[] = [];
 const mediaStore = new Map<string, Uint8Array>();
+
+// Ambient admin (TASK-511-05): restoreArchiveStreamTx enforces the
+// admin-lockout guard against the ACTIVE schema. Public dev schemas have an
+// admin from real installs; lane worker schemas are fresh, so seed one scoped
+// full-access holder in beforeAll (removed in afterAll, never touched by
+// afterEach's fixture cleanup).
+const ADMIN_EMAIL = `bkp-511-05-admin-${runId}@example.test`;
+const ADMIN_ROLE = `bkp-511-05-admin-${runId}`;
+const adminUserIds: string[] = [];
+const adminRoleIdsScoped: string[] = [];
+
+beforeAll(async () => {
+  const [role] = await db
+    .insert(roles)
+    .values({ name: ADMIN_ROLE, permissions: ["*"] })
+    .returning({ id: roles.id });
+  const [user] = await db
+    .insert(users)
+    .values({ email: ADMIN_EMAIL, passwordHash: "hash-admin", name: "Ambient Admin" })
+    .returning({ id: users.id });
+  await db.insert(userRoles).values({ userId: user.id, roleId: role.id });
+  adminUserIds.push(user.id);
+  adminRoleIdsScoped.push(role.id);
+});
+
+afterAll(async () => {
+  if (adminUserIds.length) {
+    await db.delete(userRoles).where(inArray(userRoles.userId, adminUserIds));
+    await db.delete(users).where(inArray(users.id, adminUserIds));
+  }
+  if (adminRoleIdsScoped.length) {
+    await db.delete(roles).where(inArray(roles.id, adminRoleIdsScoped));
+  }
+  adminUserIds.length = 0;
+  adminRoleIdsScoped.length = 0;
+});
 
 afterEach(async () => {
   if (contentRowIds.length) {

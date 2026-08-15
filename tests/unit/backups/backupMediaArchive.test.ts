@@ -184,12 +184,14 @@ test("bytes round-trip: every original key restored with byte-identical content"
   expect(summary.fileCount).toBe(2);
   expect(summary.totalBytes).toBe(bytesA.length + bytesB.length);
   expect(summary.skipped.filter((s) => s.key.startsWith(prefix))).toEqual([]);
-  expect(members.map((m) => m.name)).toEqual([
-    `${MEDIA_MEMBER_PREFIX}${keyA}`,
-    `${MEDIA_MEMBER_PREFIX}${keyB}`,
-  ]);
-  expect(members[0].bytes).toEqual(bytesA);
-  expect(members[1].bytes).toEqual(bytesB);
+  // media.id is a random UUID, so keyset ORDER BY id is not insertion order;
+  // assert the member SET, not a deterministic sequence.
+  expect([...members.map((m) => m.name)].sort()).toEqual(
+    [`${MEDIA_MEMBER_PREFIX}${keyA}`, `${MEDIA_MEMBER_PREFIX}${keyB}`].sort()
+  );
+  const byKey = new Map(members.map((m) => [m.name, m.bytes]));
+  expect(byKey.get(`${MEDIA_MEMBER_PREFIX}${keyA}`)).toEqual(bytesA);
+  expect(byKey.get(`${MEDIA_MEMBER_PREFIX}${keyB}`)).toEqual(bytesB);
 
   // Restore into a FRESH (empty) store — key equality is the core assertion.
   const target = makeMemoryAdapter();
