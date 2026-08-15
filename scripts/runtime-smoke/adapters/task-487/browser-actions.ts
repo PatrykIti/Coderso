@@ -150,6 +150,18 @@ export function materializeTask487BrowserAction(input: {
       // the message text). The app converges and the scenario assertions still
       // fail closed on their response/visible-effect checks.
       if (/Failed to load resource: the server responded with a status of 429/.test(text)) return;
+      // Scenario 1 (admin-login) runs in-page WITHOUT storage state on
+      // purpose, so the SPA's unauthenticated boot check of /api/auth/me
+      // 401s once on the login page; that expected call is filtered the same
+      // way as the 429 noise above. Resource errors carry no URL in the text;
+      // when a location is present it must belong to the auth bootstrap, and
+      // a bare 401 resource error on the login-only scenario is that same
+      // call. The scenario assertions still fail closed on their API response
+      // and visible-effect checks.
+      if (/Failed to load resource: the server responded with a status of 401/.test(text)) {
+        const loc = message.location?.().url ?? "";
+        if (loc === "" || loc.endsWith("/api/auth/me")) return;
+      }
       consoleErrors.push(text);
     };
     const onPageError = (error) =>
@@ -408,17 +420,27 @@ export function materializeTask487BrowserAction(input: {
       await openDrawer(drawerTitle);
       const drawer = page.getByRole("dialog").filter({ hasText: "Entry revisions" });
       const drawerOpened = await drawerTitle.isVisible();
-      const versionRows = drawer.getByText(/^Version \\d+$/);
-      const revisionRowCount = await versionRows.count();
       const versionOne = drawer.getByText("Version 1", { exact: true });
       const versionTwo = drawer.getByText("Version 2", { exact: true });
       const versionThree = drawer.getByText("Version 3", { exact: true });
+      if (
+        cfg.scenarioId === "history-drawer-revisions" ||
+        cfg.scenarioId === "dark-parity"
+      ) {
+        // The drawer fetches its revision rows asynchronously after opening,
+        // so the row count and visibility must be observed only after the
+        // settled state renders, not immediately after the drawer title.
+        await versionOne.waitFor({ state: "visible", timeout: 60000 });
+        if (cfg.scenarioId === "history-drawer-revisions") {
+          await versionTwo.waitFor({ state: "visible", timeout: 60000 });
+        }
+      }
+      const versionRows = drawer.getByText(/^Version \\d+$/);
+      const revisionRowCount = await versionRows.count();
       const versionOneVisible = (await versionOne.count()) === 1;
       const versionTwoVisible = (await versionTwo.count()) === 1;
       const versionThreeAbsent = (await versionThree.count()) === 0;
       if (cfg.scenarioId === "history-drawer-revisions") {
-        await versionOne.waitFor({ state: "visible", timeout: 60000 });
-        await versionTwo.waitFor({ state: "visible", timeout: 60000 });
         const card = versionOne.locator(
           "xpath=ancestor::div[contains(concat(' ', normalize-space(@class), ' '), ' rounded-xl ')][1]"
         );
@@ -484,6 +506,21 @@ export function materializeTask487BrowserAction(input: {
         const confirmDialogVisible = await confirm.isVisible();
         const heading = confirm.getByRole("heading", { name: "Restore revision?", exact: true });
         const confirmHeadingVisible = (await heading.count()) === 1;
+        // Every /auth/* call shares the admin auth rate-limit bucket
+        // (10 req / 60s). After the suite's earlier page boots the CSRF
+        // fetch can 429, which would make the restore fail closed with
+        // "Invalid CSRF token". Wait for the bucket to roll before issuing
+        // the restore so the client's own CSRF fetch has capacity; a 429
+        // response does not increment the bucket, so the poll is bounded
+        // and non-destructive.
+        for (let attempt = 0; attempt < 65; attempt += 1) {
+          const csrfStatus = await page.evaluate(
+            (base) => fetch(base + "/auth/csrf", { credentials: "include" }).then((response) => response.status),
+            apiBase
+          );
+          if (csrfStatus === 200) break;
+          await page.waitForTimeout(1000);
+        }
         const restorePromise = page.waitForResponse(
           (response) =>
             response.request().method() === "POST" &&
@@ -605,7 +642,6 @@ export function materializeTask487BrowserAction(input: {
         };
       }
       if (cfg.scenarioId === "dark-parity") {
-        await versionOne.waitFor({ state: "visible", timeout: 60000 });
         const darkScheme =
           (await page.evaluate(() => matchMedia("(prefers-color-scheme: dark)").matches)) === true;
         const closeButton = drawer.getByRole("button", { name: "Close revisions", exact: true });

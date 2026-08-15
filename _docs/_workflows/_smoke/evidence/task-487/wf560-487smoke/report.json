@@ -1,0 +1,80 @@
+{
+  "cleanup": { "failures": [], "pass": true },
+  "consoleErrors": [],
+  "failures": [],
+  "pass": true,
+  "processes": {
+    "git": 2,
+    "playwright-close": 1,
+    "playwright-open": 1,
+    "playwright-run-code": 6,
+    "playwright-state-load": 1,
+    "task487-dev-host": 1,
+    "task487-worker-db": 1
+  },
+  "profile": "fast",
+  "scenarios": [
+    { "elapsedMs": 42542, "id": "admin-login", "pass": true },
+    { "elapsedMs": 2678, "id": "editor-nav", "pass": true },
+    { "elapsedMs": 3652, "id": "history-drawer-revisions", "pass": true },
+    { "elapsedMs": 18119, "id": "confirm-gated-restore", "pass": true },
+    { "elapsedMs": 2630, "id": "seo-fields-visible", "pass": true },
+    { "elapsedMs": 3535, "id": "dark-parity", "pass": true }
+  ],
+  "schemaVersion": 1,
+  "screenshots": [
+    {
+      "path": "_docs/_workflows/_smoke/evidence/task-487/wf560-487smoke/01-admin-login.png",
+      "sha256": "e09027fa7f4a5dfb61fcd0fc96b7f769eb2963cc9ae858bf456db608dcdd72f4"
+    },
+    {
+      "path": "_docs/_workflows/_smoke/evidence/task-487/wf560-487smoke/02-editor-nav.png",
+      "sha256": "e582931296ae67a32ec508362f95c872be01ea76e01e2f0856bf61b71ab089ec"
+    },
+    {
+      "path": "_docs/_workflows/_smoke/evidence/task-487/wf560-487smoke/03-history-drawer-revisions.png",
+      "sha256": "e37d5745be4474c5294ba313c566947e887ed933929300de269f7edb2ab3a17b"
+    },
+    {
+      "path": "_docs/_workflows/_smoke/evidence/task-487/wf560-487smoke/04-confirm-gated-restore.png",
+      "sha256": "1a21e7fcc25f43d08f5d912b324c7184cf4a5bbfb3a0e14b886ee552d407f537"
+    },
+    {
+      "path": "_docs/_workflows/_smoke/evidence/task-487/wf560-487smoke/05-seo-fields-visible.png",
+      "sha256": "8f3783aa50684ce470906c40d6d0f09d8f87a5506b6ac5b8a212d44b5f66794e"
+    },
+    {
+      "path": "_docs/_workflows/_smoke/evidence/task-487/wf560-487smoke/06-dark-parity.png",
+      "sha256": "cfc2416e4fbd3bddea9a1f327049992faa22fca8e727610d4000cb238f2cb570"
+    }
+  ],
+  "serverUp": true,
+  "session": "wf560-487smoke",
+  "snapshots": 2,
+  "suiteCleanup": {
+    "actorAbsent": true,
+    "adminPath": "/admin",
+    "databaseBatches": 3,
+    "entriesRemoved": 6,
+    "fixturesAbsent": true,
+    "pageErrors": 0,
+    "repositorySnapshots": 2,
+    "revisionsRemoved": 13,
+    "rows": 27,
+    "sessionsRemoved": 2,
+    "statements": 22,
+    "typeSlug": "task487-29fcda07923896e66bec9d22-post",
+    "typesRemoved": 1,
+    "userRolesRemoved": 1,
+    "usersRemoved": 1,
+    "workerRequests": 3,
+    "workerStarts": 1
+  },
+  "suiteId": "task-487",
+  "timings": [
+    { "count": 1, "elapsedMs": 1, "failed": 0, "kind": "cleanup", "name": "all" },
+    { "count": 1, "elapsedMs": 160, "failed": 0, "kind": "snapshot", "name": "task487-after" },
+    { "count": 1, "elapsedMs": 178, "failed": 0, "kind": "snapshot", "name": "task487-before" },
+    { "count": 1, "elapsedMs": 84985, "failed": 0, "kind": "suite", "name": "task-487" }
+  ]
+}

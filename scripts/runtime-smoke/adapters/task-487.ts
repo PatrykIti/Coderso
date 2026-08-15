@@ -51,6 +51,7 @@ import {
   type Task487RecoveryAuthority,
 } from "./task-487/worker-operations";
 import { createTask487PrivateWorkspace, Task487Workspace } from "./task-487/workspace";
+import { RuntimeSmokeRoutingSettingsLease } from "./routing-settings-lease";
 
 export { assertExactTask487Invocation } from "./task-487/output-manifest";
 
@@ -323,6 +324,7 @@ export async function runTask487Adapter(context: RuntimeSmokeContext): Promise<S
   let transport: BrowserTransport | null = null;
   let dispatcher: PlaywrightCliDispatcher | null = null;
   let authPath: string | null = null;
+  let routingLease: RuntimeSmokeRoutingSettingsLease | null = null;
   let primary: unknown | null = null;
   let scenarios: readonly SmokeScenarioResult[] | null = null;
   let screenshots: SmokeAdapterResult["screenshots"] | null = null;
@@ -332,6 +334,17 @@ export async function runTask487Adapter(context: RuntimeSmokeContext): Promise<S
     workers = await createTask487WorkerPool(context, createTask487WorkerRegistry());
     cleanup = new Task487FixtureCleanup(workers, recoveryAuthority);
     context.lifecycle.register(cleanup);
+    // The dev host resolves `site.adminPath` from the DB at boot and the
+    // fixture install records that same path for every browser URL and the
+    // admin auth handshake, so the routing settings must be pinned BEFORE
+    // the install dispatches. The lease pins `site.adminPath` to `/admin`,
+    // points `site.homepageId` at an existing published page (the front
+    // readiness probe hits `/`), and clears the assistant launcher avatar
+    // that would otherwise trigger a console error on every admin page. It
+    // restores the ambient values on close and never leaves them pinned
+    // after a failed run (shared task-540 lease).
+    routingLease = new RuntimeSmokeRoutingSettingsLease();
+    await routingLease.apply();
     install = (await workers.dispatch(
       TASK487_WORKER_DESCRIPTORS.install,
       createTask487InstallInput({
@@ -538,6 +551,29 @@ export async function runTask487Adapter(context: RuntimeSmokeContext): Promise<S
   }
 
   const cleanupErrors: unknown[] = [];
+  // Restore the ambient routing settings even when the main flow failed;
+  // the lease is idempotent and restore() is a safe no-op when apply()
+  // never completed. Restore before closing the host so a later cleanup
+  // failure can never leave `site.adminPath` / `site.homepageId` pinned.
+  if (routingLease !== null && !routingLease.restored) {
+    try {
+      await routingLease.restore();
+    } catch (error) {
+      cleanupErrors.push(error);
+    }
+  }
+  // The lease opens the postgres-js client in this process for its
+  // snapshot/restore transactions; postgres-js keeps idle sockets alive, so
+  // the client must be closed for the Node event loop to terminate after the
+  // run (the lease imports core/db/client lazily to keep the module DB-free).
+  if (routingLease !== null) {
+    try {
+      const { closeDatabase } = await import("../../../core/db/client");
+      await closeDatabase();
+    } catch (error) {
+      cleanupErrors.push(error);
+    }
+  }
   for (const resource of [transport, workspace, server, cleanup] as const) {
     try {
       await closeAndProve(resource);

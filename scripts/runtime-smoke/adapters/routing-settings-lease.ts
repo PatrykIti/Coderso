@@ -16,7 +16,11 @@ import type { SettingKey } from "../../../core/services/settings/settingsService
  * targets BEFORE the host spawns and restore the exact ambient snapshot
  * afterwards. `site.homepageId` is leased too: the front health probe hits `/`
  * and the ambient value can point at a deleted page, so the lease pins it to an
- * existing published page for the run.
+ * existing published page for the run. A suite that installs its own fixture
+ * home page passes `apply({ homepageId })` to pin that exact page instead of
+ * the first-published-page fallback (TASK-547 pins the FormaDom `page:home` so
+ * the home scenarios hit the fixture's hero copy and 3-tab switcher); suites
+ * without a fixture home keep the fallback (TASK-540/491/487).
  *
  * The assistant launcher avatar keys are leased for the same reason: the admin
  * SPA loads the launcher avatar unconditionally, the ambient value points at
@@ -64,6 +68,10 @@ export type RuntimeSmokeRoutingSettingsOwnedRecord = Readonly<{
 export type RuntimeSmokeRoutingSettingsSnapshot = Readonly<
   Record<RuntimeSmokeLeasedSettingKey, RuntimeSmokeRoutingSettingRecord | null>
 >;
+
+export interface RuntimeSmokeRoutingLeaseApplyOptions {
+  readonly homepageId?: string | null;
+}
 
 type RuntimeSmokeRoutingSettingsState = Readonly<{
   readonly owned: Readonly<
@@ -265,6 +273,25 @@ async function resolveRuntimeSmokeHomepageId(
   return rows[0]!.id;
 }
 
+/**
+ * Choose the `site.homepageId` target for a lease run. An explicit override
+ * (TASK-547 pins the FormaDom `page:home` its fixture installs) wins and the
+ * published-page fallback is never consulted; suites without a fixture home
+ * (TASK-540/491/487) keep the first-published-page fallback.
+ */
+export async function chooseRuntimeSmokeLeaseHomepageId(
+  homepageIdOverride: string | null | undefined,
+  publishedFallback: () => Promise<string>
+): Promise<string> {
+  if (homepageIdOverride !== undefined && homepageIdOverride !== null) {
+    if (homepageIdOverride.length === 0) {
+      throw new SmokeError("smoke_argument_invalid", "runtime-smoke homepage override is invalid");
+    }
+    return homepageIdOverride;
+  }
+  return publishedFallback();
+}
+
 async function writeRoutingTargets(
   core: RuntimeSmokeRoutingCoreHandles,
   tx: DbTransaction,
@@ -316,14 +343,18 @@ async function writeSnapshotRecords(
     });
 }
 
-async function applyRuntimeSmokeRoutingTargets(): Promise<RuntimeSmokeRoutingSettingsState> {
+async function applyRuntimeSmokeRoutingTargets(
+  homepageIdOverride?: string | null
+): Promise<RuntimeSmokeRoutingSettingsState> {
   const core = await runtimeSmokeRoutingCore();
   return await core.db.transaction(
     async (tx) => {
       await core.acquireNativeCmsWriterFence(tx);
       await lockRoutingSettingsTable(core, tx);
       const snapshot = freezeSnapshot(await readRoutingSettingsForUpdate(core, tx));
-      const homepageId = await resolveRuntimeSmokeHomepageId(core, tx);
+      const homepageId = await chooseRuntimeSmokeLeaseHomepageId(homepageIdOverride, () =>
+        resolveRuntimeSmokeHomepageId(core, tx)
+      );
       await writeRoutingTargets(core, tx, homepageId);
       const owned = requireCompleteOwnedRecords(await readRoutingSettingsForUpdate(core, tx));
       return Object.freeze({ snapshot, owned });
@@ -409,19 +440,19 @@ export class RuntimeSmokeRoutingSettingsLease {
     return this.#restored;
   }
 
-  async apply(): Promise<void> {
+  async apply(options?: RuntimeSmokeRoutingLeaseApplyOptions): Promise<void> {
     if (this.#applyPromise !== null || this.#restored) {
       throw new SmokeError(
         "smoke_output_invalid",
         "runtime-smoke routing settings lease cannot be replayed"
       );
     }
-    this.#applyPromise = this.#applyOnce();
+    this.#applyPromise = this.#applyOnce(options?.homepageId);
     await this.#applyPromise;
   }
 
-  async #applyOnce(): Promise<void> {
-    const state = await applyRuntimeSmokeRoutingTargets();
+  async #applyOnce(homepageIdOverride?: string | null): Promise<void> {
+    const state = await applyRuntimeSmokeRoutingTargets(homepageIdOverride);
     this.#snapshot = state.snapshot;
     this.#owned = state.owned;
     this.#active = true;

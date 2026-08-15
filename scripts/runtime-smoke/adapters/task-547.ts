@@ -167,9 +167,14 @@ export async function runTask547Adapter(context: RuntimeSmokeContext): Promise<S
     // suite is done (TASK-547 runtime-smoke fix, shared task-540 lease). The
     // browser scenarios hardcode `/admin` and the readiness probes hit `/` and
     // `/admin/`, which only hold while `site.adminPath` is pinned to `/admin`
-    // and `site.homepageId` points at an existing published page.
+    // and `site.homepageId` points at an existing published page. The fixture
+    // is installed before this point, so pin the lease to the fixture's
+    // FormaDom `page:home` instead of the first-published-page fallback, which
+    // would point the front probes at an arbitrary leftover fixture page.
     routingLease = new RuntimeSmokeRoutingSettingsLease();
-    await context.timing.measure("phase", "routing-settings-apply", () => routingLease!.apply());
+    await context.timing.measure("phase", "routing-settings-apply", () =>
+      routingLease!.apply({ homepageId: fixture!.homePageId })
+    );
     server = await context.timing.measure("phase", "task547-server", () =>
       startTask547DevHost(context, { timing })
     );

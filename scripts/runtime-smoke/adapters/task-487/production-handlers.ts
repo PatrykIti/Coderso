@@ -6,6 +6,7 @@ import {
   contentEntries,
   contentRevisions,
   contentTypes,
+  roles,
   sessions,
   settings,
   userRoles,
@@ -123,6 +124,28 @@ async function readAdminPath(tx: DbTransaction): Promise<string> {
   return normalized;
 }
 
+/**
+ * Resolve the admin role id the same way `seed.ts` and the first-run service
+ * do: the migration-guaranteed stable id (TASK-518,
+ * `core/db/seedConstants.ts`) first, then select-by-name "admin" for
+ * pre-518 installs whose role carries a legacy random id. Never create a
+ * duplicate role and never renumber an existing one.
+ */
+async function resolveAdminRoleId(tx: DbTransaction): Promise<string> {
+  let [role] = await tx
+    .select({ id: roles.id })
+    .from(roles)
+    .where(eq(roles.id, DEFAULT_ADMIN_ROLE_ID))
+    .limit(1);
+  if (role === undefined) {
+    [role] = await tx.select({ id: roles.id }).from(roles).where(eq(roles.name, "admin")).limit(1);
+  }
+  if (role === undefined) {
+    throw new SmokeError("smoke_argument_invalid", "TASK-487 admin role is missing");
+  }
+  return role.id;
+}
+
 async function reconstructTask487RecoveryState(
   tx: DbTransaction,
   authority: Task487RecoveryAuthority
@@ -214,7 +237,7 @@ async function reconstructTask487RecoveryState(
     marker: authority.runMarker,
     typeId: type.id,
     typeSlug: type.slug,
-    actor: Object.freeze({ userId: user.id, roleId: DEFAULT_ADMIN_ROLE_ID }),
+    actor: Object.freeze({ userId: user.id, roleId: await resolveAdminRoleId(tx) }),
     fixtures: Object.freeze(fixtures),
   });
   return Object.freeze({ kind: "complete", state });
@@ -243,9 +266,11 @@ export class Task487ProductionHandlers implements Task487WorkerHandlers {
     const emailFields = buildEmailFields(expectedActor.email);
     let typeId = "";
     let userId = "";
+    let roleId = "";
     let adminPath = "/admin";
     await db.transaction(async (tx) => {
       adminPath = await readAdminPath(tx);
+      roleId = await resolveAdminRoleId(tx);
       const [typeRow] = await tx
         .insert(contentTypes)
         .values({
@@ -273,7 +298,7 @@ export class Task487ProductionHandlers implements Task487WorkerHandlers {
         throw new SmokeError("smoke_output_invalid", "TASK-487 admin user was not created");
       }
       userId = userRow.id;
-      await tx.insert(userRoles).values({ userId, roleId: DEFAULT_ADMIN_ROLE_ID });
+      await tx.insert(userRoles).values({ userId, roleId });
     });
     this.#installed = true;
     return Object.freeze({
@@ -283,7 +308,7 @@ export class Task487ProductionHandlers implements Task487WorkerHandlers {
       botProtectionEnabled: false,
       typeId,
       typeSlug: expectedType.slug,
-      actor: Object.freeze({ userId, roleId: DEFAULT_ADMIN_ROLE_ID }),
+      actor: Object.freeze({ userId, roleId }),
       statements: 4,
       rows: 3,
     });
