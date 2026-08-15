@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-14T21:00:45.316Z",
+  "generatedAt": "2026-08-15T09:26:53.876Z",
   "rows": [
     {
       "file": "tests/integration/analytics/trafficAggregation.test.ts",
@@ -268,7 +268,28 @@
       "cWriteGlobal": false
     },
     {
+      "file": "tests/integration/routes/integrationDelivery.test.ts",
+      "bucket": "B",
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
+    },
+    {
+      "file": "tests/integration/routes/integrationEventDispatch.test.ts",
+      "bucket": "B",
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
+    },
+    {
       "file": "tests/integration/routes/integrations.test.ts",
+      "bucket": "B",
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
+    },
+    {
+      "file": "tests/integration/routes/integrationsHealthRoute.test.ts",
       "bucket": "B",
       "weightMs": 0,
       "conflictKeys": [],
@@ -406,6 +427,13 @@
       "cWriteGlobal": false
     },
     {
+      "file": "tests/integration/routes/publicSiteAnalytics.test.ts",
+      "bucket": "C",
+      "weightMs": 0,
+      "conflictKeys": ["site.contentRoutes", "site.cacheTtlSeconds", "site.previewEnabled"],
+      "cWriteGlobal": true
+    },
+    {
       "file": "tests/integration/routes/redirects.test.ts",
       "bucket": "B",
       "weightMs": 0,
@@ -436,6 +464,13 @@
     {
       "file": "tests/integration/routes/securitySettings.test.ts",
       "bucket": "B",
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
+    },
+    {
+      "file": "tests/integration/routes/sentryInit.test.ts",
+      "bucket": "A",
       "weightMs": 0,
       "conflictKeys": [],
       "cWriteGlobal": false
@@ -574,6 +609,27 @@
       "cWriteGlobal": false
     },
     {
+      "file": "tests/integration/runtime/entry-password-gate.test.ts",
+      "bucket": "C",
+      "weightMs": 0,
+      "conflictKeys": ["site.contentRoutes", "site.cacheTtlSeconds"],
+      "cWriteGlobal": false
+    },
+    {
+      "file": "tests/integration/runtime/entry-visibility-cache.test.ts",
+      "bucket": "C",
+      "weightMs": 0,
+      "conflictKeys": ["site.contentRoutes", "site.cacheTtlSeconds", "site.homepageId"],
+      "cWriteGlobal": false
+    },
+    {
+      "file": "tests/integration/runtime/entry-visibility-gate.test.ts",
+      "bucket": "C",
+      "weightMs": 0,
+      "conflictKeys": ["site.contentRoutes", "site.cacheTtlSeconds"],
+      "cWriteGlobal": false
+    },
+    {
       "file": "tests/integration/runtime/menu-design-extras-runtime.test.ts",
       "bucket": "C",
       "weightMs": 0,
@@ -681,6 +737,20 @@
       "bucket": "C",
       "weightMs": 0,
       "conflictKeys": ["site.contentRoutes"],
+      "cWriteGlobal": false
+    },
+    {
+      "file": "tests/integration/server/entry-access-password-hash.test.ts",
+      "bucket": "B",
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
+    },
+    {
+      "file": "tests/integration/server/entry-visibility-public-vectors.test.ts",
+      "bucket": "B",
+      "weightMs": 0,
+      "conflictKeys": [],
       "cWriteGlobal": false
     },
     {
@@ -845,8 +915,29 @@
       "cWriteGlobal": false
     },
     {
+      "file": "tests/security/integrationEventSecrets.test.ts",
+      "bucket": "B",
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
+    },
+    {
+      "file": "tests/security/integrationHealthSecrets.test.ts",
+      "bucket": "B",
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
+    },
+    {
       "file": "tests/security/popups-public.test.ts",
       "bucket": "B",
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
+    },
+    {
+      "file": "tests/security/sentryDsnRedaction.test.ts",
+      "bucket": "A",
       "weightMs": 0,
       "conflictKeys": [],
       "cWriteGlobal": false
@@ -1097,6 +1188,13 @@
       "cWriteGlobal": false
     },
     {
+      "file": "tests/unit/auth/loginAlertDelivery.test.ts",
+      "bucket": "B",
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
+    },
+    {
       "file": "tests/unit/auth/password.test.ts",
       "bucket": "A",
       "weightMs": 0,
@@ -1139,6 +1237,34 @@
       "cWriteGlobal": false
     },
     {
+      "file": "tests/unit/backups/backupArchive.test.ts",
+      "bucket": "B",
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
+    },
+    {
+      "file": "tests/unit/backups/backupCrypto.test.ts",
+      "bucket": "A",
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
+    },
+    {
+      "file": "tests/unit/backups/backupImport.test.ts",
+      "bucket": "B",
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
+    },
+    {
+      "file": "tests/unit/backups/backupMediaArchive.test.ts",
+      "bucket": "B",
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
+    },
+    {
       "file": "tests/unit/backups/backupRemoteStorage.test.ts",
       "bucket": "B",
       "weightMs": 0,
@@ -1146,11 +1272,25 @@
       "cWriteGlobal": false
     },
     {
+      "file": "tests/unit/backups/backupRestore.test.ts",
+      "bucket": "C",
+      "weightMs": 0,
+      "conflictKeys": ["site.contentRoutes"],
+      "cWriteGlobal": false
+    },
+    {
       "file": "tests/unit/backups/backupService.test.ts",
       "bucket": "C",
       "weightMs": 0,
-      "conflictKeys": ["site.contentRoutes", "backup_schedules"],
+      "conflictKeys": ["backup_schedules"],
       "cWriteGlobal": true
+    },
+    {
+      "file": "tests/unit/backups/backupUsersSection.test.ts",
+      "bucket": "B",
+      "weightMs": 0,
+      "conflictKeys": [],
+      "cWriteGlobal": false
     },
     {
       "file": "tests/unit/booking/bookingAccess.test.ts",
@@ -1262,6 +1402,13 @@
       "bucket": "B",
       "weightMs": 0,
       "conflictKeys": [],
+      "cWriteGlobal": false
+    },
+    {
+      "file": "tests/unit/content/entryRevisionRestore.test.ts",
+      "bucket": "C",
+      "weightMs": 0,
+      "conflictKeys": ["site.contentRoutes"],
       "cWriteGlobal": false
     },
     {

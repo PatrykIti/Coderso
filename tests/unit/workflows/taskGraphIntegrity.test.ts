@@ -137,7 +137,7 @@ describe("task graph integrity", () => {
     expect(board).toEqual(counts);
   });
 
-  test("TASK-533 board changelog resolves to 1247 and TASK-511 stays To Do", () => {
+  test("TASK-533 board changelog resolves to 1247 and TASK-511 board resolves to 1281", () => {
     const text = readFileSync(README, "utf8");
     const task533 = text.split("\n").find((l) => l.startsWith("| TASK-533 |"));
     expect(task533).toBeTruthy();
@@ -146,7 +146,9 @@ describe("task graph integrity", () => {
     const task511 = gitLsTaskFiles()
       .map(parseTaskFile)
       .find((t) => t.id === "TASK-511");
-    expect(task511?.status).toBe("todo");
+    expect(task511?.status).toBe("done");
+    const board511 = text.split("\n").find((l) => l.startsWith("| TASK-511 |"));
+    expect(board511).toContain("1281");
   });
 
   test("TASK-495..535 completed families were not reopened", () => {
