@@ -132,7 +132,8 @@ function nulOffsets(relativePath: string): readonly number[] {
 
 // The scan reads and byte-checks every tracked file (>5,000 paths), so it needs
 // more than Bun's 5s default under parallel IO contention with sibling suites.
-test("no tracked text source carries a NUL byte", { timeout: 15_000 }, () => {
+// Reads are batched with bounded concurrency so lane-timeout flakes stay gone.
+test("no tracked text source carries a NUL byte", { timeout: 30_000 }, async () => {
   const scanned = trackedPaths().filter((relativePath) => !isBinaryExtension(relativePath));
 
   // Guard the guard: a broken enumeration or an over-eager filter would make every
@@ -143,23 +144,29 @@ test("no tracked text source carries a NUL byte", { timeout: 15_000 }, () => {
 
   const excepted = new Map(NUL_EXCEPTIONS.map((entry) => [entry.path, entry.nulBytes]));
   const unexpected: string[] = [];
+  const CONCURRENCY = 32;
 
-  for (const relativePath of scanned) {
-    const offsets = nulOffsets(relativePath);
-    const allowed = excepted.get(relativePath) ?? 0;
-    if (offsets.length === allowed) continue;
-    unexpected.push(
-      relativePath +
-        " carries " +
-        String(offsets.length) +
-        " NUL byte(s) at offset(s) " +
-        offsets.join(", ") +
-        (allowed === 0
-          ? " -- write it as the \\u0000 escape, or use a placeholder that is not a control byte"
-          : " -- NUL_EXCEPTIONS records " +
-            String(allowed) +
-            "; update or delete that entry in this commit")
+  for (let index = 0; index < scanned.length; index += CONCURRENCY) {
+    const chunk = scanned.slice(index, index + CONCURRENCY);
+    const results = await Promise.all(
+      chunk.map((relativePath) => [relativePath, nulOffsets(relativePath)] as const)
     );
+    for (const [relativePath, offsets] of results) {
+      const allowed = excepted.get(relativePath) ?? 0;
+      if (offsets.length === allowed) continue;
+      unexpected.push(
+        relativePath +
+          " carries " +
+          String(offsets.length) +
+          " NUL byte(s) at offset(s) " +
+          offsets.join(", ") +
+          (allowed === 0
+            ? " -- write it as the \\u0000 escape, or use a placeholder that is not a control byte"
+            : " -- NUL_EXCEPTIONS records " +
+              String(allowed) +
+              "; update or delete that entry in this commit")
+      );
+    }
   }
 
   expect(unexpected).toEqual([]);
