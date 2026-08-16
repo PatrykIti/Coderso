@@ -62,7 +62,7 @@ export function buildBatchRunCodeSource(input: {
     const canonicalJson = (value) => JSON.stringify(canonicalize(value));
     const projectFailure = (error) => {
       const message = typeof error?.message === "string" ? error.message : "";
-      const harness = /(?:wf540_|task554_)[a-z0-9_]{1,64}/u.exec(message);
+      const harness = /(?:wf540_|task554_|task490_)[a-z0-9_]{1,64}/u.exec(message);
       if (harness) return harness[0];
       if (message.includes("Timeout") && message.includes("exceeded")) return "playwright_action_timeout";
       if (message.includes("does not handle the modal state")) return "playwright_modal_state";

@@ -59,6 +59,7 @@ export interface Task490BrowserFixture extends PlainJsonObject {
   readonly variantId: Task490VariantId;
   readonly formId: string;
   readonly submissionId: string;
+  readonly adminOrigin: string;
   readonly adminPath: string;
   readonly runMarker: string;
 }
@@ -192,6 +193,7 @@ export function materializeTask490BrowserAction(input: {
     input.fixture.variantId !== input.variant.id ||
     !/^[0-9a-f-]{36}$/iu.test(input.fixture.formId) ||
     !/^[0-9a-f-]{36}$/iu.test(input.fixture.submissionId) ||
+    !/^https?:\/\/[a-z0-9.:-]+$/iu.test(input.fixture.adminOrigin) ||
     !/^\/[A-Za-z0-9._~/-]{0,127}$/u.test(input.fixture.adminPath) ||
     !/^[a-f0-9]{12,32}$/u.test(input.fixture.runMarker) ||
     (input.screenshotPath !== null &&
@@ -204,6 +206,7 @@ export function materializeTask490BrowserAction(input: {
     kind: input.descriptor.kind,
     formId: input.fixture.formId,
     submissionId: input.fixture.submissionId,
+    adminOrigin: input.fixture.adminOrigin,
     adminPath: input.fixture.adminPath,
     runMarker: input.fixture.runMarker,
     variant: input.variant,
@@ -222,6 +225,10 @@ export function materializeTask490BrowserAction(input: {
       // rate-limit bucket (10 req/60s) can therefore 429 them during the
       // suite. The app converges and the scenario receipts still fail closed.
       if (/Failed to load resource: the server responded with a status of 429/.test(text)) return;
+      if (/Failed to load resource: the server responded with a status of 401/.test(text)) {
+        const loc = message.location?.().url ?? "";
+        if (loc === "" || loc.endsWith("/api/auth/me")) return;
+      }
       consoleErrors.push(text);
     };
     const onPageError = (error) => pageErrors.push(String(error?.message ?? "pageerror").slice(0, 512));
@@ -251,7 +258,7 @@ export function materializeTask490BrowserAction(input: {
       }
       return null;
     });
-    const readTableProof = () => page.evaluate((expectedValues, badge, piiValues) => {
+    const readTableProof = () => page.evaluate(({ expectedValues, badge, piiValues }) => {
       const table = document.querySelector("table");
       const text = table ? table.innerText : "";
       const rows = table ? Array.from(table.querySelectorAll("tbody tr")) : [];
@@ -263,7 +270,7 @@ export function materializeTask490BrowserAction(input: {
           !piiValues.some((value) => text.includes(value)),
         statusBadgeMatches: firstRow.toLowerCase().includes(badge.toLowerCase()),
       };
-    }, [...cfg.expected.payloadValues], cfg.expected.statusBadge, [...cfg.expected.piiOmittedValues]);
+    }, { expectedValues: [...cfg.expected.payloadValues], badge: cfg.expected.statusBadge, piiValues: [...cfg.expected.piiOmittedValues] });
     const waitSubmissionsVisible = async () => {
       await page.waitForFunction(() => {
         const text = document.body.innerText;
@@ -273,7 +280,7 @@ export function materializeTask490BrowserAction(input: {
           table !== null &&
           Array.from(table.querySelectorAll("tbody tr")).length === 1
         );
-      }, { timeout: 120000 }).catch(async (error) => {
+      }, undefined, { timeout: 120000 }).catch(async (error) => {
         throw new Error("task490_submissions_visible_timeout: " + String(error?.message ?? error).slice(0, 200));
       });
       // The single seeded row renders after hydration; wait for the payload
@@ -378,8 +385,8 @@ export function materializeTask490BrowserAction(input: {
       await page.emulateMedia({ colorScheme: cfg.variant.colorScheme });
       await page.setViewportSize(cfg.variant.viewport);
       if (cfg.kind === "login") {
-        await page.goto(cfg.adminPath + "/", { waitUntil: "domcontentloaded", timeout: 120000 });
-        await page.waitForFunction(() => document.body.innerText.includes("Search or jump to"), { timeout: 120000 }).catch(async (error) => {
+        await page.goto(cfg.adminOrigin + cfg.adminPath + "/", { waitUntil: "domcontentloaded", timeout: 120000 });
+        await page.waitForFunction(() => document.body.innerText.includes("Dashboard"), undefined, { timeout: 120000 }).catch(async (error) => {
           throw new Error("task490_admin_shell_timeout: " + String(error?.message ?? error).slice(0, 200));
         });
         const loginFormAbsent = await page.evaluate(() => {
@@ -416,7 +423,7 @@ export function materializeTask490BrowserAction(input: {
         };
       }
       if (cfg.kind === "nav") {
-        await page.goto(cfg.adminPath + "/advanced/forms", { waitUntil: "domcontentloaded", timeout: 120000 });
+        await page.goto(cfg.adminOrigin + cfg.adminPath + "/advanced/forms", { waitUntil: "domcontentloaded", timeout: 120000 });
         const row = page.locator("tr").filter({ hasText: cfg.expected.formRowName }).first();
         await row.waitFor({ state: "visible", timeout: 120000 }).catch(async (error) => {
           throw new Error("task490_form_row_timeout: " + String(error?.message ?? error).slice(0, 200));
@@ -465,7 +472,7 @@ export function materializeTask490BrowserAction(input: {
         };
       }
       if (cfg.kind === "csv" || cfg.kind === "json") {
-        await page.goto(cfg.adminPath + "/advanced/forms/" + cfg.formId + "/submissions", { waitUntil: "domcontentloaded", timeout: 120000 });
+        await page.goto(cfg.adminOrigin + cfg.adminPath + "/advanced/forms/" + cfg.formId + "/submissions", { waitUntil: "domcontentloaded", timeout: 120000 });
         await waitSubmissionsVisible();
         const tableProof = await readTableProof();
         const statTotalValue = await readStatTotal();
@@ -502,7 +509,7 @@ export function materializeTask490BrowserAction(input: {
         };
       }
       // dark-parity: the only scenario that mutates the actual color mode.
-      await page.goto(cfg.adminPath + "/advanced/forms/" + cfg.formId + "/submissions", { waitUntil: "domcontentloaded", timeout: 120000 });
+      await page.goto(cfg.adminOrigin + cfg.adminPath + "/advanced/forms/" + cfg.formId + "/submissions", { waitUntil: "domcontentloaded", timeout: 120000 });
       await waitSubmissionsVisible();
       const tableProof = await readTableProof();
       const statTotalValue = await readStatTotal();
@@ -524,7 +531,7 @@ export function materializeTask490BrowserAction(input: {
       // Always end the flip in dark so the screenshot shows the parity state.
       if (!(await page.evaluate(() => document.documentElement.classList.contains("dark")))) {
         await toggle.click();
-        await page.waitForFunction(() => document.documentElement.classList.contains("dark"), { timeout: 30000 }).catch(async (error) => {
+        await page.waitForFunction(() => document.documentElement.classList.contains("dark"), undefined, { timeout: 30000 }).catch(async (error) => {
           throw new Error("task490_dark_screenshot_timeout: " + String(error?.message ?? error).slice(0, 200));
         });
       }

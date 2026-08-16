@@ -15,7 +15,7 @@ const decoder = new TextDecoder("utf-8", { fatal: true });
 const TOKEN = /^[a-z0-9][a-z0-9._/-]{0,159}$/u;
 const SHA256 = /^[a-f0-9]{64}$/u;
 const FAILURE =
-  /^(?:(?:wf540_|task554_)[a-z0-9_]{1,64}|playwright_(?:action_timeout|modal_state|strict_mode)|browser_action_failed)$/u;
+  /^(?:(?:wf540_|task554_|task490_)[a-z0-9_]{1,64}|playwright_(?:action_timeout|modal_state|strict_mode)|browser_action_failed)$/u;
 
 function fail(message: string, cause?: unknown): never {
   throw new SmokeError(

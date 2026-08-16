@@ -201,6 +201,7 @@ function buildTask490BrowserFixtures(input: {
         variantId: entry.variantId,
         formId: input.install.formId,
         submissionId: input.install.submissionId,
+        adminOrigin: ADMIN_ORIGIN,
         adminPath: input.install.adminPath,
         runMarker: input.install.runMarker,
       })
@@ -286,6 +287,7 @@ export async function runTask490Adapter(context: RuntimeSmokeContext): Promise<S
   let server: SupervisedServerResource | null = null;
   let workspace: Awaited<ReturnType<typeof createTask490PrivateWorkspace>> | null = null;
   let routingLease: RuntimeSmokeRoutingSettingsLease | null = null;
+  let authWindowPrepared = false;
   let transport: BrowserTransport | null = null;
   let dispatcher: PlaywrightCliDispatcher | null = null;
   let scenarios: readonly SmokeScenarioResult[] | null = null;
@@ -316,6 +318,19 @@ export async function runTask490Adapter(context: RuntimeSmokeContext): Promise<S
         "TASK-490 requires the default admin path (/admin)"
       );
     }
+    // The admin SPA fires several /auth/* requests per boot and every one
+    // consumes the shared auth rate-limit bucket (10 req/60s). The suite
+    // boots the shell six times (warmup + five scored scenarios), so a full
+    // run exceeds the window and the last boot 429s into a /admin/login
+    // bounce. Shorten the auth bucket window BEFORE the dev host reads the
+    // settings (its first request caches the patched value), then restore the
+    // exact stored row on close (mirrors the proven TASK-540/TASK-488
+    // auth-window pattern).
+    await workers.dispatch(
+      TASK490_WORKER_DESCRIPTORS.authPrepare,
+      Object.freeze({ marker: marker })
+    );
+    authWindowPrepared = true;
     server = await startTask490DevHost(context);
     workspace = await createTask490PrivateWorkspace(context);
     const authPath = join(workspace.path, "admin-auth.json");
@@ -375,7 +390,7 @@ export async function runTask490Adapter(context: RuntimeSmokeContext): Promise<S
       const warmupSource = `async (page) => {
         await page.setViewportSize(${JSON.stringify(warmupVariant.viewport)});
         await page.goto("${ADMIN_ORIGIN}${install.adminPath}/advanced/forms/${install.formId}/submissions", { waitUntil: "domcontentloaded", timeout: 180000 });
-        await page.waitForFunction(() => document.body.innerText.includes("Form submissions"), { timeout: 120000 });
+        await page.waitForFunction(() => document.body.innerText.includes("Form submissions"), undefined, { timeout: 120000 });
         return { warmed: true };
       }`;
       const warmupFrames = await transport.runSegment(
@@ -502,6 +517,25 @@ export async function runTask490Adapter(context: RuntimeSmokeContext): Promise<S
   if (routingLease !== null) {
     try {
       await routingLease.restore();
+    } catch (error) {
+      cleanupErrors.push(error);
+    }
+  }
+  // The lease opens the postgres-js client in this process for its
+  // snapshot/restore transactions; postgres-js keeps idle sockets alive, so
+  // the client must be closed for the Node event loop to terminate after the
+  // run (the lease imports core/db/client lazily to keep the module DB-free).
+  if (routingLease !== null) {
+    try {
+      const { closeDatabase } = await import("../../../core/db/client");
+      await closeDatabase();
+    } catch (error) {
+      cleanupErrors.push(error);
+    }
+  }
+  if (authWindowPrepared && workers !== null) {
+    try {
+      await workers.dispatch(TASK490_WORKER_DESCRIPTORS.authRestore, Object.freeze({ marker }));
     } catch (error) {
       cleanupErrors.push(error);
     }

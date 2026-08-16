@@ -1,0 +1,76 @@
+{
+  "cleanup": { "failures": [], "pass": true },
+  "consoleErrors": [],
+  "failures": [],
+  "pass": true,
+  "processes": {
+    "git": 2,
+    "playwright-close": 1,
+    "playwright-open": 1,
+    "playwright-run-code": 6,
+    "playwright-state-load": 1,
+    "task490-dev-host": 1,
+    "task490-worker-db": 1
+  },
+  "profile": "fast",
+  "scenarios": [
+    { "elapsedMs": 2097, "id": "admin-login", "pass": true },
+    { "elapsedMs": 3866, "id": "forms-submissions-nav", "pass": true },
+    { "elapsedMs": 3144, "id": "export-csv", "pass": true },
+    { "elapsedMs": 2990, "id": "export-json", "pass": true },
+    { "elapsedMs": 2599, "id": "dark-parity", "pass": true }
+  ],
+  "schemaVersion": 1,
+  "screenshots": [
+    {
+      "path": "_docs/_workflows/_smoke/evidence/task-490/wf560-490smoke/01-admin-login.png",
+      "sha256": "e756244064d3eab6d9fec4b1b82c0274a2e29c1f2087c35b436fab0dc6e22849"
+    },
+    {
+      "path": "_docs/_workflows/_smoke/evidence/task-490/wf560-490smoke/02-forms-submissions-nav.png",
+      "sha256": "de9d5d774709d7e81e80e62d11664ca255e40a0370995cfc61d215a10bc02bb5"
+    },
+    {
+      "path": "_docs/_workflows/_smoke/evidence/task-490/wf560-490smoke/03-export-csv.png",
+      "sha256": "7ba55b716dbd75fc580aea4fe47e4b7639a95912544e69d5d698a5a0f84ba1b8"
+    },
+    {
+      "path": "_docs/_workflows/_smoke/evidence/task-490/wf560-490smoke/04-export-json.png",
+      "sha256": "faff4d9fe4a39137cc83a0180ef9c3c64e3b86cc9b98e90facc5a23b6e94c9d5"
+    },
+    {
+      "path": "_docs/_workflows/_smoke/evidence/task-490/wf560-490smoke/05-dark-parity.png",
+      "sha256": "50e0ad6b59e785ad10ca2686cf42d734369d2578291440e7eb8f67e45b656fac"
+    }
+  ],
+  "serverUp": true,
+  "session": "wf560-490smoke",
+  "snapshots": 2,
+  "suiteCleanup": {
+    "accessLogsRemoved": 28,
+    "auditLogsRemoved": 1,
+    "databaseBatches": 3,
+    "fixturesAbsent": true,
+    "formFieldsRemoved": 3,
+    "formsRemoved": 1,
+    "identitiesAbsent": true,
+    "pageErrors": 0,
+    "repositorySnapshots": 2,
+    "rolesRemoved": 1,
+    "rows": 46,
+    "sessionsRemoved": 1,
+    "statements": 20,
+    "submissionsRemoved": 1,
+    "userRolesRemoved": 1,
+    "usersRemoved": 1,
+    "workerRequests": 5,
+    "workerStarts": 1
+  },
+  "suiteId": "task-490",
+  "timings": [
+    { "count": 1, "elapsedMs": 2, "failed": 0, "kind": "cleanup", "name": "all" },
+    { "count": 1, "elapsedMs": 240, "failed": 0, "kind": "snapshot", "name": "task490-after" },
+    { "count": 1, "elapsedMs": 237, "failed": 0, "kind": "snapshot", "name": "task490-before" },
+    { "count": 1, "elapsedMs": 38031, "failed": 0, "kind": "suite", "name": "task-490" }
+  ]
+}
