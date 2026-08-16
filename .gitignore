@@ -63,3 +63,4 @@ _docs/PLAYWRIGHT/**/_raw/
 _docs/PLAYWRIGHT/screenshots/
 opencode.json
 tests/bun-lane-report.json
+.bun/
