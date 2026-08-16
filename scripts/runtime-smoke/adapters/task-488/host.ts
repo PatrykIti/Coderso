@@ -16,7 +16,12 @@ export interface Task488TimingPolicy {
 export function task488TimingPolicy(profile: SmokeProfileId): Task488TimingPolicy {
   if (profile === "fast") {
     return Object.freeze({
-      healthTimeoutMs: 120_000,
+      // The shared dev host starts both vite instances with --force, so every
+      // boot re-optimizes the admin dep graph in the background; the launcher
+      // can also spend a long time resolving its DB admin-path fetch first.
+      // Give the readiness phase the same budget as the certification profile
+      // so a genuinely slow first boot is not mistaken for a dead server.
+      healthTimeoutMs: 240_000,
       browserDispatchTimeoutMs: 90_000,
     });
   }
@@ -41,6 +46,40 @@ async function exactHttpReady(
   }
 }
 
+// The dev host starts both vite instances with `--force`, so every boot the
+// admin dep graph is re-scanned and re-bundled in the background. The SPA HTML
+// and the non-dep entry module are served immediately, but the browser's
+// requests for the pre-bundled dep modules (`.vite/deps/*.js?v=...`) only
+// succeed after that optimization commits. If a browser scenario starts before
+// then, the admin page cannot hydrate and the login flow races the optimizer.
+// This probe waits for the real commit: it transforms the entry module, finds
+// the pre-bundled dep URL it points at, and requires that dep to actually serve.
+const ADMIN_DEP_URL = /\/[^"'\s]+?node_modules\/\.vite\/deps\/[^"'\s]+?\.js\?v=[a-f0-9]+/u;
+
+async function adminSpaWarmReady(
+  adminPath: string,
+  fetchImpl: typeof globalThis.fetch
+): Promise<boolean> {
+  const normalized = adminPath.length > 1 ? adminPath : "";
+  const entryUrl = `http://127.0.0.1:5173${normalized}/main.tsx`;
+  try {
+    const entryResponse = await fetchImpl(entryUrl, {
+      method: "GET",
+      signal: AbortSignal.timeout(2_000),
+    });
+    if (entryResponse.status !== 200) {
+      await entryResponse.body?.cancel();
+      return false;
+    }
+    const source = await entryResponse.text();
+    const match = source.match(ADMIN_DEP_URL);
+    if (match === null) return false;
+    return exactHttpReady(`http://127.0.0.1:5173${match[0]}`, fetchImpl);
+  } catch {
+    return false;
+  }
+}
+
 export function task488Readiness(
   adminPath: string,
   fetchImpl: typeof globalThis.fetch = globalThis.fetch
@@ -51,9 +90,21 @@ export function task488Readiness(
       id: "task488-admin-ready",
       check: () => exactHttpReady(`http://127.0.0.1:5173${normalized}/`, fetchImpl),
     }),
+    // The dev backend redirects every admin HTML request to the vite dev
+    // server (307) when `adminDevUrl` is set, so `{adminPath}/` can never
+    // return 200. Probe the real admin API router instead: the auth install
+    // status endpoint is an always-200 backend route (mirrors TASK-540) and
+    // proves the API surface is actually serving on this admin path.
     Object.freeze({
       id: "task488-api-ready",
-      check: () => exactHttpReady(`http://127.0.0.1:3000${normalized}/`, fetchImpl),
+      check: () =>
+        exactHttpReady(`http://127.0.0.1:3000${normalized}/api/auth/install/status`, fetchImpl),
+    }),
+    // Wait for the forced-optimization commit so browser scenarios never race
+    // the background dep bundling (see adminSpaWarmReady above).
+    Object.freeze({
+      id: "task488-admin-spa-warm",
+      check: () => adminSpaWarmReady(adminPath, fetchImpl),
     }),
   ]);
 }

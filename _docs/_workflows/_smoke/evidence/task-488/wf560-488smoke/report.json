@@ -1,0 +1,657 @@
+{
+  "cleanup": { "failures": [], "pass": true },
+  "consoleErrors": [],
+  "failures": [],
+  "pass": true,
+  "processes": {
+    "git": 2,
+    "playwright-close": 1,
+    "playwright-open": 1,
+    "playwright-run-code": 10,
+    "task488-dev-host": 1,
+    "task488-worker-db": 1
+  },
+  "profile": "fast",
+  "scenarios": [
+    {
+      "elapsedMs": 8408,
+      "id": "commerce-login",
+      "pass": true,
+      "screenshots": [
+        {
+          "path": "_docs/_workflows/_smoke/evidence/task-488/wf560-488smoke/01-commerce-login-light.png",
+          "sha256": "168f822d2bc833d057d5e7fdd5d2d43e6e7867356cd03d57f6df81e1eb26bae1"
+        },
+        {
+          "path": "_docs/_workflows/_smoke/evidence/task-488/wf560-488smoke/01-commerce-login-dark.png",
+          "sha256": "2bd5fb079b73b43df9177635fc0005b9e21f7930f59743bf7cffd922c37e0072"
+        }
+      ],
+      "title": "Admin login and authenticated shell",
+      "variants": [
+        {
+          "assertions": [
+            {
+              "actual": "200",
+              "expected": "200",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "status",
+              "target": "/auth/me"
+            },
+            {
+              "actual": "true",
+              "expected": "true",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "visible",
+              "target": "admin shell main"
+            },
+            {
+              "actual": "true",
+              "expected": "true",
+              "kind": "aria",
+              "pass": true,
+              "property": "visible",
+              "target": "Commerce navigation link"
+            },
+            {
+              "actual": "painted",
+              "expected": "painted",
+              "kind": "computed-style",
+              "pass": true,
+              "property": "background-color",
+              "target": "document root"
+            }
+          ],
+          "consoleErrors": [],
+          "id": "light",
+          "surface": "admin",
+          "theme": "light",
+          "viewport": { "height": 1000, "width": 1440 }
+        },
+        {
+          "assertions": [
+            {
+              "actual": "200",
+              "expected": "200",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "status",
+              "target": "/auth/me"
+            },
+            {
+              "actual": "true",
+              "expected": "true",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "visible",
+              "target": "admin shell main"
+            },
+            {
+              "actual": "true",
+              "expected": "true",
+              "kind": "aria",
+              "pass": true,
+              "property": "visible",
+              "target": "Commerce navigation link"
+            },
+            {
+              "actual": "painted",
+              "expected": "painted",
+              "kind": "computed-style",
+              "pass": true,
+              "property": "background-color",
+              "target": "document root"
+            }
+          ],
+          "consoleErrors": [],
+          "id": "dark",
+          "surface": "admin",
+          "theme": "dark",
+          "viewport": { "height": 1000, "width": 1440 }
+        }
+      ]
+    },
+    {
+      "elapsedMs": 2533,
+      "id": "commerce-collections-route",
+      "pass": true,
+      "screenshots": [
+        {
+          "path": "_docs/_workflows/_smoke/evidence/task-488/wf560-488smoke/02-commerce-collections-route-light.png",
+          "sha256": "75b4a608edc739e7ae5a061b4a9737607ded9bb05cd248b3f437045c2f580cc8"
+        },
+        {
+          "path": "_docs/_workflows/_smoke/evidence/task-488/wf560-488smoke/02-commerce-collections-route-dark.png",
+          "sha256": "fab2b5ec2b66350cf6150b81b3e477cd542ebf2162f3fa3907b5374259344bf2"
+        }
+      ],
+      "title": "Commerce list to collections route",
+      "variants": [
+        {
+          "assertions": [
+            {
+              "actual": "true",
+              "expected": "true",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "visible",
+              "target": "Commerce page heading"
+            },
+            {
+              "actual": "true",
+              "expected": "true",
+              "kind": "aria",
+              "pass": true,
+              "property": "visible",
+              "target": "Manage collections button"
+            },
+            {
+              "actual": "true",
+              "expected": "true",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "resolved",
+              "target": "collections route"
+            },
+            {
+              "actual": "true",
+              "expected": "true",
+              "kind": "geometry",
+              "pass": true,
+              "property": "within-viewport",
+              "target": "Collections page header"
+            }
+          ],
+          "consoleErrors": [],
+          "id": "light",
+          "surface": "admin",
+          "theme": "light",
+          "viewport": { "height": 1000, "width": 1440 }
+        },
+        {
+          "assertions": [
+            {
+              "actual": "true",
+              "expected": "true",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "visible",
+              "target": "Commerce page heading"
+            },
+            {
+              "actual": "true",
+              "expected": "true",
+              "kind": "aria",
+              "pass": true,
+              "property": "visible",
+              "target": "Manage collections button"
+            },
+            {
+              "actual": "true",
+              "expected": "true",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "resolved",
+              "target": "collections route"
+            },
+            {
+              "actual": "true",
+              "expected": "true",
+              "kind": "geometry",
+              "pass": true,
+              "property": "within-viewport",
+              "target": "Collections page header"
+            }
+          ],
+          "consoleErrors": [],
+          "id": "dark",
+          "surface": "admin",
+          "theme": "dark",
+          "viewport": { "height": 1000, "width": 1440 }
+        }
+      ]
+    },
+    {
+      "elapsedMs": 9023,
+      "id": "collection-create",
+      "pass": true,
+      "screenshots": [
+        {
+          "path": "_docs/_workflows/_smoke/evidence/task-488/wf560-488smoke/03-collection-create-light.png",
+          "sha256": "eb04b3d4339805193e050314056fe3ce4cc625b7ea02d5cff1b2d5525acd1f8f"
+        },
+        {
+          "path": "_docs/_workflows/_smoke/evidence/task-488/wf560-488smoke/03-collection-create-dark.png",
+          "sha256": "7db20f4683d0aa063e4c566b826fab529d8bfba746a446e924ffef4d5250af41"
+        }
+      ],
+      "title": "Create collection visible and assignable",
+      "variants": [
+        {
+          "assertions": [
+            {
+              "actual": "200",
+              "expected": "200",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "status",
+              "target": "POST /commerce/products"
+            },
+            {
+              "actual": "200",
+              "expected": "200",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "status",
+              "target": "POST /commerce/collections"
+            },
+            {
+              "actual": "true",
+              "expected": "true",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "visible",
+              "target": "created collection"
+            },
+            {
+              "actual": "true",
+              "expected": "true",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "visible",
+              "target": "product editor collection checkbox"
+            },
+            {
+              "actual": "true",
+              "expected": "true",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "assigned",
+              "target": "GET /commerce/products/:id"
+            }
+          ],
+          "consoleErrors": [],
+          "id": "light",
+          "surface": "admin",
+          "theme": "light",
+          "viewport": { "height": 1000, "width": 1440 }
+        },
+        {
+          "assertions": [
+            {
+              "actual": "true",
+              "expected": "true",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "visible",
+              "target": "created collection"
+            },
+            {
+              "actual": "true",
+              "expected": "true",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "visible",
+              "target": "product editor collection checkbox"
+            },
+            {
+              "actual": "true",
+              "expected": "true",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "assigned",
+              "target": "GET /commerce/products/:id"
+            },
+            {
+              "actual": "painted",
+              "expected": "painted",
+              "kind": "computed-style",
+              "pass": true,
+              "property": "background-color",
+              "target": "admin shell"
+            },
+            {
+              "actual": "0",
+              "expected": "0",
+              "kind": "geometry",
+              "pass": true,
+              "property": "overflow-x",
+              "target": "document"
+            }
+          ],
+          "consoleErrors": [],
+          "id": "dark",
+          "surface": "admin",
+          "theme": "dark",
+          "viewport": { "height": 1000, "width": 1440 }
+        }
+      ]
+    },
+    {
+      "elapsedMs": 4041,
+      "id": "variant-editor",
+      "pass": true,
+      "screenshots": [
+        {
+          "path": "_docs/_workflows/_smoke/evidence/task-488/wf560-488smoke/04-variant-editor-light.png",
+          "sha256": "8a8bf29f2c4087f749c0f76691b39b3c82fcb8588fc2dde841dcc5795b503493"
+        },
+        {
+          "path": "_docs/_workflows/_smoke/evidence/task-488/wf560-488smoke/04-variant-editor-dark.png",
+          "sha256": "8179a00381e2a2ab323e690eb8f667e1f82f0796591667830bd6f35136fd6f40"
+        }
+      ],
+      "title": "Variant editor card authoring",
+      "variants": [
+        {
+          "assertions": [
+            {
+              "actual": "true",
+              "expected": "true",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "visible",
+              "target": "Default variant 1 checkbox"
+            },
+            {
+              "actual": "true",
+              "expected": "true",
+              "kind": "aria",
+              "pass": true,
+              "property": "visible",
+              "target": "Remove variant 1 button"
+            },
+            {
+              "actual": "true",
+              "expected": "true",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "visible",
+              "target": "variant quantity input"
+            },
+            {
+              "actual": "true",
+              "expected": "true",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "visible",
+              "target": "Attributes editor"
+            },
+            {
+              "actual": "true",
+              "expected": "true",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "title-match",
+              "target": "GET /commerce/products/:id"
+            },
+            {
+              "actual": "true",
+              "expected": "true",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "attribute-match",
+              "target": "GET /commerce/products/:id"
+            }
+          ],
+          "consoleErrors": [],
+          "id": "light",
+          "surface": "admin",
+          "theme": "light",
+          "viewport": { "height": 1000, "width": 1440 }
+        },
+        {
+          "assertions": [
+            {
+              "actual": "true",
+              "expected": "true",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "visible",
+              "target": "Default variant 1 checkbox"
+            },
+            {
+              "actual": "true",
+              "expected": "true",
+              "kind": "aria",
+              "pass": true,
+              "property": "visible",
+              "target": "Remove variant 1 button"
+            },
+            {
+              "actual": "true",
+              "expected": "true",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "visible",
+              "target": "variant quantity input"
+            },
+            {
+              "actual": "true",
+              "expected": "true",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "visible",
+              "target": "Attributes editor"
+            },
+            {
+              "actual": "painted",
+              "expected": "painted",
+              "kind": "computed-style",
+              "pass": true,
+              "property": "background-color",
+              "target": "admin shell"
+            }
+          ],
+          "consoleErrors": [],
+          "id": "dark",
+          "surface": "admin",
+          "theme": "dark",
+          "viewport": { "height": 1000, "width": 1440 }
+        }
+      ]
+    },
+    {
+      "elapsedMs": 6411,
+      "id": "commerce-dark-parity",
+      "pass": true,
+      "screenshots": [
+        {
+          "path": "_docs/_workflows/_smoke/evidence/task-488/wf560-488smoke/05-commerce-dark-parity-light.png",
+          "sha256": "f596b4365a226029822585e382214b7a4750b72b7ca4015389a06fd574428c72"
+        },
+        {
+          "path": "_docs/_workflows/_smoke/evidence/task-488/wf560-488smoke/05-commerce-dark-parity-dark.png",
+          "sha256": "8179a00381e2a2ab323e690eb8f667e1f82f0796591667830bd6f35136fd6f40"
+        }
+      ],
+      "title": "Dark theme parity across commerce surfaces",
+      "variants": [
+        {
+          "assertions": [
+            {
+              "actual": "false",
+              "expected": "false",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "class-dark",
+              "target": "html element"
+            },
+            {
+              "actual": "painted",
+              "expected": "painted",
+              "kind": "computed-style",
+              "pass": true,
+              "property": "background-color",
+              "target": "admin shell"
+            },
+            {
+              "actual": "distinct",
+              "expected": "distinct",
+              "kind": "computed-style",
+              "pass": true,
+              "property": "contrast",
+              "target": "Commerce heading"
+            },
+            {
+              "actual": "0",
+              "expected": "0",
+              "kind": "geometry",
+              "pass": true,
+              "property": "overflow-x",
+              "target": "document"
+            },
+            {
+              "actual": "true",
+              "expected": "true",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "visible",
+              "target": "variant card and collections"
+            }
+          ],
+          "consoleErrors": [],
+          "id": "light",
+          "surface": "admin",
+          "theme": "light",
+          "viewport": { "height": 1000, "width": 1440 }
+        },
+        {
+          "assertions": [
+            {
+              "actual": "true",
+              "expected": "true",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "class-dark",
+              "target": "html element"
+            },
+            {
+              "actual": "painted",
+              "expected": "painted",
+              "kind": "computed-style",
+              "pass": true,
+              "property": "background-color",
+              "target": "admin shell"
+            },
+            {
+              "actual": "distinct",
+              "expected": "distinct",
+              "kind": "computed-style",
+              "pass": true,
+              "property": "contrast",
+              "target": "Commerce heading"
+            },
+            {
+              "actual": "0",
+              "expected": "0",
+              "kind": "geometry",
+              "pass": true,
+              "property": "overflow-x",
+              "target": "document"
+            },
+            {
+              "actual": "true",
+              "expected": "true",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "visible",
+              "target": "variant card and collections"
+            }
+          ],
+          "consoleErrors": [],
+          "id": "dark",
+          "surface": "admin",
+          "theme": "dark",
+          "viewport": { "height": 1000, "width": 1440 }
+        }
+      ]
+    }
+  ],
+  "schemaVersion": 1,
+  "screenshots": [
+    {
+      "path": "_docs/_workflows/_smoke/evidence/task-488/wf560-488smoke/01-commerce-login-light.png",
+      "sha256": "168f822d2bc833d057d5e7fdd5d2d43e6e7867356cd03d57f6df81e1eb26bae1"
+    },
+    {
+      "path": "_docs/_workflows/_smoke/evidence/task-488/wf560-488smoke/01-commerce-login-dark.png",
+      "sha256": "2bd5fb079b73b43df9177635fc0005b9e21f7930f59743bf7cffd922c37e0072"
+    },
+    {
+      "path": "_docs/_workflows/_smoke/evidence/task-488/wf560-488smoke/02-commerce-collections-route-light.png",
+      "sha256": "75b4a608edc739e7ae5a061b4a9737607ded9bb05cd248b3f437045c2f580cc8"
+    },
+    {
+      "path": "_docs/_workflows/_smoke/evidence/task-488/wf560-488smoke/02-commerce-collections-route-dark.png",
+      "sha256": "fab2b5ec2b66350cf6150b81b3e477cd542ebf2162f3fa3907b5374259344bf2"
+    },
+    {
+      "path": "_docs/_workflows/_smoke/evidence/task-488/wf560-488smoke/03-collection-create-light.png",
+      "sha256": "eb04b3d4339805193e050314056fe3ce4cc625b7ea02d5cff1b2d5525acd1f8f"
+    },
+    {
+      "path": "_docs/_workflows/_smoke/evidence/task-488/wf560-488smoke/03-collection-create-dark.png",
+      "sha256": "7db20f4683d0aa063e4c566b826fab529d8bfba746a446e924ffef4d5250af41"
+    },
+    {
+      "path": "_docs/_workflows/_smoke/evidence/task-488/wf560-488smoke/04-variant-editor-light.png",
+      "sha256": "8a8bf29f2c4087f749c0f76691b39b3c82fcb8588fc2dde841dcc5795b503493"
+    },
+    {
+      "path": "_docs/_workflows/_smoke/evidence/task-488/wf560-488smoke/04-variant-editor-dark.png",
+      "sha256": "8179a00381e2a2ab323e690eb8f667e1f82f0796591667830bd6f35136fd6f40"
+    },
+    {
+      "path": "_docs/_workflows/_smoke/evidence/task-488/wf560-488smoke/05-commerce-dark-parity-light.png",
+      "sha256": "f596b4365a226029822585e382214b7a4750b72b7ca4015389a06fd574428c72"
+    },
+    {
+      "path": "_docs/_workflows/_smoke/evidence/task-488/wf560-488smoke/05-commerce-dark-parity-dark.png",
+      "sha256": "8179a00381e2a2ab323e690eb8f667e1f82f0796591667830bd6f35136fd6f40"
+    }
+  ],
+  "serverUp": true,
+  "session": "wf560-488smoke",
+  "snapshots": 2,
+  "suiteCleanup": {
+    "adminPathUnchanged": true,
+    "collectionAbsenceProved": true,
+    "databaseBatches": 3,
+    "deletedCollections": 1,
+    "deletedProducts": 1,
+    "productAbsenceProved": true,
+    "repositorySnapshots": 2,
+    "rows": 4,
+    "statements": 8,
+    "workerReconnects": 0,
+    "workerRequests": 5,
+    "workerStarts": 1
+  },
+  "suiteId": "task-488",
+  "timings": [
+    { "count": 1, "elapsedMs": 49, "failed": 0, "kind": "cleanup", "name": "all" },
+    {
+      "count": 1,
+      "elapsedMs": 165,
+      "failed": 0,
+      "kind": "cleanup",
+      "name": "task488-auth-window-restore"
+    },
+    { "count": 1, "elapsedMs": 920, "failed": 0, "kind": "cleanup", "name": "task488-resources" },
+    { "count": 1, "elapsedMs": 226, "failed": 0, "kind": "phase", "name": "task488-auth-window" },
+    { "count": 1, "elapsedMs": 70006, "failed": 0, "kind": "phase", "name": "task488-browser" },
+    { "count": 1, "elapsedMs": 3, "failed": 0, "kind": "phase", "name": "task488-browser-plan" },
+    { "count": 1, "elapsedMs": 1, "failed": 0, "kind": "phase", "name": "task488-browser-start" },
+    { "count": 1, "elapsedMs": 843, "failed": 0, "kind": "phase", "name": "task488-install" },
+    { "count": 1, "elapsedMs": 112, "failed": 0, "kind": "phase", "name": "task488-screenshots" },
+    { "count": 1, "elapsedMs": 5181, "failed": 0, "kind": "phase", "name": "task488-server" },
+    { "count": 1, "elapsedMs": 17, "failed": 0, "kind": "phase", "name": "task488-workers" },
+    { "count": 1, "elapsedMs": 3, "failed": 0, "kind": "phase", "name": "task488-workspace" },
+    { "count": 1, "elapsedMs": 240, "failed": 0, "kind": "snapshot", "name": "task488-after" },
+    { "count": 1, "elapsedMs": 166, "failed": 0, "kind": "snapshot", "name": "task488-before" },
+    { "count": 1, "elapsedMs": 77882, "failed": 0, "kind": "suite", "name": "task-488" }
+  ]
+}

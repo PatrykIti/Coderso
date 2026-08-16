@@ -1,3 +1,5 @@
+import { resolve } from "node:path";
+
 import { SmokeError } from "../../contracts";
 import type {
   SmokeScenarioResult,
@@ -223,9 +225,13 @@ function task488DescriptorById(scenarioId: string): Task488ScenarioDescriptor {
 
 export function projectTask488ScenarioResults(
   observations: readonly Task488ScenarioObservation[],
-  screenshotResults: readonly SmokeScreenshotResult[]
+  screenshotResults: readonly SmokeScreenshotResult[],
+  root: string
 ): readonly SmokeScenarioResult[] {
-  const shotByPath = new Map(screenshotResults.map((shot) => [shot.path, shot]));
+  // The observation envelope carries the absolute screenshot path (what the
+  // browser wrote to), while the validated results carry the manifest-relative
+  // path; resolve the latter against the same root so the lookup matches.
+  const shotByPath = new Map(screenshotResults.map((shot) => [resolve(root, shot.path), shot]));
   if (shotByPath.size !== screenshotResults.length) {
     invalid("TASK-488 screenshot results are duplicated");
   }

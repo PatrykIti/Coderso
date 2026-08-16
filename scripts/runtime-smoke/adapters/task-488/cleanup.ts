@@ -171,6 +171,24 @@ export async function finalizeTask488ResourcesNeverThrow(input: {
   return Object.freeze({ proof, failures: Object.freeze(failures) });
 }
 
+export async function restoreTask488AuthWindowNeverThrow(input: {
+  readonly workers: WorkerPool;
+  readonly descriptor: WorkerOperationDescriptor;
+  readonly marker: string;
+}): Promise<readonly Task488FinalizationFailure[]> {
+  try {
+    await input.workers.dispatch(input.descriptor, Object.freeze({ marker: input.marker }));
+    return Object.freeze([]);
+  } catch (error) {
+    const failure: Task488FinalizationFailure = Object.freeze({
+      resource: "task488-auth-window-restore",
+      phase: "close",
+      error,
+    });
+    return Object.freeze([failure]);
+  }
+}
+
 export async function compareTask488RepositoryNeverThrow(input: {
   readonly guard: RepositoryGuard;
   readonly before: RepositorySnapshot;

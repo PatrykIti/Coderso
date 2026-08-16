@@ -63,8 +63,12 @@ function bounded(value: string | undefined): string | null {
 }
 
 export function task488AdminCredentials(source: NodeJS.ProcessEnv): Task488BrowserCredentials {
-  const email = bounded(source.CODERSO_PLAYWRIGHT_EMAIL ?? source.PLAYWRIGHT_ADMIN_EMAIL);
-  const password = bounded(source.CODERSO_PLAYWRIGHT_PASSWORD ?? source.PLAYWRIGHT_ADMIN_PASSWORD);
+  const email = bounded(
+    source.CODERSO_PLAYWRIGHT_EMAIL ?? source.PLAYWRIGHT_ADMIN_EMAIL ?? source.ADMIN_EMAIL
+  );
+  const password = bounded(
+    source.CODERSO_PLAYWRIGHT_PASSWORD ?? source.PLAYWRIGHT_ADMIN_PASSWORD ?? source.ADMIN_PASSWORD
+  );
   if (email === null || password === null || !EMAIL.test(email)) {
     throw new SmokeError(
       "smoke_authentication_failed",

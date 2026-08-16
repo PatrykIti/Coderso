@@ -23,6 +23,7 @@ import {
   createTask488CleanupResources,
   finalizeTask488ResourcesNeverThrow,
   preserveTask488PrimaryFailure,
+  restoreTask488AuthWindowNeverThrow,
   type Task488FinalCleanupProof,
 } from "./task-488/cleanup";
 import {
@@ -169,6 +170,13 @@ export async function runTask488Adapter(context: RuntimeSmokeContext): Promise<S
         adminPath: fixture.adminPath,
       }),
     });
+    // The admin SPA fires several /auth/* requests per boot and every one
+    // consumes the shared auth rate-limit bucket; ten scenario boots exceed a
+    // 60s window, so the suite shortens the window BEFORE the dev host reads
+    // the settings (its first request caches the patched value).
+    await context.timing.measure("phase", "task488-auth-window", () =>
+      workers!.dispatch(TASK_488_WORKER_DESCRIPTORS.authPrepare, Object.freeze({ marker }))
+    );
     server = await context.timing.measure("phase", "task488-server", () =>
       startTask488DevHost(context, { adminPath: install!.adminPath, timing })
     );
@@ -214,6 +222,16 @@ export async function runTask488Adapter(context: RuntimeSmokeContext): Promise<S
   }
 
   if (workers !== null) {
+    const authWindowFailures =
+      fixture !== null
+        ? await context.timing.measure("cleanup", "task488-auth-window-restore", () =>
+            restoreTask488AuthWindowNeverThrow({
+              workers,
+              descriptor: TASK_488_WORKER_DESCRIPTORS.authRestore,
+              marker: fixture!.marker,
+            })
+          )
+        : Object.freeze([]);
     const finalization = await context.timing.measure("cleanup", "task488-resources", () =>
       finalizeTask488ResourcesNeverThrow({
         browser: browserResource ?? browser?.transport ?? null,
@@ -233,7 +251,11 @@ export async function runTask488Adapter(context: RuntimeSmokeContext): Promise<S
       })
     );
     finalProof = finalization.proof;
-    primary = preserveTask488PrimaryFailure(primary, finalization.failures, null);
+    primary = preserveTask488PrimaryFailure(
+      primary,
+      [...finalization.failures, ...authWindowFailures],
+      null
+    );
   }
 
   if (primary === null && accepted !== null) {
@@ -259,7 +281,7 @@ export async function runTask488Adapter(context: RuntimeSmokeContext): Promise<S
     throw new SmokeError("smoke_output_invalid", "TASK-488 execution is incomplete");
   }
 
-  const projected = projectTask488ScenarioResults(accepted.observations, screenshots);
+  const projected = projectTask488ScenarioResults(accepted.observations, screenshots, context.root);
   const scenarios = requireManifestableScenarioResults(projected, screenshots);
   const result = projectTask488AdapterResult({
     scenarios,

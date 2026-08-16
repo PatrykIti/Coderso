@@ -144,6 +144,13 @@ const VARIANT_LIGHT_ASSERTIONS = Object.freeze([
   assertion("variant-inventory-controls", "dom-state", "variant quantity input", "visible", "true"),
   assertion("variant-attributes-editor", "dom-state", "Attributes editor", "visible", "true"),
   assertion("variant-persisted", "dom-state", "GET /commerce/products/:id", "title-match", "true"),
+  assertion(
+    "variant-attribute-persisted",
+    "dom-state",
+    "GET /commerce/products/:id",
+    "attribute-match",
+    "true"
+  ),
 ]);
 
 const VARIANT_DARK_ASSERTIONS = Object.freeze([

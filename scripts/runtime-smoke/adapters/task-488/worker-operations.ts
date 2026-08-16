@@ -26,9 +26,46 @@ export const TASK_488_WORKER_OPERATION_IDS = Object.freeze([
   "task-488/install",
   "task-488/cleanup",
   "task-488/prove",
+  "task-488/auth-window/prepare",
+  "task-488/auth-window/restore",
 ] as const);
 
 export type Task488WorkerOperationId = (typeof TASK_488_WORKER_OPERATION_IDS)[number];
+
+/**
+ * TASK-488 auth-window contract. The admin SPA fires several `/auth/*`
+ * requests per page boot (`/auth/me`, `/auth/install/status`,
+ * `/auth/bot-protection`) and every one of them consumes the shared `auth`
+ * rate-limit bucket (default 10 requests / 60s). A ten-scenario suite boots
+ * the admin shell far more than ten times inside a single window, so the last
+ * `/auth/me` is deterministically 429'd and the login/dark assertions fail.
+ * The suite shortens the auth bucket window for its own duration (mirroring
+ * the proven TASK-540 `auth-window` pattern), then restores the exact stored
+ * settings row afterwards.
+ */
+export interface Task488AuthPrepareInput extends PlainJsonObject {
+  readonly marker: string;
+}
+
+export interface Task488AuthPrepareOutput extends PlainJsonObject {
+  readonly schemaVersion: 1;
+  readonly prepared: true;
+  /** False when rate limiting is disabled, so nothing was patched. */
+  readonly changed: boolean;
+  /** The auth bucket window the suite runs under (5s when changed). */
+  readonly windowSeconds: number;
+  /** The auth bucket request cap the suite can rely on. */
+  readonly maxRequests: number;
+}
+
+export interface Task488AuthRestoreInput extends PlainJsonObject {
+  readonly marker: string;
+}
+
+export interface Task488AuthRestoreOutput extends PlainJsonObject {
+  readonly schemaVersion: 1;
+  readonly restored: true;
+}
 
 export interface Task488InstallInput extends PlainJsonObject {
   readonly marker: string;
@@ -79,6 +116,8 @@ export interface Task488WorkerHandlers {
   install(input: Task488InstallInput): Promise<Task488InstallOutput>;
   cleanup(input: Task488CleanupInput): Promise<Task488CleanupOutput>;
   prove(input: Task488ProofInput): Promise<Task488ProofOutput>;
+  prepareAuthWindow(input: Task488AuthPrepareInput): Promise<Task488AuthPrepareOutput>;
+  restoreAuthWindow(input: Task488AuthRestoreInput): Promise<Task488AuthRestoreOutput>;
   close(): Promise<void>;
   proveAbsent(): Promise<boolean>;
 }
@@ -87,6 +126,9 @@ const MARKER = /^[a-f0-9]{12}$/u;
 const SLUG = /^[a-z0-9][a-z0-9-]{1,95}$/u;
 const TITLE = /^[a-zA-Z0-9][a-zA-Z0-9 .-]{0,127}$/u;
 const ADMIN_PATH = /^\/[a-zA-Z0-9._-]+$/u;
+
+export const TASK_488_AUTH_FAST_WINDOW_SECONDS = 5;
+export const TASK_488_AUTH_MINIMUM_REQUESTS = 10;
 
 function fail(message: string): never {
   throw new WorkerProtocolError(message);
@@ -98,6 +140,45 @@ function requireSlug(value: unknown, label: string): asserts value is string {
 
 function requireAdminPath(value: unknown, label: string): asserts value is string {
   if (typeof value !== "string" || !ADMIN_PATH.test(value)) fail(`${label} is invalid`);
+}
+
+function authWindowInput(value: unknown): Task488AuthPrepareInput {
+  if (!isPlainObject(value)) fail("TASK-488 auth-window input is invalid");
+  assertExactKeys(value, ["marker"], "TASK-488 auth-window input");
+  if (typeof value.marker !== "string" || !MARKER.test(value.marker)) {
+    fail("TASK-488 auth-window marker is invalid");
+  }
+  return value as unknown as Task488AuthPrepareInput;
+}
+
+function authPrepareOutput(value: unknown): Task488AuthPrepareOutput {
+  if (!isPlainObject(value)) fail("TASK-488 auth prepare output is invalid");
+  assertExactKeys(
+    value,
+    ["schemaVersion", "prepared", "changed", "windowSeconds", "maxRequests"],
+    "TASK-488 auth prepare output"
+  );
+  if (
+    value.schemaVersion !== 1 ||
+    value.prepared !== true ||
+    typeof value.changed !== "boolean" ||
+    !Number.isSafeInteger(value.windowSeconds) ||
+    (value.windowSeconds as number) <= 0 ||
+    !Number.isSafeInteger(value.maxRequests) ||
+    (value.maxRequests as number) <= 0
+  ) {
+    fail("TASK-488 auth prepare proof drifted");
+  }
+  return value as unknown as Task488AuthPrepareOutput;
+}
+
+function authRestoreOutput(value: unknown): Task488AuthRestoreOutput {
+  if (!isPlainObject(value)) fail("TASK-488 auth restore output is invalid");
+  assertExactKeys(value, ["schemaVersion", "restored"], "TASK-488 auth restore output");
+  if (value.schemaVersion !== 1 || value.restored !== true) {
+    fail("TASK-488 auth restore proof drifted");
+  }
+  return value as unknown as Task488AuthRestoreOutput;
 }
 
 function requireCount(value: unknown, label: string): asserts value is number {
@@ -211,6 +292,8 @@ export const TASK_488_WORKER_DESCRIPTORS = Object.freeze({
   install: operationDescriptor("task-488/install", "idempotent-read"),
   cleanup: operationDescriptor("task-488/cleanup", "mutation"),
   prove: operationDescriptor("task-488/prove", "idempotent-read"),
+  authPrepare: operationDescriptor("task-488/auth-window/prepare", "mutation"),
+  authRestore: operationDescriptor("task-488/auth-window/restore", "mutation"),
 });
 
 function operationDescriptor(
@@ -262,6 +345,18 @@ export function createTask488WorkerRegistry(
       ),
       definition(TASK_488_WORKER_DESCRIPTORS.prove, proofInput, validateProofOutput, (input) =>
         handlers.prove(input)
+      ),
+      definition(
+        TASK_488_WORKER_DESCRIPTORS.authPrepare,
+        authWindowInput,
+        authPrepareOutput,
+        (input) => handlers.prepareAuthWindow(input)
+      ),
+      definition(
+        TASK_488_WORKER_DESCRIPTORS.authRestore,
+        authWindowInput,
+        authRestoreOutput,
+        (input) => handlers.restoreAuthWindow(input)
       ),
     ],
     {

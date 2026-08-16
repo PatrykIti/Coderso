@@ -7,6 +7,10 @@ import { resolveExecutableOnPath } from "../../process-supervisor";
 import type { WorkerProfileSpec } from "../../workers/pool";
 import { WorkerPool } from "../../workers/pool";
 import type {
+  Task488AuthPrepareInput,
+  Task488AuthPrepareOutput,
+  Task488AuthRestoreInput,
+  Task488AuthRestoreOutput,
   Task488CleanupInput,
   Task488CleanupOutput,
   Task488InstallInput,
@@ -14,6 +18,10 @@ import type {
   Task488ProofInput,
   Task488ProofOutput,
   Task488WorkerHandlers,
+} from "./worker-operations";
+import {
+  TASK_488_AUTH_FAST_WINDOW_SECONDS,
+  TASK_488_AUTH_MINIMUM_REQUESTS,
 } from "./worker-operations";
 
 /**
@@ -162,9 +170,22 @@ function normalizeAdminPath(value: string | null): string {
  * each handler so the Node-owned adapter never pulls the runtime pool into
  * module scope; the worker process (Bun) owns the connection lifecycle.
  */
+const SECURITY_SETTINGS_KEY = "security.settings";
+
+interface Task488SettingsSnapshot {
+  readonly exists: boolean;
+  readonly value: unknown;
+  readonly updatedAt: Date | null;
+}
+
 export class Task488ProductionHandlers implements Task488WorkerHandlers {
   #closed = false;
   #closePromise: Promise<void> | null = null;
+  #marker: string | null = null;
+  #authSnapshot: Task488SettingsSnapshot | null = null;
+  #authPrepared = false;
+  #authRestored = false;
+  #authChanged = false;
 
   async install(input: Task488InstallInput): Promise<Task488InstallOutput> {
     const { db } = await import("../../../../core/db/client");
@@ -279,6 +300,151 @@ export class Task488ProductionHandlers implements Task488WorkerHandlers {
     });
   }
 
+  async prepareAuthWindow(input: Task488AuthPrepareInput): Promise<Task488AuthPrepareOutput> {
+    if (this.#authPrepared || this.#authSnapshot !== null) {
+      throw new SmokeError(
+        "smoke_output_invalid",
+        "TASK-488 auth window was prepared more than once"
+      );
+    }
+    const { db } = await import("../../../../core/db/client");
+    const { settings } = await import("../../../../core/db/schema");
+    const securitySettings = await import("../../../../core/services/settings/securitySettings");
+    const rows = await db
+      .select({ value: settings.value, updatedAt: settings.updatedAt })
+      .from(settings)
+      .where(eq(settings.key, SECURITY_SETTINGS_KEY))
+      .limit(2);
+    if (rows.length > 1) {
+      throw new SmokeError("smoke_cleanup_failed", "TASK-488 auth settings cardinality drifted");
+    }
+    const row = rows[0];
+    this.#marker = input.marker;
+    this.#authSnapshot = Object.freeze({
+      exists: row !== undefined,
+      value: row?.value ?? null,
+      updatedAt: row?.updatedAt ?? null,
+    });
+    securitySettings.resetSecuritySettingsCache();
+    const current = await securitySettings.getSecuritySettings();
+    const auth = current.rateLimit.buckets.auth;
+    // Rate limiting disabled means the auth bucket cannot 429 the suite, so
+    // there is nothing to patch and restore becomes a no-op.
+    if (!current.rateLimit.enabled) {
+      this.#authPrepared = true;
+      this.#authChanged = false;
+      return Object.freeze({
+        schemaVersion: 1,
+        prepared: true,
+        changed: false,
+        windowSeconds: auth.windowSeconds,
+        maxRequests: auth.maxRequests,
+      });
+    }
+    const targetWindow = TASK_488_AUTH_FAST_WINDOW_SECONDS;
+    const targetRequests = Math.max(auth.maxRequests, TASK_488_AUTH_MINIMUM_REQUESTS);
+    this.#authPrepared = true;
+    this.#authChanged = true;
+    try {
+      await securitySettings.setSecuritySettings({
+        rateLimit: {
+          buckets: {
+            auth: { windowSeconds: targetWindow, maxRequests: targetRequests },
+          },
+        },
+      });
+      securitySettings.resetSecuritySettingsCache();
+      const after = await securitySettings.getSecuritySettings();
+      const afterAuth = after.rateLimit.buckets.auth;
+      if (afterAuth.windowSeconds !== targetWindow || afterAuth.maxRequests !== targetRequests) {
+        throw new SmokeError("smoke_cleanup_failed", "TASK-488 fast auth window did not persist");
+      }
+      return Object.freeze({
+        schemaVersion: 1,
+        prepared: true,
+        changed: true,
+        windowSeconds: afterAuth.windowSeconds,
+        maxRequests: afterAuth.maxRequests,
+      });
+    } catch (error) {
+      try {
+        await this.restoreAuthWindow(input);
+      } catch {
+        throw new SmokeError(
+          "smoke_cleanup_failed",
+          "TASK-488 fast auth window failed and could not restore",
+          { cause: error }
+        );
+      }
+      throw error;
+    }
+  }
+
+  async restoreAuthWindow(input: Task488AuthRestoreInput): Promise<Task488AuthRestoreOutput> {
+    if (
+      !this.#authPrepared ||
+      this.#authSnapshot === null ||
+      this.#authRestored ||
+      this.#marker === null ||
+      this.#marker !== input.marker
+    ) {
+      throw new SmokeError(
+        "smoke_output_invalid",
+        "TASK-488 auth window restore authority is absent"
+      );
+    }
+    if (!this.#authChanged) {
+      this.#authRestored = true;
+      return Object.freeze({ schemaVersion: 1, restored: true });
+    }
+    const { db } = await import("../../../../core/db/client");
+    const { settings } = await import("../../../../core/db/schema");
+    const securitySettings = await import("../../../../core/services/settings/securitySettings");
+    const snapshot = this.#authSnapshot;
+    await db.transaction(async (transaction) => {
+      if (!snapshot.exists) {
+        await transaction.delete(settings).where(eq(settings.key, SECURITY_SETTINGS_KEY));
+        return;
+      }
+      if (snapshot.updatedAt === null) {
+        throw new SmokeError("smoke_cleanup_failed", "TASK-488 auth settings timestamp is absent");
+      }
+      await transaction
+        .insert(settings)
+        .values({
+          key: SECURITY_SETTINGS_KEY,
+          value: snapshot.value,
+          updatedAt: snapshot.updatedAt,
+        })
+        .onConflictDoUpdate({
+          target: settings.key,
+          set: { value: snapshot.value, updatedAt: snapshot.updatedAt },
+        });
+    });
+    securitySettings.resetSecuritySettingsCache();
+    const restoredRows = await db
+      .select({ value: settings.value, updatedAt: settings.updatedAt })
+      .from(settings)
+      .where(eq(settings.key, SECURITY_SETTINGS_KEY))
+      .limit(1);
+    const restored = restoredRows[0];
+    if (!snapshot.exists) {
+      if (restored !== undefined) {
+        throw new SmokeError("smoke_cleanup_failed", "TASK-488 auth settings restore left a row");
+      }
+    } else if (
+      restored === undefined ||
+      restored.updatedAt === null ||
+      snapshot.updatedAt === null ||
+      restored.updatedAt.getTime() !== snapshot.updatedAt.getTime() ||
+      JSON.stringify(restored.value) !== JSON.stringify(snapshot.value)
+    ) {
+      throw new SmokeError("smoke_cleanup_failed", "TASK-488 auth settings restore drifted");
+    }
+    this.#authRestored = true;
+    return Object.freeze({ schemaVersion: 1, restored: true });
+  }
+
   async close(): Promise<void> {
     if (this.#closed) return;
     this.#closed = true;
@@ -287,6 +453,16 @@ export class Task488ProductionHandlers implements Task488WorkerHandlers {
   }
 
   async #closeOnce(): Promise<void> {
+    // Safety net for hard teardown paths: the adapter dispatches the explicit
+    // restore, but if the worker is closed without it (crash recovery, pool
+    // shutdown ordering), put the settings row back before closing the pool.
+    if (this.#authPrepared && !this.#authRestored && this.#marker !== null) {
+      try {
+        await this.restoreAuthWindow({ marker: this.#marker });
+      } catch {
+        // Best-effort during close; the adapter already recorded the failure.
+      }
+    }
     const { closeDatabase } = await import("../../../../core/db/client");
     await closeDatabase();
   }
