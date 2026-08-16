@@ -76,6 +76,15 @@ export function buildGoogleAnalyticsHeadSnippet(measurementId: string): string {
   ].join("");
 }
 
+// L02 renderers cannot embed the two-tag fragment inside one <script> element
+// (nested markup is treated as raw text and gtag.js never loads). This helper
+// splits the built fragment into the loader URL and the inline dataLayer text
+// so renderers can emit a real `src` element plus a raw-text script. Returns
+// null for anything this module did not build (fail closed).
+export function splitGoogleAnalyticsHeadSnippet(
+  snippet: string
+): { loaderSrc: string; inlineScript: string } | null { /* ... */ }
+
 type AnalyticsRuntimeDeps = {
   getIntegrationRuntimeConfig: (id: string) => Promise<Record<string, string | null> | null>;
 };
@@ -112,6 +121,9 @@ the page render.
 - `buildGoogleAnalyticsHeadSnippet("G-ABC123")` contains the `gtag/js?id=G-ABC123`
   src and `gtag('config','G-ABC123')`.
 - `buildGoogleAnalyticsHeadSnippet("</script><script>alert(1)")` → `""`.
+- `splitGoogleAnalyticsHeadSnippet(buildGoogleAnalyticsHeadSnippet("G-ABC123"))`
+  → `{ loaderSrc: ".../gtag/js?id=G-ABC123", inlineScript: "...gtag('config','G-ABC123')..." }`;
+  `null` for a foreign snippet (fail closed).
 - `buildGoogleAnalyticsHeadSnippet("ga-123")`/`""`/`"UA-1"` → `""`.
 - `resolvePublicAnalyticsHead` with a stub dep: configured valid id → snippet;
   `null`/empty/invalid id → `null`; verify the dep was called with

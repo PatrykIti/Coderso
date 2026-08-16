@@ -24,6 +24,7 @@ import {
   SiteHeaderNav,
   type SiteShellRenderProps,
 } from "./siteShell";
+import { splitGoogleAnalyticsHeadSnippet } from "../services/integrations/analyticsRuntime";
 import { buildPublicDocumentShell } from "./publicDocumentShell";
 
 export type PublicPageRenderOptions = {
@@ -207,10 +208,18 @@ const renderDocument = (
 
   // GA4 head tag (TASK-491-01-L02): LIVE renders only — never on previews, so
   // editors/preview tokens never trigger GA hits. The snippet is pre-built from
-  // a format-validated measurement id (see analyticsRuntime.ts), so it is safe
-  // to inject as raw script text.
+  // a format-validated measurement id (see analyticsRuntime.ts) and split into
+  // a loader `src` element plus the inline dataLayer script: a `<script>` cannot
+  // nest markup, so one wrapper element would leave `gtag.js` unloaded. Fail
+  // closed if the snippet shape drifted from what analyticsRuntime builds.
   if (analyticsHeadSnippet && !isPreview) {
-    headTags.push(<script key="ga4" dangerouslySetInnerHTML={{ __html: analyticsHeadSnippet }} />);
+    const parts = splitGoogleAnalyticsHeadSnippet(analyticsHeadSnippet);
+    if (parts !== null) {
+      headTags.push(<script key="ga4-loader" async src={parts.loaderSrc}></script>);
+      headTags.push(
+        <script key="ga4-inline" dangerouslySetInnerHTML={{ __html: parts.inlineScript }} />
+      );
+    }
   }
 
   const head = renderToString(<>{headTags}</>);

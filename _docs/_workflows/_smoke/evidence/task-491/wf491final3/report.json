@@ -1,0 +1,431 @@
+{
+  "cleanup": { "failures": [], "pass": true },
+  "consoleErrors": [],
+  "failures": [],
+  "pass": true,
+  "processes": {
+    "git": 2,
+    "playwright-close": 1,
+    "playwright-open": 1,
+    "playwright-run-code": 5,
+    "playwright-state-load": 1,
+    "task491-dev-host": 1,
+    "task491-worker-db": 1
+  },
+  "profile": "fast",
+  "scenarios": [
+    {
+      "elapsedMs": 5359,
+      "id": "admin-login",
+      "pass": true,
+      "screenshots": [
+        {
+          "path": "shots/01-admin-login.png",
+          "sha256": "0bd6c52731f3829371d322fcc435082f1928708b037498282068f21637b5f4db"
+        }
+      ],
+      "title": "Admin login establishes a session and renders the Integrations page",
+      "variants": [
+        {
+          "assertions": [
+            {
+              "actual": "0",
+              "expected": "0",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "count",
+              "target": "input#email"
+            },
+            {
+              "actual": "true",
+              "expected": "true",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "visible",
+              "target": "Integrations page heading"
+            },
+            {
+              "actual": "true",
+              "expected": "true",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "visible",
+              "target": "[data-app-scroll]"
+            },
+            {
+              "actual": "0.9131",
+              "expected": ">= 0.6",
+              "kind": "computed-style",
+              "pass": true,
+              "property": "background-luminance",
+              "target": "body"
+            }
+          ],
+          "consoleErrors": [],
+          "id": "admin-light",
+          "surface": "admin",
+          "theme": "light",
+          "viewport": { "height": 1000, "width": 1440 }
+        }
+      ]
+    },
+    {
+      "elapsedMs": 2563,
+      "id": "connect-ga-drawer",
+      "pass": true,
+      "screenshots": [
+        {
+          "path": "shots/02-connect-ga-drawer.png",
+          "sha256": "a895511c323f84e4007403ffd9953fcc3cfff00ed6d4ccdf7e3db6e0b022bcb7"
+        }
+      ],
+      "title": "Connect Google Analytics drawer saves a measurement ID (PATCH 200) and flips the card to Connected",
+      "variants": [
+        {
+          "assertions": [
+            {
+              "actual": "Not connected",
+              "expected": "Not connected",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "status-badge",
+              "target": "Google Analytics card"
+            },
+            {
+              "actual": "448",
+              "expected": ">= 400",
+              "kind": "geometry",
+              "pass": true,
+              "property": "width",
+              "target": "[data-slot=\"sheet-content\"]"
+            },
+            {
+              "actual": "true",
+              "expected": "true",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "label-visible",
+              "target": "Measurement ID field"
+            },
+            {
+              "actual": "200",
+              "expected": "200",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "status",
+              "target": "PATCH /settings/integrations/google-analytics"
+            },
+            {
+              "actual": "Connected",
+              "expected": "Connected",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "status-badge",
+              "target": "Google Analytics card"
+            },
+            {
+              "actual": "Not checked",
+              "expected": "Not checked",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "health-badge",
+              "target": "Google Analytics card"
+            }
+          ],
+          "consoleErrors": [],
+          "id": "admin-light",
+          "surface": "admin",
+          "theme": "light",
+          "viewport": { "height": 1000, "width": 1440 }
+        }
+      ]
+    },
+    {
+      "elapsedMs": 3381,
+      "id": "health-states",
+      "pass": true,
+      "screenshots": [
+        {
+          "path": "shots/03-health-states.png",
+          "sha256": "a6d9e2ea1ad5502e70defa206c3ae459596e87ee988fa3defb987957a2df42ed"
+        }
+      ],
+      "title": "Integration drawer Test connection transitions GA to Healthy and Sentry to Issue",
+      "variants": [
+        {
+          "assertions": [
+            {
+              "actual": "Not checked",
+              "expected": "Not checked",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "health-badge",
+              "target": "Google Analytics card"
+            },
+            {
+              "actual": "Not checked",
+              "expected": "Not checked",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "health-badge",
+              "target": "Sentry card"
+            },
+            {
+              "actual": "Not checked",
+              "expected": "Not checked",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "health-label",
+              "target": "Google Analytics drawer"
+            },
+            {
+              "actual": "Healthy",
+              "expected": "Healthy",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "health-label",
+              "target": "Google Analytics drawer"
+            },
+            {
+              "actual": "true",
+              "expected": "true",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "last-checked-present",
+              "target": "Google Analytics drawer"
+            },
+            {
+              "actual": "Not checked",
+              "expected": "Not checked",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "health-label",
+              "target": "Sentry drawer"
+            },
+            {
+              "actual": "Issue",
+              "expected": "Issue",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "health-label",
+              "target": "Sentry drawer"
+            },
+            {
+              "actual": "dsn_invalid",
+              "expected": "dsn_invalid",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "last-error",
+              "target": "Sentry drawer"
+            },
+            {
+              "actual": "0",
+              "expected": "0",
+              "kind": "geometry",
+              "pass": true,
+              "property": "visible-count",
+              "target": "[data-slot=\"sheet-content\"]"
+            }
+          ],
+          "consoleErrors": [],
+          "id": "admin-light",
+          "surface": "admin",
+          "theme": "light",
+          "viewport": { "height": 1000, "width": 1440 }
+        }
+      ]
+    },
+    {
+      "elapsedMs": 2065,
+      "id": "public-ga-tag",
+      "pass": true,
+      "screenshots": [
+        {
+          "path": "shots/04-public-ga-tag.png",
+          "sha256": "6254d9f219d321ab91e2335e3ed6faaf624afbb4b73de5d79fdaddb139b7164a"
+        }
+      ],
+      "title": "Public home page head injects the GA4 gtag snippet and the inline script populates dataLayer",
+      "variants": [
+        {
+          "assertions": [
+            {
+              "actual": "1",
+              "expected": "1",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "count",
+              "target": "public <head> gtag script"
+            },
+            {
+              "actual": "1",
+              "expected": "1",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "count",
+              "target": "inline gtag config script"
+            },
+            {
+              "actual": "true",
+              "expected": "true",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "config-event",
+              "target": "window.dataLayer"
+            },
+            {
+              "actual": "true",
+              "expected": "true",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "visible",
+              "target": "public page h1"
+            }
+          ],
+          "consoleErrors": [],
+          "id": "public-light",
+          "surface": "public",
+          "theme": "light",
+          "viewport": { "height": 1000, "width": 1440 }
+        }
+      ]
+    },
+    {
+      "elapsedMs": 1531,
+      "id": "dark-parity",
+      "pass": true,
+      "screenshots": [
+        {
+          "path": "shots/05-dark-parity.png",
+          "sha256": "cd858550db6a0c89003b5c0d09c78346d4f3844c11ab21b246a866a4b1875447"
+        }
+      ],
+      "title": "Integrations admin surface renders in dark mode with identical card state",
+      "variants": [
+        {
+          "assertions": [
+            {
+              "actual": "true",
+              "expected": "true",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "dark-class",
+              "target": "html"
+            },
+            {
+              "actual": "0.0088",
+              "expected": "<= 0.15",
+              "kind": "computed-style",
+              "pass": true,
+              "property": "background-luminance",
+              "target": "body"
+            },
+            {
+              "actual": "Connected",
+              "expected": "Connected",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "status-badge",
+              "target": "Google Analytics card"
+            },
+            {
+              "actual": "Healthy",
+              "expected": "Healthy",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "health-badge",
+              "target": "Google Analytics card"
+            },
+            {
+              "actual": "448",
+              "expected": ">= 400",
+              "kind": "geometry",
+              "pass": true,
+              "property": "width",
+              "target": "[data-slot=\"sheet-content\"]"
+            }
+          ],
+          "consoleErrors": [],
+          "id": "admin-dark",
+          "surface": "admin",
+          "theme": "dark",
+          "viewport": { "height": 1000, "width": 1440 }
+        }
+      ]
+    }
+  ],
+  "schemaVersion": 1,
+  "screenshots": [
+    {
+      "path": "shots/01-admin-login.png",
+      "sha256": "0bd6c52731f3829371d322fcc435082f1928708b037498282068f21637b5f4db"
+    },
+    {
+      "path": "shots/02-connect-ga-drawer.png",
+      "sha256": "a895511c323f84e4007403ffd9953fcc3cfff00ed6d4ccdf7e3db6e0b022bcb7"
+    },
+    {
+      "path": "shots/03-health-states.png",
+      "sha256": "a6d9e2ea1ad5502e70defa206c3ae459596e87ee988fa3defb987957a2df42ed"
+    },
+    {
+      "path": "shots/04-public-ga-tag.png",
+      "sha256": "6254d9f219d321ab91e2335e3ed6faaf624afbb4b73de5d79fdaddb139b7164a"
+    },
+    {
+      "path": "shots/05-dark-parity.png",
+      "sha256": "cd858550db6a0c89003b5c0d09c78346d4f3844c11ab21b246a866a4b1875447"
+    }
+  ],
+  "serverUp": true,
+  "session": "wf491final3",
+  "snapshots": 2,
+  "suiteCleanup": {
+    "databaseBatches": 8,
+    "deletedIntegrations": 2,
+    "remainingIntegrationRows": 0,
+    "repositorySnapshots": 2,
+    "rows": 14,
+    "statements": 11,
+    "terminalRemainingRows": 0,
+    "workerReconnects": 0,
+    "workerRequests": 10,
+    "workerStarts": 1
+  },
+  "suiteId": "task-491",
+  "timings": [
+    { "count": 1, "elapsedMs": 43, "failed": 0, "kind": "cleanup", "name": "all" },
+    { "count": 1, "elapsedMs": 1093, "failed": 0, "kind": "cleanup", "name": "task491-resources" },
+    {
+      "count": 1,
+      "elapsedMs": 1295,
+      "failed": 0,
+      "kind": "phase",
+      "name": "routing-settings-apply"
+    },
+    {
+      "count": 1,
+      "elapsedMs": 375,
+      "failed": 0,
+      "kind": "phase",
+      "name": "routing-settings-restore"
+    },
+    { "count": 1, "elapsedMs": 20981, "failed": 0, "kind": "phase", "name": "task491-browser" },
+    { "count": 1, "elapsedMs": 3, "failed": 0, "kind": "phase", "name": "task491-browser-plan" },
+    {
+      "count": 1,
+      "elapsedMs": 2672,
+      "failed": 0,
+      "kind": "phase",
+      "name": "task491-browser-start"
+    },
+    { "count": 1, "elapsedMs": 1028, "failed": 0, "kind": "phase", "name": "task491-install" },
+    { "count": 1, "elapsedMs": 92, "failed": 0, "kind": "phase", "name": "task491-screenshots" },
+    { "count": 1, "elapsedMs": 8234, "failed": 0, "kind": "phase", "name": "task491-server" },
+    { "count": 1, "elapsedMs": 15, "failed": 0, "kind": "phase", "name": "task491-workers" },
+    { "count": 1, "elapsedMs": 3, "failed": 0, "kind": "phase", "name": "task491-workspace" },
+    { "count": 1, "elapsedMs": 326, "failed": 0, "kind": "snapshot", "name": "task491-after" },
+    { "count": 1, "elapsedMs": 299, "failed": 0, "kind": "snapshot", "name": "task491-before" },
+    { "count": 1, "elapsedMs": 36856, "failed": 0, "kind": "suite", "name": "task-491" }
+  ]
+}

@@ -1,0 +1,57 @@
+{
+  "cleanup": { "failures": [], "pass": true },
+  "consoleErrors": [],
+  "failures": [{ "code": "smoke_process_failed" }],
+  "pass": false,
+  "processes": {
+    "git": 1,
+    "playwright-close": 1,
+    "playwright-open": 1,
+    "playwright-run-code": 3,
+    "playwright-state-load": 1,
+    "task491-dev-host": 1,
+    "task491-worker-db": 3
+  },
+  "profile": "fast",
+  "scenarios": [],
+  "schemaVersion": 1,
+  "screenshots": [],
+  "serverUp": false,
+  "session": "wf560-491smoke",
+  "snapshots": 1,
+  "suiteCleanup": {},
+  "suiteId": "task-491",
+  "timings": [
+    { "count": 1, "elapsedMs": 36, "failed": 0, "kind": "cleanup", "name": "all" },
+    { "count": 1, "elapsedMs": 1657, "failed": 0, "kind": "cleanup", "name": "task491-resources" },
+    {
+      "count": 1,
+      "elapsedMs": 1169,
+      "failed": 0,
+      "kind": "phase",
+      "name": "routing-settings-apply"
+    },
+    {
+      "count": 1,
+      "elapsedMs": 384,
+      "failed": 0,
+      "kind": "phase",
+      "name": "routing-settings-restore"
+    },
+    { "count": 1, "elapsedMs": 12893, "failed": 1, "kind": "phase", "name": "task491-browser" },
+    { "count": 1, "elapsedMs": 4, "failed": 0, "kind": "phase", "name": "task491-browser-plan" },
+    {
+      "count": 1,
+      "elapsedMs": 2956,
+      "failed": 0,
+      "kind": "phase",
+      "name": "task491-browser-start"
+    },
+    { "count": 1, "elapsedMs": 939, "failed": 0, "kind": "phase", "name": "task491-install" },
+    { "count": 1, "elapsedMs": 7771, "failed": 0, "kind": "phase", "name": "task491-server" },
+    { "count": 1, "elapsedMs": 15, "failed": 0, "kind": "phase", "name": "task491-workers" },
+    { "count": 1, "elapsedMs": 5, "failed": 0, "kind": "phase", "name": "task491-workspace" },
+    { "count": 1, "elapsedMs": 152, "failed": 0, "kind": "snapshot", "name": "task491-before" },
+    { "count": 1, "elapsedMs": 28316, "failed": 1, "kind": "suite", "name": "task-491" }
+  ]
+}

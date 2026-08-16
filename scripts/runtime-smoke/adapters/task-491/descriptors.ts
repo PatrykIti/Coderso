@@ -65,7 +65,12 @@ export const TASK491_MEASUREMENT_ID = "G-WF491SMOKE";
 
 export const TASK491_GA_ID = "google-analytics";
 export const TASK491_SENTRY_ID = "sentry";
-export const TASK491_SENTRY_DSN = "https://public@o0.invalid.sentry.io/0";
+// Shape-invalid Sentry DSN (no public key segment), so the product health
+// evaluator deterministically reports Issue with the machine-readable
+// `dsn_invalid` last error (the evaluator validates DSN shape only; a DSN
+// without a username segment is rejected, mirroring the pinned product test
+// `isParseableSentryDsn("https://o0.ingest.sentry.io/0") === false`).
+export const TASK491_SENTRY_DSN = "https://o0.invalid.sentry.io/0";
 
 export const TASK491_ADMIN_ORIGIN = "http://127.0.0.1:5173";
 export const TASK491_ADMIN_BASE = `${TASK491_ADMIN_ORIGIN}/admin`;
@@ -352,8 +357,10 @@ export const TASK_491_SCENARIOS: readonly Task491ScenarioDescriptor[] = Object.f
         "dom-state",
         "Google Analytics card",
         "health-badge",
-        eq("Not checked"),
-        "Not checked"
+        // dark-parity runs after health-states, so the GA card badge reflects
+        // the checked outcome ("Healthy"), not the pre-check "Not checked".
+        eq("Healthy"),
+        "Healthy"
       ),
       assertion(
         "drawer-dark-opens",

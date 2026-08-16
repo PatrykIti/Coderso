@@ -5,6 +5,7 @@ import {
   GA_MEASUREMENT_ID_PATTERN,
   isValidGaMeasurementId,
   resolvePublicAnalyticsHead,
+  splitGoogleAnalyticsHeadSnippet,
 } from "../../../core/services/integrations/analyticsRuntime";
 
 describe("GA_MEASUREMENT_ID_PATTERN", () => {
@@ -53,6 +54,42 @@ describe("buildGoogleAnalyticsHeadSnippet", () => {
     expect(buildGoogleAnalyticsHeadSnippet("ga-123")).toBe("");
     expect(buildGoogleAnalyticsHeadSnippet("")).toBe("");
     expect(buildGoogleAnalyticsHeadSnippet("UA-1")).toBe("");
+  });
+});
+
+describe("splitGoogleAnalyticsHeadSnippet", () => {
+  it("splits a built snippet into a loader src and the inline script", () => {
+    const parts = splitGoogleAnalyticsHeadSnippet(buildGoogleAnalyticsHeadSnippet("G-ABC123"));
+    expect(parts).not.toBeNull();
+    expect(parts?.loaderSrc).toBe("https://www.googletagmanager.com/gtag/js?id=G-ABC123");
+    expect(parts?.inlineScript).toContain("window.dataLayer=window.dataLayer||[]");
+    expect(parts?.inlineScript).toContain("gtag('config','G-ABC123')");
+    expect(parts?.inlineScript).not.toContain("<script");
+  });
+
+  it("returns null for anything the module did not build", () => {
+    expect(splitGoogleAnalyticsHeadSnippet("")).toBeNull();
+    expect(splitGoogleAnalyticsHeadSnippet("<script>alert(1)</script>")).toBeNull();
+    expect(
+      splitGoogleAnalyticsHeadSnippet(
+        '<script async src="https://example.com/x.js"></script><script>a();</script>'
+      )
+    ).not.toBeNull();
+    expect(
+      splitGoogleAnalyticsHeadSnippet(
+        '<script async data-x src="https://example.com/x.js"></script><script>a();</script>'
+      )
+    ).toBeNull();
+  });
+
+  it("round-trips the builder output so renderers can emit real elements", () => {
+    const snippet = buildGoogleAnalyticsHeadSnippet("G-ROUND1");
+    const parts = splitGoogleAnalyticsHeadSnippet(snippet);
+    expect(parts).not.toBeNull();
+    const rebuilt =
+      `<script async src="${parts?.loaderSrc}"></script>` +
+      `<script>${parts?.inlineScript}</script>`;
+    expect(rebuilt).toBe(snippet);
   });
 });
 

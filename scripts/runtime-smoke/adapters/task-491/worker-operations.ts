@@ -27,6 +27,8 @@ export const TASK491_WORKER_OPERATION_IDS = Object.freeze([
   "task-491/checkpoint",
   "task-491/cleanup",
   "task-491/prove",
+  "task-491/auth-window/prepare",
+  "task-491/auth-window/restore",
 ] as const);
 
 export type Task491WorkerOperationId = (typeof TASK491_WORKER_OPERATION_IDS)[number];
@@ -75,14 +77,57 @@ export interface Task491ProofOutput extends PlainJsonObject {
   readonly rows: number;
 }
 
+/**
+ * TASK-491 auth-window contract. The admin SPA fires several `/auth/*`
+ * requests per page boot (`/auth/me`, `/auth/install/status`) and every one
+ * consumes the shared `auth` rate-limit bucket (default 10 requests / 60s). A
+ * six-boot suite (auth warmup + five scored scenarios) exhausts that bucket
+ * inside a single window, so the last boot's `/auth/me` is deterministically
+ * 429'd, the SPA treats the failed bootstrap as unauthenticated and redirects
+ * to `/admin/login`, and the browser proof fails on console noise. The suite
+ * shortens the auth bucket window for its own duration (mirroring the proven
+ * TASK-490 / TASK-488 `auth-window` pattern), then restores the exact stored
+ * settings row afterwards.
+ */
+export interface Task491AuthPrepareInput extends PlainJsonObject {
+  readonly marker: string;
+}
+
+export interface Task491AuthPrepareOutput extends PlainJsonObject {
+  readonly schemaVersion: 1;
+  readonly prepared: true;
+  /** False when rate limiting is disabled, so nothing was patched. */
+  readonly changed: boolean;
+  /** The auth bucket window the suite runs under (5s when changed). */
+  readonly windowSeconds: number;
+  /** The auth bucket request cap the suite can rely on. */
+  readonly maxRequests: number;
+}
+
+export interface Task491AuthRestoreInput extends PlainJsonObject {
+  readonly marker: string;
+}
+
+export interface Task491AuthRestoreOutput extends PlainJsonObject {
+  readonly schemaVersion: 1;
+  readonly restored: true;
+}
+
 type Task491WorkerOutput =
-  Task491InstallOutput | Task491CheckpointOutput | Task491CleanupOutput | Task491ProofOutput;
+  | Task491InstallOutput
+  | Task491CheckpointOutput
+  | Task491CleanupOutput
+  | Task491ProofOutput
+  | Task491AuthPrepareOutput
+  | Task491AuthRestoreOutput;
 
 export interface Task491WorkerHandlers {
   install(input: Task491InstallInput): Promise<Task491InstallOutput>;
   checkpoint(input: Task491CheckpointInput): Promise<Task491CheckpointOutput>;
   cleanup(): Promise<Task491CleanupOutput>;
   prove(): Promise<Task491ProofOutput>;
+  prepareAuthWindow(input: Task491AuthPrepareInput): Promise<Task491AuthPrepareOutput>;
+  restoreAuthWindow(input: Task491AuthRestoreInput): Promise<Task491AuthRestoreOutput>;
   close(): Promise<void>;
   proveAbsent(): Promise<boolean>;
 }
@@ -213,6 +258,36 @@ function validateProofOutput(value: unknown): Task491ProofOutput {
   return output;
 }
 
+function authWindowInput(value: unknown): Task491AuthPrepareInput {
+  if (!isPlainObject(value)) fail("TASK-491 auth-window input is invalid");
+  assertExactKeys(value, ["marker"], "TASK-491 auth-window input");
+  if (typeof value.marker !== "string" || !/^[a-f0-9]{12,32}$/u.test(value.marker)) {
+    fail("TASK-491 auth-window marker is invalid");
+  }
+  return value as unknown as Task491AuthPrepareInput;
+}
+
+function validateAuthPrepareOutput(value: unknown): Task491AuthPrepareOutput {
+  const output = outputObject(
+    value,
+    ["schemaVersion", "prepared", "changed", "windowSeconds", "maxRequests"],
+    "TASK-491 auth prepare output"
+  ) as unknown as Task491AuthPrepareOutput;
+  if (output.prepared !== true) fail("TASK-491 auth prepare flag is invalid");
+  boolean(output.changed, "TASK-491 auth prepare changed flag");
+  integer(output.windowSeconds, 1, "TASK-491 auth prepare window");
+  integer(output.maxRequests, 1, "TASK-491 auth prepare cap");
+  return output;
+}
+
+function validateAuthRestoreOutput(value: unknown): Task491AuthRestoreOutput {
+  const output = outputObject(value, ["schemaVersion", "restored"], "TASK-491 auth restore output");
+  if ((output as unknown as Task491AuthRestoreOutput).restored !== true) {
+    fail("TASK-491 auth restore flag is invalid");
+  }
+  return output as unknown as Task491AuthRestoreOutput;
+}
+
 const OPERATION_DIGEST = createHash("sha256")
   .update(JSON.stringify({ version: 1, operations: TASK491_WORKER_OPERATION_IDS }))
   .digest("hex");
@@ -224,8 +299,8 @@ function operationDescriptor(
   return Object.freeze({
     operationId,
     profileId: TASK491_WORKER_PROFILE_ID,
-    inputSchemaId: `${operationId.replace("/", "-")}-input-v1`,
-    outputSchemaId: `${operationId.replace("/", "-")}-output-v1`,
+    inputSchemaId: `${operationId.replaceAll("/", "-")}-input-v1`,
+    outputSchemaId: `${operationId.replaceAll("/", "-")}-output-v1`,
     sourceSha256: createHash("sha256")
       .update(OPERATION_DIGEST)
       .update("\0")
@@ -242,6 +317,8 @@ export const TASK491_WORKER_DESCRIPTORS = Object.freeze({
   checkpoint: operationDescriptor("task-491/checkpoint", "idempotent-read"),
   cleanup: operationDescriptor("task-491/cleanup", "mutation"),
   prove: operationDescriptor("task-491/prove", "idempotent-read"),
+  authPrepare: operationDescriptor("task-491/auth-window/prepare", "mutation"),
+  authRestore: operationDescriptor("task-491/auth-window/restore", "mutation"),
 });
 
 function definition<TInput extends PlainJsonObject, TOutput extends Task491WorkerOutput>(
@@ -277,6 +354,18 @@ export function createTask491WorkerRegistry(
       ),
       definition(TASK491_WORKER_DESCRIPTORS.prove, emptyInput, validateProofOutput, () =>
         handlers.prove()
+      ),
+      definition(
+        TASK491_WORKER_DESCRIPTORS.authPrepare,
+        authWindowInput,
+        validateAuthPrepareOutput,
+        (input) => handlers.prepareAuthWindow(input)
+      ),
+      definition(
+        TASK491_WORKER_DESCRIPTORS.authRestore,
+        authWindowInput,
+        validateAuthRestoreOutput,
+        (input) => handlers.restoreAuthWindow(input)
       ),
     ],
     {

@@ -32,6 +32,29 @@ export function buildGoogleAnalyticsHeadSnippet(measurementId: string): string {
   ].join("");
 }
 
+/**
+ * Split the built snippet into its two script parts for head rendering.
+ *
+ * A `<script>` element cannot contain nested `<script>` markup: embedding the
+ * full fragment via `dangerouslySetInnerHTML` would make the browser treat the
+ * loader tag as raw text, so `gtag.js` would never load. The renderers emit
+ * the loader as a real `src` element and the inline dataLayer script as raw
+ * text instead. Returns null for anything this module did not build (fail
+ * closed: never emit a partial or unexpected tag).
+ */
+export type GoogleAnalyticsHeadParts = Readonly<{
+  loaderSrc: string;
+  inlineScript: string;
+}>;
+
+export function splitGoogleAnalyticsHeadSnippet(snippet: string): GoogleAnalyticsHeadParts | null {
+  const match = /^<script async src="([^"]+)"><\/script><script>([\s\S]*)<\/script>$/u.exec(
+    snippet.trim()
+  );
+  if (match === null) return null;
+  return Object.freeze({ loaderSrc: match[1] as string, inlineScript: match[2] as string });
+}
+
 export type AnalyticsRuntimeDeps = {
   getIntegrationRuntimeConfig: (id: string) => Promise<Record<string, string | null> | null>;
 };

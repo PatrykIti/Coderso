@@ -14,6 +14,7 @@ import {
 } from "../services/posts/runtime/postBlockRuntimeMapper";
 import { PostBlockRuntimeRenderer } from "../services/posts/runtime/postBlockRuntimeRenderer";
 import { ContentListPager } from "../widgets/core/contentList";
+import { splitGoogleAnalyticsHeadSnippet } from "../services/integrations/analyticsRuntime";
 import { buildPublicDocumentShell } from "./publicDocumentShell";
 
 export type PublicEntrySummary = {
@@ -249,8 +250,18 @@ const renderDocument = (
   }
 
   // GA4 head tag (TASK-491-01-L02): LIVE renders only — never on previews.
+  // The snippet holds two script parts (loader + dataLayer inline); a `<script>`
+  // element cannot nest markup, so emit the loader as a real `src` element and
+  // the inline dataLayer script as raw text. Fail closed if the snippet shape
+  // drifted from what analyticsRuntime builds.
   if (analyticsHeadSnippet && !isPreview) {
-    headTags.push(<script key="ga4" dangerouslySetInnerHTML={{ __html: analyticsHeadSnippet }} />);
+    const parts = splitGoogleAnalyticsHeadSnippet(analyticsHeadSnippet);
+    if (parts !== null) {
+      headTags.push(<script key="ga4-loader" async src={parts.loaderSrc}></script>);
+      headTags.push(
+        <script key="ga4-inline" dangerouslySetInnerHTML={{ __html: parts.inlineScript }} />
+      );
+    }
   }
 
   const head = renderToString(<>{headTags}</>);

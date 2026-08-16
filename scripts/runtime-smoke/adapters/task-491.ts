@@ -127,7 +127,9 @@ export async function runTask491Adapter(context: RuntimeSmokeContext): Promise<S
   let finalProof: Task491FinalCleanupProof | null = null;
   let routingLease: RuntimeSmokeRoutingSettingsLease | null = null;
   let routingRestored = false;
+  let authWindowPrepared = false;
   const leaseFailures: Task491FinalizationFailure[] = [];
+  const authMarker = randomBytes(12).toString("hex");
 
   try {
     workers = await context.timing.measure("phase", "task491-workers", () =>
@@ -151,6 +153,19 @@ export async function runTask491Adapter(context: RuntimeSmokeContext): Promise<S
     // suite is done (shared runtime-smoke routing-settings lease).
     routingLease = new RuntimeSmokeRoutingSettingsLease();
     await context.timing.measure("phase", "routing-settings-apply", () => routingLease!.apply());
+    // The admin SPA fires several /auth/* requests per boot and every one
+    // consumes the shared auth rate-limit bucket (10 req/60s). The suite
+    // boots the shell six times (auth warmup + five scored scenarios), so a
+    // full run exceeds the window and the last boot 429s into a /admin/login
+    // bounce. Shorten the auth bucket window BEFORE the dev host reads the
+    // settings (its first request caches the patched value), then restore the
+    // exact stored row on close (mirrors the proven TASK-490/TASK-488
+    // auth-window pattern).
+    await workers.dispatch(
+      TASK491_WORKER_DESCRIPTORS.authPrepare,
+      Object.freeze({ marker: authMarker })
+    );
+    authWindowPrepared = true;
     server = await context.timing.measure("phase", "task491-server", () =>
       startTask491DevHost(context, { timing })
     );
@@ -216,6 +231,33 @@ export async function runTask491Adapter(context: RuntimeSmokeContext): Promise<S
           Object.freeze({ resource: "task491-routing-settings", phase: "close", error })
         );
       }
+    }
+    // Restore the exact security.settings row in finally, never-throw, so a
+    // failed suite cannot leave the auth bucket window shortened.
+    if (authWindowPrepared && workers !== null) {
+      try {
+        await workers.dispatch(
+          TASK491_WORKER_DESCRIPTORS.authRestore,
+          Object.freeze({ marker: authMarker })
+        );
+      } catch (error) {
+        leaseFailures.push(
+          Object.freeze({ resource: "task491-auth-window", phase: "close", error })
+        );
+      }
+    }
+    // The lease opens the postgres-js client in this process for its
+    // snapshot/restore transactions; postgres-js keeps idle sockets alive, so
+    // the client must be closed for the Node event loop to terminate after the
+    // run (mirrors the proven TASK-490 lease teardown; the runner otherwise
+    // hangs after writing its report).
+    try {
+      const { closeDatabase } = await import("../../../core/db/client");
+      await closeDatabase();
+    } catch (error) {
+      leaseFailures.push(
+        Object.freeze({ resource: "task491-routing-settings-db", phase: "close", error })
+      );
     }
   }
 

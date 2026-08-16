@@ -31,9 +31,15 @@
     public (non-preview) request entry (`handlePublicRequest`); preview/token
     render paths pass `null`.
   - `core/site/renderPublicPage.tsx` — extend the shared `renderDocument(...)`
-    head builder to accept an optional `analyticsHeadSnippet` and push it as a
-    raw `<script>` head tag (via `dangerouslySetInnerHTML`) **only when present
-    and `!isPreview`**. Thread the option through `renderPublicPageHtml`,
+    head builder to accept an optional `analyticsHeadSnippet` and emit it as
+    TWO `<head>` script tags **only when present and `!isPreview`**: the gtag.js
+    loader as a real `<script async src>` element and the inline dataLayer
+    script via `dangerouslySetInnerHTML`. The split is required because a
+    `<script>` element cannot nest markup; embedding the whole two-tag fragment
+    in one wrapper leaves `gtag.js` unloaded (verified by the TASK-491 runtime
+    smoke public-ga-tag scenario). Use the `splitGoogleAnalyticsHeadSnippet`
+    helper from `analyticsRuntime.ts` (L01) and fail closed (no tag) if the
+    snippet shape drifted. Thread the option through `renderPublicPageHtml`,
     `renderPublicPageRuntimeHtml`, and `renderPublicPageV2RuntimeHtml` option
     types.
   - `core/site/renderPublicEntry.tsx` — same head injection for
@@ -82,12 +88,11 @@ const renderDocument = (
   const headTags: ReactNode[] = [ /* charset, viewport, title, ... */ ];
   // ...existing pushes (description, canonical, robots, og:image, css)...
   if (analyticsHeadSnippet && !isPreview) {
-    headTags.push(
-      <script
-        key="ga4"
-        dangerouslySetInnerHTML={{ __html: analyticsHeadSnippet }}
-      />
-    );
+    const parts = splitGoogleAnalyticsHeadSnippet(analyticsHeadSnippet);
+    if (parts !== null) {
+      headTags.push(<script key="ga4-loader" async src={parts.loaderSrc} />);
+      headTags.push(<script key="ga4-inline" dangerouslySetInnerHTML={{ __html: parts.inlineScript }} />);
+    }
   }
   // ...
 };
@@ -110,8 +115,9 @@ try {
 ```
 
 **Data flow:** public request → resolve snippet once → pass option → renderer
-appends one `<script>` head tag when present and not preview → cached HTML
-includes the tag.
+splits the snippet and appends the loader `<script async src>` element plus the
+inline dataLayer `<script>` element when present and not preview → cached HTML
+includes the tags.
 
 **Error handling:** resolver failure → `console.warn` + `null` → page renders
 without GA (never errors). The snippet is built raw text from a format-validated

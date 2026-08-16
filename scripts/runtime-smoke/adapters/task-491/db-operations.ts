@@ -1,6 +1,6 @@
 import { createHash, randomBytes } from "node:crypto";
 
-import { inArray } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 
 import { isPlainObject, resolveInsideRoot, SmokeError } from "../../contracts";
 import type { RuntimeSmokeContext } from "../../lifecycle";
@@ -15,6 +15,10 @@ import {
   TASK491_SENTRY_ID,
 } from "./descriptors";
 import type {
+  Task491AuthPrepareInput,
+  Task491AuthPrepareOutput,
+  Task491AuthRestoreInput,
+  Task491AuthRestoreOutput,
   Task491CheckpointInput,
   Task491CheckpointOutput,
   Task491CleanupOutput,
@@ -23,6 +27,10 @@ import type {
   Task491ProofOutput,
   Task491WorkerHandlers,
 } from "./worker-operations";
+
+const SECURITY_SETTINGS_KEY = "security.settings";
+const AUTH_FAST_WINDOW_SECONDS = 5;
+const AUTH_MINIMUM_REQUESTS = 10;
 
 type ExpectedIntegrationState = Readonly<{
   readonly status: "connected" | "disconnected";
@@ -157,9 +165,31 @@ export class Task491ProductionHandlers implements Task491WorkerHandlers {
   #cleanupOutput: Task491CleanupOutput | null = null;
   #proofOutput: Task491ProofOutput | null = null;
   #closed = false;
+  #authPrepared = false;
+  #authChanged = false;
+  #authRestored = false;
+  #authMarker: string | null = null;
+  #authSnapshot: Readonly<{
+    exists: boolean;
+    value: unknown;
+    updatedAt: Date | null;
+  }> | null = null;
 
   async install(_input: Task491InstallInput): Promise<Task491InstallOutput> {
     if (this.#state !== null) throw new Error("task_491_fixture_already_installed");
+    // The fixture owns the two integration IDs for the duration of the run.
+    // updateIntegration() with an empty config is a no-op on a pre-existing
+    // configured row (the connect drawer only persists fields the operator
+    // edits), so a leftover row from an interrupted prior run would poison the
+    // scenario-1 checkpoint. Delete the owned IDs first for a deterministic
+    // fresh state, then upsert through the product service.
+    const { db } = await import("../../../../core/db/client");
+    const { integrations } = await import("../../../../core/db/schema");
+    const ownedIds = Object.freeze([TASK491_GA_ID, TASK491_SENTRY_ID]);
+    const deletedRows = await db
+      .delete(integrations)
+      .where(inArray(integrations.id, [...ownedIds]))
+      .returning({ id: integrations.id });
     const { updateIntegration } =
       await import("../../../../core/services/integrations/integrationsService");
     // GA starts disconnected with an empty config; Sentry starts connected with
@@ -181,8 +211,8 @@ export class Task491ProductionHandlers implements Task491WorkerHandlers {
       installedDigest: digest(
         Object.freeze({ version: 1, sourceRunId, gaId: TASK491_GA_ID, sentryId: TASK491_SENTRY_ID })
       ),
-      statements: 2,
-      rows: 2,
+      statements: 3,
+      rows: 2 + deletedRows.length,
     });
     this.#state = output;
     return output;
@@ -217,53 +247,38 @@ export class Task491ProductionHandlers implements Task491WorkerHandlers {
   }
 
   async cleanup(): Promise<Task491CleanupOutput> {
-    const state = this.#requireState();
     if (this.#cleanupOutput !== null) return this.#cleanupOutput;
     const { db } = await import("../../../../core/db/client");
     const { integrations } = await import("../../../../core/db/schema");
-    const ids = Object.freeze([state.gaId, state.sentryId]);
-    const mutation = await db.transaction(async (tx) => {
-      const owned = await tx
-        .select({ id: integrations.id })
-        .from(integrations)
-        .where(inArray(integrations.id, [...ids]))
-        .for("update");
-      if (owned.length !== ids.length) {
-        throw new Error("task_491_cleanup_provenance_incomplete");
-      }
-      const deleted =
-        owned.length === 0
-          ? []
-          : await tx
-              .delete(integrations)
-              .where(inArray(integrations.id, [...ids]))
-              .returning({ id: integrations.id });
-      return Object.freeze({ owned, deleted });
-    });
-    const remaining = await this.#readRows();
-    if (
-      mutation.deleted.length !== ids.length ||
-      remaining.length !== 0 ||
-      remaining.some((row) => ids.includes(row.id))
-    ) {
+    // The fixture owns these IDs by contract (install upserts them), so the
+    // cleanup can run on any worker process, even one that never executed the
+    // install (the pool restarts a worker after a failed dispatch, which loses
+    // the per-process install state). Delete whatever rows carry the owned IDs
+    // and assert absence; a missing row is already a clean state.
+    const ids = Object.freeze([TASK491_GA_ID, TASK491_SENTRY_ID]);
+    const deleted = await db
+      .delete(integrations)
+      .where(inArray(integrations.id, [...ids]))
+      .returning({ id: integrations.id });
+    const remaining = await this.#readRowsByIds(ids);
+    if (remaining.length !== 0) {
       throw new Error("task_491_cleanup_absence_incomplete");
     }
     const output = Object.freeze({
       schemaVersion: 1,
-      deletedRows: mutation.deleted.length,
+      deletedRows: deleted.length,
       remainingRows: remaining.length,
       idDigest: digest([...ids].sort()),
-      statements: 3,
-      rows: mutation.deleted.length + remaining.length,
+      statements: 2,
+      rows: deleted.length + remaining.length,
     });
     this.#cleanupOutput = output;
     return output;
   }
 
   async prove(): Promise<Task491ProofOutput> {
-    this.#requireState();
     if (this.#proofOutput !== null) return this.#proofOutput;
-    const remaining = await this.#readRows();
+    const remaining = await this.#readRowsByIds([TASK491_GA_ID, TASK491_SENTRY_ID]);
     if (remaining.length !== 0) {
       throw new Error("task_491_proof_remaining_rows");
     }
@@ -278,6 +293,151 @@ export class Task491ProductionHandlers implements Task491WorkerHandlers {
     return output;
   }
 
+  async prepareAuthWindow(input: Task491AuthPrepareInput): Promise<Task491AuthPrepareOutput> {
+    if (this.#authPrepared || this.#authSnapshot !== null) {
+      throw new SmokeError(
+        "smoke_output_invalid",
+        "TASK-491 auth window was prepared more than once"
+      );
+    }
+    const { db } = await import("../../../../core/db/client");
+    const { settings } = await import("../../../../core/db/schema");
+    const securitySettings = await import("../../../../core/services/settings/securitySettings");
+    const rows = await db
+      .select({ value: settings.value, updatedAt: settings.updatedAt })
+      .from(settings)
+      .where(eq(settings.key, SECURITY_SETTINGS_KEY))
+      .limit(2);
+    if (rows.length > 1) {
+      throw new SmokeError("smoke_cleanup_failed", "TASK-491 auth settings cardinality drifted");
+    }
+    const row = rows[0];
+    this.#authMarker = input.marker;
+    this.#authSnapshot = Object.freeze({
+      exists: row !== undefined,
+      value: row?.value ?? null,
+      updatedAt: row?.updatedAt ?? null,
+    });
+    securitySettings.resetSecuritySettingsCache();
+    const current = await securitySettings.getSecuritySettings();
+    const auth = current.rateLimit.buckets.auth;
+    // Rate limiting disabled means the auth bucket cannot 429 the suite, so
+    // there is nothing to patch and restore becomes a no-op.
+    if (!current.rateLimit.enabled) {
+      this.#authPrepared = true;
+      this.#authChanged = false;
+      return Object.freeze({
+        schemaVersion: 1,
+        prepared: true,
+        changed: false,
+        windowSeconds: auth.windowSeconds,
+        maxRequests: auth.maxRequests,
+      });
+    }
+    const targetWindow = AUTH_FAST_WINDOW_SECONDS;
+    const targetRequests = Math.max(auth.maxRequests, AUTH_MINIMUM_REQUESTS);
+    this.#authPrepared = true;
+    this.#authChanged = true;
+    try {
+      await securitySettings.setSecuritySettings({
+        rateLimit: {
+          buckets: {
+            auth: { windowSeconds: targetWindow, maxRequests: targetRequests },
+          },
+        },
+      });
+      securitySettings.resetSecuritySettingsCache();
+      const after = await securitySettings.getSecuritySettings();
+      const afterAuth = after.rateLimit.buckets.auth;
+      if (afterAuth.windowSeconds !== targetWindow || afterAuth.maxRequests !== targetRequests) {
+        throw new SmokeError("smoke_cleanup_failed", "TASK-491 fast auth window did not persist");
+      }
+      return Object.freeze({
+        schemaVersion: 1,
+        prepared: true,
+        changed: true,
+        windowSeconds: afterAuth.windowSeconds,
+        maxRequests: afterAuth.maxRequests,
+      });
+    } catch (error) {
+      try {
+        await this.restoreAuthWindow(input);
+      } catch {
+        throw new SmokeError(
+          "smoke_cleanup_failed",
+          "TASK-491 fast auth window failed and could not restore",
+          { cause: error }
+        );
+      }
+      throw error;
+    }
+  }
+
+  async restoreAuthWindow(input: Task491AuthRestoreInput): Promise<Task491AuthRestoreOutput> {
+    if (
+      !this.#authPrepared ||
+      this.#authSnapshot === null ||
+      this.#authRestored ||
+      this.#authMarker === null ||
+      this.#authMarker !== input.marker
+    ) {
+      throw new SmokeError(
+        "smoke_output_invalid",
+        "TASK-491 auth window restore authority is absent"
+      );
+    }
+    if (!this.#authChanged) {
+      this.#authRestored = true;
+      return Object.freeze({ schemaVersion: 1, restored: true });
+    }
+    const { db } = await import("../../../../core/db/client");
+    const { settings } = await import("../../../../core/db/schema");
+    const securitySettings = await import("../../../../core/services/settings/securitySettings");
+    const snapshot = this.#authSnapshot;
+    await db.transaction(async (transaction) => {
+      if (!snapshot.exists) {
+        await transaction.delete(settings).where(eq(settings.key, SECURITY_SETTINGS_KEY));
+        return;
+      }
+      if (snapshot.updatedAt === null) {
+        throw new SmokeError("smoke_cleanup_failed", "TASK-491 auth settings timestamp is absent");
+      }
+      await transaction
+        .insert(settings)
+        .values({
+          key: SECURITY_SETTINGS_KEY,
+          value: snapshot.value,
+          updatedAt: snapshot.updatedAt,
+        })
+        .onConflictDoUpdate({
+          target: settings.key,
+          set: { value: snapshot.value, updatedAt: snapshot.updatedAt },
+        });
+    });
+    securitySettings.resetSecuritySettingsCache();
+    const restoredRows = await db
+      .select({ value: settings.value, updatedAt: settings.updatedAt })
+      .from(settings)
+      .where(eq(settings.key, SECURITY_SETTINGS_KEY))
+      .limit(1);
+    const restored = restoredRows[0];
+    if (!snapshot.exists) {
+      if (restored !== undefined) {
+        throw new SmokeError("smoke_cleanup_failed", "TASK-491 auth settings restore left a row");
+      }
+    } else if (
+      restored === undefined ||
+      restored.updatedAt === null ||
+      snapshot.updatedAt === null ||
+      restored.updatedAt.getTime() !== snapshot.updatedAt.getTime() ||
+      JSON.stringify(restored.value) !== JSON.stringify(snapshot.value)
+    ) {
+      throw new SmokeError("smoke_cleanup_failed", "TASK-491 auth settings restore drifted");
+    }
+    this.#authRestored = true;
+    return Object.freeze({ schemaVersion: 1, restored: true });
+  }
+
   async close(): Promise<void> {
     if (this.#closed) return;
     this.#closed = true;
@@ -286,6 +446,16 @@ export class Task491ProductionHandlers implements Task491WorkerHandlers {
     }
     if (this.#state !== null && this.#proofOutput === null) {
       await this.prove();
+    }
+    // Safety net for hard teardown paths: the adapter dispatches the explicit
+    // restore, but if the worker is closed without it (crash recovery, pool
+    // shutdown ordering), put the settings row back before closing the pool.
+    if (this.#authPrepared && !this.#authRestored && this.#authMarker !== null) {
+      try {
+        await this.restoreAuthWindow(Object.freeze({ marker: this.#authMarker }));
+      } catch {
+        // Best-effort during close; the adapter already recorded the failure.
+      }
     }
     const { closeDatabase } = await import("../../../../core/db/client");
     await closeDatabase();
@@ -318,6 +488,38 @@ export class Task491ProductionHandlers implements Task491WorkerHandlers {
       })
       .from(integrations)
       .where(inArray(integrations.id, [state.gaId, state.sentryId]))
+      .orderBy(integrations.id);
+    return Object.freeze(
+      rows.map((row) =>
+        Object.freeze({
+          id: row.id,
+          config: row.config,
+          status: row.status,
+          healthStatus: row.healthStatus,
+          lastCheckedAt: row.lastCheckedAt,
+          lastError: row.lastError,
+        })
+      )
+    );
+  }
+
+  // State-free row reader for cleanup/prove: the worker pool may restart the
+  // process after a failed dispatch, which loses the install state, so the
+  // teardown contract must not depend on the per-process install having run.
+  async #readRowsByIds(ids: readonly string[]): Promise<readonly ObservedIntegrationRow[]> {
+    const { db } = await import("../../../../core/db/client");
+    const { integrations } = await import("../../../../core/db/schema");
+    const rows = await db
+      .select({
+        id: integrations.id,
+        config: integrations.config,
+        status: integrations.status,
+        healthStatus: integrations.healthStatus,
+        lastCheckedAt: integrations.lastCheckedAt,
+        lastError: integrations.lastError,
+      })
+      .from(integrations)
+      .where(inArray(integrations.id, [...ids]))
       .orderBy(integrations.id);
     return Object.freeze(
       rows.map((row) =>

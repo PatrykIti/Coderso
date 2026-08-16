@@ -55,10 +55,45 @@ function task491BrowserActionSource(input: ReturnType<typeof buildTask491Browser
     const pageErrors = [];
     const failureCodes = [];
     let screenshotCaptured = false;
-    const onConsole = (message) => { if (message.type() === "error") consoleErrors.push("console-error"); };
+    const onConsole = (message) => {
+      if (message.type() !== "error") return;
+      const text = message.text().slice(0, 512);
+      // The admin auth rate-limit bucket and the SPA's unauthenticated boot
+      // check of /api/auth/me on the login page produce expected browser
+      // resource errors; the scenario assertions still fail closed on the
+      // API responses and visible-effect checks below.
+      if (/Failed to load resource: the server responded with a status of 429/.test(text)) return;
+      if (/Failed to load resource: the server responded with a status of 401/.test(text)) {
+        const loc = message.location?.().url ?? "";
+        if (loc === "" || loc.endsWith("/api/auth/me")) return;
+      }
+      // The admin assistant launcher renders a settings-provided avatar; the
+      // sandbox cannot resolve the placeholder cdn.example.com host. That
+      // asset is not part of the integrations contract, so its expected load
+      // failure is treated as fixture noise like the auth bootstrap above.
+      if (/Failed to load resource: net::ERR_NAME_NOT_RESOLVED/.test(text)) {
+        const loc = message.location?.().url ?? "";
+        if (loc.includes("cdn.example.com")) return;
+      }
+      // The public-ga-tag scenario deliberately aborts the gtag.js loader
+      // (page.route) so the sandbox never reaches Google; the abort surfaces as
+      // a resource error that is expected harness noise, like the auth-bootstrap
+      // cases above.
+      if (/Failed to load resource: net::ERR_FAILED/.test(text)) {
+        const loc = message.location?.().url ?? "";
+        if (loc.includes("googletagmanager.com")) return;
+      }
+      consoleErrors.push("console-error");
+    };
     const onPageError = () => pageErrors.push("page-error");
     page.on("console", onConsole);
     page.on("pageerror", onPageError);
+    // The admin SPA declares no favicon, so Chromium probes /favicon.ico on
+    // every boot and the dev server 404s it; fulfill it in-browser so the
+    // console stays clean and the suite does not depend on dev-server state.
+    page.route("**/favicon.ico", (route) => {
+      route.fulfill({ status: 204, contentType: "image/x-icon", body: "" }).catch(() => undefined);
+    }).catch(() => undefined);
     const check = (condition, code) => { if (!condition) failureCodes.push(code); return condition; };
     const record = (id, value, label) => {
       observedValues[id] = value;
@@ -71,6 +106,10 @@ function task491BrowserActionSource(input: ReturnType<typeof buildTask491Browser
     const visible = async (locator) => locator.count().then((count) => count > 0 && locator.first().isVisible()).catch(() => false);
     const rect = async (locator) => { const box = await locator.first().boundingBox().catch(() => null); return box ? { width: Math.round(box.width), height: Math.round(box.height), x: Math.round(box.x), y: Math.round(box.y) } : null; };
     const goto = async (url) => {
+      // The descriptor declares the variant viewport and the screenshot
+      // manifest pins its dimensions, so size the page before navigating
+      // (Playwright's default is 1280x720).
+      await page.setViewportSize(cfg.viewport).catch(() => undefined);
       const response = await page.goto(url, { waitUntil: "domcontentloaded", timeout: 60000 });
       return response ? response.status() : 0;
     };
@@ -109,6 +148,14 @@ function task491BrowserActionSource(input: ReturnType<typeof buildTask491Browser
       const button = await card.locator("button").first().innerText().catch(() => "");
       return { status: (badges[0] || "").trim(), health: (badges[1] || "").trim(), button: button.trim() };
     };
+    // The Integrations page renders its heading before the async
+    // listIntegrations() fetch resolves, so a card read right after the
+    // heading wait can race the list render. Wait for the card to be visible
+    // first; a timeout surfaces as task491-action-timeout instead of a
+    // material "missing" assertion.
+    const waitForCard = async (name) => {
+      await page.locator('[data-slot="card"]').filter({ hasText: name }).first().waitFor({ state: "visible", timeout: 15000 });
+    };
     const cardButton = (name) => page.locator('[data-slot="card"]').filter({ hasText: name }).first().locator("button").first();
     const openCardDrawer = async (name) => {
       await cardButton(name).click();
@@ -118,13 +165,22 @@ function task491BrowserActionSource(input: ReturnType<typeof buildTask491Browser
       await page.keyboard.press("Escape");
       await page.locator('[data-slot="sheet-content"]').waitFor({ state: "hidden", timeout: 10000 });
     };
-    const drawerHealthLabels = async () => page.locator('[data-slot="sheet-content"]').evaluate((sheet) => {
+    // The drawer renders the health label as a bare text node next to a dot
+    // span (IntegrationDrawer.tsx), so a span-only scan never sees it. Scan
+    // text nodes so "Not checked"/"Healthy"/"Issue" resolve regardless of the
+    // wrapping element. The walker must live inside the evaluate callback:
+    // Playwright serializes only the callback, so any Node-scope reference
+    // would throw ReferenceError in the browser context.
+    const drawerHealthLabels = () => page.locator('[data-slot="sheet-content"]').evaluate((sheet) => {
       const labels = [];
-      for (const node of sheet.querySelectorAll("span")) {
-        const text = (node.textContent || "").trim();
-        if (node.children.length === 0 && (text === "Not checked" || text === "Healthy" || text === "Issue")) {
+      const walker = document.createTreeWalker(sheet, NodeFilter.SHOW_TEXT);
+      let current = walker.nextNode();
+      while (current) {
+        const text = (current.textContent || "").trim();
+        if (text === "Not checked" || text === "Healthy" || text === "Issue") {
           labels.push(text);
         }
+        current = walker.nextNode();
       }
       return labels;
     });
@@ -132,7 +188,13 @@ function task491BrowserActionSource(input: ReturnType<typeof buildTask491Browser
     const waitForDrawerHealth = async (label) => page.waitForFunction((expected) => {
       const sheet = document.querySelector('[data-slot="sheet-content"]');
       if (!sheet) return false;
-      return [...sheet.querySelectorAll("span")].some((node) => node.children.length === 0 && (node.textContent || "").trim() === expected);
+      const walker = document.createTreeWalker(sheet, NodeFilter.SHOW_TEXT);
+      let current = walker.nextNode();
+      while (current) {
+        if ((current.textContent || "").trim() === expected) return true;
+        current = walker.nextNode();
+      }
+      return false;
     }, label, { timeout: 30000 });
     const sheetText = async () => page.locator('[data-slot="sheet-content"]').innerText();
     const drawerWidth = async () => { const box = await rect(page.locator('[data-slot="sheet-content"]')); return box ? box.width : 0; };
@@ -161,6 +223,7 @@ function task491BrowserActionSource(input: ReturnType<typeof buildTask491Browser
       } else if (cfg.scenarioId === "connect-ga-drawer") {
         await goto(cfg.physicalUrl);
         await waitIntegrationsHeading();
+        await waitForCard("Google Analytics");
         const before = await cardState("Google Analytics");
         record("ga-card-before", before ? before.status : null, before ? before.status : "missing");
         await openCardDrawer("Google Analytics");
@@ -183,6 +246,8 @@ function task491BrowserActionSource(input: ReturnType<typeof buildTask491Browser
       } else if (cfg.scenarioId === "health-states") {
         await goto(cfg.physicalUrl);
         await waitIntegrationsHeading();
+        await waitForCard("Google Analytics");
+        await waitForCard("Sentry");
         const gaBefore = await cardState("Google Analytics");
         const sentryBefore = await cardState("Sentry");
         record("ga-card-health-before", gaBefore ? gaBefore.health : null, gaBefore ? gaBefore.health : "missing");
@@ -218,7 +283,7 @@ function task491BrowserActionSource(input: ReturnType<typeof buildTask491Browser
           const head = document.head;
           const scriptCount = head.querySelectorAll('script[src*="googletagmanager.com/gtag/js"]').length;
           const inlineConfig = [...head.querySelectorAll("script:not([src])")].filter((node) => (node.textContent || "").includes("gtag('config','G-WF491SMOKE')")).length;
-          const dataLayerConfig = Array.isArray(window.dataLayer) && window.dataLayer.some((entry) => Array.isArray(entry) && entry[0] === "config" && entry[1] === "G-WF491SMOKE");
+          const dataLayerConfig = Array.isArray(window.dataLayer) && window.dataLayer.some((entry) => entry !== null && typeof entry === "object" && entry[0] === "config" && entry[1] === "G-WF491SMOKE");
           const h1 = [...document.querySelectorAll("h1")].some((node) => {
             const box = node.getBoundingClientRect();
             const style = getComputedStyle(node);
@@ -237,11 +302,17 @@ function task491BrowserActionSource(input: ReturnType<typeof buildTask491Browser
       } else if (cfg.scenarioId === "dark-parity") {
         await page.addInitScript(() => {
           try { localStorage.setItem("coderso-admin-color-mode", "dark"); } catch {}
-          document.documentElement.classList.add("dark");
-          document.documentElement.classList.remove("light");
+          // The init script also runs on intermediate documents (about:blank /
+          // redirects) where the root element may not exist yet; guard it so
+          // those navigations never raise a pageerror.
+          if (document.documentElement) {
+            document.documentElement.classList.add("dark");
+            document.documentElement.classList.remove("light");
+          }
         });
         await goto(cfg.physicalUrl);
         await waitIntegrationsHeading();
+        await waitForCard("Google Analytics");
         const darkClass = await page.evaluate(() => document.documentElement.classList.contains("dark"));
         const luminance = await bodyLuminance();
         record("html-dark-class", darkClass, String(darkClass));
