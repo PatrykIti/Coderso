@@ -1,0 +1,496 @@
+{
+  "cleanup": { "failures": [], "pass": true },
+  "consoleErrors": [],
+  "failures": [],
+  "pass": true,
+  "processes": {
+    "git": 2,
+    "playwright-close": 1,
+    "playwright-open": 1,
+    "playwright-run-code": 6,
+    "task492-dev-host": 1,
+    "task492-worker-db": 1
+  },
+  "profile": "fast",
+  "scenarios": [
+    {
+      "elapsedMs": 4034,
+      "id": "admin-login",
+      "pass": true,
+      "screenshots": [
+        {
+          "path": "_docs/_workflows/_smoke/evidence/task-492/wf560-492smoke/01-admin-login.png",
+          "sha256": "bdefcc479f3d9901500ef9eb24d58b74b3a180720c15b9fefbd8baeb48627672"
+        }
+      ],
+      "title": "Admin signs in and reaches the authenticated shell",
+      "variants": [
+        {
+          "assertions": [
+            {
+              "actual": "false",
+              "expected": "false",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "visible-after-login",
+              "target": "login form"
+            },
+            {
+              "actual": "390x36",
+              "expected": "390x36",
+              "kind": "geometry",
+              "pass": true,
+              "property": "box",
+              "target": "email input"
+            },
+            {
+              "actual": "true",
+              "expected": "true",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "settings-link-visible",
+              "target": "authenticated shell"
+            },
+            {
+              "actual": "true",
+              "expected": "true",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "starts-with-admin-path",
+              "target": "post-login path"
+            }
+          ],
+          "consoleErrors": [],
+          "id": "light-1440x900",
+          "surface": "admin",
+          "theme": "light",
+          "viewport": { "height": 900, "width": 1440 }
+        }
+      ]
+    },
+    {
+      "elapsedMs": 2345,
+      "id": "login-alerts-controls",
+      "pass": true,
+      "screenshots": [
+        {
+          "path": "_docs/_workflows/_smoke/evidence/task-492/wf560-492smoke/02-login-alerts-controls.png",
+          "sha256": "5c67b39f85e08121767330d61f19a4be7dec834f7be9aa2f5ed880fdd50a1f71"
+        }
+      ],
+      "title": "Login Alerts settings controls render with their visible state",
+      "variants": [
+        {
+          "assertions": [
+            {
+              "actual": "true",
+              "expected": "true",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "visible",
+              "target": "heading"
+            },
+            {
+              "actual": "218x32",
+              "expected": "218x32",
+              "kind": "geometry",
+              "pass": true,
+              "property": "box",
+              "target": "heading"
+            },
+            {
+              "actual": "true",
+              "expected": "true",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "visible",
+              "target": "custom email textarea"
+            },
+            {
+              "actual": "true",
+              "expected": "true",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "enabled",
+              "target": "custom email textarea"
+            },
+            {
+              "actual": "true",
+              "expected": "true",
+              "kind": "aria",
+              "pass": true,
+              "property": "aria-checked",
+              "target": "email channel switch"
+            },
+            {
+              "actual": "false",
+              "expected": "false",
+              "kind": "aria",
+              "pass": true,
+              "property": "aria-checked",
+              "target": "webhook channel switch"
+            },
+            {
+              "actual": "true",
+              "expected": "true",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "absent",
+              "target": "webhook fields"
+            }
+          ],
+          "consoleErrors": [],
+          "id": "light-1440x900",
+          "surface": "admin",
+          "theme": "light",
+          "viewport": { "height": 900, "width": 1440 }
+        }
+      ]
+    },
+    {
+      "elapsedMs": 1342,
+      "id": "webhook-enable-fields",
+      "pass": true,
+      "screenshots": [
+        {
+          "path": "_docs/_workflows/_smoke/evidence/task-492/wf560-492smoke/03-webhook-enable-fields.png",
+          "sha256": "aae327f192be2bdbb79e2e3e488e1180d49a09b65a6bc1377f8239c9c2dcf40f"
+        }
+      ],
+      "title": "Webhook channel toggle reveals URL and secret fields",
+      "variants": [
+        {
+          "assertions": [
+            {
+              "actual": "true",
+              "expected": "true",
+              "kind": "aria",
+              "pass": true,
+              "property": "aria-checked",
+              "target": "webhook channel switch"
+            },
+            {
+              "actual": "true",
+              "expected": "true",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "visible",
+              "target": "webhook url field"
+            },
+            {
+              "actual": "true",
+              "expected": "true",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "visible",
+              "target": "webhook secret field"
+            },
+            {
+              "actual": "true",
+              "expected": "true",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "value-matches",
+              "target": "webhook url field"
+            },
+            {
+              "actual": "true",
+              "expected": "true",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "value-matches",
+              "target": "webhook secret field"
+            },
+            {
+              "actual": "24x14",
+              "expected": "24x14",
+              "kind": "geometry",
+              "pass": true,
+              "property": "box",
+              "target": "webhook switch"
+            },
+            {
+              "actual": "750x36",
+              "expected": "750x36",
+              "kind": "geometry",
+              "pass": true,
+              "property": "box",
+              "target": "webhook url field"
+            }
+          ],
+          "consoleErrors": [],
+          "id": "light-1440x900",
+          "surface": "admin",
+          "theme": "light",
+          "viewport": { "height": 900, "width": 1440 }
+        }
+      ]
+    },
+    {
+      "elapsedMs": 3507,
+      "id": "edit-save",
+      "pass": true,
+      "screenshots": [
+        {
+          "path": "_docs/_workflows/_smoke/evidence/task-492/wf560-492smoke/04-edit-save.png",
+          "sha256": "9b18b7e0a795244c3de71fa7077a40544a14e823bd3a660bd3cd6ffb3dcf4e24"
+        }
+      ],
+      "title": "Save persists webhook settings; only { configured } is exposed",
+      "variants": [
+        {
+          "assertions": [
+            {
+              "actual": "1",
+              "expected": "1",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "patch-count",
+              "target": "save"
+            },
+            {
+              "actual": "200",
+              "expected": "200",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "status",
+              "target": "patch response"
+            },
+            {
+              "actual": "true",
+              "expected": "true",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "path-matches",
+              "target": "patch response"
+            },
+            {
+              "actual": "true",
+              "expected": "true",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "webhookSecret-configured-only",
+              "target": "patch response"
+            },
+            {
+              "actual": "true",
+              "expected": "true",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "raw-secret-absent",
+              "target": "patch response"
+            },
+            {
+              "actual": "true",
+              "expected": "true",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "webhookUrl-present",
+              "target": "patch response"
+            },
+            {
+              "actual": "true",
+              "expected": "true",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "visible",
+              "target": "success alert"
+            },
+            {
+              "actual": "true",
+              "expected": "true",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "visible",
+              "target": "configured label"
+            },
+            {
+              "actual": "true",
+              "expected": "true",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "raw-secret-absent",
+              "target": "page text"
+            },
+            {
+              "actual": "true",
+              "expected": "true",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "value-persisted",
+              "target": "webhook url field"
+            },
+            {
+              "actual": "true",
+              "expected": "true",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "empty-after-reload",
+              "target": "webhook secret field"
+            },
+            {
+              "actual": "true",
+              "expected": "true",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "visible-after-reload",
+              "target": "configured label"
+            },
+            {
+              "actual": "123x32",
+              "expected": "123x32",
+              "kind": "geometry",
+              "pass": true,
+              "property": "box",
+              "target": "save button"
+            },
+            {
+              "actual": "814x20",
+              "expected": "814x20",
+              "kind": "geometry",
+              "pass": true,
+              "property": "box",
+              "target": "success alert"
+            }
+          ],
+          "consoleErrors": [],
+          "id": "light-1440x900",
+          "surface": "admin",
+          "theme": "light",
+          "viewport": { "height": 900, "width": 1440 }
+        }
+      ]
+    },
+    {
+      "elapsedMs": 1385,
+      "id": "dark-parity",
+      "pass": true,
+      "screenshots": [
+        {
+          "path": "_docs/_workflows/_smoke/evidence/task-492/wf560-492smoke/05-dark-parity.png",
+          "sha256": "46fc0fd77072559ae1a3692c65b57e02f9fe87c3ffa918c791e636149d412129"
+        }
+      ],
+      "title": "Login Alerts settings render in dark mode with visible effect",
+      "variants": [
+        {
+          "assertions": [
+            {
+              "actual": "true",
+              "expected": "true",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "prefers-dark",
+              "target": "media query"
+            },
+            {
+              "actual": "true",
+              "expected": "true",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "dark-differs-from-light",
+              "target": "heading color"
+            },
+            {
+              "actual": "true",
+              "expected": "true",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "visible-in-dark",
+              "target": "configured label"
+            },
+            {
+              "actual": "true",
+              "expected": "true",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "visible-in-dark",
+              "target": "heading"
+            },
+            {
+              "actual": "rgb(28, 26, 23)",
+              "expected": "rgb(28, 26, 23)",
+              "kind": "computed-style",
+              "pass": true,
+              "property": "color-light",
+              "target": "heading"
+            },
+            {
+              "actual": "rgb(237, 237, 236)",
+              "expected": "rgb(237, 237, 236)",
+              "kind": "computed-style",
+              "pass": true,
+              "property": "color-dark",
+              "target": "heading"
+            },
+            {
+              "actual": "218x32",
+              "expected": "218x32",
+              "kind": "geometry",
+              "pass": true,
+              "property": "box",
+              "target": "heading"
+            }
+          ],
+          "consoleErrors": [],
+          "id": "dark-1440x900",
+          "surface": "admin",
+          "theme": "dark",
+          "viewport": { "height": 900, "width": 1440 }
+        }
+      ]
+    }
+  ],
+  "schemaVersion": 1,
+  "screenshots": [
+    {
+      "path": "_docs/_workflows/_smoke/evidence/task-492/wf560-492smoke/01-admin-login.png",
+      "sha256": "bdefcc479f3d9901500ef9eb24d58b74b3a180720c15b9fefbd8baeb48627672"
+    },
+    {
+      "path": "_docs/_workflows/_smoke/evidence/task-492/wf560-492smoke/02-login-alerts-controls.png",
+      "sha256": "5c67b39f85e08121767330d61f19a4be7dec834f7be9aa2f5ed880fdd50a1f71"
+    },
+    {
+      "path": "_docs/_workflows/_smoke/evidence/task-492/wf560-492smoke/03-webhook-enable-fields.png",
+      "sha256": "aae327f192be2bdbb79e2e3e488e1180d49a09b65a6bc1377f8239c9c2dcf40f"
+    },
+    {
+      "path": "_docs/_workflows/_smoke/evidence/task-492/wf560-492smoke/04-edit-save.png",
+      "sha256": "9b18b7e0a795244c3de71fa7077a40544a14e823bd3a660bd3cd6ffb3dcf4e24"
+    },
+    {
+      "path": "_docs/_workflows/_smoke/evidence/task-492/wf560-492smoke/05-dark-parity.png",
+      "sha256": "46fc0fd77072559ae1a3692c65b57e02f9fe87c3ffa918c791e636149d412129"
+    }
+  ],
+  "serverUp": true,
+  "session": "wf560-492smoke",
+  "snapshots": 2,
+  "suiteCleanup": {
+    "accessLogsRemoved": 17,
+    "auditRowsRemoved": 2,
+    "databaseBatches": 4,
+    "fixturesAbsent": true,
+    "identitiesAbsent": true,
+    "pageErrors": 0,
+    "receiptAbsent": true,
+    "repositorySnapshots": 2,
+    "rolesRemoved": 1,
+    "rows": 26,
+    "sessionsRemoved": 1,
+    "settingsRestored": true,
+    "statements": 11,
+    "userRolesRemoved": 1,
+    "usersRemoved": 1,
+    "workerRequests": 4,
+    "workerStarts": 1
+  },
+  "suiteId": "task-492",
+  "timings": [
+    { "count": 1, "elapsedMs": 1, "failed": 0, "kind": "cleanup", "name": "all" },
+    { "count": 1, "elapsedMs": 539, "failed": 0, "kind": "snapshot", "name": "task492-after" },
+    { "count": 1, "elapsedMs": 160, "failed": 0, "kind": "snapshot", "name": "task492-before" },
+    { "count": 1, "elapsedMs": 26201, "failed": 0, "kind": "suite", "name": "task-492" }
+  ]
+}

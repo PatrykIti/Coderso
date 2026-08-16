@@ -116,8 +116,8 @@ function canonicalReceiptRecord(value: unknown, owned: boolean): Task492ReceiptR
 function canonicalReceiptPayload(value: unknown): Task492RecoveryReceiptPayload {
   const receipt = exactRecord(
     value,
-    ["schemaVersion", "runMarker", "profile", "snapshot", "owned", "receiptHmac"],
-    "TASK-492 recovery receipt"
+    ["schemaVersion", "runMarker", "profile", "snapshot", "owned"],
+    "TASK-492 recovery receipt payload"
   );
   if (
     receipt.schemaVersion !== 1 ||
@@ -192,7 +192,13 @@ function validateRecoveryReceipt(
     ["schemaVersion", "runMarker", "profile", "snapshot", "owned", "receiptHmac"],
     "TASK-492 recovery receipt"
   );
-  const payload = canonicalReceiptPayload(raw);
+  const payload = canonicalReceiptPayload({
+    schemaVersion: raw.schemaVersion,
+    runMarker: raw.runMarker,
+    profile: raw.profile,
+    snapshot: raw.snapshot,
+    owned: raw.owned,
+  });
   if (payload.runMarker !== authority.runMarker || payload.profile !== authority.profile) {
     cleanupFailure("TASK-492 recovery receipt authority drifted");
   }

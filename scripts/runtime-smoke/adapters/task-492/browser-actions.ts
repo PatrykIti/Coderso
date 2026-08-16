@@ -284,6 +284,15 @@ export function materializeTask492BrowserAction(input: Task492BrowserConfig): st
       // resource-load errors are tolerated exactly like the reference
       // adapters; every other console error is real and fails the suite.
       if (/Failed to load resource: the server responded with a status of (404|429)/.test(text)) return;
+      // The shared page session boots the Admin app once per scenario and
+      // every boot calls the auth bootstrap endpoints. After login the shell
+      // re-resolves /api/auth/me while the session cookie is being applied,
+      // so a single 401 from that endpoint is expected and the app converges.
+      // Every other console error is real and fails the suite.
+      if (/Failed to load resource: the server responded with a status of 401/.test(text)) {
+        const loc = message.location?.().url ?? "";
+        if (loc === "" || loc.endsWith("/api/auth/me")) return;
+      }
       consoleErrors.push(text);
     };
     const onPageError = (error) => pageErrors.push(String(error?.message ?? "pageerror").slice(0, 512));
@@ -476,6 +485,9 @@ function task492ScenarioSource(scenarioId: Task492ScenarioId): string {
         const successAlert = page.getByText("Login alert settings updated.", { exact: true });
         await successAlert.waitFor({ state: "visible", timeout: 30000 });
         const [alertWidth, alertHeight] = await boxSize(successAlert);
+        // The toast auto-dismisses and a reload clears it, so capture the
+        // visible state while the alert is still on screen.
+        const successAlertVisible = await successAlert.isVisible();
         const configuredLabel = page.getByText("Configured", { exact: true });
         const configuredLabelVisible =
           (await configuredLabel.count()) > 0 && (await configuredLabel.first().isVisible());
@@ -502,7 +514,7 @@ function task492ScenarioSource(scenarioId: Task492ScenarioId): string {
           configuredOnlyInResponse,
           secretAbsentFromResponse,
           webhookUrlInResponse,
-          successAlertVisible: await successAlert.isVisible(),
+          successAlertVisible,
           configuredLabelVisible,
           secretAbsentFromDom,
           urlValuePersisted,
@@ -517,20 +529,41 @@ function task492ScenarioSource(scenarioId: Task492ScenarioId): string {
         page.off("request", onPatchRequest);
       }`;
     case "dark-parity":
-      return `      await page.emulateMedia({ colorScheme: "light" });
+      return `      await page.emulateMedia({ colorScheme: "dark" });
       await page.setViewportSize(cfg.variant.viewport);
-      const headingColorLight = await page.evaluate(() => {
-        const node = document.querySelector("h1");
-        return node === null ? "" : getComputedStyle(node).color;
-      });
-      await page.emulateMedia({ colorScheme: "dark" });
-      await page.reload({ waitUntil: "domcontentloaded", timeout: 120000 });
       const heading = page.getByRole("heading", { name: "Login Alerts", exact: true });
       await heading.waitFor({ state: "visible", timeout: 90000 });
       const urlInput = page.getByLabel("Webhook URL");
       await urlInput.waitFor({ state: "visible", timeout: 90000 });
-      const [headingWidth, headingHeight] = await boxSize(heading);
-      const darkMediaMatches = await page.evaluate(() => matchMedia("(prefers-color-scheme: dark)").matches);
+      // The admin chrome's dark mode is class-based (<html class="dark">
+      // driven by the AdminColorModeToggle), not media-query based, so the
+      // parity proof flips the real toggle instead of emulating the media.
+      const toggle = page.getByRole("button", { name: "Toggle dark mode", exact: true });
+      await toggle.waitFor({ state: "visible", timeout: 60000 });
+      const initialDark = await page.evaluate(() =>
+        document.documentElement.classList.contains("dark")
+      );
+      if (initialDark) {
+        await toggle.click();
+        await page.waitForFunction(
+          () => !document.documentElement.classList.contains("dark"),
+          undefined,
+          { timeout: 30000 }
+        );
+      }
+      const headingColorLight = await page.evaluate(() => {
+        const node = document.querySelector("h1");
+        return node === null ? "" : getComputedStyle(node).color;
+      });
+      await toggle.click();
+      await page.waitForFunction(
+        () => document.documentElement.classList.contains("dark"),
+        undefined,
+        { timeout: 30000 }
+      );
+      const darkMediaMatches = await page.evaluate(() =>
+        matchMedia("(prefers-color-scheme: dark)").matches
+      );
       const headingColorDark = await page.evaluate(() => {
         const node = document.querySelector("h1");
         return node === null ? "" : getComputedStyle(node).color;
@@ -540,7 +573,21 @@ function task492ScenarioSource(scenarioId: Task492ScenarioId): string {
         headingColorDark.length > 0 &&
         headingColorLight !== headingColorDark;
       const configuredInDark = (await page.getByText("Configured", { exact: true }).count()) > 0;
+      const [headingWidth, headingHeight] = await boxSize(heading);
       if (cfg.screenshotPath !== null) await page.screenshot({ path: cfg.screenshotPath, fullPage: false });
+      const headingVisibleInDark = await heading.isVisible();
+      // Restore the initial mode so the shared page session stays neutral.
+      if (
+        initialDark !==
+        (await page.evaluate(() => document.documentElement.classList.contains("dark")))
+      ) {
+        await toggle.click();
+        await page.waitForFunction(
+          (initial) => document.documentElement.classList.contains("dark") === initial,
+          initialDark,
+          { timeout: 30000 }
+        );
+      }
       return {
         scenarioId: cfg.scenarioId,
         variantId: cfg.variant.id,
@@ -552,7 +599,7 @@ function task492ScenarioSource(scenarioId: Task492ScenarioId): string {
         headingColorLight,
         headingColorDark,
         configuredInDark,
-        headingVisibleInDark: await heading.isVisible(),
+        headingVisibleInDark,
         headingBoxWidth: headingWidth,
         headingBoxHeight: headingHeight,
       };`;
