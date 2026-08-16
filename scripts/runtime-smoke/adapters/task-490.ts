@@ -7,6 +7,7 @@ import {
   createAdminAuthStorageState,
   type AdminAuthStorageStateResult,
 } from "../browser/admin-auth";
+import { RuntimeSmokeRoutingSettingsLease } from "./routing-settings-lease";
 import { BrowserTransport } from "../browser/transport";
 import { PlaywrightCliDispatcher } from "../browser/playwright-cli-dispatcher";
 import { compileBrowserDispatchPlan } from "../browser/segment-compiler";
@@ -284,6 +285,7 @@ export async function runTask490Adapter(context: RuntimeSmokeContext): Promise<S
   let cleanup: Task490FixtureCleanup | null = null;
   let server: SupervisedServerResource | null = null;
   let workspace: Awaited<ReturnType<typeof createTask490PrivateWorkspace>> | null = null;
+  let routingLease: RuntimeSmokeRoutingSettingsLease | null = null;
   let transport: BrowserTransport | null = null;
   let dispatcher: PlaywrightCliDispatcher | null = null;
   let scenarios: readonly SmokeScenarioResult[] | null = null;
@@ -295,6 +297,11 @@ export async function runTask490Adapter(context: RuntimeSmokeContext): Promise<S
     workers = await createTask490WorkerPool(context, createTask490WorkerRegistry());
     cleanup = new Task490FixtureCleanup(workers, recoveryAuthority);
     context.lifecycle.register(cleanup);
+    // The dev host resolves the admin base path from the DB at boot and this
+    // suite's auth/fixtures require /admin, so apply the shared routing
+    // settings lease BEFORE the install reads settings and the host spawns.
+    routingLease = new RuntimeSmokeRoutingSettingsLease();
+    await routingLease.apply();
     install = (await workers.dispatch(
       TASK490_WORKER_DESCRIPTORS.install,
       createTask490InstallInput({
@@ -492,6 +499,13 @@ export async function runTask490Adapter(context: RuntimeSmokeContext): Promise<S
   }
 
   const cleanupErrors: unknown[] = [];
+  if (routingLease !== null) {
+    try {
+      await routingLease.restore();
+    } catch (error) {
+      cleanupErrors.push(error);
+    }
+  }
   for (const resource of [transport, workspace, server, cleanup] as const) {
     try {
       await closeAndProve(resource);

@@ -128,10 +128,14 @@ export async function createAdminAuthStorageState(input: {
     throw new SmokeError("smoke_argument_invalid", "Admin authentication URL is invalid");
   }
   const email = boundedCredential(
-    input.environment.CODERSO_PLAYWRIGHT_EMAIL ?? input.environment.PLAYWRIGHT_ADMIN_EMAIL
+    input.environment.CODERSO_PLAYWRIGHT_EMAIL ??
+      input.environment.PLAYWRIGHT_ADMIN_EMAIL ??
+      input.environment.ADMIN_EMAIL
   );
   const password = boundedCredential(
-    input.environment.CODERSO_PLAYWRIGHT_PASSWORD ?? input.environment.PLAYWRIGHT_ADMIN_PASSWORD
+    input.environment.CODERSO_PLAYWRIGHT_PASSWORD ??
+      input.environment.PLAYWRIGHT_ADMIN_PASSWORD ??
+      input.environment.ADMIN_PASSWORD
   );
   if (email === null || password === null) {
     return Object.freeze({ attempted: true, authenticated: false, error: "credentials_missing" });
