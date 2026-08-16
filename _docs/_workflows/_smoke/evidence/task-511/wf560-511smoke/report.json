@@ -1,0 +1,919 @@
+{
+  "cleanup": { "failures": [], "pass": true },
+  "consoleErrors": [],
+  "failures": [],
+  "pass": true,
+  "processes": {
+    "git": 2,
+    "playwright-close": 1,
+    "playwright-open": 1,
+    "playwright-run-code": 11,
+    "playwright-state-load": 1,
+    "task511-dev-host": 1,
+    "task511-worker-db": 1
+  },
+  "profile": "fast",
+  "scenarios": [
+    {
+      "elapsedMs": 4747,
+      "id": "login",
+      "pass": true,
+      "screenshots": [
+        {
+          "path": "_docs/_workflows/_smoke/evidence/task-511/wf560-511smoke/01-login.png",
+          "sha256": "732084ddfce3e8ee5d6da8713aad9ca12b1a917f4765e2dabc8ce7a24a04f73c"
+        }
+      ],
+      "title": "Admin login with fixture credentials",
+      "variants": [
+        {
+          "assertions": [
+            {
+              "actual": "true",
+              "expected": "true",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "visible",
+              "target": "#email"
+            },
+            {
+              "actual": "390",
+              "expected": ">0",
+              "kind": "geometry",
+              "pass": true,
+              "property": "width",
+              "target": "Sign in button"
+            },
+            {
+              "actual": "true",
+              "expected": "true",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "visible",
+              "target": "[data-app-scroll]"
+            },
+            {
+              "actual": "true",
+              "expected": "true",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "redirected-from-login",
+              "target": "location"
+            },
+            {
+              "actual": "false",
+              "expected": "false",
+              "kind": "computed-style",
+              "pass": true,
+              "property": "class-dark",
+              "target": "html"
+            },
+            {
+              "actual": "false",
+              "expected": "false",
+              "kind": "computed-style",
+              "pass": true,
+              "property": "prefers-dark",
+              "target": "html"
+            }
+          ],
+          "consoleErrors": [],
+          "id": "light",
+          "surface": "admin",
+          "theme": "light",
+          "viewport": { "height": 900, "width": 1440 }
+        },
+        {
+          "assertions": [
+            {
+              "actual": "true",
+              "expected": "true",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "visible",
+              "target": "#email"
+            },
+            {
+              "actual": "390",
+              "expected": ">0",
+              "kind": "geometry",
+              "pass": true,
+              "property": "width",
+              "target": "Sign in button"
+            },
+            {
+              "actual": "true",
+              "expected": "true",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "visible",
+              "target": "[data-app-scroll]"
+            },
+            {
+              "actual": "true",
+              "expected": "true",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "redirected-from-login",
+              "target": "location"
+            },
+            {
+              "actual": "true",
+              "expected": "true",
+              "kind": "computed-style",
+              "pass": true,
+              "property": "class-dark",
+              "target": "html"
+            },
+            {
+              "actual": "true",
+              "expected": "true",
+              "kind": "computed-style",
+              "pass": true,
+              "property": "prefers-dark",
+              "target": "html"
+            }
+          ],
+          "consoleErrors": [],
+          "id": "dark",
+          "surface": "admin",
+          "theme": "dark",
+          "viewport": { "height": 900, "width": 1440 }
+        }
+      ]
+    },
+    {
+      "elapsedMs": 3731,
+      "id": "backups-schedule-card",
+      "pass": true,
+      "screenshots": [
+        {
+          "path": "_docs/_workflows/_smoke/evidence/task-511/wf560-511smoke/02-backups-schedule-card.png",
+          "sha256": "af5888e3675e49fec91fcf617c68d91ed88611ecc50ef22dcf29aaa8abac2fce"
+        }
+      ],
+      "title": "Backups schedule card renders frequency and include options",
+      "variants": [
+        {
+          "assertions": [
+            {
+              "actual": "true",
+              "expected": "true",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "visible",
+              "target": "Automatic backups card"
+            },
+            {
+              "actual": "741",
+              "expected": ">0",
+              "kind": "geometry",
+              "pass": true,
+              "property": "width",
+              "target": "Automatic backups card"
+            },
+            {
+              "actual": "3",
+              "expected": "3",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "count",
+              "target": "frequency buttons"
+            },
+            {
+              "actual": "4",
+              "expected": "4",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "count",
+              "target": "include checkboxes"
+            },
+            {
+              "actual": "Auto-backup active",
+              "expected": "Auto-backup active",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "text",
+              "target": "schedule badge"
+            },
+            {
+              "actual": "true",
+              "expected": "true",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "visible",
+              "target": "Update Schedule button"
+            },
+            {
+              "actual": "false",
+              "expected": "false",
+              "kind": "computed-style",
+              "pass": true,
+              "property": "class-dark",
+              "target": "html"
+            },
+            {
+              "actual": "false",
+              "expected": "false",
+              "kind": "computed-style",
+              "pass": true,
+              "property": "prefers-dark",
+              "target": "html"
+            }
+          ],
+          "consoleErrors": [],
+          "id": "light",
+          "surface": "admin",
+          "theme": "light",
+          "viewport": { "height": 900, "width": 1440 }
+        },
+        {
+          "assertions": [
+            {
+              "actual": "true",
+              "expected": "true",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "visible",
+              "target": "Automatic backups card"
+            },
+            {
+              "actual": "741",
+              "expected": ">0",
+              "kind": "geometry",
+              "pass": true,
+              "property": "width",
+              "target": "Automatic backups card"
+            },
+            {
+              "actual": "3",
+              "expected": "3",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "count",
+              "target": "frequency buttons"
+            },
+            {
+              "actual": "4",
+              "expected": "4",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "count",
+              "target": "include checkboxes"
+            },
+            {
+              "actual": "Auto-backup active",
+              "expected": "Auto-backup active",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "text",
+              "target": "schedule badge"
+            },
+            {
+              "actual": "true",
+              "expected": "true",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "visible",
+              "target": "Update Schedule button"
+            },
+            {
+              "actual": "true",
+              "expected": "true",
+              "kind": "computed-style",
+              "pass": true,
+              "property": "class-dark",
+              "target": "html"
+            },
+            {
+              "actual": "true",
+              "expected": "true",
+              "kind": "computed-style",
+              "pass": true,
+              "property": "prefers-dark",
+              "target": "html"
+            }
+          ],
+          "consoleErrors": [],
+          "id": "dark",
+          "surface": "admin",
+          "theme": "dark",
+          "viewport": { "height": 900, "width": 1440 }
+        }
+      ]
+    },
+    {
+      "elapsedMs": 5810,
+      "id": "create-encrypted-backup",
+      "pass": true,
+      "screenshots": [
+        {
+          "path": "_docs/_workflows/_smoke/evidence/task-511/wf560-511smoke/03-create-encrypted-backup.png",
+          "sha256": "736d6309d1135a2e0dbd58f636e0edd6fe3c5d07ad3adda1f07d08613e0db5d9"
+        }
+      ],
+      "title": "Encrypted .cbk create and download flow",
+      "variants": [
+        {
+          "assertions": [
+            {
+              "actual": "true",
+              "expected": "true",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "visible",
+              "target": "Create Backup dialog"
+            },
+            {
+              "actual": "512",
+              "expected": ">0",
+              "kind": "geometry",
+              "pass": true,
+              "property": "width",
+              "target": "Create Backup dialog"
+            },
+            {
+              "actual": "200",
+              "expected": "200",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "status",
+              "target": "create response"
+            },
+            {
+              "actual": "complete",
+              "expected": "complete",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "status",
+              "target": "created backup"
+            },
+            {
+              "actual": "true",
+              "expected": "true",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "visible",
+              "target": "created row"
+            },
+            {
+              "actual": "true",
+              "expected": "true",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "visible",
+              "target": "create toast"
+            },
+            {
+              "actual": "true",
+              "expected": "true",
+              "kind": "aria",
+              "pass": true,
+              "property": "disabled",
+              "target": "row restore button"
+            },
+            {
+              "actual": "true",
+              "expected": "true",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "visible",
+              "target": "download button"
+            },
+            {
+              "actual": "200",
+              "expected": "200",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "status",
+              "target": "download response"
+            },
+            {
+              "actual": "coderso-backup-cf64533c-4bab-4a0a-8b40-8de965bdd065.cbk",
+              "expected": ".cbk",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "cbk-suffix",
+              "target": "download file name"
+            },
+            {
+              "actual": "base64",
+              "expected": "base64",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "base64",
+              "target": "download encoding"
+            },
+            {
+              "actual": "938",
+              "expected": ">0",
+              "kind": "geometry",
+              "pass": true,
+              "property": "decoded-bytes",
+              "target": "download content"
+            },
+            {
+              "actual": "true",
+              "expected": "true",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "visible",
+              "target": "download toast"
+            },
+            {
+              "actual": "false",
+              "expected": "false",
+              "kind": "computed-style",
+              "pass": true,
+              "property": "class-dark",
+              "target": "html"
+            },
+            {
+              "actual": "false",
+              "expected": "false",
+              "kind": "computed-style",
+              "pass": true,
+              "property": "prefers-dark",
+              "target": "html"
+            }
+          ],
+          "consoleErrors": [],
+          "id": "light",
+          "surface": "admin",
+          "theme": "light",
+          "viewport": { "height": 900, "width": 1440 }
+        },
+        {
+          "assertions": [
+            {
+              "actual": "true",
+              "expected": "true",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "visible",
+              "target": "Create Backup dialog"
+            },
+            {
+              "actual": "512",
+              "expected": ">0",
+              "kind": "geometry",
+              "pass": true,
+              "property": "width",
+              "target": "Create Backup dialog"
+            },
+            {
+              "actual": "200",
+              "expected": "200",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "status",
+              "target": "create response"
+            },
+            {
+              "actual": "complete",
+              "expected": "complete",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "status",
+              "target": "created backup"
+            },
+            {
+              "actual": "true",
+              "expected": "true",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "visible",
+              "target": "created row"
+            },
+            {
+              "actual": "true",
+              "expected": "true",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "visible",
+              "target": "create toast"
+            },
+            {
+              "actual": "true",
+              "expected": "true",
+              "kind": "aria",
+              "pass": true,
+              "property": "disabled",
+              "target": "row restore button"
+            },
+            {
+              "actual": "true",
+              "expected": "true",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "visible",
+              "target": "download button"
+            },
+            {
+              "actual": "200",
+              "expected": "200",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "status",
+              "target": "download response"
+            },
+            {
+              "actual": "coderso-backup-b20695a9-e925-4b71-bdbd-789bd6e30495.cbk",
+              "expected": ".cbk",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "cbk-suffix",
+              "target": "download file name"
+            },
+            {
+              "actual": "base64",
+              "expected": "base64",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "base64",
+              "target": "download encoding"
+            },
+            {
+              "actual": "938",
+              "expected": ">0",
+              "kind": "geometry",
+              "pass": true,
+              "property": "decoded-bytes",
+              "target": "download content"
+            },
+            {
+              "actual": "true",
+              "expected": "true",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "visible",
+              "target": "download toast"
+            },
+            {
+              "actual": "true",
+              "expected": "true",
+              "kind": "computed-style",
+              "pass": true,
+              "property": "class-dark",
+              "target": "html"
+            },
+            {
+              "actual": "true",
+              "expected": "true",
+              "kind": "computed-style",
+              "pass": true,
+              "property": "prefers-dark",
+              "target": "html"
+            }
+          ],
+          "consoleErrors": [],
+          "id": "dark",
+          "surface": "admin",
+          "theme": "dark",
+          "viewport": { "height": 900, "width": 1440 }
+        }
+      ]
+    },
+    {
+      "elapsedMs": 2643,
+      "id": "import-restore-dialog",
+      "pass": true,
+      "screenshots": [
+        {
+          "path": "_docs/_workflows/_smoke/evidence/task-511/wf560-511smoke/04-import-restore-dialog.png",
+          "sha256": "d2efa0e749e9305c831f65b14ac72d735b4a6881e545922500ec47cc4b2c5b56"
+        }
+      ],
+      "title": "Import restore dialog confirm gate",
+      "variants": [
+        {
+          "assertions": [
+            {
+              "actual": "true",
+              "expected": "true",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "visible",
+              "target": "Import Backup dialog"
+            },
+            {
+              "actual": "512",
+              "expected": ">0",
+              "kind": "geometry",
+              "pass": true,
+              "property": "width",
+              "target": "Import Backup dialog"
+            },
+            {
+              "actual": "true",
+              "expected": "true",
+              "kind": "aria",
+              "pass": true,
+              "property": "disabled",
+              "target": "Import button"
+            },
+            {
+              "actual": "true",
+              "expected": "true",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "visible",
+              "target": "import warning"
+            },
+            {
+              "actual": "true",
+              "expected": "true",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "visible",
+              "target": "restore users checkbox"
+            },
+            {
+              "actual": "false",
+              "expected": "false",
+              "kind": "computed-style",
+              "pass": true,
+              "property": "class-dark",
+              "target": "html"
+            },
+            {
+              "actual": "false",
+              "expected": "false",
+              "kind": "computed-style",
+              "pass": true,
+              "property": "prefers-dark",
+              "target": "html"
+            }
+          ],
+          "consoleErrors": [],
+          "id": "light",
+          "surface": "admin",
+          "theme": "light",
+          "viewport": { "height": 900, "width": 1440 }
+        },
+        {
+          "assertions": [
+            {
+              "actual": "true",
+              "expected": "true",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "visible",
+              "target": "Import Backup dialog"
+            },
+            {
+              "actual": "512",
+              "expected": ">0",
+              "kind": "geometry",
+              "pass": true,
+              "property": "width",
+              "target": "Import Backup dialog"
+            },
+            {
+              "actual": "true",
+              "expected": "true",
+              "kind": "aria",
+              "pass": true,
+              "property": "disabled",
+              "target": "Import button"
+            },
+            {
+              "actual": "true",
+              "expected": "true",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "visible",
+              "target": "import warning"
+            },
+            {
+              "actual": "true",
+              "expected": "true",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "visible",
+              "target": "restore users checkbox"
+            },
+            {
+              "actual": "true",
+              "expected": "true",
+              "kind": "computed-style",
+              "pass": true,
+              "property": "class-dark",
+              "target": "html"
+            },
+            {
+              "actual": "true",
+              "expected": "true",
+              "kind": "computed-style",
+              "pass": true,
+              "property": "prefers-dark",
+              "target": "html"
+            }
+          ],
+          "consoleErrors": [],
+          "id": "dark",
+          "surface": "admin",
+          "theme": "dark",
+          "viewport": { "height": 900, "width": 1440 }
+        }
+      ]
+    },
+    {
+      "elapsedMs": 3520,
+      "id": "update-schedule",
+      "pass": true,
+      "screenshots": [
+        {
+          "path": "_docs/_workflows/_smoke/evidence/task-511/wf560-511smoke/05-update-schedule.png",
+          "sha256": "ca06972cf39e3c91c4bbe952e1870af473f34263b8ac9a7adfea01d41c5a3995"
+        }
+      ],
+      "title": "Update schedule PATCH through the card",
+      "variants": [
+        {
+          "assertions": [
+            {
+              "actual": "200",
+              "expected": "200",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "status",
+              "target": "patch response"
+            },
+            {
+              "actual": "weekly",
+              "expected": "weekly",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "weekly",
+              "target": "patch frequency"
+            },
+            {
+              "actual": "true",
+              "expected": "true",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "active",
+              "target": "Weekly button"
+            },
+            {
+              "actual": "true",
+              "expected": "true",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "visible",
+              "target": "update toast"
+            },
+            {
+              "actual": "Auto-backup active",
+              "expected": "Auto-backup active",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "text",
+              "target": "schedule badge"
+            },
+            {
+              "actual": "false",
+              "expected": "false",
+              "kind": "computed-style",
+              "pass": true,
+              "property": "class-dark",
+              "target": "html"
+            },
+            {
+              "actual": "false",
+              "expected": "false",
+              "kind": "computed-style",
+              "pass": true,
+              "property": "prefers-dark",
+              "target": "html"
+            }
+          ],
+          "consoleErrors": [],
+          "id": "light",
+          "surface": "admin",
+          "theme": "light",
+          "viewport": { "height": 900, "width": 1440 }
+        },
+        {
+          "assertions": [
+            {
+              "actual": "200",
+              "expected": "200",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "status",
+              "target": "patch response"
+            },
+            {
+              "actual": "weekly",
+              "expected": "weekly",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "weekly",
+              "target": "patch frequency"
+            },
+            {
+              "actual": "true",
+              "expected": "true",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "active",
+              "target": "Weekly button"
+            },
+            {
+              "actual": "true",
+              "expected": "true",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "visible",
+              "target": "update toast"
+            },
+            {
+              "actual": "Auto-backup active",
+              "expected": "Auto-backup active",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "text",
+              "target": "schedule badge"
+            },
+            {
+              "actual": "true",
+              "expected": "true",
+              "kind": "computed-style",
+              "pass": true,
+              "property": "class-dark",
+              "target": "html"
+            },
+            {
+              "actual": "true",
+              "expected": "true",
+              "kind": "computed-style",
+              "pass": true,
+              "property": "prefers-dark",
+              "target": "html"
+            }
+          ],
+          "consoleErrors": [],
+          "id": "dark",
+          "surface": "admin",
+          "theme": "dark",
+          "viewport": { "height": 900, "width": 1440 }
+        }
+      ]
+    }
+  ],
+  "schemaVersion": 1,
+  "screenshots": [
+    {
+      "path": "_docs/_workflows/_smoke/evidence/task-511/wf560-511smoke/01-login.png",
+      "sha256": "732084ddfce3e8ee5d6da8713aad9ca12b1a917f4765e2dabc8ce7a24a04f73c"
+    },
+    {
+      "path": "_docs/_workflows/_smoke/evidence/task-511/wf560-511smoke/02-backups-schedule-card.png",
+      "sha256": "af5888e3675e49fec91fcf617c68d91ed88611ecc50ef22dcf29aaa8abac2fce"
+    },
+    {
+      "path": "_docs/_workflows/_smoke/evidence/task-511/wf560-511smoke/03-create-encrypted-backup.png",
+      "sha256": "736d6309d1135a2e0dbd58f636e0edd6fe3c5d07ad3adda1f07d08613e0db5d9"
+    },
+    {
+      "path": "_docs/_workflows/_smoke/evidence/task-511/wf560-511smoke/04-import-restore-dialog.png",
+      "sha256": "d2efa0e749e9305c831f65b14ac72d735b4a6881e545922500ec47cc4b2c5b56"
+    },
+    {
+      "path": "_docs/_workflows/_smoke/evidence/task-511/wf560-511smoke/05-update-schedule.png",
+      "sha256": "ca06972cf39e3c91c4bbe952e1870af473f34263b8ac9a7adfea01d41c5a3995"
+    }
+  ],
+  "serverUp": true,
+  "session": "wf560-511smoke",
+  "snapshots": 2,
+  "suiteCleanup": {
+    "actorAbsent": true,
+    "artifactFilesRemoved": 2,
+    "artifactsAbsent": true,
+    "avatarSettingsRestored": true,
+    "backupRowsRemoved": 2,
+    "backupsAbsent": true,
+    "databaseBatches": 3,
+    "pageErrors": 0,
+    "rateLimitRestored": true,
+    "repositorySnapshots": 2,
+    "rolesRemoved": 1,
+    "rows": 98,
+    "scheduleRestored": true,
+    "statements": 15,
+    "userRolesRemoved": 1,
+    "usersRemoved": 1,
+    "workerRequests": 3,
+    "workerStarts": 1
+  },
+  "suiteId": "task-511",
+  "timings": [
+    { "count": 1, "elapsedMs": 1, "failed": 0, "kind": "cleanup", "name": "all" },
+    { "count": 1, "elapsedMs": 292, "failed": 0, "kind": "snapshot", "name": "task511-after" },
+    { "count": 1, "elapsedMs": 174, "failed": 0, "kind": "snapshot", "name": "task511-before" },
+    { "count": 1, "elapsedMs": 53342, "failed": 0, "kind": "suite", "name": "task-511" }
+  ]
+}

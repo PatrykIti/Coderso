@@ -162,6 +162,15 @@ const mapBackup = (
   status: asBackupStatus(row.status),
   kind: asBackupKind(row.kind),
   storageDriver: asStorageDriver(row.storageDriver),
+  // Computed from the REAL artifactPath BEFORE redaction: v2 `.cbk` rows must be
+  // restore-unavailable in the admin UI (no stored passphrase), even though the
+  // client-facing artifactPath is redacted to "local" for local storage.
+  artifactFormat:
+    row.artifactPath === null
+      ? null
+      : row.artifactPath.endsWith(BACKUP_ARCHIVE_EXTENSION)
+        ? "v2"
+        : "v1",
   artifactPath:
     options.redactArtifactPath === false
       ? (row.artifactPath ?? null)

@@ -13,6 +13,11 @@ export type BackupRecord = {
   status: BackupStatus;
   kind: BackupKind;
   storageDriver: BackupStorageDriver;
+  // Artifact lineage: "v1" = legacy `.json`, "v2" = encrypted `.cbk`, null when
+  // no artifact exists yet. Computed from the REAL artifactPath before redaction,
+  // so the admin UI can gate restore-by-id (v2 has no stored passphrase) without
+  // ever receiving the raw server-side path.
+  artifactFormat: "v1" | "v2" | null;
   artifactPath: string | null;
   artifactKey: string | null;
   sizeBytes: number | null;

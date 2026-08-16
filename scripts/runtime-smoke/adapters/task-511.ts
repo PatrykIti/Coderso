@@ -2,7 +2,7 @@ import { createHash, randomBytes } from "node:crypto";
 import { chmod, lstat, mkdtemp, realpath, rm } from "node:fs/promises";
 import { join, relative } from "node:path";
 
-import { resolveInsideRoot, SmokeError } from "../contracts";
+import { resolveInsideRoot, SmokeError, type SmokeInput } from "../contracts";
 import { appendDiagnostics } from "../diagnostics";
 import { BrowserTransport } from "../browser/transport";
 import { PlaywrightCliDispatcher } from "../browser/playwright-cli-dispatcher";
@@ -31,12 +31,13 @@ import {
   type Task511SessionConfig,
 } from "./task-511/browser-actions";
 import {
+  EVIDENCE_ROOT,
   assertExactTask511Invocation,
   assertExactTask511ScreenshotManifest,
   buildExactTask511ScreenshotManifest,
   validateTask511ScreenshotOutputs,
 } from "./task-511/output-manifest";
-import { buildTask511ScenarioResult } from "./task-511/scenarios";
+import { buildTask511ScenarioResults, type Task511ScenarioInput } from "./task-511/scenarios";
 import {
   TASK511_WORKER_DESCRIPTORS,
   createTask511CleanupInput,
@@ -255,6 +256,28 @@ async function ready(url: string): Promise<boolean> {
   }
 }
 
+/**
+ * Front liveness probe for the public origin. The task-511 scenarios are
+ * entirely admin-side; the front `/` check only proves the dev host serves
+ * the public origin. The ambient DB may legitimately have no published
+ * homepage page (TASK-560-03: suites must not depend on a pre-existing
+ * published homepage), which makes `/` return 404 while the server is fully
+ * up. Accept 200 or 404 here; the strict `ready()` still gates the admin SPA.
+ */
+async function frontReady(): Promise<boolean> {
+  try {
+    const response = await fetch(`${FRONT_ORIGIN}/`, {
+      method: "GET",
+      redirect: "manual",
+      signal: AbortSignal.timeout(5_000),
+    });
+    await response.body?.cancel();
+    return response.status === 200 || response.status === 404;
+  } catch {
+    return false;
+  }
+}
+
 function task511Host(
   context: RuntimeSmokeContext,
   adminPath: string
@@ -269,7 +292,7 @@ function task511Host(
     }),
     ports: Object.freeze([3000, 5173, 5174]),
     readiness: Object.freeze([
-      Object.freeze({ id: "task511-front-ready", check: () => ready(`${FRONT_ORIGIN}/`) }),
+      Object.freeze({ id: "task511-front-ready", check: () => frontReady() }),
       Object.freeze({
         id: "task511-admin-ready",
         check: () => ready(`${ADMIN_ORIGIN}${adminPath}/`),
@@ -711,28 +734,30 @@ export async function runTask511Adapter(context: RuntimeSmokeContext): Promise<S
   ) {
     throw new SmokeError("smoke_output_invalid", "TASK-511 adapter execution is incomplete");
   }
-  const scenarios: SmokeScenarioResult[] = scenarioInputs.map((input, index) =>
-    buildTask511ScenarioResult({
+  const config = Object.freeze({
+    adminOrigin: ADMIN_ORIGIN,
+    adminPath: install!.adminPath,
+    email: credentials.email,
+    password: credentials.password,
+    passphrase: credentials.passphrase,
+    expectedScheduleBadge: install!.scheduleEnabled ? "Auto-backup active" : "Auto-backup paused",
+  });
+  const builtInputs = scenarioInputs.map((input, index) => {
+    const scenarioIndex = Math.floor(index / TASK511_VARIANTS.length);
+    const screenshot =
+      input.variantId === input.descriptor.canonicalVariant
+        ? (screenshots[scenarioIndex] ?? null)
+        : null;
+    return Object.freeze({
       receipt: input.receipt,
       descriptor: input.descriptor,
       variantId: input.variantId,
-      config: {
-        adminOrigin: ADMIN_ORIGIN,
-        adminPath: install!.adminPath,
-        email: credentials.email,
-        password: credentials.password,
-        passphrase: credentials.passphrase,
-        expectedScheduleBadge: install!.scheduleEnabled
-          ? "Auto-backup active"
-          : "Auto-backup paused",
-      },
-      screenshot:
-        screenshots[index] === undefined
-          ? null
-          : { path: screenshots[index]!.path, sha256: screenshots[index]!.sha256 },
+      config,
+      screenshot: screenshot === null ? null : { path: screenshot.path, sha256: screenshot.sha256 },
       elapsedMs: input.elapsedMs,
-    })
-  );
+    });
+  });
+  const scenarios: readonly SmokeScenarioResult[] = buildTask511ScenarioResults(builtInputs);
   const result = projectTask511AdapterResult({
     scenarios: Object.freeze(scenarios),
     screenshots,
@@ -757,6 +782,7 @@ export interface Task511SmokeAdapter {
   readonly suiteId: "task-511";
   readonly supportedProfiles: readonly ("fast" | "certification")[];
   readonly run: (context: RuntimeSmokeContext) => Promise<SmokeAdapterResult>;
+  readonly evidenceDirectory?: (input: SmokeInput, root: string) => string | null;
 }
 
 // The registry-owned SUITE_IDS union (contracts.ts) does not include this
@@ -767,6 +793,9 @@ export const task511Adapter: Task511SmokeAdapter = Object.freeze({
   suiteId: "task-511",
   supportedProfiles: Object.freeze(["fast", "certification"] as const),
   run: runTask511Adapter,
+  evidenceDirectory(input: SmokeInput, root: string) {
+    return resolveInsideRoot(root, `${EVIDENCE_ROOT}/${input.session}`, "task_511_evidence");
+  },
 });
 
 export default task511Adapter;

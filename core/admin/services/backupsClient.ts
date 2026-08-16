@@ -18,6 +18,10 @@ export type BackupItem = {
   status: BackupStatus;
   kind: BackupKind;
   storageDriver: BackupStorageDriver;
+  // Server-computed lineage ("v1" | "v2" | null). The raw artifactPath is
+  // redacted to "local" for local storage, so the restore gate must use this
+  // field, never the path suffix.
+  artifactFormat: "v1" | "v2" | null;
   artifactPath: string | null;
   sizeBytes: number | null;
   error: string | null;

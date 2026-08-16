@@ -123,9 +123,10 @@ function rowMatches(
 }
 
 async function readScheduleRows(
-  core: Task511ScheduleCoreHandles
+  core: Task511ScheduleCoreHandles,
+  executor: typeof core.db | DbTransaction = core.db
 ): Promise<readonly Task511ScheduleRow[]> {
-  return await core.db
+  return await executor
     .select({
       id: core.backupSchedules.id,
       enabled: core.backupSchedules.enabled,
@@ -153,23 +154,31 @@ export class Task511ScheduleLease {
 
   async apply(): Promise<void> {
     const core = await task511ScheduleCore();
+    // The worker pool caps the client pool at a single socket (DB_POOL_MAX=1),
+    // so any `core.db` read inside `db.transaction` would deadlock waiting for
+    // the connection the transaction already holds. Ensure the canonical
+    // singleton row through the app service BEFORE the transaction, then read
+    // and write inside the transaction only through `tx`.
+    const preRows = await readScheduleRows(core);
+    if (preRows.length > 1) cleanupFailure("task-511 backup schedule is not a singleton");
+    let created = preRows[0] === undefined;
+    if (created) {
+      // No ambient row: create the canonical default through the app's own
+      // service (same values the admin page GET would create) and own it.
+      await core.getBackupSchedule();
+    }
     await core.db.transaction(async (tx) => {
       await core.acquireNativeCmsWriterFence(tx);
-      const rows = await readScheduleRows(core);
+      const rows = await readScheduleRows(core, tx);
       if (rows.length > 1) cleanupFailure("task-511 backup schedule is not a singleton");
       if (rows[0] !== undefined) {
         this.#snapshot = freezeRow(rows[0]);
-        this.#createdId = null;
+        this.#createdId = created ? rows[0].id : null;
       } else {
-        // No ambient row: create the canonical default through the app's own
-        // service (same values the admin page GET would create) and own it.
-        await core.getBackupSchedule();
-        const createdRows = await readScheduleRows(core);
-        if (createdRows.length !== 1 || createdRows[0] === undefined) {
-          cleanupFailure("task-511 backup schedule could not be created");
-        }
-        this.#snapshot = freezeRow(createdRows[0]);
-        this.#createdId = createdRows[0].id;
+        // The row disappeared between the pre-transaction ensure and the
+        // writer fence; fail closed instead of re-entering the pooled client
+        // from inside the transaction.
+        cleanupFailure("task-511 backup schedule row is missing");
       }
       this.#applied = true;
     });
@@ -180,7 +189,7 @@ export class Task511ScheduleLease {
     const core = await task511ScheduleCore();
     await core.db.transaction(async (tx) => {
       await core.acquireNativeCmsWriterFence(tx);
-      const rows = await readScheduleRows(core);
+      const rows = await readScheduleRows(core, tx);
       if (rows.length > 1) cleanupFailure("task-511 backup schedule is not a singleton");
       if (this.#createdId !== null) {
         const current = rows[0];

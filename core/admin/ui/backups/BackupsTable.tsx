@@ -92,8 +92,9 @@ const getActionState = (
   }
   // v2 encrypted `.cbk` archives cannot be restored by id (no stored passphrase);
   // the restore path is download → Import dialog. Legacy v1 `.json` rows keep
-  // the in-place restore-by-id flow.
-  if (backup.artifactPath.endsWith(".cbk")) {
+  // the in-place restore-by-id flow. `artifactFormat` is server-computed BEFORE
+  // path redaction, so it is the only reliable signal here.
+  if (backup.artifactFormat === "v2") {
     return {
       restore: "Download this backup and use Import to restore it.",
       download: null,

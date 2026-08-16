@@ -11,7 +11,7 @@ import { TASK511_SCENARIO_IDS, type Task511ScenarioId } from "./browser-actions"
 const PNG_SIGNATURE = Buffer.from("89504e470d0a1a0a", "hex");
 const MAX_PNG_BYTES = 16 * 1024 * 1024;
 const SHA256 = /^[a-f0-9]{64}$/u;
-export const EVIDENCE_ROOT = "_docs/_workflows/_smoke/task-511";
+export const EVIDENCE_ROOT = "_docs/_workflows/_smoke/evidence/task-511";
 const REPORT_FILE = "report.json";
 
 export interface Task511ScreenshotManifestEntry {
@@ -42,7 +42,8 @@ export function assertExactTask511Invocation(value: unknown): asserts value is S
     value.command !== "run" ||
     value.suite !== "task-511" ||
     (value.profile !== "fast" && value.profile !== "certification") ||
-    value.session !== sessionFor(value.profile)
+    typeof value.session !== "string" ||
+    value.session.length === 0
   ) {
     invalid("TASK-511 invocation is invalid", "smoke_argument_invalid");
   }

@@ -251,6 +251,7 @@ test("BackupsTable shows worker boundary, disabled reasons, v2 import-only resto
             kind: "manual",
             status: "queued",
             storageDriver: "local",
+            artifactFormat: null,
             artifactPath: null,
             sizeBytes: null,
             error: null,
@@ -262,7 +263,11 @@ test("BackupsTable shows worker boundary, disabled reasons, v2 import-only resto
             kind: "manual",
             status: "complete",
             storageDriver: "local",
-            artifactPath: "/var/backups/backup-v2-cbk.cbk",
+            // The admin list redacts the artifactPath to "local" for local
+            // storage; the restore gate MUST use artifactFormat, never the
+            // path suffix, or v2 rows would offer restore-by-id.
+            artifactFormat: "v2",
+            artifactPath: "local",
             sizeBytes: 128,
             error: null,
             createdAt: "2026-06-01T00:00:00.000Z",

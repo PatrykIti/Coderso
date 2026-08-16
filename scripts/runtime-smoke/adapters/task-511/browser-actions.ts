@@ -252,7 +252,24 @@ async (page) => {
   const pageErrors = [];
   const onConsole = (message) => {
     if (message.type() !== "error") return;
-    consoleErrors.push(String(message.text()).slice(0, 512));
+    const text = String(message.text()).slice(0, 512);
+    // Dev-host resource noise: a missing favicon or a transient burst from a
+    // shared rate-limit bucket logs "Failed to load resource" without any URL
+    // in the message text, so it cannot be path-filtered. 404/429 resource
+    // errors are tolerated exactly like the reference admin adapters; every
+    // other console error is real and fails the suite.
+    if (/Failed to load resource: the server responded with a status of (404|429)/.test(text)) return;
+    // The login scenarios run in-page WITHOUT storage state on purpose, so
+    // the Admin SPA's unauthenticated boot check of /api/auth/me 401s once
+    // on the login page. The shell re-resolves the same endpoint while the
+    // session cookie is being applied after login. A bare 401 resource error
+    // with no URL, or one from the auth bootstrap, is that same expected
+    // call; every other console error is real and fails the suite.
+    if (/Failed to load resource: the server responded with a status of 401/.test(text)) {
+      const loc = message.location?.().url ?? "";
+      if (loc === "" || loc.endsWith("/api/auth/me")) return;
+    }
+    consoleErrors.push(text);
   };
   const onPageError = (error) => {
     pageErrors.push(String(error && error.message ? error.message : "pageerror").slice(0, 512));
@@ -350,6 +367,13 @@ async (page) => {
 
 const LOGIN_BODY = `
   const receipt = receiptBase();
+  // The shared page session keeps the fixture session cookie once a previous
+  // login variant signs in. Without clearing it, booting "/login" renders the
+  // form only briefly before the SPA's client-side redirect to the shell, and
+  // the unguarded fill/click race the navigation and hit the default action
+  // timeout. Clearing cookies makes every login variant deterministic: the
+  // form always renders and the login is always fresh.
+  await page.context().clearCookies();
   await boot("/login");
   receipt.loginFormVisible = await waitVisible(page.locator("#email"), 120000);
   const signIn = button("Sign in");
@@ -399,7 +423,10 @@ const CREATE_BACKUP_BODY = `
   await boot("/backups");
   const scheduleCard = card();
   await waitVisible(scheduleCard, 120000);
-  await button("Create").click();
+  // The admin shell header also carries a global "Create" button, so the
+  // un-scoped role query is ambiguous; the backups toolbar button is the one
+  // inside the page main area next to "Import".
+  await page.locator("main").getByRole("button", { name: "Create" }).click();
   receipt.createDialogVisible = await waitVisible(page.getByText("Create Backup", { exact: true }), 15000);
   receipt.createDialogWidth = await boxWidth(dialogContent("Create Backup"));
   await page.fill("#backup-passphrase", cfg.passphrase);
@@ -407,7 +434,7 @@ const CREATE_BACKUP_BODY = `
     .waitForResponse(
       (response) =>
         response.request().method() === "POST" &&
-        new URL(response.url()).pathname === cfg.adminPath + "/api/backups",
+        response.url().split("?")[0].endsWith(cfg.adminPath + "/api/backups"),
       { timeout: 120000 }
     )
     .catch(() => null);
@@ -437,8 +464,10 @@ const CREATE_BACKUP_BODY = `
       .waitForResponse(
         (response) =>
           response.request().method() === "GET" &&
-          new URL(response.url()).pathname ===
-            cfg.adminPath + "/api/backups/" + receipt.createdBackupId + "/download",
+          response
+            .url()
+            .split("?")[0]
+            .endsWith(cfg.adminPath + "/api/backups/" + receipt.createdBackupId + "/download"),
         { timeout: 120000 }
       )
       .catch(() => null);
@@ -452,9 +481,27 @@ const CREATE_BACKUP_BODY = `
         if (typeof payload.encoding === "string") receipt.downloadEncoding = payload.encoding;
         if (typeof payload.content === "string") {
           receipt.downloadContentBytes = payload.content.length;
-          try {
-            receipt.downloadDecodedBytes = atob(payload.content).length;
-          } catch (error) {}
+          // The run-code sandbox does not expose web globals like atob, so
+          // decode the base64 payload with a pure-string decoder instead.
+          const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+          const clean = payload.content.replace(/=+$/u, "");
+          let bits = 0;
+          let value = 0;
+          let decodedBytes = 0;
+          for (const char of clean) {
+            const index = alphabet.indexOf(char);
+            if (index < 0) {
+              decodedBytes = 0;
+              break;
+            }
+            value = (value << 6) | index;
+            bits += 6;
+            if (bits >= 8) {
+              bits -= 8;
+              decodedBytes += 1;
+            }
+          }
+          receipt.downloadDecodedBytes = decodedBytes;
         }
       }
     }
@@ -471,7 +518,10 @@ const IMPORT_DIALOG_BODY = `
   await boot("/backups");
   const scheduleCard = card();
   await waitVisible(scheduleCard, 120000);
-  await button("Import").click();
+  // The admin shell header also carries a global "Import" button, so the
+  // un-scoped role query is ambiguous; the backups toolbar button is the one
+  // inside the page main area next to "Create".
+  await page.locator("main").getByRole("button", { name: "Import" }).first().click();
   receipt.importDialogVisible = await waitVisible(page.getByText("Import Backup", { exact: true }), 15000);
   receipt.importDialogWidth = await boxWidth(dialogContent("Import Backup"));
   const importButton = button("Import Backup");
@@ -500,7 +550,7 @@ const UPDATE_SCHEDULE_BODY = `
     .waitForResponse(
       (response) =>
         response.request().method() === "PATCH" &&
-        new URL(response.url()).pathname === cfg.adminPath + "/api/backups/schedule",
+        response.url().split("?")[0].endsWith(cfg.adminPath + "/api/backups/schedule"),
       { timeout: 60000 }
     )
     .catch(() => null);

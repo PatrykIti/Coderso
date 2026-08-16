@@ -125,30 +125,26 @@ function requireCompleteOwnedRecords(
   );
 }
 
-function recordMatches(
-  current: Task511SettingRecord | null,
-  expected: Task511SettingRecord
-): boolean {
-  return (
-    current !== null &&
-    current.key === expected.key &&
-    current.updatedAt === expected.updatedAt &&
-    current.valueJson === expected.valueJson
-  );
-}
-
 function ownedMatches(
   current: Task511OwnedSettingRecords,
   expected: Task511OwnedSettingRecords
 ): boolean {
+  // Ownership is value-based, not xmin-based: the app itself rewrites
+  // `security.settings` idempotently on every login (login-alert delivery
+  // failure persists `loginAlerts.deliveryError` with byte-identical JSON),
+  // which bumps the row version legitimately during the run. A strict xmin
+  // comparison would misread that benign app write as foreign drift and abort
+  // restoration. If the current value still matches exactly what the lease
+  // applied, nothing external changed the key, so restoring the pre-run
+  // snapshot cannot clobber a concurrent writer.
   return TASK511_LEASED_SETTING_KEYS.every((key) => {
     const currentRecord = current[key];
     const expectedRecord = expected[key];
     return (
       currentRecord !== null &&
       expectedRecord !== null &&
-      currentRecord.version === expectedRecord.version &&
-      recordMatches(currentRecord, expectedRecord)
+      currentRecord.key === expectedRecord.key &&
+      currentRecord.valueJson === expectedRecord.valueJson
     );
   });
 }

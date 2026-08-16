@@ -1,5 +1,6 @@
 import { SmokeError } from "../../contracts";
 import type { SmokeScenarioResult, SmokeScreenshotResult } from "../types";
+import type { SmokeScenarioVariantResult } from "../types";
 import {
   TASK511_VARIANTS,
   type Task511BrowserReceipt,
@@ -66,6 +67,16 @@ function positive(
     String(actual),
     Number.isSafeInteger(actual) && actual > 0
   );
+}
+
+function suffix(
+  kind: Task511Assertion["kind"],
+  target: string,
+  property: string,
+  expected: string,
+  actual: string
+): Task511Assertion {
+  return assertion(kind, target, property, expected, actual, actual.endsWith(expected));
 }
 
 function colorAssertions(receipt: Task511BrowserReceipt): readonly Task511Assertion[] {
@@ -155,7 +166,7 @@ function createBackupAssertions(receipt: Task511BrowserReceipt): readonly Task51
       "200",
       String(receipt.downloadResponseStatus)
     ),
-    exact("dom-state", "download file name", "cbk-suffix", ".cbk", cbkSuffix),
+    suffix("dom-state", "download file name", "cbk-suffix", ".cbk", cbkSuffix),
     exact("dom-state", "download encoding", "base64", "base64", String(receipt.downloadEncoding)),
     positive("geometry", "download content", "decoded-bytes", receipt.downloadDecodedBytes),
     exact("dom-state", "download toast", "visible", "true", String(receipt.downloadToastVisible)),
@@ -234,50 +245,76 @@ const TASK511_SCENARIO_TITLES: Readonly<Record<Task511BrowserReceipt["scenarioId
     "update-schedule": "Update schedule PATCH through the card",
   });
 
-export function buildTask511ScenarioResult(input: Task511ScenarioInput): SmokeScenarioResult {
-  if (input.receipt.consoleErrors.length > 0 || input.receipt.pageErrors.length > 0) {
-    throw new SmokeError(
-      "smoke_output_invalid",
-      `TASK-511 scenario ${input.descriptor.id} observed console or page errors`
-    );
+export function buildTask511ScenarioResults(
+  inputs: readonly Task511ScenarioInput[]
+): readonly SmokeScenarioResult[] {
+  const byScenario = new Map<Task511ScenarioDescriptor["id"], Task511ScenarioInput[]>();
+  for (const input of inputs) {
+    const group = byScenario.get(input.descriptor.id);
+    if (group === undefined) byScenario.set(input.descriptor.id, [input]);
+    else group.push(input);
   }
-  const builder = TASK511_ASSERTION_BUILDERS[input.descriptor.id];
-  if (builder === undefined)
-    throw new SmokeError("smoke_output_invalid", "TASK-511 assertions are unregistered");
-  const assertions = builder(input.receipt, input.config);
-  const failed = assertions.find((entry) => !entry.pass);
-  if (failed !== undefined) {
-    throw new SmokeError(
-      "smoke_output_invalid",
-      `TASK-511 scenario ${input.descriptor.id} assertion failed: ${failed.target} ${failed.property} expected ${failed.expected} got ${failed.actual}`
-    );
-  }
-  const variant = TASK511_VARIANTS.find((entry) => entry.id === input.variantId);
-  if (variant === undefined)
-    throw new SmokeError("smoke_output_invalid", "TASK-511 variant is unregistered");
-  return Object.freeze({
-    id: input.descriptor.id,
-    pass: true,
-    elapsedMs: input.elapsedMs,
-    title: TASK511_SCENARIO_TITLES[input.descriptor.id],
-    variants: Object.freeze([
-      Object.freeze({
-        id: variant.id,
-        surface: "admin",
-        theme: variant.colorScheme,
-        viewport: Object.freeze({ width: 1440, height: 900 }),
-        assertions,
-        consoleErrors: Object.freeze([]),
-      }),
-    ]),
-    screenshots:
-      input.screenshot === null
-        ? Object.freeze([])
-        : Object.freeze([
+  return Object.freeze(
+    inputs
+      .map(({ descriptor }) => descriptor.id)
+      .filter((id, index, ids) => ids.indexOf(id) === index)
+      .map((scenarioId) => {
+        const group = byScenario.get(scenarioId);
+        if (group === undefined)
+          throw new SmokeError("smoke_output_invalid", "TASK-511 scenario evidence is incomplete");
+        const variants: SmokeScenarioVariantResult[] = [];
+        let canonicalScreenshot: Task511ScreenshotRecord | null = null;
+        for (const input of group) {
+          if (input.receipt.consoleErrors.length > 0 || input.receipt.pageErrors.length > 0) {
+            throw new SmokeError(
+              "smoke_output_invalid",
+              `TASK-511 scenario ${input.descriptor.id} observed console or page errors`
+            );
+          }
+          const builder = TASK511_ASSERTION_BUILDERS[input.descriptor.id];
+          if (builder === undefined)
+            throw new SmokeError("smoke_output_invalid", "TASK-511 assertions are unregistered");
+          const assertions = builder(input.receipt, input.config);
+          const failed = assertions.find((entry) => !entry.pass);
+          if (failed !== undefined) {
+            throw new SmokeError(
+              "smoke_output_invalid",
+              `TASK-511 scenario ${input.descriptor.id} assertion failed: ${failed.target} ${failed.property} expected ${failed.expected} got ${failed.actual}`
+            );
+          }
+          const variant = TASK511_VARIANTS.find((entry) => entry.id === input.variantId);
+          if (variant === undefined)
+            throw new SmokeError("smoke_output_invalid", "TASK-511 variant is unregistered");
+          variants.push(
             Object.freeze({
-              path: input.screenshot.path,
-              sha256: input.screenshot.sha256,
-            } satisfies SmokeScreenshotResult),
-          ]),
-  });
+              id: variant.id,
+              surface: "admin",
+              theme: variant.colorScheme,
+              viewport: Object.freeze({ width: 1440, height: 900 }),
+              assertions,
+              consoleErrors: Object.freeze([]),
+            })
+          );
+          if (input.screenshot !== null && canonicalScreenshot === null) {
+            canonicalScreenshot = input.screenshot;
+          }
+        }
+        return Object.freeze({
+          id: scenarioId,
+          pass: true,
+          elapsedMs: Math.max(...group.map(({ elapsedMs }) => elapsedMs), 0),
+          title: TASK511_SCENARIO_TITLES[scenarioId],
+          variants: Object.freeze(variants),
+          screenshots:
+            canonicalScreenshot === null
+              ? Object.freeze([])
+              : Object.freeze([
+                  Object.freeze({
+                    path: canonicalScreenshot.path,
+                    sha256: canonicalScreenshot.sha256,
+                  } satisfies SmokeScreenshotResult),
+                ]),
+        });
+      })
+  );
 }

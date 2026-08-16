@@ -475,6 +475,31 @@ testIfDb("mapBackup keeps artifactKey null on the client-facing (redacted) map",
   const backup = await getBackupById(created.id);
   expect(backup).not.toBeNull();
   expect(backup!.artifactKey).toBeNull();
+  // The lineage is computed from the REAL path BEFORE redaction and survives on
+  // the client-facing map (v1 `.json` here, even though the path stays a URL).
+  expect(backup!.artifactFormat).toBe("v1");
+});
+
+testIfDb("mapBackup exposes v2 artifactFormat for redacted .cbk rows", async () => {
+  const [created] = await db
+    .insert(backups)
+    .values({
+      status: "complete",
+      kind: "manual",
+      storageDriver: "local",
+      artifactPath: "storage/backups/coderso-backup-fixture.cbk",
+      artifactKey: null,
+    })
+    .returning();
+  if (!created) throw new Error("backup_create_failed");
+  createdIds.push(created.id);
+
+  const backup = await getBackupById(created.id);
+  expect(backup).not.toBeNull();
+  expect(backup!.artifactFormat).toBe("v2");
+  // Local paths stay redacted on the client-facing map ("local"), so the UI
+  // cannot rely on the path suffix; artifactFormat is the restore gate signal.
+  expect(backup!.artifactPath).toBe("local");
 });
 
 // --- Storage usage aggregate (TASK-484-06-L01). ---

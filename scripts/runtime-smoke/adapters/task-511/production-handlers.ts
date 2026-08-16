@@ -93,11 +93,21 @@ const TASK511_ARTIFACT_FILE =
 const TASK511_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/u;
 
 function resolveLocalArtifactPath(stored: string): string | null {
-  const baseDir = path.resolve(process.cwd(), process.env.BACKUP_DIR ?? "storage/backups");
+  // The DB worker runs with the repository root as cwd, while the dev host
+  // runs the core server with the `core` directory as cwd, so the app writes
+  // v2 archives under `<root>/core/storage/backups` (or a configured
+  // BACKUP_DIR resolved from either cwd). Accept both candidate bases.
+  const configured = process.env.BACKUP_DIR ?? "storage/backups";
+  const baseDirs = [
+    path.resolve(process.cwd(), configured),
+    path.resolve(process.cwd(), "core", configured),
+  ];
   const normalized = path.normalize(stored);
+  const baseDir = baseDirs.find(
+    (candidate) => normalized === candidate || normalized.startsWith(`${candidate}${path.sep}`)
+  );
   if (
-    normalized === baseDir ||
-    !normalized.startsWith(`${baseDir}${path.sep}`) ||
+    baseDir === undefined ||
     path.basename(normalized) !== normalized.slice(baseDir.length + path.sep.length)
   ) {
     return null;
@@ -243,7 +253,7 @@ export class Task511ProductionHandlers implements Task511WorkerHandlers {
       }
       return [resolved];
     });
-    const preArtifactsPresent = artifactPaths.every((filePath) => exists(filePath));
+    const preArtifactsPresent = (await Promise.all(artifactPaths.map(exists))).every(Boolean);
     const preAbsenceProved = rows.length === backupIds.length && preArtifactsPresent;
     const removed = await core.db
       .delete(core.backups)
@@ -288,7 +298,7 @@ export class Task511ProductionHandlers implements Task511WorkerHandlers {
       .from(core.backups)
       .where(inArray(core.backups.id, backupIds));
     counts.record(1, remaining.length);
-    const postArtifactsPresent = artifactPaths.some((filePath) => exists(filePath));
+    const postArtifactsPresent = (await Promise.all(artifactPaths.map(exists))).some(Boolean);
     const postAbsenceProved = remaining.length === 0 && !postArtifactsPresent;
     this.#artifactPaths = artifactPaths;
     const counters = counts.snapshot();
@@ -323,7 +333,7 @@ export class Task511ProductionHandlers implements Task511WorkerHandlers {
       .from(core.backups)
       .where(inArray(core.backups.id, backupIds));
     counts.record(1, rows.length);
-    const artifactsPresent = this.#artifactPaths.some((filePath) => exists(filePath));
+    const artifactsPresent = (await Promise.all(this.#artifactPaths.map(exists))).some(Boolean);
     const actor = this.#actor;
     let actorAbsent = false;
     if (actor !== null) {

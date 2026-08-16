@@ -69,6 +69,7 @@ const backupItem = (
   overrides: Partial<{
     id: string;
     status: "queued" | "running" | "complete" | "failed";
+    artifactFormat: "v1" | "v2" | null;
     artifactPath: string | null;
   }> = {}
 ) => ({
@@ -76,6 +77,7 @@ const backupItem = (
   status: overrides.status ?? "complete",
   kind: "manual" as const,
   storageDriver: "local" as const,
+  artifactFormat: overrides.artifactFormat ?? "v1",
   artifactPath: overrides.artifactPath ?? "/backups/backup-1.zip",
   sizeBytes: 1024,
   error: null,
