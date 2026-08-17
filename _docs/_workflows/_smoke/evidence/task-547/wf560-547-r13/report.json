@@ -1,0 +1,133 @@
+{
+  "schemaVersion": 1,
+  "suiteId": "task-547",
+  "profile": "fast",
+  "session": "wf560-547-r13",
+  "pass": true,
+  "serverUp": true,
+  "failures": 0,
+  "consoleErrors": 0,
+  "scenarios": 18,
+  "screenshots": 18,
+  "snapshots": 2,
+  "processes": {
+    "git": 2,
+    "playwright-close": 1,
+    "playwright-open": 1,
+    "playwright-run-code": 18,
+    "playwright-state-load": 3,
+    "task547-dev-host": 1,
+    "task547-worker-db": 1
+  },
+  "timings": [
+    {
+      "kind": "cleanup",
+      "name": "all",
+      "count": 1,
+      "failed": 0,
+      "elapsedMs": 96
+    },
+    {
+      "kind": "cleanup",
+      "name": "task547-resources",
+      "count": 1,
+      "failed": 0,
+      "elapsedMs": 32422
+    },
+    {
+      "kind": "phase",
+      "name": "routing-settings-apply",
+      "count": 1,
+      "failed": 0,
+      "elapsedMs": 1804
+    },
+    {
+      "kind": "phase",
+      "name": "routing-settings-restore",
+      "count": 1,
+      "failed": 0,
+      "elapsedMs": 865
+    },
+    {
+      "kind": "phase",
+      "name": "task547-browser",
+      "count": 1,
+      "failed": 0,
+      "elapsedMs": 274509
+    },
+    {
+      "kind": "phase",
+      "name": "task547-browser-plan",
+      "count": 1,
+      "failed": 0,
+      "elapsedMs": 5
+    },
+    {
+      "kind": "phase",
+      "name": "task547-browser-start",
+      "count": 1,
+      "failed": 0,
+      "elapsedMs": 3951
+    },
+    {
+      "kind": "phase",
+      "name": "task547-install",
+      "count": 1,
+      "failed": 0,
+      "elapsedMs": 41011
+    },
+    {
+      "kind": "phase",
+      "name": "task547-screenshots",
+      "count": 1,
+      "failed": 0,
+      "elapsedMs": 322
+    },
+    {
+      "kind": "phase",
+      "name": "task547-server",
+      "count": 1,
+      "failed": 0,
+      "elapsedMs": 6621
+    },
+    {
+      "kind": "phase",
+      "name": "task547-workers",
+      "count": 1,
+      "failed": 0,
+      "elapsedMs": 15
+    },
+    {
+      "kind": "phase",
+      "name": "task547-workspace",
+      "count": 1,
+      "failed": 0,
+      "elapsedMs": 4
+    },
+    {
+      "kind": "snapshot",
+      "name": "task547-after",
+      "count": 1,
+      "failed": 0,
+      "elapsedMs": 297
+    },
+    {
+      "kind": "snapshot",
+      "name": "task547-before",
+      "count": 1,
+      "failed": 0,
+      "elapsedMs": 195
+    },
+    {
+      "kind": "suite",
+      "name": "task-547",
+      "count": 1,
+      "failed": 0,
+      "elapsedMs": 362017
+    }
+  ],
+  "cleanup": {
+    "pass": true,
+    "failures": []
+  }
+}

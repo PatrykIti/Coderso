@@ -1,8 +1,8 @@
 # TASK-560-05: Docs, Board, Changelog 1282, Closure
 
-**Status:** ⏳ To Do
-**Started:**
-**Completed:**
+**Status:** ✅ Done
+**Started:** 2026-08-17
+**Completed:** 2026-08-17
 **Priority:** High
 **Size:** Medium
 

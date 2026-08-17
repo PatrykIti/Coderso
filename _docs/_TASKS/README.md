@@ -83,9 +83,9 @@ Task board for project work. Keep task files and this board in sync.
   Do not move a leaf task to `Done` until either its standalone changelog
   exists or the family changelog records that leaf.
 
-- **To Do:** 303 tasks
-- **In Progress:** 8 tasks
-- **Done:** 3477 tasks
+- **To Do:** 299 tasks
+- **In Progress:** 6 tasks
+- **Done:** 3483 tasks
 
 > TASK-479 (25 subtasks 05–29 + 92 leaves) and TASK-480 (umbrella + 6 subtasks +
 > 18 leaves) were broken down 2026-06-27. The table below lists the
@@ -181,7 +181,6 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-578 | Bun Lane Degraded-Path Resilience | Medium | Small | `weightMs: 0` traktowany jako unknown + skip pustego c1 (M-557-01 + L-557-02/L-559-01). |
 | TASK-579 | Smoke Adapter Modularization (task-517 browser-actions 1519 Lines) | Medium | Medium | Wydzielić fixtures/public/admin actions z `browser-actions.ts` poniżej 1000 linii (M-560-01). |
 | TASK-559 | Bun Lane C-Split to Reach the 10-15 Minute Target (Follow-up to TASK-557) | Medium | Medium | ✅ Done (2026-08-15): C lane split into two parallel serial workers (manifest v2 conflictKeys/cWriteGlobal, lane-aware worker_count_too_low guard); full test:bun acceptance exit 0 in 9.98 min (target ≤15); pre-existing A-lane test repairs recorded. Changelog 1274. One executable task terminal. |
-| TASK-560 | Runtime Smoke Modular Migration, Evidence Backfill, and Legacy Verification | High | Large | Smoke-surface inventory (modular vs legacy), modular suites authored through the shared runtime-smoke entry for 490/492/487/488/491/511/517 areas, legacy registered suites (540/547/554) re-run on the merged tree, durable evidence committed under `_docs/_workflows/_smoke/evidence/`. Changelog 1282 pinned. 5 subtasks. |
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
 | TASK-556 | FormaDom Code-Owned Static Starter to Designer Handoff | High | Very Large | Provider-free, owner-private seed/reopen of TASK-555's immutable FormaDom release into terminal Designer through one current-root binding, one-dispatch fenced persistence, run-bound receipt staging, the existing Designer facade/`admin_write` transport, TASK-555's memory-only Setup review continuation, terminal capability regeneration, Designer backup V2, two additive host CTAs, and exactly five shared runtime-smoke flows. Implementation gate is closed until TASK-545 is exactly `✅ Done`, TASK-414/TASK-489/TASK-547/TASK-555 satisfy the parent terminal dependency rule, and a fresh read-only audit passes against unchanged contracts; TASK-545 has no superseded-successor exception and local ignored orchestration sidecars are non-authorizing helpers. Changelog 1270 pinned. 4 children + 8 executable leaves. |
@@ -234,6 +233,8 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-105-06 | Widget Editor New Tests Wave | High | Large | In progress: widget editors are now 100% lines in the full-lane report; remaining work is branch-only hardening plus barrel import ownership noise |
 | TASK-9999 | Permanent Deferred Non-User-Facing Low-Severity Backlog | Low | Very Large | Sole four-digit sentinel and intentionally permanent final board item. Accepts only evidence-backed LOW findings that satisfy the strict zero-user-visible and zero-contract-impact policy in `AGENTS.md`; source tasks must link deduplicated execution-ready leaves with exact rationale. Completed children/leaves retain normal changelog + board/stat closure. Current intake: TASK-9999-01 from TASK-540 (1 open leaf + 1 superseded, changelog 1258) and TASK-9999-02 from the TASK-560 audit sweep (4 docs-only leaves: L01 closed-family subtask tables, L02 TASK-540 historical workflow fields, L03 stale TASK-559 benchmark relabel, L04 TASK-547 closure notes). |
 ## Done
+
+| TASK-560 | Runtime Smoke Modular Migration, Evidence Backfill, and Legacy Verification | High | Large | ✅ Done (2026-08-17): smoke-surface inventory (modular vs legacy) + gap report; modular suites authored through the shared runtime-smoke entry for 490/492/487/488/491/511/517 and committed; legacy registered suites re-run on the merged tree — task-540 7/7 PASS, task-547 18/18 PASS, task-554 7/7 PASS; durable evidence committed under `_docs/_workflows/_smoke/evidence/`. Changelog 1282. 5 subtasks terminal. |
 
 | TASK-518 | Seed Default Admin Role via Migration (Stable ID, Admin-Only) | High | Small | ✅ Done (2026-08-14): stable DEFAULT_ADMIN_ROLE_ID + idempotent migration 0071 (fresh db:migrate has exactly one admin role), createFirstAdmin/seedAdmin aligned with legacy fallback; admin role only, no privilege change. Changelog 1231. 2 subtasks terminal. |
 | TASK-558 | Popup Visual Theming (Follow-up to TASK-486) | Medium | Medium | ✅ Done (2026-08-14): present-only fixed-preset theme (card/backdrop/close/z-index 9999), viewport clamping, focus/ESC/Tab-trap/reduced-motion, byte-identical no-override; 7-scenario runtime smoke PASS (wf558smoke). Changelog 1273. One executable task terminal. |

@@ -1,8 +1,8 @@
 # TASK-560-03: Run Legacy Registered Suites on the Merged Tree
 
-**Status:** ⏳ To Do
-**Started:**
-**Completed:**
+**Status:** ✅ Done
+**Started:** 2026-08-15
+**Completed:** 2026-08-17
 **Priority:** High
 **Size:** Medium
 

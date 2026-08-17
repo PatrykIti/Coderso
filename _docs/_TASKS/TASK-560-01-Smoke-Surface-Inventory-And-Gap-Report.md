@@ -1,8 +1,8 @@
 # TASK-560-01: Smoke Surface Inventory and Gap Report
 
-**Status:** 🚧 In Progress
+**Status:** ✅ Done
 **Started:** 2026-08-15
-**Completed:**
+**Completed:** 2026-08-17
 **Priority:** High
 **Size:** Medium
 
@@ -45,6 +45,48 @@ and NO committed evidence.
   contain zero smoke mentions — audit finding LOW-2). Extract and record the
   lists verbatim as an appendix to this file.
 - Do not edit any file; findings only.
+
+## Findings: inventory table (grounded 2026-08-17)
+
+| Surface | Classification | Owner | Status |
+|---|---|---|---|
+| `scripts/runtime-smoke.ts` (shared entry) | MODULAR | TASK-560/545 | active |
+| `scripts/runtime-smoke/adapters/task-487.ts` | MODULAR | TASK-560-02 | green wf560-487smoke |
+| `scripts/runtime-smoke/adapters/task-488.ts` | MODULAR | TASK-560-02 | green wf560-488smoke |
+| `scripts/runtime-smoke/adapters/task-490.ts` | MODULAR | TASK-560-02 | green wf560-490smoke |
+| `scripts/runtime-smoke/adapters/task-491.ts` | MODULAR | TASK-560-02 | green wf491final3/wf491g9 |
+| `scripts/runtime-smoke/adapters/task-492.ts` | MODULAR | TASK-560-02 | green wf560-492smoke |
+| `scripts/runtime-smoke/adapters/task-511.ts` | MODULAR | TASK-560-02 | green wf560-511smoke |
+| `scripts/runtime-smoke/adapters/task-517.ts` | MODULAR | TASK-560-02 | green wf560-517smoke |
+| `scripts/runtime-smoke/adapters/task-540.ts` | MODULAR (legacy port) | TASK-560-03 | green wf560-540 |
+| `scripts/runtime-smoke/adapters/task-547.ts` | MODULAR (legacy port) | TASK-560-03 | green wf560-547-r13 |
+| `scripts/runtime-smoke/adapters/task-554.ts` | MODULAR (legacy port) | TASK-560-03 | green task-554-fast |
+| `scripts/runtime-smoke/adapters/production-boundary.ts` | MODULAR | TASK-545 | registered |
+| `scripts/runtime-smoke/adapters/routing-settings-lease.ts` | MODULAR helper | TASK-560-03 | active |
+| `scripts/runtime-smoke/adapters/widget-contract.ts` | MODULAR | legacy | registered |
+| `scripts/playwright-widget-contract-smoke.ts` | LEGACY standalone | TASK-242 era | retained seam |
+| `scripts/smoke-auth-rate-window.ts` | LEGACY helper | TASK-540 | helper only |
+| `_docs/_workflows/_smoke/evidence/` (task-487/488/490/491/492/511/517/540/545/547) | MODULAR evidence | TASK-560-04 | committed |
+| `_docs/_workflows/_smoke/task-554/` | LEGACY evidence root | TASK-554 | committed (kept; audit MEDIUM-2) |
+| `.playwright-cli/` | LEGACY artifacts | historical | retained, gitignored |
+| `_docs/PLAYWRIGHT/` | LEGACY artifacts | historical | retained |
+| `_docs/_workflows/task-536/537/538/541/544/548-*.mjs` | LEGACY embedded Playwright loops | historical | retained seams |
+
+## Gap report (2026-08-17 closure)
+
+All eight merged feature areas now have a committed modular suite with durable
+report.json + screenshots under `_docs/_workflows/_smoke/evidence/`:
+
+- 490 (changelog 1275): suite task-490 green, 5 scenarios, evidence committed.
+- 492 (1276): task-492 green, 5 scenarios, evidence committed.
+- 487 (1277): task-487 green, 6 scenarios, evidence committed.
+- 488 (1278): task-488 green, 5 scenarios, evidence committed.
+- 491 (1279): task-491 green (wf491final3), 5 scenarios, evidence committed.
+- 559 (1274): no browser UI; Bun lane acceptance re-run post-merge (note only).
+- 511 (1281): task-511 green, 5 scenarios, evidence committed.
+- 517 (1280): task-517 green, 6 flows, evidence committed.
+- Legacy registered suites re-run on the merged tree: task-540 (7/7 PASS),
+  task-547 (18/18 PASS), task-554 (7/7 PASS).
 
 ## Appendix: per-area scenario lists (from changelogs 1275-1281 + TASK-517-03)
 
