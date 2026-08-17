@@ -3,6 +3,7 @@
 **Status:** ⏳ To Do
 **Started:**
 **Completed:**
+**Changelog:** 1294 (pinned)
 **Priority:** Medium
 **Size:** Medium
 
@@ -47,10 +48,18 @@ cache read.
 
 ## Fix Strategy
 
-Hoist `resolveEntryRequestAuth()` (and the gated-route signal) above the cache
-read; gate cache eligibility on anonymous + ungated only. For restricted
-transitions, treat the list like the gated detail path (skip shared body cache
-or do an authoritative visibility recheck).
+Hoist `resolveEntryRequestAuth()` (`publicSite.tsx:524`) ABOVE the list cache
+read (`:493-498`); the gated-route signal is already computed before the read
+(`:477-482`, TASK-517-03) — no further hoist needed there. Gate the LIST body
+cache read/write on `!isAuthenticated && !routeIsGatedEntry` only; authenticated
+list renders bypass the shared body cache entirely (lower-level DB caching may
+stay). For restricted transitions, treat the list like the gated detail path
+(narrow authoritative visibility recheck before serving the cached list, or
+skip the shared body cache) — never rely on TTL invalidation.
+
+Scope the anonymous gate explicitly to the LIST body cache read/write; do NOT
+read it as bypassing the shared cache for public detail/static/homepage renders
+of authenticated users (that is broader than this finding).
 
 ## Security Contract
 
@@ -62,8 +71,13 @@ or do an authoritative visibility recheck).
 ## Validation
 
 - `bun --cwd core lint` + `bun --cwd core lint:types`.
-- Vitest/Bun regression for the cache-ordering cases above.
-- Existing entry-visibility tests stay green.
+- Bun runtime regression for the cache-ordering cases: (1) anonymous primes the
+  list, then a `content:read` session requests the same path and receives
+  private/password entries without the anonymous cache; (2) public→restricted
+  transition is immediately fail-closed (no stale cached list exposure);
+  (3) anonymous-prime → authed-read ordering.
+- Existing entry-visibility tests stay green
+  (`tests/integration/runtime/entry-visibility-gate.test.ts:490-550`).
 
 ## Notes
 

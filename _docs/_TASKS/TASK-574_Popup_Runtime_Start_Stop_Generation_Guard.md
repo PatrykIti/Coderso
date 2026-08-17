@@ -3,6 +3,7 @@
 **Status:** ⏳ To Do
 **Started:**
 **Completed:**
+**Changelog:** 1296 (pinned)
 **Priority:** Medium
 **Size:** Medium
 
@@ -40,17 +41,42 @@ exercises the race with a deferred promise.
 
 ## Fix Strategy
 
+Keep the existing early `started` guard, the `shouldShowPopup` frequency-gate
+filter, and the fire-time recheck callback; add ONLY the generation token and
+the stale check around the existing arming loop:
+
 ```ts
 private generation = 0;
 async start() {
+  if (this.started) return; // keep existing concurrent-start guard
   const gen = ++this.generation;
   this.started = true;
-  const popups = await this.deps.fetchPopups();
-  if (gen !== this.generation || !this.started) return; // stale
-  this.disposers = popups.map((p) => this.watchTrigger(p));
+  try {
+    const popups = await this.deps.fetchPopups();
+    if (gen !== this.generation || !this.started) return; // stale
+    this.disposers = popups
+      .filter((p) => shouldShowPopup(p, this.env)) // keep frequency gate
+      .map((p) => this.watchTrigger(p.trigger, this.env, (shown) => {
+        // fire-time recheck callback (existing behavior)
+      }));
+  } catch {
+    // keep swallow-and-retry behavior; only reset when THIS generation is stale
+    if (gen === this.generation) this.started = false;
+  }
 }
-stop() { this.generation++; this.started = false; this.disposeAll(); }
+stop() {
+  this.generation++;
+  this.started = false;
+  this.disposeAll();
+}
 ```
+
+- `watchTrigger(p)` in the original pseudocode is an abstraction of the real
+  `watchTrigger(popup.trigger, env, cb)` signature — implement against the real
+  one.
+- The stale fetch-rejection path must NOT clear a newer start's latch: only
+  reset `started` when `gen === this.generation` (keep the existing 'fetch
+  rejection' tests' behavior).
 
 ## Security Contract
 

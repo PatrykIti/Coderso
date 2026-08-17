@@ -3,6 +3,7 @@
 **Status:** ⏳ To Do
 **Started:**
 **Completed:**
+**Changelog:** 1289 (pinned)
 **Priority:** High
 **Size:** Large
 
@@ -23,6 +24,17 @@ coherent destination/SSRF policy:
   (H-492-01) and NAT64-prefixed (`64:ff9b::7f00:1`) plus alternate mapped
   spellings (supplementary); delivery follows redirects without re-validation
   (M-492-02).
+- **Custom webhooks are a fully unguarded third surface:** the URL is accepted
+  as any string (`core/server/validation/webhookSchemas.ts:6`), normalized with
+  trim only (`core/services/webhooks/webhooksService.ts:153-167`), and fetched
+  with no scheme/host/SSRF/redirect guard (`deliveryService.ts:50` →
+  `retryPost.ts:68-73`) — same class as M-491-01.
+- **Assistant LLM providers** accept a user-configured `baseUrl` with no
+  validation or redirect guard (`openAiProvider.ts:162-183`,
+  `openRouterProvider.ts:261-280`).
+- **Sentry init** passes the raw DSN straight to the SDK
+  (`errorMonitoring.ts:100-108`); only `healthEvaluator.ts:52` gates it with
+  `isParseableSentryDsn`.
 
 A user with `settings:write` can force a server-side request to loopback/private
 network/metadata via literal or mapped addresses or via a redirect chain.
@@ -45,44 +57,105 @@ network/metadata via literal or mapped addresses or via a redirect chain.
 ## Scope
 
 - One shared outbound URL validator used by ALL webhook/egress paths
-  (integrations, login alerts, any future webhook), not an ad-hoc per-adapter
-  check.
-- Validate per provider: HTTPS required; Slack/Zapier host allowlists; reject
-  private/loopback/link-local/CGNAT/reserved/multicast IPv4 and IPv6, including
-  IPv4-mapped IPv6 and NAT64 prefixes; reject DNS-resolved private destinations
-  (with rebinding-aware resolution where feasible).
+  (integrations, login alerts, custom webhooks, assistant LLM providers, Sentry
+  DSN, any future webhook), not an ad-hoc per-adapter check.
+- Validate per provider: HTTPS required; Slack/Zapier host allowlists; custom
+  webhooks get the full blocklist policy (HTTPS + private/loopback/link-local/
+  CGNAT/reserved/multicast IPv4 and IPv6, including IPv4-mapped IPv6 and NAT64
+  prefixes; DNS-resolved private destinations with rebinding-aware resolution;
+  `redirect: "error"`); no host allowlist by design for custom webhooks.
+- Assistant provider policy: OpenAI/OpenRouter allowlist their official hosts
+  (`api.openai.com`, `openrouter.ai`) and reject custom `baseUrl` overrides
+  unless an explicit owner decision permits a custom endpoint with full
+  blocklist validation (record the decision in the task handoff).
+- Sentry policy: validate the DSN at init (`isParseableSentryDsn` +
+  `host === "ingest.sentry.io"` or Sentry-owned host allowlist) before passing
+  to the SDK; reject others fail-closed.
 - Block redirects (`redirect: "error"`) in every delivery path; sanitize the
-  redirect error to the existing machine-readable delivery error.
+  redirect error to the existing machine-readable delivery error at the
+  `retryPost` boundary so the URL never persists into
+  `webhookDeliveries.lastError` (`retryPost.ts:81` → `deliveryService.ts:62`).
+- Consciously resolve the localhost-HTTP dev seam: the pinned
+  `securitySettings.ts:431` localhost-http exception exists for local dev; the
+  validator must keep it reachable through an explicit, documented
+  `NODE_ENV !== "production"` escape while production stays HTTPS-only (guard
+  with tests; see `securitySettings.test.ts:188-205`).
 - Add negative tests: literal private host, mapped IPv6 spellings, NAT64
   prefix, private destination after redirect, correct host for each provider.
-- Fold in log hygiene for the delivery transport (`retryPost` timer cleanup,
-  `publicHeadTags` raw error logging) as part of the same transport change where
-  the anchors overlap.
+- Log hygiene for the delivery transport is scoped to `retryPost` timer cleanup
+  only. `publicHeadTags` raw error logging is NOT in scope — TASK-568 is the
+  single writer for `core/server/publicHeadTags.ts`.
 
 ## Fix Strategy
 
 Own a single `outboundEgress` module in the domain contract layer (pure, no DB
-imports) exporting `validateOutboundUrl(url, { provider })` and
-`fetchWithEgressPolicy(...)`; routes/services import the owner instead of
-duplicating checks. Wire `redirect: "error"` into `retryPost.ts` and
-`loginAlertDeliveryService.ts`.
+imports) exporting:
+
+```ts
+// core/services/outboundEgress/outboundEgress.ts (new, Bun-free)
+export type EgressProvider =
+  | "slack" | "zapier" | "login-alert" | "webhook" | "openai" | "openrouter" | "sentry";
+export function validateOutboundUrl(url: string, opts: { provider: EgressProvider; env?: NodeJS.ProcessEnv }): { ok: true; url: URL } | { ok: false; code: "egress_invalid_scheme" | "egress_host_forbidden" | "egress_redirect_forbidden" | ... };
+export async function fetchWithEgressPolicy(input: string | URL, init: RequestInit, opts: { provider: EgressProvider }): Promise<Response>;
+export function validateSentryDsn(dsn: string): { ok: true } | { ok: false; code: "sentry_dsn_invalid" };
+```
+
+Flow per delivery:
+1. `validateOutboundUrl(url, { provider })` — scheme (HTTPS; localhost-http
+   exception only when `env.NODE_ENV !== "production"`), host allowlist for
+   allowlisted providers, blocklist (private/loopback/link-local/CGNAT/
+   reserved/multicast, IPv4-mapped IPv6, NAT64) for blocklist providers, plus
+   DNS resolution re-check where feasible.
+2. Reject fail-closed at configuration time AND at delivery time
+   (defense in depth).
+3. `fetchWithEgressPolicy` passes `redirect: "error"` and maps a redirect
+   rejection to the existing machine-readable delivery error code — no raw URL
+   in the message or persisted error.
+
+Wire the owner into:
+- `slackDelivery.ts`, `zapierDelivery.ts` (allowlist + redirect).
+- `loginAlertDeliveryService.ts:147-155` (blocklist + redirect).
+- `webhooksService.ts:153-167` + `deliveryService.ts:50` (custom webhooks:
+  HTTPS + full blocklist + redirect, no host allowlist).
+- `retryPost.ts:68-81` — validate before fetch, `redirect: "error"`, sanitize
+  the rejection so `webhookDeliveries.lastError` never contains the URL; keep
+  timer cleanup.
+- Assistant providers: `openAiProvider.ts` / `openRouterProvider.ts` reject
+  custom `baseUrl` outside the allowlist at configuration/resolution time
+  (fail-closed, no fetch).
+- `errorMonitoring.ts` — `validateSentryDsn` before SDK init; reject
+  non-Sentry hosts fail-closed.
 
 ## Security Contract
 
 - Endpoint visibility unchanged: `internal` admin update routes require
-  `settings:write` (integrations) / configured webhook (login alerts).
+  `settings:write` (integrations, custom webhooks) / configured webhook (login
+  alerts); assistant provider config changes require `settings:write`; Sentry
+  init follows the existing secrets/settings path.
 - Validation is server-side and fail-closed; invalid destinations are rejected
   at configuration time AND at delivery time (defense in depth).
-- Redirect errors and log lines carry no raw URL/secret/error internals.
+- Redirect errors and log lines carry no raw URL/secret/error internals;
+  `webhookDeliveries.lastError` stays machine-readable without the URL.
 - No new public write surface; public form submission only triggers delivery to
   previously validated destinations.
+- Custom webhooks are an admin-configured surface (`internal`), not a public
+  one; their URLs are validated on save and on every delivery.
 
 ## Validation
 
 - `bun --cwd core lint` + `bun --cwd core lint:types`.
-- Vitest/Bun tests for the validator matrix (mapped IPv6, NAT64, redirects,
-  per-provider allowlist) + delivery tests with fake fetch.
-- Route registration + `map*Error` coverage for the affected routes.
+- Bun-free Vitest suite for the validator matrix (mapped IPv6, NAT64, redirects,
+  per-provider allowlist, custom-webhook blocklist, sentry DSN) in
+  `tests/vitest/outbound-egress/` + delivery tests with fake fetch for
+  `slackDelivery`, `zapierDelivery`, `loginAlertDeliveryService`,
+  `retryPost`/`deliveryService` (Bun lane where DB-backed), assistant provider
+  resolution, and Sentry init.
+- Route registration + `map*Error` coverage for the affected routes
+  (integrations, webhooks, security settings).
+- Run `bun test tests/unit/security/securitySettings.test.ts` and
+  `tests/integration/routes/publicSiteAnalytics.test.ts` (existing suites
+  touching the guarded contract) to confirm the localhost seam and GA head path
+  stay green.
 - Security scan per `_docs/SECURITY_SPEC.md` when feasible.
 
 ## Notes

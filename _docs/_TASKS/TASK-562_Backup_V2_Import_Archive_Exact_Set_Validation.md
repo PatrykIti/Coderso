@@ -3,6 +3,7 @@
 **Status:** ⏳ To Do
 **Started:**
 **Completed:**
+**Changelog:** 1284 (pinned)
 **Priority:** High
 **Size:** Medium
 
@@ -56,7 +57,8 @@ restore work starts.
 
 ## Security Contract
 
-- Endpoint unchanged (`internal` admin, `backups:restore`).
+- Endpoint unchanged (`internal` admin; the route uses RBAC `backups:write`
+  per `backupRoutes.ts:260,278` — there is no `backups:restore` permission).
 - No new payload fields; import payload reject-unknown unchanged.
 - Failure is fail-closed before destructive work; error codes sanitized.
 
@@ -64,6 +66,11 @@ restore work starts.
 
 - `bun --cwd core lint` + `bun --cwd core lint:types`.
 - `bun test tests/unit/backups/backupImport.test.ts` (extended negative matrix).
+  NOTE: the existing positive test `tests/unit/backups/backupImport.test.ts:732-769`
+  ("users present but opt-out") asserts SUCCESS for `include:["users"]` with only
+  `users.ndjson`; under the new exact-set rule that archive becomes INVALID, so
+  the test must be updated (add empty `roles.ndjson` + `user_roles.ndjson`
+  members, or convert to a negative test) as part of this task.
 - DB-backed import smoke when `DATABASE_URL` available.
 
 ## Notes

@@ -3,6 +3,7 @@
 **Status:** ⏳ To Do
 **Started:**
 **Completed:**
+**Changelog:** 1287 (pinned)
 **Priority:** Medium
 **Size:** Small
 
@@ -35,14 +36,25 @@ failed gate, not a LOW/TASK-9999 candidate.
 
 ## Fix Strategy
 
-Identify the natural seams (shared fixture builders, per-grant access cases,
-redirect/error cases), move them into named helper/suite files, and re-run the
-whole media delivery test group.
+Extract a shared support module `tests/integration/server/mediaDeliveryTestSupport.ts`
+exporting `createMediaDeliveryHarness()` that returns the mutable module state
+(records, bodies, mode, permissionAllowed, calls, streamFactory, adapterGet),
+the `installHarness` helper, and the `beforeEach`/`afterEach`/`afterAll` hooks
+— the current 22 tests read module-level state (`mediaDeliveryAccess.test.ts:132-138`)
+and the singleton `__setMediaDeliveryDepsForTests` seam (`:303-357`, `:359-385`),
+so each split file must be independently runnable and own those bindings.
+Then split the suites (per-grant access matrix, auth/permission variants,
+redirect/error cases) into clearly named files <= 1000 lines each.
 
 ## Validation
 
 - `wc -l` on every touched file <= 1000.
-- `bun test` (or owning lane runner) for the media delivery group passes.
+- REGENERATE the lane manifest: `tests/integration/server/` is a
+  `bun-lane-classify` directory, so extracted files are silently skipped until
+  `bun scripts/bun-lane-classify.ts` re-runs and commits
+  `tests/bun-lane-manifest.json`; add this step to the task.
+- Pin the lane command: `bun tests/integration/server/mediaDeliveryAccess.test.ts`
+  plus each extracted file (or `bun run test:bun` after manifest regen).
 - `bun --cwd core lint` + `bun --cwd core lint:types`.
 
 ## Notes

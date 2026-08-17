@@ -3,6 +3,7 @@
 **Status:** ⏳ To Do
 **Started:**
 **Completed:**
+**Changelog:** 1295 (pinned)
 **Priority:** Medium
 **Size:** Small
 
@@ -40,12 +41,21 @@ hot public path pays for unbounded JSON and extra queries, contradicting the
 ## Fix Strategy
 
 ```ts
-// entryReadService.ts
-export async function getEntryVisibilityBySlug(slug: string) {
+// entryReadService.ts — keep the (typeId, slug) scope: entry slugs are unique
+// only per type (uniqueIndex content_entries_type_slug_idx on (typeId, slug)),
+// so a slug-only probe could match a different type's entry.
+export async function getEntryVisibilityBySlug(typeId: string, slug: string) {
   return db.select({ id: entries.id, visibility: entries.visibility })
-    .from(entries).where(eq(entries.slug, slug)).limit(1);
+    .from(entries).where(and(eq(entries.typeId, typeId), eq(entries.slug, slug))).limit(1);
+}
+export async function getEntryVisibilityById(id: string) {
+  return db.select({ id: entries.id, visibility: entries.visibility })
+    .from(entries).where(eq(entries.id, id)).limit(1);
 }
 ```
+
+`entryRouteIsGated()` wires BOTH narrow reads (the probe has an id branch and a
+slug branch); the slug branch resolves `typeId` from the type slug first.
 
 ## Security Contract
 
@@ -55,4 +65,7 @@ export async function getEntryVisibilityBySlug(slug: string) {
 ## Validation
 
 - `bun --cwd core lint` + `bun --cwd core lint:types`.
-- Vitest query-shape test (narrow projection, no heavy loader calls).
+- Vitest query-shape test (narrow projection: `id`/`visibility`/`typeId` only,
+  no heavy loader calls, no SEO/taxonomy/author joins; slug probe scoped by
+  typeId).
+- Keep `tests/integration/runtime/entry-visibility-gate.test.ts` green.

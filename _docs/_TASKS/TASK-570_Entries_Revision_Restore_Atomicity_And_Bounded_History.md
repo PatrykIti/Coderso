@@ -3,6 +3,7 @@
 **Status:** ⏳ To Do
 **Started:**
 **Completed:**
+**Changelog:** 1292 (pinned)
 **Priority:** High
 **Size:** Large
 
@@ -40,46 +41,80 @@ and loads full JSON payloads.
 ## Scope
 
 - Subtask 01 (H-487-01): single `runEntryTransaction` with fence + entry
-  `FOR UPDATE`, narrow revision read by `revisionId`, validate target, snapshot
-  the LOCKED current data, update, cache-invalidate post-commit; no snapshot on
-  validation failure. Barrier/deferred-writer test proves no lost update and
-  rollback leaves no new revision.
+  `FOR UPDATE`, narrow revision read by `revisionId`, validate target (full
+  `validateEntryData` + `validateEntryReferences`, not just a shape check),
+  snapshot the LOCKED current data, update, cache-invalidate post-commit; no
+  snapshot on validation failure. Barrier/deferred-writer test proves no lost
+  update and rollback leaves no new revision. Restore re-validates the target
+  snapshot exactly like `updateEntry` does today so a stale/non-conforming
+  snapshot surfaces `ContentValidationError` instead of persisting.
 - Subtask 02 (M-487-02): keyset-cursor metadata page (id, version, createdAt,
   author; no `data`), bounded page size; narrow `getEntryRevisionData(revisionId)`
   detail read used by restore; cursor no-gap/no-dup + query-shape tests.
+  **Admin client + UI migration in scope:** `entriesClient.ts` (`EntryRevision`
+  drops `data`; add `getEntryRevisionData`), `useEntryRevisions.ts`
+  (on-demand detail fetch for the drawer preview), `EntryRevisionDrawer.tsx`
+  (render via the detail read), and `tests/vitest/admin/entriesClientRevisions.test.ts`
+  (fixtures no longer carry `data`). Without this the metadata page breaks the
+  preview and the client tests.
 - Subtask 03 (N3): unique `(entryId, version)` index (migration + snapshot +
   journal) + bounded retry on conflict; concurrency-safe version allocation.
 
 ## Fix Strategy
+
+The restore must run inside the existing `runEntryTransaction` (fence + `FOR
+UPDATE` + post-commit cache invalidation seam) and re-use the same validation
+`updateEntry` performs. `updateEntryTx` does not exist; extract a tx-scoped
+update helper or route through the update path inside the same transaction:
 
 ```ts
 return runEntryTransaction(async (tx) => {
   await acquireNativeCmsWriterFence(tx);
   const [entry] = await tx.select().from(entries)
     .where(eq(entries.id, entryId)).for("update");
-  const revision = await tx.select().from(contentRevisions)
+  if (!entry) throw new Error("entry_not_found");
+  const [revision] = await tx.select().from(contentRevisions)
     .where(and(eq(contentRevisions.entryId, entryId), eq(contentRevisions.id, revisionId)))
     .limit(1);
-  validateTarget(revision);
-  await createEntryRevisionTx(tx, entryId, currentData(entry), userId);
-  await updateEntryTx(tx, entryId, revision.data);
-  // cache invalidation AFTER commit via onCommit hook
+  if (!revision) throw new Error("entry_revision_not_found");
+  const schema = await getContentTypeById(tx, entry.typeId); // or existing loader
+  await validateEntryData(entry.typeId, schema, revision.data); // throws ContentValidationError
+  await validateEntryReferences(schema, revision.data, tx);     // throws on broken refs
+  await createEntryRevisionTx(tx, entryId, currentData(entry), userId); // snapshot LOCKED current
+  await updateEntryDataTx(tx, entryId, revision.data);          // tx-scoped write (no re-validation loop)
+  // cache invalidation AFTER commit via the existing runEntryTransaction onCommit hook
 });
 ```
+
+If any validation fails before the snapshot write, nothing is persisted and no
+snapshot is left behind (the whole transaction rolls back).
 
 ## Security Contract
 
 - Endpoints unchanged: list requires `content:read`, restore `content:write`
   (`contentEntryRoutes.ts:403-439`).
 - No new payload fields; reject-unknown unchanged.
-- Errors machine-readable (`revision_not_found`, `revision_conflict`) mapped via
-  existing `mapContentError`.
+- Errors machine-readable: existing `entry_revision_not_found` (404) kept;
+  add `revision_conflict` (409, unique-constraint retry exhaustion) to
+  `mapContentEntryError` (`contentEntryRoutes.ts:104`); the mapper name is
+  `mapContentEntryError`, not `mapContentError`.
 
 ## Validation
 
 - `bun --cwd core lint` + `bun --cwd core lint:types`.
 - DB race test with a deferred writer barrier when `DATABASE_URL` available.
-- Vitest for cursor pagination + query-shape (list loads no `data` columns).
+- Bun lane: re-run and update the existing owning suites for the new shape/
+  fence — `tests/unit/content/entryRevisionRestore.test.ts` (list results lose
+  `.data`/`.length` assumptions), `tests/unit/content/entryService.test.ts`
+  (listEntryRevisions), `tests/unit/content/entryServiceFacadeFence.test.ts`
+  (add `restoreEntryRevision` to the fence-first regex list). Run each named
+  file with `bun tests/unit/content/<file>` (env: `set -a && source .env &&
+  set +a` when DB-backed).
+- Vitest for cursor pagination + query-shape (list loads no `data` columns) +
+  admin client/UI migration (`entriesClientRevisions.test.ts`,
+  `useEntryRevisions`, `EntryRevisionDrawer`).
+- `map*Error` coverage for `entry_revision_not_found` (404) and
+  `revision_conflict` (409) in the route suite.
 
 ## Notes
 

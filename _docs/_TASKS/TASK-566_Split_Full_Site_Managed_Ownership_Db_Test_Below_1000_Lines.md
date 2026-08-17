@@ -3,6 +3,7 @@
 **Status:** ⏳ To Do
 **Started:**
 **Completed:**
+**Changelog:** 1288 (pinned)
 **Priority:** Medium
 **Size:** Small
 
@@ -33,14 +34,25 @@ file. One line over is a hard gate violation.
 
 ## Fix Strategy
 
-Split by responsibility (e.g. ownership transfer vs setting compensation) into
-named suites that share fixtures via a common helper module, then re-run the
-whole `kits` DB group.
+Extract a named common helper module (e.g.
+`tests/integration/kits/fullSiteManagedOwnershipSupport.ts`) that owns the
+in-file helpers the 12 tests share — `createOwnedIds`, `ownId`,
+`cleanupOwnedIds`, `emptyResources`, `packageFixture`, `identityNormalizer`,
+`planPackage`, `projectPersistedFormActions`, `persistEvidence`
+(`fullSiteManagedOwnershipDb.test.ts:1-215`) — including the owned-row
+cleanup contract (delete ONLY created rows) and the setting-takeover test's
+settings restore (`:918-1001`). Then split by responsibility (ownership
+transfer vs setting compensation) into named suites <= 1000 lines each.
 
 ## Validation
 
 - `wc -l` on every touched file <= 1000.
-- Owning DB test group passes (when `DATABASE_URL` available).
+- Owning DB test group passes (when `DATABASE_URL` available; load env with
+  `set -a && source .env && set +a`). NOTE: `tests/integration/kits/` is NOT in
+  `bun-lane-classify` LANE_DIRS nor in `test:integration`, so pin the exact
+  TASK-547 command: `bun test --parallel=1 --timeout=360000
+  tests/integration/kits/fullSiteManagedOwnershipDb.test.ts` plus each
+  extracted file — a generic "owning group passes" claim is ambiguous.
 - `bun --cwd core lint` + `bun --cwd core lint:types`.
 
 ## Notes

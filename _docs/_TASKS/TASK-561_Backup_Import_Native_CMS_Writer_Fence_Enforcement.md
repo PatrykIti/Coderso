@@ -3,6 +3,7 @@
 **Status:** ⏳ To Do
 **Started:**
 **Completed:**
+**Changelog:** 1283 (pinned)
 **Priority:** High
 **Size:** Medium
 
@@ -48,8 +49,12 @@ writes.
 - DB/race regression: active full-site holder vs import returns `busy` with
   zero protected writes from the import path.
 - Verify the lock is the shared fence consistent with the rest of the writers
-  (`nativeCmsWriterFence.ts:100-108`); on contention map to a machine-readable
-  error code (e.g. `restore_busy`) without raw driver details.
+  (`core/db/nativeCmsWriterFence.ts:100-108`); on contention map to the
+  EXISTING machine-readable code `native_cms_writer_fence_busy` (the code the
+  fence already throws, `core/db/nativeCmsWriterFence.ts:108`; TASK-547's busy
+  contract uses the same) — do NOT invent a new `restore_busy` code. Add a
+  `mapBackupError` case for `native_cms_writer_fence_busy` → 409/503 without
+  raw driver details.
 
 ## Fix Strategy
 
@@ -66,15 +71,16 @@ export async function importBackupFromUpload(input: ImportBackupInput) {
 ```
 
 - In `backupRoutes.ts`, map the fence error through `mapBackupError` to
-  `restore_busy` (409/503), consistent with the TASK-547 full-site `busy`
-  contract.
+  `native_cms_writer_fence_busy` (409/503), consistent with the TASK-547
+  full-site `busy` contract (no new error code).
 - Add a DB regression with a barrier: holder acquires the fence, import
   concurrently attempts, assert `busy` and zero `INSERT`/`DELETE` from import.
 
 ## Security Contract
 
-- Endpoint: `internal` admin (`/admin/api/backups/restore`), RBAC
-  `backups:restore` (unchanged).
+- Endpoint: `internal` admin (`/admin/api/backups/restore`); the route uses
+  RBAC `backups:write` (`backupRoutes.ts:260,278`) — there is no
+  `backups:restore` permission in the repo, correct the reference.
 - Fence enforcement is backend-only; no CSRF/rate-limit change.
 - No new payload fields; reject-unknown unchanged.
 - The `busy` error must be sanitized (fixed code, no driver message/bind
@@ -84,7 +90,10 @@ export async function importBackupFromUpload(input: ImportBackupInput) {
 
 - `bun --cwd core lint` + `bun --cwd core lint:types`.
 - `bun test tests/unit/kits/nativeCmsWriterFenceInventory.test.ts` (extended
-  with the importer) + DB race test when `DATABASE_URL` is available.
+  with the importer) + DB race test when `DATABASE_URL` is available (load env
+  with `set -a && source .env && set +a`).
+- Route registration + `map*Error` coverage for the new
+  `native_cms_writer_fence_busy` mapping in the backup route suite.
 - Confirm legacy `restoreBackup` still passes (non-destructive backward
   compatibility).
 

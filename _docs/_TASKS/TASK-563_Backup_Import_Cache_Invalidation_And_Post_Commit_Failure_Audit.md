@@ -3,6 +3,7 @@
 **Status:** ⏳ To Do
 **Started:**
 **Completed:**
+**Changelog:** 1285 (pinned)
 **Priority:** Medium
 **Size:** Medium
 
@@ -21,9 +22,10 @@ failure must be recorded redacted and testable.
 
 ## Evidence
 
-- `core/services/backups/backupImport.ts:715-742` — commit + media + return with
-  no `clearSiteCache`; legacy `core/services/backups/backupService.ts:572-581`
-  calls `clearSiteCache()` after the transaction.
+- `core/services/backups/backupImport.ts:713-742` — validateArchive at `:715`,
+  outer `db.transaction` at `:718`, commit + media + return with no
+  `clearSiteCache`; legacy `core/services/backups/backupService.ts:572-581`
+  calls `clearSiteCache()` after the transaction (only when settings present).
 - `backupImport.ts:725-732` media runs after DB commit; `mediaArchive.ts:293-327`
   partial object writes with raw `console.error` at `:321`.
 - `core/server/routes/backupRoutes.ts:303-320` — `logAudit` only on success.
@@ -32,37 +34,72 @@ failure must be recorded redacted and testable.
 
 ## Scope
 
-- Call `clearSiteCache()` after the authoritative DB commit (independent of the
-  later best-effort media phase).
-- Write a redacted failure audit/recovery receipt when the post-commit media
-  phase fails; sanitize the storage error at `mediaArchive.ts:321`.
+- Call `clearSiteCache()` after the authoritative DB commit, BEFORE the later
+  best-effort media phase. Condition: clear when the archive includes database
+  or settings content; a media/users-only archive with no content/settings
+  change does not need the clear (mirror the legacy condition). Note
+  `clearSiteCache` is the process-local LRU (`core/site/cache/siteCache.ts:199-201`)
+  — single-replica semantics only.
+- Write a REDACTED failure audit/recovery receipt when the post-commit media
+  phase fails. Reuse the existing `logAudit` (`auditService.ts:199`) with
+  `sanitizeAuditMetadata` (`core/services/audit/auditRedaction.ts`) — do NOT
+  invent a new `logRedactedRestoreFailure` helper. Pin action
+  `backup.mediaRestoreFailure`, targetType `backup`, targetId = run id,
+  severity `error`, message = fixed code only.
+- Sanitize the storage error log at `mediaArchive.ts:321` (fixed code, no raw
+  error object).
+- Pin rethrow-vs-swallow semantics: the accepted best-effort degradation keeps
+  SWALLOWING the media failure after the DB commit (the import already returned
+  success for the content), records the redacted audit receipt, and updates
+  `mediaRestored`/`skippedMedia` counts (`backupImport.ts:741` currently
+  hardcodes `skippedMedia: 0`) so the receipt reflects the true partial state.
+  The DB-side failure path (`backup_media_write_failed` → 500) is unchanged for
+  pre-commit phases.
+- Add injection seams for `clearSiteCache` and the failure logger (mirror the
+  existing `mediaAdapter` seam at `backupImport.ts:104`) OR document the bun
+  module-mock strategy; the validation test must not rely on ambient modules.
 - Add a regression with pre-filled cache and an Nth-object media failure test.
 
 ## Fix Strategy
 
 ```ts
 // after commit, before media best-effort phase
-await clearSiteCache(); // authoritative DB state now visible
+if (includesContentOrSettings) await clearSiteCache(); // authoritative DB state now visible
+const { restored, skipped } = { restored: 0, skipped: 0 };
 try {
-  await restoreMediaFromArchive(...);
+  ({ restored, skipped } = await restoreMediaFromArchive(...));
 } catch (error) {
-  await logRedactedRestoreFailure({ stage: "media", code: "media_restore_partial", ... });
+  // best-effort degradation: swallow, record redacted receipt, update counts
+  await logAudit({
+    action: "backup.mediaRestoreFailure",
+    targetType: "backup",
+    targetId: runId,
+    severity: "error",
+    metadata: sanitizeAuditMetadata({ code: "media_restore_partial", restored, skipped }),
+  });
 }
+return { ...result, mediaRestored: restored, skippedMedia: skipped };
 ```
 
 ## Security Contract
 
-- Endpoint unchanged (`internal` admin, `backups:restore`).
+- Endpoint unchanged (`internal` admin; the route uses RBAC `backups:write`
+  per `backupRoutes.ts:278` — there is no `backups:restore` permission).
 - Audit/failure log must be redacted (no storage credentials, keys, raw error
-  objects).
+  objects) via `sanitizeAuditMetadata`.
 - Cache invalidation runs only after commit; no invalidation on rollback.
 
 ## Validation
 
 - `bun --cwd core lint` + `bun --cwd core lint:types`.
-- Unit test for the Nth-object media failure (fake storage throwing at object N)
-  asserting redacted audit + no raw error in logs.
-- DB cache regression when `DATABASE_URL` available.
+- Bun lane test (DB-backed) for the Nth-object media failure (fake storage
+  throwing at object N, injected via the seam) asserting a redacted
+  `backup.mediaRestoreFailure` audit row + no raw error in logs + correct
+  `mediaRestored`/`skippedMedia` counts. The test is DB-backed because
+  `importBackupFromUpload` imports `db` directly; use `testIfDb` + unique
+  fixtures like the existing `backupImport.test.ts` suite.
+- DB cache regression when `DATABASE_URL` available (pre-filled site cache,
+  import, assert cache cleared).
 
 ## Notes
 
