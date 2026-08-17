@@ -229,6 +229,23 @@ type BackupArchiveReader = {
 
 export type MediaRestoreSummary = { restored: number; totalBytes: number };
 
+/**
+ * Error thrown after a best-effort media write fails mid-stream (TASK-563).
+ * Carries the objects already written so the orchestrator can record an
+ * accurate partial receipt. `message` stays credential-free (the fixed
+ * `backup_media_write_failed` code); never attach the raw storage error.
+ */
+export type MediaRestoreFailure = Error & {
+  partialRestored: number;
+  partialTotalBytes: number;
+};
+
+export const isMediaRestoreFailure = (error: unknown): error is MediaRestoreFailure =>
+  typeof error === "object" &&
+  error !== null &&
+  "partialRestored" in error &&
+  "partialTotalBytes" in error;
+
 // Content-type derived from the storage key's extension (decoupled from the DB
 // `media.mimeType` so the media-bytes stream is independent of restore ordering).
 // Matched case-insensitively; unlisted extensions fall back to octet-stream.
@@ -317,9 +334,16 @@ export async function restoreMediaFromArchive(
         entry.size,
         mimeFromExt(key) ?? "application/octet-stream"
       );
-    } catch (err) {
-      console.error("backup media write failed", err); // server-side only
-      throw new Error("backup_media_write_failed"); // credential-free; fails the restore
+    } catch {
+      // Sanitized server-side note (TASK-563): fixed code only, never the raw
+      // storage error/credentials. The orchestrator records the redacted
+      // receipt; the error below stays credential-free and carries the partial
+      // write counts so the receipt reflects the true partial state.
+      console.error("backup_media_write_failed");
+      const failure = new Error("backup_media_write_failed") as MediaRestoreFailure;
+      failure.partialRestored = out.restored;
+      failure.partialTotalBytes = out.totalBytes;
+      throw failure;
     }
     out.restored += 1;
     out.totalBytes += entry.size;

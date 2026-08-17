@@ -102,6 +102,15 @@ export const mapBackupError = (error: unknown) => {
       return new ApiError("backup_not_found", "Backup not found.", 404);
     case "backup_not_ready":
       return new ApiError("backup_not_ready", "Backup is not ready for this action.", 409);
+    // TASK-561: the native CMS writer fence throws this EXISTING code when an
+    // active full-site holder or concurrent writer holds the fence (TASK-547 busy
+    // contract). Sanitized fixed message — no driver details. Single 409 status.
+    case "native_cms_writer_fence_busy":
+      return new ApiError(
+        "native_cms_writer_fence_busy",
+        "Another full-site write is in progress; try the import again later.",
+        409
+      );
     case "backup_restore_confirmation_required":
       return new ApiError(
         "backup_restore_confirmation_required",

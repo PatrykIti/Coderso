@@ -203,7 +203,7 @@ managed-shared~core/services/content/listingQueriesService.ts~createListingQuery
 managed-shared~core/services/content/listingTemplatesService.ts~createListingTemplate|insert|listingTemplates;deleteListingTemplate|delete|listingTemplates;mutateListingTemplateAtomic|delete|listingTemplates;mutateListingTemplateAtomic|insert|listingTemplates;mutateListingTemplateAtomic|update|listingTemplates;updateListingTemplate|update|listingTemplates
 managed-shared~core/services/content/taxonomyService.ts~applyEntryTaxonomyMutation|delete|contentTermAssignments;applyEntryTaxonomyMutation|insert|contentTermAssignments;createTerm|insert|contentTerms;deleteTerm|delete|contentTerms;setTaxonomyConfig>handleKind|delete|contentTaxonomies;setTaxonomyConfig>handleKind|insert|contentTaxonomies;updateTerm|update|contentTerms
 managed-shared~core/services/content/typeService.ts~createContentType|insert|contentTypes;deleteContentType|delete|contentTypes;duplicateContentType|insert|contentTypes;mutateContentTypeAtomic|delete|contentTypes;mutateContentTypeAtomic|insert|contentTypes;mutateContentTypeAtomic|update|contentTypes;updateContentType|update|contentTypes
-managed-shared~core/services/customScreens/customScreenService.ts~createCustomScreen|insert|customScreens;deleteCustomScreen|delete|customScreens;updateCustomScreen|update|customScreens
+managed-shared~core/services/customScreens/customScreenService.ts~createCustomScreen|insert|customScreens;deleteCustomScreen|delete|customScreens;updateCustomScreen|update|customScreens;updateCustomScreen|update|customScreens
 managed-shared~core/services/customScreens/screenEntryPresentationOverrides.ts~createDefaultRepository>deleteByEntry|delete|table;createDefaultRepository>deleteByScreen|delete|table;createDefaultRepository>deleteExact|delete|table;createDefaultRepository>replaceScopedOverrides|delete|table;createDefaultRepository>replaceScopedOverrides|insert|table
 adjacent-reviewed~core/services/email/emailSettingsService.ts~updateEmailSettings|insert|settings
 managed-shared~core/services/forms/formActionsService.ts~createFormActionRun|insert|formActionRuns;setFormActionsTx|delete|formActions;setFormActionsTx|delete|formActions;setFormActionsTx|insert|formActions;setFormActionsTx|insert|formActions;setFormActionsTx|update|formActions
@@ -347,6 +347,11 @@ const fenceOwners: readonly Readonly<{ path: string; scopes: readonly string[] }
   },
   { path: "core/services/admin/usersService.ts", scopes: ["deleteUser"] },
   { path: "core/services/backups/backupService.ts", scopes: ["restoreBackup"] },
+  // TASK-561: the upload-import orchestrator is a managed-shared writer — its
+  // outer transaction takes the native fence FIRST (before any delete/insert/
+  // restore), so the owner-assertion loop below must iterate it like every
+  // other fence owner.
+  { path: "core/services/backups/backupImport.ts", scopes: ["importBackupFromUpload"] },
   { path: "core/services/tools/importExportService.ts", scopes: ["importConfig"] },
   {
     path: "core/services/content/entryService.ts",

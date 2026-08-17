@@ -1,314 +1,68 @@
 /**
- * Backup v2 import-file pipeline tests (TASK-511-05).
+ * Backup v2 import-file pipeline tests (TASK-511-05, extended by TASK-561/562).
  *
- * Bun lane: real 02 crypto (AES-256-GCM/scrypt + gzip), real tar spooling,
- * real DB writes, tx rollback seams. Shared-DB safety: fixture-scoped slugs,
- * emails and role names (bkp-511-05-*), delete ONLY created rows in afterEach,
- * and every destructive assertion runs inside a deliberately rolled-back
- * transaction. Settings restore never COMMITS singleton settings keys (484's
- * rolled-back-tx seam, matching backupService.test.ts).
- *
- * Fixtures are built with a TEST-SIDE tar writer (independent of 01's tarPack
- * implementation), then pushed through 02's REAL encryptBackupArchive so the
- * whole .cbk decrypt/validate/restore pipeline is exercised end to end.
+ * Fixture hygiene + archive builders live in `./backupImportFixtures` (shared
+ * with the TASK-563 media-failure suite); this file owns the import-pipeline
+ * behavior tests: fail-closed gates, PASS 1/2 validation, TASK-562 exact-set
+ * negatives, the TASK-561 native-CMS-writer-fence race, and the maintenance
+ * gate.
  */
-import { createHash, randomUUID } from "node:crypto";
+import { randomUUID } from "node:crypto";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
-import { afterAll, afterEach, beforeAll, expect, test } from "bun:test";
-import { eq, inArray, sql } from "drizzle-orm";
+import { afterEach, expect, test } from "bun:test";
+import { eq } from "drizzle-orm";
+import postgres from "postgres";
 
 import { db } from "../../../core/db/client";
+import {
+  NATIVE_CMS_WRITER_FENCE_KEY,
+  resolveFenceNamespace,
+} from "../../../core/db/nativeCmsWriterFence";
 import { pages, redirects, roles, settings, userRoles, users } from "../../../core/db/schema";
 import {
   ARCHIVE_ARTIFACT_VERSION,
   ARCHIVE_ENGINE_VERSION,
   ARCHIVE_SCHEMA_VERSION,
   ARCHIVE_TABLE_DESCRIPTORS,
-  MANIFEST_MEMBER_NAME,
   ROLES_MEMBER_NAME,
   SETTINGS_MEMBER_NAME,
-  TABLE_MEMBER_DIR,
   USER_ROLES_MEMBER_NAME,
   USERS_MEMBER_NAME,
   type ArchiveManifest,
 } from "../../../core/services/backups/backupArchive";
-import {
-  decryptBackupArchive,
-  encryptBackupArchive,
-} from "../../../core/services/backups/backupCrypto";
 import {
   importBackupFromUpload,
   readTarMembers,
   restoreArchiveStreamTx,
   spoolWithCeiling,
   validateManifest,
-  type ImportUploadFile,
 } from "../../../core/services/backups/backupImport";
-import type { MediaStorageAdapter } from "../../../core/services/media/storage/adapter";
 import { exportConfig } from "../../../core/services/tools/importExportService";
 import { getSetting, setSetting } from "../../../core/services/settings/settingsService";
 import { handlePublicRequest } from "../../../core/server/publicSite";
-
-const hasDb = Boolean(process.env.DATABASE_URL) && (await canConnect());
-const testIfDb = hasDb ? test : test.skip;
-
-async function canConnect() {
-  try {
-    await db.execute(sql`select 1`);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Fixture hygiene
-// ---------------------------------------------------------------------------
-
-const PASS = "bkp-511-05-pass"; // >= 02's MIN_BACKUP_PASSPHRASE (12)
-
-const runId = randomUUID();
-const scopedSlug = (label: string) => `bkp-511-05-${runId}-${label}`;
-const scopedPath = (label: string) => `/bkp-511-05-${runId}-${label}`;
-const scopedEmail = (label: string) => `bkp-511-05-${runId}-${label}@example.test`;
-const scopedRole = (label: string) => `bkp-511-05-${runId}-${label}`;
-const scopedMediaKey = (label: string) => `t511-05/${runId}/${label}.txt`;
-
-const contentRowIds: string[] = [];
-const identityRowIds: string[] = [];
-const mediaStore = new Map<string, Uint8Array>();
-
-// Ambient admin (TASK-511-05): restoreArchiveStreamTx enforces the
-// admin-lockout guard against the ACTIVE schema. Public dev schemas have an
-// admin from real installs; lane worker schemas are fresh, so seed one scoped
-// full-access holder in beforeAll (removed in afterAll, never touched by
-// afterEach's fixture cleanup).
-const ADMIN_EMAIL = `bkp-511-05-admin-${runId}@example.test`;
-const ADMIN_ROLE = `bkp-511-05-admin-${runId}`;
-const adminUserIds: string[] = [];
-const adminRoleIdsScoped: string[] = [];
-
-beforeAll(async () => {
-  const [role] = await db
-    .insert(roles)
-    .values({ name: ADMIN_ROLE, permissions: ["*"] })
-    .returning({ id: roles.id });
-  const [user] = await db
-    .insert(users)
-    .values({ email: ADMIN_EMAIL, passwordHash: "hash-admin", name: "Ambient Admin" })
-    .returning({ id: users.id });
-  await db.insert(userRoles).values({ userId: user.id, roleId: role.id });
-  adminUserIds.push(user.id);
-  adminRoleIdsScoped.push(role.id);
-});
-
-afterAll(async () => {
-  if (adminUserIds.length) {
-    await db.delete(userRoles).where(inArray(userRoles.userId, adminUserIds));
-    await db.delete(users).where(inArray(users.id, adminUserIds));
-  }
-  if (adminRoleIdsScoped.length) {
-    await db.delete(roles).where(inArray(roles.id, adminRoleIdsScoped));
-  }
-  adminUserIds.length = 0;
-  adminRoleIdsScoped.length = 0;
-});
-
-afterEach(async () => {
-  if (contentRowIds.length) {
-    await db.delete(pages).where(inArray(pages.id, contentRowIds));
-    await db.delete(redirects).where(inArray(redirects.id, contentRowIds));
-  }
-  if (identityRowIds.length) {
-    await db.delete(users).where(inArray(users.id, identityRowIds)); // cascades user_roles
-  }
-  contentRowIds.length = 0;
-  identityRowIds.length = 0;
-  mediaStore.clear();
-});
-
-type DbTx = Parameters<Parameters<typeof db.transaction>[0]>[0];
-
-// Run `fn` inside a transaction that ALWAYS rolls back; observations made in-tx
-// are captured via `capture` (never commits on the shared DB).
-async function inRolledBackTx<T>(
-  fn: (tx: DbTx) => Promise<void>,
-  capture?: (tx: DbTx) => Promise<T>
-): Promise<T | undefined> {
-  let observed: T | undefined;
-  await expect(
-    db.transaction(async (tx) => {
-      await fn(tx);
-      if (capture) observed = await capture(tx);
-      throw new Error("rollback_marker");
-    })
-  ).rejects.toThrow("rollback_marker");
-  return observed;
-}
-
-// ---------------------------------------------------------------------------
-// Archive builders (test-side, independent of 01's tarPack)
-// ---------------------------------------------------------------------------
-
-type TestMember = { name: string; bytes: Buffer };
-
-const streamFromBytes = (u8: Uint8Array, chunkSize = 1 << 16): ReadableStream<Uint8Array> => {
-  let offset = 0;
-  return new ReadableStream<Uint8Array>({
-    pull(ctrl) {
-      if (offset >= u8.length) {
-        ctrl.close();
-        return;
-      }
-      const end = Math.min(offset + chunkSize, u8.length);
-      ctrl.enqueue(u8.subarray(offset, end));
-      offset = end;
-    },
-  });
-};
-
-const collectBytes = async (stream: ReadableStream<Uint8Array>): Promise<Uint8Array> => {
-  const chunks: Uint8Array[] = [];
-  const reader = stream.getReader();
-  for (;;) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    chunks.push(value);
-  }
-  const all = new Uint8Array(chunks.reduce((n, c) => n + c.byteLength, 0));
-  let offset = 0;
-  for (const chunk of chunks) {
-    all.set(chunk, offset);
-    offset += chunk.byteLength;
-  }
-  return all;
-};
-
-// ustar header mirroring 01's writer layout (name@0, size@124, chksum@148 as
-// 8 spaces during the sum, typeflag '0'@156) + 512-padded body.
-const tarHeader = (name: string, size: number): Buffer => {
-  const header = Buffer.alloc(512);
-  header.write(name.slice(0, 100), 0, "utf8");
-  header.write(size.toString(8).padStart(11, "0"), 124, "utf8");
-  header[156] = 0x30; // '0'
-  let sum = 0;
-  for (let i = 0; i < 512; i += 1) sum += i >= 148 && i < 156 ? 0x20 : header[i];
-  header.write(sum.toString(8).padStart(6, "0"), 148, "utf8");
-  return header;
-};
-
-const buildTar = (members: TestMember[]): Buffer => {
-  const chunks: Buffer[] = [];
-  for (const member of members) {
-    chunks.push(tarHeader(member.name, member.bytes.length));
-    chunks.push(member.bytes);
-    const pad = (512 - (member.bytes.length % 512)) % 512;
-    if (pad > 0) chunks.push(Buffer.alloc(pad));
-  }
-  chunks.push(Buffer.alloc(1024)); // two zero blocks = EOF
-  return Buffer.concat(chunks);
-};
-
-const ndjson = (rows: unknown[]): Buffer =>
-  Buffer.from(rows.length ? `${rows.map((r) => JSON.stringify(r)).join("\n")}\n` : "", "utf8");
-
-const countNewlines = (buf: Buffer): number => {
-  let n = 0;
-  for (const byte of buf) if (byte === 0x0a) n += 1;
-  return n;
-};
-
-// Build a manifest covering the FULL descriptor set (PASS 1 completeness guard
-// requires exact round-trip when include has "database"). `content` maps a
-// table key → NDJSON bytes; tables absent from it become empty members.
-const buildDatabaseManifest = (
-  content: Map<string, Buffer>,
-  include: string[]
-): { manifest: ArchiveManifest; members: TestMember[] } => {
-  const members: TestMember[] = [];
-  const tables = ARCHIVE_TABLE_DESCRIPTORS.map((desc) => {
-    const bytes = content.get(desc.key) ?? Buffer.alloc(0);
-    members.push({ name: `${TABLE_MEMBER_DIR}/${desc.key}.ndjson`, bytes });
-    return {
-      key: desc.key,
-      member: `${TABLE_MEMBER_DIR}/${desc.key}.ndjson`,
-      rowCount: countNewlines(bytes),
-      byteSize: bytes.length,
-      sha256: createHash("sha256").update(bytes).digest("hex"),
-    };
-  });
-  const manifest: ArchiveManifest = {
-    artifactVersion: ARCHIVE_ARTIFACT_VERSION,
-    schemaVersion: ARCHIVE_SCHEMA_VERSION,
-    engineVersion: ARCHIVE_ENGINE_VERSION,
-    createdAt: new Date().toISOString(),
-    include: include as ArchiveManifest["include"],
-    tables,
-  };
-  return { manifest, members };
-};
-
-// Wrap a .cbk Buffer as a multipart Web File (the streaming shape the route
-// guards with isImportUploadFile).
-const asUpload = (bytes: Buffer, label = "backup.cbk"): ImportUploadFile => ({
-  name: label,
-  type: "application/octet-stream",
-  size: bytes.length,
-  stream: () => streamFromBytes(bytes),
-});
-
-// Encrypt a member set into a REAL .cbk: tar → (02) gzip + AES-256-GCM/scrypt.
-const encryptArchive = async (
-  members: TestMember[],
-  passphrase: string
-): Promise<{ cbk: Buffer; tar: Buffer; manifest: ArchiveManifest }> => {
-  const tar = buildTar(members);
-  const cipher = await collectBytes(encryptBackupArchive(streamFromBytes(tar), passphrase));
-  return {
-    cbk: Buffer.from(cipher),
-    tar,
-    manifest: JSON.parse(members[0].bytes.toString()) as ArchiveManifest,
-  };
-};
-
-const manifestFirst = (manifest: ArchiveManifest, extra: TestMember[] = []): TestMember[] => [
-  { name: MANIFEST_MEMBER_NAME, bytes: Buffer.from(`${JSON.stringify(manifest)}\n`, "utf8") },
-  ...extra,
-];
-
-const fakeAdapter = (): {
-  adapter: MediaStorageAdapter;
-  putAtCalls: Array<{ key: string; size: number; contentType: string }>;
-} => {
-  const putAtCalls: Array<{ key: string; size: number; contentType: string }> = [];
-  const adapter: MediaStorageAdapter = {
-    put: async () => {
-      throw new Error("unused");
-    },
-    putMedia: async () => {
-      throw new Error("unused");
-    },
-    get: async (key) => {
-      const bytes = mediaStore.get(key);
-      if (!bytes) throw Object.assign(new Error(`missing ${key}`), { code: "ENOENT" });
-      return Buffer.from(bytes) as unknown as NodeJS.ReadableStream;
-    },
-    delete: async (key) => {
-      mediaStore.delete(key);
-    },
-    getPublicUrl: (key) => `mem/${key}`,
-    putAt: async (key, body, size, contentType) => {
-      putAtCalls.push({ key, size, contentType });
-      const chunks: Uint8Array[] = [];
-      for await (const chunk of body) chunks.push(Buffer.from(chunk));
-      mediaStore.set(key, Buffer.concat(chunks));
-    },
-  };
-  return { adapter, putAtCalls };
-};
+import {
+  asUpload,
+  buildDatabaseManifest,
+  buildTar,
+  encryptArchive,
+  fakeAdapter,
+  identityRowIds,
+  inRolledBackTx,
+  manifestFirst,
+  mediaStore,
+  ndjson,
+  PASS,
+  scopedEmail,
+  scopedMediaKey,
+  scopedPath,
+  scopedRole,
+  scopedSlug,
+  testIfDb,
+  type TestMember,
+} from "./backupImportFixtures";
 
 // ---------------------------------------------------------------------------
 // Tests
@@ -754,7 +508,14 @@ testIfDb("users present but opt-out: members drained, no upsert, count 0", async
     },
   ]);
   const { cbk } = await encryptArchive(
-    manifestFirst(manifest, [{ name: USERS_MEMBER_NAME, bytes: userBytes }]),
+    manifestFirst(manifest, [
+      { name: USERS_MEMBER_NAME, bytes: userBytes },
+      // TASK-562 exact-set: a declared users section must carry ALL THREE NDJSON
+      // members (also for empty sections) — the opt-out archive is only valid
+      // with empty roles.ndjson + user_roles.ndjson present.
+      { name: ROLES_MEMBER_NAME, bytes: ndjson([]) },
+      { name: USER_ROLES_MEMBER_NAME, bytes: ndjson([]) },
+    ]),
     PASS
   );
   const result = await importBackupFromUpload({
@@ -767,6 +528,354 @@ testIfDb("users present but opt-out: members drained, no upsert, count 0", async
   expect(result.tablesRestored).toBe(0);
   expect(result.rowsRestored).toBe(0);
 });
+
+// --- TASK-562 exact-set validation (H-511-01 / NEW-511-01a / NEW-511-01b) ---
+
+test("validateManifest rejects malformed users/media blocks (exact shape + reject-unknown)", () => {
+  const manifest = (patch: Record<string, unknown>): string => {
+    const json: Record<string, unknown> = {
+      artifactVersion: ARCHIVE_ARTIFACT_VERSION,
+      schemaVersion: ARCHIVE_SCHEMA_VERSION,
+      engineVersion: ARCHIVE_ENGINE_VERSION,
+      createdAt: new Date().toISOString(),
+      include: ["users", "media"],
+      tables: [],
+      users: { users: 1, roles: 1, userRoles: 1 },
+      media: { fileCount: 1, totalBytes: 1, skipped: [] },
+    };
+    return JSON.stringify({ ...json, ...patch });
+  };
+  // Wrong-type / non-object blocks.
+  expect(() => validateManifest(manifest({ users: "nope" }))).toThrow("backup_manifest_invalid");
+  expect(() => validateManifest(manifest({ users: [] }))).toThrow("backup_manifest_invalid");
+  expect(() => validateManifest(manifest({ media: [] }))).toThrow("backup_manifest_invalid");
+  // Reject-unknown inside the blocks.
+  expect(() =>
+    validateManifest(manifest({ users: { users: 1, roles: 1, userRoles: 1, extra: 1 } }))
+  ).toThrow("backup_manifest_invalid");
+  expect(() =>
+    validateManifest(manifest({ media: { fileCount: 1, totalBytes: 1, skipped: [], extra: 1 } }))
+  ).toThrow("backup_manifest_invalid");
+  // Counts must be non-negative integers.
+  expect(() =>
+    validateManifest(manifest({ users: { users: "1", roles: 1, userRoles: 1 } }))
+  ).toThrow("backup_manifest_invalid");
+  expect(() =>
+    validateManifest(manifest({ users: { users: -1, roles: 1, userRoles: 1 } }))
+  ).toThrow("backup_manifest_invalid");
+  expect(() =>
+    validateManifest(manifest({ users: { users: 1.5, roles: 1, userRoles: 1 } }))
+  ).toThrow("backup_manifest_invalid");
+  expect(() =>
+    validateManifest(manifest({ media: { fileCount: 1, totalBytes: "1", skipped: [] } }))
+  ).toThrow("backup_manifest_invalid");
+  // skipped entries must be {key: string, reason: "missing"}.
+  expect(() =>
+    validateManifest(manifest({ media: { fileCount: 1, totalBytes: 1, skipped: "x" } }))
+  ).toThrow("backup_manifest_invalid");
+  expect(() =>
+    validateManifest(
+      manifest({ media: { fileCount: 1, totalBytes: 1, skipped: [{ key: "a", reason: "other" }] } })
+    )
+  ).toThrow("backup_manifest_invalid");
+  expect(() =>
+    validateManifest(
+      manifest({ media: { fileCount: 1, totalBytes: 1, skipped: [{ key: 1, reason: "missing" }] } })
+    )
+  ).toThrow("backup_manifest_invalid");
+  // Exact-set symmetry: a block must be present when declared, absent otherwise.
+  expect(() =>
+    validateManifest(JSON.stringify({ ...JSON.parse(manifest({})), users: undefined }))
+  ).toThrow("backup_manifest_invalid");
+  expect(() =>
+    validateManifest(JSON.stringify({ ...JSON.parse(manifest({})), media: undefined }))
+  ).toThrow("backup_manifest_invalid");
+  expect(() =>
+    validateManifest(
+      JSON.stringify({
+        ...JSON.parse(manifest({})),
+        include: ["media"],
+        users: { users: 1, roles: 1, userRoles: 1 },
+      })
+    )
+  ).toThrow("backup_manifest_invalid");
+  expect(() =>
+    validateManifest(
+      JSON.stringify({
+        ...JSON.parse(manifest({})),
+        include: ["users"],
+        media: { fileCount: 1, totalBytes: 1, skipped: [] },
+      })
+    )
+  ).toThrow("backup_manifest_invalid");
+});
+
+testIfDb(
+  "TASK-562 exact-set: missing users members, count drift, undeclared/duplicate/unknown members fail closed",
+  async () => {
+    const now = new Date().toISOString();
+    const usersMember = ndjson([
+      {
+        id: randomUUID(),
+        email: scopedEmail("exact"),
+        emailHash: null,
+        emailEncrypted: null,
+        passwordHash: "hash",
+        name: "Exact Set",
+        status: "active",
+        createdAt: now,
+        updatedAt: now,
+        lastLoginAt: null,
+      },
+    ]);
+    const emptyRoles = ndjson([]);
+    const emptyUserRoles = ndjson([]);
+    const usersManifest = (counts: {
+      users: number;
+      roles: number;
+      userRoles: number;
+    }): ArchiveManifest => ({
+      artifactVersion: ARCHIVE_ARTIFACT_VERSION,
+      schemaVersion: ARCHIVE_SCHEMA_VERSION,
+      engineVersion: ARCHIVE_ENGINE_VERSION,
+      createdAt: new Date().toISOString(),
+      include: ["users"],
+      tables: [],
+      users: counts,
+    });
+    const importRejects = async (members: TestMember[], manifest: ArchiveManifest) => {
+      const { cbk } = await encryptArchive(manifestFirst(manifest, members), PASS);
+      await expect(
+        importBackupFromUpload({ file: asUpload(cbk), passphrase: PASS, confirm: true })
+      ).rejects.toThrow("backup_manifest_invalid");
+    };
+
+    // Missing each of the three users members (also for an empty section).
+    await importRejects(
+      [{ name: USERS_MEMBER_NAME, bytes: usersMember }],
+      usersManifest({ users: 1, roles: 0, userRoles: 0 })
+    );
+    await importRejects(
+      [
+        { name: USERS_MEMBER_NAME, bytes: usersMember },
+        { name: ROLES_MEMBER_NAME, bytes: emptyRoles },
+      ],
+      usersManifest({ users: 1, roles: 0, userRoles: 0 })
+    );
+    await importRejects(
+      [
+        { name: USERS_MEMBER_NAME, bytes: usersMember },
+        { name: USER_ROLES_MEMBER_NAME, bytes: emptyUserRoles },
+      ],
+      usersManifest({ users: 1, roles: 0, userRoles: 0 })
+    );
+    // Count drift: manifest says 2 users, archive carries 1.
+    await importRejects(
+      [
+        { name: USERS_MEMBER_NAME, bytes: usersMember },
+        { name: ROLES_MEMBER_NAME, bytes: emptyRoles },
+        { name: USER_ROLES_MEMBER_NAME, bytes: emptyUserRoles },
+      ],
+      usersManifest({ users: 2, roles: 0, userRoles: 0 })
+    );
+    // Undeclared section members: users members without include.users.
+    await importRejects(
+      [
+        { name: USERS_MEMBER_NAME, bytes: usersMember },
+        { name: ROLES_MEMBER_NAME, bytes: emptyRoles },
+        { name: USER_ROLES_MEMBER_NAME, bytes: emptyUserRoles },
+      ],
+      { ...usersManifest({ users: 1, roles: 0, userRoles: 0 }), include: ["settings"] }
+    );
+    // Unknown member is never silently drained.
+    await importRejects([{ name: "random.txt", bytes: Buffer.from("x") }], {
+      artifactVersion: ARCHIVE_ARTIFACT_VERSION,
+      schemaVersion: ARCHIVE_SCHEMA_VERSION,
+      engineVersion: ARCHIVE_ENGINE_VERSION,
+      createdAt: new Date().toISOString(),
+      include: ["settings"],
+      tables: [],
+    });
+    // Duplicate section member (settings.json twice → PASS 2 would apply twice).
+    await importRejects(
+      [
+        { name: SETTINGS_MEMBER_NAME, bytes: Buffer.from("{}") },
+        { name: SETTINGS_MEMBER_NAME, bytes: Buffer.from("{}") },
+      ],
+      {
+        artifactVersion: ARCHIVE_ARTIFACT_VERSION,
+        schemaVersion: ARCHIVE_SCHEMA_VERSION,
+        engineVersion: ARCHIVE_ENGINE_VERSION,
+        createdAt: new Date().toISOString(),
+        include: ["settings"],
+        tables: [],
+      }
+    );
+    // Duplicate users member.
+    await importRejects(
+      [
+        { name: USERS_MEMBER_NAME, bytes: usersMember },
+        { name: USERS_MEMBER_NAME, bytes: usersMember },
+        { name: ROLES_MEMBER_NAME, bytes: emptyRoles },
+        { name: USER_ROLES_MEMBER_NAME, bytes: emptyUserRoles },
+      ],
+      usersManifest({ users: 2, roles: 0, userRoles: 0 })
+    );
+  }
+);
+
+testIfDb(
+  "TASK-562 exact-set: media count/bytes must match the tar, empty media with members is invalid",
+  async () => {
+    const mediaKey = scopedMediaKey("exact");
+    const mediaBytes = Buffer.from("exact-set-media", "utf8");
+    const mediaManifest = (fileCount: number, totalBytes: number): ArchiveManifest => ({
+      artifactVersion: ARCHIVE_ARTIFACT_VERSION,
+      schemaVersion: ARCHIVE_SCHEMA_VERSION,
+      engineVersion: ARCHIVE_ENGINE_VERSION,
+      createdAt: new Date().toISOString(),
+      include: ["media"],
+      tables: [],
+      media: { fileCount, totalBytes, skipped: [] },
+    });
+    const importRejects = async (members: TestMember[], manifest: ArchiveManifest) => {
+      const { cbk } = await encryptArchive(manifestFirst(manifest, members), PASS);
+      await expect(
+        importBackupFromUpload({ file: asUpload(cbk), passphrase: PASS, confirm: true })
+      ).rejects.toThrow("backup_manifest_invalid");
+    };
+
+    // include.media with zero members (fileCount claims 1).
+    await importRejects([], mediaManifest(1, mediaBytes.length));
+    // Count mismatch: two members claimed, one present.
+    await importRejects(
+      [{ name: `media/${mediaKey}`, bytes: mediaBytes }],
+      mediaManifest(2, mediaBytes.length)
+    );
+    // Byte mismatch: declared totalBytes differs from the real member size.
+    await importRejects(
+      [{ name: `media/${mediaKey}`, bytes: mediaBytes }],
+      mediaManifest(1, mediaBytes.length + 1)
+    );
+    // Media members without include.media.
+    await importRejects([{ name: `media/${mediaKey}`, bytes: mediaBytes }], {
+      artifactVersion: ARCHIVE_ARTIFACT_VERSION,
+      schemaVersion: ARCHIVE_SCHEMA_VERSION,
+      engineVersion: ARCHIVE_ENGINE_VERSION,
+      createdAt: new Date().toISOString(),
+      include: ["settings"],
+      tables: [],
+    });
+    // A member declared skipped cannot also be present.
+    await importRejects([{ name: `media/${mediaKey}`, bytes: mediaBytes }], {
+      ...mediaManifest(1, mediaBytes.length),
+      media: {
+        fileCount: 1,
+        totalBytes: mediaBytes.length,
+        skipped: [{ key: mediaKey, reason: "missing" }],
+      },
+    });
+    // Empty media section with include.media and a zero-count manifest is VALID.
+    const { cbk } = await encryptArchive(manifestFirst(mediaManifest(0, 0), []), PASS);
+    const result = await importBackupFromUpload({
+      file: asUpload(cbk),
+      passphrase: PASS,
+      confirm: true,
+    });
+    expect(result.mediaRestored).toBe(0);
+  }
+);
+
+testIfDb(
+  "native CMS writer fence: an active exclusive holder makes the import return busy with zero protected writes",
+  async () => {
+    // TASK-561 regression (H-547-01 / H-511-02): a destructive backup restore
+    // must never interleave with an active full-site holder (TASK-547). The
+    // holder takes the EXCLUSIVE advisory xact lock on a SEPARATE direct postgres
+    // session (mirrors legacyInstallRunLocks); the import then attempts the
+    // try-shared fence FIRST in its tx and must fail `busy` with ZERO writes.
+    // A users+media archive is used so that an unblocked import WOULD upsert a
+    // user and put media objects — both asserted absent afterwards. The holder
+    // rolls back (release marker) to free the lock.
+    const userId = randomUUID();
+    const roleId = randomUUID();
+    const email = scopedEmail("fence-busy");
+    const roleName = scopedRole("fence-busy");
+    const mediaKey = scopedMediaKey("fence-busy");
+    const now = new Date().toISOString();
+    const usersMember = ndjson([
+      {
+        id: userId,
+        email,
+        emailHash: null,
+        emailEncrypted: null,
+        passwordHash: "hash",
+        name: "Fence Busy",
+        status: "active",
+        createdAt: now,
+        updatedAt: now,
+        lastLoginAt: null,
+      },
+    ]);
+    const rolesMember = ndjson([
+      { id: roleId, name: roleName, description: null, permissions: [], createdAt: now },
+    ]);
+    const userRolesMember = ndjson([{ userId, roleId }]);
+    const mediaBytes = Buffer.from("fence-busy-media", "utf8");
+    const manifest: ArchiveManifest = {
+      artifactVersion: ARCHIVE_ARTIFACT_VERSION,
+      schemaVersion: ARCHIVE_SCHEMA_VERSION,
+      engineVersion: ARCHIVE_ENGINE_VERSION,
+      createdAt: new Date().toISOString(),
+      include: ["users", "media"],
+      tables: [],
+      media: { fileCount: 1, totalBytes: mediaBytes.length, skipped: [] },
+      users: { users: 1, roles: 1, userRoles: 1 },
+    };
+    const { cbk } = await encryptArchive(
+      manifestFirst(manifest, [
+        { name: USERS_MEMBER_NAME, bytes: usersMember },
+        { name: ROLES_MEMBER_NAME, bytes: rolesMember },
+        { name: USER_ROLES_MEMBER_NAME, bytes: userRolesMember },
+        { name: `media/${mediaKey}`, bytes: mediaBytes },
+      ]),
+      PASS
+    );
+
+    const databaseUrl = process.env.DATABASE_URL;
+    if (!databaseUrl) throw new Error("db_test_unavailable");
+    const holder = postgres(databaseUrl, { max: 1 }); // separate DIRECT session
+    const { adapter, putAtCalls } = fakeAdapter();
+    try {
+      await expect(
+        holder.begin(async (tx) => {
+          await tx`select pg_advisory_xact_lock(${resolveFenceNamespace()}, ${NATIVE_CMS_WRITER_FENCE_KEY})`;
+          await expect(
+            importBackupFromUpload({
+              file: asUpload(cbk),
+              passphrase: PASS,
+              confirm: true,
+              restoreUsers: true,
+              mediaAdapter: async () => adapter,
+            })
+          ).rejects.toThrow("native_cms_writer_fence_busy");
+          throw new Error("rollback_marker"); // release the transaction advisory lock
+        })
+      ).rejects.toThrow("rollback_marker");
+    } finally {
+      await holder.end();
+    }
+
+    // Zero protected writes from the import path: no user/role upsert, no puts.
+    const [user] = await db.select().from(users).where(eq(users.email, email));
+    expect(user).toBeUndefined();
+    const [role] = await db.select().from(roles).where(eq(roles.name, roleName));
+    expect(role).toBeUndefined();
+    expect(putAtCalls).toHaveLength(0);
+    expect(mediaStore.has(mediaKey)).toBe(false);
+  },
+  60_000
+);
 
 test("spoolWithCeiling aborts past the decompressed-byte ceiling (compression bomb)", async () => {
   const tmp = await mkdtemp(path.join(os.tmpdir(), "t511-05-bomb-"));

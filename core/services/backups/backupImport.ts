@@ -27,6 +27,10 @@ import type { AnyColumn } from "drizzle-orm";
 import type { PgTable } from "drizzle-orm/pg-core";
 
 import { db } from "../../db/client";
+import { acquireNativeCmsWriterFence } from "../../db/nativeCmsWriterFence";
+import { clearSiteCache } from "../../site/cache/siteCache"; // TASK-563 post-commit invalidation
+import { logAudit, type AuditEvent } from "../audit/auditService"; // TASK-563 failure receipt
+import { sanitizeAuditMetadata } from "../audit/auditRedaction"; // TASK-563 redaction
 import {
   ARCHIVE_ARTIFACT_VERSION,
   ARCHIVE_SCHEMA_VERSION,
@@ -42,7 +46,11 @@ import {
 import { decryptBackupArchive, normalizeBackupPassphrase } from "./backupCrypto"; // 02
 import { getMediaStorageAdapter } from "../media/storage"; // default media adapter (03 path)
 import type { MediaStorageAdapter } from "../media/storage/adapter";
-import { restoreMediaFromArchive } from "./mediaArchive"; // 03
+import {
+  isMediaRestoreFailure,
+  MEDIA_MEMBER_PREFIX,
+  restoreMediaFromArchive,
+} from "./mediaArchive"; // 03
 import {
   normalizeRoleRow,
   normalizeUserRoleRow,
@@ -102,6 +110,10 @@ export type ImportBackupInput = {
   declaredContentLength?: number; // from the content-length header
   /** Test seam: override the media storage adapter (default: real driver). */
   mediaAdapter?: () => Promise<MediaStorageAdapter>;
+  /** Test seam: override the post-commit site-cache clear (default: clearSiteCache). */
+  clearCache?: () => void | Promise<void>;
+  /** Test seam: override the post-commit media-failure receipt writer (default: logAudit). */
+  logFailure?: (event: AuditEvent) => Promise<unknown>;
 };
 
 export type ImportResult = {
@@ -362,6 +374,12 @@ const MANIFEST_TOP_KEYS = new Set([
 ]);
 const MANIFEST_TABLE_KEYS = new Set(["key", "member", "rowCount", "byteSize", "sha256"]);
 const INCLUDE_ALLOWLIST = new Set(["database", "media", "settings", "users"]); // matches 04's enum
+// TASK-562 strict per-section schema: a declared section's manifest block has an
+// EXACT key set (reject-unknown inside media/users) so a restore can never
+// silently drop or invent a section.
+const MANIFEST_USERS_KEYS = new Set(["users", "roles", "userRoles"]);
+const MANIFEST_MEDIA_KEYS = new Set(["fileCount", "totalBytes", "skipped"]);
+const MANIFEST_MEDIA_SKIPPED_KEYS = new Set(["key", "reason"]);
 
 export function validateManifest(raw: string): ArchiveManifest {
   let json: unknown;
@@ -388,6 +406,52 @@ export function validateManifest(raw: string): ArchiveManifest {
     if (typeof table.key !== "string") throw new Error("backup_manifest_invalid");
   }
   if (!Array.isArray(json.include) || json.include.some((x) => !INCLUDE_ALLOWLIST.has(x))) {
+    throw new Error("backup_manifest_invalid");
+  }
+
+  // TASK-562 SECTION EXACT-SET (fail-closed BEFORE any restore work): `include`
+  // declares the sections; a declared section MUST carry its manifest block
+  // (also for empty sections), an undeclared section MUST NOT, and unknown keys
+  // inside the blocks are rejected. A restore that would silently drop or
+  // fabricate users/media is an invalid artifact.
+  const includeMedia = json.include.includes("media");
+  const includeUsers = json.include.includes("users");
+  if (includeUsers) {
+    if (!isPlainObject(json.users)) throw new Error("backup_manifest_invalid");
+    for (const key of Object.keys(json.users)) {
+      if (!MANIFEST_USERS_KEYS.has(key)) throw new Error("backup_manifest_invalid");
+    }
+    for (const key of MANIFEST_USERS_KEYS) {
+      const count = json.users[key];
+      if (!Number.isInteger(count) || (count as number) < 0) {
+        throw new Error("backup_manifest_invalid");
+      }
+    }
+  } else if (json.users !== undefined) {
+    throw new Error("backup_manifest_invalid");
+  }
+  if (includeMedia) {
+    if (!isPlainObject(json.media)) throw new Error("backup_manifest_invalid");
+    for (const key of Object.keys(json.media)) {
+      if (!MANIFEST_MEDIA_KEYS.has(key)) throw new Error("backup_manifest_invalid");
+    }
+    if (!Number.isInteger(json.media.fileCount) || (json.media.fileCount as number) < 0) {
+      throw new Error("backup_manifest_invalid");
+    }
+    if (!Number.isInteger(json.media.totalBytes) || (json.media.totalBytes as number) < 0) {
+      throw new Error("backup_manifest_invalid");
+    }
+    if (!Array.isArray(json.media.skipped)) throw new Error("backup_manifest_invalid");
+    for (const skipped of json.media.skipped) {
+      if (!isPlainObject(skipped)) throw new Error("backup_manifest_invalid");
+      for (const key of Object.keys(skipped)) {
+        if (!MANIFEST_MEDIA_SKIPPED_KEYS.has(key)) throw new Error("backup_manifest_invalid");
+      }
+      if (typeof skipped.key !== "string" || skipped.reason !== "missing") {
+        throw new Error("backup_manifest_invalid");
+      }
+    }
+  } else if (json.media !== undefined) {
     throw new Error("backup_manifest_invalid");
   }
 
@@ -422,8 +486,14 @@ async function validateArchive(tarPath: string): Promise<ArchiveManifest> {
   const reader = readTarMembers(fileStream(tarPath));
   let manifest: ArchiveManifest | null = null;
   const seen = new Map<string, { sha256: string; rowCount: number }>();
+  // TASK-562 exact-set bookkeeping: section member names seen (dedup), per-member
+  // users line counts, and media member count/bytes — all compared against the
+  // manifest below BEFORE any restore work opens.
+  const sectionMembers = new Set<string>();
+  const usersLines = { users: 0, roles: 0, userRoles: 0 };
   let sawContentMember = false;
-  let sawMediaMember = false;
+  let mediaCount = 0;
+  let mediaBytes = 0;
   for await (const entry of reader.entries()) {
     if (entry.name === MANIFEST_MEMBER_NAME) {
       if (manifest || seen.size > 0) throw new Error("backup_manifest_invalid"); // dup / not first
@@ -440,22 +510,81 @@ async function validateArchive(tarPath: string): Promise<ArchiveManifest> {
         rows += countNewlines(chunk);
       }
       seen.set(entry.name, { sha256: hash.digest("hex"), rowCount: rows });
-    } else {
-      if (entry.name.startsWith("media/")) sawMediaMember = true;
-      // Section members (settings.json, users/roles/user_roles.ndjson, media/*)
-      // carry COUNTS, not per-member sha256 in the manifest; their byte integrity
-      // is fully covered by 02's per-frame GCM auth. Drain to advance the cursor.
+      continue;
+    }
+    // Section members: settings.json, the three users NDJSON members, media/*.
+    // Reject duplicates and unknown members (a restore that would apply a member
+    // twice, or silently drain a member it cannot interpret, is fail-closed).
+    const isSectionMember =
+      entry.name === SETTINGS_MEMBER_NAME ||
+      isUsersMemberName(entry.name) ||
+      entry.name.startsWith(MEDIA_MEMBER_PREFIX);
+    if (!isSectionMember) throw new Error("backup_manifest_invalid"); // unknown member
+    if (sectionMembers.has(entry.name)) throw new Error("backup_manifest_invalid"); // duplicate
+    sectionMembers.add(entry.name);
+    if (isUsersMemberName(entry.name)) {
+      const lines = await collectLines(entry.body);
+      if (entry.name === USERS_MEMBER_NAME) usersLines.users = lines.length;
+      else if (entry.name === ROLES_MEMBER_NAME) usersLines.roles = lines.length;
+      else usersLines.userRoles = lines.length;
+    } else if (entry.name.startsWith(MEDIA_MEMBER_PREFIX)) {
+      mediaCount += 1;
+      mediaBytes += entry.size;
       for await (const _ of entry.body) {
-        /* drain */
+        /* drain to advance the tar cursor */
+      }
+    } else {
+      for await (const _ of entry.body) {
+        /* drain to advance the tar cursor */
       }
     }
   }
   if (!manifest) throw new Error("backup_manifest_invalid");
 
   const includeDb = manifest.include.includes("database");
+  const includeMedia = manifest.include.includes("media");
+  const includeUsers = manifest.include.includes("users");
   if (!includeDb && sawContentMember) throw new Error("backup_manifest_invalid");
   if (includeDb && seen.size !== manifest.tables.length) throw new Error("backup_manifest_invalid");
-  if (!manifest.include.includes("media") && sawMediaMember) {
+
+  // TASK-562 EXACT-SET MEMBERS (fail-closed, before the tx opens): a declared
+  // section carries EXACTLY its expected members (also when empty — an absent
+  // member is a mismatch, never silently zero), an undeclared section carries
+  // none, and the manifest counts/bytes must match the real tar members.
+  if (includeUsers) {
+    for (const name of [USERS_MEMBER_NAME, ROLES_MEMBER_NAME, USER_ROLES_MEMBER_NAME]) {
+      if (!sectionMembers.has(name)) throw new Error("backup_manifest_invalid");
+    }
+    const mu = manifest.users;
+    if (
+      !mu ||
+      mu.users !== usersLines.users ||
+      mu.roles !== usersLines.roles ||
+      mu.userRoles !== usersLines.userRoles
+    ) {
+      throw new Error("backup_manifest_invalid");
+    }
+  } else if ([...sectionMembers].some((name) => isUsersMemberName(name))) {
+    throw new Error("backup_manifest_invalid");
+  }
+  if (includeMedia) {
+    if (!manifest.media) throw new Error("backup_manifest_invalid");
+    if (mediaCount !== manifest.media.fileCount || mediaBytes !== manifest.media.totalBytes) {
+      throw new Error("backup_manifest_invalid");
+    }
+    // The skipped policy is verified against the tar: an export NEVER both skips
+    // a key and writes its member, so a member whose key is declared skipped is
+    // a lying archive.
+    const skippedKeys = new Set(manifest.media.skipped.map((s) => s.key));
+    for (const member of sectionMembers) {
+      if (
+        member.startsWith(MEDIA_MEMBER_PREFIX) &&
+        skippedKeys.has(member.slice(MEDIA_MEMBER_PREFIX.length))
+      ) {
+        throw new Error("backup_manifest_invalid");
+      }
+    }
+  } else if (sawMediaMember(sectionMembers)) {
     throw new Error("backup_manifest_invalid");
   }
 
@@ -467,6 +596,10 @@ async function validateArchive(tarPath: string): Promise<ArchiveManifest> {
   }
   return manifest;
 }
+
+// TASK-562: does the archive contain any media section member?
+const sawMediaMember = (sectionMembers: Set<string>): boolean =>
+  [...sectionMembers].some((name) => name.startsWith(MEDIA_MEMBER_PREFIX));
 
 // ---------------------------------------------------------------------------
 // Content-row normalize + revive (lock-step with 484's reviveRowsForInsert)
@@ -715,20 +848,61 @@ export async function importBackupFromUpload(input: ImportBackupInput): Promise<
     const manifest = await validateArchive(tarPath);
 
     // (d) PASS 2 — RESTORE in ONE tx (all-or-nothing). One sequential spool read.
-    const dbResult = await db.transaction(async (tx) =>
-      restoreArchiveStreamTx(tx, tarPath, manifest, {
+    // Native CMS writer fence FIRST (TASK-561): a destructive restore must never
+    // interleave with an active full-site holder (TASK-547) or concurrent admin
+    // writers. Contention throws the fence's EXISTING `native_cms_writer_fence_busy`
+    // code (mapped → 409 by the route) BEFORE any delete/insert/restore work, so
+    // this path performs zero protected writes on contention.
+    const dbResult = await db.transaction(async (tx) => {
+      await acquireNativeCmsWriterFence(tx);
+      return restoreArchiveStreamTx(tx, tarPath, manifest, {
         restoreUsers: input.restoreUsers === true,
         confirm: true,
-      })
-    );
-
-    // (e) AFTER commit, OUTSIDE the tx — media bytes via 03 (non-transactional
-    //     object storage). One sequential spool read.
-    let media = { restored: 0, totalBytes: 0 };
-    if (manifest.include.includes("media")) {
-      media = await restoreMediaFromArchive(readTarMembers(fileStream(tarPath)), {
-        getAdapter: input.mediaAdapter ?? getMediaStorageAdapter,
       });
+    });
+
+    // (e) AFTER commit, OUTSIDE the tx — TASK-563: invalidate the process-local
+    //     site cache for archives that changed authoritative DB state (database
+    //     or settings; a media-/users-only archive touches neither, mirroring
+    //     the legacy restoreBackup condition), THEN restore media bytes via 03
+    //     (non-transactional object storage). One sequential spool read.
+    const runId = path.basename(tmpDir); // spool-dir identity `coderso-import-<uuid>`
+    const clearCache = input.clearCache ?? clearSiteCache;
+    if (manifest.include.includes("database") || manifest.include.includes("settings")) {
+      await clearCache();
+    }
+
+    let media = { restored: 0, totalBytes: 0 };
+    let skippedMedia = 0;
+    if (manifest.include.includes("media")) {
+      const fileCount = manifest.media?.fileCount ?? 0;
+      try {
+        media = await restoreMediaFromArchive(readTarMembers(fileStream(tarPath)), {
+          getAdapter: input.mediaAdapter ?? getMediaStorageAdapter,
+        });
+      } catch (error) {
+        // Best-effort degradation (TASK-511-03): the authoritative DB commit
+        // already returned success, so a partial object-storage write is NOT
+        // rolled back. Swallow the failure, record a REDACTED receipt (fixed
+        // code, counts only — no raw storage error/credentials), and report the
+        // true partial state via mediaRestored/skippedMedia (TASK-563).
+        if (isMediaRestoreFailure(error)) {
+          media = { restored: error.partialRestored, totalBytes: error.partialTotalBytes };
+        }
+        skippedMedia = Math.max(0, fileCount - media.restored);
+        const logFailure = input.logFailure ?? logAudit;
+        await logFailure({
+          action: "backup.mediaRestoreFailure",
+          targetType: "backup",
+          targetId: runId,
+          metadata: sanitizeAuditMetadata({
+            code: "media_restore_partial",
+            severity: "error",
+            restored: media.restored,
+            skipped: skippedMedia,
+          }),
+        });
+      }
     }
 
     return {
@@ -738,7 +912,7 @@ export async function importBackupFromUpload(input: ImportBackupInput): Promise<
       rowsRestored: dbResult.rows,
       usersRestored: dbResult.usersRestored,
       mediaRestored: media.restored,
-      skippedMedia: 0,
+      skippedMedia,
     };
   } finally {
     await cleanup(); // always — success, throw, or abort

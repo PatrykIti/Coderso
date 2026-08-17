@@ -836,6 +836,9 @@ test("mapBackupError maps the TASK-511-05 import codes", () => {
     ["backup_restore_fk_violation", 422],
     ["backup_media_key_unsafe", 422],
     ["backup_media_write_failed", 500],
+    // TASK-561: the import tx takes the native CMS writer fence FIRST; contention
+    // surfaces the fence's existing busy code as a single sanitized 409.
+    ["native_cms_writer_fence_busy", 409],
   ];
   for (const [code, status] of cases) {
     expect(mapBackupError(new Error(code))).toMatchObject({
