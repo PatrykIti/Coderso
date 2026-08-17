@@ -727,6 +727,12 @@ export const capturePageLifecycleNativeSnapshot = async (
     return readPageLifecycleTx(tx, id, false);
   });
 
+/** Read-only snapshot reader without the native CMS writer fence. */
+export const readPageLifecycleNativeSnapshot = async (
+  id: string
+): Promise<PageLifecycleNativeSnapshot | null> =>
+  db.transaction(async (tx) => readPageLifecycleTx(tx, id, false));
+
 export async function mutatePageLifecycleAtomic(
   input: PageLifecycleAtomicMutation
 ): Promise<PageLifecycleAtomicMutationResult> {

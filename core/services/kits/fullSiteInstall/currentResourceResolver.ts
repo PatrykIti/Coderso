@@ -33,6 +33,7 @@ import {
   snapshotFormFieldsWriteShape,
 } from "../../forms/validation";
 import { normalizeMenuItemSettings } from "../../menus/menuItemSettings";
+import { readPageLifecycleNativeSnapshot } from "../../pages/pageService";
 import {
   CONTENT_ENTRY_PLANNER_EQUALITY_SELECTION,
   CONTENT_TYPE_PLANNER_EQUALITY_SELECTION,
@@ -44,7 +45,6 @@ import {
   LISTING_TEMPLATE_PLANNER_EQUALITY_SELECTION,
   MENU_ITEM_PLANNER_EQUALITY_SELECTION,
   MENU_PLANNER_EQUALITY_SELECTION,
-  PAGE_PLANNER_EQUALITY_SELECTION,
   PAGE_TEMPLATE_PLANNER_EQUALITY_SELECTION,
   SETTING_PLANNER_EQUALITY_SELECTION,
 } from "./plannerEqualitySelections";
@@ -187,19 +187,9 @@ const readNativeDesired = async (
       : null;
   }
   if (kind === "page") {
-    const [row] = await db
-      .select(PAGE_PLANNER_EQUALITY_SELECTION)
-      .from(pages)
-      .where(eq(pages.id, id))
-      .orderBy(asc(pages.id))
-      .limit(1);
-    return row
-      ? projectDesired(template, {
-          slug: row.slug,
-          title: row.title,
-          status: row.status,
-          document: row.currentData,
-        })
+    const snapshot = await readPageLifecycleNativeSnapshot(id);
+    return snapshot
+      ? projectDesired(template, snapshot.desired as unknown as Record<string, unknown>)
       : null;
   }
   if (kind === "menu") {
