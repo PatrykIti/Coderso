@@ -1,0 +1,246 @@
+{
+  "cleanup": {
+    "failures": [],
+    "pass": true
+  },
+  "consoleErrors": [],
+  "failures": [],
+  "pass": true,
+  "processes": {
+    "git": 2,
+    "playwright-close": 1,
+    "playwright-open": 1,
+    "playwright-route-list": 1,
+    "playwright-run-code": 149,
+    "playwright-tab-close": 1,
+    "playwright-tab-new": 1,
+    "playwright-tab-select": 2,
+    "task540-dev-host": 1,
+    "task540-worker-bootstrap-preflight": 1,
+    "task540-worker-database": 1,
+    "task540-worker-schema-only": 1,
+    "task540-worker-user-identity-proof": 1,
+    "task540-worker-user-provisioning": 1
+  },
+  "profile": "fast",
+  "scenarios": [
+    {
+      "elapsedMs": 90131,
+      "id": "button-image",
+      "pass": true
+    },
+    {
+      "elapsedMs": 36538,
+      "id": "tabs-content",
+      "pass": true
+    },
+    {
+      "elapsedMs": 20471,
+      "id": "tabs-keyboard-aria",
+      "pass": true
+    },
+    {
+      "elapsedMs": 26444,
+      "id": "space-selection",
+      "pass": true
+    },
+    {
+      "elapsedMs": 43756,
+      "id": "dirty-guards",
+      "pass": true
+    },
+    {
+      "elapsedMs": 67560,
+      "id": "related-retry-cache",
+      "pass": true
+    },
+    {
+      "elapsedMs": 166024,
+      "id": "responsive-users",
+      "pass": true
+    }
+  ],
+  "schemaVersion": 1,
+  "screenshots": [
+    {
+      "path": "_docs/_workflows/_smoke/task-540-wf540smoke-button-image-light.png",
+      "sha256": "5dd07007efbe240338da4ba79b476728a86a1133cc335a3c11bd2c84f9a36268"
+    },
+    {
+      "path": "_docs/_workflows/_smoke/task-540-wf540smoke-media-prior-pending.png",
+      "sha256": "6ca7c961fde4f48d928a10cbdb17025ff7a451c2aa873e8a24cd342d8349ee46"
+    },
+    {
+      "path": "_docs/_workflows/_smoke/task-540-wf540smoke-tabs-content-dark.png",
+      "sha256": "b5d2d2e435125c0308636d3fe33fda7de0e24c9ad0b6417237e111ff0c2168b3"
+    },
+    {
+      "path": "_docs/_workflows/_smoke/task-540-wf540smoke-tabs-keyboard-light.png",
+      "sha256": "6236817bb52974bbb99c78c13714b627a9b720b8e3838a5cd199f03e0631b883"
+    },
+    {
+      "path": "_docs/_workflows/_smoke/task-540-wf540smoke-space-selection-dark.png",
+      "sha256": "5137e71e3b50477c7e17ab487e986ca0c94395eac328e800fc86b6157722b477"
+    },
+    {
+      "path": "_docs/_workflows/_smoke/task-540-wf540smoke-dirty-save-failure.png",
+      "sha256": "0881d97b997ba8438971aa3ebe2e2593ecfa75012dd95112a3a5076c8a1ad37c"
+    },
+    {
+      "path": "_docs/_workflows/_smoke/task-540-wf540smoke-dirty-guards-final.png",
+      "sha256": "043554ae6a3961ba4f53d186f2be10ba6d6556747936269fefec2353a9bc6be2"
+    },
+    {
+      "path": "_docs/_workflows/_smoke/task-540-wf540smoke-related-first-failure.png",
+      "sha256": "eb2bf90d3eaa3aa9acc4c8b62762c332bb5b4fc3c14fba93d43ba438170a0c51"
+    },
+    {
+      "path": "_docs/_workflows/_smoke/task-540-wf540smoke-related-a-stale.png",
+      "sha256": "3e8566e8c8eb65aac1d50f495a5e823dbbb9572846fa9f0b74a3664ccf7c09b4"
+    },
+    {
+      "path": "_docs/_workflows/_smoke/task-540-wf540smoke-related-b-dark.png",
+      "sha256": "3e8566e8c8eb65aac1d50f495a5e823dbbb9572846fa9f0b74a3664ccf7c09b4"
+    },
+    {
+      "path": "_docs/_workflows/_smoke/task-540-wf540smoke-responsive-user-a-light.png",
+      "sha256": "cbee5beeed78d3df0a24fd37c4f08a98537d14e9846ca191c8978e6966d23e02"
+    },
+    {
+      "path": "_docs/_workflows/_smoke/task-540-wf540smoke-responsive-user-b-dark.png",
+      "sha256": "9fd0bd5dc3637ef69ab530ca6938ff99fbce9784878045414866b80ac27b4ea5"
+    },
+    {
+      "path": "_docs/_workflows/_smoke/task-540-wf540smoke-responsive-user-a-converged.png",
+      "sha256": "53efa159010249439736a584786bcf0ee6ebde49a9cfef864d3e2a64aa27b3cb"
+    }
+  ],
+  "serverUp": true,
+  "session": "wf560-540",
+  "snapshots": 2,
+  "suiteCleanup": {
+    "authWindowState": "restored",
+    "canonicalCleanupReceipts": 60,
+    "databaseBatches": 0,
+    "rows": 0,
+    "statements": 0,
+    "workerReconnects": 0,
+    "workerRequests": 31,
+    "workerStarts": 5
+  },
+  "suiteId": "task-540",
+  "timings": [
+    {
+      "count": 1,
+      "elapsedMs": 113,
+      "failed": 0,
+      "kind": "cleanup",
+      "name": "all"
+    },
+    {
+      "count": 1,
+      "elapsedMs": 1632,
+      "failed": 0,
+      "kind": "phase",
+      "name": "auth-window-prepare"
+    },
+    {
+      "count": 1,
+      "elapsedMs": 347,
+      "failed": 0,
+      "kind": "phase",
+      "name": "auth-window-restore"
+    },
+    {
+      "count": 1,
+      "elapsedMs": 4352,
+      "failed": 0,
+      "kind": "phase",
+      "name": "cleanup"
+    },
+    {
+      "count": 1,
+      "elapsedMs": 51432,
+      "failed": 0,
+      "kind": "phase",
+      "name": "resource-cleanup"
+    },
+    {
+      "count": 1,
+      "elapsedMs": 2175,
+      "failed": 0,
+      "kind": "phase",
+      "name": "routing-settings-apply"
+    },
+    {
+      "count": 1,
+      "elapsedMs": 832,
+      "failed": 0,
+      "kind": "phase",
+      "name": "routing-settings-restore"
+    },
+    {
+      "count": 1,
+      "elapsedMs": 76229,
+      "failed": 0,
+      "kind": "phase",
+      "name": "setup"
+    },
+    {
+      "count": 1,
+      "elapsedMs": 90131,
+      "failed": 0,
+      "kind": "scenario",
+      "name": "button-image"
+    },
+    {
+      "count": 1,
+      "elapsedMs": 43756,
+      "failed": 0,
+      "kind": "scenario",
+      "name": "dirty-guards"
+    },
+    {
+      "count": 1,
+      "elapsedMs": 67560,
+      "failed": 0,
+      "kind": "scenario",
+      "name": "related-retry-cache"
+    },
+    {
+      "count": 1,
+      "elapsedMs": 166024,
+      "failed": 0,
+      "kind": "scenario",
+      "name": "responsive-users"
+    },
+    {
+      "count": 1,
+      "elapsedMs": 26444,
+      "failed": 0,
+      "kind": "scenario",
+      "name": "space-selection"
+    },
+    {
+      "count": 1,
+      "elapsedMs": 36538,
+      "failed": 0,
+      "kind": "scenario",
+      "name": "tabs-content"
+    },
+    {
+      "count": 1,
+      "elapsedMs": 20471,
+      "failed": 0,
+      "kind": "scenario",
+      "name": "tabs-keyboard-aria"
+    },
+    {
+      "count": 1,
+      "elapsedMs": 593639,
+      "failed": 0,
+      "kind": "suite",
+      "name": "task-540"
+    }
+  ]
+}
