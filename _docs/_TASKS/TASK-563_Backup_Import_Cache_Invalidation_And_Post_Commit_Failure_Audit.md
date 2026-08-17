@@ -56,11 +56,18 @@ failure must be recorded redacted and testable.
   `opts.runId` must use the same source.
 - Sanitize the storage error log at `mediaArchive.ts:321` (fixed code, no raw
   error object).
-- Pin rethrow-vs-swallow semantics: the accepted best-effort degradation keeps
-  SWALLOWING the media failure after the DB commit (the import already returned
-  success for the content), records the redacted audit receipt, and updates
+- Pin rethrow-vs-swallow semantics: the accepted best-effort degradation
+  SHALL swallow the media failure after the DB commit (status quo RETHROWS →
+  500 via `backupRoutes.ts:208-209`; the import already returned
+  success for the content); the pseudocode below introduces the try/catch that
+  performs the swallow, records the redacted audit receipt, and updates
   `mediaRestored`/`skippedMedia` counts (`backupImport.ts:741` currently
   hardcodes `skippedMedia: 0`) so the receipt reflects the true partial state.
+  Note: this moves the surfacing from an HTTP 500 to the redacted
+  `backup.mediaRestoreFailure` receipt + partial counts, which supersedes the
+  TASK-511-03 `:506-509` "surface backup_media_write_failed so the operator can
+  re-run" clause for the upload-import flow (the only production caller of
+  `restoreMediaFromArchive` is `backupImport.ts:729`).
   The DB-side failure path (`backup_media_write_failed` → 500) is unchanged for
   callers that treat media failure as fatal (in the import path media always
   runs post-commit, so there is no pre-commit media phase).

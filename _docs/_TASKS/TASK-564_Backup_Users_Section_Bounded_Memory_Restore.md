@@ -46,8 +46,11 @@ limit, so large instances violate the scalability contract.
   to **0074** after TASK-569 (0073); re-read the live journal immediately
   before allocation, since 0073 is allocated by the sibling 569 stream), unique
   run-scoped rows
-  (`runId` + natural-key columns), idempotent per-run cleanup, and a
-  rollback/cleanup runbook in the task handoff.
+  (`runId` + `kind` discriminator + natural-key columns; one table holds all
+  three row kinds — `kind IN ('role','user','user_role')` — with the
+  run-specific natural key columns per kind, e.g. `role_name`, `user_email`;
+  or three sibling tables if the discriminator proves awkward), idempotent
+  per-run cleanup, and a rollback/cleanup runbook in the task handoff.
 - **Run id source (pinned, shared with TASK-563):** `importBackupFromUpload`
   creates no stored backup row, so `opts.runId` must use the same source as
   TASK-563's media-failure receipt: either the synthetic `"import"` convention
@@ -86,12 +89,16 @@ export async function restoreUsersSectionTx(
   //    Same for users.email. (PII-safe: offending values never thrown.)
   // 3. Bounded FK-missing roleId guard + user_roles reconcile via SQL against
   //    staging (scoped to archived userIds; batched deletes/inserts <= 500).
+  //    The FK guard resolves roleId against staging roles UNION already-present
+  //    final roles (mirrors today's allowedRoleIds construction at
+  //    backupUsersSection.ts:376-390) so the guard stays behavior-identical.
   // 3.5 STAGING -> FINAL upsert (NEW, required): batched
   //    INSERT INTO roles (id, name, ...) SELECT ... FROM backup_users_staging
-  //    WHERE run_id = $1 ON CONFLICT (id) DO UPDATE SET ... (mirror the
-  //    excluded.* sets today at backupUsersSection.ts:340-373), then the same
-  //    batched upsert for users (backupUsersSection.ts:352) and user_roles
-  //    (composite-pk onConflictDoNothing, :370). Without this step the final
+  //    WHERE run_id = $1 AND kind = 'role' ON CONFLICT (id) DO UPDATE SET ...
+  //    (mirror the excluded.* sets today at backupUsersSection.ts:340-373,
+  //    :344-348 roles / :358-365 users), then the same batched upsert for
+  //    users (backupUsersSection.ts:352) and user_roles
+  //    (composite-pk onConflictDoNothing, :370-402). Without this step the final
   //    tables never change and the lockout guard below would run against
   //    pre-restore state.
   // 4. Admin-lockout guard: unchanged set-based query on final tables

@@ -33,7 +33,8 @@ coherent destination/SSRF policy:
   validation or redirect guard (`openAiProvider.ts:162-183`,
   `openRouterProvider.ts:261-280`).
 - **Sentry init** passes the raw DSN straight to the SDK
-  (`errorMonitoring.ts:100-108`); only `healthEvaluator.ts:52` gates it with
+  (`core/services/integrations/errorMonitoring.ts:83-91`); only
+  `healthEvaluator.ts:52` gates it with
   `isParseableSentryDsn`.
 - **Form-action webhooks are a fourth, most public-amplified surface:**
   `formAutomationRunnerCore.ts:213,230-238` fetches admin-configured action
@@ -71,7 +72,15 @@ network/metadata via literal or mapped addresses or via a redirect chain.
 - One shared outbound URL validator used by ALL webhook/egress paths
   (integrations, login alerts, custom webhooks, form-action webhooks, assistant
   LLM providers, Sentry DSN, any future webhook), not an ad-hoc per-adapter
-  check.
+  check. **Module reconciliation with TASK-414-03-L01:** the open TASK-414
+  family already contracts the same shared role at `core/services/network/outboundHttpPolicy.ts`
+  (`TASK-414-03-L01-...md:44` creates it; `TASK-414-06-L05:165` and
+  `TASK-414-04-L01:170` consume it). TASK-567 is the SINGLE initial creator of
+  that path (active stream, changelog 1289, lands FIRST); TASK-414-03-L01 then
+  EXTENDS it with agent-purpose policies + `pinnedOutboundTransport.ts` and its
+  consumers keep their existing references. Do NOT create a second
+  `core/services/outboundEgress/` module. Land order pinned: TASK-567 before
+  TASK-414-03-L01 (recorded in both contracts).
 - Validate per provider: HTTPS required; Slack/Zapier host allowlists; custom
   webhooks get the full blocklist policy (HTTPS + private/loopback/link-local/
   CGNAT/reserved/multicast IPv4 and IPv6, including IPv4-mapped IPv6 and NAT64
@@ -107,11 +116,12 @@ network/metadata via literal or mapped addresses or via a redirect chain.
 
 ## Fix Strategy
 
-Own a single `outboundEgress` module in the domain contract layer (pure, no DB
-imports) exporting:
+Own a single `outboundHttpPolicy` module in the domain contract layer (pure,
+no DB imports) exporting:
 
 ```ts
-// core/services/outboundEgress/outboundEgress.ts (new, Bun-free)
+// core/services/network/outboundHttpPolicy.ts (new, Bun-free; single owner TASK-567
+// creates it, TASK-414-03-L01 extends it after TASK-567 lands)
 export type EgressProvider =
   | "slack" | "zapier" | "login-alert" | "webhook" | "openai" | "openrouter" | "sentry";
 export function validateOutboundUrl(url: string, opts: { provider: EgressProvider; env?: NodeJS.ProcessEnv }): { ok: true; url: URL } | { ok: false; code: "egress_invalid_scheme" | "egress_host_forbidden" | "egress_redirect_forbidden" | ... };
@@ -144,17 +154,22 @@ Wire the owner into:
 - `retryPost.ts:68-81` — validate before fetch, `redirect: "error"`, sanitize
   the rejection so `webhookDeliveries.lastError` never contains the URL; keep
   timer cleanup.
-- Assistant providers: `openAiProvider.ts` / `openRouterProvider.ts` reject
-  custom `baseUrl` outside the allowlist at configuration/resolution time
-  (fail-closed, no fetch).
 - `errorMonitoring.ts` — `validateSentryDsn` before SDK init; reject
   non-Sentry hosts fail-closed.
+- **NOT edited by TASK-567:** `openAiProvider.ts` / `openRouterProvider.ts` are
+  EXCLUSIVE files of TASK-414-03-L01 (`TASK-414-03-L01-...md:38-39`). TASK-567
+  defines the provider allowlist policy in the shared module (EgressProvider
+  union incl. `openai`/`openrouter`); TASK-414-03-L01 wires the provider files
+  to it after TASK-567 lands. Recorded dependency; do not touch those files
+  here.
 
 ## Security Contract
 
 - Endpoint visibility unchanged: `internal` admin update routes require
-  `settings:write` (integrations, custom webhooks) / configured webhook (login
-  alerts); assistant provider config changes require `settings:write`; Sentry
+  `settings:write` (integrations, custom webhooks); configured webhook (login
+  alerts) and form-action webhooks are validated at config time and delivery
+  time; assistant provider config changes require `settings:write` (wired by
+  TASK-414-03-L01 after this task); Sentry
   init follows the existing secrets/settings path.
 - Validation is server-side and fail-closed; invalid destinations are rejected
   at configuration time AND at delivery time (defense in depth).
@@ -165,12 +180,37 @@ Wire the owner into:
 - Custom webhooks are an admin-configured surface (`internal`), not a public
   one; their URLs are validated on save and on every delivery.
 
+## Single-Writer Collision Guards (cross-stream)
+
+TASK-567 edits the following files that open leaves also claim. Land order and
+ownership are pinned here so exactly ONE writer owns each file at a time:
+
+- `core/services/settings/securitySettings.ts` + `tests/unit/security/securitySettings.test.ts`:
+  TASK-551-09-L04 (`...md:52,83`) and TASK-414-09-L03 (`...md:97`, rate-limit
+  buckets) also claim them. TASK-567 edits ONLY `normalizeLoginWebhookUrl`
+  (`:416-441`) and the egress validator wiring there; it must NOT touch cache
+  hardening, rate-limit buckets, or other settings logic. Land order: TASK-567
+  lands first; 551-09-L04 / 414-09-L03 land after and build on the change.
+- `core/services/webhooks/webhooksService.ts`, `core/services/webhooks/deliveryService.ts`,
+  `core/server/validation/webhookSchemas.ts`: TASK-551-03-L03 owns these
+  (`...md:33,34,36`; `:67` "No other files may be edited") and
+  TASK-414-06-L05 claims `deliveryService.ts` for the shared policy
+  (`...md:60`). TASK-567 edits them ONLY for egress validation + redirect
+  policy + sanitized lastError (no list pagination, no set-based batches, no
+  unrelated changes). Land order: TASK-567 first; 551-03-L03 / 414-06-L05 land
+  after and converge on the same shared module.
+- Forbidden paths for TASK-567: `openAiProvider.ts`, `openRouterProvider.ts`
+  (TASK-414-03-L01 exclusive), `core/services/network/pinnedOutboundTransport.ts`
+  (TASK-414-03-L01 creates it), and any analytics/kit/assistant-service files
+  outside the list above.
+
 ## Validation
 
 - `bun --cwd core lint` + `bun --cwd core lint:types`.
 - Bun-free Vitest suite for the validator matrix (mapped IPv6, NAT64, redirects,
   per-provider allowlist, custom-webhook blocklist, sentry DSN) in
-  `tests/vitest/outbound-egress/` + delivery tests with fake fetch for
+  `tests/vitest/network/outboundHttpPolicy.test.ts` + delivery tests with fake
+  fetch for
   `slackDelivery`, `zapierDelivery`, `loginAlertDeliveryService`,
   `retryPost`/`deliveryService` (Bun lane where DB-backed), assistant provider
   resolution, and Sentry init.

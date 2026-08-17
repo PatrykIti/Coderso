@@ -43,6 +43,19 @@ is the sole writer of the provider/tool/runtime contract and focused tests:
 - `core/services/assistant/providerPlanningContext.ts`;
 - new `core/services/network/outboundHttpPolicy.ts`;
 - new `core/services/network/pinnedOutboundTransport.ts`;
+
+> **Cross-stream land order (recorded with TASK-567):** `outboundHttpPolicy.ts`
+> is the SINGLE shared server-side egress/SSRF policy for ALL webhook/egress
+> paths. TASK-567 (`_docs/_TASKS/TASK-567_Outbound_Webhook_Egress_Policy_SSRF_Hardening.md`,
+> changelog 1289, active stream) creates that path FIRST with the shared
+> `EgressProvider` union (`slack/zapier/login-alert/webhook/openai/openrouter/sentry`)
+> + `validateOutboundUrl` + `fetchWithEgressPolicy` + `validateSentryDsn`.
+> This leaf then EXTENDS it with agent-purpose policies and creates
+> `pinnedOutboundTransport.ts`; its consumers (`TASK-414-04-L01:170`,
+> `TASK-414-06-L05:165`) keep their existing references to the module. Do NOT
+> create a second module under `core/services/outboundEgress/`. `openAiProvider.ts` /
+> `openRouterProvider.ts` remain EXCLUSIVE to this leaf (TASK-567 must not edit
+> them; it only defines the provider allowlist policy in the shared module).
 - `core/services/assistant/assistantService.ts` only to isolate Guide from Agent
   provider execution and remove Agent-success fallback;
 - `core/services/assistant/actionPlannerService.ts`, which must be split by

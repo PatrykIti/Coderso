@@ -134,7 +134,8 @@ no new error class needed). The route maps them via the existing
 ## Security Contract
 
 - Endpoint unchanged: `internal` admin; the route uses `content:write`
-  (`customScreenRoutes.ts:114,121,143,164`) — there is no `custom_screens:write`
+  (`customScreenRoutes.ts:114,121,145,164` — the overrides PATCH is at `:145`) —
+  there is no `custom_screens:write`
   permission in the repo, correct the RBAC reference accordingly.
 - `expectedRevision` joins the reject-unknown allowlist with a round-trip
   persistence test.

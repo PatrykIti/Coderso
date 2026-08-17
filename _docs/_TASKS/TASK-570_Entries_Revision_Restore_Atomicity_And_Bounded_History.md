@@ -49,8 +49,11 @@ and loads full JSON payloads.
   snapshot exactly like `updateEntry` does today so a stale/non-conforming
   snapshot surfaces `ContentValidationError` instead of persisting.
   Keep the existing no-op short-circuit (`areRevisionSnapshotsEqual` →
-  `{ restored: false }` with NO new snapshot) and the `actorId`-null snapshot
-  guard, both pinned by `entryRevisionRestore.test.ts:183-199`.
+  `{ restored: false }` with NO new snapshot), pinned by
+  `entryRevisionRestore.test.ts:183-199`. The `actorId`-null snapshot guard
+  (`entryService.ts:844`) has NO dedicated test today (all existing
+  `restoreEntryRevision` calls pass a real actor) — add a null-actor regression
+  test (restore succeeds, no new revision row) to the Validation scope.
 - Subtask 02 (M-487-02): keyset-cursor metadata page (id, version, createdAt,
   author; no `data`), bounded page size; narrow `getEntryRevisionData(revisionId)`
   detail read used by restore; cursor no-gap/no-dup + query-shape tests.
@@ -98,10 +101,11 @@ return runEntryTransaction(async (tx) => {
   await updateEntryDataTx(tx, entryId, revision.data);          // tx-scoped write (no re-validation loop)
 });
 // NO onCommit hook exists on runEntryTransaction (it is a bare db.transaction
-// wrapper, entryService.ts:75,318-320). Use the REAL post-commit seam:
-// applyEntryPostCommitCache(deps, entryId, { changed: true, ... }) after the
-// transaction resolves, matching the current restoreEntryRevision pattern at
-// entryService.ts:851-859 (with a post-commit entry re-read for the cacheRef).
+// wrapper, entryService.ts:75,318-320). Use the REAL post-commit seam with its
+// real signature: applyEntryPostCommitCache(deps, { changed: true, seoChanged:
+// false, cacheRef: {...} }) after the transaction resolves, matching the
+// current restoreEntryRevision pattern at entryService.ts:851-859 (with a
+// post-commit entry re-read for the cacheRef).
 ```
 
 If any validation fails before the snapshot write, nothing is persisted and no
@@ -124,6 +128,10 @@ snapshot is left behind (the whole transaction rolls back).
 
 - `bun --cwd core lint` + `bun --cwd core lint:types`.
 - DB race test with a deferred writer barrier when `DATABASE_URL` available.
+- New null-actor regression: `restoreEntryRevision` with `actorId = null`
+  succeeds and creates NO new revision row (the `entryService.ts:844` guard);
+  assert in `tests/unit/content/entryRevisionRestore.test.ts` alongside the
+  existing no-op test at :183-199.
 - Bun lane: re-run and update the existing owning suites for the new shape/
   fence — `tests/unit/content/entryRevisionRestore.test.ts` (list results lose
   `.data`/`.length` assumptions), `tests/unit/content/entryService.test.ts`

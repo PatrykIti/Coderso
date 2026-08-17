@@ -76,6 +76,9 @@ The Bun parallel lane runner has two degraded-path defects:
 if (part.c1.length > 0) await runWorker("c1", part.c1, ...);
 if (part.b.length > 0) await runWorker("b0", part.b[0], ...);
 // ... same guard for every b worker and the perf lane
+// runner report guard: if EVERY selected lane is empty, results is empty and
+// Math.max(...[]) at run-bun-parallel.ts:328 yields -Infinity ("totalMs": null);
+// guard with `const totalMs = results.length ? Math.max(...results.map(...)) : 0`
 ```
 
 **Manifest regeneration is REQUIRED as part of this task:** the committed

@@ -93,6 +93,10 @@ TASK-571 lands AFTER it (land order pin). TASK-571 must NOT touch
   prune. No new competing loop is introduced.
 - Tests: multi-batch row budget, hard size-limit test, cursor no-gap/no-dup,
   query-shape (export loads only consumed columns), index EXPLAIN evidence.
+- Retention reference: `maybePruneExpiredTraffic` is defined in
+  `core/services/analytics/trafficRetentionService.ts:78` and called from
+  `core/services/analytics/trafficRepository.ts:96`; both files are the
+  opportunistic-prune pattern to mirror.
 
 ## Fix Strategy
 
@@ -109,7 +113,8 @@ export async function listSubmissionExportJobs(formId: string): Promise<...>; //
 
 1. `createSubmissionExportJob` validates the form exists + `forms:read`,
    creates a job row (`status: "queued"`), and dispatches via the existing
-   scheduler/outbox pattern (no new competing loop).
+   scheduler pattern (backupScheduler-style; no outbox exists — see Scope),
+   no new competing loop.
 2. `runSubmissionExportJob`:
    - PASS A (columns, CSV only): bounded keyset scan reading only payload keys
      (`created_at, id` cursor, `~5k/batch`), union into a column set.
