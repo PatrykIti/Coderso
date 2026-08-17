@@ -221,6 +221,68 @@ test("postWithRetry honors timeout/abort", async () => {
   expect(result.lastError).toBeTruthy();
 });
 
+test("postWithRetry rejects a blocked URL without fetching (TASK-567)", async () => {
+  const originalFetch = globalThis.fetch;
+  let fetchCalls = 0;
+  globalThis.fetch = (async () => {
+    fetchCalls += 1;
+    return new Response("ok", { status: 200 });
+  }) as typeof fetch;
+  try {
+    const result = await postWithRetry({
+      url: "https://169.254.169.254/hook",
+      body: "{}",
+      attempts: 1,
+      baseDelayMs: 0,
+    });
+    expect(result.ok).toBe(false);
+    expect(result.lastError).toBe("egress_host_forbidden");
+    expect(fetchCalls).toBe(0);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("postWithRetry maps a redirect rejection to a machine-readable code (TASK-567)", async () => {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = (async () => {
+    throw new TypeError('redirect mode is "error"');
+  }) as typeof fetch;
+  try {
+    const result = await postWithRetry({
+      url: "https://example.test/hook",
+      body: "{}",
+      attempts: 1,
+      baseDelayMs: 0,
+    });
+    expect(result.ok).toBe(false);
+    expect(result.lastError).toBe("egress_redirect_forbidden");
+    expect(result.lastError).not.toContain("example.test");
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("postWithRetry never persists the destination URL in lastError (TASK-567)", async () => {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = (async () => {
+    throw new Error("fetch failed: https://169.254.169.254/leak");
+  }) as typeof fetch;
+  try {
+    const result = await postWithRetry({
+      url: "https://example.test/hook",
+      body: "{}",
+      attempts: 1,
+      baseDelayMs: 0,
+    });
+    expect(result.ok).toBe(false);
+    expect(result.lastError).toBe("delivery_failed");
+    expect(result.lastError).not.toContain("169.254.169.254");
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
 // --- dispatcher with stub deps ---------------------------------------------
 
 const makeStubDeps = (overrides: {

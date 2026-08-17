@@ -2,11 +2,8 @@ import { and, desc, eq, inArray } from "drizzle-orm";
 
 import { db } from "../../db/client";
 import { webhookDeliveries, webhooks } from "../../db/schema";
-import {
-  decryptSecret,
-  encryptSecret,
-  isEncryptedSecret,
-} from "../security/secretStore";
+import { decryptSecret, encryptSecret, isEncryptedSecret } from "../security/secretStore";
+import { validateOutboundUrl } from "../network/outboundHttpPolicy";
 
 export type WebhookRow = typeof webhooks.$inferSelect;
 export type WebhookDeliveryRow = typeof webhookDeliveries.$inferSelect;
@@ -79,10 +76,7 @@ const toDeliverySummary = (row: WebhookDeliveryRow): WebhookDeliverySummary => (
   deliveredAt: row.deliveredAt ?? null,
 });
 
-const toWebhookSummary = (
-  row: WebhookRow,
-  lastDelivery?: DeliveryLookup | null
-) => ({
+const toWebhookSummary = (row: WebhookRow, lastDelivery?: DeliveryLookup | null) => ({
   id: row.id,
   name: row.name,
   url: row.url,
@@ -156,9 +150,12 @@ export async function createWebhook(input: WebhookCreateInput) {
   if (!name) throw new Error("webhook_name_required");
   if (!url) throw new Error("webhook_url_required");
   if (events.length === 0) throw new Error("webhook_events_required");
+  // TASK-567: fail closed at configuration time; delivery re-validates.
+  if (!validateOutboundUrl(url, { provider: "webhook" }).ok) {
+    throw new Error("webhook_url_invalid");
+  }
 
-  const secret =
-    input.secret && input.secret.trim() ? encryptSecret(input.secret.trim()) : null;
+  const secret = input.secret && input.secret.trim() ? encryptSecret(input.secret.trim()) : null;
 
   const [row] = await db
     .insert(webhooks)
@@ -187,6 +184,10 @@ export async function updateWebhook(id: string, input: WebhookUpdateInput) {
   if (input.url !== undefined) {
     const url = input.url.trim();
     if (!url) throw new Error("webhook_url_required");
+    // TASK-567: fail closed at configuration time; delivery re-validates.
+    if (!validateOutboundUrl(url, { provider: "webhook" }).ok) {
+      throw new Error("webhook_url_invalid");
+    }
     payload.url = url;
   }
   if (input.events !== undefined) {
@@ -199,32 +200,20 @@ export async function updateWebhook(id: string, input: WebhookUpdateInput) {
   }
   if (input.secret !== undefined) {
     payload.secret =
-      input.secret && input.secret.trim()
-        ? encryptSecret(input.secret.trim())
-        : null;
+      input.secret && input.secret.trim() ? encryptSecret(input.secret.trim()) : null;
   }
 
-  const [row] = await db
-    .update(webhooks)
-    .set(payload)
-    .where(eq(webhooks.id, id))
-    .returning();
+  const [row] = await db.update(webhooks).set(payload).where(eq(webhooks.id, id)).returning();
 
   return row ? toWebhookSummary(row, null) : null;
 }
 
 export async function deleteWebhook(id: string) {
-  const [row] = await db
-    .delete(webhooks)
-    .where(eq(webhooks.id, id))
-    .returning();
+  const [row] = await db.delete(webhooks).where(eq(webhooks.id, id)).returning();
   return row ? toWebhookSummary(row, null) : null;
 }
 
-export async function createDeliveryLog(input: {
-  webhookId: string;
-  event: string;
-}) {
+export async function createDeliveryLog(input: { webhookId: string; event: string }) {
   const [row] = await db
     .insert(webhookDeliveries)
     .values({
@@ -239,10 +228,7 @@ export async function createDeliveryLog(input: {
   return row;
 }
 
-export async function updateDeliveryLog(
-  id: string,
-  payload: Partial<WebhookDeliveryRow>
-) {
+export async function updateDeliveryLog(id: string, payload: Partial<WebhookDeliveryRow>) {
   const [row] = await db
     .update(webhookDeliveries)
     .set(payload)

@@ -8,9 +8,21 @@
  * the `onAttempt` hook and the per-attempt `X-Coderso-Attempt` /
  * `X-Nextless-Attempt` headers.
  *
+ * Egress policy (TASK-567): every attempt runs through the shared outbound
+ * HTTP policy (`fetchWithEgressPolicy`) with the caller-declared provider, so
+ * scheme/host/SSRF checks run before each fetch, redirects are never followed
+ * (`redirect: "error"`), and a policy rejection is persisted as its
+ * machine-readable code, never the destination URL.
+ *
  * The module is IO-only (uses global `fetch`); it carries no secrets — the
  * destination URL is a caller concern and is never logged here.
  */
+
+import {
+  EgressPolicyError,
+  fetchWithEgressPolicy,
+  type EgressProvider,
+} from "../network/outboundHttpPolicy";
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -30,6 +42,8 @@ export type RetryPostInput = {
   attempts?: number;
   timeoutMs?: number;
   baseDelayMs?: number;
+  /** Egress provider used for the shared destination policy. Defaults to `webhook`. */
+  provider?: EgressProvider;
   /** Invoked after each attempt (success or failure) so callers can record delivery logs. */
   onAttempt?: (state: RetryAttemptState) => void | Promise<void>;
 };
@@ -45,6 +59,18 @@ const setAttemptHeader = (headers: Headers, attempt: number) => {
   const value = String(attempt);
   headers.set("X-Coderso-Attempt", value);
   headers.set("X-Nextless-Attempt", value);
+};
+
+const sanitizeLastError = (error: unknown): string => {
+  if (error instanceof EgressPolicyError) return error.code;
+  if (error instanceof Error) {
+    // Keep abort/timeout messages (used by health mapping) but never persist a
+    // message that could carry the destination URL anywhere in it.
+    const message = error.message.trim();
+    if (!message || /https?:\/\//i.test(message)) return "delivery_failed";
+    return message.slice(0, 200);
+  }
+  return "delivery_failed";
 };
 
 export async function postWithRetry(input: RetryPostInput): Promise<RetryPostResult> {
@@ -65,20 +91,28 @@ export async function postWithRetry(input: RetryPostInput): Promise<RetryPostRes
     try {
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), timeoutMs);
-      const response = await fetch(input.url, {
-        method: "POST",
-        headers,
-        body: input.body,
-        signal: controller.signal,
-      });
-      clearTimeout(timeout);
+      let response: Response;
+      try {
+        response = await fetchWithEgressPolicy(
+          input.url,
+          {
+            method: "POST",
+            headers,
+            body: input.body,
+            signal: controller.signal,
+          },
+          { provider: input.provider ?? "webhook" }
+        );
+      } finally {
+        clearTimeout(timeout);
+      }
       responseCode = response.status;
       ok = response.ok;
       if (!ok) {
         lastError = `HTTP ${response.status}`;
       }
     } catch (error) {
-      lastError = error instanceof Error ? error.message : "delivery_failed";
+      lastError = sanitizeLastError(error);
     }
 
     const finalAttempt = attempt >= maxAttempts;

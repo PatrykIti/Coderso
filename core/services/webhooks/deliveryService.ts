@@ -53,6 +53,8 @@ export async function deliverWebhook(input: WebhookDeliveryInput): Promise<Webho
     attempts: input.attempts,
     timeoutMs: input.timeoutMs,
     baseDelayMs: input.baseDelayMs,
+    // TASK-567: custom webhooks run the full blocklist policy at delivery time.
+    provider: "webhook",
     onAttempt: async (state) => {
       await recordDeliveryAttempt({
         id: delivery.id,

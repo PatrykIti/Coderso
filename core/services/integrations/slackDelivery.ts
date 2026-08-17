@@ -21,6 +21,7 @@ export { formatSlackMessage } from "./slackFormat";
 const toHealthCode = (result: RetryPostResult): string => {
   if (result.responseCode !== null) return `http_${result.responseCode}`;
   if (result.lastError && /timeout|abort/i.test(result.lastError)) return "timeout";
+  if (result.lastError && /^egress_/.test(result.lastError)) return result.lastError;
   return "delivery_failed";
 };
 
@@ -30,9 +31,12 @@ export async function deliverSlack(
 ): Promise<void> {
   const url = config.webhookUrl;
   if (!url) return;
+  // TASK-567: the shared policy allowlists hooks.slack.com and blocks
+  // redirects before any bytes are sent.
   const result = await postWithRetry({
     url,
     body: JSON.stringify(formatSlackMessage(payload)),
+    provider: "slack",
   });
   await recordIntegrationHealth("slack", {
     ok: result.ok,

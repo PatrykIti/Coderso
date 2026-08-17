@@ -213,6 +213,9 @@ testIfDb("loginAlerts webhookUrl rejects non-https non-localhost and private hos
     "https://192.168.1.10/hook",
     "https://169.254.169.254/hook",
     "https://[::1]/hook",
+    "https://[::ffff:127.0.0.1]/hook",
+    "https://[::ffff:7f00:1]/hook",
+    "https://[64:ff9b::7f00:1]/hook",
     "https://user:pass@example.com/hook",
   ];
   for (const webhookUrl of rejected) {

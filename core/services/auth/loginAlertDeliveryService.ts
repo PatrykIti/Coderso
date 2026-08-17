@@ -6,6 +6,7 @@ import {
   setSecuritySettings,
 } from "../settings/securitySettings";
 import { createWebhookSignature } from "../webhooks/signing";
+import { validateOutboundUrl } from "../network/outboundHttpPolicy";
 
 const WEBHOOK_TIMEOUT_MS = 8000;
 const DELIVERY_ERROR_MAX_LENGTH = 240;
@@ -147,11 +148,20 @@ export async function deliverLoginAlert(
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), WEBHOOK_TIMEOUT_MS);
       try {
+        // TASK-567: re-validate at delivery time (config-time already rejected
+        // literal private/mapped/NAT64 targets) and never follow redirects.
+        const validated = validateOutboundUrl(settings.webhookUrl, {
+          provider: "login-alert",
+        });
+        if (!validated.ok) {
+          throw new Error("login_alert_webhook_url_invalid");
+        }
         const response = await fetchImpl(settings.webhookUrl, {
           method: "POST",
           headers,
           body: payload,
           signal: controller.signal,
+          redirect: "error",
         });
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
         webhookStatus = "sent";

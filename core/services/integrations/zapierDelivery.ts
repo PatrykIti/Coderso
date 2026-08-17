@@ -18,6 +18,7 @@ import { recordIntegrationHealth, type IntegrationRuntimeConfig } from "./integr
 const toHealthCode = (result: RetryPostResult): string => {
   if (result.responseCode !== null) return `http_${result.responseCode}`;
   if (result.lastError && /timeout|abort/i.test(result.lastError)) return "timeout";
+  if (result.lastError && /^egress_/.test(result.lastError)) return result.lastError;
   return "delivery_failed";
 };
 
@@ -27,9 +28,12 @@ export async function deliverZapier(
 ): Promise<void> {
   const url = config.hookUrl;
   if (!url) return;
+  // TASK-567: the shared policy allowlists hooks.zapier.com and blocks
+  // redirects before any bytes are sent.
   const result = await postWithRetry({
     url,
     body: JSON.stringify(payload),
+    provider: "zapier",
   });
   await recordIntegrationHealth("zapier", {
     ok: result.ok,

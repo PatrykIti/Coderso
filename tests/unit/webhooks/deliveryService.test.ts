@@ -100,3 +100,45 @@ testIfDb("deliverWebhook retries and fails", async () => {
     globalThis.fetch = originalFetch;
   }
 });
+
+testIfDb("deliverWebhook fails closed on a blocked delivery URL (TASK-567)", async () => {
+  // Insert directly to bypass the config-time gate so the delivery-time
+  // re-validation is exercised on its own.
+  const [created] = await db
+    .insert(webhooks)
+    .values({
+      name: "Delivery-time blocked",
+      url: "https://169.254.169.254/hook",
+      events: ["entry.updated"],
+      enabled: true,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    })
+    .returning();
+  if (!created) throw new Error("webhook_insert_failed");
+  cleanupIds.push(created.id);
+
+  const originalFetch = globalThis.fetch;
+  let fetchCalls = 0;
+  globalThis.fetch = async () => {
+    fetchCalls += 1;
+    return new Response("ok", { status: 200 });
+  };
+
+  try {
+    const result = await deliverWebhook({
+      webhookId: created.id,
+      event: "entry.updated",
+      payload: { id: "entry-3" },
+      attempts: 1,
+      baseDelayMs: 0,
+      timeoutMs: 1000,
+    });
+    expect(result.status).toBe("failed");
+    expect(result.lastError).toBe("egress_host_forbidden");
+    expect(result.lastError).not.toContain("169.254.169.254");
+    expect(fetchCalls).toBe(0);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});

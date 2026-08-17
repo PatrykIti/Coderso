@@ -61,3 +61,36 @@ testIfDb("create, update, list, delete webhooks", async () => {
   const deleted = await deleteWebhook(created.id);
   expect(deleted?.id).toBe(created.id);
 });
+
+testIfDb("createWebhook rejects a blocked URL at config time (TASK-567)", async () => {
+  for (const url of [
+    "http://example.com/webhook",
+    "https://10.0.0.5/webhook",
+    "https://169.254.169.254/webhook",
+    "https://[::ffff:127.0.0.1]/webhook",
+    "https://[64:ff9b::7f00:1]/webhook",
+  ]) {
+    await expect(
+      createWebhook({
+        name: "Blocked URL",
+        url,
+        events: ["entry.created"],
+      })
+    ).rejects.toThrow("webhook_url_invalid");
+  }
+});
+
+testIfDb("updateWebhook rejects a blocked URL at config time (TASK-567)", async () => {
+  const created = await createWebhook({
+    name: "Update blocked URL",
+    url: "https://example.com/webhook",
+    events: ["entry.created"],
+  });
+  cleanupIds.push(created.id);
+
+  await expect(
+    updateWebhook(created.id, {
+      url: "https://[::ffff:7f00:1]/webhook",
+    })
+  ).rejects.toThrow("webhook_url_invalid");
+});

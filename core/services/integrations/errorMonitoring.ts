@@ -16,6 +16,7 @@
  * evaluated exactly once under Bun.
  */
 import type { IntegrationRuntimeConfig } from "./integrationsService";
+import { validateSentryDsn } from "../network/outboundHttpPolicy";
 
 export interface ErrorMonitoringDeps {
   getIntegrationRuntimeConfig: (id: string) => Promise<IntegrationRuntimeConfig | null>;
@@ -79,6 +80,14 @@ export async function initializeErrorMonitoringOnBoot(
     const config = await deps.getIntegrationRuntimeConfig("sentry");
     const dsn = typeof config?.dsn === "string" ? config.dsn.trim() : "";
     if (!dsn) return; // not configured -> stays disabled (no-op)
+
+    // TASK-567: fail closed before the SDK is ever initialized. Only
+    // Sentry-owned hosts (sentry.io / *.sentry.io) may receive error events;
+    // a malformed DSN or a non-Sentry host stays disabled.
+    if (!validateSentryDsn(dsn).ok) {
+      console.warn("sentry_init_failed");
+      return;
+    }
 
     const loaded = (await import("@sentry/node")) as SentryModule;
     loaded.init({

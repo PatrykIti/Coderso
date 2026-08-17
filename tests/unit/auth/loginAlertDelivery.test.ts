@@ -187,6 +187,70 @@ test("webhook payload contains masked email, no secret, no raw UA", async () => 
   expect(capturedBody).not.toContain("203.0.113.10");
 });
 
+test("webhook delivery passes redirect: error so redirects are never followed (TASK-567)", async () => {
+  let capturedInit: RequestInit | undefined;
+  const result = await deliverLoginAlert(
+    baseInput(),
+    makeDeps({
+      fetchImpl: async (_url, init) => {
+        capturedInit = init;
+        return new Response("ok", { status: 200 });
+      },
+    })
+  );
+
+  expect(result.webhook).toBe("sent");
+  expect(capturedInit?.redirect).toBe("error");
+});
+
+test("webhook delivery fails closed on a blocked URL without fetching (TASK-567)", async () => {
+  let recorded: string | null | undefined;
+  const fetchImpl = async () => new Response("ok", { status: 200 });
+  const result = await deliverLoginAlert(
+    baseInput(),
+    makeDeps({
+      getSettings: async () =>
+        ({
+          loginAlerts: {
+            ...settingsFixture,
+            webhookUrl: "https://169.254.169.254/hook",
+          },
+        }) as never,
+      fetchImpl,
+      recordError: async (message) => {
+        recorded = message;
+      },
+    })
+  );
+
+  expect(result.webhook).toBe("failed");
+  expect(recorded).toBe("login_alert_webhook_url_invalid");
+  expect(recorded).not.toContain("169.254.169.254");
+});
+
+test("webhook delivery fails closed on mapped/NAT64 URLs (TASK-567)", async () => {
+  let recorded: string | null | undefined;
+  const result = await deliverLoginAlert(
+    baseInput(),
+    makeDeps({
+      getSettings: async () =>
+        ({
+          loginAlerts: {
+            ...settingsFixture,
+            webhookUrl: "https://[::ffff:7f00:1]/hook",
+          },
+        }) as never,
+      fetchImpl: async () => new Response("ok", { status: 200 }),
+      recordError: async (message) => {
+        recorded = message;
+      },
+    })
+  );
+
+  expect(result.webhook).toBe("failed");
+  expect(recorded).toBe("login_alert_webhook_url_invalid");
+});
+
 test("recordError failure is swallowed and never throws", async () => {
   const result = await deliverLoginAlert(
     baseInput(),

@@ -19,6 +19,7 @@ import type {
   FormActionRunStatus,
 } from "./formActionsService";
 import { redactAuditText } from "../audit/auditRedaction";
+import { validateOutboundUrl } from "../network/outboundHttpPolicy";
 
 export type RunFormAutomationInput = {
   formId: string;
@@ -213,6 +214,14 @@ const executeWebhookAction = async (
   const renderedUrl = renderTemplateString(config.url, context);
   const renderedHeaders = renderTemplateRecord(config.headers, context);
 
+  // TASK-567: this surface is public-amplified (form submissions trigger it),
+  // so the fully rendered URL is re-validated at every delivery and redirects
+  // are never followed. Config-time already rejected literal blocked targets.
+  const validated = validateOutboundUrl(renderedUrl, { provider: "webhook" });
+  if (!validated.ok) {
+    throw new Error("form_action_webhook_url_invalid");
+  }
+
   const body: Record<string, unknown> = {};
   if (config.includeSubmission) {
     body.submission = context.submission;
@@ -235,6 +244,7 @@ const executeWebhookAction = async (
       },
       body: JSON.stringify(body),
       signal: controller.signal,
+      redirect: "error",
     });
 
     const responseText = await response.text();

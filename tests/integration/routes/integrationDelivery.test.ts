@@ -205,6 +205,60 @@ testIfDb(
 );
 
 testIfDb(
+  "a non-allowlisted slack host is rejected without fetching (TASK-567)",
+  async () => {
+    if (!hasDb) return;
+    await seedRow("slack", { webhookUrl: "https://169.254.169.254/hook" });
+
+    const originalFetch = globalThis.fetch;
+    let fetchCalls = 0;
+    globalThis.fetch = (async () => {
+      fetchCalls += 1;
+      return new Response("ok", { status: 200 });
+    }) as typeof fetch;
+    try {
+      await deliverSlack({ webhookUrl: "https://169.254.169.254/hook" }, eventPayload());
+      const row = await readRow("slack");
+      expect(row?.healthStatus).toBe("issue");
+      expect(row?.lastError).toBe("egress_host_forbidden");
+      expect(row?.lastError).not.toContain("169.254.169.254");
+      expect(fetchCalls).toBe(0);
+    } finally {
+      globalThis.fetch = originalFetch;
+      await restoreRow("slack");
+    }
+  },
+  30000
+);
+
+testIfDb(
+  "a non-allowlisted zapier host is rejected without fetching (TASK-567)",
+  async () => {
+    if (!hasDb) return;
+    await seedRow("zapier", { hookUrl: "https://hooks.attacker.test/hook" });
+
+    const originalFetch = globalThis.fetch;
+    let fetchCalls = 0;
+    globalThis.fetch = (async () => {
+      fetchCalls += 1;
+      return new Response("ok", { status: 200 });
+    }) as typeof fetch;
+    try {
+      await deliverZapier({ hookUrl: "https://hooks.attacker.test/hook" }, eventPayload());
+      const row = await readRow("zapier");
+      expect(row?.healthStatus).toBe("issue");
+      expect(row?.lastError).toBe("egress_host_forbidden");
+      expect(row?.lastError).not.toContain("attacker.test");
+      expect(fetchCalls).toBe(0);
+    } finally {
+      globalThis.fetch = originalFetch;
+      await restoreRow("zapier");
+    }
+  },
+  30000
+);
+
+testIfDb(
   "a timeout delivery records issue with the timeout code",
   async () => {
     if (!hasDb) return;

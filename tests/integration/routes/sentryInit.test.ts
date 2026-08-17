@@ -75,6 +75,18 @@ test("boot init with a dsn enables monitoring and initializes the SDK once", asy
   expect(initCalls[0].tracesSampleRate).toBe(0);
 });
 
+test("boot init rejects a non-Sentry-host DSN fail-closed (TASK-567)", async () => {
+  await initializeErrorMonitoringOnBoot(stubDeps({ dsn: "https://public@example.com/0" }));
+  expect(isErrorMonitoringEnabled()).toBe(false);
+  expect(initCalls).toHaveLength(0);
+
+  await initializeErrorMonitoringOnBoot(
+    stubDeps({ dsn: "https://public@attacker.ingest.sentry.io.evil.test/0" })
+  );
+  expect(isErrorMonitoringEnabled()).toBe(false);
+  expect(initCalls).toHaveLength(0);
+});
+
 test("boot init is idempotent across repeated calls", async () => {
   await initializeErrorMonitoringOnBoot(stubDeps({ dsn: "https://public@o0.ingest.sentry.io/0" }));
   await initializeErrorMonitoringOnBoot(stubDeps({ dsn: "https://other@o0.ingest.sentry.io/0" }));

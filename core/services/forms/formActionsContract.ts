@@ -1,3 +1,5 @@
+import { validateOutboundUrl } from "../network/outboundHttpPolicy";
+
 export type FormActionType = "email" | "webhook" | "entry_sync" | "redirect" | "success_message";
 
 export type FormActionCondition =
@@ -193,10 +195,42 @@ const normalizeWebhookHeaders = (value: unknown) => {
   return headers;
 };
 
+/**
+ * TASK-567 config-time gate for the public-amplified form-action webhook
+ * surface. Literal URLs get the full shared blocklist now; templated URLs
+ * validate the static prefix up to the first placeholder (a templated host is
+ * re-validated against the fully rendered URL at every delivery, fail-closed).
+ */
+const assertFormWebhookUrlAllowed = (url: string) => {
+  const templateStart = url.indexOf("{{");
+  if (templateStart === -1) {
+    if (!validateOutboundUrl(url, { provider: "webhook" }).ok) {
+      throw new Error("form_action_invalid_config");
+    }
+    return;
+  }
+
+  const staticPrefix = url.slice(0, templateStart);
+  if (!staticPrefix.trim()) return; // host itself is templated; delivery backstops
+  const prefixResult = validateOutboundUrl(staticPrefix, { provider: "webhook" });
+  if (prefixResult.ok) return;
+  // The static prefix is not a complete URL (e.g. "https://{{host}}/x");
+  // enforce the https scheme here, host validation happens at delivery time.
+  if (prefixResult.code === "egress_invalid_url") {
+    const scheme = /^([a-z][a-z0-9+.-]*):\/\//i.exec(staticPrefix)?.[1];
+    if (!scheme || scheme.toLowerCase() !== "https") {
+      throw new Error("form_action_invalid_config");
+    }
+    return;
+  }
+  throw new Error("form_action_invalid_config");
+};
+
 const normalizeWebhookConfig = (value: unknown): FormActionWebhookConfig => {
   if (!isRecord(value)) throw new Error("form_action_invalid_config");
   const url = readString(value.url);
   if (!url) throw new Error("form_action_invalid_config");
+  assertFormWebhookUrlAllowed(url);
 
   const methodRaw = readString(value.method)?.toUpperCase();
   const method = WEBHOOK_METHODS.has(methodRaw as FormActionWebhookConfig["method"])

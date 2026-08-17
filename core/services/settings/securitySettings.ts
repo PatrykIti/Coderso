@@ -9,6 +9,7 @@ import {
 } from "../security/secretStore";
 import { isPasswordPepperConfigured } from "../auth/passwordPepper";
 import { isLikelyEmail } from "../security/piiEmail";
+import { validateOutboundUrl } from "../network/outboundHttpPolicy";
 
 export type RateLimitBucket =
   "auth" | "admin_read" | "admin_write" | "public_read" | "public_write" | "assistant";
@@ -147,7 +148,6 @@ const RATE_LIMIT_BUCKETS: RateLimitBucket[] = [
 
 const MAX_LOGIN_ALERT_RECIPIENTS = 10;
 const MAX_LOGIN_ALERT_DELIVERY_ERROR_LENGTH = 240;
-const LOGIN_ALERT_LOOPBACK_HOSTNAMES = new Set(["localhost", "127.0.0.1"]);
 
 const DEFAULT_SECURITY_SETTINGS: SecuritySettings = {
   requestId: {
@@ -372,42 +372,6 @@ const resolveBotSecretValue = (secret: BotProtectionSettings["secretKey"]) => {
   return null;
 };
 
-const isLoginWebhookLoopbackHost = (hostname: string) =>
-  LOGIN_ALERT_LOOPBACK_HOSTNAMES.has(hostname.toLowerCase());
-
-const isLoginWebhookPrivateHost = (hostname: string) => {
-  const host = hostname.toLowerCase().replace(/^\[|\]$/g, "");
-  if (host === "::1") return true;
-  const ipv4 = host.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
-  if (ipv4) {
-    const first = Number(ipv4[1]);
-    const second = Number(ipv4[2]);
-    if (first === 10) return true;
-    if (first === 127) return true;
-    if (first === 172 && second >= 16 && second <= 31) return true;
-    if (first === 192 && second === 168) return true;
-    if (first === 169 && second === 254) return true;
-    if (first === 0) return true;
-    if (first === 100 && second >= 64 && second <= 127) return true;
-    if (first >= 224) return true;
-    return false;
-  }
-  if (host.includes(":")) {
-    if (host.startsWith("fc") || host.startsWith("fd")) return true;
-    if (
-      host.startsWith("fe8") ||
-      host.startsWith("fe9") ||
-      host.startsWith("fea") ||
-      host.startsWith("feb")
-    ) {
-      return true;
-    }
-    if (host === "::" || host.startsWith("0:0:0:0:0:0:0:")) return true;
-    return false;
-  }
-  return false;
-};
-
 const normalizeLoginRecipients = (value: unknown, fallback: string[]) => {
   const list = normalizeStringList(value, fallback, { lowerCase: true });
   return list.filter((entry) => isLikelyEmail(entry)).slice(0, MAX_LOGIN_ALERT_RECIPIENTS);
@@ -420,24 +384,18 @@ const normalizeLoginWebhookUrl = (value: unknown, fallback: string | null) => {
   const trimmed = value.trim();
   if (!trimmed) throw new Error("security_settings_invalid");
 
-  let url: URL;
-  try {
-    url = new URL(trimmed);
-  } catch {
+  // TASK-567: the shared outbound policy owns the login-alert SSRF blocklist
+  // (private/loopback/link-local/CGNAT/reserved/multicast IPv4+IPv6, mapped
+  // IPv6 and NAT64 prefixes). It keeps the documented localhost-HTTP dev seam
+  // alive outside production and stays HTTPS-only in production.
+  const validated = validateOutboundUrl(trimmed, { provider: "login-alert" });
+  if (!validated.ok) {
     throw new Error("security_settings_invalid");
   }
-
-  const loopback = isLoginWebhookLoopbackHost(url.hostname);
-  if (url.protocol !== "https:" && !(url.protocol === "http:" && loopback)) {
+  if (validated.url.username || validated.url.password) {
     throw new Error("security_settings_invalid");
   }
-  if (!loopback && isLoginWebhookPrivateHost(url.hostname)) {
-    throw new Error("security_settings_invalid");
-  }
-  if (url.username || url.password) {
-    throw new Error("security_settings_invalid");
-  }
-  return url.toString();
+  return validated.url.toString();
 };
 
 const normalizeLoginWebhookSecret = (
