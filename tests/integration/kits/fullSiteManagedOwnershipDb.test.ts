@@ -1,8 +1,6 @@
 import { expect, test } from "bun:test";
 import { randomUUID } from "node:crypto";
-import { eq, inArray } from "drizzle-orm";
 import { db } from "../../../core/db/client";
-import { acquireNativeCmsWriterFence } from "../../../core/db/nativeCmsWriterFence";
 import {
   contentEntries,
   contentTypes,
@@ -11,209 +9,26 @@ import {
   forms,
   menuItems,
   menus,
-  settings,
   solutionKitInstallItems,
   solutionKitInstallRuns,
 } from "../../../core/db/schema";
-import {
-  normalizeFormActionsInput,
-  type NormalizedFormAction,
-} from "../../../core/services/forms/formActionsContract";
 import { createFullSiteCurrentResourceResolver } from "../../../core/services/kits/fullSiteInstall/currentResourceResolver";
-import { readFullSitePlanningResourcesBatch } from "../../../core/services/kits/fullSiteInstall/planningResourceBatchReader";
-import { createFullSitePlanningSnapshotLoader } from "../../../core/services/kits/fullSiteInstall/planningSnapshot";
-import { planFullSiteInstall } from "../../../core/services/kits/fullSiteInstallPlanner";
 import type {
   CurrentResourceState,
   FullSiteCurrentResourceResolver,
-  FullSiteInstallLedgerPort,
   FullSiteInstallResourceKind,
 } from "../../../core/services/kits/fullSiteInstallTypes";
+import { createLegacyInstallLedger } from "../../../core/services/kits/legacyInstallRunPersistence";
+import type { JsonObject, ResourceSeed } from "../../../core/services/kits/fullSitePackage/types";
 import {
-  createLegacyInstallLedger,
-  findManagedResourceEvidenceBatch,
-} from "../../../core/services/kits/legacyInstallRunPersistence";
-import type {
-  FullSitePackageResources,
-  FullSitePackageV1,
-  JsonObject,
-  ResourceSeed,
-} from "../../../core/services/kits/fullSitePackage/types";
-const CLEANUP_FAILURE = "full_site_managed_ownership_cleanup_failed";
-type OwnedIds = {
-  installItems: Set<string>;
-  installRuns: Set<string>;
-  formActions: Set<string>;
-  forms: Set<string>;
-  menuItems: Set<string>;
-  menus: Set<string>;
-  entries: Set<string>;
-  detailPages: Set<string>;
-  contentTypes: Set<string>;
-};
-const createOwnedIds = (): OwnedIds => ({
-  installItems: new Set(),
-  installRuns: new Set(),
-  formActions: new Set(),
-  forms: new Set(),
-  menuItems: new Set(),
-  menus: new Set(),
-  entries: new Set(),
-  detailPages: new Set(),
-  contentTypes: new Set(),
-});
-const ownId = (ids: Set<string>, id: string = randomUUID()): string => {
-  ids.add(id);
-  return id;
-};
-const cleanupOwnedIds = async (owned: OwnedIds): Promise<void> => {
-  let cleanupFailed = false;
-  const attempt = async (
-    ids: ReadonlySet<string>,
-    remove: (values: string[]) => Promise<unknown>
-  ): Promise<void> => {
-    if (ids.size === 0) return;
-    try {
-      await remove([...ids]);
-    } catch {
-      cleanupFailed = true;
-    }
-  };
-  await attempt(owned.installItems, async (ids) =>
-    db.delete(solutionKitInstallItems).where(inArray(solutionKitInstallItems.id, ids))
-  );
-  await attempt(owned.formActions, async (ids) =>
-    db.delete(formActions).where(inArray(formActions.id, ids))
-  );
-  await attempt(owned.menuItems, async (ids) =>
-    db.delete(menuItems).where(inArray(menuItems.id, ids))
-  );
-  await attempt(owned.entries, async (ids) =>
-    db.delete(contentEntries).where(inArray(contentEntries.id, ids))
-  );
-  await attempt(owned.detailPages, async (ids) =>
-    db.delete(detailPageDocuments).where(inArray(detailPageDocuments.id, ids))
-  );
-  await attempt(owned.installRuns, async (ids) =>
-    db.delete(solutionKitInstallRuns).where(inArray(solutionKitInstallRuns.id, ids))
-  );
-  await attempt(owned.forms, async (ids) => db.delete(forms).where(inArray(forms.id, ids)));
-  await attempt(owned.menus, async (ids) => db.delete(menus).where(inArray(menus.id, ids)));
-  await attempt(owned.contentTypes, async (ids) =>
-    db.delete(contentTypes).where(inArray(contentTypes.id, ids))
-  );
-  if (cleanupFailed) throw new Error(CLEANUP_FAILURE);
-};
-const emptyResources = (): FullSitePackageResources => ({
-  contentTypes: [],
-  forms: [],
-  pageTemplates: [],
-  listingTemplates: [],
-  entries: [],
-  listingQueries: [],
-  detailPages: [],
-  pages: [],
-  menus: [],
-  settings: [],
-});
-const packageFixture = (
-  packageKey: string,
-  add: (resources: FullSitePackageResources) => void
-): FullSitePackageV1 => {
-  const resources = emptyResources();
-  add(resources);
-  return {
-    schemaVersion: 1,
-    key: packageKey,
-    metadata: { name: `Ownership ${packageKey}`, locale: "en" },
-    resources,
-  };
-};
-const identityNormalizer = async ({ desired }: { desired: JsonObject }) => desired;
-const planPackage = (
-  pkg: FullSitePackageV1,
-  ledger: FullSiteInstallLedgerPort,
-  resolveCurrentResource: FullSiteCurrentResourceResolver,
-  allowSettingTakeover?: true,
-  onSnapshotLoad?: () => void
-) => {
-  void ledger;
-  void resolveCurrentResource;
-  const loadSnapshot = createFullSitePlanningSnapshotLoader({
-    packageKey: pkg.key,
-    withReadTransaction: (read) =>
-      db.transaction(
-        async (tx) => {
-          await acquireNativeCmsWriterFence(tx);
-          return read({
-            findEvidence: (input) => findManagedResourceEvidenceBatch(tx, input),
-            readNative: (input) => readFullSitePlanningResourcesBatch(tx, input),
-          });
-        },
-        { isolationLevel: "read committed" }
-      ),
-  });
-  return planFullSiteInstall(pkg, {
-    loadPlanningSnapshot: (resources) => {
-      onSnapshotLoad?.();
-      return loadSnapshot(resources);
-    },
-    normalizeDesired: identityNormalizer,
-    ...(allowSettingTakeover ? { allowSettingTakeover } : {}),
-  });
-};
-const projectPersistedFormActions = (input: unknown): NormalizedFormAction[] =>
-  normalizeFormActionsInput(input)
-    .sort((left, right) => left.orderIndex - right.orderIndex || left.id.localeCompare(right.id))
-    .map((action, orderIndex) => ({ ...action, orderIndex }));
-const persistEvidence = async (input: {
-  owned: OwnedIds;
-  packageKey: string;
-  kind: FullSiteInstallResourceKind;
-  key: string;
-  resourceId: string;
-  desired?: JsonObject;
-  operation?: "create" | "update" | "noop";
-  itemStatus?: "planned" | "success" | "failed" | "skipped";
-  runStatus?: "success" | "failed";
-  runId?: string;
-  itemId?: string;
-}) => {
-  const runId = ownId(input.owned.installRuns, input.runId);
-  const itemId = ownId(input.owned.installItems, input.itemId);
-  const timestamp = new Date();
-  const runStatus = input.runStatus ?? "success";
-  await db.insert(solutionKitInstallRuns).values({
-    id: runId,
-    kitId: input.packageKey,
-    mode: "apply",
-    status: runStatus,
-    actorId: null,
-    rollbackOfRunId: null,
-    options: { fullSitePackage: true },
-    summary: {},
-    error: runStatus === "failed" ? "site_package_apply_failed" : null,
-    createdAt: timestamp,
-    updatedAt: timestamp,
-    finishedAt: timestamp,
-  });
-  await db.insert(solutionKitInstallItems).values({
-    id: itemId,
-    runId,
-    position: 0,
-    resourceType: input.kind,
-    resourceKey: input.key,
-    operation: input.operation ?? "create",
-    status: input.itemStatus ?? "success",
-    beforeSnapshot: null,
-    afterSnapshot: { id: input.resourceId, desired: input.desired ?? {} },
-    rollbackAction: null,
-    error: null,
-    createdAt: timestamp,
-    updatedAt: timestamp,
-  });
-  return { id: runId, itemId };
-};
+  cleanupOwnedIds,
+  createOwnedIds,
+  ownId,
+  packageFixture,
+  persistEvidence,
+  planPackage,
+  projectPersistedFormActions,
+} from "./fullSiteManagedOwnershipSupport";
 test("natural-key-only native equality remains an unmanaged planner conflict", async () => {
   const scope = randomUUID();
   const packageKey = `ownership-natural-${scope}`;
@@ -913,89 +728,5 @@ test("canonical full Form projection yields noop, then an intended managed updat
     });
   } finally {
     await cleanupOwnedIds(owned);
-  }
-});
-test("setting takeover is explicit and remains isolated from non-setting ownership", async () => {
-  const scope = randomUUID();
-  const packageKey = `ownership-setting-${scope}`;
-  const settingKey = "site.name";
-  const slug = `ownership-setting-form-${scope}`;
-  const owned = createOwnedIds();
-  {
-    const [priorSetting] = await db
-      .select({ value: settings.value, updatedAt: settings.updatedAt })
-      .from(settings)
-      .where(eq(settings.key, settingKey));
-    let settingWriteStarted = false;
-    try {
-      const formId = ownId(owned.forms);
-      await db.insert(forms).values({
-        id: formId,
-        name: `Setting isolation ${scope}`,
-        slug,
-        status: "draft",
-        settings: {},
-      });
-      settingWriteStarted = true;
-      await db
-        .insert(settings)
-        .values({ key: settingKey, value: `Before ${scope}`, updatedAt: new Date() })
-        .onConflictDoUpdate({
-          target: settings.key,
-          set: { value: `Before ${scope}`, updatedAt: new Date() },
-        });
-      const ledger = createLegacyInstallLedger();
-      const resolver = createFullSiteCurrentResourceResolver(packageKey, ledger);
-      const settingOnly = packageFixture(packageKey, (resources) => {
-        resources.settings.push({ key: settingKey, desired: { value: `After ${scope}` } });
-      });
-      await expect(planPackage(settingOnly, ledger, resolver)).rejects.toMatchObject({
-        code: "site_package_conflict",
-        identity: `setting:${settingKey}`,
-      });
-      const takeoverPlan = await planPackage(settingOnly, ledger, resolver, true);
-      expect(takeoverPlan.operations[0]).toMatchObject({
-        operation: "update",
-        managedRunId: null,
-        currentDesired: { value: `Before ${scope}` },
-      });
-      const mixed = packageFixture(packageKey, (resources) => {
-        resources.forms.push({ key: "brief", desired: { slug } });
-        resources.settings.push({ key: settingKey, desired: { value: `After ${scope}` } });
-      });
-      await expect(planPackage(mixed, ledger, resolver, true)).rejects.toMatchObject({
-        code: "site_package_conflict",
-        identity: "form:brief",
-      });
-    } finally {
-      let cleanupFailed = false;
-      try {
-        await cleanupOwnedIds(owned);
-      } catch {
-        cleanupFailed = true;
-      }
-      if (settingWriteStarted) {
-        try {
-          if (priorSetting) {
-            await db
-              .insert(settings)
-              .values({
-                key: settingKey,
-                value: priorSetting.value,
-                updatedAt: priorSetting.updatedAt,
-              })
-              .onConflictDoUpdate({
-                target: settings.key,
-                set: { value: priorSetting.value, updatedAt: priorSetting.updatedAt },
-              });
-          } else {
-            await db.delete(settings).where(eq(settings.key, settingKey));
-          }
-        } catch {
-          cleanupFailed = true;
-        }
-      }
-      if (cleanupFailed) throw new Error(CLEANUP_FAILURE);
-    }
   }
 });
