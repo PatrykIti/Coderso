@@ -35,6 +35,13 @@ coherent destination/SSRF policy:
 - **Sentry init** passes the raw DSN straight to the SDK
   (`errorMonitoring.ts:100-108`); only `healthEvaluator.ts:52` gates it with
   `isParseableSentryDsn`.
+- **Form-action webhooks are a fourth, most public-amplified surface:**
+  `formAutomationRunnerCore.ts:213,230-238` fetches admin-configured action
+  URLs with no scheme/host/SSRF/redirect guard (same class as M-491-01), the
+  URL is accepted as any string (`formActionsContract.ts:196-219`), and it is
+  triggered by PUBLIC form submissions (`publicFormsApi.ts:131` → runner
+  `executeAction` at `:416`), so an attacker-controlled redirect/SSRF chain is
+  public-amplified. Not owned by any other task; must be in scope.
 
 A user with `settings:write` can force a server-side request to loopback/private
 network/metadata via literal or mapped addresses or via a redirect chain.
@@ -50,15 +57,21 @@ network/metadata via literal or mapped addresses or via a redirect chain.
 - `core/services/settings/securitySettings.ts:375-440`
   (`isLoginWebhookPrivateHost` misses `::ffff:` and `64:ff9b::` mapped forms),
   `core/services/auth/loginAlertDeliveryService.ts:147-155` (fetch without
-  `redirect: "error"`).
+  `redirect: "error"`), `core/services/settings/securitySettings.ts:416-441`
+  (`normalizeLoginWebhookUrl` config-time normalization — no validator today),
+  `core/services/forms/formAutomationRunnerCore.ts:213,230-238` (public-triggered
+  action fetch, no guard), `core/services/forms/formActionsContract.ts:196-219`
+  (action URL accepted as any string), `core/server/publicFormsApi.ts:131`
+  (public submission → runner).
 - TASK-492 contract `TASK-492-01-L01-...md:117-123` (explicit private/loopback/
   link-local block).
 
 ## Scope
 
 - One shared outbound URL validator used by ALL webhook/egress paths
-  (integrations, login alerts, custom webhooks, assistant LLM providers, Sentry
-  DSN, any future webhook), not an ad-hoc per-adapter check.
+  (integrations, login alerts, custom webhooks, form-action webhooks, assistant
+  LLM providers, Sentry DSN, any future webhook), not an ad-hoc per-adapter
+  check.
 - Validate per provider: HTTPS required; Slack/Zapier host allowlists; custom
   webhooks get the full blocklist policy (HTTPS + private/loopback/link-local/
   CGNAT/reserved/multicast IPv4 and IPv6, including IPv4-mapped IPv6 and NAT64
@@ -71,6 +84,12 @@ network/metadata via literal or mapped addresses or via a redirect chain.
 - Sentry policy: validate the DSN at init (`isParseableSentryDsn` +
   `host === "ingest.sentry.io"` or Sentry-owned host allowlist) before passing
   to the SDK; reject others fail-closed.
+- Form-action webhook policy: same blocklist class as custom webhooks (HTTPS +
+  private/loopback/mapped/NAT64 block, `redirect: "error"`, no host allowlist
+  by design; customer endpoints). Validate at form-action configuration time
+  (`formActionsContract.ts:196-219` save path) AND at every delivery
+  (`formAutomationRunnerCore.ts:213,230-238`), fail-closed. This is the
+  public-amplified surface; add the negative matrix explicitly.
 - Block redirects (`redirect: "error"`) in every delivery path; sanitize the
   redirect error to the existing machine-readable delivery error at the
   `retryPost` boundary so the URL never persists into
@@ -114,9 +133,14 @@ Flow per delivery:
 
 Wire the owner into:
 - `slackDelivery.ts`, `zapierDelivery.ts` (allowlist + redirect).
-- `loginAlertDeliveryService.ts:147-155` (blocklist + redirect).
+- `loginAlertDeliveryService.ts:147-155` (blocklist + redirect) AND
+  `securitySettings.ts:416-441` (`normalizeLoginWebhookUrl` gains the same
+  validator at CONFIG time so the promised config-time AND delivery-time
+  rejection both hold; in production `http://localhost` must not persist).
 - `webhooksService.ts:153-167` + `deliveryService.ts:50` (custom webhooks:
   HTTPS + full blocklist + redirect, no host allowlist).
+- `formAutomationRunnerCore.ts:213,230-238` + `formActionsContract.ts:196-219`
+  (form-action webhooks: config-time + delivery-time blocklist, redirect).
 - `retryPost.ts:68-81` — validate before fetch, `redirect: "error"`, sanitize
   the rejection so `webhookDeliveries.lastError` never contains the URL; keep
   timer cleanup.

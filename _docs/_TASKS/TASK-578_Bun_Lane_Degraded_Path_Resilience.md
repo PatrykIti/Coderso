@@ -54,7 +54,8 @@ The Bun parallel lane runner has two degraded-path defects:
   empty timings map asserting more than one worker is used (B files spread by
   bucket defaults).
 - Runner must skip a lane whose file list is empty (do not run `bun test` with
-  no paths); add a fake-worker test for empty `c1`.
+  no paths); add a fake-worker test for empty `c1` AND empty `b`/`perf` lane
+  lists (the guard applies to every lane, not just c1).
 - Keep deterministic filename ordering and the existing LPT/C-split behavior.
 - Update `scripts/bun-lane-classify.ts` emission sites (perf override, A, C, B
   branches) to drop the `weightMs: 0` field entirely; the manifest format does
@@ -71,9 +72,20 @@ The Bun parallel lane runner has two degraded-path defects:
 // weightMs(row, timings) stays `timings[row.file] ?? row.weightMs ?? DEFAULT_WEIGHT[row.bucket]`
 // so pinned `0` semantics are preserved.
 
-// runner (scripts/run-bun-parallel.ts) — skip empty lane:
+// runner (scripts/run-bun-parallel.ts) — skip empty lane (all lanes):
 if (part.c1.length > 0) await runWorker("c1", part.c1, ...);
+if (part.b.length > 0) await runWorker("b0", part.b[0], ...);
+// ... same guard for every b worker and the perf lane
 ```
+
+**Manifest regeneration is REQUIRED as part of this task:** the committed
+`tests/bun-lane-manifest.json` still carries `weightMs: 0` in all 418 rows, and
+`tests/unit/toolchain/bunLaneManifest.test.ts:226-231` pins byte-identity of
+the regenerated manifest (ignoring `generatedAt`). After the classifier change,
+run `bun scripts/bun-lane-classify.ts` and commit the regenerated manifest so
+its rows omit `weightMs`; the byte-identity pin then passes. The regenerated
+manifest must be included in the same commit as the classifier change (no
+separate deferred regeneration).
 
 ## Security Contract
 
@@ -89,7 +101,11 @@ if (part.c1.length > 0) await runWorker("c1", part.c1, ...);
   rows carry NO `weightMs` field (the `weightMs: 0` emission is gone from all
   branches).
 - `bun test tests/integration/toolchain/runBunParallelFakeWorker.test.ts`
-  (extended with empty-c1: no `bun test` invocation with an empty file list).
+  (extended with empty-c1 AND empty-b/perf: no `bun test` invocation with an
+  empty file list).
+- `bun test tests/unit/toolchain/bunLaneManifest.test.ts` — byte-identity pin
+  passes against the regenerated manifest (no `weightMs` fields); the
+  regeneration is part of this task (see Fix Strategy).
 
 ## Notes
 

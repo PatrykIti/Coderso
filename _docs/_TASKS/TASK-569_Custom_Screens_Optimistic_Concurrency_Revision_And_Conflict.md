@@ -22,13 +22,32 @@ JSON document) can be lost. The UI already simulates a 409
 (`custom_screen_conflict`) that the backend never produces, so the UI guard is
 dead code against the real API.
 
-**Scope boundary for `expectedRevision`:** only the definition-bearing editor
-save path requires `expectedRevision`. Non-editor PATCH callers that change only
-`status`/`name`/`showInSidebar` without a definition — the list page status
-toggle and bulk actions (`CustomScreenListPage.tsx:223,272`) and the assistant
-executor (`actionExecutorService.ts:1442,4197,4283`) — do NOT send a revision
-and must keep working. The conditional revision check applies only when the
-payload carries a `definition` (or when `expectedRevision` is present).
+**Scope boundary for `expectedRevision`:** the conditional revision check
+applies when the payload carries a `definition` (or when `expectedRevision` is
+present). Definition-free PATCH callers that change only
+`status`/`name`/`showInSidebar`/`collectionRole`/`compositionKey`/`sidebarLabel`
+without a definition proceed WITHOUT `expectedRevision` (no revision
+precondition on the UPDATE). The list page status toggle and bulk actions
+(`CustomScreenListPage.tsx:223,272`) and the assistant custom-screen.update
+patch action (`actionExecutorService.ts:4280-4290`, sends no definition) are
+revision-free and keep working.
+
+The assistant custom-screen DEFINITION actions are definition-bearing and MUST
+send `expectedRevision: existing.revision` (both call sites hold `existing`
+from `deps.getCustomScreen`, which carries `revision` after the server record
+change):
+
+- `actionExecutorService.ts:1437-1442` — `resolveNext(currentDefinition)`
+  produces `{ definition: nextDefinition }` (non-null after the `:1438` guard);
+  pass `expectedRevision: existing.revision` alongside.
+- `actionExecutorService.ts:4196-4206` — upsert update sends
+  `definition: action.input.definition`, which is REQUIRED on the upsert action
+  (`core/services/assistant/actionPlanTypes.ts:387-401`); pass
+  `expectedRevision: existing.revision` alongside.
+
+A regression test must cover the assistant definition-action shape (section/block
+add/patch/move/remove, binding set, list-view patch, upsert update) sending the
+revision, plus a plain `{ status }` PATCH succeeding without one.
 
 ## Evidence
 
@@ -70,9 +89,13 @@ payload carries a `definition` (or when `expectedRevision` is present).
   needs-reload, not a hard 400).
 - Lock reorder for N2: drop the pre-lock observed read
   (`customScreenService.ts:266`); lock the screen row FIRST (`FOR UPDATE`),
-  then resolve `contentTypeId` from the locked row before
-  `lockContentTypeContext` (`:272`), so concurrent `contentTypeId` changes can
-  never cause a spurious `custom_screen_invalid` 400.
+  then resolve the content type id from BOTH branches — when
+  `input.contentTypeId` is provided, normalize it and target the new content
+  type's context lock + definition normalization; otherwise fall back to the
+  locked row's `contentTypeId` — before `lockContentTypeContext` (`:272`), so
+  concurrent `contentTypeId` changes can never cause a spurious
+  `custom_screen_invalid` 400 and a contentTypeId-changing PATCH validates
+  against the new content type.
 - Client sends the loaded revision; on a real 409 keep the local draft and show
   a conflict message (the existing UI guard path becomes live).
 - Add a two-concurrent-PATCH DB race test + a UI test that a real 409 preserves
@@ -81,21 +104,26 @@ payload carries a `definition` (or when `expectedRevision` is present).
 ## Fix Strategy
 
 ```ts
-// migration (next free number): ALTER TABLE custom_screens ADD COLUMN revision bigint NOT NULL DEFAULT 1;
+// migration 0073 (pinned after 0072_backup_schedule_include; re-read the live
+// journal immediately before allocation): ALTER TABLE custom_screens ADD COLUMN revision bigint NOT NULL DEFAULT 1;
 // service update (definition-bearing path only):
 const [locked] = await tx.select({ id, contentTypeId, revision })
   .from(customScreens).where(eq(customScreens.id, id)).for("update");
 if (!locked) throw new Error("custom_screen_not_found");
-if (input.definition !== undefined) {
+const nextContentTypeId = input.contentTypeId !== undefined
+  ? normalizeContentTypeId(input.contentTypeId)   // PATCH changes the content type
+  : locked.contentTypeId;                          // fallback to the locked row
+if (input.definition !== undefined || input.expectedRevision !== undefined) {
   if (input.expectedRevision == null) throw new Error("custom_screen_revision_required");
-  await lockContentTypeContext(tx, locked.contentTypeId); // AFTER row lock
+  await lockContentTypeContext(tx, nextContentTypeId); // AFTER row lock
   const updated = await tx.update(customScreens)
-    .set({ definition, updatedAt, revision: sql`revision + 1` })
+    .set({ ...definitionFields, contentTypeId: nextContentTypeId, updatedAt, revision: sql`revision + 1` })
     .where(and(eq(customScreens.id, id), eq(customScreens.revision, input.expectedRevision)))
     .returning({ id: customScreens.id, revision: customScreens.revision });
   if (updated.length === 0) throw new Error("custom_screen_conflict");
 }
-// non-definition metadata PATCH: plain UPDATE without the revision precondition
+// non-definition metadata PATCH (status/name/showInSidebar/... without
+// expectedRevision): plain UPDATE without the revision precondition
 ```
 
 `mapCustomScreenError` gains `custom_screen_conflict` → `ApiError(409)` and

@@ -44,8 +44,16 @@ failure must be recorded redacted and testable.
   phase fails. Reuse the existing `logAudit` (`auditService.ts:199`) with
   `sanitizeAuditMetadata` (`core/services/audit/auditRedaction.ts`) — do NOT
   invent a new `logRedactedRestoreFailure` helper. Pin action
-  `backup.mediaRestoreFailure`, targetType `backup`, targetId = run id,
-  severity `error`, message = fixed code only.
+  `backup.mediaRestoreFailure`, targetType `backup`, targetId = the import run
+  id (see below), severity `error`, message = fixed code only.
+- **Run id source (pinned):** `importBackupFromUpload` creates no stored backup
+  row, so there is no DB run id. Reuse the documented synthetic convention:
+  `backupRoutes.ts:307-309` uses `targetId: "import"` for upload-restore audit
+  rows. Use `targetId: "import"` for the media-failure receipt (consistent with
+  the existing upload-restore audit identity), OR the spool-dir UUID
+  (`backupImport.ts:699` `coderso-import-<randomUUID>`) if a run-scoped
+  identity is preferred. Pick ONE and record it in the receipt; TASK-564's
+  `opts.runId` must use the same source.
 - Sanitize the storage error log at `mediaArchive.ts:321` (fixed code, no raw
   error object).
 - Pin rethrow-vs-swallow semantics: the accepted best-effort degradation keeps
@@ -54,7 +62,8 @@ failure must be recorded redacted and testable.
   `mediaRestored`/`skippedMedia` counts (`backupImport.ts:741` currently
   hardcodes `skippedMedia: 0`) so the receipt reflects the true partial state.
   The DB-side failure path (`backup_media_write_failed` → 500) is unchanged for
-  pre-commit phases.
+  callers that treat media failure as fatal (in the import path media always
+  runs post-commit, so there is no pre-commit media phase).
 - Add injection seams for `clearSiteCache` and the failure logger (mirror the
   existing `mediaAdapter` seam at `backupImport.ts:104`) OR document the bun
   module-mock strategy; the validation test must not rely on ambient modules.
@@ -73,7 +82,7 @@ try {
   await logAudit({
     action: "backup.mediaRestoreFailure",
     targetType: "backup",
-    targetId: runId,
+    targetId: runId, // "import" convention (backupRoutes.ts:309) or spool-dir UUID (backupImport.ts:699); TASK-564 uses the same source
     severity: "error",
     metadata: sanitizeAuditMetadata({ code: "media_restore_partial", restored, skipped }),
   });

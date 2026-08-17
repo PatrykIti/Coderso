@@ -57,8 +57,13 @@ export const validateRenameVariantAttributeKey = (
   return { ok: true };
 };
 
-// renameVariantAttributeKey stays (variants: CommerceVariant[], prevKey, nextKey) => CommerceVariant[]
+// renameVariantAttributeKey stays (variants: CommerceVariant[], index: number,
+// prevKey: string, nextKey: string) => CommerceVariant[]  // real signature
+// commerceEditorModel.ts:163-175; CommerceVariantsCard.tsx:224 passes the index
 // and is only called after the predicate passes (or is a no-op on collision).
+// The model function may ALSO gain an internal no-op guard (defense in depth:
+// refuse when normalized !== prevKey && normalized in attrs), which breaks no
+// consumer or test; the editor predicate remains the primary mutation gate.
 ```
 
 ```tsx

@@ -48,6 +48,9 @@ and loads full JSON payloads.
   update and rollback leaves no new revision. Restore re-validates the target
   snapshot exactly like `updateEntry` does today so a stale/non-conforming
   snapshot surfaces `ContentValidationError` instead of persisting.
+  Keep the existing no-op short-circuit (`areRevisionSnapshotsEqual` →
+  `{ restored: false }` with NO new snapshot) and the `actorId`-null snapshot
+  guard, both pinned by `entryRevisionRestore.test.ts:183-199`.
 - Subtask 02 (M-487-02): keyset-cursor metadata page (id, version, createdAt,
   author; no `data`), bounded page size; narrow `getEntryRevisionData(revisionId)`
   detail read used by restore; cursor no-gap/no-dup + query-shape tests.
@@ -57,6 +60,14 @@ and loads full JSON payloads.
   (render via the detail read), and `tests/vitest/admin/entriesClientRevisions.test.ts`
   (fixtures no longer carry `data`). Without this the metadata page breaks the
   preview and the client tests.
+- **NEW internal endpoint (subtask 02):** `GET
+  /content/:type/entries/:id/revisions/:revisionId` — narrow detail read for the
+  client's `getEntryRevisionData` (id, version, data, author, timestamps),
+  `content:read`, strict params validation, mapped via `mapContentEntryError`.
+  The current `contentEntryRoutes.ts:403-415` has only the list route and
+  `:417-439` only the restore POST; the detail route is NEW, so the Security
+  Contract claim "Endpoints unchanged" must be corrected (list + restore stay
+  unchanged, detail is additive).
 - Subtask 03 (N3): unique `(entryId, version)` index (migration + snapshot +
   journal) + bounded retry on conflict; concurrency-safe version allocation.
 
@@ -77,13 +88,20 @@ return runEntryTransaction(async (tx) => {
     .where(and(eq(contentRevisions.entryId, entryId), eq(contentRevisions.id, revisionId)))
     .limit(1);
   if (!revision) throw new Error("entry_revision_not_found");
-  const schema = await getContentTypeById(tx, entry.typeId); // or existing loader
+  const schema = await getEntryContentTypeWithExecutor(tx, entry.typeId); // tx-scoped loader (entryService.ts:465)
   await validateEntryData(entry.typeId, schema, revision.data); // throws ContentValidationError
   await validateEntryReferences(schema, revision.data, tx);     // throws on broken refs
-  await createEntryRevisionTx(tx, entryId, currentData(entry), userId); // snapshot LOCKED current
+  if (areRevisionSnapshotsEqual(currentData(entry), revision.data)) {
+    return { restored: false }; // no-op: NO new snapshot (pinned by entryRevisionRestore.test.ts:183-199)
+  }
+  if (userId) await createEntryRevisionTx(tx, entryId, currentData(entry), userId); // snapshot LOCKED current
   await updateEntryDataTx(tx, entryId, revision.data);          // tx-scoped write (no re-validation loop)
-  // cache invalidation AFTER commit via the existing runEntryTransaction onCommit hook
 });
+// NO onCommit hook exists on runEntryTransaction (it is a bare db.transaction
+// wrapper, entryService.ts:75,318-320). Use the REAL post-commit seam:
+// applyEntryPostCommitCache(deps, entryId, { changed: true, ... }) after the
+// transaction resolves, matching the current restoreEntryRevision pattern at
+// entryService.ts:851-859 (with a post-commit entry re-read for the cacheRef).
 ```
 
 If any validation fails before the snapshot write, nothing is persisted and no
@@ -91,9 +109,12 @@ snapshot is left behind (the whole transaction rolls back).
 
 ## Security Contract
 
-- Endpoints unchanged: list requires `content:read`, restore `content:write`
-  (`contentEntryRoutes.ts:403-439`).
-- No new payload fields; reject-unknown unchanged.
+- Endpoints: list `GET .../revisions` and restore `POST .../restore` unchanged
+  (`content:read` / `content:write`, `contentEntryRoutes.ts:403-439`); NEW
+  detail `GET .../revisions/:revisionId` (subtask 02) is `internal`, requires
+  `content:read`, strict params validation, reject-unknown body none (GET),
+  mapped via `mapContentEntryError`.
+- No new payload fields on existing endpoints; reject-unknown unchanged.
 - Errors machine-readable: existing `entry_revision_not_found` (404) kept;
   add `revision_conflict` (409, unique-constraint retry exhaustion) to
   `mapContentEntryError` (`contentEntryRoutes.ts:104`); the mapper name is

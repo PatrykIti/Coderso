@@ -73,7 +73,13 @@ stop() {
 
 - `watchTrigger(p)` in the original pseudocode is an abstraction of the real
   `watchTrigger(popup.trigger, env, cb)` signature — implement against the real
-  one.
+  one. Similarly, `shouldShowPopup(p, this.env)` in the pseudocode above is an
+  abstraction of the real `shouldShowPopup(popupId, frequency, env)` signature
+  (`core/services/popups/runtime/frequencyGate.ts:23-27`, called at
+  `popupRuntime.ts:62`) — implement against the real one. The fire callback is
+  zero-arg and must keep `deps.render`, `recordPopupShown`, and `dispose()`
+  (existing `popupRuntime.ts:63-69`); `stop()`'s `this.disposeAll()` is the
+  real inline disposal loop (`popupRuntime.ts:36-37`).
 - The stale fetch-rejection path must NOT clear a newer start's latch: only
   reset `started` when `gen === this.generation` (keep the existing 'fetch
   rejection' tests' behavior).

@@ -51,7 +51,10 @@ TASK-571 lands AFTER it (land order pin). TASK-571 must NOT touch
   `id` tiebreaker, and no composite index serves the keyset cursor
   (`form_submissions` has only `formIdx`, `createdIdx`, `statusIdx`). Add a
   composite index `(form_id, created_at DESC, id DESC)` with FULL migration
-  artifacts (SQL + `meta/*_snapshot.json` + `meta/_journal.json` update), and
+  artifacts (SQL + `meta/*_snapshot.json` + `meta/_journal.json` update;
+  migration number pinned to **0075** after TASK-569 (0073) and TASK-564
+  (0074); re-read the live journal immediately before allocation, since 0073/0074
+  are allocated by sibling streams), and
   specify `ORDER BY created_at DESC, id DESC` with the `id` tiebreaker in the
   cursor contract. Capture sanitized `EXPLAIN (ANALYZE, BUFFERS)` against
   small + large fixtures (no real submissions data in evidence).
@@ -65,9 +68,29 @@ TASK-571 lands AFTER it (land order pin). TASK-571 must NOT touch
   (`:86-107`). JSON is streamed directly (header not required).
 - Keep PII omission (`ip`/`userAgent` excluded) and the CSV formula injection
   guard (`submissionExport.ts:14-18,31-38`).
+- **Export job table (explicit schema):** new `submission_export_jobs` table in
+  `core/db/tables/forms.ts` (or a sibling table module owned by this task),
+  columns: `id` uuid PK defaultRandom, `form_id` uuid NOT NULL FK→forms
+  (`onDelete: cascade`), `format` text NOT NULL check `csv|json`, `status` text
+  NOT NULL check `queued|running|done|failed`, `row_count` integer NULL,
+  `bytes` bigint NULL, `artifact_key` text NULL, `token_hash` text NULL
+  (HMAC of the short-lived download token, never the raw token),
+  `token_expires_at` timestamptz NULL, `error_code` text NULL (machine-readable
+  only, never driver messages), `created_by` uuid NULL FK→users,
+  `created_at` timestamptz default now NOT NULL, `updated_at` timestamptz
+  default now NOT NULL; index `(form_id, status)` + `created_at` for the
+  bounded list. Ship FULL migration artifacts (SQL + snapshot + journal) for
+  BOTH the index and this table atomically under one writer.
 - Job/artifact lifecycle: scheduler/worker dispatch, temp artifact file,
   short-lived admin-scoped download link with TTL, and bounded retention/
-  cleanup (reuse existing job/outbox infra patterns, no new competing loops).
+  cleanup. **There is no outbox implementation in the repo** (only AGENTS.md
+  spec text); the concrete pattern to mirror is `core/server/jobs/backupScheduler.ts`
+  — env-gated setInterval ticker + advisory session lock (own namespace/key)
+  + start-seam registration in `core/server/httpServer.ts` (backupScheduler is
+  registered at `:548`). Retention uses the same scheduler tick (bounded,
+  resumable prune of expired `submission_export_jobs` rows + artifact files),
+  modeled on `trafficRepository.ts`'s `maybePruneExpiredTraffic` opportunistic
+  prune. No new competing loop is introduced.
 - Tests: multi-batch row budget, hard size-limit test, cursor no-gap/no-dup,
   query-shape (export loads only consumed columns), index EXPLAIN evidence.
 
@@ -103,6 +126,15 @@ export async function listSubmissionExportJobs(formId: string): Promise<...>; //
 4. CSV keeps formula guard + PII omission (reuse existing helpers).
 
 The list route stays untouched (TASK-551-03-L02 owns it).
+
+**Allowed export-only edit surface on L02-owned files:** TASK-571 may edit
+`formsRoutes.ts`, `formSchemas.ts`, and `formsClient.ts` ONLY for the
+export/job/status functions (export route → job orchestration + status route;
+new job/status input schemas; `formsClient.exportFormSubmissions` → job flow),
+and ONLY after TASK-551-03-L02 closes (land order). It must NOT touch the list
+route, `FormSubmissionsPage.tsx`, `submissionReadService.ts`, or the list
+methods of `formsClient.ts`. New job/status schema keys must join their
+reject-unknown allowlists AND ship a round-trip persistence test (repo rule).
 
 ## Security Contract
 

@@ -42,9 +42,17 @@ limit, so large instances violate the scalability contract.
   absent; `withSessionDatabaseClient` exists but the restore runs inside the ONE
   outer `db.transaction` on the default client). Therefore ship a persistent
   staging table `backup_users_staging` with FULL migration artifacts (SQL +
-  `meta/*_snapshot.json` + `meta/_journal.json` update), unique run-scoped rows
+  `meta/*_snapshot.json` + `meta/_journal.json` update; migration number pinned
+  to **0074** after TASK-569 (0073); re-read the live journal immediately
+  before allocation, since 0073 is allocated by the sibling 569 stream), unique
+  run-scoped rows
   (`runId` + natural-key columns), idempotent per-run cleanup, and a
   rollback/cleanup runbook in the task handoff.
+- **Run id source (pinned, shared with TASK-563):** `importBackupFromUpload`
+  creates no stored backup row, so `opts.runId` must use the same source as
+  TASK-563's media-failure receipt: either the synthetic `"import"` convention
+  (`backupRoutes.ts:307-309`) or the spool-dir UUID (`backupImport.ts:699`
+  `coderso-import-<randomUUID>`). Pick ONE; both contracts must agree.
 - Replace the full-array path: stream NDJSON lines into the staging table in
   bounded batches (~5k/batch) via `ndjsonLineBatches()`, then run the existing
   set-based natural-key collision guard and user_roles reconcile as SQL against
@@ -78,7 +86,16 @@ export async function restoreUsersSectionTx(
   //    Same for users.email. (PII-safe: offending values never thrown.)
   // 3. Bounded FK-missing roleId guard + user_roles reconcile via SQL against
   //    staging (scoped to archived userIds; batched deletes/inserts <= 500).
-  // 4. Admin-lockout guard: unchanged set-based query on final tables.
+  // 3.5 STAGING -> FINAL upsert (NEW, required): batched
+  //    INSERT INTO roles (id, name, ...) SELECT ... FROM backup_users_staging
+  //    WHERE run_id = $1 ON CONFLICT (id) DO UPDATE SET ... (mirror the
+  //    excluded.* sets today at backupUsersSection.ts:340-373), then the same
+  //    batched upsert for users (backupUsersSection.ts:352) and user_roles
+  //    (composite-pk onConflictDoNothing, :370). Without this step the final
+  //    tables never change and the lockout guard below would run against
+  //    pre-restore state.
+  // 4. Admin-lockout guard: unchanged set-based query on final tables
+  //    (backupUsersSection.ts:405-419, runs AFTER the upsert).
   // 5. DELETE staging rows for runId (idempotent cleanup) before returning.
 }
 ```
@@ -88,7 +105,9 @@ export async function restoreUsersSectionTx(
 - Error handling: every failure before commit rolls back the outer tx (staging
   rows included); the run-scoped cleanup is idempotent and safe on retry.
 - Regression-test shape: extend `tests/unit/backups/backupUsersSection.test.ts`
-  (8 tests) + the `backupImport.test.ts` `testIfDb` at `:591` (pre-restore
+  (9 top-level tests today: `:179,196,211,283,335,404,434,477,595`; new tests
+  cover the staging→final upsert and run-scoped cleanup) + the
+  `backupImport.test.ts` `testIfDb` at `:591` (pre-restore
   path); keep the natural-key collision, FK-missing roleId, and admin-lockout
   guards behavior-identical.
 - Exact files owned: `core/services/backups/backupUsersSection.ts`,

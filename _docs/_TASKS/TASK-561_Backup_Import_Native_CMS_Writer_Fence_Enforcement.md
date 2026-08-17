@@ -53,7 +53,9 @@ writes.
   EXISTING machine-readable code `native_cms_writer_fence_busy` (the code the
   fence already throws, `core/db/nativeCmsWriterFence.ts:108`; TASK-547's busy
   contract uses the same) — do NOT invent a new `restore_busy` code. Add a
-  `mapBackupError` case for `native_cms_writer_fence_busy` → 409/503 without
+  `mapBackupError` case for `native_cms_writer_fence_busy` → **409** (the
+  `backup_not_ready → 409` precedent in `backupRoutes.ts:103-104`; a single
+  status, not 409/503) without
   raw driver details.
 
 ## Fix Strategy
@@ -71,14 +73,17 @@ export async function importBackupFromUpload(input: ImportBackupInput) {
 ```
 
 - In `backupRoutes.ts`, map the fence error through `mapBackupError` to
-  `native_cms_writer_fence_busy` (409/503), consistent with the TASK-547
+  `native_cms_writer_fence_busy` (409), consistent with the TASK-547
   full-site `busy` contract (no new error code).
 - Add a DB regression with a barrier: holder acquires the fence, import
   concurrently attempts, assert `busy` and zero `INSERT`/`DELETE` from import.
 
 ## Security Contract
 
-- Endpoint: `internal` admin (`/admin/api/backups/restore`); the route uses
+- Endpoint: `internal` admin (**`/admin/api/backups/import`** — the fence
+  change lands on the upload-import route `backupRoutes.ts:278`; the
+  restore-by-id route `:260` already fences via `restoreBackup` at
+  `backupService.ts:576`); the route uses
   RBAC `backups:write` (`backupRoutes.ts:260,278`) — there is no
   `backups:restore` permission in the repo, correct the reference.
 - Fence enforcement is backend-only; no CSRF/rate-limit change.
