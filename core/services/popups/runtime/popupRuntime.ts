@@ -31,8 +31,13 @@ export type PopupRuntimeDeps = {
 export function createPopupRuntime(deps: PopupRuntimeDeps) {
   let disposers: Array<() => void> = [];
   let started = false;
+  // Monotonic generation token (TASK-574): incremented on every start()/stop()
+  // so a stale in-flight fetch from a previous SPA path can never arm watchers
+  // after a newer start() has taken over.
+  let generation = 0;
 
   const stop = () => {
+    generation++;
     disposers.forEach((d) => d());
     disposers = [];
     // Reset so a subsequent start() re-fetches for the new SPA location. The
@@ -44,6 +49,7 @@ export function createPopupRuntime(deps: PopupRuntimeDeps) {
 
   const start = async () => {
     if (started) return;
+    const gen = ++generation;
     started = true;
     let popups: PublicPopup[] = [];
     try {
@@ -51,9 +57,16 @@ export function createPopupRuntime(deps: PopupRuntimeDeps) {
     } catch {
       // A failed fetch silently no-ops (page never breaks). Reset the latch so
       // the host may retry without being wedged by one transient failure.
-      started = false;
+      // Only reset for the CURRENT generation: a stale rejection from a
+      // superseded path must not clear the newer start()'s latch.
+      if (gen === generation) started = false;
       return;
     }
+
+    // Stale guard: stop()/start() re-targeted while this fetch was in flight,
+    // so this generation is no longer current. Never arm watchers for the old
+    // path.
+    if (gen !== generation || !started) return;
 
     for (const popup of popups) {
       // server already targeted by path + audience; the DTO carries no

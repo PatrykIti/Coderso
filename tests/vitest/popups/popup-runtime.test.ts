@@ -21,6 +21,17 @@ const makePopup = (overrides: Partial<PublicPopup> = {}): PublicPopup => ({
   ...overrides,
 });
 
+/** A promise the test resolves/rejects on demand to control fetch timing. */
+const makeDeferred = <T>() => {
+  let resolve!: (value: T) => void;
+  let reject!: (reason?: unknown) => void;
+  const promise = new Promise<T>((res, rej) => {
+    resolve = res;
+    reject = rej;
+  });
+  return { promise, resolve, reject };
+};
+
 type HarnessOptions = {
   popups?: PublicPopup[];
   fetchRejects?: boolean;
@@ -287,5 +298,81 @@ describe("createPopupRuntime", () => {
     expect(h.fetchCalls).toEqual(["/current"]);
     expect(h.timers.size).toBe(0);
     expect(h.renderCalls).toHaveLength(0);
+  });
+
+  test("a stale in-flight fetch from a previous path never arms watchers after stop()/start()", async () => {
+    const staleDeferred = makeDeferred<PublicPopup[]>();
+    const freshDeferred = makeDeferred<PublicPopup[]>();
+    const h = createHarness({ popups: [] });
+    let fetchCount = 0;
+    h.deps.fetchPopups = vi.fn((path: string) => {
+      h.fetchCalls.push(path);
+      fetchCount += 1;
+      return fetchCount === 1 ? staleDeferred.promise : freshDeferred.promise;
+    });
+    const runtime = createPopupRuntime(h.deps);
+
+    // First start fetches for the initial path and stays in flight.
+    const staleStart = runtime.start();
+    expect(h.fetchCalls).toEqual(["/current"]);
+
+    // SPA navigation re-targets while the first fetch is still pending.
+    h.setPath("/blog");
+    runtime.stop();
+    const freshStart = runtime.start();
+    expect(h.fetchCalls).toEqual(["/current", "/blog"]);
+
+    // The NEW path's fetch resolves first and arms its watcher.
+    freshDeferred.resolve([makePopup({ id: "popup-new" })]);
+    await freshStart;
+    expect(h.timers.size).toBe(1);
+
+    // The stale fetch resolves afterwards: its watcher must NOT be created.
+    staleDeferred.resolve([makePopup({ id: "popup-stale" })]);
+    await staleStart;
+    expect(h.timers.size).toBe(1);
+
+    // Only the new path's watcher is active and fires the new popup.
+    h.advance(10_000);
+    h.fireTimer([...h.timers.keys()][0]);
+    expect(h.renderCalls.map((p) => p.id)).toEqual(["popup-new"]);
+  });
+
+  test("a stale fetch rejection does not clear the newer start()'s latch", async () => {
+    const staleReject = makeDeferred<PublicPopup[]>();
+    const freshDeferred = makeDeferred<PublicPopup[]>();
+    const extraDeferred = makeDeferred<PublicPopup[]>();
+    const h = createHarness({ popups: [] });
+    let fetchCount = 0;
+    h.deps.fetchPopups = vi.fn((path: string) => {
+      h.fetchCalls.push(path);
+      fetchCount += 1;
+      if (fetchCount === 1) return staleReject.promise;
+      if (fetchCount === 2) return freshDeferred.promise;
+      return extraDeferred.promise;
+    });
+    const runtime = createPopupRuntime(h.deps);
+
+    const staleStart = runtime.start();
+    h.setPath("/blog");
+    runtime.stop();
+    const freshStart = runtime.start();
+
+    // The superseded fetch rejects: `started` must stay latched for the new
+    // path, so a concurrent host start() while its fetch is in flight no-ops.
+    staleReject.reject(new Error("stale fetch failed"));
+    await staleStart;
+    expect(h.timers.size).toBe(0);
+
+    void runtime.start();
+    expect(h.fetchCalls).toEqual(["/current", "/blog"]);
+
+    freshDeferred.resolve([makePopup({ id: "popup-new" })]);
+    await freshStart;
+    expect(h.timers.size).toBe(1);
+
+    h.advance(10_000);
+    h.fireTimer([...h.timers.keys()][0]);
+    expect(h.renderCalls.map((p) => p.id)).toEqual(["popup-new"]);
   });
 });

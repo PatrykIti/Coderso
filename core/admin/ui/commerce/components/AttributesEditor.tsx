@@ -4,6 +4,8 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
+import { validateRenameVariantAttributeKey } from "../commerceEditorModel";
+
 type AttributesEditorProps = {
   attributes: Record<string, string>;
   onSet: (key: string, value: string) => void;
@@ -17,6 +19,11 @@ type AttributesEditorProps = {
  * row delegate to the L01 model helpers so the variant draft stays immutable.
  * A local draft row lets the author type a new key/value pair; once both are
  * non-blank the pair is committed through `onSet` and the draft row resets.
+ *
+ * TASK-575: renaming onto an already-existing key would silently overwrite
+ * that attribute's value in the draft. The rename predicate is checked BEFORE
+ * emitting: on a collision the rename event is not fired (draft untouched) and
+ * an inline message explains why.
  */
 export function AttributesEditor({
   attributes,
@@ -26,6 +33,7 @@ export function AttributesEditor({
 }: AttributesEditorProps) {
   const [draftKey, setDraftKey] = useState("");
   const [draftValue, setDraftValue] = useState("");
+  const [collisionKey, setCollisionKey] = useState<string | null>(null);
 
   const commitDraft = (key: string, value: string) => {
     if (!key.trim()) return;
@@ -34,11 +42,26 @@ export function AttributesEditor({
     setDraftValue("");
   };
 
+  const handleRenameKey = (prevKey: string, nextKey: string) => {
+    const result = validateRenameVariantAttributeKey(attributes, prevKey, nextKey);
+    if (!result.ok) {
+      setCollisionKey(nextKey);
+      return;
+    }
+    setCollisionKey(null);
+    onRenameKey(prevKey, nextKey);
+  };
+
   const entries = Object.entries(attributes);
 
   return (
     <div className="space-y-2">
       <div className="text-xs font-medium text-muted-foreground">Attributes</div>
+      {collisionKey !== null && (
+        <p role="alert" className="text-xs text-destructive">
+          Attribute key &quot;{collisionKey}&quot; already exists.
+        </p>
+      )}
       {entries.length === 0 ? (
         <p className="text-xs text-muted-foreground">No attributes yet.</p>
       ) : (
@@ -49,7 +72,7 @@ export function AttributesEditor({
                 aria-label={`Attribute key for ${key}`}
                 value={key}
                 className="h-8 w-1/2"
-                onChange={(event) => onRenameKey(key, event.target.value)}
+                onChange={(event) => handleRenameKey(key, event.target.value)}
               />
               <Input
                 aria-label={`Attribute value for ${key}`}

@@ -160,6 +160,22 @@ export const removeVariantAttribute = (variants: CommerceVariant[], index: numbe
   return updateVariantAt(variants, index, { attributes: next });
 };
 
+// TASK-575: pure predicate the editor checks BEFORE emitting a rename. A rename
+// that collides with an existing (post-trim) key would otherwise silently
+// overwrite that attribute's value in the draft. A trim-only rename of the
+// same key (`size` -> ` size `) is a no-op success.
+export const validateRenameVariantAttributeKey = (
+  attrs: Record<string, string>,
+  prevKey: string,
+  nextKey: string
+): { ok: true } | { ok: false; code: "attribute_key_collision" } => {
+  const normalized = nextKey.trim();
+  if (normalized !== prevKey && normalized in attrs) {
+    return { ok: false, code: "attribute_key_collision" };
+  }
+  return { ok: true };
+};
+
 export const renameVariantAttributeKey = (
   variants: CommerceVariant[],
   index: number,
@@ -168,6 +184,10 @@ export const renameVariantAttributeKey = (
 ) => {
   const attrs = variants[index].attributes;
   if (prevKey === nextKey || !(prevKey in attrs)) return variants;
+  // Defense in depth: even if a caller bypasses the editor predicate, never
+  // overwrite an existing attribute value. The editor predicate remains the
+  // primary mutation gate.
+  if (validateRenameVariantAttributeKey(attrs, prevKey, nextKey).ok === false) return variants;
   const { [prevKey]: moved, ...rest } = attrs;
   return updateVariantAt(variants, index, {
     attributes: { ...rest, [nextKey]: moved },

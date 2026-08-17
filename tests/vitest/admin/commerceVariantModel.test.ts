@@ -13,6 +13,7 @@ import {
   setVariantAttribute,
   toCommerceProductInput,
   updateVariantAt,
+  validateRenameVariantAttributeKey,
   type CommerceProductDraft,
 } from "../../../core/admin/ui/commerce/commerceEditorModel";
 
@@ -112,6 +113,47 @@ describe("attribute helpers", () => {
     const source = [makeVariant({ attributes: { size: "S" } })];
     expect(renameVariantAttributeKey(source, 0, "missing", "next")).toBe(source);
     expect(renameVariantAttributeKey(source, 0, "size", "size")).toBe(source);
+  });
+
+  test("renameVariantAttributeKey is a no-op when the target key already exists", () => {
+    const source = [makeVariant({ attributes: { size: "S", color: "oak" } })];
+    const next = renameVariantAttributeKey(source, 0, "color", "size");
+    expect(next).toBe(source);
+    expect(source[0].attributes).toEqual({ size: "S", color: "oak" });
+  });
+
+  test("renameVariantAttributeKey is a no-op on a trimmed collision", () => {
+    const source = [makeVariant({ attributes: { size: "S", "color ": "oak" } })];
+    const next = renameVariantAttributeKey(source, 0, "color ", "size");
+    expect(next).toBe(source);
+    expect(source[0].attributes).toEqual({ size: "S", "color ": "oak" });
+  });
+});
+
+describe("validateRenameVariantAttributeKey", () => {
+  test("allows renaming onto a fresh key", () => {
+    expect(
+      validateRenameVariantAttributeKey({ size: "S", color: "oak" }, "color", "finish")
+    ).toEqual({ ok: true });
+  });
+
+  test("refuses renaming onto an already-existing key", () => {
+    expect(validateRenameVariantAttributeKey({ size: "S", color: "oak" }, "color", "size")).toEqual(
+      { ok: false, code: "attribute_key_collision" }
+    );
+  });
+
+  test("refuses a trimmed rename onto an existing key", () => {
+    expect(validateRenameVariantAttributeKey({ size: "S" }, " size ", "size")).toEqual({
+      ok: false,
+      code: "attribute_key_collision",
+    });
+  });
+
+  test("a trim-only rename of the same key is a no-op success", () => {
+    expect(validateRenameVariantAttributeKey({ size: "S" }, "size", " size ")).toEqual({
+      ok: true,
+    });
   });
 });
 
