@@ -10,7 +10,7 @@
 // correction (1245 -> 1247) and asserts TASK-511 remains To Do while
 // TASK-495..535 completed families were not reopened.
 
-import { describe, expect, test } from "bun:test";
+import { beforeAll, describe, expect, test } from "bun:test";
 import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import path from "node:path";
@@ -18,6 +18,26 @@ import path from "node:path";
 const ROOT = path.resolve(import.meta.dir, "../../..");
 const TASKS_DIR = path.join(ROOT, "_docs", "_TASKS");
 const README = path.join(TASKS_DIR, "README.md");
+
+// TASK-576 reliability fix: the whole-inventory parse (git ls-files + one
+// readFileSync per task file, ~34k reads) used to re-run inside every test.
+// At Bun's default 5s per-test timeout, 3 of 6 tests timed out under load.
+// The parsed inventory is now memoized once in beforeAll and shared by all
+// tests; the gate tree is static for the duration of the run.
+let memoizedTaskFiles: string[] | null = null;
+let memoizedTasks: TaskFile[] | null = null;
+function trackedTaskFiles(): string[] {
+  if (memoizedTaskFiles === null) memoizedTaskFiles = gitLsTaskFiles();
+  return memoizedTaskFiles;
+}
+function trackedTasks(): TaskFile[] {
+  if (memoizedTasks === null) memoizedTasks = trackedTaskFiles().map(parseTaskFile);
+  return memoizedTasks;
+}
+beforeAll(() => {
+  // Populate both caches once before the first test runs.
+  void trackedTasks();
+});
 
 const STATUS_RE =
   /^\*\*Status:\*\*\s*(?:(⏳|✅|🚧|⏭️|❌)\s*\*{0,2}\s*)?(?<raw>To Do|In Progress|Done|Superseded|Cancelled)/mu;
@@ -85,7 +105,7 @@ function readBoardStatistics(text: string): { todo: number; inprogress: number; 
 
 describe("task graph integrity", () => {
   test("every tracked task file has canonical FileName/H1/Status and unique ids", () => {
-    const files = gitLsTaskFiles();
+    const files = trackedTaskFiles();
     expect(files.length).toBeGreaterThan(3700);
     const seen = new Set<string>();
     for (const file of files) {
@@ -97,7 +117,7 @@ describe("task graph integrity", () => {
   });
 
   test("closed parents have no open physical descendants (by Parent field)", () => {
-    const tasks = gitLsTaskFiles().map(parseTaskFile);
+    const tasks = trackedTasks();
     const byId = new Map(tasks.map((t) => [t.id, t]));
     for (const task of tasks) {
       if (task.status !== "done") continue;
@@ -116,7 +136,7 @@ describe("task graph integrity", () => {
   });
 
   test("every physical parent linkage resolves to a physical file", () => {
-    const tasks = gitLsTaskFiles().map(parseTaskFile);
+    const tasks = trackedTasks();
     const byId = new Map(tasks.map((t) => [t.id, t]));
     for (const task of tasks) {
       if (task.parent !== null && !byId.has(task.parent)) {
@@ -126,7 +146,7 @@ describe("task graph integrity", () => {
   });
 
   test("board statistics equal the fresh physical-file count", () => {
-    const tasks = gitLsTaskFiles().map(parseTaskFile);
+    const tasks = trackedTasks();
     const counts = { todo: 0, inprogress: 0, done: 0 };
     for (const t of tasks) {
       if (t.status === "todo") counts.todo += 1;
@@ -143,16 +163,14 @@ describe("task graph integrity", () => {
     expect(task533).toBeTruthy();
     expect(task533).toContain("1247");
     expect(task533).not.toContain("Changelog 1245");
-    const task511 = gitLsTaskFiles()
-      .map(parseTaskFile)
-      .find((t) => t.id === "TASK-511");
+    const task511 = trackedTasks().find((t) => t.id === "TASK-511");
     expect(task511?.status).toBe("done");
     const board511 = text.split("\n").find((l) => l.startsWith("| TASK-511 |"));
     expect(board511).toContain("1281");
   });
 
   test("TASK-495..535 completed families were not reopened", () => {
-    const tasks = gitLsTaskFiles().map(parseTaskFile);
+    const tasks = trackedTasks();
     const byId = new Map(tasks.map((t) => [t.id, t]));
     const reopened: string[] = [];
     for (const t of tasks) {

@@ -1,7 +1,7 @@
 # TASK-576: Workflow Surface Repair And Gate Re-green
 
-**Status:** ⏳ To Do
-**Started:**
+**Status:** 🚧 In Progress
+**Started:** 2026-08-17
 **Completed:**
 **Changelog:** 1298 (pinned)
 **Priority:** High
@@ -11,6 +11,27 @@
 
 **Parent Task:** none
 **Source Findings:** H-545-01, H-545-02, H-545-03, H-545-04, M-545-06, M-545-07 (audit `_TMP-audit-task-545-workflow-integrity.md`, verified at HEAD `4e3dab15`)
+
+## Drift Correction (2026-08-17, during implementation)
+
+The pre-implementation audit's fail-fast classifier (M-545-07) stopped at the
+first non-canonical file, so the driver-contract checks never ran against the
+remaining canonical-named top-level entries. A fresh full-inventory pass
+during implementation exposed 15 legacy canonical-named pre-driver scripts
+(task-486, task-536-545, task-548, task-551, task-556, task-557) that were
+bulk-tracked by the 2026-08-15 `chore(workflows)` commit and never migrated to
+the TASK-545 driver contract. They failed the exact-identity result guard,
+the `runCanonicalAuditRounds` import, or the independent post-audit lens
+declaration. They are historical records for closed or not-yet-started tasks
+and none is a live workflow for any current task, so per the disposition
+rules they were **archived** byte-identically into
+`_docs/_workflows/_archive/` (46 files total). The disposition matrix records
+the full 15-file extension. Also fixed: `workflowStaticContractDrivers.ts`
+called `assertTask554CloseoutGuardContract` without importing it (latent bug
+masked by the fail-fast enumeration); added the missing import. Gate result
+after the correction: `workflowStaticContract.test.ts` 6/6 green,
+`taskGraphIntegrity.test.ts` 6/6 green, `node --check` clean on the remaining
+canonical inventory, smoke-evidence suites 92/92 green.
 
 ## Purpose
 
