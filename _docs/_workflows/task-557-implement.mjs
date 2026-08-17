@@ -120,7 +120,7 @@ TASK-557 implementation requires: remote direct-5432 database ONLY (local Postgr
 owner), pinned changelog 1271, worker schemas named bun_worker_N with search_path = <schema>, public,
 contracts audited CLEAN at b45d06bc (zebra fact + scorpion reconcile + stallion recheck). Use the
 configured OpenCode coder implementation role required by AGENTS.md (deepseek-v4-flash via 9router
-ds/deepseek-v4-flash). Never stage, commit, reset, clean, revert unrelated edits, expose secrets,
+9router:ds/deepseek-v4-flash). Never stage, commit, reset, clean, revert unrelated edits, expose secrets,
 weaken tests, or edit outside the current leaf's exact writer paths. Read current on-disk shared files
 before editing. Every touched production/test file must finish <=1000 lines. Audit outputs set
 pass=true exactly when no HIGH/MEDIUM finding remains; LOW findings stay visible.`;

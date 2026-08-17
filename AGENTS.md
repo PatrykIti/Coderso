@@ -174,21 +174,21 @@ Testing docs:
     reviews every delegated diff, and decides whether validation and closure
     evidence are sufficient.
   - The OpenCode `coder` agent uses the exact model
-    `deepseek/deepseek-v4-flash` with variant `max` as the default delegated
-    implementation and fix agent. It works only from an audited, current task
-    contract and its output is review evidence, never closure authority.
+    `9router:ds/deepseek-v4-flash` as the default delegated implementation and
+    fix agent. It works only from an audited, current task contract and its
+    output is review evidence, never closure authority.
   - Fresh-context audit agents (pre-implementation contract audits and
-    post-implementation five-lens audits) use GLM 5.2 through the local 9router
-    proxy, alternating between the `9router:glm/glm-5.2` and
-    `9router:openrouter/z-ai/glm-5.2` routes with bounded reasoning effort.
-    Their reports are read-only review evidence, never closure authority, and
-    the orchestrator verifies every finding against local files and command
-    output.
+    post-implementation five-lens audits) use the approved 9router model set:
+    `9router:ds/deepseek-v4-pro` and `9router:ds/deepseek-v4-pro-max`
+    (preferred, run more often) plus `9router:glm/glm-5.3` as a supplementary
+    audit route, with bounded reasoning effort. Their reports are read-only
+    review evidence, never closure authority, and the orchestrator verifies
+    every finding against local files and command output.
   - `openai/gpt-5.6-terra` (variant `xhigh` or `max`) is the last-resort
-    fallback only when the default `deepseek/deepseek-v4-flash` is unavailable
-    or the owner explicitly prohibits its use, and it is used only for the
-    named implementation or fix scope. Record the fallback, model, and variant
-    in the task handoff; it remains review evidence and never closure
+    fallback only when the default `9router:ds/deepseek-v4-flash` is
+    unavailable or the owner explicitly prohibits its use, and it is used only
+    for the named implementation or fix scope. Record the fallback, model, and
+    variant in the task handoff; it remains review evidence and never closure
     authority. If the OpenCode CLI cannot invoke its `coder` subagent
     directly, its primary `build` invocation may execute that same named
     fallback under the identical scope, model, variant, and handoff
