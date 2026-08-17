@@ -101,6 +101,27 @@ async function ready(url: string): Promise<boolean> {
   }
 }
 
+/**
+ * The front host is up as soon as it answers. The ambient DB has no published
+ * homepage (`site.homepageId` points at a missing page and the pages table is
+ * empty), so `/` legitimately renders the site's 404 view for the whole run.
+ * The scored scenarios exercise the real content URLs themselves, so a 404 on
+ * `/` is ambient state, not a readiness failure.
+ */
+async function frontReady(url: string): Promise<boolean> {
+  try {
+    const response = await fetch(url, {
+      method: "GET",
+      redirect: "manual",
+      signal: AbortSignal.timeout(5_000),
+    });
+    await response.body?.cancel();
+    return response.status === 200 || response.status === 404;
+  } catch {
+    return false;
+  }
+}
+
 async function requireEntryUnlockSecret(root: string): Promise<void> {
   const envPath = resolveInsideRoot(root, ".env", "task_517_env");
   const text = await readFile(envPath, "utf8").catch((error: unknown) => {
@@ -137,7 +158,7 @@ function task517Host(
     }),
     ports: Object.freeze([3000, 5173, 5174]),
     readiness: Object.freeze([
-      Object.freeze({ id: "task517-front-ready", check: () => ready(`${FRONT_ORIGIN}/`) }),
+      Object.freeze({ id: "task517-front-ready", check: () => frontReady(`${FRONT_ORIGIN}/`) }),
       Object.freeze({
         id: "task517-admin-ready",
         check: () => ready(`${ADMIN_ORIGIN}${adminPath}/`),

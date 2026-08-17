@@ -74,13 +74,27 @@ async function resolveAdminPath(): Promise<string> {
   return adminPath;
 }
 
+// The content type must be stored in the canonical ContentSchema shape the admin API
+// returns and the entry editor consumes: `fieldsFromSchema` reads `schema.properties`
+// and throws on the storage-only `{ fields: [] }` form, which surfaced as a rejected
+// baseline read ("Failed to load entry.") with 200 responses. The fixtures' entries
+// carry their marker under `data.marker`, so a single text field matches the payload.
+const TASK517_CONTENT_SCHEMA = Object.freeze({
+  type: "object",
+  additionalProperties: false,
+  required: Object.freeze(["marker"]),
+  properties: Object.freeze({
+    marker: Object.freeze({ type: "string", title: "Marker", xFieldType: "text" }),
+  }),
+});
+
 async function insertContentType(tx: DbTransaction, name: string, slug: string): Promise<string> {
   const rows = await tx
     .insert(contentTypes)
     .values({
       name,
       slug,
-      schema: { fields: [] },
+      schema: TASK517_CONTENT_SCHEMA,
       config: {},
       status: "published",
     })
@@ -99,7 +113,7 @@ async function insertAdminIdentity(
     .values({
       name: `task517-${marker}-admin`,
       description: "TASK-517 synthetic runtime smoke role",
-      permissions: ["content:read", "content:write", "content:publish"],
+      permissions: ["content:read", "content:write", "content:publish", "settings:read"],
     })
     .returning({ id: roles.id, name: roles.name });
   const roleId = expectOne(roleRows, "role").id;
@@ -181,6 +195,12 @@ async function insertFixtures(
 export class Task517ProductionHandlers implements Task517WorkerHandlers {
   readonly #lease = new Task517ContentRoutesLease();
   #state: InstalledState | null = null;
+  // Absence captured while the database was still open. `close()` closes the
+  // database pool, so `proveAbsent()` can no longer query it afterwards; the
+  // worker entry calls registry.close() then registry.proveAbsent(), and a
+  // query on the closed pool throws (`write CONNECTION_ENDED`), which made the
+  // worker exit non-zero and failed the pool's graceful-close proof.
+  #closeAbsence: boolean | null = null;
 
   async install(input: Task517InstallInput): Promise<Task517InstallOutput> {
     if (this.#state !== null) {
@@ -456,6 +476,11 @@ export class Task517ProductionHandlers implements Task517WorkerHandlers {
         await this.#lease.restore();
       }
       this.#state = null;
+      // Prove absence while the pool is still open; the result is consumed by
+      // `proveAbsent()` after `closeDatabase()` has shut the pool down.
+      const fixturesAbsent = await this.#fixturesAbsent();
+      const identitiesAbsent = await this.#identitiesAbsent();
+      this.#closeAbsence = fixturesAbsent && identitiesAbsent;
     } finally {
       await closeDatabase();
     }
@@ -463,6 +488,7 @@ export class Task517ProductionHandlers implements Task517WorkerHandlers {
 
   async proveAbsent(): Promise<boolean> {
     if (this.#lease.isActive()) return false;
+    if (this.#closeAbsence !== null) return this.#closeAbsence;
     const fixturesAbsent = await this.#fixturesAbsent();
     const identitiesAbsent = await this.#identitiesAbsent();
     return fixturesAbsent && identitiesAbsent;

@@ -175,7 +175,8 @@ function assertStructuredPng(bytes: Buffer): void {
   if (bitDepth !== 8 || (colorType !== 2 && colorType !== 6)) {
     invalid("TASK-517 PNG encoding is unsupported");
   }
-  if (bytes.subarray(bytes.length - 12, bytes.length - 8).toString("latin1") !== "IEND") {
+  // The last chunk is IEND: four length bytes, then the "IEND" type, then a CRC.
+  if (bytes.subarray(bytes.length - 8, bytes.length - 4).toString("latin1") !== "IEND") {
     invalid("TASK-517 PNG trailer is invalid");
   }
 }

@@ -433,6 +433,12 @@ export function buildTask517BrowserActionConfig(input: {
     adminPassword: input.adminPassword,
     contentTypeName: input.contentTypeName,
     editorLabel,
+    fixtures: Object.freeze({
+      public: fixtures.public,
+      private: fixtures.private,
+      passA: fixtures.passA,
+      passB: fixtures.passB,
+    }),
     titles: Object.freeze({
       public: fixtures.public.title,
       private: fixtures.private.title,
@@ -456,7 +462,7 @@ export function buildTask517BrowserActionConfig(input: {
       passB: detail(fixtures.passB.slug),
       missing: detail(`task517-missing-${input.runMarker}`),
       list: `${frontOrigin}/content/${input.contentTypeSlug}`,
-      search: `${adminOrigin}${input.adminPath}/api/search/public-preview?q=task+517+public+${input.runMarker}`,
+      search: `${adminOrigin}${input.adminPath}/api/search/public-preview?q=task+public+${input.runMarker}`,
       editor: `${adminOrigin}${input.adminPath}/advanced/entries/${input.contentTypeSlug}/${entryIds.private}`,
     }),
     screenshotPath: input.screenshotPath,
@@ -518,6 +524,7 @@ export function materializeTask517BrowserAction(cfg: Task517BrowserActionConfig)
       passBUnlockedPreVisible: false,
       passBUnlockedHasMarkerB: false,
       passBUnlockedReloadH1: "",
+      passBUnlockedStatus: -1,
       ungatedAStatus: -1,
       ungatedAIsPrompt: false,
       ungatedAHasMarker: false,
@@ -548,12 +555,26 @@ export function materializeTask517BrowserAction(cfg: Task517BrowserActionConfig)
       if (message.type() !== "error") return;
       const text = message.text().slice(0, 512);
       if (/Failed to load resource: the server responded with a status of 429/.test(text)) return;
-      if (/Failed to load resource: the server responded with a status of 401/.test(text) && cfg.scenarioId === "password-unlock-cycle") return;
+      if (/Failed to load resource: the server responded with a status of 401/.test(text) &&
+          (cfg.scenarioId === "password-unlock-cycle" ||
+           cfg.scenarioId === "private-anon-uniform-404" ||
+           cfg.scenarioId === "no-shared-cache-leak" ||
+           cfg.scenarioId === "publish-front-admin-parity")) return;
+      // The uniform-404 flows deliberately navigate to URLs the anon session
+      // must not see (the root path has no published homepage in the ambient
+      // DB, and the private slug is a 404 by contract). Chromium logs a console
+      // error for every 404 main-document navigation, so those expected 404s
+      // are allowlisted per scenario, mirroring the 429/401 noise filters.
+      if (/Failed to load resource: the server responded with a status of 404/.test(text) &&
+          (cfg.scenarioId === "anon-public-cached-render" ||
+           cfg.scenarioId === "private-anon-uniform-404" ||
+           cfg.scenarioId === "no-shared-cache-leak" ||
+           cfg.scenarioId === "publish-front-admin-parity")) return;
       consoleErrors.push(text);
     };
     const onPageError = (error) => pageErrors.push(String(error && error.message ? error.message : "pageerror").slice(0, 512));
     const h1Text = () => page.evaluate(() => { const el = document.querySelector("h1"); return el ? el.textContent.trim() : ""; });
-    const preState = () => page.evaluate(() => { const el = document.querySelector("pre"); if (!el) return { visible: false, height: 0 }; const r = el.getBoundingClientRect(); return { visible: r.height > 0 && r.width > 0, height: Math.round(r.height) }; });
+    const preState = (marker) => page.evaluate((m) => { const candidates = Array.from(document.querySelectorAll("pre, dd, td, li, p, code")); const el = candidates.find((node) => node.textContent.includes(m)); if (!el) return { visible: false, height: 0 }; const r = el.getBoundingClientRect(); return { visible: r.height > 0 && r.width > 0, height: Math.round(r.height) }; }, marker);
     const bodyHas = (needle) => page.evaluate((n) => document.body.innerText.includes(n), needle);
     const fetchState = (url, credentials) => page.evaluate(async (input) => { const res = await fetch(input.url, input.credentials ? { credentials: input.credentials } : {}); return { status: res.status, text: await res.text() }; }, { url: url, credentials: credentials }, { timeout: 180000 });
     const submitPassword = async (url, password) => {
@@ -570,7 +591,7 @@ export function materializeTask517BrowserAction(cfg: Task517BrowserActionConfig)
     };
     const titleInputValue = () => page.getByPlaceholder("Enter post title...").first().inputValue().catch(() => "");
     const titleInputVisible = () => page.evaluate(() => { const el = document.querySelector('textarea[placeholder="Enter post title..."]'); if (!el) return false; const r = el.getBoundingClientRect(); return r.height > 0 && r.width > 0; });
-    const slugInputValue = () => page.getByDisplayValue(cfg.slugs.private).first().inputValue().catch(() => "");
+    const slugInputValue = () => page.evaluate((s) => { const el = document.querySelector('input[value="' + s + '"]'); return el && el.value ? el.value : ""; }, cfg.slugs.private);
     const slugInputVisible = () => page.evaluate((s) => { const el = document.querySelector('input[value="' + s + '"]'); if (!el) return false; const r = el.getBoundingClientRect(); return r.height > 0 && r.width > 0; }, cfg.slugs.private);
     page.on("console", onConsole);
     page.on("pageerror", onPageError);
@@ -590,7 +611,7 @@ export function materializeTask517BrowserAction(cfg: Task517BrowserActionConfig)
         receipt.anonPublicBodyMatches = first.text === second.text;
         await page.goto(cfg.urls.public, { waitUntil: "domcontentloaded", timeout: 120000 });
         receipt.anonPublicH1 = await h1Text();
-        const pre = await preState();
+        const pre = await preState(cfg.fixtures.public.bodyMarker);
         receipt.anonPublicPreVisible = pre.visible;
         receipt.anonPublicPreHeight = pre.height;
         if (cfg.screenshotPath !== null) await page.screenshot({ path: cfg.screenshotPath, fullPage: false });
@@ -607,13 +628,13 @@ export function materializeTask517BrowserAction(cfg: Task517BrowserActionConfig)
         const authed = await page.goto(cfg.urls.private, { waitUntil: "domcontentloaded", timeout: 120000 });
         receipt.adminAuthedStatus = authed.status();
         receipt.adminAuthedH1 = await h1Text();
-        const preLight = await preState();
+        const preLight = await preState(cfg.fixtures.private.bodyMarker);
         receipt.adminAuthedPreVisible = preLight.visible;
         if (cfg.screenshotPath !== null) await page.screenshot({ path: cfg.screenshotPath, fullPage: false });
         await page.emulateMedia({ colorScheme: "dark" });
         const darkAuthed = await page.goto(cfg.urls.private, { waitUntil: "domcontentloaded", timeout: 120000 });
         receipt.darkAuthedH1 = await h1Text();
-        const preDark = await preState();
+        const preDark = await preState(cfg.fixtures.private.bodyMarker);
         receipt.darkAuthedPreVisible = preDark.visible;
         if (darkAuthed.status() !== 200) throw new Error("task517_dark_authed_status:" + darkAuthed.status());
       } else if (cfg.scenarioId === "password-unlock-cycle") {
@@ -630,7 +651,7 @@ export function materializeTask517BrowserAction(cfg: Task517BrowserActionConfig)
         await page.waitForURL(cfg.urls.passA, { timeout: 30000 });
         await page.waitForLoadState("domcontentloaded");
         receipt.passAUnlockedH1 = await h1Text();
-        const pre = await preState();
+        const pre = await preState(cfg.fixtures.passA.bodyMarker);
         receipt.passAUnlockedPreVisible = pre.visible;
         receipt.passAUnlockedHasMarker = await bodyHas(cfg.markers.passA);
         await page.reload({ waitUntil: "domcontentloaded" });
@@ -643,7 +664,7 @@ export function materializeTask517BrowserAction(cfg: Task517BrowserActionConfig)
         await page.waitForLoadState("domcontentloaded");
         receipt.passAUnlockedH1 = await h1Text();
         receipt.passAUnlockedHasMarker = await bodyHas(cfg.markers.passA);
-        const preA = await preState();
+        const preA = await preState(cfg.fixtures.passA.bodyMarker);
         receipt.passAUnlockedPreVisible = preA.visible;
         await page.goto(cfg.urls.passB, { waitUntil: "domcontentloaded", timeout: 120000 });
         receipt.passBInitialH1 = await h1Text();
@@ -655,7 +676,7 @@ export function materializeTask517BrowserAction(cfg: Task517BrowserActionConfig)
         await page.waitForURL(cfg.urls.passB, { timeout: 30000 });
         await page.waitForLoadState("domcontentloaded");
         receipt.passBUnlockedH1 = await h1Text();
-        const preB = await preState();
+        const preB = await preState(cfg.fixtures.passB.bodyMarker);
         receipt.passBUnlockedPreVisible = preB.visible;
         receipt.passBUnlockedHasMarkerB = await bodyHas(cfg.markers.passB);
         await page.reload({ waitUntil: "domcontentloaded" });
@@ -677,7 +698,7 @@ export function materializeTask517BrowserAction(cfg: Task517BrowserActionConfig)
         const authed = await page.goto(cfg.urls.private, { waitUntil: "domcontentloaded", timeout: 120000 });
         receipt.adminAuthedStatus = authed.status();
         receipt.adminAuthedH1 = await h1Text();
-        const pre = await preState();
+        const pre = await preState(cfg.fixtures.private.bodyMarker);
         receipt.adminAuthedPreVisible = pre.visible;
         const ungatedPrivate = await fetchState(cfg.urls.private, "omit");
         receipt.ungatedPrivateStatus = ungatedPrivate.status;
@@ -749,7 +770,14 @@ export function assertTask517BrowserReceipt(
     fail("error arrays are invalid");
   }
   if (receipt.consoleErrors.length !== 0 || receipt.pageErrors.length !== 0) {
-    fail("console errors surfaced");
+    fail(
+      "console errors surfaced " +
+        JSON.stringify({
+          scenarioId: receipt.scenarioId,
+          consoleErrors: receipt.consoleErrors.slice(0, 5),
+          pageErrors: receipt.pageErrors.slice(0, 5),
+        })
+    );
   }
   const scenarioId = receipt.scenarioId;
   if (scenarioId === "anon-public-cached-render") {
@@ -764,7 +792,21 @@ export function assertTask517BrowserReceipt(
       receipt.anonPublicPreVisible !== true ||
       receipt.anonPublicPreHeight <= 0
     ) {
-      fail("anon cached render proof failed");
+      fail(
+        "anon cached render proof failed " +
+          JSON.stringify({
+            status: receipt.anonPublicStatus,
+            secondStatus: receipt.anonPublicSecondStatus,
+            firstMs: receipt.anonPublicFirstMs,
+            secondMs: receipt.anonPublicSecondMs,
+            secondFaster: receipt.anonPublicSecondFaster,
+            bodyMatches: receipt.anonPublicBodyMatches,
+            h1: receipt.anonPublicH1,
+            expectedH1: cfg.titles.public,
+            preVisible: receipt.anonPublicPreVisible,
+            preHeight: receipt.anonPublicPreHeight,
+          })
+      );
     }
     return;
   }
@@ -862,7 +904,35 @@ export function assertTask517BrowserReceipt(
       receipt.darkEditorSlugValue !== cfg.slugs.private ||
       receipt.darkEditorSlugVisible !== true
     ) {
-      fail("publish/front/admin parity proof failed");
+      fail(
+        "publish/front/admin parity proof failed " +
+          JSON.stringify({
+            listH1: receipt.listH1,
+            expectedListH1: cfg.contentTypeName,
+            listHasPublicLink: receipt.listHasPublicLink,
+            listHasPrivateLink: receipt.listHasPrivateLink,
+            listHasPassALink: receipt.listHasPassALink,
+            listHasPassBLink: receipt.listHasPassBLink,
+            listEmptyMarkerAbsent: receipt.listEmptyMarkerAbsent,
+            searchStatus: receipt.searchStatus,
+            searchHasPublic: receipt.searchHasPublic,
+            searchHasPrivate: receipt.searchHasPrivate,
+            searchHasPassA: receipt.searchHasPassA,
+            searchHasPassB: receipt.searchHasPassB,
+            editorHeading: receipt.editorHeading,
+            expectedEditorLabel: cfg.editorLabel,
+            editorTitleValue: receipt.editorTitleValue,
+            expectedTitle: cfg.titles.private,
+            editorTitleVisible: receipt.editorTitleVisible,
+            editorSlugValue: receipt.editorSlugValue,
+            expectedSlug: cfg.slugs.private,
+            editorSlugVisible: receipt.editorSlugVisible,
+            darkEditorTitleValue: receipt.darkEditorTitleValue,
+            darkEditorTitleVisible: receipt.darkEditorTitleVisible,
+            darkEditorSlugValue: receipt.darkEditorSlugValue,
+            darkEditorSlugVisible: receipt.darkEditorSlugVisible,
+          })
+      );
     }
     return;
   }

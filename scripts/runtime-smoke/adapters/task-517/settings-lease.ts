@@ -69,6 +69,38 @@ const ROUTE_VALUE = (typeSlug: string, listPath: string, detailPath: string): st
 
 const CACHE_TTL_VALUE = (ttlSeconds: number): string => JSON.stringify(ttlSeconds);
 
+/**
+ * PostgreSQL `jsonb` canonicalizes its text form (keys sorted, spaces after
+ * `:` and `,`), so a raw string comparison against `JSON.stringify` output
+ * falsely drifts for multi-key values like `site.contentRoutes`. Compare the
+ * parsed JSON semantically instead; both sides come from the same JSONB
+ * value space, so deep equality is exact.
+ */
+function sameJsonValue(left: string, right: string): boolean {
+  try {
+    return jsonDeepEqual(JSON.parse(left) as unknown, JSON.parse(right) as unknown);
+  } catch {
+    return false;
+  }
+}
+
+function jsonDeepEqual(left: unknown, right: unknown): boolean {
+  if (Object.is(left, right)) return true;
+  if (typeof left !== typeof right) return false;
+  if (Array.isArray(left) || Array.isArray(right)) {
+    if (!Array.isArray(left) || !Array.isArray(right) || left.length !== right.length) return false;
+    return left.every((value, index) => jsonDeepEqual(value, right[index]));
+  }
+  if (left === null || right === null) return left === right;
+  if (typeof left !== "object" || typeof right !== "object") return false;
+  const leftRecord = left as Record<string, unknown>;
+  const rightRecord = right as Record<string, unknown>;
+  const leftKeys = Object.keys(leftRecord);
+  const rightKeys = Object.keys(rightRecord);
+  if (leftKeys.length !== rightKeys.length) return false;
+  return leftKeys.every((key) => jsonDeepEqual(leftRecord[key], rightRecord[key]));
+}
+
 async function lockSettingsTable(tx: DbTransaction): Promise<void> {
   await tx.execute(sql`LOCK TABLE ${settings} IN SHARE ROW EXCLUSIVE MODE`);
 }
@@ -208,8 +240,8 @@ export class Task517ContentRoutesLease {
         const routesOwned = freezeOwned(routesOwnedRow);
         const cacheTtlOwned = freezeOwned(cacheTtlOwnedRow);
         if (
-          routesOwned.record.valueJson !== routeValue ||
-          cacheTtlOwned.record.valueJson !== cacheTtlValue
+          !sameJsonValue(routesOwned.record.valueJson, routeValue) ||
+          !sameJsonValue(cacheTtlOwned.record.valueJson, cacheTtlValue)
         ) {
           throw new SmokeError("smoke_cleanup_failed", "TASK-517 settings ownership drifted");
         }
