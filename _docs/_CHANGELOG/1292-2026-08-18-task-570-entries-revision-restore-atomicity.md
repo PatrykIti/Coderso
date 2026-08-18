@@ -41,4 +41,4 @@
   updated it, opened History — drawer lists "Version 1", Preview renders the
   narrow snapshot ("Snapshot with 0 fields"), Restore confirm dialog executes a
   no-op restore without errors (data identical, expected); screenshots
-  `_docs/_workflows/_smoke/task570-entry-revisions-drawer.png`.
+  `_docs/_workflows/_smoke/evidence/task-570/wf569smoke/task570-entry-revisions-drawer.png`.

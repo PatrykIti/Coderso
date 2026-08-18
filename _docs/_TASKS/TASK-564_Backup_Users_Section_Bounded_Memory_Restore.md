@@ -44,7 +44,10 @@ limit, so large instances violate the scalability contract.
   staging table `backup_users_staging` with FULL migration artifacts (SQL +
   `meta/*_snapshot.json` + `meta/_journal.json` update; migration number pinned
   to **0074** after TASK-569 (0073); re-read the live journal immediately
-  before allocation, since 0073 is allocated by the sibling 569 stream), unique
+  before allocation, since 0073 is allocated by the sibling 569 stream).
+  **Completion note:** the live journal advanced past 0074/0075/0076 via
+  sibling streams, so the staging table actually landed as **0078**
+  (`0078_backup_users_staging`); journal + snapshot + schema module agree), unique
   run-scoped rows
   (`runId` + `kind` discriminator + natural-key columns; one table holds all
   three row kinds — `kind IN ('role','user','user_role')` — with the

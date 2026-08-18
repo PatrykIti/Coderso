@@ -35,4 +35,4 @@
   list (drawer validation → name + content type), added a Heading block, edited
   the static heading text (visible H2 effect), saved, and reloaded the editor —
   block persisted with no unsaved-changes flag; screenshot
-  `_docs/_workflows/_smoke/task569-custom-screens-editor.png`.
+  `_docs/_workflows/_smoke/evidence/task-569/wf569smoke/task569-custom-screens-editor.png`.

@@ -33,4 +33,4 @@
   state, Import dialog opens with file+passphrase gating (Import disabled until
   both present), maintenance-mode guard surfaces fail-closed
   ("Backups unavailable: Enable maintenance mode before importing"); screenshots
-  in `_docs/_workflows/_smoke/task564-backup-import-guard.png`.
+  in `_docs/_workflows/_smoke/evidence/task-564/wf569smoke/task564-backup-import-guard.png`.
