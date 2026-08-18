@@ -80,6 +80,7 @@ perf="batch"
 [ "$BUN_TEST_PERF_QUIET" = "1" ] && perf="perf"
 printf '%s\\n' "start:$perf" >> "$FAKE_LOG"
 printf '%s\\n' "worker:$perf:idx=\${BUN_TEST_WORKER_INDEX:-}:fence=\${BUN_TEST_FENCE_NAMESPACE_OFFSET:-}" >> "$FAKE_LOG"
+printf '%s\\n' "args:$*" >> "$FAKE_LOG"
 if [ "$perf" != "perf" ]; then sleep 0.3; fi
 printf '%s\\n' "end:$perf" >> "$FAKE_LOG"
 if [ -n "$FAKE_FAIL_MARKER" ]; then
@@ -308,5 +309,116 @@ test("connection budget: workers x pool > 10 fails before provisioning and spawn
   expect(exitCode).toBe(1);
   expect(stderr).toContain("worker_pool_budget_exceeded");
   // No worker ever spawned: the fake bun never ran.
+  expect(readLog()).toEqual([]);
+});
+
+// TASK-578: a lane with an empty file list must be SKIPPED, never run as
+// `bun test` with zero paths (which would fall back to repo-wide discovery).
+// The guard applies to every lane: c1, every B worker, and perf.
+const EMPTY_BATCH_INVOCATION = "args:test --parallel=1 --timeout=15000";
+
+test("empty c1 lane is skipped: no c1 worker and no bun test with an empty file list", () => {
+  // No write-global C rows -> part.c1 is empty; the read-only C, B, perf, and
+  // A lanes still run normally.
+  const emptyC1Manifest = {
+    rows: [
+      { file: "b-good.test.ts", bucket: "B" },
+      { file: "b-second.test.ts", bucket: "B" },
+      {
+        file: "c-readonly.test.ts",
+        bucket: "C",
+        conflictKeys: ["site.homepageId"],
+        cWriteGlobal: false,
+      },
+      { file: "perf-gate.test.ts", bucket: "perf" },
+      { file: "a-pure.test.ts", bucket: "A" },
+    ],
+  };
+  const emptyC1Path = path.join(dir, "manifest-empty-c1.json");
+  writeFileSync(emptyC1Path, JSON.stringify(emptyC1Manifest, null, 2));
+
+  const { exitCode, reportPath } = runRunner(
+    ["--lane", "all", "--workers", "4", "--no-provision"],
+    {
+      BUN_LANE_MANIFEST_PATH: emptyC1Path,
+    }
+  );
+  expect(exitCode).toBe(0);
+  const report = readReport(reportPath);
+  // c1 was skipped entirely; b0, c2, a, perf still ran.
+  expect(report.results.map((r) => r.name).sort()).toEqual(["a", "b0", "c2", "perf"]);
+  expect(report.results.some((r) => r.name === "c1")).toBe(false);
+  // No `bun test` invocation ever carried an empty file list.
+  expect(readLog().includes(EMPTY_BATCH_INVOCATION)).toBe(false);
+  expect(report.totalMs).toBeGreaterThan(0);
+});
+
+test("empty b and perf lanes are skipped: no bun test with an empty file list", () => {
+  // No B rows and no perf rows -> every B worker list and the perf lane are
+  // empty and must be skipped; c1, c2, and a still run.
+  const emptyBPerfManifest = {
+    rows: [
+      {
+        file: "c-write.test.ts",
+        bucket: "C",
+        conflictKeys: ["site.contentRoutes"],
+        cWriteGlobal: true,
+      },
+      {
+        file: "c-readonly.test.ts",
+        bucket: "C",
+        conflictKeys: ["site.homepageId"],
+        cWriteGlobal: false,
+      },
+      { file: "a-pure.test.ts", bucket: "A" },
+    ],
+  };
+  const emptyBPerfPath = path.join(dir, "manifest-empty-b-perf.json");
+  writeFileSync(emptyBPerfPath, JSON.stringify(emptyBPerfManifest, null, 2));
+
+  const { exitCode, reportPath } = runRunner(
+    ["--lane", "all", "--workers", "4", "--no-provision"],
+    {
+      BUN_LANE_MANIFEST_PATH: emptyBPerfPath,
+    }
+  );
+  expect(exitCode).toBe(0);
+  const report = readReport(reportPath);
+  // No B worker and no perf worker spawned; only c1, c2, and a ran.
+  expect(report.results.map((r) => r.name).sort()).toEqual(["a", "c1", "c2"]);
+  expect(report.results.some((r) => r.name.startsWith("b"))).toBe(false);
+  expect(report.results.some((r) => r.name === "perf")).toBe(false);
+  // No `bun test` invocation ever carried an empty file list.
+  expect(readLog().includes(EMPTY_BATCH_INVOCATION)).toBe(false);
+  expect(report.totalMs).toBeGreaterThan(0);
+});
+
+test("all selected lanes empty: report writes totalMs 0 and nothing spawns", () => {
+  // --lane b over a manifest with no B rows: every B worker list is empty, so
+  // the whole run has zero workers. The report must still be written with a
+  // truthful numeric totalMs (0), never `null` from Math.max(...[]).
+  const noBManifest = {
+    rows: [
+      { file: "a-pure.test.ts", bucket: "A" },
+      {
+        file: "c-readonly.test.ts",
+        bucket: "C",
+        conflictKeys: ["site.homepageId"],
+        cWriteGlobal: false,
+      },
+    ],
+  };
+  const noBPath = path.join(dir, "manifest-no-b.json");
+  writeFileSync(noBPath, JSON.stringify(noBManifest, null, 2));
+
+  const { exitCode, reportPath } = runRunner(["--lane", "b", "--workers", "2", "--no-provision"], {
+    BUN_LANE_MANIFEST_PATH: noBPath,
+  });
+  expect(exitCode).toBe(0);
+  const report = readReport(reportPath);
+  expect(report.results).toEqual([]);
+  expect(report.totalMs).toBe(0);
+  expect(typeof report.totalMs).toBe("number");
+  // Nothing ever spawned: the fake bun never ran at all.
   expect(readLog()).toEqual([]);
 });

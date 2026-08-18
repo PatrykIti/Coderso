@@ -121,6 +121,23 @@ test("classify examples match the contract signals", async () => {
   expect(perfIngestion.bucket).toBe("perf");
 });
 
+test("classify rows carry NO weightMs field (all four branches)", async () => {
+  // TASK-578: the classifier has no measured timings and must OMIT the
+  // optional weightMs field instead of emitting `weightMs: 0`. A `0` is a
+  // REAL weight to the partitioner (`??` never treats it as absent), so with
+  // an empty timings map every B file would fall back to 0 and LPT would dump
+  // the whole lane onto one worker. Every emission branch must stay absent.
+  const perf = await classify("tests/perf/codersoPerformanceGate.test.ts");
+  const a = await classify("tests/unit/widgets/validator.test.ts");
+  const c = await classify("tests/unit/settings/settingsService.test.ts");
+  const b = await classify("tests/unit/content/entryService.test.ts");
+  expect([perf.bucket, a.bucket, c.bucket, b.bucket]).toEqual(["perf", "A", "C", "B"]);
+  for (const row of [perf, a, c, b]) {
+    expect(Object.hasOwn(row, "weightMs")).toBe(false);
+    expect(row.weightMs).toBeUndefined();
+  }
+});
+
 test("transitive DB-coupling is detected through the value-import closure", async () => {
   // cache.test.ts imports `siteCache` -> `settingsService` -> `core/db/client`
   // with no direct `core/db` import of its own; the pure A lane strips
@@ -245,6 +262,10 @@ test("manifest rows are internally consistent", () => {
     // v2 row shape: conflictKeys is a required array on every row.
     expect(Array.isArray(row.conflictKeys)).toBe(true);
     expect(typeof row.cWriteGlobal).toBe("boolean");
+    // TASK-578: the classifier omits weightMs (no measured timings), so no
+    // committed row may carry `weightMs: 0` and break the DEFAULT_WEIGHT
+    // fallback when the timings file is missing.
+    expect(Object.hasOwn(row, "weightMs")).toBe(false);
   }
 });
 

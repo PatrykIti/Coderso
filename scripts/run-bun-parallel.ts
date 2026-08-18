@@ -26,6 +26,11 @@
  *   `--lane perf` (workers must be 1 anyway via `perf_lane_parallel_invalid`).
  *   Every spawned worker index (including perf) must be < `flags.workers`
  *   because provisioning creates exactly `bun_worker_0..{workers-1}`.
+ * - A lane with an EMPTY file list is skipped entirely (TASK-578): a worker
+ *   is never spawned with zero paths, so `bun test` can never fall back to
+ *   repo-wide discovery. The guard applies to every B worker, both C lists,
+ *   and the perf lane; when every selected lane is empty the report still
+ *   writes a truthful `totalMs: 0` (never `null` from `Math.max(...[])`).
  * - The perf worker env is an ADDITIVE overlay of `PERF_QUIET_ENV` on
  *   `resolveWorkerEnv`: `DATABASE_URL`/`DATABASE_DIRECT_URL`/`NODE_ENV` come
  *   from the base resolver (the perf lane needs real DB access).
@@ -277,17 +282,24 @@ export async function main(): Promise<void> {
   // CPU isolation); perf runs strictly after ALL of them (serial, CPU-isolated).
   const workers: Promise<WorkerResult>[] = [];
   if (flags.lane === "all" || flags.lane === "b") {
-    workers.push(...part.b.map((files, i) => runWorker(`b${i}`, files, bEnvs[i], flags.noRetry)));
+    // Skip empty B workers: `bun test` must never run with an empty file list
+    // (it would fall back to repo-wide discovery). TASK-578 guard.
+    for (let i = 0; i < part.b.length; i++) {
+      if (part.b[i].length === 0) continue;
+      workers.push(runWorker(`b${i}`, part.b[i], bEnvs[i], flags.noRetry));
+    }
   }
   if (flags.lane === "all" || flags.lane === "c") {
-    workers.push(
-      runWorker(
-        "c1",
-        part.c1,
-        resolveWorkerEnv(c1Index, { poolMax: pool, fenceOffset: c1Index + 1 }),
-        flags.noRetry
-      )
-    );
+    if (part.c1.length > 0) {
+      workers.push(
+        runWorker(
+          "c1",
+          part.c1,
+          resolveWorkerEnv(c1Index, { poolMax: pool, fenceOffset: c1Index + 1 }),
+          flags.noRetry
+        )
+      );
+    }
     if (part.c2.length > 0) {
       workers.push(
         runWorker(
@@ -312,7 +324,7 @@ export async function main(): Promise<void> {
   }
   results.push(...(await Promise.all(workers)));
 
-  if (PERF_SERIAL && (flags.lane === "all" || flags.lane === "perf")) {
+  if (PERF_SERIAL && (flags.lane === "all" || flags.lane === "perf") && part.perf.length > 0) {
     const perf = await runWorker(
       "perf",
       part.perf,
@@ -325,7 +337,7 @@ export async function main(): Promise<void> {
     results.push(perf);
   }
 
-  const totalMs = Math.max(...results.map((r) => r.durationMs));
+  const totalMs = results.length ? Math.max(...results.map((r) => r.durationMs)) : 0;
   await writeFile(flags.report, JSON.stringify({ results, totalMs }, null, 2));
   const failed = results.filter((r) => r.exit !== 0);
   for (const f of failed) {

@@ -256,6 +256,38 @@ test("DEFAULT_WEIGHT fallback drives a balanced B partition without timings", ()
   expect(p.b.flat().sort()).toEqual(["a.test.ts", "b.test.ts", "c.test.ts", "d.test.ts"]);
 });
 
+test("degraded path: classifier-shaped rows (NO weightMs) + empty timings spread B files over >1 worker", () => {
+  // Regression for TASK-578: the classifier OWNS the manifest rows and now
+  // omits the optional weightMs field when it has no measured timings. With a
+  // missing/corrupt timings file (`safeRead` degrades to `{}`) the partitioner
+  // must fall back to DEFAULT_WEIGHT[bucket] and keep spreading B files, not
+  // read a `weightMs: 0` that LPT would dump onto the first worker.
+  const rows: ManifestRowV2[] = [
+    { file: "b1.test.ts", bucket: "B", conflictKeys: [], cWriteGlobal: false },
+    { file: "b2.test.ts", bucket: "B", conflictKeys: [], cWriteGlobal: false },
+    { file: "b3.test.ts", bucket: "B", conflictKeys: [], cWriteGlobal: false },
+    { file: "b4.test.ts", bucket: "B", conflictKeys: [], cWriteGlobal: false },
+  ];
+  for (const r of rows) expect(Object.hasOwn(r, "weightMs")).toBe(false);
+
+  const p = partition(rows, {}, 2);
+  // Equal DEFAULT_WEIGHT.B weights: greedy LPT yields 2 files per worker.
+  const counts = p.b.map((files) => files.length);
+  expect(counts).toEqual([2, 2]);
+  expect(p.b.filter((files) => files.length > 0).length).toBeGreaterThan(1);
+  // Every B file lands exactly once across the workers.
+  expect(p.b.flat().sort()).toEqual(["b1.test.ts", "b2.test.ts", "b3.test.ts", "b4.test.ts"]);
+  // The same rows with an explicit measured `0` stay pinned to the first
+  // worker (the pinned `0`-semantics contract: `??` never treats 0 as absent).
+  const pinned = partition(
+    rows,
+    { "b1.test.ts": 0, "b2.test.ts": 0, "b3.test.ts": 0, "b4.test.ts": 0 },
+    2
+  );
+  expect(pinned.b[0].length).toBe(4);
+  expect(pinned.b[1].length).toBe(0);
+});
+
 test("partitionSummary is deterministic, splits C lines, and handles empty workers", () => {
   const rows = [
     row("a.test.ts", "B"),

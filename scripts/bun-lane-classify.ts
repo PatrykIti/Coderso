@@ -38,6 +38,13 @@
  * file rejects with a named error (`manifest_read_failed:<path>`) and aborts
  * the whole run so the manifest can never silently drift.
  *
+ * Rows deliberately OMIT the optional `weightMs` field (TASK-578): the
+ * classifier has no measured timings, so emitting `weightMs: 0` would make the
+ * partitioner treat `0` as a real weight and degenerate lane B onto one worker
+ * when the timings file is missing. With the field absent, the partitioner's
+ * `timings[file] ?? row.weightMs ?? DEFAULT_WEIGHT[bucket]` falls back to the
+ * bucket defaults exactly as declared.
+ *
  * Manifest v2 (TASK-559): each row carries `conflictKeys: string[]` (ALL
  * matched C signals in deterministic C_SETTING_KEYS -> C_TABLES -> C_LITERALS
  * order, so multi-signal files like `detail-page-runtime-lite.test.ts` are no
@@ -694,13 +701,13 @@ async function classify(file: string): Promise<BucketRowV2> {
   // perf path override FIRST: the perf-lane policy routes by bucket value, and
   // tests/perf/* must never be merged into A/B workers.
   if (file.startsWith(PERF_DIR)) {
-    return { file, bucket: "perf", weightMs: 0, conflictKeys: [], cWriteGlobal: false };
+    return { file, bucket: "perf", conflictKeys: [], cWriteGlobal: false }; // NO weightMs (TASK-578)
   }
   const hasDb =
     /from\s+["'](?:\.\.\/)+core\/db\/(?:client|schema)["']/.test(src) ||
     /await\s+db\./.test(src) ||
     reachesDbTransitively(file);
-  if (!hasDb) return { file, bucket: "A", weightMs: 0, conflictKeys: [], cWriteGlobal: false };
+  if (!hasDb) return { file, bucket: "A", conflictKeys: [], cWriteGlobal: false }; // NO weightMs (TASK-578)
 
   const keys = collectConflictKeys(src);
   const hitsC = keys.length > 0 || (/set\w*Setting/.test(src) && /beforeAll|beforeEach/.test(src));
@@ -710,14 +717,12 @@ async function classify(file: string): Promise<BucketRowV2> {
     return {
       file,
       bucket: "C",
-      weightMs: 0,
       conflictKeys: keys,
       cWriteGlobal: hasCWriteGlobal(src),
-    };
+    }; // NO weightMs (TASK-578)
   }
-  if (cleansOwnRows)
-    return { file, bucket: "B", weightMs: 0, conflictKeys: [], cWriteGlobal: false };
-  return { file, bucket: "B", weightMs: 0, conflictKeys: [], cWriteGlobal: false }; // DB-backed but not obviously shared
+  if (cleansOwnRows) return { file, bucket: "B", conflictKeys: [], cWriteGlobal: false }; // NO weightMs (TASK-578)
+  return { file, bucket: "B", conflictKeys: [], cWriteGlobal: false }; // NO weightMs (TASK-578), DB-backed but not obviously shared
 }
 
 async function main(): Promise<void> {
