@@ -72,7 +72,9 @@ and loads full JSON payloads.
   Contract claim "Endpoints unchanged" must be corrected (list + restore stay
   unchanged, detail is additive).
 - Subtask 03 (N3): unique `(entryId, version)` index (migration + snapshot +
-  journal) + bounded retry on conflict; concurrency-safe version allocation.
+  journal; migration number pinned to **0076** after TASK-569 (0073), TASK-564
+  (0074) and TASK-571 (0075); re-read the live journal immediately before
+  allocation) + bounded retry on conflict; concurrency-safe version allocation.
 
 ## Fix Strategy
 
