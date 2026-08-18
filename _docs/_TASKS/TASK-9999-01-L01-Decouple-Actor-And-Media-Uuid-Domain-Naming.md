@@ -46,11 +46,11 @@ differently.
 
 ## Sub-Tasks
 
-- [ ] Add one neutral UUID-shape predicate while retaining the media-named API.
-- [ ] Move actor and `updatedBy` call sites to the neutral predicate.
-- [ ] Preserve `firstScreenMediaAssetUuid` scalar/array selection and exact casing.
-- [ ] Pin exact acceptance/rejection and byte-preservation parity in existing Vitest lanes.
-- [ ] Run static checks, targeted tests, and diff validation.
+- [x] Add one neutral UUID-shape predicate while retaining the media-named API.
+- [x] Move actor and `updatedBy` call sites to the neutral predicate.
+- [x] Preserve `firstScreenMediaAssetUuid` scalar/array selection and exact casing.
+- [x] Pin exact acceptance/rejection and byte-preservation parity in existing Vitest lanes.
+- [x] Run static checks, targeted tests, and diff validation.
 
 ## Implementation Pseudocode
 
