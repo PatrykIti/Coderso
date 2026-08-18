@@ -7,6 +7,7 @@
 **Estimated Effort:** Large
 **Dependencies:** TASK-467-03-L01
 **Status:** ⏳ To Do
+**Changelog:** 1308 (pinned; closure only)
 
 ---
 

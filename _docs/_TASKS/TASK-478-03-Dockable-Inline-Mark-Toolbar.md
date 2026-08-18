@@ -7,6 +7,7 @@
 **Estimated Effort:** Small
 **Dependencies:** TASK-475 (mark toolbar)
 **Status:** ⏳ To Do
+**Changelog:** 1307 (pinned; closure only)
 
 ---
 

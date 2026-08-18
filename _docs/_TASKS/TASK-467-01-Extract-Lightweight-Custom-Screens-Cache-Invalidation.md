@@ -7,6 +7,7 @@
 **Estimated Effort:** Small
 **Dependencies:** TASK-467
 **Status:** ⏳ To Do
+**Changelog:** 1308 (pinned; closure only)
 
 ---
 

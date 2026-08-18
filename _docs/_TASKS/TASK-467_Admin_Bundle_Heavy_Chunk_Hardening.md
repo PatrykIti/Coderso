@@ -6,6 +6,7 @@
 **Estimated Effort:** Large
 **Dependencies:** TASK-399-04, TASK-462, TASK-464, TASK-209, TASK-054-22
 **Status:** ⏳ To Do
+**Changelog:** 1308 (pinned; closure only)
 
 ---
 

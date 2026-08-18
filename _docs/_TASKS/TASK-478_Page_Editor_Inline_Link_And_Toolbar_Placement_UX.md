@@ -6,6 +6,7 @@
 **Estimated Effort:** Medium
 **Dependencies:** TASK-475/476/477 (inline mark toolbar)
 **Status:** ⏳ To Do
+**Changelog:** 1307 (pinned; closure only)
 
 ---
 

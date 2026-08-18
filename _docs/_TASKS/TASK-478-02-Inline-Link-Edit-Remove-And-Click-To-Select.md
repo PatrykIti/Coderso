@@ -7,6 +7,7 @@
 **Estimated Effort:** Medium
 **Dependencies:** TASK-478-01, TASK-476-01 (mark replace/toggle)
 **Status:** ⏳ To Do
+**Changelog:** 1307 (pinned; closure only)
 
 ---
 
