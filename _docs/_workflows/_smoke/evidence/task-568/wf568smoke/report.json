@@ -1,0 +1,57 @@
+{
+  "session": "wf568smoke",
+  "serverUp": true,
+  "consoleErrors": [],
+  "failures": [],
+  "screenshots": [
+    "evidence/task-568/wf568smoke/568-1-head-no-ga.png",
+    "evidence/task-568/wf568smoke/568-2-head-with-ga.png",
+    "evidence/task-568/wf568smoke/568-3-failclosed-no-ga.png",
+    "evidence/task-568/wf568smoke/561-1-fence-no-maintenance.png",
+    "evidence/task-568/wf568smoke/561-3-import-success.png"
+  ],
+  "scenarios": [
+    {
+      "id": "568-head-no-ga",
+      "title": "Public page head with no GA configured stays clean (0 gtag scripts, correct title)",
+      "pass": true,
+      "evidence": "eval: {gtag:0, headLen:1597, scripts:2, title:'Smoke 568'}; server log has 0 analytics_head_resolution_failed entries"
+    },
+    {
+      "id": "568-head-with-ga",
+      "title": "GA4 measurement id configured through admin Settings->Integrations injects gtag script + inline init into public head",
+      "pass": true,
+      "evidence": "eval: {gtmSrc:1, gtagInline:1, hasId:true, srcs:['https://www.googletagmanager.com/gtag/js?id=G-TEST568ABC']}; DB integration google-analytics connected with measurementId"
+    },
+    {
+      "id": "568-head-failclosed",
+      "title": "Removing the GA integration makes the head fail closed (tag disappears, no stale config)",
+      "pass": true,
+      "evidence": "eval: {gtagScripts:0, hasId:false}; DB config cleared before render"
+    },
+    {
+      "id": "561-fence-no-maintenance",
+      "title": "Import without maintenance mode is rejected fail-closed (409, no DB change)",
+      "pass": true,
+      "evidence": "UI toast 'Enable maintenance mode before importing a backup.'; console 409 Conflict on /admin/api/backups/import"
+    },
+    {
+      "id": "561-import-success",
+      "title": "Valid .cbk (22 tables, 0 rows) imports fully with maintenance mode on: decrypt->validate->tx->media",
+      "pass": true,
+      "evidence": "UI toast 'Import complete: 22 tables, 0 rows.'; DB pages/media replaced per contract"
+    },
+    {
+      "id": "562-exact-set-reject",
+      "title": "Archive missing one required table member is rejected with backup_manifest_invalid (422) before any mutation",
+      "pass": true,
+      "evidence": "UI toast 'Backup manifest is missing or malformed.'; console 422; omitted postTermAssignments member from otherwise valid archive"
+    },
+    {
+      "id": "563-cache-invalidated",
+      "title": "After import replaces content, public front serves 404 (no stale cached page)",
+      "pass": true,
+      "evidence": "curl front /smoke-568 -> 404 after import (page no longer exists), not stale cached HTML"
+    }
+  ]
+}

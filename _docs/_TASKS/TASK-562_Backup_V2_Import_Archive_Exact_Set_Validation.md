@@ -1,8 +1,8 @@
 # TASK-562: Backup v2 Import Archive Exact-Set Validation
 
-**Status:** ⏳ To Do
-**Started:**
-**Completed:**
+**Status:** ✅ Done
+**Started:** 2026-08-18
+**Completed:** 2026-08-18
 **Changelog:** 1284 (pinned)
 **Priority:** High
 **Size:** Medium

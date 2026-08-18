@@ -1,8 +1,8 @@
 # TASK-575: Commerce Rename Variant Attribute Collision Guard
 
-**Status:** ⏳ To Do
-**Started:**
-**Completed:**
+**Status:** ✅ Done
+**Started:** 2026-08-18
+**Completed:** 2026-08-18
 **Changelog:** 1297 (pinned)
 **Priority:** Low
 **Size:** Small

@@ -1,8 +1,8 @@
 # TASK-568: Public Analytics Head Log Hygiene
 
-**Status:** ⏳ To Do
-**Started:**
-**Completed:**
+**Status:** ✅ Done
+**Started:** 2026-08-18
+**Completed:** 2026-08-18
 **Changelog:** 1290 (pinned)
 **Priority:** Low
 **Size:** Small

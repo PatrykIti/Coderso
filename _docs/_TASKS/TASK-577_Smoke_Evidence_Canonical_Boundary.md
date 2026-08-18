@@ -12,9 +12,9 @@
 > Keep this note for audit trail; the Purpose/Evidence sections stay as written
 > (they are the audited starting point).
 
-**Status:** ⏳ To Do
-**Started:**
-**Completed:**
+**Status:** ✅ Done
+**Started:** 2026-08-18
+**Completed:** 2026-08-18
 **Changelog:** 1299 (pinned)
 **Priority:** Medium
 **Size:** Medium

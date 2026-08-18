@@ -1,0 +1,38 @@
+{
+  "session": "wf575smoke",
+  "serverUp": true,
+  "consoleErrors": [],
+  "failures": [],
+  "screenshots": [
+    "_docs/_workflows/_smoke/evidence/task-575/wf575smoke/01-rename-collision-inline-alert.png",
+    "_docs/_workflows/_smoke/evidence/task-575/wf575smoke/02-collision-alert-dark-mode.png",
+    "_docs/_workflows/_smoke/evidence/task-575/wf575smoke/03-editor-dark-mode.png",
+    "_docs/_workflows/_smoke/evidence/task-575/wf575smoke/04-collision-alert-dark-mode.png"
+  ],
+  "scenarios": [
+    {
+      "id": "rename-collision-rejected",
+      "title": "Renaming product attribute color -> size (existing key) is rejected inline with no state change",
+      "pass": true,
+      "evidence": "Inline alert 'Attribute key \"size\" already exists.'; attribute list still shows original keys; screenshot 01"
+    },
+    {
+      "id": "rename-trim-no-false-collision",
+      "title": "Trimming an attribute key does not produce a false collision with an untrimmed sibling",
+      "pass": true,
+      "evidence": "Whitespace-trimmed key accepted; no spurious 'already exists' alert"
+    },
+    {
+      "id": "rename-unique-preserves-values",
+      "title": "Unique rename color -> farba keeps the attribute values intact",
+      "pass": true,
+      "evidence": "Attribute key updates to 'farba' with the same value set preserved"
+    },
+    {
+      "id": "collision-alert-dark-mode",
+      "title": "Collision alert is visible and readable in dark mode",
+      "pass": true,
+      "evidence": "Dark mode toggled; alert still rendered with legible colors; screenshots 02/03/04"
+    }
+  ]
+}

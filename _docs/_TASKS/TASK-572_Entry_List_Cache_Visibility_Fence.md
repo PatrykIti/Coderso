@@ -1,8 +1,8 @@
 # TASK-572: Entry List Cache Visibility Fence
 
-**Status:** ⏳ To Do
-**Started:**
-**Completed:**
+**Status:** ✅ Done
+**Started:** 2026-08-18
+**Completed:** 2026-08-18
 **Changelog:** 1294 (pinned)
 **Priority:** Medium
 **Size:** Medium

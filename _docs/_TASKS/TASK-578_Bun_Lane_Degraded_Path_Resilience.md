@@ -1,8 +1,8 @@
 # TASK-578: Bun Lane Degraded-Path Resilience
 
-**Status:** ⏳ To Do
-**Started:**
-**Completed:**
+**Status:** ✅ Done
+**Started:** 2026-08-18
+**Completed:** 2026-08-18
 **Changelog:** 1300 (pinned)
 **Priority:** Medium
 **Size:** Small

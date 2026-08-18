@@ -1,0 +1,37 @@
+{
+  "session": "wf574smoke",
+  "serverUp": true,
+  "consoleErrors": [],
+  "failures": [],
+  "screenshots": [
+    "_docs/_workflows/_smoke/evidence/task-574/wf574smoke/01-popup-published-editor.png",
+    "_docs/_workflows/_smoke/evidence/task-574/wf574smoke/02-popup-front-time-delay.png",
+    "_docs/_workflows/_smoke/evidence/task-574/wf574smoke/03-popup-single-dialog-generation-guard.png"
+  ],
+  "scenarios": [
+    {
+      "id": "popup-create-publish",
+      "title": "Create and publish a popup through the admin editor (delay 3s, session_once on)",
+      "pass": true,
+      "evidence": "Editor shows published popup; popup row appears in list; screenshot 01"
+    },
+    {
+      "id": "popup-front-time-delay",
+      "title": "Published popup appears on the public front only after the configured delay",
+      "pass": true,
+      "evidence": "Public page /smoke-574: no dialog at t=0, dialog mounts at ~3s; screenshot 02"
+    },
+    {
+      "id": "popup-close",
+      "title": "Popup close control dismisses the dialog and does not re-open on the same session",
+      "pass": true,
+      "evidence": "Close button clicked; sessionStorage persistence keeps it dismissed after navigation"
+    },
+    {
+      "id": "popup-session-once",
+      "title": "session_once popup survives navigation but returns exactly once after sessionStorage is cleared",
+      "pass": true,
+      "evidence": "After clearing sessionStorage and reloading, exactly 1 dialog mounts (generation guard prevents duplicate watchers); screenshot 03"
+    }
+  ]
+}

@@ -1,8 +1,8 @@
 # TASK-573: Entry Gated Probe Cheap Bounded Read
 
-**Status:** ⏳ To Do
-**Started:**
-**Completed:**
+**Status:** ✅ Done
+**Started:** 2026-08-18
+**Completed:** 2026-08-18
 **Changelog:** 1295 (pinned)
 **Priority:** Medium
 **Size:** Small

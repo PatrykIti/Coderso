@@ -1,8 +1,8 @@
 # TASK-567: Outbound Webhook Egress Policy (SSRF Hardening)
 
-**Status:** ⏳ To Do
-**Started:**
-**Completed:**
+**Status:** ✅ Done
+**Started:** 2026-08-18
+**Completed:** 2026-08-18
 **Changelog:** 1289 (pinned)
 **Priority:** High
 **Size:** Large
