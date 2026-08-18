@@ -6,7 +6,7 @@ import type {
   WidgetBlock,
   WidgetDefinition,
   WidgetEditorContract,
-  WidgetEditorProps,
+  WidgetEditorBundle,
   WidgetLayoutDefaults,
 } from "../types";
 import {
@@ -31,9 +31,7 @@ export type TemplateSectionData = {
 };
 
 export type TemplateSectionResolvedError =
-  | "template_missing"
-  | "template_unpublished"
-  | "template_loop";
+  "template_missing" | "template_unpublished" | "template_loop";
 
 export type TemplateSectionResolutionState =
   | "not_selected"
@@ -347,11 +345,9 @@ export function TemplateSectionBlock({
   );
 }
 
-export function createTemplateSectionWidget(editors: {
-  wizard: ComponentType<WidgetEditorProps<TemplateSectionData>>;
-  visual: ComponentType<WidgetEditorProps<TemplateSectionData>>;
-  advanced: ComponentType<WidgetEditorProps<TemplateSectionData>>;
-}): WidgetDefinition<TemplateSectionData> {
+export function createTemplateSectionWidget(
+  editors: WidgetEditorBundle<TemplateSectionData>
+): WidgetDefinition<TemplateSectionData> {
   return {
     type: TEMPLATE_SECTION_TYPE,
     title: "Template section",

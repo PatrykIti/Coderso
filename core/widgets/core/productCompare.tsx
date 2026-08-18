@@ -1,6 +1,6 @@
 import type { ComponentType, CSSProperties } from "react";
 
-import type { WidgetDefinition, WidgetEditorContract, WidgetEditorProps } from "../types";
+import type { WidgetDefinition, WidgetEditorContract, WidgetEditorBundle } from "../types";
 import {
   buildCommerceWidgetQueryInput,
   commerceStockLabelMap,
@@ -1189,11 +1189,9 @@ export function ProductCompareBlock({
   );
 }
 
-export function createProductCompareWidget(editors: {
-  wizard: ComponentType<WidgetEditorProps<ProductCompareData>>;
-  visual: ComponentType<WidgetEditorProps<ProductCompareData>>;
-  advanced: ComponentType<WidgetEditorProps<ProductCompareData>>;
-}): WidgetDefinition<ProductCompareData> {
+export function createProductCompareWidget(
+  editors: WidgetEditorBundle<ProductCompareData>
+): WidgetDefinition<ProductCompareData> {
   return {
     type: "product-compare",
     title: "Product Compare",

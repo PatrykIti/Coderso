@@ -1,6 +1,6 @@
 import type { ComponentType, CSSProperties } from "react";
 
-import type { WidgetDefinition, WidgetEditorContract, WidgetEditorProps } from "../types";
+import type { WidgetDefinition, WidgetEditorContract, WidgetEditorBundle } from "../types";
 import { getBookingRuntimeClientScript } from "./bookingRuntimeScript";
 import { compactObject, compactStyle, resolveClearableStyleValue } from "./clearableStyle";
 
@@ -948,11 +948,9 @@ export function BookingCalendarBlock({
   );
 }
 
-export function createBookingCalendarWidget(editors: {
-  wizard: ComponentType<WidgetEditorProps<BookingCalendarData>>;
-  visual: ComponentType<WidgetEditorProps<BookingCalendarData>>;
-  advanced: ComponentType<WidgetEditorProps<BookingCalendarData>>;
-}): WidgetDefinition<BookingCalendarData> {
+export function createBookingCalendarWidget(
+  editors: WidgetEditorBundle<BookingCalendarData>
+): WidgetDefinition<BookingCalendarData> {
   return {
     type: "booking-calendar",
     title: "Booking Calendar",

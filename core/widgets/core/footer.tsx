@@ -2,7 +2,7 @@ import type { CSSProperties, ComponentType } from "react";
 import { useId } from "react";
 
 import { WidgetRenderer } from "../renderers/widgetRenderer";
-import type { DeviceTarget, WidgetBlock, WidgetDefinition, WidgetEditorProps } from "../types";
+import type { DeviceTarget, WidgetBlock, WidgetDefinition, WidgetEditorBundle } from "../types";
 import { compactStyle, resolveClearableCssColorValue } from "./clearableStyle";
 import {
   footerColumnSlotIds,
@@ -958,11 +958,9 @@ export function FooterBlock({
   );
 }
 
-export function createFooterWidget(editors: {
-  wizard: ComponentType<WidgetEditorProps<FooterData>>;
-  visual: ComponentType<WidgetEditorProps<FooterData>>;
-  advanced: ComponentType<WidgetEditorProps<FooterData>>;
-}): WidgetDefinition<FooterData> {
+export function createFooterWidget(
+  editors: WidgetEditorBundle<FooterData>
+): WidgetDefinition<FooterData> {
   return {
     type: "footer",
     title: "Footer",

@@ -3,7 +3,7 @@ import type { ComponentType, CSSProperties } from "react";
 import type {
   WidgetDefinition,
   WidgetEditorContract,
-  WidgetEditorProps,
+  WidgetEditorBundle,
   WidgetRenderContext,
 } from "../types";
 import {
@@ -91,8 +91,7 @@ export type ProductGalleryData = {
 
 export type ProductGalleryRouteState = {
   cardLinks:
-    | { mode: "ready"; basePath: string }
-    | { mode: "missing_product_route"; reason: string };
+    { mode: "ready"; basePath: string } | { mode: "missing_product_route"; reason: string };
   cta:
     | { mode: "visible"; basePath: string }
     | { mode: "disabled_by_author" }
@@ -1158,11 +1157,9 @@ export function ProductGalleryBlock({
   );
 }
 
-export function createProductGalleryWidget(editors: {
-  wizard: ComponentType<WidgetEditorProps<ProductGalleryData>>;
-  visual: ComponentType<WidgetEditorProps<ProductGalleryData>>;
-  advanced: ComponentType<WidgetEditorProps<ProductGalleryData>>;
-}): WidgetDefinition<ProductGalleryData> {
+export function createProductGalleryWidget(
+  editors: WidgetEditorBundle<ProductGalleryData>
+): WidgetDefinition<ProductGalleryData> {
   return {
     type: "product-gallery",
     title: "Product Gallery",

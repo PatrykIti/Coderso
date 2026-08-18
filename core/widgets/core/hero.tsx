@@ -10,7 +10,7 @@ import type {
   WidgetBlock,
   WidgetDefinition,
   WidgetEditorContract,
-  WidgetEditorProps,
+  WidgetEditorBundle,
   WidgetRenderContext,
 } from "../types";
 import { renderSharedWidgetRuntimeScript } from "../runtimeScripts";
@@ -1736,11 +1736,9 @@ export const heroEditorContract: WidgetEditorContract = {
   ],
 };
 
-export function createHeroWidget(editors: {
-  wizard: ComponentType<WidgetEditorProps<HeroData>>;
-  visual: ComponentType<WidgetEditorProps<HeroData>>;
-  advanced: ComponentType<WidgetEditorProps<HeroData>>;
-}): WidgetDefinition<HeroData> {
+export function createHeroWidget(
+  editors: WidgetEditorBundle<HeroData>
+): WidgetDefinition<HeroData> {
   return {
     type: "hero",
     title: "Hero",

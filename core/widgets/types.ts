@@ -1,4 +1,4 @@
-import type { ComponentType, ReactNode } from "react";
+import type { ComponentType, LazyExoticComponent, ReactNode } from "react";
 
 export type WidgetCategory = "layout" | "content" | "forms" | "navigation" | "media";
 
@@ -101,6 +101,20 @@ export type WidgetEditorProps<T> = {
   context?: WidgetEditorContext;
 };
 
+/**
+ * A widget editor component slot. Accepts both eager components and
+ * `React.lazy` components so admin surfaces can defer editor module loading
+ * while keeping the required `WidgetDefinition.editor` object shape.
+ */
+export type WidgetEditorComponent<T> =
+  ComponentType<WidgetEditorProps<T>> | LazyExoticComponent<ComponentType<WidgetEditorProps<T>>>;
+
+export type WidgetEditorBundle<T> = {
+  wizard: WidgetEditorComponent<T>;
+  visual: WidgetEditorComponent<T>;
+  advanced: WidgetEditorComponent<T>;
+};
+
 export type WidgetEditorContext = {
   surface: WidgetSurface;
   blockId?: string;
@@ -144,14 +158,7 @@ export type WidgetEditorCapabilities = {
 export type WidgetEditorMode = EditorMode;
 
 export type WidgetEditorSectionRole =
-  | "setup"
-  | "source"
-  | "content"
-  | "visual"
-  | "layout"
-  | "technical"
-  | "diagnostics"
-  | "summary";
+  "setup" | "source" | "content" | "visual" | "layout" | "technical" | "diagnostics" | "summary";
 
 export type WidgetEditorDuplicateWritablePathAllowance = {
   path: string;
@@ -194,11 +201,7 @@ export type WidgetDefinition<T = Record<string, unknown>> = {
   schema: Record<string, unknown>;
   defaults: T;
   preserveAbsentDefaultKeys?: string[];
-  editor: {
-    wizard: ComponentType<WidgetEditorProps<T>>;
-    visual: ComponentType<WidgetEditorProps<T>>;
-    advanced: ComponentType<WidgetEditorProps<T>>;
-  };
+  editor: WidgetEditorBundle<T>;
   editorCapabilities?: WidgetEditorCapabilities;
   editorContract?: WidgetEditorContract;
   render: ComponentType<{

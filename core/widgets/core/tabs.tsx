@@ -18,7 +18,7 @@ import type {
   WidgetBlock,
   WidgetDefinition,
   WidgetEditorContract,
-  WidgetEditorProps,
+  WidgetEditorBundle,
   WidgetRenderContext,
 } from "../types";
 import { compactStyle, resolveClearableCssColorValue } from "./clearableStyle";
@@ -1019,11 +1019,9 @@ export function TabsBlock({
   );
 }
 
-export function createTabsWidget(editors: {
-  wizard: ComponentType<WidgetEditorProps<TabsData>>;
-  visual: ComponentType<WidgetEditorProps<TabsData>>;
-  advanced: ComponentType<WidgetEditorProps<TabsData>>;
-}): WidgetDefinition<TabsData> {
+export function createTabsWidget(
+  editors: WidgetEditorBundle<TabsData>
+): WidgetDefinition<TabsData> {
   return {
     type: "tabs",
     title: "Tabs",

@@ -1,10 +1,9 @@
-import type { ComponentType } from "react";
 import type {
   WidgetAudience,
   WidgetBindingTarget,
   WidgetComplexity,
   WidgetDefinition,
-  WidgetEditorProps,
+  WidgetEditorBundle,
   WidgetPreset,
   WidgetSurface,
   WidgetDataAccess,
@@ -49,11 +48,7 @@ import { createTemplateSectionWidget, type TemplateSectionData } from "./templat
 import { createTestimonialsWidget, type TestimonialsData } from "./testimonials";
 import { createTimelineWidget, type TimelineData } from "./timeline";
 
-type EditorBundle<T> = {
-  wizard: ComponentType<WidgetEditorProps<T>>;
-  visual: ComponentType<WidgetEditorProps<T>>;
-  advanced: ComponentType<WidgetEditorProps<T>>;
-};
+type EditorBundle<T> = WidgetEditorBundle<T>;
 
 type CoreWidgetMetadata = {
   complexity: WidgetComplexity;

@@ -1,6 +1,6 @@
 import type { CSSProperties, ComponentType, ReactNode } from "react";
 
-import type { WidgetDefinition, WidgetEditorContract, WidgetEditorProps } from "../types";
+import type { WidgetDefinition, WidgetEditorContract, WidgetEditorBundle } from "../types";
 import { compactStyle, resolveClearableStyleValue } from "./clearableStyle";
 import { createWidgetInstanceId, scopedId } from "./widgetInstanceIds";
 import { resolveWidgetLinkAttrs } from "./widgetSafeHref";
@@ -1276,11 +1276,9 @@ export function FaqAccordionBlock({
   );
 }
 
-export function createFaqAccordionWidget(editors: {
-  wizard: ComponentType<WidgetEditorProps<FaqAccordionData>>;
-  visual: ComponentType<WidgetEditorProps<FaqAccordionData>>;
-  advanced: ComponentType<WidgetEditorProps<FaqAccordionData>>;
-}): WidgetDefinition<FaqAccordionData> {
+export function createFaqAccordionWidget(
+  editors: WidgetEditorBundle<FaqAccordionData>
+): WidgetDefinition<FaqAccordionData> {
   return {
     type: "faq-accordion",
     title: "FAQ Accordion",

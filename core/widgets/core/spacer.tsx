@@ -4,7 +4,7 @@ import type {
   DeviceTarget,
   WidgetDefinition,
   WidgetEditorContract,
-  WidgetEditorProps,
+  WidgetEditorBundle,
   WidgetRenderContext,
 } from "../types";
 
@@ -383,11 +383,9 @@ export function SpacerBlock({
   );
 }
 
-export function createSpacerWidget(editors: {
-  wizard: ComponentType<WidgetEditorProps<SpacerData>>;
-  visual: ComponentType<WidgetEditorProps<SpacerData>>;
-  advanced: ComponentType<WidgetEditorProps<SpacerData>>;
-}): WidgetDefinition<SpacerData> {
+export function createSpacerWidget(
+  editors: WidgetEditorBundle<SpacerData>
+): WidgetDefinition<SpacerData> {
   return {
     type: "spacer",
     title: "Spacer",

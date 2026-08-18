@@ -9,7 +9,7 @@ import {
 import type {
   WidgetDefinition,
   WidgetEditorContract,
-  WidgetEditorProps,
+  WidgetEditorBundle,
   WidgetRenderContext,
 } from "../types";
 import { compactStyle, resolveClearableCssColorValue } from "./clearableStyle";
@@ -24,9 +24,7 @@ export type NewsletterIntegrationMode = "action-url" | "webhook";
 export type NewsletterMethod = "post" | "get";
 export type NewsletterSubmissionMode = "static" | "forms-runtime";
 export type NewsletterSuccessBehavior =
-  | "show-message-hide-form"
-  | "show-message-reset-form"
-  | "show-message-keep-form";
+  "show-message-hide-form" | "show-message-reset-form" | "show-message-keep-form";
 export type NewsletterOptInMode = "single" | "double";
 export type NewsletterOptInEnforcement = "provider-owned";
 
@@ -1338,11 +1336,9 @@ export function NewsletterBlock({
   );
 }
 
-export function createNewsletterWidget(editors: {
-  wizard: ComponentType<WidgetEditorProps<NewsletterData>>;
-  visual: ComponentType<WidgetEditorProps<NewsletterData>>;
-  advanced: ComponentType<WidgetEditorProps<NewsletterData>>;
-}): WidgetDefinition<NewsletterData> {
+export function createNewsletterWidget(
+  editors: WidgetEditorBundle<NewsletterData>
+): WidgetDefinition<NewsletterData> {
   return {
     type: "newsletter",
     title: "Newsletter",

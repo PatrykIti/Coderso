@@ -1,6 +1,6 @@
 import type { ComponentType, CSSProperties, ReactNode } from "react";
 
-import type { WidgetDefinition, WidgetEditorContract, WidgetEditorProps } from "../types";
+import type { WidgetDefinition, WidgetEditorContract, WidgetEditorBundle } from "../types";
 import {
   appointmentFormCustomFieldTypes,
   appointmentFormFieldLimits,
@@ -10,11 +10,7 @@ import { getBookingRuntimeClientScript } from "./bookingRuntimeScript";
 import { compactObject, compactStyle, resolveClearableStyleValue } from "./clearableStyle";
 
 export type AppointmentFormVariantId =
-  | "default"
-  | "compact"
-  | "inline"
-  | "sidebar"
-  | "card-summary";
+  "default" | "compact" | "inline" | "sidebar" | "card-summary";
 export type AppointmentFormNameMode = "full" | "split";
 export type AppointmentFormConsent = {
   enabled?: boolean;
@@ -24,12 +20,7 @@ export type AppointmentFormConsent = {
   termsUrl?: string;
 };
 export type AppointmentCustomFieldType =
-  | "text"
-  | "email"
-  | "phone"
-  | "select"
-  | "checkbox"
-  | "textarea";
+  "text" | "email" | "phone" | "select" | "checkbox" | "textarea";
 export type AppointmentCustomField = {
   id: string;
   label: string;
@@ -1122,11 +1113,9 @@ export function AppointmentFormBlock({
   );
 }
 
-export function createAppointmentFormWidget(editors: {
-  wizard: ComponentType<WidgetEditorProps<AppointmentFormData>>;
-  visual: ComponentType<WidgetEditorProps<AppointmentFormData>>;
-  advanced: ComponentType<WidgetEditorProps<AppointmentFormData>>;
-}): WidgetDefinition<AppointmentFormData> {
+export function createAppointmentFormWidget(
+  editors: WidgetEditorBundle<AppointmentFormData>
+): WidgetDefinition<AppointmentFormData> {
   return {
     type: "appointment-form",
     title: "Appointment Form",

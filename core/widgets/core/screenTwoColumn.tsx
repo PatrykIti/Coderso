@@ -5,7 +5,7 @@ import type {
   DeviceTarget,
   WidgetBlock,
   WidgetDefinition,
-  WidgetEditorProps,
+  WidgetEditorBundle,
   WidgetLayoutDefaults,
 } from "../types";
 import { compactObject, compactStyle, resolveClearableStyleValue } from "./clearableStyle";
@@ -167,11 +167,9 @@ export function ScreenTwoColumnBlock({
   );
 }
 
-export function createScreenTwoColumnWidget(editors: {
-  wizard: ComponentType<WidgetEditorProps<ScreenTwoColumnData>>;
-  visual: ComponentType<WidgetEditorProps<ScreenTwoColumnData>>;
-  advanced: ComponentType<WidgetEditorProps<ScreenTwoColumnData>>;
-}): WidgetDefinition<ScreenTwoColumnData> {
+export function createScreenTwoColumnWidget(
+  editors: WidgetEditorBundle<ScreenTwoColumnData>
+): WidgetDefinition<ScreenTwoColumnData> {
   return {
     type: "screen-two-column",
     title: "Screen Two Column",

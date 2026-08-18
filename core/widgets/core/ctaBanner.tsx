@@ -5,7 +5,7 @@ import {
   CSS_COLOR_SCHEMA_PATTERNS,
   CSS_COLOR_VALUE_MAX_LENGTH,
 } from "../../services/theme/cssColorContract";
-import type { WidgetDefinition, WidgetEditorContract, WidgetEditorProps } from "../types";
+import type { WidgetDefinition, WidgetEditorContract, WidgetEditorBundle } from "../types";
 import { compactStyle, resolveClearableCssColorValue } from "./clearableStyle";
 import { normalizeWidgetSafeHref, resolveWidgetLinkAttrs } from "./widgetSafeHref";
 
@@ -1169,11 +1169,9 @@ export function CtaBannerBlock({
   );
 }
 
-export function createCtaBannerWidget(editors: {
-  wizard: ComponentType<WidgetEditorProps<CtaBannerData>>;
-  visual: ComponentType<WidgetEditorProps<CtaBannerData>>;
-  advanced: ComponentType<WidgetEditorProps<CtaBannerData>>;
-}): WidgetDefinition<CtaBannerData> {
+export function createCtaBannerWidget(
+  editors: WidgetEditorBundle<CtaBannerData>
+): WidgetDefinition<CtaBannerData> {
   return {
     type: "cta-banner",
     title: "CTA Banner",

@@ -6,7 +6,7 @@ import type {
   WidgetBlock,
   WidgetDefinition,
   WidgetEditorContract,
-  WidgetEditorProps,
+  WidgetEditorBundle,
   WidgetRenderContext,
 } from "../types";
 
@@ -518,11 +518,9 @@ export function StackBlock({
   );
 }
 
-export function createStackWidget(editors: {
-  wizard: ComponentType<WidgetEditorProps<StackData>>;
-  visual: ComponentType<WidgetEditorProps<StackData>>;
-  advanced: ComponentType<WidgetEditorProps<StackData>>;
-}): WidgetDefinition<StackData> {
+export function createStackWidget(
+  editors: WidgetEditorBundle<StackData>
+): WidgetDefinition<StackData> {
   return {
     type: "stack",
     title: "Stack",

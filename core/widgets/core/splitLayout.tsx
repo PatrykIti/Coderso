@@ -7,7 +7,7 @@ import type {
   WidgetBlock,
   WidgetDefinition,
   WidgetEditorContract,
-  WidgetEditorProps,
+  WidgetEditorBundle,
   WidgetRenderContext,
 } from "../types";
 
@@ -651,11 +651,9 @@ export function SplitLayoutBlock({
   );
 }
 
-export function createSplitLayoutWidget(editors: {
-  wizard: ComponentType<WidgetEditorProps<SplitLayoutData>>;
-  visual: ComponentType<WidgetEditorProps<SplitLayoutData>>;
-  advanced: ComponentType<WidgetEditorProps<SplitLayoutData>>;
-}): WidgetDefinition<SplitLayoutData> {
+export function createSplitLayoutWidget(
+  editors: WidgetEditorBundle<SplitLayoutData>
+): WidgetDefinition<SplitLayoutData> {
   return {
     type: "split-layout",
     title: "Split Layout",

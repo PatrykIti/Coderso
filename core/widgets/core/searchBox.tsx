@@ -4,7 +4,7 @@ import {
   buildListingRuntimeParamName,
   listingRuntimeTokens,
 } from "../../services/search/filterContract";
-import type { WidgetDefinition, WidgetEditorContract, WidgetEditorProps } from "../types";
+import type { WidgetDefinition, WidgetEditorContract, WidgetEditorBundle } from "../types";
 import { compactObject, compactStyle, resolveClearableStyleValue } from "./clearableStyle";
 import { getListingRuntimeClientScript } from "./listingRuntimeScript";
 import { createWidgetInstanceId, scopedId } from "./widgetInstanceIds";
@@ -564,11 +564,9 @@ export function SearchBoxBlock({
   );
 }
 
-export function createSearchBoxWidget(editors: {
-  wizard: ComponentType<WidgetEditorProps<SearchBoxData>>;
-  visual: ComponentType<WidgetEditorProps<SearchBoxData>>;
-  advanced: ComponentType<WidgetEditorProps<SearchBoxData>>;
-}): WidgetDefinition<SearchBoxData> {
+export function createSearchBoxWidget(
+  editors: WidgetEditorBundle<SearchBoxData>
+): WidgetDefinition<SearchBoxData> {
   return {
     type: "search-box",
     title: "Search Box",

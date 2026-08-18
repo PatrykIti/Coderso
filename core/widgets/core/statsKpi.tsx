@@ -1,6 +1,6 @@
 import type { CSSProperties, ComponentType } from "react";
 
-import type { WidgetDefinition, WidgetEditorContract, WidgetEditorProps } from "../types";
+import type { WidgetDefinition, WidgetEditorContract, WidgetEditorBundle } from "../types";
 import { compactObject, compactStyle, resolveClearableStyleValue } from "./clearableStyle";
 import { resolveWidgetLinkAttrs } from "./widgetSafeHref";
 
@@ -1041,11 +1041,9 @@ export function StatsKpiBlock({ data, variant }: { data: StatsKpiData; variant: 
   );
 }
 
-export function createStatsKpiWidget(editors: {
-  wizard: ComponentType<WidgetEditorProps<StatsKpiData>>;
-  visual: ComponentType<WidgetEditorProps<StatsKpiData>>;
-  advanced: ComponentType<WidgetEditorProps<StatsKpiData>>;
-}): WidgetDefinition<StatsKpiData> {
+export function createStatsKpiWidget(
+  editors: WidgetEditorBundle<StatsKpiData>
+): WidgetDefinition<StatsKpiData> {
   return {
     type: "stats-kpi",
     title: "Stats KPI",

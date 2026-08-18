@@ -5,7 +5,7 @@ import {
   CSS_COLOR_VALUE_MAX_LENGTH,
   parseCssColorValue,
 } from "../../services/theme/cssColorContract";
-import type { WidgetDefinition, WidgetEditorContract, WidgetEditorProps } from "../types";
+import type { WidgetDefinition, WidgetEditorContract, WidgetEditorBundle } from "../types";
 import { resolveClearableCssColorValue } from "./clearableStyle";
 
 export const dividerSpaceTokens = [
@@ -668,11 +668,9 @@ export function DividerBlock({ data, variant }: { data: DividerData; variant: st
   );
 }
 
-export function createDividerWidget(editors: {
-  wizard: ComponentType<WidgetEditorProps<DividerData>>;
-  visual: ComponentType<WidgetEditorProps<DividerData>>;
-  advanced: ComponentType<WidgetEditorProps<DividerData>>;
-}): WidgetDefinition<DividerData> {
+export function createDividerWidget(
+  editors: WidgetEditorBundle<DividerData>
+): WidgetDefinition<DividerData> {
   return {
     type: "divider",
     title: "Divider",

@@ -12,7 +12,7 @@ import type {
   WidgetBlock,
   WidgetDefinition,
   WidgetEditorContract,
-  WidgetEditorProps,
+  WidgetEditorBundle,
   WidgetRenderContext,
 } from "../types";
 import { compactStyle, resolveClearableCssColorValue } from "./clearableStyle";
@@ -895,11 +895,9 @@ export function AccordionBlock({
   );
 }
 
-export function createAccordionWidget(editors: {
-  wizard: ComponentType<WidgetEditorProps<AccordionData>>;
-  visual: ComponentType<WidgetEditorProps<AccordionData>>;
-  advanced: ComponentType<WidgetEditorProps<AccordionData>>;
-}): WidgetDefinition<AccordionData> {
+export function createAccordionWidget(
+  editors: WidgetEditorBundle<AccordionData>
+): WidgetDefinition<AccordionData> {
   return {
     type: "accordion",
     title: "Accordion",

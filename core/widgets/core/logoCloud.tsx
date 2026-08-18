@@ -1,6 +1,6 @@
 import { useId, type ComponentType, type CSSProperties } from "react";
 
-import type { WidgetDefinition, WidgetEditorContract, WidgetEditorProps } from "../types";
+import type { WidgetDefinition, WidgetEditorContract, WidgetEditorBundle } from "../types";
 import { compactObject, compactStyle, resolveClearableStyleValue } from "./clearableStyle";
 import { resolveWidgetLinkAttrs } from "./widgetSafeHref";
 
@@ -795,11 +795,9 @@ export function LogoCloudBlock({ data, variant }: { data: LogoCloudData; variant
   );
 }
 
-export function createLogoCloudWidget(editors: {
-  wizard: ComponentType<WidgetEditorProps<LogoCloudData>>;
-  visual: ComponentType<WidgetEditorProps<LogoCloudData>>;
-  advanced: ComponentType<WidgetEditorProps<LogoCloudData>>;
-}): WidgetDefinition<LogoCloudData> {
+export function createLogoCloudWidget(
+  editors: WidgetEditorBundle<LogoCloudData>
+): WidgetDefinition<LogoCloudData> {
   return {
     type: "logo-cloud",
     title: "Logo Cloud",

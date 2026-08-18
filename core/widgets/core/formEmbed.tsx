@@ -1,5 +1,5 @@
 import { useId, type CSSProperties, type ComponentType } from "react";
-import type { WidgetDefinition, WidgetEditorContract, WidgetEditorProps } from "../types";
+import type { WidgetDefinition, WidgetEditorContract, WidgetEditorBundle } from "../types";
 import { compactStyle, resolveClearableCssColorValue } from "./clearableStyle";
 import { getFormRuntimeClientScript } from "./formRuntimeScript";
 import {
@@ -903,11 +903,9 @@ export const formEmbedEditorContract: WidgetEditorContract = {
   ],
 };
 
-export function createFormEmbedWidget(editors: {
-  wizard: ComponentType<WidgetEditorProps<FormEmbedData>>;
-  visual: ComponentType<WidgetEditorProps<FormEmbedData>>;
-  advanced: ComponentType<WidgetEditorProps<FormEmbedData>>;
-}): WidgetDefinition<FormEmbedData> {
+export function createFormEmbedWidget(
+  editors: WidgetEditorBundle<FormEmbedData>
+): WidgetDefinition<FormEmbedData> {
   return {
     type: "form-embed",
     title: "Form Embed",
