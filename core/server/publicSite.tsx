@@ -20,6 +20,10 @@ import { getPost, POST_CONTENT_TYPE_SLUG } from "../services/content/postsServic
 import { getPageTemplatePreviewModel } from "../services/pages/pageTemplateLibraryService";
 import { isPageTemplateError } from "../services/pages/pageTemplateLibrarySchema";
 import { getContentType } from "../services/content/typeService";
+import {
+  entryListVisibilitySignature,
+  ENTRY_LIST_CACHE_GATED,
+} from "../services/content/entryListVisibilityProbe";
 import { resolvePublicSeoMetadata } from "../services/seo/seoService";
 import { getSetting } from "../services/settings/settingsService";
 import type { ContentRouteSetting } from "../services/settings/settingsContracts";
@@ -479,7 +483,33 @@ export async function handlePublicRequest(req: Request) {
   const contentRoutes = (await getSetting("site.contentRoutes")) as ContentRouteSetting[];
   const match = matchContentRoute(slugPath, contentRoutes);
   const routeIsGatedEntry = match?.mode === "detail" ? await entryRouteIsGated(match) : false;
-  const shouldUseCache = cacheTtlSeconds > 0 && searchSignature.cacheable && !routeIsGatedEntry;
+  // TASK-572 (M-517-01): the LIST body cache is only safe for anonymous
+  // requests — the cached body is an anonymous-prime public-only render, so an
+  // authenticated content:read session must NEVER read or write it. Auth is
+  // hoisted ABOVE the shared cache read so the list-read gate can run before
+  // any cached body is served; detail/static/homepage reads stay
+  // auth-independent (gated detail is already cache-exempt via the probe above).
+  const { isAuthenticated, cookies } = await resolveEntryRequestAuth(req);
+  // TASK-572 transition fence: an ANONYMOUS list cache key carries a narrow
+  // authoritative visibility signature derived from the content type's current
+  // published restricted (private|password) entry set. The signature is stable
+  // while visibility is stable (anonymous list caching keeps working, exactly
+  // as TASK-517-03 requires), and changes the instant a public→restricted (or
+  // restricted→public) transition lands — the stale anonymous body then sits
+  // under a different key and is never served, so the fence is fail-closed
+  // immediately and never relies on TTL invalidation. The probe only runs for
+  // anonymous requests when the shared cache is usable (TTL > 0 and cacheable
+  // params); authenticated list renders bypass the shared body cache entirely,
+  // so the transition fence is irrelevant for them. A pathological restricted
+  // set (over ENTRY_LIST_VISIBILITY_SIGNATURE_CAP) returns the GATED sentinel
+  // and disables the shared list body cache for that route.
+  const listVisibilitySignature =
+    match?.mode === "list" && !isAuthenticated && cacheTtlSeconds > 0 && searchSignature.cacheable
+      ? await entryListVisibilitySignature(match)
+      : "";
+  const routeIsGatedList = listVisibilitySignature === ENTRY_LIST_CACHE_GATED;
+  const shouldUseCache =
+    cacheTtlSeconds > 0 && searchSignature.cacheable && !routeIsGatedEntry && !routeIsGatedList;
   const shortCacheTtlSeconds = Math.min(cacheTtlSeconds, DEFAULT_SITE_CACHE_TTL_SECONDS);
   const defaultStoreTtlSeconds = searchSignature.signature ? shortCacheTtlSeconds : cacheTtlSeconds;
   const resolveRenderCacheTtl = (result: PublicHtmlRenderResult) => {
@@ -489,8 +519,17 @@ export async function handlePublicRequest(req: Request) {
     return result.cacheable ? defaultStoreTtlSeconds : 0;
   };
 
-  const cacheKey = buildSiteCacheKey(cacheProfileId, slugPath, searchSignature.signature);
-  if (shouldUseCache) {
+  const cacheKey = buildSiteCacheKey(
+    cacheProfileId,
+    slugPath,
+    searchSignature.signature,
+    match?.mode === "list" ? listVisibilitySignature : ""
+  );
+  // TASK-572: gate the LIST body cache READ on the anonymous-only invariant — an
+  // authenticated list render must never consume the anonymous cached list body.
+  // Scope is explicitly the list body cache; detail/static/homepage shared-cache
+  // reads stay auth-independent (public content, gated detail already excluded).
+  if (shouldUseCache && (match?.mode !== "list" || !isAuthenticated)) {
     const cachedHtml = getSiteCacheEntry(cacheKey);
     if (cachedHtml) {
       return buildHtmlResponse(cachedHtml);
@@ -517,12 +556,6 @@ export async function handlePublicRequest(req: Request) {
       return buildHtmlResponse(result.html);
     }
   }
-
-  // ── SHARED AUTH SEAM (TASK-517-01-L03/L05, impl in publicEntryGateUi) ───────
-  // session→content:read boolean + cookies derived ONCE above the routeTarget
-  // branches; bypass is PERMISSION-bounded, not bare Boolean(user).
-  const { isAuthenticated, cookies } = await resolveEntryRequestAuth(req);
-  // ── END SHARED AUTH SEAM ────────────────────────────────────────────────────
 
   const page = match?.mode === "detail" ? null : await getPageBySlug(slugPath);
   const hasPublishedStaticPage = Boolean(page && page.status === "published" && page.publishedData);

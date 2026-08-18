@@ -548,3 +548,153 @@ testIfDbWithOptions(
   },
   { timeout: dbRuntimeTimeout }
 );
+
+// ── TASK-572: list cache visibility fence (M-517-01 + transition fence) ──────
+
+testIfDbWithOptions(
+  "TASK-572: an authed content:read list read is never served the anonymous cached body (private/password visible)",
+  async () => {
+    resetRateLimitBuckets();
+    const { contentType, publicEntry, privateEntry, passwordEntry } =
+      await seedDefaultGateFixture();
+    await setTestSetting("site.cacheTtlSeconds", 60);
+
+    // Anonymous request primes/attempts the list; under the old code this wrote
+    // the public-only body to the shared cache under the auth-independent key.
+    const anonResponse = await requestPublicPath(`/${contentType.slug}`);
+    expect(anonResponse.status).toBe(200);
+    expect(await anonResponse.text()).toContain("Gate public entry");
+
+    // The content:read session requests the SAME path and must receive the
+    // FULL list — private/password entries included — never the anonymous
+    // cached body (M-517-01).
+    const actor = await createActor("vis-gate-572-admin");
+    await grantContentRead(actor.id);
+    const token = await createSessionForUser(actor.id);
+    const authedResponse = await requestPublicPath(`/${contentType.slug}`, token);
+    expect(authedResponse.status).toBe(200);
+    const html = await authedResponse.text();
+    expect(html).toContain(publicEntry.title);
+    expect(html).toContain(privateEntry.title);
+    expect(html).toContain(passwordEntry.title);
+  },
+  { timeout: dbRuntimeTimeout }
+);
+
+testIfDbWithOptions(
+  "TASK-572: a public→restricted transition is immediately fail-closed (no stale cached list exposure)",
+  async () => {
+    resetRateLimitBuckets();
+    const { contentType } = await createContentTypeFixture("gate-572-transition");
+    const entryA = await seedEntry({
+      contentTypeId: contentType.id,
+      slug: `gate-572-a-${randomUUID().slice(0, 8)}`,
+      title: "Gate 572 transition A",
+      visibility: "public",
+    });
+    const entryB = await seedEntry({
+      contentTypeId: contentType.id,
+      slug: `gate-572-b-${randomUUID().slice(0, 8)}`,
+      title: "Gate 572 transition B",
+      visibility: "public",
+    });
+    await setTestSetting("site.cacheTtlSeconds", 60);
+    await setTestSetting("site.contentRoutes", [
+      {
+        type: contentType.slug,
+        listPath: `/${contentType.slug}`,
+        detailPath: `/${contentType.slug}/:slug`,
+        enabled: true,
+        detailPageId: null,
+      } satisfies ContentRouteSetting,
+    ]);
+
+    // Anonymous primes the list while BOTH entries are public — the shared
+    // cache now holds a body that enumerates A and B.
+    const primeResponse = await requestPublicPath(`/${contentType.slug}`);
+    expect(primeResponse.status).toBe(200);
+    const primeHtml = await primeResponse.text();
+    expect(primeHtml).toContain(entryA.title);
+    expect(primeHtml).toContain(entryB.title);
+
+    // B becomes private. The next anonymous request must be fail-closed: the
+    // now-restricted entry must NOT appear, and the stale cached list body
+    // (still enumerating B) must never be served (transition fence).
+    const actor = await createActor("vis-gate-572-transition-admin");
+    await updateEntryMetadata(entryB.id, { status: "published", visibility: "private" }, actor.id);
+    const afterResponse = await requestPublicPath(`/${contentType.slug}`);
+    expect(afterResponse.status).toBe(200);
+    const afterHtml = await afterResponse.text();
+    expect(afterHtml).toContain(entryA.title);
+    expect(afterHtml).not.toContain(entryB.title);
+    expect(afterHtml).not.toContain(`/${entryB.slug}`);
+  },
+  { timeout: dbRuntimeTimeout }
+);
+
+testIfDbWithOptions(
+  "TASK-572: anonymous-prime → authed-read ordering keeps the cache anonymous-only",
+  async () => {
+    resetRateLimitBuckets();
+    const { contentType } = await createContentTypeFixture("gate-572-ordering");
+    const publicEntry = await seedEntry({
+      contentTypeId: contentType.id,
+      slug: `gate-572-ordering-public-${randomUUID().slice(0, 8)}`,
+      title: "Gate 572 ordering public",
+      visibility: "public",
+    });
+    await setTestSetting("site.cacheTtlSeconds", 60);
+    await setTestSetting("site.contentRoutes", [
+      {
+        type: contentType.slug,
+        listPath: `/${contentType.slug}`,
+        detailPath: `/${contentType.slug}/:slug`,
+        enabled: true,
+        detailPageId: null,
+      } satisfies ContentRouteSetting,
+    ]);
+
+    // 1) Anonymous primes the list while the type is still all-public.
+    const primeResponse = await requestPublicPath(`/${contentType.slug}`);
+    expect(primeResponse.status).toBe(200);
+    expect(await primeResponse.text()).toContain(publicEntry.title);
+
+    // 2) Restricted entries appear AFTER the prime.
+    const privateEntry = await seedEntry({
+      contentTypeId: contentType.id,
+      slug: `gate-572-ordering-private-${randomUUID().slice(0, 8)}`,
+      title: "Gate 572 ordering private",
+      visibility: "private",
+    });
+    const passwordEntry = await seedEntry({
+      contentTypeId: contentType.id,
+      slug: `gate-572-ordering-password-${randomUUID().slice(0, 8)}`,
+      title: "Gate 572 ordering password",
+      visibility: "password",
+      accessPassword: "ordering-secret",
+    });
+
+    // 3) Authed read of the SAME path sees the FULL list — the pre-transition
+    // anonymous cache is never served to the content:read session.
+    const actor = await createActor("vis-gate-572-ordering-admin");
+    await grantContentRead(actor.id);
+    const token = await createSessionForUser(actor.id);
+    const authedResponse = await requestPublicPath(`/${contentType.slug}`, token);
+    expect(authedResponse.status).toBe(200);
+    const authedHtml = await authedResponse.text();
+    expect(authedHtml).toContain(publicEntry.title);
+    expect(authedHtml).toContain(privateEntry.title);
+    expect(authedHtml).toContain(passwordEntry.title);
+
+    // 4) A follow-up ANONYMOUS read is still public-only — the authed full-list
+    // body was never written under the auth-independent key, and the transition
+    // fence keeps restricted entries out of every anonymous list render.
+    const followUpResponse = await requestPublicPath(`/${contentType.slug}`);
+    expect(followUpResponse.status).toBe(200);
+    const followUpHtml = await followUpResponse.text();
+    expect(followUpHtml).toContain(publicEntry.title);
+    expect(followUpHtml).not.toContain(privateEntry.title);
+    expect(followUpHtml).not.toContain(passwordEntry.title);
+  },
+  { timeout: dbRuntimeTimeout }
+);

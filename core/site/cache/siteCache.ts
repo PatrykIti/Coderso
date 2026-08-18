@@ -100,9 +100,24 @@ let cachedTtlSeconds = DEFAULT_SITE_CACHE_TTL_SECONDS;
  * canonical listing-param signature (empty for plain paths); `|` never
  * appears in profile ids (uuid/default), normalized paths, or signatures
  * (URLSearchParams percent-encodes it), so the segments parse unambiguously.
+ *
+ * TASK-572: an optional fourth segment carries the LIST-route visibility
+ * signature (empty for detail/static/homepage keys, so legacy keys stay
+ * byte-identical). The signature changes on a public↔restricted transition,
+ * which lands the stale anonymous body under a different key — fail-closed
+ * transition fence without relying on TTL invalidation. The value is a
+ * bounded `v1:<sha256-hex>` digest (no `|`), so path parsing and
+ * path/route-based invalidation are unaffected.
  */
-export const buildSiteCacheKey = (profileId: string, path: string, searchSignature = "") =>
-  `${profileId}|${path}|${searchSignature}`;
+export const buildSiteCacheKey = (
+  profileId: string,
+  path: string,
+  searchSignature = "",
+  visibilitySignature = ""
+) =>
+  visibilitySignature
+    ? `${profileId}|${path}|${searchSignature}|${visibilitySignature}`
+    : `${profileId}|${path}|${searchSignature}`;
 
 const readSiteCacheKeyPath = (key: string) => {
   const start = key.indexOf("|");
