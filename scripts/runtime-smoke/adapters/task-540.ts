@@ -3,6 +3,7 @@ import { SmokeError } from "../contracts";
 import type { RuntimeSmokeContext } from "../lifecycle";
 import type { RepositorySnapshot } from "../repository-guard";
 import type { SmokeAdapter, SmokeAdapterResult } from "./types";
+import { task540EvidenceDirectory } from "./task-540/output-manifest";
 import type { Task540NativeEvidence } from "./task-540/suite/composition/contracts";
 import { runTask540NativeSuite } from "./task-540/suite/composition/suite";
 import { isTask540CleanupLogicalReceiptCount } from "./task-540/cleanup-cardinality";
@@ -122,6 +123,7 @@ const adapter: SmokeAdapter = Object.freeze({
   suiteId: "task-540",
   supportedProfiles: Object.freeze(["fast", "certification"] as const),
   run: runTask540Adapter,
+  evidenceDirectory: task540EvidenceDirectory,
 });
 
 export default adapter;

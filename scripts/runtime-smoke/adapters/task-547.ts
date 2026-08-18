@@ -1,6 +1,12 @@
 import { randomBytes } from "node:crypto";
 
-import { assertExactKeys, isPlainObject, SmokeError } from "../contracts";
+import {
+  assertExactKeys,
+  isPlainObject,
+  resolveInsideRoot,
+  SmokeError,
+  type SmokeInput,
+} from "../contracts";
 import type { LifecycleResource, RuntimeSmokeContext } from "../lifecycle";
 import type { SupervisedServerResource } from "../server/supervised-server";
 import type { WorkerPool } from "../workers/pool";
@@ -32,6 +38,7 @@ import { RuntimeSmokeRoutingSettingsLease } from "./routing-settings-lease";
 import {
   assertExactTask547ScreenshotManifest,
   buildExactTask547ScreenshotManifest,
+  EVIDENCE_ROOT,
   validateTask547ScreenshotOutputs,
   type Task547ScreenshotManifest,
 } from "./task-547/output-manifest";
@@ -297,6 +304,9 @@ const adapter: SmokeAdapter = Object.freeze({
   suiteId: "task-547",
   supportedProfiles: Object.freeze(["fast", "certification"] as const),
   run: runTask547Adapter,
+  evidenceDirectory(input: SmokeInput, root: string) {
+    return resolveInsideRoot(root, `${EVIDENCE_ROOT}/${input.session}`, "task_547_evidence");
+  },
 });
 
 export default adapter;

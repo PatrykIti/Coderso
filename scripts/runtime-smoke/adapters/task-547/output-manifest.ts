@@ -13,6 +13,7 @@ const PNG_SIGNATURE = Buffer.from("89504e470d0a1a0a", "hex");
 const MAXIMUM_PNG_BYTES = 16 * 1024 * 1024;
 const SHA256 = /^[a-f0-9]{64}$/u;
 const SESSION = /^[a-z][a-z0-9-]{2,63}$/u;
+export const EVIDENCE_ROOT = "_docs/_workflows/_smoke/evidence/task-547";
 
 export interface Task547ScreenshotManifestEntry {
   readonly scenarioId: string;

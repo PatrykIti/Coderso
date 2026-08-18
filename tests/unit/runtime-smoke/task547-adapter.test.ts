@@ -1,4 +1,5 @@
 import { expect, test } from "bun:test";
+import { resolve } from "node:path";
 
 import adapter, {
   assertExactTask547Invocation,
@@ -57,6 +58,13 @@ const proof: Task547FinalCleanupProof = {
 test("TASK-547 adapter is registered for identical fast and certification contracts", () => {
   expect(adapter.suiteId).toBe("task-547");
   expect(adapter.supportedProfiles).toEqual(["fast", "certification"]);
+  const root = resolve(import.meta.dir, "../../..");
+  expect(
+    adapter.evidenceDirectory?.(
+      { command: "run", suite: "task-547", profile: "fast", session: "wf547-adapter" },
+      root
+    )
+  ).toBe(`${root}/_docs/_workflows/_smoke/evidence/task-547/wf547-adapter`);
 });
 
 test("TASK-547 adapter rejects invocation drift before repository or runtime side effects", async () => {

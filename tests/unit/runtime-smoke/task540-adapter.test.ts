@@ -78,6 +78,13 @@ function canonicalEvidence(cleanupReceipts = 72): unknown {
 
 test("TASK-540 adapter validates exact native evidence totals with bounded dynamic SEO cleanup", () => {
   expect(adapter.suiteId).toBe("task-540");
+  const root = resolve(import.meta.dir, "../../..");
+  expect(
+    adapter.evidenceDirectory?.(
+      { command: "run", suite: "task-540", profile: "fast", session: "wf540-adapter" },
+      root
+    )
+  ).toBe(`${root}/_docs/_workflows/_smoke/evidence/task-540/wf540-adapter`);
   expect(adapter.supportedProfiles).toEqual(["fast", "certification"]);
   for (const cleanupReceipts of [54, 60, 72]) {
     expect(validateTask540Evidence(canonicalEvidence(cleanupReceipts))).toMatchObject({
