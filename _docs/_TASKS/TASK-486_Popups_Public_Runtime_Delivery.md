@@ -73,10 +73,10 @@ popup on the live site.
 
 | ID | Title | Effort | Status |
 | --- | --- | --- | --- |
-| TASK-486-01 | Public read endpoint + server-side targeting eval | Medium | ⏳ To Do |
-| TASK-486-02 | Client runtime engine (triggers, targeting, frequency) | Medium | ⏳ To Do |
-| TASK-486-03 | Render component + publicSite wiring | Medium | ⏳ To Do |
-| TASK-486-04 | Tests (Bun route + Vitest engine/render) & docs | Medium | ⏳ To Do |
+| TASK-486-01 | Public read endpoint + server-side targeting eval | Medium | ✅ Done |
+| TASK-486-02 | Client runtime engine (triggers, targeting, frequency) | Medium | ✅ Done |
+| TASK-486-03 | Render component + publicSite wiring | Medium | ✅ Done |
+| TASK-486-04 | Tests (Bun route + Vitest engine/render) & docs | Medium | ✅ Done |
 
 ---
 

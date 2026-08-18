@@ -10,7 +10,7 @@
 # FileName: TASK-567_Outbound_Webhook_Egress_Policy_SSRF_Hardening.md
 
 **Parent Task:** none
-**Source Findings:** M-491-01, H-492-01, M-492-02 + supplementary NAT64/mapped-IPv6 findings (audits `_TMP-audit-task-491-integrations.md`, `_TMP-audit-task-492-login-alerts.md`, verified at HEAD `4e3dab15`)
+**Source Findings:** M-491-01, H-492-01, M-492-02 + supplementary NAT64/mapped-IPv6 findings (docs-only finding from the 2026-08-17 TASK-560 audit sweep; audit reports removed by owner 2026-08-18, evidence re-anchored at HEAD `6ca20b38`)
 
 ## Purpose
 

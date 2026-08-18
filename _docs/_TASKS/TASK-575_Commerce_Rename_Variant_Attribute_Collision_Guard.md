@@ -10,7 +10,7 @@
 # FileName: TASK-575_Commerce_Rename_Variant_Attribute_Collision_Guard.md
 
 **Parent Task:** none
-**Source Findings:** L-488-01 (audit `_TMP-audit-task-488-commerce.md`, verified at HEAD `4e3dab15`)
+**Source Findings:** L-488-01 (docs-only finding from the 2026-08-17 TASK-560 audit sweep; audit reports removed by owner 2026-08-18, evidence re-anchored at HEAD `6ca20b38`)
 
 ## Purpose
 

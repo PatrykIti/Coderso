@@ -10,7 +10,7 @@
 # FileName: TASK-572_Entry_List_Cache_Visibility_Fence.md
 
 **Parent Task:** none
-**Source Findings:** M-517-01 + new list-cache visibility-fence finding (audits `_TMP-audit-task-517-entry-visibility.md` + frontend/cache review, verified at HEAD `4e3dab15`)
+**Source Findings:** M-517-01 + new list-cache visibility-fence finding (docs-only finding from the 2026-08-17 TASK-560 audit sweep; audit reports removed by owner 2026-08-18, evidence re-anchored at HEAD `6ca20b38`)
 
 ## Purpose
 

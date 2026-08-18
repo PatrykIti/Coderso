@@ -180,13 +180,13 @@ validation before any write, transactional restore, backend-only secrets).
 
 | ID | Title | Priority | Effort | Status |
 |----|-------|----------|--------|--------|
-| TASK-511-01 | Streaming batched export engine + archive format & manifest | High | Large | ⏳ To Do |
-| TASK-511-02 | Compression + passphrase encryption (gzip + AES-256-GCM/scrypt) | High | Large | ⏳ To Do |
-| TASK-511-03 | Media file streaming into/out of the archive | High | Medium | ⏳ To Do |
-| TASK-511-04 | Optional users + RBAC role-matrix include (opt-in, encrypted-only) | High | Medium | ⏳ To Do |
-| TASK-511-05 | Import-file pipeline (upload → decrypt → validate → batched transactional restore) | High | Large | ⏳ To Do |
-| TASK-511-06 | Scheduler full-backup wiring + Admin UI (include options, passphrase, upload-to-import) | High | Large | ⏳ To Do |
-| TASK-511-07 | Docs, gates & closure | Medium | Medium | ⏳ To Do |
+| TASK-511-01 | Streaming batched export engine + archive format & manifest | High | Large | ✅ Done |
+| TASK-511-02 | Compression + passphrase encryption (gzip + AES-256-GCM/scrypt) | High | Large | ✅ Done |
+| TASK-511-03 | Media file streaming into/out of the archive | High | Medium | ✅ Done |
+| TASK-511-04 | Optional users + RBAC role-matrix include (opt-in, encrypted-only) | High | Medium | ✅ Done |
+| TASK-511-05 | Import-file pipeline (upload → decrypt → validate → batched transactional restore) | High | Large | ✅ Done |
+| TASK-511-06 | Scheduler full-backup wiring + Admin UI (include options, passphrase, upload-to-import) | High | Large | ✅ Done |
+| TASK-511-07 | Docs, gates & closure | Medium | Medium | ✅ Done |
 
 Land order is strictly sequential 01→02→03→04→05→06→07. Each subtask file carries
 its own execution-ready pseudocode, single-writer file ownership, test lane

@@ -10,7 +10,7 @@
 # FileName: TASK-571_Forms_Submissions_Export_And_List_Bounded_Reads.md
 
 **Parent Task:** none
-**Source Findings:** M-490-01 + N1 (audit `_TMP-audit-task-490-forms-export.md`, verified at HEAD `4e3dab15`)
+**Source Findings:** M-490-01 + N1 (docs-only finding from the 2026-08-17 TASK-560 audit sweep; audit reports removed by owner 2026-08-18, evidence re-anchored at HEAD `6ca20b38`)
 
 ## Purpose
 

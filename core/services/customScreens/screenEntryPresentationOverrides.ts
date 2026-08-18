@@ -4,10 +4,7 @@ import type {
   ScreenBlockV1,
   ScreenFieldBinding,
 } from "./customScreenSchemas";
-import {
-  isScreenMediaAssetUuid,
-  normalizeCustomScreenDefinitionForRead,
-} from "./customScreenSchemas";
+import { isScreenUuid, normalizeCustomScreenDefinitionForRead } from "./customScreenSchemas";
 import {
   customScreenOverrideErrorCodes,
   isScreenEntryPresentationSingleMediaSchemaDefinition,
@@ -455,7 +452,7 @@ const loadScopeContext = async (
 const normalizeScopeId = (value: unknown) => normalizeScreenEntryPresentationScopeId(value);
 
 const normalizeActorId = (value: unknown) => {
-  if (!isScreenMediaAssetUuid(value)) {
+  if (!isScreenUuid(value)) {
     throw createOverrideError("custom_screen_override_invalid");
   }
   return value;

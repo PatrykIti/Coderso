@@ -90,10 +90,10 @@ a "Test connection" action to real health data (04-L02).
 
 | ID            | Title                                            | Effort | Status     |
 | ------------- | ------------------------------------------------ | ------ | ---------- |
-| TASK-491-01   | Google Analytics tag injection                   | Small  | ⏳ To Do   |
-| TASK-491-02   | Slack & Zapier outbound event dispatch           | Medium | ⏳ To Do   |
-| TASK-491-03   | Sentry server-side error monitoring init         | Small  | ⏳ To Do   |
-| TASK-491-04   | Real integration health checks + admin UI + docs | Medium | ⏳ To Do   |
+| TASK-491-01   | Google Analytics tag injection                   | Small  | ✅ Done   |
+| TASK-491-02   | Slack & Zapier outbound event dispatch           | Medium | ✅ Done   |
+| TASK-491-03   | Sentry server-side error monitoring init         | Small  | ✅ Done   |
+| TASK-491-04   | Real integration health checks + admin UI + docs | Medium | ✅ Done   |
 
 ---
 

@@ -1,24 +1,27 @@
 # TASK-9999-02-L03: Relabel Stale TASK-559 Acceptance Benchmark
 
-**Status:** ⏳ To Do
+**Status:** ✅ Done
 **Started:**
-**Completed:**
+**Completed:** 2026-08-18
+**Changelog:** 1305 (pinned)
 
 # FileName: TASK-9999-02-L03-Relabel-Stale-TASK-559-Acceptance-Benchmark.md
 
 **Parent Subtask:** TASK-9999-02
-**Source Findings:** TASK-559 stale evidence (audit `_TMP-audit-task-559-bun-lane-c-split.md`,
-verified at HEAD `4e3dab15`)
+**Source Findings:** TASK-559 stale evidence (docs-only finding from the TASK-560
+audit sweep, re-anchored to current task files at HEAD `6ca20b38`; the original
+`_TMP-audit-task-559-bun-lane-c-split.md` report was removed by the owner on
+2026-08-18).
 
 ## Purpose
 
 TASK-559 still presents the 9.98-min acceptance (for the then-397-file manifest,
 `tests/bun-lane-report-559-accept.json` and parent `TASK-559_...md:242-278`) as
-its current acceptance. After the later manifest regeneration `bb5ab806`, the
-manifest has 418 files (A=157, B=204, C=52, perf=5). The 9.98-min figure is
-stale evidence, not a current benchmark; a fresh controlled run on the current
-manifest with hash/count recorded is required before any re-claim of the
-10-15-minute target.
+its current acceptance. After later manifest regenerations the current
+`tests/bun-lane-manifest.json` (generated 2026-08-18) is 440 files:
+A=172, B=212, C=51, perf=5. The 9.98-min figure is stale evidence, not a current
+benchmark; a fresh controlled run on the current manifest with hash/count
+recorded is required before any re-claim of the 10-15-minute target.
 
 ## Scope
 

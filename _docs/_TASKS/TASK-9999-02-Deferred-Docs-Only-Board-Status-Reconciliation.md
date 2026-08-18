@@ -1,17 +1,40 @@
 # TASK-9999-02: Deferred Docs-Only Board/Status Reconciliation (TASK-560 Audit Sweep)
 
-**Status:** ⏳ To Do
+**Status:** ✅ Done
 **Started:** 2026-08-17
-**Completed:**
+**Completed:** 2026-08-18
 **Priority:** Low
 **Size:** Medium
 
 # FileName: TASK-9999-02-Deferred-Docs-Only-Board-Status-Reconciliation.md
 
 **Parent Task:** TASK-9999
-**Source Findings:** docs-only LOW findings from the TASK-560 audit sweep
-(`_TMP-audit-task-486/487/488/490/491/492/511/518/540/545/547/554/558-*.md`,
-`_TMP-audit-overview-7d.md`, verified at HEAD `4e3dab15`)
+**Source Findings:** docs-only LOW findings from the 2026-08-17 TASK-560 audit
+sweep. The original sweep reports (`_TMP-audit-*.md`) were removed by the owner
+on 2026-08-18; the evidence below is re-anchored to the current task files and
+verified at HEAD `6ca20b38`:
+- parent subtask tables show `⏳ To Do` while physical children are terminal:
+  `TASK-486_Popups_Public_Runtime_Delivery.md:76-79`,
+  `TASK-487_Entries_Revision_History_And_Restore.md:85-87`,
+  `TASK-488_Commerce_Variant_Editor_And_Collections_CRUD_UI.md:83-85`,
+  `TASK-490_Forms_Submissions_Export.md:87-88`,
+  `TASK-491_Integrations_Runtime_Wiring.md:93-96`,
+  `TASK-492_Login_Alert_Delivery_And_Recipient_Settings.md:76-78`,
+  `TASK-511_Backup_V2_Scalable_Compressed_Encrypted_Importable.md:183-189`,
+  `TASK-518_Seed_Default_Admin_Role_Migration.md:77-78`,
+  `TASK-540_Custom_Screens_Functional_and_Data_Integrity_Remediation.md`
+  (parent/children 03/04/06), `TASK-545_Workflow_Smoke_Evidence_and_Task_Graph_Integrity.md:174-177`,
+  `TASK-547_Full_Site_Example_Package_And_Projekty_Domow_Installer.md:235-244`;
+- README board rows: `_docs/_TASKS/README.md` still lists Done families
+  TASK-511/517/487/488/490/491/492 in the `## To Do` section (`:178-186`) and
+  leaves TASK-559 as an orphaned row above the To Do table header (`:164`);
+- TASK-540 retains actively-worded "Current/pending" workflow fields despite its
+  `✅ Done` status and changelog 1252;
+- TASK-559 presents a stale acceptance benchmark (9.98 min for 397 files) as
+  current evidence after the manifest grew (current `tests/bun-lane-manifest.json`
+  is 440 files: A=172, B=212, C=51, perf=5);
+- TASK-547 still describes Changelog 1260 as Draft/unindexed while it is Final
+  and indexed (`_docs/_CHANGELOG/README.md:39,106`).
 
 ## Purpose
 

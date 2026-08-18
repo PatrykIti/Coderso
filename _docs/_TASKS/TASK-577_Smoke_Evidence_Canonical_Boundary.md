@@ -22,7 +22,7 @@
 # FileName: TASK-577_Smoke_Evidence_Canonical_Boundary.md
 
 **Parent Task:** none
-**Source Findings:** M-545-05 + NEW-M-01 (audits `_TMP-audit-task-545-workflow-integrity.md`, `_TMP-audit-task-560-smoke-migration.md` + workflow/tooling review, verified at HEAD `4e3dab15`)
+**Source Findings:** M-545-05 + NEW-M-01 (docs-only finding from the 2026-08-17 TASK-560 audit sweep; audit reports removed by owner 2026-08-18, evidence re-anchored at HEAD `6ca20b38`)
 
 ## Purpose
 

@@ -367,6 +367,32 @@ test("rejects duplicate targets and media overrides on non-media fields", async 
   ).rejects.toThrow("custom_screen_override_invalid");
 });
 
+test("TASK-9999-01-L01 rejects a non-UUID actor and preserves valid uppercase round-trip", async () => {
+  const beforeEntryData = { ...repository.entryData };
+
+  await expect(
+    saveScreenEntryPresentationOverrides({
+      screenId: SCREEN_ID,
+      entryId: ENTRY_ID,
+      actorId: "not-a-uuid",
+      overrides: [{ blockId: "direct-image", propPath: "mediaAssetId", value: MEDIA_ID }],
+      deps: deps(),
+    })
+  ).rejects.toThrow("custom_screen_override_invalid");
+  expect(repository.lastReplace).toBeNull();
+  expect(repository.entryData).toEqual(beforeEntryData);
+
+  const result = await saveScreenEntryPresentationOverrides({
+    screenId: SCREEN_ID,
+    entryId: ENTRY_ID,
+    actorId: "123E4567-E89B-12D3-A456-426614174ABC",
+    overrides: [{ blockId: "direct-image", propPath: "mediaAssetId", value: MEDIA_ID }],
+    deps: deps(),
+  });
+  expect(result).toHaveLength(1);
+  expect(repository.lastReplace?.actorId).toBe("123E4567-E89B-12D3-A456-426614174ABC");
+});
+
 test("rejects scalar overrides for multiple-media fields and ignores legacy stored rows", async () => {
   await expect(
     saveScreenEntryPresentationOverrides({

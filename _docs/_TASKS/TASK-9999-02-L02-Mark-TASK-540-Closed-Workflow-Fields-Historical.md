@@ -1,13 +1,17 @@
 # TASK-9999-02-L02: Mark TASK-540 Closed Workflow Fields Historical
 
-**Status:** ⏳ To Do
+**Status:** ✅ Done
 **Started:**
-**Completed:**
+**Completed:** 2026-08-18
+**Changelog:** 1304 (pinned)
 
 # FileName: TASK-9999-02-L02-Mark-TASK-540-Closed-Workflow-Fields-Historical.md
 
 **Parent Subtask:** TASK-9999-02
-**Source Findings:** M-540-03 (audit `_TMP-audit-task-540-custom-screens.md`, verified at HEAD `4e3dab15`)
+**Source Findings:** M-540-03 (docs-only finding from the TASK-560 audit sweep,
+re-anchored to current task files at HEAD `6ca20b38`; the original
+`_TMP-audit-task-540-custom-screens.md` report was removed by the owner on
+2026-08-18).
 
 ## Purpose
 

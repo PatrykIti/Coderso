@@ -1,26 +1,34 @@
 # TASK-9999-02-L01: Sync Closed-Family Subtask Tables
 
-**Status:** ⏳ To Do
+**Status:** ✅ Done
 **Started:**
-**Completed:**
+**Completed:** 2026-08-18
+**Changelog:** 1303 (pinned)
 
 # FileName: TASK-9999-02-L01-Sync-Closed-Family-Subtask-Tables.md
 
 **Parent Subtask:** TASK-9999-02
-**Source Findings:** docs-only table drift in `_TMP-audit-task-486-popups.md:76-79`,
-`_TMP-audit-task-487-entry-revisions.md:85-87`, `_TMP-audit-task-488-commerce.md:83-85`,
-`_TMP-audit-task-490-forms-export.md:87-88`, `_TMP-audit-task-491-integrations.md:93-96`,
-`_TMP-audit-task-492-login-alerts.md:76-78`, `_TMP-audit-task-511-backups.md:183-189`,
-`_TMP-audit-task-518-stable-admin-role.md:77-78`, `_TMP-audit-task-540-custom-screens.md`
-(parent/children 03/04/06), `_TMP-audit-task-545-workflow-integrity.md:174-177`,
-`_TMP-audit-task-547-full-site-installer.md:235-244` (all verified at HEAD `4e3dab15`)
+**Source Findings:** docs-only table drift verified at HEAD `6ca20b38` in the
+current parent task files (the original `_TMP-audit-*.md` sweep reports were
+removed by the owner on 2026-08-18):
+`TASK-486_Popups_Public_Runtime_Delivery.md:76-79`,
+`TASK-487_Entries_Revision_History_And_Restore.md:85-87`,
+`TASK-488_Commerce_Variant_Editor_And_Collections_CRUD_UI.md:83-85`,
+`TASK-490_Forms_Submissions_Export.md:87-88`,
+`TASK-491_Integrations_Runtime_Wiring.md:93-96`,
+`TASK-492_Login_Alert_Delivery_And_Recipient_Settings.md:76-78`,
+`TASK-511_Backup_V2_Scalable_Compressed_Encrypted_Importable.md:183-189`,
+`TASK-518_Seed_Default_Admin_Role_Migration.md:77-78`,
+`TASK-540_Custom_Screens_Functional_and_Data_Integrity_Remediation.md`
+(parent/children 03/04/06), `TASK-545_Workflow_Smoke_Evidence_and_Task_Graph_Integrity.md:174-177`,
+`TASK-547_Full_Site_Example_Package_And_Projekty_Domow_Installer.md:235-244`.
 
 ## Purpose
 
 Reconcile the parent-family subtask display tables in the closed task files
 above: each parent is `✅ Done`, all physical children are terminal, and the
-board README rows are already correct — but the parent file tables still show
-`⏳ To Do` cells. This is display/bookkeeping drift only.
+board README rows are already correct in their Notes text — but the parent file
+tables still show `⏳ To Do` cells. This is display/bookkeeping drift only.
 
 ## Scope
 
@@ -31,6 +39,11 @@ board README rows are already correct — but the parent file tables still show
   they are already correct.
 - Where a parent also has duplicate/empty Started/Completed placeholders (e.g.
   TASK-487/490), normalize those fields in the same pass.
+- README board rows: additionally move the Done families still sitting in the
+  `## To Do` section (`_docs/_TASKS/README.md:178-186`: TASK-511/517/487/488/
+  490/491/492) into the `## Done` section, and move the orphaned TASK-559 row
+  (`:164`, above the To Do table header) into `## Done`. This is row placement
+  only; statistics and `**Status:**` fields stay untouched.
 
 ## Validation
 

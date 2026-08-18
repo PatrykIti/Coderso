@@ -74,8 +74,8 @@ a separate future task.
 
 | ID | Title | Priority | Effort | Status |
 |----|-------|----------|--------|--------|
-| TASK-518-01 | Stable admin-role id constant + seed migration (full artifacts) | High | Small | ⏳ To Do |
-| TASK-518-02 | Point createFirstAdmin + seedAdmin at the stable role + tests/docs/closure | High | Small | ⏳ To Do |
+| TASK-518-01 | Stable admin-role id constant + seed migration (full artifacts) | High | Small | ✅ Done |
+| TASK-518-02 | Point createFirstAdmin + seedAdmin at the stable role + tests/docs/closure | High | Small | ✅ Done |
 
 Land order 01→02. Bun lane (DB + first-run/seed). Run the standard pipeline; regression
 tests: fresh-schema `db:migrate` (no seed) has exactly one `admin` role with the stable id;

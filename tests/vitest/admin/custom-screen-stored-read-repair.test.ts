@@ -814,3 +814,25 @@ test("TASK-540-01 media identity predicate has one exact UUID contract", async (
   expect(firstScreenMediaAssetUuid(["", 42, null, "/media/not-a-uuid"])).toBeNull();
   expect(firstScreenMediaAssetUuid(uppercaseUuid)).toBe(uppercaseUuid);
 });
+
+test("TASK-9999-01-L01 neutral isScreenUuid has the identical truth table", async () => {
+  const { isScreenMediaAssetUuid: mediaPredicate, isScreenUuid } =
+    await import("../../../core/services/customScreens/screenMediaIdentity");
+  const corpus = [
+    "123e4567-e89b-12d3-a456-426614174000",
+    "123E4567-E89B-12D3-A456-426614174ABC",
+    "",
+    "123e4567-e89b-12d3-a456-42661417400",
+    "/media/123e4567-e89b-12d3-a456-426614174000",
+    "https://example.com/123e4567-e89b-12d3-a456-426614174000",
+    42,
+    null,
+    undefined,
+    [],
+    ["123e4567-e89b-12d3-a456-426614174000"],
+    {},
+  ];
+  for (const value of corpus) {
+    expect(isScreenUuid(value)).toBe(mediaPredicate(value));
+  }
+});

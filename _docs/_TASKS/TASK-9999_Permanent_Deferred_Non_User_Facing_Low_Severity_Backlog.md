@@ -77,6 +77,7 @@ ineligible and must move to an active task with its own complete Security Contra
 | ID | Source family | Leaves | Status |
 |---|---|---|---|
 | TASK-9999-01 | TASK-540 Custom Screens | TASK-9999-01-L01 (`⏳ To Do`), TASK-9999-01-L02 (`⏭️ Superseded`) | ⏳ To Do |
+| TASK-9999-02 | TASK-560 audit sweep (docs-only) | TASK-9999-02-L01..L04 (all `⏳ To Do`) | ⏳ To Do |
 
 The 2026-07-18 evidence-triggered re-triage removed L02 from the eligible backlog:
 active TASK-540-02-L01 now reads `baseLabel` to preserve focus while invalidating stale

@@ -10,7 +10,7 @@
 # FileName: TASK-579_Smoke_Adapter_Modularization_Browser_Actions.md
 
 **Parent Task:** none
-**Source Findings:** M-560-01 (audit `_TMP-audit-task-560-smoke-migration.md`, verified at HEAD `4e3dab15`)
+**Source Findings:** M-560-01 (docs-only finding from the 2026-08-17 TASK-560 audit sweep; audit reports removed by owner 2026-08-18, evidence re-anchored at HEAD `6ca20b38`)
 
 ## Purpose
 

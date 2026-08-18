@@ -10,7 +10,7 @@
 # FileName: TASK-568_Public_Analytics_Head_Log_Hygiene.md
 
 **Parent Task:** none
-**Source Findings:** L-491-02 (audit `_TMP-audit-task-491-integrations.md`, verified at HEAD `4e3dab15`)
+**Source Findings:** L-491-02 (docs-only finding from the 2026-08-17 TASK-560 audit sweep; audit reports removed by owner 2026-08-18, evidence re-anchored at HEAD `6ca20b38`)
 
 ## Purpose
 

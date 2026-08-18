@@ -10,7 +10,7 @@
 # FileName: TASK-563_Backup_Import_Cache_Invalidation_And_Post_Commit_Failure_Audit.md
 
 **Parent Task:** none
-**Source Findings:** M-511-03, M-511-03b (audit `_TMP-audit-task-511-backups.md`, verified at HEAD `4e3dab15`)
+**Source Findings:** M-511-03, M-511-03b (docs-only finding from the 2026-08-17 TASK-560 audit sweep; audit reports removed by owner 2026-08-18, evidence re-anchored at HEAD `6ca20b38`)
 
 ## Purpose
 

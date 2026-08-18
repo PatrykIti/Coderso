@@ -7,8 +7,6 @@
 **Dependencies:** None. Builds on the shipped read surface (`GET /forms/:id/submissions`, `core/services/forms/submissionService.ts`, `core/admin/ui/forms/FormSubmissionsPage.tsx`) and reuses the established analytics CSV export pattern (`core/services/analytics/analyticsService.ts` → JSON envelope → client Blob download). No DB change.
 **Status:** ✅ Done
 **Completed:** 2026-08-14
-**Started:** `<YYYY-MM-DD>`
-**Completed:** `<YYYY-MM-DD>`
 
 ---
 
@@ -84,8 +82,8 @@ no extra layout work.
 
 | Subtask | Title | Effort | Status |
 |---------|-------|--------|--------|
-| TASK-490-01 | Backend export builder service + route | Small | ⏳ To Do |
-| TASK-490-02 | Admin client, submissions-page actions & docs | Small | ⏳ To Do |
+| TASK-490-01 | Backend export builder service + route | Small | ✅ Done |
+| TASK-490-02 | Admin client, submissions-page actions & docs | Small | ✅ Done |
 
 **Implementation order:** 01 (domain builder → route/schema) must land before 02
 (the client method and UI consume the route; docs close the feature).

@@ -10,7 +10,7 @@
 # FileName: TASK-561_Backup_Import_Native_CMS_Writer_Fence_Enforcement.md
 
 **Parent Task:** none
-**Source Findings:** H-547-01, H-511-02 (audits `_TMP-audit-task-547-full-site-installer.md`, `_TMP-audit-task-511-backups.md`, verified at HEAD `4e3dab15`)
+**Source Findings:** H-547-01, H-511-02 (docs-only finding from the 2026-08-17 TASK-560 audit sweep; audit reports removed by owner 2026-08-18, evidence re-anchored at HEAD `6ca20b38`)
 
 ## Purpose
 

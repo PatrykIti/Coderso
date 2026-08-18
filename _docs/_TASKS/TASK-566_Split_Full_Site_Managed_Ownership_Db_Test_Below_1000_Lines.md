@@ -10,7 +10,7 @@
 # FileName: TASK-566_Split_Full_Site_Managed_Ownership_Db_Test_Below_1000_Lines.md
 
 **Parent Task:** none
-**Source Findings:** M-547-02 (audit `_TMP-audit-task-547-full-site-installer.md`, verified at HEAD `4e3dab15`)
+**Source Findings:** M-547-02 (docs-only finding from the 2026-08-17 TASK-560 audit sweep; audit reports removed by owner 2026-08-18, evidence re-anchored at HEAD `6ca20b38`)
 
 ## Purpose
 

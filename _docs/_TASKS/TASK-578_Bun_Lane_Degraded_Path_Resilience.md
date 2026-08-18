@@ -10,7 +10,7 @@
 # FileName: TASK-578_Bun_Lane_Degraded_Path_Resilience.md
 
 **Parent Task:** none
-**Source Findings:** M-557-01, L-557-02, L-559-01 (audits `_TMP-audit-task-557-bun-lanes.md`, `_TMP-audit-task-559-bun-lane-c-split.md`, verified at HEAD `4e3dab15`)
+**Source Findings:** M-557-01, L-557-02, L-559-01 (docs-only finding from the 2026-08-17 TASK-560 audit sweep; audit reports removed by owner 2026-08-18, evidence re-anchored at HEAD `6ca20b38`)
 
 ## Purpose
 

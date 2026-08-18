@@ -9,7 +9,9 @@
 **Category:** Custom Screens / Domain Naming
 **Estimated Effort:** Small
 **Dependencies:** TASK-540 closure
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-08-18
+**Changelog:** 1302 (pinned)
 
 ---
 
@@ -52,7 +54,14 @@ differently.
 
 ## Implementation Pseudocode
 
+Owners: `screenMediaIdentity.ts` owns the UUID grammar and both predicates;
+`screenEntryPresentationOverrideContract.ts` owns `normalizeUpdatedBy` and the
+local `invalidOverride` helper; `screenEntryPresentationOverrides.ts` owns
+`normalizeActorId` and its local `createOverrideError` helper. Do not move
+helpers between files; only switch their predicate imports.
+
 ```ts
+// core/services/customScreens/screenMediaIdentity.ts
 const SCREEN_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const isUnknownArray = (value: unknown): value is readonly unknown[] => Array.isArray(value);
 
@@ -71,13 +80,34 @@ export function firstScreenMediaAssetUuid(value: unknown): string | null {
   if (!isUnknownArray(value)) return null;
   return value.find(isScreenMediaAssetUuid) ?? null;
 }
+```
 
+```ts
+// core/services/customScreens/screenEntryPresentationOverrideContract.ts
+// unchanged local helper stays here:
+const invalidOverride = () => new Error("custom_screen_override_invalid");
+
+// switch predicate import to isScreenUuid; identical truth table, same error
 const normalizeUpdatedBy = (value: unknown): string | null => {
   if (value === null) return null;
   if (!isScreenUuid(value)) throw invalidOverride();
   return value;
 };
 
+// media-only canonicalizer keeps its media-named predicate (delegating)
+const normalizeCanonicalMediaUuid = (value: unknown): string => {
+  if (!isScreenMediaAssetUuid(value)) throw invalidOverride();
+  return value;
+};
+```
+
+```ts
+// core/services/customScreens/screenEntryPresentationOverrides.ts
+// unchanged local helper stays here:
+const createOverrideError = (code: (typeof customScreenOverrideErrorCodes)[number]) =>
+  new Error(code);
+
+// switch predicate import to isScreenUuid; behavior identical
 const normalizeActorId = (value: unknown): string => {
   if (!isScreenUuid(value)) {
     throw createOverrideError("custom_screen_override_invalid");
@@ -110,6 +140,6 @@ round-trip exactly and the same invalid values still fail with the same domain e
 ## Documentation Updates Required
 
 - Record validation results and completion metadata in this leaf.
-- Add this physical ID to the TASK-9999-01 closure changelog.
+- Add this physical ID to the TASK-9999-01 closure changelog (pinned 1302).
 - Update TASK-9999-01 and TASK-9999 parent tables after closure; leave TASK-9999 In
   Progress.

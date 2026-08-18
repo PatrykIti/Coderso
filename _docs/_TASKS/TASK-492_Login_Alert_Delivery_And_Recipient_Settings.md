@@ -73,9 +73,9 @@ the schema. This task makes the schema and the assistant policy consistent.
 
 | ID            | Title                                         | Effort | Status     |
 | ------------- | --------------------------------------------- | ------ | ---------- |
-| TASK-492-01   | Login Alert Settings Contract (schema + policy)| Small  | ⏳ To Do |
-| TASK-492-02   | Alert Delivery on Login Hit (email + webhook) | Small  | ⏳ To Do   |
-| TASK-492-03   | Admin Editor Wiring, Tests & Docs             | Small  | ⏳ To Do   |
+| TASK-492-01   | Login Alert Settings Contract (schema + policy)| Small  | ✅ Done |
+| TASK-492-02   | Alert Delivery on Login Hit (email + webhook) | Small  | ✅ Done   |
+| TASK-492-03   | Admin Editor Wiring, Tests & Docs             | Small  | ✅ Done   |
 
 ## Testing Requirements
 - **Vitest** (`tests/vitest/*`, `tests/vitest/ui-integration/*`): route JSON

@@ -72,7 +72,7 @@ export {
   buildScreenFieldBindingId,
   normalizeCustomScreenSchemaVersion,
 } from "./customScreenNormalizationPrimitives";
-export { isScreenMediaAssetUuid } from "./screenMediaIdentity";
+export { isScreenMediaAssetUuid, isScreenUuid } from "./screenMediaIdentity";
 export {
   normalizeScreenImageSrc,
   sanitizeScreenAuthoringUrl,

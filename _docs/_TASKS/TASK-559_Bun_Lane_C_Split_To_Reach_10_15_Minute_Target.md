@@ -22,7 +22,11 @@ because the **serial C lane** is the wall bound. This task splits the C lane
 into two serial workers with a disjoint partition to reach the target while
 preserving C's shared-mutable-state serialization contract.
 
-### Corrected baseline (2026-08-14, audited against HEAD f75343de)
+### Historical baseline (2026-08-14, audited against HEAD f75343de)
+> Historical evidence. The manifest was later regenerated; the current
+> `tests/bun-lane-manifest.json` (generatedAt 2026-08-18) has **440 rows:
+> A=172, B=212, C=51, perf=5**. This 397-row baseline is no longer the
+> current manifest and must not be re-claimed as such.
 
 - Manifest (`tests/bun-lane-manifest.json`, generatedAt 2026-08-14T15:12) has
   **397 rows: A=154, B=198, C=40, perf=5** (NOT "380 files / 39 C files").
@@ -259,7 +263,12 @@ const part = partition(manifest.rows, timings, bWorkerCount, cWorkers);
   `tests/README.md` (lane docs, "Bun lane parallel runner" section).
 
 
-## Acceptance evidence (2026-08-15)
+## Historical acceptance evidence (2026-08-15)
+> Historical result for the then-397-file manifest at commit `bb5ab806`.
+> The current manifest is 440 files (generatedAt 2026-08-18); the 9.98-min
+> figure is stale evidence, not a current benchmark. A fresh controlled run
+> on the current manifest with hash/count recorded is required before any
+> re-claim of the 10–15-minute target.
 
 Full-lane run on remote direct-5432 (`tests/bun-lane-report-559-accept.json`):
 **exit 0, total wall 9.98 min** (target ≤15 min). Per-worker table:

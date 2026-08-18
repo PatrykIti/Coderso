@@ -10,7 +10,7 @@
 # FileName: TASK-564_Backup_Users_Section_Bounded_Memory_Restore.md
 
 **Parent Task:** none
-**Source Findings:** M-511-04 (audit `_TMP-audit-task-511-backups.md`, verified at HEAD `4e3dab15`)
+**Source Findings:** M-511-04 (docs-only finding from the 2026-08-17 TASK-560 audit sweep; audit reports removed by owner 2026-08-18, evidence re-anchored at HEAD `6ca20b38`)
 
 ## Purpose
 

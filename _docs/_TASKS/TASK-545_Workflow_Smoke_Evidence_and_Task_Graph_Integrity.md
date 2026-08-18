@@ -171,10 +171,10 @@ No scanner exception or allowlist is added.
 
 | ID | Title | Leaves | Status |
 |---|---|---|---|
-| TASK-545-01 | All-results guard and static workflow contract | TASK-545-01-L01, L02 | ⏳ To Do |
-| TASK-545-02 | Canonical audit and post-audit workflow | TASK-545-02-L01, L02 | ⏳ To Do |
-| TASK-545-03 | Durable smoke evidence manifest | TASK-545-03-L01..L05 | ⏳ To Do |
-| TASK-545-04 | Task graph, changelog repair, and closure | TASK-545-04-L01..L04 | ⏳ To Do |
+| TASK-545-01 | All-results guard and static workflow contract | TASK-545-01-L01, L02 | ✅ Done |
+| TASK-545-02 | Canonical audit and post-audit workflow | TASK-545-02-L01, L02 | ✅ Done |
+| TASK-545-03 | Durable smoke evidence manifest | TASK-545-03-L01..L05 | ✅ Done |
+| TASK-545-04 | Task graph, changelog repair, and closure | TASK-545-04-L01..L04 | ✅ Done |
 
 ## Finding coverage matrix
 

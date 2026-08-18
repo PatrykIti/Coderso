@@ -10,7 +10,7 @@
 # FileName: TASK-570_Entries_Revision_Restore_Atomicity_And_Bounded_History.md
 
 **Parent Task:** none
-**Source Findings:** H-487-01, M-487-02, N3 (audit `_TMP-audit-task-487-entry-revisions.md`, verified at HEAD `4e3dab15`)
+**Source Findings:** H-487-01, M-487-02, N3 (docs-only finding from the 2026-08-17 TASK-560 audit sweep; audit reports removed by owner 2026-08-18, evidence re-anchored at HEAD `6ca20b38`)
 
 ## Purpose
 

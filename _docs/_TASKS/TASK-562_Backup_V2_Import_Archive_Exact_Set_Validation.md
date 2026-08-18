@@ -10,7 +10,7 @@
 # FileName: TASK-562_Backup_V2_Import_Archive_Exact_Set_Validation.md
 
 **Parent Task:** none
-**Source Findings:** H-511-01, NEW-511-01a, NEW-511-01b (audit `_TMP-audit-task-511-backups.md`, verified at HEAD `4e3dab15`)
+**Source Findings:** H-511-01, NEW-511-01a, NEW-511-01b (docs-only finding from the 2026-08-17 TASK-560 audit sweep; audit reports removed by owner 2026-08-18, evidence re-anchored at HEAD `6ca20b38`)
 
 ## Purpose
 

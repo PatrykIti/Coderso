@@ -80,9 +80,9 @@ contracts. No new backend, no schema/migration work.
 
 | ID            | Title                                   | Effort | Status     |
 | ------------- | --------------------------------------- | ------ | ---------- |
-| TASK-488-01   | Product Variant Editor                  | Medium | ⏳ To Do   |
-| TASK-488-02   | Collections CRUD Admin Surface          | Medium | ⏳ To Do   |
-| TASK-488-03   | Verification & Documentation            | Small  | ⏳ To Do   |
+| TASK-488-01   | Product Variant Editor                  | Medium | ✅ Done   |
+| TASK-488-02   | Collections CRUD Admin Surface          | Medium | ✅ Done   |
+| TASK-488-03   | Verification & Documentation            | Small  | ✅ Done   |
 
 ---
 

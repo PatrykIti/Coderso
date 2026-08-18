@@ -8,8 +8,6 @@
 **Status:** ✅ Done
 **Completed:** 2026-08-14
 **Changelog:** 1277 (pinned by the orchestrator; closure only)
-**Started:** `<YYYY-MM-DD>`
-**Completed:** `<YYYY-MM-DD>`
 
 ---
 
@@ -82,9 +80,9 @@ the content engine, so this is a contract completion, not a new product surface.
 
 | ID | Title | Effort | Status |
 |----|-------|--------|--------|
-| TASK-487-01 | Backend: entry revisions read + restore (service + routes) | Medium | ⏳ To Do |
-| TASK-487-02 | Admin: entries client revision methods + revision drawer UI | Medium | ⏳ To Do |
-| TASK-487-03 | Riders: wire dead Tags input + surface SEO fields | Small | ⏳ To Do |
+| TASK-487-01 | Backend: entry revisions read + restore (service + routes) | Medium | ✅ Done |
+| TASK-487-02 | Admin: entries client revision methods + revision drawer UI | Medium | ✅ Done |
+| TASK-487-03 | Riders: wire dead Tags input + surface SEO fields | Small | ✅ Done |
 
 ---
 

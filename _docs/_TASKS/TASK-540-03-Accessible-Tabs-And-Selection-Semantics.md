@@ -9,16 +9,19 @@
 **Dependencies:** TASK-540-01, TASK-540-02
 **Status:** ✅ Done
 **Completed:** 2026-08-06
+**Historical workflow notes:** The fields below record the execution trail of
+TASK-540 and are historical evidence, not current status. The family is `✅ Done`
+via Changelog 1252; smoke ownership moved to TASK-552/TASK-560.
 **Started:** 2026-07-13
 **Implementation Complete:** 2026-07-20 — assigned work was completed; canonical `✅ Done` transition awaits family changelog 1252.
 **Historical Selector-Consumer Implementation Evidence:** 2026-07-19 — commit `596ede31d17c65168510baf6b478696e3d345377` removed the renderer-local selector, imported R01's Bun-free owner directly in the leaf renderer, and kept the predicate import on that same owner. This commit remains implementation provenance, not a generation/token receipt.
-**Current Post-Audit Repair State:** The 2026-07-19 selector-consumer receipt became historical when the fresh family post-audit changed R03 source and tests. The selected-block Tabs visibility repair has a fresh exact 89/89 behavior gate and zero-finding focused re-audit. A later repository-wide full-load flake repair assigns the unchanged six-test TASK-496 dead-code guard to this leaf as an auxiliary gate outside the frozen product matrix; its 6/6 gate, sole-writer line check, workflow self-test, and unchanged renderer fingerprints passed. A clean family post-audit, full validation, smoke, changelog, and closure remain pending.
+**Current Post-Audit Repair State:** The 2026-07-19 selector-consumer receipt became historical when the fresh family post-audit changed R03 source and tests. The selected-block Tabs visibility repair has a fresh exact 89/89 behavior gate and zero-finding focused re-audit. A later repository-wide full-load flake repair assigns the unchanged six-test TASK-496 dead-code guard to this leaf as an auxiliary gate outside the frozen product matrix; its 6/6 gate, sole-writer line check, workflow self-test, and unchanged renderer fingerprints passed. A clean family post-audit, full validation, smoke, changelog, and closure were completed by 2026-08-06 (historical).
 **Repair Started:** 2026-07-16
 **Repair Reason:** Current final-source revalidation reproduced an accessibility defect in the defensive zero-item Tabs renderer: an empty `tablist` exposed no usable `tab`. TASK-540-03-L01 owns the visible fail-safe empty state and must emit no tablist, tab, or panel when there are zero tabs.
 **Historical Zero-Tab Repair Revalidated:** 2026-07-16 — TASK-540-03-L01 independently passed `core lint:types`, `core lint`, its exact renderer/interaction/image Vitest gate 89/89, and `git diff --check` on the then-final shared source. The later 2026-07-19 selector-consumer receipt is also historical after the current repair changed source and tests.
 **Modularity Repair Revalidated:** 2026-07-17 — cohesive <=1,000-line split and exact owner gate passed.
-**Post-Audit Fixture Integrity Revalidated:** 2026-07-17 — L01 restored direct compile-time typing for all shared renderer fixtures, corrected the receipt ordering, and passed core/root static checks, the exact dependency-shaped 89/89 gate, unchanged 72-name/67-declaration fingerprints, the family line gate, and `git diff --check`. The required clean family post-audit, repository-wide validation, smoke, changelog, and closure remain pending.
-**Post-Audit Fixture Immutability Revalidated:** 2026-07-17 — L01 restored the prior shallow runtime-freeze depth without reintroducing fixture assertions; the exact 89/89 gate, static/name/line/format/diff checks, and a fresh zero-finding audit passed. The clean family post-audit, repository-wide validation, smoke, changelog, and closure remain pending.
+**Post-Audit Fixture Integrity Revalidated:** 2026-07-17 — L01 restored direct compile-time typing for all shared renderer fixtures, corrected the receipt ordering, and passed core/root static checks, the exact dependency-shaped 89/89 gate, unchanged 72-name/67-declaration fingerprints, the family line gate, and `git diff --check`. The required clean family post-audit, repository-wide validation, smoke, changelog, and closure were completed by 2026-08-06 (historical).
+**Post-Audit Fixture Immutability Revalidated:** 2026-07-17 — L01 restored the prior shallow runtime-freeze depth without reintroducing fixture assertions; the exact 89/89 gate, static/name/line/format/diff checks, and a fresh zero-finding audit passed. The clean family post-audit, repository-wide validation, smoke, changelog, and closure were completed by 2026-08-06 (historical).
 **Historical Corrective Revalidation:** 2026-07-14 — TASK-540-03-L01 passed the then-current exact 89/89 renderer/interaction/image Vitest matrix, core lint/typecheck, `git diff --check`, and a fresh zero-finding post-audit
 **Fix Started:** 2026-07-20
 **Fix Reason:** A fresh family post-audit proved that builder selection could remain inside a hidden non-first Tabs panel when no insert point selected that panel. TASK-540-03-L01 must derive the visible builder panel from the selected block as a lower-priority fallback, while an explicit insert point remains authoritative.
@@ -151,4 +154,4 @@ repair passed the 72-name/67-declaration contract, exact 89/89 behavior gate, li
 and focused zero-finding re-audit. The later auxiliary dead-code guard rewrite preserves
 its six assertions while replacing 107 synchronous recursive greps with one source
 index; its independent 6/6 leaf gate does not change the 78+18 closure matrix. Fresh
-family post-audit, live smoke, changelog 1252, and closure remain pending.
+family post-audit, live smoke, changelog 1252, and closure were completed by 2026-08-06 (historical).

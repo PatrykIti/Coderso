@@ -10,7 +10,7 @@
 # FileName: TASK-573_Entry_Gated_Probe_Cheap_Bounded_Read.md
 
 **Parent Task:** none
-**Source Findings:** M-517-02 (audit `_TMP-audit-task-517-entry-visibility.md`, verified at HEAD `4e3dab15`)
+**Source Findings:** M-517-02 (docs-only finding from the 2026-08-17 TASK-560 audit sweep; audit reports removed by owner 2026-08-18, evidence re-anchored at HEAD `6ca20b38`)
 
 ## Purpose
 

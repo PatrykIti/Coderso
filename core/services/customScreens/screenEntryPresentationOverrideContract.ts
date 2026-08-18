@@ -1,4 +1,4 @@
-import { isScreenMediaAssetUuid } from "./customScreenSchemas";
+import { isScreenMediaAssetUuid, isScreenUuid } from "./customScreenSchemas";
 
 export const customScreenOverrideErrorCodes = [
   "custom_screen_override_invalid",
@@ -226,7 +226,8 @@ const normalizeDraftKeys = (record: Record<string, unknown>) =>
 
 const normalizeUpdatedBy = (value: unknown): string | null => {
   if (value === null) return null;
-  return normalizeCanonicalMediaUuid(value);
+  if (!isScreenUuid(value)) throw invalidOverride();
+  return value;
 };
 
 const normalizeRepositoryDate = (value: unknown): Date => {

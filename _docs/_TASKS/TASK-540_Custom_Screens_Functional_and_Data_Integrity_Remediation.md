@@ -11,8 +11,12 @@
 **Started:** 2026-07-13
 **Modularity Repair Revalidated:** 2026-07-17 — eight source-owner modularity repairs and exact gates passed.
 **Repair Started:** 2026-07-16
-**Current Closure Repair Started:** 2026-07-23
-**Current Closure Repair State:** All twelve implementation leaves are landed and carry
+**Historical workflow notes:** The fields below record the 2026-07-13..2026-08-06
+execution trail of TASK-540 and are historical evidence, not current status. The
+family is `✅ Done` via Changelog 1252; all closure steps described as "pending"
+completed by 2026-08-06. Smoke ownership moved to TASK-552/TASK-560.
+**Historical Closure Repair Started:** 2026-07-23
+**Historical Closure Repair State:** All twelve implementation leaves are landed and carry
 their current required gate receipts. TASK-540-04-L03 has canonical
 `Implementation Complete` plus
 `Revalidation Passed: generation 389c9f4149c84d75bc5bdfe8caeb15de / token
@@ -35,11 +39,11 @@ five-lens post-audit, then continues through full validation -> helper restart p
 Playwright CLI smoke with 13/13 screenshots and deterministic cleanup -> smoke-evidence
 audit -> changelog/status closure -> final closure checks -> integration into
 `feat/implementations`.
-**Current Codex Collaboration Directive:** 2026-07-24 — Codex agents are the only
+**Historical Codex Collaboration Directive:** 2026-07-24 — Codex agents are the only
 reviewers/implementers used for remaining work. The tracked Codex bridge and local
 orchestrator are landed; Claude invocation and fallback are absent from the current
 workflow and closure path.
-**Current Smoke Module Ownership:** The seven top-level helper/facade paths remain the
+**Historical Smoke Module Ownership:** The seven top-level helper/facade paths remain the
 public workflow bundle. That seven-path contract does not forbid implementation
 modules: cohesive tracked owners under `_docs/_workflows/task-540-smoke/**` are part of
 the same TASK-540 smoke implementation, must each remain at most 1,000 physical lines,
@@ -47,7 +51,7 @@ and join tracked-parity, diff, formatting, and line-count validation. The execut
 self-test must also prove exhaustive, non-overlapping action-to-scenario ownership for
 the current manifest, including enumerated related-cache and responsive-users owners,
 so no omitted registry member silently falls through to a shared builder.
-**Current Fresh-Target Changelog Projection Repair:** 2026-07-23 — after the committed
+**Historical Fresh-Target Changelog Projection Repair:** 2026-07-23 — after the committed
 TASK-548 board/changelog state was merged into the isolated TASK-540 worktree, the
 canonical Start gate stopped before agent, server, browser, fixture, or closure mutation
 because the TASK-540 index projection incorrectly included the independent 1260/1261
@@ -58,7 +62,7 @@ sentence or consumed two-sentence pair, preserve every following reservation byt
 reject duplicates, malformed/interposed state, or escaped 1252/neighbor contradictions.
 Those bytes still await the combined targeted gate and are not a current receipt. The
 stopped invocation produced no smoke or closure evidence.
-**Current Closure Board Checkpoint:** Merge HEAD
+**Historical Closure Board Checkpoint:** Merge HEAD
 `aaf7e6dbd13fe51d5ab00cfc5dbcaa5e44b60d01` synchronized `feature/tasks-fixes`
 with committed `feat/implementations` and observed To Do 409 / In Progress 7 / Done 3116.
 TASK-540's isolated expected delta is 409 / 6 / 3117, but this is only a
@@ -74,7 +78,7 @@ tracked and clean-checkout reproducible without changing the broad
 `_docs/_workflows/` ignore rule. TASK-540-06/L01 owns the top-level set, child-module
 ownership, historical provenance, final repins, and tracked-parity rules. TASK-545
 retains ownership of repository-wide workflow policy and durable screenshot manifests.
-**Current Vite Authority:** TASK-546 owns `package.json`, `core/package.json`, and
+**Historical Vite Authority:** TASK-546 owns `package.json`, `core/package.json`, and
 `bun.lock`; their landed bytes already resolve Vite `8.1.5` and remain
 byte-identical/read-only throughout TASK-540. Before any bridge or combined targeted
 gate, TASK-540-06/L01 changes only the smoke-host implementation's exact version
@@ -279,9 +283,9 @@ isolation, so existing postchecks and rollback remain final authority.
 **Historical R01 Stored-Read Repair Revalidated:** 2026-07-19 — TASK-540-01-L01 replaced `Repair Pending: generation 28bd5c90c7fd485eabc0c611d5e34752 / token 0237fd1a85b54c7e80e46c0eaac5477d` with the exact matching gate successor and restored canonical `Implementation Complete`; TASK-540-01 mirrors that completion state. The later selector-inclusive R01 receipt supersedes this as current owner-gate evidence.
 **Historical 2026-07-19 Post-Audit Intervention:** 2026-07-19 — one complete five-lens round stopped before full validation and smoke. The verified correction was a four-owner dependency chain: R01 appended one Bun-free, precisely returning first-media-UUID selector to `screenMediaIdentity.ts` and extended its existing UUID test declaration; R03 consumed that selector in the runtime renderer; L03 consumed it in Entry presentation media, gave every Entry Presentation control a programmatic name, and replaced its hand-built records-workspace href with the canonical helper; L04 gave every Screen Settings control a programmatic name. The failed L03-only attempt was fully reverted and remains diagnostic evidence that a pure L03 owner must not import the R03 admin/UI model. All four implementations landed in dependency order, the L01 compatibility test followed, and all five exact owner re-gates were green at that checkpoint. A fresh clean family post-audit remained required before full validation.
 **Historical Four-Owner Implementation Evidence:** 2026-07-19 — R01 landed as `f8e916b9255677352a2ed2fef9bd73093dec5683`, R03 as `596ede31d17c65168510baf6b478696e3d345377`, L03 as `46759bcea211c39a708ed424f749efe2343a56b3`, and L04 as `204fd1de0f129f73976f577f420acbdac5316dea`. These commit identities record source/test provenance only; they are not generation/token receipts and do not claim full validation, smoke, changelog, or closure.
-**Current L01 Compatibility Evidence:** 2026-07-19 — commit `7a393dcc7aaf454fee582ce7745073768e0e131b` reopens the one-shot Insert palette before the existing second insertion assertion, while commit `204fd1de0f129f73976f577f420acbdac5316dea` assigns that test exclusively to TASK-540-05-L01. The insertion target and ordering assertions remain unchanged; this is implementation provenance, not a current owner-gate receipt.
+**Historical L01 Compatibility Evidence:** 2026-07-19 — commit `7a393dcc7aaf454fee582ce7745073768e0e131b` reopens the one-shot Insert palette before the existing second insertion assertion, while commit `204fd1de0f129f73976f577f420acbdac5316dea` assigns that test exclusively to TASK-540-05-L01. The insertion target and ordering assertions remain unchanged; this is implementation provenance, not a current owner-gate receipt.
 **Historical 2026-07-19 Focused Validation Evidence:** all five dependency-ordered owner gates passed at that checkpoint. R01: schema 77/77, document operations 43/43, exact Vitest 210/210, routes 21/21, Assistant 73/73, combined Bun 94/94, and DB/static/name/line/workflow checks. R03: isolated 22/13/24/13 and combined 89/89. L03: expanded 258/258, L04 read-only consumers 98/98, and routes 13/13. L04: isolated 6/13/8/9 and combined 98/98. L01: isolated 7/7 and 10/10, combined 29/29. Full-family line, prepared-resume, workflow, and diff checks passed.
-**Current Receipt Synchronization State:** R03's current 2026-07-20 authority is exactly
+**Historical Receipt Synchronization State:** R03's current 2026-07-20 authority is exactly
 `Revalidation Passed: generation 90d5543e1773459aaf7893aec3f24c57 / token a837a8a8a8fa442dbae7656abb3e88ac / gate green`
 for its unchanged exact 89/89 renderer contract. Its separately current auxiliary
 dead-code receipt proves the independent 6/6 gate, unchanged renderer fingerprints,
@@ -292,8 +296,8 @@ authorities recorded in their own leaves. L03's current authority is
 `Revalidation Passed: generation 389c9f4149c84d75bc5bdfe8caeb15de / token
 0ffce6cc69b8444cb78f475950e6c900 / gate green`, paired with canonical
 `Implementation Complete`; no active `Repair Pending` remains. The clean five-lens
-family post-audit and full validation remain pending.
-**Current Mechanical-Gate Correction:** the protected-name `current` mode now applies the same exact additive callback-preservation contract as `final` mode for `userSettingsRoutes`; it still preserves all names, partitions, retained statements, producer/result assertions, and support-module boundaries. This removes the deterministic current-mode false failure without weakening or re-baselining the changed body SHA.
+the family post-audit and full validation were completed by 2026-08-06 (historical).
+**Historical Mechanical-Gate Correction:** the protected-name `current` mode now applies the same exact additive callback-preservation contract as `final` mode for `userSettingsRoutes`; it still preserves all names, partitions, retained statements, producer/result assertions, and support-module boundaries. This removes the deterministic current-mode false failure without weakening or re-baselining the changed body SHA.
 **Prior Repair Revalidation:** 2026-07-16 — before the composer and L04 provenance findings, HEAD `040604e7e3d5232a5fb2fcb6a05e149295a89a77` plus the then-recorded dirty paths passed core/root static gates; R01 Vitest 168/168, route/Assistant Bun 92/92 with 568 expectations, route 19/19 with 110, and ops 11/11; L03 Vitest 258/258, cacheBus 22/22, and L04 consumer matrix 98/98; L01 16/16; L02 Vitest 66/66 and Bun 27/27 with 165 expectations; user-settings 10/10 with 64; DB preflight; binding-flow 3/3; workflow self-tests; and diff checks. This evidence is historical for the expanded contract.
 **Historical L03 Repair Started:** 2026-07-15
 **Historical L03 Repair Reason:** Closure validation reproduced one logical remote cache event twice when canonical and legacy BroadcastChannel/storage transports delivered the same serialized event, and contract audit required direct-image route-boundary coverage at the strict write seam. TASK-540-04/L03 was the sole scoped repair owner with exactly three writable paths: `core/admin/utils/cacheBus.ts`, `tests/vitest/admin/cacheBus.test.ts`, and additive direct-image regressions in `tests/integration/routes/customScreensRoutes.test.ts`; `core/server/routes/customScreenRoutes.ts` and every other production route/UI/client/service file remained read-only. That repair passed its focused and dependency-shaped gates on 2026-07-15, and its exact `Repair Pending` receipt was replaced by the matching `Revalidation Passed` successor. L03 and every other then-landed source leaf remained `🚧 In Progress` with `Implementation Complete` awaiting family changelog 1252, while post-audit, full validation, live smoke, and atomic closure remained pending.

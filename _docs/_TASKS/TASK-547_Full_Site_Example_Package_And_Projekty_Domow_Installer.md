@@ -232,16 +232,16 @@ whose embedded documents delegate to their domain owners.
 - [x] **TASK-547-07** — multi-agent workflow and drift evidence; runs throughout
   the family and is not an implementation land step.
 
-1. [ ] **TASK-547-01** — versioned package schema, typed references, graph planner
+1. [x] **TASK-547-01** — versioned package schema, typed references, graph planner
    (2 executable leaves).
-2. [ ] **TASK-547-02** — installer resource expansion, idempotency, snapshots,
+2. [x] **TASK-547-02** — installer resource expansion, idempotency, snapshots,
    rollback, and audit evidence (3 executable leaves).
-3. [ ] **TASK-547-03** — complete FormaDom content/resource generator
+3. [x] **TASK-547-03** — complete FormaDom content/resource generator
    (3 executable leaves).
-4. [ ] **TASK-547-04** — seven Page v2 documents, shell, locale propagation,
+4. [x] **TASK-547-04** — seven Page v2 documents, shell, locale propagation,
    theme/design and canonical example package (3 executable leaves).
-5. [ ] **TASK-547-05** — installer-backed CLI (1 executable leaf).
-6. [ ] **TASK-547-06** — dependency-shaped tests, documentation, Playwright smoke,
+5. [x] **TASK-547-05** — installer-backed CLI (1 executable leaf).
+6. [x] **TASK-547-06** — dependency-shaped tests, documentation, Playwright smoke,
    and closure (1 executable leaf).
 Implementation is strictly sequential: `01 → 02 → 03 → 04 → 05 → 06`. Inside
 TASK-547-02, corrective L01 completion is followed by one L03-owned pre-land
@@ -432,8 +432,8 @@ After unfinished implementation is validated:
 A product-code smoke failure invalidates affected runtime scenarios, not clean
 static gates or unrelated audits. A harness-only repair invalidates the harness
 self-test and runtime smoke. A host/power/network interruption requires a clean
-smoke restart only. Changelog 1260 remains Draft and unindexed until this order
-completes. No TASK-547 commit is merged into `feat/implementations` by this
+smoke restart only. Changelog 1260 is Final and indexed (see `_docs/_CHANGELOG/README.md:39,106`);
+this closure-order note is historical and was satisfied by the family closure. No TASK-547 commit is merged into `feat/implementations` by this
 workflow.
 
 ## Documentation Updates Required

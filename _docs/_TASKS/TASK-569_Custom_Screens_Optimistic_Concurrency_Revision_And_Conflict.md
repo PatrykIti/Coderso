@@ -10,7 +10,7 @@
 # FileName: TASK-569_Custom_Screens_Optimistic_Concurrency_Revision_And_Conflict.md
 
 **Parent Task:** none
-**Source Findings:** H-540-01 + N2 (audit `_TMP-audit-task-540-custom-screens.md`, verified at HEAD `4e3dab15`)
+**Source Findings:** H-540-01 + N2 (docs-only finding from the 2026-08-17 TASK-560 audit sweep; audit reports removed by owner 2026-08-18, evidence re-anchored at HEAD `6ca20b38`)
 
 ## Purpose
 
