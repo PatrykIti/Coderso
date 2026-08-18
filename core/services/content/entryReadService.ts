@@ -193,6 +193,43 @@ export async function getEntryBySlug(typeId: string, slug: string) {
   return row ?? null;
 }
 
+export type EntryVisibilityProbe = { id: string; visibility: string };
+
+/**
+ * SERVER-ONLY, NARROW gated-route probe (TASK-573). Returns only existence plus
+ * `visibility` for one entry: a minimal projection with no joins and no
+ * SEO/taxonomy/author reads, so the hot public detail path never pays for wide
+ * `data`/`tags`/email columns or extra queries. Used by `entryRouteIsGated()`
+ * BEFORE the shared-cache read. Never add SEO/taxonomy/author/data/email
+ * columns here — the probe result is only existence/visibility.
+ */
+export async function getEntryVisibilityById(id: string): Promise<EntryVisibilityProbe | null> {
+  const [row] = await db
+    .select({ id: contentEntries.id, visibility: contentEntries.visibility })
+    .from(contentEntries)
+    .where(eq(contentEntries.id, id))
+    .limit(1);
+  return row ?? null;
+}
+
+/**
+ * Slug variant of the narrow probe. Entry slugs are unique only per type
+ * (uniqueIndex `content_entries_type_slug_idx` on (typeId, slug)), so the probe
+ * MUST keep the (typeId, slug) scope: a slug-only predicate could match a
+ * different type's entry. Callers resolve `typeId` from the type slug first.
+ */
+export async function getEntryVisibilityBySlug(
+  typeId: string,
+  slug: string
+): Promise<EntryVisibilityProbe | null> {
+  const [row] = await db
+    .select({ id: contentEntries.id, visibility: contentEntries.visibility })
+    .from(contentEntries)
+    .where(and(eq(contentEntries.typeId, typeId), eq(contentEntries.slug, slug)))
+    .limit(1);
+  return row ?? null;
+}
+
 export type EntryRevisionAuthor = { id: string; name: string | null; email: string };
 
 export type EntryRevision = {

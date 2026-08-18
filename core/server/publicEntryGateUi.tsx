@@ -6,7 +6,10 @@
 // with the publicSite render host.
 import { renderPublicPasswordPromptHtml } from "../site/renderPublicEntry";
 import { hashEntryCookieId, verifyEntryUnlockToken } from "../services/content/entryUnlockToken";
-import { getEntry, getEntryBySlug } from "../services/content/entryService";
+import {
+  getEntryVisibilityById,
+  getEntryVisibilityBySlug,
+} from "../services/content/entryReadService";
 import { getContentTypeBySlug } from "../services/content/typeService";
 import {
   resolveEntryVisibilityGate,
@@ -146,16 +149,19 @@ export const filterVisibleEntries = <T extends { visibility?: string | null }>(
 // Auth-independent and memoization-FREE (a memoized "public" verdict would go
 // stale on a visibility mutation → fail-open). Only `detail` matches pay this
 // bounded single-entry read; list/homepage/static matches short-circuit to
-// false and keep their caches. The probe NEVER reads accessPassword.
+// false and keep their caches. The probe uses the TASK-573 narrow reads
+// (id/visibility only, no joins, no SEO/taxonomy/author/data/email columns) and
+// NEVER reads accessPassword.
 export const entryRouteIsGated = async (match: ContentRouteMatch): Promise<boolean> => {
   let visibility: string | null | undefined;
   if (match.params.id) {
-    const entry = await getEntry(match.params.id);
+    const entry = await getEntryVisibilityById(match.params.id);
     visibility = entry?.visibility;
   } else if (match.params.slug) {
     const contentType = await getContentTypeBySlug(match.type);
     if (!contentType) return false;
-    const entry = await getEntryBySlug(contentType.id, match.params.slug);
+    // Entry slugs are unique only per type — keep the (typeId, slug) scope.
+    const entry = await getEntryVisibilityBySlug(contentType.id, match.params.slug);
     visibility = entry?.visibility;
   }
   return visibility === "private" || visibility === "password";

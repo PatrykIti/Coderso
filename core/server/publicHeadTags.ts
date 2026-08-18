@@ -20,8 +20,10 @@ export { buildLiveAnalyticsScriptHtml };
 export const resolvePublicAnalyticsHeadSnippet = async (): Promise<string | null> => {
   try {
     return await resolvePublicAnalyticsHead();
-  } catch (error) {
-    console.warn("analytics_head_resolution_failed", error); // fail closed, no tag
+  } catch {
+    // Log only the allowlisted code, never the error object: it can carry
+    // decrypted config, URLs, or error internals. Fail closed, no tag.
+    console.warn("analytics_head_resolution_failed");
     return null;
   }
 };
