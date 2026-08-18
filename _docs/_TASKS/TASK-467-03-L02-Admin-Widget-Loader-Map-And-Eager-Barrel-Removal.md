@@ -37,7 +37,7 @@ synchronous, but editor modules should load only when an editor is rendered.
 | `core/admin/ui/widgets/editors/index.ts` | Stop being imported by the registry; keep only if tests still need direct named exports. |
 | `core/widgets/core/index.ts` | READ-ONLY reference: consume the `CoreWidgetEditors` type (widened by TASK-467-03-L01); do not edit. `ensureCoreWidgetsRegistered` remains in the admin registry. |
 | `tests/vitest/admin/widgetsClient.test.ts` | Assert registry behavior remains stable. |
-| (none) `tests/vitest/admin/adminBundleReport.test.ts` | Bundle evidence assertions are owned by TASK-467-03-L04 (closure validation). L02 runs `bun --cwd core build:admin` + `check:admin-bundle` and records evidence for L04. |
+| `tests/vitest/admin/adminBundleReport.test.ts` | READ-ONLY reference: file owned by TASK-467-03-L04 (closure evidence). L02 runs `bun --cwd core build:admin` + `check:admin-bundle` and records evidence for L04. |
 
 ## Implementation Pseudocode
 
@@ -79,9 +79,11 @@ The implementation must make `editorLoaders` exhaustive for every
 `CoreWidgetEditors` key through `satisfies CoreWidgetEditors` and typecheck, not
 through a manually maintained count. The current audit observed 38 required
 widget keys across the `CoreWidgetEditors` type (verified against
-`core/widgets/core/index.ts:275-317`), including grouped modules such as
-`ScreenEditors` that export editors for `screenRecordHeader`,
-`screenFieldValue`, `screenFieldGroup`, and `screenTwoColumn`.
+`core/widgets/core/index.ts:275-317`). Note: `ScreenEditors` (which exports
+editors for `screenRecordHeader`, `screenFieldValue`, `screenFieldGroup`, and
+`screenTwoColumn`) is a separate Custom Screens widget editor group and is NOT
+part of the 38 `CoreWidgetEditors` keys; the loader map only needs the core
+keys.
 
 Data flow:
 

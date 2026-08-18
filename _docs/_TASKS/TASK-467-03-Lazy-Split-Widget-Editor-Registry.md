@@ -45,7 +45,7 @@ This parent is the coordinator; all source-file edits are owned by its leaves:
 |---|---|
 | TASK-467-03-L01 | `core/widgets/types.ts`, `core/widgets/core/index.ts` (type widening), `core/widgets/registry.ts` validation, `tests/vitest/widgets/editorContract.test.ts` |
 | TASK-467-03-L02 | `core/admin/ui/widgets/registry.ts`, `core/admin/ui/widgets/editors/index.ts`, `tests/vitest/admin/widgetsClient.test.ts` |
-| TASK-467-03-L03 | `core/admin/ui/widgets/WidgetEditorOutlet.tsx`, `core/admin/ui/pages/builder/{WizardPanel,VisualPanel,AdvancedPanel,BlockSettings}.tsx`, `core/admin/ui/custom-screens/CustomScreenEditorPage.tsx`, pageBuilder + admin UI tests |
+| TASK-467-03-L03 | `core/admin/ui/widgets/WidgetEditorOutlet.tsx`, `core/admin/ui/pages/builder/{WizardPanel,VisualPanel,AdvancedPanel,BlockSettings}.tsx`, pageBuilder + admin UI tests. `core/admin/ui/custom-screens/CustomScreenEditorPage.tsx` is read-only reference (owned by TASK-467-02). |
 | TASK-467-03-L04 | `scripts/adminBundleReport.ts`, `scripts/check-admin-bundle.ts`, `tests/vitest/admin/adminBundleReport.test.ts`, docs + closure |
 
 Leaves must not edit files owned by another leaf; the parent itself edits no
@@ -133,8 +133,11 @@ Data flow:
 - The lazy editor map must be exhaustive for every `CoreWidgetEditors` key
   through `satisfies CoreWidgetEditors` and typecheck, not through a manually
   maintained count. The current audit observed 38 required widget keys across the
-  `CoreWidgetEditors` type (verified against `core/widgets/core/index.ts:275-317`),
-  including grouped modules such as `ScreenEditors`.
+  `CoreWidgetEditors` type (verified against `core/widgets/core/index.ts:275-317`).
+  Note: `ScreenEditors` (`screenRecordHeader`, `screenFieldValue`,
+  `screenFieldGroup`, `screenTwoColumn`) is a separate Custom Screens widget
+  editor group that is NOT part of the 38 `CoreWidgetEditors` keys; the lazy map
+  only needs the core keys.
 - Editor modules are represented by `React.lazy` components and load only after
   a concrete widget and editor mode are rendered.
 - Do not replace the static barrel with `import("./editors")` or

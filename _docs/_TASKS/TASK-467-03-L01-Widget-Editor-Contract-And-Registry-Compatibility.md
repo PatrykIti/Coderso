@@ -40,7 +40,6 @@ picker, pack-matrix, capability, and schema/default validation paths.
 | `core/widgets/types.ts` | Widen editor component typing for `React.lazy` if current `ComponentType` is too narrow. |
 | `core/widgets/registry.ts` | Keep required editor-mode validation intact. Update only if the lazy component type requires a narrower validation helper. |
 | `core/widgets/core/index.ts` | Widen local `EditorBundle<T>` typing if needed; keep the `CoreWidgetEditors` object shape intact. |
-| `tests/vitest/widgets/editorContract.test.ts` | Cover core registry contract behavior for eager and lazy editor components. |
 | `tests/vitest/widgets/editorContract.test.ts` | Cover core registry contract behavior for eager and lazy editor components (owner). |
 
 ## Implementation Pseudocode
