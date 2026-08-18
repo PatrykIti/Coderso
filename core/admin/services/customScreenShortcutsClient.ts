@@ -1,6 +1,7 @@
 import { apiRequest } from "./apiClient";
 import { cacheKeys, cacheTtlMs } from "@/services/cachePolicy";
 import { createMemoryBackedLocalCache } from "@/utils/storageCache";
+import { registerCustomScreensCacheInvalidator } from "./customScreensCache";
 
 export type CustomScreenShortcutStatus = "draft" | "active";
 
@@ -108,6 +109,11 @@ export const clearCustomScreenShortcutsCache = () => {
   cachedShortcutsPromise = null;
   customScreenShortcutsCache.clear();
 };
+
+registerCustomScreensCacheInvalidator(() => {
+  cachedShortcutsPromise = null;
+  customScreenShortcutsCache.clear();
+});
 
 export async function listCustomScreenShortcuts() {
   const payload = await apiRequest<{ items: RawCustomScreenShortcutRecord[] }>("/custom-screens", {

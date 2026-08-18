@@ -6,10 +6,19 @@
 **Category:** Admin Build / Admin Cache / Assistant
 **Estimated Effort:** Small
 **Dependencies:** TASK-467
-**Status:** ⏳ To Do
+**Status:** ✅ Done
 **Changelog:** 1308 (pinned; closure only)
 
 ---
+
+**Implemented 2026-08-18:** memory-invalidator registry in
+`customScreensCache.ts` (register/clear with per-callback guard), assistantClient
+uses `clearCustomScreensCacheLightweight`, shortcuts client registers its
+promise/cache reset. assistantClient.test.ts split into
+assistantClientCacheInvalidation.test.ts to stay under the 1,000-line gate.
+Gates: lint + lint:types green, targeted vitest 55/55 green, build:admin +
+check:admin-bundle green. check:admin-boundary pre-existing failure recorded
+(not owned by this leaf).
 
 ## Overview
 

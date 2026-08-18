@@ -12,7 +12,7 @@ import {
 } from "./contentTypesClient";
 import {
   clearCustomScreenDetailBrowserCache,
-  clearCustomScreensBrowserCache,
+  clearCustomScreensCacheLightweight,
 } from "./customScreensCache";
 import { clearDetailPageListCache } from "./detailPagesClient";
 import { clearAllEntriesCache, clearEntriesCache } from "./entriesClient";
@@ -33,11 +33,7 @@ import type {
 export type AssistantMode = "docs-only" | "llm-guide";
 export type AssistantDetailLevel = "basic" | "medium" | "instruction" | "advanced";
 export type AssistantGuideMode =
-  | "default"
-  | "troubleshooting"
-  | "decision_guide"
-  | "checklist"
-  | "security";
+  "default" | "troubleshooting" | "decision_guide" | "checklist" | "security";
 
 export type AssistantRetrievalBackend = "db";
 export type { AssistantStatusResponse } from "./assistantStatusClient";
@@ -355,7 +351,7 @@ const notifyAssistantExecutionCacheEvent = (input: {
           plannedBindingSet?.input.id ??
           plannedListViewPatch?.input.id
       );
-      clearCustomScreensBrowserCache();
+      clearCustomScreensCacheLightweight();
       emit(cacheKeys.customScreensList, cacheAction);
       if (id) {
         clearCustomScreenDetailBrowserCache(id);
