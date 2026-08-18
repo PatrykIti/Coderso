@@ -35,9 +35,9 @@ synchronous, but editor modules should load only when an editor is rendered.
 |---|---|
 | `core/admin/ui/widgets/registry.ts` | Replace static editor barrel import with typed lazy editor component map. |
 | `core/admin/ui/widgets/editors/index.ts` | Stop being imported by the registry; keep only if tests still need direct named exports. |
-| `core/widgets/core/index.ts` | Reference only if L01 did not already widen `EditorBundle<T>` for lazy components; `ensureCoreWidgetsRegistered` remains in the admin registry. |
+| `core/widgets/core/index.ts` | READ-ONLY reference: consume the `CoreWidgetEditors` type (widened by TASK-467-03-L01); do not edit. `ensureCoreWidgetsRegistered` remains in the admin registry. |
 | `tests/vitest/admin/widgetsClient.test.ts` | Assert registry behavior remains stable. |
-| `tests/vitest/admin/adminBundleReport.test.ts` | Add bundle evidence for `registry-*` chunk reduction/splitting. |
+| (none) `tests/vitest/admin/adminBundleReport.test.ts` | Bundle evidence assertions are owned by TASK-467-03-L04 (closure validation). L02 runs `bun --cwd core build:admin` + `check:admin-bundle` and records evidence for L04. |
 
 ## Implementation Pseudocode
 
@@ -77,8 +77,9 @@ export function ensureCoreWidgetsRegistered() {
 
 The implementation must make `editorLoaders` exhaustive for every
 `CoreWidgetEditors` key through `satisfies CoreWidgetEditors` and typecheck, not
-through a manually maintained count. The current audit observed 42 required
-widget keys across 39 editor modules, including grouped modules such as
+through a manually maintained count. The current audit observed 38 required
+widget keys across the `CoreWidgetEditors` type (verified against
+`core/widgets/core/index.ts:275-317`), including grouped modules such as
 `ScreenEditors` that export editors for `screenRecordHeader`,
 `screenFieldValue`, `screenFieldGroup`, and `screenTwoColumn`.
 
@@ -137,7 +138,8 @@ test("every editable core widget has an editor bundle", () => {
 
 ## Testing Requirements
 
-- `bun run test:vitest -- tests/vitest/admin/widgetsClient.test.ts tests/vitest/admin/adminBundleReport.test.ts`
+- `bun run test:vitest -- tests/vitest/admin/widgetsClient.test.ts`
+- (adminBundleReport.test.ts runs in L04's validation)
 - `bun --cwd core build:admin`
 - `bun run check:admin-bundle`
 - `bun run check:admin-boundary`

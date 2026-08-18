@@ -30,9 +30,10 @@ Render 512 MB memory limit. The largest relevant chunks are:
 
 The source analysis found three concrete owners:
 
-1. `assistantClient.ts` imports `clearCustomScreensCache` from the full
-   `customScreensClient`, so `AdminShell -> AssistantPanel -> assistantClient`
-   can pull the heavy Custom Screens client into the shell/preload graph.
+1. (historical) `assistantClient.ts` imported `clearCustomScreensCache` from the
+   full `customScreensClient`, which could pull the heavy Custom Screens client
+   into the shell/preload graph. Since re-scope 2026-08-18, that edge is already
+   gone; the remaining assistant work is the memory-invalidator registry.
 2. `customScreensClient.ts` imports domain normalizers/capability helpers that
    reach Custom Screen schemas, binding resolvers, runtime widget registration,
    and core widget definitions.
@@ -48,11 +49,14 @@ Custom Screens list/cache split. Keep the TASK-467 Custom Screens editor-client
 extraction minimal and move-only where possible; TASK-468 owns the later V4
 Custom Screens canvas rewrite.
 
-Pre-implementation note: the current source still contains the heavy
-`assistantClient -> customScreensClient`, Custom Screens list/editor, and widget
-editor barrel edges described above. That is expected while this family is
-`⏳ To Do`; TASK-467 closure is blocked until the child tasks implement the
-listed source/test/script changes and L04 records fresh validation evidence.
+Pre-implementation note (updated 2026-08-18 after fresh audit): the
+`assistantClient -> customScreensClient` heavy edge described in overview point 1
+is already gone — `assistantClient.ts:16` imports browser-key clears from the
+lightweight `customScreensCache.ts`. The remaining real work is the memory-cache
+invalidator registry (TASK-467-01), the full-client split + memory-owner
+registration (TASK-467-02), and the widget editor lazy split (TASK-467-03).
+TASK-467 closure remains blocked until the child tasks implement the listed
+source/test/script changes and L04 records fresh validation evidence.
 
 ## Sub-Tasks
 
@@ -139,8 +143,10 @@ Forbidden closure criteria:
 
 ## Acceptance Criteria
 
-1. `assistantClient` no longer imports the full `customScreensClient` for cache
-   invalidation.
+1. `assistantClient` does not import the full `customScreensClient` for cache
+   invalidation (already true; re-verified by test) and its Custom Screens
+   action invalidation clears every registered memory owner plus the browser
+   list/detail keys through the lightweight `customScreensCache` registry.
 2. The admin shell/preload graph does not need the heavy Custom Screens editor
    normalizer or runtime widget registry just to render navigation and the
    assistant panel.

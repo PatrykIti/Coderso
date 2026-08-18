@@ -39,7 +39,7 @@ while `React.lazy` editor modules load on demand.
 | `core/admin/ui/pages/builder/VisualPanel.tsx` | Use outlet for visual mode. |
 | `core/admin/ui/pages/builder/AdvancedPanel.tsx` | Use outlet for advanced mode. |
 | `core/admin/ui/pages/builder/BlockSettings.tsx` | Preserve tab/mode behavior while delegating editor rendering. |
-| `core/admin/ui/custom-screens/CustomScreenEditorPage.tsx` | Update only if it renders widget editors directly. |
+| `core/admin/ui/custom-screens/CustomScreenEditorPage.tsx` | READ-ONLY reference: file owned by TASK-467-02 (import split). Route its editor rendering through the shared outlet only as part of 467-02's change, not here. |
 | `tests/vitest/admin/widgetEditorLayoutCss.test.ts` | Keep layout/CSS behavior green. |
 | `tests/vitest/pageBuilder/wizardPanel.test.tsx` | Cover Page builder wizard panel parity after outlet routing. |
 | `tests/vitest/pageBuilder/visualPanel.test.tsx` | Cover Page builder visual panel parity after outlet routing. |

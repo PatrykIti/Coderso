@@ -39,20 +39,17 @@ compatible.
 
 ## Files To Change
 
-| File | Required change |
+This parent is the coordinator; all source-file edits are owned by its leaves:
+
+| Leaf | Owns |
 |---|---|
-| `core/widgets/types.ts` | Widen editor component typing only if needed so `React.lazy` components are accepted while the `editor` object stays required. Do not make `editor` optional in this task by default. |
-| `core/widgets/core/index.ts` | Reference only if the local `EditorBundle` type must accept lazy component types. The registration/factory shape should otherwise stay intact. |
-| `core/admin/ui/widgets/registry.ts` | Replace static editor barrel import with per-widget or grouped `React.lazy` editor components. |
-| `core/admin/ui/widgets/editors/index.ts` | Keep only if still useful for tests/story paths; do not make registry import it eagerly. |
-| `core/admin/ui/pages/builder/BlockSettings.tsx` | Route editor rendering through a shared lazy outlet instead of assuming eager `definition.editor`. |
-| `core/admin/ui/pages/builder/WizardPanel.tsx` | Route wizard rendering through the shared outlet or a mode-specific lazy wrapper. |
-| `core/admin/ui/pages/builder/VisualPanel.tsx` | Route visual rendering through the shared outlet or a mode-specific lazy wrapper. |
-| `core/admin/ui/pages/builder/AdvancedPanel.tsx` | Route advanced rendering through the shared outlet or a mode-specific lazy wrapper. |
-| `core/admin/ui/widgets/WidgetLibraryPage.tsx` | Keep metadata/list behavior without loading all editors. |
-| `core/admin/ui/pages/builder/blockUtils.ts` and builder surfaces | Update only if they directly assume eager editor components. |
-| Custom Screens builder/editor files | Update editor rendering paths if they read `definition.editor` directly. |
-| Tests under `tests/vitest/admin` and `tests/vitest/ui*` | Add focused lazy-load and source-import coverage. |
+| TASK-467-03-L01 | `core/widgets/types.ts`, `core/widgets/core/index.ts` (type widening), `core/widgets/registry.ts` validation, `tests/vitest/widgets/editorContract.test.ts` |
+| TASK-467-03-L02 | `core/admin/ui/widgets/registry.ts`, `core/admin/ui/widgets/editors/index.ts`, `tests/vitest/admin/widgetsClient.test.ts` |
+| TASK-467-03-L03 | `core/admin/ui/widgets/WidgetEditorOutlet.tsx`, `core/admin/ui/pages/builder/{WizardPanel,VisualPanel,AdvancedPanel,BlockSettings}.tsx`, `core/admin/ui/custom-screens/CustomScreenEditorPage.tsx`, pageBuilder + admin UI tests |
+| TASK-467-03-L04 | `scripts/adminBundleReport.ts`, `scripts/check-admin-bundle.ts`, `tests/vitest/admin/adminBundleReport.test.ts`, docs + closure |
+
+Leaves must not edit files owned by another leaf; the parent itself edits no
+source files.
 
 ## Implementation Pseudocode
 
@@ -135,8 +132,9 @@ Data flow:
   modules.
 - The lazy editor map must be exhaustive for every `CoreWidgetEditors` key
   through `satisfies CoreWidgetEditors` and typecheck, not through a manually
-  maintained count. The current audit observed 42 required widget keys across 39
-  editor modules, including grouped modules such as `ScreenEditors`.
+  maintained count. The current audit observed 38 required widget keys across the
+  `CoreWidgetEditors` type (verified against `core/widgets/core/index.ts:275-317`),
+  including grouped modules such as `ScreenEditors`.
 - Editor modules are represented by `React.lazy` components and load only after
   a concrete widget and editor mode are rendered.
 - Do not replace the static barrel with `import("./editors")` or

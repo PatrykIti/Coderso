@@ -13,44 +13,61 @@
 
 ## Overview
 
-Remove the import edge:
+**Re-scoped 2026-08-18 after pre-implementation audit:** the original premise
+(an `AdminShell -> AssistantPanel -> assistantClient -> customScreensClient`
+edge) is already gone. `core/admin/services/assistantClient.ts:16` imports
+`clearCustomScreenDetailBrowserCache` and `clearCustomScreensBrowserCache` from
+the lightweight `customScreensCache.ts`, which imports only `clearLocalCache`
+and `cacheKeys`. The remaining real gap is that `customScreensCache.ts` has no
+in-memory invalidator registry: the full client's `pendingScreensList` /
+`customScreensListCache` and the shortcuts client's `cachedShortcutsPromise`
+are cleared only by their own modules, so assistant-triggered invalidations do
+not reach every in-memory owner consistently.
 
-```text
-AdminShell -> AssistantPanel -> assistantClient -> customScreensClient
-```
+This task adds a lightweight Custom Screens cache invalidation owner with a
+memory-cache invalidator registry that can be safely imported by
+`assistantClient` without importing Custom Screen document normalization,
+binding resolution, widget runtime registration, or widget editor code.
 
-The current `assistantClient.ts` imports `clearCustomScreensCache` from the full
-`customScreensClient.ts` only for assistant action cache invalidation. That
-small helper drags the heavy Custom Screens client module, and its domain/widget
-normalizer imports, into the shell/assistant bundle graph.
-
-This task creates a lightweight Custom Screens cache invalidation owner that can
-be safely imported by `assistantClient` without importing Custom Screen document
-normalization, binding resolution, widget runtime registration, or widget editor
-code.
+Pre-implementation audit (fresh agent, 2026-08-18):
+- HIGH: premise 467-01 stale — assistantClient already imports from
+  `customScreensCache` (lightweight) without the heavy client; confirmed at
+  `core/admin/services/assistantClient.ts:16` and `customScreensCache.ts`
+  (no heavy imports).
+- Real gap confirmed: no `registerCustomScreensCacheInvalidator` /
+  `clearCustomScreensCacheLightweight` anywhere in `core/`; memory owners are
+  not registered centrally.
 
 ## Sub-Tasks
 
-- [ ] Create a browser-safe lightweight Custom Screens cache invalidation
-  helper.
-- [ ] Rewire `assistantClient.ts` to import only that helper.
-- [ ] Rewire the full `customScreensClient.ts` to share the same invalidation
-  owner so behavior remains cache-bus consistent.
-- [ ] Register every in-memory Custom Screens cache owner with the helper,
-  including shortcuts/navigation cache promises.
-- [ ] Add tests proving assistant cache invalidation no longer imports the full
-  Custom Screens client path.
+- [ ] Extend `core/admin/services/customScreensCache.ts` with a memory-cache
+  invalidator registry (`registerCustomScreensCacheInvalidator` +
+  `clearCustomScreensCacheLightweight`) that clears registered in-memory
+  owners and the browser list key.
+- [ ] Register the shortcuts client's in-memory cache promise
+  (`cachedShortcutsPromise`) with the registry (this leaf owns
+  `customScreenShortcutsClient.ts`).
+- [ ] Rewire `assistantClient.ts` custom-screen action handling to call
+  `clearCustomScreensCacheLightweight` (which clears browser keys AND
+  registered memory invalidators) instead of only the browser-key helpers.
+- [ ] Add tests proving assistant cache invalidation clears memory and browser
+  Custom Screens cache without importing the full client path.
+
+Note: `customScreensClient.ts` is NOT owned by this leaf; TASK-467-02 owns the
+full client split and registers its memory invalidators there. This leaf owns
+only `customScreensCache.ts`, `customScreenShortcutsClient.ts`, and
+`assistantClient.ts`.
 
 ## Files To Change
 
 | File | Required change |
 |---|---|
-| `core/admin/services/customScreensClient.ts` | Stop being the only owner of cache invalidation. Reuse the lightweight helper. |
-| `core/admin/services/assistantClient.ts` | Replace `clearCustomScreensCache` import with the lightweight helper. |
-| `core/admin/services/customScreenShortcutsClient.ts` | Register its shortcut promise/cache invalidator with the same lightweight helper. |
-| `core/admin/services/cachePolicy.ts` | Reference only if cache key ownership needs a narrower helper. |
-| `tests/vitest/admin/assistantClient.test.ts` | Assert assistant action cache events still clear Custom Screens list/detail cache keys. |
-| `tests/vitest/admin/customScreensClient.test.ts` | Assert full client and shortcut cache behavior is unchanged. |
+| `core/admin/services/customScreensCache.ts` | Add `registerCustomScreensCacheInvalidator` + `clearCustomScreensCacheLightweight` memory-invalidator registry (owner of this leaf). |
+| `core/admin/services/assistantClient.ts` | Replace the browser-only `clearCustomScreensBrowserCache()` call in custom-screen action handling with `clearCustomScreensCacheLightweight()` so memory invalidators fire too. |
+| `core/admin/services/customScreenShortcutsClient.ts` | Register `cachedShortcutsPromise` reset with the registry via `registerCustomScreensCacheInvalidator`. |
+| `core/admin/services/cachePolicy.ts` | Reference only if cache key ownership needs a narrower helper (no change expected). |
+| `tests/vitest/admin/assistantClient.test.ts` | Assert assistant action cache events still clear Custom Screens list/detail cache keys AND trigger the registered memory invalidators. |
+| `tests/vitest/admin/customScreensCache.test.ts` | NEW: registry add/remove, idempotent clear, browser-key clear, no heavy imports (import boundary). |
 
 ## Implementation Pseudocode
 
@@ -96,23 +113,6 @@ case "custom-screen.list-view.patch":
 ```
 
 ```ts
-// customScreensClient.ts
-import {
-  clearCustomScreensCacheLightweight,
-  registerCustomScreensCacheInvalidator,
-} from "./customScreensCache";
-
-registerCustomScreensCacheInvalidator(() => {
-  cachedScreensPromise = null;
-  customScreensListCache.clear();
-});
-
-export const clearCustomScreensCache = () => {
-  clearCustomScreensCacheLightweight();
-};
-```
-
-```ts
 // customScreenShortcutsClient.ts
 import { registerCustomScreensCacheInvalidator } from "./customScreensCache";
 
@@ -121,6 +121,11 @@ registerCustomScreensCacheInvalidator(() => {
   customScreenShortcutsCache.clear();
 });
 ```
+
+Note: the full `customScreensClient.ts` memory-owner registration (its
+`pendingScreensList` / `customScreensListCache` invalidator) is owned by
+TASK-467-02, which splits that file and registers its memory invalidators
+through the same registry. This leaf must not edit `customScreensClient.ts`.
 
 Error handling:
 
@@ -196,7 +201,8 @@ test("assistant custom screen invalidation clears registered memory caches", () 
 
 ## Testing Requirements
 
-- `bun run test:vitest -- tests/vitest/admin/assistantClient.test.ts tests/vitest/admin/customScreensClient.test.ts`
+- `bun run test:vitest -- tests/vitest/admin/assistantClient.test.ts tests/vitest/admin/customScreensCache.test.ts`
+- (customScreensClient.test.ts split coverage is owned by TASK-467-02)
 - `bun --cwd core build:admin`
 - `bun run check:admin-bundle`
 - `bun run check:admin-boundary`

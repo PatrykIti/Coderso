@@ -29,6 +29,17 @@ and core widget definitions. That is correct for editor/building flows that must
 normalize full Custom Screen definitions, but too heavy for list/sidebar/cache
 flows.
 
+Pre-implementation audit (fresh agent, 2026-08-18):
+- This leaf owns `customScreensClient.ts` (split + memory-invalidator
+  registration) and its tests. It must NOT edit `customScreensCache.ts`,
+  `customScreenShortcutsClient.ts`, or `assistantClient.ts` (owned by
+  TASK-467-01).
+- TASK-467-01 lands first: the lightweight cache invalidation owner already
+  provides `registerCustomScreensCacheInvalidator` /
+  `clearCustomScreensCacheLightweight`. This leaf registers the full client's
+  in-memory owners (`pendingScreensList`, `customScreensListCache`) with that
+  registry so assistant-triggered invalidations clear them too.
+
 ## Sub-Tasks
 
 - [ ] Identify all imports of `customScreensClient.ts` and classify them as
@@ -37,9 +48,9 @@ flows.
   basic mutations.
 - [ ] Move lightweight summary DTO validation into a pure domain contract module
   instead of duplicating schema ownership in the admin client.
-- [ ] Reconcile the split with existing `customScreenShortcutsClient.ts` so the
-  implementation reuses or renames that browser-safe list client instead of
-  creating an overlapping third owner for the same cache key.
+- [ ] Register the full client's in-memory cache owners (`pendingScreensList`,
+  `customScreensListCache`) with TASK-467-01's
+  `registerCustomScreensCacheInvalidator` so assistant invalidation clears them.
 - [ ] Move editor-only full definition normalization into a lazily imported
   module used only by builder/detail routes.
 - [ ] Remove list/sidebar imports that currently derive capabilities through
@@ -54,8 +65,7 @@ flows.
 | File | Required change |
 |---|---|
 | `core/services/customScreens/customScreenSummaryContract.ts` | New pure owner for lightweight summary DTO types, enum guards, null normalization, and defensive browser/cache validation. Must not import `customScreenSchemas`, `capabilities`, `bindingResolver`, or `widgets/runtime`. |
-| `core/admin/services/customScreensClient.ts` | Either become the lightweight client or re-export from split modules without importing heavy editor-only code. |
-| `core/admin/services/customScreenShortcutsClient.ts` | Reuse as the existing lightweight list/sidebar client or migrate it onto the shared summary contract and cache invalidation owner. Do not leave it as an uncoordinated duplicate cache owner. |
+| `core/admin/services/customScreensClient.ts` | Either become the lightweight client or re-export from split modules without importing heavy editor-only code. Register `pendingScreensList` + `customScreensListCache` memory invalidators via `registerCustomScreensCacheInvalidator` (owned by this leaf). |
 | `core/admin/services/customScreensEditorClient.ts` | New optional owner for full definition normalization and editor-detail helpers. |
 | `scripts/adminBoundaryReport.ts` or focused import-graph test helper | Add TASK-467 Custom Screens browser-client forbidden-path coverage when the existing admin boundary rules are not specific enough. |
 | `core/admin/ui/custom-screens/CustomScreenListPage.tsx` | Import only lightweight list/mutation helpers. |
@@ -66,9 +76,12 @@ flows.
 | `core/admin/ui/custom-screens/CustomScreenEntryEditor.tsx` | Use editor-detail helper only if it needs normalized full definitions. |
 | `core/admin/utils/adminPrefetchCustomScreens.ts` | Classify the dynamic `customScreensClient` import and keep prefetch on the lightest client/detail helper that preserves existing prefetch behavior. |
 | `tests/vitest/customScreens/customScreenSummaryContract.test.ts` | New focused pure-contract tests for summary DTO normalization, null defaults, invalid row rejection, preserved unknown editor payloads, and import boundary. |
-| `tests/vitest/admin/customScreensClient.test.ts` | Split lightweight vs editor-normalized behavior coverage. |
+| `tests/vitest/admin/customScreensClient.test.ts` | Split lightweight vs editor-normalized behavior coverage; assert memory invalidators registered with TASK-467-01 registry. |
 | `tests/vitest/admin/adminPrefetch.test.ts` | Preserve Custom Screens prefetch behavior after moving list/detail imports. |
-| `tests/vitest/admin/adminBundleReport.test.ts` | Add or update assertions/evidence for reduced initial/static graph. |
+| `tests/vitest/admin/adminBundleReport.test.ts` | READ-ONLY reference: file owned by TASK-467-03-L04 (closure evidence). Record this leaf's reduced graph numbers in L04's evidence. |
+
+Ownership: `customScreenShortcutsClient.ts`, `customScreensCache.ts`, and
+`assistantClient.ts` are owned by TASK-467-01; do not edit them here.
 
 ## Implementation Pseudocode
 
@@ -172,12 +185,12 @@ Data flow:
 - Keep this split as move-not-redesign work: TASK-467 should extract the current
   full editor normalization behind a lazy boundary, while TASK-468 owns the later
   Custom Screens V4 canvas/data-model rewrite.
-- The implementation must choose one lightweight list owner:
-  `customScreenShortcutsClient.ts` is extended/renamed into the primary
-  lightweight client, or both shortcut and list clients share the same
+- The implementation must choose one lightweight list owner: either consume
+  the existing `customScreenShortcutsClient.ts` (owned by TASK-467-01; read-only
+  here) as the lightweight list client, or share the same
   `customScreenSummaryContract` plus the TASK-467-01 cache invalidator registry.
-  They must not drift as separate normalizers over the same
-  `cacheKeys.customScreensList` storage key.
+  Do not edit `customScreenShortcutsClient.ts` in this leaf and do not create a
+  separate normalizer over the same `cacheKeys.customScreensList` storage key.
 - `customScreenListModel.ts`, `CustomScreenListPage`, `useCustomScreens`, and
   shortcut/sidebar flows must not derive capabilities through
   `resolveCustomScreenCapabilities`; they consume only the primitive summary

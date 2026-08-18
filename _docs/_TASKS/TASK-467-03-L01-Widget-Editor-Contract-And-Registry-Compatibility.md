@@ -41,7 +41,7 @@ picker, pack-matrix, capability, and schema/default validation paths.
 | `core/widgets/registry.ts` | Keep required editor-mode validation intact. Update only if the lazy component type requires a narrower validation helper. |
 | `core/widgets/core/index.ts` | Widen local `EditorBundle<T>` typing if needed; keep the `CoreWidgetEditors` object shape intact. |
 | `tests/vitest/widgets/editorContract.test.ts` | Cover core registry contract behavior for eager and lazy editor components. |
-| `tests/vitest/admin/widgetsClient.test.ts` | Cover eager and lazy editor registration compatibility. |
+| `tests/vitest/widgets/editorContract.test.ts` | Cover core registry contract behavior for eager and lazy editor components (owner). |
 
 ## Implementation Pseudocode
 
@@ -124,7 +124,7 @@ test("registerWidget rejects widgets without complete editor modes", () => {
 ## Testing Requirements
 
 - `bun run test:vitest -- tests/vitest/widgets/editorContract.test.ts`
-- `bun run test:vitest -- tests/vitest/admin/widgetsClient.test.ts`
+- (admin `widgetsClient.test.ts` registry-boundary coverage is owned by TASK-467-03-L02)
 - `bun run check:admin-boundary`
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
