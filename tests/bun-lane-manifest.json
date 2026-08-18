@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-18T00:05:50.699Z",
+  "generatedAt": "2026-08-18T02:41:08.120Z",
   "rows": [
     {
       "file": "tests/integration/analytics/trafficAggregation.test.ts",
@@ -1248,8 +1248,32 @@
       "cWriteGlobal": false
     },
     {
+      "file": "tests/unit/content/entryServiceConcurrency.test.ts",
+      "bucket": "B",
+      "conflictKeys": [],
+      "cWriteGlobal": false
+    },
+    {
       "file": "tests/unit/content/entryServiceFacadeFence.test.ts",
       "bucket": "A",
+      "conflictKeys": [],
+      "cWriteGlobal": false
+    },
+    {
+      "file": "tests/unit/content/entryServiceMetadataWrites.test.ts",
+      "bucket": "B",
+      "conflictKeys": [],
+      "cWriteGlobal": false
+    },
+    {
+      "file": "tests/unit/content/entryServiceSourceAudit.test.ts",
+      "bucket": "B",
+      "conflictKeys": [],
+      "cWriteGlobal": false
+    },
+    {
+      "file": "tests/unit/content/entryServiceVisibility.test.ts",
+      "bucket": "B",
       "conflictKeys": [],
       "cWriteGlobal": false
     },
@@ -1423,6 +1447,12 @@
     },
     {
       "file": "tests/unit/forms/schema.test.ts",
+      "bucket": "B",
+      "conflictKeys": [],
+      "cWriteGlobal": false
+    },
+    {
+      "file": "tests/unit/forms/submissionExportJob.test.ts",
       "bucket": "B",
       "conflictKeys": [],
       "cWriteGlobal": false
