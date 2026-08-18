@@ -90,6 +90,11 @@ export const contentRevisions = pgTable(
   },
   (t) => ({
     entryIdIdx: index("content_revisions_entry_id_idx").on(t.entryId),
+    // TASK-570 (N3): concurrency-safe version allocation. The unique
+    // (entry_id, version) constraint backs the bounded-retry insert in
+    // `createEntryRevisionTx` so a writer that does NOT hold the entry row
+    // `FOR UPDATE` can never allocate a duplicate version.
+    entryVersionIdx: uniqueIndex("content_revisions_entry_version_idx").on(t.entryId, t.version),
   })
 );
 

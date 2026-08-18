@@ -3,6 +3,7 @@ import { expect, test } from "vitest";
 import {
   getCachedEntryDetail,
   getCachedEntryRevisions,
+  getEntryRevisionData,
   listEntryRevisions,
   listEntryRevisionsCached,
   restoreEntryRevision,
@@ -17,7 +18,6 @@ const revisionsFixture = [
     id: "rev-1",
     entryId: "entry-1",
     version: 1,
-    data: { title: "v1" },
     createdAt: "2026-02-21T10:00:00.000Z",
     createdBy: null,
   },
@@ -25,11 +25,12 @@ const revisionsFixture = [
     id: "rev-2",
     entryId: "entry-1",
     version: 2,
-    data: { title: "v2" },
     createdAt: "2026-02-22T10:00:00.000Z",
     createdBy: null,
   },
 ];
+
+const revisionDetailFixture = { ...revisionsFixture[0]!, data: { title: "v1" } };
 
 test("listEntryRevisions hits GET revisions endpoint without CSRF", async () => {
   const originalFetch = globalThis.fetch;
@@ -37,12 +38,31 @@ test("listEntryRevisions hits GET revisions endpoint without CSRF", async () => 
 
   globalThis.fetch = async (input, init) => {
     calls.push({ input, init });
-    return jsonResponse([]);
+    return jsonResponse({ items: [], nextCursor: null });
   };
 
   try {
     await listEntryRevisions("blog", "entry-1");
     expect(calls[0]?.input).toBe("/admin/api/content/blog/entries/entry-1/revisions");
+    expect(calls[0]?.init?.method).toBe("GET");
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("getEntryRevisionData fetches the narrow detail endpoint without CSRF", async () => {
+  const originalFetch = globalThis.fetch;
+  const calls: Array<{ input: RequestInfo | URL; init?: RequestInit }> = [];
+
+  globalThis.fetch = async (input, init) => {
+    calls.push({ input, init });
+    return jsonResponse(revisionDetailFixture);
+  };
+
+  try {
+    const detail = await getEntryRevisionData("blog", "entry-1", "rev-1");
+    expect(detail).toEqual(revisionDetailFixture);
+    expect(calls[0]?.input).toBe("/admin/api/content/blog/entries/entry-1/revisions/rev-1");
     expect(calls[0]?.init?.method).toBe("GET");
   } finally {
     globalThis.fetch = originalFetch;
@@ -57,7 +77,7 @@ test("listEntryRevisionsCached reads from shared revisions cache and force refet
 
   globalThis.fetch = async (input, init) => {
     calls.push({ input, init });
-    return jsonResponse([...revisionsFixture].reverse());
+    return jsonResponse({ items: [...revisionsFixture].reverse(), nextCursor: null });
   };
   (globalThis as { localStorage?: unknown }).localStorage = storage as unknown;
 
@@ -120,7 +140,7 @@ test("restoreEntryRevision posts with CSRF, patches detail cache, and broadcasts
     return jsonResponse({
       ok: true,
       restored: true,
-      revision: revisionsFixture[0],
+      revision: revisionDetailFixture,
       entry: restoredEntry,
     });
   };

@@ -4,6 +4,7 @@ import {
   deleteEntry,
   duplicateEntry,
   getEntry,
+  getEntryRevisionData,
   listEntriesWithContentTypes,
   listEntries,
   listEntryRevisions,
@@ -14,6 +15,10 @@ import {
   updateEntry,
   type UpdateEntryMetadataInput,
 } from "../../services/content/entryService";
+import {
+  decodeEntryRevisionCursor,
+  normalizeEntryRevisionPageLimit,
+} from "../../services/content/entryRevisionCursor";
 import { getContentTypeBySlug } from "../../services/content/typeService";
 import {
   contentEntryAllEntriesQuerySchema,
@@ -117,6 +122,12 @@ export const mapContentEntryError = (error: unknown) => {
       return new ApiError("entry_not_found", "Entry not found.", 404);
     case "entry_revision_not_found":
       return new ApiError("entry_revision_not_found", "Revision not found.", 404);
+    case "revision_conflict":
+      return new ApiError("revision_conflict", "Revision version conflict. Please retry.", 409);
+    case "entry_revision_cursor_invalid":
+      return new ApiError("entry_revision_cursor_invalid", "Revision page cursor is invalid.", 400);
+    case "entry_revision_limit_invalid":
+      return new ApiError("entry_revision_limit_invalid", "Revision page limit is invalid.", 400);
     case "entry_validation_failed":
       return new ApiError("entry_validation_failed", "Entry validation failed.", 400);
     case "entry_slug_conflict":
@@ -409,7 +420,28 @@ export function registerContentEntryRoutes(router: Router, deps: ContentEntryRou
         if (!type) throw new Error("content_type_not_found");
         const entry = await getEntry(ctx.params.id);
         if (!entry || entry.typeId !== type.id) throw new Error("entry_not_found");
-        return listEntryRevisions(entry.id);
+        const cursor = ctx.query.cursor ? decodeEntryRevisionCursor(ctx.query.cursor) : null;
+        const limit = normalizeEntryRevisionPageLimit(ctx.query.limit);
+        return listEntryRevisions(entry.id, { cursor, limit });
+      });
+    }
+  );
+
+  // NEW (TASK-570, M-487-02): narrow revision detail read. Internal endpoint,
+  // `content:read`, strict params validation (the read itself rejects malformed
+  // ids), mapped via `mapContentEntryError`. Additive; list + restore unchanged.
+  router.get(
+    "/content/:type/entries/:id/revisions/:revisionId",
+    requirePermission("content:read"),
+    async (ctx) => {
+      return withContentEntryErrors(async () => {
+        const type = await getContentTypeBySlug(ctx.params.type);
+        if (!type) throw new Error("content_type_not_found");
+        const entry = await getEntry(ctx.params.id);
+        if (!entry || entry.typeId !== type.id) throw new Error("entry_not_found");
+        const revision = await getEntryRevisionData(entry.id, ctx.params.revisionId);
+        if (!revision) throw new Error("entry_revision_not_found");
+        return revision;
       });
     }
   );

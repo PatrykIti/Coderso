@@ -11,6 +11,7 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import type { EntryRevision } from "@/services/entriesClient";
+import type { EntryRevisionPreviewState } from "./useEntryRevisions";
 import { ConfirmActionDialog } from "@/ui/shared/ConfirmActionDialog";
 
 type EntryRevisionDrawerProps = {
@@ -20,6 +21,8 @@ type EntryRevisionDrawerProps = {
   isLoading: boolean;
   error: string | null;
   restoringId: string | null;
+  revisionPreview: EntryRevisionPreviewState;
+  onPreviewRevision: (revisionId: string) => void;
   onRestore: (revisionId: string) => void;
 };
 
@@ -38,9 +41,10 @@ const formatTimestamp = (value: string) => {
 /**
  * Entry data is content-type field data, NOT a rich-text document, so a revision
  * preview is a field/value summary rather than the post editor's text extractor.
+ * The list is metadata-only (TASK-570 M-487-02): the snapshot body arrives on
+ * demand via `getEntryRevisionData` and is rendered from `revisionPreview.data`.
  */
-const describeEntryRevision = (revision: EntryRevision) => {
-  const data = revision.data ?? {};
+const describeEntryData = (data: Record<string, unknown>) => {
   const keys = Object.keys(data);
   const title = typeof data.title === "string" && data.title.trim() ? data.title : null;
   return title ?? `Snapshot with ${keys.length} field${keys.length === 1 ? "" : "s"}`;
@@ -63,16 +67,14 @@ const formatPreviewValue = (value: unknown): string => {
   return "";
 };
 
-const collectFieldSummary = (revision: EntryRevision) => {
-  const data = revision.data ?? {};
-  return Object.entries(data)
+const collectFieldSummary = (data: Record<string, unknown>) =>
+  Object.entries(data)
     .filter(([key]) => key !== "title")
     .map(([key, value]) => {
       const text = formatPreviewValue(value);
       return text ? `${key}: ${text}` : null;
     })
     .filter((entry): entry is string => entry !== null);
-};
 
 export function EntryRevisionDrawer({
   open,
@@ -81,14 +83,36 @@ export function EntryRevisionDrawer({
   isLoading,
   error,
   restoringId,
+  revisionPreview,
+  onPreviewRevision,
   onRestore,
 }: EntryRevisionDrawerProps) {
   const [previewRevisionId, setPreviewRevisionId] = useState<string | null>(null);
   const [pendingRestoreId, setPendingRestoreId] = useState<string | null>(null);
 
+  const handlePreviewClick = (revisionId: string) => {
+    setPreviewRevisionId((current) => {
+      const next = current === revisionId ? null : revisionId;
+      if (next) onPreviewRevision(next);
+      return next;
+    });
+  };
+
   const handleRestore = (revisionId: string) => {
     setPendingRestoreId(revisionId);
   };
+
+  const previewLoading =
+    revisionPreview.loading && revisionPreview.revisionId === previewRevisionId;
+  const previewError =
+    revisionPreview.error && revisionPreview.revisionId === previewRevisionId
+      ? revisionPreview.error
+      : null;
+  const previewData =
+    revisionPreview.data && revisionPreview.revisionId === previewRevisionId
+      ? revisionPreview.data.data
+      : null;
+  const previewFields = previewData ? collectFieldSummary(previewData) : [];
 
   return (
     <>
@@ -131,7 +155,6 @@ export function EntryRevisionDrawer({
                   const author = revision.createdBy?.name?.trim()
                     ? revision.createdBy.name
                     : revision.createdBy?.email || "System";
-                  const previewFields = collectFieldSummary(revision);
 
                   return (
                     <div key={revision.id} className="rounded-xl border bg-background p-4">
@@ -145,26 +168,26 @@ export function EntryRevisionDrawer({
                       </div>
                       {previewRevisionId === revision.id ? (
                         <div className="mb-3 rounded-lg border bg-muted/20 p-3 text-sm text-muted-foreground">
-                          {previewFields.length > 0 ? (
+                          {previewLoading ? (
+                            <span>Loading preview...</span>
+                          ) : previewError ? (
+                            <span className="text-destructive">{previewError}</span>
+                          ) : previewFields.length > 0 ? (
                             <ul className="space-y-1">
                               {previewFields.map((entry) => (
                                 <li key={entry}>{entry}</li>
                               ))}
                             </ul>
-                          ) : (
-                            describeEntryRevision(revision)
-                          )}
+                          ) : previewData ? (
+                            describeEntryData(previewData)
+                          ) : null}
                         </div>
                       ) : null}
                       <div className="flex justify-end gap-2">
                         <Button
                           size="sm"
                           variant="ghost"
-                          onClick={() =>
-                            setPreviewRevisionId((current) =>
-                              current === revision.id ? null : revision.id
-                            )
-                          }
+                          onClick={() => handlePreviewClick(revision.id)}
                         >
                           {previewRevisionId === revision.id ? "Hide preview" : "Preview"}
                         </Button>

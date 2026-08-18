@@ -198,7 +198,7 @@ managed-shared~core/services/content/detailPageDocumentService.ts~createDetailPa
 managed-shared~core/services/content/detailPageRevisionService.ts~discardDetailPageAutosaveRevision|delete|detailPageRevisions;restoreDetailPageRevision|update|detailPageDocuments
 managed-shared~core/services/content/entryDuplicationService.ts~duplicateEntry|insert|contentEntries;duplicateEntry|insert|contentTermAssignments
 managed-shared~core/services/content/entryLifecycleMutationService.ts~mutateEntryLifecycleAtomic|delete|contentEntries;mutateEntryLifecycleAtomic|insert|contentEntries;mutateEntryLifecycleAtomic|update|contentEntries;writeRevisionsTx|delete|contentRevisions;writeRevisionsTx|insert|contentRevisions
-managed-shared~core/services/content/entryService.ts~createEntryPreview|insert|previewTokens;createEntryRevisionTx|insert|contentRevisions;createEntry|insert|contentEntries;deleteEntry|delete|contentEntries;unpublishEntry|update|contentEntries;updateEntry|update|contentEntries;writeEntryMetadataTx|update|contentEntries;writeEntryStatusTx|update|contentEntries
+managed-shared~core/services/content/entryService.ts~createEntryPreview|insert|previewTokens;createEntryRevisionTx|insert|contentRevisions;createEntry|insert|contentEntries;deleteEntry|delete|contentEntries;restoreEntryRevision|update|contentEntries;unpublishEntry|update|contentEntries;updateEntry|update|contentEntries;writeEntryMetadataTx|update|contentEntries;writeEntryStatusTx|update|contentEntries
 managed-shared~core/services/content/listingQueriesService.ts~createListingQuery|insert|listingQueries;deleteListingQuery|delete|listingQueries;mutateListingQueryAtomic|delete|listingQueries;mutateListingQueryAtomic|insert|listingQueries;mutateListingQueryAtomic|update|listingQueries;updateListingQuery|update|listingQueries
 managed-shared~core/services/content/listingTemplatesService.ts~createListingTemplate|insert|listingTemplates;deleteListingTemplate|delete|listingTemplates;mutateListingTemplateAtomic|delete|listingTemplates;mutateListingTemplateAtomic|insert|listingTemplates;mutateListingTemplateAtomic|update|listingTemplates;updateListingTemplate|update|listingTemplates
 managed-shared~core/services/content/taxonomyService.ts~applyEntryTaxonomyMutation|delete|contentTermAssignments;applyEntryTaxonomyMutation|insert|contentTermAssignments;createTerm|insert|contentTerms;deleteTerm|delete|contentTerms;setTaxonomyConfig>handleKind|delete|contentTaxonomies;setTaxonomyConfig>handleKind|insert|contentTaxonomies;updateTerm|update|contentTerms
@@ -363,6 +363,7 @@ const fenceOwners: readonly Readonly<{ path: string; scopes: readonly string[] }
       "unpublishEntry",
       "coordinateEntryMetadataMutation",
       "createEntryRevision",
+      "restoreEntryRevision",
       "createEntryPreview",
     ],
   },
@@ -549,6 +550,7 @@ const expectedTxCallers: readonly string[] = [
   "createDetailPageRevisionTx|core/services/content/detailPageDocumentService.ts|createOrReplaceDetailPageAutosaveRevisionTx",
   "createDetailPageRevisionTx|core/services/content/detailPageDocumentService.ts|publishDetailPageDocument",
   "createEntryRevisionTx|core/services/content/entryService.ts|createEntryRevision",
+  "createEntryRevisionTx|core/services/content/entryService.ts|restoreEntryRevision",
   "createOrReplaceDetailPageAutosaveRevisionTx|core/services/content/detailPageDocumentService.ts|autosaveDetailPageDocument",
   "createOrReplaceAutosaveRevisionTx|core/services/pages/pageService.ts|autosavePage",
   "createOrReplaceAutosaveRevisionTx|core/services/pages/revisionService.ts|createOrReplaceAutosaveRevision",
@@ -923,6 +925,8 @@ const expectedIncomingForeignKeys = [
   "forms.ts|formActions.formId->forms.id:cascade",
   "forms.ts|formFields.formId->forms.id:cascade",
   "forms.ts|formSubmissions.formId->forms.id:restrict",
+  "forms.ts|submissionExportJobs.createdBy->users.id:set null",
+  "forms.ts|submissionExportJobs.formId->forms.id:cascade",
   "identity.ts|passwordResets.userId->users.id:cascade",
   "identity.ts|sessions.userId->users.id:cascade",
   "identity.ts|userRoles.userId->users.id:cascade",

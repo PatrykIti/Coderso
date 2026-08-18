@@ -68,8 +68,11 @@ export type EntrySeo = {
   robots?: string | null;
 };
 
-// Author-joined, PII-redacted revision shape; the server resolves the email
-// through `resolveEmailValue` so raw/encrypted email never reaches this cache.
+// Author-joined, PII-redacted revision METADATA shape; the server resolves the
+// email through `resolveEmailValue` so raw/encrypted email never reaches this
+// cache. The list deliberately carries NO `data` (bounded metadata page,
+// TASK-570 M-487-02); the drawer preview fetches the snapshot body on demand
+// through `getEntryRevisionData`.
 export type EntryRevisionAuthor = {
   id: string;
   name: string | null;
@@ -80,9 +83,18 @@ export type EntryRevision = {
   id: string;
   entryId: string;
   version: number;
-  data: Record<string, unknown>;
   createdAt: string;
   createdBy: EntryRevisionAuthor | null;
+};
+
+/** Full revision read: metadata + the snapshot `data` body. */
+export type EntryRevisionDetail = EntryRevision & {
+  data: Record<string, unknown>;
+};
+
+export type EntryRevisionListPage = {
+  items: EntryRevision[];
+  nextCursor: string | null;
 };
 
 export type EntryPayload = {
@@ -813,10 +825,19 @@ export async function deleteEntry(typeSlug: string, id: string) {
   return result;
 }
 
-export async function listEntryRevisions(typeSlug: string, id: string) {
-  return apiRequest<EntryRevision[]>(`/content/${typeSlug}/entries/${id}/revisions`, {
-    method: "GET",
-  });
+export async function listEntryRevisions(
+  typeSlug: string,
+  id: string,
+  options?: { cursor?: string | null; limit?: number }
+) {
+  const query = new URLSearchParams();
+  if (options?.cursor) query.set("cursor", options.cursor);
+  if (typeof options?.limit === "number") query.set("limit", String(options.limit));
+  const queryString = query.toString();
+  return apiRequest<EntryRevisionListPage>(
+    `/content/${typeSlug}/entries/${id}/revisions${queryString ? `?${queryString}` : ""}`,
+    { method: "GET" }
+  );
 }
 
 export async function listEntryRevisionsCached(
@@ -828,16 +849,23 @@ export async function listEntryRevisionsCached(
     const cached = getCachedEntryRevisions(id);
     if (cached) return cached;
   }
-  const revisions = await listEntryRevisions(typeSlug, id);
-  writeEntryRevisionsCache(id, revisions);
-  return revisions;
+  const page = await listEntryRevisions(typeSlug, id);
+  writeEntryRevisionsCache(id, page.items);
+  return page.items;
+}
+
+export async function getEntryRevisionData(typeSlug: string, id: string, revisionId: string) {
+  return apiRequest<EntryRevisionDetail>(
+    `/content/${typeSlug}/entries/${id}/revisions/${revisionId}`,
+    { method: "GET" }
+  );
 }
 
 export async function restoreEntryRevision(typeSlug: string, id: string, revisionId: string) {
   const result = await apiRequest<{
     ok: boolean;
     restored: boolean;
-    revision: EntryRevision;
+    revision: EntryRevisionDetail;
     entry: EntryDetail;
   }>(
     `/content/${typeSlug}/entries/${id}/revisions/${revisionId}/restore`,

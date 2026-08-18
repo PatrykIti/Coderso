@@ -55,6 +55,7 @@ test("every transaction-owning entry mutation acquires the shared fence first", 
     "publishEntry",
     "unpublishEntry",
     "createEntryRevision",
+    "restoreEntryRevision",
     "createEntryPreview",
   ]) {
     expect(functionBody(facade, name), name).toMatch(directFencePattern);
@@ -87,4 +88,35 @@ test("ordinary entry delete remains one fenced root delete so schema cascades st
   expect(remove).toContain(".delete(contentEntries)");
   expect(remove).not.toContain("contentRevisions");
   expect(remove).not.toContain("contentTermAssignments");
+});
+
+test("restoreEntryRevision is one fenced transaction and never re-enters updateEntry", () => {
+  const restore = functionBody(facade, "restoreEntryRevision");
+  // The restore reads the entry FOR UPDATE, snapshots and writes inside the
+  // same transaction; it must not delegate to the separate `updateEntry` flow
+  // (that would reopen the lost-update window) or to `createEntryRevision`.
+  expect(restore).toContain('.for("update")');
+  expect(restore).toContain("createEntryRevisionTx(tx,");
+  expect(restore).not.toContain("updateEntry(");
+  expect(restore).not.toContain("createEntryRevision(");
+  expect(restore).not.toContain("listEntryRevisions(");
+  expect(restore).toContain("applyEntryPostCommitCache(entryMutationDeps");
+  expect(restore).toContain("areRevisionSnapshotsEqual(");
+});
+
+test("revision list query selects no data payload columns", () => {
+  const list = functionBody(reads, "listEntryRevisions");
+  expect(list).toContain("contentRevisions.version");
+  expect(list).not.toContain("contentRevisions.data");
+  expect(list).not.toContain("data: contentRevisions.data");
+  // The detail read is the ONLY revision query that loads the payload body.
+  const detail = functionBody(reads, "getEntryRevisionData");
+  expect(detail).toContain("contentRevisions.data");
+});
+
+test("revision version allocation is bounded by the unique constraint retry", () => {
+  const revisionTx = functionBody(facade, "createEntryRevisionTx");
+  expect(revisionTx).toContain("onConflictDoNothing");
+  expect(revisionTx).toContain("MAX_REVISION_VERSION_ATTEMPTS");
+  expect(revisionTx).toContain('throw new Error("revision_conflict")');
 });

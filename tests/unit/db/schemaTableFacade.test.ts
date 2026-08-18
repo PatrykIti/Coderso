@@ -98,6 +98,17 @@ const readSnapshot = (file: string): SnapshotFile => JSON.parse(readFileSync(fil
 const snapshotPath = (idx: number): string =>
   path.join(MIGRATIONS_DIR, `meta/${String(idx).padStart(4, "0")}_snapshot.json`);
 
+/**
+ * Journal `idx` is the sequential position in `_journal.json`, while the
+ * snapshot filename uses the migration NUMBER (the zero-padded numeric prefix
+ * of the tag, e.g. `0076_content_revisions_version_uniq` -> `0076_snapshot.json`).
+ * Drizzle-kit chains snapshots by `prevId` over the lexically sorted
+ * `NNNN_snapshot.json` files, so the number, not the journal position, is the
+ * filename key. The two coincide for every pre-concurrency migration.
+ */
+const snapshotPathForEntry = (entry: { tag: string }): string =>
+  snapshotPath(Number(entry.tag.split("_")[0]));
+
 /** Journal entries oldest first, so the last two are the newest step's pair. */
 const journalEntries = (): JournalEntry[] =>
   readJournal(path.join(MIGRATIONS_DIR, "meta/_journal.json"))
@@ -193,7 +204,7 @@ const droppedWithoutStatement = (
 // names come from its keys; a failure there leaves nothing to name anyway.
 describe("core/db/schema.ts facade", () => {
   const entries = journalEntries();
-  const committed = readSnapshot(snapshotPath(entries[entries.length - 1].idx));
+  const committed = readSnapshot(snapshotPathForEntry(entries[entries.length - 1]));
 
   test("re-exports every table the migration snapshot records, and no others", () => {
     const facade = facadeSnapshot();
@@ -319,16 +330,16 @@ describe("core/db/migrations snapshot chain", () => {
 
   test("the newest snapshot records the one before it as its predecessor", () => {
     expect(entries.length).toBeGreaterThan(1);
-    const newest = readSnapshot(snapshotPath(entries[entries.length - 1].idx));
-    const previous = readSnapshot(snapshotPath(entries[entries.length - 2].idx));
+    const newest = readSnapshot(snapshotPathForEntry(entries[entries.length - 1]));
+    const previous = readSnapshot(snapshotPathForEntry(entries[entries.length - 2]));
     expect(newest.prevId).toBe(previous.id);
   });
 
   test("no table left the newest snapshot without its migration dropping or renaming it", () => {
     expect(entries.length).toBeGreaterThan(1);
     const newestEntry = entries[entries.length - 1];
-    const newest = readSnapshot(snapshotPath(newestEntry.idx));
-    const previous = readSnapshot(snapshotPath(entries[entries.length - 2].idx));
+    const newest = readSnapshot(snapshotPathForEntry(newestEntry));
+    const previous = readSnapshot(snapshotPathForEntry(entries[entries.length - 2]));
     const sql = readFileSync(path.join(MIGRATIONS_DIR, `${newestEntry.tag}.sql`), "utf8");
     expect(droppedWithoutStatement(previous.tables, newest.tables, sql)).toEqual([]);
   });

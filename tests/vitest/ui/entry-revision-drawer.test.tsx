@@ -3,15 +3,23 @@
 // confirm-gated restore path without needing the full editor. Editor-level
 // wiring (History click -> listEntryRevisionsCached, restore -> re-hydrate)
 // lives in entry-editor-visibility-groups.test.tsx.
+//
+// TASK-570 (M-487-02): the list is metadata-only, so the drawer renders the
+// snapshot body from `revisionPreview` (on-demand detail fetch through
+// `getEntryRevisionData`) instead of a `data` field on each list item.
 
 // @vitest-environment happy-dom
 
-import React from "react";
+import React, { useState } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, expect, test, vi } from "vitest";
 
 import { EntryRevisionDrawer } from "../../../core/admin/ui/entries/EntryRevisionDrawer";
-import type { EntryRevision } from "../../../core/admin/services/entriesClient";
+import type {
+  EntryRevision,
+  EntryRevisionDetail,
+} from "../../../core/admin/services/entriesClient";
+import type { EntryRevisionPreviewState } from "../../../core/admin/ui/entries/useEntryRevisions";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -100,6 +108,13 @@ const baseProps = {
   isLoading: false,
   error: null as string | null,
   restoringId: null as string | null,
+  revisionPreview: {
+    revisionId: null,
+    data: null,
+    loading: false,
+    error: null,
+  } as EntryRevisionPreviewState,
+  onPreviewRevision: vi.fn(),
   onRestore: vi.fn(),
 };
 
@@ -107,11 +122,65 @@ const revision = (overrides: Partial<EntryRevision> = {}): EntryRevision => ({
   id: "rev-2",
   entryId: "entry-42",
   version: 2,
-  data: { title: "Draft two", summary: "Intro text" },
   createdAt: "2026-06-20T09:30:00Z",
   createdBy: { id: "user-1", name: "Maria Nowak", email: "maria@example.com" },
   ...overrides,
 });
+
+const detail = (base: EntryRevision, data: Record<string, unknown>): EntryRevisionDetail => ({
+  ...base,
+  data,
+});
+
+const idlePreview: EntryRevisionPreviewState = {
+  revisionId: null,
+  data: null,
+  loading: false,
+  error: null,
+};
+
+/**
+ * Resolves a preview on demand like the editor wiring: clicking Preview calls
+ * `onPreviewRevision`, and the resolved snapshot detail lands back in
+ * `revisionPreview` so the drawer can render it.
+ */
+const PreviewHarness = ({
+  revisions,
+  details,
+  onRestore,
+}: {
+  revisions: EntryRevision[];
+  details: Record<string, EntryRevisionDetail>;
+  onRestore?: (revisionId: string) => void;
+}) => {
+  const [preview, setPreview] = useState<EntryRevisionPreviewState>(idlePreview);
+  return (
+    <EntryRevisionDrawer
+      {...baseProps}
+      revisions={revisions}
+      revisionPreview={preview}
+      onPreviewRevision={(revisionId) =>
+        setPreview({
+          revisionId,
+          data: details[revisionId] ?? null,
+          loading: false,
+          error: details[revisionId] ? null : "Revision not found.",
+        })
+      }
+      onRestore={onRestore ?? baseProps.onRestore}
+    />
+  );
+};
+
+const clickButton = (container: HTMLElement, label: string, scope?: HTMLElement) => {
+  React.act(() => {
+    const root = scope ?? container;
+    const button = Array.from(root.querySelectorAll("button")).find(
+      (candidate) => candidate.textContent === label
+    );
+    if (button) button.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+  });
+};
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -147,7 +216,7 @@ test("error state surfaces the client message without unmounting", () => {
   }
 });
 
-test("list state renders version, timestamp, redacted author and a field preview", () => {
+test("list state renders version, timestamp and redacted author without a payload", () => {
   const { container, cleanup } = mount(
     <EntryRevisionDrawer {...baseProps} revisions={[revision()]} />
   );
@@ -155,38 +224,63 @@ test("list state renders version, timestamp, redacted author and a field preview
     const text = container.textContent ?? "";
     expect(text).toContain("Version 2");
     expect(text).toContain("Maria Nowak");
-    // The author's email is never rendered raw.
+    // The author's email is never rendered raw, and the metadata-only list
+    // carries no snapshot body to leak.
     expect(text).not.toContain("maria@example.com");
+    expect(JSON.stringify(revision())).not.toContain('"data"');
+  } finally {
+    cleanup();
+  }
+});
 
-    // Preview toggle shows the field summary (not the raw document).
-    React.act(() => {
-      Array.from(container.querySelectorAll("button"))
-        .find((button) => button.textContent === "Preview")
-        ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
-    });
+test("preview resolves the snapshot detail on demand and renders the field summary", () => {
+  const snapshot = revision();
+  const { container, cleanup } = mount(
+    <PreviewHarness
+      revisions={[snapshot]}
+      details={{ [snapshot.id]: detail(snapshot, { title: "Draft two", summary: "Intro text" }) }}
+    />
+  );
+  try {
+    // Nothing is fetched before the preview toggle.
+    expect(container.textContent).not.toContain("summary: Intro text");
+
+    clickButton(container, "Preview");
     expect(container.textContent).toContain("summary: Intro text");
     expect(container.textContent).toContain("Hide preview");
+
+    // Toggling off clears the pane (a second click hides the preview).
+    clickButton(container, "Hide preview");
+    expect(container.textContent).not.toContain("summary: Intro text");
   } finally {
     cleanup();
   }
 });
 
 test("a title-only revision falls back to the describeEntryRevision summary", () => {
+  const snapshot = revision();
   const { container, cleanup } = mount(
-    <EntryRevisionDrawer
-      {...baseProps}
-      revisions={[revision({ data: { title: "Draft title only" } })]}
+    <PreviewHarness
+      revisions={[snapshot]}
+      details={{ [snapshot.id]: detail(snapshot, { title: "Draft title only" }) }}
     />
   );
   try {
-    React.act(() => {
-      Array.from(container.querySelectorAll("button"))
-        .find((button) => button.textContent === "Preview")
-        ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
-    });
+    clickButton(container, "Preview");
     // `title` is excluded from the field list, so with nothing else the preview
     // falls back to the revision description instead of an empty list.
     expect(container.textContent).toContain("Draft title only");
+  } finally {
+    cleanup();
+  }
+});
+
+test("a failed preview fetch surfaces the error inside the drawer", () => {
+  const snapshot = revision();
+  const { container, cleanup } = mount(<PreviewHarness revisions={[snapshot]} details={{}} />);
+  try {
+    clickButton(container, "Preview");
+    expect(container.textContent).toContain("Revision not found.");
   } finally {
     cleanup();
   }
@@ -198,22 +292,14 @@ test("restore is confirm-gated and calls onRestore with the revision id", () => 
     <EntryRevisionDrawer {...baseProps} revisions={[revision()]} onRestore={onRestore} />
   );
   try {
-    React.act(() => {
-      Array.from(container.querySelectorAll("button"))
-        .find((button) => button.textContent === "Restore")
-        ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
-    });
+    clickButton(container, "Restore");
     const dialog = container.querySelector('[role="dialog"]');
     expect(dialog?.textContent).toContain("Restore revision?");
     expect(dialog?.textContent).toContain("Current unsaved changes may be overwritten.");
     // Nothing is restored before the confirm click.
     expect(onRestore).not.toHaveBeenCalled();
 
-    React.act(() => {
-      Array.from(container.querySelectorAll("button"))
-        .find((button) => button.textContent === "Restore" && button.closest('[role="dialog"]'))
-        ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
-    });
+    clickButton(container, "Restore", dialog as HTMLElement);
     expect(onRestore).toHaveBeenCalledWith("rev-2");
   } finally {
     cleanup();

@@ -6,6 +6,12 @@ import { getSeoDocumentByTarget } from "../seo/seoService";
 import type { ListingPushdownPredicate } from "./listingPushdown";
 import { buildEntryDataPredicateSql } from "./listingPushdownSql";
 import { getEntryTaxonomies } from "./taxonomyService";
+import {
+  buildEntryRevisionCursorPredicate,
+  DEFAULT_ENTRY_REVISION_PAGE_LIMIT,
+  encodeEntryRevisionCursor,
+  type EntryRevisionCursor,
+} from "./entryRevisionCursor";
 import type {
   EntryData,
   EntryDetail,
@@ -232,58 +238,130 @@ export async function getEntryVisibilityBySlug(
 
 export type EntryRevisionAuthor = { id: string; name: string | null; email: string };
 
-export type EntryRevision = {
+/**
+ * Author-joined, PII-redacted revision METADATA list item (TASK-570, M-487-02).
+ * Deliberately carries NO `data`: the list endpoint is bounded and must not load
+ * full JSON payloads just to render a version timeline. Consumers that need a
+ * snapshot body use `getEntryRevisionData` (or the restore response).
+ */
+export type EntryRevisionMeta = {
   id: string;
   entryId: string;
   version: number;
-  data: EntryData;
   createdAt: Date;
   createdBy: EntryRevisionAuthor | null;
 };
 
+/** Full revision read (id, version, data, author, timestamps) for one row. */
+export type EntryRevisionDetail = EntryRevisionMeta & {
+  data: EntryData;
+};
+
+export type EntryRevisionListPage = {
+  items: EntryRevisionMeta[];
+  nextCursor: string | null;
+};
+
+export const entryRevisionUuidPattern =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+const entryRevisionListSelection = {
+  id: contentRevisions.id,
+  entryId: contentRevisions.entryId,
+  version: contentRevisions.version,
+  createdAt: contentRevisions.createdAt,
+  createdById: users.id,
+  createdByName: users.name,
+  createdByEmail: users.email,
+  createdByEmailEncrypted: users.emailEncrypted,
+};
+
+type EntryRevisionSelectionRow = {
+  id: string;
+  entryId: string;
+  version: number;
+  createdAt: Date;
+  createdById: string | null;
+  createdByName: string | null;
+  createdByEmail: string | null;
+  createdByEmailEncrypted: unknown;
+};
+
+const mapEntryRevisionMeta = (row: EntryRevisionSelectionRow): EntryRevisionMeta => ({
+  id: row.id,
+  entryId: row.entryId,
+  version: row.version,
+  createdAt: row.createdAt,
+  createdBy:
+    row.createdById && (row.createdByEmail || row.createdByEmailEncrypted)
+      ? {
+          id: row.createdById,
+          name: row.createdByName ?? null,
+          email:
+            resolveEmailValue({
+              emailEncrypted: row.createdByEmailEncrypted,
+              email: row.createdByEmail,
+            }) ?? "",
+        }
+      : null,
+});
+
 /**
- * Author-joined, PII-redacted revision list for an entry. `createdBy` resolves the
- * author's email through `resolveEmailValue` (encrypted fields stay encrypted, plaintext
- * hash fields stay hashes) so raw or encrypted email never leaves the service. Existing
- * callers only read `.length`, so the array contract is preserved.
+ * Keyset-cursor revision metadata page for an entry, newest version first.
+ * `(version DESC, id DESC)` ordering with a composite cursor makes pages
+ * gap/duplicate free; the query selects NO `data` payload columns and is bounded
+ * by `options.limit` (default 50, max 200).
  */
-export async function listEntryRevisions(entryId: string): Promise<EntryRevision[]> {
+export async function listEntryRevisions(
+  entryId: string,
+  options: { cursor?: EntryRevisionCursor | null; limit?: number } = {}
+): Promise<EntryRevisionListPage> {
+  const cursor = options.cursor ?? null;
+  const limit = options.limit ?? DEFAULT_ENTRY_REVISION_PAGE_LIMIT;
+  const conditions = [
+    eq(contentRevisions.entryId, entryId),
+    ...(cursor ? [buildEntryRevisionCursorPredicate(cursor)] : []),
+  ];
   const rows = await db
+    .select(entryRevisionListSelection)
+    .from(contentRevisions)
+    .leftJoin(users, eq(contentRevisions.createdBy, users.id))
+    .where(and(...conditions))
+    .orderBy(desc(contentRevisions.version), desc(contentRevisions.id))
+    .limit(limit + 1);
+
+  const hasMore = rows.length > limit;
+  const pageRows = hasMore ? rows.slice(0, limit) : rows;
+  const items = pageRows.map(mapEntryRevisionMeta);
+  const last = pageRows[pageRows.length - 1];
+  return {
+    items,
+    nextCursor:
+      hasMore && last ? encodeEntryRevisionCursor({ version: last.version, id: last.id }) : null,
+  };
+}
+
+/**
+ * NARROW detail read for ONE revision: id, version, data, author and
+ * timestamps, scoped by `entryId` so a revision id can never leak across
+ * entries. Malformed ids return null (never a driver cast error), so the route
+ * maps them to `entry_revision_not_found` like any other miss.
+ */
+export async function getEntryRevisionData(
+  entryId: string,
+  revisionId: string
+): Promise<EntryRevisionDetail | null> {
+  if (!entryRevisionUuidPattern.test(revisionId)) return null;
+  const [row] = await db
     .select({
-      id: contentRevisions.id,
-      entryId: contentRevisions.entryId,
-      version: contentRevisions.version,
+      ...entryRevisionListSelection,
       data: contentRevisions.data,
-      createdAt: contentRevisions.createdAt,
-      createdById: users.id,
-      createdByName: users.name,
-      createdByEmail: users.email,
-      createdByEmailEncrypted: users.emailEncrypted,
     })
     .from(contentRevisions)
     .leftJoin(users, eq(contentRevisions.createdBy, users.id))
-    .where(eq(contentRevisions.entryId, entryId))
-    .orderBy(desc(contentRevisions.version));
-
-  return rows.map((row) => ({
-    id: row.id,
-    entryId: row.entryId,
-    version: row.version,
-    data: row.data as EntryData,
-    createdAt: row.createdAt,
-    createdBy:
-      row.createdById && (row.createdByEmail || row.createdByEmailEncrypted)
-        ? {
-            id: row.createdById,
-            name: row.createdByName ?? null,
-            email:
-              resolveEmailValue({
-                emailEncrypted: row.createdByEmailEncrypted,
-                email: row.createdByEmail,
-              }) ?? "",
-          }
-        : null,
-  }));
+    .where(and(eq(contentRevisions.entryId, entryId), eq(contentRevisions.id, revisionId)))
+    .limit(1);
+  return row ? { ...mapEntryRevisionMeta(row), data: row.data as EntryData } : null;
 }
 
 /**
@@ -292,11 +370,8 @@ export async function listEntryRevisions(entryId: string): Promise<EntryRevision
  * submitted password. NEVER call this from a render/list path — the hash must never enter
  * a projection that maps into rendered HTML.
  */
-const entryUuidPattern =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-
 export async function getEntryAccessPasswordHash(entryId: string): Promise<string | null> {
-  if (!entryId || !entryUuidPattern.test(entryId)) return null;
+  if (!entryId || !entryRevisionUuidPattern.test(entryId)) return null;
   const [row] = await db
     .select({ accessPassword: contentEntries.accessPassword })
     .from(contentEntries)

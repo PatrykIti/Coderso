@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { eq, max, sql } from "drizzle-orm";
+import { and, eq, max, sql } from "drizzle-orm";
 import { db } from "../../db/client";
 import { acquireNativeCmsWriterFence } from "../../db/nativeCmsWriterFence";
 import { hashPassword } from "../auth/password";
@@ -26,16 +26,18 @@ import {
 import {
   getEntry,
   getEntryBySlug,
+  getEntryRevisionData,
   listEntries,
   listEntriesForListing,
   listEntriesWithContentTypes,
   listEntryRevisions,
-  type EntryRevision,
+  entryRevisionUuidPattern,
   type EntryRevisionAuthor,
+  type EntryRevisionDetail,
+  type EntryRevisionMeta,
 } from "./entryReadService";
 import { duplicateEntry } from "./entryDuplicationService";
 import { areRevisionSnapshotsEqual } from "./revisionSnapshot";
-import { getContentType } from "./typeService";
 import type {
   CreateEntryInput,
   EntryData,
@@ -52,6 +54,7 @@ export {
   duplicateEntry,
   getEntry,
   getEntryBySlug,
+  getEntryRevisionData,
   listEntries,
   listEntriesForListing,
   listEntriesWithContentTypes,
@@ -62,8 +65,9 @@ export type {
   EntryData,
   EntryDetail,
   EntryListItem,
-  EntryRevision,
   EntryRevisionAuthor,
+  EntryRevisionDetail,
+  EntryRevisionMeta,
   EntrySeo,
   EntryStatus,
   EntryVisibility,
@@ -779,86 +783,134 @@ export async function createEntryRevision(entryId: string, data: EntryData, user
   });
 }
 
+const MAX_REVISION_VERSION_ATTEMPTS = 5;
+
+/**
+ * Allocate the next revision version and insert the snapshot. The unique
+ * `(entry_id, version)` index (migration 0076) makes allocation
+ * concurrency-safe WITHOUT requiring the caller to hold the entry row
+ * `FOR UPDATE`: `max(version) + 1` is re-derived per attempt and a conflicting
+ * insert is swallowed by `ON CONFLICT DO NOTHING`, so two writers racing on the
+ * same next version retry with a fresh max and converge. Retry exhaustion
+ * surfaces the machine-readable `revision_conflict`.
+ */
 export async function createEntryRevisionTx(
   tx: DbClient,
   entryId: string,
   data: EntryData,
   userId: string
 ) {
-  const [{ value }] = await tx
-    .select({ value: max(contentRevisions.version) })
-    .from(contentRevisions)
-    .where(eq(contentRevisions.entryId, entryId));
+  for (let attempt = 0; attempt < MAX_REVISION_VERSION_ATTEMPTS; attempt += 1) {
+    const [{ value }] = await tx
+      .select({ value: max(contentRevisions.version) })
+      .from(contentRevisions)
+      .where(eq(contentRevisions.entryId, entryId));
 
-  const nextVersion = (value ?? 0) + 1;
+    const nextVersion = (value ?? 0) + 1;
 
-  const [row] = await tx
-    .insert(contentRevisions)
-    .values({
-      entryId,
-      version: nextVersion,
-      data,
-      createdBy: userId,
-    })
-    .returning();
+    const [row] = await tx
+      .insert(contentRevisions)
+      .values({ entryId, version: nextVersion, data, createdBy: userId })
+      .onConflictDoNothing({ target: [contentRevisions.entryId, contentRevisions.version] })
+      .returning();
 
-  return row ?? null;
+    if (row) return row;
+  }
+
+  throw new Error("revision_conflict");
 }
 
 /**
  * Restore an entry's `data` from a stored revision, mirroring
- * `restorePostRevision`. The current data is snapshotted as a new revision first
- * (when an actor is supplied) so the restore is itself reversible, then the
- * snapshot is written through `updateEntry`, which re-runs
- * `validateEntryData` against the CURRENT content-type schema — an old snapshot
- * that no longer validates surfaces as `ContentValidationError`, not a 500.
+ * `restorePostRevision`, as ONE fenced transaction (H-487-01). The entry row is
+ * locked `FOR UPDATE` and the fence is acquired inside the same transaction, so
+ * an interleaved editor write can never be lost between the pre-read and the
+ * overwrite, and the pre-restore snapshot always reflects the data actually
+ * overwritten. The target snapshot is re-validated exactly like `updateEntry`
+ * (`validateEntryData` + `validateEntryReferences`) so a stale or non-conforming
+ * snapshot surfaces as `ContentValidationError`, not a silent persist — and on
+ * validation failure the whole transaction rolls back, leaving NO snapshot row
+ * behind.
  *
- * The write goes through a cache-aware path: after commit the entry site cache is
- * invalidated exactly like `publishEntry` (`applyEntryPostCommitCache`), and a
- * cache failure is reported without turning the committed restore into a failed
- * request (M4).
+ * Cache invalidation runs post-commit through the real
+ * `applyEntryPostCommitCache` seam (no `onCommit` hook exists on
+ * `runEntryTransaction`), and the committed response re-reads the entry for the
+ * `cacheRef` exactly like the previous implementation. A no-op restore
+ * (`areRevisionSnapshotsEqual`) writes nothing and skips cache invalidation.
  */
 export async function restoreEntryRevision(
   entryId: string,
   revisionId: string,
   actorId?: string | null
 ) {
-  const entry = await getEntry(entryId);
-  if (!entry) throw new Error("entry_not_found");
-  const contentType = await getContentType(entry.typeId);
-  if (!contentType) throw new Error("content_type_not_found");
+  if (!entryRevisionUuidPattern.test(revisionId)) throw new Error("entry_revision_not_found");
 
-  const revisions = await listEntryRevisions(entryId);
-  const revision = revisions.find((item) => item.id === revisionId);
-  if (!revision) throw new Error("entry_revision_not_found");
+  const committed = await runEntryTransaction(async (tx) => {
+    await acquireNativeCmsWriterFence(tx);
+    const [entry] = await tx
+      .select(ENTRY_UPDATE_FIELDS)
+      .from(contentEntries)
+      .where(eq(contentEntries.id, entryId))
+      .limit(1)
+      .for("update");
+    if (!entry) throw new Error("entry_not_found");
 
-  const currentData = entry.data as EntryData;
-  const targetData = revision.data;
+    const [revision] = await tx
+      .select({ id: contentRevisions.id, data: contentRevisions.data })
+      .from(contentRevisions)
+      .where(and(eq(contentRevisions.entryId, entryId), eq(contentRevisions.id, revisionId)))
+      .limit(1);
+    if (!revision) throw new Error("entry_revision_not_found");
 
-  // No-op when current data already equals the snapshot (stable-key JSON compare).
-  if (areRevisionSnapshotsEqual(currentData, targetData)) {
-    return { restored: false, revision, entry };
-  }
+    const contentType = await getEntryContentTypeWithExecutor(tx, entry.typeId);
+    if (!contentType) throw new Error("content_type_not_found");
 
-  // Snapshot current state before overwrite so restore is itself reversible.
-  if (actorId) {
-    await createEntryRevision(entryId, currentData, actorId);
-  }
+    const schema = contentType.schema as ContentSchema;
+    const currentData = entry.data as EntryData;
+    const targetData = revision.data as EntryData;
+    validateEntryData(entry.typeId, schema, targetData);
+    await validateEntryReferences(schema, targetData, tx);
 
-  const updated = await updateEntry(entryId, { data: targetData });
-  if (!updated) throw new Error("entry_not_found");
+    // No-op when current data already equals the snapshot (stable-key JSON
+    // compare). Nothing is written, no snapshot row, no cache invalidation.
+    if (areRevisionSnapshotsEqual(currentData, targetData)) {
+      return { restored: false as const, cacheRef: null };
+    }
 
-  await applyEntryPostCommitCache(entryMutationDeps, {
-    changed: true,
-    seoChanged: false,
-    cacheRef: {
-      typeSlug: contentType.slug,
-      entrySlug: updated.slug,
-      entryId: updated.id,
-    },
+    // Snapshot the LOCKED current data before overwrite so restore is itself
+    // reversible. Null actor -> no snapshot row (null-actor regression).
+    if (actorId) {
+      await createEntryRevisionTx(tx, entryId, currentData, actorId);
+    }
+
+    await tx
+      .update(contentEntries)
+      .set({ data: targetData, updatedAt: new Date() })
+      .where(eq(contentEntries.id, entryId));
+
+    return {
+      restored: true as const,
+      cacheRef: {
+        typeSlug: contentType.slug,
+        entrySlug: entry.slug,
+        entryId: entry.id,
+      },
+    };
   });
 
-  return { restored: true, revision, entry: updated };
+  if (committed.cacheRef) {
+    await applyEntryPostCommitCache(entryMutationDeps, {
+      changed: true,
+      seoChanged: false,
+      cacheRef: committed.cacheRef,
+    });
+  }
+
+  const entry = await getEntry(entryId);
+  if (!entry) throw new Error("entry_not_found");
+  const revision = await getEntryRevisionData(entryId, revisionId);
+  if (!revision) throw new Error("entry_revision_not_found");
+  return { restored: committed.restored, revision, entry };
 }
 
 export async function createEntryPreview(entryId: string, ttlMinutes?: number) {

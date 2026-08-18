@@ -35,16 +35,24 @@ test("splitStatements trims whitespace and keeps single-chunk files intact", () 
   expect(splitStatements("")).toEqual([]);
 });
 
-test("readJournal returns 72 entries with monotonic idx and unique tags", async () => {
+test("readJournal returns 77 entries with strictly increasing idx and unique tags", async () => {
   const journal = await readJournal();
-  expect(journal.entries.length).toBe(73); // live journal: 0072_backup_schedule_include added 2026-08-15
+  // Live journal: 0073_smiling_ser_duncan (2026-08-16), 0075_form_submissions_export_cursor,
+  // 0076_content_revisions_version_uniq and 0078_backup_users_staging appended by
+  // concurrent streams. Concurrent agents allocate `idx` from the live journal,
+  // so `idx` is strictly increasing (sorted order) but not equal to the array
+  // index — a removed racing migration can leave a gap. The applier iterates
+  // entries in array order and only consumes `tag`.
+  expect(journal.entries.length).toBe(77);
   const tags = new Set<string>();
   journal.entries.forEach((entry, index) => {
-    expect(entry.idx).toBe(index);
+    if (index > 0) {
+      expect(entry.idx).toBeGreaterThan(journal.entries[index - 1]!.idx);
+    }
     expect(entry.tag.length).toBeGreaterThan(0);
     tags.add(entry.tag);
   });
-  expect(tags.size).toBe(73);
+  expect(tags.size).toBe(77);
 });
 
 test("rewritePublicReferences retargets public-qualified REFERENCES to the worker schema", () => {
@@ -78,10 +86,12 @@ test("rewritePublicReferences preserves spaced paren forms and leaves other DDL 
 test("GATE: no public-qualified REFERENCES remains after rewriting every migration file", async () => {
   // The worker-schema applier rewrites `REFERENCES "public"."X"` at apply time
   // so every FK resolves inside the worker schema. This gate pins that the
-  // rewrite covers ALL 73 drizzle-generated clauses across the 34 files: any
+  // rewrite covers ALL public-qualified REFERENCES across every migration file: any
   // leftover public qualification would recreate the 23503 FK violations the
   // parallel lane hit. The migration files themselves stay byte-identical for
   // the production/public path; only the applier output is asserted here.
+  // 0075_form_submissions_export_cursor added two submission_export_jobs FKs
+  // (form_id -> forms, created_by -> users), raising the count 73 -> 75.
   const journal = await readJournal();
   const schema = "bun_worker_0";
   let totalRewritten = 0;
@@ -93,5 +103,5 @@ test("GATE: no public-qualified REFERENCES remains after rewriting every migrati
       totalRewritten += (statement.match(/REFERENCES\s+"public"\."/g) ?? []).length;
     }
   }
-  expect(totalRewritten).toBe(73);
+  expect(totalRewritten).toBe(75);
 });

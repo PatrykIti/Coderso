@@ -92,6 +92,7 @@ test("registerContentEntryRoutes wires content entry endpoints and permissions",
       "POST /content/:type/entries/:id/publish",
       "POST /content/:type/entries/:id/unpublish",
       "GET /content/:type/entries/:id/revisions",
+      "GET /content/:type/entries/:id/revisions/:revisionId",
       "POST /content/:type/entries/:id/revisions/:revisionId/restore",
     ])
   );
@@ -108,6 +109,7 @@ test("registerContentEntryRoutes wires content entry endpoints and permissions",
     "content:publish",
     "content:publish",
     "content:read",
+    "content:read",
     "content:write",
   ]);
 });
@@ -118,6 +120,18 @@ test("mapContentEntryError maps entry domain errors to route ApiErrors", () => {
   expect(mapContentEntryError(new Error("entry_revision_not_found"))).toMatchObject({
     code: "entry_revision_not_found",
     status: 404,
+  });
+  expect(mapContentEntryError(new Error("revision_conflict"))).toMatchObject({
+    code: "revision_conflict",
+    status: 409,
+  });
+  expect(mapContentEntryError(new Error("entry_revision_cursor_invalid"))).toMatchObject({
+    code: "entry_revision_cursor_invalid",
+    status: 400,
+  });
+  expect(mapContentEntryError(new Error("entry_revision_limit_invalid"))).toMatchObject({
+    code: "entry_revision_limit_invalid",
+    status: 400,
   });
   expect(mapContentEntryError(new Error("entry_slug_conflict"))?.status).toBe(409);
   expect(mapContentEntryError(new Error("media_value_invalid"))?.status).toBe(400);
@@ -419,11 +433,14 @@ testIfDbWithOptions(
       const findRoute = (method: string, path: string) =>
         routes.find((route) => route.method === method && route.path === path);
       const revisionsRoute = findRoute("GET", "/content/:type/entries/:id/revisions");
+      const detailRoute = findRoute("GET", "/content/:type/entries/:id/revisions/:revisionId");
       const restoreRoute = findRoute(
         "POST",
         "/content/:type/entries/:id/revisions/:revisionId/restore"
       );
-      if (!revisionsRoute || !restoreRoute) throw new Error("missing_revision_route");
+      if (!revisionsRoute || !detailRoute || !restoreRoute) {
+        throw new Error("missing_revision_route");
+      }
       const invokeRoute = async (
         route: Route,
         params: Record<string, string>
@@ -439,16 +456,30 @@ testIfDbWithOptions(
       const listed = (await invokeRoute(revisionsRoute, {
         type: typeSlug,
         id: entry.id,
-      })) as Array<{ id: string; version: number; createdBy: { id: string } | null }>;
-      expect(listed).toHaveLength(1);
-      expect(listed[0]?.version).toBe(1);
-      expect(listed[0]?.createdBy?.id).toBe(actor.id);
+      })) as {
+        items: Array<{ id: string; version: number; createdBy: { id: string } | null }>;
+        nextCursor: string | null;
+      };
+      expect(listed.items).toHaveLength(1);
+      expect(listed.items[0]?.version).toBe(1);
+      expect(listed.items[0]?.createdBy?.id).toBe(actor.id);
       expect(JSON.stringify(listed)).not.toContain("emailEncrypted");
+      expect(JSON.stringify(listed)).not.toContain("data");
+
+      const detail = (await invokeRoute(detailRoute, {
+        type: typeSlug,
+        id: entry.id,
+        revisionId: listed.items[0]?.id ?? "",
+      })) as { id: string; version: number; data: unknown };
+      expect(detail.id).toBe(listed.items[0]?.id);
+      // The single stored revision is the pre-update snapshot, so the detail
+      // read returns the original fixture data, not the live entry data.
+      expect(detail.data).toEqual({ title: "Entry revision route fixture" });
 
       const restored = (await invokeRoute(restoreRoute, {
         type: typeSlug,
         id: entry.id,
-        revisionId: listed[0]?.id ?? "",
+        revisionId: listed.items[0]?.id ?? "",
       })) as { ok: boolean; restored: boolean; entry: { data: unknown } };
       expect(restored.ok).toBe(true);
       expect(restored.restored).toBe(true);
