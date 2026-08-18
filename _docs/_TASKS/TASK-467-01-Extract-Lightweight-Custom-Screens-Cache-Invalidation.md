@@ -205,7 +205,11 @@ test("assistant custom screen invalidation clears registered memory caches", () 
 - (customScreensClient.test.ts split coverage is owned by TASK-467-02)
 - `bun --cwd core build:admin`
 - `bun run check:admin-bundle`
-- `bun run check:admin-boundary`
+- `bun run check:admin-boundary` — pre-existing failure (verified on clean
+  HEAD 4cf30296, unchanged by this leaf): `assistantConversationState.ts ->
+  actionPlanSchema.ts -> formActionsContract.ts -> outboundHttpPolicy.ts ->
+  dynamic:node:dns/promises` (2 violations). Not owned by TASK-467; record
+  separately at closure.
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 - `git diff --check`
