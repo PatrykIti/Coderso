@@ -25,9 +25,20 @@ picker, pack-matrix, capability, and schema/default validation paths.
 
 - [ ] Add or expose a typed `WidgetEditorComponent<T>` that accepts eager
   components and `React.lazy` components.
+- [ ] Add `WidgetEditorBundle<T>` = `{ wizard, visual, advanced }` of
+  `WidgetEditorComponent<T>` and use it for `WidgetDefinition<T>.editor`.
 - [ ] Keep `WidgetDefinition<T>.editor` required with `wizard`, `visual`, and
   `advanced` component slots.
 - [ ] Keep `registerWidget` validation fail-closed for missing editor modes.
+- [ ] Widen the 42 per-widget factory editor params in
+  `core/widgets/core/*.tsx` from inline `ComponentType<WidgetEditorProps<T>>`
+  to the shared `WidgetEditorBundle<T>` type (verified: 42 files match
+  `wizard: ComponentType<WidgetEditorProps`; `footerSocialIcons.tsx`,
+  `formEmbedFields.tsx`, `listingFiltersRenderer.tsx` have no widget factory
+  and need no change). React 19 `LazyExoticComponent` is NOT assignable to
+  `ComponentType`, so `satisfies CoreWidgetEditors` in L02 fails unless the
+  factory params are widened first. Repo precedent for the union shape:
+  `core/admin/app/adminRouteComponents.tsx:5-6`.
 - [ ] Update core widget registration typing only where needed so lazy
   components satisfy the existing editor object.
 - [ ] Avoid adding an optional `loadEditor` contract unless implementation
@@ -37,10 +48,11 @@ picker, pack-matrix, capability, and schema/default validation paths.
 
 | File | Required change |
 |---|---|
-| `core/widgets/types.ts` | Widen editor component typing for `React.lazy` if current `ComponentType` is too narrow. |
-| `core/widgets/registry.ts` | Keep required editor-mode validation intact. Update only if the lazy component type requires a narrower validation helper. |
-| `core/widgets/core/index.ts` | Widen local `EditorBundle<T>` typing if needed; keep the `CoreWidgetEditors` object shape intact. |
-| `tests/vitest/widgets/editorContract.test.ts` | Cover core registry contract behavior for eager and lazy editor components (owner). |
+| `core/widgets/types.ts` | Widen editor component typing for `React.lazy`: add `WidgetEditorComponent<T>` union (`ComponentType<WidgetEditorProps<T>>` \| `LazyExoticComponent<ComponentType<WidgetEditorProps<T>>>`) and `WidgetEditorBundle<T>`, use it in `WidgetDefinition.editor`. |
+| `core/widgets/registry.ts` | Keep required editor-mode validation intact. Update only if the lazy component type requires a narrower validation helper (current truthy check `!def.editor?.wizard || ...` at line ~300 keeps working for lazy objects). |
+| `core/widgets/core/index.ts` | Widen local `EditorBundle<T>` to the shared `WidgetEditorBundle<T>`; keep the `CoreWidgetEditors` object shape intact (38 keys). |
+| `core/widgets/core/*.tsx` (42 factory files) | Replace inline `{ wizard: ComponentType<WidgetEditorProps<T>>; visual: ...; advanced: ... }` editor params with the shared `WidgetEditorBundle<T>` type. This is the type-widening blocker found by the pre-implementation audit (MEDIUM). |
+| `tests/vitest/widgets/editorContract.test.ts` | Cover core registry contract behavior for eager and lazy editor components (owner). Add a lazy-registration test using a real `React.lazy` component and a `createCoreWidgetDefinitions` factory smoke using a lazy bundle. |
 
 ## Implementation Pseudocode
 

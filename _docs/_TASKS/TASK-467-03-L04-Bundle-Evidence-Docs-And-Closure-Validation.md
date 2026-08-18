@@ -193,6 +193,16 @@ for split success, because unrelated admin editor pages can match that pattern.
 A standalone `registry-*` asset is useful evidence when Vite emits one, but its
 absence is allowed when the registry source does not import the barrel and every
 TASK-467-owned dynamic chunk is under budget.
+Pre-implementation audit note (verified against current dist at HEAD 239bab33):
+no `registry-*` chunk exists today and no `customScreensEditorClient-*` chunk is
+emitted yet (current custom-screens chunks are `customScreensClient-BPa_2BHt.js`
+and `CustomScreenEditorPage-Bk9mgI_Z.js`). The helper must therefore treat
+`registry-*`, `customScreensClient-*`, `customScreensEditorClient-*`, and the
+lazy editor module stems as OPTIONAL matches: present stems are evidence, absent
+stems are allowed when the barrel guard passes and no TASK-467-owned chunk is
+over budget. After L02 lands, the lazy editor modules (e.g. `HeroEditors-*.js`)
+are the primary split evidence; `widgetEditorChunks.length > 1` must hold from
+the loader-map-derived stems.
 
 The raw dynamic budget check must also be fail-closed for shared chunks: every
 dynamic JS chunk at or above 500 kB raw fails by default. If implementation
