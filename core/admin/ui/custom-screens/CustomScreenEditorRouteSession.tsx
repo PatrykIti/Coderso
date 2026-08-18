@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 
 import {
-  getCachedCustomScreen,
+  getCachedCustomScreenEditor,
   type CustomScreenRecord,
   type CustomScreenStatus,
-} from "@/services/customScreensClient";
+} from "@/services/customScreensEditorClient";
 import { getCachedContentTypes, type ContentTypeSummary } from "@/services/contentTypesClient";
 import {
   clearActiveAssistantSurfaceContext,
@@ -44,7 +44,7 @@ export function CustomScreenEditorRouteSession({
   const { navigate } = useAdminRouter();
   const [routeVisit] = useState<BuilderRouteVisit>(() => Object.freeze({ routeKey }));
   const initialScreen = useMemo(
-    () => (!isCreateMode && screenId ? (getCachedCustomScreen(screenId) ?? null) : null),
+    () => (!isCreateMode && screenId ? (getCachedCustomScreenEditor(screenId) ?? null) : null),
     [isCreateMode, screenId]
   );
   const initialDefinition = useMemo(

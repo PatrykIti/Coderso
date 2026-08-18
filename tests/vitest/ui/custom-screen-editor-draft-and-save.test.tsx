@@ -5,7 +5,7 @@ import { resolve } from "node:path";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import { ApiClientError } from "../../../core/admin/services/apiClient";
-import type { CustomScreenRecord } from "../../../core/admin/services/customScreensClient";
+import type { CustomScreenRecord } from "../../../core/admin/services/customScreensEditorClient";
 import {
   advanceBuilderDraftGeneration,
   getBuilderExternalRevisionSaveError,

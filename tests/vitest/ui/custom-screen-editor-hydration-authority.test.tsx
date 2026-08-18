@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import { ApiClientError } from "../../../core/admin/services/apiClient";
 import { cacheKeys } from "../../../core/admin/services/cachePolicy";
-import type { CustomScreenRecord } from "../../../core/admin/services/customScreensClient";
+import type { CustomScreenRecord } from "../../../core/admin/services/customScreensEditorClient";
 import { runBuilderManualRefresh } from "../../../core/admin/ui/custom-screens/CustomScreenEditorPage";
 import {
   broadcastCacheEvent,

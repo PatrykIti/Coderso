@@ -1,9 +1,8 @@
 import type { ContentTypeSummary } from "@/services/contentTypesClient";
 import type { EntrySummary } from "@/services/entriesClient";
-import type { CustomScreenRecord } from "@/services/customScreensClient";
 import { fieldsFromSchema } from "@/ui/content-types/schemaMapping";
+import type { CustomScreenSummaryRecord } from "@/services/customScreensClient";
 
-import { resolveCustomScreenCapabilities } from "../../../services/customScreens/capabilities";
 import type {
   CustomScreenListColumn,
   CustomScreenListFilter,
@@ -17,7 +16,7 @@ export type CustomScreenSidebarShortcutState = "visible" | "configured_after_act
 export type CustomScreenSidebarShortcutStateV3 = CustomScreenSidebarShortcutState;
 
 export type CustomScreenListRow = {
-  screen: CustomScreenRecord;
+  screen: CustomScreenSummaryRecord;
   contentTypeLabel: string;
   contentTypeSlug?: string;
   modeLabel: string;
@@ -39,21 +38,19 @@ export type CustomScreenEntriesFilterOption = {
   options: Array<{ value: string; label: string }>;
 };
 
-export const resolveCustomScreenModeLabel = (screen: CustomScreenRecord) => {
-  const capabilities =
-    screen.capabilities ??
-    resolveCustomScreenCapabilities({
-      definition: screen.definition,
-      blocks: screen.blocks,
-      bindings: screen.bindings,
-    });
-  if (capabilities.supportsDedicatedEditor) return "Workspace ready";
-  if (capabilities.supportsDedicatedPreview) return "Preview only";
+export const resolveCustomScreenModeLabel = (screen: CustomScreenSummaryRecord) => {
+  // TASK-467-02: list/sidebar flows consume ONLY the server-provided summary
+  // capabilities. Full capability derivation stays editor-only; when the
+  // server response lacks capabilities (stale cache), derive the minimal
+  // supported state from the primitive summary fields instead.
+  const capabilities = screen.capabilities;
+  if (capabilities?.supportsDedicatedEditor) return "Workspace ready";
+  if (capabilities?.supportsDedicatedPreview) return "Preview only";
   return "Setup required";
 };
 
 export const resolveCustomScreenSidebarShortcutState = (
-  screen: CustomScreenRecord
+  screen: CustomScreenSummaryRecord
 ): CustomScreenSidebarShortcutStateV3 => {
   if (!screen.showInSidebar) return "hidden";
   if (screen.status === "active") return "visible"; // any mode -> visible
@@ -61,7 +58,7 @@ export const resolveCustomScreenSidebarShortcutState = (
 };
 
 export const buildCustomScreenListRows = (
-  screens: CustomScreenRecord[],
+  screens: CustomScreenSummaryRecord[],
   contentTypes: ContentTypeSummary[]
 ): CustomScreenListRow[] => {
   const contentTypeMap = new Map(contentTypes.map((type) => [type.id, type] as const));

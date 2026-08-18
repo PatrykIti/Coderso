@@ -9,13 +9,13 @@ import {
 
 import { isApiClientError } from "@/services/apiClient";
 import { cacheKeys } from "@/services/cachePolicy";
+import { createCustomScreen, updateCustomScreen } from "@/services/customScreensClient";
 import {
-  createCustomScreen,
-  getCustomScreenCached,
-  updateCustomScreen,
+  getCustomScreenEditorCached,
+  normalizeCustomScreenRecordForEditor,
   type CustomScreenRecord,
   type CustomScreenStatus,
-} from "@/services/customScreensClient";
+} from "@/services/customScreensEditorClient";
 import { listContentTypesCached, type ContentTypeSummary } from "@/services/contentTypesClient";
 import { clearActiveAssistantSurfaceContext } from "@/ui/assistant/activeSurfaceContext";
 import {
@@ -365,7 +365,7 @@ export function useCustomScreenEditorPersistence({
     async (force = true, isActive: () => boolean = () => true) => {
       if (!screenId || isCreateMode) return;
       await runBackgroundScreenHydration(
-        () => getCustomScreenCached(screenId, { force }),
+        () => getCustomScreenEditorCached(screenId, { force }),
         () => mountedRef.current && isActive()
       );
     },
@@ -587,9 +587,12 @@ export function useCustomScreenEditorPersistence({
 
     try {
       const mutationOptions = { cacheEventOperationToken: token.cacheEventOperationToken };
-      const saved = targetId
+      const savedRaw = targetId
         ? await updateCustomScreen(targetId, payload, mutationOptions)
         : await createCustomScreen(payload, mutationOptions);
+      // TASK-467-02: mutations resolve through the lightweight client; the
+      // editor route upgrades the summary response to the full editor record.
+      const saved = normalizeCustomScreenRecordForEditor(savedRaw);
       const { mayNavigate } = commitScreenSaveResponse(saved, token);
       if (isCreateMode && mayNavigate) {
         navigate(buildCustomScreenEditorPath({ screenId: saved.id }), { skipBlockers: true });

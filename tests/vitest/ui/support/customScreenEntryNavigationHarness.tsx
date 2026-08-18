@@ -229,7 +229,7 @@ export const installNavigationMockAdapter = (adapter: NavigationMockAdapter) => 
 
 vi.mock("@/services/customScreensClient", () => ({
   getCachedCustomScreen: vi.fn((id: string) => requireMockAdapter().getScreen(id)),
-  getCustomScreenCached: vi.fn(async (id: string) => {
+  getCustomScreenRawCached: vi.fn(async (id: string) => {
     const adapter = requireMockAdapter();
     const pendingScreen = adapter.getDeferredScreenTwo();
     if (id === "screen-2" && pendingScreen) return pendingScreen;

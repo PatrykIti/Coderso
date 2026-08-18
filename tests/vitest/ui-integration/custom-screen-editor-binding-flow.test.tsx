@@ -10,7 +10,7 @@ import * as contentTypesClient from "../../../core/admin/services/contentTypesCl
 import * as customScreensClient from "../../../core/admin/services/customScreensClient";
 import * as entriesClient from "../../../core/admin/services/entriesClient";
 import { cacheKeys } from "../../../core/admin/services/cachePolicy";
-import type { CustomScreenRecord } from "../../../core/admin/services/customScreensClient";
+import type { CustomScreenRecord } from "../../../core/admin/services/customScreensEditorClient";
 import { CustomScreenEditorPage } from "../../../core/admin/ui/custom-screens/CustomScreenEditorPage";
 import { ScreenBlockInspector } from "../../../core/admin/ui/custom-screens/ScreenBlockInspector";
 import { AdminRouterProvider } from "../../../core/admin/ui/contexts/AdminRouterContext";
@@ -22,6 +22,7 @@ import type { Block, WidgetEditorContext } from "../../../core/admin/ui/pages/bu
 import {
   buildScreenFieldBindingId,
   type CustomScreenBinding,
+  type CustomScreenDefinition,
 } from "../../../core/services/customScreens/customScreenSchemas";
 
 vi.mock("@/services/solutionKitsClient", () => ({
@@ -300,6 +301,16 @@ const createEditorScreen = (): CustomScreenRecord => ({
   },
   blocks: [],
   bindings: [],
+  capabilities: {
+    mode: "editor",
+    hasBlocks: true,
+    hasBindings: true,
+    hasReadableBindings: true,
+    hasWritableBindings: true,
+    supportsDedicatedPreview: true,
+    supportsDedicatedEditor: true,
+    bindingCounts: { total: 1, readable: 1, writable: 1 },
+  },
   revision: 1,
   createdAt: "2026-07-14T00:00:00.000Z",
   updatedAt: "2026-07-14T00:00:00.000Z",
@@ -389,7 +400,7 @@ describe("CustomScreenEditorPage Button href binding flow", () => {
       id === screen.id ? screen : null
     );
     loadSpy = vi
-      .spyOn(customScreensClient, "getCustomScreenCached")
+      .spyOn(customScreensClient, "getCustomScreenRawCached")
       .mockImplementation(async (id) => {
         const queued = loadQueue.shift();
         return queued ? await queued : id === screen.id ? screen : null;
@@ -402,7 +413,8 @@ describe("CustomScreenEditorPage Button href binding flow", () => {
         screen = {
           ...screen,
           ...rest,
-          definition: payload.definition ?? screen.definition,
+          definition:
+            (payload.definition as CustomScreenDefinition | undefined) ?? screen.definition,
           sidebarLabel: payload.sidebarLabel ?? null,
           // TASK-569: the server increments the revision on every definition save.
           revision: (screen.revision ?? 0) + 1,

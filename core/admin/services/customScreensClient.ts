@@ -1,9 +1,20 @@
+// TASK-467-02: lightweight browser custom-screens client.
+//
+// This module owns the browser list/cache/mutation machinery for custom
+// screens and deliberately imports NO domain editor machinery: it never
+// reaches the full definition schema, the capability resolver, the binding
+// resolver, or the widget runtime. Server responses already carry fully
+// normalized definition/blocks/bindings/capabilities, so this client preserves
+// them as summary pass-through values. Full editor normalization lives in
+// customScreensEditorClient.ts.
+
 import { apiRequest } from "./apiClient";
-import { broadcastCacheEvent, type CacheEventOperationToken } from "@/utils/cacheBus";
+import { broadcastCacheEvent } from "@/utils/cacheBus";
 import { cacheKeys, cacheTtlMs } from "@/services/cachePolicy";
 import {
   clearCustomScreenDetailBrowserCache,
   clearCustomScreensBrowserCache,
+  registerCustomScreensCacheInvalidator,
 } from "@/services/customScreensCache";
 import {
   clearLocalCache,
@@ -11,103 +22,31 @@ import {
   readLocalCache,
   writeLocalCache,
 } from "@/utils/storageCache";
-import type { WidgetBlock } from "../../widgets/types";
+import type {
+  CustomScreenCollectionRole,
+  CustomScreenStatus,
+} from "../../services/customScreens/customScreenContracts";
 import {
-  resolveCustomScreenCapabilities,
-  type CustomScreenCapabilities,
-} from "../../services/customScreens/capabilities";
-import {
-  customScreenCollectionRoleValues,
-  getCustomScreenEditorViewBindings,
-  getCustomScreenEditorViewBlocks,
-  normalizeCustomScreenDefinitionForRead,
-  type CustomScreenBindingWarning,
-  type CustomScreenCollectionRole,
-  type CustomScreenDefinition,
-} from "../../services/customScreens/customScreenSchemas";
+  normalizeCustomScreenSummaryRecord,
+  isCustomScreenSummaryList,
+  isCustomScreenSummaryRecord,
+  type CustomScreenCreateInput,
+  type CustomScreenMutationOptions,
+  type CustomScreenSummaryRecord,
+  type CustomScreenUpdateInput,
+} from "../../services/customScreens/customScreenSummaryContract";
 import {
   normalizeScreenEntryPresentationOverrideList,
   type ScreenEntryPresentationOverrideDraft,
 } from "../../services/customScreens/screenEntryPresentationOverrideContract";
 
-export type CustomScreenStatus = "draft" | "active";
-
-export type CustomScreenBinding = {
-  id: string;
-  widgetId: string;
-  propPath: string;
-  field: string;
-  mode: "read" | "write" | "readwrite";
+export type { CustomScreenStatus, CustomScreenCollectionRole };
+export type {
+  CustomScreenCreateInput,
+  CustomScreenUpdateInput,
+  CustomScreenMutationOptions,
+  CustomScreenSummaryRecord,
 };
-
-const isCustomScreenCapabilities = (value: unknown): value is CustomScreenCapabilities => {
-  if (!isRecord(value)) return false;
-  const counts = isRecord(value.bindingCounts) ? value.bindingCounts : null;
-  return (
-    (value.mode === "collection-only" || value.mode === "dashboard" || value.mode === "editor") &&
-    typeof value.hasBlocks === "boolean" &&
-    typeof value.hasBindings === "boolean" &&
-    typeof value.hasReadableBindings === "boolean" &&
-    typeof value.hasWritableBindings === "boolean" &&
-    typeof value.supportsDedicatedPreview === "boolean" &&
-    typeof value.supportsDedicatedEditor === "boolean" &&
-    counts !== null &&
-    typeof counts.total === "number" &&
-    typeof counts.readable === "number" &&
-    typeof counts.writable === "number"
-  );
-};
-
-export type CustomScreenRecord = {
-  id: string;
-  name: string;
-  contentTypeId: string;
-  status: CustomScreenStatus;
-  collectionRole: CustomScreenCollectionRole | null;
-  compositionKey: string | null;
-  showInSidebar: boolean;
-  sidebarLabel: string | null;
-  schemaVersion: number;
-  definition?: CustomScreenDefinition;
-  blocks: WidgetBlock[];
-  bindings: CustomScreenBinding[];
-  capabilities?: CustomScreenCapabilities;
-  // TASK-569: monotonic server revision used as the optimistic-concurrency
-  // precondition on definition saves. Optional because browser-cache records
-  // written before this feature carry no revision; the editor revalidates such
-  // stale records before a definition save instead of sending a hard 400.
-  revision?: number;
-  createdAt: string;
-  updatedAt: string;
-  // TASK-505-03 (Item B3): TRANSIENT binding-GC warnings the server (505-01)
-  // attaches to the PATCH 200 response when the save-path GC pruned orphaned
-  // bindings — computed at normalize time, NEVER persisted. Type-only carry so
-  // the raw returned record typechecks in the editor (`isCustomScreenRecord`
-  // ignores extra keys; `normalizeCustomScreenRecord` spreads `...item`;
-  // `updateCustomScreen` returns the raw record → the field survives to the UI).
-  warnings?: CustomScreenBindingWarning[];
-};
-
-export type CustomScreenCreateInput = {
-  name: string;
-  contentTypeId: string;
-  status?: CustomScreenStatus;
-  collectionRole?: CustomScreenCollectionRole | null;
-  compositionKey?: string | null;
-  showInSidebar?: boolean;
-  sidebarLabel?: string | null;
-  schemaVersion?: 4;
-  definition?: CustomScreenDefinition | null;
-};
-
-export type CustomScreenUpdateInput = Partial<CustomScreenCreateInput> & {
-  // TASK-569: optimistic-concurrency precondition sent on definition saves.
-  expectedRevision?: number;
-};
-
-export type CustomScreenMutationOptions = Readonly<{
-  cacheEventOperationToken?: CacheEventOperationToken;
-}>;
 
 export type CustomScreenEntryPresentationOverride = ScreenEntryPresentationOverrideDraft;
 
@@ -136,51 +75,18 @@ const normalizeOverrideResponseEnvelope = (
   });
 };
 
-const isCustomScreenStatus = (value: unknown): value is CustomScreenStatus =>
-  value === "draft" || value === "active";
-
-const isCustomScreenCollectionRole = (value: unknown): value is CustomScreenCollectionRole =>
-  customScreenCollectionRoleValues.includes(value as CustomScreenCollectionRole);
-
-const isCustomScreenRecord = (value: unknown): value is CustomScreenRecord =>
-  isRecord(value) &&
-  typeof value.id === "string" &&
-  typeof value.name === "string" &&
-  typeof value.contentTypeId === "string" &&
-  isCustomScreenStatus(value.status) &&
-  (value.collectionRole === undefined ||
-    value.collectionRole === null ||
-    isCustomScreenCollectionRole(value.collectionRole)) &&
-  (value.compositionKey === undefined ||
-    value.compositionKey === null ||
-    typeof value.compositionKey === "string") &&
-  (value.showInSidebar === undefined || typeof value.showInSidebar === "boolean") &&
-  (value.sidebarLabel === undefined ||
-    value.sidebarLabel === null ||
-    typeof value.sidebarLabel === "string") &&
-  typeof value.schemaVersion === "number" &&
-  (value.definition === undefined || isRecord(value.definition)) &&
-  Array.isArray(value.blocks) &&
-  Array.isArray(value.bindings) &&
-  (value.capabilities === undefined || isCustomScreenCapabilities(value.capabilities)) &&
-  (value.revision === undefined || typeof value.revision === "number") &&
-  typeof value.createdAt === "string" &&
-  typeof value.updatedAt === "string";
-
-const isCustomScreenList = (value: unknown): value is CustomScreenRecord[] =>
-  Array.isArray(value) && value.every(isCustomScreenRecord);
-
 type PendingVersioned<T> = Readonly<{ promise: Promise<T>; version: number }>;
 
 type ScreenItemAuthority = Readonly<{
   version: number;
-  change: Readonly<{ kind: "replace"; value: CustomScreenRecord }> | Readonly<{ kind: "delete" }>;
+  change:
+    Readonly<{ kind: "replace"; value: CustomScreenSummaryRecord }> | Readonly<{ kind: "delete" }>;
 }>;
 
-let pendingScreensList: PendingVersioned<CustomScreenRecord[]> | null = null;
+let pendingScreensList: PendingVersioned<CustomScreenSummaryRecord[]> | null = null;
 let committedScreensListVersion = 0;
 let screenPublicationVersion = 0;
-const pendingScreenDetails = new Map<string, PendingVersioned<CustomScreenRecord | null>>();
+const pendingScreenDetails = new Map<string, PendingVersioned<CustomScreenSummaryRecord | null>>();
 const settledScreenItemAuthority = new Map<string, ScreenItemAuthority>();
 const screenDetailValueVersions = new Map<string, number>();
 const knownScreenDetailIds = new Set<string>();
@@ -189,45 +95,24 @@ const screenEntryOverridesPromises = new Map<
   Promise<ScreenEntryPresentationOverrideDraft[]>
 >();
 
-const normalizeCustomScreenRecord = (item: CustomScreenRecord): CustomScreenRecord => {
-  const definition = normalizeCustomScreenDefinitionForRead({
-    definition: item.definition,
-    schemaVersion: item.schemaVersion,
-    blocks: item.blocks,
-    bindings: item.bindings,
-  });
-  return {
-    ...item,
-    schemaVersion: definition.schemaVersion,
-    definition,
-    blocks: getCustomScreenEditorViewBlocks(definition),
-    bindings: getCustomScreenEditorViewBindings(definition),
-    collectionRole: item.collectionRole ?? null,
-    compositionKey: item.compositionKey ?? null,
-    showInSidebar: item.showInSidebar ?? false,
-    sidebarLabel: item.sidebarLabel ?? null,
-    capabilities: item.capabilities ?? resolveCustomScreenCapabilities({ definition }),
-  };
-};
-
 const customScreensListCache = createMemoryBackedLocalCache({
   key: cacheKeys.customScreensList,
   ttlMs: cacheTtlMs.list,
-  validate: isCustomScreenList,
+  validate: isCustomScreenSummaryList,
 });
 
 const readScreensCache = () =>
-  customScreensListCache.read()?.map(normalizeCustomScreenRecord) ?? null;
+  customScreensListCache.read()?.map(normalizeCustomScreenSummaryRecord) ?? null;
 
 const readScreenDetailCache = (id: string) =>
-  readLocalCache(cacheKeys.customScreenDetail(id), cacheTtlMs.detail, isCustomScreenRecord);
+  readLocalCache(cacheKeys.customScreenDetail(id), cacheTtlMs.detail, isCustomScreenSummaryRecord);
 
-const writeScreenDetailCache = (item: CustomScreenRecord) => {
-  writeLocalCache(cacheKeys.customScreenDetail(item.id), normalizeCustomScreenRecord(item));
+const writeScreenDetailCache = (item: CustomScreenSummaryRecord) => {
+  writeLocalCache(cacheKeys.customScreenDetail(item.id), normalizeCustomScreenSummaryRecord(item));
 };
 
-const primeScreensCacheInternal = (items: CustomScreenRecord[]) => {
-  customScreensListCache.write(items.map(normalizeCustomScreenRecord));
+const primeScreensCacheInternal = (items: CustomScreenSummaryRecord[]) => {
+  customScreensListCache.write(items.map(normalizeCustomScreenSummaryRecord));
 };
 
 const nextScreenPublicationVersion = () => {
@@ -247,28 +132,28 @@ const readScreenDetailValue = (id: string) => {
     }
     screenDetailValueVersions.set(id, 0);
   }
-  return normalizeCustomScreenRecord(cached);
+  return normalizeCustomScreenSummaryRecord(cached);
 };
 
-const writeScreenDetailValue = (item: CustomScreenRecord, version: number) => {
+const writeScreenDetailValue = (item: CustomScreenSummaryRecord, version: number) => {
   if (version <= committedScreensListVersion) return;
   if ((screenDetailValueVersions.get(item.id) ?? 0) > version) return;
-  const normalized = normalizeCustomScreenRecord(item);
+  const normalized = normalizeCustomScreenSummaryRecord(item);
   knownScreenDetailIds.add(normalized.id);
   screenDetailValueVersions.set(normalized.id, version);
   writeScreenDetailCache(normalized);
 };
 
-const mergeScreenIntoCurrentList = (item: CustomScreenRecord, version: number) => {
+const mergeScreenIntoCurrentList = (item: CustomScreenSummaryRecord, version: number) => {
   if (version <= committedScreensListVersion) return;
-  const normalized = normalizeCustomScreenRecord(item);
+  const normalized = normalizeCustomScreenSummaryRecord(item);
   const current = readScreensCache() ?? [];
   const index = current.findIndex((entry) => entry.id === normalized.id);
   const next = [...current];
   if (index === -1) {
     next.unshift(normalized);
   } else {
-    next[index] = normalizeCustomScreenRecord({ ...next[index], ...normalized });
+    next[index] = normalizeCustomScreenSummaryRecord({ ...next[index], ...normalized });
   }
   next.sort((left, right) => right.updatedAt.localeCompare(left.updatedAt));
   primeScreensCacheInternal(next);
@@ -295,13 +180,13 @@ const revokePendingScreenDetail = (id: string) => {
 
 const removePendingScreenDetailIfExact = (
   id: string,
-  pending: PendingVersioned<CustomScreenRecord | null>
+  pending: PendingVersioned<CustomScreenSummaryRecord | null>
 ) => {
   if (pendingScreenDetails.get(id) === pending) pendingScreenDetails.delete(id);
 };
 
-const publishSuccessfulScreenReplace = (item: CustomScreenRecord) => {
-  const normalized = normalizeCustomScreenRecord(item);
+const publishSuccessfulScreenReplace = (item: CustomScreenSummaryRecord) => {
+  const normalized = normalizeCustomScreenSummaryRecord(item);
   const version = nextScreenPublicationVersion();
   revokePendingScreenDetail(normalized.id);
   settleScreenItemAuthority(normalized.id, {
@@ -319,8 +204,11 @@ const publishSuccessfulScreenDelete = (id: string) => {
   removeScreenFromCurrentListAndDetail(id);
 };
 
-const reconcileCompleteScreenList = (serverItems: CustomScreenRecord[], listVersion: number) => {
-  let reconciled = serverItems.map(normalizeCustomScreenRecord);
+const reconcileCompleteScreenList = (
+  serverItems: CustomScreenSummaryRecord[],
+  listVersion: number
+) => {
+  let reconciled = serverItems.map(normalizeCustomScreenSummaryRecord);
   for (const [id, authority] of settledScreenItemAuthority) {
     if (authority.version <= listVersion) continue;
     const index = reconciled.findIndex((item) => item.id === id);
@@ -328,7 +216,7 @@ const reconcileCompleteScreenList = (serverItems: CustomScreenRecord[], listVers
       if (index !== -1) reconciled = reconciled.filter((item) => item.id !== id);
       continue;
     }
-    const replacement = normalizeCustomScreenRecord(authority.change.value);
+    const replacement = normalizeCustomScreenSummaryRecord(authority.change.value);
     if (index === -1) reconciled.unshift(replacement);
     else reconciled[index] = replacement;
   }
@@ -337,7 +225,7 @@ const reconcileCompleteScreenList = (serverItems: CustomScreenRecord[], listVers
 
 const invalidateScreenDetailsAtOrBefore = (
   listVersion: number,
-  reconciled: CustomScreenRecord[]
+  reconciled: CustomScreenSummaryRecord[]
 ) => {
   for (const [id, pending] of pendingScreenDetails) {
     if (pending.version <= listVersion) pendingScreenDetails.delete(id);
@@ -362,7 +250,7 @@ const discardSettledScreenAuthorityAtOrBefore = (listVersion: number) => {
   }
 };
 
-const publishScreenList = (items: CustomScreenRecord[], listVersion: number) => {
+const publishScreenList = (items: CustomScreenSummaryRecord[], listVersion: number) => {
   if (listVersion <= committedScreensListVersion) return;
   const reconciled = reconcileCompleteScreenList(items, listVersion);
   invalidateScreenDetailsAtOrBefore(listVersion, reconciled);
@@ -424,6 +312,16 @@ const readCachedScreenIdsForClear = () => {
   }
 };
 
+const resetScreenMemoryState = () => {
+  pendingScreensList = null;
+  pendingScreenDetails.clear();
+  settledScreenItemAuthority.clear();
+  screenDetailValueVersions.clear();
+  knownScreenDetailIds.clear();
+  committedScreensListVersion = 0;
+  customScreensListCache.clear();
+};
+
 export const clearCustomScreensCache = () => {
   const detailIds = new Set([
     ...knownScreenDetailIds,
@@ -432,16 +330,17 @@ export const clearCustomScreensCache = () => {
     ...settledScreenItemAuthority.keys(),
     ...readCachedScreenIdsForClear(),
   ]);
-  pendingScreensList = null;
-  pendingScreenDetails.clear();
-  settledScreenItemAuthority.clear();
-  screenDetailValueVersions.clear();
-  knownScreenDetailIds.clear();
-  committedScreensListVersion = 0;
-  customScreensListCache.clear();
+  resetScreenMemoryState();
   clearCustomScreensBrowserCache();
   for (const id of detailIds) clearCustomScreenDetailBrowserCache(id);
 };
+
+// TASK-467-01 registry: the lightweight shared invalidation path resets the
+// whole memory-backed custom-screens cache family (list + detail + overrides).
+registerCustomScreensCacheInvalidator(() => {
+  resetScreenMemoryState();
+  screenEntryOverridesPromises.clear();
+});
 
 async function getScreenEntryOverrides(screenId: string, entryId: string) {
   const payload = await apiRequest<unknown>(
@@ -517,15 +416,15 @@ export const invalidateScreenEntryOverrides = (screenId: string, entryId: string
 };
 
 export async function listCustomScreens() {
-  const payload = await apiRequest<{ items: CustomScreenRecord[] }>("/custom-screens", {
+  const payload = await apiRequest<{ items: CustomScreenSummaryRecord[] }>("/custom-screens", {
     method: "GET",
   });
-  return (payload.items ?? []).map(normalizeCustomScreenRecord);
+  return (payload.items ?? []).map(normalizeCustomScreenSummaryRecord);
 }
 
 export function listCustomScreensCached(options?: {
   force?: boolean;
-}): Promise<CustomScreenRecord[]> {
+}): Promise<CustomScreenSummaryRecord[]> {
   if (!options?.force) {
     const cached = getCachedCustomScreens();
     if (cached) return Promise.resolve(cached);
@@ -533,7 +432,7 @@ export function listCustomScreensCached(options?: {
   }
 
   const version = nextScreenPublicationVersion();
-  let pending!: PendingVersioned<CustomScreenRecord[]>;
+  let pending!: PendingVersioned<CustomScreenSummaryRecord[]>;
   const promise = listCustomScreens()
     .then((items) => {
       if (pendingScreensList === pending) publishScreenList(items, version);
@@ -548,14 +447,16 @@ export function listCustomScreensCached(options?: {
 }
 
 export async function getCustomScreen(id: string) {
-  const item = await apiRequest<CustomScreenRecord>(`/custom-screens/${encodeURIComponent(id)}`);
-  return normalizeCustomScreenRecord(item);
+  const item = await apiRequest<CustomScreenSummaryRecord>(
+    `/custom-screens/${encodeURIComponent(id)}`
+  );
+  return normalizeCustomScreenSummaryRecord(item);
 }
 
-export function getCustomScreenCached(
+export function getCustomScreenRawCached(
   id: string,
   options?: { force?: boolean }
-): Promise<CustomScreenRecord | null> {
+): Promise<CustomScreenSummaryRecord | null> {
   if (!options?.force) {
     const cached = getCachedCustomScreen(id);
     if (cached) return Promise.resolve(cached);
@@ -564,7 +465,7 @@ export function getCustomScreenCached(
   }
 
   const version = nextScreenPublicationVersion();
-  let pending!: PendingVersioned<CustomScreenRecord | null>;
+  let pending!: PendingVersioned<CustomScreenSummaryRecord | null>;
   const promise = getCustomScreen(id)
     .then((item) => ({ kind: "detail" as const, item }))
     .catch(async () => {
@@ -599,8 +500,8 @@ export function getCustomScreenCached(
 export async function createCustomScreen(
   input: CustomScreenCreateInput,
   options?: CustomScreenMutationOptions
-): Promise<CustomScreenRecord> {
-  const created = await apiRequest<CustomScreenRecord>(
+): Promise<CustomScreenSummaryRecord> {
+  const created = await apiRequest<CustomScreenSummaryRecord>(
     "/custom-screens",
     {
       method: "POST",
@@ -609,7 +510,7 @@ export async function createCustomScreen(
     },
     { withCsrf: true }
   );
-  publishSuccessfulScreenReplace(normalizeCustomScreenRecord(created));
+  publishSuccessfulScreenReplace(normalizeCustomScreenSummaryRecord(created));
   broadcastCacheEvent(
     { key: cacheKeys.customScreensList, action: "update" },
     { operationToken: options?.cacheEventOperationToken }
@@ -628,8 +529,8 @@ export async function updateCustomScreen(
   id: string,
   input: CustomScreenUpdateInput,
   options?: CustomScreenMutationOptions
-): Promise<CustomScreenRecord> {
-  const updated = await apiRequest<CustomScreenRecord>(
+): Promise<CustomScreenSummaryRecord> {
+  const updated = await apiRequest<CustomScreenSummaryRecord>(
     `/custom-screens/${encodeURIComponent(id)}`,
     {
       method: "PATCH",
@@ -638,7 +539,7 @@ export async function updateCustomScreen(
     },
     { withCsrf: true }
   );
-  publishSuccessfulScreenReplace(normalizeCustomScreenRecord(updated));
+  publishSuccessfulScreenReplace(normalizeCustomScreenSummaryRecord(updated));
   broadcastCacheEvent(
     { key: cacheKeys.customScreensList, action: "update" },
     { operationToken: options?.cacheEventOperationToken }

@@ -137,10 +137,10 @@ export function CustomScreenTable({
 
               <div className="mt-3 flex items-center gap-4 text-xs text-muted-foreground">
                 <span className="flex items-center gap-1.5">
-                  <Blocks className="size-3.5" /> {screen.blocks.length} blocks
+                  <Blocks className="size-3.5" /> {screen.blocks?.length ?? 0} blocks
                 </span>
                 <span className="flex items-center gap-1.5">
-                  <Link2 className="size-3.5" /> {screen.bindings.length} bindings
+                  <Link2 className="size-3.5" /> {screen.bindings?.length ?? 0} bindings
                 </span>
               </div>
 

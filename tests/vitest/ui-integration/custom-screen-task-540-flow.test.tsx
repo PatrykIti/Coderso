@@ -13,7 +13,7 @@ import * as mediaClient from "../../../core/admin/services/mediaClient";
 import { cacheKeys } from "../../../core/admin/services/cachePolicy";
 import type { AuthUser } from "../../../core/admin/services/authClient";
 import type { ContentTypeSummary } from "../../../core/admin/services/contentTypesClient";
-import type { CustomScreenRecord } from "../../../core/admin/services/customScreensClient";
+import type { CustomScreenRecord } from "../../../core/admin/services/customScreensEditorClient";
 import type { EntryDetail } from "../../../core/admin/services/entriesClient";
 import { CustomScreenEditorPage } from "../../../core/admin/ui/custom-screens/CustomScreenEditorPage";
 import { CustomScreenEntryEditor } from "../../../core/admin/ui/custom-screens/CustomScreenEntryEditor";
@@ -139,6 +139,16 @@ const makeScreenRecord = (definition = makeButtonDefinition()): ScreenRecordWith
   definition,
   blocks: getCustomScreenEditorViewBlocks(definition),
   bindings: getCustomScreenEditorViewBindings(definition),
+  capabilities: {
+    mode: "editor",
+    hasBlocks: true,
+    hasBindings: true,
+    hasReadableBindings: true,
+    hasWritableBindings: true,
+    supportsDedicatedPreview: true,
+    supportsDedicatedEditor: true,
+    bindingCounts: { total: 1, readable: 1, writable: 1 },
+  },
   revision: 1,
   createdAt: "2026-07-14T00:00:00.000Z",
   updatedAt: "2026-07-14T00:00:00.000Z",
@@ -376,7 +386,7 @@ beforeEach(() => {
   vi.spyOn(customScreensClient, "getCachedCustomScreen").mockImplementation((id) =>
     id === currentScreen.id ? currentScreen : null
   );
-  vi.spyOn(customScreensClient, "getCustomScreenCached").mockImplementation(async (id) =>
+  vi.spyOn(customScreensClient, "getCustomScreenRawCached").mockImplementation(async (id) =>
     id === currentScreen.id ? currentScreen : null
   );
   vi.spyOn(customScreensClient, "getCachedScreenEntryOverrides").mockReturnValue([]);

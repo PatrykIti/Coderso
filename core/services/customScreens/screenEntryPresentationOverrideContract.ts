@@ -1,4 +1,4 @@
-import { isScreenMediaAssetUuid, isScreenUuid } from "./customScreenSchemas";
+import { isScreenMediaAssetUuid, isScreenUuid } from "./screenMediaIdentity";
 
 export const customScreenOverrideErrorCodes = [
   "custom_screen_override_invalid",

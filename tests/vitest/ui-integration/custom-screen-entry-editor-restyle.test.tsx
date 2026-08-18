@@ -6,10 +6,8 @@ import { afterEach, beforeEach, expect, test, vi } from "vitest";
 
 import { updateEntry, type EntryDetail } from "@/services/entriesClient";
 import { listMediaCached } from "@/services/mediaClient";
-import {
-  replaceScreenEntryOverrides,
-  type CustomScreenRecord,
-} from "@/services/customScreensClient";
+import { replaceScreenEntryOverrides } from "@/services/customScreensClient";
+import type { CustomScreenRecord } from "@/services/customScreensEditorClient";
 import type { ContentTypeSummary } from "@/services/contentTypesClient";
 import type { CustomScreenDefinition } from "../../../core/services/customScreens/customScreenSchemas";
 import { cacheKeys } from "../../../core/admin/services/cachePolicy";
@@ -122,6 +120,16 @@ const makeFixture = (opts: {
     },
     blocks: [],
     bindings: [],
+    capabilities: {
+      mode: "editor",
+      hasBlocks: true,
+      hasBindings: true,
+      hasReadableBindings: true,
+      hasWritableBindings: true,
+      supportsDedicatedPreview: true,
+      supportsDedicatedEditor: true,
+      bindingCounts: { total: 1, readable: 1, writable: 1 },
+    },
     createdAt: "2026-05-02T00:00:00.000Z",
     updatedAt: "2026-05-02T00:00:00.000Z",
   };
@@ -298,7 +306,7 @@ vi.mock("@/services/customScreensClient", () => ({
   getCachedCustomScreens: vi.fn(() => [current.screen]),
   listCustomScreensCached: vi.fn(async () => [current.screen]),
   getCachedCustomScreen: vi.fn(() => current.screen),
-  getCustomScreenCached: vi.fn(async () => current.screen),
+  getCustomScreenRawCached: vi.fn(async () => current.screen),
   getCachedScreenEntryOverrides: vi.fn(() => currentOverrides),
   getScreenEntryOverridesCached: vi.fn(async () => currentOverrides),
   replaceScreenEntryOverrides: vi.fn(async (_screenId, _entryId, overrides) => overrides),
@@ -793,6 +801,19 @@ test("bound direct-image UUID resolves in the read-only entry Preview branch", a
             ...binding,
             mode: "read" as const,
           })),
+        },
+      },
+      // TASK-467-02: with all bindings read-only the screen is dashboard mode,
+      // not editor-ready; mirror what the capability derivation would produce.
+      capabilities: {
+        ...imageFixture.screen.capabilities,
+        mode: "dashboard",
+        hasWritableBindings: false,
+        supportsDedicatedEditor: false,
+        bindingCounts: {
+          total: imageFixture.screen.capabilities?.bindingCounts?.total ?? 1,
+          readable: imageFixture.screen.capabilities?.bindingCounts?.readable ?? 1,
+          writable: 0,
         },
       },
     },
