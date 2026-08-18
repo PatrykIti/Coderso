@@ -1,0 +1,753 @@
+{
+  "cleanup": { "failures": [], "pass": true },
+  "consoleErrors": [],
+  "failures": [],
+  "pass": true,
+  "processes": {
+    "git": 2,
+    "playwright-close": 1,
+    "playwright-open": 1,
+    "playwright-run-code": 7,
+    "task517-dev-host": 1,
+    "task517-worker-db": 1
+  },
+  "profile": "fast",
+  "scenarios": [
+    {
+      "elapsedMs": 4141,
+      "id": "anon-public-cached-render",
+      "pass": true,
+      "screenshots": [
+        {
+          "path": "_docs/_workflows/_smoke/evidence/task-517/wf579-517smoke/01-anon-public-cached-render.png",
+          "sha256": "00d7a1a20b9f77aedcb18a50dbfa8f48912a1597fb618b7d1fd3ec241c09beda"
+        }
+      ],
+      "title": "Anonymous public entry renders from the shared HTML cache",
+      "variants": [
+        {
+          "assertions": [
+            {
+              "actual": "200",
+              "expected": "200",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "anonFirstStatus",
+              "target": "request:entry-detail"
+            },
+            {
+              "actual": "200",
+              "expected": "200",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "anonSecondStatus",
+              "target": "request:entry-detail"
+            },
+            {
+              "actual": "true",
+              "expected": "true",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "secondFaster",
+              "target": "response:entry-detail"
+            },
+            {
+              "actual": "true",
+              "expected": "true",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "byteIdentical",
+              "target": "response:entry-detail"
+            },
+            {
+              "actual": "TASK-517 public 98efcc3083df583a68d7f70ae5cc",
+              "expected": "TASK-517 public 98efcc3083df583a68d7f70ae5cc",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "h1",
+              "target": "dom:entry-detail"
+            },
+            {
+              "actual": "true",
+              "expected": "true",
+              "kind": "geometry",
+              "pass": true,
+              "property": "preVisible",
+              "target": "dom:entry-body"
+            },
+            {
+              "actual": "20",
+              "expected": ">0",
+              "kind": "geometry",
+              "pass": true,
+              "property": "preHeight",
+              "target": "dom:entry-body"
+            }
+          ],
+          "consoleErrors": [],
+          "id": "anon-public-cached-light",
+          "surface": "public",
+          "theme": "light",
+          "viewport": { "height": 900, "width": 1440 }
+        }
+      ]
+    },
+    {
+      "elapsedMs": 9313,
+      "id": "private-anon-uniform-404",
+      "pass": true,
+      "screenshots": [
+        {
+          "path": "_docs/_workflows/_smoke/evidence/task-517/wf579-517smoke/02-private-anon-uniform-404.png",
+          "sha256": "5cdee2b7ddd072d93ef15830da2cc235dcc78ca3b8a0b6bf1ce08faec40d7bb7"
+        }
+      ],
+      "title": "Private entry is a uniform anonymous 404 that admin sessions bypass",
+      "variants": [
+        {
+          "assertions": [
+            {
+              "actual": "404",
+              "expected": "404",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "anonStatus",
+              "target": "request:private-entry"
+            },
+            {
+              "actual": "404",
+              "expected": "404",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "anonStatus",
+              "target": "request:missing-slug"
+            },
+            {
+              "actual": "true",
+              "expected": "true",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "bodyByteEqual",
+              "target": "response:private-vs-missing"
+            },
+            {
+              "actual": "Not Found",
+              "expected": "Not Found",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "notFoundText",
+              "target": "dom:private-anon"
+            }
+          ],
+          "consoleErrors": [],
+          "id": "anon-404-light",
+          "surface": "public",
+          "theme": "light",
+          "viewport": { "height": 900, "width": 1440 }
+        },
+        {
+          "assertions": [
+            {
+              "actual": "200",
+              "expected": "200",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "adminAuthedStatus",
+              "target": "request:private-entry"
+            },
+            {
+              "actual": "TASK-517 private 98efcc3083df583a68d7f70ae5cc",
+              "expected": "TASK-517 private 98efcc3083df583a68d7f70ae5cc",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "h1",
+              "target": "dom:private-authed"
+            },
+            {
+              "actual": "true",
+              "expected": "true",
+              "kind": "geometry",
+              "pass": true,
+              "property": "preVisible",
+              "target": "dom:private-authed"
+            }
+          ],
+          "consoleErrors": [],
+          "id": "admin-bypass-light",
+          "surface": "public",
+          "theme": "light",
+          "viewport": { "height": 900, "width": 1440 }
+        },
+        {
+          "assertions": [
+            {
+              "actual": "TASK-517 private 98efcc3083df583a68d7f70ae5cc",
+              "expected": "TASK-517 private 98efcc3083df583a68d7f70ae5cc",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "h1",
+              "target": "dom:private-authed-dark"
+            },
+            {
+              "actual": "true",
+              "expected": "true",
+              "kind": "geometry",
+              "pass": true,
+              "property": "preVisible",
+              "target": "dom:private-authed-dark"
+            }
+          ],
+          "consoleErrors": [],
+          "id": "admin-bypass-dark",
+          "surface": "public",
+          "theme": "dark",
+          "viewport": { "height": 900, "width": 1440 }
+        }
+      ]
+    },
+    {
+      "elapsedMs": 8804,
+      "id": "password-unlock-cycle",
+      "pass": true,
+      "screenshots": [
+        {
+          "path": "_docs/_workflows/_smoke/evidence/task-517/wf579-517smoke/03-password-unlock-cycle.png",
+          "sha256": "df1e95824ae64473a549bbd29999064e1958046aaeb3c8b08d8bf11566695a5e"
+        }
+      ],
+      "title": "Password unlock cycle (wrong then correct) for one entry",
+      "variants": [
+        {
+          "assertions": [
+            {
+              "actual": "TASK-517 pass-a 98efcc3083df583a68d7f70ae5cc",
+              "expected": "TASK-517 pass-a 98efcc3083df583a68d7f70ae5cc",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "h1",
+              "target": "dom:prompt"
+            },
+            {
+              "actual": "true",
+              "expected": "true",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "passwordProtected",
+              "target": "dom:prompt"
+            },
+            {
+              "actual": "true",
+              "expected": "true",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "bodyExcludesMarker",
+              "target": "dom:prompt"
+            },
+            {
+              "actual": "401",
+              "expected": "401",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "status",
+              "target": "request:wrong-unlock"
+            },
+            {
+              "actual": "true",
+              "expected": "true",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "promptRetained",
+              "target": "dom:after-wrong"
+            },
+            {
+              "actual": "302",
+              "expected": "302",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "status",
+              "target": "request:correct-unlock"
+            },
+            {
+              "actual": "TASK-517 pass-a 98efcc3083df583a68d7f70ae5cc",
+              "expected": "TASK-517 pass-a 98efcc3083df583a68d7f70ae5cc",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "h1",
+              "target": "dom:unlocked"
+            },
+            {
+              "actual": "true",
+              "expected": "true",
+              "kind": "geometry",
+              "pass": true,
+              "property": "preVisible",
+              "target": "dom:unlocked"
+            },
+            {
+              "actual": "true",
+              "expected": "true",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "bodyHasMarker",
+              "target": "dom:unlocked"
+            },
+            {
+              "actual": "TASK-517 pass-a 98efcc3083df583a68d7f70ae5cc",
+              "expected": "TASK-517 pass-a 98efcc3083df583a68d7f70ae5cc",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "h1",
+              "target": "dom:unlocked-reload"
+            }
+          ],
+          "consoleErrors": [],
+          "id": "password-unlock-light",
+          "surface": "public",
+          "theme": "light",
+          "viewport": { "height": 900, "width": 1440 }
+        }
+      ]
+    },
+    {
+      "elapsedMs": 9041,
+      "id": "cross-entry-unlock-isolation",
+      "pass": true,
+      "screenshots": [
+        {
+          "path": "_docs/_workflows/_smoke/evidence/task-517/wf579-517smoke/04-cross-entry-unlock-isolation.png",
+          "sha256": "9b7abd83e6654e6eb556361fcb6ddb9e80b9b087853e104afe8d8e2661a82142"
+        }
+      ],
+      "title": "Unlock cookie does not cross entries",
+      "variants": [
+        {
+          "assertions": [
+            {
+              "actual": "TASK-517 pass-a 98efcc3083df583a68d7f70ae5cc",
+              "expected": "TASK-517 pass-a 98efcc3083df583a68d7f70ae5cc",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "unlockedH1",
+              "target": "dom:entry-a"
+            },
+            {
+              "actual": "TASK-517 pass-b 98efcc3083df583a68d7f70ae5cc",
+              "expected": "TASK-517 pass-b 98efcc3083df583a68d7f70ae5cc",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "promptH1",
+              "target": "dom:entry-b"
+            },
+            {
+              "actual": "true",
+              "expected": "true",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "promptShown",
+              "target": "dom:entry-b"
+            },
+            {
+              "actual": "true",
+              "expected": "true",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "excludesMarkerA",
+              "target": "dom:entry-b"
+            },
+            {
+              "actual": "true",
+              "expected": "true",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "excludesBodyB",
+              "target": "dom:entry-b"
+            },
+            {
+              "actual": "TASK-517 pass-b 98efcc3083df583a68d7f70ae5cc",
+              "expected": "TASK-517 pass-b 98efcc3083df583a68d7f70ae5cc",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "h1",
+              "target": "dom:entry-b-unlocked"
+            },
+            {
+              "actual": "true",
+              "expected": "true",
+              "kind": "geometry",
+              "pass": true,
+              "property": "preVisible",
+              "target": "dom:entry-b-unlocked"
+            },
+            {
+              "actual": "true",
+              "expected": "true",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "bodyHasMarkerB",
+              "target": "dom:entry-b-unlocked"
+            },
+            {
+              "actual": "TASK-517 pass-b 98efcc3083df583a68d7f70ae5cc",
+              "expected": "TASK-517 pass-b 98efcc3083df583a68d7f70ae5cc",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "h1",
+              "target": "dom:entry-b-reload"
+            }
+          ],
+          "consoleErrors": [],
+          "id": "cross-entry-isolation-light",
+          "surface": "public",
+          "theme": "light",
+          "viewport": { "height": 900, "width": 1440 }
+        }
+      ]
+    },
+    {
+      "elapsedMs": 7874,
+      "id": "no-shared-cache-leak",
+      "pass": true,
+      "screenshots": [
+        {
+          "path": "_docs/_workflows/_smoke/evidence/task-517/wf579-517smoke/05-no-shared-cache-leak.png",
+          "sha256": "df1e95824ae64473a549bbd29999064e1958046aaeb3c8b08d8bf11566695a5e"
+        }
+      ],
+      "title": "Gated and private bodies never leak through shared caches",
+      "variants": [
+        {
+          "assertions": [
+            {
+              "actual": "TASK-517 pass-a 98efcc3083df583a68d7f70ae5cc",
+              "expected": "TASK-517 pass-a 98efcc3083df583a68d7f70ae5cc",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "unlockedH1",
+              "target": "dom:entry-a"
+            },
+            {
+              "actual": "200",
+              "expected": "200",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "status",
+              "target": "request:ungated-a"
+            },
+            {
+              "actual": "true",
+              "expected": "true",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "promptNotBody",
+              "target": "response:ungated-a"
+            },
+            {
+              "actual": "true",
+              "expected": "true",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "excludesMarker",
+              "target": "response:ungated-a"
+            }
+          ],
+          "consoleErrors": [],
+          "id": "cache-proof-light",
+          "surface": "public",
+          "theme": "light",
+          "viewport": { "height": 900, "width": 1440 }
+        },
+        {
+          "assertions": [
+            {
+              "actual": "TASK-517 private 98efcc3083df583a68d7f70ae5cc",
+              "expected": "TASK-517 private 98efcc3083df583a68d7f70ae5cc",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "h1",
+              "target": "dom:private-authed"
+            },
+            {
+              "actual": "404",
+              "expected": "404",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "status",
+              "target": "request:ungated-private"
+            },
+            {
+              "actual": "true",
+              "expected": "true",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "notFound",
+              "target": "response:ungated-private"
+            }
+          ],
+          "consoleErrors": [],
+          "id": "private-404-light",
+          "surface": "public",
+          "theme": "light",
+          "viewport": { "height": 900, "width": 1440 }
+        }
+      ]
+    },
+    {
+      "elapsedMs": 8679,
+      "id": "publish-front-admin-parity",
+      "pass": true,
+      "screenshots": [
+        {
+          "path": "_docs/_workflows/_smoke/evidence/task-517/wf579-517smoke/06-publish-front-admin-parity.png",
+          "sha256": "c50b14af243a90d587c348b215d4e868f89634aa7105c26d794d87337e566365"
+        }
+      ],
+      "title": "Publish, front listing, search and admin editor parity",
+      "variants": [
+        {
+          "assertions": [
+            {
+              "actual": "TASK-517 98efcc3083df583a68d7f70ae5cc",
+              "expected": "TASK-517 98efcc3083df583a68d7f70ae5cc",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "h1",
+              "target": "dom:list"
+            },
+            {
+              "actual": "true",
+              "expected": "true",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "publicLinkPresent",
+              "target": "dom:list"
+            },
+            {
+              "actual": "true",
+              "expected": "true",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "privateLinkAbsent",
+              "target": "dom:list"
+            },
+            {
+              "actual": "true",
+              "expected": "true",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "passALinkAbsent",
+              "target": "dom:list"
+            },
+            {
+              "actual": "true",
+              "expected": "true",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "passBLinkAbsent",
+              "target": "dom:list"
+            },
+            {
+              "actual": "true",
+              "expected": "true",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "emptyMarkerAbsent",
+              "target": "dom:list"
+            },
+            {
+              "actual": "200",
+              "expected": "200",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "status",
+              "target": "request:search"
+            },
+            {
+              "actual": "true",
+              "expected": "true",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "publicPresent",
+              "target": "response:search"
+            },
+            {
+              "actual": "true",
+              "expected": "true",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "privateAbsent",
+              "target": "response:search"
+            },
+            {
+              "actual": "true",
+              "expected": "true",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "passAAbsent",
+              "target": "response:search"
+            },
+            {
+              "actual": "true",
+              "expected": "true",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "passBAbsent",
+              "target": "response:search"
+            }
+          ],
+          "consoleErrors": [],
+          "id": "front-list-light",
+          "surface": "public",
+          "theme": "light",
+          "viewport": { "height": 900, "width": 1440 }
+        },
+        {
+          "assertions": [
+            {
+              "actual": "Edit TASK 517 98efcc3083df583a68d7f70ae5cc",
+              "expected": "Edit TASK 517 98efcc3083df583a68d7f70ae5cc",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "heading",
+              "target": "dom:editor"
+            },
+            {
+              "actual": "TASK-517 private 98efcc3083df583a68d7f70ae5cc",
+              "expected": "TASK-517 private 98efcc3083df583a68d7f70ae5cc",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "titleValue",
+              "target": "dom:editor"
+            },
+            {
+              "actual": "true",
+              "expected": "true",
+              "kind": "geometry",
+              "pass": true,
+              "property": "titleVisible",
+              "target": "dom:editor"
+            },
+            {
+              "actual": "task517-private-98efcc3083df583a68d7f70ae5cc",
+              "expected": "task517-private-98efcc3083df583a68d7f70ae5cc",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "slugValue",
+              "target": "dom:editor"
+            },
+            {
+              "actual": "true",
+              "expected": "true",
+              "kind": "geometry",
+              "pass": true,
+              "property": "slugVisible",
+              "target": "dom:editor"
+            }
+          ],
+          "consoleErrors": [],
+          "id": "admin-editor-light",
+          "surface": "admin",
+          "theme": "light",
+          "viewport": { "height": 900, "width": 1440 }
+        },
+        {
+          "assertions": [
+            {
+              "actual": "TASK-517 private 98efcc3083df583a68d7f70ae5cc",
+              "expected": "TASK-517 private 98efcc3083df583a68d7f70ae5cc",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "titleValue",
+              "target": "dom:editor-dark"
+            },
+            {
+              "actual": "true",
+              "expected": "true",
+              "kind": "geometry",
+              "pass": true,
+              "property": "titleVisible",
+              "target": "dom:editor-dark"
+            },
+            {
+              "actual": "task517-private-98efcc3083df583a68d7f70ae5cc",
+              "expected": "task517-private-98efcc3083df583a68d7f70ae5cc",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "slugValue",
+              "target": "dom:editor-dark"
+            },
+            {
+              "actual": "true",
+              "expected": "true",
+              "kind": "geometry",
+              "pass": true,
+              "property": "slugVisible",
+              "target": "dom:editor-dark"
+            }
+          ],
+          "consoleErrors": [],
+          "id": "admin-editor-dark",
+          "surface": "admin",
+          "theme": "dark",
+          "viewport": { "height": 900, "width": 1440 }
+        }
+      ]
+    }
+  ],
+  "schemaVersion": 1,
+  "screenshots": [
+    {
+      "path": "_docs/_workflows/_smoke/evidence/task-517/wf579-517smoke/01-anon-public-cached-render.png",
+      "sha256": "00d7a1a20b9f77aedcb18a50dbfa8f48912a1597fb618b7d1fd3ec241c09beda"
+    },
+    {
+      "path": "_docs/_workflows/_smoke/evidence/task-517/wf579-517smoke/02-private-anon-uniform-404.png",
+      "sha256": "5cdee2b7ddd072d93ef15830da2cc235dcc78ca3b8a0b6bf1ce08faec40d7bb7"
+    },
+    {
+      "path": "_docs/_workflows/_smoke/evidence/task-517/wf579-517smoke/03-password-unlock-cycle.png",
+      "sha256": "df1e95824ae64473a549bbd29999064e1958046aaeb3c8b08d8bf11566695a5e"
+    },
+    {
+      "path": "_docs/_workflows/_smoke/evidence/task-517/wf579-517smoke/04-cross-entry-unlock-isolation.png",
+      "sha256": "9b7abd83e6654e6eb556361fcb6ddb9e80b9b087853e104afe8d8e2661a82142"
+    },
+    {
+      "path": "_docs/_workflows/_smoke/evidence/task-517/wf579-517smoke/05-no-shared-cache-leak.png",
+      "sha256": "df1e95824ae64473a549bbd29999064e1958046aaeb3c8b08d8bf11566695a5e"
+    },
+    {
+      "path": "_docs/_workflows/_smoke/evidence/task-517/wf579-517smoke/06-publish-front-admin-parity.png",
+      "sha256": "c50b14af243a90d587c348b215d4e868f89634aa7105c26d794d87337e566365"
+    }
+  ],
+  "serverUp": true,
+  "session": "wf579-517smoke",
+  "snapshots": 2,
+  "suiteCleanup": {
+    "accessLogsRemoved": 16,
+    "contentTypesRemoved": 1,
+    "databaseBatches": 4,
+    "entriesRemoved": 4,
+    "fixturesAbsent": true,
+    "identitiesAbsent": true,
+    "loginAuditRowsRemoved": 3,
+    "pageErrors": 0,
+    "repositorySnapshots": 2,
+    "rolesRemoved": 1,
+    "rows": 16,
+    "sessionsRemoved": 3,
+    "settingsRestored": true,
+    "statements": 13,
+    "userRolesRemoved": 1,
+    "usersRemoved": 1,
+    "workerRequests": 4,
+    "workerStarts": 1
+  },
+  "suiteId": "task-517",
+  "timings": [
+    { "count": 1, "elapsedMs": 1, "failed": 0, "kind": "cleanup", "name": "all" },
+    { "count": 1, "elapsedMs": 382, "failed": 0, "kind": "snapshot", "name": "task517-after" },
+    { "count": 1, "elapsedMs": 286, "failed": 0, "kind": "snapshot", "name": "task517-before" },
+    { "count": 1, "elapsedMs": 60304, "failed": 0, "kind": "suite", "name": "task-517" }
+  ]
+}
