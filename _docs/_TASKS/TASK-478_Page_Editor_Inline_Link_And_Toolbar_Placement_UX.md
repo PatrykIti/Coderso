@@ -5,7 +5,7 @@
 **Category:** Pages / Page Editor V2 / Canvas
 **Estimated Effort:** Medium
 **Dependencies:** TASK-475/476/477 (inline mark toolbar)
-**Status:** ⏳ To Do
+**Status:** ✅ Done
 **Changelog:** 1307 (pinned; closure only)
 
 ---
@@ -35,9 +35,9 @@ live-verified on the Home hero (2026-06-27):
 
 | Child | Title | Status |
 |-------|-------|--------|
-| TASK-478-01 | Inline Link Visual Feedback | ⏳ To Do |
-| TASK-478-02 | Inline Link Edit, Remove, And Click-To-Select | ⏳ To Do |
-| TASK-478-03 | Dockable Inline Mark Toolbar (Top/Left/Right) | ⏳ To Do |
+| TASK-478-01 | Inline Link Visual Feedback | ✅ Done (changelog 1307) |
+| TASK-478-02 | Inline Link Edit, Remove, And Click-To-Select | ✅ Done (changelog 1307) |
+| TASK-478-03 | Dockable Inline Mark Toolbar (Top/Left/Right) | ✅ Done (changelog 1307) |
 
 ## Success criteria
 
@@ -46,16 +46,22 @@ live-verified on the Home hero (2026-06-27):
 - The author can move the mark toolbar off the top of the block so neither it nor
   the color picker covers the text.
 
-## Evidence (live, 2026-06-27)
+## Evidence (implemented, committed 205c66a5, verified 2026-08-18)
 
-- Link renders as `<a href rel="nofollow noreferrer">` with `class:(none)`,
-  `text-decoration:none`, base color — indistinguishable from plain text
-  (`pageRendererV2.tsx:780` `renderMarkedTextSegment` link branch has no class).
-- Toolbar buttons: bold, italic, color/highlight swatches, link — **no unlink**.
-  Link Apply is `disabled={!selectionRange || linkHref.trim().length === 0}`
-  (`PageAuthoringCanvas.tsx:569`); the URL field is not seeded from the selected
-  link's href.
-- Clicking a linked fragment on the canvas triggers navigation (beforeunload
-  confirm) instead of selecting it.
-- Toolbar is `absolute -top-9 left-0` above the text (`PageAuthoringCanvas.tsx`
-  `markToolbar`).
+Pre-implementation audit (2026-08-18, fresh context) confirmed the full feature
+set already exists in committed source with tagged tests; the family is closed
+as implemented via changelog 1307:
+
+- Linked runs render with `PAGE_TEXT_LINK_MARK_CLASS` (underline + link color
+  token `--coderso-link` + `data-page-text-mark="link"`) on both front and
+  canvas; canvas paints a non-navigating span (`data-page-editor-link-noop`)
+  while the front keeps a real `<a rel="nofollow noreferrer">`
+  (`core/services/pages/pageStaticBlockRenderers.tsx:337-402`).
+- The editor has explicit "Remove link" (`PageAuthoringCanvas.tsx:727-754`),
+  seeds the URL field from the selected link's href, applies over the range
+  without same-href toggle-only removal, and click-to-select a linked fragment
+  without navigation.
+- The mark toolbar docks Top → Right → Left with placement classes
+  (`PageAuthoringCanvas.tsx:237-246`) and keeps handlers working on every side.
+- Tests tagged TASK-478-02/03 cover unlink, seed, noop-click, and dock cycles:
+  `tests/vitest/ui/page-authoring-canvas.test.tsx` (7), `tests/vitest/pages/page-document-v2.test.ts` (3), `tests/vitest/pages/page-renderer-v2.test.tsx` (underline/class assertions). Verified 235/235 green on HEAD 31952b5f.

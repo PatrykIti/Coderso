@@ -6,7 +6,7 @@
 **Category:** Pages / Page Editor V2 / Canvas
 **Estimated Effort:** Small
 **Dependencies:** TASK-475 (mark toolbar)
-**Status:** ⏳ To Do
+**Status:** ✅ Done (2026-08-18)
 **Changelog:** 1307 (pinned; closure only)
 
 ---
@@ -19,11 +19,17 @@ spawns covers the text being edited. The owner wants to color/format a fragment
 while still seeing the text (the picker currently opens over the text because the
 toolbar is pinned just above it).
 
-## Current State (verified)
+## Implemented State (committed 205c66a5, verified 2026-08-18)
 
-- `core/admin/ui/pages/editor/PageAuthoringCanvas.tsx` `markToolbar` is
-  `className="absolute -top-9 left-0 ..."` — always pinned above the text. The
-  native color picker opens at the picker input's position, i.e. over the text.
+- `core/admin/ui/pages/editor/PageAuthoringCanvas.tsx` mark toolbar docks
+  Top → Right → Left via a single toggle (`:226-246`): placement classes
+  `top: "docked top"` / `right: "docked right"` / `left: "docked left"` with
+  absolute positioning beside the block; the owner-provided dock prop drives
+  placement when set, local state otherwise.
+- Docked left/right lay controls vertically and clamp near narrow columns;
+  selection-snapshot / blur-guard / picker-activation behavior is unchanged
+  (TASK-475/477); only the position changes, so the color picker no longer
+  covers the text.
 
 ## Implementation sketch
 

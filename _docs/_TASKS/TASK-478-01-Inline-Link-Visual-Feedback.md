@@ -6,7 +6,7 @@
 **Category:** Pages / Page Editor V2 / Canvas
 **Estimated Effort:** Small
 **Dependencies:** TASK-472-05 (link marks)
-**Status:** ⏳ To Do
+**Status:** ✅ Done (2026-08-18)
 **Changelog:** 1307 (pinned; closure only)
 
 ---
@@ -18,13 +18,14 @@ underline + link color — so the author can see a link exists. Today it renders
 a bare `<a>` with no class and resolves to plain body text (no underline, base
 color); it is indistinguishable from normal text.
 
-## Current State (verified live 2026-06-27)
+## Implemented State (committed 205c66a5, verified 2026-08-18)
 
-- `core/services/pages/pageRendererV2.tsx:778-784` `renderMarkedTextSegment` link
-  branch: `<a key href={link.href} rel="nofollow noreferrer">{node}</a>` — **no
-  `className`/style**. So both the front and the canvas paint the link without any
-  affordance. (Contrast: the separate button/cta anchor at `:1782` uses
-  `className="hover:underline"`.)
+- `core/services/pages/pageStaticBlockRenderers.tsx:337-338`
+  `PAGE_TEXT_LINK_MARK_CLASS = "underline underline-offset-2 text-[var(--coderso-link,#2563eb)] hover:opacity-80"`;
+  `renderMarkedTextSegment` applies it to the link branch (front `<a>` and
+  canvas non-navigating span) at `:386-402` with `data-page-text-mark="link"`.
+- No schema/sanitizer change needed: the class is renderer-applied, not stored in
+  the mark.
 
 ## Implementation sketch
 

@@ -6,7 +6,7 @@
 **Category:** Pages / Page Editor V2 / Canvas
 **Estimated Effort:** Medium
 **Dependencies:** TASK-478-01, TASK-476-01 (mark replace/toggle)
-**Status:** ⏳ To Do
+**Status:** ✅ Done (2026-08-18)
 **Changelog:** 1307 (pinned; closure only)
 
 ---
@@ -18,23 +18,20 @@ hijacking selection in the editor. Today there is no unlink control, the URL fie
 cannot clear a link, it does not load an existing link's href, and clicking a
 linked fragment on the canvas navigates (beforeunload) instead of selecting it.
 
-## Current State (verified live 2026-06-27)
+## Implemented State (committed 205c66a5, verified 2026-08-18)
 
-- `core/admin/ui/pages/editor/PageAuthoringCanvas.tsx`: the mark toolbar has bold,
-  italic, color/highlight swatches, and a single **"Apply link"** button
-  (`data-page-editor-text-mark-button="link"`, `:566-572`) with a URL `<input>`
-  (`:557-565`). The Apply button is `disabled={!selectionRange ||
-  linkHref.trim().length === 0}` — so an empty URL cannot be applied to clear a
-  link, and there is **no remove/unlink button**.
-- The URL `<input value={linkHref}>` is driven by local `linkHref` state and is
-  **not seeded** from the selected fragment's existing href, so the author cannot
-  see/edit the current link.
-- Removal is technically possible only by re-typing the exact same href and
-  re-applying (value-aware toggle in `applyBlockTextMark`, TASK-476-01) — entirely
-  undiscoverable.
-- On the canvas the linked fragment is a live `<a href>`; clicking it **navigates**
-  (fires the beforeunload confirm) rather than placing the caret / selecting, so
-  the author cannot click-to-edit a link.
+- `core/admin/ui/pages/editor/PageAuthoringCanvas.tsx` has an explicit **"Remove
+  link"** control (`:727-754`, `aria-label="Remove link"`) enabled when the
+  selection overlaps a link mark; it drops only the `link` mark over the range
+  (`applyBlockTextMark` explicit-unlink path, TASK-478-02), preserving other marks.
+- The URL `<input value={linkHref}>` is seeded from the selected fragment's
+  existing href (`:679`, `activeLinkHref`), so the author can see/edit the current
+  link; clearing the field unlinks (Apply disabled only when both empty and no
+  active link, `:690`).
+- On the canvas a linked fragment is painted as a **non-navigating span**
+  (`data-page-editor-link-noop`, `pageStaticBlockRenderers.tsx:388-392`) so a
+  click places the caret / selects instead of opening the URL; the front keeps a
+  real navigable `<a>`.
 
 ## Implementation sketch
 
