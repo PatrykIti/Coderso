@@ -41,9 +41,9 @@ but does not touch the already oversized `postsService.ts` and does not add a
 Post mutation wrapper.
 ## Isolation and Collision Guard
 - Execute on the owner-authorized `feat/implementations` feature branch.
-  Changelog 1267 is reserved only for TASK-554. The pre-existing untracked
-  `_TMP-task-dispatch-plan-2026-08-10.md` is external owner state: record and
-  preserve it byte-for-byte; never stage, edit, or delete it.
+  Changelog 1267 is reserved only for TASK-554. The dispatch-plan file
+  `_TMP-task-dispatch-plan-2026-08-10.md` was external owner state during
+  execution and was removed by the owner on 2026-08-18 (superseded plan).
 - Forbidden concurrent-stream paths are `_docs/_TASKS/TASK-414*.md`,
   `_docs/_TASKS/TASK-547*.md`, `_docs/_CHANGELOG/1266-*`,
   `core/services/kits/fullSitePackage/**`, and
@@ -192,8 +192,8 @@ the task/baseline/HEAD, the ordered exact lens identities
 SHA-256 of the whole-repository fingerprint *excluding that receipt itself*.
 The implementation start gate accepts it only as a regular non-symlink file
 whose exact fingerprint/HEAD still match. Before its first dispatch it also
-rejects staging and every normal dirty path except the declared owner state
-`_TMP-task-dispatch-plan-2026-08-10.md` and TASK-554's task file/board row.
+rejects staging and every normal dirty path except TASK-554's task file/board
+row. The dispatch-plan owner-state file was removed by the owner on 2026-08-18.
 Stable pre-existing ignored workflow artifacts are bound by the receipt
 fingerprint rather than misclassified as new dirt. The receipt/fingerprint is
 an implementation-integrity guardrail, never independent closure authority; the
