@@ -101,16 +101,26 @@ const createScreenRecord = (): CustomScreenRecord => ({
   },
   blocks: [],
   bindings: [],
+  revision: 1,
   createdAt: "2026-05-02T00:00:00.000Z",
   updatedAt: "2026-05-02T00:00:00.000Z",
 });
 
 let currentScreenRecord = createScreenRecord();
 
-const updateCustomScreen = vi.fn(
-  async (_id: string, payload: Record<string, unknown>) =>
-    ({ ...currentScreenRecord, ...payload }) as CustomScreenRecord
-);
+const updateCustomScreen = vi.fn(async (_id: string, payload: Record<string, unknown>) => {
+  const { expectedRevision: _expectedRevision, ...rest } = payload;
+  return {
+    ...currentScreenRecord,
+    ...rest,
+    definition:
+      (payload.definition as CustomScreenRecord["definition"] | undefined) ??
+      currentScreenRecord.definition,
+    sidebarLabel: (payload.sidebarLabel as string | null | undefined) ?? null,
+    // TASK-569: the server increments the revision on every definition save.
+    revision: (currentScreenRecord.revision ?? 0) + 1,
+  } as CustomScreenRecord;
+});
 
 vi.mock("@/services/customScreensClient", () => ({
   createCustomScreen: vi.fn(),

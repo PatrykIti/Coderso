@@ -515,3 +515,71 @@ describe("CustomScreenEditorPage route, draft, hydration, and save authority", (
     }
   });
 });
+
+// TASK-569 — optimistic-concurrency revision precondition on definition saves.
+test("a definition save sends the loaded revision and a real 409 keeps the local draft", async () => {
+  const screenId = "revision-save-screen";
+  const baseline = makeMountedScreen(screenId, `Revision baseline`);
+  cachedScreens.set(screenId, baseline);
+  remoteScreens.set(screenId, baseline);
+  const pendingUpdate = deferred<CustomScreenRecord>();
+  queueScreenUpdate(pendingUpdate);
+  const view = mountEditor(`/admin/advanced/custom-screens/${screenId}`);
+
+  try {
+    await flushMountedEditor();
+    await editScreenName(view.container, `Revision draft`);
+    saveScreen(view.container);
+    await flushMountedEditor();
+
+    const payload = updateSpy.mock.calls.at(-1)?.[1];
+    expect(payload?.expectedRevision).toBe(1);
+    expect(payload?.definition).toBeDefined();
+
+    await rejectDeferred(
+      pendingUpdate,
+      new ApiClientError("custom_screen_conflict", "Concurrent Screen save rejected", 409)
+    );
+    expect(getScreenNameInput(view.container)?.value).toBe(`Revision draft`);
+    expect(view.container.textContent).toContain("Unsaved changes");
+    expect(getAlertDescription(view.container, "Custom screen error")).toBe(
+      "Concurrent Screen save rejected"
+    );
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("a stale browser-cache record without a revision revalidates before a definition save", async () => {
+  const screenId = "stale-revision-screen";
+  const { revision: _revision, ...staleBaseline } = makeMountedScreen(
+    screenId,
+    "Stale cached Screen"
+  );
+  cachedScreens.set(screenId, staleBaseline);
+  // The record predates revision tracking on both the browser cache and the
+  // server, so the editor cannot produce an expectedRevision and must revalidate
+  // instead of sending a doomed definition save.
+  remoteScreens.set(screenId, staleBaseline);
+  const view = mountEditor(`/admin/advanced/custom-screens/${screenId}`);
+
+  try {
+    await flushMountedEditor();
+    await editScreenName(view.container, `Draft on stale cache`);
+    const updatesBefore = updateSpy.mock.calls.length;
+    const loadsBefore = loadSpy.mock.calls.length;
+
+    saveScreen(view.container);
+    await flushMountedEditor();
+
+    // No PATCH was attempted; the editor revalidated the stale record instead.
+    expect(updateSpy).toHaveBeenCalledTimes(updatesBefore);
+    expect(loadSpy).toHaveBeenCalledTimes(loadsBefore + 1);
+    expect(loadSpy).toHaveBeenLastCalledWith(screenId, { force: true });
+    expect(getScreenNameInput(view.container)?.value).toBe(`Draft on stale cache`);
+    expect(view.container.textContent).toContain("Unsaved changes");
+    expect(view.container.textContent).toContain("Newer changes are available");
+  } finally {
+    view.cleanup();
+  }
+});

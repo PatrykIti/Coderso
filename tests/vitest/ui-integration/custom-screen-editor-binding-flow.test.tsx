@@ -300,6 +300,7 @@ const createEditorScreen = (): CustomScreenRecord => ({
   },
   blocks: [],
   bindings: [],
+  revision: 1,
   createdAt: "2026-07-14T00:00:00.000Z",
   updatedAt: "2026-07-14T00:00:00.000Z",
 });
@@ -397,11 +398,14 @@ describe("CustomScreenEditorPage Button href binding flow", () => {
     updateSpy = vi
       .spyOn(customScreensClient, "updateCustomScreen")
       .mockImplementation(async (_id, payload) => {
+        const { expectedRevision: _expectedRevision, ...rest } = payload;
         screen = {
           ...screen,
-          ...payload,
+          ...rest,
           definition: payload.definition ?? screen.definition,
           sidebarLabel: payload.sidebarLabel ?? null,
+          // TASK-569: the server increments the revision on every definition save.
+          revision: (screen.revision ?? 0) + 1,
           updatedAt: "2026-07-14T01:00:00.000Z",
         };
         return screen;

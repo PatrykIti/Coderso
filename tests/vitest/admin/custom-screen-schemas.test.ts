@@ -129,6 +129,36 @@ test("customScreenUpdateSchema requires at least one property", () => {
   expect(() => validate(customScreenUpdateSchema, {})).toThrow("Invalid payload");
 });
 
+test("customScreenUpdateSchema accepts expectedRevision on the reject-unknown allowlist (TASK-569)", () => {
+  expect(() =>
+    validate(customScreenUpdateSchema, { status: "active", expectedRevision: 1 })
+  ).not.toThrow();
+  expect(() =>
+    validate(customScreenUpdateSchema, { name: "Catalog", expectedRevision: 42 })
+  ).not.toThrow();
+  // The allowlist stays strict: non-integer, zero, and unknown keys still reject.
+  expect(() => validate(customScreenUpdateSchema, { expectedRevision: 0 })).toThrow(
+    "Invalid payload"
+  );
+  expect(() => validate(customScreenUpdateSchema, { expectedRevision: 1.5 })).toThrow(
+    "Invalid payload"
+  );
+  expect(() => validate(customScreenUpdateSchema, { expectedRevision: "1" })).toThrow(
+    "Invalid payload"
+  );
+  expect(() => validate(customScreenUpdateSchema, { expectedUpdatedAt: 1 })).toThrow(
+    "Invalid payload"
+  );
+  // The create schema never exposes the precondition key.
+  expect(() =>
+    validate(customScreenCreateSchema, {
+      name: "Catalog",
+      contentTypeId: "type-1",
+      expectedRevision: 1,
+    })
+  ).toThrow("Invalid payload");
+});
+
 test("custom screen schemas accept nullable sidebarLabel", () => {
   expect(() =>
     validate(customScreenCreateSchema, {

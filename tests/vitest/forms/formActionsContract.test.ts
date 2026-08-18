@@ -114,3 +114,67 @@ test("normalizeFormActionsForWrite sorts, reindexes, and round-trips canonically
   ]);
   expect(normalizeFormActionsForWrite(normalized)).toEqual(normalized);
 });
+
+test("normalizeFormActionsInput rejects non-https webhook URLs at config time", () => {
+  expect(() =>
+    normalizeFormActionsInput([
+      {
+        type: "webhook",
+        config: { url: "http://example.com/hook" },
+      },
+    ])
+  ).toThrow("form_action_invalid_config");
+});
+
+test("normalizeFormActionsInput rejects private/mapped webhook URLs at config time", () => {
+  for (const url of [
+    "https://10.0.0.5/hook",
+    "https://169.254.169.254/hook",
+    "https://[::ffff:127.0.0.1]/hook",
+    "https://[64:ff9b::7f00:1]/hook",
+  ]) {
+    expect(() =>
+      normalizeFormActionsInput([
+        {
+          type: "webhook",
+          config: { url },
+        },
+      ])
+    ).toThrow("form_action_invalid_config");
+  }
+});
+
+test("normalizeFormActionsInput accepts templated https webhook URLs", () => {
+  const actions = normalizeFormActionsInput([
+    {
+      type: "webhook",
+      config: { url: "https://example.com/hook/{{submission.id}}" },
+    },
+  ]);
+  expect(actions[0]?.type).toBe("webhook");
+  expect((actions[0]?.config as { url: string }).url).toBe(
+    "https://example.com/hook/{{submission.id}}"
+  );
+});
+
+test("normalizeFormActionsInput rejects a templated http:// prefix at config time", () => {
+  expect(() =>
+    normalizeFormActionsInput([
+      {
+        type: "webhook",
+        config: { url: "http://example.com/hook/{{submission.id}}" },
+      },
+    ])
+  ).toThrow("form_action_invalid_config");
+});
+
+test("normalizeFormActionsInput rejects a templated URL with a blocked static host", () => {
+  expect(() =>
+    normalizeFormActionsInput([
+      {
+        type: "webhook",
+        config: { url: "https://169.254.169.254/hook/{{submission.id}}" },
+      },
+    ])
+  ).toThrow("form_action_invalid_config");
+});

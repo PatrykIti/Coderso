@@ -11,7 +11,7 @@ import { TASK554_SCENARIO_IDS } from "./browser-actions";
 const PNG_SIGNATURE = Buffer.from("89504e470d0a1a0a", "hex");
 const MAX_PNG_BYTES = 16 * 1024 * 1024;
 const SHA256 = /^[a-f0-9]{64}$/u;
-export const EVIDENCE_ROOT = "_docs/_workflows/_smoke/task-554";
+export const EVIDENCE_ROOT = "_docs/_workflows/_smoke/evidence/task-554";
 const REPORT_FILE = "report.json";
 
 export interface Task554ScreenshotManifestEntry {
@@ -300,7 +300,9 @@ export async function validateTask554ScreenshotOutputs(
   if (
     JSON.stringify([...names].sort()) !== JSON.stringify([...expectedNames, REPORT_FILE].sort())
   ) {
-    console.error(`[DIAG] screenshot set mismatch actual=${JSON.stringify([...names].sort())} expected=${JSON.stringify([...expectedNames, REPORT_FILE].sort())}`);
+    console.error(
+      `[DIAG] screenshot set mismatch actual=${JSON.stringify([...names].sort())} expected=${JSON.stringify([...expectedNames, REPORT_FILE].sort())}`
+    );
     invalid("TASK-554 screenshot evidence set is invalid");
   }
   await assertPrivateReportFile(directory);

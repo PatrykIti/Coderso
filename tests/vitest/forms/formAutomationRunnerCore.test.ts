@@ -321,6 +321,83 @@ test("runFormAutomationCore stops when action fails and continueOnError is false
   expect(result.runs[0]?.status).toBe("failed");
 });
 
+test("webhook action fails closed on a blocked delivery URL without fetching", async () => {
+  const logs: CreateFormActionRunInput[] = [];
+  const fetchFn = vi.fn(async () => new Response("ok", { status: 200 }));
+
+  const result = await runFormAutomationCore(
+    {
+      formId: "form-1",
+      submissionId: "submission-1",
+      submissionPayload: {},
+    },
+    createCoreDeps({
+      listActions: async () => [
+        createAction({
+          id: "webhook",
+          type: "webhook",
+          config: {
+            url: "https://169.254.169.254/hook",
+            method: "POST",
+            headers: {},
+            includeSubmission: true,
+            timeoutMs: 1000,
+          },
+        }),
+      ],
+      resolveNextAttempt: async () => 1,
+      createRun: async (input) => {
+        logs.push(input);
+        return createRunRecord(input, logs.length - 1);
+      },
+      fetchFn,
+    })
+  );
+
+  expect(result.runs).toHaveLength(1);
+  expect(result.runs[0]?.status).toBe("failed");
+  expect(result.runs[0]?.errorCode).toBe("form_action_webhook_url_invalid");
+  expect(fetchFn).not.toHaveBeenCalled();
+});
+
+test("webhook action fails closed when a templated URL renders to a blocked host", async () => {
+  const logs: CreateFormActionRunInput[] = [];
+  const fetchFn = vi.fn(async () => new Response("ok", { status: 200 }));
+
+  const result = await runFormAutomationCore(
+    {
+      formId: "form-1",
+      submissionId: "submission-1",
+      submissionPayload: { host: "169.254.169.254" },
+    },
+    createCoreDeps({
+      listActions: async () => [
+        createAction({
+          id: "webhook",
+          type: "webhook",
+          config: {
+            url: "https://{{submission.host}}/hook",
+            method: "POST",
+            headers: {},
+            includeSubmission: true,
+            timeoutMs: 1000,
+          },
+        }),
+      ],
+      resolveNextAttempt: async () => 1,
+      createRun: async (input) => {
+        logs.push(input);
+        return createRunRecord(input, logs.length - 1);
+      },
+      fetchFn,
+    })
+  );
+
+  expect(result.runs[0]?.status).toBe("failed");
+  expect(result.runs[0]?.errorCode).toBe("form_action_webhook_url_invalid");
+  expect(fetchFn).not.toHaveBeenCalled();
+});
+
 test("runFormAutomationCore retries failed action when retry policy is enabled", async () => {
   const logs: CreateFormActionRunInput[] = [];
   const sleep = vi.fn(async () => undefined);

@@ -105,6 +105,10 @@ const proof: Task554ProofOutput = {
 test("TASK-554 adapter registers only the two exact profiles and rejects invocation drift", () => {
   expect(adapter.suiteId).toBe("task-554");
   expect(adapter.supportedProfiles).toEqual(["fast", "certification"]);
+  const root = join(import.meta.dir, "../../..");
+  expect(adapter.evidenceDirectory?.(input, root)).toBe(
+    join(root, "_docs/_workflows/_smoke/evidence/task-554/task-554-fast")
+  );
   expect(() => assertExactTask554Invocation(input)).not.toThrow();
   for (const candidate of [
     { ...input, suite: "task-547" },
@@ -243,7 +247,7 @@ test("TASK-554 projects seven terminal scenarios and fixed cleanup receipts with
       elapsedMs: index + 1,
     })),
     screenshots: Array.from({ length: 7 }, (_value, index) => ({
-      path: `_docs/_workflows/_smoke/task-554/task-554-fast/${index + 1}.png`,
+      path: `_docs/_workflows/_smoke/evidence/task-554/task-554-fast/${index + 1}.png`,
       sha256: hash,
     })),
     cleanup,
@@ -400,7 +404,7 @@ test("TASK-554 manifest binds profile and session to seven ordered PNG paths", (
     "publisher-archive",
   ]);
   expect(manifest.paths[0]).toBe(
-    "_docs/_workflows/_smoke/task-554/task-554-fast/01-writer-metadata-save-preserves-schedule.png"
+    "_docs/_workflows/_smoke/evidence/task-554/task-554-fast/01-writer-metadata-save-preserves-schedule.png"
   );
   expect(() =>
     assertExactTask554ScreenshotManifest(
@@ -428,7 +432,7 @@ test("TASK-554 PNG decoder rejects truncated, invalid-CRC, and malformed chunks"
 test("TASK-554 evidence accepts equal hashes at distinct files and rejects extra or symlinked files", async () => {
   const root = await mkdtemp(join(tmpdir(), "task554-evidence-"));
   const manifest = buildExactTask554ScreenshotManifest(input);
-  const directory = join(root, "_docs/_workflows/_smoke/task-554/task-554-fast");
+  const directory = join(root, "_docs/_workflows/_smoke/evidence/task-554/task-554-fast");
   try {
     await mkdir(directory, { recursive: true });
     const bytes = png();

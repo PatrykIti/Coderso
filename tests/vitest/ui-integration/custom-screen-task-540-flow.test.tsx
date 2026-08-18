@@ -139,6 +139,7 @@ const makeScreenRecord = (definition = makeButtonDefinition()): ScreenRecordWith
   definition,
   blocks: getCustomScreenEditorViewBlocks(definition),
   bindings: getCustomScreenEditorViewBindings(definition),
+  revision: 1,
   createdAt: "2026-07-14T00:00:00.000Z",
   updatedAt: "2026-07-14T00:00:00.000Z",
 });
@@ -406,6 +407,8 @@ beforeEach(() => {
       definition,
       blocks: getCustomScreenEditorViewBlocks(definition),
       bindings: getCustomScreenEditorViewBindings(definition),
+      // TASK-569: the server increments the revision on every definition save.
+      revision: (currentScreen.revision ?? 0) + 1,
       updatedAt: "2026-07-14T01:00:00.000Z",
     };
     return currentScreen;
@@ -663,14 +666,13 @@ describe("TASK-540 aggregate builder, persistence, and entry seams", () => {
           ...reopened.editorView.document,
           sections: reopened.editorView.document.sections.map((section) => ({
             ...section,
-            blocks: section.blocks.map(
-              (block): ScreenBlockV1 =>
-                block.id === "button-tabs"
-                  ? {
-                      ...block,
-                      data: { ...block.data, action: "custom", href: "/legacy-target" },
-                    }
-                  : block
+            blocks: section.blocks.map((block): ScreenBlockV1 =>
+              block.id === "button-tabs"
+                ? {
+                    ...block,
+                    data: { ...block.data, action: "custom", href: "/legacy-target" },
+                  }
+                : block
             ),
           })),
         },
