@@ -1,4 +1,6 @@
 {
+  "schemaVersion": 1,
+  "pass": true,
   "session": "wf574smoke",
   "serverUp": true,
   "consoleErrors": [],
