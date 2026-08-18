@@ -65,7 +65,7 @@ L02 is already terminal and cannot be revived under this backlog contract.
 
 | ID | Title | Status |
 |---|---|---|
-| TASK-9999-01-L01 | Decouple actor and media UUID domain naming without behavior change | ⏳ To Do |
+| TASK-9999-01-L01 | Decouple actor and media UUID domain naming without behavior change | ✅ Done (2026-08-18, changelog 1302) |
 | TASK-9999-01-L02 | Historical unread-state cleanup; superseded by active focus-preserving repair | ⏭️ Superseded |
 
 ## Implementation Order

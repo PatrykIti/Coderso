@@ -493,4 +493,4 @@ declarations, passed isolated 19/15/8 plus Media 23 and combined 65/65, finished
 owner below 1,000 lines, and passed fresh zero-finding code audits. Two later authorized
 JSON-boundary regressions raise the retained/current family to 21 and 44, and the current
 combined Entries/Media gate to 67, without changing the original split provenance. Its exact modularity
-receipt is current; family post-audit, smoke, and closure remain pending.
+receipt is historical; family post-audit, smoke, and closure were completed by 2026-08-06.

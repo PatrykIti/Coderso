@@ -1,7 +1,7 @@
 # TASK-9999-02-L01: Sync Closed-Family Subtask Tables
 
 **Status:** ✅ Done
-**Started:**
+**Started:** 2026-08-17
 **Completed:** 2026-08-18
 **Changelog:** 1303 (pinned)
 

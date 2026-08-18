@@ -140,8 +140,8 @@ evidence is historical. L03 now carries canonical `Implementation Complete` plus
 current exact generation/token receipt, no active `Repair Pending` remains, and all twelve
 implementation leaves are landed. The exact R01 → R03 → L03 → L04 → L01 re-gates also
 remain recorded as historical dependency evidence.
-TASK-540-06-L01 remains active; fresh post-audit, full
-validation, live smoke, family changelog 1252, and closure remain pending.
+TASK-540-06-L01 closed via family changelog 1252; fresh post-audit, full
+validation, live smoke, and closure were completed by 2026-08-06 (historical).
 
 ## Historical pre-implementation grounded anchors
 

@@ -1,7 +1,7 @@
 # TASK-9999-02-L04: Reconcile TASK-547 Closure Notes
 
 **Status:** ✅ Done
-**Started:**
+**Started:** 2026-08-17
 **Completed:** 2026-08-18
 **Changelog:** 1306 (pinned)
 

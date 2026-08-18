@@ -1,7 +1,7 @@
 # TASK-9999-02-L03: Relabel Stale TASK-559 Acceptance Benchmark
 
 **Status:** ✅ Done
-**Started:**
+**Started:** 2026-08-17
 **Completed:** 2026-08-18
 **Changelog:** 1305 (pinned)
 

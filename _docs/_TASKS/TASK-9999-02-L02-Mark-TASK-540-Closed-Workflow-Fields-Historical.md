@@ -1,7 +1,7 @@
 # TASK-9999-02-L02: Mark TASK-540 Closed Workflow Fields Historical
 
 **Status:** ✅ Done
-**Started:**
+**Started:** 2026-08-17
 **Completed:** 2026-08-18
 **Changelog:** 1304 (pinned)
 

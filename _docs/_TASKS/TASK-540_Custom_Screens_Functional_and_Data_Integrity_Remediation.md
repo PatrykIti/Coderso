@@ -34,11 +34,11 @@ simple browser invocation owner; a further 111 commits ran from `8259a326` to
 executor self-test body out of the facade entirely. Re-measured with `wc -l` at HEAD `a68a19e0` on 2026-07-27: the executor facade
 is **976 lines**, `task-540-smoke-contract.mjs` 13, `task-540-smoke-host.mjs` 84, and
 the largest of the 162 child modules under `_docs/_workflows/task-540-smoke/**` is 964,
-with none above the limit. The remaining order therefore begins with a fresh family-wide
-five-lens post-audit, then continues through full validation -> helper restart plus one canonical seven-flow
+with none above the limit. The then-remaining order began with a fresh family-wide
+five-lens post-audit, then continued through full validation -> helper restart plus one canonical seven-flow
 Playwright CLI smoke with 13/13 screenshots and deterministic cleanup -> smoke-evidence
 audit -> changelog/status closure -> final closure checks -> integration into
-`feat/implementations`.
+`feat/implementations`. All steps completed by 2026-08-06 (historical).
 **Historical Codex Collaboration Directive:** 2026-07-24 — Codex agents are the only
 reviewers/implementers used for remaining work. The tracked Codex bridge and local
 orchestrator are landed; Claude invocation and fallback are absent from the current
@@ -93,8 +93,8 @@ bridge/local-host/schema/CAS-ACK/recovery/prompt/test implementation lands, rece
 final repins, and passes the combined targeted gate, one continuous canonical
 `task-540-local-orchestrator.mjs --run` process must retain every repository snapshot,
 exact rollback, validation command, server, Playwright, fixture, evidence, and exact-one
-smoke authority. Until then, `--run` must fail closed or remain withheld before agent
-dispatch. The coordinating external root launches exactly one outer
+smoke authority. Until then, `--run` had to fail closed or remain withheld before agent
+dispatch (historical constraint, satisfied by the completed family run). The coordinating external root launches exactly one outer
 `node _docs/_workflows/task-540-local-orchestrator.mjs --run` child from the verified
 root with `shell:false`, `detached:false`, and private non-TTY pipe stdin/stdout. It
 never launches a request/recovery bridge child. The landed host may delegate only
@@ -331,8 +331,7 @@ module-pack entry, or any non-Dashboard widget authoring surface.
 
 ## Accepted non-blocking LOW follow-ups
 
-Exactly one evidence-backed, currently behavior-neutral LOW finding remains deferred
-under the permanent TASK-9999 eligibility contract:
+The naming-only deferred LOW closed 2026-08-18 (changelog 1302):
 
 - TASK-9999-01-L01 at
   `_docs/_TASKS/TASK-9999-01-L01-Decouple-Actor-And-Media-Uuid-Domain-Naming.md`.
@@ -342,9 +341,12 @@ under the permanent TASK-9999 eligibility contract:
   not to an exact file length; the retired pre-split location in
   `customScreenSchemas.ts` cannot satisfy final closure.
   TASK-9999-01-L01 approved rationale: the shared UUID predicate already accepts and rejects the intended actor/media UUID grammar and preserves exact input bytes; deferral changes no UI/UX/accessibility, data, security/privacy/auth/RBAC, API, persistence/migration, performance/reliability, or test-integrity behavior.
+  Implementation: neutral `isScreenUuid` + delegating `isScreenMediaAssetUuid`,
+  actor/`updatedBy` routed through the neutral predicate, byte-identical acceptance,
+  2 parity tests. Status: `✅ Done` (2026-08-18).
 TASK-9999-01-L02 was re-triaged on 2026-07-18 and is `⏭️ Superseded` by active `TASK-540-02-L01`; removing `baseLabel` would regress focus-preserving stale-draft invalidation, so it is not eligible for TASK-9999 deferral.
 
-TASK-9999-01-L01 is the only TASK-540 deferred finding. HIGH/MEDIUM findings and every LOW with
+TASK-540 has no remaining deferred findings. HIGH/MEDIUM findings and every LOW with
 user-visible, accessibility, data, security, privacy, auth/RBAC, API, persistence,
 migration, performance, reliability, or test-integrity impact remain blocking.
 No newly reported LOW, newly created follow-up, or alternate TASK-9999 leaf may be
