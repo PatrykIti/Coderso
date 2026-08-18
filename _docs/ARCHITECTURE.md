@@ -1375,15 +1375,31 @@ scripts, modulepreloads i rekurencyjne statyczne importy JS, zapisuje
 
 - JavaScript chunk count `>= 2`;
 - entry gzip `<= 160,000 B`;
-- initial static graph gzip `<= 500,000 B`.
+- initial static graph gzip `<= 500,000 B`;
+- TASK-467 widget editor split: kazdy dynamiczny chunk JS `>= 500 kB` raw
+  fail-closed, chyba ze jawnie udokumentowany nie-TASK-467 owner z follow-up;
+  admin widget registry nie moze importowac barrela `./editors`; istnienie
+  konkretnych lazy editor chunkow jest dowodem splitu.
+
+Ogolna regula lazy edytorow admina (TASK-467): duze edytory widgetow nie wchodza
+do initial static graph ani do wspolnego barrela. `WidgetDefinition.editor`
+akceptuje eager `ComponentType` albo `React.lazy`; admin registry laduje
+per-module loadery, a powierzchnie builderow renderuja edytory przez
+`WidgetEditorOutlet` (lokalny `Suspense` fallback, bledny stan bez mutacji
+bloku, retry przebudowujacy loader). `check:admin-boundary` traktuje
+`typeof import(...)` jako query typow (zero bajtow runtime) i dopuszcza jeden
+udokumentowany dynamiczny `node:` import w `outboundHttpPolicy.ts`, ktorego
+guard jest build-time usuwany z bundla przegladarkowego.
 
 Pomiar TASK-399 z 2026-06-04: poprzedni admin bundle mial jeden JS chunk
 `4,369.13 kB` raw / `1,036.45 kB` gzip. Po route-level split build emituje
 `160` JS chunks, entry gzip `94,947 B`, a initial static graph gzip
-`400,812 B`. Vite nadal ostrzega o duzych raw chunkach wspoldzielonych
-(`registry`, assistant/runtime); to jest follow-up dla dalszego chunk groupingu
-lub intra-page editor splittingu, nie powod do podnoszenia
-`chunkSizeWarningLimit`.
+`400,812 B`. TASK-467 z 2026-08-18 kontynuowal split intra-page edytorow:
+`AdminShell` spadl z `1,267.8 kB` raw na `402.6 kB` raw (65 initial static /
+344 dynamic chunks; 38 konkretnych lazy editor chunkow; 0 dynamicznych
+chunkow `>= 500 kB` raw). Nie podnosimy `chunkSizeWarningLimit` dla duzych
+chunkow; kazdy taki chunk wymaga dalszego splitu lub udokumentowanego
+follow-upu.
 
 ---
 

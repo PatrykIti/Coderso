@@ -2,6 +2,8 @@ import path from "node:path";
 
 import {
   assertAdminBundleBudget,
+  assertAdminBundleSplitEvidence,
+  collectWidgetRegistryEvidence,
   formatBytes,
   readAdminBundleReport,
   writeAdminBundleReport,
@@ -61,6 +63,29 @@ const printReport = (reportPath: string, report: ReturnType<typeof readAdminBund
   process.stdout.write(`Report: ${path.relative(repoRoot, reportPath)}\n\n`);
 };
 
+const printSplitEvidence = (evidence: ReturnType<typeof collectWidgetRegistryEvidence>) => {
+  process.stdout.write("TASK-467 widget editor registry split evidence\n");
+  process.stdout.write(
+    `Registry editor barrel imports: ${evidence.registryImportsEditorBarrel ? "FAIL" : "none"}\n`
+  );
+  process.stdout.write(
+    `Widget editor chunks: ${evidence.widgetEditorChunks.length} ` +
+      `(${evidence.widgetEditorChunks
+        .slice(0, 6)
+        .map((chunk) => chunk.file.split("/").at(-1))
+        .join(", ")}${evidence.widgetEditorChunks.length > 6 ? ", …" : ""})\n`
+  );
+  process.stdout.write(
+    `Dynamic chunks >= ${formatBytes(500_000)} raw: ${evidence.dynamicOverBudgetChunks.length}\n`
+  );
+  process.stdout.write(
+    `TASK-467-owned over budget: ${evidence.task467OwnedOverBudgetChunks.length}\n`
+  );
+  process.stdout.write(
+    `Invalid dynamic allowlist entries: ${evidence.invalidDynamicBudgetAllowlistChunks.length}\n\n`
+  );
+};
+
 try {
   const args = parseArgs(Bun.argv.slice(2));
   const report = readAdminBundleReport({
@@ -68,8 +93,11 @@ try {
     repoRoot,
   });
   assertAdminBundleBudget(report);
+  const evidence = collectWidgetRegistryEvidence(report);
+  assertAdminBundleSplitEvidence(evidence);
   writeAdminBundleReport(args.reportPath, report);
   printReport(args.reportPath, report);
+  printSplitEvidence(evidence);
 } catch (error) {
   const message = error instanceof Error ? error.message : "admin_bundle_check_failed";
   process.stderr.write(`Admin bundle check failed: ${message}\n`);

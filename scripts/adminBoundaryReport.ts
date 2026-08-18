@@ -114,6 +114,32 @@ const defaultForbiddenPackageRules: AdminBoundaryForbiddenPackageRule[] = [
   { label: "Drizzle ORM runtime", specifier: "drizzle-orm" },
 ];
 
+export type AdminBoundaryDynamicNodeExemption = {
+  moduleRepoPath: string;
+  reason: string;
+  owner: string;
+  followUp: string;
+};
+
+/**
+ * Narrow, documented exemptions for DYNAMIC `node:` imports only. A module
+ * listed here may keep a guarded lazy `import("node:...")` when the browser
+ * build provably eliminates it (dead-code-eliminated server-transport branch).
+ * Static `node:` imports in any module and dynamic `node:` imports in any
+ * non-listed module still hard-fail. Every entry must name an owner and a
+ * follow-up task that re-verifies the exemption when the boundary contract
+ * changes (see _docs/SECURITY_SPEC.md scanner-config recording rules).
+ */
+export const adminBoundaryDynamicNodeExemptions: AdminBoundaryDynamicNodeExemption[] = [
+  {
+    moduleRepoPath: "core/services/network/outboundHttpPolicy.ts",
+    reason:
+      "Guarded lazy node:dns/promises resolver (TASK-567) reachable only from server delivery transports. The admin browser build dead-code-eliminates the resolver branch: verified zero `node:dns` bytes across all chunks after `bun --cwd core build:admin` (TASK-467-03-L04 evidence).",
+    owner: "TASK-567 (outbound egress policy)",
+    followUp: "TASK-467-03-L04-L01",
+  },
+];
+
 const normalizeRepoPath = (repoRoot: string, absolutePath: string) =>
   path.relative(repoRoot, absolutePath).split(path.sep).join(path.posix.sep);
 
@@ -175,7 +201,15 @@ export const resolveAdminBoundaryImportEdges = (source: string): AdminBoundaryIm
 
   for (const match of source.matchAll(dynamicImportPattern)) {
     const specifier = match[1];
-    if (specifier) edges.push({ specifier, kind: "dynamic" });
+    if (!specifier) continue;
+    // `typeof import("...")` is a type-only query: it resolves the module's
+    // type shape and emits zero runtime bytes. Treating it as a dynamic
+    // browser edge produces false positives (see TASK-467-03-L04 disposition
+    // for `outboundHttpPolicy.ts`). The guarded runtime `import(...)` on the
+    // next line is still scanned normally.
+    const prefixStart = Math.max(0, (match.index ?? 0) - "typeof ".length);
+    if (/\btypeof\s*$/.test(source.slice(prefixStart, match.index ?? 0))) continue;
+    edges.push({ specifier, kind: "dynamic" });
   }
 
   return edges;
@@ -289,13 +323,21 @@ export function analyzeAdminBoundary(
     for (const edge of resolveAdminBoundaryImportEdges(source)) {
       const forbiddenPackage = matchForbiddenPackage(edge.specifier, forbiddenPackageRules);
       if (forbiddenPackage) {
-        violations.push({
-          code: "admin_boundary_forbidden_import",
-          specifier: edge.specifier,
-          reason: forbiddenPackage.label,
-          importer: normalizeRepoPath(repoRoot, current),
-          chain: [...chain, `${edge.kind}:${edge.specifier}`],
-        });
+        const exemption =
+          edge.kind === "dynamic" &&
+          edge.specifier.startsWith("node:") &&
+          adminBoundaryDynamicNodeExemptions.find(
+            (entry) => entry.moduleRepoPath === normalizeRepoPath(repoRoot, current)
+          );
+        if (!exemption) {
+          violations.push({
+            code: "admin_boundary_forbidden_import",
+            specifier: edge.specifier,
+            reason: forbiddenPackage.label,
+            importer: normalizeRepoPath(repoRoot, current),
+            chain: [...chain, `${edge.kind}:${edge.specifier}`],
+          });
+        }
         continue;
       }
 
