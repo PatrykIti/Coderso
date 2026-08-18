@@ -222,6 +222,22 @@ bunMock?.module("../../../core/services/content/entryService", () => ({
   listEntries: async () => [],
 }));
 
+// TASK-573 narrow gated-route probe seam: publicSite calls
+// getEntryVisibilityById/getEntryVisibilityBySlug (entryReadService) BEFORE the
+// shared-cache read. Stub them against the fixture so the lite suite stays a
+// true no-DB fixture test (the probe must not hit a live database).
+bunMock?.module("../../../core/services/content/entryReadService", () => ({
+  getEntryVisibilityById: async (id: string) =>
+    id === entry.id ? { id: entry.id, visibility: entry.visibility } : null,
+  getEntryVisibilityBySlug: async (typeId: string, slug: string) =>
+    typeId === contentType.id && slug === entry.slug
+      ? { id: entry.id, visibility: entry.visibility }
+      : null,
+  // publicEntryUnlockApi imports this from entryReadService; the fixture entry
+  // has no password so the unlock seam must resolve to null without a DB hit.
+  getEntryAccessPasswordHash: async () => null,
+}));
+
 bunMock?.module("../../../core/services/content/detailPageRuntimeResolver", () => ({
   resolvePublishedDetailPageRuntime: async () => currentResolvedDetailPage,
   resolvePreviewDetailPageRuntime: async () => currentResolvedDetailPage,

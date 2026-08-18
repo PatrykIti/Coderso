@@ -65,7 +65,9 @@ This file maps admin UI surfaces to their implementation files and the cached AP
 - Entry editor
   - UI: `core/admin/ui/entries/EntryEditor.tsx`
   - Cached APIs: `listContentTypesCached`, `getEntryCached`, `getCachedEntryDetail`,
-    `listEntryRevisionsCached`, `getCachedEntryRevisions`
+    `listEntryRevisionsCached`, `getCachedEntryRevisions` (metadata-only page,
+    no `data`), `getEntryRevisionData` (narrow on-demand detail read for the
+    revision drawer preview; NOT cached)
   - Mutations: `updateEntry`, `updateEntryMetadata`, `deleteEntry`, `restoreEntryRevision`
   - Cache bus: `entries:list:<typeSlug>`, `entries:detail:<typeSlug>:<id>`,
     `entries:revisions:<id>`

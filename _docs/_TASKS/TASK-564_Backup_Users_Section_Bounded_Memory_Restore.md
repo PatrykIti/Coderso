@@ -1,9 +1,9 @@
 # TASK-564: Backup Users Section Bounded Memory Restore
 
-**Status:** ⏳ To Do
-**Started:**
-**Completed:**
-**Changelog:** 1286 (pinned)
+**Status:** ✅ Done
+**Started:** 2026-08-18
+**Completed:** 2026-08-18
+**Changelog:** 1286
 **Priority:** Medium
 **Size:** Medium
 

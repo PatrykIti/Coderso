@@ -83,9 +83,9 @@ Task board for project work. Keep task files and this board in sync.
   Do not move a leaf task to `Done` until either its standalone changelog
   exists or the family changelog records that leaf.
 
-- **To Do:** 298 tasks
+- **To Do:** 294 tasks
 - **In Progress:** 7 tasks
-- **Done:** 3483 tasks
+- **Done:** 3489 tasks
 
 > TASK-479 (25 subtasks 05–29 + 92 leaves) and TASK-480 (umbrella + 6 subtasks +
 > 18 leaves) were broken down 2026-06-27. The table below lists the
@@ -164,14 +164,10 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-561 | Backup Import Native CMS Writer Fence Enforcement | High | Medium | Restore/import backupu musi brać native CMS writer fence jako pierwszą operację transakcji (H-547-01 + H-511-02): aktywny full-site holder blokuje import, importer w `fenceOwners`, DB race regression z `busy` i zero protected writes. Fix strategy + Security Contract w pliku. |
 | TASK-562 | Backup v2 Import Archive Exact-Set Validation | High | Medium | Manifest/archive exact-set validation: wymagane trzy NDJSON members dla `include.users`, media manifest + count/bytes vs tar, reject duplikatów i nieznanych członków sekcji (H-511-01 + NEW-511-01a/b). |
 | TASK-563 | Backup Import Cache Invalidation And Post-Commit Failure Audit | Medium | Medium | `clearSiteCache()` po commitcie importu + redacted failure audit po nieudanej post-commit media phase (M-511-03 + M-511-03b). |
-| TASK-564 | Backup Users Section Bounded Memory Restore | Medium | Medium | Staging-table batch upsert / explicit size limit dla users section zamiast pełnej materializacji w pamięci (M-511-04). |
 | TASK-565 | Split mediaDeliveryAccess.test.ts Below 1,000 Lines | Medium | Small | 1051 linii — hard gate; wydzielić cohesive fixtures/suites, niezależnie uruchamialne (M-511-05). |
 | TASK-566 | Split fullSiteManagedOwnershipDb.test.ts Below 1,000 Lines | Medium | Small | 1001 linii — hard gate; podział wg odpowiedzialności (M-547-02). |
 | TASK-567 | Outbound Webhook Egress Policy (SSRF Hardening) | High | Large | Wspólny outbound URL validator dla wszystkich webhooków: HTTPS + allowlisty per provider, blokada private/loopback/mapped IPv6/NAT64, `redirect: "error"` (M-491-01 + H-492-01 + M-492-02). |
 | TASK-568 | Public Analytics Head Log Hygiene | Low | Small | Logować tylko stały kod zamiast całego error object na public head path (L-491-02; nie kwalifikuje się do TASK-9999). |
-| TASK-569 | Custom Screens Optimistic Concurrency Revision And Conflict | High | Large | Monotoniczna `revision` + `expectedRevision` w PATCH + `UPDATE ... WHERE id AND revision` + 409 `custom_screen_conflict` (H-540-01 + N2). |
-| TASK-570 | Entries Revision Restore Atomicity And Bounded History | High | Large | Restore w jednej transakcji (fence + `FOR UPDATE` + wąski read + snapshot locked data), keyset-cursor history, unique `(entryId, version)` (H-487-01 + M-487-02 + N3). |
-| TASK-571 | Forms Submissions Export And List Bounded Reads | Medium | Large | Streaming/job export z keyset cursor + bounded list route (M-490-01 + N1). |
 | TASK-572 | Entry List Cache Visibility Fence | Medium | Medium | Auth przed cache read; tylko anonymous może czytać/pisać shared list cache; fail-closed public→restricted transition (M-517-01 + nowy visibility-fence finding). |
 | TASK-573 | Entry Gated Probe Cheap Bounded Read | Medium | Small | Wąska projekcja `getEntryVisibilityBy*` zamiast pełnego `getEntry()` w probe (M-517-02). |
 | TASK-574 | Popup Runtime Start/Stop Generation Guard | Medium | Medium | Monotoniczny generation/AbortController dla `start()`/`stop()` + test z deferred promise (M-486-01). |
@@ -235,6 +231,10 @@ Task board for project work. Keep task files and this board in sync.
 ## Done
 
 | TASK-560 | Runtime Smoke Modular Migration, Evidence Backfill, and Legacy Verification | High | Large | ✅ Done (2026-08-17): smoke-surface inventory (modular vs legacy) + gap report; modular suites authored through the shared runtime-smoke entry for 490/492/487/488/491/511/517 and committed; legacy registered suites re-run on the merged tree — task-540 7/7 PASS, task-547 18/18 PASS, task-554 7/7 PASS; durable evidence committed under `_docs/_workflows/_smoke/evidence/`. Changelog 1282. 5 subtasks terminal. |
+| TASK-571 | Forms Submissions Export And List Bounded Reads | Medium | Large | ✅ Done (2026-08-18): bounded keyset-cursor export job (`(form_id, created_at DESC, id DESC)`) + advisory lock + scheduler dispatch/retention + migration 0075 index, PII omission + CSV formula guard preserved; 12 export-job + 21 route tests green, EXPLAIN evidence; smoke: published form → nonce-gated submission → CSV+JSON downloads. Changelog 1293. |
+| TASK-570 | Entries Revision Restore Atomicity And Bounded History | High | Large | ✅ Done (2026-08-18): one fenced restore tx (fence + `FOR UPDATE` + narrow revision read + snapshot locked data), null-actor restore without new revision row, keyset-cursor revision history (no `data` columns) + narrow detail read, unique `(entryId, version)` migration 0076, 404/409 route mapping; TASK-570-01 split (5 suites + support module, 29/29 names preserved). Content lane A/B-isolated 141 green. Changelog 1292. |
+| TASK-569 | Custom Screens Optimistic Concurrency Revision And Conflict | High | Large | ✅ Done (2026-08-18): monotonic `revision` + `expectedRevision` conditional PATCH → `custom_screen_conflict` 409, draft-preserving editor on real 409, migration 0073; TASK-569-01 split of actionExecutorService into 14 modules (pure relocation, all < 1000 lines). Assistant lane 103 tests green. Changelog 1291. |
+| TASK-564 | Backup Users Section Bounded Memory Restore | Medium | Medium | ✅ Done (2026-08-18): staging-table batch upsert (5k-row NDJSON batches into `backup_users_staging`, migration 0078), set-based natural-key/FK/user_roles guards + STAGING→FINAL upsert in one tx, unchanged admin-lockout guard, idempotent run-scoped cleanup, OOM-guard tests; 34 backup + 101 migration-chain tests green. Changelog 1286. |
 
 | TASK-518 | Seed Default Admin Role via Migration (Stable ID, Admin-Only) | High | Small | ✅ Done (2026-08-14): stable DEFAULT_ADMIN_ROLE_ID + idempotent migration 0071 (fresh db:migrate has exactly one admin role), createFirstAdmin/seedAdmin aligned with legacy fallback; admin role only, no privilege change. Changelog 1231. 2 subtasks terminal. |
 | TASK-558 | Popup Visual Theming (Follow-up to TASK-486) | Medium | Medium | ✅ Done (2026-08-14): present-only fixed-preset theme (card/backdrop/close/z-index 9999), viewport clamping, focus/ESC/Tab-trap/reduced-motion, byte-identical no-override; 7-scenario runtime smoke PASS (wf558smoke). Changelog 1273. One executable task terminal. |

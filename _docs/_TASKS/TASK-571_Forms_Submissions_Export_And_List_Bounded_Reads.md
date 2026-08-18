@@ -1,9 +1,9 @@
 # TASK-571: Forms Submissions Export And List Bounded Reads
 
-**Status:** ⏳ To Do
-**Started:**
-**Completed:**
-**Changelog:** 1293 (pinned)
+**Status:** ✅ Done
+**Started:** 2026-08-18
+**Completed:** 2026-08-18
+**Changelog:** 1293
 **Priority:** Medium
 **Size:** Large
 

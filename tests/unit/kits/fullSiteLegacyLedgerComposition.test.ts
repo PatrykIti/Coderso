@@ -247,7 +247,16 @@ test("current-resource resolver and DB harness use bounded exhaustive direct pro
       extractUniqueBody(ownerSource, `${declaration} ${name} = {`, "\n} as const;"),
       expectedFields.split(" ")
     );
-    const expectedUses = name === "CONTENT_ENTRY_ID_SELECTION" ? 2 : 1;
+    // TASK-547 (smoke-560) moved the page current-resource read out of this
+    // resolver into the dedicated bounded reader readPageLifecycleNativeSnapshot
+    // (pageService), so the resolver no longer emits .select(PAGE_PLANNER...).
+    // The selection stays in plannerEqualitySelections for the batch reader.
+    const expectedUses =
+      name === "CONTENT_ENTRY_ID_SELECTION"
+        ? 2
+        : name === "PAGE_PLANNER_EQUALITY_SELECTION"
+          ? 0
+          : 1;
     expect(source.match(new RegExp(`\\.select\\(${name}\\)`, "g")) ?? []).toHaveLength(
       expectedUses
     );
@@ -257,6 +266,7 @@ test("current-resource resolver and DB harness use bounded exhaustive direct pro
       expect(batchSource).toContain(name);
     }
   }
+  expect(source).toContain("readPageLifecycleNativeSnapshot");
   expect(source.match(/\.from\(contentEntries\)/g) ?? []).toHaveLength(3);
   expect(source).not.toMatch(/\.select\(\s*\)/);
   for (const forbidden of [

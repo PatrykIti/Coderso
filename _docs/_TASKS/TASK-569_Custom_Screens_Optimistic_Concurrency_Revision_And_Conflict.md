@@ -1,9 +1,9 @@
 # TASK-569: Custom Screens Optimistic Concurrency Revision And Conflict
 
-**Status:** ⏳ To Do
-**Started:**
-**Completed:**
-**Changelog:** 1291 (pinned)
+**Status:** ✅ Done
+**Started:** 2026-08-18
+**Completed:** 2026-08-18
+**Changelog:** 1291
 **Priority:** High
 **Size:** Large
 

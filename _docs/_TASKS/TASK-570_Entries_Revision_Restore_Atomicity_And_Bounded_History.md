@@ -1,9 +1,9 @@
 # TASK-570: Entries Revision Restore Atomicity And Bounded History
 
-**Status:** ⏳ To Do
-**Started:**
-**Completed:**
-**Changelog:** 1292 (pinned)
+**Status:** ✅ Done
+**Started:** 2026-08-18
+**Completed:** 2026-08-18
+**Changelog:** 1292
 **Priority:** High
 **Size:** Large
 

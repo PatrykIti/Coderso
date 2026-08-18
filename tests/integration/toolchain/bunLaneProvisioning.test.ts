@@ -18,7 +18,7 @@
  * runner loads `.env`, this file only reads `process.env` and never sources it
  * itself, same gating pattern as the sibling suites in this directory):
  *
- * - `migrateSchema(url, schema)` applies all 72 journal migrations on the
+ * - `migrateSchema(url, schema)` applies all 77 journal migrations on the
  *   first call and 0 on the second (idempotent, tag-tracked in
  *   `_bun_migrations`), and `to_regclass` resolves `pages`/`settings`.
  * - `pg_trgm` exists exactly once database-wide in `pg_extension`.
@@ -54,7 +54,7 @@ const DATABASE_DIRECT_URL = process.env.DATABASE_DIRECT_URL;
 const SCHEMA = "bun_provision_test";
 const CONTROL = "bun_control_schema";
 const SCRATCH = "bun_provision_fail";
-const MIGRATION_COUNT = 73;
+const MIGRATION_COUNT = 77;
 
 let sql: postgres.Sql | undefined;
 
@@ -76,10 +76,24 @@ afterAll(async () => {
   await sql.end();
 });
 
-test("journal has 72 monotonic entries", async () => {
+test("journal has 77 entries with strictly increasing idx and unique tags", async () => {
   const journal = await readJournal();
+  // Live journal: 0073_smiling_ser_duncan, 0075_form_submissions_export_cursor,
+  // 0076_content_revisions_version_uniq and 0078_backup_users_staging were appended
+  // by concurrent streams. Concurrent agents allocate `idx` from the live journal,
+  // so `idx` is strictly increasing (sorted order) but not equal to the array
+  // index — a removed racing migration can leave a gap. The applier iterates
+  // entries in array order and only consumes `tag`.
   expect(journal.entries.length).toBe(MIGRATION_COUNT);
-  journal.entries.forEach((entry, i) => expect(entry.idx).toBe(i));
+  const tags = new Set<string>();
+  journal.entries.forEach((entry, index) => {
+    if (index > 0) {
+      expect(entry.idx).toBeGreaterThan(journal.entries[index - 1]!.idx);
+    }
+    expect(entry.tag.length).toBeGreaterThan(0);
+    tags.add(entry.tag);
+  });
+  expect(tags.size).toBe(MIGRATION_COUNT);
 });
 
 test("splitStatements respects breakpoints and drops empties", () => {
