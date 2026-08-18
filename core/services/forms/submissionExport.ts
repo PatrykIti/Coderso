@@ -30,18 +30,18 @@ export type FormSubmissionsExport = {
 // --- CSV primitives (mirror analyticsService; owned locally per repo precedent) ---
 const shouldGuardCsvCell = (value: string) => /^[=+\-@\t\r]/.test(value.trimStart());
 
-const escapeCsvCell = (value: string) => {
+export const escapeCsvCell = (value: string) => {
   const guarded = shouldGuardCsvCell(value) ? `'${value}` : value;
   return /[",\r\n]/.test(guarded) ? `"${guarded.replace(/"/g, '""')}"` : guarded;
 };
 
-const serializeCsvRow = (values: readonly string[]) => values.map(escapeCsvCell).join(",");
+export const serializeCsvRow = (values: readonly string[]) => values.map(escapeCsvCell).join(",");
 
 // Mirrors FormSubmissionsPage.formatPayloadValue for string/number/boolean/object
 // EXCEPT the empty case: that page renders null/undefined as the placeholder "-",
 // while the CSV builder emits "" (a genuinely empty cell is the CSV-correct
 // representation of a missing answer; "-" would be a fake value in the data file).
-const formatCell = (value: unknown): string => {
+export const formatCell = (value: unknown): string => {
   if (value === null || value === undefined) return "";
   if (typeof value === "string") return value;
   if (typeof value === "number" || typeof value === "boolean") return String(value);
@@ -60,7 +60,7 @@ const slugifyForFile = (value: string) =>
 
 const formatDay = (date: Date) => date.toISOString().slice(0, 10); // YYYY-MM-DD
 
-type FieldColumn = { key: string; label: string };
+export type FieldColumn = { key: string; label: string };
 
 export type SubmissionExportRow = {
   id: string;
@@ -76,7 +76,7 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
 
 // The DB column is `jsonb` (inferred `unknown`); normalize to a plain object at
 // the builder boundary so no captured row can break column derivation.
-const toExportRow = (row: SubmissionRow): SubmissionExportRow => ({
+export const toExportRow = (row: SubmissionRow): SubmissionExportRow => ({
   id: row.id,
   createdAt: row.createdAt,
   status: row.status,
@@ -86,16 +86,16 @@ const toExportRow = (row: SubmissionRow): SubmissionExportRow => ({
 // Column order: every schema field (by orderIndex) first, then any extra payload
 // keys that exist in submissions but not in the schema (legacy/renamed), so no
 // captured answer is silently dropped. ip/userAgent are intentionally excluded.
-const buildColumns = (
-  fields: { name: string; label: string; orderIndex: number }[],
-  rows: { payload: Record<string, unknown> }[]
+//
+// `mergePayloadColumnKeys` is the single-owned union primitive: the in-memory
+// builder (TASK-490) feeds it the full row list, while the bounded export job
+// (TASK-571) feeds it one bounded batch at a time from its column-collection
+// pass — both MUST end with identical column sets and order for the same data.
+export const mergePayloadColumnKeys = (
+  columns: FieldColumn[],
+  seen: Set<string>,
+  rows: ReadonlyArray<{ payload: Record<string, unknown> }>
 ): FieldColumn[] => {
-  const ordered = [...fields].sort((a, b) => a.orderIndex - b.orderIndex);
-  const seen = new Set(ordered.map((field) => field.name));
-  const columns: FieldColumn[] = ordered.map((field) => ({
-    key: field.name,
-    label: field.label,
-  }));
   for (const row of rows) {
     for (const key of Object.keys(row.payload ?? {})) {
       if (!seen.has(key)) {
@@ -107,7 +107,35 @@ const buildColumns = (
   return columns;
 };
 
-const BASE_HEADERS = ["Submission ID", "Received At", "Status"] as const;
+export const buildColumns = (
+  fields: { name: string; label: string; orderIndex: number }[],
+  rows: { payload: Record<string, unknown> }[]
+): FieldColumn[] => {
+  const ordered = [...fields].sort((a, b) => a.orderIndex - b.orderIndex);
+  const seen = new Set(ordered.map((field) => field.name));
+  const columns: FieldColumn[] = ordered.map((field) => ({
+    key: field.name,
+    label: field.label,
+  }));
+  return mergePayloadColumnKeys(columns, seen, rows);
+};
+
+export const BASE_HEADERS = ["Submission ID", "Received At", "Status"] as const;
+
+// Shared artifact base name (`coderso-form-<slug>-submissions-<date>`). Owned
+// here so the in-memory builder (TASK-490) and the bounded export job (TASK-571)
+// emit byte-identical file names.
+export const buildSubmissionExportBaseName = (slugOrNameOrId: string, now: Date): string =>
+  `coderso-form-${slugifyForFile(slugOrNameOrId)}-submissions-${formatDay(now)}`;
+
+// Shared JSON read-model entry: `{ id, createdAt, status, data }`, deliberately
+// omitting ip/userAgent. Used by the in-memory builder and the streaming job.
+export const submissionExportJsonEntry = (row: SubmissionExportRow) => ({
+  id: row.id,
+  createdAt: new Date(row.createdAt).toISOString(),
+  status: row.status,
+  data: row.payload,
+});
 
 export function serializeSubmissionsCsv(
   columns: FieldColumn[],
@@ -127,16 +155,7 @@ export function serializeSubmissionsCsv(
 
 export function serializeSubmissionsJson(rows: SubmissionExportRow[]): string {
   // Subset of the read-model: ip/userAgent deliberately omitted.
-  return JSON.stringify(
-    rows.map((row) => ({
-      id: row.id,
-      createdAt: new Date(row.createdAt).toISOString(),
-      status: row.status,
-      data: row.payload,
-    })),
-    null,
-    2
-  );
+  return JSON.stringify(rows.map(submissionExportJsonEntry), null, 2);
 }
 
 export async function buildFormSubmissionsExport(
@@ -150,7 +169,7 @@ export async function buildFormSubmissionsExport(
   const [fields, rawRows] = await Promise.all([listFormFields(formId), listSubmissions(formId)]);
   const rows = rawRows.map(toExportRow);
   const columns = buildColumns(fields.map(toFieldRecord), rows);
-  const base = `coderso-form-${slugifyForFile(form.slug ?? form.name ?? formId)}-submissions-${formatDay(now)}`;
+  const base = buildSubmissionExportBaseName(form.slug ?? form.name ?? formId, now);
 
   if (format === "json") {
     return {

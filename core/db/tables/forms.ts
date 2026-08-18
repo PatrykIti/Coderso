@@ -5,6 +5,7 @@
  * Re-exported verbatim by `core/db/schema.ts`; import from there, not from here.
  */
 
+import { desc, sql } from "drizzle-orm";
 import {
   pgTable,
   uuid,
@@ -15,8 +16,11 @@ import {
   boolean,
   uniqueIndex,
   index,
+  check,
+  bigint,
   type AnyPgColumn,
 } from "drizzle-orm/pg-core";
+import { users } from "./identity";
 
 export const forms = pgTable(
   "forms",
@@ -103,6 +107,57 @@ export const formSubmissions = pgTable(
     formIdx: index("form_submissions_form_idx").on(t.formId),
     createdIdx: index("form_submissions_created_idx").on(t.createdAt),
     statusIdx: index("form_submissions_status_idx").on(t.status),
+    // TASK-571: keyset-cursor serving index for the bounded export scan
+    // (`ORDER BY created_at DESC, id DESC` with the `id` tiebreaker). Equality
+    // (form_id) first, then the DESC range/sort columns, finished with the
+    // stable cursor tiebreaker (id) — the traversal order the export cursor
+    // contract requires.
+    exportCursorIdx: index("form_submissions_export_cursor_idx").on(
+      t.formId,
+      desc(t.createdAt),
+      desc(t.id)
+    ),
+  })
+);
+
+/**
+ * TASK-571: async form-submissions export jobs.
+ *
+ * One row per export request. The submission payloads themselves never live
+ * here — only status/rowCount/bytes plus a HMAC of the short-lived download
+ * token (never the raw token) and the artifact key. Rows and artifact files
+ * are pruned by the export scheduler's retention pass (see
+ * `core/server/jobs/submissionExportScheduler.ts`).
+ */
+export const submissionExportJobs = pgTable(
+  "submission_export_jobs",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    formId: uuid("form_id")
+      .notNull()
+      .references(() => forms.id, { onDelete: "cascade" }),
+    format: text("format").notNull(),
+    status: text("status").notNull(),
+    rowCount: integer("row_count"),
+    bytes: bigint("bytes", { mode: "number" }),
+    artifactKey: text("artifact_key"),
+    tokenHash: text("token_hash"),
+    tokenExpiresAt: timestamp("token_expires_at", { withTimezone: true }),
+    errorCode: text("error_code"),
+    createdBy: uuid("created_by").references(() => users.id, { onDelete: "set null" }),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (t) => ({
+    formatCheck: check("submission_export_jobs_format_check", sql`${t.format} in ('csv', 'json')`),
+    statusCheck: check(
+      "submission_export_jobs_status_check",
+      sql`${t.status} in ('queued', 'running', 'done', 'failed')`
+    ),
+    // Bounded list of a form's jobs (TASK-571): `(form_id, status)` plus
+    // `created_at` for the bounded list/retention scans.
+    formStatusIdx: index("submission_export_jobs_form_status_idx").on(t.formId, t.status),
+    createdIdx: index("submission_export_jobs_created_idx").on(t.createdAt),
   })
 );
 

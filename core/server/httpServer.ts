@@ -25,6 +25,7 @@ import { initializeDocsIndexOnBootIfEnabled } from "../services/assistant/docsIn
 import { POST_METADATA_REQUEST_MAX_BYTES } from "../services/posts/postMetadataContract";
 import { ensureThemesLoaded } from "../themes/registry";
 import { startBackupScheduler } from "./jobs/backupScheduler";
+import { startSubmissionExportScheduler } from "./jobs/submissionExportScheduler";
 import { handlePublicRequest } from "./publicSite";
 import { resolveAdminPath } from "./utils/adminPath";
 import { handleMediaDeliveryRequest } from "./mediaDelivery";
@@ -546,6 +547,7 @@ export function startHttpServer(options: HttpServerOptions = {}) {
   });
   startBackupScheduler(); // shared seam: dev.ts and prod.ts both call startHttpServer;
   // dockerStart.ts imports ./prod. Env-gated opt-in outside production (see backupScheduler.ts).
+  startSubmissionExportScheduler(); // TASK-571: dispatch + retention for export jobs (same seam).
 
   const serveOptions: HttpServerServeOptions = {
     idleTimeout: options.idleTimeout,
