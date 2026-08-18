@@ -10,10 +10,10 @@
 import { createHash, randomUUID } from "node:crypto";
 
 import { afterAll, afterEach, beforeAll, expect, test } from "bun:test";
-import { and, eq, inArray } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
 
 import { db } from "../../../core/db/client";
-import { roles, userRoles, users } from "../../../core/db/schema";
+import { backupUsersStaging, roles, userRoles, users } from "../../../core/db/schema";
 import { createBackupSchema } from "../../../core/server/validation/backupSchemas";
 import { normalizeBackupInclude } from "../../../core/services/backups/backupService";
 import type {
@@ -34,6 +34,8 @@ import {
   normalizeUserRoleRow,
   normalizeUserRow,
   restoreUsersSectionTx,
+  STAGING_BATCH,
+  type UsersSectionBatch,
 } from "../../../core/services/backups/backupUsersSection";
 
 // ---------------------------------------------------------------------------
@@ -131,6 +133,34 @@ const inRolledBackTx = async <T>(
     })
   ).rejects.toThrow("rollback_marker");
   return observed;
+};
+
+// Build the TASK-564 bounded batch stream the staged restore consumes. The
+// hand-built fixture sections hold NORMALIZED rows; JSON.stringify round-trips
+// them through the strict normalizers (Date -> ISO, opaque hash verbatim).
+const sectionStream = (section: {
+  users?: unknown[];
+  roles?: unknown[];
+  userRoles?: unknown[];
+}): AsyncIterable<UsersSectionBatch> => {
+  async function* gen(): AsyncGenerator<UsersSectionBatch> {
+    const roles = section.roles ?? [];
+    const users = section.users ?? [];
+    const userRoles = section.userRoles ?? [];
+    if (roles.length) yield { kind: "role", lines: roles.map((row) => JSON.stringify(row)) };
+    if (users.length) yield { kind: "user", lines: users.map((row) => JSON.stringify(row)) };
+    if (userRoles.length)
+      yield { kind: "user_role", lines: userRoles.map((row) => JSON.stringify(row)) };
+  }
+  return gen();
+};
+
+const stagingCount = async (runId: string): Promise<number> => {
+  const rows = await db
+    .select({ id: backupUsersStaging.id })
+    .from(backupUsersStaging)
+    .where(eq(backupUsersStaging.runId, runId));
+  return rows.length;
 };
 
 // ---------------------------------------------------------------------------
@@ -251,7 +281,11 @@ test("export→normalize→restore round-trips rows; hash opaque; manifest hash-
   // Restore inside a rolled-back tx; observe rows in-tx, then roll back.
   const observed = await inRolledBackTx(
     async (tx) => {
-      const res = await restoreUsersSectionTx(tx, section, { restoreUsers: true, confirm: true });
+      const res = await restoreUsersSectionTx(
+        tx,
+        { restoreUsers: true, confirm: true, runId: randomUUID() },
+        sectionStream(section)
+      );
       expect(res).toEqual({ usersRestored: 1, rolesRestored: 1 });
     },
     async (tx) => {
@@ -313,7 +347,11 @@ test("restore leaving zero admins throws backup_users_restore_no_admin (rolled b
       // Zero out the admin set INSIDE the tx (never committed — the throw rolls back).
       const adminRoleIds = await getAdminRoleIds(undefined, tx);
       await tx.delete(userRoles).where(inArray(userRoles.roleId, adminRoleIds));
-      await restoreUsersSectionTx(tx, section, { restoreUsers: true, confirm: true });
+      await restoreUsersSectionTx(
+        tx,
+        { restoreUsers: true, confirm: true, runId: randomUUID() },
+        sectionStream(section)
+      );
     })
   ).rejects.toThrow("backup_users_restore_no_admin");
 
@@ -387,7 +425,11 @@ test("forged permission tokens are dropped; untouched accounts keep their roles"
   };
 
   await inRolledBackTx(async (tx) => {
-    await restoreUsersSectionTx(tx, section, { restoreUsers: true, confirm: true });
+    await restoreUsersSectionTx(
+      tx,
+      { restoreUsers: true, confirm: true, runId: randomUUID() },
+      sectionStream(section)
+    );
     // The outsider's assignment was NOT touched (reconcile is scoped to archived users).
     const outsiderAssignments = await tx
       .select()
@@ -405,11 +447,8 @@ test("restoreUsers false is a no-op; confirm false fails closed", async () => {
   await inRolledBackTx(async (tx) => {
     const noop = await restoreUsersSectionTx(
       tx,
-      { users: [], roles: [], userRoles: [] },
-      {
-        restoreUsers: false,
-        confirm: false,
-      }
+      { restoreUsers: false, confirm: false, runId: randomUUID() },
+      sectionStream({ users: [], roles: [], userRoles: [] })
     );
     expect(noop).toEqual({ usersRestored: 0, rolesRestored: 0 });
   });
@@ -417,11 +456,8 @@ test("restoreUsers false is a no-op; confirm false fails closed", async () => {
     db.transaction(async (tx) => {
       await restoreUsersSectionTx(
         tx,
-        { users: [], roles: [], userRoles: [] },
-        {
-          restoreUsers: true,
-          confirm: false,
-        }
+        { restoreUsers: true, confirm: false, runId: randomUUID() },
+        sectionStream({ users: [], roles: [], userRoles: [] })
       );
     })
   ).rejects.toThrow("backup_restore_confirmation_required");
@@ -507,7 +543,11 @@ test("same email/role name with a DIFFERENT id is rejected before any write", as
   };
   await expect(
     db.transaction(async (tx) => {
-      await restoreUsersSectionTx(tx, roleClashSection, { restoreUsers: true, confirm: true });
+      await restoreUsersSectionTx(
+        tx,
+        { restoreUsers: true, confirm: true, runId: randomUUID() },
+        sectionStream(roleClashSection)
+      );
     })
   ).rejects.toThrow("backup_restore_invalid_artifact");
 
@@ -541,7 +581,11 @@ test("same email/role name with a DIFFERENT id is rejected before any write", as
   let emailClashMessage = "";
   try {
     await db.transaction(async (tx) => {
-      await restoreUsersSectionTx(tx, emailClashSection, { restoreUsers: true, confirm: true });
+      await restoreUsersSectionTx(
+        tx,
+        { restoreUsers: true, confirm: true, runId: randomUUID() },
+        sectionStream(emailClashSection)
+      );
     });
     throw new Error("expected_backup_restore_invalid_artifact");
   } catch (e) {
@@ -580,13 +624,293 @@ test("same email/role name with a DIFFERENT id is rejected before any write", as
     userRoles: [{ userId: fixtureUser.id, roleId: fixtureRole.id }],
   };
   await inRolledBackTx(async (tx) => {
-    const res = await restoreUsersSectionTx(tx, happySection, {
-      restoreUsers: true,
-      confirm: true,
-    });
+    const res = await restoreUsersSectionTx(
+      tx,
+      { restoreUsers: true, confirm: true, runId: randomUUID() },
+      sectionStream(happySection)
+    );
     expect(res).toEqual({ usersRestored: 1, rolesRestored: 1 });
   });
 });
+
+// ---------------------------------------------------------------------------
+// 9. FK-missing roleId guard (behavior-identical, set-based)
+// ---------------------------------------------------------------------------
+
+test("user_role referencing a role absent from BOTH archive and target is rejected", async () => {
+  const archivedUserId = randomUUID();
+  const archivedRoleId = randomUUID();
+  const section = {
+    users: [
+      normalizeUserRow({
+        id: archivedUserId,
+        email: scopedEmail("fk-missing"),
+        emailHash: null,
+        emailEncrypted: null,
+        passwordHash: "hash-fk",
+        name: null,
+        status: "active",
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        lastLoginAt: null,
+      }),
+    ],
+    roles: [], // the role is NOT in the archive
+    userRoles: [{ userId: archivedUserId, roleId: archivedRoleId }], // and NOT in the target
+  };
+  await expect(
+    db.transaction(async (tx) => {
+      await restoreUsersSectionTx(
+        tx,
+        { restoreUsers: true, confirm: true, runId: randomUUID() },
+        sectionStream(section)
+      );
+    })
+  ).rejects.toThrow("backup_restore_invalid_artifact");
+});
+
+test("user_role roleId resolving to a STAGED role passes the FK guard", async () => {
+  const archivedUserId = randomUUID();
+  const archivedRoleId = randomUUID();
+  const section = {
+    users: [
+      normalizeUserRow({
+        id: archivedUserId,
+        email: scopedEmail("fk-ok"),
+        emailHash: null,
+        emailEncrypted: null,
+        passwordHash: "hash-fk-ok",
+        name: null,
+        status: "active",
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        lastLoginAt: null,
+      }),
+    ],
+    roles: [
+      normalizeRoleRow({
+        id: archivedRoleId,
+        name: scopedRole("fk-ok-role"),
+        description: null,
+        permissions: ["content:read"],
+        createdAt: new Date().toISOString(),
+      }),
+    ],
+    userRoles: [{ userId: archivedUserId, roleId: archivedRoleId }],
+  };
+  await inRolledBackTx(async (tx) => {
+    const res = await restoreUsersSectionTx(
+      tx,
+      { restoreUsers: true, confirm: true, runId: randomUUID() },
+      sectionStream(section)
+    );
+    expect(res).toEqual({ usersRestored: 1, rolesRestored: 1 });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 10. Staging->final upsert + run-scoped staging cleanup (success and rollback)
+// ---------------------------------------------------------------------------
+
+test("staging->final upsert lands rows; staging cleaned on success and rollback", async () => {
+  const stagingRunId = randomUUID();
+  const user = normalizeUserRow({
+    id: randomUUID(),
+    email: scopedEmail("upsert"),
+    emailHash: null,
+    emailEncrypted: null,
+    passwordHash: "hash-upsert",
+    name: "Upsert",
+    status: "active",
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    lastLoginAt: null,
+  });
+  const role = normalizeRoleRow({
+    id: randomUUID(),
+    name: scopedRole("upsert-role"),
+    description: null,
+    permissions: ["content:read"],
+    createdAt: new Date().toISOString(),
+  });
+  const section = {
+    users: [user],
+    roles: [role],
+    userRoles: [{ userId: user.id, roleId: role.id }],
+  };
+  const observed = await inRolledBackTx(
+    async (tx) => {
+      const res = await restoreUsersSectionTx(
+        tx,
+        { restoreUsers: true, confirm: true, runId: stagingRunId },
+        sectionStream(section)
+      );
+      expect(res).toEqual({ usersRestored: 1, rolesRestored: 1 });
+    },
+    async (tx) => {
+      const [u] = await tx.select().from(users).where(eq(users.email, user.email));
+      const [r] = await tx.select().from(roles).where(eq(roles.name, role.name));
+      const [ur] = await tx
+        .select()
+        .from(userRoles)
+        .where(and(eq(userRoles.userId, user.id), eq(userRoles.roleId, role.id)));
+      const staged = await tx
+        .select({ id: backupUsersStaging.id })
+        .from(backupUsersStaging)
+        .where(eq(backupUsersStaging.runId, stagingRunId));
+      return {
+        user: u?.email ?? null,
+        role: r?.name ?? null,
+        assignment: ur ? true : false,
+        staged: staged.length,
+      };
+    }
+  );
+  expect(observed).toEqual({ user: user.email, role: role.name, assignment: true, staged: 0 });
+  // ROLLBACK cleanup: the failed/rolled-back tx discarded every staged row.
+  expect(await stagingCount(stagingRunId)).toBe(0);
+});
+
+test("committed idempotent re-import leaves zero staging rows for the runId", async () => {
+  // Seed a scoped fixture, then re-import the SAME rows (same ids/emails): the
+  // upsert + user_roles reconcile are net-zero, so COMMITTING is shared-DB safe,
+  // and the step-5 cleanup must leave no staging residue on the success path.
+  const fixtureUser = await seedUser(scopedEmail("commit"), "hash-commit");
+  const fixtureRole = await seedRole(scopedRole("commit-role"), ["content:read"]);
+  await assignRole(fixtureUser.id, fixtureRole.id);
+  const stagingRunId = randomUUID();
+  const section = {
+    users: [
+      normalizeUserRow({
+        id: fixtureUser.id,
+        email: fixtureUser.email,
+        emailHash: null,
+        emailEncrypted: null,
+        passwordHash: "hash-commit",
+        name: null,
+        status: "active",
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        lastLoginAt: null,
+      }),
+    ],
+    roles: [
+      normalizeRoleRow({
+        id: fixtureRole.id,
+        name: fixtureRole.name,
+        description: null,
+        permissions: ["content:read"],
+        createdAt: new Date().toISOString(),
+      }),
+    ],
+    userRoles: [{ userId: fixtureUser.id, roleId: fixtureRole.id }],
+  };
+  await db.transaction(async (tx) => {
+    await restoreUsersSectionTx(
+      tx,
+      { restoreUsers: true, confirm: true, runId: stagingRunId },
+      sectionStream(section)
+    );
+  });
+  expect(await stagingCount(stagingRunId)).toBe(0);
+  // The re-import is net-zero: the fixture still exists exactly once.
+  const after = await db.select({ id: users.id }).from(users).where(eq(users.id, fixtureUser.id));
+  expect(after.length).toBe(1);
+});
+
+// ---------------------------------------------------------------------------
+// 11. OOM-guard: large users section streams through bounded batches
+// ---------------------------------------------------------------------------
+
+test("large users section stages in bounded batches; no full-array materialization", async () => {
+  const stagingRunId = randomUUID();
+  const TOTAL = 10_000;
+  const userIds: string[] = [];
+  const roleIds: string[] = [];
+  for (let i = 0; i < TOTAL; i++) {
+    userIds.push(randomUUID());
+    roleIds.push(randomUUID());
+  }
+  const now = new Date().toISOString();
+  const usersRows: unknown[] = userIds.map((id, i) => ({
+    id,
+    email: scopedEmail(`oom-${i}`),
+    emailHash: null,
+    emailEncrypted: null,
+    passwordHash: "hash-oom",
+    name: null,
+    status: "active",
+    createdAt: now,
+    updatedAt: now,
+    lastLoginAt: null,
+  }));
+  const rolesRows: unknown[] = roleIds.map((id, i) => ({
+    id,
+    name: scopedRole(`oom-role-${i}`),
+    description: null,
+    permissions: ["content:read"],
+    createdAt: now,
+  }));
+  const urRows: unknown[] = userIds.map((id, i) => ({ userId: id, roleId: roleIds[i] }));
+
+  let maxBatch = 0;
+  async function* oomStream(): AsyncGenerator<UsersSectionBatch> {
+    for (const batch of chunk(usersRows, STAGING_BATCH)) {
+      maxBatch = Math.max(maxBatch, batch.length);
+      yield { kind: "user", lines: batch.map((row) => JSON.stringify(row)) };
+    }
+    for (const batch of chunk(rolesRows, STAGING_BATCH)) {
+      maxBatch = Math.max(maxBatch, batch.length);
+      yield { kind: "role", lines: batch.map((row) => JSON.stringify(row)) };
+    }
+    for (const batch of chunk(urRows, STAGING_BATCH)) {
+      maxBatch = Math.max(maxBatch, batch.length);
+      yield { kind: "user_role", lines: batch.map((row) => JSON.stringify(row)) };
+    }
+  }
+
+  const oomEmailPrefix = `bkp-511-04-${runId}-oom-%`;
+  const oomRolePrefix = `bkp-511-04-${runId}-oom-role-%`;
+
+  const observed = await inRolledBackTx(
+    async (tx) => {
+      const res = await restoreUsersSectionTx(
+        tx,
+        { restoreUsers: true, confirm: true, runId: stagingRunId },
+        oomStream()
+      );
+      expect(res).toEqual({ usersRestored: TOTAL, rolesRestored: TOTAL });
+    },
+    async (tx) => {
+      // Every archived row landed in the FINAL tables via the staging upsert
+      // (no array bypass), and the in-tx cleanup left the staging table empty.
+      const [userCount] = await tx.execute(sql`
+        select count(*)::int as n
+        from ${users}
+        where ${users.email} like ${oomEmailPrefix}
+      `);
+      const [roleCount] = await tx.execute(sql`
+        select count(*)::int as n
+        from ${roles}
+        where ${roles.name} like ${oomRolePrefix}
+      `);
+      const [staged] = await tx.execute(sql`
+        select count(*)::int as n
+        from ${backupUsersStaging}
+        where ${backupUsersStaging.runId} = ${stagingRunId}
+      `);
+      return {
+        users: Number(userCount?.n ?? 0),
+        roles: Number(roleCount?.n ?? 0),
+        staged: Number(staged?.n ?? 0),
+      };
+    }
+  );
+  expect(maxBatch).toBeLessThanOrEqual(STAGING_BATCH);
+  expect(observed).toEqual({ users: TOTAL, roles: TOTAL, staged: 0 });
+  // ROLLBACK cleanup: nothing staged survives outside the tx.
+  expect(await stagingCount(stagingRunId)).toBe(0);
+}, 60_000);
 
 // ---------------------------------------------------------------------------
 // chunk helper (transitively covered by the round-trip, plus direct shape)

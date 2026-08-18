@@ -226,6 +226,7 @@ testIfDb(
           const r = await restoreArchiveStreamTx(tx, tarPath, manifest, {
             restoreUsers: false,
             confirm: true,
+            runId: randomUUID(),
           });
           expect(r.tables).toBe(ARCHIVE_TABLE_DESCRIPTORS.length); // all 22 tables replaced
           expect(r.rows).toBe(2);
@@ -417,6 +418,7 @@ testIfDb(
           await restoreArchiveStreamTx(tx, tarPath, manifest, {
             restoreUsers: true,
             confirm: true,
+            runId: randomUUID(),
           });
         },
         async (tx) => {
@@ -465,6 +467,7 @@ testIfDb(
           const r = await restoreArchiveStreamTx(tx, tarPath, manifest, {
             restoreUsers: false,
             confirm: true,
+            runId: randomUUID(),
           });
           expect(r.tables).toBe(0);
           expect(r.rows).toBe(0);

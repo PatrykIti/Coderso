@@ -13,11 +13,14 @@ import {
   jsonb,
   integer,
   boolean,
+  bigserial,
   primaryKey,
   uniqueIndex,
   index,
+  check,
   type AnyPgColumn,
 } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 import { users } from "./identity";
 
 export const plugins = pgTable(
@@ -99,6 +102,59 @@ export const backupSchedules = pgTable(
   (t) => ({
     frequencyIdx: index("backup_schedules_frequency_idx").on(t.frequency),
     nextRunAtIdx: index("backup_schedules_next_run_at_idx").on(t.nextRunAt),
+  })
+);
+
+/**
+ * Run-scoped staging store for the backup users section restore (TASK-564).
+ *
+ * The restore must run whole-set natural-key collision and user_roles
+ * reconciliation guards BEFORE any final write, but must never materialize the
+ * whole users/RBAC matrix in memory. Rows are streamed into this persistent,
+ * run-scoped table in bounded batches inside the ONE outer restore tx; the
+ * guards, the staging→final upsert and the cleanup are set-based SQL over it.
+ * One table holds all three row kinds (kind discriminator) with the
+ * kind-specific natural-key columns; every row is scoped by run_id and removed
+ * idempotently at the end of the restore (and by tx rollback on failure).
+ */
+export const backupUsersStaging = pgTable(
+  "backup_users_staging",
+  {
+    id: bigserial("id", { mode: "number" }).primaryKey(),
+    runId: text("run_id").notNull(),
+    kind: text("kind").notNull(), // 'role' | 'user' | 'user_role'
+    // Role natural key + payload (kind = 'role').
+    roleId: text("role_id"),
+    roleName: text("role_name"),
+    roleDescription: text("role_description"),
+    rolePermissions: jsonb("role_permissions"),
+    // User natural key + payload (kind = 'user').
+    userId: text("user_id"),
+    userEmail: text("user_email"),
+    userEmailHash: text("user_email_hash"),
+    userEmailEncrypted: jsonb("user_email_encrypted"),
+    userPasswordHash: text("user_password_hash"),
+    userName: text("user_name"),
+    userStatus: text("user_status"),
+    createdAt: timestamp("created_at"),
+    updatedAt: timestamp("updated_at"),
+    lastLoginAt: timestamp("last_login_at"),
+  },
+  (t) => ({
+    runIdx: index("backup_users_staging_run_idx").on(t.runId),
+    kindCheck: check(
+      "backup_users_staging_kind_check",
+      sql`${t.kind} in ('role', 'user', 'user_role')`
+    ),
+    roleNaturalKey: uniqueIndex("backup_users_staging_role_name_key")
+      .on(t.runId, t.roleName)
+      .where(sql`kind = 'role'`),
+    userNaturalKey: uniqueIndex("backup_users_staging_user_email_key")
+      .on(t.runId, t.userEmail)
+      .where(sql`kind = 'user'`),
+    userRoleNaturalKey: uniqueIndex("backup_users_staging_user_role_key")
+      .on(t.runId, t.userId, t.roleId)
+      .where(sql`kind = 'user_role'`),
   })
 );
 

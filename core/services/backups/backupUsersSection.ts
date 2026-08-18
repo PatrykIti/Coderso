@@ -15,12 +15,12 @@
  *   through the catalog; no auto-grants) and preserves the admin-lockout safety
  *   (a restore leaving zero admins fails closed and rolls back).
  */
-import { asc, getTableColumns, gt, inArray, sql } from "drizzle-orm";
+import { asc, eq, getTableColumns, gt, inArray, sql } from "drizzle-orm";
 import type { AnyColumn } from "drizzle-orm";
 import type { PgTable, SelectedFields } from "drizzle-orm/pg-core";
 
 import { db } from "../../db/client";
-import { roles, userRoles, users } from "../../db/schema";
+import { backupUsersStaging, roles, userRoles, users } from "../../db/schema";
 import { listPermissionIds } from "../admin/permissionsCatalog";
 import { getAdminRoleIds } from "../admin/rolesService";
 import {
@@ -268,141 +268,272 @@ export async function exportUsersSection(engine: ExportEngine): Promise<ArchiveU
 }
 
 // ---------------------------------------------------------------------------
-// Restore — opt-in, upsert, privilege- & lockout-safe (tx-scoped)
+// Restore — opt-in, staged, set-based, privilege- & lockout-safe (tx-scoped)
 // ---------------------------------------------------------------------------
 
-/** A trivial pure array splitter for the bounded IN-list / upsert batches. */
+/** A trivial pure array splitter for the bounded staging-insert batches. */
 export function chunk<T>(a: T[], n: number): T[][] {
   const out: T[][] = [];
   for (let i = 0; i < a.length; i += n) out.push(a.slice(i, i + n));
   return out;
 }
 
-const BATCH = 500; // bind-parameter bound for archive-derived IN lists + upserts
+/** Staging INSERT batch window (~5k rows, bounded binds: 5k * 12 binds < 65 535). */
+export const STAGING_BATCH = 5_000;
+
+/** The three archived row kinds staged into backup_users_staging. */
+export type UsersSectionKind = "role" | "user" | "user_role";
 
 /**
- * Opt-in, upsert-based restore of the users section inside the ONE outer restore
- * tx. Fail-closed correctness guards (natural-key collision, FK-missing roleId,
- * global admin-lockout) run BEFORE any write and require the WHOLE archived set
- * in hand — hence the deliberately materialized section arrays (the parent's
- * owner-scoped memory exception for the users section only; content/media still
- * stream + batch).
+ * One bounded NDJSON batch of ONE member kind (TASK-564). The caller (05's
+ * pre-restore pass) streams each member's lines in <= STAGING_BATCH batches —
+ * never the whole users/RBAC matrix in memory. The helper parses + normalizes
+ * each line here (the single reject-unknown seam) and stages it.
+ */
+export type UsersSectionBatch = Readonly<{
+  kind: UsersSectionKind;
+  lines: readonly string[];
+}>;
+
+// Parse an NDJSON line with a coded failure (never a raw SyntaxError).
+const parseStagedLine = (line: string): unknown => {
+  try {
+    return JSON.parse(line);
+  } catch {
+    throw new Error("backup_restore_invalid_artifact");
+  }
+};
+
+type StagingInsertRow = typeof backupUsersStaging.$inferInsert;
+
+// Normalized rows -> run-scoped staging columns (kind-specific payload).
+const stagedRoleRow = (runId: string, row: RoleRow): StagingInsertRow => ({
+  runId,
+  kind: "role",
+  roleId: row.id,
+  roleName: row.name,
+  roleDescription: row.description,
+  rolePermissions: row.permissions,
+  createdAt: row.createdAt,
+});
+
+const stagedUserRow = (runId: string, row: UserRow): StagingInsertRow => ({
+  runId,
+  kind: "user",
+  userId: row.id,
+  userEmail: row.email,
+  userEmailHash: row.emailHash,
+  userEmailEncrypted: row.emailEncrypted,
+  userPasswordHash: row.passwordHash,
+  userName: row.name,
+  userStatus: row.status,
+  createdAt: row.createdAt,
+  updatedAt: row.updatedAt,
+  lastLoginAt: row.lastLoginAt,
+});
+
+const stagedUserRoleRow = (runId: string, row: UserRoleRow): StagingInsertRow => ({
+  runId,
+  kind: "user_role",
+  userId: row.userId,
+  roleId: row.roleId,
+});
+
+// tx.execute returns the postgres-js row array for a SELECT; narrow it safely.
+const asRows = (result: unknown): readonly Record<string, unknown>[] =>
+  Array.isArray(result) ? (result as Record<string, unknown>[]) : [];
+
+/**
+ * Opt-in, staged restore of the users section inside the ONE outer restore tx
+ * (TASK-564). The archived section is streamed into the persistent, run-scoped
+ * `backup_users_staging` table in bounded batches (never materialized as full
+ * arrays), then the whole-set guards (natural-key collision, FK-missing roleId,
+ * global admin-lockout), the staging->final upsert and the user_roles reconcile
+ * run as set-based SQL. Every failure rolls back the outer tx (staging rows
+ * included); the run-scoped cleanup is idempotent on retry.
  */
 export async function restoreUsersSectionTx(
   tx: DbTransaction,
-  section: { users: UserRow[]; roles: RoleRow[]; userRoles: UserRoleRow[] },
-  opts: { restoreUsers: boolean; confirm: boolean }
+  opts: { restoreUsers: boolean; confirm: boolean; runId: string },
+  stream: AsyncIterable<UsersSectionBatch>
 ): Promise<{ usersRestored: number; rolesRestored: number }> {
   if (!opts.restoreUsers) return { usersRestored: 0, rolesRestored: 0 };
   if (!opts.confirm) throw new Error("backup_restore_confirmation_required");
 
-  // 0. Secondary-unique (natural-key) collision guard — fail-closed, PRE-WRITE.
-  //    The PK-targeted upsert would otherwise hit Postgres 23505 unique_violation
-  //    on a same-email/same-name row with a DIFFERENT uuid, poisoning the single
-  //    outer tx. Reject the artifact id-faithfully (never silently reconcile on
-  //    the natural key). PII-safe: the offending email/role name is never thrown.
-  const roleNames = section.roles.map((r) => r.name);
-  if (roleNames.length) {
-    const existingRoles: Array<{ id: string; name: string }> = [];
-    for (const batch of chunk(roleNames, BATCH)) {
-      existingRoles.push(
-        ...(await tx
-          .select({ id: roles.id, name: roles.name })
-          .from(roles)
-          .where(inArray(roles.name, batch)))
-      );
+  // 0. Idempotent run-scoped cleanup: a stale staging row set for this runId
+  //    (retry, or a concurrent duplicate run) must never leak into the guards.
+  await tx.delete(backupUsersStaging).where(eq(backupUsersStaging.runId, opts.runId));
+
+  // 1. Stream the archived section into backup_users_staging. The caller yields
+  //    <= STAGING_BATCH lines per batch; the insert re-chunks defensively so a
+  //    hostile caller batch can never exceed the bind bound. Only counts
+  //    accumulate in memory — never the rows.
+  let usersStaged = 0;
+  let rolesStaged = 0;
+  for await (const batch of stream) {
+    const rows: StagingInsertRow[] = [];
+    for (const line of batch.lines) {
+      const raw = parseStagedLine(line);
+      if (batch.kind === "role") rows.push(stagedRoleRow(opts.runId, normalizeRoleRow(raw)));
+      else if (batch.kind === "user") rows.push(stagedUserRow(opts.runId, normalizeUserRow(raw)));
+      else rows.push(stagedUserRoleRow(opts.runId, normalizeUserRoleRow(raw)));
     }
-    const archivedRoleIdByName = new Map(section.roles.map((r) => [r.name, r.id]));
-    if (existingRoles.some((r) => archivedRoleIdByName.get(r.name) !== r.id)) {
-      throw new Error("backup_restore_invalid_artifact"); // roles.name natural-key clash
+    if (rows.length === 0) continue;
+    for (const insertBatch of chunk(rows, STAGING_BATCH)) {
+      await tx.insert(backupUsersStaging).values(insertBatch);
     }
-  }
-  const emails = section.users.map((u) => u.email);
-  if (emails.length) {
-    const existingUsers: Array<{ id: string; email: string }> = [];
-    for (const batch of chunk(emails, BATCH)) {
-      existingUsers.push(
-        ...(await tx
-          .select({ id: users.id, email: users.email })
-          .from(users)
-          .where(inArray(users.email, batch)))
-      );
-    }
-    const archivedUserIdByEmail = new Map(section.users.map((u) => [u.email, u.id]));
-    if (existingUsers.some((u) => archivedUserIdByEmail.get(u.email) !== u.id)) {
-      throw new Error("backup_restore_invalid_artifact"); // users.email natural-key clash
-    }
+    if (batch.kind === "user") usersStaged += rows.length;
+    else if (batch.kind === "role") rolesStaged += rows.length;
   }
 
-  // 1. UPSERT roles by pk (insert-or-update) — NEVER delete-all (FK trap).
-  //    Every updated column references excluded.*; createdAt stays the original.
-  for (const batch of chunk(section.roles, BATCH)) {
-    await tx
-      .insert(roles)
-      .values(batch)
-      .onConflictDoUpdate({
-        target: roles.id,
-        set: {
-          name: sql`excluded.name`,
-          description: sql`excluded.description`,
-          permissions: sql`excluded.permissions`,
-        },
-      });
-  }
-  // 2. UPSERT users by pk. passwordHash/email* written verbatim (opaque).
-  for (const batch of chunk(section.users, BATCH)) {
-    await tx
-      .insert(users)
-      .values(batch)
-      .onConflictDoUpdate({
-        target: users.id,
-        set: {
-          email: sql`excluded.email`,
-          emailHash: sql`excluded."email_hash"`,
-          emailEncrypted: sql`excluded."email_encrypted"`,
-          passwordHash: sql`excluded."password_hash"`,
-          name: sql`excluded.name`,
-          status: sql`excluded.status`,
-          updatedAt: sql`excluded."updated_at"`,
-        },
-      });
-  }
-  // 3. Reconcile user_roles ONLY for the archived users (bounded blast radius).
-  const archivedUserIds = section.users.map((u) => u.id);
-  if (archivedUserIds.length) {
-    const archivedUserIdsSet = new Set(archivedUserIds);
-    const scopedUserRoles = section.userRoles.filter((ur) => archivedUserIdsSet.has(ur.userId));
-    if (scopedUserRoles.length) {
-      // 3a. FK-safety pre-write guard: every roleId must resolve to a role that
-      //     exists after step 1 = archived ∪ already-present target roles.
-      const allowedRoleIds = new Set(section.roles.map((r) => r.id));
-      const missingRoleIds = [
-        ...new Set(
-          scopedUserRoles.map((ur) => ur.roleId).filter((rid) => !allowedRoleIds.has(rid))
-        ),
-      ];
-      if (missingRoleIds.length) {
-        const existingRoleRows: Array<{ id: string }> = [];
-        for (const batch of chunk(missingRoleIds, BATCH)) {
-          existingRoleRows.push(
-            ...(await tx.select({ id: roles.id }).from(roles).where(inArray(roles.id, batch)))
-          );
-        }
-        for (const row of existingRoleRows) allowedRoleIds.add(row.id);
-      }
-      if (scopedUserRoles.some((ur) => !allowedRoleIds.has(ur.roleId))) {
-        throw new Error("backup_restore_invalid_artifact"); // FK-missing roleId, PII-free
-      }
-    }
-    // BATCHED delete (bounded IN list): one giant inArray could exceed bind limits.
-    for (const batch of chunk(archivedUserIds, BATCH)) {
-      await tx.delete(userRoles).where(inArray(userRoles.userId, batch));
-    }
-    for (const batch of chunk(scopedUserRoles, BATCH)) {
-      await tx.insert(userRoles).values(batch).onConflictDoNothing(); // composite-pk safety
-    }
-  }
-  // 4. Admin-lockout guard (same tx, before commit): >=1 user holds an admin
+  // 2. Secondary-unique (natural-key) collision guard — set-based, whole-set,
+  //    PRE-WRITE. The PK-targeted upsert would otherwise hit Postgres 23505
+  //    unique_violation on a same-email/same-name row with a DIFFERENT uuid,
+  //    poisoning the single outer tx. Reject the artifact id-faithfully (never
+  //    silently reconcile on the natural key). PII-safe: the offending email /
+  //    role name is never thrown.
+  const [roleClash] = asRows(
+    await tx.execute(sql`
+      select exists (
+        select 1
+        from ${backupUsersStaging} s
+        join ${roles} r on r.name = s.role_name
+        where s.run_id = ${opts.runId}
+          and s.kind = 'role'
+          and r.id::text <> s.role_id
+      ) as clash
+    `)
+  );
+  if (roleClash?.clash === true) throw new Error("backup_restore_invalid_artifact");
+  const [userClash] = asRows(
+    await tx.execute(sql`
+      select exists (
+        select 1
+        from ${backupUsersStaging} s
+        join ${users} u on u.email = s.user_email
+        where s.run_id = ${opts.runId}
+          and s.kind = 'user'
+          and u.id::text <> s.user_id
+      ) as clash
+    `)
+  );
+  if (userClash?.clash === true) throw new Error("backup_restore_invalid_artifact");
+
+  // 3. FK-missing roleId guard — set-based, whole-set, scoped to the archived
+  //    userIds (mirrors the old allowedRoleIds construction): every staged
+  //    user_role.roleId must resolve to a staged role or an already-present
+  //    final role.
+  const missingRole = asRows(
+    await tx.execute(sql`
+      select 1
+      from ${backupUsersStaging} s
+      where s.run_id = ${opts.runId}
+        and s.kind = 'user_role'
+        and exists (
+          select 1 from ${backupUsersStaging} u
+          where u.run_id = ${opts.runId} and u.kind = 'user' and u.user_id = s.user_id
+        )
+        and not exists (
+          select 1 from ${backupUsersStaging} r
+          where r.run_id = ${opts.runId} and r.kind = 'role' and r.role_id = s.role_id
+        )
+        and not exists (
+          select 1 from ${roles} f where f.id::text = s.role_id
+        )
+      limit 1
+    `)
+  );
+  if (missingRole.length > 0) throw new Error("backup_restore_invalid_artifact");
+
+  // 3.5 STAGING -> FINAL upsert (set-based INSERT ... SELECT, NEVER delete-all —
+  //     users.id is an FK target of many out-of-scope tables). The FK-safe order
+  //     is roles -> users -> user_roles, unchanged from the pre-staging path.
+  // Set-based INSERT ... SELECT FROM staging (SQL form of insert().select()):
+  // the SELECT column ORDER is the positional contract for the table's INSERT
+  // column list (roles: id, name, description, permissions, created_at).
+  await tx
+    .insert(roles)
+    .select(
+      sql`
+      select ${backupUsersStaging.roleId}::uuid,
+             ${backupUsersStaging.roleName},
+             ${backupUsersStaging.roleDescription},
+             ${backupUsersStaging.rolePermissions},
+             ${backupUsersStaging.createdAt}
+      from ${backupUsersStaging}
+      where ${backupUsersStaging.runId} = ${opts.runId}
+        and ${backupUsersStaging.kind} = 'role'
+    `
+    )
+    .onConflictDoUpdate({
+      target: roles.id,
+      set: {
+        name: sql`excluded.name`,
+        description: sql`excluded.description`,
+        permissions: sql`excluded.permissions`,
+      },
+    });
+  await tx
+    .insert(users)
+    .select(
+      sql`
+      select ${backupUsersStaging.userId}::uuid,
+             ${backupUsersStaging.userEmail},
+             ${backupUsersStaging.userEmailHash},
+             ${backupUsersStaging.userEmailEncrypted},
+             ${backupUsersStaging.userPasswordHash},
+             ${backupUsersStaging.userName},
+             ${backupUsersStaging.userStatus},
+             ${backupUsersStaging.createdAt},
+             ${backupUsersStaging.updatedAt},
+             ${backupUsersStaging.lastLoginAt}
+      from ${backupUsersStaging}
+      where ${backupUsersStaging.runId} = ${opts.runId}
+        and ${backupUsersStaging.kind} = 'user'
+    `
+    )
+    .onConflictDoUpdate({
+      target: users.id,
+      set: {
+        email: sql`excluded.email`,
+        emailHash: sql`excluded."email_hash"`,
+        emailEncrypted: sql`excluded."email_encrypted"`,
+        passwordHash: sql`excluded."password_hash"`,
+        name: sql`excluded.name`,
+        status: sql`excluded.status`,
+        updatedAt: sql`excluded."updated_at"`,
+      },
+    });
+  // Reconcile user_roles ONLY for the archived users (bounded blast radius):
+  // set-based delete of the archived users' assignments, then insert the
+  // archive's assignments for those users (composite-pk on-conflict-do-nothing).
+  await tx.execute(sql`
+    delete from ${userRoles}
+    where ${userRoles.userId} in (
+      select ${backupUsersStaging.userId}::uuid
+      from ${backupUsersStaging}
+      where ${backupUsersStaging.runId} = ${opts.runId}
+        and ${backupUsersStaging.kind} = 'user'
+    )
+  `);
+  await tx
+    .insert(userRoles)
+    .select(
+      sql`
+      select ${backupUsersStaging.userId}::uuid,
+             ${backupUsersStaging.roleId}::uuid
+      from ${backupUsersStaging}
+      where ${backupUsersStaging.runId} = ${opts.runId}
+        and ${backupUsersStaging.kind} = 'user_role'
+        and exists (
+          select 1 from ${backupUsersStaging} u
+          where u.run_id = ${opts.runId} and u.kind = 'user' and u.user_id = ${backupUsersStaging.userId}
+        )
+    `
+    )
+    .onConflictDoNothing();
+
+  // 4. Admin-lockout guard (same tx, after the upsert): >=1 user holds an admin
   //    role (any status, matching v1 lockout semantics), resolved via
   //    getAdminRoleIds (hasFullAccess only — a role named "admin" alone counts
   //    only if its permissions include "*").
@@ -417,5 +548,10 @@ export async function restoreUsersSectionTx(
   if (new Set(admins.map((r) => r.userId)).size === 0) {
     throw new Error("backup_users_restore_no_admin"); // -> tx rollback, fail-closed
   }
-  return { usersRestored: section.users.length, rolesRestored: section.roles.length };
+
+  // 5. Run-scoped staging cleanup (idempotent; the same tx also discards every
+  //    staged row on any earlier throw / rollback).
+  await tx.delete(backupUsersStaging).where(eq(backupUsersStaging.runId, opts.runId));
+
+  return { usersRestored: usersStaged, rolesRestored: rolesStaged };
 }

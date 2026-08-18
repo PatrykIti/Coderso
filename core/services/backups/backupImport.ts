@@ -51,15 +51,7 @@ import {
   MEDIA_MEMBER_PREFIX,
   restoreMediaFromArchive,
 } from "./mediaArchive"; // 03
-import {
-  normalizeRoleRow,
-  normalizeUserRoleRow,
-  normalizeUserRow,
-  restoreUsersSectionTx,
-  type RoleRow,
-  type UserRoleRow,
-  type UserRow,
-} from "./backupUsersSection"; // 04 — tx helper + normalize*/row types
+import { restoreUsersSectionTx, type UsersSectionBatch } from "./backupUsersSection"; // 04 — staged users-section restore helper
 import { importConfigTx } from "../tools/importExportService"; // 484 — tx-aware settings import
 
 type DbTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
@@ -148,15 +140,6 @@ async function collectText(body: AsyncIterable<Uint8Array>): Promise<string> {
     offset += chunk.byteLength;
   }
   return new TextDecoder().decode(all);
-}
-
-// Fully materialize an NDJSON member into raw string lines (the users section's
-// bounded owner-scoped memory exception, parent §decision 4 / §5.5).
-async function collectLines(body: AsyncIterable<Uint8Array>): Promise<string[]> {
-  return (await collectText(body))
-    .split("\n")
-    .map((line) => line.trim())
-    .filter((line) => line.length > 0);
 }
 
 const countNewlines = (chunk: Uint8Array): number => {
@@ -523,10 +506,15 @@ async function validateArchive(tarPath: string): Promise<ArchiveManifest> {
     if (sectionMembers.has(entry.name)) throw new Error("backup_manifest_invalid"); // duplicate
     sectionMembers.add(entry.name);
     if (isUsersMemberName(entry.name)) {
-      const lines = await collectLines(entry.body);
-      if (entry.name === USERS_MEMBER_NAME) usersLines.users = lines.length;
-      else if (entry.name === ROLES_MEMBER_NAME) usersLines.roles = lines.length;
-      else usersLines.userRoles = lines.length;
+      // TASK-564: count the member's NDJSON lines WITHOUT materializing them
+      // (the users section is the no-OOM exception's last full-array holdout).
+      let lineCount = 0;
+      for await (const batch of ndjsonLineBatches(entry.body, IMPORT_BATCH_SIZE)) {
+        lineCount += batch.length;
+      }
+      if (entry.name === USERS_MEMBER_NAME) usersLines.users = lineCount;
+      else if (entry.name === ROLES_MEMBER_NAME) usersLines.roles = lineCount;
+      else usersLines.userRoles = lineCount;
     } else if (entry.name.startsWith(MEDIA_MEMBER_PREFIX)) {
       mediaCount += 1;
       mediaBytes += entry.size;
@@ -666,7 +654,7 @@ export async function restoreArchiveStreamTx(
   tx: DbTransaction,
   tarPath: string,
   manifest: ArchiveManifest,
-  opts: { restoreUsers: boolean; confirm: boolean }
+  opts: { restoreUsers: boolean; confirm: boolean; runId: string }
 ): Promise<{ tables: number; rows: number; usersRestored: number }> {
   const includeDb = manifest.include.includes("database");
   const includeUsers = manifest.include.includes("users");
@@ -686,38 +674,49 @@ export async function restoreArchiveStreamTx(
   //     media.created_by, ...) and NO constraint is DEFERRABLE, so a cross-env /
   //     DR restore whose users are absent from the target must upsert users
   //     BEFORE content. 01 emits users members LAST, so a dedicated spool scan
-  //     (ONE extra sequential read, only on the opt-in path) collects the three
-  //     members, cross-checks counts, and calls 04's UPSERT-by-pk helper (never
-  //     delete-all → safe before content) inside the SAME outer tx.
+  //     (ONE extra sequential read, only on the opt-in path) streams the three
+  //     members into 04's run-scoped staging table (TASK-564: bounded batches,
+  //     no full-array materialization), then runs the set-based guards + upsert
+  //     (never delete-all → safe before content) inside the SAME outer tx.
   if (includeUsers && opts.restoreUsers) {
-    const pre = { users: [] as UserRow[], roles: [] as RoleRow[], userRoles: [] as UserRoleRow[] };
     let sawUsersPre = false;
-    for await (const entry of readTarMembers(fileStream(tarPath)).entries()) {
-      if (isUsersMemberName(entry.name)) {
-        sawUsersPre = true;
-        const lines = await collectLines(entry.body);
-        if (entry.name === USERS_MEMBER_NAME)
-          pre.users = lines.map((l) => normalizeUserRow(parseRow(l)));
-        else if (entry.name === ROLES_MEMBER_NAME)
-          pre.roles = lines.map((l) => normalizeRoleRow(parseRow(l)));
-        else pre.userRoles = lines.map((l) => normalizeUserRoleRow(parseRow(l)));
-      } else {
-        for await (const _ of entry.body) {
-          /* drain to advance the tar cursor */
+    const counts = { users: 0, roles: 0, userRoles: 0 };
+    async function* stagedUsersSection(): AsyncGenerator<UsersSectionBatch> {
+      for await (const entry of readTarMembers(fileStream(tarPath)).entries()) {
+        if (isUsersMemberName(entry.name)) {
+          sawUsersPre = true;
+          const kind: UsersSectionBatch["kind"] =
+            entry.name === USERS_MEMBER_NAME
+              ? "user"
+              : entry.name === ROLES_MEMBER_NAME
+                ? "role"
+                : "user_role";
+          for await (const batch of ndjsonLineBatches(entry.body, IMPORT_BATCH_SIZE)) {
+            if (kind === "user") counts.users += batch.length;
+            else if (kind === "role") counts.roles += batch.length;
+            else counts.userRoles += batch.length;
+            yield { kind, lines: batch };
+          }
+        } else {
+          for await (const _ of entry.body) {
+            /* drain to advance the tar cursor */
+          }
         }
       }
     }
+    const r = await restoreUsersSectionTx(
+      tx,
+      { restoreUsers: true, confirm: opts.confirm, runId: opts.runId },
+      stagedUsersSection()
+    );
     if (!sawUsersPre) throw new Error("backup_manifest_invalid");
     const mu = manifest.users;
     if (
       mu &&
-      (mu.users !== pre.users.length ||
-        mu.roles !== pre.roles.length ||
-        mu.userRoles !== pre.userRoles.length)
+      (mu.users !== counts.users || mu.roles !== counts.roles || mu.userRoles !== counts.userRoles)
     ) {
       throw new Error("backup_manifest_invalid");
     }
-    const r = await restoreUsersSectionTx(tx, pre, { restoreUsers: true, confirm: opts.confirm });
     usersRestored = r.usersRestored;
   }
 
@@ -833,6 +832,9 @@ export async function importBackupFromUpload(input: ImportBackupInput): Promise<
   );
   await mkdir(tmpDir, { recursive: true, mode: 0o700 });
   const tarPath = path.join(tmpDir, "archive.tar");
+  // Spool-dir identity `coderso-import-<uuid>`: the run-scoped staging key for
+  // TASK-564's users restore AND TASK-563's media-failure receipt (one source).
+  const runId = path.basename(tmpDir);
   const cleanup = async () => {
     await rm(tmpDir, { recursive: true, force: true });
   };
@@ -858,6 +860,7 @@ export async function importBackupFromUpload(input: ImportBackupInput): Promise<
       return restoreArchiveStreamTx(tx, tarPath, manifest, {
         restoreUsers: input.restoreUsers === true,
         confirm: true,
+        runId,
       });
     });
 
@@ -866,7 +869,6 @@ export async function importBackupFromUpload(input: ImportBackupInput): Promise<
     //     or settings; a media-/users-only archive touches neither, mirroring
     //     the legacy restoreBackup condition), THEN restore media bytes via 03
     //     (non-transactional object storage). One sequential spool read.
-    const runId = path.basename(tmpDir); // spool-dir identity `coderso-import-<uuid>`
     const clearCache = input.clearCache ?? clearSiteCache;
     if (manifest.include.includes("database") || manifest.include.includes("settings")) {
       await clearCache();
