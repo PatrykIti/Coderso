@@ -33,8 +33,17 @@ export const createActionExecutorTestState = () => {
     blocks: WidgetBlock[];
     bindings: CustomScreenBinding[];
     capabilities: CustomScreenCapabilities;
+    revision: number;
     createdAt: Date;
     updatedAt: Date;
+  }> = [];
+  const customScreenUpdateCalls: Array<{
+    id: string;
+    input: {
+      definition?: CustomScreenDefinition;
+      expectedRevision?: number;
+      [key: string]: unknown;
+    };
   }> = [];
   const listingQueries: Array<{
     id: string;
@@ -174,6 +183,7 @@ export const createActionExecutorTestState = () => {
     contentRoutes,
     contentTypes,
     customScreens,
+    customScreenUpdateCalls,
     listingQueries,
     listingTemplates,
     pages,

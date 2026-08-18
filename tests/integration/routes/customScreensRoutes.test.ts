@@ -27,6 +27,7 @@ import {
 const harness = createCustomScreenRouteHarness();
 const {
   cleanup,
+  patchScreen,
   patchScreenDefinition,
   seedBoundScreen,
   trackContentTypeId,
@@ -85,6 +86,8 @@ test("mapCustomScreenError maps domain errors to API errors", () => {
   expect(mapCustomScreenError(new Error("custom_screen_override_invalid"))?.status).toBe(400);
   expect(mapCustomScreenError(new Error("custom_screen_override_not_found"))?.status).toBe(404);
   expect(mapCustomScreenError(new Error("custom_screen_override_conflict"))?.status).toBe(409);
+  expect(mapCustomScreenError(new Error("custom_screen_revision_required"))?.status).toBe(400);
+  expect(mapCustomScreenError(new Error("custom_screen_conflict"))?.status).toBe(409);
   expect(mapCustomScreenError(new Error("other_error"))).toBeNull();
 });
 
@@ -553,3 +556,72 @@ test("PATCH custom screen entry overrides rejects unknown envelope keys before s
     status: 400,
   });
 });
+
+// TASK-569 — optimistic-concurrency revision precondition on definition PATCHes.
+testIfDb(
+  "TASK-569 PATCH /custom-screens/:id definition requires expectedRevision and a stale revision maps to 409",
+  async () => {
+    const screen = await seedBoundScreen();
+
+    // Definition without expectedRevision → 400 custom_screen_revision_required.
+    await expect(patchScreen(screen.id, { definition: buildDefinition() })).rejects.toMatchObject({
+      code: "custom_screen_revision_required",
+      status: 400,
+    });
+
+    // A stale expectedRevision → 409 custom_screen_conflict; store untouched.
+    await expect(patchScreenDefinition(screen.id, buildDefinition(), 999)).rejects.toMatchObject({
+      code: "custom_screen_conflict",
+      status: 409,
+    });
+    const reread = await getCustomScreen(screen.id);
+    expect(reread?.revision).toBe(1);
+  }
+);
+
+testIfDb(
+  "TASK-569 metadata-only PATCH proceeds without expectedRevision and does not bump the revision",
+  async () => {
+    const screen = await seedBoundScreen();
+
+    const updated = (await patchScreen(screen.id, { status: "active" })) as Awaited<
+      ReturnType<typeof getCustomScreen>
+    >;
+    expect(updated?.status).toBe("active");
+    expect(updated?.revision).toBe(1);
+
+    const reread = await getCustomScreen(screen.id);
+    expect(reread?.status).toBe("active");
+    expect(reread?.revision).toBe(1);
+  }
+);
+
+testIfDb(
+  "TASK-569 two concurrent definition PATCHes: exactly one commits, the other maps to 409",
+  async () => {
+    const screen = await seedBoundScreen();
+    const current = (await getCustomScreen(screen.id)) as NonNullable<
+      Awaited<ReturnType<typeof getCustomScreen>>
+    >;
+    const expectedRevision = current.revision;
+
+    const [first, second] = await Promise.allSettled([
+      patchScreenDefinition(screen.id, buildDefinition({ width: "half" }), expectedRevision),
+      patchScreenDefinition(screen.id, buildDefinition({ width: "full" }), expectedRevision),
+    ]);
+
+    const winners = [first, second].filter((result) => result.status === "fulfilled");
+    const losers = [first, second].filter((result) => result.status === "rejected");
+    expect(winners).toHaveLength(1);
+    expect(losers).toHaveLength(1);
+    const loser = losers[0] as PromiseRejectedResult;
+    expect(loser.reason).toMatchObject({ code: "custom_screen_conflict", status: 409 });
+
+    // Exactly one writer committed: the revision advanced exactly once and the
+    // winning definition is present verbatim.
+    const reread = await getCustomScreen(screen.id);
+    expect(reread?.revision).toBe(expectedRevision + 1);
+    const storedStyle = reread?.definition.editorView.document.sections[0]?.blocks[0]?.style;
+    expect(["half", "full"]).toContain((storedStyle as { width: string })?.width);
+  }
+);

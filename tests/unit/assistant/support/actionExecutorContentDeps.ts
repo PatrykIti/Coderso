@@ -177,6 +177,7 @@ export const createActionExecutorContentDeps = (state: ActionExecutorTestState) 
         blocks: projection.blocks,
         bindings: projection.bindings,
         capabilities: projection.capabilities,
+        revision: 1,
         createdAt: now,
         updatedAt: now,
       };
@@ -196,10 +197,12 @@ export const createActionExecutorContentDeps = (state: ActionExecutorTestState) 
         definition?: CustomScreenDefinition;
         blocks?: WidgetBlock[] | null;
         bindings?: CustomScreenBinding[] | null;
+        expectedRevision?: number;
       }
     ) => {
       const existing = customScreens.find((entry) => entry.id === id) ?? null;
       if (!existing) return null;
+      state.customScreenUpdateCalls.push({ id, input: { ...input } });
       if (input.name !== undefined) existing.name = input.name;
       if (input.contentTypeId !== undefined) existing.contentTypeId = input.contentTypeId;
       if (input.status !== undefined) existing.status = input.status;
@@ -219,6 +222,11 @@ export const createActionExecutorContentDeps = (state: ActionExecutorTestState) 
       existing.blocks = projection.blocks;
       existing.bindings = projection.bindings;
       existing.capabilities = projection.capabilities;
+      // TASK-569: only definition-bearing writes bump the monotonic revision,
+      // mirroring the server's conditional-update semantics.
+      if (input.definition !== undefined || input.expectedRevision !== undefined) {
+        existing.revision = (existing.revision ?? 0) + 1;
+      }
       existing.updatedAt = new Date("2026-04-10T12:01:00.000Z");
       return existing;
     },

@@ -591,7 +591,13 @@ export const buildCustomScreenMutationSchema = (kind: "create" | "update") => ({
   type: "object",
   $defs: buildCustomScreenV4Defs(),
   ...(kind === "create" ? { required: ["name", "contentTypeId"] } : { minProperties: 1 }),
-  properties: buildCustomScreenMutationProperties(),
+  properties: {
+    ...buildCustomScreenMutationProperties(),
+    // TASK-569: optimistic-concurrency precondition. Definition-bearing PATCHes
+    // must send the revision they were loaded from; a mismatch maps to
+    // custom_screen_conflict (HTTP 409) at the service boundary.
+    ...(kind === "update" ? { expectedRevision: { type: "integer", minimum: 1 } } : {}),
+  },
   additionalProperties: false,
 });
 

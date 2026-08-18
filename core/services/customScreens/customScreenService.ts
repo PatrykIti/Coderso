@@ -1,4 +1,4 @@
-import { desc, eq, inArray } from "drizzle-orm";
+import { and, desc, eq, inArray, sql } from "drizzle-orm";
 
 import { db } from "../../db/client";
 import { acquireNativeCmsWriterFence } from "../../db/nativeCmsWriterFence";
@@ -36,6 +36,7 @@ export type CustomScreenRecord = {
   blocks: WidgetBlock[];
   bindings: CustomScreenBinding[];
   capabilities: CustomScreenCapabilities;
+  revision: number;
   createdAt: Date;
   updatedAt: Date;
   // Transient binding-GC warnings surfaced on POST/PATCH success — computed at normalize
@@ -79,6 +80,9 @@ export type CustomScreenUpdateInput = {
   sidebarLabel?: string | null;
   schemaVersion?: 4;
   definition?: CustomScreenDefinition | null;
+  // TASK-569: optimistic-concurrency precondition. Required when the payload is
+  // definition-bearing; a mismatch maps to custom_screen_conflict (HTTP 409).
+  expectedRevision?: number;
 };
 
 const allowedStatuses = new Set<CustomScreenStatus>(["draft", "active"]);
@@ -149,6 +153,7 @@ const mapRow = (
     blocks: getCustomScreenEditorViewBlocks(definition),
     bindings: getCustomScreenEditorViewBindings(definition),
     capabilities: resolveCustomScreenCapabilities({ definition }),
+    revision: row.revision,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   };
@@ -263,24 +268,32 @@ export async function updateCustomScreen(id: string, input: CustomScreenUpdateIn
   const committed = await db.transaction(
     async (tx) => {
       await acquireNativeCmsWriterFence(tx);
-      const [observed] = await tx.select().from(customScreens).where(eq(customScreens.id, id));
-      if (!observed) return null;
-      const nextContentTypeId =
-        input.contentTypeId !== undefined
-          ? normalizeContentTypeId(input.contentTypeId)
-          : observed.contentTypeId;
-      const contentType = await lockContentTypeContext(tx, nextContentTypeId);
-      const [existing] = await tx
+      // TASK-569 (N2): lock the screen row FIRST (FOR UPDATE), then resolve the
+      // content type id from BOTH branches — the input when provided, otherwise the
+      // locked row — before locking the content type context. A concurrent
+      // contentTypeId change can therefore never produce a spurious
+      // custom_screen_invalid 400, and a contentTypeId-changing PATCH validates
+      // against the new content type.
+      const [locked] = await tx
         .select()
         .from(customScreens)
         .where(eq(customScreens.id, id))
         .for("update");
-      if (!existing) return null;
-      if (input.contentTypeId === undefined && existing.contentTypeId !== nextContentTypeId) {
-        throw new Error("custom_screen_invalid");
-      }
+      if (!locked) return null;
+      const nextContentTypeId =
+        input.contentTypeId !== undefined
+          ? normalizeContentTypeId(input.contentTypeId)
+          : locked.contentTypeId;
+      const contentType = await lockContentTypeContext(tx, nextContentTypeId);
+      // TASK-569: definition-bearing PATCHes carry an expectedRevision precondition.
+      // The conditional UPDATE ... WHERE id = ? AND revision = ? maps zero returned
+      // rows to custom_screen_conflict (HTTP 409) instead of silent last-writer-wins.
+      // Definition-free metadata PATCHes (status/name/showInSidebar/...) proceed
+      // without the revision check.
+      const isDefinitionBearing =
+        input.definition !== undefined || input.expectedRevision !== undefined;
       const baseDefinition = normalizeCustomScreenDefinitionForRead(
-        { definition: existing.definition, schemaVersion: existing.schemaVersion },
+        { definition: locked.definition, schemaVersion: locked.schemaVersion },
         { contentType }
       );
       const nextSchemaVersion =
@@ -305,35 +318,51 @@ export async function updateCustomScreen(id: string, input: CustomScreenUpdateIn
         sink
       );
       const sidebar = normalizeCustomScreenSidebarConfig({
-        showInSidebar: input.showInSidebar ?? existing.showInSidebar,
-        sidebarLabel: input.sidebarLabel !== undefined ? input.sidebarLabel : existing.sidebarLabel,
+        showInSidebar: input.showInSidebar ?? locked.showInSidebar,
+        sidebarLabel: input.sidebarLabel !== undefined ? input.sidebarLabel : locked.sidebarLabel,
       });
       const collectionLink = normalizeCustomScreenCollectionLink({
         collectionRole:
-          input.collectionRole !== undefined ? input.collectionRole : existing.collectionRole,
+          input.collectionRole !== undefined ? input.collectionRole : locked.collectionRole,
         compositionKey:
-          input.compositionKey !== undefined ? input.compositionKey : existing.compositionKey,
+          input.compositionKey !== undefined ? input.compositionKey : locked.compositionKey,
       });
-      const [row] = await tx
-        .update(customScreens)
-        .set({
-          name: input.name !== undefined ? normalizeName(input.name) : existing.name,
-          contentTypeId: nextContentTypeId,
-          status:
-            input.status !== undefined
-              ? normalizeStatus(input.status)
-              : normalizeStatus(existing.status),
-          collectionRole: collectionLink.collectionRole,
-          compositionKey: collectionLink.compositionKey,
-          showInSidebar: sidebar.showInSidebar,
-          sidebarLabel: sidebar.sidebarLabel,
-          schemaVersion: definition.schemaVersion,
-          definition,
-          updatedAt: new Date(),
-        })
-        .where(eq(customScreens.id, id))
-        .returning();
-      return row ? { row, contentType, warnings: buildBindingWarnings(sink) } : null;
+      const setValues = {
+        name: input.name !== undefined ? normalizeName(input.name) : locked.name,
+        contentTypeId: nextContentTypeId,
+        status:
+          input.status !== undefined
+            ? normalizeStatus(input.status)
+            : normalizeStatus(locked.status),
+        collectionRole: collectionLink.collectionRole,
+        compositionKey: collectionLink.compositionKey,
+        showInSidebar: sidebar.showInSidebar,
+        sidebarLabel: sidebar.sidebarLabel,
+        schemaVersion: definition.schemaVersion,
+        definition,
+        updatedAt: new Date(),
+      };
+      let row: typeof customScreens.$inferSelect | undefined;
+      if (isDefinitionBearing) {
+        const expectedRevision = input.expectedRevision;
+        if (expectedRevision == null) {
+          throw new Error("custom_screen_revision_required");
+        }
+        [row] = await tx
+          .update(customScreens)
+          .set({ ...setValues, revision: sql`${customScreens.revision} + 1` })
+          .where(and(eq(customScreens.id, id), eq(customScreens.revision, expectedRevision)))
+          .returning();
+        if (!row) throw new Error("custom_screen_conflict");
+      } else {
+        [row] = await tx
+          .update(customScreens)
+          .set(setValues)
+          .where(eq(customScreens.id, id))
+          .returning();
+        if (!row) return null;
+      }
+      return { row, contentType, warnings: buildBindingWarnings(sink) };
     },
     { isolationLevel: "read committed" }
   );

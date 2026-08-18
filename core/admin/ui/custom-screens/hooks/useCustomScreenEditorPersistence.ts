@@ -547,6 +547,27 @@ export function useCustomScreenEditorPersistence({
       return;
     }
 
+    const capturedTarget = persistedScreenTargetRef.current;
+    const targetId =
+      screenId && !isCreateMode
+        ? screenId
+        : capturedTarget?.routeVisit === routeVisit &&
+            capturedTarget.routeGeneration === routeGenerationRef.current
+          ? capturedTarget.id
+          : null;
+    // TASK-569: a definition save must carry the revision the editor was loaded
+    // from. A stale browser-cache record without a revision field cannot produce
+    // one, so revalidate instead of sending a doomed expectedRevision (or worse,
+    // racing a silent last-writer-wins against a fresh server record).
+    if (targetId && !isCreateMode && typeof screen?.revision !== "number") {
+      externalUpdateUnresolvedRef.current = true;
+      setExternalRevisionVisit(routeVisit);
+      setErrorCommit(null);
+      setSaveNoticeCommit(null);
+      void refreshScreen(true);
+      return;
+    }
+
     const token = captureScreenSaveToken();
     activeScreenSaveTokenRef.current = token;
     screenHydrationGenerationRef.current += 1;
@@ -561,17 +582,10 @@ export function useCustomScreenEditorPersistence({
       showInSidebar,
       sidebarLabel: sidebarLabel.trim() || null,
       definition: definitionRef.current,
+      ...(targetId && !isCreateMode ? { expectedRevision: screen?.revision } : {}),
     };
 
     try {
-      const capturedTarget = persistedScreenTargetRef.current;
-      const targetId =
-        screenId && !isCreateMode
-          ? screenId
-          : capturedTarget?.routeVisit === routeVisit &&
-              capturedTarget.routeGeneration === routeGenerationRef.current
-            ? capturedTarget.id
-            : null;
       const mutationOptions = { cacheEventOperationToken: token.cacheEventOperationToken };
       const saved = targetId
         ? await updateCustomScreen(targetId, payload, mutationOptions)

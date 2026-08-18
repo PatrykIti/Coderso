@@ -304,8 +304,40 @@ export const createCustomScreenRouteHarness = (
     });
   };
 
-  const patchScreenDefinition = (screenId: string, definition: CustomScreenDefinition) =>
-    patchScreen(screenId, { definition });
+  // TASK-569: definition-bearing PATCHes require the loaded revision. Resolve the
+  // current revision from the store once per screen, then keep it in sync from
+  // PATCH responses (the server echoes the incremented revision). Pass an
+  // explicit stale revision to exercise the 409 conflict path. This keeps the
+  // reject-heavy integrity suites free of a per-call revision lookup.
+  const screenRevisions = new Map<string, number>();
+  const resolveScreenRevision = async (screenId: string) => {
+    const known = screenRevisions.get(screenId);
+    if (known !== undefined) return known;
+    const [row] = await db
+      .select({ revision: customScreens.revision })
+      .from(customScreens)
+      .where(eq(customScreens.id, screenId));
+    const revision = row?.revision ?? 1;
+    screenRevisions.set(screenId, revision);
+    return revision;
+  };
+  const patchScreenDefinition = async (
+    screenId: string,
+    definition: CustomScreenDefinition,
+    expectedRevision?: number
+  ) => {
+    const current = expectedRevision ?? (await resolveScreenRevision(screenId));
+    const result = await patchScreen(screenId, { definition, expectedRevision: current });
+    if (
+      result &&
+      typeof result === "object" &&
+      "revision" in result &&
+      typeof (result as { revision?: unknown }).revision === "number"
+    ) {
+      screenRevisions.set(screenId, (result as { revision: number }).revision);
+    }
+    return result;
+  };
 
   const postScreen = async (body: unknown) => {
     const { router, routes } = makeRouter();

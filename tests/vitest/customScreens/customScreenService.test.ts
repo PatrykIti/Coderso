@@ -183,6 +183,7 @@ const createRow = (overrides: Record<string, unknown> = {}) => ({
   sidebarLabel: " Catalog ",
   schemaVersion: 4,
   definition: makeV4Definition(),
+  revision: 1,
   createdAt: new Date("2026-03-06T10:00:00.000Z"),
   updatedAt: new Date("2026-03-06T11:00:00.000Z"),
   ...overrides,
@@ -472,6 +473,7 @@ test("updateCustomScreen accepts V4 definition writes", async () => {
 
   const result = await updateCustomScreen("screen-1", {
     definition: nextDefinition,
+    expectedRevision: 1,
   });
 
   expect(mockDb.state.lastUpdateValues).toMatchObject({
@@ -521,6 +523,7 @@ test("updateCustomScreen accepts a style-carrying V4 definition and preserves it
 
   const result = await updateCustomScreen("screen-1", {
     definition: styledDefinition,
+    expectedRevision: 1,
   });
 
   // The write path (real normalizeCustomScreenDefinitionForWrite; only db is mocked)
@@ -565,6 +568,7 @@ test("updateCustomScreen rejects an unknown style key with custom_screen_definit
   await expect(
     updateCustomScreen("screen-1", {
       definition: badDefinition,
+      expectedRevision: 1,
     })
   ).rejects.toThrow("custom_screen_definition_invalid");
   expect(mockDb.state.lastUpdateValues).toBeNull();
@@ -580,7 +584,10 @@ test("TASK-505-01 updateCustomScreen accepts a section-style V4 definition and p
   ];
   mockDb.state.updateRows = [createRow({ schemaVersion: 4, definition: styledDefinition })];
 
-  const result = await updateCustomScreen("screen-1", { definition: styledDefinition });
+  const result = await updateCustomScreen("screen-1", {
+    definition: styledDefinition,
+    expectedRevision: 1,
+  });
 
   // The real write normalizer preserves the validated section style (only db is mocked).
   const writtenSection = (
@@ -616,7 +623,10 @@ test("TASK-505-01 updateCustomScreen runs the normalize-time GC safety net: a bl
     createRow({ schemaVersion: 4, definition: makeV4Definition("field-1") }),
   ];
 
-  const result = await updateCustomScreen("screen-1", { definition: orphanDefinition });
+  const result = await updateCustomScreen("screen-1", {
+    definition: orphanDefinition,
+    expectedRevision: 1,
+  });
 
   // The write safety-net inside normalizeCustomScreenEditorViewDefinitionV4 pruned the
   // block-orphan instead of hard-throwing custom_screen_definition_invalid.
@@ -699,4 +709,84 @@ test("deleteCustomScreen returns the normalized deleted record or null", async (
 
   mockDb.state.deleteRows = [];
   await expect(deleteCustomScreen("screen-2")).resolves.toBeNull();
+});
+
+test("updateCustomScreen rejects a definition PATCH without expectedRevision (TASK-569)", async () => {
+  mockDb.state.selectRows = [
+    createRow({ schemaVersion: 4, definition: makeV4Definition("field-1"), revision: 1 }),
+  ];
+
+  await expect(
+    updateCustomScreen("screen-1", { definition: makeV4Definition("field-2") })
+  ).rejects.toThrow("custom_screen_revision_required");
+  expect(mockDb.state.lastUpdateValues).toBeNull();
+});
+
+test("updateCustomScreen maps a revision mismatch to custom_screen_conflict (TASK-569)", async () => {
+  mockDb.state.selectRows = [
+    createRow({ schemaVersion: 4, definition: makeV4Definition("field-1"), revision: 1 }),
+  ];
+  // A concurrent writer bumped the revision; the conditional UPDATE matches zero rows.
+  mockDb.state.updateRows = [];
+
+  await expect(
+    updateCustomScreen("screen-1", {
+      definition: makeV4Definition("field-2"),
+      expectedRevision: 1,
+    })
+  ).rejects.toThrow("custom_screen_conflict");
+});
+
+test("updateCustomScreen response carries the incremented revision (TASK-569)", async () => {
+  mockDb.state.selectRows = [
+    createRow({ schemaVersion: 4, definition: makeV4Definition("field-1"), revision: 1 }),
+  ];
+  mockDb.state.updateRows = [
+    createRow({ schemaVersion: 4, definition: makeV4Definition("field-2"), revision: 2 }),
+  ];
+
+  const result = await updateCustomScreen("screen-1", {
+    definition: makeV4Definition("field-2"),
+    expectedRevision: 1,
+  });
+  expect(result?.revision).toBe(2);
+  expect(result?.definition.editorView.document.sections[0]?.blocks[0]?.id).toBe("field-2");
+});
+
+test("updateCustomScreen metadata PATCH proceeds without expectedRevision and keeps the revision (TASK-569)", async () => {
+  mockDb.state.selectRows = [
+    createRow({ schemaVersion: 4, definition: makeV4Definition("field-1"), revision: 3 }),
+  ];
+  mockDb.state.updateRows = [
+    createRow({ schemaVersion: 4, definition: makeV4Definition("field-1"), revision: 3 }),
+  ];
+
+  const result = await updateCustomScreen("screen-1", { status: "active" });
+  expect(result?.revision).toBe(3);
+  expect(mockDb.state.lastUpdateValues?.status).toBe("active");
+});
+
+test("updateCustomScreen resolves the content type from the locked row when the payload omits it (N2, TASK-569)", async () => {
+  // The locked row carries contentTypeId "products"; the payload changes only status.
+  // The contentType context lock must target "products" (no spurious
+  // custom_screen_invalid) and the write keeps the locked row's content type.
+  mockDb.state.selectRows = [
+    createRow({
+      schemaVersion: 4,
+      definition: makeV4Definition("field-1"),
+      contentTypeId: "products",
+    }),
+  ];
+  mockDb.state.updateRows = [
+    createRow({
+      schemaVersion: 4,
+      definition: makeV4Definition("field-1"),
+      contentTypeId: "products",
+    }),
+  ];
+
+  const result = await updateCustomScreen("screen-1", { status: "active" });
+  expect(mockDb.state.events).toContain("select:key share");
+  expect(mockDb.state.lastUpdateValues?.contentTypeId).toBe("products");
+  expect(result?.contentTypeId).toBe("products");
 });

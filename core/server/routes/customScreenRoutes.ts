@@ -44,6 +44,18 @@ export const mapCustomScreenError = (error: unknown) => {
       return new ApiError("custom_screen_invalid", "Custom screen payload is invalid", 400);
     case "custom_screen_status_invalid":
       return new ApiError("custom_screen_status_invalid", "Custom screen status is invalid", 400);
+    case "custom_screen_revision_required":
+      return new ApiError(
+        "custom_screen_revision_required",
+        "Custom screen definition saves require the current revision",
+        400
+      );
+    case "custom_screen_conflict":
+      return new ApiError(
+        "custom_screen_conflict",
+        "Custom screen was modified by another editor",
+        409
+      );
     case "custom_screen_definition_invalid": {
       const fields = error instanceof CustomScreenDefinitionError ? error.fields : undefined;
       return new ApiError(

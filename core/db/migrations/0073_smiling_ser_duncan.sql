@@ -1,0 +1,1 @@
+ALTER TABLE "custom_screens" ADD COLUMN "revision" bigint DEFAULT 1 NOT NULL;

@@ -847,3 +847,44 @@ test("custom screen mutations correlate only their local cache events without se
     }
   }
 });
+
+test("TASK-569 server revision is stored in the cached record and expectedRevision round-trips in the PATCH body", async () => {
+  const originalFetch = globalThis.fetch;
+  const calls: Array<{ input: RequestInfo | URL; init?: RequestInit }> = [];
+  clearCustomScreensCache();
+
+  globalThis.fetch = async (input, init) => {
+    calls.push({ input, init });
+    const url = String(input);
+    if (url.endsWith("/custom-screens/revision-screen") && init?.method === "PATCH") {
+      return jsonResponse(makeScreen({ id: "revision-screen", name: "Updated", revision: 5 }));
+    }
+    if (url.endsWith("/custom-screens") && init?.method === "GET") {
+      return jsonResponse({ items: [makeScreen({ id: "revision-screen", revision: 4 })] });
+    }
+    return jsonResponse({}, 404);
+  };
+
+  try {
+    const listed = await listCustomScreens();
+    expect(listed[0]?.revision).toBe(4);
+    await listCustomScreensCached({ force: true });
+    expect(getCachedCustomScreens()?.[0]?.revision).toBe(4);
+
+    await updateCustomScreen("revision-screen", { name: "Updated", expectedRevision: 4 });
+    const patchCall = calls.find(
+      (call) =>
+        String(call.input).endsWith("/custom-screens/revision-screen") &&
+        call.init?.method === "PATCH"
+    );
+    expect(JSON.parse(String(patchCall?.init?.body))).toEqual({
+      name: "Updated",
+      expectedRevision: 4,
+    });
+    expect(getCachedCustomScreens()?.find((item) => item.id === "revision-screen")?.revision).toBe(
+      5
+    );
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});

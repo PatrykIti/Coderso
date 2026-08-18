@@ -358,6 +358,7 @@ export function createCustomScreenEditorPageHarness() {
     },
     blocks: [],
     bindings: [],
+    revision: 1,
     createdAt: "2026-07-14T00:00:00.000Z",
     updatedAt: "2026-07-14T00:00:00.000Z",
   });
@@ -365,13 +366,18 @@ export function createCustomScreenEditorPageHarness() {
   const recordFromPayload = (
     base: CustomScreenRecord,
     payload: Parameters<typeof customScreensClient.updateCustomScreen>[1]
-  ): CustomScreenRecord => ({
-    ...base,
-    ...payload,
-    definition: payload.definition ?? base.definition,
-    sidebarLabel: payload.sidebarLabel ?? null,
-    updatedAt: "2026-07-14T01:00:00.000Z",
-  });
+  ): CustomScreenRecord => {
+    const { expectedRevision: _expectedRevision, ...rest } = payload;
+    return {
+      ...base,
+      ...rest,
+      definition: payload.definition ?? base.definition,
+      sidebarLabel: payload.sidebarLabel ?? null,
+      // TASK-569: the server increments the revision on every definition save.
+      revision: (base.revision ?? 0) + 1,
+      updatedAt: "2026-07-14T01:00:00.000Z",
+    };
+  };
 
   const cachedScreens = new Map<string, CustomScreenRecord>();
   const remoteScreens = new Map<string, CustomScreenRecord>();

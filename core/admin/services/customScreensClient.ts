@@ -72,6 +72,11 @@ export type CustomScreenRecord = {
   blocks: WidgetBlock[];
   bindings: CustomScreenBinding[];
   capabilities?: CustomScreenCapabilities;
+  // TASK-569: monotonic server revision used as the optimistic-concurrency
+  // precondition on definition saves. Optional because browser-cache records
+  // written before this feature carry no revision; the editor revalidates such
+  // stale records before a definition save instead of sending a hard 400.
+  revision?: number;
   createdAt: string;
   updatedAt: string;
   // TASK-505-03 (Item B3): TRANSIENT binding-GC warnings the server (505-01)
@@ -95,7 +100,10 @@ export type CustomScreenCreateInput = {
   definition?: CustomScreenDefinition | null;
 };
 
-export type CustomScreenUpdateInput = Partial<CustomScreenCreateInput>;
+export type CustomScreenUpdateInput = Partial<CustomScreenCreateInput> & {
+  // TASK-569: optimistic-concurrency precondition sent on definition saves.
+  expectedRevision?: number;
+};
 
 export type CustomScreenMutationOptions = Readonly<{
   cacheEventOperationToken?: CacheEventOperationToken;
@@ -155,6 +163,7 @@ const isCustomScreenRecord = (value: unknown): value is CustomScreenRecord =>
   Array.isArray(value.blocks) &&
   Array.isArray(value.bindings) &&
   (value.capabilities === undefined || isCustomScreenCapabilities(value.capabilities)) &&
+  (value.revision === undefined || typeof value.revision === "number") &&
   typeof value.createdAt === "string" &&
   typeof value.updatedAt === "string";
 

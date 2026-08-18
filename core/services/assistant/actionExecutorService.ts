@@ -1439,7 +1439,11 @@ const executeCustomScreenDefinitionAction = async (
   const updated =
     preview.operation === "noop"
       ? existing
-      : await deps.updateCustomScreen(existing.id, { definition: nextDefinition });
+      : await deps.updateCustomScreen(existing.id, {
+          definition: nextDefinition,
+          // TASK-569: definition-bearing PATCHes must carry the loaded revision.
+          expectedRevision: existing.revision,
+        });
   if (!updated) throw new Error("assistant_action_dependency_missing");
 
   return {
@@ -4203,6 +4207,8 @@ const executeCustomScreenAction = async (
             showInSidebar: action.input.showInSidebar,
             sidebarLabel: action.input.sidebarLabel,
             definition: action.input.definition,
+            // TASK-569: definition-bearing PATCHes must carry the loaded revision.
+            expectedRevision: existing.revision,
           })
         : existing;
 
