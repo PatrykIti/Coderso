@@ -5,6 +5,7 @@ import type { Block, WidgetDefinition, WidgetEditorContext } from "./types";
 import { applyWidgetBlockPatch } from "./blockUtils";
 import { InfoTip } from "../../shared/InfoTip";
 import { WidgetEditorModeRoot } from "../../widgets/editors/WidgetEditorControls";
+import { WidgetEditorOutlet } from "../../widgets/WidgetEditorOutlet";
 
 export type WizardPanelProps = {
   widget: WidgetDefinition;
@@ -23,7 +24,6 @@ export function WizardPanel({
   onComplete,
   editorContext,
 }: WizardPanelProps) {
-  const Editor = widget.editor.wizard;
   const variant = block.variant ?? widget.variants[0]?.id ?? "";
   const patchBlock =
     onBlockPatch ??
@@ -60,7 +60,9 @@ export function WizardPanel({
           </Badge>
         </div>
       </div>
-      <Editor
+      <WidgetEditorOutlet
+        definition={widget}
+        mode="wizard"
         value={block.data as Record<string, unknown>}
         onChange={(data) =>
           patchBlock((current) => ({

@@ -8,6 +8,20 @@ import {
 } from "../../../widgets/registry";
 import type { WidgetEditorComponent, WidgetSurface } from "../../../widgets/types";
 
+type LazyEditorFactory = {
+  loadModule: () => Promise<unknown>;
+  exportName: string;
+};
+
+/**
+ * Records the factory behind every lazy editor so the admin outlet can
+ * regenerate a fresh lazy component for a real retry after a dynamic import
+ * failure (React.lazy caches the first rejected promise on the lazy object).
+ * The index is keyed by lazy component identity and never leaks module
+ * payloads; it only stores the loader closure and export name.
+ */
+const lazyEditorFactoryIndex = new Map<unknown, LazyEditorFactory>();
+
 /**
  * Wraps a named editor export in a React.lazy component so editor modules load
  * only when a concrete widget editor mode is rendered. The loader map below
@@ -32,7 +46,24 @@ function lazyNamedEditor<T>(
     }
     return { default: component as ComponentType<Record<string, unknown>> };
   });
+  lazyEditorFactoryIndex.set(LazyComponent, { loadModule, exportName });
   return LazyComponent as WidgetEditorComponent<T>;
+}
+
+/**
+ * Rebuilds a lazy editor component from its recorded factory so a failed
+ * dynamic import can be retried with a fresh fetch. Eager editor components
+ * (for example plugin or custom widgets) are not in the index and are returned
+ * unchanged; the outlet still resets its boundary for them.
+ */
+export function reloadWidgetEditorLoader<T>(
+  editor: WidgetEditorComponent<T>
+): WidgetEditorComponent<T> {
+  const factory = lazyEditorFactoryIndex.get(editor);
+  if (!factory) {
+    return editor;
+  }
+  return lazyNamedEditor<T>(factory.loadModule, factory.exportName);
 }
 
 const editorLoaders = {
