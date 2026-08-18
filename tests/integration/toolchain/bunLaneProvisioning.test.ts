@@ -6,7 +6,8 @@
  *
  * Pure (DB-free) coverage:
  *
- * - `readJournal` returns 72 entries with monotonic `idx` 0..71.
+ * - `readJournal` returns 77 entries with strictly increasing, non-contiguous
+ *   `idx` (allocated, not identity; sibling streams leave gaps).
  * - `splitStatements` respects the `--> statement-breakpoint` marker and drops
  *   empty chunks.
  * - `workerSchemaName` output is always the exact `bun_worker_<index>` drop
