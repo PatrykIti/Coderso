@@ -19,7 +19,7 @@ import type {
   FormActionRunStatus,
 } from "./formActionsService";
 import { redactAuditText } from "../audit/auditRedaction";
-import { validateOutboundUrl } from "../network/outboundHttpPolicy";
+import { fetchWithEgressPolicy, validateOutboundUrl } from "../network/outboundHttpPolicy";
 
 export type RunFormAutomationInput = {
   formId: string;
@@ -236,16 +236,23 @@ const executeWebhookAction = async (
   }
 
   try {
-    const response = await fetchFn(renderedUrl, {
-      method: config.method,
-      headers: {
-        "Content-Type": "application/json",
-        ...renderedHeaders,
+    // TASK-567: delivery-time transport re-validates the rendered URL AND
+    // re-resolves the hostname right before the fetch (DNS-rebinding aware),
+    // then fetches with `redirect: "error"`. The injected `fetchFn` seam is
+    // preserved for tests; without it the global fetch is used.
+    const response = await fetchWithEgressPolicy(
+      renderedUrl,
+      {
+        method: config.method,
+        headers: {
+          "Content-Type": "application/json",
+          ...renderedHeaders,
+        },
+        body: JSON.stringify(body),
+        signal: controller.signal,
       },
-      body: JSON.stringify(body),
-      signal: controller.signal,
-      redirect: "error",
-    });
+      { provider: "webhook", fetchFn }
+    );
 
     const responseText = await response.text();
     if (!response.ok) {

@@ -327,3 +327,31 @@ testIfDb(
     expect(after.length).toBe(before.length); // seam replaced the real writer → no row
   }
 );
+
+testIfDb(
+  "TASK-563 fail-closed guard: backup_media_key_unsafe rethrows instead of a swallowed 200 receipt",
+  async () => {
+    const mediaBytes = Buffer.from("media bytes", "utf8");
+    const manifest = mediaOnlyManifest([mediaBytes]);
+    // Path-traversal media key: PASS-1 validateArchive only counts members, so
+    // the guard fires during the post-commit media phase, where the TASK-563
+    // catch must NOT swallow it (the route maps it to 422).
+    const { cbk } = await encryptArchive(
+      manifestFirst(manifest, [{ name: "media/../evil.png", bytes: mediaBytes }]),
+      PASS
+    );
+
+    let result: Awaited<ReturnType<typeof importBackupFromUpload>> | undefined;
+    try {
+      result = await importBackupFromUpload({
+        file: asUpload(cbk),
+        passphrase: PASS,
+        confirm: true,
+        mediaAdapter: async () => memoryAdapter(),
+      });
+    } catch (error) {
+      expect((error as Error).message).toBe("backup_media_key_unsafe");
+    }
+    expect(result).toBeUndefined(); // must propagate, never resolve as "restored"
+  }
+);

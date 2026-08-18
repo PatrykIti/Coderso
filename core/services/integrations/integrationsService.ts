@@ -15,6 +15,7 @@ import {
   type IntegrationField,
 } from "./registry";
 import { evaluateIntegrationHealth } from "./healthEvaluator";
+import { validateOutboundUrl } from "../network/outboundHttpPolicy";
 
 export { evaluateIntegrationHealth } from "./healthEvaluator";
 
@@ -72,6 +73,15 @@ const normalizeString = (value: unknown) => {
   const trimmed = value.trim();
   if (!trimmed) return null;
   return trimmed;
+};
+
+// TASK-567: config-time egress rejection for webhook-style integrations. The
+// delivery path enforces the per-provider host allowlist AND the DNS-rebinding
+// re-check; config-time rejection is the defense-in-depth first layer promised
+// by the security contract, so an invalid destination never reaches storage.
+const INTEGRATION_URL_FIELD_KEYS: Record<string, readonly string[]> = {
+  slack: ["webhookUrl"],
+  zapier: ["hookUrl"],
 };
 
 const normalizeOptional = (value: unknown) => {
@@ -210,6 +220,17 @@ export async function updateIntegration(
 
     const rawValue = input.config[field.key];
     const normalized = normalizeString(rawValue);
+
+    // TASK-567: reject a non-allowlisted destination at config time for
+    // webhook-style providers (defense in depth; delivery re-checks too).
+    const urlFieldKeys = INTEGRATION_URL_FIELD_KEYS[definition.id];
+    if (
+      urlFieldKeys?.includes(field.key) &&
+      normalized &&
+      !validateOutboundUrl(normalized, { provider: definition.id as "slack" | "zapier" }).ok
+    ) {
+      throw new Error("integration_url_invalid");
+    }
 
     if (field.type === "secret") {
       if (normalized === undefined) {

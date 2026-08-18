@@ -431,6 +431,24 @@ describe("delivery-time DNS re-verification (rebinding)", () => {
     expect(resolver).not.toHaveBeenCalled();
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
+
+  test("a resolver failure fails closed instead of silently skipping the re-check", async () => {
+    // TASK-567 LOW 3: the default resolver retries once and throws on
+    // persistent failure, so the re-check is never silently skipped. At the
+    // policy boundary this surfaces as the resolver's error before any fetch.
+    setOutboundDnsResolver(async () => {
+      throw new Error("dns unavailable");
+    });
+    const fetchMock = vi.fn(
+      async (_input: RequestInfo | URL, _init?: RequestInit) => new Response("ok", { status: 200 })
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(
+      fetchWithEgressPolicy("https://rebind.test/hook", {}, { provider: "webhook" })
+    ).rejects.toThrow("dns unavailable");
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
 });
 
 describe("redirect policy", () => {
@@ -510,6 +528,17 @@ describe("sentry DSN gate", () => {
       code: "sentry_dsn_invalid",
     });
     expect(validateSentryDsn("http://public@example.com/0")).toEqual({
+      ok: false,
+      code: "sentry_dsn_invalid",
+    });
+  });
+
+  test("requires https (TASK-567 LOW 4: http DSNs rejected even on Sentry-owned hosts)", () => {
+    expect(validateSentryDsn("http://public@o0.ingest.sentry.io/0")).toEqual({
+      ok: false,
+      code: "sentry_dsn_invalid",
+    });
+    expect(validateSentryDsn("http://public@sentry.io/12345")).toEqual({
       ok: false,
       code: "sentry_dsn_invalid",
     });

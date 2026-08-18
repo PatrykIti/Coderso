@@ -1,5 +1,17 @@
 # TASK-577: Smoke Evidence Canonical Boundary
 
+> **Post-implementation note (LOW-2 audit correction):** the "current state"
+> statements in Purpose/Evidence below describe the PRE-implementation state at
+> HEAD `4e3dab15`. After `a50a0fa6`+`247b1b46` all three adapters expose a
+> canonical `EVIDENCE_ROOT = "_docs/_workflows/_smoke/evidence/<task>"`:
+> task-540 (`task-540/output-manifest.ts:8`), task-547
+> (`task-547/output-manifest.ts:16`), task-554
+> (`task-554/output-manifest.ts:14`, the root that was non-canonical). The loose
+> task-554 evidence was relocated under `evidence/task-554/`, and the live-tree
+> guard (`smoke-evidence-inventory.test.ts`) rejects un-reconciled additions.
+> Keep this note for audit trail; the Purpose/Evidence sections stay as written
+> (they are the audited starting point).
+
 **Status:** ⏳ To Do
 **Started:**
 **Completed:**

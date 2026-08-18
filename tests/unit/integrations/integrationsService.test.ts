@@ -155,3 +155,13 @@ testIfDb(
     expect(clearedRuntime?.apiKey).toBeNull();
   }
 );
+
+testIfDb("TASK-567 config-time: slack rejects a non-allowlisted webhook URL", async () => {
+  if (!hasMasterKey) return;
+  await expect(
+    updateIntegration("slack", { config: { webhookUrl: "https://evil.example.com/hook" } })
+  ).rejects.toThrow("integration_url_invalid");
+  await expect(
+    updateIntegration("slack", { config: { webhookUrl: "https://hooks.slack.com/services/ok" } })
+  ).resolves.toMatchObject({ id: "slack" });
+});

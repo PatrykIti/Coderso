@@ -1,5 +1,6 @@
 import { expect, test, vi } from "vitest";
 
+import { setOutboundDnsResolver } from "../../../core/services/network/outboundHttpPolicy";
 import {
   retryFormAutomationRunCore,
   runFormAutomationCore,
@@ -499,4 +500,51 @@ test("retryFormAutomationRunCore reruns failed action snapshot", async () => {
   expect(retry.run.trigger).toBe("retry");
   expect(retry.result.successMessage).toBe("Retry Patryk");
   expect(runInputs[0]?.retryOfId).toBe("run-1");
+});
+
+test("webhook action fails closed when a templated hostname resolves to a private address (DNS rebinding)", async () => {
+  const logs: CreateFormActionRunInput[] = [];
+  const fetchFn = vi.fn(async () => new Response("ok", { status: 200 }));
+  // Simulate a rebinding host: literal validation passes, but the
+  // delivery-time DNS re-check (TASK-567) must reject the private target
+  // before any fetch.
+  setOutboundDnsResolver(async () => ["169.254.169.254"]);
+
+  try {
+    const result = await runFormAutomationCore(
+      {
+        formId: "form-1",
+        submissionId: "submission-1",
+        submissionPayload: { host: "rebinding.internal.test" },
+      },
+      createCoreDeps({
+        listActions: async () => [
+          createAction({
+            id: "webhook",
+            type: "webhook",
+            config: {
+              url: "https://{{submission.host}}/hook",
+              method: "POST",
+              headers: {},
+              includeSubmission: true,
+              timeoutMs: 1000,
+            },
+          }),
+        ],
+        resolveNextAttempt: async () => 1,
+        createRun: async (input) => {
+          logs.push(input);
+          return createRunRecord(input, logs.length - 1);
+        },
+        fetchFn,
+      })
+    );
+
+    expect(result.runs).toHaveLength(1);
+    expect(result.runs[0]?.status).toBe("failed");
+    expect(result.runs[0]?.errorCode).toBe("egress_host_forbidden");
+    expect(fetchFn).not.toHaveBeenCalled();
+  } finally {
+    setOutboundDnsResolver(null); // restore the default resolver
+  }
 });

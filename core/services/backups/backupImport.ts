@@ -885,12 +885,17 @@ export async function importBackupFromUpload(input: ImportBackupInput): Promise<
       } catch (error) {
         // Best-effort degradation (TASK-511-03): the authoritative DB commit
         // already returned success, so a partial object-storage write is NOT
-        // rolled back. Swallow the failure, record a REDACTED receipt (fixed
-        // code, counts only — no raw storage error/credentials), and report the
-        // true partial state via mediaRestored/skippedMedia (TASK-563).
-        if (isMediaRestoreFailure(error)) {
-          media = { restored: error.partialRestored, totalBytes: error.partialTotalBytes };
+        // rolled back. Swallow ONLY the genuine partial-write failure, record a
+        // REDACTED receipt (fixed code, counts only — no raw storage
+        // error/credentials), and report the true partial state via
+        // mediaRestored/skippedMedia (TASK-563). Fail-closed guards
+        // (`backup_media_key_unsafe`, `backup_media_too_large`) are NOT
+        // swallowable: rethrow so the route still surfaces their distinct 422
+        // mappings instead of a generic 200 receipt.
+        if (!isMediaRestoreFailure(error)) {
+          throw error;
         }
+        media = { restored: error.partialRestored, totalBytes: error.partialTotalBytes };
         skippedMedia = Math.max(0, fileCount - media.restored);
         const logFailure = input.logFailure ?? logAudit;
         await logFailure({

@@ -35,7 +35,8 @@ export type EgressErrorCode =
   | "egress_invalid_url"
   | "egress_invalid_scheme"
   | "egress_host_forbidden"
-  | "egress_redirect_forbidden";
+  | "egress_redirect_forbidden"
+  | "egress_dns_recheck_unavailable";
 
 export type EgressValidationResult = { ok: true; url: URL } | { ok: false; code: EgressErrorCode };
 
@@ -300,12 +301,43 @@ const defaultDnsResolver: OutboundDnsResolver = async (hostname) => {
   // Vite stubs `node:dns/promises` as a browser-external with NO `lookup`
   // export, so a top-level static import crashes every admin route. The DNS
   // re-check only runs inside the server-side delivery transport.
+  let lookup: (typeof import("node:dns/promises"))["lookup"] | undefined;
   try {
-    const { lookup } = await import("node:dns/promises");
+    const dns = await import("node:dns/promises");
+    lookup = dns.lookup;
+  } catch {
+    return []; // non-server context: no resolver, no re-check possible
+  }
+  if (typeof lookup !== "function") {
+    return []; // browser-stub context: never reached by server transports
+  }
+
+  const resolveOnce = async (): Promise<string[]> => {
     const result = await lookup(hostname, { all: true, verbatim: true });
     return result.map((entry) => entry.address);
-  } catch {
-    return [];
+  };
+
+  try {
+    return await resolveOnce();
+  } catch (error) {
+    // A definitive NXDOMAIN means the name cannot resolve; the subsequent
+    // fetch fails anyway, so treat it as "no addresses" rather than a
+    // transport fault. Any other (transient) failure gets ONE retry, and a
+    // persistent failure FAILS CLOSED instead of silently skipping the
+    // delivery-time re-check (a silent skip would re-open the rebinding gap).
+    if (
+      typeof error === "object" &&
+      error !== null &&
+      "code" in error &&
+      error.code === "ENOTFOUND"
+    ) {
+      return [];
+    }
+    try {
+      return await resolveOnce();
+    } catch {
+      throw new EgressPolicyError("egress_dns_recheck_unavailable");
+    }
   }
 };
 
@@ -334,7 +366,7 @@ const isRedirectError = (error: unknown): boolean => {
 export async function fetchWithEgressPolicy(
   input: string | URL,
   init: RequestInit,
-  opts: { provider: EgressProvider }
+  opts: { provider: EgressProvider; fetchFn?: typeof fetch }
 ): Promise<Response> {
   const target = typeof input === "string" ? input : input.toString();
   const validated = validateOutboundUrl(target, { provider: opts.provider });
@@ -361,7 +393,7 @@ export async function fetchWithEgressPolicy(
   }
 
   try {
-    return await fetch(target, { ...init, redirect: "error" });
+    return await (opts.fetchFn ?? fetch)(target, { ...init, redirect: "error" });
   } catch (error) {
     if (isRedirectError(error)) {
       throw new EgressPolicyError("egress_redirect_forbidden");
@@ -384,7 +416,7 @@ export function validateSentryDsn(dsn: string): SentryDsnValidationResult {
   try {
     const url = new URL(dsn.trim());
     const validShape =
-      url.protocol.startsWith("http") && Boolean(url.username) && url.pathname.length > 1;
+      url.protocol === "https:" && Boolean(url.username) && url.pathname.length > 1;
     if (!validShape || !isSentryOwnedHost(url.hostname)) {
       return { ok: false, code: "sentry_dsn_invalid" };
     }

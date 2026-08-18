@@ -53,7 +53,7 @@ redirect/error cases) into clearly named files <= 1000 lines each.
   `bun-lane-classify` directory, so extracted files are silently skipped until
   `bun scripts/bun-lane-classify.ts` re-runs and commits
   `tests/bun-lane-manifest.json`; add this step to the task.
-- Pin the lane command: `bun tests/integration/server/mediaDeliveryAccess.test.ts`
+- Pin the lane command: `bun test tests/integration/server/mediaDeliveryAccess.test.ts`
   plus each extracted file (or `bun run test:bun` after manifest regen).
 - `bun --cwd core lint` + `bun --cwd core lint:types`.
 
