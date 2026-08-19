@@ -83,9 +83,9 @@ Task board for project work. Keep task files and this board in sync.
   Do not move a leaf task to `Done` until either its standalone changelog
   exists or the family changelog records that leaf.
 
-- **To Do:** 260 tasks
+- **To Do:** 247 tasks
 - **In Progress:** 6 tasks
-- **Done:** 3525 tasks
+- **Done:** 3538 tasks (including 2 Superseded)
 
 > TASK-479 (25 subtasks 05–29 + 92 leaves) and TASK-480 (umbrella + 6 subtasks +
 > 18 leaves) were broken down 2026-06-27. The table below lists the
