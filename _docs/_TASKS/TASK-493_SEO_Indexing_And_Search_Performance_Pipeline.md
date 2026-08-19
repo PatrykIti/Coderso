@@ -129,6 +129,9 @@ services it mounts; 05 rewires the admin, 06 closes with tests + docs).
   (GSC) vs. the existing admin search.
 - `_docs/SECURITY_SPEC.md` — note GSC credential handling (encrypted secret,
   server-side-only outbound, never to client cache/log).
+- `_docs/ADMIN_CACHE.md` + `_docs/ADMIN_CACHE_MAP.md` — the new
+  `cacheKeys.seoOverview` admin cached resource (SEO Manager rows + mutation
+  invalidation), updated by 06-L02.
 
 ---
 

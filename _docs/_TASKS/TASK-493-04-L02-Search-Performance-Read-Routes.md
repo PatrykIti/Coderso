@@ -157,12 +157,13 @@ to transport status only at the route boundary via `throwMappedSeoError`
 
 ## Testing Requirements
 
-- **Bun** (`tests/integration/routes/seo-performance.test.ts` — extended to
-  cover the assembly) — route integration across all five routes with the
-  02-L02/03-L02 GSC + sitemap services stubbed and seeded 01-table rows.
-  Route/runtime flow ⇒ Bun lane. This leaf owns the route + validation tests:
-  registration of all 5 routes, RBAC, CSRF on writes, reject-unknown, and
-  `mapSeoError` status mapping.
+- **Bun** (`tests/integration/routes/seo-performance.test.ts` — **create**; the
+  file does not exist on disk today, it is not an extension of the existing
+  100-line `tests/integration/routes/seo.test.ts`). Route/validation assembly
+  coverage: registration of all five routes, RBAC gates, CSRF on the two
+  writes, reject-unknown schemas, `mapSeoError` mapping; route integration
+  across all five routes with the 02-L02/03-L02 GSC + sitemap services stubbed
+  and seeded 01-table rows. Route/runtime flow ⇒ Bun lane.
 - Cross-stream guard: the existing `tests/integration/routes/seo.test.ts`
   (registration + `mapSeoError` suite) is updated by 06-L01 (D9); this leaf
   must not edit it.

@@ -33,7 +33,13 @@
   - `_docs/SECURITY_SPEC.md` (**extend** — GSC credential handling: encrypted
     secret in the Integrations store, server-side-only outbound, never to client
     cache/log; reuse of `settings:write` + CSRF + `admin_write` for sync/submit).
-- **Source-of-truth docs:** the four files above are themselves the targets.
+  - `_docs/ADMIN_CACHE.md` + `_docs/ADMIN_CACHE_MAP.md` (**extend** — the new
+    `cacheKeys.seoOverview` admin cached resource added by 05-L01: list the key
+    in the SEO Manager cache rows, note it is scoped to the authenticated admin
+    and invalidated/cleared by the existing identity transition + cacheBus
+    rules, and add the `seo:overview` mutation-invalidation mapping).
+- **Source-of-truth docs:** the four files above plus the two admin-cache docs
+  are themselves the targets.
 - **Changelog entry (in scope):** this leaf owns the single TASK-493 changelog
   entry, pinned to number **1309** (verified next-free; 1308 is used by
   TASK-467), plus the matching `_docs/_CHANGELOG/README.md` index row.
@@ -58,6 +64,7 @@ Not applicable (documentation leaf). Edit checklist:
 ```text
 DATA_MODEL.md         -> NEW section: 4 table subsections (columns, types, indexes)
 CMS_API.md (:3052)    -> 5 internal endpoints + 2 public paths, perms + examples
+ADMIN_CACHE docs      -> cacheKeys.seoOverview rows (SEO Manager) + invalidation map
 SEARCH_SPEC.md        -> "## SEO search-performance ingest" addendum
 SECURITY_SPEC.md      -> "GSC credential & sync" note under integrations/secrets
 CHANGELOG 1309        -> single task entry + `_CHANGELOG/README.md` index row

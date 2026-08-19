@@ -36,8 +36,8 @@
     **Optimized pages** / Warnings — it deliberately does **not** render an
     "Indexed pages" card, so this leaf adds a fifth card and must NOT relabel
     away Optimized pages. Add "Sync performance" + "Submit sitemap" actions).
-    The current `averageScore`/`scanLabel` derivation at `:160-177` and
-    `getHealth` at `:35` stay; the "Indexed pages" value is sourced from
+    The current `averageScore`/`scanLabel` derivation at `:162-193` and
+    `getHealth` at `:37` stay; the "Indexed pages" value is sourced from
     `overview.indexedPages` (no existing "Indexed pages" placeholder to flip).
   - Optionally a small `SeoPerformancePanel.tsx` for the top-queries/series view
     (kept additive; the table/drawer stay as-is).
@@ -167,9 +167,10 @@ const onSubmitSitemap = async () => { await submitSitemap();
 `getCachedSeoOverview`) + existing `listSeoCached` → render real stats + table
 → user clicks Sync/Submit → POST via `apiRequest(..., { withCsrf: true })` →
 refetch overview/list. Reuse the existing cache-event subscription
-(`subscribeCacheEvents`, `:135`) so the list stays consistent.
+(`subscribeCacheEvents`, `:138`) so the list stays consistent.
 
-**Error handling:** reuse the page's `error`/`toast` pattern (`:200-248`);
+**Error handling:** reuse the page's `error`/`toast` pattern (`:200-248`,
+including the `handleSave` result toast at `:243`) ;
 surface `403` as a disabled action + toast, `409 gsc_not_configured` as a
 "Connect Google Search Console in Settings → Integrations" hint.
 

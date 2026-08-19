@@ -5,7 +5,7 @@
 **Priority:** High
 **Category:** Tools / SEO
 **Estimated Effort:** Large
-**Dependencies:** TASK-493-01, TASK-493-03-L01
+**Dependencies:** TASK-493-01, TASK-493-02-L01 (provides `collectSitemapUrls()`), TASK-493-03-L01
 **Status:** ⏳ To Do
 **Started:** `<YYYY-MM-DD>`
 **Completed:** `<YYYY-MM-DD>`
@@ -61,7 +61,7 @@
 - **Rate-limit bucket:** `admin_write`.
 - **Validation:** `seoSyncSchema` (schema owner = 04-L02,
   `core/server/validation/seoSchemas.ts`), `additionalProperties: false`.
-  Optional `{ startDate?, endDate?, scope? }`; clamp the date window (e.g. ≤ 16
+  Optional `{ startDate?, endDate? }`; clamp the date window (e.g. ≤ 16
   months, GSC's max) and reject malformed dates before any outbound call. The
   window clamp helper (`clampWindow`) lives in this leaf's service.
 - **Anti-abuse:** internal admin write — RBAC + CSRF + `admin_write` rate-limit
@@ -99,7 +99,7 @@ export async function syncSearchPerformance(input: { startDate?: string; endDate
 export async function syncIndexedPages(options: { maxUrls?: number } = {}) {
   const maxUrls = clampInt(options.maxUrls ?? 50, 1, 50);   // BOUNDED per-URL loop (cap 50/run)
   const client = await getGscClient("webmasters.readonly"); // throws gsc_not_configured
-  const urls = (await collectSitemapPublicUrls()).slice(0, maxUrls); // public page/entry URLs
+  const urls = (await collectSitemapUrls()).slice(0, maxUrls); // public page/entry URLs (02-L01)
   let inspected = 0, skipped = 0;
   for (const url of urls) {
     try {

@@ -32,7 +32,7 @@
   splitting for >50k URLs (single sitemap is sufficient for current scale — note
   as a follow-on); image/video/news sitemap extensions.
 
-> **Shared boundary `core/server/publicSite.tsx`** is also extended by TASK-493 (additive injection only; TASK-483/486/491 are Done and no longer co-write this file). S3/S4/S6 publicSite writers are separate open streams — additive injection only. Reuse the existing forms/booking public-write nonce evaluator, do not invent a competing one-off nonce.
+> **Shared boundary `core/server/publicSite.tsx`** is also extended by TASK-493 (additive injection only; TASK-483/486/491 no longer co-write this file). S3/S4/S6 publicSite writers are separate open streams — additive injection only. Reuse the existing forms/booking public-write nonce evaluator, do not invent a competing one-off nonce.
 
 ---
 
