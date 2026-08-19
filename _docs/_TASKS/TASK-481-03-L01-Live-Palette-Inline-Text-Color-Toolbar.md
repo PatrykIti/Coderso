@@ -25,7 +25,8 @@ Today the inline toolbar uses a module-level constant
 built from `getPageEditorColorPalette()` with **no tokens** (= `DEFAULT_TOKENS`),
 filtered to the four brand ids `["primary","secondary","accent","border"]`. The
 block/section controls instead read the live `sitePalette` via
-`PageEditorColorPaletteContext` (`PageEditor.tsx`:352) and preview each swatch by
+`PageEditorColorPaletteContext` (provider at `PageEditorRoot.tsx`:182; block hook
+  at `PageEditorRegistryFields.tsx`:484/:644) and preview each swatch by
 `swatch.previewValue`. This leaf threads the same live palette into the inline
 toolbar and renders inline swatches by `previewValue`, keeping the brand-id filter.
 
@@ -67,7 +68,8 @@ Not a route/auth/data leaf — N/A by surface, stated explicitly:
 // 1. Read the live palette where the toolbar renders (instead of the static const at :186):
 const colorPalette = usePageEditorColorPalette();           // shared context hook
 const inlineSwatches = colorPalette.filter((s) =>
-  ["primary", "secondary", "accent", "border"].includes(s.id));   // same filter as :214
+  ["primary", "secondary", "accent", "border"].includes(s.id));   // same filter as the
+  // original const at PageAuthoringCanvasInline.tsx:186-187
 
 // 2. Render each swatch by its resolved previewValue (NOT var()):
 inlineSwatches.map((swatch) => (
@@ -116,7 +118,12 @@ Context-sharing note (pick the lower-risk option at implementation time):
   second context. Do NOT move
   it into `core/services/pages/pageEditorControlUiModel.ts` — that module is
   exclusively owned by TASK-539-03-L01 (see TASK-539-03-L01 "Sole ownership") and is
-  a forbidden path for this family. Editing here stays within the TASK-481 brand-token
+  a forbidden path for this family. NOTE (audit LOW):
+  `core/services/pages/pageEditorColorPaletteContext.ts` is the FIRST React module in the
+  Bun-free `core/services` layer; the TASK-481 brand-token program accepts this because the
+  context/hook pair must be shared by admin UI modules (Root/RegistryFields/canvas) without
+  a duplicate context, and the module stays dependency-free (react createContext/useContext
+  only, no DB/settings/runtime coupling) so Vitest can import it without env side effects. Editing here stays within the TASK-481 brand-token
   surface (split facade + `PageEditorRoot.tsx`/`PageAuthoringCanvas.tsx`); respect the
   single-writer collision guard with TASK-539-03-L03 (see the parent).
 - **Error handling:** none — presentational; no domain codes / `map*Error`.
@@ -131,6 +138,11 @@ focusable.
 
 - Vitest lane only: `tests/vitest/ui/shared-color-control.test.tsx` (+ inline-toolbar
   cases may also extend `tests/vitest/ui/page-authoring-canvas.test.tsx`).
+  The leaf gate also runs `tests/vitest/ui/page-authoring-inline-color-toolbar.test.tsx`
+  (in the leaf allowed list): its TASK-477-01 case at ~:320 asserts the swatch style
+  contains `var(--color-primary)` — re-baseline that ONE assertion to the resolved
+  `previewValue` (e.g. `DEFAULT_TOKENS.colors.primary`) for this intended contract change;
+  never weaken the committed-var or picker-hex assertions.
 - Cases: live `previewValue` swatch rendering; brand-id filter preserved; committed
   value is the token; focusability/no-toolbar-wide-preventDefault guard.
 - No DB migration artifacts.
