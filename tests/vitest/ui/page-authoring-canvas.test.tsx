@@ -14,6 +14,9 @@ import {
   renderToStaticMarkup,
   sectionWithBrandBlockProps,
 } from "./pageAuthoringCanvasHarness";
+import { DEFAULT_TOKENS } from "../../../core/services/theme/tokenTypes";
+import { mergeTokens } from "../../../core/services/theme/tokenUtils";
+import { toPageCanvasBrandColorCssVariableMap } from "../../../core/ui/theme/tokenCss";
 
 test("SectionCanvas renders existing canvas chrome and ghost add affordances", () => {
   const section = createPageSectionV2("hero", {
@@ -47,6 +50,7 @@ test("SectionCanvas renders existing canvas chrome and ghost add affordances", (
       onStartInlineEdit={vi.fn()}
       onCommitInlineEdit={vi.fn()}
       onApplyTextMark={vi.fn()}
+      contentBrandTokenVariables={{}}
     />
   );
 
@@ -88,6 +92,7 @@ test("SectionCanvas renders hidden block ghost through the reusable label helper
       onStartInlineEdit={vi.fn()}
       onCommitInlineEdit={vi.fn()}
       onApplyTextMark={vi.fn()}
+      contentBrandTokenVariables={{}}
     />
   );
 
@@ -130,6 +135,7 @@ test("SectionCanvas exposes sanitized rich text through the inline edit wrapper"
       onStartInlineEdit={vi.fn()}
       onCommitInlineEdit={vi.fn()}
       onApplyTextMark={vi.fn()}
+      contentBrandTokenVariables={{}}
     />
   );
 
@@ -314,4 +320,89 @@ test("does not regress TASK-477-02 neutral emission on the canvas frame", () => 
   // Brand vars stay OUT of the neutral canvas frame (chrome-safe TASK-477-02).
   expect(frameTag).not.toContain("--color-primary");
   expect(frameTag).not.toContain("--color-accent");
+});
+
+const SITE_BRAND_VARS = {
+  "--color-primary": "oklch(0.42 0.16 260)",
+  "--color-secondary": "oklch(0.55 0.14 150)",
+  "--color-accent": "oklch(0.63 0.18 45)",
+  "--color-border": "oklch(0.88 0.02 250)",
+};
+
+test("co-locates SITE brand vars on the section + block content scopes (TASK-481-02-L02)", () => {
+  const mounted = mount(
+    <SectionCanvas
+      {...sectionWithBrandBlockProps}
+      contentBrandTokenVariables={SITE_BRAND_VARS as React.CSSProperties}
+    />
+  );
+  const sectionScope = mounted.container.querySelector(
+    "section[data-page-editor-section] > [data-page-editor-content]"
+  );
+  const blockScope = mounted.container.querySelector(
+    '[data-page-editor-block-id="blk-brand-heading"] > [data-page-editor-content]'
+  );
+  expect(sectionScope).toBeTruthy();
+  expect(blockScope).toBeTruthy();
+  for (const [key, value] of Object.entries(SITE_BRAND_VARS)) {
+    expect(sectionScope!.getAttribute("style")).toContain(`${key}: ${value}`);
+    expect(blockScope!.getAttribute("style")).toContain(`${key}: ${value}`);
+  }
+  // The block's own brand visual style is merged AFTER the site brand vars, so
+  // the block's `color: var(--color-accent)` resolves against the SITE accent.
+  expect(blockScope!.getAttribute("style")).toContain("color: var(--color-accent)");
+  // The section content scope carries the brand vars but no block visual style.
+  expect(sectionScope!.getAttribute("style")).not.toMatch(/(^|;)\s*color:/);
+  mounted.cleanup();
+});
+
+test("keeps SITE brand vars off the section + block chrome frames (TASK-481-02-L02)", () => {
+  const mounted = mount(
+    <SectionCanvas
+      {...sectionWithBrandBlockProps}
+      contentBrandTokenVariables={SITE_BRAND_VARS as React.CSSProperties}
+    />
+  );
+  const sectionFrame = mounted.container.querySelector("[data-page-editor-section]");
+  const blockFrame = mounted.container.querySelector(
+    '[data-page-editor-block-id="blk-brand-heading"]'
+  );
+  expect(sectionFrame!.getAttribute("style")).not.toContain("--color-primary: oklch(0.42");
+  expect(sectionFrame!.getAttribute("style")).not.toContain("--color-accent: oklch(0.63");
+  expect(blockFrame!.getAttribute("style")).not.toContain("--color-accent: oklch(0.63");
+  // Frames still re-assert the ADMIN brand for editor chrome (TASK-481-01-L02).
+  expect(sectionFrame!.getAttribute("style")).toContain("--color-primary: var(--primary)");
+  expect(blockFrame!.getAttribute("style")).toContain("--color-primary: var(--primary)");
+  mounted.cleanup();
+});
+
+test("content scope anchors on DEFAULT brand vars when no custom tokens (TASK-481-02-L02)", () => {
+  // useCanvasSiteTokens with an empty settings cache merges DEFAULT_TOKENS
+  // (offline/not-loaded), so the controller brand memo carries the DEFAULT
+  // brand values. Pin that chain, then verify the wiring renders it.
+  expect(mergeTokens(DEFAULT_TOKENS, null)).toEqual(DEFAULT_TOKENS);
+  const defaultBrand = toPageCanvasBrandColorCssVariableMap(DEFAULT_TOKENS);
+  expect(defaultBrand["--color-primary"]).toBe(DEFAULT_TOKENS.colors.primary);
+  expect(defaultBrand["--color-secondary"]).toBe(DEFAULT_TOKENS.colors.secondary);
+  expect(defaultBrand["--color-accent"]).toBe(DEFAULT_TOKENS.colors.accent);
+  expect(defaultBrand["--color-border"]).toBe(DEFAULT_TOKENS.neutrals.border);
+  const mounted = mount(
+    <SectionCanvas {...sectionWithBrandBlockProps} contentBrandTokenVariables={defaultBrand} />
+  );
+  const sectionScope = mounted.container.querySelector(
+    "section[data-page-editor-section] > [data-page-editor-content]"
+  );
+  const blockScope = mounted.container.querySelector(
+    '[data-page-editor-block-id="blk-brand-heading"] > [data-page-editor-content]'
+  );
+  expect(sectionScope!.getAttribute("style")).toContain(
+    `--color-primary: ${DEFAULT_TOKENS.colors.primary}`
+  );
+  expect(sectionScope!.getAttribute("style")).toContain(
+    `--color-border: ${DEFAULT_TOKENS.neutrals.border}`
+  );
+  expect(blockScope!.getAttribute("style")).toContain(
+    `--color-accent: ${DEFAULT_TOKENS.colors.accent}`
+  );
+  mounted.cleanup();
 });

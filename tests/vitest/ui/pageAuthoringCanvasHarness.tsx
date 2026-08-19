@@ -28,6 +28,7 @@ export const baseCanvasProps = {
   onStartInlineEdit: vi.fn(),
   onCommitInlineEdit: vi.fn(),
   onApplyTextMark: vi.fn(),
+  contentBrandTokenVariables: {},
 };
 
 /**

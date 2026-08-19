@@ -142,6 +142,7 @@ export const SectionCanvas = ({
   onStartInlineEdit,
   onCommitInlineEdit,
   onApplyTextMark,
+  contentBrandTokenVariables,
 }: {
   section: PageSectionV2;
   baseSection: PageSectionV2;
@@ -162,6 +163,7 @@ export const SectionCanvas = ({
   onStartInlineEdit: (target: PageEditorInlineEditTarget) => void;
   onCommitInlineEdit: (commit: PageEditorInlineEditCommit) => void;
   onApplyTextMark: (commit: PageEditorTextMarkCommit) => void;
+  contentBrandTokenVariables: CSSProperties;
 }) => {
   const sectionHasOverride = hasAnyResponsiveOverride(
     device,
@@ -220,7 +222,7 @@ export const SectionCanvas = ({
           above stay on the <section> (admin cascade); the rendered section
           content sits inside this scope so the 481-02 brand-token emission can
           define the SITE brand vars here without recoloring chrome. */}
-      <div data-page-editor-content="true">
+      <div data-page-editor-content="true" style={contentBrandTokenVariables}>
         <PageSectionContent
           section={section}
           layoutMode="canvas-device"
@@ -404,7 +406,10 @@ export const SectionCanvas = ({
                 {/* TASK-481-01-L01: block content scope. Chrome (override badge,
                     add-beside handle, outline/ring) stays on the frame; the block
                     content and its brand visual style live in this scope. */}
-                <div data-page-editor-content="true" style={contentVisualStyle}>
+                <div
+                  data-page-editor-content="true"
+                  style={{ ...contentBrandTokenVariables, ...contentVisualStyle }}
+                >
                   {block.visibility.visible ? content : <HiddenBlockGhost block={block} />}
                 </div>
                 {blockSelected && canAddBlockBeside ? (
