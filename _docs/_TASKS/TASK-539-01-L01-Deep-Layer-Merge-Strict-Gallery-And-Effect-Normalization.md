@@ -671,7 +671,7 @@ resolvePageBlockForBreakpoint(...):
   undefined layer own key, then recurse through slots without input mutation
 
 run the owned schema/type/runtime matrices:
-  prove the exact 78-type/129-runtime facade and owner map, strict gallery,
+  prove the exact 78-type/133-runtime facade and owner map, strict gallery,
   responsive forbidden-key, layer reachability/present-key, effect/divider,
   idempotence, byte-identity, and frozen-input cases
 run every exact validation gate below and enforce <=1000 lines per touched file
