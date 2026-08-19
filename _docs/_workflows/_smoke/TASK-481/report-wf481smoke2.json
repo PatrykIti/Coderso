@@ -1,0 +1,244 @@
+{
+  "pass": true,
+  "serverUp": true,
+  "scenarios": [
+    {
+      "id": "s1-inline-accent",
+      "variants": [
+        {
+          "name": "apply-site-accent-via-inline-toolbar",
+          "assertions": [
+            {
+              "kind": "computed-style",
+              "selector": "[data-page-editor-text-color-swatch='accent']",
+              "expected": "background-color: rgb(245, 158, 11)"
+            },
+            {
+              "kind": "computed-style",
+              "selector": "[data-page-editor-block-id='blk_fd00cabcc231'] span[style*='var(--color-accent)']",
+              "expected": "color: rgb(245, 158, 11)"
+            },
+            {
+              "kind": "dom-state",
+              "selector": "[data-page-editor-content]",
+              "expected": "--color-accent: #f59e0b"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "s2-chrome-admin",
+      "variants": [
+        {
+          "name": "editor-chrome-stays-admin-theme",
+          "assertions": [
+            {
+              "kind": "computed-style",
+              "selector": "[data-page-editor-block-id='blk_fd00cabcc231']",
+              "expected": "outline-color: rgb(124, 58, 237)"
+            },
+            {
+              "kind": "computed-style",
+              "selector": "[data-page-editor-ghost='add-block-beside']",
+              "expected": "border-color: rgb(234, 231, 224)"
+            },
+            {
+              "kind": "dom-state",
+              "selector": "[data-page-editor-block-id='blk_fd00cabcc231']",
+              "expected": "--color-accent: var(--accent)"
+            },
+            {
+              "kind": "dom-state",
+              "selector": "[data-page-editor-canvas-frame='true']",
+              "expected": "no --color-accent (brand not on frame)"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "s3-toolbar-url-custom",
+      "variants": [
+        {
+          "name": "inline-toolbar-url-input-and-custom-color",
+          "assertions": [
+            {
+              "kind": "dom-state",
+              "selector": "input[aria-label='Inline link URL']",
+              "expected": "focused and value https://coderso.dev"
+            },
+            {
+              "kind": "dom-state",
+              "selector": "[data-page-editor-text-color-picker='true']",
+              "expected": "enabled (not disabled)"
+            },
+            {
+              "kind": "computed-style",
+              "selector": "[data-page-editor-block-id='blk_fd00cabcc231'] span[style*='color']",
+              "expected": "color: rgb(225, 29, 72)"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "s4-live-repaint",
+      "variants": [
+        {
+          "name": "cache-bus-repaint-to-new-accent",
+          "assertions": [
+            {
+              "kind": "dom-state",
+              "selector": "[data-page-editor-content]",
+              "expected": "--color-accent: #16a34a (after PATCH + settingsRedacted broadcast)"
+            },
+            {
+              "kind": "computed-style",
+              "selector": "[data-page-editor-block-id='blk_fd00cabcc231'] span[style*='var(--color-accent)']",
+              "expected": "color: rgb(22, 163, 74)"
+            },
+            {
+              "kind": "dom-state",
+              "selector": "[data-page-editor-block-id='blk_fd00cabcc231']",
+              "expected": "--color-accent: var(--accent) (chrome did not bleed brand)"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "s5-cross-device",
+      "variants": [
+        {
+          "name": "tablet-canvas",
+          "assertions": [
+            {
+              "kind": "geometry",
+              "selector": "[data-page-editor-canvas-frame='true']",
+              "expected": "width: 642px"
+            },
+            {
+              "kind": "dom-state",
+              "selector": "[data-page-editor-content]",
+              "expected": "--color-accent: #16a34a"
+            },
+            {
+              "kind": "dom-state",
+              "selector": "[data-page-editor-content]",
+              "expected": "Editing: Tablet · 744px (overrides)"
+            }
+          ]
+        },
+        {
+          "name": "mobile-canvas",
+          "assertions": [
+            {
+              "kind": "geometry",
+              "selector": "[data-page-editor-canvas-frame='true']",
+              "expected": "width: 390px"
+            },
+            {
+              "kind": "dom-state",
+              "selector": "[data-page-editor-content]",
+              "expected": "--color-accent: #16a34a"
+            },
+            {
+              "kind": "dom-state",
+              "selector": "[data-page-editor-content]",
+              "expected": "Editing: Mobile · 390px (overrides)"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "s6-dark-mode",
+      "variants": [
+        {
+          "name": "admin-dark-mode-parity",
+          "assertions": [
+            { "kind": "dom-state", "selector": "html.dark", "expected": "dark class present" },
+            {
+              "kind": "computed-style",
+              "selector": "body",
+              "expected": "background-color: rgb(24, 23, 26)"
+            },
+            {
+              "kind": "computed-style",
+              "selector": "[data-page-editor-block-id='blk_fd00cabcc231']",
+              "expected": "outline-color: rgb(139, 92, 246)"
+            },
+            {
+              "kind": "dom-state",
+              "selector": "[data-page-editor-content]",
+              "expected": "--color-accent: #16a34a"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "s7-publish-front-parity",
+      "variants": [
+        {
+          "name": "published-front-renders-site-accent",
+          "assertions": [
+            {
+              "kind": "computed-style",
+              "selector": ":root",
+              "expected": "--color-accent: #16a34a"
+            },
+            {
+              "kind": "computed-style",
+              "selector": "span",
+              "expected": "color: rgb(22, 163, 74) (brand-colored text)"
+            },
+            {
+              "kind": "dom-state",
+              "selector": "h1",
+              "expected": "content section (page content parity)"
+            },
+            { "kind": "dom-state", "selector": "title", "expected": "HomePage" }
+          ]
+        }
+      ]
+    }
+  ],
+  "consoleErrors": [],
+  "screenshots": [
+    {
+      "path": "_docs/_workflows/_smoke/TASK-481/01-inline-accent.png",
+      "sha256": "a822964ccf84a97541024fc33fb98913607faa3fbbdf420e1a10414c61af6ce5"
+    },
+    {
+      "path": "_docs/_workflows/_smoke/TASK-481/02-chrome-admin.png",
+      "sha256": "d2245b8b33a5b83f6387eb23f8280ff16dd0e993d3c1bedc6a9f87b67867a1a0"
+    },
+    {
+      "path": "_docs/_workflows/_smoke/TASK-481/03-toolbar-url-custom.png",
+      "sha256": "02362b16282ce7324cefd6000e02316a2eebdcdecdbcda65739bd8de291c1087"
+    },
+    {
+      "path": "_docs/_workflows/_smoke/TASK-481/04-live-repaint.png",
+      "sha256": "edc25d6653e6a2a163f4579950fef1e668c7d3b27713476494c6d8c486b1e96f"
+    },
+    {
+      "path": "_docs/_workflows/_smoke/TASK-481/05-cross-device.png",
+      "sha256": "a348d6d307e8110d133e88896033ec21829997a939834bd105cdca849ec36dae"
+    },
+    {
+      "path": "_docs/_workflows/_smoke/TASK-481/05b-mobile.png",
+      "sha256": "c963e245109270e2de63629b44652eaa5a529d6a1a7d810b8316500d99c2bde7"
+    },
+    {
+      "path": "_docs/_workflows/_smoke/TASK-481/06-dark-mode.png",
+      "sha256": "ce92a9da9132dd0c3bec914030c09ccf34e8a9ad77ddf7980dc3006b85aca3a8"
+    },
+    {
+      "path": "_docs/_workflows/_smoke/TASK-481/07-front.png",
+      "sha256": "0170c39a07862bc1b25094929d15446af537e73a191aafeb00e2964b17220391"
+    }
+  ],
+  "failures": []
+}

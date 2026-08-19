@@ -7,9 +7,9 @@
 **Category:** Pages / Page Editor V2 / Canvas
 **Estimated Effort:** Medium
 **Dependencies:** TASK-477-02 (canvas neutral tokens + live swatch palette)
-**Status:** ⏳ To Do
-**Started:** `<YYYY-MM-DD>`
-**Completed:** `<YYYY-MM-DD>`
+**Status:** ✅ Done
+**Started:** 2026-08-18
+**Completed:** 2026-08-19
 **Changelog:** 1317 (pinned; create only at TASK-481 closure)
 
 ---

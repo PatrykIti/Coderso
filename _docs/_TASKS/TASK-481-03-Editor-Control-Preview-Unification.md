@@ -7,9 +7,9 @@
 **Category:** Pages / Page Editor V2 / Canvas
 **Estimated Effort:** Small
 **Dependencies:** TASK-481-02 (site brand resolves in-canvas)
-**Status:** ⏳ To Do
-**Started:** `<YYYY-MM-DD>`
-**Completed:** `<YYYY-MM-DD>`
+**Status:** ✅ Done
+**Started:** 2026-08-18
+**Completed:** 2026-08-19
 **Changelog:** 1317 (pinned; create only at TASK-481 closure)
 
 ---
