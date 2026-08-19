@@ -135,6 +135,23 @@ export function toPageCanvasColorCssVariableMap(tokens: DesignTokens): Record<st
 }
 
 /**
+ * The four SITE BRAND page-color vars for the Page V2 editor canvas CONTENT scope
+ * (`data-page-editor-content`). Counterpart to {@link toPageCanvasColorCssVariableMap},
+ * which emits typography + neutrals on the canvas FRAME and intentionally omits
+ * brand (brand on the frame would recolor editor chrome). These four are safe ONLY
+ * inside the content scope, where chrome re-asserts the admin brand
+ * (`adminBrandColorCssVariableMap`). Mirrors the brand half of {@link toCssVariableMap}.
+ */
+export function toPageCanvasBrandColorCssVariableMap(tokens: DesignTokens): Record<string, string> {
+  return {
+    "--color-primary": tokens.colors.primary,
+    "--color-secondary": tokens.colors.secondary,
+    "--color-accent": tokens.colors.accent,
+    "--color-border": tokens.neutrals.border,
+  };
+}
+
+/**
  * CSS variable map for the Menu Design editor canvas frame: site typography
  * vars PLUS ALL SEVEN `--color-*` (primary/secondary/accent/bg/surface/border/
  * text). Unlike the page canvas map (which keeps the brand `--color-*` OFF the

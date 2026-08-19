@@ -4,7 +4,9 @@ import { DEFAULT_ADMIN_THEME_TOKENS } from "../../../core/services/adminThemes/t
 import {
   adminBrandColorCssVariableMap,
   toAdminThemeCssVariables,
+  toCssVariableMap,
   toCssVariables,
+  toPageCanvasBrandColorCssVariableMap,
   toPageCanvasColorCssVariableMap,
 } from "../../../core/ui/theme/tokenCss";
 
@@ -58,4 +60,59 @@ test("adminBrandColorCssVariableMap re-asserts the admin brand on chrome (TASK-4
   expect(adminBrandColorCssVariableMap["--color-bg"]).toBeUndefined();
   expect(adminBrandColorCssVariableMap["--color-surface"]).toBeUndefined();
   expect(adminBrandColorCssVariableMap["--color-text"]).toBeUndefined();
+});
+
+const BRAND_CSS_VAR_KEYS = [
+  "--color-primary",
+  "--color-secondary",
+  "--color-accent",
+  "--color-border",
+] as const;
+
+test("toPageCanvasBrandColorCssVariableMap emits exactly the four SITE brand vars from DEFAULT_TOKENS (TASK-481-02-L01)", () => {
+  const map = toPageCanvasBrandColorCssVariableMap(DEFAULT_TOKENS);
+  // Exact key set: no neutrals, no typography, no shadcn aliases.
+  expect(Object.keys(map).sort()).toEqual([...BRAND_CSS_VAR_KEYS].sort());
+  expect(map["--color-primary"]).toBe(DEFAULT_TOKENS.colors.primary);
+  expect(map["--color-secondary"]).toBe(DEFAULT_TOKENS.colors.secondary);
+  expect(map["--color-accent"]).toBe(DEFAULT_TOKENS.colors.accent);
+  // --color-border is sourced from neutrals, NOT colors.
+  expect(map["--color-border"]).toBe(DEFAULT_TOKENS.neutrals.border);
+});
+
+test("toPageCanvasBrandColorCssVariableMap follows a custom-token fixture (TASK-481-02-L01)", () => {
+  const customTokens = {
+    ...DEFAULT_TOKENS,
+    colors: {
+      primary: "#111827",
+      secondary: "#7c3aed",
+      accent: "#dc2626",
+    },
+    neutrals: {
+      ...DEFAULT_TOKENS.neutrals,
+      border: "#334155",
+    },
+  };
+  const map = toPageCanvasBrandColorCssVariableMap(customTokens);
+  expect(map).toEqual({
+    "--color-primary": customTokens.colors.primary,
+    "--color-secondary": customTokens.colors.secondary,
+    "--color-accent": customTokens.colors.accent,
+    "--color-border": customTokens.neutrals.border,
+  });
+});
+
+test("toPageCanvasBrandColorCssVariableMap values match toCssVariableMap for the same tokens (TASK-481-02-L01)", () => {
+  const map = toPageCanvasBrandColorCssVariableMap(DEFAULT_TOKENS);
+  const frontMap = toCssVariableMap(DEFAULT_TOKENS);
+  for (const key of BRAND_CSS_VAR_KEYS) {
+    expect(map[key]).toBe(frontMap[key]);
+  }
+});
+
+test("toPageCanvasBrandColorCssVariableMap shares NO keys with the frame map (TASK-481-02-L01)", () => {
+  const brandMap = toPageCanvasBrandColorCssVariableMap(DEFAULT_TOKENS);
+  const frameMap = toPageCanvasColorCssVariableMap(DEFAULT_TOKENS);
+  const overlap = Object.keys(brandMap).filter((key) => key in frameMap);
+  expect(overlap).toEqual([]);
 });
