@@ -5,7 +5,9 @@
 **Category:** Admin Build / Admin UI / Bundle Performance / Architecture
 **Estimated Effort:** Large
 **Dependencies:** TASK-399-04, TASK-462, TASK-464, TASK-209, TASK-054-22
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Started:** 2026-08-18
+**Completed:** 2026-08-18
 **Changelog:** 1308 (pinned; closure only)
 
 ---
@@ -60,10 +62,10 @@ source/test/script changes and L04 records fresh validation evidence.
 
 ## Sub-Tasks
 
-- [ ] TASK-467-01: Extract lightweight Custom Screens cache invalidation.
-- [ ] TASK-467-02: Split the browser Custom Screens client into lightweight
+- [x] TASK-467-01: Extract lightweight Custom Screens cache invalidation.
+- [x] TASK-467-02: Split the browser Custom Screens client into lightweight
   list/cache and editor-only normalization modules.
-- [ ] TASK-467-03: Lazy split the widget editor registry.
+- [x] TASK-467-03: Lazy split the widget editor registry.
 
 ## Architecture
 

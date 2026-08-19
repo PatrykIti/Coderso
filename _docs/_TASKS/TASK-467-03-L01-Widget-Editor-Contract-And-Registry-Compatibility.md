@@ -6,7 +6,9 @@
 **Category:** Widgets / Contracts / Bundle Performance
 **Estimated Effort:** Medium
 **Dependencies:** TASK-467-03
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Started:** 2026-08-18
+**Completed:** 2026-08-18
 **Changelog:** 1308 (pinned; closure only)
 
 ---

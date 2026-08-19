@@ -1907,6 +1907,12 @@
       "cWriteGlobal": false
     },
     {
+      "file": "tests/unit/runtime-smoke/task-467-adapter.test.ts",
+      "bucket": "A",
+      "conflictKeys": [],
+      "cWriteGlobal": false
+    },
+    {
       "file": "tests/unit/runtime-smoke/task-554-adapter.test.ts",
       "bucket": "B",
       "conflictKeys": [],

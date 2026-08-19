@@ -6,7 +6,9 @@
 **Category:** Admin UI / Widgets / Bundle Performance
 **Estimated Effort:** Large
 **Dependencies:** TASK-467-03-L01
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Started:** 2026-08-18
+**Completed:** 2026-08-18
 **Changelog:** 1308 (pinned; closure only)
 
 ---

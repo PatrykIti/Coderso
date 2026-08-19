@@ -23,6 +23,7 @@ const SUPPORTED_PROFILES: Readonly<Record<SmokeSuiteId, readonly SmokeProfileId[
   "task-492": ["fast"],
   "task-511": ["fast"],
   "task-517": ["fast"],
+  "task-467": ["fast"],
 };
 
 function invalid(message: string): never {
@@ -30,7 +31,9 @@ function invalid(message: string): never {
 }
 
 function hasControlCharacters(value: string): boolean {
-  return /[\u0000-\u001f\u007f]/u.test(value);
+  return Array.from(value).some(
+    (character) => character.charCodeAt(0) < 32 || character.charCodeAt(0) === 127
+  );
 }
 
 export function parseRuntimeSmokeArgs(argv: readonly string[]): SmokeInput {

@@ -6,7 +6,9 @@
 **Category:** Validation / Docs / Bundle Performance
 **Estimated Effort:** Medium
 **Dependencies:** TASK-467-03-L03
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Started:** 2026-08-18
+**Completed:** 2026-08-18
 **Changelog:** 1308 (pinned; closure only)
 
 ---
@@ -16,19 +18,21 @@
 Close the lazy widget editor split with fresh bundle evidence, import-boundary
 proof, docs updates, and TASK-467 task-family synchronization.
 
-Pre-implementation note: current `scripts/check-admin-bundle.ts` and
-`scripts/adminBundleReport.ts` do not yet enforce the TASK-467 dynamic raw
-budget or registry-barrel graph evidence. This leaf owns adding those guards;
-their absence is not drift while the leaf remains `⏳ To Do`, but TASK-467
-cannot close until they are implemented and validated.
+Pre-implementation note: at the time of authoring,
+`scripts/check-admin-bundle.ts` and `scripts/adminBundleReport.ts` did not yet
+enforce the TASK-467 dynamic raw budget or registry-barrel graph evidence; this
+leaf owned adding those guards, and TASK-467 could not close until they were
+implemented and validated. Implemented and validated in the L04 commit
+(`28beb817`), including the documented lazy node-import exemption
+(`TASK-467-03-L04-L01`).
 
 ## Sub-Tasks
 
-- [ ] Regenerate admin build output and bundle report evidence.
-- [ ] Prove `registry-*` no longer includes all widget editor code.
-- [ ] Run admin boundary, lint, type, and targeted UI test lanes.
-- [ ] Update contributor-facing docs if the widget editor contract changed.
-- [ ] Update task statuses, changelog, and task board when the whole family is
+- [x] Regenerate admin build output and bundle report evidence.
+- [x] Prove `registry-*` no longer includes all widget editor code.
+- [x] Run admin boundary, lint, type, and targeted UI test lanes.
+- [x] Update contributor-facing docs if the widget editor contract changed.
+- [x] Update task statuses, changelog, and task board when the whole family is
   ready to close.
 
 ## Files To Change

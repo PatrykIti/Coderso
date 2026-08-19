@@ -286,10 +286,18 @@ export class ProcessSupervisor implements LifecycleResource {
       const stdout = stdoutCapture.bytes;
       const stderr = stderrCapture.bytes;
       if (outcome.exitCode !== 0 || outcome.signal !== null) {
-        throw new SmokeError("smoke_process_failed", "process exited unsuccessfully");
+        const snippet = new TextDecoder().decode(stderr.slice(0, 1200));
+        throw new SmokeError(
+          "smoke_process_failed",
+          `process exited unsuccessfully family=${handle.family} code=${outcome.exitCode} signal=${outcome.signal} stderr=${snippet}`
+        );
       }
       if (!spec.allowStderr && stderr.byteLength > 0) {
-        throw new SmokeError("smoke_process_failed", "process wrote unexpected stderr");
+        const snippet = new TextDecoder().decode(stderr.slice(0, 1200));
+        throw new SmokeError(
+          "smoke_process_failed",
+          `process wrote unexpected stderr family=${handle.family} stderr=${snippet}`
+        );
       }
       return Object.freeze({
         stdout,

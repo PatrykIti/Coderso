@@ -6,7 +6,9 @@
 **Category:** Widgets / Admin UI / Bundle Performance
 **Estimated Effort:** Large
 **Dependencies:** TASK-467-02, TASK-464
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Started:** 2026-08-18
+**Completed:** 2026-08-18
 **Changelog:** 1308 (pinned; closure only)
 
 ---
@@ -31,11 +33,11 @@ compatible.
 
 ## Sub-Tasks
 
-- [ ] TASK-467-03-L01: Lazy editor component contract and registry
+- [x] TASK-467-03-L01: Lazy editor component contract and registry
   compatibility.
-- [ ] TASK-467-03-L02: Admin widget loader map and eager barrel removal.
-- [ ] TASK-467-03-L03: Shared widget editor outlet and builder surface wiring.
-- [ ] TASK-467-03-L04: Bundle evidence, docs, and closure validation.
+- [x] TASK-467-03-L02: Admin widget loader map and eager barrel removal.
+- [x] TASK-467-03-L03: Shared widget editor outlet and builder surface wiring.
+- [x] TASK-467-03-L04: Bundle evidence, docs, and closure validation.
 
 ## Files To Change
 
