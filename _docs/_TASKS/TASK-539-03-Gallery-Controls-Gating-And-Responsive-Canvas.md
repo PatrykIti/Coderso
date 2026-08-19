@@ -25,7 +25,7 @@ usable Page canvas width on narrow viewports.
 | 1 | TASK-539-03-L05 | Shared grid-placement contract and focused proof | ⏳ To Do |
 | 2 | TASK-539-03-L01 | Registry/UI-model vocabulary, gates, z clamp, and cohesive registry/test split | ⏳ To Do |
 | 3 | TASK-539-03-L02 | Media URL, gallery-item, and gallery-category controls | ⏳ To Do |
-| 4 | TASK-539-03-L03 | PageEditor wiring, cohesive editor/test split, and Page-local responsive clearance | ⏳ To Do |
+| 4 | TASK-539-03-L03 | PageEditor wiring on the 481-split facade, flow-test split, and Page-local responsive clearance | ⏳ To Do |
 | 5 | TASK-539-03-L04 | Additive TASK-539 editor proof suites only | ⏳ To Do |
 
 Land exactly `L05 → L01 → L02 → L03 → L04`. L05 is the sole writer of the
@@ -39,8 +39,10 @@ must not edit `core/admin/ui/shared/CanvasEditor.tsx`, any Custom Screen file,
 sanitizer source, foreign tests, task indexes, or changelogs.
 
 The grounded oversize seams are
-`PageEditor.tsx` (5,204) and `page-editor-v2-flow.test.tsx` (6,813); these two still
-require the cohesive split. TASK-547 already split the registry:
+`PageEditor.tsx` (5,204) and `page-editor-v2-flow.test.tsx` (6,813). The
+`PageEditor.tsx` facade split (7 modules) is ALREADY landed by TASK-481-02-L02;
+this subtask rebases onto that split facade and does NOT re-split it. The flow-test
+seam is owned by TASK-539-03-L03. TASK-547 already split the registry:
 `pageEditorControlRegistry.ts` is now 32 lines (down from the pre-split 1,813) and
 `page-editor-control-registry.test.ts` is now 942 lines (down from 1,893). Re-ground
 the registry work against the landed modules

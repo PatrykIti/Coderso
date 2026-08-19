@@ -167,8 +167,9 @@ brand value without remount.
 
 ## Line gate / PageEditor.tsx split (shared with TASK-539-03-L03)
 
-`core/admin/ui/pages/PageEditor.tsx` is 5,204 lines. Its cohesive split is OWNED by
-TASK-539-03-L03 (the single splitter), which extracts:
+`core/admin/ui/pages/PageEditor.tsx` is 5,204 lines. THIS LEAF performs the cohesive
+structural facade split BEFORE its brand-token edits (it owns the split because it
+edits the file and closes before TASK-539). Extract with ZERO behavior change:
 
 - `PageEditorRoot.tsx` — the `PageEditor` component shell, canvas-frame render,
   `PageEditorColorPaletteContext.Provider`, and `SectionCanvas` mount.
@@ -181,27 +182,33 @@ TASK-539-03-L03 (the single splitter), which extracts:
 - `PageEditorResponsivePanel.tsx` — responsive/device panel.
 - `PageEditorSettingsPanel.tsx` — settings panel.
 
-TASK-481 does NOT re-split `PageEditor.tsx`. This leaf's brand-token edits are
-confined to the brand-token content-scope SURFACE (derived token vars + palette
-context + `SectionCanvas` render), which lands in `usePageEditorController.ts` and
-`PageEditorRoot.tsx` after 539-03-L03's split; the `PageEditor.tsx` facade keeps the
-exact pre-task public surface via named re-exports (no export-star), and consumers
-keep importing `PageEditor`/`PageEditorHost`/`SectionCanvas` from the stable paths.
+The `PageEditor.tsx` facade keeps the exact pre-task public surface (13 named
+re-exports, no export-star); consumers keep importing
+`PageEditor`/`PageEditorHost`/`SectionCanvas` from the stable paths. Guard the facade
+parity with a compile-time test asserting the 13-symbol surface and with
+import-identity tests at the leaf gates.
 
-Land order: TASK-539-03-L03 splits `PageEditor.tsx` first; this leaf then edits the
-split modules. Post-split receipt: every touched module `<=1000` lines (owned by
-539's split, jointly verified at closure). This leaf must not add net lines to the
+This leaf's brand-token edits are confined to the brand-token content-scope SURFACE
+(derived token vars + palette context + `SectionCanvas` render) inside
+`usePageEditorController.ts` and `PageEditorRoot.tsx`; TASK-539-03-L03 later REBASES
+onto the split facade and does NOT re-split.
+
+Land order: this leaf splits `PageEditor.tsx` first (receipt: facade + every module
+`<=1000` lines), then performs its brand-token surface edits. Post-split receipt:
+every touched file `<=1000` lines. This leaf must not add net lines to the
 `PageEditor.tsx` facade.
 
 ## Single-writer collision guard (TASK-539-03-L03)
 
-`PageEditor.tsx` is shared. TASK-481 owns the brand-token content-scope surface;
-TASK-539-03-L03 owns the gallery/responsive surface and the facade split. Both
-writers read the current on-disk state immediately before editing and never revert,
+`PageEditor.tsx` is shared. THIS LEAF performs the facade split and owns the
+brand-token content-scope surface; TASK-539-03-L03 later REBASES onto the split
+facade and owns the gallery/responsive surface (it does NOT re-split). Both writers
+read the current on-disk state immediately before editing and never revert,
 checkout, or clean up the other's uncommitted edits.
 
 Forbidden paths for this leaf (never edit): all `_docs/_TASKS/TASK-539*` files;
-`tests/vitest/ui/page-editor-v2-*.test.tsx`; and the 539-exclusive gallery/responsive
-extraction modules `PageEditorRegistryFields.tsx`, `PageEditorResponsivePanel.tsx`,
-`PageEditorToolbar.tsx`, `PageEditorSettingsPanel.tsx`, `pageEditorDocumentCommands.ts`.
+`tests/vitest/ui/page-editor-v2-*.test.tsx`; and the gallery/responsive SURFACES
+TASK-539-03-L03 adds inside the split modules (gallery items/filter controls,
+responsive-panel device logic, z-clamp rules). The 7 split modules themselves are
+created here.
 Changelog: this family creates only `1317`; TASK-539 creates only `1318`.
