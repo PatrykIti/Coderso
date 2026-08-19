@@ -21,6 +21,8 @@ module set (no `pageDocumentV2/` directory is introduced):
 ```text
 core/services/pages/pageDocumentV2.ts                         # explicit facade
 core/services/pages/pageDocumentV2Types.ts
+core/services/pages/pageGalleryV2.ts                          # NEW: gallery type + 7 PAGE_GALLERY_* constants
+core/services/pages/pageResponsiveStyleV2.ts                  # NEW: 3 dedicated responsive style types
 core/services/pages/pageDocumentV2Contract.ts
 core/services/pages/pageDocumentV2Schema.ts
 core/services/pages/pageDocumentV2Normalizer.ts
@@ -55,8 +57,22 @@ Landed module responsibilities are exact:
 - `pageDocumentV2Types.ts`: schema version, enum/tuple vocabularies and their derived
   public type aliases, clamps, patterns, predicates, animated-icon/typography lookup,
   switcher-aria helpers, `PageDocumentError`/`PageDocumentErrorCode`, and the
-  composite PageDocumentV2 public data types (including `PageGalleryItemV2` and the
-  three dedicated responsive types).
+  composite PageDocumentV2 public data types (the baseline composites listed in the
+  locked manifest below). This module is currently 955 physical lines; it must stay
+  `<=1000`. This leaf therefore performs a further cohesive split before adding
+  behavior: extract the new gallery surface and the three new dedicated responsive
+  style types into two new cohesive modules owned by this leaf,
+  `pageGalleryV2.ts` (the `PageGalleryItemV2` type plus the seven
+  `PAGE_GALLERY_*` constants) and `pageResponsiveStyleV2.ts` (the
+  `PageSectionResponsiveStyleV2`, `PageBlockResponsiveLayerV2`, and
+  `PageBlockResponsiveStyleV2` contracts). No baseline type or constant may move
+  owner. The existing `PageBlockResponsiveOverrideV2`/`PageSectionResponsiveOverrideV2`
+  stay in `pageDocumentV2Types.ts` but their `style` member is retyped to the new
+  responsive style types via an import from `pageResponsiveStyleV2.ts` (one-way
+  dependency, no cycle). The `pageDocumentV2.ts` facade re-exports the four new
+  types and seven constants from these new owner modules with the same per-specifier
+  `type X` modifiers; the final 78-type / 133-runtime surface and every owner map
+  below are updated accordingly.
 - `pageDocumentV2Contract.ts`: defaults, prop keys, block/section capabilities, slot
   registry, list-item constructors, and active-slot lookup plus their types.
 - `pageDocumentV2Schema.ts`: all PageDocumentV2 JSON-schema construction and its
@@ -73,8 +89,9 @@ Landed module responsibilities are exact:
 - `pageBlockJsonSchemaV2.ts`, `pageSectionNormalizerV2.ts`, and
   `pageBlockNormalizerV2.ts`: the existing internal block/section schema and
   normalizer owners.
-- `pageDocumentV2.ts`: explicit named `export { ... }` and
-  `export type { ... }` clauses only (see the locked manifest). No `export *`,
+- `pageDocumentV2.ts`: explicit named `export { ... } from` clauses only, where
+  every type is exported as a per-specifier `type X` modifier inside a value
+  block (see the locked manifest). No `export *`,
   executable wrapper, cloned registry, or second constant definition.
 
 Internal modules import owners directly rather than importing the facade, preventing
@@ -113,10 +130,12 @@ The repair audit re-parsed
 `core/services/pages/pageDocumentV2.ts` at the current post-TASK-547 HEAD
 `3c470092`. The baseline has exactly 74 exported
 type-alias names and 125 runtime names, with no default export or export-star. The
-landed facade is a mixed-clause explicit facade: it uses explicit
-`export type { ... } from "./owner"` and `export { ... } from "./owner"` clauses, and
-value export blocks may carry per-specifier `type X` modifiers (the landed
-`pageDocumentV2Contract` and `pageTextMarksV2` blocks do exactly that). This leaf adds
+landed facade is a mixed-clause explicit facade: it uses only
+`export { ... } from "./owner"` clauses (there are zero declaration-level
+`export type { ... } from` clauses), and every type is a per-specifier
+`type X` modifier inside a value export block (the landed
+`pageDocumentV2Contract` and `pageTextMarksV2` blocks do exactly that, and the
+other blocks carry the remaining per-specifier type modifiers). This leaf adds
 no import, local/direct declaration, alias, default export, or export-star.
 
 The counts refer to explicit type-only facade names and runtime facade names.
@@ -168,12 +187,14 @@ pageTextMarksV2.ts:
   PageBlockTextMarkInput, PageBlockTextMarkRemoveInput
 ```
 
-The only planned type additions are these four names, all owned by
-`pageDocumentV2Types.ts`:
+The only planned type additions are these four names, with exact owners:
 
 ```text
-PageBlockResponsiveLayerV2, PageBlockResponsiveStyleV2, PageGalleryItemV2,
-PageSectionResponsiveStyleV2
+pageResponsiveStyleV2.ts:
+  PageSectionResponsiveStyleV2, PageBlockResponsiveLayerV2,
+  PageBlockResponsiveStyleV2
+pageGalleryV2.ts:
+  PageGalleryItemV2
 ```
 
 The final explicit type-only manifest is therefore exactly 78 names. No other
@@ -249,7 +270,7 @@ pageDocumentV2Normalizer.ts:
 ```
 
 The only planned runtime additions are these seven
-`pageDocumentV2Types.ts` constants:
+`pageGalleryV2.ts` constants:
 
 ```text
 PAGE_GALLERY_ALT_MAX, PAGE_GALLERY_CAPTION_MAX, PAGE_GALLERY_CATEGORY_MAX,
@@ -281,14 +302,17 @@ source and execute this exact proof:
    module specifier and a nonempty `NamedExports` clause. Reject imports, direct
    declarations, `export default`, `export *`, namespace exports, aliases
    (`propertyName`), and duplicate exported names.
-2. Accept the landed mixed-clause layout: type groups use declaration-level
-   `export type { ... } from`, and value groups use declaration-level
-   `export { ... } from` but MAY carry per-specifier `type X` modifiers (the landed
+2. Accept the landed mixed-clause layout: every clause is a declaration-level
+   `export { ... } from` value block (there are zero declaration-level
+   `export type { ... } from` clauses), and every type is a per-specifier
+   `type X` modifier inside one of those value blocks (the landed
    `pageDocumentV2Contract` and `pageTextMarksV2` blocks do exactly that).
-   Declaration-only applies to this leaf's OWN additions: the four new types join the
-   `pageDocumentV2Types` type clause/type specifiers and the eight new runtime values
-   join value clauses as plain specifiers; no new import, direct declaration, alias,
-   default export, or export-star is added. Compare the sorted
+   Declaration-only applies to this leaf's OWN additions: the four new types join
+   the `pageResponsiveStyleV2`/`pageGalleryV2` export blocks as per-specifier
+   `type X` modifiers and
+   the eight new runtime values join value blocks as plain specifiers; no new
+   import, direct declaration, alias, default export, or export-star is added.
+   Compare the sorted
    `{name, ownerModule}` arrays to the exact 78-name and 133-name maps above. This
    catches extra types as well as missing/present-only checks and pins every direct
    owner.
@@ -419,7 +443,7 @@ Valid canonical rows and normalize→normalize results are deterministic.
 
 ### Strict responsive styles, layer merge, and resolution
 
-`pageDocumentV2Types.ts` owns and exports dedicated section and block responsive style contracts.
+`pageResponsiveStyleV2.ts` owns and exports dedicated section and block responsive style contracts.
 Do not reuse a broad base style behind a responsive override:
 
 ```ts
@@ -509,10 +533,13 @@ overrides.
 
 The `anchor?: never` and every forbidden `?: never` member are mandatory. A plain
 `Pick`/`Omit` relies on excess-property checking and can still admit a broader typed
-variable through structural assignment. `pageDocumentV2Types.ts` owns all five responsive
-types above. The `pageDocumentV2.ts` facade explicitly includes
+variable through structural assignment. `pageResponsiveStyleV2.ts` owns the three
+new responsive style types above; `pageDocumentV2Types.ts` keeps the two existing
+`PageBlockResponsiveOverrideV2`/`PageSectionResponsiveOverrideV2` types and imports
+the new style types. The `pageDocumentV2.ts` facade explicitly includes
 `PageSectionResponsiveStyleV2`, `PageBlockResponsiveLayerV2`, and
-`PageBlockResponsiveStyleV2` in its named `export type { ... }` declaration; none is
+`PageBlockResponsiveStyleV2` in its named export blocks as per-specifier
+`type X` modifiers; none is
 redefined or exported through `export *`.
 
 Add compile-time contracts (for example `expectTypeOf` plus individual

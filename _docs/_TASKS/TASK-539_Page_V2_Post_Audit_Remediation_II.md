@@ -291,10 +291,10 @@ every foreign TASK-548 byte, and recomputes statistics from the complete live ta
 tree rather than applying a hard-coded delta.
 
 The orchestrator owns `_docs/_workflows/task-539-fix.mjs` for this contract repair.
-It must author both `_docs/_workflows/task-539-fix.mjs` and
+It authored both `_docs/_workflows/task-539-fix.mjs` and
 `_docs/_workflows/task-539-implement.mjs` before the first TASK-539 source edit
-(contract-permitted; the orchestrator authors them itself, and neither file exists at
-contract-audit time). The sole live `_docs/_workflows/task-539-implement.mjs`
+(contract-permitted; the orchestrator authors them itself, and neither file existed at
+the earlier contract-audit time). The sole live `_docs/_workflows/task-539-implement.mjs`
 captures the post-TASK-540 baseline, enforces this exact land order/single-writer
 matrix, runs the family line gate, rejects missing audit results, and coordinates
 post-audit/smoke/closure. Leaf validation does not depend on either aggregate

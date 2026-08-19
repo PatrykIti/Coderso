@@ -24,7 +24,7 @@ Write only:
 Ground by symbols `PAGE_COMPOSITION_EFFECTS_CSS`,
 `PAGE_INTERACTIVITY_CSS`, `resolveBlockCompositionAttrs`, and
 `resolveSectionCompositionAttrs`, not historical line numbers. Baselines are
-326/407/62 lines; every touched file must remain `<=1000`.
+332/407/72 lines; every touched file must remain `<=1000`.
 
 Do not export/own any grid-placement symbol. The historical filename is retained, but
 no unconditional wrapper is added.

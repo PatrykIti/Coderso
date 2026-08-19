@@ -116,9 +116,8 @@ bun --cwd core lint
 bun run test:vitest -- \
   tests/vitest/pages/page-block-grid-placement.test.ts \
   tests/vitest/pages/page-editor-control-registry.test.ts \
-  tests/vitest/pages/page-editor-control-registry-capabilities.test.ts \
-  tests/vitest/pages/page-editor-control-registry-effects.test.ts \
-  tests/vitest/pages/page-editor-control-registry-responsive.test.ts \
+  tests/vitest/pages/page-editor-content-controls.test.ts \
+  tests/vitest/pages/page-editor-visual-controls.test.ts \
   tests/vitest/pages/page-editor-control-ui-model.test.ts \
   tests/vitest/ui/page-editor-media-url-control.test.tsx \
   tests/vitest/ui/page-editor-gallery-items-control.test.tsx \

@@ -23,21 +23,25 @@ Own:
 - `core/services/pages/pageEditorControlUiModel.ts`;
 - existing/split suites
   `tests/vitest/pages/page-editor-control-registry.test.ts` (now 942 lines),
-  `page-editor-control-registry-capabilities.test.ts`,
-  `page-editor-control-registry-effects.test.ts`,
-  `page-editor-control-registry-responsive.test.ts`, and
-  `page-editor-control-ui-model.test.ts`.
+  `page-editor-content-controls.test.ts` (287 lines),
+  `page-editor-visual-controls.test.ts` (770 lines), and
+  `page-editor-control-ui-model.test.ts` (602 lines).
 
 The facade must explicitly re-export the pre-task public symbols; `export *` is
-forbidden. TASK-547 already split the registry into the four landed modules above;
+forbidden. TASK-547 split the registry into the four landed modules above and
+TASK-554 split the oversized registry suite into the two landed suites above;
 re-ground against them instead of the planned
 `pageEditorControlTypes.ts`/`pageEditorControlBuilders.ts`/
 `pageEditorUniversalControls.ts`/`pageEditorBlockControls.ts`/
-`pageEditorResponsiveControls.ts` names. Add the new gallery/z-clamp definitions,
+`pageEditorResponsiveControls.ts` or any
+`page-editor-control-registry-{capabilities,effects,responsive}.test.ts` names
+(those three suite files do not exist and must never be authored). Add the new
+gallery/z-clamp definitions,
 builders, universal controls, per-block controls, and responsive projection into the
 landed modules by responsibility, not arbitrary line ranges. Every module and
 independently runnable suite must be at most 1,000 lines. Baseline receipts are 32
-lines for the registry and 942 for its main suite.
+lines for the registry, 942 for its main suite, 287/770 for the two TASK-554
+content/visual suites, and 602 for the UI-model suite.
 
 ## Implementation Pseudocode
 
@@ -120,9 +124,8 @@ bun --cwd core lint:types
 bun --cwd core lint
 bun run test:vitest -- \
   tests/vitest/pages/page-editor-control-registry.test.ts \
-  tests/vitest/pages/page-editor-control-registry-capabilities.test.ts \
-  tests/vitest/pages/page-editor-control-registry-effects.test.ts \
-  tests/vitest/pages/page-editor-control-registry-responsive.test.ts \
+  tests/vitest/pages/page-editor-content-controls.test.ts \
+  tests/vitest/pages/page-editor-visual-controls.test.ts \
   tests/vitest/pages/page-editor-control-ui-model.test.ts
 node _docs/_workflows/task-539-implement.mjs --check-task-family-line-limit
 git diff --check

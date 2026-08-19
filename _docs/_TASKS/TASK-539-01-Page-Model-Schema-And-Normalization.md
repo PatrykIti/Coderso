@@ -41,7 +41,10 @@ Land `TASK-539-01-L01 -> TASK-539-01-L02`.
   `pageDocumentV2Schema.ts`, `pageDocumentV2Normalizer.ts`,
   `pageDocumentV2Normalization.ts`, `pageTextMarksV2.ts`,
   `pageBlockJsonSchemaV2.ts`, `pageSectionNormalizerV2.ts`, and
-  `pageBlockNormalizerV2.ts` (no `pageDocumentV2/` directory), plus the Page model
+  `pageBlockNormalizerV2.ts` (no `pageDocumentV2/` directory), plus the two new
+  cohesive modules `pageGalleryV2.ts` (gallery type + seven `PAGE_GALLERY_*`
+  constants) and `pageResponsiveStyleV2.ts` (the three new dedicated responsive
+  style types) created by the L01 split, plus the Page model
   Vitest split named in its leaf, including the dedicated
   `tests/vitest/pages/page-document-v2-facade.test.ts` source-manifest and
   reference-identity suite. It performs the source and test split before adding

@@ -496,6 +496,7 @@ bun --cwd core lint:types
 bun --cwd core lint
 bun run test:vitest -- \
   tests/vitest/pages/page-renderer-v2-facade.test.tsx \
+  tests/vitest/pages/page-renderer-v2-module-boundaries.test.ts \
   tests/vitest/pages/page-renderer-v2.test.tsx \
   tests/vitest/pages/page-renderer-v2-section-layout.test.tsx \
   tests/vitest/pages/page-renderer-v2-blocks.test.tsx \

@@ -276,7 +276,7 @@ Do not move the new TASK-539 cross-contract matrix into these files; L02 alone o
 ```bash
 bun --cwd core lint:types
 bun --cwd core lint
-bun run test:vitest -- tests/vitest/pages/page-responsive-css.test.ts tests/vitest/pages/page-responsive-css-section.test.ts tests/vitest/pages/page-responsive-css-block.test.ts tests/vitest/pages/page-responsive-css-security.test.ts
+bun run test:vitest -- tests/vitest/pages/page-responsive-grid-spans.test.ts tests/vitest/pages/page-responsive-css.test.ts tests/vitest/pages/page-responsive-css-section.test.ts tests/vitest/pages/page-responsive-css-block.test.ts tests/vitest/pages/page-responsive-css-security.test.ts
 node _docs/_workflows/task-539-implement.mjs --check-task-family-line-limit
 git diff --check
 ```

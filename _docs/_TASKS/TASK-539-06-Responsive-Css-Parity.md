@@ -40,7 +40,7 @@ production, test, and test-support file must be independently meaningful and at 
 1,000 physical lines.
 
 L02 creates only
-`tests/vitest/pages/task-539-responsive-css-parity.test.ts`. It treats every L01 file
+`tests/vitest/pages/task-539-responsive-css-parity.test.tsx`. It treats every L01 file
 as read-only and may not re-baseline compatibility assertions.
 
 Both leaves consume, without editing or copying:

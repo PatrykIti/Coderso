@@ -16,7 +16,7 @@
 
 Create only:
 
-- `tests/vitest/pages/task-539-responsive-css-parity.test.ts`
+- `tests/vitest/pages/task-539-responsive-css-parity.test.tsx`
 
 All production files and all L01 tests/support are read-only. Do not append cases to
 `page-responsive-css*.test.ts`, re-baseline their assertions, or create a second
@@ -97,7 +97,7 @@ compatibility expectation.
 ## Validation
 
 ```bash
-bun run test:vitest -- tests/vitest/pages/task-539-responsive-css-parity.test.ts
+bun run test:vitest -- tests/vitest/pages/task-539-responsive-css-parity.test.tsx
 bun run test:vitest -- tests/vitest/pages/page-responsive-css.test.ts tests/vitest/pages/page-responsive-css-section.test.ts tests/vitest/pages/page-responsive-css-block.test.ts tests/vitest/pages/page-responsive-css-security.test.ts
 bun --cwd core lint:types
 bun --cwd core lint

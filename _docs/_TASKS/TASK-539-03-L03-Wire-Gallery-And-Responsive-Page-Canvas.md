@@ -55,7 +55,15 @@ Also own the cohesive split of `tests/vitest/ui/page-editor-v2-flow.test.tsx` in
 Each suite must run independently. Extract by behavior, not arbitrary ranges; no
 generic dumping-ground helper. Test baseline is 6,813 lines (the flow suite); the
 PageEditor source baseline is the post-TASK-481 split facade + 7 modules, each
-already `<=1000`; every result must be `<=1000`.
+already `<=1000`; every result must be `<=1000`. Current headroom before this
+leaf's gallery/responsive wiring: `usePageEditorController.ts` 996,
+`pageEditorDocumentCommands.ts` 971, `PageEditorToolbar.tsx` 970,
+`PageEditorSettingsPanel.tsx` 951, and `PageEditorRoot.tsx` 875. If this leaf's
+own additions push any of these modules (or a touched split suite) over 1,000
+lines, it must first perform a further cohesive split of that module by
+responsibility (preserving the facade's exact public surface and all prior
+behavior), with each resulting file `<=1000`, before adding the new wiring. It
+must not delete, rebaseline, or weaken existing assertions to create headroom.
 
 Post-TASK-481 content-scope re-baseline (REQUIRED for the flow suite): TASK-481-01-L01
 moved the block brand visual style keys (`color`, `backgroundColor`, `backgroundImage`,
@@ -67,9 +75,25 @@ re-baseline any assertion that reads those visual props from the block frame or 
 section-content element to read them from the nearest `[data-page-editor-content]`
 descendant instead (frame/section chrome keep only layout style + the
 `--coderso-block-text` / `--coderso-block-surface` custom props). Known impacted
-assertions at split time: `block.style.opacity/borderRadius/boxShadow`
-(`page-editor-v2-flow.test.tsx` ~1562-1564, the "PageEditor block style controls
-update visible canvas style and saved data" test). This is a structural re-baseline
+assertions at split time:
+- `block.style.opacity/borderRadius/boxShadow` (`page-editor-v2-flow.test.tsx`
+  ~1562-1564, the "PageEditor block style controls update visible canvas style and
+  saved data" test);
+- `block.style.color === ""` (`page-editor-v2-flow.test.tsx` ~1764, the transparent
+  text-color clearing assertion): `color` now lives on the inner
+  `[data-page-editor-content]` wrapper, so the frame-level read becomes vacuous;
+  assert the wrapper's `style.color` (or the `--coderso-block-text` custom prop)
+  instead;
+- the canvas-scroller right-rail assertions (`page-editor-v2-flow.test.tsx`
+  ~6648/6658/6663, `expect(scroller.style.paddingRight).toBe("300px"|"")`): this
+  leaf removes the fixed inline `style={{paddingRight:300}}` (PageEditorRoot.tsx:209)
+  in favor of the conditional class tokens (`sm:pr-[300px] lg:pr-[300px]`), so the
+  JSDOM `inline style` read no longer resolves those tokens. Re-baseline these
+  assertions to the class-token contract (assert the scroller's `className` contains
+  the conditional token when the inspector is open and omits it when closed), which
+  matches the Vitest scope of the inspector-clearance contract; the real computed
+  padding proof lives in TASK-539-08's Playwright flows at 640px and `lg`.
+This is a structural re-baseline
 of the same rendered value, not a behavior change: the visible canvas style must
 still equal the saved style. Keep all other flow-suite behavior assertions intact.
 

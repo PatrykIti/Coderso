@@ -157,6 +157,8 @@ const LEAVES = [
     allowed: [
       "core/services/pages/pageDocumentV2.ts",
       "core/services/pages/pageDocumentV2Types.ts",
+      "core/services/pages/pageGalleryV2.ts",
+      "core/services/pages/pageResponsiveStyleV2.ts",
       "core/services/pages/pageDocumentV2Contract.ts",
       "core/services/pages/pageDocumentV2Schema.ts",
       "core/services/pages/pageDocumentV2Normalizer.ts",
@@ -212,9 +214,8 @@ const LEAVES = [
       "core/services/pages/pageEditorSectionControls.ts",
       "core/services/pages/pageEditorControlUiModel.ts",
       "tests/vitest/pages/page-editor-control-registry.test.ts",
-      "tests/vitest/pages/page-editor-control-registry-capabilities.test.ts",
-      "tests/vitest/pages/page-editor-control-registry-effects.test.ts",
-      "tests/vitest/pages/page-editor-control-registry-responsive.test.ts",
+      "tests/vitest/pages/page-editor-content-controls.test.ts",
+      "tests/vitest/pages/page-editor-visual-controls.test.ts",
       "tests/vitest/pages/page-editor-control-ui-model.test.ts",
     ],
   },
@@ -291,6 +292,7 @@ const LEAVES = [
       "core/services/pages/pageRendererReplicaIdentity.ts",
       "core/services/pages/pageRendererTimelineGeometry.ts",
       "tests/vitest/pages/page-renderer-v2-facade.test.tsx",
+      "tests/vitest/pages/page-renderer-v2-module-boundaries.test.ts",
       "tests/vitest/pages/page-renderer-v2.test.tsx",
       "tests/vitest/pages/page-renderer-v2-section-layout.test.tsx",
       "tests/vitest/pages/page-renderer-v2-blocks.test.tsx",
@@ -328,7 +330,7 @@ const LEAVES = [
   {
     id: "539-06-L02",
     contract: `${TASKS}/TASK-539-06-L02-Prove-Responsive-Css-Parity.md`,
-    allowed: ["tests/vitest/pages/task-539-responsive-css-parity.test.ts"],
+    allowed: ["tests/vitest/pages/task-539-responsive-css-parity.test.tsx"],
   },
   {
     id: "539-07-L01",
