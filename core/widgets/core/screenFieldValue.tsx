@@ -1,6 +1,6 @@
 import type { ComponentType, CSSProperties } from "react";
 
-import type { WidgetBindingTarget, WidgetDefinition, WidgetEditorProps } from "../types";
+import type { WidgetBindingTarget, WidgetDefinition, WidgetEditorBundle } from "../types";
 import { compactObject, compactStyle, resolveClearableStyleValue } from "./clearableStyle";
 
 export type ScreenFieldValueVariantId = "stacked" | "inline";
@@ -185,11 +185,9 @@ export function ScreenFieldValueBlock({
   );
 }
 
-export function createScreenFieldValueWidget(editors: {
-  wizard: ComponentType<WidgetEditorProps<ScreenFieldValueData>>;
-  visual: ComponentType<WidgetEditorProps<ScreenFieldValueData>>;
-  advanced: ComponentType<WidgetEditorProps<ScreenFieldValueData>>;
-}): WidgetDefinition<ScreenFieldValueData> {
+export function createScreenFieldValueWidget(
+  editors: WidgetEditorBundle<ScreenFieldValueData>
+): WidgetDefinition<ScreenFieldValueData> {
   return {
     type: "screen-field-value",
     title: "Screen Field Value",

@@ -6,7 +6,9 @@
 **Category:** Admin UI / Custom Screens / Bundle Performance / Cache
 **Estimated Effort:** Medium
 **Dependencies:** TASK-467-01
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Started:** 2026-08-18
+**Completed:** 2026-08-18
 **Changelog:** 1308 (pinned; closure only)
 
 ---
@@ -42,22 +44,22 @@ Pre-implementation audit (fresh agent, 2026-08-18):
 
 ## Sub-Tasks
 
-- [ ] Identify all imports of `customScreensClient.ts` and classify them as
+- [x] Identify all imports of `customScreensClient.ts` and classify them as
   list/sidebar/cache, editor/detail, records workspace, or mutation-only.
-- [ ] Create a lightweight Custom Screens DTO/cache client for list/sidebar and
+- [x] Create a lightweight Custom Screens DTO/cache client for list/sidebar and
   basic mutations.
-- [ ] Move lightweight summary DTO validation into a pure domain contract module
+- [x] Move lightweight summary DTO validation into a pure domain contract module
   instead of duplicating schema ownership in the admin client.
-- [ ] Register the full client's in-memory cache owners (`pendingScreensList`,
+- [x] Register the full client's in-memory cache owners (`pendingScreensList`,
   `customScreensListCache`) with TASK-467-01's
   `registerCustomScreensCacheInvalidator` so assistant invalidation clears them.
-- [ ] Move editor-only full definition normalization into a lazily imported
+- [x] Move editor-only full definition normalization into a lazily imported
   module used only by builder/detail routes.
-- [ ] Remove list/sidebar imports that currently derive capabilities through
+- [x] Remove list/sidebar imports that currently derive capabilities through
   `bindingResolver` or widget runtime registration.
-- [ ] Preserve existing cache keys, cache-bus broadcasts, and route payload
+- [x] Preserve existing cache keys, cache-bus broadcasts, and route payload
   semantics.
-- [ ] Add bundle and behavior tests that prove list/shell imports do not reach
+- [x] Add bundle and behavior tests that prove list/shell imports do not reach
   widget runtime registration.
 
 ## Files To Change

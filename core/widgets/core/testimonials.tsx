@@ -7,7 +7,7 @@ import {
   parseHtmlAttributes,
   sanitizeHtmlWithPolicy,
 } from "../../services/posts/editor/postRichTextHtmlUtils";
-import type { WidgetDefinition, WidgetEditorContract, WidgetEditorProps } from "../types";
+import type { WidgetDefinition, WidgetEditorContract, WidgetEditorBundle } from "../types";
 import { compactStyle, resolveClearableStyleValue } from "./clearableStyle";
 import { createWidgetInstanceId, scopedId } from "./widgetInstanceIds";
 import { normalizeWidgetSafeHref, resolveWidgetLinkAttrs } from "./widgetSafeHref";
@@ -1268,11 +1268,9 @@ export function TestimonialsBlock({
   );
 }
 
-export function createTestimonialsWidget(editors: {
-  wizard: ComponentType<WidgetEditorProps<TestimonialsData>>;
-  visual: ComponentType<WidgetEditorProps<TestimonialsData>>;
-  advanced: ComponentType<WidgetEditorProps<TestimonialsData>>;
-}): WidgetDefinition<TestimonialsData> {
+export function createTestimonialsWidget(
+  editors: WidgetEditorBundle<TestimonialsData>
+): WidgetDefinition<TestimonialsData> {
   return {
     type: "testimonials",
     title: "Testimonials",

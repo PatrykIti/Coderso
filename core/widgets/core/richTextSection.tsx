@@ -10,7 +10,7 @@ import {
   stripNullBytes,
   tokenizeHtml,
 } from "../../services/posts/editor/postRichTextHtmlUtils";
-import type { WidgetDefinition, WidgetEditorContract, WidgetEditorProps } from "../types";
+import type { WidgetDefinition, WidgetEditorContract, WidgetEditorBundle } from "../types";
 import { compactStyle, resolveClearableStyleValue } from "./clearableStyle";
 import { createWidgetInstanceId, scopedId } from "./widgetInstanceIds";
 import { normalizeWidgetSafeHref, resolveWidgetLinkAttrs } from "./widgetSafeHref";
@@ -80,10 +80,7 @@ export type RichTextSectionBlock =
 
 export type RichTextRenderedSource = "html" | "blocks";
 export type RichTextRenderedSourceReason =
-  | "html-only"
-  | "blocks-only"
-  | "fallback-html-present"
-  | "fallback-html-empty";
+  "html-only" | "blocks-only" | "fallback-html-present" | "fallback-html-empty";
 
 export type RichTextRenderedSourceState = {
   mode: RichTextSectionOutputMode;
@@ -96,9 +93,7 @@ export type RichTextRenderedSourceState = {
 };
 
 export type RichTextSanitizerDiagnosticCode =
-  | "tag_removed"
-  | "attribute_removed"
-  | "href_rewritten";
+  "tag_removed" | "attribute_removed" | "href_rewritten";
 
 export type RichTextSanitizerDiagnostic = {
   code: RichTextSanitizerDiagnosticCode;
@@ -1420,9 +1415,7 @@ function RichTextSectionBlockView({
     (normalized.titleBlock?.eyebrow ?? "").trim().length > 0 || titleText.length > 0;
   const titleId = titleText.length > 0 ? scopedId(rootInstanceId, "title") : undefined;
   const HeadingTag = `h${resolveRichTextTitleHeadingLevel(normalized.titleBlock?.headingLevel)}` as
-    | "h1"
-    | "h2"
-    | "h3";
+    "h1" | "h2" | "h3";
 
   const content = (
     <div
@@ -1511,11 +1504,9 @@ function RichTextSectionBlockView({
 
 export { RichTextSectionBlockView as RichTextSectionBlock };
 
-export function createRichTextSectionWidget(editors: {
-  wizard: ComponentType<WidgetEditorProps<RichTextSectionData>>;
-  visual: ComponentType<WidgetEditorProps<RichTextSectionData>>;
-  advanced: ComponentType<WidgetEditorProps<RichTextSectionData>>;
-}): WidgetDefinition<RichTextSectionData> {
+export function createRichTextSectionWidget(
+  editors: WidgetEditorBundle<RichTextSectionData>
+): WidgetDefinition<RichTextSectionData> {
   return {
     type: "rich-text-section",
     title: "Rich Text Section",

@@ -10,6 +10,7 @@ import {
   WidgetEditorModeRoot,
   WidgetEditorSection,
 } from "../../widgets/editors/WidgetEditorControls";
+import { WidgetEditorOutlet } from "../../widgets/WidgetEditorOutlet";
 
 const spacingLabel = (value: string) => (value === "none" ? "None" : value.toUpperCase());
 
@@ -38,7 +39,6 @@ export function AdvancedPanel({
   editorContext,
   pageDefaults,
 }: AdvancedPanelProps) {
-  const Editor = widget.editor.advanced;
   const layoutState = resolveSharedBlockLayoutState(block.layout, pageDefaults);
   const visibilityState = resolveSharedBlockVisibilityState(block.visibility);
   const patchBlock =
@@ -49,7 +49,9 @@ export function AdvancedPanel({
 
   return (
     <WidgetEditorModeRoot widgetType={widget.type} mode="advanced" className="space-y-6">
-      <Editor
+      <WidgetEditorOutlet
+        definition={widget}
+        mode="advanced"
         value={block.data as Record<string, unknown>}
         onChange={(data) =>
           patchBlock((current) => ({

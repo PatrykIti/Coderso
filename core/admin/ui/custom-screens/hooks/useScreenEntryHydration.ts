@@ -9,11 +9,13 @@ import {
 import { cacheKeys } from "@/services/cachePolicy";
 import { listContentTypesCached, type ContentTypeSummary } from "@/services/contentTypesClient";
 import {
-  getCustomScreenCached,
   getScreenEntryOverridesCached,
   type CustomScreenEntryPresentationOverride,
-  type CustomScreenRecord,
 } from "@/services/customScreensClient";
+import {
+  getCustomScreenEditorCached,
+  type CustomScreenRecord,
+} from "@/services/customScreensEditorClient";
 import { getEntryCached, type EntryDetail } from "@/services/entriesClient";
 import { subscribeCacheEvents } from "@/utils/cacheBus";
 
@@ -175,7 +177,7 @@ export function useScreenEntryHydration(input: ScreenEntryHydrationInput) {
   const loadEntryRoute = useCallback(
     async (force: boolean) => {
       if (!screenId || !entryId) throw new Error("custom_screen_entry_route_invalid");
-      const nextScreen = await getCustomScreenCached(screenId, { force });
+      const nextScreen = await getCustomScreenEditorCached(screenId, { force });
       if (!nextScreen) throw new Error("custom_screen_not_found");
       const contentTypes = await listContentTypesCached({ force });
       const nextContentType =

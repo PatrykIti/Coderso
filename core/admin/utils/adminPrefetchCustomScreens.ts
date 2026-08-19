@@ -15,9 +15,9 @@ export async function prefetchCustomScreenWorkspaceData(
   const target = resolveCustomScreenWorkspacePrefetchTarget(path);
   if (!target) return false;
 
-  const { getCustomScreenCached, listCustomScreensCached } = await loadCustomScreensClient();
+  const { getCustomScreenRawCached, listCustomScreensCached } = await loadCustomScreensClient();
   await listCustomScreensCached(prefetchWarmupOptions);
-  const screen = await getCustomScreenCached(target.screenId).catch(() => null);
+  const screen = await getCustomScreenRawCached(target.screenId).catch(() => null);
   if (!screen) return true;
 
   const contentTypes = await listContentTypesCached(prefetchWarmupOptions);

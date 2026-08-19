@@ -1,7 +1,7 @@
 import type { CSSProperties, ComponentType, ReactNode, SVGProps } from "react";
 import { Check, Clock3, LockKeyhole, Sparkles } from "lucide-react";
 
-import type { WidgetDefinition, WidgetEditorContract, WidgetEditorProps } from "../types";
+import type { WidgetDefinition, WidgetEditorContract, WidgetEditorBundle } from "../types";
 import { compactStyle, resolveClearableStyleValue } from "./clearableStyle";
 import { createWidgetInstanceId, scopedId } from "./widgetInstanceIds";
 import { normalizeWidgetSafeHref } from "./widgetSafeHref";
@@ -1731,11 +1731,9 @@ export function PricingPlansBlock({
   );
 }
 
-export function createPricingPlansWidget(editors: {
-  wizard: ComponentType<WidgetEditorProps<PricingPlansData>>;
-  visual: ComponentType<WidgetEditorProps<PricingPlansData>>;
-  advanced: ComponentType<WidgetEditorProps<PricingPlansData>>;
-}): WidgetDefinition<PricingPlansData> {
+export function createPricingPlansWidget(
+  editors: WidgetEditorBundle<PricingPlansData>
+): WidgetDefinition<PricingPlansData> {
   return {
     type: "pricing-plans",
     title: "Pricing Plans",

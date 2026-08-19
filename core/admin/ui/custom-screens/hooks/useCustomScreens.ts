@@ -5,7 +5,7 @@ import { cacheKeys } from "@/services/cachePolicy";
 import {
   getCachedCustomScreens,
   listCustomScreensCached,
-  type CustomScreenRecord,
+  type CustomScreenSummaryRecord,
 } from "@/services/customScreensClient";
 import { subscribeCacheEvents } from "@/utils/cacheBus";
 import {
@@ -27,9 +27,7 @@ const resolveCustomScreensError = (error: unknown) => {
 export function useCustomScreens(options?: { skip?: boolean }) {
   const initialCached = useMemo(() => getCachedCustomScreens(), []);
   const hasInitialCache = initialCached !== null;
-  const [items, setItems] = useState<CustomScreenRecord[]>(
-    () => initialCached ?? []
-  );
+  const [items, setItems] = useState<CustomScreenSummaryRecord[]>(() => initialCached ?? []);
   const [isLoading, setIsLoading] = useState(() => !hasInitialCache);
   const [error, setError] = useState<string | null>(null);
   const hasHydratedRef = useRef(hasInitialCache);

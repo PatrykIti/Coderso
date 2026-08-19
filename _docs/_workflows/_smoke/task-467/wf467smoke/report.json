@@ -1,0 +1,525 @@
+{
+  "cleanup": { "failures": [], "pass": true },
+  "consoleErrors": [],
+  "failures": [],
+  "pass": true,
+  "processes": {
+    "git": 2,
+    "playwright-close": 1,
+    "playwright-open": 1,
+    "playwright-run-code": 8,
+    "playwright-state-load": 1,
+    "task467-worker-db": 1
+  },
+  "profile": "fast",
+  "scenarios": [
+    {
+      "elapsedMs": 5430,
+      "id": "wizard-lazy-fallback",
+      "pass": true,
+      "screenshots": [
+        {
+          "path": "_docs/_workflows/_smoke/task-467/wf467smoke/task467-01-wizard-lazy-fallback.png",
+          "sha256": "510305a32be3b1981d6fca0f5f2e1a9cfb5e0620bb60644626992491b2488044"
+        }
+      ],
+      "title": "Wizard editor shows a visible lazy fallback, then mounts",
+      "variants": [
+        {
+          "assertions": [
+            {
+              "actual": "visible",
+              "expected": "visible",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "visible",
+              "target": "wizard loading state"
+            },
+            {
+              "actual": "status",
+              "expected": "status",
+              "kind": "aria",
+              "pass": true,
+              "property": "role",
+              "target": "wizard loading state"
+            },
+            {
+              "actual": "365x86",
+              "expected": "365x86",
+              "kind": "geometry",
+              "pass": true,
+              "property": "box",
+              "target": "wizard loading state"
+            },
+            {
+              "actual": "1",
+              "expected": "1",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "count",
+              "target": "wizard editor root"
+            },
+            {
+              "actual": "365x265",
+              "expected": "365x265",
+              "kind": "geometry",
+              "pass": true,
+              "property": "box",
+              "target": "wizard editor root"
+            },
+            {
+              "actual": "visible",
+              "expected": "visible",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "visible",
+              "target": "wizard editor sections"
+            }
+          ],
+          "consoleErrors": [],
+          "id": "wizard-lazy-fallback",
+          "surface": "admin",
+          "theme": "light",
+          "viewport": { "height": 900, "width": 1440 }
+        }
+      ]
+    },
+    {
+      "elapsedMs": 4616,
+      "id": "visual-computed-style",
+      "pass": true,
+      "screenshots": [
+        {
+          "path": "_docs/_workflows/_smoke/task-467/wf467smoke/task467-02-visual-computed-style.png",
+          "sha256": "eaa0f72e0e1a9d8f12969cb0223905b9b8f54d62e736637c769d7c6a92894367"
+        }
+      ],
+      "title": "Visual color control changes the surface preview computed style",
+      "variants": [
+        {
+          "assertions": [
+            {
+              "actual": "1",
+              "expected": "1",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "count",
+              "target": "visual editor root"
+            },
+            {
+              "actual": "365x6698",
+              "expected": "365x6698",
+              "kind": "geometry",
+              "pass": true,
+              "property": "box",
+              "target": "visual editor root"
+            },
+            {
+              "actual": "visible",
+              "expected": "visible",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "visible",
+              "target": "visual editor sections"
+            },
+            {
+              "actual": "#16a34a",
+              "expected": "#16a34a",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "value",
+              "target": "background color input"
+            },
+            {
+              "actual": "rgb(22, 163, 74)",
+              "expected": "rgb(22, 163, 74)",
+              "kind": "computed-style",
+              "pass": true,
+              "property": "background-color",
+              "target": "surface preview"
+            }
+          ],
+          "consoleErrors": [],
+          "id": "visual-computed-style",
+          "surface": "admin",
+          "theme": "light",
+          "viewport": { "height": 900, "width": 1440 }
+        }
+      ]
+    },
+    {
+      "elapsedMs": 4361,
+      "id": "advanced-mount",
+      "pass": true,
+      "screenshots": [
+        {
+          "path": "_docs/_workflows/_smoke/task-467/wf467smoke/task467-03-advanced-mount.png",
+          "sha256": "45dfac0da6ae11138604a07e2dc9b3dd8893882fcbb183d61865274142648c78"
+        }
+      ],
+      "title": "Advanced editor mounts with writable controls and visible sections",
+      "variants": [
+        {
+          "assertions": [
+            {
+              "actual": "1",
+              "expected": "1",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "count",
+              "target": "advanced editor root"
+            },
+            {
+              "actual": "365x570",
+              "expected": "365x570",
+              "kind": "geometry",
+              "pass": true,
+              "property": "box",
+              "target": "advanced editor root"
+            },
+            {
+              "actual": "visible",
+              "expected": "visible",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "visible",
+              "target": "advanced editor sections"
+            },
+            {
+              "actual": "0",
+              "expected": ">0",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "writable-count",
+              "target": "advanced writable controls"
+            },
+            {
+              "actual": "4",
+              "expected": ">0",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "total-count",
+              "target": "advanced controls"
+            }
+          ],
+          "consoleErrors": [],
+          "id": "advanced-mount",
+          "surface": "admin",
+          "theme": "light",
+          "viewport": { "height": 900, "width": 1440 }
+        }
+      ]
+    },
+    {
+      "elapsedMs": 4491,
+      "id": "dark-mode",
+      "pass": true,
+      "screenshots": [
+        {
+          "path": "_docs/_workflows/_smoke/task-467/wf467smoke/task467-04-dark-mode.png",
+          "sha256": "be9586b629e61907c1d827b6ae06014824ffff30449eb9b8a72d511e394b8171"
+        }
+      ],
+      "title": "Editor shell follows dark mode with sections still visible",
+      "variants": [
+        {
+          "assertions": [
+            {
+              "actual": "rgb(246, 245, 242)",
+              "expected": "rgb(246, 245, 242)",
+              "kind": "computed-style",
+              "pass": true,
+              "property": "light-background",
+              "target": "editor root"
+            },
+            {
+              "actual": "rgb(24, 23, 26)",
+              "expected": "rgb(24, 23, 26)",
+              "kind": "computed-style",
+              "pass": true,
+              "property": "dark-background",
+              "target": "editor root"
+            },
+            {
+              "actual": "true",
+              "expected": "true",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "dark-differs-from-light",
+              "target": "editor root"
+            },
+            {
+              "actual": "visible",
+              "expected": "visible",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "visible",
+              "target": "dark-mode editor sections"
+            },
+            {
+              "actual": "365x1298",
+              "expected": "365x1298",
+              "kind": "geometry",
+              "pass": true,
+              "property": "box",
+              "target": "editor root"
+            }
+          ],
+          "consoleErrors": [],
+          "id": "dark-mode",
+          "surface": "admin",
+          "theme": "dark",
+          "viewport": { "height": 900, "width": 1440 }
+        }
+      ]
+    },
+    {
+      "elapsedMs": 55186,
+      "id": "cross-device-mobile",
+      "pass": true,
+      "screenshots": [
+        {
+          "path": "_docs/_workflows/_smoke/task-467/wf467smoke/task467-05-cross-device-mobile.png",
+          "sha256": "26c4eac3f3c275a3c8b09cb2455c5553cade2bb73b2d7e7d03e5c8fd5c49b7af"
+        }
+      ],
+      "title": "Visual editor stays usable in a mobile viewport without overflow",
+      "variants": [
+        {
+          "assertions": [
+            {
+              "actual": "visible",
+              "expected": "visible",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "visible",
+              "target": "mobile editor sections"
+            },
+            {
+              "actual": "307x1346",
+              "expected": "307x1346",
+              "kind": "geometry",
+              "pass": true,
+              "property": "box",
+              "target": "mobile editor root"
+            },
+            {
+              "actual": "true",
+              "expected": "true",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "no-horizontal-overflow",
+              "target": "document"
+            },
+            {
+              "actual": "true",
+              "expected": "true",
+              "kind": "geometry",
+              "pass": true,
+              "property": "width-gt-0",
+              "target": "mobile editor root"
+            }
+          ],
+          "consoleErrors": [],
+          "id": "cross-device-mobile",
+          "surface": "admin",
+          "theme": "light",
+          "viewport": { "height": 844, "width": 390 }
+        }
+      ]
+    },
+    {
+      "elapsedMs": 4875,
+      "id": "lazy-failure-retry",
+      "pass": true,
+      "screenshots": [
+        {
+          "path": "_docs/_workflows/_smoke/task-467/wf467smoke/task467-06-lazy-failure-retry.png",
+          "sha256": "5871f9aef1fb9f7e15b21c2bb8178e9bfba8410f3ff102eb2c44daded8aeb17e"
+        }
+      ],
+      "title": "Chunk failure shows the bounded error state and retry mounts the editor",
+      "variants": [
+        {
+          "assertions": [
+            {
+              "actual": "visible",
+              "expected": "visible",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "visible",
+              "target": "wizard error state"
+            },
+            {
+              "actual": "visible",
+              "expected": "visible",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "visible",
+              "target": "wizard retry button"
+            },
+            {
+              "actual": "Try again",
+              "expected": "Try again",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "label",
+              "target": "wizard retry button"
+            },
+            {
+              "actual": "1",
+              "expected": "1",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "count",
+              "target": "wizard editor root after retry"
+            },
+            {
+              "actual": "307x1346",
+              "expected": "307x1346",
+              "kind": "geometry",
+              "pass": true,
+              "property": "box",
+              "target": "wizard editor root after retry"
+            },
+            {
+              "actual": "visible",
+              "expected": "visible",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "visible",
+              "target": "wizard editor sections after retry"
+            }
+          ],
+          "consoleErrors": [],
+          "id": "lazy-failure-retry",
+          "surface": "admin",
+          "theme": "light",
+          "viewport": { "height": 900, "width": 1440 }
+        }
+      ]
+    },
+    {
+      "elapsedMs": 4953,
+      "id": "mode-round-trip-preserves-data",
+      "pass": true,
+      "screenshots": [
+        {
+          "path": "_docs/_workflows/_smoke/task-467/wf467smoke/task467-07-mode-round-trip-preserves-data.png",
+          "sha256": "01410666496d592a8f41bb1df9d26554bf75146f2f13f0d33146c1b1474f9b0f"
+        }
+      ],
+      "title": "Visual color survives a lazy editor round trip through Advanced",
+      "variants": [
+        {
+          "assertions": [
+            {
+              "actual": "rgb(22, 163, 74)",
+              "expected": "rgb(22, 163, 74)",
+              "kind": "computed-style",
+              "pass": true,
+              "property": "background-color-after-edit",
+              "target": "surface preview"
+            },
+            {
+              "actual": "rgb(22, 163, 74)",
+              "expected": "rgb(22, 163, 74)",
+              "kind": "computed-style",
+              "pass": true,
+              "property": "background-color-after-round-trip",
+              "target": "surface preview"
+            },
+            {
+              "actual": "rgb(22, 163, 74)",
+              "expected": "rgb(22, 163, 74)",
+              "kind": "computed-style",
+              "pass": true,
+              "property": "color-survives-round-trip",
+              "target": "surface preview"
+            },
+            {
+              "actual": "visible",
+              "expected": "visible",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "visible",
+              "target": "visual editor sections"
+            },
+            {
+              "actual": "1",
+              "expected": "1",
+              "kind": "dom-state",
+              "pass": true,
+              "property": "count",
+              "target": "visual editor root"
+            }
+          ],
+          "consoleErrors": [],
+          "id": "mode-round-trip-preserves-data",
+          "surface": "admin",
+          "theme": "light",
+          "viewport": { "height": 900, "width": 1440 }
+        }
+      ]
+    }
+  ],
+  "schemaVersion": 1,
+  "screenshots": [
+    {
+      "path": "_docs/_workflows/_smoke/task-467/wf467smoke/task467-01-wizard-lazy-fallback.png",
+      "sha256": "510305a32be3b1981d6fca0f5f2e1a9cfb5e0620bb60644626992491b2488044"
+    },
+    {
+      "path": "_docs/_workflows/_smoke/task-467/wf467smoke/task467-02-visual-computed-style.png",
+      "sha256": "eaa0f72e0e1a9d8f12969cb0223905b9b8f54d62e736637c769d7c6a92894367"
+    },
+    {
+      "path": "_docs/_workflows/_smoke/task-467/wf467smoke/task467-03-advanced-mount.png",
+      "sha256": "45dfac0da6ae11138604a07e2dc9b3dd8893882fcbb183d61865274142648c78"
+    },
+    {
+      "path": "_docs/_workflows/_smoke/task-467/wf467smoke/task467-04-dark-mode.png",
+      "sha256": "be9586b629e61907c1d827b6ae06014824ffff30449eb9b8a72d511e394b8171"
+    },
+    {
+      "path": "_docs/_workflows/_smoke/task-467/wf467smoke/task467-05-cross-device-mobile.png",
+      "sha256": "26c4eac3f3c275a3c8b09cb2455c5553cade2bb73b2d7e7d03e5c8fd5c49b7af"
+    },
+    {
+      "path": "_docs/_workflows/_smoke/task-467/wf467smoke/task467-06-lazy-failure-retry.png",
+      "sha256": "5871f9aef1fb9f7e15b21c2bb8178e9bfba8410f3ff102eb2c44daded8aeb17e"
+    },
+    {
+      "path": "_docs/_workflows/_smoke/task-467/wf467smoke/task467-07-mode-round-trip-preserves-data.png",
+      "sha256": "01410666496d592a8f41bb1df9d26554bf75146f2f13f0d33146c1b1474f9b0f"
+    }
+  ],
+  "serverUp": true,
+  "session": "wf467smoke",
+  "snapshots": 2,
+  "suiteCleanup": {
+    "accessLogsRemoved": 49,
+    "auditRowsRemoved": 1,
+    "databaseBatches": 3,
+    "identitiesAbsent": true,
+    "pageErrors": 0,
+    "receiptsAbsent": true,
+    "repositorySnapshots": 2,
+    "rolesRemoved": 1,
+    "rows": 57,
+    "scenariosPassed": 7,
+    "sessionsRemoved": 1,
+    "statements": 14,
+    "userRolesRemoved": 1,
+    "usersRemoved": 1,
+    "workerRequests": 3,
+    "workerStarts": 1
+  },
+  "suiteId": "task-467",
+  "timings": [
+    { "count": 1, "elapsedMs": 1, "failed": 0, "kind": "cleanup", "name": "all" },
+    { "count": 1, "elapsedMs": 193, "failed": 0, "kind": "snapshot", "name": "task467-after" },
+    { "count": 1, "elapsedMs": 224, "failed": 0, "kind": "snapshot", "name": "task467-before" },
+    { "count": 1, "elapsedMs": 95896, "failed": 0, "kind": "suite", "name": "task-467" }
+  ]
+}

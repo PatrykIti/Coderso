@@ -5,14 +5,16 @@ import { createRoot, type Root } from "react-dom/client";
 import { afterEach, expect, test, vi } from "vitest";
 
 import type { ContentTypeSummary } from "../../../core/admin/services/contentTypesClient";
-import type { CustomScreenRecord } from "../../../core/admin/services/customScreensClient";
+import type { CustomScreenSummaryRecord } from "../../../core/admin/services/customScreensClient";
 import {
   buildCustomScreenListRows,
   filterCustomScreenRows,
 } from "../../../core/admin/ui/custom-screens/customScreenListModel";
 
 const customScreensState = vi.hoisted(() => {
-  const makeScreen = (overrides: Partial<CustomScreenRecord> = {}): CustomScreenRecord => ({
+  const makeScreen = (
+    overrides: Partial<CustomScreenSummaryRecord> = {}
+  ): CustomScreenSummaryRecord => ({
     id: "screen-1",
     name: "Product workspace",
     contentTypeId: "ct-products",
@@ -43,7 +45,7 @@ const customScreensState = vi.hoisted(() => {
     makeScreen,
     makeContentType,
     screens: [makeScreen()],
-    cachedScreens: null as CustomScreenRecord[] | null,
+    cachedScreens: null as CustomScreenSummaryRecord[] | null,
     contentTypes: [makeContentType()],
     cachedContentTypes: null as ContentTypeSummary[] | null,
     customSubscribers: new Set<(event: { key: string; action?: string }) => void>(),

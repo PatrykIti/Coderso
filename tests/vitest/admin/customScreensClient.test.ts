@@ -8,12 +8,12 @@ import {
   deleteCustomScreen,
   getCachedCustomScreen,
   getCachedCustomScreens,
-  getCustomScreenCached,
+  getCustomScreenRawCached,
   invalidateScreenEntryOverrides,
   listCustomScreens,
   listCustomScreensCached,
   updateCustomScreen,
-  type CustomScreenRecord,
+  type CustomScreenSummaryRecord,
 } from "../../../core/admin/services/customScreensClient";
 import {
   createCacheEventOperationToken,
@@ -49,6 +49,16 @@ test("listCustomScreens hits GET /custom-screens and normalizes records", async 
           ...makeScreen(),
           showInSidebar: undefined,
           sidebarLabel: undefined,
+          capabilities: {
+            mode: "collection-only",
+            hasBlocks: false,
+            hasBindings: false,
+            hasReadableBindings: false,
+            hasWritableBindings: false,
+            supportsDedicatedPreview: false,
+            supportsDedicatedEditor: false,
+            bindingCounts: { total: 0, readable: 0, writable: 0 },
+          },
         },
       ],
     });
@@ -124,8 +134,8 @@ test.each(["first-resolves-first", "replacement-resolves-first"] as const)(
 
     try {
       clearCustomScreensCache();
-      const requestA = getCustomScreenCached("screen-1", { force: true });
-      const requestB = getCustomScreenCached("screen-1", { force: true });
+      const requestA = getCustomScreenRawCached("screen-1", { force: true });
+      const requestB = getCustomScreenRawCached("screen-1", { force: true });
       expect(requestB).not.toBe(requestA);
       if (settleOrder === "first-resolves-first") {
         first.resolve(jsonResponse(makeScreen({ name: "Stale A" })));
@@ -161,7 +171,7 @@ test("successful screen mutation revokes a matching late detail read", async () 
   try {
     resetCsrfToken();
     clearCustomScreensCache();
-    const staleRead = getCustomScreenCached("screen-1", { force: true });
+    const staleRead = getCustomScreenRawCached("screen-1", { force: true });
     await updateCustomScreen("screen-1", { name: "Mutation wins" });
     pendingDetail.resolve(jsonResponse(makeScreen({ name: "Stale read" })));
     await staleRead;
@@ -219,11 +229,11 @@ test("custom screen detail authority shares non-force work and retries after rej
 
   try {
     clearCustomScreensCache();
-    const failed = getCustomScreenCached("screen-retry");
-    expect(getCustomScreenCached("screen-retry")).toBe(failed);
+    const failed = getCustomScreenRawCached("screen-retry");
+    expect(getCustomScreenRawCached("screen-retry")).toBe(failed);
     await expect(failed).rejects.toThrow("temporary detail failure");
 
-    const retried = getCustomScreenCached("screen-retry");
+    const retried = getCustomScreenRawCached("screen-retry");
     await expect(retried).resolves.toMatchObject({ id: "screen-retry", name: "Recovered" });
     expect(getCachedCustomScreen("screen-retry")?.name).toBe("Recovered");
     expect(calls).toBe(3);
@@ -258,10 +268,10 @@ test.each([
       clearCustomScreensCache();
       const detailRequest =
         startOrder === "detail-first"
-          ? getCustomScreenCached(targetId, { force: true })
+          ? getCustomScreenRawCached(targetId, { force: true })
           : undefined;
       const listRequest = listCustomScreensCached({ force: true });
-      const startedDetail = detailRequest ?? getCustomScreenCached(targetId, { force: true });
+      const startedDetail = detailRequest ?? getCustomScreenRawCached(targetId, { force: true });
 
       const firstRequest = startOrder === "detail-first" ? startedDetail : listRequest;
       const secondRequest = startOrder === "detail-first" ? listRequest : startedDetail;
@@ -367,7 +377,7 @@ test.each([
         await deleteCustomScreen(targetId);
       }
 
-      const rejectedDetail = getCustomScreenCached(targetId, { force: true });
+      const rejectedDetail = getCustomScreenRawCached(targetId, { force: true });
       oldList.resolve(
         jsonResponse({
           items: targetState === "target-present" ? [staleTarget, unrelated] : [unrelated],
@@ -420,11 +430,11 @@ test("rejected screen mutation preserves pending list/detail authority and publi
     clearCustomScreensCache();
     events.length = 0;
     const listRequest = listCustomScreensCached({ force: true });
-    const detailRequest = getCustomScreenCached(targetId, { force: true });
+    const detailRequest = getCustomScreenRawCached(targetId, { force: true });
 
     await expect(updateCustomScreen(targetId, { name: "Rejected" })).rejects.toThrow();
     expect(listCustomScreensCached()).toBe(listRequest);
-    expect(getCustomScreenCached(targetId)).toBe(detailRequest);
+    expect(getCustomScreenRawCached(targetId)).toBe(detailRequest);
     expect(getCachedCustomScreens()).toBeNull();
     expect(events).toEqual([]);
 
@@ -466,7 +476,7 @@ test("explicit custom screen cache clear invalidates every captured publisher", 
   try {
     clearCustomScreensCache();
     const listRequest = listCustomScreensCached({ force: true });
-    const detailRequest = getCustomScreenCached(targetId, { force: true });
+    const detailRequest = getCustomScreenRawCached(targetId, { force: true });
     clearCustomScreensCache();
 
     listTransport.resolve(jsonResponse({ items: [makeScreen({ id: "late-list" })] }));
@@ -545,7 +555,7 @@ test.each(["matched", "missing"] as const)(
       );
       expect(getCachedCustomScreen(omittedId)?.name).toBe("Omitted stale detail");
 
-      const result = await getCustomScreenCached(targetId, { force: true });
+      const result = await getCustomScreenRawCached(targetId, { force: true });
 
       if (targetState === "matched") {
         expect(result).toMatchObject({ id: targetId, name: "Fallback target" });
@@ -605,15 +615,15 @@ test.each([
 
     try {
       clearCustomScreensCache();
-      let firstRequest: Promise<CustomScreenRecord[] | CustomScreenRecord | null>;
-      let secondRequest: Promise<CustomScreenRecord[] | CustomScreenRecord | null>;
+      let firstRequest: Promise<CustomScreenSummaryRecord[] | CustomScreenSummaryRecord | null>;
+      let secondRequest: Promise<CustomScreenSummaryRecord[] | CustomScreenSummaryRecord | null>;
       if (startOrder === "fallback-first") {
-        firstRequest = getCustomScreenCached(targetId, { force: true });
+        firstRequest = getCustomScreenRawCached(targetId, { force: true });
         await vi.waitFor(() => expect(listTransports).toHaveLength(1));
         secondRequest = listCustomScreensCached({ force: true });
       } else {
         firstRequest = listCustomScreensCached({ force: true });
-        secondRequest = getCustomScreenCached(targetId, { force: true });
+        secondRequest = getCustomScreenRawCached(targetId, { force: true });
       }
       await vi.waitFor(() => expect(listTransports).toHaveLength(2));
 
@@ -885,6 +895,31 @@ test("TASK-569 server revision is stored in the cached record and expectedRevisi
       5
     );
   } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("client registers a memory invalidator with the TASK-467-01 registry", async () => {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = (input, init) => {
+    const url = String(input);
+    if (url.endsWith("/auth/csrf")) return Promise.resolve(jsonResponse({ token: "csrf" }));
+    return Promise.resolve(jsonResponse({ items: [makeScreen()] }));
+  };
+
+  try {
+    clearCustomScreensCache();
+    await listCustomScreensCached();
+    expect(getCachedCustomScreens()).toHaveLength(1);
+
+    // TASK-467-01 registry invalidation (lightweight) must reach this client's
+    // memory family through the registered invalidator.
+    const { clearCustomScreensCacheLightweight } =
+      await import("../../../core/admin/services/customScreensCache");
+    clearCustomScreensCacheLightweight();
+    expect(getCachedCustomScreens()).toBeNull();
+  } finally {
+    clearCustomScreensCache();
     globalThis.fetch = originalFetch;
   }
 });

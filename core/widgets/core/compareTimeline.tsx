@@ -1,6 +1,6 @@
 import type { CSSProperties, ComponentType, ReactNode } from "react";
 
-import type { WidgetDefinition, WidgetEditorContract, WidgetEditorProps } from "../types";
+import type { WidgetDefinition, WidgetEditorContract, WidgetEditorBundle } from "../types";
 import { compactObject, resolveClearableStyleValue } from "./clearableStyle";
 import { normalizeWidgetSafeHref } from "./widgetSafeHref";
 
@@ -1187,11 +1187,9 @@ export function CompareTimelineBlock({
   );
 }
 
-export function createCompareTimelineWidget(editors: {
-  wizard: ComponentType<WidgetEditorProps<CompareTimelineData>>;
-  visual: ComponentType<WidgetEditorProps<CompareTimelineData>>;
-  advanced: ComponentType<WidgetEditorProps<CompareTimelineData>>;
-}): WidgetDefinition<CompareTimelineData> {
+export function createCompareTimelineWidget(
+  editors: WidgetEditorBundle<CompareTimelineData>
+): WidgetDefinition<CompareTimelineData> {
   return {
     type: "compare-timeline",
     title: "Compare Timeline",

@@ -3,7 +3,7 @@ import type { CSSProperties, ComponentType } from "react";
 import type {
   WidgetDefinition,
   WidgetEditorContract,
-  WidgetEditorProps,
+  WidgetEditorBundle,
   WidgetRenderContext,
 } from "../types";
 import { compactStyle, resolveClearableStyleValue } from "./clearableStyle";
@@ -20,8 +20,7 @@ export type EntryTeaserListingManualTarget = {
 export type EntryTeaserCtaHrefMode = "auto" | "custom";
 export type EntryTeaserCtaStyle = "link" | "filled" | "outline";
 export type EntryTeaserCtaUnavailableReason =
-  | "missing_auto_destination"
-  | "missing_custom_destination";
+  "missing_auto_destination" | "missing_custom_destination";
 export type EntryTeaserCtaRenderState =
   | {
       mode: "link";
@@ -1121,11 +1120,9 @@ export function EntryTeaserBlock({
   );
 }
 
-export function createEntryTeaserWidget(editors: {
-  wizard: ComponentType<WidgetEditorProps<EntryTeaserData>>;
-  visual: ComponentType<WidgetEditorProps<EntryTeaserData>>;
-  advanced: ComponentType<WidgetEditorProps<EntryTeaserData>>;
-}): WidgetDefinition<EntryTeaserData> {
+export function createEntryTeaserWidget(
+  editors: WidgetEditorBundle<EntryTeaserData>
+): WidgetDefinition<EntryTeaserData> {
   return {
     type: "entry-teaser",
     title: "Entry Teaser",

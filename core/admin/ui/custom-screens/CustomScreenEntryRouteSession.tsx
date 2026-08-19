@@ -4,12 +4,14 @@ import { isApiClientError } from "@/services/apiClient";
 import { cacheKeys } from "@/services/cachePolicy";
 import { getCachedContentTypes, type ContentTypeSummary } from "@/services/contentTypesClient";
 import {
-  getCachedCustomScreen,
   getCachedScreenEntryOverrides,
   replaceScreenEntryOverrides,
   type CustomScreenEntryPresentationOverride,
-  type CustomScreenRecord,
 } from "@/services/customScreensClient";
+import {
+  getCachedCustomScreenEditor,
+  type CustomScreenRecord,
+} from "@/services/customScreensEditorClient";
 import {
   createEntry,
   getCachedEntryDetail,
@@ -90,7 +92,7 @@ export function CustomScreenEntryRouteSession({
   const { navigate } = useAdminRouter();
   const [routeVisit] = useState<RouteVisit>(() => Object.freeze({ routeKey }));
   const initialScreen = useMemo(
-    () => (screenId ? (getCachedCustomScreen(screenId) ?? null) : null),
+    () => (screenId ? (getCachedCustomScreenEditor(screenId) ?? null) : null),
     [screenId]
   );
   const initialContentType = useMemo(

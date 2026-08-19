@@ -5,7 +5,7 @@ import type {
   DeviceTarget,
   WidgetBlock,
   WidgetDefinition,
-  WidgetEditorProps,
+  WidgetEditorBundle,
   WidgetLayoutDefaults,
 } from "../types";
 import { compactObject, compactStyle, resolveClearableStyleValue } from "./clearableStyle";
@@ -149,11 +149,9 @@ export function ScreenFieldGroupBlock({
   );
 }
 
-export function createScreenFieldGroupWidget(editors: {
-  wizard: ComponentType<WidgetEditorProps<ScreenFieldGroupData>>;
-  visual: ComponentType<WidgetEditorProps<ScreenFieldGroupData>>;
-  advanced: ComponentType<WidgetEditorProps<ScreenFieldGroupData>>;
-}): WidgetDefinition<ScreenFieldGroupData> {
+export function createScreenFieldGroupWidget(
+  editors: WidgetEditorBundle<ScreenFieldGroupData>
+): WidgetDefinition<ScreenFieldGroupData> {
   return {
     type: "screen-field-group",
     title: "Screen Field Group",

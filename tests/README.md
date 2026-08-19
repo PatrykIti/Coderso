@@ -68,12 +68,23 @@ instead of streaming Bun's full per-file text coverage table into CI logs.
 `test:coverage` now uses `scripts/run-vitest-coverage.ts` and the canonical full-lane report path `coverage/vitest/coverage-summary.json`.
 `check:admin-bundle` must run after `bun --cwd core build:admin`; it writes
 `.tmp/admin-bundle-report.json` and guards the admin SPA chunk count, HTML entry
-gzip, and initial static JS graph gzip.
+gzip, and initial static JS graph gzip. It also enforces the TASK-467 widget
+editor split: every dynamic JS chunk at or above 500 kB raw fails closed unless
+a non-TASK-467 owner is explicitly documented with a follow-up, the admin
+widget registry must not import the `./editors` barrel, and concrete lazy
+editor chunks must exist as split evidence. `registerDocumentedNonTask467DynamicBudgetFollowUp`
+is the only way to document an over-budget dynamic chunk outside TASK-467
+ownership; TASK-467-owned chunks and shared widget-editor chunks can never be
+allowlisted.
 `check:admin-boundary` is source-based and can run before the build. It walks
 the admin browser import graph, including lazy route imports, and fails when
 admin-reachable code value-imports server/runtime-only modules such as DB,
 server routes, storage adapters, provider SDKs, password hashing, secret-store,
-or runtime data resolvers.
+or runtime data resolvers. Type-only `typeof import(...)` queries emit no
+runtime edge. The single documented dynamic `node:` import exemption
+(`core/services/network/outboundHttpPolicy.ts`) is verified against the built
+bundle: the browser build eliminates the guarded lazy DNS resolver entirely
+(zero `node:dns` bytes across all chunks).
 
 ## Runtime Smoke Platform
 

@@ -1,6 +1,6 @@
 import type { ComponentType, CSSProperties } from "react";
 
-import type { WidgetBindingTarget, WidgetDefinition, WidgetEditorProps } from "../types";
+import type { WidgetBindingTarget, WidgetDefinition, WidgetEditorBundle } from "../types";
 import { compactObject, compactStyle, resolveClearableStyleValue } from "./clearableStyle";
 
 export type ScreenRecordHeaderVariantId = "card" | "compact";
@@ -210,11 +210,9 @@ export function ScreenRecordHeaderBlock({
   );
 }
 
-export function createScreenRecordHeaderWidget(editors: {
-  wizard: ComponentType<WidgetEditorProps<ScreenRecordHeaderData>>;
-  visual: ComponentType<WidgetEditorProps<ScreenRecordHeaderData>>;
-  advanced: ComponentType<WidgetEditorProps<ScreenRecordHeaderData>>;
-}): WidgetDefinition<ScreenRecordHeaderData> {
+export function createScreenRecordHeaderWidget(
+  editors: WidgetEditorBundle<ScreenRecordHeaderData>
+): WidgetDefinition<ScreenRecordHeaderData> {
   return {
     type: "screen-record-header",
     title: "Screen Record Header",

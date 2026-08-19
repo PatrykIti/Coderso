@@ -1,4 +1,4 @@
-import type { CustomScreenRecord } from "../../../../core/admin/services/customScreensClient";
+import type { CustomScreenSummaryRecord } from "../../../../core/admin/services/customScreensClient";
 
 const jsonResponse = (payload: unknown, status = 200) =>
   new Response(JSON.stringify(payload), {
@@ -29,7 +29,9 @@ const deferred = <T>() => {
   return { promise, resolve, reject };
 };
 
-const makeScreen = (overrides: Partial<CustomScreenRecord> = {}): CustomScreenRecord => ({
+const makeScreen = (
+  overrides: Partial<CustomScreenSummaryRecord> = {}
+): CustomScreenSummaryRecord => ({
   id: "screen-1",
   name: "Catalog screen",
   contentTypeId: "ct-1",

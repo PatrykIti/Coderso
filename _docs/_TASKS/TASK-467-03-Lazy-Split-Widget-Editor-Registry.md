@@ -6,7 +6,9 @@
 **Category:** Widgets / Admin UI / Bundle Performance
 **Estimated Effort:** Large
 **Dependencies:** TASK-467-02, TASK-464
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Started:** 2026-08-18
+**Completed:** 2026-08-18
 **Changelog:** 1308 (pinned; closure only)
 
 ---
@@ -31,11 +33,11 @@ compatible.
 
 ## Sub-Tasks
 
-- [ ] TASK-467-03-L01: Lazy editor component contract and registry
+- [x] TASK-467-03-L01: Lazy editor component contract and registry
   compatibility.
-- [ ] TASK-467-03-L02: Admin widget loader map and eager barrel removal.
-- [ ] TASK-467-03-L03: Shared widget editor outlet and builder surface wiring.
-- [ ] TASK-467-03-L04: Bundle evidence, docs, and closure validation.
+- [x] TASK-467-03-L02: Admin widget loader map and eager barrel removal.
+- [x] TASK-467-03-L03: Shared widget editor outlet and builder surface wiring.
+- [x] TASK-467-03-L04: Bundle evidence, docs, and closure validation.
 
 ## Files To Change
 
@@ -43,8 +45,8 @@ This parent is the coordinator; all source-file edits are owned by its leaves:
 
 | Leaf | Owns |
 |---|---|
-| TASK-467-03-L01 | `core/widgets/types.ts`, `core/widgets/core/index.ts` (type widening), `core/widgets/registry.ts` validation, `tests/vitest/widgets/editorContract.test.ts` |
-| TASK-467-03-L02 | `core/admin/ui/widgets/registry.ts`, `core/admin/ui/widgets/editors/index.ts`, `tests/vitest/admin/widgetsClient.test.ts` |
+| TASK-467-03-L01 | `core/widgets/types.ts` (add `WidgetEditorComponent<T>` / `WidgetEditorBundle<T>`), `core/widgets/core/index.ts` (type widening), `core/widgets/core/*.tsx` (42 per-widget factory editor params widened to `WidgetEditorBundle<T>`), `core/widgets/registry.ts` validation, `tests/vitest/widgets/editorContract.test.ts` |
+| TASK-467-03-L02 | `core/admin/ui/widgets/registry.ts`, `core/admin/ui/widgets/editors/index.ts`, `tests/vitest/admin/widgetsClient.test.ts`, `tests/vitest/admin/widgetRegistryBoundary.test.ts` |
 | TASK-467-03-L03 | `core/admin/ui/widgets/WidgetEditorOutlet.tsx`, `core/admin/ui/pages/builder/{WizardPanel,VisualPanel,AdvancedPanel,BlockSettings}.tsx`, pageBuilder + admin UI tests. `core/admin/ui/custom-screens/CustomScreenEditorPage.tsx` is read-only reference (owned by TASK-467-02). |
 | TASK-467-03-L04 | `scripts/adminBundleReport.ts`, `scripts/check-admin-bundle.ts`, `tests/vitest/admin/adminBundleReport.test.ts`, docs + closure |
 

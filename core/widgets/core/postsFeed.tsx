@@ -1,6 +1,6 @@
 import type { ComponentType } from "react";
 
-import type { WidgetDefinition, WidgetEditorContract, WidgetEditorProps } from "../types";
+import type { WidgetDefinition, WidgetEditorContract, WidgetEditorBundle } from "../types";
 import { resolveClearableStyleValue } from "./clearableStyle";
 import {
   ContentListBlock,
@@ -874,11 +874,9 @@ export const postsFeedEditorContract: WidgetEditorContract = {
   ],
 };
 
-export function createPostsFeedWidget(editors: {
-  wizard: ComponentType<WidgetEditorProps<PostsFeedData>>;
-  visual: ComponentType<WidgetEditorProps<PostsFeedData>>;
-  advanced: ComponentType<WidgetEditorProps<PostsFeedData>>;
-}): WidgetDefinition<PostsFeedData> {
+export function createPostsFeedWidget(
+  editors: WidgetEditorBundle<PostsFeedData>
+): WidgetDefinition<PostsFeedData> {
   return {
     type: "posts-feed",
     title: "Posts Feed",

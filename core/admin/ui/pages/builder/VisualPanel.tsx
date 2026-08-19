@@ -22,6 +22,7 @@ import {
   WidgetEditorModeRoot,
   WidgetEditorSection,
 } from "../../widgets/editors/WidgetEditorControls";
+import { WidgetEditorOutlet } from "../../widgets/WidgetEditorOutlet";
 
 const deviceLabels: { id: DeviceTarget; label: string }[] = [
   { id: "desktop", label: "Desktop" },
@@ -86,7 +87,6 @@ export function VisualPanel({
   pageDefaults,
 }: VisualPanelProps) {
   const variant = block.variant ?? widget.variants[0]?.id ?? "";
-  const Editor = widget.editor.visual;
   const visualOwnsVariantSelection = Boolean(widget.editorCapabilities?.visualOwnsVariantSelection);
   const layoutValue = sanitizeLayout(block.layout);
   const patchBlock =
@@ -152,7 +152,9 @@ export function VisualPanel({
           </Button>
         </>
       ) : null}
-      <Editor
+      <WidgetEditorOutlet
+        definition={widget}
+        mode="visual"
         value={block.data as Record<string, unknown>}
         onChange={(data) =>
           patchBlock((current) => ({

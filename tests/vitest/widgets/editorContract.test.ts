@@ -1,4 +1,5 @@
 import type { ComponentType } from "react";
+import { lazy } from "react";
 import { afterEach, describe, expect, test } from "vitest";
 
 import {
@@ -13,6 +14,7 @@ import {
   validateWidgetEditorContract,
   type WidgetEditorContractValidation,
 } from "../../../core/widgets/editorContract";
+import { createHeroWidget } from "../../../core/widgets/core/hero";
 import { appointmentFormEditorContract } from "../../../core/widgets/core/appointmentForm";
 import { bookingCalendarEditorContract } from "../../../core/widgets/core/bookingCalendar";
 import { compareTimelineEditorContract } from "../../../core/widgets/core/compareTimeline";
@@ -105,6 +107,15 @@ function widgetDefinition(
     },
     ...(editorContract ? { editorContract } : {}),
     render: NoopRender,
+  };
+}
+
+function lazyEditorBundle(): WidgetDefinition<WidgetData>["editor"] {
+  const lazyNoop = lazy(async () => ({ default: NoopEditor }));
+  return {
+    wizard: lazyNoop,
+    visual: lazyNoop,
+    advanced: lazyNoop,
   };
 }
 
@@ -603,5 +614,47 @@ describe("widget registry editor contract diagnostics", () => {
     expect(listWidgetEditorContractDiagnostics()).toHaveLength(1);
     clearWidgets();
     expect(listWidgetEditorContractDiagnostics()).toHaveLength(0);
+  });
+
+  test("registerWidget accepts lazy editor components (TASK-467-03)", () => {
+    const def: WidgetDefinition<WidgetData> = {
+      ...widgetDefinition("lazy-editor-widget"),
+      editor: lazyEditorBundle(),
+    };
+
+    expect(() => registerWidget(def)).not.toThrow();
+    const registered = getWidget("lazy-editor-widget");
+    expect(registered?.editor.wizard).toBeTypeOf("object");
+    expect(registered?.editor.visual).toBeTypeOf("object");
+    expect(registered?.editor.advanced).toBeTypeOf("object");
+  });
+
+  test("registerWidget rejects widgets without complete lazy editor modes (TASK-467-03)", () => {
+    const lazyNoop = lazy(async () => ({ default: NoopEditor }));
+    const def: WidgetDefinition<WidgetData> = {
+      ...widgetDefinition("incomplete-lazy-editor-widget"),
+      editor: {
+        wizard: lazyNoop,
+        visual: lazyNoop,
+        advanced: lazyNoop,
+      },
+    };
+
+    // Drop the advanced slot to simulate an incomplete lazy bundle.
+    def.editor = { wizard: lazyNoop, visual: lazyNoop } as WidgetDefinition<WidgetData>["editor"];
+    expect(() => registerWidget(def)).toThrow("widget_editor_invalid");
+  });
+
+  test("core widget factory accepts a lazy editor bundle (TASK-467-03)", () => {
+    const lazyNoop = lazy(async () => ({ default: NoopEditor }));
+    const editors: WidgetDefinition<WidgetData>["editor"] = {
+      wizard: lazyNoop,
+      visual: lazyNoop,
+      advanced: lazyNoop,
+    };
+
+    expect(() =>
+      createHeroWidget(editors as unknown as Parameters<typeof createHeroWidget>[0])
+    ).not.toThrow();
   });
 });

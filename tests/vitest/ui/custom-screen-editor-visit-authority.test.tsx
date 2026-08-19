@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import { cacheKeys } from "../../../core/admin/services/cachePolicy";
 import * as customScreensClient from "../../../core/admin/services/customScreensClient";
-import type { CustomScreenRecord } from "../../../core/admin/services/customScreensClient";
+import type { CustomScreenRecord } from "../../../core/admin/services/customScreensEditorClient";
 import { getBuilderExternalRevisionSaveError } from "../../../core/admin/ui/custom-screens/CustomScreenEditorPage";
 import { subscribeCacheEvents } from "../../../core/admin/utils/cacheBus";
 import { createCustomScreenEditorPageHarness } from "./support/customScreenEditorPageHarness";

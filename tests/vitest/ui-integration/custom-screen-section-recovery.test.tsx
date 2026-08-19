@@ -18,7 +18,7 @@ import { createRoot } from "react-dom/client";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 
 import { ApiClientError } from "../../../core/admin/services/apiClient";
-import type { CustomScreenRecord } from "../../../core/admin/services/customScreensClient";
+import type { CustomScreenRecord } from "../../../core/admin/services/customScreensEditorClient";
 import {
   CustomScreenEditorPage,
   detectScreenBindingOrphans,
@@ -101,6 +101,16 @@ const createScreenRecord = (): CustomScreenRecord => ({
   },
   blocks: [],
   bindings: [],
+  capabilities: {
+    mode: "editor",
+    hasBlocks: true,
+    hasBindings: true,
+    hasReadableBindings: true,
+    hasWritableBindings: true,
+    supportsDedicatedPreview: true,
+    supportsDedicatedEditor: true,
+    bindingCounts: { total: 1, readable: 1, writable: 1 },
+  },
   revision: 1,
   createdAt: "2026-05-02T00:00:00.000Z",
   updatedAt: "2026-05-02T00:00:00.000Z",
@@ -128,7 +138,7 @@ vi.mock("@/services/customScreensClient", () => ({
   getCachedCustomScreens: vi.fn(() => [currentScreenRecord]),
   listCustomScreensCached: vi.fn(async () => [currentScreenRecord]),
   getCachedCustomScreen: vi.fn(() => currentScreenRecord),
-  getCustomScreenCached: vi.fn(async () => currentScreenRecord),
+  getCustomScreenRawCached: vi.fn(async () => currentScreenRecord),
 }));
 
 vi.mock("@/services/contentTypesClient", () => ({

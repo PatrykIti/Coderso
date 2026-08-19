@@ -1,9 +1,11 @@
 import { expect, test } from "vitest";
 
-import type { CustomScreenRecord } from "../../../core/admin/services/customScreensClient";
+import type { CustomScreenSummaryRecord } from "../../../core/admin/services/customScreensClient";
 import { resolveCustomScreenSidebarShortcutState } from "../../../core/admin/ui/custom-screens/customScreenListModel";
 
-const makeScreen = (overrides: Partial<CustomScreenRecord> = {}): CustomScreenRecord => ({
+const makeScreen = (
+  overrides: Partial<CustomScreenSummaryRecord> = {}
+): CustomScreenSummaryRecord => ({
   id: "screen-1",
   name: "Product workspace",
   contentTypeId: "ct-products",

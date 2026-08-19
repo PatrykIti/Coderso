@@ -11,7 +11,7 @@ import type {
   WidgetBlock,
   WidgetDefinition,
   WidgetEditorContract,
-  WidgetEditorProps,
+  WidgetEditorBundle,
   WidgetRenderContext,
 } from "../types";
 import { compactStyle, resolveClearableCssColorValue } from "./clearableStyle";
@@ -833,11 +833,9 @@ export function ToggleBlock({
   );
 }
 
-export function createToggleBlockWidget(editors: {
-  wizard: ComponentType<WidgetEditorProps<ToggleBlockData>>;
-  visual: ComponentType<WidgetEditorProps<ToggleBlockData>>;
-  advanced: ComponentType<WidgetEditorProps<ToggleBlockData>>;
-}): WidgetDefinition<ToggleBlockData> {
+export function createToggleBlockWidget(
+  editors: WidgetEditorBundle<ToggleBlockData>
+): WidgetDefinition<ToggleBlockData> {
   return {
     type: "toggle-block",
     title: "Toggle Block",

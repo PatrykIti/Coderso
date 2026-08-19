@@ -2,7 +2,16 @@ import { spawn } from "node:child_process";
 import { realpath } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { closeSync, constants, fchmodSync, fstatSync, lstatSync, mkdirSync, openSync, writeFileSync } from "node:fs";
+import {
+  closeSync,
+  constants,
+  fchmodSync,
+  fstatSync,
+  lstatSync,
+  mkdirSync,
+  openSync,
+  writeFileSync,
+} from "node:fs";
 import { parseRuntimeSmokeArgs } from "./runtime-smoke/cli";
 import { appendDiagnostics } from "./runtime-smoke/diagnostics";
 import { SmokeError, mapSmokeError } from "./runtime-smoke/contracts";
@@ -35,13 +44,25 @@ function precreateEvidenceReport(evidenceDirectory: string): string {
   let descriptor: number | undefined;
   try {
     try {
-      descriptor = openSync(reportPath, constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL | constants.O_NOFOLLOW, 0o600);
+      descriptor = openSync(
+        reportPath,
+        constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL | constants.O_NOFOLLOW,
+        0o600
+      );
     } catch (error) {
       const code = (error as NodeJS.ErrnoException | null)?.code;
       if (code === "EEXIST") {
         const existing = lstatSync(reportPath);
-        if (!existing.isFile() || existing.isSymbolicLink() || existing.nlink !== 1 || (existing.mode & 0o777) !== 0o600) {
-          throw new SmokeError("smoke_output_invalid", "evidence report already exists with invalid ownership");
+        if (
+          !existing.isFile() ||
+          existing.isSymbolicLink() ||
+          existing.nlink !== 1 ||
+          (existing.mode & 0o777) !== 0o600
+        ) {
+          throw new SmokeError(
+            "smoke_output_invalid",
+            "evidence report already exists with invalid ownership"
+          );
         }
         return reportPath;
       }
@@ -60,7 +81,10 @@ function precreateEvidenceReport(evidenceDirectory: string): string {
 function writeEvidenceReport(reportPath: string, json: string): void {
   let descriptor: number | undefined;
   try {
-    descriptor = openSync(reportPath, constants.O_WRONLY | constants.O_TRUNC | constants.O_NOFOLLOW);
+    descriptor = openSync(
+      reportPath,
+      constants.O_WRONLY | constants.O_TRUNC | constants.O_NOFOLLOW
+    );
     const before = fstatSync(descriptor);
     if (!before.isFile() || before.nlink !== 1 || (before.mode & 0o777) !== 0o600) {
       throw new SmokeError("smoke_output_invalid", "evidence report ownership is invalid");
@@ -69,8 +93,14 @@ function writeEvidenceReport(reportPath: string, json: string): void {
     fchmodSync(descriptor, 0o600);
     const after = fstatSync(descriptor);
     const final = lstatSync(reportPath);
-    if (stableEvidenceNode(before) !== stableEvidenceNode(after) || stableEvidenceNode(after) !== stableEvidenceNode(final)) {
-      throw new SmokeError("smoke_output_invalid", "evidence report identity changed while writing");
+    if (
+      stableEvidenceNode(before) !== stableEvidenceNode(after) ||
+      stableEvidenceNode(after) !== stableEvidenceNode(final)
+    ) {
+      throw new SmokeError(
+        "smoke_output_invalid",
+        "evidence report identity changed while writing"
+      );
     }
   } finally {
     if (descriptor !== undefined) closeSync(descriptor);
@@ -153,8 +183,15 @@ async function runNodeOwnedOrchestrator(argv: readonly string[]): Promise<number
   const root = await resolveCanonicalRepositoryRoot(process.cwd());
   const node = await resolveExecutableOnPath("node");
   const entry = await realpath(fileURLToPath(import.meta.url));
-  const tsxCli = await realpath(resolve(root, "node_modules/tsx/dist/cli.mjs"));
-  if (entry !== resolve(root, "scripts/runtime-smoke.ts") || !tsxCli.startsWith(`${root}/`)) {
+  // node_modules may be a symlink to a shared store (git worktrees commonly
+  // link it to the primary checkout), so resolve its canonical location and
+  // require the tsx CLI to come from that same canonical node_modules tree.
+  const nodeModules = await realpath(resolve(root, "node_modules"));
+  const tsxCli = await realpath(resolve(nodeModules, "tsx/dist/cli.mjs"));
+  if (
+    entry !== resolve(root, "scripts/runtime-smoke.ts") ||
+    !tsxCli.startsWith(`${nodeModules}/`)
+  ) {
     throw new Error("runtime smoke Node launcher identity drifted");
   }
   const child = spawn(node, [tsxCli, entry, ...argv], {

@@ -45,6 +45,15 @@ describe("resolveAdminBoundaryImportEdges", () => {
       { specifier: "./lazy", kind: "dynamic" },
     ]);
   });
+
+  test("treats typeof import(...) as a type-only query with no runtime edge", () => {
+    const edges = resolveAdminBoundaryImportEdges(`
+      let lookup: (typeof import("node:dns/promises"))["lookup"] | undefined;
+      const dns = await import("node:dns/promises");
+    `);
+
+    expect(edges).toEqual([{ specifier: "node:dns/promises", kind: "dynamic" }]);
+  });
 });
 
 describe("analyzeAdminBoundary", () => {
@@ -102,5 +111,46 @@ describe("analyzeAdminBoundary", () => {
     expect(report.violations[0]?.resolvedPath).toBe(
       "core/services/assistant/providers/openAiProvider.ts"
     );
+  });
+
+  test("allows the documented guarded lazy node import in the exempt policy module", async () => {
+    const repoRoot = await createRepo({
+      "core/admin/main.tsx":
+        'import { validateOutboundUrl } from "../services/network/outboundHttpPolicy"; validateOutboundUrl("https://example.com");',
+      "core/services/network/outboundHttpPolicy.ts":
+        'export const validateOutboundUrl = () => true; const dns = await import("node:dns/promises"); void dns;',
+    });
+
+    const report = analyzeAdminBoundary({ repoRoot });
+
+    expect(report.violations).toEqual([]);
+  });
+
+  test("still rejects static node imports inside the exempt policy module", async () => {
+    const repoRoot = await createRepo({
+      "core/admin/main.tsx":
+        'import { value } from "../services/network/outboundHttpPolicy"; value;',
+      "core/services/network/outboundHttpPolicy.ts":
+        'import { lookup } from "node:dns/promises"; export const value = lookup;',
+    });
+
+    const report = analyzeAdminBoundary({ repoRoot });
+
+    expect(report.violations).toHaveLength(1);
+    expect(report.violations[0]?.reason).toBe("Node builtin");
+  });
+
+  test("still rejects dynamic node imports in non-exempt browser-reachable modules", async () => {
+    const repoRoot = await createRepo({
+      "core/admin/main.tsx": 'import { run } from "../services/forms/otherPolicy"; run();',
+      "core/services/forms/otherPolicy.ts":
+        'export const run = async () => { const dns = await import("node:dns/promises"); return dns; };',
+    });
+
+    const report = analyzeAdminBoundary({ repoRoot });
+
+    expect(report.violations).toHaveLength(1);
+    expect(report.violations[0]?.reason).toBe("Node builtin");
+    expect(report.violations[0]?.importer).toBe("core/services/forms/otherPolicy.ts");
   });
 });

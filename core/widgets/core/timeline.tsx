@@ -22,28 +22,17 @@ import {
   CSS_COLOR_SCHEMA_PATTERNS,
   CSS_COLOR_VALUE_MAX_LENGTH,
 } from "../../services/theme/cssColorContract";
-import type { WidgetDefinition, WidgetEditorContract, WidgetEditorProps } from "../types";
+import type { WidgetDefinition, WidgetEditorContract, WidgetEditorBundle } from "../types";
 import { compactObject, compactStyle, resolveClearableCssColorValue } from "./clearableStyle";
 import { normalizeWidgetSafeHref } from "./widgetSafeHref";
 
 // Presets are the block variants (one source of truth, no separate mode field).
 export type TimelineVariantId =
-  | "vertical-right"
-  | "vertical-left"
-  | "alternating"
-  | "alternating-opposite"
-  | "cards"
-  | "compact";
+  "vertical-right" | "vertical-left" | "alternating" | "alternating-opposite" | "cards" | "compact";
 export type TimelineAxisPosition = "left" | "right" | "alternate" | "alternate-reverse";
 export type TimelineDotVariant = "filled" | "outlined";
 export type TimelineDotTone =
-  | "primary"
-  | "secondary"
-  | "success"
-  | "error"
-  | "warning"
-  | "info"
-  | "grey";
+  "primary" | "secondary" | "success" | "error" | "warning" | "info" | "grey";
 export type TimelineDotSize = "sm" | "md" | "lg";
 // Any lucide icon name (kebab-case), or "none" for a plain dot.
 export type TimelineDotIcon = string;
@@ -1452,11 +1441,9 @@ export const timelineEditorContract: WidgetEditorContract = {
   ],
 };
 
-export function createTimelineWidget(editors: {
-  wizard: ComponentType<WidgetEditorProps<TimelineData>>;
-  visual: ComponentType<WidgetEditorProps<TimelineData>>;
-  advanced: ComponentType<WidgetEditorProps<TimelineData>>;
-}): WidgetDefinition<TimelineData> {
+export function createTimelineWidget(
+  editors: WidgetEditorBundle<TimelineData>
+): WidgetDefinition<TimelineData> {
   return {
     type: "timeline",
     title: "Timeline",

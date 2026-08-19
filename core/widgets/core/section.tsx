@@ -12,7 +12,7 @@ import type {
   WidgetBlock,
   WidgetDefinition,
   WidgetEditorContract,
-  WidgetEditorProps,
+  WidgetEditorBundle,
   WidgetRenderContext,
 } from "../types";
 import {
@@ -1462,11 +1462,9 @@ export function SectionBlock({
   );
 }
 
-export function createSectionWidget(editors: {
-  wizard: ComponentType<WidgetEditorProps<SectionData>>;
-  visual: ComponentType<WidgetEditorProps<SectionData>>;
-  advanced: ComponentType<WidgetEditorProps<SectionData>>;
-}): WidgetDefinition<SectionData> {
+export function createSectionWidget(
+  editors: WidgetEditorBundle<SectionData>
+): WidgetDefinition<SectionData> {
   return {
     type: "section",
     title: "Section",

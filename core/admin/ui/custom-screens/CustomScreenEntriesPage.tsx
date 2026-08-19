@@ -22,8 +22,8 @@ import { cacheKeys } from "@/services/cachePolicy";
 import { getCachedContentTypes, listContentTypesCached } from "@/services/contentTypesClient";
 import {
   getCachedCustomScreen,
-  getCustomScreenCached,
-  type CustomScreenRecord,
+  getCustomScreenRawCached,
+  type CustomScreenSummaryRecord,
 } from "@/services/customScreensClient";
 import {
   deleteEntry,
@@ -47,8 +47,10 @@ import { PageHeader } from "@/ui/shared/PageHeader";
 import { createListActionToastAdapter } from "@/ui/shared/listActionToasts";
 import { useListPagination } from "@/ui/shared/useListPagination";
 import { subscribeCacheEvents } from "@/utils/cacheBus";
-import { resolveCustomScreenCapabilities } from "../../../services/customScreens/capabilities";
-import type { CustomScreenListColumn } from "../../../services/customScreens/customScreenSchemas";
+import type {
+  CustomScreenDefinition,
+  CustomScreenListColumn,
+} from "../../../services/customScreens/customScreenSchemas";
 
 import { buildCustomScreenAssistantSurface } from "./assistantSurface";
 import {
@@ -149,7 +151,7 @@ export function CustomScreenEntriesPage() {
     [initialContentType]
   );
   const hasInitialCache = Boolean(initialScreen && initialContentType);
-  const [screen, setScreen] = useState<CustomScreenRecord | null>(initialScreen);
+  const [screen, setScreen] = useState<CustomScreenSummaryRecord | null>(initialScreen);
   const [entries, setEntries] = useState<EntrySummary[]>(initialEntries);
   const [contentType, setContentType] = useState(initialContentType);
   const [isLoading, setIsLoading] = useState(() => !(initialScreen && initialContentType));
@@ -170,15 +172,16 @@ export function CustomScreenEntriesPage() {
   const [visibleColumnIds, setVisibleColumnIds] = useState<string[] | null>(null);
   const screenCapabilities = useMemo(
     () =>
-      screen?.capabilities ??
-      resolveCustomScreenCapabilities({
-        definition: screen?.definition,
-        blocks: screen?.blocks,
-        bindings: screen?.bindings,
-      }),
+      // TASK-467-02: the editor client always resolves capabilities for full
+      // records; the assistant surface keeps its own fallback for safety.
+      screen?.capabilities,
     [screen]
   );
-  const listView = screen?.definition?.listView ?? fallbackListView;
+  // TASK-467-02: the lightweight summary record keeps the server payload as a
+  // pass-through `unknown`; the server always sends the fully normalized
+  // definition, so narrowing to the domain definition type is safe here.
+  const screenDefinition = screen?.definition as CustomScreenDefinition | undefined;
+  const listView = screenDefinition?.listView ?? fallbackListView;
   const effectiveListView = useMemo(() => {
     if (!visibleColumnIds) return listView;
     const shown = new Set(visibleColumnIds);
@@ -225,7 +228,7 @@ export function CustomScreenEntriesPage() {
   const contentTypeName = contentType?.name ?? null;
   const hasBulkActions =
     listView.bulkActions.delete || listView.bulkActions.publish || listView.bulkActions.unpublish;
-  const supportsWorkspaceEditor = screenCapabilities.supportsDedicatedEditor;
+  const supportsWorkspaceEditor = screenCapabilities?.supportsDedicatedEditor ?? false;
   const filterOptions = useMemo(
     () => buildCustomScreenEntriesFilterOptions({ entries, listView }),
     [entries, listView]
@@ -300,7 +303,7 @@ export function CustomScreenEntriesPage() {
         setIsLoading(true);
       }
       try {
-        const nextScreen = await getCustomScreenCached(screenId, { force });
+        const nextScreen = await getCustomScreenRawCached(screenId, { force });
         if (!nextScreen) {
           setError("Custom screen not found.");
           setEntries([]);
@@ -341,7 +344,7 @@ export function CustomScreenEntriesPage() {
   useEffect(() => {
     if (!screenId) return;
     let active = true;
-    getCustomScreenCached(screenId, { force: !hasInitialCache })
+    getCustomScreenRawCached(screenId, { force: !hasInitialCache })
       .then(async (nextScreen) => {
         if (!active) return;
         if (!nextScreen) {

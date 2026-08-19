@@ -44,8 +44,8 @@ parent subtask tables still show `⏳ To Do` while all physical children are
 `✅ Done`; TASK-540 retains actively-worded "Current/pending" workflow fields
 despite its `✅ Done` status and changelog 1252; TASK-559 presents a stale
 acceptance benchmark (9.98 min for 397 files) as current evidence after the
-manifest grew to 418 files; TASK-547 still describes Changelog 1260 as
-Draft/unindexed while it is Final and indexed.
+manifest grew to 440 files (A=172, B=212, C=51, perf=5); TASK-547 still
+describes Changelog 1260 as Draft/unindexed while it is Final and indexed.
 
 These findings qualify for TASK-9999 deferral: they are documentation/board
 metadata only, with zero current user-visible UI/UX/a11y effect and zero data,
@@ -78,7 +78,7 @@ Per the TASK-9999 parent contract and AGENTS.md:
   1252, redirect smoke ownership to TASK-552/TASK-560.
 - `TASK-9999-02-L03-Relabel-Stale-TASK-559-Acceptance-Benchmark.md` — relabel
   the TASK-559 9.98-min/397-file acceptance as historical evidence; require a
-  fresh controlled run on the current 418-file manifest before any re-claim.
+  fresh controlled run on the current 440-file manifest before any re-claim.
 - `TASK-9999-02-L04-Reconcile-TASK-547-Closure-Notes.md` — flip TASK-547 parent
   checklist `[ ]` to `[x]` and correct the "Changelog 1260 Draft/unindexed"
   note to Final/indexed.

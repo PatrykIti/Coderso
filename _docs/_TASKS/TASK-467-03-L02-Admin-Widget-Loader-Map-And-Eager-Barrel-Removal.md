@@ -6,7 +6,9 @@
 **Category:** Admin UI / Widgets / Bundle Performance
 **Estimated Effort:** Large
 **Dependencies:** TASK-467-03-L01
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Started:** 2026-08-18
+**Completed:** 2026-08-18
 **Changelog:** 1308 (pinned; closure only)
 
 ---
@@ -36,7 +38,8 @@ synchronous, but editor modules should load only when an editor is rendered.
 | `core/admin/ui/widgets/registry.ts` | Replace static editor barrel import with typed lazy editor component map. |
 | `core/admin/ui/widgets/editors/index.ts` | Stop being imported by the registry; keep only if tests still need direct named exports. |
 | `core/widgets/core/index.ts` | READ-ONLY reference: consume the `CoreWidgetEditors` type (widened by TASK-467-03-L01); do not edit. `ensureCoreWidgetsRegistered` remains in the admin registry. |
-| `tests/vitest/admin/widgetsClient.test.ts` | Assert registry behavior remains stable. |
+| `tests/vitest/admin/widgetsClient.test.ts` | Keep existing catalog/cache service coverage stable. Note: this file tests the `widgetsClient` catalog/cache service, NOT the registry boundary (pre-implementation audit finding). |
+| `tests/vitest/admin/widgetRegistryBoundary.test.ts` | NEW dedicated registry-boundary test (owner of the source/import-boundary assertions in the regression-test shape below). |
 | `tests/vitest/admin/adminBundleReport.test.ts` | READ-ONLY reference: file owned by TASK-467-03-L04 (closure evidence). L02 runs `bun --cwd core build:admin` + `check:admin-bundle` and records evidence for L04. |
 
 ## Implementation Pseudocode
@@ -107,7 +110,7 @@ Error handling:
 - Lazy module resolution should fail through the panel error boundary when an
   export is missing.
 
-Regression-test shape:
+Regression-test shape (owner: `tests/vitest/admin/widgetRegistryBoundary.test.ts`):
 
 ```ts
 test("admin widget registry does not import the editor barrel eagerly", () => {
@@ -122,6 +125,12 @@ test("every editable core widget has an editor bundle", () => {
     .filter((widget) => !widget.editor?.wizard || !widget.editor.visual || !widget.editor.advanced);
 
   expect(missing).toEqual([]);
+});
+
+test("lazy editor loaders target concrete modules only", () => {
+  const source = readFile("core/admin/ui/widgets/registry.ts");
+  const specifiers = [...source.matchAll(/import\s*\(\s*["']([^"']+)["']\s*\)/g)].map((m) => m[1]);
+  expect(specifiers.every((s) => s.startsWith("./editors/") && !s.endsWith("/index"))).toBe(true);
 });
 ```
 
@@ -140,7 +149,7 @@ test("every editable core widget has an editor bundle", () => {
 
 ## Testing Requirements
 
-- `bun run test:vitest -- tests/vitest/admin/widgetsClient.test.ts`
+- `bun run test:vitest -- tests/vitest/admin/widgetsClient.test.ts tests/vitest/admin/widgetRegistryBoundary.test.ts`
 - (adminBundleReport.test.ts runs in L04's validation)
 - `bun --cwd core build:admin`
 - `bun run check:admin-bundle`

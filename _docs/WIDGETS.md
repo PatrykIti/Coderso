@@ -126,6 +126,16 @@ Zasady:
   zastepuje komponentow `editor.*`, tylko jest testowalnym ownerem UX i danych.
   W trakcie TASK-336 brak kontraktu jest dopuszczony w trybie migracyjnym, ale
   walidacja strict musi byc wlaczona przed zamknieciem programu.
+- Edytory widgetow ladowane sa na zadanie (TASK-467): `WidgetDefinition.editor`
+  akceptuje eager `ComponentType` LUB `React.lazy` komponent
+  (`WidgetEditorComponent` / `WidgetEditorBundle`), a admin registry ladowa
+  konkretne moduly edytorow przez per-module dynamiczne importy zamiast
+  statycznego barrela. Surfaces (Page builder `WizardPanel`, `VisualPanel`,
+  `AdvancedPanel`, custom screens przez `BlockSettings`) renderuja edytory
+  przez wspolny `WidgetEditorOutlet`, ktory daje lokalny `Suspense` fallback,
+  bledny stan ograniczony do edytora (bez mutacji bloku) i retry przebudowujacy
+  loader. Lazy editor modul moze byc ladowany tylko dla konkretnego trybu
+  `wizard`/`visual`/`advanced` i typu widgetu.
 - Powtarzalne kolekcje moga uzywac wildcard segmentu w kontrakcie, np.
   `items.*.label`, podczas gdy DOM konkretnego kontrolera emituje indeksowana
   sciezke `items.0.label`. Wildcard jest dozwolony tylko jako caly segment

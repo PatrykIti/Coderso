@@ -6,7 +6,7 @@ import { afterEach, beforeEach, expect, test, vi } from "vitest";
 
 import type { AuthUser } from "../../../core/admin/services/authClient";
 import type { ContentTypeSummary } from "../../../core/admin/services/contentTypesClient";
-import type { CustomScreenRecord } from "../../../core/admin/services/customScreensClient";
+import type { CustomScreenRecord } from "../../../core/admin/services/customScreensEditorClient";
 import type { EntryDetail } from "../../../core/admin/services/entriesClient";
 import { CustomScreenEntryEditor } from "../../../core/admin/ui/custom-screens/CustomScreenEntryEditor";
 import { AdminAuthProvider } from "../../../core/admin/ui/contexts/AdminAuthContext";
@@ -79,6 +79,16 @@ const fixture: Fixture = {
     },
     blocks: [],
     bindings: [],
+    capabilities: {
+      mode: "editor",
+      hasBlocks: true,
+      hasBindings: true,
+      hasReadableBindings: true,
+      hasWritableBindings: true,
+      supportsDedicatedPreview: true,
+      supportsDedicatedEditor: true,
+      bindingCounts: { total: 1, readable: 1, writable: 1 },
+    },
     createdAt: "2026-07-14T00:00:00.000Z",
     updatedAt: "2026-07-14T00:00:00.000Z",
   },
@@ -115,7 +125,7 @@ vi.mock("@/services/customScreensClient", () => ({
   getCachedCustomScreens: vi.fn(() => [fixture.screen]),
   listCustomScreensCached: vi.fn(async () => [fixture.screen]),
   getCachedCustomScreen: vi.fn(() => fixture.screen),
-  getCustomScreenCached: vi.fn(async () => fixture.screen),
+  getCustomScreenRawCached: vi.fn(async () => fixture.screen),
   getCachedScreenEntryOverrides: vi.fn(() => []),
   getScreenEntryOverridesCached: vi.fn(async () => []),
   replaceScreenEntryOverrides: vi.fn(async () => []),

@@ -1,18 +1,13 @@
 import type { CSSProperties, ComponentType } from "react";
 
-import type { WidgetDefinition, WidgetEditorContract, WidgetEditorProps } from "../types";
+import type { WidgetDefinition, WidgetEditorContract, WidgetEditorBundle } from "../types";
 import { compactStyle, resolveClearableStyleValue } from "./clearableStyle";
 import { normalizeWidgetSafeHref } from "./widgetSafeHref";
 
 export type ContentListVariantId = "cards" | "list" | "compact";
 export type ContentListStatusScope = "published" | "all" | "draft" | "scheduled" | "archived";
 export type ContentListSort =
-  | "published-desc"
-  | "published-asc"
-  | "updated-desc"
-  | "updated-asc"
-  | "title-asc"
-  | "title-desc";
+  "published-desc" | "published-asc" | "updated-desc" | "updated-asc" | "title-asc" | "title-desc";
 export type ContentListSourceMode = "legacy" | "listing";
 /** Grid columns; 4-6 exist for listing-template style consumption (TASK-459-03). */
 export type ContentListColumns = "1" | "2" | "3" | "4" | "5" | "6";
@@ -1457,11 +1452,9 @@ export function ContentListBlock({
   );
 }
 
-export function createContentListWidget(editors: {
-  wizard: ComponentType<WidgetEditorProps<ContentListData>>;
-  visual: ComponentType<WidgetEditorProps<ContentListData>>;
-  advanced: ComponentType<WidgetEditorProps<ContentListData>>;
-}): WidgetDefinition<ContentListData> {
+export function createContentListWidget(
+  editors: WidgetEditorBundle<ContentListData>
+): WidgetDefinition<ContentListData> {
   return {
     type: "content-list",
     title: "Content List",

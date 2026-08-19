@@ -11,7 +11,7 @@ import type {
   WidgetBlock,
   WidgetDefinition,
   WidgetEditorContract,
-  WidgetEditorProps,
+  WidgetEditorBundle,
   WidgetRenderContext,
 } from "../types";
 import { compactStyle, resolveClearableCssColorValue } from "./clearableStyle";
@@ -2055,11 +2055,9 @@ export function NavigationBlock({
   );
 }
 
-export function createNavigationWidget(editors: {
-  wizard: ComponentType<WidgetEditorProps<NavigationData>>;
-  visual: ComponentType<WidgetEditorProps<NavigationData>>;
-  advanced: ComponentType<WidgetEditorProps<NavigationData>>;
-}): WidgetDefinition<NavigationData> {
+export function createNavigationWidget(
+  editors: WidgetEditorBundle<NavigationData>
+): WidgetDefinition<NavigationData> {
   return {
     type: "navigation",
     title: "Navigation",

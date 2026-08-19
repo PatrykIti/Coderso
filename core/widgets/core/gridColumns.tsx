@@ -14,7 +14,7 @@ import type {
   DeviceTarget,
   WidgetBlock,
   WidgetDefinition,
-  WidgetEditorProps,
+  WidgetEditorBundle,
   WidgetRenderContext,
 } from "../types";
 import { compactObject, compactStyle, resolveClearableCssColorValue } from "./clearableStyle";
@@ -870,11 +870,9 @@ export function GridColumnsBlock({
   );
 }
 
-export function createGridColumnsWidget(editors: {
-  wizard: ComponentType<WidgetEditorProps<GridColumnsData>>;
-  visual: ComponentType<WidgetEditorProps<GridColumnsData>>;
-  advanced: ComponentType<WidgetEditorProps<GridColumnsData>>;
-}): WidgetDefinition<GridColumnsData> {
+export function createGridColumnsWidget(
+  editors: WidgetEditorBundle<GridColumnsData>
+): WidgetDefinition<GridColumnsData> {
   return {
     type: "grid-columns",
     title: "Grid Columns",

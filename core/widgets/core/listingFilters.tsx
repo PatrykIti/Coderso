@@ -1,6 +1,6 @@
 import type { ComponentType } from "react";
 
-import type { WidgetDefinition, WidgetEditorContract, WidgetEditorProps } from "../types";
+import type { WidgetDefinition, WidgetEditorContract, WidgetEditorBundle } from "../types";
 import {
   listingFiltersDefaults,
   listingFiltersSchema,
@@ -131,11 +131,9 @@ export const listingFiltersEditorContract: WidgetEditorContract = {
   ],
 };
 
-export function createListingFiltersWidget(editors: {
-  wizard: ComponentType<WidgetEditorProps<ListingFiltersData>>;
-  visual: ComponentType<WidgetEditorProps<ListingFiltersData>>;
-  advanced: ComponentType<WidgetEditorProps<ListingFiltersData>>;
-}): WidgetDefinition<ListingFiltersData> {
+export function createListingFiltersWidget(
+  editors: WidgetEditorBundle<ListingFiltersData>
+): WidgetDefinition<ListingFiltersData> {
   return {
     type: "listing-filters",
     title: "Listing Filters",

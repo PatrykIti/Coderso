@@ -206,7 +206,7 @@ vi.mock("@/services/customScreensClient", () => ({
   getCachedCustomScreens: vi.fn(() => [currentScreenRecord]),
   listCustomScreensCached: vi.fn(async () => [currentScreenRecord]),
   getCachedCustomScreen: vi.fn(() => currentScreenRecord),
-  getCustomScreenCached: vi.fn(async () => currentScreenRecord),
+  getCustomScreenRawCached: vi.fn(async () => currentScreenRecord),
   getCachedScreenEntryOverrides: vi.fn(() => currentOverrides),
   getScreenEntryOverridesCached: vi.fn(async () => currentOverrides),
   replaceScreenEntryOverrides: vi.fn(

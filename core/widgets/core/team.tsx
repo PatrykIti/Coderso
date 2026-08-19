@@ -1,6 +1,6 @@
 import type { CSSProperties, ComponentType } from "react";
 
-import type { WidgetDefinition, WidgetEditorContract, WidgetEditorProps } from "../types";
+import type { WidgetDefinition, WidgetEditorContract, WidgetEditorBundle } from "../types";
 import { compactStyle, resolveClearableStyleValue } from "./clearableStyle";
 import { normalizeWidgetSafeHref, resolveWidgetLinkAttrs } from "./widgetSafeHref";
 
@@ -898,11 +898,9 @@ export function TeamBlock({ data, variant }: { data: TeamData; variant: string }
   );
 }
 
-export function createTeamWidget(editors: {
-  wizard: ComponentType<WidgetEditorProps<TeamData>>;
-  visual: ComponentType<WidgetEditorProps<TeamData>>;
-  advanced: ComponentType<WidgetEditorProps<TeamData>>;
-}): WidgetDefinition<TeamData> {
+export function createTeamWidget(
+  editors: WidgetEditorBundle<TeamData>
+): WidgetDefinition<TeamData> {
   return {
     type: "team",
     title: "Team",

@@ -1,6 +1,6 @@
 import type { CSSProperties, ComponentType } from "react";
 
-import type { WidgetDefinition, WidgetEditorContract, WidgetEditorProps } from "../types";
+import type { WidgetDefinition, WidgetEditorContract, WidgetEditorBundle } from "../types";
 import { compactStyle, resolveClearableStyleValue } from "./clearableStyle";
 import { sanitizeRichTextHtml } from "./richTextSection";
 import { createWidgetInstanceId, scopedId } from "./widgetInstanceIds";
@@ -805,11 +805,9 @@ export function FeatureGridBlock({
   );
 }
 
-export function createFeatureGridWidget(editors: {
-  wizard: ComponentType<WidgetEditorProps<FeatureGridData>>;
-  visual: ComponentType<WidgetEditorProps<FeatureGridData>>;
-  advanced: ComponentType<WidgetEditorProps<FeatureGridData>>;
-}): WidgetDefinition<FeatureGridData> {
+export function createFeatureGridWidget(
+  editors: WidgetEditorBundle<FeatureGridData>
+): WidgetDefinition<FeatureGridData> {
   return {
     type: "feature-grid",
     title: "Feature Grid",

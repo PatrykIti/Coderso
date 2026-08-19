@@ -6,7 +6,9 @@
 **Category:** Validation / Docs / Bundle Performance
 **Estimated Effort:** Medium
 **Dependencies:** TASK-467-03-L03
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Started:** 2026-08-18
+**Completed:** 2026-08-18
 **Changelog:** 1308 (pinned; closure only)
 
 ---
@@ -16,19 +18,21 @@
 Close the lazy widget editor split with fresh bundle evidence, import-boundary
 proof, docs updates, and TASK-467 task-family synchronization.
 
-Pre-implementation note: current `scripts/check-admin-bundle.ts` and
-`scripts/adminBundleReport.ts` do not yet enforce the TASK-467 dynamic raw
-budget or registry-barrel graph evidence. This leaf owns adding those guards;
-their absence is not drift while the leaf remains `⏳ To Do`, but TASK-467
-cannot close until they are implemented and validated.
+Pre-implementation note: at the time of authoring,
+`scripts/check-admin-bundle.ts` and `scripts/adminBundleReport.ts` did not yet
+enforce the TASK-467 dynamic raw budget or registry-barrel graph evidence; this
+leaf owned adding those guards, and TASK-467 could not close until they were
+implemented and validated. Implemented and validated in the L04 commit
+(`28beb817`), including the documented lazy node-import exemption
+(`TASK-467-03-L04-L01`).
 
 ## Sub-Tasks
 
-- [ ] Regenerate admin build output and bundle report evidence.
-- [ ] Prove `registry-*` no longer includes all widget editor code.
-- [ ] Run admin boundary, lint, type, and targeted UI test lanes.
-- [ ] Update contributor-facing docs if the widget editor contract changed.
-- [ ] Update task statuses, changelog, and task board when the whole family is
+- [x] Regenerate admin build output and bundle report evidence.
+- [x] Prove `registry-*` no longer includes all widget editor code.
+- [x] Run admin boundary, lint, type, and targeted UI test lanes.
+- [x] Update contributor-facing docs if the widget editor contract changed.
+- [x] Update task statuses, changelog, and task board when the whole family is
   ready to close.
 
 ## Files To Change
@@ -193,6 +197,16 @@ for split success, because unrelated admin editor pages can match that pattern.
 A standalone `registry-*` asset is useful evidence when Vite emits one, but its
 absence is allowed when the registry source does not import the barrel and every
 TASK-467-owned dynamic chunk is under budget.
+Pre-implementation audit note (verified against current dist at HEAD 239bab33):
+no `registry-*` chunk exists today and no `customScreensEditorClient-*` chunk is
+emitted yet (current custom-screens chunks are `customScreensClient-BPa_2BHt.js`
+and `CustomScreenEditorPage-Bk9mgI_Z.js`). The helper must therefore treat
+`registry-*`, `customScreensClient-*`, `customScreensEditorClient-*`, and the
+lazy editor module stems as OPTIONAL matches: present stems are evidence, absent
+stems are allowed when the barrel guard passes and no TASK-467-owned chunk is
+over budget. After L02 lands, the lazy editor modules (e.g. `HeroEditors-*.js`)
+are the primary split evidence; `widgetEditorChunks.length > 1` must hold from
+the loader-map-derived stems.
 
 The raw dynamic budget check must also be fail-closed for shared chunks: every
 dynamic JS chunk at or above 500 kB raw fails by default. If implementation
@@ -243,6 +257,30 @@ Error handling:
 - If a broad suite fails for unrelated pre-existing reasons, isolate with
   targeted lanes and document the unrelated failure in the closeout.
 - Do not raise `build.chunkSizeWarningLimit` to pass this task.
+- Pre-existing `bun run check:admin-boundary` failure (post-closure audit of
+  TASK-9999/TASK-478, blossom 2026-08-18, MEDIUM): verified real at HEAD and
+  untracked in any task/changelog. Chain:
+  `core/services/assistant/actionPlanSchema.ts:20` ->
+  `core/services/forms/formActionsContract.ts:1` ->
+  `core/services/network/outboundHttpPolicy.ts:304,306` -> `node:dns/promises`,
+  yielding 2 `admin_boundary_forbidden_import` (Node builtin) violations from
+  `scripts/adminBoundaryReport.ts:153` (`dynamicImportPattern` matches both the
+  type-only `typeof import(...)` at :304 and the guarded lazy `await import`
+  at :306). The :304 violation is a type-only query (zero runtime bytes; likely
+  an analyzer false positive), and :306 is the documented TASK-567 lazy DNS
+  resolver that runs only in the server delivery transport (module header
+  `outboundHttpPolicy.ts:8-10` claims browser-bundle safety).
+  Disposition: this is NOT TASK-9999-eligible (a failing validation gate is a
+  test/validation-integrity impact, excluded by the zero-contract-impact
+  policy) and NOT owned by TASK-467-03 (L04 owns `adminBundleReport.ts` /
+  `check-admin-bundle.ts`, not `adminBoundaryReport.ts`). TASK-467 cannot close
+  while this gate fails: L04 MUST, at closure, either (a) fix the analyzer
+  false positive for type-only `typeof import(...)` and re-run the gate, or
+  (b) split an explicit execution-ready follow-up task with a concrete owner
+  that fixes both the type-only false positive and verifies the :306 lazy
+  import never reaches the browser bundle, and record the follow-up ID plus the
+  verified evidence in the closeout and TASK-467 changelog 1308. Do not treat
+  this as a soft-deferred LOW.
 
 Regression-test shape:
 

@@ -7,7 +7,8 @@ import * as contentTypesClient from "../../../../core/admin/services/contentType
 import * as customScreensClient from "../../../../core/admin/services/customScreensClient";
 import * as entriesClient from "../../../../core/admin/services/entriesClient";
 import { cacheKeys } from "../../../../core/admin/services/cachePolicy";
-import type { CustomScreenRecord } from "../../../../core/admin/services/customScreensClient";
+import type { CustomScreenRecord } from "../../../../core/admin/services/customScreensEditorClient";
+import type { CustomScreenDefinition } from "../../../../core/services/customScreens/customScreenSchemas";
 import { CustomScreenEditorPage } from "../../../../core/admin/ui/custom-screens/CustomScreenEditorPage";
 import {
   AdminRouterProvider,
@@ -358,6 +359,16 @@ export function createCustomScreenEditorPageHarness() {
     },
     blocks: [],
     bindings: [],
+    capabilities: {
+      mode: "editor",
+      hasBlocks: true,
+      hasBindings: false,
+      hasReadableBindings: false,
+      hasWritableBindings: false,
+      supportsDedicatedPreview: true,
+      supportsDedicatedEditor: true,
+      bindingCounts: { total: 0, readable: 0, writable: 0 },
+    },
     revision: 1,
     createdAt: "2026-07-14T00:00:00.000Z",
     updatedAt: "2026-07-14T00:00:00.000Z",
@@ -371,7 +382,7 @@ export function createCustomScreenEditorPageHarness() {
     return {
       ...base,
       ...rest,
-      definition: payload.definition ?? base.definition,
+      definition: (payload.definition as CustomScreenDefinition | undefined) ?? base.definition,
       sidebarLabel: payload.sidebarLabel ?? null,
       // TASK-569: the server increments the revision on every definition save.
       revision: (base.revision ?? 0) + 1,
@@ -498,7 +509,7 @@ export function createCustomScreenEditorPageHarness() {
     );
 
     const nextLoadSpy = vi
-      .spyOn(customScreensClient, "getCustomScreenCached")
+      .spyOn(customScreensClient, "getCustomScreenRawCached")
       .mockImplementation(async (id) => {
         const queuedIndex = loadQueue.findIndex((queued) => queued.screenId === id);
         const queued = queuedIndex === -1 ? null : loadQueue.splice(queuedIndex, 1)[0];

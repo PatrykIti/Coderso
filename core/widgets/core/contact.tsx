@@ -4,7 +4,7 @@ import {
   CSS_COLOR_SCHEMA_PATTERNS,
   CSS_COLOR_VALUE_MAX_LENGTH,
 } from "../../services/theme/cssColorContract";
-import type { WidgetDefinition, WidgetEditorContract, WidgetEditorProps } from "../types";
+import type { WidgetDefinition, WidgetEditorContract, WidgetEditorBundle } from "../types";
 import { compactStyle, resolveClearableCssColorValue } from "./clearableStyle";
 import { getFormRuntimeClientScript } from "./formRuntimeScript";
 import { resolveWidgetLinkAttrs } from "./widgetSafeHref";
@@ -29,12 +29,7 @@ export type ContactMaxWidth = "none" | "md" | "lg" | "xl" | "2xl";
 export type ContactPaddingX = "none" | "sm" | "md" | "lg";
 export type ContactRadius = "sm" | "md" | "lg" | "xl" | "full";
 export type ContactSocialPlatform =
-  | "x"
-  | "linkedin"
-  | "facebook"
-  | "instagram"
-  | "youtube"
-  | "custom";
+  "x" | "linkedin" | "facebook" | "instagram" | "youtube" | "custom";
 
 export type ContactFieldSettings = {
   label?: string;
@@ -1861,11 +1856,9 @@ export function ContactBlock({
 export const getContactDiagnosticsSnapshot = (value: ContactData) =>
   JSON.stringify(redactContactDiagnostics(value), null, 2);
 
-export function createContactWidget(editors: {
-  wizard: ComponentType<WidgetEditorProps<ContactData>>;
-  visual: ComponentType<WidgetEditorProps<ContactData>>;
-  advanced: ComponentType<WidgetEditorProps<ContactData>>;
-}): WidgetDefinition<ContactData> {
+export function createContactWidget(
+  editors: WidgetEditorBundle<ContactData>
+): WidgetDefinition<ContactData> {
   return {
     type: "contact",
     title: "Contact",

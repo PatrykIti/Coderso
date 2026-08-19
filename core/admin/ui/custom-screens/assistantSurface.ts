@@ -1,5 +1,6 @@
 import type { AssistantActiveCustomScreenSurfaceContext } from "../../../services/assistant/actionPlanTypes";
-import type { CustomScreenRecord } from "@/services/customScreensClient";
+import type { CustomScreenRecord } from "@/services/customScreensEditorClient";
+import type { CustomScreenSummaryRecord } from "@/services/customScreensClient";
 import {
   resolveCustomScreenCapabilities,
   type CustomScreenCapabilities,
@@ -17,6 +18,11 @@ import type { Block } from "@/ui/pages/builder/types";
 
 type AssistantSurfaceBlock = Block | ScreenBlockV1;
 type AssistantSurfaceBinding = CustomScreenBinding | ScreenFieldBinding;
+// TASK-467-02: the entries workspace consumes the lightweight summary record
+// (server payload pass-through). Both record shapes carry the same normalized
+// definition/blocks/bindings/capabilities, so the surface accepts either and
+// narrows to the full record shape for typed reads.
+type AssistantScreenInput = CustomScreenRecord | CustomScreenSummaryRecord;
 
 const readBlockDataText = (block: AssistantSurfaceBlock, key: string) => {
   const data = block.data;
@@ -87,27 +93,27 @@ const normalizeBindings = (bindings: AssistantSurfaceBinding[]) =>
     );
 
 export const buildCustomScreenAssistantSurface = (input: {
-  screen: CustomScreenRecord;
+  screen: AssistantScreenInput;
   blocks?: AssistantSurfaceBlock[];
   bindings?: AssistantSurfaceBinding[];
-  capabilities?: CustomScreenCapabilities;
+  capabilities?: CustomScreenCapabilities | CustomScreenSummaryRecord["capabilities"];
   selectedBlockId?: string | null;
   selectedEntryId?: string | null;
   warnings?: string[];
 }): AssistantActiveCustomScreenSurfaceContext => {
+  const screen = input.screen as CustomScreenRecord;
   const blocks =
     input.blocks ??
-    input.screen.definition?.editorView.document.sections.flatMap((section) => section.blocks) ??
-    (input.screen.blocks as Block[]);
-  const bindings =
-    input.bindings ?? input.screen.definition?.editorView.bindings ?? input.screen.bindings;
+    screen.definition?.editorView.document.sections.flatMap((section) => section.blocks) ??
+    (screen.blocks as Block[]);
+  const bindings = input.bindings ?? screen.definition?.editorView.bindings ?? screen.bindings;
   const capabilities =
     input.capabilities ??
-    input.screen.capabilities ??
+    screen.capabilities ??
     resolveCustomScreenCapabilities({
-      definition: input.screen.definition ?? undefined,
-      blocks: input.screen.definition ? undefined : (blocks as Block[]),
-      bindings: input.screen.definition ? undefined : (bindings as CustomScreenBinding[]),
+      definition: screen.definition ?? undefined,
+      blocks: screen.definition ? undefined : (blocks as Block[]),
+      bindings: screen.definition ? undefined : (bindings as CustomScreenBinding[]),
     });
   const writableBindingFields =
     bindings.length > 0 && "blockId" in bindings[0]!
@@ -126,12 +132,12 @@ export const buildCustomScreenAssistantSurface = (input: {
   return {
     kind: "custom-screen",
     screen: {
-      id: input.screen.id,
-      name: input.screen.name,
-      status: input.screen.status,
-      contentTypeId: input.screen.contentTypeId,
-      showInSidebar: input.screen.showInSidebar,
-      sidebarLabel: input.screen.sidebarLabel,
+      id: screen.id,
+      name: screen.name,
+      status: screen.status,
+      contentTypeId: screen.contentTypeId,
+      showInSidebar: screen.showInSidebar,
+      sidebarLabel: screen.sidebarLabel,
       mode: capabilities.mode,
     },
     selectedEntryId: input.selectedEntryId ?? null,

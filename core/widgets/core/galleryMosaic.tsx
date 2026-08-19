@@ -4,7 +4,7 @@ import {
   CSS_COLOR_SCHEMA_PATTERNS,
   CSS_COLOR_VALUE_MAX_LENGTH,
 } from "../../services/theme/cssColorContract";
-import type { WidgetDefinition, WidgetEditorContract, WidgetEditorProps } from "../types";
+import type { WidgetDefinition, WidgetEditorContract, WidgetEditorBundle } from "../types";
 import { resolveClearableCssColorValue } from "./clearableStyle";
 import { createWidgetInstanceId, scopedId } from "./widgetInstanceIds";
 import { resolveWidgetLinkAttrs } from "./widgetSafeHref";
@@ -1473,11 +1473,9 @@ export function GalleryMosaicBlock({
   );
 }
 
-export function createGalleryMosaicWidget(editors: {
-  wizard: ComponentType<WidgetEditorProps<GalleryMosaicData>>;
-  visual: ComponentType<WidgetEditorProps<GalleryMosaicData>>;
-  advanced: ComponentType<WidgetEditorProps<GalleryMosaicData>>;
-}): WidgetDefinition<GalleryMosaicData> {
+export function createGalleryMosaicWidget(
+  editors: WidgetEditorBundle<GalleryMosaicData>
+): WidgetDefinition<GalleryMosaicData> {
   return {
     type: "gallery-mosaic",
     title: "Gallery Mosaic",

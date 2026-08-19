@@ -3,7 +3,7 @@ import React, { type ComponentType, type CSSProperties } from "react";
 import type {
   WidgetDefinition,
   WidgetEditorContract,
-  WidgetEditorProps,
+  WidgetEditorBundle,
   WidgetRenderContext,
 } from "../types";
 import {
@@ -2686,11 +2686,9 @@ export function ProductTableBlock({
   );
 }
 
-export function createProductTableWidget(editors: {
-  wizard: ComponentType<WidgetEditorProps<ProductTableData>>;
-  visual: ComponentType<WidgetEditorProps<ProductTableData>>;
-  advanced: ComponentType<WidgetEditorProps<ProductTableData>>;
-}): WidgetDefinition<ProductTableData> {
+export function createProductTableWidget(
+  editors: WidgetEditorBundle<ProductTableData>
+): WidgetDefinition<ProductTableData> {
   return {
     type: "product-table",
     title: "Product Table",
