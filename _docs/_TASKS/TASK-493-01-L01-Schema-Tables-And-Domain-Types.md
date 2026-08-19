@@ -18,12 +18,14 @@
   and a domain types module that owns their TS types, status enums, and
   `normalize*` helpers. This is the schema foundation for the whole pipeline.
 - **Owning module(s) to create-or-extend:**
-  - `core/db/schema.ts` (extend — add tables immediately after `seoDocuments`
-    at `:988`; the column helpers `uuid/text/integer/boolean/timestamp/jsonb/
-    index/uniqueIndex` are already imported at `:1-13`, but **`numeric` is NOT
-    currently imported** — **ADD `numeric` to the `drizzle-orm/pg-core` import**
-    in `schema.ts` (the only pre-existing "numeric" token is a comment at
-    `:783`, not an import or usage)).
+  - `core/db/tables/seo.ts` (extend — add the four tables immediately after the
+    existing `seoDocuments` table at `:19`; the column helpers
+    `uuid/text/integer/boolean/timestamp/jsonb/index/uniqueIndex` are already
+    imported at `:7-17`, but **`numeric` is NOT currently imported** — **ADD
+    `numeric` to the `drizzle-orm/pg-core` import** in `seo.ts`).
+  - `core/db/schema.ts` (facade — **no change**; it already re-exports
+    `./tables/seo`, so the four new tables become available through the existing
+    re-export).
   - `core/services/seo/seoSearchPerformanceTypes.ts` (**create** — types, enums,
     `normalize*`; sibling to the existing `seoTypes.ts`).
 - **Source-of-truth docs:** `_docs/DATA_MODEL.md` (table catalogue),
@@ -31,11 +33,11 @@
   (downstream shapes), `_docs/SECURITY_SPEC.md` (no PII stored — URLs/queries
   only).
 - **Out of scope:** the migration SQL/snapshot/journal (that is L02 — this leaf
-  only edits `schema.ts` + the types module); any data-access/query helper
+  only edits `core/db/tables/seo.ts` + the types module); any data-access/query helper
   (those live in 03/04); changing `seoDocuments`.
 
 > **DB change:** this leaf alters the Drizzle schema, so it is **incomplete
-> without the L02 migration artifacts** (SQL + `meta/0064_snapshot.json` +
+> without the L02 migration artifacts** (SQL + `meta/0079_snapshot.json` +
 > `meta/_journal.json` entry). L01 and L02 land together.
 
 ---
@@ -60,7 +62,7 @@
 ## Implementation Pseudocode
 
 ```ts
-// core/db/schema.ts — append after seoDocuments (:1011)
+// core/db/tables/seo.ts — append after seoDocuments (:19)
 
 export const seoIndexedPages = pgTable(
   "seo_indexed_pages",
@@ -111,7 +113,7 @@ export const seoSearchQueries = pgTable(
   "seo_search_queries",
   {
     id: uuid("id").defaultRandom().primaryKey(),
-    url: text("url"),                          // null = site-wide query row
+    url: text("url").notNull(),               // always present (03-L02 syncs date+page+query)
     query: text("query").notNull(),
     date: timestamp("date").notNull(),
     clicks: integer("clicks").notNull().default(0),
@@ -163,6 +165,17 @@ export type SeoIndexingState = (typeof seoIndexingStates)[number];
 export const seoSitemapStatuses = ["pending", "submitted", "processed", "error"] as const;
 export type SeoSitemapStatus = (typeof seoSitemapStatuses)[number];
 
+export type SeoSitemapSubmissionRow = {
+  sitemapUrl: string;
+  source: string;
+  status: SeoSitemapStatus;
+  urlCount: number | null;
+  warnings: number;
+  errors: number;
+  lastSubmittedAt: Date | null;
+  lastErrorMessage: string | null;
+};
+
 export type SeoIndexedPage = {
   url: string;
   targetType: "page" | "entry" | null;
@@ -183,7 +196,7 @@ export type SeoSearchMetricPoint = {
 };
 
 export type SeoSearchQueryRow = {
-  url: string | null;
+  url: string;
   query: string;
   clicks: number;
   impressions: number;

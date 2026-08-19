@@ -1,4 +1,4 @@
-# TASK-493-01-L02: Full Migration Artifacts (0064)
+# TASK-493-01-L02: Full Migration Artifacts (0079)
 # FileName: TASK-493-01-L02-Migration-Artifacts.md
 
 **Parent Subtask:** TASK-493-01
@@ -18,20 +18,18 @@
   four tables defined in L01, and verify they apply cleanly. Without this leaf
   the schema change cannot reach a database.
 - **Owning module(s) to create-or-extend:**
-  - `core/db/migrations/0064_<slug>.sql` (**create** — `CREATE TABLE` +
+  - `core/db/migrations/0079_<slug>.sql` (**create** — `CREATE TABLE` +
     `CREATE INDEX`/`CREATE UNIQUE INDEX` statements, `--> statement-breakpoint`
     separated, matching the L01 schema exactly).
-  - `core/db/migrations/meta/0064_snapshot.json` (**create** — Drizzle snapshot,
+  - `core/db/migrations/meta/0079_snapshot.json` (**create** — Drizzle snapshot,
     `"version": "7"`, `"dialect": "postgresql"`).
-  - `core/db/migrations/meta/_journal.json` (**extend** — append the `idx: 64`
-    entry after the existing `idx: 63` / `0063_yummy_glorian`).
+  - `core/db/migrations/meta/_journal.json` (**extend** — append the `idx: 79`
+    entry after the existing `idx: 78` / `0078_backup_users_staging`).
 - **Source-of-truth docs:** `_docs/DATA_MODEL.md` (the four tables get
   catalogued here — done in 06-L02), Drizzle migration conventions used by the
-  existing `0000`–`0063` files.
+  existing `0000`–`0078` files.
 - **Out of scope:** any TS schema edit (that is L01); data-access helpers; any
   destructive change to existing tables.
-
-> **Migration index is provisional.** Re-derive as last-shipped+1 via `drizzle-kit generate` at implementation time. TASK-483/484/493 each add a migration — only one can be 0064; whichever lands later renumbers (0065/0066). Allocate in dependency order at merge.
 
 > **Generate, don't hand-write where possible:** prefer the repo's Drizzle
 > generate command (e.g. `bun run db:generate` / `drizzle-kit generate`) so the
@@ -57,7 +55,7 @@
 ## Implementation Pseudocode
 
 ```sql
--- core/db/migrations/0064_<slug>.sql (shape; mirror L01 exactly)
+-- core/db/migrations/0079_<slug>.sql (shape; mirror L01 exactly)
 CREATE TABLE "seo_indexed_pages" (
   "id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
   "url" text NOT NULL,
@@ -88,10 +86,10 @@ CREATE INDEX "seo_indexed_pages_state_idx" ON "seo_indexed_pages" USING btree ("
 ```jsonc
 // core/db/migrations/meta/_journal.json — append to "entries"
 {
-  "idx": 64,
+  "idx": 79,
   "version": "7",
   "when": <epoch-ms>,
-  "tag": "0064_<slug>",
+  "tag": "0079_<slug>",
   "breakpoints": true
 }
 ```
@@ -106,7 +104,7 @@ fails loudly if any table/index is missing.
 **Regression-test shape:**
 - Apply all migrations against a throwaway DB; assert the four tables and their
   unique/secondary indexes exist (`information_schema` / `pg_indexes`).
-- Snapshot/journal parity: `idx` is contiguous (64 follows 63), `tag` matches
+- Snapshot/journal parity: `idx` is last-shipped + 1 (79 follows 78), `tag` matches
   the SQL filename.
 
 ---
@@ -117,5 +115,9 @@ fails loudly if any table/index is missing.
   `tests/integration/`) — run the migrator against an ephemeral DB and assert
   table/index existence. Migration apply is a **runtime/DB flow → Bun**, not
   Vitest.
+- **Migration-smoke test:** `tests/integration/toolchain/bunLaneProvisioning.test.ts`
+  is the concrete apply test — after 0079 lands, sync `MIGRATION_COUNT` 77 → 78
+  in `tests/integration/toolchain/bunLaneProvision.test.ts`,
+  `bunLaneProvisioning.test.ts`, and `runBunParallel.test.ts`.
 - Drizzle generate is idempotent afterward (re-running produces no new diff).
 - `bun run typecheck` stays green.

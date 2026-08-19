@@ -18,21 +18,27 @@
   let admins trigger a performance **sync** and a sitemap **submit**, replacing
   the placeholder/heuristic stats.
 - **Owning module(s) to create-or-extend:**
-  - `core/admin/services/seoClient.ts` (**extend** — add `getSeoOverview()`,
-    `getSearchPerformance(params)`, `submitSitemap(body)`, `syncSearchPerformance(body)`
-    calling the subtask 02/03/04 endpoints; reuse the existing apiClient + cache
-    helpers used by `listSeoCached`/`updateSeo`).
+  - `core/admin/services/seoClient.ts` (**extend ADDITIVELY** — add
+    `getSeoOverview()`, `getSearchPerformance(params)`, `submitSitemap(body)`,
+    `syncSearchPerformance(body)` calling the subtask 02/03/04 endpoints via
+    the real `apiRequest<T>(path, init, { withCsrf })` seam
+    (`apiClient.ts:179`); **new methods only** — never change the existing
+    list/detail methods or cache contract. Cross-stream guard:
+    TASK-551-09-L04 later hardens admin cache clients (lands after 493); this
+    leaf must stay additive so that hardening can land cleanly).
+  - `core/admin/services/cachePolicy.ts` (**extend** — ADD a
+    `cacheKeys.seoOverview` entry only; the existing `cacheKeys.seoList` /
+    `seoDetail` entries stay byte-identical).
   - `core/admin/ui/seo/SeoManagerPage.tsx` (**extend** — fetch the overview
     alongside the list; feed the **stat row** from real `SeoOverview` and
-    **ADD/relabel an "Indexed pages" `StatCard` backed by `overview.indexedPages`**.
-    NOTE: the TASK-479-26-L02 reskin's 4-up is Avg score / Issues / **Optimized
-    pages** / Warnings — it deliberately does **not** render an "Indexed pages"
-    card (it drops the prototype's fabricated one), so this leaf **adds or
-    relabels** an "Indexed pages" card rather than flipping a pre-existing
-    placeholder. Add "Sync performance" + "Submit sitemap" actions). The current
-    `averageScore`/`scanLabel` derivation at `:160-177` and `getHealth` at `:35`
-    stay; the "Indexed pages" value is sourced from `overview.indexedPages` (no
-    existing "Indexed pages" placeholder to flip).
+    **ADD a new "Indexed pages" `StatCard` backed by `overview.indexedPages`**
+    (ADDITIVE: the TASK-479-26-L02 reskin's 4-up is Avg score / Issues /
+    **Optimized pages** / Warnings — it deliberately does **not** render an
+    "Indexed pages" card, so this leaf adds a fifth card and must NOT relabel
+    away Optimized pages. Add "Sync performance" + "Submit sitemap" actions).
+    The current `averageScore`/`scanLabel` derivation at `:160-177` and
+    `getHealth` at `:35` stay; the "Indexed pages" value is sourced from
+    `overview.indexedPages` (no existing "Indexed pages" placeholder to flip).
   - Optionally a small `SeoPerformancePanel.tsx` for the top-queries/series view
     (kept additive; the table/drawer stay as-is).
 - **Source-of-truth docs:** `_docs/CMS_API.md` (endpoints consumed),
@@ -48,14 +54,16 @@
 
 - **Endpoint visibility:** n/a — admin client/UI only; it calls the **internal**
   routes built in 02/03/04, which enforce their own RBAC/CSRF.
-- **Auth model:** the admin session already attached by `apiClient`; the
-  sync/submit POSTs carry the standard admin CSRF token like other admin writes.
+- **Auth model:** the admin session already attached by the `apiRequest` seam
+  (`apiClient.ts:179`); the sync/submit POSTs carry the standard admin CSRF
+  token via `{ withCsrf: true }`, like other admin writes (same as `updateSeo`).
 - **RBAC:** the UI surfaces sync/submit actions; the **server** enforces
   `settings:write` (and read routes `content:read`). The client must handle a
   `403` gracefully (hide/disable the action, show a toast) rather than assuming
   permission.
-- **CSRF / Rate-limit:** handled server-side; the client just propagates the CSRF
-  header via the existing `apiClient`.
+- **CSRF / Rate-limit:** handled server-side; the client propagates the CSRF
+  header via the `apiRequest` `{ withCsrf: true }` option (the same seam
+  `updateSeo` already uses).
 - **Validation:** request bodies match the server schemas (reject-unknown server
   side); the client sends only the documented fields.
 - **Secret/PII handling:** the UI never receives or renders the GSC credential
@@ -67,31 +75,99 @@
 ## Implementation Pseudocode
 
 ```ts
-// core/admin/services/seoClient.ts (extend)
-export const getSeoOverview = () => apiClient.get<SeoOverview>("/seo/overview");
-export const getSearchPerformance = (p: SearchPerfParams) =>
-  apiClient.get<SeoSearchPerformance>("/seo/search-performance", { query: p });
-export const syncSearchPerformance = (b?: { startDate?: string; endDate?: string }) =>
-  apiClient.post("/seo/search-performance/sync", b ?? {});
-export const submitSitemap = (b?: { sitemapPath?: string }) =>
-  apiClient.post("/seo/sitemap/submit", b ?? {});
+// core/admin/services/seoClient.ts (extend ADDITIVELY — new methods only;
+// existing list/detail methods + cache contract untouched. TASK-551-09-L04
+// later hardens admin cache clients after 493 lands.)
+import { apiRequest } from "./apiClient";
+import { cacheKeys, cacheTtlMs } from "@/services/cachePolicy";
+import { createMemoryBackedLocalCache } from "@/utils/storageCache";
+import type { SeoOverview, SeoSearchPerformance } from "../../services/seo/seoTypes";
+
+// Client params type, owned locally by 05-L01 (exported for consumers).
+export type SearchPerfParams = {
+  targetId?: string;
+  startDate?: string;
+  endDate?: string;
+  limit?: number;
+};
+
+const isSeoOverview = (v: unknown): v is SeoOverview => Boolean(v && typeof v === "object");
+
+// Read-through overview cache using the SAME helpers listSeoCached uses
+// (createMemoryBackedLocalCache + cachePolicy TTL). The cacheKeys.seoList /
+// cacheKeys.seoDetail contract is preserved byte-identically.
+const seoOverviewCache = createMemoryBackedLocalCache({
+  key: cacheKeys.seoOverview,
+  ttlMs: cacheTtlMs.list,
+  validate: isSeoOverview,
+});
+
+export const getCachedSeoOverview = () => seoOverviewCache.read();
+
+export async function getSeoOverview(options?: { force?: boolean }) {
+  if (!options?.force) {
+    const cached = getCachedSeoOverview();
+    if (cached) return cached;
+  }
+  const overview = await apiRequest<SeoOverview>("/seo/overview", { method: "GET" });
+  seoOverviewCache.write(overview);
+  return overview;
+}
+
+export function getSearchPerformance(p: SearchPerfParams) {
+  const params = new URLSearchParams();
+  for (const [key, value] of Object.entries(p)) {
+    if (value !== undefined) params.set(key, String(value));
+  }
+  return apiRequest<SeoSearchPerformance>(
+    `/seo/search-performance?${params.toString()}`,
+    { method: "GET" }
+  );
+}
+
+export function syncSearchPerformance(b?: { startDate?: string; endDate?: string }) {
+  return apiRequest(
+    "/seo/search-performance/sync",
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(b ?? {}),
+    },
+    { withCsrf: true }
+  );
+}
+
+export function submitSitemap(b?: { sitemapPath?: string }) {
+  return apiRequest(
+    "/seo/sitemap/submit",
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(b ?? {}),
+    },
+    { withCsrf: true }
+  );
+}
 ```
 
 ```tsx
 // core/admin/ui/seo/SeoManagerPage.tsx (extend)
 const [overview, setOverview] = useState<SeoOverview | null>(getCachedSeoOverview());
 useEffect(() => { void getSeoOverview().then(setOverview).catch(noop); }, []);
-// stat row: add/relabel an "Indexed pages" StatCard -> overview?.indexedPages ?? 0
+// stat row: ADD a new 5th "Indexed pages" StatCard -> overview?.indexedPages ?? 0
+// (the 479-26-L02 4-up — Avg score / Issues / Optimized pages / Warnings — stays as-is)
 // new actions:
 const onSync = async () => { await syncSearchPerformance(); await refresh({ force: true });
-                             setOverview(await getSeoOverview()); };
-const onSubmitSitemap = async () => { await submitSitemap(); setOverview(await getSeoOverview()); };
+                             setOverview(await getSeoOverview({ force: true })); };
+const onSubmitSitemap = async () => { await submitSitemap();
+                                      setOverview(await getSeoOverview({ force: true })); };
 ```
 
-**Data flow:** mount → `getSeoOverview` + existing `listSeoCached` → render real
-stats + table → user clicks Sync/Submit → POST → refetch overview/list. Reuse the
-existing cache-event subscription (`subscribeCacheEvents`, `:135`) so the list
-stays consistent.
+**Data flow:** mount → `getSeoOverview` (read-through cache via
+`getCachedSeoOverview`) + existing `listSeoCached` → render real stats + table
+→ user clicks Sync/Submit → POST via `apiRequest(..., { withCsrf: true })` →
+refetch overview/list. Reuse the existing cache-event subscription
+(`subscribeCacheEvents`, `:135`) so the list stays consistent.
 
 **Error handling:** reuse the page's `error`/`toast` pattern (`:200-248`);
 surface `403` as a disabled action + toast, `409 gsc_not_configured` as a
@@ -102,7 +178,9 @@ surface `403` as a disabled action + toast, `409 gsc_not_configured` as a
   zeros + empty-state copy.
 - Actions: Sync/Submit call the right client methods and refetch; a `403`
   disables the action without crashing.
-- Cache: `cacheKeys.seoList`/`seoDetail` contract unchanged.
+- Cache: `cacheKeys.seoList`/`seoDetail` contract unchanged;
+  `getCachedSeoOverview()` returns the cached overview read-through and
+  `getSeoOverview({ force: true })` revalidates after sync/submit.
 
 ---
 

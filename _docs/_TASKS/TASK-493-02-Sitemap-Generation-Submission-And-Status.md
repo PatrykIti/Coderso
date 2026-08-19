@@ -21,9 +21,9 @@ that sitemap to Google and track its submission status in
 `seo_sitemap_submissions` (from subtask 01).
 
 Core today has **no** sitemap or robots.txt route — `handlePublicRequest`
-(`core/server/publicSite.tsx:1449`) dispatches `/api/search`, site assets,
-`/preview`, and page rendering, but nothing for `/sitemap.xml`. This subtask
-adds it.
+applies the `public_read` rate-limit (`core/server/publicSite.tsx:309`) and
+dispatches `/api/search` (`:317`), site assets, `/preview`, and page rendering,
+but nothing for `/sitemap.xml`. This subtask adds it.
 
 ---
 
@@ -32,7 +32,7 @@ adds it.
 | LNN | Title | Lane | Status |
 |-----|-------|------|--------|
 | L01 | Sitemap XML builder + public `/sitemap.xml` & `robots.txt` directive | Vitest (builder) + Bun (route) | ⏳ To Do |
-| L02 | Sitemap submission + status tracking (internal routes) | Bun | ⏳ To Do |
+| L02 | Sitemap submission + status tracking (service) | Bun | ⏳ To Do |
 
 ---
 
@@ -50,5 +50,6 @@ adds it.
 - L01 — Vitest for the pure XML builder (URL set, lastmod, noindex exclusion,
   XML escaping); Bun route-integration for `GET /sitemap.xml` (content-type,
   `public_read` rate-limit bucket, robots.txt directive).
-- L02 — Bun route-integration + security for the internal submit/status routes
-  (auth/RBAC/CSRF, secret-never-to-client, error mapping).
+- L02 — Bun service + security for submission/status tracking (outbound GSC PUT
+  via the 03-L01 client, SSRF path guard, DB upserts). Route registration,
+  schemas, CSRF, and secret-never-to-client assertions land in 04-L02.

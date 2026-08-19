@@ -25,6 +25,14 @@
     stay within a response-time budget at N seeded URLs).
   - `tests/security/seo-pipeline.test.ts` (**create** — sweep all new routes for
     secret-never-to-client + RBAC/CSRF enforcement).
+  - `tests/integration/routes/seo.test.ts` (**extend** — the existing ~100-line
+    file covers route registration + `mapSeoError`; add registration coverage
+    for the 5 new routes (`GET /seo/overview`, `GET /seo/search-performance`,
+    `POST /seo/search-performance/sync`, `GET /seo/sitemap`,
+    `POST /seo/sitemap/submit`) and `mapSeoError` coverage for the new codes
+    (`gsc_not_configured`, `gsc_credential_invalid`, `gsc_sync_window_invalid`,
+    `gsc_request_failed:<status>` via `startsWith("gsc_request_failed:")`,
+    `sitemap_path_invalid`, `sitemap_submit_failed`)).
 - **Source-of-truth docs:** `_docs/SECURITY_SPEC.md`, `_docs/CMS_API.md`,
   `_docs/SEARCH_SPEC.md`.
 - **Out of scope:** new product behaviour; this leaf only tests what 01–05 ship.
@@ -86,8 +94,9 @@ above; this is the closure evidence for the umbrella.
 
 ## Testing Requirements
 
-- **Bun** for all three files — runtime/route/security/perf flows ⇒ Bun lane
-  (`tests/integration/*`, `tests/security/*`, `tests/perf/*`).
+- **Bun** for all suites — runtime/route/security/perf flows ⇒ Bun lane
+  (`tests/integration/*`, `tests/security/*`, `tests/perf/*`): the three new
+  files above plus the extended `tests/integration/routes/seo.test.ts`.
 - Run with the full gate: `bun test` (the new suites) + the per-leaf Vitest
   suites green; `bun run lint` + `bun run typecheck`.
 - State explicitly in the closeout if the Google stub had to approximate any GSC

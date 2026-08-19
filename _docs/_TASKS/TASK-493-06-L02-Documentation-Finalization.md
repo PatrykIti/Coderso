@@ -17,14 +17,16 @@
 - **Goal:** Bring the four source-of-truth docs in line with the shipped
   pipeline so the contract is discoverable and accurate.
 - **Owning module(s) to create-or-extend:**
-  - `_docs/DATA_MODEL.md` (**extend** — catalogue `seo_indexed_pages`,
+  - `_docs/DATA_MODEL.md` (**extend** — add a **new** "SEO indexing &
+    search-performance tables" section cataloguing `seo_indexed_pages`,
     `seo_search_metrics`, `seo_search_queries`, `seo_sitemap_submissions` with
-    columns + indexes, beside the existing `seo_documents` entry).
+    columns + indexes; DATA_MODEL.md has **no** existing `seo_documents` entry,
+    so this is a new section, not an extension beside one).
   - `_docs/CMS_API.md` (**extend** — under the existing **SEO Manager** section
-    (`:2726`), add `GET /seo/overview`, `GET /seo/search-performance`,
+    (`:3052`), add `GET /seo/overview`, `GET /seo/search-performance`,
     `POST /seo/search-performance/sync`, `GET /seo/sitemap`,
-    `POST /seo/sitemap/submit`, and the public `GET /sitemap.xml`/`robots.txt`,
-    with permissions and example payloads).
+    `POST /seo/sitemap/submit`, and the public `GET /sitemap.xml` + `robots.txt`
+    `Sitemap:` directive, with permissions and example payloads).
   - `_docs/SEARCH_SPEC.md` (**extend** — an "SEO search-performance ingest"
     addendum: GSC source, the daily-bucket ingest, and how it differs from the
     in-app admin search this doc otherwise describes).
@@ -32,8 +34,11 @@
     secret in the Integrations store, server-side-only outbound, never to client
     cache/log; reuse of `settings:write` + CSRF + `admin_write` for sync/submit).
 - **Source-of-truth docs:** the four files above are themselves the targets.
-- **Out of scope:** changelog entries and `_docs/_TASKS/README.md` (the
-  orchestrator owns the board); any code change.
+- **Changelog entry (in scope):** this leaf owns the single TASK-493 changelog
+  entry, pinned to number **1309** (verified next-free; 1308 is used by
+  TASK-467), plus the matching `_docs/_CHANGELOG/README.md` index row.
+- **Out of scope:** `_docs/_TASKS/README.md` board rows (the orchestrator owns
+  the board); any code change.
 
 ---
 
@@ -51,10 +56,11 @@ server-side-only outbound). They must not contradict the implemented behaviour.
 Not applicable (documentation leaf). Edit checklist:
 
 ```text
-DATA_MODEL.md        -> 4 new table subsections (columns, types, indexes)
-CMS_API.md (:2726)   -> 5 internal endpoints + 1 public endpoint, perms + examples
-SEARCH_SPEC.md       -> "## SEO search-performance ingest" addendum
-SECURITY_SPEC.md     -> "GSC credential & sync" note under integrations/secrets
+DATA_MODEL.md         -> NEW section: 4 table subsections (columns, types, indexes)
+CMS_API.md (:3052)    -> 5 internal endpoints + 2 public paths, perms + examples
+SEARCH_SPEC.md        -> "## SEO search-performance ingest" addendum
+SECURITY_SPEC.md      -> "GSC credential & sync" note under integrations/secrets
+CHANGELOG 1309        -> single task entry + `_CHANGELOG/README.md` index row
 ```
 
 **Data flow / Error handling / Regression-test shape:** n/a — verified by review
@@ -66,6 +72,7 @@ documented shapes must match what that test asserts).
 ## Testing Requirements
 
 - No automated tests (docs only). Verification = cross-check each documented
-  endpoint/table/payload against the implemented `seoRoutes.ts`, `schema.ts`
-  tables, and the `seoTypes.ts` shapes, and against the 06-L01 assertions.
+  endpoint/table/payload against the implemented `seoRoutes.ts`,
+  `core/db/tables/seo.ts` tables, and the `seoTypes.ts` shapes, and against
+  the 06-L01 assertions.
 - Run any repo docs/markdown lint if present; otherwise visual review.

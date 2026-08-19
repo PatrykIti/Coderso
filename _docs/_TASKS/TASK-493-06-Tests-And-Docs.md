@@ -27,7 +27,7 @@ contract.
 | LNN | Title | Lane | Status |
 |-----|-------|------|--------|
 | L01 | Pipeline integration + perf/security gate tests | Bun | ⏳ To Do |
-| L02 | Documentation finalization (DATA_MODEL / CMS_API / SEARCH_SPEC / SECURITY_SPEC) | docs | ⏳ To Do |
+| L02 | Documentation finalization (DATA_MODEL / CMS_API / SEARCH_SPEC / SECURITY_SPEC + changelog 1309) | docs | ⏳ To Do |
 
 ---
 
@@ -42,4 +42,5 @@ contract.
 - L01 — Bun integration (`tests/integration/*`) for the full flow + a
   `tests/perf/*` budget for `/sitemap.xml` and the overview route, and a
   `tests/security/*` sweep for secret-never-to-client across the new routes.
-- L02 — doc edits only; verified by review against the implemented endpoints.
+- L02 — doc edits + the pinned changelog entry **1309**; verified by review
+  against the implemented endpoints.
