@@ -8,7 +8,7 @@
 **Estimated Effort:** Large
 **Dependencies:** TASK-539-01 through TASK-539-07
 **Status:** ⏳ To Do
-**Changelog:** 1251 (pinned; create in this leaf only)
+**Changelog:** 1318 (pinned; create in this leaf only)
 
 ---
 
@@ -23,16 +23,18 @@ May edit only:
 - `docs/develop/content-and-widgets.md`;
 - `docs/guide/screens/page-editor-preview-settings-and-history.md`;
 - TASK-539 descendant/parent statuses, only the TASK-539 board row/statistics delta,
-  changelog 1251, and only its changelog-index row;
+  changelog 1318, and only its changelog-index row;
 - screenshots `_docs/_workflows/_smoke/task-539-*`.
 
 Read but never edit:
 
-- `tests/integration/runtime/pages-runtime.test.ts` (legacy 2,000+ line suite);
+- `tests/integration/runtime/pages-runtime.test.ts` (427-line suite, already split
+  into `pages-runtime-blocks.test.ts` / `pages-runtime-responsive.test.ts` /
+  `pages-runtime-test-support.ts`; read-only);
 - `tests/integration/runtime/site-shell-runtime.test.ts`.
 
 Do not edit production source, another task family, workflow code, or shared-index
-bytes outside the exact TASK-539/changelog-1251 deltas. Read both indexes fresh
+bytes outside the exact TASK-539/changelog-1318 deltas. Read both indexes fresh
 immediately before closure. There is no TASK-545 prerequisite, exception, manifest,
 or evidence-path substitution.
 
@@ -77,7 +79,7 @@ getSetting, getSettingRecord, setSetting, deleteSetting
 getSecuritySettings, setSecuritySettings, resetSecuritySettingsCache
 resetRateLimitBuckets
 createPageTemplate, SITE_FOOTER_TEMPLATE_SETTING_KEY, clearSiteCache
-createForm, setFormFields, createListingQuery
+createForm, setFormFields
 db; accessLogs, auditLogs, formFields, forms, ipAllowlist, listingQueries,
   pageRevisions, pages, pageTemplates, previewTokens, roles, sessions, settings,
   userRoles, users
@@ -125,6 +127,14 @@ pageRequest(method, routeSuffix, actor?, csrf?, body?, expectedStatus)
 snapshotOwnedMutationState(slugs, pageIds)
   query only exact owned Page slugs/ids plus their pageRevisions and auditLogs
   return deterministic rows/counts so every denial can compare before/after bytes
+
+createOwnedListingQuery(ownedUserId)
+  insert one suite-owned listingQueries row directly through db with the typed
+    desired query shape {source:"users",sourceConfig:{},filters:[...],sort:[...],
+    pagination:{limit:1,offset:0},fields:["id","name","status"]}
+  return the created UUID id
+  this is a local typed DB insert fixture (no admin HTTP client, service writer
+    fence/lock, cache, or audit side effects)
 ```
 
 Create at least these actors with collision-safe UUID identities and exact RBAC:
@@ -177,7 +187,7 @@ Create one collision-safe published, public suite-owned Form through `createForm
 and one exact text field through `setFormFields`:
 `{type:"text",label:"Name",name:"name",required:true,settings:{},orderIndex:0}`;
 the Page form block references that exact Form ID. Create one suite-owned saved query
-through `createListingQuery`. Its deterministic query is
+through `createOwnedListingQuery`. Its deterministic query is
 `{source:"users",sourceConfig:{},filters:[{field:"id",op:"eq",value:ownedUserId}],`
 `sort:[{field:"id",dir:"asc"}],pagination:{limit:1,offset:0},`
 `fields:["id","name","status"]}`. Under the same unsafe marquee subtree, the Page
@@ -458,7 +468,7 @@ identity, and user-visible editing/publish workflow. Do not describe task intern
 the user guide.
 
 Create
-`_docs/_CHANGELOG/1251-{YYYY-MM-DD}-task-539-page-v2-post-audit-remediation-ii.md`
+`_docs/_CHANGELOG/1318-{YYYY-MM-DD}-task-539-page-v2-post-audit-remediation-ii.md`
 using the actual closure date and live changelog convention. Record exact validation
 results, line receipt, audits, nine-flow evidence, screenshots, and owner commit scope
 without secrets. Its Tasks field/index coverage must enumerate TASK-539, all 8 direct
@@ -467,5 +477,5 @@ status is closed.
 
 Only after every required receipt is green: mark leaves terminal, then child tasks,
 then TASK-539; update only its board row and recompute statistics from physical files;
-add only changelog 1251/index rows. No direct child may remain open. Do not commit as an
+add only changelog 1318/index rows. No direct child may remain open. Do not commit as an
 agent.

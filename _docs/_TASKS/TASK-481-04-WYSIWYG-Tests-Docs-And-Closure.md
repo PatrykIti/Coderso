@@ -10,6 +10,7 @@
 **Status:** ⏳ To Do
 **Started:** `<YYYY-MM-DD>`
 **Completed:** `<YYYY-MM-DD>`
+**Changelog:** 1317 (pinned; create only at TASK-481 closure)
 
 ---
 

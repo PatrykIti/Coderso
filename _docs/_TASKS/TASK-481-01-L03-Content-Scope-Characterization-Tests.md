@@ -10,6 +10,7 @@
 **Status:** ⏳ To Do
 **Started:** `<YYYY-MM-DD>`
 **Completed:** `<YYYY-MM-DD>`
+**Changelog:** 1317 (pinned; create only at TASK-481 closure)
 
 ---
 
@@ -114,3 +115,28 @@ Notes for the implementer:
 - Green gate: `bun run` the project's vitest target for this file (project standard
   vitest run); no Bun-lane runtime test.
 - No DB migration artifacts.
+
+## Line gate / page-authoring-canvas.test.tsx split
+
+`tests/vitest/ui/page-authoring-canvas.test.tsx` is 1,138 lines. Split it cohesively
+into four independently-runnable suites plus a shared harness, mirroring the
+`PageAuthoringCanvas.tsx` split from TASK-481-01-L01:
+
+- `tests/vitest/ui/pageAuthoringCanvasHarness.tsx` (new, shared) — `baseCanvasProps`
+  (vi.fn() callbacks), the local `mount()` helper (createRoot + flushSync →
+  `{ container, cleanup }`), `renderToStaticMarkup`, and the
+  `createPageSectionV2`/`createPageBlockV2` fixtures (`sectionWithBrandBlockProps`).
+- `tests/vitest/ui/page-authoring-canvas.test.tsx` (retained facade suite) — `SectionCanvas`
+  chrome/ghost/inline-edit structure tests plus the brand-map/live-repaint and
+  end-to-end brand-WYSIWYG cases added by TASK-481-02-L02 / TASK-481-04-L01.
+- `tests/vitest/ui/page-authoring-inline-color-toolbar.test.tsx` (new) — inline color/
+  highlight swatch application, live-selection snapshot, custom picker, and toolbar
+  mousedown focusability.
+- `tests/vitest/ui/page-authoring-link-toolbar.test.tsx` (new) — link URL seed/unlink/
+  remove.
+- `tests/vitest/ui/page-authoring-toolbar-dock.test.tsx` (new) — dock toggle/placement
+  and owner-controlled dock.
+
+Each suite runs independently under the existing `happy-dom` harness (no RTL /
+jest-dom / user-event); extract by behavior, not arbitrary ranges. Post-split
+receipt: every suite `<=1000` lines; verify with `wc -l` and `git diff --check`.

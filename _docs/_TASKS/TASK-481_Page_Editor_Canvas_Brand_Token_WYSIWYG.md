@@ -9,6 +9,7 @@
 **Status:** ⏳ To Do
 **Started:** `<YYYY-MM-DD>`
 **Completed:** `<YYYY-MM-DD>`
+**Changelog:** 1317 (pinned; create only at TASK-481 closure)
 
 ---
 
@@ -117,9 +118,29 @@ vitest + real-input Playwright smoke), L02 (docs + TASK-479 reciprocity).
 > Implementation note: the real canvas code lives in
 > `core/admin/ui/pages/editor/PageAuthoringCanvas.tsx` (`SectionCanvas` /
 > `renderBlockFrame`) — NOT a top-level `core/admin/ui/pages/PageAuthoringCanvas.tsx`.
-> Block brand visual style (`toPageBlockStyle`, `core/services/pages/pageRendererV2.tsx`)
-> is applied on the same frame `<div>` as the chrome, so 481-01-L01 co-locates that
-> visual style with the content scope while layout/chrome stay on the frame.
+> Block brand visual style (`toPageBlockStyle`, defined in
+> `core/services/pages/pageBlockRenderStyles.ts`:266 and imported by
+> `core/services/pages/pageRendererV2.tsx`:903) is applied on the same frame `<div>`
+> as the chrome, so 481-01-L01 co-locates that visual style with the content scope
+> while layout/chrome stay on the frame.
+
+## Line gate / oversized-file split plan
+
+This family touches three files currently over the 1,000-line limit. Each owning
+leaf prescribes a cohesive split; the post-split receipt must show every touched/
+extracted module and test at `<=1000` lines.
+
+| File | Current lines | Owning leaf | Split prescription |
+| --- | --- | --- | --- |
+| `core/admin/ui/pages/PageEditor.tsx` | 5,204 | TASK-481-02-L02 (defers to TASK-539-03-L03) | 539-03-L03 owns the facade split; see leaf |
+| `core/admin/ui/pages/editor/PageAuthoringCanvas.tsx` | 1,106 | TASK-481-01-L01 | extract `PageAuthoringCanvasInline.tsx`; facade keeps `SectionCanvas` |
+| `tests/vitest/ui/page-authoring-canvas.test.tsx` | 1,138 | TASK-481-01-L03 | split into four focused suites + shared harness |
+
+- `PageEditor.tsx` is a shared facade. TASK-539-03-L03 owns its cohesive split into
+  `PageEditorRoot.tsx`, `usePageEditorController.ts`, `pageEditorDocumentCommands.ts`,
+  `PageEditorToolbar.tsx`, `PageEditorRegistryFields.tsx`,
+  `PageEditorResponsivePanel.tsx`, and `PageEditorSettingsPanel.tsx`. TASK-481 does
+  NOT re-split it; see the single-writer collision guard below.
 
 ## Risks / constraints
 
@@ -158,6 +179,30 @@ frame; align the `@theme` brand-`--color-*` edit with 479-05-L03. No `--admin-*`
 dark-mode or `canvasSiteTokenVariables` semantics change on the 479 side — the only
 brand/WYSIWYG behavior change is owned here.
 
+## Single-writer collision guard (TASK-539)
+
+`core/admin/ui/pages/PageEditor.tsx` is shared with TASK-539-03-L03. The two
+families own disjoint SURFACES of that one file and must never clobber each other:
+
+- TASK-481 owns the brand-token content-scope surface: `useCanvasSiteTokens` +
+  `canvasSiteTokenVariables`/`canvasBrandTokenVariables`/`sitePalette` derivation
+  (`PageEditor.tsx`:682–687), `PageEditorColorPaletteContext`/`usePageEditorColorPalette`
+  (`:352`/`:355`), its provider (`:3040`), and the `SectionCanvas` render (`:2675`).
+- TASK-539-03-L03 owns the gallery/responsive surface and the facade split.
+- Both writers must read the current on-disk state immediately before editing and
+  never revert, checkout, or "clean up" the other's uncommitted edits.
+
+**Forbidden paths for TASK-481 (never edit):** all `_docs/_TASKS/TASK-539*` files,
+TASK-539's `tests/vitest/ui/page-editor-v2-*.test.tsx` suites, TASK-539's
+gallery/responsive extraction modules (`PageEditorRegistryFields.tsx`,
+`PageEditorResponsivePanel.tsx`, `PageEditorToolbar.tsx`,
+`PageEditorSettingsPanel.tsx`, `pageEditorDocumentCommands.ts`), and changelog
+`1318` (created only by TASK-539 closure).
+
+**Changelog pins:** TASK-481 creates only `1317`; TASK-539 creates only `1318`.
+Closure agents must read `_docs/_CHANGELOG/README.md` fresh immediately before
+editing.
+
 ## Testing Requirements
 
 - Vitest lane only (pure admin-UI render + pure-TS token contracts; no runtime/route/
@@ -173,6 +218,26 @@ brand/WYSIWYG behavior change is owned here.
 - No Bun lane (no runtime/route/plugin-lifecycle/security/perf surface); no DB
   migration artifacts (display-only token threading, no schema/DB change).
 
+## Validation Commands
+
+```bash
+bun --cwd core lint:types
+bun --cwd core lint
+bun run test:vitest -- \
+  tests/vitest/ui/page-authoring-canvas.test.tsx \
+  tests/vitest/ui/page-authoring-inline-color-toolbar.test.tsx \
+  tests/vitest/ui/page-authoring-link-toolbar.test.tsx \
+  tests/vitest/ui/page-authoring-toolbar-dock.test.tsx \
+  tests/vitest/ui/themeTokens.test.ts \
+  tests/vitest/ui/shared-color-control.test.tsx
+```
+
+Mandatory runtime smoke (UI/editor work): a `playwright-cli` named session
+(e.g. `-s=wf481smoke`) with screenshots saved under `_docs/_workflows/_smoke/`,
+covering at least 5 distinct real flows of the brand-token canvas with
+VISIBLE-EFFECT assertions (computed styles / geometry / DOM state), plus a dev
+server restart and light+dark admin verification.
+
 ## Documentation Updates Required
 
 - `_docs/DESIGN_TOKENS.md`: brand-vs-neutral canvas resolution model (content scope
@@ -183,8 +248,9 @@ brand/WYSIWYG behavior change is owned here.
 
 ## Notes
 
-- Do NOT create changelog entries or edit `_docs/_TASKS/README.md` (orchestrator
-  syncs the board).
+- Do NOT create changelog entries or edit `_docs/_TASKS/README.md` during
+  implementation (orchestrator syncs the board). Changelog `1317` is pinned for
+  TASK-481 and is created only at closure (see the `**Changelog:**` field above).
 - This is display-only token threading: no routes/auth/RBAC/schema/cache changes;
   values stay sanitized via the `authoringColorTokenNames` allowlist +
   `pageAuthoringSanitizers`.

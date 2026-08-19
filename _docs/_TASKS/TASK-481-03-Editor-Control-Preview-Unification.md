@@ -10,6 +10,7 @@
 **Status:** ⏳ To Do
 **Started:** `<YYYY-MM-DD>`
 **Completed:** `<YYYY-MM-DD>`
+**Changelog:** 1317 (pinned; create only at TASK-481 closure)
 
 ---
 
@@ -21,11 +22,11 @@ inline + block-level + in-canvas brand all agree (no preview/apply mismatch).
 
 Today the inline mark toolbar in
 `core/admin/ui/pages/editor/PageAuthoringCanvas.tsx` builds its swatches from a
-module-level constant `inlineTextMarkPalette` (line 197) computed from
+module-level constant `inlineTextMarkPalette` (line 214) computed from
 `getPageEditorColorPalette()` with **no tokens** — i.e. `DEFAULT_TOKENS` — and
 filtered to the four brand ids `["primary","secondary","accent","border"]`. The
 block/section controls instead read the live `sitePalette` via
-`PageEditorColorPaletteContext` (PageEditor.tsx:415) and preview each swatch by its
+`PageEditorColorPaletteContext` (PageEditor.tsx:352) and preview each swatch by its
 resolved `previewValue`. This subtask threads the live palette into the inline
 toolbar and renders inline swatches by `previewValue` too, while strictly
 preserving real-input focusability per memory

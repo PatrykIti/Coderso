@@ -10,6 +10,7 @@
 **Status:** ⏳ To Do
 **Started:** `<YYYY-MM-DD>`
 **Completed:** `<YYYY-MM-DD>`
+**Changelog:** 1317 (pinned; create only at TASK-481 closure)
 
 ---
 
@@ -20,18 +21,18 @@ palette and render its swatches by resolved `previewValue`, so inline previews a
 with the block-level control and with the now-WYSIWYG in-canvas brand render.
 
 Today the inline toolbar uses a module-level constant
-`inlineTextMarkPalette` (`core/admin/ui/pages/editor/PageAuthoringCanvas.tsx`:197)
+`inlineTextMarkPalette` (`core/admin/ui/pages/editor/PageAuthoringCanvas.tsx`:214)
 built from `getPageEditorColorPalette()` with **no tokens** (= `DEFAULT_TOKENS`),
 filtered to the four brand ids `["primary","secondary","accent","border"]`. The
 block/section controls instead read the live `sitePalette` via
-`PageEditorColorPaletteContext` (`PageEditor.tsx`:415) and preview each swatch by
+`PageEditorColorPaletteContext` (`PageEditor.tsx`:352) and preview each swatch by
 `swatch.previewValue`. This leaf threads the same live palette into the inline
 toolbar and renders inline swatches by `previewValue`, keeping the brand-id filter.
 
 **Owning module(s) to create-or-extend:**
 - `core/admin/ui/pages/editor/PageAuthoringCanvas.tsx` — the inline mark toolbar
-  inside `InlineEditableCanvasText` (`markToolbar`, swatch loops ~463 and ~529) and
-  the static `inlineTextMarkPalette` (:197).
+  inside `InlineEditableCanvasText` (`markToolbar` const at :477, swatch loops ~582
+  and ~648) and the static `inlineTextMarkPalette` (:214).
 - Shared palette context access: either export `PageEditorColorPaletteContext` /
   `usePageEditorColorPalette` from a module both files can import, OR pass the live
   palette down as a `SectionCanvas` → `InlineEditableCanvasText` prop. (See note.)
@@ -42,8 +43,8 @@ toolbar and renders inline swatches by `previewValue`, keeping the brand-id filt
 - `_docs/PAGE_MODEL.md` (inline text marks: `color`/`highlight`).
 
 **Out-of-scope:** Changing which marks/ids are offered inline (keep the existing
-brand-id filter + its neutral-exclusion rationale at :193–199); the block-level
-control; any sanitizer change.
+brand-id filter + its neutral-exclusion rationale at ~208–213, const at :214); the
+block-level control; any sanitizer change.
 
 ## Security Contract
 
@@ -64,7 +65,7 @@ Not a route/auth/data leaf — N/A by surface, stated explicitly:
 // 1. Read the live palette where the toolbar renders (instead of the static const):
 const colorPalette = usePageEditorColorPalette();           // shared context hook
 const inlineSwatches = colorPalette.filter((s) =>
-  ["primary", "secondary", "accent", "border"].includes(s.id));   // same filter as :197
+  ["primary", "secondary", "accent", "border"].includes(s.id));   // same filter as :214
 
 // 2. Render each swatch by its resolved previewValue (NOT var()):
 inlineSwatches.map((swatch) => (
@@ -89,21 +90,24 @@ Critical guardrails (memory `page-editor-color-toolbar-live-findings`):
 - **Do NOT add a toolbar-wide `onMouseDown` `preventDefault`.** The shared cause of
   the broken real-input toolbar was a toolbar-root `onMouseDown` that swallowed focus
   for the URL input and the custom color picker. Keep the existing per-control
-  handlers exactly as they are (the file already documents at :387–413 / :500–503 why
-  the link URL input and the native color picker must NOT be `preventDefault`-ed).
+  handlers exactly as they are (the mark-toolbar `onMouseDown` handler at ~:488–515
+  and the custom color picker note at ~:621–622 document why the link URL input and
+  the native color picker must NOT be `preventDefault`-ed).
 - Swatch buttons keep their own `onClick` `preventDefault/stopPropagation` (selection
   range must survive the click) — that is per-button and is fine.
 - Preserve focusability: do not wrap the swatches in a focus-stealing container.
 
 Context-sharing note (pick the lower-risk option at implementation time):
 - `PageEditorColorPaletteContext` (and `usePageEditorColorPalette`) currently live as
-  module-local consts in `PageEditor.tsx` (:415/:418) and are NOT exported.
-  `PageAuthoringCanvas.tsx` is rendered inside the provider (`PageEditor.tsx`:3124),
+  module-local consts in `PageEditor.tsx` (:352/:355) and are NOT exported.
+  `PageAuthoringCanvas.tsx` is rendered inside the provider (`PageEditor.tsx`:3040),
   so the cleanest path is to MOVE the context + hook into a shared module (e.g.
   `core/services/pages/pageEditorControlUiModel.ts`, which already owns
   `getPageEditorColorPalette` and `PageEditorColorSwatch`) and import it from both
   files. Alternatively, thread the live palette as a prop. Do NOT duplicate a second
-  context.
+  context. Editing `PageEditor.tsx` here stays within the TASK-481 brand-token
+  surface; respect the single-writer collision guard with TASK-539-03-L03 (see the
+  parent).
 - **Error handling:** none — presentational; no domain codes / `map*Error`.
 
 **Regression-test shape:** render the inline toolbar inside a palette provider seeded

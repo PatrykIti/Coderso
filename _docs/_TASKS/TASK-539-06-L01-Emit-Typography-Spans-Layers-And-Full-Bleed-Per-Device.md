@@ -8,7 +8,7 @@
 **Estimated Effort:** Large
 **Dependencies:** TASK-539-01-L01, TASK-539-02-L01, TASK-539-03-L05, TASK-539-05-L01
 **Status:** ⏳ To Do
-**Changelog:** 1251 (pinned; create only at TASK-539 closure)
+**Changelog:** 1318 (pinned; create only at TASK-539 closure)
 
 ---
 
@@ -26,9 +26,14 @@ This leaf is the only writer of:
 - `tests/vitest/pages/page-responsive-css-fixtures.ts`;
 - `tests/vitest/pages/page-responsive-css-section.test.ts`;
 - `tests/vitest/pages/page-responsive-css-block.test.ts`;
-- `tests/vitest/pages/page-responsive-css-security.test.ts`.
+- `tests/vitest/pages/page-responsive-css-security.test.ts`;
+- `tests/vitest/pages/page-responsive-grid-spans.test.ts` (existing 113-line suite;
+  this leaf owns its rebaseline: update the `:is([data-block-id],[data-tilt-parent])`
+  span-reset assertions to the placement-gated
+  `PAGE_BLOCK_GRID_ITEM_ATTRIBUTE` selector contract, never weakening the
+  stack-reset/footer-scope/clamp/no-authored-span behavior it pins).
 
-The current production facade is about 965 lines and the current test is about 1,278
+The current production facade is 999 lines and the current test is 1,278
 lines. Split them before adding behavior. Do not edit the Page model, sanitizer,
 placement owner, renderer, runtime, editor, or TASK-539 closure suite.
 

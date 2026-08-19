@@ -7,7 +7,7 @@
 **Estimated Effort:** Very Large
 **Dependencies:** TASK-521–535, TASK-538, TASK-541; TASK-540 must be fully terminal before implementation; collision dependencies TASK-478/TASK-481
 **Status:** ⏳ To Do
-**Changelog:** 1251 (pinned; create only at implementation closure)
+**Changelog:** 1318 (pinned; create only at implementation closure)
 **Contract Repair:** 2026-07-23 — refreshed against current source, tests, repository rules, and the active TASK-540 state
 
 ---
@@ -52,13 +52,18 @@ working tree, including paths committed at intermediate checkpoints. A result ab
 ## Shared contracts fixed by this family
 
 - The stable `pageDocumentV2.ts` facade freezes its grounded baseline of exactly
-  74 type exports and 121 runtime exports, all enumerated in TASK-539-01-L01. This
-  family adds only four named types and eight named runtime values, for an exact
-  final surface of 78 types plus 129 runtime values. Its source-owner facade suite
-  statically parses explicit named re-export clauses and compares the complete
-  type/value owner map, rejects direct declarations/default/export-star/duplicates,
-  type-imports all 78 names, pins the exact 129-key runtime namespace, and proves
-  every runtime facade/direct-owner export is reference-identical.
+  74 type exports and 125 runtime exports, all enumerated in TASK-539-01-L01. The
+  125 baseline runtime names include the four TASK-547 switcher-aria names
+  `PAGE_SWITCHER_ARIA_LABEL_MAX_LENGTH`, `PAGE_SWITCHER_DEFAULT_ARIA_LABEL`,
+  `normalizeSwitcherAriaLabel`, and `resolveSwitcherAriaLabel`. This family adds
+  only four named types and eight named runtime values, for an exact final surface
+  of 78 types plus 133 runtime values. Its source-owner facade suite statically
+  parses the explicit named re-export clauses (accepting the landed mixed-clause
+  layout where value export blocks carry per-specifier `type X` modifiers) and
+  compares the complete type/value owner map, rejects direct
+  declarations/default/export-star/duplicates, type-imports all 78 names, pins the
+  exact 133-key runtime namespace, and proves every runtime facade/direct-owner
+  export is reference-identical.
 - `mergePageBlockLayerPresentKeys` performs present-key deep merge for only the
   nested `layer` record and is the one owner used by preview and public CSS.
   Responsive `layer.anchor` is base-only: a write rejects it at the exact path,
@@ -168,10 +173,14 @@ working tree, including paths committed at intermediate checkpoints. A result ab
   consumes that helper and the focused geometry suite imports the owner directly.
 - The stable `pageRendererV2.tsx` facade remains exactly its grounded 41-name
   pre-task surface: 12 type exports and 29 runtime-value exports enumerated in
-  TASK-539-05-L01. Its source-owner facade suite statically pins the exact 12-name
-  type/owner map and rejects extra types/direct declarations/default/export-star/
-  duplicates; it also pins the exact 29-key runtime namespace, direct-owner runtime
-  reference identity, and absence of task-added replica/timeline symbols.
+  TASK-539-05-L01. The landed file keeps its six composition-root direct
+  declarations (`renderPageBlockContent`, `PageBlockContent`, `PageBlockFrame`,
+  `PageSectionContent`, `PageSectionRender`, `PageDocumentRender`) plus explicit
+  named re-export clauses from the support modules; no `export *`, alias, or
+  duplicate is introduced. Its source-owner facade suite statically pins the exact
+  12-name type/owner map and rejects extra types/default/export-star/duplicates; it
+  also pins the exact 29-key runtime namespace, direct-owner runtime reference
+  identity, and absence of task-added replica/timeline symbols.
 - A shared global initializer rescans the supplied root/document on every emitted
   script and uses per-element ownership (`WeakSet` or equivalent); it deduplicates
   listeners without blocking later footer discovery.
@@ -282,10 +291,15 @@ every foreign TASK-548 byte, and recomputes statistics from the complete live ta
 tree rather than applying a hard-coded delta.
 
 The orchestrator owns `_docs/_workflows/task-539-fix.mjs` for this contract repair.
-Before source implementation it authors the sole live
-`_docs/_workflows/task-539-implement.mjs`, which captures the post-TASK-540 baseline,
-enforces this exact land order/single-writer matrix, runs the family line gate, rejects
-missing audit results, and coordinates post-audit/smoke/closure. Agents do not commit.
+It must author both `_docs/_workflows/task-539-fix.mjs` and
+`_docs/_workflows/task-539-implement.mjs` before the first TASK-539 source edit
+(contract-permitted; the orchestrator authors them itself, and neither file exists at
+contract-audit time). The sole live `_docs/_workflows/task-539-implement.mjs`
+captures the post-TASK-540 baseline, enforces this exact land order/single-writer
+matrix, runs the family line gate, rejects missing audit results, and coordinates
+post-audit/smoke/closure. Leaf validation does not depend on either aggregate
+workflow file existing at audit time: those workflow-backed gates run only after the
+orchestrator authors the files, at implementation time. Agents do not commit.
 
 ## Testing Requirements
 
@@ -322,7 +336,7 @@ Update `_docs/PAGE_MODEL.md`, `_docs/SECURITY_SPEC.md`, `_docs/CMS_SPEC.md`,
 `docs/develop/content-and-widgets.md`,
 and `docs/guide/screens/page-editor-preview-settings-and-history.md`. These five
 files are the exhaustive documentation ownership for TASK-539. At closure create
-changelog 1251, enumerate the parent, all 8 children, and all 18 leaves in its task
+changelog 1318, enumerate the parent, all 8 children, and all 18 leaves in its task
 coverage, and close all descendants without reopening TASK-535.
 
 No HIGH or MEDIUM may be deferred. A LOW may be deferred only by linking a concrete

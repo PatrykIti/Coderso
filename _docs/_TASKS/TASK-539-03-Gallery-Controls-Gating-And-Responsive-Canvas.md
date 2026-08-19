@@ -8,7 +8,7 @@
 **Estimated Effort:** Large
 **Dependencies:** TASK-539-01, TASK-539-02; TASK-478/TASK-481 collision boundary resolved
 **Status:** ⏳ To Do
-**Changelog:** 1251 (pinned; create only at TASK-539 closure)
+**Changelog:** 1318 (pinned; create only at TASK-539 closure)
 
 ---
 
@@ -38,13 +38,18 @@ must not edit `core/admin/ui/shared/CanvasEditor.tsx`, any Custom Screen file,
 `core/admin/ui/pages/editor/PageAuthoringCanvas.tsx`, renderer/runtime/model/
 sanitizer source, foreign tests, task indexes, or changelogs.
 
-The grounded pre-task oversize seams are
-`pageEditorControlRegistry.ts` (1,813 lines),
-`page-editor-control-registry.test.ts` (1,893),
-`PageEditor.tsx` (5,204), and `page-editor-v2-flow.test.tsx` (6,813).
-Their owning leaves must split them by cohesive responsibility and retain explicit
-stable facades; every resulting human-authored source/test file must be at most
-1,000 physical lines.
+The grounded oversize seams are
+`PageEditor.tsx` (5,204) and `page-editor-v2-flow.test.tsx` (6,813); these two still
+require the cohesive split. TASK-547 already split the registry:
+`pageEditorControlRegistry.ts` is now 32 lines (down from the pre-split 1,813) and
+`page-editor-control-registry.test.ts` is now 942 lines (down from 1,893). Re-ground
+the registry work against the landed modules
+`pageEditorControlDefinition.ts`, `pageEditorBlockControlRegistry.ts`,
+`pageEditorBlockStyleControls.ts`, and `pageEditorSectionControls.ts` rather than
+re-splitting them.
+Their owning leaves must split the remaining oversized seams by cohesive
+responsibility and retain explicit stable facades; every resulting human-authored
+source/test file must be at most 1,000 physical lines.
 
 ## Security Contract
 

@@ -8,7 +8,7 @@
 **Estimated Effort:** Medium
 **Dependencies:** TASK-542-01, TASK-542-02, TASK-539
 **Status:** ⏳ To Do
-**Changelog:** 1254 (pinned; closure only)
+**Changelog:** 1319 (pinned; closure only)
 
 ---
 

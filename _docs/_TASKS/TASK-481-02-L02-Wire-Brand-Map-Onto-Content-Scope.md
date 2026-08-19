@@ -10,6 +10,7 @@
 **Status:** ⏳ To Do
 **Started:** `<YYYY-MM-DD>`
 **Completed:** `<YYYY-MM-DD>`
+**Changelog:** 1317 (pinned; create only at TASK-481 closure)
 
 ---
 
@@ -27,8 +28,8 @@ frame.
 **Owning module(s) to create-or-extend:**
 - `core/admin/ui/pages/PageEditor.tsx` — derive `canvasBrandTokenVariables`
   (memoized off `siteTokens` from `useCanvasSiteTokens`, alongside the existing
-  `canvasSiteTokenVariables`:745 and `sitePalette`:749) and pass it to
-  `SectionCanvas` (rendered ~2764).
+  `canvasSiteTokenVariables`:683 and `sitePalette`:687) and pass it to
+  `SectionCanvas` (rendered :2675).
 - `core/admin/ui/pages/editor/PageAuthoringCanvas.tsx` — accept the brand-var map as
   a `SectionCanvas` prop and merge it onto the `data-page-editor-content` scope(s)
   created in TASK-481-01-L01 (block content wrapper + the section content wrapper).
@@ -61,16 +62,16 @@ Not a route/auth/data leaf — N/A by surface, stated explicitly:
 ## Implementation Pseudocode
 
 ```tsx
-// core/admin/ui/pages/PageEditor.tsx  (near :744–749)
+// core/admin/ui/pages/PageEditor.tsx  (near :682–687)
 const siteTokens = useCanvasSiteTokens();                       // existing
 const canvasSiteTokenVariables = useMemo(                       // existing (neutrals+typography)
   () => toPageCanvasColorCssVariableMap(siteTokens) as CSSProperties, [siteTokens]);
 const canvasBrandTokenVariables = useMemo(                      // NEW (brand)
   () => toPageCanvasBrandColorCssVariableMap(siteTokens) as CSSProperties, [siteTokens]);
 // import { toPageCanvasBrandColorCssVariableMap } from "../../../ui/theme/tokenCss";
-// (mirror the existing toPageCanvasColorCssVariableMap import at :132)
+// (mirror the existing toPageCanvasColorCssVariableMap import at :128)
 
-// pass down to each SectionCanvas (~2764)
+// pass down to each SectionCanvas (~2675)
 <SectionCanvas ... contentBrandTokenVariables={canvasBrandTokenVariables} />
 ```
 
@@ -99,7 +100,7 @@ Data flow & live repaint:
   the settings cache bus fires, `siteTokens` recomputes → `canvasBrandTokenVariables`
   memo recomputes → React re-renders the content scope with the new brand values.
   **No new effect, no setState-in-effect** — reuse the existing subscription; just add
-  the derived memo. (This mirrors how `sitePalette`:749 already live-updates.)
+  the derived memo. (This mirrors how `sitePalette`:687 already live-updates.)
 - Order matters inside the content scope `style`: spread the brand var map FIRST, then
   `contentVisualStyle`, so the block's own brand reference (`color: var(--color-accent)`)
   resolves against the freshly-defined `--color-accent` on the same element.
@@ -123,3 +124,44 @@ brand value without remount.
   `DEFAULT_TOKENS` fallback path. Use `style`-string assertions (jsdom does not
   resolve custom properties); end-to-end colour resolution is in TASK-481-04-L01.
 - No DB migration artifacts.
+
+## Line gate / PageEditor.tsx split (shared with TASK-539-03-L03)
+
+`core/admin/ui/pages/PageEditor.tsx` is 5,204 lines. Its cohesive split is OWNED by
+TASK-539-03-L03 (the single splitter), which extracts:
+
+- `PageEditorRoot.tsx` — the `PageEditor` component shell, canvas-frame render,
+  `PageEditorColorPaletteContext.Provider`, and `SectionCanvas` mount.
+- `usePageEditorController.ts` — editor state + derived canvas token variables
+  (`useCanvasSiteTokens` → `canvasSiteTokenVariables` / `canvasBrandTokenVariables` /
+  `sitePalette`).
+- `pageEditorDocumentCommands.ts` — document mutation commands.
+- `PageEditorToolbar.tsx` — toolbar + `resolveToolbarTargetLabel`.
+- `PageEditorRegistryFields.tsx` — section/block registry field controls.
+- `PageEditorResponsivePanel.tsx` — responsive/device panel.
+- `PageEditorSettingsPanel.tsx` — settings panel.
+
+TASK-481 does NOT re-split `PageEditor.tsx`. This leaf's brand-token edits are
+confined to the brand-token content-scope SURFACE (derived token vars + palette
+context + `SectionCanvas` render), which lands in `usePageEditorController.ts` and
+`PageEditorRoot.tsx` after 539-03-L03's split; the `PageEditor.tsx` facade keeps the
+exact pre-task public surface via named re-exports (no export-star), and consumers
+keep importing `PageEditor`/`PageEditorHost`/`SectionCanvas` from the stable paths.
+
+Land order: TASK-539-03-L03 splits `PageEditor.tsx` first; this leaf then edits the
+split modules. Post-split receipt: every touched module `<=1000` lines (owned by
+539's split, jointly verified at closure). This leaf must not add net lines to the
+`PageEditor.tsx` facade.
+
+## Single-writer collision guard (TASK-539-03-L03)
+
+`PageEditor.tsx` is shared. TASK-481 owns the brand-token content-scope surface;
+TASK-539-03-L03 owns the gallery/responsive surface and the facade split. Both
+writers read the current on-disk state immediately before editing and never revert,
+checkout, or clean up the other's uncommitted edits.
+
+Forbidden paths for this leaf (never edit): all `_docs/_TASKS/TASK-539*` files;
+`tests/vitest/ui/page-editor-v2-*.test.tsx`; and the 539-exclusive gallery/responsive
+extraction modules `PageEditorRegistryFields.tsx`, `PageEditorResponsivePanel.tsx`,
+`PageEditorToolbar.tsx`, `PageEditorSettingsPanel.tsx`, `pageEditorDocumentCommands.ts`.
+Changelog: this family creates only `1317`; TASK-539 creates only `1318`.

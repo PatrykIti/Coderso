@@ -7,7 +7,7 @@
 **Estimated Effort:** Large
 **Dependencies:** TASK-541, TASK-539
 **Status:** ⏳ To Do
-**Changelog:** 1254 (pinned; create only at implementation closure)
+**Changelog:** 1319 (pinned; closure only)
 
 ---
 
@@ -100,5 +100,5 @@ owner helper/type rather than duplicating it.
 ## Documentation Updates Required
 
 Update menu model/runtime docs and `_docs/ADMIN_CACHE.md` plus
-`_docs/ADMIN_CACHE_MAP.md`. At closure create changelog 1254 and close all
+`_docs/ADMIN_CACHE_MAP.md`. At closure create changelog 1319 and close all
 descendants.

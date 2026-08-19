@@ -8,7 +8,7 @@
 **Estimated Effort:** Very Large
 **Dependencies:** TASK-539-04-L02; TASK-478 collision boundary resolved
 **Status:** ⏳ To Do
-**Changelog:** 1251 (pinned; create only at TASK-539 closure)
+**Changelog:** 1318 (pinned; create only at TASK-539 closure)
 
 ---
 
@@ -36,9 +36,15 @@ The stale renderer comment that calls the second effects-runtime copy a “total
 no-op” is part of L01's renderer-only correction; `siteShell.tsx` already has
 accurate ownership wording and remains untouched.
 
-Grounded oversize baselines are `pageRendererV2.tsx` at 4,003 lines and
-`page-renderer-v2.test.tsx` at 5,696; the split must leave every human-authored
-source/test file independently reviewable and `<=1000`.
+TASK-547 already split the renderer source: `pageRendererV2.tsx` is now 920 lines
+(down from the pre-split 4,003) and the landed support modules are
+`pageRendererV2Contract.ts`, `pageSectionRenderStyles.ts`,
+`pageBlockRenderStyles.ts`, `pageSectionRendererV2.tsx`,
+`pageStaticBlockRenderers.tsx`, `pageDataBlockRenderers.tsx`,
+`pageLayoutBlockRenderer.tsx`, and `pageDocumentRenderState.ts`.
+`page-renderer-v2.test.tsx` remains 5,696 lines and still requires its cohesive
+split. Re-ground L01 against the landed modules; the split must leave every
+human-authored source/test file independently reviewable and `<=1000`.
 
 ## Security Contract
 
@@ -92,11 +98,13 @@ change applies.
   non-final/final bottoms, and bridge only real row gaps.
 - Divider source remains unchanged and is regression-tested only.
 - The stable renderer facade keeps the grounded 12-type plus 29-runtime-value
-  manifest. Its L01-owned suite parses a declaration-only explicit facade, proves the
-  exact 12-name `pageRendererTypes` type-owner map with no extras or duplicates,
-  rejects direct/default/namespace/export-star forms, proves exact runtime keys and
-  direct-owner reference identity, and keeps task-added replica/timeline internals
-  absent.
+  manifest. Its L01-owned suite parses the landed explicit facade: it proves the
+  exact 12-name type-owner map (owned by `pageRendererV2Contract.ts`) with no extras
+  or duplicates, accepts the landed layout where the six composition-root
+  components are declared directly and the support-module names come from explicit
+  named re-export clauses, rejects default/namespace/export-star forms and
+  duplicates, proves exact runtime keys and direct-owner reference identity, and
+  keeps task-added replica/timeline internals absent.
 - No-effect/no-span/no-background markup stays byte-identical.
 
 ## Validation

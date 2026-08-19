@@ -10,6 +10,7 @@
 **Status:** ⏳ To Do
 **Started:** `<YYYY-MM-DD>`
 **Completed:** `<YYYY-MM-DD>`
+**Changelog:** 1317 (pinned; create only at TASK-481 closure)
 
 ---
 
@@ -21,7 +22,8 @@
 resolved `DesignTokens`, so TASK-481-02-L02 can paint them on the
 `data-page-editor-content` scope. It is the brand counterpart to the existing
 `toPageCanvasColorCssVariableMap` (which emits typography + the three neutrals and
-deliberately OMITS brand — see its doc comment, tokenCss.ts:87–111).
+deliberately OMITS brand — see its doc comment at tokenCss.ts ~114–127, function at
+:128).
 
 **Owning module(s) to create-or-extend:**
 - `core/ui/theme/tokenCss.ts` (single owner of canvas CSS-var maps).
@@ -69,7 +71,7 @@ export function toPageCanvasBrandColorCssVariableMap(
 
 Notes for the implementer:
 - `--color-border` is sourced from `tokens.neutrals.border` (NOT a `colors.*` field) —
-  match `toCssVariableMap`:121 exactly; `border` is the brand-eligible neutral in the
+  match `toCssVariableMap`:171 exactly; `border` is the brand-eligible neutral in the
   authoring allowlist (`authoringColorTokenNames` includes `border`) and is filtered
   into the inline brand set, so it belongs in this brand map.
 - Return value order/keys must be exactly these four; no neutrals (`bg`/`surface`/

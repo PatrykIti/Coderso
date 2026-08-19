@@ -8,7 +8,7 @@
 **Estimated Effort:** Large
 **Dependencies:** TASK-539-03-L05
 **Status:** ⏳ To Do
-**Changelog:** 1251 (pinned; create only at TASK-539 closure)
+**Changelog:** 1318 (pinned; create only at TASK-539 closure)
 
 ---
 
@@ -16,24 +16,28 @@
 
 Own:
 
-- stable facade `core/services/pages/pageEditorControlRegistry.ts`;
-- new cohesive modules
-  `pageEditorControlTypes.ts`, `pageEditorControlBuilders.ts`,
-  `pageEditorUniversalControls.ts`, `pageEditorBlockControls.ts`, and
-  `pageEditorResponsiveControls.ts` beside it;
+- stable facade `core/services/pages/pageEditorControlRegistry.ts` (now 32 lines);
+- the landed split modules
+  `pageEditorControlDefinition.ts`, `pageEditorBlockControlRegistry.ts`,
+  `pageEditorBlockStyleControls.ts`, and `pageEditorSectionControls.ts`;
 - `core/services/pages/pageEditorControlUiModel.ts`;
 - existing/split suites
-  `tests/vitest/pages/page-editor-control-registry.test.ts`,
+  `tests/vitest/pages/page-editor-control-registry.test.ts` (now 942 lines),
   `page-editor-control-registry-capabilities.test.ts`,
   `page-editor-control-registry-effects.test.ts`,
   `page-editor-control-registry-responsive.test.ts`, and
   `page-editor-control-ui-model.test.ts`.
 
 The facade must explicitly re-export the pre-task public symbols; `export *` is
-forbidden. Split definitions/builders, universal controls, per-block controls, and
-responsive projection by responsibility, not arbitrary line ranges. Every module and
-independently runnable suite must be at most 1,000 lines. Baseline receipts are 1,813
-lines for the registry and 1,893 for its main suite.
+forbidden. TASK-547 already split the registry into the four landed modules above;
+re-ground against them instead of the planned
+`pageEditorControlTypes.ts`/`pageEditorControlBuilders.ts`/
+`pageEditorUniversalControls.ts`/`pageEditorBlockControls.ts`/
+`pageEditorResponsiveControls.ts` names. Add the new gallery/z-clamp definitions,
+builders, universal controls, per-block controls, and responsive projection into the
+landed modules by responsibility, not arbitrary line ranges. Every module and
+independently runnable suite must be at most 1,000 lines. Baseline receipts are 32
+lines for the registry and 942 for its main suite.
 
 ## Implementation Pseudocode
 

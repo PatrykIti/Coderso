@@ -8,7 +8,7 @@
 **Estimated Effort:** Large
 **Dependencies:** TASK-539-03-L02
 **Status:** ⏳ To Do
-**Changelog:** 1251 (pinned; create only at TASK-539 closure)
+**Changelog:** 1318 (pinned; create only at TASK-539 closure)
 
 ---
 
