@@ -1,10 +1,15 @@
 import { describe, expect, test } from "vitest";
 
 import {
+  PAGE_GALLERY_CATEGORY_MAX,
+  PAGE_GALLERY_ITEMS_MAX,
+  PAGE_GALLERY_SRC_MAX,
+  PageDocumentError,
   createDefaultPageDocumentV2,
   createPageBlockV2,
   createPageSectionV2,
   getPageBlockActiveSlotKeys,
+  isPageDocumentError,
   normalizePageDocumentV2ForWrite,
   normalizeStoredPageDocumentV2ForRead,
   pageBlockCapabilities,
@@ -14,6 +19,7 @@ import {
   type PageBlockV2,
   type PageDocumentV2,
 } from "../../../core/services/pages/pageDocumentV2";
+import { safeNormalizeError } from "./page-document-v2-test-helpers";
 
 // TASK-449-02-L01 / TASK-442-01-L01 regression pins.
 //
@@ -409,5 +415,246 @@ describe("animated-icon block prop model (TASK-521-01-L03 — prop model only, N
     expect(() => normalizePageDocumentV2ForWrite(doc)).toThrowError(
       /Unknown page document field: sections\.0\.blocks\.0\.props\.wobble/
     );
+  });
+});
+
+// ── TASK-539-01-L01 ── strict gallery model ───────────────────────────────────
+describe("TASK-539 strict gallery model", () => {
+  const galleryDoc = (items: unknown): Record<string, unknown> =>
+    buildDocumentWithRawBlocks([
+      { id: "blk_gallery", type: "gallery", props: { layout: "grid", items } },
+    ]);
+
+  test("canonical rows round-trip exactly (src/alt/caption/category)", () => {
+    const doc = galleryDoc([
+      { src: "/a.jpg", alt: "A", caption: "Alpha", category: "modern eco" },
+      { src: "/b.jpg", alt: "B", caption: "Beta" },
+    ]);
+    const { written, read, published } = roundTripStages(doc);
+    for (const stage of [written, read, published]) {
+      const items = onlyBlock(stage).props.items as Array<Record<string, unknown>>;
+      expect(items).toHaveLength(2);
+      expect(items[0]).toEqual({
+        src: "/a.jpg",
+        alt: "A",
+        caption: "Alpha",
+        category: "modern eco",
+      });
+      expect(items[1]).toEqual({ src: "/b.jpg", alt: "B", caption: "Beta" });
+    }
+  });
+
+  test("draft sentinel {src:'',alt:'',caption:''} persists and counts toward the limit", () => {
+    const doc = galleryDoc([{ src: "", alt: "", caption: "" }]);
+    const written = normalizePageDocumentV2ForWrite(doc);
+    const items = onlyBlock(written).props.items as Array<Record<string, unknown>>;
+    expect(items).toEqual([{ src: "", alt: "", caption: "" }]);
+  });
+
+  test("caption-only and alt-only rows are canonical persistence data", () => {
+    const doc = galleryDoc([
+      { src: "", alt: "", caption: "Caption only" },
+      { src: "", alt: "Alt only", caption: "" },
+    ]);
+    const written = normalizePageDocumentV2ForWrite(doc);
+    const items = onlyBlock(written).props.items as Array<Record<string, unknown>>;
+    expect(items[0]).toEqual({ src: "", alt: "", caption: "Caption only" });
+    expect(items[1]).toEqual({ src: "", alt: "Alt only", caption: "" });
+  });
+
+  test("121 raw rows reject on write; the 120th is accepted", () => {
+    const atLimit = Array.from({ length: PAGE_GALLERY_ITEMS_MAX }, (_, i) => ({
+      src: `/g/${i}.jpg`,
+      alt: `A${i}`,
+      caption: `C${i}`,
+    }));
+    const ok = normalizePageDocumentV2ForWrite(galleryDoc(atLimit));
+    expect(onlyBlock(ok).props.items as unknown[]).toHaveLength(PAGE_GALLERY_ITEMS_MAX);
+    const over = galleryDoc([...atLimit, { src: "/x.jpg", alt: "X", caption: "X" }]);
+    const error = safeNormalizeError(over);
+    expect(isPageDocumentError(error, "page_document_invalid")).toBe(true);
+  });
+
+  test("required-string caps reject cap+1 and accept the exact cap", () => {
+    // The src must be byte-identical to the media sanitizer output at the cap,
+    // so build a valid absolute URL whose path hits PAGE_GALLERY_SRC_MAX.
+    const srcPrefix = "https://example.com/";
+    const srcAtCap = srcPrefix + "a".repeat(PAGE_GALLERY_SRC_MAX - srcPrefix.length);
+    expect(srcAtCap.length).toBe(PAGE_GALLERY_SRC_MAX);
+    const cap = galleryDoc([{ src: srcAtCap, alt: "a".repeat(500), caption: "c".repeat(2_000) }]);
+    expect(normalizePageDocumentV2ForWrite(cap)).toBeDefined();
+    const over = galleryDoc([{ src: srcAtCap + "a", alt: "a", caption: "c" }]);
+    const error = safeNormalizeError(over);
+    expect(isPageDocumentError(error, "page_document_invalid")).toBe(true);
+  });
+
+  test("outer whitespace on every required string rejects (never canonicalized)", () => {
+    for (const row of [
+      { src: " /a.jpg", alt: "a", caption: "c" },
+      { src: "/a.jpg", alt: " a", caption: "c" },
+      { src: "/a.jpg", alt: "a", caption: "c " },
+    ]) {
+      const error = safeNormalizeError(galleryDoc([row]));
+      expect(isPageDocumentError(error, "page_document_invalid")).toBe(true);
+    }
+  });
+
+  test("nonempty src must be byte-identical to the media sanitizer output", () => {
+    const unsafe = galleryDoc([{ src: "javascript:alert(1)", alt: "a", caption: "c" }]);
+    const error = safeNormalizeError(unsafe);
+    expect(isPageDocumentError(error, "page_document_invalid")).toBe(true);
+  });
+
+  test("missing or wrong-typed required strings throw page_document_invalid", () => {
+    for (const row of [
+      { src: "/a.jpg", caption: "c" },
+      { src: "/a.jpg", alt: 5, caption: "c" },
+      { src: "/a.jpg", alt: "a", caption: null },
+    ]) {
+      const error = safeNormalizeError(galleryDoc([row]));
+      expect(isPageDocumentError(error, "page_document_invalid")).toBe(true);
+    }
+  });
+
+  test("unknown/legacy keys on a write row throw page_document_unknown_field at the exact path", () => {
+    for (const key of [
+      "url",
+      "image",
+      "assetUrl",
+      "title",
+      "label",
+      "name",
+      "description",
+      "evil",
+    ]) {
+      const error = safeNormalizeError(
+        galleryDoc([{ src: "/a.jpg", alt: "a", caption: "c", [key]: "x" }])
+      );
+      expect(isPageDocumentError(error, "page_document_unknown_field"), key).toBe(true);
+      expect((error as PageDocumentError)?.path).toBe(`sections.0.blocks.0.props.items.0.${key}`);
+    }
+  });
+
+  test("category write matrix: empty, invalid, 48/49-char tokens, 12/13 tokens, 587/588, duplicates", () => {
+    // category:"" must be omitted on write, never accepted.
+    const empty = galleryDoc([{ src: "/a.jpg", alt: "a", caption: "c", category: "" }]);
+    const emptyError = safeNormalizeError(empty);
+    expect(isPageDocumentError(emptyError, "page_document_invalid")).toBe(true);
+
+    // 48-char token is legal.
+    const token48 = "a".repeat(48);
+    const ok = normalizePageDocumentV2ForWrite(
+      galleryDoc([{ src: "/a.jpg", alt: "a", caption: "c", category: token48 }])
+    );
+    expect((onlyBlock(ok).props.items as Array<Record<string, unknown>>)[0]?.category).toBe(
+      token48
+    );
+
+    // 49-char token rejects.
+    const bad = safeNormalizeError(
+      galleryDoc([{ src: "/a.jpg", alt: "a", caption: "c", category: "a".repeat(49) }])
+    );
+    expect(isPageDocumentError(bad, "page_document_invalid")).toBe(true);
+
+    // 12 tokens legal; 13 tokens reject.
+    const twelve = Array.from({ length: 12 }, (_, i) => `t${i}`).join(" ");
+    const twelveOk = normalizePageDocumentV2ForWrite(
+      galleryDoc([{ src: "/a.jpg", alt: "a", caption: "c", category: twelve }])
+    );
+    expect((onlyBlock(twelveOk).props.items as Array<Record<string, unknown>>)[0]?.category).toBe(
+      twelve
+    );
+    const thirteen = Array.from({ length: 13 }, (_, i) => `t${i}`).join(" ");
+    const thirteenError = safeNormalizeError(
+      galleryDoc([{ src: "/a.jpg", alt: "a", caption: "c", category: thirteen }])
+    );
+    expect(isPageDocumentError(thirteenError, "page_document_invalid")).toBe(true);
+
+    // 587-char total legal; 588 rejects. Tokens must be unique AND 48 chars,
+    // so pad a unique index into each token body.
+    const maxTotal = Array.from(
+      { length: 12 },
+      (_, i) => "a".repeat(40) + String(i).padStart(8, "0")
+    ).join(" ");
+    expect(maxTotal.length).toBe(PAGE_GALLERY_CATEGORY_MAX);
+    const okMax = normalizePageDocumentV2ForWrite(
+      galleryDoc([{ src: "/a.jpg", alt: "a", caption: "c", category: maxTotal }])
+    );
+    expect((onlyBlock(okMax).props.items as Array<Record<string, unknown>>)[0]?.category).toBe(
+      maxTotal
+    );
+
+    // Duplicate tokens reject on write (schema may accept them; normalizer must not).
+    const dup = safeNormalizeError(
+      galleryDoc([{ src: "/a.jpg", alt: "a", caption: "c", category: "modern modern" }])
+    );
+    expect(isPageDocumentError(dup, "page_document_invalid")).toBe(true);
+
+    // Bad spacing / non-ASCII whitespace reject.
+    const spaced = safeNormalizeError(
+      galleryDoc([{ src: "/a.jpg", alt: "a", caption: "c", category: "modern  eco" }])
+    );
+    expect(isPageDocumentError(spaced, "page_document_invalid")).toBe(true);
+  });
+
+  test("stored read: legacy aliases use exact precedence (empty higher-precedence wins)", () => {
+    const doc = galleryDoc([
+      { url: "/url.jpg", title: "T", description: "D" },
+      { src: "/src.jpg", image: "/ignored.jpg" },
+      { title: "Title only" },
+    ]);
+    const read = normalizeStoredPageDocumentV2ForRead(doc);
+    const items = onlyBlock(read).props.items as Array<Record<string, unknown>>;
+    expect(items[0]).toEqual({ src: "/url.jpg", alt: "T", caption: "T" });
+    // src beats image; title supplies both alt and caption.
+    expect(items[1]).toEqual({ src: "/src.jpg", alt: "", caption: "" });
+    expect(items[2]).toEqual({ src: "", alt: "Title only", caption: "Title only" });
+  });
+
+  test("stored read: trim-before-cap, sanitize-after-cap, and canonical-only output", () => {
+    const doc = galleryDoc([
+      { src: "  /a.jpg  ", alt: "  A  ", caption: "  C  ", category: "x  y  x" },
+    ]);
+    const read = normalizeStoredPageDocumentV2ForRead(doc);
+    const items = onlyBlock(read).props.items as Array<Record<string, unknown>>;
+    expect(items[0]).toEqual({ src: "/a.jpg", alt: "A", caption: "C", category: "x y" });
+  });
+
+  test("stored read: unsafe src sanitizes to empty and junk rows drop; frozen input unchanged", () => {
+    const doc = galleryDoc([
+      { src: "javascript:bad()", alt: "A", caption: "C" },
+      { id: 5 },
+      { src: 42, alt: "B" },
+    ]);
+    const read = normalizeStoredPageDocumentV2ForRead(doc);
+    const items = onlyBlock(read).props.items as Array<Record<string, unknown>>;
+    // The no-string-field row drops; the alt-bearing row survives with empty src.
+    expect(items).toEqual([
+      { src: "", alt: "A", caption: "C" },
+      { src: "", alt: "B", caption: "" },
+    ]);
+  });
+
+  test("stored read: legacy string rows adapt with empty alt/caption and read is deterministic", () => {
+    const doc = galleryDoc(["https://example.com/slide.jpg"]);
+    const read = normalizeStoredPageDocumentV2ForRead(doc);
+    expect(onlyBlock(read).props.items).toEqual([
+      { src: "https://example.com/slide.jpg", alt: "", caption: "" },
+    ]);
+    const second = normalizeStoredPageDocumentV2ForRead(read);
+    expect(JSON.stringify(second)).toBe(JSON.stringify(read));
+  });
+
+  test("stored read: alt-only/all-empty preservation and cap-at-120 slicing", () => {
+    const doc = galleryDoc([
+      { src: "", alt: "Only alt", caption: "" },
+      { src: "", alt: "", caption: "" },
+    ]);
+    const read = normalizeStoredPageDocumentV2ForRead(doc);
+    const items = onlyBlock(read).props.items as Array<Record<string, unknown>>;
+    expect(items).toEqual([
+      { src: "", alt: "Only alt", caption: "" },
+      { src: "", alt: "", caption: "" },
+    ]);
   });
 });

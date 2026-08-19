@@ -170,6 +170,7 @@ const LEAVES = [
       "tests/vitest/pages/page-document-v2-test-helpers.ts",
       "tests/vitest/pages/page-document-v2-facade.test.ts",
       "tests/vitest/pages/page-document-v2.test.ts",
+      "tests/vitest/pages/page-document-v2-idempotence.test.ts",
       "tests/vitest/pages/page-document-v2-tree-and-capabilities.test.ts",
       "tests/vitest/pages/page-document-v2-listing-and-settings.test.ts",
       "tests/vitest/pages/page-document-v2-style-contracts.test.ts",

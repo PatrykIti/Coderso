@@ -4,12 +4,14 @@ import Ajv from "ajv";
 
 import {
   PAGE_LAYER_Z_CLAMP,
+  PageDocumentError,
   normalizePageDocumentV2ForWrite,
+  normalizeStoredPageDocumentV2ForRead,
   pageDocumentV2JsonSchema,
   type PageDocumentV2,
 } from "../../../core/services/pages/pageDocumentV2";
 
-import { buildDocument, cloneDocument } from "./page-document-v2-test-helpers";
+import { buildDocument, cloneDocument, safeNormalizeError } from "./page-document-v2-test-helpers";
 
 // TASK-525-02-L01 — per-block staggered reveal delay model.
 describe("block reveal-delay model (TASK-525-02-L01)", () => {
@@ -172,7 +174,14 @@ describe("composition style model (TASK-522-01-L03)", () => {
     { timeout: 30_000 },
     () => {
       const doc = buildDocument();
-      doc.sections[0]!.blocks[0]!.responsive = {
+      const block = doc.sections[0]!.blocks[0]!;
+      // TASK-539 reachability: a responsive layer is only legal when the
+      // normalized BASE layer is nonempty, so author the base layer first.
+      block.style = {
+        ...(block.style as object),
+        layer: { x: 1, y: 2, z: 3 },
+      } as PageDocumentV2["sections"][number]["blocks"][number]["style"];
+      block.responsive = {
         tablet: { style: { layer: { x: 5, y: 5 } } },
       } as PageDocumentV2["sections"][number]["blocks"][number]["responsive"];
       const normalized = normalizePageDocumentV2ForWrite(doc);
@@ -664,4 +673,253 @@ describe("per-edge section border write boundary (TASK-533-02)", () => {
       expect(validate(tampered)).toBe(false);
     }
   );
+});
+
+// ── TASK-539-01-L01 ── strict responsive style contracts ─────────────────────
+// Compile-time proofs: the responsive style types must reject every base-only
+// structural key, must reject `anchor`, and must accept legal layer x/y/z.
+import {
+  isPageDocumentError,
+  type PageBlockLayer,
+  type PageBlockResponsiveLayerV2,
+  type PageBlockResponsiveStyleV2,
+  type PageBlockStyleV2,
+  type PageSectionResponsiveStyleV2,
+  type PageSectionStyleV2,
+} from "../../../core/services/pages/pageDocumentV2";
+
+const sectionForbiddenKeys = [
+  "scrollEffect",
+  "parallaxIntensity",
+  "surfacePreset",
+  "composition",
+  "fullBleed",
+  "noiseOverlay",
+  "columnTemplate",
+  "border",
+] as const;
+
+const blockForbiddenKeys = [
+  "decoration",
+  "tilt",
+  "tiltGlare",
+  "surfacePreset",
+  "hoverEffect",
+  "marquee",
+  "composition",
+  "revealDelay",
+  "magnetic",
+] as const;
+
+describe("TASK-539 strict responsive style contracts", () => {
+  // Compile-time proofs rely on @ts-expect-error: a directive is itself an
+  // error when the next line compiles, so each rejected assignment is verified
+  // at type-check time. `consume` keeps the bound value used at runtime so
+  // `noUnusedLocals` never flags it.
+  const consume = <T>(value: T): T => value;
+
+  test("compile-time: responsive layer accepts x/y/z and rejects anchor literals", () => {
+    const legal: PageBlockResponsiveLayerV2 = { x: 1, y: 2, z: 3 };
+    expect(consume(legal)).toEqual({ x: 1, y: 2, z: 3 });
+    // @ts-expect-error TASK-539: anchor is forbidden in a responsive layer literal
+    const anchorLiteral: PageBlockResponsiveLayerV2 = { x: 1, anchor: "center" };
+    consume(anchorLiteral);
+    const variable: PageBlockLayer = { x: 1, y: 2, z: 3, anchor: "center" };
+    // @ts-expect-error TASK-539: a variable typed as PageBlockLayer must not
+    // satisfy the responsive layer type even when its runtime value is legal.
+    const widened: PageBlockResponsiveLayerV2 = variable;
+    consume(widened);
+  });
+
+  test("compile-time: every forbidden section style key is rejected", () => {
+    const base: PageSectionStyleV2 = {} as PageSectionStyleV2;
+    const responsive = base as PageSectionResponsiveStyleV2;
+    expect(consume(responsive)).toBeDefined();
+    // @ts-expect-error TASK-539: surfacePreset is base-only
+    const wrong: PageSectionResponsiveStyleV2 = { surfacePreset: "dark" };
+    consume(wrong);
+    // @ts-expect-error TASK-539: border is base-only
+    const wrong2: PageSectionResponsiveStyleV2 = { border: { top: { color: "#fff" } } };
+    consume(wrong2);
+  });
+
+  test("compile-time: every forbidden block style key is rejected", () => {
+    // @ts-expect-error TASK-539: decoration is base-only
+    const wrong: PageBlockResponsiveStyleV2 = { decoration: { kind: "radiate" } };
+    consume(wrong);
+    // @ts-expect-error TASK-539: magnetic is base-only
+    const wrong2: PageBlockResponsiveStyleV2 = { magnetic: true };
+    consume(wrong2);
+    const withLayer: PageBlockResponsiveStyleV2 = { layer: { x: 10 } };
+    expect(consume(withLayer)).toEqual({ layer: { x: 10 } });
+  });
+
+  test("compile-time: legal responsive paint/typography/column values are accepted", () => {
+    const section: PageSectionResponsiveStyleV2 = {
+      background: "#0d9488",
+      backgroundType: "color",
+      accent: "#fff",
+      radius: 8,
+      shadow: "md",
+    };
+    expect(consume(section).shadow).toBe("md");
+    const block: PageBlockResponsiveStyleV2 = {
+      fontSize: "lg",
+      fontWeight: "semibold",
+      textTransform: "none",
+      column: 2,
+    };
+    expect(consume(block).column).toBe(2);
+    // A typed base variable must not satisfy the responsive style even when
+    // its runtime shape only carries allowed keys.
+    const base: PageBlockStyleV2 = {
+      decoration: { kind: "radiate" },
+    } as unknown as PageBlockStyleV2;
+    // @ts-expect-error TASK-539: PageBlockStyleV2 is not PageBlockResponsiveStyleV2
+    const invalid: PageBlockResponsiveStyleV2 = base;
+    consume(invalid);
+  });
+
+  test("schema: responsive style definitions allow only the strict key sets", () => {
+    const ajv = new Ajv({ allErrors: true, strict: false });
+    const validate = ajv.compile(pageDocumentV2JsonSchema);
+    const doc = buildDocument();
+    const section = doc.sections[0]!;
+    section.responsive = {
+      tablet: { style: { background: "#111", radius: 6 } },
+    } as PageDocumentV2["sections"][number]["responsive"];
+    section.blocks[0]!.responsive = {
+      tablet: { style: { fontSize: "lg", column: 3 } },
+    } as PageDocumentV2["sections"][number]["blocks"][number]["responsive"];
+    expect(validate(doc)).toBe(true);
+  });
+
+  test("schema: forbidden keys and layer.anchor fail additionalProperties", () => {
+    const ajv = new Ajv({ allErrors: true, strict: false });
+    const validate = ajv.compile(pageDocumentV2JsonSchema);
+    for (const key of sectionForbiddenKeys) {
+      const doc = buildDocument();
+      doc.sections[0]!.responsive = {
+        tablet: { style: { [key]: key === "scrollEffect" ? "parallax" : true } },
+      } as unknown as PageDocumentV2["sections"][number]["responsive"];
+      expect(validate(doc), `section ${key}`).toBe(false);
+    }
+    for (const key of blockForbiddenKeys) {
+      const doc = buildDocument();
+      doc.sections[0]!.blocks[0]!.responsive = {
+        tablet: { style: { [key]: key === "revealDelay" ? 100 : true } },
+      } as unknown as PageDocumentV2["sections"][number]["blocks"][number]["responsive"];
+      expect(validate(doc), `block ${key}`).toBe(false);
+    }
+    const anchorDoc = buildDocument();
+    anchorDoc.sections[0]!.blocks[0]!.responsive = {
+      tablet: { style: { layer: { x: 1, anchor: "center" } } },
+    } as unknown as PageDocumentV2["sections"][number]["blocks"][number]["responsive"];
+    expect(validate(anchorDoc)).toBe(false);
+  });
+
+  test("write: every forbidden responsive key throws page_document_invalid at its exact path", () => {
+    for (const key of sectionForbiddenKeys) {
+      const doc = buildDocument();
+      doc.sections[0]!.responsive = {
+        tablet: { style: { [key]: key === "scrollEffect" ? "parallax" : true } },
+      } as unknown as PageDocumentV2["sections"][number]["responsive"];
+      const error = safeNormalizeError(doc);
+      expect(isPageDocumentError(error, "page_document_invalid"), `section ${key}`).toBe(true);
+      expect((error as PageDocumentError)?.path).toBe(`sections.0.responsive.tablet.style.${key}`);
+    }
+    for (const key of blockForbiddenKeys) {
+      const doc = buildDocument();
+      doc.sections[0]!.blocks[0]!.responsive = {
+        tablet: { style: { [key]: key === "revealDelay" ? 100 : true } },
+      } as unknown as PageDocumentV2["sections"][number]["blocks"][number]["responsive"];
+      const error = safeNormalizeError(doc);
+      expect(isPageDocumentError(error, "page_document_invalid"), `block ${key}`).toBe(true);
+      expect((error as PageDocumentError)?.path).toBe(
+        `sections.0.blocks.0.responsive.tablet.style.${key}`
+      );
+    }
+  });
+
+  test("write: arbitrary responsive style key keeps page_document_unknown_field", () => {
+    const doc = buildDocument();
+    doc.sections[0]!.responsive = {
+      tablet: { style: { wobble: true } },
+    } as unknown as PageDocumentV2["sections"][number]["responsive"];
+    const sectionError = safeNormalizeError(doc);
+    expect(isPageDocumentError(sectionError, "page_document_unknown_field")).toBe(true);
+    expect((sectionError as PageDocumentError)?.path).toBe(
+      "sections.0.responsive.tablet.style.wobble"
+    );
+    const blockDoc = buildDocument();
+    blockDoc.sections[0]!.blocks[0]!.responsive = {
+      tablet: { style: { wobble: true } },
+    } as unknown as PageDocumentV2["sections"][number]["blocks"][number]["responsive"];
+    const blockError = safeNormalizeError(blockDoc);
+    expect(isPageDocumentError(blockError, "page_document_unknown_field")).toBe(true);
+  });
+
+  test("write: layer without a nonempty base layer throws at the exact layer path", () => {
+    const doc = buildDocument();
+    doc.sections[0]!.blocks[0]!.responsive = {
+      tablet: { style: { layer: { x: 1, y: 2, z: 3 } } },
+    } as unknown as PageDocumentV2["sections"][number]["blocks"][number]["responsive"];
+    const error = safeNormalizeError(doc);
+    expect(isPageDocumentError(error, "page_document_invalid")).toBe(true);
+    expect((error as PageDocumentError)?.path).toBe(
+      "sections.0.blocks.0.responsive.tablet.style.layer"
+    );
+  });
+
+  test("stored read drops forbidden keys and layer.anchor while keeping siblings", () => {
+    const doc = buildDocument();
+    doc.sections[0]!.responsive = {
+      tablet: {
+        style: { scrollEffect: "parallax", background: "#0d9488" },
+        layout: { columns: 1 },
+      },
+    } as unknown as PageDocumentV2["sections"][number]["responsive"];
+    doc.sections[0]!.blocks[0]!.responsive = {
+      tablet: {
+        style: {
+          decoration: { kind: "radiate" },
+          layer: { x: 1, anchor: "center" },
+          fontSize: "lg",
+        },
+        props: { level: "h3" },
+      },
+    } as unknown as PageDocumentV2["sections"][number]["blocks"][number]["responsive"];
+    const read = normalizeStoredPageDocumentV2ForRead(doc);
+    const sectionResponsive = read.sections[0]!.responsive?.tablet;
+    expect(sectionResponsive?.style).toEqual({ background: "#0d9488" });
+    expect(sectionResponsive?.layout).toEqual({ columns: 1 });
+    const blockResponsive = read.sections[0]!.blocks[0]!.responsive?.tablet;
+    expect(blockResponsive?.style).toEqual({ fontSize: "lg" });
+    expect(blockResponsive?.props).toEqual({ level: "h3" });
+  });
+
+  test("responsive layer without base drops on stored read with sibling preservation", () => {
+    const doc = buildDocument();
+    doc.sections[0]!.blocks[0]!.responsive = {
+      tablet: { style: { layer: { x: 1, y: 2, z: 3 } }, visibility: { visible: false } },
+    } as unknown as PageDocumentV2["sections"][number]["blocks"][number]["responsive"];
+    const read = normalizeStoredPageDocumentV2ForRead(doc);
+    const blockResponsive = read.sections[0]!.blocks[0]!.responsive?.tablet;
+    expect(blockResponsive?.style).toBeUndefined();
+    expect(blockResponsive?.visibility).toEqual({ visible: false });
+  });
+
+  test("responsive textTransform:none survives; base textTransform:none is omitted", () => {
+    const doc = buildDocument();
+    const block = doc.sections[0]!.blocks[0]!;
+    block.style = { ...(block.style as object), textTransform: "none" } as PageBlockStyleV2;
+    const base = normalizePageDocumentV2ForWrite(doc).sections[0]!.blocks[0]!;
+    expect("textTransform" in (base.style ?? {})).toBe(false);
+    const overrideDoc = buildDocument();
+    overrideDoc.sections[0]!.blocks[0]!.responsive = {
+      tablet: { style: { textTransform: "none" } },
+    } as unknown as PageDocumentV2["sections"][number]["blocks"][number]["responsive"];
+    const withOverride = normalizePageDocumentV2ForWrite(overrideDoc).sections[0]!.blocks[0]!;
+    expect(withOverride.responsive?.tablet?.style?.textTransform).toBe("none");
+  });
 });

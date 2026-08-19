@@ -11,6 +11,7 @@ import {
   createDefaultPageDocumentV2,
   isPageDocumentError,
   isLegacyOrVersionlessPageDocument,
+  mergePageBlockLayerPresentKeys,
   normalizePageDocumentV2ForWrite,
   normalizeBlockTextColorMarks,
   normalizeBlockTextMarks,
@@ -19,6 +20,9 @@ import {
   resolvePageBlockForBreakpoint,
   resolvePageDocumentForBreakpoint,
   resolvePageSectionForBreakpoint,
+  type PageBlockLayer,
+  type PageBlockResponsiveLayerV2,
+  type PageBlockV2,
   type PageDocumentV2,
 } from "../../../core/services/pages/pageDocumentV2";
 
@@ -471,12 +475,11 @@ describe("PageDocumentV2", () => {
       align: "left",
       gradient: true,
     });
-    // width over the cap clamps to 400 (fail-soft); no gradient authored.
+    // width over the cap clamps to 400 (fail-soft); without gradient authored,
+    // TASK-539 gating drops the decorative width/align companions entirely.
     expect(normalized.sections[0]?.blocks[1]?.props).toEqual({
       tone: "neutral",
       thickness: 1,
-      width: 400,
-      align: "center",
     });
 
     // align:"skew" is fail-closed.
@@ -845,5 +848,97 @@ describe("PageDocumentV2", () => {
       fontSize: "lg",
       fontWeight: "bold",
     });
+  });
+});
+
+// ── TASK-539-01-L01 ── present-key layer merge and nested-slot resolution ─────
+describe("TASK-539 deep layer merge", () => {
+  test("mergePageBlockLayerPresentKeys copies only own present x/y/z with override precedence", () => {
+    const merged = mergePageBlockLayerPresentKeys(
+      { x: 1, y: 2, z: 3, anchor: "center" },
+      { x: 10, z: 30 }
+    );
+    expect(merged).toEqual({ x: 10, y: 2, z: 30, anchor: "center" });
+    expect(Object.prototype.hasOwnProperty.call(merged, "y")).toBe(true);
+  });
+
+  test("layer merge returns undefined when the merged layer would be empty", () => {
+    expect(mergePageBlockLayerPresentKeys(undefined, undefined)).toBeUndefined();
+    expect(mergePageBlockLayerPresentKeys({ x: 0 }, {})).toEqual({ x: 0 });
+    expect(mergePageBlockLayerPresentKeys(undefined, {})).toBeUndefined();
+  });
+
+  test("layer merge never copies anchor from the override and never mutates inputs", () => {
+    const base = Object.freeze({ x: 1, y: 2, z: 3, anchor: "center" });
+    const override = Object.freeze({ x: 10, y: 20, z: 30 } as PageBlockResponsiveLayerV2);
+    const merged = mergePageBlockLayerPresentKeys(base, override);
+    expect(merged).toEqual({ x: 10, y: 20, z: 30, anchor: "center" });
+    expect(base).toEqual({ x: 1, y: 2, z: 3, anchor: "center" });
+    expect(override).toEqual({ x: 10, y: 20, z: 30 });
+  });
+
+  test("resolvePageBlockForBreakpoint merges layers with override precedence and omits empty style.layer", () => {
+    const block: PageBlockV2 = {
+      id: "blk_merge",
+      type: "heading",
+      props: { text: "Layers", level: "h2", align: "left" },
+      style: { layer: { x: 1, y: 2, z: 3, anchor: "center" } },
+      visibility: { visible: true },
+      responsive: {
+        tablet: { style: { layer: { x: 10, z: 5 } } },
+      },
+    };
+    const resolved = resolvePageBlockForBreakpoint(block, "tablet");
+    expect(resolved.style?.layer).toEqual({ x: 10, y: 2, z: 5, anchor: "center" });
+    expect(Object.prototype.hasOwnProperty.call(resolved.style, "layer")).toBe(true);
+    expect((block.style?.layer as PageBlockLayer | undefined)?.x).toBe(1); // no mutation.
+
+    const orphan: PageBlockV2 = {
+      id: "blk_orphan",
+      type: "heading",
+      props: { text: "No layer", level: "h2", align: "left" },
+      visibility: { visible: true },
+      responsive: {
+        tablet: { style: { layer: {} } },
+      },
+    };
+    const noMerge = resolvePageBlockForBreakpoint(orphan, "tablet");
+    expect(noMerge.style?.layer).toBeUndefined();
+    expect(Object.prototype.hasOwnProperty.call(noMerge.style ?? {}, "layer")).toBe(false);
+  });
+
+  test("nested slots resolve recursively and carry the merged layer", () => {
+    const child: PageBlockV2 = {
+      id: "blk_child",
+      type: "heading",
+      props: { text: "Child", level: "h3", align: "left" },
+      style: { layer: { x: 1, y: 2, z: 3, anchor: "center" } },
+      visibility: { visible: true },
+      responsive: { tablet: { style: { layer: { z: 5 } } } },
+    };
+    const parent: PageBlockV2 = {
+      id: "blk_parent",
+      type: "columns",
+      props: { count: 1, distribution: "equal" },
+      visibility: { visible: true },
+      slots: { "column:1": [child] },
+    };
+    const resolved = resolvePageBlockForBreakpoint(parent, "tablet");
+    const resolvedChild = resolved.slots?.["column:1"]?.[0];
+    expect(resolvedChild?.style?.layer).toEqual({ x: 1, y: 2, z: 5, anchor: "center" });
+    expect(child.style?.layer?.z).toBe(3); // source untouched.
+  });
+
+  test("non-layer nested records keep replacement behavior on resolution", () => {
+    const block: PageBlockV2 = {
+      id: "blk_pad",
+      type: "heading",
+      props: { text: "Pad", level: "h2", align: "left" },
+      style: { padding: { top: 8, bottom: 8 } },
+      visibility: { visible: true },
+      responsive: { tablet: { style: { padding: { left: 4 } } } },
+    };
+    const resolved = resolvePageBlockForBreakpoint(block, "tablet");
+    expect(resolved.style?.padding).toEqual({ left: 4 });
   });
 });

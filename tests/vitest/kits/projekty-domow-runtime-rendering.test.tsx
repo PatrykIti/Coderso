@@ -33,7 +33,7 @@ const refs = {
 describe("Projekty Domów public runtime rendering", () => {
   it("renders the source-ordered native category facet and reset contract", () => {
     const projects = buildFormaDomPages(refs).find((seed) => seed.key === "projekty");
-    const document = projects?.desired.data as {
+    const document = projects?.desired.data as unknown as {
       sections: Array<{ blocks: PageBlockV2[] }>;
     };
     const blocks = document.sections.flatMap((section) => section.blocks);

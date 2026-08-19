@@ -423,12 +423,12 @@ describe("section scroll effect model (TASK-521-01-L01)", () => {
     return doc;
   };
 
-  test("round-trips reveal-up + parallaxIntensity (present-only)", () => {
+  test("round-trips parallax + parallaxIntensity (present-only)", () => {
     const normalized = normalizePageDocumentV2ForWrite(
-      withSectionStyle({ scrollEffect: "reveal-up", parallaxIntensity: 24 })
+      withSectionStyle({ scrollEffect: "parallax", parallaxIntensity: 24 })
     );
     expect(normalized.sections[0]!.style).toMatchObject({
-      scrollEffect: "reveal-up",
+      scrollEffect: "parallax",
       parallaxIntensity: 24,
     });
     const roundTripped = normalizePageDocumentV2ForWrite(cloneDocument(normalized));
@@ -440,9 +440,9 @@ describe("section scroll effect model (TASK-521-01-L01)", () => {
     expect("scrollEffect" in normalized.sections[0]!.style).toBe(false);
   });
 
-  test("clamps parallaxIntensity to [0,40] (fail-soft)", () => {
+  test("clamps parallaxIntensity to [0,40] (fail-soft, parallax only)", () => {
     const normalized = normalizeStoredPageDocumentV2ForRead(
-      withSectionStyle({ parallaxIntensity: 9999 })
+      withSectionStyle({ scrollEffect: "parallax", parallaxIntensity: 9999 })
     );
     expect(normalized.sections[0]!.style.parallaxIntensity).toBe(40);
   });
@@ -466,7 +466,7 @@ describe("section scroll effect model (TASK-521-01-L01)", () => {
   });
 
   test(
-    "responsive[bp].style scroll keys validate + round-trip (partial-schema mirror)",
+    "responsive[bp].style cannot carry base-only scroll keys (TASK-539)",
     { timeout: 30_000 },
     () => {
       const doc = buildDocument();
@@ -476,15 +476,24 @@ describe("section scroll effect model (TASK-521-01-L01)", () => {
           ...doc.sections[0]!.responsive.tablet,
           style: { scrollEffect: "reveal-fade", parallaxIntensity: 30 },
         },
-      };
-      const normalized = normalizePageDocumentV2ForWrite(doc);
-      expect(normalized.sections[0]!.responsive.tablet?.style).toMatchObject({
-        scrollEffect: "reveal-fade",
-        parallaxIntensity: 30,
+      } as unknown as PageDocumentV2["sections"][number]["responsive"];
+      const error = safeNormalizeError(doc);
+      expect(isPageDocumentError(error, "page_document_invalid")).toBe(true);
+      // Stored read drops only the forbidden keys; the paint sibling survives.
+      const read = normalizeStoredPageDocumentV2ForRead({
+        ...doc,
+        sections: [
+          {
+            ...doc.sections[0]!,
+            responsive: {
+              tablet: {
+                style: { scrollEffect: "reveal-fade", parallaxIntensity: 30, background: "#111" },
+              },
+            },
+          },
+        ],
       });
-      const ajv = new Ajv({ allErrors: true, strict: true });
-      const validate = ajv.compile(pageDocumentV2JsonSchema);
-      expect(validate(normalized)).toBe(true);
+      expect(read.sections[0]!.responsive.tablet?.style).toEqual({ background: "#111" });
     }
   );
 });
@@ -559,15 +568,17 @@ describe("page settings effects model (TASK-521-01-L02)", () => {
     expect("effects" in normalized.settings).toBe(false);
   });
 
-  test("falls back spotlightColor 'url(x)' → var(--primary) (fail-soft)", () => {
+  test("falls back spotlightColor 'url(x)' → var(--primary) inside cursorSpotlight (fail-soft)", () => {
     const normalized = normalizeStoredPageDocumentV2ForRead(
-      withEffects({ spotlightColor: "url(x)" })
+      withEffects({ cursorSpotlight: true, spotlightColor: "url(x)" })
     );
     expect(normalized.settings.effects?.spotlightColor).toBe("var(--primary)");
   });
 
-  test("clamps spotlightSize to [120,900] (fail-soft)", () => {
-    const normalized = normalizeStoredPageDocumentV2ForRead(withEffects({ spotlightSize: 99999 }));
+  test("clamps spotlightSize to [120,900] inside cursorSpotlight (fail-soft)", () => {
+    const normalized = normalizeStoredPageDocumentV2ForRead(
+      withEffects({ cursorSpotlight: true, spotlightSize: 99999 })
+    );
     expect(normalized.settings.effects?.spotlightSize).toBe(900);
   });
 

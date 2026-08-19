@@ -34,6 +34,7 @@ core/services/pages/pageBlockNormalizerV2.ts
 tests/vitest/pages/page-document-v2-test-helpers.ts
 tests/vitest/pages/page-document-v2-facade.test.ts            # create (missing today)
 tests/vitest/pages/page-document-v2.test.ts
+tests/vitest/pages/page-document-v2-idempotence.test.ts       # split from the main suite
 tests/vitest/pages/page-document-v2-tree-and-capabilities.test.ts
 tests/vitest/pages/page-document-v2-listing-and-settings.test.ts
 tests/vitest/pages/page-document-v2-style-contracts.test.ts
@@ -787,7 +788,7 @@ Run these exact gates after the final L01 working tree exists:
 ```bash
 bun --cwd core lint:types
 bun --cwd core lint
-bun run test:vitest -- tests/vitest/pages/page-document-v2-facade.test.ts tests/vitest/pages/page-document-v2.test.ts tests/vitest/pages/page-document-v2-tree-and-capabilities.test.ts tests/vitest/pages/page-document-v2-listing-and-settings.test.ts tests/vitest/pages/page-document-v2-style-contracts.test.ts tests/vitest/pages/page-document-v2-block-roundtrip.test.ts tests/vitest/pages/task-534-interactivity-model.test.ts tests/vitest/services/css-color-contract.test.ts tests/vitest/services/css-color-contract-corpus.test.ts tests/vitest/services/css-color-consumer-parity.test.ts
+bun run test:vitest -- tests/vitest/pages/page-document-v2-facade.test.ts tests/vitest/pages/page-document-v2.test.ts tests/vitest/pages/page-document-v2-idempotence.test.ts tests/vitest/pages/page-document-v2-tree-and-capabilities.test.ts tests/vitest/pages/page-document-v2-listing-and-settings.test.ts tests/vitest/pages/page-document-v2-style-contracts.test.ts tests/vitest/pages/page-document-v2-block-roundtrip.test.ts tests/vitest/pages/task-534-interactivity-model.test.ts tests/vitest/services/css-color-contract.test.ts tests/vitest/services/css-color-contract-corpus.test.ts tests/vitest/services/css-color-consumer-parity.test.ts
 node _docs/_workflows/task-539-implement.mjs --check-task-family-line-limit
 git diff --check
 ```

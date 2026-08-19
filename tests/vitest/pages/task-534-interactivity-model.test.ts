@@ -129,8 +129,13 @@ describe("TASK-534 interactivity model", () => {
           filterable: true,
           filterCategories: ["modern", "eco"],
           items: [
-            { src: "https://example.com/a.jpg", alt: "a", category: "modern" },
-            { src: "https://example.com/b.jpg", alt: "b", category: "modern eco" },
+            { src: "https://example.com/a.jpg", alt: "a", caption: "First", category: "modern" },
+            {
+              src: "https://example.com/b.jpg",
+              alt: "b",
+              caption: "Second",
+              category: "modern eco",
+            },
           ],
         },
         visibility: { visible: true },
@@ -151,7 +156,7 @@ describe("TASK-534 interactivity model", () => {
         type: "gallery",
         props: {
           layout: "grid",
-          items: [{ src: "https://example.com/a.jpg", alt: "a" }],
+          items: [{ src: "https://example.com/a.jpg", alt: "a", caption: "A" }],
         },
         visibility: { visible: true },
       })
@@ -246,15 +251,30 @@ describe("TASK-534 interactivity model", () => {
           layout: "grid",
           filterable: true,
           filterCategories: ['a";b{}', "ok"],
-          items: [{ src: "https://example.com/a.jpg", alt: "a", category: 'a";b{}' }],
+          items: [{ src: "https://example.com/a.jpg", alt: "a", caption: "A" }],
         },
         visibility: { visible: true },
       })
     );
     const props = firstBlock(written).props;
-    expect(props.filterCategories).toEqual(["ok"]); // bad token dropped.
-    const items = props.items as Array<Record<string, unknown>>;
-    expect("category" in items[0]!).toBe(false); // bad item category dropped entirely.
+    expect(props.filterCategories).toEqual(["ok"]); // bad filter token dropped.
+    // TASK-539: item `category` is now fail-closed on fresh writes, so a bad
+    // item category throws instead of being silently dropped.
+    expect(() =>
+      write(
+        buildDocWithBlock({
+          id: "blk_g4b",
+          type: "gallery",
+          props: {
+            layout: "grid",
+            items: [
+              { src: "https://example.com/a.jpg", alt: "a", caption: "A", category: 'a";b{}' },
+            ],
+          },
+          visibility: { visible: true },
+        })
+      )
+    ).toThrow(PageDocumentError);
   });
 
   test("activeIndex clamps to a valid range (fail-soft)", () => {
@@ -319,7 +339,10 @@ describe("TASK-534 interactivity model", () => {
       buildDocWithBlock({
         id: "blk_leg",
         type: "gallery",
-        props: { layout: "grid", items: [{ src: "https://example.com/a.jpg", alt: "a" }] },
+        props: {
+          layout: "grid",
+          items: [{ src: "https://example.com/a.jpg", alt: "a", caption: "A" }],
+        },
         visibility: { visible: true },
       })
     );
@@ -382,4 +405,103 @@ describe("TASK-534 interactivity model", () => {
     });
     expect(validate(bad)).toBe(false);
   });
+});
+
+// ── TASK-539-01-L01 ── effect and divider reachability ──────────────────────
+test("cursorSpotlight:true emits only when true; spotlight dependants survive only inside it", () => {
+  const base = createDefaultPageDocumentV2();
+  const section = createPageSectionV2("content", { id: SECTION_ID, blocks: [] });
+  const doc = {
+    ...base,
+    settings: {
+      ...base.settings,
+      effects: { cursorSpotlight: true, spotlightColor: "#ff0000", spotlightSize: 120 },
+    },
+    sections: [{ ...section }],
+  };
+  const written = write(doc);
+  expect(written.settings.effects?.cursorSpotlight).toBe(true);
+  expect(written.settings.effects?.spotlightColor).toBe("#ff0000");
+  expect(written.settings.effects?.spotlightSize).toBe(120);
+
+  const off = write({
+    ...base,
+    settings: {
+      ...base.settings,
+      effects: { cursorSpotlight: false, spotlightColor: "#ff0000", spotlightSize: 120 },
+    },
+    sections: [{ ...section }],
+  });
+  expect(off.settings.effects?.cursorSpotlight).toBeUndefined();
+  expect(off.settings.effects?.spotlightColor).toBeUndefined();
+  expect(off.settings.effects?.spotlightSize).toBeUndefined();
+
+  const orphan = write({
+    ...base,
+    settings: { ...base.settings, effects: { spotlightColor: "#ff0000" } },
+    sections: [{ ...section }],
+  });
+  expect(orphan.settings.effects?.spotlightColor).toBeUndefined();
+});
+
+test("parallaxIntensity is retained only when scrollEffect is parallax", () => {
+  const base = createDefaultPageDocumentV2();
+  const section = createPageSectionV2("content", { id: SECTION_ID, blocks: [] });
+  const on = write({
+    ...base,
+    sections: [
+      {
+        ...section,
+        style: { ...section.style, scrollEffect: "parallax", parallaxIntensity: 40 },
+      },
+    ],
+  });
+  expect(on.sections[0]?.style.scrollEffect).toBe("parallax");
+  expect(on.sections[0]?.style.parallaxIntensity).toBe(40);
+
+  const off = write({
+    ...base,
+    sections: [
+      {
+        ...section,
+        style: { ...section.style, scrollEffect: "none", parallaxIntensity: 60 },
+      },
+    ],
+  });
+  expect(off.sections[0]?.style.scrollEffect).toBeUndefined();
+  expect(off.sections[0]?.style.parallaxIntensity).toBeUndefined();
+
+  const orphan = write({
+    ...base,
+    sections: [{ ...section, style: { ...section.style, parallaxIntensity: 60 } }],
+  });
+  expect(orphan.sections[0]?.style.parallaxIntensity).toBeUndefined();
+});
+
+test("divider width/align survive only when gradient is true", () => {
+  const withGradient = write(
+    buildDocWithBlock({
+      id: "blk_div_g",
+      type: "divider",
+      props: { tone: "accent", thickness: 2, width: 34, align: "left", gradient: true },
+      visibility: { visible: true },
+    })
+  );
+  expect(firstBlock(withGradient).props).toMatchObject({
+    gradient: true,
+    width: 34,
+    align: "left",
+  });
+
+  const noGradient = write(
+    buildDocWithBlock({
+      id: "blk_div_p",
+      type: "divider",
+      props: { tone: "accent", thickness: 2, width: 34, align: "left" },
+      visibility: { visible: true },
+    })
+  );
+  const props = firstBlock(noGradient).props;
+  expect(props).not.toHaveProperty("width");
+  expect(props).not.toHaveProperty("align");
 });
