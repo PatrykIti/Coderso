@@ -57,6 +57,22 @@ generic dumping-ground helper. Test baseline is 6,813 lines (the flow suite); th
 PageEditor source baseline is the post-TASK-481 split facade + 7 modules, each
 already `<=1000`; every result must be `<=1000`.
 
+Post-TASK-481 content-scope re-baseline (REQUIRED for the flow suite): TASK-481-01-L01
+moved the block brand visual style keys (`color`, `backgroundColor`, `backgroundImage`,
+`backgroundSize`, `backgroundPosition`, `borderColor`, `borderStyle`, `borderWidth`,
+`borderRadius`, `boxShadow`, `opacity`) from the block frame element onto the inner
+`[data-page-editor-content]` wrapper inside `renderBlockFrame`, and wrapped the
+section content in the same scope. When splitting `page-editor-v2-flow.test.tsx`,
+re-baseline any assertion that reads those visual props from the block frame or the
+section-content element to read them from the nearest `[data-page-editor-content]`
+descendant instead (frame/section chrome keep only layout style + the
+`--coderso-block-text` / `--coderso-block-surface` custom props). Known impacted
+assertions at split time: `block.style.opacity/borderRadius/boxShadow`
+(`page-editor-v2-flow.test.tsx` ~1562-1564, the "PageEditor block style controls
+update visible canvas style and saved data" test). This is a structural re-baseline
+of the same rendered value, not a behavior change: the visible canvas style must
+still equal the saved style. Keep all other flow-suite behavior assertions intact.
+
 Forbidden: `CanvasEditor.tsx`, `PageAuthoringCanvas.tsx`, every Screen/Custom Screen
 file, renderer/model/runtime source, and foreign tests. Reciprocal collision guard
 with TASK-481-02-L02: never edit TASK-481's brand-token content-scope surface inside
