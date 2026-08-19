@@ -770,3 +770,131 @@ test("PostClassicEditorShell handles missing post ids, generic preview failures,
     genericPreviewView.cleanup();
   }
 });
+
+test("PostClassicEditorShell reports a missing post when the fetch resolves to nothing", async () => {
+  const { PostClassicEditorShell } =
+    await import("../../../core/admin/ui/posts/editor/PostClassicEditorShell");
+
+  classicState.path = "/admin/posts/post-5?editor=classic";
+  classicState.cachedPost = classicState.createPost("post-5", "draft", {
+    title: "Cached only",
+    slug: "cached-only",
+  });
+  classicState.fetchedPost = null;
+
+  const view = mount(<PostClassicEditorShell />);
+
+  try {
+    await flush();
+
+    expect(view.container.textContent).toContain("Post not found.");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("PostClassicEditorShell blocks publishing when the entry checklist has blocking issues", async () => {
+  const { PostClassicEditorShell } =
+    await import("../../../core/admin/ui/posts/editor/PostClassicEditorShell");
+
+  classicState.path = "/admin/posts/post-6?editor=classic";
+  classicState.cachedPost = classicState.createPost("post-6", "scheduled", {
+    title: "Scheduled post",
+    slug: "scheduled-post",
+  });
+  classicState.fetchedPost = classicState.cachedPost;
+
+  const view = mount(<PostClassicEditorShell />);
+
+  try {
+    await flush();
+
+    React.act(() => {
+      Array.from(view.container.querySelectorAll("button"))
+        .find((button) => button.textContent === "Publish")
+        ?.click();
+    });
+    await flush();
+
+    expect(classicState.publishPostCalls).toEqual([]);
+    expect(view.container.textContent).toContain("Checklist blocking issue.");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("PostClassicEditorShell publishes a draft through the success path", async () => {
+  const { PostClassicEditorShell } =
+    await import("../../../core/admin/ui/posts/editor/PostClassicEditorShell");
+
+  classicState.path = "/admin/posts/post-7?editor=classic";
+  classicState.cachedPost = classicState.createPost("post-7", "draft", {
+    title: "Draft post",
+    slug: "draft-post",
+  });
+  classicState.fetchedPost = classicState.cachedPost;
+
+  const view = mount(<PostClassicEditorShell />);
+
+  try {
+    await flush();
+
+    React.act(() => {
+      Array.from(view.container.querySelectorAll("button"))
+        .find((button) => button.textContent === "Publish")
+        ?.click();
+    });
+    await flush();
+
+    expect(classicState.publishPostCalls).toEqual(["post-7"]);
+    expect(classicState.getPostCalls.length).toBeGreaterThanOrEqual(2);
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("PostClassicEditorShell surfaces draft save failures and saves from the trailing button", async () => {
+  const { PostClassicEditorShell } =
+    await import("../../../core/admin/ui/posts/editor/PostClassicEditorShell");
+
+  classicState.path = "/admin/posts/post-8?editor=classic";
+  classicState.cachedPost = classicState.createPost("post-8", "draft", {
+    title: "Save target",
+    slug: "save-target",
+  });
+  classicState.fetchedPost = classicState.cachedPost;
+
+  const view = mount(<PostClassicEditorShell />);
+
+  try {
+    await flush();
+
+    const saveDraftButtons = () =>
+      Array.from(view.container.querySelectorAll("button")).filter(
+        (button) => button.textContent === "Save draft"
+      );
+
+    classicState.nextUpdateError = classicState.apiError("Save throttled");
+    React.act(() => {
+      saveDraftButtons()[0]?.click();
+    });
+    await flush();
+    expect(view.container.textContent).toContain("Save throttled");
+
+    classicState.nextUpdateError = new Error("save exploded");
+    React.act(() => {
+      saveDraftButtons()[0]?.click();
+    });
+    await flush();
+    expect(view.container.textContent).toContain("Failed to save post.");
+
+    const before = classicState.updatePostCalls.length;
+    React.act(() => {
+      saveDraftButtons().at(-1)?.click();
+    });
+    await flush();
+    expect(classicState.updatePostCalls.length).toBe(before + 1);
+  } finally {
+    view.cleanup();
+  }
+});

@@ -5,7 +5,7 @@
 **Category:** QA + Editor UX  
 **Estimated Effort:** Large  
 **Dependencies:** TASK-105-01  
-**Status:** In Progress (2026-03-11)
+**Status:** ✅ Done (2026-08-19 closure; 2026-08-19 rebaseline)
 
 ---
 
@@ -316,6 +316,307 @@ Current `2026-03-14` snapshot after the latest page-editor fallback follow-up:
 Updated remaining slices after this follow-up:
 - `PageEditor.tsx` is no longer a large branch outlier, so the next `TASK-105-05` ROI is concentrated in residual adapter/media/async edges rather than broad page-shell behavior
 - broader low-line admin backlog keeps getting relatively more important as the editor wave compresses
+
+
+## Current authoritative rebaseline (2026-08-19, HEAD 3c470092, FINAL closure state)
+
+All numbers below come from the final canonical full-lane run generated TODAY
+at this HEAD plus the TASK-105-05 test wave (`bun scripts/run-vitest-coverage.ts`,
+artifact `coverage/vitest/coverage-summary.json`, regenerated at closure from
+the final working tree). Aggregates are weighted
+(`sum covered / sum total`), the same method the artifact `total` entry uses.
+Percentages are rendered as `floor(100 * covered / total) / 100` (truncation),
+matching the artifact `pct` fields and the report `All files` row.
+Lane totals: `81.54` stmts / `73.30` branch / `81.18` funcs / `84.59` lines.
+
+Every `2026-03-14` snapshot above is HISTORICAL. Since then `PageEditor.tsx`
+was rewritten (Page Editor V2, commit `ddc85ca4` 2026-06-14; latest change
+`6cc44880` 2026-07-09; now `5204` physical lines) and
+`PageSettingsDrawer.tsx` was DELETED in that same V2 commit. All references
+to `PageSettingsDrawer.tsx` in the historical progress notes above are
+history only: its settings surface now lives inline inside `PageEditor.tsx`
+(`pageSettingsPanelOpen` compact side-inspector panel). No current slice may
+target the deleted file. The historical `95.45% / 82.51%` claim for
+`PageEditor.tsx` was superseded by the `84.47% / 74.13%` rebaseline regression
+and recovered to the FINAL state below within this wave. New in-scope surfaces
+also appeared: `core/admin/ui/pages/editor/*`,
+`core/admin/ui/pages/editorControls/*`, and
+`core/admin/ui/pages/templates/*`.
+
+Cluster aggregates (weighted, lines / branches):
+
+- `core/admin/ui/entries/*` -> `93.76%` lines / `83.56%` branches, `31` files (`1264/1348` lines, `1022/1223` branches)
+- `core/admin/ui/pages/*` -> `94.50%` lines / `82.29%` branches, `48` files (`2890/3058` lines, `2492/3028` branches)
+- `core/admin/ui/posts/*` -> `96.72%` lines / `84.81%` branches, `44` files (`4130/4270` lines, `3168/3735` branches)
+
+Per-file snapshot (`lines% / branches%`, covered/total):
+
+Entries (31):
+
+- `entries/EntryBulkActionsBar.tsx` -> `100.00 / 71.42` (`3/3`, `10/14`)
+- `entries/EntryCreateDrawer.tsx` -> `96.38 / 91.48` (`80/83`, `43/47`)
+- `entries/EntryDeleteDialog.tsx` -> `50.00 / 75.00` (`1/2`, `3/4`)
+- `entries/EntryEditor.tsx` -> `90.03 / 80.00` (`298/331`, `192/240`)
+- `entries/EntryEditorHeader.tsx` -> `100.00 / 100.00` (`1/1`, `10/10`)
+- `entries/EntryFieldSections.tsx` -> `100.00 / 55.00` (`8/8`, `11/20`)
+- `entries/EntryFieldsPlaceholder.tsx` -> `100.00 / 100.00` (`3/3`, `2/2`)
+- `entries/EntryFilters.tsx` -> `75.00 / 100.00` (`6/8`, `4/4`)
+- `entries/EntryGrid.tsx` -> `94.44 / 88.88` (`17/18`, `16/18`)
+- `entries/EntryList.tsx` -> `93.72 / 75.00` (`224/239`, `129/172`)
+- `entries/EntryMetadataPanel.tsx` -> `90.24 / 86.36` (`111/123`, `133/154`)
+- `entries/EntryRevisionDrawer.tsx` -> `100.00 / 83.82` (`47/47`, `57/68`)
+- `entries/EntryTable.tsx` -> `96.29 / 81.81` (`26/27`, `36/44`)
+- `entries/EntryTitleSlugFields.tsx` -> `75.00 / 100.00` (`3/4`, `0/0`)
+- `entries/EntryTypeSidebar.tsx` -> `96.96 / 76.92` (`32/33`, `30/39`)
+- `entries/FieldRenderer.tsx` -> `99.04 / 92.16` (`104/105`, `153/166`)
+- `entries/contentTypeLabels.ts` -> `100.00 / 100.00` (`4/4`, `4/4`)
+- `entries/entryChecklist.ts` -> `95.12 / 93.33` (`39/41`, `56/60`)
+- `entries/entryEditorVisit.ts` -> `100.00 / 77.77` (`30/30`, `14/18`)
+- `entries/entryFieldGroups.ts` -> `100.00 / 77.27` (`25/25`, `17/22`)
+- `entries/entryLinkedFields.ts` -> `100.00 / 100.00` (`3/3`, `0/0`)
+- `entries/entryMetadataUpdate.ts` -> `91.66 / 92.85` (`11/12`, `26/28`)
+- `entries/entrySlug.ts` -> `100.00 / 100.00` (`1/1`, `0/0`)
+- `entries/entryValueMapping.ts` -> `84.37 / 71.42` (`27/32`, `20/28`)
+- `entries/useEntryEditTracker.ts` -> `100.00 / 100.00` (`35/35`, `13/13`)
+- `entries/useEntryRelationTargets.ts` -> `96.15 / 100.00` (`25/26`, `8/8`)
+- `entries/useEntryRevisions.ts` -> `100.00 / 95.83` (`38/38`, `23/24`)
+- `entries/useEntryRuntimePreview.ts` -> `100.00 / 100.00` (`22/22`, `6/6`)
+- `entries/useEntrySnapshotAuthority.ts` -> `100.00 / 100.00` (`11/11`, `0/0`)
+- `entries/useEntryTaxonomyIntent.ts` -> `100.00 / 100.00` (`17/17`, `0/0`)
+- `entries/useEntryTaxonomyTermCreate.ts` -> `75.00 / 60.00` (`12/16`, `6/10`)
+
+Pages (48):
+
+- `pages/DeviceSwitcher.tsx` -> `100.00 / 100.00` (`11/11`, `8/8`)
+- `pages/PageBulkActionsBar.tsx` -> `100.00 / 71.42` (`3/3`, `10/14`)
+- `pages/PageCreateDrawer.tsx` -> `86.95 / 81.48` (`20/23`, `22/27`)
+- `pages/PageEditor.tsx` -> `91.06 / 79.31` (`1243/1365`, `1070/1349`)
+- `pages/PageEditorPage.tsx` -> `100.00 / 100.00` (`1/1`, `0/0`)
+- `pages/PageFilters.tsx` -> `100.00 / 100.00` (`3/3`, `2/2`)
+- `pages/PageList.tsx` -> `100.00 / 100.00` (`1/1`, `0/0`)
+- `pages/PageListPage.tsx` -> `95.40 / 79.59` (`187/196`, `78/98`)
+- `pages/PagePreview.tsx` -> `88.88 / 91.66` (`8/9`, `11/12`)
+- `pages/PageRevisionDrawer.tsx` -> `100.00 / 71.73` (`24/24`, `33/46`)
+- `pages/PageRowActions.tsx` -> `100.00 / 100.00` (`4/4`, `2/2`)
+- `pages/PageTable.tsx` -> `100.00 / 90.00` (`25/25`, `18/20`)
+- `pages/builder/AdminWidgetPreviewRuntimeBridge.tsx` -> `92.85 / 50.00` (`13/14`, `3/6`)
+- `pages/builder/AdvancedPanel.tsx` -> `100.00 / 100.00` (`11/11`, `9/9`)
+- `pages/builder/BlockList.tsx` -> `91.39 / 77.52` (`85/93`, `69/89`)
+- `pages/builder/BlockSettings.tsx` -> `97.22 / 80.52` (`105/108`, `153/190`)
+- `pages/builder/BlockToolbar.tsx` -> `100.00 / 100.00` (`1/1`, `0/0`)
+- `pages/builder/FormPicker.tsx` -> `100.00 / 94.11` (`13/13`, `16/17`)
+- `pages/builder/LayoutPanel.tsx` -> `100.00 / 83.33` (`23/23`, `5/6`)
+- `pages/builder/LibraryPanel.tsx` -> `100.00 / 100.00` (`3/3`, `3/3`)
+- `pages/builder/VisualPanel.tsx` -> `96.55 / 87.30` (`28/29`, `55/63`)
+- `pages/builder/WidgetPicker.tsx` -> `92.85 / 95.23` (`26/28`, `20/21`)
+- `pages/builder/WizardPanel.tsx` -> `100.00 / 100.00` (`6/6`, `7/7`)
+- `pages/builder/blockUtils.ts` -> `99.12 / 85.89` (`226/228`, `201/234`)
+- `pages/builder/bookingFlowContext.ts` -> `100.00 / 66.66` (`6/6`, `4/6`)
+- `pages/builder/types.ts` -> `0.00 / 0.00` (`0/0`, `0/0`)
+- `pages/builder/widgetRegistry.ts` -> `100.00 / 100.00` (`1/1`, `0/0`)
+- `pages/editor/FloatingEditorToolbar.tsx` -> `100.00 / 87.50` (`4/4`, `7/8`)
+- `pages/editor/PageAuthoringCanvas.tsx` -> `99.27 / 86.43` (`274/276`, `223/258`)
+- `pages/editor/PageEditorCommandPalette.tsx` -> `100.00 / 100.00` (`15/15`, `14/14`)
+- `pages/editor/PageEditorLayers.tsx` -> `95.00 / 93.10` (`19/20`, `27/29`)
+- `pages/editor/pageEditorHostContract.ts` -> `100.00 / 100.00` (`10/10`, `10/10`)
+- `pages/editor/pageEditorLabels.ts` -> `100.00 / 86.66` (`14/14`, `13/15`)
+- `pages/editor/pageEditorOptions.ts` -> `100.00 / 93.75` (`20/20`, `15/16`)
+- `pages/editorControls/ColorSwatchControl.tsx` -> `100.00 / 87.75` (`31/31`, `43/49`)
+- `pages/editorControls/ComboboxControl.tsx` -> `92.20 / 89.09` (`71/77`, `98/110`)
+- `pages/editorControls/FacetListControl.tsx` -> `98.82 / 78.08` (`84/85`, `57/73`)
+- `pages/editorControls/ListItemsControl.tsx` -> `95.23 / 82.35` (`20/21`, `14/17`)
+- `pages/editorControls/MediaPickerControl.tsx` -> `100.00 / 80.00` (`3/3`, `4/5`)
+- `pages/editorControls/SegmentedControl.tsx` -> `96.15 / 91.42` (`25/26`, `32/35`)
+- `pages/editorControls/SliderControl.tsx` -> `100.00 / 83.33` (`9/9`, `5/6`)
+- `pages/editorControls/SliderStepperControl.tsx` -> `100.00 / 100.00` (`11/11`, `8/8`)
+- `pages/editorControls/ToggleSwitch.tsx` -> `100.00 / 90.90` (`4/4`, `10/11`)
+- `pages/editorControls/controlChrome.ts` -> `100.00 / 100.00` (`42/42`, `12/12`)
+- `pages/editorControls/index.ts` -> `0.00 / 0.00` (`0/0`, `0/0`)
+- `pages/templates/PageTemplateEditorPage.tsx` -> `100.00 / 75.00` (`58/58`, `39/52`)
+- `pages/templates/PageTemplatesPage.tsx` -> `94.36 / 88.23` (`67/71`, `45/51`)
+- `pages/templates/usePageTemplates.ts` -> `100.00 / 85.00` (`32/32`, `17/20`)
+
+Posts (44):
+
+- `posts/PostEditorPage.tsx` -> `100.00 / 85.00` (`33/33`, `17/20`)
+- `posts/PostsCreateDrawer.tsx` -> `100.00 / 86.36` (`21/21`, `19/22`)
+- `posts/PostsListPage.tsx` -> `99.53 / 79.04` (`214/215`, `83/105`)
+- `posts/PostsTable.tsx` -> `95.23 / 95.65` (`20/21`, `22/23`)
+- `posts/editor/PostBlockEditorShell.tsx` -> `91.35 / 81.55` (`243/266`, `168/206`)
+- `posts/editor/PostClassicEditorShell.tsx` -> `97.52 / 78.99` (`354/363`, `252/319`)
+- `posts/editor/PostEditorCanvas.tsx` -> `97.75 / 87.01` (`348/356`, `402/462`)
+- `posts/editor/PostEditorTopBar.tsx` -> `100.00 / 100.00` (`1/1`, `2/2`)
+- `posts/editor/PostRevisionDrawer.tsx` -> `97.87 / 73.21` (`46/47`, `41/56`)
+- `posts/editor/blocks/BlockInserter.tsx` -> `98.43 / 83.58` (`63/64`, `56/67`)
+- `posts/editor/blocks/PostListViewPanel.tsx` -> `100.00 / 94.59` (`51/51`, `35/37`)
+- `posts/editor/blocks/SlashCommandMenu.tsx` -> `100.00 / 83.33` (`4/4`, `5/6`)
+- `posts/editor/blocks/blockCatalog.ts` -> `100.00 / 94.44` (`27/27`, `17/18`)
+- `posts/editor/blocks/blockDnD.ts` -> `100.00 / 96.00` (`23/23`, `24/25`)
+- `posts/editor/blocks/blockTransforms.ts` -> `98.14 / 67.92` (`53/54`, `36/53`)
+- `posts/editor/header/PostEditorActionCluster.tsx` -> `100.00 / 83.33` (`1/1`, `5/6`)
+- `posts/editor/header/PostEditorDocumentTools.tsx` -> `100.00 / 50.00` (`1/1`, `2/4`)
+- `posts/editor/header/PostEditorHeader.tsx` -> `92.30 / 95.91` (`12/13`, `47/49`)
+- `posts/editor/hooks/useFocusReturn.ts` -> `96.15 / 82.14` (`25/26`, `23/28`)
+- `posts/editor/hooks/usePostAutosave.ts` -> `100.00 / 90.90` (`23/23`, `10/11`)
+- `posts/editor/hooks/usePostEditorLayout.ts` -> `100.00 / 96.82` (`66/66`, `61/63`)
+- `posts/editor/hooks/usePostEditorPreferences.ts` -> `98.38 / 86.36` (`61/62`, `19/22`)
+- `posts/editor/hooks/usePostEditorShortcuts.ts` -> `100.00 / 72.72` (`62/62`, `56/77`)
+- `posts/editor/hooks/usePostEditorState.ts` -> `93.87 / 84.67` (`1043/1111`, `735/868`)
+- `posts/editor/inspector/BlockInspector.tsx` -> `95.12 / 91.54` (`78/82`, `65/71`)
+- `posts/editor/inspector/DocumentInspector.tsx` -> `96.42 / 78.04` (`27/28`, `32/41`)
+- `posts/editor/inspector/InspectorSection.tsx` -> `100.00 / 60.00` (`3/3`, `3/5`)
+- `posts/editor/inspector/PostDetailsSidebar.tsx` -> `100.00 / 100.00` (`4/4`, `6/6`)
+- `posts/editor/inspector/inspectorSchemas.ts` -> `100.00 / 100.00` (`29/29`, `12/12`)
+- `posts/editor/layout/PostEditorLayout.tsx` -> `100.00 / 94.73` (`25/25`, `54/57`)
+- `posts/editor/layout/PostEditorRegions.tsx` -> `100.00 / 100.00` (`5/5`, `0/0`)
+- `posts/editor/outline/PostDocumentOutline.tsx` -> `100.00 / 91.30` (`16/16`, `21/23`)
+- `posts/editor/outline/PostDocumentStats.tsx` -> `100.00 / 100.00` (`3/3`, `0/0`)
+- `posts/editor/postEditorStore.ts` -> `99.37 / 91.81` (`158/159`, `101/110`)
+- `posts/editor/postExternalUpdateAuthority.ts` -> `100.00 / 100.00` (`13/13`, `7/7`)
+- `posts/editor/postInsertFlow.ts` -> `89.47 / 85.71` (`17/19`, `12/14`)
+- `posts/editor/postMetadataMutationPayload.ts` -> `100.00 / 89.47` (`23/23`, `34/38`)
+- `posts/editor/richtext/PostRichTextAdapter.tsx` -> `98.92 / 82.74` (`644/651`, `465/562`)
+- `posts/editor/richtext/PostRichTextToolbar.tsx` -> `90.54 / 88.52` (`67/74`, `54/61`)
+- `posts/editor/richtext/postRichTextBlockTransforms.ts` -> `100.00 / 100.00` (`13/13`, `16/16`)
+- `posts/editor/richtext/postRichTextCommandEngine.ts` -> `99.44 / 91.91` (`179/180`, `125/136`)
+- `posts/editor/settings/PostEditorSettingsDialog.tsx` -> `100.00 / 50.00` (`11/11`, `2/4`)
+- `posts/editor/settings/postEditorPreferences.ts` -> `93.33 / 94.11` (`14/15`, `16/17`)
+- `posts/editor/sidebars/PostListViewSidebar.tsx` -> `100.00 / 100.00` (`6/6`, `6/6`)
+
+## Wave outcome (final)
+
+All priority targets of this wave are closed at the final canonical run:
+
+- **PageEditor shell:** `PageEditor.tsx` (`84.47/74.13`, `212` uncovered
+  lines / `349` uncovered branches) -> `91.06/79.31` (`122` uncovered lines /
+  `279` uncovered branches): inline settings panel, section/block selection and
+  insertion, mobile insert, unload warnings, and async load/preview/revision
+  failure branches covered through the real shell.
+- **Pages editor surfaces:** `PageAuthoringCanvas.tsx` (`84.42/75.58` ->
+  `99.27/86.43`): inline text editing, mark-toolbar apply/restore, link
+  seeding/unlink, caret placement and keyboard commit paths. Also
+  `pageEditorOptions.ts` (`85.00/75.00` -> `100.00/93.75`),
+  `PageEditorCommandPalette.tsx` (-> `100.00/100.00`), `WidgetPicker.tsx`
+  (-> `92.85/95.23`), `LibraryPanel.tsx` (-> `100.00/100.00`),
+  `bookingFlowContext.ts` (-> `100.00/66.66`), `PageListPage.tsx`
+  (-> `95.40/79.59`).
+- **Pages templates:** `PageTemplatesPage.tsx` (`40.85/33.33` ->
+  `94.36/88.23`), `PageTemplateEditorPage.tsx` (`55.17/32.69` ->
+  `100.00/75.00`), `usePageTemplates.ts` (`28.12/5.00` -> `100.00/85.00`):
+  list loading/cached/error states, create/duplicate/delete flows, status
+  filtering, editor save/validation/load branches, cacheBus error branches.
+- **Entries:** `EntryList.tsx` (`80.33/59.30` -> `93.72/75.00`),
+  `EntryRevisionDrawer.tsx` (-> `100.00/83.82`), `useEntryRevisions.ts`
+  (-> `100.00/95.83`), `useEntryRuntimePreview.ts` (-> `100.00/100.00`),
+  `entryMetadataUpdate.ts` (-> `91.66/92.85`), `entryChecklist.ts`
+  (-> `95.12/93.33`), `FieldRenderer.tsx` (-> `99.04/92.16`).
+- **Posts:** `PostBlockEditorShell.tsx` (`89.85/81.55` -> `91.35/81.55`),
+  `PostClassicEditorShell.tsx` (`93.94/76.49` -> `97.52/78.99`),
+  `PostEditorCanvas.tsx` (`92.70/85.71` -> `97.75/87.01`),
+  `usePostEditorState.ts` (`93.07/83.41` -> `93.87/84.67`),
+  `postEditorStore.ts` (`86.16/68.18` -> `99.37/91.81`),
+  `postRichTextCommandEngine.ts` (`90.56/80.15` -> `99.44/91.91`),
+  `PostRichTextAdapter.tsx` (`94.16/78.47` -> `98.92/82.74`),
+  `PostsListPage.tsx` (`94.88/71.43` -> `99.53/79.04`).
+
+Oversized test files were split with assertions preserved (all originals
+deleted, split files <=1000 physical lines, independently runnable):
+`page-editor-v2-flow` (6813 -> shell/settings/insertion/failures/builder-
+chrome/columns/controls/inline-edit/panels/responsive + shared fixtures),
+`post-editor-state-hook-wave` (6500 -> crud/revisions/media/normalization/
+refresh-revisions + shared fixtures), `post-richtext-adapter-wave` (1893 ->
+paste/slash/upload/toolbar/commands/command-engine/clear-formatting/inline-
+typography/block-transform/adapter-edges + fixtures), `post-editor-canvas-wave`
+(1884 -> media/blocks/embeds/canvas-panels + fixtures), `page-post-list-wave`
+(1803 -> page-list-wave + post-list-wave + fixtures), `post-block-editor-shell-
+wave` (1678 -> layout-wave + actions-wave + fixtures), `page-authoring-canvas`
+(1138 -> selection/links-dock/branches-wave + fixtures), and the post-audit
+`blockSettings-wave.test.tsx` split (see Execution notes).
+
+Non-blocking residue (explicitly out of scope for this wave, tracked as
+follow-up backlog): `EntryDeleteDialog.tsx` (`50.00 / 75.00`, 1 line gap),
+`EntryFieldSections.tsx` branches (`11/20`), `EntryTitleSlugFields.tsx`
+(`3/4`), `EntryFilters.tsx` (`6/8`), `useEntryTaxonomyTermCreate.ts`
+(`12/16`), `AdminWidgetPreviewRuntimeBridge.tsx` (`13/14`, `3/6`),
+`BlockList.tsx` (`85/93`), `PostRichTextToolbar.tsx` (`67/74`),
+`useFocusReturn.ts` (`25/26`), `postInsertFlow.ts` (`17/19`), and
+`PostEditorHeader.tsx` (`12/13`). These are small single-line/branch leaves;
+they do not block the wave acceptance (`material drop in uncovered lines`
+achieved for every priority surface).
+
+## Execution notes
+
+Per-slice implementation pseudocode (Vitest, happy-dom):
+
+```ts
+// render-with-state: mount the surface with service mocks seeded for the
+// branch under test, then assert the VISIBLE effect (text, aria-*, disabled
+// attribute), never mere control presence.
+renderWithState(<PageTemplatesPage />, { templates: [], isLoading: false });
+expect(screen.getByText(/no templates/i)).toBeInTheDocument();
+
+// assert-branch: error paths seed the rejection and await the settled
+// alert/retry surface; cached vs empty vs populated states seed the cache
+// read explicitly (getCachedPageTemplates -> items, undefined, []).
+vi.mocked(listPageTemplatesCached).mockRejectedValueOnce(apiError("templates_list_failed"));
+renderWithState(<PageTemplatesPage />, {});
+expect(await screen.findByRole("alert")).toHaveTextContent("load");
+
+// callback-invoke: capture emitted handlers and drive success AND failure
+// variants (confirm/deny dialogs, save -> autosave fallback, cacheBus
+// revalidation), including the skipped-subscription branch for hooks with
+// `skip` options.
+const { result } = renderHook(() => usePageTemplates({ skip: true }));
+await act(async () => { await result.current.refresh(true); });
+```
+
+Test-file split plan (>1000-line gate; each split file must stay independently
+runnable in the Vitest lane, pattern: named suites + shared fixture module):
+
+- `tests/vitest/ui/post-editor-state-hook-wave.test.tsx` (`6500`): split by
+  hook responsibility -> `usePostEditorState-crud.test.tsx`,
+  `usePostEditorState-revisions.test.tsx`,
+  `usePostEditorState-media.test.tsx`,
+  `usePostEditorState-normalization.test.tsx`; shared builders ->
+  `postEditorStateFixtures.tsx`.
+- `tests/vitest/ui/page-editor-v2-flow.test.tsx` (`6813`): split by editor
+  subsystem -> `page-editor-shell-flow.test.tsx`,
+  `page-editor-settings-flow.test.tsx`,
+  `page-editor-insertion-flow.test.tsx`,
+  `page-editor-failures.test.tsx`; shared harness ->
+  `pageEditorV2Fixtures.tsx`.
+- `tests/vitest/ui/post-richtext-adapter-wave.test.tsx` (`1893`): split by
+  adapter responsibility -> `post-richtext-paste.test.tsx`,
+  `post-richtext-slash.test.tsx`, `post-richtext-upload.test.tsx`.
+- `tests/vitest/ui/post-editor-canvas-wave.test.tsx` (`1884`): split by canvas
+  flow -> `post-editor-canvas-media.test.tsx`,
+  `post-editor-canvas-blocks.test.tsx`,
+  `post-editor-canvas-embeds.test.tsx`.
+- `tests/vitest/ui/page-post-list-wave.test.tsx` (`1803`): split by page
+  ownership -> `page-list-wave.test.tsx`, `post-list-wave.test.tsx`
+  (shared mock factory -> `pagePostListFixtures.tsx`).
+- `tests/vitest/ui/post-block-editor-shell-wave.test.tsx` (`1678`): split by
+  shell responsibility -> `post-block-editor-shell-layout.test.tsx`,
+  `post-block-editor-shell-actions.test.tsx`.
+- `tests/vitest/ui/page-authoring-canvas.test.tsx` (`1138`): split by canvas
+  behavior -> `page-authoring-canvas-selection.test.tsx`,
+  `page-authoring-canvas-dnd.test.tsx` (shared
+  `pageAuthoringCanvasFixtures.tsx`).
+- `tests/vitest/pageBuilder/blockSettings-wave.test.tsx` (`1058`): split by
+  behavior (executed at closure after a post-implementation drift-audit
+  finding; the tests are wizard/live-preview/repeatable-slots behaviors, not
+  tokens/layout as originally guessed) ->
+  `blockSettings-wizard-wave.test.tsx` (`344` lines, `9` tests),
+  `blockSettings-slots-wave.test.tsx` (`425` lines, `4` tests), shared
+  `blockSettingsFixtures.tsx` (`324` lines); all `13` tests and assertions
+  preserved, both split files green in the Vitest lane, original deleted.
+
+**Changelog pin:** `1321` (TASK-105-05), reserved per stream plan
+(`1309-1319` are reserved for S1/S3); the live
+`_docs/_CHANGELOG/README.md` records the `1320/1321/1322` reservations;
+`1320` consumed by TASK-105-04 closure and `1321` by this closure
+(2026-08-19), `1322` stays reserved for the deferred TASK-105-06.
+
 
 ## Testing Requirements
 

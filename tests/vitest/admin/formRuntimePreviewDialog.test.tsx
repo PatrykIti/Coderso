@@ -8,9 +8,14 @@
 // (resolveFormTheme(undefined) = FORM_THEME_DEFAULTS), i.e. parity with the canvas'
 // un-themed look — not the legacy hardcoded preview styling.
 
+vi.mock("@/services/formsClient", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../../core/admin/services/formsClient")>();
+  return { ...actual, submitForm: vi.fn() };
+});
+
 import React from "react";
 import { createRoot } from "react-dom/client";
-import { afterEach, expect, test } from "vitest";
+import { afterEach, expect, test, vi } from "vitest";
 
 import { FormRuntimePreviewDialog } from "../../../core/admin/ui/forms/FormRuntimePreviewDialog";
 import type { FormSettings } from "../../../core/admin/services/formsClient";
@@ -194,4 +199,263 @@ test("516-06: an un-themed preview renders the resolveFormTheme DEFAULTS (canvas
   expect(html).not.toContain("bg-[var(--form-submit-bg)]");
 
   cleanup();
+});
+
+const setInputValue = (element: Element | null | undefined, value: string) => {
+  if (!(element instanceof HTMLInputElement)) return;
+  React.act(() => {
+    const descriptor = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value");
+    descriptor?.set?.call(element, value);
+    element.dispatchEvent(new Event("input", { bubbles: true }));
+    element.dispatchEvent(new Event("change", { bubbles: true }));
+  });
+};
+
+const setTextareaValue = (element: Element | null | undefined, value: string) => {
+  if (!(element instanceof HTMLTextAreaElement)) return;
+  React.act(() => {
+    const descriptor = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value");
+    descriptor?.set?.call(element, value);
+    element.dispatchEvent(new Event("input", { bubbles: true }));
+    element.dispatchEvent(new Event("change", { bubbles: true }));
+  });
+};
+
+const clickButtonByText = (root: HTMLElement, text: string) => {
+  const button = Array.from(root.querySelectorAll("button")).find(
+    (candidate) => candidate.textContent?.trim() === text
+  );
+  expect(button, `missing button ${text}`).toBeTruthy();
+  React.act(() => {
+    (button as HTMLButtonElement).click();
+  });
+};
+
+const interactiveFields = [
+  {
+    id: "c1",
+    type: "checkbox",
+    label: "Subscribe",
+    name: "subscribe",
+    required: false,
+    settings: {},
+  },
+  {
+    id: "t1",
+    type: "textarea",
+    label: "Message",
+    name: "message",
+    required: false,
+    settings: { placeholder: "Tell us more" },
+  },
+  {
+    id: "s1",
+    type: "select",
+    label: "Topic",
+    name: "topic",
+    required: false,
+    settings: { options: ["Support", "Sales"] },
+  },
+  {
+    id: "h1",
+    type: "hidden",
+    label: "Source",
+    name: "source",
+    required: false,
+    settings: { defaultValue: "preview" },
+  },
+];
+
+const renderInteractiveDialog = (settings: FormSettings, fields: typeof interactiveFields) =>
+  mount(
+    <FormRuntimePreviewDialog
+      open
+      onOpenChange={() => {}}
+      formId="form-1"
+      formName="Contact"
+      formDescription="Reach us"
+      settings={settings}
+      fields={fields}
+      hasUnsavedChanges={false}
+      onOpenLogs={() => {}}
+    />
+  );
+
+test("checkbox, textarea and select interactions feed the submitted payload", async () => {
+  const { submitForm } = await import("../../../core/admin/services/formsClient");
+  vi.mocked(submitForm).mockResolvedValue({
+    id: "sub-1",
+    formId: "form-1",
+    payload: {},
+    status: "accepted",
+    createdAt: new Date().toISOString(),
+    ip: null,
+    userAgent: null,
+    runtime: { successMessage: "Test accepted", redirectUrl: null },
+  });
+
+  const { cleanup } = renderInteractiveDialog(baseSettings(), interactiveFields);
+  try {
+    const checkbox = document.querySelector(
+      'input[type="checkbox"][id="runtime-field-c1"]'
+    ) as HTMLInputElement | null;
+    React.act(() => {
+      checkbox?.click();
+    });
+    expect(checkbox?.checked).toBe(true);
+
+    const message = document.querySelector("textarea#runtime-field-t1");
+    setTextareaValue(message, "Hello team");
+
+    const topic = document.querySelector("select#runtime-field-s1") as HTMLSelectElement | null;
+    const descriptor = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, "value");
+    React.act(() => {
+      descriptor?.set?.call(topic, "Sales");
+      topic?.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+
+    clickButtonByText(document.body, "Submit preview");
+    // Drain the submit promise chain inside act (same pattern as the shared
+    // formsWave fixtures' flush) so the post-resolution state updates are
+    // captured and no act warning escapes.
+    await React.act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(vi.mocked(submitForm)).toHaveBeenCalledWith("form-1", {
+      subscribe: true,
+      message: "Hello team",
+      topic: "Sales",
+      source: "preview",
+    });
+    expect(document.body.textContent).toContain("Submission completed");
+    expect(document.body.textContent).toContain("Test accepted");
+  } finally {
+    cleanup();
+    vi.mocked(submitForm).mockReset();
+  }
+});
+
+test("a generic submit failure surfaces the fallback message", async () => {
+  const { submitForm } = await import("../../../core/admin/services/formsClient");
+  vi.mocked(submitForm).mockRejectedValue(new Error("boom"));
+
+  const { cleanup } = renderInteractiveDialog(baseSettings(), interactiveFields);
+  try {
+    clickButtonByText(document.body, "Submit preview");
+    // Drain the submit promise chain inside act (same pattern as the shared
+    // formsWave fixtures' flush) so the post-resolution state updates are
+    // captured and no act warning escapes.
+    await React.act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(document.body.textContent).toContain("Preview submit failed");
+    expect(document.body.textContent).toContain("Failed to submit preview payload.");
+  } finally {
+    cleanup();
+    vi.mocked(submitForm).mockReset();
+  }
+});
+
+test("an ApiClientError submit failure surfaces the machine-readable message", async () => {
+  const { submitForm } = await import("../../../core/admin/services/formsClient");
+  const { ApiClientError } = await import("../../../core/admin/services/apiClient");
+  vi.mocked(submitForm).mockRejectedValue(
+    new ApiClientError("forms_submit_rejected", "Payload rejected", 422)
+  );
+
+  const { cleanup } = renderInteractiveDialog(baseSettings(), interactiveFields);
+  try {
+    clickButtonByText(document.body, "Submit preview");
+    // Drain the submit promise chain inside act (same pattern as the shared
+    // formsWave fixtures' flush) so the post-resolution state updates are
+    // captured and no act warning escapes.
+    await React.act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(document.body.textContent).toContain("Preview submit failed");
+    expect(document.body.textContent).toContain("Payload rejected");
+  } finally {
+    cleanup();
+    vi.mocked(submitForm).mockReset();
+  }
+});
+
+const ResetHarness = () => {
+  const [isOpen, setIsOpen] = React.useState(true);
+  return (
+    <div>
+      <button data-reopen onClick={() => setIsOpen(true)}>
+        Reopen
+      </button>
+      <FormRuntimePreviewDialog
+        open={isOpen}
+        onOpenChange={setIsOpen}
+        formId="form-1"
+        formName="Contact"
+        formDescription="Reach us"
+        settings={baseSettings()}
+        fields={interactiveFields}
+        hasUnsavedChanges={false}
+        onOpenLogs={() => {}}
+      />
+    </div>
+  );
+};
+
+test("closing the preview resets values, error and result for the next run", async () => {
+  const { submitForm } = await import("../../../core/admin/services/formsClient");
+  vi.mocked(submitForm).mockRejectedValue(new Error("boom"));
+
+  const view = mount(<ResetHarness />);
+  try {
+    const checkbox = document.querySelector(
+      'input[type="checkbox"][id="runtime-field-c1"]'
+    ) as HTMLInputElement | null;
+    React.act(() => {
+      checkbox?.click();
+    });
+    setTextareaValue(document.querySelector("textarea#runtime-field-t1"), "Draft message");
+    clickButtonByText(document.body, "Submit preview");
+    // Drain the submit promise chain inside act (same pattern as the shared
+    // formsWave fixtures' flush) so the post-resolution state updates are
+    // captured and no act warning escapes.
+    await React.act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    expect(document.body.textContent).toContain("Failed to submit preview payload.");
+    expect(document.body.textContent).toContain("Draft message");
+
+    // Escape triggers onOpenChange(false) -> handleOpenChange resets internal state.
+    React.act(() => {
+      document.dispatchEvent(
+        new KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true })
+      );
+    });
+    expect(document.querySelector('[role="dialog"]')).toBeNull();
+
+    // Reopen: the next run starts clean (no error, default values).
+    clickButtonByText(document.body, "Reopen");
+    const reopenedCheckbox = document.querySelector(
+      'input[type="checkbox"][id="runtime-field-c1"]'
+    ) as HTMLInputElement | null;
+    expect(reopenedCheckbox?.checked).toBe(false);
+    expect(
+      (document.querySelector("textarea#runtime-field-t1") as HTMLTextAreaElement | null)?.value
+    ).toBe("");
+    expect(document.body.textContent).not.toContain("Failed to submit preview payload.");
+    expect(document.body.textContent).not.toContain("Draft message");
+  } finally {
+    view.cleanup();
+  }
 });

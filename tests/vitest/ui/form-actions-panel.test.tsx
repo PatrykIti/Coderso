@@ -556,3 +556,138 @@ test("FormActionsPanel supports fallback labels, action relabeling, move-down or
     view.cleanup();
   }
 });
+
+test("FormActionsPanel email config inputs, always-condition reset, and multi-pair mapping branches", async () => {
+  const { FormActionsPanel } = await import("../../../core/admin/ui/forms/FormActionsPanel");
+
+  const onChangeSpy = vi.fn();
+  const initialActions: FormActionInput[] = [
+    {
+      type: "email",
+      label: "Email",
+      enabled: true,
+      continueOnError: true,
+      condition: { operator: "always" },
+      config: { to: "{{submission.email}}", subject: "", text: "" },
+      orderIndex: 0,
+    },
+    {
+      type: "entry_sync",
+      label: "Entry sync",
+      enabled: true,
+      continueOnError: true,
+      condition: { operator: "equals", field: "country", value: "PL" },
+      config: {
+        contentTypeId: "articles",
+        mode: "create",
+        dataMapping: {
+          headline: "{{submission.name}}",
+          email: "{{submission.email}}",
+        },
+      },
+      orderIndex: 1,
+    },
+    {
+      // A condition WITHOUT an operator key exercises the normalizeCondition fallback.
+      type: "webhook",
+      label: "Webhook",
+      enabled: true,
+      continueOnError: true,
+      condition: {} as unknown as FormActionInput["condition"],
+      config: { url: "https://", method: "POST", timeoutMs: 8000, includeSubmission: true },
+      orderIndex: 2,
+    },
+  ];
+
+  const Harness = () => {
+    const [actions, setActions] = useState<FormActionInput[]>(initialActions);
+    return (
+      <FormActionsPanel
+        actions={actions}
+        contentTypes={contentTypeOptions}
+        onOpenLogs={() => undefined}
+        onChange={(next) => {
+          onChangeSpy(next);
+          setActions(next);
+        }}
+      />
+    );
+  };
+
+  const view = mount(<Harness />);
+
+  try {
+    const sections = () => Array.from(view.container.querySelectorAll("section"));
+    const emailSection = sections()[0] as HTMLElement;
+
+    // Email config: "to" and "text body" inputs emit config patches.
+    React.act(() => {
+      setInputValue(
+        findInputByPlaceholder(emailSection, "To (e.g. {{submission.email}})"),
+        "ops@test.dev"
+      );
+      setTextareaValue(findTextareaByPlaceholder(emailSection, "Text body"), "New lead received");
+      // Reset the run condition back to "always" from a non-always operator.
+      setSelectValue(
+        findSelectByOptions(emailSection, [
+          "always",
+          "equals",
+          "not_equals",
+          "exists",
+          "not_exists",
+        ]),
+        "always"
+      );
+    });
+
+    const emailActions = onChangeSpy.mock.lastCall?.[0] as FormActionInput[];
+    expect(emailActions[0]?.config).toEqual(
+      expect.objectContaining({ to: "ops@test.dev", text: "New lead received" })
+    );
+    expect(emailActions[0]?.condition).toEqual({ operator: "always" });
+
+    // Entry mapping: edit one pair while a SECOND pair must survive (kept-pair
+    // branch), add a new pair (kept-pairs branch), then remove the last pair
+    // (other pairs survive the removal).
+    const entrySection = sections()[1] as HTMLElement;
+    const pairInputs = () =>
+      Array.from(entrySection.querySelectorAll("input")).filter(
+        (element) =>
+          element instanceof HTMLInputElement &&
+          element.getAttribute("placeholder") === "Entry field"
+      );
+
+    React.act(() => {
+      setInputValue(pairInputs()[0], "subject");
+    });
+
+    const afterPairEdit = onChangeSpy.mock.lastCall?.[0] as FormActionInput[];
+    expect(afterPairEdit[1]?.config).toEqual(
+      expect.objectContaining({
+        dataMapping: { subject: "{{submission.name}}", email: "{{submission.email}}" },
+      })
+    );
+
+    clickButtonByText(entrySection, "Add field");
+    const afterAdd = onChangeSpy.mock.lastCall?.[0] as FormActionInput[];
+    const addedMapping = afterAdd[1]?.config as { dataMapping?: Record<string, string> };
+    expect(Object.keys(addedMapping.dataMapping ?? {})).toEqual(["subject", "email", "field_3"]);
+
+    const removeButtons = Array.from(entrySection.querySelectorAll("button")).filter((button) =>
+      button.querySelector("svg")
+    );
+    clickElement(removeButtons[removeButtons.length - 1]);
+    const afterRemove = onChangeSpy.mock.lastCall?.[0] as FormActionInput[];
+    expect(afterRemove[1]?.config).toEqual(
+      expect.objectContaining({
+        dataMapping: { subject: "{{submission.name}}", email: "{{submission.email}}" },
+      })
+    );
+
+    // The operator-less webhook condition still renders with the "always" fallback.
+    const webhookSection = sections()[2] as HTMLElement;
+    expect(webhookSection.textContent).toContain("Call webhook");
+  } finally {
+    view.cleanup();
+  }
+});

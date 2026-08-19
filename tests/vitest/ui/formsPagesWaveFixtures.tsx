@@ -14,11 +14,11 @@ const formsPageState = vi.hoisted(() => {
     id: "form-1",
     name: "Contact",
     slug: "contact",
-    status: "draft" as const,
+    status: "draft" as "draft" | "published" | "archived",
     description: "Lead form",
     successMessage: "Thanks!",
     successRedirectUrl: null,
-    submissionAccess: "public" as const,
+    submissionAccess: "public" as "public" | "internal",
     settings: {
       layoutMode: "single" as const,
       saveProgress: false,
@@ -113,6 +113,13 @@ const formsPageState = vi.hoisted(() => {
     updateFieldsCalls: [] as Array<{ id: string; fields: Array<Record<string, unknown>> }>,
     updateActionsCalls: [] as Array<{ id: string; actions: Array<Record<string, unknown>> }>,
     navigateCalls: [] as string[],
+    // Additive branch-driver state (TASK-105-04 forms wave): tabs channel used by
+    // the Tabs mock to forward Radix onValueChange, plus load-error flags for the
+    // silently-swallowed action/content-type mount fetches in FormBuilderPage.
+    tabsValue: "settings" as string,
+    onTabsChange: null as ((value: string) => void) | null,
+    actionsLoadError: null as unknown,
+    contentTypesError: null as unknown,
     reset() {
       this.form = {
         ...form,
@@ -163,6 +170,10 @@ const formsPageState = vi.hoisted(() => {
       this.updateFieldsCalls = [];
       this.updateActionsCalls = [];
       this.navigateCalls = [];
+      this.tabsValue = "settings";
+      this.onTabsChange = null;
+      this.actionsLoadError = null;
+      this.contentTypesError = null;
     },
   };
 });
@@ -213,18 +224,39 @@ vi.mock("@/components/ui/dialog", () => ({
 }));
 
 vi.mock("@/components/ui/sheet", () => ({
-  Sheet: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  Sheet: ({
+    children,
+    open,
+  }: {
+    children: React.ReactNode;
+    open?: boolean;
+    onOpenChange?: (open: boolean) => void;
+  }) => <div data-sheet-open={String(Boolean(open))}>{children}</div>,
   SheetContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   SheetDescription: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   SheetTitle: ({ children }: { children: React.ReactNode }) => <p>{children}</p>,
 }));
 
 vi.mock("@/components/ui/tabs", () => ({
-  Tabs: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  Tabs: ({
+    children,
+    value,
+    onValueChange,
+  }: {
+    children: React.ReactNode;
+    value?: string;
+    onValueChange?: (value: string) => void;
+  }) => {
+    formsPageState.tabsValue = value ?? formsPageState.tabsValue;
+    formsPageState.onTabsChange = onValueChange ?? formsPageState.onTabsChange;
+    return <div>{children}</div>;
+  },
   TabsContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   TabsList: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-  TabsTrigger: ({ children }: { children: React.ReactNode }) => (
-    <button type="button">{children}</button>
+  TabsTrigger: ({ children, value }: { children: React.ReactNode; value?: string }) => (
+    <button type="button" onClick={() => formsPageState.onTabsChange?.(value ?? "")}>
+      {children}
+    </button>
   ),
 }));
 
@@ -245,7 +277,10 @@ vi.mock("@/services/cachePolicy", () => ({
 }));
 
 vi.mock("@/services/contentTypesClient", () => ({
-  listContentTypesCached: vi.fn(async () => formsPageState.contentTypes),
+  listContentTypesCached: vi.fn(async () => {
+    if (formsPageState.contentTypesError) throw formsPageState.contentTypesError;
+    return formsPageState.contentTypes;
+  }),
   getCachedContentTypes: () => formsPageState.contentTypes,
 }));
 
@@ -279,6 +314,7 @@ vi.mock("@/services/formsClient", async () => {
     }),
     listFormActionsCached: vi.fn(async (id: string, { force }: { force?: boolean } = {}) => {
       formsPageState.actionsCalls.push({ id, force });
+      if (formsPageState.actionsLoadError) throw formsPageState.actionsLoadError;
       return formsPageState.formActions;
     }),
     updateForm: vi.fn(async (id: string, input) => {
@@ -497,7 +533,10 @@ vi.mock("../../../core/admin/ui/forms/FormCreateDrawer", () => ({
 vi.mock("../../../core/admin/ui/forms/FormTable", () => ({
   FormTable: ({
     items,
+    onToggleAll,
+    onToggleForm,
     onEdit,
+    onSubmissions,
     onActionLogs,
     onPublish,
     onMoveToDraft,
@@ -506,7 +545,10 @@ vi.mock("../../../core/admin/ui/forms/FormTable", () => ({
     emptyMessage,
   }: {
     items: Array<{ id: string; name: string }>;
+    onToggleAll?: () => void;
+    onToggleForm?: (id: string) => void;
     onEdit: (id: string) => void;
+    onSubmissions: (id: string) => void;
     onActionLogs: (id: string) => void;
     onPublish: (id: string) => void;
     onMoveToDraft: (id: string) => void;
@@ -516,13 +558,22 @@ vi.mock("../../../core/admin/ui/forms/FormTable", () => ({
   }) => (
     <div>
       <span>{emptyMessage ?? "rows-loaded"}</span>
+      <button type="button" onClick={() => onToggleAll?.()}>
+        toggle-all-forms
+      </button>
       {items.map((item) => (
         <div key={item.id}>{item.name}</div>
       ))}
       {items[0] ? (
         <>
+          <button type="button" onClick={() => onToggleForm?.(items[0]!.id)}>
+            toggle-form-row
+          </button>
           <button type="button" onClick={() => onEdit(items[0]!.id)}>
             edit-form-row
+          </button>
+          <button type="button" onClick={() => onSubmissions(items[0]!.id)}>
+            submissions-form-row
           </button>
           <button type="button" onClick={() => onActionLogs(items[0]!.id)}>
             action-logs-form-row
@@ -559,11 +610,32 @@ vi.mock("../../../core/admin/ui/forms/FormFilters", () => ({
       <button type="button" onClick={() => onSearchChange("contact")}>
         filter-search-contact
       </button>
+      <button type="button" onClick={() => onSearchChange("lead")}>
+        filter-search-lead
+      </button>
+      <button type="button" onClick={() => onSearchChange("zzz-no-match")}>
+        filter-search-no-match
+      </button>
+      <button type="button" onClick={() => onSearchChange("")}>
+        filter-search-clear
+      </button>
       <button type="button" onClick={() => onStatusChange("published")}>
         filter-status-published
       </button>
+      <button type="button" onClick={() => onStatusChange("draft")}>
+        filter-status-draft
+      </button>
+      <button type="button" onClick={() => onStatusChange("archived")}>
+        filter-status-archived
+      </button>
+      <button type="button" onClick={() => onStatusChange("all")}>
+        filter-status-all
+      </button>
       <button type="button" onClick={() => onAccessChange("internal")}>
         filter-access-internal
+      </button>
+      <button type="button" onClick={() => onAccessChange("public")}>
+        filter-access-public
       </button>
     </div>
   ),
@@ -585,6 +657,12 @@ vi.mock("../../../core/admin/ui/forms/FormBulkActionsBar", () => ({
       <span>{`bulk-selected:${selectedCount}`}</span>
       <button type="button" onClick={() => onActionChange("publish")}>
         bulk-action-publish
+      </button>
+      <button type="button" onClick={() => onActionChange("draft")}>
+        bulk-action-draft
+      </button>
+      <button type="button" onClick={() => onActionChange("archive")}>
+        bulk-action-archive
       </button>
       <button type="button" onClick={() => onActionChange("delete")}>
         bulk-action-delete
@@ -726,21 +804,64 @@ vi.mock("../../../core/admin/ui/forms/FormCanvas", () => ({
 
 vi.mock("../../../core/admin/ui/forms/FormSettingsPanel", () => ({
   FormSettingsPanel: ({
+    name,
+    description,
+    status,
+    submissionAccess,
+    successMessage,
+    successRedirectUrl,
     onNameChange,
+    onDescriptionChange,
+    onStatusChange,
+    onSubmissionAccessChange,
+    onSuccessMessageChange,
+    onSuccessRedirectUrlChange,
     onSettingsChange,
     onAutomationRetryChange,
     onStepTitlesChange,
     onApplyPreset,
   }: {
+    name?: string;
+    description?: string;
+    status?: string;
+    submissionAccess?: string;
+    successMessage?: string;
+    successRedirectUrl?: string;
     onNameChange: (value: string) => void;
+    onDescriptionChange: (value: string) => void;
+    onStatusChange: (value: string) => void;
+    onSubmissionAccessChange: (value: string) => void;
+    onSuccessMessageChange: (value: string) => void;
+    onSuccessRedirectUrlChange: (value: string) => void;
     onSettingsChange: (updates: Record<string, unknown>) => void;
     onAutomationRetryChange: (updates: Record<string, unknown>) => void;
     onStepTitlesChange: (titles: string[]) => void;
     onApplyPreset: (presetId: "contact" | "lead_capture" | "service_intake") => void;
   }) => (
     <div>
+      <span>{`settings-name:${name ?? ""}`}</span>
+      <span>{`settings-description:${description ?? ""}`}</span>
+      <span>{`settings-status:${status ?? ""}`}</span>
+      <span>{`settings-access:${submissionAccess ?? ""}`}</span>
+      <span>{`settings-success:${successMessage ?? ""}`}</span>
+      <span>{`settings-redirect:${successRedirectUrl ?? ""}`}</span>
       <button type="button" onClick={() => onNameChange("Updated form name")}>
         change-form-name
+      </button>
+      <button type="button" onClick={() => onDescriptionChange("Updated description")}>
+        change-form-description
+      </button>
+      <button type="button" onClick={() => onStatusChange("published")}>
+        change-form-status
+      </button>
+      <button type="button" onClick={() => onSubmissionAccessChange("internal")}>
+        change-form-access
+      </button>
+      <button type="button" onClick={() => onSuccessMessageChange("Thanks!")}>
+        change-form-success-message
+      </button>
+      <button type="button" onClick={() => onSuccessRedirectUrlChange("/done")}>
+        change-form-redirect
       </button>
       <button type="button" onClick={() => onSettingsChange({ layoutMode: "multi_step" })}>
         change-form-settings

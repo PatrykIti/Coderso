@@ -4,7 +4,7 @@ import React from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 
-import { EntryList } from "../../../core/admin/ui/entries/EntryList";
+import { EntryList, filterEntries } from "../../../core/admin/ui/entries/EntryList";
 import { cacheKeys } from "../../../core/admin/services/cachePolicy";
 
 type CacheEvent = { key: string };
@@ -92,6 +92,7 @@ const entryListState = vi.hoisted(() => {
     listContentTypesCalls: [] as Array<{ force?: boolean }>,
     deleteEntryCalls: [] as Array<{ slug: string; id: string }>,
     duplicateEntryCalls: [] as Array<{ slug: string; id: string }>,
+    nextDuplicateError: null as unknown,
     updateMetadataCalls: [] as Array<{
       slug: string;
       id: string;
@@ -114,6 +115,7 @@ const entryListState = vi.hoisted(() => {
       state.listContentTypesCalls = [];
       state.deleteEntryCalls = [];
       state.duplicateEntryCalls = [];
+      state.nextDuplicateError = null;
       state.updateMetadataCalls = [];
       state.navigateCalls = [];
       state.toastSuccess.mockClear();
@@ -226,7 +228,10 @@ vi.mock("@/ui/contexts/AdminRouterContext", () => ({
 }));
 
 vi.mock("@/services/apiClient", () => ({
-  isApiClientError: () => false,
+  isApiClientError: (error: unknown) =>
+    typeof error === "object" &&
+    error !== null &&
+    (error as { name?: string }).name === "ApiClientError",
 }));
 
 vi.mock("@/services/contentTypesClient", () => ({
@@ -262,6 +267,11 @@ vi.mock("@/services/entriesClient", () => ({
   },
   duplicateEntry: async (slug: string, id: string) => {
     entryListState.duplicateEntryCalls.push({ slug, id });
+    if (entryListState.nextDuplicateError) {
+      const error = entryListState.nextDuplicateError;
+      entryListState.nextDuplicateError = null;
+      throw error;
+    }
     return entryListState.createEntry(`${id}-copy`, slug, "Copy");
   },
   updateEntryMetadata: async (slug: string, id: string, input: Record<string, unknown>) => {
@@ -283,24 +293,32 @@ vi.mock("@/ui/entries/EntryFilters", () => ({
     status,
     typeValue,
     author,
+    view,
+    advancedOpen,
     onSearchChange,
     onStatusChange,
     onTypeChange,
     onAuthorChange,
     onUpdatedFromChange,
     onUpdatedToChange,
+    onViewChange,
+    onAdvancedOpenChange,
     onClear,
   }: {
     search: string;
     status: string;
     typeValue: string;
     author: string;
+    view: string;
+    advancedOpen: boolean;
     onSearchChange: (value: string) => void;
     onStatusChange: (value: string) => void;
     onTypeChange: (value: string) => void;
     onAuthorChange: (value: string) => void;
     onUpdatedFromChange: (value: string) => void;
     onUpdatedToChange: (value: string) => void;
+    onViewChange: (value: "list" | "grid") => void;
+    onAdvancedOpenChange: (value: boolean) => void;
     onClear: () => void;
   }) => (
     <section>
@@ -327,6 +345,12 @@ vi.mock("@/ui/entries/EntryFilters", () => ({
       <button type="button" onClick={() => onUpdatedToChange("2026-03-31")}>
         to
       </button>
+      <button type="button" onClick={() => onAdvancedOpenChange(!advancedOpen)}>
+        advanced:{String(advancedOpen)}
+      </button>
+      <button type="button" onClick={() => onViewChange("grid")}>
+        view:{view}
+      </button>
       <button type="button" onClick={onClear}>
         clear filters
       </button>
@@ -344,12 +368,15 @@ vi.mock("@/ui/entries/EntryBulkActionsBar", () => ({
   }: {
     selectedCount: number;
     action: string;
-    onActionChange: (value: "archive" | "delete") => void;
+    onActionChange: (value: "archive" | "delete" | "draft") => void;
     onApply: () => void;
     onClear: () => void;
   }) => (
     <section data-selected-count={selectedCount}>
       <span>bulk:{action || "none"}</span>
+      <button type="button" onClick={() => onActionChange("draft")}>
+        choose draft
+      </button>
       <button type="button" onClick={() => onActionChange("archive")}>
         choose archive
       </button>
@@ -377,19 +404,45 @@ vi.mock("@/ui/entries/EntryCreateDrawer", () => ({
     onCreated?: (entry: { id: string }, typeSlug: string, openAfterCreate: boolean) => void;
   }) =>
     open ? (
-      <button
-        type="button"
-        onClick={() => onCreated?.({ id: "created-entry" }, defaultTypeSlug ?? "articles", true)}
-      >
-        create entry
-      </button>
+      <>
+        <button
+          type="button"
+          onClick={() => onCreated?.({ id: "created-entry" }, defaultTypeSlug ?? "articles", true)}
+        >
+          create entry
+        </button>
+        <button
+          type="button"
+          onClick={() => onCreated?.({ id: "created-entry" }, defaultTypeSlug ?? "articles", false)}
+        >
+          create entry no navigate
+        </button>
+      </>
     ) : null,
+}));
+
+vi.mock("@/ui/entries/EntryGrid", () => ({
+  EntryGrid: ({
+    entries,
+    emptyMessage,
+  }: {
+    entries: Array<{ id: string; title: string }>;
+    emptyMessage?: string;
+  }) => (
+    <section data-grid="true">
+      <span>{emptyMessage ?? `grid:${entries.length}`}</span>
+      {entries.map((entry) => (
+        <div key={entry.id}>{entry.title}</div>
+      ))}
+    </section>
+  ),
 }));
 
 vi.mock("@/ui/entries/EntryTable", () => ({
   EntryTable: ({
     entries,
     selectedKeys,
+    onToggleAll,
     onToggleEntry,
     onEdit,
     onDuplicate,
@@ -397,6 +450,7 @@ vi.mock("@/ui/entries/EntryTable", () => ({
   }: {
     entries: EntryListItem[];
     selectedKeys: string[];
+    onToggleAll?: () => void;
     onToggleEntry: (id: string) => void;
     onEdit: (id: string) => void;
     onDuplicate: (id: string) => void;
@@ -404,6 +458,13 @@ vi.mock("@/ui/entries/EntryTable", () => ({
   }) => (
     <table>
       <tbody>
+        <tr>
+          <td>
+            <button type="button" onClick={onToggleAll}>
+              toggle all entries
+            </button>
+          </td>
+        </tr>
         {entries.map((entry) => {
           const key = `${entry.contentType.slug}:${entry.id}`;
           return (
@@ -618,6 +679,280 @@ test("EntryList refreshes all-entry and content-type caches on cache bus events"
 
     expect(entryListState.listAllEntriesCalls).toContainEqual({ force: true });
     expect(entryListState.listContentTypesCalls).toContainEqual({ force: true });
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("filterEntries matches query, status, type, author, and date boundaries", () => {
+  const { createEntry } = entryListState;
+  const entries = [
+    createEntry("entry-1", "articles", "Alpha Entry", "draft"),
+    createEntry("entry-2", "products", "Beta Product", "published"),
+    createEntry("entry-3", "articles", "Scheduled Piece", "scheduled"),
+  ];
+
+  const match = (filters: Record<string, string>) =>
+    filterEntries(entries as never, {
+      query: filters.query ?? "",
+      status: filters.status ?? "all",
+      typeSlug: filters.typeSlug ?? "all",
+      author: filters.author ?? "any",
+      updatedFrom: filters.updatedFrom ?? "",
+      updatedTo: filters.updatedTo ?? "",
+    }).map((entry) => entry.id);
+
+  expect(match({ query: "beta" })).toEqual(["entry-2"]);
+  expect(match({ query: "product" })).toEqual(["entry-2"]);
+  expect(match({ status: "draft" })).toEqual(["entry-1"]);
+  expect(match({ typeSlug: "articles" })).toEqual(["entry-1", "entry-3"]);
+  expect(match({ author: "author-products" })).toEqual(["entry-2"]);
+  // The fixture dates are 2026-03-11; both boundaries keep entry-2.
+  expect(match({ updatedFrom: "2026-03-11", updatedTo: "2026-03-11" })).toEqual([
+    "entry-1",
+    "entry-2",
+    "entry-3",
+  ]);
+  // Invalid boundaries degrade to no filtering.
+  expect(match({ updatedFrom: "not-a-date" })).toEqual(["entry-1", "entry-2", "entry-3"]);
+  expect(match({ query: "missing" })).toEqual([]);
+});
+
+test("grid view persists to localStorage and renders the grid surface", async () => {
+  window.localStorage.setItem("entries.view", "grid");
+  const view = mount(<EntryList />);
+  try {
+    await flushAsync();
+    expect(view.container.querySelector('[data-grid="true"]')).not.toBeNull();
+    expect(view.container.textContent).toContain("Alpha Entry");
+
+    React.act(() => {
+      Array.from(view.container.querySelectorAll("button"))
+        .find((button) => button.textContent === "view:grid")
+        ?.click();
+    });
+    expect(window.localStorage.getItem("entries.view")).toBe("grid");
+  } finally {
+    view.cleanup();
+    window.localStorage.removeItem("entries.view");
+  }
+});
+
+test("load failures surface the api message and generic fallbacks", async () => {
+  entryListState.cachedEntries = null;
+  entryListState.entries = [];
+  entryListState.nextEntriesError = { name: "ApiClientError", message: "entries offline" };
+  const entriesView = mount(<EntryList />);
+  try {
+    await flushAsync();
+    expect(entriesView.container.textContent).toContain("entries offline");
+  } finally {
+    entriesView.cleanup();
+  }
+
+  entryListState.cachedEntries = null;
+  entryListState.entries = [];
+  entryListState.cachedTypes = null;
+  entryListState.types = [];
+  entryListState.nextTypesError = new Error("types boom");
+  const typesView = mount(<EntryList />);
+  try {
+    await flushAsync();
+    expect(typesView.container.textContent).toContain("Failed to load content types.");
+  } finally {
+    typesView.cleanup();
+  }
+});
+
+test("selection toggles, toggle-all, and clear selection update the visible scope", async () => {
+  const view = mount(<EntryList />);
+  try {
+    await flushAsync();
+    const checkboxes = () => Array.from(view.container.querySelectorAll("input[type='checkbox']"));
+    React.act(() => {
+      (checkboxes()[0] as HTMLInputElement | undefined)?.click();
+    });
+    expect(view.container.querySelector('[data-selected-count="1"]')).not.toBeNull();
+
+    React.act(() => {
+      (checkboxes()[0] as HTMLInputElement | undefined)?.click();
+    });
+    expect(view.container.querySelector('[data-selected-count="1"]')).toBeNull();
+
+    React.act(() => {
+      Array.from(view.container.querySelectorAll("button"))
+        .find((button) => button.textContent === "toggle all entries")
+        ?.click();
+    });
+    expect(view.container.querySelector('[data-selected-count="2"]')).not.toBeNull();
+
+    React.act(() => {
+      Array.from(view.container.querySelectorAll("button"))
+        .find((button) => button.textContent === "toggle all entries")
+        ?.click();
+    });
+    expect(view.container.querySelector('[data-selected-count="2"]')).toBeNull();
+
+    React.act(() => {
+      (checkboxes()[0] as HTMLInputElement | undefined)?.click();
+    });
+    React.act(() => {
+      Array.from(view.container.querySelectorAll("button"))
+        .find((button) => button.textContent === "clear selection")
+        ?.click();
+    });
+    expect(view.container.querySelector('[data-selected-count="1"]')).toBeNull();
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("bulk draft reports partial failures with the draft-specific message", async () => {
+  entryListState.nextMetadataError.set("products:entry-2", new Error("metadata failed"));
+  const view = mount(<EntryList />);
+  try {
+    await flushAsync();
+    const checkboxes = Array.from(view.container.querySelectorAll("input[type='checkbox']"));
+    React.act(() => {
+      checkboxes.forEach((checkbox) => {
+        if (checkbox instanceof HTMLInputElement) checkbox.click();
+      });
+    });
+    React.act(() => {
+      Array.from(view.container.querySelectorAll("button"))
+        .find((button) => button.textContent === "choose draft")
+        ?.click();
+    });
+    await React.act(async () => {
+      Array.from(view.container.querySelectorAll("button"))
+        .find((button) => button.textContent === "apply bulk")
+        ?.click();
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    expect(view.container.textContent).toContain("Moved 1 entry to draft; failed 1.");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("duplicate success navigates and failures surface inline and toast feedback", async () => {
+  const view = mount(<EntryList />);
+  try {
+    await flushAsync();
+    React.act(() => {
+      Array.from(view.container.querySelectorAll("button"))
+        .find((button) => button.textContent === "duplicate entry-1")
+        ?.click();
+    });
+    await React.act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    expect(entryListState.duplicateEntryCalls).toEqual([{ slug: "articles", id: "entry-1" }]);
+    expect(entryListState.navigateCalls).toContain("/entries/articles/entry-1-copy");
+    expect(entryListState.toastSuccess).toHaveBeenCalledWith("Entry duplicated.");
+
+    entryListState.nextDuplicateError = new Error("duplicate boom");
+    React.act(() => {
+      Array.from(view.container.querySelectorAll("button"))
+        .find((button) => button.textContent === "duplicate entry-2")
+        ?.click();
+    });
+    await React.act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    expect(view.container.textContent).toContain("Failed to duplicate entry.");
+    expect(entryListState.toastError).toHaveBeenCalledWith("Failed to duplicate entry.");
+
+    entryListState.nextDuplicateError = { name: "ApiClientError", message: "duplicate denied" };
+    React.act(() => {
+      Array.from(view.container.querySelectorAll("button"))
+        .find((button) => button.textContent === "duplicate entry-2")
+        ?.click();
+    });
+    await React.act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    expect(view.container.textContent).toContain("duplicate denied");
+    expect(entryListState.toastError).toHaveBeenCalledWith("duplicate denied");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("create honors the type scope and openAfterCreate preference", async () => {
+  const view = mount(<EntryList />);
+  try {
+    await flushAsync();
+    React.act(() => {
+      Array.from(view.container.querySelectorAll("button"))
+        .find((button) => button.textContent === "type:all")
+        ?.click();
+    });
+    React.act(() => {
+      Array.from(view.container.querySelectorAll("button"))
+        .find((button) => button.textContent === "New")
+        ?.click();
+    });
+    React.act(() => {
+      Array.from(view.container.querySelectorAll("button"))
+        .find((button) => button.textContent === "create entry")
+        ?.click();
+    });
+    expect(entryListState.navigateCalls).toContain("/entries/products/created-entry");
+
+    React.act(() => {
+      Array.from(view.container.querySelectorAll("button"))
+        .find((button) => button.textContent === "create entry no navigate")
+        ?.click();
+    });
+    const createsWithoutNavigation = entryListState.navigateCalls.filter(
+      (path) => path === "/entries/articles/created-entry"
+    );
+    expect(createsWithoutNavigation).toEqual([]);
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("clear filters resets every filter control", async () => {
+  const view = mount(<EntryList />);
+  try {
+    await flushAsync();
+    React.act(() => {
+      Array.from(view.container.querySelectorAll("button"))
+        .find((button) => button.textContent === "search beta")
+        ?.click();
+      Array.from(view.container.querySelectorAll("button"))
+        .find((button) => button.textContent === "from")
+        ?.click();
+    });
+    expect(view.container.textContent).not.toContain("Alpha Entry");
+    React.act(() => {
+      Array.from(view.container.querySelectorAll("button"))
+        .find((button) => button.textContent === "clear filters")
+        ?.click();
+    });
+    expect(view.container.textContent).toContain("Alpha Entry");
+    expect(view.container.textContent).toContain("Beta Product");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("a refresh failure through a cache event surfaces the alert", async () => {
+  const view = mount(<EntryList />);
+  try {
+    await flushAsync();
+    entryListState.nextEntriesError = new Error("refresh boom");
+    React.act(() => {
+      entryListState.triggerCache(cacheKeys.entriesAllList);
+    });
+    await flushAsync();
+    expect(view.container.textContent).toContain("Failed to load entries.");
   } finally {
     view.cleanup();
   }

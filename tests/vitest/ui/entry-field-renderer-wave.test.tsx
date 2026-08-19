@@ -191,11 +191,18 @@ vi.mock("@/ui/posts/editor/richtext/PostRichTextAdapter", () => ({
   PostRichTextAdapter: ({
     value,
     onChange,
+    minHeightClassName,
   }: {
     value: string;
     onChange: (value: string) => void;
+    minHeightClassName?: string;
   }) => (
-    <button type="button" data-richtext-value={value} onClick={() => onChange("Updated body")}>
+    <button
+      type="button"
+      data-richtext-value={value}
+      data-richtext-min-height={minHeightClassName ?? ""}
+      onClick={() => onChange("Updated body")}
+    >
       richtext-editor
     </button>
   ),
@@ -629,6 +636,363 @@ test("FieldRenderer relation picker covers single, multiple, search, empty, and 
       await Promise.resolve();
     });
     expect(view.container.textContent).toContain("Relation lookup failed");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("date, slug, and unknown fields round-trip typed values and normalize slugs", async () => {
+  const { FieldRenderer } = await import("../../../core/admin/ui/entries/FieldRenderer");
+
+  const onChange = vi.fn();
+  const view = mount(
+    <FieldRenderer
+      field={{ id: "field-date", name: "published_on", type: "date", label: "Published on" }}
+      value=""
+      onChange={onChange}
+    />
+  );
+
+  try {
+    let input = view.container.querySelector("input");
+    expect(input?.getAttribute("type")).toBe("date");
+    React.act(() => {
+      setInputValue(input ?? undefined, "2026-09-01");
+    });
+    expect(onChange).toHaveBeenLastCalledWith("2026-09-01");
+
+    view.rerender(
+      <FieldRenderer
+        field={{
+          id: "field-datetime",
+          name: "published_at",
+          type: "date",
+          label: "Published at",
+          date: { includeTime: true },
+        }}
+        value=""
+        onChange={onChange}
+      />
+    );
+    input = view.container.querySelector("input");
+    expect(input?.getAttribute("type")).toBe("datetime-local");
+
+    view.rerender(
+      <FieldRenderer
+        field={{ id: "field-slug", name: "url_slug", type: "slug", label: "Url slug" }}
+        value="my-slug"
+        onChange={onChange}
+      />
+    );
+    input = view.container.querySelector("input");
+    React.act(() => {
+      setInputValue(input ?? undefined, "My Slug!");
+    });
+    React.act(() => {
+      input?.dispatchEvent(new FocusEvent("focusout", { bubbles: true }));
+    });
+    expect(onChange).toHaveBeenLastCalledWith("my-slug");
+
+    view.rerender(
+      <FieldRenderer
+        field={
+          {
+            id: "field-unknown-help",
+            name: "future",
+            type: "future-type",
+            label: "Future",
+            help: "Custom unknown help",
+          } as never
+        }
+        value={null}
+        onChange={onChange}
+      />
+    );
+    expect(view.container.textContent).toContain("Custom unknown help");
+    input = view.container.querySelector("input");
+    React.act(() => {
+      setInputValue(input ?? undefined, "kept value");
+    });
+    expect(onChange).toHaveBeenLastCalledWith("kept value");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("select options normalize strings and objects and cover multi-select edges", async () => {
+  const { FieldRenderer } = await import("../../../core/admin/ui/entries/FieldRenderer");
+
+  const onChange = vi.fn();
+  const view = mount(
+    <FieldRenderer
+      field={{
+        id: "field-select-strings",
+        name: "channels",
+        type: "select",
+        label: "Channels",
+        multiple: true,
+        options: ["web", "", "email"] as never,
+      }}
+      value={["web"]}
+      onChange={onChange}
+    />
+  );
+
+  try {
+    // Empty strings are dropped; string entries get stable ids.
+    let checkboxes = Array.from(view.container.querySelectorAll("input[type='checkbox']"));
+    expect(checkboxes.length).toBe(2);
+    React.act(() => {
+      (checkboxes[1] as HTMLInputElement | undefined)?.click();
+    });
+    expect(onChange).toHaveBeenLastCalledWith(["web", "email"]);
+
+    view.rerender(
+      <FieldRenderer
+        field={{
+          id: "field-select-mixed",
+          name: "tone",
+          type: "select",
+          label: "Tone",
+          multiple: true,
+          options: ["", { label: "Broken" }, 42, { label: "Warm", value: "warm" }] as never,
+        }}
+        value={[]}
+        onChange={onChange}
+      />
+    );
+    // Only the well-formed object entry survives normalization.
+    checkboxes = Array.from(view.container.querySelectorAll("input[type='checkbox']"));
+    expect(checkboxes.length).toBe(1);
+    expect(view.container.textContent).toContain("Warm");
+
+    view.rerender(
+      <FieldRenderer
+        field={{
+          id: "field-select-none",
+          name: "none",
+          type: "select",
+          label: "None",
+          multiple: true,
+          options: [],
+        }}
+        value={[]}
+        onChange={onChange}
+      />
+    );
+    expect(view.container.textContent).toContain("No options configured.");
+
+    view.rerender(
+      <FieldRenderer
+        field={{
+          id: "field-select-single",
+          name: "single",
+          type: "select",
+          label: "Single",
+          options: ["warm", { label: "Cool", value: "cool" }] as never,
+        }}
+        value=""
+        onChange={onChange}
+      />
+    );
+    const select = view.container.querySelector("select");
+    expect(select?.querySelectorAll("option").length).toBe(2);
+    React.act(() => {
+      setSelectValue(select ?? undefined, "cool");
+    });
+    expect(onChange).toHaveBeenLastCalledWith("cool");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("relation picker surfaces generic errors, matches slugs, and styles compact richtext", async () => {
+  const { FieldRenderer } = await import("../../../core/admin/ui/entries/FieldRenderer");
+
+  const onChange = vi.fn();
+  const view = mount(
+    <FieldRenderer
+      field={{
+        id: "field-relation-generic",
+        name: "linked-generic",
+        type: "relation",
+        label: "Linked generic",
+        relation: { target: "articles-generic" },
+      }}
+      value=""
+      onChange={onChange}
+      relationTargets={[]}
+    />
+  );
+
+  try {
+    await React.act(async () => {
+      await Promise.resolve();
+    });
+    // Without a resolved target name the helper label falls back to the target slug.
+    const searchInput = view.container.querySelector("input");
+    expect(searchInput?.getAttribute("placeholder")).toBe("Search articles-generic...");
+
+    entriesState.relationError = new Error("generic relation failure");
+    view.rerender(
+      <FieldRenderer
+        field={{
+          id: "field-relation-generic",
+          name: "linked-generic",
+          type: "relation",
+          label: "Linked generic",
+          relation: { target: "articles-gen" },
+        }}
+        value=""
+        onChange={onChange}
+        relationTargets={[{ slug: "articles-gen", name: "Articles" }]}
+      />
+    );
+    await React.act(async () => {
+      await Promise.resolve();
+    });
+    expect(view.container.textContent).toContain("Failed to load related items.");
+
+    entriesState.relationError = null;
+    view.rerender(
+      <FieldRenderer
+        field={{
+          id: "field-relation-slug",
+          name: "linked-slug",
+          type: "relation",
+          label: "Linked slug",
+          relation: { target: "articles" },
+        }}
+        value="related-1"
+        onChange={onChange}
+        relationTargets={[{ slug: "articles", name: "Articles" }]}
+      />
+    );
+    await React.act(async () => {
+      await Promise.resolve();
+    });
+    // A query matching the slug keeps the row visible.
+    const slugSearch = view.container.querySelector("input");
+    React.act(() => {
+      setInputValue(slugSearch ?? undefined, "linked-entry");
+    });
+    expect(view.container.textContent).toContain("Linked entry");
+    const selectedButton = Array.from(view.container.querySelectorAll("button")).find((button) =>
+      button.textContent?.includes("Linked entry")
+    );
+    expect(selectedButton?.getAttribute("aria-pressed")).toBeNull();
+    expect(selectedButton?.className).toContain("border-primary");
+
+    view.rerender(
+      <FieldRenderer
+        field={{ id: "field-richtext-compact", name: "body", type: "richtext", label: "Body" }}
+        value="Copy"
+        onChange={onChange}
+        display="compact"
+      />
+    );
+    expect(
+      view.container
+        .querySelector("button[data-richtext-min-height]")
+        ?.getAttribute("data-richtext-min-height")
+    ).toBe("min-h-[9rem]");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("select normalization degrades safely and media honors custom help", async () => {
+  const { FieldRenderer } = await import("../../../core/admin/ui/entries/FieldRenderer");
+
+  const onChange = vi.fn();
+  const view = mount(
+    <FieldRenderer
+      field={
+        {
+          id: "field-select-nonarray",
+          name: "bad",
+          type: "select",
+          label: "Bad",
+          multiple: true,
+          options: "warm",
+        } as never
+      }
+      value={[]}
+      onChange={onChange}
+    />
+  );
+
+  try {
+    // Non-array options degrade to an empty option list.
+    expect(view.container.textContent).toContain("No options configured.");
+
+    view.rerender(
+      <FieldRenderer
+        field={{
+          id: "field-select-uncheck",
+          name: "channels",
+          type: "select",
+          label: "Channels",
+          multiple: true,
+          options: [
+            { id: "option-web", label: "Website", value: "web" },
+            { id: "option-email", label: "Email", value: "email" },
+          ],
+        }}
+        value={["web", "email"]}
+        onChange={onChange}
+      />
+    );
+    const checkboxes = Array.from(view.container.querySelectorAll("input[type='checkbox']"));
+    React.act(() => {
+      (checkboxes[0] as HTMLInputElement | undefined)?.click();
+    });
+    expect(onChange).toHaveBeenLastCalledWith(["email"]);
+
+    view.rerender(
+      <FieldRenderer
+        field={{
+          id: "field-media-help",
+          name: "cover",
+          type: "media",
+          label: "Cover",
+          help: "Custom media help",
+          media: { multiple: true },
+        }}
+        value={[]}
+        onChange={onChange}
+      />
+    );
+    expect(view.container.textContent).toContain("Custom media help");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("relation fallback input keeps typed values and single selects mark the selected row", async () => {
+  const { FieldRenderer } = await import("../../../core/admin/ui/entries/FieldRenderer");
+
+  const onChange = vi.fn();
+  const view = mount(
+    <FieldRenderer
+      field={{
+        id: "field-relation-empty",
+        name: "related",
+        type: "relation",
+        label: "Related",
+        relation: { target: "" },
+      }}
+      value=""
+      onChange={onChange}
+    />
+  );
+
+  try {
+    const input = view.container.querySelector("input");
+    React.act(() => {
+      setInputValue(input ?? undefined, "pending relation");
+    });
+    expect(onChange).toHaveBeenLastCalledWith("pending relation");
   } finally {
     view.cleanup();
   }

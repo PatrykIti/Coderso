@@ -61,6 +61,7 @@ vi.mock("@/ui/shared/ConfirmActionDialog", () => ({
     confirmLabel,
     isConfirming,
     onConfirm,
+    onOpenChange,
     children,
   }: {
     open: boolean;
@@ -69,6 +70,7 @@ vi.mock("@/ui/shared/ConfirmActionDialog", () => ({
     confirmLabel: string;
     isConfirming?: boolean;
     onConfirm: () => void;
+    onOpenChange?: (open: boolean) => void;
     children?: React.ReactNode;
   }) =>
     open ? (
@@ -76,6 +78,9 @@ vi.mock("@/ui/shared/ConfirmActionDialog", () => ({
         <p>{title}</p>
         {description ? <p>{description}</p> : null}
         {children}
+        <button type="button" onClick={() => onOpenChange?.(false)}>
+          cancel restore
+        </button>
         <button type="button" onClick={onConfirm} disabled={Boolean(isConfirming)}>
           {confirmLabel}
         </button>
@@ -317,6 +322,85 @@ test("a restoring revision shows Restoring... and disables its button", () => {
     );
     expect(restoreButton).not.toBeNull();
     expect((restoreButton as HTMLButtonElement | null)?.disabled).toBe(true);
+  } finally {
+    cleanup();
+  }
+});
+
+test("an invalid revision timestamp falls back to the raw value", () => {
+  const { container, cleanup } = mount(
+    <EntryRevisionDrawer {...baseProps} revisions={[revision({ createdAt: "not-a-date" })]} />
+  );
+  try {
+    expect(container.textContent).toContain("Version 2");
+    expect(container.textContent).toContain("not-a-date");
+  } finally {
+    cleanup();
+  }
+});
+
+test("preview summaries format numbers, booleans, arrays, objects, and blanks", () => {
+  const snapshot = revision();
+  const { container, cleanup } = mount(
+    <PreviewHarness
+      revisions={[snapshot]}
+      details={{
+        [snapshot.id]: detail(snapshot, {
+          title: "Draft two",
+          count: 3,
+          featured: true,
+          tags: ["one", "two"],
+          meta: { locale: "en" },
+          empty: null,
+        }),
+      }}
+    />
+  );
+  try {
+    clickButton(container, "Preview");
+    const text = container.textContent ?? "";
+    expect(text).toContain("count: 3");
+    expect(text).toContain("featured: true");
+    expect(text).toContain("tags: one, two");
+    expect(text).toContain("meta: locale: en");
+    // A null value contributes nothing to the summary.
+    expect(text).not.toContain("empty:");
+  } finally {
+    cleanup();
+  }
+});
+
+test("a preview error scoped to another revision is not shown", () => {
+  const { container, cleanup } = mount(
+    <EntryRevisionDrawer
+      {...baseProps}
+      revisions={[revision()]}
+      revisionPreview={{ revisionId: "rev-9", data: null, loading: false, error: "stale error" }}
+    />
+  );
+  try {
+    clickButton(container, "Preview");
+    expect(container.textContent).not.toContain("stale error");
+    // The active preview pane stays empty rather than inheriting the stale error.
+    expect(container.textContent).toContain("Hide preview");
+  } finally {
+    cleanup();
+  }
+});
+
+test("cancelling the restore dialog does not restore and closes the prompt", () => {
+  const onRestore = vi.fn();
+  const { container, cleanup } = mount(
+    <EntryRevisionDrawer {...baseProps} revisions={[revision()]} onRestore={onRestore} />
+  );
+  try {
+    clickButton(container, "Restore");
+    let dialog = container.querySelector('[role="dialog"]');
+    expect(dialog?.textContent).toContain("Restore revision?");
+    clickButton(container, "cancel restore");
+    expect(onRestore).not.toHaveBeenCalled();
+    dialog = container.querySelector('[role="dialog"]');
+    expect(dialog).toBeNull();
   } finally {
     cleanup();
   }

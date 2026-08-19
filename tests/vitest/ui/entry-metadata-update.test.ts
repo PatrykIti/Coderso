@@ -49,3 +49,121 @@ test("blank title/canonicalUrl/robots are omitted while description stays author
   expect("title" in result.payload.seo!).toBe(true);
   expect("robots" in result.payload.seo!).toBe(true);
 });
+
+test("scheduled status with a valid ISO date ships the normalized timestamp", () => {
+  const result = buildEntryMetadataUpdate(
+    form({ status: "scheduled", scheduledAt: "2026-09-01T08:30:00.000Z" })
+  );
+  expect(result.ok).toBe(true);
+  if (!result.ok) return;
+  expect(result.payload.scheduledAt).toBe("2026-09-01T08:30:00.000Z");
+});
+
+test("scheduled status without a schedule date is rejected", () => {
+  const result = buildEntryMetadataUpdate(form({ status: "scheduled" }));
+  expect(result).toEqual({
+    ok: false,
+    message: "Schedule date is required for scheduled entries.",
+  });
+});
+
+test("non-scheduled status clears a leftover schedule date", () => {
+  const result = buildEntryMetadataUpdate(form({ scheduledAt: "2026-09-01T08:30:00.000Z" }));
+  expect(result.ok).toBe(true);
+  if (!result.ok) return;
+  expect(result.payload.scheduledAt).toBeNull();
+});
+
+test("enabled taxonomies contribute category and tag selections", () => {
+  const result = buildEntryMetadataUpdate(
+    form({
+      taxonomyOverview: {
+        taxonomies: {
+          category: {
+            id: "tax-category",
+            typeId: "type-category",
+            name: "Category",
+            slug: "category",
+            kind: "category",
+            createdAt: "2026-01-01T00:00:00.000Z",
+            updatedAt: "2026-01-01T00:00:00.000Z",
+          },
+          tag: {
+            id: "tax-tag",
+            typeId: "type-tag",
+            name: "Tag",
+            slug: "tag",
+            kind: "tag",
+            createdAt: "2026-01-01T00:00:00.000Z",
+            updatedAt: "2026-01-01T00:00:00.000Z",
+          },
+        },
+        terms: { categories: [], tags: [] },
+      },
+      selectedCategoryId: "cat-1",
+      selectedTagIds: ["tag-1", "tag-2"],
+    })
+  );
+  expect(result.ok).toBe(true);
+  if (!result.ok) return;
+  expect(result.payload.taxonomy).toEqual({
+    categoryId: "cat-1",
+    tagIds: ["tag-1", "tag-2"],
+  });
+});
+
+test("disabled taxonomies omit the taxonomy payload entirely", () => {
+  const result = buildEntryMetadataUpdate(
+    form({
+      taxonomyOverview: {
+        taxonomies: {
+          category: undefined,
+          tag: {
+            id: "tax-tag",
+            typeId: "type-tag",
+            name: "Tag",
+            slug: "tag",
+            kind: "tag",
+            createdAt: "2026-01-01T00:00:00.000Z",
+            updatedAt: "2026-01-01T00:00:00.000Z",
+          },
+        },
+        terms: { categories: [], tags: [] },
+      },
+      selectedCategoryId: "cat-1",
+      selectedTagIds: [],
+    })
+  );
+  expect(result.ok).toBe(true);
+  if (!result.ok) return;
+  expect(result.payload.taxonomy).toEqual({ categoryId: null, tagIds: [] });
+});
+
+test("an absent taxonomy overview omits the taxonomy payload", () => {
+  const result = buildEntryMetadataUpdate(form());
+  expect(result.ok).toBe(true);
+  if (!result.ok) return;
+  expect(result.payload.taxonomy).toBeUndefined();
+});
+
+test("password visibility keeps the hash when blank and sends it when authored", () => {
+  const blank = buildEntryMetadataUpdate(form({ visibility: "password", accessPassword: "" }));
+  expect(blank.ok).toBe(true);
+  if (!blank.ok) return;
+  expect("accessPassword" in blank.payload).toBe(true);
+  expect(blank.payload.accessPassword).toBeUndefined();
+
+  const authored = buildEntryMetadataUpdate(
+    form({ visibility: "password", accessPassword: "s3cret" })
+  );
+  expect(authored.ok).toBe(true);
+  if (!authored.ok) return;
+  expect(authored.payload.accessPassword).toBe("s3cret");
+
+  const publicResult = buildEntryMetadataUpdate(
+    form({ visibility: "public", accessPassword: "s3cret" })
+  );
+  expect(publicResult.ok).toBe(true);
+  if (!publicResult.ok) return;
+  expect(publicResult.payload.accessPassword).toBeNull();
+});

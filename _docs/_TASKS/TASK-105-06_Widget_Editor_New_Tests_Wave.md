@@ -5,7 +5,7 @@
 **Category:** QA + Widgets  
 **Estimated Effort:** Large  
 **Dependencies:** TASK-105-01  
-**Status:** In Progress (2026-03-08)
+**Status:** 🚧 In Progress (2026-08-19 rebaseline; S6 coordination gate)
 
 ---
 
@@ -330,9 +330,168 @@ Fresh canonical `2026-03-14` rebaseline:
   - `SearchBoxEditors.tsx` -> `100.00%` lines / `66.66%` branches
   - `CompareTimelineEditors.tsx` -> `100.00%` lines / `67.25%` branches
 
-Remaining hotspots in this wave:
-- residual branch-only cleanup in `PricingPlansEditors.tsx`, `TabsEditors.tsx`, `GalleryMosaicEditors.tsx`, `SearchBoxEditors.tsx`, and `CompareTimelineEditors.tsx`
-- ownership-noise import coverage for `core/admin/ui/widgets/editors/index.ts` if the project chooses to keep that barrel inside the lane metric
+
+## Current authoritative rebaseline (2026-08-19, HEAD 3c470092, worktree run)
+
+All numbers below come from the fresh canonical full-lane run generated TODAY
+at this HEAD (`bun scripts/run-vitest-coverage.ts`, artifact
+`coverage/vitest/coverage-summary.json`). Aggregates are weighted
+(`sum covered / sum total`), the same method the artifact `total` entry uses.
+Per-file percentages below are rounded from exact covered/total fractions;
+istanbul truncates `pct` at 2dp, so a minority of values differ by `0.01` from
+the artifact's `pct` field while every fraction matches exactly.
+Lane totals: `80.17` stmts / `71.94` branch / `79.92` funcs / `83.24` lines.
+
+Every `2026-03-*` snapshot above is HISTORICAL. The directory now holds `46`
+files (the historical snapshots tracked `40`): six landed after the March
+snapshots and reset the aggregate. Verified additions:
+
+- `ScreenEditors.tsx` -> `0b78aad0` 2026-04-28
+- `ClearableFields.tsx` -> `b71898e6` 2026-05-04
+- `WidgetEditorControls.tsx`, `TokenOrPixelField.tsx`,
+  `LinkDestinationField.tsx` -> `3cecce6b` 2026-05-31
+- `SharedColorControl.tsx` -> `3cecce6b` 2026-05-31 (last-touched `605afa6c` 2026-07-12)
+
+The historical `100.00%` lines / `83.01%` branches claim is superseded. Real
+aggregate at HEAD: `83.84%` lines / `72.03%` branches across `46` files
+(`8072/9628` lines, `7279/10106` branches) = `1556` uncovered lines /
+`2827` uncovered branches. `44` of `46` files are below `100%` lines; only
+`WidgetEditorControls.tsx` (`13/13`) is line-complete and `index.ts` carries
+`0` executable lines.
+
+Per-file snapshot (`lines% / branches%`, covered/total), 46 files:
+
+- `AccordionEditors.tsx` -> `95.16 / 86.09` (`118/124`, `130/151`)
+- `AppointmentFormEditors.tsx` -> `83.04 / 75.41` (`142/171`, `92/122`)
+- `BookingCalendarEditors.tsx` -> `77.78 / 59.71` (`105/135`, `83/139`)
+- `ClearableFields.tsx` -> `98.53 / 92.39` (`67/68`, `85/92`)
+- `CommerceWidgetEditorShared.tsx` -> `87.27 / 83.06` (`96/110`, `103/124`)
+- `CompareTimelineEditors.tsx` -> `89.58 / 62.68` (`215/240`, `131/209`)
+- `ContactEditors.tsx` -> `70.96 / 54.05` (`193/272`, `180/333`)
+- `ContentListEditors.tsx` -> `90.94 / 83.99` (`291/320`, `299/356`)
+- `CtaBannerEditors.tsx` -> `77.72 / 71.14` (`143/184`, `143/201`)
+- `DividerEditors.tsx` -> `89.74 / 74.19` (`105/117`, `92/124`)
+- `EntryTeaserEditors.tsx` -> `86.33 / 77.80` (`341/395`, `389/500`)
+- `FaqAccordionEditors.tsx` -> `93.06 / 83.33` (`201/216`, `155/186`)
+- `FeatureGridEditors.tsx` -> `92.34 / 79.32` (`229/248`, `188/237`)
+- `FooterEditors.tsx` -> `51.69 / 49.72` (`153/296`, `176/354`)
+- `FormEmbedEditors.tsx` -> `85.66 / 72.32` (`239/279`, `209/289`)
+- `GalleryMosaicEditors.tsx` -> `87.47 / 69.42` (`314/359`, `227/327`)
+- `GridColumnsEditors.tsx` -> `90.94 / 80.51` (`291/320`, `252/313`)
+- `HeroEditors.tsx` -> `95.52 / 85.65` (`619/648`, `603/704`)
+- `LinkDestinationField.tsx` -> `92.50 / 88.89` (`37/40`, `48/54`)
+- `ListingFiltersEditors.tsx` -> `83.49 / 74.25` (`354/424`, `493/664`)
+- `LogoCloudEditors.tsx` -> `92.26 / 74.51` (`298/323`, `190/255`)
+- `NavigationEditors.tsx` -> `84.10 / 73.55` (`275/327`, `253/344`)
+- `NewsletterEditors.tsx` -> `82.81 / 76.57` (`183/221`, `183/239`)
+- `PostsFeedEditors.tsx` -> `85.15 / 62.18` (`281/330`, `217/349`)
+- `PricingPlansEditors.tsx` -> `87.45 / 59.11` (`216/247`, `172/291`)
+- `ProductCompareEditors.tsx` -> `73.91 / 60.11` (`119/161`, `107/178`)
+- `ProductGalleryEditors.tsx` -> `80.11 / 64.38` (`149/186`, `141/219`)
+- `ProductTableEditors.tsx` -> `89.58 / 81.05` (`172/192`, `124/153`)
+- `RichTextSectionEditors.tsx` -> `68.91 / 65.77` (`266/386`, `244/371`)
+- `ScreenEditors.tsx` -> `59.73 / 62.77` (`89/149`, `59/94`)
+- `SearchBoxEditors.tsx` -> `87.36 / 70.71` (`76/87`, `70/99`)
+- `SectionEditors.tsx` -> `89.91 / 76.19` (`294/327`, `256/336`)
+- `SharedColorControl.tsx` -> `97.67 / 94.57` (`42/43`, `87/92`)
+- `SpacerEditors.tsx` -> `98.33 / 85.51` (`59/60`, `59/69`)
+- `SplitLayoutEditors.tsx` -> `92.86 / 83.04` (`91/98`, `93/112`)
+- `StackEditors.tsx` -> `96.59 / 85.96` (`85/88`, `49/57`)
+- `StatsKpiEditors.tsx` -> `80.72 / 84.97` (`180/223`, `164/193`)
+- `TabsEditors.tsx` -> `93.23 / 78.51` (`124/133`, `95/121`)
+- `TeamEditors.tsx` -> `82.28 / 59.16` (`311/378`, `239/404`)
+- `TemplateSectionEditors.tsx` -> `63.04 / 52.54` (`29/46`, `31/59`)
+- `TestimonialsEditors.tsx` -> `75.18 / 57.94` (`206/274`, `135/233`)
+- `TimelineEditors.tsx` -> `59.45 / 56.60` (`129/217`, `120/212`)
+- `ToggleBlockEditors.tsx` -> `85.71 / 82.22` (`84/98`, `37/45`)
+- `TokenOrPixelField.tsx` -> `87.27 / 69.74` (`48/55`, `53/76`)
+- `WidgetEditorControls.tsx` -> `100.00 / 88.46` (`13/13`, `23/26`)
+- `index.ts` -> `0.00 / 0.00` (`0/0`, `0/0`) — pure re-export barrel, `0` executable lines; pct is vacuous (zero executable lines)
+
+## S6 Coordination Gate (2026-08-19)
+
+Implementation of this wave is DEFERRED until Stream 6 FAZA 0 research
+(`_TMP-S6-widget-removal.md`) confirms the old-widget cut scope. Context:
+TASK-467 (changelog 1308, 2026-08-18) just shipped the lazy widget-editor
+registry, so this system received active investment yesterday; S6 plans to
+remove the whole old widget system (`core/widgets/*` +
+`core/admin/ui/widgets/editors/*` + the Widget Library route), with an
+explicit collision note against this wave.
+
+- If S6 CONFIRMS removal -> this wave is superseded into the S6 family: the
+  editor tests die with their sources and S6 owns deletion + the coverage
+  rebaseline. Status flips to `⏭️ Superseded` with an S6 task link
+  once an S6 task file exists (do NOT supersede before then).
+- If S6 decides RETENTION/adapter -> resume implementation from this
+  re-baselined contract: `46` files, `1556` uncovered lines / `2827`
+  uncovered branches, worst files first (`FooterEditors` `51.69/49.72`,
+  `TimelineEditors` `59.45/56.60`, `ScreenEditors` `59.73/62.77`,
+  `TemplateSectionEditors` `63.04/52.54`, `RichTextSectionEditors`
+  `68.91/65.77`, `ContactEditors` `70.96/54.05`, `ProductCompareEditors`
+  `73.91/60.11`, `TestimonialsEditors` `75.18/57.94`, `BookingCalendarEditors`
+  `77.78/59.71`, `CtaBannerEditors` `77.72/71.14`, `ProductGalleryEditors`
+  `80.11/64.38`).
+
+Branch-only hardening on the CURRENT files is explicitly NOT started now:
+writing new branch tests for surfaces S6 may delete is wasted work, and
+marking this wave Done while files sit at `83.84%` lines would be metric
+manipulation, which TASK-105 forbids. The wave therefore stays
+`🚧 In Progress` under the gate.
+
+`index.ts` barrel disposition (verified): it is a pure re-export with `0`
+executable lines and DEAD CODE at HEAD — `grep` across `core/` finds zero
+importers of the barrel path or of `editors/index` after TASK-467-03-L02
+moved consumers to the lazy registry. The artifact reports `0/0` covered/total
+(`pct 0.00`, vacuous because there are zero executable lines), so it costs
+nothing to the aggregate and is NOT a wave coverage target. Disposition: S6 deletes it with the system; on retention it stays a
+`0`-line artifact and may be recorded in the coverage manifest as an
+exclude-with-reason (dead re-export barrel) if the lane manifest requires an
+explicit note.
+
+`TokenOrPixelField.tsx` note (verified): it has NO direct test file anywhere
+under `tests/` (its `87.27%` lines come only transitively via editor tests).
+On retention, give it a direct suite.
+
+Test-file split plan (applies ONLY if the wave resumes; each split file must
+stay independently runnable in the Vitest lane, pattern: named suites +
+shared fixture module):
+
+- `tests/vitest/widgets/formRuntimeScript.test.ts` (`5866`): split by runtime
+  responsibility into SIX+ named suites (arithmetic: 5866 lines / 3 suites is
+  ~1955 per file, over the gate) -> `formRuntimeScript-render.test.ts`,
+  `formRuntimeScript-state.test.ts`, `formRuntimeScript-submit.test.ts`,
+  `formRuntimeScript-validation.test.ts`, `formRuntimeScript-reset.test.ts`,
+  `formRuntimeScript-subscriptions.test.ts`; heavy fixture data moves to
+  `formRuntimeScriptFixtures.ts` so each split file lands `<=1000` lines.
+- `tests/vitest/widgets/renderer.test.tsx` (`1708`): split by widget family
+  -> `renderer-hero-cta.test.tsx`, `renderer-content-grid.test.tsx`,
+  `renderer-embed.test.tsx`.
+- `tests/vitest/widgets/productTable.test.tsx` (`1509`): split by table
+  behavior -> `productTable-render.test.tsx`,
+  `productTable-interaction.test.tsx`.
+- `tests/vitest/widgets/formEmbed.test.tsx` (`1284`): split by embed mode ->
+  `formEmbed-script.test.tsx`, `formEmbed-iframe.test.tsx`.
+- `tests/vitest/widgets/section.test.tsx` (`1002`) and
+  `gridColumns.test.tsx` (`1001`): trim/extract shared fixtures to a support
+  module and keep each suite under the gate.
+- Editor-wave suites over the gate (verified current sizes): `hero-editor-wave`
+  `2550`, `navigation-editor-wave` `1818`, `grid-columns-editor-wave` `1798`,
+  `content-list-editor-wave` `1565`, `entry-teaser-editor-wave` `1503`,
+  `feature-grid-editor-wave` `1478`, `posts-feed-editor-wave` `1407`,
+  `logo-cloud-editor-wave` `1390`, `pricing-plans-editor-wave` `1204`,
+  `newsletter-editor-wave` `1166`, `compare-timeline-editor-wave` `1098`,
+  `gallery-mosaic-editor-wave` `1078`, `faq-accordion-editor-wave` `1074`,
+  `cta-banner-editor-wave` `1058`, `team-editor-wave` `1028`,
+  `product-table-editor-wave` `1028` (all under `tests/vitest/ui/`). Split
+  each by wizard/visual/advanced mode responsibility; shared fixtures stay in
+  a per-family `*Fixtures.tsx` support module. If S6 removes the sources, all
+  of these die with them instead of being split.
+
+**Changelog pin:** `1322` (TASK-105-06) stays reserved for this wave's closure
+either way (S6-supersession closure or resumed implementation closure). Verify
+the live `_docs/_CHANGELOG/README.md` at closure (highest consumed row today:
+`1308`, next unreserved: `1309`; `1309-1319` are reserved for S1/S3).
+
 
 ## Testing Requirements
 

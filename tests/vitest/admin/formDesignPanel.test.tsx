@@ -293,3 +293,257 @@ test("ControlDefaultHint shows a reset affordance (not a plain default) when a t
     view.cleanup();
   }
 });
+
+const setTextareaValue = (element: Element | null | undefined, value: string) => {
+  if (!(element instanceof HTMLTextAreaElement)) return;
+  const descriptor = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value");
+  descriptor?.set?.call(element, value);
+  element.dispatchEvent(new Event("input", { bubbles: true }));
+  element.dispatchEvent(new Event("change", { bubbles: true }));
+};
+
+const THEME_RADII_OPTIONS = ["none", "sm", "md", "lg", "xl"];
+
+// All 15 EnumSelects in DOM order. Radix keeps the hidden native <select> alive
+// while the trigger sits inside a <form>; the option sets below are asserted
+// positionally so an upstream reorder fails loudly instead of silently drifting.
+const SELECT_PLAN: Array<{
+  group: keyof FormFormTheme;
+  key: string;
+  options: string[];
+  next: string;
+  expected?: unknown;
+}> = [
+  { group: "layout", key: "width", options: ["sm", "md", "lg", "xl", "full"], next: "lg" },
+  { group: "layout", key: "align", options: ["left", "center", "right"], next: "right" },
+  { group: "layout", key: "columns", options: ["1", "2"], next: "2", expected: 2 },
+  { group: "layout", key: "fieldGap", options: ["sm", "md", "lg"], next: "sm" },
+  {
+    group: "layout",
+    key: "buttonAlignment",
+    options: ["left", "center", "right", "full"],
+    next: "full",
+  },
+  { group: "surface", key: "borderWidth", options: ["none", "sm", "md"], next: "none" },
+  { group: "surface", key: "radius", options: THEME_RADII_OPTIONS, next: "sm" },
+  { group: "surface", key: "padding", options: ["sm", "md", "lg", "xl"], next: "sm" },
+  { group: "surface", key: "shadow", options: ["none", "soft", "sm", "md", "lg"], next: "none" },
+  { group: "typography", key: "titleSize", options: ["sm", "md", "lg", "xl"], next: "sm" },
+  {
+    group: "typography",
+    key: "titleWeight",
+    options: ["normal", "medium", "semibold", "bold"],
+    next: "bold",
+  },
+  {
+    group: "typography",
+    key: "fontFamily",
+    options: ["display", "inherit", "sans", "serif", "mono"],
+    next: "serif",
+  },
+  { group: "input", key: "size", options: ["sm", "md", "lg"], next: "lg" },
+  { group: "input", key: "radius", options: THEME_RADII_OPTIONS, next: "md" },
+  { group: "submit", key: "radius", options: THEME_RADII_OPTIONS, next: "md" },
+];
+
+test("every FORM_THEME_* enum select emits a scoped single-key group patch", () => {
+  const onThemeChange = vi.fn();
+  const view = mount(
+    <form>
+      <FormDesignPanel theme={undefined} onThemeChange={onThemeChange} />
+    </form>
+  );
+  try {
+    const selects = Array.from(view.container.querySelectorAll("select"));
+    expect(selects).toHaveLength(SELECT_PLAN.length);
+
+    SELECT_PLAN.forEach((entry, index) => {
+      const select = selects[index] as HTMLSelectElement;
+      expect(optionValues(select)).toEqual(entry.options);
+
+      React.act(() => {
+        setSelectValue(select, entry.next);
+      });
+      expect(onThemeChange).toHaveBeenLastCalledWith({
+        [entry.group]: { [entry.key]: entry.expected ?? entry.next },
+      });
+    });
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("every enum control reset emits the reduced group (cleared when emptied)", () => {
+  const onThemeChange = vi.fn();
+  const fullTheme: FormFormTheme = {
+    layout: { width: "lg", align: "right", columns: 2, fieldGap: "sm", buttonAlignment: "full" },
+    surface: { card: true, borderWidth: "none", radius: "sm", padding: "sm", shadow: "none" },
+    typography: { titleSize: "sm", titleWeight: "bold", fontFamily: "serif" },
+    input: { size: "lg", radius: "md" },
+    submit: { fullWidth: true, radius: "md", label: "Send", supportingText: "Fine print" },
+  };
+  const groupByName: Record<string, keyof FormFormTheme> = {
+    Layout: "layout",
+    Container: "surface",
+    Typography: "typography",
+    Inputs: "input",
+    Submit: "submit",
+  };
+  const sectionResetKeys: Array<{ title: string; keys: string[] }> = [
+    { title: "Layout", keys: ["width", "align", "columns", "fieldGap", "buttonAlignment"] },
+    { title: "Container", keys: ["card", "borderWidth", "radius", "padding", "shadow"] },
+    { title: "Typography", keys: ["titleSize", "titleWeight", "fontFamily"] },
+    { title: "Inputs", keys: ["size", "radius"] },
+    { title: "Submit", keys: ["radius", "fullWidth", "supportingText"] },
+  ];
+
+  const view = mount(<FormDesignPanel theme={fullTheme} onThemeChange={onThemeChange} />);
+  try {
+    for (const { title, keys } of sectionResetKeys) {
+      const group = groupByName[title];
+      const section = Array.from(view.container.querySelectorAll("section")).find(
+        (candidate) => candidate.querySelector("p")?.textContent?.trim() === title
+      );
+      expect(section, `missing section ${title}`).toBeTruthy();
+
+      const resetButtons = Array.from((section as HTMLElement).querySelectorAll("button")).filter(
+        (button) => button.textContent?.trim().startsWith("Reset")
+      );
+      expect(resetButtons.map((button) => button.textContent?.trim())).toEqual(
+        keys.map((key) =>
+          key === "supportingText"
+            ? "Reset"
+            : `Reset (default: ${String((fullTheme[group] as Record<string, unknown>)[key])})`
+        )
+      );
+
+      keys.forEach((key, index) => {
+        React.act(() => {
+          resetButtons[index]?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+        });
+        const expected: Record<string, unknown> = {
+          ...(fullTheme[group] as Record<string, unknown>),
+        };
+        delete expected[key];
+        expect(onThemeChange).toHaveBeenLastCalledWith({ [group]: expected });
+      });
+    }
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("FormDesignPanel in disabled mode renders inert controls and never fires onThemeChange", () => {
+  const onThemeChange = vi.fn();
+  const view = mount(
+    <form>
+      <FormDesignPanel theme={undefined} onThemeChange={onThemeChange} disabled />
+    </form>
+  );
+  try {
+    const selects = Array.from(view.container.querySelectorAll("select"));
+    expect(selects.length).toBeGreaterThan(0);
+    for (const select of selects) {
+      expect((select as HTMLSelectElement).disabled).toBe(true);
+    }
+
+    const switches = Array.from(view.container.querySelectorAll('[role="switch"]'));
+    expect(switches.length).toBeGreaterThan(0);
+    for (const switchControl of switches) {
+      expect((switchControl as HTMLButtonElement).disabled).toBe(true);
+    }
+
+    // The two authored text controls propagate disabled.
+    const submitLabel = view.container.querySelector('input[aria-label="Submit label"]');
+    expect((submitLabel as HTMLInputElement | null)?.disabled).toBe(true);
+    const supporting = view.container.querySelector(
+      'textarea[aria-label="Submit supporting text"]'
+    );
+    expect((supporting as HTMLTextAreaElement | null)?.disabled).toBe(true);
+
+    const resetAll = buttonWithText(view.container, "Reset to default theme");
+    expect(resetAll?.disabled).toBe(true);
+
+    // Disabled controls ignore interaction: no onThemeChange may fire.
+    React.act(() => {
+      switches[0]?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+      resetAll?.click();
+    });
+    expect(onThemeChange).not.toHaveBeenCalled();
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("FormDesignPanel submit label and supporting text write and clear through the input paths", () => {
+  const onThemeChange = vi.fn();
+  const view = mount(
+    <FormDesignPanel
+      theme={{ submit: { label: "Send", supportingText: "We reply within a day." } }}
+      onThemeChange={onThemeChange}
+    />
+  );
+  try {
+    const labelInput = view.container.querySelector(
+      'input[aria-label="Submit label"]'
+    ) as HTMLInputElement | null;
+    expect(labelInput?.value).toBe("Send");
+    React.act(() => {
+      setInputValue(labelInput!, "Send request");
+    });
+    expect(onThemeChange).toHaveBeenLastCalledWith({
+      submit: { label: "Send request", supportingText: "We reply within a day." },
+    });
+
+    React.act(() => {
+      setInputValue(labelInput!, "   ");
+    });
+    expect(onThemeChange).toHaveBeenLastCalledWith({
+      submit: { supportingText: "We reply within a day." },
+    });
+
+    const supporting = view.container.querySelector(
+      'textarea[aria-label="Submit supporting text"]'
+    ) as HTMLTextAreaElement | null;
+    React.act(() => {
+      setTextareaValue(supporting, "Updated supporting text");
+    });
+    // patchGroup merges over the PROPS theme, which still carries the authored label.
+    expect(onThemeChange).toHaveBeenLastCalledWith({
+      submit: { label: "Send", supportingText: "Updated supporting text" },
+    });
+
+    const resetSupporting = view.container.querySelector(
+      'button[aria-label="Reset submit supporting text"]'
+    ) as HTMLButtonElement | null;
+    expect(resetSupporting).toBeTruthy();
+    React.act(() => {
+      resetSupporting?.click();
+    });
+    expect(onThemeChange).toHaveBeenLastCalledWith({ submit: { label: "Send" } });
+
+    React.act(() => {
+      setTextareaValue(supporting, "  ");
+    });
+    expect(onThemeChange).toHaveBeenLastCalledWith({ submit: { label: "Send" } });
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("FormDesignPanel full-width submit switch emits a scoped submit patch", () => {
+  const onThemeChange = vi.fn();
+  const view = mount(<FormDesignPanel theme={undefined} onThemeChange={onThemeChange} />);
+  try {
+    const fullWidthSwitch = Array.from(view.container.querySelectorAll('[role="switch"]')).find(
+      (control) => control.getAttribute("aria-label") === "Full-width button"
+    ) as HTMLElement | null;
+    expect(fullWidthSwitch).toBeTruthy();
+    React.act(() => {
+      fullWidthSwitch?.click();
+    });
+    expect(onThemeChange).toHaveBeenCalledWith({ submit: { fullWidth: false } });
+  } finally {
+    view.cleanup();
+  }
+});

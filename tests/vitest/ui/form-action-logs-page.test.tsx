@@ -412,3 +412,62 @@ test("FormActionLogsPage reports api and generic load/retry errors", async () =>
     retryView.cleanup();
   }
 });
+
+test("FormActionLogsPage without a forms path segment stays idle", async () => {
+  window.history.replaceState({}, "", "/admin/other");
+  const { FormActionLogsPage } = await import("../../../core/admin/ui/forms/FormActionLogsPage");
+
+  const view = mount(<FormActionLogsPage />);
+
+  try {
+    await flush();
+
+    expect(view.container.textContent).toContain("Form action logs");
+    expect(actionLogsState.listCalls).toHaveLength(0);
+
+    clickByText(view.container, "Refresh");
+    await flush();
+
+    expect(actionLogsState.listCalls).toHaveLength(0);
+    expect(actionLogsState.navigateCalls).toHaveLength(0);
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("FormActionLogsPage refresh reports api and generic failures", async () => {
+  window.history.replaceState({}, "", "/admin/forms/form-1/action-runs");
+  const { FormActionLogsPage } = await import("../../../core/admin/ui/forms/FormActionLogsPage");
+
+  const view = mount(<FormActionLogsPage />);
+
+  try {
+    await flush();
+    expect(view.container.textContent).toContain("Send email");
+
+    actionLogsState.listError = actionLogsState.apiError("Runs went stale");
+    clickByText(view.container, "Refresh");
+    await flush();
+
+    expect(view.container.textContent).toContain("Unable to load action logs");
+    expect(view.container.textContent).toContain("Runs went stale");
+  } finally {
+    view.cleanup();
+  }
+
+  actionLogsState.reset();
+  window.history.replaceState({}, "", "/admin/forms/form-1/action-runs");
+  const genericView = mount(<FormActionLogsPage />);
+
+  try {
+    await flush();
+
+    actionLogsState.listError = new Error("boom");
+    clickByText(genericView.container, "Refresh");
+    await flush();
+
+    expect(genericView.container.textContent).toContain("Failed to load action logs.");
+  } finally {
+    genericView.cleanup();
+  }
+});
