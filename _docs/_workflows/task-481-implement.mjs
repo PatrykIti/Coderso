@@ -223,6 +223,7 @@ const SERIES_B = [
       "core/services/pages/pageEditorColorPaletteContext.ts",
       "tests/vitest/ui/shared-color-control.test.tsx",
       "tests/vitest/ui/page-authoring-canvas.test.tsx",
+      "tests/vitest/ui/page-authoring-inline-color-toolbar.test.tsx",
     ],
     gate: `${LEAF_GATE_BASE} tests/vitest/ui/shared-color-control.test.tsx tests/vitest/ui/page-authoring-canvas.test.tsx tests/vitest/ui/page-authoring-inline-color-toolbar.test.tsx && ${LINE_GATE} && git diff --check`,
   },
