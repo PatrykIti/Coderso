@@ -2,12 +2,25 @@
 
 import React from "react";
 import { createRoot } from "react-dom/client";
-import { afterEach, expect, test, vi } from "vitest";
+import { afterEach, describe, expect, test, vi } from "vitest";
 
+import { SectionCanvas } from "../../../core/admin/ui/pages/editor/PageAuthoringCanvas";
+import { ColorSwatchControl } from "../../../core/admin/ui/pages/editorControls/ColorSwatchControl";
 import {
   SharedColorControl,
   describeSharedColorControlState,
 } from "../../../core/admin/ui/widgets/editors/SharedColorControl";
+import { PageEditorColorPaletteContext } from "../../../core/services/pages/pageEditorColorPaletteContext";
+import { getPageEditorColorPalette } from "../../../core/services/pages/pageEditorControlUiModel";
+import { DEFAULT_TOKENS } from "../../../core/services/theme/tokenTypes";
+import { mergeTokens } from "../../../core/services/theme/tokenUtils";
+import { toPageCanvasBrandColorCssVariableMap } from "../../../core/ui/theme/tokenCss";
+import {
+  baseCanvasProps,
+  createPageBlockV2,
+  createPageSectionV2,
+  sectionWithBrandBlockProps,
+} from "./pageAuthoringCanvasHarness";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -601,4 +614,171 @@ test("rgba text now previews the extracted base color in the swatch while still 
   } finally {
     view.cleanup();
   }
+});
+
+// TASK-481-03-L02: the brand swatch preview unification invariant. For a given
+// brand token, the inline text-color toolbar swatch, the block-level
+// ColorSwatchControl swatch, and the in-canvas content scope brand CSS var all
+// resolve to the SAME site palette value (getPageEditorColorPalette(site)), and
+// the committed mark stays the var(--color-*) token. jsdom/happy-dom does not
+// resolve custom properties, so previews are asserted on style strings /
+// previewValue; the real cascade is covered by the Playwright smoke
+// (TASK-481-04-L01).
+describe("brand swatch preview agreement (TASK-481-03)", () => {
+  // Non-default site tokens so a stale DEFAULT_TOKENS fallback is visible.
+  const site = mergeTokens(DEFAULT_TOKENS, {
+    colors: { primary: "#0b3d91", secondary: "#7f1d1d", accent: "#166534" },
+    neutrals: { border: "#475569" },
+  });
+  // The SINGLE palette owner both controls consume (inline via the context the
+  // PageEditorRoot provider seeds, block via the registry palette prop).
+  const palette = getPageEditorColorPalette(site);
+  const brandIds = ["primary", "secondary", "accent", "border"] as const;
+
+  const mountInlineCanvas = (onApplyTextMark = vi.fn()) => {
+    const section = createPageSectionV2("content", {
+      id: "sec-brand-agreement",
+      blocks: [
+        createPageBlockV2("heading", {
+          id: "blk-brand-agreement",
+          props: { text: "Canvas headline", level: "h2", align: "left" },
+        }),
+      ],
+    });
+    const view = mount(
+      <PageEditorColorPaletteContext.Provider value={palette}>
+        <SectionCanvas
+          section={section}
+          baseSection={section}
+          selected
+          selectedBlockPath={[{ index: 0 }]}
+          selectedBlockId="blk-brand-agreement"
+          inlineEditTarget={{ blockId: "blk-brand-agreement", propPath: "text" }}
+          {...baseCanvasProps}
+          onApplyTextMark={onApplyTextMark}
+        />
+      </PageEditorColorPaletteContext.Provider>
+    );
+    return { view, onApplyTextMark };
+  };
+
+  test("inline toolbar and block control preview the SAME site value for every brand id", () => {
+    const { view: inlineView } = mountInlineCanvas();
+    const blockView = mount(
+      <PageEditorColorPaletteContext.Provider value={palette}>
+        <ColorSwatchControl
+          label="Accent"
+          value="var(--color-accent)"
+          onChange={vi.fn()}
+          palette={palette}
+        />
+      </PageEditorColorPaletteContext.Provider>
+    );
+
+    try {
+      for (const id of brandIds) {
+        const swatch = palette.find((entry) => entry.id === id);
+        expect(swatch?.previewValue, `palette entry for ${id}`).toBeTruthy();
+        const previewValue = swatch?.previewValue as string;
+
+        // Inline toolbar swatch (live-palette path through the context).
+        const inlineSwatch = inlineView.container.querySelector(
+          `[data-page-editor-text-color-swatch="${id}"]`
+        ) as HTMLElement | null;
+        expect(inlineSwatch, `inline ${id} swatch`).toBeTruthy();
+        expect(inlineSwatch?.getAttribute("style") ?? "", `inline ${id} preview`).toContain(
+          previewValue
+        );
+        expect(
+          inlineSwatch?.getAttribute("style") ?? "",
+          `inline ${id} must not fall back to DEFAULT_TOKENS`
+        ).not.toContain(DEFAULT_TOKENS.colors.primary);
+
+        // Block-level ColorSwatchControl swatch (same palette, same value).
+        const blockSwatch = blockView.container.querySelector(
+          `[data-page-editor-color-swatch="${id}"]`
+        ) as HTMLElement | null;
+        expect(blockSwatch, `block ${id} swatch`).toBeTruthy();
+        expect(blockSwatch?.getAttribute("style") ?? "", `block ${id} preview`).toContain(
+          previewValue
+        );
+      }
+    } finally {
+      inlineView.cleanup();
+      blockView.cleanup();
+    }
+  });
+
+  test("the in-canvas content scope resolves each brand var to the same site value", () => {
+    const brandVars = toPageCanvasBrandColorCssVariableMap(site);
+    const view = mount(
+      <SectionCanvas {...sectionWithBrandBlockProps} contentBrandTokenVariables={brandVars} />
+    );
+
+    try {
+      const sectionScope = view.container.querySelector(
+        "section[data-page-editor-section] > [data-page-editor-content]"
+      ) as HTMLElement | null;
+      const blockScope = view.container.querySelector(
+        '[data-page-editor-block-id="blk-brand-heading"] > [data-page-editor-content]'
+      ) as HTMLElement | null;
+      expect(sectionScope).toBeTruthy();
+      expect(blockScope).toBeTruthy();
+      for (const id of brandIds) {
+        const swatch = palette.find((entry) => entry.id === id);
+        expect(sectionScope?.getAttribute("style") ?? "", `section scope ${id}`).toContain(
+          `--color-${id}: ${swatch?.previewValue}`
+        );
+        expect(blockScope?.getAttribute("style") ?? "", `block scope ${id}`).toContain(
+          `--color-${id}: ${swatch?.previewValue}`
+        );
+      }
+    } finally {
+      view.cleanup();
+    }
+  });
+
+  test("the committed mark value stays the var(--color-*) token (not the hex)", () => {
+    const { view, onApplyTextMark } = mountInlineCanvas();
+
+    try {
+      const region = view.container.querySelector(
+        '[data-page-editor-inline-edit="active"][data-page-editor-inline-edit-prop="text"]'
+      ) as HTMLElement | null;
+      const textNode = region?.firstChild;
+      expect(textNode?.nodeType).toBe(Node.TEXT_NODE);
+      React.act(() => {
+        if (!region || !textNode) return;
+        const range = document.createRange();
+        range.setStart(textNode, 0);
+        range.setEnd(textNode, 6);
+        const selection = window.getSelection();
+        selection?.removeAllRanges();
+        selection?.addRange(range);
+        region.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
+      });
+
+      const accentSwatch = view.container.querySelector(
+        '[data-page-editor-text-color-swatch="accent"]'
+      ) as HTMLButtonElement | null;
+      expect(accentSwatch?.disabled).toBe(false);
+      React.act(() => {
+        accentSwatch?.click();
+      });
+
+      expect(onApplyTextMark).toHaveBeenCalledWith(
+        expect.objectContaining({
+          blockId: "blk-brand-agreement",
+          propPath: "text",
+          type: "color",
+          from: 0,
+          to: 6,
+          color: "var(--color-accent)",
+        })
+      );
+    } finally {
+      view.cleanup();
+      window.getSelection()?.removeAllRanges();
+    }
+  });
 });
