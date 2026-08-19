@@ -136,7 +136,7 @@ const FULL_GATES = Object.freeze([
   },
   {
     id: "vitest-481-matrix",
-    command: `bun run test:vitest -- tests/vitest/ui/page-authoring-canvas.test.tsx tests/vitest/ui/page-authoring-canvas-content-scope.test.tsx tests/vitest/ui/page-authoring-canvas-chrome.test.tsx tests/vitest/ui/page-authoring-canvas-section.test.tsx tests/vitest/ui/page-authoring-inline-color-toolbar.test.tsx tests/vitest/ui/page-authoring-link-toolbar.test.tsx tests/vitest/ui/page-authoring-toolbar-dock.test.tsx tests/vitest/ui/themeTokens.test.ts tests/vitest/ui/shared-color-control.test.tsx tests/vitest/ui/page-editor-facade.test.ts`,
+    command: `bun run test:vitest -- tests/vitest/ui/page-authoring-canvas.test.tsx tests/vitest/ui/page-authoring-inline-color-toolbar.test.tsx tests/vitest/ui/page-authoring-link-toolbar.test.tsx tests/vitest/ui/page-authoring-toolbar-dock.test.tsx tests/vitest/ui/themeTokens.test.ts tests/vitest/ui/shared-color-control.test.tsx tests/vitest/ui/page-editor-facade.test.ts`,
   },
   {
     id: "family-line-limit",
@@ -176,12 +176,12 @@ const SERIES_A = [
     contract: `${TASKS}/TASK-481-01-L03-Content-Scope-Characterization-Tests.md`,
     allowed: [
       "tests/vitest/ui/page-authoring-canvas.test.tsx",
-      "tests/vitest/ui/page-authoring-canvas-content-scope.test.tsx",
-      "tests/vitest/ui/page-authoring-canvas-chrome.test.tsx",
-      "tests/vitest/ui/page-authoring-canvas-section.test.tsx",
-      "tests/vitest/ui/page-authoring-canvas-harness.tsx",
+      "tests/vitest/ui/pageAuthoringCanvasHarness.tsx",
+      "tests/vitest/ui/page-authoring-inline-color-toolbar.test.tsx",
+      "tests/vitest/ui/page-authoring-link-toolbar.test.tsx",
+      "tests/vitest/ui/page-authoring-toolbar-dock.test.tsx",
     ],
-    gate: `${LEAF_GATE_BASE} tests/vitest/ui/page-authoring-canvas.test.tsx tests/vitest/ui/page-authoring-canvas-content-scope.test.tsx tests/vitest/ui/page-authoring-canvas-chrome.test.tsx tests/vitest/ui/page-authoring-canvas-section.test.tsx && ${LINE_GATE} && git diff --check`,
+    gate: `${LEAF_GATE_BASE} tests/vitest/ui/page-authoring-canvas.test.tsx tests/vitest/ui/page-authoring-inline-color-toolbar.test.tsx tests/vitest/ui/page-authoring-link-toolbar.test.tsx tests/vitest/ui/page-authoring-toolbar-dock.test.tsx && ${LINE_GATE} && git diff --check`,
   },
   {
     id: "481-02-L01",
@@ -204,12 +204,9 @@ const SERIES_A = [
       "core/admin/ui/pages/editor/PageAuthoringCanvas.tsx",
       "core/admin/ui/pages/editor/PageAuthoringCanvasInline.tsx",
       "tests/vitest/ui/page-authoring-canvas.test.tsx",
-      "tests/vitest/ui/page-authoring-canvas-content-scope.test.tsx",
-      "tests/vitest/ui/page-authoring-canvas-chrome.test.tsx",
-      "tests/vitest/ui/page-authoring-canvas-section.test.tsx",
       "tests/vitest/ui/page-editor-facade.test.ts",
     ],
-    gate: `${LEAF_GATE_BASE} tests/vitest/ui/page-authoring-canvas.test.tsx tests/vitest/ui/page-authoring-canvas-content-scope.test.tsx tests/vitest/ui/page-authoring-canvas-chrome.test.tsx tests/vitest/ui/page-authoring-canvas-section.test.tsx tests/vitest/ui/themeTokens.test.ts tests/vitest/ui/page-editor-facade.test.ts && ${LINE_GATE} && git diff --check`,
+    gate: `${LEAF_GATE_BASE} tests/vitest/ui/page-authoring-canvas.test.tsx tests/vitest/ui/page-authoring-inline-color-toolbar.test.tsx tests/vitest/ui/page-authoring-link-toolbar.test.tsx tests/vitest/ui/page-authoring-toolbar-dock.test.tsx tests/vitest/ui/themeTokens.test.ts tests/vitest/ui/page-editor-facade.test.ts && ${LINE_GATE} && git diff --check`,
   },
 ];
 
@@ -248,7 +245,7 @@ const POST_LENS_INPUTS = Object.freeze({
     "core/admin/ui/pages/editor/PageEditorRoot.tsx",
     "core/admin/ui/pages/editor/usePageEditorController.ts",
     "tests/vitest/ui/themeTokens.test.ts",
-    "tests/vitest/ui/page-authoring-canvas-content-scope.test.tsx",
+    "tests/vitest/ui/page-authoring-canvas.test.tsx",
   ]),
   "preview-unification": Object.freeze([
     "tests/vitest/ui/shared-color-control.test.tsx",
@@ -261,9 +258,10 @@ const POST_LENS_INPUTS = Object.freeze({
   ]),
   "test-integrity": Object.freeze([
     "tests/vitest/ui/page-authoring-canvas.test.tsx",
-    "tests/vitest/ui/page-authoring-canvas-content-scope.test.tsx",
-    "tests/vitest/ui/page-authoring-canvas-chrome.test.tsx",
-    "tests/vitest/ui/page-authoring-canvas-section.test.tsx",
+    "tests/vitest/ui/pageAuthoringCanvasHarness.tsx",
+    "tests/vitest/ui/page-authoring-inline-color-toolbar.test.tsx",
+    "tests/vitest/ui/page-authoring-link-toolbar.test.tsx",
+    "tests/vitest/ui/page-authoring-toolbar-dock.test.tsx",
     "tests/vitest/ui/themeTokens.test.ts",
     "tests/vitest/ui/shared-color-control.test.tsx",
     "tests/vitest/ui/page-editor-facade.test.ts",
