@@ -79,7 +79,7 @@
 // core/services/seo/sitemapSubmissionService.ts (create)
 export async function submitSitemap(input: { sitemapPath?: string }) {
   const feedpath = normalizeOwnOriginSitemapPath(input.sitemapPath); // throws sitemap_path_invalid
-  const client = await getGscClient();                 // 03-L01; throws gsc_not_configured
+  const client = await getGscClient("webmasters"); // 03-L01; write scope required for the submit PUT (default is webmasters.readonly); throws gsc_not_configured
   try {
     await client.request("PUT",
       `sites/${encodeURIComponent(client.siteUrl)}/sitemaps/${encodeURIComponent(feedpath)}`);

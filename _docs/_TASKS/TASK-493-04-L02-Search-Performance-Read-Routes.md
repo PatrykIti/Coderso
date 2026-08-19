@@ -124,7 +124,10 @@ router.post("/seo/search-performance/sync", requirePermission("settings:write"),
 });
 
 // --- sitemap routes (02-L02 sitemapSubmissionService; moved from 02-L02) ---
-router.get("/seo/sitemap", requirePermission("content:read"), () => getSitemapStatus());
+router.get("/seo/sitemap", requirePermission("content:read"), async () => {
+  await refreshSitemapStatus(); // 02-L02; best-effort GSC refresh (bounded cooldown) before the bounded local read
+  return getSitemapStatus();
+});
 
 router.post("/seo/sitemap/submit", requirePermission("settings:write"), async (ctx) => {
   try {

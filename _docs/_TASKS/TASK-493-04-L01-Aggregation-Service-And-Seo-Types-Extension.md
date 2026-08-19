@@ -5,7 +5,7 @@
 **Priority:** Medium
 **Category:** Tools / SEO
 **Estimated Effort:** Medium
-**Dependencies:** TASK-493-01, TASK-493-03-L02
+**Dependencies:** TASK-493-01, TASK-493-02-L02 (SeoOverview.sitemap reads `seo_sitemap_submissions` rows written by the submit flow), TASK-493-03-L02
 **Status:** ⏳ To Do
 **Started:** `<YYYY-MM-DD>`
 **Completed:** `<YYYY-MM-DD>`
@@ -99,7 +99,7 @@ import type {
   SeoIndexedPage,           // 01-L01 (NOT a local "IndexedRow")
   SeoSearchMetricPoint,     // 01-L01 (NOT a local "MetricRow")
   SeoSearchQueryRow,        // 01-L01
-  SeoSitemapSubmissionRow,  // 01-L01 (added by fixer-a to seoSearchPerformanceTypes.ts)
+  SeoSitemapSubmissionRow,  // 01-L01 (defined in seoSearchPerformanceTypes.ts)
 } from "./seoSearchPerformanceTypes";
 
 // pure, unit-testable merge over already-fetched rows

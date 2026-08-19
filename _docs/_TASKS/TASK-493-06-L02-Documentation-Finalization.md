@@ -5,7 +5,7 @@
 **Priority:** Medium
 **Category:** Tools / SEO
 **Estimated Effort:** Small
-**Dependencies:** TASK-493-01, TASK-493-02, TASK-493-03, TASK-493-04
+**Dependencies:** TASK-493-01, TASK-493-02, TASK-493-03, TASK-493-04, TASK-493-05
 **Status:** ⏳ To Do
 **Started:** `<YYYY-MM-DD>`
 **Completed:** `<YYYY-MM-DD>`
