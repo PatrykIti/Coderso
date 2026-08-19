@@ -7,6 +7,9 @@ import { expect, test, vi } from "vitest";
 import { AdminRouterProvider } from "../../../core/admin/ui/contexts/AdminRouterContext";
 import { PageEditor } from "../../../core/admin/ui/pages/PageEditor";
 import { SectionCanvas } from "../../../core/admin/ui/pages/editor/PageAuthoringCanvas";
+import { cacheKeys } from "../../../core/admin/services/cachePolicy";
+import type { PageDetail } from "../../../core/admin/services/pagesClient";
+import { broadcastCacheEvent } from "../../../core/admin/utils/cacheBus";
 import { PageEditorColorPaletteContext } from "../../../core/services/pages/pageEditorColorPaletteContext";
 import { getPageEditorColorPalette } from "../../../core/services/pages/pageEditorControlUiModel";
 import {
@@ -17,9 +20,36 @@ import {
   renderToStaticMarkup,
   sectionWithBrandBlockProps,
 } from "./pageAuthoringCanvasHarness";
-import { DEFAULT_TOKENS } from "../../../core/services/theme/tokenTypes";
+import { DEFAULT_TOKENS, type DesignTokenOverrides } from "../../../core/services/theme/tokenTypes";
 import { mergeTokens } from "../../../core/services/theme/tokenUtils";
-import { toPageCanvasBrandColorCssVariableMap } from "../../../core/ui/theme/tokenCss";
+import {
+  toPageCanvasBrandColorCssVariableMap,
+  toPageCanvasColorCssVariableMap,
+} from "../../../core/ui/theme/tokenCss";
+
+/**
+ * TASK-481-04-L01: live settings-cache boundary for the canvas site-token
+ * hooks. The PageEditor tree reads the settings cache through
+ * `@/services/settingsClient` (`getCachedSettings`/`getSettingsCached`); the
+ * cache-bus repaint test below controls that boundary with a stateful mock
+ * exactly like the menu-editor and page-editor-v2-flow suites, while the real
+ * `cacheBus` broadcast/subscribe path, the real `useCanvasSiteTokens` hook,
+ * the real controller, and the real SectionCanvas render stay un-mocked.
+ * With an empty/`null` payload the canvas anchors on DEFAULT_TOKENS, so the
+ * existing suites in this file (which pass explicit token props or render
+ * statically) keep their exact behavior.
+ */
+const settingsCacheState = vi.hoisted(() => ({
+  payload: null as Record<string, unknown> | null,
+  reset() {
+    settingsCacheState.payload = null;
+  },
+}));
+
+vi.mock("@/services/settingsClient", () => ({
+  getCachedSettings: () => settingsCacheState.payload,
+  getSettingsCached: async () => settingsCacheState.payload ?? {},
+}));
 
 test("SectionCanvas renders existing canvas chrome and ghost add affordances", () => {
   const section = createPageSectionV2("hero", {
@@ -588,5 +618,177 @@ test("inline toolbar keeps URL input + custom picker mousedown unprevented (TASK
   } finally {
     mounted.cleanup();
     window.getSelection()?.removeAllRanges();
+  }
+});
+
+// TASK-481-04-L01: the SITE accent used to prove the WYSIWYG chain. It MUST
+// differ from DEFAULT_TOKENS.colors.accent ("#f59e0b") and from the admin
+// chrome re-assertion (`var(--primary)`), otherwise the assertions below could
+// not distinguish a real SITE repaint from the DEFAULT/admin fallback.
+const SITE_ACCENT = "#16a34a";
+
+test("renders a brand block color as the SITE value on the content scope, admin on chrome (TASK-481-04-L01)", () => {
+  const site = mergeTokens(DEFAULT_TOKENS, { colors: { accent: SITE_ACCENT } });
+  const siteBrand = toPageCanvasBrandColorCssVariableMap(site);
+  const siteFrame = toPageCanvasColorCssVariableMap(site);
+  expect(SITE_ACCENT).not.toBe(DEFAULT_TOKENS.colors.accent);
+  expect(siteBrand["--color-accent"]).toBe(SITE_ACCENT);
+
+  const mounted = mount(
+    <SectionCanvas
+      {...sectionWithBrandBlockProps}
+      contentBrandTokenVariables={siteBrand as React.CSSProperties}
+    />
+  );
+
+  try {
+    const sectionScope = mounted.container.querySelector(
+      "section[data-page-editor-section] > [data-page-editor-content]"
+    );
+    const blockScope = mounted.container.querySelector(
+      '[data-page-editor-block-id="blk-brand-heading"] > [data-page-editor-content]'
+    );
+    // (1) The SITE brand map is painted on the content scopes, so the block's
+    // `var(--color-accent)` resolves against the SITE value, never the admin
+    // or DEFAULT fallback.
+    expect(sectionScope!.getAttribute("style")).toContain(`--color-accent: ${SITE_ACCENT}`);
+    expect(blockScope!.getAttribute("style")).toContain(`--color-accent: ${SITE_ACCENT}`);
+    expect(blockScope!.getAttribute("style")).toContain("color: var(--color-accent)");
+    expect(blockScope!.getAttribute("style")).not.toContain(
+      `--color-accent: ${DEFAULT_TOKENS.colors.accent}`
+    );
+
+    // (2) Editor chrome keeps the admin theme (no brand bleed): the section and
+    // block frames re-assert the ADMIN brand per TASK-481-01-L02.
+    const sectionFrame = mounted.container.querySelector("[data-page-editor-section]");
+    const blockFrame = mounted.container.querySelector(
+      '[data-page-editor-block-id="blk-brand-heading"]'
+    );
+    expect(sectionFrame!.getAttribute("style")).toContain("--color-primary: var(--primary)");
+    expect(blockFrame!.getAttribute("style")).toContain("--color-primary: var(--primary)");
+
+    // (3) Inline + block-level brand swatch previews agree with the in-canvas
+    // render; that invariant is pinned separately in TASK-481-03-L02
+    // (`tests/vitest/ui/shared-color-control.test.tsx` "brand swatch preview
+    // agreement") and TASK-481-03-L01 above — cross-reference holds, no
+    // duplicate assertion here.
+
+    // (4) Neutrals stay intact and brand stays OFF the canvas frame: the frame
+    // map (`canvasSiteTokenVariables`) carries the site neutrals + typography
+    // only, never the brand vars (TASK-477-02). Verified on the pure frame map
+    // for THIS custom site and on the real `data-page-editor-canvas-frame`
+    // style string below.
+    expect(siteFrame["--color-text"]).toBe(site.neutrals.text);
+    expect(siteFrame["--color-bg"]).toBe(site.neutrals.bg);
+    expect(siteFrame["--color-surface"]).toBe(site.neutrals.surface);
+    expect(Object.hasOwn(siteFrame, "--color-accent")).toBe(false);
+    expect(Object.hasOwn(siteFrame, "--color-primary")).toBe(false);
+  } finally {
+    mounted.cleanup();
+  }
+});
+
+test("keeps brand off the real canvas frame while neutrals stay intact (TASK-481-04-L01)", () => {
+  // The real `data-page-editor-canvas-frame` style string: renderToStaticMarkup
+  // never runs the settings effect, so the frame anchors on the DEFAULT_TOKENS
+  // neutral map (the SITE neutrals here equal the DEFAULT ones — only the SITE
+  // accent differs, which the frame never receives).
+  const html = renderToStaticMarkup(
+    <AdminRouterProvider initialPath="/admin">
+      <PageEditor />
+    </AdminRouterProvider>
+  );
+  const frameTag = html.match(/<div[^>]*data-page-editor-canvas-frame="true"[^>]*>/)?.[0] ?? "";
+  expect(frameTag).toContain("--color-text:");
+  expect(frameTag).toContain("--color-bg:");
+  expect(frameTag).toContain("--color-surface:");
+  expect(frameTag).toContain("--font-sans:");
+  expect(frameTag).not.toContain("--color-accent:");
+  expect(frameTag).not.toContain("--color-primary:");
+});
+
+const BRAND_REPAINT_PAGE: PageDetail = {
+  id: "page-481-04",
+  title: "Brand repaint",
+  slug: "/brand-repaint",
+  status: "draft",
+  currentData: {
+    schemaVersion: 2,
+    breakpoints: ["desktop", "tablet", "mobile"],
+    seo: {},
+    settings: { template: "page-v2", showInNav: true, revisionRetention: 10 },
+    sections: [
+      createPageSectionV2("content", {
+        id: "sec-481-04",
+        name: "Brand repaint section",
+        blocks: [
+          createPageBlockV2("heading", {
+            id: "blk-481-04",
+            props: { text: "Brand repaint headline", level: "h2", align: "left" },
+          }),
+        ],
+      }),
+    ],
+  },
+  updatedAt: "2026-08-19T09:00:00.000Z",
+};
+
+test("live-repaints brand when the settings cache bus fires (TASK-481-04-L01)", async () => {
+  settingsCacheState.payload = null;
+  // Mount the real PageEditor tree (real controller + SectionCanvas + real
+  // `useCanvasSiteTokens` cache-bus subscription) through the harness
+  // flushSync mount. The settings cache is empty, so the content scope
+  // anchors on the DEFAULT accent.
+  const mounted = mount(
+    <AdminRouterProvider initialPath="/admin">
+      <PageEditor initialPage={BRAND_REPAINT_PAGE} />
+    </AdminRouterProvider>
+  );
+
+  try {
+    // Let the mocked background settings revalidate settle, then flush its
+    // state write so the canvas is deterministically on DEFAULT_TOKENS.
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    flushSync(() => {});
+
+    const blockScopeQuery = '[data-page-editor-block-id="blk-481-04"] > [data-page-editor-content]';
+    const blockScopeBefore = mounted.container.querySelector(blockScopeQuery) as HTMLElement | null;
+    expect(blockScopeBefore).toBeTruthy();
+    expect(blockScopeBefore!.getAttribute("style")).toContain(
+      `--color-accent: ${DEFAULT_TOKENS.colors.accent}`
+    );
+
+    // A settings save elsewhere broadcasts `settingsRedacted`; the REAL
+    // cacheBus delivers it to the hook, which re-reads the settings cache and
+    // repaints the canvas with the NEW SITE accent.
+    settingsCacheState.payload = {
+      "design.tokens": {
+        colors: { accent: SITE_ACCENT },
+      } satisfies DesignTokenOverrides,
+    };
+    flushSync(() => {
+      broadcastCacheEvent({ key: cacheKeys.settingsRedacted, action: "update" });
+    });
+
+    const blockScopeAfter = mounted.container.querySelector(blockScopeQuery) as HTMLElement | null;
+    expect(blockScopeAfter).toBe(blockScopeBefore);
+    expect(blockScopeAfter!.getAttribute("style")).toContain(`--color-accent: ${SITE_ACCENT}`);
+    expect(blockScopeAfter!.getAttribute("style")).not.toContain(
+      `--color-accent: ${DEFAULT_TOKENS.colors.accent}`
+    );
+    const sectionScope = mounted.container.querySelector(
+      "section[data-page-editor-section] > [data-page-editor-content]"
+    );
+    expect(sectionScope!.getAttribute("style")).toContain(`--color-accent: ${SITE_ACCENT}`);
+    // Chrome stays admin after the repaint, and the canvas frame never picks
+    // up the SITE brand.
+    const frame = mounted.container.querySelector("[data-page-editor-canvas-frame]");
+    expect(frame!.getAttribute("style")).toContain("--color-text:");
+    expect(frame!.getAttribute("style")).not.toContain("--color-accent:");
+    const blockFrame = mounted.container.querySelector('[data-page-editor-block-id="blk-481-04"]');
+    expect(blockFrame!.getAttribute("style")).toContain("--color-primary: var(--primary)");
+  } finally {
+    mounted.cleanup();
+    settingsCacheState.reset();
   }
 });
