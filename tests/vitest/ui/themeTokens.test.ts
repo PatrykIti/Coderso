@@ -2,6 +2,7 @@ import { expect, test } from "vitest";
 import { DEFAULT_TOKENS } from "../../../core/services/theme/tokenTypes";
 import { DEFAULT_ADMIN_THEME_TOKENS } from "../../../core/services/adminThemes/tokenTypes";
 import {
+  adminBrandColorCssVariableMap,
   toAdminThemeCssVariables,
   toCssVariables,
   toPageCanvasColorCssVariableMap,
@@ -40,4 +41,21 @@ test("toPageCanvasColorCssVariableMap emits site neutral colors + typography onl
   expect(map["--color-border"]).toBeUndefined();
   expect(map["--background"]).toBeUndefined();
   expect(map["--foreground"]).toBeUndefined();
+});
+
+test("adminBrandColorCssVariableMap re-asserts the admin brand on chrome (TASK-481-01-L02)", () => {
+  // Mirror of the globals.css `@theme {` brand mapping, applied inline on the
+  // canvas section/block chrome frames so nested `data-page-editor-content`
+  // scopes cannot recolor chrome with the SITE brand vars.
+  expect(adminBrandColorCssVariableMap).toEqual({
+    "--color-primary": "var(--primary)",
+    "--color-secondary": "var(--secondary)",
+    "--color-accent": "var(--accent)",
+    "--color-border": "var(--border)",
+  });
+  // The three NEUTRAL vars are intentionally NOT re-asserted (no admin chrome
+  // consumes them; re-asserting would fight the TASK-477-02 neutral emission).
+  expect(adminBrandColorCssVariableMap["--color-bg"]).toBeUndefined();
+  expect(adminBrandColorCssVariableMap["--color-surface"]).toBeUndefined();
+  expect(adminBrandColorCssVariableMap["--color-text"]).toBeUndefined();
 });

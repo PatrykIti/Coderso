@@ -1,4 +1,5 @@
 import { Plus } from "lucide-react";
+import type { CSSProperties } from "react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -26,6 +27,7 @@ import {
   readBlockBreakpointOverride,
   readSectionBreakpointOverride,
 } from "../../../../services/pages/pageEditorState";
+import { adminBrandColorCssVariableMap } from "../../../../ui/theme/tokenCss";
 import {
   editorCanvasCtaButtonClass,
   editorCanvasGhostBesideHandleClass,
@@ -183,6 +185,7 @@ export const SectionCanvas = ({
           ? "outline outline-2 outline-offset-2 outline-primary"
           : "hover:outline hover:outline-1 hover:outline-offset-2 hover:outline-primary/40"
       } ${section.visibility.visible ? "" : "opacity-65"}`}
+      style={adminBrandColorCssVariableMap as CSSProperties}
       data-page-editor-section={section.type}
       data-section-id={section.id}
       data-page-editor-responsive-target={sectionHasOverride ? "override" : "inherited"}
@@ -377,7 +380,7 @@ export const SectionCanvas = ({
                     : "outline-transparent hover:outline-primary/30",
                   block.visibility.visible ? undefined : "opacity-70"
                 )}
-                style={frameLayoutStyle}
+                style={{ ...adminBrandColorCssVariableMap, ...frameLayoutStyle } as CSSProperties}
                 {...blockRenderProps.dataAttributes}
                 data-page-editor-block={block.type}
                 data-page-editor-block-id={block.id}

@@ -160,6 +160,23 @@ export function toMenuCanvasColorCssVariableMap(tokens: DesignTokens): Record<st
   };
 }
 
+/**
+ * Re-asserts the ADMIN brand `--color-*` (mirroring the `globals.css` `@theme {`
+ * brand mapping) so editor chrome keeps the admin theme even when nested inside a
+ * `data-page-editor-content` scope that defines the SITE brand vars (TASK-481).
+ * Static literals only — no token argument, no user input.
+ *
+ * The three NEUTRAL vars (`--color-bg/-surface/-text`) are intentionally omitted:
+ * no `core/admin/ui/pages` chrome consumes them, and re-asserting them would fight
+ * the TASK-477-02 neutral emission on the frame.
+ */
+export const adminBrandColorCssVariableMap: Record<string, string> = {
+  "--color-primary": "var(--primary)",
+  "--color-secondary": "var(--secondary)",
+  "--color-accent": "var(--accent)",
+  "--color-border": "var(--border)",
+};
+
 export function toCssVariableMap(tokens: DesignTokens): Record<string, string> {
   return {
     "--color-primary": tokens.colors.primary,
