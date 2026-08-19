@@ -21,9 +21,9 @@ palette and render its swatches by resolved `previewValue`, so inline previews a
 with the block-level control and with the now-WYSIWYG in-canvas brand render.
 
 Today the inline toolbar uses a module-level constant
-`inlineTextMarkPalette` (`core/admin/ui/pages/editor/PageAuthoringCanvas.tsx`:214)
-built from `getPageEditorColorPalette()` with **no tokens** (= `DEFAULT_TOKENS`)
-at `PageAuthoringCanvasInline.tsx:186`, filtered to the four brand ids `["primary","secondary","accent","border"]`. The
+`inlineTextMarkPalette` (`core/admin/ui/pages/editor/PageAuthoringCanvasInline.tsx`:186)
+built from `getPageEditorColorPalette()` with **no tokens** (= `DEFAULT_TOKENS`),
+filtered to the four brand ids `["primary","secondary","accent","border"]`. The
 block/section controls instead read the live `sitePalette` via
 `PageEditorColorPaletteContext` (`PageEditor.tsx`:352) and preview each swatch by
 `swatch.previewValue`. This leaf threads the same live palette into the inline
@@ -45,8 +45,8 @@ toolbar and renders inline swatches by `previewValue`, keeping the brand-id filt
 - `_docs/PAGE_MODEL.md` (inline text marks: `color`/`highlight`).
 
 **Out-of-scope:** Changing which marks/ids are offered inline (keep the existing
-brand-id filter + its neutral-exclusion rationale at ~208–213, const at :214); the
-block-level control; any sanitizer change.
+brand-id filter + its neutral-exclusion rationale documented around the const at
+`PageAuthoringCanvasInline.tsx:186`); the block-level control; any sanitizer change.
 
 ## Security Contract
 
