@@ -227,7 +227,7 @@ describe("composition style model (TASK-522-01-L03)", () => {
   // sanitize fail-soft / reject-unknown intact / JSON schema).
   test("surfaceTint round-trips (incl. alpha rgba + hex8)", () => {
     expect(blockStyle(docWithBlockStyle({ surfaceTint: "rgba(142,232,255,.5)" })).surfaceTint).toBe(
-      "rgba(142,232,255,.5)"
+      "rgba(142, 232, 255, 0.5)"
     );
     expect(blockStyle(docWithBlockStyle({ surfaceTint: "#8ee8ff80" })).surfaceTint).toBe(
       "#8ee8ff80"
@@ -255,7 +255,7 @@ describe("composition style model (TASK-522-01-L03)", () => {
       docWithBlockStyle({ background: "#123456", surfaceTint: "rgba(142,232,255,.5)" })
     );
     expect(style.background).toBe("#123456");
-    expect(style.surfaceTint).toBe("rgba(142,232,255,.5)");
+    expect(style.surfaceTint).toBe("rgba(142, 232, 255, 0.5)");
   });
 
   // See the revealDelay AJV test note: expensive schema compile ⇒ 30s timeout.
@@ -303,7 +303,7 @@ describe("glow model + multi-layer background write boundary (TASK-531-01)", () 
   const sectionStyle = (doc: PageDocumentV2): Record<string, unknown> =>
     normalizePageDocumentV2ForWrite(doc).sections[0]!.style as unknown as Record<string, unknown>;
 
-  const REFERENCE_GLOW = { color: "rgba(142,232,255,.22)", blur: 45, y: 18 } as const;
+  const REFERENCE_GLOW = { color: "rgba(142, 232, 255, 0.22)", blur: 45, y: 18 } as const;
 
   // ── Round-trip on BOTH targets ──────────────────────────────────────────────
   test("round-trips glow on a block (present-only, byte-stable second pass)", () => {
@@ -311,7 +311,7 @@ describe("glow model + multi-layer background write boundary (TASK-531-01)", () 
       docWithBlockStyle({ glow: { ...REFERENCE_GLOW } })
     );
     expect(first.sections[0]!.blocks[0]!.style).toMatchObject({
-      glow: { color: "rgba(142,232,255,.22)", blur: 45, y: 18 },
+      glow: { color: "rgba(142, 232, 255, 0.22)", blur: 45, y: 18 },
     });
     // Unset offsets/spread are OMITTED (present-only — not defaulted into storage).
     const glow = (first.sections[0]!.blocks[0]!.style as Record<string, unknown>).glow as Record<
