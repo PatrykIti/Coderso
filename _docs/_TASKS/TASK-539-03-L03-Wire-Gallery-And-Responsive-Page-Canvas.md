@@ -14,8 +14,10 @@
 
 ## Sole ownership, split, and collision guard
 
-Own the stable `core/admin/ui/pages/PageEditor.tsx` facade and cohesive extraction
-under `core/admin/ui/pages/editor/`:
+The `core/admin/ui/pages/PageEditor.tsx` facade split (7 modules) was ALREADY landed
+by TASK-481-02-L02 using this exact shared module set. This leaf does NOT re-perform
+the split; it REBASES onto the split facade and owns the gallery/responsive surface
+on it, plus the flow-test split:
 
 - `PageEditorRoot.tsx`
 - `usePageEditorController.ts`
@@ -51,8 +53,9 @@ Also own the cohesive split of `tests/vitest/ui/page-editor-v2-flow.test.tsx` in
 - optional focused `pageEditorV2FlowHarness.tsx`, only for shared render/host fixtures.
 
 Each suite must run independently. Extract by behavior, not arbitrary ranges; no
-generic dumping-ground helper. Baselines are 5,204 source lines and 6,813 test lines;
-every result must be `<=1000`.
+generic dumping-ground helper. Test baseline is 6,813 lines (the flow suite); the
+PageEditor source baseline is the post-TASK-481 split facade + 7 modules, each
+already `<=1000`; every result must be `<=1000`.
 
 Forbidden: `CanvasEditor.tsx`, `PageAuthoringCanvas.tsx`, every Screen/Custom Screen
 file, renderer/model/runtime source, and foreign tests. Read TASK-478/TASK-481 output

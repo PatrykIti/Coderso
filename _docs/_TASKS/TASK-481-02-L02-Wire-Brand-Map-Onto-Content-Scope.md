@@ -44,6 +44,46 @@ frame.
 `globals.css`; touching `canvasSiteTokenVariables` neutrals (must stay byte-stable on
 the frame); any sanitizer/schema change.
 
+## Line gate / PageEditor.tsx facade split (performed HERE)
+
+`core/admin/ui/pages/PageEditor.tsx` is 5,204 lines and this leaf edits it, so the
+1,000-line gate applies at TASK-481 close. The split MUST land in this leaf (the
+same shared module set TASK-539-03-L03 consumes); it is a structural extraction with
+ZERO behavior change, performed before the brand-token edits below.
+
+Extract under `core/admin/ui/pages/editor/` (preserve the facade's exact pre-task
+public surface through explicit named/type re-exports; no `export *`):
+
+| New module | Responsibility |
+|---|---|
+| `PageEditorRoot.tsx` | the top-level `PageEditor` component tree: toolbar/canvas/rail composition, autosave + publish orchestration, editor state host wiring |
+| `usePageEditorController.ts` | editor controller hook: document state, dirty tracking, undo/redo, selection |
+| `pageEditorDocumentCommands.ts` | document mutation commands: block/section add/remove/update, ordering, paste/clipboard |
+| `PageEditorToolbar.tsx` | top toolbar chrome (save/publish/preview/template/status) |
+| `PageEditorRegistryFields.tsx` | registry-driven inspector fields and control rendering |
+| `PageEditorResponsivePanel.tsx` | responsive device toggle panel + per-device visibility |
+| `PageEditorSettingsPanel.tsx` | `PageSettingsSubpanel` and page settings panels |
+
+The facade must keep re-exporting exactly: values/functions `PageEditor`,
+`PageSettingsSubpanel`, `findRecoverableAutosaveRevision`,
+`resolveToolbarTargetLabel`; type `PageEditorProps`; and all ten host-contract
+types (`PageEditorHost`, `PageEditorHostAppearancePanelProps`,
+`PageEditorHostCanvasChromeProps`, `PageEditorHostFreshnessMode`,
+`PageEditorHostLoadOptions`, `PageEditorHostPalette`, `PageEditorHostPreviewResponse`,
+`PageEditorHostPublishResult`, `PageEditorHostRevisions`,
+`PageEditorHostSettingsRenderProps`).
+
+The brand-token surface this leaf edits lives in `PageEditorRoot.tsx` (the
+`useCanvasSiteTokens`/`canvasSiteTokenVariables`/`sitePalette`/`SectionCanvas` render
+that the split preserves at their existing locations). Land order: `Root ->
+Controller -> Commands -> Toolbar -> RegistryFields -> ResponsivePanel ->
+SettingsPanel -> Facade`, running `bun --cwd core lint:types` + `bun --cwd core
+lint` + the owned Vitest suites after each step, then the brand-token edits on the
+split modules. Post-split receipt: every extracted module and the facade is `<=1000`
+physical lines (`wc -l`); the facade's 13-symbol public surface is byte-identical
+before/after (guard with a module-boundary test). TASK-539-03-L03 consumes this
+split and does NOT re-perform it.
+
 ## Security Contract
 
 Not a route/auth/data leaf — N/A by surface, stated explicitly:

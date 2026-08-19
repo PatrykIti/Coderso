@@ -132,7 +132,7 @@ extracted module and test at `<=1000` lines.
 
 | File | Current lines | Owning leaf | Split prescription |
 | --- | --- | --- | --- |
-| `core/admin/ui/pages/PageEditor.tsx` | 5,204 | TASK-481-02-L02 (defers to TASK-539-03-L03) | 539-03-L03 owns the facade split; see leaf |
+| `core/admin/ui/pages/PageEditor.tsx` | 5,204 | TASK-481-02-L02 | performs the facade split (7 shared modules) + brand-token surface; see leaf |
 | `core/admin/ui/pages/editor/PageAuthoringCanvas.tsx` | 1,106 | TASK-481-01-L01 | extract `PageAuthoringCanvasInline.tsx`; facade keeps `SectionCanvas` |
 | `tests/vitest/ui/page-authoring-canvas.test.tsx` | 1,138 | TASK-481-01-L03 | split into four focused suites + shared harness |
 
@@ -184,20 +184,29 @@ brand/WYSIWYG behavior change is owned here.
 `core/admin/ui/pages/PageEditor.tsx` is shared with TASK-539-03-L03. The two
 families own disjoint SURFACES of that one file and must never clobber each other:
 
-- TASK-481 owns the brand-token content-scope surface: `useCanvasSiteTokens` +
-  `canvasSiteTokenVariables`/`canvasBrandTokenVariables`/`sitePalette` derivation
-  (`PageEditor.tsx`:682–687), `PageEditorColorPaletteContext`/`usePageEditorColorPalette`
+- TASK-481-02-L02 performs the structural facade split (7 shared modules, ZERO
+  behavior change; see that leaf) AND owns the brand-token content-scope surface:
+  `useCanvasSiteTokens` + `canvasSiteTokenVariables`/`canvasBrandTokenVariables`/
+  `sitePalette` derivation (`PageEditorRoot.tsx`, sourced from `PageEditor.tsx`
+  `:682–687`), `PageEditorColorPaletteContext`/`usePageEditorColorPalette`
   (`:352`/`:355`), its provider (`:3040`), and the `SectionCanvas` render (`:2675`).
-- TASK-539-03-L03 owns the gallery/responsive surface and the facade split.
+- TASK-539-03-L03 consumes the split facade (it does NOT re-perform the split) and
+  owns the gallery/responsive surface on it, plus the
+  `tests/vitest/ui/page-editor-v2-flow.test.tsx` split.
 - Both writers must read the current on-disk state immediately before editing and
   never revert, checkout, or "clean up" the other's uncommitted edits.
 
 **Forbidden paths for TASK-481 (never edit):** all `_docs/_TASKS/TASK-539*` files,
-TASK-539's `tests/vitest/ui/page-editor-v2-*.test.tsx` suites, TASK-539's
-gallery/responsive extraction modules (`PageEditorRegistryFields.tsx`,
-`PageEditorResponsivePanel.tsx`, `PageEditorToolbar.tsx`,
-`PageEditorSettingsPanel.tsx`, `pageEditorDocumentCommands.ts`), and changelog
-`1318` (created only by TASK-539 closure).
+TASK-539's `tests/vitest/ui/page-editor-v2-*.test.tsx` suites, the
+gallery/responsive SURFACES that TASK-539-03-L03 adds inside the split modules
+(gallery items/filter controls, responsive-panel device logic, z-clamp rules), and
+changelog `1318` (created only by TASK-539 closure). The 7 split modules themselves
+are created by TASK-481-02-L02.
+
+**Forbidden paths for TASK-539-03-L03 (reciprocal, in its own file):** TASK-481's
+brand-token content-scope surface (the `data-page-editor-content` wrapper,
+`canvasBrandTokenVariables` derivation, palette context/provider, admin-brand
+re-assertion) and changelog `1317` (created only by TASK-481 closure).
 
 **Changelog pins:** TASK-481 creates only `1317`; TASK-539 creates only `1318`.
 Closure agents must read `_docs/_CHANGELOG/README.md` fresh immediately before
