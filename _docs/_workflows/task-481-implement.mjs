@@ -26,13 +26,13 @@ import {
   assertScopedRepositoryMutation,
   captureRepositoryFingerprint,
   noStagedChanges,
+  selfTestFileLineLimit,
 } from "./lib/s3-fingerprint.mjs";
 import {
   S3_AUDIT_SCHEMA,
   S3_FIXER_RESULT_SCHEMA,
   S3_RESULT_SCHEMA,
   s3ClosurePrompt,
-  s3CommonContext,
   s3FinalDriftLensPrompt,
   s3FinalMetadataGatePrompt,
   s3FullGatesPrompt,
@@ -88,19 +88,14 @@ const BASELINE_SHA = "43857c27";
 const SMOKE_SESSION = "wf481smoke";
 const MIN_SMOKE_SCENARIOS = 5;
 
-const COMMON = s3CommonContext({
-  root: ROOT,
-  taskId: TASK_ID,
-  changelog: CHANGELOG,
-  extra: `
+const COMMON = `
 Forbidden paths: all _docs/_TASKS/TASK-539* files, TASK-539's
 tests/vitest/ui/page-editor-v2-*.test.tsx suites, the gallery/responsive SURFACES
 TASK-539-03-L03 adds inside the split modules (gallery items/filter controls,
 responsive-panel device logic, z-clamp rules), changelog 1318, and every TASK-542 file.
 Never edit _docs/_TASKS/* or _docs/_CHANGELOG/* (orchestrator-owned). PageEditor.tsx
 facade split (7 modules) is performed by 481-02-L02 with the 15-symbol public surface
-(4 values + PageEditorProps + 10 host-contract types) preserved.`,
-});
+(4 values + PageEditorProps + 10 host-contract types) preserved.`;
 
 const ORCHESTRATOR_DIRTY = [
   "_docs/_TASKS/TASK-481_Page_Editor_Canvas_Brand_Token_WYSIWYG.md",
@@ -565,26 +560,14 @@ if (process.argv.includes("--check-task-family-line-limit")) {
 }
 
 if (isDirectInvocation() && process.argv.includes("--self-test-file-line-limit")) {
-  const { mkdtempSync, writeFileSync } = await import("node:fs");
-  const os = await import("node:os");
-  const { join } = await import("node:path");
-  const tempRoot = mkdtempSync(join(os.tmpdir(), "task-481-line-"));
   try {
-    writeFileSync(`${tempRoot}/core/tracked.ts`, "export const a = 1;\n");
-    writeFileSync(`${tempRoot}/scripts/too-long.ts`, "x\n".repeat(1001));
-    const result = (() => {
-      try {
-        assertFamilyLineLimit(tempRoot, BASELINE_SHA);
-        return { pass: true };
-      } catch (error) {
-        return { pass: false, error: String(error) };
-      }
-    })();
+    const result = selfTestFileLineLimit("s3_line_gate_selftest_481");
     process.stdout.write(`${JSON.stringify(result)}\n`);
-  } finally {
-    (await import("node:fs")).rmSync(tempRoot, { recursive: true, force: true });
+    process.exit(result.pass ? 0 : 1);
+  } catch (error) {
+    process.stdout.write(`${JSON.stringify({ pass: false, error: String(error) })}\n`);
+    process.exit(1);
   }
-  process.exit(0);
 }
 
 // ---- Main workflow ----

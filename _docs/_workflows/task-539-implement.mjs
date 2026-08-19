@@ -26,13 +26,13 @@ import {
   assertScopedRepositoryMutation,
   captureRepositoryFingerprint,
   noStagedChanges,
+  selfTestFileLineLimit,
 } from "./lib/s3-fingerprint.mjs";
 import {
   S3_AUDIT_SCHEMA,
   S3_FIXER_RESULT_SCHEMA,
   S3_RESULT_SCHEMA,
   s3ClosurePrompt,
-  s3CommonContext,
   s3FinalDriftLensPrompt,
   s3FinalMetadataGatePrompt,
   s3FullGatesPrompt,
@@ -97,11 +97,7 @@ const SMOKE_SESSION = "wf539smoke";
 const MIN_SMOKE_SCENARIOS = 9;
 const BASELINE_MARKER = `${ROOT}/_docs/_workflows/.task-539-baseline`;
 
-const COMMON = s3CommonContext({
-  root: ROOT,
-  taskId: TASK_ID,
-  changelog: CHANGELOG,
-  extra: `
+const COMMON = `
 TASK-535 stays closed. Forbidden paths: every TASK-542* file, TASK-548* files and
 the changelog-1261 index row, _docs/_workflows/task-548-*.mjs,
 _docs/SECURITY_SPEC.md and docs/guide/screens/page-editor-preview-settings-and-history.md
@@ -110,8 +106,7 @@ ScreenAuthoringCanvas.tsx / Custom Screen paths, changelog 1319, and all TASK-48
 content-scope surfaces. Never edit _docs/_TASKS/* or _docs/_CHANGELOG/* except via the
 closure leaf (orchestrator-owned). Land order is fixed: 01-L01 -> 01-L02 -> 02-L01 ->
 02-L02 -> 03-L05 -> 03-L01 -> 03-L02 -> 03-L03 -> 03-L04 -> 04-L01 -> 04-L02 -> 05-L01
--> 05-L02 -> 06-L01 -> 06-L02 -> 07-L01 -> 07-L02 -> 08-L01.`,
-});
+-> 05-L02 -> 06-L01 -> 06-L02 -> 07-L01 -> 07-L02 -> 08-L01.`;
 
 const ORCHESTRATOR_DIRTY = [
   "_docs/_TASKS/TASK-539_Page_V2_Post_Audit_Remediation_II.md",
@@ -698,24 +693,14 @@ if (process.argv.includes("--check-task-family-line-limit")) {
 }
 
 if (process.argv.includes("--self-test-file-line-limit")) {
-  const os = await import("node:os");
-  const tempRoot = (await import("node:fs")).mkdtempSync(path.join(os.tmpdir(), "task-539-line-"));
   try {
-    (await import("node:fs")).writeFileSync(`${tempRoot}/core/tracked.ts`, "export const a = 1;\n");
-    (await import("node:fs")).writeFileSync(`${tempRoot}/scripts/too-long.ts`, "x\n".repeat(1001));
-    const result = (() => {
-      try {
-        assertFamilyLineLimit(tempRoot, resolveBaseline());
-        return { pass: true };
-      } catch (error) {
-        return { pass: false, error: String(error) };
-      }
-    })();
+    const result = selfTestFileLineLimit("s3_line_gate_selftest_539");
     process.stdout.write(`${JSON.stringify(result)}\n`);
-  } finally {
-    (await import("node:fs")).rmSync(tempRoot, { recursive: true, force: true });
+    process.exit(result.pass ? 0 : 1);
+  } catch (error) {
+    process.stdout.write(`${JSON.stringify({ pass: false, error: String(error) })}\n`);
+    process.exit(1);
   }
-  process.exit(0);
 }
 
 // ---- Main workflow ----

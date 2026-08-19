@@ -188,30 +188,15 @@ if (process.argv.includes("--self-test-contract-repair")) {
 }
 
 if (process.argv.includes("--self-test-file-line-limit")) {
-  const os = await import("node:os");
-  const tempRoot = (await import("node:fs")).mkdtempSync(
-    path.join(os.tmpdir(), "task-539-fix-line-")
-  );
+  const { selfTestFileLineLimit } = await import("./lib/s3-fingerprint.mjs");
   try {
-    (await import("node:fs")).writeFileSync(`${tempRoot}/core/tracked.ts`, "export const a = 1;\n");
-    (await import("node:fs")).writeFileSync(`${tempRoot}/scripts/too-long.ts`, "x\n".repeat(1001));
-    const { assertFamilyLineLimit } = await import("./lib/s3-fingerprint.mjs");
-    const result = (() => {
-      try {
-        assertFamilyLineLimit(
-          tempRoot,
-          execFileSync("git", ["rev-parse", "HEAD"], { cwd: ROOT }).toString().trim()
-        );
-        return { pass: true };
-      } catch (error) {
-        return { pass: false, error: String(error) };
-      }
-    })();
+    const result = selfTestFileLineLimit("s3_line_gate_selftest_539_fix");
     process.stdout.write(`${JSON.stringify(result)}\n`);
-  } finally {
-    (await import("node:fs")).rmSync(tempRoot, { recursive: true, force: true });
+    process.exit(result.pass ? 0 : 1);
+  } catch (error) {
+    process.stdout.write(`${JSON.stringify({ pass: false, error: String(error) })}\n`);
+    process.exit(1);
   }
-  process.exit(0);
 }
 
 // ---- Main repair workflow ----

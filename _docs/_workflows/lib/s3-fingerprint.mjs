@@ -7,7 +7,17 @@
 
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { lstatSync, readFileSync, readdirSync, readlinkSync } from "node:fs";
+import {
+  lstatSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  readdirSync,
+  readlinkSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
+import { tmpdir } from "node:os";
 import path from "node:path";
 
 import {
@@ -193,6 +203,44 @@ export function assertFamilyLineLimit(root, baseline, label = "s3_line_gate") {
     }
   }
   return Object.freeze(counted);
+}
+
+// Self-test for the baseline-to-current family line gate. Builds an isolated
+// temp git repo with a baseline commit, verifies a clean tree passes, then
+// adds an over-limit source file and verifies the gate rejects it with a
+// line_limit error. Returns a plain JSON-serializable result; the CLI caller
+// decides exit status. No real repository state is touched.
+export function selfTestFileLineLimit(label = "s3_line_gate_selftest") {
+  const tempRoot = mkdtempSync(path.join(tmpdir(), "s3-line-"));
+  try {
+    runGit(tempRoot, ["init", "-q"]);
+    runGit(tempRoot, ["config", "user.email", "s3-gate@local"]);
+    runGit(tempRoot, ["config", "user.name", "S3 Gate"]);
+    mkdirSync(path.join(tempRoot, "core"), { recursive: true });
+    writeFileSync(path.join(tempRoot, "core", "tracked.ts"), "export const a = 1;\n");
+    runGit(tempRoot, ["add", "core/tracked.ts"]);
+    runGit(tempRoot, ["commit", "-q", "-m", "baseline"]);
+    const baseline = runGit(tempRoot, ["rev-parse", "HEAD"]).trim();
+    const clean = assertFamilyLineLimit(tempRoot, baseline, label);
+    if (clean.length !== 0) {
+      throw new S3WorkflowError("self_test_unexpected_counted", label, JSON.stringify(clean));
+    }
+    writeFileSync(path.join(tempRoot, "core", "too-long.ts"), "x\n".repeat(1001));
+    let rejected = false;
+    let errorMessage = "";
+    try {
+      assertFamilyLineLimit(tempRoot, baseline, label);
+    } catch (error) {
+      rejected = String(error).includes("line_limit");
+      errorMessage = String(error);
+    }
+    if (!rejected) {
+      throw new S3WorkflowError("self_test_limit_not_enforced", label, errorMessage);
+    }
+    return Object.freeze({ pass: true, baseline, cleanCount: clean.length, label });
+  } finally {
+    rmSync(tempRoot, { recursive: true, force: true });
+  }
 }
 
 export { S3WorkflowError };
