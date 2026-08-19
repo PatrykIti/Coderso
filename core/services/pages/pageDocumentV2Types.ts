@@ -1,6 +1,10 @@
 import { contentListLimitMax } from "../../widgets/core/contentList";
 import type { MenuAppearance } from "../menus/normalizeMenuAppearance";
 import { DEFAULT_TOKENS } from "../theme/tokenTypes";
+import type {
+  PageBlockResponsiveStyleV2,
+  PageSectionResponsiveStyleV2,
+} from "./pageResponsiveStyleV2";
 
 export const PAGE_DOCUMENT_SCHEMA_VERSION = 2 as const;
 
@@ -862,7 +866,7 @@ export type PageBlockVisibilityV2 = {
 
 export type PageBlockResponsiveOverrideV2 = {
   props?: Record<string, unknown>;
-  style?: PageBlockStyleV2;
+  style?: PageBlockResponsiveStyleV2;
   visibility?: Partial<PageBlockVisibilityV2>;
 };
 
@@ -878,7 +882,7 @@ export type PageBlockV2 = {
 
 export type PageSectionResponsiveOverrideV2 = {
   layout?: Partial<PageSectionLayoutV2>;
-  style?: Partial<PageSectionStyleV2>;
+  style?: PageSectionResponsiveStyleV2;
   spacing?: Partial<PageSectionSpacingV2>;
   visibility?: Partial<PageSectionVisibilityV2>;
 };

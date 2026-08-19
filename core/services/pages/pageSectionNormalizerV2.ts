@@ -22,6 +22,7 @@ import {
   isRecord,
   normalizeEnum,
   normalizeId,
+  normalizeSectionResponsiveStyle,
   readBoolean,
   readNumber,
   readOptionalClampedNumber,
@@ -66,6 +67,7 @@ import {
   type PageSectionBorderEdgeV2,
   type PageSectionBorderV2,
   type PageSectionLayoutV2,
+  type PageSectionScrollEffect,
   type PageSectionSpacingV2,
   type PageSectionStyleV2,
   type PageSectionV2,
@@ -197,19 +199,22 @@ const normalizeEffects = (value: unknown, mode: NormalizeMode): PageEffectsV2 | 
   const input = requireRecord(value, "settings.effects", mode);
   assertKnownKeys(input, PAGE_EFFECTS_KEYS, "settings.effects", mode);
   const result: PageEffectsV2 = {};
-  if (input.cursorSpotlight !== undefined) {
-    result.cursorSpotlight = readBoolean(input.cursorSpotlight, false);
-  }
-  if (input.spotlightColor !== undefined) {
-    result.spotlightColor = readSafeColor(input.spotlightColor, "var(--primary)");
-  }
-  if (input.spotlightSize !== undefined) {
-    result.spotlightSize = readNumber(
-      input.spotlightSize,
-      400,
-      PAGE_SPOTLIGHT_SIZE_CLAMP.min,
-      PAGE_SPOTLIGHT_SIZE_CLAMP.max
-    );
+  // TASK-539 reachability: `cursorSpotlight:true` is emitted ONLY when true,
+  // and `spotlightColor`/`spotlightSize` survive only inside that branch.
+  // `cursorSpotlight:false` and orphan dependants leave no keys.
+  if (input.cursorSpotlight === true) {
+    result.cursorSpotlight = true;
+    if (input.spotlightColor !== undefined) {
+      result.spotlightColor = readSafeColor(input.spotlightColor, "var(--primary)");
+    }
+    if (input.spotlightSize !== undefined) {
+      result.spotlightSize = readNumber(
+        input.spotlightSize,
+        400,
+        PAGE_SPOTLIGHT_SIZE_CLAMP.min,
+        PAGE_SPOTLIGHT_SIZE_CLAMP.max
+      );
+    }
   }
   // ── TASK-534 ── page-root grain overlay: present-only (emitted ONLY when true so
   // a spotlight-only / no-effect page stays byte-identical).
@@ -447,17 +452,20 @@ export const normalizeSectionStyle = (
   // Present-only scroll motion (TASK-521-01-L01). `"none"` is omitted so an
   // effect toggled off returns to byte identity; `defaultStyle` seeds neither
   // key, so `{ ...defaultStyle, ...result }` stays unchanged when unauthored.
+  // TASK-539 reachability: `parallaxIntensity` is retained ONLY when the
+  // normalized effect is `"parallax"` (omit otherwise, in both modes).
+  let normalizedScrollEffect: PageSectionScrollEffect | undefined;
   if (input.scrollEffect !== undefined) {
-    const effect = normalizeEnum(
+    normalizedScrollEffect = normalizeEnum(
       input.scrollEffect,
       pageSectionScrollEffects,
       "none",
       `${path}.scrollEffect`,
       mode
     );
-    if (effect !== "none") result.scrollEffect = effect;
+    if (normalizedScrollEffect !== "none") result.scrollEffect = normalizedScrollEffect;
   }
-  if (input.parallaxIntensity !== undefined) {
+  if (input.parallaxIntensity !== undefined && normalizedScrollEffect === "parallax") {
     result.parallaxIntensity = readNumber(
       input.parallaxIntensity,
       20,
@@ -608,7 +616,7 @@ const normalizeSectionResponsive = (
     const style =
       overrideInput.style === undefined
         ? undefined
-        : normalizeSectionStyle(overrideInput.style, mode, `${path}.${breakpoint}.style`, true);
+        : normalizeSectionResponsiveStyle(overrideInput.style, mode, `${path}.${breakpoint}.style`);
     const spacing =
       overrideInput.spacing === undefined
         ? undefined

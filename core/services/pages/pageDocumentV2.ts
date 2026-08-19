@@ -190,6 +190,23 @@ export {
 export { pageDocumentV2JsonSchema } from "./pageDocumentV2Schema";
 
 export {
+  PAGE_GALLERY_ALT_MAX,
+  PAGE_GALLERY_CAPTION_MAX,
+  PAGE_GALLERY_CATEGORY_MAX,
+  PAGE_GALLERY_CATEGORY_TOKEN_MAX,
+  PAGE_GALLERY_CATEGORY_TOKENS_MAX,
+  PAGE_GALLERY_ITEMS_MAX,
+  PAGE_GALLERY_SRC_MAX,
+  type PageGalleryItemV2,
+} from "./pageGalleryV2";
+
+export {
+  type PageBlockResponsiveLayerV2,
+  type PageBlockResponsiveStyleV2,
+  type PageSectionResponsiveStyleV2,
+} from "./pageResponsiveStyleV2";
+
+export {
   applyBlockTextMark,
   normalizeBlockTextColorMarks,
   normalizeBlockTextMarks,
@@ -207,6 +224,7 @@ export {
   createPageSectionV2,
   isLegacyOrVersionlessPageDocument,
   isPageDocumentError,
+  mergePageBlockLayerPresentKeys,
   normalizePageDocumentV2,
   normalizePageDocumentV2ForWrite,
   normalizeStoredPageDocumentV2ForRead,
