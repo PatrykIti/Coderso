@@ -5,7 +5,7 @@
 // palette context. Extracted verbatim from the former PageEditor.tsx body.
 // Single writer: TASK-481-02-L02. No behavior change.
 
-import { createContext, useContext, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { getCachedContentTypes, listContentTypesCached } from "@/services/contentTypesClient";
@@ -35,11 +35,10 @@ import {
   type PageEditorControlOptionsSource,
 } from "../../../../services/pages/pageEditorControlRegistry";
 import {
-  getPageEditorColorPalette,
   resolvePageEditorControlUiModel,
-  type PageEditorColorSwatch,
   type PageEditorControlUiModel,
 } from "../../../../services/pages/pageEditorControlUiModel";
+import { usePageEditorColorPalette } from "../../../../services/pages/pageEditorColorPaletteContext";
 import {
   composeAuthoringGradientCss,
   type AuthoringGradientModel,
@@ -70,11 +69,6 @@ import {
   ToolbarTextField,
 } from "./PageEditorSettingsPanel";
 
-export const PageEditorColorPaletteContext = createContext<readonly PageEditorColorSwatch[]>(
-  getPageEditorColorPalette()
-);
-const usePageEditorColorPalette = (): readonly PageEditorColorSwatch[] =>
-  useContext(PageEditorColorPaletteContext);
 const isPlainRecord = (value: unknown): value is Record<string, unknown> =>
   Boolean(value) && typeof value === "object" && !Array.isArray(value);
 

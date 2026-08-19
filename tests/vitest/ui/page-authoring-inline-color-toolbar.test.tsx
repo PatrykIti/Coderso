@@ -5,6 +5,7 @@ import React from "react";
 import { expect, test, vi } from "vitest";
 
 import { SectionCanvas } from "../../../core/admin/ui/pages/editor/PageAuthoringCanvas";
+import { DEFAULT_TOKENS } from "../../../core/services/theme/tokenTypes";
 import {
   baseCanvasProps,
   createPageBlockV2,
@@ -343,12 +344,15 @@ test("inline color swatches preview the applied token var; custom picker applies
   );
 
   try {
-    // The swatch previews the exact value it applies (the token var), not a fixed
-    // default hex, so it can never lie about the live theme color.
+    // The swatch PREVIEWS the live site-resolved color (previewValue), so the
+    // inline preview always agrees with the block-level control and the in-canvas
+    // brand render. Without a palette provider the hook falls back to
+    // getPageEditorColorPalette() = DEFAULT_TOKENS. The COMMITTED value stays the
+    // var(--color-*) token (asserted below via the click path), never a hex.
     const swatch = mounted.container.querySelector(
       '[data-page-editor-text-color-swatch="primary"]'
     ) as HTMLElement | null;
-    expect(swatch?.getAttribute("style") ?? "").toContain("var(--color-primary)");
+    expect(swatch?.getAttribute("style") ?? "").toContain(DEFAULT_TOKENS.colors.primary);
 
     // A native custom color picker is offered alongside the token swatches.
     const picker = mounted.container.querySelector(

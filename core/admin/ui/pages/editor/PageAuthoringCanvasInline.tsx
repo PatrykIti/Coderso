@@ -27,7 +27,7 @@ import {
   type PageBlockV2,
   type PageBreakpoint,
 } from "../../../../services/pages/pageDocumentV2";
-import { getPageEditorColorPalette } from "../../../../services/pages/pageEditorControlUiModel";
+import { usePageEditorColorPalette } from "../../../../services/pages/pageEditorColorPaletteContext";
 import { resolveInlineEditTarget } from "../../../../services/pages/pageInlineEditContract";
 import { joinPageRenderClasses } from "../../../../services/pages/pageRendererV2";
 
@@ -177,16 +177,6 @@ const readInlineTextSelectionRange = (root: HTMLElement): InlineTextSelectionRan
   return end > start ? { from: start, to: end } : null;
 };
 
-// Inline mark swatches expose only the design-token colors whose `var(--color-*)`
-// resolves consistently in the admin canvas AND on the front (brand + border).
-// The neutral `bg`/`surface`/`text` tokens use CSS variables the admin canvas does
-// not define (it carries `--color-background`/`-foreground`/`-muted` instead), so
-// they would render as an invalid color in-editor; authors reach those via the
-// custom color picker (a sanitized hex) instead. (TASK-477-01)
-const inlineTextMarkPalette = getPageEditorColorPalette().filter((swatch) =>
-  ["primary", "secondary", "accent", "border"].includes(swatch.id)
-);
-
 /**
  * Side the inline mark toolbar (and the native color picker it spawns) docks to,
  * relative to the edited block. Docking left/right keeps neither the toolbar nor
@@ -269,6 +259,10 @@ export const InlineEditableCanvasText = ({
   const MarkToolbarDockIcon = markToolbarDockIcon[activeMarkToolbarDock];
   const [selectionRange, setSelectionRange] = useState<InlineTextSelectionRange | null>(null);
   const [linkHref, setLinkHref] = useState("");
+  // LIVE site palette shared with the block-level color controls (TASK-481-03-L01).
+  // The provider in PageEditorRoot wraps the whole editor body, so this reads the
+  // site-resolved swatches, never the createContext default.
+  const colorPalette = usePageEditorColorPalette();
   // Live editable node + a synchronous selection snapshot captured on toolbar
   // mousedown (TASK-475-01): the mark toolbar is a sibling of the editable, so
   // its mouse events never reach the editable's mouseup/keyup, leaving the
@@ -440,6 +434,15 @@ export const InlineEditableCanvasText = ({
         }
       : undefined,
   };
+  // Inline mark swatches expose only the design-token colors whose `var(--color-*)`
+  // resolves consistently in the admin canvas AND on the front (brand + border).
+  // The neutral `bg`/`surface`/`text` tokens use CSS variables the admin canvas does
+  // not define (it carries `--color-background`/`-foreground`/`-muted` instead), so
+  // they would render as an invalid color in-editor; authors reach those via the
+  // custom color picker (a sanitized hex) instead. (TASK-477-01)
+  const inlineTextMarkPalette = colorPalette.filter((swatch) =>
+    ["primary", "secondary", "accent", "border"].includes(swatch.id)
+  );
   // Paint the marked children even while editing (TASK-476-02) so applied
   // color/highlight/link marks are visible in place instead of only after the
   // author leaves inline edit. Mirrors the rich-text (preserveMarkup) path, which
@@ -560,7 +563,7 @@ export const InlineEditableCanvasText = ({
             title={swatch.label}
             className="size-5 rounded-full border border-border shadow-sm transition disabled:cursor-not-allowed disabled:opacity-40"
             data-page-editor-text-color-swatch={swatch.id}
-            style={{ backgroundColor: swatch.value }}
+            style={{ backgroundColor: swatch.previewValue ?? swatch.value }}
             onClick={(event) => {
               event.preventDefault();
               event.stopPropagation();
@@ -626,7 +629,7 @@ export const InlineEditableCanvasText = ({
             title={`${swatch.label} highlight`}
             className="relative size-5 rounded border border-border shadow-sm transition disabled:cursor-not-allowed disabled:opacity-40"
             data-page-editor-text-highlight-swatch={swatch.id}
-            style={{ backgroundColor: swatch.value }}
+            style={{ backgroundColor: swatch.previewValue ?? swatch.value }}
             onClick={(event) => {
               event.preventDefault();
               event.stopPropagation();

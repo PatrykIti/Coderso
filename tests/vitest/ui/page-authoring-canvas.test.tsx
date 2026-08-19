@@ -1,11 +1,14 @@
 // @vitest-environment happy-dom
 
+import { flushSync } from "react-dom";
 import React from "react";
 import { expect, test, vi } from "vitest";
 
 import { AdminRouterProvider } from "../../../core/admin/ui/contexts/AdminRouterContext";
 import { PageEditor } from "../../../core/admin/ui/pages/PageEditor";
 import { SectionCanvas } from "../../../core/admin/ui/pages/editor/PageAuthoringCanvas";
+import { PageEditorColorPaletteContext } from "../../../core/services/pages/pageEditorColorPaletteContext";
+import { getPageEditorColorPalette } from "../../../core/services/pages/pageEditorControlUiModel";
 import {
   baseCanvasProps,
   createPageBlockV2,
@@ -405,4 +408,185 @@ test("content scope anchors on DEFAULT brand vars when no custom tokens (TASK-48
     `--color-accent: ${DEFAULT_TOKENS.colors.accent}`
   );
   mounted.cleanup();
+});
+
+// TASK-481-03-L01: a NON-default site palette threaded through the editor's
+// PageEditorColorPaletteContext. The provider in PageEditorRoot wraps the whole
+// editor body, so the inline toolbar reads these site-resolved swatches.
+const SITE_PALETTE = getPageEditorColorPalette({
+  ...DEFAULT_TOKENS,
+  colors: { primary: "#0b3d91", secondary: "#7f1d1d", accent: "#166534" },
+  neutrals: { ...DEFAULT_TOKENS.neutrals, border: "#475569" },
+});
+
+test("inline text-color swatches preview the LIVE site palette (TASK-481-03-L01)", () => {
+  const onApplyTextMark = vi.fn();
+  const section = createPageSectionV2("content", {
+    id: "sec-live-palette",
+    blocks: [
+      createPageBlockV2("heading", {
+        id: "blk-live-palette",
+        props: { text: "Canvas headline", level: "h2", align: "left" },
+      }),
+    ],
+  });
+
+  const mounted = mount(
+    <PageEditorColorPaletteContext.Provider value={SITE_PALETTE}>
+      <SectionCanvas
+        section={section}
+        baseSection={section}
+        selected
+        selectedBlockPath={[{ index: 0 }]}
+        selectedBlockId="blk-live-palette"
+        inlineEditTarget={{ blockId: "blk-live-palette", propPath: "text" }}
+        {...baseCanvasProps}
+        onApplyTextMark={onApplyTextMark}
+      />
+    </PageEditorColorPaletteContext.Provider>
+  );
+
+  try {
+    const region = mounted.container.querySelector(
+      '[data-page-editor-inline-edit="active"][data-page-editor-inline-edit-prop="text"]'
+    ) as HTMLElement | null;
+    expect(region).toBeTruthy();
+
+    // Brand-id filter preserved: exactly the four brand swatch ids inline, for
+    // both the color and the highlight rows.
+    const colorSwatches = Array.from(
+      mounted.container.querySelectorAll("[data-page-editor-text-color-swatch]")
+    );
+    expect(
+      colorSwatches.map((node) => node.getAttribute("data-page-editor-text-color-swatch"))
+    ).toEqual(["primary", "secondary", "accent", "border"]);
+    const highlightSwatches = Array.from(
+      mounted.container.querySelectorAll("[data-page-editor-text-highlight-swatch]")
+    );
+    expect(highlightSwatches).toHaveLength(4);
+    expect(
+      highlightSwatches.map((node) => node.getAttribute("data-page-editor-text-highlight-swatch"))
+    ).toEqual(["primary", "secondary", "accent", "border"]);
+
+    // Swatch backgrounds use the SITE previewValue, never DEFAULT_TOKENS.
+    const primarySwatch = mounted.container.querySelector(
+      '[data-page-editor-text-color-swatch="primary"]'
+    ) as HTMLElement | null;
+    expect(primarySwatch?.getAttribute("style") ?? "").toContain("#0b3d91");
+    expect(primarySwatch?.getAttribute("style") ?? "").not.toContain(DEFAULT_TOKENS.colors.primary);
+    const borderHighlight = mounted.container.querySelector(
+      '[data-page-editor-text-highlight-swatch="border"]'
+    ) as HTMLElement | null;
+    expect(borderHighlight?.getAttribute("style") ?? "").toContain("#475569");
+
+    // The COMMITTED mark color is still the var(--color-*) token, so the
+    // sanitizer contract is unchanged.
+    const textNode = region?.firstChild;
+    flushSync(() => {
+      if (!region || !textNode) return;
+      const range = document.createRange();
+      range.setStart(textNode, 0);
+      range.setEnd(textNode, 6);
+      const selection = window.getSelection();
+      selection?.removeAllRanges();
+      selection?.addRange(range);
+      region.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
+    });
+    flushSync(() => {
+      (primarySwatch as HTMLButtonElement | null)?.click();
+    });
+    expect(onApplyTextMark).toHaveBeenCalledWith(
+      expect.objectContaining({
+        blockId: "blk-live-palette",
+        propPath: "text",
+        type: "color",
+        from: 0,
+        to: 6,
+        color: "var(--color-primary)",
+      })
+    );
+  } finally {
+    mounted.cleanup();
+    window.getSelection()?.removeAllRanges();
+  }
+});
+
+test("inline toolbar keeps URL input + custom picker mousedown unprevented (TASK-481-03-L01)", () => {
+  const section = createPageSectionV2("content", {
+    id: "sec-live-focus",
+    blocks: [
+      createPageBlockV2("heading", {
+        id: "blk-live-focus",
+        props: { text: "Canvas headline", level: "h2", align: "left" },
+      }),
+    ],
+  });
+
+  const mounted = mount(
+    <PageEditorColorPaletteContext.Provider value={SITE_PALETTE}>
+      <SectionCanvas
+        section={section}
+        baseSection={section}
+        selected
+        selectedBlockPath={[{ index: 0 }]}
+        selectedBlockId="blk-live-focus"
+        inlineEditTarget={{ blockId: "blk-live-focus", propPath: "text" }}
+        {...baseCanvasProps}
+      />
+    </PageEditorColorPaletteContext.Provider>
+  );
+
+  try {
+    const region = mounted.container.querySelector(
+      '[data-page-editor-inline-edit="active"][data-page-editor-inline-edit-prop="text"]'
+    ) as HTMLElement | null;
+    expect(region).toBeTruthy();
+    // Select a fragment so the URL input and the picker become enabled (they
+    // are disabled without an active selection), then verify focusability.
+    const textNode = region?.firstChild;
+    flushSync(() => {
+      if (!region || !textNode) return;
+      const range = document.createRange();
+      range.setStart(textNode, 0);
+      range.setEnd(textNode, 6);
+      const selection = window.getSelection();
+      selection?.removeAllRanges();
+      selection?.addRange(range);
+      region.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
+    });
+
+    const input = mounted.container.querySelector(
+      'input[aria-label="Inline link URL"]'
+    ) as HTMLInputElement | null;
+    const picker = mounted.container.querySelector(
+      'input[type="color"][data-page-editor-text-color-picker="true"]'
+    ) as HTMLInputElement | null;
+    expect(input).toBeTruthy();
+    expect(picker).toBeTruthy();
+
+    // The mark-toolbar onMouseDown handler must NOT preventDefault for the URL
+    // input or the native color picker (bug #2 / TASK-477-01): a cancelled
+    // mousedown would steal focus and block the color dialog.
+    const inputDown = new MouseEvent("mousedown", { bubbles: true, cancelable: true });
+    flushSync(() => {
+      input?.dispatchEvent(inputDown);
+    });
+    expect(inputDown.defaultPrevented).toBe(false);
+    const pickerDown = new MouseEvent("mousedown", { bubbles: true, cancelable: true });
+    flushSync(() => {
+      picker?.dispatchEvent(pickerDown);
+    });
+    expect(pickerDown.defaultPrevented).toBe(false);
+
+    // Both controls stay focusable/enabled — no focus-stealing wrapper.
+    expect(input?.disabled).toBe(false);
+    expect(picker?.disabled).toBe(false);
+    flushSync(() => {
+      input?.focus();
+    });
+    expect(document.activeElement).toBe(input);
+  } finally {
+    mounted.cleanup();
+    window.getSelection()?.removeAllRanges();
+  }
 });

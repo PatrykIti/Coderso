@@ -58,7 +58,7 @@ import {
 import { ToolbarIconButton } from "./FloatingEditorToolbar";
 import { SectionCanvas, SectionGapInsertZone } from "./PageAuthoringCanvas";
 import { LayerBlockRows } from "./PageEditorLayers";
-import { PageEditorColorPaletteContext } from "./PageEditorRegistryFields";
+import { PageEditorColorPaletteContext } from "../../../../services/pages/pageEditorColorPaletteContext";
 import { PageEditorAlerts, PageEditorOverlays } from "./PageEditorSettingsPanel";
 import {
   ToolbarSubpanel,
