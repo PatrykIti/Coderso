@@ -47,7 +47,18 @@ const settingsCacheState = vi.hoisted(() => ({
 }));
 
 vi.mock("@/services/settingsClient", () => ({
-  getCachedSettings: () => settingsCacheState.payload,
+  // The REAL settings cache is the REDACTED payload: it never carries
+  // `design.tokens` (the redaction contract in settingsCache.ts), so a
+  // synchronous cache read must never leak the tokens. The hook therefore
+  // revalidates the FULL payload through `getSettingsCached({ force: true })`
+  // (same as AdminApp.refreshSettings), which is the only path that carries
+  // `design.tokens` — mirroring the real client exactly.
+  getCachedSettings: () => {
+    const payload = settingsCacheState.payload;
+    if (!payload) return null;
+    const { ["design.tokens"]: _tokens, ...redacted } = payload;
+    return redacted;
+  },
   getSettingsCached: async () => settingsCacheState.payload ?? {},
 }));
 
@@ -769,6 +780,10 @@ test("live-repaints brand when the settings cache bus fires (TASK-481-04-L01)", 
     flushSync(() => {
       broadcastCacheEvent({ key: cacheKeys.settingsRedacted, action: "update" });
     });
+    // The hook revalidates the FULL payload asynchronously (force), so settle
+    // the promise and flush the state write before asserting the repaint.
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    flushSync(() => {});
 
     const blockScopeAfter = mounted.container.querySelector(blockScopeQuery) as HTMLElement | null;
     expect(blockScopeAfter).toBe(blockScopeBefore);

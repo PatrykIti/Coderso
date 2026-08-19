@@ -61,7 +61,7 @@ export const useCanvasSiteSettings = (): Record<string, unknown> | null => {
 
   useEffect(() => {
     let active = true;
-    void getSettingsCached()
+    void getSettingsCached({ force: true })
       .then((payload) => {
         if (active) setSettings(payload);
       })
@@ -73,15 +73,28 @@ export const useCanvasSiteSettings = (): Record<string, unknown> | null => {
     };
   }, []);
 
-  useEffect(
-    () =>
-      subscribeCacheEvents((event) => {
-        if (event.key !== cacheKeys.settingsRedacted) return;
-        const cached = getCachedSettings();
-        if (cached) setSettings(cached);
-      }),
-    []
-  );
+  useEffect(() => {
+    let active = true;
+    const unsubscribe = subscribeCacheEvents((event) => {
+      if (event.key !== cacheKeys.settingsRedacted) return;
+      // The redacted settings cache NEVER carries `design.tokens`, so a
+      // settings save must re-read the FULL payload (background revalidation,
+      // same as AdminApp.refreshSettings) or the canvas would fall back to
+      // DEFAULT_TOKENS instead of repainting with the new site palette.
+      void getSettingsCached({ force: true })
+        .then((payload) => {
+          if (active) setSettings(payload);
+        })
+        .catch(() => {
+          const cached = getCachedSettings();
+          if (active && cached) setSettings(cached);
+        });
+    });
+    return () => {
+      active = false;
+      unsubscribe();
+    };
+  }, []);
 
   return settings;
 };
