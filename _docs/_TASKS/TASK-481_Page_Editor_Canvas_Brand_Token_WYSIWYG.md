@@ -136,11 +136,12 @@ extracted module and test at `<=1000` lines.
 | `core/admin/ui/pages/editor/PageAuthoringCanvas.tsx` | 1,106 | TASK-481-01-L01 | extract `PageAuthoringCanvasInline.tsx`; facade keeps `SectionCanvas` |
 | `tests/vitest/ui/page-authoring-canvas.test.tsx` | 1,138 | TASK-481-01-L03 | split into four focused suites + shared harness |
 
-- `PageEditor.tsx` is a shared facade. TASK-539-03-L03 owns its cohesive split into
-  `PageEditorRoot.tsx`, `usePageEditorController.ts`, `pageEditorDocumentCommands.ts`,
+- `PageEditor.tsx` is a shared facade. TASK-481-02-L02 performs its cohesive split
+  into `PageEditorRoot.tsx`, `usePageEditorController.ts`, `pageEditorDocumentCommands.ts`,
   `PageEditorToolbar.tsx`, `PageEditorRegistryFields.tsx`,
-  `PageEditorResponsivePanel.tsx`, and `PageEditorSettingsPanel.tsx`. TASK-481 does
-  NOT re-split it; see the single-writer collision guard below.
+  `PageEditorResponsivePanel.tsx`, and `PageEditorSettingsPanel.tsx`, then edits its
+  brand-token surface on the split modules. TASK-539-03-L03 later REBASES onto the
+  split facade and does NOT re-split it; see the single-writer collision guard below.
 
 ## Risks / constraints
 
