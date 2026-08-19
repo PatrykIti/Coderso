@@ -2,7 +2,7 @@
 
 **Date:** 2026-08-19
 **Version:** 0.1.0
-**Tasks:** TASK-481 (TASK-481-01, TASK-481-02, TASK-481-03, TASK-481-04; leaves 01..04 x L01-L02)
+**Tasks:** TASK-481 (TASK-481-01, TASK-481-02, TASK-481-03, TASK-481-04; 9 executable leaves)
 
 ---
 

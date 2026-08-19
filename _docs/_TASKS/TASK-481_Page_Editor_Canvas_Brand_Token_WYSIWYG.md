@@ -9,7 +9,7 @@
 **Status:** ✅ Done
 **Started:** 2026-08-18
 **Completed:** 2026-08-19
-**Changelog:** 1317 (pinned; create only at TASK-481 closure)
+**Changelog:** 1317 (created at TASK-481 closure)
 
 ---
 
@@ -103,10 +103,10 @@ content-scope behavior change.
 
 | ID | Title | Effort | Status |
 | --- | --- | --- | --- |
-| TASK-481-01 | Content-Scope Extraction & Chrome Isolation (foundation) | Medium | ⏳ To Do |
-| TASK-481-02 | Brand-Token Canvas Emission & Live Wiring | Medium | ⏳ To Do |
-| TASK-481-03 | Editor-Control Preview Unification | Small | ⏳ To Do |
-| TASK-481-04 | WYSIWYG Tests, Docs & Closure | Small | ⏳ To Do |
+| TASK-481-01 | Content-Scope Extraction & Chrome Isolation (foundation) | Medium | ✅ Done |
+| TASK-481-02 | Brand-Token Canvas Emission & Live Wiring | Medium | ✅ Done |
+| TASK-481-03 | Editor-Control Preview Unification | Small | ✅ Done |
+| TASK-481-04 | WYSIWYG Tests, Docs & Closure | Small | ✅ Done |
 
 Leaves: 01 → L01 (`data-page-editor-content` wrapper), L02 (admin brand-var
 re-assertion on chrome), L03 (characterization tests); 02 → L01

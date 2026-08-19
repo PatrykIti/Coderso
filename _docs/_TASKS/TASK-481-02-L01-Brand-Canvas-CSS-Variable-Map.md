@@ -10,7 +10,7 @@
 **Status:** ✅ Done
 **Started:** 2026-08-18
 **Completed:** 2026-08-19
-**Changelog:** 1317 (pinned; create only at TASK-481 closure)
+**Changelog:** 1317 (created at TASK-481 closure)
 
 ---
 

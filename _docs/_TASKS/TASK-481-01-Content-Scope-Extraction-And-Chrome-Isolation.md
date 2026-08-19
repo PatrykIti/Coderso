@@ -10,7 +10,7 @@
 **Status:** ✅ Done
 **Started:** 2026-08-18
 **Completed:** 2026-08-19
-**Changelog:** 1317 (pinned; create only at TASK-481 closure)
+**Changelog:** 1317 (created at TASK-481 closure)
 
 ---
 
@@ -43,9 +43,9 @@ a structure + guard-test refactor that the emission subtask (02) builds on.
 
 | ID | Title | Effort | Status |
 | --- | --- | --- | --- |
-| TASK-481-01-L01 | `data-page-editor-content` wrapper in renderBlockFrame + section content | Medium | ⏳ To Do |
-| TASK-481-01-L02 | `adminBrandColorCssVariableMap` re-assertion on section/block chrome | Small | ⏳ To Do |
-| TASK-481-01-L03 | Content-scope / chrome-isolation characterization tests | Small | ⏳ To Do |
+| TASK-481-01-L01 | `data-page-editor-content` wrapper in renderBlockFrame + section content | Medium | ✅ Done |
+| TASK-481-01-L02 | `adminBrandColorCssVariableMap` re-assertion on section/block chrome | Small | ✅ Done |
+| TASK-481-01-L03 | Content-scope / chrome-isolation characterization tests | Small | ✅ Done |
 
 ## Dependencies
 

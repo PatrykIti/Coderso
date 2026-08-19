@@ -10,7 +10,7 @@
 **Status:** ✅ Done
 **Started:** 2026-08-18
 **Completed:** 2026-08-19
-**Changelog:** 1317 (pinned; create only at TASK-481 closure)
+**Changelog:** 1317 (created at TASK-481 closure)
 
 ---
 
@@ -37,8 +37,8 @@ preserving real-input focusability per memory
 
 | ID | Title | Effort | Status |
 | --- | --- | --- | --- |
-| TASK-481-03-L01 | Thread live site palette into the inline text-color toolbar | Small | ⏳ To Do |
-| TASK-481-03-L02 | Inline + block + in-canvas preview agreement test | Small | ⏳ To Do |
+| TASK-481-03-L01 | Thread live site palette into the inline text-color toolbar | Small | ✅ Done |
+| TASK-481-03-L02 | Inline + block + in-canvas preview agreement test | Small | ✅ Done |
 
 ## Dependencies
 

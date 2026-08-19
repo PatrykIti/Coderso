@@ -10,7 +10,7 @@
 **Status:** ✅ Done
 **Started:** 2026-08-18
 **Completed:** 2026-08-19
-**Changelog:** 1317 (pinned; create only at TASK-481 closure)
+**Changelog:** 1317 (created at TASK-481 closure)
 
 ---
 
@@ -38,8 +38,8 @@ Two pieces:
 
 | ID | Title | Effort | Status |
 | --- | --- | --- | --- |
-| TASK-481-02-L01 | `toPageCanvasBrandColorCssVariableMap` + contract tests | Small | ⏳ To Do |
-| TASK-481-02-L02 | Wire brand map onto the content scope (live repaint) | Medium | ⏳ To Do |
+| TASK-481-02-L01 | `toPageCanvasBrandColorCssVariableMap` + contract tests | Small | ✅ Done |
+| TASK-481-02-L02 | Wire brand map onto the content scope (live repaint) | Medium | ✅ Done |
 
 ## Dependencies
 

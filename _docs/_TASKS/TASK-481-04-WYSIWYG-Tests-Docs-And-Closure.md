@@ -10,7 +10,7 @@
 **Status:** ✅ Done
 **Started:** 2026-08-18
 **Completed:** 2026-08-19
-**Changelog:** 1317 (pinned; create only at TASK-481 closure)
+**Changelog:** 1317 (created at TASK-481 closure)
 
 ---
 
@@ -28,8 +28,8 @@ notes.
 
 | ID | Title | Effort | Status |
 | --- | --- | --- | --- |
-| TASK-481-04-L01 | Brand-WYSIWYG vitest + real-input Playwright smoke | Small | ⏳ To Do |
-| TASK-481-04-L02 | Docs + TASK-479-05-L03 / TASK-479-08-L02 reciprocity | Small | ⏳ To Do |
+| TASK-481-04-L01 | Brand-WYSIWYG vitest + real-input Playwright smoke | Small | ✅ Done |
+| TASK-481-04-L02 | Docs + TASK-479-05-L03 / TASK-479-08-L02 reciprocity | Small | ✅ Done |
 
 ## Dependencies
 
