@@ -58,7 +58,12 @@ PageEditor source baseline is the post-TASK-481 split facade + 7 modules, each
 already `<=1000`; every result must be `<=1000`.
 
 Forbidden: `CanvasEditor.tsx`, `PageAuthoringCanvas.tsx`, every Screen/Custom Screen
-file, renderer/model/runtime source, and foreign tests. Read TASK-478/TASK-481 output
+file, renderer/model/runtime source, and foreign tests. Reciprocal collision guard
+with TASK-481-02-L02: never edit TASK-481's brand-token content-scope surface inside
+the split modules — the `data-page-editor-content` wrapper, `canvasBrandTokenVariables`
+derivation, `PageEditorColorPaletteContext`/`usePageEditorColorPalette`
+provider/consumers, and the admin-brand re-assertion on chrome; changelog `1317` is
+created only by TASK-481 closure. Read TASK-478/TASK-481 output
 fresh before editing.
 
 ## Implementation Pseudocode

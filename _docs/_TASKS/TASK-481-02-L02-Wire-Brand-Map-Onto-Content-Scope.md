@@ -19,14 +19,16 @@
 **Goal:** Paint `toPageCanvasBrandColorCssVariableMap(siteTokens)` onto the
 `data-page-editor-content` scope (block + section) so block/inline brand colors
 resolve the SITE value in the canvas (WYSIWYG), threaded from
-`core/admin/ui/pages/PageEditor.tsx` through `SectionCanvas` into the
+`usePageEditorController.ts` (derivation) + `PageEditorRoot.tsx` (render — both
+created by this leaf's facade split below) through `SectionCanvas` into the
 `renderBlockFrame` content wrapper, memoized off `useCanvasSiteTokens` so the
 existing settings cache-bus live-repaints on owner token changes — with NO
 setState-in-effect and NO change to the neutral `canvasSiteTokenVariables` on the
 frame.
 
 **Owning module(s) to create-or-extend:**
-- `core/admin/ui/pages/PageEditor.tsx` — derive `canvasBrandTokenVariables`
+- `core/admin/ui/pages/editor/usePageEditorController.ts` (created by this leaf's
+  split) — derive `canvasBrandTokenVariables`
   (memoized off `siteTokens` from `useCanvasSiteTokens`, alongside the existing
   `canvasSiteTokenVariables`:683 and `sitePalette`:687) and pass it to
   `SectionCanvas` (rendered :2675).
@@ -80,7 +82,8 @@ Controller -> Commands -> Toolbar -> RegistryFields -> ResponsivePanel ->
 SettingsPanel -> Facade`, running `bun --cwd core lint:types` + `bun --cwd core
 lint` + the owned Vitest suites after each step, then the brand-token edits on the
 split modules. Post-split receipt: every extracted module and the facade is `<=1000`
-physical lines (`wc -l`); the facade's 13-symbol public surface is byte-identical
+physical lines (`wc -l`); the facade's 15-symbol public surface (4 values +
+`PageEditorProps` type + 10 host-contract types, listed above) is byte-identical
 before/after (guard with a module-boundary test). TASK-539-03-L03 consumes this
 split and does NOT re-perform it.
 
@@ -102,7 +105,8 @@ Not a route/auth/data leaf — N/A by surface, stated explicitly:
 ## Implementation Pseudocode
 
 ```tsx
-// core/admin/ui/pages/PageEditor.tsx  (near :682–687)
+// core/admin/ui/pages/editor/usePageEditorController.ts
+// (post-split home of the canvas token derivation; sourced from PageEditor.tsx :682–687)
 const siteTokens = useCanvasSiteTokens();                       // existing
 const canvasSiteTokenVariables = useMemo(                       // existing (neutrals+typography)
   () => toPageCanvasColorCssVariableMap(siteTokens) as CSSProperties, [siteTokens]);
@@ -111,7 +115,7 @@ const canvasBrandTokenVariables = useMemo(                      // NEW (brand)
 // import { toPageCanvasBrandColorCssVariableMap } from "../../../ui/theme/tokenCss";
 // (mirror the existing toPageCanvasColorCssVariableMap import at :128)
 
-// pass down to each SectionCanvas (~2675)
+// PageEditorRoot.tsx passes the map down to each SectionCanvas (~2675)
 <SectionCanvas ... contentBrandTokenVariables={canvasBrandTokenVariables} />
 ```
 
@@ -182,10 +186,12 @@ edits the file and closes before TASK-539). Extract with ZERO behavior change:
 - `PageEditorResponsivePanel.tsx` — responsive/device panel.
 - `PageEditorSettingsPanel.tsx` — settings panel.
 
-The `PageEditor.tsx` facade keeps the exact pre-task public surface (13 named
-re-exports, no export-star); consumers keep importing
+The `PageEditor.tsx` facade keeps the exact pre-task public surface (15 named
+re-exports, no export-star): values/functions `PageEditor`, `PageSettingsSubpanel`,
+`findRecoverableAutosaveRevision`, `resolveToolbarTargetLabel`; type
+`PageEditorProps`; and the 10 host-contract types. Consumers keep importing
 `PageEditor`/`PageEditorHost`/`SectionCanvas` from the stable paths. Guard the facade
-parity with a compile-time test asserting the 13-symbol surface and with
+parity with a compile-time test asserting the 15-symbol surface and with
 import-identity tests at the leaf gates.
 
 This leaf's brand-token edits are confined to the brand-token content-scope SURFACE

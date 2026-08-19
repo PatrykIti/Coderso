@@ -98,16 +98,20 @@ Critical guardrails (memory `page-editor-color-toolbar-live-findings`):
 - Preserve focusability: do not wrap the swatches in a focus-stealing container.
 
 Context-sharing note (pick the lower-risk option at implementation time):
-- `PageEditorColorPaletteContext` (and `usePageEditorColorPalette`) currently live as
-  module-local consts in `PageEditor.tsx` (:352/:355) and are NOT exported.
-  `PageAuthoringCanvas.tsx` is rendered inside the provider (`PageEditor.tsx`:3040),
-  so the cleanest path is to MOVE the context + hook into a shared module (e.g.
-  `core/services/pages/pageEditorControlUiModel.ts`, which already owns
-  `getPageEditorColorPalette` and `PageEditorColorSwatch`) and import it from both
-  files. Alternatively, thread the live palette as a prop. Do NOT duplicate a second
-  context. Editing `PageEditor.tsx` here stays within the TASK-481 brand-token
-  surface; respect the single-writer collision guard with TASK-539-03-L03 (see the
-  parent).
+- `PageEditorColorPaletteContext` (and `usePageEditorColorPalette`) live in
+  `PageEditorRoot.tsx` after TASK-481-02-L02's facade split (pre-split anchors:
+  module-local consts at `PageEditor.tsx`:352/:355, provider at :3040; the split
+  preserves them at their existing locations inside `PageEditorRoot.tsx`).
+  `PageAuthoringCanvas.tsx` is rendered inside the provider, so the cleanest path is
+  to MOVE the context + hook into a TASK-481-owned shared module (e.g.
+  `core/services/pages/pageEditorColorPaletteContext.ts` — new, created here) and
+  import it from both files, OR export it from `PageEditorRoot.tsx`. Alternatively,
+  thread the live palette as a prop. Do NOT duplicate a second context. Do NOT move
+  it into `core/services/pages/pageEditorControlUiModel.ts` — that module is
+  exclusively owned by TASK-539-03-L01 (see TASK-539-03-L01 "Sole ownership") and is
+  a forbidden path for this family. Editing here stays within the TASK-481 brand-token
+  surface (split facade + `PageEditorRoot.tsx`/`PageAuthoringCanvas.tsx`); respect the
+  single-writer collision guard with TASK-539-03-L03 (see the parent).
 - **Error handling:** none — presentational; no domain codes / `map*Error`.
 
 **Regression-test shape:** render the inline toolbar inside a palette provider seeded
