@@ -217,11 +217,14 @@ const SERIES_B = [
     allowed: [
       "core/admin/ui/pages/editor/PageAuthoringCanvas.tsx",
       "core/admin/ui/pages/editor/PageAuthoringCanvasInline.tsx",
+      "core/admin/ui/pages/editor/PageEditorRoot.tsx",
+      "core/admin/ui/pages/editor/PageEditorRegistryFields.tsx",
+      "core/admin/ui/pages/editor/usePageEditorHostWiring.ts",
       "core/services/pages/pageEditorColorPaletteContext.ts",
       "tests/vitest/ui/shared-color-control.test.tsx",
       "tests/vitest/ui/page-authoring-canvas.test.tsx",
     ],
-    gate: `${LEAF_GATE_BASE} tests/vitest/ui/shared-color-control.test.tsx tests/vitest/ui/page-authoring-canvas.test.tsx && ${LINE_GATE} && git diff --check`,
+    gate: `${LEAF_GATE_BASE} tests/vitest/ui/shared-color-control.test.tsx tests/vitest/ui/page-authoring-canvas.test.tsx tests/vitest/ui/page-authoring-inline-color-toolbar.test.tsx && ${LINE_GATE} && git diff --check`,
   },
   {
     id: "481-03-L02",
@@ -250,6 +253,8 @@ const POST_LENS_INPUTS = Object.freeze({
   "preview-unification": Object.freeze([
     "tests/vitest/ui/shared-color-control.test.tsx",
     "core/admin/ui/pages/editor/PageAuthoringCanvas.tsx",
+    "core/admin/ui/pages/editor/PageAuthoringCanvasInline.tsx",
+    "core/admin/ui/pages/editor/PageEditorRoot.tsx",
   ]),
   "facade-parity": Object.freeze([
     "core/admin/ui/pages/PageEditor.tsx",
