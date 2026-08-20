@@ -6,9 +6,18 @@ import {
   type PageSectionV2,
 } from "./pageDocumentV2Types";
 import type { PageBlockPath } from "./pageBlockPaths";
-import { resolveSectionCompositionAttrs } from "./pageCompositionEffects";
+import {
+  PAGE_BLOCK_GRID_ITEM_ATTRIBUTE,
+  resolvePageBlockGridPlacement,
+  type PageBlockGridPlacementTarget,
+} from "./pageBlockGridPlacement";
+import {
+  PAGE_BLOCK_TRANSFORM_HOST_ATTRIBUTE,
+  resolveSectionCompositionAttrs,
+} from "./pageCompositionEffects";
 import { INTERACTIVITY_KEYFRAMES_CSS } from "./pageInteractivityGlyphs";
 import { PAGE_SECTION_CONTENT_ATTRIBUTE } from "./pageResponsiveCss";
+import { resolvePageTimelineItemGeometry } from "./pageRendererTimelineGeometry";
 import {
   distributePageSectionBlocksToColumns,
   pageSectionBlocksHaveColumnAssignments,
@@ -22,7 +31,6 @@ import type { PageRuntimeDataByBlockId } from "./pageRuntimeBindingContract";
 import {
   toPageSectionBleedStyle,
   toPageSectionRenderProps,
-  toPageSectionVariantSpacing,
 } from "./pageSectionRenderStyles";
 import {
   joinPageRenderClasses,
@@ -73,9 +81,41 @@ const wrapSectionTemplateBlock = (
   // the final dot (like the reference `.timeline:before{bottom:0}`) rather than
   // overshooting into empty section space. Optional (defaults to a large value
   // ⇒ "not last") so non-timeline callers are unaffected.
-  total = Number.POSITIVE_INFINITY
+  total = Number.POSITIVE_INFINITY,
+  // TASK-539-05-L01 — the section boundary computed the ONE legal grid target
+  // for this root block exactly once. Template chrome (timeline/gallery/FAQ/
+  // testimonials) is the legal target when placement resolves to
+  // "section-template-wrapper": the WRAPPER receives the base span style +
+  // `PAGE_BLOCK_GRID_ITEM_ATTRIBUTE` hook (whenever any span exists, incl.
+  // responsive-only) and the inner frame suppresses both (it passes "none").
+  // Every other placement leaves the wrapper byte-identical to post-530.
+  spanTarget?: PageBlockGridPlacementTarget
 ): ReactNode => {
   if (!rendered) return rendered;
+
+  // TASK-539-05-L01 — "section-template-wrapper" implies hasAnySpan (the
+  // boundary sets spanTarget = hasAnySpan ? placement : "none"), so the hook
+  // and base span style ride the wrapper present-only. The base span style is
+  // the normalized desktop colSpan/rowSpan only; responsive-only spans still
+  // gain the hook so the wrapper is a legal grid item for the responsive CSS.
+  const templateGridItem =
+    spanTarget === "section-template-wrapper"
+      ? { [PAGE_BLOCK_GRID_ITEM_ATTRIBUTE]: block.id }
+      : {};
+  // Present-only span style: only when a BASE span exists (a responsive-only
+  // span still gains the hook above but emits no empty `style` attribute).
+  const templateSpanStyle: CSSProperties | undefined =
+    spanTarget === "section-template-wrapper" &&
+    (typeof block.style?.colSpan === "number" || typeof block.style?.rowSpan === "number")
+      ? {
+          ...(typeof block.style?.colSpan === "number"
+            ? { gridColumn: `span ${block.style.colSpan}` }
+            : {}),
+          ...(typeof block.style?.rowSpan === "number"
+            ? { gridRow: `span ${block.style.rowSpan}` }
+            : {}),
+        }
+      : undefined;
 
   if (template.template === "timeline") {
     // ── TASK-533-03: VERTICAL variants (default/compact) draw a CONTINUOUS axis line
@@ -103,43 +143,50 @@ const wrapSectionTemplateBlock = (
     // author-controlled value: axis/dot are fixed structure tinted off the already-sanitized
     // `--coderso-section-accent`; the bleed offset is the clamped numeric section gap (a
     // bounded int → fixed `px` literal).
+    //
+    // ── TASK-539-05-L01 — the geometry (padding class, marker center, row gap, per-segment
+    // axis top/bottom) is owned by `resolvePageTimelineItemGeometry`; this renderer only
+    // consumes the returned values (no recomputation). The first segment begins at the
+    // first marker center, interior/last segments at row top, non-final segments bleed only
+    // the negative row gap, and the final segment ends at the final marker center.
     if (template.variant !== "horizontal") {
-      // Resolved inter-item ROW gap of the section content grid (the grid band between two
-      // items). Same source the section content style emits as inline `gap`.
-      const rowGapPx = toPageSectionVariantSpacing(section, template).gap;
-      // Last item ends the axis at its dot — no downward bleed into empty section space.
-      const isLast = index + 1 >= total;
+      const geometry = resolvePageTimelineItemGeometry(section, template, index, total);
       return (
         <div
           key={`${section.id}-timeline-${block.id}`}
           className={joinPageRenderClasses(
             "relative min-w-0",
             "grid grid-cols-[auto_minmax(0,1fr)] gap-4",
-            template.variant === "compact" ? "py-2" : "py-3"
+            geometry.paddingClassName
           )}
+          style={templateSpanStyle}
+          {...templateGridItem}
           data-page-timeline-item={index + 1}
         >
-          {/* Continuous axis: a 1px rule behind the dot (accent → fade) that spans the FULL
-              item box (`inset-y-0` — the item's own py padding is INSIDE the segment, so no
-              intra-item break) and BLEEDS its bottom by the section row gap so it meets the
-              next item's segment. On the last item the bleed is dropped so the rule ends at
-              the final dot (no overshoot). It is centered on the `w-8` marker column
-              (`left-4` = 16px = the marker span's `w-8`/2, matching the dot center). */}
+          {geometry.axis ? (
+            <span
+              aria-hidden="true"
+              className="absolute inset-y-0 w-px -translate-x-1/2"
+              style={{
+                // First segment begins at the first marker center; interior/last
+                // segments begin at the item top. Non-final segments bleed only the
+                // negative row gap (so they meet the next segment); the final
+                // segment ends at the final marker center. `inset-y-0` pins the
+                // full-item span contract (py padding sits INSIDE the segment).
+                top: geometry.axis.top,
+                bottom: geometry.axis.bottom,
+                left: `${geometry.markerCenterPx}px`,
+                background:
+                  "linear-gradient(var(--coderso-section-accent,#0d9488), rgba(148,163,184,.12))",
+              }}
+              data-page-timeline-axis="true"
+              data-page-timeline-axis-line="true"
+            />
+          ) : null}
           <span
-            aria-hidden="true"
-            className="absolute inset-y-0 left-4 w-px -translate-x-1/2"
-            style={{
-              // Bridge the row gap only (the item's own py padding is already inside this
-              // full-height span): extend the bottom so this segment reaches — and overlaps
-              // by 1px — the next item's segment. The last item ends flush at its dot.
-              bottom: isLast ? 0 : `calc(-1 * ${rowGapPx}px)`,
-              background:
-                "linear-gradient(var(--coderso-section-accent,#0d9488), rgba(148,163,184,.12))",
-            }}
-            data-page-timeline-axis="true"
-            data-page-timeline-axis-line="true"
-          />
-          <span className="relative flex w-8 justify-center">
+            className="relative flex justify-center"
+            style={{ width: `${geometry.markerCenterPx * 2}px` }}
+          >
             {/* Glow dot (mirrors `.timeline article:before` box-shadow off the accent). */}
             <span
               className="relative mt-1 h-3 w-3 rounded-full ring-4 ring-white"
@@ -189,6 +236,8 @@ const wrapSectionTemplateBlock = (
             ? "overflow-hidden rounded-xl border border-slate-200 bg-white p-3 shadow-sm"
             : undefined
         )}
+        style={templateSpanStyle}
+        {...templateGridItem}
         data-page-gallery-section-item={index + 1}
         data-page-gallery-section-variant={template.variant}
       >
@@ -205,6 +254,8 @@ const wrapSectionTemplateBlock = (
           "min-w-0 rounded-lg border border-slate-200 bg-white",
           template.variant === "compact" ? "px-4 py-3 shadow-none" : "p-5 shadow-sm"
         )}
+        style={templateSpanStyle}
+        {...templateGridItem}
         data-page-faq-item={index + 1}
         data-page-faq-variant={template.variant}
       >
@@ -223,6 +274,8 @@ const wrapSectionTemplateBlock = (
             ? "rounded-xl border border-slate-200 bg-white p-5 shadow-sm"
             : undefined
         )}
+        style={templateSpanStyle}
+        {...templateGridItem}
         data-page-testimonial-item={index + 1}
         data-page-testimonial-variant={template.variant}
         {...(template.variant === "cards" ? { "data-page-testimonial-card": "true" } : {})}
@@ -299,23 +352,34 @@ const renderTemplateSectionChildren = (
   section: PageSectionV2,
   template: ResolvedPageSectionTemplate,
   blocks: readonly PageBlockV2[],
-  renderBlock: PageSectionBlockRenderer,
-  renderRawBlock: PageSectionBlockRenderer
+  renderBlockWithFrame: PageBlockWithFrameRenderer,
+  makeContext: (block: PageBlockV2, index: number) => PageBlockRenderContext,
+  renderRawBlock: (block: PageBlockV2, index: number) => ReactNode
 ): ReactNode => {
   if (template.template === "media-split" && template.variant !== "default") {
-    return renderMediaSplitSectionChildren(section, template, blocks, renderRawBlock);
+    return renderMediaSplitSectionChildren(
+      section,
+      template,
+      blocks,
+      (block, index) => renderRawBlock(block, index)
+    );
   }
 
-  return blocks.map((block, index) =>
-    wrapSectionTemplateBlock(
+  return blocks.map((block, index) => {
+    // TASK-539-05-L01 — one context per root block: the frame render and the
+    // wrapper share the SAME computed span target (never recomputed against a
+    // different block list).
+    const context = makeContext(block, index);
+    return wrapSectionTemplateBlock(
       section,
       template,
       block,
       index,
-      renderBlock(block, index),
-      blocks.length
-    )
-  );
+      renderBlockWithFrame(block, context),
+      blocks.length,
+      context.spanTarget
+    );
+  });
 };
 
 export function PageSectionContentImpl({
@@ -375,32 +439,67 @@ export function PageSectionContentImpl({
     compositionColumns >= 2 && blocks.length > 0 && pageSectionBlocksHaveColumnAssignments(blocks)
       ? distributePageSectionBlocksToColumns(blocks, compositionColumns)
       : null;
-  const blockRenderContext = (index: number): PageBlockRenderContext => ({
-    blockPath: [{ index }] as PageBlockPath,
-    depth: 1,
-    includeHiddenBlocks,
-    renderBlockFrame,
-    renderInlineText,
-    renderColumnsSlotTrailing,
-    runtimeDataByBlockId,
-    layoutMode,
-    // TASK-533-01 (audit remediation): inside per-column composition every block
-    // frame is a child of a SINGLE-column wrapper, so its grid span (colSpan/
-    // rowSpan) is inert/misleading — drop it (span ⟂ per-column `column`). The
-    // auto-flow path leaves this unset, so span keeps working as the direct grid
-    // child of the section content grid.
-    suppressBlockSpan: columnComposition !== null,
-  });
+  const blockRenderContext = (block: PageBlockV2, index: number): PageBlockRenderContext => {
+    // ── TASK-539-05-L01 — actual grid-item span. The section boundary computes
+    // the ONE legal grid target for each root block exactly once; nested slot
+    // children always get `"none"` from `renderPageBlockList`. `includeHiddenBlocks`
+    // here is the SAME normalized boolean the render boundary chose — no nested
+    // consumer rereads or coerces the raw optional input. base/tablet/mobile
+    // spans all count (a responsive-only span still makes the frame a legal
+    // grid item for the responsive CSS; the base span style emits only when a
+    // base span exists).
+    const placement = resolvePageBlockGridPlacement(section, [{ index }] as PageBlockPath, {
+      includeHiddenBlocks,
+    });
+    const hasAnySpan = [
+      block.style,
+      block.responsive?.tablet?.style,
+      block.responsive?.mobile?.style,
+    ].some((style) => style?.colSpan !== undefined || style?.rowSpan !== undefined);
+    const spanTarget = hasAnySpan ? placement : "none";
+    const isRevealSection =
+      section.style.scrollEffect === "reveal-fade" || section.style.scrollEffect === "reveal-up";
+    return {
+      blockPath: [{ index }] as PageBlockPath,
+      depth: 1,
+      includeHiddenBlocks,
+      renderBlockFrame,
+      renderInlineText,
+      renderColumnsSlotTrailing,
+      runtimeDataByBlockId,
+      layoutMode,
+      // TASK-539-05-L01 — the owning section (placement consumers / effects).
+      section,
+      // TASK-539-05-L01 — the computed legal grid target for THIS root block.
+      spanTarget,
+      // TASK-539-05-L01 — every block under a revealing section receives the
+      // ONE transform host attribute so its per-child reveal composes through
+      // `--cx-reveal-y` in the shared formula (PAGE_REVEAL_MOTION_CSS writes
+      // only reveal opacity/variable now). Ambient-orb spans are stamped by
+      // `PageSectionRenderImpl`.
+      transformHost: isRevealSection,
+      // TASK-533-01 (audit remediation): inside per-column composition every block
+      // frame is a child of a SINGLE-column wrapper, so its grid span (colSpan/
+      // rowSpan) is inert/misleading — drop it (span ⟂ per-column `column`). The
+      // auto-flow path leaves this unset, so span keeps working as the direct grid
+      // child of the section content grid.
+      suppressBlockSpan: columnComposition !== null,
+    };
+  };
   const renderBlockAtIndex = (block: PageBlockV2, index: number) =>
-    renderBlockWithFrame(block, blockRenderContext(index));
-  const renderWrappedBlockAtIndex = (block: PageBlockV2, index: number) =>
-    wrapSectionTemplateBlock(
+    renderBlockWithFrame(block, blockRenderContext(block, index));
+  const renderWrappedBlockAtIndex = (block: PageBlockV2, index: number) => {
+    const context = blockRenderContext(block, index);
+    return wrapSectionTemplateBlock(
       section,
       template,
       block,
       index,
-      renderBlockWithFrame(block, blockRenderContext(index))
+      renderBlockWithFrame(block, context),
+      Number.POSITIVE_INFINITY,
+      context.spanTarget
     );
+  };
   return (
     <div
       className={renderProps.contentClassName}
@@ -436,7 +535,8 @@ export function PageSectionContentImpl({
             section,
             template,
             blocks,
-            renderBlockAtIndex,
+            renderBlockWithFrame,
+            (block, index) => blockRenderContext(block, index),
             renderBlockAtIndex
           )}
           {trailingContent}
@@ -474,9 +574,16 @@ export function PageSectionRenderImpl({
         )
       : undefined;
   const parallaxEnabled = parallax !== undefined;
+  // TASK-539-05-L01 — a REVEALING section is itself a transform host: its own
+  // reveal-up hide state writes only `--cx-reveal-y` (PAGE_REVEAL_MOTION_CSS),
+  // and the shared formula on THIS element composes it. Present-only: no
+  // scrollEffect (or parallax-only) ⇒ no host attr ⇒ byte-identical section.
+  const isRevealSection =
+    scrollEffect === "reveal-fade" || scrollEffect === "reveal-up";
   const effectDataAttrs: Record<string, string> = {
     ...(scrollEffect ? { "data-page-effect": scrollEffect } : {}),
     ...(parallax !== undefined ? { "data-parallax": String(parallax) } : {}),
+    ...(isRevealSection ? { [PAGE_BLOCK_TRANSFORM_HOST_ATTRIBUTE]: "" } : {}),
   };
   // Section composition (TASK-522-05-L01): surface preset + layered composition
   // data-attrs + the write-validated `accent` glow retint custom props, DISJOINT
@@ -523,11 +630,20 @@ export function PageSectionRenderImpl({
       ) : null}
       {sc.ambientOrbs ? (
         <>
-          <span className="cx-orb cx-orb-a" aria-hidden="true" data-deco="drift" />
+          {/* TASK-539-05-L01 — ambient-orb spans are transform hosts: drift
+              animates the decoration variables and the ONE formula composes
+              them (same host the block resolver stamps for block-level orbs). */}
+          <span
+            className="cx-orb cx-orb-a"
+            aria-hidden="true"
+            data-deco="drift"
+            data-page-transform-host=""
+          />
           <span
             className="cx-orb cx-orb-b"
             aria-hidden="true"
             data-deco="drift"
+            data-page-transform-host=""
             style={{ ["--deco-delay" as string]: "1500ms" } as CSSProperties}
           />
         </>

@@ -7,22 +7,32 @@ import {
   pageTypographyFontWeightCssValues,
   type PageBlockV2,
 } from "./pageDocumentV2Types";
-import { resolveBlockCompositionAttrs } from "./pageCompositionEffects";
 import { composeGlowBoxShadow, mergeShadows } from "./pageGlow";
+import {
+  escapeAuthoringCssString,
+  isSafeAuthoringCssBackgroundLayers,
+  isSafeAuthoringCssGradient,
+  parseAuthoringCssBackgroundPaint,
+  sanitizeAuthoringCssBackground,
+  sanitizeAuthoringCssColor,
+  sanitizeAuthoringMediaUrl,
+} from "./pageAuthoringSanitizers";
+import {
+  PAGE_MARQUEE_REPLICA_BLOCK_STYLE_SCOPE_ATTRIBUTE,
+  type PageReplicaIdentityContext,
+} from "./pageRendererReplicaIdentity";
+import {
+  PAGE_BLOCK_TRANSFORM_HOST_ATTRIBUTE,
+  resolveBlockCompositionAttrs,
+} from "./pageCompositionEffects";
 import {
   isPageBlockVisualElementType,
   PAGE_BLOCK_ELEMENT_ATTRIBUTE,
   PAGE_BLOCK_ID_ATTRIBUTE,
   PAGE_BLOCK_TEXT_ATTRIBUTE,
 } from "./pageResponsiveCss";
-import {
-  escapeAuthoringCssString,
-  isSafeAuthoringCssBackgroundLayers,
-  isSafeAuthoringCssGradient,
-  sanitizeAuthoringCssBackground,
-  sanitizeAuthoringCssColor,
-  sanitizeAuthoringMediaUrl,
-} from "./pageAuthoringSanitizers";
+import type { PageBlockGridPlacementTarget } from "./pageBlockGridPlacement";
+import { PAGE_BLOCK_GRID_ITEM_ATTRIBUTE } from "./pageBlockGridPlacement";
 import {
   joinPageRenderClasses,
   type PageBlockRenderProps,
@@ -108,10 +118,19 @@ export const toGradientBackground = (value: string | null | undefined) => {
 
 const toPageBlockVisualStyle = (block: PageBlockV2): PageBlockStyleProperties => {
   const style = block.style ?? {};
-  const backgroundColor =
-    style.backgroundType === "color" && style.background
-      ? sanitizeAuthoringCssColor(style.background)
-      : undefined;
+  // ── TASK-539-05-L01 — ONE canonical paint parse. After the write-time model
+  // sanitization, `parseAuthoringCssBackgroundPaint` splits the authored
+  // `background` value into its gradient image-layer stack and optional final
+  // canonical color; the renderer emits ONLY `paint.image` to
+  // `background-image` and ONLY `paint.color` to `background-color`. A
+  // combined representation is never re-rebuilt from an unparsed whole author
+  // string. The explicit `backgroundType:"none"` clear/reset and the separate
+  // `backgroundType:"image"` URL field keep their existing semantics.
+  const backgroundPaint =
+    style.backgroundType === "color" || style.backgroundType === "gradient"
+      ? parseAuthoringCssBackgroundPaint(style.background)
+      : null;
+  const backgroundColor = backgroundPaint?.color ?? undefined;
   const backgroundImageUrl =
     style.backgroundType === "image" ? sanitizeAuthoringMediaUrl(style.backgroundImage) : null;
   const textColor = sanitizeAuthoringCssColor(style.textColor);
@@ -130,9 +149,7 @@ const toPageBlockVisualStyle = (block: PageBlockV2): PageBlockStyleProperties =>
     backgroundColor: backgroundColor ?? undefined,
     backgroundImage: backgroundImageUrl
       ? `url("${escapeAuthoringCssString(backgroundImageUrl)}")`
-      : style.backgroundType === "gradient"
-        ? toGradientBackground(style.background)
-        : undefined,
+      : (backgroundPaint?.image ?? undefined),
     backgroundSize: backgroundImageUrl ? "cover" : undefined,
     backgroundPosition: backgroundImageUrl ? "center" : undefined,
     color: textColor ?? undefined,
@@ -382,7 +399,22 @@ export const splitBlockComposition = (style?: PageBlockStyle) => {
 
 export const toPageBlockRenderProps = (
   block: PageBlockV2,
-  options?: { suppressSpan?: boolean }
+  options?: {
+    suppressSpan?: boolean;
+    // TASK-539-05-L01 — the section boundary computes the REAL placement for
+    // this block and passes it here; the span/grid-item hook may only exist on
+    // the outer authored frame (see PAGE_BLOCK_GRID_ITEM_ATTRIBUTE comment).
+    spanTarget?: PageBlockGridPlacementTarget;
+    // TASK-539-05-L01 — a block under a revealing section receives the
+    // transform host attribute so its reveal composes through the ONE
+    // transform formula; ambient-orb spans stamp it too (renderer-owned).
+    transformHost?: boolean;
+    // TASK-539-05-L01 — marquee replica descendants replace their id attribute
+    // with the style-scope id so the replicated node participates in the
+    // marquee group's style scope (runtime `[data-page-block]` queries still
+    // resolve inside the group).
+    replicaIdentity?: PageReplicaIdentityContext;
+  }
 ): PageBlockRenderProps => {
   const s = splitBlockComposition(block.style);
   // TASK-525-02-L02: present-only `--reveal-delay` (bounded ms, clamped at the
@@ -420,13 +452,34 @@ export const toPageBlockRenderProps = (
   // wrapper's own auto-rows (whitespace), not the block relative to grid siblings. So
   // span and per-column `column` assignment are mutually exclusive — the span is
   // dropped here so the emitted CSS matches the real layout (no ghost rule).
+  //
+  // ── TASK-539-05-L01 — the legacy default (spanTarget undefined, e.g. direct
+  // `toPageBlockRenderProps` calls) keeps the pre-539 span behavior; the L05
+  // section boundary always passes the real computed target. The span emits only
+  // when it is BOTH the computed grid target AND not nested (replica/column
+  // wrappers pass `"none"`).
   const suppressSpan = options?.suppressSpan === true;
-  const colSpan = suppressSpan ? undefined : block.style?.colSpan;
-  const rowSpan = suppressSpan ? undefined : block.style?.rowSpan;
+  const emitSpan =
+    (options?.spanTarget === undefined || options?.spanTarget === "block-frame") &&
+    !suppressSpan;
+  const colSpan = emitSpan ? block.style?.colSpan : undefined;
+  const rowSpan = emitSpan ? block.style?.rowSpan : undefined;
   const spanStyle: CSSProperties = {
     ...(typeof colSpan === "number" ? { gridColumn: `span ${colSpan}` } : {}),
     ...(typeof rowSpan === "number" ? { gridRow: `span ${rowSpan}` } : {}),
   };
+  const hasAnySpan = [
+    block.style,
+    block.responsive?.tablet?.style,
+    block.responsive?.mobile?.style,
+  ].some((style) => style?.colSpan !== undefined || style?.rowSpan !== undefined);
+  const isGridItem =
+    options?.spanTarget === "block-frame" && hasAnySpan && !options?.suppressSpan;
+  // TASK-539-05-L01 — reveal-only blocks get the host from the renderer option;
+  // blocks with their own transform effect already carry it inside frameAttrs
+  // (04 composition resolution) and their spread below wins with the same value.
+  const revealHost = options?.transformHost === true;
+  const replica = options?.replicaIdentity;
   return {
     className: joinPageRenderClasses(
       "max-w-full",
@@ -445,7 +498,15 @@ export const toPageBlockRenderProps = (
     },
     dataAttributes: {
       "data-page-block": block.type,
-      [PAGE_BLOCK_ID_ATTRIBUTE]: block.id,
+      // ── TASK-539-05-L01 — replica descendants never expose their own
+      // `data-block-id` (the runtime must NOT let a duplicated block take over
+      // its own id from the canonical node); the STYLE-SCOPE id replaces it and
+      // routes every replicated node to the outer group's style-scoped group.
+      ...(replica
+        ? { [PAGE_MARQUEE_REPLICA_BLOCK_STYLE_SCOPE_ATTRIBUTE]: block.id }
+        : { [PAGE_BLOCK_ID_ATTRIBUTE]: block.id }),
+      ...(isGridItem ? { [PAGE_BLOCK_GRID_ITEM_ATTRIBUTE]: block.id } : {}),
+      ...(revealHost ? { [PAGE_BLOCK_TRANSFORM_HOST_ATTRIBUTE]: "" } : {}),
       ...s.frameAttrs,
     },
   };

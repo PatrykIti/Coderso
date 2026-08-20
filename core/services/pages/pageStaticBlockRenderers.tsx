@@ -39,6 +39,15 @@ import {
   toPageBlockTypographyStyle,
 } from "./pageBlockRenderStyles";
 import {
+  transformPageReplicaIdentityAttribute,
+  type PageReplicaIdentityContext,
+} from "./pageRendererReplicaIdentity";
+import type { PageGalleryItemV2 } from "./pageGalleryV2";
+import {
+  GALLERY_CATEGORY_PATTERN,
+  GALLERY_FILTER_CATEGORY_MAX,
+} from "./pageDocumentV2Types";
+import {
   readText,
   joinPageRenderClasses,
   type PageBlockRenderContext,
@@ -170,11 +179,42 @@ export const renderSafeSvgNode = (
   node: SafeSvgNode,
   key: string,
   drawIn: boolean,
-  isRoot = false
+  isRoot = false,
+  // TASK-539-05-L01 — approved marquee replica context. When present, every
+  // Safe-SVG identity-bearing attribute (`id`, local `href`/`xlinkHref` hash,
+  // and `url(#...)` in fill/stroke/clip-path/mask/filter) is rewritten through
+  // the ONE identity transformer: a target rewrites ONLY when its exact value
+  // is backed by a locally emitted `id` (`domIds`); unresolved/external values
+  // stay byte-for-byte. The primary passes no context and is unchanged.
+  replicaContext?: PageReplicaIdentityContext
 ): ReactNode => {
   if (node.kind === "text") return node.value;
 
   const props = copySafeCustomSvgProps(node.props, key);
+
+  if (replicaContext) {
+    // Finite attribute set: only names the safe-SVG prop map can actually
+    // emit are consulted (id/href/xlinkHref/fill/stroke/clipPath/mask/filter).
+    for (const attribute of [
+      "id",
+      "href",
+      "xlinkHref",
+      "fill",
+      "stroke",
+      "clipPath",
+      "mask",
+      "filter",
+    ] as const) {
+      const value = props[attribute];
+      if (typeof value === "string") {
+        props[attribute] = transformPageReplicaIdentityAttribute(
+          replicaContext,
+          attribute,
+          value
+        );
+      }
+    }
+  }
 
   if (isRoot) {
     const viewportStyle = resolveTrustedSvgViewportStyle(node.props);
@@ -191,7 +231,7 @@ export const renderSafeSvgNode = (
   }
 
   const children = node.children.map((child, index) =>
-    renderSafeSvgNode(child, `${key}.${index}`, drawIn)
+    renderSafeSvgNode(child, `${key}.${index}`, drawIn, false, replicaContext)
   );
   return createElement(node.tag, props, ...children);
 };
@@ -714,53 +754,36 @@ export const renderImage = (block: PageBlockV2) => {
   );
 };
 
-type PageGalleryItem = {
-  src: string;
-  alt: string;
-  caption: string;
-  // ── TASK-534 ── space-joined single-token category set (present-only). This
-  // render-side shape is SEPARATE from the model item shape (534-01-L01); both
-  // carry the field because `toGalleryItem` rebuilds the item and drops unknown keys.
-  category?: string;
-};
-
 // ── TASK-534 ── a gallery category is a SINGLE token, NO space (534-01-L01): the
 // runtime filter treats `data-category` as a space-separated SET, so a space must
-// not live inside one category token.
-const PAGE_GALLERY_CATEGORY_TOKEN = /^[\w-]{1,48}$/;
+// not live inside one category token. TASK-539-05-L01 — the OWNER grammar
+// (`GALLERY_CATEGORY_PATTERN`) and filter cap (`GALLERY_FILTER_CATEGORY_MAX`) are
+// consumed here; the local regex mirror and magic `12` are gone.
 
-const readGalleryItemText = (item: Record<string, unknown>, ...keys: string[]): string => {
-  for (const key of keys) {
-    const value = item[key];
-    if (isRecord(value)) {
-      const nested = readText(value.src) || readText(value.url) || readText(value.alt);
-      if (nested) return nested;
-      continue;
-    }
-    const text = readText(value);
-    if (text) return text;
-  }
-  return "";
-};
-
-const toGalleryItem = (value: unknown): PageGalleryItem | null => {
+const toGalleryItem = (value: unknown): PageGalleryItemV2 | null => {
   if (typeof value === "string") {
     const src = sanitizeAuthoringMediaUrl(value) ?? "";
     return src ? { src, alt: "", caption: "" } : null;
   }
   if (!isRecord(value)) return null;
-  const src =
-    sanitizeAuthoringMediaUrl(readGalleryItemText(value, "src", "url", "image", "assetUrl")) ?? "";
-  const alt = readGalleryItemText(value, "alt", "title", "label", "name");
-  const caption = readGalleryItemText(value, "caption", "title", "label", "name", "description");
+  // TASK-539-05-L01 — read ONLY the canonical owner keys (`src`/`alt`/`caption`/
+  // `category`); the write normalizer already committed the owner item shape, so
+  // the renderer no longer interprets alias keys (url/image/assetUrl/title/...).
+  // Defence in depth: re-sanitize nonempty URLs and category tokens with the
+  // OWNER sanitizer/constants; invalid material omits only that unsafe output
+  // (caption-only placeholders remain).
+  const src = sanitizeAuthoringMediaUrl(value.src) ?? "";
+  const alt = readText(value.alt);
+  const caption = readText(value.caption);
   if (!src && !caption) return null;
-  // ── TASK-534 ── re-sanitize the item category per space-split token (defence in
-  // depth); keep valid single tokens, re-join with a space; undefined ⇒ no category
-  // survives to the figure (present-only, so a bad/absent value never breaks out).
-  const catTokens = readGalleryItemText(value, "category")
-    .split(/\s+/)
-    .filter((token) => PAGE_GALLERY_CATEGORY_TOKEN.test(token));
-  const category = catTokens.length ? catTokens.join(" ") : undefined;
+  const category =
+    typeof value.category === "string"
+      ? value.category
+          .split(/\s+/)
+          .filter((token) => GALLERY_CATEGORY_PATTERN.test(token))
+          .slice(0, GALLERY_FILTER_CATEGORY_MAX)
+          .join(" ")
+      : undefined;
   return { src, alt, caption, ...(category ? { category } : {}) };
 };
 
@@ -780,7 +803,7 @@ export const renderGallery = (block: PageBlockV2) => {
       : "grid";
   const items = (Array.isArray(block.props.items) ? block.props.items : [])
     .map(toGalleryItem)
-    .filter((item): item is PageGalleryItem => Boolean(item));
+    .filter((item): item is PageGalleryItemV2 => Boolean(item));
 
   if (items.length === 0) {
     return (
@@ -802,10 +825,10 @@ export const renderGallery = (block: PageBlockV2) => {
     ? [
         ...new Set(
           (Array.isArray(block.props.filterCategories) ? block.props.filterCategories : []).filter(
-            (c): c is string => typeof c === "string" && PAGE_GALLERY_CATEGORY_TOKEN.test(c)
+            (c): c is string => typeof c === "string" && GALLERY_CATEGORY_PATTERN.test(c)
           )
         ),
-      ].slice(0, 12)
+      ].slice(0, GALLERY_FILTER_CATEGORY_MAX)
     : [];
 
   const grid = (
@@ -820,7 +843,7 @@ export const renderGallery = (block: PageBlockV2) => {
         const rawCat = typeof item.category === "string" ? item.category : "";
         const catTokens = rawCat
           .split(/\s+/)
-          .filter((token) => PAGE_GALLERY_CATEGORY_TOKEN.test(token));
+          .filter((token) => GALLERY_CATEGORY_PATTERN.test(token));
         const cat = catTokens.length ? catTokens.join(" ") : undefined;
         return (
           <figure

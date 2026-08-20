@@ -2,7 +2,14 @@ import type { CSSProperties, ReactNode } from "react";
 
 import { getPageBlockActiveSlotKeys } from "./pageDocumentV2Contract";
 import type { PageBlockSlotKey, PageBlockV2 } from "./pageDocumentV2Types";
-import type { PageBlockPath } from "./pageBlockPaths";
+import { serializePageBlockPath, type PageBlockPath } from "./pageBlockPaths";
+import { PAGE_MARQUEE_REPLICA_ATTRIBUTE } from "./pageCompositionEffects";
+import {
+  collectPageReplicaIdentitySets,
+  createPageMarqueeReplicaNamespace,
+  isPageMarqueeReplicaSafeSubtree,
+  type PageReplicaIdentityContext,
+} from "./pageRendererReplicaIdentity";
 import {
   joinPageRenderClasses,
   readBoolean,
@@ -64,6 +71,20 @@ export const renderPageBlockList = (
       layoutMode: context.layoutMode,
       slotKey: context.slotKey,
       parentBlock: context.parentBlock,
+      // ── TASK-539-05-L01 ──
+      // - `section` rides through unchanged (placement consumers / reveal).
+      // - Nested slot children are NEVER direct grid items: spanTarget "none"
+      //   suppresses span + PAGE_BLOCK_GRID_ITEM_ATTRIBUTE on every nested
+      //   frame (TASK-539-03-L05 classifies every nested path as "none").
+      // - The reveal host flag propagates so EVERY block under a revealing
+      //   section (root + nested) composes its per-child reveal through the
+      //   one formula.
+      // - The replica identity context rides through every nested active-slot
+      //   render so ids/refs/hooks are namespaced below the approved replica.
+      section: context.section,
+      spanTarget: "none",
+      transformHost: context.transformHost,
+      replicaIdentity: context.replicaIdentity,
     })
   );
 };
@@ -92,17 +113,18 @@ const renderSlotWrapper = ({
 );
 
 /**
- * TASK-522-05-L04 — the seamless marquee's decorative DUPLICATE track frame. It
- * re-applies the block's VISUAL frame styling (className + style) so the ticker
- * copy looks identical, but emits NO `data-block-id` / selection chrome, so each
- * item's `data-block-id` matches exactly ONE DOM node in the builder canvas
- * (finding 3). NOTE: the leaf pseudocode passed `renderBlockFrame: undefined`
- * here, but that falls through to the runtime `PageBlockFrame`, which DOES emit
- * `data-block-id` (defeating the stated invariant); a styling-only frameless copy
- * is the faithful realization of that intent — no duplicate selection targets.
+ * TASK-539-05-L01 — the approved replica's styling frame. It re-applies the
+ * block's VISUAL frame styling (className + style) plus the replica-aware
+ * data hooks: the STYLE-SCOPE id (`PAGE_MARQUEE_REPLICA_BLOCK_STYLE_SCOPE_ATTRIBUTE`)
+ * replaces `data-block-id` (so the runtime `[data-page-block]` queries inside
+ * the marquee group still resolve while the replicated node never claims the
+ * canonical id / Admin selection target), and the frameAttrs (deco/hover/
+ * tilt/magnetic/... ) ride through unchanged for visual parity. No blanket
+ * descendant `tabIndex`/`disabled` mutation: the replica segment's native
+ * `inert` owns focus/activation suppression.
  */
-const renderMarqueeCopyFrame: PageBlockFrameRenderer = ({ content, renderProps }) => (
-  <div className={renderProps.className} style={renderProps.style}>
+const renderMarqueeReplicaFrame: PageBlockFrameRenderer = ({ content, renderProps }) => (
+  <div className={renderProps.className} style={renderProps.style} {...renderProps.dataAttributes}>
     {content}
   </div>
 );
@@ -143,6 +165,9 @@ export const renderPageLayoutBlockContent = (
                 renderBlockWithFrame: context.renderBlockWithFrame,
                 slotKey,
                 parentBlock: block,
+                section: context.section,
+                transformHost: context.transformHost,
+                replicaIdentity: context.replicaIdentity,
               }),
             })}
           </FragmentLike>
@@ -181,6 +206,9 @@ export const renderPageLayoutBlockContent = (
                       renderBlockWithFrame: context.renderBlockWithFrame,
                       slotKey,
                       parentBlock: block,
+                      section: context.section,
+                      transformHost: context.transformHost,
+                      replicaIdentity: context.replicaIdentity,
                     })}
                     {context.renderColumnsSlotTrailing?.({
                       block,
@@ -200,28 +228,61 @@ export const renderPageLayoutBlockContent = (
 
   const slotKey = slotKeys[0]!;
   if (block.type === "group") {
-    // Marquee/ticker (TASK-522-05-L04): when style.marquee is set (a speed
-    // present), render the group's slot children inside a
-    // .cx-marquee-viewport > .cx-marquee-track strip. The block FRAME already
-    // carries data-marquee + --marquee-speed + data-marquee-dir (522-03
-    // resolver); the animation binds .cx-marquee-track by CLASS (522-01-L04) so
-    // the overflow:hidden viewport stays put while the track scrolls. When
-    // `seamless`, a SECOND aria-hidden track is rendered WITHOUT block frames
-    // (renderBlockFrame omitted) so the decorative copy carries NO
-    // [data-block-id] / selection chrome in the builder canvas. No marquee ⇒
-    // the flow flex branch below stays byte-identical.
+    // ── TASK-539-05-L01 ── marquee/ticker (absorbing 522-05-L04 + 539-04):
+    // when style.marquee is set, render the group's slot children inside a
+    // `.cx-marquee-viewport > .cx-marquee-rail` strip; the animation binds the
+    // RAIL by class (539-04 composition CSS) so the overflow:hidden viewport
+    // stays put while the rail scrolls, and segments are nonshrinking
+    // (`flex:0 0 auto`). The block FRAME carries data-marquee + speed/dir
+    // (539-04 resolver) — the outer authored group's ONE canonical frame
+    // remains OUTSIDE both segments, so a legal root grid target never
+    // duplicates.
+    //
+    // Seamless replica: `seamless:true` PLUS a fail-closed safe child subtree
+    // (`isPageMarqueeReplicaSafeSubtree`, evaluated on the outer group's
+    // normalized active-slot children only — the owner group itself is never
+    // passed, its own style.marquee is expected) renders ONE rail with TWO
+    // equal adjacent segments. The replica segment carries ONLY the owner
+    // marker `[data-page-marquee-replica]=""`, `aria-hidden="true"`, and the
+    // native `inert` attribute/property; every descendant ID/reference/hook is
+    // namespaced through the deterministic replica identity context, and the
+    // style-scope id replaces `data-block-id` on each replica frame. ANY
+    // unsafe direct/deep descendant, nested authored marquee, or non-seamless
+    // marquee renders the same ONE-RAIL/ONE-CANONICAL-SEGMENT fallback: no
+    // marker, no namespace, no clone render, no secondary runtime surface —
+    // a fail-closed visual degradation, never an error or document rewrite.
     const marquee = block.style?.marquee;
     if (marquee) {
-      const renderTrackChildren = (frame: boolean) =>
-        renderPageBlockList(block.slots?.[slotKey] ?? [], {
+      const slotChildren = block.slots?.[slotKey] ?? [];
+      const replicaSafe =
+        marquee.seamless === true &&
+        isPageMarqueeReplicaSafeSubtree(slotChildren, {
+          includeHiddenBlocks: context.includeHiddenBlocks,
+        });
+      const replicaContext: PageReplicaIdentityContext | undefined = replicaSafe
+        ? {
+            namespace: createPageMarqueeReplicaNamespace(
+              block.id,
+              serializePageBlockPath(context.blockPath)
+            ),
+            ...(() => {
+              const sets = collectPageReplicaIdentitySets(slotChildren, {
+                includeHiddenBlocks: context.includeHiddenBlocks,
+              });
+              return { domIds: sets.domIds, hookIdentifiers: sets.hookIdentifiers };
+            })(),
+            inert: true,
+          }
+        : undefined;
+      const renderTrackChildren = (frame: boolean, replica?: PageReplicaIdentityContext) =>
+        renderPageBlockList(slotChildren, {
           parentPath: context.blockPath,
           depth: context.depth + 1,
           includeHiddenBlocks: context.includeHiddenBlocks,
-          // Primary track keeps the real (canvas or runtime) frame so items stay
-          // selectable/targetable; the seamless copy uses the decorative frame
-          // (styling only, NO data-block-id) so it is not a duplicate selection
-          // target (finding 3).
-          renderBlockFrame: frame ? context.renderBlockFrame : renderMarqueeCopyFrame,
+          // Primary segment keeps the real (canvas or runtime) frame so items
+          // stay selectable/targetable; the approved replica segment uses the
+          // styling frame (style-scope id, no duplicate selection target).
+          renderBlockFrame: frame ? context.renderBlockFrame : renderMarqueeReplicaFrame,
           renderInlineText: context.renderInlineText,
           renderColumnsSlotTrailing: context.renderColumnsSlotTrailing,
           runtimeDataByBlockId: context.runtimeDataByBlockId,
@@ -229,15 +290,25 @@ export const renderPageLayoutBlockContent = (
           renderBlockWithFrame: context.renderBlockWithFrame,
           slotKey,
           parentBlock: block,
+          section: context.section,
+          transformHost: context.transformHost,
+          replicaIdentity: replica,
         });
       return (
         <div className="cx-marquee-viewport">
-          <div className="cx-marquee-track">{renderTrackChildren(true)}</div>
-          {marquee.seamless ? (
-            <div className="cx-marquee-track" aria-hidden="true">
-              {renderTrackChildren(false)}
-            </div>
-          ) : null}
+          <div className="cx-marquee-rail">
+            <div className="cx-marquee-segment">{renderTrackChildren(true)}</div>
+            {replicaContext ? (
+              <div
+                className="cx-marquee-segment"
+                {...{ [PAGE_MARQUEE_REPLICA_ATTRIBUTE]: "" }}
+                aria-hidden="true"
+                inert={true}
+              >
+                {renderTrackChildren(false, replicaContext)}
+              </div>
+            ) : null}
+          </div>
         </div>
       );
     }
@@ -263,6 +334,9 @@ export const renderPageLayoutBlockContent = (
         renderBlockWithFrame: context.renderBlockWithFrame,
         slotKey,
         parentBlock: block,
+        section: context.section,
+        transformHost: context.transformHost,
+        replicaIdentity: context.replicaIdentity,
       }),
     });
   }
@@ -283,6 +357,9 @@ export const renderPageLayoutBlockContent = (
       renderBlockWithFrame: context.renderBlockWithFrame,
       slotKey,
       parentBlock: block,
+      section: context.section,
+      transformHost: context.transformHost,
+      replicaIdentity: context.replicaIdentity,
     }),
   });
 };

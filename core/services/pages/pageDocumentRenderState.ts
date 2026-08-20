@@ -72,7 +72,13 @@ const blockUsesCompositionEffect = (block: PageBlockV2): boolean => {
       s.hoverEffect != null ||
       s.composition === "layered" ||
       s.marquee != null ||
-      s.layer != null)
+      s.layer != null ||
+      // TASK-539-05-L01 — magnetic is a transform-bearing channel: the ONE
+      // host formula that composes `--cx-magnetic-*` lives in
+      // PAGE_COMPOSITION_EFFECTS_CSS, so a magnetic-only block independently
+      // requires that stylesheet (the interactivity CSS only carries the
+      // transition). No magnetic block ever renders without its host formula.
+      s.magnetic === true)
   ) {
     return true;
   }
@@ -92,7 +98,15 @@ const blockUsesCompositionEffect = (block: PageBlockV2): boolean => {
 export const docUsesCompositionEffects = (document: PageDocumentV2): boolean => {
   for (const section of document.sections) {
     const ss = section.style;
-    if (ss && (ss.surfacePreset != null || ss.composition === "layered")) return true;
+    // TASK-539-05-L01 — a section with ANY authored scrollEffect stamps the
+    // transform host on its blocks (reveal) / rides the composition channel,
+    // so the composition stylesheet must be present for those documents too.
+    if (
+      ss &&
+      (ss.surfacePreset != null || ss.composition === "layered" || ss.scrollEffect != null)
+    ) {
+      return true;
+    }
     for (const block of section.blocks) {
       if (blockUsesCompositionEffect(block)) return true;
     }
