@@ -187,6 +187,32 @@ const INTEGRATIONS: IntegrationDefinition[] = [
       },
     ],
   },
+  {
+    id: "google-search-console",
+    name: "Google Search Console",
+    description: "Pull indexed-page status and search performance (impressions, clicks, queries).",
+    category: "Analytics",
+    // Descriptive capability label only - NOT permissionCatalog RBAC (no
+    // seo:* permission exists). The SEO pipeline gates on settings:read /
+    // settings:write via the integrations admin route.
+    scopes: ["seo:read", "search-console:read"],
+    fields: [
+      {
+        key: "serviceAccountJson",
+        label: "Service Account JSON",
+        type: "secret",
+        required: true,
+        placeholder: "Paste the GCP service account JSON (serviceAccountJson)",
+      },
+      {
+        key: "siteUrl",
+        label: "Property URL",
+        type: "text",
+        required: true,
+        placeholder: "https://example.com/ or sc-domain:example.com",
+      },
+    ],
+  },
 ];
 
 const integrationMap = new Map(INTEGRATIONS.map((item) => [item.id, item]));

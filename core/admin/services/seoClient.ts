@@ -7,7 +7,12 @@ import {
   readLocalCache,
   writeLocalCache,
 } from "@/utils/storageCache";
-import { seoAuditCheckIds, type SeoAuditCheckId } from "../../services/seo/seoTypes";
+import {
+  seoAuditCheckIds,
+  type SeoAuditCheckId,
+  type SeoOverview,
+  type SeoSearchPerformance,
+} from "../../services/seo/seoTypes";
 
 export { seoAuditCheckIds, type SeoAuditCheckId };
 
@@ -187,4 +192,72 @@ export async function runSeoAudit(payload: SeoAuditPayload = {}) {
     broadcastCacheEvent({ key: cacheKeys.seoDetail(id), action: "invalidate" });
   }
   return result;
+}
+
+// --- TASK-493-05-L01: SEO overview / search-performance / sitemap surface ------
+// Additive extension only. The list/detail methods above and their cache
+// contract stay untouched; TASK-551-09-L04 later hardens admin cache clients.
+
+export type SearchPerfParams = {
+  targetId?: string;
+  startDate?: string;
+  endDate?: string;
+  limit?: number;
+};
+
+const isSeoOverview = (value: unknown): value is SeoOverview =>
+  Boolean(value && typeof value === "object");
+
+// Read-through overview cache using the same helpers listSeoCached uses
+// (createMemoryBackedLocalCache + cachePolicy TTL).
+const seoOverviewCache = createMemoryBackedLocalCache({
+  key: cacheKeys.seoOverview,
+  ttlMs: cacheTtlMs.list,
+  validate: isSeoOverview,
+});
+
+export const getCachedSeoOverview = () => seoOverviewCache.read();
+
+export async function getSeoOverview(options?: { force?: boolean }) {
+  if (!options?.force) {
+    const cached = getCachedSeoOverview();
+    if (cached) return cached;
+  }
+  const overview = await apiRequest<SeoOverview>("/seo/overview", { method: "GET" });
+  seoOverviewCache.write(overview);
+  return overview;
+}
+
+export function getSearchPerformance(p: SearchPerfParams) {
+  const params = new URLSearchParams();
+  for (const [key, value] of Object.entries(p)) {
+    if (value !== undefined) params.set(key, String(value));
+  }
+  return apiRequest<SeoSearchPerformance>(`/seo/search-performance?${params.toString()}`, {
+    method: "GET",
+  });
+}
+
+export function syncSearchPerformance(b?: { startDate?: string; endDate?: string }) {
+  return apiRequest(
+    "/seo/search-performance/sync",
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(b ?? {}),
+    },
+    { withCsrf: true }
+  );
+}
+
+export function submitSitemap(b?: { sitemapPath?: string }) {
+  return apiRequest(
+    "/seo/sitemap/submit",
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(b ?? {}),
+    },
+    { withCsrf: true }
+  );
 }

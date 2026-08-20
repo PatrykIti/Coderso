@@ -25,6 +25,7 @@ import {
   ENTRY_LIST_CACHE_GATED,
 } from "../services/content/entryListVisibilityProbe";
 import { resolvePublicSeoMetadata } from "../services/seo/seoService";
+import { buildSitemapXml, collectSitemapUrls } from "../services/seo/sitemapService";
 import { getSetting } from "../services/settings/settingsService";
 import type { ContentRouteSetting } from "../services/settings/settingsContracts";
 import { getActiveThemeProfile } from "../services/themes/themeProfileService";
@@ -314,6 +315,31 @@ export async function handlePublicRequest(req: Request) {
     },
     security.rateLimit
   );
+  // Public SEO surfaces (TASK-493-02-L01): /sitemap.xml and /robots.txt are
+  // dispatched before the HTML cache read so they never collide with cached
+  // page bodies. Sitemap generation is best-effort: a DB failure degrades to a
+  // valid empty urlset instead of a 500 (a broken sitemap must not take the
+  // public site down).
+  if (url.pathname === "/sitemap.xml") {
+    try {
+      const entries = await collectSitemapUrls();
+      const xml = buildSitemapXml(entries, url.origin);
+      return new Response(xml, {
+        headers: { "Content-Type": "application/xml; charset=utf-8" },
+      });
+    } catch (error) {
+      console.warn("sitemap_generation_failed", error);
+      return new Response(buildSitemapXml([], url.origin), {
+        headers: { "Content-Type": "application/xml; charset=utf-8" },
+      });
+    }
+  }
+  if (url.pathname === "/robots.txt") {
+    const body = `User-agent: *\nAllow: /\nSitemap: ${url.origin}/sitemap.xml\n`;
+    return new Response(body, {
+      headers: { "Content-Type": "text/plain; charset=utf-8" },
+    });
+  }
   if (url.pathname === "/api/search") {
     const query = url.searchParams.get("q") ?? "";
     const limitRaw = url.searchParams.get("limit");
