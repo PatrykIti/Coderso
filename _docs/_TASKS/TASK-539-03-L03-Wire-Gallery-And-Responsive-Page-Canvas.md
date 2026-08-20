@@ -52,6 +52,16 @@ Also own the cohesive split of `tests/vitest/ui/page-editor-v2-flow.test.tsx` in
 - `page-editor-v2-settings-flow.test.tsx`
 - optional focused `pageEditorV2FlowHarness.tsx`, only for shared render/host fixtures.
 
+Implementation note (landed with this leaf): when `PageEditorToolbar.tsx` crossed the
+1,000-line gate during wiring, the canonical registry-block-target resolution was
+extracted as a further cohesive split into the new pure module
+`core/services/pages/pageEditorRegistryBlockTarget.ts` (with focused unit suite
+`tests/vitest/pages/page-editor-registry-block-target.test.ts`), per the line-gate
+split mandate below. It is Bun-free, imports only page-domain owners
+(`pageBlockPaths`, `pageBlockGridPlacement`, `pageDocumentV2`), and is consumed only
+by this leaf's `PageEditorToolbar.tsx`; module-boundary, `check:admin-boundary`, and
+`check:admin-bundle` all pass with it in place.
+
 Each suite must run independently. Extract by behavior, not arbitrary ranges; no
 generic dumping-ground helper. Test baseline is 6,813 lines (the flow suite); the
 PageEditor source baseline is the post-TASK-481 split facade + 7 modules, each
