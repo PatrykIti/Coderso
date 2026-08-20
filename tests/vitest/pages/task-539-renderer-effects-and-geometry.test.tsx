@@ -818,7 +818,7 @@ describe("stable facade and line receipts", () => {
       ["core/services/pages/pageResponsiveCssDeclarations.ts", 347],
       ["core/services/pages/pageResponsiveCssSection.ts", 257],
       ["core/services/pages/pageResponsiveCssBlock.ts", 441],
-      ["core/services/pages/pageResponsiveCssOrchestration.ts", 187],
+      ["core/services/pages/pageResponsiveCssOrchestration.ts", 188],
       ["core/services/pages/pageBlockRenderStyles.ts", 518],
       ["tests/vitest/pages/page-renderer-v2-facade.test.tsx", 439],
       ["tests/vitest/pages/page-renderer-v2-replica.test.tsx", 166],
