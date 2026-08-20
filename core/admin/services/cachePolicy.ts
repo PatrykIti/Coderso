@@ -50,6 +50,7 @@ export const cacheKeys = {
   menuDetail: (id: string) => `menus:detail:${id}`,
   seoList: "seo:list",
   seoDetail: (id: string) => `seo:detail:${id}`,
+  seoOverview: "seo:overview",
   searchRecent: "search:recent",
   searchResults: (queryKey: string) => `search:results:${queryKey}`,
   analyticsOverview: (rangeDays: number | string) => `analytics:overview:${rangeDays}`,

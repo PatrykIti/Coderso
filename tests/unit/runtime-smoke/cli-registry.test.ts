@@ -42,6 +42,33 @@ test("runtime smoke CLI accepts only the exact public shape", () => {
       "task-554-fast",
     ])
   ).toEqual({ command: "run", suite: "task-554", profile: "fast", session: "task-554-fast" });
+  expect(
+    parseRuntimeSmokeArgs([
+      "run",
+      "--suite",
+      "task-493",
+      "--profile",
+      "fast",
+      "--session",
+      "task-493-fast",
+    ])
+  ).toEqual({ command: "run", suite: "task-493", profile: "fast", session: "task-493-fast" });
+  expect(
+    parseRuntimeSmokeArgs([
+      "run",
+      "--suite",
+      "task-493",
+      "--profile",
+      "certification",
+      "--session",
+      "task-493-certification",
+    ])
+  ).toEqual({
+    command: "run",
+    suite: "task-493",
+    profile: "certification",
+    session: "task-493-certification",
+  });
 
   const invalid = [
     ["start", "--suite", "task-540", "--profile", "fast", "--session", "wf552-fast"],
@@ -58,7 +85,7 @@ test("runtime smoke CLI accepts only the exact public shape", () => {
   }
 });
 
-test("static registry reserves exactly thirteen fixed adapters", async () => {
+test("static registry reserves exactly fourteen fixed adapters", async () => {
   expect(staticSmokeRegistry.ids()).toEqual([
     "task-540",
     "task-547",
@@ -73,6 +100,7 @@ test("static registry reserves exactly thirteen fixed adapters", async () => {
     "task-511",
     "task-517",
     "task-467",
+    "task-493",
   ]);
   expect(staticSmokeRegistry.require("task-540").adapterPath).toBe(
     "scripts/runtime-smoke/adapters/task-540.ts"
@@ -95,4 +123,10 @@ test("static registry reserves exactly thirteen fixed adapters", async () => {
   const task467 = await staticSmokeRegistry.require("task-467").loadFixedAdapter(process.cwd());
   expect(task467.suiteId).toBe("task-467");
   expect(task467.supportedProfiles).toEqual(["fast"]);
+  expect(staticSmokeRegistry.require("task-493").adapterPath).toBe(
+    "scripts/runtime-smoke/adapters/task-493.ts"
+  );
+  const task493 = await staticSmokeRegistry.require("task-493").loadFixedAdapter(process.cwd());
+  expect(task493.suiteId).toBe("task-493");
+  expect(task493.supportedProfiles).toEqual(["fast", "certification"]);
 });

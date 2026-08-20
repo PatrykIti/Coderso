@@ -1,5 +1,14 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { AlertTriangle, CheckCircle2, Filter, Gauge, Search, SearchCheck } from "lucide-react";
+import {
+  AlertTriangle,
+  CheckCircle2,
+  Filter,
+  Gauge,
+  RefreshCw,
+  Search,
+  SearchCheck,
+  Send,
+} from "lucide-react";
 import { toast } from "sonner";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -10,8 +19,12 @@ import { isApiClientError } from "@/services/apiClient";
 import { cacheKeys } from "@/services/cachePolicy";
 import {
   getCachedSeo,
+  getCachedSeoOverview,
+  getSeoOverview,
   listSeoCached,
   runSeoAudit,
+  submitSitemap,
+  syncSearchPerformance,
   updateSeo,
   type SeoAuditCheckId,
   type SeoDocumentItem,
@@ -20,9 +33,11 @@ import { AdminShell } from "@/ui/layouts/AdminShell";
 import { PageHeader } from "@/ui/shared/PageHeader";
 import { StatCard } from "@/ui/shared/StatCard";
 import { subscribeCacheEvents } from "@/utils/cacheBus";
+import type { SeoOverview } from "../../../services/seo/seoTypes";
 
 import { SeoAuditDialog } from "./SeoAuditDialog";
 import { SeoDrawer } from "./SeoDrawer";
+import { SeoPerformancePanel } from "./SeoPerformancePanel";
 import { SeoTable, type SeoItem } from "./SeoTable";
 
 type SeoFilter = "all" | "optimized" | "needs-work" | "critical";
@@ -33,6 +48,11 @@ const filterOptions: Array<{ value: SeoFilter; label: string }> = [
   { value: "needs-work", label: "Needs work" },
   { value: "critical", label: "Critical" },
 ];
+
+// Silent failure boundary for the optional mount-time overview fetch: the list
+// still renders when the overview request fails (matches the page's existing
+// error-isolation behaviour for background reads).
+const noop = () => undefined;
 
 function getHealth(item: SeoItem): Exclude<SeoFilter, "all"> {
   if (item.score >= 80) return "optimized";
@@ -102,6 +122,12 @@ export function SeoManagerPage() {
   const [isAuditing, setIsAuditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // TASK-493-05-L01: real overview data (read-through cache) + write actions.
+  const [overview, setOverview] = useState<SeoOverview | null>(getCachedSeoOverview);
+  const [isSeoActionRunning, setIsSeoActionRunning] = useState(false);
+  const [seoWriteDisabled, setSeoWriteDisabled] = useState(false);
+  const [gscHint, setGscHint] = useState<string | null>(null);
+  const [performanceRefreshKey, setPerformanceRefreshKey] = useState(0);
 
   const refresh = useCallback(async (options?: { force?: boolean; background?: boolean }) => {
     if (!options?.background) setIsLoading(true);
@@ -130,6 +156,18 @@ export function SeoManagerPage() {
       active = false;
     };
   }, [initialState.hasCache, refresh]);
+
+  useEffect(() => {
+    let active = true;
+    void getSeoOverview()
+      .then((value) => {
+        if (active) setOverview(value);
+      })
+      .catch(noop);
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const activeSelectedId =
     selectedId && items.some((item) => item.id === selectedId) ? selectedId : null;
@@ -269,6 +307,59 @@ export function SeoManagerPage() {
     }
   };
 
+  // TASK-493-05-L01: shared handler for the SEO write actions (sync + sitemap
+  // submit). Both POSTs require settings:write server-side, so a 403 disables
+  // the pair and a 409 gsc_not_configured surfaces the connect hint; other
+  // failures reuse the page's existing error/toast pattern.
+  const runSeoWriteAction = useCallback(
+    async (action: () => Promise<unknown>, successMessage: string, failureMessage: string) => {
+      setIsSeoActionRunning(true);
+      setError(null);
+      setGscHint(null);
+      try {
+        await action();
+        await refresh({ force: true });
+        setOverview(await getSeoOverview({ force: true }));
+        setPerformanceRefreshKey((key) => key + 1);
+        toast.success(successMessage);
+      } catch (err) {
+        if (isApiClientError(err)) {
+          if (err.status === 403) {
+            setSeoWriteDisabled(true);
+            toast.error("You don't have permission to sync or submit SEO data.");
+          } else if (err.status === 409 && err.code === "gsc_not_configured") {
+            setGscHint("Connect Google Search Console in Settings → Integrations.");
+            toast.error(err.message);
+          } else {
+            setError(err.message);
+            toast.error(err.message);
+          }
+        } else {
+          setError(failureMessage);
+          toast.error(failureMessage);
+        }
+      } finally {
+        setIsSeoActionRunning(false);
+      }
+    },
+    [refresh]
+  );
+
+  const onSync = useCallback(
+    () =>
+      runSeoWriteAction(
+        syncSearchPerformance,
+        "Search performance synced.",
+        "Failed to sync search performance."
+      ),
+    [runSeoWriteAction]
+  );
+
+  const onSubmitSitemap = useCallback(
+    () => runSeoWriteAction(submitSitemap, "Sitemap submitted.", "Failed to submit the sitemap."),
+    [runSeoWriteAction]
+  );
+
   return (
     <AdminShell activeHref="/admin/seo" showSearch={false} breadcrumbs={["Admin", "SEO Manager"]}>
       <div className="mx-auto flex max-w-6xl flex-col gap-6">
@@ -283,6 +374,30 @@ export function SeoManagerPage() {
               </Badge>
               <Button
                 className="gap-1.5"
+                variant="outline"
+                onClick={onSync}
+                disabled={isSeoActionRunning || seoWriteDisabled}
+                title={
+                  seoWriteDisabled ? "You don't have permission to modify SEO settings." : undefined
+                }
+              >
+                <RefreshCw className="size-4" />
+                Sync performance
+              </Button>
+              <Button
+                className="gap-1.5"
+                variant="outline"
+                onClick={onSubmitSitemap}
+                disabled={isSeoActionRunning || seoWriteDisabled}
+                title={
+                  seoWriteDisabled ? "You don't have permission to modify SEO settings." : undefined
+                }
+              >
+                <Send className="size-4" />
+                Submit sitemap
+              </Button>
+              <Button
+                className="gap-1.5"
                 onClick={() => setAuditDialogOpen(true)}
                 disabled={isAuditing}
               >
@@ -293,13 +408,28 @@ export function SeoManagerPage() {
           }
         />
 
-        {/* Stat row — derived from the loaded SEO items (real fields only). */}
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        {/* Stat row — the 479-26-L02 4-up (Avg score / Issues / Optimized pages /
+            Warnings) stays as-is; 05-L01 adds a fifth card from real overview data. */}
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5">
           <StatCard label="Avg. score" value={`${seoStats.avg}/100`} icon={<Gauge />} />
           <StatCard label="Issues" value={seoStats.issues} icon={<AlertTriangle />} />
           <StatCard label="Optimized pages" value={seoStats.optimized} icon={<CheckCircle2 />} />
           <StatCard label="Warnings" value={seoStats.warnings} icon={<AlertTriangle />} />
+          <StatCard
+            label="Indexed pages"
+            value={overview?.indexedPages ?? 0}
+            icon={<SearchCheck />}
+          />
         </div>
+
+        {gscHint ? (
+          <Alert>
+            <AlertTitle>Google Search Console not connected</AlertTitle>
+            <AlertDescription>{gscHint}</AlertDescription>
+          </Alert>
+        ) : null}
+
+        <SeoPerformancePanel refreshKey={performanceRefreshKey} />
 
         <div className="flex flex-col gap-3 rounded-2xl border border-border bg-card p-3 shadow-soft lg:flex-row lg:items-center lg:justify-between">
           <div className="flex flex-wrap items-center gap-2">

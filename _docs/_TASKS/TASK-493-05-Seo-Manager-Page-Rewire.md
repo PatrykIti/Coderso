@@ -6,20 +6,23 @@
 **Category:** Tools / SEO
 **Estimated Effort:** Medium
 **Dependencies:** TASK-493-04-L02
-**Status:** ⏳ To Do
-**Started:** `<YYYY-MM-DD>`
-**Completed:** `<YYYY-MM-DD>`
+**Status:** ✅ Done
+**Started:** 2026-08-19
+**Completed:** 2026-08-19
 
 ---
 
 ## Overview
 
 Wire `SeoManagerPage` and `seoClient` to the real overview + search-performance
-endpoints so the admin shows actual indexed-pages / impressions / clicks /
-queries / sitemap status instead of the heuristic placeholder, and add a
-"Submit sitemap" / "Sync performance" affordance. Must preserve the existing
-list + cache contract (`cacheKeys.seoList` / `cacheKeys.seoDetail`) that the
-TASK-479 reskin also relies on.
+endpoints so the admin shows real stats (impressions / clicks / queries /
+sitemap status) instead of the heuristic placeholder stats, and ADDS a new
+"Indexed pages" `StatCard` backed by `overview.indexedPages` (the
+TASK-479-26-L02 reskin's 4-up is Avg score / Issues / Optimized pages /
+Warnings — no Indexed pages card exists today, so this is additive, not a
+relabel), plus "Submit sitemap" / "Sync performance" affordances. Must preserve
+the existing list + cache contract (`cacheKeys.seoList` / `cacheKeys.seoDetail`)
+that the TASK-479 reskin also relies on.
 
 ---
 
@@ -27,7 +30,7 @@ TASK-479 reskin also relies on.
 
 | LNN | Title | Lane | Status |
 |-----|-------|------|--------|
-| L01 | `seoClient` + `SeoManagerPage` real-data rewire | Vitest (ui-integration) | ⏳ To Do |
+| L01 | `seoClient` + `SeoManagerPage` real-data rewire | Vitest (ui-integration) | ✅ Done |
 
 ---
 

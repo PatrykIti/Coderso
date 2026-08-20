@@ -110,7 +110,7 @@ afterEach(() => {
   document.body.innerHTML = "";
 });
 
-test("derives the stat row from seeded SEO data and drops the unbacked Indexed pages stat", async () => {
+test("derives the stat row from seeded SEO data and shows the TASK-493 Indexed pages stat (0 without overview)", async () => {
   seed();
   const view = mount(<SeoManagerPage />);
   try {
@@ -119,7 +119,9 @@ test("derives the stat row from seeded SEO data and drops the unbacked Indexed p
     // avg = round((90 + 40) / 2) = 65, derived from the seed (not a fabricated value).
     expect(view.container.textContent).toContain("Avg");
     expect(view.container.textContent).toContain("65/100");
-    expect(view.container.textContent).not.toContain("Indexed pages");
+    // TASK-493-05-L01 adds a fifth StatCard backed by the real overview; this
+    // test has no overview seed, so the card renders with the zero fallback.
+    expect(view.container.textContent).toContain("Indexed pages");
     // meta badges derived from metaStatus (optimized / missing).
     expect(view.container.textContent).toContain("Optimized");
     expect(view.container.textContent).toContain("Missing");

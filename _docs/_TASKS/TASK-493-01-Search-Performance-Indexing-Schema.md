@@ -6,9 +6,9 @@
 **Category:** Tools / SEO
 **Estimated Effort:** Medium
 **Dependencies:** TASK-027 (SEO Manager core)
-**Status:** ⏳ To Do
-**Started:** `<YYYY-MM-DD>`
-**Completed:** `<YYYY-MM-DD>`
+**Status:** ✅ Done
+**Started:** 2026-08-19
+**Completed:** 2026-08-19
 
 ---
 
@@ -16,13 +16,13 @@
 
 Add the persistence layer the pipeline reads from and writes to: indexed-page
 status, per-URL search metrics, top search queries, and sitemap submission
-status. These tables live next to `seoDocuments` in `core/db/schema.ts:988` and
-are owned by a new domain types module under `core/services/seo/`. The existing
+status. These tables live next to `seoDocuments` in `core/db/tables/seo.ts` and
+are owned by a new domain types module under `core/services/seo/`. The `core/db/schema.ts` facade needs no change (it already re-exports `./tables/seo`). The existing
 `seo_documents` table is **not** changed.
 
 Because this adds tables, it carries **full Drizzle migration artifacts** (SQL +
-snapshot + journal entry). The next migration index is **0064** (latest on disk
-is `core/db/migrations/0063_yummy_glorian.sql`).
+snapshot + journal entry). The next migration index is **0079** (latest on disk
+is `core/db/migrations/0078_backup_users_staging.sql`).
 
 ---
 
@@ -30,8 +30,8 @@ is `core/db/migrations/0063_yummy_glorian.sql`).
 
 | LNN | Title | Lane | Status |
 |-----|-------|------|--------|
-| L01 | Schema tables + domain types/enums/`normalize*` | Vitest | ⏳ To Do |
-| L02 | Full migration artifacts (0064 SQL + snapshot + journal) + apply smoke | Bun | ⏳ To Do |
+| L01 | Schema tables + domain types/enums/`normalize*` | Vitest | ✅ Done |
+| L02 | Full migration artifacts (0079 SQL + snapshot + journal) + apply smoke | Bun | ✅ Done |
 
 ---
 

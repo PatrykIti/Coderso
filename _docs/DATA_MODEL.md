@@ -543,6 +543,80 @@ Migration: `0064_analytics_traffic_tables` (+ `meta/0064_snapshot.json`,
 `meta/_journal.json` idx-64 version-7). Deleting a session cascades to its
 pageviews so retention pruning removes both without FK violations.
 
+## SEO indexing & search-performance tables (TASK-493)
+
+Google Search Console (GSC) pipeline tables. Data is pulled server-side by
+`gscSyncService` (search analytics + URL inspection) and
+`sitemapSubmissionService` (sitemap submission/status); the aggregation layer
+(`seoPerformanceService`) reads them for the admin SEO Manager. GSC credentials
+never touch these tables — only sanitized URLs, counts, states, and the
+own-origin feedpath. Migration: `0079_hot_shadowcat` (+
+`meta/0079_snapshot.json`, `meta/_journal.json`).
+
+`seo_indexed_pages`
+- id (uuid, pk)
+- url (text, not null) — public page URL, unique
+- target_type (text, nullable) — `"page" | "entry" | null` (unmatched)
+- target_id (uuid, nullable)
+- coverage_state (text, nullable) — GSC coverageState (e.g. "Submitted and indexed")
+- indexing_state (text, nullable) — `INDEXED | NOT_INDEXED | EXCLUDED | UNKNOWN`
+  (normalized via `normalizeIndexingState`)
+- verdict (text, nullable) — GSC verdict: `PASS | FAIL | NEUTRAL`
+- robots_state (text, nullable)
+- google_canonical (text, nullable)
+- user_canonical (text, nullable)
+- last_crawled_at (timestamp, nullable)
+- last_fetched_at (timestamp, nullable)
+- synced_at (timestamp, not null, default now)
+- created_at (timestamp, not null, default now)
+- updated_at (timestamp, not null, default now)
+- Indexes: unique `seo_indexed_pages_url_idx` (url); `seo_indexed_pages_target_idx`
+  (target_type, target_id); `seo_indexed_pages_state_idx` (indexing_state)
+
+`seo_search_metrics`
+- id (uuid, pk)
+- url (text, not null)
+- date (timestamp, not null) — day bucket (UTC midnight)
+- clicks (integer, not null, default 0)
+- impressions (integer, not null, default 0)
+- ctr (numeric, nullable) — 0..1
+- position (numeric, nullable) — avg position
+- synced_at (timestamp, not null, default now)
+- created_at (timestamp, not null, default now)
+- Indexes: unique `seo_search_metrics_url_date_idx` (url, date);
+  `seo_search_metrics_date_idx` (date)
+
+`seo_search_queries`
+- id (uuid, pk)
+- url (text, not null) — always present (03-L02 syncs date+page+query)
+- query (text, not null)
+- date (timestamp, not null)
+- clicks (integer, not null, default 0)
+- impressions (integer, not null, default 0)
+- ctr (numeric, nullable)
+- position (numeric, nullable)
+- synced_at (timestamp, not null, default now)
+- created_at (timestamp, not null, default now)
+- Indexes: unique `seo_search_queries_url_query_date_idx` (url, query, date);
+  `seo_search_queries_query_idx` (query)
+
+`seo_sitemap_submissions`
+- id (uuid, pk)
+- sitemap_url (text, not null) — own-origin feedpath (e.g. `/sitemap.xml`)
+- source (text, not null, default `google`) — submission target
+- status (text, not null, default `pending`) — `pending | submitted | processed | error`
+- is_pending (boolean, not null, default true)
+- url_count (integer, nullable)
+- warnings (integer, not null, default 0)
+- errors (integer, not null, default 0)
+- last_submitted_at (timestamp, nullable)
+- last_downloaded_at (timestamp, nullable)
+- last_error_message (text, nullable) — redacted, machine-readable error only
+- created_at (timestamp, not null, default now)
+- updated_at (timestamp, not null, default now)
+- Indexes: unique `seo_sitemap_submissions_source_url_idx` (source, sitemap_url)
+  — re-submits upsert in place, one row per source + feedpath
+
 ## Backups
 
 `backups`

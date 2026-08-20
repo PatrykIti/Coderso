@@ -6,9 +6,9 @@
 **Category:** Tools / SEO
 **Estimated Effort:** Large
 **Dependencies:** TASK-493-01, Integrations registry + secret store
-**Status:** ⏳ To Do
-**Started:** `<YYYY-MM-DD>`
-**Completed:** `<YYYY-MM-DD>`
+**Status:** ✅ Done
+**Started:** 2026-08-19
+**Completed:** 2026-08-19
 
 ---
 
@@ -31,8 +31,8 @@ and `getIntegrationRuntimeConfig(id)` decrypts **server-side only**.
 
 | LNN | Title | Lane | Status |
 |-----|-------|------|--------|
-| L01 | GSC credential definition + server-side auth client | Bun | ⏳ To Do |
-| L02 | GSC data-sync service + sync route (indexed pages + analytics) | Bun | ⏳ To Do |
+| L01 | GSC credential definition + server-side auth client | Bun | ✅ Done |
+| L02 | GSC data-sync service (indexed pages + analytics) | Bun | ✅ Done |
 
 ---
 
@@ -48,6 +48,7 @@ and `getIntegrationRuntimeConfig(id)` decrypts **server-side only**.
 
 - L01 — Bun: registry definition shape, token minting against a stubbed Google
   token endpoint, credential-never-to-client.
-- L02 — Bun: sync route auth/RBAC/CSRF, outbound GSC fetch (stubbed), row upserts
-  into the 01 tables, secret-never-to-client/log.
+- L02 — Bun: sync service outbound GSC fetch (stubbed, Search Analytics +
+  bounded URL Inspection), row upserts into the 01 tables, window clamp. Route
+  auth/RBAC/CSRF and secret-never-to-client assertions land in 04-L02.
 - All outbound-fetch + secret-handling flows are **Bun lane**.

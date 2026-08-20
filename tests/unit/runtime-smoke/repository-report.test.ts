@@ -112,4 +112,19 @@ test("report serializes new smoke failure codes without error messages or causes
     expect(encoded).toContain(code);
     expect(encoded).not.toContain(secret);
   }
+  for (const code of ["smoke_authentication_failed"] as const) {
+    const report = createRuntimeSmokeReport({
+      request: { command: "run", suite: "task-493", profile: "fast", session: "task-493-fast" },
+      adapter: null,
+      primary: new SmokeError(code, secret, { cause: new Error(secret) }),
+      cleanup: { pass: true, failures: [] },
+      timings: [],
+      processCounters: {},
+      snapshots: 1,
+    });
+    const encoded = encodeReportJson(report);
+    expect(report.failures).toEqual([{ code }]);
+    expect(encoded).toContain(code);
+    expect(encoded).not.toContain(secret);
+  }
 });

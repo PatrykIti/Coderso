@@ -3108,6 +3108,132 @@ description, canonical URL, and robots directives, then falls back to published
 page SEO data and page title. Detail-page explicit SEO title/description field
 mappings keep precedence over entry SEO document fallbacks.
 
+### SEO overview / search performance / sitemap (TASK-493)
+
+Permissions: `content:read` (reads), `settings:write` (sync + sitemap submit).
+All endpoints are internal admin API calls behind the existing session cookie;
+GETs use the `admin_read` rate-limit bucket, POSTs use `admin_write` and require
+CSRF. Unknown query/body keys are rejected with `validation_error`.
+
+- `GET /seo/overview`
+- `GET /seo/search-performance?targetId=&startDate=&endDate=&limit=`
+- `POST /seo/search-performance/sync` — body `{ "startDate": "YYYY-MM-DD", "endDate": "YYYY-MM-DD" }` (both optional)
+- `GET /seo/sitemap`
+- `POST /seo/sitemap/submit` — body `{ "sitemapPath": "/sitemap.xml" }` (optional, defaults to `/sitemap.xml`)
+
+`GET /seo/overview` response (zeroed totals when tables are empty, never
+throws):
+
+```json
+{
+  "indexedPages": 12,
+  "totalPages": 14,
+  "notIndexedPages": 2,
+  "totalImpressions": 4820,
+  "totalClicks": 310,
+  "averageCtr": 0.064,
+  "averagePosition": 9.4,
+  "averageScore": 78,
+  "sitemap": {
+    "status": "submitted",
+    "urlCount": 42,
+    "lastSubmittedAt": "2026-08-19T09:00:00Z"
+  }
+}
+```
+
+`GET /seo/search-performance` response — `range` echoes the resolved (clamped)
+window; `series` is ascending by UTC day; `topQueries` is ranked by clicks
+(ties: impressions, then query) and truncated to `limit` (default 10, clamped to
+`[1, 100]`). `targetId` narrows metrics/queries to the target's URL/slug path
+keys:
+
+```json
+{
+  "range": { "startDate": "2026-07-23", "endDate": "2026-08-19" },
+  "totals": { "totalImpressions": 4820, "totalClicks": 310, "averageCtr": 0.064, "averagePosition": 9.4 },
+  "series": [
+    { "date": "2026-07-23", "clicks": 8, "impressions": 160 },
+    { "date": "2026-07-24", "clicks": 11, "impressions": 175 }
+  ],
+  "topQueries": [
+    { "query": "coderso pricing", "clicks": 22, "impressions": 340, "ctr": 0.065, "position": 3.8 }
+  ]
+}
+```
+
+Malformed, impossible, or future `startDate`/`endDate` values throw
+`gsc_sync_window_invalid` (400); a start earlier than GSC's 16-month retention
+is clamped forward to the retention boundary. `limit` is clamped server-side.
+
+`POST /seo/search-performance/sync` pulls the GSC Search Analytics window
+(default: last 28 inclusive days ending today) into `seo_search_metrics` /
+`seo_search_queries`, then runs the bounded URL Inspection pass over the
+sitemap URLs into `seo_indexed_pages` (max 50 URLs per run, clamped). Response:
+
+```json
+{ "metrics": 128, "queries": 342 }
+```
+
+`GET /seo/sitemap` refreshes GSC sitemap status best-effort (a GSC failure
+degrades to local rows) and returns the latest submission rows, newest update
+first, bounded to 50:
+
+```json
+[
+  {
+    "sitemapUrl": "/sitemap.xml",
+    "source": "google",
+    "status": "submitted",
+    "urlCount": 42,
+    "warnings": 0,
+    "errors": 0,
+    "lastSubmittedAt": "2026-08-19T09:00:00Z",
+    "lastErrorMessage": null
+  }
+]
+```
+
+`POST /seo/sitemap/submit` validates `sitemapPath` as an own-origin relative
+path only — absolute URLs, protocol-relative URLs, backslash tricks, and
+control characters are rejected with `sitemap_path_invalid` (400), so the
+outbound GSC feedpath can never point at an arbitrary host (no SSRF). A
+successful PUT records a `submitted` row (`lastSubmittedAt` set); a failed PUT
+records an `error` row with a redacted, machine-readable `lastErrorMessage`
+and throws `sitemap_submit_failed` (502). Response:
+
+```json
+{
+  "sitemapUrl": "/sitemap.xml",
+  "source": "google",
+  "status": "submitted",
+  "urlCount": null,
+  "warnings": 0,
+  "errors": 0,
+  "lastSubmittedAt": "2026-08-19T09:00:00Z",
+  "lastErrorMessage": null
+}
+```
+
+Error mapping (`mapSeoError`): `gsc_not_configured` → 409,
+`gsc_credential_invalid` → 400, `gsc_sync_window_invalid` → 400,
+`gsc_request_failed:<status>` → 502, `sitemap_path_invalid` → 400,
+`sitemap_submit_failed` → 502, `validation_error` → 400, `csrf_invalid` /
+`csrf_expired` → 403.
+
+### Public sitemap and robots
+
+Public surfaces served without `/admin` (rate-limit bucket `public_read`):
+
+- `GET /sitemap.xml` → XML urlset generated from published pages (with a
+  published body) and published, public-visibility content entries whose type
+  has an enabled content route. Targets whose SEO document robots directives
+  contain `noindex` are skipped. Generation is best-effort: a DB failure
+  degrades to a valid empty urlset instead of a 500. Entries are
+  de-duplicated by URL and ordered by lastmod descending, then loc ascending.
+- `GET /robots.txt` → `User-agent: *`, `Allow: /`, and a `Sitemap:`
+  directive pointing at `<origin>/sitemap.xml`.
+
 ---
 
 ## Analytics (v1)

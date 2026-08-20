@@ -1,0 +1,82 @@
+{
+  "cleanup": { "failures": [], "pass": true },
+  "consoleErrors": [],
+  "failures": [],
+  "pass": true,
+  "processes": {
+    "git": 2,
+    "playwright-close": 1,
+    "playwright-open": 1,
+    "playwright-run-code": 29,
+    "playwright-state-load": 4,
+    "task493-dev-host": 1,
+    "task493-worker-db": 1
+  },
+  "profile": "certification",
+  "scenarios": [
+    { "elapsedMs": 9918, "id": "sitemap-xml-served", "pass": true },
+    { "elapsedMs": 8247, "id": "robots-txt-sitemap-directive", "pass": true },
+    { "elapsedMs": 17057, "id": "seo-overview-real-data", "pass": true },
+    { "elapsedMs": 23153, "id": "sitemap-submit-status", "pass": true },
+    { "elapsedMs": 19266, "id": "indexed-pages-sync", "pass": true },
+    { "elapsedMs": 18251, "id": "search-performance-read", "pass": true },
+    { "elapsedMs": 24089, "id": "seo-manager-fifth-card", "pass": true }
+  ],
+  "schemaVersion": 1,
+  "screenshots": [
+    {
+      "path": "_docs/_workflows/_smoke/task-493/task-493-certification/01-sitemap-xml-served.png",
+      "sha256": "2a6e179897ee98a07cb46fdfa61808d0334d45941a933894dd8b00b23459e52a"
+    },
+    {
+      "path": "_docs/_workflows/_smoke/task-493/task-493-certification/02-robots-txt-sitemap-directive.png",
+      "sha256": "9765ca10f1261f3d66efa07e8d37d2fbfaa1fb9c424417032e4d0cf77abc3a35"
+    },
+    {
+      "path": "_docs/_workflows/_smoke/task-493/task-493-certification/03-seo-overview-real-data.png",
+      "sha256": "7219d7c481892990122dd70275d8689b1b7df181b849deef6fcb46b5272519ea"
+    },
+    {
+      "path": "_docs/_workflows/_smoke/task-493/task-493-certification/04-sitemap-submit-status.png",
+      "sha256": "6878ad7e1b3c0f8e68f7b344ad204639410a472f1e445be778ff1f9620743d43"
+    },
+    {
+      "path": "_docs/_workflows/_smoke/task-493/task-493-certification/05-indexed-pages-sync.png",
+      "sha256": "d7ce396a70a2f972f53e1cc09ed18f46fc738a0e8b33025497ee50f7a1fcf5fe"
+    },
+    {
+      "path": "_docs/_workflows/_smoke/task-493/task-493-certification/06-search-performance-read.png",
+      "sha256": "fc7b6f99c93e671a85c6ab2a042e7446148e803fb05420e1bbceb42ee305f5d8"
+    },
+    {
+      "path": "_docs/_workflows/_smoke/task-493/task-493-certification/07-seo-manager-fifth-card.png",
+      "sha256": "d7ce396a70a2f972f53e1cc09ed18f46fc738a0e8b33025497ee50f7a1fcf5fe"
+    }
+  ],
+  "serverUp": true,
+  "session": "task-493-certification",
+  "snapshots": 2,
+  "suiteCleanup": {
+    "databaseBatches": 31,
+    "fixturesAbsent": true,
+    "identitiesAbsent": true,
+    "pageErrors": 0,
+    "repositorySnapshots": 2,
+    "rows": 280,
+    "seoIndexedPagesRemoved": 28,
+    "seoSearchMetricsRemoved": 28,
+    "seoSearchQueriesRemoved": 28,
+    "seoSitemapSubmissionsRemoved": 28,
+    "settingsRestored": true,
+    "statements": 55,
+    "workerRequests": 31,
+    "workerStarts": 1
+  },
+  "suiteId": "task-493",
+  "timings": [
+    { "count": 1, "elapsedMs": 1, "failed": 0, "kind": "cleanup", "name": "all" },
+    { "count": 1, "elapsedMs": 668, "failed": 0, "kind": "snapshot", "name": "task493-after" },
+    { "count": 1, "elapsedMs": 425, "failed": 0, "kind": "snapshot", "name": "task493-before" },
+    { "count": 1, "elapsedMs": 146675, "failed": 0, "kind": "suite", "name": "task-493" }
+  ]
+}

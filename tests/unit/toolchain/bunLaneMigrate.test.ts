@@ -35,15 +35,16 @@ test("splitStatements trims whitespace and keeps single-chunk files intact", () 
   expect(splitStatements("")).toEqual([]);
 });
 
-test("readJournal returns 77 entries with strictly increasing idx and unique tags", async () => {
+test("readJournal returns 78 entries with strictly increasing idx and unique tags", async () => {
   const journal = await readJournal();
   // Live journal: 0073_smiling_ser_duncan (2026-08-16), 0075_form_submissions_export_cursor,
-  // 0076_content_revisions_version_uniq and 0078_backup_users_staging appended by
-  // concurrent streams. Concurrent agents allocate `idx` from the live journal,
-  // so `idx` is strictly increasing (sorted order) but not equal to the array
-  // index — a removed racing migration can leave a gap. The applier iterates
-  // entries in array order and only consumes `tag`.
-  expect(journal.entries.length).toBe(77);
+  // 0076_content_revisions_version_uniq, 0078_backup_users_staging and
+  // 0079_hot_shadowcat (TASK-493) appended by concurrent streams. Concurrent
+  // agents allocate `idx` from the live journal, so `idx` is strictly
+  // increasing (sorted order) but not equal to the array index — a removed
+  // racing migration can leave a gap. The applier iterates entries in array
+  // order and only consumes `tag`.
+  expect(journal.entries.length).toBe(78);
   const tags = new Set<string>();
   journal.entries.forEach((entry, index) => {
     if (index > 0) {
@@ -52,7 +53,7 @@ test("readJournal returns 77 entries with strictly increasing idx and unique tag
     expect(entry.tag.length).toBeGreaterThan(0);
     tags.add(entry.tag);
   });
-  expect(tags.size).toBe(77);
+  expect(tags.size).toBe(78);
 });
 
 test("rewritePublicReferences retargets public-qualified REFERENCES to the worker schema", () => {

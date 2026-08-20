@@ -6,9 +6,9 @@
 **Category:** Tools / SEO
 **Estimated Effort:** Medium
 **Dependencies:** TASK-493-01
-**Status:** ⏳ To Do
-**Started:** `<YYYY-MM-DD>`
-**Completed:** `<YYYY-MM-DD>`
+**Status:** ✅ Done
+**Started:** 2026-08-19
+**Completed:** 2026-08-19
 
 ---
 
@@ -21,18 +21,18 @@
   - `core/services/seo/sitemapService.ts` (**create** — pure builder
     `buildSitemapXml(entries)` + a DB-backed `collectSitemapUrls()` that reads
     `pages`/`contentEntries` and `seo_documents` robots via the existing
-    `resolvePublicSeoMetadata` (`seoService.ts:365`)).
+    `resolvePublicSeoMetadata` (`seoService.ts:454`)).
   - `core/server/publicSite.tsx` (**extend** — add `/sitemap.xml` and
     `/robots.txt` branches inside `handlePublicRequest` near the `/api/search`
-    dispatch at `:1479`, reusing the existing `public_read` `checkRateLimit`
-    already applied at `:1471` and the `new Response(...)` pattern).
+    dispatch at `:317`, reusing the existing `public_read` `checkRateLimit`
+    already applied at `:309` and the `new Response(...)` pattern).
 - **Source-of-truth docs:** `_docs/SEARCH_SPEC.md`, `_docs/CMS_API.md` (document
   the public `/sitemap.xml`), `_docs/SECURITY_SPEC.md` (public read surface).
 - **Out of scope:** sitemap **submission** to Google (L02); sitemap index
   splitting for >50k URLs (single sitemap is sufficient for current scale — note
   as a follow-on); image/video/news sitemap extensions.
 
-> **Shared boundary `core/server/publicSite.tsx`** is also extended by TASK-483/486/491/493 — additive injection only; reuse the existing forms/booking public-write nonce evaluator, do not invent a competing one-off nonce.
+> **Shared boundary `core/server/publicSite.tsx`** is also extended by TASK-493 (additive injection only; TASK-483/486/491 no longer co-write this file). S3/S4/S6 publicSite writers are separate open streams — additive injection only. Reuse the existing forms/booking public-write nonce evaluator, do not invent a competing one-off nonce.
 
 ---
 
@@ -84,7 +84,7 @@ export async function collectSitemapUrls(): Promise<SitemapEntry[]> {
 ```
 
 ```ts
-// core/server/publicSite.tsx — inside handlePublicRequest, after :1479
+// core/server/publicSite.tsx — inside handlePublicRequest, after :317
 if (url.pathname === "/sitemap.xml") {
   const entries = await collectSitemapUrls();
   const xml = buildSitemapXml(entries, url.origin);
