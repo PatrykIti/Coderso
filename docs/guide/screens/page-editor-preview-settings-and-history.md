@@ -187,6 +187,37 @@ The breadcrumb/status strip also matters:
        the selection with its `Base` / `Override` / `Inherited` state and a
        `Reset` action next to each overridden field. On Desktop the list is
        informational because desktop is the base.
+   - Building a gallery: insert the `Gallery` block from the command palette,
+     then open the `Content` panel and add media items. Each item has a media
+     picker, an `Alt text` field, a `Caption` field, and an optional
+     `Category`. Categories are short lowercase tags such as `kitchen` or
+     `living-room`; they power the filter chips on the published page when
+     `Filterable` is on, and the `Filter categories` field lists which tokens
+     the chips should offer. Alt text and captions help search engines and
+     screen readers, so fill them in for every image. Up to 120 items can
+     share one gallery. Save the draft, reopen the page later, and the items,
+     categories, and filter behavior come back exactly as you left them; after
+     `Publish`, the live page filters the same way.
+   - Sizing and placing blocks: blocks that sit directly on the section grid
+     can span extra columns or rows with the `Column span` / `Row span`
+     controls. Spans are per screen, so set them while editing Desktop,
+     Tablet, or Mobile to adapt the layout at real viewport widths. On narrow
+     screens, force a multi-column section into one column with `Stack
+     vertically`. Layered decorations use the layer position (X/Y) and order
+     (Z) fields; the published page applies the same spacing, layers, and
+     spans at each viewport.
+   - Responsive text: the `Typography` panel also accepts a custom font size
+     for the screen you are editing (for example a smaller heading on phones)
+     and a `Text transform` option (`None`, `Uppercase`, `Lowercase`, or
+     `Capitalize`) per screen. Choosing `None` turns inherited capitalization
+     off on that screen only.
+   - Scrolling text strips: a marquee (ticker) on a group block scrolls its
+     content, and `Seamless` mode loops without a visible gap. Direction,
+     speed, and seamless mode are set in the block's style controls. Content
+     that needs real page behavior — forms, saved-query filters and
+     collections, videos, embeds — always stays in a single copy even inside
+     a seamless strip, so the published page never duplicates a form, its
+     submit protections, or listing results.
 7. Save your work early with `Save draft`.
    Do this before opening preview if you want to validate the latest draft.
 8. Use undo/redo for local correction before saving, and use copy/paste when
@@ -247,6 +278,15 @@ Use this safe working order when you want the lowest chance of mistakes:
   inherited layout defaults.
 - If the canvas is empty, the page may still be valid as a shell, but preview
   can look nearly blank. That is expected until real content is inserted.
+- Reduced motion: visitors who prefer reduced motion see the same content with
+  scroll reveals, parallax, spotlight, tilt, and magnetic motion turned off.
+  Functional behavior stays available: switcher tabs and gallery filtering
+  still work, tickers stop but keep their content visible, and nothing becomes
+  unreachable or hidden.
+- Validate gallery and marquee behavior in runtime preview: save the draft
+  first, then filter the gallery by pointer and keyboard, and confirm that a
+  seamless marquee containing a form or a saved-query listing renders exactly
+  one form, one result count, and one result set.
 - The standalone preview flow exists, but the primary editor workflow is the
   `Runtime preview` action from inside Page Editor.
 

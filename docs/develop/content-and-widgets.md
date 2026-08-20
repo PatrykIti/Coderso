@@ -94,6 +94,44 @@ the section/block contracts owned by those domains. A historical data adapter ma
 still read an older widget-shaped record, but new authoring must not route through
 that adapter or persist a new widget document.
 
+### Page v2 authoring and runtime behavior
+
+Page v2 additions stay owned by the Page editor contract (strict schema,
+normalizer, editor controls, renderer, and tests), never a generic widget
+surface:
+
+- **Gallery controls.** The gallery block authors canonical rows with a bounded
+  media URL, alt text, and caption, plus optional category tokens (1 to 12
+  kebab tokens per item). The editor uses dedicated gallery items and category
+  token controls; stored legacy rows keep reading through non-destructive
+  aliases.
+- **Grid placement.** One shared Bun-free classifier decides where a
+  section-root block actually paints: default block frame,
+  section-template-wrapper (timeline/gallery/FAQ/testimonials), or none (nested
+  children, per-column composition, non-default media-split). Editor span
+  controls, the renderer, and responsive span CSS all consume the same
+  classification.
+- **Responsive typography, spans, and layers.** Per-device custom font sizes
+  and explicit `text-transform: none` resets project to the public CSS, spans
+  emit on the placement-gated grid hook, and responsive layers carry only
+  present `x/y/z` offsets.
+- **Full-bleed paint.** Backgrounds are parsed into validated image layers plus
+  an optional final color; responsive paint targets the section root for
+  full-bleed sections and section content otherwise. Glow overlays never
+  capture pointer events.
+- **Transform custom properties.** One fixed transform host composes reveal,
+  decoration, hover, tilt, and magnetic channels through eleven custom
+  properties; layer anchors use the independent `translate` property.
+- **Marquee.** A seamless marquee duplicates content only when the child
+  subtree is replica-safe; `form`, `filters`, `collection`, `video`, `embed`,
+  and nested marquees always render one canonical segment, so a form plus
+  paired filters/collection under one marquee keeps exactly one nonce, one
+  listing runtime script, and one resolved surface set.
+- **Effects runtime.** One reusable per-root controller scans main and footer
+  output, binds each element once per effect, and never duplicates globals.
+  Switcher/gallery filtering stays functional under reduced motion; reveal,
+  parallax, spotlight, tilt, and magnetic stay neutral.
+
 ## Extending an editor
 
 New editor-facing work extends the owning section/block schema rather than a

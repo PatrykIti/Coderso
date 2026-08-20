@@ -824,32 +824,28 @@ Page Editor session controls are intentionally browser-local and Page-only:
 
 ### Page color boundary (TASK-541 / TASK-539 handoff)
 
-The landed TASK-541 seam is the shared Page admin color control: supported UI
-commits use the canonical `authoring` profile from
-`core/services/theme/cssColorContract.ts`. Page persistence and rendering still
-use the independent legacy sanitizer in `pageAuthoringSanitizers.ts`; that
-backend has not imported the shared parser yet. The admin adapter is therefore
-not the server trust boundary for direct/imported payloads.
+The TASK-541 seam is the shared canonical color contract from
+`core/services/theme/cssColorContract.ts`. Its `authoring` profile is now the
+server trust boundary for Page persistence and rendering: the Page backend
+sanitizer in `pageAuthoringSanitizers.ts` delegates the untouched raw argument
+to `parseCssColorValue(raw, "authoring")` and then applies the exact
+seven-token filter below. There is no separate legacy backend color branch.
 
-The current Page-owned sanitizer permits exactly these site-token references,
-in owner order: `var(--color-primary)`, `var(--color-secondary)`,
+The Page-owned sanitizer permits exactly these site-token references, in owner
+order: `var(--color-primary)`, `var(--color-secondary)`,
 `var(--color-accent)`, `var(--color-bg)`, `var(--color-surface)`,
 `var(--color-text)`, and `var(--color-border)`. Other syntactically valid
-`var(--color-*)` names fail closed. Its separate legacy raw-color branches still
-accept bounded hex, alphabetic named values, and the existing broad functional
-shape. Consequently direct/imported backend values such as `currentColor` and
-`inherit` retain the current named-value behavior even though the shared admin
-control does not commit them. The exact seven-token rule applies to
-`var(--color-*)`; it does not imply that the legacy backend already enforces the
-canonical simple-color grammar or numeric ranges.
+`var(--color-*)` names fail closed. The canonical `authoring` profile governs
+the rest of the grammar: bounded supported literals (hex, `rgb()`/`rgba()`,
+`hsl()`/`hsla()`), `transparent`, and the allowlisted token references only.
+Named values such as `currentColor` and `inherit` are rejected at the write
+boundary because they are not part of the `authoring` profile.
 
-TASK-539-02-L01 owns importing the shared parser into that sanitizer while
-preserving the exact seven-token filter and Page-specific background/composite
-rules. Only after that future handoff may the Page backend be described as using
-the shared `authoring` profile and rejecting inherited/named values outside it.
-Until then, the existing legacy sanitizer remains authoritative. Optional Page
-color fields stay present-only: rejection or clear removes/omits the field and
-does not seed a resolution default.
+The seven-token rule applies to `var(--color-*)`; the shared parser enforces
+the canonical simple-color grammar, numeric ranges, and canonical output
+before the token filter runs. Optional Page color fields stay present-only:
+rejection or clear removes/omits the field and does not seed a resolution
+default.
 
 ## Responsive Cascade
 
@@ -1519,6 +1515,179 @@ the tab bar (horizontal-scroll on mobile), pill/underline selected states via
 `var(--primary)`, panel crossfade + filter fade + magnetic transition (all inside
 `prefers-reduced-motion: no-preference`), while the FUNCTIONAL `[hidden]` / `.is-hidden`
 `display:none` rules sit OUTSIDE the guard so tabs/filters WORK for reduce users.
+
+## Page V2 Strict Contract Hardening — TASK-539
+
+TASK-539 is the post-audit remediation pass over the TASK-534/535 page-toolkit
+surface. It hardens the PageDocumentV2 contract (canonical gallery, strict
+responsive style types, parsed background paint, shared grid placement), fixes
+the public renderer (marquee replica identity, timeline geometry, transform
+hosts), makes public breakpoint CSS match the normalized model, and replaces the
+effects-runtime all-or-nothing flag with one reusable per-root controller.
+Everything is **present-only** and **byte-identical when unauthored**: a legacy
+or no-effect document normalizes and renders exactly as before,
+`PAGE_DOCUMENT_SCHEMA_VERSION` stays `2`, and no route, DDL, dependency, or
+RBAC change ships.
+
+### Strict canonical gallery model
+
+`gallery` block `items[]` rows are canonical `{ src, alt, caption, category? }`
+objects owned by `core/services/pages/pageGalleryV2.ts`:
+
+- Limits: `PAGE_GALLERY_ITEMS_MAX = 120` rows, `PAGE_GALLERY_SRC_MAX = 2048`,
+  `PAGE_GALLERY_ALT_MAX = 500`, `PAGE_GALLERY_CAPTION_MAX = 2000`.
+- A nonempty `src` must equal the media sanitizer output byte-for-byte;
+  `alt`/`caption` must already equal their trimmed form. The empty draft
+  sentinel `{ src:"", alt:"", caption:"" }` persists and counts toward the
+  limit; caption-only placeholders are legal. The public renderer emits a node
+  only when media or caption exists.
+- The optional `category` is a space-separated stack of 1..12 owner-valid kebab
+  tokens (`^[\w-]{1,48}$`), capped at 587 characters total. Writes reject
+  unknown gallery keys and legacy aliases at the exact nested path
+  (`page_document_unknown_field`) and reject wrong shapes, missing required
+  fields, unsafe nonempty media URLs, invalid category values, duplicate
+  tokens, or limit overflow (`page_document_invalid`).
+- **Legacy reads are preserved non-destructively.** Stored reads slice to the
+  first 120 raw rows, resolve legacy aliases with pinned precedence
+  (`src > url > image > assetUrl`, `alt > title > ""`,
+  `caption > title > label > name > description > ""`), trim, cap, re-sanitize
+  the source, deduplicate category tokens, and rebuild fresh canonical objects
+  without mutating caller data.
+
+### Shared grid placement classification
+
+`core/services/pages/pageBlockGridPlacement.ts` is the single Bun-free source
+for where a section-root block paints in the rendered grid. Consumers never
+re-derive the rule:
+
+- `"block-frame"` — ordinary root grid cell (the default resolved template).
+- `"section-template-wrapper"` — timeline/gallery/FAQ/testimonials roots wrapped
+  by template chrome.
+- `"none"` — nested slot children, per-column composition, and non-default
+  `media-split` layouts.
+- The Page editor classifies with `{ includeHiddenBlocks: true }`; the public
+  renderer and responsive CSS use the public visible-root set (`false`). Spans
+  (base or responsive-only) stamp `[data-page-block-grid-item]="<blockId>"` on
+  the one legal target only when the renderer's shared has-any-span predicate
+  fires; wholly unauthored spans emit neither hook nor CSS, and nested
+  descendants never carry a grid hook or span declaration.
+
+### Responsive typography, spans, and layers
+
+Public breakpoint CSS (`pageResponsiveCss.ts` — explicit facade over
+orchestration/section/block/declarations/contracts modules) matches the
+normalized model:
+
+- Typography-capable blocks emit sanitized `fontSizeCustom` (strict
+  numeric-unit or single `clamp()`/`min()`/`max()` grammar) as `font-size` and
+  present `textTransform`, including an explicit `"none"` reset, as
+  `text-transform`, scoped to the block text node (or the button's visual
+  element).
+- Responsive layers carry only present `x`/`y`/`z`; `anchor` is rejected at
+  write and dropped at read, and a responsive layer without a normalized base
+  layer is unreachable. The present-key merge emits exactly the authored keys —
+  zero is a real reset, and inherited desktop values are never re-emitted.
+- The dedicated responsive style types (`PageSectionResponsiveStyleV2`,
+  `PageBlockResponsiveStyleV2`, `PageBlockResponsiveLayerV2`) and their strict
+  schemas exclude every base-only/structural key (section
+  `scrollEffect`/`parallaxIntensity`/`surfacePreset`/`composition`/`fullBleed`/
+  `noiseOverlay`/`columnTemplate`/`border`; block
+  `decoration`/`tilt`/`tiltGlare`/`surfacePreset`/`hoverEffect`/`marquee`/
+  `composition`/`revealDelay`/`magnetic`). `style.column` remains schema-valid
+  for editor/breakpoint resolution and emits the exact `not_css_expressible`
+  diagnostic at the public boundary.
+
+### Parsed paint and full bleed
+
+- `parseAuthoringCssBackgroundPaint` (owned by the page authoring sanitizers)
+  splits a validated background into an exact `image` substring (the gradient
+  layers with original spelling) plus an optional canonical final `color` via
+  TASK-541's `parseCssColorValue(raw, "authoring")`. Consumers emit
+  `paint.image` only as `background-image` and `paint.color` only as
+  `background-color`; the unsplit author string is never interpolated. The raw
+  value rejects up front on any C0/C1 control, non-ASCII whitespace, BOM,
+  unsafe function/protocol/at-rule, imbalance, empty layer, or over-cap layer
+  stack (`PAGE_BG_MAX_LAYERS = 6`, `PAGE_CSS_VALUE_MAX_LENGTH = 512`).
+- Grid lengths accept unitless zero in any all-zero decimal spelling; every
+  nonzero number requires `fr|px|%|rem|em`, including inside
+  `minmax`/`repeat`.
+- Responsive background/radius/shadow/glow declarations target the section root
+  for a full-width template or base `fullBleed === true`, and section content
+  otherwise; a device override can never switch that target. The `fullBleed`
+  structural field itself is base-only.
+
+### Transform variables and composition host
+
+- `pageCompositionEffects.tsx` owns one fixed transform host
+  attribute/selector (`data-page-transform-host` / `[data-page-transform-host]`)
+  and exactly eleven custom-property names (`--cx-reveal-y`, four
+  `--cx-decoration-*`, two `--cx-hover-*`, two `--cx-tilt-*`, two
+  `--cx-magnetic-*`). The single host formula composes reveal, decoration,
+  hover, tilt, and magnetic channels; the renderer stamps the same host on
+  section reveal wrappers, ambient orbs, and block-owned transform effects.
+- Layer anchors stay on the independent CSS `translate` property so a
+  transform-writing effect never clobbers the anchor offset. `PAGE_LAYER_Z_CLAMP`
+  stays `0..20`, strictly below the spotlight overlay (`30`) and nav (`40`).
+- Every lift/glow-reveal `::before`/`::after` overlay carries
+  `pointer-events:none` so real pointer clicks, drags, and text selection reach
+  the underlying interactive content.
+
+### Marquee replica identity and unsafe fallback
+
+- An authored `seamless:true` marquee renders one rail with two equal adjacent
+  segments only when the outer group's normalized active-slot child subtree is
+  recursively replica-safe. `video`, `form`, `collection`, `filters`, `embed`,
+  and nested authored marquees are unsafe by the exhaustive
+  `PAGE_MARQUEE_REPLICA_SAFE_BY_BLOCK_TYPE` map; any unsafe direct or deep
+  descendant degrades deterministically to the same one-canonical-segment
+  fallback as `seamless:false` — no replica marker, namespace, clone render, or
+  duplicated script/nonce/global-runtime/network-bearing surface.
+- An approved replica carries `[data-page-marquee-replica]`, `aria-hidden`,
+  and native `inert`. Local DOM/SVG `id`s and identifier-bearing data hooks are
+  namespaced through separate eligibility sets
+  (`pageRendererReplicaIdentity.ts`), and `url(#...)`/`aria-*`/`htmlFor`
+  references rewrite only targets backed by a locally emitted id. Two
+  styling-only aliases (`data-page-marquee-replica-block-style-scope` and
+  `data-page-marquee-replica-tilt-layer-style-scope`) retain the canonical
+  original block id so responsive CSS can style both segments; they are not
+  selection/runtime identities and leak to no other output. The outer group's
+  legal root grid target stays one canonical node outside both segments.
+
+### Timeline geometry
+
+- `pageRendererTimelineGeometry.ts` owns `PageTimelineItemGeometry` /
+  `resolvePageTimelineItemGeometry`. Compact items use `py-2` with an 18 px
+  marker center; default uses `py-3` with 22 px. A horizontal or single-item
+  timeline has `axis:null`. Vertical multi-item rows return exact first,
+  interior, and final segment tops and bottoms: the first segment starts at the
+  first marker center, non-final segments bleed only the negative row gap, and
+  the final segment ends at the final marker center.
+
+### Per-root effects runtime
+
+- `pageEffectsRuntime.ts` emits one static dependency-free IIFE that reuses or
+  installs `window.__codersoPageEffectsV2` and calls `init(document)`. Every
+  emitted main/footer copy invokes the reusable controller; the parser-order
+  rescan discovers later main/footer markup while binder-specific `WeakSet`s
+  keep each element bound exactly once (reveal, parallax, spotlight, switcher,
+  gallery, tilt, magnetic).
+- Every binder rejects a candidate that is or descends from a marquee replica
+  before listener/state attachment, so the inert replica keeps visual hooks
+  without becoming interactive. Spotlight writes only `--spotlight-x`/`--spotlight-y`
+  on the matched `[data-page-spotlight]` root; tilt and magnetic write/reset
+  only their fixed transform custom properties, never the whole `transform`.
+- Switcher/gallery bind before the reduced-motion branch (functional under
+  reduce); reveal/parallax/spotlight/tilt/magnetic run only after it, so
+  reduced-motion users get neutral, visible content with zero motion.
+
+### Present-only byte identity
+
+- Every TASK-539 key joins the reject-unknown allowlist (`assertKnownKeys` +
+  strict `pageDocumentV2JsonSchema` `additionalProperties: false`) with a
+  round-trip test. Un-authored keys emit zero bytes: no-override documents
+  return `{ css: "", diagnostics: [] }` from the responsive builder, no-effect
+  documents gain no grid hook, replica alias, or style byte, and legacy render
+  output stays byte-identical.
 
 ## Public Runtime
 
