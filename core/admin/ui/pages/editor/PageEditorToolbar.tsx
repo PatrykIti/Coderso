@@ -18,14 +18,14 @@ import { editorButtonClassFor, useEditorControlTone } from "../editorControls/co
 import { ToolbarIconButton } from "./FloatingEditorToolbar";
 import {
   resolvePageSectionForBreakpoint,
-  type PageBlockV2,
   type PageBreakpoint,
   type PageDocumentV2,
   type PageEffectsV2,
   type PageSectionV2,
   type PageSectionVariant,
 } from "../../../../services/pages/pageDocumentV2";
-import { getPageBlockAtPath } from "../../../../services/pages/pageBlockPaths";
+import { getPageBlockAtPath, type PageBlockPath } from "../../../../services/pages/pageBlockPaths";
+import { resolveToolbarRegistryBlockTarget } from "../../../../services/pages/pageEditorRegistryBlockTarget";
 import {
   getPageEditorControlsForTarget,
   getPageSectionVariantControl,
@@ -56,11 +56,8 @@ import {
   type PageEditorRevision,
 } from "./pageEditorHostContract";
 import { ResponsivePanelContent } from "./PageEditorResponsivePanel";
-import {
-  RegistryControlField,
-  SectionRegistryControlField,
-  ToolbarMediaUrlField,
-} from "./PageEditorRegistryFields";
+import { RegistryControlField, SectionRegistryControlField } from "./PageEditorRegistryFields";
+import { MediaUrlControl } from "../editorControls";
 import {
   ResponsiveControlShell,
   SectionDateRangeFields,
@@ -134,9 +131,8 @@ export const ToolbarSubpanel = ({
   device,
   section,
   baseSection,
-  block,
-  baseBlock,
   hasBlockSelection,
+  selectedBlockPath,
   onSectionControlChange,
   onSectionVariantChange,
   onSectionStyle,
@@ -154,9 +150,9 @@ export const ToolbarSubpanel = ({
   device: PageBreakpoint;
   section: PageSectionV2;
   baseSection: PageSectionV2;
-  block: PageBlockV2 | null;
-  baseBlock: PageBlockV2 | null;
   hasBlockSelection: boolean;
+  /** Raw selected block path (may be stale); the canonical fallback is [{index:0}]. */
+  selectedBlockPath: PageBlockPath | null;
   onSectionControlChange: (control: PageEditorControlDefinition, value: unknown) => void;
   onSectionVariantChange: (variant: PageSectionVariant) => void;
   onSectionStyle: (patch: Partial<PageSectionV2["style"]>) => void;
@@ -169,16 +165,28 @@ export const ToolbarSubpanel = ({
   onAddBlock: () => void;
   onClose: () => void;
 }) => {
-  const primaryBlock = block ?? (hasBlockSelection ? undefined : section.blocks[0]);
-  const primaryBaseBlock = baseBlock ?? (hasBlockSelection ? undefined : baseSection.blocks[0]);
-  const blockPanelControls = primaryBlock
-    ? getPageEditorControlsForTarget({ kind: "block", type: primaryBlock.type }).filter(
-        (control) =>
-          control.panel === panel &&
-          (control.id !== "block.style.backgroundImage" ||
-            primaryBlock.style?.backgroundType === "image")
-      )
-    : [];
+  // TASK-539-03-L03 canonical registry block target (resolver owns the
+  // selected/first-root candidate and the base+effective resolution gate).
+  const {
+    path: registryBlockPath,
+    base: baseRegistryBlock,
+    effective: effectiveRegistryBlock,
+    placement: registryBlockPlacement,
+  } = resolveToolbarRegistryBlockTarget(selectedBlockPath, baseSection, section);
+  const isRegistrySpanControl = (id: string) =>
+    id === "block.style.colSpan" || id === "block.style.rowSpan";
+  const primaryBlock = effectiveRegistryBlock;
+  const primaryBaseBlock = baseRegistryBlock ?? undefined;
+  const blockPanelControls =
+    primaryBlock && registryBlockPath
+      ? getPageEditorControlsForTarget({ kind: "block", type: primaryBlock.type }).filter(
+          (control) =>
+            control.panel === panel &&
+            (control.id !== "block.style.backgroundImage" ||
+              primaryBlock.style?.backgroundType === "image") &&
+            (!isRegistrySpanControl(control.id) || registryBlockPlacement !== "none")
+        )
+      : [];
   const sectionPanelControls = pageUniversalSectionControls.filter(
     (control) => control.panel === panel && control.id !== pageSectionStackVerticalControl.id
   );
@@ -288,9 +296,19 @@ export const ToolbarSubpanel = ({
                 label="Background image"
                 onReset={() => onClearOverride(["style", "backgroundImage"])}
               >
-                <ToolbarMediaUrlField
+                {/* TASK-539-03-L03: the extracted MediaUrlControl owns the
+                    URL contract and stale-write protection; the scope is the
+                    collision-safe `["section", id, control.id]` tuple so a
+                    section replacement can never receive a stale completion. */}
+                <MediaUrlControl
+                  key={`section-bg-${section.id}`}
                   label="Background image"
                   value={section.style.backgroundImage ?? ""}
+                  scopeKey={JSON.stringify([
+                    "section",
+                    section.id,
+                    "section.style.backgroundImage",
+                  ])}
                   accept={["image/*"]}
                   onChange={(backgroundImage) => onSectionStyle({ backgroundImage })}
                 />

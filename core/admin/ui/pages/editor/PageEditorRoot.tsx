@@ -3,8 +3,7 @@
 // shared canvas shell. Extracted verbatim from the former PageEditor.tsx body.
 // Single writer: TASK-481-02-L02. No behavior change.
 
-import { Fragment } from "react";
-import type { CSSProperties } from "react";
+import { Fragment, useCallback } from "react";
 import {
   ArrowDown,
   ArrowLeft,
@@ -66,6 +65,7 @@ import {
   usePageEditorToolbarActions,
 } from "./PageEditorToolbar";
 import { usePageEditorController, type PageEditorProps } from "./usePageEditorController";
+import type { PageSectionV2 } from "../../../../services/pages/pageDocumentV2Types";
 import { DeviceSwitcher } from "../DeviceSwitcher";
 
 export function PageEditor({ pageId, initialPage, host }: PageEditorProps) {
@@ -99,7 +99,6 @@ export function PageEditor({ pageId, initialPage, host }: PageEditorProps) {
     selectedSection,
     resolvedSelectedSection,
     selectedBlock,
-    toolbarBlockTarget,
     toolbarTargetLabel,
     toolbarSelectionMeta,
     canAddBlockBeside,
@@ -158,6 +157,18 @@ export function PageEditor({ pageId, initialPage, host }: PageEditorProps) {
     moveSelectedSection,
   } = controller;
   const { handleSaveDraft, handlePublish, openRevisions, handlePreview, revisionsHost } = toolbar;
+  // Stable section patch handlers: MediaUrlControl (TASK-539-03-L02)
+  // invalidates in-flight requests when its onChange identity changes, so the
+  // section-background field must not see a new callback on unrelated renders.
+  const onSectionStylePatch = useCallback(
+    (patch: Partial<PageSectionV2["style"]>) => updateSectionGroup("style", patch),
+    [updateSectionGroup]
+  );
+  const onSectionVisibilityPatch = useCallback(
+    (patch: Partial<PageSectionV2["visibility"]>) =>
+      updateSectionGroup("visibility", patch),
+    [updateSectionGroup]
+  );
 
   return (
     <EditorShell
@@ -192,6 +203,17 @@ export function PageEditor({ pageId, initialPage, host }: PageEditorProps) {
             Defined in an inline IIFE (no hooks added, react-hooks-safe) so the
             large child tree below stays in place. */}
           {(() => {
+            // TASK-539-03-L03: the open selected inspector reserves exactly
+            // 300px on the right from `sm` upward (including at `lg` despite
+            // the retained `lg:p-8`); at 320/390/480px no rail reservation is
+            // added and the ordinary `p-6` padding remains. Closing restores
+            // the ordinary `p-6 lg:p-8` state. Class tokens only: the real
+            // computed-padding proof lives in TASK-539-08's Playwright flows.
+            const canvasScrollerClassName = `min-h-0 flex-1 overflow-auto overscroll-contain bg-dotted p-6 lg:p-8 ${
+              panelOpen && hasFloatingPanelSelection
+                ? "sm:pr-[300px] lg:pr-[300px]"
+                : ""
+            }`;
             const canvasBody = (
               <>
                 {/* TASK-495-03 P4b: the builder relocates the device-context strip
@@ -200,15 +222,8 @@ export function PageEditor({ pageId, initialPage, host }: PageEditorProps) {
               measures from the dotted scroller top and lands ~16px inside the
               dots (proto parity). */}
                 <div
-                  className="min-h-0 flex-1 overflow-auto overscroll-contain bg-dotted p-6 lg:p-8"
+                  className={canvasScrollerClassName}
                   data-page-editor-canvas-scroller="true"
-                  // The right rail no longer covers the bottom; reserve RIGHT
-                  // padding instead so the centered frame is not occluded by the overlay.
-                  style={
-                    panelOpen && hasFloatingPanelSelection
-                      ? ({ paddingRight: 300 } as CSSProperties) // 280 rail + ~20 inset
-                      : undefined
-                  }
                   onClick={() => selectSection(null)}
                 >
                   <div
@@ -635,15 +650,12 @@ export function PageEditor({ pageId, initialPage, host }: PageEditorProps) {
                       device={device}
                       section={resolvedSelectedSection}
                       baseSection={selectedSection}
-                      block={toolbarBlockTarget}
-                      baseBlock={
-                        selectedBlockId ? selectedBlock : (selectedSection.blocks[0] ?? null)
-                      }
                       hasBlockSelection={Boolean(selectedBlockId)}
+                      selectedBlockPath={selectedBlockPath}
                       onSectionControlChange={updateSelectedSectionControl}
                       onSectionVariantChange={updateSelectedSectionVariant}
-                      onSectionStyle={(patch) => updateSectionGroup("style", patch)}
-                      onSectionVisibility={(patch) => updateSectionGroup("visibility", patch)}
+                      onSectionStyle={onSectionStylePatch}
+                      onSectionVisibility={onSectionVisibilityPatch}
                       onBlockControlChange={updateSelectedBlockControl}
                       onClearOverride={(path) => {
                         if (device === "desktop") return;

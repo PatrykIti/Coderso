@@ -5,7 +5,7 @@
 // palette context. Extracted verbatim from the former PageEditor.tsx body.
 // Single writer: TASK-481-02-L02. No behavior change.
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { getCachedContentTypes, listContentTypesCached } from "@/services/contentTypesClient";
@@ -18,7 +18,6 @@ import {
   listListingTemplatesCached,
   type ListingQueryRecord,
 } from "@/services/listingsClient";
-import { getCachedMedia, listMediaCached, type MediaRecord } from "@/services/mediaClient";
 import { getPageBlockRenderDefault } from "../../../../services/pages/pageBlockRenderDefaults";
 import {
   hasResponsiveOverride,
@@ -31,6 +30,7 @@ import {
   type PageSectionV2,
 } from "../../../../services/pages/pageDocumentV2";
 import {
+  isPageEditorControlVisible,
   type PageEditorControlDefinition,
   type PageEditorControlOptionsSource,
 } from "../../../../services/pages/pageEditorControlRegistry";
@@ -48,8 +48,10 @@ import {
   ColorSwatchControl,
   ComboboxControl,
   FacetListControl,
+  GalleryCategoryTokensControl,
+  GalleryItemsControl,
   ListItemsControl,
-  MediaPickerControl,
+  MediaUrlControl,
   SegmentedControl,
   SliderControl,
   SliderStepperControl,
@@ -127,15 +129,41 @@ export const SectionRegistryControlField = ({
   onChange: (control: PageEditorControlDefinition, value: unknown) => void;
   onReset: (path: readonly string[]) => void;
 }) => {
-  const value = readPathValue(section, control.path);
+  // Stable commit identity: MediaUrlControl (TASK-539-03-L02) invalidates
+  // in-flight requests when its onChange identity changes. Keying the commit
+  // to the control + handler (not to the parent render) keeps an unrelated
+  // re-render from cancelling a legitimate media selection. The hook must run
+  // unconditionally before any reachability gate can return null.
+  const commitControl = useCallback(
+    (nextValue: unknown) => onChange(control, nextValue),
+    [onChange, control]
+  );
+  // TASK-539-03-L03 canonical projection: base-only controls read, display,
+  // gate, and commit against the BASE section with a desktop field device,
+  // never the active tablet/mobile target. Responsive controls keep the
+  // effective active-device section.
+  const fieldDevice: PageBreakpoint = control.responsive ? device : "desktop";
+  const fieldTarget = control.responsive ? section : baseSection;
+  // Reachability gates resolve on the same base/effective targets: a base-only
+  // gate (e.g. parallaxIntensity on scrollEffect) can never be opened or
+  // closed by a tablet/mobile override.
+  if (
+    !isPageEditorControlVisible(control, {
+      baseTarget: baseSection,
+      effectiveTarget: section,
+    })
+  ) {
+    return null;
+  }
+  const value = readPathValue(fieldTarget, control.path);
   const override = hasResponsiveOverride(
-    device,
-    readSectionBreakpointOverride(baseSection, device),
+    fieldDevice,
+    readSectionBreakpointOverride(baseSection, fieldDevice),
     control.overridePath
   );
   return (
     <ResponsiveControlShell
-      device={device}
+      device={fieldDevice}
       override={override}
       label={control.label}
       onReset={() => onReset(control.overridePath)}
@@ -143,8 +171,8 @@ export const SectionRegistryControlField = ({
       <RegistryControlInput
         control={control}
         rawValue={value}
-        commitActiveOption={device !== "desktop" && !override}
-        onCommit={(nextValue) => onChange(control, nextValue)}
+        commitActiveOption={fieldDevice !== "desktop" && !override}
+        onCommit={commitControl}
       />
     </ResponsiveControlShell>
   );
@@ -165,22 +193,53 @@ export const RegistryControlField = ({
   onChange: (control: PageEditorControlDefinition, value: unknown) => void;
   onReset: (path: readonly string[]) => void;
 }) => {
-  const value = readPathValue(block, control.path);
+  // Stable commit identity: MediaUrlControl (TASK-539-03-L02) invalidates
+  // in-flight requests when its onChange identity changes. Keying the commit
+  // to the control + handler (not to the parent render) keeps an unrelated
+  // re-render from cancelling a legitimate media selection. The hook must run
+  // unconditionally before any reachability gate can return null.
+  const commitControl = useCallback(
+    (nextValue: unknown) => onChange(control, nextValue),
+    [onChange, control]
+  );
+  // TASK-539-03-L03 canonical projection: base-only controls (gallery,
+  // divider, form extras) read, display, gate, and commit against the BASE
+  // block with a desktop field device, never the active tablet/mobile target.
+  // Responsive controls keep the effective active-device block.
+  const fieldDevice: PageBreakpoint = control.responsive ? device : "desktop";
+  const fieldTarget = control.responsive ? block : (baseBlock ?? block);
+  // Reachability gates resolve on the same base/effective targets: a base-only
+  // gate (e.g. gallery filterCategories on filterable, divider width/align on
+  // gradient) can never be opened or closed by a tablet/mobile override.
+  if (
+    !isPageEditorControlVisible(control, {
+      baseTarget: baseBlock ?? block,
+      effectiveTarget: block,
+    })
+  ) {
+    return null;
+  }
+  const value = readPathValue(fieldTarget, control.path);
   const override = hasResponsiveOverride(
-    device,
-    readBlockBreakpointOverride(baseBlock, device),
+    fieldDevice,
+    readBlockBreakpointOverride(baseBlock, fieldDevice),
     control.overridePath
   );
   // Scoped combobox sources (TASK-457) read the sibling prop named by the
-  // registry's `filterBy` from the SAME resolved block the value comes from.
+  // registry's `filterBy` from the SAME resolved target the value comes from.
   const filterRaw = control.filterBy
-    ? readPathValue(block, ["props", control.filterBy])
+    ? readPathValue(fieldTarget, ["props", control.filterBy])
     : undefined;
   const comboboxFilterValue =
     typeof filterRaw === "string" && filterRaw.length > 0 ? filterRaw : null;
+  // TASK-539-03-L03: the canonical media/gallery parent scope is the
+  // collision-safe `["block", baseId, control.id]` tuple. The field is keyed
+  // and remounted by it, so a target or control switch invalidates every
+  // pending media-resolution request from the previous target.
+  const mediaScopeKey = baseBlock ? JSON.stringify(["block", baseBlock.id, control.id]) : null;
   return (
     <ResponsiveControlShell
-      device={device}
+      device={fieldDevice}
       override={override}
       label={control.label}
       onReset={() => onReset(control.overridePath)}
@@ -188,14 +247,24 @@ export const RegistryControlField = ({
       <RegistryControlInput
         control={control}
         rawValue={value}
-        renderDefault={getPageBlockRenderDefault(block, control.path)}
-        blockBackgroundType={block.style?.backgroundType}
-        commitActiveOption={device !== "desktop" && !override}
+        renderDefault={getPageBlockRenderDefault(fieldTarget, control.path)}
+        blockBackgroundType={fieldTarget.style?.backgroundType}
+        commitActiveOption={fieldDevice !== "desktop" && !override}
         comboboxFilterValue={comboboxFilterValue}
-        onCommit={(nextValue) => onChange(control, nextValue)}
+        mediaScopeKey={mediaScopeKey}
+        galleryCategoryTokens={readStringArrayValue(fieldTarget, ["props", "filterCategories"])}
+        onCommit={commitControl}
       />
     </ResponsiveControlShell>
   );
+};
+
+/** Reads a stored string array (e.g. gallery `filterCategories`) defensively. */
+const readStringArrayValue = (source: unknown, path: readonly string[]): readonly string[] => {
+  const value = readPathValue(source, path);
+  return Array.isArray(value)
+    ? value.filter((entry): entry is string => typeof entry === "string")
+    : [];
 };
 
 /** Mime accept hints for registry media controls, keyed by control id. */
@@ -609,6 +678,8 @@ const RegistryControlInput = ({
   blockBackgroundType,
   commitActiveOption = false,
   comboboxFilterValue = null,
+  mediaScopeKey = null,
+  galleryCategoryTokens = [],
   onCommit,
 }: {
   control: PageEditorControlDefinition;
@@ -632,6 +703,14 @@ const RegistryControlInput = ({
    * breakpoint override instead of silently no-opping.
    */
   commitActiveOption?: boolean;
+  /**
+   * TASK-539-03-L03 canonical media/gallery parent scope:
+   * `["block", baseId, control.id]`. `null` renders no media/gallery control:
+   * there is no canonical registry block target to receive a write.
+   */
+  mediaScopeKey?: string | null;
+  /** Stored gallery `filterCategories` tokens used as row suggestions. */
+  galleryCategoryTokens?: readonly string[];
   onCommit: (value: unknown) => void;
 }) => {
   const model = resolvePageEditorControlUiModel(control);
@@ -734,14 +813,22 @@ const RegistryControlInput = ({
         />
       );
     case "media":
-      return (
-        <ToolbarMediaUrlField
+      // TASK-539-03-L03: the extracted MediaUrlControl owns the URL-storage
+      // contract and stale-write protection; keying it by the canonical scope
+      // remounts it when the target or control changes so a pending media
+      // resolution can never commit to the replacement target. `onCommit` is
+      // the field's stable commit identity, so an unrelated re-render never
+      // invalidates a legitimate in-flight selection.
+      return mediaScopeKey ? (
+        <MediaUrlControl
+          key={mediaScopeKey}
           label={control.label}
           value={typeof rawValue === "string" ? rawValue : ""}
+          scopeKey={mediaScopeKey}
           accept={mediaControlAccept[control.id]}
-          onChange={(nextValue) => onCommit(nextValue)}
+          onChange={onCommit}
         />
-      );
+      ) : null;
     case "listItems":
       // Structured list items (footer link columns): commits the owner
       // `PageListItemV2` shapes — plain strings stay plain, link rows store
@@ -751,6 +838,35 @@ const RegistryControlInput = ({
           label={control.label}
           value={Array.isArray(rawValue) ? rawValue : []}
           onChange={(nextItems) => onCommit(nextItems)}
+        />
+      );
+    case "galleryItems":
+      // TASK-539 gallery rows: the dedicated canonical control, never
+      // `ListItemsControl`. Malformed stored values display as an empty list
+      // and are never committed until an explicit user edit; the control
+      // reads only the known row keys and never truncates stored values.
+      return mediaScopeKey ? (
+        <GalleryItemsControl
+          key={mediaScopeKey}
+          label={control.label}
+          value={Array.isArray(rawValue) ? rawValue : []}
+          categoryTokens={galleryCategoryTokens}
+          parentScopeKey={mediaScopeKey}
+          onChange={onCommit}
+        />
+      ) : null;
+    case "galleryCategoryTokens":
+      // TASK-539 category-token builder behind `props.filterCategories`;
+      // commits the ordered deduplicated token stack in the owner contract.
+      return (
+        <GalleryCategoryTokensControl
+          label={control.label}
+          value={
+            Array.isArray(rawValue)
+              ? rawValue.filter((entry): entry is string => typeof entry === "string")
+              : []
+          }
+          onChange={onCommit}
         />
       );
     case "facetList":
@@ -795,99 +911,6 @@ const UnsupportedControlNotice = ({
       <p className={`text-xs ${tone === "light" ? "text-muted-foreground" : "text-slate-400"}`}>
         This value cannot be edited here.
       </p>
-    </div>
-  );
-};
-
-/**
- * Bridges URL-valued Page v2 media fields (image/video sources, card image,
- * section background image) onto the shared media library picker. The stored
- * contract stays a URL string: picking a library asset resolves and writes the
- * asset URL, never the asset id. Stored URLs that match a library asset show
- * as that selection; other stored URLs surface as a clearable readout.
- */
-export const ToolbarMediaUrlField = ({
-  label,
-  value,
-  accept,
-  onChange,
-}: {
-  label: string;
-  value: string;
-  accept?: readonly string[];
-  onChange: (url: string | null) => void;
-}) => {
-  const tone = useEditorControlTone();
-  const [assets, setAssets] = useState<readonly MediaRecord[] | null>(() => getCachedMedia());
-  const requestRef = useRef(0);
-  const selectedAssetId = value ? (assets?.find((asset) => asset.url === value)?.id ?? null) : null;
-
-  useEffect(() => {
-    if (!value || assets) return;
-    let active = true;
-    listMediaCached()
-      .then((items) => {
-        if (active) setAssets(items);
-      })
-      .catch(() => {
-        // The picker dialog owns media load errors; the stored value is kept.
-      });
-    return () => {
-      active = false;
-    };
-  }, [assets, value]);
-
-  const handlePickerChange = (next: unknown) => {
-    if (typeof next !== "string" || next.length === 0) {
-      onChange(null);
-      return;
-    }
-    requestRef.current += 1;
-    const requestId = requestRef.current;
-    void listMediaCached()
-      .then((items) => {
-        if (requestId !== requestRef.current) return;
-        setAssets(items);
-        const match = items.find((item) => item.id === next);
-        if (match) onChange(match.url);
-      })
-      .catch(() => {
-        // Resolution failed: never write an asset id into a URL path.
-      });
-  };
-
-  const showsExternalValue = Boolean(value) && assets !== null && !selectedAssetId;
-  return (
-    <div className="grid gap-1">
-      <MediaPickerControl
-        label={label}
-        value={selectedAssetId}
-        accept={accept ? [...accept] : undefined}
-        onChange={handlePickerChange}
-      />
-      {showsExternalValue ? (
-        <div
-          className={`flex items-center justify-between gap-2 rounded-md px-2 py-1 ${
-            tone === "light" ? "bg-muted/40" : "bg-white/10"
-          }`}
-          data-page-editor-media-external={label}
-        >
-          <span
-            className={`truncate text-xs ${tone === "light" ? "text-muted-foreground" : "text-slate-300"}`}
-          >
-            {value}
-          </span>
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            className={editorGhostButtonClassFor(tone)}
-            onClick={() => onChange(null)}
-          >
-            Clear
-          </Button>
-        </div>
-      ) : null}
     </div>
   );
 };

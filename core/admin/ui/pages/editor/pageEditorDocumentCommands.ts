@@ -359,17 +359,18 @@ export const usePageEditorDocumentCommands = (ctx: PageEditorDocumentCommandCont
   const updateSelectedBlockControl = useCallback(
     (control: PageEditorControlDefinition, value: unknown) => {
       updateSelectedSection((section) => {
-        if (selectedBlockPath) {
-          return updatePageBlockAtPath(section, selectedBlockPath, (block) =>
-            patchBlockControlForDevice(block, device, control, value)
-          ).section;
-        }
-        return {
-          ...section,
-          blocks: section.blocks.map((block, index) =>
-            index === 0 ? patchBlockControlForDevice(block, device, control, value) : block
-          ),
-        };
+        // TASK-539-03-L03 canonical block write target: the selected path when
+        // present, otherwise the first root path [{index:0}]. Base-only
+        // controls (gallery/divider) write the desktop base regardless of the
+        // active device; a path that no longer resolves keeps the current
+        // section (no write, no dirty transition, no autosave).
+        const blockPath: PageBlockPath =
+          selectedBlockPath ?? ([{ index: 0 }] as const);
+        const fieldDevice: PageBreakpoint = control.responsive ? device : "desktop";
+        const result = updatePageBlockAtPath(section, blockPath, (block) =>
+          patchBlockControlForDevice(block, fieldDevice, control, value)
+        );
+        return result.status === "ok" ? result.section : section;
       });
     },
     [device, selectedBlockPath, updateSelectedSection]
@@ -378,7 +379,11 @@ export const usePageEditorDocumentCommands = (ctx: PageEditorDocumentCommandCont
   const updateSelectedSectionControl = useCallback(
     (control: PageEditorControlDefinition, value: unknown) => {
       updateSelectedSection((section) => {
-        const next = patchSectionControlForDevice(section, device, control, value);
+        // TASK-539-03-L03: base-only section controls (e.g. parallaxIntensity,
+        // the section variant) write the desktop base regardless of the active
+        // tablet/mobile device.
+        const fieldDevice: PageBreakpoint = control.responsive ? device : "desktop";
+        const next = patchSectionControlForDevice(section, fieldDevice, control, value);
         // Column-switch bridge (owner finding #5, round 3): when the COLUMNS
         // control takes the desktop base from one effective column to N >= 2,
         // every still-unassigned root block is pinned to column 1 in the same
