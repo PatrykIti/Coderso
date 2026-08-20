@@ -4,6 +4,7 @@ import {
   PAGE_GLOW_BLUR_CLAMP,
   PAGE_GLOW_OFFSET_CLAMP,
   PAGE_GLOW_SPREAD_CLAMP,
+  PAGE_LAYER_Z_CLAMP,
   PAGE_TYPOGRAPHY_LETTER_SPACING_CLAMP,
   PAGE_TYPOGRAPHY_LINE_HEIGHT_CLAMP,
   pageBackgroundTypes,
@@ -23,10 +24,7 @@ import {
   pageTypographyTextTransforms,
   type PageBlockType,
 } from "./pageDocumentV2";
-import {
-  control,
-  type PageEditorControlDefinition,
-} from "./pageEditorControlDefinition";
+import { control, type PageEditorControlDefinition } from "./pageEditorControlDefinition";
 
 export const pageUniversalBlockControls: readonly PageEditorControlDefinition[] = [
   control({
@@ -345,7 +343,8 @@ export const pageUniversalBlockControls: readonly PageEditorControlDefinition[] 
     path: ["style", "layer", "z"],
     input: "number",
     responsive: true,
-    clamp: { min: 0, max: 40 },
+    // TASK-539: import the model-owned clamp directly; no `0..40` mirror.
+    clamp: PAGE_LAYER_Z_CLAMP,
     unit: "",
   }),
   control({

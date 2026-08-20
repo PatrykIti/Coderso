@@ -78,6 +78,16 @@ export type PageEditorControlUiModel =
    */
   | { kind: "listItems" }
   /**
+   * TASK-539 gallery rows control: commits owner `PageGalleryItemV2[]` shapes
+   * (src/alt/caption/category) with the model-owner row/field limits.
+   */
+  | { kind: "galleryItems" }
+  /**
+   * TASK-539 gallery category-token builder: commits the deduplicated
+   * `string[]` token stack behind `props.filterCategories`.
+   */
+  | { kind: "galleryCategoryTokens" }
+  /**
    * Generic facet-list builder for the filters block `props.facets` control
    * (TASK-459-02); commits the canonical `ListingFacetConfig[]` shapes the
    * `pageDocumentV2` facet normalizer owns.
@@ -414,6 +424,12 @@ export const resolvePageEditorControlUiModel = (
       return { kind: "media" };
     case "items":
       return { kind: "listItems" };
+    // TASK-539: gallery rows and category tokens are dedicated canonical
+    // controls, never `ListItemsControl`.
+    case "galleryItems":
+      return { kind: "galleryItems" };
+    case "galleryCategoryTokens":
+      return { kind: "galleryCategoryTokens" };
     case "facets":
       return { kind: "facetList" };
     case "text":

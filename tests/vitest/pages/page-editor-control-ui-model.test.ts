@@ -345,6 +345,23 @@ describe("page editor control ui model adapter", () => {
     expect(resolveById("block.filters.props.applyLabel")).toEqual({ kind: "text" });
   });
 
+  // TASK-539-03-L01 — gallery rows and category tokens are dedicated canonical
+  // controls, never `ListItemsControl`; `items` stays listItems for the
+  // list/switcher contracts only.
+  test("gallery controls resolve to the dedicated galleryItems/galleryCategoryTokens kinds", () => {
+    expect(resolveById("block.gallery.props.items")).toEqual({ kind: "galleryItems" });
+    expect(resolveById("block.gallery.props.filterCategories")).toEqual({
+      kind: "galleryCategoryTokens",
+    });
+    expect(resolveById("block.gallery.props.layout")).toMatchObject({ kind: "segmented" });
+    expect(resolveById("block.gallery.props.filterable")).toEqual({ kind: "toggle" });
+    // `items` remains the structured list-items model for the list/switcher
+    // contracts only.
+    expect(resolveById("block.list.props.items")).toEqual({ kind: "listItems" });
+    expect(resolveById("block.switcher.props.tabs")).toEqual({ kind: "listItems" });
+    expect(resolveById("block.gallery.props.items")).not.toEqual({ kind: "listItems" });
+  });
+
   test("long option lists stay select models with labels", () => {
     const options = ["one", "two", "three", "four", "five", "six", "seven"] as const;
     const model = resolvePageEditorControlUiModel(makeControl({ input: "select", options }));

@@ -6,6 +6,7 @@ import {
   getPageResponsiveEffectiveVisible,
   getPageSectionCapability,
   getPageSectionVariantControl,
+  isPageEditorControlVisible,
   pageBlockControlRegistry,
   pageEditorDeviceMetadata,
   pageResponsiveHideToggles,
@@ -938,5 +939,57 @@ describe("page editor control registry", () => {
       (entry) => entry.id === "block.heading.props.level"
     );
     expect(headingLevel?.fallback).toBe("h2");
+  });
+
+  // TASK-539-03-L01 — control reachability gates (base vs effective).
+  test("reachability gates resolve base vs effective targets and fail closed", () => {
+    const gate = (responsive: boolean, equals: string | number | boolean | null = true) =>
+      ({
+        id: "test.gated",
+        panel: "content",
+        target: "block",
+        label: "Gated",
+        path: ["props", "flag"],
+        overridePath: ["props", "flag"],
+        input: "switch",
+        responsive,
+        showWhen: { path: ["props", "flag"], equals },
+      }) satisfies PageEditorControlDefinition;
+    const targets = (base: unknown, effective: unknown) => ({
+      baseTarget: base,
+      effectiveTarget: effective,
+    });
+    // No gate => always visible; responsive gates read the EFFECTIVE target.
+    expect(
+      isPageEditorControlVisible({ ...gate(true), showWhen: undefined }, targets({}, {}))
+    ).toBe(true);
+    expect(
+      isPageEditorControlVisible(
+        gate(true),
+        targets({ props: { flag: false } }, { props: { flag: true } })
+      )
+    ).toBe(true);
+    // Base-only gates ALWAYS read the BASE target: a tablet/mobile override
+    // can neither open nor close a base-only gate.
+    expect(
+      isPageEditorControlVisible(
+        gate(false),
+        targets({ props: { flag: false } }, { props: { flag: true } })
+      )
+    ).toBe(false);
+    expect(
+      isPageEditorControlVisible(
+        gate(false),
+        targets({ props: { flag: true } }, { props: { flag: false } })
+      )
+    ).toBe(true);
+    // Strict equality, missing, and malformed values fail closed.
+    expect(isPageEditorControlVisible(gate(true, "1"), targets({}, { props: { flag: 1 } }))).toBe(
+      false
+    );
+    expect(isPageEditorControlVisible(gate(true), targets({}, { props: {} }))).toBe(false);
+    expect(isPageEditorControlVisible(gate(true), targets({}, { props: { flag: "true" } }))).toBe(
+      false
+    );
   });
 });

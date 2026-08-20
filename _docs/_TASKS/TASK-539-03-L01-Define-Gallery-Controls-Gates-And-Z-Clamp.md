@@ -119,6 +119,15 @@ must not import browser/server/runtime adapters.
 
 ## Validation and line receipt
 
+Known cross-leaf type transient: the contract-mandated `PageEditorControlUiModel`
+union widening adds `{kind:"galleryItems"}` and `{kind:"galleryCategoryTokens"}`.
+The consumer default branch in `core/admin/ui/pages/editor/PageEditorRegistryFields.tsx`
+(owned by TASK-539-03-L03) therefore fails `lint:types` (TS2322 at ~:776) until L03
+lands its render branches for those two kinds (L03 contract lines 112-113). That
+single error is the L03-owned file; it is NOT a defect of this leaf. The gate below
+is green apart from that one documented transient, which must be resolved (lint:types
+fully green) once L03 lands, before any combined gate.
+
 ```bash
 bun --cwd core lint:types
 bun --cwd core lint

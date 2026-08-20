@@ -2,10 +2,12 @@ import { describe, expect, test } from "vitest";
 
 import {
   getPageEditorControlsForTarget,
+  isPageEditorControlVisible,
   pageBlockControlRegistry,
   pageTypographyBlockControls,
   pageUniversalBlockControls,
   pageUniversalSectionControls,
+  projectPageResponsiveOverrideEntries,
   type PageEditorControlDefinition,
 } from "../../../core/services/pages/pageEditorControlRegistry";
 import { sanitizePageEditorControlValue } from "../../../core/services/pages/pageEditorMutationActions";
@@ -16,6 +18,7 @@ import {
   PAGE_GLOW_BLUR_CLAMP,
   PAGE_GLOW_OFFSET_CLAMP,
   PAGE_GLOW_SPREAD_CLAMP,
+  PAGE_LAYER_Z_CLAMP,
   PAGE_SECTION_BORDER_WIDTH_CLAMP,
   PAGE_TYPOGRAPHY_LETTER_SPACING_CLAMP,
   PAGE_TYPOGRAPHY_LINE_HEIGHT_CLAMP,
@@ -320,7 +323,10 @@ describe("block glass/hover + layer controls (TASK-522-05-L02/L03)", () => {
 
     const z = findUniversal("block.layer.z");
     expect(z?.responsive).toBe(true);
-    expect(z?.clamp).toEqual({ min: 0, max: 40 });
+    // TASK-539: the model-owned clamp object directly (identity, not a
+    // `0..40` mirror); 0..20 keeps authored layers below the spotlight overlay.
+    expect(z?.clamp).toBe(PAGE_LAYER_Z_CLAMP);
+    expect(z?.clamp).toEqual({ min: 0, max: 20 });
     expect(z?.unit).toBe("");
     expect(z?.path).toEqual(["style", "layer", "z"]);
 
@@ -442,6 +448,34 @@ describe("layout composition.mode + group marquee controls (TASK-522-05-L02/L04)
     expect(align).toMatchObject({ input: "segmented", panel: "style" });
     expect(align.options).toEqual([...pageDividerAligns]);
   });
+
+  // TASK-539-03-L01 — all five divider props are BASE-only (the responsive
+  // prop contract supports only heading/text alignment) and `width`/`align`
+  // are reachable only when the base `gradient` rule is enabled.
+  test("all five divider props are base-only with base-owned width/align gates", () => {
+    const byId = new Map(pageBlockControlRegistry.divider.map((c) => [c.id, c]));
+    expect([...byId.keys()]).toEqual([
+      "block.divider.props.tone",
+      "block.divider.props.thickness",
+      "block.divider.props.gradient",
+      "block.divider.props.width",
+      "block.divider.props.align",
+    ]);
+    for (const [id, control] of byId) {
+      expect(control.responsive, id).toBe(false);
+    }
+    expect(byId.get("block.divider.props.width")?.showWhen).toEqual({
+      path: ["props", "gradient"],
+      equals: true,
+    });
+    expect(byId.get("block.divider.props.align")?.showWhen).toEqual({
+      path: ["props", "gradient"],
+      equals: true,
+    });
+    expect(byId.get("block.divider.props.tone")?.showWhen).toBeUndefined();
+    expect(byId.get("block.divider.props.thickness")?.showWhen).toBeUndefined();
+    expect(byId.get("block.divider.props.gradient")?.showWhen).toBeUndefined();
+  });
 });
 
 describe("glow + gradient-type controls (TASK-531-01-L03)", () => {
@@ -558,9 +592,9 @@ describe("nested glow.color client mutation guard (TASK-531-01-L03, finding #4)"
       // proving the nested length-3 path now REACHES the color sanitizer.
       expect(sanitizePageEditorControlValue(control, "expression(alert(1))")).toBeNull();
       expect(sanitizePageEditorControlValue(control, "url(//evil/x)")).toBeNull();
-      // A safe color passes through unchanged.
+      // A safe color emits the TASK-541 canonical bytes.
       expect(sanitizePageEditorControlValue(control, "rgba(142,232,255,.22)")).toBe(
-        "rgba(142,232,255,.22)"
+        "rgba(142, 232, 255, 0.22)"
       );
       expect(sanitizePageEditorControlValue(control, "#8ee8ff")).toBe("#8ee8ff");
     });
@@ -601,12 +635,34 @@ describe("page editor control registry — TASK-534 interactivity", () => {
     expect(active?.clamp).toEqual({ min: 0, max: 5 }); // SWITCHER_MAX_PANELS - 1.
   });
 
-  test("gallery resolves layout segmented + filterable switch + filterCategories list", () => {
-    const byId = new Map(pageBlockControlRegistry.gallery.map((c) => [c.id, c]));
+  test("gallery resolves items/layout/filterable/filterCategories as base-only controls", () => {
+    const controls = pageBlockControlRegistry.gallery;
+    expect(controls.map((c) => c.id)).toEqual([
+      "block.gallery.props.items",
+      "block.gallery.props.layout",
+      "block.gallery.props.filterable",
+      "block.gallery.props.filterCategories",
+    ]);
+    const byId = new Map(controls.map((c) => [c.id, c]));
+    expect(byId.get("block.gallery.props.items")?.input).toBe("galleryItems");
     expect(byId.get("block.gallery.props.layout")?.input).toBe("segmented");
     expect(byId.get("block.gallery.props.layout")?.options).toBe(pageGalleryLayouts);
     expect(byId.get("block.gallery.props.filterable")?.input).toBe("switch");
-    expect(byId.get("block.gallery.props.filterCategories")?.input).toBe("items");
+    expect(byId.get("block.gallery.props.filterCategories")?.input).toBe("galleryCategoryTokens");
+    // TASK-539-03-L01: all four gallery props are base-only (the responsive
+    // prop contract supports only heading/text alignment).
+    for (const control of controls) {
+      expect(control.responsive, control.id).toBe(false);
+    }
+    // Category tokens exist only when base filtering is enabled; the other
+    // gallery controls carry no gate (present-only).
+    expect(byId.get("block.gallery.props.filterCategories")?.showWhen).toEqual({
+      path: ["props", "filterable"],
+      equals: true,
+    });
+    expect(byId.get("block.gallery.props.items")?.showWhen).toBeUndefined();
+    expect(byId.get("block.gallery.props.layout")?.showWhen).toBeUndefined();
+    expect(byId.get("block.gallery.props.filterable")?.showWhen).toBeUndefined();
   });
 
   test("scrollHint resolves glyph segmented + label text", () => {
@@ -750,10 +806,10 @@ describe("per-edge section border controls (TASK-533-02-L03)", () => {
       expect(sanitizePageEditorControlValue(control, "expression(alert(1))")).toBeNull();
       expect(sanitizePageEditorControlValue(control, "url(//evil)")).toBeNull();
       expect(sanitizePageEditorControlValue(control, "javascript:alert(1)")).toBeNull();
-      // A safe color passes through unchanged.
+      // A safe color emits the TASK-541 canonical bytes.
       expect(sanitizePageEditorControlValue(control, "#ffffff33")).toBe("#ffffff33");
       expect(sanitizePageEditorControlValue(control, "rgba(255,255,255,.1)")).toBe(
-        "rgba(255,255,255,.1)"
+        "rgba(255, 255, 255, 0.1)"
       );
     }
   });
@@ -766,5 +822,116 @@ describe("per-edge section border controls (TASK-533-02-L03)", () => {
     // (clamped/enum-validated at the persist boundary, not the client guard).
     expect(sanitizePageEditorControlValue(width, 2)).toBe(2);
     expect(sanitizePageEditorControlValue(style, "dashed")).toBe("dashed");
+  });
+});
+
+// TASK-539-03-L01 — base-only reachability gates and responsive immunity.
+describe("gallery/divider/parallax base-only gates (TASK-539-03-L01)", () => {
+  test("parallax intensity is gated on the base scroll effect", () => {
+    const parallax = pageUniversalSectionControls.find(
+      (control) => control.id === "section.parallaxIntensity"
+    )!;
+    expect(parallax.responsive).toBe(false);
+    expect(parallax.showWhen).toEqual({ path: ["style", "scrollEffect"], equals: "parallax" });
+    // The effective responsive target never governs the base-only gate.
+    expect(
+      isPageEditorControlVisible(parallax, {
+        baseTarget: { style: { scrollEffect: "parallax" } },
+        effectiveTarget: { style: { scrollEffect: "none" } },
+      })
+    ).toBe(true);
+    expect(
+      isPageEditorControlVisible(parallax, {
+        baseTarget: { style: { scrollEffect: "none" } },
+        effectiveTarget: { style: { scrollEffect: "parallax" } },
+      })
+    ).toBe(false);
+  });
+
+  test("divider width/align gates ignore the effective responsive target", () => {
+    const width = pageBlockControlRegistry.divider.find(
+      (control) => control.id === "block.divider.props.width"
+    )!;
+    const align = pageBlockControlRegistry.divider.find(
+      (control) => control.id === "block.divider.props.align"
+    )!;
+    // A tablet/mobile gradient override cannot OPEN the base-only gate.
+    expect(
+      isPageEditorControlVisible(width, {
+        baseTarget: { props: { gradient: false } },
+        effectiveTarget: { props: { gradient: true } },
+      })
+    ).toBe(false);
+    expect(
+      isPageEditorControlVisible(align, {
+        baseTarget: { props: { gradient: false } },
+        effectiveTarget: { props: { gradient: true } },
+      })
+    ).toBe(false);
+    // Nor can it CLOSE a base-open gate.
+    expect(
+      isPageEditorControlVisible(width, {
+        baseTarget: { props: { gradient: true } },
+        effectiveTarget: { props: { gradient: false } },
+      })
+    ).toBe(true);
+    expect(
+      isPageEditorControlVisible(align, {
+        baseTarget: { props: { gradient: true } },
+        effectiveTarget: { props: { gradient: false } },
+      })
+    ).toBe(true);
+  });
+
+  test("gallery filterCategories follows the base filterable flag only", () => {
+    const categories = pageBlockControlRegistry.gallery.find(
+      (control) => control.id === "block.gallery.props.filterCategories"
+    )!;
+    expect(
+      isPageEditorControlVisible(categories, {
+        baseTarget: { props: { filterable: true } },
+        effectiveTarget: { props: { filterable: false } },
+      })
+    ).toBe(true);
+    expect(
+      isPageEditorControlVisible(categories, {
+        baseTarget: { props: { filterable: false } },
+        effectiveTarget: { props: { filterable: true } },
+      })
+    ).toBe(false);
+  });
+
+  test("base-only gallery/divider controls never project responsive override entries", () => {
+    const baseOnlyIds = new Set([
+      "block.gallery.props.items",
+      "block.gallery.props.layout",
+      "block.gallery.props.filterable",
+      "block.gallery.props.filterCategories",
+      "block.divider.props.tone",
+      "block.divider.props.thickness",
+      "block.divider.props.gradient",
+      "block.divider.props.width",
+      "block.divider.props.align",
+    ]);
+    for (const type of ["gallery", "divider"] as const) {
+      // Even with a pre-existing tablet/mobile override for every prop, the
+      // projection exposes none of these controls: no badge/reset affordance.
+      const overrideSource = {
+        props: Object.fromEntries(
+          pageBlockControlRegistry[type].map((control) => [control.path[1], "x"])
+        ),
+      };
+      for (const breakpoint of ["tablet", "mobile"] as const) {
+        const entries = projectPageResponsiveOverrideEntries(
+          { kind: "block", type },
+          breakpoint,
+          overrideSource
+        );
+        expect(
+          entries.some((entry) => baseOnlyIds.has(entry.control.id)),
+          `${type}@${breakpoint}`
+        ).toBe(false);
+      }
+    }
   });
 });
