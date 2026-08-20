@@ -48,7 +48,9 @@ export interface ParsedModule {
 
 // The six post-TASK-554 migration entries are the initial compatibility set,
 // not the universe of future owners. Later entries must match the canonical
-// task-###-(author-audit|implement|fix).mjs pattern (TASK-9999 sole exception).
+// task-###-(author-audit|implement|fix|closeout).mjs pattern (TASK-9999 sole
+// exception). Closeout is a first-class metadata-only role since TASK-554
+// established the pattern; TASK-493-closeout is the first future owner of it.
 export const INITIAL_MIGRATION_ROLES: Readonly<Record<string, WorkflowRole>> = Object.freeze({
   "task-522-author.mjs": "author-audit",
   "task-543-implement.mjs": "implement",
@@ -58,10 +60,10 @@ export const INITIAL_MIGRATION_ROLES: Readonly<Record<string, WorkflowRole>> = O
   "task-554-fix.mjs": "fix",
 });
 export const CANONICAL_FUTURE_ENTRY =
-  /^task-(?<task>[0-9]{3}|9999)-(?<suffix>author-audit|implement|fix)\.mjs$/u;
+  /^task-(?<task>[0-9]{3}|9999)-(?<suffix>author-audit|implement|fix|closeout)\.mjs$/u;
 export const ENTRY_TASK_NUMBER = /^task-(?<task>[0-9]+)-/u;
 export const CANONICAL_FUTURE_PATH_PATTERN =
-  /^(?:_docs\/_workflows\/task-554-closeout\.mjs|_docs\/_workflows\/task-(?:[0-9]{3}|9999)-(author-audit|implement|fix)\.mjs)$/u;
+  /^(?:_docs\/_workflows\/task-554-closeout\.mjs|_docs\/_workflows\/task-(?:[0-9]{3}|9999)-(author-audit|implement|fix|closeout)\.mjs)$/u;
 export const basenameOf = (relativePath: string): string => relativePath.split("/").pop() ?? "";
 
 export function gitLsFilesNul(globs: readonly string[], root: string = ROOT): string[] {
@@ -690,10 +692,26 @@ export const TASK_554_CLOSEOUT_GUARDS = Object.freeze([
   "validateTask554MetadataCloseout",
   "validateTask554TerminalCloseout",
 ]);
+const CLOSEOUT_TASK_ID = /^_docs\/_workflows\/task-(?<task>[0-9]{3}|9999)-closeout\.mjs$/u;
+function taskCloseoutGuards(taskId: string): readonly string[] {
+  return [
+    `captureTask${taskId}CloseoutSnapshot`,
+    `normalizeTask${taskId}CloseoutSnapshot`,
+    `assertTask${taskId}BoardClosureDelta`,
+    `assertTask${taskId}ChangelogClosureDelta`,
+    `assertTask${taskId}TerminalStatusDelta`,
+    `validateTask${taskId}MetadataCloseout`,
+    `validateTask${taskId}TerminalCloseout`,
+  ];
+}
 export function assertTask554CloseoutGuardContract(
   parsed: ParsedModule,
   displayPath: string
 ): void {
+  const match = CLOSEOUT_TASK_ID.exec(displayPath);
+  if (!match?.groups?.task)
+    throw new Error(`${displayPath}: closeout guard requires a canonical task-###-closeout path`);
+  const taskId = match.groups.task;
   if (agentCallNodes(parsed.sourceFile).length > 0)
     throw new Error(`${displayPath}: closeout guard must never dispatch agents`);
   if (
@@ -702,12 +720,12 @@ export function assertTask554CloseoutGuardContract(
   ) {
     throw new Error(`${displayPath}: closeout guard must not import agent drivers`);
   }
-  for (const guard of TASK_554_CLOSEOUT_GUARDS) {
+  for (const guard of taskCloseoutGuards(taskId)) {
     if (!hasFunctionDeclaration(parsed.sourceFile, guard))
       throw new Error(`${displayPath}: closeout guard missing ${guard}`);
   }
   if (!/function selfTest\(|selfTest\(\)/u.test(parsed.source))
     throw new Error(`${displayPath}: closeout guard missing its self-test`);
-  if (!/TASK_554_WORKFLOW_IMPORT/u.test(parsed.source))
+  if (!new RegExp(`TASK_${taskId}_WORKFLOW_IMPORT`, "u").test(parsed.source))
     throw new Error(`${displayPath}: closeout guard missing the direct-invocation guard`);
 }

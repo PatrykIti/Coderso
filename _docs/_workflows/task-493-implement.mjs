@@ -65,12 +65,8 @@ const MAXIMUM_PNG_DIMENSION = 16_384;
 const MAX_WORKFLOW_TREE_ENTRIES = 4096;
 const MAX_WORKFLOW_TREE_DEPTH = 64;
 const RELEASE_GATE_REPORT_PATH = ".tmp/coderso-release-gates.json";
-const TASK_493_WORKFLOW_PATHS = Object.freeze([
-  "_docs/_workflows/task-493-author-audit.mjs",
-  "_docs/_workflows/task-493-implement.mjs",
-  "_docs/_workflows/task-493-fix.mjs",
-  "_docs/_workflows/task-493-closeout.mjs",
-]);
+// prettier-ignore
+const TASK_493_WORKFLOW_PATHS = Object.freeze(["_docs/_workflows/task-493-author-audit.mjs", "_docs/_workflows/task-493-implement.mjs", "_docs/_workflows/task-493-fix.mjs", "_docs/_workflows/task-493-closeout.mjs"]);
 export const TASK_493_SMOKE_SCENARIO_IDS = Object.freeze([
   "sitemap-xml-served",
   "robots-txt-sitemap-directive",
@@ -1074,7 +1070,7 @@ function assertTask493SmokePair(profile, session) {
 function task493SessionDirectory(root, session) {
   if (session !== "task-493-fast" && session !== "task-493-certification")
     throw new Error(`task_493_smoke_session_invalid:${session}`);
-  return path.resolve(root, "_docs/_workflows/_smoke/task-493", session);
+  return path.resolve(root, "_docs/_workflows/_smoke/evidence/task-493", session);
 }
 function task493SmokeDirectoryNode(stats) {
   return Object.freeze({ dev: stats.dev, ino: stats.ino, uid: stats.uid, mode: stats.mode });
@@ -1089,7 +1085,7 @@ function sameTask493SmokeDirectoryNode(left, right) {
 }
 function assertNofollowTask493SmokeRoot(root, create = false, createdDirectories = null) {
   let directory = root;
-  for (const component of ["_docs", "_workflows", "_smoke", "task-493"]) {
+  for (const component of ["_docs", "_workflows", "_smoke", "evidence", "task-493"]) {
     directory = path.join(directory, component);
     let stats;
     let created = false;
@@ -1890,7 +1886,7 @@ function removeFastSmokeEvidence(root) {
   assertNoForbiddenDirty(root);
   assertNofollowTask493SmokeRoot(root);
   const directory = task493SessionDirectory(root, "task-493-fast");
-  const expected = path.resolve(root, "_docs/_workflows/_smoke/task-493/task-493-fast");
+  const expected = path.resolve(root, "_docs/_workflows/_smoke/evidence/task-493/task-493-fast");
   if (directory !== expected || !existsSync(directory))
     throw new Error("task_493_fast_evidence_missing_before_cleanup");
   const stats = lstatSync(directory);
@@ -2382,7 +2378,7 @@ function workflowSelfTest() {
     );
     unlinkSync(linkPath);
     const externalSmokeRoot = mkdtempSync(path.join(os.tmpdir(), "task-493-smoke-external-"));
-    const smokeAncestor = path.join(tempRoot, "_docs/_workflows/_smoke/task-493");
+    const smokeAncestor = path.join(tempRoot, "_docs/_workflows/_smoke/evidence/task-493");
     mkdirSync(path.dirname(smokeAncestor), { recursive: true });
     symlinkSync(externalSmokeRoot, smokeAncestor, "dir");
     for (const action of [
@@ -2677,7 +2673,7 @@ function workflowSelfTest() {
     const fakeBun = path.join(fakeBunDirectory, "bun");
     writeTinyFile(
       fakeBun,
-      `#!/usr/bin/env node\nconst fs = require("fs");\nif (process.argv[2] === "--eval") process.stdout.write(${JSON.stringify(JSON.stringify(fakeManifest))}); else { const session = process.argv[process.argv.indexOf("--session") + 1]; const reportPath = \`_docs/_workflows/_smoke/task-493/\${session}/report.json\`; fs.writeFileSync(reportPath, process.env.TASK_493_SELF_TEST_REPORT ?? ""); process.exit(1); }\n`
+      `#!/usr/bin/env node\nconst fs = require("fs");\nif (process.argv[2] === "--eval") process.stdout.write(${JSON.stringify(JSON.stringify(fakeManifest))}); else { const session = process.argv[process.argv.indexOf("--session") + 1]; const reportPath = \`_docs/_workflows/_smoke/evidence/task-493/\${session}/report.json\`; fs.writeFileSync(reportPath, process.env.TASK_493_SELF_TEST_REPORT ?? ""); process.exit(1); }\n`
     );
     chmodSync(fakeBun, 0o755);
     const runnerBefore = captureRepositoryFingerprint(tempRoot);

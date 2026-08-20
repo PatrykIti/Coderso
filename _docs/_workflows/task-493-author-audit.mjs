@@ -49,7 +49,7 @@ export const TASK_493_AUTHOR_AUDIT_LENS_IDS = Object.freeze([
 const SELF_TEST_ARG = "--task-493-bootstrap-self-test";
 const VERIFY_ARG = "--task-493-bootstrap-verify";
 export const TASK_493_AUTHOR_RECEIPT_PATH =
-  "_docs/_workflows/_smoke/task-493/author-audit-receipt.json";
+  "_docs/_workflows/_smoke/evidence/task-493/author-audit-receipt.json";
 const AUTHOR_ALLOWED_DIRTY_PATHS = Object.freeze([
   "_TMP-task-dispatch-plan-2026-08-10.md",
   "_docs/_TASKS/README.md",
@@ -675,7 +675,7 @@ async function bootstrapSelfTest() {
       throw new Error("task_493_author_self_test_tmp_fingerprint");
     rmSync(path.join(tempRoot, ".tmp"), { recursive: true, force: true });
     const externalReceiptRoot = mkdtempSync(path.join(os.tmpdir(), "task-493-receipt-external-"));
-    const receiptAncestor = path.join(tempRoot, "_docs/_workflows/_smoke/task-493");
+    const receiptAncestor = path.join(tempRoot, "_docs/_workflows/_smoke/evidence/task-493");
     mkdirSync(path.dirname(receiptAncestor), { recursive: true });
     symlinkSync(externalReceiptRoot, receiptAncestor, "dir");
     let receiptAncestorSymlinkRejected = false;

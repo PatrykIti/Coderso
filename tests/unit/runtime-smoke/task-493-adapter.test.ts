@@ -107,7 +107,7 @@ test("TASK-493 adapter registers only the two exact profiles and rejects invocat
   expect(adapter.supportedProfiles).toEqual(["fast", "certification"]);
   const root = join(import.meta.dir, "../../..");
   expect(adapter.evidenceDirectory?.(input, root)).toBe(
-    join(root, "_docs/_workflows/_smoke/task-493/task-493-fast")
+    join(root, "_docs/_workflows/_smoke/evidence/task-493/task-493-fast")
   );
   expect(() => assertExactTask493Invocation(input)).not.toThrow();
   for (const candidate of [
@@ -247,7 +247,7 @@ test("TASK-493 projects seven terminal scenarios and fixed cleanup receipts with
       elapsedMs: index + 1,
     })),
     screenshots: Array.from({ length: 7 }, (_value, index) => ({
-      path: `_docs/_workflows/_smoke/task-493/task-493-fast/${index + 1}.png`,
+      path: `_docs/_workflows/_smoke/evidence/task-493/task-493-fast/${index + 1}.png`,
       sha256: hash,
     })),
     cleanup,
@@ -552,7 +552,7 @@ test("TASK-493 manifest binds profile and session to seven ordered PNG paths", (
     "seo-manager-fifth-card",
   ]);
   expect(manifest.paths[0]).toBe(
-    "_docs/_workflows/_smoke/task-493/task-493-fast/01-sitemap-xml-served.png"
+    "_docs/_workflows/_smoke/evidence/task-493/task-493-fast/01-sitemap-xml-served.png"
   );
   expect(() =>
     assertExactTask493ScreenshotManifest(
@@ -580,7 +580,7 @@ test("TASK-493 PNG decoder rejects truncated, invalid-CRC, and malformed chunks"
 test("TASK-493 evidence accepts equal hashes at distinct files and rejects extra or symlinked files", async () => {
   const root = await mkdtemp(join(tmpdir(), "task493-evidence-"));
   const manifest = buildExactTask493ScreenshotManifest(input);
-  const directory = join(root, "_docs/_workflows/_smoke/task-493/task-493-fast");
+  const directory = join(root, "_docs/_workflows/_smoke/evidence/task-493/task-493-fast");
   try {
     await mkdir(directory, { recursive: true });
     const bytes = png();

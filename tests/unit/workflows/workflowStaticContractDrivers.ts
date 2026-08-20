@@ -268,7 +268,7 @@ export function assertPromptRequiresImmediateEvidenceValidation(
   file: string
 ): void {
   if (
-    !/(validateSmoke\s*\(|assertExactTask554SmokeEvidence|sameFingerprint\s*\(|normalizeAuditFindings\s*\()/u.test(
+    !/(validateSmoke\s*\(|assertExactTask(?:554|493)SmokeEvidence|sameFingerprint\s*\(|normalizeAuditFindings\s*\()/u.test(
       source
     )
   ) {
@@ -326,7 +326,7 @@ export function assertPromptResumesWithRequireTracked(source: string, file: stri
 }
 export function assertPromptValidatesMetadataOnlyClosureDelta(source: string, file: string): void {
   if (
-    !/(finalMetadataGatePrompt|assertTask554BoardClosureDelta|assertTask554ChangelogClosureDelta|assertTask554TerminalStatusDelta|validateTask554MetadataCloseout|terminal_phase_receipt_required)/u.test(
+    !/(finalMetadataGatePrompt|assertTask554BoardClosureDelta|assertTask554ChangelogClosureDelta|assertTask554TerminalStatusDelta|validateTask554MetadataCloseout|assertTask493BoardClosureDelta|assertTask493ChangelogClosureDelta|assertTask493TerminalStatusDelta|validateTask493MetadataCloseout|terminal_phase_receipt_required)/u.test(
       source
     )
   ) {
@@ -521,7 +521,7 @@ export function assertCanonicalFutureEntry(
       throw new Error(`future closeout entry must bind task 554: ${entry}`);
     return;
   }
-  const suffix = /-(author-audit|implement|fix)\.mjs$/u.exec(basename)?.[1];
+  const suffix = /-(author-audit|implement|fix|closeout)\.mjs$/u.exec(basename)?.[1];
   if (!suffix) throw new Error(`future entry has no role suffix: ${entry}`);
   if (options.role !== "closeout" && suffix !== options.role)
     throw new Error(`future entry suffix/role binding mismatch for ${entry}: role ${options.role}`);
